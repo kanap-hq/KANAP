@@ -232,6 +232,8 @@ export const spendItemsRegistry: AiEntityFilterRegistry = {
   aggregate: {
     baseTable: 'spend_items',
     alias: 'si',
+    // `spend_items` holds both natures (lot Z0): this registry reads the OPEX lines.
+    baseWhere: `si.nature = 'opex'`,
     groupFields: {
       status: { expression: 'si.status' },
       currency: { expression: 'si.currency' },

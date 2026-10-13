@@ -3,8 +3,7 @@ import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { SpendItem } from '../spend-item.entity';
 import { SpendItemsDeleteService } from '../spend-items-delete.service';
-import { CapexItem } from '../../capex/capex-item.entity';
-import { CapexItemsDeleteService } from '../../capex/capex-items-delete.service';
+import { CapexItemsDeleteService } from '../spend-items-delete.service';
 import { UserTimeAggregateService } from '../../portfolio/services/user-time-aggregate.service';
 import {
   assert, AuditEntry, freezeColumn, inRolledBackTransaction, Kind, runSpecs, seedItem, seedMonths, seedTenant, seedVersion, setBudgetColumns,
@@ -17,8 +16,9 @@ import {
 // with amounts in a frozen column cannot be deleted.
 
 const T = {
-  opex: { items: 'spend_items', column: 'spend_item_id', links: 'spend_links', attachments: 'spend_attachments', contracts: 'contract_spend_items', taskType: 'spend_item', amounts: 'spend_amounts' },
-  capex: { items: 'capex_items', column: 'capex_item_id', links: 'capex_links', attachments: 'capex_attachments', contracts: 'contract_capex_items', taskType: 'capex_item', amounts: 'capex_amounts' },
+  opex: { items: 'spend_items', column: 'spend_item_id', links: 'spend_links', attachments: 'spend_attachments', contracts: 'contract_spend_items', taskType: 'spend_item', amounts: 'spend_amounts', auditItems: 'spend_items' },
+  // The CAPEX lines share the OPEX tables since lot Z1; their tasks and audit rows keep their CAPEX names.
+  capex: { items: 'spend_items', column: 'spend_item_id', links: 'spend_links', attachments: 'spend_attachments', contracts: 'contract_spend_items', taskType: 'capex_item', amounts: 'spend_amounts', auditItems: 'capex_items' },
 } as const;
 
 function fakeStorage() {
@@ -45,7 +45,7 @@ function deleteService(kind: Kind, runner: QueryRunner, audit: unknown, storage:
       runner.manager.getRepository(SpendItem), undefined as any, undefined as any, undefined as any, audit as any, storage as any, aggregates,
     )
     : new CapexItemsDeleteService(
-      runner.manager.getRepository(CapexItem), undefined as any, undefined as any, undefined as any, audit as any, storage as any, aggregates,
+      runner.manager.getRepository(SpendItem), undefined as any, undefined as any, undefined as any, audit as any, storage as any, aggregates,
     );
 }
 
@@ -194,7 +194,7 @@ async function testDeleteCleansUp(kind: Kind) {
       after: { origin_task: null, __origin_task_id: null },
       userId,
     }], `${kind}: one audit row for the request`);
-    assert.deepEqual(audit.entries.map((e) => `${e.table}:${e.action}`), ['portfolio_requests:update', `${T[kind].items}:delete`]);
+    assert.deepEqual(audit.entries.map((e) => `${e.table}:${e.action}`), ['portfolio_requests:update', `${T[kind].auditItems}:delete`]);
     // The request's history names the task it no longer links to (the task row is gone).
     const activities = await runner.query(
       `SELECT request_id, author_id, type, changed_fields FROM portfolio_activities WHERE tenant_id = $1 AND task_id IS NULL ORDER BY created_at`,
@@ -230,7 +230,7 @@ async function testBulkDeleteIsolatesAFailingItem(kind: Kind) {
       await seedAttachment(runner, kind, tenantId, id, paths[i]);
     }
 
-    const audit = auditDouble((e) => e.table === T[kind].items && e.recordId === ids[1]);
+    const audit = auditDouble((e) => e.table === T[kind].auditItems && e.recordId === ids[1]);
     const storage = fakeStorage();
     const result = await deleteService(kind, runner, audit, storage).bulkDelete(ids, null, { manager: runner.manager });
 

@@ -9,6 +9,7 @@ A **dimension** is one way of classifying budget lines, for example **Nature** o
 - Each dimension has its own list of values.
 - Each OPEX and CAPEX line can hold one value per dimension. A line can be **Licenses** on Nature and **Workplace** on Program at the same time.
 - A line can also have no value on a dimension. Reports show these lines as "Unassigned".
+- A dimension marked **Required** asks for a value on every new line. See [Required dimensions](#required-dimensions).
 
 For example:
 
@@ -21,15 +22,32 @@ Nature          Program
 
 ### The default dimension
 
-Every workspace starts with one dimension, the default dimension. Until you give it a name, it shows as **Analytics dimension**, in each person's language. If your workspace already had analytics values, they belong to this dimension and every line keeps its value.
+Every workspace has one default dimension. Until you give it a name, it shows as **Analytics dimension**, in each person's language. If your workspace already had analytics values, they belong to this dimension and every line keeps its value.
 
 The default dimension has a special role:
 
 - It always applies to OPEX and CAPEX lines: its **Used for** field is locked. See [OPEX or CAPEX dimensions](#opex-or-capex-dimensions).
 - It cannot be disabled or deleted. Its workspace has no **Delete** button, and one line under **Lifecycle** says why: "This dimension cannot be disabled or deleted: older files and AI questions use it."
 - Questions to Plaid about the analytics category use it. See [Analytics dimensions in Plaid](#analytics-dimensions-in-plaid). In a budget file each dimension has its own column, the default one included: see [Load a budget from a spreadsheet](budget-file.md).
-- It stays the default dimension when you rename it, change its code or change its order.
+- It stays the default dimension when you rename it, change its code or move it in the order of the dimensions.
 - Its label is reserved: no other dimension can be named "Analytics dimension", in any of the app's languages.
+
+### CAPEX dimensions
+
+Every workspace also has three dimensions that classify CAPEX lines. They are used for **CAPEX only**, required and enabled:
+
+| Dimension | Code | Values, in order |
+|---|---|---|
+| **PP&E type** | `ppe_type` | Hardware, Software |
+| **Investment type** | `investment_type` | Replacement, Capacity, Productivity, Security, Conformity, Business growth, Other |
+| **Priority** | `priority` | Mandatory, High, Medium, Low |
+
+- Their names and values are in English. They come after the dimensions the workspace already had.
+- When another dimension already has one of these names, the CAPEX dimension gets the name with " (CAPEX)" added, for example **Priority (CAPEX)**.
+- When the workspace already had a dimension with one of these codes, that dimension is kept as it is and only gets the values it lacked.
+- A CAPEX line created before these dimensions holds the value of its earlier PP&E type, investment type and priority.
+- They work like any other dimension. You can rename them and their values, add values, change the order, change their settings, disable or delete them.
+- The code names the dimension's column in the budget file: `analytics:ppe_type`, `analytics:investment_type` and `analytics:priority`. When you change a code, a file exported before the change still has the old column name and is refused with "Unknown dimension". Export a fresh file. See [Load a budget from a spreadsheet](budget-file.md).
 
 ---
 
@@ -54,17 +72,19 @@ Under the title, a grey band shows your dimensions in order, with one square tog
 - Click a toggle to list the values of that dimension. The selected toggle is filled. The page address keeps your choice, so a bookmarked link opens on the same dimension. Without a choice, the page opens on the default dimension.
 - On the right of the band, **Edit** opens the workspace of the selected dimension. If you can only read dimensions, the button reads **Open**.
 - **New**, next to it, creates a dimension (requires `analytics:member`).
+- **Reorder** sets the order of the dimensions (requires `analytics:member`). The button is disabled while there is only one dimension. See [Ordering dimensions](#ordering-dimensions).
 
 With a single dimension, the band shows one toggle and the values.
 
 ### Values list
 
-The list shows the values of the selected dimension.
+The list shows the values of the selected dimension, in the dimension's order. See [Ordering values](#ordering-values).
 
 **Columns**:
 
 | Column | What it shows |
 |---|---|
+| **Order** | The position of the value in its dimension. Disabled values have a position too, so the numbers can skip when the list hides them |
 | **Name** | The name of the value |
 | **Description** | What the value covers |
 | **Status** | **Enabled** or **Disabled** |
@@ -83,6 +103,7 @@ Click any cell to open the value's workspace.
 **Actions**:
 
 - **New value**: create a value in the selected dimension (requires `analytics:member`). While the selected dimension is disabled, the button is disabled and its tooltip says "Enable this dimension to add values."
+- **Reorder**: set the order of the selected dimension's values (requires `analytics:member`). The button is disabled while the dimension has fewer than two values. See [Ordering values](#ordering-values)
 - **Import CSV**: load values from a file (requires `analytics:admin`)
 - **Export CSV**: download the values of every dimension (requires `analytics:admin`)
 - **Delete selected**: delete the selected values (requires `analytics:admin`). Values used by budget lines are kept
@@ -97,11 +118,11 @@ Click **New** in the selector bar, fill in the fields, then click **Create**. Th
 
 - **Name** is required.
 - **Code** is proposed from the name: lowercase, accents removed, spaces replaced by `-`. You can change it before you create the dimension.
-- **Order** is proposed so the new dimension comes last.
 - **Used for** starts on **OPEX and CAPEX**. See [OPEX or CAPEX dimensions](#opex-or-capex-dimensions).
+- **Required** starts off. See [Required dimensions](#required-dimensions).
 - **Description** is optional.
 
-Then go back to the page to add the values of the new dimension.
+A new dimension goes last in the order of the dimensions. Then go back to the page to add its values.
 
 ### The dimension workspace
 
@@ -109,9 +130,9 @@ Open it with **Edit** (**Open** if you can only read) in the selector bar, with 
 
 - **Header**: the name of the dimension. Click it to rename the dimension. **Prev** / **Next** move through the dimensions in order, and the close button returns to the page on this dimension
 - **Main area**: a usage line, for example "12 values, used by 27 OPEX lines and 2 CAPEX lines.", then the **Description**
-- **Properties panel** on the right: **Name**, **Code**, **Order**, **Used for** and **Lifecycle**
+- **Properties panel** on the right: **Name**, **Code**, **Used for**, **Required** and **Lifecycle**
 
-**Autosave**: Every change saves on its own. There is no Save button. Text fields save when you leave them (in **Name**, **Code** and **Order**, press Enter to save at once); the lifecycle saves as soon as you change it. When a change is refused, the reason shows under the field that caused it, for example a duplicate code under **Code**. A name refused in the header shows at the top of the page.
+**Autosave**: Every change saves on its own. There is no Save button. Text fields save when you leave them (in **Name** and **Code**, press Enter to save at once); the **Required** switch and the lifecycle save as soon as you change them. When a change is refused, the reason shows under the field that caused it, for example a duplicate code under **Code**. A name refused in the header shows at the top of the page.
 
 ### Dimension fields
 
@@ -119,10 +140,31 @@ Open it with **Edit** (**Open** if you can only read) in the selector bar, with 
 |---|---|
 | **Name** | Up to 200 characters. Names are unique regardless of case. Required, except on the default dimension: leave it empty there to show "Analytics dimension" in each person's language. The default dimension's label is reserved in every app language ("Analytics dimension", "Dimension analytique", "Analysedimension", "Dimensión analítica"), regardless of case: another dimension with one of these names is refused with "This name is reserved for the default dimension." |
 | **Code** | 1 to 40 characters: lowercase letters, digits, `-` or `_`, starting with a letter or a digit. Each code is unique. The code names the dimension's column in the OPEX and CAPEX CSV files, so changing it changes that column name. Budget lines keep their values when the code changes |
-| **Order** | A whole number. Dimensions are listed by this number, lowest first: on this page, on budget lines, in the report filters and in the report's dimension picker |
 | **Description** | What the dimension is for, so teammates classify lines the same way |
 | **Used for** | **OPEX and CAPEX**, **OPEX only** or **CAPEX only**. Says which budget lines can have a value on this dimension. See [OPEX or CAPEX dimensions](#opex-or-capex-dimensions). Locked on the default dimension, with one line under it: "The default dimension applies to OPEX and CAPEX lines." |
+| **Required** | A switch. When it is on, every new line of the kinds the dimension is used for needs a value on it, and a line that holds a value cannot lose it. See [Required dimensions](#required-dimensions). The default dimension can be required too |
 | **Lifecycle** | The status switch, labelled with the current state (**Enabled** or **Disabled**), and the **End of validity** date. See [Status and lifecycle](#status-and-lifecycle). Locked on the default dimension, with one line under it: "This dimension cannot be disabled or deleted: older files and AI questions use it." |
+
+### Ordering dimensions
+
+The dimensions have an order, which you set. KANAP shows them in this order:
+
+- in the selector bar of this page
+- in the **Properties** panel of OPEX and CAPEX lines
+- in the columns of the budget lines list
+- in the columns of the budget file
+- in the report filters and the report's dimension picker
+- in the dimensions Plaid lists
+
+A new dimension goes last.
+
+To change the order:
+
+1. Click **Reorder** in the selector bar. The dialog lists every dimension, disabled ones and dimensions for one kind of line included, each with its marks (**Default**, **Disabled**, **OPEX only**, **CAPEX only**).
+2. Drag the dimensions into place, with the mouse or with the keyboard. The keys are the same as for values: see [Ordering values](#ordering-values).
+3. Click **Save**. **Cancel** leaves the order as it was.
+
+The new order shows at once. The [Audit log](admin.md#audit-log) records one change for each dimension that moved, with its position before and after.
 
 ### OPEX or CAPEX dimensions
 
@@ -134,11 +176,11 @@ The **Used for** field says which budget lines the dimension applies to:
 | **OPEX only** | Only OPEX lines can have a value |
 | **CAPEX only** | Only CAPEX lines can have a value |
 
-OPEX screens show the dimensions used for OPEX lines, and CAPEX screens show the dimensions used for CAPEX lines. This covers the item **Properties** panel, the list columns, filters and quick search, the budget file columns, the dimension pickers and filters of the reports (they follow the report's **OPEX** / **CAPEX** choice) and Plaid.
+OPEX screens show the dimensions used for OPEX lines, and CAPEX screens show the dimensions used for CAPEX lines. This covers the line **Properties** panel, the list columns, filters and quick search, the dimension pickers and filters of the reports (they follow the report's **OPEX** / **CAPEX** choice) and Plaid. The budget file has a column for every enabled dimension, and each row takes values only on the dimensions of its kind of line.
 
 A line keeps the value it already has on a dimension that no longer applies to its kind of line. The value is hidden everywhere and shows again if you open the dimension to that kind of line again. When your choice hides values, a note appears under the field, for example "8 CAPEX lines have a value for this dimension. They keep it, hidden while the dimension is for OPEX lines only."
 
-Giving a line a value on a dimension that does not apply to it is refused, in the app, in a budget file and through the API. Sending the value the line already holds changes nothing.
+Giving a line a value on a dimension that does not apply to it is refused, in the app, in a budget file and through the API. In the app and through the API, sending the value the line already holds changes nothing. In a budget file, leave that cell empty: the export does so.
 
 A single value can also be limited to one kind of line. The two settings work at different levels. For example, the dimension **Nature de coût** is used for **OPEX and CAPEX**, and its value **Abonnements SaaS** is for **OPEX only**:
 
@@ -146,6 +188,21 @@ A single value can also be limited to one kind of line. The two settings work at
 - The value setting only filters the choices. The field stays, CAPEX lines no longer offer **Abonnements SaaS**, and a CAPEX line that already has it keeps it, shows it and stays editable. See [OPEX or CAPEX values](#opex-or-capex-values).
 
 The two settings must agree. A dimension cannot be set to one kind of line while some of its values are for the other kind only: KANAP refuses and names the values (up to three, then "and N more"), for example "2 values of this dimension are for CAPEX lines only (Matériel, Projet). Set them to OPEX and CAPEX first."
+
+### Required dimensions
+
+Turn on **Required** when every budget line must be classified on a dimension. KANAP then checks the lines of the kinds the dimension is used for:
+
+- **A new line needs a value on the dimension.** This applies to every way of creating a line: the OPEX and CAPEX screens, a budget file, Plaid and the API. Without a value, the line is not created, with the message "The Nature dimension is required. Choose a value."
+- **A line that holds a value cannot lose it.** You can pick another value. The field cannot be cleared.
+- **A line created before you turned the setting on keeps working.** If it has no value on the dimension, it stays editable and you can save other changes on it. Its field is marked as required. On the OPEX and CAPEX screens, leaving such a line after changing it asks you to choose a value first, with **Stay** and **Leave anyway**. Opening it without changing anything never asks.
+
+The setting is checked only while the dimension is enabled. A disabled dimension keeps its setting, and one line under the switch says "Not checked while the dimension is disabled." A dimension used for one kind of line only is checked on that kind only: a dimension set to **OPEX only** and required asks nothing of CAPEX lines.
+
+While the setting is on, lines under the switch help you complete the existing lines:
+
+- **Lines without a value**: for example "117 OPEX lines and 15 CAPEX lines have no value." Each kind of line has its own link, **Show OPEX lines** and **Show CAPEX lines** (**Show these lines** when only one kind is concerned). The link opens the lines in their list, in a new tab, enabled and disabled lines included.
+- **No value to choose**: when a kind of line the dimension is used for has no enabled value it can use, a warning says so, for example "No enabled value can be used on CAPEX lines. New CAPEX lines cannot be created." Add a value for that kind of line, or enable one. See [OPEX or CAPEX values](#opex-or-capex-values).
 
 ### Deleting a dimension
 
@@ -177,6 +234,28 @@ Changes save on their own, as in the dimension workspace. A name refused in the 
 - **A value stays in its dimension**: the dimension is set when the value is created and cannot change. To move a value, create it in the other dimension, change the lines, then delete the old value.
 - **Renaming keeps the lines**: lines point to the value itself, so the new name shows at once in lists and reports.
 - **Deleting**: the **Delete** button in the header deletes the value at once (requires `analytics:admin`). It is disabled when budget lines use the value, with the reason, for example "Used by 3 OPEX lines and 1 CAPEX line." Remove the value from these lines first, or disable it.
+
+### Ordering values
+
+The values of a dimension have an order, which you set. KANAP offers the values in this order wherever you choose or filter on them:
+
+- the value fields of OPEX and CAPEX lines (when you type in a field, the best matches come first)
+- the dimension's checkbox filters in the budget lines list
+- the dimension filters of the reports and the **Exclude values** list of the Analytics dimensions report
+- the values CSV export
+- the values Plaid lists
+
+Sorting the budget lines list on a dimension's column follows this order too, then the value name. Lines without a value come last in ascending order. Report rows keep their own order, by amount.
+
+At first, the values are in alphabetical order. A new value goes last in its dimension.
+
+To change the order:
+
+1. Select the dimension on the page and click **Reorder**. The dialog lists every value of the dimension, disabled ones and values for one kind of line included, each with its mark (**Disabled**, **OPEX only**, **CAPEX only**).
+2. Drag the values into place with the mouse. With the keyboard, move to a value, press Space or Enter to pick it up, move it with the arrow keys, then press Space or Enter to drop it. Escape puts it back.
+3. Click **Save**. **Cancel** leaves the order as it was.
+
+The new order shows at once in the lists and filters. The [Audit log](admin.md#audit-log) records the change on the dimension, with the order before and after.
 
 ### OPEX or CAPEX values
 
@@ -211,7 +290,8 @@ Dimensions and values each have a status (**Enabled** or **Disabled**) and an op
 
 **A disabled dimension**:
 
-- Disappears from the item forms, the OPEX and CAPEX lists, the report filters, the report's dimension picker, the OPEX and CAPEX CSV exports and Plaid. Only the Analytics dimensions page shows it, marked **Disabled**.
+- Is not checked when it is **Required**: lines can be created without a value on it. It keeps the setting for when you enable it again.
+- Disappears from the line forms, the budget lines list, the report filters, the report's dimension picker, the OPEX and CAPEX CSV exports and Plaid. Only the Analytics dimensions page shows it, marked **Disabled**.
 - Keeps its values on the lines. Enable the dimension again and they show again.
 - Takes no new values. **New value** is disabled while the dimension is selected, and CSV files cannot add or change its values.
 
@@ -223,15 +303,16 @@ The default dimension cannot be disabled.
 
 ## Values on budget lines
 
-In the **Properties** panel of an OPEX or CAPEX item, and when you create one, each enabled dimension used for that kind of line has its own field, named after the dimension, in dimension order. The default dimension shows as **Analytics dimension** until you rename it.
+In the **Properties** panel of an OPEX or CAPEX line, and when you create one, each enabled dimension used for that kind of line has its own field, named after the dimension, in dimension order. The default dimension shows as **Analytics dimension** until you rename it.
 
 - Pick a value, or clear the field to leave the line without a value on that dimension. The change saves at once.
+- A required dimension's field is marked with an asterisk. A new line cannot be created without a value on it, with the message "Nature is required". On a line that holds a value, the field offers no clear button: you can only pick another value. See [Required dimensions](#required-dimensions).
 - The field lists the enabled values of its dimension that are used for this kind of line. A disabled value, or a value used for the other kind of line only, stays shown on the lines that have it. See [OPEX or CAPEX values](#opex-or-capex-values).
 - The field cannot create a value. Create values on the Analytics dimensions page, or let an OPEX or CAPEX CSV import create them.
 - A value applies to the whole line, across all years.
 - If the dimensions cannot be loaded, one line replaces these fields: "Dimensions could not be loaded."
 
-The OPEX and CAPEX lists have one column per enabled dimension used for that kind of line, hidden by default, with checkbox filters. See [OPEX](opex.md) and [CAPEX](capex.md).
+The budget lines list has one column per enabled dimension, with checkbox filters. The column of a dimension required for OPEX or CAPEX lines shows by default, and the other columns are hidden. A column layout you saved keeps its own choice. See [Budget lines](budget-lines.md).
 
 ---
 
@@ -239,11 +320,11 @@ The OPEX and CAPEX lists have one column per enabled dimension used for that kin
 
 The **Analytics dimensions** report (under **Reporting**) shows how the budget of your OPEX or CAPEX lines is spread across the values of one dimension. See [Reporting](reports.md#analytics-dimensions) for the full description.
 
-- **Item type**: OPEX or CAPEX
+- **Line type**: OPEX or CAPEX
 - **Dimension**: the dimension the report groups on. It shows when you have two or more enabled dimensions, and starts on the default dimension
 - **Year range**: single year (pie or bar chart) or several years (line chart)
 - **Metric**: any budget column your organization shows, under its name. Starts on the default column
-- **Exclude values**: leave out some values to focus on the others. The list offers the values used for the selected item type, plus the values the lines hold
+- **Exclude values**: leave out some values to focus on the others. The list offers the values used for the selected line type, plus the values the lines hold
 
 The seven budget reports can also be narrowed to one value of a dimension, with one filter per dimension. See [Cost center, run or build and analytics filters](reports.md#cost-center-run-or-build-and-analytics-filters).
 
@@ -253,8 +334,11 @@ The seven budget reports can also be narrowed to one value of a dimension, with 
 
 - Plaid can filter and group OPEX lines on every enabled dimension used for OPEX lines, and CAPEX lines on every enabled dimension used for CAPEX lines.
 - A question about the analytics category uses the default dimension, whatever its name or order.
-- Plaid can set, change or clear a line's value on any dimension when it creates or updates an OPEX or CAPEX line. Ask for example: "Set the Nature de coût of OPX-12 to Licences et maintenance". Plaid finds the value by its name within that dimension and shows the dimension and the value, before and after, in the preview. Nothing changes until you approve it.
+- Plaid's search and the `@` mentions in the chat find an OPEX or CAPEX line by the name of a value it holds on a dimension shown for its type, with or without accents.
+- Plaid can set, change or clear a line's value on any dimension when it creates or updates an OPEX or CAPEX line. Ask for example: "Set the Nature de coût of BL-12 to Licences et maintenance". Plaid finds the value by its name within that dimension and shows the dimension and the value, before and after, in the preview. Nothing changes until you approve it.
 - Plaid follows the same rules as the app: only enabled dimensions used for the line's type, only enabled values used for the line's type, and a line keeps a value it already has.
+- When Plaid creates a line, it needs a value on each required dimension of the line's type. For a CAPEX line, this includes **PP&E type**, **Investment type** and **Priority**.
+- Plaid knows which dimensions are required. A new line needs a value on each of them, and Plaid cannot clear the value of a required dimension. Plaid refuses a request that breaks the rule and says why, for example "Nature is required for spend item creation."
 - Plaid can also create a value in the dimension you name. Without a dimension, the value goes into the default dimension.
 
 ---
@@ -263,9 +347,9 @@ The seven budget reports can also be narrowed to one value of a dimension, with 
 
 Load or update the values of every dimension from one file. Dimensions are created on the page.
 
-To set values on budget lines from a file, use the OPEX and CAPEX budget files. In those files, one `analytics:<code>` column holds each dimension, the default dimension included. See [Load a budget from a spreadsheet](budget-file.md).
+To set values on budget lines from a file, use the budget file. In it, one `analytics:<code>` column holds each enabled dimension, the default dimension included. See [Load a budget from a spreadsheet](budget-file.md).
 
-**Export**: click **Export CSV**, then **Export data**. The file lists the values of every dimension, enabled or disabled, dimension by dimension. For an empty file with the headers only, use **Download template** in the import dialog.
+**Export**: click **Export CSV**, then **Export data**. The file lists the values of every dimension, enabled or disabled, dimension by dimension, each dimension's values in its order. The file has no order column. For an empty file with the headers only, use **Download template** in the import dialog.
 
 **CSV structure**:
 
@@ -279,7 +363,6 @@ To set values on budget lines from a file, use the OPEX and CAPEX budget files. 
 | `description` | Free text |
 | `status` | `enabled` or `disabled`. Empty means `enabled` for a new value and keeps the stored status on an update |
 | `disabled_at` | The end of validity: a date (`2026-12-31`) or a full date and time. Empty if there is no end. On an update, a blank `status` and a blank `disabled_at` keep the stored values. `enabled` with an empty date clears the end of validity. `disabled` with an empty date keeps a date that has already passed, and otherwise ends the value today |
-
 | `applies_to` | The **Used for** setting, always the last column. `opex`, `capex`, or empty for **OPEX and CAPEX**. A file without this column leaves the settings as they are. An empty cell sets **OPEX and CAPEX** |
 
 Only `name` is a required column. When the `description`, `status`, `disabled_at` or `applies_to` column is missing, existing values keep what is stored for it, and new values are enabled with no description. A file without `axis_code` puts every row in the default dimension.
@@ -298,6 +381,7 @@ Only `name` is a required column. When the `description`, `status`, `disabled_at
 - **Unchanged rows**: a row identical to the stored value changes nothing. Exporting and importing the same file reports every row as unchanged.
 - **Disabled dimensions**: a row of a disabled dimension is accepted when it changes nothing, so an exported file imports as it is. A row that would create or change a value there is refused.
 - **Values missing from the file** are left as they are. The import never deletes.
+- **Order**: existing values keep their place. New values go last in their dimension, in the order of the file. To change the order, use **Reorder** on the page.
 
 **Common errors**:
 
@@ -318,10 +402,10 @@ Only `name` is a required column. When the `description`, `status`, `disabled_at
 | Level | What it allows |
 |---|---|
 | `analytics:reader` | View the Analytics dimensions page and open dimensions and values |
-| `analytics:member` | Create dimensions and values, and edit them |
+| `analytics:member` | Create dimensions and values, edit them and set the order of dimensions and values |
 | `analytics:admin` | Everything above, plus CSV import and export, and deletion |
 
-The built-in Budget Administrator role is admin, Budget Member is member and Budget Reader is reader. Anyone who can read OPEX, CAPEX or reporting sees the dimensions and their values on budget lines, in the lists and in the reports, without access to this page.
+The built-in Budget Administrator role is admin, Budget Member is member and Budget Reader is reader. Anyone who can read budget lines (Budget) or reports sees the dimensions and their values on budget lines, in the lists and in the reports, without access to this page.
 
 ---
 
@@ -351,7 +435,7 @@ Start with 5 to 10 per dimension. More than 20 usually means the dimension tries
 **Departments** are formal organizational units with precise allocation drivers. **Cost centers** say who owns and answers for the spend. **Analytics dimensions** are free, optional classifications for reporting, with no allocation or ownership attached.
 
 **Why do some lines show "Unassigned"?**
-In the Analytics dimensions report, lines without a value on the chosen dimension appear as "Unassigned". This is expected: values are optional.
+In the Analytics dimensions report, lines without a value on the chosen dimension appear as "Unassigned". This is expected: values are optional, unless the dimension is required. Even then, lines created before the setting was turned on can lack a value. The dimension's workspace counts them and links to them.
 
 **What happens to the lines when I rename a value or a dimension?**
 Nothing changes on the lines. Lists and reports show the new name at once.

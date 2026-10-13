@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useModuleItemNav, ModuleItemNavParams, ModuleItemNavResult } from './useModuleItemNav';
 import { useAnalyticsAxes } from './useAnalyticsAxes';
+import { ANALYTICS_VALUE_ORDER_SORT } from '../services/analytics';
 
 export type AnalyticsNavParams = ModuleItemNavParams;
 
@@ -12,7 +13,8 @@ export function useAnalyticsNav(params: AnalyticsNavParams): ModuleItemNavResult
   return useModuleItemNav(params, {
     endpoint: '/analytics-categories/ids',
     queryKey: 'analytics-ids',
-    defaultSort: 'name:ASC',
+    // The values list's default: the dimension's order.
+    defaultSort: ANALYTICS_VALUE_ORDER_SORT,
   });
 }
 

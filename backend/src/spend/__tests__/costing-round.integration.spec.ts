@@ -5,9 +5,10 @@ import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { REQUIRE_LEVEL_KEY } from '../../auth/require-level.decorator';
 import { SpendVersionsController } from '../spend-versions.controller';
-import { CapexVersionsController } from '../../capex/capex-versions.controller';
+import { CapexVersionsController } from '../capex-versions.controller';
 import { DISABLED_CALENDAR_WARNING } from '../round-inputs.util';
 import {
+  AUDIT_LABELS,
   amountsService,
   assert,
   budgetOperations,
@@ -101,7 +102,8 @@ function linesPayload(lines: unknown[], overrides: Record<string, unknown> = {})
 }
 
 const roundAudits = (audit: ReturnType<typeof captureAudit>) => audit.entries.filter((e) => e.table.endsWith('_round_inputs'));
-const amountsTable = (kind: Kind) => TABLES[kind].amounts;
+/** The audit label of the months of a line of `kind` (a CAPEX line keeps the CAPEX names in the audit log). */
+const amountsTable = (kind: Kind) => AUDIT_LABELS[kind].amounts;
 const shape = (lines: Array<Record<string, any>>) => lines.map((l) => [
   l.sort, l.label, l.quantity_unit, l.quantity, l.unit_price, l.price_basis, l.frequency, l.days_per_month, l.period_start, l.period_end,
 ]);
@@ -815,8 +817,8 @@ async function testLinesWriteLocksItsCalendar() {
 
 /** The lines go through bulk-upsert (member); no preview route is left. */
 async function testRoutes() {
-  assert.deepEqual(Reflect.getMetadata(REQUIRE_LEVEL_KEY, SpendVersionsController.prototype.upsertAmounts), { resource: 'opex', level: 'member' });
-  assert.deepEqual(Reflect.getMetadata(REQUIRE_LEVEL_KEY, CapexVersionsController.prototype.upsertAmounts), { resource: 'capex', level: 'member' });
+  assert.deepEqual(Reflect.getMetadata(REQUIRE_LEVEL_KEY, SpendVersionsController.prototype.upsertAmounts), { resource: 'budget', level: 'member' });
+  assert.deepEqual(Reflect.getMetadata(REQUIRE_LEVEL_KEY, CapexVersionsController.prototype.upsertAmounts), { resource: 'budget', level: 'member' });
   for (const controller of [SpendVersionsController, CapexVersionsController]) {
     const paths = Object.getOwnPropertyNames(controller.prototype).map((name) => Reflect.getMetadata('path', (controller.prototype as any)[name]));
     assert.equal(paths.some((path) => typeof path === 'string' && path.includes('preview')), false, `${controller.name}: no preview route`);

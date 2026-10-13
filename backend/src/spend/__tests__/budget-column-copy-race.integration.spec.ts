@@ -1,6 +1,6 @@
 import { copyBudgetColumn } from '../budget-column-operations';
 import { SpendVersionsService } from '../spend-versions.service';
-import { CapexVersionsService } from '../../capex/capex-versions.service';
+import { CapexVersionsService } from '../spend-versions.service';
 import { amountsService, captureAudit, Kind, noFreeze, repeat, seedLine, TABLES } from './round-inputs.fixtures';
 import { assert, assertSucceeded, progress, runRaceSpecs, settle, sql, withRace } from './race-harness';
 
@@ -39,7 +39,7 @@ const copyOperation = {
 };
 
 async function destinationMonths(race: { read: (text: string, params?: unknown[]) => Promise<any[]> }, kind: Kind, itemId: string) {
-  const fk = kind === 'opex' ? 'spend_item_id' : 'capex_item_id';
+  const fk = 'spend_item_id'; // the versions of both natures, since lot Z1
   const [version] = await race.read(`SELECT id FROM ${TABLES[kind].versions} WHERE ${fk} = $1 AND budget_year = $2`, [itemId, DESTINATION]);
   assert.ok(version, `${kind}: the destination version exists`);
   return race.read(

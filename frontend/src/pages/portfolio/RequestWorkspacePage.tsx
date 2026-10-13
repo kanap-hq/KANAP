@@ -1281,7 +1281,7 @@ export default function RequestWorkspacePage() {
         onClose={() => setDeleteConfirmOpen(false)}
         onSave={() => void handleDelete()}
         saveLabel={t('common:buttons.delete')}
-        saveColor="error"
+        saveVariant="action-danger"
         cancelLabel={t('common:buttons.cancel')}
       >
         <Typography sx={{ fontSize: 13.5, color: 'kanap.text.primary' }}>

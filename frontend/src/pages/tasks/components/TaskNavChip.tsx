@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, IconButton } from '@mui/material';
 import type { Theme } from '@mui/material/styles';
 import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
@@ -14,6 +15,7 @@ interface TaskNavChipProps {
 }
 
 export default function TaskNavChip({ currentIndex, totalCount, onPrev, onNext, hasPrev, hasNext }: TaskNavChipProps) {
+  const { t } = useTranslation('common');
   if (totalCount <= 0) return null;
 
   const navButtonSx = (theme: Theme) => ({
@@ -65,7 +67,7 @@ export default function TaskNavChip({ currentIndex, totalCount, onPrev, onNext, 
           userSelect: 'none',
         })}
       >
-        {currentIndex} of {totalCount}
+        {t('labels.positionOf', { index: currentIndex, total: totalCount })}
       </Box>
       <IconButton
         onClick={onNext}

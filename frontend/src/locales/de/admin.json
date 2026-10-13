@@ -221,6 +221,7 @@
       "password_reset_completed": "Passwort zurückgesetzt",
       "password_reset_requested": "Zurücksetzen des Passworts angefordert",
       "refresh_denied": "Sitzungsverlängerung abgelehnt",
+      "restored": "Wiederherstellen",
       "sso_login": "Anmeldung mit Microsoft",
       "sso_login_failed": "Fehlgeschlagene Anmeldung mit Microsoft",
       "update": "Aktualisieren"
@@ -266,6 +267,7 @@
       "applications": "Anwendungen",
       "assets": "Assets",
       "auditLog": "Audit-Protokoll",
+      "budgetFile": "Budgetdatei",
       "businessProcesses": "Geschäftsprozesse",
       "capexBudgetFile": "CAPEX-Budgetdatei",
       "chartOfAccounts": "Kontenplan",
@@ -273,6 +275,7 @@
       "companies": "Unternehmen",
       "contacts": "Kontakte",
       "contracts": "Verträge",
+      "contractComplianceRegister": "Konformitätsregister der Verträge",
       "costCenters": "Kostenstellen",
       "departments": "Abteilungen",
       "document": "Dokument",
@@ -563,55 +566,6 @@
     "unsavedNavigate": "Sie haben ungespeicherte Änderungen. Vor dem Navigieren speichern?",
     "unsavedSwitchTab": "Sie haben ungespeicherte Änderungen. Vor dem Wechsel der Registerkarte speichern?"
   },
-  "landing": {
-    "cards": {
-      "accounts": {
-        "description": "Konten verwalten.",
-        "title": "Konten"
-      },
-      "auditLogs": {
-        "description": "Audit-Protokoll-Aktivitäten überprüfen.",
-        "title": "Audit-Protokoll"
-      },
-      "billing": {
-        "description": "Abrechnung und Abonnements verwalten.",
-        "title": "Abrechnung"
-      },
-      "companies": {
-        "description": "Unternehmen verwalten.",
-        "title": "Unternehmen"
-      },
-      "departments": {
-        "description": "Abteilungen verwalten.",
-        "title": "Abteilungen"
-      },
-      "opsDashboard": {
-        "description": "Plattform-Betriebsmetriken anzeigen.",
-        "title": "Betriebs-Dashboard"
-      },
-      "platformAi": {
-        "description": "Manage the platform-wide built-in AI provider.",
-        "title": "Platform AI"
-      },
-      "roles": {
-        "description": "Rollen und Berechtigungen verwalten.",
-        "title": "Rollen"
-      },
-      "suppliers": {
-        "description": "Lieferanten verwalten.",
-        "title": "Lieferanten"
-      },
-      "tenants": {
-        "description": "Mandanten verwalten.",
-        "title": "Mandanten"
-      },
-      "users": {
-        "description": "Benutzer verwalten.",
-        "title": "Benutzer"
-      }
-    },
-    "title": "Administration"
-  },
   "platformAi": {
     "actions": {
       "save": "Save",
@@ -850,9 +804,9 @@
       "analytics": "Analytik",
       "applications": "Anwendungen",
       "billing": "Abrechnung",
+      "budget": "Budget",
       "budget_ops": "Budget-Operationen",
       "business_processes": "Geschäftsprozesse",
-      "capex": "Capex",
       "companies": "Unternehmen",
       "contacts": "Kontakte",
       "contracts": "Verträge",
@@ -862,7 +816,6 @@
       "infrastructure": "Infrastruktur",
       "knowledge": "Wissensdatenbank",
       "locations": "Standorte",
-      "opex": "Opex",
       "portfolio_planning": "Portfolioplanung",
       "portfolio_projects": "Portfolioprojekte",
       "portfolio_reports": "Portfolioberichte",

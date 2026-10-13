@@ -31,7 +31,7 @@ export async function seedTenant(runner: QueryRunner, tag: string): Promise<stri
 
 let itemNumber = 910_000;
 
-/** One OPEX or CAPEX line with a version for `year`, written directly. */
+/** One OPEX or CAPEX line with a version for `year`, written directly (both natures live in spend_items). */
 export async function seedLine(runner: QueryRunner, kind: 'opex' | 'capex', tenantId: string, year = 2026) {
   itemNumber += 1;
   const itemId = randomUUID();
@@ -49,12 +49,12 @@ export async function seedLine(runner: QueryRunner, kind: 'opex' | 'capex', tena
     );
   } else {
     await runner.query(
-      `INSERT INTO capex_items (id, tenant_id, description, ppe_type, investment_type, priority, currency, effective_start, item_number)
-       VALUES ($1, $2, 'Calendar test line', 'hardware', 'replacement', 'medium', 'EUR', '2020-01-01', $3)`,
+      `INSERT INTO spend_items (id, tenant_id, nature, product_name, ppe_type, investment_type, priority, currency, effective_start, item_number, legacy_number)
+       VALUES ($1, $2, 'capex', 'Calendar test line', 'hardware', 'replacement', 'medium', 'EUR', '2020-01-01', $3::int, 'CPX-' || $3::int)`,
       [itemId, tenantId, itemNumber],
     );
     await runner.query(
-      `INSERT INTO capex_versions (id, tenant_id, capex_item_id, version_name, input_grain, as_of_date, budget_year, allocation_method)
+      `INSERT INTO spend_versions (id, tenant_id, spend_item_id, version_name, input_grain, as_of_date, budget_year, allocation_method)
        VALUES ($1, $2, $3, $4, 'monthly', $5, $6, 'default')`,
       [versionId, tenantId, itemId, `Y${year}`, `${year}-01-01`, year],
     );
@@ -76,15 +76,14 @@ export async function seedCalendarRound(
   measure: string,
   year = 2026,
 ) {
-  const rounds = kind === 'opex' ? 'spend_round_inputs' : 'capex_round_inputs';
-  const lines = kind === 'opex' ? 'spend_round_input_lines' : 'capex_round_input_lines';
+  // Both natures share the round tables since lot Z1: `kind` names the line's nature only.
   const [round] = await runner.query(
-    `INSERT INTO ${rounds} (tenant_id, version_id, measure, period_start, period_end, method, fte)
+    `INSERT INTO spend_round_inputs (tenant_id, version_id, measure, period_start, period_end, method, fte)
      VALUES ($1, $2, $3, $4, $5, 'computed', 1) RETURNING id`,
     [tenantId, versionId, measure, `${year}-01-01`, `${year}-12-31`],
   );
   await runner.query(
-    `INSERT INTO ${lines}
+    `INSERT INTO spend_round_input_lines
        (tenant_id, round_input_id, sort, quantity_unit, quantity, unit_price, price_basis, frequency, working_day_profile_id, period_start, period_end)
      VALUES ($1, $2, 1, 'people', 1, 400, 'per_day', 'per_month', $3, $4, $5)`,
     [tenantId, round.id, calendarId, `${year}-01-01`, `${year}-12-31`],

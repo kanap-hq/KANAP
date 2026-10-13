@@ -1,6 +1,6 @@
 # Contracts
 
-Contracts document your vendor agreements -- software licenses, maintenance contracts, SaaS subscriptions, and service agreements. Track key dates, costs, renewal terms, and link contracts to your OPEX and CAPEX items for complete cost visibility.
+Contracts document your vendor agreements -- software licenses, maintenance contracts, SaaS subscriptions, and service agreements. Track key dates, costs, renewal terms, and link contracts to your OPEX and CAPEX lines for complete cost visibility.
 
 ## Getting started
 
@@ -43,7 +43,7 @@ The Contracts grid provides an overview of all your vendor agreements. Each row 
 - **Yearly amount**: Annual contract value (formatted with space separators)
 - **Curr**: Currency code
 - **Billing**: Billing frequency (Monthly, Quarterly, Annual, Other)
-- **Linked OPEX**: Number of linked OPEX items (click to open workspace)
+- **Linked OPEX**: Number of linked OPEX lines (click to open workspace)
 - **Status**: **Enabled** or **Disabled**, read from the end of validity
 
 **Additional columns** (via column chooser):
@@ -125,13 +125,13 @@ The Relations tab links contracts to other entities in your registry.
 
 **Available links**:
 
-- **OPEX items**: Recurring costs associated with this contract -- use the searchable multi-select to find and link items by product name
-- **CAPEX items**: Capital expenditure items linked to this contract -- same searchable multi-select interface
+- **OPEX lines**: Recurring costs associated with this contract -- use the searchable multi-select to find and link lines by product name
+- **CAPEX lines**: Capital expenditure lines linked to this contract -- same searchable multi-select interface
 - **Contacts**: People associated with this contract, each with a role (Commercial, Technical, Support, or Other). Contacts inherited from the supplier are shown with a filled badge; manually added ones appear with an outlined badge. Click a contact row to open their profile.
 - **Relevant websites**: Links to external documents such as contract PDFs or vendor portals. Each link has a description and a URL.
 - **Attachments**: Upload files by drag-and-drop or using the file picker. Click an attachment chip to download it; click the delete icon to remove it.
 
-**Tip**: Linking OPEX and CAPEX items to contracts gives you complete cost traceability -- from budget line items to vendor agreements.
+**Tip**: Linking OPEX and CAPEX lines to contracts gives you complete cost traceability -- from budget lines to vendor agreements.
 
 ---
 

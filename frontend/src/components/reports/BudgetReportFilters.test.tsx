@@ -93,7 +93,7 @@ const NODES: CostCenterNode[] = [
 ];
 
 function axis(id: string, patch: Partial<AnalyticsAxis>): AnalyticsAxis {
-  return { id, code: id, name: null, description: null, sort_order: 0, is_default: false, applies_to: null, status: 'enabled', disabled_at: null, ...patch };
+  return { id, code: id, name: null, description: null, sort_order: 0, is_default: false, applies_to: null, required: false, status: 'enabled', disabled_at: null, ...patch };
 }
 
 // The default dimension has no name of its own; Activity is enabled but no line holds a value on it.
@@ -182,7 +182,7 @@ describe('parseAnalyticsParam', () => {
 
 const seen = vi.hoisted(() => ({ search: '', kept: [] as string[], navigation: '' }));
 /** The report's line type. */
-const report = vi.hoisted(() => ({ scope: 'opex' as 'opex' | 'capex' }));
+const report = vi.hoisted(() => ({ scope: 'opex' as 'opex' | 'capex' | 'all' }));
 
 /** The lines the server holds: the bar's options come from them, and the picks keep some of them. */
 const server = vi.hoisted(() => ({ rows: [] as unknown[] }));
@@ -416,6 +416,22 @@ describe('BudgetReportFilters dimensions', () => {
     expect(within(listbox).getAllByRole('option').map((o) => o.textContent)).toEqual(['All', 'Hardware', 'Software', 'No value']);
   });
 
+  it('offers the values in the dimension order, a value the order does not list last', async () => {
+    // Nature's order lists Software first; Hardware is not in it (a value the list could not return).
+    get.mockImplementation(async (url: string, config?: { params?: Record<string, unknown> }) => {
+      if (url !== '/analytics-categories') return { data: {} };
+      const items = config?.params?.axis_id === 'ax-nat' ? [{ id: 'n-sw', name: 'Software' }] : [];
+      return { data: { items, total: items.length } };
+    });
+    await renderBar('/report', ROWS.filter((row) => row.id !== 'e'));
+    expect(get).toHaveBeenCalledWith('/analytics-categories', expect.objectContaining({
+      params: expect.objectContaining({ axis_id: 'ax-nat', sort: 'sort_order:ASC', includeDisabled: '1' }),
+    }));
+    fireEvent.mouseDown(dimensionSelect('Nature'));
+    const listbox = screen.getByRole('listbox');
+    expect(within(listbox).getAllByRole('option').map((o) => o.textContent)).toEqual(['All', 'Software', 'Hardware', 'No value']);
+  });
+
   it('shows a dimension the address names although no line holds a value on it', async () => {
     await renderBar('/report?analytics=ax-idle:none');
     expect(dimensionSelects()).toEqual(['Analytics dimension', 'Nature', 'Activity']);
@@ -535,7 +551,7 @@ describe('BudgetReportFilters dimensions', () => {
 
 describe('BudgetReportFilters items with FTE', () => {
   const Y = new Date().getFullYear();
-  const fteSelect = () => screen.queryByRole('combobox', { name: 'Items' });
+  const fteSelect = () => screen.queryByRole('combobox', { name: 'Lines' });
   // x and z declare FTE (z in last year only); y declares none.
   const FTE_ROWS: Row[] = [
     { id: 'x', versions: { y: { year: Y, fte: { budget: 1.5 } } } },
@@ -546,7 +562,7 @@ describe('BudgetReportFilters items with FTE', () => {
   it('shows once a line of the window declares FTE, and stays hidden otherwise', async () => {
     treeState.nodes = [];
     const view = await renderBar('/report', FTE_ROWS);
-    expect(fteSelect()?.textContent).toBe('All items');
+    expect(fteSelect()?.textContent).toBe('All lines');
     expect(seen.kept).toEqual(['x', 'y', 'z']);
     view.unmount();
 
@@ -558,12 +574,12 @@ describe('BudgetReportFilters items with FTE', () => {
   it('reads the address, even when no line declares FTE, and keeps the lines that declare some', async () => {
     treeState.nodes = [];
     const view = await renderBar('/report?fte=with', FTE_ROWS);
-    expect(fteSelect()?.textContent).toBe('Items with FTE');
+    expect(fteSelect()?.textContent).toBe('Lines with FTE');
     expect(seen.kept).toEqual(['x', 'z']);
     view.unmount();
 
     await renderBar('/report?fte=with', [{ id: 'y' }]);
-    expect(fteSelect()?.textContent).toBe('Items with FTE');
+    expect(fteSelect()?.textContent).toBe('Lines with FTE');
     expect(seen.kept).toEqual([]);
   });
 
@@ -571,16 +587,28 @@ describe('BudgetReportFilters items with FTE', () => {
     await renderBar('/report?scope=capex&runBuild=none', FTE_ROWS);
     fireEvent.mouseDown(fteSelect() as HTMLElement);
     const listbox = screen.getByRole('listbox');
-    expect(within(listbox).getAllByRole('option').map((o) => o.textContent)).toEqual(['All items', 'Items with FTE']);
-    fireEvent.click(within(listbox).getByRole('option', { name: 'Items with FTE' }));
+    expect(within(listbox).getAllByRole('option').map((o) => o.textContent)).toEqual(['All lines', 'Lines with FTE']);
+    fireEvent.click(within(listbox).getByRole('option', { name: 'Lines with FTE' }));
     expect(new URLSearchParams(seen.search).get('fte')).toBe('with');
     expect(new URLSearchParams(seen.search).get('scope')).toBe('capex');
     expect(seen.navigation).toBe('REPLACE');
     expect(seen.kept).toEqual(['x', 'z']);
 
     fireEvent.mouseDown(fteSelect() as HTMLElement);
-    fireEvent.click(within(screen.getByRole('listbox')).getByRole('option', { name: 'All items' }));
+    fireEvent.click(within(screen.getByRole('listbox')).getByRole('option', { name: 'All lines' }));
     expect(new URLSearchParams(seen.search).has('fte')).toBe(false);
     expect(seen.kept).toEqual(['x', 'y', 'z']);
   });
+});
+
+
+it('All offers dimensions for both natures and keeps their picks on the unified endpoint', async () => {
+  report.scope = 'all';
+  axesState.list = [AXES[1], { ...AXES[0], applies_to: 'opex' }, { ...AXES[3], applies_to: 'capex' }];
+  const rows = [...ROWS, { id: 'cap', ...values({ 'ax-idle': ['v-project', 'Project'] }) }];
+  await renderBar('/report?analytics=ax-idle:v-project', rows);
+  expect(dimensionSelects()).toEqual(['Analytics dimension', 'Nature', 'Activity']);
+  expect(dimensionSelect('Activity').textContent).toBe('Project');
+  expect(seen.kept).toEqual(['cap']);
+  expect(post.mock.calls.every(([url]) => url === '/budget-lines/summary/aggregate')).toBe(true);
 });

@@ -644,9 +644,9 @@ export class TasksService {
       FROM tasks t
       LEFT JOIN users u ON t.assignee_user_id = u.id AND u.tenant_id = t.tenant_id
       LEFT JOIN users uc ON t.creator_id = uc.id AND uc.tenant_id = t.tenant_id
-      LEFT JOIN spend_items si ON (t.related_object_type = 'spend_item' AND t.related_object_id = si.id AND si.tenant_id = t.tenant_id)
+      LEFT JOIN spend_items si ON (t.related_object_type = 'spend_item' AND t.related_object_id = si.id AND si.tenant_id = t.tenant_id AND si.nature = 'opex')
       LEFT JOIN contracts c ON (t.related_object_type = 'contract' AND t.related_object_id = c.id AND c.tenant_id = t.tenant_id)
-      LEFT JOIN capex_items ci ON (t.related_object_type = 'capex_item' AND t.related_object_id = ci.id AND ci.tenant_id = t.tenant_id)
+      LEFT JOIN spend_items ci ON (t.related_object_type = 'capex_item' AND t.related_object_id = ci.id AND ci.tenant_id = t.tenant_id AND ci.nature = 'capex')
       LEFT JOIN incidents inc ON (t.related_object_type = 'incident' AND t.related_object_id = inc.id AND inc.tenant_id = t.tenant_id)
       LEFT JOIN portfolio_projects pp ON (t.related_object_type = 'project' AND t.related_object_id = pp.id AND pp.tenant_id = t.tenant_id)
       LEFT JOIN portfolio_requests pr_origin ON pr_origin.origin_task_id = t.id AND pr_origin.tenant_id = t.tenant_id
@@ -712,7 +712,7 @@ export class TasksService {
           WHEN t.related_object_type IS NULL THEN NULL
           WHEN t.related_object_type = 'spend_item' THEN si.product_name
           WHEN t.related_object_type = 'contract' THEN c.name
-          WHEN t.related_object_type = 'capex_item' THEN ci.description
+          WHEN t.related_object_type = 'capex_item' THEN ci.product_name
           WHEN t.related_object_type = 'incident' THEN ${incidentRelatedLabelSql('inc')}
           WHEN t.related_object_type = 'project' THEN pp.name
           ELSE ''
@@ -770,9 +770,9 @@ export class TasksService {
       FROM tasks t
       LEFT JOIN users u ON t.assignee_user_id = u.id AND u.tenant_id = t.tenant_id
       LEFT JOIN users uc ON t.creator_id = uc.id AND uc.tenant_id = t.tenant_id
-      LEFT JOIN spend_items si ON (t.related_object_type = 'spend_item' AND t.related_object_id = si.id AND si.tenant_id = t.tenant_id)
+      LEFT JOIN spend_items si ON (t.related_object_type = 'spend_item' AND t.related_object_id = si.id AND si.tenant_id = t.tenant_id AND si.nature = 'opex')
       LEFT JOIN contracts c ON (t.related_object_type = 'contract' AND t.related_object_id = c.id AND c.tenant_id = t.tenant_id)
-      LEFT JOIN capex_items ci ON (t.related_object_type = 'capex_item' AND t.related_object_id = ci.id AND ci.tenant_id = t.tenant_id)
+      LEFT JOIN spend_items ci ON (t.related_object_type = 'capex_item' AND t.related_object_id = ci.id AND ci.tenant_id = t.tenant_id AND ci.nature = 'capex')
       LEFT JOIN incidents inc ON (t.related_object_type = 'incident' AND t.related_object_id = inc.id AND inc.tenant_id = t.tenant_id)
       LEFT JOIN portfolio_projects pp ON (t.related_object_type = 'project' AND t.related_object_id = pp.id AND pp.tenant_id = t.tenant_id)
       LEFT JOIN portfolio_requests pr_origin ON pr_origin.origin_task_id = t.id AND pr_origin.tenant_id = t.tenant_id
@@ -817,7 +817,7 @@ export class TasksService {
           WHEN t.related_object_type IS NULL THEN NULL
           WHEN t.related_object_type = 'spend_item' THEN si.product_name
           WHEN t.related_object_type = 'contract' THEN c.name
-          WHEN t.related_object_type = 'capex_item' THEN ci.description
+          WHEN t.related_object_type = 'capex_item' THEN ci.product_name
           WHEN t.related_object_type = 'incident' THEN ${incidentRelatedLabelSql('inc')}
           WHEN t.related_object_type = 'project' THEN pp.name
           ELSE ''
@@ -842,9 +842,9 @@ export class TasksService {
       FROM tasks t
       LEFT JOIN users u ON t.assignee_user_id = u.id AND u.tenant_id = t.tenant_id
       LEFT JOIN users uc ON t.creator_id = uc.id AND uc.tenant_id = t.tenant_id
-      LEFT JOIN spend_items si ON (t.related_object_type = 'spend_item' AND t.related_object_id = si.id AND si.tenant_id = t.tenant_id)
+      LEFT JOIN spend_items si ON (t.related_object_type = 'spend_item' AND t.related_object_id = si.id AND si.tenant_id = t.tenant_id AND si.nature = 'opex')
       LEFT JOIN contracts c ON (t.related_object_type = 'contract' AND t.related_object_id = c.id AND c.tenant_id = t.tenant_id)
-      LEFT JOIN capex_items ci ON (t.related_object_type = 'capex_item' AND t.related_object_id = ci.id AND ci.tenant_id = t.tenant_id)
+      LEFT JOIN spend_items ci ON (t.related_object_type = 'capex_item' AND t.related_object_id = ci.id AND ci.tenant_id = t.tenant_id AND ci.nature = 'capex')
       LEFT JOIN incidents inc ON (t.related_object_type = 'incident' AND t.related_object_id = inc.id AND inc.tenant_id = t.tenant_id)
       LEFT JOIN portfolio_projects pp ON (t.related_object_type = 'project' AND t.related_object_id = pp.id AND pp.tenant_id = t.tenant_id)
       LEFT JOIN portfolio_project_phases phase ON t.phase_id = phase.id AND phase.tenant_id = t.tenant_id
@@ -888,9 +888,9 @@ export class TasksService {
       FROM tasks t
       LEFT JOIN users u ON t.assignee_user_id = u.id AND u.tenant_id = t.tenant_id
       LEFT JOIN users uc ON t.creator_id = uc.id AND uc.tenant_id = t.tenant_id
-      LEFT JOIN spend_items si ON (t.related_object_type = 'spend_item' AND t.related_object_id = si.id AND si.tenant_id = t.tenant_id)
+      LEFT JOIN spend_items si ON (t.related_object_type = 'spend_item' AND t.related_object_id = si.id AND si.tenant_id = t.tenant_id AND si.nature = 'opex')
       LEFT JOIN contracts c ON (t.related_object_type = 'contract' AND t.related_object_id = c.id AND c.tenant_id = t.tenant_id)
-      LEFT JOIN capex_items ci ON (t.related_object_type = 'capex_item' AND t.related_object_id = ci.id AND ci.tenant_id = t.tenant_id)
+      LEFT JOIN spend_items ci ON (t.related_object_type = 'capex_item' AND t.related_object_id = ci.id AND ci.tenant_id = t.tenant_id AND ci.nature = 'capex')
       LEFT JOIN incidents inc ON (t.related_object_type = 'incident' AND t.related_object_id = inc.id AND inc.tenant_id = t.tenant_id)
       LEFT JOIN portfolio_projects pp ON (t.related_object_type = 'project' AND t.related_object_id = pp.id AND pp.tenant_id = t.tenant_id)
       LEFT JOIN portfolio_project_phases phase ON t.phase_id = phase.id AND phase.tenant_id = t.tenant_id
@@ -949,9 +949,9 @@ export class TasksService {
             JOIN ${relation.target} target ON target.id = rel.${relation.column} AND target.tenant_id = rel.tenant_id
             LEFT JOIN users u ON t.assignee_user_id = u.id AND u.tenant_id = t.tenant_id
             LEFT JOIN users uc ON t.creator_id = uc.id AND uc.tenant_id = t.tenant_id
-            LEFT JOIN spend_items si ON (t.related_object_type = 'spend_item' AND t.related_object_id = si.id AND si.tenant_id = t.tenant_id)
+            LEFT JOIN spend_items si ON (t.related_object_type = 'spend_item' AND t.related_object_id = si.id AND si.tenant_id = t.tenant_id AND si.nature = 'opex')
             LEFT JOIN contracts c ON (t.related_object_type = 'contract' AND t.related_object_id = c.id AND c.tenant_id = t.tenant_id)
-            LEFT JOIN capex_items ci ON (t.related_object_type = 'capex_item' AND t.related_object_id = ci.id AND ci.tenant_id = t.tenant_id)
+            LEFT JOIN spend_items ci ON (t.related_object_type = 'capex_item' AND t.related_object_id = ci.id AND ci.tenant_id = t.tenant_id AND ci.nature = 'capex')
             LEFT JOIN incidents inc ON (t.related_object_type = 'incident' AND t.related_object_id = inc.id AND inc.tenant_id = t.tenant_id)
             LEFT JOIN portfolio_projects pp ON (t.related_object_type = 'project' AND t.related_object_id = pp.id AND pp.tenant_id = t.tenant_id)
             LEFT JOIN portfolio_project_phases phase ON t.phase_id = phase.id AND phase.tenant_id = t.tenant_id
@@ -978,9 +978,9 @@ export class TasksService {
             FROM tasks t
             LEFT JOIN users u ON t.assignee_user_id = u.id AND u.tenant_id = t.tenant_id
             LEFT JOIN users uc ON t.creator_id = uc.id AND uc.tenant_id = t.tenant_id
-            LEFT JOIN spend_items si ON (t.related_object_type = 'spend_item' AND t.related_object_id = si.id AND si.tenant_id = t.tenant_id)
+            LEFT JOIN spend_items si ON (t.related_object_type = 'spend_item' AND t.related_object_id = si.id AND si.tenant_id = t.tenant_id AND si.nature = 'opex')
             LEFT JOIN contracts c ON (t.related_object_type = 'contract' AND t.related_object_id = c.id AND c.tenant_id = t.tenant_id)
-            LEFT JOIN capex_items ci ON (t.related_object_type = 'capex_item' AND t.related_object_id = ci.id AND ci.tenant_id = t.tenant_id)
+            LEFT JOIN spend_items ci ON (t.related_object_type = 'capex_item' AND t.related_object_id = ci.id AND ci.tenant_id = t.tenant_id AND ci.nature = 'capex')
             LEFT JOIN incidents inc ON (t.related_object_type = 'incident' AND t.related_object_id = inc.id AND inc.tenant_id = t.tenant_id)
             LEFT JOIN portfolio_projects pp ON (t.related_object_type = 'project' AND t.related_object_id = pp.id AND pp.tenant_id = t.tenant_id)
             LEFT JOIN portfolio_project_phases phase ON t.phase_id = phase.id AND phase.tenant_id = t.tenant_id
@@ -1007,9 +1007,9 @@ export class TasksService {
         FROM tasks t
         LEFT JOIN users u ON t.assignee_user_id = u.id AND u.tenant_id = t.tenant_id
         LEFT JOIN users uc ON t.creator_id = uc.id AND uc.tenant_id = t.tenant_id
-        LEFT JOIN spend_items si ON (t.related_object_type = 'spend_item' AND t.related_object_id = si.id AND si.tenant_id = t.tenant_id)
+        LEFT JOIN spend_items si ON (t.related_object_type = 'spend_item' AND t.related_object_id = si.id AND si.tenant_id = t.tenant_id AND si.nature = 'opex')
         LEFT JOIN contracts c ON (t.related_object_type = 'contract' AND t.related_object_id = c.id AND c.tenant_id = t.tenant_id)
-        LEFT JOIN capex_items ci ON (t.related_object_type = 'capex_item' AND t.related_object_id = ci.id AND ci.tenant_id = t.tenant_id)
+        LEFT JOIN spend_items ci ON (t.related_object_type = 'capex_item' AND t.related_object_id = ci.id AND ci.tenant_id = t.tenant_id AND ci.nature = 'capex')
         LEFT JOIN incidents inc ON (t.related_object_type = 'incident' AND t.related_object_id = inc.id AND inc.tenant_id = t.tenant_id)
         LEFT JOIN portfolio_projects pp ON (t.related_object_type = 'project' AND t.related_object_id = pp.id AND pp.tenant_id = t.tenant_id)
         LEFT JOIN portfolio_project_phases phase ON t.phase_id = phase.id AND phase.tenant_id = t.tenant_id
@@ -1061,7 +1061,7 @@ export class TasksService {
           WHEN t.related_object_type IS NULL THEN NULL
           WHEN t.related_object_type = 'spend_item' THEN si.product_name
           WHEN t.related_object_type = 'contract' THEN c.name
-          WHEN t.related_object_type = 'capex_item' THEN ci.description
+          WHEN t.related_object_type = 'capex_item' THEN ci.product_name
           WHEN t.related_object_type = 'incident' THEN ${incidentRelatedLabelSql('inc')}
           WHEN t.related_object_type = 'project' THEN pp.name
           ELSE ''
@@ -1116,9 +1116,9 @@ export class TasksService {
       FROM tasks t
       LEFT JOIN users u ON t.assignee_user_id = u.id AND u.tenant_id = t.tenant_id
       LEFT JOIN users uc ON t.creator_id = uc.id AND uc.tenant_id = t.tenant_id
-      LEFT JOIN spend_items si ON (t.related_object_type = 'spend_item' AND t.related_object_id = si.id AND si.tenant_id = t.tenant_id)
+      LEFT JOIN spend_items si ON (t.related_object_type = 'spend_item' AND t.related_object_id = si.id AND si.tenant_id = t.tenant_id AND si.nature = 'opex')
       LEFT JOIN contracts c ON (t.related_object_type = 'contract' AND t.related_object_id = c.id AND c.tenant_id = t.tenant_id)
-      LEFT JOIN capex_items ci ON (t.related_object_type = 'capex_item' AND t.related_object_id = ci.id AND ci.tenant_id = t.tenant_id)
+      LEFT JOIN spend_items ci ON (t.related_object_type = 'capex_item' AND t.related_object_id = ci.id AND ci.tenant_id = t.tenant_id AND ci.nature = 'capex')
       LEFT JOIN incidents inc ON (t.related_object_type = 'incident' AND t.related_object_id = inc.id AND inc.tenant_id = t.tenant_id)
       LEFT JOIN portfolio_projects pp ON (t.related_object_type = 'project' AND t.related_object_id = pp.id AND pp.tenant_id = t.tenant_id)
       LEFT JOIN portfolio_requests pr_origin ON pr_origin.origin_task_id = t.id AND pr_origin.tenant_id = t.tenant_id

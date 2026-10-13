@@ -1,6 +1,6 @@
 # Charts of Accounts and Account Management
 
-Charts of Accounts (CoA) organize your accounting structure by grouping accounts into named sets. Each company can be linked to a CoA, which determines which accounts are available when recording OPEX or CAPEX items.
+Charts of Accounts (CoA) organize your accounting structure by grouping accounts into named sets. Each company can be linked to a CoA, which determines which accounts are available when recording OPEX or CAPEX lines.
 
 ## Why use Charts of Accounts?
 
@@ -22,14 +22,14 @@ Chart of Accounts (FR-2024)
   -> assigned to
 Company (Acme France)
   -> used when recording
-OPEX/CAPEX items -> Account selection (filtered to FR-2024 accounts only)
+OPEX/CAPEX lines -> Account selection (filtered to FR-2024 accounts only)
 ```
 
 **Key points**:
   - One CoA can be assigned to multiple companies
   - Each company has one CoA
   - Accounts belong to one CoA
-  - When you create/edit spend items, the account dropdown is filtered by the company's CoA
+  - When you create/edit OPEX lines, the account dropdown is filtered by the company's CoA
   - Each account says whether it is used for OPEX lines, CAPEX lines or both. See [OPEX or CAPEX accounts](#opex-or-capex-accounts)
 
 ## Where to find it
@@ -281,7 +281,7 @@ Each row has a **⋯** menu with only the actions that apply to that chart. The 
 - **Make country default** / **Stop being country default** (`accounts:manager`): for one-country charts.
 - **Make default for other countries** / **Stop being default for other countries** (`accounts:manager`): for all-countries charts. Making it the default also assigns the chart to companies that have no chart.
 - **Make consolidation chart** / **Stop being consolidation chart** (`accounts:manager`): for any chart. See [Change the consolidation chart](#change-the-consolidation-chart).
-- **Delete** (`accounts:admin`): Delete the chart together with its accounts. If the chart has accounts, a confirmation tells you how many are deleted. If it is the consolidation chart, the confirmation says that group reporting will no longer have a reference chart. Deletion is refused while companies use the chart or OPEX/CAPEX items use its accounts, and the dialog shows the reason.
+- **Delete** (`accounts:admin`): Delete the chart together with its accounts. If the chart has accounts, a confirmation tells you how many are deleted. If it is the consolidation chart, the confirmation says that group reporting will no longer have a reference chart. Deletion is refused while companies use the chart or OPEX/CAPEX lines use its accounts, and the dialog shows the reason.
 
 The roles change as soon as you pick an action. The table updates on the spot.
 
@@ -404,13 +404,13 @@ This dual view lets you satisfy both local compliance requirements and group rep
   1. Create or load Charts of Accounts for your companies
   2. Assign CoAs to companies (in Company Overview tab)
   3. Assign `coa_id` to your legacy accounts (via CSV import with `coa_code` or bulk edit)
-  4. Update existing OPEX/CAPEX items that show "obsolete account" warnings
+  4. Update existing OPEX/CAPEX lines that show "obsolete account" warnings
 
 **Tip**: You don't have to migrate everything at once. Companies without a CoA continue to work with legacy accounts, allowing gradual adoption.
 
 ## Obsolete account warnings
 
-When editing OPEX or CAPEX items, you might see:
+When editing OPEX or CAPEX lines, you might see:
 
 ```
 Obsolete account detected. The selected account does not belong to
@@ -418,16 +418,16 @@ the company's Chart of Accounts. Please update the account.
 ```
 
 **Why this happens**:
-  - The item's account belongs to CoA "A"
-  - The item's company belongs to CoA "B"
+  - The line's account belongs to CoA "A"
+  - The line's company belongs to CoA "B"
   - Mismatch detected
 
 **Common scenarios**:
-  - You migrated a company to a new CoA but haven't updated old spend items yet
+  - You migrated a company to a new CoA but haven't updated old OPEX lines yet
   - An account was manually reassigned to a different CoA
   - You're viewing historical data from before the CoA migration
 
-**How to fix it**: Edit the item and select an account from the company's current Chart of Accounts. The warning will disappear once the account matches the company's CoA.
+**How to fix it**: Edit the line and select an account from the company's current Chart of Accounts. The warning will disappear once the account matches the company's CoA.
 
 ## Status and lifecycle
 
@@ -438,8 +438,8 @@ Accounts use the same lifecycle management as other master data:
   - Switching the account to **Disabled** without a date sets its end of validity to today
   - When the end of validity passes, the status switches to **Disabled** on its own within the hour
   - After the end of validity:
-      - The account no longer appears in selection dropdowns for new items
-      - Historical data remains intact; existing items keep their account assignments
+      - The account no longer appears in selection dropdowns for new lines
+      - Historical data remains intact; existing lines keep their account assignments
       - Reports for years when the account was active still include it
   - The accounts grid defaults to showing **Enabled** accounts only. Use the **Show: All / Enabled / Disabled** toggle to pick **All** and include disabled accounts.
 
@@ -452,7 +452,7 @@ When a workspace (tenant) is deleted by a platform administrator, all tenant-own
 
 Deletion is immediate and irreversible. The tenant record remains for auditability, and its slug is cleared for reuse.
 
-**Tip**: Prefer disabling over deleting. Deletion is only allowed if no OPEX/CAPEX items reference the account.
+**Tip**: Prefer disabling over deleting. Deletion is only allowed if no OPEX/CAPEX lines reference the account.
 
 ## CSV import/export
 
@@ -532,7 +532,7 @@ You have 50 accounts and 5 companies, all set up before Charts of Accounts exist
   3. Add a `coa_code` column (e.g., `US-GAAP`) to all rows
   4. Import the updated CSV (accounts now belong to the CoA)
   5. Assign the CoA to your companies
-  6. Edit any OPEX/CAPEX items showing "obsolete account" warnings
+  6. Edit any OPEX/CAPEX lines showing "obsolete account" warnings
 
 ### Scenario 3: Switching a company to a new CoA
 
@@ -542,8 +542,8 @@ Your UK subsidiary switches from UK GAAP to IFRS.
   1. Create a new CoA: `UK-IFRS` (or load from template)
   2. In the company's Overview tab, change Chart of Accounts to `UK-IFRS`
   3. Going forward, users can only select accounts from `UK-IFRS`
-  4. Existing OPEX/CAPEX items keep their old accounts but show warnings
-  5. Update items as needed (or leave historical data as-is if reporting allows)
+  4. Existing OPEX/CAPEX lines keep their old accounts but show warnings
+  5. Update lines as needed (or leave historical data as-is if reporting allows)
 
 ### Scenario 4: Setting up group consolidation (multi-country)
 
@@ -576,10 +576,10 @@ Your group has subsidiaries in France, UK, and Germany. Each country uses its lo
 A: No. Each account belongs to exactly one CoA (or none for legacy accounts). If you need the same account structure in multiple CoAs, load the template into each one or use CSV export/import with different `coa_code` values.
 
 **Q: What happens if I delete a Chart of Accounts?**
-A: Deletion is blocked if any companies reference it or any OPEX/CAPEX items use its accounts. Reassign companies and update items first, then you can delete the CoA. Deleting a CoA also deletes all accounts within it that aren't referenced elsewhere.
+A: Deletion is blocked if any companies reference it or any OPEX/CAPEX lines use its accounts. Reassign companies and update lines first, then you can delete the CoA. Deleting a CoA also deletes all accounts within it that aren't referenced elsewhere.
 
 **Q: Can I rename account numbers?**
-A: Yes, in the account's workspace. Changing the account number updates all references in OPEX/CAPEX items automatically (the account's UUID remains the same internally).
+A: Yes, in the account's workspace. Changing the account number updates all references in OPEX/CAPEX lines automatically (the account's UUID remains the same internally).
 
 **Q: How do I see which companies use a specific CoA?**
 A: Open **Manage charts** on the Charts of Accounts page and read the **Companies** column of the CoA's row. You can also filter the Companies page by CoA.
@@ -600,7 +600,7 @@ A: No, they're optional. If you only operate in one country or don't need group-
 A: Yes, that's the whole point! Many local accounts across different CoAs can map to the same consolidation account. This is how you aggregate costs from different countries into a single consolidated category.
 
 **Q: What happens if I change a consolidation mapping?**
-A: Existing OPEX/CAPEX items don't store consolidation data directly — they reference the account, which has the consolidation mapping. When you change a mapping, all historical and future items using that account will report under the new consolidation account. Update mappings carefully if you need to preserve historical reporting categories.
+A: Existing OPEX/CAPEX lines don't store consolidation data directly. They reference the account, which has the consolidation mapping. When you change a mapping, all historical and future lines using that account will report under the new consolidation account. Update mappings carefully if you need to preserve historical reporting categories.
 
 **Q: Does the consolidation chart have to be the default for other countries?**
 A: No. The two roles are independent. In the usual setup one IFRS chart holds both, and you can give them to different charts at any time in **Manage charts**.

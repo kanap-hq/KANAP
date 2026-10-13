@@ -295,14 +295,20 @@ async function testDeleteInUse() {
     await expectRefused(runner, /^France 218 is used by 3 OPEX lines and 1 CAPEX line\. Disable it instead\.$/, () => del.delete(fr.id, ctx));
     // Disabling stays possible, and the lines keep it.
     await svc.update(fr.id, { status: 'disabled' }, ctx);
-    const [{ n }] = await runner.query(
-      `SELECT count(*)::int AS n FROM spend_round_input_lines WHERE tenant_id = $1 AND working_day_profile_id = $2`,
-      [tenantId, fr.id],
-    );
+    // Both natures share the round tables since lot Z1: the OPEX lines are those of OPEX items.
+    const opexRoundLines = `SELECT l.id FROM spend_round_input_lines l
+        JOIN spend_round_inputs r ON r.tenant_id = l.tenant_id AND r.id = l.round_input_id
+        JOIN spend_versions v ON v.tenant_id = r.tenant_id AND v.id = r.version_id
+        JOIN spend_items i ON i.tenant_id = v.tenant_id AND i.id = v.spend_item_id
+       WHERE l.tenant_id = $1 AND l.working_day_profile_id = $2 AND i.nature = 'opex'`;
+    const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM (${opexRoundLines}) x`, [tenantId, fr.id]);
     assert.equal(n, 5);
 
     // Only CAPEX left: the sentence names what is there.
-    await runner.query(`DELETE FROM spend_round_input_lines WHERE tenant_id = $1 AND working_day_profile_id = $2`, [tenantId, fr.id]);
+    await runner.query(
+      `DELETE FROM spend_round_input_lines WHERE tenant_id = $1 AND id IN (${opexRoundLines})`,
+      [tenantId, fr.id],
+    );
     await expectRefused(runner, /^France 218 is used by 1 CAPEX line\. Disable it instead\.$/, () => del.delete(fr.id, ctx));
 
     // An unused calendar goes, with an audit row.

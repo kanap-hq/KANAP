@@ -2,10 +2,9 @@
 my-dashboard.md	frontend/src/pages/workspace/WorkspaceDashboardPage.tsx
 my-dashboard.md	frontend/src/pages/workspace/**/*.tsx
 operations-dashboard.md	frontend/src/pages/DashboardPage.tsx
-opex.md	frontend/src/pages/OpexListPage.tsx
-opex.md	frontend/src/pages/opex/**/*.tsx
-capex.md	frontend/src/pages/CapexPage.tsx
-capex.md	frontend/src/pages/capex/**/*.tsx
+operations-dashboard.md	frontend/src/pages/workspace/settings/BudgetDashboardSettingsModal.tsx
+budget-lines.md	frontend/src/pages/budget/**/*.tsx
+budget-lines.md	frontend/src/components/finance/**/*.tsx
 contracts.md	frontend/src/pages/ContractsPage.tsx
 contracts.md	frontend/src/pages/contracts/**/*.tsx
 companies.md	frontend/src/pages/CompaniesPage.tsx
@@ -60,7 +59,6 @@ master-data-operations.md	frontend/src/pages/admin/master-data/**/*.tsx
 csv-files.md	frontend/src/components/csv/**/*.tsx
 csv-files.md	frontend/src/components/csv/**/*.ts
 budget-data-model.md	backend/src/spend/*.entity.ts
-budget-data-model.md	backend/src/capex/*.entity.ts
 budget-data-model.md	backend/src/spend/budget-file/columns.ts
 budget-data-model.md	backend/src/budget-columns/budget-columns.util.ts
 budget-data-model.md	backend/src/companies/*.entity.ts

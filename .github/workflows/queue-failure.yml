@@ -1,0 +1,64 @@
+name: Merge queue failure
+
+# Marks a pull request that failed in the merge queue (.github/scripts/queue-failure.sh). CI runs
+# its jobs in the queue only, so a pull request that fails there shows no failed check of its
+# own, and GitHub removes it from the queue without a word. This workflow adds a failed
+# `merge queue` check on the head commit of the pull request and one comment: the failed jobs,
+# the run link and how to queue it again. The failing check is what wakes an agent session that
+# watches the pull request (Claude Code Auto-fix). It is not a required check, and a new push
+# gets a new head commit without it.
+#
+# workflow_run always runs the workflow and the script of main, with a token that can write to
+# the repository. Nothing from the queued code is checked out or run: the queue branch name and
+# the job names it carries are read as untrusted text, through env, and filtered by the script.
+#
+# A manual run replays a given CI run (dispatch only works from main). dry_run prints the check
+# and the comment without creating them.
+on:
+  workflow_run:
+    workflows: [ CI ]
+    types: [ completed ]
+    branches: [ 'gh-readonly-queue/**' ]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Id of a CI run of the merge queue that failed
+        required: true
+        type: string
+      dry_run:
+        description: Print the check and the comment without creating them
+        required: false
+        type: boolean
+        default: false
+
+permissions: {}
+
+jobs:
+  report:
+    name: report queue failure
+    # Cancelled runs are left alone: GitHub cancels the runs of the pull requests behind a failed
+    # one and builds them again, so they are not at fault.
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch' ||
+          (github.event.workflow_run.event == 'merge_group' &&
+            (github.event.workflow_run.conclusion == 'failure' ||
+              github.event.workflow_run.conclusion == 'timed_out')) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read # the run, its jobs and the job logs
+      checks: write # the failed `merge queue` check
+      contents: read # the checkout of the script from main
+      pull-requests: write # the pull request head and the comment
+    steps:
+      - name: Checkout the script from main
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+      - name: Mark the pull request that failed in the merge queue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id || inputs.run_id }}
+          QUEUE_FAILURE_DRY_RUN: ${{ inputs.dry_run || false }}
+        run: bash .github/scripts/queue-failure.sh "$RUN_ID"

@@ -140,6 +140,20 @@ Structured query and aggregate tools are authoritative for counts, filters, and
 complete lists. Discovery tools are intentionally treated as ranked and
 incomplete.
 
+`search_all` and the chat @-mention picker read the `search_index` table. Each
+hit carries a few metadata keys from the row's `extra_json`, listed per entity
+type in `SEARCH_INDEX_METADATA_KEYS` (`ai-entity.service.ts`). OPEX and CAPEX
+lines (`spend_items`, `capex_items`) are also found by the names of their
+analytics values, accent-insensitive, on the enabled dimensions used for the
+line's type (the ones its drawer shows). Dimension names are not indexed. Their
+`analytics` key lists the values the line holds, in dimension order, for
+example `Nature de coût: Matériel; Récurrence: Récurrent` (null when the line
+holds none). Setting, changing or clearing a line's values refreshes its entry
+at once. A value renamed, or a dimension renamed, disabled, past its end of
+validity, restricted to one line type or reordered, reaches the entry at the
+line's next write or at the daily rebuild of the index (migration
+`1853940000000`; see "Knowledge" in `architecture.md`).
+
 Application classification has a dedicated catalog read. `get_application_classification_catalog`
 uses the tenant and `applications:reader` scope and returns business levels
 (with the optional downtime that documents each level), cyber levels, data
@@ -202,7 +216,15 @@ previous one included. Apply translates these keys into `analytics_values`
 edit-conflict check compares each dimension with the live line's value on that
 axis. The system prompt lists each enabled dimension once, with the line types it
 applies to among those the user can read (`analytics_dimensions`: `key`, `name`,
-`default`, `used_for`), built by `ai-analytics-dimensions-context.ts`. Creating a
+`default`, `used_for`, `required`), built by `ai-analytics-dimensions-context.ts`.
+`required` is the dimension's setting (a listed dimension is enabled and applies to
+each `used_for` type), and the prompt says a required dimension must be given a
+value when creating a line. The create preview refuses a line missing a value on a
+dimension required for its type ("Nature is required for spend item creation.",
+"… for CAPEX item creation.", with the label the preview uses), through
+`missingRequiredDimensions`; the update preview refuses a `null` on a required
+dimension the line holds, with the write gate's message ("The Nature dimension is
+required. Choose a value."). The write gate checks both again at apply. Creating a
 value in a chosen dimension is a master-data create of `analytics_categories`
 with the field `dimension`. It accepts the dimension's code, its `analytics:<code>`
 key or its name, and for the default dimension also `analytics_category` or its

@@ -42,8 +42,10 @@ const DEFAULT_SORT = 'yBudget:DESC';
 // The list a run replays: its routes, reference prefix, text filter column and second sort.
 const LISTS = {
   opex: { base: '/spend-items', ref: 'OPX', textField: 'product_name', altSort: 'item_number:ASC' },
-  // The CAPEX page loads no user list; its second sort is an enum in business order (decision Q4).
-  capex: { base: '/capex-items', ref: 'CPX', textField: 'description', altSort: 'priority:ASC' },
+  // The CAPEX page loads no user list; its second sort is the priority dimension's column, in the
+  // order of its values (decision Q4; a dimension since lot C1): `analytics_<id>:ASC`, the id read
+  // from /analytics-axes at list open (`priorityField`).
+  capex: { base: '/capex-items', ref: 'CPX', textField: 'description', altSort: null },
   // The reports read both lists (OPEX mostly); the list actions are not replayed.
   reports: { base: '/spend-items', ref: 'OPX', textField: 'product_name', altSort: 'item_number:ASC' },
 };
@@ -92,6 +94,7 @@ class VirtualUser {
     this.scenarioRequests = 0;
     this.scenarioErrors = 0;
     this.list = { sort: DEFAULT_SORT, q: '', filters: {}, status: 'enabled' };
+    this.altSort = null; // the list's second sort when it is read from the tenant (CAPEX: listOpen)
     this.ids = null; // { ids, itemNumbers } of the current list state
     this.itemRef = null;
     this.item = null;
@@ -170,20 +173,28 @@ class VirtualUser {
   async listOpen() {
     this.list = { sort: DEFAULT_SORT, q: '', filters: {}, status: 'enabled' };
     // Wave 1: the budget columns setting and the dimensions gate the grid; /users runs alongside.
-    await Promise.all([
+    const [, axes] = await Promise.all([
       cached(this, 'budget-columns', 300_000, () => this.get('GET /budget-columns', '/budget-columns')),
       cached(this, 'analytics-axes', 300_000, () => this.get('GET /analytics-axes', '/analytics-axes')),
       ...(args.list === 'opex'
         ? [cached(this, 'users-lookup', 30_000, () => this.get('GET /users?status=enabled&limit=1000 (list page)', '/users?status=enabled&limit=1000'))]
         : []),
     ]);
+    // The CAPEX list's second sort: the priority dimension's column (lot C1).
+    if (args.list === 'capex') {
+      const field = priorityField(axes);
+      if (!field) throw new Error('capex: the tenant has no enabled dimension coded priority (lot C1)');
+      this.altSort = `${field}:ASC`;
+    }
     // Wave 2: first block + three undeduplicated footer totals (mount effect, onGridReady
     // timeout, URL sync effect: OpexListPage.tsx:258-278, ServerDataGrid.tsx:492-511, 627-635).
     await Promise.all([this.page(1), this.totals(), this.totals(), this.totals()]);
   }
 
   async sortChange() {
-    this.list.sort = this.list.sort === DEFAULT_SORT ? LIST.altSort : DEFAULT_SORT;
+    const altSort = this.altSort ?? LIST.altSort;
+    if (!altSort) throw new Error(`${args.list}: no second sort (the list open failed)`);
+    this.list.sort = this.list.sort === DEFAULT_SORT ? altSort : DEFAULT_SORT;
     // Two block requests in a row + two totals (onSortChanged and the URL sync effect).
     await Promise.all([(async () => { await this.page(1); await this.page(1); })(), this.totals(), this.totals()]);
   }
@@ -335,6 +346,13 @@ const REPORT_OPENS = [
   ['dashboard budget tiles', 'dashboard', 'opex', 16],
   ['report: item exclusion picker', 'itemOptions', 'opex', 6],
 ];
+
+/** The list field of the enabled dimension coded `priority` (`analytics_<id>`), else null. */
+function priorityField(res) {
+  const list = Array.isArray(res?.data) ? res.data : res?.data?.items ?? [];
+  const axis = list.find((a) => String(a.code ?? '').toLowerCase() === 'priority' && enabledAxisIds({ data: [a] }).length === 1);
+  return axis ? `analytics_${axis.id}` : null;
+}
 
 function enabledAxisIds(res) {
   const list = Array.isArray(res?.data) ? res.data : res?.data?.items ?? [];
@@ -689,15 +707,18 @@ async function single() {
     }
     if (args.list === 'capex') {
       const page = (params) => `/capex-items/summary${qs({ page: 1, limit: 50, shape: GRID_SHAPE, status: 'enabled', ...params })}`;
+      // The priority is a dimension since lot C1: its column is `analytics_<id>`.
+      const priority = priorityField(await vu.get('GET /analytics-axes', '/analytics-axes'));
+      if (!priority) throw new Error('capex: the tenant has no enabled dimension coded priority (lot C1)');
       await sample('capex summary default sort (yBudget:DESC)', page({ sort: DEFAULT_SORT }));
       await sample('capex summary default sort, full shape (AI, reports)', `/capex-items/summary${qs({ page: 1, limit: 50, sort: DEFAULT_SORT, years: YEARS, status: 'enabled' })}`);
-      await sample('capex summary sort priority:ASC (Q4)', page({ sort: 'priority:ASC' }));
+      await sample('capex summary sort priority dimension:ASC (Q4)', page({ sort: `${priority}:ASC` }));
       await sample('capex summary sort item_number:ASC', page({ sort: 'item_number:ASC' }));
       await sample('capex summary quick search "Licences"', page({ sort: DEFAULT_SORT, q: 'Licences' }));
       await sample('capex summary, set filter paying company (2 values)', page({ sort: DEFAULT_SORT, filters: JSON.stringify({ paying_company_name: { filterType: 'set', values: ['Perf Groupe SA', 'Perf UK Ltd'] } }) }));
       await sample('capex summary/totals', `/capex-items/summary/totals${qs({ status: 'enabled', amounts: DEFAULT_AMOUNTS })}`);
       await sample('capex summary/filter-values paying_company_name', `/capex-items/summary/filter-values${qs({ fields: 'paying_company_name', status: 'enabled' })}`);
-      await sample('capex summary/filter-values priority', `/capex-items/summary/filter-values${qs({ fields: 'priority', status: 'enabled' })}`);
+      await sample('capex summary/filter-values priority dimension', `/capex-items/summary/filter-values${qs({ fields: priority, status: 'enabled' })}`);
       await sample('capex summary/ids default sort', `/capex-items/summary/ids${qs({ sort: DEFAULT_SORT, status: 'enabled' })}`);
       await sample('capex summary/neighbors CPX-500', `/capex-items/summary/neighbors${qs({ id: 'CPX-500', sort: DEFAULT_SORT, status: 'enabled' })}`);
       await sample('health (trivial, tenancy query only)', '/health');

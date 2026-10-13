@@ -4,17 +4,20 @@ import { languageOf, parseDateOrder, parseDecimalMark, writeCsv } from '../../co
 import { CurrencySettingsService } from '../../currency/currency-settings.service';
 import { readBudgetColumns } from '../../budget-columns/budget-columns.util';
 import { readBudgetLineMeta } from '../item-meta';
-import { buildBudgetExport, fileNameOfExport, parseAmountYears, parseDetail, parseFileColumns, shownFileColumns } from './export-file';
-import { importBudgetFile, BudgetFileAudit, BudgetFileFreeze, BudgetFileImportResult, BudgetFileItems, parseBudgetSnapshot } from './import-file';
+import { type BudgetNature } from '../budget-nature';
+import { buildBudgetExport, BUDGET_FILE_NAME, parseAmountYears, parseDetail, parseFileColumns, shownFileColumns } from './export-file';
+import { importBudgetFile, BudgetFileAudit, BudgetFileFreeze, BudgetFileImportResult, BudgetFileLineServices, parseBudgetSnapshot } from './import-file';
 import { interpretBudgetFile, readBudgetCsv } from './interpret';
 import { loadExportLines, loadFileDimensions, loadPreflight } from './load';
 import { buildPreflight, changedSinceText } from './preflight';
-import { BudgetFileReport, BudgetFileScope, emptyCatalog } from './types';
+import { BudgetFileReport, BudgetFileExportScope, BudgetFileScope, emptyCatalog } from './types';
 
 const LEVEL_RANK: Record<string, number> = { reader: 1, contributor: 2, member: 3, admin: 4 };
 
+type CallerRights = { isAdmin?: boolean; permissions?: Record<string, string> } | null | undefined;
+
 /** Creating a supplier is the suppliers member level, the same as POST /suppliers. */
-export function canCreateSuppliers(ctx: { isAdmin?: boolean; permissions?: Record<string, string> } | null | undefined): boolean {
+export function canCreateSuppliers(ctx: CallerRights): boolean {
   if (ctx?.isAdmin) return true;
   return (LEVEL_RANK[ctx?.permissions?.suppliers ?? ''] ?? 0) >= LEVEL_RANK.member;
 }
@@ -44,9 +47,9 @@ export class BudgetFileService {
     const language = await languageOf(manager, caller.tenantId, caller.userId, options.language);
     const dateOrder = parseDateOrder(options.dateOrder);
     const decimalMark = parseDecimalMark(options.decimalMark);
-    const dimensions = await loadFileDimensions(manager, caller.tenantId, scope);
+    const dimensions = await loadFileDimensions(manager, caller.tenantId);
     const read = await readBudgetCsv(file, {
-      scope, language, dimensionCodes: dimensions.codes, refusedDimensions: dimensions.refused, dateOrder, decimalMark,
+      language, dimensionCodes: dimensions.map((dimension) => dimension.code), dateOrder, decimalMark,
     });
     const currentYear = new Date().getFullYear();
     if (read.fileErrors.length > 0 || read.headerErrors.length > 0) {
@@ -55,9 +58,9 @@ export class BudgetFileService {
         stored: [], names: [], createSuppliers: false, canCreateSuppliers: false, currentYear, labels: {},
       });
     }
-    const numbers = interpretBudgetFile(scope, read).flatMap((row) => row.itemNumber.kind === 'number' ? [row.itemNumber.n] : []);
+    const numbers = interpretBudgetFile(read, scope).map((row) => row.itemNumber);
     const settings = await this.currencySettings.getSettings(caller.tenantId, { manager });
-    const loaded = await loadPreflight(manager, scope, caller.tenantId, numbers, settings.allowedCurrencies);
+    const loaded = await loadPreflight(manager, caller.tenantId, numbers, settings.allowedCurrencies);
     const report = buildPreflight({
       scope,
       read,
@@ -69,12 +72,13 @@ export class BudgetFileService {
       currentYear,
       labels: loaded.labels,
     });
-    await nameChanges(manager, scope, caller.tenantId, report);
+    const natureOf = new Map(loaded.stored.map((line) => [line.id, line.nature]));
+    await nameChanges(manager, natureOf, caller.tenantId, report);
     return report;
   }
 
   async exportFile(
-    scope: BudgetFileScope,
+    scope: BudgetFileExportScope,
     ids: readonly string[],
     caller: BudgetFileCaller,
     options: { language: unknown; amountYears: unknown; columns: unknown; detail: unknown },
@@ -86,17 +90,18 @@ export class BudgetFileService {
     const columns = parseFileColumns(options.columns, shownFileColumns(settings.enabled));
     const years = parseAmountYears(options.amountYears, currentYear);
     const detail = parseDetail(options.detail);
+    // The lines of the source list (one nature or explicitly both), each with its nature cell.
     const loaded = await loadExportLines(manager, scope, caller.tenantId, ids);
     const built = buildBudgetExport({
-      scope, language, years, columns, detail, lines: loaded.lines, dimensionCodes: loaded.dimensionCodes,
+      language, years, columns, detail, lines: loaded.lines, dimensions: loaded.dimensions,
     });
-    return { filename: fileNameOfExport(scope), content: writeCsv({ language, headers: built.headers, rows: built.rows }) };
+    return { filename: BUDGET_FILE_NAME, content: writeCsv({ language, headers: built.headers, rows: built.rows }) };
   }
 
   /**
-   * The load. `deps` are the item service of this list, the audit log and the
-   * freeze check. The caller runs `analyzeAfterLargeImport` on the result and
-   * does not query after that.
+   * The load. `deps` are the item service of each nature, the audit log and
+   * the freeze check. The caller runs `analyzeAfterLargeImport` on the result
+   * and does not query after that.
    */
   async importFile(
     scope: BudgetFileScope,
@@ -104,7 +109,7 @@ export class BudgetFileService {
     snapshot: unknown,
     caller: BudgetFileCaller,
     options: { language: unknown; dateOrder: unknown; decimalMark?: unknown; createSuppliers: boolean; canCreateSuppliers: boolean },
-    deps: { items: BudgetFileItems; audit: BudgetFileAudit; freeze: BudgetFileFreeze },
+    deps: { items: BudgetFileLineServices; audit: BudgetFileAudit; freeze: BudgetFileFreeze },
   ): Promise<BudgetFileImportResult> {
     const manager = requireManager(caller.manager);
     const language = await languageOf(manager, caller.tenantId, caller.userId, options.language);
@@ -131,9 +136,11 @@ export class BudgetFileService {
   }
 }
 
-async function nameChanges(manager: EntityManager, scope: BudgetFileScope, tenantId: string, report: BudgetFileReport): Promise<void> {
+async function nameChanges(manager: EntityManager, natureOf: Map<string, BudgetNature>, tenantId: string, report: BudgetFileReport): Promise<void> {
   for (const entry of report.changedSinceExport) {
-    const meta = await readBudgetLineMeta(manager, scope, tenantId, entry.id);
+    const nature = natureOf.get(entry.id);
+    if (!nature) continue;
+    const meta = await readBudgetLineMeta(manager, nature, tenantId, entry.id);
     if (!meta) continue;
     const candidates: Array<{ by: string | null; at: string | null }> = [];
     if (entry.rowMismatch) candidates.push(person(meta.changed_by, meta.changed_at));

@@ -277,7 +277,7 @@ export default function AnalyticsCategoryReport() {
       subtitle={t('reports.analyticsCategory.subtitle', { type: scopeLabel, dimension: dimensionInSentence })}
       filters={(
         <>
-          <ItemScopeTabs value={scope} onChange={setScope} />
+          <ItemScopeTabs allowAll value={scope} onChange={setScope} />
           <ReportMeasureSelect value={measure} onChange={setMeasure} />
           {axis && analyticsAxes.enabled.length >= 2 && (
             <ReportFilter label={t('reports.filters.dimension')} width={200}>

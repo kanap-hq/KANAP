@@ -30,7 +30,8 @@
     "selectAll": "Select all",
     "browse": "Browse",
     "loadMore": "Load more",
-    "done": "Done"
+    "done": "Done",
+    "moreActions": "More actions"
   },
   "status": {
     "loading": "Loading...",
@@ -98,6 +99,7 @@
     "clearSearch": "Clear search"
   },
   "labels": {
+    "positionOf": "{{index}} of {{total}}",
     "show": "Show",
     "all": "All",
     "enabled": "Enabled",
@@ -189,11 +191,14 @@
     "selectTemplate": "Select template",
     "useTemplate": "Use template",
     "noTemplatesAvailable": "No published templates are available.",
+    "newOpexLine": "New OPEX line",
+    "newCapexLine": "New CAPEX line",
+    "newContract": "New contract",
     "newOpex": "New OPEX",
     "newCapex": "New CAPEX",
     "recentUpdates": "Recent updates",
     "noRecentUpdates": "No recent updates",
-    "quickActions": "Quick actions",
+    "budgetSnapshot": "Budget",
     "opexSnapshot": "OPEX snapshot",
     "capexSnapshot": "CAPEX snapshot",
     "myTasks": "My tasks",
@@ -209,11 +214,13 @@
       "noBudgetNextYear": "No {{column}} for next year",
       "accountOutsideChart": "Account not in the company's chart"
     },
-    "topItemsY": "Top items ({{column}}, Y)",
-    "topIncreasesYvsYminus1": "Top increases ({{column}}, Y vs Y-1)",
+    "topItems": "Top lines",
+    "columnY": "{{column}}, Y",
+    "topIncreases": "Top increases",
+    "columnYvsYminus1": "{{column}}, Y vs Y-1",
     "noIncreases": "No increases",
     "myBudget": {
-      "title": "My budget ({{column}}, Y)",
+      "title": "My budget",
       "roles": {
         "itOwner": "As IT owner",
         "businessOwner": "As business owner",
@@ -221,9 +228,10 @@
       },
       "lineCount_one": "{{count}} line",
       "lineCount_other": "{{count}} lines",
-      "none": "No budget lines in your name"
+      "none": "No budget lines in your name",
+      "myLines": "My lines"
     },
-    "byCostCenterY": "By cost center ({{column}}, Y)",
+    "byCostCenter": "By cost center",
     "noCostCenter": "No cost center",
     "settings": {
       "title": "Dashboard settings",
@@ -350,8 +358,8 @@
         "connection": "Connection",
         "contract": "Contract",
         "task": "Task",
-        "opexItem": "OPEX item",
-        "capexItem": "CAPEX item",
+        "opexItem": "OPEX line",
+        "capexItem": "CAPEX line",
         "incident": "Incident",
         "location": "Location",
         "document": "Document"
@@ -373,7 +381,15 @@
       "netboxErrors_one": "{{count}} error",
       "netboxErrors_other": "{{count}} errors"
     },
-    "welcome": "Welcome"
+    "welcome": "Welcome",
+    "budgetSettings": {
+      "customize": "Customize",
+      "title": "Budget dashboard settings",
+      "columns": "Amount columns",
+      "tenantColumns": "Workspace columns",
+      "atLeastOne": "Choose at least one amount column.",
+      "saveFailed": "Could not save the dashboard settings."
+    }
   },
   "csv": {
     "exportTitle": "Export CSV",
@@ -463,7 +479,10 @@
     "costCentersLoadFailed": "Cost centers could not be loaded.",
     "notSet": "Not set",
     "moreResults": "Type to narrow down: more results",
-    "valueUnavailable": "Value no longer available"
+    "valueUnavailable": "Value no longer available",
+    "budgetLines": "Budget lines",
+    "searchBudgetLines": "Search budget lines",
+    "noBudgetLinesFound": "No budget lines found"
   },
   "documentEditor": {
     "expandDocument": "Expand document",
@@ -629,7 +648,8 @@
     "fromSupplier": "From supplier",
     "manuallyAdded": "Manually added",
     "removeContact": "Remove contact",
-    "insufficientPermission": "Insufficient permission"
+    "insufficientPermission": "Insufficient permission",
+    "syncFromSupplier": "Add the supplier's contacts"
   },
   "export": {
     "button": "Export",
@@ -751,13 +771,13 @@
     "changedAt": "Changed elsewhere at {{time}}",
     "changedOn": "Changed elsewhere on {{date}} at {{time}}",
     "changed": "Changed elsewhere",
-    "changedByYouAt": "You changed this item elsewhere at {{time}}",
-    "changedByYouOn": "You changed this item elsewhere on {{date}} at {{time}}",
-    "changedByYou": "You changed this item elsewhere",
+    "changedByYouAt": "You changed this line elsewhere at {{time}}",
+    "changedByYouOn": "You changed this line elsewhere on {{date}} at {{time}}",
+    "changedByYou": "You changed this line elsewhere",
     "aUser": "a user",
     "badge": "Changed elsewhere",
     "reload": "Reload",
     "reloadHint": "Reload shows these changes. What you are editing stays on screen.",
-    "deleted": "This item was deleted"
+    "deleted": "This line was deleted"
   }
 }

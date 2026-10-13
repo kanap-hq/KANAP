@@ -16,8 +16,8 @@ import { PortfolioRequestTeam, TeamRole } from './portfolio-request-team.entity'
 import { PortfolioRequestContact } from './portfolio-request-contact.entity';
 import { PortfolioRequestUrl } from './portfolio-request-url.entity';
 import { PortfolioRequestAttachment } from './portfolio-request-attachment.entity';
-import { PortfolioRequestCapex } from './portfolio-request-capex.entity';
 import { PortfolioRequestOpex } from './portfolio-request-opex.entity';
+import { budgetLineIdsOfKind, CAPEX_ITEMS_NOT_FOUND, OPEX_ITEMS_NOT_FOUND } from './project-budget-links.util';
 import { PortfolioRequestBusinessProcess } from './portfolio-request-business-process.entity';
 import { PortfolioRequestDependency } from './portfolio-request-dependency.entity';
 import { PortfolioProjectDependency } from './portfolio-project-dependency.entity';
@@ -52,6 +52,7 @@ import { Task } from '../tasks/task.entity';
 import { requestInvolvesUsersSql, requestLinkedToProjectsSql } from './services/portfolio-report-filters';
 import { TaskAttachment } from '../tasks/task-attachment.entity';
 import { TaskActivitiesService } from '../tasks/task-activities.service';
+import { writeTaskColumns } from '../tasks/task-column-write';
 import {
   ParticipationAccessScope,
   applyRequestParticipantScope,
@@ -1088,10 +1089,10 @@ export class PortfolioRequestsService {
     // Load CAPEX items
     if (include.has('financials') || include.has('capex')) {
       result.capex_items = await mg.query(
-        `SELECT c.id, c.description, c.ppe_type, c.investment_type, c.priority, c.currency, c.status,
+        `SELECT c.id, c.product_name AS description, c.item_number, c.currency, c.status,
                 sup.name as supplier_name
-         FROM portfolio_request_capex rc
-         JOIN capex_items c ON c.id = rc.capex_id
+         FROM portfolio_request_opex rc
+         JOIN spend_items c ON c.id = rc.opex_id AND c.nature = 'capex'
          LEFT JOIN suppliers sup ON sup.id = c.supplier_id
          WHERE rc.request_id = $1`,
         [id]
@@ -1101,10 +1102,10 @@ export class PortfolioRequestsService {
     // Load OPEX items
     if (include.has('financials') || include.has('opex')) {
       result.opex_items = await mg.query(
-        `SELECT s.id, s.product_name, s.description, s.currency, s.status,
+        `SELECT s.id, s.product_name, s.item_number, s.description, s.currency, s.status,
                 sup.name as supplier_name
          FROM portfolio_request_opex ro
-         JOIN spend_items s ON s.id = ro.opex_id
+         JOIN spend_items s ON s.id = ro.opex_id AND s.nature = 'opex'
          LEFT JOIN suppliers sup ON sup.id = s.supplier_id
          WHERE ro.request_id = $1`,
         [id]
@@ -1376,9 +1377,8 @@ export class PortfolioRequestsService {
 
     if (overrides?.close_task === true && task.status !== 'done') {
       const beforeTask = { ...task };
-      task.status = 'done';
-      task.updated_at = new Date();
-      const savedTask = await taskRepo.save(task);
+      // The status and its time only, never the task read above (`tasks/task-column-write.ts`).
+      const savedTask = await writeTaskColumns(taskRepo, task, { status: 'done', updated_at: new Date() });
 
       await this.audit.log({
         table: 'tasks',
@@ -1924,24 +1924,30 @@ export class PortfolioRequestsService {
     opts?: { manager?: EntityManager; userId?: string | null },
   ) {
     const mg = opts?.manager ?? this.repo.manager;
-    const repo = mg.getRepository(PortfolioRequestCapex);
+    const repo = mg.getRepository(PortfolioRequestOpex);
     const actorId = this.requireActivityAuthor(opts?.userId);
 
-    const unique = Array.from(new Set((capexIds || []).filter(Boolean)));
-    const existing = await repo.find({ where: { request_id: requestId } });
-    const beforeIds = Array.from(new Set(existing.map((e) => e.capex_id)));
-
-    const toDelete = existing.filter((e) => !unique.includes(e.capex_id));
-    const existingSet = new Set(existing.map((e) => e.capex_id));
-
+    // Stored ids are lower case: an upper-case id must compare equal to its stored twin.
+    const unique = Array.from(new Set((capexIds || []).filter(Boolean).map((id) => String(id).toLowerCase())));
     const request = await this.getRequestOrThrow(requestId, mg);
+    // The request's links to CAPEX lines only (one table with the OPEX ones since lot Z1,
+    // `spend/budget-nature.ts`): a link to an OPEX line is neither replaced nor removed. Every id
+    // given names a CAPEX line of the tenant, or the request is refused before anything is written.
+    const stored = await repo.find({ where: { request_id: requestId } });
+    const capexLines = await budgetLineIdsOfKind(mg, 'capex', request.tenant_id, [...stored.map((e) => e.opex_id), ...unique]);
+    if (unique.some((id) => !capexLines.has(id))) throw new BadRequestException(CAPEX_ITEMS_NOT_FOUND);
+    const existing = stored.filter((e) => capexLines.has(e.opex_id));
+    const beforeIds = Array.from(new Set(existing.map((e) => e.opex_id)));
+
+    const toDelete = existing.filter((e) => !unique.includes(e.opex_id));
+    const existingSet = new Set(existing.map((e) => e.opex_id));
 
     const toInsert = unique
       .filter((id) => !existingSet.has(id))
       .map((id) => repo.create({
         tenant_id: request.tenant_id,
         request_id: requestId,
-        capex_id: id,
+        opex_id: id,
       }));
 
     if (toDelete.length > 0) await repo.remove(toDelete);
@@ -1977,14 +1983,20 @@ export class PortfolioRequestsService {
     const repo = mg.getRepository(PortfolioRequestOpex);
     const actorId = this.requireActivityAuthor(opts?.userId);
 
-    const unique = Array.from(new Set((opexIds || []).filter(Boolean)));
-    const existing = await repo.find({ where: { request_id: requestId } });
+    // Stored ids are lower case: an upper-case id must compare equal to its stored twin.
+    const unique = Array.from(new Set((opexIds || []).filter(Boolean).map((id) => String(id).toLowerCase())));
+    const request = await this.getRequestOrThrow(requestId, mg);
+    // The request's links to OPEX lines only (`spend/budget-nature.ts`): a link to a line of another
+    // nature is neither replaced nor removed. Every id given names an OPEX line of the tenant, or
+    // the request is refused before anything is written.
+    const stored = await repo.find({ where: { request_id: requestId } });
+    const opexLines = await budgetLineIdsOfKind(mg, 'opex', request.tenant_id, [...stored.map((e) => e.opex_id), ...unique]);
+    if (unique.some((id) => !opexLines.has(id))) throw new BadRequestException(OPEX_ITEMS_NOT_FOUND);
+    const existing = stored.filter((e) => opexLines.has(e.opex_id));
     const beforeIds = Array.from(new Set(existing.map((e) => e.opex_id)));
 
     const toDelete = existing.filter((e) => !unique.includes(e.opex_id));
     const existingSet = new Set(existing.map((e) => e.opex_id));
-
-    const request = await this.getRequestOrThrow(requestId, mg);
 
     const toInsert = unique
       .filter((id) => !existingSet.has(id))
@@ -2388,10 +2400,11 @@ export class PortfolioRequestsService {
 
   private async resolveCapexLabelsByIds(mg: EntityManager, capexIds: string[]): Promise<string[]> {
     if (capexIds.length === 0) return [];
+    // A CAPEX line's title is its `product_name` (lot Z1).
     const rows = await mg.query<Array<{ id: string; description: string | null }>>(
-      `SELECT id, description
-       FROM capex_items
-       WHERE id = ANY($1::uuid[])`,
+      `SELECT id, product_name AS description
+       FROM spend_items
+       WHERE id = ANY($1::uuid[]) AND nature = 'capex'`,
       [capexIds],
     );
     const byId = new Map<string, string>();
@@ -2436,7 +2449,7 @@ export class PortfolioRequestsService {
     const rows = await mg.query<Array<{ id: string; product_name: string | null; description: string | null }>>(
       `SELECT id, product_name, description
        FROM spend_items
-       WHERE id = ANY($1::uuid[])`,
+       WHERE id = ANY($1::uuid[]) AND nature = 'opex'`,
       [opexIds],
     );
     const byId = new Map<string, string>();

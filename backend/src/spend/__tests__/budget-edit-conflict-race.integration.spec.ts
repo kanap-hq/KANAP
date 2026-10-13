@@ -1,7 +1,6 @@
 import { QueryRunner } from 'typeorm';
 import { AuditService } from '../../audit/audit.service';
-import { CapexAllocationCalculatorService } from '../../capex/capex-allocation-calculator.service';
-import { CapexAllocationsService } from '../../capex/capex-allocations.service';
+import { CapexAllocationsService } from '../spend-allocations.service';
 import { EDIT_CONFLICT_CODE } from '../../common/edit-conflicts';
 import { AllocationCalculatorService } from '../allocation-calculator.service';
 import { SpendAllocationsService } from '../spend-allocations.service';
@@ -321,10 +320,11 @@ async function baseEqualToCurrent() {
 function allocations(kind: Kind) {
   return kind === 'opex'
     ? new SpendAllocationsService(undefined as any, undefined as any, new AllocationCalculatorService(undefined as any, undefined as any, undefined as any, undefined as any), realAudit() as any)
-    : new CapexAllocationsService(undefined as any, undefined as any, new CapexAllocationCalculatorService(undefined as any, undefined as any, undefined as any, undefined as any), realAudit() as any);
+    : new CapexAllocationsService(undefined as any, undefined as any, new AllocationCalculatorService(undefined as any, undefined as any, undefined as any, undefined as any), realAudit() as any);
 }
 
-const ALLOCATIONS = { opex: 'spend_allocations', capex: 'capex_allocations' } as const;
+// The allocations of both natures are in spend_allocations since lot Z1.
+const ALLOCATIONS = { opex: 'spend_allocations', capex: 'spend_allocations' } as const;
 
 async function seedAllocations(race: Race, kind: Kind, s: Setup) {
   return race.seedWith(async (runner) => {

@@ -1,11 +1,11 @@
 # Plaid
 
-Plaid est l'assistant conversationnel intégré de KANAP. Il est connecté aux mêmes données que celles que vous manipulez déjà — applications, actifs, incidents, projets, demandes, tâches, contrats, documents de la base de connaissances et master data — afin que vous puissiez poser des questions en langage naturel au lieu de naviguer entre plusieurs écrans pour trouver une réponse.
+Plaid est l'assistant conversationnel intégré de KANAP. Il est connecté aux mêmes données que celles que vous manipulez déjà (applications, actifs, incidents, projets, demandes, tâches, contrats, documents de la base de connaissances et master data), afin que vous puissiez poser des questions en langage naturel au lieu de naviguer entre plusieurs écrans pour trouver une réponse.
 
 Plaid ne remplace pas le reste de l'application. C'est un moyen plus rapide de synthétiser le contexte, de localiser des enregistrements, de rédiger du texte ou de préparer des modifications. Les opérations sensibles sont toujours présentées sous forme d'aperçus que vous devez approuver avant que quoi que ce soit ne soit écrit dans KANAP.
 
 !!! note "Plaid ou les Agents IA"
-    Plaid est l'assistant interactif que **vous** pilotez : vous demandez, il répond et vous approuvez une modification à la fois. Les **Agents IA** sont différents — ce sont des assistants autonomes qui surveillent votre centre de services et proposent ou traitent eux-mêmes le travail sur les tickets, dans les limites d'approbation que vous définissez. Voir [Agents IA — Vue d'ensemble](agents-overview.md).
+    Plaid est l'assistant interactif que **vous** pilotez : vous demandez, il répond et vous approuvez une modification à la fois. Les **Agents IA** sont différents : ce sont des assistants autonomes qui surveillent votre centre de services et proposent ou traitent eux-mêmes le travail sur les tickets, dans les limites d'approbation que vous définissez. Voir [Agents IA : vue d'ensemble](agents-overview.md).
 
 ## Où le trouver
 
@@ -27,7 +27,7 @@ Lorsque vous ouvrez Plaid pour la première fois, vous arrivez sur un écran d'a
 - Une section **Pour démarrer** avec des exemples de requêtes sur lesquels cliquer pour les envoyer
 - Le composeur en bas, prêt à recevoir votre premier message
 
-Cliquez sur une suggestion pour l'envoyer directement ou — pour les requêtes contenant un espace réservé `@` — l'insérer dans le composeur afin de la compléter.
+Cliquez sur une suggestion pour l'envoyer directement ou, pour les requêtes contenant un espace réservé `@`, l'insérer dans le composeur afin de la compléter.
 
 Saisissez un message et appuyez sur **Entrée** pour l'envoyer. **Maj+Entrée** insère un retour à la ligne. Le bouton d'envoi est désactivé lorsqu'il n'y a rien à envoyer et se transforme en bouton rouge **Arrêter** pendant que Plaid répond.
 
@@ -43,8 +43,8 @@ La liste contient :
 
 Chaque ligne affiche le titre de la conversation (ou **Sans titre** si aucun n'a encore été défini). Survolez une ligne ou placez-y le focus pour faire apparaître :
 
-- Une icône crayon — **Renommer** la conversation. Double-cliquez sur le titre pour faire de même.
-- Une icône corbeille — **Archiver** la conversation. Les conversations archivées disparaissent de la liste. Si vous archivez la conversation actuellement ouverte, Plaid bascule vers un nouveau chat vide.
+- Une icône crayon : **Renommer** la conversation. Double-cliquez sur le titre pour faire de même.
+- Une icône corbeille : **Archiver** la conversation. Les conversations archivées disparaissent de la liste. Si vous archivez la conversation actuellement ouverte, Plaid bascule vers un nouveau chat vide.
 
 La recherche filtre la liste par titre au fur et à mesure de votre saisie. Le renommage et l'archivage sont enregistrés immédiatement.
 
@@ -74,11 +74,12 @@ Les images sont importées avec votre message afin que Plaid puisse les décrire
 La saisie de `@` ouvre le **sélecteur de mentions** au-dessus du composeur. Il vous permet de référencer n'importe quel enregistrement KANAP auquel vous avez accès, selon deux modes complémentaires :
 
 - **Préfixe de type** : des codes courts qui correspondent à une seule famille d'entités. Exemples :
-  - `@T-5` — la tâche portant la référence T-5
-  - `@DOC` — les documents récents de la base de connaissances
-  - `@APP backup` — les applications correspondant à « backup »
-  - `@PRJ`, `@REQ`, `@INC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@CPX`, `@COMP`, `@CONT`, `@DEPT`, `@SUP`, `@BP`
-- **Texte libre** : tout le reste (`@payroll`, `@server-2`) lance une recherche multi-types classée par pertinence.
+  - `@T-5` : la tâche portant la référence T-5
+  - `@DOC` : les documents récents de la base de connaissances
+  - `@APP backup` : les applications correspondant à « backup »
+  - `@BL-12` : la ligne budgétaire portant la référence BL-12. `@BL` seul liste les lignes budgétaires des deux types, et `@OPX` ou `@CPX` les limite aux lignes OPEX ou CAPEX. Les anciens numéros fonctionnent toujours : `@OPX-12` ou `@CPX-3` trouve sa ligne
+  - `@PRJ`, `@REQ`, `@INC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@COMP`, `@CONT`, `@DEPT`, `@SUP`, `@BP`
+- **Texte libre** : tout le reste (`@payroll`, `@server-2`) lance une recherche multi-types classée par pertinence. Elle trouve aussi les lignes budgétaires par le nom de leurs valeurs analytiques.
 
 Utilisez les touches fléchées pour parcourir les suggestions, **Entrée** ou **Tab** pour confirmer, **Échap** pour fermer le sélecteur. Les résultats sont regroupés par type d'entité (Base de connaissances, Tâches, Projets, Applications, Actifs, Contrats, etc.) afin que vous sachiez d'un coup d'œil quel type d'enregistrement vous vous apprêtez à insérer.
 
@@ -88,9 +89,9 @@ Lorsque vous confirmez une suggestion, le composeur continue d'afficher un libel
 
 Survolez n'importe lequel de vos messages précédents pour accéder aux actions au niveau du message :
 
-- **Copier** — copie le texte du message dans le presse-papiers
-- **Modifier** — rouvre le message dans un éditeur inline ; l'enregistrement envoie la nouvelle version et supprime tout ce qui suivait (la conversation est relancée à partir de ce point)
-- **Régénérer** (sur les réponses de l'assistant) — demande à Plaid de produire une autre réponse à la même requête
+- **Copier** : copie le texte du message dans le presse-papiers
+- **Modifier** : rouvre le message dans un éditeur inline ; l'enregistrement envoie la nouvelle version et supprime tout ce qui suivait (la conversation est relancée à partir de ce point)
+- **Régénérer** (sur les réponses de l'assistant) : demande à Plaid de produire une autre réponse à la même requête
 
 La modification est l'outil adapté lorsque vous constatez que votre question précédente manquait de clarté. La régénération est l'outil adapté lorsque la question était bonne mais pas la réponse.
 
@@ -99,7 +100,7 @@ La modification est l'outil adapté lorsque vous constatez que votre question pr
 Plaid diffuse sa réponse caractère par caractère. Pendant la diffusion :
 
 - Le composeur reste utilisable afin que vous puissiez préparer une relance
-- Le bouton d'envoi affiche une icône rouge **Arrêter** — cliquer dessus annule la réponse en cours
+- Le bouton d'envoi affiche une icône rouge **Arrêter** : cliquer dessus annule la réponse en cours
 - Un petit indicateur « Utilisation des outils… » apparaît lorsque Plaid effectue une recherche dans KANAP, récupère un document ou exécute un autre appel d'outil
 - Le nombre et le type d'outils utilisés sont récapitulés sous la réponse une fois celle-ci terminée
 
@@ -108,6 +109,8 @@ Lorsque la diffusion se termine, le focus revient automatiquement sur le compose
 ### Appels d'outils
 
 Plaid utilise un petit ensemble d'outils internes pour répondre aux questions : `Search all`, `Search knowledge`, `Get document`, `Get entity context` et quelques autres. Chaque appel d'outil apparaît sous forme de ligne compacte sous le message (« a utilisé Search all · 8 résultats »). Vous n'avez généralement pas besoin de lire les détails de l'outil, mais ils sont là si vous voulez voir exactement sur quels enregistrements la réponse s'est appuyée.
+
+`Search all` trouve les lignes budgétaires par le nom de leurs valeurs analytiques, et indique à Plaid les valeurs de chaque ligne. Plaid désigne une ligne budgétaire par sa référence `BL-12`, et ses liens ouvrent la ligne.
 
 ## Artefacts et aperçus
 
@@ -128,8 +131,8 @@ Le panneau s'ouvre automatiquement lorsque :
 
 Pour les aperçus de modification en attente, le panneau propose deux boutons :
 
-- **Approuver** — confirme la modification et permet à Plaid de l'appliquer
-- **Rejeter** — annule la modification. Plaid prend acte du rejet et poursuit la conversation.
+- **Approuver** : confirme la modification et permet à Plaid de l'appliquer
+- **Rejeter** : annule la modification. Plaid prend acte du rejet et poursuit la conversation.
 
 Rien de ce qui modifie les données de KANAP n'est appliqué en silence. L'aperçu est le point de contrôle.
 

@@ -47,7 +47,7 @@ describe('ComparisonReport', () => {
     const Y = new Date().getFullYear();
     await waitFor(() => expect(post.mock.calls.some(([, body]) => body.spec.groupBy.length === 0 && body.spec.measures.length > 0)).toBe(true));
     const [url, body] = post.mock.calls.find(([, b]) => b.spec.groupBy.length === 0 && b.spec.measures.length > 0)!;
-    expect(url).toBe('/spend-items/summary/aggregate');
+    expect(url).toBe('/budget-lines/summary/aggregate');
     expect(body.query.years).toBe([Y - 2, Y - 1, Y, Y + 1, Y + 2].join(','));
     // Default range Y-1 to Y+1, one sum per shown default column and year.
     expect(body.spec.measures.map((m: { field: string }) => m.field)).toContain(`y${Y - 1}Budget`);

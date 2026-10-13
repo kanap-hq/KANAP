@@ -39,14 +39,15 @@ const logger = new Logger('BudgetImportStatistics');
 
 type Scope = 'opex' | 'capex';
 
+// The single family of both natures (lot Z1).
 const BUDGET_TABLES: Record<Scope, readonly string[]> = {
   opex: ['spend_versions', 'spend_amounts', 'spend_round_inputs', 'spend_version_totals'],
-  capex: ['capex_versions', 'capex_amounts', 'capex_round_inputs', 'capex_version_totals'],
+  capex: ['spend_versions', 'spend_amounts', 'spend_round_inputs', 'spend_version_totals'],
 };
 
 const LINE_TABLES: Record<Scope, readonly string[]> = {
   opex: ['spend_items', 'spend_item_analytics_values'],
-  capex: ['capex_items', 'capex_item_analytics_values'],
+  capex: ['spend_items', 'spend_item_analytics_values'],
 };
 
 /** What a line import writes: the lines, their analytics values, and their budget tables. */

@@ -47,6 +47,9 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
   private readonly manualJobs = new Map<string, Promise<void>>();
   private readonly loginAutoIntervalMs: number;
   private readonly loginAutoLabel = 'login-auto';
+  /** Per `tenant:year`: when a missing rate last queued a refresh of that year. */
+  private readonly missingRefreshAt = new Map<string, number>();
+  private readonly missingRefreshIntervalMs = 6 * 60 * 60 * 1000;
 
   private parseIntervalMs(): number {
     const parsed = Number(process.env.FX_LOGIN_REFRESH_INTERVAL_MS);
@@ -69,6 +72,7 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
     this.loginAutoIntervalMs = this.parseIntervalMs();
   }
   onModuleInit() {
+    this.fxRates.onMissingRates((tenantId, years) => this.refreshMissingYears(tenantId, years));
     // Scheduled refresh disabled - rely on per-tenant login-triggered refresh instead
     // this.scheduleRefresh();
   }
@@ -150,6 +154,26 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
     // A stop waits for it (background-work.ts) before it closes the pool.
     void trackBackgroundWork(job);
     return 'queued';
+  }
+
+  /**
+   * A read found no rate for a currency in use in these years: fetch them in
+   * the background (the read itself goes on with a rate of 1, marked
+   * `missing`). Each tenant year at most once every 6 hours per process, so
+   * a rate the sources do not have (or a server without internet) does not
+   * call them on every read.
+   */
+  refreshMissingYears(tenantId: string, years: number[]): void {
+    const now = Date.now();
+    const keyOf = (year: number) => `${tenantId}:${year}`;
+    const due = years.filter((year) => now - (this.missingRefreshAt.get(keyOf(year)) ?? 0) >= this.missingRefreshIntervalMs);
+    if (!due.length) return;
+    due.forEach((year) => this.missingRefreshAt.set(keyOf(year), now));
+    this.logger.log(`[missing-rate] queuing FX refresh for tenant ${tenantId}: years ${due.join(', ')}`);
+    void this.queueManualRefresh(tenantId, due, { label: 'missing-rate' }).then((status) => {
+      // Another refresh of the tenant was running: the next read asks again.
+      if (status === 'skipped') due.forEach((year) => this.missingRefreshAt.delete(keyOf(year)));
+    }).catch(() => undefined);
   }
 
   async maybeRefreshOnLogin(tenantId: string | null | undefined): Promise<void> {
@@ -336,18 +360,13 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
     (settings.allowedCurrencies ?? []).forEach((code) => currencies.add(code));
 
     const spendCurrencies = await manager
+      // The currencies in use by every budget line, whatever its nature: the FX refresh covers them all.
       .query(`SELECT DISTINCT currency FROM spend_items WHERE currency IS NOT NULL LIMIT 200`);
     spendCurrencies.forEach((row: any) => {
       const code = typeof row.currency === 'string' ? row.currency.trim().toUpperCase() : '';
       if (code.length === 3) currencies.add(code);
     });
 
-    const capexCurrencies = await manager
-      .query(`SELECT DISTINCT currency FROM capex_items WHERE currency IS NOT NULL LIMIT 200`);
-    capexCurrencies.forEach((row: any) => {
-      const code = typeof row.currency === 'string' ? row.currency.trim().toUpperCase() : '';
-      if (code.length === 3) currencies.add(code);
-    });
 
     await this.currencySettings.ensureCurrencyRecords(currencies, { manager });
 

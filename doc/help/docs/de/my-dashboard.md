@@ -94,7 +94,7 @@ Zeigt bis zu 5 Elemente an.
 
 ### Kürzlich angesehen
 
-Zeigt Elemente an, die Sie in der gesamten Anwendung kürzlich geöffnet haben — Projekte, Anfragen, Anwendungen, Assets, Schnittstellen, Verbindungen, Verträge, Aufgaben, OPEX- und CAPEX-Positionen sowie Wissensdokumente. Jeder Eintrag zeigt den Elementnamen, seinen Typ und wann Sie ihn zuletzt angesehen haben.
+Zeigt Elemente an, die Sie in der gesamten Anwendung kürzlich geöffnet haben: Projekte, Anfragen, Anwendungen, Assets, Schnittstellen, Verbindungen, Verträge, Aufgaben, OPEX- und CAPEX-Zeilen sowie Wissensdokumente. Jeder Eintrag zeigt den Elementnamen, seinen Typ und wann Sie ihn zuletzt angesehen haben.
 
 Kürzlich angesehene Elemente werden lokal in Ihrem Browser gespeichert und sind auf den aktuellen Mandanten und Benutzer beschränkt. Klicken Sie auf **Löschen**, um die Liste zurückzusetzen. Elemente, für die Sie keine Zugriffsberechtigung mehr haben, werden automatisch herausgefiltert.
 

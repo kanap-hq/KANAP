@@ -10,11 +10,15 @@ import { Tenant, TenantRequest } from '../common/decorators';
 import { CONTRACT_LOOKUP_ACCESS, CONTRACT_LOOKUP_READERS, assertLookupSearch } from '../common/lookup/lookup-requirements';
 import { CONTRACT_LOOKUP, lookupReference } from '../common/lookup/reference-lookups';
 import { ContractUpsertDto } from './dto/contract.dto';
+import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { StorageService } from '../common/storage/storage.service';
 import { contentDisposition } from '../common/content-disposition';
 import { ContractContactsService } from './contract-contacts.service';
 import { SupplierContactRole } from '../contacts/supplier-contact.entity';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
+import { canReadContractBudget } from './contract-budget';
+import { languageOf } from '../common/csv-sheet';
+import type { ComplianceItemPatch } from './contract-compliance';
 
 @UseGuards(JwtAuthGuard)
 @Controller('contracts')
@@ -28,12 +32,25 @@ export class ContractsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'reader')
   @Get()
-  list(@Query() query: any, @Req() req: any) { return this.svc.list(query, { manager: req?.queryRunner?.manager }); }
+  list(@Query() query: any, @Req() req: any) {
+    // `budget_year` and `budget_column` add the budget figures for a reader of the budget (contract-budget.ts).
+    return this.svc.list(query, { manager: req?.queryRunner?.manager, budgetAccess: canReadContractBudget(req) });
+  }
+
+  // The list's footer and quick filter counts, for the same search, filters and status scope.
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'reader')
+  @Get('totals')
+  totals(@Query() query: any, @Req() req: any) {
+    return this.svc.totals(query, { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id, budgetAccess: canReadContractBudget(req) });
+  }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'reader')
   @Get('ids')
-  listIds(@Query() query: any, @Req() req: any) { return this.svc.listIds(query, { manager: req?.queryRunner?.manager }); }
+  listIds(@Query() query: any, @Req() req: any) {
+    return this.svc.listIds(query, { manager: req?.queryRunner?.manager, budgetAccess: canReadContractBudget(req) });
+  }
 
   // Picker search (`q`) and hydration of chosen values (`ids`); see common/lookup.
   @UseGuards(PermissionGuard)
@@ -51,6 +68,19 @@ export class ContractsController {
   @Get('export')
   async export(@Query('scope') scope: 'template' | 'data' = 'data', @Res() res: Response, @Req() req: any) {
     const { filename, content } = await this.svc.exportCsv(scope, { manager: req?.queryRunner?.manager });
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', contentDisposition(filename));
+    res.send(content);
+  }
+
+  // The compliance register of the contracts the list selects (CSV, contract × requirement); before ':id'.
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'admin')
+  @Get('compliance-register/export')
+  async exportComplianceRegister(@Query() query: any, @Res() res: Response, @Req() req: any) {
+    const manager = req?.queryRunner?.manager;
+    const language = await languageOf(manager, req.tenant.id, req.user?.sub ?? null, query?.language);
+    const { filename, content } = await this.svc.exportComplianceRegister(query, language, { manager, budgetAccess: canReadContractBudget(req) });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(filename));
     res.send(content);
@@ -80,6 +110,13 @@ export class ContractsController {
   @RequireLevel('contracts', 'reader')
   @Get(':id')
   get(@Param('id') id: string, @Req() req: any) { return this.svc.get(id, { manager: req?.queryRunner?.manager }); }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'reader')
+  @Post(':id/share')
+  share(@Param('id') id: string, @Body() body: ShareItemDto, @Req() req: any) {
+    return this.svc.shareContract(id, body, req.user?.sub ?? '', { manager: req?.queryRunner?.manager });
+  }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'member')
@@ -115,6 +152,69 @@ export class ContractsController {
   @Post(':id/capex-items/bulk-replace')
   bulkReplaceCapex(@Param('id') id: string, @Body() body: { capex_item_ids: string[] }, @Req() req: any) {
     return this.svc.bulkReplaceLinkedCapexItems(id, body?.capex_item_ids ?? [], { manager: req?.queryRunner?.manager });
+  }
+
+  // Budget lines of both natures, applications and assets, from the contract's side (`contract-relations.ts`)
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'reader')
+  @Get(':id/relation-counts')
+  relationCounts(@Param('id') id: string, @Req() req: any) { return this.svc.relationCounts(id, { manager: req?.queryRunner?.manager }); }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'reader')
+  @Get(':id/budget-lines')
+  listBudgetLines(@Param('id') id: string, @Req() req: any) { return this.svc.listBudgetLines(id, { manager: req?.queryRunner?.manager }); }
+
+  // The Budget tab's figures for a year and column; also needs the right to read the budget.
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'reader')
+  @Get(':id/budget')
+  budgetCoverage(@Param('id') id: string, @Query() query: any, @Req() req: any) {
+    return this.svc.budgetCoverage(id, query, { manager: req?.queryRunner?.manager, budgetAccess: canReadContractBudget(req) });
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'member')
+  @Post(':id/budget-lines/bulk-replace')
+  bulkReplaceBudgetLines(@Param('id') id: string, @Body() body: { budget_line_ids: string[] }, @Req() req: any) {
+    return this.svc.replaceRelations(id, 'budget_lines', body?.budget_line_ids ?? [], req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+  }
+
+  // Compliance register of one contract (`contract-compliance.ts`)
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'reader')
+  @Get(':id/compliance')
+  compliance(@Param('id') id: string, @Req() req: any) { return this.svc.compliance(id, { manager: req?.queryRunner?.manager }); }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'member')
+  @Patch(':id/compliance/:requirement')
+  updateCompliance(@Param('id') id: string, @Param('requirement') requirement: string, @Body() body: ComplianceItemPatch, @Req() req: any) {
+    return this.svc.updateCompliance(id, requirement, body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'reader')
+  @Get(':id/applications')
+  listApplications(@Param('id') id: string, @Req() req: any) { return this.svc.listApplications(id, { manager: req?.queryRunner?.manager }); }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'member')
+  @Post(':id/applications/bulk-replace')
+  bulkReplaceApplications(@Param('id') id: string, @Body() body: { application_ids: string[] }, @Req() req: any) {
+    return this.svc.replaceRelations(id, 'applications', body?.application_ids ?? [], req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'reader')
+  @Get(':id/assets')
+  listAssets(@Param('id') id: string, @Req() req: any) { return this.svc.listAssets(id, { manager: req?.queryRunner?.manager }); }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'member')
+  @Post(':id/assets/bulk-replace')
+  bulkReplaceAssets(@Param('id') id: string, @Body() body: { asset_ids: string[] }, @Req() req: any) {
+    return this.svc.replaceRelations(id, 'assets', body?.asset_ids ?? [], req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
   // Tasks for contract

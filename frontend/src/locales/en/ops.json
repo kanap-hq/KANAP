@@ -5,7 +5,6 @@
     "importCsv": "Import CSV",
     "exportCsv": "Export CSV",
     "exportTitle": "Export OPEX",
-    "importTitle": "Import OPEX",
     "columns": {
       "reference": "Ref",
       "productName": "Product name",
@@ -31,14 +30,14 @@
       "runBuild": "Run or build"
     },
     "workspace": {
-      "newSpendItem": "New OPEX item",
-      "spendItem": "OPEX item",
-      "spendItems": "Spend items",
-      "itemOf": "Item {{index}} of {{total}}",
+      "newSpendItem": "New OPEX line",
+      "spendItem": "OPEX line",
+      "spendItems": "Budget lines",
+      "itemOf": "Line {{index}} of {{total}}",
       "prev": "Prev",
       "next": "Next",
-      "failedToLoad": "Failed to load item.",
-      "tabsAfterCreate": "Other tabs will be available after you create the item."
+      "failedToLoad": "Failed to load line.",
+      "tabsAfterCreate": "Other tabs will be available after you create the line."
     },
     "status": {
       "enabled": "Enabled",
@@ -86,17 +85,22 @@
       "currencyMust3": "Currency must be 3 letters",
       "payingCompanyRequired": "Paying company is required",
       "accountRequired": "Account is required",
+      "dimensionRequired": "{{name}} is required",
+      "requiredLeaveTitle_one": "Required value missing",
+      "requiredLeaveTitle_other": "Required values missing",
+      "requiredLeaveMessage_one": "{{names}} is required. Choose a value before leaving.",
+      "requiredLeaveMessage_other": "{{names}} are required. Choose values before leaving.",
+      "requiredLeaveStay": "Stay",
+      "requiredLeaveConfirm": "Leave anyway",
       "effectiveStartRequired": "Effective start is required",
-      "failedToCreate": "Failed to create item",
+      "failedToCreate": "Failed to create line",
       "failedToSave": "Failed to save",
-      "failedToLoad": "Failed to load item",
+      "failedToLoad": "Failed to load line",
       "obsoleteAccount": "Obsolete account detected. The selected account does not belong to the company's Chart of Accounts. Please update the account."
     },
     "budget": {
       "title": "Budget",
       "mode": "Mode",
-      "flat": "Flat",
-      "monthly": "Monthly",
       "total": "Total",
       "spreadPlaceholder": "e.g. 120000",
       "profileFlat": "Flat",
@@ -193,13 +197,9 @@
     "importCsv": "Import CSV",
     "exportCsv": "Export CSV",
     "exportTitle": "Export CAPEX",
-    "importTitle": "Import CAPEX",
     "columns": {
       "description": "Description",
       "company": "Company",
-      "ppeType": "PP&E type",
-      "investmentType": "Investment type",
-      "priority": "Priority",
       "yAllocation": "Y allocation",
       "yPlus1Allocation": "Y+1 allocation",
       "currency": "Currency",
@@ -225,55 +225,40 @@
       "budgetHolder": "Budget holder",
       "runBuild": "Run or build"
     },
-    "ppeTypes": {
-      "hardware": "Hardware",
-      "software": "Software"
-    },
     "runBuild": {
       "run": "Run",
       "build": "Build"
     },
-    "investmentTypes": {
-      "replacement": "Replacement",
-      "capacity": "Capacity",
-      "productivity": "Productivity",
-      "security": "Security",
-      "conformity": "Conformity",
-      "business_growth": "Business growth",
-      "other": "Other"
-    },
-    "priorityTypes": {
-      "mandatory": "Mandatory",
-      "high": "High",
-      "medium": "Medium",
-      "low": "Low"
-    },
     "workspace": {
-      "newCapexItem": "New CAPEX item",
-      "capexItem": "CAPEX item",
-      "itemOf": "Item {{index}} of {{total}}",
+      "newCapexItem": "New CAPEX line",
+      "capexItem": "CAPEX line",
+      "itemOf": "Line {{index}} of {{total}}",
       "prev": "Prev",
       "next": "Next",
-      "failedToLoad": "Failed to load item.",
-      "tabsAfterCreate": "Other tabs will be available after you create the item.",
-      "capexItems": "CAPEX items"
+      "failedToLoad": "Failed to load line.",
+      "tabsAfterCreate": "Other tabs will be available after you create the line.",
+      "capexItems": "CAPEX lines"
     },
     "editor": {
-      "descriptionRequired": "Description is required",
       "currencyMust3": "Currency must be 3 letters",
       "effectiveStartRequired": "Effective start is required",
-      "failedToCreate": "Failed to create item",
+      "failedToCreate": "Failed to create line",
       "failedToSave": "Failed to save",
-      "failedToLoad": "Failed to load item",
+      "failedToLoad": "Failed to load line",
       "obsoleteAccount": "Obsolete account detected. The selected account does not belong to the company's Chart of Accounts. Please update the account.",
       "payingCompanyRequired": "Paying company is required",
-      "accountRequired": "Account is required"
+      "accountRequired": "Account is required",
+      "dimensionRequired": "{{name}} is required",
+      "requiredLeaveTitle_one": "Required value missing",
+      "requiredLeaveTitle_other": "Required values missing",
+      "requiredLeaveMessage_one": "{{names}} is required. Choose a value before leaving.",
+      "requiredLeaveMessage_other": "{{names}} are required. Choose values before leaving.",
+      "requiredLeaveStay": "Stay",
+      "requiredLeaveConfirm": "Leave anyway"
     },
     "budget": {
       "title": "Budget",
       "mode": "Mode",
-      "flat": "Flat",
-      "monthly": "Monthly",
       "total": "Total",
       "spreadPlaceholder": "e.g. 120000",
       "profileFlat": "Flat",
@@ -383,9 +368,6 @@
       "notes": "Notes",
       "notesPlaceholder": "e.g., renewal negotiated in Q3",
       "description": "Description",
-      "ppeType": "PP&E type",
-      "investmentType": "Investment type",
-      "priority": "Priority",
       "costCenter": "Cost center",
       "costCenterCompanyHint": "This cost center belongs to {{company}}.",
       "runBuild": "Run or build"
@@ -395,8 +377,7 @@
       "itOwner": "IT owner",
       "itOwnerMissing": "IT owner missing",
       "businessOwner": "Business owner",
-      "businessOwnerMissing": "Business owner missing",
-      "priority": "Priority"
+      "businessOwnerMissing": "Business owner missing"
     },
     "status": {
       "enabled": "Enabled",
@@ -418,72 +399,315 @@
       "durationMonths": "Duration (m)",
       "autoRenewal": "Auto-renewal",
       "noticeMonths": "Notice (m)",
-      "end": "End",
+      "end": "Term end",
       "cancelBy": "Cancel by",
+      "nextDue": "Next due date",
+      "state": "State",
       "yearlyAmount": "Yearly amount",
       "currency": "Curr",
       "billing": "Billing",
-      "linkedOpex": "Linked OPEX",
-      "task": "Task"
+      "linkedLines": "Linked lines",
+      "task": "Task",
+      "committed": "Committed {{year}}",
+      "budgetLinked": "Budget {{year}}",
+      "gap": "Gap",
+      "budgetState": "Budget coverage",
+      "compliance": "Compliance"
+    },
+    "list": {
+      "toDecide": "To decide within {{days}} days ({{count}})",
+      "dueIn_one": "in {{count}} day",
+      "dueIn_other": "in {{count}} days",
+      "dueToday": "today",
+      "total_one": "Total ({{count}} contract)",
+      "total_other": "Total ({{count}} contracts)",
+      "totalExcluded_one": "excluding {{count}} contract in {{currency}} without a rate",
+      "totalExcluded_other": "excluding {{count}} contracts in {{currency}} without a rate",
+      "states": {
+        "to_decide": "To decide",
+        "in_progress": "In progress",
+        "renewed": "Renewed",
+        "renewedOn": "Renewed on {{date}}",
+        "ending": "Ends without renewal",
+        "expired": "Expired"
+      },
+      "noBudgetLine": "No budget line ({{count}})",
+      "underBudgeted": "Under-budgeted ({{count}})",
+      "budgetSelector": "Budget",
+      "budgetYear": "Budget year",
+      "gapNoLine": "No line",
+      "gapExpired": "Contract expired",
+      "committedExcluded_one": "committed {{year}} excluding {{count}} contract in {{currency}} without a rate",
+      "committedExcluded_other": "committed {{year}} excluding {{count}} contracts in {{currency}} without a rate"
     },
     "workspace": {
       "newContract": "New contract",
       "contract": "Contract",
-      "contractOf": "Contract {{index}} of {{total}}",
-      "prev": "Prev",
-      "next": "Next",
-      "failedToLoad": "Failed to load contract."
+      "previous": "Previous contract",
+      "next": "Next contract"
     },
     "tabs": {
       "overview": "Overview",
-      "details": "Details",
-      "relations": "Relations",
-      "tasks": "Tasks"
+      "budget": "Budget",
+      "compliance": "Compliance",
+      "relations": "Relations"
     },
-    "overview": {
-      "contractName": "Contract name",
+    "sections": {
+      "parties": "Parties",
+      "duration": "Duration",
+      "amount": "Amount"
+    },
+    "fields": {
+      "name": "Contract name",
       "supplier": "Supplier",
-      "contractingCompany": "Contracting company",
+      "company": "Contracting company",
       "owner": "Owner",
-      "nameSupplierCompanyRequired": "Name, supplier and company are required",
-      "failedToLoad": "Failed to load contract",
-      "failedToSave": "Failed to save"
-    },
-    "details": {
-      "startDate": "Start date",
+      "status": "Status",
+      "startDate": "Start",
       "durationMonths": "Duration (months)",
       "noticeMonths": "Notice (months)",
+      "autoRenewal": "Tacit renewal",
+      "yes": "Yes",
+      "no": "No",
       "yearlyAmount": "Yearly amount",
       "currency": "Currency",
-      "billingFrequency": "Billing frequency",
-      "autoRenewal": "Auto-renewal",
-      "endDate": "End date",
-      "cancellationDeadline": "Cancellation deadline",
-      "failedToLoad": "Failed to load details",
-      "failedToSave": "Failed to save details"
+      "billingFrequency": "Billing",
+      "lifecycle": "Lifecycle",
+      "endOfValidity": "End of validity",
+      "endOfValidityHint": "Leave blank to keep the contract active.",
+      "created": "Created",
+      "updated": "Updated",
+      "notes": "Notes"
+    },
+    "billing": {
+      "annual": "Annual",
+      "quarterly": "Quarterly",
+      "monthly": "Monthly",
+      "other": "Other"
+    },
+    "metadata": {
+      "supplierMissing": "Supplier missing",
+      "companyMissing": "Company missing",
+      "ownerMissing": "Owner missing",
+      "editInProperties": "Edit in the properties panel"
+    },
+    "placeholders": {
+      "name": "e.g., Maintenance agreement",
+      "durationMonths": "e.g., 12",
+      "noticeMonths": "e.g., 3",
+      "yearlyAmount": "e.g., 12000",
+      "notes": "e.g., renewal terms, account manager"
+    },
+    "messages": {
+      "loadFailed": "The contract could not be loaded.",
+      "saveFailed": "The change could not be saved.",
+      "createFailed": "The contract could not be created.",
+      "nameRequired": "Enter a name.",
+      "supplierRequired": "Choose a supplier.",
+      "companyRequired": "Choose a company.",
+      "startRequired": "Enter the start date.",
+      "durationRequired": "Enter a duration of at least one month.",
+      "currencyRequired": "Choose a currency.",
+      "invalidMonths": "Enter a whole number of months.",
+      "invalidAmount": "Enter an amount with at most two decimals."
+    },
+    "deadlines": {
+      "title": "Deadlines",
+      "noStart": "Enter a start date to see the terms.",
+      "noDuration": "Enter a duration to see the terms.",
+      "cancelUntil": "Cancellation possible until {{date}}",
+      "today": "today",
+      "inDays_one": "in {{count}} day",
+      "inDays_other": "in {{count}} days",
+      "noticePassed": "Notice passed, renewed until {{date}}",
+      "nextDeadline": "next deadline on {{date}}",
+      "endsOn": "Ends on {{date}}",
+      "withoutRenewal": "without renewal",
+      "expiredOn": "Ended on {{date}}",
+      "termCurrent": "Term {{number}} in progress",
+      "termLast": "Term {{number}}, the last one",
+      "termUpcoming": "Term {{number}} not started",
+      "fromTo": "from {{start}} to {{end}}",
+      "renewedTimes_one": "Renewed once since {{date}}",
+      "renewedTimes_other": "Renewed {{count}} times since {{date}}",
+      "notice_one": "{{count}} month notice",
+      "notice_other": "{{count}} months notice",
+      "noNotice": "No notice"
+    },
+    "timeline": {
+      "label": "Timeline of the contract terms",
+      "term": "Term {{number}}",
+      "termCurrent": "Term {{number}}, current",
+      "termProjected": "Term {{number}}, if renewed",
+      "termNext": "Term {{number}}, renewed",
+      "termUpcoming": "Term {{number}}, upcoming",
+      "today": "Today",
+      "deadline": "Deadline {{date}}",
+      "window": "Decision window"
+    },
+    "budget": {
+      "title": "Linked budget lines",
+      "empty": "No budget line linked.",
+      "pickerLabel": "Link or remove budget lines",
+      "columns": {
+        "ref": "Ref.",
+        "line": "Budget line",
+        "type": "Type",
+        "company": "Company"
+      },
+      "column": "Column",
+      "amountHeader": "{{column}} {{year}}",
+      "total_one": "Total ({{count}} line)",
+      "total_other": "Total ({{count}} lines)",
+      "noRate": "No {{currency}} rate",
+      "states": {
+        "covered": "Covered",
+        "under": "Under-budgeted",
+        "over": "Budget above the contract",
+        "no_line": "No budget line",
+        "no_commitment": "No commitment",
+        "not_started": "Budget not started yet"
+      },
+      "coverage": {
+        "title": "Commitment and coverage",
+        "subtitle": "Column {{column}} · {{currency}}",
+        "columns": {
+          "year": "Year",
+          "committed": "Committed by the contract",
+          "linked": "Linked lines",
+          "gap": "Gap",
+          "state": "State"
+        },
+        "hint": "Committed: the yearly amount at signature, prorated over the months a term covers, in {{currency}} at the year's rates.",
+        "hintRenewal": "The following years assume the renewal goes on until it is stopped.",
+        "hintEndOfValidity": "Nothing is committed after the end of validity on {{date}}.",
+        "hintEnds": "Nothing is committed after the contract ends on {{date}}."
+      }
     },
     "relations": {
-      "linkedOpex": "Linked OPEX",
-      "opexItems": "OPEX items",
-      "selectOpexItems": "Select OPEX items",
-      "linkedCapex": "Linked CAPEX",
-      "capexItems": "CAPEX items",
-      "selectCapexItems": "Select CAPEX items",
+      "applications": "Applications",
+      "assets": "Assets",
+      "selectApplications": "Select applications",
+      "selectAssets": "Select assets",
       "relevantWebsites": "Relevant websites",
       "addUrl": "Add URL",
+      "linkName": "Name",
+      "linkUrl": "URL",
+      "linkNamePlaceholder": "e.g., vendor portal",
+      "noWebsites": "No websites added",
+      "deleteWebsite": "Delete link",
+      "addLinkTitle": "Add link",
+      "editLinkTitle": "Edit link",
       "attachments": "Attachments",
-      "dragDrop": "Drag & drop files here, or use the button to select",
-      "noUploadPermission": "You do not have permission to upload attachments.",
-      "selectFiles": "Select files",
-      "uploadingFiles": "Uploading {{count}} file(s)…",
-      "failedToLoad": "Failed to load relations",
-      "failedToSave": "Failed to save relations"
+      "addFiles": "Add files",
+      "noAttachments": "No attachments",
+      "noAttachmentsDrop": "No attachments. Drop files here to attach them.",
+      "uploadingFiles_one": "Uploading {{count}} file…",
+      "uploadingFiles_other": "Uploading {{count}} files…",
+      "deleteAttachment": "Delete attachment"
     },
-    "linkManager": {
-      "linkedOpexTitle": "Linked OPEX — {{name}}",
-      "searchPlaceholder": "Search OPEX by product name",
-      "results": "Results",
-      "selected": "Selected"
+    "compliance": {
+      "title": "Requirements",
+      "subtitle": "expected from the linked applications and assets",
+      "hint": "A requirement appears when a linked application or asset makes it necessary.",
+      "noneExpected": "No requirement is expected: no linked application or asset makes one necessary.",
+      "showOthers": "Show the other requirements ({{count}})",
+      "hideOthers": "Hide the other requirements",
+      "notExpected": "Not expected",
+      "moreReasons_one": "and {{count}} more",
+      "moreReasons_other": "and {{count}} more",
+      "columns": {
+        "requirement": "Requirement",
+        "reason": "Expected because",
+        "state": "State",
+        "reference": "Reference"
+      },
+      "requirements": {
+        "gdpr_dpa": "GDPR data processing agreement (art. 28)",
+        "data_location": "Data location",
+        "reversibility": "Reversibility clause",
+        "exit_plan": "Exit plan",
+        "audit_security": "Audit rights and security clauses"
+      },
+      "states": {
+        "present": "Present",
+        "absent": "Missing",
+        "not_applicable": "Not applicable",
+        "to_check": "To check",
+        "unset": "Not recorded"
+      },
+      "reasons": {
+        "personal_data": "{{app}} holds personal data",
+        "business_criticality": "{{app}}: business criticality {{level}}",
+        "cyber_criticality": "{{app}}: cyber criticality {{level}}",
+        "cloud_hosting": "{{app}}: hosted in {{level}}",
+        "viaAsset": "{{text}} (asset {{asset}})"
+      },
+      "summary": {
+        "missing_one": "{{count}} missing",
+        "missing_other": "{{count}} missing",
+        "toCheck_one": "{{count}} to check",
+        "toCheck_other": "{{count}} to check",
+        "complete": "Complete",
+        "none": "No expectation",
+        "states": {
+          "missing": "Missing",
+          "to_check": "To check",
+          "complete": "Complete",
+          "none": "No expectation"
+        }
+      },
+      "stateOf": "State of {{requirement}}",
+      "referenceOf": "Reference of {{requirement}}",
+      "referencePlaceholder": "e.g., article 18.3",
+      "updatedBy": "Updated on {{date}} by {{name}}",
+      "updatedOn": "Updated on {{date}}",
+      "saveFailed": "The change could not be saved.",
+      "loadFailed": "The requirements could not be loaded.",
+      "exportRegister": "Export the register",
+      "exportFailed": "The register could not be exported."
+    },
+    "renewal": {
+      "title": "Renewal decision due",
+      "renegotiating": "Renegotiation in progress",
+      "dueBefore": "Before {{date}}",
+      "task": "task",
+      "taskFor": "for {{name}}",
+      "withoutDecision_one": "Without a decision, the contract renews for {{count}} month on {{date}}.",
+      "withoutDecision_other": "Without a decision, the contract renews for {{count}} months on {{date}}.",
+      "renegotiatingHint": "The task stays open until the final decision.",
+      "reasonLabel": "Justification",
+      "reasonPlaceholder": "e.g., 4% price increase announced, compare with other offers",
+      "renew": "Renew",
+      "renegotiate": "Renegotiate",
+      "terminate": "Terminate",
+      "confirmTerminate": "Confirm termination",
+      "consequenceEnd": "The contract will end on {{date}} and will not renew.",
+      "consequenceCommitment": "The {{year}} commitment goes from {{before}} to {{after}} {{currency}}.",
+      "consequenceNoCommitment": "{{year}} will have no commitment ({{before}} {{currency}} today).",
+      "consequenceApplications_one": "{{count}} application loses this contract: {{names}}.",
+      "consequenceApplications_other": "{{count}} applications lose this contract: {{names}}.",
+      "consequenceAssets_one": "{{count}} asset loses its support contract: {{names}}.",
+      "consequenceAssets_other": "{{count}} assets lose their support contract: {{names}}.",
+      "andMore": "{{names}} and {{count}} more",
+      "renewedBy": "Renewal confirmed on {{date}} by {{name}}.",
+      "renewedOn": "Renewal confirmed on {{date}}.",
+      "renewsOn": "The contract renews on {{date}}.",
+      "terminatedBy": "Termination decided on {{date}} by {{name}}.",
+      "terminatedOn": "Termination decided on {{date}}.",
+      "endsOn": "The contract ends on {{date}}.",
+      "reasonShown": "Justification: {{reason}}",
+      "noticeHint": "Send the termination letter before {{date}} and attach it in Relations.",
+      "undo": "Undo the decision",
+      "failed": "The decision could not be saved.",
+      "settings": {
+        "button": "Settings",
+        "title": "Contract settings",
+        "windowLabel": "Decision window before the cancellation deadline (days)",
+        "windowHint": "A contract that renews tacitly awaits a decision this many days before its cancellation deadline. Its owner then gets a task to decide on the renewal. From 0 to 365 days.",
+        "invalid": "Enter a whole number of days from 0 to 365.",
+        "saveFailed": "The settings could not be saved."
+      }
     }
   },
   "operations": {
@@ -497,13 +721,11 @@
       "freezeTitle": "Freeze / unfreeze data",
       "freezeDesc": "Lock budget columns or headcount metrics for a specific year",
       "copyBudgetTitle": "Copy budget columns",
-      "copyBudgetDesc": "Copy budget data between years and columns with optional percentage adjustments",
-      "copyAllocTitle": "Copy allocations",
-      "copyAllocDesc": "Copy allocation methods and percentages from one year to another",
+      "copyBudgetDesc": "Copy amounts between years and columns, with an optional percentage, and allocations to another year",
       "resetColumnTitle": "Reset budget column",
       "resetColumnDesc": "Clear all data from a budget column for a specific year",
       "allocationDefaultTitle": "Default allocation method",
-      "allocationDefaultDesc": "Choose the method applied to OPEX and CAPEX items left on the default allocation",
+      "allocationDefaultDesc": "Choose the method applied to OPEX and CAPEX lines left on the default allocation",
       "budgetColumnsTitle": "Budget columns",
       "budgetColumnsDesc": "Name the five budget columns, choose which ones are shown and which one is the default",
       "currencyTitle": "Currencies",
@@ -527,7 +749,7 @@
       "companiesHint": "Select at least one company: the selection is saved when the list closes.",
       "companiesPlaceholder": "Select companies",
       "method": "Default method",
-      "methodHelp": "Applies to every OPEX and CAPEX item that uses the default method. Items with an explicit method or a manual allocation are not affected.",
+      "methodHelp": "Applies to every OPEX and CAPEX line that uses the default method. Lines with an explicit method or a manual allocation are not affected.",
       "sharesTitle": "Computed split",
       "sharesEmpty": "No split yet. Select at least one company to see the percentages.",
       "companyColumn": "Company",
@@ -536,7 +758,7 @@
       "standardNote": "Standard method — no override configured for this year.",
       "overriddenNote": "Configured for your organisation. Standard method: {{method}}.",
       "resetToStandard": "Use the standard method",
-      "scopeNote": "The method is resolved when allocations are computed: either from the headcount, IT users or turnover of every company enabled for the year, or from the driver value of the companies selected for the default. Changing it re-drives every item left on the default method; manual allocations keep their percentages.",
+      "scopeNote": "The method is resolved when allocations are computed: either from the headcount, IT users or turnover of every company enabled for the year, or from the driver value of the companies selected for the default. Changing it re-drives every line left on the default method; manual allocations keep their percentages.",
       "loadError": "Could not load the default allocation method.",
       "saveError": "Could not save the default allocation method.",
       "noPermission": "You need budget administration rights to change the default. The current setting stays visible.",
@@ -548,115 +770,94 @@
     },
     "freeze": {
       "title": "Freeze / unfreeze data",
-      "frozenSuccess": "Columns frozen successfully.",
-      "unfrozenSuccess": "Columns unfrozen successfully.",
       "freezeError": "Unable to freeze columns.",
       "unfreezeError": "Unable to unfreeze columns.",
       "loadError": "Failed to load freeze status. Try selecting a different year.",
       "year": "Year",
-      "opexColumns": "OPEX columns",
-      "capexColumns": "CAPEX columns",
-      "freezeData": "Freeze data",
-      "freezing": "Freezing…",
-      "unfreezeData": "Unfreeze data",
-      "unfreezing": "Unfreezing…",
-      "updating": "Updating freeze status…",
       "frozen": "Frozen",
-      "editable": "Editable",
-      "hidden": "Hidden"
+      "open": "Open",
+      "hidden": "Hidden",
+      "column": "Column",
+      "cell": "{{column}}, {{nature}}",
+      "freezeBoth": "Freeze both",
+      "unfreezeBoth": "Unfreeze both"
     },
     "columnReset": {
       "title": "Reset budget column",
-      "subtitle": "Clear a column for one year, for OPEX or CAPEX: its twelve months and its spread period.",
+      "subtitle": "Clear a column for one year, on all lines, OPEX or CAPEX: its twelve months and its spread period.",
       "year": "Year",
       "budgetColumn": "Budget column",
       "processing": "Processing…",
       "clearColumn": "Clear column",
-      "product": "Item",
+      "product": "Line",
       "dataPreview": "Data preview",
-      "totalItems": "Total items",
-      "itemsWithData": "Items with a non-zero total",
+      "totalItems": "Total lines",
+      "itemsWithData": "Lines with a non-zero total",
       "currentTotalValue": "Current total value",
       "columnFrozenError": "The {{year}} {{column}} column is frozen. Unfreeze it before clearing data.",
+      "columnFrozenNatureError": "The {{year}} {{column}} column is frozen for {{nature}}. Unfreeze it before clearing data, or clear the other type only.",
       "noDataInfo": "The {{column}} column of {{year}} holds no amount. Clearing only removes its spread periods.",
       "confirmTitle": "Confirm column reset",
       "confirmUndoWarning": "This action cannot be undone.",
       "clearFailed": "The reset failed. Nothing was changed.",
       "loadingData": "Loading data…",
       "currentHeader": "{{column}} {{year}}, current",
-      "clearWarning_one": "Clearing removes the {{column}} amounts and period of {{year}} for {{count}} item. This cannot be undone.",
-      "clearWarning_other": "Clearing removes the {{column}} amounts and period of {{year}} for {{count}} items. This cannot be undone.",
+      "clearWarning_one": "Clearing removes the {{column}} amounts and period of {{year}} for {{count}} line. This cannot be undone.",
+      "clearWarning_other": "Clearing removes the {{column}} amounts and period of {{year}} for {{count}} lines. This cannot be undone.",
       "confirmMessage": "Clear the {{column}} column for {{year}}?",
-      "confirmAffected_one": "{{count}} item is affected, for a total of {{value}}.",
-      "confirmAffected_other": "{{count}} items are affected, for a total of {{value}}.",
-      "clearDone_one": "Cleared {{count}} item.",
-      "clearDone_other": "Cleared {{count}} items.",
+      "confirmAffected_one": "{{count}} line is affected, for a total of {{value}}.",
+      "confirmAffected_other": "{{count}} lines are affected, for a total of {{value}}.",
+      "clearDone_one": "Cleared {{count}} line.",
+      "clearDone_other": "Cleared {{count}} lines.",
       "confirmPeriodsOnly": "The {{column}} column for {{year}} holds no amount. Only its spread periods will be removed.",
       "chooseColumn": "Choose a column",
       "chooseColumnFirst": "Choose a column to see the amounts it holds."
     },
-    "copyAllocations": {
-      "title": "Copy allocations",
-      "subtitle": "Copy allocation methods and percentages from one year to another, for OPEX or CAPEX.",
-      "sourceYear": "Source year",
-      "destinationYear": "Destination year",
-      "overwriteExisting": "Overwrite existing data",
-      "dryRun": "Dry run",
-      "copyData": "Copy data",
-      "processing": "Processing...",
-      "sameYearWarning": "Source and destination years must be different.",
-      "preview": "Preview",
-      "product": "Item",
-      "action": "Action",
-      "sourceLabel": "Source ({{year}})",
-      "destinationLabel": "Destination ({{year}})",
-      "resultAfterCopy": "Result after copy",
-      "showingItems": "Showing {{total}} items. {{toCopy}} will be copied, {{skipped}} skipped, {{errors}} errors.",
-      "dryRunPrompt": "Run a dry run to preview how allocation methods will be copied.",
-      "skippedDueToDestination": "{{count}} items already have allocations in {{year}}. Enable overwrite to replace them.",
-      "summaryReady": "{{processed}} items ready to copy, {{skipped}} skipped, {{errors}} errors.",
-      "copyCompleted": "Copy completed.\nProcessed: {{processed}}\nSkipped: {{skipped}}\nErrors: {{errors}}",
-      "dryRunFailed": "Dry run failed. Check the console for details.",
-      "copyFailed": "Copy failed. Check the console for details.",
-      "actionLabels": {
-        "copy": "Will copy",
-        "skip_missing_source_version": "Skip – no source year",
-        "skip_no_source_allocations": "Skip – no allocations in source",
-        "skip_destination_has_data": "Skip – destination has data",
-        "error": "Error"
-      },
-      "defaultManualLabel": "selected companies ({{count}})",
-      "defaultManualLabel_one": "selected company ({{count}})",
-      "defaultBasisWarning": "{{count}} items are left on the default allocation: {{destinationYear}} uses {{destinationLabel}} while {{sourceYear}} uses {{sourceLabel}}. Copied items keep following the default of their own year — configure {{destinationYear}} in Budget administration if the basis should stay the same."
-    },
-    "copyBudgetColumns": {
+    "copyBudget": {
       "title": "Copy budget columns",
-      "subtitle": "Copy a column to another year or column, for OPEX or CAPEX. Each month keeps its amount and the percentage applies to every month. For columns calculated from quantity and price, the percentage raises the unit prices and the months are recalculated with the destination year's calendars. Lines that are not valid in the destination year are left out. Lines valid for part of it get only those months.",
+      "subtitle": "Copy amounts from one column to another, and allocations from one year to another, for all lines, OPEX or CAPEX.",
       "sourceYear": "Source year",
-      "sourceColumn": "Source column",
       "destinationYear": "Destination year",
+      "amounts": "Amounts",
+      "partsLabel": "To copy",
+      "amountsHelp": "Copies the twelve months of the source column into the destination column, raised by the percentage. Lines not valid in the destination year are left out, and lines valid for part of it get only those months.",
+      "allocations": "Allocations",
+      "allocationsHelp": "Copies each line's allocation method, with any split entered by hand, to the destination year. Offered when the years differ.",
+      "sourceColumn": "Source column",
       "destinationColumn": "Destination column",
       "percentageIncrease": "Percentage increase",
-      "overwriteExisting": "Overwrite existing data",
-      "dryRun": "Dry run",
-      "copyData": "Copy data",
+      "percentageHelp": "Applies to every month. For columns calculated from quantity and price, it raises the unit prices and the months are recalculated with the destination year's calendars. Amounts are rounded to whole amounts.",
+      "overwrite": "Overwrite existing data",
+      "overwriteHelp": "Replaces the amounts of a destination column that already has some, and the allocations entered by hand in the destination year.",
+      "preview": "Preview",
+      "copy": "Copy",
       "processing": "Processing…",
-      "product": "Item",
-      "dataPreview": "Data preview",
-      "totalItems": "Total items",
-      "itemsToProcess": "Items to be processed",
-      "sourceTotal": "Source total",
-      "currentDestTotal": "Current destination total",
-      "previewTotal": "Preview total",
-      "frozenError": "The {{year}} {{column}} column is frozen. Unfreeze it before copying data.",
-      "dryRunFailed": "The dry run failed.",
-      "copyFailed": "The copy failed. Nothing was changed.",
-      "loadingData": "Loading data…",
-      "roundingNote": "With a percentage, amounts are rounded to whole amounts.",
+      "chooseParts": "Choose what to copy: the amounts, the allocations or both.",
+      "previewTitle": "Preview",
+      "resultTitle": "Result",
+      "previewPrompt": "Run the preview to see what the copy does on each line.",
+      "line": "Line",
       "sourceHeader": "{{column}} {{year}}",
       "currentHeader": "{{column}} {{year}}, current",
-      "previewHeader": "{{column}} {{year}}, preview",
-      "skipped": "Skipped",
+      "afterHeader": "{{column}} {{year}}, after the copy",
+      "amountsStatus": "Amounts",
+      "allocationSource": "Allocation {{year}}",
+      "allocationCurrent": "Allocation {{year}}, current",
+      "allocationAfter": "Allocation {{year}}, after the copy",
+      "allocationsStatus": "Allocations",
+      "status": {
+        "toCopy": "To copy",
+        "copied": "Copied",
+        "replaces": "Replaces {{method}}",
+        "replaced": "Replaced {{method}}",
+        "notValid": "Not valid in {{year}}",
+        "noSource": "Skipped: nothing in {{year}}",
+        "sourceEmpty": "Skipped: the source column is empty",
+        "destinationFilled": "Skipped: the destination has amounts",
+        "noSourceAllocation": "Skipped: no allocation entered in {{year}}",
+        "destinationAllocation": "Skipped: {{year}} has an allocation entered by hand",
+        "error": "Error: {{message}}"
+      },
       "prorated": "Prorated",
       "proratedHelp": "This line starts or ends during {{year}}. Only the months within its validity are copied.",
       "calendarNote": "Calendar",
@@ -666,15 +867,43 @@
         "missing": "{{line}}: {{calendar}} has no working days for {{year}} and no replacement calendar. The amounts are copied without recalculation.",
         "disabled": "{{line}}: {{calendar}} is disabled and is still used."
       },
-      "previewInfo_one": "{{count}} item in the preview: {{toProcess}} to copy, {{skipped}} skipped. Skipped items keep their current value.",
-      "previewInfo_other": "{{count}} items in the preview: {{toProcess}} to copy, {{skipped}} skipped. Skipped items keep their current value.",
-      "existingDataWarning_one": "{{count}} item already has an amount in the destination column and will be skipped. Turn on \"Overwrite existing data\" to replace it.",
-      "existingDataWarning_other": "{{count}} items already have an amount in the destination column and will be skipped. Turn on \"Overwrite existing data\" to replace them.",
-      "copyDone_one": "Copied {{count}} item.",
-      "copyDone_other": "Copied {{count}} items.",
-      "calendarAlert_one": "{{count}} item has lines on a calendar with no working days for {{year}}. To recalculate it with its own calendar, add the year's days on the Working-day calendars page, then run the dry run again.",
-      "calendarAlert_other": "{{count}} items have lines on a calendar with no working days for {{year}}. To recalculate them with their own calendars, add the year's days on the Working-day calendars page, then run the dry run again.",
-      "acceptCalendarChanges": "Copy anyway with these calendar changes"
+      "calendarAlert_one": "{{count}} line has quantity and price lines on a calendar with no working days for {{year}}. To recalculate it with its own calendar, add the year's days on the Working-day calendars page, then run the preview again.",
+      "calendarAlert_other": "{{count}} lines have quantity and price lines on a calendar with no working days for {{year}}. To recalculate them with their own calendars, add the year's days on the Working-day calendars page, then run the preview again.",
+      "acceptCalendarChanges": "Copy anyway with these calendar changes",
+      "frozenError": "The {{year}} {{column}} column is frozen. Unfreeze it before copying amounts.",
+      "frozenNatureError": "The {{year}} {{column}} column is frozen for {{nature}}. Unfreeze it, or copy the other type only.",
+      "existingAmounts_one": "{{count}} line already has an amount in the destination column and will be skipped. Turn on \"Overwrite existing data\" to replace it.",
+      "existingAmounts_other": "{{count}} lines already have an amount in the destination column and will be skipped. Turn on \"Overwrite existing data\" to replace them.",
+      "existingAllocations_one": "{{count}} line already has an allocation entered by hand in {{year}} and keeps it. Turn on \"Overwrite existing data\" to replace it.",
+      "existingAllocations_other": "{{count}} lines already have an allocation entered by hand in {{year}} and keep it. Turn on \"Overwrite existing data\" to replace them.",
+      "methodsReplaced_one": "{{count}} line changes its allocation method in {{year}}. Without \"Overwrite existing data\", the copy keeps only the allocations entered by hand.",
+      "methodsReplaced_other": "{{count}} lines change their allocation method in {{year}}. Without \"Overwrite existing data\", the copy keeps only the allocations entered by hand.",
+      "defaultManualLabel": "selected companies ({{count}})",
+      "defaultManualLabel_one": "selected company ({{count}})",
+      "defaultBasisWarning": "{{count}} lines are left on the default allocation: {{destinationYear}} uses {{destinationLabel}} while {{sourceYear}} uses {{sourceLabel}}. Copied lines keep following the default of their own year. Configure {{destinationYear}} in Budget administration if the basis should stay the same.",
+      "summary": {
+        "preview_one": "{{count}} line in the preview.",
+        "preview_other": "{{count}} lines in the preview.",
+        "done": "Copy done.",
+        "amounts": "Amounts: {{processed}} to copy, {{skipped}} skipped.",
+        "amountsDone": "Amounts: {{processed}} copied, {{skipped}} skipped.",
+        "allocations": "Allocations: {{processed}} to copy, {{skipped}} skipped.",
+        "allocationsDone": "Allocations: {{processed}} copied, {{skipped}} skipped.",
+        "errors_one": "{{count}} line cannot be copied: its allocation rules refuse it.",
+        "errors_other": "{{count}} lines cannot be copied: their allocation rules refuse them."
+      },
+      "totalLines": "Total lines",
+      "amountsToCopy": "Amounts to copy",
+      "amountsCopied": "Amounts copied",
+      "allocationsToCopy": "Allocations to copy",
+      "allocationsCopied": "Allocations copied",
+      "sourceTotal": "Source total",
+      "currentTotal": "Current destination total",
+      "afterTotal": "Total after the copy",
+      "loadingData": "Loading data…",
+      "previewFailed": "The preview failed.",
+      "copyFailed": "The copy failed. Nothing was changed.",
+      "copyUnknown": "The server did not confirm the copy, so its result is unknown: it is either complete or not applied at all. Run the preview again to see the current state before copying again."
     },
     "currency": {
       "title": "Currency settings",
@@ -689,9 +918,9 @@
       "reportingCurrency": "Reporting currency",
       "reportingCurrencyHelp": "Primary currency used for reports and totals",
       "defaultOpexCurrency": "Default OPEX currency",
-      "defaultOpexCurrencyHelp": "Prefills currency when creating new OPEX items",
+      "defaultOpexCurrencyHelp": "Prefills currency when creating new OPEX lines",
       "defaultCapexCurrency": "Default CAPEX currency",
-      "defaultCapexCurrencyHelp": "Prefills currency when creating new CAPEX items",
+      "defaultCapexCurrencyHelp": "Prefills currency when creating new CAPEX lines",
       "allowedCurrencies": "Allowed currencies",
       "allowedCurrenciesHelp": "Optional comma-separated list (e.g. EUR, USD, GBP)",
       "forceFxSync": "Force FX rates sync",
@@ -714,7 +943,8 @@
       "forecast": "Forecast"
     },
     "scope": {
-      "label": "Item type",
+      "all": "All",
+      "label": "Line type",
       "opex": "OPEX",
       "capex": "CAPEX"
     },
@@ -848,10 +1078,10 @@
       }
     },
     "results": {
-      "skipped_one": "{{count}} item skipped.",
-      "skipped_other": "{{count}} items skipped.",
-      "failed_one": "{{count}} item failed.",
-      "failed_other": "{{count}} items failed."
+      "skipped_one": "{{count}} line skipped.",
+      "skipped_other": "{{count}} lines skipped.",
+      "failed_one": "{{count}} line failed.",
+      "failed_other": "{{count}} lines failed."
     }
   },
   "confirmations": {
@@ -861,8 +1091,8 @@
     "deleteAttachment": "Delete attachment \"{{name}}\"?"
   },
   "shared": {
-    "noSpendItemsFound": "No OPEX items found",
-    "noCapexItemsFound": "No CAPEX items found",
+    "noSpendItemsFound": "No OPEX lines found",
+    "noCapexItemsFound": "No CAPEX lines found",
     "blank": "(Blank)",
     "budgetHolder": "Budget holder",
     "budgetHolderSource": "From the cost center {{code}} · {{name}}.",
@@ -888,6 +1118,59 @@
       "y": "Y",
       "yPlus1": "Y+1",
       "yPlus2": "Y+2"
+    },
+    "changeType": {
+      "menuItem": "Change type…",
+      "title": "Change the type of {{reference}}",
+      "subtitle": {
+        "capex": "This OPEX line becomes a CAPEX line.",
+        "opex": "This CAPEX line becomes an OPEX line."
+      },
+      "fromLabel": "From",
+      "fromFirstYear": "{{year}}, its first year: the line changes type",
+      "fromYear": "{{year}}: a new {{type}} line from {{year}}",
+      "fromAllYears": "All years: the line has no budget yet",
+      "datedRefusal": {
+        "successor": "A later year is not offered: this line is already replaced by {{reference}}.",
+        "no_later_year": "A later year is not offered: the line has no budget after its first year.",
+        "ends": "A later year is not offered: the line ends before {{year}}.",
+        "starts": "A later year is not offered: the line starts in {{year}} or later."
+      },
+      "effects": {
+        "inPlace": "The line keeps its reference, budget, allocations, links, attachments and tasks.",
+        "reports": {
+          "capex": "It leaves the OPEX reports and joins the CAPEX reports. The chargeback counts it under CAPEX.",
+          "opex": "It leaves the CAPEX reports and joins the OPEX reports. The chargeback counts it under OPEX."
+        },
+        "dated_one": "This line ends on {{end}} and keeps its budget before {{year}}. A new {{type}} line carries the budget from {{year}} ({{count}} year), with the contacts and the links to applications, assets, contracts, projects and requests.",
+        "dated_other": "This line ends on {{end}} and keeps its budget before {{year}}. A new {{type}} line carries the budget from {{year}} ({{count}} years), with the contacts and the links to applications, assets, contracts, projects and requests.",
+        "datedStays": "Attachments, web links and tasks stay on this line. Values that do not apply to {{type}} lines are not copied."
+      },
+      "frozen": "{{column}} {{year}} is frozen for {{type}} lines, and this line has amounts in it.",
+      "frozenHelp": "Unfreeze the column first, or change the type from a later year.",
+      "accountLabel": "Account",
+      "accountUnfit": "{{account}} is for {{type}} lines only. Choose an account for {{target}} lines, or keep it and change it later.",
+      "accountNotCopied": "{{account}} is not copied to the new line. Choose an account for {{target}} lines, or leave it empty.",
+      "dimensionFallback": "Analytics dimension",
+      "valueOtherType": "{{value}} is for {{type}} lines only. Choose another value, or keep it and change it later.",
+      "valueOtherTypeDated": "{{value}} is for {{type}} lines only and is not copied. Choose a value for the new line.",
+      "requiredInPlace": "Required for {{type}} lines. You can also set it later.",
+      "requiredDated": "Required for the new line.",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "e.g., bought outright instead of leased",
+      "save": "Change type",
+      "failed": "The type could not be changed.",
+      "changedMeanwhile": "The line changed since the dialog opened. Check what the dialog shows, then change the type again.",
+      "loadFailed": "The line could not be read."
+    },
+    "lineage": {
+      "follows": "Follows <link>{{reference}}</link> ({{type}})",
+      "replacedBy": "Replaced by <link>{{reference}}</link> ({{type}}) from {{year}}",
+      "replacedByNoYear": "Replaced by <link>{{reference}}</link> ({{type}})",
+      "type": {
+        "opex": "OPEX line",
+        "capex": "CAPEX line"
+      }
     }
   },
   "fields": {
@@ -906,23 +1189,19 @@
         },
         "companyChargeback": {
           "title": "Company chargeback",
-          "description": "Zoom into a single company with department totals and items"
+          "description": "Zoom into a single company with department totals and lines"
         },
         "topOpex": {
-          "title": "Top items",
-          "description": "Largest OPEX or CAPEX items for a selected year (custom top N)"
+          "title": "Top lines",
+          "description": "Largest OPEX or CAPEX lines for a selected year (custom top N)"
         },
         "opexDelta": {
           "title": "Top increase / decrease",
           "description": "Biggest OPEX or CAPEX changes vs previous year (custom top N)"
         },
         "budgetTrendOpex": {
-          "title": "Budget trend (OPEX)",
-          "description": "Compare OPEX metrics across years"
-        },
-        "budgetTrendCapex": {
-          "title": "Budget trend (CAPEX)",
-          "description": "Compare CAPEX metrics across years"
+          "title": "Budget comparison",
+          "description": "Compare budget metrics across years"
         },
         "budgetColumnsCompare": {
           "title": "Budget column comparison",
@@ -938,16 +1217,17 @@
         },
         "staffing": {
           "title": "Staffing by month",
-          "description": "Monthly FTE by cost center, item, supplier or analytics dimension"
+          "description": "Monthly FTE by cost center, line, supplier or analytics dimension"
         },
         "costPerFte": {
           "title": "Cost per FTE",
-          "description": "Yearly cost of one FTE or average daily rate, by cost center, item, supplier or analytics dimension, across budget columns and years"
+          "description": "Yearly cost of one FTE or average daily rate, by cost center, line, supplier or analytics dimension, across budget columns and years"
         }
       }
     },
     "shared": {
       "loadingReport": "Loading report…",
+      "capexYearAmountNote": "CAPEX lines count for their amount of the year, without depreciation.",
       "loadingData": "Loading data…",
       "run": "Run",
       "refreshing": "Refreshing…",
@@ -978,24 +1258,23 @@
       "pieChart": "Pie chart",
       "horizontalBarChart": "Horizontal bar chart",
       "company": "Company",
-      "itemType": "Item type",
       "sourceYear": "Source year",
       "sourceMetric": "Source metric",
       "destinationYear": "Destination year",
       "destinationMetric": "Destination metric",
-      "excludeItems": "Exclude items",
-      "excludeItemsPlaceholder": "Select items to exclude",
+      "excludeItems": "Exclude lines",
+      "excludeItemsPlaceholder": "Select lines to exclude",
       "excludeAccounts": "Exclude accounts",
       "excludeAccountsPlaceholder": "Select accounts to exclude",
       "excludeCategories": "Exclude values",
       "excludeCategoriesPlaceholder": "Select values to exclude",
-      "noMatchingItems": "No matching items",
+      "noMatchingItems": "No matching lines",
       "noMatchingAccounts": "No matching accounts",
       "noMatchingCategories": "No matching values",
       "noYearsAvailable": "No years available",
       "noMetricsAvailable": "No metrics available",
-      "itemSelected_one": "1 item selected",
-      "itemSelected_other": "{{count}} items selected",
+      "itemSelected_one": "1 line selected",
+      "itemSelected_other": "{{count}} lines selected",
       "accountSelected_one": "1 account selected",
       "accountSelected_other": "{{count}} accounts selected",
       "categorySelected_one": "1 value selected",
@@ -1010,9 +1289,9 @@
       "runBuildRun": "Run",
       "runBuildBuild": "Build",
       "runBuildNone": "Not set",
-      "fteItems": "Items",
-      "fteItemsAll": "All items",
-      "fteItemsWith": "Items with FTE",
+      "fteItems": "Lines",
+      "fteItemsAll": "All lines",
+      "fteItemsWith": "Lines with FTE",
       "dimension": "Dimension",
       "analyticsAll": "All",
       "analyticsNone": "No value",
@@ -1026,11 +1305,11 @@
       "columnFte": "{{column}} FTE",
       "chartTitleFte": "{{title}} · FTE",
       "totalFte": "Total FTE",
-      "detachedSingle_one": "{{count}} item declares {{fte}} FTE while its amount no longer follows its lines.",
-      "detachedSingle_other": "{{count}} items declare {{fte}} FTE while their amount no longer follows their lines.",
+      "detachedSingle_one": "{{count}} line declares {{fte}} FTE while its amount no longer follows its quantity and price lines.",
+      "detachedSingle_other": "{{count}} lines declare {{fte}} FTE while their amount no longer follows their quantity and price lines.",
       "detachedList": "Amount no longer follows the lines for: {{list}}.",
-      "detachedEntry_one": "{{column}} ({{count}} item, {{fte}} FTE)",
-      "detachedEntry_other": "{{column}} ({{count}} items, {{fte}} FTE)"
+      "detachedEntry_one": "{{column}} ({{count}} line, {{fte}} FTE)",
+      "detachedEntry_other": "{{column}} ({{count}} lines, {{fte}} FTE)"
     },
     "columns": {
       "company": "Company",
@@ -1049,7 +1328,7 @@
       "itCostsVsTurnover": "IT costs vs turnover",
       "itCostsPerUser": "IT costs per user",
       "itCostsPerItUser": "IT costs per IT user",
-      "item": "Item",
+      "item": "Line",
       "allocationMethod": "Allocation method",
       "receivables": "Receivables",
       "payables": "Payables",
@@ -1092,7 +1371,7 @@
     },
     "companyChargeback": {
       "title": "Company chargeback",
-      "subtitle": "Detailed chargeback allocation per company across departments, items, and KPIs",
+      "subtitle": "Detailed chargeback allocation per company across departments, lines, and KPIs",
       "selectCompanyTitle": "Select a company to explore chargeback details",
       "selectCompanyDescription": "Choose a company, year, and budget column to generate the detailed chargeback view. Department totals, itemised allocations, and KPIs will appear once the report runs.",
       "selectCompany": "Select a company",
@@ -1101,9 +1380,9 @@
       "departmentDistribution": "Department distribution",
       "departmentDistributionDescription": "Horizontal bar chart mirroring the table totals.",
       "noDepartmentAllocations": "No department-level allocations for the selected configuration.",
-      "chargebackItems": "Chargeback items",
+      "chargebackItems": "Chargeback lines",
       "chargebackItemsDescription": "Itemised spend contributing to the company chargeback, including the allocation method and share of the total amount.",
-      "noChargebackItems": "No chargeback items for the selected configuration.",
+      "noChargebackItems": "No chargeback lines for the selected configuration.",
       "flowsTitle": "Intercompany flows",
       "flowsDescription": "Partner companies with receivables (you paid for them), payables (they paid for you), and the net total. Self-consumption excluded.",
       "noFlows": "No intercompany flows for the selected configuration.",
@@ -1117,8 +1396,8 @@
       "chartFootnote": "Overall {{metric}}: {{total}}"
     },
     "topOpex": {
-      "title": "Top items",
-      "subtitle": "Largest {{type}} items by selected year ({{metric}})",
+      "title": "Top lines",
+      "subtitle": "Largest {{type}} lines by selected year ({{metric}})",
       "topTotal": "Top {{count}} total",
       "totalMetric": "{{metric}}, total",
       "ofFilteredMetric": "{{pct}}% of the filtered total",
@@ -1136,11 +1415,11 @@
       "increases": "Increases",
       "decreases": "Decreases",
       "both": "Both",
-      "netIncrease": "Net increase (all items)",
-      "netDecrease": "Net decrease (all items)",
-      "grossChanges": "Gross changes (all items)",
-      "grossIncrease": "Gross increase (all items)",
-      "grossDecrease": "Gross decrease (all items)",
+      "netIncrease": "Net increase (all lines)",
+      "netDecrease": "Net decrease (all lines)",
+      "grossChanges": "Gross changes (all lines)",
+      "grossIncrease": "Gross increase (all lines)",
+      "grossDecrease": "Gross decrease (all lines)",
       "coverageNa": "Coverage — n/a",
       "coveragePct": "Coverage — {{pct}}% covered",
       "coverageSplit": "Coverage — {{detail}}",
@@ -1164,16 +1443,12 @@
       "directionToggle": "Increase or decrease"
     },
     "budgetTrendOpex": {
-      "title": "Budget trend (OPEX)",
-      "subtitle": "Compare selected metrics across a year range"
-    },
-    "budgetTrendCapex": {
-      "title": "Budget trend (CAPEX)",
+      "title": "Budget comparison",
       "subtitle": "Compare selected metrics across a year range"
     },
     "budgetColumnsCompare": {
       "title": "Budget column comparison",
-      "subtitle": "Compare up to ten budget columns for OPEX or CAPEX",
+      "subtitle": "Compare up to ten budget columns",
       "yearGroupingSubtitle": "{{type}}: year grouping",
       "selectionsSubtitle": "{{type}}: {{count}} selection(s)",
       "addSelection": "Add"
@@ -1209,13 +1484,13 @@
       "groupBy": "Group by",
       "groups": {
         "costCenter": "Cost center",
-        "item": "Item",
+        "item": "Line",
         "supplier": "Supplier",
         "axis": "Analytics dimension"
       },
       "groupsInSentence": {
         "costCenter": "cost center",
-        "item": "item",
+        "item": "line",
         "supplier": "supplier"
       },
       "none": {
@@ -1226,8 +1501,8 @@
       "average": "Average",
       "peak": "Peak",
       "others": "Others",
-      "noDetail_one": "{{count}} item declares {{fte}} FTE without monthly detail. It is not in the months.",
-      "noDetail_other": "{{count}} items declare {{fte}} FTE without monthly detail. They are not in the months."
+      "noDetail_one": "{{count}} line declares {{fte}} FTE without monthly detail. It is not in the months.",
+      "noDetail_other": "{{count}} lines declare {{fte}} FTE without monthly detail. They are not in the months."
     },
     "costPerFte": {
       "title": "Cost per FTE",
@@ -1254,15 +1529,12 @@
     "monthAnd": "{{first}} and {{second}}",
     "zeroedMonths_one": "{{months}} will be set to zero.",
     "zeroedMonths_other": "{{months}} will be set to zero.",
-    "changePeriod": "Change period",
-    "choosePeriod": "Choose the period",
-    "noMonthInItemDates": "No month of {{year}} is within the item's dates.",
-    "column": "Column",
+    "noMonthInItemDates": "No month of {{year}} is within the line's dates.",
     "distribution": "Distribution",
     "from": "From",
     "to": "To",
     "convention": "A month counts when the period covers its 15th.",
-    "beyondItemDates": "The period goes beyond the item's dates.",
+    "beyondItemDates": "The period goes beyond the line's dates.",
     "problem": {
       "missing": "Choose a start and an end date.",
       "invalid": "Enter valid dates.",
@@ -1283,10 +1555,6 @@
       "lineCount_one": "{{count}} line",
       "lineCount_other": "{{count}} lines",
       "fte": "{{value}} FTE"
-    },
-    "panel": {
-      "spread": "Spread an amount",
-      "lines": "Quantity and price"
     },
     "lines": {
       "description": "Description",
@@ -1354,7 +1622,6 @@
         "dateOutsideYear": "Choose a date in {{year}}."
       },
       "fte": "FTE over the period {{fte_period}} · Full-year average {{fte}}",
-      "applyToAll": "Apply these lines to all columns",
       "status": {
         "manual": "Amounts were entered by hand.",
         "spread": "Amounts come from a spread.",
@@ -1374,20 +1641,8 @@
     },
     "listAnd": "{{first}} and {{last}}",
     "amount": "Amount",
-    "applyDistributionToAll": "Apply the distribution to all columns",
-    "applyToAllFollow": "{{columns}} follow the same period.",
-    "applyToAllOthers_one": "{{columns}} keeps its own period.",
-    "applyToAllOthers_other": "{{columns}} keep their own period.",
-    "applyToAllFrozen": "Frozen columns never change.",
     "keepLines_one": "{{columns}} keeps its lines.",
     "keepLines_other": "{{columns}} keep their lines.",
-    "spreadLock": {
-      "fromLines_one": "The amounts come from the {{count}} line of Quantity and price.",
-      "fromLines_other": "The amounts come from the {{count}} lines of Quantity and price.",
-      "unlock": "Spread an amount instead",
-      "unlocked": "A spread replaces the amounts of the lines. The lines stay as a reference."
-    },
-    "totalFromLines": "Calculated from its lines. Open Quantity and price to change it.",
     "conflict": {
       "waiting": "Choose first, above, whether to reload this column or overwrite it.",
       "yearTotal": "{{amount}} for the year",
@@ -1396,6 +1651,123 @@
       "yearChange_one": "Someone else changed the {{columns}} column while you were editing it, and you have not chosen which values to keep. Change the year anyway and lose your values in {{columns}}, or stay and choose.",
       "yearChange_other": "Someone else changed the {{columns}} columns while you were editing them, and you have not chosen which values to keep. Change the year anyway and lose your values in these columns, or stay and choose.",
       "yearChangeConfirm": "Change the year"
+    },
+    "notEntered": "Not entered yet",
+    "columns": "Budget columns",
+    "card": {
+      "frozen": "Frozen",
+      "waiting": "Waiting for your choice"
+    },
+    "editorTitle": "{{column}} {{year}}",
+    "modes": "How the column is built",
+    "mode": {
+      "amount": "Amount",
+      "lines": "Quantity and price",
+      "monthly": "By month"
+    },
+    "annualAmount": "Annual amount",
+    "when": "When",
+    "wholeYear": "Whole year",
+    "aPeriod": "A period",
+    "storedPeriod": "Stored period: {{stored}}. Saving will use {{proposed}}, the line's dates.",
+    "span": {
+      "range": "from {{from}} to {{to}} ({{n}} months)",
+      "range_vowel": "from {{from}} to {{to}} ({{n}} months)",
+      "single": "in {{month}}"
+    },
+    "result": {
+      "spreadFlat": "{{amount}} spread flat {{span}}.",
+      "spread445": "{{amount}} spread 4-4-5 {{span}}.",
+      "enterFlat": "Enter an amount: it will be spread flat {{span}}.",
+      "enter445": "Enter an amount: it will be spread 4-4-5 {{span}}.",
+      "title": "Monthly result",
+      "quarter": "Q{{n}}",
+      "cellHint": "Enter by month",
+      "atDate": "{{amount}} on {{date}}, all in {{month}}.",
+      "enterDate": "Enter an amount: it will go in {{month}}.",
+      "show": "Show the detail",
+      "hide": "Hide the detail",
+      "folded_one": "The column is spread flat over the whole year: the monthly detail adds nothing.",
+      "folded_other": "All columns are spread flat over the whole year: the monthly detail adds nothing.",
+      "foldedEmpty": "No amount yet: the monthly detail adds nothing.",
+      "differenceWith": "Difference with",
+      "differenceRow": "Difference with {{column}}"
+    },
+    "monthlyHint": "Enter the amounts in the {{column}} column of the table below.",
+    "reference_one": "{{count}} line kept as a reference.",
+    "reference_other": "{{count}} lines kept as a reference.",
+    "referenceAmount_one": "{{count}} line kept as a reference ({{amount}}).",
+    "referenceAmount_other": "{{count}} lines kept as a reference ({{amount}}).",
+    "switch": {
+      "toAmount": "Switch to an amount? The current total ({{amount}}) becomes the amount, spread flat.",
+      "toAmountSpan": "Switch to an amount? The current total ({{amount}}) becomes the amount, spread flat {{span}}.",
+      "toLines": "Switch to quantity and price? The total will come from the lines.",
+      "toMonthly": "Switch to entry by month? The current months are kept and become editable in the table.",
+      "linesStay": "The lines stay as a reference.",
+      "reuseLines_one": "The line kept as a reference is used again.",
+      "reuseLines_other": "The {{count}} lines kept as a reference are used again.",
+      "replaced": "The current amount ({{amount}}) will be replaced.",
+      "confirm": "Switch"
+    },
+    "also": {
+      "open": "Use for other columns too…",
+      "label": "Same construction for",
+      "apply": "Apply",
+      "amountHint": "They take this period and distribution, and keep their own total.",
+      "linesHint": "These lines replace their amounts."
+    },
+    "frozen": {
+      "title": "The {{column}} {{year}} column is frozen",
+      "hint": "Read only. An administrator can unfreeze it in Administration › Freeze / unfreeze data."
+    },
+    "atADate": "At a date",
+    "date": "Date",
+    "atDate": "On {{date}}",
+    "start": {
+      "label": "Start from",
+      "source": "Column to start from",
+      "option": "{{column}} ({{amount}})",
+      "adjusted": "adjusted by",
+      "percentage": "Adjustment in percent",
+      "apply": "Copy",
+      "orBelow": "or enter it below.",
+      "prorated": "Months of the {{column}} column outside the line's dates were not copied."
+    },
+    "restore": {
+      "changes_one": "{{count}} column changed since {{time}}",
+      "changes_other": "{{count}} columns changed since {{time}}",
+      "action": "Back to the opening values",
+      "done": "Opening values restored: {{columns}}.",
+      "none": "No column restored.",
+      "frozen": "{{column}}: frozen meanwhile, not restored.",
+      "waiting": "{{column}}: waiting for your choice, not restored.",
+      "changedByAt": "{{column}}: changed by {{name}} at {{time}}, not restored. Choose above what to keep.",
+      "changedBy": "{{column}}: changed by {{name}}, not restored. Choose above what to keep.",
+      "changed": "{{column}}: changed by someone else, not restored. Choose above what to keep.",
+      "refused": "{{column}}: not restored. {{message}}",
+      "failed": "The column could not be restored.",
+      "frozenNow": "{{column}} was frozen meanwhile: it was not restored.",
+      "others": "{{column}}: changed by someone else since the opening, not restored.",
+      "othersAt": "{{column}}: changed by someone else at {{time}}, not restored.",
+      "notRun": "Nothing was restored: a change could not be saved first."
     }
+  },
+  "budget": {
+    "title": "Budget lines",
+    "titleWithCurrency": "Budget lines ({{currency}})",
+    "type": "Type",
+    "newLine": "New line",
+    "opexLine": "OPEX line",
+    "capexLine": "CAPEX line",
+    "exportTitle": "Export budget file",
+    "importTitle": "Import budget lines",
+    "opex": "OPEX",
+    "capex": "CAPEX",
+    "totalWithCount_one": "Total ({{count}} line)",
+    "totalWithCount_other": "Total ({{count}} lines)",
+    "changeType": "Change type…",
+    "typeOpex": "OPEX",
+    "typeCapex": "CAPEX",
+    "line": "Budget line"
   }
 }

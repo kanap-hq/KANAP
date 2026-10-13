@@ -321,10 +321,9 @@ export default function DrawerKnowledgeSection({ taskId, canCreate }: DrawerKnow
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setTemplatePickerOpen(false)} size="small">{t('common:buttons.cancel')}</Button>
+          <Button variant="action" onClick={() => setTemplatePickerOpen(false)}>{t('common:buttons.cancel')}</Button>
           <Button
-            variant="contained"
-            size="small"
+            variant="action-primary"
             onClick={handleCreateFromTemplate}
             disabled={!selectedTemplateId}
           >

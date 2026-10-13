@@ -61,7 +61,7 @@ Klassifizierungsfelder sind beim Anlegen optional. **Geschäftskritikalität**, 
 
 Nach dem Speichern schaltet der Arbeitsbereich alle Reiter für die detaillierte Dokumentation frei.
 
-**Tipp**: Beginnen Sie mit der Dokumentation Ihrer kritischsten Anwendungen. Verwenden Sie den Reiter **Bereitstellungen**, um zu erfassen, welche Umgebungen existieren (Prod, QA, Dev) und welche Server sie betreiben, und verknüpfen Sie dann Schnittstellen, Verträge und Budgetpositionen nach und nach.
+**Tipp**: Beginnen Sie mit der Dokumentation Ihrer kritischsten Anwendungen. Verwenden Sie den Reiter **Bereitstellungen**, um zu erfassen, welche Umgebungen existieren (Prod, QA, Dev) und welche Server sie betreiben, und verknüpfen Sie dann Schnittstellen, Verträge und Budgetzeilen nach und nach.
 
 **Berechtigungen**:
 - Anzeigen: `applications:reader`
@@ -100,7 +100,7 @@ Das Anwendungsraster bietet eine umfassende Ansicht Ihres Anwendungsportfolios.
 - **Extern erreichbar**: Ob die App aus dem Internet zugänglich ist
 - **SSO aktiviert** / **MFA aktiviert**: Authentifizierungsfunktionen
 - **Datenintegration / ETL**: Ob die App an Datenintegrationen teilnimmt
-- **OPEX-Positionen** / **CAPEX-Positionen** / **Verträge**: Verknüpfte Ausgaben und Verträge
+- **OPEX-Zeilen** / **CAPEX-Zeilen** / **Verträge**: Verknüpfte Ausgaben und Verträge
 - **Komponenten**: Unteranwendungen (wenn dies eine Suite ist)
 - **Datenklasse** / **Enthält PII** / **Datenhaltung**: Compliance-Informationen
 - **Cyberkritikalität**, **Wiederanlaufwelle**, **RTO**, **RPO**, **Prüfstatus/-datum**: Klassifizierungs- und Kontinuitätsfelder
@@ -283,8 +283,7 @@ Der Reiter Verknüpfungen verbindet diese Anwendung mit Ihren Finanz-, Vertrags-
 **Komponenten** (nur wenn „Kann Unteranwendungen haben" aktiviert ist): eine Tabelle, die die Unteranwendungen dieser Suite mit ihrem Lebenszyklus und ihrer Kritikalität auflistet. Klicken Sie auf eine Zeile, um den Arbeitsbereich der Unteranwendung zu öffnen.
 
 **Verknüpfungen**:
-- **OPEX-Positionen**: Laufende Kosten, die mit dieser Anwendung verbunden sind
-- **CAPEX-Positionen**: Investitionsausgabenprojekte
+- **Budgetzeilen**: die OPEX- und CAPEX-Zeilen dieser Anwendung in einer Liste. Suchen Sie nach Titel oder Referenz (`BL-12`); jeder Vorschlag zeigt seinen Typ
 - **Verträge**: Lieferantenverträge
 - **Projekte**: Portfolio-Projekte, die mit dieser Anwendung verknüpft sind
 - **Aufgaben**: Aufgaben, die mit dieser Anwendung verknüpft sind. Diese Liste ist hier schreibgeschützt -- Aufgaben gewinnen oder verlieren diese Verknüpfung, wenn Sie das Feld **App / Dienst** auf einer Aufgabe in der Aufgabenseite festlegen.
@@ -340,7 +339,7 @@ Klassifizierungs- und Kontinuitätswerte werden kopiert, die neue Version beginn
 | Datenhaltung | Ein |
 | Verknüpfungen | Ein |
 | Supportkontakte | Ein |
-| Budgetpositionen (OPEX + CAPEX, gepaart) | Ein |
+| Budgetzeilen (OPEX + CAPEX, gepaart) | Ein |
 | Verträge | Ein |
 | Bereitstellungen | Aus |
 | Bereitstellungs-Bindungen | Aus (nur verfügbar, wenn Bereitstellungen ausgewählt ist) |
@@ -372,7 +371,7 @@ Verwenden Sie dies, wenn Sie ein unabhängiges Duplikat einer Anwendung erstelle
 3. Das System erstellt eine Kopie mit „ (Kopie)" angehängt an den Namen
 4. Sie werden zur neuen Anwendung navigiert, um Änderungen vorzunehmen
 
-**Was kopiert wird**: Alle Kernfelder (außer dem Datum des letzten DR-Tests), einschließlich Klassifizierungs- und Kontinuitätswerten, Verantwortliche, Unternehmen, Abteilungen, Suites, OPEX/CAPEX-Positionen, Verträge, Verknüpfungen, Datenhaltung und Supportkontakte. Das Review der Kopie wird zurückgesetzt.
+**Was kopiert wird**: Alle Kernfelder (außer dem Datum des letzten DR-Tests), einschließlich Klassifizierungs- und Kontinuitätswerten, Verantwortliche, Unternehmen, Abteilungen, Suites, OPEX/CAPEX-Zeilen, Verträge, Verknüpfungen, Datenhaltung und Supportkontakte. Das Review der Kopie wird zurückgesetzt.
 
 **Was NICHT kopiert wird**: Bereitstellungen, Schnittstellen, Server-Zuweisungen, Anhänge, Versionsfelder (Version, Go-Live-Datum, Support-Ende).
 
@@ -397,8 +396,8 @@ Verwenden Sie dies, wenn Sie ein unabhängiges Duplikat einer Anwendung erstelle
 | Verknüpfungen | Ja | Optional (Standard: ja) |
 | Supportkontakte | Ja | Optional (Standard: ja) |
 | Suites (Mitgliedschaft) | Ja | Nein |
-| OPEX-Positionen | Ja | Optional (Standard: ja) |
-| CAPEX-Positionen | Ja | Optional (Standard: ja) |
+| OPEX-Zeilen | Ja | Optional (Standard: ja) |
+| CAPEX-Zeilen | Ja | Optional (Standard: ja) |
 | Verträge | Ja | Optional (Standard: ja) |
 | Bereitstellungen | Nein | Optional (Standard: nein) |
 | Bindungen | Nein | Optional (Standard: nein) |

@@ -316,6 +316,7 @@ DEPLOYMENT_MODE=single-tenant
 # TENANT (set before the first start)
 DEFAULT_TENANT_SLUG=default
 DEFAULT_TENANT_NAME=${ORG_NAME}
+DEFAULT_TENANT_LANGUAGE=en
 
 # ADMIN CREDENTIALS (read at the first start only)
 ADMIN_EMAIL=${ADMIN_EMAIL}
@@ -506,8 +507,8 @@ server {
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_prefer_server_ciphers off;
 
-    # Upload limit: budget files up to 48 MB, attachments up to 20 MB
-    client_max_body_size 50m;
+    # Upload limit: budget file loads up to 72 MB, attachments up to 20 MB
+    client_max_body_size 80m;
 
     # Canonicalize /api → /api/
     location = /api { return 301 /api/; }

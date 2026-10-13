@@ -5,10 +5,9 @@ import { costCenterLabel } from '../../services/costCenters';
 import { REPORT_VIEW_PARAM, REPORT_VIEW_VALUE } from '../../hooks/useListContextSearch';
 import { STATUS_SCOPE_PARAM } from '../../utils/statusScopeParams';
 import { keepValues, NO_ANALYTICS_VALUE, type BudgetScope, type ColumnFilters, type FilterModel, type RunBuildPick } from './reportAggregates';
-import { SUMMARY_ENDPOINT } from './useReportScope';
 
 /**
- * A report row opening the OPEX or CAPEX list in a new tab, filtered on the row's group and on the
+ * A report row opening the budget list in a new tab, filtered on the row's group and on the
  * report's filter bar. The list filters on its grid columns (the names its cells show), so each
  * group and pick goes to the column that holds it: a cost center to `cost_center_label`
  * (`code · name`), a supplier to `supplier_name`, a dimension value to its dimension's column, run or
@@ -104,7 +103,7 @@ export function reportListFilters(group: ReportListGroup, picks: ReportListPicks
 
 /** The list a row opens: its href, and how to save its filters when they are too long for a URL. */
 export type ReportListLink = {
-  /** `/ops/<scope>?filters=…&statusScope=all&from=report`, or `?ctx=…` once filters too long for a URL are saved in this tab. */
+  /** `/ops/budget?filters=…&statusScope=all&from=report`, or `?ctx=…` once filters too long for a URL are saved in this tab. */
   href: string;
   /**
    * Present while the filters are too long for a URL and not saved yet: saves them and answers the
@@ -114,16 +113,16 @@ export type ReportListLink = {
 };
 
 /**
- * The OPEX or CAPEX list filtered on `filters`, on every status (`?statusScope=all`), as a one-off
+ * The budget list filtered on `filters` and, for a per-nature scope, that nature, on every status (`?statusScope=all`), as a one-off
  * view (`?from=report`): it leaves the tab's remembered list state alone. Filters too long for a URL
  * go as `ctx` once saved in this tab; until then the href carries them inline (copying the link still
  * works) and `save` gives the `ctx` address. Report rows and the account workspace ("Show these
  * lines") open it.
  */
 export function oneOffListLink(scope: BudgetScope, columnFilters: ColumnFilters): ReportListLink {
-  const filters = JSON.stringify(columnFilters);
-  const endpoint = SUMMARY_ENDPOINT[scope];
-  const address = (search: string) => `/ops/${scope}?${search}`;
+  const filters = JSON.stringify(scope === 'all' ? columnFilters : { ...columnFilters, nature: keepValues([scope]) });
+  const endpoint = '/budget-lines/summary';
+  const address = (search: string) => `/ops/budget?${search}`;
   const params = new URLSearchParams({ filters });
   params.set(STATUS_SCOPE_PARAM, 'all');
   params.set(REPORT_VIEW_PARAM, REPORT_VIEW_VALUE);

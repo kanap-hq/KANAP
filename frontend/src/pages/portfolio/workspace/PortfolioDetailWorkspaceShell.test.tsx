@@ -63,6 +63,20 @@ describe('PortfolioDetailWorkspaceShell', () => {
     expect(screen.getByRole('complementary')).toHaveStyle({ marginTop: '0px', height: 'calc(100% + 0px)' });
     expect(screen.getByRole('button', { name: 'workspace.closeProperties' })).toHaveStyle({ top: '0px' });
   });
+
+  // The row's width decides, not the window's: beside a side navigation a window of 600px leaves
+  // the title too little room, and the actions (the "…" menu) covered it.
+  it('keeps room for the title and wraps the actions under it when the row is too narrow', () => {
+    renderShell({ actions: <button type="button">More actions</button> });
+    const titleColumn = screen.getByRole('heading', { level: 1 }).parentElement as HTMLElement;
+    const row = titleColumn.parentElement as HTMLElement;
+    const actions = screen.getByRole('button', { name: 'More actions' }).parentElement as HTMLElement;
+
+    expect(row).toHaveStyle({ display: 'flex', flexWrap: 'wrap' });
+    expect(titleColumn).toHaveStyle({ flexGrow: '1', flexShrink: '1', flexBasis: '280px', minWidth: '0' });
+    expect(actions.parentElement).toBe(row);
+    expect(actions).toHaveStyle({ flexShrink: '0', maxWidth: '100%' });
+  });
 });
 
 // Every breakpoint query answers `matches`: true renders the below-md (mobile) branch.

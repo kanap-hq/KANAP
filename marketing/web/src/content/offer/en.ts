@@ -138,7 +138,7 @@ const content: OfferContent = {
     consulting: {
       title: 'Consulting',
       subtitle: 'Paid · billed by the day',
-      body: 'Optional help to get more value from KANAP: scheduled calls, deeper work, advisory. Rate: €1,150 a day, €900 for customers with a support or hosting plan, VAT excluded.',
+      body: 'Optional help to get more value from KANAP: scheduled calls, deeper work, advisory. Rate: €1,150 a day, €900 for customers with a support or hosting plan, VAT not applicable (art. 293 B CGI).',
       items: [
         'Setup, configuration, onboarding, training',
         'Workflow design and best practices',
@@ -150,7 +150,7 @@ const content: OfferContent = {
 
   pilot: {
     title: 'Guided pilot',
-    subtitle: '€2,900 fixed · VAT excluded',
+    subtitle: '€2,900 fixed · VAT not applicable (art. 293 B CGI)',
     body: 'One engagement that launches your team on KANAP: we set it up with you, bring your data in, train your people, and leave your first agent at work.',
     items: [
       'Installation on your servers, or hosted setup',

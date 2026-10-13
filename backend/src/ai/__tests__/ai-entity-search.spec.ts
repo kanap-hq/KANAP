@@ -33,6 +33,10 @@ function createContext(query: (sql: string, params?: unknown[]) => Promise<unkno
   };
 }
 
+/** The legacy CAPEX search: the spend lines of nature 'capex' since lot Z1. */
+const isCapexSearch = (sql: string) => sql.includes('FROM spend_items ci') && sql.includes(`ci.nature = 'capex'`);
+const isOpexSearch = (sql: string) => sql.includes('FROM spend_items si') && sql.includes(`si.nature = 'opex'`);
+
 async function withFlag<T>(value: string | undefined, run: () => Promise<T>): Promise<T> {
   const previous = process.env.AI_SEARCH_INDEX_ENABLED;
   if (value === undefined) {
@@ -70,11 +74,10 @@ async function testLegacySearchAllCastsNonTextFieldsBeforeLike() {
     assert.equal(result.truncated, false);
     assert.deepEqual((result as any).failed_entity_types, []);
     assert.equal(sqlStatements.some((sql) => sql.includes('acc.account_number::text')), true);
-    assert.equal(sqlStatements.some((sql) => sql.includes('ci.ppe_type::text')), true);
     assert.equal(sqlStatements.some((sql) => sql.includes("COALESCE(acc.account_number, '')")), false);
-    assert.equal(sqlStatements.some((sql) => sql.includes("COALESCE(ci.ppe_type, '')")), false);
-    assert.equal(sqlStatements.some((sql) => sql.includes('ci.priority::text')), true);
-    assert.equal(sqlStatements.some((sql) => sql.includes("COALESCE(ci.priority, '')")), false);
+    // The CAPEX criteria are dimension values since lot C1: the search names none of the former columns.
+    assert.equal(sqlStatements.some(isCapexSearch), true);
+    assert.equal(sqlStatements.some((sql) => /ci\.(ppe_type|investment_type|priority)\b/.test(sql)), false);
   });
 }
 
@@ -82,8 +85,8 @@ async function testLegacySearchAllReportsPartialEntityFailures() {
   await withFlag('false', async () => {
     const service = createService();
     const context = createContext(async (sql) => {
-      if (sql.includes('FROM capex_items')) {
-        throw new Error('invalid input value for enum ppe_type: ""');
+      if (isCapexSearch(sql)) {
+        throw new Error('invalid input value for enum status_state: ""');
       }
       return [];
     });
@@ -219,12 +222,12 @@ async function testIndexedRowsMapToLegacyDtoShape(applicationClassifications: Re
       {
         entity_type: 'spend_items',
         entity_id: 'spend-1',
-        ref_prefix: 'OPX',
+        ref_prefix: 'BL',
         ref_number: 9,
         label: 'License renewal',
         summary: null,
         status: 'active',
-        extra_json: { supplier: 'ACME', paying_company: null, account: null, contract: null },
+        extra_json: { supplier: 'ACME', paying_company: null, account: null, contract: null, analytics: 'Nature: Licences' },
         source_updated_at: updatedAt,
         total_count: 4,
         score: 2,
@@ -232,7 +235,7 @@ async function testIndexedRowsMapToLegacyDtoShape(applicationClassifications: Re
       {
         entity_type: 'capex_items',
         entity_id: 'capex-1',
-        ref_prefix: 'CPX',
+        ref_prefix: 'BL',
         ref_number: 3,
         label: 'Server refresh',
         summary: null,
@@ -282,14 +285,17 @@ async function testIndexedRowsMapToLegacyDtoShape(applicationClassifications: Re
   });
 
   // …while budget lines build theirs from the item number.
-  assert.equal(spend.ref, 'OPX-9');
-  assert.equal(capex.ref, 'CPX-3');
+  assert.equal(spend.ref, 'BL-9');
+  assert.equal(capex.ref, 'BL-3');
   assert.deepEqual(spend.metadata, {
     supplier: 'ACME',
     paying_company: null,
     account: null,
     contract: null,
+    analytics: 'Nature: Licences',
   });
+  // A line without an indexed analytics value has no `analytics` key in extra_json: null.
+  assert.deepEqual(capex.metadata, { paying_company: null, supplier: null, analytics: null });
 }
 
 async function testLegacySearchAllGivesBudgetLineReferences() {
@@ -297,8 +303,8 @@ async function testLegacySearchAllGivesBudgetLineReferences() {
     const service = createService();
     const context = createContext(async (sql) => {
       const row = { label: 'Line', summary: null, status: 'active', updated_at: null, total_count: 1, score: 3 };
-      if (sql.includes('FROM spend_items')) return [{ ...row, id: 'spend-1', item_number: 12 }];
-      if (sql.includes('FROM capex_items')) return [{ ...row, id: 'capex-1', item_number: 4 }];
+      if (isOpexSearch(sql)) return [{ ...row, id: 'spend-1', item_number: 12 }];
+      if (isCapexSearch(sql)) return [{ ...row, id: 'capex-1', item_number: 4 }];
       return [];
     });
 
@@ -309,7 +315,7 @@ async function testLegacySearchAllGivesBudgetLineReferences() {
     });
 
     const refs = Object.fromEntries((result.items as any[]).map((item) => [item.type, item.ref]));
-    assert.deepEqual(refs, { spend_items: 'OPX-12', capex_items: 'CPX-4' });
+    assert.deepEqual(refs, { spend_items: 'BL-12', capex_items: 'BL-4' });
   });
 }
 

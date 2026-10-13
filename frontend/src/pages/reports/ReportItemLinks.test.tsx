@@ -77,16 +77,18 @@ function slot(year: number, budget: number) {
   return { year, totals: columns, reporting: { ...columns, currency: 'X', reporting_currency: 'X' } };
 }
 
+// Through the routes of one nature, `line_number` is the line's own number (BL); the CAPEX routes'
+// `item_number` is the CPX number.
 const opexRows = [
-  { id: 'o1', product_name: 'Opex line', versions: { yMinus1: slot(Y - 1, 100), y: slot(Y, 150) } },
+  { id: 'o1', item_number: 1, line_number: 1, product_name: 'Opex line', versions: { yMinus1: slot(Y - 1, 100), y: slot(Y, 150) } },
   // Not a line of the window: the table keeps the name as plain text.
   { product_name: 'No line', versions: { yMinus1: slot(Y - 1, 10), y: slot(Y, 20) } },
 ];
 const capexRows = [
-  { id: 'c1', description: 'Capex growth', versions: { yMinus1: slot(Y - 1, 50), y: slot(Y, 300) } },
+  { id: 'c1', item_number: 4, line_number: 119, description: 'Capex growth', versions: { yMinus1: slot(Y - 1, 50), y: slot(Y, 300) } },
 ];
 
-function renderReport(element: React.ReactElement, path = '/report') {
+function renderReport(element: React.ReactElement, path = '/report?scope=opex') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
@@ -103,6 +105,7 @@ beforeEach(() => {
   get.mockImplementation(async () => ({ data: { items: [], total: 0 } }));
   post.mockReset();
   post.mockImplementation(async (url: string, body: any) => {
+    if (url === '/budget-lines/summary/aggregate') return { data: fakeAggregate([...opexRows.map((row) => ({ ...row, item_number: row.id ? 1 : null })), ...capexRows.map((row) => ({ ...row, product_name: row.description, item_number: 119 }))], body) };
     if (url === '/spend-items/summary/aggregate') return { data: fakeAggregate(opexRows as any[], body) };
     if (url === '/capex-items/summary/aggregate') return { data: fakeAggregate(capexRows as any[], body) };
     throw new Error(`unexpected POST ${url}`);
@@ -117,41 +120,41 @@ function expectNewTabLink(grid: HTMLElement, name: string, href: string) {
 }
 
 describe('Top items report item links', () => {
-  it('links an OPEX line to its page in a new tab, and leaves a row without a line as text', async () => {
+  it('links an OPEX line to its BL page in a new tab, and leaves a row without a line as text', async () => {
     renderReport(<TopOpexReport />);
     const grid = await screen.findByTestId('grid-name');
     await waitFor(() => expect(grid.textContent).toContain('Opex line'));
-    expectNewTabLink(grid, 'Opex line', '/ops/opex/o1');
+    expectNewTabLink(grid, 'Opex line', '/ops/budget/BL-1');
     expect(within(grid).getByText('No line').closest('a')).toBeNull();
   });
 
-  it('links a CAPEX line to the CAPEX page', async () => {
+  it('links a CAPEX line to its BL page, never by its CPX number', async () => {
     renderReport(<TopOpexReport />, '/report?scope=capex');
     const grid = await screen.findByTestId('grid-name');
     await waitFor(() => expect(grid.textContent).toContain('Capex growth'));
-    expectNewTabLink(grid, 'Capex growth', '/ops/capex/c1');
+    expectNewTabLink(grid, 'Capex growth', '/ops/budget/BL-119');
   });
 });
 
 describe('Top increase / decrease report item links', () => {
-  it('links an OPEX line to its page in a new tab, and leaves a row without a line as text', async () => {
+  it('links an OPEX line to its BL page in a new tab, and leaves a row without a line as text', async () => {
     renderReport(<OpexDeltaReport />);
     const grid = await screen.findByTestId('grid-name');
     await waitFor(() => expect(grid.textContent).toContain('Opex line'));
-    expectNewTabLink(grid, 'Opex line', '/ops/opex/o1');
+    expectNewTabLink(grid, 'Opex line', '/ops/budget/BL-1');
     expect(within(grid).getByText('No line').closest('a')).toBeNull();
   });
 
-  it('links a CAPEX line to the CAPEX page', async () => {
+  it('links a CAPEX line to its BL page, never by its CPX number', async () => {
     renderReport(<OpexDeltaReport />, '/report?scope=capex');
     const grid = await screen.findByTestId('grid-name');
     await waitFor(() => expect(grid.textContent).toContain('Capex growth'));
-    expectNewTabLink(grid, 'Capex growth', '/ops/capex/c1');
+    expectNewTabLink(grid, 'Capex growth', '/ops/budget/BL-119');
   });
 });
 
 describe('Company chargeback report item links', () => {
-  it('links an OPEX line, and leaves common costs and the total row as text', async () => {
+  it('links an OPEX and a CAPEX line, and leaves common costs and the total row as text', async () => {
     get.mockImplementation(async (url: string) => {
       if (url === '/reports/chargeback/company') {
         return {
@@ -165,6 +168,7 @@ describe('Company chargeback report item links', () => {
             items: [
               { versionId: 'v1', itemId: 'o1', itemName: 'Opex line', allocationMethod: 'headcount', allocationMethodLabel: 'Headcount', amount: 200, amountRaw: 200, sharePct: 66.67 },
               { versionId: 'v2', itemId: null, itemName: 'Common costs', allocationMethod: 'default', allocationMethodLabel: 'Default', amount: 100, amountRaw: 100, sharePct: 33.33 },
+              { versionId: 'v3', itemId: 'c1', itemNumber: 119, nature: 'capex', itemName: 'Capex line', allocationMethod: 'it_users', allocationMethodLabel: 'IT users', amount: 0, amountRaw: 0, sharePct: 0 },
             ],
             itemsTotal: 300,
             itemsTotalRaw: 300,
@@ -178,9 +182,21 @@ describe('Company chargeback report item links', () => {
     renderReport(<CompanyChargebackReport />);
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
     const grid = await screen.findByTestId('grid-itemName');
-    expectNewTabLink(grid, 'Opex line', '/ops/opex/o1');
+    expectNewTabLink(grid, 'Opex line', '/ops/budget/o1');
+    expectNewTabLink(grid, 'Capex line', '/ops/budget/BL-119');
     expect(within(grid).getByText('Common costs').closest('a')).toBeNull();
     expect(within(grid).getByText('reports.columns.total').closest('a')).toBeNull();
-    expect(within(grid).getAllByRole('link')).toHaveLength(1);
+    expect(within(grid).getAllByRole('link')).toHaveLength(2);
+  });
+});
+
+describe.each([['Top items', TopOpexReport], ['Variation', OpexDeltaReport]])('%s All item links', (_name, Report) => {
+  it('links both natures to their native BL references', async () => {
+    renderReport(<Report />, '/report');
+    const grid = await screen.findByTestId('grid-name');
+    await waitFor(() => expect(grid.textContent).toContain('Capex growth'));
+    expectNewTabLink(grid, 'Opex line', '/ops/budget/BL-1');
+    expectNewTabLink(grid, 'Capex growth', '/ops/budget/BL-119');
+    expect(post.mock.calls.every(([url]) => url === '/budget-lines/summary/aggregate')).toBe(true);
   });
 });

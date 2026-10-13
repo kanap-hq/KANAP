@@ -17,6 +17,7 @@ import {
 } from './amounts-write.util';
 import { CostingInputError, CostLine, parseCostLines, sameLines } from './costing.util';
 import { RoundInput, centsToDecimal, costLine, versionRoundInputs } from './round-inputs.util';
+import { auditTableOf } from './budget-nature';
 
 /**
  * Edit conflicts of the budget tab (plan planning/perf-scale, lot 3D,
@@ -70,14 +71,13 @@ import { RoundInput, centsToDecimal, costLine, versionRoundInputs } from './roun
  * written.
  */
 
-// Table names come only from here: never from the caller.
-const AMOUNT_TABLE: Record<AmountScope, string> = { opex: 'spend_amounts', capex: 'capex_amounts' };
-const ROUND_TABLE: Record<AmountScope, string> = { opex: 'spend_round_inputs', capex: 'capex_round_inputs' };
-const VERSION_TABLE: Record<AmountScope, string> = { opex: 'spend_versions', capex: 'capex_versions' };
-const ITEM_TABLE: Record<AmountScope, { items: string; itemFk: string }> = {
-  opex: { items: 'spend_items', itemFk: 'spend_item_id' },
-  capex: { items: 'capex_items', itemFk: 'capex_item_id' },
-};
+// Table names come only from here: never from the caller. One family of tables for both natures
+// (lot Z1); the audit log keeps a label per nature (`auditTableOf`): a CAPEX line's rows read
+// `capex_amounts`, `capex_round_inputs`, `capex_items`.
+const AMOUNT_TABLE = 'spend_amounts';
+const ROUND_TABLE = 'spend_round_inputs';
+const VERSION_TABLE = 'spend_versions';
+const ITEM_FK = 'spend_item_id';
 /** The API name of each column, as the column copy and clear audit it (`budget-column-operations.ts`). */
 const MEASURE_COLUMN = Object.fromEntries(
   (Object.entries(BUDGET_COLUMN_MEASURE) as Array<[BudgetColumn, AmountMeasure]>).map(([column, measure]) => [measure, column]),
@@ -190,6 +190,23 @@ export function parseBudgetBase(raw: unknown, year: number): BudgetBase | null {
     }
   }
   return cells.size > 0 || columns.size > 0 ? { cells, columns } : null;
+}
+
+/**
+ * The base a write that replaces a whole column on the strength of what the
+ * screen showed must carry (the budget tab's restore and copy):
+ * `base.columns.<column>` with its twelve months and its lines (`[]` without
+ * any), so a colleague's change of either refuses it (409), even one that
+ * leaves the months as they were. A 400 without it; its values are checked
+ * by `parseBudgetBase`.
+ */
+export function assertColumnBase(rawBase: unknown, measure: AmountMeasure, action: string): void {
+  const column = isObject(rawBase) && isObject(rawBase.columns) ? rawBase.columns[measure] : undefined;
+  if (!isObject(column) || !Array.isArray(column.months) || !Array.isArray(column.lines)) {
+    throw new BadRequestException(
+      `A ${action} needs the base of its column: base.columns.${measure}.months, the twelve months the screen last read, and base.columns.${measure}.lines, its lines ([] without any).`,
+    );
+  }
 }
 
 /** A column that conflicts, before the answer is built. */
@@ -313,14 +330,14 @@ async function monthsAuthors(manager: EntityManager, scope: AmountScope, version
     [
       version.tenant_id,
       version.id,
-      AMOUNT_TABLE[scope],
+      auditTableOf(scope, AMOUNT_TABLE),
       conflicts.map((c) => c.measure),
       conflicts.map((c) => c.moved.map((i) => periods[i]).join(',')),
     ],
   );
   // When nobody is named: the moment the moved months were last written.
   const written: Array<{ period: string; updated_at: Date }> = await manager.query(
-    `SELECT to_char(period, 'YYYY-MM-DD') AS period, updated_at FROM ${AMOUNT_TABLE[scope]}
+    `SELECT to_char(period, 'YYYY-MM-DD') AS period, updated_at FROM ${AMOUNT_TABLE}
       WHERE tenant_id = $1 AND version_id = $2 AND period = ANY($3::date[])`,
     [version.tenant_id, version.id, Array.from(new Set(conflicts.flatMap((c) => c.moved.map((i) => periods[i]))))],
   );
@@ -362,7 +379,6 @@ type ColumnOperation = { user_id: string | null; created_at: Date; explains: (to
  */
 async function columnOperations(manager: EntityManager, scope: AmountScope, version: AmountVersion, conflicts: ColumnConflict[]): Promise<Map<AmountMeasure, ColumnOperation>> {
   const result = new Map<AmountMeasure, ColumnOperation>();
-  const t = ITEM_TABLE[scope];
   const rows: Array<{ measure: AmountMeasure; user_id: string | null; created_at: Date | null; after_json: Record<string, unknown> | null }> = await manager.query(
     `SELECT f.measure, a.user_id::text AS user_id, a.created_at, a.after_json
        FROM unnest($4::text[], $5::text[]) AS f(measure, api_column)
@@ -370,7 +386,7 @@ async function columnOperations(manager: EntityManager, scope: AmountScope, vers
          SELECT l.user_id, l.created_at, l.after_json
            FROM audit_log l
           WHERE l.tenant_id = $1 AND l.table_name = $3
-            AND l.record_id = (SELECT v.${t.itemFk} FROM ${VERSION_TABLE[scope]} v WHERE v.tenant_id = $1 AND v.id = $2)
+            AND l.record_id = (SELECT v.${ITEM_FK} FROM ${VERSION_TABLE} v WHERE v.tenant_id = $1 AND v.id = $2)
             AND (
               (l.after_json->>'operation' = 'budget_column_copy' AND l.after_json->>'destinationColumn' = f.api_column
                  AND l.after_json->>'destinationYear' = $6)
@@ -382,7 +398,7 @@ async function columnOperations(manager: EntityManager, scope: AmountScope, vers
     [
       version.tenant_id,
       version.id,
-      t.items,
+      auditTableOf(scope, 'spend_items'),
       conflicts.map((c) => c.measure),
       conflicts.map((c) => MEASURE_COLUMN[c.measure]),
       String(Number(version.budget_year)),
@@ -407,7 +423,7 @@ async function columnOperations(manager: EntityManager, scope: AmountScope, vers
 async function linesAuthor(manager: EntityManager, scope: AmountScope, version: AmountVersion, conflict: ColumnConflict): Promise<Pick_> {
   const [row]: Array<{ user_id: string | null; created_at: Date | null; after_json: Record<string, unknown> | null; record_updated_at: Date }> = await manager.query(
     `SELECT a.user_id::text AS user_id, a.created_at, a.after_json, r.updated_at AS record_updated_at
-       FROM ${ROUND_TABLE[scope]} r
+       FROM ${ROUND_TABLE} r
        LEFT JOIN LATERAL (
          SELECT l.user_id, l.created_at, l.after_json
            FROM audit_log l
@@ -417,7 +433,7 @@ async function linesAuthor(manager: EntityManager, scope: AmountScope, version: 
           LIMIT 1
        ) a ON true
       WHERE r.tenant_id = $1 AND r.version_id = $2 AND r.measure = $3`,
-    [version.tenant_id, version.id, conflict.measure, ROUND_TABLE[scope]],
+    [version.tenant_id, version.id, conflict.measure, auditTableOf(scope, ROUND_TABLE)],
   );
   if (!row) return { userId: null, at: null };
   const written = row.after_json?.lines;
@@ -454,7 +470,7 @@ export function budgetBaseCheck(
     if (conflicts.length === 0) return;
     const authors = await conflictAuthors(manager, scope, version, conflicts);
     const [row]: Array<{ budget_rev: number | string }> = await manager.query(
-      `SELECT budget_rev FROM ${VERSION_TABLE[scope]} WHERE tenant_id = $1 AND id = $2`,
+      `SELECT budget_rev FROM ${VERSION_TABLE} WHERE tenant_id = $1 AND id = $2`,
       [version.tenant_id, version.id],
     );
     const periods = yearPeriods(Number(version.budget_year));

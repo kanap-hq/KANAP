@@ -4,8 +4,8 @@ import { EntityManager, QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { SpendItemsService } from '../spend-items.service';
 import { SpendItemContactsService } from '../spend-item-contacts.service';
-import { CapexItemsService } from '../../capex/capex-items.service';
-import { CapexItemContactsService } from '../../capex/capex-item-contacts.service';
+import { CapexItemsService } from '../spend-items.service';
+import { CapexItemContactsService } from '../spend-item-contacts.service';
 import { assert, captureAudit, inRolledBackTransaction, Kind, runSpecs, seedItem, seedTenant, setTenant } from './round-inputs.fixtures';
 
 // An item's relations, from the item's side, on OPEX and CAPEX alike:
@@ -18,9 +18,16 @@ import { assert, captureAudit, inRolledBackTransaction, Kind, runSpecs, seedItem
 
 const USER = '00000000-0000-4000-8000-00000000abcd';
 const KINDS: Kind[] = ['opex', 'capex'];
+// The CAPEX lines share the OPEX tables since lot Z1; their audit rows keep the CAPEX table names.
 const T = {
-  opex: { items: 'spend_items', links: 'application_spend_items', itemFk: 'spend_item_id', contacts: 'spend_item_contacts' },
-  capex: { items: 'capex_items', links: 'application_capex_items', itemFk: 'capex_item_id', contacts: 'capex_item_contacts' },
+  opex: {
+    items: 'spend_items', links: 'application_spend_items', itemFk: 'spend_item_id', contacts: 'spend_item_contacts',
+    auditLinks: 'application_spend_items', auditContacts: 'spend_item_contacts',
+  },
+  capex: {
+    items: 'spend_items', links: 'application_spend_items', itemFk: 'spend_item_id', contacts: 'spend_item_contacts',
+    auditLinks: 'application_capex_items', auditContacts: 'capex_item_contacts',
+  },
 } as const;
 
 function contactsService(kind: Kind, audit: unknown): any {
@@ -30,16 +37,11 @@ function contactsService(kind: Kind, audit: unknown): any {
 
 /** The item service of each scope on the real class; only the dependencies these paths use. */
 function itemService(kind: Kind, audit: unknown, contacts: unknown = contactsService(kind, audit)): any {
-  if (kind === 'opex') {
-    const args: any[] = Array.from({ length: 11 }, () => undefined);
-    args[3] = audit;
-    args[8] = contacts;
-    return new (SpendItemsService as any)(...args);
-  }
-  const args: any[] = Array.from({ length: 12 }, () => undefined);
-  args[5] = audit;
-  args[9] = contacts;
-  return new (CapexItemsService as any)(...args);
+  // One constructor for both natures since lot Z1.
+  const args: any[] = Array.from({ length: 11 }, () => undefined);
+  args[3] = audit;
+  args[8] = contacts;
+  return kind === 'opex' ? new (SpendItemsService as any)(...args) : new (CapexItemsService as any)(...args);
 }
 
 /** The runner's manager, recording every raw statement it runs. */
@@ -105,7 +107,7 @@ async function testApplications(kind: Kind) {
     assert.deepEqual(await linkedApplications(runner, kind, tenantId, itemId), [alpha, zeta].sort(), `${kind}: stored set`);
     const expectedAfter = [alpha, zeta].sort();
     assert.deepEqual(audit.entries, [
-      { table: T[kind].links, recordId: itemId, action: 'update', before: [], after: expectedAfter, userId: USER },
+      { table: T[kind].auditLinks, recordId: itemId, action: 'update', before: [], after: expectedAfter, userId: USER },
     ], `${kind}: one audit row with the sorted application ids`);
 
     const listed = await svc.listApplications(itemId, { manager: mg });
@@ -138,7 +140,7 @@ async function testApplications(kind: Kind) {
     // Emptying the set.
     const emptied = await svc.bulkReplaceApplications(itemId, [], USER, { manager: mg });
     assert.deepEqual(emptied.items, [], `${kind}: emptied`);
-    assert.deepEqual(audit.entries[1], { table: T[kind].links, recordId: itemId, action: 'update', before: expectedAfter, after: [], userId: USER });
+    assert.deepEqual(audit.entries[1], { table: T[kind].auditLinks, recordId: itemId, action: 'update', before: expectedAfter, after: [], userId: USER });
 
     assert.deepEqual(await linkedApplications(runner, kind, tenantId, otherItemId), [alpha], `${kind}: the other line's link is untouched`);
     await setTenant(runner, otherTenant);
@@ -177,7 +179,7 @@ async function testContactsAudit(kind: Kind) {
     const link = await contacts.attachManual(itemId, { contactId: manual.id, role: 'technical' }, USER, opts);
     assert.deepEqual(
       audit.entries.map((e) => [e.table, e.recordId, e.action, e.before, e.userId]),
-      [[T[kind].contacts, link.id, 'create', null, USER]],
+      [[T[kind].auditContacts, link.id, 'create', null, USER]],
       `${kind}: attach audited with the user`,
     );
     assert.equal(audit.entries[0].after.id, link.id);
@@ -194,7 +196,7 @@ async function testContactsAudit(kind: Kind) {
     await contacts.detach(itemId, link.id, USER, opts);
     assert.deepEqual(
       [audit.entries[1].table, audit.entries[1].recordId, audit.entries[1].action, audit.entries[1].before?.id, audit.entries[1].after, audit.entries[1].userId],
-      [T[kind].contacts, link.id, 'delete', link.id, null, USER],
+      [T[kind].auditContacts, link.id, 'delete', link.id, null, USER],
       `${kind}: detach audited with the user`,
     );
 
@@ -203,7 +205,7 @@ async function testContactsAudit(kind: Kind) {
     const svc = itemService(kind, captureAudit(), contacts);
     await svc.update(itemId, { paying_company_id: companyId, supplier_id: supplierId }, USER, opts);
     assert.deepEqual(audit.entries[2], {
-      table: T[kind].contacts,
+      table: T[kind].auditContacts,
       recordId: itemId,
       action: 'update',
       before: [],

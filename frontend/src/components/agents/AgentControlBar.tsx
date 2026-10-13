@@ -226,7 +226,7 @@ export default function AgentControlBar({ agentKey, onTest }: { agentKey: string
             { onSuccess: () => setArchiveDialogOpen(false) },
           )}
           saveLabel={t('settings.archiveDialog.confirm')}
-          saveColor="error"
+          saveVariant="action-danger"
           saveLoading={data.updateAgentStatusMutation.isPending}
         >
           <Typography variant="body2" color="text.secondary">

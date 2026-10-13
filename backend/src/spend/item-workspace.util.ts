@@ -23,12 +23,13 @@ const SCOPES = {
     links: { table: 'spend_links', fk: 'spend_item_id' },
     attachments: { table: 'spend_attachments', fk: 'spend_item_id' },
   },
+  // The same tables since lot Z1: the line's id (of the scope's nature, read before) picks its rows.
   capex: {
-    contracts: { table: 'contract_capex_items', fk: 'capex_item_id' },
-    applications: { table: 'application_capex_items', fk: 'capex_item_id' },
-    projects: { table: 'portfolio_project_capex', fk: 'capex_id' },
-    links: { table: 'capex_links', fk: 'capex_item_id' },
-    attachments: { table: 'capex_attachments', fk: 'capex_item_id' },
+    contracts: { table: 'contract_spend_items', fk: 'spend_item_id' },
+    applications: { table: 'application_spend_items', fk: 'spend_item_id' },
+    projects: { table: 'portfolio_project_opex', fk: 'opex_id' },
+    links: { table: 'spend_links', fk: 'spend_item_id' },
+    attachments: { table: 'spend_attachments', fk: 'spend_item_id' },
   },
 } as const;
 

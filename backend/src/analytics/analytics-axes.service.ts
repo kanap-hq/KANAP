@@ -11,8 +11,27 @@ import {
   resolveAnalyticsLifecycle,
   sameInstant,
 } from './analytics-context';
-import { isAxisActive, isReservedAnalyticsAxisName, resolveDefaultAxisId } from './analytics-axes.util';
+import { axisAppliesTo, isAxisActive, isReservedAnalyticsAxisName, resolveDefaultAxisId } from './analytics-axes.util';
 import { AXIS_APPLIES_TO, AxisAppliesTo } from './analytics-axis.entity';
+import {
+  deleteValuesAndLinks,
+  dimensionValueIds,
+  ForcedDeleteCounts,
+  lockLinesUsing,
+  lockValueRows,
+} from './analytics-forced-delete';
+import {
+  ensureRecommendedDimensions,
+  findRecommendedDimensions,
+  findRecommendedValues,
+  RECOMMENDED_DIMENSION_KEYS,
+  RecommendedDimensionKey,
+  RecommendedValueMatch,
+  resolveSeedLanguage,
+  SeedLanguage,
+  STARTING_DIMENSION_KEYS,
+  tenantSeedLanguage,
+} from './recommended-dimensions.seed';
 
 /** A stored row, as `SELECT *` returns it. */
 export interface StoredAnalyticsAxis {
@@ -24,6 +43,7 @@ export interface StoredAnalyticsAxis {
   sort_order: number;
   is_default: boolean;
   applies_to: AxisAppliesTo | null;
+  required: boolean;
   status: StatusState;
   disabled_at: Date | null;
   created_at: Date;
@@ -36,6 +56,7 @@ export interface AnalyticsAxisValues {
   description: string | null;
   sort_order: number;
   applies_to: AxisAppliesTo | null;
+  required: boolean;
   status: StatusState;
   disabled_at: Date | null;
 }
@@ -46,6 +67,11 @@ export type AnalyticsAxisDetail = AnalyticsAxisRow & {
   value_count: number;
   opex_count: number;
   capex_count: number;
+  /** OPEX / CAPEX lines (all statuses) with no value on it; 0 for a type it does not apply to. */
+  opex_missing: number;
+  capex_missing: number;
+  /** The line types it applies to on which none of its enabled values can be chosen. */
+  unusable_for: AxisAppliesTo[];
 };
 
 export interface AnalyticsAxisInput {
@@ -54,8 +80,33 @@ export interface AnalyticsAxisInput {
   description?: unknown;
   sort_order?: unknown;
   applies_to?: unknown;
+  required?: unknown;
   status?: unknown;
   disabled_at?: unknown;
+}
+
+/** A recommended dimension (`recommended-dimensions.seed.ts`) and the dimension of the tenant that stands for it. */
+export interface RecommendedDimensionState {
+  code: RecommendedDimensionKey;
+  present: boolean;
+  axis_id: string | null;
+  /** The code of the tenant's dimension: `default` when the cost pool is on the default dimension. */
+  axis_code: string | null;
+  name: string | null;
+  /** A new tenant starts with it (the dialog ticks it); the others are the optional pack. */
+  starting: boolean;
+  /** Its seed values and the tenant's value of each (`findRecommendedValues`); empty when absent. */
+  values: RecommendedValueMatch[];
+}
+
+/** One recommended dimension in the answer of `addRecommended`. */
+export interface RecommendedDimensionResult {
+  code: RecommendedDimensionKey;
+  /** The dimension's own code: `default` when the cost pool went on the default dimension. */
+  axis_code: string;
+  axis_id: string;
+  name: string | null;
+  values_created: number;
 }
 
 export const ANALYTICS_AXIS_CODE_PATTERN = /^[a-z0-9][a-z0-9_-]{0,39}$/;
@@ -105,6 +156,16 @@ export function normalizeAppliesTo(raw: unknown): AxisAppliesTo | null {
   return value as AxisAppliesTo;
 }
 
+/** Whether a new line must hold a value on the dimension. The DTO checks the shape; this covers other callers. */
+export function normalizeRequired(raw: unknown): boolean {
+  if (raw == null) return false;
+  if (typeof raw === 'boolean') return raw;
+  const value = String(raw).trim().toLowerCase();
+  if (value === 'true') return true;
+  if (value === 'false' || value === '') return false;
+  throw analyticsRefusal('Required must be true or false.', 'required');
+}
+
 /**
  * "2 values of this dimension are for CAPEX lines only (Matériel, Projet). Set them to OPEX and
  * CAPEX first.": up to three names in name order, then "and N more". The names matter because the
@@ -125,6 +186,7 @@ function toRow(stored: StoredAnalyticsAxis): AnalyticsAxisRow {
     ...stored,
     sort_order: Number(stored.sort_order ?? 0),
     applies_to: stored.applies_to ?? null,
+    required: stored.required === true,
     status: isAxisActive(stored) ? 'enabled' : 'disabled',
   };
 }
@@ -135,6 +197,7 @@ function valuesEqual(stored: StoredAnalyticsAxis, next: AnalyticsAxisValues): bo
     && (stored.description ?? null) === next.description
     && Number(stored.sort_order) === next.sort_order
     && (stored.applies_to ?? null) === next.applies_to
+    && (stored.required === true) === next.required
     // From the stored end of validity: the stored status lags until the hourly sync once that date passes.
     && deriveStatusFromDisabledAt(stored.disabled_at) === next.status
     && sameInstant(stored.disabled_at, next.disabled_at);
@@ -157,23 +220,64 @@ export class AnalyticsAxesService {
     return { items: rows.map(toRow) };
   }
 
+  /**
+   * One dimension with its counts. `opex_missing` / `capex_missing`: the lines of every status
+   * with no value on it (as the list link with every status shows them), 0 for a type it does
+   * not apply to. `unusable_for`: the types it applies to with no enabled value usable on them.
+   * Both are computed whether or not the dimension is required.
+   */
   async get(id: string, ctx: AnalyticsContext): Promise<AnalyticsAxisDetail> {
     const [row] = await ctx.manager.query(
       `SELECT a.*,
               (SELECT count(*)::int FROM analytics_categories c WHERE c.tenant_id = $1 AND c.axis_id = a.id) AS value_count,
-              (SELECT count(*)::int FROM spend_item_analytics_values v WHERE v.tenant_id = $1 AND v.axis_id = a.id) AS opex_count,
-              (SELECT count(*)::int FROM capex_item_analytics_values v WHERE v.tenant_id = $1 AND v.axis_id = a.id) AS capex_count
+              (SELECT count(*)::int FROM spend_item_analytics_values v JOIN spend_items si ON si.tenant_id = v.tenant_id AND si.id = v.item_id AND si.nature = 'opex'
+                WHERE v.tenant_id = $1 AND v.axis_id = a.id) AS opex_count,
+              (SELECT count(*)::int FROM spend_item_analytics_values v JOIN spend_items si ON si.tenant_id = v.tenant_id AND si.id = v.item_id AND si.nature = 'capex'
+                WHERE v.tenant_id = $1 AND v.axis_id = a.id) AS capex_count,
+              CASE WHEN a.applies_to IS NULL OR a.applies_to = 'opex' THEN (
+                SELECT count(*)::int FROM spend_items i
+                 WHERE i.tenant_id = $1 AND i.nature = 'opex'
+                   AND NOT EXISTS (
+                     SELECT 1 FROM spend_item_analytics_values v
+                      WHERE v.tenant_id = $1 AND v.item_id = i.id AND v.axis_id = a.id
+                   )
+              ) ELSE 0 END AS opex_missing,
+              CASE WHEN a.applies_to IS NULL OR a.applies_to = 'capex' THEN (
+                SELECT count(*)::int FROM spend_items i
+                 WHERE i.tenant_id = $1 AND i.nature = 'capex'
+                   AND NOT EXISTS (
+                     SELECT 1 FROM spend_item_analytics_values v
+                      WHERE v.tenant_id = $1 AND v.item_id = i.id AND v.axis_id = a.id
+                   )
+              ) ELSE 0 END AS capex_missing,
+              EXISTS (
+                SELECT 1 FROM analytics_categories c
+                 WHERE c.tenant_id = $1 AND c.axis_id = a.id
+                   AND c.status = 'enabled' AND (c.disabled_at IS NULL OR c.disabled_at > now())
+                   AND (c.applies_to IS NULL OR c.applies_to = 'opex')
+              ) AS opex_usable,
+              EXISTS (
+                SELECT 1 FROM analytics_categories c
+                 WHERE c.tenant_id = $1 AND c.axis_id = a.id
+                   AND c.status = 'enabled' AND (c.disabled_at IS NULL OR c.disabled_at > now())
+                   AND (c.applies_to IS NULL OR c.applies_to = 'capex')
+              ) AS capex_usable
          FROM analytics_axes a
         WHERE a.tenant_id = $1 AND a.id = $2`,
       [ctx.tenantId, id],
     );
     if (!row) throw new NotFoundException('Dimension not found.');
-    const { value_count, opex_count, capex_count, ...stored } = row;
+    const { value_count, opex_count, capex_count, opex_missing, capex_missing, opex_usable, capex_usable, ...stored } = row;
+    const axis = toRow(stored as StoredAnalyticsAxis);
+    const usable: Record<AxisAppliesTo, boolean> = { opex: opex_usable === true, capex: capex_usable === true };
     return {
-      ...toRow(stored as StoredAnalyticsAxis),
+      ...axis,
       value_count: Number(value_count ?? 0),
       opex_count: Number(opex_count ?? 0),
       capex_count: Number(capex_count ?? 0),
+      opex_missing: Number(opex_missing ?? 0),
+      capex_missing: Number(capex_missing ?? 0),
+      unusable_for: AXIS_APPLIES_TO.filter((scope) => axisAppliesTo(axis, scope) && !usable[scope]),
     };
   }
 
@@ -198,6 +302,7 @@ export class AnalyticsAxesService {
       description: normalizeAnalyticsDescription(body?.description),
       sort_order: sortOrder,
       applies_to: normalizeAppliesTo(body?.applies_to),
+      required: normalizeRequired(body?.required),
       status: lifecycle.status,
       disabled_at: lifecycle.disabled_at,
     };
@@ -237,6 +342,8 @@ export class AnalyticsAxesService {
       description: has('description') ? normalizeAnalyticsDescription(body.description) : existing.description ?? null,
       sort_order: has('sort_order') ? normalizeSortOrder(body.sort_order) : Number(existing.sort_order),
       applies_to: appliesTo,
+      // PATCH: absent (or null) keeps it.
+      required: has('required') && body.required !== null ? normalizeRequired(body.required) : existing.required === true,
       status: lifecycle.status,
       disabled_at: lifecycle.disabled_at,
     };
@@ -247,8 +354,74 @@ export class AnalyticsAxesService {
     return this.get(id, ctx);
   }
 
-  /** Refused for the default dimension and while the dimension holds values. */
-  async delete(id: string, ctx: AnalyticsContext): Promise<void> {
+  /**
+   * The order of the dimensions: `axisIds` first, in that order, then the dimensions it leaves out
+   * in their current order, renumbered 1..n in one statement that writes only the positions that
+   * change. Every id must be a dimension of the tenant, once. One audit row per dimension whose
+   * position changes (`sort_order` before and after); the dimensions keep their `updated_at`.
+   *
+   * Locks every dimension of the tenant FOR NO KEY UPDATE, in id order: a dimension update (FOR
+   * UPDATE) and a value write (which holds its dimension FOR SHARE) wait for the reorder or it
+   * waits for them. Line writes never lock a dimension, so they are never blocked.
+   */
+  async reorder(axisIdsRaw: unknown, ctx: AnalyticsContext): Promise<{ items: AnalyticsAxisRow[] }> {
+    if (!Array.isArray(axisIdsRaw)) throw analyticsRefusal('The dimensions must be a list.', 'axis_ids');
+    const axisIds = axisIdsRaw.map((id) => String(id ?? '').trim().toLowerCase());
+    if (new Set(axisIds).size !== axisIds.length) {
+      throw analyticsRefusal('Each dimension can appear only once in the order.', 'axis_ids');
+    }
+    await ctx.manager.query(
+      `SELECT id FROM analytics_axes WHERE tenant_id = $1 ORDER BY id FOR NO KEY UPDATE`,
+      [ctx.tenantId],
+    );
+    const { items: current } = await this.list(ctx);
+    const byId = new Map(current.map((axis) => [axis.id, axis]));
+    if (axisIds.some((id) => !byId.has(id))) {
+      throw analyticsRefusal('A dimension in this order does not exist. Reload the page and try again.', 'axis_ids');
+    }
+    const listed = new Set(axisIds);
+    const next = [...axisIds.map((id) => byId.get(id)!), ...current.filter((axis) => !listed.has(axis.id))];
+
+    // The rows locked above, read under the lock: exactly the rows the UPDATE writes.
+    const moved = next
+      .map((axis, index) => ({ id: axis.id, before: axis.sort_order, after: index + 1 }))
+      .filter((row) => row.before !== row.after);
+    if (moved.length === 0) return { items: next };
+
+    await ctx.manager.query(
+      `UPDATE analytics_axes a SET sort_order = n.position::int
+         FROM unnest($2::uuid[]) WITH ORDINALITY AS n(id, position)
+        WHERE a.tenant_id = $1 AND a.id = n.id AND a.sort_order IS DISTINCT FROM n.position::int`,
+      [ctx.tenantId, next.map((axis) => axis.id)],
+    );
+    for (const row of moved) {
+      await this.audit.log(
+        {
+          table: 'analytics_axes',
+          recordId: row.id,
+          action: 'update',
+          before: { sort_order: row.before },
+          after: { sort_order: row.after },
+          userId: ctx.userId ?? null,
+          source: ctx.audit?.source,
+          sourceRef: ctx.audit?.sourceRef ?? null,
+        },
+        { manager: ctx.manager },
+      );
+    }
+    return this.list(ctx);
+  }
+
+  /**
+   * Refused for the default dimension, even forced. Without `force`, refused while the dimension
+   * holds values. With it, the dimension goes with its values and the lines lose their value on it
+   * (`analytics-forced-delete.ts`).
+   */
+  async delete(id: string, ctx: AnalyticsContext, opts?: { force?: boolean }): Promise<void> {
+    if (opts?.force) {
+      await this.forceDelete(id, ctx);
+      return;
+    }
     // The row lock comes first: a value created concurrently either committed
     // before (and is counted) or waits for this delete and then fails its key.
     const existing = await this.lock(ctx, id);
@@ -285,6 +458,140 @@ export class AnalyticsAxesService {
       },
       { manager: ctx.manager },
     );
+  }
+
+  /**
+   * The dimension, its values and every line's value on it, in one transaction. Locks the lines,
+   * then the values, then the dimension (`analytics-forced-delete.ts`); the values are read again
+   * under the dimension's lock, so a value created meanwhile goes too. One audit row for the
+   * dimension with the counts, besides the rows of the values and of the lines.
+   */
+  private async forceDelete(id: string, ctx: AnalyticsContext): Promise<ForcedDeleteCounts> {
+    // Read without a lock first: refusals come before any lock is taken.
+    const [found] = await ctx.manager.query(
+      `SELECT id, is_default FROM analytics_axes WHERE tenant_id = $1 AND id = $2::uuid`,
+      [ctx.tenantId, id],
+    );
+    if (!found) throw new NotFoundException('Dimension not found.');
+    if (found.is_default) throw new ConflictException(DEFAULT_AXIS_DELETE_MESSAGE);
+
+    await lockLinesUsing(ctx, { axisId: id });
+    await lockValueRows(ctx, await dimensionValueIds(ctx, id));
+    const existing = await this.lock(ctx, id);
+    if (!existing) throw new NotFoundException('Dimension not found.');
+    if (existing.is_default) throw new ConflictException(DEFAULT_AXIS_DELETE_MESSAGE);
+    const values = await lockValueRows<{ id: string }>(ctx, await dimensionValueIds(ctx, id));
+
+    const counts = await deleteValuesAndLinks(ctx, this.audit, { axisId: id }, values, {
+      operation: 'analytics_dimension_delete',
+      axis_id: id,
+      axis_name: existing.name ?? null,
+    });
+    await ctx.manager.query(`DELETE FROM analytics_axes WHERE tenant_id = $1 AND id = $2`, [ctx.tenantId, id]);
+    await this.audit.log(
+      {
+        table: 'analytics_axes',
+        recordId: id,
+        action: 'delete',
+        before: existing,
+        after: { forced: true, ...counts },
+        userId: ctx.userId ?? null,
+        source: ctx.audit?.source,
+        sourceRef: ctx.audit?.sourceRef ?? null,
+      },
+      { manager: ctx.manager },
+    );
+    return counts;
+  }
+
+  // Recommended dimensions ---------------------------------------------------
+
+  /**
+   * Each recommended dimension, in display order, whether the tenant already has it, and the
+   * tenant's value of each seed value. `language` is the tenant's seed language
+   * (`tenants.metadata.language`, English when it holds none).
+   */
+  async recommended(ctx: AnalyticsContext): Promise<{ language: SeedLanguage; items: RecommendedDimensionState[] }> {
+    const found = await findRecommendedDimensions(ctx.manager, ctx.tenantId);
+    const values = await findRecommendedValues(ctx.manager, ctx.tenantId, found);
+    const [tenant]: Array<{ metadata: unknown }> = await ctx.manager.query(`SELECT metadata FROM tenants WHERE id = $1`, [ctx.tenantId]);
+    return {
+      language: tenantSeedLanguage(tenant?.metadata),
+      items: found.map(({ key, axis }) => ({
+        code: key,
+        present: !!axis,
+        axis_id: axis?.id ?? null,
+        axis_code: axis?.code ?? null,
+        name: axis?.name ?? null,
+        starting: STARTING_DIMENSION_KEYS.includes(key),
+        values: values.get(key) ?? [],
+      })),
+    };
+  }
+
+  /**
+   * Creates the recommended dimensions of `codes` the tenant lacks, named in `language`
+   * (`ensureRecommendedDimensions`): the cost pool goes on the default dimension only while it has
+   * neither a name nor a value, otherwise it is a new dimension of code `cost_pool`. A dimension
+   * already there is left as it is. Answers what was created and what already existed; one audit
+   * entry per dimension created or named and per value created.
+   */
+  async addRecommended(
+    body: { codes?: unknown; language?: unknown },
+    ctx: AnalyticsContext,
+  ): Promise<{ created: RecommendedDimensionResult[]; existing: RecommendedDimensionResult[] }> {
+    const raw = Array.isArray(body?.codes) ? body.codes.map((code) => String(code ?? '').trim()) : [];
+    const keys = RECOMMENDED_DIMENSION_KEYS.filter((key) => raw.includes(key));
+    if (keys.length === 0 || raw.some((code) => !(RECOMMENDED_DIMENSION_KEYS as readonly string[]).includes(code))) {
+      throw analyticsRefusal('Choose at least one recommended dimension.', 'codes');
+    }
+    // The default comes first: a tenant inserted without the bootstrap gets it before any other dimension.
+    await resolveDefaultAxisId(ctx.manager, ctx.tenantId, { create: true });
+    const outcomes = await ensureRecommendedDimensions(ctx.manager, ctx.tenantId, resolveSeedLanguage(body?.language), keys);
+    await this.auditRecommended(ctx, outcomes);
+    const toResult = (outcome: (typeof outcomes)[number]): RecommendedDimensionResult => ({
+      code: outcome.key,
+      axis_code: outcome.code,
+      axis_id: outcome.axisId,
+      name: outcome.name,
+      values_created: outcome.valueIds.length,
+    });
+    return {
+      created: outcomes.filter((outcome) => outcome.created).map(toResult),
+      existing: outcomes.filter((outcome) => !outcome.created).map(toResult),
+    };
+  }
+
+  private async auditRecommended(ctx: AnalyticsContext, outcomes: Awaited<ReturnType<typeof ensureRecommendedDimensions>>) {
+    const created = outcomes.filter((outcome) => outcome.created);
+    if (created.length === 0) return;
+    const entry = { userId: ctx.userId ?? null, source: ctx.audit?.source, sourceRef: ctx.audit?.sourceRef ?? null };
+    const axes: StoredAnalyticsAxis[] = await ctx.manager.query(
+      `SELECT * FROM analytics_axes WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+      [ctx.tenantId, created.map((outcome) => outcome.axisId)],
+    );
+    const axisById = new Map(axes.map((axis) => [axis.id, axis]));
+    for (const outcome of created) {
+      const after = axisById.get(outcome.axisId) ?? null;
+      await this.audit.log(
+        outcome.defaultBefore
+          ? { table: 'analytics_axes', recordId: outcome.axisId, action: 'update', before: outcome.defaultBefore, after, ...entry }
+          : { table: 'analytics_axes', recordId: outcome.axisId, action: 'create', before: null, after, ...entry },
+        { manager: ctx.manager },
+      );
+    }
+    const valueIds = created.flatMap((outcome) => outcome.valueIds);
+    if (valueIds.length === 0) return;
+    const values: Array<{ id: string }> = await ctx.manager.query(
+      `SELECT * FROM analytics_categories WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+      [ctx.tenantId, valueIds],
+    );
+    for (const value of values) {
+      await this.audit.log(
+        { table: 'analytics_categories', recordId: value.id, action: 'create', before: null, after: value, ...entry },
+        { manager: ctx.manager },
+      );
+    }
   }
 
   // Internals ----------------------------------------------------------------
@@ -341,21 +648,21 @@ export class AnalyticsAxesService {
         ? await ctx.manager.query(
           `UPDATE analytics_axes
               SET code = $3, name = $4, description = $5, sort_order = $6, status = $7, disabled_at = $8,
-                  applies_to = $9, updated_at = now()
+                  applies_to = $9, required = $10, updated_at = now()
             WHERE tenant_id = $1 AND id = $2
         RETURNING *`,
           [
             ctx.tenantId, existing.id, values.code, values.name, values.description, values.sort_order,
-            values.status, values.disabled_at, values.applies_to,
+            values.status, values.disabled_at, values.applies_to, values.required,
           ],
         )
         : await ctx.manager.query(
-          `INSERT INTO analytics_axes (tenant_id, code, name, description, sort_order, is_default, status, disabled_at, applies_to)
-           VALUES ($1, $2, $3, $4, $5, false, $6, $7, $8)
+          `INSERT INTO analytics_axes (tenant_id, code, name, description, sort_order, is_default, status, disabled_at, applies_to, required)
+           VALUES ($1, $2, $3, $4, $5, false, $6, $7, $8, $9)
         RETURNING *`,
           [
             ctx.tenantId, values.code, values.name, values.description, values.sort_order,
-            values.status, values.disabled_at, values.applies_to,
+            values.status, values.disabled_at, values.applies_to, values.required,
           ],
         );
       saved = firstReturnedRow<StoredAnalyticsAxis>(rows);

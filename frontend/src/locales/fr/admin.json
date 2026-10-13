@@ -221,6 +221,7 @@
       "password_reset_completed": "Réinitialisation du mot de passe terminée",
       "password_reset_requested": "Réinitialisation du mot de passe demandée",
       "refresh_denied": "Renouvellement de session refusé",
+      "restored": "Restaurer",
       "sso_login": "Connexion avec Microsoft",
       "sso_login_failed": "Échec de connexion avec Microsoft",
       "update": "Mettre à jour"
@@ -266,6 +267,7 @@
       "applications": "Applications",
       "assets": "Actifs",
       "auditLog": "Journal d'audit",
+      "budgetFile": "Fichier budgétaire",
       "businessProcesses": "Processus métier",
       "capexBudgetFile": "Fichier budgétaire CAPEX",
       "chartOfAccounts": "Plan comptable",
@@ -273,6 +275,7 @@
       "companies": "Sociétés",
       "contacts": "Contacts",
       "contracts": "Contrats",
+      "contractComplianceRegister": "Registre de conformité des contrats",
       "costCenters": "Centres de coûts",
       "departments": "Départements",
       "document": "Document",
@@ -563,55 +566,6 @@
     "unsavedNavigate": "Vous avez des modifications non enregistrées. Enregistrer avant de naviguer ?",
     "unsavedSwitchTab": "Vous avez des modifications non enregistrées. Enregistrer avant de changer d'onglet ?"
   },
-  "landing": {
-    "cards": {
-      "accounts": {
-        "description": "Gérer les comptes.",
-        "title": "Comptes"
-      },
-      "auditLogs": {
-        "description": "Consulter l'activité du journal d'audit.",
-        "title": "Journal d'audit"
-      },
-      "billing": {
-        "description": "Gérer la facturation et les abonnements.",
-        "title": "Facturation"
-      },
-      "companies": {
-        "description": "Gérer les sociétés.",
-        "title": "Sociétés"
-      },
-      "departments": {
-        "description": "Gérer les départements.",
-        "title": "Départements"
-      },
-      "opsDashboard": {
-        "description": "Voir les métriques opérationnelles de la plateforme.",
-        "title": "Tableau de bord opérationnel"
-      },
-      "platformAi": {
-        "description": "Manage the platform-wide built-in AI provider.",
-        "title": "Platform AI"
-      },
-      "roles": {
-        "description": "Gérer les rôles et les autorisations.",
-        "title": "Rôles"
-      },
-      "suppliers": {
-        "description": "Gérer les fournisseurs.",
-        "title": "Fournisseurs"
-      },
-      "tenants": {
-        "description": "Gérer les tenants.",
-        "title": "Tenants"
-      },
-      "users": {
-        "description": "Gérer les utilisateurs.",
-        "title": "Utilisateurs"
-      }
-    },
-    "title": "Administration"
-  },
   "platformAi": {
     "actions": {
       "save": "Save",
@@ -850,9 +804,9 @@
       "analytics": "Analytique",
       "applications": "Applications",
       "billing": "Facturation",
+      "budget": "Budget",
       "budget_ops": "Opérations budgétaires",
       "business_processes": "Processus métier",
-      "capex": "Capex",
       "companies": "Sociétés",
       "contacts": "Contacts",
       "contracts": "Contrats",
@@ -862,7 +816,6 @@
       "infrastructure": "Infrastructure",
       "knowledge": "Base de connaissances",
       "locations": "Sites",
-      "opex": "Opex",
       "portfolio_planning": "Planification du portefeuille",
       "portfolio_projects": "Projets du portefeuille",
       "portfolio_reports": "Rapports du portefeuille",

@@ -1,6 +1,6 @@
 # Währungseinstellungen
 
-Die Seite Währungseinstellungen (**Budgetverwaltung > Administration > Währungen**) ist der Ort, an dem Sie konfigurieren, wie Währungen in Ihrem Arbeitsbereich gespeichert, angezeigt und umgerechnet werden. Sie steuert die mandantenweite Berichtswährung, Standardwährungen für neue Positionen und optionale Einschränkungen, welche Währungen verwendet werden können.
+Die Seite Währungseinstellungen (**Budgetverwaltung > Administration > Währungen**) ist der Ort, an dem Sie konfigurieren, wie Währungen in Ihrem Arbeitsbereich gespeichert, angezeigt und umgerechnet werden. Sie steuert die mandantenweite Berichtswährung, Standardwährungen für neue Budgetzeilen und optionale Einschränkungen, welche Währungen verwendet werden können.
 
 Für Hintergrundinformationen zu Währungskonzepten und Umrechnungsmechanismen siehe den Leitfaden zur Währungsverwaltung.
 
@@ -9,7 +9,7 @@ Für Hintergrundinformationen zu Währungskonzepten und Umrechnungsmechanismen s
 Währungen sind eine Budgeteinstellung. Die Seite steht bei den anderen Budgeteinstellungen in der [Budgetadministration](budget-operations.md).
 
 - **Die Seite öffnen, Einstellungen ändern und die Wechselkurssynchronisierung starten**: Budgetadministration auf Administratorebene. Die Karte ist für andere Benutzer ausgeblendet.
-- **Währungen bei Positionen verwenden**: OPEX- und CAPEX-Benutzer wählen in ihren Positionsformularen aus den erlaubten Währungen, ohne diese Seite zu öffnen.
+- **Währungen bei Zeilen verwenden**: OPEX- und CAPEX-Benutzer wählen in ihren Zeilenformularen aus den erlaubten Währungen, ohne diese Seite zu öffnen.
 
 Das Recht **Einstellungen** der IT-Landschaft gibt keinen Zugriff auf Währungen. Es umfasst nur die Einstellungen der IT-Landschaft.
 
@@ -19,24 +19,24 @@ Das Recht **Einstellungen** der IT-Landschaft gibt keinen Zugriff auf Währungen
 Die **mandantenweite Währung**, die für alle Berichte, Summen und Listenanzeigen verwendet wird. Wenn Sie diese Währung ändern:
   - Werden alle OPEX- und CAPEX-Jahresspalten in die neue Berichtswährung umgerechnet
   - Berechnen sich Summen in Berichten mit der neuen Basis neu
-  - **Ihre gespeicherten Positionsdaten bleiben unverändert** -- nur Anzeige und Umrechnung sind betroffen
+  - **Ihre gespeicherten Zeilendaten bleiben unverändert** -- nur Anzeige und Umrechnung sind betroffen
 
-**Beispiel**: Wenn Sie von EUR auf USD wechseln, werden Ihre OPEX-Listensummen in USD angezeigt, aber die gespeicherte Währung jeder Position (EUR, GBP usw.) bleibt gleich.
+**Beispiel**: Wenn Sie von EUR auf USD wechseln, werden Ihre OPEX-Listensummen in USD angezeigt, aber die gespeicherte Währung jeder Budgetzeile (EUR, GBP usw.) bleibt gleich.
 
 **Tipp**: Wählen Sie eine Berichtswährung, die dem Finanzberichtsstandard Ihres Konzerns entspricht (z. B. EUR für europäische Hauptsitze, USD für US-basierte Gruppen).
 
 ### Standard-OPEX-Währung
-Die Währung, die beim Erstellen einer neuen OPEX-Position (Ausgabenposition) **vorausgefüllt** wird. Dies schränkt nicht ein, welche Währungen Sie auswählen können -- es spart nur Zeit, indem ein sinnvoller Standard angeboten wird.
+Die Währung, die beim Erstellen einer neuen OPEX-Zeile (Ausgabenzeile) **vorausgefüllt** wird. Dies schränkt nicht ein, welche Währungen Sie auswählen können -- es spart nur Zeit, indem ein sinnvoller Standard angeboten wird.
 
 **Beispiel**: Wenn der Großteil Ihrer wiederkehrenden Ausgaben in EUR anfällt, setzen Sie dies auf EUR. Benutzer können weiterhin manuell GBP, USD oder jede andere zugelassene Währung auswählen.
 
 ### Standard-CAPEX-Währung
-Die Währung, die beim Erstellen einer neuen CAPEX-Position **vorausgefüllt** wird. Funktioniert genauso wie die Standard-OPEX-Währung, aber für Investitionsausgaben.
+Die Währung, die beim Erstellen einer neuen CAPEX-Zeile **vorausgefüllt** wird. Funktioniert genauso wie die Standard-OPEX-Währung, aber für Investitionsausgaben.
 
 **Tipp**: Wenn Ihre CAPEX überwiegend in einer anderen Währung als der täglichen OPEX beschafft wird (z. B. USD für Hardwarekäufe), setzen Sie hier eine andere Standardwährung.
 
 ### Zugelassene Währungen (optional)
-Eine **kommagetrennte Liste** von ISO-Codes, die einschränkt, welche Währungen Benutzer beim Erstellen oder Bearbeiten von OPEX- und CAPEX-Positionen auswählen können.
+Eine **kommagetrennte Liste** von ISO-Codes, die einschränkt, welche Währungen Benutzer beim Erstellen oder Bearbeiten von OPEX- und CAPEX-Zeilen auswählen können.
 
   - **Leer (Standard)**: Benutzer können jeden gültigen 3-stelligen ISO-Währungscode auswählen
   - **Angegebene Liste** (z. B. `EUR, USD, GBP`): Nur diese Währungen erscheinen in Dropdowns
@@ -79,9 +79,9 @@ Die Schaltfläche **FX-Kurse erzwingen** löst manuell eine Hintergrundaktualisi
   - Kurse aktualisieren sich innerhalb weniger Sekunden
   - Die FX-Kurs-Snapshot-Tabelle aktualisiert sich automatisch
 
-**Automatische Aktualisierung**: Das System aktualisiert Kurse auch automatisch alle 30 Tage, wenn sich ein Benutzer anmeldet (für J-1, J, J+1). Die manuelle Synchronisation gibt Ihnen Kontrolle, wenn Sie sofortige Aktualisierungen benötigen.
+**Automatische Aktualisierung**: Das System aktualisiert Kurse auch automatisch alle 30 Tage, wenn sich ein Benutzer anmeldet (für J-1, J, J+1). Braucht eine Liste oder ein Bericht einen Kurs, der im Snapshot seines Jahres fehlt (eine seither verwendete Währung oder ein Jahr ohne Snapshot), holt das System dieses Jahr im Hintergrund nach, und die nächste Anzeige verwendet den neuen Kurs. Die manuelle Synchronisation gibt Ihnen Kontrolle, wenn Sie sofortige Aktualisierungen benötigen.
 
-**Tipp**: Wenn Sie eine neue Währung zu den zugelassenen Währungen hinzufügen, führen Sie sofort eine FX-Synchronisation durch, um die Kurse zu befüllen, bevor Benutzer Positionen in dieser Währung erstellen.
+**Tipp**: Wenn Sie eine neue Währung zu den zugelassenen Währungen hinzufügen, führen Sie sofort eine FX-Synchronisation durch, um die Kurse zu befüllen, bevor Benutzer Budgetzeilen in dieser Währung erstellen.
 
 ## FX-Kurs-Snapshot-Tabelle
 
@@ -116,7 +116,7 @@ Wenn Ihre Berichtswährung EUR ist:
 ## CSV-Import und -Export
 
 ### Export
-OPEX- und CAPEX-Exporte enthalten Positionsdaten und Jahresbeträge in der **eigenen Währung** jeder Position -- nicht in der Berichtswährung. Dies bewahrt die Originaldaten für den Reimport oder externe Analysen.
+OPEX- und CAPEX-Exporte enthalten Zeilendaten und Jahresbeträge in der **eigenen Währung** jeder Budgetzeile -- nicht in der Berichtswährung. Dies bewahrt die Originaldaten für den Reimport oder externe Analysen.
 
 **Beispiel-CSV-Zeile** (OPEX):
 ```
@@ -125,7 +125,7 @@ SaaS License;Acme UK;6200;GBP;10000;12000;12000;12000
 ```
 
 ### Import
-Beim Import von OPEX- oder CAPEX-Positionen muss die Spalte `Currency` **Standard-3-stellige ISO-Codes** enthalten.
+Beim Import von OPEX- oder CAPEX-Zeilen muss die Spalte `Currency` **Standard-3-stellige ISO-Codes** enthalten.
 
 **Validierung**:
   - Wenn **zugelassene Währungen** konfiguriert sind, werden Importe mit nicht gelisteten Codes abgelehnt
@@ -133,7 +133,7 @@ Beim Import von OPEX- oder CAPEX-Positionen muss die Spalte `Currency` **Standar
   - Berichtswährung und Standardwährungen werden immer akzeptiert
 
 **Beispiel**:
-Wenn zugelassene Währungen = `EUR, USD, GBP` und Sie eine Position mit `Currency=CHF` importieren, schlägt der Import fehl mit:
+Wenn zugelassene Währungen = `EUR, USD, GBP` und Sie eine Budgetzeile mit `Currency=CHF` importieren, schlägt der Import fehl mit:
 ```
 Currency "CHF" is not allowed. Allowed currencies: EUR, USD, GBP
 ```
@@ -144,8 +144,8 @@ Currency "CHF" is not allowed. Allowed currencies: EUR, USD, GBP
 
 Wenn Sie Einstellungen ändern:
   - **Berichtswährung**: Wirkt sich sofort auf die Anzeige aus; historische Daten bleiben erhalten und werden mit den zum Eingabezeitpunkt aktiven Kursen umgerechnet
-  - **Standardwährungen**: Betreffen nur neue Positionen; bestehende Positionen behalten ihre Währungen
-  - **Zugelassene Währungen**: Bestehende Positionen werden nicht rückwirkend validiert -- Einschränkungen gelten nur für neue oder bearbeitete Positionen
+  - **Standardwährungen**: Betreffen nur neue Budgetzeilen; bestehende Budgetzeilen behalten ihre Währungen
+  - **Zugelassene Währungen**: Bestehende Budgetzeilen werden nicht rückwirkend validiert -- Einschränkungen gelten nur für neue oder bearbeitete Budgetzeilen
 
 ## Umrechnungsmechanismen (Kurzreferenz)
 
@@ -181,7 +181,7 @@ Ihr Konzern wechselt von EUR-basierter zu USD-basierter Berichterstattung.
   4. Überprüfen Sie die FX-Kurs-Snapshot-Tabelle -- alle Kurse sollten jetzt relativ zu USD sein
   5. Prüfen Sie OPEX- und CAPEX-Listen -- Summen und Jahresspalten zeigen nun USD
 
-**Ergebnis**: Alle Berichte, Dashboards und Listen zeigen USD. Ihre gespeicherten Positionsdaten (eigene Währung jeder Position) bleiben unverändert.
+**Ergebnis**: Alle Berichte, Dashboards und Listen zeigen USD. Ihre gespeicherten Zeilendaten (eigene Währung jeder Budgetzeile) bleiben unverändert.
 
 ### Szenario 2: Währungen aus Compliance-Gründen einschränken
 Ihre Finanzabteilung verlangt, dass alle Ausgaben nur in EUR, USD oder GBP erfasst werden.
@@ -192,7 +192,7 @@ Ihre Finanzabteilung verlangt, dass alle Ausgaben nur in EUR, USD oder GBP erfas
   3. Klicken Sie auf **Speichern**
   4. Führen Sie **FX-Kurse erzwingen** durch, um sicherzustellen, dass Kurse für alle drei Währungen verfügbar sind
 
-**Ergebnis**: Benutzer können beim Erstellen oder Bearbeiten von Positionen nur EUR, USD oder GBP auswählen. Versuche, andere Währungen zu importieren, schlagen mit einer klaren Fehlermeldung fehl.
+**Ergebnis**: Benutzer können beim Erstellen oder Bearbeiten von Budgetzeilen nur EUR, USD oder GBP auswählen. Versuche, andere Währungen zu importieren, schlagen mit einer klaren Fehlermeldung fehl.
 
 ### Szenario 3: Neue Währung mitten im Jahr hinzufügen
 Ihr Unternehmen beginnt Geschäftstätigkeit in der Schweiz und muss CHF-Ausgaben erfassen.
@@ -204,7 +204,7 @@ Ihr Unternehmen beginnt Geschäftstätigkeit in der Schweiz und muss CHF-Ausgabe
   4. Klicken Sie auf **FX-Kurse erzwingen**, um CHF-Kurse sofort abzurufen
   5. Überprüfen Sie, dass CHF in der FX-Kurs-Snapshot-Tabelle mit gültigen Kursen erscheint
 
-**Ergebnis**: Benutzer können jetzt CHF für neue Positionen auswählen. Die FX-Kurs-Tabelle enthält CHF mit aktuellen und historischen Kursen für genaue Umrechnungen.
+**Ergebnis**: Benutzer können jetzt CHF für neue Budgetzeilen auswählen. Die FX-Kurs-Tabelle enthält CHF mit aktuellen und historischen Kursen für genaue Umrechnungen.
 
 ### Szenario 4: Vorbereitung auf jährliche Budgetzyklen
 Es ist Dezember, und Sie bereiten die Budgetplanung für das nächste Jahr vor.
@@ -223,16 +223,16 @@ Es ist Dezember, und Sie bereiten die Budgetplanung für das nächste Jahr vor.
 A: Alle Berichte und Listen werden sofort in die neue Währung umgerechnet. Historische Daten bleiben erhalten -- nur die Anzeigewährung ändert sich. Planen Sie diese Änderung sorgfältig, um Verwirrung während aktiver Berichtszeiträume zu vermeiden.
 
 **F: Kann ich verschiedene Berichtswährungen für verschiedene Unternehmen festlegen?**
-A: Nein. Die Berichtswährung ist mandantenweit. Alle Unternehmen, Berichte und Summen verwenden dieselbe Berichtswährung. Einzelne Positionen speichern ihre eigene Währung, aber Umrechnungen zielen immer auf die Berichtswährung des Mandanten.
+A: Nein. Die Berichtswährung ist mandantenweit. Alle Unternehmen, Berichte und Summen verwenden dieselbe Berichtswährung. Einzelne Budgetzeilen speichern ihre eigene Währung, aber Umrechnungen zielen immer auf die Berichtswährung des Mandanten.
 
 **F: Warum sehe ich keine Kurse für eine bestimmte Währung?**
 A: Die Datenquelle (Weltbank oder ExchangeRate-API) veröffentlicht diese Währung möglicherweise nicht. Prüfen Sie, ob der ISO-Code korrekt und allgemein veröffentlicht ist. Erwägen Sie bei Bedarf, zugelassene Währungen auf Codes mit zuverlässiger Datenabdeckung zu beschränken.
 
 **F: Wie oft werden FX-Kurse automatisch aktualisiert?**
-A: Alle 30 Tage, wenn sich ein Benutzer anmeldet, aktualisiert das System die Kurse für J-1, J und J+1. Sie können auch jederzeit eine manuelle Aktualisierung über FX-Kurse erzwingen auslösen.
+A: Alle 30 Tage, wenn sich ein Benutzer anmeldet, aktualisiert das System die Kurse für J-1, J und J+1. Ein Jahr, dem der Kurs einer verwendeten Währung fehlt, wird außerdem abgerufen, sobald eine Liste oder ein Bericht ihn braucht. Sie können auch jederzeit eine manuelle Aktualisierung über FX-Kurse erzwingen auslösen.
 
 **F: Beeinflussen FX-Kursänderungen meine gespeicherten Daten?**
-A: Nein. Wechselkurse beeinflussen nur **Umrechnung und Anzeige**. Jede OPEX- und CAPEX-Position speichert ihre eigene Währung und Beträge, die sich bei Kursaktualisierungen nie ändern. Nur die angezeigten umgerechneten Werte in Berichten und Listen ändern sich.
+A: Nein. Wechselkurse beeinflussen nur **Umrechnung und Anzeige**. Jede OPEX- und CAPEX-Zeile speichert ihre eigene Währung und Beträge, die sich bei Kursaktualisierungen nie ändern. Nur die angezeigten umgerechneten Werte in Berichten und Listen ändern sich.
 
 **F: Kann ich historische Kurse manuell importieren?**
 A: Nein. Das System ruft Kurse automatisch von externen Quellen ab (Weltbank, ExchangeRate-API). Wenn Sie benutzerdefinierte Kurse benötigen, kontaktieren Sie den Support oder erwägen Sie die Verwendung einer Währung, bei der Sie die veröffentlichten Kurse akzeptieren können.

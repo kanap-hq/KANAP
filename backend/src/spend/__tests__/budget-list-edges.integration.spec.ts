@@ -22,10 +22,13 @@ import { prng, seedListFixture, uuidFrom } from './oracle/budget-list.fixture';
 //   numeric(18,2) near its maximum) is listed, sorted, filtered and totalled
 //   like the oracle, and the CAPEX totals reader and list take it too;
 // - `sqlLiteral` refuses `$<digit>`, which `finalize` would renumber;
-// - every enum the list sorts in a fixed order (status, run or build, and the
-//   CAPEX priority, investment type and PPE type of decision Q4) lists exactly
-//   the values of its database enum, in their declaration order: a value
-//   added by a migration and not here would sort as blank.
+// - a dimension column (the CAPEX priority, investment type and PP&E type are
+//   dimensions since lot C1) sorts by the value's position in its dimension,
+//   then by name, like the oracle, in both lists: the fixture's positions are
+//   out of the names' order, so a sort on the name alone fails;
+// - every enum the list sorts in a fixed order (status, run or build) lists
+//   exactly the values of its database enum, in their declaration order: a
+//   value added by a migration and not here would sort as blank.
 // @database-spec: opens the data-source, so run-ci-tests.js runs this file in its serial database lane.
 
 const SEED = 20261002;
@@ -155,20 +158,21 @@ async function run() {
     assert.ok((top.items[0] as any).versions.y.totals.budget > 1e17, 'the local amount, 1.2e17');
 
     // The CAPEX readers share the totals reader (CAPEX list and export): numeric cents, no bigint cast.
+    // A CAPEX line lives in the spend_* tables since lot Z1 (nature 'capex', its CPX number in legacy_number).
     const capexItem = uuidFrom(ids);
     const capexVersion = uuidFrom(ids);
     await runner.query(
-      `INSERT INTO capex_items (id, tenant_id, item_number, description, ppe_type, investment_type, priority, currency, effective_start)
-       VALUES ($1, $2, 900003, 'Absurd investment', 'hardware', 'other', 'low', 'EUR', '2020-01-01')`,
+      `INSERT INTO spend_items (id, tenant_id, nature, item_number, legacy_number, product_name, ppe_type, investment_type, priority, currency, effective_start)
+       VALUES ($1, $2, 'capex', 900003, 'CPX-900003', 'Absurd investment', 'hardware', 'other', 'low', 'EUR', '2020-01-01')`,
       [capexItem, tenantId],
     );
     await runner.query(
-      `INSERT INTO capex_versions (id, tenant_id, capex_item_id, version_name, as_of_date, budget_year, allocation_method)
+      `INSERT INTO spend_versions (id, tenant_id, spend_item_id, version_name, as_of_date, budget_year, allocation_method)
        VALUES ($1, $2, $3, 'Absurd', $4::date, $5, 'default')`,
       [capexVersion, tenantId, capexItem, `${Y}-01-01`, Y],
     );
     await runner.query(
-      `INSERT INTO capex_amounts (tenant_id, version_id, period, planned, committed, forecast, actual, expected_landing)
+      `INSERT INTO spend_amounts (tenant_id, version_id, period, planned, committed, forecast, actual, expected_landing)
        SELECT $1, $2, make_date($3, mo, 1), $4::numeric, 0, 0, 0, 0 FROM generate_series(1, 12) AS mo`,
       [tenantId, capexVersion, Y, MAX_MONTH],
     );
@@ -181,7 +185,7 @@ async function run() {
     const capexOracle = new BudgetSummaryOracle(capex, capexDeps, m, tenantId, fold, ROW_OPTIONS);
     for (const query of [
       { ...all, sort: 'yBudget:DESC', limit: 10 },
-      { ...all, sort: 'priority:ASC', limit: 10, filters: f({ yBudget: { filterType: 'number', type: 'greaterThan', filter: 1e15 } }) },
+      { ...all, sort: 'status:ASC', limit: 10, filters: f({ yBudget: { filterType: 'number', type: 'greaterThan', filter: 1e15 } }) },
       { ...all, sort: 'description:ASC', limit: 10, q: 'absurd' },
     ]) {
       const e = await engine.budgetListSummary(capex, capexDeps, query, m, ROW_OPTIONS);
@@ -193,12 +197,40 @@ async function run() {
     const capexTop = await engine.budgetListSummary(capex, capexDeps, { ...all, sort: 'yBudget:DESC', limit: 1 }, m, ROW_OPTIONS);
     assert.equal(capexTop.items[0].id, capexItem, 'the absurd investment sorts first');
 
+    // ----- a dimension column: the value's position, then its name -----
+    const [nature]: Array<{ id: string }> = await runner.query(
+      `SELECT id::text AS id FROM analytics_axes WHERE tenant_id = $1 AND code = 'nature'`, [tenantId]);
+    const valueOf = new Map<string, { name: string; position: number }>(
+      (await runner.query(
+        `SELECT v.item_id::text AS item, c.name, c.sort_order AS position
+           FROM spend_item_analytics_values v JOIN analytics_categories c ON c.tenant_id = v.tenant_id AND c.id = v.category_id
+          WHERE v.tenant_id = $1 AND v.axis_id = $2`, [tenantId, nature.id],
+      )).map((row: { item: string; name: string; position: number }) => [row.item, { name: row.name, position: Number(row.position) }]),
+    );
+    for (const [label, listScope, listDeps, listOracle] of [
+      ['OPEX', scope, deps, freshOracle],
+      ['CAPEX', capex, capexDeps, capexOracle],
+    ] as const) {
+      for (const dir of ['ASC', 'DESC'] as const) {
+        const query = { ...all, sort: `analytics_${nature.id}:${dir}` };
+        const sorted = await engine.budgetListIds(listScope, listDeps, query, m);
+        assert.deepEqual(sorted.ids, (await listOracle.summaryIds(query)).ids, `${label} sort on a dimension ${dir}: the oracle's order`);
+        const values = sorted.ids.map((id) => valueOf.get(id)).filter((value): value is { name: string; position: number } => !!value);
+        const positions = values.map((value) => value.position);
+        const ordered = [...positions].sort((a, b) => (dir === 'ASC' ? a - b : b - a));
+        assert.deepEqual(positions, ordered, `${label} sort on a dimension ${dir}: by position first`);
+        const names = values.map((value) => value.name).filter((name, i, list) => i === 0 || list[i - 1] !== name);
+        const byName = [...new Set(names)].sort((a, b) => a.localeCompare(b) * (dir === 'ASC' ? 1 : -1));
+        assert.notDeepEqual(names, byName, `${label} sort on a dimension ${dir}: not the order of the names (fixture positions)`);
+      }
+    }
+
     // ----- fixed sort orders against the database enums -----
     for (const [field, order] of Object.entries(FIXED_SORT_ORDERS)) {
       const labels: Array<{ label: string }> = await runner.query(
         `SELECT e.enumlabel AS label
            FROM pg_attribute a JOIN pg_enum e ON e.enumtypid = a.atttypid
-          WHERE a.attrelid = 'capex_items'::regclass AND a.attname = $1
+          WHERE a.attrelid = 'spend_items'::regclass AND a.attname = $1
           ORDER BY e.enumsortorder`,
         [field],
       );

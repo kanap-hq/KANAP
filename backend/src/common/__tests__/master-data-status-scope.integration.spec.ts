@@ -152,7 +152,7 @@ async function testContractsReadTheEndOfValidity() {
     const active = await contract('Active contract', 'enabled', null);
     const expired = await contract('Expired contract', 'enabled', PAST);
     const closed = await contract('Closed contract', 'disabled', PAST);
-    const svc = new ContractsService(undefined as any, undefined as any, undefined as any, undefined as any, { log: async () => undefined } as any, undefined as any, undefined as any, undefined as any, undefined as any);
+    const svc = new ContractsService(undefined as any, undefined as any, undefined as any, undefined as any, { log: async () => undefined } as any, undefined as any, undefined as any, undefined as any, undefined as any, undefined as any);
     const sorted = (values: string[]) => [...values].sort();
     const cases: Array<[string, any, string[]]> = [
       ['all + disabled ticked', { ...ALL, filters: statusFilter('disabled') }, [expired, closed]],
@@ -211,9 +211,10 @@ async function testSummaryClearMatchesNothing() {
   await withTenant(async (runner, tenantId) => {
     const opts = runner.manager;
     await runner.query(`INSERT INTO spend_items (tenant_id, product_name, currency, effective_start, item_number) VALUES ($1, 'Scope line', 'EUR', '2020-01-01', 1)`, [tenantId]);
+    // A CAPEX line of spend_items since lot Z1: its own BL number, CPX-1 kept as its legacy number.
     await runner.query(
-      `INSERT INTO capex_items (tenant_id, description, ppe_type, investment_type, priority, currency, effective_start, item_number)
-       VALUES ($1, 'Scope line', 'hardware', 'replacement', 'medium', 'EUR', '2020-01-01', 1)`,
+      `INSERT INTO spend_items (tenant_id, nature, product_name, ppe_type, investment_type, priority, currency, effective_start, item_number, legacy_number)
+       VALUES ($1, 'capex', 'Scope line', 'hardware', 'replacement', 'medium', 'EUR', '2020-01-01', 2, 'CPX-1')`,
       [tenantId],
     );
     const deps: any = {

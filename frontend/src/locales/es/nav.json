@@ -26,11 +26,10 @@
   "sidebar": {
     "ops": {
       "overview": "Vista general",
-      "opex": "OPEX",
-      "capex": "CAPEX",
       "contracts": "Contratos",
       "reporting": "Informes",
-      "administration": "Administración"
+      "administration": "Administración",
+      "budgetLines": "Líneas presupuestarias"
     },
     "masterData": {
       "home": "Inicio datos maestros",
@@ -153,6 +152,7 @@
     "operations": "Administración",
     "aiModels": "Modelos IA",
     "aiUsage": "Uso y costes",
-    "netbox": "Netbox"
+    "netbox": "Netbox",
+    "budget": "Líneas presupuestarias"
   }
 }

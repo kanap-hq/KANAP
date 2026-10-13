@@ -3,9 +3,10 @@ import { createHash } from 'node:crypto';
 import type { EntityManager, QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { SpendItemsService } from '../spend-items.service';
-import { CapexItemsService } from '../../capex/capex-items.service';
+import { CapexItemsService } from '../spend-items.service';
 import { SUMMARY_SCOPES, SummaryScopeConfig } from '../spend-summary.builder';
 import { CONSOLIDATION_COUNTS_INACTIVE_ACCOUNTS } from '../budget-list/budget-list.config';
+import { ANALYTICS_VALUE_ORDER_SQL } from '../../analytics/analytics-axes.util';
 import { realSummaryDeps } from './oracle/oracle-deps';
 import { seedListFixture } from './oracle/budget-list.fixture';
 import * as O from './oracle/report-browser.oracle';
@@ -55,7 +56,8 @@ import * as R from '../../../../frontend/src/pages/reports/reportAggregates';
 // @database-spec: opens the data-source, so run-ci-tests.js runs this file in its serial database lane.
 
 type Row = Record<string, any>;
-type Scope = R.BudgetScope;
+// This oracle covers the two legacy per-nature contracts.
+type Scope = Exclude<R.BudgetScope, 'all'>;
 
 const SEED = Number(process.env.REPORT_PARITY_SEED ?? 20261002);
 const TENANT_SLUG = process.env.REPORT_PARITY_TENANT || null;
@@ -230,9 +232,10 @@ function sameOptions(label: string, old: Array<{ id: string; name: string }>, no
 
 function itemService(scope: SummaryScopeConfig): any {
   const deps = realSummaryDeps(scope);
-  const args: any[] = Array.from({ length: 12 }, () => undefined);
+  // One constructor for both natures since lot Z1: the CAPEX service is the OPEX one's subclass.
+  const args: any[] = Array.from({ length: 11 }, () => undefined);
   args[4] = deps.allocationCalculator;
-  args[scope.scope === 'opex' ? 6 : 7] = deps.fxRates;
+  args[6] = deps.fxRates;
   return scope.scope === 'opex' ? new (SpendItemsService as any)(...args) : new (CapexItemsService as any)(...args);
 }
 
@@ -335,13 +338,18 @@ async function loadEnv(scope: Scope, m: EntityManager, tenantId: string): Promis
   // `/accounts?limit=1000`: the active accounts, newest first.
   const activeAccounts = await m.query(`SELECT ${accountColumns} FROM accounts WHERE tenant_id = $1 AND (disabled_at IS NULL OR disabled_at > now()) ORDER BY created_at DESC, id DESC LIMIT 1000`, [tenantId]);
   const allAccounts = await m.query(`SELECT ${accountColumns} FROM accounts WHERE tenant_id = $1`, [tenantId]);
-  // `/analytics-categories?axis_id=…&limit=1000&sort=name:ASC`: the dimension's active values.
+  // `/analytics-categories?axis_id=…&limit=1000&sort=sort_order:ASC`: the dimension's active values, in its order.
   const catalogue = (axisId: string) => m.query(
-    `SELECT id, name FROM analytics_categories WHERE tenant_id = $1 AND axis_id = $2 AND (disabled_at IS NULL OR disabled_at > now()) ORDER BY name, id LIMIT 1000`,
+    `SELECT c.id, c.name FROM analytics_categories c
+      WHERE c.tenant_id = $1 AND c.axis_id = $2 AND (c.disabled_at IS NULL OR c.disabled_at > now())
+      ORDER BY ${ANALYTICS_VALUE_ORDER_SQL} LIMIT 1000`,
     [tenantId, axisId],
   );
-  const itemTable = scope === 'opex' ? 'spend_items' : 'capex_items';
-  const used: Array<{ account_id: string }> = await m.query(`SELECT DISTINCT account_id FROM ${itemTable} WHERE tenant_id = $1 AND account_id IS NOT NULL`, [tenantId]);
+  // Both natures live in spend_items since lot Z1: the scope's own lines.
+  const used: Array<{ account_id: string }> = await m.query(
+    `SELECT DISTINCT account_id FROM spend_items WHERE tenant_id = $1 AND nature = $2 AND account_id IS NOT NULL`,
+    [tenantId, scope],
+  );
   return {
     scope,
     m,
@@ -704,7 +712,9 @@ async function main() {
       if (!tenant) throw new Error(`No tenant ${TENANT_SLUG}`);
       tenantId = tenant.id;
     } else {
-      tenantId = (await seedListFixture(runner, SEED)).tenantId;
+      // Values at position 0: the former report orders a dimension's options by name, the
+      // aggregate by position then name (a gap of lot D3, left as it is).
+      tenantId = (await seedListFixture(runner, SEED, undefined, undefined, { valuePositions: false })).tenantId;
     }
     await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
     await decorateAccounts(runner.manager, tenantId);

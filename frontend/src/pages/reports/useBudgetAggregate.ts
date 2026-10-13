@@ -5,6 +5,7 @@ import type { AggregateRequest, AggregateResult, BudgetScope } from './reportAgg
 
 /** The aggregate route of each item type. */
 export const AGGREGATE_ENDPOINT: Record<BudgetScope, string> = {
+  all: '/budget-lines/summary/aggregate',
   opex: '/spend-items/summary/aggregate',
   capex: '/capex-items/summary/aggregate',
 };
@@ -14,6 +15,7 @@ export const AGGREGATE_ENDPOINT: Record<BudgetScope, string> = {
  * invalidates `['spend-items-summary']` (or CAPEX's) refreshes every aggregate of that type.
  */
 export const SUMMARY_QUERY_KEY: Record<BudgetScope, string> = {
+  all: 'budget-lines-summary',
   opex: 'spend-items-summary',
   capex: 'capex-items-summary',
 };
@@ -55,7 +57,7 @@ function placeholder(scope: BudgetScope, request: AggregateRequest | null, keepP
 }
 
 /**
- * One server aggregate of the OPEX or CAPEX lines (`reportAggregates.ts` builds the request and
+ * One server aggregate of all budget lines, or of the chosen nature (`reportAggregates.ts` builds the request and
  * reads the answer). A null request asks nothing (the page waits for what the request needs).
  */
 export function useBudgetAggregate(scope: BudgetScope, request: AggregateRequest | null, options: Options = {}): UseQueryResult<AggregateResult> {

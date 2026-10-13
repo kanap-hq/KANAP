@@ -28,7 +28,7 @@ const TOOL = 'race_counted_write';
 function previewService() {
   const operation = {
     toolName: TOOL,
-    businessResource: 'opex',
+    businessResource: 'budget',
     executePreview: async (context: any, preview: any) => {
       await lockBudgetLine(context.manager, 'opex', context.tenantId, preview.target_entity_id);
       await context.manager.query(

@@ -25,13 +25,20 @@ import {
 // gains B's.
 
 const USER = '00000000-0000-4000-8000-00000000f2f2';
+// The link tables as the audit names them; `ITEM_COLUMN` names the item in the audited row.
 const LINK_TABLES = ['spend_item_contacts', 'capex_item_contacts', 'contract_contacts'] as const;
 const ITEM_COLUMN = { spend_item_contacts: 'spend_item_id', capex_item_contacts: 'capex_item_id', contract_contacts: 'contract_id' } as const;
+// Where each one is stored: a CAPEX line's contacts live in spend_item_contacts since lot Z1.
+const LINK_STORAGE = {
+  spend_item_contacts: { table: 'spend_item_contacts', column: 'spend_item_id' },
+  capex_item_contacts: { table: 'spend_item_contacts', column: 'spend_item_id' },
+  contract_contacts: { table: 'contract_contacts', column: 'contract_id' },
+} as const;
 
 // RLS lifted for `app` on these tables (see `withRlsLifted`: never against a
 // database a live API uses).
 const BYPASS_TABLES = [
-  'spend_items', 'capex_items', 'contracts', 'suppliers', 'contacts', 'supplier_contacts', ...LINK_TABLES,
+  'spend_items', 'contracts', 'suppliers', 'contacts', 'supplier_contacts', 'spend_item_contacts', 'contract_contacts',
 ];
 
 type Items = { spend_item_contacts: string; capex_item_contacts: string; contract_contacts: string };
@@ -41,7 +48,7 @@ async function seedItems(runner: QueryRunner, tenantId: string, supplierId: stri
   const opex = await seedItem(runner, 'opex', tenantId, start, `OPEX ${start}`);
   const capex = await seedItem(runner, 'capex', tenantId, start, `CAPEX ${start}`);
   await runner.query(`UPDATE spend_items SET supplier_id = $2 WHERE id = $1`, [opex, supplierId]);
-  await runner.query(`UPDATE capex_items SET supplier_id = $2 WHERE id = $1`, [capex, supplierId]);
+  await runner.query(`UPDATE spend_items SET supplier_id = $2 WHERE id = $1`, [capex, supplierId]);
   const [contract] = await runner.query(
     `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, start_date) VALUES ($1, $2, $3, $4, '2024-01-01') RETURNING id`,
     [tenantId, `Contract ${start}`, companyId, supplierId],
@@ -96,8 +103,8 @@ async function withWorld(fn: (runner: QueryRunner, world: World) => Promise<void
     );
 
     await setTenant(runner, tenantA);
-    const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM spend_items WHERE supplier_id = $1`, [supplierA]);
-    assert.equal(n, 2, 'with RLS lifted, the session sees both tenants\' lines of supplier A');
+    const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM spend_items WHERE supplier_id = $1 AND nature = 'opex'`, [supplierA]);
+    assert.equal(n, 2, 'with RLS lifted, the session sees both tenants\' OPEX lines of supplier A');
 
     await fn(runner, {
       tenantA, tenantB, supplierA, supplierA2, contactId: contact.id, itemsA, itemsA2, itemsB, foreignLinkId: foreign.id,
@@ -110,7 +117,8 @@ async function linksOn(runner: QueryRunner, items: Items, contactId: string): Pr
   const result: Record<string, string[]> = {};
   for (const table of LINK_TABLES) {
     const rows: Array<{ origin: string; role: string }> = await runner.query(
-      `SELECT origin, role::text AS role FROM ${table} WHERE ${ITEM_COLUMN[table]} = $1 AND contact_id = $2 ORDER BY origin, role`,
+      `SELECT origin, role::text AS role FROM ${LINK_STORAGE[table].table}
+        WHERE ${LINK_STORAGE[table].column} = $1 AND contact_id = $2 ORDER BY origin, role`,
       [items[table], contactId],
     );
     result[table] = rows.map((row) => `${row.origin}:${row.role}`);

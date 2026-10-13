@@ -45,6 +45,8 @@ type PortfolioDetailWorkspaceShellProps = {
   forceDrawerOpen?: boolean;
   /** Overrides the stored drawer state on mount only (e.g. a deep link that targets a drawer field). */
   initialDrawerOpen?: boolean;
+  /** Opens the drawer each time this number changes (the page must show one of its fields). */
+  drawerOpenRequest?: number;
   isCreate?: boolean;
   itemReference?: string | null;
   metadata?: React.ReactNode;
@@ -60,6 +62,9 @@ type PortfolioDetailWorkspaceShellProps = {
   title: string;
   titleFallback: string;
 };
+
+/** The width the title keeps beside the actions; below it, the actions wrap under the title. */
+const TITLE_MIN_WIDTH = 280;
 
 function getStoredDrawerState(storageKey: string) {
   if (typeof window === 'undefined') return true;
@@ -79,6 +84,7 @@ function isTypingTarget(target: EventTarget | null) {
 }
 
 function NavChip({ nav }: { nav: PortfolioDetailWorkspaceNav }) {
+  const { t } = useTranslation('common');
   if (nav.totalCount <= 0) return null;
 
   const navButtonSx = (theme: Theme) => ({
@@ -122,7 +128,7 @@ function NavChip({ nav }: { nav: PortfolioDetailWorkspaceNav }) {
           userSelect: 'none',
         })}
       >
-        {nav.currentIndex} of {nav.totalCount}
+        {t('labels.positionOf', { index: nav.currentIndex, total: nav.totalCount })}
       </Box>
       <IconButton onClick={nav.onNext} disabled={!nav.hasNext} aria-label={nav.nextLabel} sx={navButtonSx} size="small">
         <ChevronRightIcon sx={{ fontSize: 16 }} />
@@ -237,6 +243,7 @@ export default function PortfolioDetailWorkspaceShell({
   drawerStorageKey,
   forceDrawerOpen = false,
   initialDrawerOpen,
+  drawerOpenRequest = 0,
   isCreate = false,
   itemReference,
   metadata,
@@ -269,6 +276,10 @@ export default function PortfolioDetailWorkspaceShell({
   const hasTabRow = tabs.length > 1;
   const drawerLift = hasTabRow ? Math.abs(taskDetailTokens.drawer.panelTop) : 0;
   const tabLift = hasTabRow ? Math.abs(taskDetailTokens.drawer.tabTop) : 0;
+
+  React.useEffect(() => {
+    if (drawerOpenRequest > 0) setDrawerOpen(true);
+  }, [drawerOpenRequest]);
 
   React.useEffect(() => {
     if (forceDrawerOpen) return;
@@ -376,16 +387,20 @@ export default function PortfolioDetailWorkspaceShell({
         </Box>
 
         <Box sx={{ pt: taskDetailTokens.titleBlock.pt, px: isCompact ? 2 : taskDetailTokens.titleBlock.px, pb: taskDetailTokens.titleBlock.pb }}>
+          {/* The actions sit beside the title while the title keeps TITLE_MIN_WIDTH, and wrap under
+              it otherwise. The row's own width decides, not the window's: the side navigation
+              and the page padding take their share before it. */}
           <Box
             sx={{
               display: 'flex',
               alignItems: 'flex-start',
-              gap: taskDetailTokens.titleRow.gap,
-              flexDirection: isCompact ? 'column' : 'row',
+              flexWrap: 'wrap',
+              columnGap: taskDetailTokens.titleRow.gap,
+              rowGap: taskDetailTokens.titleStack.gap,
               mb: hasTabRow ? (metadata ? taskDetailTokens.titleStack.metadataToTabsGap : taskDetailTokens.titleRow.mb) : 0,
             }}
           >
-            <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: taskDetailTokens.titleStack.gap }}>
+            <Box sx={{ flex: `1 1 ${TITLE_MIN_WIDTH}px`, minWidth: 0, display: 'flex', flexDirection: 'column', gap: taskDetailTokens.titleStack.gap }}>
               <Box
                 component="h1"
                 sx={{
@@ -416,7 +431,7 @@ export default function PortfolioDetailWorkspaceShell({
                     {itemReference}
                   </Box>
                 )}
-                <Box sx={{ flex: 1, minWidth: isCompact ? '100%' : 0 }}>
+                <Box sx={{ flex: 1, minWidth: isCompact ? '100%' : 0, overflowWrap: 'anywhere' }}>
                   <EditableTitle
                     value={title}
                     fallback={titleFallback}
@@ -440,10 +455,9 @@ export default function PortfolioDetailWorkspaceShell({
                   alignItems: 'center',
                   gap: taskDetailTokens.actionPills.gap,
                   flexShrink: 0,
+                  maxWidth: '100%',
                   mt: isCompact ? 0 : '7px',
                   flexWrap: 'wrap',
-                  justifyContent: isCompact ? 'flex-start' : 'flex-end',
-                  width: isCompact ? '100%' : 'auto',
                 }}
               >
                 {actions}

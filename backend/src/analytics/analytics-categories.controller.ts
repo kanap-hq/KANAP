@@ -27,10 +27,12 @@ import { csvImportMulterOptions } from '../common/upload';
 import { AnalyticsCategoriesCsvService } from './analytics-categories-csv.service';
 import { AnalyticsCategoriesService } from './analytics-categories.service';
 import { AnalyticsContext } from './analytics-context';
+import { isForced } from './analytics-forced-delete';
 import { lookupAnalyticsValues } from '../common/lookup/reference-lookups';
 import {
   AnalyticsCategoryBulkDeleteDto,
   AnalyticsCategoryCreateDto,
+  AnalyticsCategoryReorderDto,
   AnalyticsCategoryUpdateDto,
 } from './dto/analytics.dto';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
@@ -43,8 +45,7 @@ export function analyticsContext(ctx: TenantRequest): AnalyticsContext {
 /** Item forms, lists and budget reports read the values without access to the page. */
 export const ANALYTICS_READERS = [
   { resource: 'analytics', level: 'reader' as const },
-  { resource: 'opex', level: 'reader' as const },
-  { resource: 'capex', level: 'reader' as const },
+  { resource: 'budget', level: 'reader' as const },
   { resource: 'reporting', level: 'reader' as const },
 ];
 
@@ -59,7 +60,7 @@ export class AnalyticsCategoriesController {
   @RequireAnyLevel(ANALYTICS_READERS)
   @Get()
   list(@Query() query: any, @Tenant() ctx: TenantRequest) {
-    return this.svc.list(query, analyticsContext(ctx));
+    return this.svc.listWithUsage(query, analyticsContext(ctx));
   }
 
   // Picker search within one dimension (`axis_id`) and hydration (`ids`); see common/lookup.
@@ -91,6 +92,14 @@ export class AnalyticsCategoriesController {
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(filename));
     res.send(content);
+  }
+
+  // The order of one dimension's values (same permission as PATCH :id), before the `:id` routes.
+  @RequireLevel('analytics', 'member')
+  @Post('reorder')
+  reorder(@Body() body: AnalyticsCategoryReorderDto, @Tenant() ctx: TenantRequest) {
+    const context = analyticsContext(ctx);
+    return this.svc.reorder(body?.axis_id, body?.value_ids, context.userId, context);
   }
 
   @RequireAnyLevel(ANALYTICS_READERS)
@@ -144,17 +153,25 @@ export class AnalyticsCategoriesController {
     return this.svc.update(id, body, context.userId, context);
   }
 
+  // `force: true` deletes values in use too: the lines lose them (analytics-forced-delete.ts).
   @RequireLevel('analytics', 'admin')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Delete('bulk')
   bulkDelete(@Body() body: AnalyticsCategoryBulkDeleteDto, @Tenant() ctx: TenantRequest) {
     const context = analyticsContext(ctx);
-    return this.svc.bulkDelete(body.ids, context.userId, context);
+    return this.svc.bulkDelete(body.ids, context.userId, context, { force: isForced(body.force) });
   }
 
+  // `?force=true` deletes a value in use too: the lines lose it (analytics-forced-delete.ts).
   @RequireLevel('analytics', 'admin')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Delete(':id')
-  delete(@Param('id', new ParseUUIDPipe()) id: string, @Tenant() ctx: TenantRequest) {
+  delete(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Query('force') force: string | undefined,
+    @Tenant() ctx: TenantRequest,
+  ) {
     const context = analyticsContext(ctx);
-    return this.svc.delete(id, context.userId, context);
+    return this.svc.delete(id, context.userId, context, { force: isForced(force) });
   }
 }

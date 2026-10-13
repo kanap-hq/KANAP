@@ -32,14 +32,17 @@ import {
   linesRound,
   listRoundInputs,
   RoundInput,
+  RoundInputFields,
   RoundInputsContext,
   upsertRoundInput,
   wholeYear,
 } from './round-inputs.util';
 import { ColumnResult, computeColumn, CostingInputError, CostLine, UNIT_PRICE_LIMITS } from './costing.util';
-import { activeMonths } from './spread.util';
+import { activeMonths, periodMonths } from './spread.util';
 import { ensureBudgetVersion } from './budget-version-ensure';
-import { lockBudgetLines, lockBudgetVersions, lockTenantBudgetOperations } from './budget-locks';
+import { assertLinesHeld, lockBudgetLines, lockBudgetVersions, lockTenantBudgetOperations } from './budget-locks';
+import { assertScopeNatures, auditTableOf, natureAnd, type BudgetNature } from './budget-nature';
+import { presentChild } from './budget-line-presentation';
 
 /**
  * Budget column operations (copy a column to another year or column, clear a
@@ -57,11 +60,13 @@ import { lockBudgetLines, lockBudgetVersions, lockTenantBudgetOperations } from 
  * only those months. A clear runs on every item, ended or not.
  */
 
-// Table and column names come only from here: never from the caller.
-const SCOPES = {
-  opex: { items: 'spend_items', itemFk: 'spend_item_id', versions: 'spend_versions', itemName: 'product_name' },
-  capex: { items: 'capex_items', itemFk: 'capex_item_id', versions: 'capex_versions', itemName: 'description' },
-} as const;
+// Table and column names come only from here: never from the caller. `nature`: the scope's lines in
+// `spend_items` (`budget-nature.ts`); the versions are read through the lines read here.
+const SCOPES: Record<AmountScope, { items: string; itemFk: string; versions: string; itemName: string; nature?: BudgetNature }> = {
+  opex: { items: 'spend_items', itemFk: 'spend_item_id', versions: 'spend_versions', itemName: 'product_name', nature: 'opex' },
+  capex: { items: 'spend_items', itemFk: 'spend_item_id', versions: 'spend_versions', itemName: 'product_name', nature: 'capex' },
+};
+assertScopeNatures('budget-column-operations', SCOPES, (t) => t.items);
 
 export type BudgetOperationDeps = {
   manager: EntityManager;
@@ -69,8 +74,11 @@ export type BudgetOperationDeps = {
   freeze: Pick<FreezeService, 'assertNotFrozen'>;
 };
 
-/** An item with its dates as `YYYY-MM-DD` text: the effective start and the UTC calendar date of the end of validity. */
-export type ItemRow = { id: string; tenant_id: string; name: string; effective_start: string | null; end_of_validity: string | null };
+/**
+ * An item with its dates as `YYYY-MM-DD` text: the effective start and the UTC calendar date of the end of validity.
+ * `item_number` is the line's own number, its BL-n reference (never the CPX number the CAPEX routes show).
+ */
+export type ItemRow = { id: string; tenant_id: string; item_number: number; name: string; effective_start: string | null; end_of_validity: string | null };
 export type BudgetVersionRow = AmountVersion & { item_id: string; input_grain: 'annual' | 'quarterly' | 'monthly' };
 
 export async function currentTenantId(manager: EntityManager): Promise<string> {
@@ -98,16 +106,16 @@ function budgetYear(value: unknown, label: string): number {
 /**
  * The uplift percentage, parsed exactly (a number or a decimal string); blank
  * is 0. It must stay above −100 %: −100 % would copy zeros and below it every
- * month would change sign.
+ * month would change sign. `label` names the field in the refusal.
  */
-function upliftPct(value: unknown): Decimal {
+export function upliftPct(value: unknown, label = 'percentageIncrease'): Decimal {
   if (value === undefined || value === null || (typeof value === 'string' && value.trim() === '')) return Decimal.ZERO;
-  if (typeof value !== 'number' && typeof value !== 'string') throw new BadRequestException('percentageIncrease must be a number.');
+  if (typeof value !== 'number' && typeof value !== 'string') throw new BadRequestException(`${label} must be a number.`);
   let pct: Decimal;
   try {
     pct = Decimal.from(value);
   } catch {
-    throw new BadRequestException('percentageIncrease must be a number.');
+    throw new BadRequestException(`${label} must be a number.`);
   }
   if (pct.cmp(-100) <= 0) throw new BadRequestException('The percentage must be above -100 %, or the copied amounts would be zero or change sign.');
   return pct;
@@ -217,26 +225,27 @@ export function validityInYear(year: number, item: Pick<ItemRow, 'effective_star
 }
 
 /**
- * Every item of the tenant, ended or not. Dates are read as text so no time
- * zone shifts them. The id breaks ties: the lines of one import share their
- * created_at, and the order must not change from one run to the next.
+ * Every item of the tenant (or those of `ids`), ended or not. Dates are read
+ * as text so no time zone shifts them. The id breaks ties: the lines of one
+ * import share their created_at, and the order must not change from one run
+ * to the next.
  */
-async function loadItems(manager: EntityManager, scope: AmountScope, tenantId: string): Promise<ItemRow[]> {
+export async function loadItems(manager: EntityManager, scope: AmountScope, tenantId: string, ids?: readonly string[]): Promise<ItemRow[]> {
   const t = SCOPES[scope];
   return manager.query(
-    `SELECT id, tenant_id, ${t.itemName} AS name,
+    `SELECT id, tenant_id, item_number, ${t.itemName} AS name,
             to_char(effective_start, 'YYYY-MM-DD') AS effective_start,
             to_char(disabled_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS end_of_validity
      FROM ${t.items}
-     WHERE tenant_id = $1
+     WHERE tenant_id = $1${natureAnd(null, t.nature)}${ids ? ' AND id = ANY($2::uuid[])' : ''}
      ORDER BY created_at DESC, id DESC`,
-    [tenantId],
+    ids ? [tenantId, ids] : [tenantId],
   );
 }
 
-/** Items valid in `year` (see `validityInYear`), each with its window. */
-export async function loadItemsValidIn(manager: EntityManager, scope: AmountScope, tenantId: string, year: number) {
-  const items = await loadItems(manager, scope, tenantId);
+/** Items valid in `year` (see `validityInYear`), each with its window; all of the tenant, or those of `ids`. */
+export async function loadItemsValidIn(manager: EntityManager, scope: AmountScope, tenantId: string, year: number, ids?: readonly string[]) {
+  const items = await loadItems(manager, scope, tenantId, ids);
   return items.flatMap((item) => {
     const validity = validityInYear(year, item);
     return validity ? [{ ...item, validity }] : [];
@@ -245,13 +254,14 @@ export async function loadItemsValidIn(manager: EntityManager, scope: AmountScop
 
 /**
  * The copied period within the item's validity. When they share no month
- * (no 15th), the validity window itself.
+ * (no 15th, or the date of a period of one day: `periodMonths`), the validity
+ * window itself.
  */
 export function periodWithinValidity(period: { period_start: string; period_end: string }, validity: YearValidity) {
   const start = period.period_start > validity.start ? period.period_start : validity.start;
   const end = period.period_end < validity.end ? period.period_end : validity.end;
   const year = Number(validity.start.slice(0, 4));
-  return start <= end && activeMonths(year, start, end).length > 0
+  return start <= end && periodMonths(year, start, end).length > 0
     ? { period_start: start, period_end: end }
     : { period_start: validity.start, period_end: validity.end };
 }
@@ -274,7 +284,7 @@ export async function loadVersions(
      ORDER BY created_at DESC, id DESC`,
     years ? [tenantId, itemIds, years] : [tenantId, itemIds],
   );
-  // Both tables have a unique (item, year) index (capex_versions since 1853640000000); keeping the first, the newest, is only a guard.
+  // The versions are unique per (item, year); keeping the first, the newest, is only a guard.
   for (const row of rows) {
     const key = `${row.item_id}:${Number(row.budget_year)}`;
     if (!byItemYear.has(key)) byItemYear.set(key, { ...row, budget_year: Number(row.budget_year) });
@@ -310,7 +320,7 @@ export async function createBudgetVersion(
   const { version, created } = ensured;
   if (created) {
     await deps.audit.log(
-      { table: SCOPES[scope].versions, recordId: version.id, action: 'create', before: null, after: version, userId },
+      { table: auditTableOf(scope, SCOPES[scope].versions), recordId: version.id, action: 'create', before: null, after: presentChild(scope, version), userId },
       { manager: deps.manager },
     );
   }
@@ -371,12 +381,12 @@ export function lineWithinValidity(line: CostLine, validity: YearValidity): Cost
   const end = line.period_end < validity.end ? line.period_end : validity.end;
   if (start > end) return null;
   const year = Number(validity.start.slice(0, 4));
-  const oneDate = line.frequency === 'once' && start === end;
-  return activeMonths(year, start, end).length > 0 || oneDate ? { ...line, period_start: start, period_end: end } : null;
+  const months = (line.frequency === 'once' ? periodMonths : activeMonths)(year, start, end);
+  return months.length > 0 ? { ...line, period_start: start, period_end: end } : null;
 }
 
 /** The calendars a copy of lines reads, keyed by id, and the country of each item's paying company. */
-type CopyCalendars = { calendars: Map<string, WorkingDayProfileInfo>; countryOf: Map<string, string> };
+export type CopyCalendars = { calendars: Map<string, WorkingDayProfileInfo>; countryOf: Map<string, string> };
 
 /**
  * The calendars the per-day lines name, and the company standard calendars
@@ -385,7 +395,7 @@ type CopyCalendars = { calendars: Map<string, WorkingDayProfileInfo>; countryOf:
  * one statement FOR KEY SHARE, after the version locks (`budget-locks.ts`):
  * it may write lines that name them.
  */
-async function loadCopyCalendars(
+export async function loadCopyCalendars(
   manager: EntityManager,
   scope: AmountScope,
   tenantId: string,
@@ -398,7 +408,7 @@ async function loadCopyCalendars(
     `SELECT i.id, upper(c.country_iso) AS country_iso
      FROM ${SCOPES[scope].items} i
      JOIN companies c ON c.tenant_id = i.tenant_id AND c.id = i.paying_company_id
-     WHERE i.tenant_id = $1 AND i.id = ANY($2::uuid[])`,
+     WHERE i.tenant_id = $1 AND i.id = ANY($2::uuid[])${natureAnd('i', SCOPES[scope].nature)}`,
     [tenantId, itemIds],
   );
   const countryOf = new Map(countries.filter((row) => row.country_iso).map((row) => [row.id, row.country_iso as string]));
@@ -424,7 +434,7 @@ function standardCalendar(calendars: Map<string, WorkingDayProfileInfo>, country
 }
 
 /** The copy of a column's lines, decided: computed for the destination year, the old way, or nothing left. */
-type LinesCopy =
+export type LinesCopy =
   | { kind: 'lines'; lines: CostLine[]; calendars: Map<string, WorkingDayProfileInfo>; result: ColumnResult; issues: CalendarIssue[] }
   | { kind: 'reference'; issues: CalendarIssue[] }
   | { kind: 'empty' };
@@ -498,6 +508,129 @@ function planLinesCopy(
   return { kind: 'lines', lines, calendars, result, issues };
 }
 
+/** One line's copy of a column, decided before anything is written. */
+export type ColumnCopyPlan = {
+  /** The source column's total over its whole year, before the cut to the line's validity. */
+  sourceTotal: bigint;
+  /** Source months outside the line's validity were left out. */
+  prorated: boolean;
+  /** Nothing to copy: no source month within the validity, or no line left of a source that follows its lines. */
+  empty: boolean;
+  /** The twelve months the destination column takes. */
+  target: bigint[];
+  targetTotal: bigint;
+  /** The source follows its lines: the lines copied, prices raised, computed for the destination year. */
+  lines: Extract<LinesCopy, { kind: 'lines' }> | null;
+  /** Lines that are only a reference, planned for the destination year; null: none, or copied the old way. */
+  reference: Exclude<LinesCopy, { kind: 'reference' }> | null;
+  issues: CalendarIssue[];
+};
+
+/**
+ * One line's copy of a source column to `year` (see `copyBudgetColumn`, and
+ * the budget tab's "Start from", `budget-line-copy.ts`): the source months
+ * outside the line's validity become zero; a source that follows its lines is
+ * copied from them (`planLinesCopy`, prices raised by `pct`), else its months
+ * are (`copiedMonths`) and lines that are only a reference are planned with
+ * their prices as they are. `skipLines`: the copy keeps the destination (no
+ * overwrite) and needs only the figures, so no line is planned and a line
+ * that could not be does not fail it.
+ */
+export function planColumnCopy(
+  item: { id: string; name: string; validity: YearValidity },
+  fullSource: readonly bigint[],
+  sourceRecord: RoundInput | undefined,
+  year: number,
+  pct: Decimal,
+  context: CopyCalendars,
+  skipLines = false,
+): ColumnCopyPlan {
+  // Months outside the item's validity in the destination year are not copied.
+  const valid = (index: number) => item.validity.months.includes(index + 1);
+  const source = fullSource.map((v, i) => (valid(i) ? v : 0n));
+  const prorated = fullSource.some((v, i) => v !== 0n && !valid(i));
+  let empty = source.every((v) => v === 0n);
+  // A source that follows its lines is copied from them, its prices raised; else its months are,
+  // and lines that are only a reference are planned the same way, their prices as they are.
+  const follows = followsLines(sourceRecord);
+  const linesCopy = !empty && !skipLines && sourceRecord && sourceRecord.lines.length > 0
+    ? planLinesCopy(item, sourceRecord, year, follows ? pct : Decimal.ZERO, context)
+    : null;
+  if (follows && linesCopy?.kind === 'empty') empty = true;
+  const lines = follows && linesCopy?.kind === 'lines' ? linesCopy : null;
+  const reference = !follows && linesCopy && linesCopy.kind !== 'reference' ? linesCopy : null;
+  const issues = linesCopy && linesCopy.kind !== 'empty' ? linesCopy.issues : [];
+  const target = lines ? lines.result.month_cents : copiedMonths(source, pct);
+  return { sourceTotal: sum(fullSource), prorated, empty, target, targetTotal: sum(target), lines, reference, issues };
+}
+
+/**
+ * The record and the lines a copied column stores. A source that follows its
+ * lines gives a column that follows the copied lines, stored like a lines
+ * write (computed, FTE from them). Otherwise the record takes the source
+ * period shifted to the destination year and cut to the line's validity
+ * (whole year without a source record) and says where the column was copied
+ * from (`copied`, a `copy` calculation). A copy replaces the whole
+ * destination column, lines included: lines that are only a reference travel
+ * as planned for the destination year (the uplift applies to the months
+ * only), with what they give there and their FTE from it, none left within
+ * the validity: none; copied the old way (a calendar without days and no
+ * replacement), they travel as they are with the source's FTE. A source
+ * without lines leaves none.
+ */
+export function copiedColumnRecord(
+  plan: Pick<ColumnCopyPlan, 'lines' | 'reference' | 'sourceTotal' | 'targetTotal'>,
+  sourceRecord: RoundInput | undefined,
+  copy: { sourceYear: number; sourceMeasure: AmountMeasure; destinationYear: number; upliftPct: string; validity: YearValidity },
+): { fields: RoundInputFields; lines: CostLine[] } {
+  const { lines, reference } = plan;
+  if (lines) return { fields: linesRound(lines.lines, lines.calendars, lines.result), lines: lines.lines };
+  const copiedPeriod = sourceRecord ? shiftPeriod(sourceRecord, copy.destinationYear - copy.sourceYear) : wholeYear(copy.destinationYear);
+  const planned = reference?.kind === 'lines' ? reference : null;
+  return {
+    fields: {
+      ...periodWithinValidity(copiedPeriod, copy.validity),
+      method: 'copied',
+      spread_profile_name: sourceRecord?.spread_profile_name ?? null,
+      last_calculation: {
+        kind: 'copy',
+        source_year: copy.sourceYear,
+        source_measure: copy.sourceMeasure,
+        uplift_pct: copy.upliftPct,
+        source_total: centsToDecimal(plan.sourceTotal),
+        total: centsToDecimal(plan.targetTotal),
+        source_method: sourceRecord?.method ?? null,
+        ...(planned ? { lines_result: linesResult(planned.lines, planned.calendars, planned.result) } : {}),
+      },
+      fte: planned ? planned.result.fte : reference ? null : sourceRecord?.lines.length ? sourceRecord.fte : null,
+    },
+    lines: planned ? planned.lines : reference ? [] : shiftLines(sourceRecord, copy.destinationYear),
+  };
+}
+
+/** The audit row a column copy writes on the line: the column's total before and after, and where it came from. */
+export function columnCopyAuditValues(
+  plan: Pick<ColumnCopyPlan, 'targetTotal' | 'prorated' | 'lines' | 'issues'>,
+  copy: { sourceYear: number; sourceColumn: BudgetColumn; destinationYear: number; destinationColumn: BudgetColumn; upliftPct: string; currentTotal: bigint },
+) {
+  return {
+    before: { [copy.destinationColumn]: toNumber(copy.currentTotal) },
+    after: {
+      [copy.destinationColumn]: toNumber(plan.targetTotal),
+      operation: 'budget_column_copy',
+      sourceYear: copy.sourceYear,
+      sourceColumn: copy.sourceColumn,
+      destinationYear: copy.destinationYear,
+      destinationColumn: copy.destinationColumn,
+      percentageIncrease: copy.upliftPct,
+      ...(plan.prorated ? { prorated: true } : {}),
+      // The record now reads as computed from lines: the copy origin stays here.
+      ...(plan.lines ? { from_lines: true } : {}),
+      ...(plan.issues.length > 0 ? { calendar_issues: plan.issues } : {}),
+    },
+  };
+}
+
 export type CopyColumnOperation = {
   sourceYear: number;
   sourceColumn: BudgetColumn;
@@ -512,6 +645,310 @@ export type CopyColumnOperation = {
 
 export const CALENDAR_CHANGES_MESSAGE = (year: number) =>
   `Some lines use a calendar with no working days for ${year}. Run the preview, then confirm.`;
+
+/** A column copy's parameters, checked (`columnCopyParams`). */
+export type ColumnCopyParams = {
+  sourceYear: number;
+  sourceColumn: BudgetColumn;
+  destinationYear: number;
+  destinationColumn: BudgetColumn;
+  pct: Decimal;
+  overwrite: boolean;
+  dryRun: boolean;
+  acceptCalendarChanges: boolean;
+};
+
+/** Checks a column copy's body: years, columns, percentage; a column copied onto itself is refused. */
+export function columnCopyParams(operation: CopyColumnOperation): ColumnCopyParams {
+  const sourceYear = budgetYear(operation?.sourceYear, 'sourceYear');
+  const destinationYear = budgetYear(operation?.destinationYear, 'destinationYear');
+  const sourceColumn = budgetColumn(operation?.sourceColumn, 'sourceColumn');
+  const destinationColumn = budgetColumn(operation?.destinationColumn, 'destinationColumn');
+  const pct = upliftPct(operation?.percentageIncrease);
+  if (sourceYear === destinationYear && sourceColumn === destinationColumn) {
+    throw new BadRequestException('A column cannot be copied onto itself: choose another year or column.');
+  }
+  return {
+    sourceYear,
+    sourceColumn,
+    destinationYear,
+    destinationColumn,
+    pct,
+    overwrite: Boolean(operation?.overwrite),
+    dryRun: Boolean(operation?.dryRun),
+    acceptCalendarChanges: operation?.acceptCalendarChanges === true,
+  };
+}
+
+/** The refusal of a copy into a frozen column: it names the nature (`FreezeService.assertNotFrozen`). */
+export async function assertColumnCopyNotFrozen(deps: BudgetOperationDeps, scope: AmountScope, params: ColumnCopyParams) {
+  await deps.freeze.assertNotFrozen(
+    { scope, column: MEASURE_FREEZE_COLUMN[BUDGET_COLUMN_MEASURE[params.destinationColumn]], year: params.destinationYear, action: 'Copy' },
+    { manager: deps.manager },
+  );
+}
+
+/**
+ * Why a line's column copy is skipped: no version in the source year (`no_source`), nothing to
+ * copy within its validity (`source_empty`), or a destination column that holds amounts and is
+ * kept (`destination_filled`, without overwrite).
+ */
+export type ColumnCopySkip = 'no_source' | 'source_empty' | 'destination_filled';
+
+/** One line's column copy: decided (a dry run) or done. */
+export type ColumnCopyLine = {
+  itemId: string;
+  itemName: string;
+  /** The line's own number: its BL-n reference. */
+  itemNumber: number;
+  sourceValue: number;
+  currentDestinationValue: number;
+  newValue: number;
+  skipped: boolean;
+  skip: ColumnCopySkip | null;
+  prorated: boolean;
+  fromLines: boolean;
+  calendarIssues: CalendarIssue[];
+};
+
+type PlannedColumnCopy = {
+  item: ItemRow & { validity: YearValidity };
+  sourceVersion: BudgetVersionRow;
+  sourceRecord: RoundInput | undefined;
+  sourceTotal: bigint;
+  currentTotal: bigint;
+  target: bigint[];
+  targetTotal: bigint;
+  prorated: boolean;
+  lines: Extract<LinesCopy, { kind: 'lines' }> | null;
+  /** Lines that are only a reference, planned for the destination year; null: none, or copied the old way. */
+  reference: Exclude<LinesCopy, { kind: 'reference' }> | null;
+  issues: CalendarIssue[];
+  /** This line's entry in `lines`, updated by the write. */
+  line: ColumnCopyLine;
+};
+
+/** One nature's column copy, every line decided (`planColumnCopyRun`), not written yet. */
+export type ColumnCopyRun = {
+  scope: AmountScope;
+  params: ColumnCopyParams;
+  tenantId: string;
+  /** The lines valid in the destination year. */
+  totalItems: number;
+  /** Every line valid in the destination year, in the order read. */
+  lines: ColumnCopyLine[];
+  plans: PlannedColumnCopy[];
+  /** The versions read, by `item:year`. */
+  versions: Map<string, BudgetVersionRow>;
+  /** Lines skipped while deciding. */
+  skipped: number;
+};
+
+/**
+ * Decides one nature's copy of one column of a year to a column of a year for
+ * every item valid in the destination year (see `copyBudgetColumn`), reading
+ * under the locks of a real copy: the lines with a source version in id order,
+ * then their destination versions. The caller holds the tenant's budget
+ * operations lock for a real copy.
+ *
+ * `heldLines`: the caller locked the lines in play already, in id order
+ * ("Copy budget columns", `budget-copy.ts`); every read here comes after that lock
+ * and decides, and a line with a source version outside that set refuses the
+ * copy (409 `retry`, `assertLinesHeld`) rather than be locked out of order.
+ */
+export async function planColumnCopyRun(
+  deps: BudgetOperationDeps,
+  scope: AmountScope,
+  params: ColumnCopyParams,
+  tenantId: string,
+  opts: { heldLines?: ReadonlySet<string> } = {},
+): Promise<ColumnCopyRun> {
+  const mg = deps.manager;
+  const { sourceYear, destinationYear, overwrite, dryRun, pct } = params;
+  const sourceMeasure = BUDGET_COLUMN_MEASURE[params.sourceColumn];
+  const destinationMeasure = BUDGET_COLUMN_MEASURE[params.destinationColumn];
+  let items = await loadItemsValidIn(mg, scope, tenantId, destinationYear);
+  let versions = await loadVersions(mg, scope, tenantId, items.map((i) => i.id), [sourceYear, destinationYear]);
+  if (opts.heldLines) {
+    // Read under the caller's lock: the lines with a source version are those it holds.
+    const held = opts.heldLines;
+    assertLinesHeld(items.filter((i) => versions.has(`${i.id}:${sourceYear}`)).map((i) => i.id), held);
+    versions = await loadVersions(mg, scope, tenantId, items.filter((i) => held.has(i.id)).map((i) => i.id), [sourceYear, destinationYear]);
+    if (!dryRun) await lockBudgetVersions(mg, scope, tenantId, Array.from(versions.values()).filter((v) => v.budget_year === destinationYear).map((v) => v.id));
+  } else if (!dryRun) {
+    // Lock order: the lines with a source version, in id order, then their destination versions,
+    // before anything is decided. Lines, validity, versions, months and records are read again
+    // under the locks; a line without a source version in the first read stays skipped.
+    const locked = await lockBudgetLines(mg, scope, tenantId, items.filter((i) => versions.has(`${i.id}:${sourceYear}`)).map((i) => i.id));
+    items = await loadItemsValidIn(mg, scope, tenantId, destinationYear);
+    versions = await loadVersions(mg, scope, tenantId, items.filter((i) => locked.has(i.id)).map((i) => i.id), [sourceYear, destinationYear]);
+    await lockBudgetVersions(mg, scope, tenantId, Array.from(versions.values()).filter((v) => v.budget_year === destinationYear).map((v) => v.id));
+  }
+  const allVersions = Array.from(versions.values());
+  // A line without a source version is skipped, so a real copy neither locks nor reads it above. Its
+  // destination is read for the answer only (never written), so the copy says what its preview said.
+  const shown = dryRun
+    ? new Map<string, BudgetVersionRow>()
+    : await loadVersions(mg, scope, tenantId, items.filter((i) => !versions.has(`${i.id}:${sourceYear}`)).map((i) => i.id), [destinationYear]);
+  const months = await readVersionMonths(mg, scope, tenantId, [...allVersions, ...shown.values()]);
+  const records = await listRoundInputs(mg, scope, tenantId, allVersions.map((v) => v.id));
+  const sourceRecordOf = (version: BudgetVersionRow) => records.get(version.id)?.find((r) => r.measure === sourceMeasure);
+
+  // Sources with lines (followed or a reference): their calendars and the company standard
+  // calendars, read once, after the version locks and before any months (`budget-locks.ts`).
+  const linesSources = items.flatMap((item) => {
+    const version = versions.get(`${item.id}:${sourceYear}`);
+    const record = version ? sourceRecordOf(version) : undefined;
+    return record && record.lines.length > 0 ? [{ itemId: item.id, record }] : [];
+  });
+  const copyCalendars = await loadCopyCalendars(
+    mg,
+    scope,
+    tenantId,
+    linesSources.map((s) => s.itemId),
+    linesSources.flatMap((s) => s.record.lines.flatMap((l) => (l.working_day_profile_id ? [l.working_day_profile_id] : []))),
+    !dryRun,
+  );
+
+  // Plan: every item is decided before anything is written, so a refusal writes nothing.
+  const plans: PlannedColumnCopy[] = [];
+  const lines: ColumnCopyLine[] = [];
+  let skipped = 0;
+
+  for (const item of items) {
+    const sourceVersion = versions.get(`${item.id}:${sourceYear}`);
+    const destinationVersion = versions.get(`${item.id}:${destinationYear}`) ?? (sourceVersion ? undefined : shown.get(`${item.id}:${destinationYear}`));
+    const current = destinationVersion ? months.get(destinationVersion.id)!.months[destinationMeasure] : [];
+    const currentTotal = sum(current);
+    const base = { itemId: item.id, itemName: item.name, itemNumber: Number(item.item_number), currentDestinationValue: toNumber(currentTotal) };
+    if (!sourceVersion) {
+      lines.push({ ...base, sourceValue: 0, newValue: toNumber(currentTotal), skipped: true, skip: 'no_source', prorated: false, fromLines: false, calendarIssues: [] });
+      skipped++;
+      continue;
+    }
+    const fullSource = months.get(sourceVersion.id)!.months[sourceMeasure];
+    const sourceRecord = sourceRecordOf(sourceVersion);
+    // A destination that holds amounts is kept, unless the copy overwrites it.
+    const kept = !overwrite && current.some((v) => v !== 0n);
+    const plan = planColumnCopy(item, fullSource, sourceRecord, destinationYear, pct, copyCalendars, kept);
+    const skip: ColumnCopySkip | null = plan.empty ? 'source_empty' : kept ? 'destination_filled' : null;
+    const { sourceTotal, prorated, target, targetTotal, lines: fromLines, reference, issues } = plan;
+
+    const line: ColumnCopyLine = {
+      ...base,
+      sourceValue: toNumber(sourceTotal),
+      newValue: toNumber(skip ? currentTotal : targetTotal),
+      skipped: !!skip,
+      skip,
+      prorated,
+      fromLines: !skip && !!fromLines,
+      calendarIssues: skip ? [] : issues,
+    };
+    lines.push(line);
+    if (skip) {
+      skipped++;
+      continue;
+    }
+    plans.push({ item, sourceVersion, sourceRecord, sourceTotal, currentTotal, target, targetTotal, prorated, lines: fromLines, reference, issues, line });
+  }
+  return { scope, params, tenantId, totalItems: items.length, lines, plans, versions, skipped };
+}
+
+/** A real copy where a line changes calendar or cannot be recomputed (`CalendarIssue`) needs `acceptCalendarChanges`. */
+export function columnCopyChangesCalendars(run: Pick<ColumnCopyRun, 'plans'>): boolean {
+  return run.plans.some((p) => p.issues.some((issue) => issue.kind !== 'disabled'));
+}
+
+/**
+ * Writes a decided copy (`planColumnCopyRun`, not a dry run): the destination
+ * column of every planned line, its record and lines, and one audit row on the
+ * line. Returns the lines written, those skipped while writing, and the lines
+ * whose destination version the copy created.
+ */
+export async function writeColumnCopyRun(
+  deps: BudgetOperationDeps,
+  run: ColumnCopyRun,
+  userId: string | null,
+): Promise<{ processed: number; skipped: number; createdVersions: Set<string> }> {
+  const mg = deps.manager;
+  const { scope, params, tenantId, versions } = run;
+  const { sourceYear, sourceColumn, destinationYear, destinationColumn, overwrite } = params;
+  const sourceMeasure = BUDGET_COLUMN_MEASURE[sourceColumn];
+  const destinationMeasure = BUDGET_COLUMN_MEASURE[destinationColumn];
+  const pctText = params.pct.toString();
+  // Freeze is checked once for the whole operation, not once per item.
+  const checkedFreeze = new Set<string>();
+  let processed = 0;
+  let skipped = 0;
+  const createdVersions = new Set<string>();
+
+  for (const plan of run.plans) {
+    const { item, sourceVersion, sourceRecord, sourceTotal, currentTotal, target, targetTotal, prorated, lines, reference, issues } = plan;
+    let destinationVersion = versions.get(`${item.id}:${destinationYear}`);
+    if (!destinationVersion) {
+      const ensured = await createBudgetVersion(
+        deps,
+        scope,
+        { itemId: item.id, tenantId: item.tenant_id, year: destinationYear, name: `Y${destinationYear}`, inputGrain: sourceVersion.input_grain ?? 'annual' },
+        userId,
+      );
+      destinationVersion = ensured.version;
+      if (ensured.created) createdVersions.add(item.id);
+      if (!ensured.created && !overwrite) {
+        // Defensive, kept on purpose (lot 3A; 3B review). The versions were read
+        // again under this line's lock, held since then, and every app path that
+        // creates a version takes that lock first (`budget-locks.ts`), so none can
+        // have created this one meanwhile. A writer outside the lock order still
+        // can: an INSERT of a version takes only FOR KEY SHARE on its line (the
+        // foreign key), which our FOR NO KEY UPDATE does not block (a raw SQL
+        // write, a tenant import, a future path). If one did, decide again on its
+        // months, read under the lock every amounts write takes: a column with
+        // amounts is kept, as for a destination that had them from the start.
+        await lockYearMonths({ manager: mg, scope, version: destinationVersion }, destinationYear);
+        const locked = (await readVersionMonths(mg, scope, tenantId, [destinationVersion])).get(destinationVersion.id)!;
+        if (locked.months[destinationMeasure].some((v) => v !== 0n)) {
+          const kept = sum(locked.months[destinationMeasure]);
+          Object.assign(plan.line, {
+            currentDestinationValue: toNumber(kept), newValue: toNumber(kept), skipped: true, skip: 'destination_filled', fromLines: false, calendarIssues: [],
+          });
+          skipped++;
+          continue;
+        }
+      }
+    }
+
+    // Replace the destination measure only; the other measures keep their months.
+    await replaceAmounts(
+      { manager: mg, freeze: deps.freeze, scope, version: destinationVersion, checkedFreeze },
+      destinationYear,
+      yearPeriods(destinationYear).map((period, i) => ({ period, [destinationMeasure]: target[i] })),
+    );
+
+    const rctx: RoundInputsContext = { manager: mg, scope, version: destinationVersion, userId, audit: deps.audit };
+    const record = copiedColumnRecord(
+      { lines, reference, sourceTotal, targetTotal },
+      sourceRecord,
+      { sourceYear, sourceMeasure, destinationYear, upliftPct: pctText, validity: item.validity },
+    );
+    await upsertRoundInput(rctx, destinationMeasure, record.fields, record.lines);
+
+    await deps.audit.log(
+      {
+        table: auditTableOf(scope, SCOPES[scope].items),
+        recordId: item.id,
+        action: 'update',
+        ...columnCopyAuditValues(
+          { targetTotal, prorated, lines, issues },
+          { sourceYear, sourceColumn, destinationYear, destinationColumn, upliftPct: pctText, currentTotal },
+        ),
+        userId,
+      },
+      { manager: mg },
+    );
+    processed++;
+  }
+  return { processed, skipped, createdVersions };
+}
 
 /**
  * Copy one column of a year to a column of a year for every item valid in
@@ -536,6 +973,10 @@ export const CALENDAR_CHANGES_MESSAGE = (year: number) =>
  * (`lines_result`) and its FTE comes from them. A real copy where a line
  * changes calendar or cannot be computed (`CalendarIssue`) is refused unless
  * `acceptCalendarChanges` is set; every item is decided first, then written.
+ *
+ * The copy of one nature, the contract of the routes of each nature; "Copy
+ * the budget" (`budget-copy.ts`) runs the same plan and write for one or both
+ * natures under one lock.
  */
 export async function copyBudgetColumn(
   deps: BudgetOperationDeps,
@@ -544,249 +985,63 @@ export async function copyBudgetColumn(
   userId: string | null,
 ) {
   const mg = deps.manager;
-  const sourceYear = budgetYear(operation?.sourceYear, 'sourceYear');
-  const destinationYear = budgetYear(operation?.destinationYear, 'destinationYear');
-  const sourceColumn = budgetColumn(operation?.sourceColumn, 'sourceColumn');
-  const destinationColumn = budgetColumn(operation?.destinationColumn, 'destinationColumn');
-  const pct = upliftPct(operation?.percentageIncrease);
-  const overwrite = Boolean(operation?.overwrite);
-  const dryRun = Boolean(operation?.dryRun);
-  if (sourceYear === destinationYear && sourceColumn === destinationColumn) {
-    throw new BadRequestException('A column cannot be copied onto itself: choose another year or column.');
-  }
-  const sourceMeasure = BUDGET_COLUMN_MEASURE[sourceColumn];
-  const destinationMeasure = BUDGET_COLUMN_MEASURE[destinationColumn];
-
-  await deps.freeze.assertNotFrozen(
-    { scope, column: MEASURE_FREEZE_COLUMN[destinationMeasure], year: destinationYear, action: 'Copy' },
-    { manager: mg },
-  );
-  // Freeze is checked once for the whole operation, not once per item.
-  const checkedFreeze = new Set<string>();
+  const params = columnCopyParams(operation);
+  const { dryRun } = params;
+  await assertColumnCopyNotFrozen(deps, scope, params);
 
   const tenantId = await currentTenantId(mg);
   // One bulk budget operation at a time per tenant: a second one gets a 409 (`budget-locks.ts`).
   if (!dryRun) await lockTenantBudgetOperations(mg, tenantId);
-  let items = await loadItemsValidIn(mg, scope, tenantId, destinationYear);
-  let versions = await loadVersions(mg, scope, tenantId, items.map((i) => i.id), [sourceYear, destinationYear]);
-  if (!dryRun) {
-    // Lock order: the lines with a source version, in id order, then their destination versions,
-    // before anything is decided. Lines, validity, versions, months and records are read again
-    // under the locks; a line without a source version in the first read stays skipped.
-    const locked = await lockBudgetLines(mg, scope, tenantId, items.filter((i) => versions.has(`${i.id}:${sourceYear}`)).map((i) => i.id));
-    items = await loadItemsValidIn(mg, scope, tenantId, destinationYear);
-    versions = await loadVersions(mg, scope, tenantId, items.filter((i) => locked.has(i.id)).map((i) => i.id), [sourceYear, destinationYear]);
-    await lockBudgetVersions(mg, scope, tenantId, Array.from(versions.values()).filter((v) => v.budget_year === destinationYear).map((v) => v.id));
-  }
-  const allVersions = Array.from(versions.values());
-  const months = await readVersionMonths(mg, scope, tenantId, allVersions);
-  const records = await listRoundInputs(mg, scope, tenantId, allVersions.map((v) => v.id));
-  const pctText = pct.toString();
-  const sourceRecordOf = (version: BudgetVersionRow) => records.get(version.id)?.find((r) => r.measure === sourceMeasure);
-
-  // Sources with lines (followed or a reference): their calendars and the company standard
-  // calendars, read once, after the version locks and before any months (`budget-locks.ts`).
-  const linesSources = items.flatMap((item) => {
-    const version = versions.get(`${item.id}:${sourceYear}`);
-    const record = version ? sourceRecordOf(version) : undefined;
-    return record && record.lines.length > 0 ? [{ itemId: item.id, record }] : [];
-  });
-  const copyCalendars = await loadCopyCalendars(
-    mg,
-    scope,
-    tenantId,
-    linesSources.map((s) => s.itemId),
-    linesSources.flatMap((s) => s.record.lines.flatMap((l) => (l.working_day_profile_id ? [l.working_day_profile_id] : []))),
-    !dryRun,
-  );
-
-  // Plan: every item is decided before anything is written, so a refusal writes nothing.
-  type Planned = {
-    item: (typeof items)[number];
-    sourceVersion: BudgetVersionRow;
-    sourceRecord: RoundInput | undefined;
-    sourceTotal: bigint;
-    currentTotal: bigint;
-    target: bigint[];
-    targetTotal: bigint;
-    prorated: boolean;
-    lines: Extract<LinesCopy, { kind: 'lines' }> | null;
-    /** Lines that are only a reference, planned for the destination year; null: none, or copied the old way. */
-    reference: Exclude<LinesCopy, { kind: 'reference' }> | null;
-    issues: CalendarIssue[];
-  };
-  const plans: Planned[] = [];
-  const results = [];
-  let processed = 0;
-  let skipped = 0;
-
-  for (const item of items) {
-    const sourceVersion = versions.get(`${item.id}:${sourceYear}`);
-    if (!sourceVersion) {
-      skipped++;
-      continue;
-    }
-    const fullSource = months.get(sourceVersion.id)!.months[sourceMeasure];
-    // Months outside the item's validity in the destination year are not copied.
-    const valid = (index: number) => item.validity.months.includes(index + 1);
-    const source = fullSource.map((v, i) => (valid(i) ? v : 0n));
-    const prorated = fullSource.some((v, i) => v !== 0n && !valid(i));
-    const destinationVersion = versions.get(`${item.id}:${destinationYear}`);
-    const current = destinationVersion ? months.get(destinationVersion.id)!.months[destinationMeasure] : [];
-    const sourceTotal = sum(fullSource);
-    const currentTotal = sum(current);
-    const sourceRecord = sourceRecordOf(sourceVersion);
-    let skip = source.every((v) => v === 0n) || (!overwrite && current.some((v) => v !== 0n));
-    // A source that follows its lines is copied from them, its prices raised; else its months are,
-    // and lines that are only a reference are planned the same way, their prices as they are.
-    const follows = followsLines(sourceRecord);
-    const linesCopy = !skip && sourceRecord && sourceRecord.lines.length > 0
-      ? planLinesCopy(item, sourceRecord, destinationYear, follows ? pct : Decimal.ZERO, copyCalendars)
-      : null;
-    if (follows && linesCopy?.kind === 'empty') skip = true;
-    const fromLines = follows && linesCopy?.kind === 'lines' ? linesCopy : null;
-    const reference = !follows && linesCopy && linesCopy.kind !== 'reference' ? linesCopy : null;
-    const issues = linesCopy && linesCopy.kind !== 'empty' ? linesCopy.issues : [];
-    const target = fromLines ? fromLines.result.month_cents : copiedMonths(source, pct);
-    const targetTotal = sum(target);
-
-    results.push({
-      itemId: item.id,
-      itemName: item.name,
-      sourceValue: toNumber(sourceTotal),
-      currentDestinationValue: toNumber(currentTotal),
-      newValue: toNumber(skip ? currentTotal : targetTotal),
-      skipped: skip,
-      prorated,
-      fromLines: !skip && !!fromLines,
-      calendarIssues: skip ? [] : issues,
-    });
-    if (skip) {
-      skipped++;
-      continue;
-    }
-    plans.push({ item, sourceVersion, sourceRecord, sourceTotal, currentTotal, target, targetTotal, prorated, lines: fromLines, reference, issues });
-  }
+  const run = await planColumnCopyRun(deps, scope, params, tenantId);
 
   if (dryRun) {
     return {
       success: true,
       dryRun,
-      summary: { totalItems: items.length, processed: plans.length, skipped, errors: 0 },
-      results,
+      summary: { totalItems: run.totalItems, processed: run.plans.length, skipped: run.skipped, errors: 0 },
+      // The lines without a source version are counted, not listed.
+      results: run.lines.filter((line) => line.skip !== 'no_source').map((line) => ({
+        itemId: line.itemId,
+        itemName: line.itemName,
+        sourceValue: line.sourceValue,
+        currentDestinationValue: line.currentDestinationValue,
+        newValue: line.newValue,
+        skipped: line.skipped,
+        prorated: line.prorated,
+        fromLines: line.fromLines,
+        calendarIssues: line.calendarIssues,
+      })),
     };
   }
   // A calendar replaced or missing changes what the lines give: the user confirms it after the preview.
-  const calendarChanges = plans.some((p) => p.issues.some((issue) => issue.kind !== 'disabled'));
-  if (calendarChanges && operation?.acceptCalendarChanges !== true) {
-    throw new BadRequestException(CALENDAR_CHANGES_MESSAGE(destinationYear));
+  if (columnCopyChangesCalendars(run) && !params.acceptCalendarChanges) {
+    throw new BadRequestException(CALENDAR_CHANGES_MESSAGE(params.destinationYear));
   }
-
-  for (const plan of plans) {
-    const { item, sourceVersion, sourceRecord, sourceTotal, currentTotal, target, targetTotal, prorated, lines, reference, issues } = plan;
-    let destinationVersion = versions.get(`${item.id}:${destinationYear}`);
-    if (!destinationVersion) {
-      const ensured = await createBudgetVersion(
-        deps,
-        scope,
-        { itemId: item.id, tenantId: item.tenant_id, year: destinationYear, name: `Y${destinationYear}`, inputGrain: sourceVersion.input_grain ?? 'annual' },
-        userId,
-      );
-      destinationVersion = ensured.version;
-      if (!ensured.created && !overwrite) {
-        // Defensive, kept on purpose (lot 3A; 3B review). The versions were read
-        // again under this line's lock, held since then, and every app path that
-        // creates a version takes that lock first (`budget-locks.ts`), so none can
-        // have created this one meanwhile. A writer outside the lock order still
-        // can: an INSERT of a version takes only FOR KEY SHARE on its line (the
-        // foreign key), which our FOR NO KEY UPDATE does not block (a raw SQL
-        // write, a tenant import, a future path). If one did, decide again on its
-        // months, read under the lock every amounts write takes: a column with
-        // amounts is kept, as for a destination that had them from the start.
-        await lockYearMonths({ manager: mg, scope, version: destinationVersion }, destinationYear);
-        const locked = (await readVersionMonths(mg, scope, tenantId, [destinationVersion])).get(destinationVersion.id)!;
-        if (locked.months[destinationMeasure].some((v) => v !== 0n)) {
-          skipped++;
-          continue;
-        }
-      }
-    }
-
-    // Replace the destination measure only; the other measures keep their months.
-    await replaceAmounts(
-      { manager: mg, freeze: deps.freeze, scope, version: destinationVersion, checkedFreeze },
-      destinationYear,
-      yearPeriods(destinationYear).map((period, i) => ({ period, [destinationMeasure]: target[i] })),
-    );
-
-    const rctx: RoundInputsContext = { manager: mg, scope, version: destinationVersion, userId, audit: deps.audit };
-    if (lines) {
-      // Stored like a lines write: the record follows the new lines (computed, FTE from them).
-      await upsertRoundInput(rctx, destinationMeasure, linesRound(lines.lines, lines.calendars, lines.result), lines.lines);
-    } else {
-      const copiedPeriod = sourceRecord ? shiftPeriod(sourceRecord, destinationYear - sourceYear) : wholeYear(destinationYear);
-      // A copy replaces the whole destination column, lines included. Lines
-      // that are only a reference travel as planned for the destination year
-      // (the uplift applies to the months only), with what they give there
-      // and their FTE from it; none left within the validity, none. Copied
-      // the old way (a calendar without days and no replacement), they travel
-      // as they are with the source's FTE. A source without lines leaves none.
-      const planned = reference?.kind === 'lines' ? reference : null;
-      await upsertRoundInput(
-        rctx,
-        destinationMeasure,
-        {
-          ...periodWithinValidity(copiedPeriod, item.validity),
-          method: 'copied',
-          spread_profile_name: sourceRecord?.spread_profile_name ?? null,
-          last_calculation: {
-            kind: 'copy',
-            source_year: sourceYear,
-            source_measure: sourceMeasure,
-            uplift_pct: pctText,
-            source_total: centsToDecimal(sourceTotal),
-            total: centsToDecimal(targetTotal),
-            source_method: sourceRecord?.method ?? null,
-            ...(planned ? { lines_result: linesResult(planned.lines, planned.calendars, planned.result) } : {}),
-          },
-          fte: planned ? planned.result.fte : reference ? null : sourceRecord?.lines.length ? sourceRecord.fte : null,
-        },
-        planned ? planned.lines : reference ? [] : shiftLines(sourceRecord, destinationYear),
-      );
-    }
-
-    await deps.audit.log(
-      {
-        table: SCOPES[scope].items,
-        recordId: item.id,
-        action: 'update',
-        before: { [destinationColumn]: toNumber(currentTotal) },
-        after: {
-          [destinationColumn]: toNumber(targetTotal),
-          operation: 'budget_column_copy',
-          sourceYear,
-          sourceColumn,
-          destinationYear,
-          destinationColumn,
-          percentageIncrease: pctText,
-          ...(prorated ? { prorated: true } : {}),
-          // The record now reads as computed from lines: the copy origin stays here.
-          ...(lines ? { from_lines: true } : {}),
-          ...(issues.length > 0 ? { calendar_issues: issues } : {}),
-        },
-        userId,
-      },
-      { manager: mg },
-    );
-    processed++;
-  }
-
+  const written = await writeColumnCopyRun(deps, run, userId);
   return {
     success: true,
     dryRun,
-    summary: { totalItems: items.length, processed, skipped, errors: 0 },
+    summary: { totalItems: run.totalItems, processed: written.processed, skipped: run.skipped + written.skipped, errors: 0 },
     results: [],
   };
+}
+
+/** Checks a clear's body: a year and a column. */
+export function clearColumnParams(operation: { year: unknown; column: unknown }): { year: number; column: BudgetColumn } {
+  return { year: budgetYear(operation?.year, 'year'), column: budgetColumn(operation?.column, 'column') };
+}
+
+/** The refusal of a clear of a frozen column: it names the nature (`FreezeService.assertNotFrozen`). */
+export async function assertClearNotFrozen(deps: BudgetOperationDeps, scope: AmountScope, params: { year: number; column: BudgetColumn }) {
+  await deps.freeze.assertNotFrozen(
+    { scope, column: MEASURE_FREEZE_COLUMN[BUDGET_COLUMN_MEASURE[params.column]], year: params.year, action: 'Clear' },
+    { manager: deps.manager },
+  );
+}
+
+/** Checks a year of a budget operation's body (a number or 4-digit text). */
+export function operationYear(value: unknown, label: string): number {
+  return budgetYear(value, label);
 }
 
 /**
@@ -794,33 +1049,43 @@ export async function copyBudgetColumn(
  * behind an end of validity are cleared too): its twelve months become zero
  * and its record (period, provenance, lines) is deleted. A version whose
  * column is already all zero is skipped, but its record is deleted too.
+ *
+ * `heldLines`: the caller holds the tenant's budget operations lock and locked
+ * the lines in play in id order ("Reset a column", `budget-copy.ts`); the reads
+ * here come after it, and a line with a version of the year outside that set
+ * refuses the reset (409 `retry`, `assertLinesHeld`).
  */
 export async function clearBudgetColumn(
   deps: BudgetOperationDeps,
   scope: AmountScope,
   operation: { year: number; column: BudgetColumn },
   userId: string | null,
+  opts: { heldLines?: ReadonlySet<string> } = {},
 ) {
   const mg = deps.manager;
-  const year = budgetYear(operation?.year, 'year');
-  const column = budgetColumn(operation?.column, 'column');
+  const { year, column } = clearColumnParams(operation);
   const measure: AmountMeasure = BUDGET_COLUMN_MEASURE[column];
 
-  await deps.freeze.assertNotFrozen(
-    { scope, column: MEASURE_FREEZE_COLUMN[measure], year, action: 'Clear' },
-    { manager: mg },
-  );
+  await assertClearNotFrozen(deps, scope, { year, column });
   // Freeze is checked once for the whole operation, not once per item.
   const checkedFreeze = new Set<string>();
 
   const tenantId = await currentTenantId(mg);
   // One bulk budget operation at a time per tenant: a second one gets a 409 (`budget-locks.ts`).
-  await lockTenantBudgetOperations(mg, tenantId);
+  if (!opts.heldLines) await lockTenantBudgetOperations(mg, tenantId);
   const items = await loadItems(mg, scope, tenantId);
   // Lock order: the lines with a version of the year, in id order, then those versions, before
   // anything is decided; versions, months and records are read again under the locks.
   const first = await loadVersions(mg, scope, tenantId, items.map((i) => i.id), [year]);
-  const locked = await lockBudgetLines(mg, scope, tenantId, items.filter((i) => first.has(`${i.id}:${year}`)).map((i) => i.id));
+  const inScope = items.filter((i) => first.has(`${i.id}:${year}`)).map((i) => i.id);
+  let locked: ReadonlySet<string>;
+  if (opts.heldLines) {
+    // Read under the caller's lock: the lines with a version of the year are those it holds.
+    assertLinesHeld(inScope, opts.heldLines);
+    locked = opts.heldLines;
+  } else {
+    locked = await lockBudgetLines(mg, scope, tenantId, inScope);
+  }
   const versions = await loadVersions(mg, scope, tenantId, items.filter((i) => locked.has(i.id)).map((i) => i.id), [year]);
   await lockBudgetVersions(mg, scope, tenantId, Array.from(versions.values()).map((v) => v.id));
   const allVersions = Array.from(versions.values());
@@ -848,7 +1113,7 @@ export async function clearBudgetColumn(
         // the line's meta names who changed its budget from this row).
         await deps.audit.log(
           {
-            table: SCOPES[scope].items,
+            table: auditTableOf(scope, SCOPES[scope].items),
             recordId: item.id,
             action: 'update',
             before: { [column]: 0 },
@@ -872,7 +1137,7 @@ export async function clearBudgetColumn(
 
     await deps.audit.log(
       {
-        table: SCOPES[scope].items,
+        table: auditTableOf(scope, SCOPES[scope].items),
         recordId: item.id,
         action: 'update',
         before: { [column]: toNumber(sum(current)) },

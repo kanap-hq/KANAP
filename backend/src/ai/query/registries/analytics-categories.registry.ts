@@ -53,7 +53,9 @@ export const analyticsCategoriesRegistry: AiEntityFilterRegistry = {
       groupable: true,
     },
   },
+  // The dimension's own order (the position an admin sets) is the default: values read as the pickers offer them.
   sortFields: {
+    sort_order: 'sort_order',
     label: 'name',
     name: 'name',
     status: 'status',
@@ -62,7 +64,7 @@ export const analyticsCategoriesRegistry: AiEntityFilterRegistry = {
     updated_at: 'updated_at',
   },
   defaultSort: {
-    field: 'name',
+    field: 'sort_order',
     direction: 'asc',
   },
   aggregate: {

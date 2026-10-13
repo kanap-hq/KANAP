@@ -130,7 +130,7 @@ Each OPEX and CAPEX line with a cost center shows the cost center's budget holde
 - **Read from the cost center**: the budget holder is not stored on the line. Change it here and every line of the cost center shows the new person at once. It changes on a line only when you change the line's cost center.
 - **Shown only when set**: a line without a cost center, or whose cost center has no budget holder, shows nothing.
 - **A separate role**: the **IT owner** and **Business owner** of a line stay as they are, set on each line. They also cover workspaces that do not use cost centers.
-- **In the lists**: the OPEX and CAPEX lists have a **Budget holder** column, hidden by default, with a checkbox filter.
+- **In the list**: the budget lines list has a **Budget holder** column, hidden by default, with a checkbox filter.
 
 ### Changing the type
 
@@ -159,8 +159,8 @@ The **Delete** button in the header deletes the node at once (requires `cost_cen
 
 ## Cost centers on budget lines
 
-- **OPEX and CAPEX**: the **Cost center** field in the **Properties** panel lists the tree. Groups are shown to help you find your way and cannot be picked. When you create a line and the paying company is empty, picking a cost center fills it with the cost center's company, and the company follows the cost center until you pick a company or an account yourself. When the two companies differ, both are kept and a hint says so. See [OPEX](opex.md) and [CAPEX](capex.md).
-- **Lists**: the **Cost center** and **Run or build** columns and filters of the OPEX and CAPEX lists.
+- **OPEX and CAPEX**: the **Cost center** field in the **Properties** panel lists the tree. Groups are shown to help you find your way and cannot be picked. When you create a line and the paying company is empty, picking a cost center fills it with the cost center's company, and the company follows the cost center until you pick a company or an account yourself. When the two companies differ, both are kept and a hint says so. See [Budget lines](budget-lines.md).
+- **List**: the **Cost center** and **Run or build** columns and filters of the budget lines list.
 - **Reports**: the budget reports can be filtered on a cost center or a group. See [Cost center, run or build and analytics filters](reports.md#cost-center-run-or-build-and-analytics-filters).
 
 ---
@@ -224,7 +224,7 @@ Load or update the whole tree from a file.
 | `cost_centers:member` | Create cost centers and groups, and edit them |
 | `cost_centers:admin` | Everything above, plus CSV import and export, and deletion |
 
-Each role starts with the level it has on departments, except the built-in Budget Administrator role, which gets admin. So Budget Administrator and Master Data Administrator are admins, Budget Member and Master Data Member are members, and the reader roles can read. Anyone who can read OPEX, CAPEX or reporting can pick a cost center on a line or in a report filter without access to this page.
+Each role starts with the level it has on departments, except the built-in Budget Administrator role, which gets admin. So Budget Administrator and Master Data Administrator are admins, Budget Member and Master Data Member are members, and the reader roles can read. Anyone who can read budget lines (Budget) or reports can pick a cost center on a line or in a report filter without access to this page.
 
 ---
 

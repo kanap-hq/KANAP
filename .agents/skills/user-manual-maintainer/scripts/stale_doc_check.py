@@ -32,8 +32,17 @@ def load_map(mapping_path: Path) -> list[tuple[str, str]]:
     return rows
 
 
+def pattern_variants(pattern: str) -> set[str]:
+    # fnmatch reads `**/` as "at least one folder"; expand each one to also match zero folders.
+    parts = pattern.split("**/")
+    variants = {parts[0]}
+    for part in parts[1:]:
+        variants = {v + "**/" + part for v in variants} | {v + part for v in variants}
+    return variants
+
+
 def matches(path: str, pattern: str) -> bool:
-    return fnmatch.fnmatch(path, pattern)
+    return any(fnmatch.fnmatch(path, variant) for variant in pattern_variants(pattern))
 
 
 def main() -> int:

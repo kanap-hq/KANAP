@@ -8,10 +8,10 @@ import { assertListEngineSupport } from '../../common/list-engine/list-engine-su
 import type { ListState } from '../../common/list-engine/list-engine.types';
 import { fieldOf, filterValuesSql, idsSql, neighborsSql, pageSql, countSql, buildCore } from '../../common/list-engine/list-sql-builder';
 import { parseListRequest, ParsedListRequest, resolveLifecycleScope } from '../../common/list-engine/list-state';
-import { compareNullableText, decimal2ToFloat, jsRound, sumJsCents } from '../../common/list-engine/sql-fragments';
+import { compareNullableText, decimal2ToFloat, jsCents, jsRound, sumJsCents } from '../../common/list-engine/sql-fragments';
 import { SqlStatement } from '../../common/list-engine/sql-statement';
 import type { LifecycleScope } from '../../common/status';
-import { parseAnalyticsFieldKey } from '../../analytics/analytics-axes.util';
+import { ANALYTICS_VALUE_ORDER_SQL, parseAnalyticsFieldKey } from '../../analytics/analytics-axes.util';
 import {
   buildBudgetSummaryRows,
   BudgetSummaryRow,
@@ -22,11 +22,13 @@ import {
   resolveLocalAmountField,
   SUMMARY_COLUMNS,
   SummaryDeps,
-  SummaryScopeConfig,
+  SummaryReadScopeConfig,
   summaryTenantId,
   yearsNamedByFields,
 } from '../spend-summary.builder';
 import { BudgetListConfig, budgetRuntimeNeeds } from './budget-list.config';
+import { natureAnd, type BudgetNature } from '../budget-nature';
+import { presentLine, presentNativeLine, selectLineColumns } from '../budget-line-presentation';
 import { fxKeyCurrency, fxSetKeySql, fxTableSql, RequestFxRates } from './budget-fx-table';
 import { BudgetListRuntime, loadBudgetRuntime, mergeNeeds, RuntimeNeeds } from './budget-list.runtime';
 
@@ -47,6 +49,9 @@ export const FILTER_VALUE_FIELDS = [
   'project_stream_name', 'project_category_name', 'cost_center_label', 'cost_center_code', 'cost_center_name', 'cost_center_path',
   'budget_holder_name', 'run_build', 'has_fte',
 ];
+
+/** The neutral list adds nature; legacy callers and their oracle keep the existing field list. */
+export const ALL_FILTER_VALUE_FIELDS = [...FILTER_VALUE_FIELDS, 'nature'];
 
 export type BudgetListRowOptions = {
   includeRecipientDetails?: boolean;
@@ -147,7 +152,7 @@ function requestKeys(req: BudgetRequest, withSort: boolean): string[] {
 }
 
 async function runtimeFor(
-  scope: SummaryScopeConfig,
+  scope: SummaryReadScopeConfig,
   deps: Pick<SummaryDeps, 'access'>,
   fxRates: RequestFxRates,
   manager: EntityManager,
@@ -162,16 +167,21 @@ async function run(manager: EntityManager, stmt: SqlStatement, sql: string): Pro
   return manager.query(final.sql, final.params);
 }
 
-async function itemsInOrder(scope: SummaryScopeConfig, manager: EntityManager, tenantId: string, ids: string[]): Promise<any[]> {
+/** The lines of the page in their order, as their nature's API shows them (`budget-line-presentation.ts`). */
+async function itemsInOrder(scope: SummaryReadScopeConfig, manager: EntityManager, tenantId: string, ids: string[]): Promise<any[]> {
   if (!ids.length) return [];
-  const items: any[] = await manager.getRepository<any>(scope.itemEntity as any)
+  const nature = scope.nature ?? 'opex';
+  const qb = manager.getRepository(scope.itemEntity)
     .createQueryBuilder('i')
-    .where('i.tenant_id = :tenantId', { tenantId })
+    .where(`i.tenant_id = :tenantId${natureAnd('i', scope.nature)}`, { tenantId })
     .andWhere('i.id = ANY(:ids)', { ids })
     .orderBy('i.created_at', 'DESC')
-    .addOrderBy('i.id', 'DESC')
-    .getMany();
-  const byId = new Map(items.map((item) => [item.id, item]));
+    .addOrderBy('i.id', 'DESC');
+  // The all-natures scope presents native fields, without the CAPEX alias mapping.
+  const items = await (scope.allNatures ? qb.addSelect('i.legacy_number') : selectLineColumns(qb, 'i', nature)).getMany();
+  const byId = new Map(items.map((item) => [item.id, scope.allNatures
+    ? presentNativeLine(item)
+    : presentLine(nature, item)]));
   return ids.map((id) => byId.get(id)).filter(Boolean);
 }
 
@@ -211,7 +221,7 @@ export function parseAmountKeys(raw: unknown, currentYear: number): Array<{ key:
  * scroll block runs. A page past the end counts the list apart.
  */
 export async function budgetListPageIds(
-  scope: SummaryScopeConfig,
+  scope: SummaryReadScopeConfig,
   deps: SummaryDeps,
   query: any,
   manager: EntityManager,
@@ -241,7 +251,7 @@ export async function budgetListPageIds(
 
 /** One page of the list: the statement picks the lines, the builder draws them. */
 export async function budgetListSummary(
-  scope: SummaryScopeConfig,
+  scope: SummaryReadScopeConfig,
   deps: SummaryDeps,
   query: any,
   manager: EntityManager,
@@ -265,7 +275,7 @@ export async function budgetListSummary(
 
 /** The ordered ids of every line of the list (workspace navigation). Without a status: the Enabled lines. */
 export async function budgetListIds(
-  scope: SummaryScopeConfig,
+  scope: SummaryReadScopeConfig,
   deps: SummaryDeps,
   query: any,
   manager: EntityManager,
@@ -279,7 +289,7 @@ export async function budgetListIds(
   return { ids: rows.map((row) => row.id), item_numbers: rows.map((row) => Number(row.item_number)), total: rows.length };
 }
 
-export type BudgetListNeighbor = { id: string; item_number: number } | null;
+export type BudgetListNeighbor = { id: string; item_number: number; nature?: BudgetNature } | null;
 
 /**
  * Where one line stands in the list (0-based `index`, null when the list does
@@ -287,7 +297,7 @@ export type BudgetListNeighbor = { id: string; item_number: number } | null;
  * without downloading every id. Without a status: the Enabled lines, like the ids.
  */
 export async function budgetListNeighbors(
-  scope: SummaryScopeConfig,
+  scope: SummaryReadScopeConfig,
   deps: SummaryDeps,
   query: any,
   id: string,
@@ -298,12 +308,12 @@ export async function budgetListNeighbors(
   const rt = await runtimeFor(scope, deps, new RequestFxRates(deps.fxRates), manager, req, budgetRuntimeNeeds(req.currentYear, requestKeys(req, true), !!state.q));
   const config = new BudgetListConfig(rt);
   const stmt = new SqlStatement(req.tenantId);
-  const rows = await run(manager, stmt, neighborsSql(stmt, config, state, id, ['id', 'item_number']));
+  const rows = await run(manager, stmt, neighborsSql(stmt, config, state, id, ['id', 'item_number', ...(scope.allNatures ? ['nature'] : [])]));
   const total = rows.length ? Number(rows[0].total) : 0;
   const me = rows.length && rows[0].me != null ? Number(rows[0].me) : null;
   const at = (n: number): BudgetListNeighbor => {
     const row = rows.find((r) => Number(r.n) === n);
-    return row ? { id: row.id, item_number: Number(row.item_number) } : null;
+    return row ? { id: row.id, item_number: Number(row.item_number), ...(scope.allNatures ? { nature: row.nature } : {}) } : null;
   };
   return me == null
     ? { index: null, total, prev: null, next: null }
@@ -316,12 +326,12 @@ export async function budgetListNeighbors(
  * the engine's text order.
  */
 export async function budgetListFilterValues(
-  scope: SummaryScopeConfig,
+  scope: SummaryReadScopeConfig,
   deps: SummaryDeps,
   query: any,
   manager: EntityManager,
 ): Promise<Record<string, Array<string | null>>> {
-  const allowed = new Set([...FILTER_VALUE_FIELDS, ...scope.extraFields]);
+  const allowed = new Set([...(scope.allNatures ? ALL_FILTER_VALUE_FIELDS : FILTER_VALUE_FIELDS), ...scope.extraFields]);
   const requested: string[] = typeof query?.fields === 'string'
     ? query.fields.split(',').map((field: string) => field.trim()).filter(Boolean)
     : [];
@@ -342,7 +352,47 @@ export async function budgetListFilterValues(
   fields.forEach((field) => { result[field] = []; });
   for (const row of rows) result[fields[Number(row.f)]].push(row.v ?? null);
   for (const field of fields) result[field].sort(compareNullableText);
+  await orderAnalyticsFilterValues(manager, req.tenantId, rt.axes?.defaultAxisId ?? null, result);
   return result;
+}
+
+/**
+ * The values of an analytics column (`analytics_<axis id>`, and the default dimension's
+ * `analytics_category_name`) in the dimension's order (`ANALYTICS_VALUE_ORDER_SQL`), with the
+ * positions of every requested dimension read in one statement. A name the dimension does not
+ * hold (none expected) follows them in text order; null stays last. Sorts `result` in place.
+ */
+async function orderAnalyticsFilterValues(
+  manager: EntityManager,
+  tenantId: string,
+  defaultAxisId: string | null,
+  result: Record<string, Array<string | null>>,
+): Promise<void> {
+  const axisOfField = new Map<string, string>();
+  for (const field of Object.keys(result)) {
+    const axisId = parseAnalyticsFieldKey(field) ?? (field === 'analytics_category_name' ? defaultAxisId : null);
+    if (axisId) axisOfField.set(field, axisId);
+  }
+  if (axisOfField.size === 0) return;
+  const rows: Array<{ axis_id: string; name: string; position: string | number }> = await manager.query(
+    `SELECT c.axis_id::text AS axis_id, c.name,
+            row_number() OVER (PARTITION BY c.axis_id ORDER BY ${ANALYTICS_VALUE_ORDER_SQL}) AS position
+       FROM analytics_categories c
+      WHERE c.tenant_id = $1 AND c.axis_id = ANY($2::uuid[])`,
+    [tenantId, Array.from(new Set(axisOfField.values()))],
+  );
+  const positions = new Map(rows.map((row) => [`${row.axis_id}|${row.name}`, Number(row.position)]));
+  for (const [field, axisId] of axisOfField) {
+    const position = (value: string | null) => (value == null ? undefined : positions.get(`${axisId}|${value}`));
+    result[field].sort((a, b) => {
+      const pa = position(a);
+      const pb = position(b);
+      if (pa !== undefined && pb !== undefined) return pa - pb;
+      if (pa !== undefined) return -1;
+      if (pb !== undefined) return 1;
+      return compareNullableText(a, b);
+    });
+  }
 }
 
 /**
@@ -364,7 +414,7 @@ export type SummaryTotals = Record<string, number | string> & { fte?: Record<str
  * Without a status: the Enabled lines.
  */
 export async function budgetListTotals(
-  scope: SummaryScopeConfig,
+  scope: SummaryReadScopeConfig,
   deps: SummaryDeps,
   query: any,
   manager: EntityManager,
@@ -478,7 +528,7 @@ export interface BudgetListAggregate {
  * as one row, and the list's total: one statement (`common/list-engine/list-aggregate.ts`).
  */
 export async function budgetListAggregate(
-  scope: SummaryScopeConfig,
+  scope: SummaryReadScopeConfig,
   deps: SummaryDeps,
   query: any,
   spec: AggregateSpec,
@@ -526,7 +576,7 @@ export async function budgetListAggregate(
  * the query has its own). The answer is `budgetListAggregate`'s.
  */
 export async function budgetListAggregateRequest(
-  scope: SummaryScopeConfig,
+  scope: SummaryReadScopeConfig,
   deps: SummaryDeps,
   body: unknown,
   manager: EntityManager,
@@ -544,11 +594,52 @@ export async function budgetListAggregateRequest(
 }
 
 /**
+ * The amount each of `ids` shows in the list for each amount key (`y2027Budget`,
+ * `y2027Revision`, …): the list engine's own field of that key, read in one
+ * statement, so the numbers are the list's (converted to the reporting
+ * currency with the list's rates, nothing after the line's end of validity).
+ * No lifecycle scope: a line the list would hide by its status still gives the
+ * amount its row would show. Cents per line and key; lines of another tenant
+ * or of no budget nature are left out, and keys that name no amount ignored.
+ * The contracts' budget columns read their lines' amounts here (lot CB).
+ */
+export async function budgetListAmountsByIds(
+  scope: SummaryReadScopeConfig,
+  deps: Pick<SummaryDeps, 'fxRates' | 'access'>,
+  manager: EntityManager,
+  ids: string[],
+  keys: string[],
+): Promise<Map<string, Record<string, bigint>>> {
+  const amountKeys = Array.from(new Set(keys.filter((key) => resolveAmountField(key) != null)));
+  const lineIds = Array.from(new Set(ids.filter(Boolean)));
+  const result = new Map<string, Record<string, bigint>>();
+  if (!amountKeys.length || !lineIds.length) return result;
+  const tenantId = await summaryTenantId(manager);
+  await assertListEngineSupport(manager);
+  const currentYear = new Date().getFullYear();
+  assertBudgetYearsWithinBounds(yearsNamedByFields(amountKeys), currentYear);
+  const rt = await loadBudgetRuntime(scope, { fxRates: new RequestFxRates(deps.fxRates) }, manager, tenantId, currentYear, budgetRuntimeNeeds(currentYear, amountKeys, false), deps.access);
+  const config = new BudgetListConfig(rt);
+  const stmt = new SqlStatement(tenantId);
+  const state: ListState = { page: 1, limit: lineIds.length, skip: 0, sort: { field: 'id', direction: 'ASC' }, filters: {}, scope: null };
+  const fields = amountKeys.map((key) => fieldOf(stmt, config, key));
+  const core = buildCore(stmt, config, state, { fields });
+  const rows = await run(manager, stmt, `${stmt.withClause()}SELECT ${config.alias}.id${fields.map((field, i) => `, ${jsCents(field.sql)}::text AS a${i}`).join('')}
+${core.from}
+${core.where}
+  AND (${config.alias}.id = ANY(${stmt.bind(lineIds, 'uuid[]')}))`);
+  for (const row of rows) {
+    result.set(row.id, Object.fromEntries(amountKeys.map((key, i) => [key, BigInt(row[`a${i}`])])));
+  }
+  return result;
+}
+
+/**
  * Rows of the given lines, in the order given (no lifecycle scope, no list
  * statement): the AI detail, which names its line by id.
  */
 export async function budgetListRowsByIds(
-  scope: SummaryScopeConfig,
+  scope: SummaryReadScopeConfig,
   deps: SummaryDeps,
   query: BudgetListRowsByIdsQuery,
   manager: EntityManager,

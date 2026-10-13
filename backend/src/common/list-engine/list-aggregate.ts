@@ -40,9 +40,9 @@ import { divRoundHalfAway, ICU_COLLATION, jsCents, sqlLiteral, sumJsCents } from
  * Every group carries `count`, its line count. Order terms: the count; a
  * measure's value (no value last, whatever the direction, unless `nulls`
  * says otherwise); a key in the field's own sort order (a ranked enum, such
- * as the CAPEX priority, in its business order; numbers as numbers; text in
- * the ICU order; blanks where PostgreSQL puts them unless `nulls` says
- * otherwise). Any order then ends with every key's text in the ICU order,
+ * as the status, in its business order; a dimension value in its dimension's
+ * order, then by name; numbers as numbers; text in the ICU order; blanks
+ * where PostgreSQL puts them unless `nulls` says otherwise). Any order then ends with every key's text in the ICU order,
  * blanks first, so it is total; the default order is the count, largest
  * first, then that tie-break. `having` keeps the groups whose measures pass
  * it, compared exactly with the bound as written (before the order and the
@@ -208,15 +208,17 @@ function keyTextOrderSql(column: string, field: FieldSql): string {
 
 /**
  * An explicit order by a group key: the field's own sort order, as the list
- * sorts it. A ranked enum (status, run or build, the CAPEX priority,
- * investment and PPE types) in its rank, a value outside the rank as blank;
- * otherwise the text order of the tie-break.
+ * sorts it. A ranked enum (status, run or build) in its rank, a value outside
+ * the rank as blank; a field with a position (a dimension value) by the
+ * group's position (`positionColumn`), then its text; otherwise the text
+ * order of the tie-break. Each term takes the direction and nulls given.
  */
-function keyOrderSql(column: string, field: FieldSql): string {
+function keyOrderTerms(column: string, positionColumn: string | null, field: FieldSql): string[] {
   if (field.kind === 'enum' && field.rank) {
-    return `(CASE ${column} ${field.rank.map((value, i) => `WHEN ${sqlLiteral(value)} THEN ${i}`).join(' ')} END)`;
+    return [`(CASE ${column} ${field.rank.map((value, i) => `WHEN ${sqlLiteral(value)} THEN ${i}`).join(' ')} END)`];
   }
-  return keyTextOrderSql(column, field);
+  if (positionColumn) return [positionColumn, keyTextOrderSql(column, field)];
+  return [keyTextOrderSql(column, field)];
 }
 
 function compileMeasure(stmt: SqlStatement, config: ListConfig, spec: AggregateMeasureSpec): CompiledMeasure {
@@ -317,6 +319,9 @@ export function aggregateSql(stmt: SqlStatement, config: ListConfig, state: List
   validateAggregateSpec(spec);
   const keys = spec.groupBy.map((key) => ({ key, field: fieldOf(stmt, config, key) }));
   const keyColumns = keys.map((k, i) => `${groupKeySql(k.key, k.field)} AS k${i}`);
+  // A key with a position (a dimension value) carries it to its group (one value: one position).
+  const positioned = keys.flatMap((k, i) => (k.field.position && k.field.kind === 'text' ? [i] : []));
+  const positionColumns = positioned.map((i) => `(${keys[i].field.position}) AS p${i}`);
   const measures = spec.measures.map((measure) => compileMeasure(stmt, config, measure));
   if (keys.length > 0 && measures.length > AGGREGATE_LIMITS.groupedMeasures && measures.some((m) => m.unit !== 'fte')) fail(GROUPED_CAP_MESSAGE);
   const core = buildCore(stmt, config, state, { fields: [...keys.map((k) => k.field), ...measures.flatMap((m) => m.fields)] });
@@ -324,10 +329,10 @@ export function aggregateSql(stmt: SqlStatement, config: ListConfig, state: List
 
   const kList = keys.map((_, i) => `k${i}`);
   // No key and no measure: an empty select list (PostgreSQL takes it), one row per line to count.
-  const lines = `SELECT ${[...keyColumns, ...measures.map((m, i) => `${m.line} AS v${i}`)].join(', ')}
+  const lines = `SELECT ${[...keyColumns, ...positionColumns, ...measures.map((m, i) => `${m.line} AS v${i}`)].join(', ')}
 ${core.from}
 ${core.where}`;
-  const groups = `SELECT ${[...kList, 'count(*) AS n', ...measures.flatMap((m, i) => measureParts(m, i, `agg_lines.v${i}`))].join(', ')}
+  const groups = `SELECT ${[...kList, ...positioned.map((i) => `min(p${i}) AS p${i}`), 'count(*) AS n', ...measures.flatMap((m, i) => measureParts(m, i, `agg_lines.v${i}`))].join(', ')}
 FROM agg_lines
 ${kList.length ? `GROUP BY ${kList.join(', ')}\n` : ''}HAVING count(*) > 0`;
   const conditions = (spec.having ?? []).map((having) => {
@@ -338,7 +343,10 @@ ${kList.length ? `GROUP BY ${kList.join(', ')}\n` : ''}HAVING count(*) > 0`;
   const orderTerms = (spec.order?.length ? spec.order : [{ by: 'count', dir: 'DESC' } as AggregateOrderSpec]).map((order) => {
     const nulls = order.nulls ? ` NULLS ${order.nulls}` : '';
     if (order.by === 'count') return `g.n ${order.dir}${nulls}`;
-    if (order.by === 'key') return `${keyOrderSql(`g.k${order.index}`, keys[order.index!].field)} ${order.dir}${nulls}`;
+    if (order.by === 'key') {
+      const position = positioned.includes(order.index!) ? `g.p${order.index}` : null;
+      return keyOrderTerms(`g.k${order.index}`, position, keys[order.index!].field).map((term) => `${term} ${order.dir}${nulls}`).join(', ');
+    }
     const i = measureIndex(order.id!);
     // A group without a value goes last in either direction unless asked otherwise.
     return `${measureValue(measures[i], i, 'g')} ${order.dir} NULLS ${order.nulls ?? 'LAST'}`;

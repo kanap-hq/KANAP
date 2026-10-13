@@ -1,6 +1,7 @@
 import { BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
+import { auditTableOf } from './budget-nature';
 import { toCents } from '../common/amount';
 import {
   AMOUNT_MEASURES,
@@ -42,10 +43,10 @@ import {
 /**
  * Round inputs: for each budget column of a version, the period its last
  * spread used, how the column was produced and, when it has some, the
- * quantity × price lines it is computed from. Shared by OPEX
- * (`spend_round_inputs`, `spend_round_input_lines`) and CAPEX
- * (`capex_round_inputs`, `capex_round_input_lines`); written in the caller's
- * transaction, next to the amounts, with one audit row per record change.
+ * quantity × price lines it is computed from. Shared by OPEX and CAPEX lines
+ * (`spend_round_inputs`, `spend_round_input_lines`, lot Z1); written in the
+ * caller's transaction, next to the amounts, with one audit row per record
+ * change (labelled by the line's nature, `auditTableOf`).
  *
  * The five columns are equal slots: a measure name is a storage key, never a
  * behaviour. What a column means comes from the tenant's settings.
@@ -167,14 +168,15 @@ type StoredRoundInput = Omit<RoundInput, 'updated_at' | 'lines'> & {
 
 type StoredLine = Omit<RoundLine, 'sort'> & { round_input_id: string; sort: number | string };
 
-// Table names come only from here: never from the caller.
-const ROUND_TABLE: Record<AmountScope, 'spend_round_inputs' | 'capex_round_inputs'> = {
+// Table names come only from here: never from the caller. One family for both natures (lot Z1); a
+// CAPEX line's records keep their audit label (`auditTableOf`).
+const ROUND_TABLE: Record<AmountScope, 'spend_round_inputs'> = {
   opex: 'spend_round_inputs',
-  capex: 'capex_round_inputs',
+  capex: 'spend_round_inputs',
 };
-const LINE_TABLE: Record<AmountScope, 'spend_round_input_lines' | 'capex_round_input_lines'> = {
+const LINE_TABLE: Record<AmountScope, 'spend_round_input_lines'> = {
   opex: 'spend_round_input_lines',
-  capex: 'capex_round_input_lines',
+  capex: 'spend_round_input_lines',
 };
 
 const COLUMNS = `id, tenant_id, version_id, measure,
@@ -188,6 +190,8 @@ export type RoundInputsContext = {
   version: AmountVersion;
   userId: string | null;
   audit: Pick<AuditService, 'log'>;
+  /** The action of the record's audit rows; by default `create`, `update` or `delete`. A restore writes `restored`. */
+  auditAction?: 'restored';
 };
 
 export function isRoundMeasure(value: unknown): value is AmountMeasure {
@@ -472,9 +476,9 @@ export async function saveRoundInput(
   }
   await ctx.audit.log(
     {
-      table: ROUND_TABLE[ctx.scope],
+      table: auditTableOf(ctx.scope, ROUND_TABLE[ctx.scope]),
       recordId: saved.id,
-      action: stored ? 'update' : 'create',
+      action: ctx.auditAction ?? (stored ? 'update' : 'create'),
       // The lines ride along when they change: one audit row per column write.
       before: stored && linesChanged ? { ...stored, lines: storedLines } : stored,
       after: linesChanged ? { ...saved, lines: savedLines } : saved,
@@ -523,9 +527,9 @@ export async function deleteRoundInput(ctx: RoundInputsContext, rawMeasure: stri
   );
   await ctx.audit.log(
     {
-      table: ROUND_TABLE[ctx.scope],
+      table: auditTableOf(ctx.scope, ROUND_TABLE[ctx.scope]),
       recordId: stored.id,
-      action: 'delete',
+      action: ctx.auditAction ?? 'delete',
       before: lines.length ? { ...stored, lines } : stored,
       after: null,
       userId: ctx.userId,
@@ -556,7 +560,7 @@ export function storedLinesResult(stored: Pick<RoundInput, 'fte' | 'last_calcula
  * its calculation as `lines_result` (none: the fields as they are). The
  * spread keeps the stored FTE itself.
  */
-function carryLinesResult(fields: RoundInputFields, stored: Pick<RoundInput, 'fte' | 'last_calculation'> | null): RoundInputFields {
+export function carryLinesResult(fields: RoundInputFields, stored: Pick<RoundInput, 'fte' | 'last_calculation'> | null): RoundInputFields {
   const result = storedLinesResult(stored);
   const calculation = fields.last_calculation;
   if (!result || !calculation || calculation.kind === 'computed') return fields;
@@ -588,6 +592,28 @@ export function annualSpreadFields(
   };
 }
 
+/** The round-input fields a quarterly spread stores. */
+export function quarterlySpreadFields(
+  quarters: Record<'Q1' | 'Q2' | 'Q3' | 'Q4', bigint>,
+  distribution: 'equal' | '445',
+  period: { period_start: string; period_end: string; active_months: number[] },
+  fte: string | null,
+): RoundInputFields {
+  return {
+    period_start: period.period_start,
+    period_end: period.period_end,
+    method: 'spread',
+    spread_profile_name: distribution === '445' ? '4-4-5' : 'flat',
+    last_calculation: {
+      kind: 'quarterly',
+      quarters: { Q1: centsToDecimal(quarters.Q1), Q2: centsToDecimal(quarters.Q2), Q3: centsToDecimal(quarters.Q3), Q4: centsToDecimal(quarters.Q4) },
+      distribution,
+      active_months: period.active_months,
+    },
+    fte,
+  };
+}
+
 /**
  * The records a spread writes: one `spread` record per measure it replaced,
  * with the period, the profile and what was computed. The lines and the FTE
@@ -610,20 +636,10 @@ export async function recordSpread(ctx: RoundInputsContext, spread: PayloadSprea
     }
     return;
   }
-  const q = spread.quarters;
-  await saveRoundInput(ctx, spread.measure, (stored) => carryLinesResult({
-    period_start,
-    period_end,
-    method: 'spread',
-    spread_profile_name: spread.distribution === '445' ? '4-4-5' : 'flat',
-    last_calculation: {
-      kind: 'quarterly',
-      quarters: { Q1: centsToDecimal(q.Q1), Q2: centsToDecimal(q.Q2), Q3: centsToDecimal(q.Q3), Q4: centsToDecimal(q.Q4) },
-      distribution: spread.distribution,
-      active_months,
-    },
-    fte: stored?.fte ?? null,
-  }, stored));
+  await saveRoundInput(ctx, spread.measure, (stored) => carryLinesResult(
+    quarterlySpreadFields(spread.quarters, spread.distribution, { period_start, period_end, active_months }, stored?.fte ?? null),
+    stored,
+  ));
 }
 
 /**

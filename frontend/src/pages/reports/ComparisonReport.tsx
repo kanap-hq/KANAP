@@ -13,13 +13,17 @@ import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { BudgetReportFilters, useBudgetReportFilters } from '../../components/reports/BudgetReportFilters';
 import { ReportFteNotice, ReportMeasureSelect, useMeasureText, useReportMeasure } from './reportMeasure';
 
+import ItemScopeTabs from '../operations/ItemScopeTabs';
+import { useReportScope } from './useReportScope';
+
 export default function ComparisonReport() {
   const { t } = useTranslation(["ops"]);
+  const [scope, setScope] = useReportScope();
   const now = new Date();
   const Y = now.getFullYear();
   const allowedYears = [Y - 2, Y - 1, Y, Y + 1, Y + 2];
   // The years read set the window: the lines still active on 1 January of Y-2.
-  const reportFilters = useBudgetReportFilters({ scope: 'opex', years: allowedYears });
+  const reportFilters = useBudgetReportFilters({ scope, years: allowedYears });
 
   const [startYear, setStartYear] = useState<number>(Y - 1);
   const [endYear, setEndYear] = useState<number>(Y + 1);
@@ -46,7 +50,7 @@ export default function ComparisonReport() {
     filters: reportFilters.queryFilters,
     measure,
   })), [reportFilters.queryFilters, years, metrics, measure]); // eslint-disable-line react-hooks/exhaustive-deps
-  const report = useBudgetAggregate('opex', request, { keepPrevious: true });
+  const report = useBudgetAggregate(scope, request, { keepPrevious: true });
   // Loading, the filter bar still reading its address, or the last answer kept while the new one loads.
   const busy = reportFilters.queryFilters == null || report.isLoading || report.isPlaceholderData;
   const totalsByMetricAndYear = useMemo(() => readTrend({ years, metrics: metrics as MetricKey[] }, report.data, measure), [years, metrics, report.data, measure]);
@@ -104,6 +108,7 @@ export default function ComparisonReport() {
       subtitle={t("reports.budgetTrendOpex.subtitle")}
       filters={(
         <>
+          <ItemScopeTabs allowAll value={scope} onChange={setScope} />
           <ReportMeasureSelect value={measure} onChange={setMeasure} />
           <BudgetReportFilters filters={reportFilters} />
           <TextField select size="small" label={t("reports.filters.startYear")} value={startYear} onChange={(e) => {
@@ -155,7 +160,7 @@ export default function ComparisonReport() {
             defaultColDef={{ sortable: true, resizable: true }}
             onGridReady={(e) => { gridApiRef.current = e.api; }}
           />
-          <ReportFteNotice scope="opex" request={request} result={report.data} columnLabel={(column) => `${metricLabels[column.metric]} ${column.year}`} />
+          <ReportFteNotice scope={scope} request={request} result={report.data} columnLabel={(column) => `${metricLabels[column.metric]} ${column.year}`} />
         </Paper>
       </Stack>
       <ReportDataStatus loading={busy} error={report.isError} onRetry={() => void report.refetch()} />

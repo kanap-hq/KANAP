@@ -9,7 +9,7 @@ Les indicateurs annuels sont l'effectif, les utilisateurs IT et le chiffre d'aff
 - Espace de travail : **Gestion budgétaire**
 - Chemin : **Gestion budgétaire > Administration**, section **Opérations**, cartes **Geler les données de référence** et **Copier les indicateurs annuels**
 - Autorisations :
-  - Accès au budget (accès lecteur à l'OPEX, au CAPEX ou à l'administration budgétaire), plus l'un des droits `companies:admin`, `departments:admin` ou `budget_ops:admin`
+  - Accès au budget (accès lecteur au Budget ou à l'administration budgétaire), plus l'un des droits `companies:admin`, `departments:admin` ou `budget_ops:admin`
   - Les cartes sont masquées pour les autres utilisateurs
 
 Les données de référence n'ont pas d'entrée Administration propre.
@@ -36,7 +36,7 @@ La page affiche une carte de statut pour chaque périmètre :
 Le gel verrouille les métriques annuelles de l'onglet **Détails** des Sociétés (effectif, utilisateurs IT, chiffre d'affaires) ou des Départements (effectif). Il n'affecte pas :
 
 - L'onglet Vue d'ensemble (nom, description et autres champs généraux)
-- Les postes OPEX ou CAPEX
+- Les lignes OPEX ou CAPEX
 
 ### Autorisations
 
@@ -155,8 +155,8 @@ Vous avez gelé 2025 mais repéré une erreur dans l'effectif d'une société.
 **Que se passe-t-il si j'essaie de modifier une année gelée ?**
 L'onglet Détails pour les Sociétés ou Départements passe en lecture seule pour cette année. Vous verrez un message indiquant que les données sont gelées. Dégelez pour effectuer des modifications.
 
-**Le gel affecte-t-il les postes OPEX ou CAPEX ?**
-Non. Le gel ne verrouille que les métriques annuelles (effectif, utilisateurs IT, chiffre d'affaires) des Sociétés et Départements. Les postes OPEX et CAPEX ne sont pas affectés.
+**Le gel affecte-t-il les lignes OPEX ou CAPEX ?**
+Non. Le gel ne verrouille que les métriques annuelles (effectif, utilisateurs IT, chiffre d'affaires) des Sociétés et Départements. Les lignes OPEX et CAPEX ne sont pas affectées.
 
 **Puis-je copier des données vers une année gelée ?**
 Non. L'outil de copie affichera une erreur et désactivera les boutons d'action. Dégelez d'abord l'année de destination.

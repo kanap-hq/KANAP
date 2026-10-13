@@ -1,53 +1,146 @@
 import React from 'react';
-import { act, render } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ThemeProvider } from '@mui/material/styles';
+import { createAppTheme } from '../config/ThemeContext';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const grid = vi.hoisted(() => ({ props: null as null | Record<string, any> }));
+const api = vi.hoisted(() => ({ get: vi.fn() }));
+// One `t` for every render (a new one each time would loop effects); options are spelled out.
+const i18n = vi.hoisted(() => ({
+  t: (key: string, opts?: Record<string, unknown>) => (opts ? `${key} ${JSON.stringify(opts)}` : key),
+}));
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
-  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } }),
+  useTranslation: () => ({ t: i18n.t, i18n: { language: 'en', resolvedLanguage: 'en' } }),
 }));
-vi.mock('../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true }) }));
-vi.mock('../components/PageHeader', () => ({ default: () => null }));
+const auth = vi.hoisted(() => ({ budget: true }));
+vi.mock('../auth/AuthContext', () => ({
+  useAuth: () => ({ hasLevel: (resource: string) => resource !== 'budget' || auth.budget, profile: { id: 'user-1' } }),
+}));
+vi.mock('../tenant/TenantContext', () => ({ useTenant: () => ({ tenantSlug: 'fromage' }) }));
+vi.mock('../services/budgetColumns', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../services/budgetColumns')>();
+  return {
+    ...actual,
+    // The tenant names its first column and hides the third: the list offers the shown ones by name.
+    getBudgetColumns: async () => ({ ...actual.DEFAULT_BUDGET_COLUMNS, labels: { ...actual.DEFAULT_BUDGET_COLUMNS.labels, planned: 'Initial' } }),
+  };
+});
+vi.mock('../components/PageHeader', () => ({ default: ({ actions }: { actions?: React.ReactNode }) => <div>{actions}</div> }));
+const download = vi.hoisted(() => ({ blob: vi.fn() }));
+vi.mock('../utils/downloadBlob', () => ({ downloadBlob: download.blob, extractFilenameFromDisposition: () => null }));
 vi.mock('../components/csv/CsvExportDialog', () => ({ default: () => null }));
 vi.mock('../components/csv/CsvImportDialog', () => ({ default: () => null }));
+vi.mock('../lib/listContext', () => ({
+  getWithListContext: (endpoint: string, params: Record<string, unknown>) => api.get(endpoint, params),
+}));
 vi.mock('../components/ServerDataGrid', () => ({
+  DATE_COLUMN_FILTER: { filter: 'agDateColumnFilter' },
   default: (props: Record<string, any>) => {
     grid.props = props;
-    return null;
+    return <div data-testid="toolbar">{props.toolbarExtras}</div>;
   },
 }));
 
 import CheckboxSetFilter from '../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
-import ContractsPage from './ContractsPage';
+import ContractsPage, { budgetQuickFilterOf, daysFromToday, isToDecideOnly } from './ContractsPage';
 
 type Col = {
   field?: string;
   colId?: string;
   filter?: unknown;
+  sortable?: boolean;
+  defaultHidden?: boolean;
   floatingFilterComponent?: unknown;
   filterParams?: { values?: unknown };
-  valueFormatter?: (params: { value?: unknown }) => string;
-  cellRenderer?: (params: any) => React.ReactElement;
+  valueFormatter?: (params: any) => string;
+  valueGetter?: (params: any) => unknown;
+  cellRenderer?: (params: any) => React.ReactElement | null;
 };
 
+const NEXT_YEAR = new Date().getFullYear() + 1;
+
+const TOTALS = {
+  count: 18,
+  yearly_amount: 3_833_400,
+  reporting_currency: 'EUR',
+  fx_year: 2026,
+  excluded: [{ currency: 'GBP', count: 1 }],
+  to_decide_count: 4,
+  // The tenant's window comes with the totals (not the default of 90 days).
+  decision_window_days: 45,
+  budget: {
+    year: NEXT_YEAR,
+    column: 'planned',
+    reporting_currency: 'EUR',
+    committed: 2_993_754,
+    linked: 1_200_000,
+    gap: -1_793_754,
+    excluded: [{ currency: 'USD', count: 1 }],
+    no_line_count: 3,
+    under_count: 2,
+    years: [NEXT_YEAR - 2, NEXT_YEAR - 1, NEXT_YEAR, NEXT_YEAR + 1],
+  },
+};
+
+/** A localStorage for the tests (jsdom has none here). */
+function stubStorage(initial: Record<string, string> = {}) {
+  const store = new Map(Object.entries(initial));
+  const storage = {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => { store.set(key, value); },
+    removeItem: (key: string) => { store.delete(key); },
+    clear: () => store.clear(),
+  };
+  Object.defineProperty(window, 'localStorage', { value: storage, configurable: true });
+  return store;
+}
+
 function renderPage() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <MemoryRouter initialEntries={['/ops/contracts']}>
-      <ContractsPage />
-    </MemoryRouter>,
+    <QueryClientProvider client={client}>
+      <ThemeProvider theme={createAppTheme('light')}>
+        <MemoryRouter initialEntries={['/ops/contracts']}>
+          <ContractsPage />
+        </MemoryRouter>
+      </ThemeProvider>
+    </QueryClientProvider>,
   );
+}
+
+/** The grid reports its request, as it does once ready and on every search, filter or scope change. */
+function report(filterModel: Record<string, unknown> = {}, statusScope = 'enabled') {
+  act(() => {
+    grid.props?.onQueryStateChange({ sort: 'next_due_date:ASC', q: '', filterModel, statusScope });
+  });
 }
 
 const columns = () => grid.props?.columns as Col[];
 const column = (field: string) => columns().find((c) => c.field === field || c.colId === field)!;
 
+function renderCell(field: string, data: Record<string, unknown>) {
+  const Cell = column(field).cellRenderer as unknown as React.ComponentType<any>;
+  return render(<MemoryRouter><Cell data={data} value={data[field]} /></MemoryRouter>);
+}
+
+const isoDaysFromToday = (days: number) => {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + days)).toISOString().slice(0, 10);
+};
+
 describe('ContractsPage', () => {
   beforeEach(() => {
     grid.props = null;
+    auth.budget = true;
+    stubStorage();
+    api.get.mockReset();
+    api.get.mockResolvedValue({ data: TOTALS });
   });
 
   it('shows a status column with a checkbox filter and translated cells', () => {
@@ -82,5 +175,217 @@ describe('ContractsPage', () => {
     const params = new URLSearchParams(href.split('?')[1]);
     expect(params.get('scope')).toBe('all');
     expect(params.get('sort')).toBe('name:ASC');
+  });
+
+  it('sorts on the next due date and keeps the term details in the column chooser', () => {
+    renderPage();
+    expect(grid.props?.defaultSort).toEqual({ field: 'next_due_date', direction: 'ASC' });
+    const hidden = columns().filter((c) => c.defaultHidden).map((c) => c.field ?? c.colId);
+    for (const field of ['start_date', 'duration_months', 'auto_renewal', 'notice_period_months', 'billing_frequency']) {
+      expect(hidden).toContain(field);
+    }
+    for (const field of ['name', 'supplier_name', 'company_name', 'next_due_date', 'term_state', 'yearly_amount_at_signature', 'linked_lines_count', 'status']) {
+      expect(hidden).not.toContain(field);
+    }
+    expect(column('linked_lines_count').valueGetter?.({ data: { linked_lines_count: 3 }, node: {} })).toBe(3);
+  });
+
+  it('shows the next due date with the days left, and the end of an ended contract', () => {
+    renderPage();
+    const due = isoDaysFromToday(19);
+    renderCell('next_due_date', { id: 'c-1', next_due_date: due, term_state: 'to_decide' });
+    expect(screen.getByText(/contracts\.list\.dueIn \{"count":19\}/)).toBeInTheDocument();
+    renderCell('next_due_date', { id: 'c-2', next_due_date: null, term_state: 'expired', current_term_end: '2026-05-31' });
+    expect(screen.getByText('31 May 2026')).toBeInTheDocument();
+    expect(daysFromToday(isoDaysFromToday(-3))).toBe(-3);
+  });
+
+  it('shows the state as a dot and a label, the renewal date for a renewed contract, with a state filter', () => {
+    renderPage();
+    const state = column('term_state');
+    expect(state.filter).toBe(CheckboxSetFilter);
+    expect(state.sortable).toBe(false);
+    expect((state.filterParams?.values as Array<{ value: string }>).map((v) => v.value)).toEqual([
+      'to_decide', 'in_progress', 'renewed', 'ending', 'expired',
+    ]);
+    renderCell('term_state', { id: 'c-1', term_state: 'to_decide' });
+    expect(screen.getByText('contracts.list.states.to_decide')).toBeInTheDocument();
+    renderCell('term_state', { id: 'c-2', term_state: 'renewed', current_term_end: '2026-12-31' });
+    expect(screen.getByText('contracts.list.states.renewedOn {"date":"1 Jan 2027"}')).toBeInTheDocument();
+  });
+
+  it('adds a totals row for the request the grid shows, naming the currencies without a rate', async () => {
+    renderPage();
+    report({ name: { filterType: 'text', type: 'contains', filter: 'sap' } }, 'all');
+    await waitFor(() => expect(grid.props?.pinnedBottomRowData).toHaveLength(1));
+    expect(api.get).toHaveBeenCalledWith('/contracts/totals', {
+      includeDisabled: '1',
+      budget_year: String(NEXT_YEAR),
+      budget_column: 'planned',
+      filters: JSON.stringify({ name: { filterType: 'text', type: 'contains', filter: 'sap' } }),
+    });
+    const [row] = grid.props!.pinnedBottomRowData;
+    expect(row.name).toBe(
+      'contracts.list.total {"count":18} · contracts.list.totalExcluded {"count":1,"currency":"GBP"}'
+      + ` · contracts.list.committedExcluded {"count":1,"currency":"USD","year":${NEXT_YEAR}}`,
+    );
+    const amount = column('yearly_amount_at_signature');
+    expect(amount.valueFormatter?.({ value: row.yearly_amount_at_signature, data: row, node: { rowPinned: 'bottom' } })).toBe('3 833 400 EUR');
+    expect(amount.valueFormatter?.({ value: 120000, data: { currency: 'USD' }, node: {} })).toBe('120 000');
+    expect(column('auto_renewal').valueFormatter?.({ value: undefined, data: row, node: { rowPinned: 'bottom' } })).toBe('');
+  });
+
+  it('toggles the "to decide" quick filter on the state column, with the count and the window from the server', async () => {
+    renderPage();
+    const setFilterModel = vi.fn();
+    let model: Record<string, unknown> = { name: { filterType: 'text', type: 'contains', filter: 'a' } };
+    act(() => {
+      grid.props?.onGridApiReady({ getFilterModel: () => model, setFilterModel });
+    });
+    report(model);
+    const toggle = await screen.findByRole('button', { name: /contracts\.list\.toDecide \{"days":45,"count":4\}/ });
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(toggle);
+    expect(setFilterModel).toHaveBeenLastCalledWith({ ...model, term_state: { filterType: 'set', values: ['to_decide'] } });
+
+    model = { ...model, term_state: { filterType: 'set', values: ['to_decide'] } };
+    report(model);
+    await waitFor(() => expect(screen.getByRole('button', { name: /contracts\.list\.toDecide/ })).toHaveAttribute('aria-pressed', 'true'));
+    fireEvent.click(screen.getByRole('button', { name: /contracts\.list\.toDecide/ }));
+    expect(setFilterModel).toHaveBeenLastCalledWith({ name: { filterType: 'text', type: 'contains', filter: 'a' } });
+  });
+
+  it('reads the quick filter as on only when the state filter keeps "to decide" alone', () => {
+    expect(isToDecideOnly({ term_state: { filterType: 'set', values: ['to_decide'] } })).toBe(true);
+    expect(isToDecideOnly({ term_state: { filterType: 'set', values: ['to_decide', 'expired'] } })).toBe(false);
+    expect(isToDecideOnly({ term_state: { filterType: 'set', values: ['to_decide'], mode: 'exclude' } })).toBe(false);
+    expect(isToDecideOnly(null)).toBe(false);
+  });
+
+  it('adds the budget columns of next year on the default column, sent with every request', async () => {
+    renderPage();
+    await waitFor(() => expect(grid.props?.extraParams).toEqual({ budget_year: String(NEXT_YEAR), budget_column: 'planned' }));
+    const committed = column('budget_committed') as Col & { headerName?: string; filter?: unknown };
+    expect(committed.headerName).toBe(`contracts.columns.committed {"year":${NEXT_YEAR}}`);
+    expect(committed.filter).toBe('agNumberColumnFilter');
+    expect((column('budget_linked') as Col & { headerName?: string }).headerName).toBe(`contracts.columns.budgetLinked {"year":${NEXT_YEAR}}`);
+    expect(column('budget_gap').filter).toBe('agNumberColumnFilter');
+    const state = column('budget_state');
+    expect(state.defaultHidden).toBe(true);
+    expect(state.filter).toBe(CheckboxSetFilter);
+    expect((state.filterParams?.values as Array<{ value: string }>).map((v) => v.value)).toEqual([
+      'covered', 'under', 'over', 'no_line', 'no_commitment', 'not_started',
+    ]);
+    // The workspace link carries them, so prev / next walks the same order.
+    act(() => {
+      grid.props?.onQueryStateChange({ sort: 'budget_gap:ASC', q: '', filterModel: {}, statusScope: 'enabled' });
+    });
+    const { container } = render(<MemoryRouter>{column('name').cellRenderer!({ value: 'SAP', data: { id: 'c-1', name: 'SAP' } })}</MemoryRouter>);
+    const params = new URLSearchParams((container.querySelector('a')?.getAttribute('href') ?? '').split('?')[1]);
+    expect([params.get('sort'), params.get('budget_year'), params.get('budget_column')]).toEqual(['budget_gap:ASC', String(NEXT_YEAR), 'planned']);
+  });
+
+  it('shows the gap with its sign, the contracts without a line or past their end, and a missing rate', () => {
+    renderPage();
+    renderCell('budget_gap', { id: 'c-1', budget_gap: -1400, budget_state: 'under', budget_linked: 1000 });
+    expect(screen.getByText('\u22121 400')).toBeInTheDocument();
+    renderCell('budget_gap', { id: 'c-2', budget_gap: 200, budget_state: 'over', budget_linked: 1200 });
+    expect(screen.getByText('+200')).toBeInTheDocument();
+    renderCell('budget_gap', { id: 'c-3', budget_gap: -500, budget_state: 'no_line', budget_linked: 0 });
+    expect(screen.getByText('contracts.list.gapNoLine')).toBeInTheDocument();
+    renderCell('budget_gap', { id: 'c-4', budget_gap: 85000, budget_state: 'over', budget_linked: 85000, term_state: 'expired' });
+    expect(screen.getByText('contracts.list.gapExpired')).toBeInTheDocument();
+    renderCell('budget_committed', { id: 'c-5', budget_committed: null, budget_linked: 0, currency: 'GBP' });
+    expect(screen.getByText('contracts.budget.noRate {"currency":"GBP"}')).toBeInTheDocument();
+    renderCell('budget_state', { id: 'c-6', budget_state: 'under' });
+    expect(screen.getByText('contracts.budget.states.under')).toBeInTheDocument();
+  });
+
+  it('sums the budget columns in the totals row', async () => {
+    renderPage();
+    report();
+    await waitFor(() => expect(grid.props?.pinnedBottomRowData).toHaveLength(1));
+    const [row] = grid.props!.pinnedBottomRowData;
+    expect([row.budget_committed, row.budget_linked, row.budget_gap]).toEqual([2_993_754, 1_200_000, -1_793_754]);
+    const pinned = { node: { rowPinned: 'bottom' }, data: row };
+    expect(column('budget_committed').valueFormatter?.({ ...pinned, value: row.budget_committed })).toBe('2 993 754');
+    expect(column('budget_gap').valueFormatter?.({ ...pinned, value: row.budget_gap })).toBe('\u22121 793 754');
+  });
+
+  it('toggles the "no budget line" and "under-budgeted" quick filters on the budget state, one at a time', async () => {
+    renderPage();
+    const setFilterModel = vi.fn();
+    let model: Record<string, unknown> = {};
+    act(() => {
+      grid.props?.onGridApiReady({ getFilterModel: () => model, setFilterModel });
+    });
+    report(model);
+    const noLine = await screen.findByRole('button', { name: 'contracts.list.noBudgetLine {"count":3}' });
+    const under = screen.getByRole('button', { name: 'contracts.list.underBudgeted {"count":2}' });
+    fireEvent.click(noLine);
+    expect(setFilterModel).toHaveBeenLastCalledWith({ budget_state: { filterType: 'set', values: ['no_line'] } });
+    model = { budget_state: { filterType: 'set', values: ['no_line'] } };
+    report(model);
+    await waitFor(() => expect(screen.getByRole('button', { name: /contracts\.list\.noBudgetLine/ })).toHaveAttribute('aria-pressed', 'true'));
+    fireEvent.click(under);
+    expect(setFilterModel).toHaveBeenLastCalledWith({ budget_state: { filterType: 'set', values: ['under'] } });
+    fireEvent.click(screen.getByRole('button', { name: /contracts\.list\.noBudgetLine/ }));
+    expect(setFilterModel).toHaveBeenLastCalledWith({});
+    expect(budgetQuickFilterOf({ budget_state: { filterType: 'set', values: ['under', 'no_line'] } })).toBeNull();
+    expect(budgetQuickFilterOf({ budget_state: { filterType: 'set', values: ['covered'] } })).toBeNull();
+  });
+
+  it('keeps the year and column per user, shared with the contract page', async () => {
+    const store = stubStorage({ 'kanap-contract-budget:fromage:user-1': JSON.stringify({ year: NEXT_YEAR - 1, column: 'actual' }) });
+    renderPage();
+    await waitFor(() => expect(grid.props?.extraParams).toEqual({ budget_year: String(NEXT_YEAR - 1), budget_column: 'actual' }));
+    report();
+    // The years the server offers, by name the columns the tenant shows.
+    fireEvent.mouseDown(await screen.findByRole('combobox', { name: 'contracts.list.budgetYear' }));
+    fireEvent.click(await screen.findByRole('option', { name: String(NEXT_YEAR + 1) }));
+    await waitFor(() => expect(grid.props?.extraParams).toEqual({ budget_year: String(NEXT_YEAR + 1), budget_column: 'actual' }));
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'contracts.budget.column' }));
+    expect(await screen.findByRole('option', { name: 'Initial' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'ops:operations.budgetColumns.forecast' })).toBeNull();
+    fireEvent.click(screen.getByRole('option', { name: 'Initial' }));
+    await waitFor(() => expect(grid.props?.extraParams).toEqual({ budget_year: String(NEXT_YEAR + 1), budget_column: 'planned' }));
+    expect(JSON.parse(store.get('kanap-contract-budget:fromage:user-1')!)).toEqual({ year: NEXT_YEAR + 1, column: 'planned' });
+  });
+
+  it('shows the compliance summary, sorted and filtered on the server', () => {
+    renderPage();
+    const compliance = column('compliance_state');
+    expect(compliance.defaultHidden).toBeFalsy();
+    expect(compliance.sortable).not.toBe(false);
+    expect(compliance.filter).toBe(CheckboxSetFilter);
+    expect(compliance.filterParams?.values).toEqual(['missing', 'to_check', 'complete', 'none'].map((value) => ({ value, label: `contracts.compliance.summary.states.${value}` })));
+    expect(compliance.valueGetter?.({ data: { compliance: { state: 'complete' } }, node: {} })).toBe('complete');
+    renderCell('compliance_state', { id: 'c-1', compliance: { expected: 5, missing: 2, to_check: 1, state: 'missing' } });
+    expect(screen.getByText(/contracts\.compliance\.summary\.missing \{"count":2\}/)).toBeInTheDocument();
+    expect(screen.getByText(/contracts\.compliance\.summary\.toCheck \{"count":1\}/)).toBeInTheDocument();
+    renderCell('compliance_state', { id: 'c-2', compliance: { expected: 0, missing: 0, to_check: 0, state: 'none' } });
+    expect(screen.getByText('contracts.compliance.summary.none')).toBeInTheDocument();
+  });
+
+  it('exports the register of the contracts the list shows, in the screen language', async () => {
+    renderPage();
+    const filters = { compliance_state: { filterType: 'set', values: ['missing'] } };
+    report(filters);
+    fireEvent.click(screen.getByRole('button', { name: 'contracts.compliance.exportRegister' }));
+    await waitFor(() => expect(api.get).toHaveBeenCalledWith('/contracts/compliance-register/export', expect.objectContaining({
+      language: 'en',
+      filters: JSON.stringify(filters),
+      budget_year: String(NEXT_YEAR),
+    })));
+    await waitFor(() => expect(download.blob).toHaveBeenCalledWith(expect.any(Blob), 'contract-compliance-register.csv'));
+  });
+
+  it('shows no budget figure to a user who cannot read the budget', () => {
+    auth.budget = false;
+    renderPage();
+    expect(grid.props?.extraParams).toEqual({});
+    expect(columns().some((c) => (c.field ?? '').startsWith('budget_'))).toBe(false);
+    expect(screen.queryByRole('button', { name: /contracts\.list\.noBudgetLine/ })).toBeNull();
+    expect(screen.queryByRole('combobox', { name: 'contracts.list.budgetYear' })).toBeNull();
   });
 });

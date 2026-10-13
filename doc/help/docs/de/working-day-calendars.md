@@ -7,7 +7,7 @@ Es gibt zwei Arten von Kalendern:
 - **Standard**: aus einem Land angelegt, und aus einer Region, wenn das Land Regionen hat. Die Arbeitstage eines beliebigen Jahres sind die Wochentage jedes Monats abzüglich der Feiertage des Landes. Sie müssen nichts eingeben und können trotzdem jeden Monat jedes Jahres ändern
 - **Individuell**: Sie geben die Arbeitstage jedes Jahres selbst ein, zum Beispiel für eine Arbeitszeitvereinbarung mit eigenen freien Tagen
 
-Im Budget-Tab einer OPEX- oder CAPEX-Position verwendet jede Zeile mit Preis pro Tag einen Kalender. Zeilen mit Preis pro Monat oder pro Stück brauchen keinen. Siehe [Menge und Preis](opex.md#menge-und-preis).
+Im Budget-Tab einer Budgetzeile verwendet jede Zeile unter Menge und Preis mit Preis pro Tag einen Kalender. Zeilen mit Preis pro Monat oder pro Stück brauchen keinen. Siehe [Menge und Preis](budget-lines.md#menge-und-preis).
 
 ---
 
@@ -239,7 +239,7 @@ Laden oder aktualisieren Sie Kalender und ihre Arbeitstage aus einer Datei.
 
 Budget-Administratoren sind Kalender-Administratoren: Die integrierte Rolle Budget-Administrator erhält admin. Jede andere Rolle beginnt mit der Stufe, die sie für Abteilungen hat. Stammdaten-Administrator ist also admin, Budget-Mitglied und Stammdaten-Mitglied sind Mitglieder, und die Leserollen können lesen.
 
-Wer OPEX oder CAPEX lesen kann, kann im Budget-Tab einen Kalender wählen, ohne Zugriff auf diese Seite zu haben.
+Wer Budgetzeilen (Budget) lesen kann, kann im Budget-Tab einen Kalender wählen, ohne Zugriff auf diese Seite zu haben.
 
 ---
 

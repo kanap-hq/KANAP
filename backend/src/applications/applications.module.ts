@@ -6,7 +6,6 @@ import { ApplicationCompany } from './application-company.entity';
 import { ApplicationDepartment } from './application-department.entity';
 import { ApplicationContractLink } from './application-contract.entity';
 import { ApplicationSpendItemLink } from './application-spend-item.entity';
-import { ApplicationCapexItemLink } from './application-capex-item.entity';
 import { ApplicationLink } from './application-link.entity';
 import { ApplicationAttachment } from './application-attachment.entity';
 import { ApplicationDataResidency } from './application-data-residency.entity';
@@ -49,7 +48,6 @@ import {
       ApplicationDepartment,
       ApplicationContractLink,
       ApplicationSpendItemLink,
-      ApplicationCapexItemLink,
       ApplicationLink,
       ApplicationAttachment,
       ApplicationDataResidency,

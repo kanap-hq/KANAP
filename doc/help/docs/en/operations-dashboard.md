@@ -1,29 +1,57 @@
 # Budget management overview
 
-The budget management overview gives you a high-level view of where your IT spend stands right now: OPEX and CAPEX snapshots, upcoming deadlines, data quality indicators, and the items that deserve your attention most, all in one place.
+The budget management overview gives you a high-level view of where your IT spend stands right now: the budget by type and year, your own budget lines, upcoming deadlines, data quality indicators, and the lines that deserve your attention most, all in one place.
 
 ## Where to find it
 
 - Path: **Budget management > Overview** (`/ops`)
 - The page you land on after login is your personal [dashboard](my-dashboard.md). Open this overview from the **Budget management** workspace.
 
+## Header actions
+
+The header holds shortcut buttons:
+
+- **New OPEX line** and **New CAPEX line** open a new budget line of that type. They show when your role has at least the Member level on Budget (`budget:member`)
+- **New contract** opens a new contract. It shows when your role can create contracts
+- **Customize**, on the right, opens the settings of this overview. See [Customizing the overview](#customizing-the-overview)
+
 ## Layout
 
-The overview is built from tiles arranged in a responsive grid: three columns on a wide screen, two on a tablet, and a single column on mobile. Each tile has an icon, a title, and usually a **View** button that takes you straight to the full page behind the data.
+The overview is built from tiles arranged in a responsive grid: three columns on a wide screen, two on a tablet, and a single column on mobile. The **Budget** tile is wider: two columns on a wide screen, the full width on a tablet. Each tile has an icon, a title, and usually a button that takes you to the full page behind the data.
+
+Several tiles have **All**, **OPEX** and **CAPEX** tabs in their header to choose the type of lines they cover. Each tile remembers your choice in your browser.
 
 ## Tiles
 
-### OPEX snapshot
+The tiles below are listed in their default order.
 
-A compact table covering three fiscal years: last year (Y-1), current year (Y), and next year (Y+1). Up to five value columns appear: the budget columns your organisation shows, under their names (**Budget**, **Revision**, **Actuals** and **Expected landing** with the standard settings, plus **Forecast** when it is shown). A column shows when it holds an amount for at least one of the three years. Hidden columns never appear. The OPEX and CAPEX tiles show the same columns. All amounts are rounded to the nearest thousand and displayed with a "k" suffix (for example, `7 846k`).
+### Budget
 
-Click **View** to open the OPEX list.
+A table covering three fiscal years: last year (Y-1), the current year (Y) and next year (Y+1). Each year has three rows: **OPEX**, **CAPEX** and **Total**. The value columns are the budget columns your organisation shows, under their names (**Budget**, **Revision**, **Actuals** and **Expected landing** with the standard settings, plus **Forecast** when it is shown). You can keep fewer of them in [Customize](#customizing-the-overview). A column shows when it holds an amount for at least one row. Hidden columns never appear. All amounts are rounded to the nearest thousand and displayed with a "k" suffix (for example, `7 846k`).
 
-### CAPEX snapshot
+Click an amount to open the [budget lines list](budget-lines.md) on that type. A **Total** amount opens the list on both types. Click **View** to open the list.
 
-Same layout and formatting as the OPEX snapshot, but drawn from your capital expenditure data.
+### Data hygiene
 
-Click **View** to open the CAPEX list.
+Checks that help you spot incomplete lines at a glance. The tile shows one column of counts per type: **OPEX** and **CAPEX** side by side. The counts cover the lines the list shows by default (**Show: Enabled**).
+
+- **No IT owner**: lines missing an IT owner
+- **No business owner**: lines missing a business owner
+- **No paying company**: lines without a paying company
+- **No cost center**: lines without a cost center
+- **No Budget for next year**: lines whose default column is zero or empty for next year. The check names your default column
+- **Account not in the company's chart**: lines whose account does not belong to the paying company's chart of accounts
+
+A count turns orange (red for the chart check) when it is above zero. Click a count to open the list on exactly the lines it counts.
+
+### My budget
+
+The lines in your name, on the default column of the current year (the subtitle names it, for example **Budget, Y**). Use the **All** / **OPEX** / **CAPEX** tabs to choose the type.
+
+- **As IT owner**, **As business owner** and **As budget holder**: how many lines you hold in each role, and their total. Click a row to open the list on those lines
+- **My lines**: your three largest lines, whatever the role, with their reference. Click one to open it
+
+The tile reads "No budget lines in your name" when you hold no line.
 
 ### My tasks
 
@@ -37,40 +65,40 @@ Lists the next five contract cancellation deadlines that are still in the future
 
 Click **View all** to open the Contracts page.
 
-### Data hygiene
+### Top lines
 
-Four checks that help you spot incomplete records at a glance. The tile shows one column of counts per item type you can read: **OPEX** and **CAPEX** side by side.
+The five largest lines for the current year, ranked by the default column. The subtitle names the column, for example **Budget, Y**. Amounts are rounded to thousands with a "k" suffix.
 
-- **No IT owner**: items missing an IT owner
-- **No business owner**: items missing a business owner
-- **No paying company**: items without a paying company
-- **Account not in the company's chart**: items whose account does not belong to the paying company's chart of accounts
+Use the **All** / **OPEX** / **CAPEX** tabs to choose the type. Click **Open** to view the full Top items report on the same type.
 
-A count turns orange (red for the chart check) when it is above zero. Click a count to open the list of that type.
+### Top increases
 
-### Quick actions
+The five lines with the largest increase in the default column compared to the previous year. The subtitle names the column, for example **Budget, Y vs Y-1**. Lines whose amount stayed flat or went down do not appear.
 
-Shortcut buttons to create a new OPEX or CAPEX item directly from the overview. These buttons are only visible if your role grants you at least `opex:manager` or `capex:manager` permissions.
+Use the **All** / **OPEX** / **CAPEX** tabs to choose the type. Click **Open** to view the full Top increase / decrease report on the same type.
 
-Below the buttons, a **Recent updates** section lists the five most recently edited items, OPEX and CAPEX together. Each row shows the date of the last edit, the item name and its type. Click a row to open the item.
+### By cost center
 
-### Top items (Y)
+The five cost centers with the largest total on the default column of the current year, with a bar for each. Lines without a cost center count together as **No cost center**. Use the **All** / **OPEX** / **CAPEX** tabs to choose the type. Click a row to open the list on that cost center's lines.
 
-The five largest items for the current year, ranked by the default column. The title names the column, for example **Top items (Budget, Y)**. Amounts are rounded to thousands with a "k" suffix.
+### Recent updates
 
-Use the **OPEX** / **CAPEX** tabs in the tile header to choose the item type. The tile remembers your choice. Click **Open** to view the full Top items report on the same type.
+The five most recently edited budget lines, OPEX and CAPEX together. Each row shows the date of the last edit, the line's reference, its name and its type. Click a row to open the line.
 
-### Top increases (Y vs Y-1)
+Without read access to budget lines (`budget:reader`), the budget tiles are hidden. **My tasks** needs read access to tasks, and **Next renewals** read access to contracts.
 
-The five items with the largest increase in the default column compared to the previous year, computed over every item of the type. The title names the column, for example **Top increases (Budget, Y vs Y-1)**. Items whose amount stayed flat or went down do not appear. Amounts are rounded to thousands with a "k" suffix.
+## Customizing the overview
 
-Use the **OPEX** / **CAPEX** tabs in the tile header to choose the item type. The tile remembers your choice. Click **Open** to view the full Top increase / decrease report on the same type.
+Click **Customize** to open **Budget dashboard settings**. Your choices apply to your own overview only.
 
-A type you cannot read is disabled in the tabs and has no column in **Data hygiene**. If you can read neither OPEX nor CAPEX, these tiles are hidden.
+- **Show or hide a tile**: tick or untick it. The dialog lists the tiles your role can see
+- **Change the order**: drag a tile by its handle on the right
+- **Amount columns of the Budget tile**: **Workspace columns**, ticked by default, follows the columns your organisation shows. Untick it to choose the columns yourself. Keep at least one: the dialog says "Choose at least one amount column." otherwise
+- **Save** applies your choices. **Reset to defaults** shows every tile again, in the default order, with the organisation's columns
 
 ## Tips
 
-- **Which column the tiles use**: A budget administrator chooses the default column and the column names in [Budget columns](budget-operations.md#budget-columns). The top tiles and the reports they open follow that choice.
-- **Rounded numbers**: Every amount on the overview is rounded to thousands for a compact view. Open the OPEX or CAPEX list, or the reports, when you need exact figures.
-- **Missing buttons**: If you do not see the **New OPEX** or **New CAPEX** buttons, your current role does not include the required manager permission. Ask your administrator to check your access.
+- **Which column the tiles use**: A budget administrator chooses the default column and the column names in [Budget columns](budget-operations.md#budget-columns). The tiles and the reports they open follow that choice.
+- **Rounded numbers**: Every amount on the overview is rounded to thousands for a compact view. Open the budget lines list, or the reports, when you need exact figures.
+- **Missing buttons**: If you do not see the **New OPEX line** or **New CAPEX line** buttons, your current role does not have the Member level on Budget. Ask your administrator to check your access.
 - **Empty tiles**: A tile that shows "No data" simply means there are no records of that type yet. Once you or your team start entering data, the tile will populate automatically.

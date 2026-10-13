@@ -56,8 +56,7 @@ Si desea el camino más corto hacia la productividad, comience con las guías de
 
 ### Gestión presupuestaria
 
-- [OPEX](opex.md) - Gestión de costes recurrentes de IT y asignaciones
-- [CAPEX](capex.md) - Seguimiento de proyectos de inversión de capital
+- [Líneas presupuestarias](budget-lines.md) - Planificar y seguir las líneas OPEX y CAPEX, sus presupuestos y sus asignaciones
 - [Contratos](contracts.md) - Gestión de contratos con proveedores y renovaciones
 - [Administración presupuestaria](budget-operations.md) - Ajustes presupuestarios y operaciones de congelación, copia y restablecimiento
 - [Monedas](currencies.md) - Monedas de reporting y predeterminadas, tipos de cambio

@@ -4,6 +4,7 @@ import type { SxProps, Theme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import { useLookupPicker } from '../../hooks/useLookupPicker';
 import { FieldLabel } from '../design';
+import OptionWithHint from './OptionWithHint';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
 import { useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
 import { ANALYTICS_VALUES_LOOKUP_ENDPOINT, type AnalyticsValue } from '../../services/analytics';
@@ -25,6 +26,8 @@ type Props = {
   selectedOption?: Pick<AnalyticsValue, 'id' | 'name'> & Partial<AnalyticsValue> | null;
   /** Offers only the values this kind of line may use. A held value of the other type still shows. */
   lineType?: LineType;
+  /** The value can be changed but not removed (a required dimension on a line holding a value). */
+  disableClearable?: boolean;
 };
 
 /** One dimension's values. The list holds enabled values; the current value stays shown when it is disabled. */
@@ -40,6 +43,7 @@ export default function AnalyticsCategorySelect({
   textFieldSx,
   selectedOption,
   lineType,
+  disableClearable = false,
 }: Props) {
   const { t } = useTranslation(['master-data', 'common']);
   const needsAxisLabel = label === undefined && !hideLabel;
@@ -71,21 +75,13 @@ export default function AnalyticsCategorySelect({
       }}
       getOptionLabel={(option) => picker.label(option, (o) => o.name ?? '')}
       renderOption={(props, option) => (
-        <li {...props} key={option.id}>
-          <Box>
-            <Box sx={{ fontWeight: 500 }}>{option.name}</Box>
-            {option.description && (
-              <Box sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-                {option.description}
-              </Box>
-            )}
-            {option.status === 'disabled' && (
-              <Box sx={{ fontSize: '0.75rem', color: 'warning.main' }}>
-                {t('common:statuses.disabled')}
-              </Box>
-            )}
-          </Box>
-        </li>
+        <OptionWithHint
+          key={option.id}
+          optionProps={props}
+          label={option.name}
+          hint={option.description}
+          trailing={option.status === 'disabled' ? t('common:statuses.disabled') : null}
+        />
       )}
       ListboxProps={naked ? { sx: drawerAutocompleteListboxSx } : undefined}
       renderInput={(params) => (
@@ -109,8 +105,10 @@ export default function AnalyticsCategorySelect({
         />
       )}
       disabled={disabled}
+      disableClearable={disableClearable}
       clearOnBlur
-      clearOnEscape
+      // Escape clears the value even with `disableClearable`.
+      clearOnEscape={!disableClearable}
       noOptionsText={picker.loading ? t('common:status.loading') : t('analytics.noOptions')}
       fullWidth
     />

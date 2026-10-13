@@ -72,7 +72,6 @@ import { setBudgetColumns } from './budgetColumnsTestState';
 import TopOpexReport from './TopOpexReport';
 import OpexDeltaReport from './OpexDeltaReport';
 import ComparisonReport from './ComparisonReport';
-import CapexBudgetTrendReport from './CapexBudgetTrendReport';
 import BudgetColumnsCompareReport from './BudgetColumnsCompareReport';
 import ConsolidationReport from './ConsolidationReport';
 import AnalyticsCategoryReport from './AnalyticsCategoryReport';
@@ -106,7 +105,7 @@ function slot(year: number, amount: number) {
 }
 
 function axis(id: string, patch: Partial<AnalyticsAxis>): AnalyticsAxis {
-  return { id, code: id, name: null, description: null, sort_order: 0, is_default: false, applies_to: null, status: 'enabled', disabled_at: null, ...patch };
+  return { id, code: id, name: null, description: null, sort_order: 0, is_default: false, applies_to: null, required: false, status: 'enabled', disabled_at: null, ...patch };
 }
 
 // The default dimension has no name of its own and reads as the translated default label.
@@ -213,7 +212,6 @@ describe('Top increase / decrease with a cost center group', () => {
 
 describe.each([
   ['OPEX trend', ComparisonReport],
-  ['CAPEX trend', CapexBudgetTrendReport],
 ])('%s with run only', (_name, Report) => {
   it('sums the run lines per year', async () => {
     renderReport(<Report />, '/report?runBuild=run');
@@ -297,8 +295,8 @@ describe('Reports with a dimension value picked', () => {
     expect(gridRows()[0].pct_of_total).toBe(Math.round((1000 / 1100) * 100));
   });
 
-  it('CAPEX trend: sums the lines holding no value on the dimension', async () => {
-    renderReport(<CapexBudgetTrendReport />, '/report?analytics=ax-nat:none');
+  it('Comparison on CAPEX: sums the lines holding no value on the dimension', async () => {
+    renderReport(<ComparisonReport />, '/report?scope=capex&analytics=ax-nat:none');
     await waitFor(() => expect(gridRows()[0]?.[String(Y)]).toBe(7020));
     expect(gridRows()[0][String(Y - 1)]).toBe(5);
   });
@@ -307,9 +305,13 @@ describe('Reports with a dimension value picked', () => {
 describe('Analytics report dimensions', () => {
   const dimensionPicker = () => screen.queryByRole('combobox', { name: 'reports.filters.dimension' });
   const groups = () => gridRows().map((row) => [row.group, row[String(Y)]]);
-  const valueCalls = () => get.mock.calls.filter(([url]) => url === '/analytics-categories').map(([, config]) => config?.params);
+  // The exclusion picker's catalogue (the values the report's lines may choose), not the dimension
+  // order the filter selects read.
+  const valueCalls = () => get.mock.calls
+    .filter(([url, config]) => url === '/analytics-categories' && config?.params?.filters != null)
+    .map(([, config]) => config?.params);
   /** The catalogue filter of the values the lines of a type may choose (theirs and those for both). */
-  const forLines = (scope: 'opex' | 'capex') => JSON.stringify({ applies_to: { filterType: 'set', values: [null, scope] } });
+  const forLines = (scope: 'opex' | 'capex' | 'all') => JSON.stringify({ applies_to: { filterType: 'set', values: scope === 'all' ? [null, 'opex', 'capex'] : [null, scope] } });
 
   async function exclude(option: string) {
     const input = screen.getByRole('combobox', { name: 'reports.filters.excludeCategories' });
@@ -348,7 +350,7 @@ describe('Analytics report dimensions', () => {
 
   it('groups an OPEX report on the default dimension when the address names one for CAPEX lines only', async () => {
     axesState.list = [DEFAULT_AXIS, { ...NATURE, applies_to: 'capex' }];
-    renderReport(<AnalyticsCategoryReport />, '/report?axis=ax-nat');
+    renderReport(<AnalyticsCategoryReport />, '/report?scope=opex&axis=ax-nat');
     await waitFor(() => expect(groups()).toHaveLength(5));
     expect(dimensionPicker()).toBeNull();
     expect(groups()[0]).toEqual(['Category e', 7000]);
@@ -371,7 +373,7 @@ describe('Analytics report dimensions', () => {
     // The dimension's own values load with the exclusion picker, not with the report.
     expect(valueCalls()).toEqual([]);
     await optionsOf('reports.filters.excludeCategories', 'keyDown');
-    expect(valueCalls()).toContainEqual({ axis_id: 'ax-def', limit: 1000, sort: 'name:ASC', filters: forLines('opex') });
+    expect(valueCalls()).toContainEqual({ axis_id: 'ax-def', limit: 1000, sort: 'sort_order:ASC', filters: forLines('all') });
 
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'reports.filters.dimension' }));
     fireEvent.click(within(await screen.findByRole('listbox')).getByRole('option', { name: 'Nature' }));
@@ -382,7 +384,7 @@ describe('Analytics report dimensions', () => {
       ['Software', 3],
     ]));
     expect(chart.options.title.text).toContain('"dimension":"Nature"');
-    await waitFor(() => expect(valueCalls()).toContainEqual({ axis_id: 'ax-nat', limit: 1000, sort: 'name:ASC', filters: forLines('opex') }));
+    await waitFor(() => expect(valueCalls()).toContainEqual({ axis_id: 'ax-nat', limit: 1000, sort: 'sort_order:ASC', filters: forLines('all') }));
   });
 
   it('offers the values the lines of the report may choose, and the values they hold', async () => {
@@ -402,10 +404,10 @@ describe('Analytics report dimensions', () => {
       }
       return { data: { items: [], total: 0 } };
     });
-    renderReport(<AnalyticsCategoryReport />, '/report?axis=ax-nat');
+    renderReport(<AnalyticsCategoryReport />, '/report?scope=opex&axis=ax-nat');
     await waitFor(() => expect(groups()).toHaveLength(3));
     const options = await optionsOf('reports.filters.excludeCategories', 'keyDown');
-    expect(valueCalls()).toContainEqual({ axis_id: 'ax-nat', limit: 1000, sort: 'name:ASC', filters: forLines('opex') });
+    expect(valueCalls()).toContainEqual({ axis_id: 'ax-nat', limit: 1000, sort: 'sort_order:ASC', filters: forLines('opex') });
     expect(options).toContain('SaaS subscriptions');
     expect(options).toContain('Hardware');
     expect(options).not.toContain('Leasing');
@@ -413,7 +415,7 @@ describe('Analytics report dimensions', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'operations.scope.capex' }));
     await waitFor(() => expect(screen.getByRole('combobox', { name: 'reports.filters.dimension' }).textContent).toBe('Nature'));
     await optionsOf('reports.filters.excludeCategories', 'keyDown');
-    await waitFor(() => expect(valueCalls()).toContainEqual({ axis_id: 'ax-nat', limit: 1000, sort: 'name:ASC', filters: forLines('capex') }));
+    await waitFor(() => expect(valueCalls()).toContainEqual({ axis_id: 'ax-nat', limit: 1000, sort: 'sort_order:ASC', filters: forLines('capex') }));
   });
 
   it('opens on the dimension the address names', async () => {
@@ -564,7 +566,6 @@ describe('Reports with the FTE measure', () => {
 
   it.each([
     ['OPEX trend', ComparisonReport],
-    ['CAPEX trend', CapexBudgetTrendReport],
   ])('%s: FTE per year, a year nobody declares empty, no point for it', async (_name, Report) => {
     renderReport(<Report />, '/report?measure=fte');
     await waitFor(() => expect(gridRows()[0]?.[String(Y)]).toBe(4.25));
@@ -655,4 +656,15 @@ describe('Reports with the FTE measure', () => {
     expect(screen.getByRole('combobox', { name: 'reports.filters.fteItems' }).textContent).toBe('reports.filters.fteItemsWith');
     expect(note()).toBeNull();
   });
+});
+
+it('All dimensions offer values for both natures from the unified request', async () => {
+  axesState.list = [DEFAULT_AXIS, { ...NATURE, applies_to: 'capex' }];
+  renderReport(<AnalyticsCategoryReport />, '/report?scope=all&axis=ax-nat');
+  await waitFor(() => expect(gridRows().map((row) => row.group)).toContain('Hardware'));
+  expect(screen.getByRole('tab', { name: 'operations.scope.all' })).toHaveAttribute('aria-selected', 'true');
+  expect(post.mock.calls.every(([url]) => url === '/budget-lines/summary/aggregate')).toBe(true);
+  fireEvent.keyDown(screen.getByRole('combobox', { name: 'reports.filters.excludeCategories' }), { key: 'ArrowDown' });
+  await screen.findByRole('listbox');
+  await waitFor(() => expect(get.mock.calls.some(([url, config]) => url === '/analytics-categories' && config?.params?.filters === JSON.stringify({ applies_to: { filterType: 'set', values: [null, 'opex', 'capex'] } }))).toBe(true));
 });

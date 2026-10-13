@@ -27,7 +27,6 @@ const ENTITY_TYPE_FROM_URL_PREFIX: Array<{ prefix: string; entityType: string }>
   { prefix: '/it/interfaces/', entityType: 'interfaces' },
   { prefix: '/it/locations/', entityType: 'locations' },
   { prefix: '/ops/contracts/', entityType: 'contracts' },
-  { prefix: '/ops/capex/', entityType: 'capex_items' },
   { prefix: '/it/incidents/', entityType: 'incidents' },
   { prefix: '/master-data/companies/', entityType: 'companies' },
   { prefix: '/master-data/contacts/', entityType: 'contacts' },
@@ -54,6 +53,8 @@ function isControlMarker(text: string): boolean {
 }
 
 function inferEntityTypeFromUrl(url: string): string | null {
+  // Neutral budget links carry no nature. The server resolves their context before displaying it.
+  if (url.startsWith('/ops/budget/')) return null;
   return ENTITY_TYPE_FROM_URL_PREFIX.find((entry) => url.startsWith(entry.prefix))?.entityType ?? null;
 }
 

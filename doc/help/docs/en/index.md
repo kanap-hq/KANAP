@@ -56,8 +56,7 @@ If you want the shortest path to productivity, start with the Fast Track guides 
 
 ### Budget Management
 
-- [OPEX](opex.md) - Manage recurring IT costs and allocations
-- [CAPEX](capex.md) - Track capital expenditure projects
+- [Budget lines](budget-lines.md) - Plan and track OPEX and CAPEX lines, their budgets and allocations
 - [Contracts](contracts.md) - Manage vendor contracts and renewals
 - [Budget Administration](budget-operations.md) - Budget settings, freeze, copy, and reset operations
 - [Currencies](currencies.md) - Reporting and default currencies, FX rates

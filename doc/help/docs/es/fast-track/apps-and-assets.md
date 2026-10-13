@@ -133,8 +133,8 @@ Vaya a la pestaña **Relaciones** para conectar su aplicación con el resto de s
 
 | Tipo de vínculo | Qué conecta | Por qué |
 |-----------|----------------------|-----|
-| **Partidas OPEX** | Costes recurrentes (licencias, cuotas SaaS) | Ver el coste completo |
-| **Partidas CAPEX** | Proyectos de inversión | Seguir la inversión |
+| **Líneas OPEX** | Costes recurrentes (licencias, cuotas SaaS) | Ver el coste completo |
+| **Líneas CAPEX** | Proyectos de inversión | Seguir la inversión |
 | **Contratos** | Acuerdos con proveedores | Saber cuándo vencen las renovaciones |
 | **Proyectos** | Proyectos del portafolio | Conectar con su portafolio de proyectos |
 | **Sitios web relevantes** | Documentación, wikis, runbooks | Acceso rápido a recursos externos |

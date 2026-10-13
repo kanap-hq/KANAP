@@ -781,12 +781,12 @@ export default function AdminAiPage() {
         </DialogContent>
         <DialogActions>
           {createdKey ? (
-            <Button onClick={() => { setCreateKeyDialog(false); setCreatedKey(null); }}>{t('aiAdmin.actions.done')}</Button>
+            <Button variant="action" onClick={() => { setCreateKeyDialog(false); setCreatedKey(null); }}>{t('aiAdmin.actions.done')}</Button>
           ) : (
             <>
-              <Button onClick={() => setCreateKeyDialog(false)}>{t('common:buttons.cancel')}</Button>
+              <Button variant="action" onClick={() => setCreateKeyDialog(false)}>{t('common:buttons.cancel')}</Button>
               <Button
-                variant="contained"
+                variant="action-primary"
                 onClick={() => createKeyMutation.mutate(newKeyLabel)}
                 disabled={!newKeyLabel.trim() || createKeyMutation.isPending}
               >

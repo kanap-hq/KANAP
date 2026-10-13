@@ -30,7 +30,8 @@
     "selectAll": "Tout sélectionner",
     "browse": "Parcourir",
     "loadMore": "Charger plus",
-    "done": "Terminé"
+    "done": "Terminé",
+    "moreActions": "Plus d'actions"
   },
   "status": {
     "loading": "Chargement...",
@@ -98,6 +99,7 @@
     "clearSearch": "Effacer la recherche"
   },
   "labels": {
+    "positionOf": "{{index}} sur {{total}}",
     "show": "Afficher",
     "all": "Tous",
     "enabled": "Activés",
@@ -189,11 +191,14 @@
     "selectTemplate": "Sélectionner un modèle",
     "useTemplate": "Utiliser le modèle",
     "noTemplatesAvailable": "Aucun modèle publié n'est disponible.",
+    "newOpexLine": "Nouvelle ligne OPEX",
+    "newCapexLine": "Nouvelle ligne CAPEX",
+    "newContract": "Nouveau contrat",
     "newOpex": "Nouvel OPEX",
     "newCapex": "Nouveau CAPEX",
     "recentUpdates": "Mises à jour récentes",
     "noRecentUpdates": "Aucune mise à jour récente",
-    "quickActions": "Actions rapides",
+    "budgetSnapshot": "Budget",
     "opexSnapshot": "Aperçu OPEX",
     "capexSnapshot": "Aperçu CAPEX",
     "myTasks": "Mes tâches",
@@ -209,11 +214,13 @@
       "noBudgetNextYear": "Sans {{column}} l'an prochain",
       "accountOutsideChart": "Compte hors du plan de la société"
     },
-    "topItemsY": "Top postes ({{column}}, A)",
-    "topIncreasesYvsYminus1": "Plus fortes hausses ({{column}}, A vs A-1)",
+    "topItems": "Top lignes",
+    "columnY": "{{column}}, A",
+    "topIncreases": "Plus fortes hausses",
+    "columnYvsYminus1": "{{column}}, A vs A-1",
     "noIncreases": "Aucune hausse",
     "myBudget": {
-      "title": "Mon budget ({{column}}, A)",
+      "title": "Mon budget",
       "roles": {
         "itOwner": "Comme responsable IT",
         "businessOwner": "Comme responsable métier",
@@ -221,9 +228,10 @@
       },
       "lineCount_one": "{{count}} ligne",
       "lineCount_other": "{{count}} lignes",
-      "none": "Aucune ligne budgétaire à votre nom"
+      "none": "Aucune ligne budgétaire à votre nom",
+      "myLines": "Mes lignes"
     },
-    "byCostCenterY": "Par centre de coûts ({{column}}, A)",
+    "byCostCenter": "Par centre de coûts",
     "noCostCenter": "Sans centre de coûts",
     "settings": {
       "title": "Paramètres du tableau de bord",
@@ -350,8 +358,8 @@
         "connection": "Connexion",
         "contract": "Contrat",
         "task": "Tâche",
-        "opexItem": "Élément OPEX",
-        "capexItem": "Élément CAPEX",
+        "opexItem": "Ligne OPEX",
+        "capexItem": "Ligne CAPEX",
         "incident": "Incident",
         "location": "Site",
         "document": "Document"
@@ -373,7 +381,15 @@
       "netboxErrors_one": "{{count}} erreur",
       "netboxErrors_other": "{{count}} erreurs"
     },
-    "welcome": "Bienvenue"
+    "welcome": "Bienvenue",
+    "budgetSettings": {
+      "customize": "Personnaliser",
+      "title": "Réglages du tableau de bord du budget",
+      "columns": "Colonnes de montant",
+      "tenantColumns": "Colonnes de l'espace de travail",
+      "atLeastOne": "Choisissez au moins une colonne de montant.",
+      "saveFailed": "Impossible d’enregistrer les réglages du tableau de bord."
+    }
   },
   "csv": {
     "exportTitle": "Exporter en CSV",
@@ -463,7 +479,10 @@
     "costCentersLoadFailed": "Les centres de coûts n'ont pas pu être chargés.",
     "notSet": "Non défini",
     "moreResults": "Tapez pour affiner : d'autres résultats existent",
-    "valueUnavailable": "Valeur plus disponible"
+    "valueUnavailable": "Valeur plus disponible",
+    "budgetLines": "Lignes budgétaires",
+    "searchBudgetLines": "Rechercher des lignes budgétaires",
+    "noBudgetLinesFound": "Aucune ligne budgétaire trouvée"
   },
   "documentEditor": {
     "expandDocument": "Agrandir le document",
@@ -629,7 +648,8 @@
     "fromSupplier": "Du fournisseur",
     "manuallyAdded": "Ajouté manuellement",
     "removeContact": "Retirer le contact",
-    "insufficientPermission": "Autorisation insuffisante"
+    "insufficientPermission": "Autorisation insuffisante",
+    "syncFromSupplier": "Reprendre les contacts du fournisseur"
   },
   "export": {
     "button": "Exporter",
@@ -751,13 +771,13 @@
     "changedAt": "Modifié ailleurs à {{time}}",
     "changedOn": "Modifié ailleurs le {{date}} à {{time}}",
     "changed": "Modifié ailleurs",
-    "changedByYouAt": "Vous avez modifié ce poste ailleurs à {{time}}",
-    "changedByYouOn": "Vous avez modifié ce poste ailleurs le {{date}} à {{time}}",
-    "changedByYou": "Vous avez modifié ce poste ailleurs",
+    "changedByYouAt": "Vous avez modifié cette ligne ailleurs à {{time}}",
+    "changedByYouOn": "Vous avez modifié cette ligne ailleurs le {{date}} à {{time}}",
+    "changedByYou": "Vous avez modifié cette ligne ailleurs",
     "aUser": "un utilisateur",
     "badge": "Modifié ailleurs",
     "reload": "Recharger",
     "reloadHint": "Recharger affiche ces modifications. Ce que vous êtes en train de modifier reste à l'écran.",
-    "deleted": "Ce poste a été supprimé"
+    "deleted": "Cette ligne a été supprimée"
   }
 }

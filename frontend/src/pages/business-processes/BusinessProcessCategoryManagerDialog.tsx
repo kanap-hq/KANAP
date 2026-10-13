@@ -272,8 +272,8 @@ export default function BusinessProcessCategoryManagerDialog({ open, onClose, on
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose} disabled={saving}>Cancel</Button>
-        <Button variant="contained" onClick={handleSave} disabled={saving || loading}>
+        <Button variant="action" onClick={handleClose} disabled={saving}>Cancel</Button>
+        <Button variant="action-primary" onClick={handleSave} disabled={saving || loading}>
           Save
         </Button>
       </DialogActions>

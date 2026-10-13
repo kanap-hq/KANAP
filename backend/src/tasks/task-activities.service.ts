@@ -7,6 +7,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { TaskTimeEntriesService } from './task-time-entries.service';
 import { AuditService } from '../audit/audit.service';
 import { normalizeMarkdownRichText } from '../common/markdown-rich-text';
+import { writeTaskColumns } from './task-column-write';
 
 export interface TaskActivityItem {
   id: string;
@@ -310,8 +311,8 @@ export class TaskActivitiesService {
 
       const before = { ...task };
       oldStatus = task.status;
-      task.status = dto.status;
-      const savedTask = await taskRepo.save(task);
+      // The status alone: the task read above may be older than its relation (`task-column-write.ts`).
+      const savedTask = await writeTaskColumns(taskRepo, task, { status: dto.status });
       newStatus = savedTask.status;
 
       await this.audit.log(

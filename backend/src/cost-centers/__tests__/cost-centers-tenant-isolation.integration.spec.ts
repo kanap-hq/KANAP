@@ -39,12 +39,13 @@ async function testTableIsTenantIsolated() {
   assert.match(policies[0].qual, /tenant_id = app_current_tenant\(\)/);
   assert.match(policies[0].with_check, /tenant_id = app_current_tenant\(\)/);
 
+  // capex_items is dormant since lot Z1, dropped by lot Z2: its key went with it, the CAPEX lines use spend_items'.
   const keys = await dataSource.query(
     `SELECT conname, pg_get_constraintdef(oid) AS def FROM pg_constraint
-     WHERE conname IN ('cost_centers_parent_fk', 'spend_items_cost_center_fk', 'capex_items_cost_center_fk')
+     WHERE conname IN ('cost_centers_parent_fk', 'spend_items_cost_center_fk')
      ORDER BY conname`,
   );
-  assert.deepEqual(keys.map((key: any) => key.conname), ['capex_items_cost_center_fk', 'cost_centers_parent_fk', 'spend_items_cost_center_fk']);
+  assert.deepEqual(keys.map((key: any) => key.conname), ['cost_centers_parent_fk', 'spend_items_cost_center_fk']);
   for (const key of keys) {
     assert.match(key.def, /FOREIGN KEY \(tenant_id, (parent_id|cost_center_id)\) REFERENCES cost_centers\(tenant_id, id\)/);
   }
@@ -126,7 +127,7 @@ async function testServiceRefusesOtherTenantsNodes() {
       `UPDATE spend_items SET cost_center_id = $2 WHERE tenant_id = $1 AND id = $3`,
       [tenantB, leafA.id, lineB],
     ));
-    await expectRefused(runner, /capex_items_cost_center_fk/, () => seedLine(runner, 'capex', tenantB, leafA.id));
+    await expectRefused(runner, /spend_items_cost_center_fk/, () => seedLine(runner, 'capex', tenantB, leafA.id));
     // B's own node is accepted on B's line.
     await runner.query(`UPDATE spend_items SET cost_center_id = $2 WHERE tenant_id = $1 AND id = $3`, [tenantB, leafB.id, lineB]);
 

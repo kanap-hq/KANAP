@@ -615,9 +615,36 @@
     "openDimension": "{{name}} öffnen",
     "markedDimension": "{{name}}, {{marks}}",
     "disabledMark": "Deaktiviert",
+    "defaultMark": "Standard",
     "enableToAddValues": "Aktivieren Sie diese Dimension, um Werte hinzuzufügen.",
     "export": "Werte exportieren",
     "import": "Werte importieren",
+    "reorder": {
+      "action": "Neu ordnen",
+      "title": "Werte von {{name}} neu ordnen",
+      "hint": "Ziehen Sie die Werte in die Reihenfolge, in der Listen und Filter sie anzeigen sollen.",
+      "loadFailed": "Die Werte konnten nicht geladen werden.",
+      "saveFailed": "Die Reihenfolge konnte nicht gespeichert werden.",
+      "roleDescription": "verschiebbarer Wert",
+      "instructions": "Um einen Wert zu verschieben, drücken Sie die Leertaste oder Eingabe, verschieben Sie ihn mit den Pfeiltasten und drücken Sie dann die Leertaste oder Eingabe, um ihn abzulegen. Escape bricht ab.",
+      "pickedUp": "Wert {{name}} aufgenommen.",
+      "movedTo": "Wert {{name}} an Position {{position}} von {{count}}.",
+      "droppedAt": "Wert {{name}} an Position {{position}} von {{count}} abgelegt.",
+      "cancelled": "Wert {{name}} wieder an seinem Platz."
+    },
+    "reorderDimensions": {
+      "action": "Dimensionen neu ordnen",
+      "title": "Dimensionen neu ordnen",
+      "hint": "Ziehen Sie die Dimensionen in die Reihenfolge, in der Ansichten, Listen und die Budgetdatei sie zeigen sollen.",
+      "loadFailed": "Die Dimensionen konnten nicht geladen werden.",
+      "saveFailed": "Die Reihenfolge konnte nicht gespeichert werden.",
+      "roleDescription": "verschiebbare Dimension",
+      "instructions": "Um eine Dimension zu verschieben, drücken Sie die Leertaste oder Eingabe, verschieben Sie sie mit den Pfeiltasten und drücken Sie dann die Leertaste oder Eingabe, um sie abzulegen. Escape bricht ab.",
+      "pickedUp": "Dimension {{name}} aufgenommen.",
+      "movedTo": "Dimension {{name}} an Position {{position}} von {{count}}.",
+      "droppedAt": "Dimension {{name}} an Position {{position}} von {{count}} abgelegt.",
+      "cancelled": "Dimension {{name}} wieder an ihrem Platz."
+    },
     "previousValue": "Vorheriger Wert",
     "nextValue": "Nächster Wert",
     "previousDimension": "Vorherige Dimension",
@@ -628,14 +655,14 @@
       "order": "Reihenfolge",
       "description": "Beschreibung",
       "dimension": "Dimension",
-      "lifecycle": "Lebenszyklus"
+      "lifecycle": "Lebenszyklus",
+      "required": "Erforderlich"
     },
     "hints": {
       "nameDefault": "Leer lassen, um „{{label}}“ in der Sprache jeder Person anzuzeigen.",
       "code": "Wird als Spaltenname in CSV-Dateien verwendet: analytics:{{code}}. Eine Änderung ändert den Spaltennamen.",
       "codeDefault": "Ältere Dateien verwenden für diese Dimension die Spalte analytics_category; analytics:{{code}} funktioniert ebenfalls.",
       "codeCreate": "Wird als Spaltenname in CSV-Dateien verwendet. Kleinbuchstaben, Ziffern, - oder _.",
-      "order": "Die Dimensionen werden nach dieser Zahl sortiert, die kleinste zuerst.",
       "defaultLocked": "Diese Dimension kann weder deaktiviert noch gelöscht werden: Ältere Dateien und Fragen an die KI verwenden sie.",
       "appliesToDefault": "Die Standarddimension gilt für OPEX- und CAPEX-Zeilen.",
       "valueDimensionAppliesTo": {
@@ -658,14 +685,27 @@
       "capex_one": "{{count}} CAPEX-Zeile",
       "capex_other": "{{count}} CAPEX-Zeilen",
       "noValues": "Noch keine Werte.",
-      "dimensionUnused": "{{values}}, noch von keiner Zeile verwendet.",
-      "dimensionOne": "{{values}}, verwendet von {{lines}}.",
-      "dimensionBoth": "{{values}}, verwendet von {{opex}} und {{capex}}.",
-      "valueOne": "Verwendet von {{lines}}.",
-      "valueBoth": "Verwendet von {{opex}} und {{capex}}."
+      "dimensionLines_one": "Verwendet von {{count}} Zeile",
+      "dimensionLines_other": "Verwendet von {{count}} Zeilen",
+      "dimensionUnused": "Noch nicht verwendet",
+      "valueLines_one": "Verwendet von {{count}} Zeile",
+      "valueLines_other": "Verwendet von {{count}} Zeilen",
+      "valueUnused": "Noch nicht verwendet"
     },
-    "deleteBlocked": {
-      "dimensionHasValues": "Um diese Dimension zu löschen, löschen Sie zuerst ihre Werte."
+    "forceDelete": {
+      "title": "{{name}} löschen?",
+      "dimensionValues_one": "Ihr Wert wird ebenfalls gelöscht.",
+      "dimensionValues_other": "Ihre {{count}} Werte werden ebenfalls gelöscht.",
+      "dimensionUsedValues_one": "Ihr Wert wird gelöscht",
+      "dimensionUsedValues_other": "Ihre {{count}} Werte werden gelöscht",
+      "dimensionUsed": "{{values}}, und sie wird aus {{lines}} entfernt. Diese Daten können nicht wiederhergestellt werden.",
+      "valueUsed_one": "Er wird aus {{count}} Budgetzeile entfernt. Diese Daten können nicht wiederhergestellt werden.",
+      "valueUsed_other": "Er wird aus {{count}} Budgetzeilen entfernt. Diese Daten können nicht wiederhergestellt werden.",
+      "valuesUsed_one": "{{count}} ausgewählter Wert wird verwendet: Er wird aus {{lines}} entfernt. Diese Daten können nicht wiederhergestellt werden.",
+      "valuesUsed_other": "{{count}} ausgewählte Werte werden verwendet: Sie werden aus {{lines}} entfernt. Diese Daten können nicht wiederhergestellt werden.",
+      "budgetLines_one": "{{count}} Budgetzeile",
+      "budgetLines_other": "{{count}} Budgetzeilen",
+      "confirmAnyway": "Trotzdem löschen"
     },
     "appliesToConflict": {
       "capex_one": "{{count}} CAPEX-Zeile hat einen Wert für diese Dimension. Sie behält ihn, ausgeblendet, solange die Dimension nur für OPEX-Zeilen gilt.",
@@ -680,6 +720,25 @@
       "opex_other": "{{count}} OPEX-Zeilen haben diesen Wert. Sie behalten ihn, aber neue OPEX-Zeilen können ihn nicht auswählen."
     },
     "showLines": "Diese Zeilen anzeigen",
+    "required": {
+      "missing": {
+        "both": "{{opex}} und {{capex}} haben keinen Wert.",
+        "opex_one": "{{count}} OPEX-Zeile hat keinen Wert.",
+        "opex_other": "{{count}} OPEX-Zeilen haben keinen Wert.",
+        "capex_one": "{{count}} CAPEX-Zeile hat keinen Wert.",
+        "capex_other": "{{count}} CAPEX-Zeilen haben keinen Wert."
+      },
+      "showLines": {
+        "opex": "OPEX-Zeilen anzeigen",
+        "capex": "CAPEX-Zeilen anzeigen"
+      },
+      "disabledHint": "Wird nicht geprüft, solange die Dimension deaktiviert ist.",
+      "unusable": {
+        "opex": "Kein aktivierter Wert ist für OPEX-Zeilen verwendbar. Neue OPEX-Zeilen können nicht angelegt werden.",
+        "capex": "Kein aktivierter Wert ist für CAPEX-Zeilen verwendbar. Neue CAPEX-Zeilen können nicht angelegt werden.",
+        "both": "Kein aktivierter Wert ist für OPEX- oder CAPEX-Zeilen verwendbar. Neue Zeilen können nicht angelegt werden."
+      }
+    },
     "messages": {
       "loadFailed": "Der Wert konnte nicht geladen werden.",
       "saveFailed": "Der Wert konnte nicht gespeichert werden.",
@@ -693,8 +752,36 @@
       "nameRequired": "Geben Sie einen Namen ein.",
       "codeRequired": "Geben Sie einen Code ein.",
       "codeInvalid": "Verwenden Sie Kleinbuchstaben, Ziffern, - oder _ (höchstens 40).",
-      "orderInvalid": "Geben Sie eine ganze Zahl ein.",
       "dimensionRequired": "Wählen Sie eine Dimension."
+    },
+    "recommended": {
+      "action": "Empfohlene Dimensionen",
+      "title": "Empfohlene Dimensionen hinzufügen",
+      "subtitle": "Vorgefertigte Dimensionen mit ihren Werten, für OPEX- und CAPEX-Positionen. Sie können sie danach umbenennen, ändern oder löschen.",
+      "dimensions": "Dimensionen",
+      "present": "Bereits vorhanden",
+      "presentAs": "Bereits vorhanden ({{name}})",
+      "language": "Sprache der Namen",
+      "submit": "Hinzufügen",
+      "names": {
+        "cost_pool": "Kostenart",
+        "it_tower": "IT-Bereich",
+        "purpose": "Zweck",
+        "priority": "Priorität",
+        "recurrence": "Wiederkehr"
+      },
+      "hints": {
+        "cost_pool": "Wofür das Geld ausgegeben wird: Hardware, Software, internes und externes Personal… Die Cost Pools von TBM.",
+        "it_tower": "Der Teil der IT, dem es dient: Rechenleistung, Speicher, Netzwerk, Arbeitsplatz… Die IT Towers von TBM.",
+        "purpose": "Warum das Geld ausgegeben wird: Ersatz, Kapazität, Compliance, Wachstum…",
+        "priority": "Zwingend, hoch, mittel oder niedrig.",
+        "recurrence": "Wiederkehrend oder einmalig."
+      },
+      "created_one": "{{count}} Dimension hinzugefügt: {{names}}.",
+      "created_other": "{{count}} Dimensionen hinzugefügt: {{names}}.",
+      "nothingCreated": "Nichts hinzugefügt: Diese Dimensionen sind bereits vorhanden.",
+      "failed": "Die Dimensionen konnten nicht hinzugefügt werden.",
+      "loadFailed": "Die empfohlenen Dimensionen konnten nicht geladen werden."
     }
   },
   "businessProcesses": {

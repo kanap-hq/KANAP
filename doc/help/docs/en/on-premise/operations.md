@@ -406,7 +406,7 @@ Start with the API log: `docker compose -f infra/compose.onprem.yml logs --no-lo
 | `[SECURITY]` warning at each start | `ADMIN_PASSWORD`, `JWT_SECRET` | Change the administrator's password in the application, or see [Password Reset](#password-reset). Use a `JWT_SECRET` of 32 characters or more |
 | Migration failed | PostgreSQL version | Must be 16+, extensions available |
 | 502 from reverse proxy | `docker compose -f infra/compose.onprem.yml ps` | Ensure the api container is running on port 8080 |
-| 413 from the reverse proxy on an upload | `client_max_body_size` | Set `client_max_body_size 50m;` in the nginx file |
+| 413 from the reverse proxy on an upload | `client_max_body_size` | Set `client_max_body_size 80m;` in the nginx file |
 | A reset email does not arrive, and the API log has an `ERROR` line with `unable to verify the first certificate` or `self-signed certificate` and the code `ESOCKET` | The certificate of the mail relay | The API does not trust the authority that signed the relay's certificate. Give it the authority's file (see [Certificates from an internal authority](configuration.md#optional-certificates-from-an-internal-authority)). Installing the authority on the server itself does not change the container |
 | Can't sign in | The password | `.env` creates the administrator at the first start only. Change the password in the application, or use [Password Reset](#password-reset) |
 

@@ -26,7 +26,8 @@ import CompanySelect from '../../components/fields/CompanySelect';
 import api from '../../api';
 import { MetricKey, horizontalBarChartHeight, metricFileName, useReportMetric } from './reportMetrics';
 import { escapeTooltipText } from './tooltipText';
-import { itemHref } from './useReportScope';
+import { itemHref, useReportScope } from './useReportScope';
+import ItemScopeTabs from '../operations/ItemScopeTabs';
 import { LinkCellRenderer } from '../../components/grid/renderers';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { useLocale } from '../../i18n/useLocale';
@@ -71,6 +72,9 @@ type CompanyChargebackDepartmentRow = {
 type CompanyChargebackItemRow = {
   versionId: string;
   itemId: string | null;
+  /** The line's number (its BL-n reference) and nature; null when the line is not read. */
+  itemNumber?: number | null;
+  nature?: 'opex' | 'capex' | null;
   itemName: string;
   allocationMethod: string;
   allocationMethodLabel: string;
@@ -154,6 +158,9 @@ export default function CompanyChargebackReport() {
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [year, setYear] = useState<number>(currentYear);
   const [metric, setMetric] = useReportMetric(budgetColumns);
+  // OPEX by default: the chargeback of before; CAPEX or both on request.
+  const [scope, setScope] = useReportScope('opex');
+  const scopeLabel = t(`operations.scope.${scope}`);
   const [showDepartments, setShowDepartments] = useState(true);
   const [showItems, setShowItems] = useState(true);
   const [showKpis, setShowKpis] = useState(true);
@@ -163,14 +170,14 @@ export default function CompanyChargebackReport() {
   const chartRef = useRef<ChartCardHandle>(null);
   const intercompanyGridRef = useRef<any>(null);
 
-  const queryKey = ['company-chargeback-report', companyId, year, metric];
+  const queryKey = ['company-chargeback-report', scope, companyId, year, metric];
   const { data, isLoading, isFetching, refetch } = useQuery<CompanyChargebackReportResponse>({
     queryKey,
     // The preselected column is the tenant's default: wait for it rather than fetch twice.
     enabled: Boolean(companyId) && budgetColumns.ready,
     queryFn: async () => {
       const response = await api.get<CompanyChargebackReportResponse>('/reports/chargeback/company', {
-        params: { companyId, year, metric },
+        params: { companyId, year, metric, scope },
       });
       return response.data;
     },
@@ -242,7 +249,7 @@ export default function CompanyChargebackReport() {
 
   const exportIntercompanyCsv = () => {
     if (!companyId) return;
-    intercompanyGridRef.current?.exportDataAsCsv?.({ fileName: `company-chargeback-flows-${companyId}-${year}-${metricFile}.csv` });
+    intercompanyGridRef.current?.exportDataAsCsv?.({ fileName: `company-chargeback-flows-${scope}-${companyId}-${year}-${metricFile}.csv` });
   };
 
   const departmentColumns = useMemo<ColDef[]>(() => [
@@ -284,8 +291,8 @@ export default function CompanyChargebackReport() {
       flex: 1,
       minWidth: 220,
       cellRenderer: LinkCellRenderer,
-      // Chargeback covers OPEX lines; common costs (no line) and the total row stay plain text.
-      cellRendererParams: { newTab: true, getHref: (row: Partial<CompanyChargebackItemRow>) => itemHref('opex', row.itemId) },
+      // Each line by its BL reference, whatever its nature; common costs (no line) and the total row stay plain text.
+      cellRendererParams: { newTab: true, getHref: (row: Partial<CompanyChargebackItemRow>) => itemHref(row.nature ?? scope, row.itemId, row.itemNumber) },
     },
     { field: 'allocationMethodLabel', headerName: t('reports.columns.allocationMethod'), minWidth: 180 },
     {
@@ -302,7 +309,7 @@ export default function CompanyChargebackReport() {
       type: 'rightAligned',
       valueFormatter: (params) => (params.value != null ? `${Number(params.value).toFixed(2)}%` : ''),
     },
-  ], [formatNumber, metricLabel]);
+  ], [formatNumber, metricLabel, scope]);
 
   const chartData = useMemo(() => {
     return departments.map((row: CompanyChargebackDepartmentRow) => ({ label: row.departmentName, value: row.amount }));
@@ -376,13 +383,13 @@ export default function CompanyChargebackReport() {
   const exportDepartmentsCsv = () => {
     if (!companyId) return;
     departmentGridRef.current?.exportDataAsCsv?.({
-      fileName: `company-chargeback-departments-${companyId}-${year}-${metricFile}.csv`,
+      fileName: `company-chargeback-departments-${scope}-${companyId}-${year}-${metricFile}.csv`,
     });
   };
 
   const exportChart = () => {
     if (!companyId) return;
-    chartRef.current?.download(`company-chargeback-departments-${companyId}-${year}-${metricFile}`);
+    chartRef.current?.download(`company-chargeback-departments-${scope}-${companyId}-${year}-${metricFile}`);
   };
 
   const companySummary = data?.company;
@@ -395,6 +402,7 @@ export default function CompanyChargebackReport() {
       subtitle={t("reports.companyChargeback.subtitle")}
       filters={(
         <>
+          <ItemScopeTabs allowAll value={scope} onChange={setScope} />
           <Box sx={{ minWidth: 240 }}>
             <CompanySelect
               label={t("reports.filters.company")}
@@ -458,6 +466,11 @@ export default function CompanyChargebackReport() {
       onExportChartPng={isReady ? exportChart : undefined}
     >
       <Stack spacing={2}>
+        {scope !== 'opex' && (
+          <Typography role="note" sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
+            {t('reports.shared.capexYearAmountNote')}
+          </Typography>
+        )}
         {!isReady && (
           <Paper variant="outlined" sx={{ p: 3 }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>{t("reports.companyChargeback.selectCompanyTitle")}</Typography>
@@ -473,7 +486,7 @@ export default function CompanyChargebackReport() {
               <Box>
                 <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{companySummary.name}</Typography>
                 <Typography variant="h5" sx={{ fontWeight: 600 }}>{formatCurrency(companySummary.total)}</Typography>
-                <Typography variant="body2" color="text.secondary">{`${metricLabel} • ${year} • ${reportingCurrency}`}</Typography>
+                <Typography variant="body2" color="text.secondary">{`${scopeLabel} • ${metricLabel} • ${year} • ${reportingCurrency}`}</Typography>
               </Box>
               <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' } }}>
                 <Box>

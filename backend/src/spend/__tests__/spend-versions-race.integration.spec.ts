@@ -1,4 +1,4 @@
-import { CapexVersionsService } from '../../capex/capex-versions.service';
+import { CapexVersionsService } from '../spend-versions.service';
 import { SpendVersionsService } from '../spend-versions.service';
 import { loadBudgetFile } from './budget-file.fixtures';
 import { captureAudit, Kind, seedItem } from './round-inputs.fixtures';
@@ -22,9 +22,10 @@ import { assert, assertSucceeded, httpStatus, progress, runRaceSpecs, settle, sq
 
 const YEAR = 2027;
 const currencySettings = { getSettings: async () => ({ reportingCurrency: 'EUR' }) };
-const VERSIONS: Record<Kind, string> = { opex: 'spend_versions', capex: 'capex_versions' };
-const ITEMS: Record<Kind, string> = { opex: 'spend_items', capex: 'capex_items' };
-const ITEM_FK: Record<Kind, string> = { opex: 'spend_item_id', capex: 'capex_item_id' };
+// The lines of both natures and their versions are in the spend_* tables since lot Z1.
+const VERSIONS: Record<Kind, string> = { opex: 'spend_versions', capex: 'spend_versions' };
+const ITEMS: Record<Kind, string> = { opex: 'spend_items', capex: 'spend_items' };
+const ITEM_FK: Record<Kind, string> = { opex: 'spend_item_id', capex: 'spend_item_id' };
 
 function versionsService(kind: Kind): { createForItem: (...args: any[]) => Promise<any>; updateForItem: (...args: any[]) => Promise<any> } {
   return kind === 'opex'

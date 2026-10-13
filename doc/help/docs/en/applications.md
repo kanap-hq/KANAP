@@ -61,7 +61,7 @@ Classification fields are optional when you create an application. **Business cr
 
 Once you save, the workspace unlocks all tabs for detailed documentation.
 
-**Tip**: Start by documenting your most critical applications. Use the **Deployments** tab to capture which environments exist (Prod, QA, Dev) and which servers run them, then link interfaces, contracts and budget items as you go.
+**Tip**: Start by documenting your most critical applications. Use the **Deployments** tab to capture which environments exist (Prod, QA, Dev) and which servers run them, then link interfaces, contracts and budget lines as you go.
 
 **Permissions**:
 - View: `applications:reader`
@@ -100,7 +100,7 @@ The Applications grid provides a comprehensive view of your application portfoli
 - **External Facing**: Whether the app is internet-accessible
 - **SSO Enabled** / **MFA Enabled**: Authentication features
 - **Data Integration / ETL**: Whether the app participates in data integrations
-- **OPEX Items** / **CAPEX Items** / **Contracts**: Linked spend and contracts
+- **OPEX lines** / **CAPEX lines** / **Contracts**: Linked spend and contracts
 - **Components**: Child applications (if this is a suite)
 - **Data Class** / **Contains PII** / **Data Residency**: Compliance information
 - **Cyber criticality**, **Recovery wave**, **RTO**, **RPO**, **Review state/date**: Classification and continuity fields
@@ -283,8 +283,7 @@ The Relations tab links this application to your financial, contract, project an
 **Components** (only when "Can have child apps" is enabled): a table listing the child applications of this Suite, with their lifecycle and criticality. Click a row to open the child workspace.
 
 **Relations**:
-- **OPEX items**: recurring costs associated with this application
-- **CAPEX items**: capital expenditure projects
+- **Budget lines**: the OPEX and CAPEX lines of this application, in one list. Search by title or reference (`BL-12`); each suggestion shows its type
 - **Contracts**: vendor contracts
 - **Projects**: portfolio projects linked to this application
 - **Tasks**: tasks linked to this application. This list is read-only here -- tasks gain or lose this link when you set the **App / Service** field on a task in the Tasks page.
@@ -340,7 +339,7 @@ Classification and continuity values are copied, but the new version starts with
 | Data residency | On |
 | Links | On |
 | Support contacts | On |
-| Budget items (OPEX + CAPEX, paired) | On |
+| Budget lines (OPEX + CAPEX, paired) | On |
 | Contracts | On |
 | Deployments | Off |
 | Deployment bindings | Off (only available when Deployments is selected) |
@@ -372,7 +371,7 @@ Use this when you want to create an independent duplicate of an application -- t
 3. The system creates a copy with " (copy)" appended to the name
 4. You're navigated to the new application to make changes
 
-**What gets copied**: All core fields (except last DR test date), including classification and continuity values, owners, companies, departments, suites, OPEX/CAPEX items, contracts, links, data residency, and support contacts. The copied application's review is reset.
+**What gets copied**: All core fields (except last DR test date), including classification and continuity values, owners, companies, departments, suites, OPEX/CAPEX lines, contracts, links, data residency, and support contacts. The copied application's review is reset.
 
 **What does NOT get copied**: Deployments, interfaces, server assignments, attachments, version fields (version, go-live date, end of support).
 
@@ -397,8 +396,8 @@ Use this when you want to create an independent duplicate of an application -- t
 | Links | Yes | Optional (default: yes) |
 | Support contacts | Yes | Optional (default: yes) |
 | Suites (membership) | Yes | No |
-| OPEX items | Yes | Optional (default: yes) |
-| CAPEX items | Yes | Optional (default: yes) |
+| OPEX lines | Yes | Optional (default: yes) |
+| CAPEX lines | Yes | Optional (default: yes) |
 | Contracts | Yes | Optional (default: yes) |
 | Deployments | No | Optional (default: no) |
 | Bindings | No | Optional (default: no) |

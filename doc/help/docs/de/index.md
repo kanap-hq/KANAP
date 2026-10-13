@@ -56,8 +56,7 @@ Wenn Sie schnellstmöglich produktiv werden möchten, beginnen Sie mit den Fast-
 
 ### Budgetverwaltung
 
-- [OPEX](opex.md) - Wiederkehrende IT-Kosten und Zuordnungen verwalten
-- [CAPEX](capex.md) - Investitionsprojekte verfolgen
+- [Budgetzeilen](budget-lines.md) - OPEX- und CAPEX-Zeilen mit ihren Budgets und Zuordnungen planen und verfolgen
 - [Verträge](contracts.md) - Lieferantenverträge und Verlängerungen verwalten
 - [Budgetadministration](budget-operations.md) - Budgeteinstellungen sowie Vorgänge zum Einfrieren, Kopieren und Zurücksetzen
 - [Währungen](currencies.md) - Reporting- und Standardwährungen, Wechselkurse

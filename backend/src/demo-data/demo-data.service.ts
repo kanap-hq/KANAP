@@ -17,6 +17,9 @@ import * as path from 'node:path';
 import * as readline from 'node:readline';
 import { DataSource, EntityManager } from 'typeorm';
 import { TENANT_RESET_RUNNING_CODE, TenantResetService } from '../admin/tenants/tenant-reset.service';
+import { capexDimensionTable } from '../analytics/capex-dimensions.seed';
+import { DEFAULT_ANALYTICS_AXIS_CODE } from '../analytics/analytics-axes.util';
+import { RECOMMENDED_DIMENSIONS, SEED_LANGUAGES } from '../analytics/recommended-dimensions.seed';
 import { AuthService } from '../auth/auth.service';
 import { DEFAULT_ACCESS_TOKEN_TTL, parseDurationMs } from '../auth/token-ttl.util';
 import { StripeConfigService } from '../billing/stripe/stripe.config';
@@ -134,14 +137,15 @@ export const CONFIRMATION_MISMATCH_CODE = 'confirmation_mismatch';
  * before any business data. Sample data is loaded only into a workspace where they are all
  * empty, because the reset after a failed load erases them (`findTenantContent` adds the tables
  * that activation fills). None of them is written at activation, by a scheduled job or by
- * browsing: only by a user's own create, import or setting save.
+ * browsing: only by a user's own create, import or setting save. The dimension values are not
+ * here: every workspace starts with those of the three CAPEX dimensions (lot C1), so
+ * `findTenantContent` checks them apart, the seeded values left out.
  */
 export const DEMO_LOAD_EMPTY_TABLES = [
   'applications',
   'app_instances',
   'assets',
   'business_processes',
-  'capex_items',
   'connections',
   'contacts',
   'contracts',
@@ -155,8 +159,7 @@ export const DEMO_LOAD_EMPTY_TABLES = [
   'spend_items',
   'suppliers',
   'tasks',
-  // Configuration: budget dimension values, portfolio classification, AI integrations and agents.
-  'analytics_categories',
+  // Configuration: portfolio classification, AI integrations and agents.
   'portfolio_sources',
   'portfolio_categories',
   'portfolio_streams',
@@ -295,11 +298,33 @@ async function templateAccountNumbers(csv: string): Promise<string[]> {
 }
 
 /**
+ * The (dimension code, value name) pairs a tenant may hold in its starting state, lower case:
+ * the recommended dimensions in the four languages, and the three CAPEX dimensions of the
+ * tenants created before them.
+ */
+export function startingDimensionValues(): Array<[string, string]> {
+  const pairs = new Map<string, [string, string]>();
+  const add = (code: string, name: string) => pairs.set(`${code}\u0000${name.toLowerCase()}`, [code, name.toLowerCase()]);
+  for (const language of SEED_LANGUAGES) {
+    for (const dimension of RECOMMENDED_DIMENSIONS[language]) {
+      const codes = dimension.key === 'cost_pool' ? [DEFAULT_ANALYTICS_AXIS_CODE, dimension.code] : [dimension.code];
+      for (const code of codes) for (const value of dimension.values) add(code, value.name);
+    }
+  }
+  for (const dimension of capexDimensionTable()) for (const value of dimension.values) add(dimension.code, value.name);
+  return [...pairs.values()];
+}
+
+/**
  * The tables that hold more than activation leaves (empty: the workspace is still in its
  * starting state). Every table of `DEMO_LOAD_EMPTY_TABLES` must be empty. Activation also
  * creates, and these may hold only that: one company; documents in the templates library;
  * the chart of accounts made from the default template, with that template's accounts; the
- * standard calendar of the company's country. And no `.example` user (sample data users).
+ * standard calendar of the company's country; the values of the recommended dimensions in any
+ * of the four languages (`recommended-dimensions.seed.ts`, the cost pool on the default dimension
+ * or on `cost_pool`) and those of the three CAPEX dimensions older tenants received
+ * (`capex-dimensions.seed.ts`), by dimension code and value name: a value an administrator added,
+ * or renamed, counts. And no `.example` user (sample data users).
  * Runs under the tenant's RLS context.
  */
 export async function findTenantContent(manager: EntityManager, tenantId: string): Promise<string[]> {
@@ -327,22 +352,31 @@ export async function findTenantContent(manager: EntityManager, tenantId: string
           AND NOT (region_code IS NULL AND country_iso IS NOT NULL AND code = country_iso))
        OR (SELECT count(*) FROM working_day_profiles WHERE tenant_id = $1) > 1`,
     `SELECT 'users' AS t WHERE EXISTS (SELECT 1 FROM users WHERE tenant_id = $1 AND lower(email) LIKE '%.example')`,
+    `SELECT 'analytics_categories' AS t WHERE EXISTS (
+       SELECT 1 FROM analytics_categories c
+         JOIN analytics_axes a ON a.id = c.axis_id AND a.tenant_id = c.tenant_id
+        WHERE c.tenant_id = $1
+          AND NOT EXISTS (SELECT 1 FROM unnest($4::text[], $5::text[]) AS s(code, name)
+                           WHERE lower(a.code) = s.code AND lower(c.name) = s.name))`,
   ];
+  const seeded = startingDimensionValues();
   const rows: Array<{ t: string }> = await manager.query(checks.join(' UNION ALL '), [
     tenantId,
     baselineChart?.id ?? null,
     templateNumbers,
+    seeded.map(([code]) => code),
+    seeded.map(([, name]) => name),
   ]);
   return rows.map((row) => row.t);
 }
 
 /**
  * The tables `countCreatedSinceLoad` reads: the business and configuration tables of a workspace
- * that has data, its companies and its documents (the templates library included: a reset puts
- * back only the starting templates). Each has `created_at` (checked by the spec). Users are not
- * counted: the reset keeps the real ones.
+ * that has data, its dimension values, its companies and its documents (the templates library
+ * included: a reset puts back only the starting templates). Each has `created_at` (checked by the
+ * spec). Users are not counted: the reset keeps the real ones.
  */
-export const DEMO_CREATED_SINCE_TABLES = [...DEMO_LOAD_EMPTY_TABLES, 'companies', 'documents'] as const;
+export const DEMO_CREATED_SINCE_TABLES = [...DEMO_LOAD_EMPTY_TABLES, 'analytics_categories', 'companies', 'documents'] as const;
 
 /**
  * How many objects were created in the workspace after `since` (the end of the sample data

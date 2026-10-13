@@ -59,6 +59,8 @@ export type AiFilterFieldDef = {
   aggregable?: boolean;
   aliases?: string[];
   acceptedValueKind?: string;
+  /** Date field that also takes `[null]`: rows with no date. */
+  blankable?: boolean;
   lookupEntity?: AiQueryEntityType;
   examples?: string[];
   doesNotAccept?: string[];
@@ -80,6 +82,12 @@ export type AiAggregateMetricDef = {
 export type AiAggregateConfig = {
   baseTable: string;
   alias: string;
+  /**
+   * A predicate every statement on `baseTable` carries besides the tenant: the OPEX lines of
+   * `spend_items` (`si.nature = 'opex'`, `spend/budget-nature.ts`). Written here only, never
+   * from a request.
+   */
+  baseWhere?: string;
   idColumn?: string;
   groupFields: Record<string, AiAggregateGroupDef>;
   metricFields?: Record<string, AiAggregateMetricDef>;

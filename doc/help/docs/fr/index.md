@@ -56,8 +56,7 @@ Si vous souhaitez le chemin le plus court vers la productivité, commencez par l
 
 ### Gestion budgétaire
 
-- [OPEX](opex.md) - Gérez les coûts IT récurrents et les ventilations
-- [CAPEX](capex.md) - Suivez les projets de dépenses d'investissement
+- [Lignes budgétaires](budget-lines.md) - Planifiez et suivez les lignes OPEX et CAPEX, leurs budgets et leurs ventilations
 - [Contrats](contracts.md) - Gérez les contrats fournisseurs et les renouvellements
 - [Administration budgétaire](budget-operations.md) - Paramètres budgétaires, opérations de gel, de copie et de réinitialisation
 - [Devises](currencies.md) - Devises de reporting et par défaut, taux de change

@@ -1,4 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger } from '@nestjs/common';
+import { EntityManager } from 'typeorm';
+import { resolveBudgetLine } from '../common/resolve-item-id';
 import { assertPublicHttpTarget } from '../common/ssrf-guard';
 import { getEnvMode, isDevelopmentEnv } from '../common/env';
 import { AiAttachmentService } from './ai-attachment.service';
@@ -16,6 +18,7 @@ import {
   withToolSchemaBreakdown,
 } from './ai-context-budget.helper';
 import {
+  budgetLineRefFromUrl,
   filterToolListForProfile,
   selectAiContextProfileForTurn,
 } from './ai-context-profile';
@@ -374,8 +377,8 @@ const ENTITY_URL_BUILDERS: Record<string, (id: string) => string> = {
   interfaces: (id) => `/it/interfaces/${id}`,
   locations: (id) => `/it/locations/${id}`,
   contracts: (id) => `/ops/contracts/${id}`,
-  spend_items: (id) => `/ops/opex/${id}`,
-  capex_items: (id) => `/ops/capex/${id}`,
+  spend_items: (id) => `/ops/budget/${id}`,
+  capex_items: (id) => `/ops/budget/${id}`,
   companies: (id) => `/master-data/companies/${id}`,
   contacts: (id) => `/master-data/contacts/${id}`,
   departments: (id) => `/master-data/departments/${id}`,
@@ -395,8 +398,6 @@ const ENTITY_TYPE_FROM_URL_PREFIX: Array<{ prefix: string; entityType: string }>
   { prefix: '/it/interfaces/', entityType: 'interfaces' },
   { prefix: '/it/locations/', entityType: 'locations' },
   { prefix: '/ops/contracts/', entityType: 'contracts' },
-  { prefix: '/ops/opex/', entityType: 'spend_items' },
-  { prefix: '/ops/capex/', entityType: 'capex_items' },
   { prefix: '/master-data/companies/', entityType: 'companies' },
   { prefix: '/master-data/contacts/', entityType: 'contacts' },
   { prefix: '/master-data/departments/', entityType: 'departments' },
@@ -417,14 +418,35 @@ function inferEntityTypeFromUrl(url: string): string | null {
   return match?.entityType ?? null;
 }
 
-function extractMentionContextItems(text: string): AiChatContextItemDto[] {
+export async function extractMentionContextItems(text: string, manager: EntityManager): Promise<AiChatContextItemDto[]> {
   const items: AiChatContextItemDto[] = [];
   const seen = new Set<string>();
   const markdownLinkRe = /\[([^\]]{1,160})\]\((\/[^)\s]+)\)/g;
+  const budgetRefs = Array.from(new Set(Array.from(text.matchAll(markdownLinkRe), (match) =>
+    budgetLineRefFromUrl(match[2]),
+  ).filter((ref): ref is string => !!ref)));
+  // One tenant-scoped, explicitly all-natures read for every budget link in this message.
+  const lines: Array<{ id: string; nature: 'opex' | 'capex'; item_number: number; legacy_number: string | null }> = budgetRefs.length
+    ? await manager.query(`SELECT id, nature, item_number, legacy_number FROM spend_items
+        WHERE tenant_id = app_current_tenant() AND nature IN ('opex', 'capex')
+          AND (id::text = ANY($1::text[]) OR ('BL-' || item_number::text) = ANY($1::text[])
+            OR item_number::text = ANY($1::text[]) OR legacy_number = ANY($1::text[]))`, [budgetRefs])
+    : [];
+  const budgetTypes = new Map<string, string>();
+  for (const line of lines) {
+    const type = line.nature === 'capex' ? 'capex_items' : 'spend_items';
+    for (const ref of [line.id, `BL-${line.item_number}`, String(line.item_number), line.legacy_number]) {
+      if (ref) budgetTypes.set(ref, type);
+    }
+  }
   let match: RegExpExecArray | null;
   while ((match = markdownLinkRe.exec(text)) != null) {
     const [, rawLabel, rawUrl] = match;
-    const entityType = inferEntityTypeFromUrl(rawUrl);
+    const budgetRef = budgetLineRefFromUrl(rawUrl);
+    let entityType = inferEntityTypeFromUrl(rawUrl);
+    if (budgetRef) {
+      entityType = budgetTypes.get(budgetRef) ?? null;
+    }
     if (!entityType) {
       continue;
     }
@@ -1460,8 +1482,8 @@ export class AiChatOrchestratorService {
     ].filter(Boolean).join('\n');
   }
 
-  private buildPreviewResultAssistantText(preview: AiMutationPreviewDto): string {
-    const summary = this.linkifyPreviewSummary(preview, String(preview.summary || '').trim());
+  private buildPreviewResultAssistantText(preview: AiMutationPreviewDto, budgetReference?: string): string {
+    const summary = this.linkifyPreviewSummary(preview, String(preview.summary || '').trim(), budgetReference);
     const errorMessage = String(preview.error_message || '').trim();
 
     switch (preview.status) {
@@ -1505,13 +1527,23 @@ export class AiChatOrchestratorService {
     return lines.join('\n');
   }
 
-  private buildPreviewResultsAssistantText(
+  private async buildPreviewResultsAssistantText(
+    manager: EntityManager,
     previews: AiMutationPreviewDto[],
     followUpPreviews: AiMutationPreviewDto[] = [],
-  ): string {
+  ): Promise<string> {
     const followUpText = this.buildFollowUpPreviewAssistantText(followUpPreviews);
     if (previews.length === 1) {
-      const base = this.buildPreviewResultAssistantText(previews[0]);
+      const preview = previews[0];
+      let budgetReference: string | undefined;
+      if (preview.target?.entity_id && ['spend_items', 'capex_items'].includes(preview.target.entity_type ?? '')) {
+        try {
+          budgetReference = (await resolveBudgetLine(preview.target.entity_id, manager)).reference;
+        } catch {
+          // A deleted target keeps its id in the confirmation link.
+        }
+      }
+      const base = this.buildPreviewResultAssistantText(preview, budgetReference);
       return followUpText ? `${base}\n\n${followUpText}` : base;
     }
 
@@ -1552,7 +1584,7 @@ export class AiChatOrchestratorService {
     return followUpText ? `${base}\n\n${followUpText}` : base;
   }
 
-  private linkifyPreviewSummary(preview: AiMutationPreviewDto, summary: string): string {
+  private linkifyPreviewSummary(preview: AiMutationPreviewDto, summary: string, budgetReference?: string): string {
     const text = String(summary || '').trim();
     if (!text) return text;
 
@@ -1564,7 +1596,7 @@ export class AiChatOrchestratorService {
     const builder = ENTITY_URL_BUILDERS[targetEntityType];
     if (!builder) return text;
 
-    const url = builder(targetEntityId);
+    const url = builder(budgetReference ?? ((targetEntityType === 'spend_items' || targetEntityType === 'capex_items') && /^BL-\d+$/.test(targetRef) ? targetRef : targetEntityId));
     // Replace every standalone occurrence of the ref with a markdown link, but skip refs
     // already inside `[ ]( )`. A negative lookbehind for `[`/`-`/word and a negative
     // lookahead for word/dash prevents partial matches like T-87 inside T-879 or
@@ -2152,7 +2184,7 @@ export class AiChatOrchestratorService {
               preStreamEvents: streamEvents,
               approvalAssistantText: null,
               contextSummary: {
-                mentions: extractMentionContextItems(latestUserMessageRow?.content ?? ''),
+                mentions: await extractMentionContextItems(latestUserMessageRow?.content ?? '', ctx.manager),
                 previews: previewContextItems([...existingPreviewsAfterApproval, ...allPreviewResults]),
                 artifacts: previewContextItems(allPreviewResults),
                 history: {
@@ -2181,7 +2213,7 @@ export class AiChatOrchestratorService {
             systemPromptText: '',
             systemPromptSections: [],
             preStreamEvents: streamEvents,
-            approvalAssistantText: this.buildPreviewResultsAssistantText(previewResults, followUpPreviews),
+            approvalAssistantText: await this.buildPreviewResultsAssistantText(ctx.manager, previewResults, followUpPreviews),
             contextSummary: {
               previews: previewContextItems(allPreviewResults),
               artifacts: previewContextItems(allPreviewResults),
@@ -2351,7 +2383,7 @@ export class AiChatOrchestratorService {
           preStreamEvents: streamEvents,
           approvalAssistantText: null,
           contextSummary: {
-            mentions: extractMentionContextItems(latestUserMessage),
+            mentions: await extractMentionContextItems(latestUserMessage, ctx.manager),
             attachments: attachmentContextItems(requestedAttachments.length > 0
               ? requestedAttachments
               : Array.from(attachmentImagesByMessage.values()).flatMap((images) =>

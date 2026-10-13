@@ -3,11 +3,11 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Button, Link, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useAuth } from '../../auth/AuthContext';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
-import { PropertyGroup, PropertyRow } from '../../components/design';
+import { KanapDialog, PropertyGroup, PropertyRow } from '../../components/design';
 import StatusLifecycleField from '../../components/fields/StatusLifecycleField';
 import LineTypeUsageSelect, { LineTypeUsageConflictNote } from '../../components/fields/LineTypeUsageSelect';
 import { ANALYTICS_AXES_QUERY_KEY, analyticsAxisLabel, axisAppliesTo, useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
@@ -25,7 +25,7 @@ import {
 import { deriveStatusFromDisabledAt, normalizeStatus } from '../../constants/status';
 import { lineTypeUsageConflict, parseLineTypeUsage, type LineType } from '../../constants/lineTypeUsage';
 import { axisListColumn, oneOffListLink } from '../reports/reportListLink';
-import { openSavedListLink } from '../reports/ReportGroupLinkCell';
+import ListLinkAnchor from '../reports/ListLinkAnchor';
 import { keepValues } from '../reports/reportAggregates';
 import { drawerFieldValueSx, drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
@@ -33,9 +33,11 @@ import AnalyticsDescriptionField from './AnalyticsDescriptionField';
 import {
   ANALYTICS_LIST_PATH,
   analyticsRefusalField,
-  valueUsageLine,
+  deleteConfirmation,
+  usedLineCount,
   type AnalyticsField,
 } from './analyticsFields';
+import AnalyticsLinesUsage from './AnalyticsLinesUsage';
 
 type FieldErrors = Partial<Record<AnalyticsField, string>>;
 
@@ -67,6 +69,7 @@ export default function AnalyticsWorkspacePage() {
   const [errors, setErrors] = React.useState<FieldErrors>({});
   const [pageError, setPageError] = React.useState<string | null>(null);
   const [deleting, setDeleting] = React.useState(false);
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
   // Autosave never blocks the fields: writes queue one after the other, so a response never
   // overwrites a newer one, and results for a record the user has left are dropped.
   const chainRef = React.useRef<Promise<unknown>>(Promise.resolve());
@@ -151,19 +154,26 @@ export default function AnalyticsWorkspacePage() {
     [afterWrite, canEdit, data?.id, queryClient, t],
   );
 
-  const handleDelete = async () => {
+  /** `force`: the budget lines using the value lose it (the confirmation said so). */
+  const handleDelete = async (force: boolean) => {
     if (!data || !canDelete) return;
     const recordId = data.id;
     setDeleting(true);
     setPageError(null);
     try {
-      await deleteAnalyticsValue(recordId);
+      await (force ? deleteAnalyticsValue(recordId, { force: true }) : deleteAnalyticsValue(recordId));
+      setConfirmOpen(false);
       queryClient.removeQueries({ queryKey: ['analytics-categories', 'detail', recordId] });
       afterWrite(recordId);
       // The user may have moved to another value meanwhile: the result is not theirs to see.
       if (currentIdRef.current === recordId) handleClose();
     } catch (e) {
-      if (currentIdRef.current === recordId) setPageError(getApiErrorMessage(e, t, t('analytics.messages.deleteFailed')));
+      setConfirmOpen(false);
+      if (currentIdRef.current === recordId) {
+        setPageError(getApiErrorMessage(e, t, t('analytics.messages.deleteFailed')));
+        // Its counts may be stale (a line linked elsewhere): the next Delete asks with the new ones.
+        void queryClient.invalidateQueries({ queryKey: ['analytics-categories', 'detail', recordId] });
+      }
     } finally {
       setDeleting(false);
     }
@@ -186,9 +196,9 @@ export default function AnalyticsWorkspacePage() {
 
   const axis = data ? axes.byId.get(data.axis_id) : undefined;
   const dimensionLabel = axis ? axes.label(axis) : analyticsAxisLabel({ name: data?.axis_name ?? null }, t);
-  const usage = data ? valueUsageLine(t, data.opex_count ?? 0, data.capex_count ?? 0) : null;
-  // The server refuses deleting a value in use: Delete stays disabled while the usage line shows.
-  const inUse = !!usage;
+  const lineCount = usedLineCount(data?.opex_count, data?.capex_count);
+  // Unused, it goes at once; used, the dialog says the lines lose it ("Delete anyway"). Disabling stays possible.
+  const confirmation = data ? deleteConfirmation(t, { kind: 'value', name: data.name, lineCount }) : null;
   const disabled = !canEdit;
 
   const actions = canDelete && data ? (
@@ -196,8 +206,8 @@ export default function AnalyticsWorkspacePage() {
       variant="action-danger"
       startIcon={<DeleteIcon sx={{ fontSize: '14px !important' }} />}
       size="small"
-      onClick={() => void handleDelete()}
-      disabled={deleting || inUse}
+      onClick={() => (confirmation ? setConfirmOpen(true) : void handleDelete(false))}
+      disabled={deleting}
     >
       {t('common:buttons.delete')}
     </Button>
@@ -272,11 +282,17 @@ export default function AnalyticsWorkspacePage() {
       >
         {data && (
           <Stack spacing={2.5} sx={{ maxWidth: 900 }}>
-            {usage && (
-              <Typography data-testid="analytics-value-usage" sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
-                {usage}
-              </Typography>
-            )}
+            <Typography data-testid="analytics-value-usage" sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
+              {/*
+                The lines holding this value, by its name in the dimension's list column. The list has no column
+                for a disabled dimension and would drop the filter: plain text then (and while the dimension loads).
+              */}
+              <AnalyticsLinesUsage
+                kind="value"
+                lineCount={lineCount}
+                filters={axis && isAnalyticsActive(axis) ? { [axisListColumn(axis)]: keepValues([data.name]) } : null}
+              />
+            </Typography>
             <AnalyticsDescriptionField
               key={data.id}
               value={data.description ?? ''}
@@ -288,6 +304,21 @@ export default function AnalyticsWorkspacePage() {
           </Stack>
         )}
       </PortfolioDetailWorkspaceShell>
+      {confirmation && (
+        <KanapDialog
+          open={confirmOpen}
+          title={confirmation.title}
+          onClose={() => { if (!deleting) setConfirmOpen(false); }}
+          onSave={() => handleDelete(true)}
+          saveLabel={confirmation.confirmLabel}
+          saveVariant="action-danger"
+          saveLoading={deleting}
+        >
+          <Typography data-testid="analytics-delete-confirmation" sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
+            {confirmation.body}
+          </Typography>
+        </KanapDialog>
+      )}
     </Box>
   );
 }
@@ -337,7 +368,6 @@ function ValueAppliesToRow({
   const link = shownConflict && axis
     ? oneOffListLink(shownConflict.scope, { [axisListColumn(axis)]: keepValues([value.name]) })
     : null;
-  const save = link?.save;
   return (
     <PropertyRow label={t('shared.lineTypeUsage.label')} helperText={dimensionHint}>
       <LineTypeUsageSelect
@@ -353,16 +383,7 @@ function ValueAppliesToRow({
       {shownConflict && link && (
         <LineTypeUsageConflictNote testId="analytics-value-applies-to-conflict">
           {t(`analytics.valueAppliesToConflict.${shownConflict.scope}`, { count: shownConflict.count })}{' '}
-          <Link
-            href={link.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            sx={{ fontSize: 12 }}
-            // Filters too long for a URL are saved first.
-            onClick={save ? (event) => { event.preventDefault(); void openSavedListLink({ ...link, save }); } : undefined}
-          >
-            {t('analytics.showLines')}
-          </Link>
+          <ListLinkAnchor link={link}>{t('analytics.showLines')}</ListLinkAnchor>
         </LineTypeUsageConflictNote>
       )}
     </PropertyRow>

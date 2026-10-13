@@ -18,43 +18,42 @@ La página principal muestra una tarjeta para cada informe disponible con una br
 | Informe | Qué cubre |
 |---------|-----------|
 | **Contracargo global** | Totales de asignación por empresa, KPI y flujos intercompañía (OPEX) |
-| **Contracargo por empresa** | Detalle de una empresa con departamentos, partidas y KPI (OPEX) |
-| **Top partidas** | Mayores partidas OPEX o CAPEX para un año seleccionado (top N personalizable) |
-| **Top aumento / disminución** | Mayores cambios OPEX o CAPEX entre dos columnas presupuestarias (top N personalizable) |
-| **Tendencia presupuestaria (OPEX)** | Comparar métricas OPEX en un rango de años |
-| **Tendencia presupuestaria (CAPEX)** | Comparar métricas CAPEX en un rango de años |
-| **Comparación de columnas presupuestarias** | Seleccione hasta 10 combinaciones de año+columna para OPEX o CAPEX |
-| **Cuentas de consolidación** | Presupuesto OPEX o CAPEX agrupado por cuenta de consolidación |
-| **Dimensiones analíticas** | Presupuesto OPEX o CAPEX agrupado por dimensión analítica |
-| **Plantilla por mes** | ETC mensuales por centro de coste, partida, proveedor o dimensión analítica |
-| **Coste por ETC** | Coste anual de un ETC o tarifa diaria media, por centro de coste, partida, proveedor o dimensión analítica, en varias columnas de presupuesto y años |
+| **Contracargo por empresa** | Detalle de una empresa con departamentos, líneas y KPI (OPEX) |
+| **Top líneas** | Mayores líneas presupuestarias para un año seleccionado (top N personalizable) |
+| **Top aumento / disminución** | Mayores cambios entre dos columnas presupuestarias (top N personalizable) |
+| **Comparación presupuestaria** | Comparar métricas presupuestarias en un rango de años |
+| **Comparación de columnas presupuestarias** | Seleccione hasta 10 combinaciones de año+columna |
+| **Cuentas de consolidación** | Presupuesto agrupado por cuenta de consolidación |
+| **Dimensiones analíticas** | Presupuesto agrupado por dimensión analítica |
+| **Plantilla por mes** | ETC mensuales por centro de coste, línea, proveedor o dimensión analítica |
+| **Coste por ETC** | Coste anual de un ETC o tarifa diaria media, por centro de coste, línea, proveedor o dimensión analítica, en varias columnas de presupuesto y años |
 
-### Elegir OPEX o CAPEX
+### Elegir el tipo de líneas
 
-**Top partidas**, **Top aumento / disminución**, **Cuentas de consolidación**, **Dimensiones analíticas**, **Plantilla por mes** y **Coste por ETC** empiezan con un conmutador **OPEX** / **CAPEX**, el primer control de la barra de filtros.
+**Top líneas**, **Top aumento / disminución**, **Comparación presupuestaria**, **Comparación de columnas presupuestarias**, **Cuentas de consolidación**, **Dimensiones analíticas**, **Plantilla por mes** y **Coste por ETC** empiezan con las pestañas **Todo**, **OPEX** y **CAPEX**, el primer control de la barra de filtros.
 
-- El informe se abre en un tipo que usted puede consultar, primero OPEX. Un tipo que no puede consultar aparece desactivado.
-- La dirección de la página conserva el tipo elegido (`?scope=opex` o `?scope=capex`), de modo que un enlace guardado o compartido se abre en el mismo tipo.
-- El subtítulo y el título del gráfico indican el tipo, de modo que una impresión o un PNG exportado muestra qué tipo cubre.
-- Cambiar de tipo borra las partidas que excluyó, ya que cada tipo tiene sus propias partidas.
+- El informe se abre en **Todo**: las líneas OPEX y CAPEX juntas. **OPEX** o **CAPEX** conserva las líneas de ese tipo. Las tres opciones requieren acceso de lectura a las líneas presupuestarias (`budget:reader`). Sin ese acceso, las pestañas aparecen desactivadas.
+- La dirección de la página conserva el tipo elegido (`?scope=all`, `?scope=opex` o `?scope=capex`), de modo que un enlace guardado o compartido se abre en el mismo tipo.
+- El subtítulo y el título del gráfico indican el tipo, de modo que una impresión o un PNG exportado muestra qué líneas cubre.
+- Cambiar de tipo borra las líneas que excluyó.
 
-Los dos informes de contracargo cubren solo OPEX.
+Los dos informes de contracargo cubren solo las líneas OPEX.
 
 ### Elegir importe o ETC
 
-Los siete informes presupuestarios tienen un selector **Medida**. Está justo después del conmutador **OPEX** / **CAPEX**, o en primer lugar cuando el informe no tiene conmutador. Ofrece **Importe** (por defecto) y **ETC**. Los dos informes de contracargo no tienen medida.
+Los seis informes presupuestarios tienen un selector **Medida**. Está justo después de las pestañas de tipo. Ofrece **Importe** (por defecto) y **ETC**. Los dos informes de contracargo no tienen medida.
 
 Con **ETC**, un informe suma personas en lugar de dinero:
 
-- Cada columna presupuestaria muestra el ETC medio del año completo que declaran sus líneas de cantidad y precio. Las líneas en personas o en días suman ETC. Las líneas en piezas cuentan 0. Una columna sin líneas no declara ETC y se deja fuera: solo cuentan los ETC declarados. Consulte [Cantidad y precio](opex.md#cantidad-y-precio) y [ETC](opex.md#etc).
-- Un año o una columna en la que ninguna partida declara ETC muestra una celda vacía, sin barra ni punto en el gráfico.
-- **Top partidas**, **Cuentas de consolidación** y **Dimensiones analíticas** dejan fuera las partidas y los grupos que no declaran ETC. Las proporciones son proporciones del total de ETC.
-- **Top aumento / disminución** compara los ETC de las dos columnas partida por partida. Una partida que declara ETC solo en un lado cuenta 0 en el otro.
+- Cada columna presupuestaria muestra el ETC medio del año completo que declaran sus líneas de cantidad y precio. Las líneas en personas o en días suman ETC. Las líneas en piezas cuentan 0. Una columna sin líneas no declara ETC y se deja fuera: solo cuentan los ETC declarados. Consulte [Cantidad y precio](budget-lines.md#cantidad-y-precio) y [ETC](budget-lines.md#etc).
+- Un año o una columna en la que ninguna línea declara ETC muestra una celda vacía, sin barra ni punto en el gráfico.
+- **Top líneas**, **Cuentas de consolidación** y **Dimensiones analíticas** dejan fuera las líneas y los grupos que no declaran ETC. Las proporciones son proporciones del total de ETC.
+- **Top aumento / disminución** compara los ETC de las dos columnas línea por línea. Una línea que declara ETC solo en un lado cuenta 0 en el otro.
 - Los valores se muestran con dos decimales. Los nombres de columna y los títulos de gráfico llevan la mención ETC.
 - La dirección de la página conserva la medida (`?measure=fte`), de modo que un enlace guardado o compartido se abre con la misma medida.
 - Los nombres de los archivos PNG y CSV exportados terminan en `-fte`.
 
-Con ETC, una línea bajo la tabla avisa cuando algunas partidas declaran ETC en una columna cuyo importe ya no sigue sus líneas. Ocurre cuando el importe se ha distribuido, cuando sus meses se han editado a mano o cuando la columna se ha copiado de una columna cuyas líneas eran solo una referencia. La línea indica cuántas partidas y cuántos ETC están afectados, por columna y año. Con varias columnas dice, por ejemplo: «El importe ya no sigue las líneas en: Presupuesto 2026 (2 partidas, 1,50 ETC), Presupuesto 2027 (1 partida, 0,50 ETC).» Con una sola columna dice: «2 partidas declaran 1,50 ETC, pero su importe ya no sigue sus líneas.» Sus ETC siguen contando. La línea le avisa de que el importe de la columna no es el coste de sus líneas.
+Con ETC, un aviso bajo la tabla indica cuando algunas líneas declaran ETC en una columna cuyo importe ya no sigue sus líneas de cantidad y precio. Ocurre cuando el importe se ha distribuido, cuando sus meses se han editado a mano o cuando la columna se ha copiado de una columna cuyas líneas eran solo una referencia. El aviso indica cuántas líneas y cuántos ETC están afectados, por columna y año. Con varias columnas dice, por ejemplo: «El importe ya no sigue las líneas en: Presupuesto 2026 (2 líneas, 1,50 ETC), Presupuesto 2027 (1 línea, 0,50 ETC).» Con una sola columna dice: «2 líneas declaran 1,50 ETC, pero su importe ya no sigue sus líneas de cantidad y precio.» Sus ETC siguen contando. El aviso le indica que el importe de la columna no es el coste de sus líneas de cantidad y precio.
 
 ### Columnas presupuestarias en los informes
 
@@ -62,26 +61,26 @@ Cada selector de columna o de métrica ofrece las columnas presupuestarias que m
 
 ### Filtros de centro de coste, de Run o build y de dimensiones analíticas
 
-Los siete informes presupuestarios (**Top partidas**, **Top aumento / disminución**, **Tendencia presupuestaria (OPEX)**, **Tendencia presupuestaria (CAPEX)**, **Comparación de columnas presupuestarias**, **Cuentas de consolidación** y **Dimensiones analíticas**), **Plantilla por mes** y **Coste por ETC** se pueden limitar a una parte del presupuesto con estos filtros:
+Los informes presupuestarios (**Top líneas**, **Top aumento / disminución**, **Comparación presupuestaria**, **Comparación de columnas presupuestarias**, **Cuentas de consolidación** y **Dimensiones analíticas**), **Plantilla por mes** y **Coste por ETC** se pueden limitar a una parte del presupuesto con estos filtros:
 
 - **Centro de coste**: elija un centro de coste o un grupo. Un grupo incluye todo lo que tiene por debajo, también los centros de coste desactivados, ya que sus líneas siguen perteneciendo al grupo. **Todos los centros de coste** quita el filtro. Consulte [Centros de coste](cost-centers.md).
 - **Run o build**: **Todos**, **Run**, **Build** o **Sin definir** para las líneas que no tienen ninguno de los dos.
-- **Partidas**: **Todas las partidas** o **Partidas con ETC**. **Partidas con ETC** conserva las partidas que declaran ETC en al menos una columna presupuestaria de cualquier año. El filtro funciona con las dos medidas. Un informe de importes limitado a **Partidas con ETC** compara, por ejemplo, los importes de Presupuesto y Realizado de las partidas de personal. El importe Realizado cubre toda la partida.
+- **Líneas**: **Todas las líneas** o **Líneas con ETC**. **Líneas con ETC** conserva las líneas que declaran ETC en al menos una columna presupuestaria de cualquier año. El filtro funciona con las dos medidas. Un informe de importes limitado a **Líneas con ETC** compara, por ejemplo, los importes de Presupuesto y Realizado de las líneas de personal. El importe Realizado cubre toda la línea.
 - **Dimensiones analíticas**: un filtro por dimensión, con el nombre de la dimensión. La dimensión por defecto se muestra como **Dimensión analítica** hasta que se le da un nombre. Elija un valor, **Sin valor** para las líneas sin valor en esa dimensión, o **Todos** para quitar el filtro. Cada filtro ofrece los valores que tienen las líneas del informe. Consulte [Dimensiones analíticas](analytics.md).
 
 Cuándo aparecen los filtros:
 
 - **Centro de coste** aparece en cuanto su espacio de trabajo tiene al menos un centro de coste o un grupo.
 - **Run o build** aparece en cuanto una línea del informe está marcada como **Run** o **Build**, o cuando la dirección de la página ya incluye el filtro.
-- **Partidas** aparece en cuanto una partida del informe declara ETC, o cuando la dirección de la página ya incluye el filtro.
-- El filtro de una dimensión aparece en cuanto una línea del informe tiene un valor en esa dimensión, o cuando la dirección de la página ya lo incluye. Las dimensiones desactivadas no tienen filtro. Un informe solo muestra las dimensiones usadas para las líneas que cubre: pasar de **OPEX** a **CAPEX** cambia la lista. Una dimensión en **Solo OPEX** no tiene filtro en un informe CAPEX, y al revés. Consulte [Dimensiones OPEX o CAPEX](analytics.md#dimensiones-opex-o-capex).
+- **Líneas** aparece en cuanto una línea del informe declara ETC, o cuando la dirección de la página ya incluye el filtro.
+- El filtro de una dimensión aparece en cuanto una línea del informe tiene un valor en esa dimensión, o cuando la dirección de la página ya lo incluye. Las dimensiones desactivadas no tienen filtro. Un informe solo muestra las dimensiones usadas para las líneas que cubre: cambiar de tipo cambia la lista. Una dimensión en **Solo OPEX** no tiene filtro en un informe CAPEX, y al revés. **Todo** muestra las dimensiones de ambos tipos. Consulte [Dimensiones OPEX o CAPEX](analytics.md#dimensiones-opex-o-capex).
 - Sin ninguno de ellos, la barra de filtros solo muestra los controles propios del informe.
 
 Cómo funcionan:
 
 - Los filtros se aplican antes de cualquier total. Los importes, las proporciones, los gráficos y los totales cubren solo las líneas conservadas.
 - Los filtros de varias dimensiones se combinan: una línea debe cumplir cada uno de ellos.
-- Las listas de partidas, cuentas y valores que se pueden excluir siguen ofreciendo todas las líneas.
+- Las listas de líneas, cuentas y valores que se pueden excluir siguen ofreciendo todas las líneas.
 - La dirección de la página conserva los filtros (`?costCenter=`, `?runBuild=`, `?fte=with` y `?analytics=`), de modo que un enlace guardado o compartido abre el informe ya filtrado. Un enlace que indica una dimensión desactivada o eliminada desde entonces ignora esa parte.
 - Si el enlace indica un centro de coste que se ha eliminado desde entonces, o si los centros de coste no se pudieron cargar, el informe no muestra ninguna línea y sí una línea de texto: "Este centro de coste ya no existe o no se pudo cargar." Haga clic en **Quitar el filtro** para volver a ver el informe.
 - Si el enlace incluye un filtro analítico y las dimensiones no se pudieron cargar, el informe no muestra ninguna línea y sí una línea de texto: "No se pudo aplicar el filtro analítico. Quítelo o vuelva a intentarlo." Haga clic en **Quitar el filtro** para quitar los filtros analíticos y volver a ver el informe.
@@ -89,15 +88,15 @@ Cómo funcionan:
 
 ### Abrir la lista desde un informe
 
-En **Plantilla por mes**, **Coste por ETC**, **Dimensiones analíticas** y **Cuentas de consolidación**, el nombre de un grupo es un enlace que abre la lista OPEX o CAPEX en una pestaña nueva, con las partidas que cuenta la fila:
+En **Plantilla por mes**, **Coste por ETC**, **Dimensiones analíticas** y **Cuentas de consolidación**, el nombre de un grupo es un enlace que abre la [lista de líneas presupuestarias](budget-lines.md) en una pestaña nueva, con las líneas que cuenta la fila:
 
-- las partidas del grupo, restringidas por la barra de filtros;
-- todos los estados (**Mostrar: Todos**), con un filtro **Fin de validez** "vacío, o posterior al 31 de diciembre" del año anterior al primer año del informe. Un informe cuenta las partidas todavía activas el 1 de enero de su primer año, incluidas las desactivadas después;
-- en **Plantilla por mes** y **Coste por ETC**, y con la medida **ETC**, solo las partidas que declaran ETC (el filtro **ETC declarados**).
+- las líneas del grupo, restringidas por la barra de filtros, y por el filtro **Tipo** cuando el informe está en **OPEX** o **CAPEX**;
+- todos los estados (**Mostrar: Todos**), con un filtro **Fin de validez** "vacío, o posterior al 31 de diciembre" del año anterior al primer año del informe. Un informe cuenta las líneas todavía activas el 1 de enero de su primer año, incluidas las desactivadas después;
+- en **Plantilla por mes** y **Coste por ETC**, y con la medida **ETC**, solo las líneas que declaran ETC (el filtro **ETC declarados**).
 
-Las columnas filtradas aparecen justo después del nombre de la partida durante esta visita, para que vea por qué la lista está restringida. Una cuenta de consolidación filtra por sus cuentas, sin columna propia.
+Las columnas filtradas aparecen justo después del nombre de la línea durante esta visita, para que vea por qué la lista está restringida. Una cuenta de consolidación filtra por sus cuentas, sin columna propia.
 
-Esta lista es una vista del informe. Lo que cambie en ella queda en su dirección, y **OPEX** o **CAPEX** abiertos después desde el menú muestran su propio orden, búsqueda y filtros.
+Esta lista es una vista del informe. Lo que cambie en ella queda en su dirección, y **Líneas presupuestarias** abierta después desde el menú muestra su propio orden, búsqueda y filtros.
 
 ---
 
@@ -166,7 +165,7 @@ Una fila de totales está fijada en la parte inferior.
 
 ## Contracargo por empresa
 
-Profundice en las asignaciones de contracargo de una empresa entre departamentos, partidas presupuestarias, flujos intercompañía y KPI.
+Profundice en las asignaciones de contracargo de una empresa entre departamentos, líneas presupuestarias, flujos intercompañía y KPI.
 
 ### Controles
 
@@ -174,7 +173,7 @@ Profundice en las asignaciones de contracargo de una empresa entre departamentos
 - **Año**: Ejercicio fiscal anterior, actual o siguiente
 - **Columna**: Cualquier columna presupuestaria visible. Empieza en la columna por defecto
 - **Totales por departamento** (casilla): Mostrar u ocultar el desglose por departamento
-- **Partidas de contracargo** (casilla): Mostrar u ocultar asignaciones detalladas
+- **Líneas de contracargo** (casilla): Mostrar u ocultar asignaciones detalladas
 - **KPI de contracargo** (casilla): Mostrar u ocultar la tabla comparativa de KPI
 - **Flujos intercompañía** (casilla): Mostrar u ocultar flujos con empresas asociadas
 - **Ejecutar**: Actualizar manualmente el informe (deshabilitado hasta que se seleccione una empresa)
@@ -189,11 +188,11 @@ Profundice en las asignaciones de contracargo de una empresa entre departamentos
 - "Costes comunes" agrega las asignaciones sin un departamento específico
 - Gráfico de barras horizontales junto a la tabla
 
-**Partidas de contracargo** (cuando está habilitado):
+**Líneas de contracargo** (cuando está habilitado):
 
-- Nombre de la partida, método de asignación, importe, participación en el total
+- Nombre de la línea, método de asignación, importe, participación en el total
 - Fila de totales fijada en la parte inferior
-- El nombre de la partida es un enlace que abre la partida OPEX en una nueva pestaña. Los costes comunes y los totales son texto simple.
+- El nombre de la línea es un enlace que abre la línea presupuestaria en una nueva pestaña. Los costes comunes y los totales son texto simple.
 
 **Flujos intercompañía** (cuando está habilitado):
 
@@ -211,38 +210,38 @@ Profundice en las asignaciones de contracargo de una empresa entre departamentos
 
 ---
 
-## Top partidas
+## Top líneas
 
-Identifique sus mayores partidas OPEX o CAPEX para un año dado.
+Identifique sus mayores líneas presupuestarias para un año dado.
 
 ### Controles
 
-- **Tipo de partida**: OPEX o CAPEX (ver [Elegir OPEX o CAPEX](#elegir-opex-o-capex))
+- **Tipo de línea**: **Todo**, **OPEX** o **CAPEX** (ver [Elegir el tipo de líneas](#elegir-el-tipo-de-lineas))
 - **Medida**: **Importe** o **ETC** (consulte [Elegir importe o ETC](#elegir-importe-o-etc))
 - **Año**: Año anterior, actual o siguiente
 - **Métrica**: Cualquier columna presupuestaria visible. Empieza en la columna por defecto
-- **Cantidad top**: Cuántas partidas mostrar (predeterminado: 10, mínimo: 1)
+- **Cantidad top**: Cuántas líneas mostrar (predeterminado: 10, mínimo: 1)
 - **Tipo de gráfico**: Gráfico circular o gráfico de barras horizontales
-- **Excluir partidas**: Autocompletado de selección múltiple para excluir partidas específicas
+- **Excluir líneas**: Autocompletado de selección múltiple para excluir líneas específicas
 - **Excluir cuentas**: Autocompletado de selección múltiple para excluir cuentas específicas
-- **Centro de coste**, **Run o build**, **Partidas** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
+- **Centro de coste**, **Run o build**, **Líneas** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
 
 ### Qué verá
 
-**Gráfico**: Gráfico circular o de barras horizontales de las partidas principales. Su título indica el tipo, por ejemplo "Top 10 CAPEX · Presupuesto 2026".
+**Gráfico**: Gráfico circular o de barras horizontales de las líneas principales. Su título indica el tipo, por ejemplo "Top 10 CAPEX · Presupuesto 2026".
 
 **Columnas de la tabla**:
 
-- Partida
+- Línea
 - Valor para la métrica y año seleccionados
 - Participación en el total (porcentaje)
 
-El nombre de la partida es un enlace que abre la partida OPEX o CAPEX en una nueva pestaña.
+El nombre de la línea es un enlace que abre la línea presupuestaria en una nueva pestaña.
 
 **Tarjetas de resumen debajo de la tabla**:
 
 - **Total top N**, con su parte del total filtrado, por ejemplo «45 % del total filtrado»
-- El total de la columna seleccionada en todas las partidas, con el nombre de la columna, por ejemplo **Presupuesto, total**
+- El total de la columna seleccionada en todas las líneas, con el nombre de la columna, por ejemplo **Presupuesto, total**
 
 La nota al pie del gráfico da el mismo total, por ejemplo «Presupuesto, total: 1 234».
 
@@ -254,20 +253,20 @@ Utilice este informe para detectar rápidamente dónde va la mayor parte de su p
 
 ## Top aumento / disminución
 
-Identifique los mayores cambios OPEX o CAPEX entre dos columnas presupuestarias (cualquier combinación de año y métrica).
+Identifique los mayores cambios entre dos columnas presupuestarias (cualquier combinación de año y métrica).
 
 ### Controles
 
-- **Tipo de partida**: OPEX o CAPEX (ver [Elegir OPEX o CAPEX](#elegir-opex-o-capex))
+- **Tipo de línea**: **Todo**, **OPEX** o **CAPEX** (ver [Elegir el tipo de líneas](#elegir-el-tipo-de-lineas))
 - **Medida**: **Importe** o **ETC** (consulte [Elegir importe o ETC](#elegir-importe-o-etc))
 - **Año de origen** y **Métrica de origen**: La columna base de comparación
 - **Año de destino** y **Métrica de destino**: La columna objetivo de comparación
-- **Cantidad top**: Cuántas partidas mostrar por dirección (predeterminado: 10)
+- **Cantidad top**: Cuántas líneas mostrar por dirección (predeterminado: 10)
 - **Tipo de gráfico**: Gráfico circular (solo una dirección) o gráfico de barras horizontales
-- **Excluir partidas**: Autocompletado de selección múltiple para excluir partidas específicas
+- **Excluir líneas**: Autocompletado de selección múltiple para excluir líneas específicas
 - **Excluir cuentas**: Autocompletado de selección múltiple para excluir cuentas específicas
 - **Dirección**: pestañas **Aumentos**, **Disminuciones** o **Ambos**
-- **Centro de coste**, **Run o build**, **Partidas** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
+- **Centro de coste**, **Run o build**, **Líneas** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
 
 Los selectores de año muestran los años que contienen datos. Los selectores de métrica ofrecen las columnas presupuestarias visibles. El informe empieza en la columna por defecto del año pasado como origen y en la columna por defecto del año actual como destino.
 
@@ -279,19 +278,19 @@ Cuando se selecciona **Ambos**, la opción de gráfico circular se deshabilita y
 
 **Columnas de la tabla**:
 
-- Partida
+- Línea
 - Valor de origen (anterior)
 - Valor de destino (actual)
 - Delta (cambio absoluto)
 - Porcentaje de aumento
 
-El nombre de la partida es un enlace que abre la partida OPEX o CAPEX en una nueva pestaña.
+El nombre de la línea es un enlace que abre la línea presupuestaria en una nueva pestaña.
 
 **Tarjetas de resumen debajo de la tabla**:
 
 - Totales de la selección (importes de aumento y/o disminución, con sumas de origen/destino)
-- Cambios brutos en todas las partidas (con porcentaje de cobertura)
-- Aumento o disminución neto en todas las partidas
+- Cambios brutos en todas las líneas (con porcentaje de cobertura)
+- Aumento o disminución neto en todas las líneas
 
 ### Caso de uso
 
@@ -299,17 +298,18 @@ Utilice este informe para identificar sobrecostes, detectar oportunidades de aho
 
 ---
 
-## Tendencia presupuestaria (OPEX)
+## Comparación presupuestaria
 
-Compare métricas OPEX en múltiples años en un solo gráfico de líneas.
+Compare métricas presupuestarias en múltiples años en un solo gráfico de líneas. La dirección del antiguo informe **Tendencia presupuestaria (CAPEX)** abre este informe en CAPEX.
 
 ### Controles
 
+- **Tipo de línea**: **Todo**, **OPEX** o **CAPEX** (ver [Elegir el tipo de líneas](#elegir-el-tipo-de-lineas))
 - **Medida**: **Importe** o **ETC** (consulte [Elegir importe o ETC](#elegir-importe-o-etc))
 - **Año de inicio**: Inicio del rango (año actual menos 2 hasta más 2)
 - **Año de fin**: Fin del rango
 - **Métricas**: Selección múltiple entre las columnas presupuestarias visibles. El informe empieza en la columna por defecto y en la última columna visible (Presupuesto y Aterrizaje previsto con la configuración estándar). Si quita todas las métricas, se usa la columna por defecto
-- **Centro de coste**, **Run o build**, **Partidas** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
+- **Centro de coste**, **Run o build**, **Líneas** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
 
 ### Qué verá
 
@@ -325,34 +325,17 @@ Compare métricas OPEX en múltiples años en un solo gráfico de líneas.
 
 ---
 
-## Tendencia presupuestaria (CAPEX)
-
-Diseño idéntico al informe de tendencia OPEX, pero extrae datos del presupuesto CAPEX.
-
-### Controles
-
-- **Medida**: **Importe** o **ETC** (consulte [Elegir importe o ETC](#elegir-importe-o-etc))
-- **Año de inicio**, **Año de fin**, **Métricas**: Igual que el informe de tendencia OPEX
-- **Centro de coste**, **Run o build**, **Partidas** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
-
-### Qué verá
-
-- Gráfico de líneas de totales CAPEX por métrica a lo largo de los años
-- Tabla resumen con columnas de año
-
----
-
 ## Comparación de columnas presupuestarias
 
-Compare de forma flexible hasta 10 combinaciones de año+columna para OPEX o CAPEX.
+Compare de forma flexible hasta 10 combinaciones de año+columna.
 
 ### Controles
 
-- **Tipo de partida**: Conmutador OPEX o CAPEX
+- **Tipo de línea**: **Todo**, **OPEX** o **CAPEX** (ver [Elegir el tipo de líneas](#elegir-el-tipo-de-lineas))
 - **Medida**: **Importe** o **ETC** (consulte [Elegir importe o ETC](#elegir-importe-o-etc))
 - **Selecciones**: Cada selección tiene un selector de año y un selector de columna con las columnas presupuestarias visibles. El informe empieza con dos selecciones: la columna por defecto del año actual y la del año siguiente. **Añadir** añade la columna por defecto del año actual, y el icono de borrar elimina una selección. Máximo de 10 selecciones; mínimo de 1.
 - **Agrupación por año** (casilla): Cuando está habilitada y al menos dos años comparten una métrica, cambia a un gráfico de líneas agrupado con una serie por métrica y años en el eje X. Cuando está deshabilitada, muestra un gráfico de líneas plano con cada selección como punto de datos.
-- **Centro de coste**, **Run o build**, **Partidas** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
+- **Centro de coste**, **Run o build**, **Líneas** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
 
 ### Qué verá
 
@@ -376,17 +359,17 @@ Compare de forma flexible hasta 10 combinaciones de año+columna para OPEX o CAP
 
 ## Cuentas de consolidación
 
-Vea datos presupuestarios OPEX o CAPEX agrupados por cuenta de consolidación, con el tipo de gráfico adaptándose al rango de años.
+Vea datos presupuestarios agrupados por cuenta de consolidación, con el tipo de gráfico adaptándose al rango de años.
 
 ### Controles
 
-- **Tipo de partida**: OPEX o CAPEX (ver [Elegir OPEX o CAPEX](#elegir-opex-o-capex))
+- **Tipo de línea**: **Todo**, **OPEX** o **CAPEX** (ver [Elegir el tipo de líneas](#elegir-el-tipo-de-lineas))
 - **Medida**: **Importe** o **ETC** (consulte [Elegir importe o ETC](#elegir-importe-o-etc))
 - **Año de inicio** y **Año de fin**: Año anterior, actual o siguiente
 - **Métrica**: Cualquier columna presupuestaria visible. Empieza en la columna por defecto
 - **Tipo de gráfico**: Gráfico circular o de barras horizontales (solo disponible cuando se selecciona un solo año)
 - **Excluir cuentas**: Autocompletado de selección múltiple para excluir cuentas específicas. Ofrece todas las cuentas usadas por las líneas del informe, por nombre y número, pueda o no abrir el plan de cuentas
-- **Centro de coste**, **Run o build**, **Partidas** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
+- **Centro de coste**, **Run o build**, **Líneas** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
 
 ### Qué verá
 
@@ -399,26 +382,26 @@ Vea datos presupuestarios OPEX o CAPEX agrupados por cuenta de consolidación, c
 
 - Gráfico de líneas con una serie por cuenta de consolidación, trazada a lo largo de los años
 
-**Tabla**: Una fila por cuenta de consolidación con columnas de año. Una fila de totales fijada en la parte inferior suma todos los grupos. Una cuenta de consolidación abre la lista de las partidas de sus cuentas en una pestaña nueva ("Sin asignar": las partidas cuya cuenta no tiene cuenta de consolidación, y las partidas sin cuenta). Consulte [Abrir la lista desde un informe](#abrir-la-lista-desde-un-informe). La fila de totales es texto sin enlace.
+**Tabla**: Una fila por cuenta de consolidación con columnas de año. Una fila de totales fijada en la parte inferior suma todos los grupos. Una cuenta de consolidación abre la lista de las líneas de sus cuentas en una pestaña nueva ("Sin asignar": las líneas cuya cuenta no tiene cuenta de consolidación, y las líneas sin cuenta). Consulte [Abrir la lista desde un informe](#abrir-la-lista-desde-un-informe). La fila de totales es texto sin enlace.
 
-Una línea en una cuenta de consolidación desactivada desde entonces sigue contando, en la línea de consolidación de esa cuenta. Los nombres y números de cuenta solo se muestran si puede leer el [plan de cuentas](chart-of-accounts.md); sin ese acceso, todas las líneas aparecen bajo "Sin asignar" en su lugar (los totales siguen siendo correctos, solo se oculta el desglose por cuenta). Las partidas sin cuenta de consolidación también aparecen como "Sin asignar". Las cuentas de consolidación son las cuentas de su [plan de consolidación](chart-of-accounts.md#el-plan-de-consolidacion).
+Una línea en una cuenta de consolidación desactivada desde entonces sigue contando, en la línea de consolidación de esa cuenta. Los nombres y números de cuenta solo se muestran si puede leer el [plan de cuentas](chart-of-accounts.md); sin ese acceso, todas las líneas aparecen bajo "Sin asignar" en su lugar (los totales siguen siendo correctos, solo se oculta el desglose por cuenta). Las líneas sin cuenta de consolidación también aparecen como "Sin asignar". Las cuentas de consolidación son las cuentas de su [plan de consolidación](chart-of-accounts.md#el-plan-de-consolidacion).
 
 ---
 
 ## Dimensiones analíticas
 
-Vea datos presupuestarios OPEX o CAPEX agrupados por los valores de una dimensión analítica. El diseño es idéntico al informe de Cuentas de consolidación. Consulte [Dimensiones analíticas](analytics.md) para configurar las dimensiones y los valores.
+Vea datos presupuestarios agrupados por los valores de una dimensión analítica. El diseño es idéntico al informe de Cuentas de consolidación. Consulte [Dimensiones analíticas](analytics.md) para configurar las dimensiones y los valores.
 
 ### Controles
 
-- **Tipo de partida**: OPEX o CAPEX (ver [Elegir OPEX o CAPEX](#elegir-opex-o-capex))
+- **Tipo de línea**: **Todo**, **OPEX** o **CAPEX** (ver [Elegir el tipo de líneas](#elegir-el-tipo-de-lineas))
 - **Medida**: **Importe** o **ETC** (consulte [Elegir importe o ETC](#elegir-importe-o-etc))
-- **Dimensión**: la dimensión por la que agrupa el informe. Ofrece las dimensiones activadas usadas para el tipo de partida elegido, aparece cuando hay dos o más, y el informe se abre en la dimensión por defecto. Si cambia a un tipo de partida que no usa la dimensión elegida, el informe vuelve a la dimensión por defecto. La dirección de la página conserva su elección, de modo que un enlace guardado o compartido se abre en la misma dimensión
+- **Dimensión**: la dimensión por la que agrupa el informe. Ofrece las dimensiones activadas usadas para el tipo de línea elegido, aparece cuando hay dos o más, y el informe se abre en la dimensión por defecto. Si cambia a un tipo de línea que no usa la dimensión elegida, el informe vuelve a la dimensión por defecto. La dirección de la página conserva su elección, de modo que un enlace guardado o compartido se abre en la misma dimensión
 - **Año de inicio** y **Año de fin**: Año anterior, actual o siguiente
 - **Métrica**: Cualquier columna presupuestaria visible. Empieza en la columna por defecto
 - **Tipo de gráfico**: Gráfico circular o de barras horizontales (solo un año)
-- **Excluir valores**: Autocompletado de selección múltiple para excluir valores concretos de la dimensión elegida. Ofrece los valores que se usan para el tipo de partida elegido, además de los que tienen las líneas del informe. Cambiar el tipo de partida o la dimensión borra esta selección
-- **Centro de coste**, **Run o build**, **Partidas** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
+- **Excluir valores**: Autocompletado de selección múltiple para excluir valores concretos de la dimensión elegida. Ofrece los valores que se usan para el tipo de línea elegido, además de los que tienen las líneas del informe. Cambiar el tipo de línea o la dimensión borra esta selección
+- **Centro de coste**, **Run o build**, **Líneas** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
 
 El subtítulo, el título del gráfico y la primera columna de la tabla indican la dimensión elegida, por ejemplo "OPEX por Nature".
 
@@ -435,21 +418,21 @@ El subtítulo, el título del gráfico y la primera columna de la tabla indican 
 
 **Tabla**: Una fila por valor con columnas de año. Una fila de totales fijada en la parte inferior. Las líneas sin valor en la dimensión elegida aparecen como "Sin asignar".
 
-Un valor abre la lista de sus partidas en una pestaña nueva ("Sin asignar": las partidas sin valor). Con la medida **ETC**, la lista muestra las partidas del valor que declaran ETC. Consulte [Abrir la lista desde un informe](#abrir-la-lista-desde-un-informe). La fila de totales es texto sin enlace.
+Un valor abre la lista de sus líneas en una pestaña nueva ("Sin asignar": las líneas sin valor). Con la medida **ETC**, la lista muestra las líneas del valor que declaran ETC. Consulte [Abrir la lista desde un informe](#abrir-la-lista-desde-un-informe). La fila de totales es texto sin enlace.
 
 ---
 
 ## Plantilla por mes
 
-Vea cuántas personas prevé cada parte del presupuesto, mes a mes. El informe lee los ETC mensuales que declaran las líneas de cantidad y precio de una columna presupuestaria. Consulte [Cantidad y precio](opex.md#cantidad-y-precio) y [ETC](opex.md#etc).
+Vea cuántas personas prevé cada parte del presupuesto, mes a mes. El informe lee los ETC mensuales que declaran las líneas de cantidad y precio de una columna presupuestaria. Consulte [Cantidad y precio](budget-lines.md#cantidad-y-precio) y [ETC](budget-lines.md#etc).
 
 ### Controles
 
-- **Tipo de partida**: OPEX o CAPEX (ver [Elegir OPEX o CAPEX](#elegir-opex-o-capex))
-- **Centro de coste**, **Run o build**, **Partidas** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
+- **Tipo de línea**: **Todo**, **OPEX** o **CAPEX** (ver [Elegir el tipo de líneas](#elegir-el-tipo-de-lineas))
+- **Centro de coste**, **Run o build**, **Líneas** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
 - **Año**: Año anterior, actual o siguiente
 - **Columna**: Cualquier columna presupuestaria visible. Empieza en la columna por defecto
-- **Agrupar por**: **Centro de coste** (por defecto), **Partida**, **Proveedor** o **Dimensión analítica**
+- **Agrupar por**: **Centro de coste** (por defecto), **Línea**, **Proveedor** o **Dimensión analítica**
 - **Dimensión**: la dimensión por la que agrupa el informe, con **Dimensión analítica**. Ofrece las dimensiones activadas usadas para las líneas del informe y aparece cuando hay dos o más. El informe se abre en la dimensión por defecto
 
 La dirección de la página conserva la agrupación (`?group=item`, `?group=supplier` o `?group=axis:<dimension id>`), de modo que un enlace guardado o compartido se abre con la misma agrupación. Sin este parámetro, el informe agrupa por centro de coste.
@@ -460,21 +443,21 @@ La dirección de la página conserva la agrupación (`?group=item`, `?group=supp
 
 **Tabla**: Una fila por grupo que declara ETC mensuales, la media más alta primero:
 
-- El grupo: un centro de coste, una partida, un proveedor o un valor de la dimensión. Las partidas sin centro de coste aparecen como «Sin centro de coste», sin proveedor como «Sin proveedor» y sin valor en la dimensión como «Sin valor»
+- El grupo: un centro de coste, una línea, un proveedor o un valor de la dimensión. Las líneas sin centro de coste aparecen como «Sin centro de coste», sin proveedor como «Sin proveedor» y sin valor en la dimensión como «Sin valor»
 - Una columna por mes
 - **Media**: la suma de los doce meses dividida entre 12. Es el ETC medio del año completo que declara la columna
 - **Pico**: el mes más alto
 
-Una fila **Total** fijada da los totales mensuales, su media y su pico. Los valores se muestran con dos decimales. Solo cuentan los ETC declarados: las partidas sin líneas de cantidad y precio en la columna se dejan fuera.
+Una fila **Total** fijada da los totales mensuales, su media y su pico. Los valores se muestran con dos decimales. Solo cuentan los ETC declarados: las líneas sin líneas de cantidad y precio en la columna se dejan fuera.
 
-El nombre de un grupo es un enlace que se abre en una pestaña nueva. Una partida abre su página. Un centro de coste, un proveedor o un valor abre la lista OPEX o CAPEX con las partidas del grupo que declaran ETC, en el periodo del informe y restringidas por la barra de filtros (consulte [Abrir la lista desde un informe](#abrir-la-lista-desde-un-informe)). «Sin centro de coste», «Sin proveedor» y «Sin valor» abren las partidas que no lo tienen. La fila **Total** es texto sin enlace. La exportación CSV conserva los nombres como texto.
+El nombre de un grupo es un enlace que se abre en una pestaña nueva. Una línea abre su página. Un centro de coste, un proveedor o un valor abre la lista de líneas presupuestarias con las líneas del grupo que declaran ETC, en el periodo del informe y restringidas por la barra de filtros (consulte [Abrir la lista desde un informe](#abrir-la-lista-desde-un-informe)). «Sin centro de coste», «Sin proveedor» y «Sin valor» abren las líneas que no lo tienen. La fila **Total** es texto sin enlace. La exportación CSV conserva los nombres como texto.
 
 ### Avisos
 
 Una línea bajo la tabla para cada caso, cuando se da:
 
-- «2 partidas declaran 1,50 ETC, pero su importe ya no sigue sus líneas.» El importe se ha distribuido, sus meses se han editado a mano o la columna se ha copiado. Esta línea cubre las partidas que tienen detalle mensual, y sus ETC siguen contando en los meses. Las partidas sin detalle mensual aparecen solo en la línea siguiente. Consulte [Elegir importe o ETC](#elegir-importe-o-etc).
-- «1 partida declara 3,00 ETC sin detalle mensual. No se incluye en los meses.» Estas partidas declaran un ETC del año completo, sin ETC por mes. Quedan fuera de los meses, de la media y del pico.
+- «2 líneas declaran 1,50 ETC, pero su importe ya no sigue sus líneas de cantidad y precio.» El importe se ha distribuido, sus meses se han editado a mano o la columna se ha copiado. Este aviso cubre las líneas que tienen detalle mensual, y sus ETC siguen contando en los meses. Las líneas sin detalle mensual aparecen solo en el aviso siguiente. Consulte [Elegir importe o ETC](#elegir-importe-o-etc).
+- «1 línea declara 3,00 ETC sin detalle mensual. No se incluye en los meses.» Estas líneas declaran un ETC del año completo, sin ETC por mes. Quedan fuera de los meses, de la media y del pico.
 
 ### Exportar
 
@@ -486,12 +469,12 @@ Una línea bajo la tabla para cada caso, cuando se da:
 
 ## Coste por ETC
 
-Vea cuánto cuesta un ETC en cada parte del presupuesto y cómo evoluciona ese coste entre columnas presupuestarias y años. El informe divide el coste de las líneas de cantidad y precio en personas o días entre sus ETC. También puede mostrar la tarifa diaria media de las líneas con precio por día (ver [Tarifa diaria](#tarifa-diaria)). Consulte [Cantidad y precio](opex.md#cantidad-y-precio) y [ETC](opex.md#etc).
+Vea cuánto cuesta un ETC en cada parte del presupuesto y cómo evoluciona ese coste entre columnas presupuestarias y años. El informe divide el coste de las líneas de cantidad y precio en personas o días entre sus ETC. También puede mostrar la tarifa diaria media de las líneas con precio por día (ver [Tarifa diaria](#tarifa-diaria)). Consulte [Cantidad y precio](budget-lines.md#cantidad-y-precio) y [ETC](budget-lines.md#etc).
 
 ### Controles
 
-- **Tipo de partida**: OPEX o CAPEX (ver [Elegir OPEX o CAPEX](#elegir-opex-o-capex))
-- **Centro de coste**, **Run o build**, **Partidas** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
+- **Tipo de línea**: **Todo**, **OPEX** o **CAPEX** (ver [Elegir el tipo de líneas](#elegir-el-tipo-de-lineas))
+- **Centro de coste**, **Run o build**, **Líneas** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
 - **Agrupar por** y **Dimensión**: las mismas opciones que en [Plantilla por mes](#plantilla-por-mes). La dirección de la página conserva la agrupación de la misma manera
 - **Mostrar**: **Coste por ETC** (por defecto) o **Tarifa diaria**. Al cambiar se conservan el tipo, la agrupación, los pares y los filtros. La dirección de la página conserva la tarifa diaria (`?view=rate`), de modo que un enlace guardado o compartido se abre en ella
 - **Columnas**: de uno a cuatro pares de un año y una columna presupuestaria. Los años van de dos años atrás a dos años adelante. **Agregar** añade un par, y el botón de quitar junto a un par lo quita. El informe se abre en la columna por defecto del año pasado y del año actual. La tabla y el gráfico muestran los pares en orden cronológico
@@ -501,7 +484,7 @@ Vea cuánto cuesta un ETC en cada parte del presupuesto y cómo evoluciona ese c
 - El coste y los ETC de las líneas en personas o días. Las líneas en piezas quedan fuera de ambos.
 - El informe lee los resultados de las líneas, también cuando el importe de la columna ya no las sigue (el importe se ha distribuido, sus meses se han editado a mano o la columna se ha copiado). El coste es entonces el coste de las líneas.
 - El coste se convierte a la moneda de reporte al tipo de la versión de cada año, como todos los importes de los informes.
-- Las partidas que declaran ETC sin detalle de líneas quedan fuera. Un aviso las indica (ver más abajo).
+- Las líneas que declaran ETC sin detalle de líneas quedan fuera. Un aviso las indica (ver más abajo).
 
 ### Qué verá
 
@@ -513,7 +496,7 @@ Vea cuánto cuesta un ETC en cada parte del presupuesto y cómo evoluciona ese c
 
 Los grupos se nombran como en Plantilla por mes («Sin centro de coste», «Sin proveedor», «Sin valor»). Una fila **Total** fijada da, para cada par, el total de ETC, el total del coste de personal y el total del coste de personal dividido entre el total de ETC.
 
-En las dos vistas, el nombre de un grupo abre su partida, o la lista de las partidas del grupo que declaran ETC, en una pestaña nueva, como en [Plantilla por mes](#plantilla-por-mes).
+En las dos vistas, el nombre de un grupo abre su línea, o la lista de las líneas del grupo que declaran ETC, en una pestaña nueva, como en [Plantilla por mes](#plantilla-por-mes).
 
 **Gráfico**: Barras horizontales del coste por ETC, una barra por par. La primera categoría es el total, seguida de los diez primeros grupos de la tabla. El título indica el tipo y la agrupación, por ejemplo «Coste por ETC OPEX por centro de coste». Pase el cursor sobre una barra para leer el grupo, el par, el coste por ETC, los ETC y el coste de personal.
 
@@ -521,8 +504,8 @@ En las dos vistas, el nombre de un grupo abre su partida, o la lista de las part
 
 Una línea bajo la tabla para cada caso, cuando se da. Cada línea indica los pares afectados:
 
-- «El importe ya no sigue las líneas en: Presupuesto 2026 (2 partidas, 1,50 ETC). Estas cifras usan el coste de sus líneas.» Estas columnas cuentan con el coste de sus líneas. Consulte [Elegir importe o ETC](#elegir-importe-o-etc).
-- «Sin detalle de líneas en: Presupuesto 2025 (1 partida, 0,50 ETC). Quedan fuera de estas cifras.» Estas partidas declaran un ETC del año completo, sin resultado por línea, por lo que el informe no puede leer su coste.
+- «El importe ya no sigue las líneas en: Presupuesto 2026 (2 líneas, 1,50 ETC). Estas cifras usan el coste de sus líneas.» Estas columnas cuentan con el coste de sus líneas. Consulte [Elegir importe o ETC](#elegir-importe-o-etc).
+- «Sin detalle de líneas en: Presupuesto 2025 (1 línea, 0,50 ETC). Quedan fuera de estas cifras.» Estas líneas declaran un ETC del año completo, sin resultado por línea, por lo que el informe no puede leer su coste.
 
 ### Tarifa diaria
 
@@ -577,8 +560,8 @@ Cada informe muestra una ruta de migas de pan de vuelta al centro de **Informes*
 ## Consejos
 
 - **Empiece con el Contracargo global**: Obtenga una imagen general de las asignaciones antes de profundizar en una empresa.
-- **Use Top partidas para victorias rápidas**: Las partidas de coste más grandes son sus primeros candidatos para optimización.
+- **Use Top líneas para victorias rápidas**: Las líneas de coste más grandes son sus primeros candidatos para optimización.
 - **Compare Presupuesto vs Aterrizaje previsto**: Utilice el informe de Comparación de columnas presupuestarias para medir la precisión de la previsión entre años.
-- **Alterne secciones en informes de contracargo**: Los controles de casilla le permiten centrarse solo en los datos que necesita (departamentos, partidas, KPI o flujos) sin ruido visual.
+- **Alterne secciones en informes de contracargo**: Los controles de casilla le permiten centrarse solo en los datos que necesita (departamentos, líneas, KPI o flujos) sin ruido visual.
 - **Agrupación por año en Comparación de columnas presupuestarias**: Al comparar la misma métrica en múltiples años, active la agrupación por año para un gráfico de líneas más limpio.
 - **Exporte para presentaciones**: Los gráficos se exportan como PNG y las tablas como CSV, ambos listos para diapositivas u hojas de cálculo.

@@ -92,10 +92,10 @@ function LinkEditForm({
         />
       )}
       <Stack direction="row" justifyContent="flex-end" spacing={1}>
-        <Button onClick={onCancel} size="small" color="inherit">
+        <Button variant="action" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" size="small" variant="contained">
+        <Button type="submit" variant="action-primary">
           Save
         </Button>
       </Stack>

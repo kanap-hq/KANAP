@@ -17,7 +17,7 @@ export class RolePermission {
   role?: Role;
 
   @Column({ type: 'text' })
-  resource!: string; // e.g., 'suppliers', 'opex', 'billing'
+  resource!: string; // e.g., 'suppliers', 'budget', 'billing'
 
   @Column({ type: 'text' })
   level!: 'reader' | 'contributor' | 'member' | 'admin';

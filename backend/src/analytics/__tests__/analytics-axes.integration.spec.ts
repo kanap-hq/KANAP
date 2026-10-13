@@ -294,13 +294,20 @@ async function testValueDimensionIsFixed() {
     ));
     // A line's value must belong to the dimension the link names.
     const hardware = await values.create({ axis_id: nature.id, name: 'Hardware' }, null, ctx);
+    // A CAPEX line: since lot Z1 a line of spend_items of nature capex, its values in the one
+    // table, guarded by the same key (the dormant capex_* key is gone).
     const other = await seedLine(runner, 'capex', tenantId);
-    await expectRefused(runner, /capex_item_analytics_values_category_fk/, () =>
+    assert.deepEqual(
+      await runner.query(`SELECT nature FROM spend_items WHERE tenant_id = $1 AND id = $2`, [tenantId, other]),
+      [{ nature: 'capex' }],
+      'the line is a CAPEX line of spend_items',
+    );
+    await expectRefused(runner, /spend_item_analytics_values_category_fk/, () =>
       linkValue(runner, 'capex', tenantId, other, defaultId, hardware.id));
     // One value per line and dimension.
     await linkValue(runner, 'capex', tenantId, other, nature.id, hardware.id);
     const soft = await values.create({ axis_id: nature.id, name: 'Software' }, null, ctx);
-    await expectRefused(runner, /capex_item_analytics_values_pkey/, () =>
+    await expectRefused(runner, /spend_item_analytics_values_pkey/, () =>
       linkValue(runner, 'capex', tenantId, other, nature.id, soft.id));
   });
 }
@@ -393,9 +400,9 @@ async function testListScopeAndFilters() {
     await values.create({ axis_id: nature.id, name: 'Hardware' }, null, ctx);
 
     const names = (result: { items: Array<{ name: string }> }) => result.items.map((item) => item.name);
-    assert.deepEqual(names(await values.list({}, ctx)), ['Hardware', 'Licences'], 'enabled only by default');
-    assert.deepEqual(names(await values.list({ includeDisabled: '1' }, ctx)), ['Hardware', 'Licences', 'Retired']);
-    assert.deepEqual(names(await values.list({ includeDisabled: true }, ctx)), ['Hardware', 'Licences', 'Retired'], 'the AI passes a boolean');
+    assert.deepEqual(names(await values.list({}, ctx)), ['Licences', 'Hardware'], 'enabled only by default, the default dimension first');
+    assert.deepEqual(names(await values.list({ includeDisabled: '1' }, ctx)), ['Licences', 'Retired', 'Hardware']);
+    assert.deepEqual(names(await values.list({ includeDisabled: true }, ctx)), ['Licences', 'Retired', 'Hardware'], 'the AI passes a boolean');
     assert.deepEqual(names(await values.list({ status: 'disabled' }, ctx)), ['Retired']);
     const byAxis = await values.list({ axis_id: nature.id }, ctx);
     assert.deepEqual(names(byAxis), ['Hardware']);
@@ -418,7 +425,7 @@ async function testListScopeAndFilters() {
     assert.equal(ids.total, 3);
     assert.equal(ids.ids.length, 3);
     // Older callers pass only the manager: the tenant comes from the transaction.
-    assert.deepEqual(names(await values.list({}, { manager: runner.manager })), ['Hardware', 'Licences']);
+    assert.deepEqual(names(await values.list({}, { manager: runner.manager })), ['Licences', 'Hardware']);
 
     const listed = await axes.list(ctx);
     assert.deepEqual(listed.items.map((axis) => [axis.code, axis.is_default]), [['default', true], ['nature', false]]);
@@ -436,10 +443,17 @@ async function testNewTenantHasItsDefault() {
     const slug = `ax-boot-${randomUUID().slice(0, 8)}`;
     const tenant = await tenants.createTenant({ slug, name: 'Analytics bootstrap' }, { manager });
     const axes = await loadAnalyticsAxes(manager, tenant.id);
-    assert.deepEqual(axes.map((axis) => [axis.code, axis.name, axis.is_default]), [['default', null, true]]);
-    // Creating the same slug again runs the seeds on the existing tenant: still one default.
+    // The default named as the cost pool, then the other recommended dimensions (lot D), for both natures, optional.
+    const expected = [
+      ['default', 'Cost pool', true, null, false],
+      ['it_tower', 'IT tower', false, null, false],
+      ['purpose', 'Purpose', false, null, false],
+      ['priority', 'Priority', false, null, false],
+    ];
+    assert.deepEqual(axes.map((axis) => [axis.code, axis.name, axis.is_default, axis.applies_to, axis.required]), expected);
+    // Creating the same slug again runs the seeds on the existing tenant: still one default, nothing more.
     await tenants.createTenant({ slug, name: 'Analytics bootstrap' }, { manager });
-    assert.equal((await loadAnalyticsAxes(manager, tenant.id)).length, 1);
+    assert.equal((await loadAnalyticsAxes(manager, tenant.id)).length, expected.length);
   });
 }
 
@@ -517,6 +531,130 @@ async function testAppliesTo() {
   });
 }
 
+async function testRequired() {
+  await withRollback(async (runner) => {
+    const tenantId = await seedTenant(runner, 'required');
+    const { axes: svc } = services(runner.manager);
+    const ctx = context(runner.manager, tenantId);
+    const defaultId = await ensureDefaultAnalyticsAxis(runner.manager, tenantId);
+
+    // Create: absent is optional (false); true is stored and returned.
+    const optional = await svc.create({ code: 'optional', name: 'Optional' }, ctx);
+    assert.equal(optional.required, false);
+    const menu = await svc.create({ code: 'menu', name: 'Menu', required: true }, ctx);
+    assert.equal(menu.required, true);
+
+    // Update: absent keeps, a boolean is written; the default dimension may be required.
+    assert.equal((await svc.update(menu.id, { name: 'Menu 2' }, ctx)).required, true, 'absent keeps');
+    assert.equal((await svc.update(menu.id, { required: null }, ctx)).required, true, 'null keeps');
+    assert.equal((await svc.update(menu.id, { required: false }, ctx)).required, false);
+    assert.equal((await svc.update(optional.id, { required: true }, ctx)).required, true);
+    assert.equal((await svc.update(defaultId, { required: true }, ctx)).required, true, 'the default dimension may be required');
+
+    // The audit carries it before and after.
+    const [audit] = await runner.query(
+      `SELECT before_json, after_json FROM audit_log
+        WHERE tenant_id = $1 AND table_name = 'analytics_axes' AND record_id = $2 AND action = 'update'
+        ORDER BY created_at DESC, id DESC LIMIT 1`,
+      [tenantId, optional.id],
+    );
+    assert.equal(audit.before_json.required, false);
+    assert.equal(audit.after_json.required, true);
+    const audits = async () => Number((await runner.query(
+      `SELECT count(*)::int AS n FROM audit_log WHERE tenant_id = $1 AND table_name = 'analytics_axes' AND record_id = $2`,
+      [tenantId, optional.id],
+    ))[0].n);
+    const before = await audits();
+    await svc.update(optional.id, { required: true }, ctx);
+    assert.equal(await audits(), before, 'an unchanged setting writes no audit row');
+
+    // Invalid: refused by the service and by the DTO.
+    await expectRefused(runner, /^Required must be true or false\./, () => svc.update(menu.id, { required: 'maybe' }, ctx));
+    for (const Dto of [AnalyticsAxisCreateDto, AnalyticsAxisUpdateDto]) {
+      const invalid = await validate(plainToInstance(Dto, { code: 'x', required: 'yes' }));
+      assert.ok(invalid.some((error) => error.property === 'required'), `${Dto.name} refuses a string`);
+      for (const valid of [true, false, undefined]) {
+        const errors = await validate(plainToInstance(Dto, { code: 'x', required: valid }));
+        assert.ok(!errors.some((error) => error.property === 'required'), `${Dto.name} accepts ${valid}`);
+      }
+    }
+
+    // List, get and the shared loader return it.
+    const listed = new Map((await svc.list(ctx)).items.map((axis) => [axis.id, axis.required]));
+    assert.equal(listed.get(defaultId), true);
+    assert.equal(listed.get(menu.id), false);
+    assert.equal(listed.get(optional.id), true);
+    assert.equal((await svc.get(optional.id, ctx)).required, true);
+    const loaded = new Map((await loadAnalyticsAxes(runner.manager, tenantId)).map((axis) => [axis.id, axis.required]));
+    assert.equal(loaded.get(optional.id), true);
+    assert.equal(loaded.get(menu.id), false);
+  });
+}
+
+/**
+ * The detail's `opex_missing` / `capex_missing` (lines of every status without a value, 0 for a
+ * type the dimension does not apply to) and `unusable_for` (types with no enabled value usable on
+ * them), whatever `required` is.
+ */
+async function testMissingAndUnusable() {
+  await withRollback(async (runner) => {
+    const tenantId = await seedTenant(runner, 'missing');
+    const { axes, values } = services(runner.manager);
+    const ctx = context(runner.manager, tenantId);
+    await ensureDefaultAnalyticsAxis(runner.manager, tenantId);
+
+    const menu = await axes.create({ code: 'menu', name: 'Menu' }, ctx);
+    assert.deepEqual(
+      { opex: menu.opex_missing, capex: menu.capex_missing, unusable: menu.unusable_for },
+      { opex: 0, capex: 0, unusable: ['opex', 'capex'] },
+      'no line, no value: unusable on both types',
+    );
+
+    const opexLines = [await seedLine(runner, 'opex', tenantId), await seedLine(runner, 'opex', tenantId), await seedLine(runner, 'opex', tenantId)];
+    const capexLines = [await seedLine(runner, 'capex', tenantId), await seedLine(runner, 'capex', tenantId)];
+    // A disabled line still counts (the list link shows every status).
+    await runner.query(
+      `UPDATE spend_items SET status = 'disabled', disabled_at = now() - interval '1 day' WHERE tenant_id = $1 AND id = $2`,
+      [tenantId, opexLines[2]],
+    );
+    const saas = await values.create({ axis_id: menu.id, name: 'Abonnements SaaS', applies_to: 'opex' }, null, ctx);
+    await linkValue(runner, 'opex', tenantId, opexLines[0], menu.id, saas.id);
+
+    const detail = await axes.get(menu.id, ctx);
+    assert.equal(detail.opex_missing, 2, 'two OPEX lines without a value, the disabled one included');
+    assert.equal(detail.capex_missing, 2);
+    assert.deepEqual(detail.unusable_for, ['capex'], 'every value is OPEX only: unusable on CAPEX lines');
+
+    const shared = await values.create({ axis_id: menu.id, name: 'Licences' }, null, ctx);
+    await linkValue(runner, 'capex', tenantId, capexLines[0], menu.id, shared.id);
+    const both = await axes.get(menu.id, ctx);
+    assert.equal(both.capex_missing, 1);
+    assert.deepEqual(both.unusable_for, [], 'a value of both types is usable on both');
+
+    // A disabled value does not count.
+    await runner.query(
+      `UPDATE analytics_categories SET status = 'disabled', disabled_at = now() - interval '1 day' WHERE tenant_id = $1 AND id = $2`,
+      [tenantId, shared.id],
+    );
+    assert.deepEqual((await axes.get(menu.id, ctx)).unusable_for, ['capex'], 'a disabled value is not usable');
+
+    // A dimension for OPEX lines only: CAPEX lines count 0 and are never unusable.
+    const recurrence = await axes.create({ code: 'recurrence', name: 'Recurrence', applies_to: 'opex' }, ctx);
+    assert.deepEqual(
+      { opex: recurrence.opex_missing, capex: recurrence.capex_missing, unusable: recurrence.unusable_for },
+      { opex: 3, capex: 0, unusable: ['opex'] },
+      'a type the dimension does not apply to: 0 and never unusable',
+    );
+
+    // The counts do not depend on the setting.
+    const required = await axes.update(menu.id, { required: true }, ctx);
+    assert.deepEqual(
+      { opex: required.opex_missing, capex: required.capex_missing, unusable: required.unusable_for },
+      { opex: 2, capex: 1, unusable: ['capex'] },
+    );
+  });
+}
+
 async function testValueAppliesTo() {
   await withRollback(async (runner) => {
     const tenantId = await seedTenant(runner, 'value-applies');
@@ -585,7 +723,7 @@ async function testValueAppliesTo() {
       values.list({ axis_id: nature.id, filters: JSON.stringify({ applies_to: { filterType: 'set', values: valuesOf } }) }, ctx);
     assert.deepEqual(names(await filtered(['capex'])), ['Matériel']);
     assert.deepEqual(names(await filtered([''])), ['Abonnements SaaS 2', 'Divers'], 'blank is OPEX and CAPEX');
-    assert.deepEqual(names(await filtered([null, 'opex'])), ['Abonnements SaaS 2', 'Divers', 'Licences']);
+    assert.deepEqual(names(await filtered([null, 'opex'])), ['Licences', 'Abonnements SaaS 2', 'Divers'], 'in the dimension order');
     assert.equal(((await values.list({ axis_id: nature.id }, ctx)).items.find((item) => item.id === hardware.id) as any)?.applies_to, 'capex');
     assert.deepEqual(
       names(await values.list({ axis_id: nature.id, sort: 'applies_to:ASC' }, ctx)).slice(0, 2),
@@ -811,6 +949,8 @@ runSpecs('analytics-axes.integration.spec', [
   testListScopeAndFilters,
   testNewTenantHasItsDefault,
   testAppliesTo,
+  testRequired,
+  testMissingAndUnusable,
   testValueAppliesTo,
   testValueAppliesToFollowsItsDimension,
   testNarrowingRacesAValueRestriction,

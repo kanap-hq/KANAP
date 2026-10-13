@@ -615,9 +615,36 @@
     "openDimension": "Abrir {{name}}",
     "markedDimension": "{{name}}, {{marks}}",
     "disabledMark": "Desactivada",
+    "defaultMark": "Predeterminada",
     "enableToAddValues": "Active esta dimensión para añadir valores.",
     "export": "Exportar valores",
     "import": "Importar valores",
+    "reorder": {
+      "action": "Reordenar",
+      "title": "Reordenar los valores de {{name}}",
+      "hint": "Arrastre los valores al orden en que las listas y los filtros deben mostrarlos.",
+      "loadFailed": "Error al cargar los valores.",
+      "saveFailed": "Error al guardar el orden.",
+      "roleDescription": "valor movible",
+      "instructions": "Para mover un valor, pulse Espacio o Intro, muévalo con las flechas y pulse Espacio o Intro para soltarlo. Escape cancela.",
+      "pickedUp": "Valor {{name}} seleccionado.",
+      "movedTo": "Valor {{name}} en la posición {{position}} de {{count}}.",
+      "droppedAt": "Valor {{name}} soltado en la posición {{position}} de {{count}}.",
+      "cancelled": "Valor {{name}} devuelto a su lugar."
+    },
+    "reorderDimensions": {
+      "action": "Reordenar las dimensiones",
+      "title": "Reordenar las dimensiones",
+      "hint": "Arrastre las dimensiones al orden en que las pantallas, las listas y el archivo de presupuesto deben mostrarlas.",
+      "loadFailed": "Error al cargar las dimensiones.",
+      "saveFailed": "Error al guardar el orden.",
+      "roleDescription": "dimensión movible",
+      "instructions": "Para mover una dimensión, pulse Espacio o Intro, muévala con las flechas y pulse Espacio o Intro para soltarla. Escape cancela.",
+      "pickedUp": "Dimensión {{name}} seleccionada.",
+      "movedTo": "Dimensión {{name}} en la posición {{position}} de {{count}}.",
+      "droppedAt": "Dimensión {{name}} soltada en la posición {{position}} de {{count}}.",
+      "cancelled": "Dimensión {{name}} devuelta a su lugar."
+    },
     "previousValue": "Valor anterior",
     "nextValue": "Valor siguiente",
     "previousDimension": "Dimensión anterior",
@@ -628,14 +655,14 @@
       "order": "Orden",
       "description": "Descripción",
       "dimension": "Dimensión",
-      "lifecycle": "Ciclo de vida"
+      "lifecycle": "Ciclo de vida",
+      "required": "Obligatoria"
     },
     "hints": {
       "nameDefault": "Déjelo vacío para mostrar «{{label}}» en el idioma de cada persona.",
       "code": "Se usa como nombre de columna en los archivos CSV: analytics:{{code}}. Cambiarlo cambia el nombre de la columna.",
       "codeDefault": "Los archivos antiguos usan la columna analytics_category para esta dimensión; analytics:{{code}} también funciona.",
       "codeCreate": "Se usa como nombre de columna en los archivos CSV. Letras minúsculas, dígitos, - o _.",
-      "order": "Las dimensiones se ordenan según este número, de menor a mayor.",
       "defaultLocked": "Esta dimensión no se puede desactivar ni eliminar: los archivos antiguos y las preguntas a la IA la usan.",
       "appliesToDefault": "La dimensión predeterminada se aplica a las líneas OPEX y CAPEX.",
       "valueDimensionAppliesTo": {
@@ -658,14 +685,27 @@
       "capex_one": "{{count}} línea CAPEX",
       "capex_other": "{{count}} líneas CAPEX",
       "noValues": "Todavía no hay valores.",
-      "dimensionUnused": "{{values}}. Uso: ninguna línea por ahora.",
-      "dimensionOne": "{{values}}. Uso: {{lines}}.",
-      "dimensionBoth": "{{values}}. Uso: {{opex}} y {{capex}}.",
-      "valueOne": "Usado por {{lines}}.",
-      "valueBoth": "Usado por {{opex}} y {{capex}}."
+      "dimensionLines_one": "Usada por {{count}} línea",
+      "dimensionLines_other": "Usada por {{count}} líneas",
+      "dimensionUnused": "Aún sin usar",
+      "valueLines_one": "Usado por {{count}} línea",
+      "valueLines_other": "Usado por {{count}} líneas",
+      "valueUnused": "Aún sin usar"
     },
-    "deleteBlocked": {
-      "dimensionHasValues": "Para eliminar esta dimensión, elimine primero sus valores."
+    "forceDelete": {
+      "title": "¿Eliminar {{name}}?",
+      "dimensionValues_one": "También se elimina su valor.",
+      "dimensionValues_other": "También se eliminan sus {{count}} valores.",
+      "dimensionUsedValues_one": "Se elimina su valor",
+      "dimensionUsedValues_other": "Se eliminan sus {{count}} valores",
+      "dimensionUsed": "{{values}}, y se quita de {{lines}}. Estos datos no se pueden recuperar.",
+      "valueUsed_one": "Se quita de {{count}} línea presupuestaria. Estos datos no se pueden recuperar.",
+      "valueUsed_other": "Se quita de {{count}} líneas presupuestarias. Estos datos no se pueden recuperar.",
+      "valuesUsed_one": "{{count}} valor seleccionado está en uso: se quita de {{lines}}. Estos datos no se pueden recuperar.",
+      "valuesUsed_other": "{{count}} valores seleccionados están en uso: se quitan de {{lines}}. Estos datos no se pueden recuperar.",
+      "budgetLines_one": "{{count}} línea presupuestaria",
+      "budgetLines_other": "{{count}} líneas presupuestarias",
+      "confirmAnyway": "Eliminar de todos modos"
     },
     "appliesToConflict": {
       "capex_one": "{{count}} línea CAPEX tiene un valor para esta dimensión. Lo conserva, oculto mientras la dimensión sea solo para líneas OPEX.",
@@ -680,6 +720,25 @@
       "opex_other": "{{count}} líneas OPEX tienen este valor. Lo conservan, pero las nuevas líneas OPEX no pueden elegirlo."
     },
     "showLines": "Mostrar estas líneas",
+    "required": {
+      "missing": {
+        "both": "{{opex}} y {{capex}} no tienen valor.",
+        "opex_one": "{{count}} línea OPEX no tiene valor.",
+        "opex_other": "{{count}} líneas OPEX no tienen valor.",
+        "capex_one": "{{count}} línea CAPEX no tiene valor.",
+        "capex_other": "{{count}} líneas CAPEX no tienen valor."
+      },
+      "showLines": {
+        "opex": "Mostrar las líneas OPEX",
+        "capex": "Mostrar las líneas CAPEX"
+      },
+      "disabledHint": "No se comprueba mientras la dimensión esté desactivada.",
+      "unusable": {
+        "opex": "Ningún valor activado se puede usar en líneas OPEX. No se pueden crear nuevas líneas OPEX.",
+        "capex": "Ningún valor activado se puede usar en líneas CAPEX. No se pueden crear nuevas líneas CAPEX.",
+        "both": "Ningún valor activado se puede usar en líneas OPEX o CAPEX. No se pueden crear nuevas líneas."
+      }
+    },
     "messages": {
       "loadFailed": "Error al cargar el valor.",
       "saveFailed": "Error al guardar el valor.",
@@ -693,8 +752,36 @@
       "nameRequired": "Introduzca un nombre.",
       "codeRequired": "Introduzca un código.",
       "codeInvalid": "Use letras minúsculas, dígitos, - o _ (40 como máximo).",
-      "orderInvalid": "Introduzca un número entero.",
       "dimensionRequired": "Elija una dimensión."
+    },
+    "recommended": {
+      "action": "Dimensiones recomendadas",
+      "title": "Añadir las dimensiones recomendadas",
+      "subtitle": "Dimensiones listas para usar con sus valores, para las líneas OPEX y CAPEX. Puede cambiarles el nombre, modificarlas o eliminarlas después.",
+      "dimensions": "Dimensiones",
+      "present": "Ya presente",
+      "presentAs": "Ya presente ({{name}})",
+      "language": "Idioma de los nombres",
+      "submit": "Añadir",
+      "names": {
+        "cost_pool": "Tipo de coste",
+        "it_tower": "Dominio TI",
+        "purpose": "Motivo",
+        "priority": "Prioridad",
+        "recurrence": "Recurrencia"
+      },
+      "hints": {
+        "cost_pool": "Lo que paga el gasto: hardware, software, personal interno y externo… Los cost pools de TBM.",
+        "it_tower": "La parte de TI a la que sirve: cómputo, almacenamiento, red, puesto de trabajo… Las IT towers de TBM.",
+        "purpose": "Por qué se gasta el dinero: sustitución, capacidad, conformidad, crecimiento…",
+        "priority": "Obligatoria, alta, media o baja.",
+        "recurrence": "Recurrente o puntual."
+      },
+      "created_one": "{{count}} dimensión añadida: {{names}}.",
+      "created_other": "{{count}} dimensiones añadidas: {{names}}.",
+      "nothingCreated": "No se ha añadido nada: estas dimensiones ya están presentes.",
+      "failed": "No se han podido añadir las dimensiones.",
+      "loadFailed": "No se han podido cargar las dimensiones recomendadas."
     }
   },
   "businessProcesses": {

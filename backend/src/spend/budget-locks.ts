@@ -1,6 +1,7 @@
 import { ConflictException, HttpStatus, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import type { AmountScope } from './amounts-write.util';
+import { assertScopeNatures, BUDGET_NATURES, linkedLineOf, natureAnd, naturesAnd, type BudgetNature } from './budget-nature';
 
 /**
  * The one lock order of every budget writer, OPEX and CAPEX alike (plan
@@ -11,7 +12,7 @@ import type { AmountScope } from './amounts-write.util';
  *      set): the tenant's budget-operations
  *      advisory lock (`lockTenantBudgetOperations`), so two of them never run
  *      at once;
- *   1. the line (`spend_items` / `capex_items`) FOR NO KEY UPDATE (FOR UPDATE
+ *   1. the line (`spend_items`, of the scope's nature) FOR NO KEY UPDATE (FOR UPDATE
  *      for its delete); several lines in id order (`lockBudgetLines`, or
  *      `lockBudgetYear` for every line of a year);
  *   2. its versions FOR NO KEY UPDATE; several in id order (`lockBudgetVersions`);
@@ -39,13 +40,89 @@ import type { AmountScope } from './amounts-write.util';
  * meanwhile waits for the delete, which waits for the line: one of the two
  * ends with a deadlock, answered 409 `retry` (lot 1D). Rare (a master data
  * delete during a bulk operation) and retried as is.
+ *
+ * A second one, of the same kind (lot M): deleting a line that another line
+ * continues sets that successor's `predecessor_id` to NULL (`ON DELETE SET NULL
+ * (predecessor_id)`), which locks the successor while the delete holds the
+ * line, outside the id order. A writer that locks several lines in id order
+ * (the budget file's `lockBudgetLinesOfBothNatures`, a column operation when
+ * both lines have its nature) and holds the successor while it waits for the
+ * deleted line ends in a deadlock with the delete, answered 409 `retry` the
+ * same way. Rare (deleting a line continued by another during a bulk write of
+ * both) and retried as is.
+ *
+ * The locks are also the nature gate of every writer (`budget-nature.ts`):
+ * the line, its versions and a year's lines are locked for the scope's nature
+ * only, so a line of the other nature is "gone" for its caller, which answers
+ * 404 or skips it, and nothing is written to it.
  */
 
-// Table names come only from here: never from the caller.
-const TABLES = {
-  opex: { items: 'spend_items', versions: 'spend_versions', itemFk: 'spend_item_id' },
-  capex: { items: 'capex_items', versions: 'capex_versions', itemFk: 'capex_item_id' },
-} as const;
+// Table names come only from here: never from the caller. `nature`: the lines of the scope in
+// `spend_items`, which holds both natures since lot Z1.
+const TABLES: Record<AmountScope, { items: string; versions: string; itemFk: string; nature?: BudgetNature }> = {
+  opex: { items: 'spend_items', versions: 'spend_versions', itemFk: 'spend_item_id', nature: 'opex' },
+  capex: { items: 'spend_items', versions: 'spend_versions', itemFk: 'spend_item_id', nature: 'capex' },
+};
+assertScopeNatures('budget-locks', TABLES, (t) => t.items);
+
+/** ` AND` a row of the entry's versions table belongs to a line of the entry's nature; empty for an entry without one. */
+function versionNature(t: (typeof TABLES)[AmountScope]): string {
+  return linkedLineOf(`${t.versions}.tenant_id`, `${t.versions}.${t.itemFk}`, t.nature, t.items);
+}
+
+/**
+ * The children of a line a route addresses by their own id. A contact link is addressed with its
+ * line (`/spend-items/:id/contacts/:linkId`), whose lock names the nature.
+ */
+export type BudgetLineChild = 'version' | 'attachment' | 'link';
+
+// Table names come only from here: never from the caller. Each child names its line in `itemFk`.
+const CHILD_TABLES: Record<AmountScope, Record<BudgetLineChild, string>> = {
+  opex: { version: 'spend_versions', attachment: 'spend_attachments', link: 'spend_links' },
+  capex: { version: 'spend_versions', attachment: 'spend_attachments', link: 'spend_links' },
+};
+
+/**
+ * The line a version, attachment or link belongs to, with the line's nature: the one
+ * lookup of every route and function that starts from a child's own id (plan
+ * planning/budget-unifie.md, G.7). Null when the child or its line is missing. Reads, never
+ * locks: a writer then locks the line, whose lock names the nature too (`lockBudgetLine`).
+ */
+export async function findBudgetLineOf(
+  manager: EntityManager,
+  scope: AmountScope,
+  child: BudgetLineChild,
+  tenantId: string,
+  childId: string,
+): Promise<{ itemId: string; nature: BudgetNature } | null> {
+  const t = TABLES[scope];
+  const [row]: Array<{ item_id: string; nature: BudgetNature }> = await manager.query(
+    `SELECT c.${t.itemFk} AS item_id, ${t.nature ? 'i.nature' : `'${scope}'::text`} AS nature
+       FROM ${CHILD_TABLES[scope][child]} c
+       JOIN ${t.items} i ON i.tenant_id = c.tenant_id AND i.id = c.${t.itemFk}
+      WHERE c.tenant_id = $1 AND c.id = $2`,
+    [tenantId, childId],
+  );
+  return row ? { itemId: row.item_id, nature: row.nature } : null;
+}
+
+/**
+ * `findBudgetLineOf` for a route of the scope: the line's id; a 404 with `notFound` when the
+ * child belongs to a line of another nature; null when the child is missing (the route answers
+ * as it always did for a missing child).
+ */
+export async function budgetLineOfChild(
+  manager: EntityManager,
+  scope: AmountScope,
+  child: BudgetLineChild,
+  tenantId: string,
+  childId: string,
+  notFound: string,
+): Promise<string | null> {
+  const found = await findBudgetLineOf(manager, scope, child, tenantId, childId);
+  if (found && found.nature !== scope) throw new NotFoundException(notFound);
+  return found?.itemId ?? null;
+}
 
 /** Locks the line (FOR NO KEY UPDATE, or FOR UPDATE before its delete); false when it is gone. */
 export async function lockBudgetLine(
@@ -55,8 +132,9 @@ export async function lockBudgetLine(
   itemId: string,
   mode: 'no key update' | 'update' = 'no key update',
 ): Promise<boolean> {
+  const t = TABLES[scope];
   const rows = await manager.query(
-    `SELECT 1 FROM ${TABLES[scope].items} WHERE tenant_id = $1 AND id = $2 FOR ${mode === 'update' ? 'UPDATE' : 'NO KEY UPDATE'}`,
+    `SELECT 1 FROM ${t.items} WHERE tenant_id = $1 AND id = $2${natureAnd(null, t.nature)} FOR ${mode === 'update' ? 'UPDATE' : 'NO KEY UPDATE'}`,
     [tenantId, itemId],
   );
   return rows.length > 0;
@@ -66,19 +144,55 @@ export async function lockBudgetLine(
 export async function lockBudgetLines(manager: EntityManager, scope: AmountScope, tenantId: string, itemIds: Iterable<string>): Promise<Set<string>> {
   const ids = Array.from(new Set(Array.from(itemIds).filter(Boolean)));
   if (ids.length === 0) return new Set();
+  const t = TABLES[scope];
   const rows: Array<{ id: string }> = await manager.query(
-    `SELECT id FROM ${TABLES[scope].items} WHERE tenant_id = $1 AND id = ANY($2::uuid[]) ORDER BY id FOR NO KEY UPDATE`,
+    `SELECT id FROM ${t.items} WHERE tenant_id = $1 AND id = ANY($2::uuid[])${natureAnd(null, t.nature)} ORDER BY id FOR NO KEY UPDATE`,
     [tenantId, ids],
   );
   return new Set(rows.map((row) => row.id));
 }
 
-/** Locks the versions in id order (one statement), once their lines are held; returns the ids still there. */
+/** The message of the 409 `retry` of an operation whose lines changed between its lock and its reads. */
+export const BUDGET_LINES_CHANGED =
+  'Another change to the budget lines was saved at the same moment, so this operation did not go through. Please try again.';
+
+/**
+ * Checks the lines an operation decides on against those its caller locked first (`budget-copy.ts`: the
+ * lines in play, in id order, before any is read again). `inScope`: the lines the operation would lock,
+ * read after that lock. A line among them that is not held entered the scope after the lock (a line
+ * created meanwhile, versions moved to a new line by a type change): locking it now would break the id
+ * order, so the operation is refused with a 409 `retry` and nothing is written.
+ */
+export function assertLinesHeld(inScope: Iterable<string>, held: ReadonlySet<string>): void {
+  for (const id of inScope) {
+    if (!held.has(id)) {
+      throw new ConflictException({ statusCode: HttpStatus.CONFLICT, error: 'Conflict', code: 'retry', message: BUDGET_LINES_CHANGED });
+    }
+  }
+}
+
+/**
+ * Locks the lines of both natures in id order, in one statement (the budget file, which loads the
+ * lines of both natures since lot R); returns the ids of those still there.
+ */
+export async function lockBudgetLinesOfBothNatures(manager: EntityManager, tenantId: string, itemIds: Iterable<string>): Promise<Set<string>> {
+  const ids = Array.from(new Set(Array.from(itemIds).filter(Boolean)));
+  if (ids.length === 0) return new Set();
+  // One table for both natures (lot Z1).
+  const rows: Array<{ id: string }> = await manager.query(
+    `SELECT id FROM ${TABLES.opex.items} WHERE tenant_id = $1 AND id = ANY($2::uuid[])${naturesAnd(null, BUDGET_NATURES)} ORDER BY id FOR NO KEY UPDATE`,
+    [tenantId, ids],
+  );
+  return new Set(rows.map((row) => row.id));
+}
+
+/** Locks the versions in id order (one statement), once their lines are held; returns the ids still there (of a line of the scope's nature). */
 export async function lockBudgetVersions(manager: EntityManager, scope: AmountScope, tenantId: string, versionIds: Iterable<string>): Promise<Set<string>> {
   const ids = Array.from(new Set(Array.from(versionIds).filter(Boolean)));
   if (ids.length === 0) return new Set();
+  const t = TABLES[scope];
   const rows: Array<{ id: string }> = await manager.query(
-    `SELECT id FROM ${TABLES[scope].versions} WHERE tenant_id = $1 AND id = ANY($2::uuid[]) ORDER BY id FOR NO KEY UPDATE`,
+    `SELECT id FROM ${t.versions} WHERE tenant_id = $1 AND id = ANY($2::uuid[])${versionNature(t)} ORDER BY id FOR NO KEY UPDATE`,
     [tenantId, ids],
   );
   return new Set(rows.map((row) => row.id));
@@ -86,9 +200,19 @@ export async function lockBudgetVersions(manager: EntityManager, scope: AmountSc
 
 /**
  * Locks a version by its id alone: its line first, then the version. The
- * version's line is read without a lock (a version never changes line); the
- * version is read again under the lock. Null when the version or its line is
- * gone (deleted meanwhile).
+ * version's line is read without a lock, then the version is locked only if it
+ * still belongs to that line and the line has the scope's nature (the line lock
+ * names the nature). Null when the version or its line is gone (deleted
+ * meanwhile), when the line has another nature than the scope's, or when the
+ * version moved to another line meanwhile.
+ *
+ * A version moves to another line in one case: the type change of a line from
+ * a later year (lot M, `budget-line-type-change.service.ts`) moves the versions
+ * of that year and after to a new line, under the lock of the line they leave.
+ * A writer that read the old line before the move, then waited for its lock,
+ * finds the version on another line and answers "gone" (404): it never writes a
+ * version through a line it does not hold, whatever the natures of the two
+ * lines are by then (the new line may have changed type again in place).
  */
 export async function lockVersionWithLine(
   manager: EntityManager,
@@ -103,8 +227,14 @@ export async function lockVersionWithLine(
   );
   if (!found) return null;
   if (!(await lockBudgetLine(manager, scope, tenantId, found.item_id))) return null;
-  const locked = await lockBudgetVersions(manager, scope, tenantId, [versionId]);
-  return locked.has(versionId) ? { itemId: found.item_id } : null;
+  // Read again under the line's lock: the version, of a line of the scope's nature, still on the line locked.
+  const locked: Array<{ id: string }> = await manager.query(
+    `SELECT id FROM ${t.versions}
+      WHERE tenant_id = $1 AND id = $2 AND ${t.itemFk} = $3${versionNature(t)}
+        FOR NO KEY UPDATE`,
+    [tenantId, versionId, found.item_id],
+  );
+  return locked.length > 0 ? { itemId: found.item_id } : null;
 }
 
 /** `lockVersionWithLine`, refusing a missing version with a 404. */
@@ -115,23 +245,23 @@ export async function lockVersionWithLineOrFail(manager: EntityManager, scope: A
 }
 
 /**
- * Locks every line of the tenant that has a version of `year`, in id order,
- * then those versions, in id order: what a write over the whole year (the FX
- * pin of a freeze) takes before its UPDATE, after the tenant lock. Returns
- * the ids of the versions locked.
+ * Locks every line of the scope's nature in the tenant that has a version of
+ * `year`, in id order, then those versions, in id order: what a write over the
+ * whole year (the FX pin of a freeze) takes before its UPDATE, after the tenant
+ * lock. Returns the ids of the versions locked: the caller writes those only.
  */
 export async function lockBudgetYear(manager: EntityManager, scope: AmountScope, tenantId: string, year: number): Promise<string[]> {
   const t = TABLES[scope];
   await manager.query(
     `SELECT i.id FROM ${t.items} i
-      WHERE i.tenant_id = $1
+      WHERE i.tenant_id = $1${natureAnd('i', t.nature)}
         AND EXISTS (SELECT 1 FROM ${t.versions} v WHERE v.tenant_id = i.tenant_id AND v.${t.itemFk} = i.id AND v.budget_year = $2)
       ORDER BY i.id
         FOR NO KEY UPDATE OF i`,
     [tenantId, year],
   );
   const rows: Array<{ id: string }> = await manager.query(
-    `SELECT id FROM ${t.versions} WHERE tenant_id = $1 AND budget_year = $2 ORDER BY id FOR NO KEY UPDATE`,
+    `SELECT id FROM ${t.versions} WHERE tenant_id = $1 AND budget_year = $2${versionNature(t)} ORDER BY id FOR NO KEY UPDATE`,
     [tenantId, year],
   );
   return rows.map((row) => row.id);

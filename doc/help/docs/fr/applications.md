@@ -61,7 +61,7 @@ Les champs de classification sont facultatifs à la création. La **Criticité b
 
 Une fois enregistré, l'espace de travail déverrouille tous les onglets pour une documentation détaillée.
 
-**Conseil** : Commencez par documenter vos applications les plus critiques. Utilisez l'onglet **Déploiements** pour capturer les environnements existants (Prod, QA, Dev) et les serveurs qui les exécutent, puis liez les interfaces, contrats et postes budgétaires au fur et à mesure.
+**Conseil** : Commencez par documenter vos applications les plus critiques. Utilisez l'onglet **Déploiements** pour capturer les environnements existants (Prod, QA, Dev) et les serveurs qui les exécutent, puis liez les interfaces, contrats et lignes budgétaires au fur et à mesure.
 
 **Autorisations** :
 - Consultation : `applications:reader`
@@ -100,7 +100,7 @@ La grille Applications offre une vue complète de votre portefeuille applicatif.
 - **Exposition externe** : Si l'app est accessible depuis Internet
 - **SSO activé** / **MFA activé** : Fonctionnalités d'authentification
 - **Intégration de données / ETL** : Si l'app participe à des intégrations de données
-- **Postes OPEX** / **Postes CAPEX** / **Contrats** : Dépenses et contrats liés
+- **Lignes OPEX** / **Lignes CAPEX** / **Contrats** : Dépenses et contrats liés
 - **Composants** : Applications enfants (si c'est une suite)
 - **Classification données** / **Contient des PII** / **Résidence des données** : Informations de conformité
 - **Criticité cyber**, **Vague de reprise**, **RTO**, **RPO**, **État/date de revue** : Champs de classification et de continuité
@@ -283,8 +283,7 @@ L'onglet Relations lie cette application à vos enregistrements financiers, cont
 **Composants** (uniquement lorsque « Peut avoir des apps enfants » est activé) : un tableau listant les applications enfants de cette Suite, avec leur cycle de vie et criticité. Cliquez sur une ligne pour ouvrir l'espace de travail enfant.
 
 **Relations** :
-- **Postes OPEX** : coûts récurrents associés à cette application
-- **Postes CAPEX** : projets de dépenses d'investissement
+- **Lignes budgétaires** : les lignes OPEX et CAPEX de cette application, dans une seule liste. Recherchez par titre ou par référence (`BL-12`) ; chaque suggestion affiche son type
 - **Contrats** : contrats fournisseurs
 - **Projets** : projets du portefeuille liés à cette application
 - **Tâches** : tâches liées à cette application. Cette liste est en lecture seule ici -- les tâches gagnent ou perdent ce lien lorsque vous définissez le champ **App / Service** sur une tâche dans la page Tâches.
@@ -340,7 +339,7 @@ Les valeurs de classification et de continuité sont copiées, mais la nouvelle 
 | Résidence des données | Activé |
 | Liens | Activé |
 | Contacts de support | Activé |
-| Postes budgétaires (OPEX + CAPEX, appariés) | Activé |
+| Lignes budgétaires (OPEX + CAPEX, appariées) | Activé |
 | Contrats | Activé |
 | Déploiements | Désactivé |
 | Liaisons de déploiement | Désactivé (disponible uniquement lorsque Déploiements est sélectionné) |
@@ -372,7 +371,7 @@ Utilisez cela lorsque vous souhaitez créer un duplicata indépendant d'une appl
 3. Le système crée une copie avec « (copie) » ajouté au nom
 4. Vous êtes redirigé vers la nouvelle application pour effectuer des modifications
 
-**Ce qui est copié** : Tous les champs principaux (sauf la date du dernier test PRA), y compris les valeurs de classification et de continuité, responsables, sociétés, départements, suites, postes OPEX/CAPEX, contrats, liens, résidence des données et contacts de support. La revue de la copie est réinitialisée.
+**Ce qui est copié** : Tous les champs principaux (sauf la date du dernier test PRA), y compris les valeurs de classification et de continuité, responsables, sociétés, départements, suites, lignes OPEX/CAPEX, contrats, liens, résidence des données et contacts de support. La revue de la copie est réinitialisée.
 
 **Ce qui N'est PAS copié** : Déploiements, interfaces, assignations d'actifs, pièces jointes, champs de version (version, date de mise en production, fin de support).
 
@@ -397,8 +396,8 @@ Utilisez cela lorsque vous souhaitez créer un duplicata indépendant d'une appl
 | Liens | Oui | Optionnel (par défaut : oui) |
 | Contacts de support | Oui | Optionnel (par défaut : oui) |
 | Suites (appartenance) | Oui | Non |
-| Postes OPEX | Oui | Optionnel (par défaut : oui) |
-| Postes CAPEX | Oui | Optionnel (par défaut : oui) |
+| Lignes OPEX | Oui | Optionnel (par défaut : oui) |
+| Lignes CAPEX | Oui | Optionnel (par défaut : oui) |
 | Contrats | Oui | Optionnel (par défaut : oui) |
 | Déploiements | Non | Optionnel (par défaut : non) |
 | Liaisons | Non | Optionnel (par défaut : non) |
@@ -591,7 +590,7 @@ Custom ERP;lob;;Moderate;Active;2018-03-20;false
 
 - **Commencez par les apps critiques** : Documentez d'abord vos applications critiques pour le métier, puis descendez dans les niveaux de criticité.
 - **Utilisez les suites pour regrouper** : Activez « Peut avoir des apps enfants » dans l'onglet Exploitation pour marquer une application comme une Suite qui regroupe les composants liés (ex. : modules SAP sous une Suite SAP).
-- **Liez aux dépenses tôt** : Connectez les postes OPEX, CAPEX et contrats dans l'onglet Relations pour voir l'image complète des coûts pour chaque application.
+- **Liez aux dépenses tôt** : Connectez les lignes OPEX, CAPEX et contrats dans l'onglet Relations pour voir l'image complète des coûts pour chaque application.
 - **Maintenez les déploiements à jour** : L'onglet Déploiements alimente les pastilles d'environnement dans la liste -- maintenez-le à jour pour une visibilité précise.
 - **Documentez l'audience** : Définissez les audiences société et département dans le tiroir des propriétés ; le nombre d'utilisateurs est alors dérivé automatiquement et utilisé dans les rapports.
 - **Exploitez le filtrage par catégorie** : Utilisez le filtre de la colonne Catégorie pour vous concentrer sur des types d'applications spécifiques (ex. : afficher uniquement les apps Métier, ou exclure les outils de Productivité).

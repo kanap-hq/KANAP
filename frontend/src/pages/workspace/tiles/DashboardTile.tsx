@@ -53,6 +53,8 @@ export const TILE_ICONS: Record<string, typeof TaskIcon> = {
 
 interface DashboardTileProps {
   title: string;
+  /** What the tile reads (column, years), on a second line under a one-line title. */
+  subtitle?: string;
   icon: string;
   isLoading?: boolean;
   /** Query failed: the tile shows a retry prompt instead of an empty state that would read as "nothing to do". */
@@ -65,6 +67,7 @@ interface DashboardTileProps {
 
 export default function DashboardTile({
   title,
+  subtitle,
   icon,
   isLoading = false,
   isError = false,
@@ -87,12 +90,18 @@ export default function DashboardTile({
       <CardHeader
         avatar={<IconComponent sx={{ color: 'text.secondary' }} />}
         title={
-          <Typography variant="subtitle1" fontWeight={500}>
+          <Typography variant="subtitle1" fontWeight={500} noWrap={!!subtitle} title={subtitle ? title : undefined}>
             {title}
           </Typography>
         }
+        subheader={subtitle ? (
+          <Typography variant="body2" noWrap sx={{ color: 'kanap.text.secondary' }}>
+            {subtitle}
+          </Typography>
+        ) : undefined}
         action={action}
-        sx={{ pb: 0 }}
+        // With a subtitle, the icon, the title and the action share the first line.
+        sx={subtitle ? { pb: 0, alignItems: 'flex-start', '& .MuiCardHeader-content': { minWidth: 0 } } : { pb: 0 }}
       />
       <CardContent sx={{ flex: 1, pt: 1, minHeight }}>
         {isLoading ? (

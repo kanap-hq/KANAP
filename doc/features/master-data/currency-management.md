@@ -33,6 +33,7 @@ The panel also contains two actions:
    - CSV cache overrides: `WB_CSV_URL` (alternate download host), `WB_CSV_CACHE_TTL_MS` (milliseconds, defaults to 30 days), `WB_CACHE_DIR` (directory for the extracted CSV).
    - Spot rate overrides: `FX_SPOT_BASE_URL`, `FX_SPOT_API_KEY`, and `FX_SPOT_CACHE_TTL_MS` (milliseconds, defaults to 30 days).
    - Login‑triggered refresh: every tenant login checks `tenants.metadata.fx_last_login_refresh_at` and, at most once per interval (default 30 days, tune via `FX_LOGIN_REFRESH_INTERVAL_MS`), silently queues the same FX sync for `[currentYear-1, currentYear, currentYear+1]`. The timestamp and years are recorded back into tenant metadata for auditing.
+   - Missing-rate refresh: when `FxRateService.resolveRates` finds no rate for a currency in a year (no snapshot for the year, or the latest one lacks the currency), the lookup answers 1 with the source `missing` and the year goes to `FxIngestionService.refreshMissingYears`, which queues the same FX sync for those years in the background. Each tenant year at most once every 6 hours per process, so a currency the sources do not publish (or a server without internet) does not call them on every read.
    - Manual refresh scope: UI/API triggers are tenant‑scoped.
    - Caching: responses from the World Bank API are cached in-memory for the configured TTL. Back-to-back refreshes within that window reuse the cached payload, keeping the job fast and friendly to upstream rate limits.
 

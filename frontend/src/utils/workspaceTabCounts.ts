@@ -74,14 +74,8 @@ export async function fetchProjectTasksCount(projectId: string): Promise<number>
 }
 
 
-/** The Relations tab badge of an OPEX line: one request (`GET /spend-items/:id/relation-counts`). */
-export async function fetchSpendRelationsCount(spendItemId: string, signal?: AbortSignal): Promise<number> {
-  const res = await api.get<{ total?: number }>(`/spend-items/${spendItemId}/relation-counts`, { signal });
-  return Number(res.data?.total) || 0;
-}
-
-/** The Relations tab badge of a CAPEX line: one request (`GET /capex-items/:id/relation-counts`). */
-export async function fetchCapexRelationsCount(capexItemId: string, signal?: AbortSignal): Promise<number> {
-  const res = await api.get<{ total?: number }>(`/capex-items/${capexItemId}/relation-counts`, { signal });
+/** One relation-count request on the child API configured for the line's nature. */
+export async function fetchBudgetRelationsCount(config: { itemsApi: string }, lineId: string, signal?: AbortSignal): Promise<number> {
+  const res = await api.get<{ total?: number }>(`${config.itemsApi}/${lineId}/relation-counts`, { signal });
   return Number(res.data?.total) || 0;
 }

@@ -39,10 +39,10 @@ const copyColumn = (manager: any, dryRun = false) => copyBudgetColumn(
 
 /** A new line of the race company, the whole file of a budget file load. */
 function newLineFile(kind: 'opex' | 'capex'): string {
+  const header = `nature,item_number,name,company_name,account_number,currency,budget_${YEAR}`;
   return kind === 'opex'
-    ? `item_number,name,company_name,account_number,currency,budget_${YEAR}\n,Imported line,Race company,6000,EUR,1200.00\n`
-    : `item_number,name,ppe_type,investment_type,priority,company_name,account_number,currency,budget_${YEAR}\n`
-      + `,Imported CAPEX line,hardware,replacement,medium,Race company,6000,EUR,1200.00\n`;
+    ? `${header}\nopex,,Imported line,Race company,6000,EUR,1200.00\n`
+    : `${header}\ncapex,,Imported CAPEX line,Race company,6000,EUR,1200.00\n`;
 }
 
 /** Refused at once with a 409 `operation_running` that names the running operation. */

@@ -1,11 +1,11 @@
 type Level = 'reader' | 'admin';
 type HasLevel = (resource: string, level: Level) => boolean;
 
-/** Budget administration belongs to the budget module: OPEX, CAPEX or budget readers. */
-const hasBudgetAccess = (hasLevel: HasLevel) => ['opex', 'capex', 'budget_ops'].some((resource) => hasLevel(resource, 'reader'));
+/** Budget administration belongs to the budget module: budget line or budget administration readers. */
+const hasBudgetAccess = (hasLevel: HasLevel) => ['budget', 'budget_ops'].some((resource) => hasLevel(resource, 'reader'));
 const budgetAdmin = (hasLevel: HasLevel) => hasLevel('budget_ops', 'admin');
-/** Column copy, allocation copy and reset run per item type, like their API. */
-const itemsAdmin = (hasLevel: HasLevel) => hasLevel('opex', 'admin') || hasLevel('capex', 'admin');
+/** Copy budget columns and reset a column: the Admin level on the budget lines, both types alike. */
+const itemsAdmin = (hasLevel: HasLevel) => hasLevel('budget', 'admin');
 const masterDataAdmin = (hasLevel: HasLevel) =>
   hasBudgetAccess(hasLevel)
   && (hasLevel('budget_ops', 'admin') || hasLevel('companies', 'admin') || hasLevel('departments', 'admin'));
@@ -19,9 +19,7 @@ const OPERATION_ACCESS: Record<string, (hasLevel: HasLevel) => boolean> = {
   columns: budgetAdmin,
   'allocation-default': budgetAdmin,
   freeze: budgetAdmin,
-  'copy-budget-columns': itemsAdmin,
-  'column-init': itemsAdmin,
-  'copy-allocations': itemsAdmin,
+  'copy-budget': itemsAdmin,
   'column-reset': itemsAdmin,
   'master-data-freeze': masterDataAdmin,
   'metrics-copy': masterDataAdmin,

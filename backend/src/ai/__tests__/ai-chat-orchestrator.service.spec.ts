@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { ForbiddenException, Logger } from '@nestjs/common';
 import {
   AiChatOrchestratorService,
+  extractMentionContextItems,
   resolveChatProviderTimeoutMs,
   resolveProviderMaxTokens,
 } from '../ai-chat-orchestrator.service';
@@ -3004,6 +3005,25 @@ async function testToolOutputApprovalMarkerDoesNotCreateDurableApproval() {
 }
 
 async function run() {
+  const reads: Array<{ sql: string; refs: string[] }> = [];
+  const manager = { query: async (sql: string, [refs]: [string[]]) => {
+    reads.push({ sql, refs });
+    return [
+      { id: 'capex-id', nature: 'capex', item_number: 127, legacy_number: 'CPX-2' },
+      { id: 'opex-id', nature: 'opex', item_number: 7, legacy_number: 'OPX-7' },
+    ];
+  } } as any;
+  const mentions = await extractMentionContextItems('[CAPEX](/ops/budget/BL-127/budget) [OPEX](/ops/opex/7) [Old](/ops/capex/2) [Missing](/ops/budget/BL-999)', manager);
+  assert.deepEqual(mentions.map((m) => m.entity_type), ['capex_items', 'spend_items', 'capex_items']);
+  assert.equal(reads.length, 1, 'one read for every linked budget line');
+  assert.ok(reads[0].sql.includes('tenant_id = app_current_tenant()'));
+  assert.ok(reads[0].sql.includes("nature IN ('opex', 'capex')"));
+  assert.deepEqual(reads[0].refs, ['BL-127', 'OPX-7', 'CPX-2', 'BL-999']);
+  const orchestrator = createOrchestrator().orchestrator;
+  const linked = await (orchestrator as any).buildPreviewResultsAssistantText({ query: async () => [{ id: 'capex-id', nature: 'capex', item_number: 127 }] }, [{
+    target: { entity_type: 'capex_items', entity_id: '11111111-2222-3333-4444-555555555555', ref: 'CPX-2' }, status: 'executed', summary: 'Updated CPX-2.',
+  }]);
+  assert.equal(linked, 'Updated [CPX-2](/ops/budget/BL-127).');
   await testSimpleTextResponse();
   await testToolCallFlow();
   await testDeepSeekReasoningContentIsReplayedForToolContinuation();

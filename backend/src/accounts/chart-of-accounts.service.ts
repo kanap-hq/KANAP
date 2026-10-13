@@ -288,15 +288,15 @@ export class ChartOfAccountsService {
       `SELECT COUNT(*)::int AS count
        FROM spend_items si
        JOIN accounts a ON a.id = si.account_id AND a.tenant_id = si.tenant_id
-       WHERE a.coa_id = $1 AND si.tenant_id = ${CURRENT_TENANT}`,
+       WHERE a.coa_id = $1 AND si.tenant_id = ${CURRENT_TENANT} AND si.nature = 'opex'`,
       [id],
     );
     const opexCount = Number(opexUsageRows?.[0]?.count ?? 0);
     const capexUsageRows = await mg.query(
       `SELECT COUNT(*)::int AS count
-       FROM capex_items ci
+       FROM spend_items ci
        JOIN accounts a ON a.id = ci.account_id AND a.tenant_id = ci.tenant_id
-       WHERE a.coa_id = $1 AND ci.tenant_id = ${CURRENT_TENANT}`,
+       WHERE a.coa_id = $1 AND ci.tenant_id = ${CURRENT_TENANT} AND ci.nature = 'capex'`,
       [id],
     );
     const capexCount = Number(capexUsageRows?.[0]?.count ?? 0);

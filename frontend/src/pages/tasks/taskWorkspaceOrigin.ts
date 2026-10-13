@@ -57,7 +57,7 @@ export const PROJECT_ORIGIN_TABS = new Set([
 
 export const SPEND_ORIGIN_TABS = new Set(['overview', 'budget', 'allocations', 'relations']);
 export const CAPEX_ORIGIN_TABS = new Set(['overview', 'budget', 'allocations', 'relations']);
-export const CONTRACT_ORIGIN_TABS = new Set(['overview', 'details', 'relations', 'tasks']);
+export const CONTRACT_ORIGIN_TABS = new Set(['overview', 'budget', 'relations']);
 export const INCIDENT_ORIGIN_TABS = new Set(['overview', 'journal', 'relations', 'documents', 'attachments']);
 
 const ORIGIN_TAB_SETS: Record<RelatedKind, Set<string>> = {
@@ -72,7 +72,7 @@ const ORIGIN_TAB_DEFAULTS: Record<RelatedKind, string> = {
   project: 'tasks',
   spend_item: 'overview',
   capex_item: 'overview',
-  contract: 'tasks',
+  contract: 'overview',
   incident: 'relations',
 };
 
@@ -86,8 +86,8 @@ const ORIGIN_ID_PARAMS: Record<RelatedKind, string> = {
 
 const ORIGIN_PATH_TAB_PATTERNS: Record<RelatedKind, RegExp> = {
   project: /^\/portfolio\/projects\/[^/]+\/([^/?#]+)/,
-  spend_item: /^\/ops\/opex\/[^/]+\/([^/?#]+)/,
-  capex_item: /^\/ops\/capex\/[^/]+\/([^/?#]+)/,
+  spend_item: /^\/ops\/(?:budget|opex)\/[^/]+\/([^/?#]+)/,
+  capex_item: /^\/ops\/(?:budget|capex)\/[^/]+\/([^/?#]+)/,
   contract: /^\/ops\/contracts\/[^/]+\/([^/?#]+)/,
   incident: /^\/it\/incidents\/[^/]+\/([^/?#]+)/,
 };
@@ -165,8 +165,8 @@ export function buildOriginPath(origin: TaskOrigin, search: URLSearchParams): st
     return `/portfolio/projects/${origin.id}/${tab}${qs ? `?${qs}` : ''}`;
   }
   const filterQs = entityTaskListFiltersSearch(search);
-  if (origin.kind === 'spend_item') return `/ops/opex/${origin.id}/${tab}${filterQs ? `?${filterQs}` : ''}`;
-  if (origin.kind === 'capex_item') return `/ops/capex/${origin.id}/${tab}${filterQs ? `?${filterQs}` : ''}`;
+  if (origin.kind === 'spend_item') return `/ops/budget/${origin.id}/${tab}${filterQs ? `?${filterQs}` : ''}`;
+  if (origin.kind === 'capex_item') return `/ops/budget/${origin.id}/${tab}${filterQs ? `?${filterQs}` : ''}`;
   if (origin.kind === 'incident') return `/it/incidents/${origin.id}/${tab}${filterQs ? `?${filterQs}` : ''}`;
   return `/ops/contracts/${origin.id}/${tab}${filterQs ? `?${filterQs}` : ''}`;
 }
@@ -176,9 +176,9 @@ export function buildParentPath(type: RelatedKind, id: string): string {
     case 'project':
       return `/portfolio/projects/${id}/summary`;
     case 'spend_item':
-      return `/ops/opex/${id}/overview`;
+      return `/ops/budget/${id}/overview`;
     case 'capex_item':
-      return `/ops/capex/${id}/overview`;
+      return `/ops/budget/${id}/overview`;
     case 'contract':
       return `/ops/contracts/${id}/overview`;
     case 'incident':

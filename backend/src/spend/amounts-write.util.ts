@@ -4,9 +4,9 @@ import { FreezeColumn, FreezeService } from '../freeze/freeze.service';
 import { CENTS_LIMIT, formatCents, toCents } from '../common/amount';
 import { budgetColumnName, DEFAULT_BUDGET_COLUMNS, readBudgetColumns } from '../budget-columns/budget-columns.util';
 import {
-  activeMonths,
   FLAT_WEIGHTS,
   NO_ACTIVE_MONTH_MESSAGE,
+  periodMonths,
   profileWeights,
   SpreadInputError,
   SpreadWindow,
@@ -17,8 +17,8 @@ import { lockBudgetVersions } from './budget-locks';
 import type { CostLine } from './costing.util';
 
 /**
- * The one way amounts are written, for OPEX (`spend_amounts`) and CAPEX
- * (`capex_amounts`): the amounts services, the item CSV importers and the
+ * The one way amounts are written, for OPEX and CAPEX lines alike
+ * (`spend_amounts`, lot Z1): the amounts services, the item CSV importers and the
  * budget column operations all go through here.
  *
  * A write names its target measures and leaves every other measure as stored.
@@ -53,8 +53,9 @@ export const BUDGET_COLUMN_MEASURE: Record<BudgetColumn, AmountMeasure> = {
 };
 
 export type AmountScope = 'opex' | 'capex';
-// Table names come only from here: never from the caller.
-const AMOUNT_TABLE: Record<AmountScope, string> = { opex: 'spend_amounts', capex: 'capex_amounts' };
+// Table names come only from here: never from the caller. The months of both natures (lot Z1); the
+// scope still decides the freeze and the audit label, the version was read for the scope's nature.
+const AMOUNT_TABLE: Record<AmountScope, string> = { opex: 'spend_amounts', capex: 'spend_amounts' };
 
 export type AmountVersion = { id: string; tenant_id: string; budget_year: number | string };
 
@@ -474,7 +475,10 @@ export async function assertSpreadProfile(manager: EntityManager, kind: unknown,
   if (kind === 'quarterly') quarterlyDistribution(name);
 }
 
-/** Period of a spread payload: both bounds or neither (the whole year), at least one active month. */
+/**
+ * Period of a spread payload: both bounds or neither (the whole year), at least one active month. A
+ * period of one day ("at a date") counts the month of that date (`periodMonths`).
+ */
 export type PayloadPeriod = { period_start: string; period_end: string; active_months: number[] };
 
 export function parsePayloadPeriod(payload: Record<string, unknown>, year: number): PayloadPeriod {
@@ -486,7 +490,7 @@ export function parsePayloadPeriod(payload: Record<string, unknown>, year: numbe
   }
   const period_start = hasStart ? String(payload.period_start).trim() : `${year}-01-01`;
   const period_end = hasEnd ? String(payload.period_end).trim() : `${year}-12-31`;
-  const months = asBadRequest(() => activeMonths(year, period_start, period_end));
+  const months = asBadRequest(() => periodMonths(year, period_start, period_end));
   if (months.length === 0) throw new BadRequestException(NO_ACTIVE_MONTH_MESSAGE);
   return { period_start, period_end, active_months: months };
 }
@@ -540,7 +544,8 @@ function alsoMeasures(raw: unknown, totals: Partial<Record<AmountMeasure, bigint
  *   omitted quarter being zero.
  * - `monthly`: `months` rows patch only the cells they carry.
  * `period_start` / `period_end` (annual and quarterly) default to the whole
- * year. Everything is validated before the first write.
+ * year; a period of one day (start = end, "at a date") puts the whole amount
+ * in the month of that date. Everything is validated before the first write.
  */
 export async function writeAmountsPayload(ctx: AmountsWriteContext, rawPayload: unknown): Promise<AmountsPayloadResult> {
   return withColumnNames(ctx, () => writePayload(ctx, rawPayload));
@@ -675,7 +680,7 @@ export async function readYearAmounts(manager: EntityManager, scope: AmountScope
  */
 export async function readVersionYearTotals(manager: EntityManager, scope: AmountScope, tenantId: string, versionId: string): Promise<Record<AmountMeasure, number>> {
   const [row]: Array<Partial<Record<AmountMeasure, string | number>>> = await manager.query(
-    `SELECT ${AMOUNT_MEASURES.join(', ')} FROM ${scope === 'opex' ? 'spend_version_totals' : 'capex_version_totals'} WHERE tenant_id = $1 AND version_id = $2`,
+    `SELECT ${AMOUNT_MEASURES.join(', ')} FROM spend_version_totals WHERE tenant_id = $1 AND version_id = $2`,
     [tenantId, versionId],
   );
   return Object.fromEntries(AMOUNT_MEASURES.map((measure) => [measure, Number(row?.[measure] ?? 0)])) as Record<AmountMeasure, number>;
@@ -687,7 +692,7 @@ export async function readVersionYearTotals(manager: EntityManager, scope: Amoun
  */
 export async function readVersionBudgetRev(manager: EntityManager, scope: AmountScope, version: AmountVersion): Promise<number | null> {
   const [row]: Array<{ budget_rev: number | string }> = await manager.query(
-    `SELECT budget_rev FROM ${scope === 'opex' ? 'spend_versions' : 'capex_versions'} WHERE tenant_id = $1 AND id = $2`,
+    `SELECT budget_rev FROM spend_versions WHERE tenant_id = $1 AND id = $2`,
     [version.tenant_id, version.id],
   );
   return row ? Number(row.budget_rev) : null;

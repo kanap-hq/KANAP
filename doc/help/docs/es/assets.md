@@ -221,8 +221,7 @@ La pestaña Relaciones conecta este activo a otros registros en KANAP. La insign
 - **Contenido por** / **Del que dependen**: Vistas inversas de solo lectura, mostradas solo cuando otros activos hacen referencia a este
 
 **Financiero y proyectos**:
-- **Partidas OPEX**: Vincular a partidas de gasto operativo
-- **Partidas CAPEX**: Vincular a partidas de gasto de capital
+- **Líneas presupuestarias**: Vincular a líneas OPEX y CAPEX, en una sola lista. Busque por título o por referencia (`BL-12`); cada sugerencia muestra su tipo
 - **Contratos**: Vincular a registros de contratos
 - **Proyectos**: Vincular a proyectos del portafolio relacionados con este activo
 
@@ -364,6 +363,6 @@ PROD-DB-01;NYC-DC1;vm;prod;active;proddb01;corp;host;10.0.1.20
 - **Haga seguimiento del ciclo de vida**: Marque los activos obsoletos y retirados para mantener los conteos de inventario precisos.
 - **Vincule a ubicaciones**: Asigne activos a ubicaciones para que el tipo de alojamiento, país y ciudad se rellenen automáticamente.
 - **Asigne a aplicaciones**: Use la pestaña Visión general para vincular activos a despliegues de aplicaciones. Las mismas asignaciones aparecen en la pestaña Despliegues de la aplicación.
-- **Use la pestaña Relaciones**: Conecte activos a partidas OPEX/CAPEX, contratos y proyectos para visibilidad financiera.
+- **Use la pestaña Relaciones**: Conecte activos a líneas presupuestarias, contratos y proyectos para visibilidad financiera.
 - **Las tareas vienen de la página Tareas**: Para adjuntar una tarea a un activo, defina el campo Activo en la propia tarea; aparecerá en Relaciones > Tareas.
 - **Adjunte documentación**: Suba archivos de configuración, diagramas de arquitectura o documentos del proveedor directamente a la pestaña Relaciones.

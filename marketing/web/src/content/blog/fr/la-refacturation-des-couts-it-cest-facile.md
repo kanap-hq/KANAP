@@ -6,6 +6,7 @@ topic: cost
 author: Friedrich
 authorRole: Fondateur, DSI
 draft: false
+updated: 2026-10-10
 translationKey: it-cost-chargeback-made-simple
 ---
 
@@ -33,7 +34,7 @@ Par défaut, KANAP utilise l'effectif des sociétés définies dans les données
 
 Vous pouvez modifier cette règle par défaut dans Administration, Méthode de ventilation par défaut. La règle définie s'appliquera année par année sur les entrées qui n'auront pas encore été personnalisées (vous ne perdez pas le travail déjà effectué).
 
-![La méthode de ventilation par défaut : exercice, sociétés ciblées, critère et répartition calculée](/screenshots/blog/chargeback-default-method.png)
+![La méthode de ventilation par défaut : exercice, sociétés ciblées, critère et répartition calculée](/screenshots/blog/chargeback-default-method-2026-10.png)
 
 ### Gestion au niveau du poste
 
@@ -41,7 +42,7 @@ Chaque poste de dépense porte sa propre règle de ventilation, pour chaque ann�
 
 L'onglet **Ventilations** d'un poste affiche le résultat en temps réel. Ici, la maintenance SAP de 280 000 EUR se répartit à l'effectif : 58,54 % pour Fromage & Co SA, 19,51 % pour Kaasmeester BV, et ainsi de suite jusqu'à 100 %.
 
-![L'onglet Ventilations : méthode, critère, pourcentage et montant par société](/screenshots/blog/chargeback-allocations.png)
+![L'onglet Ventilations : méthode, critère, pourcentage et montant par société](/screenshots/blog/chargeback-allocations-2026-10b.png)
 
 Toutes les clés de répartition sont possibles :
 
@@ -50,9 +51,13 @@ Toutes les clés de répartition sont possibles :
 - **Chiffre d'affaires** : quand la contribution suit la taille économique de l'entité.
 - **Manuel par société** : pour allouer des coûts à une ou plusieurs sociétés en particulier (et toujours : par effectif, par nombre d'utilisateurs IT, par CA).
 - **Manuel par département** : pour allouer des coûts à un ou plusieurs départements en particulier, par effectif uniquement.
-- **Manuel** : pour une liberté d'allocation totale, mais vous devez calculer manuellement les pourcentages.
+- **Pourcentages manuels** : pour une liberté d'allocation totale ; vous saisissez les pourcentages, qui doivent totaliser 100 %, ou vous les répartissez équitablement d'un clic.
 
-Pour éviter de tout reparamétrer chaque année, l'outil « Copier les ventilations » reporte ces règles d'un exercice à l'autre, simulation comprise. La ventilation suit donc le budget sans ressaisie.
+Pour éviter de tout reparamétrer chaque année, l'outil « Copier les ventilations » reporte ces règles d'un exercice à l'autre, pour l'OPEX comme pour le CAPEX, simulation comprise. La ventilation suit donc le budget sans ressaisie.
+
+### Ne pas confondre avec les centres de coûts
+
+Les centres de coûts disent qui porte une ligne et en répond : chaque centre a son responsable budgétaire, et leurs groupes permettent de lire le budget d'une direction entière. Ils n'ont aucun effet sur la refacturation. Une licence portée par le centre de coûts « Infrastructure » peut très bien être refacturée à toutes les sociétés à l'effectif.
 
 ## Les rapports de refacturation
 
@@ -62,7 +67,7 @@ Une fois les règles en place, deux rapports permettent d'explorer toutes les fa
 
 Le premier répond à « comment se répartit la dépense IT entre nos sociétés ? ». Il affiche le total consolidé, la part de chaque société, les montants payés et consommés, puis les flux intersociétés.
 
-![La refacturation globale : total, parts par société et flux intersociétés](/screenshots/blog/chargeback-global.png)
+![La refacturation globale : total, parts par société et flux intersociétés](/screenshots/blog/chargeback-global-2026-10.png)
 
 Les KPI y ajoutent deux métriques clés de tout budget IT :
 
@@ -73,7 +78,7 @@ Les KPI y ajoutent deux métriques clés de tout budget IT :
 
 Ce rapport permet de descendre d'un niveau et d'analyser le détail au niveau d'une société. On y retrouve les coûts IT par département, les postes de refacturation (pour répondre à une filiale : voilà précisément les services pour lesquels on vous facture), le détail des flux entrants et sortants, et un rappel des KPI. C'est le rapport à transmettre aux filiales avec leur facture annuelle.
 
-![La refacturation par société : totaux par département, postes détaillés et KPI](/screenshots/blog/chargeback-company.png)
+![La refacturation par société : totaux par département, postes détaillés et KPI](/screenshots/blog/chargeback-company-2026-10.png)
 
 Les deux rapports sont entièrement paramétrables (année, société, rubriques) et s'exportent en CSV, en PNG ou en PDF. Ils peuvent aussi être présentés directement en revue budgétaire.
 
@@ -90,7 +95,7 @@ C'est souvent là que se trouvent des pistes sérieuses d'économie, et c'est co
 
 ## Et le CAPEX ?
 
-Les investissements utilisent le même onglet Ventilations et la même mécanique. Un projet financé pour une seule filiale se répartit vers cette filiale, le reste suit la méthode choisie. Les rapports de refacturation couvrent les deux enveloppes, OPEX et CAPEX.
+Les investissements utilisent le même onglet Ventilations et la même mécanique. Un projet financé pour une seule filiale se répartit vers cette filiale, le reste suit la méthode choisie. Les deux rapports de refacturation, eux, portent sur l'OPEX : c'est la dépense récurrente qu'on refacture d'une année sur l'autre.
 
 ## Par où commencer
 

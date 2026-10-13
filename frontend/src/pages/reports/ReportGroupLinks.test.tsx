@@ -102,7 +102,7 @@ const everyColumn = <T,>(value: T) => Object.fromEntries(AMOUNT_COLUMNS.map((col
 const flat = (value: number) => Array.from({ length: 12 }, () => value);
 
 function axis(id: string, patch: Partial<AnalyticsAxis>): AnalyticsAxis {
-  return { id, code: id, name: null, description: null, sort_order: 0, is_default: false, applies_to: null, status: 'enabled', disabled_at: null, ...patch };
+  return { id, code: id, name: null, description: null, sort_order: 0, is_default: false, applies_to: null, required: false, status: 'enabled', disabled_at: null, ...patch };
 }
 const DEFAULT_AXIS = axis('ax-def', { is_default: true });
 const NATURE = axis('ax-nat', { name: 'Nature', sort_order: 1 });
@@ -129,8 +129,12 @@ function line(
   fte: number,
   extra: { runBuild?: 'run' | 'build' | null; area?: [string, string]; nature?: [string, string]; account?: [string, string] } = {},
 ) {
+  // The line's own number (BL-n): `item_number` on all lines, `line_number` on the lines of one nature.
+  const number = 10 + id.charCodeAt(0) - 'a'.charCodeAt(0);
   return {
     id,
+    item_number: number,
+    line_number: number,
     product_name: `Line ${id}`,
     description: `Line ${id}`,
     cost_center_id: costCenter?.[0] ?? null,
@@ -220,9 +224,9 @@ const set = (values: Array<string | null>) => ({ filterType: 'set', values });
  * The filters of every link: the report's window (no `years`, or last year as the first pair: the
  * lines still active on 1 January of last year), then the row's own.
  */
-const listed = (filters: Record<string, unknown>) => ({ disabled_at: windowFilter(Y - 1), ...filters });
+const listed = (filters: Record<string, unknown>, scope = 'all') => ({ disabled_at: windowFilter(Y - 1), ...filters, ...(scope === 'all' ? {} : { nature: set([scope]) }) });
 /** The same for a row that counts only the lines declaring FTE. */
-const staffed = (filters: Record<string, unknown>) => listed({ has_fte: set(['yes']), ...filters });
+const staffed = (filters: Record<string, unknown>, scope = 'all') => listed({ has_fte: set(['yes']), ...filters }, scope);
 
 /** The link of a row, in a new tab, the list filters its address carries and its Show scope. */
 async function linkOf(name: string) {
@@ -253,8 +257,8 @@ describe('Staffing by month group links', () => {
     renderReport(<StaffingByMonthReport />, '/report');
     const filters = staffed({ cost_center_label: set(['CC1 · Ops']) });
     expect(await linkOf('CC1 · Ops')).toEqual({
-      href: `/ops/opex?${new URLSearchParams({ filters: JSON.stringify(filters), statusScope: 'all', from: 'report' })}`,
-      path: '/ops/opex',
+      href: `/ops/budget?${new URLSearchParams({ filters: JSON.stringify(filters), statusScope: 'all', from: 'report' })}`,
+      path: '/ops/budget',
       filters,
     });
     expect((await linkOf('reports.staffing.none.costCenter')).filters).toEqual(staffed({ cost_center_label: set([null]) }));
@@ -275,9 +279,9 @@ describe('Staffing by month group links', () => {
   it('a supplier row and No supplier, on the CAPEX list', async () => {
     renderReport(<StaffingByMonthReport />, '/report?scope=capex&group=supplier');
     const acme = await linkOf('Acme');
-    expect(acme.path).toBe('/ops/capex');
-    expect(acme.filters).toEqual(staffed({ supplier_name: set(['Acme']) }));
-    expect((await linkOf('reports.staffing.none.supplier')).filters).toEqual(staffed({ supplier_name: set([null]) }));
+    expect(acme.path).toBe('/ops/budget');
+    expect(acme.filters).toEqual(staffed({ supplier_name: set(['Acme']) }, 'capex'));
+    expect((await linkOf('reports.staffing.none.supplier')).filters).toEqual(staffed({ supplier_name: set([null]) }, 'capex'));
   });
 
   it('a dimension value filters its dimension column: the default one, and a value picked as none', async () => {
@@ -291,9 +295,12 @@ describe('Staffing by month group links', () => {
     expect((await linkOf('CC2 · Dev')).filters).toEqual(staffed({ cost_center_label: set(['CC2 · Dev']) }));
   });
 
-  it('an item opens its page', async () => {
-    renderReport(<StaffingByMonthReport />, '/report?group=item');
-    expect((await linkOf('Line a')).href).toBe('/ops/opex/a');
+  it('an item opens its BL page, on all lines and on one nature', async () => {
+    const all = renderReport(<StaffingByMonthReport />, '/report?group=item');
+    expect((await linkOf('Line a')).href).toBe('/ops/budget/BL-10');
+    all.unmount();
+    renderReport(<StaffingByMonthReport />, '/report?group=item&scope=opex');
+    expect((await linkOf('Line a')).href).toBe('/ops/budget/BL-10');
     await expectPlainTotal();
   });
 });
@@ -310,7 +317,7 @@ describe('Cost per FTE group links', () => {
     expect((await linkOf('Hardware')).filters).toEqual(staffed({ 'analytics_ax-nat': set(['Hardware']) }));
     view.unmount();
     renderReport(<CostPerFteReport />, '/report?view=rate&group=item&scope=capex');
-    expect((await linkOf('Line b')).href).toBe('/ops/capex/b');
+    expect((await linkOf('Line b')).href).toBe('/ops/budget/BL-11');
     await expectPlainTotal();
   });
 });
@@ -403,7 +410,7 @@ describe('a group link whose filters are too long for a URL', () => {
   it('carries them inline (a copyable link) and saves nothing on hover or focus', async () => {
     renderCell();
     const link = screen.getByRole('link', { name: 'Acme' });
-    expect(link.getAttribute('href')).toMatch(/^\/ops\/opex\?filters=.*statusScope=all&from=report$/);
+    expect(link.getAttribute('href')).toMatch(/^\/ops\/budget\?filters=.*statusScope=all&from=report$/);
     expect(link).toHaveAttribute('target', '_blank');
     fireEvent.mouseEnter(link);
     fireEvent.mouseOver(link);
@@ -421,10 +428,10 @@ describe('a group link whose filters are too long for a URL', () => {
     expect(click.defaultPrevented).toBe(true);
     expect(open).toHaveBeenCalledWith('', '_blank');
     expect(tab.opener).toBeNull();
-    await waitFor(() => expect(tab.location.href).toBe('/ops/opex?statusScope=all&from=report&ctx=ctx-42'));
+    await waitFor(() => expect(tab.location.href).toBe('/ops/budget?statusScope=all&from=report&ctx=ctx-42'));
     expect(saves()).toHaveLength(1);
     // Saved: the link itself now carries the short address.
-    await waitFor(() => expect(screen.getByRole('link', { name: 'Acme' })).toHaveAttribute('href', '/ops/opex?statusScope=all&from=report&ctx=ctx-42'));
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Acme' })).toHaveAttribute('href', '/ops/budget?statusScope=all&from=report&ctx=ctx-42'));
   });
 
   it('a middle click does the same; a right click (copy link) does nothing', async () => {
@@ -437,7 +444,7 @@ describe('a group link whose filters are too long for a URL', () => {
     const middle = new MouseEvent('auxclick', { bubbles: true, cancelable: true, button: 1 });
     await act(async () => { link.dispatchEvent(middle); });
     expect(middle.defaultPrevented).toBe(true);
-    await waitFor(() => expect(tab.location.href).toBe('/ops/opex?statusScope=all&from=report&ctx=ctx-42'));
+    await waitFor(() => expect(tab.location.href).toBe('/ops/budget?statusScope=all&from=report&ctx=ctx-42'));
   });
 
   it('a failed save sends the tab to the inline address', async () => {
@@ -458,5 +465,22 @@ describe('a group link whose filters are too long for a URL', () => {
     expect(click.defaultPrevented).toBe(false);
     expect(open).not.toHaveBeenCalled();
     expect(saves()).toHaveLength(0);
+  });
+});
+
+describe.each([['Staffing', StaffingByMonthReport], ['Cost per FTE', CostPerFteReport], ['Dimensions', AnalyticsCategoryReport], ['Consolidation', ConsolidationReport]])('%s All group links', (_name, Report) => {
+  it('opens the unified list without a nature filter', async () => {
+    renderReport(<Report />, '/report?scope=all');
+    const links = await waitFor(() => {
+      const found = within(screen.getByTestId('grid')).getAllByRole('link');
+      expect(found.length).toBeGreaterThan(0);
+      return found;
+    });
+    for (const link of links) {
+      const url = new URL(link.getAttribute('href')!, 'http://localhost');
+      expect(url.pathname).toBe('/ops/budget');
+      expect(JSON.parse(url.searchParams.get('filters')!)).not.toHaveProperty('nature');
+    }
+    expect(post.mock.calls.every(([url]) => url === '/budget-lines/summary/aggregate')).toBe(true);
   });
 });

@@ -4,6 +4,15 @@ import { budgetAmountFields, budgetAmountSortFields, budgetFteFields, budgetFteS
 export const capexItemsRegistry: AiEntityFilterRegistry = {
   entityType: 'capex_items',
   fields: {
+    description: {
+      ai: 'description', grid: 'description', type: 'text',
+      description: 'CAPEX line title.', sortable: true, groupable: false,
+    },
+    line_description: {
+      ai: 'line_description', grid: 'line_description', type: 'text',
+      description: 'CAPEX line description, separate from its title and notes.',
+      sortable: true, groupable: false,
+    },
     status: {
       ai: 'status',
       grid: 'status',
@@ -11,36 +20,6 @@ export const capexItemsRegistry: AiEntityFilterRegistry = {
       description:
         'CAPEX item lifecycle status. As a filter, `enabled` keeps the items with no end of validity or one on or after 1 January of the current year (an item ending this year stays enabled until 31 December) and `disabled` keeps the items that ended before 1 January. The status value of each item, its sort and its grouping show the current state of the item itself: an item that ended earlier this year reads `disabled`.',
       values: ['enabled', 'disabled'],
-      discoverable: true,
-      sortable: true,
-      groupable: true,
-    },
-    ppe_type: {
-      ai: 'ppe_type',
-      grid: 'ppe_type',
-      type: 'set',
-      description: 'CAPEX PPE type.',
-      values: ['hardware', 'software'],
-      discoverable: true,
-      sortable: true,
-      groupable: true,
-    },
-    investment_type: {
-      ai: 'investment_type',
-      grid: 'investment_type',
-      type: 'set',
-      description: 'CAPEX investment type.',
-      values: ['replacement', 'capacity', 'productivity', 'security', 'conformity', 'business_growth', 'other'],
-      discoverable: true,
-      sortable: true,
-      groupable: true,
-    },
-    priority: {
-      ai: 'priority',
-      grid: 'priority',
-      type: 'set',
-      description: 'CAPEX priority.',
-      values: ['mandatory', 'high', 'medium', 'low'],
       discoverable: true,
       sortable: true,
       groupable: true,
@@ -229,11 +208,10 @@ export const capexItemsRegistry: AiEntityFilterRegistry = {
     ...budgetFteFields(),
   },
   sortFields: {
+    description: 'description',
+    line_description: 'line_description',
     label: 'description',
     status: 'status',
-    ppe_type: 'ppe_type',
-    investment_type: 'investment_type',
-    priority: 'priority',
     currency: 'currency',
     paying_company: 'company_name',
     supplier: 'supplier_name',
@@ -263,13 +241,12 @@ export const capexItemsRegistry: AiEntityFilterRegistry = {
     direction: 'desc',
   },
   aggregate: {
-    baseTable: 'capex_items',
+    baseTable: 'spend_items',
     alias: 'ci',
+    // `spend_items` holds both natures (lot Z1): this registry reads the CAPEX lines.
+    baseWhere: `ci.nature = 'capex'`,
     groupFields: {
       status: { expression: 'ci.status' },
-      ppe_type: { expression: 'ci.ppe_type' },
-      investment_type: { expression: 'ci.investment_type' },
-      priority: { expression: 'ci.priority' },
       currency: { expression: 'ci.currency' },
       paying_company: {
         expression: 'co.name',
@@ -296,7 +273,7 @@ export const capexItemsRegistry: AiEntityFilterRegistry = {
         expression: 'ac.name',
         joins: [
           `LEFT JOIN analytics_axes ax_def ON ax_def.tenant_id = ci.tenant_id AND ax_def.is_default`,
-          `LEFT JOIN capex_item_analytics_values av_def ON av_def.tenant_id = ci.tenant_id AND av_def.item_id = ci.id AND av_def.axis_id = ax_def.id`,
+          `LEFT JOIN spend_item_analytics_values av_def ON av_def.tenant_id = ci.tenant_id AND av_def.item_id = ci.id AND av_def.axis_id = ax_def.id`,
           `LEFT JOIN analytics_categories ac ON ac.id = av_def.category_id AND ac.tenant_id = av_def.tenant_id`,
         ],
       },

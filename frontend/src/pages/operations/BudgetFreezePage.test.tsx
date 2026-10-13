@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 
 vi.mock('react-i18next', () => {
-  const translation = { t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } };
+  const translation = { t: (key: string, opts?: {column: string; nature: string}) => key === 'operations.freeze.cell' ? `${opts?.column}, ${opts?.nature}` : key, i18n: { language: 'en', resolvedLanguage: 'en' } };
   return { useTranslation: () => translation };
 });
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
@@ -63,8 +63,10 @@ function renderPage() {
   );
 }
 
-/** The status card of a scope: its column names, in order. */
-const statusCard = (title: string) => within(screen.getByText(title).parentElement as HTMLElement);
+const row = (label: string) => within(screen.getByRole('rowheader', { name: label }).closest('tr')!);
+const cell = (label: string, nature: string, rowName = label) => row(rowName).getByRole('button', { name: `${label}, ${nature}` });
+const FORECAST = 'ops:operations.budgetColumns.forecast';
+const HIDDEN_FORECAST = `${FORECAST}operations.freeze.hidden`;
 
 describe('BudgetFreezePage', () => {
   beforeEach(() => {
@@ -75,38 +77,85 @@ describe('BudgetFreezePage', () => {
     post.mockResolvedValue({ data: { year: 2026, entries: [], summary: { year: 2026, scopes: {} } } });
   });
 
-  it('lists every column with the tenant names, hidden ones marked', () => {
-    renderPage();
-    const opex = statusCard('operations.freeze.opexColumns');
-    expect(opex.getByText('A0')).toBeInTheDocument();
-    expect(opex.getByText('ops:operations.budgetColumns.forecast')).toBeInTheDocument();
-    // Forecast is the one hidden column by default.
-    expect(opex.getAllByText('operations.freeze.hidden')).toHaveLength(1);
-    expect(statusCard('operations.freeze.capexColumns').getByText('ops:operations.budgetColumns.forecast')).toBeInTheDocument();
-  });
-
-  it('preselects every column, hidden ones included, so freezing a year freezes all five', async () => {
-    renderPage();
-    fireEvent.click(screen.getAllByRole('checkbox')[0]);
-    fireEvent.click(screen.getByRole('button', { name: 'operations.freeze.freezeData' }));
-    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
-    expect(post.mock.calls[0][1].scopes).toEqual([{ scope: 'opex', columns: ['budget', 'revision', 'forecast', 'actual', 'landing'] }]);
-  });
-
-  it('unfreezes a frozen hidden column', async () => {
+  it('shows every named column with one state toggle per nature, including hidden columns', () => {
     frozenOpex.columns = ['forecast'];
     renderPage();
-    expect(statusCard('operations.freeze.opexColumns').getByText('operations.freeze.frozen')).toBeInTheDocument();
-    fireEvent.click(screen.getAllByRole('checkbox')[0]);
-    fireEvent.click(screen.getByRole('button', { name: 'operations.freeze.unfreezeData' }));
-    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
-    expect(post.mock.calls[0][1].scopes[0].columns).toContain('forecast');
+    expect(screen.getAllByRole('columnheader').map((el) => el.textContent)).toEqual([
+      'operations.freeze.column', 'budget.opex', 'budget.capex', '',
+    ]);
+    expect(screen.getAllByRole('rowheader')).toHaveLength(5);
+    expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
+    expect(screen.getAllByText('operations.freeze.hidden')).toHaveLength(1);
+    const forecastOpex = cell(FORECAST, 'budget.opex', HIDDEN_FORECAST);
+    expect(forecastOpex).toHaveAttribute('aria-pressed', 'true');
+    expect(forecastOpex).toHaveTextContent('operations.freeze.frozen');
+    expect(cell(FORECAST, 'budget.capex', HIDDEN_FORECAST)).toHaveTextContent('operations.freeze.open');
+    expect(screen.queryByRole('button', { name: 'operations.freeze.freezeData' })).toBeNull();
   });
 
-  it('says who can change the page, with the same words as the column settings', () => {
+  it('freezes one open cell with one request and one entry', async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('tab', { name: '2027' }));
+    fireEvent.click(cell('A0', 'budget.capex'));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+    expect(post).toHaveBeenCalledWith('/freeze-states/freeze', { year: 2027, scopes: [{ scope: 'capex', columns: ['budget'] }] });
+  });
+
+  it('unfreezes one frozen cell with one request and one entry', async () => {
+    frozenOpex.columns = ['forecast'];
+    renderPage();
+    fireEvent.click(cell(FORECAST, 'budget.opex', HIDDEN_FORECAST));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+    expect(post).toHaveBeenCalledWith('/freeze-states/unfreeze', { year: new Date().getFullYear(), scopes: [{ scope: 'opex', columns: ['forecast'] }] });
+  });
+
+  it('disables the cell while its request runs', async () => {
+    let resolve: (value: unknown) => void = () => {};
+    post.mockReturnValue(new Promise((r) => { resolve = r; }));
+    renderPage();
+    fireEvent.click(cell('A0', 'budget.opex'));
+    await waitFor(() => expect(cell('A0', 'budget.opex')).toBeDisabled());
+    expect(cell('A0', 'budget.capex')).not.toBeDisabled();
+    resolve({ data: { year: 2026, entries: [], summary: { year: 2026, scopes: {} } } });
+    await waitFor(() => expect(cell('A0', 'budget.opex')).not.toBeDisabled());
+  });
+
+  it('freezes both natures of a row with one request, sending only the open one', async () => {
+    frozenOpex.columns = ['budget'];
+    renderPage();
+    expect(row('A0').queryByRole('button', { name: 'operations.freeze.unfreezeBoth' })).toBeNull();
+    fireEvent.click(row('A0').getByRole('button', { name: 'operations.freeze.freezeBoth' }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+    expect(post).toHaveBeenCalledWith('/freeze-states/freeze', { year: new Date().getFullYear(), scopes: [
+      { scope: 'capex', columns: ['budget'] },
+    ] });
+  });
+
+  it('freezes two open natures of a row with one request and two entries', async () => {
+    renderPage();
+    fireEvent.click(row('A0').getByRole('button', { name: 'operations.freeze.freezeBoth' }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+    expect(post).toHaveBeenCalledWith('/freeze-states/freeze', { year: new Date().getFullYear(), scopes: [
+      { scope: 'opex', columns: ['budget'] }, { scope: 'capex', columns: ['budget'] },
+    ] });
+  });
+
+  it('lets a reader see the states without toggling them', () => {
     auth.admin = false;
+    frozenOpex.columns = ['budget'];
     renderPage();
     expect(screen.getByText('operations.budgetAdminOnly')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'operations.freeze.freezeData' })).toBeDisabled();
+    expect(within(screen.getByRole('table')).queryAllByRole('button')).toHaveLength(0);
+    expect(screen.getByLabelText('A0, budget.opex: operations.freeze.frozen')).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('A0, budget.capex: operations.freeze.open'));
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it('handles a failed request without an unhandled rejection', async () => {
+    post.mockRejectedValue(new Error('offline'));
+    renderPage();
+    fireEvent.click(cell('A0', 'budget.opex'));
+    expect(await screen.findByRole('alert')).toHaveTextContent('offline');
+    expect(cell('A0', 'budget.opex')).not.toBeDisabled();
   });
 });

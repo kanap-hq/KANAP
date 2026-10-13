@@ -221,6 +221,7 @@
       "password_reset_completed": "Restablecimiento de contraseña completado",
       "password_reset_requested": "Restablecimiento de contraseña solicitado",
       "refresh_denied": "Renovación de sesión rechazada",
+      "restored": "Restaurar",
       "sso_login": "Inicio de sesión con Microsoft",
       "sso_login_failed": "Inicio de sesión con Microsoft fallido",
       "update": "Actualizar"
@@ -266,6 +267,7 @@
       "applications": "Aplicaciones",
       "assets": "Activos",
       "auditLog": "Registro de auditoría",
+      "budgetFile": "Archivo de presupuesto",
       "businessProcesses": "Procesos de negocio",
       "capexBudgetFile": "Archivo de presupuesto CAPEX",
       "chartOfAccounts": "Plan de cuentas",
@@ -273,6 +275,7 @@
       "companies": "Empresas",
       "contacts": "Contactos",
       "contracts": "Contratos",
+      "contractComplianceRegister": "Registro de conformidad de los contratos",
       "costCenters": "Centros de coste",
       "departments": "Departamentos",
       "document": "Documento",
@@ -563,55 +566,6 @@
     "unsavedNavigate": "Tiene cambios sin guardar. ¿Desea guardar antes de navegar?",
     "unsavedSwitchTab": "Tiene cambios sin guardar. ¿Desea guardar antes de cambiar de pestaña?"
   },
-  "landing": {
-    "cards": {
-      "accounts": {
-        "description": "Gestionar cuentas.",
-        "title": "Cuentas"
-      },
-      "auditLogs": {
-        "description": "Revisar la actividad del registro de auditoría.",
-        "title": "Registro de auditoría"
-      },
-      "billing": {
-        "description": "Gestionar facturación y suscripciones.",
-        "title": "Facturación"
-      },
-      "companies": {
-        "description": "Gestionar empresas.",
-        "title": "Empresas"
-      },
-      "departments": {
-        "description": "Gestionar departamentos.",
-        "title": "Departamentos"
-      },
-      "opsDashboard": {
-        "description": "Ver métricas de operaciones de la plataforma.",
-        "title": "Panel de operaciones"
-      },
-      "platformAi": {
-        "description": "Manage the platform-wide built-in AI provider.",
-        "title": "Platform AI"
-      },
-      "roles": {
-        "description": "Gestionar roles y permisos.",
-        "title": "Roles"
-      },
-      "suppliers": {
-        "description": "Gestionar proveedores.",
-        "title": "Proveedores"
-      },
-      "tenants": {
-        "description": "Gestionar espacios de trabajo.",
-        "title": "Espacios de trabajo"
-      },
-      "users": {
-        "description": "Gestionar usuarios.",
-        "title": "Usuarios"
-      }
-    },
-    "title": "Administración"
-  },
   "platformAi": {
     "actions": {
       "save": "Save",
@@ -850,9 +804,9 @@
       "analytics": "Analítica",
       "applications": "Aplicaciones",
       "billing": "Facturación",
+      "budget": "Presupuesto",
       "budget_ops": "Operaciones presupuestarias",
       "business_processes": "Procesos de negocio",
-      "capex": "Capex",
       "companies": "Empresas",
       "contacts": "Contactos",
       "contracts": "Contratos",
@@ -862,7 +816,6 @@
       "infrastructure": "Infraestructura",
       "knowledge": "Base de conocimiento",
       "locations": "Ubicaciones",
-      "opex": "Opex",
       "portfolio_planning": "Planificación de portafolio",
       "portfolio_projects": "Proyectos de portafolio",
       "portfolio_reports": "Informes de portafolio",

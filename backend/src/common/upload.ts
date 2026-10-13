@@ -10,7 +10,8 @@ export const CSV_IMPORT_MAX_BYTES = 1 * 1024 * 1024; // 1 MB
 /**
  * Limits of every multipart upload besides the file size. The app sends one
  * file and at most one text field (`snapshot`, `kind` or `source_field`), with
- * flat names. `fieldSize` keeps multer's default (1 MB).
+ * flat names. `fieldSize` keeps multer's default (1 MB), except for the budget
+ * file (`spend/budget-file/upload.ts`).
  */
 export const MULTIPART_LIMITS = {
   files: 1,

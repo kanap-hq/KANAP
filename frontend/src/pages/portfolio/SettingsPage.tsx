@@ -1159,9 +1159,9 @@ function CriterionEditDialog({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t('common:buttons.cancel')}</Button>
+        <Button variant="action" onClick={onClose}>{t('common:buttons.cancel')}</Button>
         <Button
-          variant="contained"
+          variant="action-primary"
           onClick={handleSave}
           disabled={saving || !name.trim() || values.some((v) => !v.label.trim())}
         >
@@ -1374,9 +1374,9 @@ function SkillEditDialog({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t('common:buttons.cancel')}</Button>
+        <Button variant="action" onClick={onClose}>{t('common:buttons.cancel')}</Button>
         <Button
-          variant="contained"
+          variant="action-primary"
           onClick={handleSave}
           disabled={saving || !category.trim() || !name.trim()}
         >
@@ -1633,9 +1633,9 @@ function PhaseTemplateEditDialog({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t('common:buttons.cancel')}</Button>
+        <Button variant="action" onClick={onClose}>{t('common:buttons.cancel')}</Button>
         <Button
-          variant="contained"
+          variant="action-primary"
           onClick={handleSave}
           disabled={saving || !isValid}
         >
@@ -2061,8 +2061,8 @@ function SourceEditDialog({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t('common:buttons.cancel')}</Button>
-        <Button variant="contained" onClick={handleSave} disabled={saving || !name.trim()}>
+        <Button variant="action" onClick={onClose}>{t('common:buttons.cancel')}</Button>
+        <Button variant="action-primary" onClick={handleSave} disabled={saving || !name.trim()}>
           {saving ? t('common:status.saving') : t('common:buttons.save')}
         </Button>
       </DialogActions>
@@ -2142,8 +2142,8 @@ function CategoryEditDialog({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t('common:buttons.cancel')}</Button>
-        <Button variant="contained" onClick={handleSave} disabled={saving || !name.trim()}>
+        <Button variant="action" onClick={onClose}>{t('common:buttons.cancel')}</Button>
+        <Button variant="action-primary" onClick={handleSave} disabled={saving || !name.trim()}>
           {saving ? t('common:status.saving') : t('common:buttons.save')}
         </Button>
       </DialogActions>
@@ -2225,8 +2225,8 @@ function StreamEditDialog({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t('common:buttons.cancel')}</Button>
-        <Button variant="contained" onClick={handleSave} disabled={saving || !name.trim()}>
+        <Button variant="action" onClick={onClose}>{t('common:buttons.cancel')}</Button>
+        <Button variant="action-primary" onClick={handleSave} disabled={saving || !name.trim()}>
           {saving ? t('common:status.saving') : t('common:buttons.save')}
         </Button>
       </DialogActions>
@@ -2306,8 +2306,8 @@ function TaskTypeEditDialog({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t('common:buttons.cancel')}</Button>
-        <Button variant="contained" onClick={handleSave} disabled={saving || !name.trim()}>
+        <Button variant="action" onClick={onClose}>{t('common:buttons.cancel')}</Button>
+        <Button variant="action-primary" onClick={handleSave} disabled={saving || !name.trim()}>
           {saving ? t('common:status.saving') : t('common:buttons.save')}
         </Button>
       </DialogActions>
@@ -2478,8 +2478,8 @@ function TeamEditDialog({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t('common:buttons.cancel')}</Button>
-        <Button variant="contained" onClick={handleSave} disabled={saving || !name.trim()}>
+        <Button variant="action" onClick={onClose}>{t('common:buttons.cancel')}</Button>
+        <Button variant="action-primary" onClick={handleSave} disabled={saving || !name.trim()}>
           {saving ? t('common:status.saving') : t('common:buttons.save')}
         </Button>
       </DialogActions>
@@ -2630,8 +2630,8 @@ function EmploymentTypeEditDialog({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t('common:buttons.cancel')}</Button>
-        <Button variant="contained" onClick={handleSave} disabled={saving || !name.trim()}>
+        <Button variant="action" onClick={onClose}>{t('common:buttons.cancel')}</Button>
+        <Button variant="action-primary" onClick={handleSave} disabled={saving || !name.trim()}>
           {saving ? t('common:status.saving') : t('common:buttons.save')}
         </Button>
       </DialogActions>

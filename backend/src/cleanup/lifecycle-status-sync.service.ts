@@ -16,14 +16,15 @@ export const LIFECYCLE_STATUS_SYNC_TASK_NAME = 'lifecycle-status-sync';
  *
  * `applications` and `app_instances` also carry both columns and are left out:
  * an application's status is written directly (API, CSV) with no date, and an
- * instance follows its lifecycle first. Their `status` is text.
+ * instance follows its lifecycle first. Their `status` is text. `capex_items`
+ * is left out too: dormant since lot Z1 (its lines are in `spend_items`), never
+ * written again until lot Z2 drops it.
  */
 export const LIFECYCLE_STATUS_TABLES = [
   'accounts',
   'analytics_axes',
   'analytics_categories',
   'business_processes',
-  'capex_items',
   'companies',
   'contracts',
   'cost_centers',
@@ -75,8 +76,8 @@ function isLockTimeout(err: unknown): boolean {
  * validity, in the caller's transaction. Only `status` changes: `updated_at`
  * keeps the last real edit and no audit row is written, as this is a derivation
  * (like migration 1758803100000), not an edit. The AFTER UPDATE search index
- * triggers refresh the indexed status. spend_items and capex_items have a
- * BEFORE UPDATE trigger (`row_version`, migration 1853740000000) that ignores
+ * triggers refresh the indexed status. spend_items (the lines of both natures
+ * since lot Z1) has a BEFORE UPDATE trigger (`row_version`, migration 1853740000000) that ignores
  * `status` (and `updated_at`): this sync never bumps a line's freshness
  * counter, so a CSV export is not reported as changed because a date passed.
  */

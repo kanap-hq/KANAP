@@ -1,9 +1,9 @@
 import { CENTS_LIMIT } from '../../common/amount';
 import { CsvDateOrder, CsvLanguage, CsvParsedDate, CsvReadResult, DecimalMark, readCsv } from '../../common/csv-sheet';
 import { AmountMeasure } from '../amounts-write.util';
-import { budgetFileSchema, isOldBudgetLayout, OLD_BUDGET_FILE_MESSAGE, schemaFields } from './columns';
+import { LEGACY_PREFIX, type BudgetNature } from '../budget-nature';
+import { budgetFileSchema, CRITERIA_COLUMNS_MESSAGE, hasCriteriaColumns, isOldBudgetLayout, OLD_BUDGET_FILE_MESSAGE, schemaFields } from './columns';
 import { parseToken, ParsedToken } from './token';
-import { BudgetFileScope } from './types';
 
 export type FieldCell =
   | { kind: 'absent' }
@@ -11,11 +11,26 @@ export type FieldCell =
   | { kind: 'clear' }
   | { kind: 'value'; text: string };
 
+/**
+ * The prefix a file names a line by: `BL` its own number; `OPX` and `CPX` the numbers of the
+ * files of before lot C1b (`legacy_number`, lot Z1). A bare number is a `BL` number in a file
+ * with a `nature` column, and keeps its former meaning in a file without one (`interpretBudgetFile`).
+ */
+export type ItemNumberPrefix = 'BL' | 'OPX' | 'CPX';
+
 export type ItemNumberCell =
   | { kind: 'blank' }
   | { kind: 'invalid'; raw: string }
-  | { kind: 'other'; raw: string }
-  | { kind: 'number'; n: number; raw: string };
+  /** `ref`: the reference as the report names it (`BL-12`, `CPX-3`). */
+  | { kind: 'number'; prefix: ItemNumberPrefix; n: number; raw: string; ref: string };
+
+/** The `nature` cell: absent when the file has no such column (a file of before lot C1b). */
+export type NatureCell =
+  | { kind: 'absent' }
+  | { kind: 'blank' }
+  | { kind: 'clear' }
+  | { kind: 'invalid'; raw: string }
+  | { kind: 'value'; nature: BudgetNature };
 
 export type MoneyCell =
   | { kind: 'blank' }
@@ -34,6 +49,7 @@ export interface InterpretedAmount {
 
 export interface InterpretedRow {
   line: number;
+  nature: NatureCell;
   itemNumber: ItemNumberCell;
   token: ParsedToken;
   fields: Record<string, FieldCell>;
@@ -45,43 +61,52 @@ export interface InterpretedRow {
 }
 
 /**
- * Read one budget file. An old layout comes back as that one message and no
- * rows, so the preflight does not also list a missing name on every line.
+ * Read one budget file. An old layout, or a CAPEX file of before lot C1 (the
+ * three criteria columns together), comes back as that one message and no
+ * rows, so the preflight does not also list a missing name or dimension on
+ * every line.
  */
 export async function readBudgetCsv(
   input: Buffer | string,
   options: {
-    scope: BudgetFileScope;
     language: CsvLanguage;
+    /** The enabled dimensions, of both natures (`loadFileDimensions`). */
     dimensionCodes: readonly string[];
-    /** Enabled dimensions of the other line type: code → header error (`loadFileDimensions`). */
-    refusedDimensions?: Readonly<Record<string, string>>;
     dateOrder?: CsvDateOrder;
     decimalMark?: DecimalMark;
   },
 ): Promise<CsvReadResult> {
   const read = await readCsv(
     input,
-    budgetFileSchema(options.scope, options.language, options.dimensionCodes, options.dateOrder, options.decimalMark, options.refusedDimensions),
+    budgetFileSchema(options.language, options.dimensionCodes, options.dateOrder, options.decimalMark),
   );
-  if (!isOldBudgetLayout(read.rawHeaders)) return read;
+  const refusal = isOldBudgetLayout(read.rawHeaders)
+    ? OLD_BUDGET_FILE_MESSAGE
+    : hasCriteriaColumns(read.rawHeaders) ? CRITERIA_COLUMNS_MESSAGE : null;
+  if (!refusal) return read;
   return {
     ...read,
     headerErrors: [],
     ignoredColumns: [],
-    fileErrors: [OLD_BUDGET_FILE_MESSAGE],
+    fileErrors: [refusal],
     rows: [],
     dates: null,
     amounts: null,
   };
 }
 
-/** Turn parsed cells into the budget file's own cells. No database. */
-export function interpretBudgetFile(scope: BudgetFileScope, read: CsvReadResult): InterpretedRow[] {
-  const fields = schemaFields(scope);
+/**
+ * Turn parsed cells into the budget file's own cells. No database. `scope`, the route's nature,
+ * gives a bare number of a file without a `nature` column (a file of before lot C1b) the meaning
+ * it had there: on the CAPEX list the line's CPX number, on the OPEX list the OPEX line's number.
+ * In a file with the column a bare number is the line's BL number, on both lists.
+ */
+export function interpretBudgetFile(read: CsvReadResult, scope: BudgetNature): InterpretedRow[] {
+  const fields = schemaFields();
   const amountColumns = read.columns.filter((column) => column.kind === 'amount');
   const analyticsColumns = read.columns.filter((column) => column.kind === 'analytics');
   const presentFields = new Set(read.columns.filter((column) => column.kind === 'field').map((column) => column.id));
+  const barePrefix: ItemNumberPrefix = presentFields.has('nature') ? 'BL' : LEGACY_PREFIX[scope];
   return read.rows.map((row) => {
     const errors = row.errors.map((error) => ({ column: error.column, message: error.message }));
     const cells: Record<string, FieldCell> = {};
@@ -133,7 +158,8 @@ export function interpretBudgetFile(scope: BudgetFileScope, read: CsvReadResult)
     const tokenRaw = presentFields.has('kanap_token') ? (row.cells.kanap_token ?? '') : null;
     return {
       line: row.line,
-      itemNumber: parseItemNumber(scope, cells.item_number ?? { kind: 'absent' }),
+      nature: parseNature(cells.nature ?? { kind: 'absent' }),
+      itemNumber: parseItemNumber(cells.item_number ?? { kind: 'absent' }, barePrefix),
       token: tokenRaw == null ? { kind: 'absent' } : parseToken(tokenRaw),
       fields: cells,
       analytics,
@@ -151,25 +177,26 @@ function fieldCell(raw: string): FieldCell {
   return { kind: 'value', text };
 }
 
-function parseItemNumber(scope: BudgetFileScope, cell: FieldCell): ItemNumberCell {
+/** `opex` or `capex`, any case. */
+function parseNature(cell: FieldCell): NatureCell {
+  if (cell.kind !== 'value') return cell;
+  const text = cell.text.trim().toLowerCase();
+  if (text === 'opex' || text === 'capex') return { kind: 'value', nature: text };
+  return { kind: 'invalid', raw: cell.text.trim() };
+}
+
+/** `BL-n`, `OPX-n`, `CPX-n` (any case) or a bare number, read with `barePrefix` (`BL` unless the file is one of before). */
+export function parseItemNumber(cell: FieldCell, barePrefix: ItemNumberPrefix = 'BL'): ItemNumberCell {
   if (cell.kind === 'absent' || cell.kind === 'blank') return { kind: 'blank' };
   if (cell.kind === 'clear') return { kind: 'invalid', raw: '-' };
   const text = cell.text.trim();
-  const prefixed = /^(OPX|CPX)-(\d+)$/i.exec(text);
-  if (prefixed) {
-    const prefix = prefixed[1].toUpperCase();
-    const expected = scope === 'opex' ? 'OPX' : 'CPX';
-    const n = Number(prefixed[2]);
-    if (!Number.isSafeInteger(n) || n < 1) return { kind: 'invalid', raw: text };
-    if (prefix !== expected) return { kind: 'other', raw: `${prefix}-${n}` };
-    return { kind: 'number', n, raw: text };
-  }
-  if (/^\d+$/.test(text)) {
-    const n = Number(text);
-    if (!Number.isSafeInteger(n) || n < 1) return { kind: 'invalid', raw: text };
-    return { kind: 'number', n, raw: text };
-  }
-  return { kind: 'invalid', raw: text };
+  const prefixed = /^(BL|OPX|CPX)-(\d+)$/i.exec(text);
+  const digits = prefixed ? prefixed[2] : /^\d+$/.test(text) ? text : null;
+  if (digits == null) return { kind: 'invalid', raw: text };
+  const n = Number(digits);
+  if (!Number.isSafeInteger(n) || n < 1) return { kind: 'invalid', raw: text };
+  const prefix = (prefixed ? prefixed[1].toUpperCase() : barePrefix) as ItemNumberPrefix;
+  return { kind: 'number', prefix, n, raw: text, ref: `${prefix}-${n}` };
 }
 
 /** The first year of a row that carries an amount, for a blank effective start on a new line. */

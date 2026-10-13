@@ -11,6 +11,7 @@ import { DEFAULT_TASK_TYPES } from '../portfolio/portfolio-task-type.entity';
 import { DEFAULT_EMPLOYMENT_TYPES } from '../portfolio/portfolio-employment-type.entity';
 import { seedManagedDocsKnowledgeAssets } from '../knowledge/integrated-document-seed';
 import { ensureDefaultAnalyticsAxis } from '../analytics/analytics-axes.util';
+import { ensureRecommendedDimensions, SeedLanguage, TENANT_LANGUAGE_METADATA_KEY, tenantSeedLanguage } from '../analytics/recommended-dimensions.seed';
 
 // Built-in roles configuration for newly created tenants.
 const BUILT_IN_ROLES: Array<{
@@ -21,9 +22,9 @@ const BUILT_IN_ROLES: Array<{
   // Budget Roles
   {
     name: 'Budget Administrator',
-    description: 'Full control over budget management including OPEX, CAPEX, contracts, and reporting',
+    description: 'Full control over budget management including budget lines, contracts, and reporting',
     permissions: {
-      opex: 'admin', capex: 'admin', budget_ops: 'admin', contracts: 'admin',
+      budget: 'admin', budget_ops: 'admin', contracts: 'admin',
       analytics: 'admin', reporting: 'admin', tasks: 'member', users: 'reader',
       companies: 'member', departments: 'member', cost_centers: 'admin', working_day_profiles: 'admin', suppliers: 'member',
       contacts: 'member', accounts: 'member'
@@ -33,7 +34,7 @@ const BUILT_IN_ROLES: Array<{
     name: 'Budget Member',
     description: 'Can manage budget items, contracts, and view reports',
     permissions: {
-      opex: 'member', capex: 'member', budget_ops: 'reader', contracts: 'member',
+      budget: 'member', budget_ops: 'reader', contracts: 'member',
       analytics: 'member', reporting: 'member', tasks: 'member',
       companies: 'reader', departments: 'member', cost_centers: 'member', working_day_profiles: 'member', suppliers: 'member',
       contacts: 'member', accounts: 'reader'
@@ -43,7 +44,7 @@ const BUILT_IN_ROLES: Array<{
     name: 'Budget Reader',
     description: 'Read-only access to budget data and reports',
     permissions: {
-      opex: 'reader', capex: 'reader', budget_ops: 'reader', contracts: 'reader',
+      budget: 'reader', budget_ops: 'reader', contracts: 'reader',
       analytics: 'reader', reporting: 'reader', tasks: 'reader',
       companies: 'reader', departments: 'reader', cost_centers: 'reader', working_day_profiles: 'reader', suppliers: 'reader',
       contacts: 'reader', accounts: 'reader'
@@ -59,7 +60,7 @@ const BUILT_IN_ROLES: Array<{
       companies: 'reader', departments: 'reader', cost_centers: 'reader', working_day_profiles: 'reader', suppliers: 'member',
       contacts: 'member', accounts: 'member',
       applications: 'reader', infrastructure: 'reader', locations: 'reader', settings: 'reader',
-      opex: 'reader', capex: 'reader', contracts: 'reader'
+      budget: 'reader', contracts: 'reader'
     }
   },
   {
@@ -98,7 +99,7 @@ const BUILT_IN_ROLES: Array<{
       applications: 'admin', infrastructure: 'admin', locations: 'admin', incidents: 'admin', settings: 'admin',
       tasks: 'member', users: 'reader',
       companies: 'reader', departments: 'reader', cost_centers: 'reader', working_day_profiles: 'reader', suppliers: 'member', contacts: 'member',
-      opex: 'reader', capex: 'reader', contracts: 'reader',
+      budget: 'reader', contracts: 'reader',
       portfolio_requests: 'reader', portfolio_projects: 'reader',
       portfolio_planning: 'reader', portfolio_reports: 'reader', portfolio_settings: 'reader'
     }
@@ -110,7 +111,7 @@ const BUILT_IN_ROLES: Array<{
       applications: 'member', infrastructure: 'member', locations: 'member', incidents: 'member', settings: 'member',
       tasks: 'member', users: 'reader',
       companies: 'reader', departments: 'reader', cost_centers: 'reader', working_day_profiles: 'reader', suppliers: 'reader', contacts: 'member',
-      opex: 'reader', capex: 'reader', contracts: 'reader',
+      budget: 'reader', contracts: 'reader',
       portfolio_requests: 'reader', portfolio_projects: 'reader', portfolio_planning: 'reader'
     }
   },
@@ -366,14 +367,18 @@ export class TenantsService {
     );
   }
 
-  async createTenant(params: { slug: string; name: string }, opts?: { manager?: EntityManager }) {
+  /**
+   * `language`: the language of the seeded names (`seedTenantDefaults`), English when absent,
+   * stored in `metadata.language` of a new tenant. An existing tenant keeps its own.
+   */
+  async createTenant(params: { slug: string; name: string; language?: SeedLanguage }, opts?: { manager?: EntityManager }) {
     if (opts?.manager) {
       return this.createWithManager(params, opts.manager);
     }
     return this.repo.manager.transaction((manager) => this.createWithManager(params, manager));
   }
 
-  private async createWithManager(params: { slug: string; name: string }, manager: EntityManager) {
+  private async createWithManager(params: { slug: string; name: string; language?: SeedLanguage }, manager: EntityManager) {
     const repo = manager.getRepository(Tenant);
     const slug = normalizeTenantSlug(params.slug);
     if (isReservedTenantSlug(slug)) {
@@ -382,24 +387,35 @@ export class TenantsService {
     // Ignore tenants that were previously deleted when checking for existing
     const existing = await repo.findOne({ where: { slug, deleted_at: IsNull() } });
     if (existing) {
-      await this.seedTenantDefaults(manager, existing.id);
+      // An existing tenant keeps its stored language.
+      await this.seedTenantDefaults(manager, existing.id, { language: tenantSeedLanguage(existing.metadata) });
       return existing;
     }
-    const tenant = repo.create({ slug, name: params.name, status: TenantStatus.ACTIVE, metadata: { it_ops: catalogToMetadata(DEFAULT_CLASSIFICATION_CATALOG) } });
+    // The seed language is stored with the tenant: the reset seeds the dimensions in it again.
+    const language = params.language ?? 'en';
+    const tenant = repo.create({
+      slug,
+      name: params.name,
+      status: TenantStatus.ACTIVE,
+      metadata: { it_ops: catalogToMetadata(DEFAULT_CLASSIFICATION_CATALOG), [TENANT_LANGUAGE_METADATA_KEY]: language },
+    });
     const saved = await repo.save(tenant);
-    await this.seedTenantDefaults(manager, saved.id);
+    await this.seedTenantDefaults(manager, saved.id, { language });
     return saved;
   }
 
   /**
    * The defaults every tenant starts with: system and built-in roles with their permissions,
-   * the default analytics dimension, task types, employment types, and the document libraries
+   * the default analytics dimension named as the cost pool and the other recommended dimensions
+   * (IT tower, purpose, priority) with their values, in `language` (English when absent; see
+   * `recommended-dimensions.seed.ts`), task types, employment types, and the document libraries
    * with their folders, types and templates. Idempotent: existing rows are kept. Also used to
    * rebuild a tenant's starting state (TenantBaselineService).
    */
-  async seedTenantDefaults(manager: EntityManager, tenantId: string) {
+  async seedTenantDefaults(manager: EntityManager, tenantId: string, opts?: { language?: SeedLanguage }) {
     await this.ensureSystemRoles(manager, tenantId);
     await ensureDefaultAnalyticsAxis(manager, tenantId);
+    await ensureRecommendedDimensions(manager, tenantId, opts?.language ?? 'en');
     await this.seedDefaultTaskTypes(manager, tenantId);
     await this.seedDefaultEmploymentTypes(manager, tenantId);
     await this.seedDefaultDocumentLibraries(manager, tenantId);

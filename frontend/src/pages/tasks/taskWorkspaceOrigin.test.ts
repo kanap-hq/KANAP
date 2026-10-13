@@ -53,12 +53,12 @@ describe('parseTaskOrigin', () => {
     expect(parseTaskOrigin(new URLSearchParams('contractId=ct-1'))).toEqual({
       kind: 'contract',
       id: 'ct-1',
-      tab: 'tasks',
+      tab: 'overview',
     });
     expect(parseTaskOrigin(new URLSearchParams('contractId=ct-1&originTab=not-a-tab'))).toEqual({
       kind: 'contract',
       id: 'ct-1',
-      tab: 'tasks',
+      tab: 'overview',
     });
   });
 
@@ -88,8 +88,10 @@ describe('sanitizeOriginTab', () => {
     expect(sanitizeOriginTab('project', 'effort')).toBe('effort');
     expect(sanitizeOriginTab('project', 'activity')).toBe('activity');
     expect(sanitizeOriginTab('spend_item', 'relations')).toBe('relations');
-    expect(sanitizeOriginTab('contract', 'details')).toBe('details');
-    expect(sanitizeOriginTab('contract', '')).toBe('tasks');
+    expect(sanitizeOriginTab('contract', 'budget')).toBe('budget');
+    // The former Details and Tasks tabs live in the overview now.
+    expect(sanitizeOriginTab('contract', 'details')).toBe('overview');
+    expect(sanitizeOriginTab('contract', '')).toBe('overview');
     expect(sanitizeOriginTab('spend_item', 'tasks')).toBe('overview');
   });
 });
@@ -163,11 +165,11 @@ describe('buildOriginPath / buildParentPath', () => {
 
   it('returns budget/contract workspaces on a whitelisted tab', () => {
     expect(buildOriginPath({ kind: 'spend_item', id: 'si-1', tab: 'allocations' }, new URLSearchParams()))
-      .toBe('/ops/opex/si-1/allocations');
+      .toBe('/ops/budget/si-1/allocations');
     expect(buildOriginPath({ kind: 'capex_item', id: 'cx-1', tab: 'nope' }, new URLSearchParams()))
-      .toBe('/ops/capex/cx-1/overview');
+      .toBe('/ops/budget/cx-1/overview');
     expect(buildOriginPath({ kind: 'contract', id: 'ct-1' }, new URLSearchParams()))
-      .toBe('/ops/contracts/ct-1/tasks');
+      .toBe('/ops/contracts/ct-1/overview');
   });
 
   it('preserves task list filters on entity origin paths and strips them on the task list', () => {
@@ -175,14 +177,14 @@ describe('buildOriginPath / buildParentPath', () => {
     expect(buildOriginPath({ kind: 'project', id: 'prj-1', tab: 'tasks' }, search))
       .toBe('/portfolio/projects/prj-1/tasks?taskStatus=open&taskPhase=phase-1');
     expect(buildOriginPath({ kind: 'spend_item', id: 'si-1', tab: 'overview' }, search))
-      .toBe('/ops/opex/si-1/overview?taskStatus=open&taskPhase=phase-1');
+      .toBe('/ops/budget/si-1/overview?taskStatus=open&taskPhase=phase-1');
     expect(buildOriginPath({ kind: 'tasks' }, search)).toBe('/portfolio/tasks');
   });
 
   it('jumps parents to the entity home tab', () => {
     expect(buildParentPath('project', 'prj-1')).toBe('/portfolio/projects/prj-1/summary');
-    expect(buildParentPath('spend_item', 'si-1')).toBe('/ops/opex/si-1/overview');
-    expect(buildParentPath('capex_item', 'cx-1')).toBe('/ops/capex/cx-1/overview');
+    expect(buildParentPath('spend_item', 'si-1')).toBe('/ops/budget/si-1/overview');
+    expect(buildParentPath('capex_item', 'cx-1')).toBe('/ops/budget/cx-1/overview');
     expect(buildParentPath('contract', 'ct-1')).toBe('/ops/contracts/ct-1/overview');
   });
 });
@@ -209,14 +211,14 @@ describe('buildTaskOriginSearchParams', () => {
     }).entries())).toEqual({ spendItemId: 'si-1', originTab: 'overview' });
 
     expect(Object.fromEntries(buildTaskOriginSearchParams('contract', 'ct-1', {
-      pathname: '/ops/contracts/ct-1/tasks',
+      pathname: '/ops/contracts/ct-1/overview',
       search: '',
-    }).entries())).toEqual({ contractId: 'ct-1', originTab: 'tasks' });
+    }).entries())).toEqual({ contractId: 'ct-1', originTab: 'overview' });
 
     expect(buildTaskOriginSearchParams('contract', 'ct-1', {
       pathname: '/ops/contracts/ct-1/not-a-tab',
       search: '',
-    }).get('originTab')).toBe('tasks');
+    }).get('originTab')).toBe('overview');
   });
 
   it('copies task list filters onto the task workspace URL', () => {
@@ -283,7 +285,7 @@ describe('buildTaskBreadcrumbs', () => {
     expect(crumbs[1]).toMatchObject({
       key: 'parent',
       label: 'OPEX · Microsoft Enterprise',
-      href: '/ops/opex/si-1/overview',
+      href: '/ops/budget/si-1/overview',
     });
   });
 
@@ -337,7 +339,7 @@ describe('buildTaskBreadcrumbs', () => {
     expect(crumbs).toHaveLength(1);
     expect(crumbs[0]).toMatchObject({
       label: 'Microsoft Enterprise',
-      href: '/ops/opex/si-1/overview',
+      href: '/ops/budget/si-1/overview',
     });
   });
 
@@ -349,7 +351,7 @@ describe('buildTaskBreadcrumbs', () => {
       labels,
     });
     expect(crumbs).toEqual([
-      { key: 'origin', label: 'Microsoft Enterprise', href: '/ops/opex/si-1/overview', variant: 'back' },
+      { key: 'origin', label: 'Microsoft Enterprise', href: '/ops/budget/si-1/overview', variant: 'back' },
       { key: 'parent', label: 'Contract · Azure EA', href: '/ops/contracts/ct-9/overview', variant: 'link' },
     ]);
   });
@@ -364,7 +366,7 @@ describe('buildTaskBreadcrumbs', () => {
     expect(crumbs[0].label).toBe('Microsoft Enterprise');
     expect(crumbs[1]).toMatchObject({
       label: 'OPEX · Slack Business+',
-      href: '/ops/opex/si-2/overview',
+      href: '/ops/budget/si-2/overview',
     });
   });
 
@@ -376,5 +378,15 @@ describe('buildTaskBreadcrumbs', () => {
     });
     expect(crumbs[0].label).toBe('Contract');
     expect(crumbs[1].label).toBe('SAP Cheddar Migration');
+  });
+});
+
+
+describe('unified budget workspace origins', () => {
+  it.each(['spend_item', 'capex_item'] as const)('uses the loaded task kind %s on a neutral route', (type) => {
+    const search = buildTaskOriginSearchParams(type, 'BL-127', { pathname: '/ops/budget/BL-127/allocations', search: '' });
+    const origin = parseTaskOrigin(search);
+    expect(origin).toEqual({ kind: type, id: 'BL-127', tab: 'allocations' });
+    expect(buildOriginPath(origin, search)).toBe('/ops/budget/BL-127/allocations');
   });
 });

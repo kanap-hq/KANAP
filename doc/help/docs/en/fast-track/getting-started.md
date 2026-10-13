@@ -183,7 +183,7 @@ The minimum you need:
 
 ### Link tasks to projects, contracts, or budgets
 
-When creating a task, you can link it to a **Project**, **OPEX item**, **Contract**, or **CAPEX item**. This makes the task appear in both the Tasks list and the parent workspace.
+When creating a task, you can link it to a **Project**, **OPEX line**, **Contract**, or **CAPEX line**. This makes the task appear in both the Tasks list and the parent workspace.
 
 !!! tip "Create from context"
     The fastest way to create a linked task is from within the parent workspace. Open a project → Tasks tab → New. The link is pre-filled.

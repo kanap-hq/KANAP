@@ -5,7 +5,6 @@ import { AnalyticsCategoriesService } from '../../analytics/analytics-categories
 import { ApplicationsService } from '../../applications/services';
 import { AssetsService } from '../../assets/services';
 import { BusinessProcessesService } from '../../business-processes/business-processes.service';
-import { CapexItemsService } from '../../capex/capex-items.service';
 import { CompaniesService } from '../../companies/companies.service';
 import { ConnectionsService } from '../../connections/services';
 import { ContactsService } from '../../contacts/contacts.service';
@@ -21,7 +20,8 @@ import {
 import { LocationsService } from '../../locations/locations.service';
 import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
 import { PortfolioProjectsService } from '../../portfolio/services';
-import { SpendItemsService } from '../../spend/spend-items.service';
+import { CapexItemsService, SpendItemsService } from '../../spend/spend-items.service';
+import { presentChildren } from '../../spend/budget-line-presentation';
 import { TasksService } from '../../spend/tasks.service';
 import { SuppliersService } from '../../suppliers/suppliers.service';
 import { UsersService } from '../../users/users.service';
@@ -73,8 +73,7 @@ function buildRef(
   if (entityType === 'tasks') return `T-${itemNumber}`;
   if (entityType === 'documents') return `DOC-${itemNumber}`;
   if (entityType === 'incidents') return `INC-${itemNumber}`;
-  if (entityType === 'spend_items') return `OPX-${itemNumber}`;
-  if (entityType === 'capex_items') return `CPX-${itemNumber}`;
+  if (entityType === 'spend_items' || entityType === 'capex_items') return `BL-${itemNumber}`;
   return null;
 }
 
@@ -270,6 +269,7 @@ function toEntitySummary(
   row: {
     id: string;
     item_number?: number | null;
+    reference?: string | null;
     label: string;
     status: string | null;
     summary?: string | null;
@@ -280,7 +280,7 @@ function toEntitySummary(
   return {
     type: entityType,
     id: row.id,
-    ref: buildRef(entityType, row.item_number ?? null),
+    ref: row.reference ?? buildRef(entityType, row.item_number ?? null),
     label: row.label,
     status: row.status ?? null,
     summary: row.summary ?? null,
@@ -569,6 +569,7 @@ export class AiQueryExecutor {
         classification_review_state: scalar(row.classification_review_state),
         classification_review_reason: scalar(row.classification_review_reason),
         classification_reviewed_at: scalar(row.classification_reviewed_at),
+        last_dr_test: scalar(row.last_dr_test),
         category: scalar(row.category),
         editor: scalar(row.editor),
         environment: scalar(row.environment),
@@ -623,6 +624,7 @@ export class AiQueryExecutor {
       ?? ([row.supplier_name, row.paying_company_name, row.account_display].filter(Boolean).join(' | ') || null);
     return toEntitySummary('spend_items', {
       id: row.id,
+      reference: row.reference,
       item_number: row.item_number ?? null,
       label: row.product_name || 'Untitled spend item',
       status: row.status ?? null,
@@ -636,22 +638,33 @@ export class AiQueryExecutor {
     });
   }
 
+  /** Read descriptions in one tenant/nature-scoped batch without changing the CAPEX alias. */
+  private async withCapexDescriptions(context: AiExecutionContextWithManager, rows: any[]): Promise<void> {
+    if (!rows.length) return;
+    const descriptions: Array<{ id: string; description: string | null }> = await context.manager.query(
+      `SELECT id, description FROM spend_items
+        WHERE tenant_id = $1 AND nature = 'capex' AND id = ANY($2::uuid[])`,
+      [context.tenantId, rows.map((row) => row.id)],
+    );
+    const byId = new Map(descriptions.map((row) => [row.id, row.description]));
+    for (const row of rows) row.line_description = byId.get(row.id) ?? null;
+  }
+
   private mapCapexItem(row: any, registry: AiEntityFilterRegistry): AiEntitySummaryDto {
     const anchorYear = new Date().getFullYear();
-    const summary = row.notes
-      ?? ([row.company_name, row.ppe_type, row.investment_type].filter(Boolean).join(' | ') || null);
+    const summary = row.line_description ?? row.notes
+      ?? ([row.company_name, row.supplier_name].filter(Boolean).join(' | ') || null);
     return toEntitySummary('capex_items', {
       id: row.id,
+      reference: row.reference,
       item_number: row.item_number ?? null,
       label: row.description || 'Untitled CAPEX item',
       status: row.status ?? null,
       summary,
       updated_at: row.updated_at ?? null,
       metadata: {
+        line_description: scalar(row.line_description),
         ...budgetItemMetadata(row, registry),
-        ppe_type: scalar(row.ppe_type),
-        investment_type: scalar(row.investment_type),
-        priority: scalar(row.priority),
         budget_anchor_year: anchorYear,
         ...budgetAmountMetadata(row, anchorYear),
       },
@@ -709,6 +722,8 @@ export class AiQueryExecutor {
         axis: axis ? analyticsAxisLabel(axis) : null,
         axis_code: axis ? axis.code : null,
         applies_to: scalar(row.applies_to),
+        // The value's position in its dimension (the manual order).
+        sort_order: numericScalar(row.sort_order),
       },
     });
   }
@@ -1184,6 +1199,7 @@ export class AiQueryExecutor {
         },
         { manager: context.manager },
       );
+      await this.withCapexDescriptions(context, result.items || []);
       const resultPage = result.page ?? page;
       const resultLimit = result.limit ?? limit;
       const returned = Array.isArray(result.items) ? result.items.length : 0;
@@ -1576,6 +1592,10 @@ export class AiQueryExecutor {
     if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
       return value;
     }
+    if ((entityType === 'spend_items' || entityType === 'capex_items') && /^(?:BL|OPX|CPX)-\d+$/i.test(value)) {
+      // The nature-specific item service resolves native and legacy references before loading.
+      return value;
+    }
     if (entityType === 'documents') {
       return value;
     }
@@ -1716,10 +1736,10 @@ export class AiQueryExecutor {
   private async loadFinancialVersions(
     context: AiExecutionContextWithManager,
     params: {
-      versionTable: 'spend_versions' | 'capex_versions';
-      amountTable: 'spend_amounts' | 'capex_amounts';
-      allocationTable: 'spend_allocations' | 'capex_allocations';
-      itemColumn: 'spend_item_id' | 'capex_item_id';
+      versionTable: 'spend_versions';
+      amountTable: 'spend_amounts';
+      allocationTable: 'spend_allocations';
+      itemColumn: 'spend_item_id';
       itemId: string;
     },
   ): Promise<any[]> {
@@ -1773,8 +1793,8 @@ export class AiQueryExecutor {
   private async loadLinkedContacts(
     context: AiExecutionContextWithManager,
     params: {
-      table: 'spend_item_contacts' | 'capex_item_contacts' | 'contract_contacts';
-      foreignKey: 'spend_item_id' | 'capex_item_id' | 'contract_id';
+      table: 'spend_item_contacts' | 'contract_contacts';
+      foreignKey: 'spend_item_id' | 'contract_id';
       id: string;
     },
   ): Promise<any[]> {
@@ -1875,19 +1895,21 @@ export class AiQueryExecutor {
         },
         { manager: context.manager },
       ),
+      // The CAPEX line lives in the `spend_*` family (lot Z1); its id comes from `capexItems.get`,
+      // which answers 404 for a line of the other nature (`spend/budget-nature.ts`).
       this.loadFinancialVersions(context, {
-        versionTable: 'capex_versions',
-        amountTable: 'capex_amounts',
-        allocationTable: 'capex_allocations',
-        itemColumn: 'capex_item_id',
+        versionTable: 'spend_versions',
+        amountTable: 'spend_amounts',
+        allocationTable: 'spend_allocations',
+        itemColumn: 'spend_item_id',
         itemId: capexItemId,
       }),
       this.loadLinkedContacts(context, {
-        table: 'capex_item_contacts',
-        foreignKey: 'capex_item_id',
+        table: 'spend_item_contacts',
+        foreignKey: 'spend_item_id',
         id: capexItemId,
       }).catch(() => []),
-      this.loadCapexLinkedApplications(context, capexItemId).catch(() => ({ items: [] })),
+      this.capexItems.listApplications(capexItemId, { manager: context.manager }).catch(() => ({ items: [] })),
       this.capexItems.listProjects(capexItemId, { manager: context.manager }).catch(() => ({ items: [] })),
       this.contracts.listContractsForCapexItem(capexItemId, { manager: context.manager }).catch(() => ({ items: [] })),
     ]);
@@ -1896,28 +1918,13 @@ export class AiQueryExecutor {
     return {
       ...(summary ?? {}),
       financial_summary: summary ?? null,
-      financial_versions: financialVersions,
-      contacts,
+      // The children name their line as the CAPEX contract does (`capex_item_id`).
+      financial_versions: presentChildren('capex', financialVersions),
+      contacts: presentChildren('capex', contacts),
       linked_applications: linkedApplications,
       projects: linkedProjects,
       linked_contracts: linkedContracts,
     };
-  }
-
-  /** Applications linked to a CAPEX item, in the shape of the OPEX detail's `linked_applications`. */
-  private async loadCapexLinkedApplications(
-    context: AiExecutionContextWithManager,
-    capexItemId: string,
-  ): Promise<{ items: Array<{ id: string; name: string }> }> {
-    const items = await context.manager.query(
-      `SELECT a.id, a.name
-       FROM application_capex_items l
-       JOIN applications a ON a.id = l.application_id AND a.tenant_id = l.tenant_id
-       WHERE l.tenant_id = $1 AND l.capex_item_id = $2
-       ORDER BY a.name ASC`,
-      [context.tenantId, capexItemId],
-    );
-    return { items };
   }
 
   private async loadContractDeepDetail(
@@ -2102,6 +2109,7 @@ export class AiQueryExecutor {
       // The id, not the reference the caller may have given (`get` accepts both).
       const capexItemId = row.id as string;
       await this.withoutHiddenAnalyticsValues(context, row, 'capex');
+      await this.withCapexDescriptions(context, [row]);
       const registry = await resolveAiEntityRegistry(context, entityType);
       Object.assign(row, await this.loadCapexItemDeepDetail(context, capexItemId, registry));
       row.links = await this.capexItems.listLinks(capexItemId, { manager: context.manager }).catch(() => []);
@@ -2296,7 +2304,7 @@ export class AiQueryExecutor {
         `SELECT DISTINCT ${groupField.expression} AS value
          FROM ${registry.aggregate.baseTable} ${alias}
          ${joins}
-         WHERE ${alias}.tenant_id = $1
+         WHERE ${alias}.tenant_id = $1${registry.aggregate.baseWhere ? ` AND ${registry.aggregate.baseWhere}` : ''}
            ${accessScopeSql}
            ${incidentVisibility}
            ${documentAclSql}

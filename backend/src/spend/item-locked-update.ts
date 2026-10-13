@@ -1,12 +1,13 @@
 import { BadRequestException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
-import { CapexItem } from '../capex/capex-item.entity';
 import { deriveStatusFromDisabledAt, resolveEndOfValidityAlias, resolveLifecycleState, StatusState } from '../common/status';
 import { splitEditBase } from '../common/edit-conflicts';
 import { lockBudgetLine } from './budget-locks';
+import { assertScopeNatures, natureAnd, type BudgetNature } from './budget-nature';
+import { findBudgetLine } from './budget-line-presentation';
 import { ItemAnalyticsValue, loadItemAnalyticsValues, writeItemAnalyticsValues } from './item-analytics.util';
 import { assertNoItemEditConflicts } from './item-edit-conflicts';
-import { ItemWriteScope, resolveItemWrite } from './item-write.util';
+import { ItemWriteFields, ItemWriteScope, resolveItemWrite } from './item-write.util';
 import { SpendItem } from './spend-item.entity';
 
 /**
@@ -38,9 +39,14 @@ import { SpendItem } from './spend-item.entity';
  * effects (contact sync, notifications).
  */
 
-const ENTITIES = { opex: SpendItem, capex: CapexItem } as const;
+/** The table and nature of each scope's lines (`budget-nature.ts`): one table since lot Z1. */
+const LINES: Record<ItemWriteScope, { table: string; nature?: BudgetNature }> = {
+  opex: { table: 'spend_items', nature: 'opex' },
+  capex: { table: 'spend_items', nature: 'capex' },
+};
+assertScopeNatures('item-locked-update', LINES, (t) => t.table);
 
-type ItemRow = SpendItem | CapexItem;
+type ItemRow = SpendItem;
 
 export type LockedItemUpdate<T extends ItemRow> = {
   /** The line as read under the lock, before the update. */
@@ -52,23 +58,7 @@ export type LockedItemUpdate<T extends ItemRow> = {
   statusBefore: StatusState;
 };
 
-export async function updateItemUnderLock(
-  manager: EntityManager,
-  scope: 'opex',
-  tenantId: string,
-  itemId: string,
-  body: unknown,
-  now?: Date,
-): Promise<LockedItemUpdate<SpendItem> | null>;
-export async function updateItemUnderLock(
-  manager: EntityManager,
-  scope: 'capex',
-  tenantId: string,
-  itemId: string,
-  body: unknown,
-  now?: Date,
-): Promise<LockedItemUpdate<CapexItem> | null>;
-/** Null when the line is gone (or never was in this tenant). */
+/** Null when the line is gone (or never was in this tenant, or has another nature than the scope's). */
 export async function updateItemUnderLock(
   manager: EntityManager,
   scope: ItemWriteScope,
@@ -76,10 +66,13 @@ export async function updateItemUnderLock(
   itemId: string,
   body: unknown,
   now: Date = new Date(),
+  /** How the body names its fields (`item-write.util.ts`): the budget file names the columns. */
+  fields: ItemWriteFields = 'api',
 ): Promise<LockedItemUpdate<ItemRow> | null> {
   if (!(await lockBudgetLine(manager, scope, tenantId, itemId))) return null;
-  const repo = manager.getRepository<ItemRow>(ENTITIES[scope]);
-  const read = () => repo.findOne({ where: { id: itemId, tenant_id: tenantId } as any });
+  const nature = LINES[scope].nature!;
+  // A CAPEX line with its hidden columns (legacy number, CAPEX enums): what its API and audit rows show.
+  const read = () => findBudgetLine(manager, nature, tenantId, itemId, fields === 'columns');
   const before = await read();
   if (!before) return null;
   const analyticsBefore = (await loadItemAnalyticsValues(manager, scope, tenantId, [itemId])).get(itemId) ?? [];
@@ -87,7 +80,7 @@ export async function updateItemUnderLock(
   // `base` (lot 3C) is not a column: compared below, never written.
   const { changes, base } = splitEditBase(body);
   // Writable columns only, every id resolved in this tenant, checked against the locked row; see `item-write.util.ts`.
-  const { values, lifecycle: input, analytics } = await resolveItemWrite(manager, scope, changes, before);
+  const { values, lifecycle: input, analytics } = await resolveItemWrite(manager, scope, changes, before, fields);
   let disabledAt: ReturnType<typeof resolveEndOfValidityAlias>;
   try {
     // `disabled_at`, or the deprecated `effective_end` when no end of validity is given (bare date at 12:00 UTC).
@@ -104,7 +97,7 @@ export async function updateItemUnderLock(
   // Nothing written yet: a conflict refuses the request whole (409 `edit_conflict`).
   await assertNoItemEditConflicts(manager, scope, tenantId, itemId, base, changes, {
     before, analyticsBefore, values, disabledAt: lifecycle.disabled_at, analytics,
-  });
+  }, fields);
 
   // A plain column (no trigger, no @UpdateDateColumn): "recent updates" read it.
   const set: Record<string, unknown> = { ...values, updated_at: now };
@@ -115,9 +108,9 @@ export async function updateItemUnderLock(
   if (lifecycle.status !== before.status) set.status = lifecycle.status;
   await manager
     .createQueryBuilder()
-    .update(ENTITIES[scope])
+    .update(SpendItem)
     .set(set as any)
-    .where('tenant_id = :tenantId AND id = :itemId', { tenantId, itemId })
+    .where(`tenant_id = :tenantId AND id = :itemId${natureAnd(null, nature)}`, { tenantId, itemId })
     .execute();
   // A change of analytics values alone is an edit too (updated_at above, the audit row of the caller).
   await writeItemAnalyticsValues(manager, scope, tenantId, itemId, analytics);

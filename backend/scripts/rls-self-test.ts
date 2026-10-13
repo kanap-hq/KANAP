@@ -1840,6 +1840,28 @@ async function main() {
     await setTenant(r, tenantTwoId);
     await expectCrossTenantReadBlocked(r, results, 'capex_items: cross-tenant read blocked', `SELECT 1 FROM capex_items WHERE id = $1`, [capexId]);
 
+    // A CAPEX line, as lot Z1 stores every one (plan planning/budget-unifie.md): in spend_items, of
+    // nature capex, with its CPX legacy number (its PP&E type, investment type and priority are
+    // dimension values since lot C1). The other tenant reads it neither by id nor by its legacy
+    // number. (The dormant capex_items keeps its own check above until lot Z2 drops it.)
+    await setTenant(r, tenantOneId);
+    const capexLineRows = await r.query(
+      `INSERT INTO spend_items(product_name, nature, legacy_number, currency, effective_start, status, item_number)
+       VALUES ($1, 'capex', $2, 'EUR', '2025-01-01', 'enabled', (SELECT COALESCE(MAX(item_number), 0) + 1 FROM spend_items))
+       RETURNING id`,
+      [`CAPEX line ${tag}`, `CPX-RLS-${tag}`],
+    );
+    const capexLineId = capexLineRows[0].id as string;
+    await setTenant(r, tenantTwoId);
+    await expectCrossTenantReadBlocked(r, results, 'spend_items (nature capex): cross-tenant read blocked', `SELECT 1 FROM spend_items WHERE id = $1`, [capexLineId]);
+    await expectCrossTenantReadBlocked(
+      r,
+      results,
+      'spend_items (nature capex): cross-tenant read by legacy number blocked',
+      `SELECT 1 FROM spend_items WHERE nature = 'capex' AND legacy_number = $1`,
+      [`CPX-RLS-${tag}`],
+    );
+
     await setTenant(r, tenantOneId);
     const libraryRows = await r.query(
       `INSERT INTO document_libraries(name, slug, is_system, display_order)

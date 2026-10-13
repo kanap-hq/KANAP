@@ -507,12 +507,13 @@ export const taskCsvConfig: CsvEntityConfig = {
       ['capex', 'capex_item'],
     ]);
 
-    // Table mapping for related object resolution
-    const tableMap: Record<string, { table: string; nameColumn: string }> = {
+    // Table mapping for related object resolution. `where`: a `spend_item` names an OPEX line
+    // (`spend/budget-nature.ts`), never a line of another nature with the same name.
+    const tableMap: Record<string, { table: string; nameColumn: string; where?: string }> = {
       project: { table: 'portfolio_projects', nameColumn: 'name' },
-      spend_item: { table: 'spend_items', nameColumn: 'product_name' },
+      spend_item: { table: 'spend_items', nameColumn: 'product_name', where: ` AND nature = 'opex'` },
       contract: { table: 'contracts', nameColumn: 'name' },
-      capex_item: { table: 'capex_items', nameColumn: 'description' },
+      capex_item: { table: 'spend_items', nameColumn: 'product_name', where: ` AND nature = 'capex'` },
       incident: { table: 'incidents', nameColumn: "'INC-' || item_number::text" },
     };
 
@@ -568,11 +569,11 @@ export const taskCsvConfig: CsvEntityConfig = {
       const mapping = tableMap[type];
       if (!mapping) continue;
 
-      const { table, nameColumn } = mapping;
+      const { table, nameColumn, where } = mapping;
       const names = items.map((i) => i.name.toLowerCase());
 
       const rows = await context.manager.query(
-        `SELECT id, ${nameColumn} AS name FROM ${table} WHERE tenant_id = $1 AND LOWER(${nameColumn}) = ANY($2)`,
+        `SELECT id, ${nameColumn} AS name FROM ${table} WHERE tenant_id = $1${where ?? ''} AND LOWER(${nameColumn}) = ANY($2)`,
         [context.tenantId, names],
       );
 
@@ -595,6 +596,30 @@ export const taskCsvConfig: CsvEntityConfig = {
         }
         // Clean up temporary field
         delete entity._related_object_name;
+      }
+    }
+
+    // A budget line named by its id: the task takes the type of the line's nature (`spend_item` for
+    // an OPEX line, `capex_item` for a CAPEX line), whatever the file says. A file exported before
+    // the line changed type (lot M) keeps naming the type of before; a task of that type on the line
+    // would be shown by no reader. An id that names no budget line is left as it is.
+    const budgetLineTasks = entities.filter(
+      (e) => (e.related_object_type === 'spend_item' || e.related_object_type === 'capex_item') && e.related_object_id,
+    );
+    if (budgetLineTasks.length > 0) {
+      const lineIds = [...new Set(budgetLineTasks.map((e) => String(e.related_object_id)))]
+        .filter((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
+      const lineRows: Array<{ id: string; nature: string }> = lineIds.length > 0
+        ? await context.manager.query(
+          // Both natures on purpose: the nature read here is the answer (`spend/budget-nature.ts`).
+          `SELECT id::text AS id, nature FROM spend_items WHERE tenant_id = $1 AND id = ANY($2::uuid[]) AND nature IN ('opex', 'capex')`,
+          [context.tenantId, lineIds],
+        )
+        : [];
+      const natureById = new Map(lineRows.map((row) => [row.id.toLowerCase(), row.nature]));
+      for (const entity of budgetLineTasks) {
+        const nature = natureById.get(String(entity.related_object_id).toLowerCase());
+        if (nature) entity.related_object_type = nature === 'capex' ? 'capex_item' : 'spend_item';
       }
     }
 

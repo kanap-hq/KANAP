@@ -118,7 +118,7 @@ Tasks are the **atomic unit of work** in KANAP. They cross the Run/Build boundar
 
 A **clearly scoped action** with a defined responsible person, status, and deadline.
 
-- Can be **standalone** or linked to a **Project**, **OPEX item**, **Contract**, or **CAPEX item**
+- Can be **standalone** or linked to a **Project**, **OPEX line**, **Contract**, or **CAPEX line**
 - Carries a concrete effort
 - Impact on users or services is contained and well-understood
 - Does not require coordination across multiple teams — even if it takes a long time, it remains carried by a single person without requiring cross-functional analysis
@@ -162,9 +162,9 @@ The rest of this guide covers the practical essentials. For full detail, see [Ta
 |---------|---------------|-----------------|
 | **Standalone** | Independent work, not linked to anything | **Portfolio > Tasks > New** |
 | **Project** | Deliverable within a project | Project workspace **Tasks** tab, or **Timeline** phase shortcut |
-| **OPEX** | Action tied to an OPEX item | OPEX workspace, **Tasks** panel on the **Overview** tab |
+| **OPEX** | Action tied to an OPEX line | Budget line workspace, **Tasks** panel on the **Overview** tab |
 | **Contract** | Action tied to a contract | Contract workspace **Tasks** tab |
-| **CAPEX** | Action tied to a CAPEX item | CAPEX workspace, **Tasks** panel on the **Overview** tab |
+| **CAPEX** | Action tied to a CAPEX line | Budget line workspace, **Tasks** panel on the **Overview** tab |
 
 All tasks appear in the central **Portfolio > Tasks** list regardless of context, so you always have one place to see everything.
 
@@ -253,8 +253,7 @@ The list in this guide is a starting point. Adapt it to how your IT department a
 ## Where to Go Next
 
 - [Tasks](../tasks.md) — full reference for statuses, CSV import/export, time tracking, and every workspace feature
-- [OPEX](../opex.md) — managing OPEX items and their tasks
-- [CAPEX](../capex.md) — managing CAPEX items and their tasks
+- [Budget lines](../budget-lines.md): managing OPEX and CAPEX lines and their tasks
 - [Contracts](../contracts.md) — managing contracts and their tasks
 - [Portfolio Projects](../portfolio-projects.md) — project delivery, phases, effort tracking, and project-level tasks
 - [Getting Started](getting-started.md) — if you're new to KANAP

@@ -16,7 +16,7 @@ import { readBudgetLineMeta } from '../../src/spend/item-meta';
  *   DATABASE_URL=postgres://app:app@localhost:5432/<db> npx ts-node scripts/perf/meta-cost.ts <tenant slug> [samples]
  *
  * 1. The statement alone, each call in its own transaction with the tenant set (as a request):
- *    p50, p95, p99 over random lines, then the plan of one call.
+ *    p50, p95, p99 over random OPEX lines (the meta is read as OPEX), then the plan of one call.
  * 2. Through the request pipeline main.ts installs (tenant transaction, interceptor, filter) over
  *    HTTP on 127.0.0.1, one request at a time, then 50 at once (50 open workspaces whose polls fall
  *    together). JWT and permission checks are not in this path (a few cached reads per request).
@@ -43,7 +43,7 @@ async function main() {
     await manager.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
     return fn(manager);
   });
-  const ids: string[] = (await inTenant<Array<{ id: string }>>((m) => m.query(`SELECT id FROM spend_items WHERE tenant_id = $1 ORDER BY random() LIMIT $2`, [tenantId, samples])))
+  const ids: string[] = (await inTenant<Array<{ id: string }>>((m) => m.query(`SELECT id FROM spend_items WHERE tenant_id = $1 AND nature = 'opex' ORDER BY random() LIMIT $2`, [tenantId, samples])))
     .map((row: { id: string }) => row.id);
   console.log(`tenant ${slug}: ${ids.length} lines sampled`);
 

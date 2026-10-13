@@ -40,14 +40,14 @@ const report = (over: Record<string, unknown> = {}) => ({
   changes: { created: 0, updated: 1, unchanged: 2, createdLines: [], updatedLines: [{ line: 2, itemNumber: 'OPX-4', fields: ['budget_2026'] }] },
   changedSinceExport: [{ line: 2, itemNumber: 'OPX-4', by: 'Ada', at: '2026-03-01T14:02:00.000Z', message: 'OPX-4 was changed by Ada at 14:02.' }],
   changedSinceExportCount: 1,
-  warnings: { duplicates: [], ignoredColumns: [], supplierNames: [] },
+  warnings: { duplicates: [], ignoredColumns: [], supplierNames: [], ignoredCells: [] },
   creates: { dimensionValues: [], suppliers: [] },
   supplierMessage: null,
   snapshot: { lines: [{ id: 'line-1' }] },
   ...over,
 });
 
-function renderDialog(props: { canCreateSuppliers?: boolean; onImported?: () => void } = {}) {
+function renderDialog(props: { canCreateSuppliers?: boolean; onImported?: () => void; scope?: 'opex' | 'capex' } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const view = render(
     <ThemeProvider theme={createAppTheme('dark')}>
@@ -55,7 +55,7 @@ function renderDialog(props: { canCreateSuppliers?: boolean; onImported?: () => 
         <BudgetFileImportDialog
           open
           onClose={() => undefined}
-          scope="opex"
+          scope={props.scope ?? 'opex'}
           canCreateSuppliers={props.canCreateSuppliers ?? true}
           onImported={props.onImported}
         />
@@ -72,6 +72,13 @@ const lastParams = () => lastCall()?.[2]?.params;
 
 describe('BudgetFileImportDialog', () => {
   beforeEach(() => post.mockReset());
+
+  it.each(['opex', 'capex'] as const)('titles the dialog for budget lines of both types when the list is on %s', async (scope) => {
+    post.mockResolvedValueOnce({ data: report() });
+    renderDialog({ scope });
+    expect(await screen.findByText('budget.importTitle')).toBeInTheDocument();
+    expect(screen.queryByText(/^(opex|capex)\.importTitle$/)).not.toBeInTheDocument();
+  });
 
   it('checks the file in the screen language and shows the notices and who changed a line', async () => {
     post.mockResolvedValueOnce({ data: report() });
@@ -203,6 +210,27 @@ describe('BudgetFileImportDialog', () => {
     expect(config).toEqual({ params: { language: 'fr', createSuppliers: 'false', decimalMark: 'comma' } });
     expect(onImported).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('button', { name: 'operations.budgetFile.done' })).toBeEnabled();
+  });
+
+  it('refreshes both lists after a load: a file may hold lines of both natures', async () => {
+    const invalidate = vi.spyOn(QueryClient.prototype, 'invalidateQueries');
+    post.mockResolvedValueOnce({ data: report() });
+    renderDialog();
+    await screen.findByText('operations.budgetFile.ready');
+    post.mockResolvedValueOnce({ data: { ok: true, dryRun: false, inserted: 1, updated: 1 } });
+    fireEvent.click(screen.getByRole('button', { name: 'operations.budgetFile.load' }));
+    await screen.findByText(/operations.budgetFile.loaded/);
+    const keys = invalidate.mock.calls.map(([filters]) => (filters as { queryKey?: unknown[] } | undefined)?.queryKey?.[0]);
+    expect(keys).toEqual(expect.arrayContaining(['spend-items-summary', 'capex-items-summary']));
+    invalidate.mockRestore();
+  });
+
+  it('lists the cells the load ignores among the warnings, by line and column', async () => {
+    const message = 'description is ignored on a CAPEX line. Leave the cell empty.';
+    post.mockResolvedValueOnce({ data: report({ warnings: { duplicates: [], ignoredColumns: [], supplierNames: [], ignoredCells: [{ line: 3, column: 'description', message }] } }) });
+    renderDialog();
+    expect(await screen.findByText('operations.budgetFile.warningsTitle')).toBeInTheDocument();
+    expect(screen.getByText(`operations.budgetFile.rowColumn:${JSON.stringify({ line: 3, column: 'description', message })}`)).toBeInTheDocument();
   });
 
   it('turns a stale check into a plain sentence with a way to check again', async () => {

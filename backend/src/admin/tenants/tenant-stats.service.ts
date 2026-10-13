@@ -25,8 +25,8 @@ export class TenantStatsService {
         manager.query(`SELECT COUNT(*)::int AS count FROM companies`),
         manager.query(`SELECT COUNT(*)::int AS count FROM departments`),
         manager.query(`SELECT COUNT(*)::int AS count FROM suppliers`),
-        manager.query(`SELECT COUNT(*)::int AS count FROM spend_items`),
-        manager.query(`SELECT COUNT(*)::int AS count FROM capex_items`),
+        manager.query(`SELECT COUNT(*)::int AS count FROM spend_items WHERE nature = 'opex'`),
+        manager.query(`SELECT COUNT(*)::int AS count FROM spend_items WHERE nature = 'capex'`),
         manager.query(`SELECT COUNT(*)::int AS count FROM users`),
         manager.query(`SELECT COUNT(*)::int AS count FROM users WHERE status = 'enabled'`),
       ]);

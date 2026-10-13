@@ -10,6 +10,7 @@ import * as engine from '../budget-list/budget-list.service';
 import { realSummaryDeps } from './oracle/oracle-deps';
 import { computeColumn, type CostLine } from '../costing.util';
 import { linesCalculation } from '../round-inputs.util';
+import { CAPEX_NUMBER_OFFSET } from './round-inputs.fixtures';
 
 // FTE reports, lot 1: the list fields and measures the budget reports read
 // for an FTE measure, on OPEX and CAPEX, in a rolled-back transaction:
@@ -78,7 +79,11 @@ async function insertTenant(runner: QueryRunner, tag: string): Promise<string> {
   return id;
 }
 
-/** One line of the scope with its versions and rounds; its id. */
+/**
+ * One line of the scope with its versions and rounds; its id. The lines of both natures are in the
+ * spend_* tables since lot Z1: a CAPEX line takes BL number `itemNumber` + CAPEX_NUMBER_OFFSET (the
+ * OPEX lines of the same tenant hold the low numbers) and CPX number `itemNumber`.
+ */
 async function insertLine(runner: QueryRunner, scope: SummaryScopeConfig, tenantId: string, itemNumber: number, line: Line): Promise<string> {
   const itemId = randomUUID();
   if (scope.scope === 'opex') {
@@ -89,8 +94,8 @@ async function insertLine(runner: QueryRunner, scope: SummaryScopeConfig, tenant
     );
   } else {
     await runner.query(
-      `INSERT INTO capex_items (id, tenant_id, item_number, description, ppe_type, investment_type, priority, currency, effective_start)
-       VALUES ($1, $2, $3, $4, 'hardware', 'other', 'low', $5, '2020-01-01')`,
+      `INSERT INTO spend_items (id, tenant_id, nature, item_number, legacy_number, product_name, ppe_type, investment_type, priority, currency, effective_start)
+       VALUES ($1, $2, 'capex', $3::int + ${CAPEX_NUMBER_OFFSET}, 'CPX-' || $3::int, $4, 'hardware', 'other', 'low', $5, '2020-01-01')`,
       [itemId, tenantId, itemNumber, `FTE ${line.label}`, line.currency ?? 'EUR'],
     );
   }
@@ -107,7 +112,7 @@ async function insertLine(runner: QueryRunner, scope: SummaryScopeConfig, tenant
       );
     } else {
       await runner.query(
-        `INSERT INTO capex_versions (id, tenant_id, capex_item_id, version_name, as_of_date, budget_year, allocation_method, fx_rate_set_id)
+        `INSERT INTO spend_versions (id, tenant_id, spend_item_id, version_name, as_of_date, budget_year, allocation_method, fx_rate_set_id)
          VALUES ($1, $2, $3, 'Y' || $5::int, $4::date, $5::int, 'default', $6)`,
         [versionId, tenantId, itemId, `${year}-01-01`, year, line.fxRateSetId ?? null],
       );
@@ -115,7 +120,7 @@ async function insertLine(runner: QueryRunner, scope: SummaryScopeConfig, tenant
     const planned = line.planned?.[year];
     if (planned != null) {
       await runner.query(
-        `INSERT INTO ${scope.scope === 'opex' ? 'spend_amounts' : 'capex_amounts'} (tenant_id, version_id, period, planned) VALUES ($1, $2, make_date($3, 1, 1), $4::numeric)`,
+        `INSERT INTO spend_amounts (tenant_id, version_id, period, planned) VALUES ($1, $2, make_date($3, 1, 1), $4::numeric)`,
         [tenantId, versionId, year, planned],
       );
     }

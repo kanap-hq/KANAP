@@ -1,6 +1,7 @@
 import type { EntityManager } from 'typeorm';
-import type { SummaryDeps, SummaryScopeConfig } from '../spend-summary.builder';
+import type { SummaryDeps, SummaryReadScopeConfig } from '../spend-summary.builder';
 import { loadCostCenterTree } from '../../cost-centers/cost-center-tree.util';
+import { BUDGET_NATURES } from '../budget-nature';
 import { buildDefaultByYear, STANDARD_DEFAULT } from '../allocation-rule-resolver';
 import { formatAllocationMethodLabel } from '../allocation-utils';
 import { buildFxTable, FxTable } from './budget-fx-table';
@@ -10,7 +11,7 @@ import { buildFxTable, FxTable } from './budget-fx-table';
  * pre-reads, each loaded only when a field of the request needs it.
  */
 export interface BudgetListRuntime {
-  scope: SummaryScopeConfig;
+  scope: SummaryReadScopeConfig;
   tenantId: string;
   currentYear: number;
   fx?: FxTable;
@@ -82,7 +83,7 @@ function ruleLabel(resolution: { kind: string; method: string } | undefined): st
 }
 
 export async function loadBudgetRuntime(
-  scope: SummaryScopeConfig,
+  scope: SummaryReadScopeConfig,
   deps: Pick<SummaryDeps, 'fxRates'>,
   manager: EntityManager,
   tenantId: string,
@@ -99,8 +100,8 @@ export async function loadBudgetRuntime(
     tasks.push(
       manager.query(
         `SELECT ax.id, ax.is_default FROM analytics_axes ax
-          WHERE ax.tenant_id = $1 AND (ax.applies_to IS NULL OR ax.applies_to = $2)`,
-        [tenantId, scope.scope],
+          WHERE ax.tenant_id = $1 AND (ax.applies_to IS NULL OR ax.applies_to = ANY($2::text[]))`,
+        [tenantId, scope.allNatures ? BUDGET_NATURES : [scope.scope]],
       ).then((rows: Array<{ id: string; is_default: boolean }>) => {
         let defaultAxisId: string | null = null;
         for (const row of rows) if (row.is_default) defaultAxisId = row.id;

@@ -31,7 +31,7 @@ Lorsque vous cliquez sur **Nouvelle**, l'espace de travail complet de la tâche 
 
 **Conseil** : Vous pouvez coller des images directement dans la description. Elles sont téléversées vers le stockage automatiquement lorsque vous créez la tâche.
 
-**Note** : Les tâches peuvent également être créées depuis d'autres espaces de travail (postes OPEX, Contrats, postes CAPEX, Projets du portefeuille) où la relation est pré-sélectionnée.
+**Note** : Les tâches peuvent également être créées depuis d'autres espaces de travail (lignes OPEX, Contrats, lignes CAPEX, Projets du portefeuille) où la relation est pré-sélectionnée.
 
 **Champs obligatoires** :
   - **Titre** : Une courte description de ce qui doit être fait
@@ -364,7 +364,7 @@ Dans l'espace de travail du Projet, utilisez l'onglet **Tâches** pour gérer le
 
 **Conseil** : Dans l'onglet Planning, cliquez sur le bouton **[+]** à côté d'une phase pour créer une tâche pré-liée à cette phase.
 
-### Depuis les postes OPEX
+### Depuis les lignes OPEX
 Dans l'espace de travail OPEX, utilisez le panneau **Tâches** de l'onglet **Vue d'ensemble** pour créer des tâches comme :
 - « Revoir la tarification fournisseur pour 2026 »
 - « Négocier une remise sur volume »
@@ -374,7 +374,7 @@ Dans l'espace de travail Contrat, utilisez l'onglet **Tâches** pour :
 - « Revoir le contrat avant la date limite de renouvellement »
 - « Demander des conditions mises à jour au fournisseur »
 
-### Depuis les postes CAPEX
+### Depuis les lignes CAPEX
 Dans l'espace de travail CAPEX, les tâches suivent les jalons du projet :
 - « Compléter la collecte des exigences »
 - « Obtenir l'approbation du budget »
@@ -385,7 +385,7 @@ Ces tâches se lient automatiquement à l'entité parente et apparaissent à la 
 
 ## Tâches autonomes
 
-Les tâches autonomes sont des éléments de travail indépendants non liés à un projet, contrat ou poste budgétaire spécifique. Elles sont utiles pour :
+Les tâches autonomes sont des éléments de travail indépendants non liés à un projet, contrat ou ligne budgétaire spécifique. Elles sont utiles pour :
 - Travail général d'exploitation IT
 - Demandes ad hoc
 - Initiatives transversales

@@ -1,6 +1,6 @@
 # Verträge
 
-Verträge dokumentieren Ihre Lieferantenvereinbarungen -- Softwarelizenzen, Wartungsverträge, SaaS-Abonnements und Servicevereinbarungen. Verfolgen Sie wichtige Termine, Kosten, Verlängerungsbedingungen und verknüpfen Sie Verträge mit Ihren OPEX- und CAPEX-Positionen für vollständige Kostentransparenz.
+Verträge dokumentieren Ihre Lieferantenvereinbarungen -- Softwarelizenzen, Wartungsverträge, SaaS-Abonnements und Servicevereinbarungen. Verfolgen Sie wichtige Termine, Kosten, Verlängerungsbedingungen und verknüpfen Sie Verträge mit Ihren OPEX- und CAPEX-Zeilen für vollständige Kostentransparenz.
 
 ## Erste Schritte
 
@@ -43,7 +43,7 @@ Das Vertrags-Grid bietet einen Überblick über alle Ihre Lieferantenvereinbarun
 - **Jahresbetrag**: Jährlicher Vertragswert (mit Leerzeichen formatiert)
 - **Währ.**: Währungscode
 - **Abrechnung**: Abrechnungshäufigkeit (Monatlich, Vierteljährlich, Jährlich, Sonstige)
-- **Verknüpfte OPEX**: Anzahl verknüpfter OPEX-Positionen (zum Öffnen des Arbeitsbereichs anklicken)
+- **Verknüpfte OPEX**: Anzahl verknüpfter OPEX-Zeilen (zum Öffnen des Arbeitsbereichs anklicken)
 - **Status**: **Aktiviert** oder **Deaktiviert**, aus dem Ende der Gültigkeit ermittelt
 
 **Zusätzliche Spalten** (über Spaltenauswahl):
@@ -125,13 +125,13 @@ Der Verknüpfungen-Tab verbindet Verträge mit anderen Objekten in Ihrem Registe
 
 **Verfügbare Verknüpfungen**:
 
-- **OPEX-Positionen**: Wiederkehrende Kosten, die mit diesem Vertrag verbunden sind -- verwenden Sie die durchsuchbare Mehrfachauswahl, um Positionen nach Produktname zu finden und zu verknüpfen
-- **CAPEX-Positionen**: Mit diesem Vertrag verknüpfte Investitionspositionen -- gleiche durchsuchbare Mehrfachauswahl-Oberfläche
+- **OPEX-Zeilen**: Wiederkehrende Kosten, die mit diesem Vertrag verbunden sind -- verwenden Sie die durchsuchbare Mehrfachauswahl, um Budgetzeilen nach Produktname zu finden und zu verknüpfen
+- **CAPEX-Zeilen**: Mit diesem Vertrag verknüpfte CAPEX-Zeilen -- gleiche durchsuchbare Mehrfachauswahl-Oberfläche
 - **Kontakte**: Mit diesem Vertrag verbundene Personen, jeweils mit einer Rolle (Kommerziell, Technisch, Support oder Sonstige). Vom Lieferanten übernommene Kontakte werden mit einem ausgefüllten Badge angezeigt; manuell hinzugefügte erscheinen mit einem umrandeten Badge. Klicken Sie auf eine Kontaktzeile, um deren Profil zu öffnen.
 - **Relevante Websites**: Links zu externen Dokumenten wie Vertrags-PDFs oder Lieferantenportalen. Jeder Link hat eine Beschreibung und eine URL.
 - **Anhänge**: Laden Sie Dateien per Drag-and-Drop oder über die Dateiauswahl hoch. Klicken Sie auf einen Anhang-Chip zum Herunterladen; klicken Sie auf das Löschsymbol zum Entfernen.
 
-**Tipp**: Das Verknüpfen von OPEX- und CAPEX-Positionen mit Verträgen bietet Ihnen vollständige Kostenverfolgbarkeit -- von Budgetposten bis zu Lieferantenvereinbarungen.
+**Tipp**: Das Verknüpfen von OPEX- und CAPEX-Zeilen mit Verträgen bietet Ihnen vollständige Kostenverfolgbarkeit -- von Budgetzeilen bis zu Lieferantenvereinbarungen.
 
 ---
 
@@ -191,7 +191,7 @@ Halten Sie Ihr Vertragsregister mit externen Systemen per CSV synchron.
 ## Tipps
 
 - **Die Spalte „Kündigen bis" beachten**: Die Liste sortiert standardmäßig nach Kündigungsstichtag, sodass handlungsbedürftige Verträge zuerst erscheinen.
-- **Frühzeitig mit OPEX und CAPEX verknüpfen**: Verbinden Sie Verträge bei der Erstellung mit Kostenpositionen für vollständige Kostenverfolgung.
+- **Frühzeitig mit OPEX und CAPEX verknüpfen**: Verbinden Sie Verträge bei der Erstellung mit Budgetzeilen für vollständige Kostenverfolgung.
 - **Aufgaben für Verlängerungen nutzen**: Erstellen Sie 3--6 Monate vor dem Kündigungsstichtag eine Aufgabe zur Verlängerungsprüfung.
 - **Jahresbeträge verfolgen**: Auch bei monatlicher Abrechnung erfassen Sie den Jahresbetrag für einen einfacheren Jahresvergleich.
 - **Deep-Link aus der Liste**: Sie können einen direkten Link zu jedem Vertrag teilen -- die Arbeitsbereich-URL enthält die Vertrags-ID und bewahrt Ihren Listenkontext (Suche, Sortierung, Filter), sodass der Zurück-Button Sie genau dorthin zurückbringt, wo Sie waren.

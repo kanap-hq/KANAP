@@ -54,11 +54,12 @@ import { getSummaryFieldValue, summaryFieldValues } from './summary-field-value.
  *     number model parsed text with `Number()`, a date model parsed any
  *     string with `Date`).
  *  A6 (design 2.13-5) no cap.
- *  A7 (Q4, PR C) the CAPEX priority, investment type and PPE type sort in
- *     their business order, the declaration order of their enums, like
- *     status and run or build (before: by code, high < low < mandatory <
- *     medium). Their filter values keep the text order, like status and run
- *     or build.
+ *  A7 (lot C1, decision 2) a dimension's values (`analytics_<axis id>`, and
+ *     the default dimension's `analytics_category_name`) sort by their
+ *     position in the dimension, then by name (before: by name); their filter
+ *     values follow the same order (D3). The CAPEX priority, investment type
+ *     and PP&E type, enums ranked in their business order until lot C1, are
+ *     dimensions since.
  *
  * The 10,000-line cap, the `capped` flag and the SQL fast path are gone (A6);
  * the deterministic tie-breaks of the latest task and contract (2.13-3) live
@@ -66,6 +67,60 @@ import { getSummaryFieldValue, summaryFieldValues } from './summary-field-value.
  */
 
 export type OracleFold = (text: string) => string;
+
+/**
+ * The fields of a CAPEX line as the CAPEX list showed them before lot Z1: the former `CapexItem`
+ * entity, in its order, without the PP&E type, investment type and priority (dimensions since lot C1).
+ */
+const CAPEX_LINE_FIELDS = [
+  'id', 'tenant_id', 'item_number', 'paying_company_id', 'account_id', 'supplier_id', 'description',
+  'currency', 'effective_start', 'status', 'disabled_at', 'project_id', 'owner_it_id', 'owner_business_id',
+  'cost_center_id', 'run_build', 'notes', 'created_at', 'updated_at', 'row_version',
+];
+
+/**
+ * A dimension value's position in its dimension (ADAPTER A7), for the dimension fields of a list:
+ * `applies(field)` says whether the field reads a dimension, `of(field, value)` the position of a
+ * value of it. Read once per oracle from the tenant's values, apart from the engine.
+ */
+export interface ValuePositions {
+  applies(field: string): boolean;
+  of(field: string, value: string): number | null;
+}
+
+export async function loadValuePositions(manager: EntityManager, tenantId: string): Promise<ValuePositions> {
+  const rows: Array<{ axis: string; name: string; sort_order: number }> = await manager.query(
+    `SELECT axis_id::text AS axis, name, sort_order FROM analytics_categories WHERE tenant_id = $1`,
+    [tenantId],
+  );
+  const [defaultAxis]: Array<{ id: string }> = await manager.query(
+    `SELECT id::text AS id FROM analytics_axes WHERE tenant_id = $1 AND is_default`,
+    [tenantId],
+  );
+  const positions = new Map(rows.map((row) => [`${row.axis}\u0000${row.name}`, Number(row.sort_order)]));
+  const axisOf = (field: string) => parseAnalyticsFieldKey(field) ?? (field === 'analytics_category_name' ? defaultAxis?.id ?? null : null);
+  return {
+    applies: (field) => axisOf(field) != null,
+    of: (field, value) => {
+      const axis = axisOf(field);
+      return axis == null ? null : positions.get(`${axis}\u0000${value}`) ?? null;
+    },
+  };
+}
+
+/**
+ * A line of `spend_items` (both natures since lot Z1) as its list shows it, written here apart
+ * from the engine's presentation: an OPEX line as read; a CAPEX line in the former `CapexItem`
+ * shape, its title (`product_name`) as `description` and its CPX number (`legacy_number`) as
+ * `item_number`. Both get `reference`, `BL-` and the line's own number.
+ */
+function oracleLine(nature: 'opex' | 'capex', item: Record<string, any>): Record<string, any> {
+  const reference = `BL-${item.item_number}`;
+  if (nature === 'opex') return { ...item, reference };
+  const cpx = /^CPX-(\d+)$/.exec(item.legacy_number ?? '');
+  const shown: Record<string, any> = { ...item, item_number: cpx ? Number(cpx[1]) : item.item_number, description: item.product_name };
+  return { ...Object.fromEntries(CAPEX_LINE_FIELDS.map((field) => [field, shown[field]])), reference };
+}
 
 /** The oracle's own declaration of number and date fields (A5); the engine has its own in its config. */
 function isNumberField(field: string): boolean {
@@ -108,6 +163,13 @@ interface OracleContext {
 
 export class BudgetSummaryOracle {
   private readonly rowsCache = new Map<string, Promise<BudgetSummaryRow[]>>();
+  private positions: Promise<ValuePositions> | null = null;
+
+  /** ADAPTER A7: the positions of the tenant's dimension values, read once. */
+  private valuePositions(): Promise<ValuePositions> {
+    this.positions ??= loadValuePositions(this.manager, this.tenantId);
+    return this.positions;
+  }
 
   constructor(
     private readonly config: SummaryScopeConfig,
@@ -166,9 +228,14 @@ export class BudgetSummaryOracle {
     let rows = this.rowsCache.get(key);
     if (!rows) {
       rows = (async () => {
-        const where: Record<string, any> = { tenant_id: ctx.tenantId };
+        // Lot Z1: the scope's own nature of `spend_items`; a CAPEX line also reads the columns the entity never selects.
+        const nature = this.config.scope;
+        const where: Record<string, any> = { tenant_id: ctx.tenantId, nature };
         applyDisabledAtWhere(where, scope, ctx.filters);
-        const items = await this.manager.getRepository<any>(this.config.itemEntity as any).find({ where, order: { created_at: 'DESC', id: 'DESC' } });
+        const repository = this.manager.getRepository<any>(this.config.itemEntity as any);
+        const select = nature === 'capex' ? repository.metadata.columns.map((column) => column.propertyName) : undefined;
+        const found = await repository.find({ where, select, order: { created_at: 'DESC', id: 'DESC' } });
+        const items = found.map((item: Record<string, any>) => oracleLine(nature, item));
         return buildBudgetSummaryRows(this.config, this.deps, this.manager, ctx.tenantId, items, {
           years: ctx.years,
           currentYear: ctx.currentYear,
@@ -185,7 +252,7 @@ export class BudgetSummaryOracle {
     let rows = [...(await this.rows(ctx, scope))];
     rows = this.applyFilters(rows, ctx.memoryFilters);
     if (ctx.q) rows = this.quickSearch(rows, ctx.q);
-    return sortRows(rows, ctx.sort.field, ctx.sort.direction);
+    return sortRows(rows, ctx.sort.field, ctx.sort.direction, await this.valuePositions());
   }
 
   async summary(query: any): Promise<{ items: BudgetSummaryRow[]; total: number; page: number; limit: number; ids: string[] }> {
@@ -211,6 +278,7 @@ export class BudgetSummaryOracle {
     let rows = [...(await this.rows(ctx, this.lifecycleScope(ctx, this.windowScope(ctx))))];
     if (ctx.q) rows = this.quickSearch(rows, ctx.q);
     const result: Record<string, Array<string | null>> = {};
+    const positions = await this.valuePositions();
     for (const field of fields) {
       const others = { ...ctx.memoryFilters };
       delete others[field];
@@ -224,6 +292,10 @@ export class BudgetSummaryOracle {
         if (a === b) return 0;
         if (a == null) return 1;
         if (b == null) return -1;
+        // ADAPTER A7: a dimension's values in its order first.
+        const pa = positions.of(field, a);
+        const pb = positions.of(field, b);
+        if (pa != null && pb != null && pa !== pb) return pa - pb;
         return oracleTextCompare(a, b); // ADAPTER A2
       });
     }
@@ -243,7 +315,7 @@ export class BudgetSummaryOracle {
     const items = ids.length
       ? await this.manager.getRepository<any>(this.config.itemEntity as any)
         .createQueryBuilder('i')
-        .where('i.tenant_id = :tenantId', { tenantId: this.tenantId })
+        .where('i.tenant_id = :tenantId AND i.nature = :nature', { tenantId: this.tenantId, nature: this.config.scope })
         .andWhere('i.id = ANY(:ids)', { ids })
         .getMany()
       : [];
@@ -434,23 +506,22 @@ function textMatches(type: string, value: string, needle: string): boolean {
 }
 
 /**
- * The former `FIXED_SORT_ORDERS` (status, run or build), and A7: the CAPEX
- * enums in their declaration order. Written here, not read from the builder's
+ * The former `FIXED_SORT_ORDERS` (status, run or build). Written here, not read from the builder's
  * list the engine uses, so a wrong order on either side shows as a difference.
  */
 export const SORT_ORDERS: Record<string, readonly string[]> = {
   status: ['enabled', 'disabled'],
   run_build: ['run', 'build'],
-  // ADAPTER A7: business order of the CAPEX enums (before: sorted by code).
-  priority: ['mandatory', 'high', 'medium', 'low'],
-  investment_type: ['replacement', 'capacity', 'productivity', 'security', 'conformity', 'business_growth', 'other'],
-  ppe_type: ['hardware', 'software'],
 };
 
-/** The former `sortSummaryRows`, text compared in the natural order (A2), the CAPEX enums ranked (A7). */
-export function sortRows<T extends Record<string, any>>(rows: T[], field: string, direction: 'ASC' | 'DESC'): T[] {
+/**
+ * The former `sortSummaryRows`, text compared in the natural order (A2), status and run or build
+ * ranked, a dimension's values by their position first (A7).
+ */
+export function sortRows<T extends Record<string, any>>(rows: T[], field: string, direction: 'ASC' | 'DESC', positions?: ValuePositions): T[] {
   const dir = direction === 'ASC' ? 1 : -1;
   const order = Object.prototype.hasOwnProperty.call(SORT_ORDERS, field) ? SORT_ORDERS[field] : undefined;
+  const positioned = positions?.applies(field) ? positions : null;
   const valueOf = (row: T) => {
     const value = getSummaryFieldValue(row, field);
     if (!order) return value;
@@ -470,6 +541,12 @@ export function sortRows<T extends Record<string, any>>(rows: T[], field: string
     if (av instanceof Date && bv instanceof Date) {
       const diff = av.getTime() - bv.getTime();
       return diff === 0 ? 0 : (diff < 0 ? -1 : 1) * dir;
+    }
+    if (positioned) {
+      // ADAPTER A7: the position in the dimension first.
+      const pa = positioned.of(field, String(av));
+      const pb = positioned.of(field, String(bv));
+      if (pa != null && pb != null && pa !== pb) return (pa < pb ? -1 : 1) * dir;
     }
     // ADAPTER A2: the natural order (today: `String(v).toLowerCase()` compared with `<`).
     return oracleTextCompare(String(av), String(bv)) * dir;

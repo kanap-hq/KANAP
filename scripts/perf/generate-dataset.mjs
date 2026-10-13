@@ -360,17 +360,21 @@ for (let i = 0; i < P.capex; i += 1) {
   const life = lifetime();
   const cur = currency();
   const description = `Investissement ${pick(PRODUCTS)} ${pad(i + 1, 5)}`;
-  const ppe = pick(['software', 'hardware']);
+  // The PP&E type, investment type and priority: values of the CAPEX dimensions every tenant starts with, by name.
+  const ppe = pick(['Software', 'Hardware']);
+  const investment = pick(['Replacement', 'Business growth']);
+  const priority = pick(['Mandatory', 'High', 'Medium', 'Low']);
   capexItems.push([
-    '', description, ppe, pick(['replacement', 'business_growth']), pick(['mandatory', 'high', 'medium', 'low']), cur, life.start, lineStatus(life), life.end, 'Projet CAPEX perf',
-    cc.company, ppe === 'hardware' ? ASSET_ACCOUNT.tangible : ASSET_ACCOUNT.intangible, pick(owners).email, pick(owners).email, pick(CATEGORIES),
+    '', description, cur, life.start, lineStatus(life), life.end, 'Projet CAPEX perf',
+    cc.company, ppe === 'Hardware' ? ASSET_ACCOUNT.tangible : ASSET_ACCOUNT.intangible, pick(owners).email, pick(owners).email, pick(CATEGORIES),
     ...AXES.map((a) => (chance(0.8) ? pick(axisValues[a.code]) : '')),
+    ppe, investment, priority,
     cc.code, 'build', '', '', '', '', '', '', '', '', '',
   ]);
   itemBudget('capex', description, Math.round(Math.exp(between(Math.log(10000), Math.log(2000000)))), life, chance(P.costedShare * 0.5));
 }
-out('15-capex-items.csv', ['item_number', 'description', 'ppe_type', 'investment_type', 'priority', 'currency', 'effective_start', 'status', 'disabled_at', 'notes', 'company_name', 'account_number', 'owner_it_email', 'owner_business_email', 'analytics_category',
-  ...AXES.map((a) => `analytics:${a.code}`), 'cost_center_code', 'run_build',
+out('15-capex-items.csv', ['item_number', 'description', 'currency', 'effective_start', 'status', 'disabled_at', 'notes', 'company_name', 'account_number', 'owner_it_email', 'owner_business_email', 'analytics_category',
+  ...AXES.map((a) => `analytics:${a.code}`), 'analytics:ppe_type', 'analytics:investment_type', 'analytics:priority', 'cost_center_code', 'run_build',
   'y_minus1_budget', 'y_minus1_landing', 'y_budget', 'y_follow_up', 'y_landing', 'y_revision', 'y_plus1_budget', 'y_plus1_revision', 'y_plus2_budget'], capexItems);
 
 // Every contract covers 1 to 3 OPEX lines (800 contracts → about 1,600 linked lines).

@@ -294,7 +294,7 @@ export default function CsvImportDialog({
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t('buttons.close')}</Button>
+        <Button variant="action" onClick={onClose}>{t('buttons.close')}</Button>
       </DialogActions>
     </Dialog>
   );

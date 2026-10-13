@@ -17,7 +17,7 @@ vi.mock('../../auth/AuthContext', () => ({
 import api from '../../api';
 import MetadataUserPicker from './MetadataUserPicker';
 import ShareDialog from '../ShareDialog';
-import { fetchCapexRelationsCount, fetchSpendRelationsCount } from '../../utils/workspaceTabCounts';
+import { fetchBudgetRelationsCount } from '../../utils/workspaceTabCounts';
 
 const apiGet = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
 
@@ -123,10 +123,10 @@ describe('Relations tab badge', () => {
 
   it('costs one request per line instead of five', async () => {
     apiGet.mockResolvedValue({ data: { contracts: 1, applications: 2, projects: 0, links: 3, attachments: 1, total: 7 } });
-    expect(await fetchSpendRelationsCount('item-1')).toBe(7);
+    expect(await fetchBudgetRelationsCount({ itemsApi: '/spend-items' }, 'item-1')).toBe(7);
     expect(apiGet).toHaveBeenCalledTimes(1);
     expect(apiGet).toHaveBeenCalledWith('/spend-items/item-1/relation-counts', expect.anything());
-    expect(await fetchCapexRelationsCount('item-2')).toBe(7);
+    expect(await fetchBudgetRelationsCount({ itemsApi: '/capex-items' }, 'item-2')).toBe(7);
     expect(apiGet).toHaveBeenLastCalledWith('/capex-items/item-2/relation-counts', expect.anything());
   });
 });

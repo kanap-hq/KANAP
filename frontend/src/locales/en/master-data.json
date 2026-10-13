@@ -615,9 +615,36 @@
     "openDimension": "Open {{name}}",
     "markedDimension": "{{name}}, {{marks}}",
     "disabledMark": "Disabled",
+    "defaultMark": "Default",
     "enableToAddValues": "Enable this dimension to add values.",
     "export": "Export values",
     "import": "Import values",
+    "reorder": {
+      "action": "Reorder",
+      "title": "Reorder values of {{name}}",
+      "hint": "Drag the values into the order lists and filters should show.",
+      "loadFailed": "Failed to load the values.",
+      "saveFailed": "Failed to save the order.",
+      "roleDescription": "movable value",
+      "instructions": "To move a value, press Space or Enter, move it with the arrow keys, then press Space or Enter to drop it. Escape cancels.",
+      "pickedUp": "Picked up {{name}}.",
+      "movedTo": "{{name}} is at position {{position}} of {{count}}.",
+      "droppedAt": "{{name}} dropped at position {{position}} of {{count}}.",
+      "cancelled": "{{name}} is back in its place."
+    },
+    "reorderDimensions": {
+      "action": "Reorder dimensions",
+      "title": "Reorder dimensions",
+      "hint": "Drag the dimensions into the order screens, lists and the budget file should show them.",
+      "loadFailed": "Failed to load the dimensions.",
+      "saveFailed": "Failed to save the order.",
+      "roleDescription": "movable dimension",
+      "instructions": "To move a dimension, press Space or Enter, move it with the arrow keys, then press Space or Enter to drop it. Escape cancels.",
+      "pickedUp": "Picked up {{name}}.",
+      "movedTo": "{{name}} is at position {{position}} of {{count}}.",
+      "droppedAt": "{{name}} dropped at position {{position}} of {{count}}.",
+      "cancelled": "{{name}} is back in its place."
+    },
     "previousValue": "Previous value",
     "nextValue": "Next value",
     "previousDimension": "Previous dimension",
@@ -628,14 +655,14 @@
       "order": "Order",
       "description": "Description",
       "dimension": "Dimension",
-      "lifecycle": "Lifecycle"
+      "lifecycle": "Lifecycle",
+      "required": "Required"
     },
     "hints": {
       "nameDefault": "Leave empty to show \"{{label}}\" in each person's language.",
       "code": "Used as the column name in CSV files: analytics:{{code}}. Changing it changes the column name.",
       "codeDefault": "Older files use the column analytics_category for this dimension; analytics:{{code}} works too.",
       "codeCreate": "Used as the column name in CSV files. Lowercase letters, digits, - or _.",
-      "order": "Dimensions are listed by this number, lowest first.",
       "defaultLocked": "This dimension cannot be disabled or deleted: older files and AI questions use it.",
       "appliesToDefault": "The default dimension applies to OPEX and CAPEX lines.",
       "valueDimensionAppliesTo": {
@@ -658,14 +685,27 @@
       "capex_one": "{{count}} CAPEX line",
       "capex_other": "{{count}} CAPEX lines",
       "noValues": "No values yet.",
-      "dimensionUnused": "{{values}}, not used by any line yet.",
-      "dimensionOne": "{{values}}, used by {{lines}}.",
-      "dimensionBoth": "{{values}}, used by {{opex}} and {{capex}}.",
-      "valueOne": "Used by {{lines}}.",
-      "valueBoth": "Used by {{opex}} and {{capex}}."
+      "dimensionLines_one": "Used by {{count}} line",
+      "dimensionLines_other": "Used by {{count}} lines",
+      "dimensionUnused": "Not used yet",
+      "valueLines_one": "Used by {{count}} line",
+      "valueLines_other": "Used by {{count}} lines",
+      "valueUnused": "Not used yet"
     },
-    "deleteBlocked": {
-      "dimensionHasValues": "To delete this dimension, delete its values first."
+    "forceDelete": {
+      "title": "Delete {{name}}?",
+      "dimensionValues_one": "Its value is deleted too.",
+      "dimensionValues_other": "Its {{count}} values are deleted too.",
+      "dimensionUsedValues_one": "Its value is deleted",
+      "dimensionUsedValues_other": "Its {{count}} values are deleted",
+      "dimensionUsed": "{{values}}, and it is removed from {{lines}}. This data cannot be recovered.",
+      "valueUsed_one": "It is removed from {{count}} budget line. This data cannot be recovered.",
+      "valueUsed_other": "It is removed from {{count}} budget lines. This data cannot be recovered.",
+      "valuesUsed_one": "{{count}} selected value is used: it is removed from {{lines}}. This data cannot be recovered.",
+      "valuesUsed_other": "{{count}} selected values are used: they are removed from {{lines}}. This data cannot be recovered.",
+      "budgetLines_one": "{{count}} budget line",
+      "budgetLines_other": "{{count}} budget lines",
+      "confirmAnyway": "Delete anyway"
     },
     "appliesToConflict": {
       "capex_one": "{{count}} CAPEX line has a value for this dimension. It keeps it, hidden while the dimension is for OPEX lines only.",
@@ -680,6 +720,25 @@
       "opex_other": "{{count}} OPEX lines have this value. They keep it, but new OPEX lines cannot choose it."
     },
     "showLines": "Show these lines",
+    "required": {
+      "missing": {
+        "both": "{{opex}} and {{capex}} have no value.",
+        "opex_one": "{{count}} OPEX line has no value.",
+        "opex_other": "{{count}} OPEX lines have no value.",
+        "capex_one": "{{count}} CAPEX line has no value.",
+        "capex_other": "{{count}} CAPEX lines have no value."
+      },
+      "showLines": {
+        "opex": "Show OPEX lines",
+        "capex": "Show CAPEX lines"
+      },
+      "disabledHint": "Not checked while the dimension is disabled.",
+      "unusable": {
+        "opex": "No enabled value can be used on OPEX lines. New OPEX lines cannot be created.",
+        "capex": "No enabled value can be used on CAPEX lines. New CAPEX lines cannot be created.",
+        "both": "No enabled value can be used on OPEX or CAPEX lines. New lines cannot be created."
+      }
+    },
     "messages": {
       "loadFailed": "Failed to load the value.",
       "saveFailed": "Failed to save the value.",
@@ -693,8 +752,36 @@
       "nameRequired": "Enter a name.",
       "codeRequired": "Enter a code.",
       "codeInvalid": "Use lowercase letters, digits, - or _ (40 at most).",
-      "orderInvalid": "Enter a whole number.",
       "dimensionRequired": "Choose a dimension."
+    },
+    "recommended": {
+      "action": "Recommended dimensions",
+      "title": "Add the recommended dimensions",
+      "subtitle": "Ready-made dimensions with their values, for OPEX and CAPEX lines. You can rename, change or delete them afterwards.",
+      "dimensions": "Dimensions",
+      "present": "Already present",
+      "presentAs": "Already present ({{name}})",
+      "language": "Language of the names",
+      "submit": "Add",
+      "names": {
+        "cost_pool": "Cost pool",
+        "it_tower": "IT tower",
+        "purpose": "Purpose",
+        "priority": "Priority",
+        "recurrence": "Recurrence"
+      },
+      "hints": {
+        "cost_pool": "What the money pays for: hardware, software, internal and external labor… The cost pools of TBM.",
+        "it_tower": "The part of IT it serves: compute, storage, network, end user… The IT towers of TBM.",
+        "purpose": "Why the money is spent: replacement, capacity, compliance, growth…",
+        "priority": "Mandatory, high, medium or low.",
+        "recurrence": "Recurring or one-off."
+      },
+      "created_one": "{{count}} dimension added: {{names}}.",
+      "created_other": "{{count}} dimensions added: {{names}}.",
+      "nothingCreated": "Nothing added: these dimensions are already present.",
+      "failed": "The dimensions could not be added.",
+      "loadFailed": "The recommended dimensions could not be loaded."
     }
   },
   "businessProcesses": {

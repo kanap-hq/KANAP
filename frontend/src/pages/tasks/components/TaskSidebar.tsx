@@ -331,9 +331,9 @@ export default function TaskSidebar({
                   <Typography
                     component={Link}
                     to={isProjectTask ? (projectWorkspaceLink || `/portfolio/projects/${task.related_object_id}`) :
-                        task.related_object_type === 'spend_item' ? `/ops/opex/${task.related_object_id}` :
+                        task.related_object_type === 'spend_item' ? `/ops/budget/${task.related_object_id}` :
                         task.related_object_type === 'contract' ? `/ops/contracts/${task.related_object_id}` :
-                        task.related_object_type === 'capex_item' ? `/ops/capex/${task.related_object_id}` :
+                        task.related_object_type === 'capex_item' ? `/ops/budget/${task.related_object_id}` :
                         task.related_object_type === 'incident' ? `/it/incidents/${task.related_object_id}/overview` :
                         '#'}
                     sx={{ color: 'text.primary', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}

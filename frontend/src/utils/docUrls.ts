@@ -50,10 +50,7 @@ const routeToDocSlug: [RegExp, string][] = [
   [/^\/it\/settings/, 'it-ops-settings'],
 
   // Budget Management
-  [/^\/ops\/opex\/\d+/, 'opex'],
-  [/^\/ops\/opex/, 'opex'],
-  [/^\/ops\/capex\/\d+/, 'capex'],
-  [/^\/ops\/capex/, 'capex'],
+  [/^\/ops\/budget(?:\/|$)/, 'budget-lines'],
   [/^\/ops\/contracts\/\d+/, 'contracts'],
   [/^\/ops\/contracts/, 'contracts'],
   [/^\/ops\/tasks\/\d+/, 'tasks'],

@@ -13,11 +13,21 @@ export const LEGACY_BUDGET_REDIRECTS: ReadonlyArray<{ from: string; to: string }
 ];
 
 /**
+ * The two copy operations of Budget administration, now one "Copy budget columns" (lot OPS). The old
+ * allocation copy opens it with the amounts unticked.
+ */
+export const MERGED_OPERATION_REDIRECTS: ReadonlyArray<{ from: string; to: string }> = [
+  { from: '/ops/operations/copy-budget-columns', to: '/ops/operations/copy-budget' },
+  { from: '/ops/operations/column-init', to: '/ops/operations/copy-budget' },
+  { from: '/ops/operations/copy-allocations', to: '/ops/operations/copy-budget?amounts=0' },
+];
+
+/**
  * The redirect routes. They sit outside ProtectedRoute: the old paths have no permission
  * entry of their own, so the new route checks access after the redirect.
  */
 export function legacyBudgetRedirectRoutes() {
-  return LEGACY_BUDGET_REDIRECTS.map(({ from, to }) => (
+  return [...LEGACY_BUDGET_REDIRECTS, ...MERGED_OPERATION_REDIRECTS].map(({ from, to }) => (
     <Route key={from} path={from} element={<Navigate to={to} replace />} />
   ));
 }
