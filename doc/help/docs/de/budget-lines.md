@@ -20,14 +20,14 @@ Der Arbeitsbereich öffnet sich im Erstellungsmodus mit dem Titel **Neue OPEX-Ze
 - **Konto**: Das Sachkonto. Es erscheinen nur Konten aus dem Kontenplan des zahlenden Unternehmens, und zwar nur solche, die in [Kontenpläne und Kontenverwaltung](chart-of-accounts.md#opex-oder-capex-konten) zum Typ der Zeile passen: **OPEX und CAPEX**, oder **Nur OPEX** für eine OPEX-Zeile und **Nur CAPEX** für eine CAPEX-Zeile. Eine Zeile, die bereits ein Konto für den anderen Typ hat, behält es und bleibt bearbeitbar. Ein solches Konto für eine neue Zeile oder beim Ändern des Kontos zu wählen, wird abgelehnt
 - **Währung**: ISO-Code (z. B. USD, EUR). Standardmäßig Ihre Arbeitsbereich-Währung; kann pro Zeile überschrieben werden
 - **Beginn der Gültigkeit**: Wann diese Ausgabe beginnt (TT/MM/JJJJ)
-- **Erforderliche Dimensionen**: ein Feld pro Dimension, die für den Typ der Zeile erforderlich ist. Eine CAPEX-Zeile braucht anfangs **PP&E type**, **Investment type** und **Priority**. Siehe [CAPEX-Dimensionen](#capex-dimensionen)
+- **Erforderliche Dimensionen**: ein Feld pro Dimension, die für den Typ der Zeile erforderlich ist. Ein neuer Arbeitsbereich hat keine erforderliche Dimension. Siehe [Empfohlene Dimensionen](#empfohlene-dimensionen)
 
 **Optional aber nützlich**:
 
 - **Lieferant**: Wen Sie bezahlen. Verknüpft mit Ihren Lieferanten in den Stammdaten
 - **Kostenstelle**: Wer für die Ausgabe verantwortlich ist. Siehe [Kostenstellen](cost-centers.md). Ist das zahlende Unternehmen noch leer, füllt die Wahl einer Kostenstelle es mit dem Unternehmen der Kostenstelle
 - **Run oder Build**: **Run** für Ausgaben, die bestehende Services am Laufen halten, **Build** für Ausgaben, die sie schaffen oder verändern
-- **Analysedimensionen**: Ein Feld pro Dimension, die für den Typ der Zeile verwendet wird, nach ihr benannt, für eine eigene Gruppierung in Berichten (z. B. „Licenses“ in Nature). Die Standarddimension erscheint als **Analysedimension**, bis sie umbenannt wird. Siehe [Analysedimensionen](analytics.md)
+- **Analysedimensionen**: Ein Feld pro Dimension, die für den Typ der Zeile verwendet wird, nach ihr benannt, für eine eigene Gruppierung in Berichten (z. B. **Software** in **Kostenart**). Die Standarddimension erscheint als **Analysedimension**, bis sie umbenannt wird. Siehe [Analysedimensionen](analytics.md)
 - **Ende der Gültigkeit**: Das Datum, an dem diese Zeile endet. Lassen Sie es leer, wenn es kein Ende gibt. Danach ist die Zeile deaktiviert und spätere Jahre zählen in den Budgetansichten nicht mehr
 - **IT-Verantwortlicher** / **Fachbereichsverantwortlicher**: Wer verantwortlich ist
 - **Beschreibung** und **Notizen**: Freitext im Tab **Übersicht**, für beide Typen
@@ -48,22 +48,25 @@ Jede Zeile hat einen Typ, angezeigt in der Spalte **Typ** der Liste und in der e
 
 - **Konten**: Ein Konto kann auf **OPEX und CAPEX**, **Nur OPEX** oder **Nur CAPEX** gesetzt sein. Siehe [OPEX- oder CAPEX-Konten](chart-of-accounts.md#opex-oder-capex-konten)
 - **Dimensionen und Werte**: Eine Dimension oder ein Wert kann nur für einen Typ verwendet werden, und eine Dimension kann für einen Typ erforderlich sein. Der Bereich **Eigenschaften** zeigt nur die Dimensionen, die für den Typ der Zeile verwendet werden. Siehe [OPEX- oder CAPEX-Dimensionen](analytics.md#opex-oder-capex-dimensionen)
-- **Leistungsverrechnung**: Die Leistungsverrechnungsberichte decken nur OPEX-Zeilen ab. Siehe [Berichte](reports.md)
+- **Leistungsverrechnung**: Die Leistungsverrechnungsberichte öffnen sich auf OPEX-Zeilen und bieten CAPEX-Zeilen oder beide an. Siehe [Berichte](reports.md)
 - **Einfrieren**: Eine Budgetspalte wird pro Jahr und pro Typ eingefroren. Siehe [Daten einfrieren / auftauen](budget-operations.md#daten-einfrieren-auftauen)
 
 Der Typ einer Zeile ändert sich mit **Typ ändern…**. Siehe [Typ ändern](#typ-andern).
 
-### CAPEX-Dimensionen
+### Empfohlene Dimensionen
 
-Jeder Arbeitsbereich klassifiziert CAPEX-Zeilen nach drei Analysedimensionen:
+Ein neuer Arbeitsbereich beginnt mit vier empfohlenen Dimensionen, mit ihren Werten, in der Sprache des Arbeitsbereichs:
 
-| Dimension | Werte |
+| Dimension | Was sie aussagt |
 |---|---|
-| **PP&E type** | Hardware, Software (Sachanlagen) |
-| **Investment type** | Replacement, Capacity, Productivity, Security, Conformity, Business growth, Other |
-| **Priority** | Mandatory, High, Medium, Low |
+| **Kostenart** | Wofür das Geld ausgegeben wird: Hardware, Software, internes und externes Personal, externe Dienstleistungen, Gebäude und Energie, Telekommunikation, Sonstiges. Sie ist die Standarddimension |
+| **IT-Bereich** | Der Teil der IT, dem die Ausgabe dient: Rechenzentrum, Rechenleistung, Speicher, Netzwerk, Plattform, Druck, Arbeitsplatz, Anwendung, Betrieb und Support, Sicherheit und Compliance, IT-Management |
+| **Zweck** | Warum das Geld ausgegeben wird: Ersatz, Kapazität, Produktivität, Sicherheit, Compliance, Wachstum, Sonstiges |
+| **Priorität** | Zwingend, hoch, mittel oder niedrig |
 
-Sie werden für CAPEX-Zeilen verwendet und sind erforderlich: Eine neue CAPEX-Zeile braucht auf jeder von ihnen einen Wert. Sie funktionieren wie jede andere Dimension: Ihre Felder stehen im Bereich **Eigenschaften** bei den anderen Dimensionen, und ihre Spalten werden in der Liste standardmäßig angezeigt. Ein Administrator kann sie umbenennen, Werte hinzufügen, die Reihenfolge der Werte ändern, sie deaktivieren oder löschen. Siehe [CAPEX-Dimensionen](analytics.md#capex-dimensionen) unter Analysedimensionen.
+Sie gelten für OPEX- und CAPEX-Zeilen, und keine ist erforderlich. Sie funktionieren wie jede andere Dimension: Ihre Felder stehen im Bereich **Eigenschaften**, und ein Administrator kann sie umbenennen, Werte hinzufügen, eine davon erforderlich machen, sie deaktivieren oder löschen. Ein Administrator kann sie einem bestehenden Arbeitsbereich hinzufügen. Siehe [Empfohlene Dimensionen](analytics.md#empfohlene-dimensionen) unter Analysedimensionen.
+
+Arbeitsbereiche, die vor den empfohlenen Dimensionen angelegt wurden, behalten drei Dimensionen nur für CAPEX-Zeilen, alle erforderlich: **PP&E type**, **Investment type** und **Priority**. Eine neue CAPEX-Zeile braucht dort auf jeder einen Wert.
 
 ---
 
@@ -95,7 +98,7 @@ Die Liste (unter **Budgetverwaltung > Budgetzeilen**) enthält die OPEX- und CAP
 - **Konto**: Die Sachkonto-Nummer und -Bezeichnung
 - **Zuordnung**: Die Zuordnungsmethoden-Bezeichnung für das aktuelle Jahr (verlinkt zum Tab **Zuordnungen**)
 - **Budget J** und **Erwarteter Endwert J**: Die Beträge des aktuellen Jahres in der Standardspalte und in der letzten angezeigten Spalte (verlinkt zum Tab **Budget** für dieses Jahr). Mit den Standardeinstellungen sind das Budget und Erwarteter Endwert. Ist die Standardspalte zugleich die letzte angezeigte Spalte, erscheint nur eine Betragsspalte. Siehe [Budgetspalten](budget-operations.md#budgetspalten)
-- **Erforderliche Dimensionen**: Eine Spalte pro aktivierter Dimension, die für einen der beiden Typen erforderlich ist, nach ihr benannt: anfangs **PP&E type**, **Investment type** und **Priority**
+- **Erforderliche Dimensionen**: Eine Spalte pro aktivierter Dimension, die für einen der beiden Typen erforderlich ist, nach ihr benannt. Ein neuer Arbeitsbereich hat keine
 - **Aufgabe**: Der neueste Aufgabentitel (verlinkt zum Tab **Übersicht**, in dem sich der Aufgabenbereich befindet)
 
 **Zusätzliche Spalten** (standardmäßig ausgeblendet, über die Spaltenauswahl umschaltbar):
@@ -250,7 +253,7 @@ Ersetzt die Zeile eine andere, oder wurde sie nach einer Typänderung ab einem s
 - Jedes Feld listet die aktivierten Werte seiner Dimension. Ein deaktivierter Wert bleibt auf den Zeilen, die ihn bereits haben, und kann für keine andere Zeile gewählt werden
 - Ein Wert, der nur für den anderen Typ verwendet wird, wird nicht angeboten, und seine Wahl wird abgelehnt. Eine Zeile, die ihn bereits hat, behält ihn und bleibt bearbeitbar. Siehe [OPEX- oder CAPEX-Werte](analytics.md#opex-oder-capex-werte)
 - Das Feld kann keinen Wert erstellen: Erstellen Sie ihn unter [Analysedimensionen](analytics.md), oder lassen Sie ihn von einem CSV-Import erstellen
-- Eine erforderliche Dimension ist mit einem Sternchen markiert. Eine neue Zeile braucht einen Wert in ihr: **Erstellen** bricht mit „Nature ist erforderlich“ ab, bis Sie einen wählen. Bei einer Zeile mit einem Wert kann das Feld nicht geleert, nur geändert werden. Eine Zeile ohne Wert bleibt bearbeitbar. Wenn Sie eine solche Zeile ändern, fragt KANAP beim Verlassen zuerst: „Nature ist erforderlich. Wählen Sie einen Wert, bevor Sie die Seite verlassen.“ **Bleiben** setzt den Cursor in das fehlende Feld. **Trotzdem verlassen** verlässt die Zeile. Siehe [Erforderliche Dimensionen](analytics.md#erforderliche-dimensionen)
+- Eine erforderliche Dimension ist mit einem Sternchen markiert. Eine neue Zeile braucht einen Wert in ihr: **Erstellen** bricht mit „Kostenart ist erforderlich“ ab, bis Sie einen wählen. Bei einer Zeile mit einem Wert kann das Feld nicht geleert, nur geändert werden. Eine Zeile ohne Wert bleibt bearbeitbar. Wenn Sie eine solche Zeile ändern, fragt KANAP beim Verlassen zuerst: „Kostenart ist erforderlich. Wählen Sie einen Wert, bevor Sie die Seite verlassen.“ **Bleiben** setzt den Cursor in das fehlende Feld. **Trotzdem verlassen** verlässt die Zeile. Siehe [Erforderliche Dimensionen](analytics.md#erforderliche-dimensionen)
 - Können die Dimensionen nicht geladen werden, ersetzt eine Zeile diese Felder: „Die Dimensionen konnten nicht geladen werden.“
 
 **Tipp**: Beim Erstellen einer Zeile bedeutet die Warnung „Veraltetes Konto“, dass das ausgewählte Konto nicht zum Kontenplan des zahlenden Unternehmens gehört. Wählen Sie ein anderes Konto, um die Warnung zu beheben. Eine bestehende Zeile, deren Konto außerhalb des Kontenplans ihres Unternehmens liegt, lässt sich weiterhin bearbeiten: Der Kontenplan wird nur geprüft, wenn sich das Unternehmen oder das Konto ändert.
@@ -259,13 +262,13 @@ Ersetzt die Zeile eine andere, oder wurde sie nach einer Typänderung ab einem s
 
 ### Budget
 
-Im Budget-Tab geben Sie Finanzdaten pro Jahr ein. Er unterstützt mehrere Budgetspalten und zwei Eingabemodi, die als Tabs erscheinen: **Jährlich** (Jahressummen) und **Monatlich** (monatliche Aufschlüsselung).
+Der Budget-Tab enthält die Beträge der Zeile, Jahr für Jahr und Spalte für Spalte. Wählen Sie für das gewählte Jahr eine Spalte, legen Sie fest, wie sie aufgebaut ist, und lesen Sie dann das Ergebnis Monat für Monat.
 
 **Jahresauswahl**:
 
 - Verwenden Sie die Jahres-Tabs oben, um zwischen J-2, J-1, J (aktuelles Jahr), J+1 und J+2 zu wechseln
-- Jedes Jahr hat seine eigene Version, seinen eigenen Modus und eigene Beträge
-- Beim Wechsel des Jahres werden Ihre ausstehenden Änderungen zuerst gespeichert
+- Jedes Jahr hat seine eigenen Beträge
+- Beim Wechsel des Jahres werden Ihre ausstehenden Änderungen zuerst gespeichert. Wartet eine Spalte nach der Änderung einer anderen Person noch auf Ihre Wahl, fragt KANAP zuerst: **Jahr wechseln** verwirft Ihre Werte in dieser Spalte
 
 **Budgetspalten**:
 
@@ -276,6 +279,9 @@ Im Budget-Tab geben Sie Finanzdaten pro Jahr ein. Er unterstützt mehrere Budget
     - **Ist-Werte**: Tatsächliche Ausgaben, so wie sie im Jahresverlauf erfasst werden
     - **Erwarteter Endwert**: Ihre beste Schätzung des Werts zum Jahresende
 - Ein Budgetadministrator kann die Spalten umbenennen, einige ausblenden und die Standardspalte unter **Budgetverwaltung > Administration > Budgetspalten** wählen (siehe [Budgetspalten](budget-operations.md#budgetspalten)). Eine ausgeblendete Spalte behält ihre Beträge
+- Jede angezeigte Spalte hat unter den Jahres-Tabs eine Karte: ihren Namen, ihre Summe für das Jahr, die Herkunft ihrer Beträge und ihren Zeitraum, zum Beispiel „Gleichmäßig verteilt“ und „9 Monate, April bis Dezember“. Eine leere Spalte zeigt „Noch nicht erfasst“. Bewegen Sie den Mauszeiger über eine Karte, um ihre Zeilen unter Menge und Preis zu sehen
+- Klicken Sie auf eine Karte, um an dieser Spalte zu arbeiten. Der Tab öffnet sich auf der ersten angezeigten Spalte, die nicht eingefroren ist
+- Bei nur einer angezeigten Spalte gibt es keine Karten: Der Editor zeigt die Spalte direkt
 
 **Zeitraum einer Spalte**:
 
@@ -283,85 +289,121 @@ Im Budget-Tab geben Sie Finanzdaten pro Jahr ein. Er unterstützt mehrere Budget
 - Ein Monat zählt, wenn der Zeitraum seinen 15. Tag abdeckt. Ein Zeitraum, der am 10. April beginnt, schließt den April ein; einer, der am 20. April beginnt, startet im Mai
 - Eine Spalte ohne Betrag und ohne Zeitraum erhält einen Vorschlag: **Beginn der Gültigkeit** und **Ende der Gültigkeit** der Zeile, begrenzt auf das Jahr. Eine Zeile, die am 1. April beginnt, ergibt den Vorschlag April bis Dezember
 - Eine Spalte, die bereits Beträge enthält und keinen Zeitraum hat, gilt als ganzes Jahr, sodass sich vorhandene Daten wie bisher verhalten
+- Geht der gespeicherte Zeitraum einer Spalte über die Daten der Zeile hinaus, nennt der Editor den Zeitraum, den das Speichern verwendet, zum Beispiel „Gespeicherter Zeitraum: Januar bis Dezember. Beim Speichern gilt April bis Dezember, nach den Daten der Zeile.“
 
-**Jährlich oder Monatlich**:
+**Wie eine Spalte aufgebaut ist**:
 
-- **Jährlich**: Geben Sie eine Summe pro Spalte ein. Die Summe wird gleichmäßig auf die Monate des Zeitraums der Spalte verteilt, und die Monate außerhalb des Zeitraums werden auf null gesetzt. Der Zeitraum wird unter jeder Summe angezeigt, bevor Sie etwas eingeben, zum Beispiel „9 Monate, April bis Dezember“. Nur die Summe, die Sie bearbeiten, wird gespeichert. Die anderen Spalten behalten ihre Monatsbeträge.
-- Klicken Sie auf das Stiftsymbol neben dem Zeitraum unter einer Summe (**Zeitraum ändern**), um das Verteilungsfeld für diese Spalte mit ihrer aktuellen Summe zu öffnen. Lassen die Daten der Zeile keinen Monat im Jahr übrig, ist die Summe deaktiviert und zeigt „Kein Monat von 2026 liegt innerhalb der Daten der Zeile.“ Klicken Sie auf das Stiftsymbol daneben (**Zeitraum wählen**), um selbst einen festzulegen.
-- Klicken Sie auf das Rechnersymbol neben dem Stift (**Menge und Preis**), um dasselbe Feld mit den Zeilen dieser Spalte zu öffnen. Siehe [Menge und Preis](#menge-und-preis).
-- Eine Spalte, die ihren Zeilen folgt (ihre Beträge wurden aus ihren Zeilen unter Menge und Preis berechnet), hat eine schreibgeschützte Summe. Klicken Sie auf die Summe oder drücken Sie darauf Enter, um **Menge und Preis** für diese Spalte zu öffnen. Der Stift tut dasselbe. Zeigen Sie mit der Maus auf die Summe, um „Aus den Zeilen berechnet. Öffnen Sie Menge und Preis, um den Betrag zu ändern.“ zu lesen
-- **Monatlich**: Geben Sie Beträge pro Monat (Jan-Dez) für jede angezeigte Spalte ein, zum Beispiel um einem Auszahlungsplan oder den Meilensteinen eines Projekts zu folgen. Quartalszwischensummen und eine Jahressumme werden angezeigt. Nur die Monate, die Sie ändern, werden gespeichert.
-- Beide Tabs zeigen dieselben Spalten: Prognose erscheint auch in **Jährlich**, wenn sie angezeigt wird.
-- Wechseln Sie mit den Tabs **Jährlich** und **Monatlich** zwischen den Modi. Der Wechsel ändert Ihre Beträge nicht.
-- Ihre Wahl zwischen **Jährlich** und **Monatlich** wird in Ihrem Browser gespeichert, nur für Sie: Der Wechsel ändert nicht, was andere Benutzer sehen, die diese Zeile öffnen. Bis Sie wählen, öffnet sich eine Spalte in dem Modus, in dem ihre Beträge zuletzt erfasst wurden.
+Der Editor unter den Karten trägt den Namen der Spalte und das Jahr, zum Beispiel **Budget 2026**. Drei Tabs legen fest, wie die Spalte aufgebaut ist:
+
+- **Betrag**: ein Jahresbetrag, auf die Monate verteilt
+- **Menge und Preis**: Zeilen, jeweils eine Menge mal ein Stückpreis. Siehe [Menge und Preis](#menge-und-preis)
+- **Pro Monat**: zwölf Beträge, in der Tabelle erfasst
+
+Die drei Tabs werden immer angeboten. Eine Spalte öffnet sich auf dem Tab, der zur Herkunft ihrer Beträge passt: **Menge und Preis**, wenn sie aus ihren Zeilen berechnet werden, **Pro Monat** nach einer Änderung von Hand, und **Betrag** für eine leere, verteilte oder kopierte Spalte.
+
+Bei einer leeren Spalte wechselt ein Klick auf einen Tab sofort. Bei einer Spalte mit Beträgen erscheint zuerst eine Frage im Editor, die sagt, was sich ändert. Klicken Sie auf **Wechseln**, um fortzufahren, oder auf **Abbrechen**:
+
+- Zu **Betrag**: Die aktuelle Summe wird zum Betrag, gleichmäßig über den Zeitraum der Spalte verteilt. Die Zeilen der Spalte bleiben als Referenz erhalten
+- Zu **Pro Monat**: Die aktuellen Monate bleiben erhalten und werden in der Tabelle bearbeitbar
+- Zu **Menge und Preis**: Die Summe ergibt sich aus den Zeilen. Der aktuelle Betrag wird ersetzt, oder die als Referenz behaltenen Zeilen werden wieder verwendet
+
+**Betrag**:
+
+- **Jahresbetrag**: die Summe der Spalte für das Jahr
+- **Wann**: **Ganzes Jahr**, **Ein Zeitraum** mit den Daten **Von** und **Bis**, oder **An einem Datum** mit einem einzigen **Datum**
+- **Verteilung**: **Gleichmäßig** oder **4-4-5**. An einem Datum gibt es keine Verteilung: Der Monat des Datums erhält den ganzen Betrag
+- Ein Satz sagt, was Sie erhalten, zum Beispiel „120.000 von April bis Dezember (9 Monate) gleichmäßig verteilt.“ oder „5.000 am 10. Februar 2026, ganz im Februar.“ Bewegen Sie den Mauszeiger über das Info-Symbol daneben, um die Regel des 15. zu lesen
+- Fallen Monate des Jahres außerhalb des Zeitraums, nennt ein Hinweis, welche auf null gesetzt werden, zum Beispiel „Januar bis März werden auf null gesetzt.“
+- Eine Warnung erscheint, wenn der Zeitraum über die Daten der Zeile hinausgeht. Der Betrag wird trotzdem gespeichert
+- Solange ein Datum fehlt oder kein Monat zählt, nennt ein roter Hinweis den Grund, und nichts wird gespeichert. Lassen die Daten der Zeile keinen Monat im Jahr übrig, zeigt der Editor „Kein Monat von 2026 liegt innerhalb der Daten der Zeile.“ Wählen Sie **Ein Zeitraum**, um die Daten selbst festzulegen
+- **Jede Änderung wird sofort gespeichert**: der Betrag, wenn Sie das Feld verlassen oder die Eingabetaste drücken, die übrigen Felder, sobald Sie sie ändern. Es gibt keine Schaltfläche. Ein leerer Betrag oder null speichert nichts
+- Bei **4-4-5** werden die Gewichte der zählenden Monate so erhöht, dass der ganze Betrag auf sie entfällt
+- Um eine Spalte wieder gleichmäßig auf zwölf Monate zu verteilen, wählen Sie **Ganzes Jahr** und **Gleichmäßig**
+- Eine Verteilung auf einer aus Zeilen aufgebauten Spalte behält ihre Zeilen als Referenz. Siehe [Menge und Preis](#menge-und-preis)
+
+**Pro Monat**:
+
+- Der Editor zeigt zum Beispiel „Geben Sie die Beträge in der Spalte Budget der Tabelle unten ein.“ Geben Sie jeden Monat in dieser Spalte von **Ergebnis pro Monat** ein. Die Quartalssummen und die Gesamtsumme folgen während der Eingabe. Nur die Monate, die Sie ändern, werden gespeichert
+- Nutzen Sie diesen Modus für einen Auszahlungsplan oder die Meilensteine eines Projekts, zum Beispiel den ganzen Betrag in einem einzigen Monat
+- Klicken Sie auf einen Monat einer anderen Spalte in der Tabelle, um diese Spalte pro Monat zu erfassen: Sie wird zur aktiven Spalte, und der Cursor steht in diesem Monat. Bei einer Spalte mit Beträgen fragt der Editor zuerst. Bewegen Sie den Mauszeiger über einen Monat, um „Pro Monat erfassen“ zu lesen. Die Monate einer eingefrorenen Spalte sind nicht anklickbar
+
+**Ausgehend von**:
+
+- Eine leere Spalte, ohne Betrag und ohne Zeile, kann von einer anderen angezeigten Spalte mit Beträgen ausgehen. Der Editor zeigt „Ausgehend von“, dann die Spalte mit ihrer Summe, „angepasst um“, einen Prozentsatz (standardmäßig 0) und **Übernehmen**. Sie können die Spalte auch selbst darunter erfassen
+- **Übernehmen** arbeitet wie [Budgetspalten kopieren](budget-operations.md#budgetspalten-kopieren) für diese Zeile und dieses Jahr: Die Monate behalten ihre Form, und der Prozentsatz gilt für jeden Monat. Eine aus ihren Zeilen berechnete Spalte bleibt berechnet, mit um den Prozentsatz erhöhten Stückpreisen. Eine eingefrorene Spalte kann als Quelle dienen
+- Schließen die Daten der Zeile Monate der Quelle aus, werden sie nicht übernommen, und ein Hinweis sagt es: „Monate der Spalte Budget außerhalb der Daten der Zeile wurden nicht übernommen.“
+
+**Auch für andere Spalten verwenden**:
+
+- Unter dem Editor gibt **Auch für andere Spalten verwenden…** anderen Spalten denselben Aufbau wie der aktiven Spalte. Der Link erscheint, wenn die aktive Spalte ein Betrag mit gültigem Zeitraum ist oder ihren Zeilen unter Menge und Preis folgt, und eine andere Spalte ihn übernehmen kann
+- Der Link listet die anderen angezeigten Spalten unter **Gleicher Aufbau für** auf, jede mit einem Kontrollkästchen. Die Spalten, die unter [Budgetspalten](budget-operations.md#budgetspalten) folgen sollen, sind anfangs angekreuzt. Klicken Sie auf **Übernehmen** oder auf **Abbrechen**
+- Von einem Betrag aus übernehmen die angekreuzten Spalten seinen Zeitraum und seine Verteilung, und jede behält ihre eigene Summe. Spalten, die ihren Zeilen folgen, werden nicht angeboten, und ein Satz nennt sie, zum Beispiel „Die Spalte Prognose behält ihre Zeilen.“
+- Von Menge und Preis aus erhalten die angekreuzten Spalten dieselben Zeilen, die ihre Beträge ersetzen
+- Eingefrorene Spalten und Spalten, die auf Ihre Wahl warten, werden nicht angeboten
+
+**Spalte leeren**:
+
+- **Spalte leeren**, rechts unter dem Editor, setzt jeden Monat der aktiven Spalte auf null, zum Beispiel bevor Sie den ganzen Betrag in einem einzigen Monat erfassen. Enthält die Spalte Beträge, bestätigen Sie zuerst: „Alle Monate der Spalte Budget für 2026 leeren? Die anderen Spalten bleiben unverändert.“ Das zählt als Änderung von Hand
+- Um Beträge und Zeitraum einer Spalte für alle Zeilen zu entfernen, verwenden Sie **Budgetspalte zurücksetzen** in der Budget-Administration
+
+**Ergebnis pro Monat**:
+
+- Unter dem Editor zeigt **Ergebnis pro Monat** das Jahr Monat für Monat für jede angezeigte Spalte, in der Währung der Zeile, mit einer Zwischensumme pro Quartal (**Q1** bis **Q4**) und einer Zeile **Gesamt**. Die aktive Spalte ist hervorgehoben
+- Ab zwei Spalten gibt eine letzte Zeile die Abweichung jeder Spalte zu einer von ihnen an, zum Beispiel „+12.000 (+1,8 %)“. Wählen Sie diese Spalte unter **Abweichung zu** über der Tabelle. Sie beginnt bei der Standardspalte
+- Solange jede Spalte leer oder ein gleichmäßig über das ganze Jahr verteilter Betrag ist, ersetzt ein Satz die Tabelle, zum Beispiel „Alle Spalten sind linear über das ganze Jahr verteilt: Die Monatswerte zeigen nichts Neues.“ **Details anzeigen** öffnet die Tabelle, **Details ausblenden** klappt sie wieder zu. Ihre Wahl gilt, solange Sie auf der Zeile bleiben
+- Die Tabelle bleibt offen, solange die aktive Spalte pro Monat erfasst wird oder eine Spalte auf Ihre Wahl wartet
+
+**Zurück zu den Werten beim Öffnen**:
+
+- Der Tab behält die Werte, die jede Spalte eines Jahres hatte, als Sie dieses Jahr während Ihres Besuchs der Zeile zum ersten Mal geöffnet haben. Ein Wechsel des Tabs oder des Jahres behält sie. Ein Neuladen der Seite beginnt mit den Werten dieses Moments neu
+- Sobald Sie eine Spalte ändern, steht rechts neben den Jahres-Tabs zum Beispiel „2 Spalten seit 10:42 geändert“, gefolgt von **Zurück zu den Werten beim Öffnen**
+- Ein Klick darauf setzt die Spalten, die Sie geändert haben, auf diese Werte zurück. Es gibt keine Bestätigung. Ihre laufenden Änderungen werden zuerst gespeichert, dann wird jede Spalte einzeln wiederhergestellt
+- Ein Hinweis nennt das Ergebnis, zum Beispiel „Werte beim Öffnen wiederhergestellt: Budget und Revision.“ Eine Spalte bleibt, wie sie ist, wenn sie inzwischen eingefroren wurde, wenn jemand anderes sie seitdem geändert hat (das Banner oben fragt dann, was gilt) oder solange sie auf Ihre Wahl wartet. Eine Spalte, die nur jemand anderes geändert hat, wird nie wiederhergestellt. Schließen Sie den Hinweis mit **Schließen**
+- Kann eine laufende Änderung nicht gespeichert werden, wird nichts wiederhergestellt: „Nichts wurde wiederhergestellt: Eine Änderung konnte vorher nicht gespeichert werden.“
+- Das Audit-Protokoll erfasst jede wiederhergestellte Spalte mit der Aktion **Wiederherstellen**
 
 **Einfrierverhalten**:
 
-- Wenn die Budgetspalten eines Jahres für den Typ der Zeile eingefroren sind (über die Budgetadministration), werden die entsprechenden Felder schreibgeschützt und zeigen ein Schloss-Symbol
-- Sie können eingefrorene Daten weiterhin ansehen; Administratoren können sie über **Budgetverwaltung > Administration > Daten einfrieren / auftauen** wieder freigeben
+- Sind die Budgetspalten eines Jahres für den Typ der Zeile eingefroren (über die Budget-Administration), zeigt die Karte jeder eingefrorenen Spalte ein Schloss-Symbol, ebenso ihre Kopfzeile in der Tabelle
+- Eine eingefrorene Spalte ist schreibgeschützt. Ihr Editor zeigt zum Beispiel „Die Spalte Budget 2026 ist eingefroren“ und „Schreibgeschützt. Ein Administrator hebt das Einfrieren unter Administration › Daten einfrieren / auftauen auf.“, mit ihrer Summe und der Herkunft ihrer Beträge
+- Sind Spalten eingefroren, sagt eine Zeile unter dem Diagramm „Einige Spalten sind eingefroren und schreibgeschützt.“
 - Jede Spalte kann unabhängig eingefroren werden
-
-**Einen Betrag verteilen**:
-
-- Das Feld hat zwei Tabs: **Betrag verteilen** und **Menge und Preis**. Dieser Teil behandelt den ersten
-- Das Verteilungsfeld ist im Tab **Monatlich** immer sichtbar. Im Tab **Jährlich** öffnet es sich über das Stiftsymbol unter einer Summe, und seine Schließen-Schaltfläche schließt es
-- Wählen Sie eine **Spalte** unter den angezeigten Spalten, prüfen Sie den **Betrag**, wählen Sie eine **Verteilung** (**Gleichmäßig** oder **4-4-5**) und legen Sie die Daten **Von** und **Bis** fest. Die Daten gehen vom aktuellen Zeitraum der Spalte aus, die Verteilung von der bisherigen Verteilung der Spalte
-- Das Feld öffnet sich mit der Standardspalte. Der Betrag übernimmt die aktuelle Summe der Spalte, in beiden Tabs, und passt sich an, wenn Sie eine andere Spalte wählen. Er bleibt leer, wenn die Spalte keinen Betrag hat
-- **Jede Änderung wird sofort gespeichert**: der Betrag, wenn Sie das Feld verlassen oder Enter drücken, die Verteilung und die Daten, sobald Sie sie ändern. Es gibt keine Schaltfläche zum Klicken. Ein leerer Betrag oder null speichert nichts
-- **Die Verteilung auf alle Spalten anwenden** ist ein Schalter, standardmäßig eingeschaltet: Jede Spalte, die ihm folgt, erhält dieselbe Verteilung und denselben Zeitraum, und jede behält ihre eigene aktuelle Summe. Das Einschalten verteilt diese Spalten sofort, und der Schalter bleibt für Ihre nächsten Änderungen eingeschaltet. Das Ausschalten allein ändert nichts: Die nächsten Änderungen gelten nur für die gewählte Spalte. Standardmäßig folgt jede Spalte. Ein Budgetadministrator legt unter [Budgetspalten](budget-operations.md#budgetspalten) fest, welche folgen. Eingefrorene Spalten ändern sich nie. Fahren Sie mit der Maus über den Schalter, um zu sehen, welche Spalten folgen und welche ihren eigenen Zeitraum behalten
-- Eine Spalte, die dem Schalter nicht folgt, wird allein verteilt: Der Schalter erscheint nicht, wenn Sie sie verteilen. Der Schalter ist auch ausgeblendet, wenn sich keine andere folgende Spalte ändern kann
-- Spalten, die ihren Zeilen folgen, lässt der Schalter aus: Sie behalten die Beträge ihrer Zeilen, und ein Satz nennt sie, zum Beispiel „Die Spalte Prognose behält ihre Zeilen.“ Folgen alle anderen Spalten ihren Zeilen, erscheint der Schalter nicht
-- Um eine Spalte auf eine gleichmäßige Verteilung über zwölf Monate zurückzusetzen, wählen Sie **Gleichmäßig** und setzen Sie die Daten auf den 1. Januar und den 31. Dezember
-- Summen, die Sie im Tab **Jährlich** eingeben, gelten weiterhin nur für ihre eigene Spalte
-- Die Felder **Von** und **Bis** zeigen den Zeitraum. Fallen Monate heraus, nennt das Feld die Monate, die auf null gesetzt werden („Januar bis März werden auf null gesetzt.“). Ein Zeitraum über das ganze Jahr zeigt keine Zeile. Fahren Sie mit der Maus über das Info-Symbol neben dem Titel des Felds, um die Regel zum 15. zu sehen
-- Mit **4-4-5** werden die Gewichte der zählenden Monate hochskaliert, sodass der gesamte Betrag auf sie entfällt
-- Ein Hinweis erscheint, wenn der Zeitraum über die Daten der Zeile hinausgeht. Die Verteilung wird trotzdem gespeichert
-- Solange ein Datum fehlt oder kein Monat zählt, nennt das Feld den Grund und speichert nichts
-- Eine Spalte, die ihren Zeilen folgt, zeigt ihre aktuellen Werte in den Feldern ausgegraut, unter dem Satz „Die Beträge stammen aus den 4 Zeilen von Menge und Preis.“ Klicken Sie auf **Stattdessen Betrag verteilen**, um die Felder dieser Spalte freizugeben. Der Satz lautet dann „Eine Verteilung ersetzt die Beträge der Zeilen. Die Zeilen bleiben als Referenz erhalten.“ Die Sperre kehrt zurück, wenn Sie die Spalte, das Jahr oder das Feld wechseln
-- Eine Verteilung über eine aus Zeilen aufgebaute Spalte behält ihre Zeilen als Referenz. Siehe [Menge und Preis](#menge-und-preis)
 
 **Wie jede Spalte entstanden ist**:
 
-- Eine kurze Kennzeichnung zeigt, woher die Beträge einer Spalte stammen. Im Tab **Monatlich** steht sie unter der Spaltenüberschrift (fahren Sie mit der Maus darüber, um den Zeitraum zu sehen). Im Tab **Jährlich** steht sie neben dem Zeitraum
+- Eine kurze Bezeichnung auf jeder Karte nennt die Herkunft der Beträge der Spalte, gefolgt von ihrem Zeitraum. Bei nur einer Spalte steht sie unter dem Titel des Editors
 - **Gleichmäßig verteilt**, **Nach 4-4-5 verteilt** oder **Nach Quartal verteilt**: Die Beträge stammen aus einer Verteilung
-- **Kopiert aus Budget 2025 +2 %**: Die Beträge stammen aus **Budgetspalten kopieren** in der Budgetadministration, mit dem Prozentsatz, falls einer angewendet wurde
-- **Menge und Preis · 3 Zeilen · 1.00 VZÄ**: Die Beträge stammen aus Zeilen, mit ihrer Anzahl und, wenn die Zeilen Personen oder Tage zählen, den VZÄ der Spalte. Die VZÄ sind der Jahresdurchschnitt. Fahren Sie mit der Maus über die Kennzeichnung, um die Zeilen zu sehen, zum Beispiel „Projektleitung: 1 Person × 1.200 pro Tag, 5 Tage pro Monat, Feb. bis Juli“
-- **Von Hand geändert**: Ein Monat wurde im Raster oder durch einen Import einer Budgetdatei geändert
-- Eine Spalte ohne Kennzeichnung hat die Daten behalten, die sie vor der Einführung der Zeiträume hatte
+- **Kopiert aus Budget 2025 +2 %**: Die Beträge stammen aus **Budgetspalten kopieren** in der Budget-Administration oder aus **Ausgehend von**, mit dem Prozentsatz, falls es einen gibt
+- **Menge und Preis · 3 Zeilen · 1.00 VZÄ**: Die Beträge stammen aus Zeilen, mit ihrer Anzahl und, wenn die Zeilen Personen oder Tage zählen, den VZÄ der Spalte. Die VZÄ sind der Jahresdurchschnitt. Bewegen Sie den Mauszeiger über die Karte, um die Zeilen zu sehen, zum Beispiel „Projektleiter: 1 Person × 1.200 pro Tag, 5 Tage pro Monat, Feb. bis Juli“
+- **Von Hand geändert**: Ein Monat wurde in der Tabelle oder durch den Import einer Budgetdatei geändert
+- Ein Betrag an einem Datum zeigt sein Datum statt eines Zeitraums, zum Beispiel „Am 10. Februar 2026“
+- Eine Spalte ohne Bezeichnung hat die Daten behalten, die sie vor der Einführung der Zeiträume hatte
 
 **Wenn jemand anderes dieselbe Spalte bearbeitet**:
 
 - Zwei Personen können gleichzeitig unterschiedliche Monate oder unterschiedliche Spalten derselben Zeile ausfüllen, ohne Konflikt
 - Bei einer monatlichen Eingabe warten, wenn jemand anderes einen der gleichen Monate geändert hat, nur diese Monate auf Ihre Wahl; die übrigen Monate der Spalte werden gespeichert, wie Sie sie eingegeben haben
-- Hat jemand anderes die Summe der Spalte, ihre Verteilung oder ihre Zeilen unter Menge und Preis geändert, während Sie daran arbeiteten, wartet die ganze Spalte: Ein Banner bietet **Spalte neu laden** oder **Überschreiben**. Die Beträge, das Verteilungsfeld und die Zeilen der Spalte bleiben bis zu Ihrer Wahl schreibgeschützt
+- Hat jemand anderes die Summe der Spalte, ihre Verteilung oder ihre Zeilen unter Menge und Preis geändert, während Sie daran arbeiteten, wartet die ganze Spalte: Ein Banner bietet **Spalte neu laden** oder **Überschreiben**. Ihre Karte zeigt einen orangefarbenen Punkt (bewegen Sie den Mauszeiger darüber, um „Wartet auf Ihre Wahl“ zu lesen), und ihre Monate sind eingefärbt. Der Editor bleibt bis zu Ihrer Wahl schreibgeschützt, mit der Zeile „Wählen Sie zuerst oben, ob Sie diese Spalte neu laden oder überschreiben.“
 - Speichern lädt das Jahr neu, sodass Sie für jede andere Spalte immer die neuesten Zahlen sehen; die Zelle oder Spalte, die Sie bearbeiten, wird dabei nicht gestört
-
-**Werkzeuge im Monatsmodus**:
-
-- **Spalte leeren**: Das Symbol neben einer Spaltenüberschrift setzt alle Monate dieser Spalte auf null, zum Beispiel bevor Sie den gesamten Betrag in einem einzigen Monat erfassen. Wenn die Spalte Beträge enthält, bestätigen Sie zuerst. Das gilt als Änderung von Hand. Um Beträge und Zeitraum einer Spalte für alle Zeilen zu entfernen, verwenden Sie **Budgetspalte zurücksetzen** in der Budgetadministration
 
 **Mehrjahrestrend**:
 
-- Ein Diagramm unter dem Raster zeigt jede angezeigte Spalte über mehrere Jahre, auch Prognose, wenn sie angezeigt wird, und aktualisiert sich während der Eingabe
+- Ein Diagramm unter der Tabelle zeigt jede angezeigte Spalte über mehrere Jahre, auch Prognose, wenn sie angezeigt wird, und aktualisiert sich während der Eingabe
 
 **So verwenden Sie ihn**:
 
-1. Wählen Sie das Jahr, für das Sie planen
-2. Wählen Sie den Tab **Jährlich** oder **Monatlich**
-3. Füllen Sie die relevanten Spalten aus (Budget für die Erstplanung, Ist-Werte für die Nachverfolgung, Erwarteter Endwert für die Zahl zum Jahresende)
-4. Ihre Änderungen werden automatisch gespeichert; neben den Jahres-Tabs erscheint der Hinweis **Wird gespeichert...** / **Gespeichert**
+1. Wählen Sie das Jahr, das Sie planen
+2. Klicken Sie auf die Karte der Spalte, die Sie ausfüllen (Budget für die erste Planung, Ist-Werte für die Verfolgung, Erwarteter Endwert für den Wert zum Jahresende)
+3. Wählen Sie **Betrag**, **Menge und Preis** oder **Pro Monat** und füllen Sie die Spalte aus
+4. Lesen Sie das Ergebnis unter **Ergebnis pro Monat**. Ihre Änderungen werden automatisch gespeichert; neben den Jahres-Tabs erscheint der Hinweis **Wird gespeichert...** / **Gespeichert**
 
-**Tipp**: Für die meisten Zeilen ist der Modus Jährlich schneller. Verwenden Sie den Modus Monatlich, wenn die Ausgaben von Monat zu Monat stark schwanken (z. B. saisonale Lizenzen, einmalige Einrichtungsgebühren, schrittweise Einführungen).
+**Tipp**: Für die meisten Zeilen genügt ein Betrag über das ganze Jahr oder einen Zeitraum. Verwenden Sie **Pro Monat**, wenn die Ausgaben von Monat zu Monat deutlich schwanken (z. B. saisonale Lizenzen, einmalige Einrichtungsgebühren, schrittweise Einführungen). Um eine neue Spalte aus einer vorhandenen zu füllen, verwenden Sie **Ausgehend von**.
 
 #### Menge und Preis
 
 Bauen Sie eine Spalte aus Zeilen auf, statt ihre Beträge einzugeben. Jede Zeile liest sich wie ein Satz: eine Menge, eine Einheit, ein Stückpreis, wie oft, wann und nach welchem Kalender. Zum Beispiel eine Projektleitung mit 5 Tagen pro Monat zu 1.200 pro Tag von Februar bis Juli und 50 Lizenzen zu 12 pro Stück pro Monat. Die Monate der Spalte sind die Summe ihrer Zeilen. Die Beträge einer Spalte haben jeweils nur eine Quelle: ihre Zeilen, eine Verteilung, einen von Hand eingegebenen Monat oder eine Kopie. Die andere Quelle bleibt als schreibgeschützte Referenz sichtbar, mit einem Link zum Wechseln.
 
-**Den Tab öffnen**:
-
-- Tab **Jährlich**: Klicken Sie auf das Rechnersymbol neben dem Zeitraum unter einer Summe. Das Feld öffnet sich auf **Menge und Preis** für diese Spalte. Bei einer Spalte, die ihren Zeilen folgt, öffnen auch der Stift und die Summe es
-- Tab **Monatlich**: Klicken Sie oben im Feld auf **Menge und Preis**. Wenn Sie eine Spalte wählen, die ihren Zeilen folgt, oder wenn die Standardspalte eine solche ist, wechselt das Feld auf **Menge und Preis**
-- Wählen Sie oben im Tab die **Spalte**. Eingefrorene Spalten können nicht gewählt werden
+**Öffnen**: Klicken Sie auf die Karte der Spalte und dann auf den Tab **Menge und Preis** des Editors. Eine aus ihren Zeilen berechnete Spalte öffnet sich auf diesem Tab. Die Zeilen einer eingefrorenen Spalte sind schreibgeschützt.
 
 **Die Zeilen**:
 
@@ -414,14 +456,13 @@ Klicken Sie unter der Tabelle auf **Zeile hinzufügen**, um eine Zeile hinzuzuf�
 - Die VZÄ der Zeilen, wenn eine Zeile Personen oder Tage zählt, zum Beispiel „VZÄ im Zeitraum 0.24 · Jahresdurchschnitt 0.12“. Siehe [VZÄ](#vza). Die Summe der Spalte steht in der Spalte selbst
 - Woher die Beträge stammen, wenn sie nicht mehr aus den Zeilen stammen: einer der Sätze im nächsten Teil
 - Hinweise, wenn sie zutreffen: „Der Zeitraum reicht über die Daten der Zeile hinaus.“, ein inzwischen deaktivierter Kalender, zum Beispiel „Mitarbeitende am Hauptsitz ist deaktiviert. Die Zeilen verwenden ihn weiterhin.“, und seit der letzten Speicherung der Zeilen geänderte Arbeitstage
-- **Diese Zeilen auf alle Spalten anwenden**: ein Schalter für dieselben Spalten wie der Schalter im Tab für die Verteilung, hier standardmäßig ausgeschaltet. Das Einschalten schreibt die Zeilen sofort in jede folgende Spalte, und der Schalter bleibt eingeschaltet: Jede spätere Speicherung schreibt die Zeilen auch in diese Spalten. Das Ausschalten allein ändert nichts
+- Um anderen Spalten dieselben Zeilen zu geben, verwenden Sie **Auch für andere Spalten verwenden…** unter dem Editor. Siehe [Budget](#budget)
 
-**Wenn sich die Beträge auf anderem Weg ändern**: Die Zeilen bleiben als Referenz bei der Spalte, und der Tab nennt, woher die Beträge jetzt stammen, gefolgt vom Link **Die Zeilen wieder verwenden**. Die Zeilen sind dann schreibgeschützt: Sie können keine Zeile hinzufügen, entfernen oder ändern, und der Tab zeigt weder einen Betrag pro Zeile noch VZÄ noch **Diese Zeilen auf alle Spalten anwenden**. Der Link speichert die Zeilen, wie sie sind, und berechnet die Spalte erneut aus ihnen, und die Zeilen sind wieder bearbeitbar. Um eine als Referenz behaltene Zeile zu ändern, klicken Sie zuerst auf **Die Zeilen wieder verwenden** und ändern Sie sie dann.
+**Wenn sich die Beträge auf anderem Weg ändern**: Die Zeilen bleiben als Referenz bei der Spalte, schreibgeschützt. Unter **Betrag** oder **Pro Monat** sagt eine Zeile, wie viele Zeilen behalten werden, zum Beispiel „4 Zeilen als Referenz behalten (48.000).“, gefolgt vom Link **Die Zeilen wieder verwenden**. Der Link speichert die Zeilen, wie sie sind, und berechnet die Spalte erneut daraus. Die Wahl des Tabs **Menge und Preis** tut dasselbe, nach einer Frage. Um eine als Referenz behaltene Zeile zu ändern, verwenden Sie die Zeilen zuerst wieder und ändern sie dann.
 
-- Ein im Tab **Monatlich** eingegebener Monat: „Die Beträge wurden von Hand eingegeben. Die Zeilen wieder verwenden.“
-- Eine Verteilung: „Die Beträge stammen aus einer Verteilung. Die Zeilen wieder verwenden.“
-- **Budgetspalten kopieren** in der Budgetadministration: „Die Beträge wurden aus Budget 2025 kopiert. Die Zeilen wieder verwenden.“ Waren die Quellbeträge nicht aus Zeilen berechnet, überträgt die Kopie die Zeilen der Quellspalte als Referenz. Eine aus ihren Zeilen berechnete Spalte bleibt berechnet, mit um den Prozentsatz erhöhten Preisen. Siehe [Eine aus Zeilen aufgebaute Spalte kopieren](budget-operations.md#eine-aus-zeilen-aufgebaute-spalte-kopieren)
-- Geänderte Arbeitstage eines Kalenders: „Seit der letzten Berechnung geänderte Arbeitstage: März: 20 Tage, jetzt 19“. An der Spalte ändert sich nichts, bis Sie auf **Die Zeilen wieder verwenden** klicken. Die Zeilen bleiben bis dahin bearbeitbar
+- Die Spalte auf **Betrag** oder **Pro Monat** umstellen, einen Monat in der Tabelle eingeben oder **Spalte leeren**
+- **Budgetspalten kopieren** in der Budgetadministration oder **Ausgehend von**: Waren die Quellbeträge nicht aus Zeilen berechnet, überträgt die Kopie die Zeilen der Quellspalte als Referenz. Eine aus ihren Zeilen berechnete Spalte bleibt berechnet, mit um den Prozentsatz erhöhten Preisen. Siehe [Eine aus Zeilen aufgebaute Spalte kopieren](budget-operations.md#eine-aus-zeilen-aufgebaute-spalte-kopieren)
+- Geänderte Arbeitstage eines Kalenders: Der Tab **Menge und Preis** zeigt zum Beispiel „Seit der letzten Berechnung geänderte Arbeitstage: März: 20 Tage, jetzt 19.“, gefolgt von **Die Zeilen wieder verwenden**. An der Spalte ändert sich nichts, bis Sie auf **Die Zeilen wieder verwenden** klicken. Die Zeilen bleiben bis dahin bearbeitbar
 - **Budgetspalte zurücksetzen** in der Budgetadministration entfernt die Zeilen zusammen mit den Beträgen. Siehe [Budgetspalte zurücksetzen](budget-operations.md#budgetspalte-zurucksetzen)
 - Eine Budgetdatei ändert die Monate einer Spalte und lässt ihre Zeilen. Siehe [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md)
 
@@ -443,7 +484,7 @@ Zum Beispiel zählt ein Berater in Vollzeit von Februar bis Oktober in jedem die
 
 ### Zuordnungen
 
-Der Tab Zuordnungen verteilt die Ausgabe eines Jahres auf Ihre Unternehmen und Abteilungen. Die Zuordnungen der OPEX-Zeilen speisen die Leistungsverrechnungsberichte und die Kosten-pro-Benutzer-KPIs.
+Der Tab Zuordnungen verteilt die Ausgabe eines Jahres auf Ihre Unternehmen und Abteilungen. Die Zuordnungen speisen die Leistungsverrechnungsberichte und die Kosten-pro-Benutzer-KPIs, für OPEX- und CAPEX-Zeilen.
 
 **Jahresauswahl**:
 
@@ -596,13 +637,13 @@ Eine OPEX-Zeile, die sich als Investition herausstellt, wird zu einer CAPEX-Zeil
 
 **Ab** legt fest, wo die Änderung beginnt:
 
-- **Das erste Jahr der Zeile** (Standard): Die Zeile selbst ändert ihren Typ. Sie behält ihre `BL`-Referenz und ihre Adresse, ihre Budgets, Zuordnungen, Verknüpfungen, Anhänge und Aufgaben. Ihr **Typ** ändert sich in der Liste. Eine Zeile, die zu CAPEX wird, verlässt die OPEX-Berichte und die Leistungsverrechnung und erscheint in den CAPEX-Berichten. Eine Zeile, die zu OPEX wird, tut das Umgekehrte
+- **Das erste Jahr der Zeile** (Standard): Die Zeile selbst ändert ihren Typ. Sie behält ihre `BL`-Referenz und ihre Adresse, ihre Budgets, Zuordnungen, Verknüpfungen, Anhänge und Aufgaben. Ihr **Typ** ändert sich in der Liste. Eine Zeile, die zu CAPEX wird, verlässt die OPEX-Berichte und erscheint in den CAPEX-Berichten, und die Leistungsverrechnung zählt sie unter CAPEX. Eine Zeile, die zu OPEX wird, tut das Umgekehrte
 - **Ein späteres Jahr**: Diese Zeile endet am 31. Dezember des Vorjahres und behält ihre früheren Budgets. Eine neue Zeile des anderen Typs, mit ihrer eigenen `BL`-Referenz, übernimmt das Budget ab diesem Jahr, mit den Kontakten und den Verknüpfungen zu Anwendungen, Assets, Verträgen, Projekten und Anfragen. Anhänge, relevante Websites und Aufgaben bleiben bei dieser Zeile. Oben im Tab **Übersicht** sind die beiden Zeilen verknüpft: **Ersetzt durch** auf dieser Zeile, **Folgt auf** auf der neuen
 
 Der Dialog fragt außerdem nach:
 
 - **Konto**: ein Konto für den neuen Typ. Gilt das Konto der Zeile nur für ihren aktuellen Typ, behält die Zeile es, wenn sie selbst ihren Typ ändert, sofern Sie kein anderes wählen; eine neue Zeile ab einem späteren Jahr erhält es nur, wenn es zum neuen Typ passt
-- **Dimensionen**: die für den neuen Typ erforderlichen Dimensionen und die Werte der Zeile, die nur für ihren aktuellen Typ gelten. Ändert die Zeile selbst ihren Typ, können Sie sie jetzt oder später festlegen. Ab einem späteren Jahr braucht die neue Zeile die erforderlichen Dimensionen, und Werte nur für den aktuellen Typ werden nicht übernommen. Die [CAPEX-Dimensionen](#capex-dimensionen) gelten nicht für OPEX-Zeilen: Eine CAPEX-Zeile, die selbst zu OPEX wird, behält deren Werte, ohne sie anzuzeigen, und zeigt sie wieder an, wenn sie später wieder zu CAPEX wird
+- **Dimensionen**: die für den neuen Typ erforderlichen Dimensionen und die Werte der Zeile, die nur für ihren aktuellen Typ gelten. Ändert die Zeile selbst ihren Typ, können Sie sie jetzt oder später festlegen. Ab einem späteren Jahr braucht die neue Zeile die erforderlichen Dimensionen, und Werte nur für den aktuellen Typ werden nicht übernommen. Eine Dimension nur für CAPEX-Zeilen gilt nicht für OPEX-Zeilen: Eine CAPEX-Zeile, die selbst zu OPEX wird, behält ihren Wert, ohne ihn anzuzeigen, und zeigt ihn wieder an, wenn sie später wieder zu CAPEX wird
 - **Grund**: optional, wird im Audit-Protokoll der Zeile gespeichert
 
 Die Änderung wird abgelehnt, wenn die Zeile in den betroffenen Jahren Beträge in einer eingefrorenen Spalte hat, ob für OPEX- oder CAPEX-Zeilen. Heben Sie zuerst das Einfrieren der Spalte auf, oder lassen Sie die Änderung in einem späteren Jahr beginnen. Ein späteres Jahr wird angeboten, wenn es nach dem ersten Budgetjahr der Zeile liegt, die Zeile in diesem oder einem späteren Jahr ein Budget hat, vor dem 1. Januar dieses Jahres beginnt und an diesem Tag noch gültig ist und noch nicht durch eine andere Zeile ersetzt wurde. Eine Änderung beginnt immer am 1. Januar.
@@ -627,7 +668,7 @@ Eine Budgetdatei ändert den Typ einer Zeile nie. Siehe [Ein Budget aus einer Ta
 
 7. **Kontakte verfolgen**: Fügen Sie Lieferantenkontakte mit Rollen (Vertrieb, Technik, Support) hinzu, damit Ihr Team weiß, wen es für jede Zeile kontaktieren soll.
 
-8. **Analysedimensionen nutzen**: Geben Sie Zeilen einen Wert in jeder Dimension (zum Beispiel Licenses in Nature, oder **Investment type** und **Priority** einer CAPEX-Zeile), um Ausgaben in Berichten zu gruppieren.
+8. **Analysedimensionen nutzen**: Geben Sie Zeilen einen Wert in jeder Dimension (zum Beispiel **Software** in **Kostenart**, oder **Zweck** und **Priorität** einer CAPEX-Zeile), um Ausgaben in Berichten zu gruppieren.
 
 9. **Unternehmenskennzahlen aktuell halten**: Zuordnungen hängen von Mitarbeiterzahl, IT-Benutzern und Umsatz der Unternehmen ab. Veraltete Kennzahlen verursachen Zuordnungsfehler.
 
@@ -649,7 +690,7 @@ Der Zugriff auf Budgetzeilen wird durch die Ressource Budget gesteuert, die für
 
 - `budget:reader`: Liste anzeigen, Zeilen öffnen, Budgets und Zuordnungen einsehen (schreibgeschützt), Anhänge herunterladen
 - `budget:member`: Zeilen erstellen und bearbeiten, ihren Typ ändern, Budgets und Zuordnungen aktualisieren, Anhänge hochladen und löschen, Beziehungen, Verknüpfungen und Kontakte verwalten
-- `budget:admin`: Alle Mitglied-Rechte plus CSV-Import und -Export, Budget-Operationen (Budgetspalten kopieren, Zuordnungen kopieren, Budgetspalte zurücksetzen) und Massenlöschung
+- `budget:admin`: Alle Mitglied-Rechte plus CSV-Import und -Export, Budget-Operationen (Budgetspalten kopieren, mit Beträgen und Zuordnungen, und Budgetspalte zurücksetzen) und Massenlöschung
 
 Das Einfrieren von Budgetspalten erfordert die Budgetadministration (`budget_ops:admin`).
 

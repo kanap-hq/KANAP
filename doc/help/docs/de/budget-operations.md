@@ -22,8 +22,7 @@ Die Startseite hat zwei Abschnitte. Jede Karte führt zu einem eigenen Werkzeug.
 | Werkzeug | Zweck |
 |----------|-------|
 | **Daten einfrieren / auftauen** | Budgetspalten sperren, um Änderungen zu verhindern |
-| **Budgetspalten kopieren** | Daten zwischen Jahren und Spalten mit Anpassungen kopieren |
-| **Zuordnungen kopieren** | Zuordnungsmethoden von einem Jahr in ein anderes kopieren |
+| **Budgetspalten kopieren** | Beträge zwischen Jahren und Spalten kopieren, mit optionalem Prozentsatz, und Zuordnungen in ein anderes Jahr |
 | **Budgetspalte zurücksetzen** | Alle Daten einer bestimmten Spalte löschen |
 | **Stammdaten einfrieren** | Die Kennzahlen der Unternehmen und Abteilungen für ein Jahr sperren. Siehe [Stammdaten einfrieren und Jahreskennzahlen kopieren](master-data-operations.md) |
 | **Jahreskennzahlen kopieren** | Die Kennzahlen der Unternehmen und Abteilungen von einem Jahr in ein anderes kopieren. Siehe [Stammdaten einfrieren und Jahreskennzahlen kopieren](master-data-operations.md) |
@@ -31,7 +30,7 @@ Die Startseite hat zwei Abschnitte. Jede Karte führt zu einem eigenen Werkzeug.
 | Karten | Wer sie sieht |
 |---|---|
 | Währungen, Budgetspalten, Standard-Zuordnungsmethode, Daten einfrieren / auftauen | Budgetadministration auf Administratorebene (`budget_ops:admin`) |
-| Budgetspalten kopieren, Zuordnungen kopieren, Budgetspalte zurücksetzen | Budget auf Administratorebene (`budget:admin`). Die Registerkarten OPEX und CAPEX öffnen sich beide mit dieser Stufe |
+| Budgetspalten kopieren, Budgetspalte zurücksetzen | Budget auf Administratorebene (`budget:admin`). Die Registerkarten **Alle**, **OPEX** und **CAPEX** öffnen sich alle mit dieser Stufe |
 | Stammdaten einfrieren, Jahreskennzahlen kopieren | Benutzer mit Zugriff auf das Budget, die Administratoren der Budgetadministration, von Unternehmen oder Abteilungen sind. Administratoren von Unternehmen und Abteilungen handeln für ihren eigenen Bereich |
 
 Die integrierte Rolle Budget-Administrator sieht alle Karten. Budget-Mitglied und Budget-Leser sehen keine, daher fehlt **Administration** in ihrem Menü.
@@ -91,61 +90,70 @@ Einfrieren und Auftauen erfordern `budget_ops:admin`. Die Karte ist für andere 
 
 ## Budgetspalten kopieren
 
-Kopieren Sie Budgetdaten von einem Jahr und einer Spalte in eine andere, mit einer optionalen prozentualen Anpassung. Dies ist das primäre Werkzeug zur Vorbereitung des nächsten Jahresbudgets aus dem aktuellen.
+Kopieren Sie die Beträge einer Spalte in ein anderes Jahr oder eine andere Spalte, mit einem optionalen Prozentsatz, und die Zuordnungen eines Jahres in ein anderes Jahr. Dies ist das wichtigste Werkzeug, um das Budget des nächsten Jahres aus dem aktuellen zu befüllen.
 
-Der Umschalter **OPEX** / **CAPEX** oben auf der Seite legt fest, auf welche Budgetzeilen sich die Kopie bezieht. OPEX ist standardmäßig ausgewählt.
+Die Registerkarten **Alle** / **OPEX** / **CAPEX** oben auf der Seite legen fest, auf welche Budgetzeilen die Kopie wirkt. **Alle**, die Voreinstellung, kopiert OPEX- und CAPEX-Zeilen zusammen.
 
-Erfordert die Administratorstufe auf Budget (`budget:admin`).
+Erfordert die Admin-Stufe für Budget (`budget:admin`).
 
 ### Wann verwenden
 
-- Vorbereitung des nächsten Jahresbudgets aus dem aktuellen Jahr
-- Erstellen einer Revision aus dem genehmigten Budget
-- Fortschreibung von Prognosen mit einem Inflationsfaktor
+- Das Budget des nächsten Jahres, Beträge und Zuordnungen, aus dem aktuellen Jahr vorbereiten
+- Eine Revision aus dem genehmigten Budget erstellen
+- Prognosen mit einem Inflationsfaktor fortschreiben
 
 ### Felder
 
 | Feld | Beschreibung |
-|------|--------------|
-| **Quelljahr** | Jahr, aus dem kopiert wird (Bereich: aktuelles Jahr minus eins bis aktuelles Jahr plus fünf) |
-| **Quellspalte** | Jede angezeigte Spalte, auch Prognose, wenn sie angezeigt wird. Beginnt mit der Standardspalte |
-| **Zieljahr** | Jahr, in das kopiert wird (gleicher Bereich) |
-| **Zielspalte** | Jede angezeigte Spalte. Beginnt mit der Standardspalte |
-| **Prozentuale Erhöhung** | Anpassung, die auf jeden kopierten Monat angewendet wird (z. B. `3` = +3 %). Bei einer aus Zeilen berechneten Spalte erhöht sie stattdessen den Stückpreis jeder Zeile. Siehe [Eine aus Zeilen aufgebaute Spalte kopieren](#eine-aus-zeilen-aufgebaute-spalte-kopieren). Standard ist 0. Dezimalwerte und negative Werte möglich. Ein Prozentsatz von -100 % oder weniger wird abgelehnt. |
-| **Vorhandene Daten überschreiben** | Umschalter. Wenn aus, werden Elemente die bereits einen Wert im Ziel haben, übersprungen. Wenn ein, werden alle Zielwerte ersetzt. |
+|-------|-------------|
+| **Quelljahr** | Jahr, aus dem kopiert wird (Bereich: aktuelles Jahr minus eins bis aktuelles Jahr plus fünf). Beginnt beim aktuellen Jahr |
+| **Zieljahr** | Jahr, in das kopiert wird (gleicher Bereich). Beginnt beim nächsten Jahr |
+| **Zu kopieren** | **Beträge**, **Zuordnungen** oder beides. **Zuordnungen** wird angeboten, wenn sich die beiden Jahre unterscheiden, und ist anfangs angekreuzt. Bewegen Sie den Mauszeiger über jedes Kontrollkästchen, um zu lesen, was es kopiert |
+| **Quellspalte** | Mit **Beträge**: jede angezeigte Spalte, auch Prognose, wenn sie angezeigt wird. Beginnt bei der Standardspalte |
+| **Zielspalte** | Mit **Beträge**: jede angezeigte Spalte. Beginnt bei der Standardspalte |
+| **Prozentuale Erhöhung** | Mit **Beträge**: Anpassung, die auf jeden kopierten Monat angewendet wird (z. B. `3` = +3 %). Bei einer aus ihren Zeilen berechneten Spalte erhöht sie stattdessen den Stückpreis jeder Zeile. Siehe [Eine aus Zeilen aufgebaute Spalte kopieren](#eine-aus-zeilen-aufgebaute-spalte-kopieren). Standardwert 0. Dezimalzahlen und negative Werte sind erlaubt. Ein Prozentsatz von -100 % oder weniger wird abgelehnt |
+| **Vorhandene Daten überschreiben** | Ein Schalter für beide Teile. Aus: Eine Zielspalte, die bereits Beträge enthält, behält sie, und eine von Hand erfasste Zuordnung im Zieljahr bleibt erhalten. Ein: Beides wird ersetzt |
 
-Die Seite öffnet mit der Standardspalte des aktuellen Jahres als Quelle und der Standardspalte des nächsten Jahres als Ziel. Ausgeblendete Spalten werden nicht angeboten.
+Ausgeblendete Spalten werden nicht angeboten. Ist unter **Zu kopieren** nichts angekreuzt, zeigt die Seite „Wählen Sie, was kopiert wird: die Beträge, die Zuordnungen oder beides.“
 
-### Zwei-Schritt-Prozess: Testlauf, dann Kopieren
+### Zwei Schritte: Vorschau, dann Kopieren
 
-1. Klicken Sie auf **Testlauf**, um eine Vorschau zu erstellen, ohne Daten zu ändern
-2. Überprüfen Sie das Vorschau-Grid, das zeigt:
-   - Name der **Zeile** (mit **Übersprungen** markierte Budgetzeilen behalten ihren aktuellen Wert; mit **Anteilig** markierte Budgetzeilen beginnen oder enden im Zieljahr und erhalten nur die Monate innerhalb ihrer Gültigkeit)
-   - **Quellwert** (aus dem Quelljahr/der Quellspalte)
-   - **Aktueller Zielwert**
-   - **Vorschauwert** (was das Ziel nach dem Kopieren wird)
-3. Wenn Sie zufrieden sind, klicken Sie auf **Daten kopieren** zum Anwenden
+1. Klicken Sie auf **Vorschau**, um zu sehen, was die Kopie mit jeder Zeile macht, ohne Daten zu ändern
+2. Prüfen Sie die Tabelle, eine Zeile pro Budgetzeile:
+   - **Zeile**: der Name der Zeile, ein Link, der sie in einem neuen Tab öffnet, damit die Vorschau stehen bleibt. Mit **Anteilig** markierte Zeilen beginnen oder enden im Zieljahr und erhalten nur die Monate ihrer Gültigkeit. Mit **Kalender** markierte Zeilen wechseln den Kalender (siehe unten)
+   - **Zeilentyp**: **OPEX** oder **CAPEX**, in der Registerkarte **Alle**
+   - Für die Beträge: die Quellspalte, die aktuelle Zielspalte, die Zielspalte nach der Kopie und der Status der Beträge
+   - Für die Zuordnungen: die Quellzuordnung, die aktuelle Zielzuordnung, die Zuordnung nach der Kopie und der Status der Zuordnungen
+3. Wenn Sie zufrieden sind, klicken Sie auf **Kopieren**, um sie anzuwenden
 
-Die Schaltfläche **Daten kopieren** ist erst nach einem erfolgreichen Testlauf aktiviert.
+**Kopieren** ist erst nach einer Vorschau aktiv. Jede Änderung eines Feldes verwirft die Vorschau: Starten Sie sie erneut. Nach der Kopie bleibt die Tabelle unter dem Titel **Ergebnis** sichtbar, mit dem, was jede Zeile getan hat.
 
-### Zusammenfassungsstatistiken
+Jeder Teil hat in jeder Zeile seinen eigenen Status:
 
-Unterhalb des Grids zeigt eine Statistikleiste:
+| Status | Bedeutung |
+|---|---|
+| **Zu kopieren** / **Kopiert** | Der Teil wird kopiert oder wurde kopiert |
+| **Ersetzt Mitarbeiterzahl** / **Hat Mitarbeiterzahl ersetzt** | Die Zuordnung des Zieljahres folgt einer anderen Methode, die die kopierte Zuordnung ersetzt |
+| **In 2027 nicht gültig** | Die Zeile ist im Zieljahr nicht gültig. Sie wird ausgelassen |
+| **Übersprungen: nichts in 2026** | Die Zeile hat im Quelljahr kein Budget |
+| **Übersprungen: die Quellspalte ist leer** | Die Quellspalte hat keinen Betrag |
+| **Übersprungen: das Ziel enthält Beträge** | Die Zielspalte enthält bereits Beträge, und **Vorhandene Daten überschreiben** ist aus |
+| **Übersprungen: keine Zuordnung in 2026 erfasst** | Die Zeile hat im Quelljahr keine Zuordnung zum Kopieren |
+| **Übersprungen: 2027 hat eine von Hand erfasste Zuordnung** | Das Zieljahr hat eine von Hand erfasste Zuordnung, und **Vorhandene Daten überschreiben** ist aus |
+| **Fehler** | Die Zuordnungsregeln der Zeile lehnen die Kopie ab, mit dem Grund. **Kopieren** bleibt deaktiviert, solange eine Zeile einen Fehler hat |
 
-- **Gesamtelemente** im Datensatz
-- **Zu verarbeitende Elemente** (nicht übersprungene)
-- **Quellsumme** (Summe der Quellwerte)
-- **Aktuelle Zielsumme**
-- **Vorschausumme** (nach Testlauf angezeigt)
+### Zusammenfassung
 
-### Überschreibungsverhalten
+Über der Tabelle fasst ein Banner die Vorschau zusammen, zum Beispiel „136 Zeilen in der Vorschau. Beträge: 120 zu kopieren, 16 übersprungen. Zuordnungen: 130 zu kopieren, 6 übersprungen.“ Nach der Kopie zeigt es „Kopie abgeschlossen.“ mit denselben Zahlen.
 
-| Überschreiben | Ziel hat Daten | Ergebnis |
-|---------------|----------------|----------|
-| Aus | Ja | Übersprungen |
-| Aus | Nein (Null) | Kopiert |
-| Ein | Ja | Ersetzt |
-| Ein | Nein (Null) | Kopiert |
+Warnungen erscheinen, wenn sie zutreffen:
+
+- Zeilen, deren Zielspalte bereits einen Betrag hat und die ohne **Vorhandene Daten überschreiben** übersprungen werden
+- Zeilen, die ohne **Vorhandene Daten überschreiben** eine von Hand erfasste Zuordnung im Zieljahr behalten
+- Zeilen, deren Zuordnungsmethode sich im Zieljahr ändert. Ohne **Vorhandene Daten überschreiben** behält die Kopie nur die von Hand erfassten Zuordnungen: Eine Zeile, die einer Methode ohne von Hand erfasste Aufteilung folgt, übernimmt die Methode des Quelljahres
+- Zeilen auf der Standardzuordnung, wenn sich der Standard des Zieljahres von dem des Quelljahres unterscheidet. Kopierte Zeilen folgen weiterhin dem Standard ihres eigenen Jahres. Konfigurieren Sie ihn unter [Standard-Zuordnungsmethode](#standard-zuordnungsmethode), wenn die Basis gleich bleiben soll
+
+Unter der Tabelle zeigen die Summen die Anzahl der Zeilen, die zu kopierenden Beträge, das Quelltotal, das aktuelle Zieltotal und das Total nach der Kopie sowie die zu kopierenden Zuordnungen.
 
 ### Wie Beträge kopiert werden
 
@@ -159,7 +167,7 @@ Unterhalb des Grids zeigt eine Statistikleiste:
 - Eine Quelle ohne Zeitraum ergibt einen Zeitraum über das ganze Jahr
 - Im Budget-Tab zeigt die Zielspalte „Kopiert aus Budget 2026 +2 %“
 - Das Kopieren einer Spalte auf sich selbst (gleiches Jahr und gleiche Spalte) wird abgelehnt
-- Die Kopie gilt ganz oder gar nicht: Schlägt eine Budgetzeile fehl, wird nichts gespeichert
+- Die Kopie gilt ganz oder gar nicht: Schlägt eine Budgetzeile fehl, wird nichts gespeichert, weder Beträge noch Zuordnungen
 
 ### Eine aus Zeilen aufgebaute Spalte kopieren
 
@@ -178,8 +186,8 @@ Eine Spalte kann aus Zeilen aufgebaut sein, jede eine Menge mal ein Stückpreis.
 - Die prozentuale Erhöhung gilt für die Monate, wie bei jeder anderen Spalte. Die Stückpreise der Zeilen ändern sich nicht
 - Die Zeilen wandern ins Zieljahr, mit Beschreibung, Menge, Einheit, Häufigkeit und Kalender, und ihre Zeiträume wandern wie der Zeitraum der Spalte. Eine Zeile, die wegen der Gültigkeit der Budgetzeile nur für einen Teil des Zieljahres bleibt, wird auf diesen Zeitraum gekürzt, und eine Zeile ohne verbleibenden Monat entfällt
 - Die VZÄ werden aus den kopierten Zeilen mit den Arbeitstagekalendern des Zieljahres neu berechnet
-- Im Budget-Tab zeigt die Zielspalte „Kopiert aus Budget 2026“, und ihr Tab **Menge und Preis** meldet „Die Beträge wurden aus Budget 2026 kopiert. Die Zeilen wieder verwenden.“
-- Die kopierten Zeilen sind eine schreibgeschützte Referenz. Klicken Sie im Tab **Menge und Preis** auf **Die Zeilen wieder verwenden**, um die Spalte mit ihren aktuellen Preisen aus den Zeilen zu berechnen. Um das Zieljahr zu eigenen Preisen zu planen, ändern Sie danach die Stückpreise: Jede Änderung berechnet die Spalte erneut
+- Im Budget-Tab zeigt die Zielspalte „Kopiert aus Budget 2026“, und ihr Editor zeigt zum Beispiel „4 Zeilen als Referenz behalten (48.000). Die Zeilen wieder verwenden.“
+- Die kopierten Zeilen sind eine schreibgeschützte Referenz. Klicken Sie auf **Die Zeilen wieder verwenden**, um die Spalte mit ihren aktuellen Preisen aus den Zeilen zu berechnen. Um das Zieljahr zu eigenen Preisen zu planen, ändern Sie danach die Stückpreise: Jede Änderung berechnet die Spalte erneut
 
 Eine Kopie aus einer Spalte ohne Zeilen lässt das Ziel ohne Zeilen, und seine VZÄ bleiben leer.
 
@@ -187,57 +195,21 @@ Eine Kopie aus einer Spalte ohne Zeilen lässt das Ziel ohne Zeilen, und seine V
 
 Eine Zeile mit Preis pro Tag braucht einen Kalender, der das Zieljahr enthält. Hat der Kalender einer Zeile für dieses Jahr keine Arbeitstage, verwendet die Kopie stattdessen den Standardkalender des Landes des zahlenden Unternehmens der Budgetzeile. Das ist der Kalender, der mit dem Unternehmen angelegt wurde. Das gilt für eine Spalte, die aus Zeilen aufgebaut ist, und für eine Spalte, deren Zeilen nur eine Referenz sind. Gibt es keinen, wird die Budgetzeile auf die übliche Weise kopiert: Monate mal Prozentsatz. Die Zeilen bleiben unverändert als Referenz, und die VZÄ bleiben die VZÄ der Quellspalte.
 
-Der Testlauf kennzeichnet diese Budgetzeilen mit einem Hinweis **Kalender**, mit einem Tooltip je Zeile, und zeigt eine Warnung über der Vorschau. Die Vorschau meldet auch eine Budgetzeile, für die es keinen Ersatzkalender gibt. Um trotzdem zu kopieren, haken Sie **Trotzdem mit diesen Kalenderänderungen kopieren** an. Besser ist es, die Tage des Jahres auf der Seite **Arbeitstagekalender** hinzuzufügen und den Testlauf erneut auszuführen.
+Die Vorschau kennzeichnet diese Budgetzeilen mit einem Hinweis **Kalender**, mit einem Tooltip je Zeile, und zeigt eine Warnung über der Tabelle. Die Vorschau meldet auch eine Budgetzeile, für die es keinen Ersatzkalender gibt. Um trotzdem zu kopieren, haken Sie **Trotzdem mit diesen Kalenderänderungen kopieren** an. Besser ist es, die Tage des Jahres auf der Seite **Arbeitstagekalender** hinzuzufügen und die Vorschau erneut zu starten.
 
-Ein deaktivierter Kalender wird weiterhin verwendet. Der Testlauf vermerkt ihn und verlangt keine Bestätigung.
+Ein deaktivierter Kalender wird weiterhin verwendet. Die Vorschau vermerkt ihn und verlangt keine Bestätigung.
+
+### Zuordnungen kopieren
+
+**Zuordnungen** kopiert die Zuordnungsmethode jeder Zeile aus dem Quelljahr in das Zieljahr, mit einer von Hand erfassten Aufteilung (die gewählten Unternehmen oder Abteilungen, die eingegebenen Prozentsätze). Nur Zeilen, die im Zieljahr gültig sind, werden kopiert, nach derselben Regel wie die Beträge.
+
+- Eine Zeile auf der Standardzuordnung bleibt auf dem Standard: Im Zieljahr folgt sie dem Standard dieses Jahres
+- Ohne **Vorhandene Daten überschreiben** behält eine Zeile die von Hand erfasste Zuordnung im Zieljahr. Eine Zeile, deren Zieljahr einer Methode ohne von Hand erfasste Aufteilung folgt, erhält die Quellzuordnung, und die Vorschau nennt die Methode, die sie ersetzt, zum Beispiel „Ersetzt Mitarbeiterzahl“
+- Mit **Vorhandene Daten überschreiben** ersetzt jede kopierte Zuordnung die Zuordnung im Ziel
 
 ### Schutz eingefrorener Spalten
 
-Wenn die Zielspalte eingefroren ist, sind sowohl **Testlauf** als auch **Daten kopieren** deaktiviert. Ein Fehlerbanner weist Sie an, zuerst die Sperrung aufzuheben.
-
----
-
-## Zuordnungen kopieren
-
-Kopieren Sie Zuordnungsmethoden und Prozentsätze von einem Jahr in ein anderes. Dies erspart Ihnen die Neueingabe der Leistungsverrechnungs-Konfigurationen beim Einrichten eines neuen Geschäftsjahres.
-
-Der Umschalter **OPEX** / **CAPEX** oben legt fest, welche Budgetzeilen kopiert werden. Nur Budgetzeilen, die im Zieljahr gültig sind, werden kopiert, nach derselben Regel wie bei **Budgetspalten kopieren**. Die Kopie erfolgt ganz oder gar nicht: Schlägt eine Budgetzeile fehl, wird nichts kopiert.
-
-Erfordert die Administratorstufe auf Budget (`budget:admin`).
-
-### Wann verwenden
-
-- Vorbereitung des nächsten Jahresbudgets mit denselben Kostenzuordnungen
-- Fortschreibung der Leistungsverrechnungs-Konfigurationen
-- Einrichtung eines neuen Geschäftsjahres
-
-### Felder
-
-| Feld | Beschreibung |
-|------|--------------|
-| **Quelljahr** | Jahr, aus dem die Zuordnungen kopiert werden (Bereich: aktuelles Jahr minus eins bis aktuelles Jahr plus fünf) |
-| **Zieljahr** | Jahr, in das die Zuordnungen kopiert werden (gleicher Bereich). Muss sich vom Quelljahr unterscheiden. |
-| **Vorhandene Daten überschreiben** | Umschalter. Wenn aus, werden Elemente übersprungen, die im Ziel bereits Zuordnungen haben. |
-
-### Zwei-Schritt-Prozess: Testlauf, dann Kopieren
-
-1. Klicken Sie auf **Testlauf**, um eine Vorschau zu sehen
-2. Das Vorschau-Grid zeigt jede OPEX- oder CAPEX-Zeile mit:
-   - Name der **Zeile**
-   - **Aktion**: was geschehen wird (Wird kopiert, Übersprungen – kein Quelljahr, Übersprungen – keine Zuordnungen in der Quelle, Übersprungen – Ziel enthält Daten, Fehler)
-   - **Quell**methode und -bezeichnung
-   - **Ziel** aktuelle Methode und Bezeichnung
-   - **Ergebnis nach dem Kopieren**: wie das Ziel aussehen wird
-3. Klicken Sie auf **Daten kopieren** zum Anwenden
-
-### Validierung
-
-- Quell- und Zieljahr müssen unterschiedlich sein. Bei Übereinstimmung erscheint ein Warnbanner und beide Schaltflächen werden deaktiviert.
-- Jede Filteränderung löscht die Vorschau und erfordert einen neuen Testlauf.
-
-### Zusammenfassung
-
-Nach einem Testlauf zeigt ein Banner die Anzahl der kopierbereiten, übersprungenen und fehlerhaften Elemente. Wenn Elemente übersprungen wurden, weil das Ziel bereits Zuordnungen hat, erscheint eine separate Warnung mit dem Vorschlag, die Überschreibung zu aktivieren.
+Umfasst die Kopie die Beträge und ist die Zielspalte eingefroren, sind **Vorschau** und **Kopieren** deaktiviert, und ein Fehlerbanner weist Sie an, zuerst aufzutauen. In der Registerkarte **Alle** nennt das Banner den Typ, wenn die Spalte nur für einen Typ eingefroren ist, zum Beispiel „Die Spalte Budget für 2027 ist für CAPEX eingefroren. Tauen Sie sie auf, oder kopieren Sie nur den anderen Typ.“ Die Zuordnungen allein hängen nicht vom Einfrieren ab.
 
 ---
 
@@ -245,7 +217,7 @@ Nach einem Testlauf zeigt ein Banner die Anzahl der kopierbereiten, übersprunge
 
 Löschen Sie alle Daten einer bestimmten Budgetspalte für ein gegebenes Jahr. Dies ist eine destruktive Operation: Verwenden Sie sie, wenn Sie neu beginnen müssen.
 
-Der Umschalter **OPEX** / **CAPEX** oben auf der Seite legt fest, welche Budgetzeilen geleert werden. Das Zurücksetzen setzt die zwölf Monate der Spalte auf null und entfernt ihren Zeitraum sowie ihre Zeilen, wenn die Spalte aus Menge und Preis aufgebaut wurde. Im Budget-Tab erhält die Spalte danach einen neuen Vorschlag aus den Daten der Budgetzeile. Das Zurücksetzen erfasst alle Budgetzeilen, auch solche, deren Gültigkeit bereits abgelaufen ist. Es gilt ganz oder gar nicht: Schlägt eine Budgetzeile fehl, wird nichts geleert.
+Die Registerkarten **Alle** / **OPEX** / **CAPEX** oben auf der Seite legen fest, welche Budgetzeilen geleert werden. **Alle**, die Voreinstellung, leert OPEX- und CAPEX-Zeilen zusammen. Das Zurücksetzen setzt die zwölf Monate der Spalte auf null und entfernt ihren Zeitraum sowie ihre Zeilen, wenn die Spalte aus Menge und Preis aufgebaut wurde. Im Budget-Tab erhält die Spalte danach einen neuen Vorschlag aus den Daten der Budgetzeile. Das Zurücksetzen erfasst alle Budgetzeilen, auch solche, deren Gültigkeit bereits abgelaufen ist. Es gilt ganz oder gar nicht: Schlägt eine Budgetzeile fehl, wird nichts geleert.
 
 Erfordert die Administratorstufe auf Budget (`budget:admin`).
 
@@ -266,7 +238,7 @@ Eine Spalte, deren Budgetzeilen keinen Betrag enthalten, kann trotzdem zurückge
 
 ### Vorschau
 
-Bevor Sie eine Spalte wählen, ersetzt eine einzige Zeile das Grid: „Wählen Sie eine Spalte, um ihre Beträge zu sehen.“ Sobald Sie eine Spalte gewählt haben, zeigt ein Grid jede OPEX- oder CAPEX-Zeile und ihren aktuellen Wert in dieser Spalte. Beträge, die geleert werden, erscheinen halbfett; leere Werte sind abgeschwächt. Unterhalb des Grids erscheinen drei Statistiken:
+Bevor Sie eine Spalte wählen, ersetzt eine einzige Zeile das Grid: „Wählen Sie eine Spalte, um ihre Beträge zu sehen.“ Sobald Sie eine Spalte gewählt haben, zeigt ein Grid jede Zeile des gewählten Typs und ihren aktuellen Wert in dieser Spalte. Der Name der Zeile öffnet sie in einem neuen Tab, und in der Registerkarte **Alle** nennt eine Spalte **Zeilentyp** **OPEX** oder **CAPEX**. Beträge, die geleert werden, erscheinen halbfett; leere Werte sind abgeschwächt. Unterhalb des Grids erscheinen drei Statistiken:
 
 - **Gesamtelemente**
 - **Zeilen mit einer Summe ungleich null**
@@ -287,7 +259,7 @@ Sie müssen im Dialog auf **Spalte leeren** klicken, um fortzufahren, oder **Abb
 
 - Die Schaltfläche **Spalte leeren** bleibt verfügbar, wenn keine Budgetzeile einen Betrag enthält, damit die Verteilungszeiträume trotzdem entfernt werden können
 - Keine Spalte ist vorausgewählt, Sie wählen die zu leerende Spalte also immer selbst
-- Eingefrorene Spalten können nicht zurückgesetzt werden. Tauen Sie sie zuerst auf
+- Eingefrorene Spalten können nicht zurückgesetzt werden. Tauen Sie sie zuerst auf. In der Registerkarte **Alle** nennt die Meldung den Typ, wenn die Spalte nur für einen Typ eingefroren ist, zum Beispiel „Die Spalte Budget für 2026 ist für CAPEX eingefroren. Tauen Sie sie auf, bevor Sie Daten löschen, oder leeren Sie nur den anderen Typ.“
 - Der Bestätigungsdialog erfordert eine explizite Bestätigung
 
 ---
@@ -367,18 +339,18 @@ Eine Zeile pro Spalte, immer in derselben Reihenfolge, von Spalte 1 bis Spalte 5
 | **Name** | Der Name, den alle in Listen, im Budget-Tab, in Berichten, in der Übersicht und in der Budget-Administration sehen. Lassen Sie ihn leer, um den Standardnamen zu verwenden, der als Platzhalter erscheint. Höchstens 40 Zeichen, ohne Steuerzeichen oder unsichtbare Zeichen. Jeder Name muss sich von den Namen der anderen Spalten unterscheiden, auch vom Standardnamen einer Spalte, die Sie nicht umbenannt haben, unabhängig von der Groß- und Kleinschreibung |
 | **In Dateien** | Die Zeile unter jedem Namen. Sie nennt den technischen Namen der Spalte in der Budgetdatei und ihren Importen, zum Beispiel `budget` für Spalte 1. Sie ändert sich nie, wenn Sie eine Spalte umbenennen. Siehe [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md) |
 | **Angezeigt** | Ob die Spalte auf dem Bildschirm erscheint. Mindestens eine Spalte muss angezeigt bleiben |
-| **Folgt Verteilung und Zeilen** | Ob die Spalte übernimmt, was im Budget-Tab auf alle Spalten angewendet wird: Verteilung und Zeitraum eines verteilten Betrags (**Die Verteilung auf alle Spalten anwenden**) sowie die Zeilen mit Menge und Preis (**Diese Zeilen auf alle Spalten anwenden**). Eine Spalte, die nicht folgt, behält ihre eigenen: Wenn Sie sie verteilen oder ihre Zeilen bearbeiten, ändert sie sich allein |
+| **Folgt Verteilung und Zeilen** | Ob die Spalte unter **Auch für andere Spalten verwenden…** im Budget-Tab anfangs angekreuzt ist. Dieser Link gibt anderen Spalten den Zeitraum und die Verteilung eines Betrags oder die Zeilen mit Menge und Preis. Sie können dort jede Spalte weiterhin an- oder abwählen |
 | **Standard** | Die Spalte, die Berichte vorauswählen und nach der die Listen und die Übersicht sortiert werden. Ihr Einfrieren schreibt die Wechselkurse des Jahres fest. Die Standardspalte muss angezeigt werden |
 
 Die Überschriften **Folgt Verteilung und Zeilen** und **Standard** tragen ein Infosymbol. Fahren Sie mit der Maus darüber oder setzen Sie den Tastaturfokus darauf, um dieselbe Erklärung auf der Seite zu lesen.
 
-Standardmäßig sind Budget, Revision, Ist-Werte und Erwarteter Endwert angezeigt und Prognose ist ausgeblendet. Jede Spalte folgt den Schaltern des Budget-Tabs, und Budget ist die Standardspalte.
+Standardmäßig sind Budget, Revision, Ist-Werte und Erwarteter Endwert angezeigt und Prognose ist ausgeblendet. Jede Spalte folgt Verteilung und Zeilen, und Budget ist die Standardspalte.
 
 ### Was die Einstellungen ändern
 
 - **Ausgeblendete Spalten** verschwinden aus den Listen, der Spaltenauswahl, dem Budget-Tab, den Auswahlfeldern der Berichte, den Seiten zum Kopieren und Zurücksetzen und der Übersicht. Sie behalten ihre Beträge: Das Ausblenden einer Spalte löscht nie Daten, und wenn Sie sie wieder anzeigen, sind die Beträge wieder da. Ausgeblendete Spalten nehmen weiterhin Importe über die Budgetdatei an, und Einfrierungen gelten weiterhin für sie. Die Seite zum Einfrieren listet ausgeblendete Spalten ebenfalls auf, mit **Ausgeblendet** gekennzeichnet, sodass Sie sie wie die anderen einfrieren können
-- **Die Standardspalte** ist in jedem Bericht vorausgewählt. Nach ihr werden die Liste der Budgetzeilen und ihre Navigation mit Zurück und Weiter sortiert. Die Kacheln **Top-Zeilen**, **Stärkste Zuwächse**, **Mein Budget** und **Nach Kostenstelle** der Übersicht verwenden sie. Die Liste zeigt sie für das aktuelle Jahr, neben der letzten angezeigten Spalte. Sie ist auch der Referenzbetrag des Zuordnungen-Tabs und die Spalte, mit der sich das Verteilungsfeld öffnet. Ihr Einfrieren für ein Jahr schreibt die Wechselkurse dieses Jahres fest (siehe [Das Einfrieren der Standardspalte schreibt die Wechselkurse fest](#das-einfrieren-der-standardspalte-schreibt-die-wechselkurse-fest))
-- **Folgt Verteilung und Zeilen** legt fest, welche Spalten sich gemeinsam ändern, wenn eine Verteilung auf alle Spalten angewendet wird, und welche Spalten die Zeilen übernehmen, wenn **Diese Zeilen auf alle Spalten anwenden** eingeschaltet ist. Eingefrorene Spalten ändern sich nie, unabhängig von dieser Einstellung
+- **Die Standardspalte** ist in jedem Bericht vorausgewählt. Nach ihr werden die Liste der Budgetzeilen und ihre Navigation mit Zurück und Weiter sortiert. Die Kacheln **Top-Zeilen**, **Stärkste Zuwächse**, **Mein Budget** und **Nach Kostenstelle** der Übersicht verwenden sie. Die Liste zeigt sie für das aktuelle Jahr, neben der letzten angezeigten Spalte. Sie ist auch der Referenzbetrag des Zuordnungen-Tabs und die Ausgangsspalte der Zeile **Abweichung zu** im Budget-Tab. Ihr Einfrieren für ein Jahr schreibt die Wechselkurse dieses Jahres fest (siehe [Das Einfrieren der Standardspalte schreibt die Wechselkurse fest](#das-einfrieren-der-standardspalte-schreibt-die-wechselkurse-fest))
+- **Folgt Verteilung und Zeilen** legt fest, welche Spalten anfangs angekreuzt sind, wenn Sie **Auch für andere Spalten verwenden…** im Budget-Tab nutzen. Eingefrorene Spalten werden nie angeboten, unabhängig von dieser Einstellung
 
 ### Speichern
 
@@ -399,8 +371,7 @@ Hier ist eine typische Abfolge mit diesen Werkzeugen, mit den Standardnamen der 
 ### 1. Ende des Jahres N
 
 1. Ist-Werte des Jahres N einfrieren (historische Daten schützen)
-2. N Budget nach N+1 Budget kopieren (mit prozentualer Erhöhung für Inflation)
-3. N Zuordnungen nach N+1 kopieren
+2. N Budget nach N+1 Budget kopieren, mit den Zuordnungen (ein Lauf von **Budgetspalten kopieren**, mit prozentualer Erhöhung für Inflation)
 
 ### 2. Während der Budgetplanung (N+1)
 
@@ -421,7 +392,7 @@ Hier ist eine typische Abfolge mit diesen Werkzeugen, mit den Standardnamen der 
 
 ## Tipps
 
-- **Immer zuerst einen Testlauf durchführen**: Sowohl Budgetspalten kopieren als auch Zuordnungen kopieren unterstützen einen Testlauf. Verwenden Sie ihn jedes Mal, um das Ergebnis vor dem Festschreiben zu überprüfen.
+- **Immer zuerst die Vorschau ansehen**: **Budgetspalten kopieren** zeigt vor dem Kopieren, was es mit jeder Zeile macht. Prüfen Sie sie jedes Mal vor dem Festschreiben.
 - **Nach Genehmigung einfrieren**: Das Sperren von Spalten nach der Genehmigung bewahrt Ihren Audit-Trail und verhindert versehentliche Bearbeitungen.
 - **Prozentuale Anpassungen verwenden**: Beim Kopieren zwischen Jahren wenden Sie einen Inflations- oder Wachstumsfaktor an, damit Sie nicht jede Zeile manuell anpassen müssen.
 - **Einfrierstatus vor Massenoperationen prüfen**: Eingefrorene Spalten blockieren Kopier- und Zurücksetzungsoperationen. Wenn eine Schaltfläche ausgegraut ist, prüfen Sie zuerst die Seite zum Einfrieren.

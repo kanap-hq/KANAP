@@ -4,25 +4,25 @@ Analysedimensionen klassifizieren Ihr IT-Budget für das Reporting, außerhalb I
 
 ## Dimensionen und Werte
 
-Eine **Dimension** ist eine Art, Budgetzeilen zu klassifizieren, zum Beispiel **Nature** oder **Program**. Ihre **Werte** sind die Auswahlmöglichkeiten, die sie bietet, zum Beispiel **Licenses**, **Cloud** und **Services** für Nature.
+Eine **Dimension** ist eine Art, Budgetzeilen zu klassifizieren, zum Beispiel **Kostenart** oder **IT-Bereich**. Ihre **Werte** sind die Auswahlmöglichkeiten, die sie bietet, zum Beispiel **Hardware**, **Software** und **Externe Dienstleistungen** für Kostenart.
 
 - Jede Dimension hat ihre eigene Werteliste.
-- Jede OPEX- und CAPEX-Zeile kann einen Wert pro Dimension tragen. Eine Zeile kann gleichzeitig **Licenses** in Nature und **Workplace** in Program sein.
+- Jede OPEX- und CAPEX-Zeile kann einen Wert pro Dimension tragen. Eine Zeile kann gleichzeitig **Software** in Kostenart und **Anwendung** in IT-Bereich sein.
 - Eine Zeile kann in einer Dimension auch keinen Wert haben. Berichte zeigen diese Zeilen als „Nicht zugeordnet“.
 - Eine als **Erforderlich** markierte Dimension verlangt einen Wert auf jeder neuen Zeile. Siehe [Erforderliche Dimensionen](#erforderliche-dimensionen).
 
 Zum Beispiel:
 
 ```
-Nature          Program
-  Licenses        Workplace
-  Cloud           ERP
-  Services        Security
+Kostenart                   IT-Bereich
+  Hardware                    Rechenleistung
+  Software                    Anwendung
+  Externe Dienstleistungen    Arbeitsplatz
 ```
 
 ### Die Standarddimension
 
-Jeder Arbeitsbereich hat eine Standarddimension. Solange Sie ihr keinen Namen geben, erscheint sie als **Analysedimension**, in der Sprache jeder Person. Hatte Ihr Arbeitsbereich bereits Analysewerte, gehören sie zu dieser Dimension, und jede Zeile behält ihren Wert.
+Jeder Arbeitsbereich hat eine Standarddimension. In einem neuen Arbeitsbereich ist es die **Kostenart**. Ohne Namen erscheint sie als **Analysedimension**, in der Sprache jeder Person. Hatte Ihr Arbeitsbereich bereits Analysewerte, gehören sie zu dieser Dimension, und jede Zeile behält ihren Wert.
 
 Die Standarddimension hat eine besondere Rolle:
 
@@ -32,22 +32,34 @@ Die Standarddimension hat eine besondere Rolle:
 - Sie bleibt die Standarddimension, wenn Sie sie umbenennen, ihren Code ändern oder sie in der Reihenfolge der Dimensionen verschieben.
 - Ihre Bezeichnung ist reserviert: Keine andere Dimension kann „Analysedimension“ heißen, und das gilt für jede Sprache der App.
 
-### CAPEX-Dimensionen
+### Empfohlene Dimensionen
 
-Jeder Arbeitsbereich hat außerdem drei Dimensionen, die CAPEX-Zeilen klassifizieren. Sie sind auf **Nur CAPEX** gesetzt, erforderlich und aktiviert:
+Ein neuer Arbeitsbereich beginnt mit vier empfohlenen Dimensionen und ihren Werten, in der Sprache des Arbeitsbereichs. Sie sind aktiviert, gelten für OPEX- und CAPEX-Zeilen, und keine ist erforderlich:
 
-| Dimension | Code | Werte, in ihrer Reihenfolge |
+| Dimension | Code | Werte, in Reihenfolge |
 |---|---|---|
-| **PP&E type** | `ppe_type` | Hardware, Software |
-| **Investment type** | `investment_type` | Replacement, Capacity, Productivity, Security, Conformity, Business growth, Other |
-| **Priority** | `priority` | Mandatory, High, Medium, Low |
+| **Kostenart** | `default` | Hardware, Software, Internes Personal, Externes Personal, Externe Dienstleistungen, Gebäude und Energie, Telekommunikation, Sonstiges |
+| **IT-Bereich** | `it_tower` | Rechenzentrum, Rechenleistung, Speicher, Netzwerk, Plattform, Druck, Arbeitsplatz, Anwendung, Betrieb und Support, Sicherheit und Compliance, IT-Management |
+| **Zweck** | `purpose` | Ersatz, Kapazität, Produktivität, Sicherheit, Compliance, Wachstum, Sonstiges |
+| **Priorität** | `priority` | Zwingend, Hoch, Mittel, Niedrig |
 
-- Ihre Namen und Werte sind auf Englisch. Sie stehen nach den Dimensionen, die der Arbeitsbereich bereits hatte.
-- Trägt eine andere Dimension bereits einen dieser Namen, erhält die CAPEX-Dimension den Namen mit dem Zusatz „(CAPEX)“, zum Beispiel **Priority (CAPEX)**.
-- Hatte der Arbeitsbereich bereits eine Dimension mit einem dieser Codes, bleibt diese Dimension unverändert und erhält nur die Werte, die ihr fehlten.
-- Eine CAPEX-Zeile, die vor diesen Dimensionen angelegt wurde, trägt den Wert ihres früheren Anlagentyps, ihrer Investitionsart und ihrer Priorität.
-- Sie funktionieren wie jede andere Dimension. Sie können sie und ihre Werte umbenennen, Werte hinzufügen, die Reihenfolge ändern, ihre Einstellungen ändern, sie deaktivieren oder löschen.
-- Der Code benennt die Spalte der Dimension in der Budgetdatei: `analytics:ppe_type`, `analytics:investment_type` und `analytics:priority`. Wenn Sie einen Code ändern, trägt eine vor der Änderung exportierte Datei noch den alten Spaltennamen und wird mit „Unknown dimension“ abgelehnt. Exportieren Sie eine neue Datei. Siehe [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md).
+- Die Kostenart ist die Standarddimension. Kostenarten und IT-Bereiche folgen dem Modell TBM (Technology Business Management).
+- Jede Dimension und jeder Wert hat eine Beschreibung, damit Ihr Team Zeilen einheitlich klassifiziert.
+- Die Sprache ist die des Arbeitsbereichs: die Sprache des Browsers beim Start der Testphase oder die für eine Installation auf Ihren eigenen Servern eingestellte Sprache. Ein Zurücksetzen des Arbeitsbereichs legt sie in dieser Sprache neu an.
+- Sie funktionieren wie jede andere Dimension. Sie können sie und ihre Werte umbenennen, Werte hinzufügen, die Reihenfolge ändern, eine davon erforderlich machen, sie deaktivieren oder löschen.
+
+**Einem bestehenden Arbeitsbereich hinzufügen**: Klicken Sie in der Auswahlleiste auf **Empfohlene Dimensionen** (erfordert `analytics:admin`). Der Dialog **Empfohlene Dimensionen hinzufügen** listet die vier Dimensionen auf, dazu **Wiederkehr** (Wiederkehrend oder Einmalig), jede mit einer kurzen Beschreibung.
+
+- Die Dimensionen, die dem Arbeitsbereich fehlen, sind anfangs angekreuzt, außer **Wiederkehr**. Eine bereits vorhandene Dimension ist ausgegraut und als **Bereits vorhanden** markiert, mit ihrem Namen im Arbeitsbereich, zum Beispiel **Bereits vorhanden (Investment type)**: Eine ältere Dimension **Investment type** steht für den Zweck.
+- **Sprache der Namen** beginnt bei Ihrer Bildschirmsprache.
+- Klicken Sie auf **Hinzufügen**. Eine Meldung nennt, was angelegt wurde, zum Beispiel „3 Dimensionen hinzugefügt: Kostenart, IT-Bereich, Zweck.“
+- Die Kostenart kommt auf die Standarddimension, wenn diese weder einen Namen noch Werte hat. Andernfalls wird sie als neue Dimension mit dem Code `cost_pool` angelegt.
+- Trägt eine andere Dimension bereits den Namen, erhält die neue eine Nummer, zum Beispiel **Priorität (2)**.
+- Das [Audit-Protokoll](admin.md#audit-protokoll) erfasst jede angelegte Dimension und jeden angelegten Wert.
+
+**Arbeitsbereiche, die vor den empfohlenen Dimensionen angelegt wurden**, behalten drei Dimensionen zur Klassifizierung von CAPEX-Zeilen, die für **Nur CAPEX** gelten, erforderlich und aktiviert sind: **PP&E type** (`ppe_type`: Hardware, Software), **Investment type** (`investment_type`: Replacement, Capacity, Productivity, Security, Conformity, Business growth, Other) und **Priority** (`priority`: Mandatory, High, Medium, Low). Ihre Namen und Werte sind englisch. Sie funktionieren wie jede andere Dimension.
+
+Der Code einer Dimension benennt ihre Spalte in der Budgetdatei, zum Beispiel `analytics:it_tower`. Wenn Sie einen Code ändern, trägt eine vor der Änderung exportierte Datei noch den alten Spaltennamen und wird mit „Unknown dimension“ abgelehnt. Exportieren Sie eine neue Datei. Siehe [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md).
 
 ---
 
@@ -55,11 +67,11 @@ Jeder Arbeitsbereich hat außerdem drei Dimensionen, die CAPEX-Zeilen klassifizi
 
 Navigieren Sie zu **Stammdaten > Analysedimensionen** (im Abschnitt **Finanzen**).
 
-1. **Benennen Sie die Standarddimension**, wenn „Analysedimension“ nicht passt: Wählen Sie sie in der Auswahlleiste aus, klicken Sie auf **Bearbeiten** und geben Sie dann in ihrem Arbeitsbereich einen Namen ein, zum Beispiel **Nature**.
-2. **Fügen Sie ihre Werte hinzu**: Klicken Sie auf **Neuer Wert**.
-3. **Fügen Sie eine Dimension hinzu**, wenn Sie das Budget aus einem weiteren Blickwinkel lesen möchten: Klicken Sie in der Auswahlleiste auf **Neu** und fügen Sie dann ihre Werte hinzu.
+1. **Prüfen Sie die empfohlenen Dimensionen**: Ein neuer Arbeitsbereich hat bereits **Kostenart**, **IT-Bereich**, **Zweck** und **Priorität**, mit ihren Werten. Wählen Sie eine in der Auswahlleiste aus, um ihre Werte zu sehen. Benennen Sie einen Wert um, fügen Sie einen hinzu oder deaktivieren Sie die, die Sie nicht brauchen. Ein älterer Arbeitsbereich kann sie mit **Empfohlene Dimensionen** hinzufügen. Siehe [Empfohlene Dimensionen](#empfohlene-dimensionen).
+2. **Benennen Sie die Standarddimension**, wenn sie noch „Analysedimension“ zeigt: Wählen Sie sie in der Auswahlleiste aus, klicken Sie auf **Bearbeiten** und geben Sie dann in ihrem Arbeitsbereich einen Namen ein.
+3. **Fügen Sie eine Dimension hinzu**, wenn Sie das Budget aus einem weiteren Blickwinkel lesen möchten: Klicken Sie in der Auswahlleiste auf **Neu** und fügen Sie dann mit **Neuer Wert** ihre Werte hinzu.
 
-**Tipp**: Beginnen Sie mit ein oder zwei Dimensionen und jeweils 5 bis 10 Werten. Eine einheitliche Benennung macht die Listen übersichtlicher.
+**Tipp**: Beginnen Sie mit einigen Dimensionen und jeweils 5 bis 10 Werten. Eine einheitliche Benennung macht die Listen übersichtlicher.
 
 ---
 
@@ -67,11 +79,12 @@ Navigieren Sie zu **Stammdaten > Analysedimensionen** (im Abschnitt **Finanzen**
 
 ### Dimensionsauswahl
 
-Unter dem Titel zeigt ein graues Band Ihre Dimensionen in ihrer Reihenfolge, mit je einer quadratischen Schaltfläche. Es sieht aus wie die Auswahl der Kontenpläne und funktioniert genauso. Eine deaktivierte Dimension ist als **Deaktiviert** markiert. Eine Dimension, die nur für eine Zeilenart gilt, ist als **Nur OPEX** oder **Nur CAPEX** markiert. Bei vielen Dimensionen scrollt das Band seitlich.
+Unter dem Titel zeigt ein graues Band Ihre Dimensionen in ihrer Reihenfolge, mit je einer quadratischen Schaltfläche. Es sieht aus wie die Auswahl der Kontenpläne und funktioniert genauso. Eine deaktivierte Dimension ist als **Deaktiviert** markiert. Eine Dimension, die nur für eine Zeilenart gilt, ist als **Nur OPEX** oder **Nur CAPEX** markiert. Jede Schaltfläche zeigt den vollständigen Namen ihrer Dimension. Bei vielen Dimensionen umbrechen die Schaltflächen auf mehrere Reihen, und die Aktionen bleiben rechts in der ersten Reihe. Auf einem schmalen Bildschirm stehen die Aktionen in einer eigenen Reihe.
 
 - Klicken Sie auf eine Schaltfläche, um die Werte dieser Dimension aufzulisten. Die ausgewählte Schaltfläche ist gefüllt. Die Seitenadresse speichert Ihre Wahl, sodass ein gespeicherter Link mit derselben Dimension öffnet. Ohne Wahl öffnet die Seite mit der Standarddimension.
 - Rechts im Band öffnet **Bearbeiten** den Arbeitsbereich der ausgewählten Dimension. Wenn Sie Dimensionen nur lesen dürfen, heißt die Schaltfläche **Öffnen**.
 - **Neu** daneben erstellt eine Dimension (erfordert `analytics:member`).
+- **Empfohlene Dimensionen** fügt die empfohlenen Dimensionen hinzu, die dem Arbeitsbereich fehlen (erfordert `analytics:admin`). Siehe [Empfohlene Dimensionen](#empfohlene-dimensionen).
 - **Neu ordnen** legt die Reihenfolge der Dimensionen fest (erfordert `analytics:member`). Die Schaltfläche ist deaktiviert, solange es nur eine Dimension gibt. Siehe [Dimensionen ordnen](#dimensionen-ordnen).
 
 Mit einer einzigen Dimension zeigt das Band eine Schaltfläche und die Werte.
@@ -106,7 +119,7 @@ Klicken Sie auf eine beliebige Zelle, um den Arbeitsbereich des Werts zu öffnen
 - **Neu ordnen**: die Reihenfolge der Werte der ausgewählten Dimension festlegen (erfordert `analytics:member`). Die Schaltfläche ist deaktiviert, solange die Dimension weniger als zwei Werte hat. Siehe [Werte ordnen](#werte-ordnen)
 - **CSV importieren**: Werte aus einer Datei laden (erfordert `analytics:admin`)
 - **CSV exportieren**: die Werte aller Dimensionen herunterladen (erfordert `analytics:admin`)
-- **Auswahl löschen**: die ausgewählten Werte löschen (erfordert `analytics:admin`). Werte, die von Budgetzeilen verwendet werden, bleiben erhalten
+- **Auswahl löschen**: die ausgewählten Werte löschen (erfordert `analytics:admin`). Werden einige davon von Budgetzeilen verwendet, nennt die Bestätigung, wie viele Zeilen sie verlieren, zum Beispiel „2 ausgewählte Werte werden verwendet: Sie werden aus 5 Budgetzeilen entfernt. Diese Daten können nicht wiederhergestellt werden.“, und die Schaltfläche heißt **Trotzdem löschen**
 
 ---
 
@@ -129,7 +142,7 @@ Eine neue Dimension kommt in der Reihenfolge der Dimensionen an die letzte Stell
 Öffnen Sie ihn mit **Bearbeiten** (**Öffnen**, wenn Sie nur lesen dürfen) in der Auswahlleiste, bei ausgewählter Dimension.
 
 - **Kopfzeile**: der Name der Dimension. Klicken Sie darauf, um die Dimension umzubenennen. **Zurück** / **Weiter** bewegen sich durch die Dimensionen in ihrer Reihenfolge, und die Schließen-Schaltfläche führt zur Seite mit dieser Dimension zurück
-- **Hauptbereich**: eine Nutzungszeile, zum Beispiel „12 Werte, verwendet von 27 OPEX-Zeilen und 2 CAPEX-Zeilen.“, dann die **Beschreibung**
+- **Hauptbereich**: eine Nutzungszeile, dann die **Beschreibung**. Die Nutzungszeile nennt die Anzahl der Werte und der Budgetzeilen, die einen davon tragen, OPEX und CAPEX zusammen, zum Beispiel „12 Werte · Verwendet von 29 Zeilen“. **Verwendet von 29 Zeilen** ist ein Link: Er öffnet diese Zeilen in der Liste der Budgetzeilen, in einem neuen Tab, aktivierte und deaktivierte Zeilen eingeschlossen. Eine Dimension, die keine Zeile verwendet, zeigt „Noch nicht verwendet“, eine ohne Werte „Noch keine Werte.“ Solange die Dimension deaktiviert ist, erscheint die Anzahl ohne Link
 - **Bereich Eigenschaften** rechts: **Name**, **Code**, **Verwendet für**, **Erforderlich** und **Lebenszyklus**
 
 **Automatisches Speichern**: Jede Änderung wird von selbst gespeichert. Es gibt keine Schaltfläche zum Speichern. Textfelder werden gespeichert, wenn Sie sie verlassen (drücken Sie in **Name** und **Code** Enter, um sofort zu speichern); der Schalter **Erforderlich** und der Lebenszyklus werden gespeichert, sobald Sie sie ändern. Wird eine Änderung abgelehnt, erscheint der Grund unter dem Feld, das sie verursacht hat, zum Beispiel ein doppelter Code unter **Code**. Ein in der Kopfzeile abgelehnter Name wird oben auf der Seite angezeigt.
@@ -182,18 +195,18 @@ Eine Zeile behält den Wert, den sie bereits in einer Dimension hat, die für ih
 
 Einer Zeile einen Wert in einer Dimension zu geben, die nicht für sie gilt, wird abgelehnt: in der Anwendung, in einer Budgetdatei und über die API. In der Anwendung und über die API ändert sich nichts, wenn der Wert gesendet wird, den die Zeile bereits hat. Lassen Sie diese Zelle in einer Budgetdatei leer: Der Export tut das auch.
 
-Auch ein einzelner Wert kann auf eine Zeilenart beschränkt werden. Die beiden Einstellungen wirken auf verschiedenen Ebenen. Zum Beispiel gilt die Dimension **Nature de coût** für **OPEX und CAPEX**, und ihr Wert **Abonnements SaaS** gilt nur für **Nur OPEX**:
+Auch ein einzelner Wert kann auf eine Zeilenart beschränkt werden. Die beiden Einstellungen wirken auf verschiedenen Ebenen. Zum Beispiel gilt die Dimension **Kostenart** für **OPEX und CAPEX**, und ihr Wert **Internes Personal** gilt nur für **Nur OPEX**:
 
 - Die Einstellung der Dimension legt fest, ob das Feld für eine Zeilenart existiert. Fällt das Feld weg, sind die Werte ausgeblendet, die die Zeilen haben.
-- Die Einstellung des Werts filtert die Auswahl. Das Feld bleibt, CAPEX-Zeilen bieten **Abonnements SaaS** nicht mehr an, und eine CAPEX-Zeile, die ihn bereits hat, behält ihn, zeigt ihn an und bleibt bearbeitbar. Siehe [OPEX- oder CAPEX-Werte](#opex-oder-capex-werte).
+- Die Einstellung des Werts filtert die Auswahl. Das Feld bleibt, CAPEX-Zeilen bieten **Internes Personal** nicht mehr an, und eine CAPEX-Zeile, die ihn bereits hat, behält ihn, zeigt ihn an und bleibt bearbeitbar. Siehe [OPEX- oder CAPEX-Werte](#opex-oder-capex-werte).
 
-Die beiden Einstellungen müssen zusammenpassen. Eine Dimension kann nicht auf eine Zeilenart beschränkt werden, solange einige ihrer Werte nur für die andere gelten: KANAP lehnt dies ab und nennt die Werte (höchstens drei, dann „and N more“), zum Beispiel „2 values of this dimension are for CAPEX lines only (Matériel, Projet). Set them to OPEX and CAPEX first.“
+Die beiden Einstellungen müssen zusammenpassen. Eine Dimension kann nicht auf eine Zeilenart beschränkt werden, solange einige ihrer Werte nur für die andere gelten: KANAP lehnt dies ab und nennt die Werte (höchstens drei, dann „and N more“), zum Beispiel „2 values of this dimension are for CAPEX lines only (Hardware, Software). Set them to OPEX and CAPEX first.“
 
 ### Erforderliche Dimensionen
 
 Schalten Sie **Erforderlich** ein, wenn jede Budgetzeile in einer Dimension klassifiziert sein muss. KANAP prüft dann die Zeilen der Arten, für die die Dimension verwendet wird:
 
-- **Eine neue Zeile braucht einen Wert in der Dimension.** Das gilt für jeden Weg, eine Zeile anzulegen: die OPEX- und CAPEX-Bildschirme, eine Budgetdatei, Plaid und die API. Ohne Wert wird die Zeile nicht angelegt, mit der Meldung „The Nature dimension is required. Choose a value.“
+- **Eine neue Zeile braucht einen Wert in der Dimension.** Das gilt für jeden Weg, eine Zeile anzulegen: die OPEX- und CAPEX-Bildschirme, eine Budgetdatei, Plaid und die API. Ohne Wert wird die Zeile nicht angelegt, mit der Meldung „The Kostenart dimension is required. Choose a value.“
 - **Eine Zeile mit einem Wert kann ihn nicht verlieren.** Sie können einen anderen Wert wählen. Das Feld kann nicht geleert werden.
 - **Eine Zeile, die vor dem Einschalten angelegt wurde, funktioniert weiter.** Hat sie keinen Wert in der Dimension, bleibt sie bearbeitbar, und Sie können andere Änderungen an ihr speichern. Ihr Feld ist als erforderlich markiert. In den OPEX- und CAPEX-Bildschirmen fragt KANAP beim Verlassen einer solchen Zeile nach einer Änderung zuerst nach einem Wert, mit **Bleiben** und **Trotzdem verlassen**. Wird sie nur geöffnet, ohne etwas zu ändern, fragt KANAP nie.
 
@@ -206,9 +219,13 @@ Solange die Einstellung eingeschaltet ist, helfen Ihnen Zeilen unter dem Schalte
 
 ### Eine Dimension löschen
 
-Die Schaltfläche **Löschen** in der Kopfzeile löscht die Dimension sofort (erfordert `analytics:admin`). Solange die Dimension noch Werte hat, ist die Schaltfläche deaktiviert, und eine Zeile unter der Nutzungszeile nennt den Grund: „Um diese Dimension zu löschen, löschen Sie zuerst ihre Werte.“
+Die Schaltfläche **Löschen** in der Kopfzeile löscht die Dimension mit ihren Werten (erfordert `analytics:admin`):
 
-Die Standarddimension hat keine Schaltfläche **Löschen**: Sie kann nicht gelöscht werden.
+- Eine Dimension ohne Werte wird sofort gelöscht.
+- Eine Dimension, deren Werte keine Zeile verwendet, fragt zuerst, zum Beispiel „Wiederkehr löschen?“ mit „Ihre 2 Werte werden ebenfalls gelöscht.“, dann **Löschen**.
+- Eine von Budgetzeilen verwendete Dimension fragt zuerst, mit der Anzahl der Zeilen: „Ihre 3 Werte werden gelöscht, und sie wird aus 6 Budgetzeilen entfernt. Diese Daten können nicht wiederhergestellt werden.“ Klicken Sie auf **Trotzdem löschen**, um fortzufahren. Die Zeilen verlieren ihren Wert in dieser Dimension, und ihr Verlauf erfasst die Änderung.
+
+Die Standarddimension hat keine Schaltfläche **Löschen**: Sie kann nicht gelöscht werden. Das [Audit-Protokoll](admin.md#audit-protokoll) erfasst die gelöschte Dimension mit der Anzahl ihrer Werte und Zeilen, jeden gelöschten Wert und jede Zeile, die einen Wert verloren hat.
 
 Um die Werte stattdessen auf den Zeilen zu behalten, deaktivieren Sie die Dimension.
 
@@ -223,17 +240,17 @@ Klicken Sie auf **Neuer Wert**. Das Feld **Dimension** steht zunächst auf der D
 ### Der Werte-Arbeitsbereich
 
 - **Kopfzeile**: der Name des Werts. Klicken Sie darauf, um den Wert umzubenennen. **Zurück** / **Weiter** bewegen sich durch die Werte derselben Dimension, in der aktuellen Reihenfolge und mit den aktuellen Filtern der Liste. Die Schließen-Schaltfläche führt zur Liste zurück
-- **Hauptbereich**: eine Zeile wie „Verwendet von 3 OPEX-Zeilen und 1 CAPEX-Zeile.“, wenn Budgetzeilen den Wert verwenden, dann die **Beschreibung**
+- **Hauptbereich**: eine Nutzungszeile, dann die **Beschreibung**. Die Nutzungszeile zählt die Budgetzeilen, die den Wert tragen, OPEX und CAPEX zusammen, zum Beispiel „Verwendet von 4 Zeilen“. Sie ist ein Link, der diese Zeilen in der Liste der Budgetzeilen in einem neuen Tab öffnet. Ein Wert, den keine Zeile verwendet, zeigt „Noch nicht verwendet“. Solange die Dimension deaktiviert ist, erscheint die Anzahl ohne Link
 - **Bereich Eigenschaften** rechts: **Dimension** (schreibgeschützt), **Verwendet für** und **Lebenszyklus**
 
 Änderungen werden von selbst gespeichert, wie im Dimensions-Arbeitsbereich. Ein in der Kopfzeile abgelehnter Name wird oben auf der Seite angezeigt.
 
 ### Regeln für Werte
 
-- **Eine Liste pro Dimension**: Namen sind innerhalb einer Dimension eindeutig, unabhängig von Groß- und Kleinschreibung. Zwei Dimensionen können jeweils einen Wert namens „Sonstiges“ haben. Ein doppelter Name wird abgelehnt, zum Beispiel „A value named Licenses already exists in Nature.“
+- **Eine Liste pro Dimension**: Namen sind innerhalb einer Dimension eindeutig, unabhängig von Groß- und Kleinschreibung. Zwei Dimensionen können jeweils einen Wert namens „Sonstiges“ haben. Ein doppelter Name wird abgelehnt, zum Beispiel „A value named Software already exists in Kostenart.“
 - **Ein Wert bleibt in seiner Dimension**: Die Dimension wird beim Erstellen des Werts festgelegt und kann sich nicht ändern. Um einen Wert zu verschieben, erstellen Sie ihn in der anderen Dimension, ändern Sie die Zeilen und löschen Sie dann den alten Wert.
 - **Umbenennen behält die Zeilen**: Zeilen verweisen auf den Wert selbst, daher erscheint der neue Name sofort in Listen und Berichten.
-- **Löschen**: Die Schaltfläche **Löschen** in der Kopfzeile löscht den Wert sofort (erfordert `analytics:admin`). Sie ist deaktiviert, wenn Budgetzeilen den Wert verwenden, mit dem Grund, zum Beispiel „Verwendet von 3 OPEX-Zeilen und 1 CAPEX-Zeile.“ Entfernen Sie den Wert zuerst von diesen Zeilen, oder deaktivieren Sie ihn.
+- **Löschen**: Die Schaltfläche **Löschen** in der Kopfzeile löscht einen Wert, den keine Zeile verwendet, sofort (erfordert `analytics:admin`). Verwenden Budgetzeilen den Wert, fragt sie zuerst: „Er wird aus 4 Budgetzeilen entfernt. Diese Daten können nicht wiederhergestellt werden.“ Klicken Sie auf **Trotzdem löschen**, um fortzufahren, oder deaktivieren Sie den Wert stattdessen, um ihn auf den Zeilen zu behalten.
 
 ### Werte ordnen
 
@@ -269,7 +286,7 @@ Das Feld **Verwendet für** eines Werts legt fest, welche Budgetzeilen ihn verwe
 
 Das Feld einer OPEX-Zeile bietet die Werte für OPEX und für beide an. Das Feld einer CAPEX-Zeile tut dasselbe für CAPEX. Eine Zeile, die bereits einen Wert der anderen Art hat, behält ihn, zeigt ihn an und bleibt bearbeitbar, wie bei einem deaktivierten Wert. Einen solchen Wert für eine andere Zeile oder beim Ändern des Werts einer Zeile zu wählen, wird abgelehnt: in der Anwendung, in einer Budgetdatei, über die API und in Plaid.
 
-- Gilt die Dimension nur für eine Zeilenart, ist die Zeilenart, die sie ausschließt, im Feld nicht verfügbar, mit einer Zeile wie „Die Dimension Nature de coût gilt nur für OPEX-Zeilen.“ **OPEX und CAPEX** und die eigene Zeilenart der Dimension bleiben wählbar. Ein Wert kann nicht auf die Zeilenart beschränkt werden, die seine Dimension ausschließt.
+- Gilt die Dimension nur für eine Zeilenart, ist die Zeilenart, die sie ausschließt, im Feld nicht verfügbar, mit einer Zeile wie „Die Dimension IT-Bereich gilt nur für OPEX-Zeilen.“ **OPEX und CAPEX** und die eigene Zeilenart der Dimension bleiben wählbar. Ein Wert kann nicht auf die Zeilenart beschränkt werden, die seine Dimension ausschließt.
 - Haben Zeilen der anderen Art den Wert, erscheint unter dem Feld eine Zeile, zum Beispiel „4 CAPEX-Zeilen haben diesen Wert. Sie behalten ihn, aber neue CAPEX-Zeilen können ihn nicht auswählen.“ Klicken Sie auf **Diese Zeilen anzeigen**, um sie in der Liste in einem neuen Tab zu öffnen. Die Zeile bleibt, solange der Konflikt besteht.
 - Der Bericht Analysedimensionen bietet in seiner Liste **Werte ausschließen** die Werte der gewählten Art an. Siehe [Berichte](reports.md#analysedimensionen).
 
@@ -306,7 +323,7 @@ Die Standarddimension kann nicht deaktiviert werden.
 Im Bereich **Eigenschaften** einer OPEX- oder CAPEX-Zeile, und wenn Sie eine erstellen, hat jede aktivierte Dimension, die für diese Zeilenart verwendet wird, ein eigenes Feld, nach der Dimension benannt, in der Reihenfolge der Dimensionen. Die Standarddimension erscheint als **Analysedimension**, bis Sie sie umbenennen.
 
 - Wählen Sie einen Wert, oder leeren Sie das Feld, um die Zeile in dieser Dimension ohne Wert zu lassen. Die Änderung wird sofort gespeichert.
-- Das Feld einer erforderlichen Dimension ist mit einem Sternchen markiert. Eine neue Budgetzeile kann ohne Wert in ihr nicht angelegt werden, mit der Meldung „Nature ist erforderlich“. Bei einer Budgetzeile mit einem Wert hat das Feld keine Schaltfläche zum Leeren: Sie können nur einen anderen Wert wählen. Siehe [Erforderliche Dimensionen](#erforderliche-dimensionen).
+- Das Feld einer erforderlichen Dimension ist mit einem Sternchen markiert. Eine neue Budgetzeile kann ohne Wert in ihr nicht angelegt werden, mit der Meldung „Kostenart ist erforderlich“. Bei einer Budgetzeile mit einem Wert hat das Feld keine Schaltfläche zum Leeren: Sie können nur einen anderen Wert wählen. Siehe [Erforderliche Dimensionen](#erforderliche-dimensionen).
 - Das Feld listet die aktivierten Werte seiner Dimension, die für diese Zeilenart verwendet werden. Ein deaktivierter Wert oder ein Wert, der nur für die andere Zeilenart gilt, bleibt auf den Zeilen sichtbar, die ihn haben. Siehe [OPEX- oder CAPEX-Werte](#opex-oder-capex-werte).
 - Das Feld kann keinen Wert erstellen. Erstellen Sie Werte auf der Seite Analysedimensionen, oder lassen Sie sie von einem OPEX- oder CAPEX-CSV-Import erstellen.
 - Ein Wert gilt für die ganze Zeile, über alle Jahre.
@@ -335,10 +352,10 @@ Die sieben Budgetberichte lassen sich auch auf einen Wert einer Dimension eingre
 - Plaid kann OPEX-Zeilen nach jeder aktivierten Dimension filtern und gruppieren, die für OPEX-Zeilen verwendet wird, und CAPEX-Zeilen nach jeder aktivierten Dimension, die für CAPEX-Zeilen verwendet wird.
 - Eine Frage zur Analysekategorie verwendet die Standarddimension, unabhängig von ihrem Namen und ihrer Reihenfolge.
 - Die Suche von Plaid und die `@`-Erwähnungen im Chat finden eine OPEX- oder CAPEX-Zeile über den Namen eines Werts, den sie auf einer für ihren Typ angezeigten Dimension hat, mit oder ohne Akzente.
-- Plaid kann den Wert einer Zeile in jeder Dimension setzen, ändern oder löschen, wenn es eine OPEX- oder CAPEX-Zeile anlegt oder aktualisiert. Fragen Sie zum Beispiel: „Setze die Nature de coût von BL-12 auf Licences et maintenance.“ Plaid findet den Wert über seinen Namen in dieser Dimension und zeigt in der Vorschau die Dimension und den Wert, vorher und nachher. Nichts ändert sich, bevor Sie zustimmen.
+- Plaid kann den Wert einer Zeile in jeder Dimension setzen, ändern oder löschen, wenn es eine OPEX- oder CAPEX-Zeile anlegt oder aktualisiert. Fragen Sie zum Beispiel: „Setze die Kostenart von BL-12 auf Software.“ Plaid findet den Wert über seinen Namen in dieser Dimension und zeigt in der Vorschau die Dimension und den Wert, vorher und nachher. Nichts ändert sich, bevor Sie zustimmen.
 - Plaid befolgt dieselben Regeln wie die App: nur aktivierte Dimensionen, die für den Typ der Zeile verwendet werden, nur aktivierte Werte, die für den Typ der Zeile verwendet werden, und eine Zeile behält einen Wert, den sie bereits trägt.
-- Wenn Plaid eine Zeile anlegt, braucht sie einen Wert auf jeder erforderlichen Dimension des Zeilentyps. Bei einer CAPEX-Zeile gehören **PP&E type**, **Investment type** und **Priority** dazu.
-- Plaid weiß, welche Dimensionen erforderlich sind. Eine neue Zeile braucht in jeder von ihnen einen Wert, und Plaid kann den Wert einer erforderlichen Dimension nicht löschen. Plaid lehnt eine Anfrage ab, die gegen die Regel verstößt, und nennt den Grund, zum Beispiel „Nature is required for spend item creation.“
+- Wenn Plaid eine Zeile anlegt, braucht sie einen Wert auf jeder erforderlichen Dimension des Zeilentyps. In einem Arbeitsbereich, der vor den empfohlenen Dimensionen angelegt wurde, braucht eine CAPEX-Zeile **PP&E type**, **Investment type** und **Priority**.
+- Plaid weiß, welche Dimensionen erforderlich sind. Eine neue Zeile braucht in jeder von ihnen einen Wert, und Plaid kann den Wert einer erforderlichen Dimension nicht löschen. Plaid lehnt eine Anfrage ab, die gegen die Regel verstößt, und nennt den Grund, zum Beispiel „Kostenart is required for spend item creation.“
 - Plaid kann auch einen Wert in der Dimension anlegen, die Sie nennen. Ohne Angabe einer Dimension kommt der Wert in die Standarddimension.
 
 ---
@@ -403,7 +420,7 @@ Nur `name` ist eine Pflichtspalte. Fehlt die Spalte `description`, `status`, `di
 |---|---|
 | `analytics:reader` | Die Seite Analysedimensionen ansehen und Dimensionen und Werte öffnen |
 | `analytics:member` | Dimensionen und Werte erstellen und bearbeiten, die Reihenfolge der Dimensionen und Werte festlegen |
-| `analytics:admin` | Alles oben Genannte, dazu CSV-Import und -Export sowie Löschen |
+| `analytics:admin` | Alles oben Genannte, dazu CSV-Import und -Export, die empfohlenen Dimensionen sowie Löschen |
 
 Die integrierte Rolle Budget-Administrator ist admin, Budget-Mitglied ist member und Budget-Leser ist reader. Wer Budgetzeilen (Budget) oder Berichte lesen kann, sieht die Dimensionen und ihre Werte auf Budgetzeilen, in den Listen und in den Berichten, ohne Zugriff auf diese Seite zu haben.
 
@@ -423,7 +440,7 @@ Die integrierte Rolle Budget-Administrator ist admin, Budget-Mitglied ist member
 ## Häufig gestellte Fragen
 
 **Kann eine Zeile mehrere Analysewerte haben?**
-Ja, einen pro Dimension. Eine Zeile kann **Licenses** in Nature und **Workplace** in Program sein. Innerhalb einer Dimension hat eine Zeile einen Wert oder keinen.
+Ja, einen pro Dimension. Eine Zeile kann **Software** in Kostenart und **Anwendung** in IT-Bereich sein. Innerhalb einer Dimension hat eine Zeile einen Wert oder keinen.
 
 **Wirken sich Analysedimensionen auf Zuordnungen oder die Buchhaltung aus?**
 Nein. Sie dienen nur dem Reporting und haben keinen Einfluss auf Kostenzuordnungen oder die formale Buchhaltung.
