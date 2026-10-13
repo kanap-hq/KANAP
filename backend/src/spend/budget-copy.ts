@@ -22,7 +22,8 @@ import {
   writeColumnCopyRun,
 } from './budget-column-operations';
 import { AllocationCopyLine, AllocationCopyRun, AllocationOperationDeps, allocationCopyParams, runAllocationCopy } from './budget-allocation-operations';
-import { lockBudgetLinesOfBothNatures, lockTenantBudgetOperations } from './budget-locks';
+import { formatAllocationMethodLabel } from './allocation-utils';
+import { lockBudgetLines, lockBudgetLinesOfBothNatures, lockTenantBudgetOperations } from './budget-locks';
 import { BUDGET_NATURES, budgetLineReference, type BudgetNature } from './budget-nature';
 
 /**
@@ -35,10 +36,13 @@ import { BUDGET_NATURES, budgetLineReference, type BudgetNature } from './budget
  * another year: `budget-allocation-operations.ts`). One `overwrite` covers both
  * parts. The functions of each part run as they do for the routes of each
  * nature, once per nature, inside the request transaction and under one tenant
- * lock: a real copy first locks the lines of every nature in play in id order
- * (`budget-locks.ts`), decides the amounts of every nature, then writes them,
- * then copies the allocations. All or nothing: an error on any line or nature
- * fails the request, and the request transaction rolls everything back.
+ * lock: a real copy first locks the lines in play, of every nature, in id order
+ * in one statement (`budget-locks.ts`), and hands that set to each part, which
+ * reads its lines again under it and locks no line of its own (a line that
+ * entered the scope meanwhile refuses the copy with a 409 `retry`). It decides
+ * the amounts of every nature, then writes them, then copies the allocations.
+ * All or nothing: an error on any line or nature fails the request, and the
+ * request transaction rolls everything back.
  *
  * The routes of each nature (`/spend-items/budget-operations/*`,
  * `/capex-items/budget-operations/*`) stay as they are for the API and the AI.
@@ -90,21 +94,39 @@ export function operationNatures(scope: unknown): BudgetNature[] {
 }
 
 /**
- * Locks the lines of both natures in id order, in one statement, before any of
- * them is decided: the operations of each nature then lock their own lines
- * again (held already) and their versions. Nothing to do for one nature: its
- * operation locks its lines itself.
+ * Locks the lines an operation writes, of every nature in play, in id order and
+ * in one statement, before any of them is decided; returns the ids held. The
+ * operations of each nature then read their lines again under these locks and
+ * work on the held lines only (`heldLines`): no line is locked after a version.
  */
 async function lockLinesOfNatures(
   manager: EntityManager,
   tenantId: string,
   natures: readonly BudgetNature[],
   idsOf: (nature: BudgetNature) => Promise<string[]>,
-): Promise<void> {
-  if (natures.length < 2) return;
+): Promise<Set<string>> {
   const ids: string[] = [];
   for (const nature of natures) ids.push(...(await idsOf(nature)));
-  await lockBudgetLinesOfBothNatures(manager, tenantId, ids);
+  return natures.length > 1
+    ? lockBudgetLinesOfBothNatures(manager, tenantId, ids)
+    : lockBudgetLines(manager, natures[0], tenantId, ids);
+}
+
+/**
+ * The allocations part of a line whose destination version the amounts part created during the
+ * copy: the destination as it was before the copy (no version), as the preview showed it. The
+ * allocation copy read the version just created (the default method, no row).
+ */
+function destinationBeforeCopy(part: Omit<AllocationCopyLine, 'itemId' | 'itemName' | 'itemNumber'>) {
+  const none = { method: null, label: formatAllocationMethodLabel(null) };
+  return {
+    ...part,
+    destinationMethod: none.method,
+    destinationMethodLabel: none.label,
+    destinationAllocationsCount: 0,
+    // A line the allocations skip keeps what the destination had: nothing.
+    ...(part.action === 'copy' ? {} : { resultMethod: none.method, resultMethodLabel: none.label }),
+  };
 }
 
 /**
@@ -175,11 +197,12 @@ export async function copyBudget(deps: CopyBudgetDeps, operation: CopyBudgetOper
   if (amounts) for (const nature of natures) await assertColumnCopyNotFrozen(deps, nature, amounts);
 
   const tenantId = await currentTenantId(mg);
+  let heldLines: Set<string> | undefined;
   if (!dryRun) {
     // One bulk budget operation at a time per tenant: a second one gets a 409 (`budget-locks.ts`).
     await lockTenantBudgetOperations(mg, tenantId);
     // The lines both parts write: valid in the destination year, with a source version.
-    await lockLinesOfNatures(mg, tenantId, natures, async (nature) => {
+    heldLines = await lockLinesOfNatures(mg, tenantId, natures, async (nature) => {
       const items = await loadItemsValidIn(mg, nature, tenantId, destinationYear);
       const sources = await loadVersions(mg, nature, tenantId, items.map((i) => i.id), [sourceYear]);
       return items.filter((i) => sources.has(`${i.id}:${sourceYear}`)).map((i) => i.id);
@@ -190,8 +213,10 @@ export async function copyBudget(deps: CopyBudgetDeps, operation: CopyBudgetOper
   // The amounts: every nature decided before any is written, so a refusal writes nothing.
   const columnRuns: Array<{ nature: BudgetNature; run: ColumnCopyRun }> = [];
   const amountsSummary: PartSummary = { totalItems: 0, processed: 0, skipped: 0, errors: 0 };
+  // The lines whose destination version the amounts created: the allocations answer their destination as before.
+  const createdVersions = new Set<string>();
   if (amounts) {
-    for (const nature of natures) columnRuns.push({ nature, run: await planColumnCopyRun(depsOf(nature), nature, amounts, tenantId) });
+    for (const nature of natures) columnRuns.push({ nature, run: await planColumnCopyRun(depsOf(nature), nature, amounts, tenantId, { heldLines }) });
     if (!dryRun && !amounts.acceptCalendarChanges && columnRuns.some(({ run }) => columnCopyChangesCalendars(run))) {
       throw new BadRequestException(CALENDAR_CHANGES_MESSAGE(destinationYear));
     }
@@ -205,6 +230,7 @@ export async function copyBudget(deps: CopyBudgetDeps, operation: CopyBudgetOper
       const written = await writeColumnCopyRun(depsOf(nature), run, userId);
       amountsSummary.processed += written.processed;
       amountsSummary.skipped += written.skipped;
+      for (const itemId of written.createdVersions) createdVersions.add(itemId);
     }
   }
 
@@ -213,7 +239,7 @@ export async function copyBudget(deps: CopyBudgetDeps, operation: CopyBudgetOper
   const allocationsSummary: PartSummary = { totalItems: 0, processed: 0, skipped: 0, errors: 0 };
   if (allocations) {
     for (const nature of natures) {
-      const run = await runAllocationCopy(depsOf(nature), nature, allocations, tenantId, userId);
+      const run = await runAllocationCopy(depsOf(nature), nature, allocations, tenantId, userId, { heldLines });
       allocationRuns.push({ nature, run });
       allocationsSummary.totalItems += run.totalItems;
       allocationsSummary.processed += run.processed;
@@ -236,7 +262,10 @@ export async function copyBudget(deps: CopyBudgetDeps, operation: CopyBudgetOper
     for (const { itemId, itemName, itemNumber, ...part } of run.lines) entry(nature, { itemId, itemName, itemNumber }).amounts = part;
   }
   for (const { nature, run } of allocationRuns) {
-    for (const { itemId, itemName, itemNumber, ...part } of run.lines) entry(nature, { itemId, itemName, itemNumber }).allocations = part;
+    for (const { itemId, itemName, itemNumber, ...part } of run.lines) {
+      // A real copy answers what its preview answered.
+      entry(nature, { itemId, itemName, itemNumber }).allocations = createdVersions.has(itemId) ? destinationBeforeCopy(part) : part;
+    }
   }
 
   return {
@@ -255,8 +284,8 @@ export async function copyBudget(deps: CopyBudgetDeps, operation: CopyBudgetOper
 /**
  * Reset one column of a year on the lines of `scope` (`clearBudgetColumn`, once
  * per nature, under one tenant lock): the freeze of every nature is checked
- * first, then the lines of every nature in play are locked in id order. The
- * summary adds the natures up.
+ * first, then the lines of every nature in play are locked in id order and
+ * handed to each nature (`heldLines`). The summary adds the natures up.
  */
 export async function clearBudgetColumns(
   deps: BudgetOperationDeps,
@@ -273,7 +302,7 @@ export async function clearBudgetColumns(
   // One bulk budget operation at a time per tenant: a second one gets a 409 (`budget-locks.ts`).
   await lockTenantBudgetOperations(mg, tenantId);
   // The lines the clear writes: every line, ended or not, with a version of the year.
-  await lockLinesOfNatures(mg, tenantId, natures, async (nature) => {
+  const heldLines = await lockLinesOfNatures(mg, tenantId, natures, async (nature) => {
     const items = await loadItems(mg, nature, tenantId);
     const versions = await loadVersions(mg, nature, tenantId, items.map((i) => i.id), [params.year]);
     return items.filter((i) => versions.has(`${i.id}:${params.year}`)).map((i) => i.id);
@@ -281,7 +310,7 @@ export async function clearBudgetColumns(
 
   const summary = { totalItems: 0, cleared: 0, skipped: 0, errors: 0 };
   for (const nature of natures) {
-    const done = await clearBudgetColumn(deps, nature, params, userId, { tenantLocked: true });
+    const done = await clearBudgetColumn(deps, nature, params, userId, { heldLines });
     summary.totalItems += done.summary.totalItems;
     summary.cleared += done.summary.cleared;
     summary.skipped += done.summary.skipped;

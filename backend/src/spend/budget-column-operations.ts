@@ -40,7 +40,7 @@ import {
 import { ColumnResult, computeColumn, CostingInputError, CostLine, UNIT_PRICE_LIMITS } from './costing.util';
 import { activeMonths, periodMonths } from './spread.util';
 import { ensureBudgetVersion } from './budget-version-ensure';
-import { lockBudgetLines, lockBudgetVersions, lockTenantBudgetOperations } from './budget-locks';
+import { assertLinesHeld, lockBudgetLines, lockBudgetVersions, lockTenantBudgetOperations } from './budget-locks';
 import { assertScopeNatures, auditTableOf, natureAnd, type BudgetNature } from './budget-nature';
 import { presentChild } from './budget-line-presentation';
 
@@ -750,12 +750,18 @@ export type ColumnCopyRun = {
  * under the locks of a real copy: the lines with a source version in id order,
  * then their destination versions. The caller holds the tenant's budget
  * operations lock for a real copy.
+ *
+ * `heldLines`: the caller locked the lines in play already, in id order
+ * ("Copy the budget", `budget-copy.ts`); every read here comes after that lock
+ * and decides, and a line with a source version outside that set refuses the
+ * copy (409 `retry`, `assertLinesHeld`) rather than be locked out of order.
  */
 export async function planColumnCopyRun(
   deps: BudgetOperationDeps,
   scope: AmountScope,
   params: ColumnCopyParams,
   tenantId: string,
+  opts: { heldLines?: ReadonlySet<string> } = {},
 ): Promise<ColumnCopyRun> {
   const mg = deps.manager;
   const { sourceYear, destinationYear, overwrite, dryRun, pct } = params;
@@ -763,7 +769,13 @@ export async function planColumnCopyRun(
   const destinationMeasure = BUDGET_COLUMN_MEASURE[params.destinationColumn];
   let items = await loadItemsValidIn(mg, scope, tenantId, destinationYear);
   let versions = await loadVersions(mg, scope, tenantId, items.map((i) => i.id), [sourceYear, destinationYear]);
-  if (!dryRun) {
+  if (opts.heldLines) {
+    // Read under the caller's lock: the lines with a source version are those it holds.
+    const held = opts.heldLines;
+    assertLinesHeld(items.filter((i) => versions.has(`${i.id}:${sourceYear}`)).map((i) => i.id), held);
+    versions = await loadVersions(mg, scope, tenantId, items.filter((i) => held.has(i.id)).map((i) => i.id), [sourceYear, destinationYear]);
+    if (!dryRun) await lockBudgetVersions(mg, scope, tenantId, Array.from(versions.values()).filter((v) => v.budget_year === destinationYear).map((v) => v.id));
+  } else if (!dryRun) {
     // Lock order: the lines with a source version, in id order, then their destination versions,
     // before anything is decided. Lines, validity, versions, months and records are read again
     // under the locks; a line without a source version in the first read stays skipped.
@@ -773,7 +785,12 @@ export async function planColumnCopyRun(
     await lockBudgetVersions(mg, scope, tenantId, Array.from(versions.values()).filter((v) => v.budget_year === destinationYear).map((v) => v.id));
   }
   const allVersions = Array.from(versions.values());
-  const months = await readVersionMonths(mg, scope, tenantId, allVersions);
+  // A line without a source version is skipped, so a real copy neither locks nor reads it above. Its
+  // destination is read for the answer only (never written), so the copy says what its preview said.
+  const shown = dryRun
+    ? new Map<string, BudgetVersionRow>()
+    : await loadVersions(mg, scope, tenantId, items.filter((i) => !versions.has(`${i.id}:${sourceYear}`)).map((i) => i.id), [destinationYear]);
+  const months = await readVersionMonths(mg, scope, tenantId, [...allVersions, ...shown.values()]);
   const records = await listRoundInputs(mg, scope, tenantId, allVersions.map((v) => v.id));
   const sourceRecordOf = (version: BudgetVersionRow) => records.get(version.id)?.find((r) => r.measure === sourceMeasure);
 
@@ -800,7 +817,7 @@ export async function planColumnCopyRun(
 
   for (const item of items) {
     const sourceVersion = versions.get(`${item.id}:${sourceYear}`);
-    const destinationVersion = versions.get(`${item.id}:${destinationYear}`);
+    const destinationVersion = versions.get(`${item.id}:${destinationYear}`) ?? (sourceVersion ? undefined : shown.get(`${item.id}:${destinationYear}`));
     const current = destinationVersion ? months.get(destinationVersion.id)!.months[destinationMeasure] : [];
     const currentTotal = sum(current);
     const base = { itemId: item.id, itemName: item.name, itemNumber: Number(item.item_number), currentDestinationValue: toNumber(currentTotal) };
@@ -845,13 +862,14 @@ export function columnCopyChangesCalendars(run: Pick<ColumnCopyRun, 'plans'>): b
 /**
  * Writes a decided copy (`planColumnCopyRun`, not a dry run): the destination
  * column of every planned line, its record and lines, and one audit row on the
- * line. Returns the lines written and those skipped while writing.
+ * line. Returns the lines written, those skipped while writing, and the lines
+ * whose destination version the copy created.
  */
 export async function writeColumnCopyRun(
   deps: BudgetOperationDeps,
   run: ColumnCopyRun,
   userId: string | null,
-): Promise<{ processed: number; skipped: number }> {
+): Promise<{ processed: number; skipped: number; createdVersions: Set<string> }> {
   const mg = deps.manager;
   const { scope, params, tenantId, versions } = run;
   const { sourceYear, sourceColumn, destinationYear, destinationColumn, overwrite } = params;
@@ -862,6 +880,7 @@ export async function writeColumnCopyRun(
   const checkedFreeze = new Set<string>();
   let processed = 0;
   let skipped = 0;
+  const createdVersions = new Set<string>();
 
   for (const plan of run.plans) {
     const { item, sourceVersion, sourceRecord, sourceTotal, currentTotal, target, targetTotal, prorated, lines, reference, issues } = plan;
@@ -874,6 +893,7 @@ export async function writeColumnCopyRun(
         userId,
       );
       destinationVersion = ensured.version;
+      if (ensured.created) createdVersions.add(item.id);
       if (!ensured.created && !overwrite) {
         // Defensive, kept on purpose (lot 3A; 3B review). The versions were read
         // again under this line's lock, held since then, and every app path that
@@ -927,7 +947,7 @@ export async function writeColumnCopyRun(
     );
     processed++;
   }
-  return { processed, skipped };
+  return { processed, skipped, createdVersions };
 }
 
 /**
@@ -1030,15 +1050,17 @@ export function operationYear(value: unknown, label: string): number {
  * and its record (period, provenance, lines) is deleted. A version whose
  * column is already all zero is skipped, but its record is deleted too.
  *
- * `tenantLocked`: the caller holds the tenant's budget operations lock and the
- * lines in play ("Reset a column" over both natures, `budget-copy.ts`).
+ * `heldLines`: the caller holds the tenant's budget operations lock and locked
+ * the lines in play in id order ("Reset a column", `budget-copy.ts`); the reads
+ * here come after it, and a line with a version of the year outside that set
+ * refuses the reset (409 `retry`, `assertLinesHeld`).
  */
 export async function clearBudgetColumn(
   deps: BudgetOperationDeps,
   scope: AmountScope,
   operation: { year: number; column: BudgetColumn },
   userId: string | null,
-  opts: { tenantLocked?: boolean } = {},
+  opts: { heldLines?: ReadonlySet<string> } = {},
 ) {
   const mg = deps.manager;
   const { year, column } = clearColumnParams(operation);
@@ -1050,12 +1072,20 @@ export async function clearBudgetColumn(
 
   const tenantId = await currentTenantId(mg);
   // One bulk budget operation at a time per tenant: a second one gets a 409 (`budget-locks.ts`).
-  if (!opts.tenantLocked) await lockTenantBudgetOperations(mg, tenantId);
+  if (!opts.heldLines) await lockTenantBudgetOperations(mg, tenantId);
   const items = await loadItems(mg, scope, tenantId);
   // Lock order: the lines with a version of the year, in id order, then those versions, before
   // anything is decided; versions, months and records are read again under the locks.
   const first = await loadVersions(mg, scope, tenantId, items.map((i) => i.id), [year]);
-  const locked = await lockBudgetLines(mg, scope, tenantId, items.filter((i) => first.has(`${i.id}:${year}`)).map((i) => i.id));
+  const inScope = items.filter((i) => first.has(`${i.id}:${year}`)).map((i) => i.id);
+  let locked: ReadonlySet<string>;
+  if (opts.heldLines) {
+    // Read under the caller's lock: the lines with a version of the year are those it holds.
+    assertLinesHeld(inScope, opts.heldLines);
+    locked = opts.heldLines;
+  } else {
+    locked = await lockBudgetLines(mg, scope, tenantId, inScope);
+  }
   const versions = await loadVersions(mg, scope, tenantId, items.filter((i) => locked.has(i.id)).map((i) => i.id), [year]);
   await lockBudgetVersions(mg, scope, tenantId, Array.from(versions.values()).map((v) => v.id));
   const allVersions = Array.from(versions.values());

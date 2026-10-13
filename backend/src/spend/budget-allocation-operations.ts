@@ -7,7 +7,7 @@ import { currentTenantId, loadItemsValidIn, loadVersions } from './budget-column
 import { SpendAllocation } from './spend-allocation.entity';
 import { SpendVersion } from './spend-version.entity';
 import { ensureBudgetVersion } from './budget-version-ensure';
-import { lockBudgetLines, lockBudgetVersions, lockTenantBudgetOperations } from './budget-locks';
+import { assertLinesHeld, lockBudgetLines, lockBudgetVersions, lockTenantBudgetOperations } from './budget-locks';
 import { auditTableOf } from './budget-nature';
 import { presentChild } from './budget-line-presentation';
 
@@ -162,6 +162,11 @@ export type AllocationCopyRun = {
  * version of each item and year (the one the budget tab shows). A missing
  * destination version is created with the source's grain, method and notes.
  * The caller holds the tenant's budget operations lock for a real copy.
+ *
+ * `heldLines`: the caller locked the lines in play already, in id order
+ * ("Copy the budget", `budget-copy.ts`); the reads here come after that lock,
+ * and a line with a source version outside that set refuses the copy (409
+ * `retry`, `assertLinesHeld`) rather than be locked out of order.
  */
 export async function runAllocationCopy(
   deps: AllocationOperationDeps,
@@ -169,13 +174,20 @@ export async function runAllocationCopy(
   params: AllocationCopyParams,
   tenantId: string,
   userId: string | null,
+  opts: { heldLines?: ReadonlySet<string> } = {},
 ): Promise<AllocationCopyRun> {
   const mg = deps.manager;
   const t = SCOPES[scope];
   const { sourceYear, destinationYear, overwrite, dryRun } = params;
   let items = await loadItemsValidIn(mg, scope, tenantId, destinationYear);
   let picked = await loadVersions(mg, scope, tenantId, items.map((i) => i.id), [sourceYear, destinationYear]);
-  if (!dryRun) {
+  if (opts.heldLines) {
+    // Read under the caller's lock: the lines with a source version are those it holds.
+    const held = opts.heldLines;
+    assertLinesHeld(items.filter((i) => picked.has(`${i.id}:${sourceYear}`)).map((i) => i.id), held);
+    picked = await loadVersions(mg, scope, tenantId, items.filter((i) => held.has(i.id)).map((i) => i.id), [sourceYear, destinationYear]);
+    if (!dryRun) await lockBudgetVersions(mg, scope, tenantId, Array.from(picked.values()).filter((v) => v.budget_year === destinationYear).map((v) => v.id));
+  } else if (!dryRun) {
     // Lock order: the lines with a source version, in id order, then their destination versions,
     // before anything is decided. Lines, validity and versions are read again under the locks; a
     // line without a source version in the first read stays skipped.

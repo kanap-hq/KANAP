@@ -5,6 +5,8 @@ import dataSource from '../../data-source';
 import { AllocationCalculatorService } from '../allocation-calculator.service';
 import { SpendBudgetOperationsService } from '../spend-budget-operations.service';
 import { BUDGET_OPERATION_RUNNING_CODE, lockTenantBudgetOperations } from '../budget-locks';
+import { clearBudgetColumn, columnCopyParams, planColumnCopyRun } from '../budget-column-operations';
+import { allocationCopyParams, runAllocationCopy } from '../budget-allocation-operations';
 import {
   AUDIT_LABELS,
   amountsService,
@@ -188,6 +190,9 @@ async function testAllCopiesBothNatures() {
     const bothNatures = statements.findIndex((sql) => /nature IN \('opex', 'capex'\) ORDER BY id FOR NO KEY UPDATE/.test(sql));
     const firstVersionLock = statements.findIndex((sql) => /FROM spend_versions WHERE tenant_id = \$1 AND id = ANY\(\$2::uuid\[\]\).*FOR NO KEY UPDATE/s.test(sql));
     assert.ok(bothNatures >= 0 && bothNatures < firstVersionLock, 'the lines of both natures are locked in one statement before any version');
+    // No part locks a line of its own afterwards: each works on the lines held (`heldLines`).
+    const lineLocks = statements.filter((sql) => /FROM spend_items WHERE tenant_id = \$1 AND id = ANY\(\$2::uuid\[\]\).*FOR NO KEY UPDATE/s.test(sql));
+    assert.equal(lineLocks.length, 1, 'one statement locks lines, in id order');
     assert.deepEqual(done.summary, {
       lines: 5,
       amounts: { totalItems: 5, processed: 3, skipped: 2, errors: 0 },
@@ -487,7 +492,90 @@ async function testRoutesOfEachNatureUnchanged() {
   });
 }
 
+/**
+ * A real copy answers what its preview answered, line by line and part by part, with and without
+ * overwrite: the lines whose destination version the amounts create during the copy included (their
+ * allocations part reads the destination as before the copy, no version).
+ */
+async function testRealCopyAnswersAsPreview() {
+  await inRolledBackTransaction(async (runner) => {
+    const w = await seedWorld(runner, 'copy-as-preview');
+    // A CAPEX line on an automatic method without a 2032 version: the amounts create it during the copy.
+    const automatic = await seedItem(runner, 'capex', w.tenantId, 3, 'Automatic CAPEX');
+    await seedYear(runner, 'capex', w.tenantId, automatic, YEAR, '40', 'headcount');
+    for (const overwrite of [false, true]) {
+      await runner.query('SAVEPOINT as_preview');
+      try {
+        const body = { scope: 'all', sourceYear: YEAR, destinationYear: NEXT, amounts: { ...AMOUNTS, percentageIncrease: 5 }, allocations: true, overwrite };
+        const preview = await copy(runner, { ...body, dryRun: true });
+        const done = await copy(runner, body);
+        const lines = byName(preview.results);
+        assert.deepEqual([lines.Manual.allocations.destinationMethod, lines['Automatic CAPEX'].allocations.destinationMethod], [null, null], 'no 2032 version before the copy');
+        assert.equal(done.results.length, preview.results.length, `overwrite ${overwrite}: as many lines`);
+        preview.results.forEach((line: any, i: number) => {
+          assert.deepEqual(done.results[i], line, `overwrite ${overwrite}: ${line.itemName} answered as in the preview`);
+        });
+        assert.deepEqual(done.summary, preview.summary, `overwrite ${overwrite}: same summary`);
+        assert.equal((await allocationOf(runner, 'capex', automatic, NEXT))!.allocation_method, 'headcount', 'the copy itself is done');
+      } finally {
+        await runner.query('ROLLBACK TO SAVEPOINT as_preview');
+      }
+    }
+  });
+}
+
+/**
+ * The lines in play are locked first, in id order; a line that enters the scope after that lock (a
+ * line created meanwhile) is not locked out of order: the operation is refused with a 409 `retry`
+ * and writes nothing.
+ */
+async function testLineAfterTheLockRefused() {
+  await inRolledBackTransaction(async (runner) => {
+    const w = await seedWorld(runner, 'copy-held');
+    const retry = (err: unknown) => err instanceof ConflictException && (err.getResponse() as any)?.code === 'retry';
+    // Through the operation: a CAPEX line with a 2031 budget appears right after the lines are locked.
+    const original = runner.query.bind(runner);
+    let added: string | null = null;
+    (runner as any).query = async (sql: string, ...rest: unknown[]) => {
+      const answer = await (original as any)(sql, ...rest);
+      if (!added && /nature IN \('opex', 'capex'\) ORDER BY id FOR NO KEY UPDATE/.test(sql)) {
+        added = await seedItem(runner, 'capex', w.tenantId, 9, 'Created meanwhile');
+        await seedYear(runner, 'capex', w.tenantId, added, YEAR, '10', 'default');
+      }
+      return answer;
+    };
+    try {
+      const body = { scope: 'all', sourceYear: YEAR, destinationYear: NEXT, amounts: AMOUNTS, allocations: true };
+      await assert.rejects(() => underSavepoint(runner, () => copy(runner, body)), retry, 'refused with a 409 retry');
+    } finally {
+      (runner as any).query = original;
+    }
+    assert.ok(added, 'harness: the line was created after the lock');
+    assert.equal(await findVersion(runner, 'opex', w.manual, NEXT), undefined, 'nothing written');
+
+    // Each part refuses a line outside the set its caller holds (the line above went with the savepoint).
+    const extra = await seedItem(runner, 'capex', w.tenantId, 9, 'Created meanwhile');
+    await seedYear(runner, 'capex', w.tenantId, extra, YEAR, '10', 'default');
+    const held = new Set([w.manual, w.filled, w.automatic, w.equipment]);
+    const deps = { manager: runner.manager, audit: captureAudit() as any, freeze: realFreeze() as any, calculator: new AllocationCalculatorService(undefined as any, undefined as any, undefined as any, undefined as any) };
+    const params = columnCopyParams({ sourceYear: YEAR, destinationYear: NEXT, sourceColumn: 'budget', destinationColumn: 'budget', percentageIncrease: 0, overwrite: false, dryRun: false });
+    await assert.rejects(() => planColumnCopyRun(deps, 'capex', params, w.tenantId, { heldLines: held }), retry, 'the amounts');
+    await assert.rejects(
+      () => runAllocationCopy(deps, 'capex', allocationCopyParams({ sourceYear: YEAR, destinationYear: NEXT }), w.tenantId, null, { heldLines: held }),
+      retry,
+      'the allocations',
+    );
+    await assert.rejects(() => clearBudgetColumn(deps, 'capex', { year: YEAR, column: 'budget' }, null, { heldLines: held }), retry, 'the reset');
+    // With the line held, each part goes through.
+    const all = new Set([...held, extra]);
+    const run = await planColumnCopyRun(deps, 'capex', params, w.tenantId, { heldLines: all });
+    assert.equal(run.plans.length, 2, 'Equipment and the new line are planned');
+  });
+}
+
 void runSpecs('budget-copy.integration.spec', [
+  ['a real copy answers what its preview answered', testRealCopyAnswersAsPreview],
+  ['a line entering the scope after the lock is refused', testLineAfterTheLockRefused],
   ['all copies both natures, one lock, BL numbers', testAllCopiesBothNatures],
   ['a failure writes nothing', testFailureWritesNothing],
   ['the calendar confirmation is decided for both natures first', testCalendarDecidedForBothNatures],
