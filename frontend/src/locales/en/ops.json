@@ -101,8 +101,6 @@
     "budget": {
       "title": "Budget",
       "mode": "Mode",
-      "flat": "Flat",
-      "monthly": "Monthly",
       "total": "Total",
       "spreadPlaceholder": "e.g. 120000",
       "profileFlat": "Flat",
@@ -261,8 +259,6 @@
     "budget": {
       "title": "Budget",
       "mode": "Mode",
-      "flat": "Flat",
-      "monthly": "Monthly",
       "total": "Total",
       "spreadPlaceholder": "e.g. 120000",
       "profileFlat": "Flat",
@@ -1378,10 +1374,7 @@
     "monthAnd": "{{first}} and {{second}}",
     "zeroedMonths_one": "{{months}} will be set to zero.",
     "zeroedMonths_other": "{{months}} will be set to zero.",
-    "changePeriod": "Change period",
-    "choosePeriod": "Choose the period",
     "noMonthInItemDates": "No month of {{year}} is within the line's dates.",
-    "column": "Column",
     "distribution": "Distribution",
     "from": "From",
     "to": "To",
@@ -1407,10 +1400,6 @@
       "lineCount_one": "{{count}} line",
       "lineCount_other": "{{count}} lines",
       "fte": "{{value}} FTE"
-    },
-    "panel": {
-      "spread": "Spread an amount",
-      "lines": "Quantity and price"
     },
     "lines": {
       "description": "Description",
@@ -1478,7 +1467,6 @@
         "dateOutsideYear": "Choose a date in {{year}}."
       },
       "fte": "FTE over the period {{fte_period}} · Full-year average {{fte}}",
-      "applyToAll": "Apply these lines to all columns",
       "status": {
         "manual": "Amounts were entered by hand.",
         "spread": "Amounts come from a spread.",
@@ -1498,20 +1486,8 @@
     },
     "listAnd": "{{first}} and {{last}}",
     "amount": "Amount",
-    "applyDistributionToAll": "Apply the distribution to all columns",
-    "applyToAllFollow": "{{columns}} follow the same period.",
-    "applyToAllOthers_one": "{{columns}} keeps its own period.",
-    "applyToAllOthers_other": "{{columns}} keep their own period.",
-    "applyToAllFrozen": "Frozen columns never change.",
     "keepLines_one": "{{columns}} keeps its lines.",
     "keepLines_other": "{{columns}} keep their lines.",
-    "spreadLock": {
-      "fromLines_one": "The amounts come from the {{count}} line of Quantity and price.",
-      "fromLines_other": "The amounts come from the {{count}} lines of Quantity and price.",
-      "unlock": "Spread an amount instead",
-      "unlocked": "A spread replaces the amounts of the lines. The lines stay as a reference."
-    },
-    "totalFromLines": "Calculated from its lines. Open Quantity and price to change it.",
     "conflict": {
       "waiting": "Choose first, above, whether to reload this column or overwrite it.",
       "yearTotal": "{{amount}} for the year",
@@ -1520,6 +1496,105 @@
       "yearChange_one": "Someone else changed the {{columns}} column while you were editing it, and you have not chosen which values to keep. Change the year anyway and lose your values in {{columns}}, or stay and choose.",
       "yearChange_other": "Someone else changed the {{columns}} columns while you were editing them, and you have not chosen which values to keep. Change the year anyway and lose your values in these columns, or stay and choose.",
       "yearChangeConfirm": "Change the year"
+    },
+    "notEntered": "Not entered yet",
+    "columns": "Budget columns",
+    "card": {
+      "frozen": "Frozen",
+      "waiting": "Waiting for your choice"
+    },
+    "editorTitle": "{{column}} {{year}}",
+    "modes": "How the column is built",
+    "mode": {
+      "amount": "Amount",
+      "lines": "Quantity and price",
+      "monthly": "By month"
+    },
+    "annualAmount": "Annual amount",
+    "when": "When",
+    "wholeYear": "Whole year",
+    "aPeriod": "A period",
+    "storedPeriod": "Stored period: {{stored}}. Saving will use {{proposed}}, the line's dates.",
+    "span": {
+      "range": "from {{from}} to {{to}} ({{n}} months)",
+      "range_vowel": "from {{from}} to {{to}} ({{n}} months)",
+      "single": "in {{month}}"
+    },
+    "result": {
+      "spreadFlat": "{{amount}} spread flat {{span}}.",
+      "spread445": "{{amount}} spread 4-4-5 {{span}}.",
+      "enterFlat": "Enter an amount: it will be spread flat {{span}}.",
+      "enter445": "Enter an amount: it will be spread 4-4-5 {{span}}.",
+      "title": "Monthly result",
+      "quarter": "Q{{n}}",
+      "cellHint": "Enter by month",
+      "atDate": "{{amount}} on {{date}}, all in {{month}}.",
+      "enterDate": "Enter an amount: it will go in {{month}}.",
+      "show": "Show the detail",
+      "hide": "Hide the detail",
+      "folded_one": "The column is spread flat over the whole year: the monthly detail adds nothing.",
+      "folded_other": "All columns are spread flat over the whole year: the monthly detail adds nothing.",
+      "foldedEmpty": "No amount yet: the monthly detail adds nothing.",
+      "differenceWith": "Difference with",
+      "differenceRow": "Difference with {{column}}"
+    },
+    "monthlyHint": "Enter the amounts in the {{column}} column of the table below.",
+    "reference_one": "{{count}} line kept as a reference.",
+    "reference_other": "{{count}} lines kept as a reference.",
+    "referenceAmount_one": "{{count}} line kept as a reference ({{amount}}).",
+    "referenceAmount_other": "{{count}} lines kept as a reference ({{amount}}).",
+    "switch": {
+      "toAmount": "Switch to an amount? The current total ({{amount}}) becomes the amount, spread flat.",
+      "toAmountSpan": "Switch to an amount? The current total ({{amount}}) becomes the amount, spread flat {{span}}.",
+      "toLines": "Switch to quantity and price? The total will come from the lines.",
+      "toMonthly": "Switch to entry by month? The current months are kept and become editable in the table.",
+      "linesStay": "The lines stay as a reference.",
+      "reuseLines_one": "The line kept as a reference is used again.",
+      "reuseLines_other": "The {{count}} lines kept as a reference are used again.",
+      "replaced": "The current amount ({{amount}}) will be replaced.",
+      "confirm": "Switch"
+    },
+    "also": {
+      "open": "Use for other columns too…",
+      "label": "Same construction for",
+      "apply": "Apply",
+      "amountHint": "They take this period and distribution, and keep their own total.",
+      "linesHint": "These lines replace their amounts."
+    },
+    "frozen": {
+      "title": "The {{column}} {{year}} column is frozen",
+      "hint": "Read only. An administrator can unfreeze it in Administration › Freeze / unfreeze data."
+    },
+    "atADate": "At a date",
+    "date": "Date",
+    "atDate": "On {{date}}",
+    "start": {
+      "label": "Start from",
+      "source": "Column to start from",
+      "option": "{{column}} ({{amount}})",
+      "adjusted": "adjusted by",
+      "percentage": "Adjustment in percent",
+      "apply": "Copy",
+      "orBelow": "or enter it below.",
+      "prorated": "Months of the {{column}} column outside the line's dates were not copied."
+    },
+    "restore": {
+      "changes_one": "{{count}} column changed since {{time}}",
+      "changes_other": "{{count}} columns changed since {{time}}",
+      "action": "Back to the opening values",
+      "done": "Opening values restored: {{columns}}.",
+      "none": "No column restored.",
+      "frozen": "{{column}}: frozen meanwhile, not restored.",
+      "waiting": "{{column}}: waiting for your choice, not restored.",
+      "changedByAt": "{{column}}: changed by {{name}} at {{time}}, not restored. Choose above what to keep.",
+      "changedBy": "{{column}}: changed by {{name}}, not restored. Choose above what to keep.",
+      "changed": "{{column}}: changed by someone else, not restored. Choose above what to keep.",
+      "refused": "{{column}}: not restored. {{message}}",
+      "failed": "The column could not be restored.",
+      "frozenNow": "{{column}} was frozen meanwhile: it was not restored.",
+      "others": "{{column}}: changed by someone else since the opening, not restored.",
+      "othersAt": "{{column}}: changed by someone else at {{time}}, not restored.",
+      "notRun": "Nothing was restored: a change could not be saved first."
     }
   },
   "budget": {

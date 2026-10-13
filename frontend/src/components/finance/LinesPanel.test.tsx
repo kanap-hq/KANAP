@@ -126,7 +126,6 @@ type Options = Partial<LinesPanelProps> & { onSave?: LinesPanelProps['onSave'] }
 
 function renderPanel(options: Options = {}) {
   const onSave = options.onSave ?? vi.fn(async () => ({ ok: true as const }));
-  const onApplyToAll = vi.fn();
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const props: LinesPanelProps = {
     year: 2026,
@@ -135,7 +134,6 @@ function renderPanel(options: Options = {}) {
     frozen: false,
     frozenHint: 'frozen',
     columnName: (m) => (m === 'planned' ? 'Budget' : 'Revision'),
-    applyToAll: { offered: false, on: false, hint: '', onChange: onApplyToAll },
     ...options,
     onSave,
   };
@@ -151,7 +149,6 @@ function renderPanel(options: Options = {}) {
   const view = render(ui(props));
   return {
     onSave: onSave as ReturnType<typeof vi.fn>,
-    onApplyToAll,
     unmount: view.unmount,
     /** The same panel drawn again with other props (a reload brought another record). */
     rerender: (change: Partial<LinesPanelProps>) => view.rerender(ui({ ...props, ...change })),
@@ -255,7 +252,7 @@ describe('LinesPanel', () => {
     expect(onSave).toHaveBeenCalledWith([{
       label: '', quantity_unit: 'people', quantity: '1', unit_price: '1200', price_basis: 'per_day', frequency: 'per_month',
       days_per_month: '5', period_start: '2026-04-01', period_end: '2026-12-31', working_day_profile_id: 'us',
-    }], false, []);
+    }], []);
   });
 
   it('without an enabled calendar, a new line is one person per month and saves with its price alone', async () => {
@@ -273,7 +270,7 @@ describe('LinesPanel', () => {
     expect(onSave).toHaveBeenCalledWith([{
       label: '', quantity_unit: 'people', quantity: '1', unit_price: '8000', price_basis: 'per_month', frequency: 'per_month',
       days_per_month: null, period_start: '2026-04-01', period_end: '2026-12-31', working_day_profile_id: null,
-    }], false, []);
+    }], []);
   });
 
   it('while the calendars are loading, a new line keeps the price per day', () => {
@@ -557,11 +554,8 @@ describe('LinesPanel', () => {
       }, 'Amounts were copied from Budget 2025.'],
     ];
     for (const [over, text] of cases) {
-      const { onSave, unmount } = renderPanel({
-        record: roundWith([line], over),
-        applyToAll: { offered: true, on: false, hint: 'hint', onChange: vi.fn() },
-      });
-      // Read-only: no field, no remove, no Add a line, no Apply these lines to all columns.
+      const { onSave, unmount } = renderPanel({ record: roundWith([line], over) });
+      // Read-only: no field, no remove, no Add a line.
       expect(screen.getByLabelText('Description')).toBeDisabled();
       expect(screen.getByLabelText('Unit price')).toBeDisabled();
       expect(screen.getByLabelText('days per month')).toBeDisabled();
@@ -570,7 +564,6 @@ describe('LinesPanel', () => {
       expect(combo(0, 'Unit')).toHaveAttribute('aria-disabled', 'true');
       expect(screen.queryByRole('button', { name: 'Remove the line' })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Add a line' })).not.toBeInTheDocument();
-      expect(screen.queryByLabelText('Apply these lines to all columns')).not.toBeInTheDocument();
       // The Amount column keeps its place, blank; no FTE line.
       expect(heads()).toEqual(['', 'Description', 'Quantity', 'Unit', 'Unit price', 'How often', 'From', 'To', 'Calendar', '', '', '']);
       expect(screen.getByTestId('line-amount')).toHaveTextContent(/^$/);
@@ -591,7 +584,6 @@ describe('LinesPanel', () => {
     const line = storedLine();
     const { rerender } = renderPanel({
       record: roundWith([line], { method: 'spread', last_calculation: { kind: 'annual', total: '1.00', profile: 'flat', active_months: [1], weights: [] } }),
-      applyToAll: { offered: true, on: false, hint: 'hint', onChange: vi.fn() },
     });
     expect(screen.getByLabelText('Unit price')).toBeDisabled();
 
@@ -603,7 +595,6 @@ describe('LinesPanel', () => {
     expect(screen.queryByTestId('lines-status')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Remove the line' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add a line' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Apply these lines to all columns')).toBeInTheDocument();
   });
 
   it('lines typed and not saved yet on a column without stored lines are editable', () => {
@@ -639,46 +630,6 @@ describe('LinesPanel', () => {
     renderPanel({ record: roundWith([storedLine()]) });
     expect(combo(0, 'Calendar')).toHaveTextContent('France (disabled)');
     expect(notes()).toHaveTextContent('France is disabled. The lines still use it.');
-  });
-
-  it('turning Apply these lines to all columns on writes the lines at once', async () => {
-    const onChange = vi.fn();
-    const { onSave } = renderPanel({
-      record: roundWith([storedLine()]),
-      applyToAll: { offered: true, on: false, hint: 'hint', onChange },
-    });
-    fireEvent.click(screen.getByLabelText('Apply these lines to all columns'));
-    expect(onChange).toHaveBeenCalledWith(true);
-    // The same lines as stored: sent anyway, to the group's columns too.
-    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
-    expect(onSave.mock.calls[0][1]).toBe(true);
-    expect(onSave.mock.calls[0][0]).toHaveLength(1);
-  });
-
-  it('turning Apply these lines to all columns on without a complete line writes nothing', async () => {
-    const onChange = vi.fn();
-    const { onSave } = renderPanel({ applyToAll: { offered: true, on: false, hint: 'hint', onChange } });
-    // No line at all: sending none would clear the lines of the group's other columns.
-    fireEvent.click(screen.getByLabelText('Apply these lines to all columns'));
-    expect(onChange).toHaveBeenCalledWith(true);
-    // A line without its unit price is not complete either.
-    fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
-    fireEvent.click(screen.getByLabelText('Apply these lines to all columns'));
-    expect(onChange).toHaveBeenCalledTimes(2);
-    await settle();
-    expect(onSave).not.toHaveBeenCalled();
-  });
-
-  it('turning Apply these lines to all columns off writes nothing', async () => {
-    const onChange = vi.fn();
-    const { onSave } = renderPanel({
-      record: roundWith([storedLine()]),
-      applyToAll: { offered: true, on: true, hint: 'hint', onChange },
-    });
-    fireEvent.click(screen.getByLabelText('Apply these lines to all columns'));
-    expect(onChange).toHaveBeenCalledWith(false);
-    await settle();
-    expect(onSave).not.toHaveBeenCalled();
   });
 
   it('a refusal shows under the table and keeps what was typed; the next commit sends again', async () => {
@@ -948,7 +899,7 @@ describe('LinesPanel and the stored lines (lot 3D, scenario 4)', () => {
 
     typeAndLeave(description(), 'Their manager, half time');
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
-    const [lines, , startedFrom] = onSave.mock.calls[0];
+    const [lines, startedFrom] = onSave.mock.calls[0];
     expect(lines[0]).toMatchObject({ label: 'Their manager, half time' });
     expect(startedFrom).toEqual([expect.objectContaining({ label: 'Their manager', unit_price: '950' })]);
   });
@@ -965,10 +916,10 @@ describe('LinesPanel and the stored lines (lot 3D, scenario 4)', () => {
     const { onSave } = renderPanel({ record: roundWith([storedLine()]) });
     typeAndLeave(description(), 'Lead');
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
-    expect(onSave.mock.calls[0][2]).toEqual([expect.objectContaining({ label: 'Project manager' })]);
+    expect(onSave.mock.calls[0][1]).toEqual([expect.objectContaining({ label: 'Project manager' })]);
     typeAndLeave(description(), 'Lead, part time');
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(2));
-    expect(onSave.mock.calls[1][2]).toEqual([expect.objectContaining({ label: 'Lead' })]);
+    expect(onSave.mock.calls[1][1]).toEqual([expect.objectContaining({ label: 'Lead' })]);
   });
 
   it('commits made while a save is on its way go once it answered, from the lines it stored', async () => {
@@ -988,7 +939,7 @@ describe('LinesPanel and the stored lines (lot 3D, scenario 4)', () => {
     // One write for the latest drafts, starting from what the first save stored.
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(2));
     expect(calls[1][0][0]).toMatchObject({ label: 'Lead, half time' });
-    expect(calls[1][2]).toEqual([expect.objectContaining({ label: 'Lead' })]);
+    expect(calls[1][1]).toEqual([expect.objectContaining({ label: 'Lead' })]);
     await act(async () => { answer({ ok: true }); });
     await settle();
     expect(onSave).toHaveBeenCalledTimes(2);

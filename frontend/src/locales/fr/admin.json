@@ -221,6 +221,7 @@
       "password_reset_completed": "Réinitialisation du mot de passe terminée",
       "password_reset_requested": "Réinitialisation du mot de passe demandée",
       "refresh_denied": "Renouvellement de session refusé",
+      "restored": "Restaurer",
       "sso_login": "Connexion avec Microsoft",
       "sso_login_failed": "Échec de connexion avec Microsoft",
       "update": "Mettre à jour"

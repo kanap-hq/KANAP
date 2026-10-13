@@ -22,6 +22,8 @@ import {
   runSpecs,
   Services,
 } from '../../admin/tenants/__tests__/tenant-reset-test-helpers';
+import { ensureCapexDimensions } from '../../analytics/capex-dimensions.seed';
+import { RECOMMENDED_DIMENSIONS } from '../../analytics/recommended-dimensions.seed';
 import { backendPath } from '../../common/__tests__/backend-root';
 import { TENANT_RESETTING_CODE } from '../../common/tenancy/request-tenancy.middleware';
 import { StorageService } from '../../common/storage/storage.service';
@@ -35,12 +37,18 @@ import { DemoDataService, DemoDataState } from '../demo-data.service';
 // with the administrator's token and the tenant's Host. Then:
 // - the load ends `loaded`, with the landscape (instances, interfaces, bindings, connections)
 //   and the `.example` users of the data set, and no e-mail sent;
+// - the tenant is French (activated from a French browser): its budget lines carry the
+//   recommended dimensions in French ("Matériel" for the files' "Hardware"), no English value is
+//   added next to them, and every line has a cost pool, an IT tower and a business domain;
 // - the loader's token is refused (401) on another tenant's host, accepted on its own;
 // - the reset brings the tenant back to the state of activation, table by table;
 // - a loader that fails half-way (an injected server error on the contracts import) ends
 //   `failed`, the tenant back to the state of activation;
 // - while a tenant is being reset its writes get 409 tenant_resetting, its reads go on, and
 //   another tenant is not affected.
+// And a workspace activated before the recommended dimensions (an unnamed, empty default
+// dimension and the three required CAPEX dimensions) loads too: the cost pool goes on the default
+// dimension, the investment type stands for the purpose, the PP&E type follows the cost pool.
 // No storage or mail service is reached: both are doubles.
 
 process.env.STRIPE_SECRET_KEY = '';
@@ -53,6 +61,77 @@ const FIXTURES = backendPath('fixtures', 'fromage-co');
 /** Data rows of a fixture file (`;`-separated, no quoted line breaks in these files). */
 function fixtureRows(name: string): string[] {
   return fs.readFileSync(path.join(FIXTURES, name), 'utf8').split(/\r?\n/).slice(1).filter((line) => line.trim() !== '');
+}
+
+/** How many rows of a fixture file have a value in each `analytics:<code>` column (no `;` inside these cells). */
+function fixtureDimensionCounts(name: string): Map<string, number> {
+  const [header] = fs.readFileSync(path.join(FIXTURES, name), 'utf8').split(/\r?\n/, 1);
+  const columns = header.split(';');
+  const counts = new Map<string, number>();
+  for (const line of fixtureRows(name)) {
+    const cells = line.split(';');
+    columns.forEach((column, index) => {
+      if (!column.startsWith('analytics:')) return;
+      const code = column.slice('analytics:'.length);
+      counts.set(code, (counts.get(code) ?? 0) + (cells[index]?.trim() ? 1 : 0));
+    });
+  }
+  return counts;
+}
+
+/**
+ * The dimensions after the load: lines with a value per dimension and nature (printed), the
+ * recommended dimensions in the tenant's language with no other value, and every line with a
+ * cost pool, an IT tower and a business domain.
+ */
+async function checkDimensions(tenantId: string) {
+  const files = { opex: '14-spend-items.csv', capex: '15-capex-items.csv' } as const;
+  const lines = await inTenant(tenantId, (m) => m.query(
+    `SELECT nature, count(*)::int AS n FROM spend_items WHERE tenant_id = $1 GROUP BY nature`, [tenantId]));
+  const total = Object.fromEntries(lines.map((row: any) => [row.nature, row.n])) as Record<'opex' | 'capex', number>;
+  assert.deepEqual(total, { opex: fixtureRows(files.opex).length, capex: fixtureRows(files.capex).length }, 'every budget line of the files');
+
+  const axes: Array<{ code: string; name: string; values: string[] }> = await inTenant(tenantId, (m) => m.query(
+    `SELECT a.code, a.name, coalesce(array_agg(c.name ORDER BY c.sort_order, c.name) FILTER (WHERE c.id IS NOT NULL), '{}') AS values
+       FROM analytics_axes a LEFT JOIN analytics_categories c ON c.axis_id = a.id AND c.tenant_id = a.tenant_id
+      WHERE a.tenant_id = $1 GROUP BY a.id, a.code, a.name ORDER BY a.code`, [tenantId]));
+  assert.deepEqual(axes.map((axis) => axis.code), ['business_domain', 'default', 'it_tower', 'priority', 'purpose', 'recurrence', 'reference'],
+    'the recommended dimensions and the data set\'s own two; no cost type, PP&E type or investment type');
+  for (const seed of RECOMMENDED_DIMENSIONS.fr) {
+    const axis = axes.find((item) => item.code === (seed.key === 'cost_pool' ? 'default' : seed.code))!;
+    assert.equal(axis.name, seed.name, `${seed.key}: named in French`);
+    assert.deepEqual(axis.values, seed.values.map((value) => value.name), `${seed.key}: the French values only, none added by the load`);
+  }
+
+  const rows: Array<{ code: string; nature: 'opex' | 'capex'; n: number }> = await inTenant(tenantId, (m) => m.query(
+    `SELECT a.code, s.nature, count(*)::int AS n
+       FROM spend_item_analytics_values v
+       JOIN analytics_axes a ON a.id = v.axis_id AND a.tenant_id = v.tenant_id
+       JOIN spend_items s ON s.id = v.item_id AND s.tenant_id = v.tenant_id
+      WHERE v.tenant_id = $1
+      GROUP BY a.code, s.nature`, [tenantId]));
+  const actual = (code: string, nature: 'opex' | 'capex') => rows.find((row) => row.code === code && row.nature === nature)?.n ?? 0;
+  const expected = { opex: fixtureDimensionCounts(files.opex), capex: fixtureDimensionCounts(files.capex) };
+  console.log('demo-data.e2e: lines with a value / lines, per dimension');
+  for (const axis of axes) {
+    const cells = (['opex', 'capex'] as const).map((nature) => `${nature} ${actual(axis.code, nature)}/${total[nature]}`);
+    console.log(`  ${axis.code.padEnd(16)} ${axis.name.padEnd(22)} ${cells.join('  ')}`);
+    for (const nature of ['opex', 'capex'] as const) {
+      assert.equal(actual(axis.code, nature), expected[nature].get(axis.code) ?? 0, `${axis.code}, ${nature}: the lines the file gives a value`);
+    }
+  }
+  for (const code of ['default', 'it_tower', 'business_domain']) {
+    for (const nature of ['opex', 'capex'] as const) assert.equal(actual(code, nature), total[nature], `${code}: every ${nature} line`);
+  }
+  for (const code of ['purpose', 'priority']) assert.equal(actual(code, 'capex'), total.capex, `${code}: every CAPEX line`);
+
+  const [dataCenter] = await inTenant(tenantId, (m) => m.query(
+    `SELECT c.name FROM spend_items s
+       JOIN spend_item_analytics_values v ON v.item_id = s.id AND v.tenant_id = s.tenant_id
+       JOIN analytics_axes a ON a.id = v.axis_id AND a.tenant_id = v.tenant_id AND a.is_default
+       JOIN analytics_categories c ON c.id = v.category_id AND c.tenant_id = v.tenant_id
+      WHERE s.tenant_id = $1 AND s.product_name = 'Data center de Paris — hébergement et énergie'`, [tenantId]));
+  assert.equal(dataCenter?.name, 'Locaux et énergie', 'the file\'s "Facilities and power", in French');
 }
 
 type Served = {
@@ -188,7 +267,7 @@ async function testLoadResetAndFailure() {
   let a: ActivatedTenant | undefined;
   let b: ActivatedTenant | undefined;
   try {
-    a = await createActivatedTenant(svc, { tag: 'e2e-a', orgName: 'Fromage E2E', signup: true });
+    a = await createActivatedTenant(svc, { tag: 'e2e-a', orgName: 'Fromage E2E', signup: true, language: 'fr' });
     b = await createActivatedTenant(svc, { tag: 'e2e-b', orgName: 'Neighbour E2E', signup: true });
     const hostA = `${a.slug}.lvh.me`;
     const hostB = `${b.slug}.lvh.me`;
@@ -224,6 +303,7 @@ async function testLoadResetAndFailure() {
       'the sample users have no password');
     assert.deepEqual(served.delivered, [], 'no e-mail sent');
     assert.deepEqual(countDifferences(neighbourCounts, await countTenantRows(b.tenantId)), [], 'the neighbour tenant is untouched');
+    await checkDimensions(a.tenantId);
 
     // ── The loader's token: refused on another tenant's host, accepted on its own ──
     assert.equal(served.loaderEnvs.length, 1);
@@ -286,7 +366,58 @@ async function testLoadResetAndFailure() {
   }
 }
 
-runSpecs('demo-data.e2e.integration.spec', [testLoadResetAndFailure]).catch((err) => {
+async function testOlderWorkspace() {
+  const svc: Services = buildServices();
+  const served = await serve();
+  let a: ActivatedTenant | undefined;
+  try {
+    a = await createActivatedTenant(svc, { tag: 'e2e-old', orgName: 'Fromage E2E older', signup: true });
+    const tenantId = a.tenantId;
+    // As the seed left a workspace before lot D.
+    await inTenant(tenantId, async (m) => {
+      await m.query(`DELETE FROM analytics_categories WHERE tenant_id = $1`, [tenantId]);
+      await m.query(`DELETE FROM analytics_axes WHERE tenant_id = $1 AND NOT is_default`, [tenantId]);
+      await m.query(`UPDATE analytics_axes SET name = NULL, description = NULL WHERE tenant_id = $1 AND is_default`, [tenantId]);
+      await ensureCapexDimensions(m, tenantId);
+    });
+    await served.demo.load({ tenantId, actorId: a.ownerId, host: `${a.slug}.lvh.me` });
+    const loaded = await waitForEnd(served.demo, tenantId);
+    assert.equal(loaded.status, 'loaded', `the load ended ${JSON.stringify(loaded)}`);
+
+    const rows: Array<{ code: string; name: string; nature: string | null; n: number }> = await inTenant(tenantId, (m) => m.query(
+      `SELECT a.code, a.name, s.nature, count(s.id)::int AS n
+         FROM analytics_axes a
+         LEFT JOIN spend_item_analytics_values v ON v.axis_id = a.id AND v.tenant_id = a.tenant_id
+         LEFT JOIN spend_items s ON s.id = v.item_id AND s.tenant_id = v.tenant_id
+        WHERE a.tenant_id = $1
+        GROUP BY a.id, a.code, a.name, s.nature
+        ORDER BY a.code, s.nature`, [tenantId]));
+    const opex = fixtureRows('14-spend-items.csv').length;
+    const capex = fixtureRows('15-capex-items.csv').length;
+    const count = (code: string, nature: string) => rows.find((row) => row.code === code && row.nature === nature)?.n ?? 0;
+    assert.deepEqual([...new Set(rows.map((row) => row.code))],
+      ['business_domain', 'default', 'investment_type', 'it_tower', 'ppe_type', 'priority', 'recurrence', 'reference'], 'no purpose next to the investment type');
+    assert.equal(rows.find((row) => row.code === 'default')?.name, 'Cost pool', 'the empty default dimension became the cost pool');
+    for (const code of ['default', 'it_tower', 'business_domain']) {
+      assert.deepEqual([count(code, 'opex'), count(code, 'capex')], [opex, capex], `${code}: every line`);
+    }
+    for (const code of ['ppe_type', 'investment_type', 'priority']) {
+      assert.deepEqual([count(code, 'opex'), count(code, 'capex')], [0, capex], `${code}: every CAPEX line`);
+    }
+    const ppe = await inTenant(tenantId, (m) => m.query(
+      `SELECT c.name, count(*)::int AS n FROM spend_item_analytics_values v
+         JOIN analytics_axes a ON a.id = v.axis_id AND a.tenant_id = v.tenant_id AND a.code = 'ppe_type'
+         JOIN analytics_categories c ON c.id = v.category_id AND c.tenant_id = v.tenant_id
+        WHERE v.tenant_id = $1 GROUP BY c.name ORDER BY c.name`, [tenantId]));
+    assert.deepEqual(ppe.map((row: any) => [row.name, row.n]), [['Hardware', 8], ['Software', 7]], 'the PP&E type follows the cost pool');
+  } finally {
+    served.demo.stop();
+    await served.app.close();
+    await cleanupTenants([a?.tenantId]);
+  }
+}
+
+runSpecs('demo-data.e2e.integration.spec', [testLoadResetAndFailure, testOlderWorkspace]).catch((err) => {
   console.error(err);
   process.exit(1);
 });

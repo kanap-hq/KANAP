@@ -40,7 +40,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildLinesFile, buildMonthlyFile, fetchDefaultDimensionCode, loadBudgetFile } from '../../scripts/lib/budget-file.mjs';
+import { buildLinesFile, buildMonthlyFile, loadBudgetFile } from '../../scripts/lib/budget-file.mjs';
 import { DATASET_YEAR, parseCsv, shiftCsvText, shiftIsoDate } from '../../scripts/lib/fixture-csv.mjs';
 import { createHttpClient } from '../../scripts/lib/http-client.mjs';
 
@@ -552,67 +552,91 @@ async function ensurePortfolioClassification() {
   }
 }
 
-// The default dimension holds the domain a line serves (ERP, e-commerce, workplace…).
-// What the expense pays for is on the "Cost type" dimension.
-const DEFAULT_AXIS = { name: 'Domain', description: 'The business or technical domain the expense serves' };
-const DOMAINS = [
-  ['Productivity', 'Email, collaboration, office suites'],
-  ['ERP', 'Enterprise resource planning'],
-  ['CRM', 'Customer relationship management'],
-  ['E-commerce', 'Online shop, B2B portal and payment'],
-  ['Retail', 'Shops and points of sale'],
-  ['Supply Chain', 'Warehouses, EDI and logistics'],
-  ['Traceability', 'Supply chain and cold chain'],
-  ['ITSM', 'IT service management'],
-  ['HR', 'Human capital management'],
-  ['Security', 'Cybersecurity and identity'],
-  ['Infrastructure', 'Hosting, cloud and virtualization'],
-  ['Network', 'WAN, LAN and telecom'],
-  ['Workplace', 'Workstations, end-user support and devices'],
-  ['Monitoring', 'Observability and alerting'],
-  ['IoT', 'Internet of Things platforms'],
-  ['Analytics', 'BI, data platforms and reporting'],
-  ['IT Management', 'IT governance, planning, sourcing and training'],
-];
-// Values of earlier fixture versions that described the kind of expense, not a domain.
-const LEGACY_DOMAIN_VALUES = ['Professional Services', 'Managed Services', 'Training', 'General'];
+// The recommended dimensions every tenant starts with (cost pool on the default dimension, IT
+// tower, purpose, priority) and the optional recurrence pack come from the tenant's own seed, in
+// its language: the runner adds the ones the tenant lacks (POST /analytics-axes/recommended, in
+// the tenant's seed language), which names the default dimension only while it has neither a
+// name nor a value. The budget files name their values in English, as an English tenant's seed
+// does; GET /analytics-axes/recommended gives the tenant's value of each one ("Matériel" for
+// "Hardware" on a French tenant), so the budget import never creates an English value next to
+// the tenant's own.
 
-async function defaultAxis() {
-  const axis = items(await apiGet('/analytics-axes')).find((item) => item.is_default);
-  if (!axis) throw new Error('The tenant has no default analytics dimension');
-  return axis;
+/** The `analytics:<code>` columns of the budget files that hold a recommended dimension -> its key. */
+const RECOMMENDED_COLUMNS = { default: 'cost_pool', it_tower: 'it_tower', purpose: 'purpose', priority: 'priority', recurrence: 'recurrence' };
+
+/** Adds the recommended dimensions the tenant lacks, in its seed language. */
+async function ensureRecommendedDimensions() {
+  info('Ensuring the recommended analytics dimensions');
+  const state = await apiGet('/analytics-axes/recommended');
+  const missing = state.items.filter((item) => !item.present).map((item) => item.code);
+  if (!missing.length) return;
+  const result = await apiPost('/analytics-axes/recommended', { codes: missing, language: state.language });
+  for (const created of result.created) ok(`Created analytics dimension '${created.name}' (${created.values_created} values)`);
 }
 
-async function defaultAxisValues(axisId) {
-  return (await getAll('/analytics-categories?limit=500')).filter((item) => item.axis_id === axisId);
-}
-
-async function ensureAnalyticsCategories() {
-  info('Ensuring the Domain dimension');
-  const axis = await defaultAxis();
-  if (axis.name !== DEFAULT_AXIS.name || axis.description !== DEFAULT_AXIS.description) {
-    await apiPatch(`/analytics-axes/${axis.id}`, DEFAULT_AXIS);
-    ok(`Default analytics dimension named '${DEFAULT_AXIS.name}'`);
-  }
-  const existing = await defaultAxisValues(axis.id);
-  for (const [name, description] of DOMAINS) {
-    if (existing.some((item) => lower(item.name) === lower(name))) continue;
-    await apiPost('/analytics-categories', { name, description });
-    ok(`Created domain '${name}'`);
-  }
-}
-
-// Runs after the budget imports, once no line uses the old values any more.
-async function removeLegacyDomainValues() {
-  const legacy = (await defaultAxisValues((await defaultAxis()).id)).filter((item) => LEGACY_DOMAIN_VALUES.some((name) => lower(name) === lower(item.name)));
-  for (const value of legacy) {
-    try {
-      await apiDelete(`/analytics-categories/${value.id}`);
-      ok(`Removed legacy domain value '${value.name}'`);
-    } catch (error) {
-      warn(`Could not remove legacy domain value '${value.name}': ${error.message.split('\n')[0]}`);
+/**
+ * Per budget file column code, the tenant's dimension that stands for the recommended one (its
+ * code, the nature it is restricted to) and its value name for each English seed name; and the
+ * code of an older tenant's PP&E type dimension, if it has one.
+ */
+async function recommendedColumns() {
+  const state = await apiGet('/analytics-axes/recommended');
+  const axes = items(await apiGet('/analytics-axes'));
+  const byKey = new Map(state.items.map((item) => [item.code, item]));
+  const dimensions = {};
+  for (const [column, key] of Object.entries(RECOMMENDED_COLUMNS)) {
+    const item = byKey.get(key);
+    if (!item?.present || !item.axis_code) throw new Error(`The tenant has no ${key} dimension`);
+    const axis = axes.find((candidate) => candidate.id === item.axis_id);
+    const names = new Map();
+    for (const value of item.values) {
+      // A value the administrator renamed or deleted: the import creates the English one.
+      if (!value.name) info(`${item.name}: no value stands for '${value.english_name}'; the budget import creates it`);
+      names.set(lower(value.english_name), value.name ?? value.english_name);
     }
+    dimensions[column] = { code: item.axis_code, name: item.name, appliesTo: axis?.applies_to ?? null, names };
   }
+  const ppeType = axes.find((axis) => lower(axis.code) === 'ppe_type');
+  if (ppeType) info(`${ppeType.name}: filled on the CAPEX lines from the cost pool (Hardware, else Software)`);
+  return { dimensions, ppeType: ppeType ? ppeType.code : null };
+}
+
+/**
+ * The rows of a budget file with the recommended dimensions' columns renamed to the tenant's
+ * dimension codes and their English values replaced by the tenant's. A value that is not in the
+ * seed is a fixture error. A dimension restricted to the other nature (the investment type of an
+ * older tenant standing for the purpose) leaves its column empty on these rows.
+ *
+ * A tenant created before the recommended dimensions still has the PP&E type dimension, required
+ * on CAPEX lines (backend/src/analytics/capex-dimensions.seed.ts). The files carry no PP&E type:
+ * it follows the cost pool there, Hardware for hardware and Software for the rest.
+ */
+function withTenantDimensions(rows, scope, { dimensions, ppeType }) {
+  const skipped = new Set();
+  const mapped = rows.map((row) => {
+    const out = {};
+    if (scope === 'capex' && ppeType) {
+      out[`analytics:${ppeType}`] = lower(row['analytics:default']) === 'hardware' ? 'Hardware' : 'Software';
+    }
+    for (const [column, value] of Object.entries(row)) {
+      const dimension = column.startsWith('analytics:') ? dimensions[column.slice('analytics:'.length)] : null;
+      if (!dimension) {
+        out[column] = value;
+        continue;
+      }
+      const text = normalizeValue(value);
+      let name = '';
+      if (text && dimension.appliesTo && dimension.appliesTo !== scope) skipped.add(dimension.name);
+      else if (text) {
+        name = dimension.names.get(lower(text));
+        if (!name) throw new Error(`${BUDGET_ITEM_FILES[scope]}: '${text}' is no value of the recommended ${column}`);
+      }
+      out[`analytics:${dimension.code}`] = name;
+    }
+    return out;
+  });
+  for (const name of skipped) info(`${name} applies to ${scope === 'opex' ? 'CAPEX' : 'OPEX'} lines only: left empty on the ${scope === 'opex' ? 'OPEX' : 'CAPEX'} lines`);
+  return mapped;
 }
 
 // ── Budget: analytics dimensions, costed lines, monthly rows ─────────────────
@@ -627,10 +651,12 @@ async function removeLegacyDomainValues() {
 // once the lines are imported: both steps resolve the names against the tenant
 // first.
 
+// The fixture's own dimensions, after the recommended ones. The business domain says which part of
+// the business a line serves (the IT tower says which part of IT); the budget reference groups the
+// lines of one order or program.
 const ANALYTICS_AXES = [
-  { code: 'nature', name: 'Cost type', description: 'What the expense pays for: licenses, staff augmentation, cloud, hardware…', sort_order: 10 },
-  { code: 'reference', name: 'Budget reference', description: 'Groups the OPEX and CAPEX lines of one order or one competence center, whatever the supplier', sort_order: 20 },
-  { code: 'recurrence', name: 'Recurrence', description: 'Recurring or one-off expense', sort_order: 30 },
+  { code: 'business_domain', name: 'Business domain', description: 'The part of the business the spending serves: ERP, e-commerce, shops… Shared IT serves every business.', sort_order: 100 },
+  { code: 'reference', name: 'Budget reference', description: 'Groups the OPEX and CAPEX lines of one order or one competence center, whatever the supplier', sort_order: 110 },
 ];
 
 async function ensureAnalyticsAxes() {
@@ -746,15 +772,15 @@ function disabledWithoutDate(rows) {
 }
 
 /** One item file, converted to a lines file and loaded through the two routes. */
-async function importBudgetLines(scope, defaultDimensionCode, existingNumbers) {
+async function importBudgetLines(scope, tenantDimensions, existingNumbers) {
   const name = BUDGET_ITEM_FILES[scope];
-  const rows = readCsv(name);
+  const rows = withTenantDimensions(readCsv(name), scope, tenantDimensions);
   const dated = disabledWithoutDate(rows);
   if (dated.length) {
     info(`${name}: ${dated.length} disabled rows without a date are written as ended on ${BUDGET_YEAR - 1}-12-31`);
   }
   info(`Importing ${name} as the ${scope === 'opex' ? 'OPEX' : 'CAPEX'} budget file`);
-  const csvText = buildLinesFile(scope, rows, { year: BUDGET_YEAR, defaultDimensionCode, existingNumbers });
+  const csvText = buildLinesFile(scope, rows, { year: BUDGET_YEAR, existingNumbers });
   const result = await loadBudgetFile({ request: budgetRequest, scope, csvText, filename: name });
   ok(`Imported ${name}: ${result.rows} rows, ${result.created} created, ${result.updated} updated, ${result.unchanged} unchanged ` +
     `(preflight ${(result.preflightMs / 1000).toFixed(1)} s, import ${(result.importMs / 1000).toFixed(1)} s)`);
@@ -764,10 +790,9 @@ async function importBudgetLines(scope, defaultDimensionCode, existingNumbers) {
 /** The OPEX and CAPEX lines through the budget file, then the refreshed index. */
 async function importBudgetItems() {
   const before = await budgetItemIndex();
-  const defaultDimensionCode = await fetchDefaultDimensionCode(budgetRequest);
-  info(`Default analytics dimension: analytics:${defaultDimensionCode}`);
+  const tenantDimensions = await recommendedColumns();
   for (const scope of ['opex', 'capex']) {
-    await importBudgetLines(scope, defaultDimensionCode, numbersByName(before, scope));
+    await importBudgetLines(scope, tenantDimensions, numbersByName(before, scope));
   }
   return budgetItemIndex();
 }
@@ -1896,7 +1921,6 @@ async function runImports() {
   step('budget');
   const budgetIndex = await importBudgetItems();
   await runBudget(budgetIndex);
-  await removeLegacyDomainValues();
   step('portfolio');
   await importCsv('16-portfolio-projects.csv', '/portfolio/projects/import');
   await importCsv('17-portfolio-requests.csv', '/portfolio/requests/import');
@@ -1943,7 +1967,7 @@ async function main() {
   await setupSettings();
   step('classification');
   await ensurePortfolioClassification();
-  await ensureAnalyticsCategories();
+  await ensureRecommendedDimensions();
   await ensureAnalyticsAxes();
   await runImports();
   if (!options.skipRelations) await runRelations();

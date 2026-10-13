@@ -192,6 +192,23 @@ export function parseBudgetBase(raw: unknown, year: number): BudgetBase | null {
   return cells.size > 0 || columns.size > 0 ? { cells, columns } : null;
 }
 
+/**
+ * The base a write that replaces a whole column on the strength of what the
+ * screen showed must carry (the budget tab's restore and copy):
+ * `base.columns.<column>` with its twelve months and its lines (`[]` without
+ * any), so a colleague's change of either refuses it (409), even one that
+ * leaves the months as they were. A 400 without it; its values are checked
+ * by `parseBudgetBase`.
+ */
+export function assertColumnBase(rawBase: unknown, measure: AmountMeasure, action: string): void {
+  const column = isObject(rawBase) && isObject(rawBase.columns) ? rawBase.columns[measure] : undefined;
+  if (!isObject(column) || !Array.isArray(column.months) || !Array.isArray(column.lines)) {
+    throw new BadRequestException(
+      `A ${action} needs the base of its column: base.columns.${measure}.months, the twelve months the screen last read, and base.columns.${measure}.lines, its lines ([] without any).`,
+    );
+  }
+}
+
 /** A column that conflicts, before the answer is built. */
 type ColumnConflict = {
   measure: AmountMeasure;

@@ -685,14 +685,27 @@
       "capex_one": "{{count}} CAPEX line",
       "capex_other": "{{count}} CAPEX lines",
       "noValues": "No values yet.",
-      "dimensionUnused": "{{values}}, not used by any line yet.",
-      "dimensionOne": "{{values}}, used by {{lines}}.",
-      "dimensionBoth": "{{values}}, used by {{opex}} and {{capex}}.",
-      "valueOne": "Used by {{lines}}.",
-      "valueBoth": "Used by {{opex}} and {{capex}}."
+      "dimensionLines_one": "Used by {{count}} line",
+      "dimensionLines_other": "Used by {{count}} lines",
+      "dimensionUnused": "Not used yet",
+      "valueLines_one": "Used by {{count}} line",
+      "valueLines_other": "Used by {{count}} lines",
+      "valueUnused": "Not used yet"
     },
-    "deleteBlocked": {
-      "dimensionHasValues": "To delete this dimension, delete its values first."
+    "forceDelete": {
+      "title": "Delete {{name}}?",
+      "dimensionValues_one": "Its value is deleted too.",
+      "dimensionValues_other": "Its {{count}} values are deleted too.",
+      "dimensionUsedValues_one": "Its value is deleted",
+      "dimensionUsedValues_other": "Its {{count}} values are deleted",
+      "dimensionUsed": "{{values}}, and it is removed from {{lines}}. This data cannot be recovered.",
+      "valueUsed_one": "It is removed from {{count}} budget line. This data cannot be recovered.",
+      "valueUsed_other": "It is removed from {{count}} budget lines. This data cannot be recovered.",
+      "valuesUsed_one": "{{count}} selected value is used: it is removed from {{lines}}. This data cannot be recovered.",
+      "valuesUsed_other": "{{count}} selected values are used: they are removed from {{lines}}. This data cannot be recovered.",
+      "budgetLines_one": "{{count}} budget line",
+      "budgetLines_other": "{{count}} budget lines",
+      "confirmAnyway": "Delete anyway"
     },
     "appliesToConflict": {
       "capex_one": "{{count}} CAPEX line has a value for this dimension. It keeps it, hidden while the dimension is for OPEX lines only.",
@@ -740,6 +753,35 @@
       "codeRequired": "Enter a code.",
       "codeInvalid": "Use lowercase letters, digits, - or _ (40 at most).",
       "dimensionRequired": "Choose a dimension."
+    },
+    "recommended": {
+      "action": "Recommended dimensions",
+      "title": "Add the recommended dimensions",
+      "subtitle": "Ready-made dimensions with their values, for OPEX and CAPEX lines. You can rename, change or delete them afterwards.",
+      "dimensions": "Dimensions",
+      "present": "Already present",
+      "presentAs": "Already present ({{name}})",
+      "language": "Language of the names",
+      "submit": "Add",
+      "names": {
+        "cost_pool": "Cost pool",
+        "it_tower": "IT tower",
+        "purpose": "Purpose",
+        "priority": "Priority",
+        "recurrence": "Recurrence"
+      },
+      "hints": {
+        "cost_pool": "What the money pays for: hardware, software, internal and external labor… The cost pools of TBM.",
+        "it_tower": "The part of IT it serves: compute, storage, network, end user… The IT towers of TBM.",
+        "purpose": "Why the money is spent: replacement, capacity, compliance, growth…",
+        "priority": "Mandatory, high, medium or low.",
+        "recurrence": "Recurring or one-off."
+      },
+      "created_one": "{{count}} dimension added: {{names}}.",
+      "created_other": "{{count}} dimensions added: {{names}}.",
+      "nothingCreated": "Nothing added: these dimensions are already present.",
+      "failed": "The dimensions could not be added.",
+      "loadFailed": "The recommended dimensions could not be loaded."
     }
   },
   "businessProcesses": {

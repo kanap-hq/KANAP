@@ -35,6 +35,7 @@ import { COUNTRY_OPTIONS } from '../../constants/isoOptions';
 import { ymdToEu } from '../../lib/date-eu';
 import AddIcon from '@mui/icons-material/Add';
 import ApplicationSelect from '../../components/fields/ApplicationSelect';
+import OptionWithHint from '../../components/fields/OptionWithHint';
 import DateEUField from '../../components/fields/DateEUField';
 import DateCalendarPopover from '../../components/fields/DateCalendarPopover';
 import { ServerOption } from '../../components/fields/ServerSelect';
@@ -1335,14 +1336,7 @@ export default function AssetWorkspacePage() {
                 />
               )}
               renderOption={(props, option) => (
-                <li {...props} key={option.id}>
-                  <Box>
-                    <Typography className="kanap-autocomplete-option-primary">{option.name}</Typography>
-                    {option.description && (
-                      <Typography className="kanap-autocomplete-option-secondary">{option.description}</Typography>
-                    )}
-                  </Box>
-                </li>
+                <OptionWithHint key={option.id} optionProps={props} label={option.name} hint={option.description} />
               )}
               ListboxProps={{ sx: drawerAutocompleteListboxSx }}
               isOptionEqualToValue={(option, value) => option.id === value.id}

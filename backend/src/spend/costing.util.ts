@@ -1,6 +1,6 @@
 import { Decimal, DECIMAL_SCALE_DIGITS, DecimalLimitError, DecimalLimits, divRoundHalfAway, parseDecimalLiteral, parseLimitedDecimal } from '../common/decimal';
 import { CENTS_LIMIT } from '../common/amount';
-import { activeMonths, NO_ACTIVE_MONTH_MESSAGE, splitTowardZero, SpreadInputError } from './spread.util';
+import { activeMonths, NO_ACTIVE_MONTH_MESSAGE, periodMonths, splitTowardZero, SpreadInputError } from './spread.util';
 
 /**
  * Quantity × price lines: the months of one budget column computed from its
@@ -30,7 +30,8 @@ import { activeMonths, NO_ACTIVE_MONTH_MESSAGE, splitTowardZero, SpreadInputErro
  * rounded half away from zero where said, except the equal splits above. A
  * month counts for a line when the line's period covers its 15th
  * (`activeMonths`); a line bought once on one date (start = end) counts that
- * date's month. Its other months are zero.
+ * date's month (`periodMonths`, the rule of a total spread at a date). Its
+ * other months are zero.
  */
 
 export type QuantityUnit = 'days' | 'people' | 'pieces';
@@ -193,18 +194,16 @@ function parseDaysPerMonth(value: unknown, n: number): string {
 
 /**
  * A line's active months: those whose 15th its period covers; a line bought
- * once on one date (start = end, the pieces' date) counts that date's month.
+ * once on one date (start = end, the pieces' date) counts that date's month
+ * (`periodMonths`). A line counted per month keeps the 15th rule alone.
  */
 function lineMonths(year: number, line: Pick<CostLine, 'frequency' | 'period_start' | 'period_end'>, n: number): number[] {
   let months: number[];
   try {
-    months = activeMonths(year, line.period_start, line.period_end);
+    months = (line.frequency === 'once' ? periodMonths : activeMonths)(year, line.period_start, line.period_end);
   } catch (err) {
     if (err instanceof SpreadInputError) throw lineError(n, continued(err.message));
     throw err;
-  }
-  if (months.length === 0 && line.frequency === 'once' && line.period_start === line.period_end) {
-    months = [Number(line.period_start.slice(5, 7))];
   }
   if (months.length === 0) throw lineError(n, continued(NO_ACTIVE_MONTH_MESSAGE));
   return months;

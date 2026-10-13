@@ -221,6 +221,7 @@
       "password_reset_completed": "Passwort zurückgesetzt",
       "password_reset_requested": "Zurücksetzen des Passworts angefordert",
       "refresh_denied": "Sitzungsverlängerung abgelehnt",
+      "restored": "Wiederherstellen",
       "sso_login": "Anmeldung mit Microsoft",
       "sso_login_failed": "Fehlgeschlagene Anmeldung mit Microsoft",
       "update": "Aktualisieren"
