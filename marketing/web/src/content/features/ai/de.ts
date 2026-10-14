@@ -4,7 +4,7 @@ const content: FeatureContent = {
   meta: {
     title: 'Plaid, KI-Assistent für IT-Governance',
     description:
-      'Fragen Sie Plaid zu Ihren IT-Daten. Dokumente erstellen, Aufgaben aktualisieren, beliebiges KI-Tool per MCP anbinden. Nutzung in Hosted Cloud enthalten. Open Source.',
+      'Fragen Sie Plaid zu Ihren IT-Daten. Dokumente erstellen, Aufgaben aktualisieren, Ihre KI-Tools per MCP anbinden. Nutzung in Hosted Cloud enthalten. Open Source.',
   },
   header: {
     eyebrow: 'Plaid · KI-Assistent',
@@ -35,22 +35,22 @@ const content: FeatureContent = {
       shotAlt: 'Plaid zeigt eine Vorschau von Aufgabenänderungen',
     },
     {
-      title: 'MCP, KANAP aus jedem KI-Tool nutzen',
-      body: 'KANAP stellt einen vollwertigen MCP-Server (Model Context Protocol) bereit. Binden Sie Claude Desktop, Cursor, Windsurf oder ein beliebiges MCP-kompatibles Tool an, und fragen Sie Ihre IT-Governance-Daten ab, ohne Ihren Workflow zu verlassen.',
+      title: 'MCP, KANAP aus Ihren KI-Tools nutzen',
+      body: 'Fragen Sie Ihre IT-Governance-Daten ab, ohne Ihren Workflow zu verlassen. KANAP stellt einen schreibgeschützten MCP-Server (Model Context Protocol) bereit. Claude Code, Cursor und jeder Client, der einen API-Key im Header sendet, verbinden sich direkt damit.',
       bullets: [
-        'Standard-MCP-Protokoll, funktioniert mit jedem kompatiblen Client',
-        'Sichere API-Key-Authentifizierung mit feingranularem Scoping',
+        'Standard-MCP über HTTP, authentifiziert per API-Key',
+        'Jeder Schlüssel liest nur, was sein Ersteller sehen darf',
         'Dieselben Leseabfragen wie im eingebauten Chat (MCP ist schreibgeschützt)',
         'Bestehende KI-Workflows beibehalten und KANAP-Kontext ergänzen',
       ],
-      shotAlt: 'MCP-Konfiguration mit API-Key-Scoping',
+      shotAlt: 'Einstellungen der MCP API-Schlüssel',
     },
     {
       title: 'Volle Kontrolle & Compliance',
       body: 'Plaid respektiert die Regeln Ihrer Organisation. Jede Aktion unterliegt den Berechtigungen des Nutzers. Administratoren haben vollständige Kontrolle darüber, was Plaid darf und was nicht.',
       bullets: [
         'Vollständige Einhaltung der Nutzerrechte bei jeder Abfrage',
-        'Sichere API-Keys mit granularem MCP-Scoping',
+        'MCP-Schlüssel mit Ablaufdatum, widerrufbar und auf die Rechte ihres Erstellers begrenzt',
         'Websuche kann unabhängig aktiviert oder deaktiviert werden',
         'Vorschau und Bestätigung für alle Schreiboperationen',
         'Nur-Lese-Zugriff über Rollen für vorsichtige Rollouts',

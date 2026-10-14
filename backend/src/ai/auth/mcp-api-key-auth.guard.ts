@@ -1,12 +1,12 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { AiApiKeysService } from '../ai-api-keys.service';
-import { TenantsService } from '../../tenants/tenants.service';
+import { AiTenantExecutionService } from '../execution/ai-tenant-execution.service';
 
 @Injectable()
 export class McpApiKeyAuthGuard implements CanActivate {
   constructor(
     private readonly apiKeys: AiApiKeysService,
-    private readonly tenants: TenantsService,
+    private readonly tenantExecutor: AiTenantExecutionService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -16,25 +16,16 @@ export class McpApiKeyAuthGuard implements CanActivate {
       throw new UnauthorizedException('Missing MCP API key');
     }
 
-    const authentication = await this.apiKeys.authenticatePresentedKey(rawKey, {
-      tenantId: req?.tenant?.id ? String(req.tenant.id) : undefined,
-    });
-    const { apiKey, user } = authentication;
-
-    if (req?.tenant?.id && req.tenant.id !== apiKey.tenant_id) {
-      throw new UnauthorizedException('MCP API key tenant mismatch');
+    // ai_api_keys is under FORCE RLS: the key is looked up inside the tenant named by the host.
+    const tenantId = req?.tenant?.id ? String(req.tenant.id) : null;
+    if (!tenantId) {
+      throw new UnauthorizedException('MCP requests must use the tenant address.');
     }
-
-    if (!req?.tenant?.id) {
-      const tenant = await this.tenants.findById(apiKey.tenant_id);
-      if (!tenant) {
-        throw new UnauthorizedException('Tenant not found');
-      }
-      req.tenant = {
-        id: tenant.id,
-        slug: tenant.slug,
-        name: tenant.name,
-      };
+    const { apiKey, user } = await this.tenantExecutor.run(tenantId, (manager) =>
+      this.apiKeys.authenticatePresentedKey(rawKey, { manager, tenantId }),
+    );
+    if (apiKey.tenant_id !== tenantId) {
+      throw new UnauthorizedException('MCP API key tenant mismatch');
     }
 
     req.user = {

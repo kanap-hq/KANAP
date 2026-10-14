@@ -410,7 +410,7 @@ export class AiToolRegistry {
           inputSchema: GetEntityDetailInputSchema,
           inputSummary: {
             entity_type: `One of ${QUERY_ENTITY_TYPE_SUMMARY}.`,
-            entity_id: 'The entity UUID, or canonical reference such as PRJ-12, REQ-7, T-42, DOC-3, or INC-12 when supported.',
+            entity_id: 'The entity UUID, or canonical reference such as APP-4, AST-9, PRJ-12, REQ-7, T-42, DOC-3, INC-12 or BL-5 when supported.',
             year: 'Optional fiscal/calendar year for year-backed metrics on supported entities such as companies and departments.',
           },
           surfaces: ['chat', 'mcp'],
@@ -430,7 +430,7 @@ export class AiToolRegistry {
           inputSchema: GetEntityContextInputSchema,
           inputSummary: {
             entity_type: `One of ${CONTEXT_ENTITY_TYPE_SUMMARY}.`,
-            entity_id: 'The entity UUID to inspect.',
+            entity_id: 'The entity UUID or reference such as APP-4, AST-9, PRJ-12, REQ-7 or T-42.',
           },
           surfaces: ['chat', 'mcp'],
           readOnly: true,

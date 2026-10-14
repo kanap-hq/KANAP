@@ -913,6 +913,8 @@
       "summary": {
         "preview_one": "{{count}} ligne dans l'aperçu.",
         "preview_other": "{{count}} lignes dans l'aperçu.",
+        "leftOut_one": "{{count}} ligne non valide en {{year}} est laissée de côté.",
+        "leftOut_other": "{{count}} lignes non valides en {{year}} sont laissées de côté.",
         "done": "Copie terminée.",
         "amounts": "Montants : {{processed}} à copier, {{skipped}} ignorés.",
         "amountsDone": "Montants : {{processed}} copiés, {{skipped}} ignorés.",
