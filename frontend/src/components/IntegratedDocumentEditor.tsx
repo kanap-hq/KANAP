@@ -25,7 +25,7 @@ import ImportButton from './ImportButton';
 import { MarkdownContent } from './MarkdownContent';
 import { normalizeMarkdownForRichTextEditor } from '../lib/markdownEditorNormalization';
 import { getApiErrorMessage, getDocumentSaveErrorMessage } from '../utils/apiErrorMessage';
-import type { AutosaveStatus } from '../hooks/useAutosave';
+import { AUTOSAVE_RETRY_DELAYS_MS, isTransientSaveFailure, type AutosaveStatus } from '../hooks/useAutosave';
 
 const MarkdownEditor = React.lazy(() => import('./MarkdownEditor'));
 
@@ -344,6 +344,9 @@ export const IntegratedDocumentEditor = React.forwardRef<
     }
   }, [acquireLock, canEdit, doc?.edit_lock, editMode, isDraftMode, lockToken, parseLockInfo, parseLockInfoFromError]);
 
+  // Autosaves refused in a row by a busy server (503 busy or MARKDOWN_BUSY, 409 retry).
+  const transientAutosaveFailuresRef = React.useRef(0);
+
   const saveMutation = useMutation({
     mutationFn: async (mode: 'manual' | 'autosave') => {
       if (isDraftMode || !entityId) {
@@ -364,6 +367,7 @@ export const IntegratedDocumentEditor = React.forwardRef<
       return { mode, sentContent, data: res.data as IntegratedDocumentDetails };
     },
     onSuccess: async (result) => {
+      transientAutosaveFailuresRef.current = 0;
       setError(null);
       savedContentRef.current = result.sentContent;
       // Typing while the request was in flight must survive: the draft stays
@@ -392,6 +396,18 @@ export const IntegratedDocumentEditor = React.forwardRef<
     onError: (e: any, mode: 'manual' | 'autosave') => {
       const status = Number(e?.response?.status || 0);
       const lockInfo = parseLockInfoFromError(e);
+      if (mode === 'autosave' && isTransientSaveFailure(e)) {
+        // A busy server: the next autosave sends the text again (the autosave delay is longer
+        // than the server's Retry-After). Said only once the retries keep failing.
+        transientAutosaveFailuresRef.current += 1;
+        if (transientAutosaveFailuresRef.current <= AUTOSAVE_RETRY_DELAYS_MS.length) {
+          markSaveStatus('pending');
+          return;
+        }
+        markSaveStatus('error');
+        setError(t('errors:notSavedYet'));
+        return;
+      }
       markSaveStatus('error');
       if ((status === 410 || status === 423) && mode === 'autosave') {
         setEditMode(false);

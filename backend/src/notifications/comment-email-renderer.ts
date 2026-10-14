@@ -16,6 +16,8 @@ export interface RenderCommentForEmailParams {
   commentHtml: string;
   tenantBaseUrl: string;
   tenantSlug?: string | null;
+  /** The HTML was cleaned for an email already (sanitizeRichHtmlForEmail): it is not cleaned again. */
+  sanitized?: boolean;
 }
 
 export interface RenderedCommentForEmail {
@@ -24,7 +26,7 @@ export interface RenderedCommentForEmail {
 }
 
 export function renderCommentForEmail(params: RenderCommentForEmailParams): RenderedCommentForEmail {
-  const sanitized = sanitizeCommentHtml(params.commentHtml);
+  const sanitized = params.sanitized ? String(params.commentHtml || '').trim() : sanitizeCommentHtml(params.commentHtml);
   const withAbsoluteUrls = rewriteCommentUrls(sanitized, params.tenantBaseUrl, params.tenantSlug ?? null);
 
   const html = withAbsoluteUrls.trim() || '<p>(No comment content)</p>';

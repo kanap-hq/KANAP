@@ -18,7 +18,12 @@ import { extractInlineImageUrls } from '../common/content-image-urls';
 import { ItemNumberService } from '../common/item-number.service';
 import { DocumentImportService, ImportedDocumentResult } from '../common/document-import.service';
 import { assertMarkdownSize } from '../common/markdown-limits';
-import { isMarkdownTooComplex, markdownToSearchText, normalizeMarkdownRichText } from '../common/markdown-worker';
+import {
+  isMarkdownTooComplex,
+  markdownToSearchText,
+  normalizeMarkdownRichText,
+  normalizeMarkdownWithSearchText,
+} from '../common/markdown-worker';
 import { bilingualDocumentTsQueryAnyTermSql, bilingualDocumentTsQuerySql, normalizeDocumentAnyTermQuery } from '../common/document-search-tsquery';
 import { DocumentExportService, ExportImageFetchOptions } from '../common/document-export.service';
 import { BulkDeleteResult } from '../common/delete.types';
@@ -3849,7 +3854,9 @@ export class KnowledgeService {
       ? await this.getTemplateDocumentSummary(templateDocumentId, manager, tenantId, userId)
       : null;
 
-    let contentMarkdown = await normalizeMarkdownRichText(body?.content_markdown, { fieldName: 'content_markdown' }) || '';
+    const normalizedContent = await normalizeMarkdownWithSearchText(body?.content_markdown, { fieldName: 'content_markdown' });
+    let contentMarkdown = normalizedContent.content || '';
+    let contentPlain: string | null = normalizedContent.searchText;
     if (templateDocument) {
       templateClassifications = await manager.query(
         `SELECT category_id, stream_id
@@ -3860,6 +3867,7 @@ export class KnowledgeService {
       );
       if (!String(contentMarkdown || '').trim()) {
         contentMarkdown = templateDocument.content_markdown;
+        contentPlain = null;
       }
     }
 
@@ -3869,7 +3877,7 @@ export class KnowledgeService {
       templateDocument,
     });
 
-    const contentPlain = await this.stripMarkdown(contentMarkdown);
+    if (contentPlain === null) contentPlain = await this.stripMarkdown(contentMarkdown);
 
     const itemNumber = await this.itemNumbers.nextItemNumber('document', tenantId, manager);
 
@@ -3978,10 +3986,11 @@ export class KnowledgeService {
     }
 
     const summary = body?.summary == null ? null : String(body.summary).trim() || null;
-    const contentMarkdown = await normalizeMarkdownRichText(body?.content_markdown, {
+    const normalizedContent = await normalizeMarkdownWithSearchText(body?.content_markdown, {
       fieldName: 'content_markdown',
       enforceSizeLimit: !opts?.storedContent,
-    }) || '';
+    });
+    const contentMarkdown = normalizedContent.content || '';
     const status = this.normalizeStatus(body?.status, 'published');
 
     await this.ensureFolderInLibrary(String(body.folder_id), String(body.library_id), manager);
@@ -4003,7 +4012,7 @@ export class KnowledgeService {
       title,
       summary,
       content_markdown: contentMarkdown,
-      content_plain: await this.stripMarkdown(contentMarkdown, { storedContent: opts?.storedContent }),
+      content_plain: normalizedContent.searchText,
       folder_id: body.folder_id,
       library_id: body.library_id,
       document_type_id: body.document_type_id,
@@ -4046,13 +4055,14 @@ export class KnowledgeService {
       }
 
       if (patch && patch.content_markdown !== undefined) {
-        const nextContent = await normalizeMarkdownRichText(patch.content_markdown, {
+        const next = await normalizeMarkdownWithSearchText(patch.content_markdown, {
           fieldName: 'content_markdown',
           enforceSizeLimit: !opts?.storedContent,
-        }) || '';
+        });
+        const nextContent = next.content || '';
         if (nextContent !== saved.content_markdown) {
           saved.content_markdown = nextContent;
-          saved.content_plain = await this.stripMarkdown(nextContent, { storedContent: opts?.storedContent });
+          saved.content_plain = next.searchText;
           changed = true;
         }
       }
@@ -4143,12 +4153,13 @@ export class KnowledgeService {
     }
 
     if (body?.content_markdown !== undefined) {
-      const normalized = await normalizeMarkdownRichText(body.content_markdown, {
+      const next = await normalizeMarkdownWithSearchText(body.content_markdown, {
         fieldName: 'content_markdown',
-      }) || '';
+      });
+      const normalized = next.content || '';
       if (normalized !== existing.content_markdown) {
         existing.content_markdown = normalized;
-        existing.content_plain = await this.stripMarkdown(normalized);
+        existing.content_plain = next.searchText;
         changed = true;
         contentChanged = true;
       }
@@ -4413,9 +4424,9 @@ export class KnowledgeService {
     }
 
     if (body?.content_markdown !== undefined) {
-      const normalized = await normalizeMarkdownRichText(body.content_markdown, { fieldName: 'content_markdown' }) || '';
-      existing.content_markdown = normalized;
-      existing.content_plain = await this.stripMarkdown(normalized);
+      const next = await normalizeMarkdownWithSearchText(body.content_markdown, { fieldName: 'content_markdown' });
+      existing.content_markdown = next.content || '';
+      existing.content_plain = next.searchText;
     }
 
     if (body?.folder_id !== undefined) {

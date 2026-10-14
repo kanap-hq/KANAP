@@ -2,7 +2,9 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { performance } from 'node:perf_hooks';
-import { BadRequestException, HttpException } from '@nestjs/common';
+import { BadRequestException, HttpException, Logger } from '@nestjs/common';
+import { renderCommentForEmail } from '../../notifications/comment-email-renderer';
+import { runWithRequestTenant } from '../tenancy/request-tenant-context';
 import { backendPath } from './backend-root';
 import { htmlToMarkdown as htmlToMarkdownInProcess } from '../html-to-markdown';
 import { MARKDOWN_MAX_BYTES } from '../markdown-limits';
@@ -18,8 +20,13 @@ import {
   MARKDOWN_WORK_TIMEOUT_MS,
   markdownToSearchText,
   markdownWorkBudget,
+  MARKDOWN_BUSY_RETRY_AFTER_SECONDS,
+  MarkdownBusyException,
+  markdownWorkersStatus,
   markdownWorkerThreadsForTests,
   normalizeMarkdownRichText,
+  normalizeMarkdownWithSearchText,
+  renderCommentEmail,
   renderMarkdownEmailHtml,
   renderPlainTextEmailHtml,
   reopenMarkdownWorkersForTests,
@@ -196,8 +203,69 @@ async function testAFullPoolAnswersBusy() {
   assert.equal(await normalizeMarkdownRichText('Served again.'), 'Served again.');
 }
 
+async function timedOutcome(work: () => Promise<unknown>): Promise<{ outcome: string; ms: number }> {
+  const startedAt = performance.now();
+  const outcome = await outcomeOf(work);
+  return { outcome, ms: performance.now() - startedAt };
+}
+
+async function testTenantsShareTheWorkers() {
+  const slow = fill('_a ', 100 * 1024);
+  // Tenant A: one call running, two waiting; a further call is refused at once.
+  const callsOfA = [0, 1, 2].map(() => runWithRequestTenant('tenant-a', () => timedOutcome(() => normalizeMarkdownRichText(slow))));
+  const refused = await runWithRequestTenant('tenant-a', () => timedOutcome(() => normalizeMarkdownRichText('one more')));
+  assert.equal(refused.outcome, MARKDOWN_BUSY);
+  assert.ok(refused.ms < 50, `refused in ${refused.ms.toFixed(0)} ms`);
+  assert.equal(new MarkdownBusyException().retryAfterSeconds, MARKDOWN_BUSY_RETRY_AFTER_SECONDS);
+  // Tenant B is served by the other worker while the calls of A wait.
+  const callOfB = await runWithRequestTenant('tenant-b', () => timedOutcome(() => normalizeMarkdownRichText('**B**')));
+  assert.equal(callOfB.outcome, 'ok');
+  assert.ok(callOfB.ms < 500, `tenant B served in ${callOfB.ms.toFixed(0)} ms`);
+  const outcomesOfA = await Promise.all(callsOfA);
+  assert.equal(outcomesOfA[0].outcome, MARKDOWN_TOO_COMPLEX);
+  // The waiting calls of A are refused after one second, while A's running call holds its worker.
+  for (const waiting of outcomesOfA.slice(1)) {
+    assert.equal(waiting.outcome, MARKDOWN_BUSY);
+    assert.ok(waiting.ms >= 900 && waiting.ms < 1800, `waited ${waiting.ms.toFixed(0)} ms`);
+  }
+  assert.equal(await runWithRequestTenant('tenant-a', () => normalizeMarkdownRichText('A again')), 'A again');
+}
+
+async function testOneCallPerDocumentSave() {
+  for (const page of userManualPages().slice(0, 40)) {
+    const normalized = normalizeInProcess(page);
+    assert.deepEqual(await normalizeMarkdownWithSearchText(page), { content: normalized, searchText: searchTextInProcess(normalized || '') });
+  }
+  assert.equal(searchTextInProcess(''), '');
+  assert.deepEqual(await normalizeMarkdownWithSearchText('  '), { content: null, searchText: '' });
+  const items = Array.from({ length: 4000 }, (_, index) => `- [${index % 2 ? 'x' : ' '}] Item ${index} of the list`).join('\n');
+  const text = items.slice(0, MARKDOWN_MAX_BYTES);
+  const startedAt = performance.now();
+  const saved = await normalizeMarkdownWithSearchText(text);
+  const elapsedMs = performance.now() - startedAt;
+  assert.equal(saved.content, text.trim());
+  assert.ok(elapsedMs < MARKDOWN_WORK_TIMEOUT_MS * 0.75, `4000 task items saved in ${elapsedMs.toFixed(0)} ms`);
+  const slow = fill('_a ', 250 * 1024);
+  assert.deepEqual(await normalizeMarkdownWithSearchText(slow, { enforceSizeLimit: false }), { content: slow.trim(), searchText: slow.replace(/\s+/g, ' ').trim() });
+}
+
+async function testCommentEmailsAreRenderedInTheWorkers() {
+  const base = 'https://acme.example.com';
+  for (const page of userManualPages().slice(0, 20)) {
+    const expected = renderCommentForEmail({ commentHtml: emailHtmlInProcess(page), tenantBaseUrl: base, tenantSlug: 'acme' });
+    assert.deepEqual(await renderCommentEmail(page, base, 'acme'), expected);
+  }
+  assert.deepEqual(await renderCommentEmail('  ', base, 'acme'), renderCommentForEmail({ commentHtml: '', tenantBaseUrl: base, tenantSlug: 'acme' }));
+  const slow = fill('_a ', 150 * 1024);
+  const { result, maxLagMs } = await withMainThreadProbe(() => renderCommentEmail(slow, base, 'acme'));
+  assert.deepEqual(result, renderCommentForEmail({ commentHtml: renderPlainTextEmailHtml(slow), tenantBaseUrl: base, tenantSlug: 'acme' }));
+  assert.ok(maxLagMs < MAX_MAIN_THREAD_LAG_MS, `plain-text email: main thread busy ${maxLagMs.toFixed(0)} ms`);
+}
+
 async function testStoppedPool() {
+  assert.equal(markdownWorkersStatus(), 'ready');
   await closeMarkdownWorkers();
+  assert.equal(markdownWorkersStatus(), 'unavailable');
   assert.equal(await outcomeOf(() => normalizeMarkdownRichText('text')), MARKDOWN_UNAVAILABLE);
   assert.equal(await renderMarkdownEmailHtml('**text**'), renderPlainTextEmailHtml('**text**'));
   reopenMarkdownWorkersForTests();
@@ -205,7 +273,14 @@ async function testStoppedPool() {
   assert.equal(await normalizeMarkdownRichText('**text**'), '**text**');
 }
 
+const busyLines: string[] = [];
+
 async function run() {
+  const warn = Logger.prototype.warn;
+  Logger.prototype.warn = function captureBusy(this: Logger, message: unknown, ...rest: unknown[]) {
+    if (String(message).includes('reason=busy')) busyLines.push(String(message));
+    return (warn as (...args: unknown[]) => void).call(this, message, ...rest);
+  } as typeof Logger.prototype.warn;
   assert.equal(await startMarkdownWorkers(), true);
   await testNormalContentsGiveTheSameResultAsInProcess();
   await testContentRulesAreTheSame();
@@ -215,7 +290,12 @@ async function run() {
   await testSharedBudget();
   await testAStoppedWorkerIsRefusedAndReplaced();
   await testAFullPoolAnswersBusy();
+  await testTenantsShareTheWorkers();
+  await testOneCallPerDocumentSave();
+  await testCommentEmailsAreRenderedInTheWorkers();
   await testStoppedPool();
+  // Refusals for a busy pool are logged once per minute, with their count.
+  assert.equal(busyLines.length, 1, busyLines.join('\n'));
   await closeMarkdownWorkers();
 }
 

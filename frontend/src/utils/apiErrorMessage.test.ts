@@ -19,6 +19,17 @@ describe('getApiErrorMessage', () => {
     )).toBe('Too many attempts. Wait a few minutes and try again.');
   });
 
+  it('reads the variant of a message for this installation', () => {
+    const unavailable = (variant?: string) => ({
+      response: { status: 503, data: { code: 'MARKDOWN_UNAVAILABLE', message: 'raw', ...(variant ? { variant } : {}) } },
+    });
+    expect(getApiErrorMessage(unavailable(), t, 'fallback')).toBe('Formatted texts cannot be saved right now. Try again in a few minutes.');
+    expect(getApiErrorMessage(unavailable('onprem'), t, 'fallback')).toBe(
+      'Formatted texts cannot be saved on this server right now. Ask your administrator to check the API logs.',
+    );
+    expect(getApiErrorMessage(unavailable('onprem'), i18n.getFixedT('fr'), 'fallback')).toMatch(/^Les textes mis en forme ne peuvent pas être enregistrés sur ce serveur/);
+  });
+
   it('keeps the server message without a code, then the fallback', () => {
     expect(getApiErrorMessage({ response: { status: 500, data: { message: 'Server said' } } }, t, 'fallback')).toBe('Server said');
     expect(getApiErrorMessage({}, t, 'fallback')).toBe('fallback');

@@ -7,9 +7,13 @@ import {
 import * as path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { Worker } from 'node:worker_threads';
+import { Features } from '../config/features';
+import { renderCommentForEmail, RenderedCommentForEmail } from '../notifications/comment-email-renderer';
+import { readPoolMax } from './db-pool-budget';
 import type { ImportedImageReference } from './document-import-markdown';
 import { sanitizeRichHtmlForEmail } from './html-sanitizer';
 import { assertMarkdownSize } from './markdown-limits';
+import { currentRequestTenant } from './tenancy/request-tenant-context';
 import type {
   MarkdownWorkerOperation,
   MarkdownWorkerOperations,
@@ -37,8 +41,13 @@ import {
  *   one call, or shares one budget across its calls (`markdownWorkBudget`).
  * - Calls wait in a queue for a free worker. A call that waits longer than
  *   `QUEUE_WAIT_MS` while workers are running is refused with a 503
- *   `MARKDOWN_BUSY`, so a request never holds its database connection long on a
- *   busy pool.
+ *   `MARKDOWN_BUSY` (with Retry-After), so a request never holds its database
+ *   connection long on a busy pool. Calls waiting and running stay within half
+ *   of the database pool of the process.
+ * - Each tenant has at most one call running and `TENANT_WAITING_MAX` waiting:
+ *   a worker that frees up takes the oldest call of a tenant that has none
+ *   running, and a further call of a tenant is refused at once (503
+ *   `MARKDOWN_BUSY`), so one tenant cannot hold the workers of all the others.
  * - When no worker can start, calls are refused with a 503 `MARKDOWN_UNAVAILABLE`
  *   and emails fall back to plain text. The main thread never parses in their
  *   place.
@@ -56,9 +65,13 @@ export const MARKDOWN_UNAVAILABLE = 'MARKDOWN_UNAVAILABLE';
 /** Workers per API process. */
 const WORKER_COUNT = 2;
 /** How long a call may wait for a free worker while the workers are running. */
-const QUEUE_WAIT_MS = 3000;
-/** Calls waiting at most, per process (memory bound). */
-const QUEUE_MAX = 256;
+const QUEUE_WAIT_MS = 1000;
+/** Calls of one tenant waiting at most (a tenant has one call running at most). */
+const TENANT_WAITING_MAX = 2;
+/** Seconds the client waits before sending again a call refused for a busy pool. */
+export const MARKDOWN_BUSY_RETRY_AFTER_SECONDS = 1;
+/** Refusals for a busy pool are logged once per window, with their count. */
+const BUSY_LOG_WINDOW_MS = 60_000;
 /** How long a worker may take to start (loading the modules, warm-up). */
 const START_TIMEOUT_MS = 30_000;
 /** Delay before a new start after a worker could not start. */
@@ -81,19 +94,27 @@ export class MarkdownTooComplexException extends BadRequestException {
 }
 
 export class MarkdownBusyException extends ServiceUnavailableException {
+  /** Sent as the Retry-After header (release-tenant-runner.filter.ts). */
+  readonly retryAfterSeconds = MARKDOWN_BUSY_RETRY_AFTER_SECONDS;
+
   constructor() {
     super({
       code: MARKDOWN_BUSY,
-      message: 'The server is busy processing other texts. Try again in a moment.',
+      message: 'The server is busy with other texts. Try again in a moment.',
     });
   }
 }
 
 export class MarkdownUnavailableException extends ServiceUnavailableException {
   constructor() {
+    // On-premise, the administrator of the server can act on it; in the cloud, the service restarts its workers.
+    const onPremise = Features.SINGLE_TENANT;
     super({
       code: MARKDOWN_UNAVAILABLE,
-      message: 'Text processing is not available on this server. Contact your administrator.',
+      message: onPremise
+        ? 'Formatted texts cannot be saved on this server right now. Ask your administrator to check the API logs.'
+        : 'Formatted texts cannot be saved right now. Try again in a few minutes.',
+      ...(onPremise ? { variant: 'onprem' } : {}),
     });
   }
 }
@@ -138,6 +159,8 @@ type Task = {
   chars: number;
   timeoutMs: number;
   budget?: MarkdownWorkBudget;
+  /** Tenant of the request that sent the call (fair share of the workers), or null. */
+  tenant: string | null;
   resolve: (value: unknown) => void;
   reject: (error: unknown) => void;
   waitTimer: NodeJS.Timeout | null;
@@ -165,6 +188,10 @@ require(workerData.entry);
 
 let slots: Slot[] = [];
 const queue: Task[] = [];
+/** Calls waiting in the queue, and running, per tenant. */
+const waitingByTenant = new Map<string, number>();
+const runningByTenant = new Map<string, number>();
+let queueMax = 0;
 let closed = false;
 let restartAt = 0;
 let unavailable = false;
@@ -180,6 +207,82 @@ function workerData(): Record<string, unknown> {
     tsNode: source ? require.resolve('ts-node') : null,
     tsProject: source ? path.resolve(__dirname, '..', '..', 'tsconfig.json') : null,
   };
+}
+
+/** Calls waiting at most: with the calls running, half the database pool of the process at most. */
+function queueLimit(): number {
+  if (!queueMax) queueMax = Math.max(1, Math.floor(readPoolMax() / 2) - WORKER_COUNT);
+  return queueMax;
+}
+
+function addCount(counts: Map<string, number>, tenant: string | null, delta: number): void {
+  if (!tenant) return;
+  const next = (counts.get(tenant) ?? 0) + delta;
+  if (next > 0) counts.set(tenant, next);
+  else counts.delete(tenant);
+}
+
+function enqueue(task: Task): void {
+  queue.push(task);
+  addCount(waitingByTenant, task.tenant, 1);
+}
+
+function takeFromQueue(index: number): Task {
+  const [task] = queue.splice(index, 1);
+  if (task.waitTimer) clearTimeout(task.waitTimer);
+  task.waitTimer = null;
+  addCount(waitingByTenant, task.tenant, -1);
+  return task;
+}
+
+/** Empties the queue (no worker can start, shutdown) and refuses its calls. */
+function refuseQueue(error: () => unknown): void {
+  while (queue.length > 0) takeFromQueue(0).reject(error());
+}
+
+/** A running call is over (answered, stopped or refused). */
+function endRun(task: Task): void {
+  addCount(runningByTenant, task.tenant, -1);
+}
+
+let busyWindowStart = 0;
+let busyCount = 0;
+
+/** Logs a refusal for a busy pool: the first of a 60 s window, then their count at its end. */
+function logBusy(op: string, fieldName: string, reason: 'tenant' | 'queue' | 'wait'): void {
+  const now = Date.now();
+  if (busyWindowStart && now - busyWindowStart < BUSY_LOG_WINDOW_MS) {
+    busyCount += 1;
+    return;
+  }
+  busyWindowStart = now;
+  busyCount = 0;
+  logger.warn(`Text not processed: op=${op} field=${fieldName} reason=busy (${reason}); further refusals are counted for 60 s.`);
+  setTimeout(() => {
+    if (busyCount > 0) logger.warn(`Texts not processed for a busy pool in the last 60 s: ${busyCount} more.`);
+    busyCount = 0;
+  }, BUSY_LOG_WINDOW_MS).unref();
+}
+
+/**
+ * Node options of a worker: those of the process, without the compile hook the
+ * development server (ts-node-dev) preloads. That hook compiles through the
+ * server's process and waits for it, which a worker thread cannot do: the
+ * worker registers ts-node itself (BOOTSTRAP).
+ */
+function workerExecArgv(): string[] | undefined {
+  const args = process.execArgv;
+  const kept: string[] = [];
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if ((arg === '-r' || arg === '--require') && /ts-node-dev/.test(args[index + 1] ?? '')) {
+      index += 1;
+      continue;
+    }
+    if (/^(?:-r|--require)=.*ts-node-dev/.test(arg)) continue;
+    kept.push(arg);
+  }
+  return kept.length === args.length ? undefined : kept;
 }
 
 function notifyReady(ready: boolean): void {
@@ -208,6 +311,7 @@ function spawnSlot(): void {
     worker = new Worker(BOOTSTRAP, {
       eval: true,
       workerData: workerData(),
+      execArgv: workerExecArgv(),
       resourceLimits: { maxOldGenerationSizeMb: WORKER_HEAP_MB },
     });
   } catch (error) {
@@ -230,7 +334,7 @@ function spawnSlot(): void {
     onStartFailure('the worker did not start in time');
   }, START_TIMEOUT_MS);
   slot.startTimer.unref();
-  worker.on('message', (message: MarkdownWorkerReply | { ready: true }) => onMessage(slot, message));
+  worker.on('message', (message: MarkdownWorkerReply | { ready: true; sources?: string[] }) => onMessage(slot, message));
   worker.on('error', (error) => {
     slot.lastError = String(error?.message ?? error);
   });
@@ -257,10 +361,7 @@ function onStartFailure(reason: string): void {
       '(503 MARKDOWN_UNAVAILABLE) and emails show comments as plain text. Next try in a few seconds.',
     );
   }
-  for (const task of queue.splice(0)) {
-    if (task.waitTimer) clearTimeout(task.waitTimer);
-    task.reject(new MarkdownUnavailableException());
-  }
+  refuseQueue(() => new MarkdownUnavailableException());
   notifyReady(false);
 }
 
@@ -271,6 +372,7 @@ function onExit(slot: Slot): void {
   slot.task = null;
   removeSlot(slot);
   if (task) {
+    endRun(task);
     chargeBudget(task, performance.now() - slot.startedAt);
     logStopped(task, slot.lastError ? `stopped: ${slot.lastError}` : 'stopped');
     task.reject(new MarkdownTooComplexException(task.fieldName));
@@ -283,10 +385,23 @@ function onExit(slot: Slot): void {
   dispatch();
 }
 
-function onMessage(slot: Slot, message: MarkdownWorkerReply | { ready: true }): void {
+/**
+ * Development server (ts-node-dev): it restarts when a module the API loaded
+ * changes, and learns of them from the API process. The modules only the workers
+ * load are reported to it the same way, so a change there restarts it too.
+ */
+function watchWorkerSources(sources: string[] | undefined): void {
+  if (!sources?.length || !process.env.TS_NODE_DEV || typeof process.send !== 'function') return;
+  for (const file of sources) {
+    if (!require.cache[file]) process.send({ cmd: 'NODE_DEV', required: file });
+  }
+}
+
+function onMessage(slot: Slot, message: MarkdownWorkerReply | { ready: true; sources?: string[] }): void {
   if (!slot.ready) {
     if (!('ready' in message) || message.ready !== true) return;
     slot.ready = true;
+    watchWorkerSources(message.sources);
     if (slot.startTimer) clearTimeout(slot.startTimer);
     slot.startTimer = null;
     // A worker keeps the process alive while it starts or runs a call, never when idle.
@@ -306,6 +421,7 @@ function onMessage(slot: Slot, message: MarkdownWorkerReply | { ready: true }): 
   if (slot.runTimer) clearTimeout(slot.runTimer);
   slot.runTimer = null;
   slot.worker.unref();
+  endRun(task);
   chargeBudget(task, performance.now() - slot.startedAt);
   settle(task, message);
   dispatch();
@@ -343,11 +459,13 @@ function logStopped(task: Task, reason: string): void {
 
 function runOnSlot(slot: Slot, task: Task): void {
   slot.task = task;
+  addCount(runningByTenant, task.tenant, 1);
   slot.startedAt = performance.now();
   slot.worker.ref();
   slot.runTimer = setTimeout(() => {
     if (slot.task !== task) return;
     slot.task = null;
+    endRun(task);
     chargeBudget(task, task.timeoutMs);
     logStopped(task, 'time');
     task.reject(new MarkdownTooComplexException(task.fieldName));
@@ -362,6 +480,7 @@ function runOnSlot(slot: Slot, task: Task): void {
     if (slot.runTimer) clearTimeout(slot.runTimer);
     slot.runTimer = null;
     slot.worker.unref();
+    endRun(task);
     task.reject(error);
   }
 }
@@ -371,10 +490,10 @@ function dispatch(): void {
   for (const slot of slots) {
     if (queue.length === 0) return;
     if (!slot.ready || slot.task) continue;
-    const task = queue.shift()!;
-    if (task.waitTimer) clearTimeout(task.waitTimer);
-    task.waitTimer = null;
-    runOnSlot(slot, task);
+    // One running call per tenant: the oldest call of a tenant with none running goes first.
+    const index = queue.findIndex((task) => !task.tenant || !runningByTenant.has(task.tenant));
+    if (index === -1) return;
+    runOnSlot(slot, takeFromQueue(index));
   }
 }
 
@@ -385,8 +504,8 @@ function onWaitTimeout(task: Task): void {
     task.waitTimer = setTimeout(() => onWaitTimeout(task), QUEUE_WAIT_MS);
     return;
   }
-  queue.splice(queue.indexOf(task), 1);
-  logger.warn(`Text not processed: op=${task.op} field=${task.fieldName} reason=busy`);
+  takeFromQueue(queue.indexOf(task));
+  logBusy(task.op, task.fieldName, 'wait');
   task.reject(new MarkdownBusyException());
 }
 
@@ -421,6 +540,7 @@ function submit<K extends MarkdownWorkerOperation>(
       chars: textLength(args),
       timeoutMs,
       budget: opts?.budget,
+      tenant: currentRequestTenant(),
       resolve: resolve as (value: unknown) => void,
       reject: settleWithError,
       waitTimer: null,
@@ -437,13 +557,18 @@ function submit<K extends MarkdownWorkerOperation>(
       refuse(new MarkdownUnavailableException());
       return;
     }
-    if (queue.length >= QUEUE_MAX) {
-      logger.warn(`Text not processed: op=${op} field=${fieldName} reason=busy`);
+    if (task.tenant && (waitingByTenant.get(task.tenant) ?? 0) >= TENANT_WAITING_MAX) {
+      logBusy(op, fieldName, 'tenant');
+      refuse(new MarkdownBusyException());
+      return;
+    }
+    if (queue.length >= queueLimit()) {
+      logBusy(op, fieldName, 'queue');
       refuse(new MarkdownBusyException());
       return;
     }
     task.waitTimer = setTimeout(() => onWaitTimeout(task), QUEUE_WAIT_MS);
-    queue.push(task);
+    enqueue(task);
     dispatch();
   });
 }
@@ -462,14 +587,14 @@ export function startMarkdownWorkers(): Promise<boolean> {
 /** Stops the workers (API shutdown). Calls still waiting or running are refused. */
 export async function closeMarkdownWorkers(): Promise<void> {
   closed = true;
-  for (const task of queue.splice(0)) {
-    if (task.waitTimer) clearTimeout(task.waitTimer);
-    task.reject(new MarkdownUnavailableException());
-  }
+  refuseQueue(() => new MarkdownUnavailableException());
   const stopping = slots.map((slot) => {
     const task = slot.task;
     slot.task = null;
-    if (task) task.reject(new MarkdownUnavailableException());
+    if (task) {
+      endRun(task);
+      task.reject(new MarkdownUnavailableException());
+    }
     slot.stopped = true;
     if (slot.runTimer) clearTimeout(slot.runTimer);
     if (slot.startTimer) clearTimeout(slot.startTimer);
@@ -478,6 +603,15 @@ export async function closeMarkdownWorkers(): Promise<void> {
   slots = [];
   notifyReady(false);
   await Promise.all(stopping);
+}
+
+/**
+ * State of the workers for the health route: `ready` (at least one worker
+ * answers), `starting`, or `unavailable` (none could start, or the API stops).
+ */
+export function markdownWorkersStatus(): 'ready' | 'starting' | 'unavailable' {
+  if (closed || unavailable) return 'unavailable';
+  return slots.some((slot) => slot.ready) ? 'ready' : 'starting';
 }
 
 /** For specs: a pool that may start again after `closeMarkdownWorkers`. */
@@ -563,6 +697,30 @@ export async function normalizeMarkdownRichText(value: unknown, opts?: Normalize
   }
 }
 
+/**
+ * `normalizeMarkdownRichText` and the search text of the result, in one call of
+ * the workers (a document save). A stored content the workers cannot process in
+ * time is kept as it is, and indexed with its spaces collapsed.
+ */
+export async function normalizeMarkdownWithSearchText(
+  value: unknown,
+  opts?: NormalizeOptions,
+): Promise<{ content: string | null; searchText: string }> {
+  const text = value == null ? '' : String(value).trim();
+  if (!text) return { content: null, searchText: '' };
+  const fieldName = opts?.fieldName || 'content';
+  const enforceSizeLimit = opts?.enforceSizeLimit !== false;
+  if (enforceSizeLimit) assertMarkdownSize(text, fieldName);
+  try {
+    return await submit('normalizeWithSearchText', [text, { fieldName, enforceSizeLimit }], { ...opts, fieldName });
+  } catch (error) {
+    if (!enforceSizeLimit && isMarkdownTooComplex(error)) {
+      return { content: text, searchText: text.replace(/\s+/g, ' ').trim() };
+    }
+    throw error;
+  }
+}
+
 export function isHtmlContent(content: string, opts?: MarkdownWorkOptions): Promise<boolean> {
   return submit('isHtml', [String(content ?? '')], opts);
 }
@@ -604,6 +762,31 @@ export async function renderMarkdownEmailHtml(content: string): Promise<string> 
   } catch {
     return renderPlainTextEmailHtml(text);
   }
+}
+
+/**
+ * A stored comment as the HTML and the text preview of an email, with links made
+ * absolute. Never rejects: a comment the workers cannot render is shown as plain text.
+ */
+export async function renderCommentEmail(
+  content: string,
+  tenantBaseUrl: string,
+  tenantSlug: string | null,
+): Promise<RenderedCommentForEmail> {
+  const text = String(content || '').trim();
+  if (text) {
+    try {
+      return await submit('commentEmail', [text, tenantBaseUrl, tenantSlug], { fieldName: 'email' });
+    } catch {
+      // Plain text below.
+    }
+  }
+  return renderCommentForEmail({
+    commentHtml: renderPlainTextEmailHtml(text),
+    tenantBaseUrl,
+    tenantSlug,
+    sanitized: true,
+  });
 }
 
 /** The Markdown of a document import (converter output) cleaned for the editor, and its images. */

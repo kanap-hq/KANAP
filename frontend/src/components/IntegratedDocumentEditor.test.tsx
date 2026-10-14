@@ -240,6 +240,36 @@ describe('IntegratedDocumentEditor — incidents:review', () => {
     expect((screen.getByLabelText('markdown-editor') as HTMLTextAreaElement).value).toBe('a long document, one more line');
   });
 
+  it('sends an autosave again when the server is busy with other texts, without an error', async () => {
+    await renderEditor({ autosaveDelayMs: 5 });
+    const editor = await startEditing();
+    vi.mocked(api.patch).mockRejectedValueOnce(Object.assign(new Error('Request failed'), {
+      response: {
+        status: 503,
+        headers: { 'retry-after': '1' },
+        data: { code: 'MARKDOWN_BUSY', message: 'The server is busy processing other texts. Try again in a moment.' },
+      },
+    }));
+
+    // The second attempt stays in flight until the test lets it answer.
+    let answer: (value: unknown) => void = () => undefined;
+    vi.mocked(api.patch).mockImplementationOnce((_url: string, body: any) => new Promise((resolve) => {
+      answer = () => resolve(documentPayload(String(body?.content_markdown ?? ''), 4) as any);
+    }));
+
+    fireEvent.change(editor, { target: { value: 'typed while the server is busy' } });
+
+    await waitFor(() => expect(api.patch).toHaveBeenCalledTimes(2));
+    expect(vi.mocked(api.patch).mock.calls[1][1]).toMatchObject({ content_markdown: 'typed while the server is busy', save_mode: 'autosave' });
+    // Sent again without an error message in between.
+    expect(screen.queryByText('errors:MARKDOWN_BUSY')).not.toBeInTheDocument();
+    expect(screen.queryByText('errors:notSavedYet')).not.toBeInTheDocument();
+    await act(async () => {
+      answer(undefined);
+    });
+    expect((screen.getByLabelText('markdown-editor') as HTMLTextAreaElement).value).toBe('typed while the server is busy');
+  });
+
   it('leaves edit mode and releases the lock when editing is revoked mid-session', async () => {
     // The host can revoke editing under the user's feet: closing the incident in
     // another tab freezes its review. Staying in edit mode would keep the lock

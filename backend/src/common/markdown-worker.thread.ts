@@ -12,6 +12,7 @@ import { containsInlineDataImage, htmlToMarkdown, isHtmlContent, resolveHtmlCont
 import { normalizeMarkdownRichText } from './markdown-rich-text';
 import { markdownToSearchText } from './markdown-search-text';
 import { renderMarkdownToHtml } from './markdown-to-html';
+import { renderCommentForEmail } from '../notifications/comment-email-renderer';
 
 /**
  * Entry of a Markdown worker thread (markdown-worker.ts starts it). Each message
@@ -22,12 +23,18 @@ import { renderMarkdownToHtml } from './markdown-to-html';
 
 export const MARKDOWN_WORKER_OPERATIONS = {
   normalize: (text: string, opts: { fieldName: string; enforceSizeLimit: boolean }) => normalizeMarkdownRichText(text, opts),
+  normalizeWithSearchText: (text: string, opts: { fieldName: string; enforceSizeLimit: boolean }) => {
+    const content = normalizeMarkdownRichText(text, opts);
+    return { content, searchText: markdownToSearchText(content || '') };
+  },
   isHtml: (text: string) => isHtmlContent(text),
   containsDataImage: (text: string) => containsInlineDataImage(text),
   htmlToMarkdown: (text: string) => htmlToMarkdown(text),
   resolveHtmlSources: (texts: string[]) => texts.map((text) => resolveHtmlContentSource(text)),
   searchText: (text: string) => markdownToSearchText(text),
   emailHtml: (text: string) => renderMarkdownToHtml(text),
+  commentEmail: (text: string, tenantBaseUrl: string, tenantSlug: string | null) =>
+    renderCommentForEmail({ commentHtml: renderMarkdownToHtml(text), tenantBaseUrl, tenantSlug }),
   importedMarkdown: (raw: string) => {
     const markdown = sanitizeForMdxEditor(raw);
     return { markdown, images: findImportedImageReferences(markdown) };
@@ -117,5 +124,10 @@ if (parentPort && (workerData as { kanapMarkdownWorker?: boolean } | null)?.kana
   port.on('message', (request: MarkdownWorkerRequest) => {
     port.postMessage(runMarkdownWorkerOperation(request));
   });
-  port.postMessage({ ready: true });
+  // From the TypeScript sources (development), the modules this thread loaded, so the
+  // development server restarts when one of them changes (markdown-worker.ts).
+  const sources = (workerData as { tsNode?: string | null }).tsNode
+    ? Object.keys(require.cache).filter((file) => file.endsWith('.ts'))
+    : undefined;
+  port.postMessage({ ready: true, sources });
 }

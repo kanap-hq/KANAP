@@ -46,7 +46,8 @@
   "SHARE_RATE_LIMITED": "Ha enviado el máximo de 30 enlaces en la última hora. Vuelva a intentarlo más tarde.",
   "MARKDOWN_TOO_LARGE": "Este texto es demasiado largo: el límite es de 200 KB de texto (las imágenes no cuentan).",
   "MARKDOWN_TOO_LARGE_DOCUMENT": "Este documento supera los 200 KB de texto que admite un guardado (las imágenes no cuentan). Acórtelo para guardar sus cambios. Se conserva la última versión guardada.",
-  "MARKDOWN_TOO_COMPLEX": "Este texto es demasiado complejo para procesarlo. Coloque los registros o el código pegados en un bloque de código, o cierre las marcas de formato (* y _).",
-  "MARKDOWN_BUSY": "El servidor está procesando otros textos. Vuelva a intentarlo en un momento.",
-  "MARKDOWN_UNAVAILABLE": "El procesamiento de textos no está disponible en este servidor. Póngase en contacto con su administrador."
+  "MARKDOWN_TOO_COMPLEX": "Este texto es demasiado complejo para analizarlo. Ponga los registros o el código pegados en un bloque de código, o cierre los caracteres de formato (* y _).",
+  "MARKDOWN_BUSY": "El servidor está ocupado con otros textos. Vuelva a intentarlo en un momento.",
+  "MARKDOWN_UNAVAILABLE": "Los textos con formato no se pueden guardar en este momento. Vuelva a intentarlo en unos minutos.",
+  "MARKDOWN_UNAVAILABLE_onprem": "Los textos con formato no se pueden guardar en este servidor en este momento. Pida a su administrador que revise los registros de la API."
 }

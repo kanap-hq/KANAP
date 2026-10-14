@@ -46,7 +46,8 @@
   "SHARE_RATE_LIMITED": "Sie haben in der letzten Stunde die Höchstzahl von 30 Links gesendet. Versuchen Sie es später erneut.",
   "MARKDOWN_TOO_LARGE": "Dieser Text ist zu lang: Die Grenze liegt bei 200 KB Text (Bilder zählen nicht).",
   "MARKDOWN_TOO_LARGE_DOCUMENT": "Dieses Dokument überschreitet die 200 KB Text, die eine Speicherung zulässt (Bilder zählen nicht). Kürzen Sie es, um Ihre Änderungen zu speichern. Die zuletzt gespeicherte Version bleibt erhalten.",
-  "MARKDOWN_TOO_COMPLEX": "Dieser Text ist zu komplex für die Verarbeitung. Setzen Sie eingefügte Protokolle oder Code in einen Codeblock oder schließen Sie die Formatierungszeichen (* und _).",
-  "MARKDOWN_BUSY": "Der Server verarbeitet gerade andere Texte. Versuchen Sie es gleich noch einmal.",
-  "MARKDOWN_UNAVAILABLE": "Die Textverarbeitung ist auf diesem Server nicht verfügbar. Wenden Sie sich an Ihren Administrator."
+  "MARKDOWN_TOO_COMPLEX": "Dieser Text ist zu komplex. Setzen Sie eingefügte Protokolle oder Code in einen Codeblock oder schließen Sie die Formatierungszeichen (* und _).",
+  "MARKDOWN_BUSY": "Der Server ist mit anderen Texten ausgelastet. Versuchen Sie es gleich noch einmal.",
+  "MARKDOWN_UNAVAILABLE": "Formatierte Texte können gerade nicht gespeichert werden. Versuchen Sie es in einigen Minuten erneut.",
+  "MARKDOWN_UNAVAILABLE_onprem": "Formatierte Texte können auf diesem Server gerade nicht gespeichert werden. Bitten Sie Ihren Administrator, die API-Protokolle zu prüfen."
 }

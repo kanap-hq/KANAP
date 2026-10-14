@@ -4,6 +4,8 @@ type ApiErrorPayload = {
   message?: unknown;
   code?: unknown;
   error?: unknown;
+  /** Variant of the message for this installation (`onprem`): the `errors:<code>_<variant>` key. */
+  variant?: unknown;
 };
 
 type ApiErrorLike = {
@@ -45,7 +47,8 @@ export function getApiErrorMessage(error: unknown, t: TFunction, fallback: strin
   const code = getApiErrorCode(apiError);
 
   if (code) {
-    const translated = t(`errors:${code}`, { defaultValue: message || fallback });
+    const variant = stringifyErrorValue(payload?.variant);
+    const translated = t(`errors:${code}`, { defaultValue: message || fallback, ...(variant ? { context: variant } : {}) });
     if (typeof translated === 'string' && translated.trim()) {
       return translated;
     }

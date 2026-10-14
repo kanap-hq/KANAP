@@ -10,8 +10,9 @@ export type AutosaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error' |
  * What a failed save means for the autosave, from the API's answer (the
  * backend's database error codes, plan planning/perf-scale lot 1D):
  * - `transient`: 409 `retry` (another write to the same data at the same
- *   moment) or 503 `busy` (the data is held by a long operation, or the
- *   server is saturated). The same save can go through a moment later: it is
+ *   moment), 503 `busy` (the data is held by a long operation, or the server
+ *   is saturated) or 503 `MARKDOWN_BUSY` (the server's text processing is busy
+ *   with other texts). The same save can go through a moment later: it is
  *   retried by itself a few times, then kept (see useAutosave);
  * - `conflict`: 409 `duplicate`, `parent_gone` or `in_use`. Sending the same
  *   save again fails the same way: it is reported and dropped, and the page
@@ -38,7 +39,8 @@ export function isTransientSaveFailure(error: unknown): boolean {
  * Waits before each automatic retry of a transient failure. Three retries per
  * pending edit in all, flushes included: a new edit gives a fresh three. The
  * wait is the longer of this and the server's Retry-After (the backend sends
- * a fixed 2 s), so the waits grow: 2, 2, 4 s on a busy answer.
+ * a fixed 2 s for `busy`, 1 s for `MARKDOWN_BUSY`), so the waits grow: 2, 2,
+ * 4 s on a busy answer.
  */
 export const AUTOSAVE_RETRY_DELAYS_MS: readonly number[] = [1_000, 2_000, 4_000];
 /** Ceiling for a wait the server asks for in Retry-After. */
@@ -50,7 +52,7 @@ export function classifySaveFailure(error: unknown): SaveFailure {
   const response = (error as { response?: { status?: number; data?: { code?: unknown }; headers?: Record<string, unknown> } } | null)?.response;
   const status = response?.status;
   const code = typeof response?.data?.code === 'string' ? response.data.code : undefined;
-  if ((status === 409 && code === 'retry') || (status === 503 && code === 'busy')) {
+  if ((status === 409 && code === 'retry') || (status === 503 && (code === 'busy' || code === 'MARKDOWN_BUSY'))) {
     const seconds = Number(String(response?.headers?.['retry-after'] ?? '').trim() || NaN);
     return {
       kind: 'transient',

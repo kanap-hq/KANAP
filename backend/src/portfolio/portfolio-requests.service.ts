@@ -243,6 +243,21 @@ const applyExplicitTenantConstraint = (
   qb.andWhere('r.tenant_id = :tenantId', { tenantId });
 };
 
+/**
+ * The purpose of a request converted from a task: the purpose sent with the
+ * conversion is a new text, held to the size limit; the task's description is a
+ * stored content, kept whatever its size (as copies and recoveries are).
+ */
+export async function convertedRequestPurpose(
+  hasPurposeOverride: boolean,
+  purposeOverride: unknown,
+  taskDescription: unknown,
+): Promise<string | null> {
+  return hasPurposeOverride
+    ? await normalizeMarkdownRichText(purposeOverride)
+    : await normalizeMarkdownRichText(taskDescription, { fieldName: 'purpose', enforceSizeLimit: false });
+}
+
 @Injectable()
 export class PortfolioRequestsService {
   constructor(
@@ -1276,9 +1291,7 @@ export class PortfolioRequestsService {
 
     const hasPurposeOverride = Object.prototype.hasOwnProperty.call(overrides || {}, 'purpose');
     const hasRequestorOverride = Object.prototype.hasOwnProperty.call(overrides || {}, 'requestor_id');
-    const purposeContent = hasPurposeOverride
-      ? await this.normalizeNullable(overrides?.purpose)
-      : await this.normalizeNullable(task.description);
+    const purposeContent = await convertedRequestPurpose(hasPurposeOverride, overrides?.purpose, task.description);
 
     const request = requestRepo.create({
       tenant_id: tenantId,

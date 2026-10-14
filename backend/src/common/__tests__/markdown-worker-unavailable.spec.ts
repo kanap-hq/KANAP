@@ -4,6 +4,7 @@ import { HttpException } from '@nestjs/common';
 import {
   closeMarkdownWorkers,
   MARKDOWN_UNAVAILABLE,
+  markdownWorkersStatus,
   normalizeMarkdownRichText,
   renderMarkdownEmailHtml,
   renderPlainTextEmailHtml,
@@ -36,6 +37,7 @@ async function run() {
   };
   try {
     assert.equal(await startMarkdownWorkers(), false);
+    assert.equal(markdownWorkersStatus(), 'unavailable');
     assert.equal(await codeOf(() => normalizeMarkdownRichText('**text**')), `503 ${MARKDOWN_UNAVAILABLE}`);
     assert.equal(
       await codeOf(() => normalizeMarkdownRichText('**stored**', { enforceSizeLimit: false })),
