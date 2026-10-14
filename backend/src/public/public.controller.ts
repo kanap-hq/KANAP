@@ -2,7 +2,8 @@ import { BadRequestException, Body, Controller, Get, InternalServerErrorExceptio
 import { Features } from '../config/features';
 import { throwNotAvailableInMode } from '../common/feature-gates';
 import { Throttle } from '@nestjs/throttler';
-import { IsEmail, IsOptional, IsString, Matches, MinLength } from 'class-validator';
+import { IsEmail, IsISO31661Alpha2, IsNotEmpty, IsOptional, IsString, Matches, MinLength } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomBytes, createHash } from 'crypto';
 import { Repository } from 'typeorm';
@@ -19,8 +20,18 @@ import { clientAddress } from '../common/client-address';
 import { withTenant } from '../common/tenant-runner';
 import { TurnstileService } from './turnstile.service';
 import { Subscription, SubscriptionStatus } from '../billing/subscription.entity';
-import { TRIAL_PERIOD_DAYS } from '../billing/plans.config';
-import { StripeClientService } from '../billing/stripe';
+import { INVOICE_PAYMENT_TERM_DAYS, TRIAL_PERIOD_DAYS } from '../billing/plans.config';
+import { StripeClientService, ensureInvoiceA4 } from '../billing/stripe';
+import {
+  euVatTaxIdValue,
+  isEuCountry,
+  isValidEuVatNumber,
+  normaliseVatNumber,
+  stripeAddress,
+  toIsoCountry,
+} from '../billing/billing-profile.util';
+import { customerSiren, invoiceCustomFields, invoiceLocale } from '../billing/invoice-mentions';
+import { GTC_VERSION } from '../billing/terms';
 import { isReservedTenantSlug, normalizeTenantSlug } from '../tenants/tenant-slug-policy';
 import { StorageService } from '../common/storage/storage.service';
 import { Response } from 'express';
@@ -101,41 +112,63 @@ export class SendContactDto {
   captcha_token?: string;
 }
 
+/** Trims a string body field; other values are left for the validators to refuse. */
+const trimmed = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
+
+/**
+ * The Enterprise Support invoice form (/offer). The invoice needs the full billing address
+ * with an ISO country code; a company in the EU also needs a valid VAT number, checked by
+ * the route with the rule of the tenant invoice details (billing-profile.util.ts).
+ */
 export class RequestSupportInvoiceDto {
+  @Transform(trimmed)
   @IsString()
   @MinLength(2)
   company_name!: string;
 
+  @Transform(trimmed)
   @IsString()
   @MinLength(2)
   contact_name!: string;
 
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
   @IsEmail()
   billing_email!: string;
 
+  @Transform(trimmed)
   @IsString()
-  @IsOptional()
-  address_line1?: string;
+  @IsNotEmpty()
+  address_line1!: string;
 
+  @Transform(trimmed)
   @IsString()
   @IsOptional()
   address_line2?: string;
 
+  @Transform(trimmed)
   @IsString()
-  @IsOptional()
-  city?: string;
+  @IsNotEmpty()
+  city!: string;
 
+  @Transform(trimmed)
   @IsString()
-  @IsOptional()
-  postal_code?: string;
+  @IsNotEmpty()
+  postal_code!: string;
 
-  @IsString()
-  @MinLength(2)
+  /** ISO 3166-1 alpha-2 ("fr" is read as "FR"; "FRANCE" is refused). */
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toUpperCase() : value))
+  @IsISO31661Alpha2()
   country!: string;
 
+  @Transform(trimmed)
   @IsString()
   @IsOptional()
   vat_id?: string;
+
+  /** The version of the general terms of sale the requester accepted (GTC_VERSION). */
+  @IsString()
+  @IsNotEmpty()
+  terms_version!: string;
 
   @IsString()
   @IsOptional()
@@ -145,6 +178,15 @@ export class RequestSupportInvoiceDto {
   @IsOptional()
   captcha_token?: string;
 }
+
+/** A support invoice request after normalisation: exactly what is sent to Stripe. */
+type SupportInvoiceRequest = {
+  company: string;
+  contact: string;
+  email: string;
+  address: { line1: string; line2: string | null; city: string; postalCode: string; country: string };
+  vatNumber: string | null;
+};
 
 @Controller('public')
 export class PublicController {
@@ -353,6 +395,8 @@ export class PublicController {
   @Throttle({ default: RATE_LIMITS.publicRequestSupportInvoice })
   async requestSupportInvoice(@Body() body: RequestSupportInvoiceDto, @Req() req: any) {
     if (Features.SINGLE_TENANT) throwNotAvailableInMode();
+    // Checked before the CAPTCHA (its token is single use) and before any Stripe call.
+    const request = this.validateSupportInvoiceRequest(body);
     await this.turnstile.verifyOrThrow({
       token: this.resolveCaptchaToken(body),
       remoteIp: clientAddress(req),
@@ -364,40 +408,54 @@ export class PublicController {
     const priceId = (process.env.STRIPE_PRICE_ENTERPRISE_SUPPORT_ANNUAL || '').trim();
     if (!priceId) throw new InternalServerErrorException('Enterprise Support price not configured');
 
+    const country = request.address.country;
+    const euBankTransferCountry = this.resolveEuBankTransferCountry(country);
+    const idempotencyBase = this.supportInvoiceIdempotencyBase(request, priceId, euBankTransferCountry);
+    const mentionsContact = { vatNumber: request.vatNumber, address: { country } };
+    const siren = customerSiren(mentionsContact);
+    const euVat = euVatTaxIdValue({ vatNumber: request.vatNumber, address: request.address });
+
     let customer: any;
     try {
-      customer = await stripe.customers.create({
-        name: body.company_name,
-        email: body.billing_email,
-        metadata: {
-          contact_name: body.contact_name,
-          billing_channel: 'enterprise-support',
+      customer = await stripe.customers.create(
+        {
+          name: request.company,
+          email: request.email,
+          metadata: {
+            contact_name: request.contact,
+            billing_channel: 'enterprise-support',
+            ...(siren ? { siren } : {}),
+          },
+          address: stripeAddress(request.address),
+          invoice_settings: { custom_fields: invoiceCustomFields(mentionsContact) },
+          preferred_locales: [invoiceLocale(country)],
+          ...(euVat ? { tax_id_data: [{ type: 'eu_vat' as const, value: euVat }] } : {}),
         },
-        address: {
-          line1: body.address_line1 || '',
-          line2: body.address_line2 || '',
-          city: body.city || '',
-          postal_code: body.postal_code || '',
-          country: body.country || '',
-        },
-        tax_id_data: body.vat_id ? [{ type: 'eu_vat' as const, value: body.vat_id }] : undefined,
+        { idempotencyKey: `${idempotencyBase}-customer` },
+      );
+      // GTC art. 2: the acceptance is kept on the customer. This route has no tenant, and the
+      // audit log is tenant-scoped (RLS), so it cannot hold it. A retry writes its own moment.
+      await stripe.customers.update(customer.id, {
+        metadata: { gtc_version: GTC_VERSION, gtc_accepted_at: new Date().toISOString() },
       });
     } catch (error: any) {
       this.throwSupportInvoiceStripeError(error);
     }
 
     let subscription: any;
-    const euBankTransferCountry = this.resolveEuBankTransferCountry(body.country);
     try {
-      subscription = await stripe.subscriptions.create({
-        customer: customer.id,
-        items: [{ price: priceId, quantity: 1 }],
-        collection_method: 'send_invoice',
-        days_until_due: 30,
-        payment_settings: this.buildSupportInvoicePaymentSettings(euBankTransferCountry),
-        metadata: { billing_channel: 'enterprise-support', company_name: body.company_name },
-        expand: ['latest_invoice'],
-      });
+      subscription = await stripe.subscriptions.create(
+        {
+          customer: customer.id,
+          items: [{ price: priceId, quantity: 1 }],
+          collection_method: 'send_invoice',
+          days_until_due: INVOICE_PAYMENT_TERM_DAYS,
+          payment_settings: this.buildSupportInvoicePaymentSettings(euBankTransferCountry),
+          metadata: { billing_channel: 'enterprise-support', company_name: request.company },
+          expand: ['latest_invoice'],
+        },
+        { idempotencyKey: `${idempotencyBase}-subscription` },
+      );
     } catch (error: any) {
       this.throwSupportInvoiceStripeError(error);
     }
@@ -414,11 +472,11 @@ export class PublicController {
     if (notifyEmail) {
       try {
         const supportContent = buildSupportRequestEmail({
-          companyName: body.company_name,
-          contactName: body.contact_name,
-          billingEmail: body.billing_email,
-          country: body.country,
-          vatId: body.vat_id,
+          companyName: request.company,
+          contactName: request.contact,
+          billingEmail: request.email,
+          country,
+          vatId: request.vatNumber ?? undefined,
         });
         await this.emails.send({
           to: notifyEmail,
@@ -616,6 +674,63 @@ export class PublicController {
     return text.replace(/[&<>"']/g, (m) => map[m] || m);
   }
 
+  /**
+   * The support invoice request as it is sent to Stripe, after the checks the ValidationPipe
+   * cannot make: the general terms of sale in their current version, and in the EU a VAT
+   * number in the country's format (the rule of the tenant invoice details).
+   */
+  private validateSupportInvoiceRequest(body: RequestSupportInvoiceDto): SupportInvoiceRequest {
+    if (body.terms_version !== GTC_VERSION) {
+      throw new BadRequestException({
+        code: 'TERMS_NOT_ACCEPTED',
+        message: 'Accept the current general terms of sale to request the invoice.',
+      });
+    }
+    const text = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
+    const country = toIsoCountry(body.country);
+    const line1 = text(body.address_line1);
+    const city = text(body.city);
+    const postalCode = text(body.postal_code);
+    if (!country || !line1 || !city || !postalCode) {
+      throw new BadRequestException({
+        code: 'BILLING_ADDRESS_INCOMPLETE',
+        message: 'Enter the full billing address: address line 1, postal code, city and country.',
+      });
+    }
+    const vatNumber = normaliseVatNumber(body.vat_id) || null;
+    if (isEuCountry(country) && !isValidEuVatNumber(country, vatNumber)) {
+      throw new BadRequestException({
+        code: 'VAT_NUMBER_INVALID',
+        message: 'Enter a valid VAT number for the selected country. It is required in the European Union.',
+      });
+    }
+    return {
+      company: text(body.company_name),
+      contact: text(body.contact_name),
+      email: text(body.billing_email).toLowerCase(),
+      address: { line1, line2: text(body.address_line2) || null, city, postalCode, country },
+      vatNumber,
+    };
+  }
+
+  /**
+   * The base of the Stripe idempotency keys of one support invoice request. Stripe keeps a key
+   * 24 hours and answers a repeated key with the first response, so a double click or a retry
+   * gets the same customer and subscription back instead of new ones. The base follows
+   * everything the request sends (Stripe refuses a known key with other parameters, so a
+   * corrected form must be a new request) and the UTC day.
+   */
+  private supportInvoiceIdempotencyBase(request: SupportInvoiceRequest, priceId: string, bankTransferCountry: string): string {
+    const payload = JSON.stringify({
+      request,
+      priceId,
+      bankTransferCountry,
+      termsVersion: GTC_VERSION,
+      day: new Date().toISOString().slice(0, 10),
+    });
+    return `support-invoice-${createHash('sha256').update(payload).digest('hex')}`;
+  }
+
   private extractInvoiceId(source: any): string | null {
     if (!source) return null;
     if (typeof source === 'string') return source;
@@ -623,19 +738,27 @@ export class PublicController {
     return null;
   }
 
+  /**
+   * Finalizes (A4 first) and sends the invoice of a new support subscription, once. The
+   * invoice is read again: after an idempotent replay the subscription carries it as it was
+   * at the first request. An invoice already finalized is returned as it is, never sent twice.
+   */
   private async finalizeAndSendSupportInvoice(stripe: any, latestInvoice: any): Promise<any | null> {
     const invoiceId = this.extractInvoiceId(latestInvoice);
     if (!invoiceId) return null;
 
-    let invoice: any = latestInvoice;
-    if (!invoice || typeof invoice !== 'object') {
-      invoice = await stripe.invoices.retrieve(invoiceId);
-    }
+    let invoice: any = await stripe.invoices.retrieve(invoiceId);
+    if (invoice?.status !== 'draft') return invoice;
 
-    if (invoice?.status === 'draft') {
+    // The draft is set to A4 before Stripe renders its PDF.
+    await ensureInvoiceA4(stripe, invoice, this.logger);
+    try {
       invoice = await stripe.invoices.finalizeInvoice(invoiceId, { auto_advance: true });
-    } else if (!invoice?.status || !invoice?.hosted_invoice_url) {
-      invoice = await stripe.invoices.retrieve(invoiceId);
+    } catch (error) {
+      // A concurrent identical request finalized it first: that request sends it.
+      const current = await stripe.invoices.retrieve(invoiceId);
+      if (current?.status && current.status !== 'draft') return current;
+      throw error;
     }
 
     if (invoice?.collection_method === 'send_invoice' && invoice?.status === 'open') {
@@ -645,13 +768,13 @@ export class PublicController {
         const msg = typeof error?.message === 'string' ? error.message : 'unknown';
         this.logger.warn(`Unable to send enterprise support invoice ${invoiceId}: ${msg}`);
       }
-      if (!invoice?.hosted_invoice_url) {
-        try {
-          invoice = await stripe.invoices.retrieve(invoiceId);
-        } catch (error: any) {
-          const msg = typeof error?.message === 'string' ? error.message : 'unknown';
-          this.logger.warn(`Unable to refresh enterprise support invoice ${invoiceId}: ${msg}`);
-        }
+    }
+    if (!invoice?.hosted_invoice_url) {
+      try {
+        invoice = await stripe.invoices.retrieve(invoiceId);
+      } catch (error: any) {
+        const msg = typeof error?.message === 'string' ? error.message : 'unknown';
+        this.logger.warn(`Unable to refresh enterprise support invoice ${invoiceId}: ${msg}`);
       }
     }
 
@@ -719,8 +842,11 @@ export class PublicController {
     const messageLower = rawMessage.toLowerCase();
     const code = typeof error?.code === 'string' ? error.code : '';
 
-    if (messageLower.includes('eu_vat') || messageLower.includes('vat') || code === 'invalid_tax_id') {
-      throw new BadRequestException('Invalid VAT number. Please enter a valid EU VAT ID.');
+    if (messageLower.includes('eu_vat') || messageLower.includes('vat') || code === 'tax_id_invalid' || code === 'invalid_tax_id') {
+      throw new BadRequestException({
+        code: 'VAT_NUMBER_INVALID',
+        message: 'Enter a valid VAT number for the selected country. It is required in the European Union.',
+      });
     }
     if (code === 'email_invalid') {
       throw new BadRequestException('Invalid billing email address.');

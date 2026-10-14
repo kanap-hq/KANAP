@@ -113,6 +113,47 @@ export function euVatTaxIdValue(contact: Pick<InvoiceProfileContact, 'vatNumber'
   return normaliseVatNumber(contact.vatNumber);
 }
 
+/** A postal address as KANAP holds it (tenant invoice details, the public support invoice form). */
+export type PostalAddress = {
+  line1?: string | null;
+  line2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  postalCode?: string | null;
+  country?: string | null;
+};
+
+/** The `address` of a Stripe customer. */
+export type StripeAddress = {
+  line1?: string;
+  line2?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  country?: string;
+};
+
+/**
+ * The address to send to Stripe: the filled fields only, trimmed; undefined when none is.
+ * A blank field is left out, never sent as an empty string.
+ */
+export function stripeAddress(address: PostalAddress | null | undefined): StripeAddress | undefined {
+  if (!address) return undefined;
+  const mapped: StripeAddress = {};
+  const fields: Array<[keyof StripeAddress, string | null | undefined]> = [
+    ['line1', address.line1],
+    ['line2', address.line2],
+    ['city', address.city],
+    ['state', address.state],
+    ['postal_code', address.postalCode],
+    ['country', address.country],
+  ];
+  for (const [key, value] of fields) {
+    if (filled(value)) mapped[key] = value.trim();
+  }
+  return Object.keys(mapped).length ? mapped : undefined;
+}
+
 /** The invoice fields still missing (or malformed) before the tenant can subscribe. */
 export function missingInvoiceFields(contact: InvoiceProfileContact): InvoiceFieldKey[] {
   const missing: InvoiceFieldKey[] = [];

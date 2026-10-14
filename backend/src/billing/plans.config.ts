@@ -7,6 +7,11 @@ export const TRIAL_PERIOD_DAYS = 14;
 export const FREEZE_GRACE_DAYS = 14;
 export const HEALTHY_STATUSES = ['active', 'trialing'] as const;
 export const BANK_TRANSFER_MIN_AMOUNT_EUR_CENTS = 100000;
+/**
+ * Days a customer has to pay an invoice by bank transfer (Stripe `days_until_due`). Must match
+ * art. 5.4 of the general terms of sale (`sales` in marketing/web/src/content/legal/{fr,en}.ts).
+ */
+export const INVOICE_PAYMENT_TERM_DAYS = 30;
 /** Stripe quantity of every cloud subscription: one subscription covers all users. */
 export const CLOUD_SUBSCRIPTION_QUANTITY = 1;
 
