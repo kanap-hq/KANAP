@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { BUSY_RETRY_AFTER_SECONDS } from '../filters/database-error.mapping';
+import { runWithRequestTenant } from './request-tenant-context';
 
 /**
  * The tenancy middleware main.ts mounts before every route: it reads the
@@ -184,7 +185,9 @@ export function createRequestTenancyMiddleware(options: RequestTenancyOptions) {
       });
       return;
     }
-    // Outside the try: an error further down the chain is not a tenant lookup failure.
-    next();
+    // Outside the try: an error further down the chain is not a tenant lookup failure. The rest
+    // of the request runs with its tenant and, once authenticated, its user as the current ones
+    // (request-tenant-context.ts).
+    runWithRequestTenant((req as any).tenant?.id ?? null, () => next(), req as any);
   };
 }

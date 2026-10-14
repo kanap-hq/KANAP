@@ -9,6 +9,7 @@ import { IsBoolean, IsEmail, IsIn, IsOptional, IsString, ValidateIf, ValidateNes
 import { Type } from 'class-transformer';
 import type { PlanKey, IntervalKey } from './plans.config';
 import { LongRunningRequest, OUTSIDE_WORK_TIMEOUTS } from '../common/request-db-timeouts';
+import { requestHost, sameHostReturnUrl } from './return-url';
 
 export class CreateCheckoutSessionDto {
   @IsIn(['max'])
@@ -188,7 +189,11 @@ export class BillingController {
       req.user?.sub ?? null,
       mg,
       body.terms_version ?? null,
-      { successUrl: body.success_url ?? null, cancelUrl: body.cancel_url ?? null },
+      // Only URLs on the tenant host the user is on; the configured ones otherwise.
+      {
+        successUrl: sameHostReturnUrl(body.success_url, requestHost(req)),
+        cancelUrl: sameHostReturnUrl(body.cancel_url, requestHost(req)),
+      },
     );
   }
 
@@ -255,7 +260,11 @@ export class BillingController {
       throw new BadRequestException('Tenant context not resolved');
     }
     const mg = req?.queryRunner?.manager as import('typeorm').EntityManager | undefined;
-    const session = await this.billing.createCustomerPortalSession({ tenantId, manager: mg, returnUrl: body?.returnUrl });
+    const session = await this.billing.createCustomerPortalSession({
+      tenantId,
+      manager: mg,
+      returnUrl: sameHostReturnUrl(body?.returnUrl, requestHost(req)),
+    });
     return { url: session.url };
   }
 
@@ -275,8 +284,9 @@ export class BillingController {
       manager: mg,
       planKey: body.plan_key,
       interval: body.interval,
-      successUrl: body.success_url,
-      cancelUrl: body.cancel_url,
+      // Only URLs on the tenant host the user is on; the configured ones otherwise.
+      successUrl: sameHostReturnUrl(body.success_url, requestHost(req)),
+      cancelUrl: sameHostReturnUrl(body.cancel_url, requestHost(req)),
       allowPromotionCodes: body.allow_promotion_codes,
       termsVersion: body.terms_version ?? null,
       userId: req.user?.sub ?? null,

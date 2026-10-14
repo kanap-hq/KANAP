@@ -5,6 +5,7 @@ import remarkGfm from 'remark-gfm';
 import { describe, expect, it, vi } from 'vitest';
 import {
   convertRichClipboardToMarkdown,
+  escapeTableCell,
   shouldHandleRichClipboardImport,
 } from './richClipboardMarkdown';
 
@@ -185,6 +186,14 @@ describe('richClipboardMarkdown', () => {
       expect(markdown).toContain(String.raw`| a\\\|b | C:\temp |`);
       const cells = Array.from(renderMarkdown(markdown).querySelectorAll('td')).map((cell) => cell.textContent);
       expect(cells).toEqual([String.raw`a\|b`, String.raw`C:\temp`]);
+    });
+
+    it('escapes a long run of backslashes in a table cell in linear time', () => {
+      const run = '\\'.repeat(200 * 1024);
+      const startedAt = performance.now();
+      expect(escapeTableCell(run)).toBe(run);
+      expect(performance.now() - startedAt).toBeLessThan(50);
+      expect(escapeTableCell(`${run}|`)).toBe(`${run}${run}\\|`);
     });
 
     it('keeps backslashes and backticks literal inside inline code', async () => {

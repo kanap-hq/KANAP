@@ -24,8 +24,7 @@ import {
   buildSsoUserProvisionedEmail,
   buildWorkspaceResetEmail,
 } from './notification-templates';
-import { renderCommentForEmail } from './comment-email-renderer';
-import { renderMarkdownToHtml } from '../common/markdown-to-html';
+import { renderCommentEmail } from '../common/markdown-worker';
 import { EmailBranding, resolveEmailBranding } from '../email/email-branding';
 import { getEmailStrings, resolveEmailLocale } from '../i18n/email-i18n';
 
@@ -739,12 +738,7 @@ export class NotificationsService {
     if (hasComment) {
       const tenantSlug = await this.getTenantSlug(params.tenantId);
       const tenantBaseUrl = this.buildTenantBaseUrl(tenantSlug);
-      const commentAsHtml = renderMarkdownToHtml(trimmedComment);
-      renderedComment = renderCommentForEmail({
-        commentHtml: commentAsHtml,
-        tenantBaseUrl,
-        tenantSlug,
-      });
+      renderedComment = await renderCommentEmail(trimmedComment, tenantBaseUrl, tenantSlug);
       embeddedComment = await this.embedInlineImagesForComment({
         itemType: 'task',
         itemId: params.taskId,
@@ -1157,12 +1151,7 @@ export class NotificationsService {
     const tenantBaseUrl = this.buildTenantBaseUrl(tenantSlug);
     const itemUrl = await this.buildItemUrl(params.itemType, params.itemId, params.tenantId, params.manager);
     const branding = await this.resolveBranding(params.tenantId);
-    const commentAsHtml = renderMarkdownToHtml(params.commentContent);
-    const renderedComment = renderCommentForEmail({
-      commentHtml: commentAsHtml,
-      tenantBaseUrl,
-      tenantSlug,
-    });
+    const renderedComment = await renderCommentEmail(params.commentContent, tenantBaseUrl, tenantSlug);
     const embeddedComment = await this.embedInlineImagesForComment({
       itemType: params.itemType,
       itemId: params.itemId,

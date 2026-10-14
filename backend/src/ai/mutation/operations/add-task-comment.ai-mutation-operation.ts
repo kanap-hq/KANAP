@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { z } from 'zod';
-import { normalizeMarkdownRichText } from '../../../common/markdown-rich-text';
+import { normalizeMarkdownRichText } from '../../../common/markdown-worker';
 import { TaskActivitiesService } from '../../../tasks/task-activities.service';
 import { AiMutationPreview } from '../../ai-mutation-preview.entity';
 import { AiExecutionContextWithManager } from '../../ai.types';
@@ -53,7 +53,7 @@ export class AddTaskCommentAiMutationOperation implements AiMutationOperation<Ad
     input: AddTaskCommentInput,
   ): Promise<AiPreparedMutationPreview> {
     const task = await this.support.resolveTaskSnapshot(context, input.ref);
-    const normalizedContent = normalizeMarkdownRichText(input.content, { fieldName: 'content' });
+    const normalizedContent = await normalizeMarkdownRichText(input.content, { fieldName: 'content' });
     if (!normalizedContent?.trim()) {
       throw new BadRequestException('Comment content is required.');
     }

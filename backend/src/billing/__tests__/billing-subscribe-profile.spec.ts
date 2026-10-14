@@ -80,6 +80,8 @@ function createService(opts: {
   schedule?: Record<string, any>;
   /** The customer's saved cards (`customers.listPaymentMethods`). */
   cards?: Array<Record<string, unknown>>;
+  /** What `invoices.retrieve` returns (nothing by default). */
+  retrievedInvoice?: Record<string, unknown>;
 }) {
   const calls: Call[] = [];
   const record = (method: string, impl: (...args: any[]) => unknown) => async (...args: unknown[]) => {
@@ -127,7 +129,7 @@ function createService(opts: {
     },
     invoices: {
       list: record('invoices.list', () => ({ data: [] })),
-      retrieve: record('invoices.retrieve', () => null),
+      retrieve: record('invoices.retrieve', () => opts.retrievedInvoice ?? null),
       finalizeInvoice: record('invoices.finalizeInvoice', () => null),
       update: record('invoices.update', () => null),
     },
@@ -746,6 +748,36 @@ async function testTransferToAnnualStartsTheAnnualPeriodNow() {
   assert.ok(!('billing_cycle_anchor' in same), 'the same price does not restart the period');
 }
 
+/** The plan dialog confirms the transfer invoice: number, amount, due date and its Stripe page. */
+async function testTransferReturnsTheInvoiceToPay() {
+  const invoice = {
+    id: 'in_transfer',
+    number: 'KAN-0027',
+    status: 'open',
+    total: 224100,
+    currency: 'eur',
+    due_date: 1794528000,
+    hosted_invoice_url: 'https://invoice.stripe.test/in_transfer',
+  };
+  const { service, manager } = createService({
+    tenant: createTenant(COMPLETE_FR_INVOICE),
+    subscription: runningOn('monthly'),
+    priceIds: PRICE_IDS,
+    stripeSubscription: stripeSubscription(MONTHLY_PRICE),
+    onSubscriptionUpdate: (_params, state) => ({ ...state, latest_invoice: 'in_transfer' }),
+    retrievedInvoice: invoice,
+  });
+  const result: any = await service.requestInvoice('tenant-1', 'max', 'annual', 'user-1', manager as any, GTC_VERSION);
+  assert.equal(result.hosted_invoice_url, 'https://invoice.stripe.test/in_transfer');
+  assert.deepEqual(result.invoice, {
+    number: 'KAN-0027',
+    amount: 224100,
+    currency: 'EUR',
+    hosted_invoice_url: 'https://invoice.stripe.test/in_transfer',
+    due_date: new Date(1794528000 * 1000).toISOString(),
+  });
+}
+
 /*
  * A switch to monthly planned by a subscription schedule shows on the billing page and can be
  * cancelled ("Keep annual"). A bank transfer subscription moves to card only once the customer
@@ -951,6 +983,7 @@ async function run() {
   await testBankTransferAnnualSwitchesToCardAtPeriodEnd();
   await testSamePlanAndIntervalIsRefused();
   await testTransferToAnnualStartsTheAnnualPeriodNow();
+  await testTransferReturnsTheInvoiceToPay();
   await testSummaryShowsThePlannedSwitch();
   await testKeepAnnualReleasesTheScheduleAndAudits();
   await testKeepAnnualGivesBankTransferBack();

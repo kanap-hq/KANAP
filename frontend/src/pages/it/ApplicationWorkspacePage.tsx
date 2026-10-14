@@ -40,6 +40,7 @@ import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import { useApplicationNav } from '../../hooks/useApplicationNav';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import { drawerAutocompleteListboxSx, drawerFieldValueSx, drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
+import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { CRITICALITY_COLORS, getDotColor, LIFECYCLE_COLORS } from '../../utils/statusColors';
 import { filterCountryOptions, useCountryOptions } from '../../i18n/countries';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
@@ -1331,7 +1332,7 @@ export default function ApplicationWorkspacePage() {
         await queryClient.invalidateQueries({ predicate: (query) => ['applications', 'app-filter-values', 'applications-filter-values', 'application-recovery-dependencies'].some((key) => String(query.queryKey[0]).startsWith(key)) });
       } catch (err: any) {
         classificationSaveFailed.current = true;
-        setError(err?.response?.data?.message || err?.message || t('messages.saveClassificationFailed'));
+        setError(getApiErrorMessage(err, t, t('messages.saveClassificationFailed')));
         throw err;
       } finally { setClassificationSaving(false); }
     });
@@ -1350,7 +1351,7 @@ export default function ApplicationWorkspacePage() {
         navigate(`/it/applications/${newId}/overview${searchParams.toString() ? `?${searchParams.toString()}` : ''}`);
       }
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || t('messages.createApplicationFailed'));
+      setError(getApiErrorMessage(err, t, t('messages.createApplicationFailed')));
     } finally {
       setSavingCreate(false);
     }
@@ -1550,7 +1551,7 @@ export default function ApplicationWorkspacePage() {
                 await api.post(`/applications/${currentApp.current.id}/classification-review`, { expected_revision: currentApp.current.classification_revision });
                 await appQuery.refetch();
                 await queryClient.invalidateQueries({ predicate: (query) => ['applications', 'applications-classification-summary'].some((key) => String(query.queryKey[0]).startsWith(key)) });
-              } catch (err: any) { setError(err?.response?.data?.message || err?.message || t('messages.reviewFailed')); }
+              } catch (err: any) { setError(getApiErrorMessage(err, t, t('messages.reviewFailed'))); }
               finally { setClassificationSaving(false); }
             }}
             onPatch={patchApplication}

@@ -17,8 +17,13 @@ import { AuditService } from '../audit/audit.service';
 import { extractInlineImageUrls } from '../common/content-image-urls';
 import { ItemNumberService } from '../common/item-number.service';
 import { DocumentImportService, ImportedDocumentResult } from '../common/document-import.service';
-import { normalizeMarkdownRichText } from '../common/markdown-rich-text';
-import { markdownToSearchText } from '../common/markdown-search-text';
+import { assertMarkdownSize } from '../common/markdown-limits';
+import {
+  isMarkdownTooComplex,
+  markdownToSearchText,
+  normalizeMarkdownRichText,
+  normalizeMarkdownWithSearchText,
+} from '../common/markdown-worker';
 import { bilingualDocumentTsQueryAnyTermSql, bilingualDocumentTsQuerySql, normalizeDocumentAnyTermQuery } from '../common/document-search-tsquery';
 import { DocumentExportService, ExportImageFetchOptions } from '../common/document-export.service';
 import { BulkDeleteResult } from '../common/delete.types';
@@ -77,6 +82,7 @@ import { DocumentType } from './document-type.entity';
 import { DocumentVersion } from './document-version.entity';
 import { Document } from './document.entity';
 import { userNameSharedSql } from '../common/lookup/reference-lookups';
+import { trailingDigits } from '../common/text-scan';
 
 export type RelationEntityType =
   | 'applications'
@@ -1346,16 +1352,25 @@ export class KnowledgeService {
     return resolveToUuid(idOrRef, 'document', manager);
   }
 
-  private stripMarkdown(value: string): string {
-    return markdownToSearchText(value);
+  /**
+   * Search text of a Markdown content (Markdown workers). A stored content the
+   * workers cannot process in time is indexed as it is.
+   */
+  private async stripMarkdown(value: string, opts?: { storedContent?: boolean }): Promise<string> {
+    try {
+      return await markdownToSearchText(value, { fieldName: 'content_markdown' });
+    } catch (error) {
+      if (opts?.storedContent && isMarkdownTooComplex(error)) return String(value || '').replace(/\s+/g, ' ').trim();
+      throw error;
+    }
   }
 
   private parseItemNumberQuery(input: string): number | null {
     const value = String(input || '').trim();
     if (!value) return null;
-    const match = value.match(/(?:^[A-Z]+-)?(\d+)$/i);
-    if (!match) return null;
-    const itemNumber = Number(match[1]);
+    const digits = trailingDigits(value);
+    if (!digits) return null;
+    const itemNumber = Number(digits);
     return Number.isFinite(itemNumber) && itemNumber > 0 ? itemNumber : null;
   }
 
@@ -3839,7 +3854,9 @@ export class KnowledgeService {
       ? await this.getTemplateDocumentSummary(templateDocumentId, manager, tenantId, userId)
       : null;
 
-    let contentMarkdown = normalizeMarkdownRichText(body?.content_markdown, { fieldName: 'content_markdown' }) || '';
+    const normalizedContent = await normalizeMarkdownWithSearchText(body?.content_markdown, { fieldName: 'content_markdown' });
+    let contentMarkdown = normalizedContent.content || '';
+    let contentPlain: string | null = normalizedContent.searchText;
     if (templateDocument) {
       templateClassifications = await manager.query(
         `SELECT category_id, stream_id
@@ -3850,6 +3867,7 @@ export class KnowledgeService {
       );
       if (!String(contentMarkdown || '').trim()) {
         contentMarkdown = templateDocument.content_markdown;
+        contentPlain = null;
       }
     }
 
@@ -3859,7 +3877,7 @@ export class KnowledgeService {
       templateDocument,
     });
 
-    const contentPlain = this.stripMarkdown(contentMarkdown);
+    if (contentPlain === null) contentPlain = await this.stripMarkdown(contentMarkdown);
 
     const itemNumber = await this.itemNumbers.nextItemNumber('document', tenantId, manager);
 
@@ -3951,6 +3969,12 @@ export class KnowledgeService {
         summary?: string | null;
         content_markdown?: string | null;
       } | void>;
+      /**
+       * The content (and the one the initializer returns) is a stored content: a
+       * copy, a recovery or a template. No size limit; a content over the parse
+       * budget is kept as it is (markdown-rich-text.ts).
+       */
+      storedContent?: boolean;
     } & DocumentAccessOptions,
   ): Promise<Document> {
     const manager = this.getManager(opts);
@@ -3962,9 +3986,11 @@ export class KnowledgeService {
     }
 
     const summary = body?.summary == null ? null : String(body.summary).trim() || null;
-    const contentMarkdown = normalizeMarkdownRichText(body?.content_markdown, {
+    const normalizedContent = await normalizeMarkdownWithSearchText(body?.content_markdown, {
       fieldName: 'content_markdown',
-    }) || '';
+      enforceSizeLimit: !opts?.storedContent,
+    });
+    const contentMarkdown = normalizedContent.content || '';
     const status = this.normalizeStatus(body?.status, 'published');
 
     await this.ensureFolderInLibrary(String(body.folder_id), String(body.library_id), manager);
@@ -3986,7 +4012,7 @@ export class KnowledgeService {
       title,
       summary,
       content_markdown: contentMarkdown,
-      content_plain: this.stripMarkdown(contentMarkdown),
+      content_plain: normalizedContent.searchText,
       folder_id: body.folder_id,
       library_id: body.library_id,
       document_type_id: body.document_type_id,
@@ -4029,12 +4055,14 @@ export class KnowledgeService {
       }
 
       if (patch && patch.content_markdown !== undefined) {
-        const nextContent = normalizeMarkdownRichText(patch.content_markdown, {
+        const next = await normalizeMarkdownWithSearchText(patch.content_markdown, {
           fieldName: 'content_markdown',
-        }) || '';
+          enforceSizeLimit: !opts?.storedContent,
+        });
+        const nextContent = next.content || '';
         if (nextContent !== saved.content_markdown) {
           saved.content_markdown = nextContent;
-          saved.content_plain = this.stripMarkdown(nextContent);
+          saved.content_plain = next.searchText;
           changed = true;
         }
       }
@@ -4125,12 +4153,13 @@ export class KnowledgeService {
     }
 
     if (body?.content_markdown !== undefined) {
-      const normalized = normalizeMarkdownRichText(body.content_markdown, {
+      const next = await normalizeMarkdownWithSearchText(body.content_markdown, {
         fieldName: 'content_markdown',
-      }) || '';
+      });
+      const normalized = next.content || '';
       if (normalized !== existing.content_markdown) {
         existing.content_markdown = normalized;
-        existing.content_plain = this.stripMarkdown(normalized);
+        existing.content_plain = next.searchText;
         changed = true;
         contentChanged = true;
       }
@@ -4395,9 +4424,9 @@ export class KnowledgeService {
     }
 
     if (body?.content_markdown !== undefined) {
-      const normalized = normalizeMarkdownRichText(body.content_markdown, { fieldName: 'content_markdown' }) || '';
-      existing.content_markdown = normalized;
-      existing.content_plain = this.stripMarkdown(normalized);
+      const next = await normalizeMarkdownWithSearchText(body.content_markdown, { fieldName: 'content_markdown' });
+      existing.content_markdown = next.content || '';
+      existing.content_plain = next.searchText;
     }
 
     if (body?.folder_id !== undefined) {
@@ -5572,7 +5601,7 @@ export class KnowledgeService {
       throw new BadRequestException('Only comments can be created via this endpoint');
     }
 
-    const content = normalizeMarkdownRichText(body?.content, { fieldName: 'content' });
+    const content = await normalizeMarkdownRichText(body?.content, { fieldName: 'content' });
 
     const activity = manager.getRepository(DocumentActivity).create({
       document_id: documentId,
@@ -5607,7 +5636,7 @@ export class KnowledgeService {
       throw new BadRequestException('Only comments can be edited via this endpoint');
     }
 
-    existing.content = normalizeMarkdownRichText(body?.content, { fieldName: 'content' });
+    existing.content = await normalizeMarkdownRichText(body?.content, { fieldName: 'content' });
     existing.updated_at = new Date();
     return repo.save(existing);
   }
@@ -6164,6 +6193,8 @@ export class KnowledgeService {
     await this.assertDocumentWritable(documentId, manager, userId, opts);
     await this.assertWorkflowAllowsEditing(documentId, manager);
     await this.ensureValidLock(documentId, String(userId || ''), lockToken, manager);
+    // Checked before the images are stored: the document could not be saved anyway.
+    assertMarkdownSize(converted.markdown, 'content_markdown');
 
     const tenantSlug = await this.loadCurrentTenantSlug(manager);
     const replacements = new Map<string, string>();
@@ -6178,7 +6209,7 @@ export class KnowledgeService {
     }
 
     return {
-      markdown: this.importService.rewriteImageTargets(converted.markdown, replacements, converted.omittedTargets),
+      markdown: await this.importService.rewriteImageTargets(converted.markdown, replacements, converted.omittedTargets),
       warnings: converted.warnings,
     };
   }

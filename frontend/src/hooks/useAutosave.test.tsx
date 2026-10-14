@@ -397,6 +397,9 @@ describe('classifySaveFailure', () => {
     expect(classifySaveFailure(apiError(503, 'busy'))).toEqual({ kind: 'transient', retryAfterMs: undefined });
     expect(classifySaveFailure(apiError(409, 'retry'))).toEqual({ kind: 'transient', retryAfterMs: undefined });
     expect(classifySaveFailure(apiError(503, 'busy', { 'retry-after': '3' }))).toEqual({ kind: 'transient', retryAfterMs: 3_000 });
+    // The server's text processing busy with other texts: sent again after its Retry-After.
+    expect(classifySaveFailure(apiError(503, 'MARKDOWN_BUSY', { 'retry-after': '1' }))).toEqual({ kind: 'transient', retryAfterMs: 1_000 });
+    expect(classifySaveFailure(apiError(400, 'MARKDOWN_TOO_COMPLEX'))).toEqual({ kind: 'fatal' });
     expect(classifySaveFailure(apiError(503, 'busy', { 'retry-after': '600' })).retryAfterMs).toBe(10_000);
     expect(classifySaveFailure(apiError(503, 'busy', { 'retry-after': 'soon' })).retryAfterMs).toBeUndefined();
     for (const code of ['duplicate', 'parent_gone', 'in_use']) {

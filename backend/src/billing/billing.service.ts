@@ -941,9 +941,19 @@ export class BillingService {
 
     const invoiceForAccess = await this.ensureInvoiceAccessible(latestInvoice ?? fallbackInvoice ?? null);
     const summary = await this.getSubscriptionSummary({ manager: mg, forceStripeRefresh: true });
+    // The invoice to pay by transfer, for the confirmation in the plan dialog.
+    const invoice = this.planChangeInvoice(invoiceForAccess);
     return {
       ...summary,
       hosted_invoice_url: invoiceForAccess?.hosted_invoice_url ?? null,
+      invoice: invoice
+        ? {
+            ...invoice,
+            due_date: typeof invoiceForAccess?.due_date === 'number'
+              ? new Date(invoiceForAccess.due_date * 1000).toISOString()
+              : null,
+          }
+        : null,
     };
   }
 

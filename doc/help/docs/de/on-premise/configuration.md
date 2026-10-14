@@ -398,7 +398,7 @@ Hinweise:
 Mit `AI_MCP_ENABLED=true` lesen KI-Assistenten die Daten von KANAP über seinen MCP-Server unter `https://<your-name>/api/ai/mcp`. Jeder Mandant schaltet MCP außerdem unter **Administration → Künstliche Intelligenz → Plaid** ein. Benutzer verbinden sich auf eine von zwei Arten, verglichen unter [Verbindung oder API-Schlüssel](../ai-settings.md#connection-or-api-key):
 
 - **API-Schlüssel**: Ein Administrator erstellt einen Schlüssel in KANAP, und der Benutzer fügt ihn in den Client ein (Claude Code, Cursor, Skripte). Dafür genügt ein Client, der den Server erreicht, über HTTPS oder innerhalb Ihres Netzes auch über einfaches HTTP.
-- **Verbindung (OAuth)**: Claude, Claude Desktop oder Claude Code meldet sich ohne Schlüssel mit dem Konto des Benutzers bei KANAP an. Dafür braucht es die folgende Einrichtung.
+- **Verbindung (OAuth)**: Claude, Claude Desktop, Claude Code, ChatGPT oder Grok meldet sich ohne Schlüssel mit dem Konto des Benutzers bei KANAP an. Dafür braucht es die folgende Einrichtung.
 
 **Reverse Proxy.** Die Discovery für Verbindungen stellt die API unter `/.well-known/oauth-` bereit. Das nginx-Beispiel in der [Installationsanleitung](installation.md#reverse-proxy-example-nginx) leitet sie an die API weiter:
 
@@ -419,16 +419,16 @@ location ^~ /.well-known/oauth- {
 **Für jede Verbindung:**
 
 - **HTTPS** mit einem Zertifikat, dem der Client vertraut. Der Anmeldeaustausch braucht es, auch für Claude Code.
-- **Ausgehendes HTTPS vom Server zu `claude.ai`.** Wenn ein Benutzer eine Anwendung verbindet, liest die API die öffentliche Beschreibung der Anwendung unter der Adresse, die die Anwendung angibt (`claude.ai` für Claude, Claude Desktop und Claude Code).
+- **Ausgehendes HTTPS vom Server zum Host der Anwendung.** Wenn ein Benutzer eine Anwendung verbindet, liest die API die öffentliche Beschreibung der Anwendung unter der Adresse, die die Anwendung angibt: `claude.ai` für Claude, Claude Desktop und Claude Code, `chatgpt.com` für ChatGPT, `grok.com` für Grok.
 
-**Zusätzlich für Claude und Claude Desktop.** Claude ruft KANAP von den Servern von Anthropic aus auf:
+**Zusätzlich für Claude, Claude Desktop, ChatGPT und Grok.** Diese Anwendungen rufen KANAP von den Servern ihres Anbieters aus auf:
 
 - Die KANAP-Adresse wird im öffentlichen DNS zu einer IPv4-Adresse aufgelöst (ein `A`-Eintrag).
-- Der Server nimmt HTTPS von den Adressen von Anthropic an, `160.79.104.0/21`.
+- Der Server nimmt HTTPS von den Servern des Anbieters an. Für Claude sind das die Adressen von Anthropic, `160.79.104.0/21`. Für ChatGPT und Grok prüfen Sie die aktuellen Adressen bei OpenAI oder xAI, oder nehmen Sie HTTPS aus dem Internet an.
 - Die Adresse, die Benutzer eingeben, antwortet direkt, ohne Weiterleitung auf einen anderen Host: Bei einer Weiterleitung verwirft Claude die Anmeldedaten.
 - Keine Prüfung durch eine Web Application Firewall und keine Bot-Erkennung auf `/.well-known/oauth-*`, `/api/oauth/*` und `/api/ai/mcp`.
 
-Eine Instanz, die nur aus Ihrem internen Netz erreichbar ist, kann nicht von Claude oder Claude Desktop aus verbunden werden.
+Eine Instanz, die nur aus Ihrem internen Netz erreichbar ist, kann nicht von Claude, Claude Desktop, ChatGPT oder Grok aus verbunden werden.
 
 Damit die Benutzer nichts abtippen müssen, teilen Sie einen Link, der den Dialog **Add custom connector** von Claude bereits ausgefüllt öffnet. Setzen Sie Ihre eigene Serveradresse URL-kodiert an das Ende (`:` wird zu `%3A`, `/` wird zu `%2F`):
 
@@ -584,6 +584,7 @@ Nach dem ersten Build kann KANAP vollständig vom Netz getrennt laufen, wenn E-M
 | 80 | TCP | HTTP: leitet auf HTTPS um (und beantwortet Zertifikatserneuerungen, wenn Sie Let's Encrypt verwenden) |
 | 22 | TCP | SSH für die Administration. Erlauben Sie es, bevor Sie eine Firewall aktivieren |
 | 443 | TCP | Von `160.79.104.0/21`, nur um Claude und Claude Desktop ohne Schlüssel über MCP zu verbinden (siehe [KI-Assistenten über MCP verbinden](#connecting-ai-assistants-over-mcp)) |
+| 443 | TCP | Von den Servern von OpenAI oder xAI, nur um ChatGPT oder Grok ohne Schlüssel über MCP zu verbinden (gleicher Abschnitt) |
 
 Sonst muss nichts aus dem Netzwerk erreichbar sein. Insbesondere sind PostgreSQL (5432) und der Objektspeicher (9000) nur für die Docker-Netzwerke des Servers bestimmt.
 
@@ -616,6 +617,7 @@ Nur erforderlich, wenn die entsprechende Funktion aktiviert ist.
 | `graph.microsoft.com` | 443 | Profilanreicherung bei der Anmeldung und die tägliche Verzeichnissynchronisierung | Wenn Entra SSO konfiguriert ist |
 | Der KI-Anbieter, den Sie konfigurieren (oder Ihr eigener Modellserver) | 443 oder der Port Ihres Servers | Chat, Agenten | Wenn KI-Funktionen aktiviert sind und ein Modell eingerichtet ist |
 | `claude.ai` | 443 | Liest die Beschreibung von Claude, Claude Desktop oder Claude Code, wenn ein Benutzer es ohne Schlüssel über MCP verbindet | Wenn `AI_MCP_ENABLED=true` und Benutzer sich über OAuth verbinden (für API-Schlüssel nicht nötig) |
+| `chatgpt.com`, `grok.com` | 443 | Liest die Beschreibung von ChatGPT oder Grok, wenn ein Benutzer es ohne Schlüssel über MCP verbindet | Wie bei `claude.ai` |
 | `api.worldbank.org` | 443 | Jährliche Wechselkurse | Optional |
 | `open.er-api.com` | 443 | Tageswechselkurse | Optional |
 

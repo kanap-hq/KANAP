@@ -761,10 +761,14 @@
       "loadFailed": "Pläne konnten nicht geladen werden.",
       "nowAnnual": "Ihr Plan ist jetzt jährlich.",
       "nowMonthly": "Ihr Plan ist jetzt monatlich.",
+      "openInvoice": "Rechnung öffnen",
       "paymentRequired": "Der Plan ändert sich, sobald die Rechnung bezahlt ist.",
       "requestFailed": "Anfrage fehlgeschlagen.",
       "switchToAnnual": "Ihr Plan wechselt am {{date}} zu jährlich.",
-      "switchToMonthly": "Ihr Plan wechselt am {{date}} zu monatlich."
+      "switchToMonthly": "Ihr Plan wechselt am {{date}} zu monatlich.",
+      "transferInvoice": "Rechnung {{number}} erstellt: {{amount}}, per Überweisung zu zahlen bis {{date}}. Die Bankverbindung steht auf der Rechnung.",
+      "transferInvoiceNoDate": "Rechnung {{number}} erstellt: {{amount}}, per Überweisung zu zahlen. Die Bankverbindung steht auf der Rechnung.",
+      "transferInvoiceShort": "Rechnung erstellt, per Überweisung zu zahlen. Die Bankverbindung steht auf der Rechnung."
     },
     "monthlyEquivalent": "{{amount}} pro Monat, jährlich abgerechnet",
     "period": {

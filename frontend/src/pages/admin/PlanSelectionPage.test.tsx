@@ -398,6 +398,50 @@ describe('PlanSelectionDialog', () => {
       expect(assigned).toBe('');
     });
 
+    it('confirms a bank transfer invoice in the dialog and opens it in a new tab', async () => {
+      (api.post as any).mockResolvedValue({
+        data: {
+          hosted_invoice_url: 'https://invoice.stripe.test/in_transfer',
+          invoice: {
+            number: 'KAN-0027',
+            amount: 224100,
+            currency: 'EUR',
+            hosted_invoice_url: 'https://invoice.stripe.test/in_transfer',
+            due_date: '2026-11-13T12:00:00.000Z',
+          },
+        },
+      });
+      const onSuccess = vi.fn();
+      const onClose = vi.fn();
+      renderDialog({ invoiceMissingFields: [], subscription: MONTHLY_PLAN, onSuccess, onClose });
+      await switchToAnnual();
+      acceptTerms();
+      fireEvent.click(screen.getByRole('button', { name: 'Change plan (bank transfer)' }));
+
+      expect(await screen.findByText(
+        'Invoice KAN-0027 created: €2,241.00, to pay by bank transfer before 13 Nov 2026. The bank details are on the invoice.',
+      )).toBeInTheDocument();
+      const link = screen.getByRole('link', { name: 'Open invoice' });
+      expect(link).toHaveAttribute('href', 'https://invoice.stripe.test/in_transfer');
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+      expect(onSuccess).toHaveBeenCalledTimes(1);
+      expect(onClose).not.toHaveBeenCalled();
+      expect(assigned).toBe('');
+    });
+
+    it('confirms a bank transfer invoice without its number in a shorter line', async () => {
+      (api.post as any).mockResolvedValue({ data: { hosted_invoice_url: 'https://invoice.stripe.test/in_transfer' } });
+      renderDialog({ invoiceMissingFields: [], subscription: MONTHLY_PLAN });
+      await switchToAnnual();
+      acceptTerms();
+      fireEvent.click(screen.getByRole('button', { name: 'Change plan (bank transfer)' }));
+
+      expect(await screen.findByText('Invoice created, to pay by bank transfer. The bank details are on the invoice.')).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Open invoice' })).toHaveAttribute('href', 'https://invoice.stripe.test/in_transfer');
+      expect(assigned).toBe('');
+    });
+
     it('sends the customer to the invoice when the card payment needs them', async () => {
       (api.post as any).mockResolvedValue({
         data: {

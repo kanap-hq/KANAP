@@ -15,7 +15,7 @@ import { shareRecipientsOf } from '../notifications/share-recipients';
 import { TaskActivitiesService } from './task-activities.service';
 import { TaskAttachmentsService } from './task-attachments.service';
 import { detectChanges, resolveDisplayNames, TASK_TRACKED_FIELDS, FieldConfig } from '../common/change-detection';
-import { normalizeMarkdownRichText } from '../common/markdown-rich-text';
+import { normalizeMarkdownRichText } from '../common/markdown-worker';
 import { writeTaskColumns } from './task-column-write';
 import { ParticipationAccessScope, taskParticipantCondition } from '../auth/business-contributor-scope';
 
@@ -762,7 +762,7 @@ export class TasksUnifiedService {
       related_object_type: target.type,
       related_object_id: target.id,
       title: payload.title,
-      description: normalizeMarkdownRichText(payload.description, { fieldName: 'description' }) as any,
+      description: await normalizeMarkdownRichText(payload.description, { fieldName: 'description' }) as any,
       status: ((payload.status as any) ?? 'open') as any,
       due_date: (payload.due_date ?? null) as any,
       assignee_user_id: (payload.assignee_user_id ?? null) as any,
@@ -838,7 +838,7 @@ export class TasksUnifiedService {
     if (!existing) throw new NotFoundException('Task not found');
 
     const normalizedDescription = this.hasOwn(payload, 'description')
-      ? normalizeMarkdownRichText(payload.description, { fieldName: 'description' })
+      ? await normalizeMarkdownRichText(payload.description, { fieldName: 'description' })
       : undefined;
 
     // Capture "before" state for notification comparison
@@ -981,7 +981,7 @@ export class TasksUnifiedService {
     );
 
     if (this.hasOwn(nextPayload, 'description')) {
-      nextPayload.description = normalizeMarkdownRichText(nextPayload.description, { fieldName: 'description' }) as any;
+      nextPayload.description = await normalizeMarkdownRichText(nextPayload.description, { fieldName: 'description' }) as any;
     }
 
     const relationChanged =
