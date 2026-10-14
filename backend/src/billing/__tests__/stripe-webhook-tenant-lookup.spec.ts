@@ -1,5 +1,6 @@
 import * as assert from 'node:assert/strict';
 import { StripeWebhookService } from '../stripe-webhook.service';
+import { SubscriptionStatus } from '../subscription.entity';
 
 /**
  * A Stripe event has to be attributed to a tenant. The customer id is the normal route.
@@ -127,12 +128,140 @@ async function testReadsTheHintFromAnInvoiceAndRejectsGarbage() {
   assert.equal(await lookup({ customerId: 'cus_old', subscriptionId: 'sub_live' }, undefined), null);
 }
 
+/**
+ * Since basil, an invoice names its subscription under `parent.subscription_details` and a
+ * subscription carries its period on its items. The webhook sync resolves both shapes and
+ * never writes null over a stored period because the payload does not carry it.
+ */
+const PERIOD_START = 1_790_000_000;
+const PERIOD_END = 1_792_592_000;
+const STORED_END = new Date('2026-10-01T00:00:00.000Z');
+
+function cloverSubscription(overrides: Record<string, unknown> = {}, item: Record<string, unknown> = {}) {
+  return {
+    object: 'subscription',
+    id: 'sub_1',
+    customer: 'cus_1',
+    status: 'active',
+    collection_method: 'charge_automatically',
+    currency: 'eur',
+    quantity: 1,
+    items: {
+      data: [{
+        quantity: 1,
+        current_period_start: PERIOD_START,
+        current_period_end: PERIOD_END,
+        price: { id: 'price_unknown', currency: 'eur', unit_amount: 24900, recurring: { interval: 'month' } },
+        ...item,
+      }],
+    },
+    ...overrides,
+  };
+}
+
+function createSyncService(stored: Record<string, unknown>, stripeSubscription: unknown = null) {
+  const row: Record<string, any> = { id: 'local-sub', ...stored };
+  const retrieved: string[] = [];
+  const manager = {
+    getRepository: () => ({
+      findOne: async () => row,
+      create: (data: Record<string, unknown>) => ({ ...data }),
+      save: async (data: Record<string, unknown>) => data,
+    }),
+  };
+  const dataSource = {
+    createQueryRunner: () => ({
+      isTransactionActive: false,
+      connect: async () => undefined,
+      startTransaction: async () => undefined,
+      commitTransaction: async () => undefined,
+      rollbackTransaction: async () => undefined,
+      release: async () => undefined,
+      query: async () => [],
+      manager,
+    }),
+    getRepository: () => ({
+      findOne: async () => ({ id: TENANT_A, stripe_customer_id: 'cus_1' }),
+      update: async () => undefined,
+    }),
+  };
+  const client = {
+    subscriptions: {
+      retrieve: async (id: string) => {
+        retrieved.push(id);
+        return stripeSubscription;
+      },
+    },
+  };
+  const svc = new StripeWebhookService(
+    {} as any,
+    { getClient: () => client } as any,
+    dataSource as any,
+    { log: async () => undefined } as any,
+  );
+  return { svc, row, retrieved };
+}
+
+async function testCloverInvoiceResolvesItsSubscription() {
+  const { svc, row, retrieved } = createSyncService(
+    { stripe_subscription_id: 'sub_1', status: SubscriptionStatus.ACTIVE },
+    cloverSubscription({ status: 'past_due' }),
+  );
+  await svc.processEvent({
+    id: 'evt_1',
+    type: 'invoice.payment_failed',
+    data: {
+      object: {
+        object: 'invoice',
+        id: 'in_1',
+        customer: 'cus_1',
+        status: 'open',
+        number: 'KANAP-0002',
+        total: 24900,
+        currency: 'eur',
+        parent: { type: 'subscription_details', subscription_details: { subscription: 'sub_1', metadata: {} } },
+      },
+    },
+  });
+  assert.deepEqual(retrieved, ['sub_1'], 'the subscription named by invoice.parent is synced');
+  assert.equal(row.status, SubscriptionStatus.PAST_DUE);
+  assert.equal(row.latest_invoice_id, 'in_1');
+  assert.equal(row.latest_invoice_status, 'open');
+  assert.equal(row.current_period_end?.getTime(), PERIOD_END * 1000);
+}
+
+async function testCloverSubscriptionUpdatedWritesThePeriods() {
+  const { svc, row } = createSyncService({ stripe_subscription_id: 'sub_1', current_period_end: STORED_END, next_payment_at: STORED_END });
+  await svc.processEvent({ id: 'evt_2', type: 'customer.subscription.updated', data: { object: cloverSubscription() } });
+  assert.equal(row.current_period_start?.getTime(), PERIOD_START * 1000);
+  assert.equal(row.current_period_end?.getTime(), PERIOD_END * 1000);
+  assert.equal(row.next_payment_at?.getTime(), PERIOD_END * 1000);
+  assert.equal(row.canceled_at_effective, null);
+}
+
+async function testSubscriptionEventWithoutPeriodKeepsTheStoredDates() {
+  const { svc, row } = createSyncService({
+    stripe_subscription_id: 'sub_1',
+    current_period_end: STORED_END,
+    next_payment_at: STORED_END,
+    canceled_at_effective: STORED_END,
+  });
+  const payload = cloverSubscription({ cancel_at_period_end: true }, { current_period_start: undefined, current_period_end: undefined });
+  await svc.processEvent({ id: 'evt_3', type: 'customer.subscription.updated', data: { object: payload } });
+  assert.equal(row.current_period_end?.getTime(), STORED_END.getTime());
+  assert.equal(row.next_payment_at?.getTime(), STORED_END.getTime());
+  assert.equal(row.canceled_at_effective?.getTime(), STORED_END.getTime());
+}
+
 async function run() {
   await testResolvesByCustomerFirst();
   await testFallsBackOnMetadataWhenTheStoredCustomerHasDrifted();
   await testIgnoresASubscriptionTheTenantHasLeft();
   await testMetadataCannotPointAtAnotherTenantsSubscription();
   await testReadsTheHintFromAnInvoiceAndRejectsGarbage();
+  await testCloverInvoiceResolvesItsSubscription();
+  await testCloverSubscriptionUpdatedWritesThePeriods();
+  await testSubscriptionEventWithoutPeriodKeepsTheStoredDates();
 }
 
 void run();

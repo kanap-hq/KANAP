@@ -5,6 +5,7 @@ import { PaymentMode, Subscription, SubscriptionType, SubscriptionStatus, Collec
 import { User } from '../users/user.entity';
 import { Tenant } from '../tenants/tenant.entity';
 import { StripeClientService, StripeConfigService } from './stripe';
+import { subscriptionPeriod } from './stripe/stripe-shapes.util';
 import { computePriceAmount, computeStripePriceAmount, normaliseStripePrice, type NormalisedPrice } from './price.util';
 import { euVatTaxIdValue, missingInvoiceFields, normaliseVatNumber, toIsoCountry } from './billing-profile.util';
 import { withTenant } from '../common/tenant-runner';
@@ -916,13 +917,21 @@ export class BillingService {
     sub.payment_mode = this.resolvePaymentMode(stripeSub);
     sub.status = this.resolveStatus(stripeSub?.status) ?? sub.status;
     sub.collection_method = this.resolveCollectionMethod(stripeSub?.collection_method) ?? sub.collection_method;
-    sub.current_period_start = this.toDate(stripeSub?.current_period_start);
-    sub.current_period_end = this.toDate(stripeSub?.current_period_end);
+    // A period Stripe does not send (moved to the items since basil) keeps the stored dates.
+    const period = subscriptionPeriod(stripeSub);
+    if (period.start != null) sub.current_period_start = this.toDate(period.start);
+    if (period.end != null) {
+      sub.current_period_end = this.toDate(period.end);
+      sub.next_payment_at = this.toDate(period.end);
+    }
     sub.trial_end = this.toDate(stripeSub?.trial_end);
     sub.cancel_at = this.toDate(stripeSub?.cancel_at);
     sub.canceled_at = this.toDate(stripeSub?.canceled_at);
-    sub.canceled_at_effective = stripeSub?.cancel_at_period_end ? this.toDate(stripeSub?.current_period_end) : null;
-    sub.next_payment_at = this.toDate(stripeSub?.current_period_end);
+    if (!stripeSub?.cancel_at_period_end) {
+      sub.canceled_at_effective = null;
+    } else if (period.end != null) {
+      sub.canceled_at_effective = this.toDate(period.end);
+    }
     sub.currency = typeof stripeSub?.currency === 'string' ? stripeSub.currency.toUpperCase() : sub.currency;
     if (!sub.currency) {
       const priceCurrency = stripeSub?.items?.data?.[0]?.price?.currency;
@@ -1331,7 +1340,6 @@ export class BillingService {
       const invoices = await client.invoices.list({
         customer: tenant.stripe_customer_id,
         limit: 10,
-        expand: ['data.payment_intent'],
       });
       return (invoices?.data ?? []).map((invoice: any) => ({
         id: invoice.id,
