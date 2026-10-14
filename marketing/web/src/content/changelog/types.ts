@@ -1,14 +1,8 @@
-export interface ChangelogEntry {
-  date: string; // ISO date YYYY-MM-DD
-  version?: string;
-  title: string;
-  summary: string;
-  sections?: {
-    label: string;
-    items: string[];
-  }[];
-}
-
+/**
+ * Changelog page copy. The entries themselves are the blog articles with
+ * topic `release` (see `getReleasePosts` in `src/lib/blog.ts`); the technical
+ * list of changes lives on the GitHub releases page.
+ */
 export interface ChangelogContent {
   meta: { title: string; description: string };
   header: {
@@ -16,11 +10,12 @@ export interface ChangelogContent {
     title: string;
     lead: string;
   };
-  subscribe: {
+  /** Shown in place of the list while no release article is published. */
+  empty: string;
+  github: {
     label: string;
     body: string;
-    githubCta: string;
-    githubHref: string;
+    cta: string;
+    href: string;
   };
-  entries: ChangelogEntry[];
 }

@@ -98,6 +98,11 @@ export async function getPostsWithFallback(locale: Locale): Promise<BlogItem[]> 
   );
 }
 
+/** Release notes articles (topic `release`) for the `locale` changelog, same fallback as the index. */
+export async function getReleasePosts(locale: Locale): Promise<BlogItem[]> {
+  return (await getPostsWithFallback(locale)).filter((i) => i.post.data.topic === 'release');
+}
+
 /** True when at least one post exists in any locale — gates the nav/footer/home links. */
 export async function blogHasPosts(): Promise<boolean> {
   return (await getAllPosts()).length > 0;

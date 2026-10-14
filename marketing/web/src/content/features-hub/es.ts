@@ -17,13 +17,13 @@ const content: FeaturesHubContent = {
       role: 'CIO / director de TI',
       headline: 'Defienda el presupuesto de TI ante el comité de dirección.',
       body:
-        'Su CFO pregunta por qué los costes de TI subieron un 12 %. Usted entra con los números: un informe de repercusión por empresa y departamento, OPEX frente a CAPEX desglosado por aplicación, la tendencia plurianual. Cada línea se rastrea hasta un contrato o un proyecto. Sin gimnasia de hojas de cálculo, sin «ya le respondo».',
-      outcome: 'Entre a la revisión presupuestaria con respuestas, no con preguntas.',
+        'Su CFO pregunta por qué los costes de TI subieron un 12 %. Usted entra con los números: un informe de repercusión por empresa y departamento, OPEX y CAPEX lado a lado, por dimensión analítica, la tendencia plurianual. Cada línea se rastrea hasta un contrato o un proyecto. Sin gimnasia de hojas de cálculo, sin «ya le respondo».',
+      outcome: 'Entre a la revisión presupuestaria con las respuestas.',
       modules: [
         { slug: 'budget', label: 'Presupuesto' },
         { slug: 'it-landscape', label: 'Paisaje de TI' },
       ],
-      shotAlt: 'Informe de repercusión por empresa y departamento, desglose OPEX/CAPEX',
+      shotAlt: 'Las 10 mayores líneas OPEX del presupuesto 2026, en gráfico circular',
     },
     {
       role: 'Arquitecto de empresa',

@@ -37,7 +37,7 @@ const content: OnPremContent = {
       },
       {
         title: 'Votre cadence',
-        body: 'Épinglez la version que vous exécutez, testez une mise à jour, migrez selon votre calendrier de changements. Aucune mise à jour forcée, aucune coupure surprise.',
+        body: 'KANAP publie une version environ une fois par mois. Lisez ses notes de version, testez la mise à jour et appliquez-la dans votre fenêtre de changement. Figez une version précise si besoin. Aucune mise à jour forcée, aucune coupure surprise.',
       },
     ],
   },
@@ -73,7 +73,7 @@ const content: OnPremContent = {
       },
       {
         title: 'Coller l\'invite d\'installation',
-        body: "Ouvrez votre agent et collez le modèle d'invite depuis notre documentation, renseignez votre nom de domaine, votre email admin et (en option) votre transport email (Resend ou SMTP). L'agent lit les pages d'installation référencées, installe Docker, PostgreSQL 16 avec les extensions requises, MinIO, nginx et certbot, clone KANAP dans /opt/kanap, génère des identifiants robustes, construit les images et démarre les conteneurs. Il configure aussi TLS et son renouvellement automatique. L'agent demande votre confirmation avant chaque commande.",
+        body: "Ouvrez votre agent et collez le modèle d'invite depuis notre documentation, renseignez votre nom de domaine, votre email admin et (en option) votre transport email (Resend ou SMTP). L'agent lit les pages d'installation référencées, installe Docker, PostgreSQL 16 avec les extensions requises, MinIO, nginx et certbot, clone KANAP dans /opt/kanap sur la branche stable (toujours la dernière version publiée), génère des identifiants robustes, construit les images et démarre les conteneurs. Il configure aussi TLS et son renouvellement automatique. L'agent demande votre confirmation avant chaque commande.",
       },
       {
         title: 'Se connecter et durcir',
@@ -111,7 +111,7 @@ const content: OnPremContent = {
     items: [
       {
         title: 'Mises à jour à votre rythme',
-        body: 'Épinglez la version que vous exécutez, testez la mise à jour en pré-prod, appliquez-la dans votre fenêtre de changement. Migrations au boot, idempotentes par conception.',
+        body: 'La branche stable pointe toujours sur la dernière version publiée. Pour mettre à jour, lisez les nouvelles entrées du changelog (celles marquées « Action required » d\'abord), puis récupérez stable et reconstruisez. Figez une version précise par son tag, et revenez au tag précédent avec la sauvegarde faite avant la mise à jour. Migrations au démarrage, idempotentes par conception.',
       },
       {
         title: 'Des sauvegardes avec vos propres outils',
@@ -152,7 +152,7 @@ const content: OnPremContent = {
 
   cta: {
     title: 'Prêt à auto-héberger ?',
-    body: 'Clonez le dépôt et lancez la pile en moins de dix minutes. Pas de compte requis, pas de compte à rebours, juste de l\'open source.',
+    body: 'Clonez le dépôt sur la branche stable et lancez la pile en moins de dix minutes. Pas de compte requis, pas de compte à rebours, juste de l\'open source.',
     primary: 'Déployer depuis GitHub',
     secondary: 'Nous contacter',
   },

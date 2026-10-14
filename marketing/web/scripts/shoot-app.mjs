@@ -44,14 +44,14 @@ const EMAIL = process.env.APP_EMAIL;
 const PASSWORD = process.env.APP_PASSWORD;
 
 // Sample data used by the shot definitions (Fromage demo tenant).
-const ALLOC_ITEM_ID = 'OPX-2'; // SAP S/4HANA Maintenance, Headcount (refs resolve in the URL)
-const ANALYTICS_ITEM_ID = '9f2f0c3f-fc65-441b-b22b-cfeefdd27086'; // OPX-8 AWS Cloud Hosting, Infrastructure
+const ALLOC_ITEM_ID = 'BL-2'; // SAP S/4HANA Maintenance, Headcount (refs resolve in the URL)
+const ANALYTICS_ITEM_ID = 'BL-120'; // Data Center Refresh, a CAPEX line with Cost pool, IT tower, Purpose and Priority set
 const COMPANY_NAME = 'Fromage & Co SA';
 const LANG = flag('lang', ''); // UI language override, e.g. fr
-// Budget demo data (Fromage & Co fixture with the budget files 26-30).
-const STAFFING_ITEM_ID = flag('staffing-item', 'OPX-90'); // Régie · Product owner e-commerce · BOU-100
-const SAAS_ITEM_ID = 'OPX-4'; // Salesforce (Sales + Service Cloud), account 612100
-// OPEX list filter used by the budget articles: the two software accounts.
+// Budget demo data (Fromage & Co fixture, reloaded 2026-10-13).
+const STAFFING_ITEM_ID = flag('staffing-item', 'BL-91'); // Contractor · E-commerce front-end developer · BOU-100
+const SAAS_ITEM_ID = 'BL-4'; // Salesforce (Sales + Service Cloud), account 612100
+// Budget lines filter used by the budget articles: the two software accounts.
 const SOFTWARE_ACCOUNTS = ['612100 - SaaS Subscriptions', '612200 - Software Licenses'];
 // Analytics dimensions kept out of the shots (customer-specific names).
 // Report filter controls to leave out of the shot, by label (local test dimensions):
@@ -200,30 +200,10 @@ const PAGES = {
       );
     },
   },
-  'opex-allocations': { path: `/ops/opex/${ALLOC_ITEM_ID}/allocations?year=2026`, waitFor: 'main' },
   'allocation-default': { path: '/ops/operations/allocation-default', waitFor: 'main' },
   'budget-operations': { path: '/ops/operations', waitFor: 'main' },
   'reports-landing': { path: '/ops/reports', waitFor: 'main' },
-  'opex-list': { path: '/ops/opex', waitFor: 'main' },
-  'analytics-dimensions': { path: '/master-data/analytics', waitFor: 'main' },
   // Budget presentation set: one item across years and columns, costed lines, organisation, settings, reports.
-  'budget-item-tab': {
-    path: `/ops/opex/${STAFFING_ITEM_ID}/budget?year=2026`,
-    waitFor: 'main',
-    prepare: (page) => page.waitForSelector('button[aria-label="Quantité et prix"], button[aria-label="Quantity and price"]', { timeout: 30000 }),
-  },
-  'budget-item-lines': {
-    path: `/ops/opex/${STAFFING_ITEM_ID}/budget?year=2026`,
-    waitFor: 'main',
-    prepare: async (page) => {
-      const sel = 'button[aria-label="Quantité et prix"], button[aria-label="Quantity and price"]';
-      await page.waitForSelector(sel, { timeout: 30000 });
-      await openProperties(page);
-      await page.click(sel);
-      await page.mouse.move(700, 300); // drop the button tooltip
-      await sleep(2000);
-    },
-  },
   'budget-cost-centers': { path: '/master-data/cost-centers', waitFor: 'main' },
   'budget-calendars': { path: '/master-data/working-day-calendars', waitFor: 'main' },
   'budget-columns': { path: '/ops/operations/columns', waitFor: 'main' },
@@ -257,43 +237,6 @@ const PAGES = {
       await choose('A0 Budget', 'A3 Atterrissage');
       await page.waitForFunction(() => document.querySelectorAll('table tbody tr').length > 1, { timeout: 30000 }).catch(() => {});
       await sleep(1500);
-    },
-  },
-  'budget-top-opex': {
-    path: '/ops/reports/top-opex',
-    waitFor: 'main',
-    prepare: async (page) => {
-      await page.waitForFunction(() => !document.body.innerText.includes('No data to display') && !document.body.innerText.includes('Top 0'), { timeout: 40000 }).catch(() => console.warn('top opex still empty'));
-      await sleep(1500);
-    },
-  },
-  'budget-opex-list': { path: '/ops/opex', waitFor: 'main', prepare: async (page) => { await sleep(2500); } },
-  'analytics-opex-item': { path: `/ops/opex/${ANALYTICS_ITEM_ID}`, waitFor: 'main' },
-  'analytics-report': { path: '/ops/reports/analytics', waitFor: 'main' },
-  'analytics-report-range': {
-    path: '/ops/reports/analytics',
-    waitFor: 'main',
-    async prepare(page) {
-      // Widen the range to previous year -> next year so the chart switches to lines.
-      const year = new Date().getFullYear();
-      const pickYear = async (selectIndex, label) => {
-        const selects = await page.$$('.MuiSelect-select');
-        await selects[selectIndex].click();
-        await page.waitForSelector('li[role="option"]', { timeout: 10000 });
-        const options = await page.$$('li[role="option"]');
-        for (const option of options) {
-          const text = await option.evaluate((el) => el.textContent?.trim() || '');
-          if (text === String(label)) {
-            await option.click();
-            break;
-          }
-        }
-        await sleep(800);
-      };
-      await page.waitForSelector('.MuiSelect-select', { timeout: 20000 });
-      await pickYear(0, year - 1);
-      await pickYear(1, year + 1);
-      await sleep(1500); // let the chart redraw
     },
   },
   // Compliance article (October 2026): application classification, fromage fixture (#487).
@@ -338,38 +281,43 @@ const PAGES = {
       }
     },
   },
-  // Budget feature page (October 2026): --out public/screenshots.
-  'budget-opex-grid': {
-    path: '/ops/opex',
+  // Budget feature page and budget articles, version 26.10.1 (2026-10-13): --out public/screenshots.
+  // Read-only: nothing is saved, the copy runs a preview only.
+  'budget-lines-grid-2026-10-13': {
+    path: '/ops/budget',
     waitFor: 'main',
     async prepare(page) {
       await page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 60000 });
-      // Same columns as opex-list-filters, minus Task, so the 2026 amounts and their total show.
-      await clickText(page, 'button', 'Choose columns');
-      await page.waitForSelector('.MuiPopover-paper', { timeout: 10000 });
-      for (const label of ['Paying company', 'Contract', 'Allocation', 'Task']) await clickText(page, '.MuiPopover-paper label', label);
-      await page.keyboard.press('Escape');
-      await page.waitForFunction(
-        () => /\d/.test(document.querySelector('.ag-floating-bottom .ag-cell[col-id="yBudget"]')?.textContent || ''),
-        { timeout: 30000 },
-      );
+      await page.waitForFunction(() => /Total \(\d+ lines\)/.test(document.querySelector('.ag-floating-bottom')?.textContent || ''), { timeout: 30000 });
       await sleep(1000);
     },
   },
-  'budget-top-items': {
-    path: '/ops/reports/top-opex',
+  'budget-allocations-2026-10-13': {
+    path: `/ops/budget/${ALLOC_ITEM_ID}/allocations?year=2026`,
+    waitFor: 'main',
+    async prepare(page) {
+      await openProperties(page);
+      await page.waitForFunction(() => /100(\.00)?%/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
+    },
+  },
+  'budget-currency-2026-10-13': {
+    path: '/ops/operations/currency',
+    waitFor: 'main',
+    prepare: (page) => page.waitForFunction(() => /\d\.\d{6}/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 }),
+  },
+  'budget-top-lines-2026-10-13': {
+    path: '/ops/reports/top-opex?scope=opex',
     waitFor: 'main',
     async prepare(page) {
       await waitForReport(page);
+      await page.waitForFunction(() => document.querySelector('main')?.innerText.includes('Largest OPEX lines'), { timeout: 30000 }).catch(() => console.warn('OPEX tab not applied'));
       await pickSelect(page, 'Chart type', 'Pie chart');
       await hideControls(page, HIDDEN_DIMENSIONS);
-      await page.waitForSelector('.ag-charts-wrapper canvas', { timeout: 20000 }).catch(() => {});
       await sleep(1500);
     },
   },
-  // Budget articles (October 2026).
-  'opex-list-filters': {
-    path: '/ops/opex',
+  'budget-lines-filters-2026-10-13': {
+    path: '/ops/budget',
     waitFor: 'main',
     async prepare(page) {
       await page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 60000 });
@@ -383,7 +331,6 @@ const PAGES = {
       // Account set filter: clear, then tick the two software accounts.
       const col = await page.$eval('.ag-header-cell[col-id="account_display"]', (h) => h.getAttribute('aria-colindex'));
       await page.click(`.ag-floating-filter[aria-colindex="${col}"] button`);
-      // The popup fills in once the account values are loaded.
       await page.waitForFunction(
         () => [...document.querySelectorAll('.ag-popup button')].some((b) => b.textContent?.trim() === 'Clear')
           && document.querySelectorAll('.ag-popup label').length > 2,
@@ -392,35 +339,37 @@ const PAGES = {
       await clickText(page, '.ag-popup button', 'Clear');
       await sleep(500);
       for (const account of SOFTWARE_ACCOUNTS) await clickText(page, '.ag-popup label', account);
-      // Wait for the filtered total in the pinned bottom row.
       await page.waitForFunction(
-        () => document.querySelector('.ag-floating-filter')?.closest('.ag-header')?.textContent?.includes('2 selected')
-          && /\d/.test(document.querySelector('.ag-floating-bottom .ag-cell[col-id="yBudget"]')?.textContent || ''),
+        () => document.querySelector('.ag-floating-filter')?.closest('.ag-header')?.textContent?.includes('2 selected'),
         { timeout: 30000 },
-      );
-      await sleep(1000);
+      ).catch(() => console.warn('account filter not applied'));
+      await sleep(1500);
     },
   },
-  // Budget tab opened with the list filter in the URL: the "3 of 21" pill shows.
-  'opex-budget-tab': {
-    path: `/ops/opex/${SAAS_ITEM_ID}/budget?year=2026&filters=${encodeURIComponent(
+  // Budget tab opened with the list filter in the URL: the "n of N" pill counts the filtered lines.
+  'budget-tab-2026-10-13': {
+    path: `/ops/budget/${SAAS_ITEM_ID}/budget?year=2026&filters=${encodeURIComponent(
       JSON.stringify({ account_display: { filterType: 'set', values: SOFTWARE_ACCOUNTS } }),
     )}`,
     waitFor: 'main',
     async prepare(page) {
       await openProperties(page);
       await page.waitForFunction(() => / of \d+/.test(document.querySelector('main')?.innerText || ''), { timeout: 20000 });
-      await page.waitForSelector('.ag-charts-wrapper canvas', { timeout: 20000 }).catch(() => {});
+      await sleep(1000);
     },
   },
-  'currency-settings': {
-    path: '/ops/operations/currency',
+  'budget-quantity-price-2026-10-13': {
+    path: `/ops/budget/${STAFFING_ITEM_ID}/budget?year=2026`,
     waitFor: 'main',
-    prepare: (page) => page.waitForFunction(() => /\d\.\d{6}/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 }),
+    async prepare(page) {
+      await openProperties(page);
+      await page.waitForFunction(() => document.querySelector('main')?.innerText.includes('FTE over the period'), { timeout: 30000 });
+      await sleep(1000);
+    },
   },
-  // Dry run only (never "Copy data"): 2026 Expected landing -> 2027 Budget, +3 %.
-  'copy-budget-columns': {
-    path: '/ops/operations/copy-budget-columns',
+  // Preview only (never "Copy"): all lines, 2026 Expected landing -> 2027 Budget, +3 %.
+  'copy-budget-columns-2026-10-13': {
+    path: '/ops/operations/copy-budget',
     waitFor: 'main',
     async prepare(page) {
       await page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 60000 });
@@ -432,27 +381,19 @@ const PAGES = {
       const [pct] = await page.$$('xpath/.//*[normalize-space(text())="Percentage increase"]/following::input[1]');
       await pct.click({ clickCount: 3 });
       await page.keyboard.type('3');
-      await clickText(page, 'button', 'Dry run');
-      await page.waitForFunction(() => /items? in the preview/.test(document.body.innerText), { timeout: 60000 });
-      await sleep(1000);
-      // Sort by preview, ascending: the skipped lines (0 or kept value) come
-      // first, followed by the smallest copied lines.
-      await page.click('.ag-header-cell[col-id="previewValue"]');
-      await sleep(800);
-      // Frame from the selection bar down to the first preview rows.
-      const [bar] = await page.$$('xpath/.//*[normalize-space(text())="Source year"]/ancestor::*[contains(@class,"MuiPaper-root")][1]');
-      await bar?.evaluate((n) => n.scrollIntoView({ block: 'start' }));
-      await sleep(1000);
+      await clickText(page, 'button', 'Preview');
+      await page.waitForFunction(() => /lines? in the preview/.test(document.body.innerText), { timeout: 60000 });
+      await sleep(1500);
     },
   },
-  'reporting-landing': {
+  'reporting-landing-2026-10-13': {
     path: '/ops/reports',
     waitFor: 'main',
     prepare: (page) => page.waitForFunction(() => document.querySelector('main')?.innerText.includes('Cost per FTE'), { timeout: 20000 }),
   },
-  // Last year's landing against next year's budget (2027 budget is still empty on the demo tenant).
-  'top-opex-increase': {
-    path: '/ops/reports/opex-delta',
+  // Last year's landing against this year's budget (2027 is empty on the demo tenant).
+  'top-increase-2026-10-13': {
+    path: '/ops/reports/opex-delta?scope=opex',
     waitFor: 'main',
     async prepare(page) {
       await waitForReport(page);
@@ -465,8 +406,8 @@ const PAGES = {
       await sleep(1500);
     },
   },
-  'cost-per-fte': {
-    path: '/ops/reports/cost-per-fte',
+  'cost-per-fte-2026-10-13': {
+    path: '/ops/reports/cost-per-fte?scope=opex',
     waitFor: 'main',
     async prepare(page) {
       await waitForReport(page);
@@ -479,20 +420,52 @@ const PAGES = {
       await sleep(1500);
     },
   },
-  'chargeback-default-method': {
+  'chargeback-default-method-2026-10-13': {
     path: '/ops/operations/allocation-default',
     waitFor: 'main',
     prepare: (page) => page.waitForFunction(() => document.querySelector('main')?.innerText.includes('Headcount'), { timeout: 20000 }),
   },
-  'chargeback-allocations': {
-    path: `/ops/opex/${ALLOC_ITEM_ID}/allocations?year=2026`,
+  'chargeback-global-2026-10-13': {
+    path: '/ops/reports/chargeback/global',
+    waitFor: 'main',
+    prepare: (page) => page.waitForFunction(() => /Overall total\s+[\d,  ]{3,}/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 }),
+  },
+  'analytics-dimensions-2026-10-13': {
+    path: '/master-data/analytics',
+    waitFor: 'main',
+    prepare: (page) => page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 30000 }),
+  },
+  'analytics-line-properties-2026-10-13': {
+    path: `/ops/budget/${ANALYTICS_ITEM_ID}`,
     waitFor: 'main',
     async prepare(page) {
       await openProperties(page);
-      await page.waitForFunction(() => /100(\.00)?%/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
+      await page.waitForFunction(() => document.querySelector('aside')?.innerText.includes('Cost pool'), { timeout: 30000 });
+      await sleep(1000);
+    },
+  },
+  'analytics-report-2026-10-13': {
+    path: '/ops/reports/analytics?scope=opex',
+    waitFor: 'main',
+    async prepare(page) {
+      await waitForReport(page);
+      await page.waitForFunction(() => document.querySelector('main')?.innerText.includes('Group OPEX totals by Cost pool'), { timeout: 30000 }).catch(() => console.warn('OPEX tab not applied'));
+      await sleep(1500);
+    },
+  },
+  // Range report: 2025 to 2026 (2027 is empty on the demo tenant), drawn as lines.
+  'analytics-report-range-2026-10-13': {
+    path: '/ops/reports/analytics?scope=opex',
+    waitFor: 'main',
+    async prepare(page) {
+      await waitForReport(page);
+      await pickSelect(page, 'Start year', '2025');
+      await pickSelect(page, 'End year', '2026');
+      await sleep(1500);
     },
   },
 };
+PAGES['chargeback-company-2026-10-13'] = PAGES['chargeback-company'];
 
 // Flags that take a value, so their value is not read as a shot name.
 const VALUE_FLAGS = ['base', 'out', 'theme', 'width', 'height', 'scale', 'lang', 'staffing-item', 'hide'];

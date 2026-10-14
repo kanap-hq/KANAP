@@ -17,13 +17,13 @@ const content: FeaturesHubContent = {
       role: 'CIO / IT director',
       headline: 'Defend the IT budget at the board meeting.',
       body:
-        "Your CFO asks why IT costs went up 12%. You walk in with the numbers: a chargeback report by company and department, OPEX vs CAPEX broken down by application, the multi-year trend. Every line traces back to a contract or a project. No spreadsheet gymnastics, no \"I'll get back to you\".",
-      outcome: 'Walk into the budget review with answers, not questions.',
+        "Your CFO asks why IT costs went up 12%. You walk in with the numbers: a chargeback report by company and department, OPEX and CAPEX side by side, by analytics dimension, the multi-year trend. Every line traces back to a contract or a project. No spreadsheet gymnastics, no \"I'll get back to you\".",
+      outcome: 'Walk into the budget review with the answers.',
       modules: [
         { slug: 'budget', label: 'Budget' },
         { slug: 'it-landscape', label: 'IT landscape' },
       ],
-      shotAlt: 'Chargeback report by company and department, OPEX/CAPEX breakdown',
+      shotAlt: 'Top 10 OPEX lines of the 2026 budget, as a pie chart',
     },
     {
       role: 'Enterprise architect',

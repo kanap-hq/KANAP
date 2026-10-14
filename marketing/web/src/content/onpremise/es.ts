@@ -37,7 +37,7 @@ const content: OnPremContent = {
       },
       {
         title: 'Su ritmo',
-        body: 'Fije la versión que ejecuta, pruebe una actualización, migre según el calendario de su ventana de cambios. Sin actualizaciones forzadas, sin caídas sorpresa.',
+        body: 'KANAP publica una versión aproximadamente una vez al mes. Lea sus notas de versión, pruebe la actualización y aplíquela en su ventana de cambios. Fije una versión concreta si lo necesita. Sin actualizaciones forzadas, sin caídas sorpresa.',
       },
     ],
   },
@@ -73,7 +73,7 @@ const content: OnPremContent = {
       },
       {
         title: 'Pegar el prompt de instalación',
-        body: 'Abra su agente y pegue la plantilla de prompt de nuestra documentación, luego rellene su hostname, el email de administrador y (opcionalmente) su transporte de email (Resend o SMTP). El agente lee las páginas de instalación enlazadas, instala Docker, PostgreSQL 16 con las extensiones necesarias, MinIO, nginx y certbot, clona KANAP en /opt/kanap, genera credenciales fuertes, construye las imágenes y arranca los contenedores. También configura TLS y la renovación automática. El agente pide confirmación antes de ejecutar cada comando.',
+        body: 'Abra su agente y pegue la plantilla de prompt de nuestra documentación, luego rellene su hostname, el email de administrador y (opcionalmente) su transporte de email (Resend o SMTP). El agente lee las páginas de instalación enlazadas, instala Docker, PostgreSQL 16 con las extensiones necesarias, MinIO, nginx y certbot, clona KANAP en /opt/kanap en la rama stable (siempre la última versión publicada), genera credenciales fuertes, construye las imágenes y arranca los contenedores. También configura TLS y la renovación automática. El agente pide confirmación antes de ejecutar cada comando.',
       },
       {
         title: 'Iniciar sesión y reforzar',
@@ -111,7 +111,7 @@ const content: OnPremContent = {
     items: [
       {
         title: 'Actualizaciones en su calendario',
-        body: 'Fije la versión que ejecuta, pruebe la actualización en pre-prod, aplíquela en su ventana de cambios. Las migraciones se ejecutan al arranque, idempotentes por diseño.',
+        body: 'La rama stable apunta siempre a la última versión publicada. Para actualizar, lea las nuevas entradas del changelog (primero las marcadas "Action required"), luego haga pull de stable y reconstruya. Fije una versión concreta por su tag y vuelva al tag anterior con la copia de seguridad hecha antes de la actualización. Las migraciones se ejecutan al arranque, idempotentes por diseño.',
       },
       {
         title: 'Copias de seguridad con sus propias herramientas',
@@ -152,7 +152,7 @@ const content: OnPremContent = {
 
   cta: {
     title: '¿Listo para autoalojar?',
-    body: 'Clone el repo y levante la pila en menos de diez minutos. Sin cuenta, sin cuenta atrás de prueba, solo open source.',
+    body: 'Clone el repo, cambie a la rama stable y levante la pila en menos de diez minutos. Sin cuenta, sin cuenta atrás de prueba, solo open source.',
     primary: 'Desplegar desde GitHub',
     secondary: 'Hablar con nosotros',
   },

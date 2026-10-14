@@ -19,7 +19,7 @@ const content: FeatureContent = {
         'OPEX and CAPEX in one list, filterable by type',
         'Budget, revision, actuals and landing columns, renamable',
         'Amounts as quantity × price, or spread by month',
-        'Column copy with a dry run first',
+        'Column copy with a preview first',
         'Version freeze: the approved version stays put',
       ],
       shotAlt: 'Budget lines list with the 2026 amounts and the totals row',
@@ -38,7 +38,7 @@ const content: FeatureContent = {
     },
     {
       title: 'Multi-company, multi-currency, consolidation',
-      body: 'Each line keeps its currency, and everything rolls up into one reporting currency. Rates come from the World Bank and are fixed when the budget is frozen. Charts of accounts and a consolidation chart put your numbers in the structure finance uses.',
+      body: 'Each line keeps its currency, and everything rolls up into one reporting currency. Rates come from the World Bank and are fixed when the default column is frozen. Charts of accounts and a consolidation chart put your numbers in the structure finance uses.',
       bullets: [
         'One reporting currency for every total',
         'Automatic exchange rates, fixed at freeze',
@@ -50,7 +50,7 @@ const content: FeatureContent = {
     },
     {
       title: 'A report for every question',
-      body: 'Global and per-company chargeback, trends, top increases and decreases, comparison of two versions, analytics dimensions, consolidation accounts, monthly staffing and cost per FTE. Every report row opens the matching filtered list, and Plaid answers the same questions in plain language.',
+      body: 'Global and per-company chargeback, trends, top increases and decreases, comparison of budget columns, analytics dimensions, consolidation accounts, monthly staffing and cost per FTE. Every report row opens the matching filtered list, and Plaid answers the same questions in plain language.',
       bullets: [
         'Global and per-company chargeback',
         'Budget comparison across years, for all lines, OPEX or CAPEX',
@@ -69,7 +69,7 @@ const content: FeatureContent = {
       { title: 'Round trip with your spreadsheet', body: 'Export the lines, edit them in Excel or LibreOffice, import the file back: KANAP writes only the cells that changed.' },
       { title: 'Sample data', body: 'A trial fills up in a minute with the budget of Fromage & Co, four fictional companies, so you can see everything before entering yours.' },
       { title: 'Headcount and cost per FTE', body: 'A contractor line in people or days declares its FTE. Reports turn it into month-by-month headcount and cost per FTE, or the daily rate, by supplier or by cost center.' },
-      { title: 'Your own analysis axes', body: 'Create as many analytics dimensions as your questions need (domain, cost nature, programme), each with its own values, for OPEX, CAPEX or both. Budget reports filter on them, and several group by dimension.' },
+      { title: 'Your own analysis axes', body: 'Create as many analytics dimensions as your questions need (domain, cost nature, programme), each with its own values, for OPEX, CAPEX or both. Four recommended dimensions come ready: cost pool, IT tower, purpose and priority. Budget reports filter on them, and several group by dimension.' },
     ],
   },
   crossLinks: {
