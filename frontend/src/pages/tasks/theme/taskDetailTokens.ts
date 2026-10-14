@@ -163,7 +163,8 @@ export const kanapPalette = {
   text: {
     primary: { light: '#111827', dark: '#E5E7EB' },
     secondary: { light: '#6B7280', dark: '#9CA3AF' },
-    tertiary: { light: '#9CA3AF', dark: '#6B7280' },
+    /** Dark value reaches 4.5:1 (WCAG AA) on every dark surface, composer included. */
+    tertiary: { light: '#9CA3AF', dark: '#818895' },
   },
   teal: { light: '#1A6B7A', dark: '#4DB8C9' },
   tealForeground: { light: '#FFFFFF', dark: '#0F1117' },

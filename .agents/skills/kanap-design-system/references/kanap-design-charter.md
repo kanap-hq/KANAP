@@ -70,7 +70,7 @@ MUI palette mappings (set in `ThemeContext.tsx`):
 |---|---|---|---|
 | `kanap.text.primary` | `#111827` | `#E5E7EB` | Main content, values in fields |
 | `kanap.text.secondary` | `#6B7280` | `#9CA3AF` | Secondary information, action button text |
-| `kanap.text.tertiary` | `#9CA3AF` | `#6B7280` | Field labels, metadata, hints, IDs in small contexts |
+| `kanap.text.tertiary` | `#9CA3AF` | `#818895` | Field labels, metadata, hints, IDs in small contexts |
 
 ### Borders
 

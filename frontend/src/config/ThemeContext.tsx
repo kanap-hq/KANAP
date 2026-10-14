@@ -174,7 +174,7 @@ function getComponentOverrides(mode: PaletteMode): ThemeOptions['components'] {
           'lineHeight': '1.4 !important' as any,
           'letterSpacing': '0 !important' as any,
           'textTransform': 'none !important' as any,
-          'color': `${isDark ? 'rgba(255,255,255,0.35)' : '#9CA3AF'} !important`,
+          'color': `${kanap.text.tertiary} !important`,
           'position': 'relative !important' as any,
           'transform': 'none !important',
           'marginBottom': '2px !important' as any,
@@ -183,7 +183,7 @@ function getComponentOverrides(mode: PaletteMode): ThemeOptions['components'] {
             fontSize: '11px !important' as any,
           },
           '&.Mui-focused': {
-            color: `${isDark ? 'rgba(255,255,255,0.35)' : '#9CA3AF'} !important`,
+            color: `${kanap.text.tertiary} !important`,
             fontSize: '11px !important' as any,
           },
         },
