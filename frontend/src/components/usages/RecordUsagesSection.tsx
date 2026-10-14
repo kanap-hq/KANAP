@@ -109,7 +109,7 @@ export default function RecordUsagesSection({ owner, id }: { owner: UsageOwner; 
   } else if (data) body = <UsageGroups groups={data.groups} details={details} />;
 
   return (
-    <Box component="section" id={USAGES_SECTION_ID} aria-label={title} sx={{ maxWidth: 720, scrollMarginTop: '16px' }}>
+    <Box component="section" id={USAGES_SECTION_ID} aria-label={title} sx={{ scrollMarginTop: '16px' }}>
       <Typography component="h2" sx={sectionLabelSx}>{title}</Typography>
       {body}
     </Box>
