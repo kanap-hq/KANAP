@@ -410,7 +410,8 @@ fix the cause shown in the output and run it again.
 The tenant's MCP API keys (`ai_api_keys`) are stored as hashes and keep working
 on the on-prem installation. They also keep working on the cloud as long as the
 tenant exists there: revoke them on the cloud after the move, or create new keys
-on-prem.
+on-prem. MCP clients connected with OAuth (Claude) are listed with the keys: revoke
+them on the cloud too, and connect the clients again to the on-prem address.
 
 ### SSO / Entra ID
 

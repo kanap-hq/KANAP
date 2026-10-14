@@ -3,8 +3,9 @@ import type { RequestHandler } from 'express';
 
 // JSON bodies keep their 20 MB limit.
 export const JSON_BODY_LIMIT = '20mb';
-// No route of the API takes a form-encoded body (the Entra sign-in returns in
-// the query string, the public forms post JSON): a small limit is enough.
+// Only the MCP OAuth token and revocation routes take a form-encoded body (RFC 6749,
+// ai/oauth); the Entra sign-in returns in the query string, the public forms post
+// JSON: a small limit is enough.
 export const URLENCODED_BODY_LIMIT = '64kb';
 
 type VerifyFn = (req: any, res: any, buffer: Buffer, encoding: string) => void;

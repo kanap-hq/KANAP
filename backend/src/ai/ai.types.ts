@@ -2,7 +2,7 @@ import { EntityManager } from 'typeorm';
 import { z } from 'zod';
 
 export type AiSurface = 'chat' | 'mcp';
-export type AiAuthMethod = 'jwt' | 'api_key';
+export type AiAuthMethod = 'jwt' | 'api_key' | 'oauth';
 export type AiMutationWriteToolName =
   | 'import_ticket'
   | 'import_glpi_ticket'

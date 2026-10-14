@@ -42,6 +42,8 @@ export type AiApiKeyRecordDto = {
   mcp_rate_limit_per_minute: number;
   created_at: string;
   created_by_user_id: string;
+  credential_kind: string;
+  oauth_client_name: string | null;
 };
 
 export type AiApiKeyAuthentication = {
@@ -108,10 +110,12 @@ export class AiApiKeysService {
       mcp_rate_limit_per_minute: typeof record.mcp_rate_limit_per_minute === 'number' ? record.mcp_rate_limit_per_minute : 0,
       created_at: record.created_at.toISOString(),
       created_by_user_id: record.created_by_user_id,
+      credential_kind: record.credential_kind ?? 'api_key',
+      oauth_client_name: record.oauth_client_name ?? null,
     };
   }
 
-  private async logAudit(
+  async logAudit(
     params: Parameters<AuditService['log']>[0],
     opts?: { manager?: EntityManager; tenantId?: string },
   ) {
@@ -227,6 +231,18 @@ export class AiApiKeysService {
     return this.toView(saved);
   }
 
+  /**
+   * The owner of a key or an OAuth grant may use it: an enabled user whose primary role is a
+   * custom role or Administrator. Same rule as the AI policy's permission state (ai-policy.service.ts):
+   * the other system roles get no AI access, the AI roles come as additional roles.
+   */
+  ownerMayAuthenticate(user: AiApiKeyAuthentication['user']): boolean {
+    const roleName = (user?.role?.role_name ?? '').toLowerCase();
+    return !!user
+      && user.status === 'enabled'
+      && (!!user.role && (!user.role.is_system || roleName === 'administrator'));
+  }
+
   async authenticatePresentedKey(
     presentedKey: string,
     opts?: { manager?: EntityManager; tenantId?: string },
@@ -252,7 +268,8 @@ export class AiApiKeysService {
     const record = records.find(
       (candidate) => !!candidate.key_hash && this.hashService.matches(presentedKey, candidate.key_hash),
     );
-    if (!record || !record.key_hash) {
+    // An OAuth grant's hash is the one of its refresh token, never usable as an API key.
+    if (!record || !record.key_hash || (record.credential_kind ?? 'api_key') !== 'api_key') {
       await this.logAudit(
         {
           table: 'ai_api_keys',
@@ -303,11 +320,7 @@ export class AiApiKeysService {
     }
 
     const user = await this.users.findById(record.user_id, { manager: opts?.manager });
-    const roleName = (user?.role?.role_name ?? '').toLowerCase();
-    const canAuthenticate = !!user
-      && user.status === 'enabled'
-      && (!!user.role && (!user.role.is_system || roleName === 'administrator'));
-    if (!canAuthenticate) {
+    if (!this.ownerMayAuthenticate(user)) {
       await this.logAudit(
         {
           table: 'ai_api_keys',
