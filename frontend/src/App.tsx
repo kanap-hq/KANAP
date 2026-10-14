@@ -8,6 +8,7 @@ const LoginPage = React.lazy(() => import('./pages/LoginPage'));
 const ForgotPasswordPage = React.lazy(() => import('./pages/ForgotPasswordPage'));
 const ResetPasswordPage = React.lazy(() => import('./pages/ResetPasswordPage'));
 const AcceptInvitePage = React.lazy(() => import('./pages/AcceptInvitePage'));
+const OAuthAuthorizePage = React.lazy(() => import('./pages/oauth/OAuthAuthorizePage'));
 const BudgetListPage = React.lazy(() => import('./pages/budget/BudgetListPage'));
 const BudgetListRedirect = React.lazy(() => import('./pages/budget/listRedirect'));
 const BudgetLineRoute = React.lazy(() => import('./pages/budget/BudgetLineRoute'));
@@ -239,6 +240,8 @@ function AppRoutes() {
         <Route path="/forgot-password" element={config.features.email ? <ForgotPasswordPage /> : <Navigate to="/login" replace />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/accept-invite" element={<AcceptInvitePage />} />
+        {/* Consent screen of an MCP connection: public, the page signs the user in itself. */}
+        <Route path="/oauth/authorize" element={<OAuthAuthorizePage />} />
         {/* Budget settings and operations formerly under Master data, and the two copy operations merged: redirect before the permission check. */}
         {legacyBudgetRedirectRoutes()}
         <Route element={<ProtectedRoute />}>

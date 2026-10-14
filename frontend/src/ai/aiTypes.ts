@@ -255,4 +255,10 @@ export type AiApiKeyRecord = {
   revocation_reason: string | null;
   created_at: string;
   created_by_user_id: string;
+  /** `api_key` for a key made by hand, `oauth` for a connection approved on the consent page. */
+  credential_kind?: 'api_key' | 'oauth' | string;
+  oauth_client_id?: string | null;
+  /** Chosen by the client itself: shown as text, next to the host it returns to. */
+  oauth_client_name?: string | null;
+  oauth_redirect_host?: string | null;
 };

@@ -8,7 +8,7 @@
     "agents-workspace.md": "01f0b93495177a5611878beb87816b10",
     "ai-assistant.md": "aaa362615dc79d8ade0ce52f911d30fe",
     "ai-models.md": "ccafc76eb2019cd794829d7cf2e01bba",
-    "ai-settings.md": "5884aa666888860b1d32246a242f9b1d",
+    "ai-settings.md": "52887c15cdc35a4929137dac66276987",
     "ai-usage.md": "a73bb84e9d985f0af725a7c2630604b9",
     "analytics.md": "82df6dfb43e23c5390bbee2e0ebc3c5a",
     "applications.md": "817e1f5629449eaff3921fd4e635b2b3",
@@ -44,7 +44,7 @@
     "master-data-operations.md": "14f746131dabbc879583b7ff3003ae23",
     "my-dashboard.md": "efec61e9eb100cb67d13cf217ce4dd82",
     "netbox.md": "02e742911ee43ecf4b1282cfa5307aa1",
-    "on-premise/configuration.md": "998094010032304fe273e258398d42d3",
+    "on-premise/configuration.md": "112b304fa530c43a29e3592885320574",
     "on-premise/index.md": "255fe852e65613cfdad8c7909d7d4216",
     "on-premise/installation-ai.md": "c1fbefb1f79a12ea7fc788ef680e7d81",
     "on-premise/installation-example.md": "c3e38ca899e0e3f8404073949fb32034",
@@ -63,7 +63,8 @@
     "scheduled-tasks.md": "e72da539219d2c403fa7af6b2af003f7",
     "suppliers.md": "6d8eed01fde6ebe64e109859e26ca640",
     "tasks.md": "b4b770b534b0ee6ac5efb8422e2045d4",
-    "working-day-calendars.md": "ad8a37b3054019f7f52c79a981e89879"
+    "working-day-calendars.md": "ad8a37b3054019f7f52c79a981e89879",
+    "connected-apps.md": "95f66c0aa49b7abfc1401e868602ae24"
   },
   "glossary_hash": "9f44e04a31257e1141582ae5b9c01324",
   "nav_hashes": {

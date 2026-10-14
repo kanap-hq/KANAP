@@ -65,20 +65,26 @@
         "label": "Label",
         "lastUsed": "Last used",
         "prefix": "Prefix",
-        "status": "Status"
+        "status": "Status",
+        "kind": "Type"
       },
       "copied": "Copied",
-      "empty": "No MCP API keys configured.",
+      "empty": "No MCP keys or connections.",
       "endpoint": {
         "label": "Server address",
         "helper": "MCP clients connect to this address and send the key in an Authorization header.",
-        "copy": "Copy address"
+        "copy": "Copy address",
+        "connectorHint": "Claude, Claude Desktop and Claude Code can also connect without a key: add this address as a custom connector."
       },
       "statuses": {
         "active": "Active",
         "revoked": "Revoked"
       },
-      "title": "MCP API keys"
+      "title": "MCP keys and connections",
+      "kinds": {
+        "apiKey": "API key",
+        "oauth": "Connection"
+      }
     },
     "messages": {
       "connectionTestFailed": "Connection test failed.",

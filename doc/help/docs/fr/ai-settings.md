@@ -1,6 +1,6 @@
 # Paramètres Plaid
 
-Cette page pilote l'[assistant de chat Plaid](ai-assistant.md) : le modèle IA auquel il s'adresse, l'activation du chat et de l'API MCP, la durée de conservation des conversations, et les clés qui permettent aux clients MCP externes d'accéder à vos données. C'est un écran centré sur le chat. Les modèles eux-mêmes — fournisseurs, clés, prix — se définissent une fois pour toutes sur la page [Modèles IA](ai-models.md), et chaque [agent IA](agents-workspace.md) choisit son propre modèle dans son onglet Paramètres : rien de ce que vous changez ici ne modifie donc le fonctionnement des agents.
+Cette page pilote l'[assistant de chat Plaid](ai-assistant.md) : le modèle IA auquel il s'adresse, l'activation du chat et de l'API MCP, la durée de conservation des conversations, et les clés et connexions qui permettent aux clients MCP externes d'accéder à vos données. C'est un écran centré sur le chat. Les modèles eux-mêmes (fournisseurs, clés, prix) se définissent une fois pour toutes sur la page [Modèles IA](ai-models.md), et chaque [agent IA](agents-workspace.md) choisit son propre modèle dans son onglet Paramètres : rien de ce que vous changez ici ne modifie donc le fonctionnement des agents.
 
 ## Où la trouver
 
@@ -83,36 +83,101 @@ Les modifications apportées à **Fournisseur**, **Fonctionnalités**, **Conserv
 
 ---
 
-## Clés API MCP
+## Clés et connexions MCP
 
-La section **Clés API MCP** génère des clés à longue durée de vie pour que des assistants externes et des IDE puissent communiquer avec KANAP via le Model Context Protocol, en utilisant les mêmes données que celles vues par Plaid.
+Les assistants externes et les IDE accèdent à KANAP via le Model Context Protocol (MCP), avec les mêmes données que Plaid. Ils se connectent de deux façons :
 
-La carte présente un bouton **Créer une clé**, l'**Adresse du serveur** à laquelle les clients se connectent (avec un bouton de copie), le plafond **Durée de vie maximale de la clé (jours)** et un tableau des clés existantes avec **Libellé**, **Préfixe**, **Créé**, **Expire**, **Dernière utilisation** et **Statut** (**Active** ou **Révoquée**).
+- **Connexion** : Claude, Claude Desktop et Claude Code se connectent à KANAP avec le compte de l'utilisateur. Personne ne crée ni ne copie de clé. Voir [Connecter un client MCP](#connecter-un-client-mcp).
+- **Clé API** : une clé à longue durée de vie pour Cursor, les scripts et les autres clients MCP.
+
+La carte **Clés et connexions MCP** présente un bouton **Créer une clé**, l'**Adresse du serveur** à laquelle les clients se connectent (avec un bouton de copie), le plafond **Durée de vie maximale de la clé (jours)** et un tableau avec **Libellé**, **Type**, **Préfixe**, **Créé**, **Expire**, **Dernière utilisation** et **Statut** (**Active** ou **Révoquée**).
+
+La colonne **Type** indique **Clé API** ou **Connexion**. Une ligne de connexion affiche le nom de l'application et l'hôte vers lequel elle revient, par exemple *Claude · claude.ai*. Les connexions n'ont pas de préfixe.
 
 ### Créer une clé
 
 1. Cliquez sur **Créer une clé**.
-2. Saisissez un **Libellé** descriptif (par exemple « Client MCP de bureau »).
+2. Saisissez un **Libellé** descriptif (par exemple « Cursor sur mon portable »).
 3. Cliquez sur **Créer**. KANAP génère un secret à usage unique.
-4. Copiez le secret immédiatement — il n'est affiché qu'une seule fois et ne pourra pas être récupéré par la suite.
-5. Si vous utilisez Claude Code, copiez la **Commande Claude Code** affichée sous la clé. Elle contient déjà l'adresse du serveur et la clé.
+4. Copiez le secret immédiatement. Il n'est affiché qu'une seule fois et ne pourra pas être récupéré par la suite.
+5. Si vous utilisez Claude Code avec une clé, copiez la **Commande Claude Code** affichée sous la clé. Elle contient déjà l'adresse du serveur et la clé.
 
-Le champ **Durée de vie maximale de la clé (jours)** limite la durée de vie de toute clé nouvellement émise, quelle que soit la valeur demandée dans la requête. Laissez-le vide pour aucune limite d'expiration. Notez que ce champ appartient aux paramètres ci-dessus plutôt qu'à cette carte : il est écrit par le bouton **Enregistrer les paramètres**, et non par la création d'une clé.
+Le champ **Durée de vie maximale de la clé (jours)** limite la durée de vie de toute clé nouvellement émise, quelle que soit la valeur demandée. Il limite aussi la durée d'une connexion. Laissez-le vide pour aucune limite d'expiration. Ce champ appartient aux paramètres ci-dessus plutôt qu'à cette carte : il est écrit par le bouton **Enregistrer les paramètres**, et non par la création d'une clé.
 
-### Révoquer une clé
+### Révoquer une clé ou une connexion
 
-Cliquez sur l'icône de corbeille sur n'importe quelle ligne active pour révoquer la clé. Les clés révoquées restent dans le tableau à des fins d'audit mais ne peuvent plus s'authentifier.
+Cliquez sur l'icône de corbeille d'une ligne active. Une clé révoquée cesse de fonctionner immédiatement. Une connexion révoquée coupe l'accès de l'application immédiatement, et l'utilisateur doit la connecter à nouveau. Les lignes révoquées restent dans le tableau à des fins d'audit.
+
+Les utilisateurs peuvent aussi déconnecter leurs propres applications dans leur onglet [Applications connectées](connected-apps.md).
+
+### Qui peut se connecter
+
+- **Activer MCP** doit être actif (voir **Fonctionnalités** plus haut).
+- L'utilisateur a besoin du rôle **AI MCP User**, ou d'un rôle qui donne l'accès MCP en lecture.
+- L'accès est en lecture seule. Un client voit exactement ce que l'utilisateur voit dans KANAP, et rien de plus. Pour une clé, c'est la personne qui l'a créée : créez les clés depuis un compte dont les accès correspondent à ce que le client doit lire.
+- Connexions et clés partagent les mêmes limites de débit, la même piste d'audit et, sur le modèle inclus KANAP, le même quota mensuel.
 
 ### Connecter un client MCP
 
-Un client MCP a besoin de deux éléments : l'adresse du serveur et une clé.
+Chaque client a besoin de l'**Adresse du serveur** : votre adresse KANAP suivie de `/api/ai/mcp`, par exemple `https://acme.kanap.net/api/ai/mcp`. La carte **Clés et connexions MCP** l'affiche pour votre organisation.
 
-- **Adresse du serveur** : votre adresse KANAP suivie de `/api/ai/mcp`, par exemple `https://acme.kanap.net/api/ai/mcp`. La carte **Clés API MCP** l'affiche pour votre organisation.
-- **Clé** : envoyée avec chaque requête dans l'en-tête `Authorization: Bearer kanap_mcp_...`. Les clients qui ne peuvent pas définir cet en-tête peuvent utiliser `X-API-Key: kanap_mcp_...` à la place.
+#### Claude et Claude Desktop
 
-**Activer MCP** doit être actif (voir **Fonctionnalités** plus haut), et la clé doit être active et non expirée.
+1. Dans Claude, ouvrez **Paramètres > Connecteurs** et cliquez sur **Ajouter un connecteur personnalisé**.
+2. Collez l'adresse du serveur et validez.
+3. Claude ouvre la page de connexion KANAP. Connectez-vous avec votre mot de passe ou avec Microsoft.
+4. KANAP affiche *Claude demande à lire vos données KANAP*. L'écran indique ce que Claude peut faire (lire ce que vous voyez, dans la limite de vos droits d'accès), l'hôte vers lequel il revient, ainsi que le compte et l'espace de travail avec lesquels vous êtes connecté. Si le compte n'est pas le vôtre, cliquez sur **Ce n'est pas vous ?** pour vous connecter avec un autre.
+5. Cliquez sur **Autoriser**. Claude est connecté. **Refuser** ferme la demande et rien n'est connecté.
 
-Chaque résultat respecte les droits de la personne qui a créé la clé. Un client voit exactement ce que cette personne voit dans KANAP, et rien de plus. Créez les clés depuis un compte dont les accès correspondent à ce que le client doit lire.
+Claude Desktop utilise les mêmes connecteurs que claude.ai : ajoutez le connecteur dans l'un ou l'autre.
+
+#### Claude Team et Enterprise
+
+Un Owner de l'organisation ajoute le connecteur personnalisé une seule fois, avec l'adresse du serveur, pour toute l'organisation Claude. Chaque membre clique ensuite sur **Connecter** sur le connecteur et se connecte avec son propre compte KANAP. Chaque membre ne voit que ses propres données KANAP.
+
+#### Claude Code
+
+Ajoutez le serveur sans clé :
+
+```bash
+claude mcp add --transport http kanap https://acme.kanap.net/api/ai/mcp
+```
+
+Lancez ensuite `claude mcp login kanap`, ou utilisez simplement le serveur : Claude Code ouvre votre navigateur sur la page de connexion KANAP, puis sur le même écran que ci-dessus.
+
+#### Se souvenir de cette application
+
+La case **Se souvenir de cette application** est cochée par défaut. Si elle reste cochée, la connexion suivante de la même application par le même utilisateur est plus rapide :
+
+- Claude Code, qui revient vers votre propre ordinateur, est autorisé sans aucun écran.
+- Claude et Claude Desktop affichent un écran court avec un seul bouton **Continuer**.
+
+Décochez la case pour voir l'écran complet à chaque fois. Déconnecter l'application efface ce choix.
+
+Une connexion reste active d'elle-même jusqu'à 90 jours, ou moins si la **Durée de vie maximale de la clé (jours)** est plus courte. Ensuite, l'utilisateur se connecte à nouveau.
+
+#### Cursor, scripts et autres clients
+
+Ces clients utilisent une clé API (voir [Créer une clé](#creer-une-cle)). La clé est envoyée dans l'en-tête `Authorization: Bearer kanap_mcp_...` de chaque requête. Les clients qui ne peuvent pas définir cet en-tête peuvent utiliser `X-API-Key: kanap_mcp_...` à la place. La clé doit être active et non expirée.
+
+Dans Cursor, ajoutez un serveur distant (HTTP) dans `mcp.json` :
+
+```json
+{
+  "mcpServers": {
+    "kanap": {
+      "url": "https://acme.kanap.net/api/ai/mcp",
+      "headers": { "Authorization": "Bearer kanap_mcp_..." }
+    }
+  }
+}
+```
+
+Claude Code accepte aussi une clé, par exemple sur une machine sans navigateur :
+
+```bash
+claude mcp add --transport http kanap https://acme.kanap.net/api/ai/mcp --header "Authorization: Bearer kanap_mcp_..."
+```
 
 #### Outils disponibles
 
@@ -132,48 +197,6 @@ Le serveur MCP est en lecture seule. Un client peut rechercher et lire vos donn�
 | `get_document` | Lit un document de la base de connaissances |
 | `web_search` | Recherche sur le web, lorsque la recherche web est activée pour votre organisation |
 
-#### Exemples de clients
-
-**Claude Code.** Exécutez la commande affichée à la création de la clé, ou écrivez-la vous-même :
-
-```bash
-claude mcp add --transport http kanap https://acme.kanap.net/api/ai/mcp --header "Authorization: Bearer kanap_mcp_..."
-```
-
-**Cursor et autres clients qui acceptent des en-têtes.** Ajoutez un serveur distant (HTTP) avec l'adresse du serveur et l'en-tête `Authorization`. Dans Cursor, l'entrée de `mcp.json` ressemble à ceci :
-
-```json
-{
-  "mcpServers": {
-    "kanap": {
-      "url": "https://acme.kanap.net/api/ai/mcp",
-      "headers": { "Authorization": "Bearer kanap_mcp_..." }
-    }
-  }
-}
-```
-
-**Claude Desktop et claude.ai.** Leurs connecteurs personnalisés se connectent avec OAuth, que KANAP ne propose pas encore. Claude Desktop peut tout de même joindre KANAP via la passerelle `mcp-remote`, qui s'exécute sur votre ordinateur et ajoute l'en-tête. Dans `claude_desktop_config.json` :
-
-```json
-{
-  "mcpServers": {
-    "kanap": {
-      "command": "npx",
-      "args": [
-        "mcp-remote",
-        "https://acme.kanap.net/api/ai/mcp",
-        "--header",
-        "Authorization:${KANAP_AUTH}"
-      ],
-      "env": { "KANAP_AUTH": "Bearer kanap_mcp_..." }
-    }
-  }
-}
-```
-
-La clé est placée dans une variable d'environnement, car certains systèmes découpent les arguments au niveau des espaces.
-
 ---
 
 ## Conseils
@@ -181,6 +204,6 @@ La clé est placée dans une variable d'environnement, car certains systèmes d�
 - **Laissez Plaid sur le modèle par défaut, sauf raison contraire.** Épingler le chat à un modèle précis signifie qu'il cesse de suivre le modèle par défaut de l'organisation — utile lorsque le chat et les agents ont réellement besoin de modèles différents, gênant sinon.
 - **Le volume de chat est facile à sous-estimer.** La page [Utilisation & coûts](ai-usage.md) valorise le chat aux tarifs du modèle assigné ; un assistant très sollicité sur un modèle coûteux s'y voit bien avant d'apparaître sur une facture.
 - **Un modèle vision est un besoin des agents, pas du chat.** Si vos agents de tri doivent lire les captures d'écran des tickets, cela relève de *leur* modèle — voir **Comprend les images** sur la page [Modèles IA](ai-models.md).
-- **Renouvelez les clés MCP.** Préférez des clés à courte durée de vie pour les postes de travail partagés, et utilisez **Durée de vie maximale de la clé (jours)** pour imposer un plafond qu'aucune requête ne peut dépasser.
+- **Préférez les connexions pour Claude.** Chaque personne se connecte avec son propre compte, donc personne ne partage de clé. Gardez les clés pour les clients qui en ont besoin, renouvelez-les, et utilisez **Durée de vie maximale de la clé (jours)** pour imposer un plafond qu'aucune requête ne peut dépasser.
 - **Définissez une fenêtre de conservation.** Conserver les conversations indéfiniment est pratique jusqu'à ce que la base de données devienne volumineuse ou qu'une revue de conformité demande combien de temps le contenu du chat est conservé — 90 ou 180 jours constituent un point de départ courant.
 - **GLPI se configure ailleurs.** La connexion au système de ticketing sur laquelle travaillent vos agents se configure sous **Administration → Intégrations**, et non ici — voir [Intégrations](integrations.md).

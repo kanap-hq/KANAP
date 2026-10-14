@@ -47,6 +47,7 @@ import {
 import { PropertyRow } from '../../components/design';
 import { drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
 import { AiApiKeyRecord } from '../../ai/aiTypes';
+import { clientDisplayName } from '../oauth/clientName';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { useTheme } from '@mui/material/styles';
 import { getDotColor } from '../../utils/statusColors';
@@ -680,7 +681,13 @@ export default function AdminAiPage() {
 
                   <PropertyRow
                     label={t('aiAdmin.keys.endpoint.label')}
-                    helperText={t('aiAdmin.keys.endpoint.helper')}
+                    helperText={(
+                      <>
+                        {t('aiAdmin.keys.endpoint.helper')}
+                        <br />
+                        {t('aiAdmin.keys.endpoint.connectorHint')}
+                      </>
+                    )}
                   >
                     <Box sx={{ maxWidth: 560 }}>
                       <CopyValue
@@ -716,6 +723,7 @@ export default function AdminAiPage() {
                       <TableHead>
                         <TableRow>
                           <TableCell>{t('aiAdmin.keys.columns.label')}</TableCell>
+                          <TableCell>{t('aiAdmin.keys.columns.kind')}</TableCell>
                           <TableCell>{t('aiAdmin.keys.columns.prefix')}</TableCell>
                           <TableCell>{t('aiAdmin.keys.columns.created')}</TableCell>
                           <TableCell>{t('aiAdmin.keys.columns.expires')}</TableCell>
@@ -727,8 +735,24 @@ export default function AdminAiPage() {
                       <TableBody>
                         {keysQuery.data.map((key) => (
                           <TableRow key={key.id}>
-                            <TableCell>{key.label}</TableCell>
-                            <TableCell><code>{key.key_prefix}</code></TableCell>
+                            {key.credential_kind === 'oauth' ? (
+                              <>
+                                <TableCell>
+                                  {clientDisplayName(key.oauth_client_name) ?? key.label}
+                                  {key.oauth_redirect_host ? (
+                                    <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>{` · ${key.oauth_redirect_host}`}</Box>
+                                  ) : null}
+                                </TableCell>
+                                <TableCell>{t('aiAdmin.keys.kinds.oauth')}</TableCell>
+                                <TableCell />
+                              </>
+                            ) : (
+                              <>
+                                <TableCell>{key.label}</TableCell>
+                                <TableCell>{t('aiAdmin.keys.kinds.apiKey')}</TableCell>
+                                <TableCell><code>{key.key_prefix}</code></TableCell>
+                              </>
+                            )}
                             <TableCell>{new Date(key.created_at).toLocaleDateString(locale)}</TableCell>
                             <TableCell>{key.expires_at ? new Date(key.expires_at).toLocaleDateString(locale) : t('aiAdmin.shared.never')}</TableCell>
                             <TableCell>{key.last_used_at ? new Date(key.last_used_at).toLocaleString(locale) : t('aiAdmin.shared.never')}</TableCell>

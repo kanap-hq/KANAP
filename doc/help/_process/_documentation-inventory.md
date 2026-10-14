@@ -1,6 +1,6 @@
 # User Manual Documentation Inventory
 
-_Generated: 2026-10-13_
+_Generated: 2026-10-14_
 
 This document tracks documentation coverage for the KANAP user manual.
 
@@ -13,12 +13,12 @@ This document tracks documentation coverage for the KANAP user manual.
 | IT Landscape | 9 | 9 | 0 |
 | Knowledge | 1 | 1 | 0 |
 | Master Data | 8 | 8 | 0 |
-| Admin & Settings | 16 | 16 | 0 |
+| Admin & Settings | 17 | 17 | 0 |
 | Plaid | 1 | 1 | 0 |
 | AI Agents | 5 | 5 | 0 |
 | Reports | 9 | 9 | 0 |
 | Portfolio | 10 | 10 | 0 |
-| **TOTAL** | **68** | **68** | **0** |
+| **TOTAL** | **69** | **69** | **0** |
 
 _Note: Supplemental Fast Track guides are excluded from these route-based counts. All tenant-facing routes have a manual. The classic product (through the 2026-05-10 sweep) is available in en/fr/de/es; the AI Agents section (added 2026-07-05) is also available in en/fr/de/es. The two AI model registry pages (added 2026-08-10) are available in en/fr/de/es._
 
@@ -28,6 +28,7 @@ _Note: Supplemental Fast Track guides are excluded from these route-based counts
 
 | Date | Doc File | Changes |
 |------|----------|---------|
+| 2026-10-14 | _MCP connections for Claude (en/fr/de/es)_ | New `connected-apps.md` (`/settings/connected-apps`: the user's connected applications with **Disconnect**, then their own API keys, read only). `ai-settings`: section renamed **MCP keys and connections** (the **Type** column, **API key** or **Connection** with the application and its return host, revoking a connection, who can connect), **Connecting an MCP client** now leads with Claude and Claude Desktop (custom connector, KANAP sign-in, the consent screen), then Claude Team and Enterprise, Claude Code without a key, **Remember this application**, then API keys for Cursor and scripts; the `mcp-remote` bridge example is gone. `on-premise/configuration`: what connecting Claude needs (HTTPS, inbound from Anthropic's addresses, outbound to the application's description). mkdocs nav **Connected apps** with fr/de/es labels, `docUrls.ts`, `doc-update-map.tsv`. |
 | 2026-10-13 | `contracts.md` (en/fr/de/es) | Contracts revamp. Page rewritten for the current screens: how terms, cancellation deadlines and the end of validity are computed (tacit renewal, month ends); the list (default and optional columns, **Next due date**, **State** with its five values, quick filters **To decide within n days**, **No budget line**, **Under-budgeted**, budget year and column selector, **Committed** / **Budget** / **Gap**, totals row in the reporting currency with currencies without a rate named, **Compliance** column, **Export the register**, **Settings**); the contract page (header, **Properties** panel and autosave, **Send link**, tabs **Overview**, **Budget** with commitment and the six coverage states, **Compliance** with requirements, reasons and states, **Relations**); renewal decisions (decision window, daily task and its two titles, **Renew**, **Renegotiate**, **Terminate** with the proposed end and the warning, **Let it end**, **Undo the decision**, turning the tacit renewal off and back on); CSV import refusal for a renewed contract. Also `operations-dashboard.md` (Next renewals), `admin.md` (expiration warnings), `on-premise/configuration.md` (`contract-renewal-tasks`, job count removed), `tasks.md` (From Contracts), `applications.md` (one line on compliance). `doc-update-map.tsv` now maps `frontend/src/pages/contracts/**/*.ts`. |
 | 2026-10-13 | _Budget tab redesign and budget finishing (en/fr/de/es)_ | `budget-lines.md`: Budget tab rewritten (column cards, **Amount** / **Quantity and price** / **By month**, **When** with **At a date**, **Start from**, **Use for other columns too…**, **Monthly result** with **Difference with** and the folded table, **Back to the opening values**), **Recommended dimensions** replaces CAPEX dimensions, chargeback for both types. `budget-operations.md`: one **Copy budget columns** operation (amounts and allocations, one **Overwrite existing data**, **All** / **OPEX** / **CAPEX**, **Preview**, statuses per part, links to the lines), **Reset budget column** on **All**, the **Follows the spread and the lines** setting now ticks the columns of **Use for other columns too…**. `analytics.md`: recommended dimensions and their dialog, wrapping band, "Used by N lines" links, forced delete of a dimension or a value. `reports.md`: chargeback on **All** / **OPEX** / **CAPEX**. `budget-data-model.md`, `budget-file.md`, `sample-data.md`, `admin.md` (audit action **Restore**). `doc-update-map.tsv` maps `CopyBudgetPage.tsx`. |
 | 2026-10-12 | `budget-lines.md` (en/fr/de/es) | Unified budget. New `budget-lines.md` replaces the former OPEX and CAPEX pages: one list at **Budget management > Budget lines** (`/ops/budget`) with the **Type** column and its filter, `BL-n` references (former `OPX-n` and `CPX-n` still found), **Total (N lines)** with **Total OPEX** and **Total CAPEX** rows and lock icons, the **Type** row of the Properties panel, description and notes on every line, **Change type...** in place or from a later year. Updated `budget-operations.md` (freeze page: year tabs, one cell per column and type, **Freeze both** / **Unfreeze both**, lock icons in the list), `reports.md` (**All** tab by default, **Budget comparison** replaces Budget trend (OPEX), Budget trend (CAPEX) removed, its address opens the comparison on CAPEX), `operations-dashboard.md` (Budget tile, header actions, My budget, By cost center, Recent updates, **Customize**), `ai-assistant.md` (`@BL` mentions), `budget-data-model.md`, `budget-file.md`, and the links of `analytics.md`, `cost-centers.md`, `working-day-calendars.md`, `index.md`, `fast-track/task-types.md`. mkdocs nav **Budget lines** with fr/de/es labels, `docUrls.ts` maps `/ops/budget*` to `budget-lines`, `doc-update-map.tsv` maps `pages/budget/**` and `components/finance/**`. |
@@ -224,6 +225,7 @@ _Note: `/knowledge/new`, `/knowledge/:id`, and `/knowledge/:id/:tab` are covered
 | `/admin/integrations` | AdminIntegrationsPage | **DOCUMENTED** | `integrations.md` |
 | `/admin/scheduled-tasks` | ScheduledTasksPage | **DOCUMENTED** | `scheduled-tasks.md` |
 | `/settings` | SettingsPage | **DOCUMENTED** | mapped to `fast-track/getting-started.md` in `docUrls.ts` (personal settings are covered in the Getting Started guide) |
+| `/settings/connected-apps` | ConnectedAppsTab | **DOCUMENTED** | `connected-apps.md` (mapped before the `/settings` rule in `docUrls.ts`) |
 
 ### Plaid
 

@@ -107,6 +107,7 @@ const routeToDocSlug: [RegExp, string][] = [
   [/^\/agents\/[^/]+/, 'agents-workspace'],
   [/^\/agents/, 'agents-overview'],
 
+  [/^\/settings\/connected-apps/, 'connected-apps'],
   [/^\/settings/, 'fast-track/getting-started'],
 ];
 
