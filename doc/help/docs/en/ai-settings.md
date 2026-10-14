@@ -87,7 +87,7 @@ Changes in **Provider**, **Features**, **Retention** *and* the **Key max lifetim
 
 The **MCP API keys** section mints long-lived keys so external assistants and IDEs can talk to KANAP through the Model Context Protocol, using the same data Plaid sees.
 
-The card shows a **Create key** button, the **Key max lifetime (days)** cap, and a table of existing keys with **Label**, **Prefix**, **Created**, **Expires**, **Last used**, and **Status** (**Active** or **Revoked**).
+The card shows a **Create key** button, the **Server address** that clients connect to (with a copy button), the **Key max lifetime (days)** cap, and a table of existing keys with **Label**, **Prefix**, **Created**, **Expires**, **Last used**, and **Status** (**Active** or **Revoked**).
 
 ### Creating a key
 
@@ -95,12 +95,84 @@ The card shows a **Create key** button, the **Key max lifetime (days)** cap, and
 2. Enter a descriptive **Label** (for example, "Desktop MCP client").
 3. Click **Create**. KANAP generates a one-time secret.
 4. Copy the secret immediately — it is shown once and cannot be retrieved later.
+5. Copy the **Claude Code command** shown under the key if you use Claude Code. It already contains the server address and the key.
 
 The **Key max lifetime (days)** field caps how long any newly issued key can live, regardless of what the request asks for. Leave it empty for no expiration limit. Note that this one field belongs to the settings above rather than to this card: it is written by the **Save settings** button, not by creating a key.
 
 ### Revoking a key
 
 Click the trash icon on any active row to revoke the key. Revoked keys stay in the table for audit purposes but can no longer authenticate.
+
+### Connecting an MCP client
+
+An MCP client needs two things: the server address and a key.
+
+- **Server address**: your KANAP address followed by `/api/ai/mcp`, for example `https://acme.kanap.net/api/ai/mcp`. The **MCP API keys** card shows it for your organization.
+- **Key**: sent with every request in the header `Authorization: Bearer kanap_mcp_...`. Clients that cannot set this header can use `X-API-Key: kanap_mcp_...` instead.
+
+**Enable MCP** must be on (see **Features** above), and the key must be active and not expired.
+
+Every result respects the permissions of the person who created the key. A client sees exactly what that person sees in KANAP, and nothing more. Create keys from an account whose access matches what the client should read.
+
+#### Available tools
+
+The MCP server is read-only. A client can search and read your data but cannot change anything.
+
+| Tool | What it does |
+|---|---|
+| `search_all` | Searches every kind of record by keyword |
+| `describe_entity_filters` | Lists the filters available for a kind of record |
+| `query_entities` | Lists records that match filters |
+| `aggregate_entities` | Counts or totals records, grouped by a field |
+| `get_filter_values` | Lists the possible values of a filter |
+| `get_entity_detail` | Reads one record in full |
+| `get_entity_context` | Reads the records linked to one record |
+| `get_entity_comments` | Reads the comments of one project or task |
+| `search_knowledge` | Searches the knowledge base |
+| `get_document` | Reads one knowledge document |
+| `web_search` | Searches the web, when web search is switched on for your organization |
+
+#### Client examples
+
+**Claude Code.** Run the command shown when you create the key, or write it yourself:
+
+```bash
+claude mcp add --transport http kanap https://acme.kanap.net/api/ai/mcp --header "Authorization: Bearer kanap_mcp_..."
+```
+
+**Cursor and other clients that accept headers.** Add a remote (HTTP) server with the server address and the `Authorization` header. In Cursor, the `mcp.json` entry looks like this:
+
+```json
+{
+  "mcpServers": {
+    "kanap": {
+      "url": "https://acme.kanap.net/api/ai/mcp",
+      "headers": { "Authorization": "Bearer kanap_mcp_..." }
+    }
+  }
+}
+```
+
+**Claude Desktop and claude.ai.** Their custom connectors sign in with OAuth, which KANAP does not offer yet. Claude Desktop can still reach KANAP through the `mcp-remote` bridge, which runs on your computer and adds the header. In `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "kanap": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "https://acme.kanap.net/api/ai/mcp",
+        "--header",
+        "Authorization:${KANAP_AUTH}"
+      ],
+      "env": { "KANAP_AUTH": "Bearer kanap_mcp_..." }
+    }
+  }
+}
+```
+
+The key goes in an environment variable because some systems split arguments on spaces.
 
 ---
 

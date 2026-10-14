@@ -87,7 +87,7 @@ Der Bereich **Funktionen** schaltet die optionalen KI-Oberflächen um:
 
 Der Bereich **MCP API-Schlüssel** stellt langlebige Schlüssel aus, damit externe Assistenten und IDEs über das Model Context Protocol mit KANAP kommunizieren können — unter Verwendung derselben Daten, die Plaid sieht.
 
-Die Karte zeigt eine Schaltfläche **Schlüssel erstellen**, die Obergrenze **Max. Lebensdauer des Schlüssels (Tage)** und eine Tabelle vorhandener Schlüssel mit **Bezeichnung**, **Präfix**, **Erstellt**, **Läuft ab**, **Zuletzt verwendet** und **Status** (**Aktiv** oder **Widerrufen**).
+Die Karte zeigt eine Schaltfläche **Schlüssel erstellen**, die **Serveradresse**, mit der sich Clients verbinden (mit einer Kopierschaltfläche), die Obergrenze **Max. Lebensdauer des Schlüssels (Tage)** und eine Tabelle vorhandener Schlüssel mit **Bezeichnung**, **Präfix**, **Erstellt**, **Läuft ab**, **Zuletzt verwendet** und **Status** (**Aktiv** oder **Widerrufen**).
 
 ### Einen Schlüssel erstellen
 
@@ -95,12 +95,84 @@ Die Karte zeigt eine Schaltfläche **Schlüssel erstellen**, die Obergrenze **Ma
 2. Geben Sie eine beschreibende **Bezeichnung** ein (zum Beispiel „Desktop-MCP-Client“).
 3. Klicken Sie auf **Erstellen**. KANAP generiert ein einmaliges Geheimnis.
 4. Kopieren Sie das Geheimnis sofort — es wird nur einmal angezeigt und kann später nicht mehr abgerufen werden.
+5. Wenn Sie Claude Code verwenden, kopieren Sie den **Claude-Code-Befehl** unter dem Schlüssel. Er enthält bereits die Serveradresse und den Schlüssel.
 
 Das Feld **Max. Lebensdauer des Schlüssels (Tage)** begrenzt, wie lange ein neu ausgestellter Schlüssel gültig sein kann, unabhängig davon, was die Anfrage verlangt. Lassen Sie es leer, wenn es keine Ablaufbegrenzung geben soll. Beachten Sie, dass dieses eine Feld zu den Einstellungen weiter oben gehört und nicht zu dieser Karte: Es wird von der Schaltfläche **Einstellungen speichern** geschrieben, nicht durch das Erstellen eines Schlüssels.
 
 ### Einen Schlüssel widerrufen
 
 Klicken Sie auf das Papierkorbsymbol in einer aktiven Zeile, um den Schlüssel zu widerrufen. Widerrufene Schlüssel bleiben zu Audit-Zwecken in der Tabelle, können sich aber nicht mehr authentifizieren.
+
+### Einen MCP-Client verbinden
+
+Ein MCP-Client braucht zwei Dinge: die Serveradresse und einen Schlüssel.
+
+- **Serveradresse**: Ihre KANAP-Adresse, gefolgt von `/api/ai/mcp`, zum Beispiel `https://acme.kanap.net/api/ai/mcp`. Die Karte **MCP API-Schlüssel** zeigt sie für Ihre Organisation an.
+- **Schlüssel**: wird mit jeder Anfrage im Header `Authorization: Bearer kanap_mcp_...` gesendet. Clients, die diesen Header nicht setzen können, verwenden stattdessen `X-API-Key: kanap_mcp_...`.
+
+**MCP aktivieren** muss eingeschaltet sein (siehe **Funktionen** oben), und der Schlüssel muss aktiv und nicht abgelaufen sein.
+
+Jedes Ergebnis beachtet die Berechtigungen der Person, die den Schlüssel erstellt hat. Ein Client sieht genau das, was diese Person in KANAP sieht, und nicht mehr. Erstellen Sie Schlüssel mit einem Konto, dessen Zugriffsrechte dem entsprechen, was der Client lesen soll.
+
+#### Verfügbare Werkzeuge
+
+Der MCP-Server ist schreibgeschützt. Ein Client kann Ihre Daten durchsuchen und lesen, aber nichts ändern.
+
+| Werkzeug | Funktion |
+|---|---|
+| `search_all` | Durchsucht alle Arten von Datensätzen nach Stichwort |
+| `describe_entity_filters` | Listet die Filter auf, die für eine Art von Datensatz verfügbar sind |
+| `query_entities` | Listet Datensätze auf, die zu Filtern passen |
+| `aggregate_entities` | Zählt oder summiert Datensätze, gruppiert nach einem Feld |
+| `get_filter_values` | Listet die möglichen Werte eines Filters auf |
+| `get_entity_detail` | Liest einen Datensatz vollständig |
+| `get_entity_context` | Liest die mit einem Datensatz verknüpften Datensätze |
+| `get_entity_comments` | Liest die Kommentare eines Projekts oder einer Aufgabe |
+| `search_knowledge` | Durchsucht die Wissensdatenbank |
+| `get_document` | Liest ein Dokument der Wissensdatenbank |
+| `web_search` | Sucht im Web, wenn die Websuche für Ihre Organisation eingeschaltet ist |
+
+#### Client-Beispiele
+
+**Claude Code.** Führen Sie den Befehl aus, der beim Erstellen des Schlüssels angezeigt wird, oder schreiben Sie ihn selbst:
+
+```bash
+claude mcp add --transport http kanap https://acme.kanap.net/api/ai/mcp --header "Authorization: Bearer kanap_mcp_..."
+```
+
+**Cursor und andere Clients, die Header akzeptieren.** Fügen Sie einen Remote-Server (HTTP) mit der Serveradresse und dem Header `Authorization` hinzu. In Cursor sieht der Eintrag in `mcp.json` so aus:
+
+```json
+{
+  "mcpServers": {
+    "kanap": {
+      "url": "https://acme.kanap.net/api/ai/mcp",
+      "headers": { "Authorization": "Bearer kanap_mcp_..." }
+    }
+  }
+}
+```
+
+**Claude Desktop und claude.ai.** Ihre benutzerdefinierten Konnektoren melden sich mit OAuth an, das KANAP noch nicht anbietet. Claude Desktop erreicht KANAP trotzdem über die Brücke `mcp-remote`, die auf Ihrem Computer läuft und den Header hinzufügt. In `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "kanap": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "https://acme.kanap.net/api/ai/mcp",
+        "--header",
+        "Authorization:${KANAP_AUTH}"
+      ],
+      "env": { "KANAP_AUTH": "Bearer kanap_mcp_..." }
+    }
+  }
+}
+```
+
+Der Schlüssel steht in einer Umgebungsvariablen, weil manche Systeme Argumente an Leerzeichen aufteilen.
 
 ---
 

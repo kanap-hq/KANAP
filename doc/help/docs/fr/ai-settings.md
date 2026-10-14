@@ -87,7 +87,7 @@ Les modifications apportées à **Fournisseur**, **Fonctionnalités**, **Conserv
 
 La section **Clés API MCP** génère des clés à longue durée de vie pour que des assistants externes et des IDE puissent communiquer avec KANAP via le Model Context Protocol, en utilisant les mêmes données que celles vues par Plaid.
 
-La carte présente un bouton **Créer une clé**, le plafond **Durée de vie maximale de la clé (jours)** et un tableau des clés existantes avec **Libellé**, **Préfixe**, **Créé**, **Expire**, **Dernière utilisation** et **Statut** (**Active** ou **Révoquée**).
+La carte présente un bouton **Créer une clé**, l'**Adresse du serveur** à laquelle les clients se connectent (avec un bouton de copie), le plafond **Durée de vie maximale de la clé (jours)** et un tableau des clés existantes avec **Libellé**, **Préfixe**, **Créé**, **Expire**, **Dernière utilisation** et **Statut** (**Active** ou **Révoquée**).
 
 ### Créer une clé
 
@@ -95,12 +95,84 @@ La carte présente un bouton **Créer une clé**, le plafond **Durée de vie max
 2. Saisissez un **Libellé** descriptif (par exemple « Client MCP de bureau »).
 3. Cliquez sur **Créer**. KANAP génère un secret à usage unique.
 4. Copiez le secret immédiatement — il n'est affiché qu'une seule fois et ne pourra pas être récupéré par la suite.
+5. Si vous utilisez Claude Code, copiez la **Commande Claude Code** affichée sous la clé. Elle contient déjà l'adresse du serveur et la clé.
 
 Le champ **Durée de vie maximale de la clé (jours)** limite la durée de vie de toute clé nouvellement émise, quelle que soit la valeur demandée dans la requête. Laissez-le vide pour aucune limite d'expiration. Notez que ce champ appartient aux paramètres ci-dessus plutôt qu'à cette carte : il est écrit par le bouton **Enregistrer les paramètres**, et non par la création d'une clé.
 
 ### Révoquer une clé
 
 Cliquez sur l'icône de corbeille sur n'importe quelle ligne active pour révoquer la clé. Les clés révoquées restent dans le tableau à des fins d'audit mais ne peuvent plus s'authentifier.
+
+### Connecter un client MCP
+
+Un client MCP a besoin de deux éléments : l'adresse du serveur et une clé.
+
+- **Adresse du serveur** : votre adresse KANAP suivie de `/api/ai/mcp`, par exemple `https://acme.kanap.net/api/ai/mcp`. La carte **Clés API MCP** l'affiche pour votre organisation.
+- **Clé** : envoyée avec chaque requête dans l'en-tête `Authorization: Bearer kanap_mcp_...`. Les clients qui ne peuvent pas définir cet en-tête peuvent utiliser `X-API-Key: kanap_mcp_...` à la place.
+
+**Activer MCP** doit être actif (voir **Fonctionnalités** plus haut), et la clé doit être active et non expirée.
+
+Chaque résultat respecte les droits de la personne qui a créé la clé. Un client voit exactement ce que cette personne voit dans KANAP, et rien de plus. Créez les clés depuis un compte dont les accès correspondent à ce que le client doit lire.
+
+#### Outils disponibles
+
+Le serveur MCP est en lecture seule. Un client peut rechercher et lire vos données, sans rien pouvoir modifier.
+
+| Outil | Ce qu'il fait |
+|---|---|
+| `search_all` | Recherche tous les types d'enregistrements par mot-clé |
+| `describe_entity_filters` | Liste les filtres disponibles pour un type d'enregistrement |
+| `query_entities` | Liste les enregistrements qui correspondent à des filtres |
+| `aggregate_entities` | Compte ou totalise des enregistrements, regroupés par un champ |
+| `get_filter_values` | Liste les valeurs possibles d'un filtre |
+| `get_entity_detail` | Lit un enregistrement en entier |
+| `get_entity_context` | Lit les enregistrements liés à un enregistrement |
+| `get_entity_comments` | Lit les commentaires d'un projet ou d'une tâche |
+| `search_knowledge` | Recherche dans la base de connaissances |
+| `get_document` | Lit un document de la base de connaissances |
+| `web_search` | Recherche sur le web, lorsque la recherche web est activée pour votre organisation |
+
+#### Exemples de clients
+
+**Claude Code.** Exécutez la commande affichée à la création de la clé, ou écrivez-la vous-même :
+
+```bash
+claude mcp add --transport http kanap https://acme.kanap.net/api/ai/mcp --header "Authorization: Bearer kanap_mcp_..."
+```
+
+**Cursor et autres clients qui acceptent des en-têtes.** Ajoutez un serveur distant (HTTP) avec l'adresse du serveur et l'en-tête `Authorization`. Dans Cursor, l'entrée de `mcp.json` ressemble à ceci :
+
+```json
+{
+  "mcpServers": {
+    "kanap": {
+      "url": "https://acme.kanap.net/api/ai/mcp",
+      "headers": { "Authorization": "Bearer kanap_mcp_..." }
+    }
+  }
+}
+```
+
+**Claude Desktop et claude.ai.** Leurs connecteurs personnalisés se connectent avec OAuth, que KANAP ne propose pas encore. Claude Desktop peut tout de même joindre KANAP via la passerelle `mcp-remote`, qui s'exécute sur votre ordinateur et ajoute l'en-tête. Dans `claude_desktop_config.json` :
+
+```json
+{
+  "mcpServers": {
+    "kanap": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "https://acme.kanap.net/api/ai/mcp",
+        "--header",
+        "Authorization:${KANAP_AUTH}"
+      ],
+      "env": { "KANAP_AUTH": "Bearer kanap_mcp_..." }
+    }
+  }
+}
+```
+
+La clé est placée dans une variable d'environnement, car certains systèmes découpent les arguments au niveau des espaces.
 
 ---
 

@@ -3,7 +3,7 @@ import { Box, MenuItem, Menu, Popover, TextField } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../api';
-import { COUNTRY_OPTIONS } from '../../../constants/isoOptions';
+import { useCountryOptions } from '../../../i18n/countries';
 import {
   PortfolioMetadataItem,
 } from '../../portfolio/workspace/PortfolioMetadataBar';
@@ -65,6 +65,7 @@ export default function LocationMetadataBar({
   onSubLocationsClick,
 }: Props) {
   const { t } = useTranslation(['it', 'common']);
+  const countryOptions = useCountryOptions();
   const { byField, labelFor } = useItOpsEnumOptions();
   const hostingOptions = byField.hostingType || [];
   const providerOptions = byField.serverProvider || [];
@@ -168,7 +169,7 @@ export default function LocationMetadataBar({
             }}
           >
             <MenuItem value="" sx={drawerMenuItemSx}>—</MenuItem>
-            {COUNTRY_OPTIONS.map((opt) => (
+            {countryOptions.map((opt) => (
               <MenuItem key={opt.code} value={opt.code} sx={drawerMenuItemSx}>
                 {opt.name} ({opt.code})
               </MenuItem>

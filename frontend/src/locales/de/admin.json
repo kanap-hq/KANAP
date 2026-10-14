@@ -9,9 +9,14 @@
       "testing": "Wird getestet..."
     },
     "dialogs": {
+      "claudeCodeHelper": "Führen Sie ihn in einem Terminal aus, um Claude Code mit diesem Schlüssel an KANAP anzubinden.",
+      "claudeCodeLabel": "Claude-Code-Befehl",
+      "copyCommand": "Befehl kopieren",
+      "copyKey": "Schlüssel kopieren",
       "copyKeyWarning": "Kopieren Sie diesen Schlüssel jetzt. Er wird nicht erneut angezeigt.",
       "createKeyTitle": "MCP API-Schlüssel erstellen",
-      "keyCreatedTitle": "Schlüssel erstellt"
+      "keyCreatedTitle": "Schlüssel erstellt",
+      "keyLabel": "Schlüssel"
     },
     "features": {
       "braveSearchNotConfigured": "BRAVE_SEARCH_API_KEY nicht konfiguriert",
@@ -62,7 +67,13 @@
         "prefix": "Präfix",
         "status": "Status"
       },
+      "copied": "Kopiert",
       "empty": "Keine MCP API-Schlüssel konfiguriert.",
+      "endpoint": {
+        "label": "Serveradresse",
+        "helper": "MCP-Clients verbinden sich mit dieser Adresse und senden den Schlüssel in einem Authorization-Header.",
+        "copy": "Adresse kopieren"
+      },
       "statuses": {
         "active": "Aktiv",
         "revoked": "Widerrufen"

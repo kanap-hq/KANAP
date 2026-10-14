@@ -31,7 +31,7 @@ import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LocationSelect from '../../components/fields/LocationSelect';
-import { COUNTRY_OPTIONS } from '../../constants/isoOptions';
+import { useCountryName } from '../../i18n/countries';
 import { ymdToEu } from '../../lib/date-eu';
 import AddIcon from '@mui/icons-material/Add';
 import ApplicationSelect from '../../components/fields/ApplicationSelect';
@@ -431,9 +431,7 @@ export default function AssetWorkspacePage() {
   const [locationCompanyName, setLocationCompanyName] = React.useState<string | null>(null);
   const [locationInfoLoading, setLocationInfoLoading] = React.useState(false);
   const [locationInfoError, setLocationInfoError] = React.useState<string | null>(null);
-  const countryNameMap = React.useMemo(() => {
-    return new Map(COUNTRY_OPTIONS.map((c) => [c.code.toUpperCase(), c.name]));
-  }, []);
+  const countryName = useCountryName();
   const getHostingCategory = React.useCallback(
     (code?: string | null) => {
       if (!code) return 'cloud' as const;
@@ -1032,7 +1030,7 @@ export default function AssetWorkspacePage() {
   const countryDisplay = locationDetails && locationDetails.country_iso
     ? (() => {
         const code = (locationDetails.country_iso || '').toUpperCase();
-        const name = countryNameMap.get(code) || code;
+        const name = countryName(code);
         return `${name} (${code})`;
       })()
     : locationDetails
