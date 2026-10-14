@@ -913,6 +913,8 @@
       "summary": {
         "preview_one": "{{count}} line in the preview.",
         "preview_other": "{{count}} lines in the preview.",
+        "leftOut_one": "{{count}} line not valid in {{year}} is left out.",
+        "leftOut_other": "{{count}} lines not valid in {{year}} are left out.",
         "done": "Copy done.",
         "amounts": "Amounts: {{processed}} to copy, {{skipped}} skipped.",
         "amountsDone": "Amounts: {{processed}} copied, {{skipped}} skipped.",
