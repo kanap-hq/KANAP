@@ -39,12 +39,17 @@ export class CreateCheckoutSessionDto {
   terms_version?: string;
 }
 
-class ChangePlanDto {
+export class ChangePlanDto {
   @IsIn(['max'])
   plan_key!: PlanKey;
 
   @IsIn(['monthly', 'annual'])
   subscription_type!: IntervalKey;
+
+  /** Required, checked by the service like `CreateCheckoutSessionDto.terms_version`. */
+  @IsOptional()
+  @IsString()
+  terms_version?: string;
 }
 
 export class RequestInvoiceDto {
@@ -167,7 +172,14 @@ export class BillingController {
       throw new BadRequestException('Tenant context not resolved');
     }
     const mg = req?.queryRunner?.manager as import('typeorm').EntityManager | undefined;
-    return this.billing.changePlan(tenantId, body.plan_key, body.subscription_type, req.user?.sub ?? null, mg);
+    return this.billing.changePlan(
+      tenantId,
+      body.plan_key,
+      body.subscription_type,
+      req.user?.sub ?? null,
+      mg,
+      body.terms_version ?? null,
+    );
   }
 
   @UseGuards(PermissionGuard)

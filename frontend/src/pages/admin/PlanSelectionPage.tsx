@@ -233,6 +233,7 @@ export default function PlanSelectionDialog({
         await api.post('/billing/change-plan', {
           plan_key: planKey,
           subscription_type: billingCycle,
+          terms_version: plan?.terms?.version,
         });
         onSuccess?.();
         onClose();

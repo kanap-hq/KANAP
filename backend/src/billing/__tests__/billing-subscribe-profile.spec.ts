@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { ArgumentMetadata, BadRequestException, ValidationPipe } from '@nestjs/common';
 import { BillingService } from '../billing.service';
-import { CreateCheckoutSessionDto, RequestInvoiceDto } from '../billing.controller';
+import { ChangePlanDto, CreateCheckoutSessionDto, RequestInvoiceDto } from '../billing.controller';
 import { Subscription } from '../subscription.entity';
 import { User } from '../../users/user.entity';
 import { GTC_VERSION } from '../terms';
@@ -43,6 +43,8 @@ function createService(opts: {
   tenant: ReturnType<typeof createTenant>;
   taxIds?: Array<{ id: string; type: string; value: string }>;
   createTaxIdError?: unknown;
+  /** A running Stripe subscription (plan change). */
+  subscription?: Partial<Subscription>;
 }) {
   const calls: Call[] = [];
   const record = (method: string, impl: (...args: any[]) => unknown) => async (...args: unknown[]) => {
@@ -66,7 +68,8 @@ function createService(opts: {
     },
     subscriptions: {
       create: record('subscriptions.create', () => ({ id: 'sub_1', latest_invoice: null })),
-      retrieve: record('subscriptions.retrieve', () => null),
+      retrieve: record('subscriptions.retrieve', () =>
+        opts.subscription ? { id: 'sub_1', status: 'active', items: { data: [{ id: 'si_1' }] } } : null),
       update: record('subscriptions.update', () => ({ id: 'sub_1' })),
     },
     invoices: {
@@ -78,7 +81,12 @@ function createService(opts: {
     paymentMethods: { retrieve: record('paymentMethods.retrieve', () => null) },
   };
 
-  const subscription = { id: 'local-sub', plan_name: 'Trial', seat_limit: null } as unknown as Subscription;
+  const subscription = {
+    id: 'local-sub',
+    plan_name: 'Trial',
+    seat_limit: null,
+    ...(opts.subscription ?? {}),
+  } as unknown as Subscription;
   const manager = {
     getRepository: (entity: unknown) => {
       if (entity === Subscription) {
@@ -313,6 +321,31 @@ async function testAcceptedTermsAreAudited() {
   assert.equal(acceptance[0].opts?.manager, transfer.manager);
 }
 
+const RUNNING = { stripe_subscription_id: 'sub_1', status: 'active' } as Partial<Subscription>;
+
+/** A plan change is a new commitment under the general terms of sale. */
+async function testChangePlanRequiresTheCurrentTerms() {
+  for (const termsVersion of [undefined, null, '', '2020-01-01']) {
+    const { service, manager, calls, audits } = createService({ tenant: createTenant(COMPLETE_FR_INVOICE), subscription: RUNNING });
+    await expectBadRequest(
+      service.changePlan('tenant-1', 'max', 'annual', 'user-1', manager as any, termsVersion as any),
+      { message: 'TERMS_NOT_ACCEPTED' },
+    );
+    assert.deepEqual(calls, [], `no Stripe call for a plan change with ${String(termsVersion)}`);
+    assert.deepEqual(audits, []);
+  }
+
+  const { service, manager, calls, audits } = createService({ tenant: createTenant(COMPLETE_FR_INVOICE), subscription: RUNNING });
+  (service as any).logger = { warn: () => undefined };
+  await service.changePlan('tenant-1', 'max', 'annual', 'user-1', manager as any, GTC_VERSION);
+  assert.equal(calls.filter((call) => call.method === 'subscriptions.update').length, 1);
+  const acceptance = audits.filter((a) => a.entry.sourceRef === 'terms_acceptance');
+  assert.deepEqual(acceptance.map((a) => a.entry), [expectedAcceptance('card', 'annual')]);
+  assert.equal(acceptance[0].opts?.manager, manager);
+  // The acceptance is recorded before Stripe is called.
+  assert.equal(audits[0].entry.sourceRef, 'terms_acceptance');
+}
+
 async function testSubscribeBodiesKeepTheTermsVersion() {
   const pipe = new ValidationPipe({ whitelist: true, transform: true });
   const checkoutMeta: ArgumentMetadata = { type: 'body', metatype: CreateCheckoutSessionDto, data: '' };
@@ -321,6 +354,11 @@ async function testSubscribeBodiesKeepTheTermsVersion() {
   assert.equal(checkout.terms_version, GTC_VERSION);
   const invoice = await pipe.transform({ plan_key: 'max', subscription_type: 'annual', terms_version: GTC_VERSION }, invoiceMeta);
   assert.equal(invoice.terms_version, GTC_VERSION);
+  const changeMeta: ArgumentMetadata = { type: 'body', metatype: ChangePlanDto, data: '' };
+  const change = await pipe.transform({ plan_key: 'max', subscription_type: 'annual', terms_version: GTC_VERSION }, changeMeta);
+  // Validated through the DTO class: its whitelist would drop an undeclared field.
+  assert.ok(change instanceof ChangePlanDto);
+  assert.equal(change.terms_version, GTC_VERSION);
 }
 
 async function run() {
@@ -332,6 +370,7 @@ async function run() {
   await testRefusedVatNumberBecomesVatNumberInvalid();
   await testSubscribeRefusesWithoutTheCurrentTerms();
   await testAcceptedTermsAreAudited();
+  await testChangePlanRequiresTheCurrentTerms();
   await testSubscribeBodiesKeepTheTermsVersion();
 }
 

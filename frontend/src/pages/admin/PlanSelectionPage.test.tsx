@@ -294,4 +294,21 @@ describe('PlanSelectionDialog', () => {
     expect(screen.getByRole('button', { name: 'Change plan (card)' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Change plan (bank transfer)' })).toBeDisabled();
   });
+
+  it('requires the terms for a plan change and sends their version', async () => {
+    (api.post as any).mockResolvedValue({ data: {} });
+    authState.subscription = { status: 'active', stripe_subscription_id: 'sub_1', is_subscription_healthy: true };
+    renderDialog({ invoiceMissingFields: [] });
+    await switchToAnnual();
+
+    expect(screen.getByRole('button', { name: 'Change plan (card)' })).toBeDisabled();
+    acceptTerms();
+    fireEvent.click(screen.getByRole('button', { name: 'Change plan (card)' }));
+
+    await vi.waitFor(() => expect(api.post).toHaveBeenCalledWith('/billing/change-plan', {
+      plan_key: 'max',
+      subscription_type: 'annual',
+      terms_version: '2026-10-12',
+    }));
+  });
 });

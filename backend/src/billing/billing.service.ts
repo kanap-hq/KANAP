@@ -397,7 +397,17 @@ export class BillingService {
     return { url: session.url, id: session.id };
   }
 
-  async changePlan(tenantId: string, planKey: PlanKey, interval: IntervalKey, userId?: string | null, manager?: EntityManager) {
+  async changePlan(
+    tenantId: string,
+    planKey: PlanKey,
+    interval: IntervalKey,
+    userId?: string | null,
+    manager?: EntityManager,
+    termsVersion?: string | null,
+  ) {
+    // A plan change is a new commitment under the general terms of sale; it moves the
+    // subscription to card payment (charge_automatically).
+    await this.acceptTerms({ tenantId, termsVersion, paymentPath: 'card', planKey, interval, userId, manager });
     const client = this.getStripeClientOrThrow();
     const mg = manager ?? this.subs.manager;
     const sub = await this.ensureSubscription(mg);
