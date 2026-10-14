@@ -119,22 +119,30 @@ export function cleanClientName(value: unknown, fallback: string): string {
   return raw ? raw.slice(0, 100) : fallback;
 }
 
+/** CIMD draft §4.1: no client metadata document may name a shared-secret method. */
+const SHARED_SECRET_METHODS = new Set(['client_secret_basic', 'client_secret_post', 'client_secret_jwt']);
+
 /**
  * This server only has public clients (PKCE S256, no client authentication at the token endpoint).
- * A client qualifies when its `token_endpoint_auth_method` is `none` or absent (RFC 7591 §2 makes
- * `client_secret_basic` the default, but no CIMD client can hold a secret: CIMD draft §4.1 forbids
- * every shared-secret method), or when it states that it also works without client authentication:
- * `none` in `token_endpoint_auth_methods_supported`. That second key is not RFC 7591 client metadata;
- * ChatGPT publishes it next to `"token_endpoint_auth_method": "private_key_jwt"` and picks the method
- * this server advertises (`token_endpoint_auth_methods_supported: ["none"]`, RFC 8414).
- * CIMD draft §8.2 requires client authentication for a client that declares `private_key_jwt`: one
- * that declares it with no public fallback is refused, as is any secret-based method.
+ * A client qualifies when its `token_endpoint_auth_method` is `none` or absent (no CIMD client can
+ * hold a secret, CIMD draft §4.1).
+ *
+ * A client that declares `private_key_jwt` qualifies only when it also lists `none` in
+ * `token_endpoint_auth_methods_supported` and no shared-secret method. That key is not RFC 7591
+ * client metadata: ChatGPT publishes it and picks a method from the intersection with this server's
+ * `token_endpoint_auth_methods_supported` (`["none"]`, RFC 8414). Accepting such a client departs
+ * from CIMD draft §8.2, which says the server MUST require client authentication from a client that
+ * declares `private_key_jwt`; it rests on the client's own published `none`. Its grants are then
+ * bearer grants like every other client's here (PKCE, rotated refresh tokens, `mcp:read` only).
  */
 export function canActAsPublicClient(doc: Record<string, unknown>): boolean {
   const method = doc.token_endpoint_auth_method;
   if (method === undefined || method === 'none') return true;
+  if (method !== 'private_key_jwt') return false;
   const supported = doc.token_endpoint_auth_methods_supported;
-  return Array.isArray(supported) && supported.includes('none');
+  return Array.isArray(supported)
+    && supported.includes('none')
+    && !supported.some((entry) => SHARED_SECRET_METHODS.has(entry as string));
 }
 
 export function parseClientMetadata(clientId: string, body: unknown): ClientMetadata {

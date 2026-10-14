@@ -704,29 +704,29 @@ async function testTokenRefusals(a: Seed) {
   assert.equal(notACode.data.error, 'invalid_grant');
 }
 
-async function testClientAuthenticationIsIgnored(a: Seed) {
-  // ChatGPT declares private_key_jwt next to none. Should it still send an assertion, the assertion
-  // is neither verified nor required: the code, redirect_uri and PKCE verifier are the proof.
+async function testClientsConnectWithoutClientAuthentication(a: Seed) {
+  // ChatGPT declares private_key_jwt next to none: it connects as a public client.
+  const chatgpt = await connect(a, { clientId: CHATGPT_CIMD, redirectUri: CHATGPT_REDIRECT });
+  assert.equal((await toolsList(a, chatgpt.access_token)).status, 200);
+  const refreshed = await call(a.host, '/oauth/token', {
+    form: { grant_type: 'refresh_token', refresh_token: chatgpt.refresh_token, client_id: CHATGPT_CIMD },
+  });
+  assert.equal(refreshed.status, 200, refreshed.text);
+
+  // A client assertion is refused, not silently ignored: nothing would check it.
   const assertion = {
     client_assertion_type: 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
     client_assertion: 'eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJub3QtY2hlY2tlZCJ9.c2lnbmF0dXJl',
   };
   const { params, verifier } = authorizationParams(a, { client_id: CHATGPT_CIMD, redirect_uri: CHATGPT_REDIRECT });
   const code = await approve(a, params);
-  const token = await exchange(a, code, params, verifier, assertion);
-  assert.equal(token.status, 200, token.text);
-  const refreshed = await call(a.host, '/oauth/token', {
-    form: { grant_type: 'refresh_token', refresh_token: token.data.refresh_token, client_id: CHATGPT_CIMD, ...assertion },
+  const withAssertion = await exchange(a, code, params, verifier, assertion);
+  assert.equal(withAssertion.status, 401, withAssertion.text);
+  assert.equal(withAssertion.data.error, 'invalid_client');
+  const refreshWithAssertion = await call(a.host, '/oauth/token', {
+    form: { grant_type: 'refresh_token', refresh_token: refreshed.data.refresh_token, client_id: CHATGPT_CIMD, ...assertion },
   });
-  assert.equal(refreshed.status, 200, refreshed.text);
-  assert.equal((await toolsList(a, refreshed.data.access_token)).status, 200);
-
-  // An assertion never stands in for the verifier.
-  const other = authorizationParams(a, { client_id: CHATGPT_CIMD, redirect_uri: CHATGPT_REDIRECT });
-  const otherCode = await approve(a, other.params);
-  const refused = await exchange(a, otherCode, other.params, other.verifier, { ...assertion, code_verifier: undefined });
-  assert.equal(refused.status, 400, refused.text);
-  assert.equal(refused.data.error, 'invalid_grant');
+  assert.equal(refreshWithAssertion.data.error, 'invalid_client');
 
   // Grok, a plain public client, still connects.
   const grok = await connect(a, { clientId: GROK_CIMD, redirectUri: GROK_REDIRECT });
@@ -897,7 +897,7 @@ async function run() {
     await testOldGrantsOfAClientAreRetired(a);
     await testAuthorizeRefusals(a);
     await testTokenRefusals(a);
-    await testClientAuthenticationIsIgnored(a);
+    await testClientsConnectWithoutClientAuthentication(a);
     await testCodeReplayRevokesTheGrant(a);
     await testRevocationIsImmediate(a);
     await testIsolation(a, b);

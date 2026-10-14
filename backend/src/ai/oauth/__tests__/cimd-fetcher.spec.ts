@@ -174,6 +174,12 @@ async function testDocumentRules() {
     [{ token_endpoint_auth_method: 'private_key_jwt', jwks_uri: 'https://client.example.com/jwks.json' }, 'not_public_client'],
     [{ token_endpoint_auth_method: 'private_key_jwt', token_endpoint_auth_methods_supported: ['private_key_jwt'] }, 'not_public_client'],
     [{ token_endpoint_auth_method: 'client_secret_post', token_endpoint_auth_methods_supported: 'none' }, 'not_public_client'],
+    // A public fallback does not excuse a shared-secret or other method (CIMD §4.1).
+    [{ token_endpoint_auth_method: 'client_secret_basic', token_endpoint_auth_methods_supported: ['client_secret_basic', 'none'] }, 'not_public_client'],
+    [{ token_endpoint_auth_method: 'client_secret_post', token_endpoint_auth_methods_supported: ['none'] }, 'not_public_client'],
+    [{ token_endpoint_auth_method: 'tls_client_auth', token_endpoint_auth_methods_supported: ['none'] }, 'not_public_client'],
+    [{ token_endpoint_auth_method: 'private_key_jwt', token_endpoint_auth_methods_supported: ['none', 'client_secret_basic'] }, 'not_public_client'],
+    [{ token_endpoint_auth_method: null }, 'not_public_client'],
   ];
   for (const [overrides, pattern] of cases) {
     const service = fetcher({ fetchImpl: async () => jsonResponse(doc(overrides)) });
@@ -204,13 +210,8 @@ async function testClientsThatCanBePublic() {
   // Grok declares none: it stays accepted.
   const grok = fetcher({ fetchImpl: async () => jsonResponse(GROK_CLIENT_METADATA) });
   assert.deepEqual((await grok.fetch(GROK_CIMD)).redirect_uris, GROK_CLIENT_METADATA.redirect_uris);
-  for (const overrides of [
-    { token_endpoint_auth_method: undefined },
-    { token_endpoint_auth_method: 'client_secret_basic', token_endpoint_auth_methods_supported: ['client_secret_basic', 'none'] },
-  ]) {
-    const service = fetcher({ fetchImpl: async () => jsonResponse(doc(overrides)) });
-    assert.equal((await service.fetch(CLIENT_ID)).client_id, CLIENT_ID, JSON.stringify(overrides));
-  }
+  const noMethod = fetcher({ fetchImpl: async () => jsonResponse(doc({ token_endpoint_auth_method: undefined })) });
+  assert.equal((await noMethod.fetch(CLIENT_ID)).client_id, CLIENT_ID);
 }
 
 async function testOperatorAllowlistDoesNotApply() {
