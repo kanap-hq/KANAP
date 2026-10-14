@@ -12,7 +12,7 @@ Navegue a **Datos maestros > Contactos** para ver su directorio de contactos. Ha
 **Muy recomendados**:
 - **Nombre** / **Apellido**: El nombre del contacto
 - **Proveedor**: Para qué proveedor trabaja este contacto
-- **Tipo de contacto**: El rol del contacto en el proveedor (Comercial, Técnico, Soporte u Otro) -- disponible una vez seleccionado un proveedor
+- **Tipo de contacto**: El rol del contacto en el proveedor (Comercial, Técnico, Soporte u Otro). Elegir un proveedor lo fija en Comercial; cámbielo si es necesario.
 
 **Opcionales pero útiles**:
 - **Puesto de trabajo**: Su cargo o posición
@@ -25,7 +25,7 @@ Navegue a **Datos maestros > Contactos** para ver su directorio de contactos. Ha
 
 ## Trabajar con la lista
 
-La cuadrícula de Contactos proporciona un directorio buscable de todos los contactos externos. Cada celda de una fila es un enlace clicable que abre el espacio de trabajo del contacto.
+La cuadrícula de Contactos proporciona un directorio buscable de todos los contactos externos. Cada celda de una fila es un enlace clicable que abre la página del contacto.
 
 **Columnas predeterminadas**:
 - **Apellido** / **Nombre**: Nombre del contacto
@@ -49,22 +49,34 @@ La cuadrícula de Contactos proporciona un directorio buscable de todos los cont
 
 ---
 
-## El espacio de trabajo de Contactos
+## La página del contacto
 
-Haga clic en cualquier fila para abrir el espacio de trabajo. Tiene una pestaña.
+Haga clic en una fila para abrir la página del contacto. Cada cambio se guarda solo: no hay botón de guardar.
 
-### Visión general
+**Título**: el nombre del contacto. Haga clic en él para editar el nombre y el apellido uno al lado del otro; el cambio se guarda al salir de los dos campos o al pulsar Intro, y Escape lo cancela. Un contacto sin nombre muestra su correo electrónico en su lugar.
 
-**Qué puede editar**:
-- **Correo electrónico**: Dirección de correo (obligatorio)
-- **Nombre** / **Apellido**: Nombre del contacto
-- **Proveedor**: Vincular a un proveedor de los datos maestros
-- **Tipo de contacto**: El rol del contacto en el proveedor -- Comercial, Técnico, Soporte u Otro. Este campo está disponible una vez seleccionado un proveedor. Si elimina el proveedor, el tipo de contacto también se elimina.
-- **Puesto de trabajo**: Su cargo o posición
-- **Teléfono** / **Móvil**: Números de teléfono. Cada uno tiene un selector de código de país junto al campo de número local. Introducir un código de país sugiere automáticamente el país si no hay ninguno configurado.
-- **País**: Ubicación, seleccionada de una lista buscable de códigos de país ISO
-- **Activo**: Si este contacto está actualmente activo
-- **Notas**: Notas de texto libre (hasta 2.000 caracteres)
+**Encabezado**, bajo el nombre:
+- **Proveedor**: el proveedor para el que trabaja este contacto, como enlace a su página. Un contacto sin proveedor muestra **Sin proveedor**: haga clic para abrir las propiedades y elegir uno.
+- **Tipo de contacto**: el rol del contacto en el proveedor: Comercial, Técnico, Soporte u Otro. Haga clic para elegir otro. Aparece en cuanto el contacto tiene un proveedor.
+- **Estado**: **Activo** o **Inactivo**. Haga clic para cambiarlo.
+
+**Propiedades** (el panel de la derecha, que se abre con su pestaña o la tecla `P`):
+- **Proveedor**: elija el proveedor en la lista. Un contacto con proveedor siempre tiene un tipo de contacto: elegir un proveedor para un contacto sin tipo le da **Comercial**, que puede cambiar enseguida. Quitar el proveedor quita también el tipo de contacto.
+- **Tipo de contacto**: la misma elección que en el encabezado.
+- **Correo electrónico**: obligatorio y único entre sus contactos.
+- **Cargo**: su rol o puesto.
+- **Teléfono** / **Móvil**: un prefijo y un número. Elija el prefijo en la lista o escríbalo. Si el contacto aún no tiene país, el prefijo lo establece.
+- **País**: lista de países con búsqueda.
+
+Los campos de texto se guardan al salir de ellos o al pulsar Intro, las listas en cuanto elige. Un valor que KANAP no puede aceptar (un correo no válido o que ya usa otro contacto, un teléfono que no es un prefijo seguido de un número de 7 a 15 dígitos en total) muestra su mensaje bajo el campo y no se guarda.
+
+**Notas**: notas libres (hasta 2.000 caracteres), bajo el encabezado. Se guardan un momento después de dejar de escribir y al salir del campo.
+
+Pulse **Escape** o haga clic en el botón de cerrar para volver a la lista.
+
+### Crear un contacto
+
+Haga clic en **Nuevo** en la lista. Indique el correo electrónico (obligatorio) y los demás campos, y haga clic en **Crear**. Elegir un proveedor fija el tipo de contacto en **Comercial**, que puede cambiar antes de crear. Vuelve a la lista una vez creado el contacto.
 
 ---
 
@@ -78,8 +90,8 @@ Cada proveedor tiene una pestaña de **Contactos** que muestra todos los contact
 
 1. Abra el espacio de trabajo del proveedor y vaya a la pestaña **Contactos**.
 2. Haga clic en **Crear** junto a un rol de contacto.
-3. Complete los datos del contacto -- el proveedor y el tipo de contacto están prerrellenados.
-4. Después de guardar, se le devuelve automáticamente al espacio de trabajo del proveedor.
+3. Complete los datos del contacto: el proveedor y el tipo de contacto están prerrellenados.
+4. Haga clic en **Crear**: vuelve a la pestaña **Contactos** del proveedor.
 
 ### Soporte de aplicaciones
 
