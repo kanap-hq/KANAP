@@ -102,6 +102,12 @@ function stripsTagsAndCommentsUntilNoneIsLeft() {
   assert.ok(!comment.includes('<!--'), comment);
   assert.equal(comment.trim(), 'a  z');
 
+  // An opener left without its closer, alone or rebuilt by a pass.
+  for (const input of ['a <!-- never closed', 'a <!<!---- b', 'a <!-- x --> b <!-- open']) {
+    const unclosed = sanitizeForMdxEditor(input);
+    assert.ok(!unclosed.includes('<!--'), `${input} -> ${unclosed}`);
+  }
+
   assert.equal(
     sanitizeForMdxEditor('<p>One <b>bold</b> word.</p><!-- bookmark --><table><tr><th>A</th><th>B</th></tr><tr><td><i>1</i></td><td>2</td></tr></table>'),
     'One bold word.\n\n| A | B |\n| --- | --- |\n| 1 | 2 |\n',
