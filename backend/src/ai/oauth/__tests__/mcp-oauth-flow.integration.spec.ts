@@ -25,7 +25,7 @@ import { McpOAuthController, McpOAuthMetadataController } from '../mcp-oauth.con
 import { McpOAuthService } from '../mcp-oauth.service';
 import { s256Challenge } from '../mcp-oauth.util';
 import { signAccessToken } from '../mcp-oauth-tokens';
-import { CHATGPT_CIMD, CHATGPT_CLIENT_METADATA, CHATGPT_REDIRECT } from './chatgpt-client-metadata.fixture';
+import { CHATGPT_CIMD, CHATGPT_CLIENT_METADATA, CHATGPT_REDIRECT, GROK_CIMD, GROK_CLIENT_METADATA, GROK_REDIRECT } from './client-metadata-documents.fixture';
 
 // The MCP OAuth connector end to end, over real HTTP and a real database (ai_api_keys under
 // FORCE RLS): 401 + WWW-Authenticate → protected resource metadata → authorization server
@@ -42,6 +42,7 @@ const WEB_CIMD = 'https://client.example.com/oauth/metadata.json';
 const WEB_REDIRECT = 'https://client.example.com/api/mcp/auth_callback';
 const CIMD_DOCUMENTS: Record<string, unknown> = {
   [CHATGPT_CIMD]: CHATGPT_CLIENT_METADATA,
+  [GROK_CIMD]: GROK_CLIENT_METADATA,
   [CLAUDE_CIMD]: {
     client_id: CLAUDE_CIMD,
     client_name: 'Claude Code',
@@ -726,6 +727,10 @@ async function testClientAuthenticationIsIgnored(a: Seed) {
   const refused = await exchange(a, otherCode, other.params, other.verifier, { ...assertion, code_verifier: undefined });
   assert.equal(refused.status, 400, refused.text);
   assert.equal(refused.data.error, 'invalid_grant');
+
+  // Grok, a plain public client, still connects.
+  const grok = await connect(a, { clientId: GROK_CIMD, redirectUri: GROK_REDIRECT });
+  assert.equal((await toolsList(a, grok.access_token)).status, 200);
 }
 
 async function testCodeReplayRevokesTheGrant(a: Seed) {

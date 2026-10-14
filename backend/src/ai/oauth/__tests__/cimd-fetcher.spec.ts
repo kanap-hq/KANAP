@@ -20,7 +20,7 @@ import {
   redirectUriMatches,
   s256Challenge,
 } from '../mcp-oauth.util';
-import { CHATGPT_CIMD, CHATGPT_CLIENT_METADATA, CHATGPT_REDIRECT } from './chatgpt-client-metadata.fixture';
+import { CHATGPT_CIMD, CHATGPT_CLIENT_METADATA, CHATGPT_REDIRECT, GROK_CIMD, GROK_CLIENT_METADATA } from './client-metadata-documents.fixture';
 
 // Client ID Metadata Documents are fetched from a URL a third party chooses: the SSRF rules,
 // the size and time limits and the document checks, plus the URL helpers of the flow.
@@ -201,6 +201,9 @@ async function testClientsThatCanBePublic() {
   const metadata = await chatgpt.fetch(CHATGPT_CIMD);
   assert.equal(metadata.client_name, 'ChatGPT');
   assert.deepEqual(metadata.redirect_uris, [CHATGPT_REDIRECT]);
+  // Grok declares none: it stays accepted.
+  const grok = fetcher({ fetchImpl: async () => jsonResponse(GROK_CLIENT_METADATA) });
+  assert.deepEqual((await grok.fetch(GROK_CIMD)).redirect_uris, GROK_CLIENT_METADATA.redirect_uris);
   for (const overrides of [
     { token_endpoint_auth_method: undefined },
     { token_endpoint_auth_method: 'client_secret_basic', token_endpoint_auth_methods_supported: ['client_secret_basic', 'none'] },
