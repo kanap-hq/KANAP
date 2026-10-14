@@ -51,7 +51,7 @@ Lorsque Plaid tourne sur le modèle inclus KANAP — aucun choix explicite, aucu
 - La date de **réinitialisation** du volume
 - Un rappel indiquant que l'utilisation de vos propres clés API supprime le plafond
 
-Comme le dit la carte, le volume est partagé entre les requêtes de chat et MCP de ce tenant — et les agents y puisent aussi. Un message correspond à une question de chat, à une requête d'un assistant externe via MCP, ou à un ticket examiné par un agent. Un parc d'agents actif le consomme plus vite : si vous surveillez cette barre, surveillez aussi la page [Utilisation & coûts](ai-usage.md).
+Comme le dit la carte, le chat et les agents de ce tenant se partagent le volume. Un message correspond à une question de chat ou à un ticket examiné par un agent. Les requêtes des assistants externes via MCP ne comptent pas. Un parc d'agents actif le consomme plus vite : si vous surveillez cette barre, surveillez aussi la page [Utilisation & coûts](ai-usage.md).
 
 ### Indicateurs d'état
 
@@ -70,7 +70,7 @@ Lorsqu'il manque quelque chose, **Erreurs de validation du fournisseur actuel** 
 La section **Fonctionnalités** active ou désactive les surfaces d'IA facultatives :
 
 - **Activer le chat** : active ou désactive l'espace de chat intégré pour les utilisateurs finaux. Il ne peut pas être activé tant que l'en-tête affiche **Fournisseur incomplet** : l'enregistrement est refusé avec la liste des raisons, et vous les corrigez d'abord sur la page [Modèles IA](ai-models.md). Une confirmation manquante du modèle inclus fait exception : l'enregistrement ouvre alors la fenêtre de confirmation. Le même contrôle s'exécute à chaque enregistrement tant que le chat est déjà activé : un modèle devenu incomplet par la suite bloquera donc des modifications sans rapport sur cette page tant qu'il n'aura pas été réglé.
-- **Activer MCP** : active ou désactive l'API MCP pour les clients externes. Elle n'attend pas la confirmation du modèle inclus. Les requêtes MCP comptent quand même dans le volume mensuel inclus lorsque Plaid utiliserait ce modèle.
+- **Activer MCP** : active ou désactive l'API MCP pour les clients externes. Elle n'attend pas la confirmation du modèle inclus. Les requêtes MCP ne comptent pas dans le volume mensuel inclus.
 - **Recherche web** — permet à l'assistant de chat Plaid d'effectuer des recherches sur le web. Cela nécessite que la clé de recherche web au niveau de l'instance soit configurée ; sans elle, le commutateur est désactivé et une infobulle en explique la raison. Son activation lance automatiquement un test de connectivité et en signale le résultat. Ce commutateur s'applique **uniquement à l'assistant de chat** — les agents IA disposent de leur propre réglage de recherche web indépendant, dans l'onglet [Paramètres](agents-workspace.md) de chaque agent, qui repose sur la même configuration au niveau de l'instance.
 
 ---
@@ -120,6 +120,8 @@ Les utilisateurs peuvent aussi déconnecter leurs propres applications dans leur
 ### Connecter un client MCP
 
 Chaque client a besoin de l'**Adresse du serveur** : votre adresse KANAP suivie de `/api/ai/mcp`, par exemple `https://acme.kanap.net/api/ai/mcp`. La carte **Clés et connexions MCP** l'affiche pour votre organisation.
+
+Chaque clé ou application connectée accepte jusqu'à 60 requêtes par minute. Au-delà, le serveur refuse la requête et le client peut réessayer une minute plus tard.
 
 #### Claude et Claude Desktop
 

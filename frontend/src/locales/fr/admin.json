@@ -137,7 +137,7 @@
       },
       "builtinUsage": {
         "cta": "Utilisez vos propres clés API pour une utilisation illimitée.",
-        "description": "L'utilisation intégrée est partagée entre les requêtes de chat et MCP de ce tenant.",
+        "description": "L'utilisation intégrée est partagée entre le chat et les agents de ce tenant.",
         "loadFailed": "Impossible de charger l'utilisation intégrée.",
         "reset": "Réinitialisation le {{date}}.",
         "summary": "{{count}} / {{limit}} messages utilisés ce mois-ci",

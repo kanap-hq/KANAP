@@ -51,7 +51,7 @@ Wenn Plaid auf dem Inklusiven KANAP-Modell läuft — keine ausdrückliche Wahl,
 - Dem Datum, an dem das Kontingent zurückgesetzt wird
 - Einem Hinweis, dass eigene API-Schlüssel die Obergrenze aufheben
 
-Wie die Karte erläutert, wird das Kontingent für diesen Mandanten gemeinsam von Chat- und MCP-Anfragen genutzt — und die Agenten schöpfen ebenfalls daraus. Eine Nachricht ist eine Chat-Frage, eine Anfrage eines externen Assistenten über MCP oder ein von einem Agenten geprüftes Ticket. Eine ausgelastete Agentenflotte verbraucht es schneller; wenn Sie also diesen Balken beobachten, behalten Sie auch die Seite [Nutzung & Kosten](ai-usage.md) im Auge.
+Wie die Karte erläutert, teilen sich der Chat und die Agenten dieses Mandanten das Kontingent. Eine Nachricht ist eine Chat-Frage oder ein von einem Agenten geprüftes Ticket. Anfragen externer Assistenten über MCP zählen nicht. Eine ausgelastete Agentenflotte verbraucht es schneller; wenn Sie also diesen Balken beobachten, behalten Sie auch die Seite [Nutzung & Kosten](ai-usage.md) im Auge.
 
 ### Status-Chips
 
@@ -70,7 +70,7 @@ Fehlt etwas, listet **Aktuelle Validierungsfehler des Anbieters** es über dem F
 Der Bereich **Funktionen** schaltet die optionalen KI-Oberflächen um:
 
 - **Chat aktivieren**: schaltet den In-App-Chat-Arbeitsbereich für Endbenutzer ein oder aus. Er lässt sich nicht einschalten, solange der Header **Anbieter unvollständig** meldet: Das Speichern wird mit den aufgeführten Gründen abgelehnt, und Sie beheben sie zuerst auf der Seite [KI-Modelle](ai-models.md). Eine fehlende Bestätigung des inklusiven Modells ist die Ausnahme: Dann öffnet das Speichern das Bestätigungsfenster. Dieselbe Prüfung läuft bei jedem Speichern, solange der Chat bereits aktiv ist: Ein Modell, das später unvollständig wird, blockiert also auch unabhängige Änderungen auf dieser Seite, bis die Sache geklärt ist.
-- **MCP aktivieren**: schaltet die MCP-API für externe Clients ein oder aus. Sie wartet nicht auf die Bestätigung des inklusiven Modells. MCP-Anfragen zählen trotzdem zum monatlichen Kontingent, wenn Plaid auf diesem Modell laufen würde.
+- **MCP aktivieren**: schaltet die MCP-API für externe Clients ein oder aus. Sie wartet nicht auf die Bestätigung des inklusiven Modells. MCP-Anfragen zählen nicht zum monatlichen Kontingent.
 - **Websuche** — ermöglicht es dem Plaid-Chat-Assistenten, das Web zu durchsuchen. Dafür muss der Websuche-Schlüssel auf Instanzebene konfiguriert sein; ohne ihn ist der Schalter deaktiviert und ein Tooltip erklärt den Grund. Beim Aktivieren wird automatisch ein Konnektivitätstest ausgeführt und das Ergebnis gemeldet. Dieser Schalter gilt **nur für den Chat-Assistenten** — KI-Agenten haben ihre eigene, unabhängige Websuche-Einstellung auf der [Registerkarte Einstellungen](agents-workspace.md) jedes Agenten, die auf derselben Konfiguration auf Instanzebene beruht.
 
 ---
@@ -120,6 +120,8 @@ Benutzer können ihre eigenen Anwendungen auch auf ihrer Registerkarte [Verbunde
 ### Einen MCP-Client verbinden
 
 Jeder Client braucht die **Serveradresse**: Ihre KANAP-Adresse, gefolgt von `/api/ai/mcp`, zum Beispiel `https://acme.kanap.net/api/ai/mcp`. Die Karte **MCP-Schlüssel und -Verbindungen** zeigt sie für Ihre Organisation an.
+
+Jeder Schlüssel und jede verbundene Anwendung akzeptiert bis zu 60 Anfragen pro Minute. Darüber hinaus lehnt der Server die Anfrage ab, und der Client kann es eine Minute später erneut versuchen.
 
 #### Claude und Claude Desktop
 

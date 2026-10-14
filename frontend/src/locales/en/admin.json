@@ -137,7 +137,7 @@
       },
       "builtinUsage": {
         "cta": "Use your own API keys for unlimited usage.",
-        "description": "Built-in usage is shared across chat and MCP requests for this tenant.",
+        "description": "Built-in usage is shared by chat and agents for this tenant.",
         "loadFailed": "Failed to load built-in usage.",
         "reset": "Resets on {{date}}.",
         "summary": "{{count}} / {{limit}} messages used this month",
