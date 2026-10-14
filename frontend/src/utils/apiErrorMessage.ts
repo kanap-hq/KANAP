@@ -28,15 +28,21 @@ function stringifyErrorValue(value: unknown): string {
   return '';
 }
 
+function getApiErrorCode(apiError: ApiErrorLike | null | undefined): string {
+  const payload = apiError?.response?.data;
+  return (
+    stringifyErrorValue(payload?.code) ||
+    stringifyErrorValue(payload?.error) ||
+    stringifyErrorValue(apiError?.code) ||
+    stringifyErrorValue(apiError?.error)
+  );
+}
+
 export function getApiErrorMessage(error: unknown, t: TFunction, fallback: string): string {
   const apiError = error as ApiErrorLike | null | undefined;
   const payload = apiError?.response?.data;
   const message = stringifyErrorValue(payload?.message) || stringifyErrorValue(apiError?.message);
-  const code =
-    stringifyErrorValue(payload?.code) ||
-    stringifyErrorValue(payload?.error) ||
-    stringifyErrorValue(apiError?.code) ||
-    stringifyErrorValue(apiError?.error);
+  const code = getApiErrorCode(apiError);
 
   if (code) {
     const translated = t(`errors:${code}`, { defaultValue: message || fallback });
@@ -58,4 +64,19 @@ export function getApiErrorMessage(error: unknown, t: TFunction, fallback: strin
   }
 
   return fallback;
+}
+
+/**
+ * `getApiErrorMessage` for a failed save of a document's text. A text over the
+ * size limit gets a message that says what to do with the document, also when
+ * the save is automatic.
+ */
+export function getDocumentSaveErrorMessage(error: unknown, t: TFunction, fallback: string): string {
+  if (getApiErrorCode(error as ApiErrorLike | null | undefined) === 'MARKDOWN_TOO_LARGE') {
+    const translated = t('errors:MARKDOWN_TOO_LARGE_DOCUMENT', { defaultValue: '' });
+    if (typeof translated === 'string' && translated.trim()) {
+      return translated;
+    }
+  }
+  return getApiErrorMessage(error, t, fallback);
 }

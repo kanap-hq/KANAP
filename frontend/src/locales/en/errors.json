@@ -45,5 +45,6 @@
   "SHARE_TOO_MANY_RECIPIENTS": "A link can be sent to 20 recipients at most.",
   "SHARE_RATE_LIMITED": "You have sent the maximum of 30 links in the last hour. Try again later.",
   "MARKDOWN_TOO_LARGE": "This text is too long: the limit is 200 KB of text (images do not count).",
+  "MARKDOWN_TOO_LARGE_DOCUMENT": "This document is over the 200 KB of text a save accepts (images do not count). Shorten it to save your changes. The last saved version is kept.",
   "MARKDOWN_TOO_COMPLEX": "This text is too complex to process. Put pasted logs or code in a code block, or close the formatting marks (* and _)."
 }

@@ -414,6 +414,7 @@
     "uploadCompleted": "Upload completed successfully.",
     "fileNotFormatted": "The provided file isn't properly formatted",
     "rowError": "Row {{row}}: {{message}}",
+    "rowColumnError": "Row {{row}}, {{column}}: {{message}}",
     "andMoreErrors": "…and {{count}} more",
     "ignoredColumns": "Ignored columns: {{columns}}.",
     "importWorkflow": "Import workflow",

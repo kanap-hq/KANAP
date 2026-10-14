@@ -364,7 +364,14 @@ export class IntegratedDocumentsService {
       : 'Imported from legacy project field';
   }
 
-  private formatInterfaceSpecificationValue(value: unknown): string | null {
+  /**
+   * @param overBudget texts measured over the Markdown parse budget: shown as plain
+   * text without being parsed (`buildInterfaceSpecificationMarkdownWithinBudget`).
+   */
+  private formatInterfaceSpecificationValue(
+    value: unknown,
+    overBudget: ReadonlySet<string> = new Set<string>(),
+  ): string | null {
     if (value == null) {
       return null;
     }
@@ -372,6 +379,9 @@ export class IntegratedDocumentsService {
     if (Array.isArray(value)) {
       if (value.length === 0) {
         return null;
+      }
+      if (value.some((item) => typeof item === 'string' && overBudget.has(item.trim()))) {
+        return `\`\`\`json\n${JSON.stringify(value, null, 2)}\n\`\`\``;
       }
       const allScalar = value.every((item) => (
         item == null
@@ -384,7 +394,7 @@ export class IntegratedDocumentsService {
       }
 
       const scalars = value
-        .map((item) => this.formatInterfaceSpecificationValue(item))
+        .map((item) => this.formatInterfaceSpecificationValue(item, overBudget))
         .filter((item): item is string => !!item);
       return scalars.length > 0 ? scalars.map((item) => `- ${item}`).join('\n') : null;
     }
@@ -397,17 +407,20 @@ export class IntegratedDocumentsService {
     if (!normalized) {
       return null;
     }
+    if (overBudget.has(normalized)) {
+      return plainTextCodeBlock(normalized);
+    }
     if (isHtmlContent(normalized)) {
       return htmlToMarkdown(normalized);
     }
     return normalized;
   }
 
-  private buildInterfaceSpecificationMarkdown(row: InterfaceBackfillRow): string {
-    const sections: Array<{
-      heading: string;
-      fields: Array<{ label: string; value: unknown }>;
-    }> = [
+  private interfaceSpecificationSections(row: InterfaceBackfillRow): Array<{
+    heading: string;
+    fields: Array<{ label: string; value: unknown }>;
+  }> {
+    return [
       {
         heading: 'Business Purpose & Overview',
         fields: [
@@ -448,10 +461,15 @@ export class IntegratedDocumentsService {
         ],
       },
     ];
+  }
 
-    return sections.map((section) => {
+  private buildInterfaceSpecificationMarkdown(
+    row: InterfaceBackfillRow,
+    overBudget: ReadonlySet<string> = new Set<string>(),
+  ): string {
+    return this.interfaceSpecificationSections(row).map((section) => {
       const fieldBlocks = section.fields.flatMap((field) => {
-        const rendered = this.formatInterfaceSpecificationValue(field.value);
+        const rendered = this.formatInterfaceSpecificationValue(field.value, overBudget);
         if (!rendered) {
           return [];
         }
@@ -464,6 +482,33 @@ export class IntegratedDocumentsService {
         ...fieldBlocks,
       ].join('\n').trimEnd();
     }).join('\n\n');
+  }
+
+  /**
+   * `buildInterfaceSpecificationMarkdown` for the stored texts of an interface: the
+   * texts the parser reads are measured off the main thread first. A text over the
+   * parse budget is shown as plain text, without being parsed; so is the whole
+   * specification when, once assembled, it is over the budget.
+   */
+  private async buildInterfaceSpecificationMarkdownWithinBudget(row: InterfaceBackfillRow): Promise<string> {
+    const texts = new Set<string>();
+    for (const section of this.interfaceSpecificationSections(row)) {
+      for (const field of section.fields) {
+        const items = Array.isArray(field.value) ? field.value : [field.value];
+        for (const item of items) {
+          if (typeof item === 'string' && item.trim()) texts.add(item.trim());
+        }
+      }
+    }
+    const overBudget = new Set<string>();
+    for (const text of texts) {
+      if (!(await noteHtmlContentSourceParseBudget(text, 'specification'))) overBudget.add(text);
+    }
+    const markdown = this.buildInterfaceSpecificationMarkdown(row, overBudget);
+    if (!(await noteMarkdownParseBudget([markdown], { fieldName: 'specification' }))) {
+      return plainTextCodeBlock(markdown);
+    }
+    return markdown;
   }
 
   private getLegacySourceField(
@@ -1066,7 +1111,7 @@ export class IntegratedDocumentsService {
     if (sourceEntityType === 'interfaces') {
       const row = await this.loadInterfaceBackfillRow(sourceEntityId, manager);
       return {
-        content: this.buildInterfaceSpecificationMarkdown(row),
+        content: await this.buildInterfaceSpecificationMarkdownWithinBudget(row),
         source: 'legacy',
         unresolvedLegacyInlineAttachmentIds: [],
       };

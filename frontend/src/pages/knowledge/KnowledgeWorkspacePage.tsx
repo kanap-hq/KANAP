@@ -37,7 +37,7 @@ import KnowledgeSidebar from './components/KnowledgeSidebar';
 import FolderTreePanel from './components/FolderTreePanel';
 import ValidatedBadge from './components/ValidatedBadge';
 import { CircularProgress } from '@mui/material';
-import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import { getApiErrorMessage, getDocumentSaveErrorMessage } from '../../utils/apiErrorMessage';
 import { getDotColor, KNOWLEDGE_STATUS_COLORS } from '../../utils/statusColors';
 import { normalizeMarkdownForRichTextEditor } from '../../lib/markdownEditorNormalization';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
@@ -935,7 +935,7 @@ export default function KnowledgeWorkspacePage() {
         setError(t('workspace.messages.lockExpired'));
         return;
       }
-      setError(getApiErrorMessage(e, t, t('workspace.messages.saveFailed')));
+      setError(getDocumentSaveErrorMessage(e, t, t('workspace.messages.saveFailed')));
     },
   });
 

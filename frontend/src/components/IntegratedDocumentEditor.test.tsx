@@ -221,6 +221,25 @@ describe('IntegratedDocumentEditor — incidents:review', () => {
     expect(ref.current!.isDirty()).toBe(true);
   });
 
+  it('says what to do when an autosave is refused for a document over the size limit', async () => {
+    await renderEditor({ autosaveDelayMs: 5 });
+    const editor = await startEditing();
+    vi.mocked(api.patch).mockRejectedValueOnce(Object.assign(new Error('Request failed'), {
+      response: {
+        status: 400,
+        data: { code: 'MARKDOWN_TOO_LARGE', message: 'content_markdown is too long: 250 KB of text, the limit is 200 KB.' },
+      },
+    }));
+
+    fireEvent.change(editor, { target: { value: 'a long document, one more line' } });
+
+    expect(await screen.findByText('errors:MARKDOWN_TOO_LARGE_DOCUMENT')).toBeInTheDocument();
+    expect(api.patch).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(api.patch).mock.calls[0][1]).toMatchObject({ save_mode: 'autosave' });
+    // The text stays in the editor, still to be saved.
+    expect((screen.getByLabelText('markdown-editor') as HTMLTextAreaElement).value).toBe('a long document, one more line');
+  });
+
   it('leaves edit mode and releases the lock when editing is revoked mid-session', async () => {
     // The host can revoke editing under the user's feet: closing the incident in
     // another tab freezes its review. Staying in edit mode would keep the lock

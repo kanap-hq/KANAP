@@ -45,5 +45,6 @@
   "SHARE_TOO_MANY_RECIPIENTS": "Un enlace se puede enviar a 20 destinatarios como máximo.",
   "SHARE_RATE_LIMITED": "Ha enviado el máximo de 30 enlaces en la última hora. Vuelva a intentarlo más tarde.",
   "MARKDOWN_TOO_LARGE": "Este texto es demasiado largo: el límite es de 200 KB de texto (las imágenes no cuentan).",
+  "MARKDOWN_TOO_LARGE_DOCUMENT": "Este documento supera los 200 KB de texto que admite un guardado (las imágenes no cuentan). Acórtelo para guardar sus cambios. Se conserva la última versión guardada.",
   "MARKDOWN_TOO_COMPLEX": "Este texto es demasiado complejo para procesarlo. Coloque los registros o el código pegados en un bloque de código, o cierre las marcas de formato (* y _)."
 }

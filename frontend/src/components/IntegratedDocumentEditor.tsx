@@ -24,7 +24,7 @@ import ExportButton from './ExportButton';
 import ImportButton from './ImportButton';
 import { MarkdownContent } from './MarkdownContent';
 import { normalizeMarkdownForRichTextEditor } from '../lib/markdownEditorNormalization';
-import { getApiErrorMessage } from '../utils/apiErrorMessage';
+import { getApiErrorMessage, getDocumentSaveErrorMessage } from '../utils/apiErrorMessage';
 import type { AutosaveStatus } from '../hooks/useAutosave';
 
 const MarkdownEditor = React.lazy(() => import('./MarkdownEditor'));
@@ -415,7 +415,7 @@ export const IntegratedDocumentEditor = React.forwardRef<
         setError(t('documentEditor.lockExpired'));
         return;
       }
-      setError(getApiErrorMessage(e, t, t('documentEditor.failedToSave')));
+      setError(getDocumentSaveErrorMessage(e, t, t('documentEditor.failedToSave')));
     },
   });
 
@@ -656,12 +656,8 @@ export const IntegratedDocumentEditor = React.forwardRef<
   const lockHolderLabel = activeLockInfo?.holder_name || 'another user';
   const loadErrorMessage = React.useMemo(() => {
     if (!loadError) return null;
-    return (
-      (loadError as any)?.response?.data?.message
-      || (loadError as any)?.message
-      || t('documentEditor.failedToLoad')
-    );
-  }, [loadError]);
+    return getApiErrorMessage(loadError, t, t('documentEditor.failedToLoad'));
+  }, [loadError, t]);
   const lockExpiryLabel = React.useMemo(() => {
     const raw = activeLockInfo?.expires_at || lockExpiresAt || null;
     if (!raw) return null;
