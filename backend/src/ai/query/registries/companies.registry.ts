@@ -103,6 +103,7 @@ export const companiesRegistry: AiEntityFilterRegistry = {
   },
   sortFields: {
     label: 'name',
+    name: 'name',
     status: 'status',
     country: 'country_iso',
     country_iso: 'country_iso',

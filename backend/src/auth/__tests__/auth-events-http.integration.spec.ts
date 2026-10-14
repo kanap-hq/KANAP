@@ -27,6 +27,7 @@ import { TenantsService } from '../../tenants/tenants.service';
 import { User } from '../../users/user.entity';
 import { UsersService } from '../../users/users.service';
 import { AuthController } from '../auth.controller';
+import { loginAttemptLimitProvider } from '../login-attempt-limit';
 import { AuthService } from '../auth.service';
 import { PasswordResetToken } from '../password-reset-token.entity';
 import { RefreshToken } from '../refresh-token.entity';
@@ -86,6 +87,7 @@ function createUsersService() {
   providers: [
     ListContextsService,
     { provide: DataSource, useValue: dataSource },
+    loginAttemptLimitProvider,
     { provide: UsersService, useFactory: createUsersService },
     {
       provide: AuthService,

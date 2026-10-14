@@ -80,7 +80,7 @@ async function testStructuredReadGuidancePrefersQueryLayerTools() {
   assert.match(prompt, /Spend-item reads and spend-item aggregations are summary-backed/i);
   assert.match(prompt, /Prefer completeness over speed/i);
   assert.match(prompt, /`q` on query_entities and aggregate_entities is literal text quick-search only/i);
-  assert.match(prompt, /Treat `filters_ignored` from query_entities or aggregate_entities, and `fields_ignored` from get_filter_values, as blocking validation failures/i);
+  assert.match(prompt, /Treat `filters_ignored` and `sort_ignored` from query_entities or aggregate_entities, and `fields_ignored` from get_filter_values, as blocking validation failures/i);
   assert.match(prompt, /do one silent repair attempt before answering/i);
   assert.match(prompt, /Never base counts, ownership claims, assignee claims, or analytical conclusions on a structured result that contains ignored filters or ignored fields/i);
   assert.doesNotMatch(prompt, /\blist_entities\b/);

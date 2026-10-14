@@ -10,7 +10,7 @@ Navigate to **Master Data > Suppliers** to open the supplier directory. Click **
 - **Name**: The supplier or vendor name
 
 **Optional but useful**:
-- **ERP Supplier ID**: Reference ID from your ERP or procurement system
+- **ERP supplier ID**: Reference ID from your ERP or procurement system
 - **Notes**: Free-form notes about the vendor relationship
 
 **Tip**: Create suppliers before adding applications or contracts -- you will be able to link them during creation.
@@ -22,15 +22,15 @@ Navigate to **Master Data > Suppliers** to open the supplier directory. Click **
 The Suppliers list gives you a searchable, sortable directory of all your vendors.
 
 **Default columns**:
-- **Name**: Supplier name (click to open workspace)
-- **ERP Supplier ID**: Reference ID from external systems
+- **Name**: Supplier name (click to open the supplier page)
+- **ERP supplier ID**: Reference ID from external systems
 
 **Additional columns** (via column chooser):
 - **Status**: Enabled or Disabled
 - **Notes**: Additional information
 - **Created**: When the record was created
 
-Every cell in a row is clickable and navigates to that supplier's workspace.
+Every cell in a row is clickable and opens that supplier's page.
 
 **Default sort**: By name, alphabetical.
 
@@ -46,46 +46,66 @@ Every cell in a row is clickable and navigates to that supplier's workspace.
 
 ---
 
-## The Supplier workspace
+## The supplier page
 
-Click any row to open the workspace. Use **Prev** and **Next** to step through suppliers without returning to the list. If you have unsaved changes, KANAP will prompt you before navigating away.
+Click any row to open the supplier page. Use the arrows at the top, or the left and right arrow keys, to step through suppliers without returning to the list. Every change saves on its own: there is no save button.
 
-The workspace has two tabs: **Overview** and **Contacts**.
+The page has two tabs: **Overview** and **Contacts**.
 
-### Overview
+**Title**: The supplier's name. Click it to edit it; the change saves when you leave the field or press Enter, and Escape cancels it. A name is required and must differ from the name of every other supplier: KANAP shows the message under the name and keeps the stored one.
 
-The Overview tab captures the supplier's identity and status.
+**Reference**: The ERP supplier ID, when the supplier has one, shows before the name. Click it to copy it.
 
-**What you can edit**:
-- **Name**: Supplier or vendor name (required)
-- **ERP Supplier ID**: Reference ID from your procurement or ERP system
-- **Lifecycle**: the status switch, labelled with the current state (**Enabled** or **Disabled**), and the **End of validity** date. Leave the date blank to keep the supplier active indefinitely, or set a future date to schedule its end. Switching the supplier to **Disabled** without a date sets the end of validity to today
-- **Notes**: Free-form notes about the vendor
+**Header**, under the name:
+- **Status**: **Enabled** or **Disabled**. Click it to change it. Choosing **Disabled** sets the end of validity to today.
+- **Contacts**: How many contacts are linked to the supplier. Click it to open the **Contacts** tab.
+- **Used by**: How many budget lines, contracts, applications and assets use the supplier. Click it to scroll to the **Used by** section of the **Overview** tab.
 
-Editing requires `suppliers:manager` permission. Read-only users see the same fields but cannot make changes.
+**Properties** (the panel on the right, opened with its tab or the `P` key):
+- **ERP supplier ID**: The supplier's ID in your ERP or procurement system. It saves when you leave the field or press Enter.
+- **Lifecycle**: The status switch and the **End of validity** date. Leave the date blank to keep the supplier active indefinitely, or set a future date to schedule its end.
 
----
+**Notes**: Free-form notes about the vendor, on the **Overview** tab. They save a moment after you stop typing, and when you leave the field.
+
+Editing requires `suppliers:manager` permission. Read-only users see the same page but cannot make changes.
+
+Press **Escape** or click the close button to go back to the list.
 
 ### Contacts
 
-The Contacts tab organises contacts linked to this supplier into four role categories:
+The **Contacts** tab lists the contacts linked to this supplier by contact type:
 
-| Role | Purpose |
+| Contact type | Purpose |
 |------|---------|
 | **Commercial** | Sales and account management contacts |
 | **Technical** | Engineering and technical support contacts |
 | **Support** | Helpdesk and customer support contacts |
-| **Other** | Any contact that does not fit the above roles |
+| **Other** | Any contact that does not fit the above types |
 
 **How it works**:
-- Each role section lists its linked contacts in a table showing first name, last name, job title, email, and mobile
-- Click a contact row to open that contact's workspace
-- Use **Add** to search for and attach an existing contact to a role
-- Use **Create** to create a brand-new contact and link it in one step -- KANAP will return you to this tab afterward
+- Each section lists its contacts by name. Click a name to open the contact page.
+- **Add existing**: Search for a contact by name and pick it. The link saves at once.
+- **New contact**: Opens the contact form with the supplier and the contact type already filled in. KANAP brings you back to this tab once the contact is created.
+- The bin button removes the link. The contact itself stays in your contacts.
 
 **Tip**: Keep at least one contact per supplier so that vendor communication is always one click away.
 
-When creating a new supplier, the Contacts tab is disabled until you save the record.
+### Used by
+
+The **Used by** section, under the notes on the **Overview** tab, lists what refers to this supplier, one list per type, each with its count:
+
+- **Budget lines**: OPEX and CAPEX lines whose supplier it is, with their reference (`BL-12`) and type.
+- **Contracts**: contracts with this supplier.
+- **Applications**: applications whose vendor it is.
+- **Assets**: assets it supports (the support vendor of the asset).
+
+Click a row to open that page. Disabled items show **Disabled** and come after the others. A list shows up to 50 items and says how many there are in all. Past 50, budget lines, contracts and applications get a link such as **Show all 57** that opens their list filtered on this supplier. You only see the lists you are allowed to read: a user without access to contracts sees no contract list. A supplier that nothing uses shows one line that says so.
+
+Check this section before you disable or delete a supplier.
+
+### Creating a supplier
+
+Click **New** in the list. Fill in the name (required), the ERP supplier ID and the notes, then click **Create**. The supplier is created enabled and its page opens, with the **Contacts** tab ready.
 
 ---
 

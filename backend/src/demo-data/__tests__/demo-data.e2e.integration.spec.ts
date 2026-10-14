@@ -40,6 +40,7 @@ import { DemoDataService, DemoDataState } from '../demo-data.service';
 // - the tenant is French (activated from a French browser): its budget lines carry the
 //   recommended dimensions in French ("Matériel" for the files' "Hardware"), no English value is
 //   added next to them, and every line has a cost pool, an IT tower and a business domain;
+// - every contact has the supplier and contact type of 09b-contact-suppliers.csv;
 // - the loader's token is refused (401) on another tenant's host, accepted on its own;
 // - the reset brings the tenant back to the state of activation, table by table;
 // - a loader that fails half-way (an injected server error on the contracts import) ends
@@ -142,6 +143,25 @@ type Served = {
   storage: { put: string[]; deleted: string[] };
   loaderEnvs: Array<Record<string, string>>;
 };
+
+/**
+ * Every contact of the data set has the supplier and contact type of 09b-contact-suppliers.csv,
+ * as its supplier and as its one primary supplier link, so each supplier lists its contacts.
+ */
+async function checkContactSuppliers(tenantId: string) {
+  const expected = fixtureRows('09b-contact-suppliers.csv').map((line) => line.split(';').map((cell) => cell.trim()).join('|')).sort();
+  assert.equal(expected.length, fixtureRows('09-contacts.csv').length, 'one supplier per contact of the data set');
+  const rows: Array<{ first_name: string; last_name: string; supplier: string; role: string }> = await inTenant(tenantId, (m) => m.query(
+    `SELECT c.first_name, c.last_name, s.name AS supplier, sc.role::text AS role
+       FROM contacts c
+       JOIN suppliers s ON s.tenant_id = c.tenant_id AND s.id = c.supplier_id
+       JOIN supplier_contacts sc ON sc.tenant_id = c.tenant_id AND sc.contact_id = c.id AND sc.supplier_id = c.supplier_id AND sc.is_primary
+      WHERE c.tenant_id = $1`, [tenantId]));
+  assert.deepEqual(rows.map((r) => [r.first_name, r.last_name, r.supplier, r.role].join('|')).sort(), expected, 'contacts with their supplier and type');
+  const contacts = await tenantCount(tenantId, `SELECT count(*) AS n FROM contacts WHERE tenant_id = $1`);
+  const links = await tenantCount(tenantId, `SELECT count(*) AS n FROM supplier_contacts WHERE tenant_id = $1`);
+  assert.deepEqual({ contacts, links }, { contacts: expected.length, links: expected.length }, 'one supplier link per contact');
+}
 
 async function serve(): Promise<Served> {
   // Loaded after the environment above: the modules read it when they load.
@@ -304,6 +324,7 @@ async function testLoadResetAndFailure() {
     assert.deepEqual(served.delivered, [], 'no e-mail sent');
     assert.deepEqual(countDifferences(neighbourCounts, await countTenantRows(b.tenantId)), [], 'the neighbour tenant is untouched');
     await checkDimensions(a.tenantId);
+    await checkContactSuppliers(a.tenantId);
 
     // ── The loader's token: refused on another tenant's host, accepted on its own ──
     assert.equal(served.loaderEnvs.length, 1);

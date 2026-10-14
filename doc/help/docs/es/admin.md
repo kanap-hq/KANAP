@@ -66,7 +66,7 @@ La página de Registro de auditoría conserva el historial de los cambios de dat
 
 **Exportaciones** (tabla **Exportación**): exportaciones CSV, documentos e informes que genera el servidor. La fila indica qué se exportó y quién lo hizo. La exportación del propio registro de auditoría también se registra.
 
-Las filas de acceso, de sesión y de exportación guardan además la **dirección IP** desde la que llegó la solicitud y el **navegador** utilizado. Abra la fila para leerlos en el panel **Después**. Detrás de un proxy inverso, es la dirección IP de la propia persona, siempre que el proxy la transmita (on-premise: consulte el [ejemplo de proxy inverso](on-premise/installation.md#ejemplo-de-proxy-inverso-nginx)).
+Las filas de acceso, de sesión y de exportación guardan además la **dirección IP** desde la que llegó la solicitud y el **navegador** utilizado. Abra la fila para leerlos en el panel **Después**. Detrás de un proxy inverso, es la dirección IP de la propia persona, siempre que el proxy la transmita (on-premise: consulte el [ejemplo de proxy inverso](on-premise/installation.md#reverse-proxy-example-nginx)).
 
 Las contraseñas, los enlaces de acceso y los tokens nunca se escriben en el registro. Cuando alguien intenta iniciar sesión con una dirección de correo electrónico que no tiene cuenta, la fila muestra **Cuenta desconocida** y no conserva la dirección escrita.
 
@@ -541,12 +541,14 @@ Los pasos de configuración del registro de aplicación de Entra están en [SSO 
 
 ### Límites de inicio de sesión
 
-KANAP limita las solicitudes de inicio de sesión repetidas desde la misma dirección IP:
+KANAP limita las solicitudes de inicio de sesión repetidas:
 
-- **Inicio de sesión con contraseña**: 5 intentos por minuto.
-- **Inicio de sesión con Microsoft**: 60 solicitudes por minuto. El límite es más alto porque el personal de una misma organización suele acceder a KANAP desde la misma dirección de salida.
+- **Inicio de sesión con contraseña**: 60 solicitudes por minuto desde la misma dirección IP. Tras 5 intentos fallidos en una cuenta desde la misma dirección IP en 15 minutos, esa cuenta no puede iniciar sesión desde esa dirección durante 15 minutos. La misma cuenta puede seguir iniciando sesión desde otra dirección, y las demás cuentas desde la misma dirección. Un inicio de sesión correcto pone el contador a cero.
+- **Inicio de sesión con Microsoft**: 60 solicitudes por minuto desde la misma dirección IP.
 
-Cuando se alcanza el límite, la persona espera un minuto y vuelve a intentarlo. Detrás de un proxy inverso, KANAP cuenta la dirección IP de cada persona, siempre que el proxy la transmita. Los inicios de sesión y los inicios de sesión fallidos aparecen en el [Registro de auditoría](#registro-de-auditoria). Las solicitudes bloqueadas por el límite no se registran.
+Los límites por dirección son altos porque el personal de una misma organización suele acceder a KANAP desde la misma dirección de salida. Cuando se alcanza un límite por dirección, la persona espera un minuto y vuelve a intentarlo. Detrás de un proxy inverso, KANAP cuenta la dirección IP de cada persona, siempre que el proxy la transmita.
+
+Los inicios de sesión y los inicios de sesión fallidos aparecen en el [Registro de auditoría](#registro-de-auditoria). Cuando 5 intentos fallidos bloquean una cuenta desde una dirección, se registra un inicio de sesión fallido con el motivo **Demasiados intentos de inicio de sesión**. Los intentos rechazados durante los 15 minutos siguientes no se registran, como tampoco las solicitudes bloqueadas por un límite por dirección.
 
 ---
 
@@ -611,7 +613,7 @@ Controle qué notificaciones por correo electrónico recibe.
 | **Tareas** | Asignación (como asignado, solicitante o visor), cambios de estado, comentarios |
 | **Presupuesto** | Alertas de vencimiento, cambios de estado, comentarios |
 
-Las **Alertas de vencimiento** envían un correo a los responsables de un contrato, de una línea OPEX o de una línea CAPEX 30, 14, 7 y 1 día(s) antes de sus fechas: el plazo de cancelación y la fecha de fin de un contrato, el fin de validez de una línea OPEX o CAPEX. Solo las reciben los responsables que activaron las notificaciones de Presupuesto y las **Alertas de vencimiento**. La comprobación se ejecuta cada día a las 08:00 UTC. Cada recordatorio se envía una sola vez al día a cada destinatario, aunque la comprobación vuelva a ejecutarse ese día, por ejemplo tras un reinicio.
+Las **Alertas de vencimiento** envían un correo a los responsables de un contrato, de una línea OPEX o de una línea CAPEX 30, 14, 7 y 1 día(s) antes de sus fechas: la próxima fecha límite de rescisión de un contrato, el fin de un contrato que no se renovará (el fin de su periodo, o su fin de validez si llega antes), el fin de validez de una línea OPEX o CAPEX. Un contrato con renovación tácita no recibe aviso del fin de cada periodo. Solo las reciben los responsables que activaron las notificaciones de Presupuesto y las **Alertas de vencimiento**. La comprobación se ejecuta cada día a las 08:00 UTC. Cada recordatorio se envía una sola vez al día a cada destinatario, aunque la comprobación vuelva a ejecutarse ese día, por ejemplo tras un reinicio.
 
 **Correo electrónico de revisión semanal**: Reciba un resumen periódico de su actividad y elementos próximos. Configure:
 - **Día de la semana** (p. ej., Lunes)

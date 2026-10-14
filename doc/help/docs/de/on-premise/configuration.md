@@ -382,7 +382,7 @@ Alle KI-Funktionen sind auf einer On-Premise-Installation standardmäßig ausges
 | Variable | Beschreibung | Standard |
 |----------|-------------|---------|
 | `AI_CHAT_ENABLED` | Schaltet den [Plaid-Chat-Assistenten](../ai-assistant.md) für die Installation ein. | `false` |
-| `AI_MCP_ENABLED` | Schaltet den MCP-Zugriff und die KI-API-Schlüssel ein. | `false` |
+| `AI_MCP_ENABLED` | Schaltet den MCP-Server ein: API-Schlüssel und Verbindungen ohne Schlüssel. Siehe [KI-Assistenten über MCP verbinden](#connecting-ai-assistants-over-mcp). | `false` |
 | `AI_SETTINGS_ENABLED` | Öffnet **Administration → Künstliche Intelligenz** (KI-Modelle, Plaid-Einstellungen) und die [Agenten](../agents-overview.md) für Administratoren. Ohne diesen Schalter kann niemand einen Anbieter einrichten. | `false` |
 | `AI_SETTINGS_ENCRYPTION_SECRET` | Geheimnis, das die Anbieterschlüssel verschlüsselt, die Sie in KANAP eingeben. Erzeugen Sie es mit `openssl rand -hex 32`. | *nicht gesetzt* |
 
@@ -392,6 +392,56 @@ Hinweise:
 - Eine spätere Änderung von `AI_SETTINGS_ENCRYPTION_SECRET` macht die gespeicherten Schlüssel unlesbar. Sichern Sie es zusammen mit `.env`, und geben Sie die Schlüssel erneut ein, wenn Sie es verlieren.
 - Eine On-Premise-Installation enthält kein Modell: Sie fügen Ihren eigenen Anbieter oder Modellserver unter **Administration → Künstliche Intelligenz → KI-Modelle** hinzu. Siehe [KI-Modelle](../ai-models.md) und [Plaid-Einstellungen](../ai-settings.md). Dort hat außerdem jeder Mandant seine eigenen Schalter.
 - Die API braucht ausgehenden Zugriff auf den gewählten Anbieter (siehe [Firewall-Regeln](#firewall-regeln)).
+
+### KI-Assistenten über MCP verbinden { #connecting-ai-assistants-over-mcp }
+
+Mit `AI_MCP_ENABLED=true` lesen KI-Assistenten die Daten von KANAP über seinen MCP-Server unter `https://<your-name>/api/ai/mcp`. Jeder Mandant schaltet MCP außerdem unter **Administration → Künstliche Intelligenz → Plaid** ein. Benutzer verbinden sich auf eine von zwei Arten, verglichen unter [Verbindung oder API-Schlüssel](../ai-settings.md#connection-or-api-key):
+
+- **API-Schlüssel**: Ein Administrator erstellt einen Schlüssel in KANAP, und der Benutzer fügt ihn in den Client ein (Claude Code, Cursor, Skripte). Dafür genügt ein Client, der den Server erreicht, über HTTPS oder innerhalb Ihres Netzes auch über einfaches HTTP.
+- **Verbindung (OAuth)**: Claude, Claude Desktop oder Claude Code meldet sich ohne Schlüssel mit dem Konto des Benutzers bei KANAP an. Dafür braucht es die folgende Einrichtung.
+
+**Reverse Proxy.** Die Discovery für Verbindungen stellt die API unter `/.well-known/oauth-` bereit. Das nginx-Beispiel in der [Installationsanleitung](installation.md#reverse-proxy-example-nginx) leitet sie an die API weiter:
+
+```nginx
+location ^~ /.well-known/oauth- {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_set_header Host              $host;
+    proxy_set_header X-Real-IP         $remote_addr;
+    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_http_version 1.1;
+    proxy_redirect off;
+}
+```
+
+`proxy_pass` hat keinen abschließenden Schrägstrich: Der Pfad erreicht die API unverändert. Halten Sie das Präfix exakt, damit andere `/.well-known/`-Adressen (Zertifikatserneuerung, `security.txt`) bleiben, wo sie sind. Wenden Sie bei einem anderen Proxy dieselbe Regel an, behalten Sie den Header `Host` bei und reichen Sie den Header `WWW-Authenticate` der Antworten der API unverändert durch: Er teilt dem Client mit, wo er sich anmelden muss.
+
+**Für jede Verbindung:**
+
+- **HTTPS** mit einem Zertifikat, dem der Client vertraut. Der Anmeldeaustausch braucht es, auch für Claude Code.
+- **Ausgehendes HTTPS vom Server zu `claude.ai`.** Wenn ein Benutzer eine Anwendung verbindet, liest die API die öffentliche Beschreibung der Anwendung unter der Adresse, die die Anwendung angibt (`claude.ai` für Claude, Claude Desktop und Claude Code).
+
+**Zusätzlich für Claude und Claude Desktop.** Claude ruft KANAP von den Servern von Anthropic aus auf:
+
+- Die KANAP-Adresse wird im öffentlichen DNS zu einer IPv4-Adresse aufgelöst (ein `A`-Eintrag).
+- Der Server nimmt HTTPS von den Adressen von Anthropic an, `160.79.104.0/21`.
+- Die Adresse, die Benutzer eingeben, antwortet direkt, ohne Weiterleitung auf einen anderen Host: Bei einer Weiterleitung verwirft Claude die Anmeldedaten.
+- Keine Prüfung durch eine Web Application Firewall und keine Bot-Erkennung auf `/.well-known/oauth-*`, `/api/oauth/*` und `/api/ai/mcp`.
+
+Eine Instanz, die nur aus Ihrem internen Netz erreichbar ist, kann nicht von Claude oder Claude Desktop aus verbunden werden.
+
+Damit die Benutzer nichts abtippen müssen, teilen Sie einen Link, der den Dialog **Add custom connector** von Claude bereits ausgefüllt öffnet. Setzen Sie Ihre eigene Serveradresse URL-kodiert an das Ende (`:` wird zu `%3A`, `/` wird zu `%2F`):
+
+```text
+https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=KANAP&connectorUrl=https%3A%2F%2Fkanap.company.com%2Fapi%2Fai%2Fmcp
+```
+
+Jeder Benutzer öffnet ihn, bestätigt und meldet sich dann bei KANAP an, wie unter [Einen MCP-Client verbinden](../ai-settings.md#connecting-an-mcp-client) beschrieben.
+
+**Ohne Erreichbarkeit aus dem Internet** funktionieren weiterhin zwei Wege:
+
+- API-Schlüssel, von jedem Client aus, der den Server erreicht.
+- Claude Code über OAuth, wenn der Computer des Benutzers den Server über HTTPS erreicht und der Server `claude.ai` über HTTPS erreicht. Die Anmeldung kehrt zum eigenen Computer des Benutzers zurück.
 
 ## Optional: Erweitert
 
@@ -407,7 +457,7 @@ Hinweise:
 | `APP_URL` | Nur Multi-Tenant (Cloud). **On-Premise nicht nötig**: `APP_BASE_URL` wird verwendet. | *nicht gesetzt* |
 | `EMAIL_OVERRIDE` | Leitet alle E-Mails an diese Adresse um (nur Entwicklung/QA, **niemals in der Produktion**) | *nicht gesetzt* |
 
-**Client-Adresse.** Mit der dokumentierten Einrichtung (nginx auf demselben Server, API-Port an `127.0.0.1` gebunden) setzen Sie `RATE_LIMIT_TRUST_PROXY=true`. Der Proxy muss `X-Forwarded-For` senden; das nginx-Beispiel tut das. Setzen Sie `false`, wenn nichts vor der API steht. Ein falscher Wert gibt allen Benutzern dieselbe Adresse, und die 5 Anmeldeversuche pro Minute teilen sich alle.
+**Client-Adresse.** Mit der dokumentierten Einrichtung (nginx auf demselben Server, API-Port an `127.0.0.1` gebunden) setzen Sie `RATE_LIMIT_TRUST_PROXY=true`. Der Proxy muss `X-Forwarded-For` senden; das nginx-Beispiel tut das. Setzen Sie `false`, wenn nichts vor der API steht. Ein falscher Wert gibt allen Benutzern dieselbe Adresse: Die 60 Passwort-Anmeldeanfragen pro Minute teilen sich dann alle, und 5 Fehlversuche für ein Konto sperren dieses Konto 15 Minuten lang für alle.
 
 ## Optional: Kapazität und Leistung
 
@@ -533,6 +583,7 @@ Nach dem ersten Build kann KANAP vollständig vom Netz getrennt laufen, wenn E-M
 | 443 | TCP | HTTPS: nginx-Reverse-Proxy, der die Anwendung bereitstellt |
 | 80 | TCP | HTTP: leitet auf HTTPS um (und beantwortet Zertifikatserneuerungen, wenn Sie Let's Encrypt verwenden) |
 | 22 | TCP | SSH für die Administration. Erlauben Sie es, bevor Sie eine Firewall aktivieren |
+| 443 | TCP | Von `160.79.104.0/21`, nur um Claude und Claude Desktop ohne Schlüssel über MCP zu verbinden (siehe [KI-Assistenten über MCP verbinden](#connecting-ai-assistants-over-mcp)) |
 
 Sonst muss nichts aus dem Netzwerk erreichbar sein. Insbesondere sind PostgreSQL (5432) und der Objektspeicher (9000) nur für die Docker-Netzwerke des Servers bestimmt.
 
@@ -564,6 +615,7 @@ Nur erforderlich, wenn die entsprechende Funktion aktiviert ist.
 | `login.microsoftonline.com` | 443 | Metadaten und Tokens für Entra ID SSO | Wenn Entra SSO konfiguriert ist |
 | `graph.microsoft.com` | 443 | Profilanreicherung bei der Anmeldung und die tägliche Verzeichnissynchronisierung | Wenn Entra SSO konfiguriert ist |
 | Der KI-Anbieter, den Sie konfigurieren (oder Ihr eigener Modellserver) | 443 oder der Port Ihres Servers | Chat, Agenten | Wenn KI-Funktionen aktiviert sind und ein Modell eingerichtet ist |
+| `claude.ai` | 443 | Liest die Beschreibung von Claude, Claude Desktop oder Claude Code, wenn ein Benutzer es ohne Schlüssel über MCP verbindet | Wenn `AI_MCP_ENABLED=true` und Benutzer sich über OAuth verbinden (für API-Schlüssel nicht nötig) |
 | `api.worldbank.org` | 443 | Jährliche Wechselkurse | Optional |
 | `open.er-api.com` | 443 | Tageswechselkurse | Optional |
 
@@ -583,11 +635,12 @@ Standardmäßig gibt Docker seinen ersten 15 Netzwerken Bereiche innerhalb von `
 
 ## Hintergrundjobs
 
-Die API führt 15 geplante Jobs aus. Die folgenden Zeiten sind die Standardwerte, in UTC (die Uhr des API-Containers). Administratoren sehen die Jobs unter **Administration → Geplante Aufgaben** (siehe [Geplante Aufgaben](../scheduled-tasks.md)), wo jeder einzelne ausgeschaltet, neu geplant oder auf Anforderung ausgeführt werden kann.
+Die API führt die folgenden geplanten Jobs aus. Die folgenden Zeiten sind die Standardwerte, in UTC (die Uhr des API-Containers). Administratoren sehen die Jobs unter **Administration → Geplante Aufgaben** (siehe [Geplante Aufgaben](../scheduled-tasks.md)), wo jeder einzelne ausgeschaltet, neu geplant oder auf Anforderung ausgeführt werden kann.
 
 | Job | Wann | Was er tut |
 |-----|------|--------------|
-| `check-expirations` | Täglich 08:00 | Schreibt den Verantwortlichen von Verträgen und OPEX-Zeilen 30, 14, 7 und 1 Tag(e) vor einer Kündigungsfrist, einem Enddatum oder dem Ende der Gültigkeit eine E-Mail. Nur Benutzer, die diese Benachrichtigungen eingeschaltet haben, erhalten sie, einmal pro Tag. |
+| `check-expirations` | Täglich 08:00 | Schreibt den Verantwortlichen von Verträgen und Budgetzeilen 30, 14, 7 und 1 Tag(e) vor dem nächsten Kündigungstermin eines Vertrags, dem Ende eines Vertrags, der sich nicht verlängert, oder dem Ende der Gültigkeit einer Zeile eine E-Mail. Nur Benutzer, die diese Benachrichtigungen eingeschaltet haben, erhalten sie, einmal pro Tag. |
+| `contract-renewal-tasks` | Täglich 07:30 | Legt für den Verantwortlichen jedes Vertrags, dessen Kündigungstermin, oder bei einem Vertrag ohne Verlängerung dessen Ende, in den Entscheidungszeitraum fällt, eine Aufgabe zur Verlängerungsentscheidung an. Eine Aufgabe pro Vertrag und Periode. Siehe [Verträge](../contracts.md#verlangerungsentscheidungen). |
 | `send-weekly-reviews` | Stündlich | Sendet den Wochenrückblick an Benutzer, die ihn abonniert haben, an ihrem eigenen Tag und in ihrer eigenen Zeitzone. |
 | `lifecycle-status-sync` | Stündlich und einmal beim Start | Setzt Stammdaten, Verträge, OPEX- und CAPEX-Zeilen auf deaktiviert, sobald ihr Gültigkeitsende überschritten ist. |
 | `entra-directory-sync` | Täglich 03:00 | Aktualisiert Benutzerattribute und deaktiviert Konten, die im Verzeichnis entfernt oder deaktiviert wurden. Funktioniert nur, wenn Entra SSO verbunden und genehmigt ist. Siehe [Microsoft Entra SSO](sso-entra.md). |

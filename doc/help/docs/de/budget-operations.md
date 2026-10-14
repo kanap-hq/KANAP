@@ -144,7 +144,7 @@ Jeder Teil hat in jeder Zeile seinen eigenen Status:
 
 ### Zusammenfassung
 
-Über der Tabelle fasst ein Banner die Vorschau zusammen, zum Beispiel „136 Zeilen in der Vorschau. Beträge: 120 zu kopieren, 16 übersprungen. Zuordnungen: 130 zu kopieren, 6 übersprungen.“ Nach der Kopie zeigt es „Kopie abgeschlossen.“ mit denselben Zahlen.
+Über der Tabelle fasst ein Banner die Vorschau zusammen, zum Beispiel „136 Zeilen in der Vorschau. 6 Zeilen, die 2027 nicht gültig sind, werden ausgelassen. Beträge: 120 zu kopieren, 10 übersprungen. Zuordnungen: 124 zu kopieren, 6 übersprungen.“ Die Zeilenzahl entspricht der Tabelle. Die im Zieljahr nicht gültigen Zeilen stehen darin, und die Zahlen für Beträge und Zuordnungen lassen sie aus. Nach der Kopie zeigt es „Kopie abgeschlossen.“ mit denselben Zahlen.
 
 Warnungen erscheinen, wenn sie zutreffen:
 

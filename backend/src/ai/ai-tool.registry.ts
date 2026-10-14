@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { describeZodIssues, invalidInputMessage } from './control-plane/dispatcher/ai-input-validation.util';
 import { z } from 'zod';
 import zodToJsonSchema from 'zod-to-json-schema';
 import { Features } from '../config/features';
@@ -11,7 +12,7 @@ import { AiSettingsService } from './ai-settings.service';
 import { AiProviderToolDef } from './providers/ai-provider.types';
 import { BraveSearchService } from './web-search/brave-search.service';
 import { AiAggregateExecutor } from './query/ai-aggregate.executor';
-import { AiQueryExecutor } from './query/ai-query.executor';
+import { AI_QUERY_DEFAULT_LIMIT, AI_QUERY_FAMILY_MAX_LIMIT, AI_QUERY_MAX_LIMIT, AiQueryExecutor } from './query/ai-query.executor';
 import { describeAiEntityFilters } from './query/ai-filter-description.util';
 import { resolveAiEntityRegistry } from './query/registries';
 import { budgetColumnsAiContext, readBudgetColumns } from '../budget-columns/budget-columns.util';
@@ -39,39 +40,48 @@ import {
   AiToolName,
 } from './ai.types';
 
+const QUERY_ENTITY_TYPE_SUMMARY = AI_QUERY_ENTITY_TYPES.join(', ');
+const CONTEXT_ENTITY_TYPE_SUMMARY = AI_CONTEXT_ENTITY_TYPES.join(', ');
+const QUICK_SEARCH_DESCRIPTION = 'Optional quick-search text, matched literally: a filter written here (status:in_progress, assignee=bob@example.com) is searched as words. Field filters go in `filters`.';
+const SCOPE_DESCRIPTION = 'Optional first-person scope for tasks, projects and requests: "me" or "my_team".';
+const FILTERS_DESCRIPTION = 'Optional field filters keyed by field name. describe_entity_filters lists the supported fields and value formats.';
+const YEAR_DESCRIPTION = 'Optional fiscal or calendar year for year-backed metrics, such as company headcount, IT users, turnover and department headcount. Defaults to the current year when metric fields are included.';
+
 const SearchAllInputSchema = z.object({
-  query: z.string().trim().min(1),
-  entity_types: z.array(AiSearchEntityTypeSchema).optional(),
-  limit: z.number().int().min(1).max(100).default(25),
+  query: z.string().trim().min(1).describe('Search text or item reference such as PRJ-12, REQ-7, T-42, DOC-3 or INC-12.'),
+  entity_types: z.array(AiSearchEntityTypeSchema).optional().describe('Optional entity families to search. All readable families by default.'),
+  limit: z.number().int().min(1).max(100).default(25)
+    .describe('Maximum number of results (default 25, max 100). When `truncated` is true, more matches exist than returned: a narrower query or query_entities on one family finds them.'),
 });
 
 const GetEntityContextInputSchema = z.object({
-  entity_type: AiContextEntityTypeSchema,
-  entity_id: z.string().trim().min(1),
+  entity_type: AiContextEntityTypeSchema.describe(`One of ${CONTEXT_ENTITY_TYPE_SUMMARY}.`),
+  entity_id: z.string().trim().min(1).describe('The UUID or reference of the record, such as APP-4, AST-9, PRJ-12, REQ-7 or T-42.'),
 });
 
 const GetEntityDetailInputSchema = z.object({
-  entity_type: AiQueryEntityTypeSchema,
-  entity_id: z.string().trim().min(1).describe('Entity UUID or canonical reference when that entity supports references.'),
+  entity_type: AiQueryEntityTypeSchema.describe('The entity family of the record.'),
+  entity_id: z.string().trim().min(1)
+    .describe('The UUID of the record, or its reference where the family has one, such as APP-4, AST-9, PRJ-12, REQ-7, T-42, DOC-3, INC-12 or BL-5.'),
   year: z.number().int().min(1900).max(3000).optional()
-    .describe('Optional fiscal/calendar year for year-backed metrics on supported entities such as companies and departments.'),
+    .describe('Optional fiscal or calendar year for year-backed metrics, on companies and departments.'),
 });
 
 const GetEntityCommentsInputSchema = z.object({
   entity_type: z.enum(['projects', 'tasks']).describe('The entity family: projects or tasks.'),
-  entity_id: z.string().trim().min(1).describe('The project/task UUID or canonical reference such as PRJ-12 or T-42.'),
-  offset: z.number().int().min(0).max(5000).default(0).describe('Zero-based comment offset for pagination.'),
-  limit: z.number().int().min(1).max(100).default(20).describe('Maximum number of comments to return.'),
+  entity_id: z.string().trim().min(1).describe('The UUID or reference of the project or task, such as PRJ-12 or T-42.'),
+  offset: z.number().int().min(0).max(5000).default(0).describe('Zero-based comment offset (default 0). A higher offset reads older comments.'),
+  limit: z.number().int().min(1).max(100).default(20).describe('Maximum number of comments to return (default 20, max 100).'),
 });
 
 const SearchKnowledgeInputSchema = z.object({
-  query: z.string().trim().min(1),
-  offset: z.number().int().min(0).max(5000).default(0),
-  limit: z.number().int().min(1).max(200).default(20),
+  query: z.string().trim().min(1).describe('Search words, or a document reference such as DOC-14.'),
+  offset: z.number().int().min(0).max(5000).default(0).describe('Zero-based result offset (default 0). When `truncated` is true, offset + limit fetches the next batch.'),
+  limit: z.number().int().min(1).max(200).default(20).describe('Maximum number of documents to return (default 20, max 200).'),
 });
 
 const GetDocumentInputSchema = z.object({
-  document_id: z.string().trim().min(1),
+  document_id: z.string().trim().min(1).describe('The document UUID or DOC reference, such as DOC-123.'),
 });
 
 const AiFilterValueSchema = z.union([
@@ -92,37 +102,41 @@ const AiFilterValueSchema = z.union([
 ]);
 
 const QueryEntitiesInputSchema = z.object({
-  entity_type: AiQueryEntityTypeSchema,
-  scope: AiQueryScopeSchema.optional(),
-  filters: z.record(z.string(), AiFilterValueSchema).optional(),
-  q: z.string().trim().optional(),
-  year: z.number().int().min(1900).max(3000).optional()
-    .describe('Optional fiscal/calendar year for year-backed metrics on supported entities such as companies and departments. Defaults to the current year when metric fields are included.'),
+  entity_type: AiQueryEntityTypeSchema.describe('The entity family to list.'),
+  scope: AiQueryScopeSchema.optional().describe(SCOPE_DESCRIPTION),
+  filters: z.record(z.string(), AiFilterValueSchema).optional().describe(FILTERS_DESCRIPTION),
+  q: z.string().trim().optional().describe(QUICK_SEARCH_DESCRIPTION),
+  year: z.number().int().min(1900).max(3000).optional().describe(YEAR_DESCRIPTION),
   sort: z.object({
     field: z.string().trim().min(1),
     direction: z.enum(['asc', 'desc']),
-  }).optional(),
-  page: z.number().int().min(1).max(100).default(1),
-  limit: z.number().int().min(1).max(200).default(200),
+  }).optional()
+    .describe('Optional sort field and direction: a field marked sortable by describe_entity_filters, or created_at and updated_at on every family. "The latest created" is created_at desc.'),
+  page: z.number().int().min(1).max(100).default(1)
+    .describe('Page number (default 1). When `total` is greater than the items returned, later pages with the same limit hold the rest.'),
+  // No default or maximum here: the executor applies the family's (`aiQueryLimit`) and reports it.
+  limit: z.number().int().min(1).optional()
+    .describe(`Items per page: default ${AI_QUERY_DEFAULT_LIMIT}, at most ${AI_QUERY_MAX_LIMIT} (${Object.entries(AI_QUERY_FAMILY_MAX_LIMIT).map(([type, max]) => `${max} for ${type}`).join(', ')}). A larger value is reduced; the result's limit is the one applied. aggregate_entities returns counts and totals without paging.`),
 });
 
 const DescribeEntityFiltersInputSchema = z.object({
-  entity_type: AiQueryEntityTypeSchema,
+  entity_type: AiQueryEntityTypeSchema.describe('The entity family to describe.'),
 });
 
 const AggregateEntitiesInputSchema = z.object({
-  entity_type: AiQueryEntityTypeSchema,
-  scope: AiQueryScopeSchema.optional(),
-  group_by: z.string().trim().min(1),
-  metric: z.string().trim().min(1).optional(),
-  function: z.enum(['count', 'sum', 'avg', 'min', 'max']).optional(),
-  filters: z.record(z.string(), AiFilterValueSchema).optional(),
-  q: z.string().trim().optional(),
+  entity_type: AiQueryEntityTypeSchema.describe('The entity family to aggregate.'),
+  scope: AiQueryScopeSchema.optional().describe(SCOPE_DESCRIPTION),
+  group_by: z.string().trim().min(1).describe('The field to group by, among the group-by fields describe_entity_filters lists.'),
+  metric: z.string().trim().min(1).optional()
+    .describe('Optional numeric or date field to aggregate with sum, avg, min or max. On OPEX and CAPEX items, an FTE field (`<year>_<column>_fte`, such as `y_budget_fte`) names its year and column and holds the full-year average FTE; each group then also returns `unknown`, the number of lines whose column has no quantity × price lines, left out of the value.'),
+  function: z.enum(['count', 'sum', 'avg', 'min', 'max']).optional().describe('Optional aggregation function: count, sum, avg, min or max. Defaults to count.'),
+  filters: z.record(z.string(), AiFilterValueSchema).optional().describe(FILTERS_DESCRIPTION),
+  q: z.string().trim().optional().describe(QUICK_SEARCH_DESCRIPTION),
 });
 
 const GetFilterValuesInputSchema = z.object({
-  entity_type: AiQueryEntityTypeSchema,
-  fields: z.array(z.string().trim().min(1)).min(1).max(10),
+  entity_type: AiQueryEntityTypeSchema.describe('The entity family.'),
+  fields: z.array(z.string().trim().min(1)).min(1).max(10).describe('Up to 10 filter field names to list values for.'),
 });
 
 const GetApplicationClassificationCatalogInputSchema = z.object({}).strict();
@@ -176,8 +190,13 @@ const PrepareMutationPlanInputSchema = z.object({
     .describe('Ordered write-preview operations. Independent operations create previews immediately; dependent operations wait for their prerequisites.'),
 });
 
-const QUERY_ENTITY_TYPE_SUMMARY = AI_QUERY_ENTITY_TYPES.join(', ');
-const CONTEXT_ENTITY_TYPE_SUMMARY = AI_CONTEXT_ENTITY_TYPES.join(', ');
+/** The schema's field descriptions, the single source of a read tool's `inputSummary`. */
+function fieldDescriptions(schema: z.AnyZodObject): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(schema.shape as Record<string, z.ZodTypeAny>)
+      .flatMap(([field, type]) => (type.description ? [[field, type.description]] : [])),
+  );
+}
 
 function normalizeBulkTargetRef(value: unknown): string | null {
   const normalized = String(value ?? '').trim();
@@ -276,13 +295,9 @@ export class AiToolRegistry {
         {
           name: 'search_all',
           category: 'discovery',
-          description: 'Search across readable KANAP entity families using stable AI DTOs. If complete=true and truncated=false, use the returned results instead of repeating broad searches; if failed_entity_types is non-empty, treat the answer as partial and prefer a specific authoritative tool.',
+          description: 'Searches the readable KANAP records of every family (applications, assets, projects, requests, tasks, documents, budget lines, contracts and more) by text or by reference such as PRJ-12, and returns the matches with their reference, name and status. Suited to finding a record whose family or exact name is unknown; query_entities lists, filters and counts one family. When `complete` is true and `truncated` false, the results hold every match. `failed_entity_types` lists the families that could not be searched: the results are then partial, and query_entities on those families gives the authoritative answer.',
           inputSchema: SearchAllInputSchema,
-          inputSummary: {
-            query: 'Search text or item reference such as PRJ-12, REQ-7, T-42, DOC-3, or INC-12.',
-            entity_types: 'Optional entity families to include.',
-            limit: 'Maximum number of results to return (default 25, max 100). Raise limit or page with offset only when the first page is insufficient. If truncated=true, narrow the query or switch to a more specific tool.',
-          },
+          inputSummary: fieldDescriptions(SearchAllInputSchema),
           surfaces: ['chat', 'mcp'],
           readOnly: true,
           execute: (context, input) => this.entityTools.searchAll(context, input),
@@ -293,11 +308,9 @@ export class AiToolRegistry {
         {
           name: 'describe_entity_filters',
           category: 'authoritative',
-          description: 'Describe supported AI filter fields for one readable entity family, including aliases, expected value kinds, examples, and lookup hints. Use this before structured filtering when field names or value formats are uncertain.',
+          description: 'Describes how one entity family can be filtered and sorted: each filter field with its aliases, expected value kinds, examples and lookup hints, plus `sort_fields` (every field query_entities sorts by, created_at and updated_at included) and `default_sort`. Useful before query_entities or aggregate_entities when field names or value formats are unknown. On OPEX and CAPEX lines, `budget_columns` gives the tenant\'s names for the amount columns.',
           inputSchema: DescribeEntityFiltersInputSchema,
-          inputSummary: {
-            entity_type: `One of ${QUERY_ENTITY_TYPE_SUMMARY}.`,
-          },
+          inputSummary: fieldDescriptions(DescribeEntityFiltersInputSchema),
           surfaces: ['chat', 'mcp'],
           readOnly: true,
           execute: async (context, input) => {
@@ -315,18 +328,9 @@ export class AiToolRegistry {
         {
           name: 'query_entities',
           category: 'authoritative',
-          description: 'Query one readable entity family with server-side filters, pagination, and exact totals. If `filters_ignored` is non-empty, the query was not fully honored and must be repaired before answering.',
+          description: 'Lists the records of one entity family with server-side filters, sort and pagination, and returns the exact `total`. Each item carries its created_at and updated_at. `filters_ignored` lists the filters the server could not apply: the items are then not the requested set. `sort` is the order the items are in. `sort_ignored` names a requested sort field that is not supported: the items are then in the default order, and `sortable_fields` lists the fields a new query can sort by, which a question about order (latest, oldest, largest, first) needs. Items with the same sort value come in no particular order: when the first items share it (for example the same created_at), they tie, which a page of one item cannot show. A limit above the family\'s maximum is reduced and named in `limit_capped`. On budget lines and contracts, `amounts_currency` and `amounts_currency_note` give the currency of the returned amounts; an item\'s own `currency` is the one its amounts were entered in.',
           inputSchema: QueryEntitiesInputSchema,
-          inputSummary: {
-            entity_type: `One of ${QUERY_ENTITY_TYPE_SUMMARY}.`,
-            scope: 'Optional first-person scope. Use "me" or "my_team" for tasks, projects, and requests.',
-            filters: 'Optional field filters keyed by AI field name. Use describe_entity_filters when unsure which fields or value formats are supported.',
-            q: 'Optional literal quick-search text. Use plain text only; never encode filters like status:in_progress or assignee=bob@example.com here.',
-            year: 'Optional fiscal/calendar year for year-backed metrics, such as company headcount, IT users, turnover, and department headcount. Defaults to the current year when metric fields are included.',
-            sort: 'Optional sort field and direction.',
-            page: 'Page number to fetch (default 1). Use later pages when total is greater than returned.',
-            limit: 'Maximum number of items to return per page (default 200). Use the maximum unless you have a reason to limit.',
-          },
+          inputSummary: fieldDescriptions(QueryEntitiesInputSchema),
           surfaces: ['chat', 'mcp'],
           readOnly: true,
           execute: async (context, input) => {
@@ -340,17 +344,9 @@ export class AiToolRegistry {
         {
           name: 'aggregate_entities',
           category: 'authoritative',
-          description: 'Break down one readable entity family by a supported field with exact server-side counts or metric aggregations. If `filters_ignored` is non-empty, the query was not fully honored and must be repaired before answering.',
+          description: 'Groups the records of one entity family by a field and returns exact server-side counts, or the sum, average, minimum or maximum of a numeric or date field for each group. `filters_ignored` lists the filters the server could not apply: the figures then cover more records than requested. A sum or average of amounts names its currency in `amounts_currency` and `amounts_currency_note`: budget lines are in the reporting currency; contracts keep each contract\'s own currency, so a total across currencies needs a group or filter by currency.',
           inputSchema: AggregateEntitiesInputSchema,
-          inputSummary: {
-            entity_type: `One of ${QUERY_ENTITY_TYPE_SUMMARY}.`,
-            scope: 'Optional first-person scope. Use "me" or "my_team" for tasks, projects, and requests.',
-            group_by: 'A supported group-by field from the query layer registry.',
-            metric: 'Optional numeric or date field to aggregate when using sum, avg, min, or max. On OPEX and CAPEX items, an FTE field (`<year>_<column>_fte`, e.g. `y_budget_fte`) names its year and column and holds the full-year average FTE; each group then also returns `unknown`, the number of lines whose column has no quantity × price lines, left out of the value.',
-            function: 'Optional aggregation function: count, sum, avg, min, or max. Defaults to count.',
-            filters: 'Optional field filters keyed by AI field name.',
-            q: 'Optional literal quick-search text. Use plain text only; never encode filters like status:in_progress or assignee=bob@example.com here.',
-          },
+          inputSummary: fieldDescriptions(AggregateEntitiesInputSchema),
           surfaces: ['chat', 'mcp'],
           readOnly: true,
           execute: async (context, input) => {
@@ -364,12 +360,9 @@ export class AiToolRegistry {
         {
           name: 'get_filter_values',
           category: 'authoritative',
-          description: 'Discover exact filter values for supported set-like AI query fields. If `fields_ignored` is non-empty, those field names are unsupported for that entity and must not be used for filtering.',
+          description: 'Returns the exact values that exist for set-like filter fields of one entity family (statuses, categories, owners and similar), as accepted by the filters of query_entities and aggregate_entities. `fields_ignored` lists the requested fields this family cannot filter on.',
           inputSchema: GetFilterValuesInputSchema,
-          inputSummary: {
-            entity_type: `One of ${QUERY_ENTITY_TYPE_SUMMARY}.`,
-            fields: 'AI field names to inspect.',
-          },
+          inputSummary: fieldDescriptions(GetFilterValuesInputSchema),
           surfaces: ['chat', 'mcp'],
           readOnly: true,
           execute: async (context, input) => {
@@ -406,13 +399,9 @@ export class AiToolRegistry {
         {
           name: 'get_entity_detail',
           category: 'inspection',
-          description: 'Return one readable business/domain entity as a detailed AI-safe DTO. Use query_entities for long lists, then call this for the specific item that needs full scalar detail and attachment metadata.',
+          description: 'Returns one record with all its scalar fields and its attachment metadata, by UUID or reference (APP-4, PRJ-12, BL-5...). query_entities suits lists; this tool gives the full detail of one known record. On budget lines and contracts, `amounts_currency_note` says which amounts are in the reporting currency and which in the record\'s own currency.',
           inputSchema: GetEntityDetailInputSchema,
-          inputSummary: {
-            entity_type: `One of ${QUERY_ENTITY_TYPE_SUMMARY}.`,
-            entity_id: 'The entity UUID, or canonical reference such as PRJ-12, REQ-7, T-42, DOC-3, or INC-12 when supported.',
-            year: 'Optional fiscal/calendar year for year-backed metrics on supported entities such as companies and departments.',
-          },
+          inputSummary: fieldDescriptions(GetEntityDetailInputSchema),
           surfaces: ['chat', 'mcp'],
           readOnly: true,
           execute: async (context, input): Promise<AiEntityDetailDto> => {
@@ -426,12 +415,9 @@ export class AiToolRegistry {
         {
           name: 'get_entity_context',
           category: 'inspection',
-          description: 'Return a stable relationship-focused context payload for one known entity.',
+          description: 'Returns one application, asset, project, request or task with the records linked to it, by UUID or reference (APP-4, AST-9, PRJ-12, REQ-7, T-42). Applications and assets come with their related applications or assets, linked projects and requests; projects with their source requests, tasks, dependencies, linked applications, assets and documents; requests with their resulting projects, dependencies, linked applications and assets; tasks with their project, converted request, linked applications and assets. Every record also lists the knowledge documents linked to it, and projects and tasks their recent activity. `truncated` is true when the recent activity holds more entries than returned.',
           inputSchema: GetEntityContextInputSchema,
-          inputSummary: {
-            entity_type: `One of ${CONTEXT_ENTITY_TYPE_SUMMARY}.`,
-            entity_id: 'The entity UUID to inspect.',
-          },
+          inputSummary: fieldDescriptions(GetEntityContextInputSchema),
           surfaces: ['chat', 'mcp'],
           readOnly: true,
           execute: (context, input) => this.entityTools.getEntityContext(context, input),
@@ -442,14 +428,9 @@ export class AiToolRegistry {
         {
           name: 'get_entity_comments',
           category: 'inspection',
-          description: 'Return the paginated discussion comments feed for one readable project or task. Use this instead of mixed recent activity when the user asks what people said.',
+          description: 'Returns the discussion comments of one project or task, newest first, with offset and limit for older ones. It holds what people wrote, without the field changes that the recent activity of get_entity_context mixes in.',
           inputSchema: GetEntityCommentsInputSchema,
-          inputSummary: {
-            entity_type: 'One of projects or tasks.',
-            entity_id: 'The project/task UUID or canonical reference such as PRJ-12 or T-42.',
-            offset: 'Zero-based comment offset (default 0). Increase this to page deeper into the discussion history.',
-            limit: 'Maximum number of comments to return (default 20, max 100).',
-          },
+          inputSummary: fieldDescriptions(GetEntityCommentsInputSchema),
           surfaces: ['chat', 'mcp'],
           readOnly: true,
           execute: (context, input) => this.entityTools.getEntityComments(context, input),
@@ -460,13 +441,9 @@ export class AiToolRegistry {
         {
           name: 'search_knowledge',
           category: 'discovery',
-          description: 'Search the knowledge base with existing PostgreSQL full-text retrieval.',
+          description: 'Full-text search over the knowledge base documents the user can read, by words or by DOC reference (DOC-14). Returns each match\'s reference, title, summary, status, a text snippet, a relevance score, its library and its last update, with the `total` number of matches; `truncated` is true when more matches exist past offset + limit. get_document returns a document\'s full content.',
           inputSchema: SearchKnowledgeInputSchema,
-          inputSummary: {
-            query: 'Search text or document reference such as DOC-14.',
-            offset: 'Zero-based result offset (default 0). Increase this to fetch the next batch when truncated=true.',
-            limit: 'Maximum number of documents to return (default 20, max 200). Raise limit or page with offset only when the first page is insufficient.',
-          },
+          inputSummary: fieldDescriptions(SearchKnowledgeInputSchema),
           surfaces: ['chat', 'mcp'],
           readOnly: true,
           execute: async (context, input) => {
@@ -507,11 +484,9 @@ export class AiToolRegistry {
         {
           name: 'get_document',
           category: 'inspection',
-          description: 'Return one knowledge document using a stable AI-oriented DTO.',
+          description: 'Returns one knowledge document by UUID or DOC reference (DOC-123): its full content as Markdown in `content_markdown`, with its title, summary, status, library, folder, document type, contributors, and the applications, assets, projects, requests and tasks it is linked to.',
           inputSchema: GetDocumentInputSchema,
-          inputSummary: {
-            document_id: 'The document UUID or DOC-123 reference.',
-          },
+          inputSummary: fieldDescriptions(GetDocumentInputSchema),
           surfaces: ['chat', 'mcp'],
           readOnly: true,
           execute: async (context, input) => {
@@ -951,7 +926,10 @@ export class AiToolRegistry {
 
     const parsed = definition.inputSchema.safeParse(rawInput);
     if (!parsed.success) {
-      throw new BadRequestException(parsed.error.flatten());
+      throw new BadRequestException({
+        message: invalidInputMessage(definition.name, describeZodIssues(parsed.error.issues)),
+        ...parsed.error.flatten(),
+      });
     }
 
     return definition.execute(context, parsed.data);

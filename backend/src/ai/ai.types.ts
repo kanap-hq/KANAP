@@ -2,7 +2,7 @@ import { EntityManager } from 'typeorm';
 import { z } from 'zod';
 
 export type AiSurface = 'chat' | 'mcp';
-export type AiAuthMethod = 'jwt' | 'api_key';
+export type AiAuthMethod = 'jwt' | 'api_key' | 'oauth';
 export type AiMutationWriteToolName =
   | 'import_ticket'
   | 'import_glpi_ticket'
@@ -131,6 +131,7 @@ export type AiEntitySummaryDto = {
   label: string;
   status: string | null;
   summary: string | null;
+  created_at?: string | null;
   updated_at: string | null;
   match_context?: string | null;
   metadata?: AiEntityMetadata | null;
@@ -217,6 +218,9 @@ export type AiEntityCommentsDto = {
 export type AiEntityDetailDto = {
   entity: AiEntitySummaryDto;
   data: Record<string, unknown>;
+  /** The currency of the amounts, on the families that carry some (`ai-amounts-currency.util.ts`). */
+  amounts_currency?: string | null;
+  amounts_currency_note?: string;
   total: number;
   returned: number;
   truncated: boolean;

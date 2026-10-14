@@ -1,7 +1,8 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Autocomplete, TextField } from '@mui/material';
-import { COUNTRY_OPTIONS, CURRENCY_OPTIONS } from '../../constants/isoOptions';
+import { CURRENCY_OPTIONS } from '../../constants/isoOptions';
+import { useCountryOptions } from '../../i18n/countries';
 import { drawerAutocompleteListboxSx, drawerFieldValueSx } from '../../theme/formSx';
 import type { CoaListItem } from '../coa/useCoaList';
 
@@ -86,10 +87,11 @@ type FieldProps = {
 
 export function CountryField(props: FieldProps) {
   const { t } = useTranslation(['master-data']);
+  const options = useCountryOptions();
   return (
     <CodeAutocomplete
       {...props}
-      options={COUNTRY_OPTIONS}
+      options={options}
       label={t('companies.fields.country')}
       placeholder={t('companies.placeholders.country')}
     />

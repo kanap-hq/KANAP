@@ -382,7 +382,7 @@ All AI features are off by default on an on-premise installation. Three switches
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `AI_CHAT_ENABLED` | Turns on the [Plaid chat assistant](../ai-assistant.md) for the installation. | `false` |
-| `AI_MCP_ENABLED` | Turns on MCP access and AI API keys. | `false` |
+| `AI_MCP_ENABLED` | Turns on the MCP server: API keys and connections without a key. See [Connecting AI assistants over MCP](#connecting-ai-assistants-over-mcp). | `false` |
 | `AI_SETTINGS_ENABLED` | Opens **Admin → Artificial intelligence** (AI models, Plaid settings) and the [agents](../agents-overview.md) to administrators. Without it nobody can set up a provider. | `false` |
 | `AI_SETTINGS_ENCRYPTION_SECRET` | Secret that encrypts the provider keys you enter in KANAP. Generate it with `openssl rand -hex 32`. | *unset* |
 
@@ -392,6 +392,56 @@ Notes:
 - Changing `AI_SETTINGS_ENCRYPTION_SECRET` later makes the stored keys unreadable. Back it up with `.env`, and enter the keys again if you lose it.
 - An on-premise installation has no model included: you add your own provider or model server under **Admin → Artificial intelligence → AI models**. See [AI models](../ai-models.md) and [Plaid settings](../ai-settings.md). Each tenant also has its own switches there.
 - The API needs outbound access to the provider you choose (see [Firewall rules](#firewall-rules)).
+
+### Connecting AI assistants over MCP { #connecting-ai-assistants-over-mcp }
+
+With `AI_MCP_ENABLED=true`, AI assistants read KANAP data through its MCP server, at `https://<your-name>/api/ai/mcp`. Each tenant also switches MCP on under **Admin → Artificial intelligence → Plaid**. Users connect in one of two ways, compared in [Connection or API key](../ai-settings.md#connection-or-api-key):
+
+- **API key**: an administrator creates a key in KANAP and the user pastes it into the client (Claude Code, Cursor, scripts). It needs nothing more than a client that reaches the server, over HTTPS or plain HTTP inside your network.
+- **Connection (OAuth)**: Claude, Claude Desktop or Claude Code signs in to KANAP with the user's account, without a key. It needs the setup below.
+
+**Reverse proxy.** Discovery for connections is served by the API under `/.well-known/oauth-`. The nginx example in the [installation guide](installation.md#reverse-proxy-example-nginx) routes it to the API:
+
+```nginx
+location ^~ /.well-known/oauth- {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_set_header Host              $host;
+    proxy_set_header X-Real-IP         $remote_addr;
+    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_http_version 1.1;
+    proxy_redirect off;
+}
+```
+
+`proxy_pass` has no trailing slash: the path reaches the API unchanged. Keep the prefix exact, so that other `/.well-known/` addresses (certificate renewal, `security.txt`) stay where they are. With another proxy, apply the same rule, keep the `Host` header, and pass the `WWW-Authenticate` header of the API's answers through unchanged: it tells the client where to sign in.
+
+**For every connection:**
+
+- **HTTPS** with a certificate the client trusts. The sign-in exchange needs it, for Claude Code too.
+- **Outbound HTTPS from the server to `claude.ai`.** When a user connects an application, the API reads the application's public description from the address the application gives (`claude.ai` for Claude, Claude Desktop and Claude Code).
+
+**For Claude and Claude Desktop, in addition.** Claude calls KANAP from Anthropic's servers:
+
+- The KANAP address resolves in public DNS to an IPv4 address (an `A` record).
+- The server accepts HTTPS from Anthropic's addresses, `160.79.104.0/21`.
+- The address users enter answers directly, with no redirect to another host: Claude drops the credentials on a redirect.
+- No web application firewall challenge or bot check on `/.well-known/oauth-*`, `/api/oauth/*` and `/api/ai/mcp`.
+
+An instance that only your internal network can reach cannot be connected from Claude or Claude Desktop.
+
+To spare users the typing, share a link that opens Claude's **Add custom connector** dialog already filled in. Put your own server address at the end, URL-encoded (`:` becomes `%3A`, `/` becomes `%2F`):
+
+```text
+https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=KANAP&connectorUrl=https%3A%2F%2Fkanap.company.com%2Fapi%2Fai%2Fmcp
+```
+
+Each user opens it, confirms, then signs in to KANAP as described in [Connecting an MCP client](../ai-settings.md#connecting-an-mcp-client).
+
+**Without exposure to the internet**, two ways still work:
+
+- API keys, from any client that reaches the server.
+- Claude Code over OAuth, when the user's computer reaches the server over HTTPS and the server reaches `claude.ai` over HTTPS. The sign-in returns to the user's own computer.
 
 ## Optional: advanced
 
@@ -407,7 +457,7 @@ Notes:
 | `APP_URL` | Multi-tenant (cloud) only. **Not needed on-premise**: `APP_BASE_URL` is used. | *unset* |
 | `EMAIL_OVERRIDE` | Redirect all emails to this address (dev/QA only, **never in production**) | *unset* |
 
-**Client address.** With the documented setup (nginx on the same server, API port bound to `127.0.0.1`), set `RATE_LIMIT_TRUST_PROXY=true`. The proxy must send `X-Forwarded-For`; the nginx example does. Set `false` when nothing sits in front of the API. A wrong value gives every user the same address, so the 5 sign-in attempts per minute are shared by everyone.
+**Client address.** With the documented setup (nginx on the same server, API port bound to `127.0.0.1`), set `RATE_LIMIT_TRUST_PROXY=true`. The proxy must send `X-Forwarded-For`; the nginx example does. Set `false` when nothing sits in front of the API. A wrong value gives every user the same address: the 60 password sign-in requests per minute are then shared by everyone, and 5 failed attempts on one account block that account for everyone for 15 minutes.
 
 ## Optional: capacity and performance
 
@@ -533,6 +583,7 @@ After the initial build, KANAP can run fully air-gapped if email, SSO, AI and FX
 | 443 | TCP | HTTPS: nginx reverse proxy serving the application |
 | 80 | TCP | HTTP: redirects to HTTPS (and answers certificate renewals when you use Let's Encrypt) |
 | 22 | TCP | SSH, for administration. Allow it before you enable a firewall |
+| 443 | TCP | From `160.79.104.0/21`, only to connect Claude and Claude Desktop over MCP without a key (see [Connecting AI assistants over MCP](#connecting-ai-assistants-over-mcp)) |
 
 Nothing else needs to be reachable from the network. In particular, PostgreSQL (5432) and the object storage (9000) are for the Docker networks of the server only.
 
@@ -564,6 +615,7 @@ Only required if the corresponding feature is enabled.
 | `login.microsoftonline.com` | 443 | Entra ID SSO metadata & tokens | If Entra SSO is configured |
 | `graph.microsoft.com` | 443 | Profile enrichment at sign-in and the daily directory sync | If Entra SSO is configured |
 | The AI provider you configure (or your own model server) | 443 or your server's port | Chat, agents | If AI features are enabled and a model is set up |
+| `claude.ai` | 443 | Reads the description of Claude, Claude Desktop or Claude Code when a user connects it over MCP without a key | If `AI_MCP_ENABLED=true` and users connect over OAuth (not needed for API keys) |
 | `api.worldbank.org` | 443 | Annual FX rates | Optional |
 | `open.er-api.com` | 443 | Spot FX rates | Optional |
 
@@ -583,11 +635,12 @@ By default, Docker gives its first 15 networks ranges inside `172.16.0.0/12` (`1
 
 ## Background jobs
 
-The API runs 15 scheduled jobs. The times below are the defaults, in UTC (the clock of the API container). Administrators see the jobs under **Admin → Scheduled Tasks** (see [Scheduled Tasks](../scheduled-tasks.md)), where each one can be switched off, rescheduled or run on demand.
+The API runs the scheduled jobs below. The times below are the defaults, in UTC (the clock of the API container). Administrators see the jobs under **Admin → Scheduled Tasks** (see [Scheduled Tasks](../scheduled-tasks.md)), where each one can be switched off, rescheduled or run on demand.
 
 | Job | When | What it does |
 |-----|------|--------------|
-| `check-expirations` | Daily 08:00 | Emails the owners of contracts and OPEX lines 30, 14, 7 and 1 day(s) before a cancellation deadline, an end date or the end of validity. Only users who switched these notifications on receive them, once per day. |
+| `check-expirations` | Daily 08:00 | Emails the owners of contracts and budget lines 30, 14, 7 and 1 day(s) before a contract's next cancellation deadline, the end of a contract that will not renew, or a line's end of validity. Only users who switched these notifications on receive them, once per day. |
+| `contract-renewal-tasks` | Daily 07:30 | Creates a renewal decision task for the owner of each contract whose cancellation deadline, or end for a contract without renewal, enters the decision window. One task per contract and term. See [Contracts](../contracts.md#renewal-decisions). |
 | `send-weekly-reviews` | Hourly | Sends the weekly review digest to users who opted in, at their own day and time zone. |
 | `lifecycle-status-sync` | Hourly, and once at start | Switches master data, contracts, OPEX and CAPEX lines to disabled once their end of validity has passed. |
 | `entra-directory-sync` | Daily 03:00 | Refreshes user attributes and disables accounts removed or deactivated in the directory. Works only when Entra SSO is connected and approved. See [Microsoft Entra SSO](sso-entra.md). |

@@ -95,6 +95,7 @@ async function meFor(permissions: Array<[string, string]>) {
     {} as any,
     {} as any,
     {} as any,
+    {} as any,
   );
   const manager = { getRepository: () => ({ find: async () => [] }) };
   return controller.me({ user: { sub: 'user-1' }, queryRunner: { manager } });

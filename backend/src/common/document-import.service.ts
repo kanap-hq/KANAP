@@ -7,6 +7,7 @@ import { BadRequestException, Injectable, InternalServerErrorException, Logger }
 import { ARCHIVE_MAX_ENTRY_BYTES, ARCHIVE_MAX_TOTAL_BYTES, openBoundedArchive } from './archive-limits';
 import { converterEnv } from './converter-env';
 import { IMPORTABLE_MIME_TYPES } from './dto/import-document.dto';
+import { decodeHtmlEntities } from './html-entities';
 import { validateUploadedFile } from './upload-validation';
 import { VectorImageConversionService } from './vector-image-conversion.service';
 
@@ -16,6 +17,17 @@ const IMPORT_MAX_FILE_BYTES = 20 * 1024 * 1024;
 const PANDOC_TIMEOUT_MS = 60_000;
 const PANDOC_MAX_BUFFER_BYTES = 50 * 1024 * 1024;
 const VECTOR_IMAGE_EXTENSIONS = new Set(['.svg', '.emf', '.wmf', '.eps']);
+const IMPORT_TEXT_ENTITIES = { nbsp: ' ', amp: '&', quot: '"', '#39': "'", '#039': "'" };
+/** Decoded in a table cell before its spaces are collapsed; the rest is decoded with the whole document. */
+const TABLE_CELL_SPACE_ENTITIES = { nbsp: ' ' };
+
+/**
+ * Puts plain text in a GFM table cell: a pipe is escaped, and so is each
+ * backslash right before it, so the text keeps its pipes and backslashes.
+ */
+export function escapeMarkdownTableCell(text: string): string {
+  return text.replace(/\\*\|/g, (run) => run.replace(/[\\|]/g, '\\$&'));
+}
 
 /** Limits on the images pandoc extracts, read back from disk: those of the archive itself. */
 export type ExtractedMediaLimits = { maxImageBytes: number; maxTotalBytes: number };
@@ -373,7 +385,7 @@ export class DocumentImportService {
   private buildMarkdownImage(rawHtml: string, target: string): string {
     const alt = this.escapeMarkdownImageText(this.readHtmlAttribute(rawHtml, 'alt') || '');
     const title = this.readHtmlAttribute(rawHtml, 'title');
-    const encodedTitle = title ? ` "${String(title).replace(/"/g, '\\"')}"` : '';
+    const encodedTitle = title ? ` "${String(title).replace(/[\\"]/g, '\\$&')}"` : '';
     return `![${alt}](${target}${encodedTitle})`;
   }
 
@@ -495,7 +507,7 @@ export class DocumentImportService {
       const cellRegex = /<(?:td|th)\b[^>]*>([\s\S]*?)<\/(?:td|th)>/gi;
       let cellMatch: RegExpExecArray | null;
       while ((cellMatch = cellRegex.exec(rowMatch[1])) !== null) {
-        const text = this.stripHtmlToText(cellMatch[1]).replace(/\|/g, '\\|');
+        const text = escapeMarkdownTableCell(this.stripHtmlToText(cellMatch[1]));
         cells.push(text);
       }
       if (cells.length > 0) rows.push(cells);
@@ -525,16 +537,12 @@ export class DocumentImportService {
     text = text.replace(/<br\s*\/?>/gi, ' ');
     text = text.replace(/<\/p\s*>/gi, ' ');
     text = text.replace(/<\/?[a-zA-Z][a-zA-Z0-9]*\b[^>]*\/?>/g, '');
-    text = this.decodeHtmlEntities(text);
+    text = decodeHtmlEntities(text, { entities: TABLE_CELL_SPACE_ENTITIES });
     return text.replace(/\s+/g, ' ').trim();
   }
 
   private decodeHtmlEntities(text: string): string {
-    return text
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&amp;/g, '&')
-      .replace(/&quot;/g, '"')
-      .replace(/&#0?39;/g, "'");
+    return decodeHtmlEntities(text, { entities: IMPORT_TEXT_ENTITIES });
   }
 
   private getInlineImageMimeType(extension: string): string {

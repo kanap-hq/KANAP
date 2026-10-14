@@ -8,6 +8,7 @@ budget-lines.md	frontend/src/components/finance/**/*.tsx
 budget-lines.md	frontend/src/components/finance/**/*.ts
 contracts.md	frontend/src/pages/ContractsPage.tsx
 contracts.md	frontend/src/pages/contracts/**/*.tsx
+contracts.md	frontend/src/pages/contracts/**/*.ts
 companies.md	frontend/src/pages/CompaniesPage.tsx
 companies.md	frontend/src/pages/companies/**/*.tsx
 departments.md	frontend/src/pages/DepartmentsPage.tsx
@@ -96,6 +97,8 @@ ai-assistant.md	frontend/src/pages/ai/AiWorkspacePage.tsx
 ai-assistant.md	frontend/src/ai/**/*.tsx
 ai-settings.md	frontend/src/pages/admin/AdminAiPage.tsx
 ai-settings.md	frontend/src/pages/admin/IncludedModelConfirmation.tsx
+ai-settings.md	frontend/src/pages/oauth/**/*.tsx
+connected-apps.md	frontend/src/pages/settings/ConnectedAppsTab.tsx
 ai-models.md	frontend/src/pages/admin/AdminAiModelsPage.tsx
 ai-usage.md	frontend/src/pages/admin/AdminAiUsagePage.tsx
 integrations.md	frontend/src/pages/admin/AdminIntegrationsPage.tsx

@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { PropertyGroup, PropertyRow } from '../../../components/design/PropertyRow';
 import { drawerSelectSx, drawerMenuItemSx, drawerFieldValueSx } from '../../../theme/formSx';
 import CompanySelect from '../../../components/fields/CompanySelect';
-import { COUNTRY_OPTIONS, CountryOption } from '../../../constants/isoOptions';
+import type { CountryOption } from '../../../constants/isoOptions';
+import { filterCountryOptions, useCountryOptions } from '../../../i18n/countries';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 
 export type LocationDrawerData = {
@@ -44,8 +45,9 @@ export default function LocationPropertiesDrawer({
   const hostingOptions = byField.hostingType || [];
   const providerOptions = byField.serverProvider || [];
 
+  const countryOptions = useCountryOptions();
   const countryValue: CountryOption | null =
-    COUNTRY_OPTIONS.find((opt) => opt.code === (data.country_iso || '').toUpperCase()) ??
+    countryOptions.find((opt) => opt.code === (data.country_iso || '').toUpperCase()) ??
     (data.country_iso
       ? { code: data.country_iso.toUpperCase(), name: t('workspace.location.fields.unknownCountry', { code: data.country_iso.toUpperCase() }) }
       : null);
@@ -118,7 +120,8 @@ export default function LocationPropertiesDrawer({
         <PropertyRow label={t('pages.locations.columns.country')}>
           <Autocomplete
             value={countryValue}
-            options={COUNTRY_OPTIONS}
+            options={countryOptions}
+            filterOptions={filterCountryOptions}
             disabled={disabled}
             onChange={(_, option) => onCountryChange(option?.code ?? '')}
             getOptionLabel={(opt) => `${opt.name} (${opt.code})`}

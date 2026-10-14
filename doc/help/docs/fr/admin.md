@@ -66,7 +66,7 @@ La page Journal d'audit conserve l'historique des modifications de données et d
 
 **Exports** (table **Export**) : exports CSV, documents et rapports produits par le serveur. La ligne indique ce qui a été exporté et par qui. L'export du journal d'audit est lui aussi enregistré.
 
-Les lignes de connexion, de session et d'export conservent aussi l'**adresse IP** d'où venait la demande et le **navigateur** utilisé. Ouvrez la ligne pour les lire dans le panneau **Après**. Derrière un reverse proxy, c'est l'adresse IP de la personne elle-même, tant que le proxy la transmet (on-premise : voir l'[exemple de reverse proxy](on-premise/installation.md#exemple-de-reverse-proxy-nginx)).
+Les lignes de connexion, de session et d'export conservent aussi l'**adresse IP** d'où venait la demande et le **navigateur** utilisé. Ouvrez la ligne pour les lire dans le panneau **Après**. Derrière un reverse proxy, c'est l'adresse IP de la personne elle-même, tant que le proxy la transmet (on-premise : voir l'[exemple de reverse proxy](on-premise/installation.md#reverse-proxy-example-nginx)).
 
 Les mots de passe, les liens de connexion et les jetons ne sont jamais écrits dans le journal. Quand quelqu'un tente de se connecter avec une adresse e-mail sans compte, la ligne affiche **Compte inconnu** et ne conserve pas l'adresse saisie.
 
@@ -541,12 +541,14 @@ Les étapes de configuration de l'enregistrement d'application Entra sont décri
 
 ### Limites de connexion
 
-KANAP limite les demandes de connexion répétées depuis la même adresse IP :
+KANAP limite les demandes de connexion répétées :
 
-- **Connexion par mot de passe** : 5 tentatives par minute.
-- **Connexion Microsoft** : 60 demandes par minute. La limite est plus haute parce que les collaborateurs d'une même organisation accèdent souvent à KANAP depuis la même adresse sortante.
+- **Connexion par mot de passe** : 60 demandes par minute depuis la même adresse IP. Après 5 échecs sur un compte depuis la même adresse IP en 15 minutes, ce compte ne peut plus se connecter depuis cette adresse pendant 15 minutes. Le même compte peut toujours se connecter depuis une autre adresse, et les autres comptes depuis la même adresse. Une connexion réussie remet le compteur à zéro.
+- **Connexion Microsoft** : 60 demandes par minute depuis la même adresse IP.
 
-Une fois la limite atteinte, la personne patiente une minute et réessaie. Derrière un reverse proxy, KANAP compte l'adresse IP de chaque personne, tant que le proxy la transmet. Les connexions et les échecs de connexion apparaissent dans le [Journal d'audit](#journal-daudit). Les demandes bloquées par la limite ne sont pas enregistrées.
+Les limites par adresse sont hautes parce que les collaborateurs d'une même organisation accèdent souvent à KANAP depuis la même adresse sortante. Une fois une limite par adresse atteinte, la personne patiente une minute et réessaie. Derrière un reverse proxy, KANAP compte l'adresse IP de chaque personne, tant que le proxy la transmet.
+
+Les connexions et les échecs de connexion apparaissent dans le [Journal d'audit](#journal-daudit). Quand 5 échecs bloquent un compte depuis une adresse, un échec de connexion avec le motif **Trop de tentatives de connexion** est enregistré. Les tentatives refusées pendant les 15 minutes qui suivent ne sont pas enregistrées, pas plus que les demandes bloquées par une limite par adresse.
 
 ---
 
@@ -611,7 +613,7 @@ Contrôlez quelles notifications par e-mail vous recevez.
 | **Tâches** | Assignation (comme responsable, demandeur ou observateur), changements de statut, commentaires |
 | **Budget** | Alertes d'expiration, changements de statut, commentaires |
 
-Les **Alertes d'expiration** envoient un e-mail aux responsables d'un contrat, d'une ligne OPEX ou d'une ligne CAPEX 30, 14, 7 et 1 jour(s) avant ses dates : la date limite de résiliation et la date de fin d'un contrat, la fin de validité d'une ligne OPEX ou CAPEX. Seuls les responsables qui ont activé les notifications Budget et les **Alertes d'expiration** les reçoivent. La vérification a lieu chaque jour à 08h00 UTC. Chaque rappel est envoyé une seule fois par jour à chaque destinataire, même si la vérification s'exécute à nouveau ce jour-là, par exemple après un redémarrage.
+Les **Alertes d'expiration** envoient un e-mail aux responsables d'un contrat, d'une ligne OPEX ou d'une ligne CAPEX 30, 14, 7 et 1 jour(s) avant ses dates : la prochaine date limite de résiliation d'un contrat, la fin d'un contrat qui ne sera pas reconduit (la fin de son terme, ou sa fin de validité si elle vient avant), la fin de validité d'une ligne OPEX ou CAPEX. Un contrat à reconduction tacite n'est pas averti de la fin de chaque terme. Seuls les responsables qui ont activé les notifications Budget et les **Alertes d'expiration** les reçoivent. La vérification a lieu chaque jour à 08h00 UTC. Chaque rappel est envoyé une seule fois par jour à chaque destinataire, même si la vérification s'exécute à nouveau ce jour-là, par exemple après un redémarrage.
 
 **E-mail de revue hebdomadaire** : Recevez un résumé périodique de votre activité et des éléments à venir. Configurez :
 - **Jour de la semaine** (ex. : lundi)

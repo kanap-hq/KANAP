@@ -22,8 +22,7 @@ import {
 import PlanSelectionDialog from './PlanSelectionPage';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { isEuCountry } from '../../utils/billingProfile';
-import { COUNTRY_OPTIONS } from '../../constants/isoOptions';
-import { useCountryName } from '../coa/coaRoles';
+import { filterCountryOptions, useCountryOptions } from '../../i18n/countries';
 import { useFieldDraft } from '../../hooks/useFieldDraft';
 import { formatShortDate } from '../../lib/dateFormat';
 import { drawerAutocompleteListboxSx, drawerFieldValueSx, tealLinkSx } from '../../theme/formSx';
@@ -251,13 +250,7 @@ function CountryPicker({
   disabled?: boolean;
   error?: string;
 }) {
-  const countryName = useCountryName();
-  const options = React.useMemo<CountryChoice[]>(
-    () => COUNTRY_OPTIONS
-      .map((option) => ({ code: option.code.toUpperCase(), name: countryName(option.code) }))
-      .sort((a, b) => a.name.localeCompare(b.name)),
-    [countryName],
-  );
+  const options: CountryChoice[] = useCountryOptions();
   const code = value.trim().toUpperCase();
   const selected = options.find((option) => option.code === code) ?? null;
   return (
@@ -266,6 +259,7 @@ function CountryPicker({
       value={selected}
       onChange={(_event, option) => onChange(option?.code ?? '')}
       getOptionLabel={(option) => option.name}
+      filterOptions={filterCountryOptions}
       isOptionEqualToValue={(a, b) => a.code === b.code}
       disabled={disabled}
       ListboxProps={{ sx: drawerAutocompleteListboxSx }}

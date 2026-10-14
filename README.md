@@ -57,7 +57,9 @@ Today, Plaid can:
 - create and update documents, tasks, master data, business records,
   relationships, and financial planning data through the same approval path
 - import a GLPI ticket into a KANAP task after user confirmation
-- expose read-only MCP tools so external AI clients can query governed KANAP data
+- expose read-only MCP tools so external AI clients can query governed KANAP
+  data: Claude, Claude Desktop and Claude Code sign in with the user's KANAP
+  account (OAuth), other clients use an API key
 
 Alongside Plaid, the **helpdesk agent** watches your connected service desk
 (GLPI today), reads each ticket against your applications and documentation,

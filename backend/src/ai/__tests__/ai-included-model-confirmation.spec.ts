@@ -6,7 +6,6 @@ import { Features } from '../../config/features';
 import { Subscription } from '../../billing/subscription.entity';
 import { Tenant, TenantStatus } from '../../tenants/tenant.entity';
 import { UserRole } from '../../users/user-role.entity';
-import { AiMcpController } from '../ai-mcp.controller';
 import { AiModelConfig } from '../ai-model-config.entity';
 import { AiModelResolutionError, AiModelResolverService, BUILTIN_NOT_ACCEPTED_MESSAGE } from '../ai-model-resolver.service';
 import { AiPolicyService } from '../ai-policy.service';
@@ -707,7 +706,7 @@ async function testConfirmationByAUserNoLongerFoundAndSingleTenantView() {
 }
 
 // ---------------------------------------------------------------------------
-// 3. Agents, included quota, MCP counting
+// 3. Agents, included quota, MCP
 // ---------------------------------------------------------------------------
 
 function agentContext(manager: any, agentId: string | null = 'agent-1') {
@@ -723,14 +722,13 @@ function agentContext(manager: any, agentId: string | null = 'agent-1') {
 }
 
 function createUsage() {
-  const usage = { reserved: 0, mcpReserved: 0 };
+  const usage = { reserved: 0 };
   return {
     usage,
     service: {
       getCurrentUsage: async () => ({ count: 0, limit: 100, year_month: '2026-10', reset_date: '' }),
       getMonthlyLimit: async () => 100,
       reserveMessageDetached: async () => { usage.reserved += 1; return usage.reserved; },
-      reserveMessage: async () => { usage.mcpReserved += 1; return usage.mcpReserved; },
     },
   };
 }
@@ -777,20 +775,11 @@ async function testAgentsWaitWithoutConsumingTheQuota() {
 
 /**
  * MCP sends KANAP data to the user's own client, never to the included model: it works
- * without the confirmation and without the provider name and location, and its requests
- * count against the included volume whenever the assistant would fall back on that model,
- * as before the confirmation existed.
+ * without the confirmation and without the provider name and location, and it draws on
+ * nothing of the included model (the controller holds neither its usage nor its throttle).
  */
-async function testMcpWorksAndCountsAsBefore() {
+async function testMcpWorksWithoutTheIncludedModel() {
   await withFeatures({ AI_CHAT_ENABLED: true, AI_MCP_ENABLED: true, AI_SETTINGS_ENABLED: true }, async () => {
-    const { usage, service } = createUsage();
-    const rateLimits: unknown[] = [];
-    const makeController = (stack: ReturnType<typeof createStack>) => new AiMcpController(
-      {} as any, {} as any, {} as any, {} as any, {} as any, {} as any,
-      stack.resolver,
-      service as any,
-      { assertAllowed: (_tenantId: string, _userId: string, limits: unknown) => { rateLimits.push(limits); } } as any,
-    );
     const mcpContext = (manager: any) => ({ ...agentContext(manager, null), userId: 'user-2', surface: 'mcp' as const });
     const permissions = new Map([['ai_mcp', 'reader']]);
 
@@ -800,31 +789,18 @@ async function testMcpWorksAndCountsAsBefore() {
     const capabilities = await createPolicy(mcpOnly, permissions).getCapabilities(READER_CONTEXT, mcpOnly.manager);
     assert.equal(capabilities.surfaces.mcp.available, true);
     assert.equal(capabilities.surfaces.mcp.provider_ready, true);
-    await (makeController(mcpOnly) as any).assertBuiltinMcpBudget(mcpContext(mcpOnly.manager));
-    assert.equal(usage.mcpReserved, 1, 'counted on the included volume, confirmed or not');
-    assert.deepEqual(rateLimits, [{ tenantPerMinute: 30, userPerHour: 60 }]);
 
-    // A platform without a provider name or location yet: MCP keeps working and counting.
+    // A platform without a provider name or location yet: MCP keeps working.
     const noIdentity = createStack(
       workspace({ settings: settingsRow({ mcp_enabled: true }) }),
       createPlatform({ disclosure_name: null, disclosure_location: null }),
     );
     await createPolicy(noIdentity, permissions).assertSurfaceAccess(mcpContext(noIdentity.manager), noIdentity.manager);
-    await (makeController(noIdentity) as any).assertBuiltinMcpBudget(mcpContext(noIdentity.manager));
-    assert.equal(usage.mcpReserved, 2);
 
-    // The resolution MCP uses never carries the included model's key.
+    // An ungated resolution never carries the included model's key.
     const ungated = await mcpOnly.resolver.resolve(TENANT_ID, { type: 'chat' }, mcpOnly.manager, { includedModelGate: 'none' });
     assert.equal(ungated.source, 'builtin');
     assert.equal(ungated.apiKey, null);
-
-    // Assistant on the workspace's own model: nothing counted.
-    const own = createStack(workspace({
-      settings: settingsRow({ mcp_enabled: true }),
-      configs: [registryModel({ is_default: true })],
-    }));
-    await (makeController(own) as any).assertBuiltinMcpBudget(mcpContext(own.manager));
-    assert.equal(usage.mcpReserved, 2, 'own model: nothing counted');
 
     // No platform row at all: MCP is not ready, as before.
     const noPlatform = createStack(workspace({ settings: settingsRow({ mcp_enabled: true }) }), createPlatform(null));
@@ -1072,7 +1048,7 @@ async function run() {
     testConfirmationKeyLength,
     testConfirmationByAUserNoLongerFoundAndSingleTenantView,
     testAgentsWaitWithoutConsumingTheQuota,
-    testMcpWorksAndCountsAsBefore,
+    testMcpWorksWithoutTheIncludedModel,
     testAgentToolsDoNotWaitForTheAssistant,
     testCapabilitiesNameTheConfirmation,
     testPlatformFieldsAreValidated,

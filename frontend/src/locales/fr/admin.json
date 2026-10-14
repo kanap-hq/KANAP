@@ -9,9 +9,14 @@
       "testing": "Test en cours..."
     },
     "dialogs": {
+      "claudeCodeHelper": "Exécutez-la dans un terminal pour connecter Claude Code à KANAP avec cette clé.",
+      "claudeCodeLabel": "Commande Claude Code",
+      "copyCommand": "Copier la commande",
+      "copyKey": "Copier la clé",
       "copyKeyWarning": "Copiez cette clé maintenant. Elle ne sera plus affichée.",
       "createKeyTitle": "Créer une clé API MCP",
-      "keyCreatedTitle": "Clé créée"
+      "keyCreatedTitle": "Clé créée",
+      "keyLabel": "Clé"
     },
     "features": {
       "braveSearchNotConfigured": "BRAVE_SEARCH_API_KEY non configurée",
@@ -60,14 +65,26 @@
         "label": "Libellé",
         "lastUsed": "Dernière utilisation",
         "prefix": "Préfixe",
-        "status": "Statut"
+        "status": "Statut",
+        "kind": "Type"
       },
-      "empty": "Aucune clé API MCP configurée.",
+      "copied": "Copié",
+      "empty": "Aucune clé ni connexion MCP.",
+      "endpoint": {
+        "label": "Adresse du serveur",
+        "helper": "Les clients MCP se connectent à cette adresse et envoient la clé dans un en-tête Authorization.",
+        "copy": "Copier l'adresse",
+        "connectorHint": "Claude, Claude Desktop et Claude Code peuvent aussi se connecter sans clé : ajoutez cette adresse comme connecteur personnalisé."
+      },
       "statuses": {
         "active": "Active",
         "revoked": "Révoquée"
       },
-      "title": "Clés API MCP"
+      "title": "Clés et connexions MCP",
+      "kinds": {
+        "apiKey": "Clé API",
+        "oauth": "Connexion"
+      }
     },
     "messages": {
       "connectionTestFailed": "Le test de connexion a échoué.",
@@ -120,7 +137,7 @@
       },
       "builtinUsage": {
         "cta": "Utilisez vos propres clés API pour une utilisation illimitée.",
-        "description": "L'utilisation intégrée est partagée entre les requêtes de chat et MCP de ce tenant.",
+        "description": "L'utilisation intégrée est partagée entre le chat et les agents de ce tenant.",
         "loadFailed": "Impossible de charger l'utilisation intégrée.",
         "reset": "Réinitialisation le {{date}}.",
         "summary": "{{count}} / {{limit}} messages utilisés ce mois-ci",
@@ -218,6 +235,7 @@
       "login": "Connexion",
       "login_failed": "Échec de connexion",
       "logout": "Déconnexion",
+      "mcp_connection_refused": "Connexion d'un client MCP refusée",
       "password_reset_completed": "Réinitialisation du mot de passe terminée",
       "password_reset_requested": "Réinitialisation du mot de passe demandée",
       "refresh_denied": "Renouvellement de session refusé",
@@ -309,6 +327,7 @@
       "sso_failed": "La connexion avec Microsoft a échoué",
       "sso_not_configured": "Connexion avec Microsoft non configurée",
       "tenant_mismatch": "L'annuaire Microsoft ne correspond pas à l'espace de travail",
+      "too_many_attempts": "Trop de tentatives de connexion",
       "unknown_user": "Aucun compte avec cette adresse"
     },
     "shared": {

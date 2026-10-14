@@ -19,11 +19,13 @@ vi.mock('react-i18next', async () => {
 const state = vi.hoisted(() => ({
   deploymentMode: 'multi-tenant' as 'multi-tenant' | 'single-tenant',
   version: '26.10.1',
+  aiMcp: false,
+  mcpReader: false,
 }));
 
 vi.mock('../../config/FeaturesContext', () => ({
   useFeatures: () => ({
-    config: { deploymentMode: state.deploymentMode, features: {}, version: state.version },
+    config: { deploymentMode: state.deploymentMode, features: { aiMcp: state.aiMcp }, version: state.version },
     isLoading: false,
   }),
 }));
@@ -34,10 +36,16 @@ vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('./ProfileTab', () => ({ default: () => <div>profile tab</div> }));
 vi.mock('./NotificationsTab', () => ({ default: () => <div>notifications tab</div> }));
 vi.mock('./AppearanceTab', () => ({ default: () => <div>appearance tab</div> }));
+vi.mock('./ConnectedAppsTab', () => ({ default: () => <div>connected apps tab</div> }));
+vi.mock('../../auth/AuthContext', () => ({
+  useAuth: () => ({ hasLevel: (resource: string) => resource === 'ai_mcp' && state.mcpReader }),
+}));
 
 afterEach(() => {
   state.deploymentMode = 'multi-tenant';
   state.version = '26.10.1';
+  state.aiMcp = false;
+  state.mcpReader = false;
 });
 
 describe('AboutTab', () => {
@@ -90,6 +98,47 @@ describe('SettingsPage: About tab', () => {
     expect(tabs).toHaveLength(4);
     expect(tabs[3]).toHaveTextContent('About');
     expect(tabs[3]).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText('About KANAP')).toBeInTheDocument();
+  });
+});
+
+function renderSettings(path: string) {
+  return render(
+    <MemoryRouter initialEntries={[path]}>
+      <Routes>
+        <Route path="/settings/:tab" element={<SettingsPage />} />
+      </Routes>
+    </MemoryRouter>,
+  );
+}
+
+describe('SettingsPage: Connected apps tab', () => {
+  it('shows the tab before About when MCP is on and the user may use it', () => {
+    state.aiMcp = true;
+    state.mcpReader = true;
+    renderSettings('/settings/connected-apps');
+
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs).toHaveLength(5);
+    expect(tabs[3]).toHaveTextContent('Connected apps');
+    expect(tabs[3]).toHaveAttribute('aria-selected', 'true');
+    expect(tabs[4]).toHaveTextContent('About');
+    expect(screen.getByText('connected apps tab')).toBeInTheDocument();
+  });
+
+  it('hides the tab when MCP is off, and its address opens the profile', () => {
+    state.mcpReader = true;
+    renderSettings('/settings/connected-apps');
+
+    expect(screen.getAllByRole('tab')).toHaveLength(4);
+    expect(screen.queryByText('connected apps tab')).not.toBeInTheDocument();
+    expect(screen.getByText('profile tab')).toBeInTheDocument();
+  });
+
+  it('hides the tab from a user without MCP access', () => {
+    state.aiMcp = true;
+    renderSettings('/settings/about');
+    expect(screen.getAllByRole('tab')).toHaveLength(4);
     expect(screen.getByText('About KANAP')).toBeInTheDocument();
   });
 });

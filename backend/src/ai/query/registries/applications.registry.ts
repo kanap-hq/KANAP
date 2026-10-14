@@ -271,14 +271,6 @@ export const applicationsRegistry: AiEntityFilterRegistry = {
       groupable: false,
       aggregable: true,
     },
-    derived_total_users: {
-      ai: 'derived_total_users',
-      grid: 'derived_total_users',
-      type: 'number',
-      description: 'Computed total users for the configured user mode and year.',
-      sortable: false,
-      groupable: false,
-    },
     data_residency: {
       ai: 'data_residency',
       grid: 'data_residency',

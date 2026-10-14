@@ -532,7 +532,10 @@
       "renewedTimes_other": "Reconduit {{count}} fois depuis le {{date}}",
       "notice_one": "Préavis de {{count}} mois",
       "notice_other": "Préavis de {{count}} mois",
-      "noNotice": "Sans préavis"
+      "noNotice": "Sans préavis",
+      "renewalConfirmed": "Reconduction confirmée",
+      "nextTerm": "prochain terme du {{start}} au {{end}}",
+      "decisionDue": "décision attendue"
     },
     "timeline": {
       "label": "Frise des termes du contrat",
@@ -704,10 +707,36 @@
         "button": "Réglages",
         "title": "Réglages des contrats",
         "windowLabel": "Délai de décision avant la date limite de résiliation (jours)",
-        "windowHint": "Un contrat à reconduction tacite attend une décision ce nombre de jours avant sa date limite de résiliation. Son responsable reçoit alors une tâche pour décider du renouvellement. De 0 à 365 jours.",
+        "windowHint": "Un contrat attend une décision ce nombre de jours avant sa date limite de résiliation, ou avant sa fin s'il n'est pas reconduit tacitement. Son responsable reçoit alors une tâche pour décider. De 0 à 365 jours.",
         "invalid": "Saisissez un nombre entier de jours entre 0 et 365.",
         "saveFailed": "Les réglages n'ont pas pu être enregistrés."
-      }
+      },
+      "endTitle": "Fin prévue le {{date}} · décision attendue",
+      "endWithoutDecision": "Sans décision, le contrat prend fin le {{date}}.",
+      "letEnd": "Laisser finir",
+      "endConfirmedBy": "Fin confirmée le {{date}} par {{name}}.",
+      "endConfirmedOn": "Fin confirmée le {{date}}."
+    },
+    "stopRenewal": {
+      "title": "Désactiver la reconduction tacite",
+      "hint": "Ses termes passés sont conservés.",
+      "confirm": "Désactiver la reconduction",
+      "failed": "La fin du contrat n'a pas pu être enregistrée.",
+      "body": "Le contrat prendra fin le {{date}}, sauf renouvellement."
+    },
+    "endChoice": {
+      "label": "Date de fin",
+      "earliest_one": "Préavis de {{count}} mois : la première fin possible est le {{date}}.",
+      "earliest_other": "Préavis de {{count}} mois : la première fin possible est le {{date}}.",
+      "earliestNoNotice": "Sans préavis : la première fin possible est le {{date}}.",
+      "beforeAllowed": "Avant la fin permise par le préavis : à convenir avec le fournisseur.",
+      "tooEarly": "Choisissez un jour à partir du {{date}}."
+    },
+    "resumeRenewal": {
+      "title": "Réactiver la reconduction tacite",
+      "body": "Le contrat sera reconduit tacitement et la fin du {{date}} sera retirée.",
+      "confirm": "Réactiver la reconduction",
+      "failed": "La reconduction n'a pas pu être réactivée."
     }
   },
   "operations": {
@@ -884,6 +913,8 @@
       "summary": {
         "preview_one": "{{count}} ligne dans l'aperçu.",
         "preview_other": "{{count}} lignes dans l'aperçu.",
+        "leftOut_one": "{{count}} ligne non valide en {{year}} est laissée de côté.",
+        "leftOut_other": "{{count}} lignes non valides en {{year}} sont laissées de côté.",
         "done": "Copie terminée.",
         "amounts": "Montants : {{processed}} à copier, {{skipped}} ignorés.",
         "amountsDone": "Montants : {{processed}} copiés, {{skipped}} ignorés.",
@@ -1399,15 +1430,18 @@
     "topOpex": {
       "title": "Top lignes",
       "subtitle": "Plus grosses lignes {{type}} par année sélectionnée ({{metric}})",
+      "subtitle_all": "Plus grosses lignes budgétaires par année sélectionnée ({{metric}})",
       "topTotal": "Total top {{count}}",
       "totalMetric": "{{metric}}, total",
       "ofFilteredMetric": "{{pct}} % du total filtré",
       "shareSubtitle": "Part du total annuel ({{metric}})",
-      "chartTitle": "Top {{count}} des {{type}} · {{metric}} {{year}}"
+      "chartTitle": "Top {{count}} des {{type}} · {{metric}} {{year}}",
+      "chartTitle_all": "Top {{count}} des lignes · {{metric}} {{year}}"
     },
     "opexDelta": {
       "title": "Top hausse / baisse",
       "subtitle": "Plus grandes variations {{type}} vs année précédente",
+      "subtitle_all": "Plus grandes variations budgétaires vs année précédente",
       "sourceColumn": "Colonne source",
       "destinationColumn": "Colonne de destination",
       "increase": "Hausse",
@@ -1434,8 +1468,11 @@
       "shareOfChangeMagnitude": "Part de l'amplitude totale des variations",
       "pieAvailableHint": "Camembert disponible lorsqu'une seule direction est sélectionnée",
       "chartTitleIncreases": "Top {{n}} des hausses {{type}} · {{source}} → {{destination}}",
+      "chartTitleIncreases_all": "Top {{n}} des hausses · {{source}} → {{destination}}",
       "chartTitleDecreases": "Top {{n}} des baisses {{type}} · {{source}} → {{destination}}",
+      "chartTitleDecreases_all": "Top {{n}} des baisses · {{source}} → {{destination}}",
       "chartTitleChanges": "Top {{n}} des variations {{type}} · {{source}} → {{destination}}",
+      "chartTitleChanges_all": "Top {{n}} des variations · {{source}} → {{destination}}",
       "incValue": "Hausse : {{value}}",
       "decValue": "Baisse : {{value}}",
       "topTotalIncrease": "Hausse totale du top {{count}}",
@@ -1451,14 +1488,19 @@
       "title": "Comparaison de colonnes budgétaires",
       "subtitle": "Comparer jusqu’à dix colonnes budgétaires",
       "yearGroupingSubtitle": "{{type}} : regroupement par année",
+      "yearGroupingSubtitle_all": "OPEX et CAPEX : regroupement par année",
       "selectionsSubtitle": "{{type}} : {{count}} sélection(s)",
+      "selectionsSubtitle_all": "OPEX et CAPEX : {{count}} sélection(s)",
       "addSelection": "Ajouter"
     },
     "consolidation": {
       "title": "Budget par compte de consolidation",
       "subtitle": "Totaux {{type}} regroupés par compte de consolidation ; camembert pour une seule année, courbe pour une plage pluriannuelle",
+      "subtitle_all": "Totaux OPEX et CAPEX regroupés par compte de consolidation ; camembert pour une seule année, courbe pour une plage pluriannuelle",
       "chartTitleSingle": "{{type}} par compte de consolidation · {{year}}",
+      "chartTitleSingle_all": "OPEX et CAPEX par compte de consolidation · {{year}}",
       "chartTitleRange": "{{type}} par compte de consolidation · {{start}} à {{end}}",
+      "chartTitleRange_all": "OPEX et CAPEX par compte de consolidation · {{start}} à {{end}}",
       "shareSubtitle": "Part des totaux sélectionnés",
       "annualSubtitle": "Totaux annuels par compte de consolidation",
       "totalLabel": "Total ({{metric}}) : {{value}}",
@@ -1468,8 +1510,11 @@
     "analyticsCategory": {
       "title": "Budget par dimension analytique",
       "subtitle": "Totaux {{type}} regroupés par {{dimension}} ; camembert pour une seule année, courbe pour une plage pluriannuelle",
+      "subtitle_all": "Totaux OPEX et CAPEX regroupés par {{dimension}} ; camembert pour une seule année, courbe pour une plage pluriannuelle",
       "chartTitleSingle": "{{type}} par {{dimension}} · {{year}}",
+      "chartTitleSingle_all": "OPEX et CAPEX par {{dimension}} · {{year}}",
       "chartTitleRange": "{{type}} par {{dimension}} · {{start}} à {{end}}",
+      "chartTitleRange_all": "OPEX et CAPEX par {{dimension}} · {{start}} à {{end}}",
       "shareSubtitle": "Part des totaux sélectionnés",
       "annualSubtitle": "Totaux annuels par valeur",
       "totalLabel": "Total ({{metric}}) : {{value}}",
@@ -1481,7 +1526,9 @@
     "staffing": {
       "title": "Effectifs par mois",
       "subtitle": "ETP mensuels {{type}} par {{group}}",
+      "subtitle_all": "ETP mensuels par {{group}}",
       "chartTitle": "Effectifs {{type}} par {{group}}, {{column}} {{year}}",
+      "chartTitle_all": "Effectifs par {{group}}, {{column}} {{year}}",
       "groupBy": "Regrouper par",
       "groups": {
         "costCenter": "Centre de coûts",
@@ -1508,8 +1555,11 @@
     "costPerFte": {
       "title": "Coût par ETP",
       "subtitle": "Coût annuel {{type}} d'un ETP ou TJM, par {{group}}",
+      "subtitle_all": "Coût annuel d'un ETP ou TJM, par {{group}}",
       "chartTitle": "Coût par ETP {{type}} par {{group}}",
+      "chartTitle_all": "Coût par ETP par {{group}}",
       "rateChartTitle": "TJM {{type}} par {{group}}",
+      "rateChartTitle_all": "TJM par {{group}}",
       "columns": "Colonnes",
       "show": "Afficher",
       "staffCost": "Coût du personnel",

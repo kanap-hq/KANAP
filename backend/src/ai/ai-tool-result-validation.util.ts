@@ -2,13 +2,13 @@ type IgnoredFieldValidation = {
   status: 'invalid';
   blocking: true;
   ignored_fields: string[];
-  source: 'filters_ignored' | 'fields_ignored';
+  source: 'filters_ignored' | 'fields_ignored' | 'sort_ignored';
   guidance: string;
 };
 
 function getIgnoredFields(
   value: unknown,
-  key: 'filters_ignored' | 'fields_ignored',
+  key: 'filters_ignored' | 'fields_ignored' | 'sort_ignored',
 ): string[] {
   if (!value || typeof value !== 'object') {
     return [];
@@ -29,7 +29,16 @@ export function buildStructuredToolResultValidation(
   if (toolName === 'query_entities' || toolName === 'aggregate_entities') {
     const ignoredFields = getIgnoredFields(result, 'filters_ignored');
     if (ignoredFields.length === 0) {
-      return null;
+      const ignoredSort = getIgnoredFields(result, 'sort_ignored');
+      if (ignoredSort.length === 0) return null;
+      return {
+        status: 'invalid',
+        blocking: true,
+        ignored_fields: ignoredSort,
+        source: 'sort_ignored',
+        guidance:
+          'The requested sort field is not supported: the items are in the default order shown in `sort`. Do not answer an ordering question (latest, oldest, largest) from this result. Query again with a field from `sortable_fields`.',
+      };
     }
     return {
       status: 'invalid',

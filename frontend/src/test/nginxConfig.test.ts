@@ -82,7 +82,19 @@ describe('web container nginx configuration', () => {
     expect(headersConf).toContain('X-Content-Type-Options "nosniff"');
     expect(headersConf).toContain('Referrer-Policy "strict-origin-when-cross-origin"');
     expect(headersConf).toContain('Permissions-Policy "camera=(), microphone=(), geolocation=()"');
-    expect(headersConf).toContain('X-Frame-Options "SAMEORIGIN"');
+    expect(headersConf).toContain('X-Frame-Options $x_frame_options');
+  });
+
+  it('denies framing of the MCP consent screen only, keeping same-origin framing elsewhere', () => {
+    const text = stripComments(defaultConf);
+    expect(text).toContain(`map $request_uri $frame_ancestors { ~^/oauth/authorize(\\?|$) "'none'"; default "'self'"; }`);
+    expect(text).toContain('map $request_uri $x_frame_options { ~^/oauth/authorize(\\?|$) "DENY"; default "SAMEORIGIN"; }');
+    expect(cspValue).toContain('frame-ancestors $frame_ancestors;');
+    const pattern = /^\/oauth\/authorize(\?|$)/;
+    expect(pattern.test('/oauth/authorize?client_id=x')).toBe(true);
+    expect(pattern.test('/oauth/authorize')).toBe(true);
+    expect(pattern.test('/oauth/authorizeX')).toBe(false);
+    expect(pattern.test('/settings')).toBe(false);
   });
 
   it('leaves clipboard access and HTTPS pinning to others', () => {

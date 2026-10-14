@@ -1,5 +1,5 @@
 import { Body, Controller, Post, BadRequestException, Get, Req, Res, UnauthorizedException, UseGuards, Logger } from '@nestjs/common';
-import { Throttle } from '@nestjs/throttler';
+import { Throttle, ThrottlerException } from '@nestjs/throttler';
 import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
@@ -29,6 +29,7 @@ import { SecurityEventsService } from '../audit/security-events.service';
 import { AuthEvent, AuthEventReason } from '../audit/security-events';
 import { NeverRejects } from '../common/never-rejects';
 import { authRefusalOf } from './auth-refused.exception';
+import { LoginAttemptLimit } from './login-attempt-limit';
 import { Response } from 'express';
 import {
   REFRESH_TOKEN_COOKIE_NAME,
@@ -93,6 +94,7 @@ export class AuthController {
     private readonly dataSource: DataSource,
     private readonly tenants: TenantsService,
     private readonly securityEvents: SecurityEventsService,
+    private readonly loginAttempts: LoginAttemptLimit,
   ) {}
 
   /**
@@ -129,6 +131,14 @@ export class AuthController {
   @Throttle({ default: RATE_LIMITS.authLogin })
   async login(@Body() body: LoginDto, @Req() req: any, @Res({ passthrough: true }) res: Response) {
     if (!body?.email || !body?.password) throw new BadRequestException({ code: 'MISSING_CREDENTIALS', message: 'email and password are required' });
+    // Before the password check and without reading the account: a known and an unknown
+    // account get the same answer (login-attempt-limit.ts). The attempts refused during a block
+    // are not recorded: the event is written once, when the block starts (below).
+    const attempt = await this.loginAttempts.begin(req, body.email);
+    if (attempt.blocked) {
+      res.setHeader('Retry-After', String(attempt.retryAfterSeconds));
+      throw new ThrottlerException();
+    }
     let signedIn: { userId: string; tokens: Awaited<ReturnType<AuthService['signTokens']>> };
     try {
       signedIn = await this.runInRequestTenant(req, async (manager) => {
@@ -144,8 +154,17 @@ export class AuthController {
     } catch (error) {
       // After the rollback of the sign-in transaction: the event is written apart from it.
       this.recordRefusal(req, 'login_failed', error);
+      if (authRefusalOf(error)) {
+        if (await this.loginAttempts.refused(attempt)) {
+          this.recordAuthEvent(req, { action: 'login_failed', reason: 'too_many_attempts' });
+        }
+      } else {
+        // Not a decision on the password (server error, database unavailable): it does not count.
+        await this.loginAttempts.withdraw(attempt);
+      }
       throw error;
     }
+    await this.loginAttempts.succeeded(attempt);
     this.recordAuthEvent(req, { action: 'login', userId: signedIn.userId });
     setRefreshTokenCookie(res, signedIn.tokens.refresh_token, signedIn.tokens.refresh_expires_in, isSecureRequest(req));
     return this.toTokenResponse(signedIn.tokens);

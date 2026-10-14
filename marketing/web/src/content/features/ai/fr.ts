@@ -4,12 +4,12 @@ const content: FeatureContent = {
   meta: {
     title: 'Plaid, Assistant IA pour la gouvernance IT',
     description:
-      "Interrogez Plaid sur vos données IT. Créez des documents, mettez à jour des tâches, connectez n'importe quel outil IA via MCP. Usage inclus sur le cloud hébergé. Open source.",
+      "Interrogez Plaid sur vos données IT. Créez des documents, mettez à jour des tâches, ajoutez KANAP à Claude en deux clics. Usage inclus sur le cloud hébergé. Open source.",
   },
   header: {
     eyebrow: 'Plaid · Assistant IA',
     title: 'Posez à KANAP toutes vos questions sur votre IT.',
-    lead: "Plaid répond sur votre budget, vos applications, vos projets et votre documentation, et effectue des changements quand vous le demandez. Chaque écriture vous est montrée avant son exécution. Utilisez-le dans KANAP, ou connectez-le à vos propres outils IA via MCP.",
+    lead: "Plaid répond sur votre budget, vos applications, vos projets et votre documentation, et effectue des changements quand vous le demandez. Chaque écriture vous est montrée avant son exécution. Utilisez-le dans KANAP, ou ajoutez KANAP à Claude avec son adresse et un clic.",
   },
   sections: [
     {
@@ -35,22 +35,22 @@ const content: FeatureContent = {
       shotAlt: 'Plaid montrant un aperçu de mises à jour de tâches',
     },
     {
-      title: "MCP, utilisez KANAP depuis n'importe quel outil IA",
-      body: 'KANAP expose un serveur MCP (Model Context Protocol) complet. Connectez Claude Desktop, Cursor, Windsurf ou tout client compatible, et interrogez vos données de gouvernance IT sans quitter votre flux.',
+      title: 'Ajoutez KANAP à Claude en deux clics',
+      body: "Collez votre adresse KANAP dans Claude comme connecteur personnalisé, connectez-vous, cliquez sur Autoriser. Claude répond alors à partir de votre budget, de vos applications, de vos projets et de vos documents. Aucune clé à créer ni à copier. Cela fonctionne dans Claude, Claude Desktop et Claude Code.",
       bullets: [
-        'Protocole MCP standard, compatible avec tout client',
-        'Authentification par clé API avec scoping granulaire',
-        'Les mêmes requêtes en lecture que le chat intégré (MCP est en lecture seule)',
-        'Conservez vos flux IA existants, ajoutez le contexte KANAP',
+        'Chaque personne se connecte avec son propre compte KANAP',
+        "En lecture seule, dans la limite des droits de cette personne",
+        "Chaque utilisateur voit ses applications connectées et les déconnecte en un clic",
+        'Les clés API restent disponibles pour les scripts et les autres clients MCP',
       ],
-      shotAlt: 'Configuration MCP avec scoping de clé API',
+      shotAlt: 'Réglages des clés API MCP',
     },
     {
       title: 'Contrôle et conformité totaux',
       body: 'Plaid respecte vos règles. Chaque action est régie par les permissions utilisateur. Les administrateurs gardent le contrôle total sur ce que Plaid peut ou ne peut pas faire.',
       bullets: [
         'Respect total des permissions utilisateur sur chaque requête',
-        'Clés API sécurisées avec scoping MCP granulaire',
+        "Connexions et clés MCP limitées aux droits de chaque utilisateur, révocables à tout moment",
         'Recherche web activable ou désactivable indépendamment',
         'Aperçu et confirmation de toutes les écritures',
         'Accès en lecture seule via les rôles pour des déploiements prudents',

@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/com
 import { InjectRepository } from '@nestjs/typeorm';
 import Ajv, { ErrorObject, ValidateFunction } from 'ajv';
 import addFormats from 'ajv-formats';
+import { describeAjvErrors, invalidInputMessage } from './ai-input-validation.util';
 import { Repository } from 'typeorm';
 import { AiExecutionContextWithManager } from '../../ai.types';
 import {
@@ -150,6 +151,8 @@ export class AiCapabilityDispatcherService {
     coerceTypes: false,
     strict: false,
     validateSchema: false,
+    // The schema of each error (its accepted field names) for the refusal message.
+    verbose: true,
   });
   private readonly inputValidators = new Map<string, ValidateFunction>();
 
@@ -214,8 +217,10 @@ export class AiCapabilityDispatcherService {
     if (validator(value)) {
       return;
     }
+    // The message is what the caller's model reads (MCP tool result, Plaid tool error): it names
+    // each field and why.
     throw new BadRequestException({
-      message: 'Capability input validation failed.',
+      message: invalidInputMessage(contract.name, describeAjvErrors(validator.errors)),
       errors: this.formatValidationErrors(validator.errors),
     });
   }

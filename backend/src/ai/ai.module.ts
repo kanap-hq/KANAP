@@ -67,6 +67,9 @@ import { AiSystemPromptService } from './ai-system-prompt.service';
 import { AiToolRegistry } from './ai-tool.registry';
 import { McpApiKeyAuthGuard } from './auth/mcp-api-key-auth.guard';
 import { McpApiKeyHashService } from './auth/mcp-api-key-hash.service';
+import { CimdFetcherService } from './oauth/cimd-fetcher.service';
+import { McpOAuthController, McpOAuthMetadataController } from './oauth/mcp-oauth.controller';
+import { McpOAuthService } from './oauth/mcp-oauth.service';
 import { AiActionRequestService } from './control-plane/action-request/ai-action-request.service';
 import { AiAgentActionPlannerService } from './control-plane/agent-control/ai-agent-action-planner.service';
 import { AiAgentControlController } from './control-plane/agent-control/ai-agent-control.controller';
@@ -246,12 +249,16 @@ import { BraveSearchService } from './web-search/brave-search.service';
     AiApiKeysController,
     AiIntegrationsController,
     AiMcpController,
+    McpOAuthMetadataController,
+    McpOAuthController,
     AiSearchController,
     AiAgentControlController,
   ],
   providers: [
     AiTenantExecutionService,
     McpApiKeyHashService,
+    CimdFetcherService,
+    McpOAuthService,
     AiSettingsService,
     AiModelConfigService,
     AiModelResolverService,

@@ -370,9 +370,11 @@ In the OPEX workspace, use the **Tasks** panel on the **Overview** tab to create
 - "Negotiate volume discount"
 
 ### From Contracts
-In the Contract workspace, use the **Tasks** tab for:
-- "Review contract before renewal deadline"
+In a contract's **Overview**, use the **Tasks** section for:
 - "Request updated terms from vendor"
+- "Collect the signed amendment"
+
+You do not need to create renewal tasks yourself: KANAP gives the contract's owner a task when a renewal decision is due. See [Contracts](contracts.md#renewal-decisions).
 
 ### From CAPEX lines
 In the CAPEX workspace, tasks track project milestones:

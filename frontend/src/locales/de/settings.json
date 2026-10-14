@@ -4,6 +4,7 @@
     "profile": "Profil",
     "notifications": "Benachrichtigungen",
     "appearance": "Darstellung",
+    "connectedApps": "Verbundene Apps",
     "about": "Über"
   },
   "profile": {
@@ -92,5 +93,23 @@
     "deploymentOnPremise": "Bereitstellung: On-Premise",
     "releaseNotes": "Versionshinweise",
     "upgradeGuide": "Upgrade-Anleitung"
+  },
+  "connectedApps": {
+    "title": "Verbundene Anwendungen",
+    "subtitle": "Diese Anwendungen können Ihre KANAP-Daten mit Ihren Zugriffsrechten lesen.",
+    "empty": "Keine verbundenen Anwendungen.",
+    "howTo": "So verbinden Sie Claude",
+    "connectedOn": "Verbunden am {{date}}",
+    "createdOn": "Erstellt am {{date}}",
+    "lastUsed": "zuletzt verwendet {{date}}",
+    "never": "nie",
+    "disconnect": "Trennen",
+    "confirm": {
+      "title": "{{client}} trennen?",
+      "body": "{{client}} verliert sofort den Zugriff auf Ihre KANAP-Daten. Um die Anwendung wieder zu nutzen, verbinden Sie sie dort erneut."
+    },
+    "apiKeys": "API-Schlüssel",
+    "loadFailed": "Ihre verbundenen Anwendungen konnten nicht geladen werden.",
+    "disconnectFailed": "Diese Anwendung konnte nicht getrennt werden."
   }
 }

@@ -250,7 +250,8 @@ export class UsersService {
       .addSelect(expertiseSql, 'areas_of_expertise')
       .addSelect(displayNameSql, 'display_name')
       .orderBy(sortField, sort.direction, 'NULLS LAST')
-      .addOrderBy('u.email', 'ASC')
+      // A tie-break on another expression: one on u.email would replace the email sort itself.
+      .addOrderBy('u.id', 'ASC')
       .offset(skip)
       .limit(limit)
       .getRawMany();

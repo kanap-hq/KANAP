@@ -60,6 +60,8 @@ type PortfolioDetailWorkspaceShellProps = {
   properties?: React.ReactNode;
   tabs: PortfolioDetailWorkspaceTab[];
   title: string;
+  /** Replaces the click-to-edit title, for a title made of several fields (a contact's first and last name). */
+  titleEditor?: React.ReactNode;
   titleFallback: string;
 };
 
@@ -256,6 +258,7 @@ export default function PortfolioDetailWorkspaceShell({
   properties,
   tabs,
   title,
+  titleEditor,
   titleFallback,
 }: PortfolioDetailWorkspaceShellProps) {
   const theme = useTheme();
@@ -432,12 +435,14 @@ export default function PortfolioDetailWorkspaceShell({
                   </Box>
                 )}
                 <Box sx={{ flex: 1, minWidth: isCompact ? '100%' : 0, overflowWrap: 'anywhere' }}>
-                  <EditableTitle
-                    value={title}
-                    fallback={titleFallback}
-                    canEdit={canEditTitle}
-                    onSave={onTitleSave}
-                  />
+                  {titleEditor ?? (
+                    <EditableTitle
+                      value={title}
+                      fallback={titleFallback}
+                      canEdit={canEditTitle}
+                      onSave={onTitleSave}
+                    />
+                  )}
                 </Box>
               </Box>
 

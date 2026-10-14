@@ -262,6 +262,7 @@ La pestaña se organiza en cuatro bloques, en el orden de un análisis de impact
 **Datos**:
 - La **Confidencialidad de los datos** utiliza el catálogo de clases de datos de la organización.
 - **Contiene datos personales** y **Residencia de los datos** completan la visión de los datos.
+- Los datos personales, la criticidad de negocio y cibernética, y el alojamiento de las instancias deciden también qué cláusulas se esperan en los contratos vinculados a la aplicación. Vea la pestaña **Conformidad** en [Contratos](contracts.md#conformidad).
 
 **Continuidad y recuperación**:
 - La **ola de recuperación** indica el orden de restauración; no representa una duración ni una gravedad.

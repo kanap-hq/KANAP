@@ -12,7 +12,7 @@ Navigate to **Master Data > Contacts** to see your contact directory. Click **Ne
 **Strongly recommended**:
 - **First Name** / **Last Name**: The contact's name
 - **Supplier**: Which vendor this contact works for
-- **Contact type**: The contact's role at the supplier (Commercial, Technical, Support, or Other) -- available once a supplier is selected
+- **Contact type**: The contact's role at the supplier (Commercial, Technical, Support, or Other). Choosing a supplier sets it to Commercial; change it if needed.
 
 **Optional but useful**:
 - **Job Title**: Their role or position
@@ -25,7 +25,7 @@ Navigate to **Master Data > Contacts** to see your contact directory. Click **Ne
 
 ## Working with the list
 
-The Contacts grid provides a searchable directory of all external contacts. Every cell in a row is a clickable link that opens the contact workspace.
+The Contacts grid provides a searchable directory of all external contacts. Every cell in a row is a clickable link that opens the contact page.
 
 **Default columns**:
 - **Last Name** / **First Name**: Contact name
@@ -49,37 +49,56 @@ The Contacts grid provides a searchable directory of all external contacts. Ever
 
 ---
 
-## The Contacts workspace
+## The contact page
 
-Click any row to open the workspace. It has one tab.
+Click any row to open the contact page. Every change saves on its own: there is no save button.
 
-### Overview
+**Title**: The contact's name. Click it to edit the first and last name side by side; the change saves when you leave the two fields or press Enter, and Escape cancels it. A contact without a name shows its email instead.
 
-**What you can edit**:
-- **Email**: Email address (required)
-- **First Name** / **Last Name**: Contact's name
-- **Supplier**: Link to a supplier from master data
-- **Contact type**: The contact's role at the supplier -- Commercial, Technical, Support, or Other. This field becomes available once a supplier is selected. If you clear the supplier, the contact type is cleared as well.
-- **Job Title**: Their role or position
-- **Phone** / **Mobile**: Phone numbers. Each has a country dial code picker alongside the local number field. Entering a dial code auto-suggests the country if none is set.
-- **Country**: Location, selected from a searchable list of ISO country codes
-- **Active**: Whether this contact is currently active
-- **Notes**: Free-form notes (up to 2,000 characters)
+**Header**, under the name:
+- **Supplier**: The vendor this contact works for, as a link to its page. A contact without a supplier shows **No supplier**: click it to open the properties and choose one.
+- **Contact type**: The contact's role at the supplier: Commercial, Technical, Support, or Other. Click it to choose another. It appears once the contact has a supplier.
+- **Status**: **Active** or **Inactive**. Click it to change it.
+- **Used by**: How many suppliers, budget lines, contracts and other items the contact is linked to. Click it to scroll to the **Used by** section.
+
+**Properties** (the panel on the right, opened with its tab or the `P` key):
+- **Supplier**: Choose the vendor from the list. A contact always has a contact type once it has a supplier: choosing a supplier for a contact without a type gives it **Commercial**, which you can change at once. Clearing the supplier clears the contact type too.
+- **Contact type**: The same choice as in the header.
+- **Email**: Required, and unique across your contacts.
+- **Job title**: Their role or position.
+- **Phone** / **Mobile**: A dial code and a number. Pick the dial code from the list or type it. When the contact has no country yet, the dial code sets it.
+- **Country**: Searchable list of countries.
+
+Text fields save when you leave them or press Enter, lists save as soon as you choose. A value KANAP cannot accept (an email that is not valid or that another contact already uses, a phone number that is not a dial code followed by a number of 7 to 15 digits in all) shows its message under the field and is not saved.
+
+**Notes**: Free-form notes (up to 2,000 characters), under the header. They save a moment after you stop typing, and when you leave the field.
+
+Press **Escape** or click the close button to go back to the list.
+
+### Used by
+
+The **Used by** section, under the notes, lists everything the contact is linked to, one list per type, each with its count: suppliers, budget lines (OPEX and CAPEX, with their `BL-` reference), contracts, applications, assets, locations, projects (`PRJ-`) and requests (`REQ-`). Each row shows the contact's role there: the contact type for suppliers, budget lines and contracts, the role typed on the application, asset or location.
+
+Click a row to open that page. A list shows up to 50 items and says how many there are in all. You only see the lists you are allowed to read. A contact linked to nothing shows one line that says so.
+
+### Creating a contact
+
+Click **New** in the list. Fill in the email (required) and the other fields, then click **Create**. Choosing a supplier sets the contact type to **Commercial**, which you can change before creating. You return to the list once the contact is created.
 
 ---
 
 ## Where contacts are used
 
-Contacts appear in several places throughout KANAP.
+Contacts appear in several places throughout KANAP. The **Used by** section of the contact page lists them all.
 
 ### Supplier contacts
 
 Each supplier has a **Contacts** tab showing all contacts linked to that vendor. You can create a new contact directly from the supplier workspace:
 
 1. Open the supplier workspace and go to the **Contacts** tab.
-2. Click **Create** next to a contact role.
-3. Fill in the contact details -- the supplier and contact type are pre-filled.
-4. After saving, you are returned to the supplier workspace automatically.
+2. Click **New contact** next to a contact type.
+3. Fill in the contact details: the supplier and contact type are pre-filled.
+4. Click **Create**: you return to the supplier's **Contacts** tab.
 
 ### Application support
 

@@ -9,7 +9,8 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import SettingsIcon from '@mui/icons-material/Settings';
 import ChipToggleBar from '../../components/ChipToggleBar';
-import { coaCoverage, coaRoleLabels, useCountryName } from './coaRoles';
+import { coaCoverage, coaRoleLabels } from './coaRoles';
+import { useCountryName } from '../../i18n/countries';
 import { CoaListItem } from './useCoaList';
 
 export default function CoaChipBar({

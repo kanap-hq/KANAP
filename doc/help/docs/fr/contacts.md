@@ -12,7 +12,7 @@ Naviguez vers **Données de référence > Contacts** pour voir votre répertoire
 **Fortement recommandé** :
 - **Prénom** / **Nom** : Le nom du contact
 - **Fournisseur** : Chez quel vendeur travaille ce contact
-- **Type de contact** : Le rôle du contact chez le fournisseur (Commercial, Technique, Support ou Autre) — disponible une fois qu'un fournisseur est sélectionné
+- **Type de contact** : Le rôle du contact chez le fournisseur (Commercial, Technique, Support ou Autre). Choisir un fournisseur le règle sur Commercial ; changez-le si besoin.
 
 **Optionnel mais utile** :
 - **Intitulé de poste** : Son rôle ou sa fonction
@@ -25,7 +25,7 @@ Naviguez vers **Données de référence > Contacts** pour voir votre répertoire
 
 ## Travailler avec la liste
 
-La grille Contacts fournit un répertoire consultable de tous les contacts externes. Chaque cellule d'une ligne est un lien cliquable qui ouvre l'espace de travail du contact.
+La grille Contacts fournit un répertoire consultable de tous les contacts externes. Chaque cellule d'une ligne est un lien cliquable qui ouvre la fiche du contact.
 
 **Colonnes par défaut** :
 - **Nom** / **Prénom** : Nom du contact
@@ -49,37 +49,56 @@ La grille Contacts fournit un répertoire consultable de tous les contacts exter
 
 ---
 
-## L'espace de travail Contacts
+## La fiche contact
 
-Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. Il comporte un seul onglet.
+Cliquez sur une ligne pour ouvrir la fiche du contact. Chaque modification s'enregistre d'elle-même : il n'y a pas de bouton d'enregistrement.
 
-### Vue d'ensemble
+**Titre** : le nom du contact. Cliquez dessus pour modifier le prénom et le nom côte à côte ; la modification s'enregistre quand vous quittez les deux champs ou appuyez sur Entrée, et Échap l'annule. Un contact sans nom affiche son e-mail à la place.
 
-**Ce que vous pouvez modifier** :
-- **Email** : Adresse email (obligatoire)
-- **Prénom** / **Nom** : Nom du contact
-- **Fournisseur** : Lien vers un fournisseur des données de référence
-- **Type de contact** : Le rôle du contact chez le fournisseur — Commercial, Technique, Support ou Autre. Ce champ devient disponible une fois qu'un fournisseur est sélectionné. Si vous effacez le fournisseur, le type de contact est également effacé.
-- **Intitulé de poste** : Son rôle ou sa fonction
-- **Téléphone** / **Mobile** : Numéros de téléphone. Chacun dispose d'un sélecteur d'indicatif pays à côté du champ de numéro local. La saisie d'un indicatif suggère automatiquement le pays si aucun n'est défini.
-- **Pays** : Localisation, sélectionnée à partir d'une liste consultable de codes pays ISO
-- **Actif** : Si ce contact est actuellement actif
-- **Notes** : Notes libres (jusqu'à 2 000 caractères)
+**En-tête**, sous le nom :
+- **Fournisseur** : le fournisseur pour lequel travaille ce contact, sous forme de lien vers sa fiche. Un contact sans fournisseur affiche **Aucun fournisseur** : cliquez dessus pour ouvrir les propriétés et en choisir un.
+- **Type de contact** : le rôle du contact chez le fournisseur : Commercial, Technique, Support ou Autre. Cliquez dessus pour en choisir un autre. Il apparaît dès que le contact a un fournisseur.
+- **Statut** : **Actif** ou **Inactif**. Cliquez dessus pour le changer.
+- **Lié à** : le nombre de fournisseurs, lignes budgétaires, contrats et autres éléments liés au contact. Cliquez dessus pour aller à la section **Lié à**.
+
+**Propriétés** (le panneau de droite, ouvert par son onglet ou la touche `P`) :
+- **Fournisseur** : choisissez le fournisseur dans la liste. Un contact qui a un fournisseur a toujours un type de contact : choisir un fournisseur pour un contact sans type lui donne **Commercial**, que vous pouvez changer aussitôt. Retirer le fournisseur retire aussi le type de contact.
+- **Type de contact** : le même choix que dans l'en-tête.
+- **E-mail** : obligatoire, et unique parmi vos contacts.
+- **Fonction** : son rôle ou son poste.
+- **Téléphone** / **Mobile** : un indicatif et un numéro. Choisissez l'indicatif dans la liste ou saisissez-le. Quand le contact n'a pas encore de pays, l'indicatif le renseigne.
+- **Pays** : liste de pays avec recherche.
+
+Les champs de texte s'enregistrent quand vous les quittez ou appuyez sur Entrée, les listes dès que vous choisissez. Une valeur que KANAP ne peut pas accepter (un e-mail invalide ou déjà utilisé par un autre contact, un téléphone qui n'est pas un indicatif suivi d'un numéro de 7 à 15 chiffres au total) affiche son message sous le champ et n'est pas enregistrée.
+
+**Notes** : notes libres (jusqu'à 2 000 caractères), sous l'en-tête. Elles s'enregistrent un instant après la fin de la saisie, et quand vous quittez le champ.
+
+Appuyez sur **Échap** ou cliquez sur le bouton de fermeture pour revenir à la liste.
+
+### Lié à
+
+La section **Lié à**, sous les notes, liste tout ce à quoi le contact est lié, une liste par type, chacune avec son nombre : fournisseurs, lignes budgétaires (OPEX et CAPEX, avec leur référence `BL-`), contrats, applications, actifs, sites, projets (`PRJ-`) et demandes (`REQ-`). Chaque ligne indique le rôle du contact : le type de contact pour les fournisseurs, les lignes budgétaires et les contrats, le rôle saisi sur l'application, l'actif ou le site.
+
+Cliquez sur une ligne pour ouvrir sa fiche. Une liste montre jusqu'à 50 éléments et indique leur nombre total. Vous ne voyez que les listes que vous avez le droit de lire. Un contact lié à rien affiche une ligne qui le dit.
+
+### Créer un contact
+
+Cliquez sur **Nouveau** dans la liste. Renseignez l'e-mail (obligatoire) et les autres champs, puis cliquez sur **Créer**. Choisir un fournisseur règle le type de contact sur **Commercial**, que vous pouvez changer avant de créer. Vous revenez à la liste une fois le contact créé.
 
 ---
 
 ## Où les contacts sont utilisés
 
-Les contacts apparaissent à plusieurs endroits dans KANAP.
+Les contacts apparaissent à plusieurs endroits dans KANAP. La section **Lié à** de la fiche contact les liste tous.
 
 ### Contacts fournisseur
 
 Chaque fournisseur dispose d'un onglet **Contacts** affichant tous les contacts liés à ce vendeur. Vous pouvez créer un nouveau contact directement depuis l'espace de travail du fournisseur :
 
 1. Ouvrez l'espace de travail du fournisseur et allez dans l'onglet **Contacts**.
-2. Cliquez sur **Créer** à côté d'un rôle de contact.
-3. Remplissez les détails du contact — le fournisseur et le type de contact sont pré-remplis.
-4. Après l'enregistrement, vous êtes automatiquement redirigé vers l'espace de travail du fournisseur.
+2. Cliquez sur **Nouveau contact** à côté d'un type de contact.
+3. Remplissez les détails du contact : le fournisseur et le type de contact sont pré-remplis.
+4. Cliquez sur **Créer** : vous revenez à l'onglet **Contacts** du fournisseur.
 
 ### Support applicatif
 

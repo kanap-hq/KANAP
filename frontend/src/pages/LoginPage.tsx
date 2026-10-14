@@ -2,18 +2,54 @@ import { useEffect, useState } from 'react';
 import { Alert, Box, Button, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import api from '../api';
 import { useAuth } from '../auth/AuthContext';
 import AuthFrame from '../components/AuthFrame';
 import { useTenant } from '../tenant/TenantContext';
 import { useFeatures } from '../config/FeaturesContext';
+import { getApiErrorMessage } from '../utils/apiErrorMessage';
+import { oauthReturnPath } from '../auth/loginRedirect';
 
 const marketingUrl = import.meta.env.VITE_MARKETING_URL ?? 'https://kanap.net';
-// Signing in always lands on the home page: no memory of the page the user was on.
-const postLoginPath = '/';
+// Signing in lands on the home page: no memory of the page the user was on. The one exception is
+// the consent page of an MCP connection (`?returnTo=/oauth/authorize?…`), see oauthReturnPath.
+
+/** Whole minutes of a 429's `Retry-After` (in seconds), rounded up; null without a usable value. */
+function retryAfterMinutes(err: any): number | null {
+  const value = String(err?.response?.headers?.['retry-after'] ?? '').trim();
+  if (!/^\d+$/.test(value) || Number(value) <= 0) return null;
+  return Math.ceil(Number(value) / 60);
+}
+
+/** A 400 from the request check that names the e-mail field: the address typed is not an e-mail. */
+function isInvalidEmail(err: any): boolean {
+  const data = err?.response?.data;
+  if (err?.response?.status !== 400 || data?.code) return false;
+  const messages = Array.isArray(data?.message) ? data.message : [data?.message];
+  return messages.some((message: unknown) => typeof message === 'string' && /\bemail\b/i.test(message));
+}
+
+/**
+ * The message of a refused sign-in: a rate limit has its own sentence, with the wait the server
+ * gives when it gives one; an address that is not an e-mail has its own sentence; an answer with a
+ * code goes through the shared error messages; anything else (no answer, another validation
+ * error) is the plain failure sentence.
+ */
+function signInErrorMessage(err: any, t: TFunction): string {
+  const fallback = t('auth:login.failed');
+  if (err?.response?.status === 429) {
+    const minutes = retryAfterMinutes(err);
+    return minutes === null ? t('auth:login.tooManyAttempts') : t('auth:login.tooManyAttemptsWait', { count: minutes });
+  }
+  if (isInvalidEmail(err)) return t('auth:login.invalidEmail');
+  const code = err?.response?.data?.code;
+  if (typeof code === 'string' && code.trim()) return getApiErrorMessage(err, t, fallback);
+  return fallback;
+}
 
 export default function LoginPage() {
-  const { t } = useTranslation(['auth', 'common']);
+  const { t } = useTranslation(['auth', 'common', 'errors']);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -21,6 +57,7 @@ export default function LoginPage() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const sessionExpired = searchParams.get('sessionExpired') === 'true';
+  const postLoginPath = oauthReturnPath(searchParams.get('returnTo'));
   const [infoMessage, setInfoMessage] = useState<string | null>(() => {
     const state = location.state as any;
     if (state?.passwordResetSuccess) {
@@ -69,7 +106,7 @@ export default function LoginPage() {
       login(res.data as { access_token: string; expires_in: number; refresh_expires_in?: number });
       navigate(postLoginPath, { replace: true });
     } catch (err: any) {
-      setError(err?.response?.data?.message || 'Login failed');
+      setError(signInErrorMessage(err, t));
     }
   };
 

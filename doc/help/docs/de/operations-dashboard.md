@@ -61,7 +61,7 @@ Klicken Sie auf **Alle anzeigen**, um die Aufgaben-Seite zu öffnen.
 
 ### Nächste Verlängerungen
 
-Listet die nächsten fünf Vertragskündigungsfristen auf, die noch in der Zukunft liegen. Vergangene Fristen werden automatisch herausgefiltert, sodass Sie nur sehen, was ansteht.
+Listet die fünf Verträge, die als Nächstes fällig sind, heute eingeschlossen, in der Reihenfolge der Spalte **Nächste Frist** der Vertragsliste: Ein Vertrag mit stillschweigender Verlängerung erscheint mit seinem nächsten Kündigungstermin, jeder andere Vertrag mit seinem Ende. Abgelaufene Verträge erscheinen nicht.
 
 Klicken Sie auf **Alle anzeigen**, um die Verträge-Seite zu öffnen.
 

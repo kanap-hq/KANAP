@@ -28,22 +28,23 @@ type ContactSelectProps = {
   helperText?: React.ReactNode;
   required?: boolean;
   query?: string; // initial query
-  showEmail?: boolean;
-  compactOptions?: boolean;
   groupByCompany?: boolean;
   hideLabel?: boolean;
   placeholder?: string;
   textFieldSx?: SxProps<Theme>;
 };
 
-function formatLabel(c: Contact, showEmail: boolean, compactOptions = false): string {
-  const fullName = [c.first_name, c.last_name].filter(Boolean).join(' ').trim();
-  const name = fullName || c.email;
-  const supplier = c.supplier_name ? ` — ${c.supplier_name}` : '';
-  if (compactOptions) return `${name}${supplier}`;
-  if (!showEmail) return name;
-  return fullName ? `${fullName}${supplier} (${c.email})` : c.email;
+/** A contact is named, never shown by email: the email only stands in for a contact with no name. */
+function contactName(c: Contact): string {
+  return [c.first_name, c.last_name].filter(Boolean).join(' ').trim() || c.email;
 }
+
+/** "Name — supplier", the one line a contact takes in the field and in the list. */
+function formatLabel(c: Contact): string {
+  return c.supplier_name ? `${contactName(c)} — ${c.supplier_name}` : contactName(c);
+}
+
+const optionLineSx = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 } as const;
 
 const ContactSelect = React.forwardRef<HTMLInputElement, ContactSelectProps>(function ContactSelect(
   {
@@ -56,8 +57,6 @@ const ContactSelect = React.forwardRef<HTMLInputElement, ContactSelectProps>(fun
     helperText,
     required = false,
     query = '',
-    showEmail = true,
-    compactOptions = false,
     groupByCompany = true,
     hideLabel = false,
     placeholder,
@@ -116,16 +115,22 @@ const ContactSelect = React.forwardRef<HTMLInputElement, ContactSelectProps>(fun
         if (reason === 'input') setInput(newValue);
         else if (reason === 'clear') setInput('');
       }}
-      getOptionLabel={(option) => formatLabel(option as Contact, showEmail, compactOptions)}
+      getOptionLabel={(option) => formatLabel(option as Contact)}
       groupBy={groupByCompany ? (option) => (option as Contact).supplier_name || t('selects.noSupplier') : undefined}
       ListboxProps={naked ? { sx: drawerAutocompleteListboxSx } : undefined}
-      renderOption={(props, option) => (
-        <li {...props}>
-          <span className="kanap-autocomplete-option-primary">
-            {formatLabel(option as Contact, showEmail, compactOptions)}
-          </span>
-        </li>
-      )}
+      renderOption={(props, option) => {
+        // Grouped by supplier, the group header already names it.
+        const text = groupByCompany ? contactName(option as Contact) : formatLabel(option as Contact);
+        // React wants the key passed on its own, not spread with the other props.
+        const { key, ...optionProps } = props as typeof props & { key: React.Key };
+        return (
+          <li key={key} {...optionProps}>
+            <Box component="span" className="kanap-autocomplete-option-primary" sx={optionLineSx} title={text}>
+              {text}
+            </Box>
+          </li>
+        );
+      }}
       renderInput={(params) => (
         <TextField
           {...params}
@@ -136,6 +141,8 @@ const ContactSelect = React.forwardRef<HTMLInputElement, ContactSelectProps>(fun
           helperText={helperText}
           variant="standard"
           sx={textFieldSx}
+          // A hidden label still names the field for assistive technologies.
+          inputProps={naked && label ? { ...params.inputProps, 'aria-label': label } : params.inputProps}
           InputProps={{
             ...params.InputProps,
             endAdornment: (

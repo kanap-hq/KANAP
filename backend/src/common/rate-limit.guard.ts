@@ -17,6 +17,17 @@ export class RateLimitGuard extends ThrottlerGuard {
 }
 
 /**
+ * Same limits, counted per client address and tenant: callers that many tenants share, such as
+ * the servers of a hosted MCP client calling the OAuth token route, get one budget per tenant.
+ */
+@Injectable()
+export class TenantRateLimitGuard extends RateLimitGuard {
+  protected async getTracker(req: Record<string, any>): Promise<string> {
+    return `${await super.getTracker(req)}:${req?.tenant?.id ?? '-'}`;
+  }
+}
+
+/**
  * Same limits, counted per signed-in user (tenant and user id) rather than per
  * address: several users behind one company proxy do not share a budget. Runs
  * after the authentication guard; without a user it counts per address.

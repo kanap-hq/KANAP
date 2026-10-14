@@ -65,7 +65,7 @@ const content: SecurityContent = {
       'Rol de administrador a nivel de workspace separado de los administradores de módulo',
       'SSO vía Microsoft Entra ID (OIDC) tanto en nube como en autoalojado',
       'Autenticación local con contraseña usando Argon2 + flujos opcionales de restablecimiento de contraseña',
-      'Los intentos de inicio de sesión se limitan por dirección IP: 5 intentos con contraseña y 60 solicitudes de inicio de sesión con Microsoft por minuto. Detrás de un proxy inverso, el límite cuenta la dirección IP de cada usuario',
+      'Los intentos de inicio de sesión se limitan por dirección IP: 60 solicitudes de inicio de sesión con contraseña y 60 solicitudes de inicio de sesión con Microsoft por minuto. Tras 5 intentos fallidos de contraseña en una cuenta desde una dirección IP en 15 minutos, esa dirección espera 15 minutos antes de volver a intentarlo con esa cuenta. Detrás de un proxy inverso, los límites cuentan la dirección IP de cada usuario',
       'Los tokens de sesión solo se aceptan con el único algoritmo de firma con el que KANAP los emite',
       'Plaid y MCP aplican el mismo RBAC que la interfaz, sin escalada de privilegios',
       'Tokens API ligados a usuarios individuales, revocables en cualquier momento',
