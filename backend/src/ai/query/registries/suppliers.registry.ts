@@ -26,6 +26,7 @@ export const suppliersRegistry: AiEntityFilterRegistry = {
   },
   sortFields: {
     label: 'name',
+    name: 'name',
     status: 'status',
     erp_supplier_id: 'erp_supplier_id',
     created_at: 'created_at',
