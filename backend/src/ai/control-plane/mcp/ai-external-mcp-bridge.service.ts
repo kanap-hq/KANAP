@@ -14,9 +14,10 @@ import { hashStableJson } from '../evidence/ai-evidence.service';
 import { parseCredentialRef } from '../providers/adapter-config.service';
 import { AdapterErrorCode, AdapterEvidenceSeed, AdapterResult } from '../providers/provider.types';
 import { AiExternalMcpMockTransport, ExternalMcpMockToolDefinition } from './ai-external-mcp-mock-transport.service';
+import { EMAIL_ADDRESSES } from '../../../common/text-scan';
 
 const SECRET_KEY_RE = /(api[-_]?key|token|secret|password|authorization|cookie|session|client_secret)/i;
-const EMAIL_RE = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
+const EMAIL_RE = EMAIL_ADDRESSES;
 const IPV4_RE = /\b(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)\b/g;
 const BEARER_RE = /\bBearer\s+[A-Za-z0-9._~+/=-]{12,}\b/gi;
 const SECRET_ASSIGNMENT_RE = /\b(password|token|secret|api[-_]?key)\s*[:=]\s*[^ \n\r\t]+/gi;

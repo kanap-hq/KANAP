@@ -1,5 +1,12 @@
 import { marked } from 'marked';
 import TurndownService = require('turndown');
+import { containsInlineDataImageText, withoutDataImagePayloads } from './markdown-limits';
+
+/**
+ * HTML and Markdown conversions with the Markdown parser and turndown. Runs in
+ * the Markdown workers: the API calls these functions through markdown-worker.ts,
+ * which bounds their time.
+ */
 
 const HTML_TAG_REGEX_FALLBACK = /<\/?(p|h[1-6]|ul|ol|li|blockquote|pre|code|strong|em|a|img|table|thead|tbody|tr|td|th|div|span|br|hr|mark|u)\b[^>]*>/i;
 const MARKDOWN_AUTOLINK_REGEX_FALLBACK = /^<https?:\/\/[^>\s]+>$/i;
@@ -119,7 +126,8 @@ export function isAllowedMarkdownHtmlSnippet(value: string): boolean {
 
 function parseTokens(content: string): MarkdownToken[] | null {
   try {
-    return marked.lexer(content, { gfm: true, breaks: true }) as MarkdownToken[];
+    // Inline image payloads are not parsed (see withoutDataImagePayloads).
+    return marked.lexer(withoutDataImagePayloads(content), { gfm: true, breaks: true }) as MarkdownToken[];
   } catch {
     return null;
   }
@@ -168,34 +176,71 @@ function walkMarkedToken(value: unknown, visit: (token: MarkdownToken) => void):
   }
 }
 
+function collectRawHtmlSnippets(tokens: MarkdownToken[]): string[] {
+  const snippets: string[] = [];
+  const seen = new Set<string>();
+
+  for (const token of tokens) {
+    walkMarkedToken(token, (current) => {
+      if (current.type !== 'html') return;
+      const snippet = normalizeSnippet(current.raw ?? current.text ?? '');
+      if (!snippet || seen.has(snippet)) return;
+      seen.add(snippet);
+      snippets.push(snippet);
+    });
+  }
+
+  return snippets;
+}
+
+/**
+ * Whether the text holds one of the known HTML tags. The test runs on the text up
+ * to its last ">", so every candidate tag has a closing ">" ahead of it and the
+ * first candidate matches at once (linear time).
+ */
+function hasHtmlTagText(text: string): boolean {
+  const lastClose = text.lastIndexOf('>');
+  if (lastClose === -1) return false;
+  return HTML_TAG_REGEX_FALLBACK.test(text.slice(0, lastClose + 1));
+}
+
+function findRawHtmlSnippetsInText(text: string): string[] {
+  if (MARKDOWN_AUTOLINK_REGEX_FALLBACK.test(text)) return [];
+  if (!hasHtmlTagText(text)) return [];
+  const fallbackSnippet = normalizeSnippet(text);
+  return fallbackSnippet ? [fallbackSnippet] : [];
+}
+
 export function findRawHtmlSnippets(content: string): string[] {
   const text = String(content || '').trim();
   if (!text) return [];
 
   const tokens = parseTokens(text);
-  if (tokens) {
-    const snippets: string[] = [];
-    const seen = new Set<string>();
+  return tokens ? collectRawHtmlSnippets(tokens) : findRawHtmlSnippetsInText(text);
+}
 
-    for (const token of tokens) {
-      walkMarkedToken(token, (current) => {
-        if (current.type !== 'html') return;
+function tokensContainDataImage(tokens: MarkdownToken[]): boolean {
+  let found = false;
+  for (const token of tokens) {
+    walkMarkedToken(token, (current) => {
+      if (found) return;
+      if (current.type === 'image') {
+        const href = String((current as any).href ?? '').trim();
+        if (isDataImageUri(href)) {
+          found = true;
+        }
+        return;
+      }
+      if (current.type === 'html') {
         const snippet = normalizeSnippet(current.raw ?? current.text ?? '');
-        if (!snippet || seen.has(snippet)) return;
-        seen.add(snippet);
-        snippets.push(snippet);
-      });
-    }
-
-    return snippets;
+        if (hasDataImageInHtmlSnippet(snippet)) {
+          found = true;
+        }
+      }
+    });
+    if (found) break;
   }
-
-  {
-    if (MARKDOWN_AUTOLINK_REGEX_FALLBACK.test(text)) return [];
-    if (!HTML_TAG_REGEX_FALLBACK.test(text)) return [];
-    const fallbackSnippet = normalizeSnippet(text);
-    return fallbackSnippet ? [fallbackSnippet] : [];
-  }
+  return found;
 }
 
 export function containsInlineDataImage(content: string): boolean {
@@ -203,32 +248,19 @@ export function containsInlineDataImage(content: string): boolean {
   if (!text) return false;
 
   const tokens = parseTokens(text);
-  if (tokens) {
-    let found = false;
-    for (const token of tokens) {
-      walkMarkedToken(token, (current) => {
-        if (found) return;
-        if (current.type === 'image') {
-          const href = String((current as any).href ?? '').trim();
-          if (isDataImageUri(href)) {
-            found = true;
-          }
-          return;
-        }
-        if (current.type === 'html') {
-          const snippet = normalizeSnippet(current.raw ?? current.text ?? '');
-          if (hasDataImageInHtmlSnippet(snippet)) {
-            found = true;
-          }
-        }
-      });
-      if (found) break;
-    }
-    return found;
-  }
+  return tokens ? tokensContainDataImage(tokens) : containsInlineDataImageText(text);
+}
 
-  return /!\[[^\]]*]\(\s*<?data:image\/[a-z0-9.+-]+;base64,[^)>\s]+>?/i.test(text)
-    || /<img\b[^>]*\bsrc\s*=\s*("data:image\/[a-z0-9.+-]+;base64,[^"]*"|'data:image\/[a-z0-9.+-]+;base64,[^']*')[^>]*>/i.test(text);
+/** Raw HTML snippets and inline base64 images of a Markdown content, from a single parse. */
+export function inspectMarkdownContent(content: string): { rawHtmlSnippets: string[]; hasInlineDataImage: boolean } {
+  const text = String(content || '').trim();
+  if (!text) return { rawHtmlSnippets: [], hasInlineDataImage: false };
+
+  const tokens = parseTokens(text);
+  if (tokens) {
+    return { rawHtmlSnippets: collectRawHtmlSnippets(tokens), hasInlineDataImage: tokensContainDataImage(tokens) };
+  }
+  return { rawHtmlSnippets: findRawHtmlSnippetsInText(text), hasInlineDataImage: containsInlineDataImageText(text) };
 }
 
 export function isHtmlContent(content: string): boolean {
@@ -241,7 +273,7 @@ export function isHtmlContent(content: string): boolean {
   }
 
   if (MARKDOWN_AUTOLINK_REGEX_FALLBACK.test(text)) return false;
-  return HTML_TAG_REGEX_FALLBACK.test(text);
+  return hasHtmlTagText(text);
 }
 
 export function resolveHtmlContentSource(content: string): string {

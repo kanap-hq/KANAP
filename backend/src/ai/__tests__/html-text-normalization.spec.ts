@@ -1,7 +1,14 @@
 import * as assert from 'node:assert/strict';
 import { normalizeKnowledgeText, stripWebText } from '../control-plane/agent-control/agent-control-knowledge.util';
 import { normalizeKnowledgeReplyText } from '../control-plane/agent-control/agent-control-timeline-synthesis.util';
+import { findImportedImageReferences } from '../../common/document-import-markdown';
 import { buildMarkdownImage } from '../mutation/operations/import-glpi-ticket.ai-mutation-operation';
+
+/** The Markdown image the GLPI import writes for the `<img>` tag of `html`. */
+function importedImage(html: string, target: string): string {
+  const [reference] = findImportedImageReferences(html);
+  return buildMarkdownImage(reference, target);
+}
 
 function decodesWebTextOnce() {
   assert.equal(stripWebText('<b>R&amp;D</b> &quot;guide&quot; it&#39;s &lt;new&gt;'), 'R&D "guide" it\'s <new>');
@@ -22,11 +29,11 @@ function decodesReplyTextOnce() {
 
 function escapesGlpiImageTitle() {
   assert.equal(
-    buildMarkdownImage('<img src="x" alt="Chart" title="Monthly view">', '/files/1'),
+    importedImage('<img src="x" alt="Chart" title="Monthly view">', '/files/1'),
     '![Chart](/files/1 "Monthly view")',
   );
   assert.equal(
-    buildMarkdownImage('<img src="x" alt="Chart" title=\'Say \\"hi\\" \\\'>', '/files/1'),
+    importedImage('<img src="x" alt="Chart" title=\'Say \\"hi\\" \\\'>', '/files/1'),
     '![Chart](/files/1 "Say \\\\\\"hi\\\\\\" \\\\")',
   );
 }

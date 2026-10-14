@@ -21,7 +21,7 @@ import { PortfolioProjectsBaseService, ServiceOpts } from './portfolio-projects-
 import { computeAutoAllocations } from '../utils/allocation-utils';
 import { formatItemLabel } from '../utils/activity-labels';
 import { detectChanges, PROJECT_TRACKED_FIELDS, resolveDisplayNames } from '../../common/change-detection';
-import { normalizeMarkdownRichText } from '../../common/markdown-rich-text';
+import { normalizeMarkdownRichText } from '../../common/markdown-worker';
 import { IntegratedDocumentsService } from '../../knowledge/integrated-documents.service';
 import { ParticipationAccessScope, projectParticipantCondition } from '../../auth/business-contributor-scope';
 import { budgetLineIdsOfKind, CAPEX_ITEMS_NOT_FOUND, insertProjectBudgetLinks, lockProject, OPEX_ITEMS_NOT_FOUND } from '../project-budget-links.util';
@@ -340,7 +340,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
         'Standard projects must be created via Request conversion. Use origin: fast_track or legacy.'
       );
     }
-    const purposeContent = this.normalizeNullable(body.purpose);
+    const purposeContent = await this.normalizeNullable(body.purpose);
 
     const entity = repo.create({
       tenant_id: tenantId,
@@ -559,7 +559,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
 
     const before = { ...existing };
     const has = (key: string) => Object.prototype.hasOwnProperty.call(body, key);
-    const nextPurpose = has('purpose') ? this.normalizeNullable(body.purpose) : undefined;
+    const nextPurpose = has('purpose') ? await this.normalizeNullable(body.purpose) : undefined;
 
     // Status transition handling
     if (has('status')) {
@@ -667,7 +667,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
         author_id: userId,
         type: isDecision ? 'decision' : 'change',
         content: isDecision
-          ? normalizeMarkdownRichText(body.decision_rationale, { fieldName: 'decision_rationale' })
+          ? await normalizeMarkdownRichText(body.decision_rationale, { fieldName: 'decision_rationale' })
           : null,
         context: isDecision ? (body.decision_context || null) : null,
         decision_outcome: isDecision ? (body.decision_outcome as any || null) : null,

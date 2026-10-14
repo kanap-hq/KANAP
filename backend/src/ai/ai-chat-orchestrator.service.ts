@@ -56,6 +56,8 @@ import { AiCapabilityDispatcherService } from './control-plane/dispatcher/ai-cap
 import { budgetColumnsAiContext, readBudgetColumns } from '../budget-columns/budget-columns.util';
 import { loadAnalyticsAxes } from '../analytics/analytics-axes.util';
 import { analyticsDimensionsAiContext, AnalyticsDimensionsPromptContext } from './ai-analytics-dimensions-context';
+import { findMarkdownPathLinks, replaceDataImageTags, replaceMarkdownDataImages } from '../common/text-scan';
+import { assertMarkdownSize } from '../common/markdown-limits';
 
 const MAX_TOOL_ITERATIONS = parsePositiveIntEnv(process.env.AI_CHAT_MAX_TOOL_ITERATIONS, 40);
 /**
@@ -92,12 +94,11 @@ const APPROVE_SELECTED_MARKER_RE = /^\[APPROVE_SELECTED:([0-9a-f,\s-]+)\]$/i;
 const REJECT_SELECTED_MARKER_RE = /^\[REJECT_SELECTED:([0-9a-f,\s-]+)\]$/i;
 const TEXTUAL_CONFIRMATION_RE = /^(oui|yes|ok|okay|d'accord|daccord|vas-y|go ahead|procede|procède|confirm|confirme|approuve|approve)[\s!.?]*$/i;
 /** Strip base64 data-URI images from text to avoid blowing up the LLM context. */
-function stripBase64Images(text: string): string {
+export function stripBase64Images(text: string): string {
   // Markdown: ![alt](data:image/...;base64,...)
-  text = text.replace(/!\[(?:\\.|[^\]\\])*\]\(data:image\/[^;]*;base64,[^)]+\)/gi, '[image removed]');
+  const withoutMarkdownImages = replaceMarkdownDataImages(text, '[image removed]');
   // HTML: <img ... src="data:image/...;base64,..." ...>
-  text = text.replace(/<img\b[^>]*\bsrc=(['"])data:image\/[^;]*;base64,[^'"]*\1[^>]*>/gi, '[image removed]');
-  return text;
+  return replaceDataImageTags(withoutMarkdownImages, '[image removed]');
 }
 
 function isOfficialDeepSeekEndpoint(endpointUrl: string | null): boolean {
@@ -421,9 +422,9 @@ function inferEntityTypeFromUrl(url: string): string | null {
 export async function extractMentionContextItems(text: string, manager: EntityManager): Promise<AiChatContextItemDto[]> {
   const items: AiChatContextItemDto[] = [];
   const seen = new Set<string>();
-  const markdownLinkRe = /\[([^\]]{1,160})\]\((\/[^)\s]+)\)/g;
-  const budgetRefs = Array.from(new Set(Array.from(text.matchAll(markdownLinkRe), (match) =>
-    budgetLineRefFromUrl(match[2]),
+  const links = findMarkdownPathLinks(text);
+  const budgetRefs = Array.from(new Set(links.map((link) =>
+    budgetLineRefFromUrl(link.path),
   ).filter((ref): ref is string => !!ref)));
   // One tenant-scoped, explicitly all-natures read for every budget link in this message.
   const lines: Array<{ id: string; nature: 'opex' | 'capex'; item_number: number; legacy_number: string | null }> = budgetRefs.length
@@ -439,9 +440,7 @@ export async function extractMentionContextItems(text: string, manager: EntityMa
       if (ref) budgetTypes.set(ref, type);
     }
   }
-  let match: RegExpExecArray | null;
-  while ((match = markdownLinkRe.exec(text)) != null) {
-    const [, rawLabel, rawUrl] = match;
+  for (const { label: rawLabel, path: rawUrl } of links) {
     const budgetRef = budgetLineRefFromUrl(rawUrl);
     let entityType = inferEntityTypeFromUrl(rawUrl);
     if (budgetRef) {
@@ -1669,6 +1668,8 @@ export class AiChatOrchestratorService {
   }
 
   async prepareRequest(params: ChatStreamParams): Promise<PreparedChatRequest> {
+    // A chat message is held to the size of a rich-text field (inline images do not count).
+    assertMarkdownSize(params.userMessage, 'message');
     const approvalAction = this.parseApprovalAction(params.userMessage);
     this.logger.log(
       `prepareRequest: conversation_id=${params.conversationId || 'NONE'} `

@@ -5,6 +5,7 @@ import { SchedulerRegistry } from '@nestjs/schedule';
 import { CronJob } from 'cron';
 import { ScheduledTask } from './scheduled-task.entity';
 import { ScheduledTaskRun } from './scheduled-task-run.entity';
+import { runOutsideRequest } from '../../common/tenancy/request-tenant-context';
 
 export interface TaskRegistration {
   name: string;
@@ -107,6 +108,12 @@ export class ScheduledTasksService implements OnApplicationBootstrap {
   }
 
   private createCronJob(name: string, cronExpression: string) {
+    // Created outside any request: the job's timers would otherwise keep, for every later tick,
+    // the request that scheduled it again (an admin edit, a reschedule seen in a tick).
+    runOutsideRequest(() => this.scheduleCronJob(name, cronExpression));
+  }
+
+  private scheduleCronJob(name: string, cronExpression: string) {
     try {
       // Remove existing job if any
       try { this.schedulerRegistry.deleteCronJob(name); } catch {}
@@ -410,8 +417,9 @@ export class ScheduledTasksService implements OnApplicationBootstrap {
       throw new NotFoundException(`Task '${name}' not found or has no handler`);
     }
 
-    // Fire and forget — don't block the HTTP request
-    this.executeTask(name).catch(err => {
+    // Fire and forget — don't block the HTTP request. The run is a background task, not part
+    // of the request that triggered it.
+    runOutsideRequest(() => this.executeTask(name)).catch(err => {
       this.logger.error(`[${name}] Manual trigger failed: ${err.message}`);
     });
   }

@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { isActiveAt, isDisabled } from '../common/status';
 import { generateWorkingDays, isKnownCountry, isKnownRegion } from './public-holidays';
+import { trailingRun } from '../common/text-scan';
 
 /**
  * Working-day calendars: the one validation of `days_by_year` shared by the
@@ -82,7 +83,7 @@ function normalizeDay(raw: unknown, year: string, month: number): string {
     throw refusal(`Enter a number of days for ${label}.`, { year, month });
   }
   const whole = match[1].replace(/^0+(?=\d)/, '') || '0';
-  const fraction = (match[2] ?? '').replace(/0+$/, '');
+  const fraction = (match[2] ?? '').replace(trailingRun('0', false), '');
   if (fraction.length > CALENDAR_DAY_DECIMALS) throw refusal('Use at most 6 decimals.', { year, month });
   const max = daysInMonth(Number(year), month);
   // Exact comparison on the digits: the whole part above the month, or equal with a fraction.
