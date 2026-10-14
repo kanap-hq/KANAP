@@ -62,6 +62,25 @@ const EMPTY_CONTACT: Readonly<BillingContact> = Object.freeze({
 
 type BillingAddressInput = Partial<Omit<BillingAddress, 'postalCode'>> & { postalCode?: string | null };
 
+type PlanChangeInvoice = {
+  number: string | null;
+  /** Invoice total in cents: the new price less the credit for the unused part of the period. */
+  amount: number | null;
+  currency: string | null;
+  hosted_invoice_url: string | null;
+};
+
+/**
+ * The outcome of `POST /billing/change-plan`: `paid` (the change applies, its invoice is paid),
+ * `requires_payment` (nothing changes until the invoice is paid on its hosted page) or
+ * `scheduled` (annual to monthly, at `effective_at`).
+ */
+export type PlanChange = {
+  status: 'paid' | 'requires_payment' | 'scheduled';
+  invoice?: PlanChangeInvoice;
+  effective_at?: string;
+};
+
 type BillingContactInput = {
   name?: string | null;
   company?: string | null;
@@ -425,33 +444,64 @@ export class BillingService {
       throw new BadRequestException('Stripe price not configured for requested plan');
     }
 
-    // Retrieve the Stripe subscription to get the existing item ID
-    const stripeSub = await client.subscriptions.retrieve(sub.stripe_subscription_id);
-    const existingItemId = stripeSub.items?.data?.[0]?.id;
-    if (!existingItemId) {
+    const subscriptionId = sub.stripe_subscription_id;
+    const stripeSub = await client.subscriptions.retrieve(subscriptionId);
+    const existingItem = stripeSub.items?.data?.[0];
+    if (!existingItem?.id) {
       throw new BadRequestException('Unable to resolve existing subscription item');
     }
+    const currentPrice: any = existingItem.price;
+    if (this.stripeObjectId(currentPrice) === targetPriceId) {
+      throw new BadRequestException('PLAN_UNCHANGED');
+    }
 
-    await client.subscriptions.update(sub.stripe_subscription_id, {
-      items: [{ id: existingItemId, price: targetPriceId }],
-      collection_method: 'charge_automatically',
-      payment_settings: {
-        payment_method_types: ['card'],
-      },
+    // The invoice of the change carries the current invoicing details, mentions and language.
+    const tenant = await this.requireTenant(tenantId);
+    await this.pushInvoiceProfile(tenant, this.stripeObjectId(stripeSub.customer) ?? tenant.stripe_customer_id ?? null);
+
+    // GTC art. 6.3: annual to monthly takes effect at the end of the annual period, never refunded.
+    if (currentPrice?.recurring?.interval === 'year' && interval === 'monthly') {
+      const effectiveAt = await this.scheduleSwitchAtPeriodEnd(stripeSub, targetPriceId);
+      const summary = await this.getSubscriptionSummary({ manager: mg });
+      const change: PlanChange = { status: 'scheduled', effective_at: effectiveAt };
+      return { ...summary, change };
+    }
+
+    // Any other change (monthly to annual) takes effect at once: a new period starts today, the
+    // unused part of the current one is credited and the difference is invoiced and charged now.
+    // A switch planned for the period end no longer applies.
+    await this.releaseSchedule(stripeSub);
+    if (stripeSub.collection_method === 'send_invoice') {
+      // A pending update needs charge_automatically and does not accept the collection method.
+      await client.subscriptions.update(subscriptionId, {
+        collection_method: 'charge_automatically',
+        payment_settings: { payment_method_types: ['card'] },
+      });
+    }
+    const previousInvoiceId = this.stripeObjectId(stripeSub.latest_invoice);
+    // On flexible billing (the default since 2025-09-30.clover) a price change keeps the billing
+    // cycle anchor, so the new period starts today only with `billing_cycle_anchor: 'now'`.
+    // `pending_if_incomplete`: the change applies only once its invoice is paid.
+    const updated: any = await client.subscriptions.update(subscriptionId, {
+      items: [{ id: existingItem.id, price: targetPriceId }],
       metadata: { plan_key: planKey },
-      proration_behavior: 'create_prorations',
+      billing_cycle_anchor: 'now',
+      proration_behavior: 'always_invoice',
+      payment_behavior: 'pending_if_incomplete',
+      expand: ['latest_invoice'],
     });
+    const invoice = await this.newSubscriptionInvoice(updated, previousInvoiceId);
+    if (invoice) await ensureInvoiceA4(client, invoice, this.logger);
 
-    // Update local subscription record
-    sub.plan_name = toPlanDisplayName(planKey);
-    sub.seat_limit = PLANS[planKey].seatLimit;
-    sub.stripe_price_id = targetPriceId;
-    sub.subscription_type = interval === 'annual' ? SubscriptionType.ANNUAL : SubscriptionType.MONTHLY;
-    sub.collection_method = CollectionMethod.CHARGE_AUTOMATICALLY;
-    sub.payment_mode = PaymentMode.CARD;
-    sub.days_until_due = null;
-    sub.last_synced_at = new Date();
-    const saved = await mg.getRepository(Subscription).save(sub);
+    if (updated?.pending_update || (invoice && invoice.status !== 'paid')) {
+      // 3-D Secure or a refused card: nothing changes until the customer pays the invoice.
+      const summary = await this.getSubscriptionSummary({ manager: mg });
+      const change: PlanChange = { status: 'requires_payment', invoice: this.planChangeInvoice(invoice) };
+      return { ...summary, change };
+    }
+
+    // Stripe applied the paid change: the local record follows it.
+    const saved = await this.refreshSubscriptionFromStripe(sub, mg);
     await this.audit.log(
       {
         table: 'subscriptions',
@@ -463,8 +513,115 @@ export class BillingService {
       },
       { manager: mg },
     );
+    const summary = await this.getSubscriptionSummary({ manager: mg });
+    const change: PlanChange = { status: 'paid', ...(invoice ? { invoice: this.planChangeInvoice(invoice) } : {}) };
+    return { ...summary, change };
+  }
 
-    return this.getSubscriptionSummary({ manager: mg, forceStripeRefresh: true });
+  /**
+   * GTC art. 6.3, annual to monthly: the price changes at the end of the current annual period.
+   * A subscription schedule keeps the current phase until its end, then bills the monthly price
+   * by card; at the end of that phase it releases the subscription, which renews monthly. An
+   * existing schedule (a switch already planned) is updated. Returns when the switch applies.
+   */
+  private async scheduleSwitchAtPeriodEnd(stripeSub: any, targetPriceId: string): Promise<string> {
+    const client = this.getStripeClientOrThrow();
+    if (stripeSub?.collection_method === 'send_invoice') {
+      // A bank transfer subscription: Stripe refuses a card phase while the subscription keeps
+      // its bank transfer (customer_balance) settings. The annual period is already invoiced,
+      // so its next invoice is the first monthly one, paid by card.
+      await client.subscriptions.update(stripeSub.id, {
+        payment_settings: { payment_method_types: ['card'], payment_method_options: { customer_balance: '' } },
+      });
+    }
+    const scheduleId = this.stripeObjectId(stripeSub?.schedule);
+    // `from_subscription` takes no other parameter: the phases are set by a second call.
+    const schedule: any = scheduleId
+      ? await client.subscriptionSchedules.retrieve(scheduleId)
+      : await client.subscriptionSchedules.create({ from_subscription: stripeSub.id });
+    const phases: any[] = schedule?.phases ?? [];
+    const currentStart = schedule?.current_phase?.start_date;
+    const current = phases.find((phase) => phase?.start_date === currentStart) ?? phases[0];
+    if (!current?.start_date || !current?.end_date) {
+      throw new BadRequestException('Unable to resolve the current billing period');
+    }
+    await client.subscriptionSchedules.update(schedule.id, {
+      end_behavior: 'release',
+      proration_behavior: 'none',
+      phases: [
+        {
+          items: (current.items ?? []).map((item: any) => ({
+            price: this.stripeObjectId(item?.price) as string,
+            quantity: item?.quantity ?? CLOUD_SUBSCRIPTION_QUANTITY,
+          })),
+          start_date: current.start_date,
+          end_date: current.end_date,
+          ...(current.collection_method ? { collection_method: current.collection_method } : {}),
+        },
+        {
+          items: [{ price: targetPriceId, quantity: CLOUD_SUBSCRIPTION_QUANTITY }],
+          collection_method: 'charge_automatically',
+          duration: { interval: 'month', interval_count: 1 },
+        },
+      ],
+    });
+    return new Date(current.end_date * 1000).toISOString();
+  }
+
+  /** An immediate change replaces a switch planned for the period end. */
+  private async releaseSchedule(stripeSub: any): Promise<void> {
+    const scheduleId = this.stripeObjectId(stripeSub?.schedule);
+    if (!scheduleId) return;
+    await this.getStripeClientOrThrow().subscriptionSchedules.release(scheduleId);
+  }
+
+  /**
+   * Copies the invoicing details, mentions and language to the Stripe customer before a plan
+   * change invoices. Complete details go through the subscribe path (a refused VAT number is
+   * VAT_NUMBER_INVALID); incomplete ones, which a card plan change accepts, are best effort.
+   */
+  private async pushInvoiceProfile(tenant: Tenant, customerId: string | null): Promise<void> {
+    if (!customerId) return;
+    const contact = this.getInvoiceContact(tenant);
+    if (missingInvoiceFields(contact).length) {
+      await this.syncStripeCustomerProfile({ ...tenant, stripe_customer_id: customerId } as Tenant, contact);
+      return;
+    }
+    await this.pushCustomerProfile(customerId, tenant, contact);
+  }
+
+  private async pushCustomerProfile(customerId: string, tenant: Tenant, profile: BillingContact): Promise<void> {
+    const client = this.getStripeClientOrThrow();
+    await this.withVatNumberErrors(async () => {
+      await client.customers.update(customerId, this.stripeCustomerDetails(tenant, profile));
+      await this.syncStripeTaxIds(customerId, profile);
+    });
+  }
+
+  /** The invoice a subscription update created, or null when it created none. */
+  private async newSubscriptionInvoice(updated: any, previousInvoiceId: string | null): Promise<any | null> {
+    const latest = updated?.latest_invoice;
+    const latestId = this.stripeObjectId(latest);
+    if (!latestId || latestId === previousInvoiceId) return null;
+    if (typeof latest === 'object') return latest;
+    return this.getStripeClientOrThrow().invoices.retrieve(latestId);
+  }
+
+  private planChangeInvoice(invoice: any | null): PlanChangeInvoice | undefined {
+    if (!invoice) return undefined;
+    return {
+      number: invoice.number ?? null,
+      amount: typeof invoice.total === 'number' ? invoice.total : null,
+      currency: invoice.currency ? String(invoice.currency).toUpperCase() : null,
+      hosted_invoice_url: invoice.hosted_invoice_url ?? null,
+    };
+  }
+
+  /** The id of a Stripe reference, expanded or not. */
+  private stripeObjectId(source: any): string | null {
+    if (typeof source === 'string') return source || null;
+    if (source && typeof source === 'object' && typeof source.id === 'string') return source.id;
+    return null;
   }
 
   async requestInvoice(
@@ -507,6 +664,11 @@ export class BillingService {
       previousLatestInvoiceId = this.extractStripeInvoiceId(stripeSub?.latest_invoice);
       const invoicePaymentMethodTypes = await this.resolveInvoicePaymentMethodTypes(customerId, stripeSub?.default_payment_method);
       const invoicePaymentSettings = this.buildSendInvoicePaymentSettings(invoicePaymentMethodTypes, euBankTransferCountry);
+      // A new price (monthly card to annual transfer) starts a new period today: on flexible
+      // billing the anchor stays put unless reset, and the annual invoice would wait for it.
+      // The same price only changes how the subscription is paid, from its next invoice.
+      const priceChanges = this.stripeObjectId(stripeSub.items?.data?.[0]?.price) !== priceId;
+      if (priceChanges) await this.releaseSchedule(stripeSub);
 
       stripeSubResult = await client.subscriptions.update(sub.stripe_subscription_id, {
         items: [{ id: existingItemId, price: priceId }],
@@ -514,7 +676,8 @@ export class BillingService {
         days_until_due: INVOICE_PAYMENT_TERM_DAYS,
         payment_settings: invoicePaymentSettings,
         metadata: { plan_key: planKey, billing_channel: 'saas' },
-        // Force immediate invoice creation for proration/upgrade deltas.
+        ...(priceChanges ? { billing_cycle_anchor: 'now' as const } : {}),
+        // The new period is invoiced at once, less the credit for the unused part of the current one.
         proration_behavior: 'always_invoice',
         expand: ['latest_invoice'],
       });
@@ -665,12 +828,7 @@ export class BillingService {
       }
       if (tenant.stripe_customer_id) {
         const customerId = tenant.stripe_customer_id;
-        if (profile) {
-          await this.withVatNumberErrors(async () => {
-            await client.customers.update(customerId, this.stripeCustomerDetails(tenant, profile));
-            await this.syncStripeTaxIds(customerId, profile);
-          });
-        }
+        if (profile) await this.pushCustomerProfile(customerId, tenant, profile);
         await this.updateSubscriptionCustomer(tenant.id, customerId, { manager: opts.manager });
         return customerId;
       }

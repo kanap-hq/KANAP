@@ -16,13 +16,14 @@ import {
 import { getLocaleFromUrl, localePath } from '../i18n/ui';
 import { getOfferContent, getTrialContent } from '../content/resolve';
 import { GTC_VERSION } from '../content/legal/terms-version';
+import { isoCountryOptions } from '../content/iso-countries';
 
 const locale = getLocaleFromUrl(Astro.url);
 const content = getOfferContent(locale);
 const trial = getTrialContent(locale).start;
 const pricingPlans = [...content.selfHosted.plans, ...content.cloud.plans];
-// The invoice needs a real country (ISO code): "Other" is not offered on the invoice form.
-const supportCountryOptions = trial.countryOptions.filter((o) => o.value !== 'OTHER');
+// The invoice needs a real country: every ISO 3166-1 code, named in the page language.
+const supportCountryOptions = isoCountryOptions(locale);
 // EU member states (ISO 3166-1 alpha-2): a company there must give its VAT number.
 // Same list as EU_COUNTRY_CODES in backend/src/billing/billing-profile.util.ts.
 const euCountryCodes = [
@@ -168,6 +169,7 @@ function resolveHref(href: string): string {
       role="dialog"
       aria-modal="true"
       aria-labelledby="support-invoice-title"
+      data-support-invoice-panel
     >
       <button
         type="button"
@@ -178,27 +180,28 @@ function resolveHref(href: string): string {
         ×
       </button>
 
-      <header class="mk-support-modal__head">
+      <header class="mk-support-modal__head" data-support-invoice-head>
         <span class="mk-eyebrow">{content.supportInvoice.eyebrow}</span>
         <h2 id="support-invoice-title">{content.supportInvoice.title}</h2>
         <p class="mk-lead">{content.supportInvoice.body}</p>
       </header>
 
       <form class="mk-support-form" data-support-invoice-form novalidate>
+        <p class="mk-tf__help">{content.supportInvoice.requiredHint}</p>
         <div class="mk-support-form__row">
           <div class="mk-tf__field">
-            <label for="si-company">{content.supportInvoice.companyLabel}</label>
+            <label for="si-company">{content.supportInvoice.companyLabel}<span class="mk-tf__req" aria-hidden="true">*</span></label>
             <input id="si-company" name="company_name" type="text" required autocomplete="organization" />
           </div>
           <div class="mk-tf__field">
-            <label for="si-contact">{content.supportInvoice.contactLabel}</label>
+            <label for="si-contact">{content.supportInvoice.contactLabel}<span class="mk-tf__req" aria-hidden="true">*</span></label>
             <input id="si-contact" name="contact_name" type="text" required autocomplete="name" />
           </div>
         </div>
 
         <div class="mk-support-form__row">
           <div class="mk-tf__field">
-            <label for="si-email">{content.supportInvoice.billingEmailLabel}</label>
+            <label for="si-email">{content.supportInvoice.billingEmailLabel}<span class="mk-tf__req" aria-hidden="true">*</span></label>
             <input id="si-email" name="billing_email" type="email" required autocomplete="email" />
           </div>
           <CountryField
@@ -208,11 +211,12 @@ function resolveHref(href: string): string {
             options={supportCountryOptions}
             noMatch={trial.form.countryNoMatch}
             required
+            markRequired
           />
         </div>
 
         <div class="mk-tf__field">
-          <label for="si-address1">{content.supportInvoice.address1Label}</label>
+          <label for="si-address1">{content.supportInvoice.address1Label}<span class="mk-tf__req" aria-hidden="true">*</span></label>
           <input id="si-address1" name="address_line1" type="text" required autocomplete="address-line1" />
         </div>
         <div class="mk-tf__field">
@@ -221,17 +225,17 @@ function resolveHref(href: string): string {
         </div>
         <div class="mk-support-form__row">
           <div class="mk-tf__field">
-            <label for="si-postal">{content.supportInvoice.postalCodeLabel}</label>
+            <label for="si-postal">{content.supportInvoice.postalCodeLabel}<span class="mk-tf__req" aria-hidden="true">*</span></label>
             <input id="si-postal" name="postal_code" type="text" required autocomplete="postal-code" />
           </div>
           <div class="mk-tf__field">
-            <label for="si-city">{content.supportInvoice.cityLabel}</label>
+            <label for="si-city">{content.supportInvoice.cityLabel}<span class="mk-tf__req" aria-hidden="true">*</span></label>
             <input id="si-city" name="city" type="text" required autocomplete="address-level2" />
           </div>
         </div>
 
         <div class="mk-tf__field">
-          <label for="si-vat">{content.supportInvoice.vatLabel}</label>
+          <label for="si-vat">{content.supportInvoice.vatLabel}<span class="mk-tf__req" aria-hidden="true" data-support-vat-required hidden>*</span></label>
           <input id="si-vat" name="vat_id" type="text" autocomplete="off" aria-describedby="si-vat-help" />
           <p class="mk-tf__help" id="si-vat-help" data-support-vat-help hidden>{content.supportInvoice.vatHelpEu}</p>
         </div>
@@ -255,6 +259,19 @@ function resolveHref(href: string): string {
           {content.supportInvoice.submitLabel}
         </button>
       </form>
+
+      <div class="mk-support-done" data-support-invoice-done hidden>
+        <h2 class="mk-support-done__title" id="support-invoice-done-title" tabindex="-1" data-support-done-title>{content.supportInvoice.doneTitle}</h2>
+        <p class="mk-support-done__body" data-support-done-body></p>
+        <div class="mk-support-done__actions">
+          <a class="mk-btn mk-btn--primary" target="_blank" rel="noopener noreferrer" data-support-done-link hidden>
+            {content.supportInvoice.successLinkLabel}
+          </a>
+          <button type="button" class="mk-btn mk-btn--ghost" data-close-support-invoice>
+            {content.supportInvoice.doneClose}
+          </button>
+        </div>
+      </div>
     </section>
   </div>
 </BaseLayout>
@@ -262,9 +279,9 @@ function resolveHref(href: string): string {
 <script define:vars={{
   submitLabel: content.supportInvoice.submitLabel,
   submittingLabel: content.supportInvoice.submittingLabel,
-  successWithLink: content.supportInvoice.successWithLink,
-  successLinkLabel: content.supportInvoice.successLinkLabel,
-  successNoLink: content.supportInvoice.successNoLink,
+  doneSent: content.supportInvoice.doneSent,
+  doneSentNoNumber: content.supportInvoice.doneSentNoNumber,
+  doneOpen: content.supportInvoice.doneOpen,
   errorGeneric: content.supportInvoice.errorGeneric,
   errorRequired: content.supportInvoice.errorRequired,
   errorVatRequired: content.supportInvoice.errorVatRequired,
@@ -283,6 +300,15 @@ function resolveHref(href: string): string {
   const countryInput = form ? form.querySelector('input[name="country"]') : null;
   const vatInput = form ? form.querySelector('input[name="vat_id"]') : null;
   const vatHelp = document.querySelector('[data-support-vat-help]');
+  const vatMarker = document.querySelector('[data-support-vat-required]');
+  const head = document.querySelector('[data-support-invoice-head]');
+  const panel = document.querySelector('[data-support-invoice-panel]');
+  const done = document.querySelector('[data-support-invoice-done]');
+  const doneTitle = document.querySelector('[data-support-done-title]');
+  const doneBody = document.querySelector('[data-support-done-body]');
+  const doneLink = document.querySelector('[data-support-done-link]');
+  // Set once an invoice is created: the next opening starts a fresh form.
+  let completed = false;
   const termsInput = document.querySelector('[data-support-terms]');
 
   function isEuCountry(code) {
@@ -294,6 +320,7 @@ function resolveHref(href: string): string {
     const eu = isEuCountry(countryInput ? countryInput.value : '');
     if (vatInput) vatInput.required = eu;
     if (vatHelp) vatHelp.hidden = !eu;
+    if (vatMarker) vatMarker.hidden = !eu;
   }
 
   if (countryInput) countryInput.addEventListener('change', syncVatRequirement);
@@ -312,16 +339,34 @@ function resolveHref(href: string): string {
     statusEl.className = 'mk-tf__status' + (kind ? ' mk-tf__status--' + kind : '');
   }
 
-  function setInvoiceLink(url) {
-    if (!statusEl) return;
-    statusEl.textContent = successWithLink + ' ';
-    const link = document.createElement('a');
-    link.href = url;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    link.textContent = successLinkLabel;
-    statusEl.appendChild(link);
-    statusEl.className = 'mk-tf__status mk-tf__status--success';
+  // The confirmation replaces the form: who received which invoice, and a link to open it.
+  function showDone(email, number, url) {
+    const sent = number
+      ? doneSent.replace('{number}', number).replace('{email}', email)
+      : doneSentNoNumber.replace('{email}', email);
+    if (doneBody) doneBody.textContent = url ? sent + ' ' + doneOpen : sent;
+    if (doneLink) {
+      if (url) doneLink.setAttribute('href', url);
+      else doneLink.removeAttribute('href');
+      doneLink.hidden = !url;
+    }
+    if (form) form.hidden = true;
+    if (head) head.hidden = true;
+    if (done) done.hidden = false;
+    if (panel && doneTitle) panel.setAttribute('aria-labelledby', 'support-invoice-done-title');
+    completed = true;
+    if (doneTitle) doneTitle.focus();
+  }
+
+  function showForm() {
+    if (form) {
+      form.reset();
+      form.hidden = false;
+    }
+    if (head) head.hidden = false;
+    if (done) done.hidden = true;
+    if (panel) panel.setAttribute('aria-labelledby', 'support-invoice-title');
+    completed = false;
   }
 
   function loadScript(src) {
@@ -373,6 +418,7 @@ function resolveHref(href: string): string {
 
   function openModal() {
     if (!modal) return;
+    if (completed) showForm();
     modal.hidden = false;
     document.documentElement.classList.add('mk-support-modal-open');
     setStatus('');
@@ -465,14 +511,13 @@ function resolveHref(href: string): string {
           }
           throw new Error('bad status ' + res.status);
         }
-        const data = await res.json();
-        if (data && data.hosted_invoice_url) {
-          setInvoiceLink(data.hosted_invoice_url);
-        } else {
-          setStatus(successNoLink, 'success');
-        }
-        form.reset();
+        const data = await res.json().catch(() => null);
         resetCaptcha();
+        showDone(
+          payload.billing_email,
+          data && data.invoice_number ? String(data.invoice_number) : '',
+          data && data.hosted_invoice_url ? String(data.hosted_invoice_url) : '',
+        );
       } catch (err) {
         resetCaptcha();
         setStatus(errorGeneric, 'error');
@@ -675,8 +720,41 @@ function resolveHref(href: string): string {
     color: var(--kanap-text-tertiary);
   }
 
-  .mk-support-modal[hidden] {
+  .mk-support-modal[hidden],
+  .mk-support-modal__head[hidden],
+  .mk-support-form[hidden],
+  .mk-support-done[hidden],
+  .mk-support-done__actions .mk-btn[hidden] {
     display: none;
+  }
+
+  /* Replaces the form once the invoice is created. */
+  .mk-support-done {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 640px;
+  }
+
+  .mk-support-done__title {
+    margin: 0;
+  }
+
+  /* Focused by script so screen readers announce it; no ring on a heading. */
+  .mk-support-done__title:focus {
+    outline: none;
+  }
+
+  .mk-support-done__body {
+    margin: 0;
+    color: var(--kanap-text-secondary);
+  }
+
+  .mk-support-done__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 8px;
   }
 
   .mk-support-modal {

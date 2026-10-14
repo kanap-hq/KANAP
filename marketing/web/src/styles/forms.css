@@ -20,6 +20,13 @@
   letter-spacing: 0.01em;
 }
 
+/* Required marker after a label: an orange asterisk. The input carries `required`, which
+   screen readers announce, so the marker itself is hidden from them. */
+.mk-tf__req {
+  margin-left: 2px;
+  color: var(--kanap-orange);
+}
+
 /* Inputs, selects, textareas — unified aesthetic */
 .mk-tf__field input,
 .mk-tf__field select,

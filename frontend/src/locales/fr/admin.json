@@ -727,6 +727,7 @@
       "label": "Période de facturation",
       "monthly": "Mensuel"
     },
+    "currentPlan": "C'est votre plan actuel.",
     "errors": {
       "noActiveSubscription": "Aucun abonnement actif trouvé.",
       "planNotBankTransferEligible": "Ce plan n'est pas éligible au virement bancaire.",
@@ -745,8 +746,13 @@
     "messages": {
       "checkoutUrlUnavailable": "L'URL de paiement n'est pas disponible.",
       "invoiceCreated": "Facture créée.",
+      "invoicePaid": "Facture {{number}}, {{amount}}, payée.",
       "loadFailed": "Impossible de charger les plans.",
-      "requestFailed": "La requête a échoué."
+      "nowAnnual": "Votre plan est désormais annuel.",
+      "nowMonthly": "Votre plan est désormais mensuel.",
+      "paymentRequired": "Le plan change une fois sa facture payée.",
+      "requestFailed": "La requête a échoué.",
+      "switchToMonthly": "Votre plan passe en mensuel le {{date}}."
     },
     "monthlyEquivalent": "{{amount}} par mois, facturé annuellement",
     "period": {

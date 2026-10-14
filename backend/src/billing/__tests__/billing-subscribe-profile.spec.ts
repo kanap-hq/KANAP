@@ -71,12 +71,23 @@ function createService(opts: {
   /** A running Stripe subscription (plan change). */
   subscription?: Partial<Subscription>;
   retrievedCustomer?: Record<string, unknown>;
+  /** Price id per interval; one id for both by default. */
+  priceIds?: Record<string, string>;
+  /** The Stripe subscription `subscriptions.retrieve` returns (a running one by default). */
+  stripeSubscription?: Record<string, any>;
+  /** What Stripe does on `subscriptions.update`: may change `state`, returns the answer. */
+  onSubscriptionUpdate?: (params: Record<string, any>, state: Record<string, any>) => unknown;
+  schedule?: Record<string, any>;
 }) {
   const calls: Call[] = [];
   const record = (method: string, impl: (...args: any[]) => unknown) => async (...args: unknown[]) => {
     calls.push({ method, args });
     return impl(...args);
   };
+  const stripeState: Record<string, any> | null = opts.stripeSubscription
+    ? JSON.parse(JSON.stringify(opts.stripeSubscription))
+    : null;
+  const schedule = opts.schedule ?? null;
   const client = {
     customers: {
       retrieve: record('customers.retrieve', () => opts.retrievedCustomer ?? { id: 'cus_1' }),
@@ -94,9 +105,18 @@ function createService(opts: {
     },
     subscriptions: {
       create: record('subscriptions.create', () => ({ id: 'sub_1', latest_invoice: null })),
-      retrieve: record('subscriptions.retrieve', () =>
-        opts.subscription ? { id: 'sub_1', status: 'active', items: { data: [{ id: 'si_1' }] } } : null),
-      update: record('subscriptions.update', () => ({ id: 'sub_1' })),
+      retrieve: record('subscriptions.retrieve', () => {
+        if (stripeState) return JSON.parse(JSON.stringify(stripeState));
+        return opts.subscription ? { id: 'sub_1', status: 'active', items: { data: [{ id: 'si_1' }] } } : null;
+      }),
+      update: record('subscriptions.update', (_id: string, params: Record<string, any>) =>
+        (opts.onSubscriptionUpdate && stripeState ? opts.onSubscriptionUpdate(params, stripeState) : { id: 'sub_1' })),
+    },
+    subscriptionSchedules: {
+      create: record('subscriptionSchedules.create', () => schedule),
+      retrieve: record('subscriptionSchedules.retrieve', () => schedule),
+      update: record('subscriptionSchedules.update', (id: string) => ({ id })),
+      release: record('subscriptionSchedules.release', (id: string) => ({ id })),
     },
     invoices: {
       list: record('invoices.list', () => ({ data: [] })),
@@ -114,13 +134,18 @@ function createService(opts: {
     seat_limit: null,
     ...(opts.subscription ?? {}),
   } as unknown as Subscription;
+  /** A copy of the local subscription record at each save. */
+  const saves: Array<Partial<Subscription>> = [];
   const manager = {
     getRepository: (entity: unknown) => {
       if (entity === Subscription) {
         return {
           findOne: async () => subscription,
           create: (data: Partial<Subscription>) => data,
-          save: async (data: Subscription) => data,
+          save: async (data: Subscription) => {
+            saves.push({ ...data });
+            return data;
+          },
         };
       }
       if (entity === User) {
@@ -136,7 +161,7 @@ function createService(opts: {
     update: async () => undefined,
   };
   const stripeConfig = {
-    getPriceId: () => 'price_max',
+    getPriceId: (interval: string) => opts.priceIds?.[interval] ?? 'price_max',
     getCheckoutSuccessUrl: () => 'https://fromage.kanap.test/admin/billing',
     getCheckoutCancelUrl: () => 'https://fromage.kanap.test/admin/billing',
   };
@@ -155,7 +180,7 @@ function createService(opts: {
     {} as any,
     audit as any,
   );
-  return { service, manager, calls, audits };
+  return { service, manager, calls, audits, subscription, saves };
 }
 
 async function expectBadRequest(promise: Promise<unknown>, expected: Record<string, unknown>) {
@@ -471,6 +496,245 @@ async function testDraftInvoiceIsSetToA4BeforeFinalizing() {
   assert.deepEqual(invoiceCalls[0].args, ['in_draft', { rendering: { pdf: { page_size: 'a4' } } }]);
 }
 
+/*
+ * GTC art. 6.3. Monthly to annual applies at once: a new annual period starts today, the unused
+ * part of the month is credited and the difference is invoiced and charged now; the change
+ * applies only once that invoice is paid. Annual to monthly applies at the end of the annual
+ * period, never refunded. The local record follows Stripe, never ahead of it.
+ */
+const PRICE_IDS = { monthly: 'price_monthly', annual: 'price_annual' };
+const MONTHLY_PRICE = { id: 'price_monthly', currency: 'eur', unit_amount: 24900, recurring: { interval: 'month' } };
+const ANNUAL_PRICE = { id: 'price_annual', currency: 'eur', unit_amount: 249000, recurring: { interval: 'year' } };
+const PERIOD = { start: 1792000000, end: 1823536000 };
+
+function stripeSubscription(price: Record<string, unknown>, extra: Record<string, unknown> = {}) {
+  return {
+    id: 'sub_1',
+    status: 'active',
+    customer: 'cus_1',
+    collection_method: 'charge_automatically',
+    latest_invoice: 'in_previous',
+    items: { data: [{ id: 'si_1', price, quantity: 1 }] },
+    ...extra,
+  };
+}
+
+function runningOn(interval: 'monthly' | 'annual') {
+  return { ...RUNNING, subscription_type: interval, stripe_price_id: PRICE_IDS[interval] } as Partial<Subscription>;
+}
+
+const IMMEDIATE_CHANGE = {
+  items: [{ id: 'si_1', price: 'price_annual' }],
+  metadata: { plan_key: 'max' },
+  billing_cycle_anchor: 'now',
+  proration_behavior: 'always_invoice',
+  payment_behavior: 'pending_if_incomplete',
+  expand: ['latest_invoice'],
+};
+
+async function testMonthlyToAnnualIsInvoicedAndChargedAtOnce() {
+  const invoice = {
+    id: 'in_new',
+    number: 'KAN-0012',
+    status: 'paid',
+    total: 224100,
+    currency: 'eur',
+    hosted_invoice_url: 'https://invoice.stripe.test/in_new',
+    rendering: { pdf: { page_size: 'letter' } },
+  };
+  const { service, manager, calls, audits, subscription } = createService({
+    tenant: createTenant(COMPLETE_FR_INVOICE),
+    subscription: runningOn('monthly'),
+    priceIds: PRICE_IDS,
+    // A switch to monthly was planned earlier: the immediate change replaces it.
+    stripeSubscription: stripeSubscription(MONTHLY_PRICE, { schedule: 'sub_sched_old' }),
+    onSubscriptionUpdate: (params, state) => {
+      state.items.data[0].price = ANNUAL_PRICE;
+      state.metadata = params.metadata;
+      state.schedule = null;
+      state.latest_invoice = invoice;
+      return { ...state };
+    },
+  });
+  const result: any = await service.changePlan('tenant-1', 'max', 'annual', 'user-1', manager as any, GTC_VERSION);
+
+  const updates = calls.filter((call) => call.method === 'subscriptions.update');
+  assert.deepEqual(updates.map((call) => call.args), [['sub_1', IMMEDIATE_CHANGE]]);
+  assert.deepEqual(result.change, {
+    status: 'paid',
+    invoice: { number: 'KAN-0012', amount: 224100, currency: 'EUR', hosted_invoice_url: 'https://invoice.stripe.test/in_new' },
+  });
+
+  // The customer carries the invoice mentions and language before Stripe invoices the change.
+  const order = calls.map((call) => call.method);
+  const push = calls.find((call) => call.method === 'customers.update');
+  assert.ok(push, 'the invoicing details are pushed to the customer');
+  assert.deepEqual((push!.args[1] as any).invoice_settings, FR_MENTIONS.invoice_settings);
+  assert.deepEqual((push!.args[1] as any).preferred_locales, ['fr']);
+  assert.ok(order.indexOf('customers.update') < order.indexOf('subscriptions.update'));
+  assert.ok(order.indexOf('subscriptionSchedules.release') < order.indexOf('subscriptions.update'));
+  assert.deepEqual(calls.find((call) => call.method === 'subscriptionSchedules.release')!.args, ['sub_sched_old']);
+
+  // The invoice of the change is A4.
+  assert.ok(calls.some((call) => call.method === 'invoices.update'
+    && call.args[0] === 'in_new' && JSON.stringify(call.args[1]) === JSON.stringify({ rendering: { pdf: { page_size: 'a4' } } })));
+
+  // Paid: the local record follows Stripe and the change is audited.
+  assert.equal(subscription.subscription_type, 'annual');
+  assert.equal(subscription.stripe_price_id, 'price_annual');
+  assert.equal(result.subscription_type, 'annual');
+  assert.equal(audits.filter((a) => a.entry.table === 'subscriptions').length, 1);
+}
+
+async function testUnpaidChangeSendsToTheInvoiceAndChangesNothing() {
+  const invoice = {
+    id: 'in_open',
+    number: 'KAN-0013',
+    status: 'open',
+    total: 224100,
+    currency: 'eur',
+    hosted_invoice_url: 'https://invoice.stripe.test/in_open',
+  };
+  const { service, manager, calls, audits, subscription, saves } = createService({
+    tenant: createTenant(COMPLETE_FR_INVOICE),
+    subscription: runningOn('monthly'),
+    priceIds: PRICE_IDS,
+    stripeSubscription: stripeSubscription(MONTHLY_PRICE),
+    // 3-D Secure: Stripe keeps the change pending until the invoice is paid.
+    onSubscriptionUpdate: (_params, state) => ({
+      ...state,
+      latest_invoice: invoice,
+      pending_update: { expires_at: PERIOD.start, subscription_items: [{ id: 'si_1', price: 'price_annual' }] },
+    }),
+  });
+  const result: any = await service.changePlan('tenant-1', 'max', 'annual', 'user-1', manager as any, GTC_VERSION);
+
+  assert.deepEqual(calls.filter((call) => call.method === 'subscriptions.update').map((call) => call.args), [['sub_1', IMMEDIATE_CHANGE]]);
+  assert.deepEqual(result.change, {
+    status: 'requires_payment',
+    invoice: { number: 'KAN-0013', amount: 224100, currency: 'EUR', hosted_invoice_url: 'https://invoice.stripe.test/in_open' },
+  });
+  assert.equal(subscription.subscription_type, 'monthly');
+  assert.equal(subscription.stripe_price_id, 'price_monthly');
+  assert.ok(saves.every((saved) => saved.subscription_type !== 'annual' && saved.stripe_price_id !== 'price_annual'),
+    'the local record is never moved to annual before payment');
+  assert.equal(audits.filter((a) => a.entry.table === 'subscriptions').length, 0);
+}
+
+async function testAnnualToMonthlyIsScheduledAtPeriodEnd() {
+  const fromSubscription = {
+    id: 'sub_sched_1',
+    current_phase: { start_date: PERIOD.start, end_date: PERIOD.end },
+    phases: [{ start_date: PERIOD.start, end_date: PERIOD.end, items: [{ price: 'price_annual', quantity: 1 }], collection_method: null }],
+  };
+  const expectedPhases = {
+    end_behavior: 'release',
+    proration_behavior: 'none',
+    phases: [
+      { items: [{ price: 'price_annual', quantity: 1 }], start_date: PERIOD.start, end_date: PERIOD.end },
+      {
+        items: [{ price: 'price_monthly', quantity: 1 }],
+        collection_method: 'charge_automatically',
+        duration: { interval: 'month', interval_count: 1 },
+      },
+    ],
+  };
+  for (const existing of [null, 'sub_sched_1']) {
+    const { service, manager, calls, saves, subscription } = createService({
+      tenant: createTenant(COMPLETE_FR_INVOICE),
+      subscription: runningOn('annual'),
+      priceIds: PRICE_IDS,
+      stripeSubscription: stripeSubscription(ANNUAL_PRICE, { schedule: existing }),
+      schedule: fromSubscription,
+    });
+    const result: any = await service.changePlan('tenant-1', 'max', 'monthly', 'user-1', manager as any, GTC_VERSION);
+
+    assert.deepEqual(result.change, { status: 'scheduled', effective_at: new Date(PERIOD.end * 1000).toISOString() });
+    // No price change now: no subscription update, no invoice.
+    assert.equal(calls.filter((call) => call.method === 'subscriptions.update').length, 0);
+    if (existing) {
+      assert.equal(calls.filter((call) => call.method === 'subscriptionSchedules.create').length, 0);
+      assert.deepEqual(calls.find((call) => call.method === 'subscriptionSchedules.retrieve')!.args, ['sub_sched_1']);
+    } else {
+      assert.deepEqual(calls.find((call) => call.method === 'subscriptionSchedules.create')!.args, [{ from_subscription: 'sub_1' }]);
+    }
+    assert.deepEqual(calls.find((call) => call.method === 'subscriptionSchedules.update')!.args, ['sub_sched_1', expectedPhases]);
+    assert.equal(subscription.subscription_type, 'annual');
+    assert.ok(saves.every((saved) => saved.subscription_type !== 'monthly' && saved.stripe_price_id !== 'price_monthly'));
+  }
+}
+
+async function testBankTransferAnnualSwitchesToCardAtPeriodEnd() {
+  const { service, manager, calls } = createService({
+    tenant: createTenant(COMPLETE_FR_INVOICE),
+    subscription: runningOn('annual'),
+    priceIds: PRICE_IDS,
+    stripeSubscription: stripeSubscription(ANNUAL_PRICE, { collection_method: 'send_invoice' }),
+    onSubscriptionUpdate: (_params, state) => ({ ...state }),
+    schedule: {
+      id: 'sub_sched_1',
+      current_phase: { start_date: PERIOD.start, end_date: PERIOD.end },
+      phases: [{ start_date: PERIOD.start, end_date: PERIOD.end, items: [{ price: 'price_annual', quantity: 1 }], collection_method: 'send_invoice' }],
+    },
+  });
+  const result: any = await service.changePlan('tenant-1', 'max', 'monthly', 'user-1', manager as any, GTC_VERSION);
+  assert.equal(result.change.status, 'scheduled');
+  // Stripe refuses a card phase while the subscription keeps its bank transfer settings.
+  const order = calls.map((call) => call.method);
+  assert.deepEqual(calls.filter((call) => call.method === 'subscriptions.update').map((call) => call.args), [
+    ['sub_1', { payment_settings: { payment_method_types: ['card'], payment_method_options: { customer_balance: '' } } }],
+  ]);
+  assert.ok(order.indexOf('subscriptions.update') < order.indexOf('subscriptionSchedules.update'));
+  const phases = (calls.find((call) => call.method === 'subscriptionSchedules.update')!.args[1] as any).phases;
+  assert.equal(phases[0].collection_method, 'send_invoice');
+  assert.equal(phases[1].collection_method, 'charge_automatically');
+}
+
+async function testSamePlanAndIntervalIsRefused() {
+  const { service, manager, calls } = createService({
+    tenant: createTenant(COMPLETE_FR_INVOICE),
+    subscription: runningOn('annual'),
+    priceIds: PRICE_IDS,
+    stripeSubscription: stripeSubscription(ANNUAL_PRICE),
+  });
+  await expectBadRequest(
+    service.changePlan('tenant-1', 'max', 'annual', 'user-1', manager as any, GTC_VERSION),
+    { message: 'PLAN_UNCHANGED', error: 'Bad Request', statusCode: 400 },
+  );
+  assert.equal(calls.filter((call) => call.method === 'subscriptions.update').length, 0);
+}
+
+async function testTransferToAnnualStartsTheAnnualPeriodNow() {
+  const monthly = createService({
+    tenant: createTenant(COMPLETE_FR_INVOICE),
+    subscription: runningOn('monthly'),
+    priceIds: PRICE_IDS,
+    stripeSubscription: stripeSubscription(MONTHLY_PRICE),
+    onSubscriptionUpdate: (_params, state) => ({ ...state, latest_invoice: null }),
+  });
+  await monthly.service.requestInvoice('tenant-1', 'max', 'annual', 'user-1', monthly.manager as any, GTC_VERSION);
+  const update = monthly.calls.find((call) => call.method === 'subscriptions.update')!;
+  assert.equal(update.args[0], 'sub_1');
+  const params = update.args[1] as Record<string, any>;
+  assert.equal(params.billing_cycle_anchor, 'now');
+  assert.equal(params.proration_behavior, 'always_invoice');
+  assert.equal(params.collection_method, 'send_invoice');
+  assert.equal(params.days_until_due, 30);
+  assert.deepEqual(params.items, [{ id: 'si_1', price: 'price_annual' }]);
+
+  // Annual card to annual transfer keeps the period: only the payment method changes.
+  const annual = createService({
+    tenant: createTenant(COMPLETE_FR_INVOICE),
+    subscription: runningOn('annual'),
+    priceIds: PRICE_IDS,
+    stripeSubscription: stripeSubscription(ANNUAL_PRICE),
+    onSubscriptionUpdate: (_params, state) => ({ ...state, latest_invoice: null }),
+  });
+  await annual.service.requestInvoice('tenant-1', 'max', 'annual', 'user-1', annual.manager as any, GTC_VERSION);
+  const same = annual.calls.find((call) => call.method === 'subscriptions.update')!.args[1] as Record<string, any>;
+  assert.ok(!('billing_cycle_anchor' in same), 'the same price does not restart the period');
+}
+
 async function run() {
   await testRequestInvoiceRefusesIncompleteProfile();
   await testCheckoutRefusesIncompleteProfile();
@@ -488,6 +752,12 @@ async function run() {
   await testNewCustomerWithoutSirenSendsNoSirenKey();
   await testGermanCustomerGetsNatureOnlyAndGerman();
   await testDraftInvoiceIsSetToA4BeforeFinalizing();
+  await testMonthlyToAnnualIsInvoicedAndChargedAtOnce();
+  await testUnpaidChangeSendsToTheInvoiceAndChangesNothing();
+  await testAnnualToMonthlyIsScheduledAtPeriodEnd();
+  await testBankTransferAnnualSwitchesToCardAtPeriodEnd();
+  await testSamePlanAndIntervalIsRefused();
+  await testTransferToAnnualStartsTheAnnualPeriodNow();
 }
 
 void run();

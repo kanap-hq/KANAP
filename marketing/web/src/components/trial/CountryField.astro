@@ -26,16 +26,18 @@ interface Props {
   noMatch: string;
   help?: string;
   required?: boolean;
+  /** Shows the required marker (orange asterisk) after the label; screen readers read `required`. */
+  markRequired?: boolean;
 }
 
-const { id, name, label, options, noMatch, help, required = false } = Astro.props;
+const { id, name, label, options, noMatch, help, required = false, markRequired = false } = Astro.props;
 const labelId = `${id}-label`;
 const listId = `${id}-listbox`;
 const helpId = help ? `${id}-help` : undefined;
 ---
 
 <div class="mk-tf__field mk-cf" data-country-field>
-  <label for={id} id={labelId}>{label}</label>
+  <label for={id} id={labelId}>{label}{markRequired && <span class="mk-tf__req" aria-hidden="true">*</span>}</label>
   <div class="mk-cf__control">
     <input
       id={id}

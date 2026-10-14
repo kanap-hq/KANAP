@@ -248,6 +248,12 @@ Public config: `GET /config/public` returns `features.sampleData` (`true` in mul
   - 400 `{ "message": "VAT_NUMBER_INVALID" }` when Stripe does not accept the EU VAT number. The invoice details are copied to the Stripe customer at this point, and an EU VAT number is registered there as a tax id so it appears on invoices.
 - POST `/billing/request-invoice` (bank transfer)
   - Same 400 answers as `/billing/checkout`: `BILLING_PROFILE_INCOMPLETE` with `missing`, and `VAT_NUMBER_INVALID`.
+  - On a running subscription with another price (monthly card to annual transfer), the annual period starts today (`billing_cycle_anchor: now`): the invoice carries the annual price less the credit for the unused month, payable within `INVOICE_PAYMENT_TERM_DAYS`. The same price keeps the period and only changes how it is paid.
+- POST `/billing/change-plan` (card, running subscription) → the subscription summary plus `change: { status, invoice?, effective_at? }`
+  - Body: `{ plan_key, subscription_type, terms_version }`. The invoicing details are copied to the Stripe customer first (complete details as at checkout, `VAT_NUMBER_INVALID` included; incomplete ones best effort).
+  - Monthly to annual (any change other than annual to monthly): a new period starts today, the unused part of the current one is credited and the difference is invoiced and charged at once (`billing_cycle_anchor: now`, `proration_behavior: always_invoice`, `payment_behavior: pending_if_incomplete`). `status: 'paid'` with `invoice: { number, amount, currency, hosted_invoice_url }` (amount in cents) once paid; `status: 'requires_payment'` with the invoice when the card needs the customer (3-D Secure) or is refused: Stripe keeps the change pending and applies it only when that invoice is paid, and the local subscription is unchanged.
+  - Annual to monthly: `status: 'scheduled'`, `effective_at` = end of the annual period. A Stripe subscription schedule keeps the annual price until then and bills the monthly price by card from that date; nothing is refunded.
+  - 400 `PLAN_UNCHANGED` when the plan and interval are the current ones; `NO_ACTIVE_SUBSCRIPTION` without a running subscription.
 
 ## Companies
 - GET `/companies?year=YYYY&status=enabled|disabled&page=1&limit=50&sort=name:ASC`
