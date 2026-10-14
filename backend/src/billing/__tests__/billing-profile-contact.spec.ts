@@ -33,6 +33,16 @@ const COMPLETE_INVOICE = {
   address: { line1: '1 rue de la Paix', line2: 'Bat. B', postal_code: '75002', city: 'Paris', state: null, country: 'FR' },
 };
 
+const FR_MENTIONS = {
+  invoice_settings: {
+    custom_fields: [
+      { name: "Nature de l'opération", value: 'Prestation de services' },
+      { name: 'SIREN', value: '345678901' },
+    ],
+  },
+  preferred_locales: ['fr'],
+};
+
 function createTenant(overrides: Partial<TenantRow> = {}): TenantRow {
   return {
     id: 'tenant-1',
@@ -184,7 +194,40 @@ async function testCheckoutUsesTheBorrowedDetails() {
     name: 'Fromage SAS',
     phone: undefined,
     address: { line1: '1 rue de la Paix', city: 'Paris', postal_code: '75002', country: 'FR' },
+    ...FR_MENTIONS,
+    metadata: { siren: '345678901' },
   });
+}
+
+async function testSavingTheProfilePushesTheInvoiceMentions() {
+  // An existing customer receives the mentions at its next profile save.
+  const tenant = createTenant({ billing_invoice_info: COMPLETE_INVOICE });
+  const { service, manager, calls } = createService(tenant);
+  await service.updateBillingProfile({ tenantId: tenant.id, invoice: { phone: '+33 1 00 00 00 00' }, manager: manager as any });
+  const updates = calls.filter((call) => call.method === 'customers.update');
+  assert.equal(updates.length, 1);
+  assert.equal(updates[0].args[0], 'cus_1');
+  assert.deepEqual(updates[0].args[1], {
+    email: 'billing@fromage-co.com',
+    name: 'Fromage SAS',
+    phone: '+33 1 00 00 00 00',
+    address: { line1: '1 rue de la Paix', line2: 'Bat. B', city: 'Paris', postal_code: '75002', country: 'FR' },
+    ...FR_MENTIONS,
+    metadata: { siren: '345678901' },
+  });
+  assert.ok(!JSON.stringify(updates[0].args[1]).includes('default_payment_method'), 'the default payment method is left alone');
+
+  // A customer outside France: the nature only, its language, no SIREN.
+  const spanish = createTenant({
+    billing_invoice_info: { ...COMPLETE_INVOICE, vat_number: 'ESX1234567X', address: { ...COMPLETE_INVOICE.address, country: 'ES' } },
+  });
+  const es = createService(spanish);
+  await es.service.updateBillingProfile({ tenantId: spanish.id, invoice: {}, manager: es.manager as any });
+  const esUpdate = es.calls.find((call) => call.method === 'customers.update');
+  const payload = esUpdate!.args[1] as Record<string, unknown>;
+  assert.deepEqual(payload.invoice_settings, { custom_fields: [{ name: "Nature de l'opération", value: 'Prestation de services' }] });
+  assert.deepEqual(payload.preferred_locales, ['es']);
+  assert.deepEqual(payload.metadata, { siren: '' }, 'a SIREN left from a French profile is removed');
 }
 
 async function testNextSaveWritesTheBorrowedValues() {
@@ -300,6 +343,7 @@ async function run() {
   await testInvoiceDetailsBorrowTheCustomerCard();
   await testSavedInvoiceValuesComeFirst();
   await testCheckoutUsesTheBorrowedDetails();
+  await testSavingTheProfilePushesTheInvoiceMentions();
   await testNextSaveWritesTheBorrowedValues();
   await testClearingFields();
   await testClearingTheCompanyKeepsItEmpty();

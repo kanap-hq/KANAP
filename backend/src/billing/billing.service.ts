@@ -1,13 +1,15 @@
+import { createHash } from 'node:crypto';
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager, DataSource } from 'typeorm';
 import { PaymentMode, Subscription, SubscriptionType, SubscriptionStatus, CollectionMethod } from './subscription.entity';
 import { User } from '../users/user.entity';
 import { Tenant } from '../tenants/tenant.entity';
-import { StripeClientService, StripeConfigService } from './stripe';
+import { StripeClientService, StripeConfigService, ensureInvoiceA4 } from './stripe';
 import { subscriptionPeriod } from './stripe/stripe-shapes.util';
 import { computePriceAmount, computeStripePriceAmount, normaliseStripePrice, type NormalisedPrice } from './price.util';
 import { euVatTaxIdValue, missingInvoiceFields, normaliseVatNumber, toIsoCountry } from './billing-profile.util';
+import { customerSiren, invoiceCustomFields, invoiceLocale } from './invoice-mentions';
 import { withTenant } from '../common/tenant-runner';
 import { Features } from '../config/features';
 import { AuditService } from '../audit/audit.service';
@@ -570,6 +572,8 @@ export class BillingService {
   ): Promise<string> {
     const client = this.getStripeClientOrThrow();
     const profile = opts.invoiceProfile ?? null;
+    // Read before a deleted or stale customer id is cleared below: it keys the creation.
+    const previousCustomerId = tenant.stripe_customer_id ?? null;
     if (tenant.stripe_customer_id) {
       // Verify the customer still exists in the current Stripe environment
       try {
@@ -601,14 +605,24 @@ export class BillingService {
 
     const invoiceContact = profile ?? this.getInvoiceContact(tenant);
     const euVat = profile ? euVatTaxIdValue(profile) : null;
-    const customer = await this.withVatNumberErrors<{ id: string }>(() => client.customers.create({
-      ...this.stripeCustomerDetails(tenant, invoiceContact),
+    const details = this.stripeCustomerDetails(tenant, invoiceContact);
+    const siren = details.metadata.siren;
+    const params = {
+      ...details,
+      // A new customer has no SIREN key to clear: it is sent only when there is one.
       metadata: {
+        ...(siren ? { siren } : {}),
         tenant_id: tenant.id,
         tenant_slug: tenant.slug,
       },
       ...(euVat ? { tax_id_data: [{ type: 'eu_vat' as const, value: euVat }] } : {}),
-    }));
+    };
+    // The key names the customer id it replaces (a recreation after a deletion gets a new
+    // one) and follows the payload: a retry with the same details returns the same
+    // customer, corrected details are a new request.
+    const payloadHash = createHash('sha256').update(JSON.stringify(params)).digest('hex').slice(0, 16);
+    const idempotencyKey = `tenant-customer-${tenant.id}-${previousCustomerId ?? 'new'}-${payloadHash}`;
+    const customer = await this.withVatNumberErrors<{ id: string }>(() => client.customers.create(params, { idempotencyKey }));
 
     // The tenant was loaded by the caller before the Stripe calls: write the
     // customer id only, never the rest of that copy.
@@ -618,13 +632,22 @@ export class BillingService {
     return customer.id;
   }
 
-  /** The Stripe customer fields KANAP owns: email, name (company), phone, address. */
+  /**
+   * The Stripe customer fields KANAP owns: email, name (company), phone, address, the
+   * invoice mentions (operation nature, SIREN of a French customer) and the invoice
+   * language. Stripe merges `metadata` keys on update, so `siren` leaves the others alone;
+   * an empty `siren` removes a SIREN the customer no longer has.
+   */
   private stripeCustomerDetails(tenant: Tenant, contact: BillingContact) {
+    const siren = customerSiren(contact);
     return {
       email: contact.email || undefined,
       name: contact.company || contact.name || tenant.name,
       phone: contact.phone || undefined,
       address: this.normaliseStripeAddress(this.addressToRecord(contact.address)),
+      invoice_settings: { custom_fields: invoiceCustomFields(contact) },
+      preferred_locales: [invoiceLocale(contact.address.country)],
+      metadata: { siren: siren ?? '' },
     };
   }
 
@@ -1166,6 +1189,8 @@ export class BillingService {
       }
     }
 
+    // The draft is set to A4 before Stripe renders its PDF.
+    await ensureInvoiceA4(client, invoice, this.logger);
     try {
       const finalized = await client.invoices.finalizeInvoice(invoiceId, {
         auto_advance: true,
