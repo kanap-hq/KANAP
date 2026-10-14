@@ -19,7 +19,8 @@ import api from '../../api';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { drawerMenuItemSx } from '../../theme/formSx';
 import CreateCoADialog from './CreateCoADialog';
-import { coaCoverage, coaRoleLabels, useCountryName } from './coaRoles';
+import { coaCoverage, coaRoleLabels } from './coaRoles';
+import { useCountryName } from '../../i18n/countries';
 import { CoaListItem, useCoaList } from './useCoaList';
 
 type ConsolidationImpact = { matched: number; outside: number; unmapped: number };

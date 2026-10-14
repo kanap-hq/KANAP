@@ -2,14 +2,24 @@ import 'dotenv/config';
 import * as assert from 'node:assert/strict';
 import dataSource from '../../data-source';
 import { computeContractTerms, contractCommitmentCents, contractCommitmentSql, contractTermsSql } from '../contract-terms';
-import { CONTRACT_COMMITMENT_CASES, CONTRACT_TERM_CASES, contractCommitmentSweep, contractTermSweep } from './contract-terms.cases';
+import {
+  CONTRACT_COMMITMENT_CASES,
+  CONTRACT_DECISION_CASES,
+  CONTRACT_TERM_CASES,
+  contractCommitmentSweep,
+  contractTermSweep,
+} from './contract-terms.cases';
 
 // The contract term rule in SQL (contractTermsSql) gives the TypeScript values
 // (computeContractTerms), the list's next due date and state included: on the hand-worked cases, through both the scalar expressions the
 // list sorts and filters on and the lateral row the expiry warnings join; then on every
 // combination of the sweep. The commitment of a year (contractCommitmentSql, lot CB) gives the
-// cents of contractCommitmentCents on its cases and its own sweep. The rows are literal values
-// (unnest), so the spec needs no table and runs on an empty database.
+// cents of contractCommitmentCents on its cases and its own sweep. The decisions recorded (lot CR2,
+// `renewalDecision`) are checked on their hand-worked cases (the decisions as a JSON column) and
+// on the whole sweep with a decision drawn from the term end's day (a renewal on even days, an end
+// on other multiples of 3), so both sides must ask about the same term and read it the same way. The rows are literal values (unnest), so the spec needs no table and runs on an empty
+// database; the audit log reading (`renewalConfirmedSql`) is covered by
+// contract-renewal.integration.spec.ts.
 
 type SqlRow = {
   id: number;
@@ -22,10 +32,44 @@ type SqlRow = {
   term_state: string;
 };
 
-type Input = { today: string; start: string; months: number | null; notice: number | null; renewal: boolean; disabledAt: string | null };
+type Input = {
+  today: string; start: string; months: number | null; notice: number | null; renewal: boolean; disabledAt: string | null;
+  /** The latest decision of each term, by its last day, for the `column` mode. */
+  decisions?: Record<string, string> | null;
+};
 
-const SOURCE = `unnest($1::int[], $2::date[], $3::int[], $4::int[], $5::bool[], $6::timestamptz[], $7::date[])
-  AS v(id, start_date, duration_months, notice_period_months, auto_renewal, disabled_at, today)`;
+const SOURCE = `unnest($1::int[], $2::date[], $3::int[], $4::int[], $5::bool[], $6::timestamptz[], $7::date[], $8::jsonb[])
+  AS v(id, start_date, duration_months, notice_period_months, auto_renewal, disabled_at, today, decisions)`;
+
+/**
+ * Which decisions are recorded: none (the option left out), the row's `decisions`, or one drawn
+ * from the term end's day (the sweep).
+ */
+type Confirmed = 'none' | 'column' | 'even-day';
+
+function sqlOptions(mode: Confirmed) {
+  if (mode === 'column') return { renewalDecision: (termEnd: string) => `(v.decisions->>to_char(${termEnd}, 'YYYY-MM-DD'))` };
+  if (mode === 'even-day') {
+    return {
+      renewalDecision: (termEnd: string) =>
+        `(CASE WHEN EXTRACT(DAY FROM ${termEnd})::int % 2 = 0 THEN 'renew' WHEN EXTRACT(DAY FROM ${termEnd})::int % 3 = 0 THEN 'end' END)`,
+    };
+  }
+  return undefined;
+}
+
+function tsOptions(mode: Confirmed, row: Input) {
+  if (mode === 'column') return { renewalDecision: (termEnd: string) => row.decisions?.[termEnd] ?? null };
+  if (mode === 'even-day') {
+    return {
+      renewalDecision: (termEnd: string) => {
+        const day = Number(termEnd.slice(8, 10));
+        return day % 2 === 0 ? 'renew' : day % 3 === 0 ? 'end' : null;
+      },
+    };
+  }
+  return undefined;
+}
 
 function params(rows: Input[]): unknown[] {
   return [
@@ -36,13 +80,14 @@ function params(rows: Input[]): unknown[] {
     rows.map((r) => r.renewal),
     rows.map((r) => r.disabledAt),
     rows.map((r) => r.today),
+    rows.map((r) => (r.decisions ? JSON.stringify(r.decisions) : null)),
   ];
 }
 
 const ymd = (column: string) => `to_char(${column}, 'YYYY-MM-DD')`;
 
-async function viaLateral(rows: Input[]): Promise<SqlRow[]> {
-  const terms = contractTermsSql('v', 'v.today');
+async function viaLateral(rows: Input[], mode: Confirmed = 'none'): Promise<SqlRow[]> {
+  const terms = contractTermsSql('v', 'v.today', sqlOptions(mode));
   return dataSource.query(
     `SELECT v.id, t.term_index, ${ymd('t.current_term_end')} AS current_term_end,
             ${ymd('t.next_cancellation_deadline')} AS next_cancellation_deadline,
@@ -55,8 +100,8 @@ async function viaLateral(rows: Input[]): Promise<SqlRow[]> {
   );
 }
 
-async function viaScalars(rows: Input[]): Promise<SqlRow[]> {
-  const terms = contractTermsSql('v', 'v.today');
+async function viaScalars(rows: Input[], mode: Confirmed = 'none'): Promise<SqlRow[]> {
+  const terms = contractTermsSql('v', 'v.today', sqlOptions(mode));
   return dataSource.query(
     `SELECT v.id, ${terms.termIndex} AS term_index, ${ymd(terms.currentTermEnd)} AS current_term_end,
             ${ymd(terms.nextCancellationDeadline)} AS next_cancellation_deadline,
@@ -68,10 +113,11 @@ async function viaScalars(rows: Input[]): Promise<SqlRow[]> {
   );
 }
 
-function expectedOf(row: Input): Omit<SqlRow, 'id'> {
+function expectedOf(row: Input, mode: Confirmed = 'none'): Omit<SqlRow, 'id'> {
   const t = computeContractTerms(
     { start_date: row.start, duration_months: row.months, notice_period_months: row.notice, auto_renewal: row.renewal, disabled_at: row.disabledAt },
     row.today,
+    tsOptions(mode, row),
   );
   return {
     term_index: t.term_index,
@@ -129,20 +175,37 @@ async function main() {
       });
     }
 
+    // The decisions recorded: the hand-worked states, through both forms.
+    const confirmedCases: Input[] = CONTRACT_DECISION_CASES.map((c) => ({
+      today: c.today, start: c.start, months: c.months, notice: c.notice, renewal: c.renewal, disabledAt: c.disabledAt ?? null, decisions: c.decisions,
+    }));
+    for (const [label, run] of [['lateral row', viaLateral], ['scalar expressions', viaScalars]] as const) {
+      const got = await run(confirmedCases, 'column');
+      CONTRACT_DECISION_CASES.forEach((c, i) => {
+        assert.equal(got[i].term_state, c.expected, `${label}, decisions, ${c.name}`);
+        assert.deepEqual(strip(got[i]), expectedOf(confirmedCases[i], 'column'), `${label}, decisions, ${c.name}: same as TypeScript`);
+      });
+    }
+
     const sweep = contractTermSweep();
-    const got = await viaLateral(sweep);
-    assert.equal(got.length, sweep.length, 'sweep: one row per combination');
-    let mismatches = 0;
-    const first: string[] = [];
-    sweep.forEach((row, i) => {
-      const sql = strip(got[i]);
-      const ts = expectedOf(row);
-      if (JSON.stringify(sql) !== JSON.stringify(ts)) {
-        mismatches += 1;
-        if (first.length < 5) first.push(`${JSON.stringify(row)}\n    sql ${JSON.stringify(sql)}\n    ts  ${JSON.stringify(ts)}`);
-      }
-    });
-    assert.equal(mismatches, 0, `sweep: SQL and TypeScript differ on ${mismatches} of ${sweep.length} rows\n  ${first.join('\n  ')}`);
+    let toDecideLeft = 0;
+    for (const mode of ['none', 'even-day'] as const) {
+      const got = await viaLateral(sweep, mode);
+      assert.equal(got.length, sweep.length, `sweep (${mode}): one row per combination`);
+      let mismatches = 0;
+      const first: string[] = [];
+      sweep.forEach((row, i) => {
+        const sql = strip(got[i]);
+        const ts = expectedOf(row, mode);
+        if (mode === 'even-day' && expectedOf(row).term_state === 'to_decide' && ts.term_state !== 'to_decide') toDecideLeft += 1;
+        if (JSON.stringify(sql) !== JSON.stringify(ts)) {
+          mismatches += 1;
+          if (first.length < 5) first.push(`${JSON.stringify(row)}\n    sql ${JSON.stringify(sql)}\n    ts  ${JSON.stringify(ts)}`);
+        }
+      });
+      assert.equal(mismatches, 0, `sweep (${mode}): SQL and TypeScript differ on ${mismatches} of ${sweep.length} rows\n  ${first.join('\n  ')}`);
+    }
+    assert.ok(toDecideLeft > 100, `the even-day sweep takes contracts out of "to decide" (${toDecideLeft})`);
 
     const commitmentCases: CommitmentInput[] = CONTRACT_COMMITMENT_CASES.map((c) => ({
       start: c.start, months: c.months, renewal: c.renewal, disabledAt: c.disabledAt ?? null, amount: String(c.amount), year: c.year,
@@ -165,7 +228,7 @@ async function main() {
     });
     assert.equal(commitmentMismatches, 0, `commitment sweep: SQL and TypeScript differ on ${commitmentMismatches} of ${commitmentRows.length} rows\n  ${firstCommitment.join('\n  ')}`);
 
-    console.log(`contract-terms.parity.spec: ok (${CONTRACT_TERM_CASES.length} cases, ${sweep.length} sweep rows, ${CONTRACT_COMMITMENT_CASES.length} commitment cases, ${commitmentRows.length} commitment sweep rows)`);
+    console.log(`contract-terms.parity.spec: ok (${CONTRACT_TERM_CASES.length} cases, ${CONTRACT_DECISION_CASES.length} decision cases, ${sweep.length} sweep rows twice, ${CONTRACT_COMMITMENT_CASES.length} commitment cases, ${commitmentRows.length} commitment sweep rows)`);
   } finally {
     await dataSource.destroy();
   }

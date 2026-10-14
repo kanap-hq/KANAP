@@ -8,7 +8,7 @@ import { requireJwtSecret } from '../common/env';
  * `JWT_SECRET` when its own variable was unset, so a single key signed and verified all four
  * families. Each family now has a key of its own and a verified `purpose` claim.
  *
- * Two families now derive their own key from `JWT_SECRET` through HMAC with a stable, versioned
+ * Most families now derive their own key from `JWT_SECRET` through HMAC with a stable, versioned
  * label: rotating a label version rotates that family's key material without touching
  * `JWT_SECRET`. A configured dedicated key is the ONLY key used for its family — no fallback
  * attempt with another key after a failure.
@@ -24,6 +24,8 @@ export const TOKEN_SECRET_LABEL_PREFIX = 'kanap:v1:';
 export const TOKEN_SECRET_LABEL = {
   'password-reset': `${TOKEN_SECRET_LABEL_PREFIX}password-reset`,
   'entra-state': `${TOKEN_SECRET_LABEL_PREFIX}entra-state`,
+  'mcp-oauth-code': `${TOKEN_SECRET_LABEL_PREFIX}mcp-oauth-code`,
+  'mcp-access': `${TOKEN_SECRET_LABEL_PREFIX}mcp-access`,
 } as const;
 
 export type DerivedTokenFamily = keyof typeof TOKEN_SECRET_LABEL;
@@ -34,11 +36,13 @@ export const TOKEN_FAMILY_ENV: Record<TokenFamily, string> = {
   'password-reset': 'PASSWORD_RESET_SECRET',
   provisioning: 'PROVISIONING_TOKEN_SECRET',
   'entra-state': 'ENTRA_STATE_SECRET',
+  'mcp-oauth-code': 'MCP_OAUTH_CODE_SECRET',
+  'mcp-access': 'MCP_ACCESS_TOKEN_SECRET',
 };
 
 export type TokenSecretSource = 'dedicated-key' | 'derived-key' | 'jwt-secret';
 
-export const TOKEN_FAMILIES: TokenFamily[] = ['password-reset', 'provisioning', 'entra-state'];
+export const TOKEN_FAMILIES: TokenFamily[] = ['password-reset', 'provisioning', 'entra-state', 'mcp-oauth-code', 'mcp-access'];
 
 /**
  * Derive a family key from `JWT_SECRET` with a distinct, stable HMAC label (RFC 2104 PRF).
@@ -87,6 +91,16 @@ export function getProvisioningSecret(env: NodeJS.ProcessEnv = process.env): str
 /** Entra SSO state / login handoff signing key. */
 export function getEntraStateSecret(env: NodeJS.ProcessEnv = process.env): string {
   return resolveFamilySecret('entra-state', env).secret;
+}
+
+/** MCP OAuth authorization code signing key (ai/oauth). */
+export function getMcpOAuthCodeSecret(env: NodeJS.ProcessEnv = process.env): string {
+  return resolveFamilySecret('mcp-oauth-code', env).secret;
+}
+
+/** MCP OAuth access token signing key (ai/oauth): verified only by the MCP guard. */
+export function getMcpAccessTokenSecret(env: NodeJS.ProcessEnv = process.env): string {
+  return resolveFamilySecret('mcp-access', env).secret;
 }
 
 export type TokenSecretPolicyEntry = {

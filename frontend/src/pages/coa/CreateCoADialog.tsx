@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -15,10 +15,9 @@ import {
 } from '@mui/material';
 import api from '../../api';
 import { KanapDialog, PropertyRow } from '../../components/design';
-import { COUNTRY_OPTIONS } from '../../constants/isoOptions';
 import { drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
-import { useCountryName } from './coaRoles';
+import { useCountryName, useCountryOptions } from '../../i18n/countries';
 
 type TemplateOption = {
   id: string;
@@ -58,12 +57,7 @@ export default function CreateCoADialog({
   const [preflight, setPreflight] = useState<any | null>(null);
   const [preflighting, setPreflighting] = useState(false);
 
-  const countryOptions = useMemo(
-    () => COUNTRY_OPTIONS
-      .map((option) => ({ code: option.code, name: countryName(option.code) }))
-      .sort((a, b) => a.name.localeCompare(b.name)),
-    [countryName],
-  );
+  const countryOptions = useCountryOptions();
 
   useEffect(() => {
     if (!open || mode !== 'template') return;

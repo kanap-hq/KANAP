@@ -4,6 +4,7 @@
     "profile": "Profil",
     "notifications": "Notifications",
     "appearance": "Apparence",
+    "connectedApps": "Applications connectées",
     "about": "À propos"
   },
   "profile": {
@@ -92,5 +93,23 @@
     "deploymentOnPremise": "Déploiement : sur site",
     "releaseNotes": "Notes de version",
     "upgradeGuide": "Guide de mise à jour"
+  },
+  "connectedApps": {
+    "title": "Applications connectées",
+    "subtitle": "Ces applications peuvent lire vos données KANAP avec vos droits d'accès.",
+    "empty": "Aucune application connectée.",
+    "howTo": "Comment connecter Claude",
+    "connectedOn": "Connectée le {{date}}",
+    "createdOn": "Créée le {{date}}",
+    "lastUsed": "dernière utilisation {{date}}",
+    "never": "jamais",
+    "disconnect": "Déconnecter",
+    "confirm": {
+      "title": "Déconnecter {{client}} ?",
+      "body": "{{client}} perd immédiatement l'accès à vos données KANAP. Pour l'utiliser à nouveau, reconnectez-la depuis l'application."
+    },
+    "apiKeys": "Clés API",
+    "loadFailed": "Impossible de charger vos applications connectées.",
+    "disconnectFailed": "Impossible de déconnecter cette application."
   }
 }

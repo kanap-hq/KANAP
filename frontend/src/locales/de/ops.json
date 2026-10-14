@@ -519,7 +519,7 @@
       "today": "heute",
       "inDays_one": "in {{count}} Tag",
       "inDays_other": "in {{count}} Tagen",
-      "noticePassed": "Kündigungsfrist verstrichen, verlängert bis {{date}}",
+      "noticePassed": "Kündigungstermin verstrichen, verlängert bis {{date}}",
       "nextDeadline": "nächste Frist am {{date}}",
       "endsOn": "Endet am {{date}}",
       "withoutRenewal": "ohne Verlängerung",
@@ -532,7 +532,10 @@
       "renewedTimes_other": "{{count}}-mal verlängert seit {{date}}",
       "notice_one": "Kündigungsfrist {{count}} Monat",
       "notice_other": "Kündigungsfrist {{count}} Monate",
-      "noNotice": "Keine Kündigungsfrist"
+      "noNotice": "Keine Kündigungsfrist",
+      "renewalConfirmed": "Verlängerung bestätigt",
+      "nextTerm": "nächste Periode vom {{start}} bis {{end}}",
+      "decisionDue": "Entscheidung ausstehend"
     },
     "timeline": {
       "label": "Zeitleiste der Vertragsperioden",
@@ -697,17 +700,43 @@
       "terminatedOn": "Kündigung am {{date}} beschlossen.",
       "endsOn": "Der Vertrag endet am {{date}}.",
       "reasonShown": "Begründung: {{reason}}",
-      "noticeHint": "Senden Sie das Kündigungsschreiben vor dem {{date}} und hängen Sie es unter Beziehungen an.",
+      "noticeHint": "Senden Sie das Kündigungsschreiben vor dem {{date}} und hängen Sie es unter Verknüpfungen an.",
       "undo": "Entscheidung zurücknehmen",
       "failed": "Die Entscheidung konnte nicht gespeichert werden.",
       "settings": {
         "button": "Einstellungen",
         "title": "Vertragseinstellungen",
-        "windowLabel": "Entscheidungszeitraum vor der Kündigungsfrist (Tage)",
-        "windowHint": "Ein Vertrag mit stillschweigender Verlängerung wartet so viele Tage vor seiner Kündigungsfrist auf eine Entscheidung. Sein Verantwortlicher erhält dann eine Aufgabe, über die Verlängerung zu entscheiden. Von 0 bis 365 Tagen.",
+        "windowLabel": "Entscheidungszeitraum vor dem Kündigungstermin (Tage)",
+        "windowHint": "Ein Vertrag wartet so viele Tage vor seinem Kündigungstermin auf eine Entscheidung, oder vor seinem Ende, wenn er sich nicht stillschweigend verlängert. Sein Verantwortlicher erhält dann eine Aufgabe, um zu entscheiden. Von 0 bis 365 Tagen.",
         "invalid": "Geben Sie eine ganze Zahl von Tagen zwischen 0 und 365 ein.",
         "saveFailed": "Die Einstellungen konnten nicht gespeichert werden."
-      }
+      },
+      "endTitle": "Ende am {{date}} · Entscheidung ausstehend",
+      "endWithoutDecision": "Ohne Entscheidung endet der Vertrag am {{date}}.",
+      "letEnd": "Auslaufen lassen",
+      "endConfirmedBy": "Ende am {{date}} von {{name}} bestätigt.",
+      "endConfirmedOn": "Ende am {{date}} bestätigt."
+    },
+    "stopRenewal": {
+      "title": "Stillschweigende Verlängerung beenden",
+      "hint": "Seine bisherigen Perioden bleiben erhalten.",
+      "confirm": "Verlängerung beenden",
+      "failed": "Das Vertragsende konnte nicht gespeichert werden.",
+      "body": "Der Vertrag endet am {{date}}, sofern er nicht verlängert wird."
+    },
+    "endChoice": {
+      "label": "Enddatum",
+      "earliest_one": "Kündigungsfrist von {{count}} Monat: Das frühestmögliche Ende ist der {{date}}.",
+      "earliest_other": "Kündigungsfrist von {{count}} Monaten: Das frühestmögliche Ende ist der {{date}}.",
+      "earliestNoNotice": "Keine Kündigungsfrist: Das frühestmögliche Ende ist der {{date}}.",
+      "beforeAllowed": "Vor dem Ende, das die Kündigungsfrist erlaubt: mit dem Lieferanten zu vereinbaren.",
+      "tooEarly": "Wählen Sie einen Tag ab dem {{date}}."
+    },
+    "resumeRenewal": {
+      "title": "Stillschweigende Verlängerung wieder aktivieren",
+      "body": "Der Vertrag verlängert sich stillschweigend und das Ende am {{date}} entfällt.",
+      "confirm": "Verlängerung wieder aktivieren",
+      "failed": "Die Verlängerung konnte nicht wieder aktiviert werden."
     }
   },
   "operations": {
@@ -884,6 +913,8 @@
       "summary": {
         "preview_one": "{{count}} Zeile in der Vorschau.",
         "preview_other": "{{count}} Zeilen in der Vorschau.",
+        "leftOut_one": "{{count}} Zeile, die {{year}} nicht gültig ist, wird ausgelassen.",
+        "leftOut_other": "{{count}} Zeilen, die {{year}} nicht gültig sind, werden ausgelassen.",
         "done": "Kopie abgeschlossen.",
         "amounts": "Beträge: {{processed}} zu kopieren, {{skipped}} übersprungen.",
         "amountsDone": "Beträge: {{processed}} kopiert, {{skipped}} übersprungen.",
@@ -1398,15 +1429,18 @@
     "topOpex": {
       "title": "Top-Zeilen",
       "subtitle": "Größte {{type}}-Zeilen nach ausgewähltem Jahr ({{metric}})",
+      "subtitle_all": "Größte Budgetzeilen nach ausgewähltem Jahr ({{metric}})",
       "topTotal": "Top {{count}} gesamt",
       "totalMetric": "{{metric}}, gesamt",
       "ofFilteredMetric": "{{pct}} % der gefilterten Summe",
       "shareSubtitle": "Anteil an der Jahressumme ({{metric}})",
-      "chartTitle": "Top {{count}} {{type}} · {{metric}} {{year}}"
+      "chartTitle": "Top {{count}} {{type}} · {{metric}} {{year}}",
+      "chartTitle_all": "Top {{count}} Zeilen · {{metric}} {{year}}"
     },
     "opexDelta": {
       "title": "Top Anstieg / Rückgang",
       "subtitle": "Größte {{type}}-Veränderungen vs. Vorjahr",
+      "subtitle_all": "Größte Budgetveränderungen vs. Vorjahr",
       "sourceColumn": "Quellspalte",
       "destinationColumn": "Zielspalte",
       "increase": "Anstieg",
@@ -1433,8 +1467,11 @@
       "shareOfChangeMagnitude": "Anteil an der gesamten Veränderungsgröße",
       "pieAvailableHint": "Kreisdiagramm verfügbar, wenn nur eine Richtung ausgewählt ist",
       "chartTitleIncreases": "Top {{n}} {{type}}-Anstiege · {{source}} → {{destination}}",
+      "chartTitleIncreases_all": "Top {{n}} Anstiege · {{source}} → {{destination}}",
       "chartTitleDecreases": "Top {{n}} {{type}}-Rückgänge · {{source}} → {{destination}}",
+      "chartTitleDecreases_all": "Top {{n}} Rückgänge · {{source}} → {{destination}}",
       "chartTitleChanges": "Top {{n}} {{type}}-Veränderungen · {{source}} → {{destination}}",
+      "chartTitleChanges_all": "Top {{n}} Veränderungen · {{source}} → {{destination}}",
       "incValue": "Anst.: {{value}}",
       "decValue": "Rückg.: {{value}}",
       "topTotalIncrease": "Gesamtanstieg der Top {{count}}",
@@ -1450,14 +1487,19 @@
       "title": "Budgetspaltenvergleich",
       "subtitle": "Bis zu zehn Budgetspalten vergleichen",
       "yearGroupingSubtitle": "{{type}}: Jahresgruppierung",
+      "yearGroupingSubtitle_all": "OPEX und CAPEX: Jahresgruppierung",
       "selectionsSubtitle": "{{type}}: {{count}} Auswahl(en)",
+      "selectionsSubtitle_all": "OPEX und CAPEX: {{count}} Auswahl(en)",
       "addSelection": "Hinzufügen"
     },
     "consolidation": {
       "title": "Budget nach Konsolidierungskonto",
       "subtitle": "{{type}}-Totale nach Konsolidierungskonto gruppiert; Kreisdiagramm für ein einzelnes Jahr, Liniendiagramm für mehrere Jahre",
+      "subtitle_all": "OPEX- und CAPEX-Totale nach Konsolidierungskonto gruppiert; Kreisdiagramm für ein einzelnes Jahr, Liniendiagramm für mehrere Jahre",
       "chartTitleSingle": "{{type}} nach Konsolidierungskonto · {{year}}",
+      "chartTitleSingle_all": "OPEX und CAPEX nach Konsolidierungskonto · {{year}}",
       "chartTitleRange": "{{type}} nach Konsolidierungskonto · {{start}} bis {{end}}",
+      "chartTitleRange_all": "OPEX und CAPEX nach Konsolidierungskonto · {{start}} bis {{end}}",
       "shareSubtitle": "Anteil an den ausgewählten Totalen",
       "annualSubtitle": "Jahrestotale pro Konsolidierungskonto",
       "totalLabel": "Gesamt ({{metric}}): {{value}}",
@@ -1467,8 +1509,11 @@
     "analyticsCategory": {
       "title": "Budget nach Analysedimension",
       "subtitle": "{{type}}-Totale nach {{dimension}} gruppiert; Kreisdiagramm für ein einzelnes Jahr, Liniendiagramm für mehrere Jahre",
+      "subtitle_all": "OPEX- und CAPEX-Totale nach {{dimension}} gruppiert; Kreisdiagramm für ein einzelnes Jahr, Liniendiagramm für mehrere Jahre",
       "chartTitleSingle": "{{type}} nach {{dimension}} · {{year}}",
+      "chartTitleSingle_all": "OPEX und CAPEX nach {{dimension}} · {{year}}",
       "chartTitleRange": "{{type}} nach {{dimension}} · {{start}} bis {{end}}",
+      "chartTitleRange_all": "OPEX und CAPEX nach {{dimension}} · {{start}} bis {{end}}",
       "shareSubtitle": "Anteil an den ausgewählten Totalen",
       "annualSubtitle": "Jahrestotale pro Wert",
       "totalLabel": "Gesamt ({{metric}}): {{value}}",
@@ -1480,7 +1525,9 @@
     "staffing": {
       "title": "Personal nach Monat",
       "subtitle": "Monatliche {{type}}-VZÄ nach {{group}}",
+      "subtitle_all": "Monatliche VZÄ nach {{group}}",
       "chartTitle": "{{type}}-Personal nach {{group}}, {{column}} {{year}}",
+      "chartTitle_all": "Personal nach {{group}}, {{column}} {{year}}",
       "groupBy": "Gruppieren nach",
       "groups": {
         "costCenter": "Kostenstelle",
@@ -1507,8 +1554,11 @@
     "costPerFte": {
       "title": "Kosten pro VZÄ",
       "subtitle": "Jährliche {{type}}-Kosten eines VZÄ oder durchschnittlicher Tagessatz, nach {{group}}",
+      "subtitle_all": "Jährliche Kosten eines VZÄ oder durchschnittlicher Tagessatz, nach {{group}}",
       "chartTitle": "{{type}}-Kosten pro VZÄ nach {{group}}",
+      "chartTitle_all": "Kosten pro VZÄ nach {{group}}",
       "rateChartTitle": "{{type}}-Tagessatz nach {{group}}",
+      "rateChartTitle_all": "Tagessatz nach {{group}}",
       "columns": "Spalten",
       "show": "Anzeige",
       "staffCost": "Personalkosten",

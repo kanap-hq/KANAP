@@ -1,10 +1,12 @@
-import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
 import { ContractRenewalService } from './contract-renewal.service';
 
 type ReasonBody = { reason?: string | null };
+/** A termination's end (`YYYY-MM-DD`); absent, the proposed one. */
+type EndBody = { reason?: string | null; end_date?: string | null };
 
 /**
  * The renewal decision of a contract (`contract-renewal.service.ts`): read with the contract, decided
@@ -18,8 +20,8 @@ export class ContractRenewalController {
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'reader')
   @Get(':id/renewal')
-  get(@Param('id') id: string, @Req() req: any) {
-    return this.svc.get(id, { manager: req?.queryRunner?.manager });
+  get(@Param('id') id: string, @Query('end_date') endDate: string | undefined, @Req() req: any) {
+    return this.svc.get(id, { manager: req?.queryRunner?.manager, endDate });
   }
 
   @UseGuards(PermissionGuard)
@@ -32,7 +34,7 @@ export class ContractRenewalController {
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'member')
   @Post(':id/renewal/terminate')
-  terminate(@Param('id') id: string, @Body() body: ReasonBody, @Req() req: any) {
+  terminate(@Param('id') id: string, @Body() body: EndBody, @Req() req: any) {
     return this.svc.act(id, 'terminate', body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
@@ -41,6 +43,30 @@ export class ContractRenewalController {
   @Post(':id/renewal/renegotiate')
   renegotiate(@Param('id') id: string, @Body() body: ReasonBody, @Req() req: any) {
     return this.svc.act(id, 'renegotiate', body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+  }
+
+  /** The renewal field's "no" on a contract already renewed or awaiting a decision: renewal off, it ends on `end_date` (the proposed end by default). */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'member')
+  @Post(':id/renewal/stop')
+  stop(@Param('id') id: string, @Body() body: EndBody, @Req() req: any) {
+    return this.svc.stopRenewal(id, body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+  }
+
+  /** A contract without renewal whose end is within the window: let it end (lot CR2, round 2). */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'member')
+  @Post(':id/renewal/end')
+  end(@Param('id') id: string, @Body() body: ReasonBody, @Req() req: any) {
+    return this.svc.act(id, 'end', body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+  }
+
+  /** The renewal field's "yes" on a contract without renewal that has an end of validity: renewal on, the end removed. */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'member')
+  @Post(':id/renewal/resume')
+  resume(@Param('id') id: string, @Req() req: any) {
+    return this.svc.resumeRenewal(id, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
   @UseGuards(PermissionGuard)

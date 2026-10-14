@@ -9,9 +9,14 @@
       "testing": "Testing..."
     },
     "dialogs": {
+      "claudeCodeHelper": "Run it in a terminal to connect Claude Code to KANAP with this key.",
+      "claudeCodeLabel": "Claude Code command",
+      "copyCommand": "Copy command",
+      "copyKey": "Copy key",
       "copyKeyWarning": "Copy this key now. It will not be shown again.",
       "createKeyTitle": "Create MCP API key",
-      "keyCreatedTitle": "Key created"
+      "keyCreatedTitle": "Key created",
+      "keyLabel": "Key"
     },
     "features": {
       "braveSearchNotConfigured": "BRAVE_SEARCH_API_KEY not configured",
@@ -60,14 +65,26 @@
         "label": "Label",
         "lastUsed": "Last used",
         "prefix": "Prefix",
-        "status": "Status"
+        "status": "Status",
+        "kind": "Type"
       },
-      "empty": "No MCP API keys configured.",
+      "copied": "Copied",
+      "empty": "No MCP keys or connections.",
+      "endpoint": {
+        "label": "Server address",
+        "helper": "MCP clients connect to this address and send the key in an Authorization header.",
+        "copy": "Copy address",
+        "connectorHint": "Claude, Claude Desktop and Claude Code can also connect without a key: add this address as a custom connector."
+      },
       "statuses": {
         "active": "Active",
         "revoked": "Revoked"
       },
-      "title": "MCP API keys"
+      "title": "MCP keys and connections",
+      "kinds": {
+        "apiKey": "API key",
+        "oauth": "Connection"
+      }
     },
     "messages": {
       "connectionTestFailed": "Connection test failed.",
@@ -120,7 +137,7 @@
       },
       "builtinUsage": {
         "cta": "Use your own API keys for unlimited usage.",
-        "description": "Built-in usage is shared across chat and MCP requests for this tenant.",
+        "description": "Built-in usage is shared by chat and agents for this tenant.",
         "loadFailed": "Failed to load built-in usage.",
         "reset": "Resets on {{date}}.",
         "summary": "{{count}} / {{limit}} messages used this month",
@@ -218,6 +235,7 @@
       "login": "Sign-in",
       "login_failed": "Failed sign-in",
       "logout": "Sign-out",
+      "mcp_connection_refused": "MCP client connection refused",
       "password_reset_completed": "Password reset completed",
       "password_reset_requested": "Password reset requested",
       "refresh_denied": "Session renewal refused",
@@ -309,6 +327,7 @@
       "sso_failed": "Sign-in with Microsoft failed",
       "sso_not_configured": "Sign-in with Microsoft not set up",
       "tenant_mismatch": "Microsoft directory does not match the workspace",
+      "too_many_attempts": "Too many sign-in attempts",
       "unknown_user": "No account with this address"
     },
     "shared": {

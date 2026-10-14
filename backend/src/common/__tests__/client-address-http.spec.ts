@@ -98,6 +98,10 @@ async function testAddressByHops() {
 
 async function testLoginLimitPerAddress() {
   const { limit } = RATE_LIMITS.authLogin;
+  // Password sign-in, per client address: as wide as the sign-in with Microsoft, for the staff of
+  // one organisation behind one outbound address. Refusals per account are limited apart.
+  assert.equal(limit, 60, 'password sign-in: 60 requests a minute per client address');
+  assert.equal(RATE_LIMITS.authLogin.ttl, 60_000);
 
   // Behind one proxy: each client has its own count.
   await withApp('true', async (app) => {

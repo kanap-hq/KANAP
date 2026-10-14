@@ -165,7 +165,7 @@ export default function AnalyticsCategoryReport() {
         .filter((datum) => datum.value != null);
       const total = chartData.reduce((acc, datum) => acc + (Number(datum.value) || 0), 0);
       const base = {
-        title: { text: measureText.chartTitle(t('reports.analyticsCategory.chartTitleSingle', { type: scopeLabel, dimension: dimensionInSentence, year })) },
+        title: { text: measureText.chartTitle(t('reports.analyticsCategory.chartTitleSingle', { type: scopeLabel, context: scope, dimension: dimensionInSentence, year })) },
         subtitle: { text: metricsCaption || t('reports.analyticsCategory.shareSubtitle') },
         footnote: { text: t('reports.analyticsCategory.totalLabel', { metric: metricsCaption, value: formatNumber(measureText.fte && chartData.length === 0 ? null : total) }) },
         data: chartData,
@@ -258,7 +258,7 @@ export default function AnalyticsCategoryReport() {
       } : {}),
     }));
     return {
-      title: { text: measureText.chartTitle(t('reports.analyticsCategory.chartTitleRange', { type: scopeLabel, dimension: dimensionInSentence, start: years[0], end: years[years.length - 1] })) },
+      title: { text: measureText.chartTitle(t('reports.analyticsCategory.chartTitleRange', { type: scopeLabel, context: scope, dimension: dimensionInSentence, start: years[0], end: years[years.length - 1] })) },
       subtitle: { text: metricsCaption || t('reports.analyticsCategory.annualSubtitle') },
       data: chartData,
       series,
@@ -274,7 +274,7 @@ export default function AnalyticsCategoryReport() {
     <ReportLayout
       busy={busy}
       title={t("reports.analyticsCategory.title")}
-      subtitle={t('reports.analyticsCategory.subtitle', { type: scopeLabel, dimension: dimensionInSentence })}
+      subtitle={t('reports.analyticsCategory.subtitle', { type: scopeLabel, context: scope, dimension: dimensionInSentence })}
       filters={(
         <>
           <ItemScopeTabs allowAll value={scope} onChange={setScope} />

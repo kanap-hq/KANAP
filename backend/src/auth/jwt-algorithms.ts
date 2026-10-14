@@ -5,8 +5,8 @@ import type { Algorithm } from 'jsonwebtoken';
  * with, and every `jwt.verify` names the algorithms it accepts, so a token is only accepted in
  * the algorithm its family is issued with.
  *
- * - Tokens this API issues (access, password reset, SSO state, SSO login handoff) are signed with
- *   HS256 and accepted in HS256 only.
+ * - Tokens this API issues (access, password reset, SSO state, SSO login handoff, MCP OAuth code
+ *   and access token) are signed with HS256 and accepted in HS256 only.
  * - Provisioning tokens are issued outside this repository with a shared secret
  *   (`token-secret.util.ts`): any HMAC algorithm is accepted.
  * - Entra ID tokens are signed by Microsoft with RS256 and checked against its published keys.

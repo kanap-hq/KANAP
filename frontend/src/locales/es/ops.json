@@ -532,7 +532,10 @@
       "renewedTimes_other": "Renovado {{count}} veces desde el {{date}}",
       "notice_one": "Preaviso de {{count}} mes",
       "notice_other": "Preaviso de {{count}} meses",
-      "noNotice": "Sin preaviso"
+      "noNotice": "Sin preaviso",
+      "renewalConfirmed": "Renovación confirmada",
+      "nextTerm": "próximo periodo del {{start}} al {{end}}",
+      "decisionDue": "decisión pendiente"
     },
     "timeline": {
       "label": "Cronología de los periodos del contrato",
@@ -704,10 +707,36 @@
         "button": "Ajustes",
         "title": "Ajustes de contratos",
         "windowLabel": "Plazo de decisión antes de la fecha límite de rescisión (días)",
-        "windowHint": "Un contrato con renovación tácita espera una decisión este número de días antes de su fecha límite de rescisión. Su responsable recibe entonces una tarea para decidir la renovación. De 0 a 365 días.",
+        "windowHint": "Un contrato espera una decisión este número de días antes de su fecha límite de rescisión, o antes de su fin si no se renueva tácitamente. Su responsable recibe entonces una tarea para decidir. De 0 a 365 días.",
         "invalid": "Introduzca un número entero de días entre 0 y 365.",
         "saveFailed": "No se pudieron guardar los ajustes."
-      }
+      },
+      "endTitle": "Fin prevista el {{date}} · decisión pendiente",
+      "endWithoutDecision": "Sin decisión, el contrato termina el {{date}}.",
+      "letEnd": "Dejar terminar",
+      "endConfirmedBy": "Fin confirmada el {{date}} por {{name}}.",
+      "endConfirmedOn": "Fin confirmada el {{date}}."
+    },
+    "stopRenewal": {
+      "title": "Desactivar la renovación tácita",
+      "hint": "Sus periodos anteriores se conservan.",
+      "confirm": "Desactivar la renovación",
+      "failed": "No se pudo guardar el fin del contrato.",
+      "body": "El contrato terminará el {{date}}, salvo renovación."
+    },
+    "endChoice": {
+      "label": "Fecha de fin",
+      "earliest_one": "Preaviso de {{count}} mes: el primer fin posible es el {{date}}.",
+      "earliest_other": "Preaviso de {{count}} meses: el primer fin posible es el {{date}}.",
+      "earliestNoNotice": "Sin preaviso: el primer fin posible es el {{date}}.",
+      "beforeAllowed": "Antes del fin que permite el preaviso: a acordar con el proveedor.",
+      "tooEarly": "Elija un día a partir del {{date}}."
+    },
+    "resumeRenewal": {
+      "title": "Reactivar la renovación tácita",
+      "body": "El contrato se renovará tácitamente y se retirará el fin del {{date}}.",
+      "confirm": "Reactivar la renovación",
+      "failed": "No se pudo reactivar la renovación."
     }
   },
   "operations": {
@@ -884,6 +913,8 @@
       "summary": {
         "preview_one": "{{count}} línea en la vista previa.",
         "preview_other": "{{count}} líneas en la vista previa.",
+        "leftOut_one": "{{count}} línea no válida en {{year}} queda fuera.",
+        "leftOut_other": "{{count}} líneas no válidas en {{year}} quedan fuera.",
         "done": "Copia terminada.",
         "amounts": "Importes: {{processed}} por copiar, {{skipped}} omitidos.",
         "amountsDone": "Importes: {{processed}} copiados, {{skipped}} omitidos.",
@@ -1398,15 +1429,18 @@
     "topOpex": {
       "title": "Top líneas",
       "subtitle": "Mayores líneas {{type}} por año seleccionado ({{metric}})",
+      "subtitle_all": "Mayores líneas presupuestarias por año seleccionado ({{metric}})",
       "topTotal": "Total top {{count}}",
       "totalMetric": "{{metric}}, total",
       "ofFilteredMetric": "{{pct}} % del total filtrado",
       "shareSubtitle": "Participación en el total anual ({{metric}})",
-      "chartTitle": "Top {{count}} {{type}} · {{metric}} {{year}}"
+      "chartTitle": "Top {{count}} {{type}} · {{metric}} {{year}}",
+      "chartTitle_all": "Top {{count}} líneas · {{metric}} {{year}}"
     },
     "opexDelta": {
       "title": "Top aumento / disminución",
       "subtitle": "Mayores variaciones {{type}} vs. año anterior",
+      "subtitle_all": "Mayores variaciones presupuestarias vs. año anterior",
       "sourceColumn": "Columna de origen",
       "destinationColumn": "Columna de destino",
       "increase": "Aumento",
@@ -1433,8 +1467,11 @@
       "shareOfChangeMagnitude": "Participación de la magnitud total del cambio",
       "pieAvailableHint": "Gráfico circular disponible cuando se selecciona una sola dirección",
       "chartTitleIncreases": "Top {{n}} aumentos {{type}} · {{source}} → {{destination}}",
+      "chartTitleIncreases_all": "Top {{n}} aumentos · {{source}} → {{destination}}",
       "chartTitleDecreases": "Top {{n}} disminuciones {{type}} · {{source}} → {{destination}}",
+      "chartTitleDecreases_all": "Top {{n}} disminuciones · {{source}} → {{destination}}",
       "chartTitleChanges": "Top {{n}} variaciones {{type}} · {{source}} → {{destination}}",
+      "chartTitleChanges_all": "Top {{n}} variaciones · {{source}} → {{destination}}",
       "incValue": "Aum.: {{value}}",
       "decValue": "Dis.: {{value}}",
       "topTotalIncrease": "Aumento total del top {{count}}",
@@ -1450,14 +1487,19 @@
       "title": "Comparación de columnas presupuestarias",
       "subtitle": "Comparar hasta diez columnas presupuestarias",
       "yearGroupingSubtitle": "{{type}}: agrupación por año",
+      "yearGroupingSubtitle_all": "OPEX y CAPEX: agrupación por año",
       "selectionsSubtitle": "{{type}}: {{count}} selección(es)",
+      "selectionsSubtitle_all": "OPEX y CAPEX: {{count}} selección(es)",
       "addSelection": "Agregar"
     },
     "consolidation": {
       "title": "Presupuesto por cuenta de consolidación",
       "subtitle": "Totales {{type}} agrupados por cuenta de consolidación; circular para un solo año, lineal para rango plurianual",
+      "subtitle_all": "Totales OPEX y CAPEX agrupados por cuenta de consolidación; circular para un solo año, lineal para rango plurianual",
       "chartTitleSingle": "{{type}} por cuenta de consolidación · {{year}}",
+      "chartTitleSingle_all": "OPEX y CAPEX por cuenta de consolidación · {{year}}",
       "chartTitleRange": "{{type}} por cuenta de consolidación · {{start}} a {{end}}",
+      "chartTitleRange_all": "OPEX y CAPEX por cuenta de consolidación · {{start}} a {{end}}",
       "shareSubtitle": "Participación de los totales seleccionados",
       "annualSubtitle": "Totales anuales por cuenta de consolidación",
       "totalLabel": "Total ({{metric}}): {{value}}",
@@ -1467,8 +1509,11 @@
     "analyticsCategory": {
       "title": "Presupuesto por dimensión analítica",
       "subtitle": "Totales {{type}} agrupados por {{dimension}}; circular para un solo año, lineal para rango plurianual",
+      "subtitle_all": "Totales OPEX y CAPEX agrupados por {{dimension}}; circular para un solo año, lineal para rango plurianual",
       "chartTitleSingle": "{{type}} por {{dimension}} · {{year}}",
+      "chartTitleSingle_all": "OPEX y CAPEX por {{dimension}} · {{year}}",
       "chartTitleRange": "{{type}} por {{dimension}} · {{start}} a {{end}}",
+      "chartTitleRange_all": "OPEX y CAPEX por {{dimension}} · {{start}} a {{end}}",
       "shareSubtitle": "Participación de los totales seleccionados",
       "annualSubtitle": "Totales anuales por valor",
       "totalLabel": "Total ({{metric}}): {{value}}",
@@ -1480,7 +1525,9 @@
     "staffing": {
       "title": "Plantilla por mes",
       "subtitle": "ETC mensuales {{type}} por {{group}}",
+      "subtitle_all": "ETC mensuales por {{group}}",
       "chartTitle": "Plantilla {{type}} por {{group}}, {{column}} {{year}}",
+      "chartTitle_all": "Plantilla por {{group}}, {{column}} {{year}}",
       "groupBy": "Agrupar por",
       "groups": {
         "costCenter": "Centro de coste",
@@ -1507,8 +1554,11 @@
     "costPerFte": {
       "title": "Coste por ETC",
       "subtitle": "Coste anual {{type}} de un ETC o tarifa diaria media, por {{group}}",
+      "subtitle_all": "Coste anual de un ETC o tarifa diaria media, por {{group}}",
       "chartTitle": "Coste por ETC {{type}} por {{group}}",
+      "chartTitle_all": "Coste por ETC por {{group}}",
       "rateChartTitle": "Tarifa diaria {{type}} por {{group}}",
+      "rateChartTitle_all": "Tarifa diaria por {{group}}",
       "columns": "Columnas",
       "show": "Mostrar",
       "staffCost": "Coste de personal",

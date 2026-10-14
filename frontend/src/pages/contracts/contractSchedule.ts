@@ -45,8 +45,10 @@ export type DeadlineState =
   | { kind: 'cancel'; deadline: string; days: number; urgent: boolean }
   /** Renewing, the current term's notice has passed: the contract runs one more term. */
   | { kind: 'renewed'; renewedUntil: string; nextDeadline: string | null }
-  /** No renewal after the current term: the contract ends with it. */
-  | { kind: 'ends'; end: string; days: number }
+  /** Renewing, its renewal confirmed for the term of the next deadline: the term after it runs. */
+  | { kind: 'confirmed'; nextStart: string; nextEnd: string }
+  /** No renewal after the current term: the contract ends with it. `decisionDue`: renewal off, its end within the window, nothing decided. */
+  | { kind: 'ends'; end: string; days: number; decisionDue?: boolean }
   /** The last term is over. */
   | { kind: 'expired'; end: string }
   /** No term to show (no duration). */
@@ -93,6 +95,12 @@ export type ContractSchedule = {
   timeline: ScheduleTimeline | null;
 };
 
+/**
+ * A renewal decided for a term (`GET /contracts/:id/renewal`, a decided renewal): its last day,
+ * the first day of the next term and that term's last day.
+ */
+export type ConfirmedRenewal = { term_end: string; renews_on: string; next_term_end: string };
+
 /** At most this many terms before the current one on the timeline. */
 const PAST_TERMS_SHOWN = 3;
 const MAX_YEAR_TICKS = 8;
@@ -102,11 +110,18 @@ export function fraction(timeline: Pick<ScheduleTimeline, 'from' | 'to'>, ymd: s
   return Math.min(1, Math.max(0, daysBetween(timeline.from, ymd) / span));
 }
 
-/** The schedule of a contract as of `today`; null while the start date is not a valid day. */
+/**
+ * The schedule of a contract as of `today`; null while the start date is not a valid day. With
+ * `confirmed`, a renewal decided for the term of the next deadline: the state says so, and the
+ * timeline draws neither that deadline nor its window.
+ */
 export function contractSchedule(
   input: ContractTermsInput,
   today: string,
   windowDays: number | null | undefined = DECISION_WINDOW_DAYS,
+  confirmed: ConfirmedRenewal | null = null,
+  /** A decision is awaited on the end of a contract without renewal (`GET /contracts/:id/renewal`, `end` mode). */
+  endDecisionDue = false,
 ): ContractSchedule | null {
   const decisionWindow = windowDays ?? DECISION_WINDOW_DAYS;
   const terms = computeContractTerms(input, today);
@@ -133,13 +148,21 @@ export function contractSchedule(
     return { ...base, state: { kind: 'none' }, lastTerm: true, timeline: null };
   }
 
-  const renewsAfter = Boolean(input.auto_renewal) && (validUntil === null || termStart(k + 1) <= validUntil);
+  // A next term starts: with renewal, or without it up to an end of validity after that term starts (the term rule).
+  const renewsAfter = (Boolean(input.auto_renewal) || validUntil !== null) && (validUntil === null || termStart(k + 1) <= validUntil);
   const currentEnd = termEnd(k);
+  // The renewal is confirmed for the term of the next deadline (the dates may have changed since).
+  const confirmedNow = renewsAfter && confirmed !== null && terms.next_cancellation_deadline !== null
+    && terms.next_cancellation_deadline === addMonthsYmd(confirmed.term_end, -notice);
   let state: DeadlineState;
-  if (!renewsAfter) {
-    state = currentEnd < today
-      ? { kind: 'expired', end: currentEnd }
-      : { kind: 'ends', end: currentEnd, days: daysBetween(today, currentEnd) };
+  if (confirmedNow && confirmed) {
+    state = { kind: 'confirmed', nextStart: confirmed.renews_on, nextEnd: confirmed.next_term_end };
+  } else if (!renewsAfter) {
+    // The contract ends with its term, or on its end of validity when that comes first.
+    const end = validUntil !== null && validUntil < currentEnd ? validUntil : currentEnd;
+    state = end < today
+      ? { kind: 'expired', end }
+      : { kind: 'ends', end, days: daysBetween(today, end), ...(endDecisionDue && !input.auto_renewal ? { decisionDue: true } : {}) };
   } else {
     const deadline = addMonthsYmd(currentEnd, -notice);
     if (deadline >= today) {
@@ -157,7 +180,8 @@ export function contractSchedule(
     segments.push({ number: index + 1, start: termStart(index), end: termEnd(index), kind });
   }
   if (renewsAfter) {
-    segments.push({ number: k + 2, start: termStart(k + 1), end: termEnd(k + 1), kind: state.kind === 'renewed' ? 'next' : 'projected' });
+    const runs = state.kind === 'renewed' || confirmedNow;
+    segments.push({ number: k + 2, start: termStart(k + 1), end: termEnd(k + 1), kind: runs ? 'next' : 'projected' });
   }
 
   let from = segments[0].start;
@@ -169,7 +193,7 @@ export function contractSchedule(
   from = addDays(from, -pad);
   to = addDays(to, pad);
 
-  const deadline = renewsAfter && terms.next_cancellation_deadline && terms.next_cancellation_deadline <= to
+  const deadline = renewsAfter && !confirmedNow && terms.next_cancellation_deadline && terms.next_cancellation_deadline <= to
     ? terms.next_cancellation_deadline
     : null;
   const windowStart = deadline ? addDays(deadline, -decisionWindow) : null;

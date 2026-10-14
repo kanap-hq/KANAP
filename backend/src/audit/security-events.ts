@@ -39,6 +39,8 @@ export const AUTH_EVENT_ACTIONS = [
   'password_reset_completed',
   'sso_login',
   'sso_login_failed',
+  /** The account refused to connect an MCP client (OAuth consent screen, ai/oauth). */
+  'mcp_connection_refused',
 ] as const;
 export type AuthEventAction = (typeof AUTH_EVENT_ACTIONS)[number];
 
@@ -74,6 +76,8 @@ export const AUTH_EVENT_REASONS = [
   'sso_failed',
   /** A sign-in through the provisioning token exchange. */
   'provisioning',
+  /** Password sign-in refused before the password check: too many attempts for the account from this address. */
+  'too_many_attempts',
 ] as const;
 export type AuthEventReason = (typeof AUTH_EVENT_REASONS)[number];
 

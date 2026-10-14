@@ -66,7 +66,7 @@ Die Seite Audit-Protokoll bewahrt die Historie der Datenänderungen und der Sich
 
 **Exporte** (Tabelle **Export**): CSV-Exporte, Dokumente und Berichte, die der Server erzeugt. Die Zeile zeigt, was exportiert wurde und von wem. Auch der Export des Audit-Protokolls wird aufgezeichnet.
 
-Anmelde-, Sitzungs- und Export-Zeilen halten außerdem die **IP-Adresse** fest, von der die Anfrage kam, sowie den verwendeten **Browser**. Öffnen Sie die Zeile, um beides im Bereich **Nachher** zu lesen. Hinter einem Reverse Proxy ist es die IP-Adresse der Person selbst, sofern der Proxy sie weitergibt (On-Premise: siehe das [Reverse-Proxy-Beispiel](on-premise/installation.md#reverse-proxy-beispiel-nginx)).
+Anmelde-, Sitzungs- und Export-Zeilen halten außerdem die **IP-Adresse** fest, von der die Anfrage kam, sowie den verwendeten **Browser**. Öffnen Sie die Zeile, um beides im Bereich **Nachher** zu lesen. Hinter einem Reverse Proxy ist es die IP-Adresse der Person selbst, sofern der Proxy sie weitergibt (On-Premise: siehe das [Reverse-Proxy-Beispiel](on-premise/installation.md#reverse-proxy-example-nginx)).
 
 Passwörter, Anmelde-Links und Tokens werden nie ins Protokoll geschrieben. Versucht sich jemand mit einer E-Mail-Adresse anzumelden, zu der es kein Konto gibt, zeigt die Zeile **Unbekanntes Konto** und speichert die eingegebene Adresse nicht.
 
@@ -541,12 +541,14 @@ Die Einrichtungsschritte für die Entra-App-Registrierung finden Sie unter [Micr
 
 ### Anmeldelimits
 
-KANAP begrenzt wiederholte Anmeldeanfragen von derselben IP-Adresse:
+KANAP begrenzt wiederholte Anmeldeanfragen:
 
-- **Anmeldung mit Passwort**: 5 Versuche pro Minute.
-- **Anmeldung mit Microsoft**: 60 Anfragen pro Minute. Das Limit ist höher, weil die Beschäftigten einer Organisation KANAP oft über dieselbe ausgehende Adresse erreichen.
+- **Anmeldung mit Passwort**: 60 Anfragen pro Minute von derselben IP-Adresse. Nach 5 Fehlversuchen für ein Konto von derselben IP-Adresse innerhalb von 15 Minuten kann sich dieses Konto 15 Minuten lang nicht von dieser Adresse anmelden. Dasselbe Konto kann sich weiterhin von einer anderen Adresse anmelden, andere Konten auch von derselben Adresse. Eine erfolgreiche Anmeldung setzt den Zähler zurück.
+- **Anmeldung mit Microsoft**: 60 Anfragen pro Minute von derselben IP-Adresse.
 
-Ist das Limit erreicht, wartet die Person eine Minute und versucht es erneut. Hinter einem Reverse Proxy zählt KANAP die IP-Adresse jeder Person, sofern der Proxy sie weitergibt. Anmeldungen und fehlgeschlagene Anmeldungen erscheinen im [Audit-Protokoll](#audit-protokoll). Anfragen, die das Limit stoppt, werden nicht aufgezeichnet.
+Die Limits pro Adresse sind hoch, weil die Beschäftigten einer Organisation KANAP oft über dieselbe ausgehende Adresse erreichen. Ist ein Limit pro Adresse erreicht, wartet die Person eine Minute und versucht es erneut. Hinter einem Reverse Proxy zählt KANAP die IP-Adresse jeder Person, sofern der Proxy sie weitergibt.
+
+Anmeldungen und fehlgeschlagene Anmeldungen erscheinen im [Audit-Protokoll](#audit-protokoll). Wenn 5 Fehlversuche ein Konto von einer Adresse sperren, wird eine fehlgeschlagene Anmeldung mit dem Grund **Zu viele Anmeldeversuche** aufgezeichnet. Versuche, die in den folgenden 15 Minuten abgelehnt werden, werden nicht aufgezeichnet, ebenso wenig Anfragen, die ein Limit pro Adresse stoppt.
 
 ---
 
@@ -611,7 +613,7 @@ Steuern Sie, welche E-Mail-Benachrichtigungen Sie erhalten.
 | **Aufgaben** | Zuweisung (als Beauftragter, Antragsteller oder Betrachter), Statusänderungen, Kommentare |
 | **Budget** | Ablaufwarnungen, Statusänderungen, Kommentare |
 
-**Ablaufwarnungen** senden den Verantwortlichen eines Vertrags, einer OPEX-Zeile oder einer CAPEX-Zeile 30, 14, 7 und 1 Tag(e) vor deren Terminen eine E-Mail: Kündigungsfrist und Enddatum eines Vertrags, Ende der Gültigkeit einer OPEX- oder CAPEX-Zeile. Nur Verantwortliche, die die Budget-Benachrichtigungen und die **Ablaufwarnungen** eingeschaltet haben, erhalten sie. Die Prüfung läuft jeden Tag um 08:00 UTC. Jede Erinnerung geht pro Tag nur einmal an jeden Empfänger, auch wenn die Prüfung an diesem Tag erneut läuft, etwa nach einem Neustart.
+**Ablaufwarnungen** senden den Verantwortlichen eines Vertrags, einer OPEX-Zeile oder einer CAPEX-Zeile 30, 14, 7 und 1 Tag(e) vor deren Terminen eine E-Mail: der nächste Kündigungstermin eines Vertrags, das Ende eines Vertrags, der sich nicht verlängert (das Ende seiner Periode, oder sein Ende der Gültigkeit, wenn es früher liegt), das Ende der Gültigkeit einer OPEX- oder CAPEX-Zeile. Ein Vertrag mit stillschweigender Verlängerung wird nicht vor dem Ende jeder Periode gewarnt. Nur Verantwortliche, die die Budget-Benachrichtigungen und die **Ablaufwarnungen** eingeschaltet haben, erhalten sie. Die Prüfung läuft jeden Tag um 08:00 UTC. Jede Erinnerung geht pro Tag nur einmal an jeden Empfänger, auch wenn die Prüfung an diesem Tag erneut läuft, etwa nach einem Neustart.
 
 **Wöchentliche Zusammenfassungs-E-Mail**: Erhalten Sie eine regelmäßige Zusammenfassung Ihrer Aktivitäten und anstehenden Termine. Konfigurieren Sie:
 - **Wochentag** (z. B. Montag)

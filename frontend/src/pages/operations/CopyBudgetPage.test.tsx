@@ -227,6 +227,24 @@ describe('CopyBudgetPage', () => {
     expect(button('copy')).toBeDisabled();
   });
 
+  it('counts every line of the table in the summary, and says how many the copy leaves out', async () => {
+    // A line ended before the destination year: the table lists it, the copy does not answer it.
+    const endedLine = { id: 'o-2', nature: 'opex', item_number: 2, line_number: 2, product_name: 'Old support', versions: { [`y${Y}`]: slot(Y, 500) } };
+    post.mockImplementation(async (url: string, body: any) => {
+      if (url === '/budget-lines/summary/aggregate') return { data: fakeAggregate([opexLine, capexLine, endedLine], body) };
+      return operation(url, body);
+    });
+    renderPage();
+    await linesLoaded();
+    fireEvent.click(button('preview'));
+
+    const ended = await screen.findByTestId('row-o-2');
+    await waitFor(() => expect(ended.querySelector('[data-col="amountsStatus"]')?.textContent).toBe(`operations.copyBudget.status.notValid {"year":${Y + 1}}`));
+    const summary = screen.getAllByRole('alert').find((alert) => alert.textContent?.includes('summary.preview'));
+    expect(summary?.textContent).toContain('operations.copyBudget.summary.preview {"count":3}');
+    expect(summary?.textContent).toContain(`operations.copyBudget.summary.leftOut {"count":1,"year":${Y + 1}}`);
+  });
+
   it('previews both parts line by line, with BL links in a new tab and the type, then copies', async () => {
     renderPage();
     await linesLoaded();

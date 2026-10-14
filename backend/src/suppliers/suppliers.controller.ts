@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, Res, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Body, Controller, Delete, Get, InternalServerErrorException, Param, ParseUUIDPipe, Patch, Post, Query, Req, Res, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { SuppliersService } from './suppliers.service';
 import { SuppliersDeleteService } from './suppliers-delete.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -16,6 +16,7 @@ import { SupplierContactsService } from './supplier-contacts.service';
 import { SupplierContactRole } from '../contacts/supplier-contact.entity';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
+import { readSupplierUsages } from './supplier-usages';
 
 @UseGuards(JwtAuthGuard)
 @Controller('suppliers')
@@ -115,6 +116,15 @@ export class SuppliersController {
   @Delete(':id')
   delete(@Param('id') id: string, @Req() req: any) {
     return this.deleteSvc.delete(id, { manager: req?.queryRunner?.manager, userId: req.user?.sub ?? null });
+  }
+
+  // Where the supplier is used: the groups the caller may read (common/record-usages.ts).
+  @UseGuards(PermissionGuard)
+  @RequireLevel('suppliers', 'reader')
+  @Get(':id/usages')
+  usages(@Param('id', new ParseUUIDPipe()) id: string, @Tenant() ctx: TenantRequest) {
+    if (!ctx.manager) throw new InternalServerErrorException('No request transaction');
+    return readSupplierUsages(ctx.manager, ctx.tenantId, id, ctx);
   }
 
   // Supplier ↔ Contact links

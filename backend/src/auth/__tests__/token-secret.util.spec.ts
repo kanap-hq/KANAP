@@ -23,6 +23,8 @@ import {
   ENTRA_STATE_PURPOSE,
   PROVISIONING_PURPOSE,
   PASSWORD_RESET_PURPOSE,
+  MCP_ACCESS_PURPOSE,
+  MCP_OAUTH_CODE_PURPOSE,
 } from '../access-token.util';
 
 const JWT_SECRET = 'token-secret-spec-jwt-secret';
@@ -33,6 +35,8 @@ function cleanEnv(): NodeJS.ProcessEnv {
     PASSWORD_RESET_SECRET: '',
     PROVISIONING_TOKEN_SECRET: '',
     ENTRA_STATE_SECRET: '',
+    MCP_OAUTH_CODE_SECRET: '',
+    MCP_ACCESS_TOKEN_SECRET: '',
   } as NodeJS.ProcessEnv;
 }
 
@@ -40,6 +44,8 @@ function testLabelsAreStableAndVersioned() {
   const expected = {
     'password-reset': 'kanap:v1:password-reset',
     'entra-state': 'kanap:v1:entra-state',
+    'mcp-oauth-code': 'kanap:v1:mcp-oauth-code',
+    'mcp-access': 'kanap:v1:mcp-access',
   };
   assert.deepEqual({ ...TOKEN_SECRET_LABEL }, expected);
   for (const label of Object.values(TOKEN_SECRET_LABEL)) {
@@ -50,18 +56,22 @@ function testLabelsAreStableAndVersioned() {
   assert.equal(PASSWORD_RESET_PURPOSE, 'kanap:v1:password-reset');
   assert.equal(ENTRA_STATE_PURPOSE, 'kanap:v1:entra-state');
   assert.equal(PROVISIONING_PURPOSE, 'provision');
+  assert.equal(MCP_OAUTH_CODE_PURPOSE, 'kanap:v1:mcp-oauth-code');
+  assert.equal(MCP_ACCESS_PURPOSE, 'kanap:v1:mcp-access');
 }
 
 function testDerivedKeysAreDistinctAndNeverTheBaseSecret() {
   const reset = deriveSecret(JWT_SECRET, 'password-reset');
   const state = deriveSecret(JWT_SECRET, 'entra-state');
+  const code = deriveSecret(JWT_SECRET, 'mcp-oauth-code');
+  const access = deriveSecret(JWT_SECRET, 'mcp-access');
 
   assert.notEqual(reset, probe(JWT_SECRET, 'password-reset'));
-  for (const [name, key] of [['reset', reset], ['state', state]] as const) {
+  for (const [name, key] of [['reset', reset], ['state', state], ['code', code], ['access', access]] as const) {
     assert.notEqual(key, JWT_SECRET, `${name} key must not be the access-token secret`);
     assert.match(key, /^[0-9a-f]{64}$/, `${name} key must be the HMAC digest`);
   }
-  assert.notEqual(reset, state, 'families must derive distinct keys');
+  assert.equal(new Set([reset, state, code, access]).size, 4, 'families must derive distinct keys');
 }
 
 function testProvisioningKeepsTheHistoricalKeyUntilToldOtherwise() {
@@ -123,7 +133,7 @@ function testEachFamilyReadsItsOwnVariable() {
 
 function testDerivedSecretsCannotVerifyAsAccessTokens() {
   // A family that derives its own key is not signed with the access-token secret at all.
-  for (const family of ['password-reset', 'entra-state'] as const) {
+  for (const family of ['password-reset', 'entra-state', 'mcp-oauth-code', 'mcp-access'] as const) {
     const token = jwt.sign({ purpose: TOKEN_SECRET_LABEL[family], sub: 'user-1' }, deriveSecret(JWT_SECRET, family));
     assert.throws(() => jwt.verify(token, JWT_SECRET), /invalid signature/, `${family} must not verify with JWT_SECRET`);
   }
@@ -145,6 +155,8 @@ function testSecretPolicyReportsSourcesWithoutValues() {
     { family: 'password-reset', envVar: 'PASSWORD_RESET_SECRET', source: 'derived-key' },
     { family: 'provisioning', envVar: 'PROVISIONING_TOKEN_SECRET', source: 'jwt-secret' },
     { family: 'entra-state', envVar: 'ENTRA_STATE_SECRET', source: 'dedicated-key' },
+    { family: 'mcp-oauth-code', envVar: 'MCP_OAUTH_CODE_SECRET', source: 'derived-key' },
+    { family: 'mcp-access', envVar: 'MCP_ACCESS_TOKEN_SECRET', source: 'derived-key' },
   ]);
   // Nothing that could leak a secret value.
   const serialized = JSON.stringify(policy);

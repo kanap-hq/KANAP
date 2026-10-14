@@ -255,7 +255,7 @@ export default function OpexDeltaReport() {
 
   const chartOptions = useMemo(() => {
     const base = {
-      title: { text: t(chartTitleKey, { n: countLabel, type: scopeLabel, source: sourceLabel, destination: destinationLabel }) },
+      title: { text: t(chartTitleKey, { n: countLabel, type: scopeLabel, context: scope, source: sourceLabel, destination: destinationLabel }) },
       subtitle: { text: t('reports.opexDelta.shareOfChangeMagnitude') },
       footnote: { text: selectionFootnote },
       data: chartData,
@@ -392,7 +392,7 @@ export default function OpexDeltaReport() {
     <ReportLayout
       busy={busy}
       title={t("reports.opexDelta.title")}
-      subtitle={t('reports.opexDelta.subtitle', { type: scopeLabel })}
+      subtitle={t('reports.opexDelta.subtitle', { type: scopeLabel, context: scope })}
       filters={(
         <Box sx={{
           display: 'flex',

@@ -77,6 +77,30 @@
       "both": "OPEX und CAPEX",
       "opex": "Nur OPEX",
       "capex": "Nur CAPEX"
+    },
+    "usages": {
+      "title": "Verwendet in",
+      "open": "Verwendungen anzeigen",
+      "loadFailed": "Die Liste der Verwendungen konnte nicht geladen werden.",
+      "emptySupplier": "Dieser Lieferant wird noch nirgends verwendet.",
+      "emptyContact": "Dieser Kontakt ist noch mit nichts verknüpft.",
+      "partial": "{{shown}} von {{total}} angezeigt.",
+      "showAll": "Alle {{total}} anzeigen",
+      "inactive": "Deaktiviert",
+      "nature": {
+        "opex": "OPEX",
+        "capex": "CAPEX"
+      },
+      "groups": {
+        "suppliers": "Lieferanten",
+        "budget_lines": "Budgetzeilen",
+        "contracts": "Verträge",
+        "applications": "Anwendungen",
+        "assets": "Assets",
+        "locations": "Standorte",
+        "projects": "Projekte",
+        "requests": "Anfragen"
+      }
     }
   },
   "companies": {
@@ -355,7 +379,6 @@
   },
   "suppliers": {
     "title": "Lieferanten",
-    "entity": "Lieferant",
     "newSupplier": "Neuer Lieferant",
     "supplierFallback": "Lieferant",
     "contactsTabHint": "Der Tab Kontakte wird nach dem Erstellen des Lieferanten verfügbar.",
@@ -367,26 +390,43 @@
     "export": "Lieferanten exportieren",
     "import": "Lieferanten importieren",
     "fields": {
-      "erpSupplierId": "ERP-Lieferanten-ID"
+      "name": "Name",
+      "erpSupplierId": "ERP-Lieferanten-ID",
+      "status": "Status",
+      "lifecycle": "Lebenszyklus",
+      "notes": "Notizen",
+      "contacts": "Kontakte"
     },
     "contacts": {
-      "commercial": "Vertrieb",
-      "technical": "Technik",
-      "support": "Support",
-      "other": "Sonstige",
       "noContacts": "Keine Kontakte",
-      "add": "Hinzufügen",
-      "create": "Erstellen",
-      "attach": "Verknüpfen",
-      "selectContact": "{{role}}-Kontakt auswählen",
-      "firstName": "Vorname",
-      "lastName": "Nachname",
-      "jobTitle": "Funktion",
-      "mobile": "Mobil",
-      "actions": "Aktionen",
+      "addExisting": "Vorhandenen hinzufügen",
+      "create": "Neuer Kontakt",
+      "selectContact": "Hinzuzufügender Kontakt ({{role}})",
+      "searchPlaceholder": "Kontakte nach Name suchen",
       "removeLink": "Verknüpfung entfernen",
-      "insufficientPermission": "Unzureichende Berechtigung"
-    }
+      "saveFailed": "Die Kontakte des Lieferanten konnten nicht aktualisiert werden.",
+      "loadFailed": "Die Kontakte des Lieferanten konnten nicht geladen werden."
+    },
+    "placeholders": {
+      "name": "z. B. Acme Software",
+      "erpSupplierId": "z. B. SUP-001",
+      "notes": "z. B. Zahlungsbedingungen, Wechsel des Ansprechpartners"
+    },
+    "status": {
+      "enabled": "Aktiviert",
+      "disabled": "Deaktiviert"
+    },
+    "metadata": {
+      "openContacts": "Kontakte öffnen"
+    },
+    "messages": {
+      "nameRequired": "Geben Sie einen Namen ein.",
+      "nameTaken": "Ein anderer Lieferant hat bereits diesen Namen.",
+      "saveFailed": "Der Lieferant konnte nicht gespeichert werden.",
+      "createFailed": "Der Lieferant konnte nicht erstellt werden."
+    },
+    "previous": "Vorheriger Lieferant",
+    "next": "Nächster Lieferant"
   },
   "contacts": {
     "title": "Kontakte",
@@ -404,23 +444,56 @@
     "export": "Kontakte exportieren",
     "import": "Kontakte importieren",
     "fields": {
+      "email": "E-Mail",
       "firstName": "Vorname",
       "lastName": "Nachname",
       "jobTitle": "Funktion",
       "phone": "Telefon",
       "mobile": "Mobil",
-      "countryCode": "Landesvorwahl",
-      "phoneFormat": "Format: +<countrycode><number>",
+      "country": "Land",
       "supplier": "Lieferant",
       "contactType": "Kontakttyp",
-      "selectType": "Typ auswählen",
-      "selectSupplierFirst": "Wählen Sie zuerst einen Lieferanten"
+      "notes": "Notizen",
+      "status": "Status",
+      "selectSupplierFirst": "Wählen Sie zuerst einen Lieferanten",
+      "dialCodeOf": "Vorwahl ({{field}})"
     },
     "roles": {
       "commercial": "Vertrieb",
       "technical": "Technik",
       "support": "Support",
       "other": "Sonstige"
+    },
+    "placeholders": {
+      "email": "z. B. name@beispiel.de",
+      "firstName": "z. B. Alex",
+      "lastName": "z. B. Martin",
+      "jobTitle": "z. B. Kundenbetreuer",
+      "supplier": "z. B. Lieferant A",
+      "contactType": "Typ auswählen",
+      "dialCode": "+49",
+      "phone": "z. B. 30 1234567",
+      "mobile": "z. B. 151 2345678",
+      "notes": "z. B. Bevorzugt E-Mail, werktags vormittags erreichbar"
+    },
+    "metadata": {
+      "openSupplier": "Lieferant öffnen",
+      "chooseInProperties": "In den Eigenschaften auswählen",
+      "supplierMissing": "Kein Lieferant",
+      "typeMissing": "Typ fehlt"
+    },
+    "status": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv"
+    },
+    "messages": {
+      "emailInvalid": "Geben Sie eine gültige E-Mail-Adresse ein.",
+      "emailTaken": "Ein anderer Kontakt verwendet diese E-Mail bereits.",
+      "phoneInvalid": "Geben Sie eine Vorwahl und eine Nummer mit insgesamt 7 bis 15 Ziffern ein.",
+      "typeRequired": "Wählen Sie einen Kontakttyp für diesen Lieferanten.",
+      "saveFailed": "Der Kontakt konnte nicht gespeichert werden.",
+      "createFailed": "Der Kontakt konnte nicht erstellt werden.",
+      "loadFailed": "Der Kontakt konnte nicht geladen werden."
     }
   },
   "coa": {
@@ -910,17 +983,6 @@
     "department": {
       "companyRequired": "Unternehmen ist erforderlich",
       "nameRequired": "Name ist erforderlich"
-    },
-    "supplier": {
-      "nameRequired": "Name ist erforderlich"
-    },
-    "contact": {
-      "emailRequired": "Eine gültige E-Mail-Adresse ist erforderlich",
-      "invalidPhone": "Ungültiges Telefonnummernformat",
-      "invalidMobile": "Ungültiges Mobilnummernformat",
-      "countryCodeLength": "Verwenden Sie einen 2-stelligen ISO-Code",
-      "selectContactType": "Wählen Sie einen Kontakttyp für diesen Lieferanten",
-      "chooseSupplier": "Wählen Sie einen Lieferanten, um den Kontakttyp festzulegen"
     },
     "account": {
       "accountNumberRequired": "Kontonummer ist erforderlich",

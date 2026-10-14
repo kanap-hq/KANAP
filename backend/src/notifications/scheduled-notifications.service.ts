@@ -189,7 +189,9 @@ export class ScheduledNotificationsService implements OnModuleInit {
         c.tenant_id,
         c.owner_user_id,
         to_char(t.next_cancellation_deadline, 'YYYY-MM-DD') AS cancellation_deadline,
-        CASE WHEN t.renews_at_term_end THEN NULL ELSE to_char(t.current_term_end, 'YYYY-MM-DD') END AS end_date,
+        -- The contract ends with its last term, or on its end of validity when that comes first.
+        CASE WHEN t.renews_at_term_end THEN NULL
+             ELSE to_char(LEAST(t.current_term_end, (c.disabled_at AT TIME ZONE 'UTC')::date), 'YYYY-MM-DD') END AS end_date,
         u.id as owner_id,
         u.email as owner_email,
         u.locale as owner_locale
@@ -202,7 +204,7 @@ export class ScheduledNotificationsService implements OnModuleInit {
         AND c.owner_user_id IS NOT NULL
         AND (
           t.next_cancellation_deadline BETWEEN $2::date AND $2::date + 30
-          OR (NOT t.renews_at_term_end AND t.current_term_end BETWEEN $2::date AND $2::date + 30)
+          OR (NOT t.renews_at_term_end AND LEAST(t.current_term_end, (c.disabled_at AT TIME ZONE 'UTC')::date) BETWEEN $2::date AND $2::date + 30)
         )
     `, [tenantId, utcDateYmd(now)]);
 

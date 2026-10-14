@@ -4,12 +4,12 @@ const content: FeatureContent = {
   meta: {
     title: 'Plaid, asistente de IA para la gobernanza de TI',
     description:
-      'Pregúntele a Plaid sobre sus datos de TI. Cree documentos, actualice tareas, conecte cualquier herramienta de IA vía MCP. Uso incluido en nube alojada. Open source.',
+      'Pregúntele a Plaid sobre sus datos de TI. Cree documentos, actualice tareas, añada KANAP a Claude en dos clics. Uso incluido en nube alojada. Open source.',
   },
   header: {
     eyebrow: 'Plaid · asistente de IA',
     title: 'Pregúntele a KANAP lo que sea sobre su TI.',
-    lead: 'Plaid responde sobre su presupuesto, sus aplicaciones, sus proyectos y su documentación, y aplica cambios cuando usted se lo pide. Cada escritura se le muestra antes de ejecutarse. Úselo dentro de KANAP, o conéctelo a sus propias herramientas de IA a través de MCP.',
+    lead: 'Plaid responde sobre su presupuesto, sus aplicaciones, sus proyectos y su documentación, y aplica cambios cuando usted se lo pide. Cada escritura se le muestra antes de ejecutarse. Úselo dentro de KANAP, o añada KANAP a Claude con su dirección y un clic.',
   },
   sections: [
     {
@@ -35,22 +35,22 @@ const content: FeatureContent = {
       shotAlt: 'Plaid mostrando una vista previa de actualizaciones de tareas',
     },
     {
-      title: 'MCP, use KANAP desde cualquier herramienta de IA',
-      body: 'KANAP expone un servidor MCP (Model Context Protocol) completo. Conecte Claude Desktop, Cursor, Windsurf o cualquier herramienta compatible con MCP, y consulte sus datos de gobernanza de TI sin salir de su flujo de trabajo.',
+      title: 'Añada KANAP a Claude en dos clics',
+      body: 'Pegue su dirección de KANAP en Claude como conector personalizado, inicie sesión y haga clic en Autorizar. Claude responde entonces a partir de su presupuesto, sus aplicaciones, sus proyectos y sus documentos. No hay ninguna clave que crear ni copiar. Funciona en Claude, Claude Desktop y Claude Code.',
       bullets: [
-        'Protocolo MCP estándar, funciona con cualquier cliente compatible',
-        'Autenticación segura con clave API y alcance granular',
-        'Las mismas consultas de lectura que el chat integrado (MCP es de solo lectura)',
-        'Conserve sus flujos de IA actuales y añada el contexto de KANAP',
+        'Cada persona inicia sesión con su propia cuenta de KANAP',
+        'Solo lectura, dentro de los derechos de acceso de esa persona',
+        'Cada usuario ve sus aplicaciones conectadas y las desconecta con un clic',
+        'Las claves API siguen disponibles para scripts y otros clientes MCP',
       ],
-      shotAlt: 'Configuración MCP con alcance de clave API',
+      shotAlt: 'Ajustes de las claves API MCP',
     },
     {
       title: 'Control y cumplimiento totales',
       body: 'Plaid respeta las reglas de su organización. Cada acción se rige por los permisos del usuario. Los administradores tienen control total sobre lo que Plaid puede y no puede hacer.',
       bullets: [
         'Respeto pleno de los permisos del usuario en cada consulta',
-        'Claves API seguras con alcance granular de MCP',
+        'Conexiones y claves MCP limitadas a los permisos de cada usuario y revocables en cualquier momento',
         'La búsqueda web se puede activar o desactivar de forma independiente',
         'Vista previa y confirmación para todas las operaciones de escritura',
         'Acceso de solo lectura mediante roles para despliegues prudentes',

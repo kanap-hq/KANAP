@@ -77,6 +77,30 @@
       "both": "OPEX and CAPEX",
       "opex": "OPEX only",
       "capex": "CAPEX only"
+    },
+    "usages": {
+      "title": "Used by",
+      "open": "Show where it is used",
+      "loadFailed": "The list of uses could not be loaded.",
+      "emptySupplier": "Nothing uses this supplier yet.",
+      "emptyContact": "This contact is not linked to anything yet.",
+      "partial": "{{shown}} of {{total}} shown.",
+      "showAll": "Show all {{total}}",
+      "inactive": "Disabled",
+      "nature": {
+        "opex": "OPEX",
+        "capex": "CAPEX"
+      },
+      "groups": {
+        "suppliers": "Suppliers",
+        "budget_lines": "Budget lines",
+        "contracts": "Contracts",
+        "applications": "Applications",
+        "assets": "Assets",
+        "locations": "Locations",
+        "projects": "Projects",
+        "requests": "Requests"
+      }
     }
   },
   "companies": {
@@ -355,7 +379,6 @@
   },
   "suppliers": {
     "title": "Suppliers",
-    "entity": "supplier",
     "newSupplier": "New supplier",
     "supplierFallback": "Supplier",
     "contactsTabHint": "The contacts tab becomes available after you create the supplier.",
@@ -367,26 +390,43 @@
     "export": "Export suppliers",
     "import": "Import suppliers",
     "fields": {
-      "erpSupplierId": "ERP supplier ID"
+      "name": "Name",
+      "erpSupplierId": "ERP supplier ID",
+      "status": "Status",
+      "lifecycle": "Lifecycle",
+      "notes": "Notes",
+      "contacts": "Contacts"
     },
     "contacts": {
-      "commercial": "Commercial",
-      "technical": "Technical",
-      "support": "Support",
-      "other": "Other",
       "noContacts": "No contacts",
-      "add": "Add",
-      "create": "Create",
-      "attach": "Attach",
-      "selectContact": "Select {{role}} contact",
-      "firstName": "First name",
-      "lastName": "Last name",
-      "jobTitle": "Job title",
-      "mobile": "Mobile",
-      "actions": "Actions",
+      "addExisting": "Add existing",
+      "create": "New contact",
+      "selectContact": "Contact to add ({{role}})",
+      "searchPlaceholder": "Search contacts by name",
       "removeLink": "Remove link",
-      "insufficientPermission": "Insufficient permission"
-    }
+      "saveFailed": "Failed to update the supplier contacts.",
+      "loadFailed": "Failed to load the supplier contacts."
+    },
+    "placeholders": {
+      "name": "e.g., Acme Software",
+      "erpSupplierId": "e.g., SUP-001",
+      "notes": "e.g., Payment terms, account manager changes"
+    },
+    "status": {
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "metadata": {
+      "openContacts": "Open the contacts"
+    },
+    "messages": {
+      "nameRequired": "Enter a name.",
+      "nameTaken": "Another supplier already has this name.",
+      "saveFailed": "Failed to save the supplier.",
+      "createFailed": "Failed to create the supplier."
+    },
+    "previous": "Previous supplier",
+    "next": "Next supplier"
   },
   "contacts": {
     "title": "Contacts",
@@ -404,23 +444,56 @@
     "export": "Export contacts",
     "import": "Import contacts",
     "fields": {
+      "email": "Email",
       "firstName": "First name",
       "lastName": "Last name",
       "jobTitle": "Job title",
       "phone": "Phone",
       "mobile": "Mobile",
-      "countryCode": "Country code",
-      "phoneFormat": "Format: +<countrycode><number>",
+      "country": "Country",
       "supplier": "Supplier",
       "contactType": "Contact type",
-      "selectType": "Select type",
-      "selectSupplierFirst": "Select a supplier first"
+      "notes": "Notes",
+      "status": "Status",
+      "selectSupplierFirst": "Select a supplier first",
+      "dialCodeOf": "{{field}} dial code"
     },
     "roles": {
       "commercial": "Commercial",
       "technical": "Technical",
       "support": "Support",
       "other": "Other"
+    },
+    "placeholders": {
+      "email": "e.g., name@example.com",
+      "firstName": "e.g., Alex",
+      "lastName": "e.g., Martin",
+      "jobTitle": "e.g., Account manager",
+      "supplier": "e.g., Supplier A",
+      "contactType": "Choose a type",
+      "dialCode": "+33",
+      "phone": "e.g., 1 23 45 67 89",
+      "mobile": "e.g., 6 12 34 56 78",
+      "notes": "e.g., Prefers email, available on weekday mornings"
+    },
+    "metadata": {
+      "openSupplier": "Open the supplier",
+      "chooseInProperties": "Choose it in the properties",
+      "supplierMissing": "No supplier",
+      "typeMissing": "Type missing"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "messages": {
+      "emailInvalid": "Enter a valid email address.",
+      "emailTaken": "Another contact already uses this email.",
+      "phoneInvalid": "Enter a dial code and a number of 7 to 15 digits in all.",
+      "typeRequired": "Choose a contact type for this supplier.",
+      "saveFailed": "Failed to save the contact.",
+      "createFailed": "Failed to create the contact.",
+      "loadFailed": "Failed to load the contact."
     }
   },
   "coa": {
@@ -910,17 +983,6 @@
     "department": {
       "companyRequired": "Company is required",
       "nameRequired": "Name is required"
-    },
-    "supplier": {
-      "nameRequired": "Name is required"
-    },
-    "contact": {
-      "emailRequired": "Valid email is required",
-      "invalidPhone": "Invalid phone number format",
-      "invalidMobile": "Invalid mobile number format",
-      "countryCodeLength": "Use 2-letter ISO code",
-      "selectContactType": "Select a contact type for this supplier",
-      "chooseSupplier": "Choose a supplier to set the contact type"
     },
     "account": {
       "accountNumberRequired": "Account number is required",

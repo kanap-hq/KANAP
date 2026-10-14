@@ -370,9 +370,11 @@ En el espacio de trabajo OPEX, use el panel **Tareas** de la pestaña **Vista ge
 - "Negociar descuento por volumen"
 
 ### Desde Contratos
-En el espacio de trabajo del Contrato, use la pestaña **Tareas** para:
-- "Revisar contrato antes de la fecha límite de renovación"
+En la **Vista general** de un contrato, use la sección **Tareas** para:
 - "Solicitar condiciones actualizadas al proveedor"
+- "Obtener la adenda firmada"
+
+No necesita crear usted mismo las tareas de renovación: KANAP da una tarea al responsable del contrato cuando hay una decisión de renovación pendiente. Vea [Contratos](contracts.md#decisiones-de-renovacion).
 
 ### Desde líneas CAPEX
 En el espacio de trabajo CAPEX, las tareas rastrean hitos del proyecto:

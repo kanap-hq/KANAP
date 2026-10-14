@@ -152,7 +152,7 @@ async function main() {
   const sso = await seedTenant('sso', true);
   const app = await createApp();
   try {
-    assert.ok(LIMIT > RATE_LIMITS.authLogin.limit, 'single sign-on has its own, wider budget');
+    assert.ok(LIMIT >= RATE_LIMITS.authLogin.limit, 'single sign-on has a budget of its own, at least as wide as the password sign-in');
 
     // A run of requests that verify nothing, on a host without single sign-on, from two
     // addresses (each up to the limit): every one refused, no row.

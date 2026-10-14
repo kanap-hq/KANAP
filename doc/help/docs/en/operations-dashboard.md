@@ -61,7 +61,7 @@ Click **View all** to open the Tasks page.
 
 ### Next renewals
 
-Lists the next five contract cancellation deadlines that are still in the future. Past deadlines are automatically filtered out so you only see what is coming up.
+Lists the five contracts due next, today included, in the order of the **Next due date** column of the Contracts list: a contract that renews tacitly appears on its next cancellation deadline, any other contract on its end. Ended contracts do not appear.
 
 Click **View all** to open the Contracts page.
 

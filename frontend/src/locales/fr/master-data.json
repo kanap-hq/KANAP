@@ -77,6 +77,30 @@
       "both": "OPEX et CAPEX",
       "opex": "OPEX uniquement",
       "capex": "CAPEX uniquement"
+    },
+    "usages": {
+      "title": "Lié à",
+      "open": "Voir les liens",
+      "loadFailed": "La liste des liens n'a pas pu être chargée.",
+      "emptySupplier": "Ce fournisseur n'est encore lié à rien.",
+      "emptyContact": "Ce contact n'est encore lié à rien.",
+      "partial": "{{shown}} sur {{total}} affichés.",
+      "showAll": "Voir les {{total}}",
+      "inactive": "Désactivé",
+      "nature": {
+        "opex": "OPEX",
+        "capex": "CAPEX"
+      },
+      "groups": {
+        "suppliers": "Fournisseurs",
+        "budget_lines": "Lignes budgétaires",
+        "contracts": "Contrats",
+        "applications": "Applications",
+        "assets": "Actifs",
+        "locations": "Sites",
+        "projects": "Projets",
+        "requests": "Demandes"
+      }
     }
   },
   "companies": {
@@ -355,7 +379,6 @@
   },
   "suppliers": {
     "title": "Fournisseurs",
-    "entity": "fournisseur",
     "newSupplier": "Nouveau fournisseur",
     "supplierFallback": "Fournisseur",
     "contactsTabHint": "L'onglet Contacts devient disponible après la création du fournisseur.",
@@ -367,26 +390,43 @@
     "export": "Exporter les fournisseurs",
     "import": "Importer les fournisseurs",
     "fields": {
-      "erpSupplierId": "ID fournisseur ERP"
+      "name": "Nom",
+      "erpSupplierId": "ID fournisseur ERP",
+      "status": "Statut",
+      "lifecycle": "Cycle de vie",
+      "notes": "Notes",
+      "contacts": "Contacts"
     },
     "contacts": {
-      "commercial": "Commercial",
-      "technical": "Technique",
-      "support": "Support",
-      "other": "Autre",
       "noContacts": "Aucun contact",
-      "add": "Ajouter",
-      "create": "Créer",
-      "attach": "Associer",
-      "selectContact": "Sélectionner le contact {{role}}",
-      "firstName": "Prénom",
-      "lastName": "Nom",
-      "jobTitle": "Fonction",
-      "mobile": "Mobile",
-      "actions": "Actions",
+      "addExisting": "Ajouter un existant",
+      "create": "Nouveau contact",
+      "selectContact": "Contact à ajouter ({{role}})",
+      "searchPlaceholder": "Rechercher un contact par nom",
       "removeLink": "Retirer le lien",
-      "insufficientPermission": "Autorisation insuffisante"
-    }
+      "saveFailed": "Échec de la mise à jour des contacts du fournisseur.",
+      "loadFailed": "Échec du chargement des contacts du fournisseur."
+    },
+    "placeholders": {
+      "name": "ex. : Acme Software",
+      "erpSupplierId": "ex. : SUP-001",
+      "notes": "ex. : conditions de paiement, changement d’interlocuteur"
+    },
+    "status": {
+      "enabled": "Activé",
+      "disabled": "Désactivé"
+    },
+    "metadata": {
+      "openContacts": "Ouvrir les contacts"
+    },
+    "messages": {
+      "nameRequired": "Saisissez un nom.",
+      "nameTaken": "Un autre fournisseur porte déjà ce nom.",
+      "saveFailed": "Échec de l'enregistrement du fournisseur.",
+      "createFailed": "Échec de la création du fournisseur."
+    },
+    "previous": "Fournisseur précédent",
+    "next": "Fournisseur suivant"
   },
   "contacts": {
     "title": "Contacts",
@@ -404,23 +444,56 @@
     "export": "Exporter les contacts",
     "import": "Importer les contacts",
     "fields": {
+      "email": "E-mail",
       "firstName": "Prénom",
       "lastName": "Nom",
       "jobTitle": "Fonction",
       "phone": "Téléphone",
       "mobile": "Mobile",
-      "countryCode": "Code pays",
-      "phoneFormat": "Format : +<countrycode><number>",
+      "country": "Pays",
       "supplier": "Fournisseur",
       "contactType": "Type de contact",
-      "selectType": "Sélectionnez un type",
-      "selectSupplierFirst": "Sélectionnez d'abord un fournisseur"
+      "notes": "Notes",
+      "status": "Statut",
+      "selectSupplierFirst": "Sélectionnez d'abord un fournisseur",
+      "dialCodeOf": "Indicatif ({{field}})"
     },
     "roles": {
       "commercial": "Commercial",
       "technical": "Technique",
       "support": "Support",
       "other": "Autre"
+    },
+    "placeholders": {
+      "email": "ex. nom@exemple.com",
+      "firstName": "ex. Alex",
+      "lastName": "ex. Martin",
+      "jobTitle": "ex. Responsable de compte",
+      "supplier": "ex. Fournisseur A",
+      "contactType": "Choisissez un type",
+      "dialCode": "+33",
+      "phone": "ex. 1 23 45 67 89",
+      "mobile": "ex. 6 12 34 56 78",
+      "notes": "ex. Préfère les e-mails, joignable en semaine le matin"
+    },
+    "metadata": {
+      "openSupplier": "Ouvrir le fournisseur",
+      "chooseInProperties": "À choisir dans les propriétés",
+      "supplierMissing": "Aucun fournisseur",
+      "typeMissing": "Type manquant"
+    },
+    "status": {
+      "active": "Actif",
+      "inactive": "Inactif"
+    },
+    "messages": {
+      "emailInvalid": "Saisissez une adresse e-mail valide.",
+      "emailTaken": "Un autre contact utilise déjà cet e-mail.",
+      "phoneInvalid": "Saisissez un indicatif et un numéro de 7 à 15 chiffres au total.",
+      "typeRequired": "Choisissez un type de contact pour ce fournisseur.",
+      "saveFailed": "Échec de l'enregistrement du contact.",
+      "createFailed": "Échec de la création du contact.",
+      "loadFailed": "Échec du chargement du contact."
     }
   },
   "coa": {
@@ -910,17 +983,6 @@
     "department": {
       "companyRequired": "La société est requise",
       "nameRequired": "Le nom est requis"
-    },
-    "supplier": {
-      "nameRequired": "Le nom est requis"
-    },
-    "contact": {
-      "emailRequired": "Un e-mail valide est requis",
-      "invalidPhone": "Format de numéro de téléphone invalide",
-      "invalidMobile": "Format de numéro de mobile invalide",
-      "countryCodeLength": "Utilisez un code ISO à 2 lettres",
-      "selectContactType": "Sélectionnez un type de contact pour ce fournisseur",
-      "chooseSupplier": "Choisissez un fournisseur pour définir le type de contact"
     },
     "account": {
       "accountNumberRequired": "Le numéro de compte est requis",

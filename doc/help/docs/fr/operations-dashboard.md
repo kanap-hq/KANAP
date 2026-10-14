@@ -61,7 +61,7 @@ Cliquez sur **Tout voir** pour ouvrir la page Tâches.
 
 ### Prochains renouvellements
 
-Liste les cinq prochaines échéances de résiliation de contrats encore dans le futur. Les échéances passées sont automatiquement filtrées pour que vous ne voyiez que ce qui arrive.
+Liste les cinq contrats dont l'échéance est la plus proche, aujourd'hui compris, dans l'ordre de la colonne **Prochaine échéance** de la liste des contrats : un contrat à reconduction tacite y figure à sa prochaine date limite de résiliation, tout autre contrat à sa fin. Les contrats échus n'y figurent pas.
 
 Cliquez sur **Tout voir** pour ouvrir la page Contrats.
 

@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { aiAmountsCurrency, isBudgetLineEntity } from './ai-amounts-currency.util';
 import { normalizeAgFilterModel, assertSetFilterModes } from '../../common/ag-grid-filtering';
 import { bilingualDocumentTsQuerySql } from '../../common/document-search-tsquery';
 import { AccountsService } from '../../accounts/accounts.service';
@@ -1179,6 +1180,28 @@ export class AiAggregateExecutor {
   }
 
   async execute(
+    context: AiExecutionContextWithManager,
+    input: {
+      entity_type: AiQueryEntityType;
+      group_by: string;
+      metric?: string;
+      function?: AiAggregateFunction;
+      filters?: Record<string, AiFilterValue>;
+      q?: string;
+      scope?: AiQueryScope;
+    },
+  ): Promise<AiAggregateResult> {
+    const result = await this.executeAggregate(context, input);
+    // A sum or an average of amounts names their currency; a count or an FTE has none.
+    const metric = input.metric?.trim() ?? '';
+    const isAmount = metric !== '' && (
+      isBudgetLineEntity(input.entity_type) ? !metric.endsWith('_fte') : metric.startsWith('yearly_amount')
+    );
+    const amounts = isAmount ? await aiAmountsCurrency(context, input.entity_type) : null;
+    return amounts ? { ...result, ...amounts } : result;
+  }
+
+  private async executeAggregate(
     context: AiExecutionContextWithManager,
     input: {
       entity_type: AiQueryEntityType;

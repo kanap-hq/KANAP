@@ -41,6 +41,39 @@ describe('contractSchedule', () => {
     expect(schedule.timeline!.window).toBeNull();
   });
 
+  it('a renewal confirmed for the term: no deadline nor window, the next term runs', () => {
+    const input = { start_date: '2023-07-01', duration_months: 12, notice_period_months: 6, auto_renewal: true };
+    const confirmed = { term_end: '2027-06-30', renews_on: '2027-07-01', next_term_end: '2028-06-30' };
+    const schedule = contractSchedule(input, TODAY, 90, confirmed)!;
+    expect(schedule.state).toEqual({ kind: 'confirmed', nextStart: '2027-07-01', nextEnd: '2028-06-30' });
+    expect(schedule.timeline!.deadline).toBeNull();
+    expect(schedule.timeline!.window).toBeNull();
+    expect(schedule.timeline!.segments.map((s) => s.kind)).toEqual(['past', 'past', 'past', 'current', 'next']);
+    expect(schedule.lastTerm).toBe(false);
+    // Another term's renewal (a past one), or dates changed since: the deadline is back.
+    expect(contractSchedule(input, TODAY, 90, { term_end: '2026-06-30', renews_on: '2026-07-01', next_term_end: '2027-06-30' })!.state)
+      .toMatchObject({ kind: 'cancel', deadline: '2026-12-30' });
+    expect(contractSchedule({ ...input, notice_period_months: 3 }, TODAY, 90, confirmed)!.state.kind).toBe('confirmed');
+    expect(contractSchedule({ ...input, start_date: '2023-08-01' }, TODAY, 90, confirmed)!.state.kind).toBe('cancel');
+    // A termination since (end of validity on the term's last day): the contract ends.
+    expect(contractSchedule({ ...input, disabled_at: '2027-06-30T12:00:00.000Z' }, TODAY, 90, confirmed)!.state.kind).toBe('ends');
+  });
+
+  it('renewal off with an end of validity: its terms run up to it, and a decision on its end shows', () => {
+    const input = { start_date: '2023-07-01', duration_months: 12, notice_period_months: 6, auto_renewal: false, disabled_at: '2027-06-30T12:00:00.000Z' };
+    const schedule = contractSchedule(input, TODAY)!;
+    expect(schedule.renewals).toBe(3);
+    expect(schedule.termNumber).toBe(4);
+    expect(schedule.state).toEqual({ kind: 'ends', end: '2027-06-30', days: 261 });
+    expect(schedule.timeline!.segments.map((s) => s.kind)).toEqual(['past', 'past', 'past', 'current']);
+    expect(contractSchedule(input, TODAY, 90, null, true)!.state).toEqual({ kind: 'ends', end: '2027-06-30', days: 261, decisionDue: true });
+    // Without an end of validity, its first term only, as before.
+    expect(contractSchedule({ ...input, disabled_at: null }, TODAY)!.state).toEqual({ kind: 'expired', end: '2024-06-30' });
+    // An end of validity in a later term: it runs into that term.
+    const later = contractSchedule({ ...input, disabled_at: '2027-11-15T12:00:00.000Z' }, TODAY)!;
+    expect(later.state).toMatchObject({ kind: 'cancel', deadline: '2026-12-30' });
+  });
+
   it('is not urgent before the decision window', () => {
     const schedule = contractSchedule({ start_date: '2024-10-01', duration_months: 36, notice_period_months: 3, auto_renewal: true }, TODAY)!;
     expect(schedule.state).toMatchObject({ kind: 'cancel', deadline: '2027-06-30', urgent: false });
@@ -71,7 +104,8 @@ describe('contractSchedule', () => {
     const schedule = contractSchedule({
       start_date: '2023-07-01', duration_months: 12, notice_period_months: 6, auto_renewal: true, disabled_at: '2027-03-01T22:59:00.000Z',
     }, TODAY)!;
-    expect(schedule.state).toEqual({ kind: 'ends', end: '2027-06-30', days: 261 });
+    // It ends on its end of validity, inside its term.
+    expect(schedule.state).toEqual({ kind: 'ends', end: '2027-03-01', days: 140 });
     expect(schedule.timeline!.segments.some((s) => s.kind === 'projected')).toBe(false);
   });
 
