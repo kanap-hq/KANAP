@@ -28,22 +28,41 @@ export class CreateCheckoutSessionDto {
   @IsOptional()
   @IsBoolean()
   allow_promotion_codes?: boolean;
+
+  /**
+   * The version of the general terms of sale the user accepted (`terms.version` of
+   * `GET /billing/plans`). Required: the service refuses a missing or outdated one with
+   * TERMS_NOT_ACCEPTED, one stable code for the client.
+   */
+  @IsOptional()
+  @IsString()
+  terms_version?: string;
 }
 
-class ChangePlanDto {
+export class ChangePlanDto {
   @IsIn(['max'])
   plan_key!: PlanKey;
 
   @IsIn(['monthly', 'annual'])
   subscription_type!: IntervalKey;
+
+  /** Required, checked by the service like `CreateCheckoutSessionDto.terms_version`. */
+  @IsOptional()
+  @IsString()
+  terms_version?: string;
 }
 
-class RequestInvoiceDto {
+export class RequestInvoiceDto {
   @IsIn(['max'])
   plan_key!: PlanKey;
 
   @IsIn(['monthly', 'annual'])
   subscription_type!: IntervalKey;
+
+  /** Required, checked by the service like `CreateCheckoutSessionDto.terms_version`. */
+  @IsOptional()
+  @IsString()
+  terms_version?: string;
 }
 
 class BillingAddressDto {
@@ -153,7 +172,14 @@ export class BillingController {
       throw new BadRequestException('Tenant context not resolved');
     }
     const mg = req?.queryRunner?.manager as import('typeorm').EntityManager | undefined;
-    return this.billing.changePlan(tenantId, body.plan_key, body.subscription_type, req.user?.sub ?? null, mg);
+    return this.billing.changePlan(
+      tenantId,
+      body.plan_key,
+      body.subscription_type,
+      req.user?.sub ?? null,
+      mg,
+      body.terms_version ?? null,
+    );
   }
 
   @UseGuards(PermissionGuard)
@@ -167,7 +193,14 @@ export class BillingController {
       throw new BadRequestException('Tenant context not resolved');
     }
     const mg = req?.queryRunner?.manager as import('typeorm').EntityManager | undefined;
-    return this.billing.requestInvoice(tenantId, body.plan_key, body.subscription_type, req.user?.sub ?? null, mg);
+    return this.billing.requestInvoice(
+      tenantId,
+      body.plan_key,
+      body.subscription_type,
+      req.user?.sub ?? null,
+      mg,
+      body.terms_version ?? null,
+    );
   }
 
   @UseGuards(PermissionGuard)
@@ -220,6 +253,8 @@ export class BillingController {
       successUrl: body.success_url,
       cancelUrl: body.cancel_url,
       allowPromotionCodes: body.allow_promotion_codes,
+      termsVersion: body.terms_version ?? null,
+      userId: req.user?.sub ?? null,
     });
     return { url: session.url, id: session.id };
   }

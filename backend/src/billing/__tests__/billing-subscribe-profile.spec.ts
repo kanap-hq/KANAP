@@ -1,7 +1,10 @@
 import * as assert from 'node:assert/strict';
-import { BadRequestException } from '@nestjs/common';
+import { ArgumentMetadata, BadRequestException, ValidationPipe } from '@nestjs/common';
 import { BillingService } from '../billing.service';
+import { ChangePlanDto, CreateCheckoutSessionDto, RequestInvoiceDto } from '../billing.controller';
 import { Subscription } from '../subscription.entity';
+import { User } from '../../users/user.entity';
+import { GTC_VERSION } from '../terms';
 
 /**
  * A tenant subscribes (card checkout or bank transfer) only with complete invoice
@@ -65,6 +68,8 @@ function createService(opts: {
   tenant: ReturnType<typeof createTenant>;
   taxIds?: Array<{ id: string; type: string; value: string }>;
   createTaxIdError?: unknown;
+  /** A running Stripe subscription (plan change). */
+  subscription?: Partial<Subscription>;
   retrievedCustomer?: Record<string, unknown>;
 }) {
   const calls: Call[] = [];
@@ -89,7 +94,8 @@ function createService(opts: {
     },
     subscriptions: {
       create: record('subscriptions.create', () => ({ id: 'sub_1', latest_invoice: null })),
-      retrieve: record('subscriptions.retrieve', () => null),
+      retrieve: record('subscriptions.retrieve', () =>
+        opts.subscription ? { id: 'sub_1', status: 'active', items: { data: [{ id: 'si_1' }] } } : null),
       update: record('subscriptions.update', () => ({ id: 'sub_1' })),
     },
     invoices: {
@@ -102,7 +108,12 @@ function createService(opts: {
     paymentMethods: { retrieve: record('paymentMethods.retrieve', () => null) },
   };
 
-  const subscription = { id: 'local-sub', plan_name: 'Trial', seat_limit: null } as unknown as Subscription;
+  const subscription = {
+    id: 'local-sub',
+    plan_name: 'Trial',
+    seat_limit: null,
+    ...(opts.subscription ?? {}),
+  } as unknown as Subscription;
   const manager = {
     getRepository: (entity: unknown) => {
       if (entity === Subscription) {
@@ -111,6 +122,11 @@ function createService(opts: {
           create: (data: Partial<Subscription>) => data,
           save: async (data: Subscription) => data,
         };
+      }
+      if (entity === User) {
+        // Seats counted by the subscription summary a bank transfer request returns.
+        const qb: any = { leftJoin: () => qb, where: () => qb, andWhere: () => qb, getCount: async () => 3 };
+        return { createQueryBuilder: () => qb };
       }
       throw new Error('Unexpected repository');
     },
@@ -124,7 +140,12 @@ function createService(opts: {
     getCheckoutSuccessUrl: () => 'https://fromage.kanap.test/admin/billing',
     getCheckoutCancelUrl: () => 'https://fromage.kanap.test/admin/billing',
   };
-  const audit = { log: async () => undefined };
+  const audits: Array<{ entry: Record<string, unknown>; opts: { manager?: unknown } | undefined }> = [];
+  const audit = {
+    log: async (entry: Record<string, unknown>, opts?: { manager?: unknown }) => {
+      audits.push({ entry, opts });
+    },
+  };
   const service = new BillingService(
     { manager } as any,
     {} as any,
@@ -134,7 +155,7 @@ function createService(opts: {
     {} as any,
     audit as any,
   );
-  return { service, manager, calls };
+  return { service, manager, calls, audits };
 }
 
 async function expectBadRequest(promise: Promise<unknown>, expected: Record<string, unknown>) {
@@ -156,14 +177,14 @@ const INCOMPLETE = {
 
 async function testRequestInvoiceRefusesIncompleteProfile() {
   const { service, manager, calls } = createService({ tenant: createTenant(null) });
-  await expectBadRequest(service.requestInvoice('tenant-1', 'max', 'annual', 'user-1', manager as any), INCOMPLETE);
+  await expectBadRequest(service.requestInvoice('tenant-1', 'max', 'annual', 'user-1', manager as any, GTC_VERSION), INCOMPLETE);
   assert.deepEqual(calls, []);
 }
 
 async function testCheckoutRefusesIncompleteProfile() {
   const { service, manager, calls } = createService({ tenant: createTenant(null) });
   await expectBadRequest(
-    service.createCheckoutSession({ tenantId: 'tenant-1', manager: manager as any, planKey: 'max', interval: 'monthly' }),
+    service.createCheckoutSession({ tenantId: 'tenant-1', manager: manager as any, planKey: 'max', interval: 'monthly', termsVersion: GTC_VERSION }),
     INCOMPLETE,
   );
   assert.deepEqual(calls, []);
@@ -174,7 +195,7 @@ async function testCheckoutRefusesEuProfileWithoutVat() {
     tenant: createTenant({ ...COMPLETE_FR_INVOICE, vat_number: null }),
   });
   await expectBadRequest(
-    service.createCheckoutSession({ tenantId: 'tenant-1', manager: manager as any, planKey: 'max', interval: 'monthly' }),
+    service.createCheckoutSession({ tenantId: 'tenant-1', manager: manager as any, planKey: 'max', interval: 'monthly', termsVersion: GTC_VERSION }),
     { message: 'BILLING_PROFILE_INCOMPLETE', missing: ['vatNumber'] },
   );
   assert.deepEqual(calls, []);
@@ -187,6 +208,7 @@ async function testCheckoutPushesDetailsAndVatToExistingCustomer() {
     manager: manager as any,
     planKey: 'max',
     interval: 'monthly',
+    termsVersion: GTC_VERSION,
   });
   assert.equal(session.id, 'cs_1');
 
@@ -218,7 +240,7 @@ async function testStaleVatIdIsReplacedAndSameOneKept() {
       { id: 'txi_ch', type: 'ch_vat', value: 'CHE-123.456.788 MWST' },
     ],
   });
-  await service.createCheckoutSession({ tenantId: 'tenant-1', manager: manager as any, planKey: 'max', interval: 'monthly' });
+  await service.createCheckoutSession({ tenantId: 'tenant-1', manager: manager as any, planKey: 'max', interval: 'monthly', termsVersion: GTC_VERSION });
   assert.deepEqual(
     calls.filter((call) => call.method === 'customers.deleteTaxId').map((call) => call.args),
     [['cus_1', 'txi_old']],
@@ -229,7 +251,7 @@ async function testStaleVatIdIsReplacedAndSameOneKept() {
     tenant: createTenant(COMPLETE_FR_INVOICE),
     taxIds: [{ id: 'txi_same', type: 'eu_vat', value: 'FR12345678901' }],
   });
-  await same.service.createCheckoutSession({ tenantId: 'tenant-1', manager: same.manager as any, planKey: 'max', interval: 'monthly' });
+  await same.service.createCheckoutSession({ tenantId: 'tenant-1', manager: same.manager as any, planKey: 'max', interval: 'monthly', termsVersion: GTC_VERSION });
   assert.equal(same.calls.filter((call) => call.method === 'customers.deleteTaxId').length, 0);
   assert.equal(same.calls.filter((call) => call.method === 'customers.createTaxId').length, 0);
 }
@@ -248,7 +270,7 @@ async function testRefusedVatNumberBecomesVatNumberInvalid() {
   });
   const warnings: string[] = [];
   (service as any).logger = { warn: (message: string) => warnings.push(message) };
-  await expectBadRequest(service.requestInvoice('tenant-1', 'max', 'annual', 'user-1', manager as any), {
+  await expectBadRequest(service.requestInvoice('tenant-1', 'max', 'annual', 'user-1', manager as any, GTC_VERSION), {
     message: 'VAT_NUMBER_INVALID',
   });
   // Stripe's refusal stays diagnosable from the API logs.
@@ -260,15 +282,118 @@ async function testRefusedVatNumberBecomesVatNumberInvalid() {
 
   const checkout = createService({ tenant: createTenant(COMPLETE_FR_INVOICE), createTaxIdError: stripeError });
   await expectBadRequest(
-    checkout.service.createCheckoutSession({ tenantId: 'tenant-1', manager: checkout.manager as any, planKey: 'max', interval: 'monthly' }),
+    checkout.service.createCheckoutSession({ tenantId: 'tenant-1', manager: checkout.manager as any, planKey: 'max', interval: 'monthly', termsVersion: GTC_VERSION }),
     { message: 'VAT_NUMBER_INVALID' },
   );
   assert.equal(checkout.calls.filter((call) => call.method === 'checkout.sessions.create').length, 0);
 }
 
+/** GTC art. 2: no subscription without accepting the current general terms of sale. */
+async function testSubscribeRefusesWithoutTheCurrentTerms() {
+  for (const termsVersion of [undefined, null, '', '2020-01-01']) {
+    const transfer = createService({ tenant: createTenant(COMPLETE_FR_INVOICE) });
+    await expectBadRequest(
+      transfer.service.requestInvoice('tenant-1', 'max', 'annual', 'user-1', transfer.manager as any, termsVersion as any),
+      { message: 'TERMS_NOT_ACCEPTED' },
+    );
+    assert.deepEqual(transfer.calls, [], `no Stripe call for transfer with ${String(termsVersion)}`);
+    assert.deepEqual(transfer.audits, []);
+
+    const card = createService({ tenant: createTenant(COMPLETE_FR_INVOICE) });
+    await expectBadRequest(
+      card.service.createCheckoutSession({
+        tenantId: 'tenant-1',
+        manager: card.manager as any,
+        planKey: 'max',
+        interval: 'monthly',
+        termsVersion: termsVersion as any,
+        userId: 'user-1',
+      }),
+      { message: 'TERMS_NOT_ACCEPTED' },
+    );
+    assert.deepEqual(card.calls, [], `no Stripe call for card with ${String(termsVersion)}`);
+    assert.deepEqual(card.audits, []);
+  }
+}
+
+function expectedAcceptance(paymentPath: 'card' | 'transfer', interval: 'monthly' | 'annual') {
+  return {
+    table: 'tenants',
+    recordId: 'tenant-1',
+    action: 'update',
+    before: null,
+    after: { terms_acceptance: { terms_version: GTC_VERSION, payment_path: paymentPath, plan_key: 'max', interval } },
+    userId: 'user-1',
+    sourceRef: 'terms_acceptance',
+  };
+}
+
+async function testAcceptedTermsAreAudited() {
+  const card = createService({ tenant: createTenant(COMPLETE_FR_INVOICE) });
+  const session = await card.service.createCheckoutSession({
+    tenantId: 'tenant-1',
+    manager: card.manager as any,
+    planKey: 'max',
+    interval: 'monthly',
+    termsVersion: GTC_VERSION,
+    userId: 'user-1',
+  });
+  assert.equal(session.id, 'cs_1');
+  assert.deepEqual(card.audits.map((a) => a.entry), [expectedAcceptance('card', 'monthly')]);
+  // Written with the request's manager: its transaction carries the tenant.
+  assert.equal(card.audits[0].opts?.manager, card.manager);
+
+  const transfer = createService({ tenant: createTenant(COMPLETE_FR_INVOICE) });
+  await transfer.service.requestInvoice('tenant-1', 'max', 'annual', 'user-1', transfer.manager as any, GTC_VERSION);
+  assert.equal(transfer.calls.filter((call) => call.method === 'subscriptions.create').length, 1);
+  const acceptance = transfer.audits.filter((a) => a.entry.sourceRef === 'terms_acceptance');
+  assert.deepEqual(acceptance.map((a) => a.entry), [expectedAcceptance('transfer', 'annual')]);
+  assert.equal(acceptance[0].opts?.manager, transfer.manager);
+}
+
+const RUNNING = { stripe_subscription_id: 'sub_1', status: 'active' } as Partial<Subscription>;
+
+/** A plan change is a new commitment under the general terms of sale. */
+async function testChangePlanRequiresTheCurrentTerms() {
+  for (const termsVersion of [undefined, null, '', '2020-01-01']) {
+    const { service, manager, calls, audits } = createService({ tenant: createTenant(COMPLETE_FR_INVOICE), subscription: RUNNING });
+    await expectBadRequest(
+      service.changePlan('tenant-1', 'max', 'annual', 'user-1', manager as any, termsVersion as any),
+      { message: 'TERMS_NOT_ACCEPTED' },
+    );
+    assert.deepEqual(calls, [], `no Stripe call for a plan change with ${String(termsVersion)}`);
+    assert.deepEqual(audits, []);
+  }
+
+  const { service, manager, calls, audits } = createService({ tenant: createTenant(COMPLETE_FR_INVOICE), subscription: RUNNING });
+  (service as any).logger = { warn: () => undefined };
+  await service.changePlan('tenant-1', 'max', 'annual', 'user-1', manager as any, GTC_VERSION);
+  assert.equal(calls.filter((call) => call.method === 'subscriptions.update').length, 1);
+  const acceptance = audits.filter((a) => a.entry.sourceRef === 'terms_acceptance');
+  assert.deepEqual(acceptance.map((a) => a.entry), [expectedAcceptance('card', 'annual')]);
+  assert.equal(acceptance[0].opts?.manager, manager);
+  // The acceptance is recorded before Stripe is called.
+  assert.equal(audits[0].entry.sourceRef, 'terms_acceptance');
+}
+
+async function testSubscribeBodiesKeepTheTermsVersion() {
+  const pipe = new ValidationPipe({ whitelist: true, transform: true });
+  const checkoutMeta: ArgumentMetadata = { type: 'body', metatype: CreateCheckoutSessionDto, data: '' };
+  const invoiceMeta: ArgumentMetadata = { type: 'body', metatype: RequestInvoiceDto, data: '' };
+  const checkout = await pipe.transform({ plan_key: 'max', interval: 'monthly', terms_version: GTC_VERSION }, checkoutMeta);
+  assert.equal(checkout.terms_version, GTC_VERSION);
+  const invoice = await pipe.transform({ plan_key: 'max', subscription_type: 'annual', terms_version: GTC_VERSION }, invoiceMeta);
+  assert.equal(invoice.terms_version, GTC_VERSION);
+  const changeMeta: ArgumentMetadata = { type: 'body', metatype: ChangePlanDto, data: '' };
+  const change = await pipe.transform({ plan_key: 'max', subscription_type: 'annual', terms_version: GTC_VERSION }, changeMeta);
+  // Validated through the DTO class: its whitelist would drop an undeclared field.
+  assert.ok(change instanceof ChangePlanDto);
+  assert.equal(change.terms_version, GTC_VERSION);
+}
+
 async function testNewCustomerCarriesMentionsAndAnIdempotencyKey() {
   const { service, manager, calls } = createService({ tenant: createTenant(COMPLETE_FR_INVOICE, null) });
-  await service.createCheckoutSession({ tenantId: 'tenant-1', manager: manager as any, planKey: 'max', interval: 'monthly' });
+  await service.createCheckoutSession({ tenantId: 'tenant-1', manager: manager as any, planKey: 'max', interval: 'monthly', termsVersion: GTC_VERSION });
   const creates = calls.filter((call) => call.method === 'customers.create');
   assert.equal(creates.length, 1);
   assert.equal(creates[0].args.length, 2);
@@ -290,7 +415,7 @@ async function testNewCustomerCarriesMentionsAndAnIdempotencyKey() {
 /** The idempotency key of the `customers.create` a checkout sends for this invoice profile. */
 async function creationKey(invoiceInfo: Record<string, unknown>): Promise<{ key: string; params: Record<string, any> }> {
   const { service, manager, calls } = createService({ tenant: createTenant(invoiceInfo, null) });
-  await service.createCheckoutSession({ tenantId: 'tenant-1', manager: manager as any, planKey: 'max', interval: 'monthly' });
+  await service.createCheckoutSession({ tenantId: 'tenant-1', manager: manager as any, planKey: 'max', interval: 'monthly', termsVersion: GTC_VERSION });
   const create = calls.find((call) => call.method === 'customers.create')!;
   return { key: (create.args[1] as { idempotencyKey: string }).idempotencyKey, params: create.args[0] as Record<string, any> };
 }
@@ -316,7 +441,7 @@ async function testRecreatedCustomerUsesAnotherIdempotencyKey() {
     tenant: createTenant(COMPLETE_FR_INVOICE, 'cus_deleted'),
     retrievedCustomer: { id: 'cus_deleted', deleted: true },
   });
-  await service.createCheckoutSession({ tenantId: 'tenant-1', manager: manager as any, planKey: 'max', interval: 'monthly' });
+  await service.createCheckoutSession({ tenantId: 'tenant-1', manager: manager as any, planKey: 'max', interval: 'monthly', termsVersion: GTC_VERSION });
   const creates = calls.filter((call) => call.method === 'customers.create');
   assert.equal(creates.length, 1);
   assert.match((creates[0].args[1] as { idempotencyKey: string }).idempotencyKey, /^tenant-customer-tenant-1-cus_deleted-[0-9a-f]{16}$/);
@@ -324,7 +449,7 @@ async function testRecreatedCustomerUsesAnotherIdempotencyKey() {
 
 async function testGermanCustomerGetsNatureOnlyAndGerman() {
   const { service, manager, calls } = createService({ tenant: createTenant(COMPLETE_DE_INVOICE) });
-  await service.createCheckoutSession({ tenantId: 'tenant-1', manager: manager as any, planKey: 'max', interval: 'monthly' });
+  await service.createCheckoutSession({ tenantId: 'tenant-1', manager: manager as any, planKey: 'max', interval: 'monthly', termsVersion: GTC_VERSION });
   const update = calls.find((call) => call.method === 'customers.update');
   assert.deepEqual(update!.args[1], {
     email: 'rechnung@kaese.test',
@@ -353,6 +478,10 @@ async function run() {
   await testCheckoutPushesDetailsAndVatToExistingCustomer();
   await testStaleVatIdIsReplacedAndSameOneKept();
   await testRefusedVatNumberBecomesVatNumberInvalid();
+  await testSubscribeRefusesWithoutTheCurrentTerms();
+  await testAcceptedTermsAreAudited();
+  await testChangePlanRequiresTheCurrentTerms();
+  await testSubscribeBodiesKeepTheTermsVersion();
   await testNewCustomerCarriesMentionsAndAnIdempotencyKey();
   await testRecreatedCustomerUsesAnotherIdempotencyKey();
   await testIdempotencyKeyFollowsThePayload();

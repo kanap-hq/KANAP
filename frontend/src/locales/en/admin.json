@@ -730,6 +730,7 @@
     "errors": {
       "noActiveSubscription": "No active subscription was found.",
       "planNotBankTransferEligible": "This plan is not eligible for bank transfer.",
+      "termsNotAccepted": "The general terms of sale could not be confirmed. Reload the page and accept them again.",
       "vatNumberInvalid": "The VAT number was not accepted. Check it in the invoicing information."
     },
     "invoiceFields": {
@@ -755,6 +756,10 @@
     "profile": {
       "complete": "Complete invoicing information",
       "incomplete": "Complete the invoicing information before subscribing: {{fields}}."
+    },
+    "terms": {
+      "accept": "I accept the",
+      "link": "general terms of sale"
     },
     "title": "Choose a plan",
     "trial": {

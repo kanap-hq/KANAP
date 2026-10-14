@@ -730,6 +730,7 @@
     "errors": {
       "noActiveSubscription": "No se encontró ninguna suscripción activa.",
       "planNotBankTransferEligible": "Este plan no es elegible para transferencia bancaria.",
+      "termsNotAccepted": "No se pudo confirmar la aceptación de las condiciones generales de venta. Vuelva a cargar la página y acéptelas de nuevo.",
       "vatNumberInvalid": "No se aceptó el número de IVA. Revíselo en la información de facturación."
     },
     "invoiceFields": {
@@ -755,6 +756,10 @@
     "profile": {
       "complete": "Completar la información de facturación",
       "incomplete": "Complete la información de facturación antes de suscribirse: {{fields}}."
+    },
+    "terms": {
+      "accept": "Acepto las",
+      "link": "condiciones generales de venta"
     },
     "title": "Elegir un plan",
     "trial": {
