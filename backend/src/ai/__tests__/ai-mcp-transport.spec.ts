@@ -108,7 +108,13 @@ async function testToolsListReturnsJsonSchemas(url: string) {
   const reply = await rpc(url, { jsonrpc: '2.0', id: 2, method: 'tools/list' });
   assert.equal(reply.error, undefined, JSON.stringify(reply.error));
   assert.deepEqual(reply.result.tools, [
-    { name: 'search_all', description: 'Search KANAP.', inputSchema: toolSchema },
+    {
+      name: 'search_all',
+      title: 'Search all',
+      description: 'Search KANAP.',
+      inputSchema: toolSchema,
+      annotations: { title: 'Search all', readOnlyHint: true },
+    },
   ]);
 }
 

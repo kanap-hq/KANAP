@@ -229,6 +229,7 @@
       "login": "Anmeldung",
       "login_failed": "Fehlgeschlagene Anmeldung",
       "logout": "Abmeldung",
+      "mcp_connection_refused": "Verbindung eines MCP-Clients abgelehnt",
       "password_reset_completed": "Passwort zurückgesetzt",
       "password_reset_requested": "Zurücksetzen des Passworts angefordert",
       "refresh_denied": "Sitzungsverlängerung abgelehnt",

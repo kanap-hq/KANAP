@@ -37,6 +37,12 @@ import { AiBuiltinRateLimiter } from './platform/ai-builtin-rate-limiter';
 import { AiBuiltinUsageService } from './platform/ai-builtin-usage.service';
 import { AiExecutionContext } from './ai.types';
 
+/** A readable tool title from its name: `get_entity_detail` → "Get entity detail". */
+export function toolTitle(name: string): string {
+  const words = name.replace(/[_-]+/g, ' ').trim();
+  return words ? words.charAt(0).toUpperCase() + words.slice(1) : name;
+}
+
 @Controller('ai/mcp')
 @SkipTenantTransaction()
 export class AiMcpController {
@@ -68,7 +74,7 @@ export class AiMcpController {
       userId: String((req as any)?.user?.sub || ''),
       isPlatformHost: (req as any)?.isPlatformHost === true,
       surface: 'mcp',
-      authMethod: 'api_key',
+      authMethod: (req as any)?.user?.authMethod === 'oauth' ? 'oauth' : 'api_key',
       requestId: (req as any)?.id ?? null,
       aiApiKeyId: (req as any)?.user?.aiApiKeyId ?? null,
     };
@@ -195,8 +201,12 @@ export class AiMcpController {
     server.setRequestHandler(ListToolsRequestSchema, async () => ({
       tools: toolDefs.map((toolDef) => ({
         name: toolDef.name,
+        title: toolTitle(toolDef.name),
         description: toolDef.description,
         inputSchema: toolDef.parameters as any,
+        // MCP exposes read-only capabilities only (capability-contract.ts, `mcp_exposure`); the
+        // Anthropic directory asks for a title and this hint on every tool.
+        annotations: { title: toolTitle(toolDef.name), readOnlyHint: true },
       })),
     }));
 

@@ -44,6 +44,9 @@ export type PublicHttpTargetOptions = {
   // private RFC1918 / localhost / internal-DNS targets (GLPI, Ollama, PRTG) are legitimate.
   enforcePrivateBlock?: boolean;
   lookupFn?: LookupFn; // test seam; defaults to the real DNS resolver
+  // Leave SSRF_ALLOWED_HOSTS aside: for targets a third party chooses (an OAuth client's
+  // metadata document), where the operator's internal hosts are never a legitimate target.
+  ignoreHostAllowlist?: boolean;
 };
 
 function shouldEnforce(opts?: PublicHttpTargetOptions): boolean {
@@ -194,7 +197,7 @@ export async function resolvePublicHttpTarget(
 ): Promise<PublicHttpTarget> {
   const url = parseHttpUrl(target);
   if (!shouldEnforce(opts)) return { url, addresses: null };
-  const allow = envHostAllowlist();
+  const allow = opts?.ignoreHostAllowlist ? new Set<string>() : envHostAllowlist();
   if (isAllowlistedHost(url.hostname, allow)) return { url, addresses: null };
   assertHostLiteral(url.hostname);
   const lookupFn = opts?.lookupFn ?? (lookup as unknown as LookupFn);

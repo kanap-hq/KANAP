@@ -14,16 +14,20 @@ import { TOKEN_SECRET_LABEL } from './token-secret.util';
 export const ACCESS_TOKEN_PURPOSE = 'access';
 
 /**
- * Purpose markers of the other families. Two double as the versioned HMAC labels that derive their
+ * Purpose markers of the other families. Most double as the versioned HMAC labels that derive their
  * signing keys, so a marker rename cannot silently desynchronise a family from its key derivation.
  * Provisioning keeps its historical marker, because its issuer is a service outside this
  * repository; the handoff is discriminated by `ENTRA_LOGIN_HANDOFF_TYPE`, its own legacy marker.
- * All four are listed here so the access-token predicate refuses the whole set.
+ * The two MCP OAuth families open the MCP endpoint only. All are listed here so the access-token
+ * predicate refuses the whole set.
  */
 export const PASSWORD_RESET_PURPOSE = TOKEN_SECRET_LABEL['password-reset'];
 export const PROVISIONING_PURPOSE = 'provision';
 export const ENTRA_STATE_PURPOSE = TOKEN_SECRET_LABEL['entra-state'];
 export const ENTRA_LOGIN_HANDOFF_TYPE = 'entra_login_handoff';
+/** MCP OAuth (ai/oauth): the authorization code and the access token of an MCP client. */
+export const MCP_OAUTH_CODE_PURPOSE = TOKEN_SECRET_LABEL['mcp-oauth-code'];
+export const MCP_ACCESS_PURPOSE = TOKEN_SECRET_LABEL['mcp-access'];
 
 /**
  * Every marker that identifies a token family other than an access token. Listed in one place so
@@ -35,6 +39,8 @@ export const FOREIGN_TOKEN_MARKERS: readonly string[] = [
   PROVISIONING_PURPOSE,
   ENTRA_STATE_PURPOSE,
   ENTRA_LOGIN_HANDOFF_TYPE,
+  MCP_OAUTH_CODE_PURPOSE,
+  MCP_ACCESS_PURPOSE,
 ];
 
 /**

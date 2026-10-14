@@ -1,5 +1,8 @@
 import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 
+/** An API key the user created, or the grant an MCP client received through OAuth (ai/oauth). */
+export type AiCredentialKind = 'api_key' | 'oauth';
+
 @Entity('ai_api_keys')
 @Index(['tenant_id', 'user_id'])
 @Index(['tenant_id', 'key_prefix'], { unique: true })
@@ -58,4 +61,28 @@ export class AiApiKey {
 
   @Column('uuid')
   created_by_user_id!: string;
+
+  @Column('text', { default: 'api_key' })
+  credential_kind!: AiCredentialKind;
+
+  /** OAuth: the client's metadata document URL (CIMD), which is its `client_id`. */
+  @Column('text', { nullable: true })
+  oauth_client_id!: string | null;
+
+  @Column('text', { nullable: true })
+  oauth_client_name!: string | null;
+
+  @Column('text', { nullable: true })
+  oauth_redirect_uri!: string | null;
+
+  /** OAuth: the `jti` of the authorization code that created the grant (unique per tenant). */
+  @Column('uuid', { nullable: true })
+  oauth_code_jti!: string | null;
+
+  @Column('timestamptz', { nullable: true })
+  refresh_rotated_at!: Date | null;
+
+  /** OAuth: the user asked to skip the consent screen next time for this client. */
+  @Column('boolean', { default: false })
+  oauth_remember!: boolean;
 }

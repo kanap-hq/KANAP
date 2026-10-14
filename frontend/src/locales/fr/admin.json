@@ -229,6 +229,7 @@
       "login": "Connexion",
       "login_failed": "Échec de connexion",
       "logout": "Déconnexion",
+      "mcp_connection_refused": "Connexion d'un client MCP refusée",
       "password_reset_completed": "Réinitialisation du mot de passe terminée",
       "password_reset_requested": "Réinitialisation du mot de passe demandée",
       "refresh_denied": "Renouvellement de session refusé",

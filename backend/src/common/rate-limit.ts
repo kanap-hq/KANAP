@@ -32,6 +32,13 @@ export const RATE_LIMITS = {
    */
   ssoSignIn: { limit: 60, ttl: 60_000 },
   authRefresh: { limit: 20, ttl: 60_000 },
+  /**
+   * MCP OAuth (ai/oauth): the authorization routes, opened in the user's browser, and the token
+   * and revocation routes, called by the MCP client's servers. Claude's servers share a small range
+   * of outbound addresses for all its users, so the token budget is a wide one.
+   */
+  mcpOAuthAuthorize: { limit: 30, ttl: 60_000 },
+  mcpOAuthToken: { limit: 60, ttl: 60_000 },
   authProvisioningExchange: { limit: 5, ttl: 10 * 60_000 },
   authPasswordResetRequest: { limit: 3, ttl: 15 * 60_000 },
   authPasswordResetComplete: { limit: 5, ttl: 10 * 60_000 },

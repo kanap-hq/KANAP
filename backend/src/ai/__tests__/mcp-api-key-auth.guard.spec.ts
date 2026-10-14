@@ -41,6 +41,7 @@ async function testGuardPopulatesTenantAndUser() {
       toView: (record: any) => ({ id: record.id, tenant_id: record.tenant_id, user_id: record.user_id }),
     } as any,
     tenantExecutor,
+    {} as any,
   );
 
   const req: any = {
@@ -87,6 +88,7 @@ async function testGuardRejectsTenantMismatch() {
       toView: () => ({ id: 'key-1' }),
     } as any,
     tenantExecutor,
+    {} as any,
   );
 
   await assert.rejects(
@@ -117,6 +119,7 @@ async function testGuardRequiresTenantAddress() {
       },
     } as any,
     tenantExecutor,
+    {} as any,
   );
 
   await assert.rejects(
@@ -147,6 +150,7 @@ async function testGuardLooksUpKeyInsideRequestTenant() {
       toView: (record: any) => ({ id: record.id }),
     } as any,
     tenantExecutor,
+    {} as any,
   );
 
   await guard.canActivate({
