@@ -4,10 +4,11 @@ import { Repository, EntityManager, DataSource } from 'typeorm';
 import { PaymentMode, Subscription, SubscriptionType, SubscriptionStatus, CollectionMethod } from './subscription.entity';
 import { User } from '../users/user.entity';
 import { Tenant } from '../tenants/tenant.entity';
-import { StripeClientService, StripeConfigService } from './stripe';
+import { StripeClientService, StripeConfigService, ensureInvoiceA4 } from './stripe';
 import { subscriptionPeriod } from './stripe/stripe-shapes.util';
 import { computePriceAmount, computeStripePriceAmount, normaliseStripePrice, type NormalisedPrice } from './price.util';
 import { euVatTaxIdValue, missingInvoiceFields, normaliseVatNumber, toIsoCountry } from './billing-profile.util';
+import { customerSiren, invoiceCustomFields, invoiceLocale } from './invoice-mentions';
 import { withTenant } from '../common/tenant-runner';
 import { Features } from '../config/features';
 import { AuditService } from '../audit/audit.service';
@@ -570,6 +571,8 @@ export class BillingService {
   ): Promise<string> {
     const client = this.getStripeClientOrThrow();
     const profile = opts.invoiceProfile ?? null;
+    // Read before a deleted or stale customer id is cleared below: it keys the creation.
+    const previousCustomerId = tenant.stripe_customer_id ?? null;
     if (tenant.stripe_customer_id) {
       // Verify the customer still exists in the current Stripe environment
       try {
@@ -601,14 +604,22 @@ export class BillingService {
 
     const invoiceContact = profile ?? this.getInvoiceContact(tenant);
     const euVat = profile ? euVatTaxIdValue(profile) : null;
-    const customer = await this.withVatNumberErrors<{ id: string }>(() => client.customers.create({
-      ...this.stripeCustomerDetails(tenant, invoiceContact),
-      metadata: {
-        tenant_id: tenant.id,
-        tenant_slug: tenant.slug,
+    const details = this.stripeCustomerDetails(tenant, invoiceContact);
+    // The key names the customer id it replaces: a retried request returns the same
+    // customer, a recreation after a deletion gets a new one.
+    const idempotencyKey = `tenant-customer-${tenant.id}-${previousCustomerId ?? 'new'}`;
+    const customer = await this.withVatNumberErrors<{ id: string }>(() => client.customers.create(
+      {
+        ...details,
+        metadata: {
+          ...(details.metadata ?? {}),
+          tenant_id: tenant.id,
+          tenant_slug: tenant.slug,
+        },
+        ...(euVat ? { tax_id_data: [{ type: 'eu_vat' as const, value: euVat }] } : {}),
       },
-      ...(euVat ? { tax_id_data: [{ type: 'eu_vat' as const, value: euVat }] } : {}),
-    }));
+      { idempotencyKey },
+    ));
 
     // The tenant was loaded by the caller before the Stripe calls: write the
     // customer id only, never the rest of that copy.
@@ -618,13 +629,21 @@ export class BillingService {
     return customer.id;
   }
 
-  /** The Stripe customer fields KANAP owns: email, name (company), phone, address. */
+  /**
+   * The Stripe customer fields KANAP owns: email, name (company), phone, address, the
+   * invoice mentions (operation nature, SIREN of a French customer) and the invoice
+   * language. Stripe merges `metadata` keys on update, so `siren` leaves the others alone.
+   */
   private stripeCustomerDetails(tenant: Tenant, contact: BillingContact) {
+    const siren = customerSiren(contact);
     return {
       email: contact.email || undefined,
       name: contact.company || contact.name || tenant.name,
       phone: contact.phone || undefined,
       address: this.normaliseStripeAddress(this.addressToRecord(contact.address)),
+      invoice_settings: { custom_fields: invoiceCustomFields(contact) },
+      preferred_locales: [invoiceLocale(contact.address.country)],
+      ...(siren ? { metadata: { siren } } : {}),
     };
   }
 
@@ -1166,6 +1185,8 @@ export class BillingService {
       }
     }
 
+    // The draft is set to A4 before Stripe renders its PDF.
+    await ensureInvoiceA4(client, invoice, this.logger);
     try {
       const finalized = await client.invoices.finalizeInvoice(invoiceId, {
         auto_advance: true,

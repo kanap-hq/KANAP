@@ -159,9 +159,14 @@ function cloverSubscription(overrides: Record<string, unknown> = {}, item: Recor
   };
 }
 
-function createSyncService(stored: Record<string, unknown>, stripeSubscription: unknown = null) {
+function createSyncService(
+  stored: Record<string, unknown>,
+  stripeSubscription: unknown = null,
+  opts: { tenantKnown?: boolean; invoiceUpdateError?: Error } = {},
+) {
   const row: Record<string, any> = { id: 'local-sub', ...stored };
   const retrieved: string[] = [];
+  const invoiceUpdates: unknown[][] = [];
   const manager = {
     getRepository: () => ({
       findOne: async () => row,
@@ -181,7 +186,7 @@ function createSyncService(stored: Record<string, unknown>, stripeSubscription: 
       manager,
     }),
     getRepository: () => ({
-      findOne: async () => ({ id: TENANT_A, stripe_customer_id: 'cus_1' }),
+      findOne: async () => (opts.tenantKnown === false ? null : { id: TENANT_A, stripe_customer_id: 'cus_1' }),
       update: async () => undefined,
     }),
   };
@@ -192,6 +197,13 @@ function createSyncService(stored: Record<string, unknown>, stripeSubscription: 
         return stripeSubscription;
       },
     },
+    invoices: {
+      update: async (...args: unknown[]) => {
+        invoiceUpdates.push(args);
+        if (opts.invoiceUpdateError) throw opts.invoiceUpdateError;
+        return { id: args[0] };
+      },
+    },
   };
   const svc = new StripeWebhookService(
     {} as any,
@@ -199,7 +211,8 @@ function createSyncService(stored: Record<string, unknown>, stripeSubscription: 
     dataSource as any,
     { log: async () => undefined } as any,
   );
-  return { svc, row, retrieved };
+  (svc as any).logger = { warn: () => undefined, log: () => undefined, debug: () => undefined, error: () => undefined };
+  return { svc, row, retrieved, invoiceUpdates };
 }
 
 async function testCloverInvoiceResolvesItsSubscription() {
@@ -253,6 +266,52 @@ async function testSubscriptionEventWithoutPeriodKeepsTheStoredDates() {
   assert.equal(row.canceled_at_effective?.getTime(), STORED_END.getTime());
 }
 
+/**
+ * Invoice PDFs are A4. `invoice.created` and `invoice.finalized` set the format on every
+ * invoice of the account, before and apart from the tenant lookup (an Enterprise Support
+ * invoice has no tenant), and a Stripe error there does not stop the event.
+ */
+const A4 = { rendering: { pdf: { page_size: 'a4' } } };
+
+function invoiceEvent(type: string, invoice: Record<string, unknown>) {
+  return { id: 'evt_inv', type, data: { object: { object: 'invoice', status: 'open', ...invoice } } };
+}
+
+async function testInvoiceWithoutTenantIsSetToA4() {
+  const { svc, invoiceUpdates } = createSyncService({}, null, { tenantKnown: false });
+  await svc.processEvent(invoiceEvent('invoice.finalized', { id: 'in_support', customer: 'cus_unknown' }));
+  assert.deepEqual(invoiceUpdates, [['in_support', A4]]);
+
+  const created = createSyncService({}, null, { tenantKnown: false });
+  await created.svc.processEvent(invoiceEvent('invoice.created', { id: 'in_new', customer: 'cus_unknown', rendering: { pdf: { page_size: 'letter' } } }));
+  assert.deepEqual(created.invoiceUpdates, [['in_new', A4]]);
+}
+
+async function testInvoiceAlreadyA4AndOtherEventsAreLeftAlone() {
+  const { svc, invoiceUpdates } = createSyncService({}, null, { tenantKnown: false });
+  await svc.processEvent(invoiceEvent('invoice.finalized', { id: 'in_a4', customer: 'cus_unknown', ...A4 }));
+  await svc.processEvent(invoiceEvent('invoice.paid', { id: 'in_paid', customer: 'cus_unknown' }));
+  await svc.processEvent(invoiceEvent('invoice.updated', { id: 'in_upd', customer: 'cus_unknown' }));
+  assert.deepEqual(invoiceUpdates, []);
+}
+
+async function testStripeErrorOnA4DoesNotStopTheEvent() {
+  const { svc, row, invoiceUpdates } = createSyncService(
+    { stripe_subscription_id: 'sub_1', status: SubscriptionStatus.ACTIVE },
+    cloverSubscription(),
+    { invoiceUpdateError: new Error('Stripe is down') },
+  );
+  await svc.processEvent(invoiceEvent('invoice.finalized', {
+    id: 'in_2',
+    customer: 'cus_1',
+    number: 'KANAP-0003',
+    parent: { type: 'subscription_details', subscription_details: { subscription: 'sub_1', metadata: {} } },
+  }));
+  assert.equal(invoiceUpdates.length, 1, 'the A4 update was attempted');
+  assert.equal(row.latest_invoice_id, 'in_2', 'the event is still applied to the tenant');
+  assert.equal(row.latest_invoice_number, 'KANAP-0003');
+}
+
 async function run() {
   await testResolvesByCustomerFirst();
   await testFallsBackOnMetadataWhenTheStoredCustomerHasDrifted();
@@ -262,6 +321,9 @@ async function run() {
   await testCloverInvoiceResolvesItsSubscription();
   await testCloverSubscriptionUpdatedWritesThePeriods();
   await testSubscriptionEventWithoutPeriodKeepsTheStoredDates();
+  await testInvoiceWithoutTenantIsSetToA4();
+  await testInvoiceAlreadyA4AndOtherEventsAreLeftAlone();
+  await testStripeErrorOnA4DoesNotStopTheEvent();
 }
 
 void run();

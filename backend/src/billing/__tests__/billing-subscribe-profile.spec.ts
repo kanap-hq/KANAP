@@ -7,7 +7,9 @@ import { Subscription } from '../subscription.entity';
  * A tenant subscribes (card checkout or bank transfer) only with complete invoice
  * details. The check runs before any Stripe call, so Stripe never answers with a raw
  * "customer needs a valid email" error. With complete details, the Stripe customer
- * receives the current details and the EU VAT number as an `eu_vat` tax id.
+ * receives the current details and the EU VAT number as an `eu_vat` tax id, the invoice
+ * mentions (operation nature, SIREN of a French customer) and the invoice language.
+ * Creating the customer is idempotent.
  */
 
 type Call = { method: string; args: unknown[] };
@@ -20,12 +22,35 @@ const COMPLETE_FR_INVOICE = {
   address: { line1: '1 rue de la Paix', postal_code: '75002', city: 'Paris', country: 'FR' },
 };
 
-function createTenant(invoiceInfo: Record<string, unknown> | null) {
+const COMPLETE_DE_INVOICE = {
+  company: 'Käse GmbH',
+  email: 'rechnung@kaese.test',
+  vat_number: 'DE123456789',
+  address: { line1: 'Hauptstrasse 1', postal_code: '10115', city: 'Berlin', country: 'DE' },
+};
+
+const FR_MENTIONS = {
+  invoice_settings: {
+    custom_fields: [
+      { name: "Nature de l'opération", value: 'Prestation de services' },
+      { name: 'SIREN', value: '345678901' },
+    ],
+  },
+  preferred_locales: ['fr'],
+};
+
+/** True when `key` appears at any depth of `value`. */
+function hasKeyDeep(value: unknown, key: string): boolean {
+  if (!value || typeof value !== 'object') return false;
+  return Object.entries(value).some(([k, v]) => k === key || hasKeyDeep(v, key));
+}
+
+function createTenant(invoiceInfo: Record<string, unknown> | null, stripeCustomerId: string | null = 'cus_1') {
   return {
     id: 'tenant-1',
     slug: 'fromage',
     name: 'Fromage',
-    stripe_customer_id: 'cus_1',
+    stripe_customer_id: stripeCustomerId,
     billing_invoice_info: invoiceInfo,
     billing_customer_info: null,
     billing_email: null,
@@ -40,6 +65,7 @@ function createService(opts: {
   tenant: ReturnType<typeof createTenant>;
   taxIds?: Array<{ id: string; type: string; value: string }>;
   createTaxIdError?: unknown;
+  retrievedCustomer?: Record<string, unknown>;
 }) {
   const calls: Call[] = [];
   const record = (method: string, impl: (...args: any[]) => unknown) => async (...args: unknown[]) => {
@@ -48,7 +74,7 @@ function createService(opts: {
   };
   const client = {
     customers: {
-      retrieve: record('customers.retrieve', () => ({ id: 'cus_1' })),
+      retrieve: record('customers.retrieve', () => opts.retrievedCustomer ?? { id: 'cus_1' }),
       update: record('customers.update', () => ({ id: 'cus_1' })),
       create: record('customers.create', () => ({ id: 'cus_new' })),
       listTaxIds: record('customers.listTaxIds', () => ({ data: opts.taxIds ?? [] })),
@@ -70,6 +96,7 @@ function createService(opts: {
       list: record('invoices.list', () => ({ data: [] })),
       retrieve: record('invoices.retrieve', () => null),
       finalizeInvoice: record('invoices.finalizeInvoice', () => null),
+      update: record('invoices.update', () => null),
     },
     prices: { retrieve: record('prices.retrieve', () => null) },
     paymentMethods: { retrieve: record('paymentMethods.retrieve', () => null) },
@@ -171,7 +198,10 @@ async function testCheckoutPushesDetailsAndVatToExistingCustomer() {
     name: 'Fromage SAS',
     phone: '+33 1 23 45 67 89',
     address: { line1: '1 rue de la Paix', city: 'Paris', postal_code: '75002', country: 'FR' },
+    ...FR_MENTIONS,
+    metadata: { siren: '345678901' },
   });
+  assert.ok(!hasKeyDeep(update!.args[1], 'default_payment_method'), 'the default payment method is left alone');
   const created = calls.filter((call) => call.method === 'customers.createTaxId');
   assert.deepEqual(created.map((call) => call.args), [['cus_1', { type: 'eu_vat', value: 'FR12345678901' }]]);
 
@@ -236,6 +266,60 @@ async function testRefusedVatNumberBecomesVatNumberInvalid() {
   assert.equal(checkout.calls.filter((call) => call.method === 'checkout.sessions.create').length, 0);
 }
 
+async function testNewCustomerCarriesMentionsAndAnIdempotencyKey() {
+  const { service, manager, calls } = createService({ tenant: createTenant(COMPLETE_FR_INVOICE, null) });
+  await service.createCheckoutSession({ tenantId: 'tenant-1', manager: manager as any, planKey: 'max', interval: 'monthly' });
+  const creates = calls.filter((call) => call.method === 'customers.create');
+  assert.equal(creates.length, 1);
+  assert.deepEqual(creates[0].args, [
+    {
+      email: 'billing@fromage-co.com',
+      name: 'Fromage SAS',
+      phone: '+33 1 23 45 67 89',
+      address: { line1: '1 rue de la Paix', city: 'Paris', postal_code: '75002', country: 'FR' },
+      ...FR_MENTIONS,
+      metadata: { siren: '345678901', tenant_id: 'tenant-1', tenant_slug: 'fromage' },
+      tax_id_data: [{ type: 'eu_vat', value: 'FR12345678901' }],
+    },
+    { idempotencyKey: 'tenant-customer-tenant-1-new' },
+  ]);
+  assert.ok(!hasKeyDeep(creates[0].args[0], 'default_payment_method'));
+}
+
+async function testRecreatedCustomerUsesAnotherIdempotencyKey() {
+  // The stored customer was deleted in Stripe: the new one must not replay the first creation.
+  const { service, manager, calls } = createService({
+    tenant: createTenant(COMPLETE_FR_INVOICE, 'cus_deleted'),
+    retrievedCustomer: { id: 'cus_deleted', deleted: true },
+  });
+  await service.createCheckoutSession({ tenantId: 'tenant-1', manager: manager as any, planKey: 'max', interval: 'monthly' });
+  const creates = calls.filter((call) => call.method === 'customers.create');
+  assert.equal(creates.length, 1);
+  assert.deepEqual(creates[0].args[1], { idempotencyKey: 'tenant-customer-tenant-1-cus_deleted' });
+}
+
+async function testGermanCustomerGetsNatureOnlyAndGerman() {
+  const { service, manager, calls } = createService({ tenant: createTenant(COMPLETE_DE_INVOICE) });
+  await service.createCheckoutSession({ tenantId: 'tenant-1', manager: manager as any, planKey: 'max', interval: 'monthly' });
+  const update = calls.find((call) => call.method === 'customers.update');
+  assert.deepEqual(update!.args[1], {
+    email: 'rechnung@kaese.test',
+    name: 'Käse GmbH',
+    phone: undefined,
+    address: { line1: 'Hauptstrasse 1', city: 'Berlin', postal_code: '10115', country: 'DE' },
+    invoice_settings: { custom_fields: [{ name: "Nature de l'opération", value: 'Prestation de services' }] },
+    preferred_locales: ['de'],
+  });
+}
+
+async function testDraftInvoiceIsSetToA4BeforeFinalizing() {
+  const { service, calls } = createService({ tenant: createTenant(COMPLETE_FR_INVOICE) });
+  await (service as any).ensureInvoiceAccessible({ id: 'in_draft', status: 'draft', rendering: { pdf: { page_size: 'letter' } } });
+  const invoiceCalls = calls.filter((call) => call.method.startsWith('invoices.'));
+  assert.deepEqual(invoiceCalls.map((call) => call.method).slice(0, 2), ['invoices.update', 'invoices.finalizeInvoice']);
+  assert.deepEqual(invoiceCalls[0].args, ['in_draft', { rendering: { pdf: { page_size: 'a4' } } }]);
+}
+
 async function run() {
   await testRequestInvoiceRefusesIncompleteProfile();
   await testCheckoutRefusesIncompleteProfile();
@@ -243,6 +327,10 @@ async function run() {
   await testCheckoutPushesDetailsAndVatToExistingCustomer();
   await testStaleVatIdIsReplacedAndSameOneKept();
   await testRefusedVatNumberBecomesVatNumberInvalid();
+  await testNewCustomerCarriesMentionsAndAnIdempotencyKey();
+  await testRecreatedCustomerUsesAnotherIdempotencyKey();
+  await testGermanCustomerGetsNatureOnlyAndGerman();
+  await testDraftInvoiceIsSetToA4BeforeFinalizing();
 }
 
 void run();

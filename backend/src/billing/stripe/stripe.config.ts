@@ -1,6 +1,39 @@
 import { Injectable } from '@nestjs/common';
+import { getEnvMode, isProductionEnv } from '../../common/env';
 
 const DEFAULT_API_VERSION = '2023-10-16';
+
+export type StripeKeyMode = 'test' | 'live' | 'unknown';
+
+/** Test or live, from the key prefix (secret `sk_` or restricted `rk_`). */
+export function stripeKeyMode(secretKey: string | null | undefined): StripeKeyMode {
+  const key = String(secretKey ?? '').trim();
+  if (/^(sk|rk)_test_/.test(key)) return 'test';
+  if (/^(sk|rk)_live_/.test(key)) return 'live';
+  return 'unknown';
+}
+
+/**
+ * The start-up line naming the Stripe mode and API version (never the key), and a
+ * warning when the mode does not match the environment: a live key outside production,
+ * or a test key in production.
+ */
+export function describeStripeMode(
+  secretKey: string | null | undefined,
+  apiVersion: string,
+  env: NodeJS.ProcessEnv = process.env,
+): { mode: StripeKeyMode; line: string; warning: string | null } {
+  const mode = stripeKeyMode(secretKey);
+  const production = isProductionEnv(env);
+  const envLabel = getEnvMode(env) || 'unset';
+  let warning: string | null = null;
+  if (mode === 'live' && !production) {
+    warning = `[stripe] live key in a non-production environment (APP_ENV/NODE_ENV=${envLabel})`;
+  } else if (mode === 'test' && production) {
+    warning = `[stripe] test key in production (APP_ENV/NODE_ENV=${envLabel})`;
+  }
+  return { mode, line: `[stripe] mode=${mode} api=${apiVersion}`, warning };
+}
 
 @Injectable()
 export class StripeConfigService {
