@@ -87,20 +87,20 @@ Der Bereich **Funktionen** schaltet die optionalen KI-Oberflächen um:
 
 Externe Assistenten und IDEs greifen über das Model Context Protocol (MCP) auf KANAP zu, mit denselben Daten, die Plaid sieht. Sie verbinden sich auf eine von zwei Arten:
 
-- **Verbindung** (OAuth): Claude, Claude Desktop und Claude Code melden sich mit dem eigenen Konto des Benutzers bei KANAP an. Niemand erstellt oder kopiert einen Schlüssel. Siehe [Einen MCP-Client verbinden](#connecting-an-mcp-client).
+- **Verbindung** (OAuth): Claude, Claude Desktop, Claude Code, ChatGPT und Grok melden sich mit dem eigenen Konto des Benutzers bei KANAP an. Niemand erstellt oder kopiert einen Schlüssel. Siehe [Einen MCP-Client verbinden](#connecting-an-mcp-client).
 - **API-Schlüssel**: ein langlebiger Schlüssel für Cursor, Skripte und jeden anderen MCP-Client, der einen Header senden kann.
 
 ### Verbindung oder API-Schlüssel { #connection-or-api-key }
 
 | | Verbindung (OAuth) | API-Schlüssel |
 |---|---|---|
-| Für | Jede Person, die Claude mit ihrem eigenen KANAP-Konto verwendet | Ein Skript, ein gemeinsam genutztes Werkzeug oder einen Client, der sich nicht anmelden kann |
-| Clients | Claude (claude.ai), Claude Desktop, Claude Code | Claude Code, Cursor, Skripte, jeder MCP-Client, der einen Header `Authorization` oder `X-API-Key` senden kann |
+| Für | Jede Person, die einen KI-Assistenten mit ihrem eigenen KANAP-Konto verwendet | Ein Skript, ein gemeinsam genutztes Werkzeug oder einen Client, der sich nicht anmelden kann |
+| Clients | Claude (claude.ai), Claude Desktop, Claude Code, ChatGPT, Grok | Claude Code, Cursor, Skripte, jeder MCP-Client, der einen Header `Authorization` oder `X-API-Key` senden kann |
 | Einrichtung | Serveradresse im Client einfügen, bei KANAP anmelden, auf **Zulassen** klicken | Eine Person, die diese Seite öffnen kann, erstellt einen Schlüssel; das Geheimnis wird in den Client eingefügt |
 | Liest mit | den Zugriffsrechten der angemeldeten Person | den Zugriffsrechten der Person, die den Schlüssel erstellt hat |
 | Lebensdauer | 90 Tage lang still erneuert, oder kürzer, wenn **Max. Lebensdauer des Schlüssels (Tage)** kürzer ist. Danach verbindet sich der Benutzer erneut | Bis zum Widerruf oder bis **Max. Lebensdauer des Schlüssels (Tage)** |
-| Netzwerk | HTTPS. Claude und Claude Desktop: KANAP aus dem Internet erreichbar. Jeder Client: KANAP erreicht `claude.ai` über HTTPS | Der Client erreicht KANAP. Funktioniert in einem privaten Netz, auch über einfaches HTTP |
-| Grenzen | Nur Clients, die ein Client-Metadatendokument veröffentlichen, also heute die Anwendungen von Claude | Von benutzerdefinierten Konnektoren in Claude und Claude Desktop nicht akzeptiert. Ein Geheimnis, das sicher aufbewahrt, rotiert und widerrufen werden muss |
+| Netzwerk | HTTPS. Claude, Claude Desktop, ChatGPT und Grok: KANAP aus dem Internet erreichbar. Jeder Client: KANAP erreicht den Host des Clients über HTTPS (`claude.ai`, `chatgpt.com` oder `grok.com`) | Der Client erreicht KANAP. Funktioniert in einem privaten Netz, auch über einfaches HTTP |
+| Grenzen | Nur Clients, die ein Client-Metadatendokument veröffentlichen: Claude, ChatGPT und Grok | Von benutzerdefinierten Konnektoren in Claude und Claude Desktop nicht akzeptiert. Ein Geheimnis, das sicher aufbewahrt, rotiert und widerrufen werden muss |
 
 Beim gehosteten Dienst ist KANAP bereits über HTTPS aus dem Internet erreichbar: Verbindungen funktionieren ohne weitere Einrichtung. Bei einer On-Premise-Installation steht unter [KI-Assistenten über MCP verbinden](on-premise/configuration.md#connecting-ai-assistants-over-mcp), was geöffnet werden muss.
 
@@ -175,12 +175,25 @@ claude mcp add --transport http kanap https://acme.kanap.net/api/ai/mcp
 
 Führen Sie dann `claude mcp login kanap` aus, oder verwenden Sie den Server einfach: Claude Code öffnet Ihren Browser auf der KANAP-Anmeldeseite und dann auf demselben Bildschirm wie oben. Der Browser kehrt zu Ihrem eigenen Computer zurück, daher muss KANAP nicht aus dem Internet erreichbar sein: Ihr Computer erreicht KANAP über HTTPS, und KANAP erreicht `claude.ai` über HTTPS.
 
+#### ChatGPT und Grok { #connecting-chatgpt-grok }
+
+ChatGPT und Grok verbinden sich auf dieselbe Weise wie Claude.
+
+1. Fügen Sie KANAP als benutzerdefinierten MCP-Server mit der Serveradresse hinzu:
+    - **ChatGPT**: Fügen Sie einen benutzerdefinierten MCP-Server oder eine benutzerdefinierte App hinzu. Das Menü hängt von Ihrem Tarif und Ihrem Arbeitsbereich ab, und ein Administrator des Arbeitsbereichs muss es unter Umständen zuerst erlauben. Siehe [Developer mode and MCP apps in ChatGPT](https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt).
+    - **Grok**: Öffnen Sie `grok.com/connectors`, klicken Sie auf **New Connector** und dann auf **Custom**. Bei Grok Business und Enterprise fügt zuerst ein Teamadministrator den Konnektor in der xAI-Konsole hinzu. Siehe [Grok connectors](https://docs.x.ai/grok/connectors).
+2. Melden Sie sich mit Ihrem Passwort oder mit Microsoft bei KANAP an.
+3. KANAP zeigt denselben Bildschirm wie für Claude, mit dem Namen der Anwendung und dem Host, zu dem sie zurückkehrt (`chatgpt.com`, `grok.com` oder `console.x.ai`).
+4. Klicken Sie auf **Zulassen**.
+
+ChatGPT und Grok rufen KANAP von ihren eigenen Servern aus auf, daher muss die Serveradresse über HTTPS aus dem Internet erreichbar sein. KANAP liest außerdem die öffentliche Beschreibung jeder Anwendung über HTTPS von `chatgpt.com` oder `grok.com`.
+
 #### Diese Anwendung merken
 
 Das Kästchen **Diese Anwendung merken** ist standardmäßig angehakt. Bleibt es angehakt, geht die nächste Verbindung derselben Anwendung durch denselben Benutzer schneller:
 
 - Claude Code, das zu Ihrem eigenen Computer zurückkehrt, wird ohne Bildschirm zugelassen.
-- Claude und Claude Desktop zeigen einen kurzen Bildschirm mit einer einzigen Schaltfläche **Weiter**.
+- Claude, Claude Desktop, ChatGPT und Grok zeigen einen kurzen Bildschirm mit einer einzigen Schaltfläche **Weiter**.
 
 Entfernen Sie das Häkchen, um jedes Mal den vollständigen Bildschirm zu sehen. Wenn Sie die Anwendung trennen, wird die Wahl vergessen.
 

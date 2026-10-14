@@ -1,6 +1,6 @@
 # Connected apps
 
-The **Connected apps** tab lists the applications that can read your KANAP data on your behalf, such as Claude, Claude Desktop or Claude Code. It is where you see these accesses and cut them.
+The **Connected apps** tab lists the applications that can read your KANAP data on your behalf, such as Claude, Claude Desktop, Claude Code, ChatGPT or Grok. It is where you see these accesses and cut them.
 
 ## Where to find it
 
@@ -20,7 +20,7 @@ An application reads only what you can see in KANAP, within your own access righ
 
 To cut an access, click **Disconnect** and confirm. The application loses access at once. To use it again, connect it again from the application. Disconnecting also forgets the **Remember this application** choice you made when you connected it.
 
-When nothing is connected, the tab shows one line and a link to the instructions. To connect Claude, see [Connecting an MCP client](ai-settings.md#connecting-an-mcp-client).
+When nothing is connected, the tab shows one line and a link to the instructions. To connect an application, see [Connecting an MCP client](ai-settings.md#connecting-an-mcp-client).
 
 ## API keys
 

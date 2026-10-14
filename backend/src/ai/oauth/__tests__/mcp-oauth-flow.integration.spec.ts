@@ -25,6 +25,7 @@ import { McpOAuthController, McpOAuthMetadataController } from '../mcp-oauth.con
 import { McpOAuthService } from '../mcp-oauth.service';
 import { s256Challenge } from '../mcp-oauth.util';
 import { signAccessToken } from '../mcp-oauth-tokens';
+import { CHATGPT_CIMD, CHATGPT_CLIENT_METADATA, CHATGPT_REDIRECT, GROK_CIMD, GROK_CLIENT_METADATA, GROK_REDIRECT } from './client-metadata-documents.fixture';
 
 // The MCP OAuth connector end to end, over real HTTP and a real database (ai_api_keys under
 // FORCE RLS): 401 + WWW-Authenticate → protected resource metadata → authorization server
@@ -40,6 +41,8 @@ const CLAUDE_CIMD = 'https://claude.ai/oauth/claude-code-client-metadata';
 const WEB_CIMD = 'https://client.example.com/oauth/metadata.json';
 const WEB_REDIRECT = 'https://client.example.com/api/mcp/auth_callback';
 const CIMD_DOCUMENTS: Record<string, unknown> = {
+  [CHATGPT_CIMD]: CHATGPT_CLIENT_METADATA,
+  [GROK_CIMD]: GROK_CLIENT_METADATA,
   [CLAUDE_CIMD]: {
     client_id: CLAUDE_CIMD,
     client_name: 'Claude Code',
@@ -701,6 +704,35 @@ async function testTokenRefusals(a: Seed) {
   assert.equal(notACode.data.error, 'invalid_grant');
 }
 
+async function testClientsConnectWithoutClientAuthentication(a: Seed) {
+  // ChatGPT declares private_key_jwt next to none: it connects as a public client.
+  const chatgpt = await connect(a, { clientId: CHATGPT_CIMD, redirectUri: CHATGPT_REDIRECT });
+  assert.equal((await toolsList(a, chatgpt.access_token)).status, 200);
+  const refreshed = await call(a.host, '/oauth/token', {
+    form: { grant_type: 'refresh_token', refresh_token: chatgpt.refresh_token, client_id: CHATGPT_CIMD },
+  });
+  assert.equal(refreshed.status, 200, refreshed.text);
+
+  // A client assertion is refused, not silently ignored: nothing would check it.
+  const assertion = {
+    client_assertion_type: 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
+    client_assertion: 'eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJub3QtY2hlY2tlZCJ9.c2lnbmF0dXJl',
+  };
+  const { params, verifier } = authorizationParams(a, { client_id: CHATGPT_CIMD, redirect_uri: CHATGPT_REDIRECT });
+  const code = await approve(a, params);
+  const withAssertion = await exchange(a, code, params, verifier, assertion);
+  assert.equal(withAssertion.status, 401, withAssertion.text);
+  assert.equal(withAssertion.data.error, 'invalid_client');
+  const refreshWithAssertion = await call(a.host, '/oauth/token', {
+    form: { grant_type: 'refresh_token', refresh_token: refreshed.data.refresh_token, client_id: CHATGPT_CIMD, ...assertion },
+  });
+  assert.equal(refreshWithAssertion.data.error, 'invalid_client');
+
+  // Grok, a plain public client, still connects.
+  const grok = await connect(a, { clientId: GROK_CIMD, redirectUri: GROK_REDIRECT });
+  assert.equal((await toolsList(a, grok.access_token)).status, 200);
+}
+
 async function testCodeReplayRevokesTheGrant(a: Seed) {
   const { params, verifier } = authorizationParams(a);
   const code = await approve(a, params);
@@ -865,6 +897,7 @@ async function run() {
     await testOldGrantsOfAClientAreRetired(a);
     await testAuthorizeRefusals(a);
     await testTokenRefusals(a);
+    await testClientsConnectWithoutClientAuthentication(a);
     await testCodeReplayRevokesTheGrant(a);
     await testRevocationIsImmediate(a);
     await testIsolation(a, b);
