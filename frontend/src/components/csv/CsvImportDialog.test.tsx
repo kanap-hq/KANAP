@@ -3,10 +3,14 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('react-i18next', () => {
-  // Counted messages come back as `key:count` and the ignored columns as
-  // `key:columns`, so the tests can read what was passed.
-  const t = (key: string, options?: { count?: number; columns?: string }) => (
-    typeof options?.count === 'number' ? `${key}:${options.count}` : options?.columns ? `${key}:${options.columns}` : key
+  // Counted messages come back as `key:count`, the ignored columns as
+  // `key:columns` and a row error about a column as `key:column:message`, so the
+  // tests can read what was passed.
+  const t = (key: string, options?: { count?: number; columns?: string; column?: string; message?: string }) => (
+    typeof options?.count === 'number' ? `${key}:${options.count}`
+      : options?.columns ? `${key}:${options.columns}`
+        : options?.column ? `${key}:${options.column}:${options.message}`
+          : key
   );
   const translation = { t, i18n: { language: 'en', resolvedLanguage: 'en' } };
   return { useTranslation: () => translation };
@@ -60,6 +64,23 @@ describe('CsvImportDialog', () => {
     renderDialog();
     fireEvent.click(screen.getByRole('button', { name: 'csv.preflightCheck' }));
     expect(await screen.findByRole('alert')).toHaveTextContent(/^csv\.validationFailed$/);
+    expect(screen.getByText('csv.rowError')).toBeInTheDocument();
+  });
+
+  it('translates a row error that has a code, with the column it is about', async () => {
+    post.mockResolvedValueOnce({
+      data: report({
+        ok: false,
+        errors: [
+          { row: 4, column: 'description', message: 'description is too long: 250 KB of text, the limit is 200 KB.', code: 'MARKDOWN_TOO_LARGE' },
+          { row: 5, column: 'supplier', message: 'Unknown supplier' },
+        ],
+      }),
+    });
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'csv.preflightCheck' }));
+    expect(await screen.findByText('csv.rowColumnError:description:errors:MARKDOWN_TOO_LARGE')).toBeInTheDocument();
+    // A row error without a code reads as before.
     expect(screen.getByText('csv.rowError')).toBeInTheDocument();
   });
 

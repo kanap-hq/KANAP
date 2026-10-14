@@ -89,6 +89,7 @@ export interface CsvFieldDefinition {
   /** Custom export function (for COMPUTED fields) */
   exportFn?: (entity: any, context: CsvExportContext) => string | null;
   /** Custom import transform function */
+  /** May return a promise: the import awaits it. */
   importTransformFn?: (value: string, row: Record<string, string>, context: CsvImportContext) => any;
 }
 
@@ -166,6 +167,8 @@ export interface CsvImportError {
   column?: string;
   /** Error message */
   message: string;
+  /** Error code the interface translates, when the message has one (MARKDOWN_TOO_LARGE, ...) */
+  code?: string;
 }
 
 /**
@@ -248,6 +251,8 @@ export interface CsvImportContext {
   viewer?: { userId: string | null; isAdmin: boolean };
   /** Effective IT Ops catalogs (defaults included), read with the tenant shared lock by the entity CSV service. */
   itOpsSettings?: import('../../it-ops-settings/it-ops-settings.service').ItOpsSettings;
+  /** Time budget of the rich-text cells of the file, processed in the Markdown workers (markdown-worker.ts). */
+  markdownBudget?: import('../markdown-worker').MarkdownWorkBudget;
 }
 
 /**

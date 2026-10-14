@@ -12,6 +12,7 @@ import { AgentLlmRuntime, AiAgentLlmClient } from './ai-agent-llm-client';
 import { TicketImageEvidence } from './ai-ticket-need-representation.types';
 import { isRecord } from '../../../common/object-guards';
 import { estimateJsonTokens } from './json-token-estimate';
+import { HTML_TAGS } from '../../../common/text-scan';
 
 export type TicketEvidenceExtractionResult = {
   attachmentRefs: TicketAttachmentRef[];
@@ -54,7 +55,7 @@ function schemaText(value: unknown, maxLength: number): string | null {
   }
   const normalized = String(raw ?? '')
     .replace(/<br\s*\/?>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
+    .replace(HTML_TAGS, ' ')
     .replace(/\s+/g, ' ')
     .trim();
   return normalized ? normalized.slice(0, maxLength) : null;

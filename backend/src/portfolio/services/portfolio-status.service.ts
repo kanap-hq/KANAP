@@ -7,7 +7,7 @@ import { PortfolioProjectsBaseService, ServiceOpts } from './portfolio-projects-
 import { PortfolioAttachmentsService } from './portfolio-attachments.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { AuditService } from '../../audit/audit.service';
-import { normalizeMarkdownRichText } from '../../common/markdown-rich-text';
+import { normalizeMarkdownRichText } from '../../common/markdown-worker';
 
 /**
  * Service for managing comments and status transitions.
@@ -46,7 +46,7 @@ export class PortfolioStatusService extends PortfolioProjectsBaseService {
     if (!project) throw new NotFoundException('Project not found');
 
     const isDecision = opts?.isDecision === true;
-    const normalizedContent = normalizeMarkdownRichText(content, { fieldName: 'content' });
+    const normalizedContent = await normalizeMarkdownRichText(content, { fieldName: 'content' });
     let changedFields: Record<string, [unknown, unknown]> | null = null;
     let oldStatus: string | null = null;
 
@@ -171,7 +171,7 @@ export class PortfolioStatusService extends PortfolioProjectsBaseService {
     }
 
     const oldContent = activity.content;
-    activity.content = normalizeMarkdownRichText(content, { fieldName: 'content' });
+    activity.content = await normalizeMarkdownRichText(content, { fieldName: 'content' });
     activity.updated_at = new Date();
 
     const saved = await activityRepo.save(activity);

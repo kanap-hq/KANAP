@@ -6,7 +6,7 @@ import { Task, TaskStatus, TASK_STATUSES } from './task.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { TaskTimeEntriesService } from './task-time-entries.service';
 import { AuditService } from '../audit/audit.service';
-import { normalizeMarkdownRichText } from '../common/markdown-rich-text';
+import { normalizeMarkdownRichText } from '../common/markdown-worker';
 import { writeTaskColumns } from './task-column-write';
 
 export interface TaskActivityItem {
@@ -185,7 +185,7 @@ export class TaskActivitiesService {
     }
 
     const repo = mg.getRepository(PortfolioActivity);
-    const normalizedContent = normalizeMarkdownRichText(dto.content, { fieldName: 'content' });
+    const normalizedContent = await normalizeMarkdownRichText(dto.content, { fieldName: 'content' });
     const activity = repo.create({
       task_id: taskId,
       tenant_id: tenantId,
@@ -238,7 +238,7 @@ export class TaskActivitiesService {
     }
 
     const repo = mg.getRepository(PortfolioActivity);
-    const normalizedContent = normalizeMarkdownRichText(dto.content, { fieldName: 'content' });
+    const normalizedContent = await normalizeMarkdownRichText(dto.content, { fieldName: 'content' });
     const createdAt = parseImportedCreatedAt(dto.created_at);
     const activity = repo.create({
       task_id: taskId,
@@ -279,7 +279,7 @@ export class TaskActivitiesService {
       throw new BadRequestException(`Invalid status. Allowed values: ${TASK_STATUSES.join(', ')}`);
     }
 
-    const normalizedContent = normalizeMarkdownRichText(dto.content, { fieldName: 'content' }) ?? '';
+    const normalizedContent = await normalizeMarkdownRichText(dto.content, { fieldName: 'content' }) ?? '';
     const hasComment = normalizedContent.length > 0;
 
     const normalizedHours = dto.time_hours == null ? 0 : Number(dto.time_hours);
@@ -462,7 +462,7 @@ export class TaskActivitiesService {
       throw new ForbiddenException('You can only edit your own comments');
     }
 
-    activity.content = normalizeMarkdownRichText(content, { fieldName: 'content' });
+    activity.content = await normalizeMarkdownRichText(content, { fieldName: 'content' });
     activity.updated_at = new Date();
 
     return repo.save(activity);

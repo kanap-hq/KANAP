@@ -10,6 +10,7 @@ import { ExportFormat } from './dto/export.dto';
 import { isDevelopmentEnv, parseBoolean } from './env';
 import { readStreamWithCaps, StreamLimitError } from './bounded-stream';
 import { decodeHtmlEntities } from './html-entities';
+import { trailingRun } from './text-scan';
 
 const execFileAsync = promisify(execFile);
 
@@ -29,7 +30,7 @@ const DEFAULT_FILENAME = 'document';
 const HTML_IMAGE_RE = /<img\b[^>]*>/gi;
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 const ODT_MAX_IMAGE_WIDTH_CM = 16;
-const ODT_SIZE_RE = /^([0-9]*\.?[0-9]+)\s*(cm|mm|in|pt|px)$/i;
+const ODT_SIZE_RE = /^([0-9]+(?:\.[0-9]+)?|\.[0-9]+)\s*(cm|mm|in|pt|px)$/i;
 const EXPORT_ATTRIBUTE_ENTITIES = { amp: '&', quot: '"', '#39': '\'', lt: '<', gt: '>' };
 
 type ExportConfig = {
@@ -306,8 +307,10 @@ export class DocumentExportService {
   private async extractHtmlImages(html: string, ctx: AstImageContext): Promise<any[]> {
     const images: any[] = [];
     const regex = new RegExp(HTML_IMAGE_RE.source, 'gi');
+    // Every tag ends with ">": the text after the last one holds none.
+    const searched = html.slice(0, html.lastIndexOf('>') + 1);
     let match: RegExpExecArray | null;
-    while ((match = regex.exec(html)) !== null) {
+    while ((match = regex.exec(searched)) !== null) {
       const rawSrc = this.readHtmlAttribute(match[0], 'src');
       if (!rawSrc || !rawSrc.trim()) continue;
       const alt = this.readHtmlAttribute(match[0], 'alt') || '';
@@ -833,7 +836,7 @@ export class DocumentExportService {
       .trim()
       .replace(/[^\w.-]+/g, '_')
       .replace(/^_+/, '')
-      .replace(/_+$/, '');
+      .replace(trailingRun('_', false), '');
     return cleaned || DEFAULT_FILENAME;
   }
 }

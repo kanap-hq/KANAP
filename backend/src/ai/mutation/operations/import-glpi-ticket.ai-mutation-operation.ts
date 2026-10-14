@@ -1,8 +1,16 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import { decodeHtmlEntities } from '../../../common/html-entities';
-import { htmlToMarkdown, resolveHtmlContentSource } from '../../../common/html-to-markdown';
-import { normalizeMarkdownRichText } from '../../../common/markdown-rich-text';
+import type { ImportedImageReference } from '../../../common/document-import-markdown';
+import { assertMarkdownSize } from '../../../common/markdown-limits';
+import {
+  findImportedImageReferences,
+  htmlToMarkdown,
+  MarkdownWorkBudget,
+  markdownWorkBudget,
+  normalizeMarkdownRichText,
+  resolveHtmlContentSource,
+} from '../../../common/markdown-worker';
 import { TaskPriorityLevel } from '../../../tasks/task.entity';
 import { TaskActivitiesService } from '../../../tasks/task-activities.service';
 import { TaskAttachmentsService } from '../../../tasks/task-attachments.service';
@@ -30,6 +38,7 @@ import {
   AiTaskCreateTarget,
   AiTaskMutationSupportService,
 } from '../ai-task-mutation-support.service';
+import { findImgSourceValues } from '../../../common/text-scan';
 
 const RELATION_TYPE_VALUES = ['standalone', 'project', 'spend_item', 'capex_item'] as const;
 const PRIORITY_LEVEL_VALUES = ['blocker', 'high', 'normal', 'low', 'optional'] as const;
@@ -219,10 +228,8 @@ function extractImageTargets(html: string | null): string[] {
 
   const seen = new Set<string>();
   const results: string[] = [];
-  const regex = /<img\b[^>]*\bsrc\s*=\s*(['"])(.*?)\1[^>]*>/gi;
-  let match: RegExpExecArray | null;
-  while ((match = regex.exec(html)) !== null) {
-    const rawTarget = decodeHtmlAttribute(String(match[2] || '').trim());
+  for (const value of findImgSourceValues(html)) {
+    const rawTarget = decodeHtmlAttribute(value.trim());
     if (!rawTarget || seen.has(rawTarget)) {
       continue;
     }
@@ -254,13 +261,14 @@ function buildSourceFooter(
   return lines.join('\n');
 }
 
-function buildDescription(
+async function buildDescription(
   ticket: TicketRecord,
   contentHtml: string | null,
   sourceUri: string | null,
   sourceOptions: Parameters<typeof buildSourceFooter>[2],
-): string {
-  const converted = htmlToMarkdown(contentHtml || '');
+  budget: MarkdownWorkBudget,
+): Promise<string> {
+  const converted = await htmlToMarkdown(contentHtml || '', { fieldName: 'description', budget });
   const sections = [textOrNull(converted), buildSourceFooter(ticket, sourceUri, sourceOptions)].filter((part): part is string => !!part);
   return sections.join('\n\n');
 }
@@ -407,41 +415,20 @@ function attachmentRefForTarget(
   return (attachments ?? []).find((attachment) => attachment.target === target) ?? null;
 }
 
-function findImageOccurrences(markdown: string): ImportedImageOccurrence[] {
-  const text = String(markdown || '');
-  const occurrences: ImportedImageOccurrence[] = [];
-
-  const markdownImageRegex = /!\[[^\]]*]\(\s*<?([^)\s>]+)>?(?:\s+["'][^"']*["'])?\s*\)/g;
-  let markdownMatch: RegExpExecArray | null;
-  while ((markdownMatch = markdownImageRegex.exec(text)) !== null) {
-    const raw = String(markdownMatch[0] || '');
-    const target = String(markdownMatch[1] || '').trim();
-    const index = Number(markdownMatch.index || 0);
-    if (!raw || !target) continue;
-    occurrences.push({
+/** The images of a Markdown text (found in the Markdown workers), with their rewrite. */
+async function findImageOccurrences(markdown: string, budget?: MarkdownWorkBudget): Promise<ImportedImageOccurrence[]> {
+  const references = await findImportedImageReferences(markdown, { fieldName: 'content', budget });
+  return references.map((reference) => {
+    const { raw, target } = reference;
+    return {
       raw,
       target,
-      index,
-      rewrite: (nextTarget) => (nextTarget ? raw.replace(target, nextTarget) : ''),
-    });
-  }
-
-  const htmlImageRegex = /<img\b[^>]*\bsrc\s*=\s*(["'])([^"']+)\1[^>]*>/gi;
-  let htmlMatch: RegExpExecArray | null;
-  while ((htmlMatch = htmlImageRegex.exec(text)) !== null) {
-    const raw = String(htmlMatch[0] || '');
-    const target = String(htmlMatch[2] || '').trim();
-    const index = Number(htmlMatch.index || 0);
-    if (!raw || !target) continue;
-    occurrences.push({
-      raw,
-      target,
-      index,
-      rewrite: (nextTarget) => (nextTarget ? buildMarkdownImage(raw, nextTarget) : ''),
-    });
-  }
-
-  return occurrences.sort((a, b) => a.index - b.index);
+      index: reference.index,
+      rewrite: reference.kind === 'markdown'
+        ? (nextTarget: string | null) => (nextTarget ? raw.replace(target, nextTarget) : '')
+        : (nextTarget: string | null) => (nextTarget ? buildMarkdownImage(reference, nextTarget) : ''),
+    };
+  });
 }
 
 function applyReplacements(
@@ -470,31 +457,19 @@ function applyReplacements(
   return output;
 }
 
-function readHtmlAttribute(rawHtml: string, attributeName: string): string | null {
-  const pattern = new RegExp(`\\b${attributeName}\\s*=\\s*([\"'])(.*?)\\1`, 'i');
-  const match = rawHtml.match(pattern);
-  return match?.[2] ? String(match[2]) : null;
-}
-
-function escapeMarkdownImageText(value: string): string {
-  return String(value || '')
-    .replace(/\\/g, '\\\\')
-    .replace(/\[/g, '\\[')
-    .replace(/\]/g, '\\]');
-}
-
-export function buildMarkdownImage(rawHtml: string, target: string): string {
-  const alt = escapeMarkdownImageText(readHtmlAttribute(rawHtml, 'alt') || '');
-  const title = readHtmlAttribute(rawHtml, 'title');
+export function buildMarkdownImage(reference: ImportedImageReference, target: string): string {
+  const alt = reference.alt ?? '';
+  const title = reference.title ?? null;
   const encodedTitle = title ? ` "${String(title).replace(/[\\"]/g, '\\$&')}"` : '';
   return `![${alt}](${target}${encodedTitle})`;
 }
 
-function rewriteMarkdownImageTargets(
+async function rewriteMarkdownImageTargets(
   markdown: string,
   replacements: Map<string, string>,
-): string {
-  const applied = findImageOccurrences(markdown)
+  budget?: MarkdownWorkBudget,
+): Promise<string> {
+  const applied = (await findImageOccurrences(markdown, budget))
     .map((occurrence) => {
       const replacement = replacements.get(occurrence.target);
       if (!replacement) {
@@ -787,11 +762,15 @@ abstract class BaseImportTicketAiMutationOperation<TInput extends LegacyImportTi
     const publicFollowups = followups.filter((followup) => !followup.is_private);
     const privateFollowupCount = followups.length - publicFollowups.length;
     const contentSource = textOrNull(ticket.descriptionHtml) ?? textOrNull(ticket.description) ?? '';
-    const normalizedContentHtml = textOrNull(resolveHtmlContentSource(contentSource));
+    // The ticket text is bounded before its conversion to Markdown.
+    assertMarkdownSize(contentSource, 'description');
+    // The ticket text is converted in the Markdown workers, within one time budget.
+    const budget = markdownWorkBudget();
+    const normalizedContentHtml = textOrNull(await resolveHtmlContentSource(contentSource, { fieldName: 'description', budget }));
     const sourceUri = ticketSourceUri(ticket);
-    const description = normalizeMarkdownRichText(
-      buildDescription(ticket, normalizedContentHtml, sourceUri, this.sourceLabels(providerKey)),
-      { fieldName: 'description' },
+    const description = await normalizeMarkdownRichText(
+      await buildDescription(ticket, normalizedContentHtml, sourceUri, this.sourceLabels(providerKey), budget),
+      { fieldName: 'description', budget },
     );
     const taskType = await this.resolveMappedTaskType(context, ticket.type);
     const imageTargets = attachmentTargets(ticket.attachments, 'ticket_description');
@@ -1097,7 +1076,7 @@ abstract class BaseImportTicketAiMutationOperation<TInput extends LegacyImportTi
 
           if (descriptionImages.replacements.size > 0) {
             try {
-              const rewrittenDescription = rewriteMarkdownImageTargets(
+              const rewrittenDescription = await rewriteMarkdownImageTargets(
                 created.description || textOrNull(mutation.description) || '',
                 descriptionImages.replacements,
               );
@@ -1153,12 +1132,17 @@ abstract class BaseImportTicketAiMutationOperation<TInput extends LegacyImportTi
       }
     }
 
+    // The follow-up texts are converted in the Markdown workers, within one time budget.
+    const followupBudget = markdownWorkBudget();
     for (const followup of followups) {
       try {
-        const normalizedContentHtml = textOrNull(resolveHtmlContentSource(followup.content_html || ''));
-        const converted = htmlToMarkdown(normalizedContentHtml || '');
+        assertMarkdownSize(followup.content_html, 'content');
+        const normalizedContentHtml = textOrNull(
+          await resolveHtmlContentSource(followup.content_html || '', { budget: followupBudget }),
+        );
+        const converted = await htmlToMarkdown(normalizedContentHtml || '', { budget: followupBudget });
         const rewritten = followupImageReplacements.size > 0
-          ? rewriteMarkdownImageTargets(converted, followupImageReplacements)
+          ? await rewriteMarkdownImageTargets(converted, followupImageReplacements, followupBudget)
           : converted;
         const content = buildImportedFollowupComment(this.sourceLabels(providerKey).sourceLabel, ticketId, followup, rewritten);
         await this.activities.createImportedComment(

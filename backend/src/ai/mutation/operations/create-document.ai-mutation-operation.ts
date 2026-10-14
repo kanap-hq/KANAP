@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { z } from 'zod';
-import { normalizeMarkdownRichText } from '../../../common/markdown-rich-text';
+import { normalizeMarkdownRichText } from '../../../common/markdown-worker';
 import { KnowledgeService } from '../../../knowledge/knowledge.service';
 import { AiMutationPreview } from '../../ai-mutation-preview.entity';
 import { AiExecutionContextWithManager } from '../../ai.types';
@@ -128,7 +128,7 @@ export class CreateDocumentAiMutationOperation implements AiMutationOperation<Cr
     }
 
     const summary = input.summary == null ? null : textOrNull(input.summary);
-    const explicitContentMarkdown = normalizeMarkdownRichText(input.content_markdown, {
+    const explicitContentMarkdown = await normalizeMarkdownRichText(input.content_markdown, {
       fieldName: 'content_markdown',
     });
     const template = input.template_document

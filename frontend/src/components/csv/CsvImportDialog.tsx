@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography, Stack, Alert, LinearProgress, Divider } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import api from '../../api';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { AmountReading, DateReading, amountReadingOf, dateReadingOf, screenLanguage } from './readings';
@@ -15,12 +16,24 @@ type ImportReport = {
   processed?: number;
   /** Rows identical to what is stored, left untouched (budget rows import only). */
   unchanged?: number;
-  errors: { row: number; message: string }[];
+  errors: RowError[];
   /** How the server read the dates and the amounts, in English, when it had to choose. */
   notices?: { dates: string | null; amounts: string | null };
   /** Headers the importer does not know and left out of the import. */
   ignoredColumns?: string[];
 };
+
+/** `code`: the error code the interface translates, when the server gave one (MARKDOWN_TOO_LARGE, ...). */
+type RowError = { row: number; column?: string; message: string; code?: string };
+
+/** A row error in the interface language when it has a code, with the column it is about. */
+function rowErrorText(err: RowError, t: TFunction): string {
+  if (!err.code) return t('csv.rowError', { row: err.row, message: err.message });
+  const message = t(`errors:${err.code}`, { defaultValue: err.message });
+  return err.column
+    ? t('csv.rowColumnError', { row: err.row, column: err.column, message })
+    : t('csv.rowError', { row: err.row, message });
+}
 
 /** The notice sentences and the switch labels, shared with the budget file import. */
 const K = 'operations.budgetFile.';
@@ -283,7 +296,7 @@ export default function CsvImportDialog({
             {(report as any).errors && (report as any).errors.length > 0 && (
               <Box sx={{ mt: 1 }}>
                 {(report as any).errors.slice(0, 5).map((err: any, i: number) => (
-                  <Typography key={i} variant="body2">{t('csv.rowError', { row: err.row, message: err.message })}</Typography>
+                  <Typography key={i} variant="body2">{rowErrorText(err, t)}</Typography>
                 ))}
                 {(report as any).errors.length > 5 && (
                   <Typography variant="caption">{t('csv.andMoreErrors', { count: (report as any).errors.length - 5 })}</Typography>

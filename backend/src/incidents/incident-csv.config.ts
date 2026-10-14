@@ -4,7 +4,7 @@ import {
   CsvImportContext,
 } from '../common/csv';
 import { allocateItemNumbers } from '../common/item-number.service';
-import { normalizeMarkdownRichText } from '../common/markdown-rich-text';
+import { normalizeMarkdownRichText } from '../common/markdown-worker';
 import { findCatalogOption, requireImportCatalogs } from '../it-ops-settings/catalog-resolve';
 import { INCIDENT_SEVERITIES, INCIDENT_STATUSES } from './incident.entity';
 import { incidentVisibleToViewer, type IncidentViewer } from './incident-visibility';
@@ -324,7 +324,9 @@ export const incidentCsvConfig: CsvEntityConfig = {
       defaultExport: true,
       label: 'Incident review',
       group: 'Record',
-      importTransformFn: (value: string) => normalizeMarkdownRichText(value, { fieldName: 'review' }) ?? '',
+      // Processed in the Markdown workers, within the time budget of the file's rich-text cells.
+      importTransformFn: async (value: string, _row: Record<string, string>, context: CsvImportContext) =>
+        await normalizeMarkdownRichText(value, { fieldName: 'review', budget: context.markdownBudget }) ?? '',
     },
 
     // === SOURCE ===
