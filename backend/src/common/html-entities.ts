@@ -66,5 +66,5 @@ export function decodeHtmlEntities(value: string, options: DecodeHtmlEntitiesOpt
 }
 
 export function decodeNumericHtmlEntities(value: string): string {
-  return decodeHtmlEntities(value, { numeric: true }).replace(/ /g, ' ');
+  return decodeHtmlEntities(value, { numeric: true }).replace(/\u00a0/g, ' ');
 }

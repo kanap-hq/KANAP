@@ -8,9 +8,23 @@ function importer(): any {
 
 function decodesImportedHtmlTextOnce() {
   const service = importer();
-  assert.equal(service.stripHtmlToText('<p>A&nbsp;&amp;&nbsp;B &quot;C&quot; D&#39;s E&#039;s</p>'), 'A & B "C" D\'s E\'s');
-  assert.equal(service.stripHtmlToText('<p>R&amp;D &amp;quot;draft&amp;quot; &amp;#39;x&amp;#39;</p>'), 'R&D &quot;draft&quot; &#39;x&#39;');
-  assert.equal(service.stripHtmlToText('<p>&AMP; &lt;kept&gt;</p>'), '&AMP; &lt;kept&gt;');
+  const paragraph = (html: string): string => service.sanitizeForMdxEditor(`<p>${html}</p>`).trim();
+  const tableCell = (html: string): string => {
+    const markdown: string = service.sanitizeForMdxEditor(
+      `<table><tr><th>Header</th></tr><tr><td>${html}</td></tr></table>`,
+    );
+    return markdown.trim().split('\n')[2].slice(2, -2);
+  };
+  const cases: Array<[string, string]> = [
+    ['A&nbsp;&amp;&nbsp;B &quot;C&quot; D&#39;s E&#039;s', 'A & B "C" D\'s E\'s'],
+    ['R&amp;D &amp;quot;draft&amp;quot; &amp;#39;x&amp;#39;', 'R&D &quot;draft&quot; &#39;x&#39;'],
+    ['&amp;quot;x&amp;quot; &amp;nbsp;', '&quot;x&quot; &nbsp;'],
+    ['&AMP; &lt;kept&gt;', '&AMP; &lt;kept&gt;'],
+  ];
+  for (const [input, expected] of cases) {
+    assert.equal(paragraph(input), expected, `paragraph: ${input}`);
+    assert.equal(tableCell(input), expected, `table cell: ${input}`);
+  }
 }
 
 function escapesTableCellText() {

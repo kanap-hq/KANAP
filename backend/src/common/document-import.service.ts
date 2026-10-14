@@ -18,6 +18,8 @@ const PANDOC_TIMEOUT_MS = 60_000;
 const PANDOC_MAX_BUFFER_BYTES = 50 * 1024 * 1024;
 const VECTOR_IMAGE_EXTENSIONS = new Set(['.svg', '.emf', '.wmf', '.eps']);
 const IMPORT_TEXT_ENTITIES = { nbsp: ' ', amp: '&', quot: '"', '#39': "'", '#039': "'" };
+/** Decoded in a table cell before its spaces are collapsed; the rest is decoded with the whole document. */
+const TABLE_CELL_SPACE_ENTITIES = { nbsp: ' ' };
 
 /**
  * Puts plain text in a GFM table cell: a pipe is escaped, and so is each
@@ -535,7 +537,7 @@ export class DocumentImportService {
     text = text.replace(/<br\s*\/?>/gi, ' ');
     text = text.replace(/<\/p\s*>/gi, ' ');
     text = text.replace(/<\/?[a-zA-Z][a-zA-Z0-9]*\b[^>]*\/?>/g, '');
-    text = this.decodeHtmlEntities(text);
+    text = decodeHtmlEntities(text, { entities: TABLE_CELL_SPACE_ENTITIES });
     return text.replace(/\s+/g, ' ').trim();
   }
 
