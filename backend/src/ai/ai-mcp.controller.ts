@@ -33,7 +33,6 @@ import {
   assertMcpScope,
 } from './control-plane/mcp/ai-mcp-access-policy';
 import { AiTenantExecutionService } from './execution/ai-tenant-execution.service';
-import { AiBuiltinRateLimiter } from './platform/ai-builtin-rate-limiter';
 import { AiBuiltinUsageService } from './platform/ai-builtin-usage.service';
 import { AiExecutionContext } from './ai.types';
 
@@ -57,7 +56,6 @@ export class AiMcpController {
     private readonly settingsService: AiSettingsService,
     private readonly modelResolver: AiModelResolverService,
     private readonly builtinUsage: AiBuiltinUsageService,
-    private readonly builtinRateLimiter: AiBuiltinRateLimiter,
   ) {}
 
   private requireTenantId(req: Request): string {
@@ -99,6 +97,11 @@ export class AiMcpController {
     return methods;
   }
 
+  // Each JSON-RPC message counts once against the key's limit; a body that is not one counts once.
+  private mcpRequestCount(body: unknown): number {
+    return Array.isArray(body) ? Math.max(body.length, 1) : 1;
+  }
+
   private toolDefinitionScope(methods: Set<string>): AiMcpScope | null {
     if (methods.has('tools/call')) {
       return MCP_SCOPE_TOOLS_EXECUTE;
@@ -113,9 +116,16 @@ export class AiMcpController {
     context: AiExecutionContext,
     apiKey: any,
     methods: Set<string>,
+    requestCount: number,
   ): AiMcpApiKeyPolicy {
+    // The only place a POST is counted: before any lookup, so refused and bogus requests count too.
     const keyPolicy = this.mcpExposure.parsePolicy(apiKey);
-    this.mcpRateLimiter.assertAllowed(context.tenantId, context.aiApiKeyId, keyPolicy.rateLimitPerMinute);
+    this.mcpRateLimiter.assertAllowed(
+      context.tenantId,
+      context.aiApiKeyId,
+      keyPolicy.rateLimitPerMinute,
+      requestCount,
+    );
 
     if (!keyPolicy.valid) {
       throw new ForbiddenException('MCP API key policy is invalid.');
@@ -133,16 +143,16 @@ export class AiMcpController {
   }
 
   // MCP requests count against the included volume whenever the assistant would fall back
-  // on the included model, confirmed or not: MCP sends nothing to that model, so its
-  // confirmation does not apply here (and the resolution carries no key).
+  // on the included model, confirmed or not. MCP sends nothing to that model, so neither its
+  // confirmation nor its throttle (requests per tenant per minute, per user per hour) applies:
+  // the key's own per-minute limit guards the endpoint.
   private async assertBuiltinMcpBudget(ctx: AiExecutionContext & { manager: any }) {
     const resolved = await this.modelResolver.tryResolve(ctx.tenantId, { type: 'chat' }, ctx.manager, {
       includedModelGate: 'none',
     });
-    if (resolved?.source !== 'builtin' || !resolved.builtinRateLimits) {
+    if (resolved?.source !== 'builtin') {
       return;
     }
-    this.builtinRateLimiter.assertAllowed(ctx.tenantId, ctx.userId, resolved.builtinRateLimits);
     const limit = await this.builtinUsage.getMonthlyLimit(ctx.manager);
     await this.builtinUsage.reserveMessage(ctx.tenantId, limit, ctx.manager);
   }
@@ -176,7 +186,7 @@ export class AiMcpController {
     const context = this.buildContext(req);
     const apiKey = this.requireApiKey(req);
     const methods = this.mcpMethods(req.body);
-    this.assertMcpPostPreflight(context, apiKey, methods);
+    this.assertMcpPostPreflight(context, apiKey, methods, this.mcpRequestCount(req.body));
     const definitionScope = this.toolDefinitionScope(methods);
 
     const toolDefs = await this.tenantExecutor.runWithContext(context, async (ctx) => {
@@ -218,9 +228,7 @@ export class AiMcpController {
       let result: unknown;
       try {
         result = await this.tenantExecutor.runWithContext(context, async (ctx) => {
-          const keyPolicy = this.mcpExposure.parsePolicy(apiKey);
           await this.mcpExposure.assertCanExecute(ctx, apiKey, toolDef.name);
-          this.mcpRateLimiter.assertAllowed(ctx.tenantId, ctx.aiApiKeyId, keyPolicy.rateLimitPerMinute);
           await this.assertBuiltinMcpBudget(ctx);
           const dispatched = await this.dispatcher.execute(ctx, {
             capabilityName: toolDef.name,

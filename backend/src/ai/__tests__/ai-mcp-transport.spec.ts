@@ -1,9 +1,10 @@
 import * as assert from 'node:assert/strict';
 import { AddressInfo } from 'node:net';
 import * as express from 'express';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, HttpException } from '@nestjs/common';
 import { AiMcpController } from '../ai-mcp.controller';
 import { parseMcpApiKeyPolicy } from '../control-plane/mcp/ai-mcp-access-policy';
+import { AiMcpRateLimiter } from '../control-plane/mcp/ai-mcp-rate-limiter.service';
 
 // Drives the real MCP SDK server and Streamable HTTP transport behind POST /ai/mcp.
 // The capabilities expose plain JSON Schemas: tools/list and tools/call must accept them as they are.
@@ -18,7 +19,10 @@ const toolSchema = {
   additionalProperties: false,
 };
 
-function createController(calls: Array<{ name: string; input: unknown }>) {
+function createController(
+  calls: Array<{ name: string; input: unknown }>,
+  options: { rateLimiter?: any; rateLimitPerMinute?: number } = {},
+) {
   return new AiMcpController(
     {
       execute: async (_ctx: any, request: any) => {
@@ -38,7 +42,7 @@ function createController(calls: Array<{ name: string; input: unknown }>) {
         mcp_capability_allowlist_json: apiKey.mcp_allowed_capabilities,
         mcp_capability_denylist_json: [],
         mcp_max_effect: 'read',
-        mcp_rate_limit_per_minute: 60,
+        mcp_rate_limit_per_minute: options.rateLimitPerMinute ?? 60,
       }),
       assertPostAccess: async () => undefined,
       listToolJsonSchemas: async () => [
@@ -47,13 +51,12 @@ function createController(calls: Array<{ name: string; input: unknown }>) {
       assertCanExecute: async () => ({}),
     } as any,
     {} as any,
-    { assertAllowed: () => undefined } as any,
+    options.rateLimiter ?? { assertAllowed: () => undefined },
     {
       runWithContext: async (context: any, fn: Function) => fn({ ...context, manager: {} }),
     } as any,
     {} as any,
     { tryResolve: async () => ({ source: 'registry' }) } as any,
-    {} as any,
     {} as any,
   );
 }
@@ -73,6 +76,10 @@ async function withServer(controller: AiMcpController, fn: (url: string) => Prom
     };
     controller.handlePost(req, res).catch(next);
   });
+  app.use((error: any, _req: any, res: any, _next: any) => {
+    const status = error instanceof HttpException ? error.getStatus() : 500;
+    res.status(status).json(error instanceof HttpException ? error.getResponse() : { message: String(error) });
+  });
   const server = app.listen(0);
   await new Promise((resolve) => server.once('listening', resolve));
   try {
@@ -82,14 +89,18 @@ async function withServer(controller: AiMcpController, fn: (url: string) => Prom
   }
 }
 
-async function rpc(url: string, body: unknown): Promise<any> {
+async function post(url: string, body: unknown): Promise<{ status: number; text: string }> {
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'content-type': 'application/json', accept: 'application/json, text/event-stream' },
     body: JSON.stringify(body),
   });
-  const text = await response.text();
-  assert.equal(response.status, 200, text);
+  return { status: response.status, text: await response.text() };
+}
+
+async function rpc(url: string, body: unknown): Promise<any> {
+  const { status, text } = await post(url, body);
+  assert.equal(status, 200, text);
   const data = text.split('\n').find((line) => line.startsWith('data: '));
   return JSON.parse(data ? data.slice('data: '.length) : text);
 }
@@ -150,6 +161,47 @@ async function testToolErrorsComeBackAsToolResults(url: string) {
   assert.equal(internal.result.content[0].text, 'The tool failed.');
 }
 
+const initialize = {
+  jsonrpc: '2.0',
+  id: 1,
+  method: 'initialize',
+  params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'test', version: '1' } },
+};
+
+function toolCall(id: number) {
+  return { jsonrpc: '2.0', id, method: 'tools/call', params: { name: 'search_all', arguments: { query: 'SAP' } } };
+}
+
+// A tools/call is one request: with a limit of 3 a minute, initialize, tools/list and one call fit,
+// and the next request is refused before it reaches the tool.
+async function testEachRequestCountsOnce() {
+  const calls: Array<{ name: string; input: unknown }> = [];
+  const controller = createController(calls, { rateLimiter: new AiMcpRateLimiter(), rateLimitPerMinute: 3 });
+  await withServer(controller, async (url) => {
+    await rpc(url, initialize);
+    await rpc(url, { jsonrpc: '2.0', id: 2, method: 'tools/list' });
+    const reply = await rpc(url, toolCall(3));
+    assert.equal(reply.result.isError, undefined, JSON.stringify(reply.result));
+    assert.equal(calls.length, 1);
+
+    const refused = await post(url, toolCall(4));
+    assert.equal(refused.status, 429, refused.text);
+    assert.equal(JSON.parse(refused.text).code, 'MCP_RATE_LIMITED');
+    assert.equal(calls.length, 1);
+  });
+}
+
+// A JSON-RPC batch counts each of its messages.
+async function testBatchCountsEachMessage() {
+  const calls: Array<{ name: string; input: unknown }> = [];
+  const controller = createController(calls, { rateLimiter: new AiMcpRateLimiter(), rateLimitPerMinute: 2 });
+  await withServer(controller, async (url) => {
+    const refused = await post(url, [toolCall(1), toolCall(2), toolCall(3)]);
+    assert.equal(refused.status, 429, refused.text);
+    assert.equal(calls.length, 0);
+  });
+}
+
 async function run() {
   const calls: Array<{ name: string; input: unknown }> = [];
   await withServer(createController(calls), async (url) => {
@@ -158,6 +210,8 @@ async function run() {
     await testToolsCallDispatches(url, calls);
     await testToolErrorsComeBackAsToolResults(url);
   });
+  await testEachRequestCountsOnce();
+  await testBatchCountsEachMessage();
 }
 
 run().catch((error) => {

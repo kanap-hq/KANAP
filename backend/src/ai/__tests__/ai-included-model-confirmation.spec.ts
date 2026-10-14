@@ -784,12 +784,10 @@ async function testAgentsWaitWithoutConsumingTheQuota() {
 async function testMcpWorksAndCountsAsBefore() {
   await withFeatures({ AI_CHAT_ENABLED: true, AI_MCP_ENABLED: true, AI_SETTINGS_ENABLED: true }, async () => {
     const { usage, service } = createUsage();
-    const rateLimits: unknown[] = [];
     const makeController = (stack: ReturnType<typeof createStack>) => new AiMcpController(
       {} as any, {} as any, {} as any, {} as any, {} as any, {} as any,
       stack.resolver,
       service as any,
-      { assertAllowed: (_tenantId: string, _userId: string, limits: unknown) => { rateLimits.push(limits); } } as any,
     );
     const mcpContext = (manager: any) => ({ ...agentContext(manager, null), userId: 'user-2', surface: 'mcp' as const });
     const permissions = new Map([['ai_mcp', 'reader']]);
@@ -802,7 +800,6 @@ async function testMcpWorksAndCountsAsBefore() {
     assert.equal(capabilities.surfaces.mcp.provider_ready, true);
     await (makeController(mcpOnly) as any).assertBuiltinMcpBudget(mcpContext(mcpOnly.manager));
     assert.equal(usage.mcpReserved, 1, 'counted on the included volume, confirmed or not');
-    assert.deepEqual(rateLimits, [{ tenantPerMinute: 30, userPerHour: 60 }]);
 
     // A platform without a provider name or location yet: MCP keeps working and counting.
     const noIdentity = createStack(
