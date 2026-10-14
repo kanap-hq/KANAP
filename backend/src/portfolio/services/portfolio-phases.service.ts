@@ -253,7 +253,7 @@ export class PortfolioPhasesService extends PortfolioProjectsBaseService {
 
   /**
    * Reorder phases: each listed phase takes its position in the list as its sequence.
-   * The list holds distinct phases of this project only, and is written in one statement.
+   * The list holds distinct phase ids; ids outside this project are ignored. One statement.
    */
   async reorderPhases(
     projectId: string,
@@ -273,15 +273,8 @@ export class PortfolioPhasesService extends PortfolioProjectsBaseService {
       throw new BadRequestException('phase_ids must not list a phase twice');
     }
 
-    const found: Array<{ id: string }> = await mg.query(
-      `SELECT id FROM portfolio_project_phases
-       WHERE tenant_id = $1 AND project_id = $2 AND id = ANY($3::uuid[])`,
-      [tenantId, projectId, ids],
-    );
-    if (found.length !== ids.length) {
-      throw new BadRequestException('phase_ids must only list phases of this project');
-    }
-
+    // Ids that no longer belong to this project (for example a phase deleted meanwhile) are
+    // skipped: the UPDATE only matches the project's own phases.
     await mg.query(
       `UPDATE portfolio_project_phases AS p
        SET sequence = (o.position - 1)::int, updated_at = now()

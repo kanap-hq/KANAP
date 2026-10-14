@@ -3,6 +3,7 @@ import { format } from 'node:util';
 import {
   createRequestTenancyMiddleware,
   RequestTenancyOptions,
+  routePath,
   TENANT_RESETTING_CODE,
   tenantSlugFromHost,
 } from '../request-tenancy.middleware';
@@ -249,6 +250,23 @@ async function testWritesRefusedWhileResetting() {
   assert.deepEqual(other.tenant, { slug: 'other', id: 't-2', name: 'Other' });
 }
 
+/** The route path drops trailing slashes in time linear in the path length. */
+function testRoutePathTrimsTrailingSlashes() {
+  assert.equal(routePath({ path: '/health/' }), '/health');
+  assert.equal(routePath({ path: '/health///' }), '/health');
+  assert.equal(routePath({ path: '/' }), '/');
+  assert.equal(routePath({ path: '///' }), '/');
+  assert.equal(routePath({ path: '' }), '/');
+  assert.equal(routePath({ path: '/a//b' }), '/a//b');
+
+  const path = `${'/'.repeat(8000)}x`;
+  const started = process.hrtime.bigint();
+  const result = routePath({ path });
+  const elapsedMs = Number(process.hrtime.bigint() - started) / 1e6;
+  assert.equal(result, path, 'a path ending in a letter is kept as is');
+  assert.ok(elapsedMs < 5, `8,000 slashes then a letter take under 5 ms (took ${elapsedMs.toFixed(2)} ms)`);
+}
+
 async function main() {
   await testLookupFailureAnswersBusy();
   await testLookupFailureLogUsesAFixedFormat();
@@ -256,6 +274,7 @@ async function main() {
   await testOtherAnswersUnchanged();
   await testNextErrorIsNotALookupFailure();
   testSlugs();
+  testRoutePathTrimsTrailingSlashes();
   await testClassMiddleware();
   await testWritesRefusedWhileResetting();
   console.log('request-tenancy.middleware.spec: ok');

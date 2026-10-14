@@ -63,8 +63,11 @@ export function refusedWhileResetting(req: Request, demoStatus: string | null | 
 const LIVENESS_PATHS = new Set(['/health', '/api/health', '/ops/metrics', '/api/ops/metrics']);
 
 /** The request path without a trailing slash (`/health/` is `/health`). */
-function routePath(req: Request): string {
-  return (req.path || '/').replace(/\/+$/, '') || '/';
+export function routePath(req: Pick<Request, 'path'>): string {
+  const path = req.path || '/';
+  let end = path.length;
+  while (end > 0 && path.charCodeAt(end - 1) === 47 /* '/' */) end -= 1;
+  return path.slice(0, end) || '/';
 }
 
 /** The tenant subdomain of a host, or null for apex, www and unknown hosts. */

@@ -10,9 +10,9 @@ import dataSource from '../../data-source';
 import { PortfolioPhasesService } from '../services/portfolio-phases.service';
 import { PHASE_REORDER_MAX_IDS, ReorderPhasesDto } from '../dto/reorder-phases.dto';
 
-// Reordering a project's phases: the body is a bounded list of UUIDs, the list
-// holds distinct phases of the project only, and the new order is written in a
-// single UPDATE scoped by tenant and project.
+// Reordering a project's phases: the body is a bounded list of distinct UUIDs,
+// ids outside the project are ignored, and the new order is written in a single
+// UPDATE scoped by tenant and project.
 
 async function dtoErrors(body: unknown): Promise<string[]> {
   const errors = await validate(plainToInstance(ReorderPhasesDto, body as object));
@@ -122,7 +122,7 @@ async function testOrderIsWrittenInOneStatement() {
   });
 }
 
-async function testListHoldsDistinctPhasesOfTheProject() {
+async function testIdsOutsideTheProjectAreIgnored() {
   await withTransaction(async (runner) => {
     const tenantId = randomUUID();
     const otherTenantId = randomUUID();
@@ -130,19 +130,57 @@ async function testListHoldsDistinctPhasesOfTheProject() {
     await seedTenant(runner, otherTenantId);
     const projectId = await seedProject(runner, tenantId, 'Reorder project');
     const otherProjectId = await seedProject(runner, tenantId, 'Other project');
-    const [a, b] = await seedPhases(runner, tenantId, projectId, ['A', 'B']);
+    const [a, b, c] = await seedPhases(runner, tenantId, projectId, ['A', 'B', 'C']);
     const [otherPhase] = await seedPhases(runner, tenantId, otherProjectId, ['X']);
     const otherTenantProjectId = await seedProject(runner, otherTenantId, 'Other tenant project');
     const [otherTenantPhase] = await seedPhases(runner, otherTenantId, otherTenantProjectId, ['Y']);
+
+    await setCurrentTenant(runner, tenantId);
+    const { svc, manager } = phasesService(runner);
+
+    await svc.reorderPhases(projectId, [c, otherPhase, b, a], tenantId, { manager });
+    assert.deepEqual(
+      await sequences(runner, projectId),
+      { [c]: 0, [b]: 2, [a]: 3 },
+      'a phase of another project is skipped and the project phases are reordered',
+    );
+    assert.deepEqual(await sequences(runner, otherProjectId), { [otherPhase]: 0 }, 'the phase of the other project keeps its sequence');
+
+    await svc.reorderPhases(projectId, [a, otherTenantPhase, c, b], tenantId, { manager });
+    assert.deepEqual(
+      await sequences(runner, projectId),
+      { [a]: 0, [c]: 2, [b]: 3 },
+      'a phase of another tenant is skipped and the project phases are reordered',
+    );
+
+    await svc.reorderPhases(projectId, [b, randomUUID(), a, c], tenantId, { manager });
+    assert.deepEqual(
+      await sequences(runner, projectId),
+      { [b]: 0, [a]: 2, [c]: 3 },
+      'an id that matches no phase is skipped',
+    );
+
+    await setCurrentTenant(runner, otherTenantId);
+    assert.deepEqual(
+      await sequences(runner, otherTenantProjectId),
+      { [otherTenantPhase]: 0 },
+      'the phase of the other tenant keeps its sequence',
+    );
+  });
+}
+
+async function testListIsValidated() {
+  await withTransaction(async (runner) => {
+    const tenantId = randomUUID();
+    await seedTenant(runner, tenantId);
+    const projectId = await seedProject(runner, tenantId, 'Reorder project');
+    const [a, b] = await seedPhases(runner, tenantId, projectId, ['A', 'B']);
 
     await setCurrentTenant(runner, tenantId);
     const { svc, manager, counter } = phasesService(runner);
     const before = await sequences(runner, projectId);
 
     for (const [label, list] of [
-      ['a phase of another project', [b, otherPhase, a]],
-      ['a phase of another tenant', [b, otherTenantPhase, a]],
-      ['an unknown phase', [b, randomUUID(), a]],
       ['the same phase twice', [b, a, b]],
       ['the same phase twice in another case', [b, a, a.toUpperCase()]],
     ] as const) {
@@ -152,21 +190,19 @@ async function testListHoldsDistinctPhasesOfTheProject() {
         `a list with ${label} is refused`,
       );
     }
-    assert.equal(counter.updates, 0, 'a refused list writes nothing');
-    assert.deepEqual(await sequences(runner, projectId), before);
-
-    await setCurrentTenant(runner, tenantId);
-    const otherSeq: Array<{ sequence: number }> = await runner.query(
-      `SELECT sequence FROM portfolio_project_phases WHERE id = $1`,
-      [otherPhase],
-    );
-    assert.equal(Number(otherSeq[0].sequence), 0, 'the phase of the other project keeps its sequence');
-
     await assert.rejects(
       () => svc.reorderPhases(projectId, { length: 3 } as any, tenantId, { manager }),
       (err: unknown) => err instanceof BadRequestException,
       'a value that is not a list is refused',
     );
+    const tooMany = Array.from({ length: PHASE_REORDER_MAX_IDS + 1 }, () => randomUUID());
+    await assert.rejects(
+      () => svc.reorderPhases(projectId, tooMany, tenantId, { manager }),
+      (err: unknown) => err instanceof BadRequestException,
+      'a list over the bound is refused',
+    );
+    assert.equal(counter.updates, 0, 'a refused list writes nothing');
+    assert.deepEqual(await sequences(runner, projectId), before);
   });
 }
 
@@ -175,7 +211,8 @@ async function run() {
   await dataSource.initialize();
   try {
     await testOrderIsWrittenInOneStatement();
-    await testListHoldsDistinctPhasesOfTheProject();
+    await testIdsOutsideTheProjectAreIgnored();
+    await testListIsValidated();
   } finally {
     await dataSource.destroy();
   }

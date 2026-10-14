@@ -276,20 +276,20 @@ export function compileAgFilterCondition(
     case 'notEqual':
       return { sql: `${textExpr} <> :${param}`, params: { [param]: value } };
     case 'startsWith':
-      return { sql: `${textExpr} ILIKE :${param} ESCAPE '\\'`, params: { [param]: `${literal}%` } };
+      return { sql: `${textExpr} ILIKE :${param}`, params: { [param]: `${literal}%` } };
     case 'endsWith':
-      return { sql: `${textExpr} ILIKE :${param} ESCAPE '\\'`, params: { [param]: `%${literal}` } };
+      return { sql: `${textExpr} ILIKE :${param}`, params: { [param]: `%${literal}` } };
     case 'notContains':
-      return { sql: `${textExpr} NOT ILIKE :${param} ESCAPE '\\'`, params: { [param]: `%${literal}%` } };
+      return { sql: `${textExpr} NOT ILIKE :${param}`, params: { [param]: `%${literal}%` } };
     case 'contains':
     default:
-      return { sql: `${textExpr} ILIKE :${param} ESCAPE '\\'`, params: { [param]: `%${literal}%` } };
+      return { sql: `${textExpr} ILIKE :${param}`, params: { [param]: `%${literal}%` } };
   }
 }
 
 /**
  * Makes a typed value match literally inside a LIKE pattern: `\`, `%` and `_`
- * are prefixed with `\`, the escape character named by `ESCAPE '\'`.
+ * are prefixed with `\`, the default escape character of LIKE and ILIKE.
  */
 export function escapeLikePattern(value: string): string {
   return value.replace(/[\\%_]/g, '\\$&');
@@ -308,7 +308,7 @@ export function buildQuickSearchConditions(
   return expressions.map((expr) => {
     const param = nextParam();
     return {
-      sql: `${expr} ILIKE :${param} ESCAPE '\\'`,
+      sql: `${expr} ILIKE :${param}`,
       params: { [param]: likeValue },
     };
   });
