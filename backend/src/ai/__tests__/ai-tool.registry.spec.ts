@@ -470,24 +470,36 @@ async function testListAvailableTools() {
   );
   assert.match(
     tools.find((tool) => tool.name === 'query_entities')?.description || '',
-    /filters_ignored.*must be repaired before answering/i,
+    /filters_ignored.*could not apply/i,
   );
   assert.match(
     tools.find((tool) => tool.name === 'aggregate_entities')?.description || '',
-    /filters_ignored.*must be repaired before answering/i,
+    /filters_ignored.*could not apply/i,
   );
   assert.match(
     tools.find((tool) => tool.name === 'get_filter_values')?.description || '',
-    /fields_ignored.*must not be used for filtering/i,
+    /fields_ignored.*cannot filter on/i,
   );
   assert.match(
     tools.find((tool) => tool.name === 'query_entities')?.input_summary.q || '',
-    /plain text only.*never encode filters/i,
+    /matched literally.*searched as words/i,
   );
   assert.match(
     tools.find((tool) => tool.name === 'aggregate_entities')?.input_summary.q || '',
-    /plain text only.*never encode filters/i,
+    /matched literally.*searched as words/i,
   );
+}
+
+// Anthropic's connector review refuses tool text that reads like instructions to the model.
+async function testReadToolTextStatesFacts() {
+  const registry = createRegistry();
+  const readTools = registry.listRegisteredTools().filter((tool) => tool.readOnly);
+  for (const schema of registry.toToolJsonSchemas(readTools)) {
+    const texts = [schema.description, ...Object.values((schema.parameters as any).properties ?? {}).map((p: any) => p.description ?? '')];
+    for (const text of texts) {
+      assert.doesNotMatch(text, /\b(must|always|never|instead of)\b|\bDTO\b/i, `${schema.name}: ${text}`);
+    }
+  }
 }
 
 async function testTaskReadersSeeEntityCommentsTool() {
@@ -1882,6 +1894,7 @@ async function testAggregateExecutorMarksUnresolvedScopeIncomplete() {
 async function run() {
   await testListAvailableTools();
   await testTaskReadersSeeEntityCommentsTool();
+  await testReadToolTextStatesFacts();
   await testListRegisteredToolsExposesRuntimeRegistry();
   await testListAvailableToolsIncludesCategories();
   await testRegisteredToolCategoriesMatchExpectedAssignments();

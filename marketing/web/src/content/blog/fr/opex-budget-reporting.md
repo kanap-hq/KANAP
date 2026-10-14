@@ -17,9 +17,9 @@ Le budget est construit ; reste à le faire approuver. KANAP facilite la présen
 
 ## Des rapports prêts à l'emploi
 
-La section Rapports propose onze rapports préconfigurés, chacun avec tableau récapitulatif, graphique et exports. Rien à construire : vous choisissez, vous exécutez. Une ligne vous intrigue ? Dans les tops, le nom d'un poste ouvre sa fiche dans un nouvel onglet ; dans les rapports par regroupement, le nom d'un groupe ouvre la liste des postes qui le composent.
+La section Rapports propose dix rapports préconfigurés, chacun avec tableau récapitulatif, graphique et exports. Rien à construire : vous choisissez, vous exécutez. Une ligne vous intrigue ? Dans les tops, le nom d'une ligne ouvre sa fiche dans un nouvel onglet ; dans les rapports par regroupement, le nom d'un groupe ouvre la liste des lignes qui le composent.
 
-![Les rapports préconfigurés de la gestion budgétaire](/screenshots/blog/reporting-landing-2026-10.png)
+![La page Rapports : les dix rapports budgétaires préconfigurés, de la refacturation globale au coût par ETP.](/screenshots/blog/reporting-landing-2026-10-13.png)
 
 ## Où atterrit-on, qu'est-ce qui augmente ?
 
@@ -27,9 +27,9 @@ La section Rapports propose onze rapports préconfigurés, chacun avec tableau r
 
 « Top hausse / baisse » nomme ensuite les lignes qui expliquent l'écart. C'est souvent la diapositive la plus intéressante à présenter !
 
-![Le même rapport un an plus tôt : les 10 plus fortes hausses OPEX entre l'atterrissage 2025 et le budget 2026](/screenshots/blog/top-opex-increase-2026-10.png)
+![Le même rapport un an plus tôt : les 10 plus fortes hausses OPEX entre l'atterrissage prévu 2025 et le budget 2026.](/screenshots/blog/top-increase-2026-10-13.png)
 
-Enfin, « Top postes » montre en un clin d'œil les gros postes de votre budget, ceux où le budget, en général, se joue.
+Enfin, « Top lignes » montre en un clin d'œil les plus grosses lignes de votre budget, ceux où le budget, en général, se joue.
 
 Ces rapports, et d'autres que vous pourrez explorer, sont entièrement paramétrables et permettent de produire rapidement des données et des graphiques solides pour soutenir votre présentation budgétaire.
 
@@ -37,37 +37,37 @@ Ces rapports, et d'autres que vous pourrez explorer, sont entièrement paramétr
 
 En comité, la question des prestataires arrive toujours. Les lignes en quantité × prix de l'épisode 1 y répondent sans travail supplémentaire.
 
-« Effectifs par mois » montre les ETP mois par mois, regroupés par centre de coûts, par fournisseur, par poste ou par dimension analytique, avec la moyenne et le pic de l'année. « Coût par ETP » compare jusqu'à quatre colonnes côte à côte, par exemple l'atterrissage 2026 et le budget 2027, et passe en TJM d'un clic. Si l'équipe externe passe de 12 à 9 ETP mais que le TJM moyen monte de 6 %, la phrase se lit directement dans le tableau.
+« Effectifs par mois » montre les ETP mois par mois, regroupés par centre de coûts, par fournisseur, par ligne ou par dimension analytique, avec la moyenne et le pic de l'année. « Coût par ETP » compare jusqu'à quatre colonnes côte à côte, par exemple l'atterrissage 2026 et le budget 2027, et passe en TJM d'un clic. Si l'équipe externe passe de 12 à 9 ETP mais que le TJM moyen monte de 6 %, la phrase se lit directement dans le tableau.
 
-![Le coût par ETP par fournisseur, budget et atterrissage prévu 2026 côte à côte](/screenshots/blog/cost-per-fte-2026-10.png)
+![Le coût OPEX par ETP par fournisseur, avec le budget 2026 et l'atterrissage prévu 2026 côte à côte.](/screenshots/blog/cost-per-fte-2026-10-13.png)
 
-Les rapports budgétaires ont aussi un sélecteur « Mesure » : Montant ou ETP. Le top des hausses, la tendance ou la comparaison de colonnes se lisent alors en personnes.
+Les rapports budgétaires ont aussi un sélecteur « Mesure » : Montant ou ETP. Le top des hausses, la comparaison budgétaire ou la comparaison de colonnes se lisent alors en personnes.
 
 ## Qui paie quoi ?
 
-« Refacturation globale » et « Refacturation par société » convertissent les ventilations de l'épisode 2 en totaux par société et/ou par département, en fonction des métriques choisies (par effectif, par CA, etc.). Ces deux rapports portent sur l'OPEX. On ne vous a jamais demandé « Combien nous coûte l'IT du département X ? ». Cette fois-ci, la réponse est prête : en montant absolu, en pourcentage, et par utilisateur !
+« Refacturation globale » et « Refacturation par société » convertissent les ventilations de l'épisode 2 en totaux par société et/ou par département, en fonction des métriques choisies (par effectif, par CA, etc.). Les deux rapports s'ouvrent sur l'OPEX et peuvent inclure les lignes CAPEX. On ne vous a jamais demandé « Combien nous coûte l'IT du département X ? ». Cette fois-ci, la réponse est prête : en montant absolu, en pourcentage, et par utilisateur !
 
 Et même si votre société ne refacture pas les coûts, ces rapports sont une mine d'or pour identifier les coûts cachés de votre DSI, et faire prendre conscience à la direction des coûts de certaines solutions de niche qui restent peu visibles dans les « top 10 » du budget.
 
 ## Dans la structure de la direction financière
 
-La direction financière lit le budget avec son plan de comptes, pas avec celui de la DSI. « Comptes de consolidation » regroupe le budget par compte du plan de consolidation, quelle que soit la société et son plan de comptes local. Les chiffres présentés sont ceux que le contrôle de gestion retrouvera dans ses propres tableaux.
+La direction financière lit le budget avec son propre plan de comptes. « Comptes de consolidation » regroupe le budget par compte du plan de consolidation, quelle que soit la société et son plan de comptes local. Les chiffres présentés sont ceux que le contrôle de gestion retrouvera dans ses propres tableaux.
 
 « Dimensions analytiques » donne une autre lecture : la répartition par nature, par domaine, ou par toute autre dimension que vous aurez définie. Voir [Axe analytique du budget IT : ce que coûte la cyber](/fr/blog/la-dimension-analytique-du-budget-it).
 
 ## OPEX et CAPEX, côte à côte
 
-Un sélecteur OPEX / CAPEX ouvre la plupart des rapports, et « Tendance budgétaire » existe pour chaque enveloppe. Fonctionnement et investissements se présentent dans la même réunion, avec les mêmes outils et les mêmes exports, en toute cohérence.
+La plupart des rapports s'ouvrent sur toutes les lignes, avec des onglets OPEX et CAPEX, et « Comparaison budgétaire » couvre tout le budget ou une seule nature. Fonctionnement et investissements se présentent dans la même réunion, avec les mêmes outils et les mêmes exports, en toute cohérence.
 
 ## Exporter
 
 Chaque rapport s'exporte : tableau en CSV, graphique en PNG, page complète en PDF. Le support de présentation se monte sans capture d'écran, et vous pouvez même adapter les rapports en live pour répondre à des questions ad hoc.
 
-Et pour la question qu'aucun rapport n'avait prévue, Plaid, l'agent IA intégré, interroge les mêmes données en langage naturel : « total du budget 2027 par fournisseur », « ETP budgétés par centre de coûts ». La réponse nomme les postes par leur référence (`OPX-12`, `CPX-3`), que vous retrouvez aussitôt dans la liste.
+Et pour la question qu'aucun rapport n'avait prévue, Plaid, l'agent IA intégré, interroge les mêmes données en langage naturel : « total du budget 2027 par fournisseur », « ETP budgétés par centre de coûts ». La réponse nomme les lignes par leur référence (`BL-12`, `BL-3`), que vous retrouvez aussitôt dans la liste.
 
 ## La phase de revue
 
-Le budget est rarement validé du premier coup. C'est tout l'objet de la colonne révision : y mettre les versions de travail des postes affectés par des coups de rabot ou, qui sait, des renforts budgétaires, puis réintégrer les données des cases vides depuis le budget (même mécanique qu'à l'épisode 2).
+Le budget est rarement validé du premier coup. C'est tout l'objet de la colonne révision : y mettre les versions de travail des lignes affectées par des coups de rabot ou, qui sait, des renforts budgétaires, puis réintégrer les données des cases vides depuis le budget (même mécanique qu'à l'épisode 2).
 
 Vous construisez ainsi en quelques clics une variante complète du budget, qui peut ensuite être recopiée (en écrasant les données, cette fois) vers la colonne budget après validation. 
 

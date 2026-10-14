@@ -12,7 +12,7 @@ translationKey: it-cost-chargeback-made-simple
 
 "How much does IT cost us?" Easy question. "How much does IT cost department X?" Far less easy. And when management asks who should carry the bill, the CIO's spreadsheet quickly shows its limits.
 
-IT chargeback answers that question. Every IT cost is shared across the entities that benefit from it, following an explicit, verifiable rule. Those entities can be companies, departments, turnover, headcount, or simply a manual entry. And combinations of those criteria.
+IT chargeback answers that question. Every IT cost is shared across the entities that benefit from it, following an explicit, verifiable rule. Those entities are companies or departments, and the key can be headcount, IT users, turnover or a percentage you type. And combinations of those criteria.
 
 Costs can even be brought down to the per-user level for instructive comparisons across countries, departments and companies.
 
@@ -32,17 +32,17 @@ Three uses come up again and again:
 
 By default, KANAP uses the headcount of the companies defined in the reference data: all costs are shared across all companies based on headcount.
 
-You can change this default rule in Administration, Default allocation method. The rule you set applies year by year to entries that have not been customised yet (you do not lose work already done).
+You can change this default rule in Administration, Default allocation method. The rule you set applies year by year to lines that have not been customised yet (you do not lose work already done).
 
-![The default allocation method: fiscal year, selected companies, driver and computed split](/screenshots/blog/chargeback-default-method-2026-10.png)
+![The default allocation method for 2026: fiscal year, companies and driver, here all enabled companies by headcount.](/screenshots/blog/chargeback-default-method-2026-10-13.png)
 
-### Managing rules per item
+### Managing rules per line
 
-Each spend item carries its own allocation rule, for each year. When the default setting needs refining, it can be adjusted for each OPEX and CAPEX entry. That is what lets you route the cost of specific applications correctly (for example, an accounting package charged to the finance department).
+Each budget line carries its own allocation rule, for each year. When the default setting needs refining, it can be adjusted for each OPEX and CAPEX line. That is what lets you route the cost of specific applications correctly (for example, an accounting package charged to the finance department).
 
-An item's **Allocations** tab shows the result in real time. Here, the 280,000 EUR SAP maintenance is split by headcount: 58.54% for Fromage & Co SA, 19.51% for Kaasmeester BV, and so on up to 100%.
+A line's **Allocations** tab shows the result in real time. Here, the 280,000 EUR SAP maintenance is split by headcount: 58.54% for Fromage & Co SA, 19.51% for Kaasmeester BV, and so on up to 100%.
 
-![The Allocations tab: method, driver, percentage and amount per company](/screenshots/blog/chargeback-allocations-2026-10b.png)
+![The Allocations tab of SAP S/4HANA Maintenance for 2026: method, driver, percentage and amount for each of the four companies.](/screenshots/budget-allocations-2026-10-13.png)
 
 Every allocation basis is available:
 
@@ -53,7 +53,7 @@ Every allocation basis is available:
 - **Manual by department**: to allocate costs to one or more specific departments, by headcount only.
 - **Manual percentages**: for complete freedom of allocation; you enter the percentages, which must add up to 100%, or split them evenly in one click.
 
-To avoid reconfiguring everything every year, the "Copy allocations" tool rolls these rules from one fiscal year to the next, for OPEX as for CAPEX, dry run included. Allocation therefore follows the budget with no retyping.
+To avoid reconfiguring everything every year, **Copy budget columns** rolls these rules from one fiscal year to the next with the amounts, preview included. Allocation therefore follows the budget with no retyping.
 
 ### Not to be confused with cost centers
 
@@ -67,20 +67,20 @@ Once the rules are in place, two reports let you explore every facet of chargeba
 
 The first answers "how is IT spend shared across our companies?". It shows the consolidated total, each company's share, amounts paid and consumed, then intercompany flows.
 
-![Global chargeback: total, share per company and intercompany flows](/screenshots/blog/chargeback-global-2026-10.png)
+![Global chargeback for the 2026 OPEX budget: overall total, totals per company and the chart of the split, with the All, OPEX and CAPEX tabs.](/screenshots/blog/chargeback-global-2026-10-13.png)
 
 The KPIs add two metrics that are key to any IT budget:
 
-- IT costs vs. turnover, for the group as a whole and per company. You can then say, with evidence: our IT costs 2.45% of turnover per year.
+- IT costs vs. turnover, for the group as a whole and per company. You can then say, with evidence: at Fromage & Co SA, IT costs 3.94% of turnover per year.
 - IT costs per person and per IT user, in absolute value.
 
 ### Company chargeback
 
-This report goes one level deeper and analyses the detail for a single company. It shows IT costs per department, the chargeback items (to answer a subsidiary: here is exactly what you are billed for), the detail of inbound and outbound flows, and a recall of the KPIs. This is the report to send to subsidiaries with their annual invoice.
+This report goes one level deeper and analyses the detail for a single company. It shows IT costs per department, the chargeback lines (to answer a subsidiary: here is exactly what you are billed for), the detail of inbound and outbound flows, and a recall of the KPIs. This is the report to send to subsidiaries with their annual invoice.
 
-![Company chargeback: department totals, itemised charges and KPIs](/screenshots/blog/chargeback-company-2026-10.png)
+![Company chargeback for Fromage & Co SA, 2026 OPEX budget: KPIs, department totals and the chargeback lines.](/screenshots/blog/chargeback-company-2026-10-13.png)
 
-Both reports are fully parameterisable (year, company, sections) and export to CSV, PNG or PDF. They can also be presented directly in a budget review.
+Both reports are fully parameterisable (type of lines, year, column, company, sections) and export to CSV, PNG or PDF. They can also be presented directly in a budget review.
 
 <aside class="tip">
   <b>Tip</b>
@@ -95,7 +95,7 @@ This is often where serious savings opportunities lie, and it is how the CIO can
 
 ## What about CAPEX?
 
-Investments use the same Allocations tab and the same mechanics. A project funded for a single subsidiary is allocated to that subsidiary; the rest follows the chosen method. Both chargeback reports, however, cover OPEX: the recurring spend is what gets charged back year after year.
+Investments use the same Allocations tab and the same mechanics. A project funded for a single subsidiary is allocated to that subsidiary; the rest follows the chosen method. Both chargeback reports open on OPEX, the spend usually charged back year after year, and can include CAPEX lines at their amount for the year.
 
 ## Where to start
 

@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict';
 import { AddressInfo } from 'node:net';
 import * as express from 'express';
 import { BadRequestException, HttpException } from '@nestjs/common';
-import { AiMcpController } from '../ai-mcp.controller';
+import { AiMcpController, internalToolErrorMessage } from '../ai-mcp.controller';
 import { parseMcpApiKeyPolicy } from '../control-plane/mcp/ai-mcp-access-policy';
 import { AiMcpRateLimiter } from '../control-plane/mcp/ai-mcp-rate-limiter.service';
 
@@ -138,7 +138,7 @@ async function testToolsCallDispatches(url: string, calls: Array<{ name: string;
   assert.deepEqual(calls.at(-1), { name: 'search_all', input: { query: 'SAP' } });
 }
 
-async function testToolErrorsComeBackAsToolResults(url: string) {
+async function testToolErrorsComeBackAsToolResults(url: string, logged: Array<{ message: string; stack?: string }>) {
   const http = await rpc(url, {
     jsonrpc: '2.0',
     id: 4,
@@ -155,7 +155,16 @@ async function testToolErrorsComeBackAsToolResults(url: string) {
     params: { name: 'search_all', arguments: { query: 'fail-internal' } },
   });
   assert.equal(internal.result.isError, true);
-  assert.equal(internal.result.content[0].text, 'The tool failed.');
+  const text: string = internal.result.content[0].text;
+  const reference = text.match(/reference ([0-9a-f]{8}) /)?.[1];
+  assert.ok(reference, text);
+  assert.equal(text, internalToolErrorMessage(reference));
+  // Logged once, under the same reference, with the stack; the HTTP error above is not logged.
+  assert.equal(logged.length, 1);
+  assert.match(logged[0].message, new RegExp(`search_all failed, reference ${reference}`));
+  assert.match(logged[0].stack ?? '', /invalid input syntax for type uuid/);
+  // The internal error's own message stays on the server.
+  assert.doesNotMatch(text, /uuid|PRJ-1/);
 }
 
 const initialize = {
@@ -201,11 +210,14 @@ async function testBatchCountsEachMessage() {
 
 async function run() {
   const calls: Array<{ name: string; input: unknown }> = [];
-  await withServer(createController(calls), async (url) => {
+  const controller = createController(calls);
+  const logged: Array<{ message: string; stack?: string }> = [];
+  (controller as any).logger = { error: (message: string, stack?: string) => logged.push({ message, stack }) };
+  await withServer(controller, async (url) => {
     await testInitializeAdvertisesTools(url);
     await testToolsListReturnsJsonSchemas(url);
     await testToolsCallDispatches(url, calls);
-    await testToolErrorsComeBackAsToolResults(url);
+    await testToolErrorsComeBackAsToolResults(url, logged);
   });
   await testEachRequestCountsOnce();
   await testBatchCountsEachMessage();

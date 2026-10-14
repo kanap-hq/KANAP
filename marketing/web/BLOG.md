@@ -25,7 +25,7 @@ Fill in the frontmatter (the block between the `---` lines):
 | `title` | yes | Sentence case, no trailing period. Around 60 characters reads well in the list and in search results. |
 | `description` | yes | One or two sentences. This is the excerpt on the index, the meta description for search, and the RSS summary. |
 | `date` | yes | `YYYY-MM-DD`. A future date keeps the article out of the build until that day (useful to prepare a post ahead of a deploy). |
-| `topic` | yes | One of `agents`, `self-hosting`, `cost`, `glpi`, `product`, `portfolio`, `compliance`. Shown as the chip next to the article. |
+| `topic` | yes | One of `agents`, `self-hosting`, `cost`, `glpi`, `product`, `portfolio`, `compliance`, `release`. Shown as the chip next to the article. |
 | `author` | no | Defaults to `KANAP`. |
 | `authorRole` | no | Short line after the name, e.g. `Founder, CIO`. |
 | `draft` | no | `true` while writing: the file is ignored by the build. Set to `false` (or remove the line) to publish. |
@@ -147,6 +147,31 @@ On the server (`/opt/kanap`): `git pull`, then `docker compose build marketing` 
 
 Then share the article. Its URL is `https://kanap.net/blog/<slug>` (`/fr/blog/<slug>`
 for the French version). LinkedIn picks up the title, description and card automatically.
+
+## Release articles
+
+A release article tells readers what a version brings them. It is written at the
+maintainer's request, for one version or for one month of versions.
+
+- Sources: the version's entry in `CHANGELOG.md` at the repository root, the user manual
+  pages the version touched (`doc/help/docs/en`) and fresh screenshots of the screens
+  that changed.
+- Write about what the user gains: what they can now do, see or stop doing. Leave pull
+  request numbers and code vocabulary to the GitHub release.
+- Frontmatter: `topic: release`, and `draft: true` until the maintainer has reviewed it.
+- End the article with a link to the GitHub release of the version
+  (`https://github.com/kanap-hq/KANAP/releases/tag/v<version>`), labelled "Technical
+  details and the full list of changes".
+- Published release articles appear on their own on `/changelog`, newest first, as well
+  as on `/blog` and in the RSS feeds. While none is published, `/changelog` shows one line
+  and the link to the GitHub releases.
+
+Planned rhythm: a "What's new this month" article when the month brings visible
+changes, and a dedicated article for a major feature.
+
+Version numbers appear in release articles only. The rest of the site (feature pages,
+on-premise page, changelog copy) names no version: it refers to the `stable` branch and
+to "the latest published version".
 
 ## Before you hit publish
 

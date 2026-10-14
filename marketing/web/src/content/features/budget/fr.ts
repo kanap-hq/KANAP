@@ -19,7 +19,7 @@ const content: FeatureContent = {
         'OPEX et CAPEX dans une seule liste, filtrable par type',
         'Colonnes budget, révision, réalisé et atterrissage, renommables',
         'Montants en quantité × prix, ou répartis par mois',
-        'Copie de colonnes avec essai à blanc, puis copie',
+        'Copie de colonnes, avec un aperçu d’abord',
         'Gel des versions : la version validée ne bouge plus',
       ],
       shotAlt: 'Liste des lignes budgétaires avec les montants 2026 et la ligne de totaux',
@@ -38,7 +38,7 @@ const content: FeatureContent = {
     },
     {
       title: 'Multi-sociétés, multi-devises, consolidation',
-      body: "Chaque ligne garde sa devise, et tout se consolide dans une devise de reporting. Les taux viennent de la Banque mondiale et se figent au gel du budget. Plan de comptes et plan de consolidation : vous retrouvez vos chiffres dans la structure de la direction financière.",
+      body: "Chaque ligne garde sa devise, et tout se consolide dans une devise de reporting. Les taux viennent de la Banque mondiale et sont figés au gel de la colonne par défaut. Plan de comptes et plan de consolidation : vous retrouvez vos chiffres dans la structure de la direction financière.",
       bullets: [
         'Devise de reporting unique pour tous les totaux',
         'Taux de change automatiques, figés au gel',
@@ -50,7 +50,7 @@ const content: FeatureContent = {
     },
     {
       title: 'Des rapports pour chaque question',
-      body: "Refacturation globale et par société, tendances, plus fortes hausses et baisses, comparaison de deux versions, dimensions analytiques, comptes de consolidation, effectifs par mois et coût par ETP. Chaque ligne d'un rapport ouvre la liste filtrée correspondante, et Plaid répond aux mêmes questions en langage naturel.",
+      body: "Refacturation globale et par société, tendances, plus fortes hausses et baisses, comparaison de colonnes, dimensions analytiques, comptes de consolidation, effectifs par mois et coût par ETP. Chaque ligne d'un rapport ouvre la liste filtrée correspondante, et Plaid répond aux mêmes questions en langage naturel.",
       bullets: [
         'Refacturation globale et par société',
         'Comparaison budgétaire sur plusieurs années, pour toutes les lignes, l’OPEX ou le CAPEX',
@@ -69,7 +69,7 @@ const content: FeatureContent = {
       { title: 'Aller-retour avec le tableur', body: "Exportez les lignes, modifiez-les dans Excel ou LibreOffice, réimportez : KANAP n'écrit que les cellules qui ont changé." },
       { title: 'Données d’exemple', body: 'Un essai se remplit en une minute avec le budget de Fromage & Co, quatre sociétés fictives, pour tout voir avant de saisir le vôtre.' },
       { title: 'Effectifs et coût par ETP', body: 'Une ligne de régie en personnes ou en jours déclare ses ETP. Les rapports en tirent les effectifs mois par mois et le coût par ETP, ou le TJM, par fournisseur ou par centre de coûts.' },
-      { title: 'Vos propres axes d’analyse', body: 'Créez autant de dimensions analytiques que vos questions en demandent (domaine, nature de coût, programme), chacune avec ses valeurs, pour l’OPEX, le CAPEX ou les deux. Les rapports budgétaires se filtrent dessus, et plusieurs regroupent par dimension.' },
+      { title: 'Vos propres axes d’analyse', body: 'Créez autant de dimensions analytiques que vos questions en demandent (domaine, nature de coût, programme), chacune avec ses valeurs, pour l’OPEX, le CAPEX ou les deux. Quatre dimensions recommandées sont prêtes : nature de coût, domaine IT, motif et priorité. Les rapports budgétaires se filtrent dessus, et plusieurs regroupent par dimension.' },
     ],
   },
   crossLinks: {

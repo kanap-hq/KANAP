@@ -66,7 +66,7 @@ Die Seite Audit-Protokoll bewahrt die Historie der Datenänderungen und der Sich
 
 **Exporte** (Tabelle **Export**): CSV-Exporte, Dokumente und Berichte, die der Server erzeugt. Die Zeile zeigt, was exportiert wurde und von wem. Auch der Export des Audit-Protokolls wird aufgezeichnet.
 
-Anmelde-, Sitzungs- und Export-Zeilen halten außerdem die **IP-Adresse** fest, von der die Anfrage kam, sowie den verwendeten **Browser**. Öffnen Sie die Zeile, um beides im Bereich **Nachher** zu lesen. Hinter einem Reverse Proxy ist es die IP-Adresse der Person selbst, sofern der Proxy sie weitergibt (On-Premise: siehe das [Reverse-Proxy-Beispiel](on-premise/installation.md#reverse-proxy-beispiel-nginx)).
+Anmelde-, Sitzungs- und Export-Zeilen halten außerdem die **IP-Adresse** fest, von der die Anfrage kam, sowie den verwendeten **Browser**. Öffnen Sie die Zeile, um beides im Bereich **Nachher** zu lesen. Hinter einem Reverse Proxy ist es die IP-Adresse der Person selbst, sofern der Proxy sie weitergibt (On-Premise: siehe das [Reverse-Proxy-Beispiel](on-premise/installation.md#reverse-proxy-example-nginx)).
 
 Passwörter, Anmelde-Links und Tokens werden nie ins Protokoll geschrieben. Versucht sich jemand mit einer E-Mail-Adresse anzumelden, zu der es kein Konto gibt, zeigt die Zeile **Unbekanntes Konto** und speichert die eingegebene Adresse nicht.
 

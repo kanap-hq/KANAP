@@ -540,6 +540,18 @@ server {
         proxy_redirect off;
     }
 
+    # MCP connections without a key: discovery served by the API, path kept
+    # (no trailing slash on proxy_pass). Other /.well-known addresses stay below.
+    location ^~ /.well-known/oauth- {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+        proxy_redirect off;
+    }
+
     # Tout le reste → SPA
     location / {
         proxy_pass http://127.0.0.1:8081;

@@ -382,7 +382,7 @@ Todas las funciones de IA están desactivadas por defecto en una instalación on
 | Variable | Descripción | Valor predeterminado |
 |----------|-------------|---------|
 | `AI_CHAT_ENABLED` | Activa el [asistente de chat Plaid](../ai-assistant.md) para la instalación. | `false` |
-| `AI_MCP_ENABLED` | Activa el acceso MCP y las claves API de IA. | `false` |
+| `AI_MCP_ENABLED` | Activa el servidor MCP: claves API y conexiones sin clave. Consulte [Conectar asistentes de IA mediante MCP](#connecting-ai-assistants-over-mcp). | `false` |
 | `AI_SETTINGS_ENABLED` | Abre **Administración → Inteligencia artificial** (modelos IA, configuración de Plaid) y los [agentes](../agents-overview.md) a los administradores. Sin ella, nadie puede configurar un proveedor. | `false` |
 | `AI_SETTINGS_ENCRYPTION_SECRET` | Secreto que cifra las claves de proveedor que introduce en KANAP. Genérelo con `openssl rand -hex 32`. | *sin definir* |
 
@@ -393,16 +393,55 @@ Notas:
 - Una instalación on-premise no incluye ningún modelo: usted añade su propio proveedor o servidor de modelos en **Administración → Inteligencia artificial → Modelos IA**. Consulte [Modelos IA](../ai-models.md) y [Configuración de Plaid](../ai-settings.md). Cada espacio de trabajo tiene también allí sus propios interruptores.
 - La API necesita acceso saliente al proveedor que elija (consulte [Reglas de cortafuegos](#reglas-de-cortafuegos)).
 
-### Conectar Claude mediante MCP
+### Conectar asistentes de IA mediante MCP { #connecting-ai-assistants-over-mcp }
 
-Con `AI_MCP_ENABLED=true`, Claude, Claude Desktop y Claude Code pueden conectarse a KANAP sin clave: los usuarios añaden la dirección del servidor como conector personalizado e inician sesión con su cuenta de KANAP. Consulte [Conectar un cliente MCP](../ai-settings.md#conectar-un-cliente-mcp). Esto requiere:
+Con `AI_MCP_ENABLED=true`, los asistentes de IA leen los datos de KANAP a través de su servidor MCP, en `https://<su-nombre>/api/ai/mcp`. Cada espacio de trabajo activa además MCP en **Administración → Inteligencia artificial → Plaid**. Los usuarios se conectan de una de dos formas, comparadas en [Conexión o clave API](../ai-settings.md#connection-or-api-key):
 
-- **HTTPS.** KANAP se sirve por HTTPS, como en esta guía. El intercambio de inicio de sesión lo necesita, también para Claude Code.
-- **Para Claude y Claude Desktop**: la dirección de KANAP se resuelve en el DNS público y el servidor acepta HTTPS desde las direcciones de Anthropic, `160.79.104.0/21`. Claude llama a KANAP desde la nube de Anthropic. Una instancia accesible solo desde su red interna no puede conectarse desde claude.ai.
-- **Para Claude Code**: el ordenador del usuario llega al servidor. No hace falta abrir nada a Internet.
-- **HTTPS saliente hacia `claude.ai`.** Cuando un usuario conecta una aplicación, la API lee la descripción pública de la aplicación en la dirección que indica la aplicación (`claude.ai` para Claude, Claude Desktop y Claude Code).
+- **Clave API**: un administrador crea una clave en KANAP y el usuario la pega en el cliente (Claude Code, Cursor, scripts). Solo necesita un cliente que llegue al servidor, por HTTPS o por HTTP simple dentro de su red.
+- **Conexión (OAuth)**: Claude, Claude Desktop o Claude Code inicia sesión en KANAP con la cuenta del usuario, sin clave. Necesita la configuración que se describe a continuación.
 
-Las claves API funcionan sin nada de esto, siempre que el cliente llegue al servidor.
+**Proxy inverso.** La API sirve el descubrimiento de las conexiones bajo `/.well-known/oauth-`. El ejemplo de nginx de la [guía de instalación](installation.md#reverse-proxy-example-nginx) lo enruta hacia la API:
+
+```nginx
+location ^~ /.well-known/oauth- {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_set_header Host              $host;
+    proxy_set_header X-Real-IP         $remote_addr;
+    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_http_version 1.1;
+    proxy_redirect off;
+}
+```
+
+`proxy_pass` no lleva barra final: la ruta llega a la API sin cambios. Mantenga el prefijo exacto, para que las demás direcciones `/.well-known/` (renovación de certificados, `security.txt`) sigan donde están. Con otro proxy, aplique la misma regla, conserve el encabezado `Host` y transmita sin cambios el encabezado `WWW-Authenticate` de las respuestas de la API: indica al cliente dónde iniciar sesión.
+
+**Para todas las conexiones:**
+
+- **HTTPS** con un certificado en el que confíe el cliente. El intercambio de inicio de sesión lo necesita, también para Claude Code.
+- **HTTPS saliente desde el servidor hacia `claude.ai`.** Cuando un usuario conecta una aplicación, la API lee la descripción pública de la aplicación en la dirección que indica la aplicación (`claude.ai` para Claude, Claude Desktop y Claude Code).
+
+**Para Claude y Claude Desktop, además.** Claude llama a KANAP desde los servidores de Anthropic:
+
+- La dirección de KANAP se resuelve en el DNS público a una dirección IPv4 (un registro `A`).
+- El servidor acepta HTTPS desde las direcciones de Anthropic, `160.79.104.0/21`.
+- La dirección que introducen los usuarios responde directamente, sin redirección a otro host: Claude descarta las credenciales en una redirección.
+- Ningún desafío de cortafuegos de aplicaciones web ni comprobación antibots en `/.well-known/oauth-*`, `/api/oauth/*` y `/api/ai/mcp`.
+
+Una instancia accesible solo desde su red interna no puede conectarse desde Claude ni desde Claude Desktop.
+
+Para ahorrar la escritura a los usuarios, comparta un enlace que abre el cuadro de diálogo **Add custom connector** de Claude ya rellenado. Ponga la dirección de su servidor al final, codificada para URL (`:` se convierte en `%3A`, `/` en `%2F`):
+
+```text
+https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=KANAP&connectorUrl=https%3A%2F%2Fkanap.company.com%2Fapi%2Fai%2Fmcp
+```
+
+Cada usuario lo abre, confirma y luego inicia sesión en KANAP como se describe en [Conectar un cliente MCP](../ai-settings.md#connecting-an-mcp-client).
+
+**Sin exposición a Internet**, dos formas siguen funcionando:
+
+- Las claves API, desde cualquier cliente que llegue al servidor.
+- Claude Code mediante OAuth, cuando el ordenador del usuario llega al servidor por HTTPS y el servidor llega a `claude.ai` por HTTPS. El inicio de sesión vuelve al propio ordenador del usuario.
 
 ## Opcional: avanzado
 
@@ -544,7 +583,7 @@ Tras la compilación inicial, KANAP puede funcionar completamente aislado de la 
 | 443 | TCP | HTTPS: proxy inverso nginx que sirve la aplicación |
 | 80 | TCP | HTTP: redirige a HTTPS (y responde a las renovaciones de certificado cuando usa Let's Encrypt) |
 | 22 | TCP | SSH, para la administración. Permítalo antes de activar un cortafuegos |
-| 443 | TCP | Desde `160.79.104.0/21`, solo para conectar Claude y Claude Desktop mediante MCP (consulte [Conectar Claude mediante MCP](#conectar-claude-mediante-mcp)) |
+| 443 | TCP | Desde `160.79.104.0/21`, solo para conectar Claude y Claude Desktop mediante MCP sin clave (consulte [Conectar asistentes de IA mediante MCP](#connecting-ai-assistants-over-mcp)) |
 
 Nada más necesita ser accesible desde la red. En particular, PostgreSQL (5432) y el almacenamiento de objetos (9000) son solo para las redes Docker del servidor.
 
@@ -576,7 +615,7 @@ Solo es necesario si la función correspondiente está activada.
 | `login.microsoftonline.com` | 443 | Metadatos y tokens del SSO con Entra ID | Si el SSO con Entra está configurado |
 | `graph.microsoft.com` | 443 | Enriquecimiento del perfil al iniciar sesión y sincronización diaria del directorio | Si el SSO con Entra está configurado |
 | El proveedor de IA que configure (o su propio servidor de modelos) | 443 o el puerto de su servidor | Chat, agentes | Si las funciones de IA están activadas y hay un modelo configurado |
-| `claude.ai` | 443 | Lee la descripción de Claude, Claude Desktop o Claude Code cuando un usuario lo conecta mediante MCP | Si `AI_MCP_ENABLED=true` y los usuarios conectan Claude sin clave |
+| `claude.ai` | 443 | Lee la descripción de Claude, Claude Desktop o Claude Code cuando un usuario lo conecta mediante MCP sin clave | Si `AI_MCP_ENABLED=true` y los usuarios se conectan mediante OAuth (no es necesario para las claves API) |
 | `api.worldbank.org` | 443 | Tipos de cambio anuales | Opcional |
 | `open.er-api.com` | 443 | Tipos de cambio al contado | Opcional |
 

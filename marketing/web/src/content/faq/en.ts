@@ -90,6 +90,10 @@ const content: FaqContent = {
           q: 'How can I control Plaid?',
           a: 'At workspace level, an administrator turns Plaid on or off, and web search and MCP can be enabled or disabled separately. At user level, role-based permissions decide who can use Plaid and which modules it can read. Making a change needs member level on both Plaid and the module, and every change is shown as a preview that the user confirms. MCP access is read-only. RBAC is always enforced, Plaid never sees more than the user is allowed to.',
         },
+        {
+          q: 'How do I connect Claude or another AI assistant to KANAP?',
+          a: 'Through KANAP\'s read-only MCP server, in one of two ways. Claude, Claude Desktop and Claude Code connect without a key: paste your KANAP address as a custom connector, sign in with your KANAP account and click Allow. Each person then reads with their own access rights. Other assistants, such as Cursor or your own scripts, use an API key created by an administrator. On a self-hosted installation, the key-free connection from Claude and Claude Desktop needs KANAP reachable from the internet over HTTPS. Claude Code and API keys also work on an internal network.',
+        },
       ],
     },
     {

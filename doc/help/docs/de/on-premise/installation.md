@@ -97,6 +97,7 @@ docker compose -f infra/compose.onprem.yml logs -f api
 
 # 6. Den Reverse Proxy so konfigurieren, dass er den Verkehr weiterleitet an:
 #    - /api/* → 127.0.0.1:8080 (der api-Container)
+#    - /.well-known/oauth-* → 127.0.0.1:8080, path kept (MCP connections without a key)
 #    - /*     → 127.0.0.1:8081 (der web-Container, Port 80 im Container)
 # Der Proxy muss Host beibehalten und X-Forwarded-Proto und X-Forwarded-For setzen.
 # Lesen Sie nach dem ersten Start die Zeilen [ENV], [CONFIG], [CORS], [RATE-LIMIT] und [SECURITY] im API-Protokoll.
@@ -116,7 +117,7 @@ docker compose -f infra/compose.onprem.yml logs -f api
 
 **Wahl des E-Mail-Versands:** On-Premise-Bereitstellungen können für ausgehende E-Mails entweder **Resend** oder **SMTP** verwenden. SMTP ist nützlich, wenn der Kunde bereits ein internes Mail-Relay oder einen verwalteten Anbieter wie Microsoft 365 hat. Konfigurieren Sie eine dieser Optionen, wenn Passwortzurücksetzung, Einladungen und Benachrichtigungs-E-Mails vom ersten Tag an funktionieren sollen.
 
-## Reverse-Proxy-Beispiel (nginx)
+## Reverse-Proxy-Beispiel (nginx) { #reverse-proxy-example-nginx }
 
 **Anforderungen an den Reverse Proxy:**
 
@@ -126,6 +127,7 @@ docker compose -f infra/compose.onprem.yml logs -f api
 4. `X-Forwarded-Proto: https` setzen und `Host` beibehalten. KANAP baut jeden versendeten Link aus `APP_BASE_URL`. Das Beispiel sendet außerdem `X-Forwarded-Host` mit demselben Wert wie `Host`. Verwendet die Site einen Nicht-Standard-Port, tragen Sie die genaue Adresse mit Port in `CORS_ORIGINS` ein.
 5. `X-Forwarded-For` mit der Client-Adresse senden (das Beispiel tut das) und `RATE_LIMIT_TRUST_PROXY=true` setzen. KANAP verwendet diese Adresse für seine Anmeldelimits. Der API-Port muss an `127.0.0.1` gebunden bleiben, wie es `compose.onprem.yml` tut. Steht nichts vor der API, setzen Sie `RATE_LIMIT_TRUST_PROXY=false`.
 6. Anfragen bis 80 MB annehmen (`client_max_body_size 80m`): Das Laden einer Budgetdatei sendet bis zu 72 MB (die Datei, bis zu 48 MB, und das Ergebnis ihrer Prüfung), Anhänge sind bis zu 20 MB groß.
+7. `/.well-known/oauth-*` an die API leiten (Port 8080), mit unverändertem Pfad. KI-Assistenten wie Claude lesen diese Adressen, um sich ohne Schlüssel über MCP zu verbinden. Andere `/.well-known/`-Adressen bleiben beim Web-Container. Siehe [KI-Assistenten über MCP verbinden](configuration.md#connecting-ai-assistants-over-mcp).
 
 Da die Container an `127.0.0.1` gebunden sind, läuft nginx auf demselben Host und leitet an `localhost` weiter.
 
@@ -176,6 +178,18 @@ server {
         # Lang laufende Anfragen (Exporte, Importe)
         proxy_read_timeout  300s;
         proxy_send_timeout  300s;
+        proxy_redirect off;
+    }
+
+    # MCP connections without a key: discovery served by the API, path kept
+    # (no trailing slash on proxy_pass). Other /.well-known addresses stay below.
+    location ^~ /.well-known/oauth- {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
         proxy_redirect off;
     }
 

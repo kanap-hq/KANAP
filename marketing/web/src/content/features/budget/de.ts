@@ -19,7 +19,7 @@ const content: FeatureContent = {
         'OPEX und CAPEX in einer Liste, nach Typ filterbar',
         'Spalten für Budget, Revision, Ist und Hochrechnung, umbenennbar',
         'Beträge als Menge × Preis oder nach Monaten verteilt',
-        'Spalten kopieren, zuerst als Probelauf',
+        'Spalten kopieren, zuerst mit Vorschau',
         'Versionen einfrieren: Die genehmigte Version bleibt unverändert',
       ],
       shotAlt: 'Liste der Budgetzeilen mit den Beträgen 2026 und der Summenzeile',
@@ -38,7 +38,7 @@ const content: FeatureContent = {
     },
     {
       title: 'Mehrere Gesellschaften, mehrere Währungen, Konsolidierung',
-      body: 'Jede Zeile behält ihre Währung, und alles wird in einer Berichtswährung zusammengeführt. Die Kurse stammen von der Weltbank und werden beim Einfrieren des Budgets festgeschrieben. Kontenpläne und ein Konsolidierungsplan bringen Ihre Zahlen in die Struktur des Finanzbereichs.',
+      body: 'Jede Zeile behält ihre Währung, und alles wird in einer Berichtswährung zusammengeführt. Die Kurse stammen von der Weltbank und werden beim Einfrieren der Standardspalte festgeschrieben. Kontenpläne und ein Konsolidierungsplan bringen Ihre Zahlen in die Struktur des Finanzbereichs.',
       bullets: [
         'Eine Berichtswährung für alle Summen',
         'Automatische Wechselkurse, beim Einfrieren festgeschrieben',
@@ -50,7 +50,7 @@ const content: FeatureContent = {
     },
     {
       title: 'Ein Bericht für jede Frage',
-      body: 'Gesamt- und gesellschaftsbezogene Verrechnung, Trends, größte Steigerungen und Rückgänge, Vergleich zweier Versionen, Analysedimensionen, Konsolidierungskonten, monatlicher Personalbestand und Kosten pro FTE. Jede Berichtszeile öffnet die passende gefilterte Liste, und Plaid beantwortet dieselben Fragen in natürlicher Sprache.',
+      body: 'Gesamt- und gesellschaftsbezogene Verrechnung, Trends, größte Steigerungen und Rückgänge, Vergleich von Budgetspalten, Analysedimensionen, Konsolidierungskonten, monatlicher Personalbestand und Kosten pro FTE. Jede Berichtszeile öffnet die passende gefilterte Liste, und Plaid beantwortet dieselben Fragen in natürlicher Sprache.',
       bullets: [
         'Gesamt- und gesellschaftsbezogene Verrechnung',
         'Budgetvergleich über mehrere Jahre, für alle Zeilen, OPEX oder CAPEX',
@@ -69,7 +69,7 @@ const content: FeatureContent = {
       { title: 'Hin und zurück mit der Tabellenkalkulation', body: 'Exportieren Sie die Zeilen, bearbeiten Sie sie in Excel oder LibreOffice und importieren Sie die Datei zurück: KANAP schreibt nur die geänderten Zellen.' },
       { title: 'Beispieldaten', body: 'Ein Test füllt sich in einer Minute mit dem Budget von Fromage & Co, vier fiktiven Gesellschaften, damit Sie alles sehen, bevor Sie Ihr eigenes erfassen.' },
       { title: 'Personal und Kosten pro FTE', body: 'Eine Zeile für externe Kräfte in Personen oder Tagen gibt ihre FTE an. Die Berichte zeigen daraus den Personalbestand Monat für Monat und die Kosten pro FTE oder den Tagessatz, nach Lieferant oder Kostenstelle.' },
-      { title: 'Eigene Analyseachsen', body: 'Legen Sie so viele Analysedimensionen an, wie Ihre Fragen verlangen (Bereich, Kostenart, Programm), jede mit eigenen Werten, für OPEX, CAPEX oder beides. Die Budgetberichte lassen sich danach filtern, mehrere gruppieren nach Dimension.' },
+      { title: 'Eigene Analyseachsen', body: 'Legen Sie so viele Analysedimensionen an, wie Ihre Fragen verlangen (Bereich, Kostenart, Programm), jede mit eigenen Werten, für OPEX, CAPEX oder beides. Vier empfohlene Dimensionen sind sofort da: Kostenart, IT-Bereich, Zweck und Priorität. Die Budgetberichte lassen sich danach filtern, mehrere gruppieren nach Dimension.' },
     ],
   },
   crossLinks: {
