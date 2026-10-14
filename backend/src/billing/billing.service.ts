@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager, DataSource } from 'typeorm';
@@ -605,21 +606,23 @@ export class BillingService {
     const invoiceContact = profile ?? this.getInvoiceContact(tenant);
     const euVat = profile ? euVatTaxIdValue(profile) : null;
     const details = this.stripeCustomerDetails(tenant, invoiceContact);
-    // The key names the customer id it replaces: a retried request returns the same
-    // customer, a recreation after a deletion gets a new one.
-    const idempotencyKey = `tenant-customer-${tenant.id}-${previousCustomerId ?? 'new'}`;
-    const customer = await this.withVatNumberErrors<{ id: string }>(() => client.customers.create(
-      {
-        ...details,
-        metadata: {
-          ...(details.metadata ?? {}),
-          tenant_id: tenant.id,
-          tenant_slug: tenant.slug,
-        },
-        ...(euVat ? { tax_id_data: [{ type: 'eu_vat' as const, value: euVat }] } : {}),
+    const siren = details.metadata.siren;
+    const params = {
+      ...details,
+      // A new customer has no SIREN key to clear: it is sent only when there is one.
+      metadata: {
+        ...(siren ? { siren } : {}),
+        tenant_id: tenant.id,
+        tenant_slug: tenant.slug,
       },
-      { idempotencyKey },
-    ));
+      ...(euVat ? { tax_id_data: [{ type: 'eu_vat' as const, value: euVat }] } : {}),
+    };
+    // The key names the customer id it replaces (a recreation after a deletion gets a new
+    // one) and follows the payload: a retry with the same details returns the same
+    // customer, corrected details are a new request.
+    const payloadHash = createHash('sha256').update(JSON.stringify(params)).digest('hex').slice(0, 16);
+    const idempotencyKey = `tenant-customer-${tenant.id}-${previousCustomerId ?? 'new'}-${payloadHash}`;
+    const customer = await this.withVatNumberErrors<{ id: string }>(() => client.customers.create(params, { idempotencyKey }));
 
     // The tenant was loaded by the caller before the Stripe calls: write the
     // customer id only, never the rest of that copy.
@@ -632,7 +635,8 @@ export class BillingService {
   /**
    * The Stripe customer fields KANAP owns: email, name (company), phone, address, the
    * invoice mentions (operation nature, SIREN of a French customer) and the invoice
-   * language. Stripe merges `metadata` keys on update, so `siren` leaves the others alone.
+   * language. Stripe merges `metadata` keys on update, so `siren` leaves the others alone;
+   * an empty `siren` removes a SIREN the customer no longer has.
    */
   private stripeCustomerDetails(tenant: Tenant, contact: BillingContact) {
     const siren = customerSiren(contact);
@@ -643,7 +647,7 @@ export class BillingService {
       address: this.normaliseStripeAddress(this.addressToRecord(contact.address)),
       invoice_settings: { custom_fields: invoiceCustomFields(contact) },
       preferred_locales: [invoiceLocale(contact.address.country)],
-      ...(siren ? { metadata: { siren } } : {}),
+      metadata: { siren: siren ?? '' },
     };
   }
 

@@ -227,7 +227,7 @@ async function testSavingTheProfilePushesTheInvoiceMentions() {
   const payload = esUpdate!.args[1] as Record<string, unknown>;
   assert.deepEqual(payload.invoice_settings, { custom_fields: [{ name: "Nature de l'opération", value: 'Prestation de services' }] });
   assert.deepEqual(payload.preferred_locales, ['es']);
-  assert.ok(!('metadata' in payload), 'no SIREN outside France');
+  assert.deepEqual(payload.metadata, { siren: '' }, 'a SIREN left from a French profile is removed');
 }
 
 async function testNextSaveWritesTheBorrowedValues() {

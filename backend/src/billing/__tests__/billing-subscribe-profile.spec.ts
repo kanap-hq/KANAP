@@ -271,19 +271,43 @@ async function testNewCustomerCarriesMentionsAndAnIdempotencyKey() {
   await service.createCheckoutSession({ tenantId: 'tenant-1', manager: manager as any, planKey: 'max', interval: 'monthly' });
   const creates = calls.filter((call) => call.method === 'customers.create');
   assert.equal(creates.length, 1);
-  assert.deepEqual(creates[0].args, [
-    {
-      email: 'billing@fromage-co.com',
-      name: 'Fromage SAS',
-      phone: '+33 1 23 45 67 89',
-      address: { line1: '1 rue de la Paix', city: 'Paris', postal_code: '75002', country: 'FR' },
-      ...FR_MENTIONS,
-      metadata: { siren: '345678901', tenant_id: 'tenant-1', tenant_slug: 'fromage' },
-      tax_id_data: [{ type: 'eu_vat', value: 'FR12345678901' }],
-    },
-    { idempotencyKey: 'tenant-customer-tenant-1-new' },
-  ]);
+  assert.equal(creates[0].args.length, 2);
+  assert.deepEqual(creates[0].args[0], {
+    email: 'billing@fromage-co.com',
+    name: 'Fromage SAS',
+    phone: '+33 1 23 45 67 89',
+    address: { line1: '1 rue de la Paix', city: 'Paris', postal_code: '75002', country: 'FR' },
+    ...FR_MENTIONS,
+    metadata: { siren: '345678901', tenant_id: 'tenant-1', tenant_slug: 'fromage' },
+    tax_id_data: [{ type: 'eu_vat', value: 'FR12345678901' }],
+  });
+  const options = creates[0].args[1] as Record<string, string>;
+  assert.deepEqual(Object.keys(options), ['idempotencyKey']);
+  assert.match(options.idempotencyKey, /^tenant-customer-tenant-1-new-[0-9a-f]{16}$/);
   assert.ok(!hasKeyDeep(creates[0].args[0], 'default_payment_method'));
+}
+
+/** The idempotency key of the `customers.create` a checkout sends for this invoice profile. */
+async function creationKey(invoiceInfo: Record<string, unknown>): Promise<{ key: string; params: Record<string, any> }> {
+  const { service, manager, calls } = createService({ tenant: createTenant(invoiceInfo, null) });
+  await service.createCheckoutSession({ tenantId: 'tenant-1', manager: manager as any, planKey: 'max', interval: 'monthly' });
+  const create = calls.find((call) => call.method === 'customers.create')!;
+  return { key: (create.args[1] as { idempotencyKey: string }).idempotencyKey, params: create.args[0] as Record<string, any> };
+}
+
+async function testIdempotencyKeyFollowsThePayload() {
+  // A retry with the same details reuses the key; corrected details are a new request.
+  const first = await creationKey(COMPLETE_FR_INVOICE);
+  const retry = await creationKey(COMPLETE_FR_INVOICE);
+  const corrected = await creationKey({ ...COMPLETE_FR_INVOICE, email: 'compta@fromage-co.com' });
+  assert.equal(retry.key, first.key);
+  assert.notEqual(corrected.key, first.key);
+  assert.match(corrected.key, /^tenant-customer-tenant-1-new-[0-9a-f]{16}$/);
+}
+
+async function testNewCustomerWithoutSirenSendsNoSirenKey() {
+  const { params } = await creationKey(COMPLETE_DE_INVOICE);
+  assert.deepEqual(params.metadata, { tenant_id: 'tenant-1', tenant_slug: 'fromage' });
 }
 
 async function testRecreatedCustomerUsesAnotherIdempotencyKey() {
@@ -295,7 +319,7 @@ async function testRecreatedCustomerUsesAnotherIdempotencyKey() {
   await service.createCheckoutSession({ tenantId: 'tenant-1', manager: manager as any, planKey: 'max', interval: 'monthly' });
   const creates = calls.filter((call) => call.method === 'customers.create');
   assert.equal(creates.length, 1);
-  assert.deepEqual(creates[0].args[1], { idempotencyKey: 'tenant-customer-tenant-1-cus_deleted' });
+  assert.match((creates[0].args[1] as { idempotencyKey: string }).idempotencyKey, /^tenant-customer-tenant-1-cus_deleted-[0-9a-f]{16}$/);
 }
 
 async function testGermanCustomerGetsNatureOnlyAndGerman() {
@@ -309,6 +333,8 @@ async function testGermanCustomerGetsNatureOnlyAndGerman() {
     address: { line1: 'Hauptstrasse 1', city: 'Berlin', postal_code: '10115', country: 'DE' },
     invoice_settings: { custom_fields: [{ name: "Nature de l'opération", value: 'Prestation de services' }] },
     preferred_locales: ['de'],
+    // No SIREN outside France: an empty value removes one the customer may still carry.
+    metadata: { siren: '' },
   });
 }
 
@@ -329,6 +355,8 @@ async function run() {
   await testRefusedVatNumberBecomesVatNumberInvalid();
   await testNewCustomerCarriesMentionsAndAnIdempotencyKey();
   await testRecreatedCustomerUsesAnotherIdempotencyKey();
+  await testIdempotencyKeyFollowsThePayload();
+  await testNewCustomerWithoutSirenSendsNoSirenKey();
   await testGermanCustomerGetsNatureOnlyAndGerman();
   await testDraftInvoiceIsSetToA4BeforeFinalizing();
 }
