@@ -82,7 +82,7 @@ export default function ConnectedAppsTab() {
         {connections.length === 0 ? (
           <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
             {t('connectedApps.empty')}{' '}
-            <Link href={getDocPageUrl('ai-settings', locale)} target="_blank" rel="noopener">
+            <Link href={`${getDocPageUrl('ai-settings', locale)}#connecting-an-mcp-client`} target="_blank" rel="noopener">
               {t('connectedApps.howTo')}
             </Link>
           </Typography>

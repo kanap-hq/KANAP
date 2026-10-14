@@ -275,10 +275,13 @@ export default function OAuthAuthorizePage() {
           <Stack spacing={1.5}>{identity}</Stack>
 
           {!short && (
-            <FormControlLabel
-              control={<Checkbox size="small" checked={remember} onChange={(event) => setRemember(event.target.checked)} />}
-              label={<Typography sx={{ fontSize: 13 }}>{t('auth:oauthConsent.remember')}</Typography>}
-            />
+            // In a Box: the Stack's spacing would reset the label's negative margin that lines the box up with the text.
+            <Box>
+              <FormControlLabel
+                control={<Checkbox size="small" checked={remember} onChange={(event) => setRemember(event.target.checked)} />}
+                label={<Typography sx={{ fontSize: 13 }}>{t('auth:oauthConsent.remember')}</Typography>}
+              />
+            </Box>
           )}
 
           {short ? (
