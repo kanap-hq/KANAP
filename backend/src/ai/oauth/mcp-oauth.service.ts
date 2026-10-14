@@ -200,10 +200,14 @@ export class McpOAuthService {
   /** The consent screen's details, and whether the user's remembered consent covers this request. */
   async describeRequest(params: AuthorizationParams, host: McpOAuthHost, userId: string) {
     const request = await this.validateAuthorization(params, host);
-    const autoApprove = await this.tenantExecutor.run(host.tenantId, async (manager) => {
+    const remembered = await this.tenantExecutor.run(host.tenantId, async (manager) => {
       await this.assertUserMayAuthorize(host, userId, manager);
       return this.hasRememberedConsent(manager, host.tenantId, userId, request);
     });
+    // Remembered consent skips the screen for a loopback redirect only (Claude Code on the user's
+    // machine). A web redirect always takes a click, so a page cannot connect a user's account to
+    // a client of its choosing on its own.
+    const autoApprove = remembered && isLoopbackRedirect(request.redirectUri);
     return {
       client: {
         client_id: request.clientId,
@@ -216,6 +220,7 @@ export class McpOAuthService {
       loopback_redirect: isLoopbackRedirect(request.redirectUri),
       scope: request.scope,
       resource: request.resource,
+      remembered,
       auto_approve: autoApprove,
     };
   }

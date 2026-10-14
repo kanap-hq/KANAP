@@ -809,26 +809,36 @@ async function testRememberedConsent(a: Seed) {
       headers: { authorization: `Bearer ${sessionToken(a, userId)}` },
     });
     assert.equal(response.status, 200, response.text);
-    return response.data.auto_approve as boolean;
+    return { remembered: response.data.remembered as boolean, auto: response.data.auto_approve as boolean };
   };
+  const web = { client_id: WEB_CIMD, redirect_uri: WEB_REDIRECT };
+  const neither = { remembered: false, auto: false };
   const userId = await addUser(a, 'remember');
   const otherUser = await addUser(a, 'other');
 
-  // Not remembered: the screen comes back.
+  // Not remembered: both false, loopback or web.
   await connect(a, { userId, remember: false, clientId: WEB_CIMD, redirectUri: WEB_REDIRECT });
-  assert.equal(await describe(userId, { client_id: WEB_CIMD, redirect_uri: WEB_REDIRECT }), false);
+  await connect(a, { userId, remember: false });
+  assert.deepEqual(await describe(userId, web), neither);
+  assert.deepEqual(await describe(userId), neither);
 
-  // Remembered: same user, same client, same redirect host.
-  const remembered = await connect(a, { userId, remember: true });
-  assert.equal(await describe(userId), true);
-  assert.equal(await describe(userId, { redirect_uri: 'http://localhost:9999/callback' }), true, 'any loopback port');
-  assert.equal(await describe(userId, { redirect_uri: 'http://127.0.0.1:9999/callback' }), false, 'another redirect host');
-  assert.equal(await describe(userId, { client_id: WEB_CIMD, redirect_uri: WEB_REDIRECT }), false, 'another client');
-  assert.equal(await describe(otherUser), false, 'another user');
+  // Remembered, loopback redirect: the screen is skipped.
+  const loopback = await connect(a, { userId, remember: true });
+  assert.deepEqual(await describe(userId), { remembered: true, auto: true });
+  assert.deepEqual(await describe(userId, { redirect_uri: 'http://localhost:9999/callback' }), { remembered: true, auto: true }, 'any loopback port');
+  assert.deepEqual(await describe(userId, { redirect_uri: 'http://127.0.0.1:9999/callback' }), neither, 'another redirect host');
+  assert.deepEqual(await describe(otherUser), neither, 'another user');
+
+  // Remembered, web redirect: known, and still one click.
+  const remoteGrant = await connect(a, { userId, remember: true, clientId: WEB_CIMD, redirectUri: WEB_REDIRECT });
+  assert.deepEqual(await describe(userId, web), { remembered: true, auto: false });
+  assert.deepEqual(await describe(otherUser, web), neither, 'another user');
 
   // Revoking the connection forgets the consent.
-  await call(a.host, '/oauth/revoke', { form: { token: remembered.refresh_token } });
-  assert.equal(await describe(userId), false);
+  await call(a.host, '/oauth/revoke', { form: { token: loopback.refresh_token } });
+  assert.deepEqual(await describe(userId), neither);
+  await call(a.host, '/oauth/revoke', { form: { token: remoteGrant.refresh_token } });
+  assert.deepEqual(await describe(userId, web), neither);
 }
 
 async function testDisabledDeploymentAnswersNothing(a: Seed) {
