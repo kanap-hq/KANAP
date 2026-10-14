@@ -14,10 +14,12 @@ import { renderMarkdownToHtml as emailHtmlInProcess } from '../markdown-to-html'
 import {
   closeMarkdownWorkers,
   htmlToMarkdown,
+  idleMarkdownWorkersForTests,
   MARKDOWN_BUSY,
   MARKDOWN_TOO_COMPLEX,
   MARKDOWN_UNAVAILABLE,
   MARKDOWN_WORK_TIMEOUT_MS,
+  markdownQueueLimit,
   markdownToSearchText,
   markdownWorkBudget,
   MARKDOWN_BUSY_RETRY_AFTER_SECONDS,
@@ -195,40 +197,99 @@ async function testAStoppedWorkerIsRefusedAndReplaced() {
   assert.equal(await normalizeMarkdownRichText('Replaced.'), 'Replaced.');
 }
 
-async function testAFullPoolAnswersBusy() {
-  const slow = fill('_a ', 100 * 1024);
-  const outcomes = await Promise.all(Array.from({ length: 8 }, () => outcomeOf(() => normalizeMarkdownRichText(slow))));
-  assert.ok(outcomes.every((outcome) => outcome === MARKDOWN_TOO_COMPLEX || outcome === MARKDOWN_BUSY), outcomes.join());
-  assert.ok(outcomes.includes(MARKDOWN_BUSY), 'calls waiting past the queue time are refused as busy');
-  assert.equal(await normalizeMarkdownRichText('Served again.'), 'Served again.');
-}
-
 async function timedOutcome(work: () => Promise<unknown>): Promise<{ outcome: string; ms: number }> {
   const startedAt = performance.now();
   const outcome = await outcomeOf(work);
   return { outcome, ms: performance.now() - startedAt };
 }
 
-async function testTenantsShareTheWorkers() {
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Runs `work` as a request of `user` in `tenant` (the key of its calls). */
+function asUser<T>(tenant: string, user: string, work: () => T): T {
+  return runWithRequestTenant(tenant, work, { user: { sub: user } });
+}
+
+async function testAFreeWorkerAlwaysTakesACall() {
   const slow = fill('_a ', 100 * 1024);
-  // Tenant A: one call running, two waiting; a further call is refused at once.
-  const callsOfA = [0, 1, 2].map(() => runWithRequestTenant('tenant-a', () => timedOutcome(() => normalizeMarkdownRichText(slow))));
-  const refused = await runWithRequestTenant('tenant-a', () => timedOutcome(() => normalizeMarkdownRichText('one more')));
+  // One tenant, as on a single-tenant server: a slow call of a user holds one worker.
+  const running = asUser('tenant-a', 'user-1', () => timedOutcome(() => normalizeMarkdownRichText(slow)));
+  await sleep(100);
+  // The other worker takes the next calls at once: of the same user, of another user, of the tenant.
+  const calls = [
+    await asUser('tenant-a', 'user-1', () => timedOutcome(() => normalizeMarkdownRichText('**same user**'))),
+    await asUser('tenant-a', 'user-2', () => timedOutcome(() => normalizeMarkdownRichText('**other user**'))),
+    await runWithRequestTenant('tenant-a', () => timedOutcome(() => normalizeMarkdownRichText('**tenant**'))),
+  ];
+  for (const call of calls) {
+    assert.equal(call.outcome, 'ok');
+    assert.ok(call.ms < 300, `served by the free worker in ${call.ms.toFixed(0)} ms`);
+  }
+  assert.equal((await running).outcome, MARKDOWN_TOO_COMPLEX);
+}
+
+async function testTheKeyWithFewestCallsRunningGoesFirst() {
+  const medium = fill('_a ', 10 * 1024);
+  const order: string[] = [];
+  const tracked = (label: string, work: () => Promise<unknown>) => outcomeOf(work).then((outcome) => {
+    order.push(label);
+    return outcome;
+  });
+  // A user fills both workers and has two calls waiting.
+  const callsOfH = [1, 2, 3, 4].map((index) => asUser('tenant-a', 'heavy', () => tracked(`H${index}`, () => normalizeMarkdownRichText(medium))));
+  await sleep(20);
+  // Another user's call comes last, but goes first when a worker frees up: it has no call running.
+  const callOfN = asUser('tenant-b', 'normal', () => tracked('N', () => normalizeMarkdownRichText('**N**')));
+  assert.deepEqual(await Promise.all([...callsOfH, callOfN]), ['ok', 'ok', 'ok', 'ok', 'ok']);
+  assert.ok(order.indexOf('N') < order.indexOf('H3') && order.indexOf('N') < order.indexOf('H4'), order.join());
+}
+
+async function testCapsApplyOnlyToWaitingCalls() {
+  const slow = fill('_a ', 100 * 1024);
+  const base = 'https://acme.example.com';
+  const comment = '**Done**, see [the plan](/portfolio/projects/PRJ-3).';
+  // A user: two calls running (both workers), two waiting; a fifth is refused at once.
+  const callsOfH = [0, 1, 2, 3].map(() => asUser('tenant-a', 'heavy', () => timedOutcome(() => normalizeMarkdownRichText(slow))));
+  await sleep(50);
+  const refused = await asUser('tenant-a', 'heavy', () => timedOutcome(() => normalizeMarkdownRichText('one more')));
   assert.equal(refused.outcome, MARKDOWN_BUSY);
   assert.ok(refused.ms < 50, `refused in ${refused.ms.toFixed(0)} ms`);
   assert.equal(new MarkdownBusyException().retryAfterSeconds, MARKDOWN_BUSY_RETRY_AFTER_SECONDS);
-  // Tenant B is served by the other worker while the calls of A wait.
-  const callOfB = await runWithRequestTenant('tenant-b', () => timedOutcome(() => normalizeMarkdownRichText('**B**')));
-  assert.equal(callOfB.outcome, 'ok');
-  assert.ok(callOfB.ms < 500, `tenant B served in ${callOfB.ms.toFixed(0)} ms`);
-  const outcomesOfA = await Promise.all(callsOfA);
-  assert.equal(outcomesOfA[0].outcome, MARKDOWN_TOO_COMPLEX);
-  // The waiting calls of A are refused after one second, while A's running call holds its worker.
-  for (const waiting of outcomesOfA.slice(1)) {
-    assert.equal(waiting.outcome, MARKDOWN_BUSY);
-    assert.ok(waiting.ms >= 900 && waiting.ms < 1800, `waited ${waiting.ms.toFixed(0)} ms`);
+  // An email sent by the same request is free of the user's caps: it waits for a worker and is rendered.
+  const email = asUser('tenant-a', 'heavy', () => timedOutcome(() => renderCommentEmail(comment, base, 'acme')));
+  // Another user still gets a place in the queue; both workers stay busy past its wait.
+  const other = await asUser('tenant-a', 'other', () => timedOutcome(() => normalizeMarkdownRichText('**other**')));
+  assert.equal(other.outcome, MARKDOWN_BUSY);
+  assert.ok(other.ms >= 900 && other.ms < 1800, `waited ${other.ms.toFixed(0)} ms`);
+  const outcomesOfH = await Promise.all(callsOfH);
+  assert.deepEqual(outcomesOfH.map((call) => call.outcome), [MARKDOWN_TOO_COMPLEX, MARKDOWN_TOO_COMPLEX, MARKDOWN_BUSY, MARKDOWN_BUSY]);
+  const rendered = await email;
+  assert.equal(rendered.outcome, 'ok');
+  assert.ok(rendered.ms > MARKDOWN_WORK_TIMEOUT_MS - 200 && rendered.ms < 5000, `email rendered after ${rendered.ms.toFixed(0)} ms`);
+  const expected = renderCommentForEmail({ commentHtml: emailHtmlInProcess(comment), tenantBaseUrl: base, tenantSlug: 'acme' });
+  assert.deepEqual(await asUser('tenant-a', 'heavy', () => renderCommentEmail(comment, base, 'acme')), expected);
+  assert.notDeepEqual(expected, renderCommentForEmail({ commentHtml: renderPlainTextEmailHtml(comment), tenantBaseUrl: base, tenantSlug: 'acme' }));
+  // The queue holds the calls of two keys at least, whatever the database pool.
+  for (const poolMax of [2, 5, 9, 20, 40]) {
+    assert.ok(markdownQueueLimit(poolMax) >= 4, `pool ${poolMax}: ${markdownQueueLimit(poolMax)} calls waiting`);
   }
-  assert.equal(await runWithRequestTenant('tenant-a', () => normalizeMarkdownRichText('A again')), 'A again');
+  assert.equal(markdownQueueLimit(5), 4);
+  assert.equal(markdownQueueLimit(20), 8);
+}
+
+async function testAFullQueueAnswersBusy() {
+  const slow = fill('_a ', 100 * 1024);
+  const limit = markdownQueueLimit();
+  // Calls of as many users: two run, `limit` wait and are refused after the wait, the last two at once.
+  const calls = await Promise.all(Array.from(
+    { length: 2 + limit + 2 },
+    (_, index) => asUser('tenant-c', `user-${index}`, () => timedOutcome(() => normalizeMarkdownRichText(slow))),
+  ));
+  const outcomes = calls.map((call) => call.outcome);
+  assert.equal(outcomes.filter((outcome) => outcome === MARKDOWN_TOO_COMPLEX).length, 2, outcomes.join());
+  assert.equal(outcomes.filter((outcome) => outcome === MARKDOWN_BUSY).length, limit + 2, outcomes.join());
+  assert.equal(calls.filter((call) => call.outcome === MARKDOWN_BUSY && call.ms < 50).length, 2);
+  assert.equal(await normalizeMarkdownRichText('Served again.'), 'Served again.');
 }
 
 async function testOneCallPerDocumentSave() {
@@ -247,6 +308,13 @@ async function testOneCallPerDocumentSave() {
   assert.ok(elapsedMs < MARKDOWN_WORK_TIMEOUT_MS * 0.75, `4000 task items saved in ${elapsedMs.toFixed(0)} ms`);
   const slow = fill('_a ', 250 * 1024);
   assert.deepEqual(await normalizeMarkdownWithSearchText(slow, { enforceSizeLimit: false }), { content: slow.trim(), searchText: slow.replace(/\s+/g, ' ').trim() });
+  // The save does the work of two calls, with the budget of two.
+  const refused = await timedOutcome(() => normalizeMarkdownWithSearchText(fill('_a ', 100 * 1024)));
+  assert.equal(refused.outcome, MARKDOWN_TOO_COMPLEX);
+  assert.ok(
+    refused.ms > 2 * MARKDOWN_WORK_TIMEOUT_MS - 100 && refused.ms < 2 * MARKDOWN_WORK_TIMEOUT_MS + 1000,
+    `refused after ${refused.ms.toFixed(0)} ms`,
+  );
 }
 
 async function testCommentEmailsAreRenderedInTheWorkers() {
@@ -289,8 +357,14 @@ async function run() {
   await testStoredContentsFallBackToReadableText();
   await testSharedBudget();
   await testAStoppedWorkerIsRefusedAndReplaced();
-  await testAFullPoolAnswersBusy();
-  await testTenantsShareTheWorkers();
+  await idleMarkdownWorkersForTests();
+  await testAFreeWorkerAlwaysTakesACall();
+  await idleMarkdownWorkersForTests();
+  await testTheKeyWithFewestCallsRunningGoesFirst();
+  await idleMarkdownWorkersForTests();
+  await testCapsApplyOnlyToWaitingCalls();
+  await idleMarkdownWorkersForTests();
+  await testAFullQueueAnswersBusy();
   await testOneCallPerDocumentSave();
   await testCommentEmailsAreRenderedInTheWorkers();
   await testStoppedPool();

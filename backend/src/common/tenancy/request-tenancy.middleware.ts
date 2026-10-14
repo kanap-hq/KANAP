@@ -178,7 +178,8 @@ export function createRequestTenancyMiddleware(options: RequestTenancyOptions) {
       return;
     }
     // Outside the try: an error further down the chain is not a tenant lookup failure. The rest
-    // of the request runs with its tenant as the current one (request-tenant-context.ts).
-    runWithRequestTenant((req as any).tenant?.id ?? null, () => next());
+    // of the request runs with its tenant and, once authenticated, its user as the current ones
+    // (request-tenant-context.ts).
+    runWithRequestTenant((req as any).tenant?.id ?? null, () => next(), req as any);
   };
 }

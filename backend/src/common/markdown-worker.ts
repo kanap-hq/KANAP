@@ -13,7 +13,7 @@ import { readPoolMax } from './db-pool-budget';
 import type { ImportedImageReference } from './document-import-markdown';
 import { sanitizeRichHtmlForEmail } from './html-sanitizer';
 import { assertMarkdownSize } from './markdown-limits';
-import { currentRequestTenant } from './tenancy/request-tenant-context';
+import { currentRequestContext } from './tenancy/request-tenant-context';
 import type {
   MarkdownWorkerOperation,
   MarkdownWorkerOperations,
@@ -39,15 +39,19 @@ import {
  *   `MARKDOWN_TOO_COMPLEX`; so is a call whose worker overflows its stack, runs
  *   out of memory or stops. A task that processes several texts sends them in
  *   one call, or shares one budget across its calls (`markdownWorkBudget`).
- * - Calls wait in a queue for a free worker. A call that waits longer than
- *   `QUEUE_WAIT_MS` while workers are running is refused with a 503
- *   `MARKDOWN_BUSY` (with Retry-After), so a request never holds its database
- *   connection long on a busy pool. Calls waiting and running stay within half
- *   of the database pool of the process.
- * - Each tenant has at most one call running and `TENANT_WAITING_MAX` waiting:
- *   a worker that frees up takes the oldest call of a tenant that has none
- *   running, and a further call of a tenant is refused at once (503
- *   `MARKDOWN_BUSY`), so one tenant cannot hold the workers of all the others.
+ * - A free worker always takes a waiting call. Among the waiting calls it takes
+ *   the one whose key has the fewest calls running, the oldest at equal count.
+ *   The key is the user of the request (tenant and user id), else its tenant,
+ *   else `system`: users share the workers fairly, within a tenant too (a
+ *   single-tenant server has one tenant).
+ * - Only a call that has to wait meets the caps, never one a free worker can
+ *   take: `KEY_WAITING_MAX` calls of one key waiting, and `queueLimit()` calls
+ *   of requests waiting in all (a request holds its database connection while
+ *   it waits). Past them, and past `QUEUE_WAIT_MS` of waiting, a call is
+ *   refused with a 503 `MARKDOWN_BUSY` (with Retry-After).
+ * - Emails and background tasks (no request waits on them, they hold no
+ *   connection of a request) have the key `system`, are free of the caps of a
+ *   key and wait up to `SYSTEM_WAIT_MS`; an email then falls back to plain text.
  * - When no worker can start, calls are refused with a 503 `MARKDOWN_UNAVAILABLE`
  *   and emails fall back to plain text. The main thread never parses in their
  *   place.
@@ -64,10 +68,16 @@ export const MARKDOWN_UNAVAILABLE = 'MARKDOWN_UNAVAILABLE';
 
 /** Workers per API process. */
 const WORKER_COUNT = 2;
-/** How long a call may wait for a free worker while the workers are running. */
+/** How long a call of a request may wait for a free worker while the workers are running. */
 const QUEUE_WAIT_MS = 1000;
-/** Calls of one tenant waiting at most (a tenant has one call running at most). */
-const TENANT_WAITING_MAX = 2;
+/** How long an email or a background task may wait for a free worker. */
+const SYSTEM_WAIT_MS = 5000;
+/** Calls of one key (a user, else a tenant) waiting at most. */
+const KEY_WAITING_MAX = 2;
+/** Emails and background tasks waiting at most: a burst of them cannot grow the queue without end. */
+const SYSTEM_WAITING_MAX = 32;
+/** Key of the calls sent outside a request, and of emails. */
+const SYSTEM_KEY = 'system';
 /** Seconds the client waits before sending again a call refused for a busy pool. */
 export const MARKDOWN_BUSY_RETRY_AFTER_SECONDS = 1;
 /** Refusals for a busy pool are logged once per window, with their count. */
@@ -149,6 +159,13 @@ export type MarkdownWorkOptions = {
   budget?: MarkdownWorkBudget;
 };
 
+type SubmitOptions = MarkdownWorkOptions & {
+  /** Time budget of the call, when it does the work of several calls (default `MARKDOWN_WORK_TIMEOUT_MS`). */
+  timeoutMs?: number;
+  /** An email: key `system`, free of the caps of a key, even when sent during a request. */
+  background?: boolean;
+};
+
 // ---------------------------------------------------------------------------
 // Pool.
 
@@ -159,8 +176,10 @@ type Task = {
   chars: number;
   timeoutMs: number;
   budget?: MarkdownWorkBudget;
-  /** Tenant of the request that sent the call (fair share of the workers), or null. */
-  tenant: string | null;
+  /** Fair-share key: the user of the request (tenant and user id), else its tenant, else `system`. */
+  key: string;
+  /** A call of a request: it holds the request's database connection while it waits, the caps apply. */
+  capped: boolean;
   resolve: (value: unknown) => void;
   reject: (error: unknown) => void;
   waitTimer: NodeJS.Timeout | null;
@@ -187,10 +206,13 @@ require(workerData.entry);
 `;
 
 let slots: Slot[] = [];
+/** Calls waiting for a worker, oldest first. */
 const queue: Task[] = [];
-/** Calls waiting in the queue, and running, per tenant. */
-const waitingByTenant = new Map<string, number>();
-const runningByTenant = new Map<string, number>();
+/** Calls of requests waiting, per key and in all; calls running per key. */
+const waitingByKey = new Map<string, number>();
+const runningByKey = new Map<string, number>();
+let cappedWaiting = 0;
+let systemWaiting = 0;
 let queueMax = 0;
 let closed = false;
 let restartAt = 0;
@@ -209,29 +231,57 @@ function workerData(): Record<string, unknown> {
   };
 }
 
-/** Calls waiting at most: with the calls running, half the database pool of the process at most. */
+/**
+ * Calls of requests waiting at most. A request holds its database connection
+ * while it waits: with the calls running, half the database pool of the
+ * process, and never fewer than the workers plus 2, so that the calls of
+ * several keys can wait with a small pool (each key waits `KEY_WAITING_MAX`
+ * at most).
+ */
+export function markdownQueueLimit(poolMax: number = readPoolMax()): number {
+  return Math.max(WORKER_COUNT + 2, Math.floor(poolMax / 2) - WORKER_COUNT);
+}
+
 function queueLimit(): number {
-  if (!queueMax) queueMax = Math.max(1, Math.floor(readPoolMax() / 2) - WORKER_COUNT);
+  if (!queueMax) queueMax = markdownQueueLimit();
   return queueMax;
 }
 
-function addCount(counts: Map<string, number>, tenant: string | null, delta: number): void {
-  if (!tenant) return;
-  const next = (counts.get(tenant) ?? 0) + delta;
-  if (next > 0) counts.set(tenant, next);
-  else counts.delete(tenant);
+/** The fair-share key of a call, and whether it is a call of a request (the caps apply). */
+function shareKeyOf(background: boolean): { key: string; capped: boolean } {
+  const context = background ? null : currentRequestContext();
+  if (!context) return { key: SYSTEM_KEY, capped: false };
+  if (context.userId) return { key: `user:${context.tenantId ?? ''}:${context.userId}`, capped: true };
+  if (context.tenantId) return { key: `tenant:${context.tenantId}`, capped: true };
+  return { key: SYSTEM_KEY, capped: true };
+}
+
+function addCount(counts: Map<string, number>, key: string, delta: number): void {
+  const next = (counts.get(key) ?? 0) + delta;
+  if (next > 0) counts.set(key, next);
+  else counts.delete(key);
 }
 
 function enqueue(task: Task): void {
   queue.push(task);
-  addCount(waitingByTenant, task.tenant, 1);
+  if (task.capped) {
+    addCount(waitingByKey, task.key, 1);
+    cappedWaiting += 1;
+  } else {
+    systemWaiting += 1;
+  }
 }
 
 function takeFromQueue(index: number): Task {
   const [task] = queue.splice(index, 1);
   if (task.waitTimer) clearTimeout(task.waitTimer);
   task.waitTimer = null;
-  addCount(waitingByTenant, task.tenant, -1);
+  if (task.capped) {
+    addCount(waitingByKey, task.key, -1);
+    cappedWaiting -= 1;
+  } else {
+    systemWaiting -= 1;
+  }
   return task;
 }
 
@@ -242,14 +292,14 @@ function refuseQueue(error: () => unknown): void {
 
 /** A running call is over (answered, stopped or refused). */
 function endRun(task: Task): void {
-  addCount(runningByTenant, task.tenant, -1);
+  addCount(runningByKey, task.key, -1);
 }
 
 let busyWindowStart = 0;
 let busyCount = 0;
 
 /** Logs a refusal for a busy pool: the first of a 60 s window, then their count at its end. */
-function logBusy(op: string, fieldName: string, reason: 'tenant' | 'queue' | 'wait'): void {
+function logBusy(op: string, fieldName: string, reason: 'key' | 'queue' | 'wait'): void {
   const now = Date.now();
   if (busyWindowStart && now - busyWindowStart < BUSY_LOG_WINDOW_MS) {
     busyCount += 1;
@@ -459,7 +509,7 @@ function logStopped(task: Task, reason: string): void {
 
 function runOnSlot(slot: Slot, task: Task): void {
   slot.task = task;
-  addCount(runningByTenant, task.tenant, 1);
+  addCount(runningByKey, task.key, 1);
   slot.startedAt = performance.now();
   slot.worker.ref();
   slot.runTimer = setTimeout(() => {
@@ -482,28 +532,53 @@ function runOnSlot(slot: Slot, task: Task): void {
     slot.worker.unref();
     endRun(task);
     task.reject(error);
+    // The worker is free again: it takes the next call.
+    setImmediate(dispatch);
   }
 }
 
+/** The waiting call a free worker takes: the one of the key with the fewest calls running, the oldest at equal count. */
+function nextTaskIndex(): number {
+  let best = 0;
+  let bestRunning = Number.POSITIVE_INFINITY;
+  for (let index = 0; index < queue.length; index += 1) {
+    const running = runningByKey.get(queue[index].key) ?? 0;
+    if (running < bestRunning) {
+      best = index;
+      bestRunning = running;
+      if (running === 0) break;
+    }
+  }
+  return best;
+}
+
+/** Gives every free worker a waiting call. Afterwards, a free worker means an empty queue. */
 function dispatch(): void {
   if (closed) return;
   for (const slot of slots) {
     if (queue.length === 0) return;
     if (!slot.ready || slot.task) continue;
-    // One running call per tenant: the oldest call of a tenant with none running goes first.
-    const index = queue.findIndex((task) => !task.tenant || !runningByTenant.has(task.tenant));
-    if (index === -1) return;
-    runOnSlot(slot, takeFromQueue(index));
+    runOnSlot(slot, takeFromQueue(nextTaskIndex()));
   }
+}
+
+function hasFreeWorker(): boolean {
+  return slots.some((slot) => slot.ready && !slot.task);
+}
+
+function armWaitTimer(task: Task, delayMs: number): void {
+  task.waitTimer = setTimeout(() => onWaitTimeout(task), delayMs);
 }
 
 function onWaitTimeout(task: Task): void {
   if (!queue.includes(task)) return;
   if (!slots.some((slot) => slot.ready)) {
     // The workers are starting: the start timeout bounds this wait.
-    task.waitTimer = setTimeout(() => onWaitTimeout(task), QUEUE_WAIT_MS);
+    armWaitTimer(task, QUEUE_WAIT_MS);
     return;
   }
+  dispatch();
+  if (!queue.includes(task)) return;
   takeFromQueue(queue.indexOf(task));
   logBusy(task.op, task.fieldName, 'wait');
   task.reject(new MarkdownBusyException());
@@ -521,7 +596,7 @@ function textLength(args: unknown[]): number {
 function submit<K extends MarkdownWorkerOperation>(
   op: K,
   args: Parameters<MarkdownWorkerOperations[K]>,
-  opts?: MarkdownWorkOptions,
+  opts?: SubmitOptions,
 ): Promise<ReturnType<MarkdownWorkerOperations[K]>> {
   return new Promise((resolve, settleWithError) => {
     // A call refused before it reaches a worker settles on the next turn of the event loop: a
@@ -532,7 +607,11 @@ function submit<K extends MarkdownWorkerOperation>(
       refuse(new MarkdownUnavailableException());
       return;
     }
-    const timeoutMs = Math.min(MARKDOWN_WORK_TIMEOUT_MS, opts?.budget ? opts.budget.remainingMs : Number.POSITIVE_INFINITY);
+    const timeoutMs = Math.min(
+      opts?.timeoutMs ?? MARKDOWN_WORK_TIMEOUT_MS,
+      opts?.budget ? opts.budget.remainingMs : Number.POSITIVE_INFINITY,
+    );
+    const { key, capped } = shareKeyOf(opts?.background === true);
     const task: Task = {
       op,
       args,
@@ -540,7 +619,8 @@ function submit<K extends MarkdownWorkerOperation>(
       chars: textLength(args),
       timeoutMs,
       budget: opts?.budget,
-      tenant: currentRequestTenant(),
+      key,
+      capped,
       resolve: resolve as (value: unknown) => void,
       reject: settleWithError,
       waitTimer: null,
@@ -557,19 +637,20 @@ function submit<K extends MarkdownWorkerOperation>(
       refuse(new MarkdownUnavailableException());
       return;
     }
-    if (task.tenant && (waitingByTenant.get(task.tenant) ?? 0) >= TENANT_WAITING_MAX) {
-      logBusy(op, fieldName, 'tenant');
-      refuse(new MarkdownBusyException());
-      return;
+    if (!hasFreeWorker()) {
+      // The call has to wait: the caps apply (a free worker takes any call).
+      const overCap = capped
+        ? ((waitingByKey.get(key) ?? 0) >= KEY_WAITING_MAX ? 'key' : cappedWaiting >= queueLimit() ? 'queue' : null)
+        : (systemWaiting >= SYSTEM_WAITING_MAX ? 'queue' : null);
+      if (overCap) {
+        logBusy(op, fieldName, overCap);
+        refuse(new MarkdownBusyException());
+        return;
+      }
     }
-    if (queue.length >= queueLimit()) {
-      logBusy(op, fieldName, 'queue');
-      refuse(new MarkdownBusyException());
-      return;
-    }
-    task.waitTimer = setTimeout(() => onWaitTimeout(task), QUEUE_WAIT_MS);
     enqueue(task);
     dispatch();
+    if (queue.includes(task)) armWaitTimer(task, capped ? QUEUE_WAIT_MS : SYSTEM_WAIT_MS);
   });
 }
 
@@ -618,6 +699,16 @@ export function markdownWorkersStatus(): 'ready' | 'starting' | 'unavailable' {
 export function reopenMarkdownWorkersForTests(): void {
   closed = false;
   restartAt = 0;
+}
+
+/** For specs: resolves once every worker of the pool has started and none runs a call. */
+export async function idleMarkdownWorkersForTests(): Promise<void> {
+  for (let waited = 0; waited < 30_000; waited += 20) {
+    ensurePool();
+    if (slots.length === WORKER_COUNT && slots.every((slot) => slot.ready && !slot.task) && queue.length === 0) return;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  throw new Error('The Markdown workers did not become idle');
 }
 
 /** For specs: the worker threads of the pool, the one running a call first. */
@@ -712,7 +803,13 @@ export async function normalizeMarkdownWithSearchText(
   const enforceSizeLimit = opts?.enforceSizeLimit !== false;
   if (enforceSizeLimit) assertMarkdownSize(text, fieldName);
   try {
-    return await submit('normalizeWithSearchText', [text, { fieldName, enforceSizeLimit }], { ...opts, fieldName });
+    // The work of two calls (normalization, then search text), with the budget of two: a document
+    // accepted when they were two calls is accepted still.
+    return await submit(
+      'normalizeWithSearchText',
+      [text, { fieldName, enforceSizeLimit }],
+      { ...opts, fieldName, timeoutMs: 2 * MARKDOWN_WORK_TIMEOUT_MS },
+    );
   } catch (error) {
     if (!enforceSizeLimit && isMarkdownTooComplex(error)) {
       return { content: text, searchText: text.replace(/\s+/g, ' ').trim() };
@@ -758,7 +855,7 @@ export async function renderMarkdownEmailHtml(content: string): Promise<string> 
   const text = String(content || '').trim();
   if (!text) return '';
   try {
-    return await submit('emailHtml', [text], { fieldName: 'email' });
+    return await submit('emailHtml', [text], { fieldName: 'email', background: true });
   } catch {
     return renderPlainTextEmailHtml(text);
   }
@@ -776,7 +873,7 @@ export async function renderCommentEmail(
   const text = String(content || '').trim();
   if (text) {
     try {
-      return await submit('commentEmail', [text, tenantBaseUrl, tenantSlug], { fieldName: 'email' });
+      return await submit('commentEmail', [text, tenantBaseUrl, tenantSlug], { fieldName: 'email', background: true });
     } catch {
       // Plain text below.
     }

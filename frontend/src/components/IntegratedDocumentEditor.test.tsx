@@ -4,6 +4,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '../api';
+import { AUTOSAVE_RETRY_DELAYS_MS } from '../hooks/useAutosave';
 import IntegratedDocumentEditor, { type IntegratedDocumentEditorHandle } from './IntegratedDocumentEditor';
 import { createAppTheme } from '../config/ThemeContext';
 
@@ -259,7 +260,8 @@ describe('IntegratedDocumentEditor — incidents:review', () => {
 
     fireEvent.change(editor, { target: { value: 'typed while the server is busy' } });
 
-    await waitFor(() => expect(api.patch).toHaveBeenCalledTimes(2));
+    // Sent again after the server's Retry-After (1 s).
+    await waitFor(() => expect(api.patch).toHaveBeenCalledTimes(2), { timeout: 3000 });
     expect(vi.mocked(api.patch).mock.calls[1][1]).toMatchObject({ content_markdown: 'typed while the server is busy', save_mode: 'autosave' });
     // Sent again without an error message in between.
     expect(screen.queryByText('errors:MARKDOWN_BUSY')).not.toBeInTheDocument();
@@ -268,6 +270,91 @@ describe('IntegratedDocumentEditor — incidents:review', () => {
       answer(undefined);
     });
     expect((screen.getByLabelText('markdown-editor') as HTMLTextAreaElement).value).toBe('typed while the server is busy');
+  });
+
+  it('waits for a new modification after a document refused as too complex', async () => {
+    await renderEditor({ autosaveDelayMs: 5 });
+    const editor = await startEditing();
+    vi.mocked(api.patch).mockRejectedValueOnce(Object.assign(new Error('Request failed'), {
+      response: {
+        status: 400,
+        data: { code: 'MARKDOWN_TOO_COMPLEX', message: 'content_markdown is too complex to process as Markdown.' },
+      },
+    }));
+
+    fireEvent.change(editor, { target: { value: 'a pasted log with open _marks' } });
+    await waitFor(() => expect(api.patch).toHaveBeenCalledTimes(1));
+    // Many autosave delays later, the refused text has not been sent again.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    });
+    expect(api.patch).toHaveBeenCalledTimes(1);
+
+    fireEvent.change(editor, { target: { value: 'a pasted log in a code block' } });
+    await waitFor(() => expect(api.patch).toHaveBeenCalledTimes(2));
+    expect(vi.mocked(api.patch).mock.calls[1][1]).toMatchObject({ content_markdown: 'a pasted log in a code block', save_mode: 'autosave' });
+  });
+
+  it('sends a busy autosave again a few times, then waits for a new modification', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      await renderEditor({ autosaveDelayMs: 5 });
+      const editor = await startEditing();
+      vi.mocked(api.patch).mockRejectedValue(Object.assign(new Error('Request failed'), {
+        response: {
+          status: 503,
+          headers: { 'retry-after': '1' },
+          data: { code: 'MARKDOWN_BUSY', message: 'The server is busy with other texts.' },
+        },
+      }));
+
+      fireEvent.change(editor, { target: { value: 'typed while the server stays busy' } });
+      for (let second = 0; second < 15; second += 1) {
+        // eslint-disable-next-line no-await-in-loop
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(1000);
+        });
+      }
+      // The first try and one retry per delay (1, 2 and 4 s), then the message and no more tries.
+      expect(api.patch).toHaveBeenCalledTimes(1 + AUTOSAVE_RETRY_DELAYS_MS.length);
+      expect(screen.getByText('errors:notSavedYet')).toBeInTheDocument();
+
+      vi.mocked(api.patch).mockImplementation(async (_url: string, body: any) => (
+        documentPayload(String(body?.content_markdown ?? ''), 4) as any
+      ));
+      fireEvent.change(editor, { target: { value: 'typed once the server is free' } });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100);
+      });
+      expect(api.patch).toHaveBeenCalledTimes(2 + AUTOSAVE_RETRY_DELAYS_MS.length);
+      expect(vi.mocked(api.patch).mock.calls[1 + AUTOSAVE_RETRY_DELAYS_MS.length][1]).toMatchObject({
+        content_markdown: 'typed once the server is free',
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('sends an autosave again after a network failure', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      await renderEditor({ autosaveDelayMs: 5 });
+      const editor = await startEditing();
+      vi.mocked(api.patch).mockRejectedValueOnce(Object.assign(new Error('Network Error'), { isAxiosError: true, code: 'ERR_NETWORK' }));
+
+      fireEvent.change(editor, { target: { value: 'typed while offline' } });
+      for (let step = 0; step < 4; step += 1) {
+        // eslint-disable-next-line no-await-in-loop
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(500);
+        });
+      }
+      expect(api.patch).toHaveBeenCalledTimes(2);
+      expect(vi.mocked(api.patch).mock.calls[1][1]).toMatchObject({ content_markdown: 'typed while offline', save_mode: 'autosave' });
+      expect(screen.queryByText('errors:notSavedYet')).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('leaves edit mode and releases the lock when editing is revoked mid-session', async () => {

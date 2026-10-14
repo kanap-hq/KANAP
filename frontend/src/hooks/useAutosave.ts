@@ -46,6 +46,24 @@ export const AUTOSAVE_RETRY_DELAYS_MS: readonly number[] = [1_000, 2_000, 4_000]
 /** Ceiling for a wait the server asks for in Retry-After. */
 const MAX_RETRY_AFTER_MS = 10_000;
 
+/**
+ * Whether an autosave of a whole document (the document editors) is sent
+ * again by itself: a transient failure, or a request left without an answer
+ * (network). Anything else would fail the same way with the same text.
+ */
+export function isRetriableAutosaveFailure(error: unknown): boolean {
+  if (isTransientSaveFailure(error)) return true;
+  const failure = error as { isAxiosError?: boolean; response?: unknown; code?: string } | null;
+  return failure?.isAxiosError === true && !failure.response && failure.code !== 'ERR_CANCELED';
+}
+
+/** Wait before the `attempt`-th automatic retry (1-based): the retry delay, or the server's Retry-After when longer. */
+export function autosaveRetryDelayMs(error: unknown, attempt: number): number {
+  const delays = AUTOSAVE_RETRY_DELAYS_MS;
+  const base = delays[Math.min(Math.max(attempt, 1), delays.length) - 1];
+  return Math.max(base, classifySaveFailure(error).retryAfterMs ?? 0);
+}
+
 const CONFLICT_CODES = new Set(['duplicate', 'parent_gone', 'in_use']);
 
 export function classifySaveFailure(error: unknown): SaveFailure {
