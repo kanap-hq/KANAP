@@ -3,6 +3,7 @@ import { DataSource } from 'typeorm';
 import { StripeClientService, StripeConfigService } from './stripe';
 import { Subscription, SubscriptionStatus, SubscriptionType, PaymentMode, CollectionMethod } from './subscription.entity';
 import { computePriceAmount, normaliseStripePrice } from './price.util';
+import { invoiceSubscriptionId, subscriptionPeriod, subscriptionQuantity } from './stripe/stripe-shapes.util';
 import { Tenant } from '../tenants/tenant.entity';
 import { withTenant } from '../common/tenant-runner';
 import { getEnvMode, isDevelopmentEnv } from '../common/env';
@@ -166,7 +167,7 @@ export class StripeWebhookService implements OnModuleInit {
       assignSubscription(data.metadata?.subscription_id);
     }
     if (!subscriptionId && event?.type?.startsWith('invoice.')) {
-      assignSubscription(data.subscription);
+      assignSubscription(invoiceSubscriptionId(data));
     }
 
     return {
@@ -281,13 +282,21 @@ export class StripeWebhookService implements OnModuleInit {
       if (subscriptionData) {
         sub.status = this.resolveStatus(subscriptionData?.status) ?? sub.status ?? null;
         sub.collection_method = this.resolveCollectionMethod(subscriptionData?.collection_method) ?? sub.collection_method ?? null;
-        sub.current_period_start = this.toDate(subscriptionData?.current_period_start);
-        sub.current_period_end = this.toDate(subscriptionData?.current_period_end);
+        // A period Stripe does not send (moved to the items since basil) keeps the stored dates.
+        const period = subscriptionPeriod(subscriptionData);
+        if (period.start != null) sub.current_period_start = this.toDate(period.start);
+        if (period.end != null) {
+          sub.current_period_end = this.toDate(period.end);
+          sub.next_payment_at = this.toDate(period.end);
+        }
         sub.trial_end = this.toDate(subscriptionData?.trial_end);
         sub.cancel_at = this.toDate(subscriptionData?.cancel_at);
         sub.canceled_at = this.toDate(subscriptionData?.canceled_at);
-        sub.canceled_at_effective = subscriptionData?.cancel_at_period_end ? this.toDate(subscriptionData?.current_period_end) : null;
-        sub.next_payment_at = this.toDate(subscriptionData?.current_period_end);
+        if (!subscriptionData?.cancel_at_period_end) {
+          sub.canceled_at_effective = null;
+        } else if (period.end != null) {
+          sub.canceled_at_effective = this.toDate(period.end);
+        }
         sub.currency = typeof subscriptionData?.currency === 'string' ? subscriptionData.currency?.toUpperCase() : sub.currency ?? null;
         sub.amount = this.resolveAmount(subscriptionData);
         if (!sub.currency) {
@@ -310,8 +319,9 @@ export class StripeWebhookService implements OnModuleInit {
           // The Stripe quantity is not a number of users: keep the stored user limit.
           sub.plan_name = planName ?? sub.plan_name ?? null;
         }
-        if (typeof subscriptionData?.quantity === 'number') {
-          sub.active_seats = subscriptionData.quantity;
+        const quantity = subscriptionQuantity(subscriptionData);
+        if (quantity != null) {
+          sub.active_seats = quantity;
         }
         const interval = subscriptionData?.items?.data?.[0]?.price?.recurring?.interval;
         if (interval === 'year') {

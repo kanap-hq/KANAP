@@ -50,7 +50,7 @@ function createTenant(overrides: Partial<TenantRow> = {}): TenantRow {
   };
 }
 
-function createService(tenant: TenantRow) {
+function createService(tenant: TenantRow, invoiceList: unknown[] = []) {
   const calls: Call[] = [];
   const updates: Array<Record<string, unknown>> = [];
   const record = (method: string, impl: (...args: any[]) => unknown) => async (...args: unknown[]) => {
@@ -73,7 +73,7 @@ function createService(tenant: TenantRow) {
       retrieve: record('subscriptions.retrieve', () => null),
       update: record('subscriptions.update', () => ({ id: 'sub_1' })),
     },
-    invoices: { list: record('invoices.list', () => ({ data: [] })) },
+    invoices: { list: record('invoices.list', () => ({ data: invoiceList })) },
     prices: { retrieve: record('prices.retrieve', () => null) },
   };
   const subscription = { id: 'local-sub', plan_name: 'Trial', seat_limit: null } as unknown as Subscription;
@@ -262,6 +262,40 @@ async function testEmptyEmailIsAcceptedAndAMalformedOneRefused() {
   assert.ok(caught instanceof BadRequestException, 'a malformed email is refused');
 }
 
+async function testInvoiceHistoryIsListedWithoutExpand() {
+  // The list used to expand `payment_intent`, a field Stripe removed from invoices in basil
+  // and KANAP never read.
+  const tenant = createTenant({ billing_invoice_info: COMPLETE_INVOICE });
+  const { service, calls } = createService(tenant, [
+    {
+      id: 'in_1',
+      number: 'KANAP-0001',
+      status: 'paid',
+      total: 24900,
+      currency: 'eur',
+      hosted_invoice_url: 'https://invoice.stripe.test/in_1',
+      invoice_pdf: 'https://invoice.stripe.test/in_1.pdf',
+      created: 1_790_000_000,
+    },
+  ]);
+  const profile = await service.getBillingProfile({ tenantId: tenant.id });
+  const list = calls.filter((call) => call.method === 'invoices.list');
+  assert.equal(list.length, 1);
+  assert.deepEqual(list[0].args, [{ customer: 'cus_1', limit: 10 }]);
+  assert.deepEqual(profile.invoices, [
+    {
+      id: 'in_1',
+      number: 'KANAP-0001',
+      status: 'paid',
+      total: 24900,
+      currency: 'EUR',
+      hostedInvoiceUrl: 'https://invoice.stripe.test/in_1',
+      invoicePdf: 'https://invoice.stripe.test/in_1.pdf',
+      createdAt: new Date(1_790_000_000 * 1000).toISOString(),
+    },
+  ]);
+}
+
 async function run() {
   await testInvoiceDetailsBorrowTheCustomerCard();
   await testSavedInvoiceValuesComeFirst();
@@ -270,6 +304,7 @@ async function run() {
   await testClearingFields();
   await testClearingTheCompanyKeepsItEmpty();
   await testEmptyEmailIsAcceptedAndAMalformedOneRefused();
+  await testInvoiceHistoryIsListedWithoutExpand();
 }
 
 void run();
