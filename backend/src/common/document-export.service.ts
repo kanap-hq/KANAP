@@ -9,6 +9,7 @@ import { converterEnv } from './converter-env';
 import { ExportFormat } from './dto/export.dto';
 import { isDevelopmentEnv, parseBoolean } from './env';
 import { readStreamWithCaps, StreamLimitError } from './bounded-stream';
+import { trailingRun } from './text-scan';
 
 const execFileAsync = promisify(execFile);
 
@@ -838,7 +839,7 @@ export class DocumentExportService {
       .trim()
       .replace(/[^\w.-]+/g, '_')
       .replace(/^_+/, '')
-      .replace(/_+$/, '');
+      .replace(trailingRun('_', false), '');
     return cleaned || DEFAULT_FILENAME;
   }
 }

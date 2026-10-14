@@ -197,6 +197,8 @@ function run() {
   // Ends of texts, and the numbers of edit conflicts and exports, read without ambiguity.
   sameAsPattern('trailingRun', [' ', '"', ')', '.', 'a', '\n', '!', '\u00a0'], (t) => t.replace(/[\s"')}\].,:;!?]+$/g, ''), (t) => t.replace(trailingRun('"\')}].,:;!?', true), ''));
   assertFast('trailingRun', [' ', '. a'], (t) => t.replace(trailingRun('"\')}].,:;!?', true), ''));
+  sameAsPattern('trailingRun _', ['_', 'a', '.', '-'], (t) => t.replace(/_+$/, ''), (t) => t.replace(trailingRun('_', false), ''));
+  assertFast('trailingRun _', ['_', '_a'], (t) => t.replace(trailingRun('_', false), ''));
   sameAsPattern('trailingDigits', ['1', '0', 'a', 'DOC-', '-', ' '], (t) => t.match(/(?:^[A-Z]+-)?(\d+)$/i)?.[1] ?? null, trailingDigits);
   assertFast('trailingDigits', ['1', '1a'], trailingDigits);
   const numberPieces = ['1', '0', '.', 'e', 'E', '+', '-', 'x'];
