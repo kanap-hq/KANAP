@@ -363,3 +363,48 @@ describe('SupplierWorkspacePage', () => {
     await expectNext(name);
   });
 });
+
+describe('SupplierWorkspacePage: used by', () => {
+  const USAGES = {
+    total: 3,
+    groups: [
+      {
+        type: 'budget_lines',
+        total: 2,
+        items: [
+          { id: 'b-1', reference: 'BL-12', name: 'Office 365', nature: 'opex', status: 'enabled', active: true },
+          { id: 'b-2', reference: 'BL-40', name: 'Servers', nature: 'capex', status: 'enabled', active: true },
+        ],
+      },
+      { type: 'contracts', total: 1, items: [{ id: 'k-1', reference: null, name: 'Enterprise agreement', status: 'enabled', active: true }] },
+    ],
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    auth.canEdit = true;
+    stored = { ...SUPPLIER };
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/suppliers/s-1') return { data: stored };
+      if (url === '/suppliers/s-1/contacts') return { data: LINKS };
+      if (url === '/suppliers/s-1/usages') return { data: USAGES };
+      return { data: { items: [] } };
+    });
+  });
+
+  it('shows the number of uses in the header, which opens the tab', async () => {
+    renderAt('/master-data/suppliers/s-1/overview');
+    const count = await screen.findByRole('button', { name: /shared\.usages\.title.*3/ });
+    fireEvent.click(count);
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/suppliers/s-1/usages'));
+  });
+
+  it('lists the budget lines and contracts on the tab, each opening its page', async () => {
+    renderAt('/master-data/suppliers/s-1/usages');
+    expect(await screen.findByRole('link', { name: /Office 365/ })).toHaveAttribute('href', '/ops/budget/BL-12');
+    expect(screen.getByRole('link', { name: /Servers/ })).toHaveAttribute('href', '/ops/budget/BL-40');
+    expect(screen.getByRole('link', { name: /Enterprise agreement/ })).toHaveAttribute('href', '/ops/contracts/k-1');
+    expect(screen.getByRole('tab', { name: 'shared.usages.title', selected: true })).toBeInTheDocument();
+    expect(screen.getByTestId('location')).toHaveTextContent('/master-data/suppliers/s-1/usages');
+  });
+});

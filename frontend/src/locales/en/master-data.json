@@ -77,6 +77,29 @@
       "both": "OPEX and CAPEX",
       "opex": "OPEX only",
       "capex": "CAPEX only"
+    },
+    "usages": {
+      "title": "Used by",
+      "open": "Open where it is used",
+      "loadFailed": "The list of uses could not be loaded.",
+      "emptySupplier": "Nothing uses this supplier yet.",
+      "emptyContact": "This contact is not linked to anything yet.",
+      "partial": "{{shown}} of {{total}} shown.",
+      "inactive": "Disabled",
+      "nature": {
+        "opex": "OPEX",
+        "capex": "CAPEX"
+      },
+      "groups": {
+        "suppliers": "Suppliers",
+        "budget_lines": "Budget lines",
+        "contracts": "Contracts",
+        "applications": "Applications",
+        "assets": "Assets",
+        "locations": "Locations",
+        "projects": "Projects",
+        "requests": "Requests"
+      }
     }
   },
   "companies": {

@@ -25,10 +25,11 @@ import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { getDotColor } from '../../utils/statusColors';
 import { SupplierNameTitle, SupplierNotes, SupplierTextRow } from './SupplierFields';
 import SupplierContactsTab, { useSupplierContacts } from './SupplierContactsTab';
+import RecordUsagesTab, { useRecordUsages } from '../../components/usages/RecordUsagesTab';
 import { SUPPLIERS_PATH, type Supplier, type SupplierPatch, isDuplicateError } from './supplierModel';
 
-type TabKey = 'overview' | 'contacts';
-const TAB_KEYS: readonly string[] = ['overview', 'contacts'];
+type TabKey = 'overview' | 'contacts' | 'usages';
+const TAB_KEYS: readonly string[] = ['overview', 'contacts', 'usages'];
 const DRAWER_KEY = 'kanap.suppliers.drawerOpen';
 const LIST_CONTEXT_KEYS = ['sort', 'q', 'filters', 'scope'];
 
@@ -86,6 +87,7 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
     queryFn: async () => (await api.get<Supplier>(`/suppliers/${id}`)).data,
   });
   const { data: contactLinks } = useSupplierContacts(id);
+  const { data: usages } = useRecordUsages('suppliers', id);
 
   const [errors, setErrors] = React.useState<FieldErrors>({});
   // Writes queue one after the other: a response never overwrites a newer one.
@@ -173,6 +175,13 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
       >
         {contactLinks ? contactLinks.length : '…'}
       </PortfolioMetadataItem>
+      <PortfolioMetadataItem
+        label={t('shared.usages.title')}
+        onClick={tab === 'usages' ? undefined : () => goTo(id, 'usages')}
+        title={tab === 'usages' ? undefined : t('shared.usages.open')}
+      >
+        {usages ? usages.total : '…'}
+      </PortfolioMetadataItem>
       {errors.status && (
         <Typography component="span" sx={{ fontSize: 12, color: 'error.main' }}>{errors.status}</Typography>
       )}
@@ -227,6 +236,7 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
         tabs={[
           { key: 'overview', label: t('shared.labels.overview') },
           { key: 'contacts', label: t('shared.labels.contacts') },
+          { key: 'usages', label: t('shared.usages.title') },
         ]}
         onTabChange={(next) => goTo(id, next as TabKey)}
         drawerStorageKey={DRAWER_KEY}
@@ -286,6 +296,7 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
           </Stack>
         )}
         {tab === 'contacts' && <SupplierContactsTab supplierId={id} canManage={canEdit} />}
+        {tab === 'usages' && <RecordUsagesTab owner="suppliers" id={id} />}
       </PortfolioDetailWorkspaceShell>
     </Box>
   );

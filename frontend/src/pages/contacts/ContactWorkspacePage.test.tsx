@@ -397,3 +397,41 @@ describe('ContactWorkspacePage create', () => {
     expect(navigateMock).toHaveBeenCalledWith('/master-data/contacts');
   });
 });
+
+describe('ContactWorkspacePage: used by', () => {
+  const USAGES = {
+    total: 2,
+    groups: [
+      { type: 'suppliers', total: 1, items: [{ id: 's-1', reference: null, name: 'Supplier A', status: 'enabled', active: true, roles: ['commercial'] }] },
+      { type: 'contracts', total: 1, items: [{ id: 'k-1', reference: null, name: 'Support contract', status: 'enabled', active: true, roles: ['support'] }] },
+    ],
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    auth.canEdit = true;
+    stored = { ...CONTACT };
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/contacts/c-1') return { data: stored };
+      if (url === '/contacts/c-1/usages') return { data: USAGES };
+      return { data: { items: [] } };
+    });
+  });
+
+  it('shows the number of uses in the header, which opens the tab', async () => {
+    renderAt('/master-data/contacts/c-1/overview');
+    const count = await screen.findByRole('button', { name: /shared\.usages\.title.*2/ });
+    fireEvent.click(count);
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/contacts/c-1/usages'));
+  });
+
+  it('lists what the contact is linked to on the tab, with its roles', async () => {
+    renderAt('/master-data/contacts/c-1/usages');
+    const contract = await screen.findByRole('link', { name: /Support contract/ });
+    expect(contract).toHaveAttribute('href', '/ops/contracts/k-1');
+    expect(contract).toHaveTextContent('contacts.roles.support');
+    expect(screen.getByTestId('location')).toHaveTextContent('/master-data/contacts/c-1/usages');
+    // The notes belong to the overview.
+    expect(screen.queryByText('Prefers email')).toBeNull();
+  });
+});

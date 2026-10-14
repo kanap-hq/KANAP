@@ -31,10 +31,13 @@ import {
   safeReturnTo,
 } from './contactModel';
 import { ContactNameTitle, ContactPhoneField, ContactRoleSelect, MetadataMenu, useContactRoleOptions } from './ContactFields';
+import RecordUsagesTab, { useRecordUsages } from '../../components/usages/RecordUsagesTab';
 
 const LIST_PATH = '/master-data/contacts';
 const DRAWER_KEY = 'kanap.contacts.drawerOpen';
 const LIST_CONTEXT_KEYS = ['sort', 'q', 'filters'];
+type TabKey = 'overview' | 'usages';
+const TAB_KEYS: readonly string[] = ['overview', 'usages'];
 
 type FieldKey = 'name' | 'email' | 'job_title' | 'phone' | 'mobile' | 'country' | 'supplier_id' | 'supplier_role' | 'notes' | 'active';
 type FieldErrors = Partial<Record<FieldKey, string>>;
@@ -66,16 +69,16 @@ export default function ContactWorkspacePage() {
   const params = useParams();
   const location = useLocation();
   const id = String(params.id || '');
-  // One tab: any other address of the former page opens it.
-  if (params.tab && params.tab !== 'overview') {
+  // Any other address of the former page opens the overview.
+  if (params.tab && !TAB_KEYS.includes(params.tab)) {
     return <Navigate replace to={`${LIST_PATH}/${id}/overview${location.search}`} />;
   }
   if (id === 'new') return <ContactCreate />;
   // Keyed by contact: drafts and pending saves belong to the contact they were typed on.
-  return <ContactEditor key={id} id={id} />;
+  return <ContactEditor key={id} id={id} tab={(params.tab as TabKey | undefined) ?? 'overview'} />;
 }
 
-function ContactEditor({ id }: { id: string }) {
+function ContactEditor({ id, tab }: { id: string; tab: TabKey }) {
   const { t } = useTranslation(['master-data', 'common']);
   const theme = useTheme();
   const navigate = useNavigate();
@@ -90,6 +93,7 @@ function ContactEditor({ id }: { id: string }) {
     queryKey: detailKey,
     queryFn: async () => (await api.get<Contact>(`/contacts/${id}`)).data,
   });
+  const { data: usages } = useRecordUsages('contacts', id);
 
   const [errors, setErrors] = React.useState<FieldErrors>({});
   const [pageError, setPageError] = React.useState<string | null>(null);
@@ -201,6 +205,10 @@ function ContactEditor({ id }: { id: string }) {
     await registry.flushAll();
     navigate(withContext(LIST_PATH));
   };
+  const goToTab = async (next: TabKey) => {
+    await registry.flushAll();
+    navigate(withContext(`${LIST_PATH}/${id}/${next}`));
+  };
 
   const [drawerOpenRequest, setDrawerOpenRequest] = React.useState(0);
   const openDrawer = () => setDrawerOpenRequest((n) => n + 1);
@@ -278,6 +286,13 @@ function ContactEditor({ id }: { id: string }) {
           }}
           disabled={disabled}
         />
+      </PortfolioMetadataItem>
+      <PortfolioMetadataItem
+        label={t('shared.usages.title')}
+        onClick={tab === 'usages' ? undefined : () => { void goToTab('usages'); }}
+        title={tab === 'usages' ? undefined : t('shared.usages.open')}
+      >
+        {usages ? usages.total : '…'}
       </PortfolioMetadataItem>
     </>
   ) : undefined;
@@ -375,9 +390,12 @@ function ContactEditor({ id }: { id: string }) {
         </Alert>
       )}
       <PortfolioDetailWorkspaceShell
-        activeTab="overview"
-        tabs={[{ key: 'overview', label: t('shared.labels.overview') }]}
-        onTabChange={() => undefined}
+        activeTab={tab}
+        tabs={[
+          { key: 'overview', label: t('shared.labels.overview') },
+          { key: 'usages', label: t('shared.usages.title') },
+        ]}
+        onTabChange={(next) => { void goToTab(next as TabKey); }}
         drawerStorageKey={DRAWER_KEY}
         drawerOpenRequest={drawerOpenRequest}
         backLabel={t('contacts.title')}
@@ -407,7 +425,7 @@ function ContactEditor({ id }: { id: string }) {
         )}
         properties={properties}
       >
-        {data && (
+        {data && tab === 'overview' && (
           <Stack spacing={3} sx={{ maxWidth: 900 }}>
             <ContactNotes
               value={data.notes ?? ''}
@@ -420,6 +438,7 @@ function ContactEditor({ id }: { id: string }) {
             />
           </Stack>
         )}
+        {tab === 'usages' && <RecordUsagesTab owner="contacts" id={id} />}
       </PortfolioDetailWorkspaceShell>
     </Box>
   );
