@@ -16,7 +16,8 @@ import BusinessProcessSelect from '../../../components/fields/BusinessProcessSel
 import EnumAutocomplete from '../../../components/fields/EnumAutocomplete';
 import TeamMemberMultiSelect from '../../../components/fields/TeamMemberMultiSelect';
 import { PropertyGroup, PropertyRow } from '../../../components/design';
-import { COUNTRY_OPTIONS, type CountryOption } from '../../../constants/isoOptions';
+import type { CountryOption } from '../../../constants/isoOptions';
+import { filterCountryOptions, useCountryOptions } from '../../../i18n/countries';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { drawerFieldValueSx } from '../../../theme/formSx';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
@@ -176,12 +177,13 @@ export default function InterfacePropertyPanel({
     [residency],
   );
 
+  const countryOptions = useCountryOptions();
   const residencyOptions = React.useMemo<CountryOption[]>(() => {
     const extras = residencyCodes
-      .filter((code) => !COUNTRY_OPTIONS.some((option) => option.code === code))
+      .filter((code) => !countryOptions.some((option) => option.code === code))
       .map((code) => ({ code, name: `Unknown (${code})` }));
-    return [...COUNTRY_OPTIONS, ...extras];
-  }, [residencyCodes]);
+    return [...countryOptions, ...extras];
+  }, [countryOptions, residencyCodes]);
 
   return (
     <>
@@ -402,6 +404,7 @@ export default function InterfacePropertyPanel({
               void runPersist(() => onReplaceDataResidency(value.map((item) => item.code)));
             }}
             getOptionLabel={(option) => `${option.name} (${option.code})`}
+            filterOptions={filterCountryOptions}
             isOptionEqualToValue={(option, value) => option.code === value.code}
             renderInput={(params) => (
               <TextField

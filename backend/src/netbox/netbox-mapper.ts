@@ -246,14 +246,25 @@ export function ipv4InCidr(ip: string, cidr: string): boolean {
   return (ipInt & mask) === (networkInt & mask);
 }
 
+/**
+ * The base address, trimmed, without trailing slashes. Same loop as normalizeNetboxBaseUrl in
+ * netbox.client.ts, which imports this module.
+ */
+function withoutTrailingSlashes(raw: string): string {
+  const trimmed = String(raw || '').trim();
+  let end = trimmed.length;
+  while (end > 0 && trimmed.charCodeAt(end - 1) === 47 /* '/' */) end -= 1;
+  return trimmed.slice(0, end);
+}
+
 function netboxObjectUrl(baseUrl: string, type: NetboxObjectType, id: string): string {
-  const base = String(baseUrl || '').trim().replace(/\/+$/, '');
+  const base = withoutTrailingSlashes(baseUrl);
   return type === 'device' ? `${base}/dcim/devices/${id}/` : `${base}/virtualization/virtual-machines/${id}/`;
 }
 
 /** Deep link to a Location, used for the sub-location's external URL. */
 export function netboxLocationUrl(baseUrl: string, id: string): string {
-  const base = String(baseUrl || '').trim().replace(/\/+$/, '');
+  const base = withoutTrailingSlashes(baseUrl);
   return `${base}/dcim/locations/${id}/`;
 }
 

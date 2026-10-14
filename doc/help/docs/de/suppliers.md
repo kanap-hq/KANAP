@@ -59,6 +59,7 @@ Die Seite hat zwei Reiter: **Übersicht** und **Kontakte**.
 **Kopfzeile**, unter dem Namen:
 - **Status**: **Aktiviert** oder **Deaktiviert**. Klicken Sie darauf, um ihn zu ändern. Die Wahl von **Deaktiviert** setzt das Ende der Gültigkeit auf heute.
 - **Kontakte**: Die Anzahl der mit dem Lieferanten verknüpften Kontakte. Klicken Sie darauf, um den Reiter **Kontakte** zu öffnen.
+- **Verwendet in**: Die Anzahl der Budgetzeilen, Verträge, Anwendungen und Assets, die den Lieferanten verwenden. Klicken Sie darauf, um zum Abschnitt **Verwendet in** im Reiter **Übersicht** zu springen.
 
 **Eigenschaften** (das Feld rechts, geöffnet über seinen Reiter oder die Taste `P`):
 - **ERP-Lieferanten-ID**: Die ID des Lieferanten in Ihrem ERP- oder Beschaffungssystem. Sie wird gespeichert, wenn Sie das Feld verlassen oder Enter drücken.
@@ -88,6 +89,19 @@ Der Reiter **Kontakte** listet die mit diesem Lieferanten verknüpften Kontakte 
 - Die Papierkorb-Schaltfläche entfernt die Verknüpfung. Der Kontakt selbst bleibt in Ihren Kontakten.
 
 **Tipp**: Pflegen Sie mindestens einen Kontakt pro Lieferant, damit die Kommunikation mit ihm immer nur einen Klick entfernt ist.
+
+### Verwendet in
+
+Der Abschnitt **Verwendet in**, unter den Notizen im Reiter **Übersicht**, listet auf, was auf diesen Lieferanten verweist, eine Liste pro Typ, jede mit ihrer Anzahl:
+
+- **Budgetzeilen**: OPEX- und CAPEX-Zeilen mit diesem Lieferanten, mit ihrer Referenz (`BL-12`) und ihrem Typ.
+- **Verträge**: Verträge mit diesem Lieferanten.
+- **Anwendungen**: Anwendungen, deren Hersteller er ist.
+- **Assets**: Assets, die er betreut (der Support-Lieferant des Assets).
+
+Klicken Sie auf eine Zeile, um die zugehörige Seite zu öffnen. Deaktivierte Einträge tragen den Hinweis **Deaktiviert** und stehen nach den anderen. Eine Liste zeigt bis zu 50 Einträge und nennt ihre Gesamtzahl. Bei mehr als 50 haben Budgetzeilen, Verträge und Anwendungen einen Link wie **Alle 57 anzeigen**, der ihre Liste gefiltert auf diesen Lieferanten öffnet. Sie sehen nur die Listen, die Sie lesen dürfen: Ein Benutzer ohne Zugriff auf Verträge sieht keine Vertragsliste. Ein Lieferant, den nichts verwendet, zeigt eine Zeile, die das sagt.
+
+Prüfen Sie diesen Abschnitt, bevor Sie einen Lieferanten deaktivieren oder löschen.
 
 ### Einen Lieferanten erstellen
 

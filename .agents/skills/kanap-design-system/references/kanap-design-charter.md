@@ -69,8 +69,8 @@ MUI palette mappings (set in `ThemeContext.tsx`):
 | Token | Light | Dark | Usage |
 |---|---|---|---|
 | `kanap.text.primary` | `#111827` | `#E5E7EB` | Main content, values in fields |
-| `kanap.text.secondary` | `#6B7280` | `#9CA3AF` | Secondary information, action button text |
-| `kanap.text.tertiary` | `#9CA3AF` | `#6B7280` | Field labels, metadata, hints, IDs in small contexts |
+| `kanap.text.secondary` | `#4B5563` | `#9CA3AF` | Secondary information, action button text |
+| `kanap.text.tertiary` | `#6C7482` | `#818895` | Field labels, metadata, hints, IDs in small contexts |
 
 ### Borders
 
@@ -978,7 +978,7 @@ Most form fields save on every change, optimistically update the UI, and show a 
 
 ### Custom CSS variables in AG Grid
 
-- `--kanap-text-secondary`: `#6B7280` (light) / `rgba(255,255,255,0.55)` (dark) — used by ID column cellStyles
+- `--kanap-text-secondary`: `#4B5563` (light) / `rgba(255,255,255,0.55)` (dark) — used by ID column cellStyles
 
 ### Navigation link neutralization (`ThemeContext.tsx`)
 

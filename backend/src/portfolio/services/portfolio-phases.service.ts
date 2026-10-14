@@ -8,6 +8,7 @@ import { PortfolioPhaseTemplate } from '../portfolio-phase-template.entity';
 import { PortfolioPhaseTemplateItem } from '../portfolio-phase-template-item.entity';
 import { AuditService } from '../../audit/audit.service';
 import { PortfolioProjectsBaseService, ServiceOpts } from './portfolio-projects-base.service';
+import { PHASE_REORDER_MAX_IDS } from '../dto/reorder-phases.dto';
 
 /**
  * Service for managing project phases.
@@ -251,22 +252,36 @@ export class PortfolioPhasesService extends PortfolioProjectsBaseService {
   }
 
   /**
-   * Reorder phases.
+   * Reorder phases: each listed phase takes its position in the list as its sequence.
+   * The list holds distinct phase ids; ids outside this project are ignored. One statement.
    */
   async reorderPhases(
     projectId: string,
     phaseIds: string[],
+    tenantId: string,
     opts?: ServiceOpts,
   ) {
     const mg = this.getManager(opts);
 
-    for (let i = 0; i < phaseIds.length; i++) {
-      await mg.query(
-        `UPDATE portfolio_project_phases SET sequence = $1, updated_at = now()
-         WHERE id = $2 AND project_id = $3`,
-        [i, phaseIds[i], projectId]
-      );
+    if (!Array.isArray(phaseIds) || phaseIds.length > PHASE_REORDER_MAX_IDS) {
+      throw new BadRequestException(`phase_ids must be a list of at most ${PHASE_REORDER_MAX_IDS} phase ids`);
     }
+    if (phaseIds.length === 0) return { ok: true };
+
+    const ids = phaseIds.map((id) => String(id).toLowerCase());
+    if (new Set(ids).size !== ids.length) {
+      throw new BadRequestException('phase_ids must not list a phase twice');
+    }
+
+    // Ids that no longer belong to this project (for example a phase deleted meanwhile) are
+    // skipped: the UPDATE only matches the project's own phases.
+    await mg.query(
+      `UPDATE portfolio_project_phases AS p
+       SET sequence = (o.position - 1)::int, updated_at = now()
+       FROM unnest($3::uuid[]) WITH ORDINALITY AS o(id, position)
+       WHERE p.tenant_id = $1 AND p.project_id = $2 AND p.id = o.id`,
+      [tenantId, projectId, ids],
+    );
 
     return { ok: true };
   }

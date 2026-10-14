@@ -1,7 +1,9 @@
 import * as assert from 'node:assert/strict';
+import { format } from 'node:util';
 import {
   createRequestTenancyMiddleware,
   RequestTenancyOptions,
+  routePath,
   TENANT_RESETTING_CODE,
   tenantSlugFromHost,
 } from '../request-tenancy.middleware';
@@ -69,6 +71,30 @@ async function testLookupFailureAnswersBusy() {
     assert.equal(res.body?.code, 'busy', `${label}: code busy`);
     assert.equal(res.headers['retry-after'], '2', `${label}: Retry-After`);
   }
+}
+
+/**
+ * The lookup failure log line uses a fixed format string: the method, the path and the error
+ * message are arguments, so a path holding `%` sequences is logged exactly as received.
+ */
+async function testLookupFailureLogUsesAFixedFormat() {
+  const calls: unknown[][] = [];
+  const original = console.error;
+  console.error = (...args: unknown[]) => { calls.push(args); };
+  const path = '/spend-items/%s%d%o%%?q=%j';
+  try {
+    await run({ query: async () => { throw new Error('pool timeout'); } }, 'acme.kanap.net', path);
+  } finally {
+    console.error = original;
+  }
+  assert.equal(calls.length, 1, 'one log line');
+  const [template, ...args] = calls[0];
+  assert.equal(template, '[tenancy] %s %s: tenant lookup failed, answered 503 busy: %s');
+  assert.deepEqual(args, ['GET', path, 'pool timeout']);
+  assert.equal(
+    format(...(calls[0] as [string, ...unknown[]])),
+    `[tenancy] GET ${path}: tenant lookup failed, answered 503 busy: pool timeout`,
+  );
 }
 
 /**
@@ -224,12 +250,31 @@ async function testWritesRefusedWhileResetting() {
   assert.deepEqual(other.tenant, { slug: 'other', id: 't-2', name: 'Other' });
 }
 
+/** The route path drops trailing slashes in time linear in the path length. */
+function testRoutePathTrimsTrailingSlashes() {
+  assert.equal(routePath({ path: '/health/' }), '/health');
+  assert.equal(routePath({ path: '/health///' }), '/health');
+  assert.equal(routePath({ path: '/' }), '/');
+  assert.equal(routePath({ path: '///' }), '/');
+  assert.equal(routePath({ path: '' }), '/');
+  assert.equal(routePath({ path: '/a//b' }), '/a//b');
+
+  const path = `${'/'.repeat(8000)}x`;
+  const started = process.hrtime.bigint();
+  const result = routePath({ path });
+  const elapsedMs = Number(process.hrtime.bigint() - started) / 1e6;
+  assert.equal(result, path, 'a path ending in a letter is kept as is');
+  assert.ok(elapsedMs < 5, `8,000 slashes then a letter take under 5 ms (took ${elapsedMs.toFixed(2)} ms)`);
+}
+
 async function main() {
   await testLookupFailureAnswersBusy();
+  await testLookupFailureLogUsesAFixedFormat();
   await testHealthIsNeverLookedUp();
   await testOtherAnswersUnchanged();
   await testNextErrorIsNotALookupFailure();
   testSlugs();
+  testRoutePathTrimsTrailingSlashes();
   await testClassMiddleware();
   await testWritesRefusedWhileResetting();
   console.log('request-tenancy.middleware.spec: ok');

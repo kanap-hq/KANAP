@@ -77,6 +77,30 @@
       "both": "OPEX et CAPEX",
       "opex": "OPEX uniquement",
       "capex": "CAPEX uniquement"
+    },
+    "usages": {
+      "title": "Lié à",
+      "open": "Voir les liens",
+      "loadFailed": "La liste des liens n'a pas pu être chargée.",
+      "emptySupplier": "Ce fournisseur n'est encore lié à rien.",
+      "emptyContact": "Ce contact n'est encore lié à rien.",
+      "partial": "{{shown}} sur {{total}} affichés.",
+      "showAll": "Voir les {{total}}",
+      "inactive": "Désactivé",
+      "nature": {
+        "opex": "OPEX",
+        "capex": "CAPEX"
+      },
+      "groups": {
+        "suppliers": "Fournisseurs",
+        "budget_lines": "Lignes budgétaires",
+        "contracts": "Contrats",
+        "applications": "Applications",
+        "assets": "Actifs",
+        "locations": "Sites",
+        "projects": "Projets",
+        "requests": "Demandes"
+      }
     }
   },
   "companies": {

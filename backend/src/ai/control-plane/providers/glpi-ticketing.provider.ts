@@ -4,7 +4,7 @@ import { AiSettingsService } from '../../ai-settings.service';
 import { GlpiService } from '../../glpi/glpi.service';
 import { GlpiAssignableGroup, GlpiCategory, GlpiConnectionOverrides, GlpiTechnician, GlpiTicket, GlpiTicketFollowup, GlpiTicketUserAssociation } from '../../glpi/glpi.types';
 import { classificationContextWithoutCatalogue } from './ticket-classification';
-import { decodeNumericHtmlEntities } from '../../../common/html-entities';
+import { decodeHtmlEntities, decodeNumericHtmlEntities, HTML_TEXT_ENTITIES } from '../../../common/html-entities';
 import { GLPI_TICKETING_IMPLEMENTATION, LEGACY_GLPI_TICKETING_PROVIDER_KEY } from './provider-constants';
 import {
   TICKETING_ASSIGNMENT_UPDATE_APPROVED_CAPABILITY,
@@ -98,16 +98,13 @@ function nowIso(): string {
 
 function stripHtml(value: string | null | undefined): string | null {
   if (!value) return null;
-  const text = decodeNumericHtmlEntities(String(value).replace(/\r\n/g, '\n'))
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>/gi, '\n')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, '\'')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
+  const text = decodeHtmlEntities(
+    decodeNumericHtmlEntities(String(value).replace(/\r\n/g, '\n'))
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/p>/gi, '\n')
+      .replace(/<[^>]+>/g, ' '),
+    { entities: HTML_TEXT_ENTITIES, ignoreCase: true },
+  )
     .replace(/[ \t]+/g, ' ')
     .replace(/\n\s+/g, '\n')
     .trim();
