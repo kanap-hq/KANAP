@@ -15,7 +15,9 @@ const TABLE_CELL_SPACE_ENTITIES = { nbsp: ' ' };
  * backslash right before it, so the text keeps its pipes and backslashes.
  */
 export function escapeMarkdownTableCell(text: string): string {
-  return text.replace(/\\*\|/g, (run) => run.replace(/[\\|]/g, '\\$&'));
+  // Each run of backslashes is matched once, whole, with the pipe that may follow it:
+  // the scan stays linear on long runs.
+  return text.replace(/\\+\|?|\|/g, (run) => (run.endsWith('|') ? run.replace(/[\\|]/g, '\\$&') : run));
 }
 
 /** An image of an imported Markdown text, with what its rewrite needs. */

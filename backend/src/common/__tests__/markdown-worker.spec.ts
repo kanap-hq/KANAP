@@ -247,23 +247,27 @@ async function testTwoUsersMayUseEveryWorker() {
 }
 
 async function testAFreeWorkerSkipsAKeyAtItsCap() {
-  const medium = fill('_a ', 10 * 1024);
+  const slow = fill('_a ', 100 * 1024);
   const order: string[] = [];
   const tracked = (label: string, work: () => Promise<unknown>) => timedOutcome(work).then((call) => {
     order.push(label);
     return call;
   });
   // A user sends two calls: the second waits for the first, although a worker is free.
-  const callsOfA = [1, 2].map((index) => asUser('tenant-a', 'user-a', () => tracked(`A${index}`, () => normalizeMarkdownRichText(medium))));
+  const texts = [slow, '**A2**'];
+  const callsOfA = [1, 2].map((index) => asUser('tenant-a', 'user-a', () => tracked(`A${index}`, () => normalizeMarkdownRichText(texts[index - 1]))));
   await sleep(20);
   // Another user's call, sent later, takes the free worker at once.
   const callOfN = await asUser('tenant-b', 'normal', () => tracked('N', () => normalizeMarkdownRichText('**N**')));
   assert.equal(callOfN.outcome, 'ok');
   assert.ok(callOfN.ms < 200, `served in ${callOfN.ms.toFixed(0)} ms`);
+  // The first call ends when the spec stops its worker, whatever the load of the machine:
+  // the second one then starts on the free worker, well within its wait.
+  const [busy] = markdownWorkerThreadsForTests();
+  await busy.terminate();
   const [first, second] = await Promise.all(callsOfA);
-  assert.deepEqual([first.outcome, second.outcome], ['ok', 'ok']);
+  assert.deepEqual([first.outcome, second.outcome], [MARKDOWN_TOO_COMPLEX, 'ok']);
   assert.deepEqual(order, ['N', 'A1', 'A2']);
-  assert.ok(second.ms > first.ms, `A2 after A1: ${first.ms.toFixed(0)} then ${second.ms.toFixed(0)} ms`);
 }
 
 async function testCapsApplyOnlyToWaitingCalls() {

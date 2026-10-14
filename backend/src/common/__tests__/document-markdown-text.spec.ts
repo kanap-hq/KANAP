@@ -1,4 +1,5 @@
 import * as assert from 'node:assert/strict';
+import { performance } from 'node:perf_hooks';
 import { DocumentExportService } from '../document-export.service';
 import {
   convertHtmlTableToGfm,
@@ -50,6 +51,13 @@ function escapesTableCellText() {
   for (const [input, expected] of cases) {
     assert.equal(escapeMarkdownTableCell(input), expected, input);
   }
+  // A long run of backslashes is escaped in linear time, with or without a pipe after it.
+  const run = '\\'.repeat(200 * 1024);
+  const startedAt = performance.now();
+  assert.equal(escapeMarkdownTableCell(run), run);
+  const elapsedMs = performance.now() - startedAt;
+  assert.ok(elapsedMs < 50, `200 KB of backslashes escaped in ${elapsedMs.toFixed(0)} ms`);
+  assert.equal(escapeMarkdownTableCell(`${run}|`), `${run}${run}\\|`);
 
   const table = convertHtmlTableToGfm(
     '<table><tr><th>Pattern</th><th>Path</th></tr><tr><td>a\\|b</td><td>C:\\temp</td></tr></table>',
