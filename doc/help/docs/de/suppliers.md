@@ -99,7 +99,7 @@ Der Abschnitt **Verwendet in**, unter den Notizen im Reiter **Übersicht**, list
 - **Anwendungen**: Anwendungen, deren Hersteller er ist.
 - **Assets**: Assets, die er betreut (der Support-Lieferant des Assets).
 
-Klicken Sie auf eine Zeile, um die zugehörige Seite zu öffnen. Deaktivierte Einträge tragen den Hinweis **Deaktiviert** und stehen nach den anderen. Eine Liste zeigt bis zu 50 Einträge und nennt ihre Gesamtzahl. Sie sehen nur die Listen, die Sie lesen dürfen: Ein Benutzer ohne Zugriff auf Verträge sieht keine Vertragsliste. Ein Lieferant, den nichts verwendet, zeigt eine Zeile, die das sagt.
+Klicken Sie auf eine Zeile, um die zugehörige Seite zu öffnen. Deaktivierte Einträge tragen den Hinweis **Deaktiviert** und stehen nach den anderen. Eine Liste zeigt bis zu 50 Einträge und nennt ihre Gesamtzahl. Bei mehr als 50 haben Budgetzeilen, Verträge und Anwendungen einen Link wie **Alle 57 anzeigen**, der ihre Liste gefiltert auf diesen Lieferanten öffnet. Sie sehen nur die Listen, die Sie lesen dürfen: Ein Benutzer ohne Zugriff auf Verträge sieht keine Vertragsliste. Ein Lieferant, den nichts verwendet, zeigt eine Zeile, die das sagt.
 
 Prüfen Sie diesen Abschnitt, bevor Sie einen Lieferanten deaktivieren oder löschen.
 

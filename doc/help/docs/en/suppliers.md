@@ -99,7 +99,7 @@ The **Used by** section, under the notes on the **Overview** tab, lists what ref
 - **Applications**: applications whose vendor it is.
 - **Assets**: assets it supports (the support vendor of the asset).
 
-Click a row to open that page. Disabled items show **Disabled** and come after the others. A list shows up to 50 items and says how many there are in all. You only see the lists you are allowed to read: a user without access to contracts sees no contract list. A supplier that nothing uses shows one line that says so.
+Click a row to open that page. Disabled items show **Disabled** and come after the others. A list shows up to 50 items and says how many there are in all. Past 50, budget lines, contracts and applications get a link such as **Show all 57** that opens their list filtered on this supplier. You only see the lists you are allowed to read: a user without access to contracts sees no contract list. A supplier that nothing uses shows one line that says so.
 
 Check this section before you disable or delete a supplier.
 

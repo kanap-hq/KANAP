@@ -921,6 +921,9 @@ export default function ApplicationsPage() {
           showRowCount
           queryKey={'applications'}
           defaultSort={{ field: 'name', direction: 'ASC' }}
+          // A link's filter on a hidden column (a supplier's "Show all") shows that column, next to the name.
+          showFilteredColumns
+          filteredColumnsAfter="name"
           initialState={initialState}
           extraParams={extraParams}
           requiredColumns={['name']}

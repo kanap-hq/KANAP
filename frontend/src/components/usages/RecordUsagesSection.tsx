@@ -1,12 +1,14 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Box, Typography } from '@mui/material';
+import { Alert, Box, Link, Typography } from '@mui/material';
 import type { Theme } from '@mui/material/styles';
 import api from '../../api';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import { getProjectStatusLabel, getRequestStatusLabel } from '../../utils/portfolioI18n';
+import { useItOpsSettings } from '../../hooks/useItOpsSettings';
+import { usageListLink, type UsageListLink } from './usageListLinks';
 
 /** What `GET /suppliers/:id/usages` and `GET /contacts/:id/usages` answer (backend `common/record-usages.ts`). */
 export type UsageType = 'suppliers' | 'budget_lines' | 'contracts' | 'applications' | 'assets' | 'locations' | 'projects' | 'requests';
@@ -77,9 +79,15 @@ const sectionLabelSx = { fontSize: 12, fontWeight: 500, color: 'kanap.text.terti
 
 /**
  * The "Used by" section of a supplier or contact overview: the objects that use the record, by
- * type, each row opening the object's page. Nothing to list takes one line.
+ * type, each row opening the object's page. Nothing to list takes one line. A group cut at the limit
+ * links to its list filtered on the record, when that list can filter on it (`usageListLink`).
  */
-export default function RecordUsagesSection({ owner, id }: { owner: UsageOwner; id: string }) {
+export default function RecordUsagesSection({ owner, id, ownerName }: {
+  owner: UsageOwner;
+  id: string;
+  /** The record's name: the lists filter on it. */
+  ownerName?: string | null;
+}) {
   const { t } = useTranslation(['master-data', 'common']);
   const { t: tPortfolio } = useTranslation('portfolio');
   const { data, error } = useRecordUsages(owner, id);
@@ -106,7 +114,9 @@ export default function RecordUsagesSection({ owner, id }: { owner: UsageOwner; 
         {owner === 'suppliers' ? t('shared.usages.emptySupplier') : t('shared.usages.emptyContact')}
       </Typography>
     );
-  } else if (data) body = <UsageGroups groups={data.groups} details={details} />;
+  } else if (data) {
+    body = <UsageGroups groups={data.groups} details={details} owner={owner} ownerName={ownerName ?? null} />;
+  }
 
   return (
     <Box component="section" id={USAGES_SECTION_ID} aria-label={title} sx={{ scrollMarginTop: '16px' }}>
@@ -116,7 +126,12 @@ export default function RecordUsagesSection({ owner, id }: { owner: UsageOwner; 
   );
 }
 
-function UsageGroups({ groups, details }: { groups: UsageGroup[]; details: (type: UsageType, item: UsageItem) => string[] }) {
+function UsageGroups({ groups, details, owner, ownerName }: {
+  groups: UsageGroup[];
+  details: (type: UsageType, item: UsageItem) => string[];
+  owner: UsageOwner;
+  ownerName: string | null;
+}) {
   const { t } = useTranslation(['master-data', 'common']);
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
@@ -171,11 +186,54 @@ function UsageGroups({ groups, details }: { groups: UsageGroup[]; details: (type
             {group.total > group.items.length && (
               <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', pt: '6px' }}>
                 {t('shared.usages.partial', { shown: group.items.length, total: group.total })}
+                <GroupListLink owner={owner} ownerName={ownerName} type={group.type} total={group.total} />
               </Typography>
             )}
           </Box>
         );
       })}
     </Box>
+  );
+}
+
+type GroupListLinkProps = { owner: UsageOwner; ownerName: string | null; type: UsageType; total: number };
+
+/** The "Show all" link of a cut group, when its list can filter on the record (`usageListLink`). */
+function GroupListLink(props: GroupListLinkProps) {
+  if (props.type === 'applications' && props.owner === 'suppliers' && props.ownerName) return <ApplicationsListLink {...props} />;
+  return <ShowAllLink link={usageListLink(props.owner, props.type, props.ownerName)} total={props.total} />;
+}
+
+/** The applications list ticks every lifecycle state, read from the IT operations settings. */
+function ApplicationsListLink({ owner, ownerName, type, total }: GroupListLinkProps) {
+  const { data: settings } = useItOpsSettings();
+  const applicationLifecycles = (settings?.lifecycleStates ?? []).map((state) => state.code);
+  return <ShowAllLink link={usageListLink(owner, type, ownerName, { applicationLifecycles })} total={total} />;
+}
+
+/**
+ * "Show all 52": the group's list, filtered on the record, in the same tab. Filters too long for a
+ * URL are saved when the link is used, never before (saves are rate limited).
+ */
+function ShowAllLink({ link, total }: { link: UsageListLink | null; total: number }) {
+  const { t } = useTranslation(['master-data']);
+  const navigate = useNavigate();
+  if (!link) return null;
+  const save = link.save;
+  return (
+    <>
+      {' '}
+      <Link
+        component={RouterLink}
+        to={link.href}
+        sx={{ fontSize: 12 }}
+        onClick={save ? (event: React.MouseEvent) => {
+          event.preventDefault();
+          void save().then((href) => navigate(href), () => navigate(link.href));
+        } : undefined}
+      >
+        {t('shared.usages.showAll', { total })}
+      </Link>
+    </>
   );
 }

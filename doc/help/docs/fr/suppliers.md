@@ -99,7 +99,7 @@ La section **Lié à**, sous les notes de l'onglet **Vue d'ensemble**, liste ce 
 - **Applications** : les applications dont il est l'éditeur.
 - **Actifs** : les actifs dont il assure le support (le fournisseur de support de l'actif).
 
-Cliquez sur une ligne pour ouvrir sa fiche. Les éléments désactivés portent la mention **Désactivé** et viennent après les autres. Une liste montre jusqu'à 50 éléments et indique leur nombre total. Vous ne voyez que les listes que vous avez le droit de lire : un utilisateur sans accès aux contrats ne voit pas la liste des contrats. Un fournisseur que rien n'utilise affiche une ligne qui le dit.
+Cliquez sur une ligne pour ouvrir sa fiche. Les éléments désactivés portent la mention **Désactivé** et viennent après les autres. Une liste montre jusqu'à 50 éléments et indique leur nombre total. Au-delà de 50, les lignes budgétaires, les contrats et les applications ont un lien comme **Voir les 57** qui ouvre leur liste filtrée sur ce fournisseur. Vous ne voyez que les listes que vous avez le droit de lire : un utilisateur sans accès aux contrats ne voit pas la liste des contrats. Un fournisseur que rien n'utilise affiche une ligne qui le dit.
 
 Consultez cette section avant de désactiver ou de supprimer un fournisseur.
 
