@@ -308,6 +308,8 @@ describe('PlanSelectionDialog', () => {
       plan_key: 'max',
       subscription_type: 'annual',
       terms_version: '2026-10-12',
+      success_url: `${window.location.origin}/admin/billing`,
+      cancel_url: `${window.location.origin}/admin/billing`,
     }));
   });
 
@@ -430,8 +432,62 @@ describe('PlanSelectionDialog', () => {
         plan_key: 'max',
         subscription_type: 'monthly',
         terms_version: '2026-10-12',
+        success_url: `${window.location.origin}/admin/billing`,
+        cancel_url: `${window.location.origin}/admin/billing`,
       });
       expect(assigned).toBe('');
+    });
+
+    const ANNUAL_TRANSFER = { ...MONTHLY_PLAN, subscription_type: 'annual' as const };
+    const PLANNED_SWITCH = { interval: 'monthly' as const, effective_at: '2027-10-14T10:00:00.000Z' };
+
+    it('sends the customer to the card setup page when the switch needs a card', async () => {
+      (api.post as any).mockResolvedValue({
+        data: { change: { status: 'requires_card', setup_url: 'https://checkout.stripe.test/cs_setup' } },
+      });
+      const onSuccess = vi.fn();
+      renderDialog({ invoiceMissingFields: [], subscription: ANNUAL_TRANSFER, onSuccess });
+      await planLoaded();
+      acceptTerms();
+      fireEvent.click(screen.getByRole('button', { name: 'Change plan (card)' }));
+
+      await vi.waitFor(() => expect(assigned).toBe('https://checkout.stripe.test/cs_setup'));
+      expect(screen.queryByText(/switches to monthly/)).not.toBeInTheDocument();
+    });
+
+    it('explains a planned switch and keeps the current plan without new terms', async () => {
+      (api.post as any).mockResolvedValue({ data: { ...ANNUAL_TRANSFER, scheduled_change: null } });
+      const onSuccess = vi.fn();
+      renderDialog({ invoiceMissingFields: [], subscription: { ...ANNUAL_TRANSFER, scheduled_change: PLANNED_SWITCH }, onSuccess });
+      await planLoaded();
+
+      expect(screen.getByText('Your plan switches to monthly on 14 Oct 2027.')).toBeInTheDocument();
+      // Monthly is already planned: nothing to change.
+      acceptTerms();
+      expect(screen.getByRole('button', { name: 'Change plan (card)' })).toBeDisabled();
+
+      // The current annual plan keeps it: no terms to accept, no plan change.
+      fireEvent.click(screen.getByRole('button', { name: 'Annual' }));
+      expect(screen.queryByRole('checkbox', { name: TERMS })).not.toBeInTheDocument();
+      expect(screen.queryByText('This is your current plan.')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Keep annual' }));
+
+      expect(await screen.findByText('Your plan stays annual.')).toBeInTheDocument();
+      expect(api.post).toHaveBeenCalledTimes(1);
+      expect(api.post).toHaveBeenCalledWith('/billing/scheduled-change/cancel');
+      expect(onSuccess).toHaveBeenCalledTimes(1);
+    });
+
+    it('opens on the interval to confirm, with the card saved notice', async () => {
+      renderDialog({
+        invoiceMissingFields: [],
+        subscription: MONTHLY_PLAN,
+        initialInterval: 'annual',
+        notice: 'Card saved. Confirm the switch.',
+      });
+      await planLoaded();
+      expect(screen.getByText('Card saved. Confirm the switch.')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Annual' })).toHaveAttribute('aria-pressed', 'true');
     });
   });
 });

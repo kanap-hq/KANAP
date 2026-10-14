@@ -42,9 +42,11 @@ type BillingInterval = 'monthly' | 'annual';
 
 /** The outcome of `POST /billing/change-plan`. */
 type PlanChange = {
-  status: 'paid' | 'requires_payment' | 'scheduled';
+  status: 'paid' | 'requires_payment' | 'scheduled' | 'scheduled_change_cancelled' | 'requires_card';
   invoice?: { number: string | null; amount: number | null; currency: string | null; hosted_invoice_url: string | null };
   effective_at?: string;
+  /** requires_card: the Stripe page where the customer saves a card. */
+  setup_url?: string;
 };
 
 /** The running subscription the dialog compares the selection with. */
@@ -56,6 +58,8 @@ type CurrentSubscription = {
   is_subscription_healthy?: boolean;
   plan_name?: string | null;
   subscription_type?: 'monthly' | 'annual' | null;
+  /** A planned switch of interval (annual to monthly at the end of the year). */
+  scheduled_change?: { interval: 'monthly' | 'annual'; effective_at: string } | null;
 };
 
 function formatPrice(cents: number, locale: string, currency = 'EUR'): string {
@@ -76,6 +80,11 @@ function paidMessage(change: PlanChange | undefined, interval: BillingInterval, 
   if (!invoice?.number || invoice.amount == null) return now;
   const amount = formatPrice(invoice.amount, locale, invoice.currency ?? 'EUR');
   return `${now} ${t('planSelection.messages.invoicePaid', { number: invoice.number, amount })}`;
+}
+
+/** "Your plan stays annual." once a planned switch is cancelled. */
+function keptMessage(interval: BillingInterval, t: TFunction): string {
+  return t(interval === 'annual' ? 'planSelection.messages.keptAnnual' : 'planSelection.messages.keptMonthly');
 }
 
 /** Months the annual price saves against twelve monthly payments, when it is a whole number. */
@@ -198,6 +207,10 @@ type PlanSelectionDialogProps = {
   onExited?: () => void;
   /** The current subscription, fresher than the one read at sign-in (billing page data). */
   subscription?: CurrentSubscription | null;
+  /** The interval selected when the dialog opens (monthly otherwise). */
+  initialInterval?: BillingInterval;
+  /** A line shown when the dialog opens (back from the card setup page). */
+  notice?: string | null;
 };
 
 export default function PlanSelectionDialog({
@@ -208,6 +221,8 @@ export default function PlanSelectionDialog({
   onCompleteInvoiceDetails,
   onExited,
   subscription: currentSubscription,
+  initialInterval,
+  notice = null,
 }: PlanSelectionDialogProps) {
   const auth = useAuth();
   const { claims } = auth;
@@ -215,9 +230,9 @@ export default function PlanSelectionDialog({
   const { t } = useTranslation(['admin', 'common']);
   const locale = useLocale();
   const { mode } = useTheme().palette;
-  const [billingCycle, setBillingCycle] = React.useState<BillingInterval>('monthly');
+  const [billingCycle, setBillingCycle] = React.useState<BillingInterval>(initialInterval ?? 'monthly');
   const [actionError, setActionError] = React.useState<string | null>(null);
-  const [actionInfo, setActionInfo] = React.useState<string | null>(null);
+  const [actionInfo, setActionInfo] = React.useState<string | null>(open ? notice : null);
   const [actionLoading, setActionLoading] = React.useState<string | null>(null);
   const [termsAccepted, setTermsAccepted] = React.useState(false);
   // The dialog stays mounted between openings: each opening starts without the outcome of
@@ -227,9 +242,10 @@ export default function PlanSelectionDialog({
     setWasOpen(open);
     if (open) {
       setActionError(null);
-      setActionInfo(null);
+      setActionInfo(notice);
       setActionLoading(null);
       setTermsAccepted(false);
+      if (initialInterval) setBillingCycle(initialInterval);
     }
   }
 
@@ -269,10 +285,27 @@ export default function PlanSelectionDialog({
           plan_key: planKey,
           subscription_type: billingCycle,
           terms_version: plan?.terms?.version,
+          // A switch from bank transfer to card first needs a card: the setup page returns here.
+          success_url: window.location.origin + '/admin/billing',
+          cancel_url: window.location.origin + '/admin/billing',
         });
         const change = res.data?.change;
         // The billing page reloads the subscription and the invoice list.
         onSuccess?.();
+        if (change?.status === 'requires_card') {
+          // Nothing changes until the customer has saved a card on its Stripe page.
+          const url = change.setup_url;
+          if (url) {
+            window.location.href = url;
+          } else {
+            setActionError(t('planSelection.messages.cardSetupUnavailable'));
+          }
+          return;
+        }
+        if (change?.status === 'scheduled_change_cancelled') {
+          setActionInfo(keptMessage(billingCycle, t));
+          return;
+        }
         if (change?.status === 'requires_payment') {
           // The card needs the customer (3-D Secure) or was refused: the plan changes once the
           // invoice is paid on its Stripe page, like a checkout.
@@ -307,6 +340,23 @@ export default function PlanSelectionDialog({
       } else {
         setActionError(t('planSelection.messages.checkoutUrlUnavailable'));
       }
+    } catch (e: any) {
+      setActionError(parseApiError(e, t));
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  /** "Keep annual": cancels the planned switch. Keeps the current commitment: no new terms. */
+  const handleKeepCurrentPlan = async () => {
+    if (!isBillingAdmin) return;
+    setActionError(null);
+    setActionInfo(null);
+    setActionLoading('keep');
+    try {
+      await api.post('/billing/scheduled-change/cancel');
+      onSuccess?.();
+      setActionInfo(keptMessage(billingCycle, t));
     } catch (e: any) {
       setActionError(parseApiError(e, t));
     } finally {
@@ -357,6 +407,18 @@ export default function PlanSelectionDialog({
     && !!plan
     && subscription?.plan_name === plan.display_name
     && subscription?.subscription_type === billingCycle;
+  // A switch of interval planned for the end of the period (annual to monthly).
+  const scheduledChange = hasHealthyStripeSubscription ? subscription?.scheduled_change ?? null : null;
+  // The current plan selected while a switch is planned: the action keeps it.
+  const keepsCurrentPlan = !!scheduledChange && isCurrentPlan;
+  // The interval the planned switch moves to: already planned, nothing to change.
+  const switchAlreadyPlanned = !!scheduledChange
+    && !!plan
+    && subscription?.plan_name === plan.display_name
+    && billingCycle === scheduledChange.interval;
+  const keepLabel = t(billingCycle === 'annual'
+    ? 'billing.subscription.scheduledChange.keepAnnual'
+    : 'billing.subscription.scheduledChange.keepMonthly');
   const cardLabel = hasHealthyStripeSubscription ? t('planSelection.actions.changePlanCard') : t('planSelection.actions.payByCard');
   const bankTransferLabel = hasHealthyStripeSubscription ? t('planSelection.actions.changePlanBankTransfer') : t('planSelection.actions.payByBankTransfer');
 
@@ -386,10 +448,15 @@ export default function PlanSelectionDialog({
       subtitle={subtitle}
       onClose={onClose}
       onExited={onExited}
-      onSave={() => (plan ? handleCardFlow(plan.plan_key) : undefined)}
-      saveLabel={cardLabel}
-      saveDisabled={!plan || !isBillingAdmin || isAnyLoading || cardBlocked || isCurrentPlan || !termsAccepted}
-      saveLoading={cardLoading}
+      onSave={() => {
+        if (!plan) return undefined;
+        return keepsCurrentPlan ? handleKeepCurrentPlan() : handleCardFlow(plan.plan_key);
+      }}
+      saveLabel={keepsCurrentPlan ? keepLabel : cardLabel}
+      saveDisabled={keepsCurrentPlan
+        ? !isBillingAdmin || isAnyLoading
+        : !plan || !isBillingAdmin || isAnyLoading || cardBlocked || isCurrentPlan || switchAlreadyPlanned || !termsAccepted}
+      saveLoading={keepsCurrentPlan ? actionLoading === 'keep' : cardLoading}
       secondaryActions={plan && bankTransferEligible ? (
         <Button
           variant="action"
@@ -472,7 +539,7 @@ export default function PlanSelectionDialog({
             </Box>
           </Box>
 
-          {isCurrentPlan && (
+          {isCurrentPlan && !keepsCurrentPlan && (
             <Typography sx={{ mt: '16px', fontSize: 12, color: 'kanap.text.tertiary' }}>
               {t('planSelection.currentPlan')}
             </Typography>
@@ -502,6 +569,16 @@ export default function PlanSelectionDialog({
         </Box>
       )}
 
+      {scheduledChange && !actionInfo && (
+        <Box sx={statusLineSx}>
+          <StatusDot color={getDotColor('info', mode)} sx={statusDotSx} />
+          <span>
+            {t(scheduledChange.interval === 'monthly' ? 'planSelection.messages.switchToMonthly' : 'planSelection.messages.switchToAnnual', {
+              date: formatShortDate(scheduledChange.effective_at, locale, { year: 'always' }),
+            })}
+          </span>
+        </Box>
+      )}
       {!!actionInfo && (
         <Box role="status" sx={statusLineSx}>
           <StatusDot color={getDotColor('success', mode)} sx={statusDotSx} />
@@ -514,7 +591,7 @@ export default function PlanSelectionDialog({
         </Typography>
       )}
 
-      {plan && (
+      {plan && !keepsCurrentPlan && (
         <FormControlLabel
           sx={termsLineSx}
           control={(

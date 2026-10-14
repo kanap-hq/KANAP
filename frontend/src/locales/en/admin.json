@@ -434,6 +434,7 @@
       "title": "Invoice history"
     },
     "messages": {
+      "keepFailed": "Failed to cancel the planned switch.",
       "loadFailed": "Failed to load billing details.",
       "portalFailed": "Failed to open the billing portal.",
       "portalUnavailable": "Billing portal is unavailable.",
@@ -465,6 +466,12 @@
       "unpaid": "Unpaid"
     },
     "subscription": {
+      "scheduledChange": {
+        "annual": "Switches to annual on {{date}}.",
+        "keepAnnual": "Keep annual",
+        "keepMonthly": "Keep monthly",
+        "monthly": "Switches to monthly on {{date}}."
+      },
       "title": "Subscription",
       "values": {
         "amountPerMonth": "{{amount}} / month",
@@ -744,14 +751,19 @@
       "vatNumber": "VAT number"
     },
     "messages": {
+      "cardSaved": "Card saved. Confirm the switch.",
+      "cardSetupUnavailable": "The card form is unavailable. Try again later.",
       "checkoutUrlUnavailable": "Checkout URL is unavailable.",
       "invoiceCreated": "Invoice created.",
       "invoicePaid": "Invoice {{number}}, {{amount}}, paid.",
+      "keptAnnual": "Your plan stays annual.",
+      "keptMonthly": "Your plan stays monthly.",
       "loadFailed": "Failed to load plans.",
       "nowAnnual": "Your plan is now annual.",
       "nowMonthly": "Your plan is now monthly.",
       "paymentRequired": "The plan changes once its invoice is paid.",
       "requestFailed": "Request failed.",
+      "switchToAnnual": "Your plan switches to annual on {{date}}.",
       "switchToMonthly": "Your plan switches to monthly on {{date}}."
     },
     "monthlyEquivalent": "{{amount}} per month, billed annually",

@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
 import api from '../../api';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { useLocale } from '../../i18n/useLocale';
 import {
   BillingContact,
@@ -200,7 +201,27 @@ function subscriptionLines(subscription: BillingSubscription | null | undefined,
   return { plan, details };
 }
 
+type BillingInterval = 'monthly' | 'annual';
+
+/** "Switches to monthly on 14 Oct 2027." for a live subscription with a planned switch, else null. */
+function scheduledChangeLine(subscription: BillingSubscription | null | undefined, t: Translate, locale: string) {
+  const change = isLiveSubscription(subscription) ? subscription?.scheduled_change ?? null : null;
+  if (!change) return null;
+  const toMonthly = change.interval === 'monthly';
+  return {
+    text: t(toMonthly ? 'billing.subscription.scheduledChange.monthly' : 'billing.subscription.scheduledChange.annual', {
+      date: formatShortDate(change.effective_at, locale, { year: 'always' }),
+    }),
+    keepLabel: t(toMonthly ? 'billing.subscription.scheduledChange.keepAnnual' : 'billing.subscription.scheduledChange.keepMonthly'),
+  };
+}
+
 const sectionTitleSx = { fontSize: 16, fontWeight: 500, color: 'kanap.text.primary', lineHeight: 1.4 } as const;
+const keepActionSx = {
+  ...tealLinkSx,
+  fontSize: 13,
+  '&:disabled': { color: 'kanap.text.tertiary', cursor: 'default', textDecoration: 'none' },
+} as const;
 const sectionHeadSx = { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 2, mb: 1.5 } as const;
 const saveStatusSx = { fontSize: 12, color: 'kanap.text.tertiary' } as const;
 const twoColumnsSx = {
@@ -427,6 +448,11 @@ export default function BillingCenter() {
   const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({});
   const [savesInFlight, setSavesInFlight] = React.useState(0);
   const [justSaved, setJustSaved] = React.useState(false);
+  const [keeping, setKeeping] = React.useState(false);
+  const [keepError, setKeepError] = React.useState<string | null>(null);
+  // Back from the card setup page: the plan dialog reopens on the interval to confirm.
+  const [confirmInterval, setConfirmInterval] = React.useState<BillingInterval | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   const savedTimerRef = React.useRef<number | null>(null);
   // Saves run one after the other, so an answer never overwrites a newer one.
   const chainRef = React.useRef<Promise<unknown>>(Promise.resolve());
@@ -449,6 +475,7 @@ export default function BillingCenter() {
   const statusMeta = getStatusMeta(subscriptionSummary, t);
   const statusColor = getDotColor(statusMeta.color ?? 'default', mode);
   const { plan: planLine, details: detailParts } = subscriptionLines(subscriptionSummary, t, locale);
+  const switchLine = scheduledChangeLine(subscriptionSummary, t, locale);
   const isHealthy = subscription?.is_subscription_healthy;
   const planActionLabel = hasSubscription ? t('billing.actions.changePlan') : t('billing.actions.choosePlan');
   const invoices = profileQuery.data?.invoices ?? [];
@@ -576,6 +603,37 @@ export default function BillingCenter() {
     }
   };
 
+  /** "Keep annual": cancels the planned switch; the answer is the subscription summary. */
+  const keepCurrentPlan = async () => {
+    setKeepError(null);
+    setKeeping(true);
+    try {
+      const res = await api.post<BillingSubscription>('/billing/scheduled-change/cancel');
+      queryClient.setQueryData<BillingProfileResponse | undefined>(['billing-profile'], (prev) => (
+        prev ? { ...prev, subscription: res.data } : prev
+      ));
+    } catch (e: any) {
+      setKeepError(getApiErrorMessage(e, t, t('billing.messages.keepFailed')));
+    } finally {
+      setKeeping(false);
+    }
+  };
+
+  // The card setup page returns with `card_saved=<interval>`: confirm the switch in the plan dialog.
+  const cardSaved = searchParams.get('card_saved');
+  React.useEffect(() => {
+    if (cardSaved !== 'monthly' && cardSaved !== 'annual') return;
+    if (canManage) {
+      setConfirmInterval(cardSaved);
+      setPlanDialogOpen(true);
+    }
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('card_saved');
+      return next;
+    }, { replace: true });
+  }, [cardSaved, canManage, setSearchParams]);
+
   // Auto-open plan dialog when subscription is unhealthy
   const isHealthyRef = React.useRef(isHealthy);
   React.useEffect(() => {
@@ -615,9 +673,10 @@ export default function BillingCenter() {
     <>
       <PageHeader title={t('billing.title')} />
       <Stack spacing={4} sx={{ maxWidth: 960 }}>
-        {(!!portalError || profileQuery.isError) && (
+        {(!!portalError || !!keepError || profileQuery.isError) && (
           <Stack spacing={1}>
             {!!portalError && <Alert severity="error">{portalError}</Alert>}
+            {!!keepError && <Alert severity="error">{keepError}</Alert>}
             {profileQuery.isError && (
               <Alert severity="error">{getApiErrorMessage(profileQuery.error, t, t('billing.messages.loadFailed'))}</Alert>
             )}
@@ -642,6 +701,19 @@ export default function BillingCenter() {
                   <Box component="span" key={part}>{`· ${part}`}</Box>
                 ))}
               </Box>
+              {switchLine && (
+                <Typography component="div" sx={{ fontSize: 13, lineHeight: 1.4, color: 'kanap.text.secondary' }}>
+                  {switchLine.text}
+                  {canManage && (
+                    <>
+                      {' '}
+                      <Box component="button" type="button" onClick={keepCurrentPlan} disabled={keeping} sx={keepActionSx}>
+                        {switchLine.keepLabel}
+                      </Box>
+                    </>
+                  )}
+                </Typography>
+              )}
             </Box>
             <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
               <Button
@@ -709,7 +781,12 @@ export default function BillingCenter() {
 
       <PlanSelectionDialog
         open={planDialogOpen}
-        onClose={() => setPlanDialogOpen(false)}
+        onClose={() => {
+          setPlanDialogOpen(false);
+          setConfirmInterval(null);
+        }}
+        initialInterval={confirmInterval ?? undefined}
+        notice={confirmInterval ? t('planSelection.messages.cardSaved') : null}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['billing-profile'] });
         }}

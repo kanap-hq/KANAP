@@ -50,6 +50,15 @@ export class ChangePlanDto {
   @IsOptional()
   @IsString()
   terms_version?: string;
+
+  /** Where the card setup page returns (`requires_card`), as for `/billing/checkout`. */
+  @IsOptional()
+  @IsString()
+  success_url?: string;
+
+  @IsOptional()
+  @IsString()
+  cancel_url?: string;
 }
 
 export class RequestInvoiceDto {
@@ -179,7 +188,23 @@ export class BillingController {
       req.user?.sub ?? null,
       mg,
       body.terms_version ?? null,
+      { successUrl: body.success_url ?? null, cancelUrl: body.cancel_url ?? null },
     );
+  }
+
+  /** "Keep annual": cancels a planned switch to monthly; returns the subscription summary. */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('billing', 'admin')
+  @LongRunningRequest(OUTSIDE_WORK_TIMEOUTS)
+  @Post('scheduled-change/cancel')
+  async cancelScheduledChange(@Req() req: any) {
+    if (!Features.STRIPE_BILLING) throwFeatureDisabled('billing');
+    const tenantId = req?.tenant?.id as string | undefined;
+    if (!tenantId) {
+      throw new BadRequestException('Tenant context not resolved');
+    }
+    const mg = req?.queryRunner?.manager as import('typeorm').EntityManager | undefined;
+    return this.billing.cancelScheduledChange({ tenantId, userId: req.user?.sub ?? null, manager: mg });
   }
 
   @UseGuards(PermissionGuard)

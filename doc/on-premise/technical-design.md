@@ -345,6 +345,7 @@ Optional in both modes: true when `ENTRA_CLIENT_ID` is configured. Per-tenant ac
 | `billing.controller.ts` | 142 | `GET /billing/plans` | 403 `FEATURE_DISABLED` |
 | `billing.controller.ts` | 148 | `GET /billing/subscription` | 403 `FEATURE_DISABLED` |
 | `billing.controller.ts` | 156 | `POST /billing/change-plan` | 403 `FEATURE_DISABLED` |
+| `billing.controller.ts` | 201 | `POST /billing/scheduled-change/cancel` | 403 `FEATURE_DISABLED` |
 | `billing.controller.ts` | 169 | `POST /billing/request-invoice` | 403 `FEATURE_DISABLED` |
 | `billing.controller.ts` | 182 | `GET /billing/profile` | 403 `FEATURE_DISABLED` |
 | `billing.controller.ts` | 197 | `POST /billing/portal` | 403 `FEATURE_DISABLED` |
