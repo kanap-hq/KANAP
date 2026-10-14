@@ -137,7 +137,7 @@
       },
       "builtinUsage": {
         "cta": "Verwenden Sie Ihre eigenen API-Schlüssel für unbegrenzte Nutzung.",
-        "description": "Die integrierte Nutzung wird für diesen Mandanten von Chat- und MCP-Anfragen gemeinsam genutzt.",
+        "description": "Die integrierte Nutzung wird für diesen Mandanten von Chat und Agenten gemeinsam genutzt.",
         "loadFailed": "Die integrierte Nutzung konnte nicht geladen werden.",
         "reset": "Wird am {{date}} zurückgesetzt.",
         "summary": "{{count}} / {{limit}} Nachrichten in diesem Monat verwendet",

@@ -20,18 +20,26 @@ export class AiMcpRateLimiter implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  assertAllowed(tenantId: string, apiKeyId: string | null | undefined, limitPerMinute: number): void {
+  // `cost` is the number of requests charged at once (the messages of a JSON-RPC batch).
+  assertAllowed(
+    tenantId: string,
+    apiKeyId: string | null | undefined,
+    limitPerMinute: number,
+    cost = 1,
+  ): void {
     const key = `${tenantId}:${apiKeyId || 'anonymous'}`;
     const now = Date.now();
     const events = this.prune(this.windows.get(key) ?? [], now - WINDOW_MS);
-    if (events.length >= limitPerMinute) {
+    if (events.length + cost > limitPerMinute) {
       this.windows.set(key, events);
       throw new HttpException({
         code: 'MCP_RATE_LIMITED',
         message: 'MCP API key rate limit exceeded.',
       }, HttpStatus.TOO_MANY_REQUESTS);
     }
-    events.push(now);
+    for (let i = 0; i < cost; i += 1) {
+      events.push(now);
+    }
     this.windows.set(key, events);
   }
 
