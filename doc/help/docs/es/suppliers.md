@@ -59,6 +59,7 @@ La página tiene dos pestañas: **Vista general** y **Contactos**.
 **Encabezado**, bajo el nombre:
 - **Estado**: **Activado** o **Desactivado**. Haga clic para cambiarlo. Elegir **Desactivado** fija el fin de validez en hoy.
 - **Contactos**: cuántos contactos están vinculados al proveedor. Haga clic para abrir la pestaña **Contactos**.
+- **Usado en**: cuántas líneas presupuestarias, contratos, aplicaciones y activos usan el proveedor. Haga clic para ir a la sección **Usado en** de la pestaña **Vista general**.
 
 **Propiedades** (el panel de la derecha, que se abre con su pestaña o la tecla `P`):
 - **ID de proveedor ERP**: el ID del proveedor en su sistema ERP o de compras. Se guarda al salir del campo o al pulsar Intro.
@@ -88,6 +89,19 @@ La pestaña **Contactos** lista los contactos vinculados a este proveedor por ti
 - El botón de papelera elimina el vínculo. El contacto sigue en sus contactos.
 
 **Consejo**: mantenga al menos un contacto por proveedor para que la comunicación con él esté siempre a un clic.
+
+### Usado en
+
+La sección **Usado en**, bajo las notas de la pestaña **Vista general**, lista lo que hace referencia a este proveedor, una lista por tipo, cada una con su número:
+
+- **Líneas presupuestarias**: las líneas OPEX y CAPEX cuyo proveedor es, con su referencia (`BL-12`) y su tipo.
+- **Contratos**: los contratos con este proveedor.
+- **Aplicaciones**: las aplicaciones de las que es el fabricante.
+- **Activos**: los activos a los que da soporte (el proveedor de soporte del activo).
+
+Haga clic en una fila para abrir su página. Los elementos desactivados muestran **Desactivado** y aparecen después de los demás. Una lista muestra hasta 50 elementos e indica cuántos hay en total. Solo ve las listas que tiene permiso para leer: un usuario sin acceso a los contratos no ve la lista de contratos. Un proveedor que nada usa muestra una línea que lo indica.
+
+Consulte esta sección antes de desactivar o eliminar un proveedor.
 
 ### Crear un proveedor
 

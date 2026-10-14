@@ -59,6 +59,7 @@ Click any row to open the contact page. Every change saves on its own: there is 
 - **Supplier**: The vendor this contact works for, as a link to its page. A contact without a supplier shows **No supplier**: click it to open the properties and choose one.
 - **Contact type**: The contact's role at the supplier: Commercial, Technical, Support, or Other. Click it to choose another. It appears once the contact has a supplier.
 - **Status**: **Active** or **Inactive**. Click it to change it.
+- **Used by**: How many suppliers, budget lines, contracts and other items the contact is linked to. Click it to scroll to the **Used by** section.
 
 **Properties** (the panel on the right, opened with its tab or the `P` key):
 - **Supplier**: Choose the vendor from the list. A contact always has a contact type once it has a supplier: choosing a supplier for a contact without a type gives it **Commercial**, which you can change at once. Clearing the supplier clears the contact type too.
@@ -74,6 +75,12 @@ Text fields save when you leave them or press Enter, lists save as soon as you c
 
 Press **Escape** or click the close button to go back to the list.
 
+### Used by
+
+The **Used by** section, under the notes, lists everything the contact is linked to, one list per type, each with its count: suppliers, budget lines (OPEX and CAPEX, with their `BL-` reference), contracts, applications, assets, locations, projects (`PRJ-`) and requests (`REQ-`). Each row shows the contact's role there: the contact type for suppliers, budget lines and contracts, the role typed on the application, asset or location.
+
+Click a row to open that page. A list shows up to 50 items and says how many there are in all. You only see the lists you are allowed to read. A contact linked to nothing shows one line that says so.
+
 ### Creating a contact
 
 Click **New** in the list. Fill in the email (required) and the other fields, then click **Create**. Choosing a supplier sets the contact type to **Commercial**, which you can change before creating. You return to the list once the contact is created.
@@ -82,14 +89,14 @@ Click **New** in the list. Fill in the email (required) and the other fields, th
 
 ## Where contacts are used
 
-Contacts appear in several places throughout KANAP.
+Contacts appear in several places throughout KANAP. The **Used by** section of the contact page lists them all.
 
 ### Supplier contacts
 
 Each supplier has a **Contacts** tab showing all contacts linked to that vendor. You can create a new contact directly from the supplier workspace:
 
 1. Open the supplier workspace and go to the **Contacts** tab.
-2. Click **Create** next to a contact role.
+2. Click **New contact** next to a contact type.
 3. Fill in the contact details: the supplier and contact type are pre-filled.
 4. Click **Create**: you return to the supplier's **Contacts** tab.
 
