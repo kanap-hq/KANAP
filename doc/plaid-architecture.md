@@ -321,11 +321,15 @@ or the tool descriptions.
    ```
 
 `KANAP_MCP_URL` (default `http://fromage.lvh.me/api/ai/mcp`), `KANAP_TENANT`
-(default `fromage`), `DATABASE_URL`, `EVAL_ONLY` (question ids), `EVAL_MODEL`
-and `EVAL_CONCURRENCY` change the run. Each question ends `ok` when the answer
-names every value its facts require, `MISS` when one is missing, and `check`
-when the facts need a human reading (a tie, a breakdown). The Markdown report
-goes to the temporary directory, or to `EVAL_REPORT`.
+(default `fromage`), `DATABASE_URL`, `EVAL_ONLY` (question ids), `EVAL_MODEL`,
+`EVAL_CONCURRENCY` and `EVAL_PAUSE` (seconds between questions) change the run.
+Each question ends `ok` when the answer names every value its facts require,
+`MISS` when one is missing, `check` when the facts need a human reading (a tie,
+a breakdown), and `limited` when a rate limit answered instead of the tools:
+the key's (60 MCP requests a minute), or the built-in model's per-user limit,
+which MCP calls draw on. Questions run one at a time by default for that
+reason. The Markdown report goes to the temporary directory, or to
+`EVAL_REPORT`.
 
 ## Agentic Control Plane
 

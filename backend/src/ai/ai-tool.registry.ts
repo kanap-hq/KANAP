@@ -316,7 +316,7 @@ export class AiToolRegistry {
         {
           name: 'query_entities',
           category: 'authoritative',
-          description: 'Query one readable entity family with server-side filters, sort, pagination, and exact totals. Each item carries its created_at and updated_at. If `filters_ignored` is non-empty, the query was not fully honored and must be repaired before answering. `sort` in the result is the order the items are in; if `sort_ignored` is non-empty, the requested sort field is not supported and the items are in the default order: pick a field from `sortable_fields` and query again before answering any question about order (latest, oldest, largest, first).',
+          description: 'Query one readable entity family with server-side filters, sort, pagination, and exact totals. Each item carries its created_at and updated_at. If `filters_ignored` is non-empty, the query was not fully honored and must be repaired before answering. `sort` in the result is the order the items are in; if `sort_ignored` is non-empty, the requested sort field is not supported and the items are in the default order: pick a field from `sortable_fields` and query again before answering any question about order (latest, oldest, largest, first). Items with the same sort value come in no particular order: when the first items share it (for example the same created_at), say they tie instead of naming one.',
           inputSchema: QueryEntitiesInputSchema,
           inputSummary: {
             entity_type: `One of ${QUERY_ENTITY_TYPE_SUMMARY}.`,

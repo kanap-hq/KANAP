@@ -11,11 +11,13 @@
 //   DATABASE_URL      default postgres://app:app@localhost:5432/appdb
 //   EVAL_ONLY         comma-separated question ids to run
 //   EVAL_MODEL        model passed to claude (default: claude's own)
-//   EVAL_CONCURRENCY  questions asked at once, default 4
+//   EVAL_PAUSE        seconds between two questions, default 0
+//   EVAL_CONCURRENCY  questions asked at once, default 1 (a key allows 60 MCP requests a minute,
+//                     and each claude session sends several)
 //   EVAL_REPORT       path of the Markdown report, default <tmp>/kanap-mcp-eval-<time>.md
 //
 // A question passes (`ok`) when the answer contains every value its facts list under
-// `mustInclude`; `check` means read it yourself. The facts come from SQL on the tenant
+// `mustInclude`; `check` means read it yourself; `limited` means the key's rate limit answered. The facts come from SQL on the tenant
 // (RLS: app.current_tenant set), independently of the tool layer under test.
 
 import { spawn } from 'node:child_process';
@@ -29,7 +31,8 @@ const URL = process.env.KANAP_MCP_URL || 'http://fromage.lvh.me/api/ai/mcp';
 const TENANT = process.env.KANAP_TENANT || 'fromage';
 const DATABASE_URL = process.env.DATABASE_URL || 'postgres://app:app@localhost:5432/appdb';
 const ONLY = process.env.EVAL_ONLY ? new Set(process.env.EVAL_ONLY.split(',').map((id) => id.trim())) : null;
-const CONCURRENCY = Math.max(1, Number(process.env.EVAL_CONCURRENCY) || 4);
+const PAUSE = Math.max(0, Number(process.env.EVAL_PAUSE) || 0);
+const CONCURRENCY = Math.max(1, Number(process.env.EVAL_CONCURRENCY) || 1);
 const REPORT = process.env.EVAL_REPORT || path.join(os.tmpdir(), `kanap-mcp-eval-${new Date().toISOString().replace(/[:.]/g, '-')}.md`);
 
 if (!KEY) {
@@ -276,6 +279,9 @@ function ask(question, mcpConfigPath) {
 
 function verdict(facts, result) {
   if (result.error) return 'error';
+  // A rate limit (the key's, or the built-in model budget MCP calls draw on) answered, or the
+  // session could not connect to the server: not the tools. Ask that question again later.
+  if (/MCP_RATE_LIMITED|rate limit exceeded|no KANAP MCP tools are connected/i.test(result.answer)) return 'limited';
   if (!facts.mustInclude?.length) return 'check';
   const answer = result.answer.toLowerCase();
   return facts.mustInclude.every((value) => answer.includes(String(value).toLowerCase())) ? 'ok' : 'MISS';
@@ -297,6 +303,7 @@ async function main() {
     const worker = async () => {
       while (next < questions.length) {
         const question = questions[next++];
+        if (PAUSE && next > 1) await new Promise((resolve) => setTimeout(resolve, PAUSE * 1000));
         results[question.id] = await ask(question, mcpConfigPath);
         const v = verdict(facts[question.id], results[question.id]);
         console.log(`[${v.padEnd(5)}] ${question.id} (${results[question.id].seconds}s, ${results[question.id].turns ?? '?'} turns)`);
