@@ -118,8 +118,8 @@ Plaid can currently read these entity families:
 `accounts`, `analytics_categories`, `applications`, `assets`,
 `business_processes`, `capex_items`, `chart_of_accounts`, `companies`,
 `connections`, `contacts`, `contracts`, `departments`, `documents`,
-`interfaces`, `locations`, `projects`, `requests`, `spend_items`, `suppliers`,
-`tasks`, and `users`.
+`incidents`, `interfaces`, `locations`, `projects`, `requests`, `spend_items`,
+`suppliers`, `tasks`, and `users`.
 
 The core read tools are:
 
@@ -163,6 +163,51 @@ from most to least severe. It is authoritative for labels and ranks;
 Application queries can filter, sort, group, aggregate, and count business
 level/rank, cyber level/rank, data class, recovery wave/order, RTO, RPO, and
 review state.
+
+### Query contract
+
+`query_entities` and `aggregate_entities` translate the model's fields through
+one registry per family (`backend/src/ai/query/registries/`) and call the
+family's list service, the one behind its grid. A registry advertises its filter
+fields (`fields`) and its sort fields (`sortFields`, which also holds `label`,
+`created_at` and `updated_at` on every family). `describe_entity_filters`
+returns both, with `sort_fields` and `default_sort`.
+
+Nothing the model asks for is dropped silently:
+
+- a filter field the registry does not know, or a value it cannot express,
+  is named in `filters_ignored`, and the query returns no items
+  (`status: invalid_filter`);
+- a sort field the registry does not know is named in `sort_ignored`; the
+  items come in the default order, `sort` says which, `sortable_fields` lists
+  the fields the family takes, and `complete` is false;
+- every result carries `sort`, the order of its items.
+
+Plaid chat attaches a blocking validation to either case
+(`ai-tool-result-validation.util.ts`); MCP clients read the fields themselves,
+as the tool descriptions tell them.
+
+A list service that does not know a column falls back to its own default
+order. `ai-query-registry-contract.integration.spec.ts` keeps registries and
+list services in step: for every family it runs each advertised sort (asc and
+desc) and each filter on a seeded tenant, records the SQL each call sends, and
+fails when a sort sends the same statements in both directions or the same as
+an unknown column, when a filter sends the same statements as no filter, or
+when either fails. It also checks the created_at order on seeded rows, the
+`sort_ignored` result and the page sizes. A field that cannot be filtered or
+sorted in SQL (a value computed per page, such as an application's derived user
+count) stays out of the registry and only appears in the items' metadata.
+
+Each item carries `created_at` and `updated_at`. Its `summary` is clipped to 300
+characters; `get_entity_detail` has the full text.
+
+Page size: 25 items by default, at most 50, 30 for `applications`, 15 for
+`spend_items` and `capex_items` (`aiQueryLimit` in `ai-query.executor.ts`). A
+larger `limit` is reduced and the result's `limit` is the one applied. The
+values keep a full page under the MCP response cap (64,000 characters,
+`ai-mcp.controller.ts`): on the demo tenant an OPEX or CAPEX line takes about
+2,800 characters (its yearly amounts), an application about 1,500, any other
+row under 900.
 
 ## Write Model
 
@@ -257,6 +302,30 @@ Current MCP behavior is deliberately read-only:
 
 Read-write MCP is roadmap. It needs an explicit approval protocol rather than
 reusing chat approval cards.
+
+### Answer evaluation
+
+`backend/scripts/ai-mcp-eval.mjs` asks about twenty realistic questions through
+`claude -p` against an MCP endpoint and prints each answer next to the facts it
+reads from the database with SQL, outside the tool layer. It calls a model, so
+it does not run in CI. Run it after a change to the registries, the executor
+or the tool descriptions.
+
+1. Start the local stack and open Plaid settings on the demo tenant
+   (`http://fromage.lvh.me`). Turn on **Enable MCP** and create an MCP key.
+2. From `backend/`, with the key in the environment (never in a file of the
+   repository):
+
+   ```bash
+   KANAP_MCP_KEY=kanap_mcp_... node scripts/ai-mcp-eval.mjs
+   ```
+
+`KANAP_MCP_URL` (default `http://fromage.lvh.me/api/ai/mcp`), `KANAP_TENANT`
+(default `fromage`), `DATABASE_URL`, `EVAL_ONLY` (question ids), `EVAL_MODEL`
+and `EVAL_CONCURRENCY` change the run. Each question ends `ok` when the answer
+names every value its facts require, `MISS` when one is missing, and `check`
+when the facts need a human reading (a tie, a breakdown). The Markdown report
+goes to the temporary directory, or to `EVAL_REPORT`.
 
 ## Agentic Control Plane
 
