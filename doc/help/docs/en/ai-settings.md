@@ -1,6 +1,6 @@
 # Plaid Settings
 
-This page controls the [Plaid chat assistant](ai-assistant.md): which AI model it talks to, whether chat and the MCP API are switched on, how long conversations are kept, and which keys let external MCP clients reach your data. It is a chat-focused screen. The models themselves — providers, keys, prices — are defined once on the [AI models](ai-models.md) page, and each [AI agent](agents-workspace.md) picks its own model on its Settings tab, so nothing you change here alters how the agents run.
+This page controls the [Plaid chat assistant](ai-assistant.md): which AI model it talks to, whether chat and the MCP API are switched on, how long conversations are kept, and which keys and connections let external MCP clients reach your data. It is a chat-focused screen. The models themselves (providers, keys, prices) are defined once on the [AI models](ai-models.md) page, and each [AI agent](agents-workspace.md) picks its own model on its Settings tab, so nothing you change here alters how the agents run.
 
 ## Where to find it
 
@@ -83,40 +83,105 @@ Changes in **Provider**, **Features**, **Retention** *and* the **Key max lifetim
 
 ---
 
-## MCP API keys
+## MCP keys and connections
 
-The **MCP API keys** section mints long-lived keys so external assistants and IDEs can talk to KANAP through the Model Context Protocol, using the same data Plaid sees.
+External assistants and IDEs reach KANAP through the Model Context Protocol (MCP), with the same data Plaid sees. They connect in one of two ways:
 
-The card shows a **Create key** button, the **Server address** that clients connect to (with a copy button), the **Key max lifetime (days)** cap, and a table of existing keys with **Label**, **Prefix**, **Created**, **Expires**, **Last used**, and **Status** (**Active** or **Revoked**).
+- **Connection**: Claude, Claude Desktop and Claude Code sign in to KANAP with the user's own account. Nobody creates or copies a key. See [Connecting an MCP client](#connecting-an-mcp-client).
+- **API key**: a long-lived key for Cursor, scripts and other MCP clients.
+
+The **MCP keys and connections** card shows a **Create key** button, the **Server address** that clients connect to (with a copy button), the **Key max lifetime (days)** cap, and a table with **Label**, **Type**, **Prefix**, **Created**, **Expires**, **Last used** and **Status** (**Active** or **Revoked**).
+
+The **Type** column says **API key** or **Connection**. A connection row shows the name of the application and the host it returns to, for example *Claude · claude.ai*. Connections have no prefix.
 
 ### Creating a key
 
 1. Click **Create key**.
-2. Enter a descriptive **Label** (for example, "Desktop MCP client").
+2. Enter a descriptive **Label** (for example, "Cursor on my laptop").
 3. Click **Create**. KANAP generates a one-time secret.
-4. Copy the secret immediately — it is shown once and cannot be retrieved later.
-5. Copy the **Claude Code command** shown under the key if you use Claude Code. It already contains the server address and the key.
+4. Copy the secret immediately. It is shown once and cannot be retrieved later.
+5. Copy the **Claude Code command** shown under the key if you use Claude Code with a key. It already contains the server address and the key.
 
-The **Key max lifetime (days)** field caps how long any newly issued key can live, regardless of what the request asks for. Leave it empty for no expiration limit. Note that this one field belongs to the settings above rather than to this card: it is written by the **Save settings** button, not by creating a key.
+The **Key max lifetime (days)** field caps how long any newly issued key can live, regardless of what the request asks for. It also caps how long a connection lasts. Leave it empty for no expiration limit. This field belongs to the settings above rather than to this card: it is written by the **Save settings** button, not by creating a key.
 
-### Revoking a key
+### Revoking a key or a connection
 
-Click the trash icon on any active row to revoke the key. Revoked keys stay in the table for audit purposes but can no longer authenticate.
+Click the trash icon on any active row. A revoked key stops working at once. A revoked connection cuts the application off at once, and the user has to connect it again. Revoked rows stay in the table for audit purposes.
+
+Users can also disconnect their own applications on their [Connected apps](connected-apps.md) tab.
+
+### Who can connect
+
+- **Enable MCP** must be on (see **Features** above).
+- The user needs the **AI MCP User** role, or any role that gives read access to MCP.
+- Access is read only. A client sees exactly what the user sees in KANAP, and nothing more. For a key, that is the person who created it: create keys from an account whose access matches what the client should read.
+- Connections and keys share the same rate limits, the same audit trail and, on the KANAP included model, the same monthly allowance.
 
 ### Connecting an MCP client
 
-An MCP client needs two things: the server address and a key.
+Every client needs the **Server address**: your KANAP address followed by `/api/ai/mcp`, for example `https://acme.kanap.net/api/ai/mcp`. The **MCP keys and connections** card shows it for your organization.
 
-- **Server address**: your KANAP address followed by `/api/ai/mcp`, for example `https://acme.kanap.net/api/ai/mcp`. The **MCP API keys** card shows it for your organization.
-- **Key**: sent with every request in the header `Authorization: Bearer kanap_mcp_...`. Clients that cannot set this header can use `X-API-Key: kanap_mcp_...` instead.
+#### Claude and Claude Desktop
 
-**Enable MCP** must be on (see **Features** above), and the key must be active and not expired.
+1. In Claude, open **Settings > Connectors** and click **Add custom connector**.
+2. Paste the server address and confirm.
+3. Claude opens the KANAP sign-in page. Sign in with your password or with Microsoft.
+4. KANAP shows *Claude wants to read your KANAP data*. The screen lists what Claude can do (read what you can see, within your own access rights), the host it returns to, and the account and workspace you are signed in with. If the account is not yours, click **Not you?** to sign in with another one.
+5. Click **Allow**. Claude is connected. **Refuse** closes the request and nothing is connected.
 
-Every result respects the permissions of the person who created the key. A client sees exactly what that person sees in KANAP, and nothing more. Create keys from an account whose access matches what the client should read.
+Claude Desktop uses the same connectors as claude.ai: add the connector in either one.
+
+#### Claude Team and Enterprise
+
+An organization Owner adds the custom connector once, with the server address, for the whole Claude organization. Each member then clicks **Connect** on the connector and signs in with their own KANAP account. Every member sees only their own KANAP data.
+
+#### Claude Code
+
+Add the server without a key:
+
+```bash
+claude mcp add --transport http kanap https://acme.kanap.net/api/ai/mcp
+```
+
+Then run `claude mcp login kanap`, or just use the server: Claude Code opens your browser on the KANAP sign-in page, then on the same screen as above.
+
+#### Remember this application
+
+The **Remember this application** box is ticked by default. When it stays ticked, the next connection of the same application by the same user is quicker:
+
+- Claude Code, which returns to your own computer, is approved without any screen.
+- Claude and Claude Desktop show a short screen with a single **Continue** button.
+
+Untick the box to see the full screen every time. Disconnecting the application forgets the choice.
+
+A connection stays signed in by itself for up to 90 days, or less when **Key max lifetime (days)** is shorter. After that, the user connects again.
+
+#### Cursor, scripts and other clients
+
+These clients use an API key (see [Creating a key](#creating-a-key)). The key goes in the header `Authorization: Bearer kanap_mcp_...` of every request. Clients that cannot set this header can use `X-API-Key: kanap_mcp_...` instead. The key must be active and not expired.
+
+In Cursor, add a remote (HTTP) server in `mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "kanap": {
+      "url": "https://acme.kanap.net/api/ai/mcp",
+      "headers": { "Authorization": "Bearer kanap_mcp_..." }
+    }
+  }
+}
+```
+
+Claude Code also accepts a key, for example on a machine with no browser:
+
+```bash
+claude mcp add --transport http kanap https://acme.kanap.net/api/ai/mcp --header "Authorization: Bearer kanap_mcp_..."
+```
 
 #### Available tools
 
-The MCP server is read-only. A client can search and read your data but cannot change anything.
+The MCP server is read only. A client can search and read your data but cannot change anything.
 
 | Tool | What it does |
 |---|---|
@@ -132,47 +197,6 @@ The MCP server is read-only. A client can search and read your data but cannot c
 | `get_document` | Reads one knowledge document |
 | `web_search` | Searches the web, when web search is switched on for your organization |
 
-#### Client examples
-
-**Claude Code.** Run the command shown when you create the key, or write it yourself:
-
-```bash
-claude mcp add --transport http kanap https://acme.kanap.net/api/ai/mcp --header "Authorization: Bearer kanap_mcp_..."
-```
-
-**Cursor and other clients that accept headers.** Add a remote (HTTP) server with the server address and the `Authorization` header. In Cursor, the `mcp.json` entry looks like this:
-
-```json
-{
-  "mcpServers": {
-    "kanap": {
-      "url": "https://acme.kanap.net/api/ai/mcp",
-      "headers": { "Authorization": "Bearer kanap_mcp_..." }
-    }
-  }
-}
-```
-
-**Claude Desktop and claude.ai.** Their custom connectors sign in with OAuth, which KANAP does not offer yet. Claude Desktop can still reach KANAP through the `mcp-remote` bridge, which runs on your computer and adds the header. In `claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "kanap": {
-      "command": "npx",
-      "args": [
-        "mcp-remote",
-        "https://acme.kanap.net/api/ai/mcp",
-        "--header",
-        "Authorization:${KANAP_AUTH}"
-      ],
-      "env": { "KANAP_AUTH": "Bearer kanap_mcp_..." }
-    }
-  }
-}
-```
-
-The key goes in an environment variable because some systems split arguments on spaces.
 
 ---
 
@@ -181,6 +205,6 @@ The key goes in an environment variable because some systems split arguments on 
 - **Leave Plaid on the default model unless you have a reason not to.** Pinning chat to a specific model means it stops following the organization default — useful when chat and agents genuinely need different models, a nuisance otherwise.
 - **Chat volume is cheap to underestimate.** The [Usage & costs](ai-usage.md) page prices chat at the assigned model's rates; a busy assistant on an expensive model shows up there long before it shows up on an invoice.
 - **A vision model is an agent requirement, not a chat one.** If your triage agents need to read ticket screenshots, that belongs on *their* model — see **Understands images** on the [AI models](ai-models.md) page.
-- **Rotate MCP keys.** Prefer short-lived keys for shared workstations, and use **Key max lifetime (days)** to enforce a ceiling no request can exceed.
+- **Prefer connections for Claude.** Each person signs in with their own account, so nobody shares a key. Keep keys for clients that need one, rotate them, and use **Key max lifetime (days)** to set a ceiling no request can exceed.
 - **Set a retention window.** Keeping conversations forever is convenient until the database grows large or a compliance review asks how long chat content is kept — 90 or 180 days is a common starting point.
 - **GLPI lives elsewhere.** The ticketing connection your agents work against is configured under **Admin → Integrations**, not here — see [Integrations](integrations.md).

@@ -158,6 +158,7 @@ plugins:
             Microsoft Entra SSO: Microsoft Entra SSO
             "AI models": "Modèles IA"
             "Plaid Settings": "Paramètres Plaid"
+            "Connected apps": "Applications connectées"
             "Usage & costs": "Utilisation & coûts"
             Integrations: Intégrations
             "Scheduled Tasks": "Tâches planifiées"
@@ -238,6 +239,7 @@ plugins:
             Microsoft Entra SSO: Microsoft Entra SSO
             "AI models": "KI-Modelle"
             "Plaid Settings": "Plaid-Einstellungen"
+            "Connected apps": "Verbundene Apps"
             "Usage & costs": "Nutzung & Kosten"
             Integrations: Integrationen
             "Scheduled Tasks": "Geplante Aufgaben"
@@ -318,6 +320,7 @@ plugins:
             Microsoft Entra SSO: Microsoft Entra SSO
             "AI models": "Modelos IA"
             "Plaid Settings": "Configuración de Plaid"
+            "Connected apps": "Aplicaciones conectadas"
             "Usage & costs": "Uso y costes"
             Integrations: Integraciones
             "Scheduled Tasks": "Tareas programadas"
@@ -394,6 +397,7 @@ nav:
 
   - Plaid:
     - Plaid: ai-assistant.md
+    - Connected apps: connected-apps.md
 
   - AI Agents:
     - Overview: agents-overview.md
