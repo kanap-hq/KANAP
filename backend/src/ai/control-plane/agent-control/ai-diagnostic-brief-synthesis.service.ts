@@ -18,6 +18,7 @@ import {
 } from './ai-reply-synthesis.service';
 import { KanapAlertContextResolution } from './ai-kanap-entity-context.service';
 import { estimateJsonTokens } from './json-token-estimate';
+import { HTML_TAGS } from '../../../common/text-scan';
 
 // Diagnostic-brief synthesis (plan 37 §4.4) — the alert-world analog of reply
 // synthesis: ONE structured LLM stage turning deterministic alert evidence plus
@@ -202,7 +203,7 @@ const BriefSchema = z.object({
 function normalizeText(value: unknown): string {
   return String(value ?? '')
     .replace(/\r\n/g, '\n')
-    .replace(/<[^>]+>/g, ' ')
+    .replace(HTML_TAGS, ' ')
     .replace(/[ \t]{2,}/g, ' ')
     .replace(/\n{4,}/g, '\n\n\n')
     .trim();

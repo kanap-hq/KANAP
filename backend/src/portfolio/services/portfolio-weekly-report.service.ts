@@ -11,6 +11,7 @@ import {
   taskProjectTeamPredicates,
   timeEntryProjectTeamFilters,
 } from './portfolio-report-filters';
+import { HTML_TAGS } from '../../common/text-scan';
 
 export type WeeklyReportQuery = {
   tenantId: string;
@@ -488,7 +489,7 @@ const NUMERIC = /^-?\d+(\.\d+)?$/;
 
 /** Plain words out of a rich text value, cut at the change text length. */
 const shortText = (value: string): string => {
-  const plain = value.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  const plain = value.replace(HTML_TAGS, ' ').replace(/\s+/g, ' ').trim();
   return plain.length > CHANGE_TEXT_MAX ? `${plain.slice(0, CHANGE_TEXT_MAX).trimEnd()}…` : plain;
 };
 

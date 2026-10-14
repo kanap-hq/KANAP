@@ -1,4 +1,5 @@
 import { sanitizeRichHtmlForEmail } from '../common/html-sanitizer';
+import { HTML_TAGS, untilLast } from '../common/text-scan';
 
 const ENTITY_MAP: Record<string, string> = {
   amp: '&',
@@ -181,9 +182,9 @@ function htmlToPlainText(html: string): string {
   const withLineBreaks = html
     .replace(/<\s*br\s*\/?>/gi, '\n')
     .replace(/<\s*\/\s*(p|div|li|h1|h2|h3|h4|h5|h6|blockquote|tr)\s*>/gi, '\n')
-    .replace(/<\s*li\b[^>]*>/gi, '- ');
+    .replace(untilLast('>', /<\s*li\b[^>]*>/gi), '- ');
 
-  const withoutTags = withLineBreaks.replace(/<[^>]+>/g, ' ');
+  const withoutTags = withLineBreaks.replace(HTML_TAGS, ' ');
   const decoded = decodeHtmlEntities(withoutTags);
   const normalized = decoded
     .replace(/\r/g, '')

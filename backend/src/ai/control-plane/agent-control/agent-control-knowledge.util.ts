@@ -19,6 +19,7 @@ import type {
   TicketTimelineEntry,
   WebSearchResultItem,
 } from './ai-agent-control.service';
+import { HTML_TAGS, trailingRun } from '../../../common/text-scan';
 
 /**
  * Knowledge retrieval, search planning and interpretation for ticketing triage.
@@ -102,7 +103,7 @@ export function normalizeKnowledgeText(value: string | null | undefined): string
   return String(value ?? '')
     .replace(/<br\s*\/?>/gi, ' ')
     .replace(/<\/p>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
+    .replace(HTML_TAGS, ' ')
     .replace(/&nbsp;/gi, ' ')
     .replace(/&amp;/gi, '&')
     .replace(/&quot;/gi, '"')
@@ -117,7 +118,7 @@ export function normalizeKnowledgeText(value: string | null | undefined): string
 export function cleanKnowledgeCandidate(value: string | null | undefined): string {
   const normalized = normalizeKnowledgeText(value)
     .replace(/^[\s"'([{]+/g, '')
-    .replace(/[\s"')}\].,:;!?]+$/g, '')
+    .replace(trailingRun('"\')}].,:;!?', true), '')
     .trim();
   return clampText(normalized, 160);
 }
@@ -320,7 +321,7 @@ export function knowledgeItemsFromOutput(value: unknown): KnowledgeSearchItem[] 
 
 export function stripWebText(value: string): string {
   return String(value || '')
-    .replace(/<[^>]+>/g, ' ')
+    .replace(HTML_TAGS, ' ')
     .replace(/&amp;/gi, '&')
     .replace(/&quot;/gi, '"')
     .replace(/&#39;/gi, '\'')

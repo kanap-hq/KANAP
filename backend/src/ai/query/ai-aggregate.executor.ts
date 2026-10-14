@@ -52,6 +52,7 @@ import { assertPlainTextQuickSearch } from './ai-quick-search-validation.util';
 import { resolveAiEntityRegistry } from './registries';
 import { resolveFteField } from '../../spend/spend-summary.builder';
 import type { AggregateSpec } from '../../common/list-engine/list-aggregate';
+import { trailingDigits } from '../../common/text-scan';
 
 /** Connection fields grouped on their effective values (see aggregateConnectionsByEffectiveRisk). */
 const CONNECTION_EFFECTIVE_RISK_GROUPS = new Set(['criticality', 'data_class', 'contains_pii']);
@@ -185,9 +186,9 @@ const DOCUMENT_LINKED_ENTITY_FILTERS: Record<DocumentLinkedEntityField, Document
 function parseDocumentItemNumberQuery(input: string): number | null {
   const value = String(input || '').trim();
   if (!value) return null;
-  const match = value.match(/(?:^[A-Z]+-)?(\d+)$/i);
-  if (!match) return null;
-  const itemNumber = Number(match[1]);
+  const digits = trailingDigits(value);
+  if (!digits) return null;
+  const itemNumber = Number(digits);
   return Number.isFinite(itemNumber) && itemNumber > 0 ? itemNumber : null;
 }
 

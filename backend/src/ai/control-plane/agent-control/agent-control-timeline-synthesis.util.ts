@@ -8,6 +8,13 @@ import { ticketLooksFrench } from './agent-control-knowledge.util';
 import { adapterData, clampText } from './agent-control-util';
 import type { ConversationActionGate, KnowledgeSearchItem, TicketLike, TicketNoteLike, TicketTimelineEntry, WebSearchResultItem } from './ai-agent-control.service';
 import { ReplySynthesisRejectedSource, ReplySynthesisResult, ReplySynthesisSource } from './ai-reply-synthesis.service';
+import {
+  HTML_TAGS,
+  removeThematicBreakLines,
+  replaceMarkdownLinks,
+  SPACES_BEFORE_LINE_BREAKS,
+  untilLast,
+} from '../../../common/text-scan';
 
 /**
  * Ticket timeline assembly and reply synthesis: turning notes and actions into a timeline,
@@ -389,28 +396,27 @@ export function resolveReplyLanguage(
 }
 
 export function normalizeKnowledgeReplyText(value: string | null | undefined): string {
-  return decodeNumericHtmlEntities(String(value ?? '').replace(/\r\n/g, '\n'))
+  const decoded = decodeNumericHtmlEntities(String(value ?? '').replace(/\r\n/g, '\n'))
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/p>/gi, '\n\n')
-    .replace(/<li\b[^>]*>/gi, '- ')
+    .replace(untilLast('>', /<li\b[^>]*>/gi), '- ')
     .replace(/<\/li>/gi, '\n')
-    .replace(/<[^>]+>/g, ' ')
+    .replace(HTML_TAGS, ' ')
     .replace(/&nbsp;/gi, ' ')
     .replace(/&amp;/gi, '&')
     .replace(/&quot;/gi, '"')
     .replace(/&#39;/gi, '\'')
     .replace(/&lt;/gi, '[')
-    .replace(/&gt;/gi, ']')
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, (_match, alt) => String(alt || '').trim() ? `[image: ${String(alt).trim()}]` : '')
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    .replace(/^#{1,6}\s+/gm, '')
-    .replace(/^\s*[-*_]{3,}\s*$/gm, '')
+    .replace(/&gt;/gi, ']');
+  const withoutImages = replaceMarkdownLinks(decoded, true, (alt) => alt.trim() ? `[image: ${alt.trim()}]` : '');
+  const withoutLinks = replaceMarkdownLinks(withoutImages, false, (label) => label);
+  return removeThematicBreakLines(withoutLinks.replace(/^#{1,6}\s+/gm, ''))
     .replace(/\*\*([^*\n]+)\*\*/g, '$1')
     .replace(/__([^_\n]+)__/g, '$1')
     .replace(/(^|[\s(])\*([^*\n]+)\*(?=[\s).,!?:;]|$)/g, '$1$2')
     .replace(/(^|[\s(])_([^_\n]+)_(?=[\s).,!?:;]|$)/g, '$1$2')
     .replace(/[<>]/g, '')
-    .replace(/[ \t]+\n/g, '\n')
+    .replace(SPACES_BEFORE_LINE_BREAKS, '\n')
     .replace(/\n[ \t]+/g, '\n')
     .replace(/[ \t]{2,}/g, ' ')
     .replace(/\n{3,}/g, '\n\n')
@@ -423,7 +429,7 @@ export function sanitizeForProvider(value: string | null | undefined, maxChars: 
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/[<>]/g, '')
     .replace(/javascript:/gi, 'javascript[:]')
-    .replace(/[ \t]+\n/g, '\n')
+    .replace(SPACES_BEFORE_LINE_BREAKS, '\n')
     .replace(/\n[ \t]+/g, '\n')
     .replace(/[ \t]{2,}/g, ' ')
     .replace(/\n{4,}/g, '\n\n\n')

@@ -37,6 +37,7 @@ import {
   AiTaskCreateTarget,
   AiTaskMutationSupportService,
 } from '../ai-task-mutation-support.service';
+import { findImgSourceValues } from '../../../common/text-scan';
 
 const RELATION_TYPE_VALUES = ['standalone', 'project', 'spend_item', 'capex_item'] as const;
 const PRIORITY_LEVEL_VALUES = ['blocker', 'high', 'normal', 'low', 'optional'] as const;
@@ -223,10 +224,8 @@ function extractImageTargets(html: string | null): string[] {
 
   const seen = new Set<string>();
   const results: string[] = [];
-  const regex = /<img\b[^>]*\bsrc\s*=\s*(['"])(.*?)\1[^>]*>/gi;
-  let match: RegExpExecArray | null;
-  while ((match = regex.exec(html)) !== null) {
-    const rawTarget = decodeHtmlAttribute(String(match[2] || '').trim());
+  for (const value of findImgSourceValues(html)) {
+    const rawTarget = decodeHtmlAttribute(value.trim());
     if (!rawTarget || seen.has(rawTarget)) {
       continue;
     }

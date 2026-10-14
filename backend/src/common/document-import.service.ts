@@ -15,6 +15,7 @@ import { converterEnv } from './converter-env';
 import { IMPORTABLE_MIME_TYPES } from './dto/import-document.dto';
 import { validateUploadedFile } from './upload-validation';
 import { VectorImageConversionService } from './vector-image-conversion.service';
+import { removeSvgBlipElements } from './text-scan';
 
 const execFileAsync = promisify(execFile);
 
@@ -189,8 +190,6 @@ export class DocumentImportService {
    * parent `<a:blip r:embed="...">`, which is the correct raster image.
    */
   private stripProprietarySvgExtensions(docxPath: string): void {
-    const svgBlipPattern = /<(?:[a-zA-Z0-9]+:)?svgBlip\b[\s\S]*?\/>/g;
-
     try {
       const archive = openBoundedArchive(docxPath);
       const zip = archive.zip;
@@ -202,7 +201,7 @@ export class DocumentImportService {
         if (!name.startsWith('word/') || !name.endsWith('.xml')) continue;
 
         const content = archive.readText(entry);
-        const stripped = content.replace(svgBlipPattern, '');
+        const stripped = removeSvgBlipElements(content);
         if (stripped.length !== content.length) {
           zip.updateFile(entry.entryName, Buffer.from(stripped, 'utf8'));
           modified = true;

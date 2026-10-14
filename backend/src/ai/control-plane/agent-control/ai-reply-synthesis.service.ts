@@ -11,6 +11,7 @@ import {
 import { AiAgentLlmClient } from './ai-agent-llm-client';
 import type { TicketImageEvidence } from './ai-ticket-need-representation.types';
 import { estimateJsonTokens } from './json-token-estimate';
+import { HTML_TAGS, SPACES_BEFORE_LINE_BREAKS, hasHtmlTag } from '../../../common/text-scan';
 
 export type ReplySynthesisTicket = {
   id: string;
@@ -123,12 +124,12 @@ const SynthesisSchema = z.object({
 function normalizeText(value: unknown): string {
   return decodeNumericHtmlEntities(String(value ?? '').replace(/\r\n/g, '\n'))
     .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<[^>]+>/g, ' ')
+    .replace(HTML_TAGS, ' ')
     .replace(/&nbsp;/gi, ' ')
     .replace(/&amp;/gi, '&')
     .replace(/&quot;/gi, '"')
     .replace(/&#39;/gi, '\'')
-    .replace(/[ \t]+\n/g, '\n')
+    .replace(SPACES_BEFORE_LINE_BREAKS, '\n')
     .replace(/\n[ \t]+/g, '\n')
     .replace(/[ \t]{2,}/g, ' ')
     .replace(/\n{4,}/g, '\n\n\n')
@@ -160,7 +161,7 @@ function compactImageEvidence(evidence: TicketImageEvidence[] | null | undefined
 }
 
 function isUnsafePlainText(value: string): boolean {
-  return /<[^>]+>/.test(value) || /javascript:/i.test(value);
+  return hasHtmlTag(value) || /javascript:/i.test(value);
 }
 
 function sourceKey(source: { kind: ReplySynthesisSource['kind'] | null; ref: string | null; url: string | null }): string | null {

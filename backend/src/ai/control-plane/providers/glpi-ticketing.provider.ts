@@ -56,6 +56,7 @@ import {
   TicketReferenceEnums,
 } from './provider.types';
 import { MAX_INTERNAL_NOTE_CHARS, MAX_PUBLIC_REPLY_CHARS, noteBodyIsUnsafe, normalizeReason } from './ticket-safety';
+import { HTML_TAGS } from '../../../common/text-scan';
 
 const GLPI_APPROVED_WRITE_CAPABILITIES = new Set([
   TICKETING_INTERNAL_NOTE_ADD_APPROVED_CAPABILITY,
@@ -101,7 +102,7 @@ function stripHtml(value: string | null | undefined): string | null {
   const text = decodeNumericHtmlEntities(String(value).replace(/\r\n/g, '\n'))
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/p>/gi, '\n')
-    .replace(/<[^>]+>/g, ' ')
+    .replace(HTML_TAGS, ' ')
     .replace(/&nbsp;/gi, ' ')
     .replace(/&amp;/gi, '&')
     .replace(/&quot;/gi, '"')

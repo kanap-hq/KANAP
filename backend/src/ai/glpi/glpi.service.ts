@@ -25,6 +25,7 @@ import {
   GlpiCategory,
   GlpiTechnician,
 } from './glpi.types';
+import { findImgSourceValues, hasHtmlTag } from '../../common/text-scan';
 
 const GLPI_TIMEOUT_MS = 10_000;
 const GLPI_MAX_DOCUMENT_BYTES = 20 * 1024 * 1024;
@@ -171,7 +172,7 @@ function normalizePlainTicketFollowup(value: string, opts?: { maxChars?: number;
   if (normalized.length > maxChars) {
     throw new BadRequestException(`${label} content exceeds the allowed length.`);
   }
-  if (/<[^>]+>/.test(normalized) || /javascript:/i.test(normalized)) {
+  if (hasHtmlTag(normalized) || /javascript:/i.test(normalized)) {
     throw new BadRequestException(`${label} content must be plain text and cannot contain HTML or scripts.`);
   }
   return normalized;
@@ -205,10 +206,8 @@ function extractImageTargets(html: string | null): string[] {
 
   const seen = new Set<string>();
   const results: string[] = [];
-  const regex = /<img\b[^>]*\bsrc\s*=\s*(['"])(.*?)\1[^>]*>/gi;
-  let match: RegExpExecArray | null;
-  while ((match = regex.exec(html)) !== null) {
-    const rawTarget = decodeHtmlAttribute(String(match[2] || '').trim());
+  for (const value of findImgSourceValues(html)) {
+    const rawTarget = decodeHtmlAttribute(value.trim());
     if (!rawTarget || seen.has(rawTarget)) {
       continue;
     }

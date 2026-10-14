@@ -77,6 +77,7 @@ import { DocumentType } from './document-type.entity';
 import { DocumentVersion } from './document-version.entity';
 import { Document } from './document.entity';
 import { userNameSharedSql } from '../common/lookup/reference-lookups';
+import { trailingDigits } from '../common/text-scan';
 
 export type RelationEntityType =
   | 'applications'
@@ -1362,9 +1363,9 @@ export class KnowledgeService {
   private parseItemNumberQuery(input: string): number | null {
     const value = String(input || '').trim();
     if (!value) return null;
-    const match = value.match(/(?:^[A-Z]+-)?(\d+)$/i);
-    if (!match) return null;
-    const itemNumber = Number(match[1]);
+    const digits = trailingDigits(value);
+    if (!digits) return null;
+    const itemNumber = Number(digits);
     return Number.isFinite(itemNumber) && itemNumber > 0 ? itemNumber : null;
   }
 
