@@ -63,8 +63,11 @@ export function refusedWhileResetting(req: Request, demoStatus: string | null | 
 const LIVENESS_PATHS = new Set(['/health', '/api/health', '/ops/metrics', '/api/ops/metrics']);
 
 /** The request path without a trailing slash (`/health/` is `/health`). */
-function routePath(req: Request): string {
-  return (req.path || '/').replace(/\/+$/, '') || '/';
+export function routePath(req: Pick<Request, 'path'>): string {
+  const path = req.path || '/';
+  let end = path.length;
+  while (end > 0 && path.charCodeAt(end - 1) === 47 /* '/' */) end -= 1;
+  return path.slice(0, end) || '/';
 }
 
 /** The tenant subdomain of a host, or null for apex, www and unknown hosts. */
@@ -103,7 +106,12 @@ export function tenantSlugFromHost(host: string): string | null {
 /** The 503 `busy` answer to a request whose tenant could not be looked up. */
 export function answerTenantLookupFailed(req: Request, res: Response, error: unknown) {
   // eslint-disable-next-line no-console
-  console.error(`[tenancy] ${req.method} ${req.originalUrl ?? req.url}: tenant lookup failed, answered 503 busy:`, (error as Error)?.message ?? error);
+  console.error(
+    '[tenancy] %s %s: tenant lookup failed, answered 503 busy: %s',
+    req.method,
+    req.originalUrl ?? req.url,
+    (error as Error)?.message ?? error,
+  );
   if (res.headersSent) return;
   res.setHeader('Retry-After', String(BUSY_RETRY_AFTER_SECONDS));
   res.status(503).json({

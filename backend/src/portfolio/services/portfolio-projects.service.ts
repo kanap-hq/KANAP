@@ -294,9 +294,10 @@ export class PortfolioProjectsService {
   reorderPhases(
     projectId: string,
     phaseIds: string[],
+    tenantId: string,
     opts?: ServiceOpts,
   ) {
-    return this.phasesService.reorderPhases(projectId, phaseIds, opts);
+    return this.phasesService.reorderPhases(projectId, phaseIds, tenantId, opts);
   }
 
   applyPhaseTemplate(

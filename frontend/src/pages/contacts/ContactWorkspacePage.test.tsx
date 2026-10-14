@@ -96,6 +96,7 @@ describe('ContactWorkspacePage', () => {
     stored = { ...CONTACT };
     mocked.get.mockImplementation(async (url: string) => {
       if (url === '/contacts/c-1') return { data: stored };
+      if (url.endsWith('/usages')) return { data: { total: 0, groups: [] } };
       return { data: { items: [] } };
     });
     mocked.patch.mockImplementation(async (_url: string, body: Record<string, unknown>) => {
@@ -395,5 +396,50 @@ describe('ContactWorkspacePage create', () => {
     renderAt('/master-data/contacts/new/overview?returnTo=//example.com');
     fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'contacts.title' }));
     expect(navigateMock).toHaveBeenCalledWith('/master-data/contacts');
+  });
+});
+
+describe('ContactWorkspacePage: used by', () => {
+  const USAGES = {
+    total: 2,
+    groups: [
+      { type: 'suppliers', total: 1, items: [{ id: 's-1', reference: null, name: 'Supplier A', status: 'enabled', active: true, roles: ['commercial'] }] },
+      { type: 'contracts', total: 1, items: [{ id: 'k-1', reference: null, name: 'Support contract', status: 'enabled', active: true, roles: ['support'] }] },
+    ],
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    auth.canEdit = true;
+    stored = { ...CONTACT };
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/contacts/c-1') return { data: stored };
+      if (url === '/contacts/c-1/usages') return { data: USAGES };
+      return { data: { items: [] } };
+    });
+  });
+
+  it('shows the uses under the notes of the overview, with the contact\'s roles', async () => {
+    renderAt('/master-data/contacts/c-1/overview');
+    const section = await screen.findByRole('region', { name: 'shared.usages.title' });
+    const contract = await within(section).findByRole('link', { name: /Support contract/ });
+    expect(contract).toHaveAttribute('href', '/ops/contracts/k-1');
+    expect(contract).toHaveTextContent('contacts.roles.support');
+    expect(screen.getByText('Prefers email').compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByRole('tab', { name: 'shared.usages.title' })).toBeNull();
+  });
+
+  it('scrolls to the section from the header count', async () => {
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    renderAt('/master-data/contacts/c-1/overview');
+    await screen.findByRole('region', { name: 'shared.usages.title' });
+    fireEvent.click(await screen.findByRole('button', { name: /shared\.usages\.title.*2/ }));
+    expect(scroll).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
+  });
+
+  it('sends the former Used by tab address to the overview', async () => {
+    renderAt('/master-data/contacts/c-1/usages');
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/master-data/contacts/c-1/overview'));
   });
 });

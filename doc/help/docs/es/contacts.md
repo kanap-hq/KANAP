@@ -59,6 +59,7 @@ Haga clic en una fila para abrir la página del contacto. Cada cambio se guarda 
 - **Proveedor**: el proveedor para el que trabaja este contacto, como enlace a su página. Un contacto sin proveedor muestra **Sin proveedor**: haga clic para abrir las propiedades y elegir uno.
 - **Tipo de contacto**: el rol del contacto en el proveedor: Comercial, Técnico, Soporte u Otro. Haga clic para elegir otro. Aparece en cuanto el contacto tiene un proveedor.
 - **Estado**: **Activo** o **Inactivo**. Haga clic para cambiarlo.
+- **Usado en**: cuántos proveedores, líneas presupuestarias, contratos y otros elementos están vinculados al contacto. Haga clic para ir a la sección **Usado en**.
 
 **Propiedades** (el panel de la derecha, que se abre con su pestaña o la tecla `P`):
 - **Proveedor**: elija el proveedor en la lista. Un contacto con proveedor siempre tiene un tipo de contacto: elegir un proveedor para un contacto sin tipo le da **Comercial**, que puede cambiar enseguida. Quitar el proveedor quita también el tipo de contacto.
@@ -74,6 +75,12 @@ Los campos de texto se guardan al salir de ellos o al pulsar Intro, las listas e
 
 Pulse **Escape** o haga clic en el botón de cerrar para volver a la lista.
 
+### Usado en
+
+La sección **Usado en**, bajo las notas, lista todo aquello a lo que está vinculado el contacto, una lista por tipo, cada una con su número: proveedores, líneas presupuestarias (OPEX y CAPEX, con su referencia `BL-`), contratos, aplicaciones, activos, ubicaciones, proyectos (`PRJ-`) y solicitudes (`REQ-`). Cada fila muestra el rol del contacto: el tipo de contacto para proveedores, líneas presupuestarias y contratos, el rol escrito en la aplicación, el activo o la ubicación.
+
+Haga clic en una fila para abrir su página. Una lista muestra hasta 50 elementos e indica cuántos hay en total. Solo ve las listas que tiene permiso para leer. Un contacto sin vínculos muestra una línea que lo indica.
+
 ### Crear un contacto
 
 Haga clic en **Nuevo** en la lista. Indique el correo electrónico (obligatorio) y los demás campos, y haga clic en **Crear**. Elegir un proveedor fija el tipo de contacto en **Comercial**, que puede cambiar antes de crear. Vuelve a la lista una vez creado el contacto.
@@ -82,14 +89,14 @@ Haga clic en **Nuevo** en la lista. Indique el correo electrónico (obligatorio)
 
 ## Dónde se usan los contactos
 
-Los contactos aparecen en varios lugares de KANAP.
+Los contactos aparecen en varios lugares de KANAP. La sección **Usado en** de la página del contacto los lista todos.
 
 ### Contactos de proveedor
 
 Cada proveedor tiene una pestaña de **Contactos** que muestra todos los contactos vinculados a ese proveedor. Puede crear un nuevo contacto directamente desde el espacio de trabajo del proveedor:
 
 1. Abra el espacio de trabajo del proveedor y vaya a la pestaña **Contactos**.
-2. Haga clic en **Crear** junto a un rol de contacto.
+2. Haga clic en **Nuevo contacto** junto a un tipo de contacto.
 3. Complete los datos del contacto: el proveedor y el tipo de contacto están prerrellenados.
 4. Haga clic en **Crear**: vuelve a la pestaña **Contactos** del proveedor.
 

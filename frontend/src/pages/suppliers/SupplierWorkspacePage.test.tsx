@@ -116,6 +116,7 @@ describe('SupplierWorkspacePage', () => {
     mocked.get.mockImplementation(async (url: string) => {
       if (url === '/suppliers/s-1') return { data: stored };
       if (url === '/suppliers/s-1/contacts') return { data: LINKS };
+      if (url.endsWith('/usages')) return { data: { total: 0, groups: [] } };
       return { data: { items: [] } };
     });
     mocked.patch.mockImplementation(async (_url: string, body: Record<string, unknown>) => {
@@ -361,5 +362,67 @@ describe('SupplierWorkspacePage', () => {
     // The tab bar (the contacts tab waits for the supplier), then the first field again.
     await expectNext(screen.getByRole('tab', { name: 'shared.labels.overview' }));
     await expectNext(name);
+  });
+});
+
+describe('SupplierWorkspacePage: used by', () => {
+  const USAGES = {
+    total: 3,
+    groups: [
+      {
+        type: 'budget_lines',
+        total: 2,
+        items: [
+          { id: 'b-1', reference: 'BL-12', name: 'Office 365', nature: 'opex', status: 'enabled', active: true },
+          { id: 'b-2', reference: 'BL-40', name: 'Servers', nature: 'capex', status: 'enabled', active: true },
+        ],
+      },
+      { type: 'contracts', total: 1, items: [{ id: 'k-1', reference: null, name: 'Enterprise agreement', status: 'enabled', active: true }] },
+    ],
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    auth.canEdit = true;
+    stored = { ...SUPPLIER };
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/suppliers/s-1') return { data: stored };
+      if (url === '/suppliers/s-1/contacts') return { data: LINKS };
+      if (url === '/suppliers/s-1/usages') return { data: USAGES };
+      return { data: { items: [] } };
+    });
+  });
+
+  it('shows the uses under the notes of the overview, each opening its page', async () => {
+    renderAt('/master-data/suppliers/s-1/overview');
+    const section = await screen.findByRole('region', { name: 'shared.usages.title' });
+    expect(await within(section).findByRole('link', { name: /Office 365/ })).toHaveAttribute('href', '/ops/budget/BL-12');
+    expect(within(section).getByRole('link', { name: /Servers/ })).toHaveAttribute('href', '/ops/budget/BL-40');
+    expect(within(section).getByRole('link', { name: /Enterprise agreement/ })).toHaveAttribute('href', '/ops/contracts/k-1');
+    // Under the notes, and no tab of its own.
+    const notes = screen.getByText('suppliers.fields.notes');
+    expect(notes.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByRole('tab', { name: 'shared.usages.title' })).toBeNull();
+  });
+
+  it('scrolls to the section from the header count', async () => {
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    renderAt('/master-data/suppliers/s-1/overview');
+    await screen.findByRole('region', { name: 'shared.usages.title' });
+    fireEvent.click(await screen.findByRole('button', { name: /shared\.usages\.title.*3/ }));
+    expect(scroll).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it('opens the overview from the Contacts tab, then scrolls to the section', async () => {
+    renderAt('/master-data/suppliers/s-1/contacts');
+    fireEvent.click(await screen.findByRole('button', { name: /shared\.usages\.title.*3/ }));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/suppliers/s-1/overview'));
+  });
+
+  it('sends the former Used by tab address to the overview', async () => {
+    renderAt('/master-data/suppliers/s-1/usages');
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/master-data/suppliers/s-1/overview'));
   });
 });

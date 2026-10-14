@@ -1,36 +1,6 @@
-import { useMemo } from 'react';
 import type { TFunction } from 'i18next';
-import { COUNTRY_OPTIONS } from '../../constants/isoOptions';
-import { useLocale } from '../../i18n/useLocale';
+import type { CountryNameFn } from '../../i18n/countries';
 import type { CoaListItem } from './useCoaList';
-
-const COUNTRY_NAME_BY_CODE = new Map(COUNTRY_OPTIONS.map((c) => [c.code.toUpperCase(), c.name]));
-
-export type CountryNameFn = (iso?: string | null) => string;
-
-/** A country's name in the interface language ("France", "Pays-Bas"), the English list as fallback. */
-export function useCountryName(): CountryNameFn {
-  const locale = useLocale();
-  return useMemo(() => {
-    let display: Intl.DisplayNames | null = null;
-    try {
-      display = new Intl.DisplayNames([locale], { type: 'region' });
-    } catch {
-      display = null;
-    }
-    return (iso?: string | null) => {
-      if (!iso) return '';
-      const code = iso.toUpperCase();
-      try {
-        const name = display?.of(code);
-        if (name && name !== code) return name;
-      } catch {
-        // An unknown region code: fall back to the static list.
-      }
-      return COUNTRY_NAME_BY_CODE.get(code) ?? code;
-    };
-  }, [locale]);
-}
 
 /** Where a chart applies: its country, or every country for a GLOBAL chart. */
 export function coaCoverage(coa: CoaListItem, t: TFunction, countryName: CountryNameFn): string {

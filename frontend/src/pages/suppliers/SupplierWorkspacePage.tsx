@@ -25,6 +25,7 @@ import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { getDotColor } from '../../utils/statusColors';
 import { SupplierNameTitle, SupplierNotes, SupplierTextRow } from './SupplierFields';
 import SupplierContactsTab, { useSupplierContacts } from './SupplierContactsTab';
+import RecordUsagesSection, { scrollToUsages, useRecordUsages } from '../../components/usages/RecordUsagesSection';
 import { SUPPLIERS_PATH, type Supplier, type SupplierPatch, isDuplicateError } from './supplierModel';
 
 type TabKey = 'overview' | 'contacts';
@@ -86,6 +87,9 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
     queryFn: async () => (await api.get<Supplier>(`/suppliers/${id}`)).data,
   });
   const { data: contactLinks } = useSupplierContacts(id);
+  const { data: usages } = useRecordUsages('suppliers', id);
+  // The header's count asked for the "Used by" section from another tab: scroll once the overview shows it.
+  const [usagesScrollPending, setUsagesScrollPending] = React.useState(false);
 
   const [errors, setErrors] = React.useState<FieldErrors>({});
   // Writes queue one after the other: a response never overwrites a newer one.
@@ -142,6 +146,12 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
     if (targetId) void go(`${SUPPLIERS_PATH}/${targetId}/${nextTab}`);
   };
 
+  React.useEffect(() => {
+    if (!usagesScrollPending || tab !== 'overview' || !data) return;
+    setUsagesScrollPending(false);
+    scrollToUsages();
+  }, [usagesScrollPending, tab, data]);
+
   const disabled = !canEdit || !data;
   const status = normalizeStatus(data?.status);
   const enabledColor = getDotColor('success', theme.palette.mode);
@@ -172,6 +182,19 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
         title={tab === 'contacts' ? undefined : t('suppliers.metadata.openContacts')}
       >
         {contactLinks ? contactLinks.length : '…'}
+      </PortfolioMetadataItem>
+      <PortfolioMetadataItem
+        label={t('shared.usages.title')}
+        onClick={() => {
+          if (tab === 'overview') scrollToUsages();
+          else {
+            setUsagesScrollPending(true);
+            goTo(id, 'overview');
+          }
+        }}
+        title={t('shared.usages.open')}
+      >
+        {usages ? usages.total : '…'}
       </PortfolioMetadataItem>
       {errors.status && (
         <Typography component="span" sx={{ fontSize: 12, color: 'error.main' }}>{errors.status}</Typography>
@@ -283,6 +306,7 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
               }}
               onCommit={() => { void autosave.flush(); }}
             />
+            <RecordUsagesSection owner="suppliers" id={id} ownerName={data.name} />
           </Stack>
         )}
         {tab === 'contacts' && <SupplierContactsTab supplierId={id} canManage={canEdit} />}

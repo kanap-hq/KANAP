@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, InternalServerErrorException, Param, ParseUUIDPipe, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
@@ -10,6 +10,8 @@ import { contentDisposition } from '../common/content-disposition';
 import { ContactUpsertDto } from './dto/contact.dto';
 import { ContactsDeleteService } from './contacts-delete.service';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
+import { Tenant, TenantRequest } from '../common/decorators';
+import { readContactUsages } from './contact-usages';
 
 @UseGuards(JwtAuthGuard)
 @Controller('contacts')
@@ -37,6 +39,15 @@ export class ContactsController {
   @RequireLevel('contacts', 'reader')
   @Get(':id')
   get(@Param('id') id: string, @Req() req: any) { return this.svc.get(id, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id }); }
+
+  // Where the contact is used: the groups the caller may read (common/record-usages.ts).
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contacts', 'reader')
+  @Get(':id/usages')
+  usages(@Param('id', new ParseUUIDPipe()) id: string, @Tenant() ctx: TenantRequest) {
+    if (!ctx.manager) throw new InternalServerErrorException('No request transaction');
+    return readContactUsages(ctx.manager, ctx.tenantId, id, ctx);
+  }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('contacts', 'member')
