@@ -5,6 +5,7 @@ import {
   ForbiddenException,
   Get,
   HttpException,
+  Logger,
   Post,
   Query,
   Req,
@@ -12,6 +13,7 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
+import { randomBytes } from 'node:crypto';
 import { Request, Response } from 'express';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -39,9 +41,15 @@ export function toolTitle(name: string): string {
   return words ? words.charAt(0).toUpperCase() + words.slice(1) : name;
 }
 
+/** What an MCP client reads when a tool fails for a reason other than its input or access. */
+export function internalToolErrorMessage(reference: string): string {
+  return `KANAP could not complete this request. This may be temporary: try again in a moment. If it keeps failing, report reference ${reference} to the KANAP administrator.`;
+}
+
 @Controller('ai/mcp')
 @SkipTenantTransaction()
 export class AiMcpController {
+  private readonly logger = new Logger(AiMcpController.name);
   private readonly maxResponseChars = 64_000;
 
   constructor(
@@ -221,10 +229,18 @@ export class AiMcpController {
         });
       } catch (error) {
         // A tool error goes back as a tool result, so the client's model can read it and retry.
-        // Only our own HTTP errors carry a message meant for the caller.
-        const message = error instanceof HttpException ? error.message : 'The tool failed.';
+        // Only our own HTTP errors carry a message meant for the caller; any other error is logged
+        // here, once, under a reference the caller can quote.
+        if (error instanceof HttpException) {
+          return { content: [{ type: 'text' as const, text: error.message }], isError: true };
+        }
+        const reference = context.requestId || randomBytes(4).toString('hex');
+        this.logger.error(
+          `MCP tool ${toolDef.name} failed, reference ${reference}, tenant ${context.tenantId}`,
+          error instanceof Error ? error.stack : String(error),
+        );
         return {
-          content: [{ type: 'text' as const, text: message }],
+          content: [{ type: 'text' as const, text: internalToolErrorMessage(reference) }],
           isError: true,
         };
       }
