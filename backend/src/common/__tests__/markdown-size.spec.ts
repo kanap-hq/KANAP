@@ -183,13 +183,24 @@ function testInlineImagesDoNotCountTowardTheLimit() {
   assert.equal(normalizeMarkdownRichText(withAttachment), withAttachment.trim());
 }
 
-function testParsingSkipsInlineImagePayloads() {
-  const text = `Introduction avec un [lien](https://example.com).\n\n${IMAGE_5MB}\n\nFin.`;
+function testDataImageTextOutsideAnImageCountsInFull() {
+  const payload = `data:image/png;base64,${fill('iVBORw0KGgoAAAANSUhEUgAA', 5 * 1024 * 1024)}`;
+  // A data URI written as text is not an inline image: all its bytes count.
+  const comment = `Valeur relevée : ${payload}`;
+  assert.ok(markdownTextSize(comment) > 5 * 1024 * 1024);
+  assert.equal(sizeError(() => assertMarkdownSize(comment))?.code, MARKDOWN_TOO_LARGE);
+  assert.equal(sizeError(() => normalizeMarkdownRichText(comment, { fieldName: 'content' }))?.code, MARKDOWN_TOO_LARGE);
+  // Nor is an image written inside a code block.
+  const inCode = `\`\`\`\n![schema](${payload})\n\`\`\``;
+  assert.equal(sizeError(() => normalizeMarkdownRichText(inCode, { fieldName: 'content' }))?.code, MARKDOWN_TOO_LARGE);
+  // A real inline image is refused by its own rule, quickly: its payload is not parsed.
+  const withImage = `Introduction avec un [lien](https://example.com).\n\n${IMAGE_5MB}\n\nFin.`;
   const ms = elapsedMs(() => {
-    assert.equal(containsInlineDataImage(text), true);
-    assert.deepEqual(findRawHtmlSnippets(text), []);
+    assert.equal(containsInlineDataImage(withImage), true);
+    assert.deepEqual(findRawHtmlSnippets(withImage), []);
+    assert.match(String((sizeError(() => normalizeMarkdownRichText(withImage)) as any)?.message), /inline base64 images/);
   });
-  assert.ok(ms < 1000, `parse with a 5 MB inline image: ${ms.toFixed(0)} ms`);
+  assert.ok(ms < 1000, `checks with a 5 MB inline image: ${ms.toFixed(0)} ms`);
 }
 
 function run() {
@@ -202,7 +213,7 @@ function run() {
   testLargerTextIsRefused();
   testSizeCountsUtf8Bytes();
   testInlineImagesDoNotCountTowardTheLimit();
-  testParsingSkipsInlineImagePayloads();
+  testDataImageTextOutsideAnImageCountsInFull();
 }
 
 run();

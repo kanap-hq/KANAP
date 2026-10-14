@@ -166,6 +166,8 @@ export interface CsvImportError {
   column?: string;
   /** Error message */
   message: string;
+  /** Error code the interface translates, when the message has one (MARKDOWN_TOO_LARGE, ...) */
+  code?: string;
 }
 
 /**

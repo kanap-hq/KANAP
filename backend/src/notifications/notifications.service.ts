@@ -25,7 +25,7 @@ import {
   buildWorkspaceResetEmail,
 } from './notification-templates';
 import { renderCommentForEmail } from './comment-email-renderer';
-import { renderMarkdownToHtml } from '../common/markdown-to-html';
+import { renderMarkdownToHtmlBounded } from '../common/markdown-to-html';
 import { EmailBranding, resolveEmailBranding } from '../email/email-branding';
 import { getEmailStrings, resolveEmailLocale } from '../i18n/email-i18n';
 
@@ -739,7 +739,7 @@ export class NotificationsService {
     if (hasComment) {
       const tenantSlug = await this.getTenantSlug(params.tenantId);
       const tenantBaseUrl = this.buildTenantBaseUrl(tenantSlug);
-      const commentAsHtml = renderMarkdownToHtml(trimmedComment);
+      const commentAsHtml = await renderMarkdownToHtmlBounded(trimmedComment);
       renderedComment = renderCommentForEmail({
         commentHtml: commentAsHtml,
         tenantBaseUrl,
@@ -1157,7 +1157,7 @@ export class NotificationsService {
     const tenantBaseUrl = this.buildTenantBaseUrl(tenantSlug);
     const itemUrl = await this.buildItemUrl(params.itemType, params.itemId, params.tenantId, params.manager);
     const branding = await this.resolveBranding(params.tenantId);
-    const commentAsHtml = renderMarkdownToHtml(params.commentContent);
+    const commentAsHtml = await renderMarkdownToHtmlBounded(params.commentContent);
     const renderedComment = renderCommentForEmail({
       commentHtml: commentAsHtml,
       tenantBaseUrl,

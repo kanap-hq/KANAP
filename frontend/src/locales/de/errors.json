@@ -44,5 +44,6 @@
   "rate_limited": "Zu viele Versuche. Warten Sie einige Minuten und versuchen Sie es erneut.",
   "SHARE_TOO_MANY_RECIPIENTS": "Ein Link kann an höchstens 20 Empfänger gesendet werden.",
   "SHARE_RATE_LIMITED": "Sie haben in der letzten Stunde die Höchstzahl von 30 Links gesendet. Versuchen Sie es später erneut.",
-  "MARKDOWN_TOO_LARGE": "Dieser Text ist zu lang zum Speichern: Die Grenze liegt bei 200 KB Text (Bilder zählen nicht). Teilen Sie ihn auf mehrere Dokumente auf."
+  "MARKDOWN_TOO_LARGE": "Dieser Text ist zu lang: Die Grenze liegt bei 200 KB Text (Bilder zählen nicht).",
+  "MARKDOWN_TOO_COMPLEX": "Dieser Text ist zu komplex für die Verarbeitung. Setzen Sie eingefügte Protokolle oder Code in einen Codeblock oder schließen Sie die Formatierungszeichen (* und _)."
 }

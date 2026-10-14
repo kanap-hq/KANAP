@@ -20,6 +20,7 @@ import { installGracefulShutdown } from './common/graceful-shutdown';
 import { waitForBackgroundWork } from './common/background-work';
 import { EmailService } from './email/email.service';
 import { apiProcessCount, clusterWorkerId, isLeadProcess, processLabel } from './common/cluster/process-role';
+import { closeMarkdownParseWorkers } from './common/markdown-parse-budget';
 import { STARTUP_PROVISIONING_LOCK, withStartupLock } from './common/cluster/startup-lock';
 import { checkPoolBudget, poolMaxFloorWarning, readPoolMax } from './common/db-pool-budget';
 import { DemoDataService } from './demo-data/demo-data.service';
@@ -202,6 +203,8 @@ async function bootstrap() {
       }
       await emailService.drain(deadlineAt);
       await app.close();
+      // The Markdown parse workers of this process (common/markdown-parse-budget.ts).
+      await closeMarkdownParseWorkers();
     },
   });
 

@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { decodeNumericHtmlEntities } from '../../common/html-entities';
-import { resolveHtmlContentSource } from '../../common/html-to-markdown';
+import { noteHtmlContentSourceParseBudget, resolveHtmlContentSource } from '../../common/html-to-markdown';
 import { openValidatedFetch } from '../../common/pinned-fetch';
 import { Features } from '../../config/features';
 import { AiSecretCipherService } from '../ai-secret-cipher.service';
@@ -659,6 +659,8 @@ export class GlpiService {
 
     const record = this.expectRecord(payload, 'GLPI ticket');
     const resolvedTicketId = parseNumericGlpiValue(record.id) ?? ticketId;
+    // The ticket text is measured by the Markdown parser off the main thread first.
+    await noteHtmlContentSourceParseBudget(record.content, 'description');
     const contentHtml = textOrNull(resolveHtmlContentSource(String(record.content ?? '')));
     const name = textOrNull(record.name);
     return {
@@ -1114,6 +1116,10 @@ export class GlpiService {
         throw new BadRequestException('GLPI ticket followups response was malformed.');
       }
 
+      // The follow-up texts are measured by the Markdown parser off the main thread first.
+      await Promise.all(payload.map((item) => noteHtmlContentSourceParseBudget(
+        item && typeof item === 'object' ? (item as Record<string, unknown>).content : null,
+      )));
       const pageItems = payload
         .map((item) => this.normalizeFollowup(item))
         .filter((item): item is GlpiTicketFollowup => !!item);

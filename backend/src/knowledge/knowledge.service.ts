@@ -18,6 +18,7 @@ import { extractInlineImageUrls } from '../common/content-image-urls';
 import { ItemNumberService } from '../common/item-number.service';
 import { DocumentImportService, ImportedDocumentResult } from '../common/document-import.service';
 import { assertMarkdownSize, normalizeMarkdownRichText } from '../common/markdown-rich-text';
+import { noteMarkdownParseBudget } from '../common/markdown-parse-budget';
 import { markdownToSearchText } from '../common/markdown-search-text';
 import { bilingualDocumentTsQueryAnyTermSql, bilingualDocumentTsQuerySql, normalizeDocumentAnyTermQuery } from '../common/document-search-tsquery';
 import { DocumentExportService, ExportImageFetchOptions } from '../common/document-export.service';
@@ -3951,6 +3952,12 @@ export class KnowledgeService {
         summary?: string | null;
         content_markdown?: string | null;
       } | void>;
+      /**
+       * The content (and the one the initializer returns) is a stored content: a
+       * copy, a recovery or a template. No size limit; a content over the parse
+       * budget is kept as it is (markdown-rich-text.ts).
+       */
+      storedContent?: boolean;
     } & DocumentAccessOptions,
   ): Promise<Document> {
     const manager = this.getManager(opts);
@@ -3962,8 +3969,12 @@ export class KnowledgeService {
     }
 
     const summary = body?.summary == null ? null : String(body.summary).trim() || null;
+    if (opts?.storedContent) {
+      await noteMarkdownParseBudget([body?.content_markdown], { fieldName: 'content_markdown' });
+    }
     const contentMarkdown = normalizeMarkdownRichText(body?.content_markdown, {
       fieldName: 'content_markdown',
+      enforceSizeLimit: !opts?.storedContent,
     }) || '';
     const status = this.normalizeStatus(body?.status, 'published');
 
@@ -4029,8 +4040,12 @@ export class KnowledgeService {
       }
 
       if (patch && patch.content_markdown !== undefined) {
+        if (opts?.storedContent) {
+          await noteMarkdownParseBudget([patch.content_markdown], { fieldName: 'content_markdown' });
+        }
         const nextContent = normalizeMarkdownRichText(patch.content_markdown, {
           fieldName: 'content_markdown',
+          enforceSizeLimit: !opts?.storedContent,
         }) || '';
         if (nextContent !== saved.content_markdown) {
           saved.content_markdown = nextContent;

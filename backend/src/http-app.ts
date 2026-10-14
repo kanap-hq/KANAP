@@ -9,6 +9,7 @@ import { createBodyParsers } from './common/body-parsers';
 import { applyTrustProxy, trustProxySettingFromEnv, trustProxyStartupLine } from './common/client-address';
 import { isLeadProcess } from './common/cluster/process-role';
 import { createCorsMiddlewares, createOriginPolicy } from './common/cors-policy';
+import { createMarkdownParseBudgetMiddleware } from './common/markdown-parse-budget.middleware';
 import { parseCorsPatterns } from './common/env';
 import { createRequestFinalizer } from './common/request-finalizer.middleware';
 import { useRequestPipeline } from './common/request-pipeline';
@@ -43,6 +44,9 @@ export function applyHttpMiddleware(app: INestApplication): void {
   };
   app.use('/stripe/webhook', express.raw({ type: '*/*' }));
   app.use(...createBodyParsers(rawBodySaver));
+  // Long strings of a JSON body are measured by the Markdown parser off the main thread
+  // (common/markdown-parse-budget.ts) before the tenant transaction opens.
+  app.use(createMarkdownParseBudgetMiddleware());
   // Ops metrics middleware — must be registered before tenancy so it wraps the full pipeline
   const opsMetricsStore = app.get(OpsMetricsStore);
   app.use(createRequestMetricsMiddleware(opsMetricsStore));

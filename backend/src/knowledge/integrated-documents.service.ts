@@ -9,7 +9,8 @@ import { marked } from 'marked';
 import { EntityManager, Repository } from 'typeorm';
 import { DocumentImportService } from '../common/document-import.service';
 import { extractInlineImageUrls } from '../common/content-image-urls';
-import { containsInlineDataImage, htmlToMarkdown, isHtmlContent } from '../common/html-to-markdown';
+import { containsInlineDataImage, htmlToMarkdown, isHtmlContent, noteHtmlContentSourceParseBudget } from '../common/html-to-markdown';
+import { noteMarkdownParseBudget } from '../common/markdown-parse-budget';
 import { ImportExecutionOptions, readUploadedFileBuffer } from '../common/import-connection';
 import { normalizeMarkdownRichText } from '../common/markdown-rich-text';
 import { PermissionsService, PermissionLevel } from '../permissions/permissions.service';
@@ -249,6 +250,18 @@ const SUPPORTED_SLOT_KEYS = INTEGRATED_DOCUMENT_SLOT_DEFINITIONS.reduce<Record<S
     incidents: new Set<string>(),
   },
 );
+
+/** The text as a fenced code block: shown as plain text, read by the parser in linear time. */
+function plainTextCodeBlock(text: string): string {
+  let longestRun = 0;
+  let run = 0;
+  for (const char of text) {
+    run = char === '`' ? run + 1 : 0;
+    if (run > longestRun) longestRun = run;
+  }
+  const fence = '`'.repeat(Math.max(3, longestRun + 1));
+  return `${fence}text\n${text.trim()}\n${fence}`;
+}
 
 @Injectable()
 export class IntegratedDocumentsService {
@@ -1044,7 +1057,7 @@ export class IntegratedDocumentsService {
     if (sourceEntityType === 'applications') {
       const row = await this.loadApplicationBackfillRow(sourceEntityId, manager);
       return {
-        content: this.prepareRecoveredContent(row.description),
+        content: await this.prepareRecoveredContentWithinBudget(row.description),
         source: 'legacy',
         unresolvedLegacyInlineAttachmentIds: [],
       };
@@ -1099,7 +1112,7 @@ export class IntegratedDocumentsService {
       if (!rows.length) {
         throw new NotFoundException(`${sourceEntityType.slice(0, -1)} not found`);
       }
-      const content = this.prepareRecoveredContent(rows[0].content ?? null);
+      const content = await this.prepareRecoveredContentWithinBudget(rows[0].content ?? null);
       return {
         content,
         source: 'legacy',
@@ -1119,12 +1132,31 @@ export class IntegratedDocumentsService {
         `Integrated document missing and no recovery source is available for ${sourceEntityType}:${slotKey}`,
       );
     }
-    const content = this.prepareRecoveredContent(auditContent);
+    const content = await this.prepareRecoveredContentWithinBudget(auditContent);
     return {
       content,
       source: 'audit',
       unresolvedLegacyInlineAttachmentIds: this.extractAnyLegacyInlineAttachmentIds(content || ''),
     };
+  }
+
+  /**
+   * `prepareRecoveredContent` for a stored text read back (legacy field, older
+   * revision): the texts the parser reads are measured off the main thread first.
+   * A text over the parse budget becomes a plain-text code block, kept readable.
+   */
+  private async prepareRecoveredContentWithinBudget(content: string | null | undefined): Promise<string | null> {
+    if (content == null) {
+      return null;
+    }
+    const text = String(content);
+    if (!text.trim()) {
+      return '';
+    }
+    if (!(await noteHtmlContentSourceParseBudget(text, 'description'))) {
+      return plainTextCodeBlock(text);
+    }
+    return this.prepareRecoveredContent(text);
   }
 
   private prepareRecoveredContent(content: string | null | undefined): string | null {
@@ -2266,7 +2298,11 @@ export class IntegratedDocumentsService {
     manager: EntityManager,
     opts?: {
       useTemplateWhenBlank?: boolean;
-      /** The explicit content is a stored content (copy, backfill, repair): no size limit. */
+      /**
+       * The explicit content is a stored content (copy, backfill, repair): no size
+       * limit, here and in the managed document it creates. The parse budget still
+       * applies: a content over it is kept as it is.
+       */
       storedContent?: boolean;
       ownerUserId?: string | null;
       changeNote?: string | null;
@@ -2287,6 +2323,11 @@ export class IntegratedDocumentsService {
     }
 
     const slotSetting = await this.getSlotSetting(sourceEntityType, slotKey, manager);
+    // Stored texts (the template, a copied content) are measured off the main thread first.
+    await noteMarkdownParseBudget(
+      opts?.storedContent ? [explicitContent, slotSetting.template_content_markdown] : [slotSetting.template_content_markdown],
+      { fieldName: 'content_markdown' },
+    );
     const initialContent = this.resolveInitialContent(
       explicitContent,
       slotSetting.template_content_markdown,
@@ -2325,6 +2366,9 @@ export class IntegratedDocumentsService {
         manager,
         initializer: opts?.initializer,
         sourceContext: provisioningContext,
+        // A blank explicit content leaves the template, a stored content, in place.
+        storedContent: opts?.storedContent
+          || (!String(explicitContent ?? '').trim() && opts?.useTemplateWhenBlank !== false),
       },
     );
     await this.ensurePrimaryOwnerContributor(created.id, opts?.ownerUserId ?? null, manager);

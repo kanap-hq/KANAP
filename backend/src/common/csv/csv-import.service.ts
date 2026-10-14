@@ -19,6 +19,7 @@ import {
 import { CsvResolverService } from './csv-resolver.service';
 import { denormalizeCsvFormulaValue } from './csv-export.service';
 import { CsvJsonValidators } from './csv-json-validators';
+import { assertMarkdownParseBudget, CSV_MARKDOWN_PARSE_BUDGET_MS } from '../markdown-parse-budget';
 
 /**
  * Import options
@@ -85,6 +86,13 @@ export class CsvImportService {
   ): Promise<CsvImportResult> {
     // Decode and parse CSV
     const { rows, headerErrors } = await this.parseCsv(config, file);
+    // The Markdown parser reads some cells later on the main thread: all the long cells of
+    // the file are measured together off the main thread first (markdown-parse-budget.ts).
+    await assertMarkdownParseBudget(
+      rows.flatMap((cells) => Object.values(cells)),
+      'csv',
+      { budgetMs: CSV_MARKDOWN_PARSE_BUDGET_MS, minChars: 256 },
+    );
 
     // Early return if header errors
     if (headerErrors.length > 0) {
@@ -461,10 +469,12 @@ export class CsvImportService {
         row.parsed[field.entityProperty] = parsedValue;
       }
     } catch (error: any) {
+      const code = error?.getResponse?.()?.code;
       row.errors.push({
         row: row.rowNumber,
         column: field.csvColumn,
         message: error.message,
+        ...(typeof code === 'string' ? { code } : {}),
       });
     }
   }

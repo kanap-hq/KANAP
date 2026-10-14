@@ -1,5 +1,12 @@
 import { marked } from 'marked';
 import TurndownService = require('turndown');
+import {
+  assertWithinMarkdownParseBudget,
+  noteMarkdownParseBudget,
+  withoutDataImagePayloads,
+} from './markdown-parse-budget';
+
+export { withoutDataImagePayloads };
 
 const HTML_TAG_REGEX_FALLBACK = /<\/?(p|h[1-6]|ul|ol|li|blockquote|pre|code|strong|em|a|img|table|thead|tbody|tr|td|th|div|span|br|hr|mark|u)\b[^>]*>/i;
 const MARKDOWN_AUTOLINK_REGEX_FALLBACK = /^<https?:\/\/[^>\s]+>$/i;
@@ -117,23 +124,13 @@ export function isAllowedMarkdownHtmlSnippet(value: string): boolean {
   return true;
 }
 
-const DATA_IMAGE_PAYLOAD_REGEX = /(data:image\/[a-z0-9.+-]+;base64,)[a-z0-9+/=]+/gi;
-
-/**
- * The text with each base64 image payload cut to one character. An inline image
- * is not text: it neither counts toward the size of a Markdown content nor goes
- * through the Markdown parser. The cut keeps the `data:image/...;base64,` prefix,
- * so the URI is still recognised as an inline image, and changes no Markdown
- * structure (the payload alphabet, letters, digits, "+", "/" and "=", holds no
- * delimiter that acts in the middle of a line).
- */
-export function withoutDataImagePayloads(content: string): string {
-  return String(content || '').replace(DATA_IMAGE_PAYLOAD_REGEX, '$1A');
-}
-
 function parseTokens(content: string): MarkdownToken[] | null {
+  // Inline image payloads are not parsed (see withoutDataImagePayloads).
+  const parseText = withoutDataImagePayloads(content);
+  // A text measured over the parse budget never reaches the parser (markdown-parse-budget.ts).
+  assertWithinMarkdownParseBudget(parseText);
   try {
-    return marked.lexer(withoutDataImagePayloads(content), { gfm: true, breaks: true }) as MarkdownToken[];
+    return marked.lexer(parseText, { gfm: true, breaks: true }) as MarkdownToken[];
   } catch {
     return null;
   }
@@ -278,7 +275,9 @@ function hasMarkdownDataImageText(text: string): boolean {
 /**
  * `<img ... src="data:image/...;base64,...">` in text that could not be tokenized.
  * Each tag is cut at its first ">" (a base64 payload holds none), and only text up
- * to the last ">" is searched, so every tag match succeeds at once.
+ * to the last ">" is searched, so every tag match succeeds at once. One difference
+ * with a tag read up to its closing quote: a quoted `src` value holding a ">" before
+ * the end of its quotes is not recognised here (a base64 image never holds one).
  */
 function hasHtmlDataImageText(text: string): boolean {
   const lastClose = text.lastIndexOf('>');
@@ -334,6 +333,18 @@ export function isHtmlContent(content: string): boolean {
 
   if (MARKDOWN_AUTOLINK_REGEX_FALLBACK.test(text)) return false;
   return hasHtmlTagText(text);
+}
+
+/**
+ * Measures, off the main thread, the texts `resolveHtmlContentSource` parses for
+ * this content (the text and its entity-decoded form): one over the parse budget is
+ * then refused by the parser with a 400 `MARKDOWN_TOO_COMPLEX`.
+ */
+export async function noteHtmlContentSourceParseBudget(content: unknown, fieldName = 'content'): Promise<boolean> {
+  const text = String(content ?? '').trim();
+  if (!text) return true;
+  const decoded = decodeHtmlEntities(text).trim();
+  return noteMarkdownParseBudget(decoded && decoded !== text ? [text, decoded] : [text], { fieldName });
 }
 
 export function resolveHtmlContentSource(content: string): string {

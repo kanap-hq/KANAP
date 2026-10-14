@@ -4,6 +4,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { promisify } from 'node:util';
 import { BadRequestException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import { assertMarkdownParseBudget } from './markdown-parse-budget';
 import { ARCHIVE_MAX_ENTRY_BYTES, ARCHIVE_MAX_TOTAL_BYTES, openBoundedArchive } from './archive-limits';
 import { converterEnv } from './converter-env';
 import { IMPORTABLE_MIME_TYPES } from './dto/import-document.dto';
@@ -43,6 +44,21 @@ export type ImportedDocumentResult = {
   omittedTargets: string[];
   warnings: string[];
 };
+
+/**
+ * Applies `replace` to the text up to the end of the last `closer` (compared
+ * without case) and keeps the rest as it is. For a pattern that runs from an
+ * opening mark to the next `closer`, the result is the same as on the whole text:
+ * no match can end after the last closer. Each opening mark before it then has a
+ * closer ahead, so a lazy match never scans to the end of the text again
+ * (linear time).
+ */
+function replaceBeforeLastCloser(text: string, closer: string, replace: (head: string) => string): string {
+  const end = text.toLowerCase().lastIndexOf(closer.toLowerCase());
+  if (end === -1) return text;
+  const cut = end + closer.length;
+  return replace(text.slice(0, cut)) + text.slice(cut);
+}
 
 @Injectable()
 export class DocumentImportService {
@@ -94,6 +110,8 @@ export class DocumentImportService {
         throw new BadRequestException('Imported document produced no content.');
       }
       const markdown = this.sanitizeForMdxEditor(rawMarkdown);
+      // The Markdown parser reads the result later on the main thread: bounded first.
+      await assertMarkdownParseBudget(markdown, 'content_markdown');
       const collected = await this.collectReferencedImages(markdown, tempDir);
       warnings.push(...collected.warnings);
 
@@ -445,7 +463,7 @@ export class DocumentImportService {
     );
 
     // Convert HTML tables to GFM markdown tables.
-    result = result.replace(/<table\b[\s\S]*?<\/table>/gi, (html) => this.convertHtmlTableToGfm(html));
+    result = replaceBeforeLastCloser(result, '</table>', (head) => head.replace(/<table\b[\s\S]*?<\/table>/gi, (html) => this.convertHtmlTableToGfm(html)));
 
     // Convert URI autolinks <scheme://…> to standard markdown links.
     // MDX treats <https://…> as JSX and fails on the :// namespace syntax.
@@ -468,7 +486,7 @@ export class DocumentImportService {
     );
 
     // Strip HTML comments (e.g. pandoc bookmarks, drawing group markers).
-    result = result.replace(/<!--[\s\S]*?-->/g, '');
+    result = replaceBeforeLastCloser(result, '-->', (head) => head.replace(/<!--[\s\S]*?-->/g, ''));
 
     // Strip block-level and inline HTML tags, keeping text content.
     result = result.replace(/<\/p\s*>/gi, '\n\n');
