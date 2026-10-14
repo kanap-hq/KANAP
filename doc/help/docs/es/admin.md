@@ -449,6 +449,8 @@ La parte superior de la página resume su suscripción en dos líneas:
 
 Sin una suscripción en curso (una prueba, una prueba expirada o una suscripción finalizada), solo se muestra el estado. Durante una prueba, lo acompañan la fecha de fin de la prueba y los días restantes.
 
+Cuando está previsto un paso a la facturación mensual, una tercera línea lo indica, por ejemplo «Pasa a mensual el 7 oct 2027.» Haga clic en **Mantener anual** en esa línea para cancelar el cambio.
+
 ### Acciones
 
 - **Elegir plan** / **Cambiar plan**: Abrir el cuadro de diálogo del plan para suscribirse o alternar entre facturación mensual y anual. Requiere administrador de facturación.
@@ -456,7 +458,28 @@ Sin una suscripción en curso (una prueba, una prueba expirada o una suscripció
 
 Si su suscripción no está en buen estado (prueba expirada, pago vencido, etc.), el cuadro de selección de plan se abre automáticamente al visitar la página de Facturación.
 
-Para suscribirse, con tarjeta o por transferencia, la información de facturación debe estar completa (consulte [Información de facturación](#informacion-de-facturacion)). Si falta algo, el cuadro **Elegir un plan** enumera los campos que faltan y los botones de pago permanecen desactivados. Haga clic en **Completar la información de facturación** para cerrar el cuadro e ir al primer campo que falta. Cuando los datos se guarden completos, los botones de pago estarán disponibles. Cambiar el plan de una suscripción con tarjeta en curso no requiere esta comprobación.
+### Suscribirse
+
+Para suscribirse, la información de facturación debe estar completa: empresa, correo electrónico, dirección, país y, en la Unión Europea, número de IVA (consulte [Información de facturación](#informacion-de-facturacion)). Si falta algo, el cuadro **Elegir un plan** enumera los campos que faltan y los botones de pago permanecen desactivados. Haga clic en **Completar la información de facturación** para cerrar el cuadro e ir al primer campo que falta. Cuando los datos se guarden completos, los botones de pago estarán disponibles.
+
+Marque **Acepto las condiciones generales de venta** antes de pagar. La misma casilla se marca en cada cambio de plan.
+
+Puede pagar de dos formas:
+- **Pagar con tarjeta**: para facturación mensual o anual. Se abre la página de pago de Stripe. La tarjeta se carga cada vez que se emite una factura.
+- **Pagar por transferencia**: solo para facturación anual. KANAP emite la factura y la abre. La factura se paga en un plazo de 30 días.
+
+No se cobra IVA. Cada factura lleva la mención «TVA non applicable, art. 293 B du CGI».
+
+### Cambiar de plan
+
+Abra **Cambiar plan**, elija el intervalo de facturación y confirme con **Cambiar plan (tarjeta)** o **Cambiar plan (transferencia)**.
+
+- **De mensual a anual**: el cambio se aplica de inmediato. Hoy comienza un nuevo periodo anual, la parte no utilizada del mes en curso se abona y la diferencia se factura. Con tarjeta, se carga en el acto. Si su banco le pide confirmar el pago, se abre la página de pago y el plan cambia una vez pagada la factura. Con transferencia, la factura se paga en un plazo de 30 días.
+- **De anual a mensual**: el cambio se aplica al final del periodo anual. Hasta entonces, la página muestra «Pasa a mensual el» seguido de la fecha. Haga clic en **Mantener anual** para conservar la facturación anual.
+
+Pasar de la transferencia a la tarjeta requiere una tarjeta guardada. Si no tiene ninguna, una página de Stripe le pide que añada una y después se vuelve a abrir el cuadro del plan para que confirme el cambio.
+
+Cambiar el plan de una suscripción con tarjeta en curso no requiere información de facturación completa. Un cambio pagado por transferencia sí la requiere.
 
 ### Información de facturación
 
@@ -491,6 +514,8 @@ Sus facturas se enumeran en una tabla bajo la información de facturación:
 - **Descargar**: Descargar la factura en PDF
 
 Las cinco facturas más recientes se muestran primero. Haga clic en **Mostrar todo** para ver las demás.
+
+Cada factura se envía también por correo electrónico a la dirección de correo de facturación. El PDF está en formato A4. Su idioma sigue el país de la dirección de facturación: francés para Francia y Mónaco, alemán para Alemania y Austria, español para España, inglés para los demás países. Para una empresa francesa, la factura muestra también su SIREN, obtenido del número de IVA.
 
 ---
 
