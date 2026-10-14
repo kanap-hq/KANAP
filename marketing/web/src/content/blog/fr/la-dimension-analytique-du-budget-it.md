@@ -11,54 +11,63 @@ translationKey: analytics-dimensions-for-your-it-budget
 
 À la question : « Qui paie cette licence ? », les outils de refacturation répondent sans hésiter. Mais à la question : « Combien nous coûte la cyber, tous fournisseurs confondus ? », nous restons souvent sans réponse.
 
-La dimension analytique apporte cette seconde lecture. Une étiquette légère, optionnelle, posée sur un poste pour dire sa nature : Infrastructure, Migration Cloud, Licences, Sécurité. Évidemment paramétrable.
+La dimension analytique apporte cette seconde lecture. Chaque dimension est une façon de classer les lignes, avec ses propres valeurs : ce que paie l'argent, la partie de l'IT servie, la raison de la dépense. Un nouvel espace en compte quatre dès le départ, toutes facultatives.
 
 ## La mécanique dans KANAP
 
-### Créer les dimensions
+### Les dimensions et leurs valeurs
 
-Direction **Données de référence > Dimensions analytiques**. Chaque dimension porte un nom unique et une description. La description sert surtout aux collègues : « Hébergement, cloud et virtualisation » se comprend mieux que « Infra ».
+Direction **Données de référence > Dimensions analytiques**. Un bandeau en haut liste les dimensions ; un clic sur l'une affiche ses valeurs. Un nouvel espace arrive avec quatre dimensions recommandées, chacune avec ses valeurs et une description d'une phrase :
 
-![La liste des dimensions analytiques : nom, description, statut et date de mise à jour](/screenshots/blog/analytics-dimensions.png)
+- **Nature de coût**, la dimension par défaut : ce que paie l'argent (Matériel, Logiciel, Main-d'œuvre externe, Services externes...).
+- **Domaine IT** : la partie de l'IT que sert la dépense (Calcul, Réseau, Poste de travail, Application, Sécurité et conformité...).
+- **Motif** : pourquoi l'argent est dépensé (Remplacement, Capacité, Productivité, Sécurité, Conformité, Croissance).
+- **Priorité** : Obligatoire, Haute, Moyenne ou Basse.
 
-Une dizaine de catégories larges suffisent généralement. Au-delà de vingt, on décrit son organisation au lieu de l'analyser. Gardez un nommage cohérent.
+![La page Dimensions analytiques : le bandeau des dimensions avec Cost pool sélectionnée, et ses huit valeurs avec leur description](/screenshots/blog/analytics-dimensions-2026-10-13.png)
 
-### Étiqueter un poste
+Natures de coût et domaines IT suivent le modèle TBM (Technology Business Management). Renommez, réordonnez ou désactivez ce qui ne vous convient pas. Un espace créé avant les ajoute avec **Dimensions recommandées**. **Nouveau** crée une dimension à vous, et **Nouvelle valeur** ajoute une valeur à la dimension sélectionnée.
 
-Dans le panneau des propriétés d'un poste OPEX ou CAPEX, le champ **Catégorie analytique** attend une dimension. Choisissez-en une, ou laissez vide pour « Non affecté ». L'étiquette vaut ensuite pour le poste entier, tous exercices confondus.
+Cinq à dix valeurs larges par dimension suffisent généralement. Au-delà de vingt, la dimension veut répondre à trop de questions : scindez-la en deux. La description sert surtout aux collègues : « Prestataires et consultants facturés au temps passé » se comprend mieux que « Ext. ».
 
-![Le champ Catégorie analytique d'un poste OPEX, ici AWS Cloud Hosting étiqueté Infrastructure](/screenshots/blog/analytics-opex-item.png)
+### Classer une ligne
 
-Un poste porte zéro ou une dimension. L'analyse multidimensionnelle n'existe pas par ce biais : pour croiser deux angles, passez par les départements et leurs clés de ventilation.
+Dans le panneau **Propriétés** d'une ligne, chaque dimension a son champ, par exemple **Nature de coût** ou **Domaine IT**. Choisissez une valeur, ou laissez vide pour « Non affecté ». La valeur vaut pour la ligne entière, tous exercices confondus.
+
+![Le panneau Propriétés d'une ligne budgétaire : Hardware en Cost pool, Compute en IT tower, Replacement en Purpose et Mandatory en Priority](/screenshots/blog/analytics-line-properties-2026-10-13.png)
+
+Une ligne porte une valeur par dimension : **Logiciel** en Nature de coût et **Application** en Domaine IT en même temps. Chaque dimension répond à une question, et le rapport les croise.
 
 Deux points à garder en tête :
 
 - **Aucun impact sur les ventilations** ni sur la comptabilité formelle. La société payeuse, le compte et les clés de répartition ne bougent pas. Les dimensions analytiques servent uniquement au reporting.
-- **Départements et dimensions ne jouent pas dans la même cour.** Les départements sont des unités organisationnelles formelles, avec des clés de ventilation précises. Les dimensions analytiques sont des étiquettes informelles et optionnelles, sans surcharge de ventilation.
+- **Départements et dimensions ne jouent pas dans la même cour.** Les départements sont des unités organisationnelles formelles, avec des clés de ventilation précises. Les dimensions analytiques sont des classements informels et optionnels, sans surcharge de ventilation.
 
-Pour retirer une dimension, désactivez-la. La date de désactivation est enregistrée, la dimension disparaît des listes de sélection, les postes déjà étiquetés gardent leur étiquette, et les rapports historiques restent exacts. Il n'y a pas de bouton supprimer, et c'est volontaire.
+Pour retirer une valeur ou une dimension, désactivez-la : les lignes gardent leur valeur et les rapports passés restent exacts. La suppression existe, après une confirmation qui compte les lignes concernées.
 
-Vous pouvez utiliser l'information collectée dans la liste des OPEX, en ajoutant la colonne optionnelle « Analytique ». Cela permet de balayer en un clin d'œil tous les postes d'une catégorie : « Quelles sont les applications utilisées par la finance ? ».
+Dans la liste des lignes budgétaires, chaque dimension a sa colonne optionnelle. Cela permet de balayer en un clin d'œil toutes les lignes d'une valeur : « Quelles lignes relèvent de la main-d'œuvre externe ? ».
 
 ## Le rapport Budget par dimension analytique
 
 Le rapport se trouve sous **Rapports > Dimensions analytiques**.
 
+- **Type de lignes** : toutes les lignes, OPEX ou CAPEX.
+- **Dimension** : la dimension de regroupement, Nature de coût au départ.
 - **Année unique** : camembert ou barres horizontales, au choix.
-- **Plage pluriannuelle** : une courbe, avec une ligne par dimension.
-- **Métrique** : budget, réalisé, atterrissage prévu ou révision.
-- **Exclusion de dimensions** : pour se concentrer sur un sous-ensemble.
+- **Plage pluriannuelle** : une courbe, avec une ligne par valeur.
+- **Métrique** : toute colonne affichée (budget, révision, réalisé, atterrissage prévu).
+- **Exclure des valeurs** : pour se concentrer sur un sous-ensemble.
 - **Sorties** : tableau récapitulatif, export CSV du tableau, PNG du graphique, PDF complet.
 
-![Le rapport en 2026 : 3,2 M€ de budget OPEX répartis sur quinze dimensions analytiques](/screenshots/blog/analytics-report.png)
+![Le rapport en 2026 : 12,1 M€ de budget OPEX répartis entre les valeurs de Cost pool](/screenshots/blog/analytics-report-2026-10-13.png)
 
-Sur l'exercice 2026, la productivité capte 25 % du budget OPEX. L'infrastructure suit à 13 %, comme les services professionnels.
+Sur l'exercice 2026, la main-d'œuvre externe capte à elle seule 54 % du budget OPEX. Le logiciel suit à 26 %, puis les services externes à 11 %.
 
 En vue pluriannuelle, le rapport devient un outil de trajectoire. Une ligne s'envole, une autre s'éteint, et la décision se discute sur des faits.
 
-![Le même rapport sur 2025 à 2027 : une courbe par dimension analytique](/screenshots/blog/analytics-report-range.png)
+![Le même rapport de 2025 à 2026 : une courbe par valeur de Cost pool](/screenshots/blog/analytics-report-range-2026-10-13.png)
 
-« Non affecté » est un état valide. Les dimensions sont optionnelles, et un poste sans étiquette apparaît simplement sur cette ligne.
+« Non affecté » est un état valide. Les valeurs sont optionnelles, et une ligne sans valeur apparaît simplement sur cette ligne du rapport.
 
 <aside class="tip">
   <b>Astuce</b>
@@ -67,22 +76,22 @@ En vue pluriannuelle, le rapport devient un outil de trajectoire. Une ligne s'en
 
 ## Les coûts cachés
 
-Le camembert fait remonter ce que le « top 10 » des postes masque. La dimension devenue trop grosse pour être honnête. Deux dimensions qui décrivent presque la même chose et gagneraient à fusionner. La courbe qui part de zéro en 2025 sur l'IoT, trace d'un poste apparu en cours de route. Ou la dimension RH qui passe de 80 000 € à 150 000 € en un an, quand le budget global ne progresse que de 13 %.
+Le camembert fait remonter ce que le « top 10 » des lignes masque. La valeur devenue trop grosse pour être honnête. Deux valeurs qui décrivent presque la même chose et gagneraient à fusionner. Le motif Capacité qui part de zéro en 2025, trace d'une ligne apparue en cours de route. Ou les RH, sur la dimension Domaine métier, qui passent de 468 500 € à 574 570 € en un an (+23 %), quand le budget OPEX ne progresse que de 13 %.
 
-C'est aussi là que les deux lectures se croisent. La sécurité pèse 7 % du budget. Le rapport de refacturation dit quelle filiale la porte. Le DSI tient alors une phrase courte et vérifiable en revue budgétaire : voilà ce que nous dépensons, pour quoi, et qui paie.
+C'est aussi là que les deux lectures se croisent. Sécurité et conformité, en Domaine IT, pèse 8 % du budget OPEX. Le rapport de refacturation dit quelle filiale la porte. Le DSI tient alors une phrase courte et vérifiable en revue budgétaire : voilà ce que nous dépensons, pour quoi, et qui paie.
 
 ## Et le CAPEX ?
 
-Le champ **Catégorie analytique** existe aussi sur les postes CAPEX, avec la même règle : zéro ou une dimension. Un projet d'investissement se lit donc avec le vocabulaire des dépenses récurrentes, et la comparaison entre les deux enveloppes reste possible.
+Les dimensions valent pour les lignes OPEX et CAPEX, sauf si vous en réservez une à une seule nature. Un projet d'investissement se lit donc avec le vocabulaire des dépenses récurrentes, et la comparaison entre les deux enveloppes reste possible.
 
 C'est tout l'intérêt d'une nomenclature commune : la question « combien coûte la sécurité ? » se pose de la même façon sur une licence récurrente et sur un projet d'équipement.
 
 ## Par où commencer
 
-1. Créez cinq à dix dimensions larges, avec une description d'une phrase chacune.
-2. Étiquetez d'abord les dix postes les plus lourds. Le rapport devient utile dès cette étape.
-3. Laissez le reste en « Non affecté », puis étiquetez au fil de l'eau.
+1. Passez en revue les quatre dimensions recommandées, renommez ou désactivez les valeurs inutiles.
+2. Classez d'abord les dix lignes les plus lourdes. Le rapport devient utile dès cette étape.
+3. Laissez le reste en « Non affecté », puis classez au fil de l'eau.
 4. Croisez le rapport avec les rapports de refacturation : qui paie d'un côté, pour quoi de l'autre.
-5. Relancez le rapport à chaque revue budgétaire. Scindez une dimension trop large, fusionnez deux dimensions trop fines.
+5. Relancez le rapport à chaque revue budgétaire. Scindez une valeur trop large, fusionnez deux valeurs trop fines.
 
-Cette dimension analytique complète parfaitement la répartition des coûts IT (voir [La refacturation des coûts IT, c'est facile](/fr/blog/la-refacturation-des-couts-it-cest-facile)) et vous donnera toute la visibilité nécessaire pour préparer, analyser et défendre votre budget.
+Cette dimension analytique complète parfaitement la répartition des coûts IT (voir [Refacturation informatique : qui paie quoi ?](/fr/blog/la-refacturation-des-couts-it-cest-facile)) et vous donnera toute la visibilité nécessaire pour préparer, analyser et défendre votre budget.

@@ -17,13 +17,13 @@ const content: FeaturesHubContent = {
       role: 'CIO / IT-Leitung',
       headline: 'Verteidigen Sie das IT-Budget im Vorstand.',
       body:
-        'Ihr CFO fragt, warum die IT-Kosten um 12 % gestiegen sind. Sie kommen mit den Zahlen: ein Chargeback-Bericht nach Gesellschaft und Abteilung, OPEX und CAPEX nach Anwendung aufgeschlüsselt, der Mehrjahrestrend. Jede Zeile lässt sich auf einen Vertrag oder ein Projekt zurückführen. Keine Excel-Akrobatik, kein „Ich melde mich".',
-      outcome: 'Gehen Sie mit Antworten ins Budget-Review, nicht mit Fragen.',
+        'Ihr CFO fragt, warum die IT-Kosten um 12 % gestiegen sind. Sie kommen mit den Zahlen: ein Chargeback-Bericht nach Gesellschaft und Abteilung, OPEX und CAPEX nebeneinander, nach Analysedimension, der Mehrjahrestrend. Jede Zeile lässt sich auf einen Vertrag oder ein Projekt zurückführen. Keine Excel-Akrobatik, kein „Ich melde mich".',
+      outcome: 'Gehen Sie mit den Antworten ins Budget-Review.',
       modules: [
         { slug: 'budget', label: 'Budget' },
         { slug: 'it-landscape', label: 'IT-Landschaft' },
       ],
-      shotAlt: 'Chargeback-Bericht nach Gesellschaft und Abteilung, OPEX/CAPEX-Aufschlüsselung',
+      shotAlt: 'Die 10 größten OPEX-Zeilen des Budgets 2026 als Kreisdiagramm',
     },
     {
       role: 'Unternehmensarchitekt',

@@ -12,7 +12,7 @@ translationKey: it-cost-chargeback-made-simple
 
 « Combien nous coûte l'IT ? » La question est facile. « Combien coûte l'IT du département X ? » l'est beaucoup moins. Et quand la direction demande qui doit porter la facture, le tableur du DSI montre vite ses limites.
 
-La refacturation IT répond à cette question. Chaque coût informatique est réparti entre les entités qui en bénéficient, selon une règle explicite et vérifiable. Ces entités peuvent être des sociétés, des départements, le chiffre d'affaires, l'effectif, ou encore une entrée manuelle. Et des combinaisons de ces critères !
+La refacturation IT répond à cette question. Chaque coût informatique est réparti entre les entités qui en bénéficient, selon une règle explicite et vérifiable. Ces entités sont des sociétés ou des départements, et la clé peut être l'effectif, les utilisateurs IT, le chiffre d'affaires ou un pourcentage saisi. Et des combinaisons de ces critères !
 
 Les coûts peuvent même ensuite être ramenés à l'utilisateur pour des comparaisons instructives entre pays, départements et sociétés.
 
@@ -32,17 +32,17 @@ Trois usages reviennent :
 
 Par défaut, KANAP utilise l'effectif des sociétés définies dans les données de référence : tous les coûts seront répartis entre toutes les sociétés en fonction de l'effectif.
 
-Vous pouvez modifier cette règle par défaut dans Administration, Méthode de ventilation par défaut. La règle définie s'appliquera année par année sur les entrées qui n'auront pas encore été personnalisées (vous ne perdez pas le travail déjà effectué).
+Vous pouvez modifier cette règle par défaut dans Administration, Méthode de ventilation par défaut. La règle définie s'appliquera année par année sur les lignes qui n'auront pas encore été personnalisées (vous ne perdez pas le travail déjà effectué).
 
-![La méthode de ventilation par défaut : exercice, sociétés ciblées, critère et répartition calculée](/screenshots/blog/chargeback-default-method-2026-10.png)
+![La méthode de ventilation par défaut pour 2026 : exercice, sociétés et critère, ici toutes les sociétés actives à l'effectif.](/screenshots/blog/chargeback-default-method-2026-10-13.png)
 
-### Gestion au niveau du poste
+### Gestion au niveau de la ligne
 
-Chaque poste de dépense porte sa propre règle de ventilation, pour chaque année. Lorsque le réglage par défaut doit être affiné, il peut être ajusté pour chaque entrée d'OPEX et de CAPEX. C'est cela qui permet de reporter correctement le coût des applications spécifiques (ex. : un logiciel de comptabilité imputé au département finance).
+Chaque ligne budgétaire porte sa propre règle de ventilation, pour chaque année. Lorsque le réglage par défaut doit être affiné, il peut être ajusté pour chaque ligne OPEX et CAPEX. C'est cela qui permet de reporter correctement le coût des applications spécifiques (ex. : un logiciel de comptabilité imputé au département finance).
 
-L'onglet **Ventilations** d'un poste affiche le résultat en temps réel. Ici, la maintenance SAP de 280 000 EUR se répartit à l'effectif : 58,54 % pour Fromage & Co SA, 19,51 % pour Kaasmeester BV, et ainsi de suite jusqu'à 100 %.
+L'onglet **Ventilations** d'une ligne affiche le résultat en temps réel. Ici, la maintenance SAP de 280 000 EUR se répartit à l'effectif : 58,54 % pour Fromage & Co SA, 19,51 % pour Kaasmeester BV, et ainsi de suite jusqu'à 100 %.
 
-![L'onglet Ventilations : méthode, critère, pourcentage et montant par société](/screenshots/blog/chargeback-allocations-2026-10b.png)
+![L'onglet Ventilations de SAP S/4HANA Maintenance pour 2026 : méthode, critère, pourcentage et montant pour chacune des quatre sociétés.](/screenshots/budget-allocations-2026-10-13.png)
 
 Toutes les clés de répartition sont possibles :
 
@@ -53,7 +53,7 @@ Toutes les clés de répartition sont possibles :
 - **Manuel par département** : pour allouer des coûts à un ou plusieurs départements en particulier, par effectif uniquement.
 - **Pourcentages manuels** : pour une liberté d'allocation totale ; vous saisissez les pourcentages, qui doivent totaliser 100 %, ou vous les répartissez équitablement d'un clic.
 
-Pour éviter de tout reparamétrer chaque année, l'outil « Copier les ventilations » reporte ces règles d'un exercice à l'autre, pour l'OPEX comme pour le CAPEX, simulation comprise. La ventilation suit donc le budget sans ressaisie.
+Pour éviter de tout reparamétrer chaque année, **Copier les colonnes budgétaires** reporte ces règles d'un exercice à l'autre avec les montants, aperçu compris. La ventilation suit donc le budget sans ressaisie.
 
 ### Ne pas confondre avec les centres de coûts
 
@@ -67,20 +67,20 @@ Une fois les règles en place, deux rapports permettent d'explorer toutes les fa
 
 Le premier répond à « comment se répartit la dépense IT entre nos sociétés ? ». Il affiche le total consolidé, la part de chaque société, les montants payés et consommés, puis les flux intersociétés.
 
-![La refacturation globale : total, parts par société et flux intersociétés](/screenshots/blog/chargeback-global-2026-10.png)
+![La refacturation globale du budget OPEX 2026 : total général, totaux par société et graphique de la répartition, avec les onglets All, OPEX et CAPEX.](/screenshots/blog/chargeback-global-2026-10-13.png)
 
 Les KPI y ajoutent deux métriques clés de tout budget IT :
 
-- Les coûts IT vs. le CA, global pour le groupe et par société. Vous pourrez dire de façon étayée : notre IT coûte 2,45 % du CA par an.
+- Les coûts IT vs. le CA, global pour le groupe et par société. Vous pourrez dire de façon étayée : chez Fromage & Co SA, l'IT coûte 3,94 % du CA par an.
 - Les coûts IT par personne et par utilisateur IT en valeur absolue.
 
 ### Refacturation par société
 
-Ce rapport permet de descendre d'un niveau et d'analyser le détail au niveau d'une société. On y retrouve les coûts IT par département, les postes de refacturation (pour répondre à une filiale : voilà précisément les services pour lesquels on vous facture), le détail des flux entrants et sortants, et un rappel des KPI. C'est le rapport à transmettre aux filiales avec leur facture annuelle.
+Ce rapport permet de descendre d'un niveau et d'analyser le détail au niveau d'une société. On y retrouve les coûts IT par département, les lignes de refacturation (pour répondre à une filiale : voilà précisément les services pour lesquels on vous facture), le détail des flux entrants et sortants, et un rappel des KPI. C'est le rapport à transmettre aux filiales avec leur facture annuelle.
 
-![La refacturation par société : totaux par département, postes détaillés et KPI](/screenshots/blog/chargeback-company-2026-10.png)
+![La refacturation de Fromage & Co SA, budget OPEX 2026 : KPI, totaux par département et lignes de refacturation.](/screenshots/blog/chargeback-company-2026-10-13.png)
 
-Les deux rapports sont entièrement paramétrables (année, société, rubriques) et s'exportent en CSV, en PNG ou en PDF. Ils peuvent aussi être présentés directement en revue budgétaire.
+Les deux rapports sont entièrement paramétrables (type de lignes, année, colonne, société, rubriques) et s'exportent en CSV, en PNG ou en PDF. Ils peuvent aussi être présentés directement en revue budgétaire.
 
 <aside class="tip">
   <b>Astuce</b>
@@ -95,7 +95,7 @@ C'est souvent là que se trouvent des pistes sérieuses d'économie, et c'est co
 
 ## Et le CAPEX ?
 
-Les investissements utilisent le même onglet Ventilations et la même mécanique. Un projet financé pour une seule filiale se répartit vers cette filiale, le reste suit la méthode choisie. Les deux rapports de refacturation, eux, portent sur l'OPEX : c'est la dépense récurrente qu'on refacture d'une année sur l'autre.
+Les investissements utilisent le même onglet Ventilations et la même mécanique. Un projet financé pour une seule filiale se répartit vers cette filiale, le reste suit la méthode choisie. Les deux rapports de refacturation s'ouvrent sur l'OPEX, la dépense qu'on refacture d'une année sur l'autre, et peuvent inclure les lignes CAPEX pour leur montant de l'année.
 
 ## Par où commencer
 
