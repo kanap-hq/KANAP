@@ -1,3 +1,4 @@
+import { decodeHtmlEntities, HTML_TEXT_ENTITIES } from '../../../common/html-entities';
 import { isRecord } from '../../../common/object-guards';
 import { clampText, trimmedString } from './agent-control-util';
 import type { ActionPlannerPromptInput } from './ai-agent-action-planner.service';
@@ -100,16 +101,13 @@ export function ticketLooksFrench(ticket: TicketLike): boolean {
 }
 
 export function normalizeKnowledgeText(value: string | null | undefined): string {
-  return String(value ?? '')
-    .replace(/<br\s*\/?>/gi, ' ')
-    .replace(/<\/p>/gi, ' ')
-    .replace(HTML_TAGS, ' ')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, '\'')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
+  return decodeHtmlEntities(
+    String(value ?? '')
+      .replace(/<br\s*\/?>/gi, ' ')
+      .replace(/<\/p>/gi, ' ')
+      .replace(HTML_TAGS, ' '),
+    { entities: HTML_TEXT_ENTITIES, ignoreCase: true },
+  )
     .replace(/[’`]/g, '\'')
     .replace(/\s+/g, ' ')
     .trim();
@@ -319,14 +317,13 @@ export function knowledgeItemsFromOutput(value: unknown): KnowledgeSearchItem[] 
     }));
 }
 
+const WEB_TEXT_ENTITIES = { amp: '&', quot: '"', '#39': '\'', lt: '<', gt: '>' };
+
 export function stripWebText(value: string): string {
-  return String(value || '')
-    .replace(HTML_TAGS, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, '\'')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
+  return decodeHtmlEntities(String(value || '').replace(HTML_TAGS, ' '), {
+    entities: WEB_TEXT_ENTITIES,
+    ignoreCase: true,
+  })
     .replace(/\s+/g, ' ')
     .trim();
 }

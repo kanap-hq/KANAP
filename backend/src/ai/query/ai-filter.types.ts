@@ -122,6 +122,16 @@ export type AiQueryResult = {
   filters_applied: string[];
   filters_ignored: string[];
   suggested_repairs?: AiFilterRepairSuggestion[];
+  /** The order of `items`: the requested sort, or the family's default one when `sort_ignored` names it. */
+  sort?: { field: string; direction: 'asc' | 'desc' };
+  /** A requested sort field the family cannot sort on; `sortable_fields` then lists the ones it can. */
+  sort_ignored?: string[];
+  sortable_fields?: string[];
+  /** A `limit` above the family's maximum: the page size asked and the one applied (`limit`). */
+  limit_capped?: { requested: number; applied: number };
+  /** The currency of the amounts, on the families that carry some (`ai-amounts-currency.util.ts`). */
+  amounts_currency?: string | null;
+  amounts_currency_note?: string;
   scope: {
     requested: AiQueryScope;
     resolved: boolean;
@@ -131,6 +141,8 @@ export type AiQueryResult = {
 
 export type AiAggregateResult = {
   status?: 'ok' | 'invalid_filter';
+  amounts_currency?: string | null;
+  amounts_currency_note?: string;
   group_by: string;
   metric?: string | null;
   function?: 'count' | 'sum' | 'avg' | 'min' | 'max';
@@ -186,6 +198,9 @@ export type AiFilterDescription = {
 export type AiFilterDescriptionResult = {
   entity_type: AiQueryEntityType;
   fields: AiFilterDescription[];
+  /** Every `sort.field` query_entities takes for this family (the sortable fields, label, created_at, updated_at...). */
+  sort_fields: string[];
+  default_sort: { field: string; direction: 'asc' | 'desc' };
   total: number;
   returned: number;
   truncated: boolean;

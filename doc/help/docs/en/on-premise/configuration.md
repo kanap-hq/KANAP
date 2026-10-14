@@ -393,6 +393,17 @@ Notes:
 - An on-premise installation has no model included: you add your own provider or model server under **Admin → Artificial intelligence → AI models**. See [AI models](../ai-models.md) and [Plaid settings](../ai-settings.md). Each tenant also has its own switches there.
 - The API needs outbound access to the provider you choose (see [Firewall rules](#firewall-rules)).
 
+### Connecting Claude over MCP
+
+With `AI_MCP_ENABLED=true`, Claude, Claude Desktop and Claude Code can connect to KANAP without a key: users add the server address as a custom connector and sign in with their KANAP account. See [Connecting an MCP client](../ai-settings.md#connecting-an-mcp-client). This needs:
+
+- **HTTPS.** KANAP is served over HTTPS, as in this guide. The sign-in exchange needs it, for Claude Code too.
+- **For Claude and Claude Desktop**: the KANAP address resolves in public DNS and the server accepts HTTPS from Anthropic's addresses, `160.79.104.0/21`. Claude calls KANAP from Anthropic's cloud. An instance that only your internal network can reach cannot be connected from claude.ai.
+- **For Claude Code**: the user's computer reaches the server. Nothing has to be open to the internet.
+- **Outbound HTTPS to `claude.ai`.** When a user connects an application, the API reads the application's public description from the address the application gives (`claude.ai` for Claude, Claude Desktop and Claude Code).
+
+API keys work without any of this, as long as the client reaches the server.
+
 ## Optional: advanced
 
 | Variable | Description | Default |
@@ -533,6 +544,7 @@ After the initial build, KANAP can run fully air-gapped if email, SSO, AI and FX
 | 443 | TCP | HTTPS: nginx reverse proxy serving the application |
 | 80 | TCP | HTTP: redirects to HTTPS (and answers certificate renewals when you use Let's Encrypt) |
 | 22 | TCP | SSH, for administration. Allow it before you enable a firewall |
+| 443 | TCP | From `160.79.104.0/21`, only to connect Claude and Claude Desktop over MCP (see [Connecting Claude over MCP](#connecting-claude-over-mcp)) |
 
 Nothing else needs to be reachable from the network. In particular, PostgreSQL (5432) and the object storage (9000) are for the Docker networks of the server only.
 
@@ -564,6 +576,7 @@ Only required if the corresponding feature is enabled.
 | `login.microsoftonline.com` | 443 | Entra ID SSO metadata & tokens | If Entra SSO is configured |
 | `graph.microsoft.com` | 443 | Profile enrichment at sign-in and the daily directory sync | If Entra SSO is configured |
 | The AI provider you configure (or your own model server) | 443 or your server's port | Chat, agents | If AI features are enabled and a model is set up |
+| `claude.ai` | 443 | Reads the description of Claude, Claude Desktop or Claude Code when a user connects it over MCP | If `AI_MCP_ENABLED=true` and users connect Claude without a key |
 | `api.worldbank.org` | 443 | Annual FX rates | Optional |
 | `open.er-api.com` | 443 | Spot FX rates | Optional |
 

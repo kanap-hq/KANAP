@@ -359,7 +359,7 @@ export class DocumentImportService {
   private buildMarkdownImage(reference: ImportedImageReference, target: string): string {
     const alt = reference.alt ?? '';
     const title = reference.title ?? null;
-    const encodedTitle = title ? ` "${String(title).replace(/"/g, '\\"')}"` : '';
+    const encodedTitle = title ? ` "${String(title).replace(/[\\"]/g, '\\$&')}"` : '';
     return `![${alt}](${target}${encodedTitle})`;
   }
 

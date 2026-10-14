@@ -1,3 +1,7 @@
+import { render } from '@testing-library/react';
+import { createElement } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { describe, expect, it, vi } from 'vitest';
 import {
   convertRichClipboardToMarkdown,
@@ -166,5 +170,40 @@ describe('richClipboardMarkdown', () => {
     expect(markdown).toContain('| Column |');
     expect(markdown).toContain('| Line 1 Line 2 |');
     expect(markdown).not.toContain('<br>');
+  });
+
+  describe('special characters in pasted text', () => {
+    function renderMarkdown(markdown: string) {
+      return render(createElement(ReactMarkdown, { remarkPlugins: [remarkGfm] }, markdown)).container;
+    }
+
+    it('keeps a pipe and the backslash before it inside a table cell', async () => {
+      const markdown = await convertRichClipboardToMarkdown({
+        html: String.raw`<table><tr><th>Pattern</th><th>Path</th></tr><tr><td>a\|b</td><td>C:\temp</td></tr></table>`,
+      });
+
+      expect(markdown).toContain(String.raw`| a\\\|b | C:\temp |`);
+      const cells = Array.from(renderMarkdown(markdown).querySelectorAll('td')).map((cell) => cell.textContent);
+      expect(cells).toEqual([String.raw`a\|b`, String.raw`C:\temp`]);
+    });
+
+    it('keeps backslashes and backticks literal inside inline code', async () => {
+      const markdown = await convertRichClipboardToMarkdown({
+        html: String.raw`<p>Run <code>C:\temp\run.cmd</code> or <code>a ` + '`' + String.raw`b</code></p>`,
+      });
+
+      expect(markdown).toBe('Run `C:\\temp\\run.cmd` or ``a `b``');
+      const codes = Array.from(renderMarkdown(markdown).querySelectorAll('code')).map((code) => code.textContent);
+      expect(codes).toEqual([String.raw`C:\temp\run.cmd`, 'a `b']);
+    });
+
+    it('keeps backslashes and quotes in an image title', async () => {
+      const markdown = await convertRichClipboardToMarkdown({
+        html: '<p><img src="https://example.com/a.png" alt="Chart" title=\'Say \\"hi\\" \\\'></p>',
+      });
+
+      expect(markdown).toBe('![Chart](https://example.com/a.png "Say \\\\\\"hi\\\\\\" \\\\")');
+      expect(renderMarkdown(markdown).querySelector('img')?.getAttribute('title')).toBe('Say \\"hi\\" \\');
+    });
   });
 });

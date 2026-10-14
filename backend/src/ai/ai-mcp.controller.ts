@@ -4,6 +4,7 @@ import {
   Delete,
   ForbiddenException,
   Get,
+  HttpException,
   Post,
   Query,
   Req,
@@ -12,12 +13,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { validate as isUuid } from 'uuid';
 import { SkipTenantTransaction } from '../common/skip-tenant-transaction.decorator';
-import { AiModelResolverService } from './ai-model-resolver.service';
-import { AiSettingsService } from './ai-settings.service';
 import { McpApiKeyAuthGuard } from './auth/mcp-api-key-auth.guard';
 import { AiCapabilityDispatcherService } from './control-plane/dispatcher/ai-capability-dispatcher.service';
 import { AiMcpAuditService } from './control-plane/mcp/ai-mcp-audit.service';
@@ -31,9 +31,13 @@ import {
   assertMcpScope,
 } from './control-plane/mcp/ai-mcp-access-policy';
 import { AiTenantExecutionService } from './execution/ai-tenant-execution.service';
-import { AiBuiltinRateLimiter } from './platform/ai-builtin-rate-limiter';
-import { AiBuiltinUsageService } from './platform/ai-builtin-usage.service';
 import { AiExecutionContext } from './ai.types';
+
+/** A readable tool title from its name: `get_entity_detail` → "Get entity detail". */
+export function toolTitle(name: string): string {
+  const words = name.replace(/[_-]+/g, ' ').trim();
+  return words ? words.charAt(0).toUpperCase() + words.slice(1) : name;
+}
 
 @Controller('ai/mcp')
 @SkipTenantTransaction()
@@ -46,10 +50,6 @@ export class AiMcpController {
     private readonly mcpAudit: AiMcpAuditService,
     private readonly mcpRateLimiter: AiMcpRateLimiter,
     private readonly tenantExecutor: AiTenantExecutionService,
-    private readonly settingsService: AiSettingsService,
-    private readonly modelResolver: AiModelResolverService,
-    private readonly builtinUsage: AiBuiltinUsageService,
-    private readonly builtinRateLimiter: AiBuiltinRateLimiter,
   ) {}
 
   private requireTenantId(req: Request): string {
@@ -66,7 +66,7 @@ export class AiMcpController {
       userId: String((req as any)?.user?.sub || ''),
       isPlatformHost: (req as any)?.isPlatformHost === true,
       surface: 'mcp',
-      authMethod: 'api_key',
+      authMethod: (req as any)?.user?.authMethod === 'oauth' ? 'oauth' : 'api_key',
       requestId: (req as any)?.id ?? null,
       aiApiKeyId: (req as any)?.user?.aiApiKeyId ?? null,
     };
@@ -91,6 +91,11 @@ export class AiMcpController {
     return methods;
   }
 
+  // Each JSON-RPC message counts once against the key's limit; a body that is not one counts once.
+  private mcpRequestCount(body: unknown): number {
+    return Array.isArray(body) ? Math.max(body.length, 1) : 1;
+  }
+
   private toolDefinitionScope(methods: Set<string>): AiMcpScope | null {
     if (methods.has('tools/call')) {
       return MCP_SCOPE_TOOLS_EXECUTE;
@@ -105,9 +110,18 @@ export class AiMcpController {
     context: AiExecutionContext,
     apiKey: any,
     methods: Set<string>,
+    requestCount: number,
   ): AiMcpApiKeyPolicy {
+    // The only place a POST is counted: before any lookup, so refused and bogus requests count too.
+    // MCP sends nothing to the included model, so it draws on neither its throttle nor its monthly
+    // allowance: this per-key limit is the guard.
     const keyPolicy = this.mcpExposure.parsePolicy(apiKey);
-    this.mcpRateLimiter.assertAllowed(context.tenantId, context.aiApiKeyId, keyPolicy.rateLimitPerMinute);
+    this.mcpRateLimiter.assertAllowed(
+      context.tenantId,
+      context.aiApiKeyId,
+      keyPolicy.rateLimitPerMinute,
+      requestCount,
+    );
 
     if (!keyPolicy.valid) {
       throw new ForbiddenException('MCP API key policy is invalid.');
@@ -122,21 +136,6 @@ export class AiMcpController {
       assertMcpScope(keyPolicy, MCP_SCOPE_TOOLS_EXECUTE);
     }
     return keyPolicy;
-  }
-
-  // MCP requests count against the included volume whenever the assistant would fall back
-  // on the included model, confirmed or not: MCP sends nothing to that model, so its
-  // confirmation does not apply here (and the resolution carries no key).
-  private async assertBuiltinMcpBudget(ctx: AiExecutionContext & { manager: any }) {
-    const resolved = await this.modelResolver.tryResolve(ctx.tenantId, { type: 'chat' }, ctx.manager, {
-      includedModelGate: 'none',
-    });
-    if (resolved?.source !== 'builtin' || !resolved.builtinRateLimits) {
-      return;
-    }
-    this.builtinRateLimiter.assertAllowed(ctx.tenantId, ctx.userId, resolved.builtinRateLimits);
-    const limit = await this.builtinUsage.getMonthlyLimit(ctx.manager);
-    await this.builtinUsage.reserveMessage(ctx.tenantId, limit, ctx.manager);
   }
 
   private mcpTextResult(result: unknown): string {
@@ -168,7 +167,7 @@ export class AiMcpController {
     const context = this.buildContext(req);
     const apiKey = this.requireApiKey(req);
     const methods = this.mcpMethods(req.body);
-    this.assertMcpPostPreflight(context, apiKey, methods);
+    this.assertMcpPostPreflight(context, apiKey, methods, this.mcpRequestCount(req.body));
     const definitionScope = this.toolDefinitionScope(methods);
 
     const toolDefs = await this.tenantExecutor.runWithContext(context, async (ctx) => {
@@ -177,48 +176,62 @@ export class AiMcpController {
         return [];
       }
 
-        const definitions = await this.mcpExposure.listToolJsonSchemas(ctx, apiKey, definitionScope);
-        if (methods.has('tools/list')) {
-          await this.assertBuiltinMcpBudget(ctx);
-        }
-        return definitions;
+      return this.mcpExposure.listToolJsonSchemas(ctx, apiKey, definitionScope);
     });
 
-    const server = new McpServer({
-      name: 'kanap-mcp',
-      version: '1.0.0',
-    });
+    // The low-level server takes the capabilities' JSON Schemas as they are (McpServer wants Zod).
+    const server = new Server(
+      { name: 'kanap-mcp', version: '1.0.0' },
+      { capabilities: { tools: {} } },
+    );
 
-    for (const toolDef of toolDefs) {
-      server.tool(
-        toolDef.name,
-        toolDef.description,
-        toolDef.parameters as any,
-        async (args: any) => {
-          const result = await this.tenantExecutor.runWithContext(context, async (ctx) => {
-            const keyPolicy = this.mcpExposure.parsePolicy(apiKey);
-            await this.mcpExposure.assertCanExecute(ctx, apiKey, toolDef.name);
-            this.mcpRateLimiter.assertAllowed(ctx.tenantId, ctx.aiApiKeyId, keyPolicy.rateLimitPerMinute);
-            await this.assertBuiltinMcpBudget(ctx);
-            const dispatched = await this.dispatcher.execute(ctx, {
-              capabilityName: toolDef.name,
-              input: args,
-              execution: {
-                surface: 'mcp',
-                trigger_kind: 'mcp_client',
-                metadata: {
-                  ai_api_key_id: ctx.aiApiKeyId ?? null,
-                },
+    server.setRequestHandler(ListToolsRequestSchema, async () => ({
+      tools: toolDefs.map((toolDef) => ({
+        name: toolDef.name,
+        title: toolTitle(toolDef.name),
+        description: toolDef.description,
+        inputSchema: toolDef.parameters as any,
+        // MCP exposes read-only capabilities only (capability-contract.ts, `mcp_exposure`); the
+        // Anthropic directory asks for a title and this hint on every tool.
+        annotations: { title: toolTitle(toolDef.name), readOnlyHint: true },
+      })),
+    }));
+
+    server.setRequestHandler(CallToolRequestSchema, async (request) => {
+      const toolDef = toolDefs.find((def) => def.name === request.params.name);
+      if (!toolDef) {
+        throw new ForbiddenException('MCP API key is not allowed to execute this capability.');
+      }
+      let result: unknown;
+      try {
+        result = await this.tenantExecutor.runWithContext(context, async (ctx) => {
+          await this.mcpExposure.assertCanExecute(ctx, apiKey, toolDef.name);
+          const dispatched = await this.dispatcher.execute(ctx, {
+            capabilityName: toolDef.name,
+            input: request.params.arguments ?? {},
+            execution: {
+              surface: 'mcp',
+              trigger_kind: 'mcp_client',
+              metadata: {
+                ai_api_key_id: ctx.aiApiKeyId ?? null,
               },
-            });
-            return dispatched.output;
+            },
           });
-          return {
-            content: [{ type: 'text' as const, text: this.mcpTextResult(result) }],
-          };
-        },
-      );
-    }
+          return dispatched.output;
+        });
+      } catch (error) {
+        // A tool error goes back as a tool result, so the client's model can read it and retry.
+        // Only our own HTTP errors carry a message meant for the caller.
+        const message = error instanceof HttpException ? error.message : 'The tool failed.';
+        return {
+          content: [{ type: 'text' as const, text: message }],
+          isError: true,
+        };
+      }
+      return {
+        content: [{ type: 'text' as const, text: this.mcpTextResult(result) }],
+      };
+    });
 
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined, // stateless

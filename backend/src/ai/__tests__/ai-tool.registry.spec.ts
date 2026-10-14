@@ -1350,7 +1350,8 @@ async function testQueryEntitiesDelegatesToQueryExecutor() {
   }]);
 }
 
-async function testQueryEntitiesAppliesGenerousDefaultLimit() {
+/** The page size is the executor's (`aiQueryLimit`, per family): the tool passes none of its own. */
+async function testQueryEntitiesLeavesThePageSizeToTheExecutor() {
   const calls: unknown[] = [];
   const registry = createRegistry({
     queryExecutor: {
@@ -1368,8 +1369,51 @@ async function testQueryEntitiesAppliesGenerousDefaultLimit() {
   assert.deepEqual(calls, [{
     entity_type: 'tasks',
     page: 1,
-    limit: 200,
   }]);
+}
+
+/**
+ * A refused input names each field and why, in the message the caller's model reads: the
+ * dispatcher's schema check (MCP and the chat capabilities) and the tool's own (Zod).
+ */
+async function testInvalidInputNamesTheFieldAndWhy() {
+  const { AiCapabilityDispatcherService } = require('../control-plane/dispatcher/ai-capability-dispatcher.service');
+  const registry = createRegistry();
+  const schemas = new Map(registry.toToolJsonSchemas([{ name: 'get_entity_detail' }, { name: 'query_entities' }]).map((schema) => [schema.name, schema.parameters]));
+  const dispatcher = new AiCapabilityDispatcherService(...Array.from({ length: 9 }, () => ({}) as any));
+  const refusal = (name: string, input: unknown): string => {
+    try {
+      dispatcher['validateCapabilityInput']({ name, version: '1', input_schema: schemas.get(name) }, input);
+    } catch (error: any) {
+      assert.ok(error instanceof BadRequestException, `${name}: a 400`);
+      return error.message;
+    }
+    throw new Error(`${name}: ${JSON.stringify(input)} was accepted`);
+  };
+
+  const unknown = refusal('get_entity_detail', { entity_type: 'spend_items', id: 'BL-102' });
+  assert.match(unknown, /^Invalid input for get_entity_detail: /);
+  assert.match(unknown, /unknown field "id" \(accepted: entity_type, entity_id, year\)/, unknown);
+  assert.match(unknown, /missing required field "entity_id"/, unknown);
+
+  const enumValue = refusal('get_entity_detail', { entity_type: 'budget_lines', entity_id: 'BL-102' });
+  assert.match(enumValue, /"entity_type" must be one of: "accounts", .*"spend_items".*"users"/, enumValue);
+
+  const nested = refusal('query_entities', { entity_type: 'spend_items', sort: { field: 'y_budget', direction: 'down' }, page: 'two' });
+  assert.match(nested, /"sort.direction" must be one of: "asc", "desc"/, nested);
+  assert.match(nested, /"page" must be integer/, nested);
+  assert.doesNotMatch(nested, /down|two/, 'the values sent are not echoed');
+
+  await assert.rejects(
+    () => registry.execute(createContext(), 'get_entity_detail', { entity_type: 'budget_lines' }),
+    (error: any) => {
+      assert.ok(error instanceof BadRequestException);
+      assert.match(error.message, /^Invalid input for get_entity_detail: /);
+      assert.match(error.message, /"entity_type" must be one of: "accounts"/, error.message);
+      assert.match(error.message, /missing required field "entity_id"/, error.message);
+      return true;
+    },
+  );
 }
 
 async function testSchemasExposeDefaultLimits() {
@@ -1383,7 +1427,8 @@ async function testSchemasExposeDefaultLimits() {
   assert.equal(searchAll.parameters.properties.limit.default, 25);
   assert.equal(searchAll.parameters.properties.limit.maximum, 100);
   assert.equal(queryEntities.parameters.properties.page.default, 1);
-  assert.equal(queryEntities.parameters.properties.limit.default, 200);
+  assert.equal(queryEntities.parameters.properties.limit.default, undefined);
+  assert.equal(queryEntities.parameters.properties.limit.maximum, undefined);
   assert.equal(searchKnowledge.parameters.properties.offset.default, 0);
   assert.equal(searchKnowledge.parameters.properties.limit.default, 20);
   assert.equal(searchKnowledge.parameters.properties.limit.maximum, 200);
@@ -1858,7 +1903,7 @@ async function run() {
   await testUpdateDocumentContentToolSchemaExposesDocumentAndBodyFields();
   await testUpdateDocumentRelationsToolSchemaExposesRelationFields();
   await testQueryEntitiesDelegatesToQueryExecutor();
-  await testQueryEntitiesAppliesGenerousDefaultLimit();
+  await testQueryEntitiesLeavesThePageSizeToTheExecutor();
   await testAggregateEntitiesDelegatesToAggregateExecutor();
   await testAggregateEntitiesSchemaExposesMetricAndFunction();
   await testGetFilterValuesDelegatesToQueryExecutor();
@@ -1867,6 +1912,7 @@ async function run() {
   await testSearchKnowledgeMapsStableDto();
   await testSearchKnowledgeAppliesDefaultLimit();
   await testSchemasExposeDefaultLimits();
+  await testInvalidInputNamesTheFieldAndWhy();
   await testGetEntityCommentsSchemaExposesPaginationDefaults();
   await testGetDocumentMapsStableDto();
   await testWebSearchRejectsOversizedQueries();

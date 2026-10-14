@@ -28,7 +28,7 @@ export const capexItemsRegistry: AiEntityFilterRegistry = {
       ai: 'currency',
       grid: 'currency',
       type: 'set',
-      description: 'CAPEX item currency.',
+      description: "The line's own currency, the one its amounts are entered in. The amounts query_entities and aggregate_entities return are in the reporting currency named by the result's amounts_currency, converted at each year's rate.",
       dynamic: true,
       discoverable: true,
       sortable: true,

@@ -228,7 +228,7 @@ export class LocationsService {
         { ...where, region: like },
       ];
     }
-    const allowedSortFields = ['location_reference', 'name', 'hosting_type', 'provider', 'country_iso', 'city', 'created_at'];
+    const allowedSortFields = ['location_reference', 'name', 'hosting_type', 'provider', 'country_iso', 'city', 'created_at', 'updated_at'];
     const sortField = allowedSortFields.includes(sort.field) ? sort.field : 'created_at';
     const [rows, total] = await repo.findAndCount({
       where: whereArr ?? where,
@@ -304,7 +304,7 @@ export class LocationsService {
       ];
     }
 
-    const allowedSortFields = ['location_reference', 'name', 'hosting_type', 'provider', 'country_iso', 'city', 'created_at'];
+    const allowedSortFields = ['location_reference', 'name', 'hosting_type', 'provider', 'country_iso', 'city', 'created_at', 'updated_at'];
     const sortField = allowedSortFields.includes(sort.field) ? sort.field : 'created_at';
     const limit = Math.min(Math.max(Number(query?.limit) || 10000, 1), 10000);
     const [rows, total] = await repo.findAndCount({

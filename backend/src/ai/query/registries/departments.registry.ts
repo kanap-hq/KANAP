@@ -45,6 +45,7 @@ export const departmentsRegistry: AiEntityFilterRegistry = {
   },
   sortFields: {
     label: 'name',
+    name: 'name',
     status: 'status',
     company: 'company_name',
     headcount_year: 'headcount_year',

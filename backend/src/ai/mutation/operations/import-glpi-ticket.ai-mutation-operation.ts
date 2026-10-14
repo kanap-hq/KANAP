@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { z } from 'zod';
+import { decodeHtmlEntities } from '../../../common/html-entities';
 import type { ImportedImageReference } from '../../../common/document-import-markdown';
 import { assertMarkdownSize } from '../../../common/markdown-limits';
 import {
@@ -204,17 +205,20 @@ function mapTicketTaskTypeName(type: unknown): string | null {
   }
 }
 
+const HTML_ATTRIBUTE_ENTITIES = {
+  amp: '&',
+  quot: '"',
+  '#39': '\'',
+  '#38': '&',
+  '#34': '"',
+  '#60': '<',
+  '#62': '>',
+  lt: '<',
+  gt: '>',
+};
+
 function decodeHtmlAttribute(value: string): string {
-  return String(value || '')
-    .replace(/&amp;/gi, '&')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, '\'')
-    .replace(/&#38;/gi, '&')
-    .replace(/&#34;/gi, '"')
-    .replace(/&#60;/gi, '<')
-    .replace(/&#62;/gi, '>')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>');
+  return decodeHtmlEntities(String(value || ''), { entities: HTML_ATTRIBUTE_ENTITIES, ignoreCase: true });
 }
 
 function extractImageTargets(html: string | null): string[] {
@@ -453,10 +457,10 @@ function applyReplacements(
   return output;
 }
 
-function buildMarkdownImage(reference: ImportedImageReference, target: string): string {
+export function buildMarkdownImage(reference: ImportedImageReference, target: string): string {
   const alt = reference.alt ?? '';
   const title = reference.title ?? null;
-  const encodedTitle = title ? ` "${String(title).replace(/"/g, '\\"')}"` : '';
+  const encodedTitle = title ? ` "${String(title).replace(/[\\"]/g, '\\$&')}"` : '';
   return `![${alt}](${target}${encodedTitle})`;
 }
 

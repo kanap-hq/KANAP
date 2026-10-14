@@ -4,12 +4,12 @@ const content: FeatureContent = {
   meta: {
     title: 'Plaid, AI assistant for IT governance',
     description:
-      'Ask Plaid about your IT data. Create documents, update tasks, connect any AI tool via MCP. Usage included on hosted cloud. Open source.',
+      'Ask Plaid about your IT data. Create documents, update tasks, add KANAP to Claude in two clicks. Usage included on hosted cloud. Open source.',
   },
   header: {
     eyebrow: 'Plaid · AI assistant',
     title: 'Ask KANAP anything about your IT.',
-    lead: 'Plaid answers across your budget, applications, projects and documentation, and makes changes when you ask. Every write is shown to you before it runs. Use it inside KANAP, or connect it to your own AI tools over MCP.',
+    lead: 'Plaid answers across your budget, applications, projects and documentation, and makes changes when you ask. Every write is shown to you before it runs. Use it inside KANAP, or add KANAP to Claude with its address and one click.',
   },
   sections: [
     {
@@ -35,22 +35,22 @@ const content: FeatureContent = {
       shotAlt: 'Plaid showing a preview of task updates',
     },
     {
-      title: 'MCP, use KANAP from any AI tool',
-      body: 'KANAP exposes a full MCP (Model Context Protocol) server. Connect Claude Desktop, Cursor, Windsurf or any MCP-compatible tool, and query your IT governance data without leaving your workflow.',
+      title: 'Add KANAP to Claude in two clicks',
+      body: 'Paste your KANAP address into Claude as a custom connector, sign in, click Allow. Claude then answers from your budget, applications, projects and documents. There is no key to create or copy. It works in Claude, Claude Desktop and Claude Code.',
       bullets: [
-        'Standard MCP protocol, works with any compatible client',
-        'Secure API key authentication with granular scoping',
-        'The same read queries as the built-in chat (MCP is read-only)',
-        'Keep your existing AI workflows, add KANAP context',
+        'Each person signs in with their own KANAP account',
+        'Read-only, within that person\'s access rights',
+        'Every user sees their connected apps and disconnects them in one click',
+        'API keys remain available for scripts and other MCP clients',
       ],
-      shotAlt: 'MCP configuration with API key scoping',
+      shotAlt: 'MCP API key settings',
     },
     {
       title: 'Full control & compliance',
       body: 'Plaid respects your organisation\'s rules. Every action is governed by user permissions. Administrators have complete control over what Plaid can and cannot do.',
       bullets: [
         'Full respect of user permissions on every query',
-        'Secure API keys with granular MCP scoping',
+        'MCP connections and keys follow each user\'s permissions and can be cut at any time',
         'Web search can be enabled or disabled independently',
         'Preview and confirmation for all write operations',
         'Read-only access through roles for cautious rollouts',

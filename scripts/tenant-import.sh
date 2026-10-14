@@ -504,6 +504,12 @@ UPDATE ai_external_mcp_servers SET credential_ref_json = NULL
 WHERE tenant_id = '$SOURCE_TENANT_ID' AND credential_ref_json->>'kind' = 'encrypted';
 "
 
+# MCP clients connected with OAuth were authorized for the source address: their
+# connections are revoked here, and the clients connect again to this installation.
+import_sql+="UPDATE ai_api_keys SET revoked_at = now(), revocation_reason = 'tenant_import'
+WHERE tenant_id = '$SOURCE_TENANT_ID' AND credential_kind = 'oauth' AND revoked_at IS NULL;
+"
+
 # Item counters: the exported item_sequences rows are kept (they come from the
 # same snapshot as the data). As a guard, a counter lower than the highest
 # number in use is raised past it, for each of the 13 kinds the
@@ -620,7 +626,7 @@ echo "    tenant '$SOURCE_SLUG' imported as '$DEST_SLUG'"
 echo "  Row counts match the export metadata and every row belongs to the tenant."
 echo "  Every foreign key holds."
 echo "  Post-import fixes done: subscription reset to On-Prem, encrypted values"
-echo "  cleared, item counters checked, budget totals and search index rebuilt,"
+echo "  cleared, MCP OAuth connections revoked, item counters checked, budget totals and search index rebuilt,"
 echo "  active seats recounted."
 
 # ---------------------------------------------------------------------------

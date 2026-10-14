@@ -393,6 +393,17 @@ Hinweise:
 - Eine On-Premise-Installation enthält kein Modell: Sie fügen Ihren eigenen Anbieter oder Modellserver unter **Administration → Künstliche Intelligenz → KI-Modelle** hinzu. Siehe [KI-Modelle](../ai-models.md) und [Plaid-Einstellungen](../ai-settings.md). Dort hat außerdem jeder Mandant seine eigenen Schalter.
 - Die API braucht ausgehenden Zugriff auf den gewählten Anbieter (siehe [Firewall-Regeln](#firewall-regeln)).
 
+### Claude über MCP verbinden
+
+Mit `AI_MCP_ENABLED=true` können sich Claude, Claude Desktop und Claude Code ohne Schlüssel mit KANAP verbinden: Benutzer fügen die Serveradresse als benutzerdefinierten Konnektor hinzu und melden sich mit ihrem KANAP-Konto an. Siehe [Einen MCP-Client verbinden](../ai-settings.md#einen-mcp-client-verbinden). Dafür braucht es:
+
+- **HTTPS.** KANAP wird über HTTPS bereitgestellt, wie in dieser Anleitung. Der Anmeldeaustausch braucht es, auch für Claude Code.
+- **Für Claude und Claude Desktop**: Die KANAP-Adresse wird im öffentlichen DNS aufgelöst, und der Server nimmt HTTPS von den Adressen von Anthropic an, `160.79.104.0/21`. Claude ruft KANAP aus der Cloud von Anthropic auf. Eine Instanz, die nur aus Ihrem internen Netz erreichbar ist, kann nicht von claude.ai aus verbunden werden.
+- **Für Claude Code**: Der Computer des Benutzers erreicht den Server. Nichts muss zum Internet hin geöffnet sein.
+- **Ausgehendes HTTPS zu `claude.ai`.** Wenn ein Benutzer eine Anwendung verbindet, liest die API die öffentliche Beschreibung der Anwendung unter der Adresse, die die Anwendung angibt (`claude.ai` für Claude, Claude Desktop und Claude Code).
+
+API-Schlüssel funktionieren ohne all das, sobald der Client den Server erreicht.
+
 ## Optional: Erweitert
 
 | Variable | Beschreibung | Standard |
@@ -533,6 +544,7 @@ Nach dem ersten Build kann KANAP vollständig vom Netz getrennt laufen, wenn E-M
 | 443 | TCP | HTTPS: nginx-Reverse-Proxy, der die Anwendung bereitstellt |
 | 80 | TCP | HTTP: leitet auf HTTPS um (und beantwortet Zertifikatserneuerungen, wenn Sie Let's Encrypt verwenden) |
 | 22 | TCP | SSH für die Administration. Erlauben Sie es, bevor Sie eine Firewall aktivieren |
+| 443 | TCP | Von `160.79.104.0/21`, nur um Claude und Claude Desktop über MCP zu verbinden (siehe [Claude über MCP verbinden](#claude-uber-mcp-verbinden)) |
 
 Sonst muss nichts aus dem Netzwerk erreichbar sein. Insbesondere sind PostgreSQL (5432) und der Objektspeicher (9000) nur für die Docker-Netzwerke des Servers bestimmt.
 
@@ -564,6 +576,7 @@ Nur erforderlich, wenn die entsprechende Funktion aktiviert ist.
 | `login.microsoftonline.com` | 443 | Metadaten und Tokens für Entra ID SSO | Wenn Entra SSO konfiguriert ist |
 | `graph.microsoft.com` | 443 | Profilanreicherung bei der Anmeldung und die tägliche Verzeichnissynchronisierung | Wenn Entra SSO konfiguriert ist |
 | Der KI-Anbieter, den Sie konfigurieren (oder Ihr eigener Modellserver) | 443 oder der Port Ihres Servers | Chat, Agenten | Wenn KI-Funktionen aktiviert sind und ein Modell eingerichtet ist |
+| `claude.ai` | 443 | Liest die Beschreibung von Claude, Claude Desktop oder Claude Code, wenn ein Benutzer es über MCP verbindet | Wenn `AI_MCP_ENABLED=true` und Benutzer Claude ohne Schlüssel verbinden |
 | `api.worldbank.org` | 443 | Jährliche Wechselkurse | Optional |
 | `open.er-api.com` | 443 | Tageswechselkurse | Optional |
 

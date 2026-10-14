@@ -9,9 +9,14 @@
       "testing": "Probando..."
     },
     "dialogs": {
+      "claudeCodeHelper": "Ejecútelo en un terminal para conectar Claude Code a KANAP con esta clave.",
+      "claudeCodeLabel": "Comando de Claude Code",
+      "copyCommand": "Copiar el comando",
+      "copyKey": "Copiar la clave",
       "copyKeyWarning": "Copie esta clave ahora. No se mostrará de nuevo.",
       "createKeyTitle": "Crear clave API MCP",
-      "keyCreatedTitle": "Clave creada"
+      "keyCreatedTitle": "Clave creada",
+      "keyLabel": "Clave"
     },
     "features": {
       "braveSearchNotConfigured": "BRAVE_SEARCH_API_KEY no configurada",
@@ -60,14 +65,26 @@
         "label": "Etiqueta",
         "lastUsed": "Último uso",
         "prefix": "Prefijo",
-        "status": "Estado"
+        "status": "Estado",
+        "kind": "Tipo"
       },
-      "empty": "No hay claves API MCP configuradas.",
+      "copied": "Copiado",
+      "empty": "No hay claves ni conexiones MCP.",
+      "endpoint": {
+        "label": "Dirección del servidor",
+        "helper": "Los clientes MCP se conectan a esta dirección y envían la clave en un encabezado Authorization.",
+        "copy": "Copiar la dirección",
+        "connectorHint": "Claude, Claude Desktop y Claude Code también pueden conectarse sin clave: añada esta dirección como conector personalizado."
+      },
       "statuses": {
         "active": "Activa",
         "revoked": "Revocada"
       },
-      "title": "Claves API MCP"
+      "title": "Claves y conexiones MCP",
+      "kinds": {
+        "apiKey": "Clave API",
+        "oauth": "Conexión"
+      }
     },
     "messages": {
       "connectionTestFailed": "La prueba de conexión falló.",
@@ -120,7 +137,7 @@
       },
       "builtinUsage": {
         "cta": "Use sus propias claves API para un uso ilimitado.",
-        "description": "El uso integrado se comparte entre las solicitudes de chat y de MCP de este espacio de trabajo.",
+        "description": "El uso integrado se comparte entre el chat y los agentes de este espacio de trabajo.",
         "loadFailed": "No se pudo cargar el uso integrado.",
         "reset": "Se restablece el {{date}}.",
         "summary": "{{count}} / {{limit}} mensajes utilizados este mes",
@@ -218,6 +235,7 @@
       "login": "Inicio de sesión",
       "login_failed": "Inicio de sesión fallido",
       "logout": "Cierre de sesión",
+      "mcp_connection_refused": "Conexión de un cliente MCP rechazada",
       "password_reset_completed": "Restablecimiento de contraseña completado",
       "password_reset_requested": "Restablecimiento de contraseña solicitado",
       "refresh_denied": "Renovación de sesión rechazada",

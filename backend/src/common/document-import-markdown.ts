@@ -4,6 +4,20 @@
  * markdown-worker.ts, which bounds its time.
  */
 
+import { decodeHtmlEntities } from './html-entities';
+
+const IMPORT_TEXT_ENTITIES = { nbsp: ' ', amp: '&', quot: '"', '#39': "'", '#039': "'" };
+/** Decoded in a table cell before its spaces are collapsed; the rest is decoded with the whole document. */
+const TABLE_CELL_SPACE_ENTITIES = { nbsp: ' ' };
+
+/**
+ * Puts plain text in a GFM table cell: a pipe is escaped, and so is each
+ * backslash right before it, so the text keeps its pipes and backslashes.
+ */
+export function escapeMarkdownTableCell(text: string): string {
+  return text.replace(/\\*\|/g, (run) => run.replace(/[\\|]/g, '\\$&'));
+}
+
 /** An image of an imported Markdown text, with what its rewrite needs. */
 export type ImportedImageReference = {
   kind: 'markdown' | 'html';
@@ -43,12 +57,8 @@ export function escapeMarkdownImageText(value: string): string {
     .replace(/\]/g, '\\]');
 }
 
-function decodeHtmlEntities(text: string): string {
-  return text
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#0?39;/g, "'");
+function decodeImportedHtmlEntities(text: string): string {
+  return decodeHtmlEntities(text, { entities: IMPORT_TEXT_ENTITIES });
 }
 
 function stripHtmlToText(html: string): string {
@@ -56,11 +66,11 @@ function stripHtmlToText(html: string): string {
   text = text.replace(/<br\s*\/?>/gi, ' ');
   text = text.replace(/<\/p\s*>/gi, ' ');
   text = text.replace(/<\/?[a-zA-Z][a-zA-Z0-9]*\b[^>]*\/?>/g, '');
-  text = decodeHtmlEntities(text);
+  text = decodeHtmlEntities(text, { entities: TABLE_CELL_SPACE_ENTITIES });
   return text.replace(/\s+/g, ' ').trim();
 }
 
-function convertHtmlTableToGfm(html: string): string {
+export function convertHtmlTableToGfm(html: string): string {
   const rows: string[][] = [];
   const rowRegex = /<tr\b[^>]*>([\s\S]*?)<\/tr>/gi;
   let rowMatch: RegExpExecArray | null;
@@ -69,7 +79,7 @@ function convertHtmlTableToGfm(html: string): string {
     const cellRegex = /<(?:td|th)\b[^>]*>([\s\S]*?)<\/(?:td|th)>/gi;
     let cellMatch: RegExpExecArray | null;
     while ((cellMatch = cellRegex.exec(rowMatch[1])) !== null) {
-      const text = stripHtmlToText(cellMatch[1]).replace(/\|/g, '\\|');
+      const text = escapeMarkdownTableCell(stripHtmlToText(cellMatch[1]));
       cells.push(text);
     }
     if (cells.length > 0) rows.push(cells);
@@ -145,7 +155,7 @@ export function sanitizeForMdxEditor(markdown: string): string {
   result = result.replace(/<\/?[a-zA-Z][a-zA-Z0-9]*\b[^>]*\/?>/g, '');
 
   // Decode common HTML entities left by stripped HTML.
-  result = decodeHtmlEntities(result);
+  result = decodeImportedHtmlEntities(result);
 
   // Collapse excessive blank lines.
   result = result.replace(/\n{3,}/g, '\n\n');

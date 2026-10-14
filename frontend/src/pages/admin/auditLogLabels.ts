@@ -19,6 +19,7 @@ export const AUDIT_EVENT_ACTIONS = [
   'password_reset_completed',
   'sso_login',
   'sso_login_failed',
+  'mcp_connection_refused',
   'export',
 ] as const;
 

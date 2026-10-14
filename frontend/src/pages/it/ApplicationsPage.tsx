@@ -12,7 +12,6 @@ import { useAuth } from '../../auth/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import ForbiddenPage from '../ForbiddenPage';
 import { CsvExportDialogV2, CsvImportDialogV2 } from '../../components/csv';
-import { COUNTRY_OPTIONS } from '../../constants/isoOptions';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
 import api from '../../api';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
@@ -371,10 +370,6 @@ export default function ApplicationsPage() {
     return true;
   }, []);
 
-  const countryNameByCode = useMemo(
-    () => new Map(COUNTRY_OPTIONS.map((c) => [c.code.toUpperCase(), c.name])),
-    [],
-  );
   const formatYesNo = useCallback((b?: boolean) => (b ? t('enums.yesNo.yes') : t('enums.yesNo.no')), []);
 
   if (!hasLevel('applications', 'reader')) {
@@ -407,7 +402,6 @@ export default function ApplicationsPage() {
       const arr = (params?.value as string[] | undefined) || [];
       const firstTwo = arr.slice(0, 2);
       const extra = arr.length > 2 ? ` +${arr.length - 2}` : '';
-      const fullNames = arr.map((c) => countryNameByCode.get(String(c || '').toUpperCase()) || String(c || ''));
       return (
         <Link
           href={buildAppHref(params.data as AppRow, 'compliance')}
@@ -421,7 +415,7 @@ export default function ApplicationsPage() {
       );
     };
     return Cell;
-  }, [buildAppHref, countryNameByCode, handleInternalNavigate]);
+  }, [buildAppHref, handleInternalNavigate]);
 
   const RelationSummaryCell = useCallback((tab: 'relations') => {
     const Cell: React.FC<ICellRendererParams<AppRow, any>> = (params) => {
@@ -927,6 +921,9 @@ export default function ApplicationsPage() {
           showRowCount
           queryKey={'applications'}
           defaultSort={{ field: 'name', direction: 'ASC' }}
+          // A link's filter on a hidden column (a supplier's "Show all") shows that column, next to the name.
+          showFilteredColumns
+          filteredColumnsAfter="name"
           initialState={initialState}
           extraParams={extraParams}
           requiredColumns={['name']}

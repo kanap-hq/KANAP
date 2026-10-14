@@ -31,6 +31,7 @@ import {
   safeReturnTo,
 } from './contactModel';
 import { ContactNameTitle, ContactPhoneField, ContactRoleSelect, MetadataMenu, useContactRoleOptions } from './ContactFields';
+import RecordUsagesSection, { scrollToUsages, useRecordUsages } from '../../components/usages/RecordUsagesSection';
 
 const LIST_PATH = '/master-data/contacts';
 const DRAWER_KEY = 'kanap.contacts.drawerOpen';
@@ -66,7 +67,7 @@ export default function ContactWorkspacePage() {
   const params = useParams();
   const location = useLocation();
   const id = String(params.id || '');
-  // One tab: any other address of the former page opens it.
+  // One tab: any other address of the former page (or the former Used by tab) opens it.
   if (params.tab && params.tab !== 'overview') {
     return <Navigate replace to={`${LIST_PATH}/${id}/overview${location.search}`} />;
   }
@@ -90,6 +91,7 @@ function ContactEditor({ id }: { id: string }) {
     queryKey: detailKey,
     queryFn: async () => (await api.get<Contact>(`/contacts/${id}`)).data,
   });
+  const { data: usages } = useRecordUsages('contacts', id);
 
   const [errors, setErrors] = React.useState<FieldErrors>({});
   const [pageError, setPageError] = React.useState<string | null>(null);
@@ -279,6 +281,13 @@ function ContactEditor({ id }: { id: string }) {
           disabled={disabled}
         />
       </PortfolioMetadataItem>
+      <PortfolioMetadataItem
+        label={t('shared.usages.title')}
+        onClick={scrollToUsages}
+        title={t('shared.usages.open')}
+      >
+        {usages ? usages.total : '…'}
+      </PortfolioMetadataItem>
     </>
   ) : undefined;
 
@@ -418,6 +427,7 @@ function ContactEditor({ id }: { id: string }) {
               }}
               onCommit={() => { void autosave.flush(); }}
             />
+            <RecordUsagesSection owner="contacts" id={id} />
           </Stack>
         )}
       </PortfolioDetailWorkspaceShell>

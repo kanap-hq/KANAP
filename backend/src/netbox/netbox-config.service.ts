@@ -137,7 +137,13 @@ function stringMap(value: unknown): Record<string, string> {
   return result;
 }
 
+/** Longest Netbox address accepted, in characters. */
+export const NETBOX_ADDRESS_MAX_LENGTH = 2048;
+
 export function normalizeNetboxAddress(raw: string): string {
+  if (String(raw || '').trim().length > NETBOX_ADDRESS_MAX_LENGTH) {
+    throw new BadRequestException(`The Netbox address must be at most ${NETBOX_ADDRESS_MAX_LENGTH} characters long.`);
+  }
   const trimmed = normalizeNetboxBaseUrl(raw);
   let parsed: URL;
   try {

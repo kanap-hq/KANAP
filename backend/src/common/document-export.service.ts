@@ -9,6 +9,7 @@ import { converterEnv } from './converter-env';
 import { ExportFormat } from './dto/export.dto';
 import { isDevelopmentEnv, parseBoolean } from './env';
 import { readStreamWithCaps, StreamLimitError } from './bounded-stream';
+import { decodeHtmlEntities } from './html-entities';
 import { trailingRun } from './text-scan';
 
 const execFileAsync = promisify(execFile);
@@ -30,6 +31,7 @@ const HTML_IMAGE_RE = /<img\b[^>]*>/gi;
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 const ODT_MAX_IMAGE_WIDTH_CM = 16;
 const ODT_SIZE_RE = /^([0-9]+(?:\.[0-9]+)?|\.[0-9]+)\s*(cm|mm|in|pt|px)$/i;
+const EXPORT_ATTRIBUTE_ENTITIES = { amp: '&', quot: '"', '#39': '\'', lt: '<', gt: '>' };
 
 type ExportConfig = {
   extension: 'pdf' | 'docx' | 'odt';
@@ -371,12 +373,7 @@ export class DocumentExportService {
     const match = String(tag || '').match(pattern);
     const raw = String(match?.[1] ?? match?.[2] ?? match?.[3] ?? '').trim();
     if (!raw) return null;
-    return raw
-      .replace(/&amp;/g, '&')
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, '\'')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>');
+    return decodeHtmlEntities(raw, { entities: EXPORT_ATTRIBUTE_ENTITIES });
   }
 
   /**

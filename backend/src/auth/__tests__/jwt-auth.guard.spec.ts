@@ -18,6 +18,8 @@ import {
   ENTRA_STATE_PURPOSE,
   PROVISIONING_PURPOSE,
   PASSWORD_RESET_PURPOSE,
+  MCP_ACCESS_PURPOSE,
+  MCP_OAUTH_CODE_PURPOSE,
   describeTokenPurposePolicy,
   resolveAccessTokenPolicy,
 } from '../access-token.util';
@@ -128,6 +130,18 @@ function testRejectsProvisioningToken() {
   const guard = newGuard();
   const token = sign(accessClaims({ purpose: PROVISIONING_PURPOSE }));
   assertRejected(guard, requestWith(token), 'provisioning token');
+}
+
+function testRejectsMcpOAuthTokens() {
+  // The MCP families have keys of their own; even signed with the session key (an operator who
+  // set MCP_ACCESS_TOKEN_SECRET to JWT_SECRET), their purpose keeps them off the web API.
+  const guard = newGuard();
+  for (const purpose of [MCP_ACCESS_PURPOSE, MCP_OAUTH_CODE_PURPOSE]) {
+    const token = sign(accessClaims({ purpose, aud: 'https://acme.kanap.net/api/ai/mcp', grant: 'grant-1' }));
+    assertRejected(guard, requestWith(token), purpose);
+    const ownKey = sign(accessClaims({ purpose }), deriveSecret(JWT_SECRET, purpose === MCP_ACCESS_PURPOSE ? 'mcp-access' : 'mcp-oauth-code'));
+    assertRejected(guard, requestWith(ownKey), `${purpose} with its own key`);
+  }
 }
 
 function testRejectsEntraHandoffToken() {
@@ -419,6 +433,7 @@ function run() {
   testRejectsPasswordResetToken();
   testRejectsNewPasswordResetTokenFromDerivedKey();
   testRejectsProvisioningToken();
+  testRejectsMcpOAuthTokens();
   testRejectsEntraHandoffToken();
   testRejectsEntraStateToken();
   testRejectsPrefixEntraStateTokenWithoutAnyMarker();
@@ -435,7 +450,7 @@ function run() {
   testInvalidDeadlineRefusesUntypedTokenAndWarns();
   testMutationWithoutPurposeControlAcceptsForeignTokens();
   // eslint-disable-next-line no-console
-  console.log('jwt-auth.guard.spec: OK (20 cases)');
+  console.log('jwt-auth.guard.spec: OK (21 cases)');
 }
 
 run();

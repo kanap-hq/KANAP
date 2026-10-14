@@ -4,7 +4,7 @@ import PageHeader from '../../components/PageHeader';
 import ServerDataGrid, { EnhancedColDef } from '../../components/ServerDataGrid';
 import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, MenuItem, Stack, TextField, Alert } from '@mui/material';
 // no special tenant checks here; backend enforces platform admin
-import { COUNTRY_OPTIONS } from '../../constants/isoOptions';
+import { useCountryOptions } from '../../i18n/countries';
 import api from '../../api';
 import CsvExportDialog from '../../components/csv/CsvExportDialog';
 import CsvImportDialog from '../../components/csv/CsvImportDialog';
@@ -26,6 +26,7 @@ type Template = {
 
 function TemplateDialog({ open, onClose, onSaved, initial }: { open: boolean; onClose: () => void; onSaved: () => void; initial?: Partial<Template> }) {
   const { t } = useTranslation(['admin', 'common']);
+  const countryOptions = useCountryOptions();
   const [country, setCountry] = useState(initial?.country_iso ?? '');
   const [code, setCode] = useState(initial?.template_code ?? '');
   const [name, setName] = useState(initial?.template_name ?? '');
@@ -68,7 +69,7 @@ function TemplateDialog({ open, onClose, onSaved, initial }: { open: boolean; on
           <FormControlLabel control={<Checkbox checked={isGlobal} onChange={(e) => setIsGlobal(e.target.checked)} />} label={t('coaTemplates.dialog.fields.allCountries')} />
           {!isGlobal && (
             <TextField select label={t('coaTemplates.dialog.fields.country')} value={country} onChange={(e) => setCountry(e.target.value)} required size="small">
-              {COUNTRY_OPTIONS.map((c) => (
+              {countryOptions.map((c) => (
                 <MenuItem key={c.code} value={c.code}>{c.code} — {c.name}</MenuItem>
               ))}
             </TextField>

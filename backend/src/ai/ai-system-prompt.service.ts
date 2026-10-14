@@ -114,7 +114,7 @@ function toolUsageGuidelines(mode: AiContextProfile['promptMode']): string {
     '- Application create/update previews accept criticality, cyber_criticality, data_class, recovery_wave, rto_minutes (whole minutes; one day is 1440), rpo_minutes and classification_justification, including explicit null to clear one field. Use tenant codes. A preview shows whether an existing human review becomes stale. Catalog changes and human review are not AI write capabilities.',
 
     '- Use get_entity_comments for the actual project/task discussion feed when comments or older conversation history are requested.',
-    '- Treat `filters_ignored` from query_entities or aggregate_entities, and `fields_ignored` from get_filter_values, as blocking validation failures. If they appear, do one silent repair attempt before answering; otherwise explain the invalid filter.',
+    '- Treat `filters_ignored` and `sort_ignored` from query_entities or aggregate_entities, and `fields_ignored` from get_filter_values, as blocking validation failures. If they appear, do one silent repair attempt before answering; otherwise explain the invalid filter.',
     '- Never base counts, ownership claims, assignee claims, or analytical conclusions on a structured result that contains ignored filters or ignored fields.',
     '- When the user says "me", "my", "mine", or "myself", use scope: "me". When they say "my team", use scope: "my_team".',
     '- Cross-entity examples: tasks for projects in a stream use project_stream; applications linked to a project use linked_project; documents linked to an entity use the relevant linked_* filter.',

@@ -42,7 +42,7 @@ import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import { drawerAutocompleteListboxSx, drawerFieldValueSx, drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { CRITICALITY_COLORS, getDotColor, LIFECYCLE_COLORS } from '../../utils/statusColors';
-import { COUNTRY_OPTIONS } from '../../constants/isoOptions';
+import { filterCountryOptions, useCountryOptions } from '../../i18n/countries';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import { PortfolioMetadataItem, PortfolioStatusMetadata } from '../portfolio/workspace/PortfolioMetadataBar';
 import SendLinkButton from '../../components/workspace/SendLinkButton';
@@ -1146,6 +1146,7 @@ function ComplianceTab({
   error: string | null;
 }) {
   const { t } = useTranslation(['it', 'common']);
+  const countryOptions = useCountryOptions();
   const { byField } = useItOpsEnumOptions();
   // Interfaces to applications restored later: the key carries the wave so a change refetches; a 403 (restricted reader) shows nothing.
   const dependenciesQuery = useQuery({
@@ -1155,7 +1156,7 @@ function ComplianceTab({
     retry: false,
   });
   const residencyCodes = (app.data_residency || []).map((row) => row.country_iso);
-  const selectedCountries = COUNTRY_OPTIONS.filter((option) => residencyCodes.includes(option.code));
+  const selectedCountries = countryOptions.filter((option) => residencyCodes.includes(option.code));
   const horizontalRowSx = { display: 'grid', gridTemplateColumns: '160px minmax(0, 1fr)', columnGap: '18px', alignItems: 'center' } as const;
   const horizontalLabelSx = { pt: '3px' } as const;
   const compactValueSx = { maxWidth: 360 } as const;
@@ -1174,7 +1175,7 @@ function ComplianceTab({
         <PropertyRow label={classificationText("Data residency")} sx={horizontalRowSx} labelSx={horizontalLabelSx} valueSx={compactValueSx}>
           <Autocomplete
             multiple
-            options={COUNTRY_OPTIONS}
+            options={countryOptions}
             value={selectedCountries}
             onChange={(_, value) => {
               void (async () => {
@@ -1183,6 +1184,7 @@ function ComplianceTab({
               })();
             }}
             getOptionLabel={(option) => `${option.code} — ${option.name}`}
+            filterOptions={filterCountryOptions}
             disabled={!canManage}
             renderInput={(params) => (
               <TextField

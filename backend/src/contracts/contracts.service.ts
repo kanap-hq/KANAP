@@ -131,8 +131,11 @@ const ANY_LINE_LINK = ` AND EXISTS (SELECT 1 FROM ${BUDGET_LINE_TABLE} nl WHERE 
 
 /** The list's order without a valid `sort`: the next due date first (`contract-terms.ts`). */
 const DEFAULT_LIST_SORT: Sort = { field: 'next_due_date', direction: 'ASC' };
-/** The sort fields computed from the contract terms, ordered through a selected alias. */
-const TERM_SORT_FIELDS = new Set(['end_date', 'cancellation_deadline', 'next_due_date']);
+/**
+ * The sort fields ordered through a selected alias: the ones computed from the contract terms, and
+ * the joined names (the paginated query cannot order on a column of a join it does not select).
+ */
+const ALIAS_SORT_FIELDS = new Set(['end_date', 'cancellation_deadline', 'next_due_date', 'company_name', 'supplier_name']);
 /** The budget figures of the list (`contract-budget.ts`, joined as `cb`), in units of the reporting currency. */
 const BUDGET_FIELDS: Record<string, string> = {
   budget_committed: '(cb.committed::numeric / 100)',
@@ -332,7 +335,7 @@ export class ContractsService {
     const sortField = sortExpressions[sort.field] ? sort.field : DEFAULT_LIST_SORT.field;
     const sortExpr = sortExpressions[sortField];
     const direction = sort.field === sortField ? sort.direction : DEFAULT_LIST_SORT.direction;
-    if (TERM_SORT_FIELDS.has(sortField) || budgetSorts[sortField] || complianceSorts[sortField]) {
+    if (ALIAS_SORT_FIELDS.has(sortField) || budgetSorts[sortField] || complianceSorts[sortField]) {
       qb.addSelect(sortExpr, `sort_${sortField}`);
       // Without a value (no next due date, no rate for the currency): last in both directions.
       qb.orderBy(`sort_${sortField}`, direction, sortField === 'next_due_date' || budgetSorts[sortField] ? 'NULLS LAST' : undefined);

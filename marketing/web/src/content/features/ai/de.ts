@@ -4,12 +4,12 @@ const content: FeatureContent = {
   meta: {
     title: 'Plaid, KI-Assistent für IT-Governance',
     description:
-      'Fragen Sie Plaid zu Ihren IT-Daten. Dokumente erstellen, Aufgaben aktualisieren, beliebiges KI-Tool per MCP anbinden. Nutzung in Hosted Cloud enthalten. Open Source.',
+      'Fragen Sie Plaid zu Ihren IT-Daten. Dokumente erstellen, Aufgaben aktualisieren, KANAP mit zwei Klicks zu Claude hinzufügen. Nutzung in Hosted Cloud enthalten. Open Source.',
   },
   header: {
     eyebrow: 'Plaid · KI-Assistent',
     title: 'Fragen Sie KANAP alles über Ihre IT.',
-    lead: 'Plaid antwortet über Ihr Budget, Ihre Anwendungen, Projekte und Dokumentation hinweg und nimmt Änderungen vor, wenn Sie darum bitten. Jeder Schreibvorgang wird Ihnen gezeigt, bevor er ausgeführt wird. Nutzen Sie es in KANAP oder binden Sie es über MCP an Ihre eigenen KI-Tools an.',
+    lead: 'Plaid antwortet über Ihr Budget, Ihre Anwendungen, Projekte und Dokumentation hinweg und nimmt Änderungen vor, wenn Sie darum bitten. Jeder Schreibvorgang wird Ihnen gezeigt, bevor er ausgeführt wird. Nutzen Sie es in KANAP, oder fügen Sie KANAP mit seiner Adresse und einem Klick zu Claude hinzu.',
   },
   sections: [
     {
@@ -35,22 +35,22 @@ const content: FeatureContent = {
       shotAlt: 'Plaid zeigt eine Vorschau von Aufgabenänderungen',
     },
     {
-      title: 'MCP, KANAP aus jedem KI-Tool nutzen',
-      body: 'KANAP stellt einen vollwertigen MCP-Server (Model Context Protocol) bereit. Binden Sie Claude Desktop, Cursor, Windsurf oder ein beliebiges MCP-kompatibles Tool an, und fragen Sie Ihre IT-Governance-Daten ab, ohne Ihren Workflow zu verlassen.',
+      title: 'KANAP mit zwei Klicks zu Claude hinzufügen',
+      body: 'Fügen Sie Ihre KANAP-Adresse in Claude als benutzerdefinierten Konnektor ein, melden Sie sich an, klicken Sie auf Zulassen. Claude antwortet dann aus Ihrem Budget, Ihren Anwendungen, Projekten und Dokumenten. Es gibt keinen Schlüssel zu erstellen oder zu kopieren. Das funktioniert in Claude, Claude Desktop und Claude Code.',
       bullets: [
-        'Standard-MCP-Protokoll, funktioniert mit jedem kompatiblen Client',
-        'Sichere API-Key-Authentifizierung mit feingranularem Scoping',
-        'Dieselben Leseabfragen wie im eingebauten Chat (MCP ist schreibgeschützt)',
-        'Bestehende KI-Workflows beibehalten und KANAP-Kontext ergänzen',
+        'Jede Person meldet sich mit ihrem eigenen KANAP-Konto an',
+        'Schreibgeschützt, im Rahmen der Rechte dieser Person',
+        'Jeder Benutzer sieht seine verbundenen Apps und trennt sie mit einem Klick',
+        'API-Schlüssel bleiben für Skripte und andere MCP-Clients verfügbar',
       ],
-      shotAlt: 'MCP-Konfiguration mit API-Key-Scoping',
+      shotAlt: 'Einstellungen der MCP API-Schlüssel',
     },
     {
       title: 'Volle Kontrolle & Compliance',
       body: 'Plaid respektiert die Regeln Ihrer Organisation. Jede Aktion unterliegt den Berechtigungen des Nutzers. Administratoren haben vollständige Kontrolle darüber, was Plaid darf und was nicht.',
       bullets: [
         'Vollständige Einhaltung der Nutzerrechte bei jeder Abfrage',
-        'Sichere API-Keys mit granularem MCP-Scoping',
+        'MCP-Verbindungen und -Schlüssel folgen den Rechten jedes Benutzers und lassen sich jederzeit trennen',
         'Websuche kann unabhängig aktiviert oder deaktiviert werden',
         'Vorschau und Bestätigung für alle Schreiboperationen',
         'Nur-Lese-Zugriff über Rollen für vorsichtige Rollouts',

@@ -9,9 +9,14 @@
       "testing": "Wird getestet..."
     },
     "dialogs": {
+      "claudeCodeHelper": "Führen Sie ihn in einem Terminal aus, um Claude Code mit diesem Schlüssel an KANAP anzubinden.",
+      "claudeCodeLabel": "Claude-Code-Befehl",
+      "copyCommand": "Befehl kopieren",
+      "copyKey": "Schlüssel kopieren",
       "copyKeyWarning": "Kopieren Sie diesen Schlüssel jetzt. Er wird nicht erneut angezeigt.",
       "createKeyTitle": "MCP API-Schlüssel erstellen",
-      "keyCreatedTitle": "Schlüssel erstellt"
+      "keyCreatedTitle": "Schlüssel erstellt",
+      "keyLabel": "Schlüssel"
     },
     "features": {
       "braveSearchNotConfigured": "BRAVE_SEARCH_API_KEY nicht konfiguriert",
@@ -60,14 +65,26 @@
         "label": "Bezeichnung",
         "lastUsed": "Zuletzt verwendet",
         "prefix": "Präfix",
-        "status": "Status"
+        "status": "Status",
+        "kind": "Typ"
       },
-      "empty": "Keine MCP API-Schlüssel konfiguriert.",
+      "copied": "Kopiert",
+      "empty": "Keine MCP-Schlüssel oder -Verbindungen.",
+      "endpoint": {
+        "label": "Serveradresse",
+        "helper": "MCP-Clients verbinden sich mit dieser Adresse und senden den Schlüssel in einem Authorization-Header.",
+        "copy": "Adresse kopieren",
+        "connectorHint": "Claude, Claude Desktop und Claude Code können sich auch ohne Schlüssel verbinden: Fügen Sie diese Adresse als benutzerdefinierten Connector hinzu."
+      },
       "statuses": {
         "active": "Aktiv",
         "revoked": "Widerrufen"
       },
-      "title": "MCP API-Schlüssel"
+      "title": "MCP-Schlüssel und -Verbindungen",
+      "kinds": {
+        "apiKey": "API-Schlüssel",
+        "oauth": "Verbindung"
+      }
     },
     "messages": {
       "connectionTestFailed": "Verbindungstest fehlgeschlagen.",
@@ -120,7 +137,7 @@
       },
       "builtinUsage": {
         "cta": "Verwenden Sie Ihre eigenen API-Schlüssel für unbegrenzte Nutzung.",
-        "description": "Die integrierte Nutzung wird für diesen Mandanten von Chat- und MCP-Anfragen gemeinsam genutzt.",
+        "description": "Die integrierte Nutzung wird für diesen Mandanten von Chat und Agenten gemeinsam genutzt.",
         "loadFailed": "Die integrierte Nutzung konnte nicht geladen werden.",
         "reset": "Wird am {{date}} zurückgesetzt.",
         "summary": "{{count}} / {{limit}} Nachrichten in diesem Monat verwendet",
@@ -218,6 +235,7 @@
       "login": "Anmeldung",
       "login_failed": "Fehlgeschlagene Anmeldung",
       "logout": "Abmeldung",
+      "mcp_connection_refused": "Verbindung eines MCP-Clients abgelehnt",
       "password_reset_completed": "Passwort zurückgesetzt",
       "password_reset_requested": "Zurücksetzen des Passworts angefordert",
       "refresh_denied": "Sitzungsverlängerung abgelehnt",

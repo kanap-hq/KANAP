@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import { AiExecutionContextWithManager } from '../../ai.types';
 import { LlmTokenPrices, llmCostEur } from '../../ai-llm-cost.util';
-import { decodeNumericHtmlEntities } from '../../../common/html-entities';
+import { decodeHtmlEntities, decodeNumericHtmlEntities } from '../../../common/html-entities';
 import {
   compileSystemPrompt,
   CompiledGuidance,
@@ -121,14 +121,15 @@ const SynthesisSchema = z.object({
   confidence: z.number().min(0).max(1).nullable().optional(),
 });
 
+const REPLY_TEXT_ENTITIES = { nbsp: ' ', amp: '&', quot: '"', '#39': '\'' };
+
 function normalizeText(value: unknown): string {
-  return decodeNumericHtmlEntities(String(value ?? '').replace(/\r\n/g, '\n'))
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(HTML_TAGS, ' ')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, '\'')
+  return decodeHtmlEntities(
+    decodeNumericHtmlEntities(String(value ?? '').replace(/\r\n/g, '\n'))
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(HTML_TAGS, ' '),
+    { entities: REPLY_TEXT_ENTITIES, ignoreCase: true },
+  )
     .replace(SPACES_BEFORE_LINE_BREAKS, '\n')
     .replace(/\n[ \t]+/g, '\n')
     .replace(/[ \t]{2,}/g, ' ')

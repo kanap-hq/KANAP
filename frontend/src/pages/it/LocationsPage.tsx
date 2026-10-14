@@ -9,7 +9,7 @@ import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilte
 import { LinkCellRenderer } from '../../components/grid/renderers';
 import { useAuth } from '../../auth/AuthContext';
 import ForbiddenPage from '../ForbiddenPage';
-import { COUNTRY_OPTIONS } from '../../constants/isoOptions';
+import { useCountryName } from '../../i18n/countries';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 
 import { useTranslation } from 'react-i18next';
@@ -46,9 +46,7 @@ export default function LocationsPage() {
     [settings?.hostingTypes],
   );
 
-  const countryNameMap = useMemo(() => {
-    return new Map(COUNTRY_OPTIONS.map((c) => [c.code.toUpperCase(), c.name]));
-  }, []);
+  const countryName = useCountryName();
 
   const lastQueryRef = useRef<{ sort: string; q: string; filters: any } | null>(null);
   const buildWorkspaceSearch = useCallback(() => {
@@ -131,7 +129,7 @@ export default function LocationsPage() {
       valueFormatter: (p) => {
         const raw = (p.value || '').toString().toUpperCase();
         if (!raw) return '';
-        const name = countryNameMap.get(raw) || raw;
+        const name = countryName(raw);
         return `${name} (${raw})`;
       },
       cellRenderer: ClickableCell,
