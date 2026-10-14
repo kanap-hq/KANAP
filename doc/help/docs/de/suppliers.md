@@ -50,7 +50,7 @@ Jede Zelle in einer Zeile ist anklickbar und öffnet die Seite dieses Lieferante
 
 Klicken Sie auf eine Zeile, um die Seite des Lieferanten zu öffnen. Mit den Pfeilen oben oder den Pfeiltasten links und rechts wechseln Sie zwischen den Lieferanten, ohne zur Liste zurückzukehren. Jede Änderung wird von selbst gespeichert: Es gibt keine Schaltfläche zum Speichern.
 
-Die Seite hat zwei Reiter: **Übersicht** und **Kontakte**.
+Die Seite hat drei Reiter: **Übersicht**, **Kontakte** und **Verwendet in**.
 
 **Titel**: Der Name des Lieferanten. Klicken Sie darauf, um ihn zu bearbeiten; die Änderung wird gespeichert, wenn Sie das Feld verlassen oder Enter drücken, Escape verwirft sie. Der Name ist Pflicht und muss sich von den Namen aller anderen Lieferanten unterscheiden: KANAP zeigt die Meldung unter dem Namen und behält den gespeicherten Namen.
 
@@ -59,6 +59,7 @@ Die Seite hat zwei Reiter: **Übersicht** und **Kontakte**.
 **Kopfzeile**, unter dem Namen:
 - **Status**: **Aktiviert** oder **Deaktiviert**. Klicken Sie darauf, um ihn zu ändern. Die Wahl von **Deaktiviert** setzt das Ende der Gültigkeit auf heute.
 - **Kontakte**: Die Anzahl der mit dem Lieferanten verknüpften Kontakte. Klicken Sie darauf, um den Reiter **Kontakte** zu öffnen.
+- **Verwendet in**: Die Anzahl der Budgetzeilen, Verträge, Anwendungen und Assets, die den Lieferanten verwenden. Klicken Sie darauf, um den Reiter **Verwendet in** zu öffnen.
 
 **Eigenschaften** (das Feld rechts, geöffnet über seinen Reiter oder die Taste `P`):
 - **ERP-Lieferanten-ID**: Die ID des Lieferanten in Ihrem ERP- oder Beschaffungssystem. Sie wird gespeichert, wenn Sie das Feld verlassen oder Enter drücken.
@@ -88,6 +89,19 @@ Der Reiter **Kontakte** listet die mit diesem Lieferanten verknüpften Kontakte 
 - Die Papierkorb-Schaltfläche entfernt die Verknüpfung. Der Kontakt selbst bleibt in Ihren Kontakten.
 
 **Tipp**: Pflegen Sie mindestens einen Kontakt pro Lieferant, damit die Kommunikation mit ihm immer nur einen Klick entfernt ist.
+
+### Verwendet in
+
+Der Reiter **Verwendet in** listet auf, was auf diesen Lieferanten verweist, eine Liste pro Typ, jede mit ihrer Anzahl:
+
+- **Budgetzeilen**: OPEX- und CAPEX-Zeilen mit diesem Lieferanten, mit ihrer Referenz (`BL-12`) und ihrem Typ.
+- **Verträge**: Verträge mit diesem Lieferanten.
+- **Anwendungen**: Anwendungen, deren Hersteller er ist.
+- **Assets**: Assets, die er betreut (der Support-Lieferant des Assets).
+
+Klicken Sie auf eine Zeile, um die zugehörige Seite zu öffnen. Deaktivierte Einträge tragen den Hinweis **Deaktiviert** und stehen nach den anderen. Eine Liste zeigt bis zu 50 Einträge und nennt ihre Gesamtzahl. Sie sehen nur die Listen, die Sie lesen dürfen: Ein Benutzer ohne Zugriff auf Verträge sieht keine Vertragsliste. Ein Lieferant, den nichts verwendet, zeigt eine Zeile, die das sagt.
+
+Prüfen Sie diesen Reiter, bevor Sie einen Lieferanten deaktivieren oder löschen.
 
 ### Einen Lieferanten erstellen
 

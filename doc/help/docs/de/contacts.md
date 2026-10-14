@@ -53,12 +53,15 @@ Das Kontakte-Grid bietet ein durchsuchbares Verzeichnis aller externen Kontakte.
 
 Klicken Sie auf eine Zeile, um die Seite des Kontakts zu öffnen. Jede Änderung wird von selbst gespeichert: Es gibt keine Schaltfläche zum Speichern.
 
+Die Seite hat zwei Reiter: **Übersicht** und **Verwendet in**.
+
 **Titel**: Der Name des Kontakts. Klicken Sie darauf, um Vorname und Nachname nebeneinander zu bearbeiten; die Änderung wird gespeichert, wenn Sie die beiden Felder verlassen oder Enter drücken, Escape verwirft sie. Ein Kontakt ohne Namen zeigt stattdessen seine E-Mail.
 
 **Kopfzeile**, unter dem Namen:
 - **Lieferant**: Der Lieferant, für den dieser Kontakt arbeitet, als Link zu seiner Seite. Ein Kontakt ohne Lieferant zeigt **Kein Lieferant**: Klicken Sie darauf, um die Eigenschaften zu öffnen und einen auszuwählen.
 - **Kontakttyp**: Die Rolle des Kontakts beim Lieferanten: Vertrieb, Technik, Support oder Sonstige. Klicken Sie darauf, um einen anderen zu wählen. Er erscheint, sobald der Kontakt einen Lieferanten hat.
 - **Status**: **Aktiv** oder **Inaktiv**. Klicken Sie darauf, um ihn zu ändern.
+- **Verwendet in**: Die Anzahl der Lieferanten, Budgetzeilen, Verträge und anderen Einträge, mit denen der Kontakt verknüpft ist. Klicken Sie darauf, um den Reiter **Verwendet in** zu öffnen.
 
 **Eigenschaften** (das Feld rechts, geöffnet über seinen Reiter oder die Taste `P`):
 - **Lieferant**: Wählen Sie den Lieferanten aus der Liste. Ein Kontakt mit Lieferant hat immer einen Kontakttyp: Die Wahl eines Lieferanten für einen Kontakt ohne Typ gibt ihm **Vertrieb**, den Sie sofort ändern können. Wird der Lieferant entfernt, wird auch der Kontakttyp entfernt.
@@ -74,6 +77,12 @@ Textfelder werden gespeichert, wenn Sie sie verlassen oder Enter drücken, Liste
 
 Drücken Sie **Escape** oder klicken Sie auf die Schließen-Schaltfläche, um zur Liste zurückzukehren.
 
+### Verwendet in
+
+Der Reiter **Verwendet in** listet alles auf, womit der Kontakt verknüpft ist, eine Liste pro Typ, jede mit ihrer Anzahl: Lieferanten, Budgetzeilen (OPEX und CAPEX, mit ihrer Referenz `BL-`), Verträge, Anwendungen, Assets, Standorte, Projekte (`PRJ-`) und Anfragen (`REQ-`). Jede Zeile zeigt die Rolle des Kontakts dort: den Kontakttyp bei Lieferanten, Budgetzeilen und Verträgen, die bei der Anwendung, dem Asset oder dem Standort eingetragene Rolle.
+
+Klicken Sie auf eine Zeile, um die zugehörige Seite zu öffnen. Eine Liste zeigt bis zu 50 Einträge und nennt ihre Gesamtzahl. Sie sehen nur die Listen, die Sie lesen dürfen. Ein Kontakt, der mit nichts verknüpft ist, zeigt eine Zeile, die das sagt.
+
 ### Einen Kontakt erstellen
 
 Klicken Sie in der Liste auf **Neu**. Geben Sie die E-Mail (Pflichtfeld) und die weiteren Felder ein und klicken Sie dann auf **Erstellen**. Die Wahl eines Lieferanten setzt den Kontakttyp auf **Vertrieb**, den Sie vor dem Erstellen ändern können. Nach dem Erstellen kehren Sie zur Liste zurück.
@@ -82,14 +91,14 @@ Klicken Sie in der Liste auf **Neu**. Geben Sie die E-Mail (Pflichtfeld) und die
 
 ## Wo Kontakte verwendet werden
 
-Kontakte erscheinen an mehreren Stellen in KANAP.
+Kontakte erscheinen an mehreren Stellen in KANAP. Der Reiter **Verwendet in** der Kontaktseite listet sie alle auf.
 
 ### Lieferantenkontakte
 
 Jeder Lieferant hat einen **Kontakte**-Tab, der alle mit diesem Anbieter verknüpften Kontakte zeigt. Sie können einen neuen Kontakt direkt aus dem Lieferanten-Arbeitsbereich erstellen:
 
 1. Öffnen Sie den Lieferanten-Arbeitsbereich und gehen Sie zum **Kontakte**-Tab.
-2. Klicken Sie auf **Erstellen** neben einer Kontaktrolle.
+2. Klicken Sie auf **Neuer Kontakt** neben einem Kontakttyp.
 3. Füllen Sie die Kontaktdetails aus: Lieferant und Kontakttyp sind vorausgefüllt.
 4. Klicken Sie auf **Erstellen**: Sie kehren zum Reiter **Kontakte** des Lieferanten zurück.
 

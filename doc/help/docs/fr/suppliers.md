@@ -50,7 +50,7 @@ Chaque cellule d'une ligne est cliquable et ouvre la fiche du fournisseur.
 
 Cliquez sur une ligne pour ouvrir la fiche du fournisseur. Utilisez les flèches en haut, ou les touches fléchées gauche et droite, pour passer d'un fournisseur à l'autre sans revenir à la liste. Chaque modification s'enregistre d'elle-même : il n'y a pas de bouton d'enregistrement.
 
-La fiche comporte deux onglets : **Vue d'ensemble** et **Contacts**.
+La fiche comporte trois onglets : **Vue d'ensemble**, **Contacts** et **Utilisé par**.
 
 **Titre** : le nom du fournisseur. Cliquez dessus pour le modifier ; la modification s'enregistre quand vous quittez le champ ou appuyez sur Entrée, et Échap l'annule. Le nom est obligatoire et doit différer de celui de tous les autres fournisseurs : KANAP affiche le message sous le nom et garde le nom enregistré.
 
@@ -59,6 +59,7 @@ La fiche comporte deux onglets : **Vue d'ensemble** et **Contacts**.
 **En-tête**, sous le nom :
 - **Statut** : **Activé** ou **Désactivé**. Cliquez dessus pour le changer. Choisir **Désactivé** fixe la fin de validité à aujourd'hui.
 - **Contacts** : le nombre de contacts liés au fournisseur. Cliquez dessus pour ouvrir l'onglet **Contacts**.
+- **Utilisé par** : le nombre de lignes budgétaires, contrats, applications et actifs qui utilisent le fournisseur. Cliquez dessus pour ouvrir l'onglet **Utilisé par**.
 
 **Propriétés** (le panneau de droite, ouvert par son onglet ou la touche `P`) :
 - **ID fournisseur ERP** : l'identifiant du fournisseur dans votre ERP ou votre système d'achats. Il s'enregistre quand vous quittez le champ ou appuyez sur Entrée.
@@ -88,6 +89,19 @@ L'onglet **Contacts** liste les contacts liés à ce fournisseur par type de con
 - Le bouton corbeille retire le lien. Le contact lui-même reste dans vos contacts.
 
 **Conseil** : gardez au moins un contact par fournisseur pour que la communication avec lui soit toujours à portée de clic.
+
+### Utilisé par
+
+L'onglet **Utilisé par** liste ce qui fait référence à ce fournisseur, une liste par type, chacune avec son nombre :
+
+- **Lignes budgétaires** : les lignes OPEX et CAPEX dont il est le fournisseur, avec leur référence (`BL-12`) et leur type.
+- **Contrats** : les contrats passés avec ce fournisseur.
+- **Applications** : les applications dont il est l'éditeur.
+- **Actifs** : les actifs dont il assure le support (le fournisseur de support de l'actif).
+
+Cliquez sur une ligne pour ouvrir sa fiche. Les éléments désactivés portent la mention **Désactivé** et viennent après les autres. Une liste montre jusqu'à 50 éléments et indique leur nombre total. Vous ne voyez que les listes que vous avez le droit de lire : un utilisateur sans accès aux contrats ne voit pas la liste des contrats. Un fournisseur que rien n'utilise affiche une ligne qui le dit.
+
+Consultez cet onglet avant de désactiver ou de supprimer un fournisseur.
 
 ### Créer un fournisseur
 

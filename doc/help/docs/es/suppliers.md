@@ -50,7 +50,7 @@ Cada celda de una fila es clicable y abre la página de ese proveedor.
 
 Haga clic en una fila para abrir la página del proveedor. Use las flechas de la parte superior, o las teclas de flecha izquierda y derecha, para pasar de un proveedor a otro sin volver a la lista. Cada cambio se guarda solo: no hay botón de guardar.
 
-La página tiene dos pestañas: **Vista general** y **Contactos**.
+La página tiene tres pestañas: **Vista general**, **Contactos** y **Usado en**.
 
 **Título**: el nombre del proveedor. Haga clic en él para editarlo; el cambio se guarda al salir del campo o al pulsar Intro, y Escape lo cancela. El nombre es obligatorio y debe ser distinto del de todos los demás proveedores: KANAP muestra el mensaje bajo el nombre y conserva el nombre guardado.
 
@@ -59,6 +59,7 @@ La página tiene dos pestañas: **Vista general** y **Contactos**.
 **Encabezado**, bajo el nombre:
 - **Estado**: **Activado** o **Desactivado**. Haga clic para cambiarlo. Elegir **Desactivado** fija el fin de validez en hoy.
 - **Contactos**: cuántos contactos están vinculados al proveedor. Haga clic para abrir la pestaña **Contactos**.
+- **Usado en**: cuántas líneas presupuestarias, contratos, aplicaciones y activos usan el proveedor. Haga clic para abrir la pestaña **Usado en**.
 
 **Propiedades** (el panel de la derecha, que se abre con su pestaña o la tecla `P`):
 - **ID de proveedor ERP**: el ID del proveedor en su sistema ERP o de compras. Se guarda al salir del campo o al pulsar Intro.
@@ -88,6 +89,19 @@ La pestaña **Contactos** lista los contactos vinculados a este proveedor por ti
 - El botón de papelera elimina el vínculo. El contacto sigue en sus contactos.
 
 **Consejo**: mantenga al menos un contacto por proveedor para que la comunicación con él esté siempre a un clic.
+
+### Usado en
+
+La pestaña **Usado en** lista lo que hace referencia a este proveedor, una lista por tipo, cada una con su número:
+
+- **Líneas presupuestarias**: las líneas OPEX y CAPEX cuyo proveedor es, con su referencia (`BL-12`) y su tipo.
+- **Contratos**: los contratos con este proveedor.
+- **Aplicaciones**: las aplicaciones de las que es el fabricante.
+- **Activos**: los activos a los que da soporte (el proveedor de soporte del activo).
+
+Haga clic en una fila para abrir su página. Los elementos desactivados muestran **Desactivado** y aparecen después de los demás. Una lista muestra hasta 50 elementos e indica cuántos hay en total. Solo ve las listas que tiene permiso para leer: un usuario sin acceso a los contratos no ve la lista de contratos. Un proveedor que nada usa muestra una línea que lo indica.
+
+Consulte esta pestaña antes de desactivar o eliminar un proveedor.
 
 ### Crear un proveedor
 
