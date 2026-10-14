@@ -119,6 +119,24 @@ export function cleanClientName(value: unknown, fallback: string): string {
   return raw ? raw.slice(0, 100) : fallback;
 }
 
+/**
+ * This server only has public clients (PKCE S256, no client authentication at the token endpoint).
+ * A client qualifies when its `token_endpoint_auth_method` is `none` or absent (RFC 7591 §2 makes
+ * `client_secret_basic` the default, but no CIMD client can hold a secret: CIMD draft §4.1 forbids
+ * every shared-secret method), or when it states that it also works without client authentication:
+ * `none` in `token_endpoint_auth_methods_supported`. That second key is not RFC 7591 client metadata;
+ * ChatGPT publishes it next to `"token_endpoint_auth_method": "private_key_jwt"` and picks the method
+ * this server advertises (`token_endpoint_auth_methods_supported: ["none"]`, RFC 8414).
+ * CIMD draft §8.2 requires client authentication for a client that declares `private_key_jwt`: one
+ * that declares it with no public fallback is refused, as is any secret-based method.
+ */
+export function canActAsPublicClient(doc: Record<string, unknown>): boolean {
+  const method = doc.token_endpoint_auth_method;
+  if (method === undefined || method === 'none') return true;
+  const supported = doc.token_endpoint_auth_methods_supported;
+  return Array.isArray(supported) && supported.includes('none');
+}
+
 export function parseClientMetadata(clientId: string, body: unknown): ClientMetadata {
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     throw new CimdError('not_json');
@@ -132,8 +150,7 @@ export function parseClientMetadata(clientId: string, body: unknown): ClientMeta
   if (redirectUris.length === 0) {
     throw new CimdError('no_redirect_uris');
   }
-  // A public client: anything else would need a client secret this server does not issue.
-  if (doc.token_endpoint_auth_method !== undefined && doc.token_endpoint_auth_method !== 'none') {
+  if (!canActAsPublicClient(doc)) {
     throw new CimdError('not_public_client');
   }
   return {

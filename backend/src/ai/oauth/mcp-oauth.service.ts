@@ -309,6 +309,13 @@ export class McpOAuthService {
 
   // ---------------------------------------------------------------- token endpoint
 
+  /**
+   * Every client is public (`token_endpoint_auth_methods_supported: ["none"]`). Client credentials a
+   * client sends anyway (`client_assertion`, an Authorization header) are ignored, never verified nor
+   * trusted: the code's binding to client_id, redirect_uri and the PKCE verifier is the whole proof,
+   * as for any other public client. Refusing them would only lock out a client that offers both
+   * methods (ChatGPT, see `canActAsPublicClient`) and still authenticates by habit.
+   */
   async token(body: Record<string, unknown>, host: McpOAuthHost): Promise<TokenResponse> {
     const grantType = str(body.grant_type);
     if (grantType === 'authorization_code') return this.exchangeCode(body, host);
