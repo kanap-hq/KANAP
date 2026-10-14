@@ -35,6 +35,7 @@ import {
   ProviderContext,
   RefItem,
 } from './provider.types';
+import { HTML_TAGS } from '../../../common/text-scan';
 
 // PRTG monitoring adapter — READS ONLY (Phase 15.A). The optional 15.B
 // acknowledge/pause pairs are deliberately NOT implemented: the control plane
@@ -196,7 +197,7 @@ function stripHtml(value: string | null | undefined): string | null {
     String(value)
       .replace(/<br\s*\/?>/gi, '\n')
       .replace(/<\/p>/gi, '\n')
-      .replace(/<[^>]+>/g, ' '),
+      .replace(HTML_TAGS, ' '),
     { entities: HTML_TEXT_ENTITIES, ignoreCase: true },
   )
     .replace(/[ \t]+/g, ' ')

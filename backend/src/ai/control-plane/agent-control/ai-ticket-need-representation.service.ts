@@ -21,6 +21,7 @@ import {
 } from './ai-ticket-need-representation.types';
 import { isRecord } from '../../../common/object-guards';
 import { estimateJsonTokens } from './json-token-estimate';
+import { HTML_TAGS } from '../../../common/text-scan';
 
 export type TicketNeedRepresentationBuildResult = {
   source: 'llm' | 'deterministic' | 'llm_fallback';
@@ -85,7 +86,7 @@ function schemaText(value: unknown, maxLength: number): string | null {
   }
   const normalized = String(raw ?? '')
     .replace(/<br\s*\/?>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
+    .replace(HTML_TAGS, ' ')
     .replace(/\s+/g, ' ')
     .trim();
   return normalized ? normalized.slice(0, maxLength) : null;
@@ -267,7 +268,7 @@ type ParsedNeed = z.infer<typeof NeedSchema>;
 function normalizeText(value: unknown): string {
   return String(value ?? '')
     .replace(/<br\s*\/?>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
+    .replace(HTML_TAGS, ' ')
     .replace(/[\u2019`]/g, '\'')
     .replace(/\s+/g, ' ')
     .trim();

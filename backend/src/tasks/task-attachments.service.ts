@@ -13,6 +13,7 @@ import { RemoteInlineImageImportService } from '../common/remote-inline-image-im
 import { DocumentImportService, ImportedDocumentResult } from '../common/document-import.service';
 import { extractInlineImageUrls } from '../common/content-image-urls';
 import { ImportExecutionOptions, readUploadedFileBuffer } from '../common/import-connection';
+import { assertMarkdownSize } from '../common/markdown-limits';
 
 @Injectable()
 export class TaskAttachmentsService {
@@ -144,6 +145,9 @@ export class TaskAttachmentsService {
       );
     }
 
+    // Checked before the images are stored: the description could not be saved anyway.
+    assertMarkdownSize(converted.markdown, sourceField);
+
     const tenantSlug = await this.loadCurrentTenantSlug(manager);
     const replacements = new Map<string, string>();
     for (const image of converted.images) {
@@ -155,7 +159,7 @@ export class TaskAttachmentsService {
     }
 
     return {
-      markdown: this.importService.rewriteImageTargets(converted.markdown, replacements, converted.omittedTargets),
+      markdown: await this.importService.rewriteImageTargets(converted.markdown, replacements, converted.omittedTargets),
       warnings: converted.warnings,
     };
   }

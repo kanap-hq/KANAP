@@ -33,11 +33,12 @@ import { formatShortDateTime } from '../../lib/dateFormat';
 import { buildInlineImageUrl, resolveInlineImageTenantSlug } from '../../utils/inlineImageUrls';
 import { useTenant } from '../../tenant/TenantContext';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
+import { AUTOSAVE_RETRY_DELAYS_MS, autosaveRetryDelayMs, isRetriableAutosaveFailure } from '../../hooks/useAutosave';
 import KnowledgeSidebar from './components/KnowledgeSidebar';
 import FolderTreePanel from './components/FolderTreePanel';
 import ValidatedBadge from './components/ValidatedBadge';
 import { CircularProgress } from '@mui/material';
-import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import { getApiErrorMessage, getDocumentSaveErrorMessage } from '../../utils/apiErrorMessage';
 import { getDotColor, KNOWLEDGE_STATUS_COLORS } from '../../utils/statusColors';
 import { normalizeMarkdownForRichTextEditor } from '../../lib/markdownEditorNormalization';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
@@ -829,6 +830,15 @@ export default function KnowledgeWorkspacePage() {
     return () => { void releaseLock(); };
   }, [releaseLock]);
 
+  // Autosaves refused in a row by a busy server or left without an answer, and when the next
+  // one may go (the server's Retry-After, growing waits).
+  const transientAutosaveFailuresRef = React.useRef(0);
+  const autosaveRetryNotBeforeRef = React.useRef(0);
+  // The form of the last save sent, and a form refused for good: the autosave waits for a new
+  // modification instead of sending it again.
+  const sentFormRef = React.useRef<any>(null);
+  const refusedFormRef = React.useRef<any>(null);
+
   // Save mutation
   const saveMutation = useMutation({
     mutationFn: async (mode: 'manual' | 'autosave') => {
@@ -854,6 +864,7 @@ export default function KnowledgeWorkspacePage() {
         return { mode, data: res.data, created: true };
       }
 
+      sentFormRef.current = form;
       const contentMarkdown = normalizeMarkdownForRichTextEditor(contentDraftRef.current);
       const payload = {
         title: form.title,
@@ -872,6 +883,9 @@ export default function KnowledgeWorkspacePage() {
       return { mode, data: res.data, created: false };
     },
     onSuccess: async (result) => {
+      transientAutosaveFailuresRef.current = 0;
+      autosaveRetryNotBeforeRef.current = 0;
+      refusedFormRef.current = null;
       setError(null);
       setDirty(false);
       if (result.created) {
@@ -913,6 +927,20 @@ export default function KnowledgeWorkspacePage() {
     onError: (e: any, mode: 'manual' | 'autosave') => {
       const status = Number(e?.response?.status || 0);
       const lockInfo = parseLockInfoFromError(e);
+      if (!isRetriableAutosaveFailure(e)) {
+        // Refused for its content (too large, too complex, ...) or otherwise for good: sending
+        // the same document again would fail the same way. The autosave waits for a new modification.
+        refusedFormRef.current = sentFormRef.current;
+      } else if (mode === 'autosave') {
+        // A busy server or no answer: sent again a few times, then it waits for a new modification.
+        transientAutosaveFailuresRef.current += 1;
+        const attempt = transientAutosaveFailuresRef.current;
+        if (attempt <= AUTOSAVE_RETRY_DELAYS_MS.length) {
+          autosaveRetryNotBeforeRef.current = Date.now() + autosaveRetryDelayMs(e, attempt);
+        } else {
+          refusedFormRef.current = sentFormRef.current;
+        }
+      }
       if ((status === 410 || status === 423) && mode === 'autosave') {
         setEditMode(false);
         setLockToken(null);
@@ -935,7 +963,7 @@ export default function KnowledgeWorkspacePage() {
         setError(t('workspace.messages.lockExpired'));
         return;
       }
-      setError(getApiErrorMessage(e, t, t('workspace.messages.saveFailed')));
+      setError(getDocumentSaveErrorMessage(e, t, t('workspace.messages.saveFailed')));
     },
   });
 
@@ -943,13 +971,23 @@ export default function KnowledgeWorkspacePage() {
   React.useEffect(() => {
     if (!editMode || !dirty || isCreate) return;
     if (!lockToken || saveMutation.isPending) return;
+    if (refusedFormRef.current !== null) {
+      // The document was refused: nothing is sent until it changes.
+      if (form === refusedFormRef.current) return;
+      // A new modification: saved again, with fresh retries.
+      refusedFormRef.current = null;
+      transientAutosaveFailuresRef.current = 0;
+      autosaveRetryNotBeforeRef.current = 0;
+    }
+    const delayMs = Math.max(1800, autosaveRetryNotBeforeRef.current - Date.now());
     const timer = window.setTimeout(() => {
       void saveMutation.mutate('autosave');
-    }, 1800);
+    }, delayMs);
     return () => window.clearTimeout(timer);
   }, [
     dirty,
     editMode,
+    form,
     form.content_markdown,
     form.document_type_id,
     form.folder_id,

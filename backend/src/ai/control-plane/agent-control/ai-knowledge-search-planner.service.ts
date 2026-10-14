@@ -11,6 +11,7 @@ import {
 import { AiAgentLlmClient } from './ai-agent-llm-client';
 import { TicketNeedRepresentation } from './ai-ticket-need-representation.types';
 import { estimateJsonTokens } from './json-token-estimate';
+import { HTML_TAGS } from '../../../common/text-scan';
 
 export type KnowledgePlannerTicket = {
   id: string;
@@ -122,7 +123,7 @@ const ResultInterpretationSchema = z.object({
 function normalizeText(value: unknown): string {
   return String(value ?? '')
     .replace(/<br\s*\/?>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
+    .replace(HTML_TAGS, ' ')
     .replace(/[’`]/g, '\'')
     .replace(/\s+/g, ' ')
     .trim();

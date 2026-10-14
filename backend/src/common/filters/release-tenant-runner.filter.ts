@@ -101,6 +101,16 @@ export class ReleaseTenantRunnerFilter extends BaseExceptionFilter {
       console.warn(databaseErrorLogLine(req, mapped));
       return super.catch(mapped.exception, host);
     }
+    const retryAfterSeconds = (exception as { retryAfterSeconds?: unknown } | null)?.retryAfterSeconds;
+    if (
+      exception instanceof HttpException
+      && typeof retryAfterSeconds === 'number'
+      && typeof res?.setHeader === 'function'
+      && !res.headersSent
+    ) {
+      // A refusal that clears by itself (MARKDOWN_BUSY) says when to try again.
+      res.setHeader('Retry-After', String(retryAfterSeconds));
+    }
     return super.catch(mapMultipartError(exception) ?? exception, host);
   }
 }
