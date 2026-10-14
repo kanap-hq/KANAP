@@ -24,6 +24,7 @@ import {
   CreateProjectInput,
   UpdateProjectInput,
   ListProjectsQueryInput,
+  ReorderPhasesDto,
 } from './dto';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { ShareRateLimit } from '../notifications/share-rate-limit';
@@ -968,11 +969,11 @@ export class PortfolioProjectsController {
   @Post(':id/phases/reorder')
   async reorderPhases(
     @Param('id') idOrRef: string,
-    @Body() body: { phase_ids: string[] },
+    @Body() body: ReorderPhasesDto,
     @Tenant() ctx: TenantRequest,
   ) {
     const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
-    return this.svc.reorderPhases(id, body?.phase_ids ?? [], {
+    return this.svc.reorderPhases(id, body.phase_ids, ctx.tenantId, {
       manager: ctx.manager,
     });
   }

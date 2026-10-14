@@ -1,5 +1,6 @@
 import * as assert from 'node:assert/strict';
 import { BadRequestException } from '@nestjs/common';
+import { decodeHtmlEntities } from '../../common/html-entities';
 import { ImportGlpiTicketAiMutationOperation, ImportTicketAiMutationOperation } from '../mutation/operations/import-glpi-ticket.ai-mutation-operation';
 
 function createContext() {
@@ -32,10 +33,10 @@ function extractImageTargets(html: string | null | undefined): string[] {
   const regex = /<img\b[^>]*\bsrc\s*=\s*(['"])(.*?)\1[^>]*>/gi;
   let match: RegExpExecArray | null;
   while ((match = regex.exec(text)) !== null) {
-    const target = String(match[2] || '')
-      .replace(/&amp;/gi, '&')
-      .replace(/&quot;/gi, '"')
-      .trim();
+    const target = decodeHtmlEntities(String(match[2] || ''), {
+      entities: { amp: '&', quot: '"' },
+      ignoreCase: true,
+    }).trim();
     if (target && !seen.has(target)) {
       seen.add(target);
       targets.push(target);

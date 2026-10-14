@@ -1,6 +1,6 @@
 import * as assert from 'node:assert/strict';
 import { BadRequestException } from '@nestjs/common';
-import { assertSetFilterModes, compileAgFilterCondition, createParamNameGenerator, isExcludeSetModel, setFilterMode } from '../ag-grid-filtering';
+import { assertSetFilterModes, buildQuickSearchConditions, compileAgFilterCondition, createParamNameGenerator, escapeLikePattern, isExcludeSetModel, setFilterMode } from '../ag-grid-filtering';
 import { buildWhereFromAgFilters } from '../pagination';
 
 // The shared grid filter compiler of the 24 SQL lists. Include mode must stay
@@ -8,6 +8,9 @@ import { buildWhereFromAgFilters } from '../pagination';
 // snapshot below is the output of the compiler before the change (`d42c9f66`
 // lineage), checked against it on 150 model × target pairs when the mode was
 // added. Exclude mode keeps exactly the rows the include model drops.
+// Since then the LIKE patterns escape `\`, `%` and `_` with `\`, the default
+// escape character, so they match literally (`ab%` reads `%ab\%%`); the SQL text
+// and every other output are unchanged.
 
 type Target = Parameters<typeof compileAgFilterCondition>[1];
 
@@ -18,7 +21,7 @@ const INCLUDE_SNAPSHOT: Array<[any, Target, unknown]> = [
   [{"filterType":"set","values":[null]}, {"expression":"c.name"}, {"sql":"c.name IS NULL","params":{}}],
   [{"filterType":"set","values":[]}, {"expression":"c.name"}, {"sql":"1=0","params":{}}],
   [{"filterType":"set","values":["","x"]}, {"expression":"c.name"}, {"sql":"c.name IN (:...p0)","params":{"p0":["x"]}}],
-  [{"filterType":"text","type":"contains","filter":"ab%"}, {"expression":"c.name"}, {"sql":"c.name ILIKE :p0","params":{"p0":"%ab%%"}}],
+  [{"filterType":"text","type":"contains","filter":"ab%"}, {"expression":"c.name"}, {"sql":"c.name ILIKE :p0","params":{"p0":"%ab\\%%"}}],
   [{"filterType":"text","type":"equals","filter":"Ab"}, {"expression":"c.name"}, {"sql":"c.name = :p0","params":{"p0":"Ab"}}],
   [{"filterType":"text","type":"blank"}, {"expression":"c.name"}, {"sql":"NULLIF((c.name)::text, '') IS NULL","params":{}}],
   [{"filterType":"number","type":"greaterThan","filter":5}, {"expression":"c.name"}, {"sql":"c.name ILIKE :p0","params":{"p0":"%5%"}}],
@@ -34,7 +37,7 @@ const INCLUDE_SNAPSHOT: Array<[any, Target, unknown]> = [
   [{"filterType":"set","values":[null]}, {"expression":"c.count","dataType":"number"}, {"sql":"c.count IS NULL","params":{}}],
   [{"filterType":"set","values":[]}, {"expression":"c.count","dataType":"number"}, {"sql":"1=0","params":{}}],
   [{"filterType":"set","values":["","x"]}, {"expression":"c.count","dataType":"number"}, {"sql":"1=0","params":{}}],
-  [{"filterType":"text","type":"contains","filter":"ab%"}, {"expression":"c.count","dataType":"number"}, {"sql":"c.count ILIKE :p0","params":{"p0":"%ab%%"}}],
+  [{"filterType":"text","type":"contains","filter":"ab%"}, {"expression":"c.count","dataType":"number"}, {"sql":"c.count ILIKE :p0","params":{"p0":"%ab\\%%"}}],
   [{"filterType":"text","type":"equals","filter":"Ab"}, {"expression":"c.count","dataType":"number"}, null],
   [{"filterType":"text","type":"blank"}, {"expression":"c.count","dataType":"number"}, {"sql":"c.count IS NULL","params":{}}],
   [{"filterType":"number","type":"greaterThan","filter":5}, {"expression":"c.count","dataType":"number"}, {"sql":"c.count > :p0","params":{"p0":5}}],
@@ -50,7 +53,7 @@ const INCLUDE_SNAPSHOT: Array<[any, Target, unknown]> = [
   [{"filterType":"set","values":[null]}, {"expression":"c.type_id","textExpression":"(SELECT t.name FROM types t WHERE t.id = c.type_id)"}, {"sql":"c.type_id IS NULL","params":{}}],
   [{"filterType":"set","values":[]}, {"expression":"c.type_id","textExpression":"(SELECT t.name FROM types t WHERE t.id = c.type_id)"}, {"sql":"1=0","params":{}}],
   [{"filterType":"set","values":["","x"]}, {"expression":"c.type_id","textExpression":"(SELECT t.name FROM types t WHERE t.id = c.type_id)"}, {"sql":"(SELECT t.name FROM types t WHERE t.id = c.type_id) IN (:...p0)","params":{"p0":["x"]}}],
-  [{"filterType":"text","type":"contains","filter":"ab%"}, {"expression":"c.type_id","textExpression":"(SELECT t.name FROM types t WHERE t.id = c.type_id)"}, {"sql":"(SELECT t.name FROM types t WHERE t.id = c.type_id) ILIKE :p0","params":{"p0":"%ab%%"}}],
+  [{"filterType":"text","type":"contains","filter":"ab%"}, {"expression":"c.type_id","textExpression":"(SELECT t.name FROM types t WHERE t.id = c.type_id)"}, {"sql":"(SELECT t.name FROM types t WHERE t.id = c.type_id) ILIKE :p0","params":{"p0":"%ab\\%%"}}],
   [{"filterType":"text","type":"equals","filter":"Ab"}, {"expression":"c.type_id","textExpression":"(SELECT t.name FROM types t WHERE t.id = c.type_id)"}, {"sql":"(SELECT t.name FROM types t WHERE t.id = c.type_id) = :p0","params":{"p0":"Ab"}}],
   [{"filterType":"text","type":"blank"}, {"expression":"c.type_id","textExpression":"(SELECT t.name FROM types t WHERE t.id = c.type_id)"}, {"sql":"NULLIF((c.type_id)::text, '') IS NULL","params":{}}],
   [{"filterType":"number","type":"greaterThan","filter":5}, {"expression":"c.type_id","textExpression":"(SELECT t.name FROM types t WHERE t.id = c.type_id)"}, {"sql":"(SELECT t.name FROM types t WHERE t.id = c.type_id) ILIKE :p0","params":{"p0":"%5%"}}],
@@ -170,7 +173,42 @@ function testSetWithNullBindsValues() {
   assert.equal(buildWhereFromAgFilters({ name: { filterType: 'set', values: [] } }).name._getSql('t.name'), '1=0');
 }
 
+// The text operators match the typed value literally: `\`, `%` and `_` are escaped
+// together with `\`, the default escape character of LIKE (no ESCAPE clause, which
+// would not parse when standard_conforming_strings is off).
+function testLikeOperatorsMatchTheValueLiterally() {
+  const typed = 'a\\b%c_d';
+  const literal = 'a\\\\b\\%c\\_d';
+  assert.equal(escapeLikePattern(typed), literal);
+  assert.equal(escapeLikePattern('plain'), 'plain');
+  assert.equal(escapeLikePattern('\\%_'), '\\\\\\%\\_');
+
+  const name = { expression: 'c.name' };
+  const expected: Array<[string, string, string]> = [
+    ['contains', 'ILIKE', `%${literal}%`],
+    ['notContains', 'NOT ILIKE', `%${literal}%`],
+    ['startsWith', 'ILIKE', `${literal}%`],
+    ['endsWith', 'ILIKE', `%${literal}`],
+  ];
+  for (const [type, operator, pattern] of expected) {
+    assert.deepEqual(
+      compile({ filterType: 'text', type, filter: typed }, name),
+      { sql: `c.name ${operator} :p0`, params: { p0: pattern } },
+      `${type} matches the value literally`,
+    );
+  }
+  // Equality compares the value as typed.
+  assert.deepEqual(compile({ filterType: 'text', type: 'equals', filter: typed }, name), { sql: 'c.name = :p0', params: { p0: typed } });
+
+  const quick = buildQuickSearchConditions(` ${typed} `, ['c.name', 'c.code'], createParamNameGenerator('q'));
+  assert.deepEqual(quick, [
+    { sql: `c.name ILIKE :q0`, params: { q0: `%${literal}%` } },
+    { sql: `c.code ILIKE :q1`, params: { q1: `%${literal}%` } },
+  ], 'the quick search escapes the backslash too');
+}
+
 testIncludeModeUnchanged();
+testLikeOperatorsMatchTheValueLiterally();
 testExcludeModeIsTheComplement();
 testExcludeModeOnlyOnSetModels();
 testUnknownModeIsRefused();

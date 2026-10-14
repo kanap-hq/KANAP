@@ -163,12 +163,20 @@ function wrapWith(markdown: string, wrapper: string): string {
   return `${wrapper}${content}${wrapper}`;
 }
 
-function escapeInlineCode(value: string): string {
-  return value.replace(/`/g, '\\`');
+// A code span takes its content literally: it is fenced with more backticks
+// than the longest run inside, and padded when that content starts or ends with one.
+function formatInlineCode(value: string): string {
+  const longestRun = Math.max(0, ...(value.match(/`+/g) || []).map((run) => run.length));
+  const fence = '`'.repeat(longestRun + 1);
+  const padding = /^`|`$/.test(value) ? ' ' : '';
+  return `${fence}${padding}${value}${padding}${fence}`;
 }
 
+// A pipe is escaped in a table cell, and so is each backslash right before it.
 function escapeTableCell(value: string): string {
-  return value.replace(/\|/g, '\\|').replace(/\n+/g, ' ');
+  return value
+    .replace(/\\*\|/g, (run) => run.replace(/[\\|]/g, '\\$&'))
+    .replace(/\n+/g, ' ');
 }
 
 function formatLinkDestination(value: string): string {
@@ -178,7 +186,7 @@ function formatLinkDestination(value: string): string {
 }
 
 function formatImageMarkdown(src: string, alt: string, title: string): string {
-  const titleSuffix = title ? ` "${title.replace(/"/g, '\\"')}"` : '';
+  const titleSuffix = title ? ` "${title.replace(/[\\"]/g, '\\$&')}"` : '';
   return `![${alt}](${formatLinkDestination(src)}${titleSuffix})`;
 }
 
@@ -445,7 +453,7 @@ async function convertInlineNodes(nodes: Node[], ctx: ConversionContext): Promis
               fragment = childMarkdown;
               break;
             case 'code':
-              fragment = `\`${escapeInlineCode(childMarkdown)}\``;
+              fragment = formatInlineCode(childMarkdown);
               break;
             case 'a': {
               const href = String(node.getAttribute('href') || '').trim();
