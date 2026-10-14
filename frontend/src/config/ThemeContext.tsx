@@ -526,7 +526,7 @@ function getComponentOverrides(mode: PaletteMode): ThemeOptions['components'] {
             fontSize: '0.6875rem',
             textTransform: 'none' as const,
             letterSpacing: 0,
-            color: isDark ? 'rgba(255,255,255,0.55)' : '#6B7280',
+            color: isDark ? 'rgba(255,255,255,0.55)' : '#6C7482',
           },
         },
       },
@@ -602,7 +602,7 @@ export function createAppTheme(mode: PaletteMode, brandingPrimaryColors?: Brandi
       divider: isDark ? 'rgba(255,255,255,0.08)' : '#E5E7EB',
       text: {
         primary: isDark ? '#E5E7EB' : '#111827',
-        secondary: isDark ? 'rgba(255,255,255,0.55)' : '#6B7280',
+        secondary: isDark ? 'rgba(255,255,255,0.55)' : '#4B5563',
       },
       action: {
         hover: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',

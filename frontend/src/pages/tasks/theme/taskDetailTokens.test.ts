@@ -27,7 +27,7 @@ describe('kanap text tokens contrast', () => {
     },
   );
 
-  it.each(['primary', 'secondary'] as const)(
+  it.each(['primary', 'secondary', 'tertiary'] as const)(
     'light %s text reaches WCAG AA on every light surface',
     (token) => {
       for (const surface of surfaces) {
@@ -37,10 +37,10 @@ describe('kanap text tokens contrast', () => {
     },
   );
 
-  it('keeps primary > secondary > tertiary in dark mode', () => {
-    const bg = kanapPalette.bg.primary.dark;
+  it.each(['light', 'dark'] as const)('keeps primary > secondary > tertiary in %s mode', (mode) => {
+    const bg = kanapPalette.bg.primary[mode];
     const { primary, secondary, tertiary } = kanapPalette.text;
-    expect(contrast(primary.dark, bg)).toBeGreaterThan(contrast(secondary.dark, bg));
-    expect(contrast(secondary.dark, bg)).toBeGreaterThan(contrast(tertiary.dark, bg));
+    expect(contrast(primary[mode], bg)).toBeGreaterThan(contrast(secondary[mode], bg));
+    expect(contrast(secondary[mode], bg)).toBeGreaterThan(contrast(tertiary[mode], bg));
   });
 });
