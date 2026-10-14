@@ -17,7 +17,7 @@ import { AuditService } from '../audit/audit.service';
 import { extractInlineImageUrls } from '../common/content-image-urls';
 import { ItemNumberService } from '../common/item-number.service';
 import { DocumentImportService, ImportedDocumentResult } from '../common/document-import.service';
-import { normalizeMarkdownRichText } from '../common/markdown-rich-text';
+import { assertMarkdownSize, normalizeMarkdownRichText } from '../common/markdown-rich-text';
 import { markdownToSearchText } from '../common/markdown-search-text';
 import { bilingualDocumentTsQueryAnyTermSql, bilingualDocumentTsQuerySql, normalizeDocumentAnyTermQuery } from '../common/document-search-tsquery';
 import { DocumentExportService, ExportImageFetchOptions } from '../common/document-export.service';
@@ -6164,6 +6164,8 @@ export class KnowledgeService {
     await this.assertDocumentWritable(documentId, manager, userId, opts);
     await this.assertWorkflowAllowsEditing(documentId, manager);
     await this.ensureValidLock(documentId, String(userId || ''), lockToken, manager);
+    // Checked before the images are stored: the document could not be saved anyway.
+    assertMarkdownSize(converted.markdown, 'content_markdown');
 
     const tenantSlug = await this.loadCurrentTenantSlug(manager);
     const replacements = new Map<string, string>();

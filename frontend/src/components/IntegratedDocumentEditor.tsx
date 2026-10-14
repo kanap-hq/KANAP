@@ -24,6 +24,7 @@ import ExportButton from './ExportButton';
 import ImportButton from './ImportButton';
 import { MarkdownContent } from './MarkdownContent';
 import { normalizeMarkdownForRichTextEditor } from '../lib/markdownEditorNormalization';
+import { getApiErrorMessage } from '../utils/apiErrorMessage';
 import type { AutosaveStatus } from '../hooks/useAutosave';
 
 const MarkdownEditor = React.lazy(() => import('./MarkdownEditor'));
@@ -414,7 +415,7 @@ export const IntegratedDocumentEditor = React.forwardRef<
         setError(t('documentEditor.lockExpired'));
         return;
       }
-      setError(e?.response?.data?.message || e?.message || t('documentEditor.failedToSave'));
+      setError(getApiErrorMessage(e, t, t('documentEditor.failedToSave')));
     },
   });
 
@@ -612,7 +613,7 @@ export const IntegratedDocumentEditor = React.forwardRef<
       setError('Editing lock expired. Re-enter edit mode to continue.');
       return;
     }
-    setError((e as any)?.response?.data?.message || (e as any)?.message || t('documentEditor.importFailed'));
+    setError(getApiErrorMessage(e, t, t('documentEditor.importFailed')));
   }, [doc?.edit_lock, parseLockInfo, parseLockInfoFromError]);
 
   const handleDocumentImport = React.useCallback(async (file: File): Promise<ImportDocumentResult> => {

@@ -117,9 +117,23 @@ export function isAllowedMarkdownHtmlSnippet(value: string): boolean {
   return true;
 }
 
+const DATA_IMAGE_PAYLOAD_REGEX = /(data:image\/[a-z0-9.+-]+;base64,)[a-z0-9+/=]+/gi;
+
+/**
+ * The text with each base64 image payload cut to one character. An inline image
+ * is not text: it neither counts toward the size of a Markdown content nor goes
+ * through the Markdown parser. The cut keeps the `data:image/...;base64,` prefix,
+ * so the URI is still recognised as an inline image, and changes no Markdown
+ * structure (the payload alphabet, letters, digits, "+", "/" and "=", holds no
+ * delimiter that acts in the middle of a line).
+ */
+export function withoutDataImagePayloads(content: string): string {
+  return String(content || '').replace(DATA_IMAGE_PAYLOAD_REGEX, '$1A');
+}
+
 function parseTokens(content: string): MarkdownToken[] | null {
   try {
-    return marked.lexer(content, { gfm: true, breaks: true }) as MarkdownToken[];
+    return marked.lexer(withoutDataImagePayloads(content), { gfm: true, breaks: true }) as MarkdownToken[];
   } catch {
     return null;
   }
@@ -168,34 +182,125 @@ function walkMarkedToken(value: unknown, visit: (token: MarkdownToken) => void):
   }
 }
 
+function collectRawHtmlSnippets(tokens: MarkdownToken[]): string[] {
+  const snippets: string[] = [];
+  const seen = new Set<string>();
+
+  for (const token of tokens) {
+    walkMarkedToken(token, (current) => {
+      if (current.type !== 'html') return;
+      const snippet = normalizeSnippet(current.raw ?? current.text ?? '');
+      if (!snippet || seen.has(snippet)) return;
+      seen.add(snippet);
+      snippets.push(snippet);
+    });
+  }
+
+  return snippets;
+}
+
+/**
+ * Whether the text holds one of the known HTML tags. The test runs on the text up
+ * to its last ">", so every candidate tag has a closing ">" ahead of it and the
+ * first candidate matches at once (linear time).
+ */
+function hasHtmlTagText(text: string): boolean {
+  const lastClose = text.lastIndexOf('>');
+  if (lastClose === -1) return false;
+  return HTML_TAG_REGEX_FALLBACK.test(text.slice(0, lastClose + 1));
+}
+
+function findRawHtmlSnippetsInText(text: string): string[] {
+  if (MARKDOWN_AUTOLINK_REGEX_FALLBACK.test(text)) return [];
+  if (!hasHtmlTagText(text)) return [];
+  const fallbackSnippet = normalizeSnippet(text);
+  return fallbackSnippet ? [fallbackSnippet] : [];
+}
+
 export function findRawHtmlSnippets(content: string): string[] {
   const text = String(content || '').trim();
   if (!text) return [];
 
   const tokens = parseTokens(text);
-  if (tokens) {
-    const snippets: string[] = [];
-    const seen = new Set<string>();
+  return tokens ? collectRawHtmlSnippets(tokens) : findRawHtmlSnippetsInText(text);
+}
 
-    for (const token of tokens) {
-      walkMarkedToken(token, (current) => {
-        if (current.type !== 'html') return;
+function tokensContainDataImage(tokens: MarkdownToken[]): boolean {
+  let found = false;
+  for (const token of tokens) {
+    walkMarkedToken(token, (current) => {
+      if (found) return;
+      if (current.type === 'image') {
+        const href = String((current as any).href ?? '').trim();
+        if (isDataImageUri(href)) {
+          found = true;
+        }
+        return;
+      }
+      if (current.type === 'html') {
         const snippet = normalizeSnippet(current.raw ?? current.text ?? '');
-        if (!snippet || seen.has(snippet)) return;
-        seen.add(snippet);
-        snippets.push(snippet);
-      });
+        if (hasDataImageInHtmlSnippet(snippet)) {
+          found = true;
+        }
+      }
+    });
+    if (found) break;
+  }
+  return found;
+}
+
+const DATA_IMAGE_TARGET_STICKY_REGEX = /\s*<?data:image\/[a-z0-9.+-]+;base64,[^)>\s]/iy;
+const DATA_IMAGE_SRC_REGEX = /\bsrc\s*=\s*(["'])data:image\/[a-z0-9.+-]+;base64,/gi;
+
+/**
+ * `![alt](data:image/...;base64,...)` in text that could not be tokenized: one
+ * pass over the text, where a "]" closes the alt text opened by the last "![".
+ */
+function hasMarkdownDataImageText(text: string): boolean {
+  let altOpen = false;
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    if (char === '!' && text[index + 1] === '[') {
+      altOpen = true;
+      index += 1;
+      continue;
     }
-
-    return snippets;
+    if (char !== ']') continue;
+    const opened = altOpen;
+    altOpen = false;
+    if (!opened || text[index + 1] !== '(') continue;
+    DATA_IMAGE_TARGET_STICKY_REGEX.lastIndex = index + 2;
+    if (DATA_IMAGE_TARGET_STICKY_REGEX.test(text)) return true;
   }
+  return false;
+}
 
-  {
-    if (MARKDOWN_AUTOLINK_REGEX_FALLBACK.test(text)) return [];
-    if (!HTML_TAG_REGEX_FALLBACK.test(text)) return [];
-    const fallbackSnippet = normalizeSnippet(text);
-    return fallbackSnippet ? [fallbackSnippet] : [];
-  }
+/**
+ * `<img ... src="data:image/...;base64,...">` in text that could not be tokenized.
+ * Each tag is cut at its first ">" (a base64 payload holds none), and only text up
+ * to the last ">" is searched, so every tag match succeeds at once.
+ */
+function hasHtmlDataImageText(text: string): boolean {
+  const lastClose = text.lastIndexOf('>');
+  if (lastClose === -1) return false;
+  const tags = text.slice(0, lastClose + 1).match(/<img\b[^>]*>/gi) || [];
+  return tags.some((tag) => {
+    const lastQuote: Record<string, number> = { '"': tag.lastIndexOf('"'), '\'': tag.lastIndexOf('\'') };
+    const srcRegex = new RegExp(DATA_IMAGE_SRC_REGEX.source, 'gi');
+    let match: RegExpExecArray | null;
+    while ((match = srcRegex.exec(tag)) !== null) {
+      // The quoted value must be closed before the end of the tag.
+      if (lastQuote[match[1]] >= srcRegex.lastIndex) return true;
+    }
+    return false;
+  });
+}
+
+/** Inline base64 image check for text the Markdown parser could not tokenize. */
+export function containsInlineDataImageText(content: string): boolean {
+  const text = withoutDataImagePayloads(String(content || '').trim());
+  if (!text) return false;
+  return hasMarkdownDataImageText(text) || hasHtmlDataImageText(text);
 }
 
 export function containsInlineDataImage(content: string): boolean {
@@ -203,32 +308,19 @@ export function containsInlineDataImage(content: string): boolean {
   if (!text) return false;
 
   const tokens = parseTokens(text);
-  if (tokens) {
-    let found = false;
-    for (const token of tokens) {
-      walkMarkedToken(token, (current) => {
-        if (found) return;
-        if (current.type === 'image') {
-          const href = String((current as any).href ?? '').trim();
-          if (isDataImageUri(href)) {
-            found = true;
-          }
-          return;
-        }
-        if (current.type === 'html') {
-          const snippet = normalizeSnippet(current.raw ?? current.text ?? '');
-          if (hasDataImageInHtmlSnippet(snippet)) {
-            found = true;
-          }
-        }
-      });
-      if (found) break;
-    }
-    return found;
-  }
+  return tokens ? tokensContainDataImage(tokens) : containsInlineDataImageText(text);
+}
 
-  return /!\[[^\]]*]\(\s*<?data:image\/[a-z0-9.+-]+;base64,[^)>\s]+>?/i.test(text)
-    || /<img\b[^>]*\bsrc\s*=\s*("data:image\/[a-z0-9.+-]+;base64,[^"]*"|'data:image\/[a-z0-9.+-]+;base64,[^']*')[^>]*>/i.test(text);
+/** Raw HTML snippets and inline base64 images of a Markdown content, from a single parse. */
+export function inspectMarkdownContent(content: string): { rawHtmlSnippets: string[]; hasInlineDataImage: boolean } {
+  const text = String(content || '').trim();
+  if (!text) return { rawHtmlSnippets: [], hasInlineDataImage: false };
+
+  const tokens = parseTokens(text);
+  if (tokens) {
+    return { rawHtmlSnippets: collectRawHtmlSnippets(tokens), hasInlineDataImage: tokensContainDataImage(tokens) };
+  }
+  return { rawHtmlSnippets: findRawHtmlSnippetsInText(text), hasInlineDataImage: containsInlineDataImageText(text) };
 }
 
 export function isHtmlContent(content: string): boolean {
@@ -241,7 +333,7 @@ export function isHtmlContent(content: string): boolean {
   }
 
   if (MARKDOWN_AUTOLINK_REGEX_FALLBACK.test(text)) return false;
-  return HTML_TAG_REGEX_FALLBACK.test(text);
+  return hasHtmlTagText(text);
 }
 
 export function resolveHtmlContentSource(content: string): string {

@@ -13,6 +13,7 @@ import { RemoteInlineImageImportService } from '../common/remote-inline-image-im
 import { DocumentImportService, ImportedDocumentResult } from '../common/document-import.service';
 import { extractInlineImageUrls } from '../common/content-image-urls';
 import { ImportExecutionOptions, readUploadedFileBuffer } from '../common/import-connection';
+import { assertMarkdownSize } from '../common/markdown-rich-text';
 
 @Injectable()
 export class TaskAttachmentsService {
@@ -143,6 +144,9 @@ export class TaskAttachmentsService {
         file.originalname,
       );
     }
+
+    // Checked before the images are stored: the description could not be saved anyway.
+    assertMarkdownSize(converted.markdown, sourceField);
 
     const tenantSlug = await this.loadCurrentTenantSlug(manager);
     const replacements = new Map<string, string>();

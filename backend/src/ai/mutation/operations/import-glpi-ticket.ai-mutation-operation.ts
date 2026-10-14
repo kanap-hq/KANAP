@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import { htmlToMarkdown, resolveHtmlContentSource } from '../../../common/html-to-markdown';
-import { normalizeMarkdownRichText } from '../../../common/markdown-rich-text';
+import { assertMarkdownSize, normalizeMarkdownRichText } from '../../../common/markdown-rich-text';
 import { TaskPriorityLevel } from '../../../tasks/task.entity';
 import { TaskActivitiesService } from '../../../tasks/task-activities.service';
 import { TaskAttachmentsService } from '../../../tasks/task-attachments.service';
@@ -783,6 +783,8 @@ abstract class BaseImportTicketAiMutationOperation<TInput extends LegacyImportTi
     const publicFollowups = followups.filter((followup) => !followup.is_private);
     const privateFollowupCount = followups.length - publicFollowups.length;
     const contentSource = textOrNull(ticket.descriptionHtml) ?? textOrNull(ticket.description) ?? '';
+    // The ticket text is bounded before its conversion to Markdown.
+    assertMarkdownSize(contentSource, 'description');
     const normalizedContentHtml = textOrNull(resolveHtmlContentSource(contentSource));
     const sourceUri = ticketSourceUri(ticket);
     const description = normalizeMarkdownRichText(
@@ -1151,6 +1153,7 @@ abstract class BaseImportTicketAiMutationOperation<TInput extends LegacyImportTi
 
     for (const followup of followups) {
       try {
+        assertMarkdownSize(followup.content_html, 'content');
         const normalizedContentHtml = textOrNull(resolveHtmlContentSource(followup.content_html || ''));
         const converted = htmlToMarkdown(normalizedContentHtml || '');
         const rewritten = followupImageReplacements.size > 0

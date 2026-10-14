@@ -1382,6 +1382,7 @@ export class IntegratedDocumentsService {
     }
     return normalizeMarkdownRichText(content, {
       fieldName: 'content_markdown',
+      enforceSizeLimit: false,
     }) || '';
   }
 
@@ -1564,10 +1565,11 @@ export class IntegratedDocumentsService {
   private resolveInitialContent(
     explicitContent: string | null | undefined,
     templateContent: string | null | undefined,
-    opts?: { useTemplateWhenBlank?: boolean },
+    opts?: { useTemplateWhenBlank?: boolean; storedContent?: boolean },
   ): string {
     const normalizedExplicit = normalizeMarkdownRichText(explicitContent, {
       fieldName: 'content_markdown',
+      enforceSizeLimit: !opts?.storedContent,
     }) || '';
     if (normalizedExplicit) {
       return normalizedExplicit;
@@ -1575,8 +1577,10 @@ export class IntegratedDocumentsService {
     if (opts?.useTemplateWhenBlank === false) {
       return '';
     }
+    // The template is a stored document: it keeps whatever size it has.
     return normalizeMarkdownRichText(templateContent, {
       fieldName: 'content_markdown',
+      enforceSizeLimit: false,
     }) || '';
   }
 
@@ -1827,6 +1831,7 @@ export class IntegratedDocumentsService {
       return {
         content_markdown: normalizeMarkdownRichText(content, {
           fieldName: 'content_markdown',
+          enforceSizeLimit: false,
         }) || '',
         legacyMappings: [],
         dataImageAttachmentIds: [],
@@ -1920,6 +1925,7 @@ export class IntegratedDocumentsService {
         this.applyInlineImageReplacements(content, replacements),
         {
           fieldName: 'content_markdown',
+          enforceSizeLimit: false,
         },
       ) || '',
       legacyMappings,
@@ -2097,6 +2103,7 @@ export class IntegratedDocumentsService {
 
     const normalizedExpectedContent = normalizeMarkdownRichText(rewritten.content_markdown, {
       fieldName: 'content_markdown',
+      enforceSizeLimit: false,
     }) || '';
     if (normalizedExpectedContent !== normalizedDocumentContent) {
       throw new Error(`Managed document content mismatch for ${sourceEntityType}:${slotKey}:${sourceEntityId}`);
@@ -2259,6 +2266,8 @@ export class IntegratedDocumentsService {
     manager: EntityManager,
     opts?: {
       useTemplateWhenBlank?: boolean;
+      /** The explicit content is a stored content (copy, backfill, repair): no size limit. */
+      storedContent?: boolean;
       ownerUserId?: string | null;
       changeNote?: string | null;
       activityContent?: string | null;
@@ -2281,7 +2290,7 @@ export class IntegratedDocumentsService {
     const initialContent = this.resolveInitialContent(
       explicitContent,
       slotSetting.template_content_markdown,
-      { useTemplateWhenBlank: opts?.useTemplateWhenBlank },
+      { useTemplateWhenBlank: opts?.useTemplateWhenBlank, storedContent: opts?.storedContent },
     );
 
     const provisioningContext = await this.buildSourceAccessContext(
@@ -2697,6 +2706,7 @@ export class IntegratedDocumentsService {
       {
         ownerUserId,
         useTemplateWhenBlank: false,
+        storedContent: true,
         initializer: async (projectDocumentId, initializerManager) => {
           if (referencedAttachmentIds.length === 0) {
             return {
@@ -2750,6 +2760,7 @@ export class IntegratedDocumentsService {
       {
         ownerUserId,
         useTemplateWhenBlank: false,
+        storedContent: true,
         changeNote: importChangeNote,
         activityContent: importChangeNote,
         initializer: async (documentId, initializerManager) => {
@@ -2914,6 +2925,7 @@ export class IntegratedDocumentsService {
         {
           ownerUserId: context.ownerUserId,
           useTemplateWhenBlank: false,
+          storedContent: true,
           changeNote: 'Recovered from audit log after integrated-doc migration',
           activityContent: 'Recovered from audit log after integrated-doc migration',
           initializer: needsDataImageRecovery
@@ -3196,6 +3208,7 @@ export class IntegratedDocumentsService {
     const recovered = await this.loadRecoveredSlotContent(sourceEntityType, context.source.id, slotKey, manager);
     const normalizedDocumentContent = normalizeMarkdownRichText(document.content_markdown, {
       fieldName: 'content_markdown',
+      enforceSizeLimit: false,
     }) || '';
     await this.assertRecoveredInlineImagesMatchDocument(
       sourceEntityType,
@@ -3369,6 +3382,7 @@ export class IntegratedDocumentsService {
     const preparedLegacyContent = this.prepareRecoveredContent(legacyContent);
     const normalizedDocumentContent = normalizeMarkdownRichText(document.content_markdown, {
       fieldName: 'content_markdown',
+      enforceSizeLimit: false,
     }) || '';
     await this.assertRecoveredInlineImagesMatchDocument(
       sourceEntityType,
