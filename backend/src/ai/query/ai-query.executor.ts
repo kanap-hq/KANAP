@@ -52,6 +52,7 @@ import {
   AiQueryResult,
 } from './ai-filter.types';
 import { assertPlainTextQuickSearch } from './ai-quick-search-validation.util';
+import { aiAmountsCurrency } from './ai-amounts-currency.util';
 import { analyticsAxisFields, resolveAiEntityRegistry } from './registries';
 import { budgetFteFields } from './registries/budget-amount-fields';
 import { analyticsAxisLabel, AnalyticsAxisInfo, axisAppliesTo, loadAnalyticsAxes, parseAnalyticsFieldKey } from '../../analytics/analytics-axes.util';
@@ -156,6 +157,19 @@ function budgetFteValue(row: any, slot: FixedSlot, column: (typeof SUMMARY_COLUM
 }
 
 /**
+ * The fixed years whose amounts were not converted: no rate for the line's currency that year,
+ * so the reporting values are the line's own at a rate of 1 (`fx-rate.service.ts`, `missing`).
+ */
+export function budgetFxMissingYears(row: any, anchorYear: number): number[] {
+  const years: number[] = [];
+  for (const slot of FIXED_SLOTS) {
+    const reporting = budgetSlot(row, slot, anchorYear)?.reporting;
+    if (reporting?.fx_source === 'missing' && reporting.currency !== reporting.reporting_currency) years.push(anchorYear + slot.offset);
+  }
+  return years;
+}
+
+/**
  * Every column of every fixed year under its registry key (`y_plus1_forecast`),
  * and the same per year; the FTE of each under `<slot>_<column>_fte`.
  */
@@ -173,6 +187,8 @@ function budgetAmountMetadata(row: any, anchorYear: number): AiEntityMetadata {
     yearlyTotals.push(year);
   }
   metadata.yearly_totals = yearlyTotals;
+  // The years without a rate, as "2025, 2026"; null when every year is converted.
+  metadata.amounts_fx_missing_years = budgetFxMissingYears(row, anchorYear).join(', ') || null;
   for (const slot of FIXED_SLOTS) {
     for (const column of SUMMARY_COLUMNS) metadata[`${slot.ai}_${column.ai}_fte`] = budgetFteValue(row, slot, column, anchorYear);
   }
@@ -1125,14 +1141,22 @@ export class AiQueryExecutor {
     const registry = await resolveAiEntityRegistry(context, input.entity_type);
     const sort = resolveAiQuerySort(registry, input.sort);
     const result = await this.executeQuery(context, input, registry, sort);
-    if (!sort.ignored.length) return { ...result, sort: sort.applied, sort_ignored: [] };
-    // An unknown sort field never passes silently: the items come in the default order, said so.
+    const requestedLimit = Math.floor(Number(input.limit));
+    // Neither a reduced page size nor an unknown sort field passes silently.
+    const limitCapped = Number.isFinite(requestedLimit) && requestedLimit > result.limit
+      ? { limit_capped: { requested: requestedLimit, applied: result.limit } }
+      : {};
+    const amounts = await aiAmountsCurrency(context, input.entity_type);
+    if (!sort.ignored.length) return { ...result, sort: sort.applied, sort_ignored: [], ...limitCapped, ...amounts };
+    // The items come in the default order, said so.
     return {
       ...result,
       complete: false,
       sort: sort.applied,
       sort_ignored: sort.ignored,
       sortable_fields: Object.keys(registry.sortFields),
+      ...limitCapped,
+      ...amounts,
     };
   }
 
@@ -2066,6 +2090,19 @@ export class AiQueryExecutor {
   }
 
   async executeDetail(
+    context: AiExecutionContextWithManager,
+    input: {
+      entity_type: AiQueryEntityType;
+      entity_id: string;
+      year?: number;
+    },
+  ): Promise<AiEntityDetailDto> {
+    const detail = await this.executeEntityDetail(context, input);
+    const amounts = await aiAmountsCurrency(context, input.entity_type, 'detail');
+    return amounts ? { ...detail, ...amounts } : detail;
+  }
+
+  private async executeEntityDetail(
     context: AiExecutionContextWithManager,
     input: {
       entity_type: AiQueryEntityType;

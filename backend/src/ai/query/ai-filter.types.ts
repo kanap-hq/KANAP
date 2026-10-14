@@ -127,6 +127,11 @@ export type AiQueryResult = {
   /** A requested sort field the family cannot sort on; `sortable_fields` then lists the ones it can. */
   sort_ignored?: string[];
   sortable_fields?: string[];
+  /** A `limit` above the family's maximum: the page size asked and the one applied (`limit`). */
+  limit_capped?: { requested: number; applied: number };
+  /** The currency of the amounts, on the families that carry some (`ai-amounts-currency.util.ts`). */
+  amounts_currency?: string | null;
+  amounts_currency_note?: string;
   scope: {
     requested: AiQueryScope;
     resolved: boolean;
@@ -136,6 +141,8 @@ export type AiQueryResult = {
 
 export type AiAggregateResult = {
   status?: 'ok' | 'invalid_filter';
+  amounts_currency?: string | null;
+  amounts_currency_note?: string;
   group_by: string;
   metric?: string | null;
   function?: 'count' | 'sum' | 'avg' | 'min' | 'max';

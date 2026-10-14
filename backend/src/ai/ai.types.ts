@@ -218,6 +218,9 @@ export type AiEntityCommentsDto = {
 export type AiEntityDetailDto = {
   entity: AiEntitySummaryDto;
   data: Record<string, unknown>;
+  /** The currency of the amounts, on the families that carry some (`ai-amounts-currency.util.ts`). */
+  amounts_currency?: string | null;
+  amounts_currency_note?: string;
   total: number;
   returned: number;
   truncated: boolean;

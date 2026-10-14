@@ -5,6 +5,19 @@ import { Tenant } from '../tenants/tenant.entity';
 import { ISO_CURRENCIES } from './iso-currencies';
 import { AuditService } from '../audit/audit.service';
 
+/** A 3-letter currency code, upper case, or the fallback. */
+export function normalizeCurrencyCode(code?: string | null, fallback = 'EUR'): string {
+  if (!code || typeof code !== 'string') return fallback;
+  const trimmed = code.trim().toUpperCase();
+  return trimmed.length === 3 ? trimmed : fallback;
+}
+
+/** The tenant's reporting currency, as `getSettings` reads it, in one query. */
+export async function readReportingCurrency(manager: EntityManager, tenantId: string): Promise<string> {
+  const [row] = await manager.query(`SELECT metadata->>'reporting_currency' AS code FROM tenants WHERE id = $1`, [tenantId]);
+  return normalizeCurrencyCode(row?.code);
+}
+
 export interface CurrencySettings {
   reportingCurrency: string;
   defaultSpendCurrency: string;
@@ -48,9 +61,7 @@ export class CurrencySettingsService {
   }
 
   private normalizeCode(code?: string | null, fallback = 'EUR'): string {
-    if (!code || typeof code !== 'string') return fallback;
-    const trimmed = code.trim().toUpperCase();
-    return trimmed.length === 3 ? trimmed : fallback;
+    return normalizeCurrencyCode(code, fallback);
   }
 
   private normalizeList(list?: string[] | null): string[] | null {
