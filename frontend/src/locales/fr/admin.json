@@ -761,10 +761,14 @@
       "loadFailed": "Impossible de charger les plans.",
       "nowAnnual": "Votre plan est désormais annuel.",
       "nowMonthly": "Votre plan est désormais mensuel.",
+      "openInvoice": "Ouvrir la facture",
       "paymentRequired": "Le plan change une fois sa facture payée.",
       "requestFailed": "La requête a échoué.",
       "switchToAnnual": "Votre plan passe en annuel le {{date}}.",
-      "switchToMonthly": "Votre plan passe en mensuel le {{date}}."
+      "switchToMonthly": "Votre plan passe en mensuel le {{date}}.",
+      "transferInvoice": "Facture {{number}} créée : {{amount}}, à régler par virement avant le {{date}}. Les coordonnées bancaires figurent sur la facture.",
+      "transferInvoiceNoDate": "Facture {{number}} créée : {{amount}}, à régler par virement. Les coordonnées bancaires figurent sur la facture.",
+      "transferInvoiceShort": "Facture créée, à régler par virement. Les coordonnées bancaires figurent sur la facture."
     },
     "monthlyEquivalent": "{{amount}} par mois, facturé annuellement",
     "period": {

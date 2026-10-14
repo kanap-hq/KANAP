@@ -761,10 +761,14 @@
       "loadFailed": "Failed to load plans.",
       "nowAnnual": "Your plan is now annual.",
       "nowMonthly": "Your plan is now monthly.",
+      "openInvoice": "Open invoice",
       "paymentRequired": "The plan changes once its invoice is paid.",
       "requestFailed": "Request failed.",
       "switchToAnnual": "Your plan switches to annual on {{date}}.",
-      "switchToMonthly": "Your plan switches to monthly on {{date}}."
+      "switchToMonthly": "Your plan switches to monthly on {{date}}.",
+      "transferInvoice": "Invoice {{number}} created: {{amount}}, to pay by bank transfer before {{date}}. The bank details are on the invoice.",
+      "transferInvoiceNoDate": "Invoice {{number}} created: {{amount}}, to pay by bank transfer. The bank details are on the invoice.",
+      "transferInvoiceShort": "Invoice created, to pay by bank transfer. The bank details are on the invoice."
     },
     "monthlyEquivalent": "{{amount}} per month, billed annually",
     "period": {

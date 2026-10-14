@@ -82,6 +82,28 @@ function paidMessage(change: PlanChange | undefined, interval: BillingInterval, 
   return `${now} ${t('planSelection.messages.invoicePaid', { number: invoice.number, amount })}`;
 }
 
+/** The invoice `POST /billing/request-invoice` creates, to pay by bank transfer. */
+type TransferInvoice = {
+  number: string | null;
+  amount: number | null;
+  currency: string | null;
+  hosted_invoice_url: string | null;
+  due_date: string | null;
+};
+
+/** "Invoice KAN-0027 created: €2,241.00, to pay by bank transfer before 13 Nov 2026. ..." */
+function transferMessage(invoice: TransferInvoice | null | undefined, url: string | null, t: TFunction, locale: string): string {
+  if (invoice?.number && invoice.amount != null) {
+    const amount = formatPrice(invoice.amount, locale, invoice.currency ?? 'EUR');
+    const date = formatShortDate(invoice.due_date, locale, { year: 'always' });
+    return date
+      ? t('planSelection.messages.transferInvoice', { number: invoice.number, amount, date })
+      : t('planSelection.messages.transferInvoiceNoDate', { number: invoice.number, amount });
+  }
+  if (invoice || url) return t('planSelection.messages.transferInvoiceShort');
+  return t('planSelection.messages.invoiceCreated');
+}
+
 /** "Your plan stays annual." once a planned switch is cancelled. */
 function keptMessage(interval: BillingInterval, t: TFunction): string {
   return t(interval === 'annual' ? 'planSelection.messages.keptAnnual' : 'planSelection.messages.keptMonthly');
@@ -233,6 +255,8 @@ export default function PlanSelectionDialog({
   const [billingCycle, setBillingCycle] = React.useState<BillingInterval>(initialInterval ?? 'monthly');
   const [actionError, setActionError] = React.useState<string | null>(null);
   const [actionInfo, setActionInfo] = React.useState<string | null>(open ? notice : null);
+  // The Stripe page of a bank transfer invoice, opened in a new tab from the confirmation.
+  const [invoiceUrl, setInvoiceUrl] = React.useState<string | null>(null);
   const [actionLoading, setActionLoading] = React.useState<string | null>(null);
   const [termsAccepted, setTermsAccepted] = React.useState(false);
   // The dialog stays mounted between openings: each opening starts without the outcome of
@@ -243,6 +267,7 @@ export default function PlanSelectionDialog({
     if (open) {
       setActionError(null);
       setActionInfo(notice);
+      setInvoiceUrl(null);
       setActionLoading(null);
       setTermsAccepted(false);
       if (initialInterval) setBillingCycle(initialInterval);
@@ -278,6 +303,7 @@ export default function PlanSelectionDialog({
     if (!isBillingAdmin) return;
     setActionError(null);
     setActionInfo(null);
+    setInvoiceUrl(null);
     setActionLoading(`${planKey}:card`);
     try {
       if (hasHealthyStripeSubscription) {
@@ -352,6 +378,7 @@ export default function PlanSelectionDialog({
     if (!isBillingAdmin) return;
     setActionError(null);
     setActionInfo(null);
+    setInvoiceUrl(null);
     setActionLoading('keep');
     try {
       await api.post('/billing/scheduled-change/cancel');
@@ -368,25 +395,21 @@ export default function PlanSelectionDialog({
     if (!isBillingAdmin) return;
     setActionError(null);
     setActionInfo(null);
+    setInvoiceUrl(null);
     setActionLoading(`${planKey}:bank_transfer`);
     try {
-      const res = await api.post<any>('/billing/request-invoice', {
+      const res = await api.post<{ invoice?: TransferInvoice | null; hosted_invoice_url?: string | null }>('/billing/request-invoice', {
         plan_key: planKey,
         subscription_type: billingCycle,
         terms_version: plan?.terms?.version,
       });
+      // The billing page reloads the subscription and the invoice list.
       onSuccess?.();
-
-      const hostedInvoiceUrl =
-        res?.data?.hosted_invoice_url ||
-        res?.data?.latest_invoice_url ||
-        null;
-
-      if (hostedInvoiceUrl) {
-        window.location.href = hostedInvoiceUrl;
-      } else {
-        setActionInfo(t('planSelection.messages.invoiceCreated'));
-      }
+      // The customer stays in KANAP: the invoice (with the bank details) opens in a new tab.
+      const invoice = res?.data?.invoice ?? null;
+      const url = invoice?.hosted_invoice_url || res?.data?.hosted_invoice_url || null;
+      setInvoiceUrl(url);
+      setActionInfo(transferMessage(invoice, url, t, locale));
     } catch (e: any) {
       setActionError(parseApiError(e, t));
     } finally {
@@ -582,7 +605,17 @@ export default function PlanSelectionDialog({
       {!!actionInfo && (
         <Box role="status" sx={statusLineSx}>
           <StatusDot color={getDotColor('success', mode)} sx={statusDotSx} />
-          <span>{actionInfo}</span>
+          <Box component="span">
+            <span>{actionInfo}</span>
+            {invoiceUrl && (
+              <>
+                {' '}
+                <Box component="a" href={invoiceUrl} target="_blank" rel="noopener noreferrer" sx={inlineLinkSx}>
+                  {t('planSelection.messages.openInvoice')}
+                </Box>
+              </>
+            )}
+          </Box>
         </Box>
       )}
       {!!actionError && (
