@@ -4,6 +4,7 @@ import {
   Delete,
   ForbiddenException,
   Get,
+  HttpException,
   Post,
   Query,
   Req,
@@ -12,8 +13,9 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { validate as isUuid } from 'uuid';
 import { SkipTenantTransaction } from '../common/skip-tenant-transaction.decorator';
 import { AiModelResolverService } from './ai-model-resolver.service';
@@ -184,41 +186,58 @@ export class AiMcpController {
         return definitions;
     });
 
-    const server = new McpServer({
-      name: 'kanap-mcp',
-      version: '1.0.0',
-    });
+    // The low-level server takes the capabilities' JSON Schemas as they are (McpServer wants Zod).
+    const server = new Server(
+      { name: 'kanap-mcp', version: '1.0.0' },
+      { capabilities: { tools: {} } },
+    );
 
-    for (const toolDef of toolDefs) {
-      server.tool(
-        toolDef.name,
-        toolDef.description,
-        toolDef.parameters as any,
-        async (args: any) => {
-          const result = await this.tenantExecutor.runWithContext(context, async (ctx) => {
-            const keyPolicy = this.mcpExposure.parsePolicy(apiKey);
-            await this.mcpExposure.assertCanExecute(ctx, apiKey, toolDef.name);
-            this.mcpRateLimiter.assertAllowed(ctx.tenantId, ctx.aiApiKeyId, keyPolicy.rateLimitPerMinute);
-            await this.assertBuiltinMcpBudget(ctx);
-            const dispatched = await this.dispatcher.execute(ctx, {
-              capabilityName: toolDef.name,
-              input: args,
-              execution: {
-                surface: 'mcp',
-                trigger_kind: 'mcp_client',
-                metadata: {
-                  ai_api_key_id: ctx.aiApiKeyId ?? null,
-                },
+    server.setRequestHandler(ListToolsRequestSchema, async () => ({
+      tools: toolDefs.map((toolDef) => ({
+        name: toolDef.name,
+        description: toolDef.description,
+        inputSchema: toolDef.parameters as any,
+      })),
+    }));
+
+    server.setRequestHandler(CallToolRequestSchema, async (request) => {
+      const toolDef = toolDefs.find((def) => def.name === request.params.name);
+      if (!toolDef) {
+        throw new ForbiddenException('MCP API key is not allowed to execute this capability.');
+      }
+      let result: unknown;
+      try {
+        result = await this.tenantExecutor.runWithContext(context, async (ctx) => {
+          const keyPolicy = this.mcpExposure.parsePolicy(apiKey);
+          await this.mcpExposure.assertCanExecute(ctx, apiKey, toolDef.name);
+          this.mcpRateLimiter.assertAllowed(ctx.tenantId, ctx.aiApiKeyId, keyPolicy.rateLimitPerMinute);
+          await this.assertBuiltinMcpBudget(ctx);
+          const dispatched = await this.dispatcher.execute(ctx, {
+            capabilityName: toolDef.name,
+            input: request.params.arguments ?? {},
+            execution: {
+              surface: 'mcp',
+              trigger_kind: 'mcp_client',
+              metadata: {
+                ai_api_key_id: ctx.aiApiKeyId ?? null,
               },
-            });
-            return dispatched.output;
+            },
           });
-          return {
-            content: [{ type: 'text' as const, text: this.mcpTextResult(result) }],
-          };
-        },
-      );
-    }
+          return dispatched.output;
+        });
+      } catch (error) {
+        // A tool error goes back as a tool result, so the client's model can read it and retry.
+        // Only our own HTTP errors carry a message meant for the caller.
+        const message = error instanceof HttpException ? error.message : 'The tool failed.';
+        return {
+          content: [{ type: 'text' as const, text: message }],
+          isError: true,
+        };
+      }
+      return {
+        content: [{ type: 'text' as const, text: this.mcpTextResult(result) }],
+      };
+    });
 
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined, // stateless

@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { NotFoundException } from '@nestjs/common';
+import { AiEntityService } from '../ai-entity.service';
 import { AiQueryExecutor } from '../query/ai-query.executor';
 
 type SearchItem = { id: string; label: string; ref?: string | null };
@@ -114,12 +115,87 @@ async function testIncidentReferences() {
 
   await assert.rejects(
     resolve(executor, createContext(async () => []), 'incidents', 'INC-99'),
-    (error: unknown) => error instanceof NotFoundException && error.message === 'Incident not found.',
+    (error: unknown) => error instanceof NotFoundException
+      && error.message === 'No incidents record matches "INC-99". Search for it first, then use its id or reference.',
   );
   assert.deepEqual(searches, []);
 
   await assert.rejects(resolve(executor, createContext(), 'incidents', 'printer on fire'), NotFoundException);
   assert.deepEqual(searches, ['printer on fire']);
+}
+
+async function testFamilyReferencesResolveWithoutSearch() {
+  const cases: Array<[string, string, RegExp, unknown]> = [
+    ['applications', 'APP-1', /FROM applications WHERE tenant_id = \$1 AND upper\(sequential_id\) = \$2/, 'APP-1'],
+    ['applications', 'app-007', /FROM applications/, 'APP-7'],
+    ['assets', 'AST-3', /FROM assets WHERE tenant_id = \$1 AND upper\(asset_reference\) = \$2/, 'AST-3'],
+    ['projects', 'PRJ-1', /FROM portfolio_projects WHERE tenant_id = \$1 AND item_number = \$2/, 1],
+    ['requests', 'REQ-7', /FROM portfolio_requests WHERE tenant_id = \$1 AND item_number = \$2/, 7],
+    ['tasks', 'T-42', /FROM tasks WHERE tenant_id = \$1 AND item_number = \$2/, 42],
+  ];
+  for (const [entityType, ref, sqlPattern, param] of cases) {
+    const id = randomUUID();
+    const { executor, searches } = createExecutor();
+    const context = createContext(async (sql, params) => {
+      assert.match(sql, sqlPattern);
+      assert.equal(params?.[0], context.tenantId, 'lookup is scoped to the caller tenant');
+      assert.equal(params?.[1], param);
+      return [{ id }];
+    });
+    assert.equal(await resolve(executor, context, entityType, ref), id, `${entityType} ${ref}`);
+    assert.deepEqual(searches, [], `${entityType} ${ref} resolves without a text search`);
+  }
+
+  const { executor, searches } = createExecutor();
+  await assert.rejects(
+    resolve(executor, createContext(async () => []), 'applications', 'APP-999'),
+    (error: unknown) => error instanceof NotFoundException && error.message.startsWith('No applications record matches "APP-999"'),
+  );
+  // Another family's prefix is not a reference of this one: it falls back to the text search.
+  await assert.rejects(resolve(executor, createContext(), 'applications', 'PRJ-1'), NotFoundException);
+  assert.deepEqual(searches, ['PRJ-1']);
+}
+
+async function testApplicationAndAssetRefsAreTopLevel() {
+  const { executor } = createExecutor();
+  const map = executor as any;
+  assert.equal(map.mapApplication({ id: 'a', name: 'Microsoft 365', sequential_id: 'APP-1' }).ref, 'APP-1');
+  assert.equal(map.mapAsset({ id: 'b', name: 'WEB-SRV-01', asset_reference: 'AST-7' }).ref, 'AST-7');
+  assert.equal(map.mapContract({ id: 'c', name: 'Support' }).ref, null, 'contracts have no reference');
+}
+
+async function testEntityContextAcceptsReferences() {
+  const projectId = randomUUID();
+  const service = Object.create(AiEntityService.prototype) as any;
+  service.policy = { assertEntityTypeReadAccess: async () => undefined };
+  const built: string[] = [];
+  service.buildProjectContext = async (_context: unknown, id: string) => {
+    built.push(id);
+    return { entity: { type: 'projects', id, ref: 'PRJ-1', metadata: {} }, related: [] };
+  };
+  const context = createContext(async (sql, params) => {
+    assert.match(sql, /FROM portfolio_projects WHERE tenant_id = \$1 AND item_number = \$2/);
+    return params?.[1] === 1 ? [{ id: projectId }] : [];
+  });
+
+  const result = await service.getEntityContext(context, { entity_type: 'projects', entity_id: 'PRJ-1' });
+  assert.equal(result.entity.id, projectId);
+  assert.deepEqual(built, [projectId]);
+
+  const uuid = randomUUID();
+  await service.getEntityContext(createContext(async () => { throw new Error('a uuid needs no lookup'); }), {
+    entity_type: 'projects',
+    entity_id: uuid,
+  });
+  assert.deepEqual(built, [projectId, uuid]);
+
+  for (const missing of ['PRJ-99', 'not a project']) {
+    await assert.rejects(
+      service.getEntityContext(context, { entity_type: 'projects', entity_id: missing }),
+      (error: unknown) => error instanceof NotFoundException && error.message.startsWith(`No projects record matches "${missing}"`),
+    );
+  }
+  assert.equal(built.length, 2, 'the builders never receive a value that is not a uuid');
 }
 
 async function testNativeBudgetReferences() {
@@ -140,6 +216,9 @@ async function run() {
   await testUuidsPassThroughWithoutSearch();
   await testDocumentsKeepTheRawReference();
   await testIncidentReferences();
+  await testFamilyReferencesResolveWithoutSearch();
+  await testApplicationAndAssetRefsAreTopLevel();
+  await testEntityContextAcceptsReferences();
   await testNativeBudgetReferences();
   console.log('ai-query-detail-entity-id spec passed');
 }

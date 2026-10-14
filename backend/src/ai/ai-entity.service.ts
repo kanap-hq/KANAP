@@ -24,6 +24,7 @@ import { incidentRelatedLabelSql, incidentRelatedTitleSql, incidentVisibilitySql
 import { budgetLineReference } from '../spend/budget-nature';
 import { INCIDENT_REVIEW_SLOT } from '../knowledge/integrated-document.constants';
 import { AiPolicyService } from './ai-policy.service';
+import { entityNotFound, resolveAiEntityReference } from './ai-entity-reference.util';
 import {
   participantConditionForAiEntity,
   ParticipationScopedAiEntityType,
@@ -2743,7 +2744,7 @@ export class AiEntityService {
     const applicationRootParams: unknown[] = [applicationId, tenantId];
     const applicationRootScopeSql = appendParticipationScopeSql('applications', 'a', applicationRootParams, applicationAccessScope);
     const applications = await manager.query<any[]>(
-      `SELECT a.id, a.name, a.description, a.status, a.updated_at, a.lifecycle, a.environment, a.editor, a.criticality, a.hosting_model, a.data_class, a.version
+      `SELECT a.id, a.sequential_id, a.name, a.description, a.status, a.updated_at, a.lifecycle, a.environment, a.editor, a.criticality, a.hosting_model, a.data_class, a.version
        FROM applications a
        WHERE a.id = $1
          AND a.tenant_id = $2
@@ -2787,14 +2788,14 @@ export class AiEntityService {
         applicationProjectParams,
       ),
       manager.query<SearchRow[]>(
-        `SELECT a.id, NULL::int AS item_number, a.name AS label, a.description AS summary, a.status, a.updated_at
+        `SELECT a.id, a.sequential_id AS item_ref, NULL::int AS item_number, a.name AS label, a.description AS summary, a.status, a.updated_at
          FROM application_suites l
          JOIN applications a ON a.id = l.suite_id AND a.tenant_id = $2 AND a.tenant_id = l.tenant_id
          WHERE l.application_id = $1
            AND l.tenant_id = $2
            ${relatedApplicationScopeSql}
          UNION
-         SELECT a.id, NULL::int AS item_number, a.name AS label, a.description AS summary, a.status, a.updated_at
+         SELECT a.id, a.sequential_id AS item_ref, NULL::int AS item_number, a.name AS label, a.description AS summary, a.status, a.updated_at
          FROM application_suites l
          JOIN applications a ON a.id = l.application_id AND a.tenant_id = $2 AND a.tenant_id = l.tenant_id
          WHERE l.suite_id = $1
@@ -2803,7 +2804,7 @@ export class AiEntityService {
         relatedApplicationParams,
       ),
       manager.query<SearchRow[]>(
-        `SELECT a.id, NULL::int AS item_number, a.name AS label, COALESCE(a.fqdn, a.hostname, a.notes) AS summary, a.status, a.updated_at
+        `SELECT a.id, a.asset_reference AS item_ref, NULL::int AS item_number, a.name AS label, COALESCE(a.fqdn, a.hostname, a.notes) AS summary, a.status, a.updated_at
          FROM app_instances ai
          JOIN app_asset_assignments aaa ON aaa.app_instance_id = ai.id AND aaa.tenant_id = $2 AND aaa.tenant_id = ai.tenant_id
          JOIN assets a ON a.id = aaa.asset_id AND a.tenant_id = $2 AND a.tenant_id = aaa.tenant_id
@@ -2830,6 +2831,7 @@ export class AiEntityService {
       entity: {
         ...toContextEntityBase('applications', {
           id: application.id,
+          ref: application.sequential_id,
           label: application.name,
           summary: application.description,
           status: application.status,
@@ -2862,7 +2864,7 @@ export class AiEntityService {
     const projectSummarySql = buildProjectSummarySql('p');
     const { tenantId } = context;
     const assets = await manager.query<any[]>(
-      `SELECT a.id, a.name, a.status, a.updated_at, a.kind, a.provider, a.environment, a.fqdn, a.region, a.zone, a.notes
+      `SELECT a.id, a.asset_reference, a.name, a.status, a.updated_at, a.kind, a.provider, a.environment, a.fqdn, a.region, a.zone, a.notes
        FROM assets a
        WHERE a.id = $1
          AND a.tenant_id = $2
@@ -2906,13 +2908,13 @@ export class AiEntityService {
         assetProjectParams,
       ),
       manager.query<SearchRow[]>(
-        `SELECT a.id, NULL::int AS item_number, a.name AS label, COALESCE(a.fqdn, a.hostname, a.notes) AS summary, a.status, a.updated_at
+        `SELECT a.id, a.asset_reference AS item_ref, NULL::int AS item_number, a.name AS label, COALESCE(a.fqdn, a.hostname, a.notes) AS summary, a.status, a.updated_at
          FROM asset_relations rel
          JOIN assets a ON a.id = rel.related_asset_id AND a.tenant_id = $2 AND a.tenant_id = rel.tenant_id
          WHERE rel.asset_id = $1
            AND rel.tenant_id = $2
          UNION
-         SELECT a.id, NULL::int AS item_number, a.name AS label, COALESCE(a.fqdn, a.hostname, a.notes) AS summary, a.status, a.updated_at
+         SELECT a.id, a.asset_reference AS item_ref, NULL::int AS item_number, a.name AS label, COALESCE(a.fqdn, a.hostname, a.notes) AS summary, a.status, a.updated_at
          FROM asset_relations rel
          JOIN assets a ON a.id = rel.asset_id AND a.tenant_id = $2 AND a.tenant_id = rel.tenant_id
          WHERE rel.related_asset_id = $1
@@ -2920,7 +2922,7 @@ export class AiEntityService {
         [assetId, tenantId],
       ),
       manager.query<SearchRow[]>(
-        `SELECT a.id, NULL::int AS item_number, a.name AS label, a.description AS summary, a.status, a.updated_at
+        `SELECT a.id, a.sequential_id AS item_ref, NULL::int AS item_number, a.name AS label, a.description AS summary, a.status, a.updated_at
          FROM app_asset_assignments aaa
          JOIN app_instances ai ON ai.id = aaa.app_instance_id AND ai.tenant_id = $2 AND ai.tenant_id = aaa.tenant_id
          JOIN applications a ON a.id = ai.application_id AND a.tenant_id = $2 AND a.tenant_id = ai.tenant_id
@@ -2936,6 +2938,7 @@ export class AiEntityService {
       entity: {
         ...toSummary('assets', {
           id: asset.id,
+          ref: asset.asset_reference,
           label: asset.name,
           summary: asset.fqdn ?? asset.notes ?? null,
           status: asset.status,
@@ -3045,7 +3048,7 @@ export class AiEntityService {
         requestDependencyParams,
       ),
       manager.query<SearchRow[]>(
-        `SELECT a.id, NULL::int AS item_number, a.name AS label, a.description AS summary, a.status, a.updated_at
+        `SELECT a.id, a.sequential_id AS item_ref, NULL::int AS item_number, a.name AS label, a.description AS summary, a.status, a.updated_at
          FROM portfolio_request_applications l
          JOIN applications a ON a.id = l.application_id AND a.tenant_id = $2 AND a.tenant_id = l.tenant_id
          WHERE l.request_id = $1
@@ -3055,7 +3058,7 @@ export class AiEntityService {
         requestApplicationParams,
       ),
       manager.query<SearchRow[]>(
-        `SELECT a.id, NULL::int AS item_number, a.name AS label, COALESCE(a.fqdn, a.hostname, a.notes) AS summary, a.status, a.updated_at
+        `SELECT a.id, a.asset_reference AS item_ref, NULL::int AS item_number, a.name AS label, COALESCE(a.fqdn, a.hostname, a.notes) AS summary, a.status, a.updated_at
          FROM portfolio_request_assets l
          JOIN assets a ON a.id = l.asset_id AND a.tenant_id = $2 AND a.tenant_id = l.tenant_id
          WHERE l.request_id = $1
@@ -3213,7 +3216,7 @@ export class AiEntityService {
         projectDependencyParams,
       ),
       manager.query<SearchRow[]>(
-        `SELECT a.id, NULL::int AS item_number, a.name AS label, a.description AS summary, a.status, a.updated_at
+        `SELECT a.id, a.sequential_id AS item_ref, NULL::int AS item_number, a.name AS label, a.description AS summary, a.status, a.updated_at
          FROM application_projects l
          JOIN applications a ON a.id = l.application_id AND a.tenant_id = $2 AND a.tenant_id = l.tenant_id
          WHERE l.project_id = $1
@@ -3223,7 +3226,7 @@ export class AiEntityService {
         projectApplicationParams,
       ),
       manager.query<SearchRow[]>(
-        `SELECT a.id, NULL::int AS item_number, a.name AS label, COALESCE(a.fqdn, a.hostname, a.notes) AS summary, a.status, a.updated_at
+        `SELECT a.id, a.asset_reference AS item_ref, NULL::int AS item_number, a.name AS label, COALESCE(a.fqdn, a.hostname, a.notes) AS summary, a.status, a.updated_at
          FROM asset_projects l
          JOIN assets a ON a.id = l.asset_id AND a.tenant_id = $2 AND a.tenant_id = l.tenant_id
          WHERE l.project_id = $1
@@ -3511,18 +3514,21 @@ export class AiEntityService {
     },
   ): Promise<AiEntityContextDto> {
     await this.policy.assertEntityTypeReadAccess(context, input.entity_type, context.manager);
+    // A uuid or the family's reference (APP-1, PRJ-12, ...); the builders cast the id to uuid.
+    const entityId = await resolveAiEntityReference(context.manager, context.tenantId, input.entity_type, input.entity_id);
+    if (!entityId) throw entityNotFound(input.entity_type, String(input.entity_id ?? '').trim());
 
     let result: AiEntityContextPayloadDto;
     if (input.entity_type === 'applications') {
-      result = await this.buildApplicationContext(context, input.entity_id, context.manager);
+      result = await this.buildApplicationContext(context, entityId, context.manager);
     } else if (input.entity_type === 'assets') {
-      result = await this.buildAssetContext(context, input.entity_id, context.manager);
+      result = await this.buildAssetContext(context, entityId, context.manager);
     } else if (input.entity_type === 'requests') {
-      result = await this.buildRequestContext(context, input.entity_id, context.manager);
+      result = await this.buildRequestContext(context, entityId, context.manager);
     } else if (input.entity_type === 'projects') {
-      result = await this.buildProjectContext(context, input.entity_id, context.manager);
+      result = await this.buildProjectContext(context, entityId, context.manager);
     } else if (input.entity_type === 'tasks') {
-      result = await this.buildTaskContext(context, input.entity_id, context.manager);
+      result = await this.buildTaskContext(context, entityId, context.manager);
     } else {
       throw new BadRequestException('Unsupported entity type.');
     }

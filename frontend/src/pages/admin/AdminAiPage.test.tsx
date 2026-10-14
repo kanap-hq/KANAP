@@ -145,6 +145,26 @@ describe('AdminAiPage', () => {
     expect(screen.queryByText('Usage Overview')).not.toBeInTheDocument();
     expect(screen.queryByText('Token usage')).not.toBeInTheDocument();
   });
+
+  it('shows the server address and a Claude Code command for a new key', async () => {
+    const endpoint = `${window.location.origin}/api/ai/mcp`;
+    (api.post as any).mockResolvedValueOnce({ data: { key: 'kanap_mcp_secret', record: { id: 'key-1' } } });
+    renderPage();
+
+    expect(await screen.findByDisplayValue(endpoint)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy address' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create key' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.change(within(dialog).getByRole('textbox'), { target: { value: 'Laptop' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Create' }));
+
+    expect(await within(dialog).findByDisplayValue('kanap_mcp_secret')).toBeInTheDocument();
+    expect(within(dialog).getByDisplayValue(
+      `claude mcp add --transport http kanap ${endpoint} --header "Authorization: Bearer kanap_mcp_secret"`,
+    )).toBeInTheDocument();
+    expect(api.post).toHaveBeenCalledWith('/ai/keys', { label: 'Laptop' });
+  });
 });
 
 // The KANAP included model: its provider, where it processes data, and the

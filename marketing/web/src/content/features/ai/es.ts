@@ -4,7 +4,7 @@ const content: FeatureContent = {
   meta: {
     title: 'Plaid, asistente de IA para la gobernanza de TI',
     description:
-      'Pregúntele a Plaid sobre sus datos de TI. Cree documentos, actualice tareas, conecte cualquier herramienta de IA vía MCP. Uso incluido en nube alojada. Open source.',
+      'Pregúntele a Plaid sobre sus datos de TI. Cree documentos, actualice tareas, conecte sus herramientas de IA vía MCP. Uso incluido en nube alojada. Open source.',
   },
   header: {
     eyebrow: 'Plaid · asistente de IA',
@@ -35,22 +35,22 @@ const content: FeatureContent = {
       shotAlt: 'Plaid mostrando una vista previa de actualizaciones de tareas',
     },
     {
-      title: 'MCP, use KANAP desde cualquier herramienta de IA',
-      body: 'KANAP expone un servidor MCP (Model Context Protocol) completo. Conecte Claude Desktop, Cursor, Windsurf o cualquier herramienta compatible con MCP, y consulte sus datos de gobernanza de TI sin salir de su flujo de trabajo.',
+      title: 'MCP, use KANAP desde sus herramientas de IA',
+      body: 'Consulte sus datos de gobernanza de TI sin salir de su flujo de trabajo. KANAP ofrece un servidor MCP (Model Context Protocol) de solo lectura. Claude Code, Cursor y cualquier cliente que envíe una clave API en un encabezado se conectan directamente.',
       bullets: [
-        'Protocolo MCP estándar, funciona con cualquier cliente compatible',
-        'Autenticación segura con clave API y alcance granular',
+        'MCP estándar sobre HTTP, autenticado con una clave API',
+        'Cada clave solo lee lo que su creador puede ver',
         'Las mismas consultas de lectura que el chat integrado (MCP es de solo lectura)',
         'Conserve sus flujos de IA actuales y añada el contexto de KANAP',
       ],
-      shotAlt: 'Configuración MCP con alcance de clave API',
+      shotAlt: 'Ajustes de las claves API MCP',
     },
     {
       title: 'Control y cumplimiento totales',
       body: 'Plaid respeta las reglas de su organización. Cada acción se rige por los permisos del usuario. Los administradores tienen control total sobre lo que Plaid puede y no puede hacer.',
       bullets: [
         'Respeto pleno de los permisos del usuario en cada consulta',
-        'Claves API seguras con alcance granular de MCP',
+        'Claves MCP revocables, con caducidad y limitadas a los permisos de su creador',
         'La búsqueda web se puede activar o desactivar de forma independiente',
         'Vista previa y confirmación para todas las operaciones de escritura',
         'Acceso de solo lectura mediante roles para despliegues prudentes',
