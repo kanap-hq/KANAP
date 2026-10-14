@@ -89,7 +89,27 @@ function decodesExportedImageAttributeOnce() {
   assert.equal(service.readHtmlAttribute('<img src="/files/a?x=1&AMP;y=2">', 'src'), '/files/a?x=1&AMP;y=2');
 }
 
+function stripsTagsAndCommentsUntilNoneIsLeft() {
+  for (const input of ['<scr<b>ipt>alert(1)</script>', '<<b>script>alert(1)<</b>/script>']) {
+    const paragraph = sanitizeForMdxEditor(`<p>${input}</p>`);
+    assert.ok(!/<script/i.test(paragraph), `paragraph: ${paragraph}`);
+    const table = convertHtmlTableToGfm(`<table><tr><td>${input}</td></tr></table>`);
+    assert.ok(!/<script/i.test(table), `table cell: ${table}`);
+  }
+  assert.equal(sanitizeForMdxEditor('<<b>script>x').trim(), 'x');
+
+  const comment = sanitizeForMdxEditor('a <!<!-- a -->-- b --> z');
+  assert.ok(!comment.includes('<!--'), comment);
+  assert.equal(comment.trim(), 'a  z');
+
+  assert.equal(
+    sanitizeForMdxEditor('<p>One <b>bold</b> word.</p><!-- bookmark --><table><tr><th>A</th><th>B</th></tr><tr><td><i>1</i></td><td>2</td></tr></table>'),
+    'One bold word.\n\n| A | B |\n| --- | --- |\n| 1 | 2 |\n',
+  );
+}
+
 decodesImportedHtmlTextOnce();
+stripsTagsAndCommentsUntilNoneIsLeft();
 escapesTableCellText();
 escapesImageTitle();
 decodesExportedImageAttributeOnce();

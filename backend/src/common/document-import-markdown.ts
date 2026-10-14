@@ -46,6 +46,32 @@ function replaceBeforeLastCloser(text: string, closer: string, replace: (head: s
   return replace(text.slice(0, cut)) + text.slice(cut);
 }
 
+/**
+ * Removes HTML tags, keeping their text. The removal repeats until the text stops
+ * changing: one pass can leave a tag it put together itself (`<<b>script>`
+ * becomes `<script>`). Each pass that changes the text shortens it, so the loop ends.
+ */
+function stripHtmlTags(html: string): string {
+  let previous: string;
+  let text = html;
+  do {
+    previous = text;
+    text = text.replace(/<\/?[a-zA-Z][a-zA-Z0-9]*\b[^>]*\/?>/g, '');
+  } while (text !== previous);
+  return text;
+}
+
+/** Removes HTML comments, repeated until none is left, as for tags. */
+function stripHtmlComments(markdown: string): string {
+  let previous: string;
+  let text = markdown;
+  do {
+    previous = text;
+    text = replaceBeforeLastCloser(text, '-->', (head) => head.replace(/<!--[\s\S]*?-->/g, ''));
+  } while (text !== previous);
+  return text;
+}
+
 export function readHtmlAttribute(rawHtml: string, attributeName: string): string | null {
   const pattern = new RegExp(`\\b${attributeName}\\s*=\\s*([\"'])(.*?)\\1`, 'i');
   const match = rawHtml.match(pattern);
@@ -67,7 +93,7 @@ function stripHtmlToText(html: string): string {
   let text = String(html || '');
   text = text.replace(/<br\s*\/?>/gi, ' ');
   text = text.replace(/<\/p\s*>/gi, ' ');
-  text = text.replace(/<\/?[a-zA-Z][a-zA-Z0-9]*\b[^>]*\/?>/g, '');
+  text = stripHtmlTags(text);
   text = decodeHtmlEntities(text, { entities: TABLE_CELL_SPACE_ENTITIES });
   return text.replace(/\s+/g, ' ').trim();
 }
@@ -150,11 +176,11 @@ export function sanitizeForMdxEditor(markdown: string): string {
   );
 
   // Strip HTML comments (e.g. pandoc bookmarks, drawing group markers).
-  result = replaceBeforeLastCloser(result, '-->', (head) => head.replace(/<!--[\s\S]*?-->/g, ''));
+  result = stripHtmlComments(result);
 
   // Strip block-level and inline HTML tags, keeping text content.
   result = result.replace(/<\/p\s*>/gi, '\n\n');
-  result = result.replace(/<\/?[a-zA-Z][a-zA-Z0-9]*\b[^>]*\/?>/g, '');
+  result = stripHtmlTags(result);
 
   // Decode common HTML entities left by stripped HTML.
   result = decodeImportedHtmlEntities(result);
