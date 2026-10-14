@@ -121,8 +121,10 @@ const ContactSelect = React.forwardRef<HTMLInputElement, ContactSelectProps>(fun
       renderOption={(props, option) => {
         // Grouped by supplier, the group header already names it.
         const text = groupByCompany ? contactName(option as Contact) : formatLabel(option as Contact);
+        // React wants the key passed on its own, not spread with the other props.
+        const { key, ...optionProps } = props as typeof props & { key: React.Key };
         return (
-          <li {...props} key={(option as Contact).id}>
+          <li key={key} {...optionProps}>
             <Box component="span" className="kanap-autocomplete-option-primary" sx={optionLineSx} title={text}>
               {text}
             </Box>
@@ -139,6 +141,8 @@ const ContactSelect = React.forwardRef<HTMLInputElement, ContactSelectProps>(fun
           helperText={helperText}
           variant="standard"
           sx={textFieldSx}
+          // A hidden label still names the field for assistive technologies.
+          inputProps={naked && label ? { ...params.inputProps, 'aria-label': label } : params.inputProps}
           InputProps={{
             ...params.InputProps,
             endAdornment: (

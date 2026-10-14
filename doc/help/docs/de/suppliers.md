@@ -22,7 +22,7 @@ Navigieren Sie zu **Stammdaten > Lieferanten**, um das Lieferantenverzeichnis zu
 Die Lieferantenliste bietet Ihnen ein durchsuchbares, sortierbares Verzeichnis aller Ihrer Anbieter.
 
 **Standardspalten**:
-- **Name**: Lieferantenname (zum Öffnen des Arbeitsbereichs anklicken)
+- **Name**: Lieferantenname (zum Öffnen der Lieferantenseite anklicken)
 - **ERP-Lieferanten-ID**: Referenz-ID aus externen Systemen
 
 **Zusätzliche Spalten** (über Spaltenauswahl):
@@ -30,7 +30,7 @@ Die Lieferantenliste bietet Ihnen ein durchsuchbares, sortierbares Verzeichnis a
 - **Notizen**: Zusätzliche Informationen
 - **Erstellt**: Wann der Datensatz erstellt wurde
 
-Jede Zelle in einer Zeile ist anklickbar und navigiert zum Arbeitsbereich dieses Lieferanten.
+Jede Zelle in einer Zeile ist anklickbar und öffnet die Seite dieses Lieferanten.
 
 **Standardsortierung**: Nach Name, alphabetisch.
 
@@ -46,46 +46,52 @@ Jede Zelle in einer Zeile ist anklickbar und navigiert zum Arbeitsbereich dieses
 
 ---
 
-## Der Lieferanten-Arbeitsbereich
+## Die Lieferantenseite
 
-Klicken Sie auf eine beliebige Zeile, um den Arbeitsbereich zu öffnen. Verwenden Sie **Zurück** und **Weiter**, um zwischen Lieferanten zu wechseln, ohne zur Liste zurückzukehren. Bei nicht gespeicherten Änderungen fordert KANAP Sie vor dem Navigieren auf.
+Klicken Sie auf eine Zeile, um die Seite des Lieferanten zu öffnen. Mit den Pfeilen oben oder den Pfeiltasten links und rechts wechseln Sie zwischen den Lieferanten, ohne zur Liste zurückzukehren. Jede Änderung wird von selbst gespeichert: Es gibt keine Schaltfläche zum Speichern.
 
-Der Arbeitsbereich hat zwei Tabs: **Übersicht** und **Kontakte**.
+Die Seite hat zwei Reiter: **Übersicht** und **Kontakte**.
 
-### Übersicht
+**Titel**: Der Name des Lieferanten. Klicken Sie darauf, um ihn zu bearbeiten; die Änderung wird gespeichert, wenn Sie das Feld verlassen oder Enter drücken, Escape verwirft sie. Der Name ist Pflicht und muss sich von den Namen aller anderen Lieferanten unterscheiden: KANAP zeigt die Meldung unter dem Namen und behält den gespeicherten Namen.
 
-Der Übersichts-Tab erfasst die Identität und den Status des Lieferanten.
+**Referenz**: Die ERP-Lieferanten-ID steht, wenn der Lieferant eine hat, vor dem Namen. Klicken Sie darauf, um sie zu kopieren.
 
-**Was Sie bearbeiten können**:
-- **Name**: Lieferanten- oder Anbietername (Pflicht)
-- **ERP-Lieferanten-ID**: Referenz-ID aus Ihrem Beschaffungs- oder ERP-System
-- **Lebenszyklus**: der Statusschalter, dessen Beschriftung den aktuellen Zustand zeigt (**Aktiviert** oder **Deaktiviert**), und das Datum **Ende der Gültigkeit**. Lassen Sie das Datum leer, damit der Lieferant unbegrenzt aktiv bleibt, oder setzen Sie ein zukünftiges Datum, um sein Ende zu planen. Wenn Sie den Lieferanten ohne Datum auf **Deaktiviert** setzen, wird das Ende der Gültigkeit auf heute gesetzt
-- **Notizen**: Freitext-Notizen zum Anbieter
+**Kopfzeile**, unter dem Namen:
+- **Status**: **Aktiviert** oder **Deaktiviert**. Klicken Sie darauf, um ihn zu ändern. Die Wahl von **Deaktiviert** setzt das Ende der Gültigkeit auf heute.
+- **Kontakte**: Die Anzahl der mit dem Lieferanten verknüpften Kontakte. Klicken Sie darauf, um den Reiter **Kontakte** zu öffnen.
 
-Zum Bearbeiten ist die Berechtigung `suppliers:manager` erforderlich. Schreibgeschützte Benutzer sehen die gleichen Felder, können aber keine Änderungen vornehmen.
+**Eigenschaften** (das Feld rechts, geöffnet über seinen Reiter oder die Taste `P`):
+- **ERP-Lieferanten-ID**: Die ID des Lieferanten in Ihrem ERP- oder Beschaffungssystem. Sie wird gespeichert, wenn Sie das Feld verlassen oder Enter drücken.
+- **Lebenszyklus**: Der Statusschalter und das Datum **Ende der Gültigkeit**. Lassen Sie das Datum leer, damit der Lieferant unbegrenzt aktiv bleibt, oder legen Sie ein künftiges Datum fest, um sein Ende zu planen.
 
----
+**Notizen**: Freie Notizen zum Lieferanten, im Reiter **Übersicht**. Sie werden kurz nach dem Ende der Eingabe gespeichert und wenn Sie das Feld verlassen.
+
+Zum Bearbeiten ist die Berechtigung `suppliers:manager` erforderlich. Benutzer mit Lesezugriff sehen dieselbe Seite, können aber nichts ändern.
+
+Drücken Sie **Escape** oder klicken Sie auf die Schaltfläche zum Schließen, um zur Liste zurückzukehren.
 
 ### Kontakte
 
-Der Kontakte-Tab organisiert die mit diesem Lieferanten verknüpften Kontakte in vier Rollenkategorien:
+Der Reiter **Kontakte** listet die mit diesem Lieferanten verknüpften Kontakte nach Kontakttyp:
 
-| Rolle | Zweck |
-|-------|-------|
-| **Kommerziell** | Vertriebs- und Account-Management-Kontakte |
-| **Technisch** | Ingenieure und technischer Support |
-| **Support** | Helpdesk und Kundensupport |
-| **Sonstige** | Alle Kontakte, die nicht in die obigen Rollen passen |
+| Kontakttyp | Zweck |
+|------|---------|
+| **Vertrieb** | Ansprechpartner für Vertrieb und Kundenbetreuung |
+| **Technik** | Ansprechpartner für Engineering und technischen Support |
+| **Support** | Ansprechpartner für Helpdesk und Kundensupport |
+| **Sonstige** | Jeder Kontakt, der zu keinem der obigen Typen passt |
 
-**Funktionsweise**:
-- Jeder Rollenabschnitt listet seine verknüpften Kontakte in einer Tabelle mit Vorname, Nachname, Berufsbezeichnung, E-Mail und Mobil
-- Klicken Sie auf eine Kontaktzeile, um den Arbeitsbereich dieses Kontakts zu öffnen
-- Verwenden Sie **Hinzufügen**, um einen bestehenden Kontakt zu suchen und einer Rolle zuzuordnen
-- Verwenden Sie **Erstellen**, um einen neuen Kontakt zu erstellen und in einem Schritt zu verknüpfen -- KANAP kehrt anschließend zu diesem Tab zurück
+**So funktioniert es**:
+- Jeder Abschnitt listet seine Kontakte mit Namen. Klicken Sie auf einen Namen, um die Kontaktseite zu öffnen.
+- **Vorhandenen hinzufügen**: Suchen Sie einen Kontakt nach Namen und wählen Sie ihn aus. Die Verknüpfung wird sofort gespeichert.
+- **Neuer Kontakt**: Öffnet das Kontaktformular mit bereits ausgefülltem Lieferanten und Kontakttyp. KANAP bringt Sie nach dem Erstellen des Kontakts zu diesem Reiter zurück.
+- Die Papierkorb-Schaltfläche entfernt die Verknüpfung. Der Kontakt selbst bleibt in Ihren Kontakten.
 
-**Tipp**: Halten Sie mindestens einen Kontakt pro Lieferanten bereit, damit die Anbieterkommunikation immer nur einen Klick entfernt ist.
+**Tipp**: Pflegen Sie mindestens einen Kontakt pro Lieferant, damit die Kommunikation mit ihm immer nur einen Klick entfernt ist.
 
-Beim Erstellen eines neuen Lieferanten ist der Kontakte-Tab deaktiviert, bis Sie den Datensatz speichern.
+### Einen Lieferanten erstellen
+
+Klicken Sie in der Liste auf **Neu**. Geben Sie den Namen (Pflicht), die ERP-Lieferanten-ID und die Notizen ein und klicken Sie dann auf **Erstellen**. Der Lieferant wird aktiviert angelegt und seine Seite öffnet sich, mit verfügbarem Reiter **Kontakte**.
 
 ---
 

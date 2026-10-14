@@ -355,7 +355,6 @@
   },
   "suppliers": {
     "title": "Proveedores",
-    "entity": "proveedor",
     "newSupplier": "Nuevo proveedor",
     "supplierFallback": "Proveedor",
     "contactsTabHint": "La pestaña Contactos estará disponible después de crear el proveedor.",
@@ -367,26 +366,43 @@
     "export": "Exportar proveedores",
     "import": "Importar proveedores",
     "fields": {
-      "erpSupplierId": "ID de proveedor ERP"
+      "name": "Nombre",
+      "erpSupplierId": "ID de proveedor ERP",
+      "status": "Estado",
+      "lifecycle": "Ciclo de vida",
+      "notes": "Notas",
+      "contacts": "Contactos"
     },
     "contacts": {
-      "commercial": "Comercial",
-      "technical": "Técnico",
-      "support": "Soporte",
-      "other": "Otro",
       "noContacts": "Sin contactos",
-      "add": "Agregar",
-      "create": "Crear",
-      "attach": "Asociar",
-      "selectContact": "Seleccionar contacto {{role}}",
-      "firstName": "Nombre",
-      "lastName": "Apellido",
-      "jobTitle": "Cargo",
-      "mobile": "Móvil",
-      "actions": "Acciones",
+      "addExisting": "Añadir existente",
+      "create": "Nuevo contacto",
+      "selectContact": "Contacto para añadir ({{role}})",
+      "searchPlaceholder": "Buscar contactos por nombre",
       "removeLink": "Eliminar vínculo",
-      "insufficientPermission": "Permiso insuficiente"
-    }
+      "saveFailed": "Error al actualizar los contactos del proveedor.",
+      "loadFailed": "Error al cargar los contactos del proveedor."
+    },
+    "placeholders": {
+      "name": "p. ej., Acme Software",
+      "erpSupplierId": "p. ej., SUP-001",
+      "notes": "p. ej., condiciones de pago, cambio de interlocutor"
+    },
+    "status": {
+      "enabled": "Activado",
+      "disabled": "Desactivado"
+    },
+    "metadata": {
+      "openContacts": "Abrir los contactos"
+    },
+    "messages": {
+      "nameRequired": "Introduzca un nombre.",
+      "nameTaken": "Otro proveedor ya tiene este nombre.",
+      "saveFailed": "Error al guardar el proveedor.",
+      "createFailed": "Error al crear el proveedor."
+    },
+    "previous": "Proveedor anterior",
+    "next": "Proveedor siguiente"
   },
   "contacts": {
     "title": "Contactos",
@@ -942,9 +958,6 @@
   "formSchemas": {
     "department": {
       "companyRequired": "La empresa es obligatoria",
-      "nameRequired": "El nombre es obligatorio"
-    },
-    "supplier": {
       "nameRequired": "El nombre es obligatorio"
     },
     "account": {

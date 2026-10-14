@@ -10,7 +10,7 @@ Naviguez vers **Données de référence > Fournisseurs** pour ouvrir le réperto
 - **Nom** : Le nom du fournisseur ou du vendeur
 
 **Optionnel mais utile** :
-- **ID Fournisseur ERP** : Identifiant de référence de votre ERP ou système d'approvisionnement
+- **ID fournisseur ERP** : Identifiant de référence de votre ERP ou système d'approvisionnement
 - **Notes** : Notes libres sur la relation fournisseur
 
 **Conseil** : Créez les fournisseurs avant d'ajouter des applications ou des contrats — vous pourrez les lier lors de la création.
@@ -22,15 +22,15 @@ Naviguez vers **Données de référence > Fournisseurs** pour ouvrir le réperto
 La liste des fournisseurs vous offre un répertoire consultable et triable de tous vos vendeurs.
 
 **Colonnes par défaut** :
-- **Nom** : Nom du fournisseur (cliquez pour ouvrir l'espace de travail)
-- **ID Fournisseur ERP** : Identifiant de référence des systèmes externes
+- **Nom** : Nom du fournisseur (cliquez pour ouvrir la fiche du fournisseur)
+- **ID fournisseur ERP** : Identifiant de référence des systèmes externes
 
 **Colonnes supplémentaires** (via le sélecteur de colonnes) :
 - **Statut** : Activé ou Désactivé
 - **Notes** : Informations complémentaires
 - **Créé** : Date de création de l'enregistrement
 
-Chaque cellule d'une ligne est cliquable et navigue vers l'espace de travail du fournisseur.
+Chaque cellule d'une ligne est cliquable et ouvre la fiche du fournisseur.
 
 **Tri par défaut** : Par nom, alphabétique.
 
@@ -46,46 +46,52 @@ Chaque cellule d'une ligne est cliquable et navigue vers l'espace de travail du 
 
 ---
 
-## L'espace de travail Fournisseur
+## La fiche fournisseur
 
-Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. Utilisez **Préc** et **Suiv** pour naviguer entre les fournisseurs sans revenir à la liste. Si vous avez des modifications non enregistrées, KANAP vous demandera confirmation avant de quitter la page.
+Cliquez sur une ligne pour ouvrir la fiche du fournisseur. Utilisez les flèches en haut, ou les touches fléchées gauche et droite, pour passer d'un fournisseur à l'autre sans revenir à la liste. Chaque modification s'enregistre d'elle-même : il n'y a pas de bouton d'enregistrement.
 
-L'espace de travail comporte deux onglets : **Vue d'ensemble** et **Contacts**.
+La fiche comporte deux onglets : **Vue d'ensemble** et **Contacts**.
 
-### Vue d'ensemble
+**Titre** : le nom du fournisseur. Cliquez dessus pour le modifier ; la modification s'enregistre quand vous quittez le champ ou appuyez sur Entrée, et Échap l'annule. Le nom est obligatoire et doit différer de celui de tous les autres fournisseurs : KANAP affiche le message sous le nom et garde le nom enregistré.
 
-L'onglet Vue d'ensemble capture l'identité et le statut du fournisseur.
+**Référence** : l'ID fournisseur ERP, quand le fournisseur en a un, s'affiche avant le nom. Cliquez dessus pour le copier.
 
-**Ce que vous pouvez modifier** :
-- **Nom** : Nom du fournisseur ou du vendeur (obligatoire)
-- **ID Fournisseur ERP** : Identifiant de référence de votre système d'approvisionnement ou ERP
-- **Cycle de vie** : l'interrupteur de statut, dont le libellé indique l'état actuel (**Activé** ou **Désactivé**), et la date de **Fin de validité**. Laissez la date vide pour que le fournisseur reste actif indéfiniment, ou fixez une date future pour programmer sa fin. Passer le fournisseur à **Désactivé** sans date fixe la fin de validité à aujourd'hui
-- **Notes** : Notes libres sur le vendeur
+**En-tête**, sous le nom :
+- **Statut** : **Activé** ou **Désactivé**. Cliquez dessus pour le changer. Choisir **Désactivé** fixe la fin de validité à aujourd'hui.
+- **Contacts** : le nombre de contacts liés au fournisseur. Cliquez dessus pour ouvrir l'onglet **Contacts**.
 
-La modification nécessite l'autorisation `suppliers:manager`. Les utilisateurs en lecture seule voient les mêmes champs mais ne peuvent pas les modifier.
+**Propriétés** (le panneau de droite, ouvert par son onglet ou la touche `P`) :
+- **ID fournisseur ERP** : l'identifiant du fournisseur dans votre ERP ou votre système d'achats. Il s'enregistre quand vous quittez le champ ou appuyez sur Entrée.
+- **Cycle de vie** : l'interrupteur de statut et la date de **Fin de validité**. Laissez la date vide pour que le fournisseur reste actif sans limite, ou saisissez une date future pour programmer sa fin.
 
----
+**Notes** : des notes libres sur le fournisseur, dans l'onglet **Vue d'ensemble**. Elles s'enregistrent un instant après la fin de la saisie, et quand vous quittez le champ.
+
+La modification requiert la permission `suppliers:manager`. Les utilisateurs en lecture seule voient la même fiche sans pouvoir la modifier.
+
+Appuyez sur **Échap** ou cliquez sur le bouton de fermeture pour revenir à la liste.
 
 ### Contacts
 
-L'onglet Contacts organise les contacts liés à ce fournisseur en quatre catégories de rôle :
+L'onglet **Contacts** liste les contacts liés à ce fournisseur par type de contact :
 
-| Rôle | Objectif |
-|------|----------|
-| **Commercial** | Contacts de vente et de gestion de compte |
+| Type de contact | Usage |
+|------|---------|
+| **Commercial** | Contacts commerciaux et gestion de compte |
 | **Technique** | Contacts d'ingénierie et de support technique |
-| **Support** | Contacts helpdesk et support client |
-| **Autre** | Tout contact qui ne correspond pas aux rôles ci-dessus |
+| **Support** | Contacts du helpdesk et du support client |
+| **Autre** | Tout contact qui n'entre pas dans les types ci-dessus |
 
-**Comment ça fonctionne** :
-- Chaque section de rôle liste ses contacts liés dans un tableau affichant prénom, nom, intitulé de poste, email et mobile
-- Cliquez sur une ligne de contact pour ouvrir l'espace de travail de ce contact
-- Utilisez **Ajouter** pour rechercher et attacher un contact existant à un rôle
-- Utilisez **Créer** pour créer un tout nouveau contact et le lier en une seule étape — KANAP vous ramènera ensuite à cet onglet
+**Fonctionnement** :
+- Chaque section liste ses contacts par nom. Cliquez sur un nom pour ouvrir la fiche du contact.
+- **Ajouter un existant** : recherchez un contact par son nom et choisissez-le. Le lien s'enregistre aussitôt.
+- **Nouveau contact** : ouvre le formulaire de contact avec le fournisseur et le type de contact déjà remplis. KANAP vous ramène à cet onglet une fois le contact créé.
+- Le bouton corbeille retire le lien. Le contact lui-même reste dans vos contacts.
 
-**Conseil** : Gardez au moins un contact par fournisseur pour que la communication fournisseur soit toujours à un clic.
+**Conseil** : gardez au moins un contact par fournisseur pour que la communication avec lui soit toujours à portée de clic.
 
-Lors de la création d'un nouveau fournisseur, l'onglet Contacts est désactivé jusqu'à l'enregistrement de l'entrée.
+### Créer un fournisseur
+
+Cliquez sur **Nouveau** dans la liste. Renseignez le nom (obligatoire), l'ID fournisseur ERP et les notes, puis cliquez sur **Créer**. Le fournisseur est créé activé et sa fiche s'ouvre, avec l'onglet **Contacts** disponible.
 
 ---
 
