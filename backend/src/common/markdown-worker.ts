@@ -39,16 +39,20 @@ import {
  *   `MARKDOWN_TOO_COMPLEX`; so is a call whose worker overflows its stack, runs
  *   out of memory or stops. A task that processes several texts sends them in
  *   one call, or shares one budget across its calls (`markdownWorkBudget`).
- * - A free worker always takes a waiting call. Among the waiting calls it takes
- *   the one whose key has the fewest calls running, the oldest at equal count.
- *   The key is the user of the request (tenant and user id), else its tenant,
- *   else `system`: users share the workers fairly, within a tenant too (a
- *   single-tenant server has one tenant).
- * - Only a call that has to wait meets the caps, never one a free worker can
- *   take: `KEY_WAITING_MAX` calls of one key waiting, and `queueLimit()` calls
- *   of requests waiting in all (a request holds its database connection while
- *   it waits). Past them, and past `QUEUE_WAIT_MS` of waiting, a call is
- *   refused with a 503 `MARKDOWN_BUSY` (with Retry-After).
+ * - Each call has a key: the user of the request (tenant and user id), else
+ *   its tenant, else `system`. Users share the workers fairly, within a tenant
+ *   too (a single-tenant server has one tenant).
+ * - A key has `KEY_RUNNING_MAX` calls running at most (the workers less one),
+ *   so one user never holds every worker: a worker that frees up skips the
+ *   calls of a key at that cap, and takes the call of another key or stays
+ *   free for the next one. Among the calls it may take, it takes the one whose
+ *   key has the fewest calls running, the oldest at equal count. Two users
+ *   with heavy texts can still use every worker. The key `system` has no cap.
+ * - Only a call that cannot start at once meets the caps of the queue:
+ *   `KEY_WAITING_MAX` calls of one key waiting, and `queueLimit()` calls of
+ *   requests waiting in all (a request holds its database connection while it
+ *   waits). Past them, and past `QUEUE_WAIT_MS` of waiting, a call is refused
+ *   with a 503 `MARKDOWN_BUSY` (with Retry-After).
  * - Emails and background tasks (no request waits on them, they hold no
  *   connection of a request) have the key `system`, are free of the caps of a
  *   key and wait up to `SYSTEM_WAIT_MS`; an email then falls back to plain text.
@@ -72,6 +76,8 @@ const WORKER_COUNT = 2;
 const QUEUE_WAIT_MS = 1000;
 /** How long an email or a background task may wait for a free worker. */
 const SYSTEM_WAIT_MS = 5000;
+/** Calls of one key (a user, else a tenant) running at most: one worker always stays for the other keys. */
+const KEY_RUNNING_MAX = Math.max(1, WORKER_COUNT - 1);
 /** Calls of one key (a user, else a tenant) waiting at most. */
 const KEY_WAITING_MAX = 2;
 /** Emails and background tasks waiting at most: a burst of them cannot grow the queue without end. */
@@ -537,11 +543,20 @@ function runOnSlot(slot: Slot, task: Task): void {
   }
 }
 
-/** The waiting call a free worker takes: the one of the key with the fewest calls running, the oldest at equal count. */
+/** Whether a call may start now: its key is under its cap of calls running (`system` has none). */
+function mayStart(task: Task): boolean {
+  return task.key === SYSTEM_KEY || (runningByKey.get(task.key) ?? 0) < KEY_RUNNING_MAX;
+}
+
+/**
+ * The waiting call a free worker takes, or -1: among the calls that may start, the one of the
+ * key with the fewest calls running, the oldest at equal count.
+ */
 function nextTaskIndex(): number {
-  let best = 0;
+  let best = -1;
   let bestRunning = Number.POSITIVE_INFINITY;
   for (let index = 0; index < queue.length; index += 1) {
+    if (!mayStart(queue[index])) continue;
     const running = runningByKey.get(queue[index].key) ?? 0;
     if (running < bestRunning) {
       best = index;
@@ -552,13 +567,15 @@ function nextTaskIndex(): number {
   return best;
 }
 
-/** Gives every free worker a waiting call. Afterwards, a free worker means an empty queue. */
+/** Gives every free worker a waiting call that may start. Afterwards, a free worker means no such call waits. */
 function dispatch(): void {
   if (closed) return;
   for (const slot of slots) {
     if (queue.length === 0) return;
     if (!slot.ready || slot.task) continue;
-    runOnSlot(slot, takeFromQueue(nextTaskIndex()));
+    const index = nextTaskIndex();
+    if (index === -1) return;
+    runOnSlot(slot, takeFromQueue(index));
   }
 }
 
@@ -637,8 +654,8 @@ function submit<K extends MarkdownWorkerOperation>(
       refuse(new MarkdownUnavailableException());
       return;
     }
-    if (!hasFreeWorker()) {
-      // The call has to wait: the caps apply (a free worker takes any call).
+    if (!hasFreeWorker() || !mayStart(task)) {
+      // The call has to wait (no free worker, or its key at its cap of calls running): the caps apply.
       const overCap = capped
         ? ((waitingByKey.get(key) ?? 0) >= KEY_WAITING_MAX ? 'key' : cappedWaiting >= queueLimit() ? 'queue' : null)
         : (systemWaiting >= SYSTEM_WAITING_MAX ? 'queue' : null);
