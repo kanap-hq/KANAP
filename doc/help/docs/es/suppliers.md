@@ -99,7 +99,7 @@ La sección **Usado en**, bajo las notas de la pestaña **Vista general**, lista
 - **Aplicaciones**: las aplicaciones de las que es el fabricante.
 - **Activos**: los activos a los que da soporte (el proveedor de soporte del activo).
 
-Haga clic en una fila para abrir su página. Los elementos desactivados muestran **Desactivado** y aparecen después de los demás. Una lista muestra hasta 50 elementos e indica cuántos hay en total. Solo ve las listas que tiene permiso para leer: un usuario sin acceso a los contratos no ve la lista de contratos. Un proveedor que nada usa muestra una línea que lo indica.
+Haga clic en una fila para abrir su página. Los elementos desactivados muestran **Desactivado** y aparecen después de los demás. Una lista muestra hasta 50 elementos e indica cuántos hay en total. Con más de 50, las líneas presupuestarias, los contratos y las aplicaciones tienen un enlace como **Ver los 57** que abre su lista filtrada por este proveedor. Solo ve las listas que tiene permiso para leer: un usuario sin acceso a los contratos no ve la lista de contratos. Un proveedor que nada usa muestra una línea que lo indica.
 
 Consulte esta sección antes de desactivar o eliminar un proveedor.
 
