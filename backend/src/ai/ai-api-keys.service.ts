@@ -12,6 +12,15 @@ import {
 } from './control-plane/mcp/ai-mcp-access-policy';
 import { AiTenantExecutionService } from './execution/ai-tenant-execution.service';
 
+function redirectHostOf(uri: string | null | undefined): string | null {
+  if (!uri) return null;
+  try {
+    return new URL(uri).hostname || null;
+  } catch {
+    return null;
+  }
+}
+
 export type CreateAiApiKeyInput = {
   tenantId: string;
   userId: string;
@@ -43,7 +52,10 @@ export type AiApiKeyRecordDto = {
   created_at: string;
   created_by_user_id: string;
   credential_kind: string;
+  oauth_client_id: string | null;
   oauth_client_name: string | null;
+  /** The host an OAuth connection returns to (`claude.ai`, `localhost`), shown next to its name. */
+  oauth_redirect_host: string | null;
 };
 
 export type AiApiKeyAuthentication = {
@@ -111,7 +123,9 @@ export class AiApiKeysService {
       created_at: record.created_at.toISOString(),
       created_by_user_id: record.created_by_user_id,
       credential_kind: record.credential_kind ?? 'api_key',
+      oauth_client_id: record.oauth_client_id ?? null,
       oauth_client_name: record.oauth_client_name ?? null,
+      oauth_redirect_host: redirectHostOf(record.oauth_redirect_uri),
     };
   }
 

@@ -7,9 +7,10 @@ import { AiSettingsService } from '../ai-settings.service';
 import { buildMcpApiKeyPolicyRecord } from '../control-plane/mcp/ai-mcp-access-policy';
 import { AiTenantExecutionService } from '../execution/ai-tenant-execution.service';
 import { UsersService } from '../../users/users.service';
-import { CimdError, CimdFetcherService, ClientMetadata, isCimdClientId } from './cimd-fetcher.service';
+import { CIMD_PUBLIC_ERROR, CimdFetcherService, ClientMetadata, isCimdClientId } from './cimd-fetcher.service';
 import {
   ACCESS_TOKEN_TTL_SECONDS,
+  MAX_OAUTH_URL_LENGTH,
   MCP_OAUTH_SCOPE,
   REFRESH_TOKEN_TTL_DAYS,
   isLoopbackRedirect,
@@ -30,6 +31,7 @@ import {
   refreshTokenMatchesHash,
   signAccessToken,
   signAuthorizationCode,
+  successorRefreshToken,
   verifyAccessToken,
   verifyAuthorizationCode,
 } from './mcp-oauth-tokens';
@@ -101,6 +103,27 @@ const str = (value: unknown): string | null => {
 
 const REFRESH_TTL_MS = REFRESH_TOKEN_TTL_DAYS * 86_400_000;
 const LAST_USED_RESOLUTION_MS = 60_000;
+/** A refresh presented again within this window after its rotation gets the same successor. */
+const REFRESH_RETRY_WINDOW_MS = 60_000;
+/** At most one "refreshed" audit row per grant in this window. */
+const REFRESH_AUDIT_INTERVAL_MS = 60 * 60_000;
+/** Live grants kept per user and client: a new connection retires the oldest beyond this. */
+const MAX_LIVE_GRANTS_PER_CLIENT = 5;
+
+/**
+ * The two parameters every authorization request needs before anything else is looked at:
+ * present, strings, at most MAX_OAUTH_URL_LENGTH characters (the code carries both).
+ */
+export function checkRequestShape(params: AuthorizationParams): { clientId: string; redirectUri: string } {
+  const clientId = str(params.client_id);
+  if (!clientId) throw new AuthorizationError('invalid_request', 'client_id is required.');
+  const redirectUri = str(params.redirect_uri);
+  if (!redirectUri) throw new AuthorizationError('invalid_request', 'redirect_uri is required.');
+  if (clientId.length > MAX_OAUTH_URL_LENGTH || redirectUri.length > MAX_OAUTH_URL_LENGTH) {
+    throw new AuthorizationError('invalid_request', 'client_id and redirect_uri are limited to 512 characters.');
+  }
+  return { clientId, redirectUri };
+}
 
 @Injectable()
 export class McpOAuthService {
@@ -117,20 +140,16 @@ export class McpOAuthService {
 
   /** Validates an authorization request (RFC 6749 §4.1.1, PKCE, RFC 8707) against the client's CIMD. */
   async validateAuthorization(params: AuthorizationParams, host: McpOAuthHost): Promise<ValidatedAuthorization> {
-    const clientId = str(params.client_id);
-    if (!clientId) throw new AuthorizationError('invalid_request', 'client_id is required.');
+    const { clientId, redirectUri } = checkRequestShape(params);
     if (!isCimdClientId(clientId)) {
       throw new AuthorizationError('invalid_client', 'client_id must be the https URL of a client metadata document.');
     }
-    const redirectUri = str(params.redirect_uri);
-    if (!redirectUri) throw new AuthorizationError('invalid_request', 'redirect_uri is required.');
 
     let client: ClientMetadata;
     try {
       client = await this.cimd.fetch(clientId);
-    } catch (error) {
-      const message = error instanceof CimdError ? error.message : 'The client metadata document cannot be fetched.';
-      throw new AuthorizationError('invalid_client', message);
+    } catch {
+      throw new AuthorizationError('invalid_client', CIMD_PUBLIC_ERROR);
     }
     if (!client.redirect_uris.some((registered) => redirectUriMatches(registered, redirectUri))) {
       throw new AuthorizationError('invalid_request', 'redirect_uri is not registered by this client.');
@@ -231,18 +250,7 @@ export class McpOAuthService {
   ): Promise<{ redirect_to: string }> {
     const request = await this.validateAuthorization(params, host);
     if (!decision.approve) {
-      await this.tenantExecutor.run(host.tenantId, (manager) => this.apiKeys.logAudit(
-        {
-          table: 'ai_api_keys',
-          recordId: null,
-          action: 'update',
-          before: null,
-          after: { oauth: 'refused', oauth_client_id: request.clientId, oauth_client_name: request.client.client_name },
-          userId,
-          source: 'user',
-        },
-        { manager },
-      ));
+      // The refusal is a sign-in event of the account (the controller records it).
       return {
         redirect_to: redirectWithParams(request.redirectUri, {
           error: 'access_denied',
@@ -316,8 +324,8 @@ export class McpOAuthService {
     if (str(body.redirect_uri) !== claims.redirect_uri) {
       throw new TokenEndpointError('invalid_grant', 'redirect_uri does not match the authorization request.');
     }
-    const resource = str(body.resource);
-    if (!resource) throw new TokenEndpointError('invalid_target', 'resource is required.');
+    // RFC 8707: optional here, the code carries the resource of the authorization request.
+    const resource = str(body.resource) ?? claims.resource;
     if (!isThisMcpResource(resource, host.origin) || !isThisMcpResource(claims.resource, host.origin)) {
       throw new TokenEndpointError('invalid_target', 'resource must be this server\'s MCP endpoint.');
     }
@@ -375,12 +383,28 @@ export class McpOAuthService {
     }
   }
 
+  /** 90 days from now, capped by the tenant's key max lifetime counted from the grant's creation. */
   private async grantExpiry(manager: EntityManager, tenantId: string, createdAt: Date): Promise<Date> {
     const settings = await this.aiSettings.find(tenantId, { manager });
     const sliding = Date.now() + REFRESH_TTL_MS;
     const maxDays = settings?.mcp_key_max_lifetime_days;
     if (!maxDays) return new Date(sliding);
     return new Date(Math.min(sliding, createdAt.getTime() + maxDays * 86_400_000));
+  }
+
+  /** Retires the user's oldest live grants for this client beyond MAX_LIVE_GRANTS_PER_CLIENT. */
+  private async retireOldGrants(manager: EntityManager, tenantId: string, userId: string, clientId: string): Promise<void> {
+    const rows: Array<{ id: string }> = await manager.query(
+      `SELECT id FROM ai_api_keys
+        WHERE tenant_id = $1 AND user_id = $2 AND credential_kind = 'oauth' AND oauth_client_id = $3
+          AND revoked_at IS NULL
+        ORDER BY created_at DESC, id DESC
+        OFFSET $4`,
+      [tenantId, userId, clientId, MAX_LIVE_GRANTS_PER_CLIENT],
+    );
+    for (const row of rows) {
+      await this.apiKeys.revokeKey(row.id, { manager, tenantId, userId: null, revocationReason: 'oauth_superseded' });
+    }
   }
 
   private async createGrant(
@@ -391,6 +415,10 @@ export class McpOAuthService {
     const now = new Date();
     const prefix = newGrantPrefix();
     const refresh = issueRefreshToken(host.tenantId, prefix);
+    const expiresAt = await this.grantExpiry(manager, host.tenantId, now);
+    if (expiresAt.getTime() <= now.getTime()) {
+      throw new TokenEndpointError('invalid_grant', 'The workspace allows no new MCP connection lifetime.');
+    }
     const repo = manager.getRepository(AiApiKey);
     const record = await repo.save(repo.create({
       tenant_id: host.tenantId,
@@ -398,7 +426,7 @@ export class McpOAuthService {
       key_hash: refresh.hash,
       key_prefix: prefix,
       label: (claims.client_name || new URL(claims.client_id).hostname).slice(0, 100),
-      expires_at: await this.grantExpiry(manager, host.tenantId, now),
+      expires_at: expiresAt,
       ...buildMcpApiKeyPolicyRecord({ maxEffect: 'read' }),
       created_by_user_id: claims.sub,
       credential_kind: 'oauth',
@@ -422,6 +450,7 @@ export class McpOAuthService {
       },
       { manager },
     );
+    await this.retireOldGrants(manager, host.tenantId, claims.sub, claims.client_id);
     return this.tokenResponse(host, record, refresh.token, claims.scope);
   }
 
@@ -452,6 +481,16 @@ export class McpOAuthService {
       .getOne();
   }
 
+  /**
+   * Refresh (RFC 6749 §6) with rotation. Only the grant and its owner are checked here: the MCP
+   * endpoint checks the tenant's MCP access on every request, so a passing refusal there (a
+   * provider being configured, MCP switched off for a while) does not end the connection.
+   *
+   * The successor of a token is derived from it. A token that is no longer current but whose
+   * successor is the current one, rotated less than a minute ago, is a retry (a lost answer, two
+   * refreshes at once): it gets that same successor. Any other genuine former token is a replay
+   * and revokes the grant; a forged one is only refused.
+   */
   private async refresh(body: Record<string, unknown>, host: McpOAuthHost): Promise<TokenResponse> {
     const presented = str(body.refresh_token);
     const parsed = parseRefreshToken(presented, host.tenantId);
@@ -461,51 +500,78 @@ export class McpOAuthService {
     if (resource && !isThisMcpResource(resource, host.origin)) {
       throw new TokenEndpointError('invalid_target', 'resource must be this server\'s MCP endpoint.');
     }
+    const clientId = str(body.client_id);
 
     type Outcome = { ok: false } | { ok: true; response: TokenResponse };
     const outcome = await this.tenantExecutor.run(host.tenantId, async (manager): Promise<Outcome> => {
-      const grant = await this.findGrantByPrefix(manager, host.tenantId, parsed.prefix);
-      if (!grant) return { ok: false };
-      if (!refreshTokenMatchesHash(presented, grant.key_hash)) {
-        // Issued here but no longer current: a rotated token used again. Whoever holds it, the
-        // grant is compromised (OAuth 2.1 §4.3.1): revoke it. A forged token only gets refused.
-        if (parsed.genuine && !grant.revoked_at) {
-          await this.apiKeys.revokeKey(grant.id, {
-            manager,
-            tenantId: host.tenantId,
-            userId: null,
-            revocationReason: 'oauth_refresh_replayed',
-          });
-        }
-        return { ok: false };
-      }
-      if (grant.revoked_at || (grant.expires_at && grant.expires_at.getTime() <= Date.now())) return { ok: false };
-      const clientId = str(body.client_id);
+      let grant = await this.findGrantByPrefix(manager, host.tenantId, parsed.prefix);
+      if (!grant || !this.isLive(grant)) return { ok: false };
       if (clientId && clientId !== grant.oauth_client_id) return { ok: false };
-      try {
-        await this.assertOwnerForToken(host, grant.user_id, manager);
-      } catch (error) {
-        if (error instanceof TokenEndpointError) return { ok: false };
-        throw error;
+      if (!(await this.ownerMayUseGrant(manager, grant))) return { ok: false };
+      const successor = successorRefreshToken(host.tenantId, parsed.prefix, presented);
+
+      if (refreshTokenMatchesHash(presented, grant.key_hash)) {
+        const expiresAt = await this.grantExpiry(manager, host.tenantId, grant.created_at);
+        if (expiresAt.getTime() <= Date.now()) return { ok: false };
+        const previousRotation = grant.refresh_rotated_at;
+        // Compare-and-swap on the current hash: of two refreshes with one token, one rotates.
+        const [{ count }] = await manager.query(
+          `WITH changed AS (
+             UPDATE ai_api_keys
+                SET key_hash = $3, refresh_rotated_at = now(), last_used_at = now(), expires_at = $4
+              WHERE tenant_id = $1 AND id = $2 AND key_hash = $5 AND revoked_at IS NULL
+             RETURNING 1
+           ) SELECT count(*)::int AS count FROM changed`,
+          [host.tenantId, grant.id, successor.hash, expiresAt, grant.key_hash],
+        );
+        if (Number(count) === 1) {
+          if (!previousRotation || Date.now() - previousRotation.getTime() >= REFRESH_AUDIT_INTERVAL_MS) {
+            await this.apiKeys.logAudit(
+              {
+                table: 'ai_api_keys',
+                recordId: grant.id,
+                action: 'update',
+                before: null,
+                after: { oauth: 'refreshed', expires_at: expiresAt.toISOString() },
+                userId: grant.user_id,
+                source: 'system',
+              },
+              { manager },
+            );
+          }
+          return { ok: true, response: this.tokenResponse(host, grant, successor.token, MCP_OAUTH_SCOPE) };
+        }
+        // The other refresh rotated first: read the grant again, this is now a retry.
+        grant = await this.findGrantByPrefix(manager, host.tenantId, parsed.prefix);
+        if (!grant || !this.isLive(grant)) return { ok: false };
       }
 
-      const next = issueRefreshToken(host.tenantId, parsed.prefix);
-      const expiresAt = await this.grantExpiry(manager, host.tenantId, grant.created_at);
-      // Compare-and-swap on the current hash: of two refreshes with one token, one wins.
-      const [{ count }] = await manager.query(
-        `WITH changed AS (
-           UPDATE ai_api_keys
-              SET key_hash = $3, refresh_rotated_at = now(), last_used_at = now(), expires_at = $4
-            WHERE tenant_id = $1 AND id = $2 AND key_hash = $5 AND revoked_at IS NULL
-           RETURNING 1
-         ) SELECT count(*)::int AS count FROM changed`,
-        [host.tenantId, grant.id, next.hash, expiresAt, grant.key_hash],
-      );
-      if (Number(count) !== 1) return { ok: false };
-      return { ok: true, response: this.tokenResponse(host, grant, next.token, MCP_OAUTH_SCOPE) };
+      if (!parsed.genuine) return { ok: false };
+      const rotatedAt = grant.refresh_rotated_at?.getTime() ?? 0;
+      if (refreshTokenMatchesHash(successor.token, grant.key_hash) && Date.now() - rotatedAt < REFRESH_RETRY_WINDOW_MS) {
+        return { ok: true, response: this.tokenResponse(host, grant, successor.token, MCP_OAUTH_SCOPE) };
+      }
+      // Issued here but long replaced: whoever holds it, the grant is compromised (OAuth 2.1 §4.3.1).
+      await this.apiKeys.revokeKey(grant.id, {
+        manager,
+        tenantId: host.tenantId,
+        userId: null,
+        revocationReason: 'oauth_refresh_replayed',
+      });
+      return { ok: false };
     });
     if (!outcome.ok) throw invalid();
     return outcome.response;
+  }
+
+  private isLive(grant: AiApiKey): boolean {
+    return !grant.revoked_at && !(grant.expires_at && grant.expires_at.getTime() <= Date.now());
+  }
+
+  /** The grant's owner still exists, is enabled and may use MCP credentials (ownerMayAuthenticate). */
+  private async ownerMayUseGrant(manager: EntityManager, grant: AiApiKey): Promise<boolean> {
+    const user = await this.users.findById(grant.user_id, { manager });
+    return this.apiKeys.ownerMayAuthenticate(user);
   }
 
   // ---------------------------------------------------------------- revocation (RFC 7009)

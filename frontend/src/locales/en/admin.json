@@ -229,6 +229,7 @@
       "login": "Sign-in",
       "login_failed": "Failed sign-in",
       "logout": "Sign-out",
+      "mcp_connection_refused": "MCP client connection refused",
       "password_reset_completed": "Password reset completed",
       "password_reset_requested": "Password reset requested",
       "refresh_denied": "Session renewal refused",

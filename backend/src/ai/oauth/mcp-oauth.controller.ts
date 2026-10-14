@@ -1,14 +1,15 @@
-import { Body, Controller, Get, HttpException, NotFoundException, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpException, NotFoundException, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { Response } from 'express';
+import { SecurityEventsService } from '../../audit/security-events.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { assertRequestOriginAllowed } from '../../common/cors-policy';
 import { throwFeatureDisabled } from '../../common/feature-gates';
 import { RATE_LIMITS } from '../../common/rate-limit';
-import { RateLimitGuard } from '../../common/rate-limit.guard';
+import { RateLimitGuard, TenantRateLimitGuard } from '../../common/rate-limit.guard';
 import { SkipTenantTransaction } from '../../common/skip-tenant-transaction.decorator';
 import { Features } from '../../config/features';
-import { AuthorizationError, McpOAuthHost, McpOAuthService, TokenEndpointError } from './mcp-oauth.service';
+import { AuthorizationError, McpOAuthHost, McpOAuthService, TokenEndpointError, checkRequestShape } from './mcp-oauth.service';
 import {
   MCP_OAUTH_SCOPES_SUPPORTED,
   mcpResourceUrl,
@@ -85,8 +86,20 @@ export class McpOAuthMetadataController {
 @Controller('oauth')
 @SkipTenantTransaction()
 export class McpOAuthController {
-  constructor(private readonly oauth: McpOAuthService) {}
+  constructor(
+    private readonly oauth: McpOAuthService,
+    private readonly securityEvents: SecurityEventsService,
+  ) {}
 
+  /**
+   * The authorization endpoint sends the browser to the web app's page `/oauth/authorize` with the
+   * request as the client sent it, whatever its outcome: that page reads it through
+   * `authorize/request` once the user is signed in, and shows the consent screen or the error
+   * (with a link back to the client when the redirect URI was verified). This route never sends
+   * the browser to the client itself, and fetches nothing: a client's metadata document is only
+   * fetched for a signed-in user. Only a request without a usable client_id or redirect_uri is
+   * answered here.
+   */
   @Get('authorize')
   @UseGuards(RateLimitGuard)
   @Throttle({ default: RATE_LIMITS.mcpOAuthAuthorize })
@@ -94,15 +107,11 @@ export class McpOAuthController {
     const host = requireHost(req);
     noStore(res);
     try {
-      await this.oauth.validateAuthorization(query, host);
+      checkRequestShape(query);
     } catch (error) {
       if (!(error instanceof AuthorizationError)) throw error;
-      const redirect = this.oauth.errorRedirect(error, host);
-      if (redirect) return res.redirect(302, redirect);
-      // The redirect URI is not verified: the error is shown here, never sent there.
       return res.status(400).json({ error: error.error, error_description: error.description });
     }
-    // The consent page gets the request exactly as the client sent it.
     const original = String(req.originalUrl ?? req.url ?? '');
     const queryIndex = original.indexOf('?');
     const search = queryIndex >= 0 ? original.slice(queryIndex) : '';
@@ -123,6 +132,7 @@ export class McpOAuthController {
   }
 
   @Post('authorize/decision')
+  @HttpCode(200)
   @UseGuards(RateLimitGuard, JwtAuthGuard)
   @Throttle({ default: RATE_LIMITS.mcpOAuthAuthorize })
   async decide(@Req() req: any, @Body() body: Record<string, unknown>, @Res({ passthrough: true }) res: Response) {
@@ -135,8 +145,11 @@ export class McpOAuthController {
     const remember = params.remember === true;
     delete params.approve;
     delete params.remember;
+    const userId = String(req.user?.sub ?? '');
     try {
-      return await this.oauth.decide(params, host, String(req.user?.sub ?? ''), { approve, remember });
+      const decided = await this.oauth.decide(params, host, userId, { approve, remember });
+      if (!approve) void this.securityEvents.recordAuthEvent(host.tenantId, { action: 'mcp_connection_refused', userId }, req);
+      return decided;
     } catch (error) {
       throw this.consentError(error, host);
     }
@@ -159,7 +172,7 @@ export class McpOAuthController {
   }
 
   @Post('token')
-  @UseGuards(RateLimitGuard)
+  @UseGuards(TenantRateLimitGuard)
   @Throttle({ default: RATE_LIMITS.mcpOAuthToken })
   async token(@Req() req: any, @Body() body: Record<string, unknown>, @Res() res: Response) {
     const host = requireHost(req);
@@ -173,7 +186,7 @@ export class McpOAuthController {
   }
 
   @Post('revoke')
-  @UseGuards(RateLimitGuard)
+  @UseGuards(TenantRateLimitGuard)
   @Throttle({ default: RATE_LIMITS.mcpOAuthToken })
   async revoke(@Req() req: any, @Body() body: Record<string, unknown>, @Res() res: Response) {
     const host = requireHost(req);

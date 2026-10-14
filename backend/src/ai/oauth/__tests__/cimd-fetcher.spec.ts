@@ -1,5 +1,15 @@
 import * as assert from 'node:assert/strict';
-import { CIMD_MAX_BYTES, CimdError, CimdFetcherService, isCimdClientId } from '../cimd-fetcher.service';
+import { Logger } from '@nestjs/common';
+import {
+  CIMD_FAILURE_TTL_MS,
+  CIMD_MAX_BYTES,
+  CIMD_MAX_IN_FLIGHT,
+  CIMD_PUBLIC_ERROR,
+  CimdError,
+  CimdFetcherService,
+  cleanClientName,
+  isCimdClientId,
+} from '../cimd-fetcher.service';
 import {
   canonicalResource,
   isAcceptableRedirectUri,
@@ -13,6 +23,9 @@ import {
 
 // Client ID Metadata Documents are fetched from a URL a third party chooses: the SSRF rules,
 // the size and time limits and the document checks, plus the URL helpers of the flow.
+
+// Every refusal logs a warning: expected here.
+Logger.overrideLogger(['error']);
 
 const CLIENT_ID = 'https://client.example.com/oauth/metadata.json';
 const PUBLIC_ADDRESS = [{ address: '93.184.216.34' }];
@@ -35,10 +48,12 @@ function fetcher(options: Record<string, unknown>) {
   return new CimdFetcherService().configure({ lookupFn: async () => PUBLIC_ADDRESS, ...options } as any);
 }
 
-async function assertCimdError(promise: Promise<unknown>, pattern: RegExp) {
+/** A refused document: the reason is kept for the log, the caller only sees the generic message. */
+async function assertCimdError(promise: Promise<unknown>, reason: string) {
   await assert.rejects(promise, (error: unknown) => {
     assert.ok(error instanceof CimdError, `expected a CimdError, got ${String(error)}`);
-    assert.match((error as Error).message, pattern);
+    assert.equal((error as CimdError).reason, reason, (error as CimdError).detail);
+    assert.equal((error as Error).message, CIMD_PUBLIC_ERROR, 'no upstream detail reaches the caller');
     return true;
   });
 }
@@ -79,10 +94,13 @@ async function testClientIdMustBeHttps() {
   assert.equal(isCimdClientId('https://user:pw@client.example.com/m'), false);
   assert.equal(isCimdClientId('https://client.example.com/m#x'), false);
   assert.equal(isCimdClientId('client-123'), false);
+  assert.equal(isCimdClientId('https://client.example.com:8443/m'), false, 'port 443 only');
+  assert.equal(isCimdClientId('https://client.example.com:443/m'), true, 'the default port, written out');
+  assert.equal(isCimdClientId(`https://client.example.com/${'a'.repeat(520)}`), false, '512 characters at most');
   assert.equal(isCimdClientId(CLIENT_ID), true);
   let fetched = false;
   const service = fetcher({ fetchImpl: async () => { fetched = true; return jsonResponse(doc()); } });
-  await assertCimdError(service.fetch('http://client.example.com/metadata.json'), /https URL/);
+  await assertCimdError(service.fetch('http://client.example.com/metadata.json'), 'invalid_client_id');
   assert.equal(fetched, false);
 }
 
@@ -93,7 +111,7 @@ async function testPrivateAddressesAreRefusedBeforeAnyRequest() {
       lookupFn: async () => [{ address }],
       fetchImpl: async () => { fetched = true; return jsonResponse(doc()); },
     });
-    await assertCimdError(service.fetch(CLIENT_ID), /Private or internal/);
+    await assertCimdError(service.fetch(CLIENT_ID), 'unreachable');
     assert.equal(fetched, false, `no request to ${address}`);
   }
   // A mix of public and private addresses is refused too.
@@ -101,23 +119,23 @@ async function testPrivateAddressesAreRefusedBeforeAnyRequest() {
     lookupFn: async () => [{ address: '93.184.216.34' }, { address: '10.1.2.3' }],
     fetchImpl: async () => jsonResponse(doc()),
   });
-  await assertCimdError(mixed.fetch(CLIENT_ID), /Private or internal/);
+  await assertCimdError(mixed.fetch(CLIENT_ID), 'unreachable');
   // An IP literal in the URL.
   const literal = fetcher({ fetchImpl: async () => jsonResponse(doc({ client_id: 'https://127.0.0.1/m' })) });
-  await assertCimdError(literal.fetch('https://127.0.0.1/m'), /Private or internal/);
+  await assertCimdError(literal.fetch('https://127.0.0.1/m'), 'unreachable');
 }
 
 async function testRedirectIsRefused() {
   const service = fetcher({
     fetchImpl: async () => new Response(null, { status: 302, headers: { location: 'http://10.0.0.1/metadata.json' } }),
   });
-  await assertCimdError(service.fetch(CLIENT_ID), /redirects/);
+  await assertCimdError(service.fetch(CLIENT_ID), 'redirect');
 }
 
 async function testOversizedDocumentIsRefused() {
   const big = JSON.stringify(doc({ padding: 'x'.repeat(CIMD_MAX_BYTES) }));
   const declared = fetcher({ fetchImpl: async () => new Response(big, { status: 200, headers: { 'content-length': String(big.length) } }) });
-  await assertCimdError(declared.fetch(CLIENT_ID), /too large/);
+  await assertCimdError(declared.fetch(CLIENT_ID), 'too_large');
   // Streamed without a length: cut at the limit.
   const streamed = fetcher({
     fetchImpl: async () => new Response(new ReadableStream({
@@ -127,12 +145,12 @@ async function testOversizedDocumentIsRefused() {
       },
     }), { status: 200 }),
   });
-  await assertCimdError(streamed.fetch(CLIENT_ID), /too large/);
+  await assertCimdError(streamed.fetch(CLIENT_ID), 'too_large');
 }
 
 async function testOtherClientIdIsRefused() {
   const service = fetcher({ fetchImpl: async () => jsonResponse(doc({ client_id: 'https://evil.example.com/m' })) });
-  await assertCimdError(service.fetch(CLIENT_ID), /another client_id/);
+  await assertCimdError(service.fetch(CLIENT_ID), 'client_id_mismatch');
 }
 
 async function testSlowServerTimesOut() {
@@ -142,24 +160,91 @@ async function testSlowServerTimesOut() {
       init.signal?.addEventListener('abort', () => reject(new Error('aborted')));
     }),
   });
-  await assertCimdError(service.fetch(CLIENT_ID), /too long/);
+  await assertCimdError(service.fetch(CLIENT_ID), 'timeout');
 }
 
 async function testDocumentRules() {
-  const cases: Array<[Record<string, unknown>, RegExp]> = [
-    [{ redirect_uris: [] }, /redirect_uris/],
-    [{ redirect_uris: ['http://client.example.com/callback'] }, /redirect_uris/],
-    [{ redirect_uris: ['https://client.example.com/cb#frag'] }, /redirect_uris/],
-    [{ token_endpoint_auth_method: 'client_secret_basic' }, /public clients/],
+  const cases: Array<[Record<string, unknown>, string]> = [
+    [{ redirect_uris: [] }, 'no_redirect_uris'],
+    [{ redirect_uris: ['http://client.example.com/callback'] }, 'no_redirect_uris'],
+    [{ redirect_uris: ['https://client.example.com/cb#frag', 42] }, 'no_redirect_uris'],
+    [{ token_endpoint_auth_method: 'client_secret_basic' }, 'not_public_client'],
   ];
   for (const [overrides, pattern] of cases) {
     const service = fetcher({ fetchImpl: async () => jsonResponse(doc(overrides)) });
     await assertCimdError(service.fetch(CLIENT_ID), pattern);
   }
   const notJson = fetcher({ fetchImpl: async () => new Response('<html>', { status: 200 }) });
-  await assertCimdError(notJson.fetch(CLIENT_ID), /not valid JSON/);
+  await assertCimdError(notJson.fetch(CLIENT_ID), 'not_json');
   const notFound = fetcher({ fetchImpl: async () => new Response('', { status: 404 }) });
-  await assertCimdError(notFound.fetch(CLIENT_ID), /HTTP 404/);
+  await assertCimdError(notFound.fetch(CLIENT_ID), 'http_status');
+
+  // Unusable redirect URIs are left out, the usable ones kept.
+  const mixed = fetcher({
+    fetchImpl: async () => jsonResponse(doc({ redirect_uris: ['http://client.example.com/cb', 'https://client.example.com/cb', `https://x.example/${'a'.repeat(600)}`] })),
+  });
+  assert.deepEqual((await mixed.fetch(CLIENT_ID)).redirect_uris, ['https://client.example.com/cb']);
+
+  // Names cannot hide behind control or bidirectional characters.
+  assert.equal(cleanClientName('Cla\u202eude\u0000 Code\n', 'x'), 'Claude Code');
+  assert.equal(cleanClientName('\u200f\u2066', 'client.example.com'), 'client.example.com');
+}
+
+async function testOperatorAllowlistDoesNotApply() {
+  const previous = process.env.SSRF_ALLOWED_HOSTS;
+  process.env.SSRF_ALLOWED_HOSTS = 'client.example.com,10.0.0.5';
+  try {
+    let fetched = false;
+    const service = new CimdFetcherService().configure({
+      lookupFn: async () => [{ address: '10.0.0.5' }],
+      fetchImpl: async () => { fetched = true; return jsonResponse(doc()); },
+    });
+    await assertCimdError(service.fetch(CLIENT_ID), 'unreachable');
+    assert.equal(fetched, false, 'SSRF_ALLOWED_HOSTS opens nothing to a client metadata document');
+  } finally {
+    if (previous === undefined) delete process.env.SSRF_ALLOWED_HOSTS;
+    else process.env.SSRF_ALLOWED_HOSTS = previous;
+  }
+}
+
+async function testFailuresAreCachedForAMinute() {
+  let now = 5_000_000;
+  let calls = 0;
+  const service = fetcher({ now: () => now, fetchImpl: async () => { calls += 1; return new Response('', { status: 500 }); } });
+  await assertCimdError(service.fetch(CLIENT_ID), 'http_status');
+  await assertCimdError(service.fetch(CLIENT_ID), 'http_status');
+  assert.equal(calls, 1, 'the failure is remembered');
+  now += CIMD_FAILURE_TTL_MS + 1;
+  await assertCimdError(service.fetch(CLIENT_ID), 'http_status');
+  assert.equal(calls, 2);
+}
+
+async function testFetchesInFlightAreCappedAndShared() {
+  const release: Array<() => void> = [];
+  let calls = 0;
+  const service = fetcher({
+    fetchImpl: (url: URL) => new Promise<Response>((resolve) => {
+      calls += 1;
+      release.push(() => resolve(jsonResponse(doc({ client_id: url.toString() }))));
+    }),
+  });
+  const ids = Array.from({ length: CIMD_MAX_IN_FLIGHT }, (_, i) => `https://client${i}.example.com/m`);
+  const running = ids.map((id) => service.fetch(id));
+  // The same document asked again while it loads: one fetch for both.
+  const shared = service.fetch(ids[0]);
+  // One more document beyond the cap: refused at once, nothing fetched.
+  await assertCimdError(service.fetch('https://one-too-many.example.com/m'), 'busy');
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(calls, CIMD_MAX_IN_FLIGHT);
+  release.forEach((fn) => fn());
+  const results = await Promise.all([...running, shared]);
+  assert.equal(results[CIMD_MAX_IN_FLIGHT].client_id, ids[0]);
+  // Slots free again.
+  release.length = 0;
+  const later = service.fetch('https://one-too-many.example.com/m');
+  await new Promise((resolve) => setImmediate(resolve));
+  release.forEach((fn) => fn());
+  assert.equal((await later).client_id, 'https://one-too-many.example.com/m');
 }
 
 function testUrlHelpers() {
@@ -190,6 +275,7 @@ function testUrlHelpers() {
   assert.equal(normalizeScope(undefined), 'mcp:read');
   assert.equal(normalizeScope('mcp:read'), 'mcp:read');
   assert.equal(normalizeScope('mcp:read mcp:write'), null);
+  assert.equal(normalizeScope('mcp:read offline_access'), 'mcp:read', 'offline_access is accepted and ignored');
 
   assert.equal(
     mcpBearerChallenge(origin),
@@ -207,6 +293,9 @@ async function run() {
   await testOtherClientIdIsRefused();
   await testSlowServerTimesOut();
   await testDocumentRules();
+  await testOperatorAllowlistDoesNotApply();
+  await testFailuresAreCachedForAMinute();
+  await testFetchesInFlightAreCappedAndShared();
   testUrlHelpers();
   // eslint-disable-next-line no-console
   console.log('cimd-fetcher.spec: OK');

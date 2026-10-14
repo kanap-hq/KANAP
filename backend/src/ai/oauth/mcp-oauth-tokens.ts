@@ -15,7 +15,9 @@ import { ACCESS_TOKEN_TTL_SECONDS, AUTHORIZATION_CODE_TTL_SECONDS, canonicalReso
  * - the refresh token: `kanap_mcprt_<prefix>_<nonce>_<mac>`, hashed into the grant's `key_hash`
  *   and replaced on every use. The prefix names the grant and stays the same across rotations;
  *   the MAC proves the token was issued here, so a token that is genuine but no longer the current
- *   one is a replay (the grant is revoked), while a forged one is merely refused.
+ *   one is a replay (the grant is revoked), while a forged one is merely refused. The successor of
+ *   a token is derived from it (`successorRefreshToken`): a client whose refresh answer was lost,
+ *   or that refreshed twice at once, presents the same token again and gets the same successor.
  *
  * Both JWT families have their own signing key (auth/token-secret.util.ts), distinct from the
  * session key: a session token never verifies as an MCP token, and the reverse.
@@ -123,10 +125,23 @@ export function newGrantPrefix(): string {
   return randomBytes(6).toString('hex');
 }
 
-export function issueRefreshToken(tenantId: string, grantPrefix: string): { token: string; hash: string } {
-  const nonce = randomBytes(24).toString('base64url');
+function refreshTokenWithNonce(tenantId: string, grantPrefix: string, nonce: string): { token: string; hash: string } {
   const token = `${REFRESH_TOKEN_PREFIX}_${grantPrefix}_${nonce}_${refreshMac(tenantId, grantPrefix, nonce)}`;
   return { token, hash: hashRefreshToken(token) };
+}
+
+/** The first refresh token of a grant. */
+export function issueRefreshToken(tenantId: string, grantPrefix: string): { token: string; hash: string } {
+  return refreshTokenWithNonce(tenantId, grantPrefix, randomBytes(24).toString('base64url'));
+}
+
+/** The token that replaces `previous`: always the same one, and only this server can compute it. */
+export function successorRefreshToken(tenantId: string, grantPrefix: string, previous: string): { token: string; hash: string } {
+  const nonce = createHmac('sha256', refreshMacKey())
+    .update(`successor\n${tenantId}\n${previous}`, 'utf8')
+    .digest('base64url')
+    .slice(0, 32);
+  return refreshTokenWithNonce(tenantId, grantPrefix, nonce);
 }
 
 export function hashRefreshToken(token: string): string {

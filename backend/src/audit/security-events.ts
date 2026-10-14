@@ -39,6 +39,8 @@ export const AUTH_EVENT_ACTIONS = [
   'password_reset_completed',
   'sso_login',
   'sso_login_failed',
+  /** The account refused to connect an MCP client (OAuth consent screen, ai/oauth). */
+  'mcp_connection_refused',
 ] as const;
 export type AuthEventAction = (typeof AUTH_EVENT_ACTIONS)[number];
 

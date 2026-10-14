@@ -24,6 +24,7 @@ import { CimdFetcherService } from '../cimd-fetcher.service';
 import { McpOAuthController, McpOAuthMetadataController } from '../mcp-oauth.controller';
 import { McpOAuthService } from '../mcp-oauth.service';
 import { s256Challenge } from '../mcp-oauth.util';
+import { signAccessToken } from '../mcp-oauth-tokens';
 
 // The MCP OAuth connector end to end, over real HTTP and a real database (ai_api_keys under
 // FORCE RLS): 401 + WWW-Authenticate → protected resource metadata → authorization server
@@ -116,6 +117,8 @@ type Harness = {
   baseUrl: string;
   audits: any[];
   deniedUsers: Set<string>;
+  settings: { mcp_key_max_lifetime_days: number | null };
+  events: any[];
   close(): Promise<void>;
 };
 
@@ -127,7 +130,9 @@ async function startHarness(seeds: Seed[]): Promise<Harness> {
     findById: (id: string, opts?: { manager?: any }) =>
       (opts?.manager ?? dataSource.manager).getRepository(User).findOne({ where: { id }, relations: ['role'] }),
   } as any;
-  const aiSettings = { find: async () => ({ mcp_key_max_lifetime_days: null }) } as any;
+  const settings = { mcp_key_max_lifetime_days: null as number | null };
+  const aiSettings = { find: async () => ({ ...settings }) } as any;
+  const events: any[] = [];
   const apiKeys = new AiApiKeysService(
     dataSource.getRepository(AiApiKey),
     users,
@@ -150,7 +155,9 @@ async function startHarness(seeds: Seed[]): Promise<Harness> {
   });
   const oauth = new McpOAuthService(apiKeys, users, policy, aiSettings, executor, cimd);
   const metadata = new McpOAuthMetadataController();
-  const controller = new McpOAuthController(oauth);
+  const controller = new McpOAuthController(oauth, {
+    recordAuthEvent: async (tenantId: string, event: any) => { events.push({ tenantId, ...event }); },
+  } as any);
   const mcpGuard = new McpApiKeyAuthGuard(apiKeys, executor, oauth);
   const sessionGuard = new JwtAuthGuard(new Reflector());
   const mcp = new AiMcpController(
@@ -228,6 +235,8 @@ async function startHarness(seeds: Seed[]): Promise<Harness> {
     baseUrl: `http://127.0.0.1:${(server.address() as AddressInfo).port}`,
     audits,
     deniedUsers,
+    settings,
+    events,
     close: () => new Promise<void>((resolve) => server.close(() => resolve())),
   };
 }
@@ -417,6 +426,11 @@ async function testFullFlow(a: Seed) {
   assert.equal(row.credential_kind, 'oauth');
   assert.equal(row.oauth_client_id, CLAUDE_CIMD);
   assert.equal(row.oauth_client_name, 'Claude Code');
+  const view = new AiApiKeysService({} as any, {} as any, new McpApiKeyHashService(), {} as any).toView(row);
+  assert.equal(view.credential_kind, 'oauth');
+  assert.equal(view.oauth_client_id, CLAUDE_CIMD);
+  assert.equal(view.oauth_redirect_host, 'localhost');
+  assert.equal('key_hash' in view, false);
   assert.equal(row.label, 'Claude Code');
   assert.equal(row.oauth_redirect_uri, params.redirect_uri);
   assert.equal(row.oauth_remember, true);
@@ -441,6 +455,19 @@ async function testFullFlow(a: Seed) {
   const rotatedRow = await grantRow(a, 'id = $2', [claims.grant]);
   assert.ok(rotatedRow.refresh_rotated_at.getTime() >= row.refresh_rotated_at.getTime());
 
+  // The same token again right away (a lost answer): the same successor, nothing revoked.
+  const retried = await call(a.host, '/oauth/token', {
+    form: { grant_type: 'refresh_token', refresh_token: token.data.refresh_token, client_id: CLAUDE_CIMD },
+  });
+  assert.equal(retried.status, 200, retried.text);
+  assert.equal(retried.data.refresh_token, refreshed.data.refresh_token, 'a retry gets the same successor');
+  assert.equal((await grantRow(a, 'id = $2', [claims.grant])).revoked_at, null);
+
+  // One rotation further, the first token is two generations old: a replay.
+  const third = await call(a.host, '/oauth/token', {
+    form: { grant_type: 'refresh_token', refresh_token: refreshed.data.refresh_token },
+  });
+  assert.equal(third.status, 200, third.text);
   const replayed = await call(a.host, '/oauth/token', {
     form: { grant_type: 'refresh_token', refresh_token: token.data.refresh_token, client_id: CLAUDE_CIMD },
   });
@@ -450,11 +477,105 @@ async function testFullFlow(a: Seed) {
   assert.ok(revokedRow.revoked_at, 'a replayed refresh token revokes the connection');
   assert.equal(revokedRow.revocation_reason, 'oauth_refresh_replayed');
   // Everything of that grant is dead now, the newest pair included.
-  assert.equal((await toolsList(a, refreshed.data.access_token)).status, 401);
+  assert.equal((await toolsList(a, third.data.access_token)).status, 401);
   const afterReplay = await call(a.host, '/oauth/token', {
-    form: { grant_type: 'refresh_token', refresh_token: refreshed.data.refresh_token },
+    form: { grant_type: 'refresh_token', refresh_token: third.data.refresh_token },
   });
   assert.equal(afterReplay.data.error, 'invalid_grant');
+  // Rotations within the hour of the creation leave no "refreshed" audit row (see below).
+  assert.equal(harness.audits.filter((entry) => entry.recordId === claims.grant && entry.after?.oauth === 'refreshed').length, 0);
+}
+
+async function testRefreshAuditIsAggregated(a: Seed) {
+  const token = await connect(a);
+  const grantId = (jwt.decode(token.access_token) as any).grant;
+  const refreshedRows = () => harness.audits.filter((entry) => entry.recordId === grantId && entry.after?.oauth === 'refreshed').length;
+  await new AiTenantExecutionService(dataSource).run(a.tenantId, (manager) => manager.query(
+    `UPDATE ai_api_keys SET refresh_rotated_at = now() - interval '2 hours' WHERE tenant_id = $1 AND id = $2`,
+    [a.tenantId, grantId],
+  ));
+  let current = token.refresh_token;
+  for (let i = 0; i < 3; i += 1) {
+    const next = await call(a.host, '/oauth/token', { form: { grant_type: 'refresh_token', refresh_token: current } });
+    assert.equal(next.status, 200, next.text);
+    current = next.data.refresh_token;
+  }
+  assert.equal(refreshedRows(), 1, 'one row for the rotations of an hour');
+}
+
+async function testRefreshRetriesAndRaces(a: Seed) {
+  // Two refreshes with one token at the same time: both answered, with the same successor.
+  for (let i = 0; i < 3; i += 1) {
+    const token = await connect(a);
+    const form = { grant_type: 'refresh_token', refresh_token: token.refresh_token };
+    const [one, two] = await Promise.all([call(a.host, '/oauth/token', { form }), call(a.host, '/oauth/token', { form })]);
+    assert.equal(one.status, 200, one.text);
+    assert.equal(two.status, 200, two.text);
+    assert.equal(one.data.refresh_token, two.data.refresh_token);
+    const grantId = (jwt.decode(token.access_token) as any).grant;
+    assert.equal((await grantRow(a, 'id = $2', [grantId])).revoked_at, null, 'a race revokes nothing');
+    assert.equal((await call(a.host, '/oauth/token', { form: { grant_type: 'refresh_token', refresh_token: one.data.refresh_token } })).status, 200);
+  }
+
+  // A retry after the window is a replay.
+  const token = await connect(a);
+  const grantId = (jwt.decode(token.access_token) as any).grant;
+  const next = await call(a.host, '/oauth/token', { form: { grant_type: 'refresh_token', refresh_token: token.refresh_token } });
+  assert.equal(next.status, 200);
+  await new AiTenantExecutionService(dataSource).run(a.tenantId, (manager) => manager.query(
+    `UPDATE ai_api_keys SET refresh_rotated_at = now() - interval '2 minutes' WHERE tenant_id = $1 AND id = $2`,
+    [a.tenantId, grantId],
+  ));
+  const late = await call(a.host, '/oauth/token', { form: { grant_type: 'refresh_token', refresh_token: token.refresh_token } });
+  assert.equal(late.data.error, 'invalid_grant');
+  assert.equal((await grantRow(a, 'id = $2', [grantId])).revocation_reason, 'oauth_refresh_replayed');
+}
+
+async function testRefreshChecksTheGrantAndItsOwnerOnly(a: Seed) {
+  // A passing refusal of MCP access (provider being set up, MCP off for a while) does not end
+  // the connection: the MCP endpoint refuses requests meanwhile, the refresh goes on.
+  const token = await connect(a);
+  harness.deniedUsers.add(a.userId);
+  let refreshed: any;
+  try {
+    refreshed = await call(a.host, '/oauth/token', { form: { grant_type: 'refresh_token', refresh_token: token.refresh_token } });
+    assert.equal(refreshed.status, 200, refreshed.text);
+  } finally {
+    harness.deniedUsers.delete(a.userId);
+  }
+
+  // A disabled owner: refused, and the grant stays (enabling the account again brings it back).
+  const userId = await addUser(a, 'disabled');
+  const owned = await connect(a, { userId });
+  const executor = new AiTenantExecutionService(dataSource);
+  await executor.run(a.tenantId, (manager) => manager.query(`UPDATE users SET status = 'disabled' WHERE tenant_id = $1 AND id = $2`, [a.tenantId, userId]));
+  const refused = await call(a.host, '/oauth/token', { form: { grant_type: 'refresh_token', refresh_token: owned.refresh_token } });
+  assert.equal(refused.data.error, 'invalid_grant');
+  assert.equal((await toolsList(a, owned.access_token)).status, 401, 'nor does its access token open MCP');
+  await executor.run(a.tenantId, (manager) => manager.query(`UPDATE users SET status = 'enabled' WHERE tenant_id = $1 AND id = $2`, [a.tenantId, userId]));
+  assert.equal((await call(a.host, '/oauth/token', { form: { grant_type: 'refresh_token', refresh_token: owned.refresh_token } })).status, 200);
+
+  // A refresh whose expiry would not be in the future: refused.
+  const short = await connect(a);
+  const grantId = (jwt.decode(short.access_token) as any).grant;
+  await executor.run(a.tenantId, (manager) => manager.query(
+    `UPDATE ai_api_keys SET created_at = now() - interval '2 days' WHERE tenant_id = $1 AND id = $2`, [a.tenantId, grantId]));
+  harness.settings.mcp_key_max_lifetime_days = 1;
+  try {
+    const expired = await call(a.host, '/oauth/token', { form: { grant_type: 'refresh_token', refresh_token: short.refresh_token } });
+    assert.equal(expired.data.error, 'invalid_grant');
+  } finally {
+    harness.settings.mcp_key_max_lifetime_days = null;
+  }
+}
+
+async function testOldGrantsOfAClientAreRetired(a: Seed) {
+  const userId = await addUser(a, 'many');
+  const tokens = [];
+  for (let i = 0; i < 6; i += 1) tokens.push(await connect(a, { userId }));
+  const first = await grantRow(a, 'id = $2', [(jwt.decode(tokens[0].access_token) as any).grant]);
+  assert.equal(first.revocation_reason, 'oauth_superseded', 'the sixth connection retires the oldest');
+  for (const token of tokens.slice(1)) assert.equal((await toolsList(a, token.access_token)).status, 200);
 }
 
 async function testForgedRefreshTokenDoesNotRevoke(a: Seed) {
@@ -468,29 +589,35 @@ async function testForgedRefreshTokenDoesNotRevoke(a: Seed) {
 }
 
 async function testAuthorizeRefusals(a: Seed) {
-  const expectError = async (overrides: Record<string, string | undefined>, error: string, redirected: boolean) => {
+  const session = { authorization: `Bearer ${sessionToken(a)}` };
+  const expectError = async (overrides: Record<string, string | undefined>, error: string, backToClient: boolean) => {
     const { params } = authorizationParams(a, overrides);
-    const response = await call(a.host, `/oauth/authorize?${new URLSearchParams(params)}`);
-    if (redirected) {
-      assert.equal(response.status, 302, `${error}: ${response.text}`);
-      const location = new URL(response.headers.get('location')!);
-      assert.equal(`${location.origin}${location.pathname}`, new URL(params.redirect_uri).origin + new URL(params.redirect_uri).pathname);
-      assert.equal(location.searchParams.get('error'), error);
-      assert.equal(location.searchParams.get('state'), params.state);
-      assert.equal(location.searchParams.get('iss'), origin(a));
+    const query = new URLSearchParams(params).toString();
+    // The authorization endpoint sends every usable request to KANAP's own page, never to the client.
+    const authorize = await call(a.host, `/oauth/authorize?${query}`);
+    assert.equal(authorize.status, 302, `${error}: ${authorize.text}`);
+    assert.equal(authorize.headers.get('location'), `${origin(a)}/oauth/authorize?${query}`);
+    // The page reads the request and shows the error.
+    const described = await call(a.host, `/oauth/authorize/request?${query}`, { headers: session });
+    assert.equal(described.status, 400, `${error}: ${described.text}`);
+    assert.equal(described.data.error, error);
+    if (backToClient) {
+      // The redirect URI was verified: the page may offer to go back to the client with the error.
+      const back = new URL(described.data.redirect_to);
+      assert.equal(`${back.origin}${back.pathname}`, new URL(params.redirect_uri).origin + new URL(params.redirect_uri).pathname);
+      assert.equal(back.searchParams.get('error'), error);
+      assert.equal(back.searchParams.get('state'), params.state);
+      assert.equal(back.searchParams.get('iss'), origin(a));
     } else {
-      assert.equal(response.status, 400, `${error}: ${response.text}`);
-      assert.equal(response.data.error, error);
-      assert.equal(response.headers.get('location'), null, 'never redirected to an unverified address');
+      assert.equal(described.data.redirect_to, null, 'nothing points to an unverified address');
     }
   };
-  // Before the redirect URI is verified: answered here.
+  // Before the redirect URI is verified.
   await expectError({ client_id: 'http://claude.ai/oauth/claude-code-client-metadata' }, 'invalid_client', false);
   await expectError({ client_id: 'https://unknown.example.com/metadata.json' }, 'invalid_client', false);
   await expectError({ redirect_uri: 'https://attacker.example.com/callback' }, 'invalid_request', false);
   await expectError({ redirect_uri: 'http://localhost:53682/other' }, 'invalid_request', false);
-  await expectError({ redirect_uri: undefined }, 'invalid_request', false);
-  // After: back to the client.
+  // After: the error may go back to the client.
   await expectError({ code_challenge: undefined }, 'invalid_request', true);
   await expectError({ code_challenge_method: 'plain' }, 'invalid_request', true);
   await expectError({ code_challenge_method: undefined }, 'invalid_request', true);
@@ -498,6 +625,21 @@ async function testAuthorizeRefusals(a: Seed) {
   await expectError({ resource: 'https://other.kanap.test/api/ai/mcp' }, 'invalid_target', true);
   await expectError({ scope: 'mcp:write' }, 'invalid_scope', true);
   await expectError({ response_type: 'token' }, 'unsupported_response_type', true);
+
+  // Too malformed to show: answered by the endpoint itself.
+  for (const overrides of [{ redirect_uri: undefined }, { client_id: undefined }, { client_id: `${CLAUDE_CIMD}?${'a'.repeat(520)}` }]) {
+    const { params } = authorizationParams(a, overrides);
+    const response = await call(a.host, `/oauth/authorize?${new URLSearchParams(params)}`);
+    assert.equal(response.status, 400, response.text);
+    assert.equal(response.data.error, 'invalid_request');
+    assert.equal(response.headers.get('location'), null);
+  }
+
+  // offline_access is accepted and ignored.
+  const offline = authorizationParams(a, { scope: 'mcp:read offline_access' });
+  const described = await call(a.host, `/oauth/authorize/request?${new URLSearchParams(offline.params)}`, { headers: session });
+  assert.equal(described.status, 200, described.text);
+  assert.equal(described.data.scope, 'mcp:read');
 
   // A trailing slash on the resource is tolerated, the token audience stays canonical.
   const { params, verifier } = authorizationParams(a, { resource: `${resource(a)}/` });
@@ -527,7 +669,7 @@ async function testAuthorizeRefusals(a: Seed) {
   });
   assert.equal(denied.status, 200);
   assert.equal(new URL(denied.data.redirect_to).searchParams.get('error'), 'access_denied');
-  assert.ok(harness.audits.some((entry) => entry.after?.oauth === 'refused' && entry.userId === a.userId));
+  assert.ok(harness.events.some((event) => event.action === 'mcp_connection_refused' && event.userId === a.userId && event.tenantId === a.tenantId));
 }
 
 async function testTokenRefusals(a: Seed) {
@@ -543,7 +685,13 @@ async function testTokenRefusals(a: Seed) {
   };
   await expectGrantError({ code_verifier: undefined }, 'invalid_grant');
   await expectGrantError({ code_verifier: randomBytes(32).toString('base64url') }, 'invalid_grant');
-  await expectGrantError({ resource: undefined }, 'invalid_target');
+  // resource is optional at the token endpoint: the code's is used.
+  {
+    const { params, verifier, code } = await fresh();
+    const response = await exchange(a, code, params, verifier, { resource: undefined });
+    assert.equal(response.status, 200, response.text);
+    assert.equal((jwt.decode(response.data.access_token) as any).aud, resource(a));
+  }
   await expectGrantError({ resource: 'https://other.kanap.test/api/ai/mcp' }, 'invalid_target');
   await expectGrantError({ redirect_uri: 'http://localhost:1/callback' }, 'invalid_grant');
   await expectGrantError({ client_id: WEB_CIMD }, 'invalid_grant');
@@ -595,19 +743,25 @@ async function testRevocationIsImmediate(a: Seed) {
   const unknown = await call(a.host, '/oauth/revoke', { form: { token: 'whatever' } });
   assert.equal(unknown.status, 200, 'an unknown token is not an error');
 
-  // The owner loses MCP access: the next refresh is refused.
-  const third = await connect(a);
-  harness.deniedUsers.add(a.userId);
-  try {
-    const refresh = await call(a.host, '/oauth/token', { form: { grant_type: 'refresh_token', refresh_token: third.refresh_token } });
-    assert.equal(refresh.data.error, 'invalid_grant');
-  } finally {
-    harness.deniedUsers.delete(a.userId);
-  }
 }
 
 async function testIsolation(a: Seed, b: Seed) {
   const token = await connect(a);
+  // A token that passes every claim check for tenant B, naming a grant of tenant A: the grant is
+  // read inside tenant B (tenant_id predicate and RLS), where it does not exist.
+  const grantOfA = (jwt.decode(token.access_token) as any).grant;
+  const forged = signAccessToken({ sub: a.userId, tenant_id: b.tenantId, iss: origin(b), aud: resource(b), grant: grantOfA, scope: 'mcp:read' });
+  assert.equal((await toolsList(b, forged)).status, 401);
+  // Seen from tenant B's context, without any tenant predicate, the row is not there (FORCE RLS).
+  const seenFromB = await new AiTenantExecutionService(dataSource).run(b.tenantId, (manager) =>
+    manager.query(`SELECT id FROM ai_api_keys WHERE id = $1`, [grantOfA]));
+  assert.equal(seenFromB.length, 0);
+  // The access token travels in Authorization only.
+  const inHeader = await call(a.host, '/ai/mcp', {
+    headers: { accept: 'application/json, text/event-stream', 'x-api-key': token.access_token },
+    json: { jsonrpc: '2.0', id: 1, method: 'tools/list' },
+  });
+  assert.equal(inHeader.status, 401);
   // A token of tenant A on tenant B's address.
   assert.equal((await toolsList(b, token.access_token)).status, 401);
   const refreshOnB = await call(b.host, '/oauth/token', { form: { grant_type: 'refresh_token', refresh_token: token.refresh_token } });
@@ -699,6 +853,10 @@ async function run() {
   try {
     await testFullFlow(a);
     await testForgedRefreshTokenDoesNotRevoke(a);
+    await testRefreshRetriesAndRaces(a);
+    await testRefreshAuditIsAggregated(a);
+    await testRefreshChecksTheGrantAndItsOwnerOnly(a);
+    await testOldGrantsOfAClientAreRetired(a);
     await testAuthorizeRefusals(a);
     await testTokenRefusals(a);
     await testCodeReplayRevokesTheGrant(a);

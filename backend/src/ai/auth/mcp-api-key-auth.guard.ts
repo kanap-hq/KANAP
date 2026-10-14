@@ -9,7 +9,7 @@ const API_KEY_PREFIX = 'kanap_mcp_';
 
 /**
  * MCP endpoint authentication: a personal API key (`kanap_mcp_…`, `Authorization: Bearer` or
- * `X-API-Key`), or an OAuth access token of the `mcp-access` family (`Authorization: Bearer`).
+ * `X-API-Key`), or an OAuth access token of the `mcp-access` family (`Authorization: Bearer` only).
  * Nothing else opens it, a web session token included.
  *
  * Every 401 carries the `WWW-Authenticate` challenge that points MCP clients to the protected
@@ -43,6 +43,7 @@ export class McpApiKeyAuthGuard implements CanActivate {
     if (!rawKey) {
       throw new UnauthorizedException('Missing MCP credential');
     }
+    const fromAuthorization = String(req?.headers?.authorization ?? '').trim().startsWith('Bearer ');
 
     // ai_api_keys is under FORCE RLS: the key is looked up inside the tenant named by the host.
     const tenantId = req?.tenant?.id ? String(req.tenant.id) : null;
@@ -50,7 +51,8 @@ export class McpApiKeyAuthGuard implements CanActivate {
       throw new UnauthorizedException('MCP requests must use the tenant address.');
     }
 
-    if (!rawKey.startsWith(API_KEY_PREFIX) && looksLikeJwt(rawKey)) {
+    // An access token is accepted in `Authorization: Bearer` only (RFC 6750 §2.1, MCP authorization).
+    if (fromAuthorization && !rawKey.startsWith(API_KEY_PREFIX) && looksLikeJwt(rawKey)) {
       return this.authenticateOAuth(req, rawKey);
     }
 

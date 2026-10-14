@@ -13,6 +13,9 @@ export const MCP_RESOURCE_PATH = `${PUBLIC_API_PREFIX}/ai/mcp`;
 export const MCP_OAUTH_SCOPE = 'mcp:read';
 export const MCP_OAUTH_SCOPES_SUPPORTED = [MCP_OAUTH_SCOPE] as const;
 
+/** Longest client_id and redirect_uri accepted: the authorization code that carries both stays small. */
+export const MAX_OAUTH_URL_LENGTH = 512;
+
 export const AUTHORIZATION_CODE_TTL_SECONDS = 60;
 export const ACCESS_TOKEN_TTL_SECONDS = 15 * 60;
 export const REFRESH_TOKEN_TTL_DAYS = 90;
@@ -101,7 +104,7 @@ export function redirectUriMatches(registered: string, requested: string): boole
 
 /** A redirect URI a client may register: https, or plain http on a loopback host. No fragment. */
 export function isAcceptableRedirectUri(uri: unknown): uri is string {
-  if (typeof uri !== 'string' || uri.length === 0 || uri.length > 2000) return false;
+  if (typeof uri !== 'string' || uri.length === 0 || uri.length > MAX_OAUTH_URL_LENGTH) return false;
   let url: URL;
   try {
     url = new URL(uri);
@@ -140,13 +143,15 @@ export function pkceVerifierMatches(verifier: unknown, challenge: string): boole
   return computed.length === expected.length && timingSafeEqual(computed, expected);
 }
 
-/** `scope` of an authorization request: empty means `mcp:read`; anything else must be `mcp:read`. */
+/**
+ * `scope` of an authorization request: empty means `mcp:read`, and so does `mcp:read`.
+ * `offline_access` is accepted and ignored: every grant gets a refresh token.
+ */
 export function normalizeScope(value: unknown): string | null {
   if (value === undefined || value === null || value === '') return MCP_OAUTH_SCOPE;
   if (typeof value !== 'string') return null;
   const scopes = value.split(' ').filter(Boolean);
-  if (scopes.length === 0) return MCP_OAUTH_SCOPE;
-  return scopes.every((scope) => scope === MCP_OAUTH_SCOPE) ? MCP_OAUTH_SCOPE : null;
+  return scopes.every((scope) => scope === MCP_OAUTH_SCOPE || scope === 'offline_access') ? MCP_OAUTH_SCOPE : null;
 }
 
 /** Append OAuth response parameters to a validated redirect URI, keeping its own query. */
