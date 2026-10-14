@@ -730,6 +730,7 @@
     "errors": {
       "noActiveSubscription": "Kein aktives Abonnement gefunden.",
       "planNotBankTransferEligible": "Dieser Plan ist nicht für Banküberweisung geeignet.",
+      "termsNotAccepted": "Die Annahme der Allgemeinen Geschäftsbedingungen konnte nicht bestätigt werden. Laden Sie die Seite neu und akzeptieren Sie sie erneut.",
       "vatNumberInvalid": "Die USt-IdNr. wurde nicht akzeptiert. Prüfen Sie sie in den Rechnungsinformationen."
     },
     "invoiceFields": {
@@ -755,6 +756,10 @@
     "profile": {
       "complete": "Rechnungsinformationen vervollständigen",
       "incomplete": "Vervollständigen Sie die Rechnungsinformationen, bevor Sie ein Abonnement abschließen: {{fields}}."
+    },
+    "terms": {
+      "accept": "Ich akzeptiere die",
+      "link": "Allgemeinen Geschäftsbedingungen"
     },
     "title": "Plan wählen",
     "trial": {

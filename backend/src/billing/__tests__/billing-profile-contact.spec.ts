@@ -3,6 +3,7 @@ import { ArgumentMetadata, BadRequestException, ValidationPipe } from '@nestjs/c
 import { BillingService } from '../billing.service';
 import { UpdateBillingProfileDto } from '../billing.controller';
 import { Subscription } from '../subscription.entity';
+import { GTC_VERSION } from '../terms';
 
 /**
  * The billing page has one invoicing section, saved field by field.
@@ -175,6 +176,7 @@ async function testCheckoutUsesTheBorrowedDetails() {
     manager: manager as any,
     planKey: 'max',
     interval: 'monthly',
+    termsVersion: GTC_VERSION,
   });
   assert.equal(session.id, 'cs_1');
   const update = calls.find((call) => call.method === 'customers.update');

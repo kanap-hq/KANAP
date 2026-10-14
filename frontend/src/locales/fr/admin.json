@@ -730,6 +730,7 @@
     "errors": {
       "noActiveSubscription": "Aucun abonnement actif trouvé.",
       "planNotBankTransferEligible": "Ce plan n'est pas éligible au virement bancaire.",
+      "termsNotAccepted": "L'acceptation des conditions générales de vente n'a pas pu être confirmée. Rechargez la page et acceptez-les à nouveau.",
       "vatNumberInvalid": "Le numéro de TVA n'a pas été accepté. Vérifiez-le dans les informations de facturation."
     },
     "invoiceFields": {
@@ -755,6 +756,10 @@
     "profile": {
       "complete": "Compléter les informations de facturation",
       "incomplete": "Complétez les informations de facturation avant de vous abonner : {{fields}}."
+    },
+    "terms": {
+      "accept": "J'accepte les",
+      "link": "conditions générales de vente"
     },
     "title": "Choisir un plan",
     "trial": {

@@ -11,6 +11,7 @@ import { euVatTaxIdValue, missingInvoiceFields, normaliseVatNumber, toIsoCountry
 import { withTenant } from '../common/tenant-runner';
 import { Features } from '../config/features';
 import { AuditService } from '../audit/audit.service';
+import { GTC_URLS, GTC_VERSION, type TermsPaymentPath } from './terms';
 import {
   PLANS,
   HEALTHY_STATUSES,
@@ -123,6 +124,8 @@ export class BillingService {
         },
       },
       prices: plan.prices,
+      // The general terms of sale the subscriber accepts in the plan dialog.
+      terms: { version: GTC_VERSION, urls: GTC_URLS },
     }));
   }
 
@@ -298,7 +301,19 @@ export class BillingService {
     cancelUrl?: string | null;
     metadata?: Record<string, string>;
     allowPromotionCodes?: boolean;
+    /** The version of the general terms of sale the user accepted (GTC_VERSION). */
+    termsVersion?: string | null;
+    userId?: string | null;
   }) {
+    await this.acceptTerms({
+      tenantId: opts.tenantId,
+      termsVersion: opts.termsVersion,
+      paymentPath: 'card',
+      planKey: opts.planKey,
+      interval: opts.interval,
+      userId: opts.userId,
+      manager: opts.manager,
+    });
     // Only a current plan can be bought, always at its configured price.
     const planKey = opts.planKey;
     const interval = opts.interval;
@@ -439,7 +454,15 @@ export class BillingService {
     return this.getSubscriptionSummary({ manager: mg, forceStripeRefresh: true });
   }
 
-  async requestInvoice(tenantId: string, planKey: PlanKey, interval: IntervalKey, userId?: string | null, manager?: EntityManager) {
+  async requestInvoice(
+    tenantId: string,
+    planKey: PlanKey,
+    interval: IntervalKey,
+    userId?: string | null,
+    manager?: EntityManager,
+    termsVersion?: string | null,
+  ) {
+    await this.acceptTerms({ tenantId, termsVersion, paymentPath: 'transfer', planKey, interval, userId, manager });
     const client = this.getStripeClientOrThrow();
 
     if (!isBankTransferEligible(planKey, interval)) {
@@ -542,6 +565,45 @@ export class BillingService {
       ...summary,
       hosted_invoice_url: invoiceForAccess?.hosted_invoice_url ?? null,
     };
+  }
+
+  /**
+   * GTC art. 2: subscribing requires accepting the current general terms of sale. Refuses with
+   * TERMS_NOT_ACCEPTED, before any Stripe call, unless `termsVersion` is GTC_VERSION; then
+   * records the acceptance in the tenant's audit log with `manager` (the request's transaction,
+   * which carries the tenant; a refused subscription rolls the entry back with it).
+   */
+  private async acceptTerms(opts: {
+    tenantId: string;
+    termsVersion?: string | null;
+    paymentPath: TermsPaymentPath;
+    planKey: PlanKey;
+    interval: IntervalKey;
+    userId?: string | null;
+    manager?: EntityManager | null;
+  }): Promise<void> {
+    if (opts.termsVersion !== GTC_VERSION) {
+      throw new BadRequestException({ message: 'TERMS_NOT_ACCEPTED' });
+    }
+    await this.audit.log(
+      {
+        table: 'tenants',
+        recordId: opts.tenantId,
+        action: 'update',
+        before: null,
+        after: {
+          terms_acceptance: {
+            terms_version: GTC_VERSION,
+            payment_path: opts.paymentPath,
+            plan_key: opts.planKey,
+            interval: opts.interval,
+          },
+        },
+        userId: opts.userId ?? null,
+        sourceRef: 'terms_acceptance',
+      },
+      { manager: opts.manager ?? undefined },
+    );
   }
 
   /**

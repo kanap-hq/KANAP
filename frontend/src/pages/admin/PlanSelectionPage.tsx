@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Button, ButtonBase, CircularProgress, Typography } from '@mui/material';
+import { Box, Button, ButtonBase, Checkbox, CircularProgress, FormControlLabel, Typography } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import type { Theme } from '@mui/material/styles';
 import type { TFunction } from 'i18next';
@@ -34,6 +34,8 @@ type Plan = {
     annual: PlanPaymentOption;
   };
   prices: PlanPrice;
+  /** The general terms of sale to accept before subscribing (version and links per language). */
+  terms?: { version: string; urls: { fr: string; en: string } };
 };
 
 type BillingInterval = 'monthly' | 'annual';
@@ -74,6 +76,9 @@ function parseApiError(error: any, t: TFunction): string {
   }
   if (message === 'VAT_NUMBER_INVALID') {
     return t('planSelection.errors.vatNumberInvalid');
+  }
+  if (message === 'TERMS_NOT_ACCEPTED') {
+    return t('planSelection.errors.termsNotAccepted');
   }
   return getApiErrorMessage(error, t, t('planSelection.messages.requestFailed'));
 }
@@ -142,6 +147,15 @@ const inlineLinkSx = {
 
 const errorLineSx = { mt: '16px', fontSize: 13, lineHeight: 1.5, color: 'kanap.danger' } as const;
 
+const termsLineSx = {
+  mt: '20px',
+  mr: 0,
+  // Aligns the checkbox box (not its click area) with the content edge.
+  ml: '-6px',
+  '& .MuiCheckbox-root': { p: '4px', mr: '6px' },
+  '& .MuiFormControlLabel-label': { fontSize: 13, lineHeight: 1.5, color: 'kanap.text.primary' },
+} as const;
+
 type PlanSelectionDialogProps = {
   open: boolean;
   onClose: () => void;
@@ -170,6 +184,7 @@ export default function PlanSelectionDialog({
   const [actionError, setActionError] = React.useState<string | null>(null);
   const [actionInfo, setActionInfo] = React.useState<string | null>(null);
   const [actionLoading, setActionLoading] = React.useState<string | null>(null);
+  const [termsAccepted, setTermsAccepted] = React.useState(false);
   // The dialog stays mounted between openings: each opening starts without the outcome of
   // the previous attempt (an error from details fixed since, a finished request).
   const [wasOpen, setWasOpen] = React.useState(open);
@@ -179,6 +194,7 @@ export default function PlanSelectionDialog({
       setActionError(null);
       setActionInfo(null);
       setActionLoading(null);
+      setTermsAccepted(false);
     }
   }
 
@@ -202,6 +218,11 @@ export default function PlanSelectionDialog({
     enabled: open,
   });
 
+  // The catalogue sells one plan (Hosted KANAP); the dialog offers the first one listed.
+  const plan = plansQuery.data?.[0] ?? null;
+  // The French terms are binding; every other language reads the English translation.
+  const termsUrl = plan?.terms ? (locale === 'fr' ? plan.terms.urls.fr : plan.terms.urls.en) : null;
+
   const handleCardFlow = async (planKey: string) => {
     if (!isBillingAdmin) return;
     setActionError(null);
@@ -223,6 +244,7 @@ export default function PlanSelectionDialog({
         interval: billingCycle,
         success_url: window.location.origin + '/admin/billing',
         cancel_url: window.location.origin + '/admin/billing',
+        terms_version: plan?.terms?.version,
       });
       const url = res.data?.url;
       if (url) {
@@ -246,6 +268,7 @@ export default function PlanSelectionDialog({
       const res = await api.post<any>('/billing/request-invoice', {
         plan_key: planKey,
         subscription_type: billingCycle,
+        terms_version: plan?.terms?.version,
       });
       onSuccess?.();
 
@@ -266,8 +289,6 @@ export default function PlanSelectionDialog({
     }
   };
 
-  // The catalogue sells one plan (Hosted KANAP); the dialog offers the first one listed.
-  const plan = plansQuery.data?.[0] ?? null;
   const annual = billingCycle === 'annual';
   const price = plan ? (annual ? plan.prices.annual : plan.prices.monthly) : 0;
   const freeMonths = plan ? annualFreeMonths(plan.prices) : null;
@@ -307,13 +328,13 @@ export default function PlanSelectionDialog({
       onExited={onExited}
       onSave={() => (plan ? handleCardFlow(plan.plan_key) : undefined)}
       saveLabel={cardLabel}
-      saveDisabled={!plan || !isBillingAdmin || isAnyLoading || cardBlocked}
+      saveDisabled={!plan || !isBillingAdmin || isAnyLoading || cardBlocked || !termsAccepted}
       saveLoading={cardLoading}
       secondaryActions={plan && bankTransferEligible ? (
         <Button
           variant="action"
           onClick={() => handleBankTransferFlow(plan.plan_key)}
-          disabled={!isBillingAdmin || isAnyLoading || bankTransferBlocked}
+          disabled={!isBillingAdmin || isAnyLoading || bankTransferBlocked || !termsAccepted}
           startIcon={bankTransferLoading ? <CircularProgress color="inherit" size={14} /> : undefined}
         >
           {bankTransferLabel}
@@ -426,6 +447,29 @@ export default function PlanSelectionDialog({
         <Typography role="alert" sx={errorLineSx}>
           {actionError}
         </Typography>
+      )}
+
+      {plan && (
+        <FormControlLabel
+          sx={termsLineSx}
+          control={(
+            <Checkbox
+              size="small"
+              checked={termsAccepted}
+              onChange={(event) => setTermsAccepted(event.target.checked)}
+            />
+          )}
+          label={(
+            <>
+              {t('planSelection.terms.accept')}{' '}
+              {termsUrl ? (
+                <Box component="a" href={termsUrl} target="_blank" rel="noopener noreferrer" sx={inlineLinkSx}>
+                  {t('planSelection.terms.link')}
+                </Box>
+              ) : t('planSelection.terms.link')}
+            </>
+          )}
+        />
       )}
     </KanapDialog>
   );

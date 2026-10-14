@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -39,7 +39,8 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
+const localeState = vi.hoisted(() => ({ value: 'en' }));
+vi.mock('../../i18n/useLocale', () => ({ useLocale: () => localeState.value }));
 
 const TRIAL = { status: 'trialing', trial_days_remaining: 10, stripe_subscription_id: null, is_subscription_healthy: true };
 const authState = vi.hoisted(() => ({
@@ -60,8 +61,11 @@ const PLANS = [
       annual: { card: true, bank_transfer: true },
     },
     prices: { monthly: 24900, annual: 249000 },
+    terms: { version: '2026-10-12', urls: { fr: 'https://kanap.net/fr/sales', en: 'https://kanap.net/sales' } },
   },
 ];
+
+const TERMS = 'I accept the general terms of sale';
 
 const theme = createAppTheme('light');
 
@@ -86,11 +90,16 @@ async function switchToAnnual() {
   fireEvent.click(screen.getByRole('button', { name: 'Annual' }));
 }
 
+function acceptTerms() {
+  fireEvent.click(screen.getByRole('checkbox', { name: TERMS }));
+}
+
 describe('PlanSelectionDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (api.get as any).mockResolvedValue({ data: PLANS });
     authState.subscription = { ...TRIAL };
+    localeState.value = 'en';
   });
 
   it('lists the missing invoice fields and disables both pay buttons', async () => {
@@ -111,6 +120,7 @@ describe('PlanSelectionDialog', () => {
   it('enables both pay buttons when the invoice details are complete', async () => {
     renderDialog({ invoiceMissingFields: [] });
     await switchToAnnual();
+    acceptTerms();
 
     expect(screen.queryByText(/before subscribing/)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Pay by card' })).toBeEnabled();
@@ -123,6 +133,7 @@ describe('PlanSelectionDialog', () => {
     });
     renderDialog({ invoiceMissingFields: [] });
     await planLoaded();
+    acceptTerms();
     fireEvent.click(screen.getByRole('button', { name: 'Pay by card' }));
 
     expect(
@@ -143,6 +154,7 @@ describe('PlanSelectionDialog', () => {
     );
     const { rerender } = render(view(true));
     await planLoaded();
+    acceptTerms();
     fireEvent.click(screen.getByRole('button', { name: 'Pay by card' }));
     const refusal = 'The VAT number was not accepted. Check it in the invoicing information.';
     expect(await screen.findByText(refusal)).toBeInTheDocument();
@@ -150,6 +162,10 @@ describe('PlanSelectionDialog', () => {
     rerender(view(false));
     rerender(view(true));
     await planLoaded();
+    // The terms are accepted again on each opening.
+    expect(screen.getByRole('checkbox', { name: TERMS })).not.toBeChecked();
+    expect(screen.getByRole('button', { name: 'Pay by card' })).toBeDisabled();
+    acceptTerms();
     expect(screen.getByRole('button', { name: 'Pay by card' })).toBeEnabled();
     expect(screen.queryByText(refusal)).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -160,6 +176,7 @@ describe('PlanSelectionDialog', () => {
     (api.post as any).mockRejectedValue({ response: { data: { message: 'VAT_NUMBER_INVALID' } } });
     renderDialog({ invoiceMissingFields: [] });
     await switchToAnnual();
+    acceptTerms();
     fireEvent.click(screen.getByRole('button', { name: 'Pay by bank transfer' }));
 
     expect(
@@ -170,6 +187,7 @@ describe('PlanSelectionDialog', () => {
   it('offers bank transfer only for an interval that allows it', async () => {
     renderDialog({ invoiceMissingFields: [] });
     await planLoaded();
+    acceptTerms();
 
     expect(screen.getByRole('button', { name: 'Pay by card' })).toBeEnabled();
     expect(screen.getByText('€249.00')).toBeInTheDocument();
@@ -183,6 +201,68 @@ describe('PlanSelectionDialog', () => {
     expect(screen.getByText('per year')).toBeInTheDocument();
     expect(screen.getByText('€207.50 per month, billed annually')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Pay by bank transfer' })).toBeEnabled();
+  });
+
+  it('keeps both pay buttons disabled until the general terms of sale are accepted', async () => {
+    renderDialog({ invoiceMissingFields: [] });
+    await switchToAnnual();
+
+    expect(screen.getByRole('checkbox', { name: TERMS })).not.toBeChecked();
+    expect(screen.getByRole('button', { name: 'Pay by card' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Pay by bank transfer' })).toBeDisabled();
+
+    acceptTerms();
+    expect(screen.getByRole('button', { name: 'Pay by card' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Pay by bank transfer' })).toBeEnabled();
+  });
+
+  it('sends the accepted terms version with the card and the bank transfer requests', async () => {
+    (api.post as any).mockResolvedValue({ data: {} });
+    renderDialog({ invoiceMissingFields: [] });
+    await switchToAnnual();
+    acceptTerms();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pay by card' }));
+    expect(await screen.findByText('Checkout URL is unavailable.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Pay by bank transfer' }));
+    expect(await screen.findByText('Invoice created.')).toBeInTheDocument();
+
+    expect(api.post).toHaveBeenCalledWith('/billing/checkout', expect.objectContaining({
+      plan_key: 'max',
+      interval: 'annual',
+      terms_version: '2026-10-12',
+    }));
+    expect(api.post).toHaveBeenCalledWith('/billing/request-invoice', {
+      plan_key: 'max',
+      subscription_type: 'annual',
+      terms_version: '2026-10-12',
+    });
+  });
+
+  it('links to the terms in the reader\'s language, in a new tab', async () => {
+    renderDialog();
+    await planLoaded();
+    const english = screen.getByRole('link', { name: 'general terms of sale' });
+    expect(english).toHaveAttribute('href', 'https://kanap.net/sales');
+    expect(english).toHaveAttribute('target', '_blank');
+    cleanup();
+
+    localeState.value = 'fr';
+    renderDialog();
+    await planLoaded();
+    expect(screen.getByRole('link', { name: 'general terms of sale' })).toHaveAttribute('href', 'https://kanap.net/fr/sales');
+  });
+
+  it('explains a refusal for terms not accepted', async () => {
+    (api.post as any).mockRejectedValue({ response: { data: { message: 'TERMS_NOT_ACCEPTED' } } });
+    renderDialog({ invoiceMissingFields: [] });
+    await planLoaded();
+    acceptTerms();
+    fireEvent.click(screen.getByRole('button', { name: 'Pay by card' }));
+
+    expect(
+      await screen.findByText('The general terms of sale could not be confirmed. Reload the page and accept them again.'),
+    ).toBeInTheDocument();
   });
 
   it('shows the trial end and the days left under the title', async () => {
@@ -208,6 +288,7 @@ describe('PlanSelectionDialog', () => {
     };
     renderDialog({ invoiceMissingFields: ['email'] });
     await switchToAnnual();
+    acceptTerms();
 
     expect(screen.queryByText(/trial/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Change plan (card)' })).toBeEnabled();

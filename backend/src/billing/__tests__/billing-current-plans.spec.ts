@@ -4,6 +4,7 @@ import { BillingService } from '../billing.service';
 import { CreateCheckoutSessionDto } from '../billing.controller';
 import { StripeConfigService } from '../stripe/stripe.config';
 import { Subscription, SubscriptionType } from '../subscription.entity';
+import { GTC_VERSION } from '../terms';
 import { User } from '../../users/user.entity';
 
 /**
@@ -149,7 +150,7 @@ async function testCheckoutWithoutCurrentPlanIsRefusedBeforeStripe() {
   ]) {
     const { service, manager, calls } = createService();
     await expectBadRequest(
-      service.createCheckoutSession({ tenantId: 'tenant-1', manager: manager as any, ...(opts as any) }),
+      service.createCheckoutSession({ tenantId: 'tenant-1', manager: manager as any, termsVersion: GTC_VERSION, ...(opts as any) }),
     );
     assert.deepEqual(calls, [], `no Stripe call for ${JSON.stringify(opts)}`);
   }
@@ -164,6 +165,7 @@ async function testCheckoutUsesTheConfiguredPlanPrice() {
     interval: 'annual',
     priceId: 'price_legacy_annual',
     quantity: 7,
+    termsVersion: GTC_VERSION,
   } as any);
   const created = calls.filter((call) => call.method === 'checkout.sessions.create');
   assert.equal(created.length, 1);
