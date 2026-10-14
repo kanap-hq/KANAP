@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, Logger, OnModuleInit, Optional } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { StripeClientService, StripeConfigService } from './stripe';
+import { StripeClientService, StripeConfigService, ensureInvoiceA4 } from './stripe';
 import { Subscription, SubscriptionStatus, SubscriptionType, PaymentMode, CollectionMethod } from './subscription.entity';
 import { computePriceAmount, normaliseStripePrice } from './price.util';
 import { invoiceSubscriptionId, subscriptionPeriod, subscriptionQuantity } from './stripe/stripe-shapes.util';
@@ -99,6 +99,10 @@ export class StripeWebhookService implements OnModuleInit {
   }
 
   async processEvent(event: StripeEvent): Promise<void> {
+    if (event?.type === 'invoice.created' || event?.type === 'invoice.finalized') {
+      // Every invoice of the account, tenant or not (Enterprise Support has none), is A4.
+      await this.applyInvoiceA4(event?.data?.object);
+    }
     const identifiers = this.extractIdentifiers(event);
     await this.enrichIdentifiers(identifiers);
     if (!identifiers.customerId && !identifiers.subscriptionId) {
@@ -139,6 +143,15 @@ export class StripeWebhookService implements OnModuleInit {
     } catch (error) {
       this.logger.error(`Failed to apply Stripe event for tenant ${tenant.id}: ${(error as Error).message}`);
       throw error;
+    }
+  }
+
+  /** Never throws: the page size must not stop the event's own handling. */
+  private async applyInvoiceA4(invoice: any): Promise<void> {
+    try {
+      await ensureInvoiceA4(this.stripeClient.getClient(), invoice, this.logger);
+    } catch (error) {
+      this.logger.warn(`Unable to set the A4 PDF format on invoice ${invoice?.id ?? 'unknown'}: ${(error as Error)?.message}`);
     }
   }
 
