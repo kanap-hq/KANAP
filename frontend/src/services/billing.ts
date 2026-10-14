@@ -73,6 +73,8 @@ export type BillingSubscription = {
   trial_days_remaining?: number | null;
   payment_due_at?: string | null;
   freeze_effective_at?: string | null;
+  /** A planned switch of interval (annual to monthly at the end of the year), read from Stripe. */
+  scheduled_change?: { interval: 'monthly' | 'annual'; effective_at: string } | null;
 };
 
 export type BillingProfileResponse = {

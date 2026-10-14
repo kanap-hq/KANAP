@@ -72,13 +72,29 @@ type PlanChangeInvoice = {
 
 /**
  * The outcome of `POST /billing/change-plan`: `paid` (the change applies, its invoice is paid),
- * `requires_payment` (nothing changes until the invoice is paid on its hosted page) or
- * `scheduled` (annual to monthly, at `effective_at`).
+ * `requires_payment` (nothing changes until the invoice is paid on its hosted page),
+ * `scheduled` (annual to monthly, at `effective_at`), `scheduled_change_cancelled` (the current
+ * plan was selected while a switch was planned: the switch is cancelled) or `requires_card`
+ * (a bank transfer subscription moving to card has no card: nothing changes, `setup_url` is the
+ * Stripe page where the customer saves one).
  */
 export type PlanChange = {
-  status: 'paid' | 'requires_payment' | 'scheduled';
+  status: 'paid' | 'requires_payment' | 'scheduled' | 'scheduled_change_cancelled' | 'requires_card';
   invoice?: PlanChangeInvoice;
   effective_at?: string;
+  setup_url?: string;
+};
+
+/** A change of interval a Stripe subscription schedule applies at `effective_at` (ISO date). */
+export type ScheduledChange = {
+  interval: IntervalKey;
+  effective_at: string;
+};
+
+/** Where the card setup page sends the customer back (the billing page), as for a checkout. */
+export type CardSetupReturnUrls = {
+  successUrl?: string | null;
+  cancelUrl?: string | null;
 };
 
 type BillingContactInput = {
@@ -157,11 +173,16 @@ export class BillingService {
     const shouldRefresh = opts?.forceStripeRefresh
       ? !!sub.stripe_subscription_id
       : await this.shouldRefreshFromStripe(sub);
+    // Read from Stripe on each refresh (the billing page forces one), never stored: null without one.
+    let scheduledChange: ScheduledChange | null = null;
     if (shouldRefresh) {
-      sub = await this.refreshSubscriptionFromStripe(sub, mg).catch((error) => {
+      try {
+        const refreshed = await this.syncSubscriptionFromStripe(sub, mg);
+        sub = refreshed.sub;
+        scheduledChange = refreshed.scheduledChange;
+      } catch (error) {
         this.logger.warn(`Stripe refresh failed for subscription ${sub.id}: ${(error as Error).message}`);
-        return sub;
-      });
+      }
     }
     const seats_used = await this.computeSeatsUsed(mg);
     const estimated = await this.estimateRecurringAmount(sub);
@@ -241,6 +262,7 @@ export class BillingService {
       trial_days_remaining: trialDaysRemaining,
       payment_due_at: paymentDueAt,
       freeze_effective_at: freezeEffectiveAt,
+      scheduled_change: scheduledChange,
     };
   }
 
@@ -426,6 +448,7 @@ export class BillingService {
     userId?: string | null,
     manager?: EntityManager,
     termsVersion?: string | null,
+    returnUrls?: CardSetupReturnUrls,
   ) {
     // A plan change is a new commitment under the general terms of sale; it moves the
     // subscription to card payment (charge_automatically).
@@ -452,12 +475,35 @@ export class BillingService {
     }
     const currentPrice: any = existingItem.price;
     if (this.stripeObjectId(currentPrice) === targetPriceId) {
-      throw new BadRequestException('PLAN_UNCHANGED');
+      // The current plan selected while a switch is planned keeps it ("Keep annual").
+      if (!(await this.releaseScheduledChange(tenantId, stripeSub, sub, userId ?? null, mg))) {
+        throw new BadRequestException('PLAN_UNCHANGED');
+      }
+      const summary = await this.getSubscriptionSummary({ manager: mg, forceStripeRefresh: true });
+      const change: PlanChange = { status: 'scheduled_change_cancelled' };
+      return { ...summary, change };
+    }
+
+    const tenant = await this.requireTenant(tenantId);
+    const customerId = this.stripeObjectId(stripeSub.customer) ?? tenant.stripe_customer_id ?? null;
+
+    // A bank transfer subscription moves to card: without a card its first card invoice would
+    // fail. Nothing changes until the customer has saved one.
+    if (stripeSub.collection_method === 'send_invoice' && !(await this.ensureUsableCard(customerId, stripeSub.default_payment_method))) {
+      const setupUrl = await this.createCardSetupSession({
+        tenant,
+        customerId,
+        currency: stripeSub.currency ?? null,
+        interval,
+        ...returnUrls,
+      });
+      const summary = await this.getSubscriptionSummary({ manager: mg });
+      const change: PlanChange = { status: 'requires_card', setup_url: setupUrl };
+      return { ...summary, change };
     }
 
     // The invoice of the change carries the current invoicing details, mentions and language.
-    const tenant = await this.requireTenant(tenantId);
-    await this.pushInvoiceProfile(tenant, this.stripeObjectId(stripeSub.customer) ?? tenant.stripe_customer_id ?? null);
+    await this.pushInvoiceProfile(tenant, customerId);
 
     // GTC art. 6.3: annual to monthly takes effect at the end of the annual period, never refunded.
     if (currentPrice?.recurring?.interval === 'year' && interval === 'monthly') {
@@ -573,6 +619,164 @@ export class BillingService {
     const scheduleId = this.stripeObjectId(stripeSub?.schedule);
     if (!scheduleId) return;
     await this.getStripeClientOrThrow().subscriptionSchedules.release(scheduleId);
+  }
+
+  /**
+   * `POST /billing/scheduled-change/cancel` ("Keep annual"): cancels a planned switch and returns
+   * the subscription summary. Nothing planned: nothing changes.
+   */
+  async cancelScheduledChange(opts: { tenantId: string; userId?: string | null; manager?: EntityManager }) {
+    const client = this.getStripeClientOrThrow();
+    const mg = opts.manager ?? this.subs.manager;
+    const sub = await this.ensureSubscription(mg);
+    if (!sub.stripe_subscription_id) {
+      throw new BadRequestException('NO_ACTIVE_SUBSCRIPTION');
+    }
+    const stripeSub = await client.subscriptions.retrieve(sub.stripe_subscription_id);
+    await this.releaseScheduledChange(opts.tenantId, stripeSub, sub, opts.userId ?? null, mg);
+    return this.getSubscriptionSummary({ manager: mg, forceStripeRefresh: true });
+  }
+
+  /**
+   * Cancels a planned switch: releasing the subscription schedule leaves the subscription on its
+   * current price and period. A bank transfer subscription gets back the transfer payment
+   * settings the switch had replaced with card. Audited. False when no switch is planned.
+   */
+  private async releaseScheduledChange(
+    tenantId: string,
+    stripeSub: any,
+    sub: Subscription,
+    userId: string | null,
+    manager: EntityManager,
+  ): Promise<boolean> {
+    const scheduleId = this.stripeObjectId(stripeSub?.schedule);
+    const scheduledChange = scheduleId ? await this.resolveScheduledChange(stripeSub) : null;
+    if (!scheduleId || !scheduledChange) return false;
+    const client = this.getStripeClientOrThrow();
+    await client.subscriptionSchedules.release(scheduleId);
+    if (stripeSub.collection_method === 'send_invoice') {
+      const tenant = await this.requireTenant(tenantId);
+      const customerId = this.stripeObjectId(stripeSub.customer) ?? tenant.stripe_customer_id ?? null;
+      const types = customerId ? await this.resolveInvoicePaymentMethodTypes(customerId, stripeSub.default_payment_method) : [];
+      const country = this.resolveEuBankTransferCountry(this.getInvoiceContact(tenant).address.country);
+      await client.subscriptions.update(stripeSub.id, { payment_settings: this.buildSendInvoicePaymentSettings(types, country) });
+    }
+    await this.audit.log(
+      {
+        table: 'subscriptions',
+        recordId: sub.id,
+        action: 'update',
+        before: { stripe_subscription_id: sub.stripe_subscription_id, scheduled_change: scheduledChange },
+        after: { stripe_subscription_id: sub.stripe_subscription_id, scheduled_change: null },
+        userId,
+        sourceRef: scheduleId,
+      },
+      { manager },
+    );
+    return true;
+  }
+
+  /**
+   * The change the subscription's schedule will apply: the interval of the phase after the
+   * current one and its start, when that phase bills another price. The schedule is retrieved
+   * only when the subscription has one.
+   */
+  private async resolveScheduledChange(stripeSub: any): Promise<ScheduledChange | null> {
+    const scheduleId = this.stripeObjectId(stripeSub?.schedule);
+    if (!scheduleId) return null;
+    const schedule: any = Array.isArray(stripeSub.schedule?.phases)
+      ? stripeSub.schedule
+      : await this.getStripeClientOrThrow().subscriptionSchedules.retrieve(scheduleId);
+    if (schedule?.status !== 'active' && schedule?.status !== 'not_started') return null;
+    const currentEnd: number = schedule.current_phase?.end_date ?? Math.floor(Date.now() / 1000);
+    const next = (schedule.phases ?? []).find((phase: any) => typeof phase?.start_date === 'number' && phase.start_date >= currentEnd);
+    const nextPrice = next?.items?.[0]?.price;
+    const nextPriceId = this.stripeObjectId(nextPrice);
+    if (!nextPriceId || nextPriceId === this.stripeObjectId(stripeSub?.items?.data?.[0]?.price)) return null;
+    const interval = await this.priceInterval(nextPrice);
+    if (!interval) return null;
+    return { interval, effective_at: new Date(next.start_date * 1000).toISOString() };
+  }
+
+  /** The interval of a price: a configured plan price, else its Stripe recurring interval. */
+  private async priceInterval(price: any): Promise<IntervalKey | null> {
+    const priceId = this.stripeObjectId(price);
+    if (!priceId) return null;
+    for (const planKey of Object.keys(PLANS) as PlanKey[]) {
+      for (const interval of ['monthly', 'annual'] as IntervalKey[]) {
+        if (getPriceId(this.stripeConfig, interval, planKey) === priceId) return interval;
+      }
+    }
+    const recurring = typeof price === 'object' && price?.recurring
+      ? price.recurring
+      : (await this.getStripeClientOrThrow().prices.retrieve(priceId))?.recurring;
+    if (recurring?.interval === 'year') return 'annual';
+    if (recurring?.interval === 'month') return 'monthly';
+    return null;
+  }
+
+  /**
+   * Whether a card invoice of this customer can be charged: the subscription's or the customer's
+   * default payment method is a card, or the customer has a saved card, which then becomes the
+   * customer's default (a card saved on the setup page before its webhook arrived).
+   */
+  private async ensureUsableCard(customerId: string | null, subscriptionDefault: any): Promise<boolean> {
+    if (!customerId) return false;
+    if ((await this.resolveStripePaymentMethodType(subscriptionDefault)) === 'card') return true;
+    const client = this.getStripeClientOrThrow();
+    const customer: any = await client.customers.retrieve(customerId, {
+      expand: ['invoice_settings.default_payment_method'],
+    });
+    if ((await this.resolveStripePaymentMethodType(customer?.invoice_settings?.default_payment_method)) === 'card') return true;
+    const cards = await client.customers.listPaymentMethods(customerId, { type: 'card', limit: 1 });
+    const card = cards?.data?.[0];
+    if (!card?.id) return false;
+    await client.customers.update(customerId, { invoice_settings: { default_payment_method: card.id } });
+    return true;
+  }
+
+  /**
+   * A Stripe Checkout page in setup mode where the customer saves a card. Its return URL (the
+   * checkout one) carries `card_saved=<interval>`: the billing page reopens the plan dialog to
+   * confirm the switch. `checkout.session.completed` makes the card the customer's default.
+   */
+  private async createCardSetupSession(opts: {
+    tenant: Tenant;
+    customerId: string | null;
+    currency: string | null;
+    interval: IntervalKey;
+  } & CardSetupReturnUrls): Promise<string> {
+    if (!opts.customerId) {
+      throw new BadRequestException('NO_ACTIVE_SUBSCRIPTION');
+    }
+    const successUrl = this.withQueryParam(opts.successUrl ?? this.stripeConfig.getCheckoutSuccessUrl(), 'card_saved', opts.interval);
+    const cancelUrl = opts.cancelUrl ?? this.stripeConfig.getCheckoutCancelUrl();
+    const session = await this.getStripeClientOrThrow().checkout.sessions.create({
+      mode: 'setup',
+      customer: opts.customerId,
+      // Setup mode needs a currency; the card is the only payment method a card invoice takes.
+      currency: String(opts.currency || 'eur').toLowerCase(),
+      payment_method_types: ['card'],
+      success_url: successUrl || undefined,
+      cancel_url: cancelUrl || undefined,
+      metadata: { tenant_id: opts.tenant.id, purpose: 'plan_change_card' },
+      setup_intent_data: { metadata: { tenant_id: opts.tenant.id } },
+    });
+    if (!session?.url) {
+      throw new BadRequestException('Stripe did not return a Checkout URL');
+    }
+    return session.url;
+  }
+
+  private withQueryParam(url: string | null, key: string, value: string): string | null {
+    if (!url) return null;
+    try {
+      const parsed = new URL(url);
+      parsed.searchParams.set(key, value);
+      return parsed.toString();
+    } catch {
+      return url;
+    }
   }
 
   /**
@@ -737,9 +941,19 @@ export class BillingService {
 
     const invoiceForAccess = await this.ensureInvoiceAccessible(latestInvoice ?? fallbackInvoice ?? null);
     const summary = await this.getSubscriptionSummary({ manager: mg, forceStripeRefresh: true });
+    // The invoice to pay by transfer, for the confirmation in the plan dialog.
+    const invoice = this.planChangeInvoice(invoiceForAccess);
     return {
       ...summary,
       hosted_invoice_url: invoiceForAccess?.hosted_invoice_url ?? null,
+      invoice: invoice
+        ? {
+            ...invoice,
+            due_date: typeof invoiceForAccess?.due_date === 'number'
+              ? new Date(invoiceForAccess.due_date * 1000).toISOString()
+              : null,
+          }
+        : null,
     };
   }
 
@@ -1129,13 +1343,21 @@ export class BillingService {
   }
 
   private async refreshSubscriptionFromStripe(sub: Subscription, manager: EntityManager): Promise<Subscription> {
+    return (await this.syncSubscriptionFromStripe(sub, manager)).sub;
+  }
+
+  /** The local record follows the Stripe subscription; also returns the switch its schedule plans. */
+  private async syncSubscriptionFromStripe(
+    sub: Subscription,
+    manager: EntityManager,
+  ): Promise<{ sub: Subscription; scheduledChange: ScheduledChange | null }> {
     const client = this.stripeClient.getClient();
-    if (!client || !sub.stripe_subscription_id) return sub;
+    if (!client || !sub.stripe_subscription_id) return { sub, scheduledChange: null };
     const stripeSub = await client.subscriptions.retrieve(sub.stripe_subscription_id, {
       expand: ['default_payment_method', 'items.data.price.tiers'],
     });
 
-    if (!stripeSub) return sub;
+    if (!stripeSub) return { sub, scheduledChange: null };
 
     const quantity = this.resolveStripeQuantity(stripeSub);
 
@@ -1209,7 +1431,11 @@ export class BillingService {
 
     sub.last_synced_at = new Date();
     await manager.getRepository(Subscription).save(sub);
-    return sub;
+    const scheduledChange = await this.resolveScheduledChange(stripeSub).catch((error) => {
+      this.logger.warn(`Unable to read the schedule of subscription ${sub.stripe_subscription_id}: ${(error as Error).message}`);
+      return null;
+    });
+    return { sub, scheduledChange };
   }
 
   private async describeStripePaymentMethod(source: any): Promise<{ id: string; brand: string | null; last4: string | null } | null> {

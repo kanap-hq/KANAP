@@ -162,11 +162,12 @@ function cloverSubscription(overrides: Record<string, unknown> = {}, item: Recor
 function createSyncService(
   stored: Record<string, unknown>,
   stripeSubscription: unknown = null,
-  opts: { tenantKnown?: boolean; invoiceUpdateError?: Error } = {},
+  opts: { tenantKnown?: boolean; invoiceUpdateError?: Error; setupIntent?: Record<string, unknown> } = {},
 ) {
   const row: Record<string, any> = { id: 'local-sub', ...stored };
   const retrieved: string[] = [];
   const invoiceUpdates: unknown[][] = [];
+  const customerUpdates: unknown[][] = [];
   const manager = {
     getRepository: () => ({
       findOne: async () => row,
@@ -204,6 +205,15 @@ function createSyncService(
         return { id: args[0] };
       },
     },
+    setupIntents: {
+      retrieve: async (id: string) => ({ id, ...(opts.setupIntent ?? {}) }),
+    },
+    customers: {
+      update: async (...args: unknown[]) => {
+        customerUpdates.push(args);
+        return { id: args[0] };
+      },
+    },
   };
   const svc = new StripeWebhookService(
     {} as any,
@@ -212,7 +222,7 @@ function createSyncService(
     { log: async () => undefined } as any,
   );
   (svc as any).logger = { warn: () => undefined, log: () => undefined, debug: () => undefined, error: () => undefined };
-  return { svc, row, retrieved, invoiceUpdates };
+  return { svc, row, retrieved, invoiceUpdates, customerUpdates };
 }
 
 async function testCloverInvoiceResolvesItsSubscription() {
@@ -312,6 +322,29 @@ async function testStripeErrorOnA4DoesNotStopTheEvent() {
   assert.equal(row.latest_invoice_number, 'KANAP-0003');
 }
 
+/** A card saved on the setup page (bank transfer to card) becomes the customer's default payment method. */
+function setupCompleted(setupIntent: unknown) {
+  return {
+    id: 'evt_setup',
+    type: 'checkout.session.completed',
+    data: { object: { object: 'checkout.session', id: 'cs_setup', mode: 'setup', customer: 'cus_1', setup_intent: setupIntent, subscription: null } },
+  };
+}
+
+async function testSavedCardBecomesTheDefault() {
+  const { svc, customerUpdates } = createSyncService({}, null, { setupIntent: { status: 'succeeded', payment_method: 'pm_saved' } });
+  await svc.processEvent(setupCompleted('seti_1'));
+  assert.deepEqual(customerUpdates, [['cus_1', { invoice_settings: { default_payment_method: 'pm_saved' } }]]);
+
+  // Not succeeded, or a customer KANAP does not know: the default is left alone.
+  const pending = createSyncService({}, null, { setupIntent: { status: 'requires_action', payment_method: 'pm_saved' } });
+  await pending.svc.processEvent(setupCompleted('seti_2'));
+  assert.deepEqual(pending.customerUpdates, []);
+  const unknown = createSyncService({}, null, { tenantKnown: false, setupIntent: { status: 'succeeded', payment_method: 'pm_saved' } });
+  await unknown.svc.processEvent(setupCompleted('seti_3'));
+  assert.deepEqual(unknown.customerUpdates, []);
+}
+
 async function run() {
   await testResolvesByCustomerFirst();
   await testFallsBackOnMetadataWhenTheStoredCustomerHasDrifted();
@@ -324,6 +357,7 @@ async function run() {
   await testInvoiceWithoutTenantIsSetToA4();
   await testInvoiceAlreadyA4AndOtherEventsAreLeftAlone();
   await testStripeErrorOnA4DoesNotStopTheEvent();
+  await testSavedCardBecomesTheDefault();
 }
 
 void run();

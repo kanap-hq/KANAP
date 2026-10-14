@@ -434,6 +434,7 @@
       "title": "Rechnungshistorie"
     },
     "messages": {
+      "keepFailed": "Der geplante Wechsel konnte nicht storniert werden.",
       "loadFailed": "Abrechnungsdetails konnten nicht geladen werden.",
       "portalFailed": "Das Abrechnungsportal konnte nicht geöffnet werden.",
       "portalUnavailable": "Das Abrechnungsportal ist nicht verfügbar.",
@@ -465,6 +466,12 @@
       "unpaid": "Unbezahlt"
     },
     "subscription": {
+      "scheduledChange": {
+        "annual": "Wechselt am {{date}} zu jährlich.",
+        "keepAnnual": "Jährlich beibehalten",
+        "keepMonthly": "Monatlich beibehalten",
+        "monthly": "Wechselt am {{date}} zu monatlich."
+      },
       "title": "Abonnement",
       "values": {
         "amountPerMonth": "{{amount}} / Monat",
@@ -744,15 +751,24 @@
       "vatNumber": "USt-IdNr."
     },
     "messages": {
+      "cardSaved": "Karte gespeichert. Bestätigen Sie den Wechsel.",
+      "cardSetupUnavailable": "Das Kartenformular ist nicht verfügbar. Versuchen Sie es später erneut.",
       "checkoutUrlUnavailable": "Checkout-URL ist nicht verfügbar.",
       "invoiceCreated": "Rechnung erstellt.",
       "invoicePaid": "Rechnung {{number}}, {{amount}}, bezahlt.",
+      "keptAnnual": "Ihr Plan bleibt jährlich.",
+      "keptMonthly": "Ihr Plan bleibt monatlich.",
       "loadFailed": "Pläne konnten nicht geladen werden.",
       "nowAnnual": "Ihr Plan ist jetzt jährlich.",
       "nowMonthly": "Ihr Plan ist jetzt monatlich.",
+      "openInvoice": "Rechnung öffnen",
       "paymentRequired": "Der Plan ändert sich, sobald die Rechnung bezahlt ist.",
       "requestFailed": "Anfrage fehlgeschlagen.",
-      "switchToMonthly": "Ihr Plan wechselt am {{date}} zu monatlich."
+      "switchToAnnual": "Ihr Plan wechselt am {{date}} zu jährlich.",
+      "switchToMonthly": "Ihr Plan wechselt am {{date}} zu monatlich.",
+      "transferInvoice": "Rechnung {{number}} erstellt: {{amount}}, per Überweisung zu zahlen bis {{date}}. Die Bankverbindung steht auf der Rechnung.",
+      "transferInvoiceNoDate": "Rechnung {{number}} erstellt: {{amount}}, per Überweisung zu zahlen. Die Bankverbindung steht auf der Rechnung.",
+      "transferInvoiceShort": "Rechnung erstellt, per Überweisung zu zahlen. Die Bankverbindung steht auf der Rechnung."
     },
     "monthlyEquivalent": "{{amount}} pro Monat, jährlich abgerechnet",
     "period": {

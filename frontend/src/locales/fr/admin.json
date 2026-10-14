@@ -434,6 +434,7 @@
       "title": "Historique des factures"
     },
     "messages": {
+      "keepFailed": "Impossible d'annuler le changement prévu.",
       "loadFailed": "Impossible de charger les détails de facturation.",
       "portalFailed": "Impossible d'ouvrir le portail de facturation.",
       "portalUnavailable": "Le portail de facturation n'est pas disponible.",
@@ -465,6 +466,12 @@
       "unpaid": "Impayé"
     },
     "subscription": {
+      "scheduledChange": {
+        "annual": "Passe en annuel le {{date}}.",
+        "keepAnnual": "Rester en annuel",
+        "keepMonthly": "Rester en mensuel",
+        "monthly": "Passe en mensuel le {{date}}."
+      },
       "title": "Abonnement",
       "values": {
         "amountPerMonth": "{{amount}} / mois",
@@ -744,15 +751,24 @@
       "vatNumber": "numéro de TVA"
     },
     "messages": {
+      "cardSaved": "Carte enregistrée. Confirmez le changement.",
+      "cardSetupUnavailable": "Le formulaire de carte n'est pas disponible. Réessayez plus tard.",
       "checkoutUrlUnavailable": "L'URL de paiement n'est pas disponible.",
       "invoiceCreated": "Facture créée.",
       "invoicePaid": "Facture {{number}}, {{amount}}, payée.",
+      "keptAnnual": "Votre plan reste annuel.",
+      "keptMonthly": "Votre plan reste mensuel.",
       "loadFailed": "Impossible de charger les plans.",
       "nowAnnual": "Votre plan est désormais annuel.",
       "nowMonthly": "Votre plan est désormais mensuel.",
+      "openInvoice": "Ouvrir la facture",
       "paymentRequired": "Le plan change une fois sa facture payée.",
       "requestFailed": "La requête a échoué.",
-      "switchToMonthly": "Votre plan passe en mensuel le {{date}}."
+      "switchToAnnual": "Votre plan passe en annuel le {{date}}.",
+      "switchToMonthly": "Votre plan passe en mensuel le {{date}}.",
+      "transferInvoice": "Facture {{number}} créée : {{amount}}, à régler par virement avant le {{date}}. Les coordonnées bancaires figurent sur la facture.",
+      "transferInvoiceNoDate": "Facture {{number}} créée : {{amount}}, à régler par virement. Les coordonnées bancaires figurent sur la facture.",
+      "transferInvoiceShort": "Facture créée, à régler par virement. Les coordonnées bancaires figurent sur la facture."
     },
     "monthlyEquivalent": "{{amount}} par mois, facturé annuellement",
     "period": {

@@ -308,6 +308,8 @@ describe('PlanSelectionDialog', () => {
       plan_key: 'max',
       subscription_type: 'annual',
       terms_version: '2026-10-12',
+      success_url: `${window.location.origin}/admin/billing`,
+      cancel_url: `${window.location.origin}/admin/billing`,
     }));
   });
 
@@ -396,6 +398,50 @@ describe('PlanSelectionDialog', () => {
       expect(assigned).toBe('');
     });
 
+    it('confirms a bank transfer invoice in the dialog and opens it in a new tab', async () => {
+      (api.post as any).mockResolvedValue({
+        data: {
+          hosted_invoice_url: 'https://invoice.stripe.test/in_transfer',
+          invoice: {
+            number: 'KAN-0027',
+            amount: 224100,
+            currency: 'EUR',
+            hosted_invoice_url: 'https://invoice.stripe.test/in_transfer',
+            due_date: '2026-11-13T12:00:00.000Z',
+          },
+        },
+      });
+      const onSuccess = vi.fn();
+      const onClose = vi.fn();
+      renderDialog({ invoiceMissingFields: [], subscription: MONTHLY_PLAN, onSuccess, onClose });
+      await switchToAnnual();
+      acceptTerms();
+      fireEvent.click(screen.getByRole('button', { name: 'Change plan (bank transfer)' }));
+
+      expect(await screen.findByText(
+        'Invoice KAN-0027 created: €2,241.00, to pay by bank transfer before 13 Nov 2026. The bank details are on the invoice.',
+      )).toBeInTheDocument();
+      const link = screen.getByRole('link', { name: 'Open invoice' });
+      expect(link).toHaveAttribute('href', 'https://invoice.stripe.test/in_transfer');
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+      expect(onSuccess).toHaveBeenCalledTimes(1);
+      expect(onClose).not.toHaveBeenCalled();
+      expect(assigned).toBe('');
+    });
+
+    it('confirms a bank transfer invoice without its number in a shorter line', async () => {
+      (api.post as any).mockResolvedValue({ data: { hosted_invoice_url: 'https://invoice.stripe.test/in_transfer' } });
+      renderDialog({ invoiceMissingFields: [], subscription: MONTHLY_PLAN });
+      await switchToAnnual();
+      acceptTerms();
+      fireEvent.click(screen.getByRole('button', { name: 'Change plan (bank transfer)' }));
+
+      expect(await screen.findByText('Invoice created, to pay by bank transfer. The bank details are on the invoice.')).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Open invoice' })).toHaveAttribute('href', 'https://invoice.stripe.test/in_transfer');
+      expect(assigned).toBe('');
+    });
+
     it('sends the customer to the invoice when the card payment needs them', async () => {
       (api.post as any).mockResolvedValue({
         data: {
@@ -430,8 +476,62 @@ describe('PlanSelectionDialog', () => {
         plan_key: 'max',
         subscription_type: 'monthly',
         terms_version: '2026-10-12',
+        success_url: `${window.location.origin}/admin/billing`,
+        cancel_url: `${window.location.origin}/admin/billing`,
       });
       expect(assigned).toBe('');
+    });
+
+    const ANNUAL_TRANSFER = { ...MONTHLY_PLAN, subscription_type: 'annual' as const };
+    const PLANNED_SWITCH = { interval: 'monthly' as const, effective_at: '2027-10-14T10:00:00.000Z' };
+
+    it('sends the customer to the card setup page when the switch needs a card', async () => {
+      (api.post as any).mockResolvedValue({
+        data: { change: { status: 'requires_card', setup_url: 'https://checkout.stripe.test/cs_setup' } },
+      });
+      const onSuccess = vi.fn();
+      renderDialog({ invoiceMissingFields: [], subscription: ANNUAL_TRANSFER, onSuccess });
+      await planLoaded();
+      acceptTerms();
+      fireEvent.click(screen.getByRole('button', { name: 'Change plan (card)' }));
+
+      await vi.waitFor(() => expect(assigned).toBe('https://checkout.stripe.test/cs_setup'));
+      expect(screen.queryByText(/switches to monthly/)).not.toBeInTheDocument();
+    });
+
+    it('explains a planned switch and keeps the current plan without new terms', async () => {
+      (api.post as any).mockResolvedValue({ data: { ...ANNUAL_TRANSFER, scheduled_change: null } });
+      const onSuccess = vi.fn();
+      renderDialog({ invoiceMissingFields: [], subscription: { ...ANNUAL_TRANSFER, scheduled_change: PLANNED_SWITCH }, onSuccess });
+      await planLoaded();
+
+      expect(screen.getByText('Your plan switches to monthly on 14 Oct 2027.')).toBeInTheDocument();
+      // Monthly is already planned: nothing to change.
+      acceptTerms();
+      expect(screen.getByRole('button', { name: 'Change plan (card)' })).toBeDisabled();
+
+      // The current annual plan keeps it: no terms to accept, no plan change.
+      fireEvent.click(screen.getByRole('button', { name: 'Annual' }));
+      expect(screen.queryByRole('checkbox', { name: TERMS })).not.toBeInTheDocument();
+      expect(screen.queryByText('This is your current plan.')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Keep annual' }));
+
+      expect(await screen.findByText('Your plan stays annual.')).toBeInTheDocument();
+      expect(api.post).toHaveBeenCalledTimes(1);
+      expect(api.post).toHaveBeenCalledWith('/billing/scheduled-change/cancel');
+      expect(onSuccess).toHaveBeenCalledTimes(1);
+    });
+
+    it('opens on the interval to confirm, with the card saved notice', async () => {
+      renderDialog({
+        invoiceMissingFields: [],
+        subscription: MONTHLY_PLAN,
+        initialInterval: 'annual',
+        notice: 'Card saved. Confirm the switch.',
+      });
+      await planLoaded();
+      expect(screen.getByText('Card saved. Confirm the switch.')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Annual' })).toHaveAttribute('aria-pressed', 'true');
     });
   });
 });

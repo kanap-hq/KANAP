@@ -139,11 +139,33 @@ export class StripeWebhookService implements OnModuleInit {
     }
 
     try {
+      if (event?.type === 'checkout.session.completed' && event?.data?.object?.mode === 'setup') {
+        await this.applySavedCard(event.data.object);
+      }
       await this.applyEventToTenant(tenant.id, event, identifiers);
     } catch (error) {
       this.logger.error(`Failed to apply Stripe event for tenant ${tenant.id}: ${(error as Error).message}`);
       throw error;
     }
+  }
+
+  /**
+   * A card saved on the card setup page (a plan change from bank transfer to card) becomes the
+   * customer's default payment method: the subscription's card invoices charge it.
+   */
+  private async applySavedCard(session: any): Promise<void> {
+    const client = this.stripeClient.getClient();
+    const customerId = typeof session?.customer === 'string' ? session.customer : session?.customer?.id;
+    const setupIntentRef = session?.setup_intent;
+    if (!client || !customerId || !setupIntentRef) return;
+    const setupIntent: any = typeof setupIntentRef === 'string'
+      ? await client.setupIntents.retrieve(setupIntentRef)
+      : setupIntentRef;
+    const paymentMethodId = typeof setupIntent?.payment_method === 'string'
+      ? setupIntent.payment_method
+      : setupIntent?.payment_method?.id;
+    if (setupIntent?.status !== 'succeeded' || !paymentMethodId) return;
+    await client.customers.update(customerId, { invoice_settings: { default_payment_method: paymentMethodId } });
   }
 
   /** Never throws: the page size must not stop the event's own handling. */

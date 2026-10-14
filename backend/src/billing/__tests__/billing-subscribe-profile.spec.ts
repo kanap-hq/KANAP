@@ -78,6 +78,10 @@ function createService(opts: {
   /** What Stripe does on `subscriptions.update`: may change `state`, returns the answer. */
   onSubscriptionUpdate?: (params: Record<string, any>, state: Record<string, any>) => unknown;
   schedule?: Record<string, any>;
+  /** The customer's saved cards (`customers.listPaymentMethods`). */
+  cards?: Array<Record<string, unknown>>;
+  /** What `invoices.retrieve` returns (nothing by default). */
+  retrievedInvoice?: Record<string, unknown>;
 }) {
   const calls: Call[] = [];
   const record = (method: string, impl: (...args: any[]) => unknown) => async (...args: unknown[]) => {
@@ -99,6 +103,7 @@ function createService(opts: {
         return { id: 'txi_new' };
       }),
       deleteTaxId: record('customers.deleteTaxId', () => ({ deleted: true })),
+      listPaymentMethods: record('customers.listPaymentMethods', () => ({ data: opts.cards ?? [] })),
     },
     checkout: {
       sessions: { create: record('checkout.sessions.create', () => ({ id: 'cs_1', url: 'https://checkout.stripe.test/cs_1' })) },
@@ -116,11 +121,15 @@ function createService(opts: {
       create: record('subscriptionSchedules.create', () => schedule),
       retrieve: record('subscriptionSchedules.retrieve', () => schedule),
       update: record('subscriptionSchedules.update', (id: string) => ({ id })),
-      release: record('subscriptionSchedules.release', (id: string) => ({ id })),
+      release: record('subscriptionSchedules.release', (id: string) => {
+        // Released: the subscription no longer has a schedule.
+        if (stripeState) stripeState.schedule = null;
+        return { id };
+      }),
     },
     invoices: {
       list: record('invoices.list', () => ({ data: [] })),
-      retrieve: record('invoices.retrieve', () => null),
+      retrieve: record('invoices.retrieve', () => opts.retrievedInvoice ?? null),
       finalizeInvoice: record('invoices.finalizeInvoice', () => null),
       update: record('invoices.update', () => null),
     },
@@ -523,6 +532,8 @@ function runningOn(interval: 'monthly' | 'annual') {
   return { ...RUNNING, subscription_type: interval, stripe_price_id: PRICE_IDS[interval] } as Partial<Subscription>;
 }
 
+const CUSTOMER_WITH_CARD = { id: 'cus_1', invoice_settings: { default_payment_method: { id: 'pm_card', type: 'card' } } };
+
 const IMMEDIATE_CHANGE = {
   items: [{ id: 'si_1', price: 'price_annual' }],
   metadata: { plan_key: 'max' },
@@ -667,6 +678,8 @@ async function testAnnualToMonthlyIsScheduledAtPeriodEnd() {
 async function testBankTransferAnnualSwitchesToCardAtPeriodEnd() {
   const { service, manager, calls } = createService({
     tenant: createTenant(COMPLETE_FR_INVOICE),
+    // The customer's default payment method is a card: the switch is scheduled at once.
+    retrievedCustomer: CUSTOMER_WITH_CARD,
     subscription: runningOn('annual'),
     priceIds: PRICE_IDS,
     stripeSubscription: stripeSubscription(ANNUAL_PRICE, { collection_method: 'send_invoice' }),
@@ -735,6 +748,218 @@ async function testTransferToAnnualStartsTheAnnualPeriodNow() {
   assert.ok(!('billing_cycle_anchor' in same), 'the same price does not restart the period');
 }
 
+/** The plan dialog confirms the transfer invoice: number, amount, due date and its Stripe page. */
+async function testTransferReturnsTheInvoiceToPay() {
+  const invoice = {
+    id: 'in_transfer',
+    number: 'KAN-0027',
+    status: 'open',
+    total: 224100,
+    currency: 'eur',
+    due_date: 1794528000,
+    hosted_invoice_url: 'https://invoice.stripe.test/in_transfer',
+  };
+  const { service, manager } = createService({
+    tenant: createTenant(COMPLETE_FR_INVOICE),
+    subscription: runningOn('monthly'),
+    priceIds: PRICE_IDS,
+    stripeSubscription: stripeSubscription(MONTHLY_PRICE),
+    onSubscriptionUpdate: (_params, state) => ({ ...state, latest_invoice: 'in_transfer' }),
+    retrievedInvoice: invoice,
+  });
+  const result: any = await service.requestInvoice('tenant-1', 'max', 'annual', 'user-1', manager as any, GTC_VERSION);
+  assert.equal(result.hosted_invoice_url, 'https://invoice.stripe.test/in_transfer');
+  assert.deepEqual(result.invoice, {
+    number: 'KAN-0027',
+    amount: 224100,
+    currency: 'EUR',
+    hosted_invoice_url: 'https://invoice.stripe.test/in_transfer',
+    due_date: new Date(1794528000 * 1000).toISOString(),
+  });
+}
+
+/*
+ * A switch to monthly planned by a subscription schedule shows on the billing page and can be
+ * cancelled ("Keep annual"). A bank transfer subscription moves to card only once the customer
+ * has a card.
+ */
+const SWITCH_END = PERIOD.end + 31 * 86400;
+const PLANNED_SWITCH = {
+  id: 'sub_sched_1',
+  status: 'active',
+  current_phase: { start_date: PERIOD.start, end_date: PERIOD.end },
+  phases: [
+    { start_date: PERIOD.start, end_date: PERIOD.end, items: [{ price: 'price_annual', quantity: 1 }] },
+    { start_date: PERIOD.end, end_date: SWITCH_END, items: [{ price: 'price_monthly', quantity: 1 }] },
+  ],
+};
+const SWITCH_TO_MONTHLY = { interval: 'monthly', effective_at: new Date(PERIOD.end * 1000).toISOString() };
+
+function annualWithPlannedSwitch(extra: Record<string, unknown> = {}, schedule: Record<string, any> = PLANNED_SWITCH) {
+  return createService({
+    tenant: createTenant(COMPLETE_FR_INVOICE),
+    subscription: runningOn('annual'),
+    priceIds: PRICE_IDS,
+    stripeSubscription: stripeSubscription(ANNUAL_PRICE, { schedule: 'sub_sched_1', ...extra }),
+    onSubscriptionUpdate: (_params, state) => ({ ...state }),
+    schedule,
+  });
+}
+
+async function testSummaryShowsThePlannedSwitch() {
+  const planned = annualWithPlannedSwitch();
+  const summary: any = await planned.service.getSubscriptionSummary({ manager: planned.manager as any, forceStripeRefresh: true });
+  assert.deepEqual(summary.scheduled_change, SWITCH_TO_MONTHLY);
+  assert.deepEqual(planned.calls.filter((call) => call.method === 'subscriptionSchedules.retrieve').map((call) => call.args), [['sub_sched_1']]);
+
+  // No schedule: nothing planned, and no schedule is read.
+  const none = createService({
+    tenant: createTenant(COMPLETE_FR_INVOICE),
+    subscription: runningOn('annual'),
+    priceIds: PRICE_IDS,
+    stripeSubscription: stripeSubscription(ANNUAL_PRICE, { schedule: null }),
+  });
+  const plain: any = await none.service.getSubscriptionSummary({ manager: none.manager as any, forceStripeRefresh: true });
+  assert.equal(plain.scheduled_change, null);
+  assert.equal(none.calls.filter((call) => call.method.startsWith('subscriptionSchedules.')).length, 0);
+
+  // A schedule whose next phase keeps the price plans no switch.
+  const samePrice = annualWithPlannedSwitch({}, {
+    ...PLANNED_SWITCH,
+    phases: [PLANNED_SWITCH.phases[0], { ...PLANNED_SWITCH.phases[1], items: [{ price: 'price_annual', quantity: 1 }] }],
+  });
+  const kept: any = await samePrice.service.getSubscriptionSummary({ manager: samePrice.manager as any, forceStripeRefresh: true });
+  assert.equal(kept.scheduled_change, null);
+}
+
+async function testKeepAnnualReleasesTheScheduleAndAudits() {
+  const { service, manager, calls, audits } = annualWithPlannedSwitch();
+  const summary: any = await service.cancelScheduledChange({ tenantId: 'tenant-1', userId: 'user-1', manager: manager as any });
+
+  assert.deepEqual(calls.filter((call) => call.method === 'subscriptionSchedules.release').map((call) => call.args), [['sub_sched_1']]);
+  // A card subscription keeps its payment settings; nothing else changes in Stripe.
+  assert.equal(calls.filter((call) => call.method === 'subscriptions.update').length, 0);
+  assert.equal(summary.scheduled_change, null);
+  assert.deepEqual(audits.map((a) => a.entry), [{
+    table: 'subscriptions',
+    recordId: 'local-sub',
+    action: 'update',
+    before: { stripe_subscription_id: 'sub_1', scheduled_change: SWITCH_TO_MONTHLY },
+    after: { stripe_subscription_id: 'sub_1', scheduled_change: null },
+    userId: 'user-1',
+    sourceRef: 'sub_sched_1',
+  }]);
+  assert.equal(audits[0].opts?.manager, manager);
+
+  // Nothing planned: nothing to release, nothing audited.
+  const none = createService({
+    tenant: createTenant(COMPLETE_FR_INVOICE),
+    subscription: runningOn('annual'),
+    priceIds: PRICE_IDS,
+    stripeSubscription: stripeSubscription(ANNUAL_PRICE, { schedule: null }),
+  });
+  await none.service.cancelScheduledChange({ tenantId: 'tenant-1', userId: 'user-1', manager: none.manager as any });
+  assert.equal(none.calls.filter((call) => call.method === 'subscriptionSchedules.release').length, 0);
+  assert.deepEqual(none.audits, []);
+}
+
+async function testKeepAnnualGivesBankTransferBack() {
+  // The switch had made the transfer subscription card-only; keeping annual restores the transfer.
+  const { service, manager, calls } = annualWithPlannedSwitch({ collection_method: 'send_invoice' });
+  await service.cancelScheduledChange({ tenantId: 'tenant-1', userId: 'user-1', manager: manager as any });
+  const order = calls.map((call) => call.method);
+  assert.ok(order.indexOf('subscriptionSchedules.release') < order.indexOf('subscriptions.update'));
+  assert.deepEqual(calls.filter((call) => call.method === 'subscriptions.update').map((call) => call.args), [[
+    'sub_1',
+    {
+      payment_settings: {
+        payment_method_types: ['customer_balance', 'card'],
+        payment_method_options: {
+          customer_balance: { funding_type: 'bank_transfer', bank_transfer: { type: 'eu_bank_transfer', eu_bank_transfer: { country: 'FR' } } },
+        },
+      },
+    },
+  ]]);
+}
+
+async function testSelectingAnnualWhileASwitchIsPlannedKeepsIt() {
+  const { service, manager, calls, audits } = annualWithPlannedSwitch();
+  const result: any = await service.changePlan('tenant-1', 'max', 'annual', 'user-1', manager as any, GTC_VERSION);
+  assert.deepEqual(result.change, { status: 'scheduled_change_cancelled' });
+  assert.equal(result.scheduled_change, null);
+  assert.deepEqual(calls.filter((call) => call.method === 'subscriptionSchedules.release').map((call) => call.args), [['sub_sched_1']]);
+  assert.equal(calls.filter((call) => call.method === 'subscriptions.update').length, 0);
+  assert.equal(calls.filter((call) => call.method === 'subscriptionSchedules.update').length, 0);
+  assert.equal(audits.filter((a) => a.entry.table === 'subscriptions' && a.entry.sourceRef === 'sub_sched_1').length, 1);
+}
+
+const BANK_TRANSFER_SCHEDULE = {
+  id: 'sub_sched_1',
+  current_phase: { start_date: PERIOD.start, end_date: PERIOD.end },
+  phases: [{ start_date: PERIOD.start, end_date: PERIOD.end, items: [{ price: 'price_annual', quantity: 1 }], collection_method: 'send_invoice' }],
+};
+
+async function testTransferToCardWithoutACardRequiresOne() {
+  const { service, manager, calls } = createService({
+    tenant: createTenant(COMPLETE_FR_INVOICE),
+    subscription: runningOn('annual'),
+    priceIds: PRICE_IDS,
+    stripeSubscription: stripeSubscription(ANNUAL_PRICE, { collection_method: 'send_invoice', currency: 'eur' }),
+    onSubscriptionUpdate: (_params, state) => ({ ...state }),
+    schedule: BANK_TRANSFER_SCHEDULE,
+  });
+  const result: any = await service.changePlan('tenant-1', 'max', 'monthly', 'user-1', manager as any, GTC_VERSION, {
+    successUrl: 'https://fromage.lvh.me/admin/billing',
+    cancelUrl: 'https://fromage.lvh.me/admin/billing',
+  });
+
+  assert.deepEqual(result.change, { status: 'requires_card', setup_url: 'https://checkout.stripe.test/cs_1' });
+  assert.deepEqual(calls.filter((call) => call.method === 'checkout.sessions.create').map((call) => call.args), [[{
+    mode: 'setup',
+    customer: 'cus_1',
+    currency: 'eur',
+    payment_method_types: ['card'],
+    success_url: 'https://fromage.lvh.me/admin/billing?card_saved=monthly',
+    cancel_url: 'https://fromage.lvh.me/admin/billing',
+    metadata: { tenant_id: 'tenant-1', purpose: 'plan_change_card' },
+    setup_intent_data: { metadata: { tenant_id: 'tenant-1' } },
+  }]]);
+  // Nothing changes until a card is saved: no schedule, no subscription update.
+  assert.equal(calls.filter((call) => call.method.startsWith('subscriptionSchedules.')).length, 0);
+  assert.equal(calls.filter((call) => call.method === 'subscriptions.update').length, 0);
+
+  // Without return URLs in the request, the checkout ones from the configuration.
+  const configured = createService({
+    tenant: createTenant(COMPLETE_FR_INVOICE),
+    subscription: runningOn('annual'),
+    priceIds: PRICE_IDS,
+    stripeSubscription: stripeSubscription(ANNUAL_PRICE, { collection_method: 'send_invoice' }),
+  });
+  await configured.service.changePlan('tenant-1', 'max', 'monthly', 'user-1', configured.manager as any, GTC_VERSION);
+  const params = configured.calls.find((call) => call.method === 'checkout.sessions.create')!.args[0] as Record<string, unknown>;
+  assert.equal(params.success_url, 'https://fromage.kanap.test/admin/billing?card_saved=monthly');
+  assert.equal(params.cancel_url, 'https://fromage.kanap.test/admin/billing');
+}
+
+async function testTransferToCardWithASavedCardMakesItTheDefault() {
+  // A card saved on the setup page before its webhook arrived: it becomes the default, then the switch is scheduled.
+  const { service, manager, calls } = createService({
+    tenant: createTenant(COMPLETE_FR_INVOICE),
+    subscription: runningOn('annual'),
+    priceIds: PRICE_IDS,
+    stripeSubscription: stripeSubscription(ANNUAL_PRICE, { collection_method: 'send_invoice' }),
+    onSubscriptionUpdate: (_params, state) => ({ ...state }),
+    schedule: BANK_TRANSFER_SCHEDULE,
+    cards: [{ id: 'pm_saved', type: 'card' }],
+  });
+  const result: any = await service.changePlan('tenant-1', 'max', 'monthly', 'user-1', manager as any, GTC_VERSION);
+  assert.equal(result.change.status, 'scheduled');
+  assert.ok(calls.some((call) => call.method === 'customers.update'
+    && JSON.stringify(call.args) === JSON.stringify(['cus_1', { invoice_settings: { default_payment_method: 'pm_saved' } }])));
+  assert.equal(calls.filter((call) => call.method === 'checkout.sessions.create').length, 0);
+  assert.equal(calls.filter((call) => call.method === 'subscriptionSchedules.update').length, 1);
+}
+
 async function run() {
   await testRequestInvoiceRefusesIncompleteProfile();
   await testCheckoutRefusesIncompleteProfile();
@@ -758,6 +983,13 @@ async function run() {
   await testBankTransferAnnualSwitchesToCardAtPeriodEnd();
   await testSamePlanAndIntervalIsRefused();
   await testTransferToAnnualStartsTheAnnualPeriodNow();
+  await testTransferReturnsTheInvoiceToPay();
+  await testSummaryShowsThePlannedSwitch();
+  await testKeepAnnualReleasesTheScheduleAndAudits();
+  await testKeepAnnualGivesBankTransferBack();
+  await testSelectingAnnualWhileASwitchIsPlannedKeepsIt();
+  await testTransferToCardWithoutACardRequiresOne();
+  await testTransferToCardWithASavedCardMakesItTheDefault();
 }
 
 void run();

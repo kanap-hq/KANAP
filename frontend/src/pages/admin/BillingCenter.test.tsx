@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import BillingCenter from './BillingCenter';
 import api from '../../api';
 import enAdmin from '../../locales/en/admin.json';
@@ -72,6 +72,7 @@ const FRENCH_INVOICE = {
 function renderPage(
   subscription: Record<string, unknown>,
   profile: { invoice?: Record<string, unknown>; invoice_missing_fields?: string[]; invoices?: unknown[] } = {},
+  path = '/admin/billing',
 ) {
   authState.subscription = subscription;
   (api.get as any).mockImplementation(async (url: string) => {
@@ -91,7 +92,7 @@ function renderPage(
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <ThemeProvider theme={createAppTheme('light')}>
-      <MemoryRouter initialEntries={['/admin/billing']}>
+      <MemoryRouter initialEntries={[path]}>
         <QueryClientProvider client={client}>
           <BillingCenter />
         </QueryClientProvider>
@@ -233,6 +234,59 @@ describe('BillingCenter subscription summary', () => {
     expect(screen.queryByText(/sync/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Change plan' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Manage payment' })).toBeInTheDocument();
+  });
+});
+
+describe('BillingCenter planned switch', () => {
+  const ANNUAL_WITH_SWITCH = {
+    plan_name: 'Hosted KANAP',
+    status: 'active',
+    stripe_subscription_id: 'sub_1',
+    subscription_type: 'annual',
+    collection_method: 'charge_automatically',
+    payment_mode: 'card',
+    amount: 249000,
+    currency: 'EUR',
+    renewal_at: '2027-10-14T10:00:00.000Z',
+    is_subscription_healthy: true,
+    scheduled_change: { interval: 'monthly', effective_at: '2027-10-14T10:00:00.000Z' },
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    authState.claims = { isBillingAdmin: true };
+  });
+
+  it('shows the switch to monthly under the subscription and keeps annual on demand', async () => {
+    (api.post as any).mockResolvedValue({ data: { ...ANNUAL_WITH_SWITCH, scheduled_change: null } });
+    renderPage(ANNUAL_WITH_SWITCH);
+
+    expect(await screen.findByText('Switches to monthly on 14 Oct 2027.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Keep annual' }));
+
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/billing/scheduled-change/cancel'));
+    await waitFor(() => expect(screen.queryByText('Switches to monthly on 14 Oct 2027.')).not.toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: 'Keep annual' })).not.toBeInTheDocument();
+  });
+
+  it('shows the switch without the action to a user who cannot manage billing', async () => {
+    authState.claims = { isBillingAdmin: false };
+    renderPage(ANNUAL_WITH_SWITCH);
+    expect(await screen.findByText('Switches to monthly on 14 Oct 2027.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Keep annual' })).not.toBeInTheDocument();
+  });
+
+  it('reopens the plan dialog to confirm the switch once the card is saved', async () => {
+    renderPage(
+      { ...ANNUAL_WITH_SWITCH, collection_method: 'send_invoice', payment_mode: 'bank_transfer', scheduled_change: null },
+      { invoice: FRENCH_INVOICE },
+      '/admin/billing?card_saved=monthly',
+    );
+    expect(await screen.findByText('Card saved. Confirm the switch.')).toBeInTheDocument();
+    expect(screen.getByText('Choose a plan')).toBeInTheDocument();
   });
 });
 

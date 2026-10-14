@@ -434,6 +434,7 @@
       "title": "Historial de facturas"
     },
     "messages": {
+      "keepFailed": "No se pudo cancelar el cambio previsto.",
       "loadFailed": "No se pudieron cargar los detalles de facturación.",
       "portalFailed": "No se pudo abrir el portal de facturación.",
       "portalUnavailable": "El portal de facturación no está disponible.",
@@ -465,6 +466,12 @@
       "unpaid": "Impago"
     },
     "subscription": {
+      "scheduledChange": {
+        "annual": "Pasa a anual el {{date}}.",
+        "keepAnnual": "Mantener anual",
+        "keepMonthly": "Mantener mensual",
+        "monthly": "Pasa a mensual el {{date}}."
+      },
       "title": "Suscripción",
       "values": {
         "amountPerMonth": "{{amount}} / mes",
@@ -744,15 +751,24 @@
       "vatNumber": "número de IVA"
     },
     "messages": {
+      "cardSaved": "Tarjeta guardada. Confirme el cambio.",
+      "cardSetupUnavailable": "El formulario de tarjeta no está disponible. Inténtelo de nuevo más tarde.",
       "checkoutUrlUnavailable": "La URL de pago no está disponible.",
       "invoiceCreated": "Factura creada.",
       "invoicePaid": "Factura {{number}}, {{amount}}, pagada.",
+      "keptAnnual": "Su plan sigue siendo anual.",
+      "keptMonthly": "Su plan sigue siendo mensual.",
       "loadFailed": "No se pudieron cargar los planes.",
       "nowAnnual": "Su plan ahora es anual.",
       "nowMonthly": "Su plan ahora es mensual.",
+      "openInvoice": "Abrir la factura",
       "paymentRequired": "El plan cambia una vez pagada su factura.",
       "requestFailed": "La solicitud falló.",
-      "switchToMonthly": "Su plan pasa a mensual el {{date}}."
+      "switchToAnnual": "Su plan pasa a anual el {{date}}.",
+      "switchToMonthly": "Su plan pasa a mensual el {{date}}.",
+      "transferInvoice": "Factura {{number}} creada: {{amount}}, a pagar por transferencia antes del {{date}}. Los datos bancarios figuran en la factura.",
+      "transferInvoiceNoDate": "Factura {{number}} creada: {{amount}}, a pagar por transferencia. Los datos bancarios figuran en la factura.",
+      "transferInvoiceShort": "Factura creada, a pagar por transferencia. Los datos bancarios figuran en la factura."
     },
     "monthlyEquivalent": "{{amount}} al mes, facturado anualmente",
     "period": {
