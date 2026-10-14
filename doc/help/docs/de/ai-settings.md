@@ -87,8 +87,29 @@ Der Bereich **Funktionen** schaltet die optionalen KI-Oberflächen um:
 
 Externe Assistenten und IDEs greifen über das Model Context Protocol (MCP) auf KANAP zu, mit denselben Daten, die Plaid sieht. Sie verbinden sich auf eine von zwei Arten:
 
-- **Verbindung**: Claude, Claude Desktop und Claude Code melden sich mit dem eigenen Konto des Benutzers bei KANAP an. Niemand erstellt oder kopiert einen Schlüssel. Siehe [Einen MCP-Client verbinden](#einen-mcp-client-verbinden).
-- **API-Schlüssel**: ein langlebiger Schlüssel für Cursor, Skripte und andere MCP-Clients.
+- **Verbindung** (OAuth): Claude, Claude Desktop und Claude Code melden sich mit dem eigenen Konto des Benutzers bei KANAP an. Niemand erstellt oder kopiert einen Schlüssel. Siehe [Einen MCP-Client verbinden](#connecting-an-mcp-client).
+- **API-Schlüssel**: ein langlebiger Schlüssel für Cursor, Skripte und jeden anderen MCP-Client, der einen Header senden kann.
+
+### Verbindung oder API-Schlüssel { #connection-or-api-key }
+
+| | Verbindung (OAuth) | API-Schlüssel |
+|---|---|---|
+| Für | Jede Person, die Claude mit ihrem eigenen KANAP-Konto verwendet | Ein Skript, ein gemeinsam genutztes Werkzeug oder einen Client, der sich nicht anmelden kann |
+| Clients | Claude (claude.ai), Claude Desktop, Claude Code | Claude Code, Cursor, Skripte, jeder MCP-Client, der einen Header `Authorization` oder `X-API-Key` senden kann |
+| Einrichtung | Serveradresse im Client einfügen, bei KANAP anmelden, auf **Zulassen** klicken | Eine Person, die diese Seite öffnen kann, erstellt einen Schlüssel; das Geheimnis wird in den Client eingefügt |
+| Liest mit | den Zugriffsrechten der angemeldeten Person | den Zugriffsrechten der Person, die den Schlüssel erstellt hat |
+| Lebensdauer | 90 Tage lang still erneuert, oder kürzer, wenn **Max. Lebensdauer des Schlüssels (Tage)** kürzer ist. Danach verbindet sich der Benutzer erneut | Bis zum Widerruf oder bis **Max. Lebensdauer des Schlüssels (Tage)** |
+| Netzwerk | HTTPS. Claude und Claude Desktop: KANAP aus dem Internet erreichbar. Jeder Client: KANAP erreicht `claude.ai` über HTTPS | Der Client erreicht KANAP. Funktioniert in einem privaten Netz, auch über einfaches HTTP |
+| Grenzen | Nur Clients, die ein Client-Metadatendokument veröffentlichen, also heute die Anwendungen von Claude | Von benutzerdefinierten Konnektoren in Claude und Claude Desktop nicht akzeptiert. Ein Geheimnis, das sicher aufbewahrt, rotiert und widerrufen werden muss |
+
+Beim gehosteten Dienst ist KANAP bereits über HTTPS aus dem Internet erreichbar: Verbindungen funktionieren ohne weitere Einrichtung. Bei einer On-Premise-Installation steht unter [KI-Assistenten über MCP verbinden](on-premise/configuration.md#connecting-ai-assistants-over-mcp), was geöffnet werden muss.
+
+Beide Wege teilen den Rest:
+
+- **MCP aktivieren** muss eingeschaltet sein (siehe **Funktionen** oben).
+- Dieselben schreibgeschützten [Werkzeuge](#verfugbare-werkzeuge), im Rahmen der Zugriffsrechte der Person hinter dem Schlüssel oder der Verbindung.
+- Eine Grenze von 60 MCP-Anfragen pro Minute für jeden Schlüssel und jede Verbindung. Darüber hinaus werden Anfragen bis zum Ende der Minute abgelehnt.
+- Dasselbe Audit-Protokoll.
 
 Die Karte **MCP-Schlüssel und -Verbindungen** zeigt eine Schaltfläche **Schlüssel erstellen**, die **Serveradresse**, mit der sich Clients verbinden (mit einer Kopierschaltfläche), die Obergrenze **Max. Lebensdauer des Schlüssels (Tage)** und eine Tabelle mit **Bezeichnung**, **Typ**, **Präfix**, **Erstellt**, **Läuft ab**, **Zuletzt verwendet** und **Status** (**Aktiv** oder **Widerrufen**).
 
@@ -96,9 +117,11 @@ Die Spalte **Typ** zeigt **API-Schlüssel** oder **Verbindung**. Eine Verbindung
 
 ### Einen Schlüssel erstellen
 
+Schlüssel werden nur auf dieser Seite erstellt, also erstellen sie nur Personen, die diese Seite öffnen können (`ai_settings:admin`, mit MCP-Zugriff). Ein Schlüssel liest mit den Zugriffsrechten der Person, die ihn erstellt hat: Ein von einem Administrator erstellter Schlüssel liest alles, was ein Administrator sieht. Behandeln Sie ihn wie das Passwort dieser Person, und bevorzugen Sie eine Verbindung, wenn sich jeder Benutzer anmelden kann.
+
 1. Klicken Sie auf **Schlüssel erstellen**.
 2. Geben Sie eine beschreibende **Bezeichnung** ein (zum Beispiel „Cursor auf meinem Laptop“).
-3. Klicken Sie auf **Erstellen**. KANAP generiert ein einmaliges Geheimnis.
+3. Klicken Sie auf **Erstellen**. KANAP generiert ein einmaliges Geheimnis, das mit `kanap_mcp_` beginnt.
 4. Kopieren Sie das Geheimnis sofort. Es wird nur einmal angezeigt und kann später nicht mehr abgerufen werden.
 5. Wenn Sie Claude Code mit einem Schlüssel verwenden, kopieren Sie den **Claude-Code-Befehl** unter dem Schlüssel. Er enthält bereits die Serveradresse und den Schlüssel.
 
@@ -114,28 +137,33 @@ Benutzer können ihre eigenen Anwendungen auch auf ihrer Registerkarte [Verbunde
 
 - **MCP aktivieren** muss eingeschaltet sein (siehe **Funktionen** oben).
 - Der Benutzer braucht die Rolle **AI MCP User** oder eine Rolle, die Lesezugriff auf MCP gewährt.
-- Der Zugriff ist schreibgeschützt. Ein Client sieht genau das, was der Benutzer in KANAP sieht, und nicht mehr. Bei einem Schlüssel ist das die Person, die ihn erstellt hat: Erstellen Sie Schlüssel mit einem Konto, dessen Zugriffsrechte dem entsprechen, was der Client lesen soll.
-- Verbindungen und Schlüssel teilen sich dieselben Ratenbegrenzungen, dasselbe Audit-Protokoll und, beim inklusive KANAP-Modell, dasselbe monatliche Kontingent.
+- Der Zugriff ist schreibgeschützt. Ein Client sieht genau das, was der Benutzer in KANAP sieht, und nicht mehr. Bei einem Schlüssel ist dieser Benutzer die Person, die ihn erstellt hat.
 
-### Einen MCP-Client verbinden
+### Einen MCP-Client verbinden { #connecting-an-mcp-client }
 
-Jeder Client braucht die **Serveradresse**: Ihre KANAP-Adresse, gefolgt von `/api/ai/mcp`, zum Beispiel `https://acme.kanap.net/api/ai/mcp`. Die Karte **MCP-Schlüssel und -Verbindungen** zeigt sie für Ihre Organisation an.
+Jeder Client braucht die **Serveradresse**: Ihre KANAP-Adresse, gefolgt von `/api/ai/mcp`, zum Beispiel `https://acme.kanap.net/api/ai/mcp`. Die Karte **MCP-Schlüssel und -Verbindungen** auf dieser Seite zeigt sie an, mit einer Kopierschaltfläche. Benutzer, die diese Seite nicht öffnen können, nehmen die Adresse von KANAP in ihrem Browser und hängen `/api/ai/mcp` an.
 
 Jeder Schlüssel und jede verbundene Anwendung akzeptiert bis zu 60 Anfragen pro Minute. Darüber hinaus lehnt der Server die Anfrage ab, und der Client kann es eine Minute später erneut versuchen.
 
-#### Claude und Claude Desktop
+#### Claude und Claude Desktop { #connecting-claude }
 
-1. Öffnen Sie in Claude **Einstellungen > Konnektoren** und klicken Sie auf **Benutzerdefinierten Konnektor hinzufügen**.
-2. Fügen Sie die Serveradresse ein und bestätigen Sie.
-3. Claude öffnet die KANAP-Anmeldeseite. Melden Sie sich mit Ihrem Passwort oder mit Microsoft an.
+1. Fügen Sie KANAP als benutzerdefinierten Konnektor hinzu: Öffnen Sie in Claude **Settings > Connectors** und klicken Sie auf **Add custom connector**.
+2. Fügen Sie die Serveradresse ein. Wenn Claude fragt, wie die Anmeldung erfolgen soll, wählen Sie **Sign in now** und **Use Claude's published identity**. **Register automatically** funktioniert mit KANAP nicht, und es werden weder Client-ID noch Client-Geheimnis benötigt.
+3. Bestätigen Sie. Claude öffnet die KANAP-Anmeldeseite. Melden Sie sich mit Ihrem Passwort oder mit Microsoft an.
 4. KANAP zeigt *Claude möchte Ihre KANAP-Daten lesen*. Der Bildschirm nennt, was Claude tun kann (lesen, was Sie sehen, im Rahmen Ihrer eigenen Zugriffsrechte), den Host, zu dem Claude zurückkehrt, sowie das Konto und den Arbeitsbereich, mit denen Sie angemeldet sind. Wenn das Konto nicht Ihres ist, klicken Sie auf **Nicht Sie?**, um sich mit einem anderen anzumelden.
 5. Klicken Sie auf **Zulassen**. Claude ist verbunden. **Ablehnen** schließt die Anfrage, und es wird nichts verbunden.
 
-Claude Desktop verwendet dieselben Konnektoren wie claude.ai: Fügen Sie den Konnektor in einem der beiden hinzu.
+Claude Desktop verwendet dieselben Konnektoren wie claude.ai: Fügen Sie den Konnektor in einem der beiden hinzu. Claude ruft KANAP von den Servern von Anthropic aus auf, daher muss die Serveradresse über HTTPS aus dem Internet erreichbar sein.
+
+Bei einer selbst gehosteten Installation kann ein Administrator einen Link teilen, der den Dialog **Add custom connector** mit bereits ausgefülltem Namen und ausgefüllter Adresse öffnet. Ersetzen Sie das Ende durch Ihre eigene Serveradresse, URL-kodiert (`:` wird zu `%3A`, `/` wird zu `%2F`):
+
+```text
+https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=KANAP&connectorUrl=https%3A%2F%2Fkanap.example.com%2Fapi%2Fai%2Fmcp
+```
 
 #### Claude Team und Enterprise
 
-Ein Owner der Organisation fügt den benutzerdefinierten Konnektor einmal mit der Serveradresse für die gesamte Claude-Organisation hinzu. Jedes Mitglied klickt dann beim Konnektor auf **Verbinden** und meldet sich mit seinem eigenen KANAP-Konto an. Jedes Mitglied sieht nur seine eigenen KANAP-Daten.
+Ein Owner der Organisation fügt den benutzerdefinierten Konnektor einmal mit der Serveradresse für die gesamte Claude-Organisation hinzu. Jedes Mitglied klickt dann beim Konnektor auf **Connect** und meldet sich mit seinem eigenen KANAP-Konto an. Jedes Mitglied sieht nur seine eigenen KANAP-Daten.
 
 #### Claude Code
 
@@ -145,7 +173,7 @@ Fügen Sie den Server ohne Schlüssel hinzu:
 claude mcp add --transport http kanap https://acme.kanap.net/api/ai/mcp
 ```
 
-Führen Sie dann `claude mcp login kanap` aus, oder verwenden Sie den Server einfach: Claude Code öffnet Ihren Browser auf der KANAP-Anmeldeseite und dann auf demselben Bildschirm wie oben.
+Führen Sie dann `claude mcp login kanap` aus, oder verwenden Sie den Server einfach: Claude Code öffnet Ihren Browser auf der KANAP-Anmeldeseite und dann auf demselben Bildschirm wie oben. Der Browser kehrt zu Ihrem eigenen Computer zurück, daher muss KANAP nicht aus dem Internet erreichbar sein: Ihr Computer erreicht KANAP über HTTPS, und KANAP erreicht `claude.ai` über HTTPS.
 
 #### Diese Anwendung merken
 
@@ -175,13 +203,13 @@ Fügen Sie in Cursor einen Remote-Server (HTTP) in `mcp.json` hinzu:
 }
 ```
 
-Claude Code akzeptiert auch einen Schlüssel, zum Beispiel auf einem Rechner ohne Browser:
+Claude Code akzeptiert auch einen Schlüssel, zum Beispiel auf einem Rechner ohne Browser oder wenn KANAP `claude.ai` nicht erreichen kann:
 
 ```bash
 claude mcp add --transport http kanap https://acme.kanap.net/api/ai/mcp --header "Authorization: Bearer kanap_mcp_..."
 ```
 
-#### Verfügbare Werkzeuge
+### Verfügbare Werkzeuge
 
 Der MCP-Server ist schreibgeschützt. Ein Client kann Ihre Daten durchsuchen und lesen, aber nichts ändern.
 
@@ -206,6 +234,6 @@ Der MCP-Server ist schreibgeschützt. Ein Client kann Ihre Daten durchsuchen und
 - **Lassen Sie Plaid auf dem Standardmodell, solange Sie keinen Grund für etwas anderes haben.** Den Chat an ein bestimmtes Modell zu heften bedeutet, dass er dem Organisationsstandard nicht mehr folgt — nützlich, wenn Chat und Agenten wirklich verschiedene Modelle brauchen, sonst eher lästig.
 - **Chat-Volumen wird leicht unterschätzt.** Die Seite [Nutzung & Kosten](ai-usage.md) bewertet den Chat zu den Tarifen des zugewiesenen Modells; ein ausgelasteter Assistent auf einem teuren Modell fällt dort lange auf, bevor er auf einer Rechnung auffällt.
 - **Ein bildfähiges Modell ist eine Anforderung der Agenten, nicht des Chats.** Wenn Ihre Triage-Agenten Ticket-Screenshots lesen sollen, gehört das an *deren* Modell — siehe **Versteht Bilder** auf der Seite [KI-Modelle](ai-models.md).
-- **Bevorzugen Sie Verbindungen für Claude.** Jede Person meldet sich mit ihrem eigenen Konto an, sodass niemand einen Schlüssel teilt. Behalten Sie Schlüssel für Clients, die einen brauchen, rotieren Sie sie und verwenden Sie **Max. Lebensdauer des Schlüssels (Tage)**, um eine Obergrenze durchzusetzen, die keine Anfrage überschreiten kann.
+- **Bevorzugen Sie Verbindungen für Claude.** Jede Person meldet sich mit ihrem eigenen Konto an und liest mit ihren eigenen Zugriffsrechten, sodass niemand einen Schlüssel teilt. Behalten Sie Schlüssel für Clients, die einen brauchen, rotieren Sie sie und verwenden Sie **Max. Lebensdauer des Schlüssels (Tage)**, um eine Obergrenze durchzusetzen, die keine Anfrage überschreiten kann.
 - **Legen Sie ein Aufbewahrungsfenster fest.** Gespräche für immer aufzubewahren ist bequem, bis die Datenbank groß wird oder eine Compliance-Prüfung fragt, wie lange Chat-Inhalte aufbewahrt werden — 90 oder 180 Tage sind ein üblicher Ausgangspunkt.
 - **GLPI wird an anderer Stelle konfiguriert.** Die Ticketing-Verbindung, mit der Ihre Agenten arbeiten, wird unter **Administration → Integrationen** konfiguriert, nicht hier — siehe [Integrationen](integrations.md).

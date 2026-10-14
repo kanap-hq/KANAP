@@ -20,7 +20,7 @@ Eine Anwendung liest nur, was Sie in KANAP sehen, im Rahmen Ihrer eigenen Zugrif
 
 Um einen Zugriff zu trennen, klicken Sie auf **Trennen** und bestätigen Sie. Die Anwendung verliert den Zugriff sofort. Um sie wieder zu nutzen, verbinden Sie sie in der Anwendung erneut. Das Trennen vergisst auch die Wahl **Diese Anwendung merken**, die Sie beim Verbinden getroffen haben.
 
-Wenn nichts verbunden ist, zeigt die Registerkarte eine Zeile und einen Link zur Anleitung. Wie Sie Claude verbinden, steht unter [Einen MCP-Client verbinden](ai-settings.md#einen-mcp-client-verbinden).
+Wenn nichts verbunden ist, zeigt die Registerkarte eine Zeile und einen Link zur Anleitung. Wie Sie Claude verbinden, steht unter [Einen MCP-Client verbinden](ai-settings.md#connecting-an-mcp-client).
 
 ## API-Schlüssel
 

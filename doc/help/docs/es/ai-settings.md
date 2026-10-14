@@ -87,8 +87,29 @@ Los cambios en **Proveedor**, **Funcionalidades**, **Retención** *y* el campo *
 
 Los asistentes externos y los IDE acceden a KANAP a través del Model Context Protocol (MCP), con los mismos datos que ve Plaid. Se conectan de una de dos formas:
 
-- **Conexión**: Claude, Claude Desktop y Claude Code inician sesión en KANAP con la cuenta del propio usuario. Nadie crea ni copia una clave. Consulte [Conectar un cliente MCP](#conectar-un-cliente-mcp).
-- **Clave API**: una clave de larga duración para Cursor, scripts y otros clientes MCP.
+- **Conexión** (OAuth): Claude, Claude Desktop y Claude Code inician sesión en KANAP con la cuenta del propio usuario. Nadie crea ni copia una clave. Consulte [Conectar un cliente MCP](#connecting-an-mcp-client).
+- **Clave API**: una clave de larga duración para Cursor, scripts y cualquier otro cliente MCP capaz de enviar un encabezado.
+
+### Conexión o clave API { #connection-or-api-key }
+
+| | Conexión (OAuth) | Clave API |
+|---|---|---|
+| Para | Cada persona que usa Claude con su propia cuenta de KANAP | Un script, una herramienta compartida o un cliente que no puede iniciar sesión |
+| Clientes | Claude (claude.ai), Claude Desktop, Claude Code | Claude Code, Cursor, scripts, cualquier cliente MCP capaz de enviar un encabezado `Authorization` o `X-API-Key` |
+| Configuración | Pegar la dirección del servidor en el cliente, iniciar sesión en KANAP y hacer clic en **Autorizar** | Alguien que puede abrir esta página crea una clave; el secreto se pega en el cliente |
+| Lee con | El acceso de la persona que inició sesión | El acceso de la persona que creó la clave |
+| Duración | Se renueva de forma transparente durante 90 días, o menos si la **Vida útil máxima de la clave (días)** es más corta. Después, el usuario vuelve a conectarse | Hasta su revocación, o hasta la **Vida útil máxima de la clave (días)** |
+| Red | HTTPS. Claude y Claude Desktop: KANAP accesible desde Internet. Todos los clientes: KANAP llega a `claude.ai` por HTTPS | El cliente llega a KANAP. Funciona dentro de una red privada, también por HTTP simple |
+| Límites | Solo los clientes que publican un documento de metadatos de cliente, es decir, hoy las aplicaciones de Claude | Los conectores personalizados de Claude y Claude Desktop no la aceptan. Un secreto que hay que guardar de forma segura, rotar y revocar |
+
+En el servicio alojado, KANAP ya es accesible desde Internet por HTTPS: las conexiones funcionan sin nada que configurar. En una instalación on-premise, consulte [Conectar asistentes de IA mediante MCP](on-premise/configuration.md#connecting-ai-assistants-over-mcp) para saber qué abrir.
+
+Las dos formas comparten el resto:
+
+- **Habilitar MCP** debe estar activado (consulte **Funcionalidades** más arriba).
+- Las mismas [herramientas](#herramientas-disponibles) de solo lectura, dentro de los derechos de acceso de la persona detrás de la clave o de la conexión.
+- Un límite de 60 solicitudes MCP por minuto para cada clave y cada conexión. Por encima, las solicitudes se rechazan hasta que termina el minuto.
+- El mismo registro de auditoría.
 
 La tarjeta **Claves y conexiones MCP** muestra un botón **Crear clave**, la **Dirección del servidor** a la que se conectan los clientes (con un botón para copiarla), el límite de **Vida útil máxima de la clave (días)** y una tabla con **Etiqueta**, **Tipo**, **Prefijo**, **Creada**, **Expira**, **Último uso** y **Estado** (**Activa** o **Revocada**).
 
@@ -96,9 +117,11 @@ La columna **Tipo** indica **Clave API** o **Conexión**. Una fila de conexión 
 
 ### Crear una clave
 
+Las claves se crean solo en esta página, así que solo las crean las personas que pueden abrirla (`ai_settings:admin`, con acceso MCP). Una clave lee con el acceso de la persona que la creó: una clave creada por un administrador lee todo lo que ve un administrador. Trátela como la contraseña de esa persona, y prefiera una conexión cuando cada usuario pueda iniciar sesión.
+
 1. Haga clic en **Crear clave**.
 2. Introduzca una **Etiqueta** descriptiva (por ejemplo, «Cursor en mi portátil»).
-3. Haga clic en **Crear**. KANAP genera un secreto de un solo uso.
+3. Haga clic en **Crear**. KANAP genera un secreto de un solo uso que empieza por `kanap_mcp_`.
 4. Copie el secreto inmediatamente. Se muestra una sola vez y no puede recuperarse más tarde.
 5. Si usa Claude Code con una clave, copie el **Comando de Claude Code** que aparece bajo la clave. Ya contiene la dirección del servidor y la clave.
 
@@ -114,28 +137,33 @@ Los usuarios también pueden desconectar sus propias aplicaciones en su pestaña
 
 - **Habilitar MCP** debe estar activado (consulte **Funcionalidades** más arriba).
 - El usuario necesita el rol **AI MCP User**, o cualquier rol que dé acceso de lectura a MCP.
-- El acceso es de solo lectura. Un cliente ve exactamente lo que el usuario ve en KANAP, y nada más. En el caso de una clave, es la persona que la creó: cree las claves desde una cuenta cuyo acceso corresponda a lo que el cliente debe leer.
-- Las conexiones y las claves comparten los mismos límites de frecuencia, el mismo registro de auditoría y, con el modelo incluido de KANAP, la misma cuota mensual.
+- El acceso es de solo lectura. Un cliente ve exactamente lo que el usuario ve en KANAP, y nada más. En el caso de una clave, ese usuario es la persona que la creó.
 
-### Conectar un cliente MCP
+### Conectar un cliente MCP { #connecting-an-mcp-client }
 
-Cada cliente necesita la **Dirección del servidor**: su dirección de KANAP seguida de `/api/ai/mcp`, por ejemplo `https://acme.kanap.net/api/ai/mcp`. La tarjeta **Claves y conexiones MCP** la muestra para su organización.
+Cada cliente necesita la **Dirección del servidor**: su dirección de KANAP seguida de `/api/ai/mcp`, por ejemplo `https://acme.kanap.net/api/ai/mcp`. La tarjeta **Claves y conexiones MCP** de esta página la muestra, con un botón para copiarla. Los usuarios que no pueden abrir esta página toman la dirección de KANAP de su navegador y le añaden `/api/ai/mcp`.
 
 Cada clave o aplicación conectada acepta hasta 60 solicitudes por minuto. Por encima, el servidor rechaza la solicitud y el cliente puede volver a intentarlo un minuto después.
 
-#### Claude y Claude Desktop
+#### Claude y Claude Desktop { #connecting-claude }
 
-1. En Claude, abra **Configuración > Conectores** y haga clic en **Añadir conector personalizado**.
-2. Pegue la dirección del servidor y confirme.
-3. Claude abre la página de inicio de sesión de KANAP. Inicie sesión con su contraseña o con Microsoft.
+1. Añada KANAP como conector personalizado: en Claude, abra **Settings > Connectors** y haga clic en **Add custom connector**.
+2. Pegue la dirección del servidor. Si Claude pregunta cómo iniciar sesión, elija **Sign in now** y **Use Claude's published identity**. **Register automatically** no funciona con KANAP, y no se necesita ningún ID ni secreto de cliente.
+3. Confirme. Claude abre la página de inicio de sesión de KANAP. Inicie sesión con su contraseña o con Microsoft.
 4. KANAP muestra *Claude solicita leer sus datos de KANAP*. La pantalla indica lo que Claude puede hacer (leer lo que usted ve, dentro de sus propios derechos de acceso), el host al que vuelve, y la cuenta y el espacio de trabajo con los que ha iniciado sesión. Si la cuenta no es la suya, haga clic en **¿No es usted?** para iniciar sesión con otra.
 5. Haga clic en **Autorizar**. Claude queda conectado. **Rechazar** cierra la solicitud y no se conecta nada.
 
-Claude Desktop usa los mismos conectores que claude.ai: añada el conector en cualquiera de los dos.
+Claude Desktop usa los mismos conectores que claude.ai: añada el conector en cualquiera de los dos. Claude llama a KANAP desde los servidores de Anthropic, así que la dirección del servidor debe ser accesible desde Internet por HTTPS.
+
+En una instalación autoalojada, un administrador puede compartir un enlace que abre el cuadro de diálogo **Add custom connector** con el nombre y la dirección ya rellenados. Sustituya el final por la dirección de su propio servidor, codificada para URL (`:` se convierte en `%3A`, `/` en `%2F`):
+
+```text
+https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=KANAP&connectorUrl=https%3A%2F%2Fkanap.example.com%2Fapi%2Fai%2Fmcp
+```
 
 #### Claude Team y Enterprise
 
-Un Owner de la organización añade el conector personalizado una sola vez, con la dirección del servidor, para toda la organización de Claude. Después, cada miembro hace clic en **Conectar** en el conector e inicia sesión con su propia cuenta de KANAP. Cada miembro ve solo sus propios datos de KANAP.
+Un Owner de la organización añade el conector personalizado una sola vez, con la dirección del servidor, para toda la organización de Claude. Después, cada miembro hace clic en **Connect** en el conector e inicia sesión con su propia cuenta de KANAP. Cada miembro ve solo sus propios datos de KANAP.
 
 #### Claude Code
 
@@ -145,7 +173,7 @@ Añada el servidor sin clave:
 claude mcp add --transport http kanap https://acme.kanap.net/api/ai/mcp
 ```
 
-Después ejecute `claude mcp login kanap`, o simplemente use el servidor: Claude Code abre su navegador en la página de inicio de sesión de KANAP y luego en la misma pantalla descrita arriba.
+Después ejecute `claude mcp login kanap`, o simplemente use el servidor: Claude Code abre su navegador en la página de inicio de sesión de KANAP y luego en la misma pantalla descrita arriba. El navegador vuelve a su propio ordenador, así que KANAP no necesita ser accesible desde Internet: su ordenador llega a KANAP por HTTPS, y KANAP llega a `claude.ai` por HTTPS.
 
 #### Recordar esta aplicación
 
@@ -175,13 +203,13 @@ En Cursor, añada un servidor remoto (HTTP) en `mcp.json`:
 }
 ```
 
-Claude Code también acepta una clave, por ejemplo en un equipo sin navegador:
+Claude Code también acepta una clave, por ejemplo en un equipo sin navegador, o cuando KANAP no puede llegar a `claude.ai`:
 
 ```bash
 claude mcp add --transport http kanap https://acme.kanap.net/api/ai/mcp --header "Authorization: Bearer kanap_mcp_..."
 ```
 
-#### Herramientas disponibles
+### Herramientas disponibles
 
 El servidor MCP es de solo lectura. Un cliente puede buscar y leer sus datos, sin poder cambiar nada.
 
@@ -206,6 +234,6 @@ El servidor MCP es de solo lectura. Un cliente puede buscar y leer sus datos, si
 - **Deje Plaid en el modelo predeterminado salvo que tenga un motivo para no hacerlo.** Fijar el chat a un modelo concreto significa que deja de seguir al predeterminado de la organización: útil cuando el chat y los agentes necesitan realmente modelos distintos, y una molestia el resto del tiempo.
 - **Es fácil subestimar el volumen del chat.** La página [Uso y costes](ai-usage.md) valora el chat a las tarifas del modelo asignado; un asistente muy usado con un modelo caro aparece allí mucho antes de aparecer en una factura.
 - **Un modelo con visión es un requisito de los agentes, no del chat.** Si sus agentes de triaje necesitan leer capturas de pantalla de los tickets, eso corresponde al modelo de *ellos*: consulte **Comprende imágenes** en la página [Modelos IA](ai-models.md).
-- **Prefiera las conexiones para Claude.** Cada persona inicia sesión con su propia cuenta, así que nadie comparte una clave. Reserve las claves para los clientes que las necesitan, rótelas y use **Vida útil máxima de la clave (días)** para imponer un tope que ninguna petición pueda superar.
+- **Prefiera las conexiones para Claude.** Cada persona inicia sesión con su propia cuenta y lee con su propio acceso, así que nadie comparte una clave. Reserve las claves para los clientes que las necesitan, rótelas y use **Vida útil máxima de la clave (días)** para imponer un tope que ninguna petición pueda superar.
 - **Establezca una ventana de retención.** Conservar las conversaciones para siempre es conveniente hasta que la base de datos crece demasiado o una revisión de conformidad pregunta cuánto tiempo se conserva el contenido del chat: 90 o 180 días es un punto de partida habitual.
 - **GLPI se configura en otro sitio.** La conexión de ticketing con la que trabajan sus agentes se configura en **Administración → Integraciones**, no aquí; consulte [Integraciones](integrations.md).

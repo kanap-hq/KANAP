@@ -20,7 +20,7 @@ Une application ne lit que ce que vous voyez dans KANAP, dans la limite de vos d
 
 Pour couper un accès, cliquez sur **Déconnecter** et confirmez. L'application perd l'accès immédiatement. Pour l'utiliser à nouveau, reconnectez-la depuis l'application. La déconnexion efface aussi le choix **Se souvenir de cette application** fait lors de la connexion.
 
-Quand rien n'est connecté, l'onglet affiche une ligne et un lien vers les instructions. Pour connecter Claude, voir [Connecter un client MCP](ai-settings.md#connecter-un-client-mcp).
+Quand rien n'est connecté, l'onglet affiche une ligne et un lien vers les instructions. Pour connecter Claude, voir [Connecter un client MCP](ai-settings.md#connecting-an-mcp-client).
 
 ## Clés API
 
