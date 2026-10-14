@@ -61,13 +61,20 @@ function stripHtmlTags(html: string): string {
   return text;
 }
 
-/** Removes HTML comments, repeated until none is left, as for tags. */
+/**
+ * Removes HTML comments, repeated until none is left, as for tags. An opener left
+ * without its closer is removed too; the text after it stays.
+ */
 function stripHtmlComments(markdown: string): string {
   let previous: string;
   let text = markdown;
   do {
     previous = text;
     text = replaceBeforeLastCloser(text, '-->', (head) => head.replace(/<!--[\s\S]*?-->/g, ''));
+  } while (text !== previous);
+  do {
+    previous = text;
+    text = text.replace(/<!--/g, '');
   } while (text !== previous);
   return text;
 }
