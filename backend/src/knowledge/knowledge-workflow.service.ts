@@ -7,7 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
-import { normalizeMarkdownRichText } from '../common/markdown-rich-text';
+import { normalizeMarkdownRichText } from '../common/markdown-worker';
 import {
   buildKnowledgeWorkflowApprovedEmail,
   buildKnowledgeWorkflowCancelledEmail,
@@ -299,7 +299,7 @@ export class KnowledgeWorkflowService {
     if (!workflow) throw new NotFoundException('Workflow not found');
 
     const participant = await this.getPendingWorkflowParticipantOrThrow(workflow.id, userId, currentStage, manager);
-    const comment = normalizeMarkdownRichText(body?.comment, { fieldName: 'comment' }) || null;
+    const comment = await normalizeMarkdownRichText(body?.comment, { fieldName: 'comment' }) || null;
 
     participant.decision = 'approved';
     participant.comment = comment;
@@ -389,7 +389,7 @@ export class KnowledgeWorkflowService {
       throw new BadRequestException('The active workflow is not awaiting a decision');
     }
 
-    const comment = normalizeMarkdownRichText(body?.comment, { fieldName: 'comment' }) || '';
+    const comment = await normalizeMarkdownRichText(body?.comment, { fieldName: 'comment' }) || '';
     if (!comment.trim()) {
       throw new BadRequestException('A comment is required when requesting changes');
     }

@@ -192,7 +192,7 @@ async function testIncidentRefAndValueParsing() {
  * column that replaced the four narrative columns
  * (planning/incident-review-document.md §3.8).
  */
-function testIncidentRecordColumns() {
+async function testIncidentRecordColumns() {
   const recordColumns = incidentCsvConfig.fields
     .filter((f) => f.group === 'Record')
     .map((f) => f.csvColumn);
@@ -214,10 +214,11 @@ function testIncidentRecordColumns() {
 
   // Markdown is validated at parse time, so a dry run reports a bad cell
   // without provisioning or writing anything.
-  assert.equal(transform(incidentCsvConfig, 'review', '## Impact\n\nMail down'), '## Impact\n\nMail down');
-  assert.equal(transform(incidentCsvConfig, 'review', '   '), '');
-  assert.throws(
-    () => transform(incidentCsvConfig, 'review', '<script>alert(1)</script>'),
+  // The review is processed in the Markdown workers: the transform is asynchronous.
+  assert.equal(await transform(incidentCsvConfig, 'review', '## Impact\n\nMail down'), '## Impact\n\nMail down');
+  assert.equal(await transform(incidentCsvConfig, 'review', '   '), '');
+  await assert.rejects(
+    async () => transform(incidentCsvConfig, 'review', '<script>alert(1)</script>'),
     /must be Markdown/,
   );
 }
@@ -319,7 +320,7 @@ async function testIncidentImportHooks() {
   testFkEntitiesHaveResolvers();
   await testTemplateHeadersRoundTripThroughImportValidation();
   await testIncidentRefAndValueParsing();
-  testIncidentRecordColumns();
+  await testIncidentRecordColumns();
   await testIncidentReviewIsVirtual();
   await testIncidentImportHooks();
 

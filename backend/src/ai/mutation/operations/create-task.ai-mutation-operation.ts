@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import { validate as isUuid } from 'uuid';
-import { normalizeMarkdownRichText } from '../../../common/markdown-rich-text';
+import { normalizeMarkdownRichText } from '../../../common/markdown-worker';
 import { AiPolicyService } from '../../ai-policy.service';
 import { AiMutationPreview } from '../../ai-mutation-preview.entity';
 import { AiExecutionContextWithManager } from '../../ai.types';
@@ -273,7 +273,7 @@ export class CreateTaskAiMutationOperation implements AiMutationOperation<Create
         relation_ref: relation.ref,
         relation_label: relation.label,
         title,
-        description: normalizeMarkdownRichText(input.description, { fieldName: 'description' }),
+        description: await normalizeMarkdownRichText(input.description, { fieldName: 'description' }),
         requestor_user_id: requestor.id,
         requestor_label: requestor.label,
         assignee_user_id: assignee?.id ?? null,

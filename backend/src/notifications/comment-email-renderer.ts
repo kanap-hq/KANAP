@@ -1,4 +1,5 @@
 import { sanitizeRichHtmlForEmail } from '../common/html-sanitizer';
+import { HTML_TAGS, untilLast } from '../common/text-scan';
 
 const ENTITY_MAP: Record<string, string> = {
   amp: '&',
@@ -15,6 +16,8 @@ export interface RenderCommentForEmailParams {
   commentHtml: string;
   tenantBaseUrl: string;
   tenantSlug?: string | null;
+  /** The HTML was cleaned for an email already (sanitizeRichHtmlForEmail): it is not cleaned again. */
+  sanitized?: boolean;
 }
 
 export interface RenderedCommentForEmail {
@@ -23,7 +26,7 @@ export interface RenderedCommentForEmail {
 }
 
 export function renderCommentForEmail(params: RenderCommentForEmailParams): RenderedCommentForEmail {
-  const sanitized = sanitizeCommentHtml(params.commentHtml);
+  const sanitized = params.sanitized ? String(params.commentHtml || '').trim() : sanitizeCommentHtml(params.commentHtml);
   const withAbsoluteUrls = rewriteCommentUrls(sanitized, params.tenantBaseUrl, params.tenantSlug ?? null);
 
   const html = withAbsoluteUrls.trim() || '<p>(No comment content)</p>';
@@ -181,9 +184,9 @@ function htmlToPlainText(html: string): string {
   const withLineBreaks = html
     .replace(/<\s*br\s*\/?>/gi, '\n')
     .replace(/<\s*\/\s*(p|div|li|h1|h2|h3|h4|h5|h6|blockquote|tr)\s*>/gi, '\n')
-    .replace(/<\s*li\b[^>]*>/gi, '- ');
+    .replace(untilLast('>', /<\s*li\b[^>]*>/gi), '- ');
 
-  const withoutTags = withLineBreaks.replace(/<[^>]+>/g, ' ');
+  const withoutTags = withLineBreaks.replace(HTML_TAGS, ' ');
   const decoded = decodeHtmlEntities(withoutTags);
   const normalized = decoded
     .replace(/\r/g, '')

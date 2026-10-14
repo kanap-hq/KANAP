@@ -173,9 +173,11 @@ function formatInlineCode(value: string): string {
 }
 
 // A pipe is escaped in a table cell, and so is each backslash right before it.
-function escapeTableCell(value: string): string {
+export function escapeTableCell(value: string): string {
+  // Each run of backslashes is matched once, whole, with the pipe that may follow it:
+  // the scan stays linear on long runs.
   return value
-    .replace(/\\*\|/g, (run) => run.replace(/[\\|]/g, '\\$&'))
+    .replace(/\\+\|?|\|/g, (run) => (run.endsWith('|') ? run.replace(/[\\|]/g, '\\$&') : run))
     .replace(/\n+/g, ' ');
 }
 

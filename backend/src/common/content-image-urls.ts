@@ -1,3 +1,5 @@
+import { findMarkdownImageTargets } from './text-scan';
+
 export function extractInlineImageUrls(content: string | null): string[] {
   if (!content) return [];
 
@@ -13,10 +15,8 @@ export function extractInlineImageUrls(content: string | null): string[] {
   }
 
   // Markdown images: ![alt](url) or ![alt](<url>)
-  const mdRe = /!\[[^\]]*\]\(\s*<?([^)\s>]+)>?(?:\s+["'][^"']*["'])?\s*\)/g;
-  let mdMatch: RegExpExecArray | null;
-  while ((mdMatch = mdRe.exec(content)) !== null) {
-    const raw = (mdMatch[1] || '').trim();
+  for (const target of findMarkdownImageTargets(content)) {
+    const raw = target.trim();
     if (!raw || !raw.includes('/inline')) continue;
     urls.push(raw);
   }

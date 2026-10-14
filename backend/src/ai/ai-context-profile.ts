@@ -1,5 +1,6 @@
 import type { AiQueryEntityType, AiToolListItemDto, AiToolName } from './ai.types';
 import type { AiProviderToolDef } from './providers/ai-provider.types';
+import { wordsInOrder } from '../common/text-scan';
 
 export type AiContextProfileName =
   | 'minimal'
@@ -234,7 +235,7 @@ function normalizeText(value: string): string {
     .toLowerCase();
 }
 
-function containsAny(text: string, patterns: RegExp[]): boolean {
+function containsAny(text: string, patterns: Array<{ test(text: string): boolean }>): boolean {
   return patterns.some((pattern) => pattern.test(text));
 }
 
@@ -381,8 +382,8 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
   const needsWeb = containsAny(text, [
     // Not the bare word "forecast": it names a budget column; a weather forecast matches below.
     /\b(web|internet|online|google|site web|actualite|eol|end of life|weather|meteo)\b/,
-    /\b(latest|current|derniere)\b.*\b(version|release)\b/,
-    /\b(demain|today|tomorrow)\b.*\b(meteo|weather|forecast)\b/,
+    wordsInOrder(/\b(?:latest|current|derniere)\b/, /\b(?:version|release)\b/),
+    wordsInOrder(/\b(?:demain|today|tomorrow)\b/, /\b(?:meteo|weather|forecast)\b/),
   ]);
 
   if (isMinimalDirectRequest(raw)) {
@@ -405,7 +406,7 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
 
   const isWrite = containsAny(text, [
     /\b(create|creer|cree|add|ajoute|ajouter|change|changer|update|mettre a jour|modifie|modifier|delete|supprime|(?:re)?assign(?:e|er|es|ez|ed|ing|s)?|link|lier|unlink|delier|convert|convertir|import|publish|publier|mark|set|passer|passe)\b/,
-    /\b(add|ajoute|ajouter)\b.*\b(comment|commentaire)\b/,
+    wordsInOrder(/\b(?:add|ajoute|ajouter)\b/, /\b(?:comment|commentaire)\b/),
   ]);
 
   if (isWrite) {
@@ -468,7 +469,7 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
 
   if (containsAny(text, [
     /\b(document|documents|doc|docs|knowledge|knowledge base|article|articles|page|pages|backup|backups)\b/,
-    /\b(find|search|cherche|chercher|trouve|trouver)\b.*\b(doc|document|knowledge|backup)\b/,
+    wordsInOrder(/\b(?:find|search|cherche|chercher|trouve|trouver)\b/, /\b(?:doc|document|knowledge|backup)\b/),
   ])) {
     return { profile: PROFILES.knowledge, explicitIntent: true };
   }
@@ -494,7 +495,7 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
 function isAssistantContinuationPrompt(content: string): boolean {
   const text = normalizeText(content);
   return content.includes('?') || containsAny(text, [
-    /\b(quel|quelle|quels|quelles|what|which)\b.*\b(contenu|content|valeur|value|statut|status|commentaire|comment|texte|text|champ|field)\b/,
+    wordsInOrder(/\b(?:quel|quelle|quels|quelles|what|which)\b/, /\b(?:contenu|content|valeur|value|statut|status|commentaire|comment|texte|text|champ|field)\b/),
     /\b(souhaitez|souhaites|voulez|veux|want|would you like|which one|lequel|laquelle)\b/,
     /\b(precise|precisez|indiquer|indiquez|provide|specify|confirm|confirmez|choisir|choose)\b/,
     /\b(preview|previews|plan de mutation|mutation plan|approuver|approve|rejeter|reject|rejet|approbation|approval)\b/,
@@ -505,10 +506,10 @@ function isWriteTargetCorrectionPrompt(content: string): boolean {
   const text = normalizeText(content);
   return containsAny(text, [
     /\b(exclu|exclus|exclure|exclude|excluded|retire|retirer|enleve|enlever|skip|ignore|ignored|relance|relancer)\b/,
-    /\b(ne veux|ne veut|don't want|do not want|dont want)\b.*\b(tache|taches|task|tasks|cible|cibles|target|targets)\b/,
-    /\b(deja|already)\b.*\b(ferme|fermee|fermees|termine|terminee|terminees|done|completed|closed|cancelled|canceled)\b/,
-    /\b(?:seulement|uniquement|only|que|qu['’][a-z]+)\b.*\b(actif|active|actives|ouvert|ouverte|open|pending|in progress|en cours)\b/,
-    /\b(encore|still)\b.*\b(actif|active|actives|ouvert|ouverte|open|pending|in progress|en cours)\b/,
+    wordsInOrder(/\b(?:ne veux|ne veut|don't want|do not want|dont want)\b/, /\b(?:tache|taches|task|tasks|cible|cibles|target|targets)\b/),
+    wordsInOrder(/\b(?:deja|already)\b/, /\b(?:ferme|fermee|fermees|termine|terminee|terminees|done|completed|closed|cancelled|canceled)\b/),
+    wordsInOrder(/\b(?:seulement|uniquement|only|que|qu['’][a-z]+)\b/, /\b(?:actif|active|actives|ouvert|ouverte|open|pending|in progress|en cours)\b/),
+    wordsInOrder(/\b(?:encore|still)\b/, /\b(?:actif|active|actives|ouvert|ouverte|open|pending|in progress|en cours)\b/),
   ]);
 }
 

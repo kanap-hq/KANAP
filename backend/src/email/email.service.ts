@@ -15,6 +15,7 @@ import type {
   EmailTransport,
 } from './transports/email-transport.interface';
 import type { SendEmailOptions } from './email.types';
+import { findAddressTokens, replaceAddressTokens } from '../common/text-scan';
 
 export type { EmailAttachment, Recipient, SendEmailOptions } from './email.types';
 
@@ -26,16 +27,13 @@ interface QueuedEmail {
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-/** The addresses of a recipient entry: `a@b.c`, `Name <a@b.c>`, or several in one string. */
-const ADDRESS_PATTERN = /[^\s<>,;"']+@[^\s<>,;"']+/g;
-
 /**
  * Whether a recipient entry holds an address on a reserved `.example` domain (RFC 2606). The
  * demo users (`fromage-co.example`, ...) live on such domains: no e-mail is ever sent to them.
  * An entry carrying several addresses is left out whole when one of them is reserved.
  */
 export function isExampleRecipient(entry: unknown): boolean {
-  const addresses = String(entry ?? '').match(ADDRESS_PATTERN) ?? [];
+  const addresses = findAddressTokens(String(entry ?? ''));
   return addresses.some((address) => {
     const domain = address.slice(address.lastIndexOf('@') + 1).trim().toLowerCase().replace(/\.+$/, '');
     return domain === 'example' || domain.endsWith('.example');
@@ -44,7 +42,7 @@ export function isExampleRecipient(entry: unknown): boolean {
 
 /** `text` with every e-mail address replaced by `[address]`, for a log line. */
 export function maskEmailAddresses(text: string): string {
-  return text.replace(ADDRESS_PATTERN, '[address]');
+  return replaceAddressTokens(text, '[address]');
 }
 
 function escapeHtml(text: string): string {

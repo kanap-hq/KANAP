@@ -1,6 +1,6 @@
 # Verbundene Apps
 
-Die Registerkarte **Verbundene Apps** listet die Anwendungen auf, die Ihre KANAP-Daten in Ihrem Namen lesen können, etwa Claude, Claude Desktop oder Claude Code. Hier sehen Sie diese Zugriffe und trennen sie.
+Die Registerkarte **Verbundene Apps** listet die Anwendungen auf, die Ihre KANAP-Daten in Ihrem Namen lesen können, etwa Claude, Claude Desktop, Claude Code, ChatGPT oder Grok. Hier sehen Sie diese Zugriffe und trennen sie.
 
 ## Wo Sie es finden
 
@@ -20,7 +20,7 @@ Eine Anwendung liest nur, was Sie in KANAP sehen, im Rahmen Ihrer eigenen Zugrif
 
 Um einen Zugriff zu trennen, klicken Sie auf **Trennen** und bestätigen Sie. Die Anwendung verliert den Zugriff sofort. Um sie wieder zu nutzen, verbinden Sie sie in der Anwendung erneut. Das Trennen vergisst auch die Wahl **Diese Anwendung merken**, die Sie beim Verbinden getroffen haben.
 
-Wenn nichts verbunden ist, zeigt die Registerkarte eine Zeile und einen Link zur Anleitung. Wie Sie Claude verbinden, steht unter [Einen MCP-Client verbinden](ai-settings.md#connecting-an-mcp-client).
+Wenn nichts verbunden ist, zeigt die Registerkarte eine Zeile und einen Link zur Anleitung. Wie Sie eine Anwendung verbinden, steht unter [Einen MCP-Client verbinden](ai-settings.md#connecting-an-mcp-client).
 
 ## API-Schlüssel
 

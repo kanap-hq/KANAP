@@ -24,7 +24,8 @@ import ExportButton from './ExportButton';
 import ImportButton from './ImportButton';
 import { MarkdownContent } from './MarkdownContent';
 import { normalizeMarkdownForRichTextEditor } from '../lib/markdownEditorNormalization';
-import type { AutosaveStatus } from '../hooks/useAutosave';
+import { getApiErrorMessage, getDocumentSaveErrorMessage } from '../utils/apiErrorMessage';
+import { AUTOSAVE_RETRY_DELAYS_MS, autosaveRetryDelayMs, isRetriableAutosaveFailure, type AutosaveStatus } from '../hooks/useAutosave';
 
 const MarkdownEditor = React.lazy(() => import('./MarkdownEditor'));
 
@@ -343,12 +344,23 @@ export const IntegratedDocumentEditor = React.forwardRef<
     }
   }, [acquireLock, canEdit, doc?.edit_lock, editMode, isDraftMode, lockToken, parseLockInfo, parseLockInfoFromError]);
 
+  // Autosaves refused in a row by a busy server (503 busy or MARKDOWN_BUSY, 409 retry) or left
+  // without an answer (network).
+  const transientAutosaveFailuresRef = React.useRef(0);
+  // When the next autosave may go after such a failure (the server's Retry-After, growing waits).
+  const autosaveRetryNotBeforeRef = React.useRef(0);
+  // The text of the last save sent, and a text refused for good: the autosave waits for a new
+  // modification instead of sending it again.
+  const lastSentContentRef = React.useRef('');
+  const refusedContentRef = React.useRef<string | null>(null);
+
   const saveMutation = useMutation({
     mutationFn: async (mode: 'manual' | 'autosave') => {
       if (isDraftMode || !entityId) {
         throw new Error('Managed document is not available until the source item is created');
       }
       const sentContent = String(formRef.current.content_markdown || '');
+      lastSentContentRef.current = sentContent;
       const res = await api.patch(
         endpointBase,
         {
@@ -363,6 +375,9 @@ export const IntegratedDocumentEditor = React.forwardRef<
       return { mode, sentContent, data: res.data as IntegratedDocumentDetails };
     },
     onSuccess: async (result) => {
+      transientAutosaveFailuresRef.current = 0;
+      autosaveRetryNotBeforeRef.current = 0;
+      refusedContentRef.current = null;
       setError(null);
       savedContentRef.current = result.sentContent;
       // Typing while the request was in flight must survive: the draft stays
@@ -391,6 +406,27 @@ export const IntegratedDocumentEditor = React.forwardRef<
     onError: (e: any, mode: 'manual' | 'autosave') => {
       const status = Number(e?.response?.status || 0);
       const lockInfo = parseLockInfoFromError(e);
+      if (mode === 'autosave' && isRetriableAutosaveFailure(e)) {
+        // A busy server or no answer: the autosave sends the text again, after the longer of
+        // the autosave delay, the server's Retry-After and the growing retry waits. Said only
+        // once these retries are spent; the autosave then waits for a new modification.
+        transientAutosaveFailuresRef.current += 1;
+        const attempt = transientAutosaveFailuresRef.current;
+        if (attempt <= AUTOSAVE_RETRY_DELAYS_MS.length) {
+          autosaveRetryNotBeforeRef.current = Date.now() + autosaveRetryDelayMs(e, attempt);
+          markSaveStatus('pending');
+          return;
+        }
+        refusedContentRef.current = lastSentContentRef.current;
+        markSaveStatus('error');
+        setError(t('errors:notSavedYet'));
+        return;
+      }
+      if (!isRetriableAutosaveFailure(e)) {
+        // Refused for its content (too large, too complex, ...) or otherwise for good: sending
+        // the same text again would fail the same way. The autosave waits for a new modification.
+        refusedContentRef.current = lastSentContentRef.current;
+      }
       markSaveStatus('error');
       if ((status === 410 || status === 423) && mode === 'autosave') {
         setEditMode(false);
@@ -414,7 +450,7 @@ export const IntegratedDocumentEditor = React.forwardRef<
         setError(t('documentEditor.lockExpired'));
         return;
       }
-      setError(e?.response?.data?.message || e?.message || t('documentEditor.failedToSave'));
+      setError(getDocumentSaveErrorMessage(e, t, t('documentEditor.failedToSave')));
     },
   });
 
@@ -477,9 +513,18 @@ export const IntegratedDocumentEditor = React.forwardRef<
   React.useEffect(() => {
     if (!autosaveEnabled) return;
     if (isDraftMode || !editMode || !dirty || !lockToken || saveMutation.isPending) return;
+    if (refusedContentRef.current !== null) {
+      // The text was refused: nothing is sent until it changes.
+      if (String(form.content_markdown || '') === refusedContentRef.current) return;
+      // A new modification: saved again, with fresh retries.
+      refusedContentRef.current = null;
+      transientAutosaveFailuresRef.current = 0;
+      autosaveRetryNotBeforeRef.current = 0;
+    }
+    const delayMs = Math.max(autosaveDelayMs, autosaveRetryNotBeforeRef.current - Date.now());
     const timer = window.setTimeout(() => {
       void enqueueSave('autosave');
-    }, autosaveDelayMs);
+    }, delayMs);
     return () => window.clearTimeout(timer);
   }, [
     autosaveDelayMs,
@@ -612,7 +657,7 @@ export const IntegratedDocumentEditor = React.forwardRef<
       setError('Editing lock expired. Re-enter edit mode to continue.');
       return;
     }
-    setError((e as any)?.response?.data?.message || (e as any)?.message || t('documentEditor.importFailed'));
+    setError(getApiErrorMessage(e, t, t('documentEditor.importFailed')));
   }, [doc?.edit_lock, parseLockInfo, parseLockInfoFromError]);
 
   const handleDocumentImport = React.useCallback(async (file: File): Promise<ImportDocumentResult> => {
@@ -655,12 +700,8 @@ export const IntegratedDocumentEditor = React.forwardRef<
   const lockHolderLabel = activeLockInfo?.holder_name || 'another user';
   const loadErrorMessage = React.useMemo(() => {
     if (!loadError) return null;
-    return (
-      (loadError as any)?.response?.data?.message
-      || (loadError as any)?.message
-      || t('documentEditor.failedToLoad')
-    );
-  }, [loadError]);
+    return getApiErrorMessage(loadError, t, t('documentEditor.failedToLoad'));
+  }, [loadError, t]);
   const lockExpiryLabel = React.useMemo(() => {
     const raw = activeLockInfo?.expires_at || lockExpiresAt || null;
     if (!raw) return null;

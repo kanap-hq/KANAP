@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { decodeHtmlEntities, decodeNumericHtmlEntities } from '../../common/html-entities';
-import { resolveHtmlContentSource } from '../../common/html-to-markdown';
+import { markdownWorkBudget, resolveHtmlContentSource, resolveHtmlContentSources } from '../../common/markdown-worker';
 import { openValidatedFetch } from '../../common/pinned-fetch';
 import { Features } from '../../config/features';
 import { AiSecretCipherService } from '../ai-secret-cipher.service';
@@ -25,6 +25,7 @@ import {
   GlpiCategory,
   GlpiTechnician,
 } from './glpi.types';
+import { findImgSourceValues, hasHtmlTag } from '../../common/text-scan';
 
 const GLPI_TIMEOUT_MS = 10_000;
 const GLPI_MAX_DOCUMENT_BYTES = 20 * 1024 * 1024;
@@ -171,7 +172,7 @@ function normalizePlainTicketFollowup(value: string, opts?: { maxChars?: number;
   if (normalized.length > maxChars) {
     throw new BadRequestException(`${label} content exceeds the allowed length.`);
   }
-  if (/<[^>]+>/.test(normalized) || /javascript:/i.test(normalized)) {
+  if (hasHtmlTag(normalized) || /javascript:/i.test(normalized)) {
     throw new BadRequestException(`${label} content must be plain text and cannot contain HTML or scripts.`);
   }
   return normalized;
@@ -208,10 +209,8 @@ function extractImageTargets(html: string | null): string[] {
 
   const seen = new Set<string>();
   const results: string[] = [];
-  const regex = /<img\b[^>]*\bsrc\s*=\s*(['"])(.*?)\1[^>]*>/gi;
-  let match: RegExpExecArray | null;
-  while ((match = regex.exec(html)) !== null) {
-    const rawTarget = decodeHtmlAttribute(String(match[2] || '').trim());
+  for (const value of findImgSourceValues(html)) {
+    const rawTarget = decodeHtmlAttribute(value.trim());
     if (!rawTarget || seen.has(rawTarget)) {
       continue;
     }
@@ -662,7 +661,8 @@ export class GlpiService {
 
     const record = this.expectRecord(payload, 'GLPI ticket');
     const resolvedTicketId = parseNumericGlpiValue(record.id) ?? ticketId;
-    const contentHtml = textOrNull(resolveHtmlContentSource(String(record.content ?? '')));
+    // Read in the Markdown workers (markdown-worker.ts).
+    const contentHtml = textOrNull(await resolveHtmlContentSource(String(record.content ?? ''), { fieldName: 'description' }));
     const name = textOrNull(record.name);
     return {
       id: resolvedTicketId,
@@ -1083,6 +1083,7 @@ export class GlpiService {
   ): Promise<GlpiTicketFollowup[]> {
     const results: GlpiTicketFollowup[] = [];
     const seenIds = new Set<number>();
+    const followupBudget = markdownWorkBudget();
     let offset = 0;
     let total: number | null = null;
 
@@ -1117,8 +1118,16 @@ export class GlpiService {
         throw new BadRequestException('GLPI ticket followups response was malformed.');
       }
 
+      // The follow-up texts of the page are read in the Markdown workers in one call, within
+      // the time budget of all the follow-ups of the ticket.
+      const contents = await resolveHtmlContentSources(
+        payload.map((item) => String(
+          (item && typeof item === 'object' && !Array.isArray(item) ? (item as Record<string, unknown>).content : null) ?? '',
+        )),
+        { fieldName: 'content', budget: followupBudget },
+      );
       const pageItems = payload
-        .map((item) => this.normalizeFollowup(item))
+        .map((item, index) => this.normalizeFollowup(item, contents[index]))
         .filter((item): item is GlpiTicketFollowup => !!item);
       let newItemCount = 0;
       for (const item of pageItems) {
@@ -1469,7 +1478,8 @@ export class GlpiService {
     return { baseUrl, userToken, appToken };
   }
 
-  private normalizeFollowup(payload: unknown): GlpiTicketFollowup | null {
+  /** @param resolvedContent the text of the follow-up as `resolveHtmlContentSource` reads it */
+  private normalizeFollowup(payload: unknown, resolvedContent: string): GlpiTicketFollowup | null {
     if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
       return null;
     }
@@ -1480,7 +1490,7 @@ export class GlpiService {
       return null;
     }
 
-    const contentHtml = textOrNull(resolveHtmlContentSource(String(record.content ?? '')));
+    const contentHtml = textOrNull(resolvedContent);
     const authorId = parseNumericGlpiValue(record.users_id);
     const editorId = parseNumericGlpiValue(record.users_id_editor);
     const authorLabel = decodeGlpiPlainTextField(textOrNull(record.user_name)

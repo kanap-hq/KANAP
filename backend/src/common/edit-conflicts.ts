@@ -79,7 +79,7 @@ function instantOf(value: unknown): number | null {
 function numberOf(value: unknown): number | null {
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;
   if (typeof value === 'bigint') return Number(value);
-  if (typeof value === 'string' && /^[+-]?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i.test(value)) return Number(value);
+  if (typeof value === 'string' && /^[+-]?(\d+(?:\.\d*)?|\.\d+)(e[+-]?\d+)?$/i.test(value)) return Number(value);
   return null;
 }
 
