@@ -4,6 +4,7 @@ import {
   isEuCountry,
   isValidEuVatNumber,
   missingInvoiceFields,
+  stripeAddress,
   type InvoiceProfileContact,
 } from '../billing-profile.util';
 
@@ -106,6 +107,16 @@ function testEuHelpers() {
   assert.equal(euVatTaxIdValue(contact({ vatNumber: '12345' })), null);
 }
 
+function testStripeAddressSendsFilledFieldsOnly() {
+  // A blank field is left out: Stripe never receives an empty string.
+  assert.deepEqual(
+    stripeAddress({ line1: ' 1 rue de la Paix ', line2: '  ', city: 'Paris', state: null, postalCode: '75002', country: 'FR' }),
+    { line1: '1 rue de la Paix', city: 'Paris', postal_code: '75002', country: 'FR' },
+  );
+  assert.equal(stripeAddress({ line1: '', city: null }), undefined);
+  assert.equal(stripeAddress(null), undefined);
+}
+
 function run() {
   testCompleteFrenchProfilePasses();
   testFrenchProfileWithoutVatListsVat();
@@ -116,6 +127,7 @@ function run() {
   testBadEmailListsEmail();
   testEmptyProfileListsEverythingInOrder();
   testEuHelpers();
+  testStripeAddressSendsFilledFieldsOnly();
 }
 
 run();

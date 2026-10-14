@@ -15,11 +15,20 @@ import {
 } from './sections';
 import { getLocaleFromUrl, localePath } from '../i18n/ui';
 import { getOfferContent, getTrialContent } from '../content/resolve';
+import { GTC_VERSION } from '../content/legal/terms-version';
 
 const locale = getLocaleFromUrl(Astro.url);
 const content = getOfferContent(locale);
 const trial = getTrialContent(locale).start;
 const pricingPlans = [...content.selfHosted.plans, ...content.cloud.plans];
+// The invoice needs a real country (ISO code): "Other" is not offered on the invoice form.
+const supportCountryOptions = trial.countryOptions.filter((o) => o.value !== 'OTHER');
+// EU member states (ISO 3166-1 alpha-2): a company there must give its VAT number.
+// Same list as EU_COUNTRY_CODES in backend/src/billing/billing-profile.util.ts.
+const euCountryCodes = [
+  'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE',
+  'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE',
+];
 
 // Localize internal CTA hrefs
 function resolveHref(href: string): string {
@@ -196,39 +205,44 @@ function resolveHref(href: string): string {
             id="si-country"
             name="country"
             label={content.supportInvoice.countryLabel}
-            options={trial.countryOptions}
+            options={supportCountryOptions}
             noMatch={trial.form.countryNoMatch}
             required
           />
         </div>
 
-        <details class="mk-support-form__details">
-          <summary>{content.supportInvoice.optionalSummary}</summary>
-          <div class="mk-support-form__optional">
-            <div class="mk-tf__field">
-              <label for="si-vat">{content.supportInvoice.vatLabel}</label>
-              <input id="si-vat" name="vat_id" type="text" autocomplete="off" />
-            </div>
-            <div class="mk-tf__field">
-              <label for="si-address1">{content.supportInvoice.address1Label}</label>
-              <input id="si-address1" name="address_line1" type="text" autocomplete="address-line1" />
-            </div>
-            <div class="mk-tf__field">
-              <label for="si-address2">{content.supportInvoice.address2Label}</label>
-              <input id="si-address2" name="address_line2" type="text" autocomplete="address-line2" />
-            </div>
-            <div class="mk-support-form__row">
-              <div class="mk-tf__field">
-                <label for="si-city">{content.supportInvoice.cityLabel}</label>
-                <input id="si-city" name="city" type="text" autocomplete="address-level2" />
-              </div>
-              <div class="mk-tf__field">
-                <label for="si-postal">{content.supportInvoice.postalCodeLabel}</label>
-                <input id="si-postal" name="postal_code" type="text" autocomplete="postal-code" />
-              </div>
-            </div>
+        <div class="mk-tf__field">
+          <label for="si-address1">{content.supportInvoice.address1Label}</label>
+          <input id="si-address1" name="address_line1" type="text" required autocomplete="address-line1" />
+        </div>
+        <div class="mk-tf__field">
+          <label for="si-address2">{content.supportInvoice.address2Label}</label>
+          <input id="si-address2" name="address_line2" type="text" autocomplete="address-line2" />
+        </div>
+        <div class="mk-support-form__row">
+          <div class="mk-tf__field">
+            <label for="si-postal">{content.supportInvoice.postalCodeLabel}</label>
+            <input id="si-postal" name="postal_code" type="text" required autocomplete="postal-code" />
           </div>
-        </details>
+          <div class="mk-tf__field">
+            <label for="si-city">{content.supportInvoice.cityLabel}</label>
+            <input id="si-city" name="city" type="text" required autocomplete="address-level2" />
+          </div>
+        </div>
+
+        <div class="mk-tf__field">
+          <label for="si-vat">{content.supportInvoice.vatLabel}</label>
+          <input id="si-vat" name="vat_id" type="text" autocomplete="off" aria-describedby="si-vat-help" />
+          <p class="mk-tf__help" id="si-vat-help" data-support-vat-help hidden>{content.supportInvoice.vatHelpEu}</p>
+        </div>
+
+        <label class="mk-support-form__terms">
+          <input type="checkbox" name="terms" required data-support-terms />
+          <span>
+            {content.supportInvoice.termsAccept}{' '}
+            <a href={localePath(locale, '/sales')} target="_blank" rel="noopener">{content.supportInvoice.termsLink}</a>
+          </span>
+        </label>
 
         <div class="mk-tf__field" data-support-turnstile-field hidden>
           <span class="mk-tf__label-spacer">{content.supportInvoice.captchaLabel}</span>
@@ -253,6 +267,11 @@ function resolveHref(href: string): string {
   successNoLink: content.supportInvoice.successNoLink,
   errorGeneric: content.supportInvoice.errorGeneric,
   errorRequired: content.supportInvoice.errorRequired,
+  errorVatRequired: content.supportInvoice.errorVatRequired,
+  errorVatInvalid: content.supportInvoice.errorVatInvalid,
+  errorTerms: content.supportInvoice.errorTerms,
+  termsVersion: GTC_VERSION,
+  euCountryCodes,
 }}>
   const modal = document.querySelector('[data-support-invoice-modal]');
   const form = document.querySelector('[data-support-invoice-form]');
@@ -261,6 +280,31 @@ function resolveHref(href: string): string {
   const openers = document.querySelectorAll('[data-open-support-invoice]');
   const closers = document.querySelectorAll('[data-close-support-invoice]');
   const captcha = { enabled: false, required: false, token: '', widgetId: null, ready: false };
+  const countryInput = form ? form.querySelector('input[name="country"]') : null;
+  const vatInput = form ? form.querySelector('input[name="vat_id"]') : null;
+  const vatHelp = document.querySelector('[data-support-vat-help]');
+  const termsInput = document.querySelector('[data-support-terms]');
+
+  function isEuCountry(code) {
+    return euCountryCodes.includes(String(code || '').toUpperCase());
+  }
+
+  // The VAT number is required, and said so, only for a country of the European Union.
+  function syncVatRequirement() {
+    const eu = isEuCountry(countryInput ? countryInput.value : '');
+    if (vatInput) vatInput.required = eu;
+    if (vatHelp) vatHelp.hidden = !eu;
+  }
+
+  if (countryInput) countryInput.addEventListener('change', syncVatRequirement);
+  if (form) form.addEventListener('reset', () => setTimeout(syncVatRequirement, 0));
+
+  function resetCaptcha() {
+    if (captcha.enabled && window.turnstile && captcha.widgetId !== null) {
+      window.turnstile.reset(captcha.widgetId);
+      captcha.token = '';
+    }
+  }
 
   function setStatus(text, kind) {
     if (!statusEl) return;
@@ -365,15 +409,29 @@ function resolveHref(href: string): string {
         billing_email: String(fd.get('billing_email') ?? '').trim(),
         country: String(fd.get('country') ?? ''),
         vat_id: String(fd.get('vat_id') ?? '').trim() || undefined,
-        address_line1: String(fd.get('address_line1') ?? '').trim() || undefined,
+        address_line1: String(fd.get('address_line1') ?? '').trim(),
         address_line2: String(fd.get('address_line2') ?? '').trim() || undefined,
-        city: String(fd.get('city') ?? '').trim() || undefined,
-        postal_code: String(fd.get('postal_code') ?? '').trim() || undefined,
+        city: String(fd.get('city') ?? '').trim(),
+        postal_code: String(fd.get('postal_code') ?? '').trim(),
+        terms_version: termsInput && termsInput.checked ? termsVersion : undefined,
         captchaToken: captcha.enabled ? captcha.token : undefined,
       };
 
-      if (!payload.company_name || !payload.contact_name || !payload.billing_email || !payload.country) {
+      if (
+        !payload.company_name || !payload.contact_name || !payload.billing_email || !payload.country
+        || !payload.address_line1 || !payload.postal_code || !payload.city
+      ) {
         setStatus(errorRequired, 'error');
+        return;
+      }
+      if (isEuCountry(payload.country) && !payload.vat_id) {
+        setStatus(errorVatRequired, 'error');
+        if (vatInput) vatInput.focus();
+        return;
+      }
+      if (!payload.terms_version) {
+        setStatus(errorTerms, 'error');
+        if (termsInput) termsInput.focus();
         return;
       }
       if (captcha.required && !payload.captchaToken) {
@@ -391,7 +449,22 @@ function resolveHref(href: string): string {
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify(payload),
         });
-        if (!res.ok) throw new Error('bad status ' + res.status);
+        if (!res.ok) {
+          const failure = await res.json().catch(() => null);
+          const code = failure && typeof failure === 'object' ? failure.code : null;
+          // A CAPTCHA token is single use: a corrected form needs a new one.
+          resetCaptcha();
+          if (code === 'VAT_NUMBER_INVALID') {
+            setStatus(errorVatInvalid, 'error');
+            if (vatInput) vatInput.focus();
+            return;
+          }
+          if (code === 'TERMS_NOT_ACCEPTED') {
+            setStatus(errorTerms, 'error');
+            return;
+          }
+          throw new Error('bad status ' + res.status);
+        }
         const data = await res.json();
         if (data && data.hosted_invoice_url) {
           setInvoiceLink(data.hosted_invoice_url);
@@ -399,11 +472,9 @@ function resolveHref(href: string): string {
           setStatus(successNoLink, 'success');
         }
         form.reset();
-        if (captcha.enabled && window.turnstile && captcha.widgetId !== null) {
-          window.turnstile.reset(captcha.widgetId);
-          captcha.token = '';
-        }
+        resetCaptcha();
       } catch (err) {
+        resetCaptcha();
         setStatus(errorGeneric, 'error');
       } finally {
         btn.disabled = false;
@@ -680,24 +751,26 @@ function resolveHref(href: string): string {
     gap: 16px;
   }
 
-  .mk-support-form__details {
-    border: 1px solid var(--kanap-border-soft);
-    border-radius: var(--kanap-radius-composer);
-    padding: 14px 16px;
-  }
-
-  .mk-support-form__details summary {
+  .mk-support-form__terms {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 13px;
+    line-height: 1.5;
     color: var(--kanap-text-secondary);
     cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
   }
 
-  .mk-support-form__optional {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    padding-top: 16px;
+  .mk-support-form__terms input {
+    flex: none;
+    width: 16px;
+    height: 16px;
+    margin: 2px 0 0;
+    accent-color: var(--kanap-teal);
+  }
+
+  .mk-support-form__terms a {
+    color: var(--kanap-teal);
   }
 
   .mk-support-modal-open {

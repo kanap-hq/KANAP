@@ -1,5 +1,9 @@
 import * as assert from 'node:assert/strict';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { backendPath } from '../../common/__tests__/backend-root';
 import {
+  INVOICE_PAYMENT_TERM_DAYS,
   PLANS,
   isBankTransferEligible,
   resolvePlanKeyFromLegacyName,
@@ -44,11 +48,29 @@ function testBankTransferEligibility() {
   assert.equal(isBankTransferEligible('max', 'annual'), true);
 }
 
+function sourceFiles(dir: string): string[] {
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) return entry.name === '__tests__' ? [] : sourceFiles(full);
+    return entry.name.endsWith('.ts') ? [full] : [];
+  });
+}
+
+function testInvoicePaymentTerm() {
+  // GTC art. 5.4: invoices paid by bank transfer are payable within 30 days.
+  assert.equal(INVOICE_PAYMENT_TERM_DAYS, 30);
+  // Every Stripe `days_until_due` reads the constant: no literal term left in the sources.
+  const literal = /days_until_due\s*[:=]\s*\d/;
+  const offenders = sourceFiles(backendPath('src')).filter((file) => literal.test(fs.readFileSync(file, 'utf8')));
+  assert.deepEqual(offenders, []);
+}
+
 function run() {
   testSingleSellablePlan();
   testLegacyNameResolution();
   testPriceIdResolution();
   testBankTransferEligibility();
+  testInvoicePaymentTerm();
   // eslint-disable-next-line no-console
   console.log('plans.config.spec: all assertions passed');
 }

@@ -8,7 +8,7 @@ import { Tenant } from '../tenants/tenant.entity';
 import { StripeClientService, StripeConfigService, ensureInvoiceA4 } from './stripe';
 import { subscriptionPeriod } from './stripe/stripe-shapes.util';
 import { computePriceAmount, computeStripePriceAmount, normaliseStripePrice, type NormalisedPrice } from './price.util';
-import { euVatTaxIdValue, missingInvoiceFields, normaliseVatNumber, toIsoCountry } from './billing-profile.util';
+import { euVatTaxIdValue, missingInvoiceFields, normaliseVatNumber, stripeAddress, toIsoCountry } from './billing-profile.util';
 import { customerSiren, invoiceCustomFields, invoiceLocale } from './invoice-mentions';
 import { withTenant } from '../common/tenant-runner';
 import { Features } from '../config/features';
@@ -20,6 +20,7 @@ import {
   FREEZE_GRACE_DAYS,
   BANK_TRANSFER_MIN_AMOUNT_EUR_CENTS,
   CLOUD_SUBSCRIPTION_QUANTITY,
+  INVOICE_PAYMENT_TERM_DAYS,
   getPriceId,
   isBankTransferEligible,
   resolvePlanKeyFromPriceId,
@@ -510,7 +511,7 @@ export class BillingService {
       stripeSubResult = await client.subscriptions.update(sub.stripe_subscription_id, {
         items: [{ id: existingItemId, price: priceId }],
         collection_method: 'send_invoice',
-        days_until_due: 30,
+        days_until_due: INVOICE_PAYMENT_TERM_DAYS,
         payment_settings: invoicePaymentSettings,
         metadata: { plan_key: planKey, billing_channel: 'saas' },
         // Force immediate invoice creation for proration/upgrade deltas.
@@ -525,7 +526,7 @@ export class BillingService {
         customer: customerId,
         items: [{ price: priceId, quantity: CLOUD_SUBSCRIPTION_QUANTITY }],
         collection_method: 'send_invoice',
-        days_until_due: 30,
+        days_until_due: INVOICE_PAYMENT_TERM_DAYS,
         payment_settings: invoicePaymentSettings,
         metadata: { plan_key: planKey, billing_channel: 'saas', tenant_id: tenant.id, tenant_slug: tenant.slug },
         expand: ['latest_invoice'],
@@ -542,7 +543,7 @@ export class BillingService {
     sub.subscription_type = interval === 'annual' ? SubscriptionType.ANNUAL : SubscriptionType.MONTHLY;
     sub.collection_method = CollectionMethod.SEND_INVOICE;
     sub.payment_mode = PaymentMode.BANK_TRANSFER;
-    sub.days_until_due = 30;
+    sub.days_until_due = INVOICE_PAYMENT_TERM_DAYS;
     sub.last_synced_at = new Date();
     const saved = await mg.getRepository(Subscription).save(sub);
     await this.audit.log(
@@ -716,7 +717,7 @@ export class BillingService {
       email: contact.email || undefined,
       name: contact.company || contact.name || tenant.name,
       phone: contact.phone || undefined,
-      address: this.normaliseStripeAddress(this.addressToRecord(contact.address)),
+      address: stripeAddress(contact.address),
       invoice_settings: { custom_fields: invoiceCustomFields(contact) },
       preferred_locales: [invoiceLocale(contact.address.country)],
       metadata: { siren: siren ?? '' },
@@ -761,19 +762,6 @@ export class BillingService {
       }
       throw error;
     }
-  }
-
-  private normaliseStripeAddress(address: Record<string, any> | null | undefined) {
-    if (!address) return undefined;
-    const entries: Record<string, any> = { ...address };
-    const mapped: Record<string, any> = {};
-    if (entries.line1) mapped.line1 = entries.line1;
-    if (entries.line2) mapped.line2 = entries.line2;
-    if (entries.city) mapped.city = entries.city;
-    if (entries.state) mapped.state = entries.state;
-    if (entries.postal_code) mapped.postal_code = entries.postal_code;
-    if (entries.country) mapped.country = entries.country;
-    return Object.keys(mapped).length ? mapped : undefined;
   }
 
   private async updateSubscriptionCustomer(
