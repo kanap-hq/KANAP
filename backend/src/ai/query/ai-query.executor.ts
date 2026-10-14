@@ -55,6 +55,7 @@ import { assertPlainTextQuickSearch } from './ai-quick-search-validation.util';
 import { analyticsAxisFields, resolveAiEntityRegistry } from './registries';
 import { budgetFteFields } from './registries/budget-amount-fields';
 import { analyticsAxisLabel, AnalyticsAxisInfo, axisAppliesTo, loadAnalyticsAxes, parseAnalyticsFieldKey } from '../../analytics/analytics-axes.util';
+import { entityNotFound, resolveAiEntityReference } from '../ai-entity-reference.util';
 import { FIXED_SLOTS, FixedSlot, fteFieldKey, resolveFteField, SlotMetric, SUMMARY_COLUMNS } from '../../spend/spend-summary.builder';
 
 function toIso(value: Date | string | null | undefined): string | null {
@@ -548,6 +549,7 @@ export class AiQueryExecutor {
   private mapApplication(row: any): AiEntitySummaryDto {
     return toEntitySummary('applications', {
       id: row.id,
+      reference: row.sequential_id ?? null,
       label: row.name,
       status: row.status ?? null,
       summary: row.description ?? null,
@@ -870,6 +872,7 @@ export class AiQueryExecutor {
   private mapAsset(row: any): AiEntitySummaryDto {
     return toEntitySummary('assets', {
       id: row.id,
+      reference: row.asset_reference ?? null,
       label: row.name,
       status: row.status ?? null,
       summary: row.fqdn ?? row.hostname ?? row.notes ?? null,
@@ -1588,10 +1591,6 @@ export class AiQueryExecutor {
   ): Promise<string> {
     const value = String(rawId || '').trim();
     if (!value) return value;
-    // Any uuid shape (not only v1-v5): an unmatched one would now throw below.
-    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
-      return value;
-    }
     if ((entityType === 'spend_items' || entityType === 'capex_items') && /^(?:BL|OPX|CPX)-\d+$/i.test(value)) {
       // The nature-specific item service resolves native and legacy references before loading.
       return value;
@@ -1599,18 +1598,8 @@ export class AiQueryExecutor {
     if (entityType === 'documents') {
       return value;
     }
-
-    if (entityType === 'incidents') {
-      const itemNumber = value.match(/^INC-?(\d+)$/i)?.[1];
-      if (itemNumber) {
-        const rows: Array<{ id: string }> = await context.manager.query(
-          `SELECT id FROM incidents WHERE tenant_id = $1 AND item_number = $2 LIMIT 1`,
-          [context.tenantId, Number(itemNumber)],
-        );
-        if (rows.length === 0) throw new NotFoundException('Incident not found.');
-        return String(rows[0].id);
-      }
-    }
+    const resolved = await resolveAiEntityReference(context.manager, context.tenantId, entityType, value);
+    if (resolved) return resolved;
 
     const result = await this.execute(context, {
       entity_type: entityType,
@@ -1628,7 +1617,7 @@ export class AiQueryExecutor {
     if (result.items.length === 1) return result.items[0].id;
     // Not a uuid and nothing matched: the services would cast it to uuid and
     // fail in Postgres, so answer with a plain "not found" instead.
-    throw new NotFoundException(`No ${entityType} record matches "${value}". Search for it first, then use its id or reference.`);
+    throw entityNotFound(entityType, value);
   }
 
   private toDetailResult(

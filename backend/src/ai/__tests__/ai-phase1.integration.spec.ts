@@ -2382,6 +2382,23 @@ async function testAiEntityServicePhase1TenantDefenseInDepth() {
       false,
     );
 
+    // Contexts carry business references, and a reference resolves to the caller tenant's record.
+    assert.match(String(applicationContext.entity.ref), /^APP-\d+$/);
+    assert.match(String(assetContext.entity.ref), /^AST-\d+$/);
+    const linkedAssetRefs = applicationContext.related
+      .find((group: any) => group.relation === 'linked_assets')?.items.map((item: any) => item.ref);
+    assert.deepEqual(linkedAssetRefs?.map((ref: string) => /^AST-\d+$/.test(ref)), [true]);
+    const applicationByRef = await entityService.getEntityContext(tenantAContext, {
+      entity_type: 'applications',
+      entity_id: String(applicationContext.entity.ref),
+    });
+    assert.equal(applicationByRef.entity.id, graphA.applicationId);
+    const assetByRef = await entityService.getEntityContext(tenantAContext, {
+      entity_type: 'assets',
+      entity_id: String(assetContext.entity.ref),
+    });
+    assert.equal(assetByRef.entity.id, graphA.assetId);
+
     const projectContext = await entityService.getEntityContext(tenantAContext, {
       entity_type: 'projects',
       entity_id: graphA.projectId,
