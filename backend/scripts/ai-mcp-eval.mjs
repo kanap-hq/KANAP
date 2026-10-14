@@ -215,6 +215,15 @@ const QUESTIONS = [
     },
   },
   {
+    id: 'usd-opex-lines',
+    q: 'Which OPEX lines are in US dollars, and in which currency are the budget amounts you get for them?',
+    facts: async (sql) => {
+      const rows = await sql(`SELECT 'BL-' || item_number AS ref FROM spend_items WHERE nature = 'opex' AND currency = 'USD' ORDER BY item_number`);
+      const [{ code }] = await sql(`SELECT coalesce(metadata->>'reporting_currency', 'EUR') AS code FROM tenants WHERE id = app_current_tenant()`);
+      return { text: `${list(names(rows, 'ref'))}; their amounts come converted to ${code}`, mustInclude: [...names(rows, 'ref'), code] };
+    },
+  },
+  {
     id: 'latest-document',
     q: 'Which knowledge document was updated most recently?',
     facts: async (sql) => {

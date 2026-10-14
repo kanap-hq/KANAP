@@ -305,7 +305,7 @@ reusing chat approval cards.
 
 ### Answer evaluation
 
-`backend/scripts/ai-mcp-eval.mjs` asks about twenty realistic questions through
+`backend/scripts/ai-mcp-eval.mjs` asks about twenty realistic questions (spend lines and their currency included) through
 `claude -p` against an MCP endpoint and prints each answer next to the facts it
 reads from the database with SQL, outside the tool layer. It calls a model, so
 it does not run in CI. Run it after a change to the registries, the executor
