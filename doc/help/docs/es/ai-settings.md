@@ -51,7 +51,7 @@ Cuando Plaid funciona con el modelo incluido de KANAP —sin elección explícit
 - La fecha en la que se **restablece** el volumen
 - Un recordatorio de que usar sus propias claves API elimina el límite
 
-Como dice la tarjeta, el volumen se comparte entre las solicitudes de chat y de MCP de este espacio de trabajo, y los agentes también lo consumen. Un mensaje es una pregunta de chat, una solicitud de un asistente externo por MCP o un ticket revisado por un agente. Una flota de agentes muy activa lo agota más rápido, así que si está vigilando esta barra, vigile también la página [Uso y costes](ai-usage.md).
+Como dice la tarjeta, el chat y los agentes de este espacio de trabajo comparten el volumen. Un mensaje es una pregunta de chat o un ticket revisado por un agente. Las solicitudes de asistentes externos por MCP no cuentan. Una flota de agentes muy activa lo agota más rápido, así que si está vigilando esta barra, vigile también la página [Uso y costes](ai-usage.md).
 
 ### Chips de estado
 
@@ -70,7 +70,7 @@ Cuando falta algo, **Errores de validación del proveedor actual** lo enumera en
 La sección **Funcionalidades** activa o desactiva las superficies de IA opcionales:
 
 - **Habilitar chat**: activa o desactiva el espacio de chat dentro de la app para los usuarios finales. No se puede activar mientras el encabezado diga **Proveedor incompleto**: el guardado se rechaza indicando los motivos, y esos motivos se corrigen antes en la página [Modelos IA](ai-models.md). Una confirmación pendiente del modelo incluido es la excepción: el guardado abre entonces la ventana de confirmación. La misma comprobación se ejecuta en cada guardado mientras el chat ya está activo, de modo que un modelo que quede incompleto más adelante bloqueará cambios sin ninguna relación en esta página hasta que se resuelva.
-- **Habilitar MCP**: activa o desactiva la API MCP para los clientes externos. No espera a la confirmación del modelo incluido. Las solicitudes MCP siguen contando en el volumen mensual incluido cuando Plaid usaría ese modelo.
+- **Habilitar MCP**: activa o desactiva la API MCP para los clientes externos. No espera a la confirmación del modelo incluido. Las solicitudes MCP no cuentan en el volumen mensual incluido.
 - **Búsqueda web** — permite al asistente de chat Plaid buscar en la web. Requiere que la clave de búsqueda web a nivel de instancia esté configurada; sin ella, el conmutador está deshabilitado y un tooltip explica por qué. Al activarlo se ejecuta automáticamente una prueba de conectividad y se informa del resultado. Este conmutador se aplica **solo al asistente de chat**: los agentes IA tienen su propia configuración de búsqueda web independiente, en la [pestaña Configuración](agents-workspace.md) de cada agente, que se basa en la misma configuración a nivel de instancia.
 
 ---
@@ -120,6 +120,8 @@ Los usuarios también pueden desconectar sus propias aplicaciones en su pestaña
 ### Conectar un cliente MCP
 
 Cada cliente necesita la **Dirección del servidor**: su dirección de KANAP seguida de `/api/ai/mcp`, por ejemplo `https://acme.kanap.net/api/ai/mcp`. La tarjeta **Claves y conexiones MCP** la muestra para su organización.
+
+Cada clave o aplicación conectada acepta hasta 60 solicitudes por minuto. Por encima, el servidor rechaza la solicitud y el cliente puede volver a intentarlo un minuto después.
 
 #### Claude y Claude Desktop
 

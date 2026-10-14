@@ -139,12 +139,6 @@ function createMcpControllerHarness(options?: {
     {
       runWithContext: async (context: any, fn: Function) => fn({ ...context, manager: { tag: 'manager' } }),
     } as any,
-    {
-      get: async () => ({}),
-      getEffectiveProviderSource: () => 'custom',
-    } as any,
-    { tryResolve: async () => ({ source: 'registry' }) } as any,
-    {} as any,
   );
   return { controller, exposureCalls, rateCalls };
 }
@@ -213,7 +207,7 @@ async function testControllersBuildPlatformAwareContexts() {
     aiApiKeyId: null,
   });
 
-  const mcp = new AiMcpController({} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
+  const mcp = new AiMcpController({} as any, {} as any, {} as any, {} as any, {} as any);
   assertBaseContext((mcp as any).buildContext(req), {
     surface: 'mcp',
     authMethod: 'api_key',
@@ -224,7 +218,7 @@ async function testControllersBuildPlatformAwareContexts() {
 async function testControllersRejectMissingTenantContext() {
   const req = createRequest({ tenant: undefined });
   const settings = new AiSettingsController({} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
-  const mcp = new AiMcpController({} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
+  const mcp = new AiMcpController({} as any, {} as any, {} as any, {} as any, {} as any);
 
   assert.throws(
     () => (settings as any).buildContext(req),
@@ -240,7 +234,7 @@ async function testControllersRejectInvalidTenantContext() {
   const req = createRequest({ tenant: { id: 'tenant-1' } });
   const settings = new AiSettingsController({} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
   const overview = new AiAdminOverviewController({} as any, {} as any, {} as any);
-  const mcp = new AiMcpController({} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
+  const mcp = new AiMcpController({} as any, {} as any, {} as any, {} as any, {} as any);
 
   assert.throws(
     () => (settings as any).buildContext(req),

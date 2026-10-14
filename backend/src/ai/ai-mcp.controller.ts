@@ -18,8 +18,6 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { validate as isUuid } from 'uuid';
 import { SkipTenantTransaction } from '../common/skip-tenant-transaction.decorator';
-import { AiModelResolverService } from './ai-model-resolver.service';
-import { AiSettingsService } from './ai-settings.service';
 import { McpApiKeyAuthGuard } from './auth/mcp-api-key-auth.guard';
 import { AiCapabilityDispatcherService } from './control-plane/dispatcher/ai-capability-dispatcher.service';
 import { AiMcpAuditService } from './control-plane/mcp/ai-mcp-audit.service';
@@ -33,7 +31,6 @@ import {
   assertMcpScope,
 } from './control-plane/mcp/ai-mcp-access-policy';
 import { AiTenantExecutionService } from './execution/ai-tenant-execution.service';
-import { AiBuiltinUsageService } from './platform/ai-builtin-usage.service';
 import { AiExecutionContext } from './ai.types';
 
 /** A readable tool title from its name: `get_entity_detail` → "Get entity detail". */
@@ -53,9 +50,6 @@ export class AiMcpController {
     private readonly mcpAudit: AiMcpAuditService,
     private readonly mcpRateLimiter: AiMcpRateLimiter,
     private readonly tenantExecutor: AiTenantExecutionService,
-    private readonly settingsService: AiSettingsService,
-    private readonly modelResolver: AiModelResolverService,
-    private readonly builtinUsage: AiBuiltinUsageService,
   ) {}
 
   private requireTenantId(req: Request): string {
@@ -119,6 +113,8 @@ export class AiMcpController {
     requestCount: number,
   ): AiMcpApiKeyPolicy {
     // The only place a POST is counted: before any lookup, so refused and bogus requests count too.
+    // MCP sends nothing to the included model, so it draws on neither its throttle nor its monthly
+    // allowance: this per-key limit is the guard.
     const keyPolicy = this.mcpExposure.parsePolicy(apiKey);
     this.mcpRateLimiter.assertAllowed(
       context.tenantId,
@@ -140,21 +136,6 @@ export class AiMcpController {
       assertMcpScope(keyPolicy, MCP_SCOPE_TOOLS_EXECUTE);
     }
     return keyPolicy;
-  }
-
-  // MCP requests count against the included volume whenever the assistant would fall back
-  // on the included model, confirmed or not. MCP sends nothing to that model, so neither its
-  // confirmation nor its throttle (requests per tenant per minute, per user per hour) applies:
-  // the key's own per-minute limit guards the endpoint.
-  private async assertBuiltinMcpBudget(ctx: AiExecutionContext & { manager: any }) {
-    const resolved = await this.modelResolver.tryResolve(ctx.tenantId, { type: 'chat' }, ctx.manager, {
-      includedModelGate: 'none',
-    });
-    if (resolved?.source !== 'builtin') {
-      return;
-    }
-    const limit = await this.builtinUsage.getMonthlyLimit(ctx.manager);
-    await this.builtinUsage.reserveMessage(ctx.tenantId, limit, ctx.manager);
   }
 
   private mcpTextResult(result: unknown): string {
@@ -195,11 +176,7 @@ export class AiMcpController {
         return [];
       }
 
-        const definitions = await this.mcpExposure.listToolJsonSchemas(ctx, apiKey, definitionScope);
-        if (methods.has('tools/list')) {
-          await this.assertBuiltinMcpBudget(ctx);
-        }
-        return definitions;
+      return this.mcpExposure.listToolJsonSchemas(ctx, apiKey, definitionScope);
     });
 
     // The low-level server takes the capabilities' JSON Schemas as they are (McpServer wants Zod).
@@ -229,7 +206,6 @@ export class AiMcpController {
       try {
         result = await this.tenantExecutor.runWithContext(context, async (ctx) => {
           await this.mcpExposure.assertCanExecute(ctx, apiKey, toolDef.name);
-          await this.assertBuiltinMcpBudget(ctx);
           const dispatched = await this.dispatcher.execute(ctx, {
             capabilityName: toolDef.name,
             input: request.params.arguments ?? {},

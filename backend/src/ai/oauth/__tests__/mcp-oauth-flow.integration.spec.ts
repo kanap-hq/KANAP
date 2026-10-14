@@ -177,10 +177,6 @@ async function startHarness(seeds: Seed[]): Promise<Harness> {
     {} as any,
     { assertAllowed: () => undefined } as any,
     { runWithContext: async (context: any, fn: Function) => fn({ ...context, manager: {} }) } as any,
-    {} as any,
-    { tryResolve: async () => ({ source: 'registry' }) } as any,
-    {} as any,
-    {} as any,
   );
 
   const byHost = new Map(seeds.map((seed) => [seed.host, seed]));

@@ -51,7 +51,7 @@ When Plaid is running on the KANAP included model — no explicit choice, no org
 - The date the allowance **resets**
 - A reminder that using your own API keys removes the cap
 
-As the card says, the allowance is shared across chat and MCP requests for this tenant — and the agents draw on it too. One message is one chat question, one request from an external assistant over MCP, or one ticket reviewed by an agent. A busy agent fleet consumes it faster, so if you are watching this bar, watch the [Usage & costs](ai-usage.md) page too.
+As the card says, chat and the agents of this tenant share the allowance. One message is one chat question or one ticket reviewed by an agent. Requests from external assistants over MCP do not count. A busy agent fleet consumes it faster, so if you are watching this bar, watch the [Usage & costs](ai-usage.md) page too.
 
 ### Status chips
 
@@ -70,7 +70,7 @@ When something is missing, **Current provider validation errors** lists it above
 The **Features** section toggles the optional AI surfaces:
 
 - **Enable chat**: turns the in-app chat workspace on or off for end users. It cannot be switched on while the header says **Provider incomplete**: the save is refused with the reasons listed, and you fix them on the [AI models](ai-models.md) page first. A missing confirmation of the included model is the exception: the save opens the confirmation window instead. The same check runs on every save while chat is already on, so a model that becomes incomplete later will block unrelated changes on this page until it is sorted out.
-- **Enable MCP**: turns the MCP API on or off for external clients. It does not wait for the confirmation of the included model. MCP requests still count against the included monthly allowance when Plaid would run on that model.
+- **Enable MCP**: turns the MCP API on or off for external clients. It does not wait for the confirmation of the included model. MCP requests do not count against the included monthly allowance.
 - **Web search** — lets the Plaid chat assistant search the web. It requires the instance-level web-search key to be configured; without it, the toggle is disabled and a tooltip explains why. Switching it on automatically runs a connectivity test and reports the result. This toggle applies to the **chat assistant only** — AI agents have their own, independent web-search setting on each agent's [Settings tab](agents-workspace.md), which relies on the same instance-level configuration.
 
 ---
@@ -120,6 +120,8 @@ Users can also disconnect their own applications on their [Connected apps](conne
 ### Connecting an MCP client
 
 Every client needs the **Server address**: your KANAP address followed by `/api/ai/mcp`, for example `https://acme.kanap.net/api/ai/mcp`. The **MCP keys and connections** card shows it for your organization.
+
+Each key or connected application accepts up to 60 requests a minute. Past that, the server refuses the request and the client can retry a minute later.
 
 #### Claude and Claude Desktop
 
@@ -196,7 +198,6 @@ The MCP server is read only. A client can search and read your data but cannot c
 | `search_knowledge` | Searches the knowledge base |
 | `get_document` | Reads one knowledge document |
 | `web_search` | Searches the web, when web search is switched on for your organization |
-
 
 ---
 

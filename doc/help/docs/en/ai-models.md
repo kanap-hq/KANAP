@@ -55,7 +55,7 @@ On the hosted service, the first row of the table is always **KANAP included mod
 
 - It costs `0.00 €` in both price columns. It is part of your subscription, not something you are billed per token for.
 - It is **multimodal** — it reads ticket screenshots — and you cannot change that.
-- In the **Usage** column it shows your **included messages this month** with a progress bar, so you can see how much of the monthly allowance is left. A message is one question asked of Plaid, one request from an external assistant connected over MCP, or one ticket reviewed by an agent — all three draw on the same allowance. That bar is the included-model quota; it is not the same figure as the message counts on the models you add.
+- In the **Usage** column it shows your **included messages this month** with a progress bar, so you can see how much of the monthly allowance is left. A message is one question asked of Plaid or one ticket reviewed by an agent: both draw on the same allowance. Requests from external assistants connected over MCP do not count. That bar is the included-model quota; it is not the same figure as the message counts on the models you add.
 - It shows a filled star in the **Default** column whenever no active model of your own is starred — that is the "nothing configured" fallback in visible form. Click its empty star to clear your current default and fall back to it. You still cannot edit or archive it.
 - It has no edit or archive actions: those belong to the models you add. It is simply always there.
 - Plaid and the agents use it only after an administrator confirms the provider and where it processes data, on the [Plaid Settings](ai-settings.md#confirming-the-kanap-included-model) page. Models you add are not subject to that step.

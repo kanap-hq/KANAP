@@ -55,9 +55,6 @@ function createController(
     {
       runWithContext: async (context: any, fn: Function) => fn({ ...context, manager: {} }),
     } as any,
-    {} as any,
-    { tryResolve: async () => ({ source: 'registry' }) } as any,
-    {} as any,
   );
 }
 
