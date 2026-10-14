@@ -131,6 +131,7 @@ export type AiEntitySummaryDto = {
   label: string;
   status: string | null;
   summary: string | null;
+  created_at?: string | null;
   updated_at: string | null;
   match_context?: string | null;
   metadata?: AiEntityMetadata | null;

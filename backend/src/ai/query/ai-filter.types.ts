@@ -122,6 +122,11 @@ export type AiQueryResult = {
   filters_applied: string[];
   filters_ignored: string[];
   suggested_repairs?: AiFilterRepairSuggestion[];
+  /** The order of `items`: the requested sort, or the family's default one when `sort_ignored` names it. */
+  sort?: { field: string; direction: 'asc' | 'desc' };
+  /** A requested sort field the family cannot sort on; `sortable_fields` then lists the ones it can. */
+  sort_ignored?: string[];
+  sortable_fields?: string[];
   scope: {
     requested: AiQueryScope;
     resolved: boolean;
@@ -186,6 +191,9 @@ export type AiFilterDescription = {
 export type AiFilterDescriptionResult = {
   entity_type: AiQueryEntityType;
   fields: AiFilterDescription[];
+  /** Every `sort.field` query_entities takes for this family (the sortable fields, label, created_at, updated_at...). */
+  sort_fields: string[];
+  default_sort: { field: string; direction: 'asc' | 'desc' };
   total: number;
   returned: number;
   truncated: boolean;

@@ -274,6 +274,7 @@ function toEntitySummary(
     label: string;
     status: string | null;
     summary?: string | null;
+    created_at?: Date | string | null;
     updated_at?: Date | string | null;
     metadata?: AiEntityMetadata;
   },
@@ -284,10 +285,70 @@ function toEntitySummary(
     ref: row.reference ?? buildRef(entityType, row.item_number ?? null),
     label: row.label,
     status: row.status ?? null,
-    summary: row.summary ?? null,
+    summary: clipSummary(row.summary),
+    created_at: toIso(row.created_at),
     updated_at: toIso(row.updated_at),
     metadata: row.metadata ?? null,
   };
+}
+
+/** A list row's summary stays short: the full text is in get_entity_detail. */
+export const AI_QUERY_SUMMARY_MAX_CHARS = 300;
+
+function clipSummary(value: string | null | undefined): string | null {
+  if (value == null) return null;
+  const text = String(value);
+  return text.length <= AI_QUERY_SUMMARY_MAX_CHARS ? text : `${text.slice(0, AI_QUERY_SUMMARY_MAX_CHARS - 1)}…`;
+}
+
+/**
+ * Page size of query_entities. A page of the widest families must fit the MCP response cap
+ * (64,000 characters, `ai-mcp.controller.ts`): measured on the demo tenant, an OPEX or CAPEX
+ * line takes about 2,800 characters (its yearly amounts), an application about 1,500 and any
+ * other row under 900. A larger `limit` is reduced to the family's maximum; the result's
+ * `limit` is the one applied.
+ */
+export const AI_QUERY_DEFAULT_LIMIT = 25;
+export const AI_QUERY_MAX_LIMIT = 50;
+export const AI_QUERY_FAMILY_MAX_LIMIT: Partial<Record<AiQueryEntityType, number>> = {
+  spend_items: 15,
+  capex_items: 15,
+  applications: 30,
+};
+
+export function aiQueryMaxLimit(entityType: AiQueryEntityType): number {
+  return AI_QUERY_FAMILY_MAX_LIMIT[entityType] ?? AI_QUERY_MAX_LIMIT;
+}
+
+export function aiQueryLimit(entityType: AiQueryEntityType, requested: unknown): number {
+  const max = aiQueryMaxLimit(entityType);
+  const value = Number(requested);
+  if (!Number.isFinite(value) || value < 1) return Math.min(AI_QUERY_DEFAULT_LIMIT, max);
+  return Math.min(Math.floor(value), max);
+}
+
+/** The sort a query runs with, and the requested field it could not use (not advertised by the registry). */
+export type AiResolvedSort = {
+  param: string;
+  applied: { field: string; direction: 'asc' | 'desc' };
+  ignored: string[];
+};
+
+export function resolveAiQuerySort(
+  registry: AiEntityFilterRegistry,
+  sort?: { field?: string; direction?: string },
+): AiResolvedSort {
+  const fallback: AiResolvedSort = {
+    param: `${registry.sortFields[registry.defaultSort.field] ?? registry.defaultSort.field}:${registry.defaultSort.direction.toUpperCase()}`,
+    applied: { field: registry.defaultSort.field, direction: registry.defaultSort.direction },
+    ignored: [],
+  };
+  const field = typeof sort?.field === 'string' ? sort.field.trim() : '';
+  if (!field) return fallback;
+  const mappedField = Object.prototype.hasOwnProperty.call(registry.sortFields, field) ? registry.sortFields[field] : undefined;
+  if (!mappedField) return { ...fallback, ignored: [field] };
+  const direction = sort?.direction === 'asc' ? 'asc' : 'desc';
+  return { param: `${mappedField}:${direction.toUpperCase()}`, applied: { field, direction }, ignored: [] };
 }
 
 @Injectable()
@@ -317,21 +378,6 @@ export class AiQueryExecutor {
     private readonly incidents: IncidentsService,
     private readonly incidentRecords: IncidentRecordService,
   ) {}
-
-  private resolveSort(
-    registry: AiEntityFilterRegistry,
-    sort?: { field: string; direction: 'asc' | 'desc' },
-  ): string {
-    if (!sort?.field) {
-      return `${registry.defaultSort.field}:${registry.defaultSort.direction.toUpperCase()}`;
-    }
-    const mappedField = registry.sortFields[sort.field];
-    const direction = sort.direction === 'asc' ? 'ASC' : 'DESC';
-    if (!mappedField) {
-      return `${registry.defaultSort.field}:${registry.defaultSort.direction.toUpperCase()}`;
-    }
-    return `${mappedField}:${direction}`;
-  }
 
   private async normalizePersonFilters(
     context: AiExecutionContextWithManager,
@@ -396,20 +442,20 @@ export class AiQueryExecutor {
       filters?: Record<string, AiFilterValue>;
       q?: string;
       year?: number;
-      sort?: { field: string; direction: 'asc' | 'desc' };
       page?: number;
       limit?: number;
     },
+    sort: AiResolvedSort,
   ): Promise<{ query: Record<string, any>; filtersApplied: string[]; filtersIgnored: string[] }> {
     const normalizedFilters = await this.normalizePersonFilters(context, entityType, input.filters);
     const adapted = adaptFilters(registry, normalizedFilters);
     const page = Math.min(Math.max(Number(input.page) || 1, 1), 100);
-    const limit = Math.min(Math.max(Number(input.limit) || 200, 1), 200);
+    const limit = aiQueryLimit(entityType, input.limit);
     assertPlainTextQuickSearch(entityType, input.q, registry);
     const query: Record<string, any> = {
       page,
       limit,
-      sort: this.resolveSort(registry, input.sort),
+      sort: sort.param,
     };
     if (input.q?.trim()) query.q = input.q.trim();
     if (Object.keys(adapted.filters).length > 0) query.filters = adapted.filters;
@@ -472,6 +518,7 @@ export class AiQueryExecutor {
       label: row.title || 'Untitled task',
       status: row.status ?? null,
       summary: row.description ?? null,
+      created_at: row.created_at ?? null,
       updated_at: row.updated_at ?? null,
       metadata: {
         assignee: scalar(row.assignee_name),
@@ -503,6 +550,7 @@ export class AiQueryExecutor {
       label: row.name,
       status: row.status ?? null,
       summary: row.purpose ?? null,
+      created_at: row.created_at ?? null,
       updated_at: row.updated_at ?? null,
       metadata: {
         origin: scalar(row.origin),
@@ -529,6 +577,7 @@ export class AiQueryExecutor {
       label: row.name,
       status: row.status ?? null,
       summary: row.current_situation ?? row.expected_benefits ?? null,
+      created_at: row.created_at ?? null,
       updated_at: row.updated_at ?? null,
       metadata: {
         source: scalar(row.source_name),
@@ -553,6 +602,7 @@ export class AiQueryExecutor {
       label: row.name,
       status: row.status ?? null,
       summary: row.description ?? null,
+      created_at: row.created_at ?? null,
       updated_at: row.updated_at ?? null,
       metadata: {
         ref: scalar(row.sequential_id),
@@ -631,6 +681,7 @@ export class AiQueryExecutor {
       label: row.product_name || 'Untitled spend item',
       status: row.status ?? null,
       summary,
+      created_at: row.created_at ?? null,
       updated_at: row.updated_at ?? null,
       metadata: {
         ...budgetItemMetadata(row, registry),
@@ -663,6 +714,7 @@ export class AiQueryExecutor {
       label: row.description || 'Untitled CAPEX item',
       status: row.status ?? null,
       summary,
+      created_at: row.created_at ?? null,
       updated_at: row.updated_at ?? null,
       metadata: {
         line_description: scalar(row.line_description),
@@ -679,6 +731,7 @@ export class AiQueryExecutor {
       label: [row.account_number, row.account_name].filter(Boolean).join(' - ') || 'Untitled account',
       status: row.status ?? null,
       summary: row.description ?? row.native_name ?? null,
+      created_at: row.created_at ?? null,
       updated_at: row.updated_at ?? null,
       metadata: {
         coa_code: scalar(row.coa_code),
@@ -697,6 +750,7 @@ export class AiQueryExecutor {
       label: [row.code, row.name].filter(Boolean).join(' - ') || 'Untitled chart of accounts',
       status: null,
       summary: [row.scope, row.country_iso].filter(Boolean).join(' | ') || null,
+      created_at: row.created_at ?? null,
       updated_at: row.updated_at ?? null,
       metadata: {
         code: scalar(row.code),
@@ -719,6 +773,7 @@ export class AiQueryExecutor {
       label: row.name || 'Untitled analytics category',
       status: row.status ?? null,
       summary: row.description ?? null,
+      created_at: row.created_at ?? null,
       updated_at: row.updated_at ?? null,
       metadata: {
         axis: axis ? analyticsAxisLabel(axis) : null,
@@ -754,6 +809,7 @@ export class AiQueryExecutor {
       label: row.name || 'Untitled business process',
       status: row.status ?? null,
       summary: row.description ?? row.notes ?? null,
+      created_at: row.created_at ?? null,
       updated_at: row.updated_at ?? null,
       metadata: {
         owner: scalar(row.owner_name),
@@ -773,6 +829,7 @@ export class AiQueryExecutor {
       label: row.name,
       status: row.status ?? null,
       summary,
+      created_at: row.created_at ?? null,
       updated_at: row.updated_at ?? null,
       metadata: {
         company: scalar(companyName),
@@ -801,6 +858,7 @@ export class AiQueryExecutor {
       label: row.name,
       status: row.status ?? null,
       summary: [row.city, row.country_iso].filter(Boolean).join(', ') || null,
+      created_at: row.created_at ?? null,
       updated_at: row.updated_at ?? null,
       metadata: {
         country: scalar(row.country_iso),
@@ -823,6 +881,7 @@ export class AiQueryExecutor {
       label: row.name,
       status: row.status ?? null,
       summary: row.notes ?? row.erp_supplier_id ?? null,
+      created_at: row.created_at ?? null,
       updated_at: row.updated_at ?? null,
       metadata: {
         erp_supplier_id: scalar(row.erp_supplier_id),
@@ -838,6 +897,7 @@ export class AiQueryExecutor {
       label: row.name,
       status: row.status ?? null,
       summary: row.description ?? row.company_name ?? null,
+      created_at: row.created_at ?? null,
       updated_at: row.updated_at ?? null,
       metadata: {
         company: scalar(row.company_name),
@@ -857,6 +917,7 @@ export class AiQueryExecutor {
       label,
       status: row.active === false ? 'inactive' : 'active',
       summary: [row.job_title, row.supplier_name, row.country].filter(Boolean).join(' | ') || null,
+      created_at: row.created_at ?? null,
       updated_at: row.updated_at ?? null,
       metadata: {
         email: scalar(row.email),
@@ -876,6 +937,7 @@ export class AiQueryExecutor {
       label: row.name,
       status: row.status ?? null,
       summary: row.fqdn ?? row.hostname ?? row.notes ?? null,
+      created_at: row.created_at ?? null,
       updated_at: row.updated_at ?? null,
       metadata: {
         asset_reference: scalar(row.asset_reference),
@@ -914,6 +976,7 @@ export class AiQueryExecutor {
       label: `${row.code} — ${row.name}`,
       status: null,
       summary: [row.city, row.country_iso].filter(Boolean).join(', ') || null,
+      created_at: row.created_at ?? null,
       updated_at: row.updated_at ?? null,
       metadata: {
         hosting_type: scalar(row.hosting_type),
@@ -933,6 +996,7 @@ export class AiQueryExecutor {
       label: [row.interface_reference || row.interface_id, row.name].filter(Boolean).join(' - ') || 'Untitled interface',
       status: row.lifecycle ?? null,
       summary: row.business_purpose ?? row.overview_notes ?? null,
+      created_at: row.created_at ?? null,
       updated_at: row.updated_at ?? null,
       metadata: {
         interface_reference: scalar(row.interface_reference),
@@ -958,6 +1022,7 @@ export class AiQueryExecutor {
       label: [row.connection_reference, row.name].filter(Boolean).join(' - ') || 'Untitled connection',
       status: row.lifecycle ?? null,
       summary: row.description ?? null,
+      created_at: row.created_at ?? null,
       updated_at: row.updated_at ?? null,
       metadata: {
         connection_reference: scalar(row.connection_reference),
@@ -984,6 +1049,7 @@ export class AiQueryExecutor {
       label,
       status: row.status ?? null,
       summary,
+      created_at: row.created_at ?? null,
       updated_at: row.updated_at ?? null,
       metadata: {
         email: scalar(row.email),
@@ -1009,6 +1075,7 @@ export class AiQueryExecutor {
       label: row.title,
       status: row.status ?? null,
       summary: row.description ?? null,
+      created_at: row.created_at ?? null,
       updated_at: row.updated_at ?? null,
       metadata: {
         severity: scalar(row.severity),
@@ -1030,6 +1097,7 @@ export class AiQueryExecutor {
       label: row.title,
       status: row.status ?? null,
       summary: row.summary ?? null,
+      created_at: row.created_at ?? null,
       updated_at: row.updated_at ?? null,
       metadata: {
         library: scalar(row.library_name),
@@ -1055,9 +1123,36 @@ export class AiQueryExecutor {
     },
   ): Promise<AiQueryResult> {
     const registry = await resolveAiEntityRegistry(context, input.entity_type);
-    const { query, filtersApplied, filtersIgnored } = await this.buildBaseQuery(context, input.entity_type, registry, input);
+    const sort = resolveAiQuerySort(registry, input.sort);
+    const result = await this.executeQuery(context, input, registry, sort);
+    if (!sort.ignored.length) return { ...result, sort: sort.applied, sort_ignored: [] };
+    // An unknown sort field never passes silently: the items come in the default order, said so.
+    return {
+      ...result,
+      complete: false,
+      sort: sort.applied,
+      sort_ignored: sort.ignored,
+      sortable_fields: Object.keys(registry.sortFields),
+    };
+  }
+
+  private async executeQuery(
+    context: AiExecutionContextWithManager,
+    input: {
+      entity_type: AiQueryEntityType;
+      filters?: Record<string, AiFilterValue>;
+      q?: string;
+      year?: number;
+      page?: number;
+      limit?: number;
+      scope?: AiQueryScope;
+    },
+    registry: AiEntityFilterRegistry,
+    sort: AiResolvedSort,
+  ): Promise<AiQueryResult> {
+    const { query, filtersApplied, filtersIgnored } = await this.buildBaseQuery(context, input.entity_type, registry, input, sort);
     const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 200;
+    const limit = Number(query.limit);
     if (filtersIgnored.length > 0) {
       return {
         status: 'invalid_filter',

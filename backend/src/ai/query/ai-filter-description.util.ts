@@ -64,6 +64,8 @@ export function describeAiEntityFilters(
   return {
     entity_type: entityType,
     fields,
+    sort_fields: Object.keys(registry.sortFields),
+    default_sort: registry.defaultSort,
     total: fields.length,
     returned: fields.length,
     truncated: false,

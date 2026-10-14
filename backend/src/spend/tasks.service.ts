@@ -587,6 +587,23 @@ const TASK_ASSET_IDS_SQL = `
       AND asset_link.tenant_id = t.tenant_id
   ), '[]'::jsonb)`;
 
+/** A task's first linked application or asset by name: the sort key of the Applications and Assets columns. */
+const TASK_FIRST_APPLICATION_NAME_SQL = `(
+    SELECT MIN(app.name)
+    FROM task_applications app_link
+    JOIN applications app ON app.id = app_link.application_id AND app.tenant_id = app_link.tenant_id
+    WHERE app_link.task_id = t.id
+      AND app_link.tenant_id = t.tenant_id
+  )`;
+
+const TASK_FIRST_ASSET_NAME_SQL = `(
+    SELECT MIN(asset.name)
+    FROM task_assets asset_link
+    JOIN assets asset ON asset.id = asset_link.asset_id AND asset.tenant_id = asset_link.tenant_id
+    WHERE asset_link.task_id = t.id
+      AND asset_link.tenant_id = t.tenant_id
+  )`;
+
 const TASK_APPLICATIONS_SQL = `
   COALESCE((
     SELECT jsonb_agg(jsonb_build_object(
@@ -687,6 +704,8 @@ export class TasksService {
       company_name: 'company_name',
       project_stream_name: 'project_stream_name',
       project_category_name: 'project_category_name',
+      application_name: TASK_FIRST_APPLICATION_NAME_SQL,
+      asset_name: TASK_FIRST_ASSET_NAME_SQL,
     };
     const sortField = sortFieldMap[sort.field] || 't.created_at';
 
@@ -786,7 +805,7 @@ export class TasksService {
       LEFT JOIN portfolio_streams project_pst ON project_pst.id = pp.stream_id AND project_pst.tenant_id = t.tenant_id
       LEFT JOIN portfolio_categories project_pc ON project_pc.id = pp.category_id AND project_pc.tenant_id = t.tenant_id
       WHERE ${whereConditions}
-      ORDER BY ${sortField} ${sort.direction}
+      ORDER BY ${sortField} ${sort.direction}, t.id ASC
       LIMIT ${limit} OFFSET ${skip}
     `;
 
@@ -833,6 +852,8 @@ export class TasksService {
       company_name: 'comp.name',
       project_stream_name: 'project_pst.name',
       project_category_name: 'project_pc.name',
+      application_name: TASK_FIRST_APPLICATION_NAME_SQL,
+      asset_name: TASK_FIRST_ASSET_NAME_SQL,
     };
     const sortField = sortFieldMap[sort.field] || 't.created_at';
     const limit = Math.min(Math.max(Number(query?.limit) || 10000, 1), 10000);
@@ -903,7 +924,7 @@ export class TasksService {
       LEFT JOIN portfolio_streams project_pst ON project_pst.id = pp.stream_id AND project_pst.tenant_id = t.tenant_id
       LEFT JOIN portfolio_categories project_pc ON project_pc.id = pp.category_id AND project_pc.tenant_id = t.tenant_id
       WHERE ${whereConditions}
-      ORDER BY ${sortField} ${sort.direction}
+      ORDER BY ${sortField} ${sort.direction}, t.id ASC
       LIMIT ${limit}
     `;
     const rows: Array<{ id: string; item_number: number | null }> = await manager.query(idsQuery, params);

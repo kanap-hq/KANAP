@@ -11,7 +11,7 @@ import { AiSettingsService } from './ai-settings.service';
 import { AiProviderToolDef } from './providers/ai-provider.types';
 import { BraveSearchService } from './web-search/brave-search.service';
 import { AiAggregateExecutor } from './query/ai-aggregate.executor';
-import { AiQueryExecutor } from './query/ai-query.executor';
+import { AI_QUERY_DEFAULT_LIMIT, AI_QUERY_FAMILY_MAX_LIMIT, AI_QUERY_MAX_LIMIT, AiQueryExecutor } from './query/ai-query.executor';
 import { describeAiEntityFilters } from './query/ai-filter-description.util';
 import { resolveAiEntityRegistry } from './query/registries';
 import { budgetColumnsAiContext, readBudgetColumns } from '../budget-columns/budget-columns.util';
@@ -103,7 +103,8 @@ const QueryEntitiesInputSchema = z.object({
     direction: z.enum(['asc', 'desc']),
   }).optional(),
   page: z.number().int().min(1).max(100).default(1),
-  limit: z.number().int().min(1).max(200).default(200),
+  // No default or maximum here: the executor applies the family's (`aiQueryLimit`) and reports it.
+  limit: z.number().int().min(1).optional(),
 });
 
 const DescribeEntityFiltersInputSchema = z.object({
@@ -293,7 +294,7 @@ export class AiToolRegistry {
         {
           name: 'describe_entity_filters',
           category: 'authoritative',
-          description: 'Describe supported AI filter fields for one readable entity family, including aliases, expected value kinds, examples, and lookup hints. Use this before structured filtering when field names or value formats are uncertain.',
+          description: 'Describe supported AI filter fields for one readable entity family, including aliases, expected value kinds, examples, and lookup hints, plus `sort_fields` (every sort field query_entities accepts, created_at and updated_at included) and `default_sort`. Use this before structured filtering when field names or value formats are uncertain.',
           inputSchema: DescribeEntityFiltersInputSchema,
           inputSummary: {
             entity_type: `One of ${QUERY_ENTITY_TYPE_SUMMARY}.`,
@@ -315,7 +316,7 @@ export class AiToolRegistry {
         {
           name: 'query_entities',
           category: 'authoritative',
-          description: 'Query one readable entity family with server-side filters, pagination, and exact totals. If `filters_ignored` is non-empty, the query was not fully honored and must be repaired before answering.',
+          description: 'Query one readable entity family with server-side filters, sort, pagination, and exact totals. Each item carries its created_at and updated_at. If `filters_ignored` is non-empty, the query was not fully honored and must be repaired before answering. `sort` in the result is the order the items are in; if `sort_ignored` is non-empty, the requested sort field is not supported and the items are in the default order: pick a field from `sortable_fields` and query again before answering any question about order (latest, oldest, largest, first).',
           inputSchema: QueryEntitiesInputSchema,
           inputSummary: {
             entity_type: `One of ${QUERY_ENTITY_TYPE_SUMMARY}.`,
@@ -323,9 +324,9 @@ export class AiToolRegistry {
             filters: 'Optional field filters keyed by AI field name. Use describe_entity_filters when unsure which fields or value formats are supported.',
             q: 'Optional literal quick-search text. Use plain text only; never encode filters like status:in_progress or assignee=bob@example.com here.',
             year: 'Optional fiscal/calendar year for year-backed metrics, such as company headcount, IT users, turnover, and department headcount. Defaults to the current year when metric fields are included.',
-            sort: 'Optional sort field and direction.',
-            page: 'Page number to fetch (default 1). Use later pages when total is greater than returned.',
-            limit: 'Maximum number of items to return per page (default 200). Use the maximum unless you have a reason to limit.',
+            sort: 'Optional sort field and direction. Fields marked sortable by describe_entity_filters, plus created_at and updated_at on every family. For "the latest created", sort by created_at desc.',
+            page: 'Page number to fetch (default 1). Use later pages when total is greater than returned, with the same limit.',
+            limit: `Items per page: default ${AI_QUERY_DEFAULT_LIMIT}, at most ${AI_QUERY_MAX_LIMIT} (${Object.entries(AI_QUERY_FAMILY_MAX_LIMIT).map(([type, max]) => `${max} for ${type}`).join(', ')}). A larger value is reduced; the result's limit is the one applied. For counts and totals use aggregate_entities instead of paging.`,
           },
           surfaces: ['chat', 'mcp'],
           readOnly: true,

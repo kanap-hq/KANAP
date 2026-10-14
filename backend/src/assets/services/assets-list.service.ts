@@ -356,9 +356,30 @@ export class AssetsListService extends AssetsBaseService {
       created_at: 'CAST(a.created_at AS TEXT)',
     };
 
+    // Number filters: the assignment count the list shows (`enrichListItems`).
+    const numberExpressions: Record<string, string> = {
+      assignments_count: '(SELECT COUNT(*) FROM app_asset_assignments aaa WHERE aaa.asset_id = a.id AND aaa.tenant_id = a.tenant_id)',
+    };
+    const numberOperators: Record<string, string> = {
+      equals: '=', notEqual: '<>', greaterThan: '>', greaterThanOrEqual: '>=', lessThan: '<', lessThanOrEqual: '<=',
+    };
+
     // Apply set and text filters
     for (const [field, model] of Object.entries(filters)) {
       if (shouldSkip(field)) continue;
+      const numberExpression = numberExpressions[field];
+      if (numberExpression) {
+        const value = Number(model?.filter);
+        if (model?.filterType !== 'number' || !Number.isFinite(value)) continue;
+        if (model.type === 'inRange' && Number.isFinite(Number(model.filterTo))) {
+          params.push(value, Number(model.filterTo));
+          whereConditions += ` AND ${numberExpression} BETWEEN $${params.length - 1} AND $${params.length}`;
+        } else if (numberOperators[model.type ?? 'equals']) {
+          params.push(value);
+          whereConditions += ` AND ${numberExpression} ${numberOperators[model.type ?? 'equals']} $${params.length}`;
+        }
+        continue;
+      }
       const expression = fieldExpressions[field];
       if (!expression) continue;
 

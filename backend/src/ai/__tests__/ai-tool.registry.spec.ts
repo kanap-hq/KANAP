@@ -1350,7 +1350,8 @@ async function testQueryEntitiesDelegatesToQueryExecutor() {
   }]);
 }
 
-async function testQueryEntitiesAppliesGenerousDefaultLimit() {
+/** The page size is the executor's (`aiQueryLimit`, per family): the tool passes none of its own. */
+async function testQueryEntitiesLeavesThePageSizeToTheExecutor() {
   const calls: unknown[] = [];
   const registry = createRegistry({
     queryExecutor: {
@@ -1368,7 +1369,6 @@ async function testQueryEntitiesAppliesGenerousDefaultLimit() {
   assert.deepEqual(calls, [{
     entity_type: 'tasks',
     page: 1,
-    limit: 200,
   }]);
 }
 
@@ -1383,7 +1383,8 @@ async function testSchemasExposeDefaultLimits() {
   assert.equal(searchAll.parameters.properties.limit.default, 25);
   assert.equal(searchAll.parameters.properties.limit.maximum, 100);
   assert.equal(queryEntities.parameters.properties.page.default, 1);
-  assert.equal(queryEntities.parameters.properties.limit.default, 200);
+  assert.equal(queryEntities.parameters.properties.limit.default, undefined);
+  assert.equal(queryEntities.parameters.properties.limit.maximum, undefined);
   assert.equal(searchKnowledge.parameters.properties.offset.default, 0);
   assert.equal(searchKnowledge.parameters.properties.limit.default, 20);
   assert.equal(searchKnowledge.parameters.properties.limit.maximum, 200);
@@ -1858,7 +1859,7 @@ async function run() {
   await testUpdateDocumentContentToolSchemaExposesDocumentAndBodyFields();
   await testUpdateDocumentRelationsToolSchemaExposesRelationFields();
   await testQueryEntitiesDelegatesToQueryExecutor();
-  await testQueryEntitiesAppliesGenerousDefaultLimit();
+  await testQueryEntitiesLeavesThePageSizeToTheExecutor();
   await testAggregateEntitiesDelegatesToAggregateExecutor();
   await testAggregateEntitiesSchemaExposesMetricAndFunction();
   await testGetFilterValuesDelegatesToQueryExecutor();

@@ -38,6 +38,16 @@ const classificationTargets: Record<string, FilterTargetConfig> = {
   ...Object.fromEntries(Object.entries(classificationSql).map(([field, expression]) => [field, { expression, numericExpression: expression, dataType: field.includes('rank') || field.endsWith('_order') ? 'number' as const : 'string' as const }])),
 };
 const classificationSort: Record<string, string> = { ...classificationSql, criticality: classificationSql.criticality_rank, cyber_criticality: classificationSql.cyber_criticality_rank, data_class: classificationSql.data_class_rank, recovery_wave: classificationSql.recovery_wave_order };
+/** The reference APP-<n> in the order of its number (APP-9 before APP-10). */
+const SEQUENTIAL_ID_SORT_SQL = `NULLIF(substring(a.sequential_id FROM '([0-9]+)$'), '')::int`;
+/** The count columns, sortable when the list includes them. */
+const COUNT_SORT_SQL: Record<string, { include: string; sql: string }> = {
+  spend_count: { include: 'counts', sql: `(SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id${linkedLineOf('l.tenant_id', 'l.spend_item_id', 'opex')})` },
+  capex_count: { include: 'counts', sql: `(SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id${linkedLineOf('l.tenant_id', 'l.spend_item_id', 'capex')})` },
+  contracts_count: { include: 'counts', sql: '(SELECT COUNT(*) FROM application_contracts l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id)' },
+  suites_count: { include: 'structure', sql: '(SELECT COUNT(*) FROM application_suites l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id)' },
+  components_count: { include: 'structure', sql: '(SELECT COUNT(*) FROM application_suites l WHERE l.suite_id = a.id AND l.tenant_id = a.tenant_id)' },
+};
 
 type ParamNameFactory = () => string;
 type SetFilterModel = { filterType: 'set'; values: any[] };
@@ -527,16 +537,13 @@ export class ApplicationsListService extends ApplicationsBaseService {
       qb.orderBy('classification_sort_value', direction, 'NULLS LAST');
     } else if (sort.field === 'supplier_name' && needsSupplierJoin) {
       qb.addOrderBy('s.name', direction);
-    } else if (include.has('counts') && sort.field === 'spend_count') {
-      qb.addOrderBy(`(SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id${linkedLineOf('l.tenant_id', 'l.spend_item_id', 'opex')})`, direction, direction === 'DESC' ? 'NULLS LAST' : 'NULLS FIRST');
-    } else if (include.has('counts') && sort.field === 'capex_count') {
-      qb.addOrderBy(`(SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id${linkedLineOf('l.tenant_id', 'l.spend_item_id', 'capex')})`, direction, direction === 'DESC' ? 'NULLS LAST' : 'NULLS FIRST');
-    } else if (include.has('counts') && sort.field === 'contracts_count') {
-      qb.addOrderBy(`(SELECT COUNT(*) FROM application_contracts l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id)`, direction, direction === 'DESC' ? 'NULLS LAST' : 'NULLS FIRST');
-    } else if (include.has('structure') && sort.field === 'suites_count') {
-      qb.addOrderBy(`(SELECT COUNT(*) FROM application_suites l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id)`, direction, direction === 'DESC' ? 'NULLS LAST' : 'NULLS FIRST');
-    } else if (include.has('structure') && sort.field === 'components_count') {
-      qb.addOrderBy(`(SELECT COUNT(*) FROM application_suites l WHERE l.suite_id = a.id AND l.tenant_id = a.tenant_id)`, direction, direction === 'DESC' ? 'NULLS LAST' : 'NULLS FIRST');
+    } else if (sort.field === 'sequential_id') {
+      qb.addSelect(SEQUENTIAL_ID_SORT_SQL, 'reference_sort_value');
+      qb.orderBy('reference_sort_value', direction, 'NULLS LAST');
+    } else if (COUNT_SORT_SQL[sort.field] && include.has(COUNT_SORT_SQL[sort.field].include)) {
+      // Through a selected alias: the paginated query cannot order on a raw subquery.
+      qb.addSelect(COUNT_SORT_SQL[sort.field].sql, 'count_sort_value');
+      qb.orderBy('count_sort_value', direction, direction === 'DESC' ? 'NULLS LAST' : 'NULLS FIRST');
     } else if (appFields.has(sort.field)) {
       qb.orderBy(classificationTargets[sort.field]?.expression ?? `a.${sort.field}`, direction, 'NULLS LAST');
     } else {
@@ -642,6 +649,9 @@ export class ApplicationsListService extends ApplicationsBaseService {
     if (classificationSort[sort.field]) {
       qb.addSelect(classificationSort[sort.field], 'classification_sort_value');
       qb.orderBy('classification_sort_value', direction, 'NULLS LAST');
+    } else if (sort.field === 'sequential_id') {
+      qb.addSelect(SEQUENTIAL_ID_SORT_SQL, 'reference_sort_value');
+      qb.orderBy('reference_sort_value', direction, 'NULLS LAST');
     } else if (appFields.has(sort.field)) {
       qb.orderBy(classificationTargets[sort.field]?.expression ?? `a.${sort.field}`, direction, 'NULLS LAST');
     } else {

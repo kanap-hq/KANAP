@@ -125,7 +125,7 @@ export class ContactsService {
     const { page, limit, skip, sort, q, filters } = parsePagination(query);
     assertSetFilterModes(filters);
     const allowedSortFields = [
-      'last_name', 'first_name', 'email', 'active', 'created_at', 'updated_at', 'supplier_name'
+      'last_name', 'first_name', 'email', 'country', 'active', 'created_at', 'updated_at', 'supplier_name'
     ];
     const qb = repo.createQueryBuilder('c').leftJoinAndSelect('c.supplier', 's', 's.tenant_id = c.tenant_id');
 
@@ -206,7 +206,7 @@ export class ContactsService {
     const { sort, q, filters } = parsePagination(query);
     assertSetFilterModes(filters);
     const allowedSortFields = [
-      'last_name', 'first_name', 'email', 'active', 'created_at', 'updated_at', 'supplier_name'
+      'last_name', 'first_name', 'email', 'country', 'active', 'created_at', 'updated_at', 'supplier_name'
     ];
     const qb = repo.createQueryBuilder('c').leftJoin('c.supplier', 's', 's.tenant_id = c.tenant_id').select('c.id', 'id');
 

@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, In, Repository } from 'typeorm';
+import { EntityManager, In, Repository, SelectQueryBuilder } from 'typeorm';
 import { BusinessProcess } from './business-process.entity';
 import { BusinessProcessCategory } from './business-process-category.entity';
 import { BusinessProcessCategoryLink } from './business-process-category-link.entity';
@@ -69,15 +69,7 @@ export class BusinessProcessesService {
       );
     }
 
-    if (filtersToApply && typeof filtersToApply === 'object') {
-      const nameFilter = (filtersToApply as any).name;
-      if (nameFilter && typeof nameFilter === 'object') {
-        const value = nameFilter.filter ?? nameFilter.value ?? nameFilter;
-        if (typeof value === 'string' && value.trim()) {
-          qb.andWhere('bp.name ILIKE :filterName', { filterName: `%${value.trim()}%` });
-        }
-      }
-    }
+    this.applyListFilters(qb, filtersToApply);
 
     const total = await qb.getCount();
 
@@ -117,6 +109,33 @@ export class BusinessProcessesService {
     return { items: shaped, total, page, limit };
   }
 
+  /** The column filters of the list: the name (contains) and the primary category (set). */
+  private applyListFilters(qb: SelectQueryBuilder<BusinessProcess>, filters: any) {
+    if (!filters || typeof filters !== 'object') return;
+    const nameFilter = filters.name;
+    if (nameFilter && typeof nameFilter === 'object') {
+      const value = nameFilter.filter ?? nameFilter.value ?? nameFilter;
+      if (typeof value === 'string' && value.trim()) {
+        qb.andWhere('bp.name ILIKE :filterName', { filterName: `%${value.trim()}%` });
+      }
+    }
+    // The primary category is the first linked category by name, as the list shows it; null is a
+    // process without a category.
+    const categoryFilter = filters.primary_category_name;
+    if (categoryFilter && categoryFilter.filterType === 'set' && Array.isArray(categoryFilter.values)) {
+      const names = categoryFilter.values.filter((value: unknown) => typeof value === 'string');
+      const withNull = categoryFilter.values.some((value: unknown) => value === null);
+      const primary = `(SELECT MIN(cat.name) FROM business_process_category_links link
+          JOIN business_process_categories cat ON cat.id = link.category_id AND cat.tenant_id = link.tenant_id
+         WHERE link.process_id = bp.id AND link.tenant_id = bp.tenant_id)`;
+      const clauses = [
+        ...(names.length ? [`${primary} IN (:...primaryCategoryNames)`] : []),
+        ...(withNull ? [`${primary} IS NULL`] : []),
+      ];
+      qb.andWhere(clauses.length ? `(${clauses.join(' OR ')})` : '1=0', { primaryCategoryNames: names });
+    }
+  }
+
   async listIds(query: any, opts?: { manager?: EntityManager }): Promise<{ ids: string[]; total: number }> {
     const repo = this.getRepo(opts?.manager);
     const parsed = parsePagination({ ...query, page: 1, limit: query?.limit ?? 10000 }, { field: 'name', direction: 'ASC' });
@@ -143,15 +162,7 @@ export class BusinessProcessesService {
       );
     }
 
-    if (filtersToApply && typeof filtersToApply === 'object') {
-      const nameFilter = (filtersToApply as any).name;
-      if (nameFilter && typeof nameFilter === 'object') {
-        const value = nameFilter.filter ?? nameFilter.value ?? nameFilter;
-        if (typeof value === 'string' && value.trim()) {
-          qb.andWhere('bp.name ILIKE :filterName', { filterName: `%${value.trim()}%` });
-        }
-      }
-    }
+    this.applyListFilters(qb, filtersToApply);
 
     const allowedSort = new Set(['name', 'status', 'updated_at', 'created_at', 'primary_category_name']);
     const safeSortField = allowedSort.has(sort.field) ? sort.field : 'name';
