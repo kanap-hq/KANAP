@@ -20,6 +20,7 @@ import { installGracefulShutdown } from './common/graceful-shutdown';
 import { waitForBackgroundWork } from './common/background-work';
 import { EmailService } from './email/email.service';
 import { apiProcessCount, clusterWorkerId, isLeadProcess, processLabel } from './common/cluster/process-role';
+import { closeMarkdownWorkers, startMarkdownWorkers } from './common/markdown-worker';
 import { STARTUP_PROVISIONING_LOCK, withStartupLock } from './common/cluster/startup-lock';
 import { checkPoolBudget, poolMaxFloorWarning, readPoolMax } from './common/db-pool-budget';
 import { DemoDataService } from './demo-data/demo-data.service';
@@ -67,6 +68,9 @@ function logTokenSecretPolicy() {
 }
 
 async function bootstrap() {
+  // Rich text is processed off the main thread (common/markdown-worker.ts): the workers start
+  // while the application initialises.
+  const markdownWorkers = startMarkdownWorkers();
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   checkStartupEnv();
   // Start-up report lines (`[SECRETS]`, `[DB]`, `[CORS]`, `[RATE-LIMIT]`, `[SECURITY]`): printed once
@@ -173,6 +177,16 @@ async function bootstrap() {
   // Tenant resolution from the Host header, the request pipeline and the finalizer (http-app.ts).
   applyTenancyAndPipeline(app, ds);
 
+  if (await markdownWorkers) {
+    if (isLeadProcess()) console.log('[markdown] Text processing workers ready');
+  } else {
+    // eslint-disable-next-line no-console
+    console.error(
+      `[markdown] ${processLabel()}: the text processing workers could not start. Until they start, writes of rich `
+      + 'text are refused (503 MARKDOWN_UNAVAILABLE) and emails show comments as plain text.',
+    );
+  }
+
   const port = process.env.PORT || 8080;
   await app.listen(port as number);
 
@@ -202,6 +216,8 @@ async function bootstrap() {
       }
       await emailService.drain(deadlineAt);
       await app.close();
+      // The text processing workers of this process (common/markdown-worker.ts).
+      await closeMarkdownWorkers();
     },
   });
 

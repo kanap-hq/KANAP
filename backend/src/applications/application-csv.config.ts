@@ -8,6 +8,7 @@ import {
   CsvExportContext,
   CsvImportContext,
 } from '../common/csv';
+import { assertMarkdownSize } from '../common/markdown-limits';
 
 /**
  * CSV configuration for Applications entity (V2)
@@ -70,6 +71,11 @@ export const applicationCsvConfig: CsvEntityConfig = {
       defaultExport: false,
       label: 'Description',
       group: 'Overview',
+      // The description is the source of the overview document: same size limit as on the page.
+      importTransformFn: (value: string) => {
+        assertMarkdownSize(value, 'description');
+        return value;
+      },
     },
     {
       csvColumn: 'category',

@@ -4,12 +4,18 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { promisify } from 'node:util';
 import { BadRequestException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import type { ImportedImageReference } from './document-import-markdown';
+import {
+  findImportedImageReferences,
+  isMarkdownWorkFailure,
+  sanitizeImportedMarkdown,
+} from './markdown-worker';
 import { ARCHIVE_MAX_ENTRY_BYTES, ARCHIVE_MAX_TOTAL_BYTES, openBoundedArchive } from './archive-limits';
 import { converterEnv } from './converter-env';
 import { IMPORTABLE_MIME_TYPES } from './dto/import-document.dto';
-import { decodeHtmlEntities } from './html-entities';
 import { validateUploadedFile } from './upload-validation';
 import { VectorImageConversionService } from './vector-image-conversion.service';
+import { removeSvgBlipElements } from './text-scan';
 
 const execFileAsync = promisify(execFile);
 
@@ -17,17 +23,6 @@ const IMPORT_MAX_FILE_BYTES = 20 * 1024 * 1024;
 const PANDOC_TIMEOUT_MS = 60_000;
 const PANDOC_MAX_BUFFER_BYTES = 50 * 1024 * 1024;
 const VECTOR_IMAGE_EXTENSIONS = new Set(['.svg', '.emf', '.wmf', '.eps']);
-const IMPORT_TEXT_ENTITIES = { nbsp: ' ', amp: '&', quot: '"', '#39': "'", '#039': "'" };
-/** Decoded in a table cell before its spaces are collapsed; the rest is decoded with the whole document. */
-const TABLE_CELL_SPACE_ENTITIES = { nbsp: ' ' };
-
-/**
- * Puts plain text in a GFM table cell: a pipe is escaped, and so is each
- * backslash right before it, so the text keeps its pipes and backslashes.
- */
-export function escapeMarkdownTableCell(text: string): string {
-  return text.replace(/\\*\|/g, (run) => run.replace(/[\\|]/g, '\\$&'));
-}
 
 /** Limits on the images pandoc extracts, read back from disk: those of the archive itself. */
 export type ExtractedMediaLimits = { maxImageBytes: number; maxTotalBytes: number };
@@ -105,8 +100,11 @@ export class DocumentImportService {
       if (!String(rawMarkdown || '').trim()) {
         throw new BadRequestException('Imported document produced no content.');
       }
-      const markdown = this.sanitizeForMdxEditor(rawMarkdown);
-      const collected = await this.collectReferencedImages(markdown, tempDir);
+      // The converter output is cleaned for the editor in the Markdown workers (markdown-worker.ts).
+      const { markdown, images: references } = await sanitizeImportedMarkdown(rawMarkdown, {
+        fieldName: 'content_markdown',
+      });
+      const collected = await this.collectReferencedImages(markdown, tempDir, EXTRACTED_MEDIA_LIMITS, references);
       warnings.push(...collected.warnings);
 
       return {
@@ -116,7 +114,7 @@ export class DocumentImportService {
         warnings,
       };
     } catch (error: any) {
-      if (error instanceof BadRequestException) {
+      if (error instanceof BadRequestException || isMarkdownWorkFailure(error)) {
         throw error;
       }
       const stderr = String(error?.stderr || error?.message || 'unknown error');
@@ -127,13 +125,15 @@ export class DocumentImportService {
     }
   }
 
-  rewriteImageTargets(
+  async rewriteImageTargets(
     markdown: string,
     replacements: Map<string, string>,
     omittedTargets?: Iterable<string>,
-  ): string {
+  ): Promise<string> {
     const omitted = new Set(Array.from(omittedTargets || []));
-    const occurrences = this.findImageOccurrences(markdown);
+    const occurrences = this.withRewrites(
+      await findImportedImageReferences(markdown, { fieldName: 'content_markdown' }),
+    );
     const applied = occurrences
       .map((occurrence) => {
         if (replacements.has(occurrence.target)) {
@@ -190,8 +190,6 @@ export class DocumentImportService {
    * parent `<a:blip r:embed="...">`, which is the correct raster image.
    */
   private stripProprietarySvgExtensions(docxPath: string): void {
-    const svgBlipPattern = /<(?:[a-zA-Z0-9]+:)?svgBlip\b[\s\S]*?\/>/g;
-
     try {
       const archive = openBoundedArchive(docxPath);
       const zip = archive.zip;
@@ -203,7 +201,7 @@ export class DocumentImportService {
         if (!name.startsWith('word/') || !name.endsWith('.xml')) continue;
 
         const content = archive.readText(entry);
-        const stripped = content.replace(svgBlipPattern, '');
+        const stripped = removeSvgBlipElements(content);
         if (stripped.length !== content.length) {
           zip.updateFile(entry.entryName, Buffer.from(stripped, 'utf8'));
           modified = true;
@@ -224,6 +222,7 @@ export class DocumentImportService {
     markdown: string,
     tempDir: string,
     mediaLimits: ExtractedMediaLimits = EXTRACTED_MEDIA_LIMITS,
+    references?: ImportedImageReference[],
   ): Promise<{ images: ImportedDocumentImage[]; omittedTargets: string[]; warnings: string[] }> {
     const images: ImportedDocumentImage[] = [];
     const omittedTargets = new Set<string>();
@@ -231,7 +230,8 @@ export class DocumentImportService {
     const seenTargets = new Set<string>();
     let mediaBytes = 0;
 
-    for (const occurrence of this.findImageOccurrences(markdown)) {
+    const occurrences = references ?? await findImportedImageReferences(markdown, { fieldName: 'content_markdown' });
+    for (const occurrence of occurrences) {
       const target = occurrence.target;
       if (!this.isLocalTarget(target) || seenTargets.has(target)) {
         continue;
@@ -317,43 +317,17 @@ export class DocumentImportService {
     };
   }
 
-  private findImageOccurrences(markdown: string): ImportedImageOccurrence[] {
-    const text = String(markdown || '');
-    const occurrences: ImportedImageOccurrence[] = [];
-
-    const markdownImageRegex = /!\[[^\]]*]\(\s*<?([^)\s>]+)>?(?:\s+["'][^"']*["'])?\s*\)/g;
-    let markdownMatch: RegExpExecArray | null;
-    while ((markdownMatch = markdownImageRegex.exec(text)) !== null) {
-      const raw = String(markdownMatch[0] || '');
-      const target = String(markdownMatch[1] || '').trim();
-      const index = Number(markdownMatch.index || 0);
-      if (!raw || !target) continue;
-      occurrences.push({
-        kind: 'markdown',
-        raw,
-        target,
-        index,
-        rewrite: (nextTarget) => (nextTarget ? raw.replace(target, nextTarget) : ''),
-      });
-    }
-
-    const htmlImageRegex = /<img\b[^>]*\bsrc\s*=\s*(["'])([^"']+)\1[^>]*>/gi;
-    let htmlMatch: RegExpExecArray | null;
-    while ((htmlMatch = htmlImageRegex.exec(text)) !== null) {
-      const raw = String(htmlMatch[0] || '');
-      const target = String(htmlMatch[2] || '').trim();
-      const index = Number(htmlMatch.index || 0);
-      if (!raw || !target) continue;
-      occurrences.push({
-        kind: 'html',
-        raw,
-        target,
-        index,
-        rewrite: (nextTarget) => (nextTarget ? this.buildMarkdownImage(raw, nextTarget) : ''),
-      });
-    }
-
-    return occurrences.sort((a, b) => a.index - b.index);
+  /** The images found in the Markdown workers, with their rewrite. */
+  private withRewrites(references: ImportedImageReference[]): ImportedImageOccurrence[] {
+    return references.map((reference) => {
+      const { raw, target } = reference;
+      return {
+        ...reference,
+        rewrite: reference.kind === 'markdown'
+          ? (nextTarget: string | null) => (nextTarget ? raw.replace(target, nextTarget) : '')
+          : (nextTarget: string | null) => (nextTarget ? this.buildMarkdownImage(reference, nextTarget) : ''),
+      };
+    });
   }
 
   private applyReplacements(
@@ -382,24 +356,11 @@ export class DocumentImportService {
     return output;
   }
 
-  private buildMarkdownImage(rawHtml: string, target: string): string {
-    const alt = this.escapeMarkdownImageText(this.readHtmlAttribute(rawHtml, 'alt') || '');
-    const title = this.readHtmlAttribute(rawHtml, 'title');
+  private buildMarkdownImage(reference: ImportedImageReference, target: string): string {
+    const alt = reference.alt ?? '';
+    const title = reference.title ?? null;
     const encodedTitle = title ? ` "${String(title).replace(/[\\"]/g, '\\$&')}"` : '';
     return `![${alt}](${target}${encodedTitle})`;
-  }
-
-  private readHtmlAttribute(rawHtml: string, attributeName: string): string | null {
-    const pattern = new RegExp(`\\b${attributeName}\\s*=\\s*([\"'])(.*?)\\1`, 'i');
-    const match = rawHtml.match(pattern);
-    return match?.[2] ? String(match[2]) : null;
-  }
-
-  private escapeMarkdownImageText(value: string): string {
-    return String(value || '')
-      .replace(/\\/g, '\\\\')
-      .replace(/\[/g, '\\[')
-      .replace(/\]/g, '\\]');
   }
 
   private isLocalTarget(target: string): boolean {
@@ -434,115 +395,6 @@ export class DocumentImportService {
       return null;
     }
     return resolved;
-  }
-
-  /**
-   * Post-processes pandoc GFM output to produce clean markdown that:
-   * 1. Passes the backend `content_markdown` validation (no raw HTML).
-   * 2. Parses without errors in the frontend MDXEditor (JSX/MDX rules).
-   *
-   * Pandoc falls back to raw HTML for constructs GFM cannot represent
-   * (tables with column widths, merged cells, autolinks, etc.).
-   */
-  private sanitizeForMdxEditor(markdown: string): string {
-    // Protect fenced code blocks from processing.
-    const codeBlocks: string[] = [];
-    let result = String(markdown || '').replace(
-      /^(`{3,}|~{3,})([^\n]*)\n([\s\S]*?)\n\1\s*$/gm,
-      (match) => {
-        const i = codeBlocks.length;
-        codeBlocks.push(match);
-        return `\x00CB${i}\x00`;
-      },
-    );
-
-    // Convert HTML tables to GFM markdown tables.
-    result = result.replace(/<table\b[\s\S]*?<\/table>/gi, (html) => this.convertHtmlTableToGfm(html));
-
-    // Convert URI autolinks <scheme://…> to standard markdown links.
-    // MDX treats <https://…> as JSX and fails on the :// namespace syntax.
-    result = result.replace(/<([a-zA-Z][a-zA-Z0-9+.-]*:\/\/[^\s>]+)>/g, '[$1]($1)');
-
-    // Convert email autolinks <user@host> to markdown mailto links.
-    result = result.replace(/<([^\s>@]+@[^\s>]+\.[^\s>]+)>/g, '[$1](mailto:$1)');
-
-    // Convert semantic HTML breaks/rules to markdown equivalents.
-    result = result.replace(/<br\s*\/?>/gi, '\n');
-    result = result.replace(/<hr\s*\/?>/gi, '\n---\n');
-
-    // Convert <img> tags to markdown images before stripping HTML.
-    result = result.replace(
-      /<img\b[^>]*\bsrc\s*=\s*(["'])([^"']+)\1[^>]*>/gi,
-      (match, _q, src) => {
-        const alt = this.escapeMarkdownImageText(this.readHtmlAttribute(match, 'alt') || '');
-        return `![${alt}](${src})`;
-      },
-    );
-
-    // Strip HTML comments (e.g. pandoc bookmarks, drawing group markers).
-    result = result.replace(/<!--[\s\S]*?-->/g, '');
-
-    // Strip block-level and inline HTML tags, keeping text content.
-    result = result.replace(/<\/p\s*>/gi, '\n\n');
-    result = result.replace(/<\/?[a-zA-Z][a-zA-Z0-9]*\b[^>]*\/?>/g, '');
-
-    // Decode common HTML entities left by stripped HTML.
-    result = this.decodeHtmlEntities(result);
-
-    // Collapse excessive blank lines.
-    result = result.replace(/\n{3,}/g, '\n\n');
-
-    // Restore code blocks.
-    result = result.replace(/\x00CB(\d+)\x00/g, (_, i) => codeBlocks[Number(i)]);
-
-    return result;
-  }
-
-  private convertHtmlTableToGfm(html: string): string {
-    const rows: string[][] = [];
-    const rowRegex = /<tr\b[^>]*>([\s\S]*?)<\/tr>/gi;
-    let rowMatch: RegExpExecArray | null;
-    while ((rowMatch = rowRegex.exec(html)) !== null) {
-      const cells: string[] = [];
-      const cellRegex = /<(?:td|th)\b[^>]*>([\s\S]*?)<\/(?:td|th)>/gi;
-      let cellMatch: RegExpExecArray | null;
-      while ((cellMatch = cellRegex.exec(rowMatch[1])) !== null) {
-        const text = escapeMarkdownTableCell(this.stripHtmlToText(cellMatch[1]));
-        cells.push(text);
-      }
-      if (cells.length > 0) rows.push(cells);
-    }
-
-    if (rows.length === 0) return '';
-
-    // Normalize column count.
-    const maxCols = Math.max(...rows.map((r) => r.length));
-    for (const row of rows) {
-      while (row.length < maxCols) row.push('');
-    }
-
-    // First row becomes the header (pandoc puts <th> in a <thead>).
-    const lines: string[] = [];
-    lines.push('| ' + rows[0].map((c) => c || ' ').join(' | ') + ' |');
-    lines.push('| ' + rows[0].map(() => '---').join(' | ') + ' |');
-    for (let i = 1; i < rows.length; i++) {
-      lines.push('| ' + rows[i].map((c) => c || ' ').join(' | ') + ' |');
-    }
-
-    return '\n' + lines.join('\n') + '\n';
-  }
-
-  private stripHtmlToText(html: string): string {
-    let text = String(html || '');
-    text = text.replace(/<br\s*\/?>/gi, ' ');
-    text = text.replace(/<\/p\s*>/gi, ' ');
-    text = text.replace(/<\/?[a-zA-Z][a-zA-Z0-9]*\b[^>]*\/?>/g, '');
-    text = decodeHtmlEntities(text, { entities: TABLE_CELL_SPACE_ENTITIES });
-    return text.replace(/\s+/g, ' ').trim();
-  }
-
-  private decodeHtmlEntities(text: string): string {
-    return decodeHtmlEntities(text, { entities: IMPORT_TEXT_ENTITIES });
   }
 
   private getInlineImageMimeType(extension: string): string {

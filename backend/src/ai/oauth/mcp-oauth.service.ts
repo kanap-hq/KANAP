@@ -309,7 +309,15 @@ export class McpOAuthService {
 
   // ---------------------------------------------------------------- token endpoint
 
+  /**
+   * Every client is public (`token_endpoint_auth_methods_supported: ["none"]`). A client assertion is
+   * refused (RFC 6749 §5.2 `invalid_client`): a client that sends one expects key-bound tokens, and
+   * this server would neither check it nor bind anything to it.
+   */
   async token(body: Record<string, unknown>, host: McpOAuthHost): Promise<TokenResponse> {
+    if (body.client_assertion !== undefined || body.client_assertion_type !== undefined) {
+      throw new TokenEndpointError('invalid_client', 'This server accepts public clients only (token_endpoint_auth_method "none").', 401);
+    }
     const grantType = str(body.grant_type);
     if (grantType === 'authorization_code') return this.exchangeCode(body, host);
     if (grantType === 'refresh_token') return this.refresh(body, host);

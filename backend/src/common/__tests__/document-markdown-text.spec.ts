@@ -1,16 +1,28 @@
 import * as assert from 'node:assert/strict';
+import { performance } from 'node:perf_hooks';
 import { DocumentExportService } from '../document-export.service';
-import { DocumentImportService, escapeMarkdownTableCell } from '../document-import.service';
+import {
+  convertHtmlTableToGfm,
+  escapeMarkdownTableCell,
+  findImportedImageReferences,
+  sanitizeForMdxEditor,
+} from '../document-import-markdown';
+import { DocumentImportService } from '../document-import.service';
 
 function importer(): any {
   return new DocumentImportService({} as any);
 }
 
+/** The Markdown image the import writes for the `<img>` tag of `html`. */
+function importedImage(html: string, target: string): string {
+  const [reference] = findImportedImageReferences(html);
+  return importer().buildMarkdownImage(reference, target);
+}
+
 function decodesImportedHtmlTextOnce() {
-  const service = importer();
-  const paragraph = (html: string): string => service.sanitizeForMdxEditor(`<p>${html}</p>`).trim();
+  const paragraph = (html: string): string => sanitizeForMdxEditor(`<p>${html}</p>`).trim();
   const tableCell = (html: string): string => {
-    const markdown: string = service.sanitizeForMdxEditor(
+    const markdown: string = sanitizeForMdxEditor(
       `<table><tr><th>Header</th></tr><tr><td>${html}</td></tr></table>`,
     );
     return markdown.trim().split('\n')[2].slice(2, -2);
@@ -39,21 +51,27 @@ function escapesTableCellText() {
   for (const [input, expected] of cases) {
     assert.equal(escapeMarkdownTableCell(input), expected, input);
   }
+  // A long run of backslashes is escaped in linear time, with or without a pipe after it.
+  const run = '\\'.repeat(200 * 1024);
+  const startedAt = performance.now();
+  assert.equal(escapeMarkdownTableCell(run), run);
+  const elapsedMs = performance.now() - startedAt;
+  assert.ok(elapsedMs < 50, `200 KB of backslashes escaped in ${elapsedMs.toFixed(0)} ms`);
+  assert.equal(escapeMarkdownTableCell(`${run}|`), `${run}${run}\\|`);
 
-  const table = importer().convertHtmlTableToGfm(
+  const table = convertHtmlTableToGfm(
     '<table><tr><th>Pattern</th><th>Path</th></tr><tr><td>a\\|b</td><td>C:\\temp</td></tr></table>',
   );
   assert.match(table, /^\| a\\\\\\\|b \| C:\\temp \|$/m);
 }
 
 function escapesImageTitle() {
-  const service = importer();
   assert.equal(
-    service.buildMarkdownImage('<img src="a.png" alt="Chart" title="Monthly view">', 'img/a.png'),
+    importedImage('<img src="a.png" alt="Chart" title="Monthly view">', 'img/a.png'),
     '![Chart](img/a.png "Monthly view")',
   );
   assert.equal(
-    service.buildMarkdownImage('<img src="a.png" alt="Chart" title=\'Say \\"hi\\" \\\'>', 'img/a.png'),
+    importedImage('<img src="a.png" alt="Chart" title=\'Say \\"hi\\" \\\'>', 'img/a.png'),
     '![Chart](img/a.png "Say \\\\\\"hi\\\\\\" \\\\")',
   );
 }

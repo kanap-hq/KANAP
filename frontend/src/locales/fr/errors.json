@@ -43,5 +43,11 @@
   "confirmation_mismatch": "Le nom saisi ne correspond pas au nom de l'espace de travail.",
   "rate_limited": "Trop de tentatives. Patientez quelques minutes, puis réessayez.",
   "SHARE_TOO_MANY_RECIPIENTS": "Un lien peut être envoyé à 20 destinataires au maximum.",
-  "SHARE_RATE_LIMITED": "Vous avez envoyé le maximum de 30 liens au cours de la dernière heure. Réessayez plus tard."
+  "SHARE_RATE_LIMITED": "Vous avez envoyé le maximum de 30 liens au cours de la dernière heure. Réessayez plus tard.",
+  "MARKDOWN_TOO_LARGE": "Ce texte est trop long : la limite est de 200 Ko de texte (les images ne comptent pas).",
+  "MARKDOWN_TOO_LARGE_DOCUMENT": "Ce document dépasse les 200 Ko de texte qu'un enregistrement accepte (les images ne comptent pas). Raccourcissez-le pour enregistrer vos modifications. La dernière version enregistrée est conservée.",
+  "MARKDOWN_TOO_COMPLEX": "Ce texte est trop complexe à analyser. Mettez les journaux ou le code collés dans un bloc de code, ou refermez les caractères de mise en forme (* et _).",
+  "MARKDOWN_BUSY": "Le serveur est occupé par d'autres textes. Réessayez dans un instant.",
+  "MARKDOWN_UNAVAILABLE": "Les textes mis en forme ne peuvent pas être enregistrés pour le moment. Réessayez dans quelques minutes.",
+  "MARKDOWN_UNAVAILABLE_onprem": "Les textes mis en forme ne peuvent pas être enregistrés sur ce serveur pour le moment. Demandez à votre administrateur de consulter les journaux de l'API."
 }

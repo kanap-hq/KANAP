@@ -10,6 +10,7 @@ import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
 import { useTranslation } from 'react-i18next';
 import type { ImportDocumentResult } from '../api/endpoints/import';
 import { KanapDialog, useKanapDialogs } from './design';
+import { getApiErrorMessage } from '../utils/apiErrorMessage';
 
 interface ImportButtonProps {
   onImportFile: (file: File) => Promise<ImportDocumentResult>;
@@ -88,7 +89,7 @@ export default function ImportButton({
       if (onError) {
         onError(error);
       } else {
-        await dialogs.alert({ message: getErrorMessage(error), intent: 'danger' });
+        await dialogs.alert({ message: getApiErrorMessage(error, t, getErrorMessage(error)), intent: 'danger' });
       }
       // eslint-disable-next-line no-console
       console.error('Document import failed', error);

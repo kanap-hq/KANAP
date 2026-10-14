@@ -8,6 +8,7 @@ import { Repository } from 'typeorm';
 import { format } from '@fast-csv/format';
 import { parseString } from '@fast-csv/parse';
 import { decodeCsvBufferUtf8OrThrow } from '../../common/encoding';
+import { assertMarkdownSize } from '../../common/markdown-limits';
 import { Application } from '../application.entity';
 import { ApplicationOwner } from '../application-owner.entity';
 import { ApplicationCompany } from '../application-company.entity';
@@ -215,6 +216,8 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
    * Create a new application.
    */
   private async createLocked(body: Partial<Application>, userId?: string | null, opts?: ServiceOpts) {
+    // The description is the source of the overview document (integrated documents): Markdown size limit.
+    assertMarkdownSize(body.description, 'description');
     const mg = this.getManager(opts);
     const repo = mg.getRepository(Application);
     const tenantId = await this.getCurrentTenantId(mg);
@@ -272,6 +275,10 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     await mg.query('SELECT id FROM applications WHERE id = $1 AND tenant_id = $2 FOR UPDATE', [appId, tenantId]);
     const existing = await repo.findOne({ where: { id: appId, tenant_id: tenantId } });
     if (!existing) throw new NotFoundException('Application not found');
+    // A changed description gets the Markdown size limit; a stored one is kept as it is.
+    if (body.description !== undefined && body.description !== existing.description) {
+      assertMarkdownSize(body.description, 'description');
+    }
     const before = { ...existing };
     const classification = classificationPatch(body, existing, catalog);
     const patch: any = { ...body, ...classification };

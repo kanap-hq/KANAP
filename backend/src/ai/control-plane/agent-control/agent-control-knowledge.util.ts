@@ -20,6 +20,7 @@ import type {
   TicketTimelineEntry,
   WebSearchResultItem,
 } from './ai-agent-control.service';
+import { HTML_TAGS, trailingRun } from '../../../common/text-scan';
 
 /**
  * Knowledge retrieval, search planning and interpretation for ticketing triage.
@@ -104,7 +105,7 @@ export function normalizeKnowledgeText(value: string | null | undefined): string
     String(value ?? '')
       .replace(/<br\s*\/?>/gi, ' ')
       .replace(/<\/p>/gi, ' ')
-      .replace(/<[^>]+>/g, ' '),
+      .replace(HTML_TAGS, ' '),
     { entities: HTML_TEXT_ENTITIES, ignoreCase: true },
   )
     .replace(/[’`]/g, '\'')
@@ -115,7 +116,7 @@ export function normalizeKnowledgeText(value: string | null | undefined): string
 export function cleanKnowledgeCandidate(value: string | null | undefined): string {
   const normalized = normalizeKnowledgeText(value)
     .replace(/^[\s"'([{]+/g, '')
-    .replace(/[\s"')}\].,:;!?]+$/g, '')
+    .replace(trailingRun('"\')}].,:;!?', true), '')
     .trim();
   return clampText(normalized, 160);
 }
@@ -319,7 +320,7 @@ export function knowledgeItemsFromOutput(value: unknown): KnowledgeSearchItem[] 
 const WEB_TEXT_ENTITIES = { amp: '&', quot: '"', '#39': '\'', lt: '<', gt: '>' };
 
 export function stripWebText(value: string): string {
-  return decodeHtmlEntities(String(value || '').replace(/<[^>]+>/g, ' '), {
+  return decodeHtmlEntities(String(value || '').replace(HTML_TAGS, ' '), {
     entities: WEB_TEXT_ENTITIES,
     ignoreCase: true,
   })
