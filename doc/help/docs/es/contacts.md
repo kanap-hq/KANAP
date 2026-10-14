@@ -53,15 +53,13 @@ La cuadrícula de Contactos proporciona un directorio buscable de todos los cont
 
 Haga clic en una fila para abrir la página del contacto. Cada cambio se guarda solo: no hay botón de guardar.
 
-La página tiene dos pestañas: **Vista general** y **Usado en**.
-
 **Título**: el nombre del contacto. Haga clic en él para editar el nombre y el apellido uno al lado del otro; el cambio se guarda al salir de los dos campos o al pulsar Intro, y Escape lo cancela. Un contacto sin nombre muestra su correo electrónico en su lugar.
 
 **Encabezado**, bajo el nombre:
 - **Proveedor**: el proveedor para el que trabaja este contacto, como enlace a su página. Un contacto sin proveedor muestra **Sin proveedor**: haga clic para abrir las propiedades y elegir uno.
 - **Tipo de contacto**: el rol del contacto en el proveedor: Comercial, Técnico, Soporte u Otro. Haga clic para elegir otro. Aparece en cuanto el contacto tiene un proveedor.
 - **Estado**: **Activo** o **Inactivo**. Haga clic para cambiarlo.
-- **Usado en**: cuántos proveedores, líneas presupuestarias, contratos y otros elementos están vinculados al contacto. Haga clic para abrir la pestaña **Usado en**.
+- **Usado en**: cuántos proveedores, líneas presupuestarias, contratos y otros elementos están vinculados al contacto. Haga clic para ir a la sección **Usado en**.
 
 **Propiedades** (el panel de la derecha, que se abre con su pestaña o la tecla `P`):
 - **Proveedor**: elija el proveedor en la lista. Un contacto con proveedor siempre tiene un tipo de contacto: elegir un proveedor para un contacto sin tipo le da **Comercial**, que puede cambiar enseguida. Quitar el proveedor quita también el tipo de contacto.
@@ -79,7 +77,7 @@ Pulse **Escape** o haga clic en el botón de cerrar para volver a la lista.
 
 ### Usado en
 
-La pestaña **Usado en** lista todo aquello a lo que está vinculado el contacto, una lista por tipo, cada una con su número: proveedores, líneas presupuestarias (OPEX y CAPEX, con su referencia `BL-`), contratos, aplicaciones, activos, ubicaciones, proyectos (`PRJ-`) y solicitudes (`REQ-`). Cada fila muestra el rol del contacto: el tipo de contacto para proveedores, líneas presupuestarias y contratos, el rol escrito en la aplicación, el activo o la ubicación.
+La sección **Usado en**, bajo las notas, lista todo aquello a lo que está vinculado el contacto, una lista por tipo, cada una con su número: proveedores, líneas presupuestarias (OPEX y CAPEX, con su referencia `BL-`), contratos, aplicaciones, activos, ubicaciones, proyectos (`PRJ-`) y solicitudes (`REQ-`). Cada fila muestra el rol del contacto: el tipo de contacto para proveedores, líneas presupuestarias y contratos, el rol escrito en la aplicación, el activo o la ubicación.
 
 Haga clic en una fila para abrir su página. Una lista muestra hasta 50 elementos e indica cuántos hay en total. Solo ve las listas que tiene permiso para leer. Un contacto sin vínculos muestra una línea que lo indica.
 
@@ -91,7 +89,7 @@ Haga clic en **Nuevo** en la lista. Indique el correo electrónico (obligatorio)
 
 ## Dónde se usan los contactos
 
-Los contactos aparecen en varios lugares de KANAP. La pestaña **Usado en** de la página del contacto los lista todos.
+Los contactos aparecen en varios lugares de KANAP. La sección **Usado en** de la página del contacto los lista todos.
 
 ### Contactos de proveedor
 

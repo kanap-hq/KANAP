@@ -50,7 +50,7 @@ Every cell in a row is clickable and opens that supplier's page.
 
 Click any row to open the supplier page. Use the arrows at the top, or the left and right arrow keys, to step through suppliers without returning to the list. Every change saves on its own: there is no save button.
 
-The page has three tabs: **Overview**, **Contacts** and **Used by**.
+The page has two tabs: **Overview** and **Contacts**.
 
 **Title**: The supplier's name. Click it to edit it; the change saves when you leave the field or press Enter, and Escape cancels it. A name is required and must differ from the name of every other supplier: KANAP shows the message under the name and keeps the stored one.
 
@@ -59,7 +59,7 @@ The page has three tabs: **Overview**, **Contacts** and **Used by**.
 **Header**, under the name:
 - **Status**: **Enabled** or **Disabled**. Click it to change it. Choosing **Disabled** sets the end of validity to today.
 - **Contacts**: How many contacts are linked to the supplier. Click it to open the **Contacts** tab.
-- **Used by**: How many budget lines, contracts, applications and assets use the supplier. Click it to open the **Used by** tab.
+- **Used by**: How many budget lines, contracts, applications and assets use the supplier. Click it to scroll to the **Used by** section of the **Overview** tab.
 
 **Properties** (the panel on the right, opened with its tab or the `P` key):
 - **ERP supplier ID**: The supplier's ID in your ERP or procurement system. It saves when you leave the field or press Enter.
@@ -92,7 +92,7 @@ The **Contacts** tab lists the contacts linked to this supplier by contact type:
 
 ### Used by
 
-The **Used by** tab lists what refers to this supplier, one list per type, each with its count:
+The **Used by** section, under the notes on the **Overview** tab, lists what refers to this supplier, one list per type, each with its count:
 
 - **Budget lines**: OPEX and CAPEX lines whose supplier it is, with their reference (`BL-12`) and type.
 - **Contracts**: contracts with this supplier.
@@ -101,7 +101,7 @@ The **Used by** tab lists what refers to this supplier, one list per type, each 
 
 Click a row to open that page. Disabled items show **Disabled** and come after the others. A list shows up to 50 items and says how many there are in all. You only see the lists you are allowed to read: a user without access to contracts sees no contract list. A supplier that nothing uses shows one line that says so.
 
-Check this tab before you disable or delete a supplier.
+Check this section before you disable or delete a supplier.
 
 ### Creating a supplier
 

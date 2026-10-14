@@ -53,15 +53,13 @@ La grille Contacts fournit un répertoire consultable de tous les contacts exter
 
 Cliquez sur une ligne pour ouvrir la fiche du contact. Chaque modification s'enregistre d'elle-même : il n'y a pas de bouton d'enregistrement.
 
-La fiche comporte deux onglets : **Vue d'ensemble** et **Utilisé par**.
-
 **Titre** : le nom du contact. Cliquez dessus pour modifier le prénom et le nom côte à côte ; la modification s'enregistre quand vous quittez les deux champs ou appuyez sur Entrée, et Échap l'annule. Un contact sans nom affiche son e-mail à la place.
 
 **En-tête**, sous le nom :
 - **Fournisseur** : le fournisseur pour lequel travaille ce contact, sous forme de lien vers sa fiche. Un contact sans fournisseur affiche **Aucun fournisseur** : cliquez dessus pour ouvrir les propriétés et en choisir un.
 - **Type de contact** : le rôle du contact chez le fournisseur : Commercial, Technique, Support ou Autre. Cliquez dessus pour en choisir un autre. Il apparaît dès que le contact a un fournisseur.
 - **Statut** : **Actif** ou **Inactif**. Cliquez dessus pour le changer.
-- **Utilisé par** : le nombre de fournisseurs, lignes budgétaires, contrats et autres éléments liés au contact. Cliquez dessus pour ouvrir l'onglet **Utilisé par**.
+- **Utilisé par** : le nombre de fournisseurs, lignes budgétaires, contrats et autres éléments liés au contact. Cliquez dessus pour aller à la section **Utilisé par**.
 
 **Propriétés** (le panneau de droite, ouvert par son onglet ou la touche `P`) :
 - **Fournisseur** : choisissez le fournisseur dans la liste. Un contact qui a un fournisseur a toujours un type de contact : choisir un fournisseur pour un contact sans type lui donne **Commercial**, que vous pouvez changer aussitôt. Retirer le fournisseur retire aussi le type de contact.
@@ -79,7 +77,7 @@ Appuyez sur **Échap** ou cliquez sur le bouton de fermeture pour revenir à la 
 
 ### Utilisé par
 
-L'onglet **Utilisé par** liste tout ce à quoi le contact est lié, une liste par type, chacune avec son nombre : fournisseurs, lignes budgétaires (OPEX et CAPEX, avec leur référence `BL-`), contrats, applications, actifs, sites, projets (`PRJ-`) et demandes (`REQ-`). Chaque ligne indique le rôle du contact : le type de contact pour les fournisseurs, les lignes budgétaires et les contrats, le rôle saisi sur l'application, l'actif ou le site.
+La section **Utilisé par**, sous les notes, liste tout ce à quoi le contact est lié, une liste par type, chacune avec son nombre : fournisseurs, lignes budgétaires (OPEX et CAPEX, avec leur référence `BL-`), contrats, applications, actifs, sites, projets (`PRJ-`) et demandes (`REQ-`). Chaque ligne indique le rôle du contact : le type de contact pour les fournisseurs, les lignes budgétaires et les contrats, le rôle saisi sur l'application, l'actif ou le site.
 
 Cliquez sur une ligne pour ouvrir sa fiche. Une liste montre jusqu'à 50 éléments et indique leur nombre total. Vous ne voyez que les listes que vous avez le droit de lire. Un contact lié à rien affiche une ligne qui le dit.
 
@@ -91,7 +89,7 @@ Cliquez sur **Nouveau** dans la liste. Renseignez l'e-mail (obligatoire) et les 
 
 ## Où les contacts sont utilisés
 
-Les contacts apparaissent à plusieurs endroits dans KANAP. L'onglet **Utilisé par** de la fiche contact les liste tous.
+Les contacts apparaissent à plusieurs endroits dans KANAP. La section **Utilisé par** de la fiche contact les liste tous.
 
 ### Contacts fournisseur
 
