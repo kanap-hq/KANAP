@@ -714,6 +714,7 @@ export default function BillingCenter() {
           queryClient.invalidateQueries({ queryKey: ['billing-profile'] });
         }}
         invoiceMissingFields={invoiceMissingFields}
+        subscription={subscriptionSummary}
         onCompleteInvoiceDetails={handleCompleteInvoiceDetails}
         onExited={handlePlanDialogExited}
       />

@@ -727,6 +727,7 @@
       "label": "Billing interval",
       "monthly": "Monthly"
     },
+    "currentPlan": "This is your current plan.",
     "errors": {
       "noActiveSubscription": "No active subscription was found.",
       "planNotBankTransferEligible": "This plan is not eligible for bank transfer.",
@@ -745,8 +746,13 @@
     "messages": {
       "checkoutUrlUnavailable": "Checkout URL is unavailable.",
       "invoiceCreated": "Invoice created.",
+      "invoicePaid": "Invoice {{number}}, {{amount}}, paid.",
       "loadFailed": "Failed to load plans.",
-      "requestFailed": "Request failed."
+      "nowAnnual": "Your plan is now annual.",
+      "nowMonthly": "Your plan is now monthly.",
+      "paymentRequired": "The plan changes once its invoice is paid.",
+      "requestFailed": "Request failed.",
+      "switchToMonthly": "Your plan switches to monthly on {{date}}."
     },
     "monthlyEquivalent": "{{amount}} per month, billed annually",
     "period": {

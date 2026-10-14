@@ -40,15 +40,42 @@ type Plan = {
 
 type BillingInterval = 'monthly' | 'annual';
 
-function formatPrice(cents: number, locale: string): string {
+/** The outcome of `POST /billing/change-plan`. */
+type PlanChange = {
+  status: 'paid' | 'requires_payment' | 'scheduled';
+  invoice?: { number: string | null; amount: number | null; currency: string | null; hosted_invoice_url: string | null };
+  effective_at?: string;
+};
+
+/** The running subscription the dialog compares the selection with. */
+type CurrentSubscription = {
+  status?: string | null;
+  trial_end?: string | null;
+  trial_days_remaining?: number | null;
+  stripe_subscription_id?: string | null;
+  is_subscription_healthy?: boolean;
+  plan_name?: string | null;
+  subscription_type?: 'monthly' | 'annual' | null;
+};
+
+function formatPrice(cents: number, locale: string, currency = 'EUR'): string {
   try {
     return new Intl.NumberFormat(locale, {
       style: 'currency',
-      currency: 'EUR',
+      currency,
     }).format(cents / 100);
   } catch {
-    return `${(cents / 100).toFixed(2)} EUR`;
+    return `${(cents / 100).toFixed(2)} ${currency}`;
   }
+}
+
+/** "Your plan is now annual. Invoice KAN-0012, 2 241,00 €, paid." */
+function paidMessage(change: PlanChange | undefined, interval: BillingInterval, t: TFunction, locale: string): string {
+  const now = t(interval === 'annual' ? 'planSelection.messages.nowAnnual' : 'planSelection.messages.nowMonthly');
+  const invoice = change?.invoice;
+  if (!invoice?.number || invoice.amount == null) return now;
+  const amount = formatPrice(invoice.amount, locale, invoice.currency ?? 'EUR');
+  return `${now} ${t('planSelection.messages.invoicePaid', { number: invoice.number, amount })}`;
 }
 
 /** Months the annual price saves against twelve monthly payments, when it is a whole number. */
@@ -79,6 +106,9 @@ function parseApiError(error: any, t: TFunction): string {
   }
   if (message === 'TERMS_NOT_ACCEPTED') {
     return t('planSelection.errors.termsNotAccepted');
+  }
+  if (message === 'PLAN_UNCHANGED') {
+    return t('planSelection.currentPlan');
   }
   return getApiErrorMessage(error, t, t('planSelection.messages.requestFailed'));
 }
@@ -166,6 +196,8 @@ type PlanSelectionDialogProps = {
   onCompleteInvoiceDetails?: () => void;
   /** Called once the dialog has finished closing. */
   onExited?: () => void;
+  /** The current subscription, fresher than the one read at sign-in (billing page data). */
+  subscription?: CurrentSubscription | null;
 };
 
 export default function PlanSelectionDialog({
@@ -175,8 +207,11 @@ export default function PlanSelectionDialog({
   invoiceMissingFields = [],
   onCompleteInvoiceDetails,
   onExited,
+  subscription: currentSubscription,
 }: PlanSelectionDialogProps) {
-  const { subscription, claims } = useAuth();
+  const auth = useAuth();
+  const { claims } = auth;
+  const subscription: CurrentSubscription | null = currentSubscription ?? auth.subscription ?? null;
   const { t } = useTranslation(['admin', 'common']);
   const locale = useLocale();
   const { mode } = useTheme().palette;
@@ -230,13 +265,32 @@ export default function PlanSelectionDialog({
     setActionLoading(`${planKey}:card`);
     try {
       if (hasHealthyStripeSubscription) {
-        await api.post('/billing/change-plan', {
+        const res = await api.post<{ change?: PlanChange }>('/billing/change-plan', {
           plan_key: planKey,
           subscription_type: billingCycle,
           terms_version: plan?.terms?.version,
         });
+        const change = res.data?.change;
+        // The billing page reloads the subscription and the invoice list.
         onSuccess?.();
-        onClose();
+        if (change?.status === 'requires_payment') {
+          // The card needs the customer (3-D Secure) or was refused: the plan changes once the
+          // invoice is paid on its Stripe page, like a checkout.
+          const url = change.invoice?.hosted_invoice_url;
+          if (url) {
+            window.location.href = url;
+          } else {
+            setActionError(t('planSelection.messages.paymentRequired'));
+          }
+          return;
+        }
+        if (change?.status === 'scheduled') {
+          setActionInfo(t('planSelection.messages.switchToMonthly', {
+            date: formatShortDate(change.effective_at ?? null, locale, { year: 'always' }),
+          }));
+          return;
+        }
+        setActionInfo(paidMessage(change, billingCycle, t, locale));
         return;
       }
 
@@ -298,6 +352,11 @@ export default function PlanSelectionDialog({
   const cardLoading = !!plan && actionLoading === `${plan.plan_key}:card`;
   const bankTransferLoading = !!plan && actionLoading === `${plan.plan_key}:bank_transfer`;
   const isAnyLoading = !!actionLoading;
+  // The selection is the running plan and interval: there is nothing to change.
+  const isCurrentPlan = hasHealthyStripeSubscription
+    && !!plan
+    && subscription?.plan_name === plan.display_name
+    && subscription?.subscription_type === billingCycle;
   const cardLabel = hasHealthyStripeSubscription ? t('planSelection.actions.changePlanCard') : t('planSelection.actions.payByCard');
   const bankTransferLabel = hasHealthyStripeSubscription ? t('planSelection.actions.changePlanBankTransfer') : t('planSelection.actions.payByBankTransfer');
 
@@ -329,13 +388,13 @@ export default function PlanSelectionDialog({
       onExited={onExited}
       onSave={() => (plan ? handleCardFlow(plan.plan_key) : undefined)}
       saveLabel={cardLabel}
-      saveDisabled={!plan || !isBillingAdmin || isAnyLoading || cardBlocked || !termsAccepted}
+      saveDisabled={!plan || !isBillingAdmin || isAnyLoading || cardBlocked || isCurrentPlan || !termsAccepted}
       saveLoading={cardLoading}
       secondaryActions={plan && bankTransferEligible ? (
         <Button
           variant="action"
           onClick={() => handleBankTransferFlow(plan.plan_key)}
-          disabled={!isBillingAdmin || isAnyLoading || bankTransferBlocked || !termsAccepted}
+          disabled={!isBillingAdmin || isAnyLoading || bankTransferBlocked || isCurrentPlan || !termsAccepted}
           startIcon={bankTransferLoading ? <CircularProgress color="inherit" size={14} /> : undefined}
         >
           {bankTransferLabel}
@@ -372,7 +431,7 @@ export default function PlanSelectionDialog({
                 );
               })}
             </Box>
-            {freeMonths != null && (
+            {annual && freeMonths != null && (
               <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>
                 {t('planSelection.annualSavings', { count: freeMonths })}
               </Typography>
@@ -413,6 +472,11 @@ export default function PlanSelectionDialog({
             </Box>
           </Box>
 
+          {isCurrentPlan && (
+            <Typography sx={{ mt: '16px', fontSize: 12, color: 'kanap.text.tertiary' }}>
+              {t('planSelection.currentPlan')}
+            </Typography>
+          )}
           {!isBillingAdmin && (
             <Typography sx={{ mt: '16px', fontSize: 12, color: 'kanap.text.tertiary' }}>
               {t('shared.billingAdminRequired')}

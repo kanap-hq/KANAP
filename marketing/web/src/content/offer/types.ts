@@ -95,9 +95,18 @@ export interface OfferContent {
     captchaLabel: string;
     submitLabel: string;
     submittingLabel: string;
-    successWithLink: string;
+    /** Above the form: what the asterisk after a label means. */
+    requiredHint: string;
+    /** The confirmation that replaces the form once the invoice is created. */
+    doneTitle: string;
+    /** `{number}` and `{email}` are replaced. */
+    doneSent: string;
+    /** When Stripe returned no invoice number; `{email}` is replaced. */
+    doneSentNoNumber: string;
+    /** After the sentence when the invoice can be opened. */
+    doneOpen: string;
     successLinkLabel: string;
-    successNoLink: string;
+    doneClose: string;
     errorGeneric: string;
     errorRequired: string;
     errorVatRequired: string;

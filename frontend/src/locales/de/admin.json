@@ -727,6 +727,7 @@
       "label": "Abrechnungszeitraum",
       "monthly": "Monatlich"
     },
+    "currentPlan": "Dies ist Ihr aktueller Plan.",
     "errors": {
       "noActiveSubscription": "Kein aktives Abonnement gefunden.",
       "planNotBankTransferEligible": "Dieser Plan ist nicht für Banküberweisung geeignet.",
@@ -745,8 +746,13 @@
     "messages": {
       "checkoutUrlUnavailable": "Checkout-URL ist nicht verfügbar.",
       "invoiceCreated": "Rechnung erstellt.",
+      "invoicePaid": "Rechnung {{number}}, {{amount}}, bezahlt.",
       "loadFailed": "Pläne konnten nicht geladen werden.",
-      "requestFailed": "Anfrage fehlgeschlagen."
+      "nowAnnual": "Ihr Plan ist jetzt jährlich.",
+      "nowMonthly": "Ihr Plan ist jetzt monatlich.",
+      "paymentRequired": "Der Plan ändert sich, sobald die Rechnung bezahlt ist.",
+      "requestFailed": "Anfrage fehlgeschlagen.",
+      "switchToMonthly": "Ihr Plan wechselt am {{date}} zu monatlich."
     },
     "monthlyEquivalent": "{{amount}} pro Monat, jährlich abgerechnet",
     "period": {

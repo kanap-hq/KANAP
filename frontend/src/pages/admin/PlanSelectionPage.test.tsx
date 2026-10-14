@@ -2,7 +2,7 @@ import React from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import PlanSelectionDialog from './PlanSelectionPage';
 import api from '../../api';
 import enAdmin from '../../locales/en/admin.json';
@@ -192,7 +192,6 @@ describe('PlanSelectionDialog', () => {
     expect(screen.getByRole('button', { name: 'Pay by card' })).toBeEnabled();
     expect(screen.getByText('€249.00')).toBeInTheDocument();
     expect(screen.getByText('per month')).toBeInTheDocument();
-    expect(screen.getByText('2 months free')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Pay by bank transfer' })).not.toBeInTheDocument();
 
     await switchToAnnual();
@@ -310,5 +309,129 @@ describe('PlanSelectionDialog', () => {
       subscription_type: 'annual',
       terms_version: '2026-10-12',
     }));
+  });
+
+  it('shows the annual saving only when Annual is selected', async () => {
+    renderDialog({ invoiceMissingFields: [] });
+    await planLoaded();
+    expect(screen.queryByText('2 months free')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Annual' }));
+    expect(screen.getByText('2 months free')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Monthly' }));
+    expect(screen.queryByText('2 months free')).not.toBeInTheDocument();
+  });
+
+  describe('plan change on a running subscription', () => {
+    const RUNNING = { status: 'active', stripe_subscription_id: 'sub_1', is_subscription_healthy: true };
+    const MONTHLY_PLAN = { ...RUNNING, plan_name: 'Hosted KANAP', subscription_type: 'monthly' as const };
+    const originalLocation = window.location;
+    let assigned = '';
+
+    beforeEach(() => {
+      authState.subscription = { ...RUNNING };
+      assigned = '';
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: {
+          ...originalLocation,
+          origin: originalLocation.origin,
+          set href(value: string) {
+            assigned = value;
+          },
+          get href() {
+            return assigned || originalLocation.href;
+          },
+        },
+      });
+    });
+
+    afterEach(() => {
+      Object.defineProperty(window, 'location', { configurable: true, value: originalLocation });
+    });
+
+    it('disables both actions on the current plan and interval, with a hint', async () => {
+      // The billing page passes its fresher subscription; the one read at sign-in is older.
+      renderDialog({ invoiceMissingFields: [], subscription: MONTHLY_PLAN });
+      await planLoaded();
+      acceptTerms();
+
+      expect(screen.getByRole('button', { name: 'Change plan (card)' })).toBeDisabled();
+      expect(screen.getByText('This is your current plan.')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Annual' }));
+      expect(screen.getByRole('button', { name: 'Change plan (card)' })).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'Change plan (bank transfer)' })).toBeEnabled();
+      expect(screen.queryByText('This is your current plan.')).not.toBeInTheDocument();
+
+      cleanup();
+      renderDialog({ invoiceMissingFields: [], subscription: { ...MONTHLY_PLAN, subscription_type: 'annual' } });
+      await switchToAnnual();
+      acceptTerms();
+      expect(screen.getByRole('button', { name: 'Change plan (card)' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Change plan (bank transfer)' })).toBeDisabled();
+      expect(screen.getByText('This is your current plan.')).toBeInTheDocument();
+    });
+
+    it('confirms a paid change with its invoice and reloads the billing data', async () => {
+      (api.post as any).mockResolvedValue({
+        data: {
+          change: {
+            status: 'paid',
+            invoice: { number: 'KAN-0012', amount: 224100, currency: 'EUR', hosted_invoice_url: 'https://invoice.stripe.test/in_new' },
+          },
+        },
+      });
+      const onSuccess = vi.fn();
+      const onClose = vi.fn();
+      renderDialog({ invoiceMissingFields: [], subscription: MONTHLY_PLAN, onSuccess, onClose });
+      await switchToAnnual();
+      acceptTerms();
+      fireEvent.click(screen.getByRole('button', { name: 'Change plan (card)' }));
+
+      expect(await screen.findByText('Your plan is now annual. Invoice KAN-0012, €2,241.00, paid.')).toBeInTheDocument();
+      expect(onSuccess).toHaveBeenCalledTimes(1);
+      expect(onClose).not.toHaveBeenCalled();
+      expect(assigned).toBe('');
+    });
+
+    it('sends the customer to the invoice when the card payment needs them', async () => {
+      (api.post as any).mockResolvedValue({
+        data: {
+          change: {
+            status: 'requires_payment',
+            invoice: { number: 'KAN-0013', amount: 224100, currency: 'EUR', hosted_invoice_url: 'https://invoice.stripe.test/in_open' },
+          },
+        },
+      });
+      const onSuccess = vi.fn();
+      renderDialog({ invoiceMissingFields: [], subscription: MONTHLY_PLAN, onSuccess });
+      await switchToAnnual();
+      acceptTerms();
+      fireEvent.click(screen.getByRole('button', { name: 'Change plan (card)' }));
+
+      await vi.waitFor(() => expect(assigned).toBe('https://invoice.stripe.test/in_open'));
+      expect(screen.queryByText(/Your plan is now/)).not.toBeInTheDocument();
+      expect(onSuccess).toHaveBeenCalledTimes(1);
+    });
+
+    it('announces a switch to monthly at the end of the annual period', async () => {
+      (api.post as any).mockResolvedValue({
+        data: { change: { status: 'scheduled', effective_at: '2027-10-14T10:00:00.000Z' } },
+      });
+      renderDialog({ invoiceMissingFields: [], subscription: { ...MONTHLY_PLAN, subscription_type: 'annual' } });
+      await planLoaded();
+      acceptTerms();
+      fireEvent.click(screen.getByRole('button', { name: 'Change plan (card)' }));
+
+      expect(await screen.findByText('Your plan switches to monthly on 14 Oct 2027.')).toBeInTheDocument();
+      expect(api.post).toHaveBeenCalledWith('/billing/change-plan', {
+        plan_key: 'max',
+        subscription_type: 'monthly',
+        terms_version: '2026-10-12',
+      });
+      expect(assigned).toBe('');
+    });
   });
 });
