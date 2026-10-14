@@ -59,7 +59,7 @@ La fiche comporte deux onglets : **Vue d'ensemble** et **Contacts**.
 **En-tête**, sous le nom :
 - **Statut** : **Activé** ou **Désactivé**. Cliquez dessus pour le changer. Choisir **Désactivé** fixe la fin de validité à aujourd'hui.
 - **Contacts** : le nombre de contacts liés au fournisseur. Cliquez dessus pour ouvrir l'onglet **Contacts**.
-- **Utilisé par** : le nombre de lignes budgétaires, contrats, applications et actifs qui utilisent le fournisseur. Cliquez dessus pour aller à la section **Utilisé par** de l'onglet **Vue d'ensemble**.
+- **Lié à** : le nombre de lignes budgétaires, contrats, applications et actifs liés au fournisseur. Cliquez dessus pour aller à la section **Lié à** de l'onglet **Vue d'ensemble**.
 
 **Propriétés** (le panneau de droite, ouvert par son onglet ou la touche `P`) :
 - **ID fournisseur ERP** : l'identifiant du fournisseur dans votre ERP ou votre système d'achats. Il s'enregistre quand vous quittez le champ ou appuyez sur Entrée.
@@ -90,9 +90,9 @@ L'onglet **Contacts** liste les contacts liés à ce fournisseur par type de con
 
 **Conseil** : gardez au moins un contact par fournisseur pour que la communication avec lui soit toujours à portée de clic.
 
-### Utilisé par
+### Lié à
 
-La section **Utilisé par**, sous les notes de l'onglet **Vue d'ensemble**, liste ce qui fait référence à ce fournisseur, une liste par type, chacune avec son nombre :
+La section **Lié à**, sous les notes de l'onglet **Vue d'ensemble**, liste ce qui fait référence à ce fournisseur, une liste par type, chacune avec son nombre :
 
 - **Lignes budgétaires** : les lignes OPEX et CAPEX dont il est le fournisseur, avec leur référence (`BL-12`) et leur type.
 - **Contrats** : les contrats passés avec ce fournisseur.

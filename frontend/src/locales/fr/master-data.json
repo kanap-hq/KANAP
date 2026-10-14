@@ -79,10 +79,10 @@
       "capex": "CAPEX uniquement"
     },
     "usages": {
-      "title": "Utilisé par",
-      "open": "Voir les utilisations",
-      "loadFailed": "La liste des utilisations n'a pas pu être chargée.",
-      "emptySupplier": "Rien n'utilise encore ce fournisseur.",
+      "title": "Lié à",
+      "open": "Voir les liens",
+      "loadFailed": "La liste des liens n'a pas pu être chargée.",
+      "emptySupplier": "Ce fournisseur n'est encore lié à rien.",
       "emptyContact": "Ce contact n'est encore lié à rien.",
       "partial": "{{shown}} sur {{total}} affichés.",
       "inactive": "Désactivé",
