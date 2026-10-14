@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { describeZodIssues, invalidInputMessage } from './control-plane/dispatcher/ai-input-validation.util';
 import { z } from 'zod';
 import zodToJsonSchema from 'zod-to-json-schema';
 import { Features } from '../config/features';
@@ -952,7 +953,10 @@ export class AiToolRegistry {
 
     const parsed = definition.inputSchema.safeParse(rawInput);
     if (!parsed.success) {
-      throw new BadRequestException(parsed.error.flatten());
+      throw new BadRequestException({
+        message: invalidInputMessage(definition.name, describeZodIssues(parsed.error.issues)),
+        ...parsed.error.flatten(),
+      });
     }
 
     return definition.execute(context, parsed.data);
