@@ -124,8 +124,12 @@ export function netboxAuthorizationHeader(token: string): string {
   return `Token ${String(token || '').trim()}`;
 }
 
+/** Trims the address and removes its trailing slashes. */
 export function normalizeNetboxBaseUrl(raw: string): string {
-  return String(raw || '').trim().replace(/\/+$/, '');
+  const trimmed = String(raw || '').trim();
+  let end = trimmed.length;
+  while (end > 0 && trimmed.charCodeAt(end - 1) === 47 /* '/' */) end -= 1;
+  return trimmed.slice(0, end);
 }
 
 /** Clamps an operator-set timeout to a sane window; null keeps the default. */

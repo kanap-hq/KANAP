@@ -1,4 +1,5 @@
 import * as assert from 'node:assert/strict';
+import { format } from 'node:util';
 import {
   createRequestTenancyMiddleware,
   RequestTenancyOptions,
@@ -69,6 +70,30 @@ async function testLookupFailureAnswersBusy() {
     assert.equal(res.body?.code, 'busy', `${label}: code busy`);
     assert.equal(res.headers['retry-after'], '2', `${label}: Retry-After`);
   }
+}
+
+/**
+ * The lookup failure log line uses a fixed format string: the method, the path and the error
+ * message are arguments, so a path holding `%` sequences is logged exactly as received.
+ */
+async function testLookupFailureLogUsesAFixedFormat() {
+  const calls: unknown[][] = [];
+  const original = console.error;
+  console.error = (...args: unknown[]) => { calls.push(args); };
+  const path = '/spend-items/%s%d%o%%?q=%j';
+  try {
+    await run({ query: async () => { throw new Error('pool timeout'); } }, 'acme.kanap.net', path);
+  } finally {
+    console.error = original;
+  }
+  assert.equal(calls.length, 1, 'one log line');
+  const [template, ...args] = calls[0];
+  assert.equal(template, '[tenancy] %s %s: tenant lookup failed, answered 503 busy: %s');
+  assert.deepEqual(args, ['GET', path, 'pool timeout']);
+  assert.equal(
+    format(...(calls[0] as [string, ...unknown[]])),
+    `[tenancy] GET ${path}: tenant lookup failed, answered 503 busy: pool timeout`,
+  );
 }
 
 /**
@@ -226,6 +251,7 @@ async function testWritesRefusedWhileResetting() {
 
 async function main() {
   await testLookupFailureAnswersBusy();
+  await testLookupFailureLogUsesAFixedFormat();
   await testHealthIsNeverLookedUp();
   await testOtherAnswersUnchanged();
   await testNextErrorIsNotALookupFailure();

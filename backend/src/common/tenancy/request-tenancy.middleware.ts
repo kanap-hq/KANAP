@@ -103,7 +103,12 @@ export function tenantSlugFromHost(host: string): string | null {
 /** The 503 `busy` answer to a request whose tenant could not be looked up. */
 export function answerTenantLookupFailed(req: Request, res: Response, error: unknown) {
   // eslint-disable-next-line no-console
-  console.error(`[tenancy] ${req.method} ${req.originalUrl ?? req.url}: tenant lookup failed, answered 503 busy:`, (error as Error)?.message ?? error);
+  console.error(
+    '[tenancy] %s %s: tenant lookup failed, answered 503 busy: %s',
+    req.method,
+    req.originalUrl ?? req.url,
+    (error as Error)?.message ?? error,
+  );
   if (res.headersSent) return;
   res.setHeader('Retry-After', String(BUSY_RETRY_AFTER_SECONDS));
   res.status(503).json({

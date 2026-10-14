@@ -269,21 +269,30 @@ export function compileAgFilterCondition(
   if (rawValue == null || rawValue === '') return null;
   const value = String(rawValue);
   const param = nextParam();
+  const literal = escapeLikePattern(value);
   switch (type) {
     case 'equals':
       return { sql: `${textExpr} = :${param}`, params: { [param]: value } };
     case 'notEqual':
       return { sql: `${textExpr} <> :${param}`, params: { [param]: value } };
     case 'startsWith':
-      return { sql: `${textExpr} ILIKE :${param}`, params: { [param]: `${value}%` } };
+      return { sql: `${textExpr} ILIKE :${param} ESCAPE '\\'`, params: { [param]: `${literal}%` } };
     case 'endsWith':
-      return { sql: `${textExpr} ILIKE :${param}`, params: { [param]: `%${value}` } };
+      return { sql: `${textExpr} ILIKE :${param} ESCAPE '\\'`, params: { [param]: `%${literal}` } };
     case 'notContains':
-      return { sql: `${textExpr} NOT ILIKE :${param}`, params: { [param]: `%${value}%` } };
+      return { sql: `${textExpr} NOT ILIKE :${param} ESCAPE '\\'`, params: { [param]: `%${literal}%` } };
     case 'contains':
     default:
-      return { sql: `${textExpr} ILIKE :${param}`, params: { [param]: `%${value}%` } };
+      return { sql: `${textExpr} ILIKE :${param} ESCAPE '\\'`, params: { [param]: `%${literal}%` } };
   }
+}
+
+/**
+ * Makes a typed value match literally inside a LIKE pattern: `\`, `%` and `_`
+ * are prefixed with `\`, the escape character named by `ESCAPE '\'`.
+ */
+export function escapeLikePattern(value: string): string {
+  return value.replace(/[\\%_]/g, '\\$&');
 }
 
 export function buildQuickSearchConditions(
@@ -294,8 +303,7 @@ export function buildQuickSearchConditions(
   if (!search || typeof search !== 'string') return [];
   const trimmed = search.trim();
   if (!trimmed) return [];
-  const sanitized = trimmed.replace(/%/g, '\\%').replace(/_/g, '\\_');
-  const likeValue = `%${sanitized}%`;
+  const likeValue = `%${escapeLikePattern(trimmed)}%`;
 
   return expressions.map((expr) => {
     const param = nextParam();
