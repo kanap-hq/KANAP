@@ -65,20 +65,26 @@
         "label": "Libellé",
         "lastUsed": "Dernière utilisation",
         "prefix": "Préfixe",
-        "status": "Statut"
+        "status": "Statut",
+        "kind": "Type"
       },
       "copied": "Copié",
-      "empty": "Aucune clé API MCP configurée.",
+      "empty": "Aucune clé ni connexion MCP.",
       "endpoint": {
         "label": "Adresse du serveur",
         "helper": "Les clients MCP se connectent à cette adresse et envoient la clé dans un en-tête Authorization.",
-        "copy": "Copier l'adresse"
+        "copy": "Copier l'adresse",
+        "connectorHint": "Claude, Claude Desktop et Claude Code peuvent aussi se connecter sans clé : ajoutez cette adresse comme connecteur personnalisé."
       },
       "statuses": {
         "active": "Active",
         "revoked": "Révoquée"
       },
-      "title": "Clés API MCP"
+      "title": "Clés et connexions MCP",
+      "kinds": {
+        "apiKey": "Clé API",
+        "oauth": "Connexion"
+      }
     },
     "messages": {
       "connectionTestFailed": "Le test de connexion a échoué.",

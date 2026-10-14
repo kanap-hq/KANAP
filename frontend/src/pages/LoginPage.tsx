@@ -9,10 +9,11 @@ import AuthFrame from '../components/AuthFrame';
 import { useTenant } from '../tenant/TenantContext';
 import { useFeatures } from '../config/FeaturesContext';
 import { getApiErrorMessage } from '../utils/apiErrorMessage';
+import { oauthReturnPath } from '../auth/loginRedirect';
 
 const marketingUrl = import.meta.env.VITE_MARKETING_URL ?? 'https://kanap.net';
-// Signing in always lands on the home page: no memory of the page the user was on.
-const postLoginPath = '/';
+// Signing in lands on the home page: no memory of the page the user was on. The one exception is
+// the consent page of an MCP connection (`?returnTo=/oauth/authorize?…`), see oauthReturnPath.
 
 /** Whole minutes of a 429's `Retry-After` (in seconds), rounded up; null without a usable value. */
 function retryAfterMinutes(err: any): number | null {
@@ -56,6 +57,7 @@ export default function LoginPage() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const sessionExpired = searchParams.get('sessionExpired') === 'true';
+  const postLoginPath = oauthReturnPath(searchParams.get('returnTo'));
   const [infoMessage, setInfoMessage] = useState<string | null>(() => {
     const state = location.state as any;
     if (state?.passwordResetSuccess) {

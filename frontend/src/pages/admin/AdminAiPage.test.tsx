@@ -52,6 +52,9 @@ function renderPage() {
   );
 }
 
+// The rows of the MCP keys card; each test that sets them puts back the empty list.
+let adminKeys: any[] = [];
+
 describe('AdminAiPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -127,7 +130,7 @@ describe('AdminAiPage', () => {
             },
           });
         case '/ai/admin/keys':
-          return Promise.resolve({ data: [] });
+          return Promise.resolve({ data: adminKeys });
         default:
           throw new Error(`Unexpected GET ${url}`);
       }
@@ -140,10 +143,33 @@ describe('AdminAiPage', () => {
     await screen.findByRole('heading', { name: 'Provider' });
     expect(await screen.findByText('Model used by Plaid')).toBeInTheDocument();
     expect(await screen.findByText('Claude production')).toBeInTheDocument();
-    expect(await screen.findByText('No MCP API keys configured.')).toBeInTheDocument();
+    expect(await screen.findByText('No MCP keys or connections.')).toBeInTheDocument();
     // The token/usage overview moved to the dedicated Usage & costs page.
     expect(screen.queryByText('Usage Overview')).not.toBeInTheDocument();
     expect(screen.queryByText('Token usage')).not.toBeInTheDocument();
+  });
+
+  it('tells a key from a connection, with the client and its return host', async () => {
+    adminKeys = [
+      {
+        id: 'k1', label: 'Laptop', key_prefix: 'abcd1234', credential_kind: 'api_key', created_at: '2026-10-01T10:00:00.000Z',
+        expires_at: null, last_used_at: null, revoked_at: null,
+      },
+      {
+        id: 'k2', label: 'Claude', key_prefix: 'efgh5678', credential_kind: 'oauth', oauth_client_name: 'Claude',
+        oauth_redirect_host: 'claude.ai', created_at: '2026-10-14T10:00:00.000Z', expires_at: null, last_used_at: null, revoked_at: null,
+      },
+    ];
+    renderPage();
+
+    expect(await screen.findByText('API key')).toBeInTheDocument();
+    expect(screen.getByText('Connection')).toBeInTheDocument();
+    expect(screen.getByText('· claude.ai')).toBeInTheDocument();
+    expect(screen.getByText('abcd1234')).toBeInTheDocument();
+    // A connection has no key to show.
+    expect(screen.queryByText('efgh5678')).not.toBeInTheDocument();
+    expect(screen.getByText(/add this address as a custom connector/)).toBeInTheDocument();
+    adminKeys = [];
   });
 
   it('shows the server address and a Claude Code command for a new key', async () => {

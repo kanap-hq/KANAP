@@ -1,12 +1,13 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '../api';
 import LoginPage from './LoginPage';
 
 const mocks = vi.hoisted(() => ({
   login: vi.fn(),
+  sso: false,
 }));
 
 vi.mock('../api', () => ({
@@ -31,7 +32,7 @@ vi.mock('../config/FeaturesContext', () => ({
   useFeatures: () => ({
     config: {
       features: {
-        sso: false,
+        sso: mocks.sso,
         email: false,
       },
     },
@@ -47,6 +48,7 @@ const i18n = vi.hoisted(() => {
     'auth:login.emailLabel': 'Username or email',
     'auth:login.passwordLabel': 'Password',
     'auth:login.submit': 'Sign in',
+    'auth:login.ssoMicrosoft': 'Sign in with Microsoft',
   };
   // A stable t: a new function on each render would loop effects.
   const t = (key: string, options?: { count?: number }) =>
@@ -81,6 +83,7 @@ function renderLogin(initialEntry: TestInitialEntry) {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/" element={<LocationProbe />} />
+        <Route path="/oauth/authorize" element={<LocationProbe />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -89,6 +92,7 @@ function renderLogin(initialEntry: TestInitialEntry) {
 describe('LoginPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.sso = false;
     vi.mocked(api.post).mockResolvedValue({
       data: {
         access_token: 'access-token',
@@ -195,5 +199,72 @@ describe('LoginPage', () => {
     const alert = await submitRefused({ message: 'Network Error', code: 'ERR_NETWORK' });
     expect(alert).toHaveTextContent('auth:login.failed');
     expect(alert).not.toHaveTextContent('Network Error');
+  });
+
+  const consentPath = '/oauth/authorize?client_id=https%3A%2F%2Fclaude.ai%2Fmeta&state=abc&code_challenge=x';
+
+  async function signIn(search: string) {
+    renderLogin(`/login${search}`);
+    fireEvent.change(screen.getByLabelText('Username or email'), { target: { value: 'user@example.com' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'correct horse battery staple' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    await screen.findByText('Destination page');
+    return screen.getByTestId('location').textContent;
+  }
+
+  it('returns to the consent page of an MCP connection after a password sign-in', async () => {
+    expect(await signIn(`?returnTo=${encodeURIComponent(consentPath)}`)).toBe(consentPath);
+  });
+
+  it.each([
+    '/settings',
+    '//evil.example/oauth/authorize?x=1',
+    'https://evil.example/oauth/authorize?x=1',
+    '/oauth/authorizeX?x=1',
+  ])('ignores any other return path (%s) and lands on the home page', async (returnTo) => {
+    expect(await signIn(`?returnTo=${encodeURIComponent(returnTo)}`)).toBe('/');
+  });
+
+  describe('Microsoft sign-in', () => {
+    const originalLocation = window.location;
+    let assigned = '';
+
+    beforeEach(() => {
+      mocks.sso = true;
+      assigned = '';
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: {
+          ...originalLocation,
+          origin: originalLocation.origin,
+          set href(value: string) {
+            assigned = value;
+          },
+          get href() {
+            return assigned || originalLocation.href;
+          },
+        },
+      });
+    });
+
+    afterEach(() => {
+      Object.defineProperty(window, 'location', { configurable: true, value: originalLocation });
+    });
+
+    function redirectToOf(url: string): string | null {
+      return new URL(url, 'http://fromage.lvh.me').searchParams.get('redirectTo');
+    }
+
+    it('passes the consent page as the return path', () => {
+      renderLogin(`/login?returnTo=${encodeURIComponent(consentPath)}`);
+      fireEvent.click(screen.getByRole('button', { name: 'Sign in with Microsoft' }));
+      expect(redirectToOf(assigned)).toBe(consentPath);
+    });
+
+    it('passes the home page for any other return path', () => {
+      renderLogin(`/login?returnTo=${encodeURIComponent('/admin/users')}`);
+      fireEvent.click(screen.getByRole('button', { name: 'Sign in with Microsoft' }));
+      expect(redirectToOf(assigned)).toBe('/');
+    });
   });
 });

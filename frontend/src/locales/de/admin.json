@@ -65,20 +65,26 @@
         "label": "Bezeichnung",
         "lastUsed": "Zuletzt verwendet",
         "prefix": "Präfix",
-        "status": "Status"
+        "status": "Status",
+        "kind": "Typ"
       },
       "copied": "Kopiert",
-      "empty": "Keine MCP API-Schlüssel konfiguriert.",
+      "empty": "Keine MCP-Schlüssel oder -Verbindungen.",
       "endpoint": {
         "label": "Serveradresse",
         "helper": "MCP-Clients verbinden sich mit dieser Adresse und senden den Schlüssel in einem Authorization-Header.",
-        "copy": "Adresse kopieren"
+        "copy": "Adresse kopieren",
+        "connectorHint": "Claude, Claude Desktop und Claude Code können sich auch ohne Schlüssel verbinden: Fügen Sie diese Adresse als benutzerdefinierten Connector hinzu."
       },
       "statuses": {
         "active": "Aktiv",
         "revoked": "Widerrufen"
       },
-      "title": "MCP API-Schlüssel"
+      "title": "MCP-Schlüssel und -Verbindungen",
+      "kinds": {
+        "apiKey": "API-Schlüssel",
+        "oauth": "Verbindung"
+      }
     },
     "messages": {
       "connectionTestFailed": "Verbindungstest fehlgeschlagen.",

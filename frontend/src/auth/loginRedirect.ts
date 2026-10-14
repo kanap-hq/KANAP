@@ -30,3 +30,15 @@ export function sanitizeLoginRedirect(value: unknown, fallback = '/'): string {
     return fallback;
   }
 }
+
+const OAUTH_AUTHORIZE_PREFIX = '/oauth/authorize?';
+
+/**
+ * Where to go after signing in when the login page was opened by the consent page of an MCP
+ * connection: only `/oauth/authorize?…` on this origin is kept, anything else lands on the home
+ * page as before. Not a general return-to: signing in otherwise always opens the home page.
+ */
+export function oauthReturnPath(value: unknown): string {
+  const path = sanitizeLoginRedirect(value, '');
+  return path.startsWith(OAUTH_AUTHORIZE_PREFIX) ? path : '/';
+}
