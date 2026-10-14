@@ -80,7 +80,7 @@
     },
     "usages": {
       "title": "Used by",
-      "open": "Open where it is used",
+      "open": "Show where it is used",
       "loadFailed": "The list of uses could not be loaded.",
       "emptySupplier": "Nothing uses this supplier yet.",
       "emptyContact": "This contact is not linked to anything yet.",

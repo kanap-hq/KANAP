@@ -80,7 +80,7 @@
     },
     "usages": {
       "title": "Verwendet in",
-      "open": "Verwendungen öffnen",
+      "open": "Verwendungen anzeigen",
       "loadFailed": "Die Liste der Verwendungen konnte nicht geladen werden.",
       "emptySupplier": "Dieser Lieferant wird noch nirgends verwendet.",
       "emptyContact": "Dieser Kontakt ist noch mit nichts verknüpft.",

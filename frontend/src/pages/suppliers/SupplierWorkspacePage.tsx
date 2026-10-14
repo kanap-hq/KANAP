@@ -25,11 +25,11 @@ import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { getDotColor } from '../../utils/statusColors';
 import { SupplierNameTitle, SupplierNotes, SupplierTextRow } from './SupplierFields';
 import SupplierContactsTab, { useSupplierContacts } from './SupplierContactsTab';
-import RecordUsagesTab, { useRecordUsages } from '../../components/usages/RecordUsagesTab';
+import RecordUsagesSection, { scrollToUsages, useRecordUsages } from '../../components/usages/RecordUsagesSection';
 import { SUPPLIERS_PATH, type Supplier, type SupplierPatch, isDuplicateError } from './supplierModel';
 
-type TabKey = 'overview' | 'contacts' | 'usages';
-const TAB_KEYS: readonly string[] = ['overview', 'contacts', 'usages'];
+type TabKey = 'overview' | 'contacts';
+const TAB_KEYS: readonly string[] = ['overview', 'contacts'];
 const DRAWER_KEY = 'kanap.suppliers.drawerOpen';
 const LIST_CONTEXT_KEYS = ['sort', 'q', 'filters', 'scope'];
 
@@ -88,6 +88,8 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
   });
   const { data: contactLinks } = useSupplierContacts(id);
   const { data: usages } = useRecordUsages('suppliers', id);
+  // The header's count asked for the "Used by" section from another tab: scroll once the overview shows it.
+  const [usagesScrollPending, setUsagesScrollPending] = React.useState(false);
 
   const [errors, setErrors] = React.useState<FieldErrors>({});
   // Writes queue one after the other: a response never overwrites a newer one.
@@ -144,6 +146,12 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
     if (targetId) void go(`${SUPPLIERS_PATH}/${targetId}/${nextTab}`);
   };
 
+  React.useEffect(() => {
+    if (!usagesScrollPending || tab !== 'overview' || !data) return;
+    setUsagesScrollPending(false);
+    scrollToUsages();
+  }, [usagesScrollPending, tab, data]);
+
   const disabled = !canEdit || !data;
   const status = normalizeStatus(data?.status);
   const enabledColor = getDotColor('success', theme.palette.mode);
@@ -177,8 +185,14 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
       </PortfolioMetadataItem>
       <PortfolioMetadataItem
         label={t('shared.usages.title')}
-        onClick={tab === 'usages' ? undefined : () => goTo(id, 'usages')}
-        title={tab === 'usages' ? undefined : t('shared.usages.open')}
+        onClick={() => {
+          if (tab === 'overview') scrollToUsages();
+          else {
+            setUsagesScrollPending(true);
+            goTo(id, 'overview');
+          }
+        }}
+        title={t('shared.usages.open')}
       >
         {usages ? usages.total : '…'}
       </PortfolioMetadataItem>
@@ -236,7 +250,6 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
         tabs={[
           { key: 'overview', label: t('shared.labels.overview') },
           { key: 'contacts', label: t('shared.labels.contacts') },
-          { key: 'usages', label: t('shared.usages.title') },
         ]}
         onTabChange={(next) => goTo(id, next as TabKey)}
         drawerStorageKey={DRAWER_KEY}
@@ -293,10 +306,10 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
               }}
               onCommit={() => { void autosave.flush(); }}
             />
+            <RecordUsagesSection owner="suppliers" id={id} />
           </Stack>
         )}
         {tab === 'contacts' && <SupplierContactsTab supplierId={id} canManage={canEdit} />}
-        {tab === 'usages' && <RecordUsagesTab owner="suppliers" id={id} />}
       </PortfolioDetailWorkspaceShell>
     </Box>
   );

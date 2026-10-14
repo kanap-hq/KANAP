@@ -96,6 +96,7 @@ describe('ContactWorkspacePage', () => {
     stored = { ...CONTACT };
     mocked.get.mockImplementation(async (url: string) => {
       if (url === '/contacts/c-1') return { data: stored };
+      if (url.endsWith('/usages')) return { data: { total: 0, groups: [] } };
       return { data: { items: [] } };
     });
     mocked.patch.mockImplementation(async (_url: string, body: Record<string, unknown>) => {
@@ -418,20 +419,27 @@ describe('ContactWorkspacePage: used by', () => {
     });
   });
 
-  it('shows the number of uses in the header, which opens the tab', async () => {
+  it('shows the uses under the notes of the overview, with the contact\'s roles', async () => {
     renderAt('/master-data/contacts/c-1/overview');
-    const count = await screen.findByRole('button', { name: /shared\.usages\.title.*2/ });
-    fireEvent.click(count);
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/contacts/c-1/usages'));
-  });
-
-  it('lists what the contact is linked to on the tab, with its roles', async () => {
-    renderAt('/master-data/contacts/c-1/usages');
-    const contract = await screen.findByRole('link', { name: /Support contract/ });
+    const section = await screen.findByRole('region', { name: 'shared.usages.title' });
+    const contract = await within(section).findByRole('link', { name: /Support contract/ });
     expect(contract).toHaveAttribute('href', '/ops/contracts/k-1');
     expect(contract).toHaveTextContent('contacts.roles.support');
-    expect(screen.getByTestId('location')).toHaveTextContent('/master-data/contacts/c-1/usages');
-    // The notes belong to the overview.
-    expect(screen.queryByText('Prefers email')).toBeNull();
+    expect(screen.getByText('Prefers email').compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByRole('tab', { name: 'shared.usages.title' })).toBeNull();
+  });
+
+  it('scrolls to the section from the header count', async () => {
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    renderAt('/master-data/contacts/c-1/overview');
+    await screen.findByRole('region', { name: 'shared.usages.title' });
+    fireEvent.click(await screen.findByRole('button', { name: /shared\.usages\.title.*2/ }));
+    expect(scroll).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
+  });
+
+  it('sends the former Used by tab address to the overview', async () => {
+    renderAt('/master-data/contacts/c-1/usages');
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/master-data/contacts/c-1/overview'));
   });
 });

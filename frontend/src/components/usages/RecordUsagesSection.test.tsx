@@ -16,7 +16,7 @@ vi.mock('react-i18next', () => ({
 vi.mock('../../api', () => ({ default: { get: vi.fn() } }));
 
 import api from '../../api';
-import RecordUsagesTab, { type Usages } from './RecordUsagesTab';
+import RecordUsagesSection, { type Usages } from './RecordUsagesSection';
 
 const mocked = api as unknown as { get: ReturnType<typeof vi.fn> };
 
@@ -43,14 +43,14 @@ function renderTab(owner: 'suppliers' | 'contacts' = 'contacts') {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={createAppTheme('dark')}>
         <MemoryRouter>
-          <RecordUsagesTab owner={owner} id="x-1" />
+          <RecordUsagesSection owner={owner} id="x-1" />
         </MemoryRouter>
       </ThemeProvider>
     </QueryClientProvider>,
   );
 }
 
-describe('RecordUsagesTab', () => {
+describe('RecordUsagesSection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocked.get.mockResolvedValue({ data: USAGES });
@@ -63,6 +63,7 @@ describe('RecordUsagesTab', () => {
     expect(within(lines).getByRole('heading', { name: 'shared.usages.groups.budget_lines' })).toBeInTheDocument();
     expect(within(lines).getByText('52')).toBeInTheDocument();
     expect(screen.getAllByRole('region').map((region) => region.getAttribute('aria-label'))).toEqual([
+      'shared.usages.title',
       'shared.usages.groups.suppliers',
       'shared.usages.groups.budget_lines',
       'shared.usages.groups.applications',
@@ -102,7 +103,9 @@ describe('RecordUsagesTab', () => {
     renderTab('suppliers');
     expect(await screen.findByText('shared.usages.emptySupplier')).toBeInTheDocument();
     expect(mocked.get).toHaveBeenCalledWith('/suppliers/x-1/usages');
-    expect(screen.queryByRole('region')).toBeNull();
+    // One line under the section title, no group.
+    expect(screen.getAllByRole('region').map((region) => region.getAttribute('aria-label'))).toEqual(['shared.usages.title']);
+    expect(screen.getByRole('heading', { name: 'shared.usages.title' })).toBeInTheDocument();
   });
 
   it('shows an error when the list cannot load', async () => {

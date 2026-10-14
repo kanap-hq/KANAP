@@ -1,3 +1,4 @@
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -64,8 +65,21 @@ const rowLinkSx = (theme: Theme) => ({
   '&:focus-visible': { outline: `2px solid ${theme.palette.kanap.teal}`, outlineOffset: -2, borderRadius: '2px' },
 });
 
-/** The objects that use a supplier or a contact, by type: each row opens the object's page. */
-export default function RecordUsagesTab({ owner, id }: { owner: UsageOwner; id: string }) {
+/** The anchor of the section: the header's count scrolls to it. */
+export const USAGES_SECTION_ID = 'used-by';
+
+/** Scrolls the page to the section, smoothly. */
+export function scrollToUsages(): void {
+  document.getElementById(USAGES_SECTION_ID)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+const sectionLabelSx = { fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary', mb: 1 } as const;
+
+/**
+ * The "Used by" section of a supplier or contact overview: the objects that use the record, by
+ * type, each row opening the object's page. Nothing to list takes one line.
+ */
+export default function RecordUsagesSection({ owner, id }: { owner: UsageOwner; id: string }) {
   const { t } = useTranslation(['master-data', 'common']);
   const { t: tPortfolio } = useTranslation('portfolio');
   const { data, error } = useRecordUsages(owner, id);
@@ -82,25 +96,36 @@ export default function RecordUsagesTab({ owner, id }: { owner: UsageOwner; id: 
     return parts;
   };
 
-  if (error) return <Alert severity="error" sx={{ maxWidth: 640 }}>{t('shared.usages.loadFailed')}</Alert>;
+  const title = t('shared.usages.title');
+  let body: React.ReactNode = null;
+  if (error) body = <Alert severity="error">{t('shared.usages.loadFailed')}</Alert>;
   // Nothing while the list loads: no flash of the empty line.
-  if (!data) return null;
-  if (data.groups.length === 0) {
-    return (
-      <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary', py: '6px' }}>
+  else if (data && data.groups.length === 0) {
+    body = (
+      <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>
         {owner === 'suppliers' ? t('shared.usages.emptySupplier') : t('shared.usages.emptyContact')}
       </Typography>
     );
-  }
+  } else if (data) body = <UsageGroups groups={data.groups} details={details} />;
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, maxWidth: 720 }}>
-      {data.groups.map((group) => {
+    <Box component="section" id={USAGES_SECTION_ID} aria-label={title} sx={{ maxWidth: 720, scrollMarginTop: '16px' }}>
+      <Typography component="h2" sx={sectionLabelSx}>{title}</Typography>
+      {body}
+    </Box>
+  );
+}
+
+function UsageGroups({ groups, details }: { groups: UsageGroup[]; details: (type: UsageType, item: UsageItem) => string[] }) {
+  const { t } = useTranslation(['master-data', 'common']);
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+      {groups.map((group) => {
         const title = t(`shared.usages.groups.${group.type}`);
         return (
           <Box key={group.type} component="section" aria-label={title}>
             <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 0.5 }}>
-              <Typography component="h3" sx={{ fontSize: 14, fontWeight: 500, color: 'kanap.text.primary' }}>{title}</Typography>
+              <Typography component="h3" sx={{ fontSize: 13, fontWeight: 500, color: 'kanap.text.primary' }}>{title}</Typography>
               <Typography component="span" sx={{ fontSize: 12, color: 'kanap.text.tertiary', fontVariantNumeric: 'tabular-nums' }}>
                 {group.total}
               </Typography>
