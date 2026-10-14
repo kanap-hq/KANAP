@@ -6,9 +6,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 
 // A stable `t`: a new one on each render would loop the effects.
-const t = vi.hoisted(() => (key: string, options?: Record<string, unknown>) => (
-  options?.total != null ? `${key}:${String(options.shown)}/${String(options.total)}` : key
-));
+const t = vi.hoisted(() => (key: string, options?: Record<string, unknown>) => {
+  if (options?.shown != null) return `${key}:${String(options.shown)}/${String(options.total)}`;
+  return options?.total != null ? `${key}:${String(options.total)}` : key;
+});
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
   useTranslation: () => ({ t, i18n: { language: 'en', resolvedLanguage: 'en' } }),
@@ -37,13 +38,13 @@ const USAGES: Usages = {
   ],
 };
 
-function renderTab(owner: 'suppliers' | 'contacts' = 'contacts') {
+function renderTab(owner: 'suppliers' | 'contacts' = 'contacts', ownerName?: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={createAppTheme('dark')}>
         <MemoryRouter>
-          <RecordUsagesSection owner={owner} id="x-1" />
+          <RecordUsagesSection owner={owner} id="x-1" ownerName={ownerName} />
         </MemoryRouter>
       </ThemeProvider>
     </QueryClientProvider>,
@@ -96,6 +97,44 @@ describe('RecordUsagesSection', () => {
     renderTab();
     expect(await screen.findByText('shared.usages.partial:2/52')).toBeInTheDocument();
     expect(screen.getByText('shared.usages.partial:1/2')).toBeInTheDocument();
+  });
+
+  it('links a cut group of a supplier to its list filtered on the supplier, and only a cut one', async () => {
+    const usages = {
+        total: 158,
+        groups: [
+          { type: 'budget_lines', total: 52, items: Array.from({ length: 50 }, (_, i) => ({ id: `b-${i}`, reference: `BL-${i}`, name: `Line ${i}`, nature: 'opex', status: 'enabled', active: true })) },
+          { type: 'contracts', total: 50, items: Array.from({ length: 50 }, (_, i) => ({ id: `c-${i}`, reference: null, name: `Contract ${i}`, status: 'enabled', active: true })) },
+          { type: 'applications', total: 3, items: [{ id: 'a-1', reference: null, name: 'Outlook', status: 'active', active: true }] },
+          { type: 'assets', total: 53, items: [{ id: 's-1', reference: null, name: 'Server', status: 'active', active: true }] },
+        ],
+    };
+    mocked.get.mockImplementation(async (url: string) => (url === '/it-ops/settings'
+      ? { data: { lifecycleStates: [{ code: 'active', label: 'Active' }, { code: 'retired', label: 'Retired' }] } }
+      : { data: usages }));
+    renderTab('suppliers', 'Microsoft');
+    const lines = await screen.findByRole('region', { name: 'shared.usages.groups.budget_lines' });
+    const all = within(lines).getByRole('link', { name: 'shared.usages.showAll:52' });
+    const [path, search] = all.getAttribute('href')!.split('?');
+    expect(path).toBe('/ops/budget');
+    const params = new URLSearchParams(search);
+    expect(JSON.parse(params.get('filters')!)).toEqual({ supplier_name: { filterType: 'set', values: ['Microsoft'] } });
+    expect(params.get('statusScope')).toBe('all');
+    // Applications: every lifecycle state ticked, once the settings name them.
+    const apps = await within(screen.getByRole('region', { name: 'shared.usages.groups.applications' })).findByRole('link', { name: 'shared.usages.showAll:3' });
+    const appParams = new URLSearchParams(apps.getAttribute('href')!.split('?')[1]);
+    expect(JSON.parse(appParams.get('filters')!).lifecycle).toEqual({ filterType: 'set', values: ['active', 'retired'] });
+    // Exactly 50: nothing cut, no link. Assets: their list cannot filter on the supplier.
+    expect(within(screen.getByRole('region', { name: 'shared.usages.groups.contracts' })).queryByRole('link', { name: /showAll/ })).toBeNull();
+    const assets = screen.getByRole('region', { name: 'shared.usages.groups.assets' });
+    expect(within(assets).getByText('shared.usages.partial:1/53')).toBeInTheDocument();
+    expect(within(assets).queryByRole('link', { name: /showAll/ })).toBeNull();
+  });
+
+  it('gives a contact no list link: no list filters on a contact', async () => {
+    renderTab('contacts', 'Robert Chen');
+    expect(await screen.findByText('shared.usages.partial:2/52')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /showAll/ })).toBeNull();
   });
 
   it('says so in one line when nothing uses the record', async () => {

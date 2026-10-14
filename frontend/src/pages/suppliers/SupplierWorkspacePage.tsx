@@ -306,7 +306,7 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
               }}
               onCommit={() => { void autosave.flush(); }}
             />
-            <RecordUsagesSection owner="suppliers" id={id} />
+            <RecordUsagesSection owner="suppliers" id={id} ownerName={data.name} />
           </Stack>
         )}
         {tab === 'contacts' && <SupplierContactsTab supplierId={id} canManage={canEdit} />}

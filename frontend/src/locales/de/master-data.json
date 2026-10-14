@@ -85,6 +85,7 @@
       "emptySupplier": "Dieser Lieferant wird noch nirgends verwendet.",
       "emptyContact": "Dieser Kontakt ist noch mit nichts verknüpft.",
       "partial": "{{shown}} von {{total}} angezeigt.",
+      "showAll": "Alle {{total}} anzeigen",
       "inactive": "Deaktiviert",
       "nature": {
         "opex": "OPEX",
