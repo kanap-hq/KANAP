@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { z } from 'zod';
-import { normalizeMarkdownRichText } from '../../../common/markdown-rich-text';
+import { normalizeMarkdownRichText } from '../../../common/markdown-worker';
 import { KnowledgeService } from '../../../knowledge/knowledge.service';
 import { AiMutationPreview } from '../../ai-mutation-preview.entity';
 import { AiExecutionContextWithManager } from '../../ai.types';
@@ -148,7 +148,7 @@ export class UpdateDocumentContentAiMutationOperation implements AiMutationOpera
       this.support.assertRelationEditingAllowed(document);
     }
 
-    const nextContent = normalizeMarkdownRichText(input.content_markdown, {
+    const nextContent = await normalizeMarkdownRichText(input.content_markdown, {
       fieldName: 'content_markdown',
     });
     if (!nextContent?.trim()) {

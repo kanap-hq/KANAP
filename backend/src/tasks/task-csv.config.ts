@@ -6,6 +6,7 @@ import {
   CsvImportContext,
 } from '../common/csv';
 import { allocateItemNumbers } from '../common/item-number.service';
+import { assertMarkdownSize } from '../common/markdown-limits';
 
 /**
  * CSV configuration for Tasks entity
@@ -57,6 +58,11 @@ export const taskCsvConfig: CsvEntityConfig = {
       defaultExport: true,
       label: 'Description',
       group: 'Basic',
+      // The description is Markdown: same size limit as in the task editor.
+      importTransformFn: (value: string) => {
+        assertMarkdownSize(value, 'description');
+        return value;
+      },
     },
 
     // === CONTEXT (Related object, phase, priority, category, stream) ===

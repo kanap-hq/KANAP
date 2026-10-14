@@ -14,6 +14,7 @@ import { AiAgentLlmClient } from './ai-agent-llm-client';
 import type { TicketImageEvidence } from './ai-ticket-need-representation.types';
 import { isRecord } from '../../../common/object-guards';
 import { estimateJsonTokens } from './json-token-estimate';
+import { HTML_TAGS } from '../../../common/text-scan';
 
 export type PlannerActionType = string;
 
@@ -182,7 +183,7 @@ function normalizeText(value: unknown): string {
   return String(value ?? '')
     .replace(/\r\n/g, '\n')
     .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<[^>]+>/g, ' ')
+    .replace(HTML_TAGS, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }

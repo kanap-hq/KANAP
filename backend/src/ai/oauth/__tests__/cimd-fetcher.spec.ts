@@ -20,6 +20,7 @@ import {
   redirectUriMatches,
   s256Challenge,
 } from '../mcp-oauth.util';
+import { CHATGPT_CIMD, CHATGPT_CLIENT_METADATA, CHATGPT_REDIRECT, GROK_CIMD, GROK_CLIENT_METADATA } from './client-metadata-documents.fixture';
 
 // Client ID Metadata Documents are fetched from a URL a third party chooses: the SSRF rules,
 // the size and time limits and the document checks, plus the URL helpers of the flow.
@@ -169,6 +170,16 @@ async function testDocumentRules() {
     [{ redirect_uris: ['http://client.example.com/callback'] }, 'no_redirect_uris'],
     [{ redirect_uris: ['https://client.example.com/cb#frag', 42] }, 'no_redirect_uris'],
     [{ token_endpoint_auth_method: 'client_secret_basic' }, 'not_public_client'],
+    // Authentication declared with no public fallback: CIMD §8.2 requires it, this server has none.
+    [{ token_endpoint_auth_method: 'private_key_jwt', jwks_uri: 'https://client.example.com/jwks.json' }, 'not_public_client'],
+    [{ token_endpoint_auth_method: 'private_key_jwt', token_endpoint_auth_methods_supported: ['private_key_jwt'] }, 'not_public_client'],
+    [{ token_endpoint_auth_method: 'client_secret_post', token_endpoint_auth_methods_supported: 'none' }, 'not_public_client'],
+    // A public fallback does not excuse a shared-secret or other method (CIMD §4.1).
+    [{ token_endpoint_auth_method: 'client_secret_basic', token_endpoint_auth_methods_supported: ['client_secret_basic', 'none'] }, 'not_public_client'],
+    [{ token_endpoint_auth_method: 'client_secret_post', token_endpoint_auth_methods_supported: ['none'] }, 'not_public_client'],
+    [{ token_endpoint_auth_method: 'tls_client_auth', token_endpoint_auth_methods_supported: ['none'] }, 'not_public_client'],
+    [{ token_endpoint_auth_method: 'private_key_jwt', token_endpoint_auth_methods_supported: ['none', 'client_secret_basic'] }, 'not_public_client'],
+    [{ token_endpoint_auth_method: null }, 'not_public_client'],
   ];
   for (const [overrides, pattern] of cases) {
     const service = fetcher({ fetchImpl: async () => jsonResponse(doc(overrides)) });
@@ -188,6 +199,19 @@ async function testDocumentRules() {
   // Names cannot hide behind control or bidirectional characters.
   assert.equal(cleanClientName('Cla\u202eude\u0000 Code\n', 'x'), 'Claude Code');
   assert.equal(cleanClientName('\u200f\u2066', 'client.example.com'), 'client.example.com');
+}
+
+async function testClientsThatCanBePublic() {
+  // ChatGPT declares private_key_jwt but also supports none: it is a public client here.
+  const chatgpt = fetcher({ fetchImpl: async () => jsonResponse(CHATGPT_CLIENT_METADATA) });
+  const metadata = await chatgpt.fetch(CHATGPT_CIMD);
+  assert.equal(metadata.client_name, 'ChatGPT');
+  assert.deepEqual(metadata.redirect_uris, [CHATGPT_REDIRECT]);
+  // Grok declares none: it stays accepted.
+  const grok = fetcher({ fetchImpl: async () => jsonResponse(GROK_CLIENT_METADATA) });
+  assert.deepEqual((await grok.fetch(GROK_CIMD)).redirect_uris, GROK_CLIENT_METADATA.redirect_uris);
+  const noMethod = fetcher({ fetchImpl: async () => jsonResponse(doc({ token_endpoint_auth_method: undefined })) });
+  assert.equal((await noMethod.fetch(CLIENT_ID)).client_id, CLIENT_ID);
 }
 
 async function testOperatorAllowlistDoesNotApply() {
@@ -293,6 +317,7 @@ async function run() {
   await testOtherClientIdIsRefused();
   await testSlowServerTimesOut();
   await testDocumentRules();
+  await testClientsThatCanBePublic();
   await testOperatorAllowlistDoesNotApply();
   await testFailuresAreCachedForAMinute();
   await testFetchesInFlightAreCappedAndShared();

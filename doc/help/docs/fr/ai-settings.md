@@ -87,20 +87,20 @@ Les modifications apportées à **Fournisseur**, **Fonctionnalités**, **Conserv
 
 Les assistants externes et les IDE accèdent à KANAP via le Model Context Protocol (MCP), avec les mêmes données que Plaid. Ils se connectent de deux façons :
 
-- **Connexion** (OAuth) : Claude, Claude Desktop et Claude Code se connectent à KANAP avec le compte de l'utilisateur. Personne ne crée ni ne copie de clé. Voir [Connecter un client MCP](#connecting-an-mcp-client).
+- **Connexion** (OAuth) : Claude, Claude Desktop, Claude Code, ChatGPT et Grok se connectent à KANAP avec le compte de l'utilisateur. Personne ne crée ni ne copie de clé. Voir [Connecter un client MCP](#connecting-an-mcp-client).
 - **Clé API** : une clé à longue durée de vie pour Cursor, les scripts et tout autre client MCP capable d'envoyer un en-tête.
 
 ### Connexion ou clé API { #connection-or-api-key }
 
 | | Connexion (OAuth) | Clé API |
 |---|---|---|
-| Pour | Chaque personne qui utilise Claude avec son propre compte KANAP | Un script, un outil partagé ou un client qui ne peut pas se connecter |
-| Clients | Claude (claude.ai), Claude Desktop, Claude Code | Claude Code, Cursor, les scripts, tout client MCP capable d'envoyer un en-tête `Authorization` ou `X-API-Key` |
+| Pour | Chaque personne qui utilise un assistant IA avec son propre compte KANAP | Un script, un outil partagé ou un client qui ne peut pas se connecter |
+| Clients | Claude (claude.ai), Claude Desktop, Claude Code, ChatGPT, Grok | Claude Code, Cursor, les scripts, tout client MCP capable d'envoyer un en-tête `Authorization` ou `X-API-Key` |
 | Mise en place | Collez l'adresse du serveur dans le client, connectez-vous à KANAP, cliquez sur **Autoriser** | Une personne qui peut ouvrir cette page crée une clé ; le secret est collé dans le client |
 | Lit avec | Les accès de la personne qui s'est connectée | Les accès de la personne qui a créé la clé |
 | Durée de vie | Renouvelée sans intervention pendant 90 jours, ou moins si la **Durée de vie maximale de la clé (jours)** est plus courte. Ensuite, l'utilisateur se connecte à nouveau | Jusqu'à sa révocation, ou jusqu'à la **Durée de vie maximale de la clé (jours)** |
-| Réseau | HTTPS. Claude et Claude Desktop : KANAP joignable depuis Internet. Tous les clients : KANAP atteint `claude.ai` en HTTPS | Le client atteint KANAP. Fonctionne dans un réseau privé, y compris en HTTP simple |
-| Limites | Uniquement les clients qui publient un document de métadonnées client, c'est-à-dire aujourd'hui les applications de Claude | Refusée par les connecteurs personnalisés de Claude et Claude Desktop. Un secret à stocker en sécurité, à renouveler et à révoquer |
+| Réseau | HTTPS. Claude, Claude Desktop, ChatGPT et Grok : KANAP joignable depuis Internet. Tous les clients : KANAP atteint l'hôte du client en HTTPS (`claude.ai`, `chatgpt.com` ou `grok.com`) | Le client atteint KANAP. Fonctionne dans un réseau privé, y compris en HTTP simple |
+| Limites | Uniquement les clients qui publient un document de métadonnées client : Claude, ChatGPT et Grok | Refusée par les connecteurs personnalisés de Claude et Claude Desktop. Un secret à stocker en sécurité, à renouveler et à révoquer |
 
 Sur le service hébergé, KANAP est déjà joignable depuis Internet en HTTPS : les connexions fonctionnent sans rien à configurer. Sur une installation on-premise, voir [Connecter des assistants IA via MCP](on-premise/configuration.md#connecting-ai-assistants-over-mcp) pour savoir quoi ouvrir.
 
@@ -175,12 +175,25 @@ claude mcp add --transport http kanap https://acme.kanap.net/api/ai/mcp
 
 Lancez ensuite `claude mcp login kanap`, ou utilisez simplement le serveur : Claude Code ouvre votre navigateur sur la page de connexion KANAP, puis sur le même écran que ci-dessus. Le navigateur revient vers votre propre ordinateur : KANAP n'a donc pas besoin d'être joignable depuis Internet. Votre ordinateur atteint KANAP en HTTPS, et KANAP atteint `claude.ai` en HTTPS.
 
+#### ChatGPT et Grok { #connecting-chatgpt-grok }
+
+ChatGPT et Grok se connectent de la même façon que Claude.
+
+1. Ajoutez KANAP comme serveur MCP personnalisé, avec l'adresse du serveur :
+    - **ChatGPT** : ajoutez un serveur MCP personnalisé ou une application personnalisée. Le menu dépend de votre offre et de votre espace de travail, et un administrateur de l'espace de travail doit parfois l'autoriser d'abord. Voir [Developer mode and MCP apps in ChatGPT](https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt).
+    - **Grok** : ouvrez `grok.com/connectors`, cliquez sur **New Connector**, puis sur **Custom**. Sur Grok Business et Enterprise, un administrateur de l'équipe ajoute d'abord le connecteur dans la console xAI. Voir [Grok connectors](https://docs.x.ai/grok/connectors).
+2. Connectez-vous à KANAP avec votre mot de passe ou avec Microsoft.
+3. KANAP affiche le même écran que pour Claude, avec le nom de l'application et l'hôte vers lequel elle revient (`chatgpt.com`, `grok.com` ou `console.x.ai`).
+4. Cliquez sur **Autoriser**.
+
+ChatGPT et Grok appellent KANAP depuis leurs propres serveurs : l'adresse du serveur doit donc être joignable depuis Internet en HTTPS. KANAP lit aussi la description publique de chaque application sur `chatgpt.com` ou `grok.com` en HTTPS.
+
 #### Se souvenir de cette application
 
 La case **Se souvenir de cette application** est cochée par défaut. Si elle reste cochée, la connexion suivante de la même application par le même utilisateur est plus rapide :
 
 - Claude Code, qui revient vers votre propre ordinateur, est autorisé sans aucun écran.
-- Claude et Claude Desktop affichent un écran court avec un seul bouton **Continuer**.
+- Claude, Claude Desktop, ChatGPT et Grok affichent un écran court avec un seul bouton **Continuer**.
 
 Décochez la case pour voir l'écran complet à chaque fois. Déconnecter l'application efface ce choix.
 

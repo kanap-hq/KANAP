@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -213,5 +213,67 @@ describe('KnowledgeWorkspacePage — edit lock', () => {
     view.unmount();
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(releaseCalls()).toHaveLength(1);
+  });
+});
+
+describe('KnowledgeWorkspacePage — autosave', () => {
+  const documentRow = (title: string, revision: number) => ({
+    id: 'doc-9',
+    item_number: 9,
+    title,
+    content_markdown: 'Body',
+    revision,
+    can_write: true,
+    edit_lock: null,
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(api.get).mockImplementation(async (url: string) => (
+      url === DOC_URL ? { data: documentRow('Runbook', 1) } as any : { data: [] } as any
+    ));
+    vi.mocked(api.post).mockImplementation(async (url: string) => (
+      url === '/knowledge/DOC-9/locks'
+        ? { data: { lock_token: 'tok-1', expires_at: '2099-01-01T00:00:00Z' } } as any
+        : { data: {} } as any
+    ));
+    vi.mocked(api.delete).mockResolvedValue({ data: {} } as any);
+    vi.mocked(api.patch).mockImplementation(async (_url: string, body: any) => ({ data: documentRow(body.title, 2) }) as any);
+  });
+
+  it('waits for a new modification after a document refused as too complex', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, retryDelay: 0 } } });
+      renderWorkspace(queryClient);
+      fireEvent.click(await screen.findByText('workspace.actions.edit'));
+      const title = await screen.findByDisplayValue('Runbook');
+      const saves = () => vi.mocked(api.patch).mock.calls.filter(([url]) => url === DOC_URL);
+      vi.mocked(api.patch).mockRejectedValueOnce(Object.assign(new Error('Request failed'), {
+        response: { status: 400, data: { code: 'MARKDOWN_TOO_COMPLEX', message: 'content_markdown is too complex.' } },
+      }));
+
+      fireEvent.change(title, { target: { value: 'Runbook, refused' } });
+      for (let second = 0; second < 10; second += 1) {
+        // eslint-disable-next-line no-await-in-loop
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(1000);
+        });
+      }
+      // Sent once: the same document is not sent again on every autosave delay.
+      expect(saves()).toHaveLength(1);
+
+      fireEvent.change(title, { target: { value: 'Runbook, changed' } });
+      for (let second = 0; second < 3; second += 1) {
+        // eslint-disable-next-line no-await-in-loop
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(1000);
+        });
+      }
+      expect(saves()).toHaveLength(2);
+      expect(saves()[1][1]).toMatchObject({ title: 'Runbook, changed', save_mode: 'autosave' });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

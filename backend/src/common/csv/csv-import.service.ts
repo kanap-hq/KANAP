@@ -19,6 +19,7 @@ import {
 import { CsvResolverService } from './csv-resolver.service';
 import { denormalizeCsvFormulaValue } from './csv-export.service';
 import { CsvJsonValidators } from './csv-json-validators';
+import { markdownWorkBudget } from '../markdown-worker';
 
 /**
  * Import options
@@ -120,6 +121,7 @@ export class CsvImportService {
       isAdmin: opts.isAdmin,
       viewer: opts.viewer ?? { userId: opts.userId ?? null, isAdmin: opts.isAdmin === true },
       itOpsSettings: opts.itOpsSettings,
+      markdownBudget: markdownWorkBudget(),
     };
 
     // Phase 1: Validate and parse all rows
@@ -366,7 +368,7 @@ export class CsvImportService {
 
       // Parse and validate each field
       for (const field of importFields) {
-        this.parseField(field, raw, parsedRow, context);
+        await this.parseField(field, raw, parsedRow, context);
       }
 
       // Resolve identity
@@ -408,12 +410,12 @@ export class CsvImportService {
   /**
    * Parse a single field from the raw row.
    */
-  private parseField(
+  private async parseField(
     field: CsvFieldDefinition,
     raw: Record<string, string>,
     row: CsvImportRow,
     context: CsvImportContext,
-  ): void {
+  ): Promise<void> {
     // Handle numbered column arrays
     if (
       field.type === CsvFieldType.ARRAY &&
@@ -456,15 +458,18 @@ export class CsvImportService {
 
     // Parse based on type
     try {
-      const parsedValue = this.parseValue(field, rawValue, row, context);
+      // A transform may be asynchronous (rich text processed in the Markdown workers).
+      const parsedValue = await this.parseValue(field, rawValue, row, context);
       if (parsedValue !== undefined) {
         row.parsed[field.entityProperty] = parsedValue;
       }
     } catch (error: any) {
+      const code = error?.getResponse?.()?.code;
       row.errors.push({
         row: row.rowNumber,
         column: field.csvColumn,
         message: error.message,
+        ...(typeof code === 'string' ? { code } : {}),
       });
     }
   }
