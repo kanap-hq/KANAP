@@ -1,4 +1,4 @@
-import { decodeNumericHtmlEntities } from '../../../common/html-entities';
+import { decodeHtmlEntities, decodeNumericHtmlEntities, HTML_TEXT_ENTITIES } from '../../../common/html-entities';
 import { isRecord } from '../../../common/object-guards';
 import { TICKETING_INTERNAL_NOTE_ADD_APPROVED_CAPABILITY, TICKETING_PUBLIC_REPLY_ADD_APPROVED_CAPABILITY } from '../capability/capability-contract';
 import { AiActionRequest } from '../entities/ai-action-request.entity';
@@ -388,19 +388,19 @@ export function resolveReplyLanguage(
     ?? (ticketLooksFrench(ticket) ? 'fr' : 'en');
 }
 
+// Angle brackets from the source become square brackets in reply text.
+const KNOWLEDGE_REPLY_TEXT_ENTITIES = { ...HTML_TEXT_ENTITIES, lt: '[', gt: ']' };
+
 export function normalizeKnowledgeReplyText(value: string | null | undefined): string {
-  return decodeNumericHtmlEntities(String(value ?? '').replace(/\r\n/g, '\n'))
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>/gi, '\n\n')
-    .replace(/<li\b[^>]*>/gi, '- ')
-    .replace(/<\/li>/gi, '\n')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, '\'')
-    .replace(/&lt;/gi, '[')
-    .replace(/&gt;/gi, ']')
+  return decodeHtmlEntities(
+    decodeNumericHtmlEntities(String(value ?? '').replace(/\r\n/g, '\n'))
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/p>/gi, '\n\n')
+      .replace(/<li\b[^>]*>/gi, '- ')
+      .replace(/<\/li>/gi, '\n')
+      .replace(/<[^>]+>/g, ' '),
+    { entities: KNOWLEDGE_REPLY_TEXT_ENTITIES, ignoreCase: true },
+  )
     .replace(/!\[([^\]]*)\]\([^)]+\)/g, (_match, alt) => String(alt || '').trim() ? `[image: ${String(alt).trim()}]` : '')
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .replace(/^#{1,6}\s+/gm, '')
