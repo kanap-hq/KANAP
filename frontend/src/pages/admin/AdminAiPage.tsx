@@ -187,6 +187,48 @@ function ValidationErrorList({ errors }: { errors: string[] }) {
   );
 }
 
+const MONO_FONT = "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace";
+
+function mcpEndpointUrl(origin: string): string {
+  return `${origin}/api/ai/mcp`;
+}
+
+function claudeCodeCommand(endpoint: string, key: string): string {
+  return `claude mcp add --transport http kanap ${endpoint} --header "Authorization: Bearer ${key}"`;
+}
+
+function CopyValue({ value, copyLabel, copiedLabel, multiline = false }: {
+  value: string;
+  copyLabel: string;
+  copiedLabel: string;
+  multiline?: boolean;
+}) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <Stack direction="row" spacing={1} alignItems="flex-start">
+      <TextField
+        variant="standard"
+        fullWidth
+        value={value}
+        multiline={multiline}
+        InputProps={{ readOnly: true, sx: { fontFamily: MONO_FONT, fontSize: '0.8125rem' } }}
+      />
+      <Tooltip title={copied ? copiedLabel : copyLabel}>
+        <IconButton
+          size="small"
+          aria-label={copyLabel}
+          onClick={() => {
+            void navigator.clipboard?.writeText(value).then(() => setCopied(true), () => undefined);
+          }}
+          onMouseLeave={() => setCopied(false)}
+        >
+          <ContentCopyIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+    </Stack>
+  );
+}
+
 export default function AdminAiPage() {
   const { config } = useFeatures();
   const queryClient = useQueryClient();
@@ -370,6 +412,7 @@ export default function AdminAiPage() {
   });
 
   const currentSettings = settingsQuery.data?.settings;
+  const mcpEndpoint = mcpEndpointUrl(window.location.origin);
   const builtinUsageRatio = getBuiltinUsageRatio(builtinUsageQuery.data);
   const builtinUsageColor = builtinUsageRatio >= 0.9 ? 'error' : builtinUsageRatio >= 0.75 ? 'warning' : 'success';
   const activeModelConfigs = (modelConfigsQuery.data?.model_configs ?? []).filter((entry) => entry.status === 'active');
@@ -635,6 +678,19 @@ export default function AdminAiPage() {
                     </Button>
                   </Stack>
 
+                  <PropertyRow
+                    label={t('aiAdmin.keys.endpoint.label')}
+                    helperText={t('aiAdmin.keys.endpoint.helper')}
+                  >
+                    <Box sx={{ maxWidth: 560 }}>
+                      <CopyValue
+                        value={mcpEndpoint}
+                        copyLabel={t('aiAdmin.keys.endpoint.copy')}
+                        copiedLabel={t('aiAdmin.keys.copied')}
+                      />
+                    </Box>
+                  </PropertyRow>
+
                   <TextField
                     size="small"
                     label={t('aiAdmin.fields.keyMaxLifetimeDays')}
@@ -752,17 +808,24 @@ export default function AdminAiPage() {
           {createdKey ? (
             <Stack spacing={2} sx={{ mt: 1 }}>
               <Alert severity="warning">{t('aiAdmin.dialogs.copyKeyWarning')}</Alert>
-              <Stack direction="row" spacing={1} alignItems="center">
-                <TextField
-                  fullWidth
-                  size="small"
+              <PropertyRow label={t('aiAdmin.dialogs.keyLabel')}>
+                <CopyValue
                   value={createdKey}
-                  InputProps={{ readOnly: true, sx: { fontFamily: 'monospace', fontSize: '0.85rem' } }}
+                  copyLabel={t('aiAdmin.dialogs.copyKey')}
+                  copiedLabel={t('aiAdmin.keys.copied')}
                 />
-                <IconButton onClick={() => navigator.clipboard.writeText(createdKey)}>
-                  <ContentCopyIcon />
-                </IconButton>
-              </Stack>
+              </PropertyRow>
+              <PropertyRow
+                label={t('aiAdmin.dialogs.claudeCodeLabel')}
+                helperText={t('aiAdmin.dialogs.claudeCodeHelper')}
+              >
+                <CopyValue
+                  value={claudeCodeCommand(mcpEndpoint, createdKey)}
+                  copyLabel={t('aiAdmin.dialogs.copyCommand')}
+                  copiedLabel={t('aiAdmin.keys.copied')}
+                  multiline
+                />
+              </PropertyRow>
             </Stack>
           ) : (
             <Stack spacing={2} sx={{ mt: 1 }}>

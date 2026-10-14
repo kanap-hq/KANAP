@@ -4,7 +4,7 @@ const content: FeatureContent = {
   meta: {
     title: 'Plaid, AI assistant for IT governance',
     description:
-      'Ask Plaid about your IT data. Create documents, update tasks, connect any AI tool via MCP. Usage included on hosted cloud. Open source.',
+      'Ask Plaid about your IT data. Create documents, update tasks, connect your AI tools via MCP. Usage included on hosted cloud. Open source.',
   },
   header: {
     eyebrow: 'Plaid · AI assistant',
@@ -35,22 +35,22 @@ const content: FeatureContent = {
       shotAlt: 'Plaid showing a preview of task updates',
     },
     {
-      title: 'MCP, use KANAP from any AI tool',
-      body: 'KANAP exposes a full MCP (Model Context Protocol) server. Connect Claude Desktop, Cursor, Windsurf or any MCP-compatible tool, and query your IT governance data without leaving your workflow.',
+      title: 'MCP, use KANAP from your AI tools',
+      body: 'Query your IT governance data without leaving your workflow. KANAP runs a read-only MCP (Model Context Protocol) server. Claude Code, Cursor and any client that sends an API key header connect to it directly.',
       bullets: [
-        'Standard MCP protocol, works with any compatible client',
-        'Secure API key authentication with granular scoping',
+        'Standard MCP over HTTP, authenticated with an API key',
+        'Each key reads only what its creator is allowed to see',
         'The same read queries as the built-in chat (MCP is read-only)',
         'Keep your existing AI workflows, add KANAP context',
       ],
-      shotAlt: 'MCP configuration with API key scoping',
+      shotAlt: 'MCP API key settings',
     },
     {
       title: 'Full control & compliance',
       body: 'Plaid respects your organisation\'s rules. Every action is governed by user permissions. Administrators have complete control over what Plaid can and cannot do.',
       bullets: [
         'Full respect of user permissions on every query',
-        'Secure API keys with granular MCP scoping',
+        'MCP keys that expire, can be revoked and follow their creator\'s permissions',
         'Web search can be enabled or disabled independently',
         'Preview and confirmation for all write operations',
         'Read-only access through roles for cautious rollouts',
