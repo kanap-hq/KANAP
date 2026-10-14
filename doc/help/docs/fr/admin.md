@@ -449,6 +449,8 @@ Le haut de la page résume votre abonnement en deux lignes :
 
 Sans abonnement en cours (un essai, un essai expiré ou un abonnement terminé), seul le statut est affiché. Pendant un essai, il est accompagné de la date de fin d'essai et du nombre de jours restants.
 
+Lorsqu'un passage à la facturation mensuelle est prévu, une troisième ligne l'indique, par exemple « Passe en mensuel le 7 oct. 2027. » Cliquez sur **Rester en annuel** sur cette ligne pour annuler ce passage.
+
 ### Actions
 
 - **Choisir un plan** / **Changer de plan** : Ouvrir la boîte de dialogue du plan pour souscrire ou basculer entre facturation mensuelle et annuelle. Nécessite l'admin facturation.
@@ -456,7 +458,28 @@ Sans abonnement en cours (un essai, un essai expiré ou un abonnement terminé),
 
 Si votre abonnement n'est pas en règle (essai expiré, paiement en retard, etc.), la boîte de dialogue de sélection du plan s'ouvre automatiquement lorsque vous visitez la page Facturation.
 
-Pour souscrire, par carte ou par virement, les informations de facturation doivent être complètes (voir [Informations de facturation](#informations-de-facturation)). S'il manque quelque chose, la boîte de dialogue **Choisir un plan** liste les champs manquants et les boutons de paiement restent désactivés. Cliquez sur **Compléter les informations de facturation** pour fermer la boîte de dialogue et accéder au premier champ manquant. Une fois les informations enregistrées, les boutons de paiement deviennent disponibles. Le changement de plan d'un abonnement par carte en cours ne demande pas cette vérification.
+### Souscrire
+
+Pour souscrire, les informations de facturation doivent être complètes : société, e-mail, adresse, pays et, dans l'Union européenne, numéro de TVA (voir [Informations de facturation](#informations-de-facturation)). S'il manque quelque chose, la boîte de dialogue **Choisir un plan** liste les champs manquants et les boutons de paiement restent désactivés. Cliquez sur **Compléter les informations de facturation** pour fermer la boîte de dialogue et accéder au premier champ manquant. Une fois les informations enregistrées, les boutons de paiement deviennent disponibles.
+
+Cochez **J'accepte les conditions générales de vente** avant de payer. Cette case est aussi demandée à chaque changement de plan.
+
+Vous pouvez payer de deux façons :
+- **Payer par carte** : pour une facturation mensuelle ou annuelle. La page de paiement Stripe s'ouvre. La carte est débitée à chaque émission de facture.
+- **Payer par virement** : pour une facturation annuelle uniquement. KANAP émet la facture et l'ouvre. La facture est payable sous 30 jours.
+
+Aucune TVA n'est facturée. Chaque facture porte la mention « TVA non applicable, art. 293 B du CGI ».
+
+### Changer de plan
+
+Ouvrez **Changer de plan**, choisissez la périodicité de facturation et confirmez avec **Changer de plan (carte)** ou **Changer de plan (virement)**.
+
+- **De mensuel à annuel** : le changement s'applique immédiatement. Une nouvelle période annuelle commence aujourd'hui, la partie non utilisée du mois en cours est créditée et la différence est facturée. Avec une carte, elle est débitée tout de suite. Si votre banque vous demande de confirmer le paiement, la page de paiement s'ouvre et le plan change une fois la facture payée. Avec un virement, la facture est payable sous 30 jours.
+- **D'annuel à mensuel** : le changement s'applique à la fin de la période annuelle. D'ici là, la page affiche « Passe en mensuel le » suivi de la date. Cliquez sur **Rester en annuel** pour conserver la facturation annuelle.
+
+Passer du virement à la carte nécessite une carte enregistrée. Si vous n'en avez pas, une page Stripe vous demande d'en ajouter une, puis la boîte de dialogue du plan se rouvre pour que vous confirmiez le changement.
+
+Le changement de plan d'un abonnement par carte en cours ne demande pas des informations de facturation complètes. Un changement payé par virement les demande.
 
 ### Informations de facturation
 
@@ -491,6 +514,8 @@ Vos factures sont listées dans un tableau sous les informations de facturation 
 - **Télécharger** : Télécharger le PDF de la facture
 
 Les cinq factures les plus récentes sont affichées en premier. Cliquez sur **Tout afficher** pour voir les autres.
+
+Chaque facture est aussi envoyée par e-mail à l'adresse e-mail de facturation. Le PDF est au format A4. Sa langue suit le pays de l'adresse de facturation : français pour la France et Monaco, allemand pour l'Allemagne et l'Autriche, espagnol pour l'Espagne, anglais pour les autres pays. Pour une société française, la facture indique aussi son SIREN, tiré du numéro de TVA.
 
 ---
 

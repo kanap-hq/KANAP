@@ -449,6 +449,8 @@ The top of the page sums up your subscription in two lines:
 
 Without a running subscription (a trial, an expired trial or an ended subscription), only the status is shown. During a trial, it comes with the trial end date and the number of days remaining.
 
+When a switch to monthly billing is planned, a third line shows it, for example "Switches to monthly on 7 Oct 2027." Click **Keep annual** on that line to cancel the switch.
+
 ### Actions
 
 - **Choose plan** / **Change plan**: Open the plan dialog to subscribe or switch between monthly and annual billing. Requires billing admin.
@@ -456,7 +458,28 @@ Without a running subscription (a trial, an expired trial or an ended subscripti
 
 If your subscription is unhealthy (expired trial, past due, etc.), the plan selection dialog opens automatically when you visit the Billing page.
 
-To subscribe, by card or by bank transfer, the invoicing information must be complete (see [Invoicing Information](#invoicing-information)). If something is missing, the **Choose a plan** dialog lists the missing fields and the pay buttons stay disabled. Click **Complete invoicing information** to close the dialog and go to the first missing field. Once the details are saved, the pay buttons become available. Changing the plan of a running card subscription does not require this check.
+### Subscribing
+
+To subscribe, the invoicing information must be complete: company, email, address, country and, in the European Union, the VAT number (see [Invoicing Information](#invoicing-information)). If something is missing, the **Choose a plan** dialog lists the missing fields and the pay buttons stay disabled. Click **Complete invoicing information** to close the dialog and go to the first missing field. Once the details are saved, the pay buttons become available.
+
+Tick **I accept the general terms of sale** before you pay. You also tick it each time you change plan.
+
+You can pay in two ways:
+- **Pay by card**: for monthly or annual billing. Stripe's payment page opens. The card is charged each time an invoice is issued.
+- **Pay by bank transfer**: for annual billing only. KANAP issues the invoice and opens it. The invoice is payable within 30 days.
+
+No VAT is charged. Each invoice states "TVA non applicable, art. 293 B du CGI".
+
+### Changing plan
+
+Open **Change plan**, pick the billing interval and confirm with **Change plan (card)** or **Change plan (bank transfer)**.
+
+- **Monthly to annual**: the change applies at once. A new annual period starts today, the unused part of the current month is credited, and the difference is invoiced. With a card, it is charged right away. If your bank asks you to confirm the payment, the payment page opens and the plan changes once the invoice is paid. With a bank transfer, the invoice is payable within 30 days.
+- **Annual to monthly**: the change applies at the end of the annual period. Until then, the page shows "Switches to monthly on" followed by the date. Click **Keep annual** to stay on annual billing.
+
+Moving from bank transfer to card requires a saved card. If you have none, a Stripe page asks you to add one, then the plan dialog reopens so you can confirm the change.
+
+Changing the plan of a running card subscription does not require complete invoicing information. A change paid by bank transfer does.
 
 ### Invoicing Information
 
@@ -491,6 +514,8 @@ Your invoices are listed in a table below the invoicing information:
 - **Download**: Download the invoice PDF
 
 The five most recent invoices are shown first. Click **Show all** to see the others.
+
+Each invoice is also sent by email to the invoicing email address. The PDF is in A4 format. Its language follows the country of the invoicing address: French for France and Monaco, German for Germany and Austria, Spanish for Spain, English for other countries. For a French company, the invoice also shows its SIREN, taken from the VAT number.
 
 ---
 

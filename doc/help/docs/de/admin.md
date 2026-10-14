@@ -449,6 +449,8 @@ Oben auf der Seite wird Ihr Abonnement in zwei Zeilen zusammengefasst:
 
 Ohne laufendes Abonnement (eine Testphase, eine abgelaufene Testphase oder ein beendetes Abonnement) wird nur der Status angezeigt. Während einer Testphase stehen daneben das Ende der Testphase und die verbleibenden Tage.
 
+Ist ein Wechsel zur monatlichen Abrechnung geplant, zeigt ihn eine dritte Zeile an, zum Beispiel „Wechselt am 7. Okt. 2027 zu monatlich.“ Klicken Sie in dieser Zeile auf **Jährlich beibehalten**, um den Wechsel abzubrechen.
+
 ### Aktionen
 
 - **Plan wählen** / **Plan ändern**: Öffnet den Tarifdialog zum Abonnieren oder zum Wechsel zwischen monatlicher und jährlicher Abrechnung. Erfordert Abrechnungsadministrator.
@@ -456,7 +458,28 @@ Ohne laufendes Abonnement (eine Testphase, eine abgelaufene Testphase oder ein b
 
 Wenn Ihr Abonnement nicht in Ordnung ist (abgelaufene Testversion, überfällig usw.), öffnet sich der Tarifauswahldialog automatisch, wenn Sie die Abrechnungsseite besuchen.
 
-Um ein Abonnement abzuschließen, per Karte oder per Überweisung, müssen die Rechnungsinformationen vollständig sein (siehe [Rechnungsinformationen](#rechnungsinformationen)). Fehlt etwas, listet der Dialog **Plan wählen** die fehlenden Felder auf und die Zahlungsschaltflächen bleiben deaktiviert. Klicken Sie auf **Rechnungsinformationen vervollständigen**, um den Dialog zu schließen und zum ersten fehlenden Feld zu wechseln. Sobald die Angaben gespeichert sind, werden die Zahlungsschaltflächen verfügbar. Der Planwechsel eines laufenden Kartenabonnements erfordert diese Prüfung nicht.
+### Abonnement abschließen
+
+Um ein Abonnement abzuschließen, müssen die Rechnungsinformationen vollständig sein: Unternehmen, E-Mail, Adresse, Land und, in der Europäischen Union, die USt-IdNr. (siehe [Rechnungsinformationen](#rechnungsinformationen)). Fehlt etwas, listet der Dialog **Plan wählen** die fehlenden Felder auf und die Zahlungsschaltflächen bleiben deaktiviert. Klicken Sie auf **Rechnungsinformationen vervollständigen**, um den Dialog zu schließen und zum ersten fehlenden Feld zu wechseln. Sobald die Angaben gespeichert sind, werden die Zahlungsschaltflächen verfügbar.
+
+Aktivieren Sie vor der Zahlung **Ich akzeptiere die Allgemeinen Geschäftsbedingungen**. Bei jedem Planwechsel aktivieren Sie das Kästchen erneut.
+
+Sie können auf zwei Arten zahlen:
+- **Per Karte zahlen**: für monatliche oder jährliche Abrechnung. Die Stripe-Zahlungsseite öffnet sich. Die Karte wird bei jeder ausgestellten Rechnung belastet.
+- **Per Überweisung zahlen**: nur für jährliche Abrechnung. KANAP stellt die Rechnung aus und öffnet sie. Die Rechnung ist innerhalb von 30 Tagen zahlbar.
+
+Es wird keine Mehrwertsteuer berechnet. Jede Rechnung trägt den Vermerk „TVA non applicable, art. 293 B du CGI“.
+
+### Plan ändern
+
+Öffnen Sie **Plan ändern**, wählen Sie das Abrechnungsintervall und bestätigen Sie mit **Plan ändern (Karte)** oder **Plan ändern (Überweisung)**.
+
+- **Von monatlich zu jährlich**: Die Änderung gilt sofort. Ein neuer Jahreszeitraum beginnt heute, der nicht genutzte Teil des laufenden Monats wird gutgeschrieben und die Differenz in Rechnung gestellt. Bei Karte wird sie sofort belastet. Verlangt Ihre Bank eine Bestätigung der Zahlung, öffnet sich die Zahlungsseite und der Plan ändert sich, sobald die Rechnung bezahlt ist. Bei Überweisung ist die Rechnung innerhalb von 30 Tagen zahlbar.
+- **Von jährlich zu monatlich**: Die Änderung gilt am Ende des Jahreszeitraums. Bis dahin zeigt die Seite „Wechselt am … zu monatlich.“ mit dem Datum an. Klicken Sie auf **Jährlich beibehalten**, um bei jährlicher Abrechnung zu bleiben.
+
+Für den Wechsel von Überweisung zu Karte ist eine gespeicherte Karte erforderlich. Haben Sie keine, fordert Sie eine Stripe-Seite auf, eine hinzuzufügen. Danach öffnet sich der Tarifdialog wieder, damit Sie den Wechsel bestätigen.
+
+Der Planwechsel eines laufenden Kartenabonnements erfordert keine vollständigen Rechnungsinformationen. Ein per Überweisung bezahlter Wechsel erfordert sie.
 
 ### Rechnungsinformationen
 
@@ -491,6 +514,8 @@ Ihre Rechnungen werden in einer Tabelle unter den Rechnungsinformationen aufgef�
 - **Herunterladen**: Rechnungs-PDF herunterladen
 
 Die fünf neuesten Rechnungen werden zuerst angezeigt. Klicken Sie auf **Alle anzeigen**, um die übrigen zu sehen.
+
+Jede Rechnung wird außerdem per E-Mail an die Rechnungs-E-Mail-Adresse gesendet. Das PDF hat das Format A4. Seine Sprache richtet sich nach dem Land der Rechnungsadresse: Französisch für Frankreich und Monaco, Deutsch für Deutschland und Österreich, Spanisch für Spanien, Englisch für alle anderen Länder. Bei einem französischen Unternehmen zeigt die Rechnung außerdem seine SIREN, die aus der USt-IdNr. abgeleitet wird.
 
 ---
 
