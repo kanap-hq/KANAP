@@ -111,7 +111,11 @@ export function isMarkdownWorkFailure(error: unknown): boolean {
 }
 
 /** Time budget shared by the calls of one task that processes several texts. */
-export type MarkdownWorkBudget = { remainingMs: number };
+export type MarkdownWorkBudget = {
+  remainingMs: number;
+  /** Set once a call was refused for this budget: later refusals are not logged again. */
+  refused?: boolean;
+};
 
 export function markdownWorkBudget(): MarkdownWorkBudget {
   return { remainingMs: MARKDOWN_WORK_TIMEOUT_MS };
@@ -400,10 +404,13 @@ function submit<K extends MarkdownWorkerOperation>(
   args: Parameters<MarkdownWorkerOperations[K]>,
   opts?: MarkdownWorkOptions,
 ): Promise<ReturnType<MarkdownWorkerOperations[K]>> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve, settleWithError) => {
+    // A call refused before it reaches a worker settles on the next turn of the event loop: a
+    // task that loops over many texts (CSV) then lets other requests run between its refusals.
+    const refuse = (error: unknown) => setImmediate(() => settleWithError(error));
     const fieldName = opts?.fieldName || 'content';
     if (closed) {
-      reject(new MarkdownUnavailableException());
+      refuse(new MarkdownUnavailableException());
       return;
     }
     const timeoutMs = Math.min(MARKDOWN_WORK_TIMEOUT_MS, opts?.budget ? opts.budget.remainingMs : Number.POSITIVE_INFINITY);
@@ -415,22 +422,24 @@ function submit<K extends MarkdownWorkerOperation>(
       timeoutMs,
       budget: opts?.budget,
       resolve: resolve as (value: unknown) => void,
-      reject,
+      reject: settleWithError,
       waitTimer: null,
     };
     if (timeoutMs <= 0) {
-      logStopped(task, 'time');
-      reject(new MarkdownTooComplexException(fieldName));
+      // The budget of the task is spent: refused at once, logged once per task.
+      if (!opts?.budget?.refused) logStopped(task, 'time');
+      if (opts?.budget) opts.budget.refused = true;
+      refuse(new MarkdownTooComplexException(fieldName));
       return;
     }
     ensurePool();
     if (slots.length === 0) {
-      reject(new MarkdownUnavailableException());
+      refuse(new MarkdownUnavailableException());
       return;
     }
     if (queue.length >= QUEUE_MAX) {
       logger.warn(`Text not processed: op=${op} field=${fieldName} reason=busy`);
-      reject(new MarkdownBusyException());
+      refuse(new MarkdownBusyException());
       return;
     }
     task.waitTimer = setTimeout(() => onWaitTimeout(task), QUEUE_WAIT_MS);
