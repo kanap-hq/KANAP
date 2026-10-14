@@ -19,7 +19,7 @@ import {
 import { CsvResolverService } from './csv-resolver.service';
 import { denormalizeCsvFormulaValue } from './csv-export.service';
 import { CsvJsonValidators } from './csv-json-validators';
-import { assertMarkdownParseBudget, CSV_MARKDOWN_PARSE_BUDGET_MS } from '../markdown-parse-budget';
+import { markdownWorkBudget } from '../markdown-worker';
 
 /**
  * Import options
@@ -86,13 +86,6 @@ export class CsvImportService {
   ): Promise<CsvImportResult> {
     // Decode and parse CSV
     const { rows, headerErrors } = await this.parseCsv(config, file);
-    // The Markdown parser reads some cells later on the main thread: all the long cells of
-    // the file are measured together off the main thread first (markdown-parse-budget.ts).
-    await assertMarkdownParseBudget(
-      rows.flatMap((cells) => Object.values(cells)),
-      'csv',
-      { budgetMs: CSV_MARKDOWN_PARSE_BUDGET_MS, minChars: 256 },
-    );
 
     // Early return if header errors
     if (headerErrors.length > 0) {
@@ -128,6 +121,7 @@ export class CsvImportService {
       isAdmin: opts.isAdmin,
       viewer: opts.viewer ?? { userId: opts.userId ?? null, isAdmin: opts.isAdmin === true },
       itOpsSettings: opts.itOpsSettings,
+      markdownBudget: markdownWorkBudget(),
     };
 
     // Phase 1: Validate and parse all rows
@@ -374,7 +368,7 @@ export class CsvImportService {
 
       // Parse and validate each field
       for (const field of importFields) {
-        this.parseField(field, raw, parsedRow, context);
+        await this.parseField(field, raw, parsedRow, context);
       }
 
       // Resolve identity
@@ -416,12 +410,12 @@ export class CsvImportService {
   /**
    * Parse a single field from the raw row.
    */
-  private parseField(
+  private async parseField(
     field: CsvFieldDefinition,
     raw: Record<string, string>,
     row: CsvImportRow,
     context: CsvImportContext,
-  ): void {
+  ): Promise<void> {
     // Handle numbered column arrays
     if (
       field.type === CsvFieldType.ARRAY &&
@@ -464,7 +458,8 @@ export class CsvImportService {
 
     // Parse based on type
     try {
-      const parsedValue = this.parseValue(field, rawValue, row, context);
+      // A transform may be asynchronous (rich text processed in the Markdown workers).
+      const parsedValue = await this.parseValue(field, rawValue, row, context);
       if (parsedValue !== undefined) {
         row.parsed[field.entityProperty] = parsedValue;
       }

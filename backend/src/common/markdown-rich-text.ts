@@ -1,65 +1,21 @@
 import { BadRequestException } from '@nestjs/common';
-import {
-  containsInlineDataImageText,
-  inspectMarkdownContent,
-  isAllowedMarkdownHtmlSnippet,
-  withoutDataImagePayloads,
-} from './html-to-markdown';
-import { assertWithinMarkdownParseBudget, isOverMarkdownParseBudget, markdownParseText } from './markdown-parse-budget';
+import { inspectMarkdownContent, isAllowedMarkdownHtmlSnippet } from './html-to-markdown';
+import { assertMarkdownSize, MARKDOWN_MAX_BYTES, markdownTooLargeError } from './markdown-limits';
 
 /**
- * Largest Markdown content accepted on a write, in UTF-8 bytes of text. Inline
- * base64 images do not count (see `markdownTextSize`). Contents stored before
- * the limit stay readable and exportable; only a new, larger write is refused.
- * The time the parser may spend on a content is bounded separately
- * (markdown-parse-budget.ts).
+ * Checks of a Markdown content with the Markdown parser. Runs in the Markdown
+ * workers: the API calls it through `normalizeMarkdownRichText` of
+ * markdown-worker.ts, which bounds its time.
  */
-export const MARKDOWN_MAX_BYTES = 200 * 1024;
-
-export const MARKDOWN_TOO_LARGE = 'MARKDOWN_TOO_LARGE';
 
 type NormalizeMarkdownRichTextOptions = {
   fieldName?: string;
   /**
    * False for server-side processing of contents already stored (copies,
-   * backfills, repairs, verification), which keep whatever size they had. Such a
-   * content measured over the parse budget is kept as it is, without the checks
-   * that need the parser.
+   * backfills, repairs, verification), which keep whatever size they had.
    */
   enforceSizeLimit?: boolean;
 };
-
-/**
- * Size of the text of a Markdown content in UTF-8 bytes. The base64 payloads of
- * inline images are left out only when the text holds an inline image (Markdown
- * image or `<img>` tag with a `data:image/...;base64,` source); any other text
- * counts in full.
- */
-export function markdownTextSize(value: string): number {
-  const text = String(value ?? '');
-  const cut = withoutDataImagePayloads(text);
-  if (cut.length === text.length || !containsInlineDataImageText(text)) {
-    return Buffer.byteLength(text, 'utf8');
-  }
-  return Buffer.byteLength(cut, 'utf8');
-}
-
-function markdownTooLargeError(fieldName: string, size: number): BadRequestException {
-  return new BadRequestException({
-    code: MARKDOWN_TOO_LARGE,
-    message: `${fieldName} is too long: ${Math.ceil(size / 1024)} KB of text, the limit is ${MARKDOWN_MAX_BYTES / 1024} KB.`,
-    field: fieldName,
-    max_bytes: MARKDOWN_MAX_BYTES,
-  });
-}
-
-/** Refuses a Markdown content larger than `MARKDOWN_MAX_BYTES` with a 400 `MARKDOWN_TOO_LARGE`. */
-export function assertMarkdownSize(value: unknown, fieldName = 'content'): void {
-  if (value == null) return;
-  const size = markdownTextSize(String(value));
-  if (size <= MARKDOWN_MAX_BYTES) return;
-  throw markdownTooLargeError(fieldName, size);
-}
 
 export function normalizeMarkdownRichText(
   value: unknown,
@@ -73,10 +29,6 @@ export function normalizeMarkdownRichText(
   const enforceSizeLimit = opts?.enforceSizeLimit !== false;
   if (enforceSizeLimit) {
     assertMarkdownSize(text, field);
-    assertWithinMarkdownParseBudget(markdownParseText(text), field);
-  } else if (isOverMarkdownParseBudget(markdownParseText(text))) {
-    // A stored content the parser cannot handle within its budget stays as it is.
-    return text;
   }
 
   const { rawHtmlSnippets, hasInlineDataImage } = inspectMarkdownContent(text);

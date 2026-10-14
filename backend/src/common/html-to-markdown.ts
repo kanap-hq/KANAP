@@ -1,12 +1,12 @@
 import { marked } from 'marked';
 import TurndownService = require('turndown');
-import {
-  assertWithinMarkdownParseBudget,
-  noteMarkdownParseBudget,
-  withoutDataImagePayloads,
-} from './markdown-parse-budget';
+import { containsInlineDataImageText, withoutDataImagePayloads } from './markdown-limits';
 
-export { withoutDataImagePayloads };
+/**
+ * HTML and Markdown conversions with the Markdown parser and turndown. Runs in
+ * the Markdown workers: the API calls these functions through markdown-worker.ts,
+ * which bounds their time.
+ */
 
 const HTML_TAG_REGEX_FALLBACK = /<\/?(p|h[1-6]|ul|ol|li|blockquote|pre|code|strong|em|a|img|table|thead|tbody|tr|td|th|div|span|br|hr|mark|u)\b[^>]*>/i;
 const MARKDOWN_AUTOLINK_REGEX_FALLBACK = /^<https?:\/\/[^>\s]+>$/i;
@@ -125,12 +125,9 @@ export function isAllowedMarkdownHtmlSnippet(value: string): boolean {
 }
 
 function parseTokens(content: string): MarkdownToken[] | null {
-  // Inline image payloads are not parsed (see withoutDataImagePayloads).
-  const parseText = withoutDataImagePayloads(content);
-  // A text measured over the parse budget never reaches the parser (markdown-parse-budget.ts).
-  assertWithinMarkdownParseBudget(parseText);
   try {
-    return marked.lexer(parseText, { gfm: true, breaks: true }) as MarkdownToken[];
+    // Inline image payloads are not parsed (see withoutDataImagePayloads).
+    return marked.lexer(withoutDataImagePayloads(content), { gfm: true, breaks: true }) as MarkdownToken[];
   } catch {
     return null;
   }
@@ -246,62 +243,6 @@ function tokensContainDataImage(tokens: MarkdownToken[]): boolean {
   return found;
 }
 
-const DATA_IMAGE_TARGET_STICKY_REGEX = /\s*<?data:image\/[a-z0-9.+-]+;base64,[^)>\s]/iy;
-const DATA_IMAGE_SRC_REGEX = /\bsrc\s*=\s*(["'])data:image\/[a-z0-9.+-]+;base64,/gi;
-
-/**
- * `![alt](data:image/...;base64,...)` in text that could not be tokenized: one
- * pass over the text, where a "]" closes the alt text opened by the last "![".
- */
-function hasMarkdownDataImageText(text: string): boolean {
-  let altOpen = false;
-  for (let index = 0; index < text.length; index += 1) {
-    const char = text[index];
-    if (char === '!' && text[index + 1] === '[') {
-      altOpen = true;
-      index += 1;
-      continue;
-    }
-    if (char !== ']') continue;
-    const opened = altOpen;
-    altOpen = false;
-    if (!opened || text[index + 1] !== '(') continue;
-    DATA_IMAGE_TARGET_STICKY_REGEX.lastIndex = index + 2;
-    if (DATA_IMAGE_TARGET_STICKY_REGEX.test(text)) return true;
-  }
-  return false;
-}
-
-/**
- * `<img ... src="data:image/...;base64,...">` in text that could not be tokenized.
- * Each tag is cut at its first ">" (a base64 payload holds none), and only text up
- * to the last ">" is searched, so every tag match succeeds at once. One difference
- * with a tag read up to its closing quote: a quoted `src` value holding a ">" before
- * the end of its quotes is not recognised here (a base64 image never holds one).
- */
-function hasHtmlDataImageText(text: string): boolean {
-  const lastClose = text.lastIndexOf('>');
-  if (lastClose === -1) return false;
-  const tags = text.slice(0, lastClose + 1).match(/<img\b[^>]*>/gi) || [];
-  return tags.some((tag) => {
-    const lastQuote: Record<string, number> = { '"': tag.lastIndexOf('"'), '\'': tag.lastIndexOf('\'') };
-    const srcRegex = new RegExp(DATA_IMAGE_SRC_REGEX.source, 'gi');
-    let match: RegExpExecArray | null;
-    while ((match = srcRegex.exec(tag)) !== null) {
-      // The quoted value must be closed before the end of the tag.
-      if (lastQuote[match[1]] >= srcRegex.lastIndex) return true;
-    }
-    return false;
-  });
-}
-
-/** Inline base64 image check for text the Markdown parser could not tokenize. */
-export function containsInlineDataImageText(content: string): boolean {
-  const text = withoutDataImagePayloads(String(content || '').trim());
-  if (!text) return false;
-  return hasMarkdownDataImageText(text) || hasHtmlDataImageText(text);
-}
-
 export function containsInlineDataImage(content: string): boolean {
   const text = String(content || '').trim();
   if (!text) return false;
@@ -333,18 +274,6 @@ export function isHtmlContent(content: string): boolean {
 
   if (MARKDOWN_AUTOLINK_REGEX_FALLBACK.test(text)) return false;
   return hasHtmlTagText(text);
-}
-
-/**
- * Measures, off the main thread, the texts `resolveHtmlContentSource` parses for
- * this content (the text and its entity-decoded form): one over the parse budget is
- * then refused by the parser with a 400 `MARKDOWN_TOO_COMPLEX`.
- */
-export async function noteHtmlContentSourceParseBudget(content: unknown, fieldName = 'content'): Promise<boolean> {
-  const text = String(content ?? '').trim();
-  if (!text) return true;
-  const decoded = decodeHtmlEntities(text).trim();
-  return noteMarkdownParseBudget(decoded && decoded !== text ? [text, decoded] : [text], { fieldName });
 }
 
 export function resolveHtmlContentSource(content: string): string {

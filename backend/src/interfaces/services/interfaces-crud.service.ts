@@ -26,7 +26,7 @@ import {
   InterfacesBaseService,
   ServiceOpts,
 } from './interfaces-base.service';
-import { assertMarkdownSize } from '../../common/markdown-rich-text';
+import { assertMarkdownSize } from '../../common/markdown-limits';
 
 /**
  * Texts the specification document of an interface is built from

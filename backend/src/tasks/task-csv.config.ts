@@ -6,7 +6,7 @@ import {
   CsvImportContext,
 } from '../common/csv';
 import { allocateItemNumbers } from '../common/item-number.service';
-import { assertMarkdownSize } from '../common/markdown-rich-text';
+import { assertMarkdownSize } from '../common/markdown-limits';
 
 /**
  * CSV configuration for Tasks entity

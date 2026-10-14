@@ -2,7 +2,7 @@
  * Contents stored before the Markdown size limit (200 KB of text) stay readable,
  * convertible and usable as templates: copies, recoveries and templates are
  * stored contents, exempt from the limit down to the managed document they
- * create. A stored text the parser cannot handle within its budget is recovered
+ * create. A stored text the Markdown workers cannot process in time is recovered
  * as plain text, without holding the main thread.
  *
  * Runs the real SQL against `DATABASE_URL`; every test seeds inside a
@@ -14,8 +14,8 @@ import { randomUUID } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { ItemNumberService } from '../../common/item-number.service';
-import { closeMarkdownParseWorkers } from '../../common/markdown-parse-budget';
-import { MARKDOWN_MAX_BYTES } from '../../common/markdown-rich-text';
+import { closeMarkdownWorkers } from '../../common/markdown-worker';
+import { MARKDOWN_MAX_BYTES } from '../../common/markdown-limits';
 import { KnowledgeService } from '../knowledge.service';
 import { IntegratedDocumentsService } from '../integrated-documents.service';
 import { seedManagedDocsKnowledgeAssets } from '../integrated-document-seed';
@@ -293,7 +293,7 @@ async function run() {
     await testApplicationOverviewIsRecoveredFromAStoredDescription();
   } finally {
     await dataSource.destroy();
-    await closeMarkdownParseWorkers();
+    await closeMarkdownWorkers();
   }
 }
 

@@ -5,14 +5,18 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { marked } from 'marked';
 import { EntityManager, Repository } from 'typeorm';
 import { DocumentImportService } from '../common/document-import.service';
 import { extractInlineImageUrls } from '../common/content-image-urls';
-import { containsInlineDataImage, htmlToMarkdown, isHtmlContent, noteHtmlContentSourceParseBudget } from '../common/html-to-markdown';
-import { noteMarkdownParseBudget } from '../common/markdown-parse-budget';
 import { ImportExecutionOptions, readUploadedFileBuffer } from '../common/import-connection';
-import { normalizeMarkdownRichText } from '../common/markdown-rich-text';
+import {
+  containsInlineDataImage,
+  findInlineImageReferences,
+  interfaceSpecificationMarkdown,
+  isMarkdownTooComplex,
+  normalizeMarkdownRichText,
+  prepareRecoveredContent,
+} from '../common/markdown-worker';
 import { PermissionsService, PermissionLevel } from '../permissions/permissions.service';
 import { PortfolioActivity } from '../portfolio/portfolio-activity.entity';
 import { Document } from './document.entity';
@@ -125,12 +129,6 @@ type ManagedAttachmentRow = {
   size: number;
   storage_path: string;
   source_field: string | null;
-};
-type MarkdownToken = {
-  type?: string;
-  raw?: string;
-  text?: string;
-  [key: string]: unknown;
 };
 type InlineImageOccurrence = {
   raw: string;
@@ -251,18 +249,6 @@ const SUPPORTED_SLOT_KEYS = INTEGRATED_DOCUMENT_SLOT_DEFINITIONS.reduce<Record<S
   },
 );
 
-/** The text as a fenced code block: shown as plain text, read by the parser in linear time. */
-function plainTextCodeBlock(text: string): string {
-  let longestRun = 0;
-  let run = 0;
-  for (const char of text) {
-    run = char === '`' ? run + 1 : 0;
-    if (run > longestRun) longestRun = run;
-  }
-  const fence = '`'.repeat(Math.max(3, longestRun + 1));
-  return `${fence}text\n${text.trim()}\n${fence}`;
-}
-
 @Injectable()
 export class IntegratedDocumentsService {
   private readonly legacyColumnExistsCache = new Map<string, boolean>();
@@ -362,153 +348,6 @@ export class IntegratedDocumentsService {
       : sourceEntityType === 'incidents'
         ? 'Imported from legacy incident fields'
       : 'Imported from legacy project field';
-  }
-
-  /**
-   * @param overBudget texts measured over the Markdown parse budget: shown as plain
-   * text without being parsed (`buildInterfaceSpecificationMarkdownWithinBudget`).
-   */
-  private formatInterfaceSpecificationValue(
-    value: unknown,
-    overBudget: ReadonlySet<string> = new Set<string>(),
-  ): string | null {
-    if (value == null) {
-      return null;
-    }
-
-    if (Array.isArray(value)) {
-      if (value.length === 0) {
-        return null;
-      }
-      if (value.some((item) => typeof item === 'string' && overBudget.has(item.trim()))) {
-        return `\`\`\`json\n${JSON.stringify(value, null, 2)}\n\`\`\``;
-      }
-      const allScalar = value.every((item) => (
-        item == null
-        || typeof item === 'string'
-        || typeof item === 'number'
-        || typeof item === 'boolean'
-      ));
-      if (!allScalar) {
-        return `\`\`\`json\n${JSON.stringify(value, null, 2)}\n\`\`\``;
-      }
-
-      const scalars = value
-        .map((item) => this.formatInterfaceSpecificationValue(item, overBudget))
-        .filter((item): item is string => !!item);
-      return scalars.length > 0 ? scalars.map((item) => `- ${item}`).join('\n') : null;
-    }
-
-    if (typeof value === 'object') {
-      return `\`\`\`json\n${JSON.stringify(value, null, 2)}\n\`\`\``;
-    }
-
-    const normalized = String(value).trim();
-    if (!normalized) {
-      return null;
-    }
-    if (overBudget.has(normalized)) {
-      return plainTextCodeBlock(normalized);
-    }
-    if (isHtmlContent(normalized)) {
-      return htmlToMarkdown(normalized);
-    }
-    return normalized;
-  }
-
-  private interfaceSpecificationSections(row: InterfaceBackfillRow): Array<{
-    heading: string;
-    fields: Array<{ label: string; value: unknown }>;
-  }> {
-    return [
-      {
-        heading: 'Business Purpose & Overview',
-        fields: [
-          { label: 'Business purpose', value: row.business_purpose },
-          { label: 'Overview notes', value: row.overview_notes },
-        ],
-      },
-      {
-        heading: 'Business Objects',
-        fields: [{ label: 'Business objects', value: row.business_objects }],
-      },
-      {
-        heading: 'Use Cases',
-        fields: [{ label: 'Main use cases', value: row.main_use_cases }],
-      },
-      {
-        heading: 'Business Rules',
-        fields: [{ label: 'Functional rules', value: row.functional_rules }],
-      },
-      {
-        heading: 'Impact of Failure',
-        fields: [{ label: 'Impact of failure', value: row.impact_of_failure }],
-      },
-      {
-        heading: 'Transformations Overview',
-        fields: [{ label: 'Core transformations summary', value: row.core_transformations_summary }],
-      },
-      {
-        heading: 'Error Handling',
-        fields: [{ label: 'Error handling', value: row.error_handling_summary }],
-      },
-      {
-        heading: 'Data & Compliance Notes',
-        fields: [
-          { label: 'Typical data', value: row.typical_data },
-          { label: 'Audit logging', value: row.audit_logging },
-          { label: 'Security controls summary', value: row.security_controls_summary },
-        ],
-      },
-    ];
-  }
-
-  private buildInterfaceSpecificationMarkdown(
-    row: InterfaceBackfillRow,
-    overBudget: ReadonlySet<string> = new Set<string>(),
-  ): string {
-    return this.interfaceSpecificationSections(row).map((section) => {
-      const fieldBlocks = section.fields.flatMap((field) => {
-        const rendered = this.formatInterfaceSpecificationValue(field.value, overBudget);
-        if (!rendered) {
-          return [];
-        }
-        return [`### ${field.label}`, '', rendered];
-      });
-
-      return [
-        `## ${section.heading}`,
-        '',
-        ...fieldBlocks,
-      ].join('\n').trimEnd();
-    }).join('\n\n');
-  }
-
-  /**
-   * `buildInterfaceSpecificationMarkdown` for the stored texts of an interface: the
-   * texts the parser reads are measured off the main thread first. A text over the
-   * parse budget is shown as plain text, without being parsed; so is the whole
-   * specification when, once assembled, it is over the budget.
-   */
-  private async buildInterfaceSpecificationMarkdownWithinBudget(row: InterfaceBackfillRow): Promise<string> {
-    const texts = new Set<string>();
-    for (const section of this.interfaceSpecificationSections(row)) {
-      for (const field of section.fields) {
-        const items = Array.isArray(field.value) ? field.value : [field.value];
-        for (const item of items) {
-          if (typeof item === 'string' && item.trim()) texts.add(item.trim());
-        }
-      }
-    }
-    const overBudget = new Set<string>();
-    for (const text of texts) {
-      if (!(await noteHtmlContentSourceParseBudget(text, 'specification'))) overBudget.add(text);
-    }
-    const markdown = this.buildInterfaceSpecificationMarkdown(row, overBudget);
-    if (!(await noteMarkdownParseBudget([markdown], { fieldName: 'specification' }))) {
-      return plainTextCodeBlock(markdown);
-    }
-    return markdown;
   }
 
   private getLegacySourceField(
@@ -1102,7 +941,7 @@ export class IntegratedDocumentsService {
     if (sourceEntityType === 'applications') {
       const row = await this.loadApplicationBackfillRow(sourceEntityId, manager);
       return {
-        content: await this.prepareRecoveredContentWithinBudget(row.description),
+        content: await prepareRecoveredContent(row.description),
         source: 'legacy',
         unresolvedLegacyInlineAttachmentIds: [],
       };
@@ -1111,7 +950,7 @@ export class IntegratedDocumentsService {
     if (sourceEntityType === 'interfaces') {
       const row = await this.loadInterfaceBackfillRow(sourceEntityId, manager);
       return {
-        content: await this.buildInterfaceSpecificationMarkdownWithinBudget(row),
+        content: await interfaceSpecificationMarkdown(row),
         source: 'legacy',
         unresolvedLegacyInlineAttachmentIds: [],
       };
@@ -1157,7 +996,7 @@ export class IntegratedDocumentsService {
       if (!rows.length) {
         throw new NotFoundException(`${sourceEntityType.slice(0, -1)} not found`);
       }
-      const content = await this.prepareRecoveredContentWithinBudget(rows[0].content ?? null);
+      const content = await prepareRecoveredContent(rows[0].content ?? null);
       return {
         content,
         source: 'legacy',
@@ -1177,7 +1016,7 @@ export class IntegratedDocumentsService {
         `Integrated document missing and no recovery source is available for ${sourceEntityType}:${slotKey}`,
       );
     }
-    const content = await this.prepareRecoveredContentWithinBudget(auditContent);
+    const content = await prepareRecoveredContent(auditContent);
     return {
       content,
       source: 'audit',
@@ -1185,148 +1024,14 @@ export class IntegratedDocumentsService {
     };
   }
 
-  /**
-   * `prepareRecoveredContent` for a stored text read back (legacy field, older
-   * revision): the texts the parser reads are measured off the main thread first.
-   * A text over the parse budget becomes a plain-text code block, kept readable.
-   */
-  private async prepareRecoveredContentWithinBudget(content: string | null | undefined): Promise<string | null> {
-    if (content == null) {
-      return null;
-    }
-    const text = String(content);
-    if (!text.trim()) {
-      return '';
-    }
-    if (!(await noteHtmlContentSourceParseBudget(text, 'description'))) {
-      return plainTextCodeBlock(text);
-    }
-    return this.prepareRecoveredContent(text);
-  }
-
-  private prepareRecoveredContent(content: string | null | undefined): string | null {
-    if (content == null) {
-      return null;
-    }
-    const normalized = String(content);
-    if (!normalized.trim()) {
-      return '';
-    }
-    if (isHtmlContent(normalized)) {
-      return htmlToMarkdown(normalized);
-    }
-    return normalized;
-  }
-
-  private parseMarkdownTokens(content: string): MarkdownToken[] | null {
-    try {
-      return marked.lexer(content, { gfm: true, breaks: true }) as MarkdownToken[];
-    } catch {
-      return null;
-    }
-  }
-
-  private walkMarkdownToken(value: unknown, visit: (token: MarkdownToken) => void): void {
-    if (!value || typeof value !== 'object') return;
-    const token = value as MarkdownToken;
-    if (typeof token.type !== 'string') return;
-
-    visit(token);
-
-    if (token.type === 'code' || token.type === 'codespan') {
-      return;
-    }
-
-    for (const nested of Object.values(token)) {
-      if (Array.isArray(nested)) {
-        for (const child of nested) {
-          this.walkMarkdownToken(child, visit);
-        }
-        continue;
-      }
-      if (nested && typeof nested === 'object') {
-        this.walkMarkdownToken(nested, visit);
-      }
-    }
-  }
-
-  private collectInlineImageOccurrences(content: string | null | undefined): InlineImageOccurrence[] {
-    const text = String(content || '');
-    if (!text.trim()) {
-      return [];
-    }
-
-    const tokens = this.parseMarkdownTokens(text);
-    if (tokens) {
-      const occurrences: InlineImageOccurrence[] = [];
-      for (const token of tokens) {
-        this.walkMarkdownToken(token, (current) => {
-          if (current.type === 'image') {
-            const raw = String(current.raw || '');
-            const target = String((current as any).href || '').trim();
-            if (!raw || !target) return;
-            occurrences.push({
-              raw,
-              target,
-              rewrite: (nextTarget: string) => raw.replace(target, nextTarget),
-            });
-            return;
-          }
-
-          if (current.type !== 'html') {
-            return;
-          }
-
-          const snippet = String(current.raw ?? current.text ?? '');
-          if (!snippet || !/<img\b/i.test(snippet)) {
-            return;
-          }
-
-          const imgRegex = /<img\b[^>]*\bsrc\s*=\s*(["'])([^"']+)\1[^>]*>/gi;
-          let match: RegExpExecArray | null;
-          while ((match = imgRegex.exec(snippet)) !== null) {
-            const raw = String(match[0] || '');
-            const target = String(match[2] || '').trim();
-            if (!raw || !target) continue;
-            occurrences.push({
-              raw,
-              target,
-              rewrite: (nextTarget: string) => raw.replace(target, nextTarget),
-            });
-          }
-        });
-      }
-      return occurrences;
-    }
-
-    const fallbackOccurrences: InlineImageOccurrence[] = [];
-    const markdownImageRegex = /!\[[^\]]*]\(\s*<?([^)\s>]+)>?(?:\s+["'][^"']*["'])?\s*\)/g;
-    let markdownMatch: RegExpExecArray | null;
-    while ((markdownMatch = markdownImageRegex.exec(text)) !== null) {
-      const raw = String(markdownMatch[0] || '');
-      const target = String(markdownMatch[1] || '').trim();
-      if (!raw || !target) continue;
-      fallbackOccurrences.push({
-        raw,
-        target,
-        rewrite: (nextTarget: string) => raw.replace(target, nextTarget),
-      });
-    }
-
-    const htmlImageRegex = /<img\b[^>]*\bsrc\s*=\s*(["'])([^"']+)\1[^>]*>/gi;
-    let htmlMatch: RegExpExecArray | null;
-    while ((htmlMatch = htmlImageRegex.exec(text)) !== null) {
-      const raw = String(htmlMatch[0] || '');
-      const target = String(htmlMatch[2] || '').trim();
-      if (!raw || !target) continue;
-      fallbackOccurrences.push({
-        raw,
-        target,
-        rewrite: (nextTarget: string) => raw.replace(target, nextTarget),
-      });
-    }
-
-    return fallbackOccurrences;
+  /** The inline images of a Markdown text (Markdown workers), with their rewrite. */
+  private async collectInlineImageOccurrences(content: string | null | undefined): Promise<InlineImageOccurrence[]> {
+    const references = await findInlineImageReferences(content, { fieldName: 'content_markdown' });
+    return references.map(({ raw, target }) => ({
+      raw,
+      target,
+      rewrite: (nextTarget: string) => raw.replace(target, nextTarget),
+    }));
   }
 
   private applyInlineImageReplacements(
@@ -1415,12 +1120,12 @@ export class IntegratedDocumentsService {
     return match?.[1] || null;
   }
 
-  private collectRecoverableInlineImageOccurrences(
+  private async collectRecoverableInlineImageOccurrences(
     content: string | null | undefined,
     sourceEntityType: SourceScopedEntityType,
     opts?: { includeLegacyAttachmentRefs?: boolean },
-  ): RecoverableInlineImageOccurrence[] {
-    const occurrences = this.collectInlineImageOccurrences(content);
+  ): Promise<RecoverableInlineImageOccurrence[]> {
+    const occurrences = await this.collectInlineImageOccurrences(content);
     const recoverable: RecoverableInlineImageOccurrence[] = [];
 
     for (const occurrence of occurrences) {
@@ -1453,11 +1158,24 @@ export class IntegratedDocumentsService {
     return recoverable;
   }
 
-  private resolveRecoveredInitialContent(content: string | null | undefined): string {
-    if (containsInlineDataImage(String(content || ''))) {
+  /**
+   * Whether a recovered text holds inline base64 images. A text the Markdown
+   * workers cannot process in time is kept as it is: no image is taken out of it.
+   */
+  private async recoveredContentHasDataImage(content: string | null | undefined): Promise<boolean> {
+    try {
+      return await containsInlineDataImage(String(content || ''), { fieldName: 'content_markdown' });
+    } catch (error) {
+      if (isMarkdownTooComplex(error)) return false;
+      throw error;
+    }
+  }
+
+  private async resolveRecoveredInitialContent(content: string | null | undefined): Promise<string> {
+    if (await this.recoveredContentHasDataImage(content)) {
       return '';
     }
-    return normalizeMarkdownRichText(content, {
+    return await normalizeMarkdownRichText(content, {
       fieldName: 'content_markdown',
       enforceSizeLimit: false,
     }) || '';
@@ -1639,12 +1357,12 @@ export class IntegratedDocumentsService {
     return document;
   }
 
-  private resolveInitialContent(
+  private async resolveInitialContent(
     explicitContent: string | null | undefined,
     templateContent: string | null | undefined,
     opts?: { useTemplateWhenBlank?: boolean; storedContent?: boolean },
-  ): string {
-    const normalizedExplicit = normalizeMarkdownRichText(explicitContent, {
+  ): Promise<string> {
+    const normalizedExplicit = await normalizeMarkdownRichText(explicitContent, {
       fieldName: 'content_markdown',
       enforceSizeLimit: !opts?.storedContent,
     }) || '';
@@ -1655,7 +1373,7 @@ export class IntegratedDocumentsService {
       return '';
     }
     // The template is a stored document: it keeps whatever size it has.
-    return normalizeMarkdownRichText(templateContent, {
+    return await normalizeMarkdownRichText(templateContent, {
       fieldName: 'content_markdown',
       enforceSizeLimit: false,
     }) || '';
@@ -1898,15 +1616,22 @@ export class IntegratedDocumentsService {
     legacyMappings: Array<{ sourceAttachmentId: string; clonedAttachmentId: string }>;
     dataImageAttachmentIds: string[];
   }> {
-    const recoverable = this.collectRecoverableInlineImageOccurrences(
-      content,
-      sourceEntityType,
-      { includeLegacyAttachmentRefs: opts?.includeLegacyAttachmentRefs !== false },
-    );
+    let recoverable: RecoverableInlineImageOccurrence[];
+    try {
+      recoverable = await this.collectRecoverableInlineImageOccurrences(
+        content,
+        sourceEntityType,
+        { includeLegacyAttachmentRefs: opts?.includeLegacyAttachmentRefs !== false },
+      );
+    } catch (error) {
+      // A text the Markdown workers cannot process in time is kept as it is.
+      if (!isMarkdownTooComplex(error)) throw error;
+      recoverable = [];
+    }
 
     if (recoverable.length === 0) {
       return {
-        content_markdown: normalizeMarkdownRichText(content, {
+        content_markdown: await normalizeMarkdownRichText(content, {
           fieldName: 'content_markdown',
           enforceSizeLimit: false,
         }) || '',
@@ -1998,7 +1723,7 @@ export class IntegratedDocumentsService {
     }
 
     return {
-      content_markdown: normalizeMarkdownRichText(
+      content_markdown: await normalizeMarkdownRichText(
         this.applyInlineImageReplacements(content, replacements),
         {
           fieldName: 'content_markdown',
@@ -2010,18 +1735,18 @@ export class IntegratedDocumentsService {
     };
   }
 
-  private rewriteRecoveredInlineImagesForVerification(
+  private async rewriteRecoveredInlineImagesForVerification(
     sourceEntityType: SourceScopedEntityType,
     tenantSlug: string,
     content: string | null | undefined,
     managedAttachmentIds: string[],
     contextLabel: string,
     opts?: { includeLegacyAttachmentRefs?: boolean },
-  ): {
+  ): Promise<{
     content_markdown: string;
     assignments: RecoverableInlineImageAssignment[];
-  } {
-    const recoverable = this.collectRecoverableInlineImageOccurrences(
+  }> {
+    const recoverable = await this.collectRecoverableInlineImageOccurrences(
       content,
       sourceEntityType,
       { includeLegacyAttachmentRefs: opts?.includeLegacyAttachmentRefs !== false },
@@ -2083,7 +1808,7 @@ export class IntegratedDocumentsService {
   ): Promise<void> {
     const managedAttachmentIds = this.extractKnowledgeInlineAttachmentIds(normalizedDocumentContent);
     const contextLabel = `${sourceEntityType}:${slotKey}:${sourceEntityId}`;
-    const rewritten = this.rewriteRecoveredInlineImagesForVerification(
+    const rewritten = await this.rewriteRecoveredInlineImagesForVerification(
       sourceEntityType,
       tenantSlug,
       recoveredContent,
@@ -2178,7 +1903,7 @@ export class IntegratedDocumentsService {
       }
     }
 
-    const normalizedExpectedContent = normalizeMarkdownRichText(rewritten.content_markdown, {
+    const normalizedExpectedContent = await normalizeMarkdownRichText(rewritten.content_markdown, {
       fieldName: 'content_markdown',
       enforceSizeLimit: false,
     }) || '';
@@ -2368,12 +2093,7 @@ export class IntegratedDocumentsService {
     }
 
     const slotSetting = await this.getSlotSetting(sourceEntityType, slotKey, manager);
-    // Stored texts (the template, a copied content) are measured off the main thread first.
-    await noteMarkdownParseBudget(
-      opts?.storedContent ? [explicitContent, slotSetting.template_content_markdown] : [slotSetting.template_content_markdown],
-      { fieldName: 'content_markdown' },
-    );
-    const initialContent = this.resolveInitialContent(
+    const initialContent = await this.resolveInitialContent(
       explicitContent,
       slotSetting.template_content_markdown,
       { useTemplateWhenBlank: opts?.useTemplateWhenBlank, storedContent: opts?.storedContent },
@@ -2610,7 +2330,7 @@ export class IntegratedDocumentsService {
     await this.knowledge.assertDocumentUnlockedForUser(documentId, normalizedUserId, manager);
 
     const existing = await this.getDocumentOrThrow(documentId, manager);
-    const nextContent = normalizeMarkdownRichText(content, { fieldName: 'content_markdown' }) || '';
+    const nextContent = await normalizeMarkdownRichText(content, { fieldName: 'content_markdown' }) || '';
     if (existing.content_markdown === nextContent) {
       return { document_id: documentId, changed: false, version_number: null, revision: null };
     }
@@ -2679,7 +2399,7 @@ export class IntegratedDocumentsService {
     }
 
     const existingDocument = await this.getDocumentOrThrow(existingBinding.document_id, manager);
-    const nextContent = normalizeMarkdownRichText(content, { fieldName: 'content_markdown' }) || '';
+    const nextContent = await normalizeMarkdownRichText(content, { fieldName: 'content_markdown' }) || '';
     if (existingDocument.content_markdown === nextContent) {
       return {
         documentId: existingBinding.document_id,
@@ -2836,7 +2556,7 @@ export class IntegratedDocumentsService {
     manager: EntityManager,
   ): Promise<ManagedWriteResult> {
     const importChangeNote = this.getImportChangeNote(sourceEntityType);
-    const initialContent = this.resolveRecoveredInitialContent(legacyContent);
+    const initialContent = await this.resolveRecoveredInitialContent(legacyContent);
     const normalizedActorUserId = this.normalizeOptionalUserId(actorUserId);
 
     return this.ensureBoundDocument(
@@ -3002,8 +2722,8 @@ export class IntegratedDocumentsService {
         manager,
       );
     } else {
-      const initialContent = this.resolveRecoveredInitialContent(recovered.content);
-      const needsDataImageRecovery = containsInlineDataImage(String(recovered.content || ''));
+      const initialContent = await this.resolveRecoveredInitialContent(recovered.content);
+      const needsDataImageRecovery = await this.recoveredContentHasDataImage(recovered.content);
       await this.ensureBoundDocument(
         sourceEntityType,
         context.source,
@@ -3295,7 +3015,7 @@ export class IntegratedDocumentsService {
     }
 
     const recovered = await this.loadRecoveredSlotContent(sourceEntityType, context.source.id, slotKey, manager);
-    const normalizedDocumentContent = normalizeMarkdownRichText(document.content_markdown, {
+    const normalizedDocumentContent = await normalizeMarkdownRichText(document.content_markdown, {
       fieldName: 'content_markdown',
       enforceSizeLimit: false,
     }) || '';
@@ -3468,8 +3188,8 @@ export class IntegratedDocumentsService {
       }
     }
 
-    const preparedLegacyContent = this.prepareRecoveredContent(legacyContent);
-    const normalizedDocumentContent = normalizeMarkdownRichText(document.content_markdown, {
+    const preparedLegacyContent = await prepareRecoveredContent(legacyContent);
+    const normalizedDocumentContent = await normalizeMarkdownRichText(document.content_markdown, {
       fieldName: 'content_markdown',
       enforceSizeLimit: false,
     }) || '';
@@ -3726,7 +3446,7 @@ export class IntegratedDocumentsService {
     const existing = await this.getDocumentOrThrow(documentId, manager);
     const nextContent = body?.content_markdown === undefined
       ? existing.content_markdown
-      : (normalizeMarkdownRichText(body?.content_markdown, { fieldName: 'content_markdown' }) || '');
+      : (await normalizeMarkdownRichText(body?.content_markdown, { fieldName: 'content_markdown' }) || '');
 
     const sourceContext = await this.buildSourceAccessContext(
       sourceEntityType, sourceEntityId, slotKey, normalizedUserId, manager,

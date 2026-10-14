@@ -4,14 +4,15 @@ import * as path from 'node:path';
 import { BadRequestException } from '@nestjs/common';
 import { backendPath } from './backend-root';
 import { markdownToSearchText } from '../markdown-search-text';
-import { containsInlineDataImage, containsInlineDataImageText, findRawHtmlSnippets } from '../html-to-markdown';
+import { containsInlineDataImage, findRawHtmlSnippets } from '../html-to-markdown';
 import {
   MARKDOWN_MAX_BYTES,
   MARKDOWN_TOO_LARGE,
   assertMarkdownSize,
+  containsInlineDataImageText,
   markdownTextSize,
-  normalizeMarkdownRichText,
-} from '../markdown-rich-text';
+} from '../markdown-limits';
+import { normalizeMarkdownRichText } from '../markdown-rich-text';
 
 // Reference outputs: the regular expressions the linear scans replace.
 function referenceSearchText(value: string): string {

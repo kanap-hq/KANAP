@@ -17,9 +17,8 @@ import { AuditService } from '../audit/audit.service';
 import { extractInlineImageUrls } from '../common/content-image-urls';
 import { ItemNumberService } from '../common/item-number.service';
 import { DocumentImportService, ImportedDocumentResult } from '../common/document-import.service';
-import { assertMarkdownSize, normalizeMarkdownRichText } from '../common/markdown-rich-text';
-import { noteMarkdownParseBudget } from '../common/markdown-parse-budget';
-import { markdownToSearchText } from '../common/markdown-search-text';
+import { assertMarkdownSize } from '../common/markdown-limits';
+import { isMarkdownTooComplex, markdownToSearchText, normalizeMarkdownRichText } from '../common/markdown-worker';
 import { bilingualDocumentTsQueryAnyTermSql, bilingualDocumentTsQuerySql, normalizeDocumentAnyTermQuery } from '../common/document-search-tsquery';
 import { DocumentExportService, ExportImageFetchOptions } from '../common/document-export.service';
 import { BulkDeleteResult } from '../common/delete.types';
@@ -1347,8 +1346,17 @@ export class KnowledgeService {
     return resolveToUuid(idOrRef, 'document', manager);
   }
 
-  private stripMarkdown(value: string): string {
-    return markdownToSearchText(value);
+  /**
+   * Search text of a Markdown content (Markdown workers). A stored content the
+   * workers cannot process in time is indexed as it is.
+   */
+  private async stripMarkdown(value: string, opts?: { storedContent?: boolean }): Promise<string> {
+    try {
+      return await markdownToSearchText(value, { fieldName: 'content_markdown' });
+    } catch (error) {
+      if (opts?.storedContent && isMarkdownTooComplex(error)) return String(value || '').replace(/\s+/g, ' ').trim();
+      throw error;
+    }
   }
 
   private parseItemNumberQuery(input: string): number | null {
@@ -3840,7 +3848,7 @@ export class KnowledgeService {
       ? await this.getTemplateDocumentSummary(templateDocumentId, manager, tenantId, userId)
       : null;
 
-    let contentMarkdown = normalizeMarkdownRichText(body?.content_markdown, { fieldName: 'content_markdown' }) || '';
+    let contentMarkdown = await normalizeMarkdownRichText(body?.content_markdown, { fieldName: 'content_markdown' }) || '';
     if (templateDocument) {
       templateClassifications = await manager.query(
         `SELECT category_id, stream_id
@@ -3860,7 +3868,7 @@ export class KnowledgeService {
       templateDocument,
     });
 
-    const contentPlain = this.stripMarkdown(contentMarkdown);
+    const contentPlain = await this.stripMarkdown(contentMarkdown);
 
     const itemNumber = await this.itemNumbers.nextItemNumber('document', tenantId, manager);
 
@@ -3969,10 +3977,7 @@ export class KnowledgeService {
     }
 
     const summary = body?.summary == null ? null : String(body.summary).trim() || null;
-    if (opts?.storedContent) {
-      await noteMarkdownParseBudget([body?.content_markdown], { fieldName: 'content_markdown' });
-    }
-    const contentMarkdown = normalizeMarkdownRichText(body?.content_markdown, {
+    const contentMarkdown = await normalizeMarkdownRichText(body?.content_markdown, {
       fieldName: 'content_markdown',
       enforceSizeLimit: !opts?.storedContent,
     }) || '';
@@ -3997,7 +4002,7 @@ export class KnowledgeService {
       title,
       summary,
       content_markdown: contentMarkdown,
-      content_plain: this.stripMarkdown(contentMarkdown),
+      content_plain: await this.stripMarkdown(contentMarkdown, { storedContent: opts?.storedContent }),
       folder_id: body.folder_id,
       library_id: body.library_id,
       document_type_id: body.document_type_id,
@@ -4040,16 +4045,13 @@ export class KnowledgeService {
       }
 
       if (patch && patch.content_markdown !== undefined) {
-        if (opts?.storedContent) {
-          await noteMarkdownParseBudget([patch.content_markdown], { fieldName: 'content_markdown' });
-        }
-        const nextContent = normalizeMarkdownRichText(patch.content_markdown, {
+        const nextContent = await normalizeMarkdownRichText(patch.content_markdown, {
           fieldName: 'content_markdown',
           enforceSizeLimit: !opts?.storedContent,
         }) || '';
         if (nextContent !== saved.content_markdown) {
           saved.content_markdown = nextContent;
-          saved.content_plain = this.stripMarkdown(nextContent);
+          saved.content_plain = await this.stripMarkdown(nextContent, { storedContent: opts?.storedContent });
           changed = true;
         }
       }
@@ -4140,12 +4142,12 @@ export class KnowledgeService {
     }
 
     if (body?.content_markdown !== undefined) {
-      const normalized = normalizeMarkdownRichText(body.content_markdown, {
+      const normalized = await normalizeMarkdownRichText(body.content_markdown, {
         fieldName: 'content_markdown',
       }) || '';
       if (normalized !== existing.content_markdown) {
         existing.content_markdown = normalized;
-        existing.content_plain = this.stripMarkdown(normalized);
+        existing.content_plain = await this.stripMarkdown(normalized);
         changed = true;
         contentChanged = true;
       }
@@ -4410,9 +4412,9 @@ export class KnowledgeService {
     }
 
     if (body?.content_markdown !== undefined) {
-      const normalized = normalizeMarkdownRichText(body.content_markdown, { fieldName: 'content_markdown' }) || '';
+      const normalized = await normalizeMarkdownRichText(body.content_markdown, { fieldName: 'content_markdown' }) || '';
       existing.content_markdown = normalized;
-      existing.content_plain = this.stripMarkdown(normalized);
+      existing.content_plain = await this.stripMarkdown(normalized);
     }
 
     if (body?.folder_id !== undefined) {
@@ -5587,7 +5589,7 @@ export class KnowledgeService {
       throw new BadRequestException('Only comments can be created via this endpoint');
     }
 
-    const content = normalizeMarkdownRichText(body?.content, { fieldName: 'content' });
+    const content = await normalizeMarkdownRichText(body?.content, { fieldName: 'content' });
 
     const activity = manager.getRepository(DocumentActivity).create({
       document_id: documentId,
@@ -5622,7 +5624,7 @@ export class KnowledgeService {
       throw new BadRequestException('Only comments can be edited via this endpoint');
     }
 
-    existing.content = normalizeMarkdownRichText(body?.content, { fieldName: 'content' });
+    existing.content = await normalizeMarkdownRichText(body?.content, { fieldName: 'content' });
     existing.updated_at = new Date();
     return repo.save(existing);
   }
@@ -6195,7 +6197,7 @@ export class KnowledgeService {
     }
 
     return {
-      markdown: this.importService.rewriteImageTargets(converted.markdown, replacements, converted.omittedTargets),
+      markdown: await this.importService.rewriteImageTargets(converted.markdown, replacements, converted.omittedTargets),
       warnings: converted.warnings,
     };
   }

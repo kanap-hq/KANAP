@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { decodeNumericHtmlEntities } from '../../common/html-entities';
-import { noteHtmlContentSourceParseBudget, resolveHtmlContentSource } from '../../common/html-to-markdown';
+import { markdownWorkBudget, resolveHtmlContentSource, resolveHtmlContentSources } from '../../common/markdown-worker';
 import { openValidatedFetch } from '../../common/pinned-fetch';
 import { Features } from '../../config/features';
 import { AiSecretCipherService } from '../ai-secret-cipher.service';
@@ -659,9 +659,8 @@ export class GlpiService {
 
     const record = this.expectRecord(payload, 'GLPI ticket');
     const resolvedTicketId = parseNumericGlpiValue(record.id) ?? ticketId;
-    // The ticket text is measured by the Markdown parser off the main thread first.
-    await noteHtmlContentSourceParseBudget(record.content, 'description');
-    const contentHtml = textOrNull(resolveHtmlContentSource(String(record.content ?? '')));
+    // Read in the Markdown workers (markdown-worker.ts).
+    const contentHtml = textOrNull(await resolveHtmlContentSource(String(record.content ?? ''), { fieldName: 'description' }));
     const name = textOrNull(record.name);
     return {
       id: resolvedTicketId,
@@ -1082,6 +1081,7 @@ export class GlpiService {
   ): Promise<GlpiTicketFollowup[]> {
     const results: GlpiTicketFollowup[] = [];
     const seenIds = new Set<number>();
+    const followupBudget = markdownWorkBudget();
     let offset = 0;
     let total: number | null = null;
 
@@ -1116,12 +1116,16 @@ export class GlpiService {
         throw new BadRequestException('GLPI ticket followups response was malformed.');
       }
 
-      // The follow-up texts are measured by the Markdown parser off the main thread first.
-      await Promise.all(payload.map((item) => noteHtmlContentSourceParseBudget(
-        item && typeof item === 'object' ? (item as Record<string, unknown>).content : null,
-      )));
+      // The follow-up texts of the page are read in the Markdown workers in one call, within
+      // the time budget of all the follow-ups of the ticket.
+      const contents = await resolveHtmlContentSources(
+        payload.map((item) => String(
+          (item && typeof item === 'object' && !Array.isArray(item) ? (item as Record<string, unknown>).content : null) ?? '',
+        )),
+        { fieldName: 'content', budget: followupBudget },
+      );
       const pageItems = payload
-        .map((item) => this.normalizeFollowup(item))
+        .map((item, index) => this.normalizeFollowup(item, contents[index]))
         .filter((item): item is GlpiTicketFollowup => !!item);
       let newItemCount = 0;
       for (const item of pageItems) {
@@ -1472,7 +1476,8 @@ export class GlpiService {
     return { baseUrl, userToken, appToken };
   }
 
-  private normalizeFollowup(payload: unknown): GlpiTicketFollowup | null {
+  /** @param resolvedContent the text of the follow-up as `resolveHtmlContentSource` reads it */
+  private normalizeFollowup(payload: unknown, resolvedContent: string): GlpiTicketFollowup | null {
     if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
       return null;
     }
@@ -1483,7 +1488,7 @@ export class GlpiService {
       return null;
     }
 
-    const contentHtml = textOrNull(resolveHtmlContentSource(String(record.content ?? '')));
+    const contentHtml = textOrNull(resolvedContent);
     const authorId = parseNumericGlpiValue(record.users_id);
     const editorId = parseNumericGlpiValue(record.users_id_editor);
     const authorLabel = decodeGlpiPlainTextField(textOrNull(record.user_name)

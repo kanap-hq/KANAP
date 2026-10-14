@@ -13,7 +13,7 @@ import { RemoteInlineImageImportService } from '../common/remote-inline-image-im
 import { DocumentImportService, ImportedDocumentResult } from '../common/document-import.service';
 import { extractInlineImageUrls } from '../common/content-image-urls';
 import { ImportExecutionOptions, readUploadedFileBuffer } from '../common/import-connection';
-import { assertMarkdownSize } from '../common/markdown-rich-text';
+import { assertMarkdownSize } from '../common/markdown-limits';
 
 @Injectable()
 export class TaskAttachmentsService {
@@ -159,7 +159,7 @@ export class TaskAttachmentsService {
     }
 
     return {
-      markdown: this.importService.rewriteImageTargets(converted.markdown, replacements, converted.omittedTargets),
+      markdown: await this.importService.rewriteImageTargets(converted.markdown, replacements, converted.omittedTargets),
       warnings: converted.warnings,
     };
   }

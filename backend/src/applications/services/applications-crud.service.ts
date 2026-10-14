@@ -8,7 +8,7 @@ import { Repository } from 'typeorm';
 import { format } from '@fast-csv/format';
 import { parseString } from '@fast-csv/parse';
 import { decodeCsvBufferUtf8OrThrow } from '../../common/encoding';
-import { assertMarkdownSize } from '../../common/markdown-rich-text';
+import { assertMarkdownSize } from '../../common/markdown-limits';
 import { Application } from '../application.entity';
 import { ApplicationOwner } from '../application-owner.entity';
 import { ApplicationCompany } from '../application-company.entity';

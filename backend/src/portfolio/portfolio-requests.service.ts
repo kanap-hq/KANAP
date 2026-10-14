@@ -46,7 +46,7 @@ import { fixMulterFilename } from '../common/upload';
 import { extractInlineImageUrls } from '../common/content-image-urls';
 import { isStoragePathReferencedInAnyTable } from '../common/storage-path-refs';
 import { detectChanges, REQUEST_TRACKED_FIELDS, resolveDisplayNames } from '../common/change-detection';
-import { normalizeMarkdownRichText } from '../common/markdown-rich-text';
+import { MarkdownWorkBudget, markdownWorkBudget, normalizeMarkdownRichText } from '../common/markdown-worker';
 import { RemoteInlineImageImportService } from '../common/remote-inline-image-import.service';
 import { IntegratedDocumentsService } from '../knowledge/integrated-documents.service';
 import { Task } from '../tasks/task.entity';
@@ -1180,8 +1180,9 @@ export class PortfolioRequestsService {
 
     const name = String(body.name || '').trim();
     if (!name) throw new BadRequestException('name is required');
-    const purposeContent = this.normalizeNullable(body.purpose);
-    const risksContent = this.normalizeNullable(body.risks);
+    const markdownBudget = markdownWorkBudget();
+    const purposeContent = await this.normalizeNullable(body.purpose, markdownBudget);
+    const risksContent = await this.normalizeNullable(body.risks, markdownBudget);
 
     const entity = repo.create({
       tenant_id: tenantId,
@@ -1198,8 +1199,8 @@ export class PortfolioRequestsService {
       // Note: Effort estimation is now derived from Time estimation criteria values
 
       // Analysis
-      current_situation: this.normalizeNullable(body.current_situation),
-      expected_benefits: this.normalizeNullable(body.expected_benefits),
+      current_situation: await this.normalizeNullable(body.current_situation, markdownBudget),
+      expected_benefits: await this.normalizeNullable(body.expected_benefits, markdownBudget),
       feasibility_review: this.normalizeFeasibilityReview(body.feasibility_review),
 
       // Team leads/sponsors
@@ -1276,8 +1277,8 @@ export class PortfolioRequestsService {
     const hasPurposeOverride = Object.prototype.hasOwnProperty.call(overrides || {}, 'purpose');
     const hasRequestorOverride = Object.prototype.hasOwnProperty.call(overrides || {}, 'requestor_id');
     const purposeContent = hasPurposeOverride
-      ? this.normalizeNullable(overrides?.purpose)
-      : this.normalizeNullable(task.description);
+      ? await this.normalizeNullable(overrides?.purpose)
+      : await this.normalizeNullable(task.description);
 
     const request = requestRepo.create({
       tenant_id: tenantId,
@@ -1427,8 +1428,9 @@ export class PortfolioRequestsService {
 
     const before = { ...existing };
     const has = (key: string) => Object.prototype.hasOwnProperty.call(body, key);
-    const nextPurpose = has('purpose') ? this.normalizeNullable(body.purpose) : undefined;
-    const nextRisks = has('risks') ? this.normalizeNullable(body.risks) : undefined;
+    const markdownBudget = markdownWorkBudget();
+    const nextPurpose = has('purpose') ? await this.normalizeNullable(body.purpose, markdownBudget) : undefined;
+    const nextRisks = has('risks') ? await this.normalizeNullable(body.risks, markdownBudget) : undefined;
 
     // Overview fields
     if (has('name')) {
@@ -1467,8 +1469,8 @@ export class PortfolioRequestsService {
     // Note: Effort estimation is now derived from Time estimation criteria values
 
     // Analysis
-    if (has('current_situation')) existing.current_situation = this.normalizeNullable(body.current_situation);
-    if (has('expected_benefits')) existing.expected_benefits = this.normalizeNullable(body.expected_benefits);
+    if (has('current_situation')) existing.current_situation = await this.normalizeNullable(body.current_situation, markdownBudget);
+    if (has('expected_benefits')) existing.expected_benefits = await this.normalizeNullable(body.expected_benefits, markdownBudget);
     if (has('feasibility_review')) {
       existing.feasibility_review = this.normalizeFeasibilityReview(body.feasibility_review);
     }
@@ -1522,7 +1524,7 @@ export class PortfolioRequestsService {
         author_id: userId,
         type: isDecision ? 'decision' : 'change',
         content: isDecision
-          ? normalizeMarkdownRichText(body.decision_rationale, { fieldName: 'decision_rationale' })
+          ? await normalizeMarkdownRichText(body.decision_rationale, { fieldName: 'decision_rationale' })
           : null,
         context: isDecision ? (body.decision_context || null) : null,
         decision_outcome: isDecision ? (body.decision_outcome as any || null) : null,
@@ -2257,7 +2259,7 @@ export class PortfolioRequestsService {
     if (!request) throw new NotFoundException('Request not found');
 
     const isDecision = opts?.isDecision === true;
-    const normalizedContent = normalizeMarkdownRichText(content, { fieldName: 'content' });
+    const normalizedContent = await normalizeMarkdownRichText(content, { fieldName: 'content' });
     let changedFields: Record<string, [unknown, unknown]> | null = null;
     let oldStatus: string | null = null;
 
@@ -2367,7 +2369,7 @@ export class PortfolioRequestsService {
     }
 
     const oldContent = activity.content;
-    activity.content = normalizeMarkdownRichText(content, { fieldName: 'content' });
+    activity.content = await normalizeMarkdownRichText(content, { fieldName: 'content' });
     activity.updated_at = new Date();
 
     const saved = await activityRepo.save(activity);
@@ -2725,8 +2727,9 @@ export class PortfolioRequestsService {
     }
   }
 
-  private normalizeNullable(value: unknown): string | null {
-    return normalizeMarkdownRichText(value);
+  /** @param budget time budget shared by the rich-text fields of one write (Markdown workers) */
+  private async normalizeNullable(value: unknown, budget?: MarkdownWorkBudget): Promise<string | null> {
+    return await normalizeMarkdownRichText(value, { budget });
   }
 
   private normalizeOriginTaskUrl(

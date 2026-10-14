@@ -5,14 +5,14 @@ import { applicationCsvConfig } from '../../applications/application-csv.config'
 import { ApplicationsCrudService } from '../../applications/services/applications-crud.service';
 import { InterfacesCrudService } from '../../interfaces/services/interfaces-crud.service';
 import { DEFAULT_CLASSIFICATION_CATALOG } from '../../it-ops-settings/classification-catalog';
-import { closeMarkdownParseWorkers } from '../../common/markdown-parse-budget';
-import { MARKDOWN_MAX_BYTES, MARKDOWN_TOO_LARGE } from '../../common/markdown-rich-text';
-import { IntegratedDocumentsService } from '../integrated-documents.service';
+import { MARKDOWN_MAX_BYTES, MARKDOWN_TOO_LARGE } from '../../common/markdown-limits';
+import { closeMarkdownWorkers, interfaceSpecificationMarkdown } from '../../common/markdown-worker';
+import { interfaceSpecificationMarkdown as interfaceSpecificationMarkdownInProcess } from '../integrated-document-markdown';
 
 // The texts integrated documents are built from (application description,
 // interface specification fields) get the Markdown size limit when a write sets
-// them; stored texts are kept. The interface specification is built without
-// parsing a stored text the parser cannot handle within its budget.
+// them; stored texts are kept. The interface specification is built in the
+// Markdown workers; one they cannot build in time is shown as plain text.
 
 const tenantId = randomUUID();
 const applicationId = randomUUID();
@@ -191,39 +191,37 @@ function interfaceRow(overrides: Record<string, unknown>) {
   };
 }
 
-async function testInterfaceSpecificationIsBuiltWithinTheParseBudget() {
-  const integrated = new IntegratedDocumentsService(null as any, null as any, null as any, null as any) as any;
-
-  // Normal texts: the same specification as before.
+async function testInterfaceSpecificationIsBuiltInTheWorkers() {
+  // Normal texts: the same specification as built in process.
   const normal = interfaceRow({ functional_rules: fill('Règle _métier_ appliquée au flux. ', 20 * 1024) });
-  assert.equal(
-    await integrated.buildInterfaceSpecificationMarkdownWithinBudget(normal),
-    integrated.buildInterfaceSpecificationMarkdown(normal),
-  );
+  assert.equal(await interfaceSpecificationMarkdown(normal as any), interfaceSpecificationMarkdownInProcess(normal as any));
+  const withHtml = interfaceRow({ overview_notes: '<p>Flux <strong>quotidien</strong> vers la paie.</p>' });
+  assert.equal(await interfaceSpecificationMarkdown(withHtml as any), interfaceSpecificationMarkdownInProcess(withHtml as any));
 
-  // A stored text the parser cannot handle within its budget is shown as plain text.
+  // Stored texts the workers cannot read in time: the whole specification as plain text.
   const unparsable = fill('_a ', MARKDOWN_MAX_BYTES);
-  const { result, maxLagMs } = await withMainThreadProbe(() => integrated.buildInterfaceSpecificationMarkdownWithinBudget(
-    interfaceRow({ overview_notes: unparsable, business_objects: ['Salarié', unparsable] }),
+  const { result, maxLagMs } = await withMainThreadProbe(() => interfaceSpecificationMarkdown(
+    interfaceRow({ overview_notes: unparsable, business_objects: ['Salarié', unparsable] }) as any,
   ));
   const markdown = String(result);
-  assert.ok(maxLagMs < 100, `main thread busy ${maxLagMs.toFixed(0)} ms at once`);
-  assert.ok(markdown.includes(`### Overview notes\n\n\`\`\`text\n${unparsable.trim()}\n\`\`\``), 'overview notes as plain text');
-  assert.ok(markdown.includes('### Business purpose\n\nEnvoyer la paie **chaque mois**.'), 'other texts unchanged');
-  assert.ok(markdown.includes('### Business objects\n\n```json\n'), 'a list holding such a text is shown as data');
+  assert.ok(maxLagMs < 50, `main thread busy ${maxLagMs.toFixed(0)} ms at once`);
+  assert.ok(markdown.startsWith('```text\n## Business Purpose & Overview'), 'specification as plain text');
+  assert.ok(markdown.includes(`### Overview notes\n\n${unparsable.trim()}`), 'overview notes kept');
+  assert.ok(markdown.includes('### Business purpose\n\nEnvoyer la paie **chaque mois**.'), 'other texts kept');
+  assert.ok(markdown.endsWith('\n```'), 'one closed code block');
 }
 
 async function run() {
   await testApplicationDescriptionIsLimitedOnWrite();
   await testApplicationCsvDescriptionIsLimited();
   await testInterfaceSpecificationSourcesAreLimitedOnWrite();
-  await testInterfaceSpecificationIsBuiltWithinTheParseBudget();
-  await closeMarkdownParseWorkers();
+  await testInterfaceSpecificationIsBuiltInTheWorkers();
+  await closeMarkdownWorkers();
 }
 
 run().catch(async (error) => {
   // eslint-disable-next-line no-console
   console.error(error);
-  await closeMarkdownParseWorkers();
+  await closeMarkdownWorkers();
   process.exit(1);
 });

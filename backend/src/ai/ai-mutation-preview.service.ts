@@ -24,7 +24,6 @@ import { LEGACY_GLPI_TICKETING_PROVIDER_KEY } from './control-plane/providers/pr
 import { AiMutationOperationRegistry } from './mutation/ai-mutation-operation.registry';
 import { AiPreparedMutationPreview } from './mutation/ai-mutation-operation.types';
 import { mapDatabaseError } from '../common/filters/database-error.mapping';
-import { collectJsonStrings, noteMarkdownParseBudget } from '../common/markdown-parse-budget';
 
 const PREVIEW_TTL_MS = 10 * 60 * 1000;
 const MAX_CONVERSATION_PREVIEWS = 50;
@@ -425,8 +424,6 @@ export class AiMutationPreviewService {
     );
     await this.assertPendingCapacityAvailable(context, context.conversationId ?? null);
 
-    // Long texts of the tool input are measured by the Markdown parser off the main thread first.
-    await noteMarkdownParseBudget(collectJsonStrings(input), { fieldName: 'ai_input' });
     const prepared = await operation.prepareCreatePreview(context, input);
     const existing = await this.findEquivalentConversationPreview(context, operation.toolName, prepared);
     if (existing) {
@@ -937,8 +934,6 @@ export class AiMutationPreviewService {
     const queryRunner = context.manager.queryRunner;
     const useSavepoint = queryRunner?.isTransactionActive === true;
 
-    // The stored input is parsed again on execution, maybe in another process: measured again.
-    await noteMarkdownParseBudget(collectJsonStrings(preview.mutation_input), { fieldName: 'ai_input' });
     try {
       if (useSavepoint) {
         await queryRunner.query(`SAVEPOINT ${EXECUTION_SAVEPOINT_NAME}`);

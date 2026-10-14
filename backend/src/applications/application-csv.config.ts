@@ -8,7 +8,7 @@ import {
   CsvExportContext,
   CsvImportContext,
 } from '../common/csv';
-import { assertMarkdownSize } from '../common/markdown-rich-text';
+import { assertMarkdownSize } from '../common/markdown-limits';
 
 /**
  * CSV configuration for Applications entity (V2)
