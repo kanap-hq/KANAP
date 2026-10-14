@@ -17,7 +17,11 @@ import { ensureDefaultAnalyticsAxis } from '../../analytics/analytics-axes.util'
 //   first, asc the older first, and each item carries its created_at.
 // - A sort field the registry does not advertise is never dropped silently: the result names it
 //   in `sort_ignored`, with the order it applied and the fields it could have used.
-// - Page sizes: the default, the general maximum and the family maximum (`aiQueryLimit`).
+// - Page sizes: the default, the general maximum and the family maximum (`aiQueryLimit`); a
+//   reduced page size is named in `limit_capped`.
+// - The currency of the amounts: budget lines in the tenant's reporting currency
+//   (`amounts_currency`), in lists, sums and details; contracts in each contract's own; a line's
+//   years without a rate named in `amounts_fx_missing_years`.
 // - A field flagged `sortable` is a sort field, and the other way around.
 
 process.env.STRIPE_SECRET_KEY = '';
@@ -57,16 +61,17 @@ const SERVICE_FALLBACK_SORT: Record<string, string> = {
 const OLDER = '2030-01-15T10:00:00.000Z';
 const NEWER = '2031-01-15T10:00:00.000Z';
 
-type Harness = { app: any; dataSource: DataSource; executor: any; registries: any };
+type Harness = { app: any; dataSource: DataSource; executor: any; aggregates: any; registries: any };
 type Seed = { tenantId: string; userId: string; rows: Record<string, { older: string; newer: string }> };
 
 async function createHarness(): Promise<Harness> {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required for ai-query-registry-contract.integration.spec.ts.');
   const { AppModule } = require('../../app.module');
   const { AiQueryExecutor } = require('../query/ai-query.executor');
+  const { AiAggregateExecutor } = require('../query/ai-aggregate.executor');
   const registries = require('../query/registries');
   const app = await NestFactory.createApplicationContext(AppModule, { logger: false, abortOnError: false });
-  return { app, dataSource: app.get(DataSource), executor: app.get(AiQueryExecutor), registries };
+  return { app, dataSource: app.get(DataSource), executor: app.get(AiQueryExecutor), aggregates: app.get(AiAggregateExecutor), registries };
 }
 
 async function insertId(runner: QueryRunner, sql: string, params: unknown[]): Promise<string> {
@@ -306,6 +311,10 @@ async function testPageSizes(harness: Harness, runner: QueryRunner, seed: Seed) 
   assert.equal(await limitOf('suppliers'), AI_QUERY_DEFAULT_LIMIT, 'the default page size');
   assert.equal(await limitOf('suppliers', 7), 7, 'a smaller page size is kept');
   assert.equal(await limitOf('suppliers', 500), AI_QUERY_MAX_LIMIT, 'a larger one is reduced to the maximum');
+  const capped = await runQuery(runner, harness.executor, ctx, { entity_type: 'spend_items', limit: 16 });
+  assert.deepEqual(capped.result.limit_capped, { requested: 16, applied: 15 }, 'a reduced page size is named');
+  const kept = await runQuery(runner, harness.executor, ctx, { entity_type: 'spend_items', limit: 15 });
+  assert.equal(kept.result.limit_capped, undefined, 'a page size within the maximum is not');
   for (const [entityType, max] of Object.entries<number>(AI_QUERY_FAMILY_MAX_LIMIT)) {
     assert.equal(await limitOf(entityType, 500), max, `${entityType}: its own maximum`);
     assert.equal(await limitOf(entityType), Math.min(AI_QUERY_DEFAULT_LIMIT, max), `${entityType}: its default`);
@@ -313,6 +322,44 @@ async function testPageSizes(harness: Harness, runner: QueryRunner, seed: Seed) 
   const page = await runQuery(runner, harness.executor, ctx, { entity_type: 'suppliers', limit: 1, page: 2, sort: { field: 'created_at', direction: 'desc' } });
   assert.deepEqual(page.ids, [seed.rows.suppliers.older], 'page 2 of 1 is the second row');
   assert.equal(page.result.truncated, false, 'the last page is not truncated');
+}
+
+async function testAmountsCurrency(harness: Harness, runner: QueryRunner, seed: Seed) {
+  const ctx = context(runner, seed);
+  // Not the lines' currency (EUR): the amounts follow the tenant's reporting currency.
+  await runner.query(`UPDATE tenants SET metadata = metadata || '{"reporting_currency":"CHF"}'::jsonb WHERE id = $1`, [seed.tenantId]);
+  for (const entityType of ['spend_items', 'capex_items']) {
+    const { result, error } = await runQuery(runner, harness.executor, ctx, { entity_type: entityType });
+    assert.equal(error, null, `${entityType}: runs (${error})`);
+    assert.equal(result.amounts_currency, 'CHF', `${entityType}: the amounts are in the reporting currency`);
+    assert.match(result.amounts_currency_note, /CHF is the reporting currency/, `${entityType}: the note says so`);
+    assert.equal(result.items[0].metadata.currency, 'EUR', `${entityType}: the item keeps its own currency`);
+    assert.equal(result.items[0].metadata.amounts_fx_missing_years, null, `${entityType}: no year without a rate`);
+
+    const sum = await harness.aggregates.execute(ctx, { entity_type: entityType, group_by: 'currency', metric: 'y_budget', function: 'sum' });
+    assert.equal(sum.amounts_currency, 'CHF', `${entityType}: a sum of amounts names their currency`);
+    const count = await harness.aggregates.execute(ctx, { entity_type: entityType, group_by: 'currency' });
+    assert.equal(count.amounts_currency, undefined, `${entityType}: a count has no currency`);
+    const fte = await harness.aggregates.execute(ctx, { entity_type: entityType, group_by: 'currency', metric: 'y_budget_fte', function: 'sum' });
+    assert.equal(fte.amounts_currency, undefined, `${entityType}: nor an FTE`);
+
+    const detail = await harness.executor.executeDetail(ctx, { entity_type: entityType, entity_id: seed.rows[entityType].newer });
+    assert.equal(detail.amounts_currency, 'CHF', `${entityType}: the detail names the currency of its amounts`);
+    assert.match(detail.amounts_currency_note, /versions\.\*\.totals and financial_versions are in the line's own currency/, `${entityType}: and which ones are the line's`);
+  }
+
+  const contracts = await runQuery(runner, harness.executor, ctx, { entity_type: 'contracts' });
+  assert.equal(contracts.result.amounts_currency, null, 'contracts: no single currency');
+  assert.match(contracts.result.amounts_currency_note, /each contract's own currency/, 'contracts: each its own');
+  const contractSum = await harness.aggregates.execute(ctx, { entity_type: 'contracts', group_by: 'currency', metric: 'yearly_amount', function: 'sum' });
+  assert.match(contractSum.amounts_currency_note, /do not add up/, 'contracts: a sum warns across currencies');
+  const users = await runQuery(runner, harness.executor, ctx, { entity_type: 'users' });
+  assert.equal('amounts_currency' in users.result, false, 'a family without amounts says nothing');
+
+  const { budgetFxMissingYears } = require('../query/ai-query.executor');
+  const reporting = (currency: string, fx_source: string) => ({ reporting: { currency, reporting_currency: 'EUR', fx_source } });
+  const row = { versions: { y: reporting('USD', 'missing'), yPlus1: reporting('USD', 'live'), yMinus1: reporting('EUR', 'missing') } };
+  assert.deepEqual(budgetFxMissingYears(row, 2026), [2026], 'a year without a rate for another currency is named, not the reporting currency');
 }
 
 async function run() {
@@ -328,6 +375,7 @@ async function run() {
       await testCreatedAtOrderOnSeededRows(harness, runner, seed);
       await testUnknownSortIsReported(harness, runner, seed);
       await testPageSizes(harness, runner, seed);
+      await testAmountsCurrency(harness, runner, seed);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();

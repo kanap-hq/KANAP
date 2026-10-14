@@ -316,7 +316,7 @@ export class AiToolRegistry {
         {
           name: 'query_entities',
           category: 'authoritative',
-          description: 'Query one readable entity family with server-side filters, sort, pagination, and exact totals. Each item carries its created_at and updated_at. If `filters_ignored` is non-empty, the query was not fully honored and must be repaired before answering. `sort` in the result is the order the items are in; if `sort_ignored` is non-empty, the requested sort field is not supported and the items are in the default order: pick a field from `sortable_fields` and query again before answering any question about order (latest, oldest, largest, first). Items with the same sort value come in no particular order: when the first items share it (for example the same created_at), say they tie instead of naming one.',
+          description: 'Query one readable entity family with server-side filters, sort, pagination, and exact totals. Each item carries its created_at and updated_at. If `filters_ignored` is non-empty, the query was not fully honored and must be repaired before answering. `sort` in the result is the order the items are in; if `sort_ignored` is non-empty, the requested sort field is not supported and the items are in the default order: pick a field from `sortable_fields` and query again before answering any question about order (latest, oldest, largest, first). Items with the same sort value come in no particular order: when the first items share it (for example the same created_at), say they tie instead of naming one. A limit above the family\'s maximum is reduced and named in `limit_capped`. On budget lines and contracts, `amounts_currency` and `amounts_currency_note` give the currency of the amounts: an item\'s own `currency` is the one its amounts are entered in, not the one they are returned in.',
           inputSchema: QueryEntitiesInputSchema,
           inputSummary: {
             entity_type: `One of ${QUERY_ENTITY_TYPE_SUMMARY}.`,
@@ -341,7 +341,7 @@ export class AiToolRegistry {
         {
           name: 'aggregate_entities',
           category: 'authoritative',
-          description: 'Break down one readable entity family by a supported field with exact server-side counts or metric aggregations. If `filters_ignored` is non-empty, the query was not fully honored and must be repaired before answering.',
+          description: 'Break down one readable entity family by a supported field with exact server-side counts or metric aggregations. If `filters_ignored` is non-empty, the query was not fully honored and must be repaired before answering. A sum or average of amounts names their currency in `amounts_currency` and `amounts_currency_note` (budget lines: the reporting currency; contracts: each contract\'s own, so group or filter by currency first).',
           inputSchema: AggregateEntitiesInputSchema,
           inputSummary: {
             entity_type: `One of ${QUERY_ENTITY_TYPE_SUMMARY}.`,
@@ -407,7 +407,7 @@ export class AiToolRegistry {
         {
           name: 'get_entity_detail',
           category: 'inspection',
-          description: 'Return one readable business/domain entity as a detailed AI-safe DTO. Use query_entities for long lists, then call this for the specific item that needs full scalar detail and attachment metadata.',
+          description: 'Return one readable business/domain entity as a detailed AI-safe DTO. Use query_entities for long lists, then call this for the specific item that needs full scalar detail and attachment metadata. On budget lines and contracts, `amounts_currency_note` says which amounts are in the reporting currency and which in the item\'s own currency.',
           inputSchema: GetEntityDetailInputSchema,
           inputSummary: {
             entity_type: `One of ${QUERY_ENTITY_TYPE_SUMMARY}.`,
