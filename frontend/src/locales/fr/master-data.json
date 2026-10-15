@@ -218,6 +218,12 @@
       "nameRequired": "Saisissez un nom.",
       "companyRequired": "Choisissez une société.",
       "headcountInvalid": "Saisissez un nombre entier, 0 ou plus."
+    },
+    "delete": {
+      "toDelete_one": "{{count}} département sera supprimé :",
+      "toDelete_other": "{{count}} départements seront supprimés :",
+      "kept_one": "{{count}} département ne peut pas être supprimé et est conservé :",
+      "kept_other": "{{count}} départements ne peuvent pas être supprimés et sont conservés :"
     }
   },
   "costCenters": {

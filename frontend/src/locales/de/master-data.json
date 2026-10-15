@@ -218,6 +218,12 @@
       "nameRequired": "Geben Sie einen Namen ein.",
       "companyRequired": "Wählen Sie ein Unternehmen.",
       "headcountInvalid": "Geben Sie eine ganze Zahl ein, 0 oder mehr."
+    },
+    "delete": {
+      "toDelete_one": "{{count}} Abteilung wird gelöscht:",
+      "toDelete_other": "{{count}} Abteilungen werden gelöscht:",
+      "kept_one": "{{count}} Abteilung kann nicht gelöscht werden und bleibt erhalten:",
+      "kept_other": "{{count}} Abteilungen können nicht gelöscht werden und bleiben erhalten:"
     }
   },
   "costCenters": {

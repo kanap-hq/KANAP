@@ -11,6 +11,8 @@ import { ChartOfAccountsDeleteService } from '../../accounts/chart-of-accounts-d
 import { Asset } from '../../assets/asset.entity';
 import { AssetsDeleteService } from '../../assets/assets-delete.service';
 import { Company } from '../../companies/company.entity';
+import { Department } from '../../departments/department.entity';
+import { DepartmentsDeleteService } from '../../departments/departments-delete.service';
 import { User } from '../../users/user.entity';
 import { UsersDeleteService } from '../../users/users-delete.service';
 import { ReferenceCheckService } from '../reference-check.service';
@@ -240,10 +242,49 @@ async function testAccountsAndCharts() {
   });
 }
 
+/** A version of `lineId` for 2026 allocated to `departmentId`. */
+async function allocate(r: QueryRunner, t: string, lineId: string, companyId: string, departmentId: string) {
+  const versionId = await one(
+    r,
+    `INSERT INTO spend_versions (tenant_id, spend_item_id, version_name, as_of_date, budget_year)
+     VALUES ($1, $2, 'Budget 2026', '2026-01-01', 2026) RETURNING id`,
+    [t, lineId],
+  );
+  await r.query(
+    `INSERT INTO spend_allocations (tenant_id, version_id, company_id, department_id, allocation_pct) VALUES ($1, $2, $3, $4, 100)`,
+    [t, versionId, companyId, departmentId],
+  );
+}
+
+async function testDepartments() {
+  await withRollback(async (runner, t) => {
+    const svc = new DepartmentsDeleteService(runner.manager.getRepository(Department), noAudit);
+    const paris = await cc.seedCompany(runner, t, 'Departments Paris');
+    const department = (name: string) =>
+      one(runner, `INSERT INTO departments (tenant_id, company_id, name) VALUES ($1, $2, $3) RETURNING id`, [t, paris, name]);
+    const free = await department('Spare');
+    const used = await department('Finance');
+    await allocate(runner, t, await cc.seedLine(runner, 'opex', t, null), paris, used);
+    await allocate(runner, t, await cc.seedLine(runner, 'opex', t, null), paris, used);
+    await allocate(runner, t, await cc.seedLine(runner, 'capex', t, null), paris, used);
+    const usages = [{ type: 'opex_lines', total: 2 }, { type: 'capex_lines', total: 1 }];
+
+    assert.deepEqual(await svc.deleteCheck([free, used, 'nope'], { manager: runner.manager }), {
+      refused: [{ id: used, name: 'Finance', code: 'DEPARTMENT_IN_USE', usages }],
+    });
+    assert.equal(await count(runner, 'departments', [free, used]), 2, 'the check deletes nothing');
+    await expectRefusal(runner, () => svc.delete(used, { manager: runner.manager }), 'DEPARTMENT_IN_USE', usages,
+      /^Cannot delete department "Finance": it is being used in allocations/);
+    const bulk = await svc.bulkDelete([free, used], null, { manager: runner.manager });
+    assert.deepEqual(bulk.deleted, [free]);
+    assert.deepEqual(bulk.failed.map((f) => [f.code, f.usages]), [['DEPARTMENT_IN_USE', usages]]);
+  });
+}
+
 async function run() {
   await dataSource.initialize();
   try {
-    for (const test of [testAssets, testCostCenters, testCalendars, testUsers, testAccountsAndCharts]) {
+    for (const test of [testAssets, testCostCenters, testCalendars, testUsers, testAccountsAndCharts, testDepartments]) {
       await test();
       console.log(`  ok ${test.name}`);
     }

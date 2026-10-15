@@ -105,5 +105,6 @@
   "ANALYTICS_VALUE_IN_USE": "Este valor se usa en {{usages}}. Desactívelo, o elimínelo de todos modos desde su página: las líneas lo pierden.",
   "ANALYTICS_DIMENSION_HAS_VALUES": "Esta dimensión aún tiene {{usages}}. Elimínelos primero, o elimine la dimensión con sus valores desde su página.",
   "ANALYTICS_DEFAULT_DIMENSION": "Esta dimensión no se puede eliminar: archivos antiguos y preguntas a la IA la usan. Desactive sus valores en su lugar.",
-  "BUDGET_LINE_FROZEN": "Esta línea tiene importes en {{column}} {{year}}, una columna presupuestaria congelada. Descongele primero la columna, o indique un fin de validez en lugar de eliminar la línea."
+  "BUDGET_LINE_FROZEN": "Esta línea tiene importes en {{column}} {{year}}, una columna presupuestaria congelada. Descongele primero la columna, o indique un fin de validez en lugar de eliminar la línea.",
+  "DEPARTMENT_IN_USE": "Este departamento se usa en las asignaciones de {{usages}}. Desactívelo en lugar de eliminarlo."
 }

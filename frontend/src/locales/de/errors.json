@@ -105,5 +105,6 @@
   "ANALYTICS_VALUE_IN_USE": "Dieser Wert wird noch verwendet: {{usages}}. Deaktivieren Sie ihn, oder löschen Sie ihn trotzdem auf seiner Seite: Die Zeilen verlieren ihn.",
   "ANALYTICS_DIMENSION_HAS_VALUES": "Diese Dimension enthält noch {{usages}}. Löschen Sie diese zuerst, oder löschen Sie die Dimension mit ihren Werten auf ihrer Seite.",
   "ANALYTICS_DEFAULT_DIMENSION": "Diese Dimension kann nicht gelöscht werden: Ältere Dateien und KI-Fragen verwenden sie. Deaktivieren Sie stattdessen ihre Werte.",
-  "BUDGET_LINE_FROZEN": "Diese Zeile hat Beträge in {{column}} {{year}}, einer eingefrorenen Budgetspalte. Heben Sie zuerst das Einfrieren der Spalte auf, oder setzen Sie ein Gültigkeitsende, statt die Zeile zu löschen."
+  "BUDGET_LINE_FROZEN": "Diese Zeile hat Beträge in {{column}} {{year}}, einer eingefrorenen Budgetspalte. Heben Sie zuerst das Einfrieren der Spalte auf, oder setzen Sie ein Gültigkeitsende, statt die Zeile zu löschen.",
+  "DEPARTMENT_IN_USE": "Diese Abteilung wird in den Zuordnungen von {{usages}} verwendet. Deaktivieren Sie sie, statt sie zu löschen."
 }

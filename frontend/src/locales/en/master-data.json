@@ -218,6 +218,12 @@
       "nameRequired": "Enter a name.",
       "companyRequired": "Choose a company.",
       "headcountInvalid": "Enter a whole number, 0 or more."
+    },
+    "delete": {
+      "toDelete_one": "{{count}} department will be deleted:",
+      "toDelete_other": "{{count}} departments will be deleted:",
+      "kept_one": "{{count}} department cannot be deleted and is kept:",
+      "kept_other": "{{count}} departments cannot be deleted and are kept:"
     }
   },
   "costCenters": {
