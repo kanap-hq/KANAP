@@ -15,7 +15,7 @@ Rendez-vous dans **Données de référence > Sociétés** pour ouvrir la liste.
 - **Ville** : ville où la société est basée
 - **Devise de base** : code devise ISO (recherche par nom ou code)
 
-**Conseil** : Gardez des noms uniques pour éviter la confusion dans les imports et les listes de sélection.
+**Noms uniques** : chaque société a son propre nom, quelle que soit la casse (`Acme` et `acme` sont le même nom). Un nom déjà porté par une autre société est refusé, avec un message sous le nom.
 
 ## Travailler avec la liste
 
@@ -77,7 +77,7 @@ Cliquez sur n'importe quelle ligne de la liste pour ouvrir l'espace de travail d
 - **En-tête** : le nom de la société. Cliquez dessus pour renommer la société. Les flèches avec « N sur M » permettent de passer d'une société à l'autre dans l'ordre et avec les filtres de la liste, sans revenir à la liste. Le lien de retour, **Sociétés**, ramène à la liste avec votre contexte de recherche intact
 - **Panneau Propriétés** à droite : **Pays**, **Devise de base**, **Plan comptable** et **Cycle de vie**. Utilisez le bouton situé à côté pour replier le panneau ou le rouvrir
 
-**Enregistrement automatique** : chaque modification s'enregistre d'elle-même quand vous quittez le champ. Il n'y a ni bouton Enregistrer, ni bouton Réinitialiser, ni bouton Fermer. Vous pouvez continuer à travailler pendant l'enregistrement. Lorsqu'une modification est refusée, la raison s'affiche sous le champ concerné, sauf pour le nom, dont le refus s'affiche en haut de la page.
+**Enregistrement automatique** : chaque modification s'enregistre d'elle-même quand vous quittez le champ. Il n'y a ni bouton Enregistrer, ni bouton Réinitialiser, ni bouton Fermer. Vous pouvez continuer à travailler pendant l'enregistrement. Lorsqu'une modification est refusée, la raison s'affiche sous le champ concerné.
 
 ---
 
@@ -205,7 +205,7 @@ Les colonnes, dans cet ordre. Les colonnes de métriques suivent l'année sélec
 **Import** :
 
 - Commencez par la **Vérification préalable**. Elle valide les en-têtes, l'encodage, les champs obligatoires, les doublons et les métriques. Si la vérification est propre, **Charger** applique les insertions et les mises à jour
-- **Correspondance** : par `name` de société. Un nom présent deux fois dans le fichier n'est gardé qu'une fois, la première ligne l'emportant
+- **Correspondance** : par `name` de société, quelle que soit la casse. Le nom enregistré ne change pas : une ligne `ACME` met à jour `Acme`, et la vérification préalable indique « ACME » a été rapproché de « Acme ». Un nom présent deux fois dans le fichier n'est gardé qu'une fois, la première ligne l'emportant
 - **Champs obligatoires** : `name`, `country_iso` et `base_currency`
 - **Statut et fin de validité** : l'export écrit le statut déduit de la fin de validité. Une nouvelle société est activée sauf si la ligne indique `disabled`. Lors d'une mise à jour, un `status` vide et un `disabled_at` vide conservent les valeurs enregistrées. `enabled` avec une date vide efface la fin de validité. `disabled` avec une date vide conserve une date déjà passée, et sinon termine la société aujourd'hui
 - Une ligne dont le statut contredit sa date est refusée avec une erreur de ligne : « Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again. » ou « Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed. »

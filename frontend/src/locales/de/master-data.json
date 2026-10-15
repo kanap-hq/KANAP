@@ -169,6 +169,7 @@
       "saveFailed": "Das Unternehmen konnte nicht gespeichert werden.",
       "createFailed": "Das Unternehmen konnte nicht erstellt werden.",
       "nameRequired": "Geben Sie einen Namen ein.",
+      "nameTaken": "Ein anderes Unternehmen hat bereits diesen Namen.",
       "countryRequired": "Wählen Sie ein Land.",
       "currencyRequired": "Wählen Sie eine Basiswährung.",
       "cityRequired": "Geben Sie eine Stadt ein.",

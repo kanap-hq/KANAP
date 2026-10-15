@@ -169,6 +169,7 @@
       "saveFailed": "Failed to save the company.",
       "createFailed": "Failed to create the company.",
       "nameRequired": "Enter a name.",
+      "nameTaken": "Another company already has this name.",
       "countryRequired": "Choose a country.",
       "currencyRequired": "Choose a base currency.",
       "cityRequired": "Enter a city.",

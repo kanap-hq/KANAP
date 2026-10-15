@@ -15,7 +15,7 @@ Navigieren Sie zu **Stammdaten > Unternehmen**, um die Liste zu öffnen.
 - **Stadt**: Stadt, in der das Unternehmen ansässig ist
 - **Basiswährung**: ISO-Währungscode (nach Name oder Code durchsuchbar)
 
-**Tipp**: Halten Sie die Namen eindeutig, um Verwechslungen bei Importen und Auswahllisten zu vermeiden.
+**Eindeutige Namen**: Jedes Unternehmen hat seinen eigenen Namen, unabhängig von Groß- und Kleinschreibung (`Acme` und `acme` sind derselbe Name). Ein Name, den bereits ein anderes Unternehmen trägt, wird abgelehnt, mit einer Meldung unter dem Namen.
 
 ## Mit der Liste arbeiten
 
@@ -77,7 +77,7 @@ Klicken Sie auf eine beliebige Zeile der Liste, um den Arbeitsbereich des Untern
 - **Kopfzeile**: der Name des Unternehmens. Klicken Sie darauf, um das Unternehmen umzubenennen. Die Pfeile mit „N von M" wechseln zwischen Unternehmen in der Reihenfolge und mit den Filtern der Liste, ohne zur Liste zurückzukehren. Der Zurück-Link **Unternehmen** führt mit erhaltenem Suchkontext zur Liste zurück
 - **Bereich Eigenschaften** rechts: **Land**, **Basiswährung**, **Kontenplan** und **Lebenszyklus**. Mit der Schaltfläche daneben klappen Sie den Bereich ein oder wieder aus
 
-**Automatisches Speichern**: Jede Änderung wird von selbst gespeichert, sobald Sie das Feld verlassen. Es gibt keine Schaltflächen zum Speichern, Zurücksetzen oder Schließen. Sie können weiterarbeiten, während eine Änderung gespeichert wird. Wird eine Änderung abgelehnt, erscheint der Grund unter dem Feld, das sie verursacht hat, außer beim Namen, dessen Ablehnung oben auf der Seite angezeigt wird.
+**Automatisches Speichern**: Jede Änderung wird von selbst gespeichert, sobald Sie das Feld verlassen. Es gibt keine Schaltflächen zum Speichern, Zurücksetzen oder Schließen. Sie können weiterarbeiten, während eine Änderung gespeichert wird. Wird eine Änderung abgelehnt, erscheint der Grund unter dem Feld, das sie verursacht hat.
 
 ---
 
@@ -205,7 +205,7 @@ Die Spalten in dieser Reihenfolge. Die Kennzahlenspalten folgen dem in der Symbo
 **Import**:
 
 - Beginnen Sie mit der **Vorabprüfung**. Sie prüft die Kopfzeilen, die Kodierung, die Pflichtfelder, die Duplikate und die Kennzahlen. Ist die Prüfung sauber, wendet **Laden** die Einfügungen und Aktualisierungen an
-- **Zuordnung**: über den `name` des Unternehmens. Ein Name, der zweimal in der Datei steht, wird einmal behalten, die erste Zeile gewinnt
+- **Zuordnung**: über den `name` des Unternehmens, unabhängig von Groß- und Kleinschreibung. Die gespeicherte Schreibweise bleibt: Eine Zeile `ACME` aktualisiert `Acme`, und die Vorabprüfung meldet „ACME“ wurde „Acme“ zugeordnet. Ein Name, der zweimal in der Datei steht, wird einmal behalten, die erste Zeile gewinnt
 - **Pflichtfelder**: `name`, `country_iso` und `base_currency`
 - **Status und Ende der Gültigkeit**: Der Export schreibt den aus dem Ende der Gültigkeit abgeleiteten Status. Ein neues Unternehmen ist aktiviert, außer die Zeile sagt `disabled`. Bei einer Aktualisierung behalten ein leeres `status` und ein leeres `disabled_at` die gespeicherten Werte. `enabled` mit leerem Datum löscht das Ende der Gültigkeit. `disabled` mit leerem Datum behält ein bereits vergangenes Datum, andernfalls beendet es das Unternehmen heute
 - Eine Zeile, deren Status ihrem Datum widerspricht, wird mit einem Zeilenfehler abgelehnt: „Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again.“ oder „Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed.“

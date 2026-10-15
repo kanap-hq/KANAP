@@ -169,6 +169,7 @@
       "saveFailed": "Échec de l'enregistrement de la société.",
       "createFailed": "Échec de la création de la société.",
       "nameRequired": "Saisissez un nom.",
+      "nameTaken": "Une autre société porte déjà ce nom.",
       "countryRequired": "Choisissez un pays.",
       "currencyRequired": "Choisissez une devise de base.",
       "cityRequired": "Saisissez une ville.",

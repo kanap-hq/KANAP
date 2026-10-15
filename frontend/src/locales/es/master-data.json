@@ -169,6 +169,7 @@
       "saveFailed": "Error al guardar la empresa.",
       "createFailed": "Error al crear la empresa.",
       "nameRequired": "Introduzca un nombre.",
+      "nameTaken": "Otra empresa ya tiene este nombre.",
       "countryRequired": "Elija un país.",
       "currencyRequired": "Elija una moneda base.",
       "cityRequired": "Introduzca una ciudad.",

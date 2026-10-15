@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, ILike, In, Raw, Repository } from 'typeorm';
 import { Supplier } from './supplier.entity';
@@ -27,6 +27,7 @@ import {
   writeCsv,
 } from '../common/csv-sheet';
 import { csvLifecycleConflict } from '../spend/item-write.util';
+import { duplicateNameException } from '../common/duplicate-name';
 
 /** The contact columns of the file: one e-mail per contact type. */
 const CONTACT_COLUMNS = ['commercial_contact', 'technical_contact', 'support_contact'] as const;
@@ -102,14 +103,7 @@ export class SuppliersService {
         LIMIT 1`,
       [name, exceptId ?? null],
     );
-    if (rows.length > 0) {
-      throw new ConflictException({
-        statusCode: HttpStatus.CONFLICT,
-        error: 'Conflict',
-        code: 'duplicate',
-        message: 'Another supplier already has this name.',
-      });
-    }
+    if (rows.length > 0) throw duplicateNameException('Another supplier already has this name.');
   }
 
   async get(id: string, opts?: { manager?: EntityManager }) {
