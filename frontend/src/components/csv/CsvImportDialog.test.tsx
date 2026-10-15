@@ -216,6 +216,17 @@ describe('CsvImportDialog', () => {
     expect(lastParams()).toEqual({ language: 'en', dryRun: false, dateOrder: 'day-first', decimalMark: 'comma' });
   });
 
+  it('drops the report of the previous file when another file is picked', async () => {
+    post.mockResolvedValueOnce({ data: report({ ok: false, errors: [{ row: 2, message: 'Old problem' }] }) });
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'csv.preflightCheck' }));
+    expect(await screen.findByText('csv.rowError')).toBeInTheDocument();
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [new File(['c;d'], 'other.csv', { type: 'text/csv' })] } });
+    expect(screen.queryByText('csv.rowError')).not.toBeInTheDocument();
+  });
+
   it('names the ignored columns the response lists', async () => {
     post.mockResolvedValueOnce({ data: report({ ignoredColumns: ['legacy_code', 'notes'] }) });
     renderDialog();

@@ -6,6 +6,7 @@ import type { TFunction } from 'i18next';
 import api from '../../api';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { csvRequestErrorMessage } from './csvRequestError';
+import { CsvReportMessage, csvMessageText } from './csvMessage';
 import { AmountReading, DateReading, amountReadingOf, dateReadingOf, screenLanguage } from './readings';
 
 type ImportReport = {
@@ -30,11 +31,11 @@ type ImportReport = {
  * `code`: the error code the interface translates, when the server gave one (MARKDOWN_TOO_LARGE, ...),
  * with the values its sentence names (`params`). Row 0 is the header.
  */
-type RowError = { row: number; column?: string; message: string; code?: string; params?: Record<string, string | number> };
+type RowError = CsvReportMessage;
 
 /** A row error in the interface language when it has a code, with the column it is about. */
 function rowErrorText(err: RowError, t: TFunction): string {
-  const message = err.code ? t(`errors:${err.code}`, { ...err.params, defaultValue: err.message }) : err.message;
+  const message = csvMessageText(err, t);
   if (err.row === 0) return t('csv.headerError', { message });
   return err.code && err.column
     ? t('csv.rowColumnError', { row: err.row, column: err.column, message })
@@ -118,6 +119,9 @@ export default function CsvImportDialog({
     // A new file decides its own reading: the next check starts from the server's choice.
     setDateOrder(null);
     setAmountReading(null);
+    // The report and the error were about the previous file.
+    setReport(null);
+    setRequestError(null);
     setFile(next);
   };
 

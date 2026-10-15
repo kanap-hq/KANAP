@@ -16,6 +16,7 @@ import ErrorIcon from '@mui/icons-material/Error';
 import WarningIcon from '@mui/icons-material/Warning';
 import { useTranslation } from 'react-i18next';
 import { CsvImportResult } from './csv.types';
+import { csvMessageText } from './csvMessage';
 
 interface CsvValidationResultsProps {
   result: CsvImportResult;
@@ -92,7 +93,7 @@ export function CsvValidationResults({
                 <ListItemText
                   primary={
                     <Typography variant="body2">
-                      {err.row > 0 && <strong>{t('csv.rowPrefix', { row: err.row })}</strong>} {err.message}
+                      {err.row > 0 && <strong>{t('csv.rowPrefix', { row: err.row })}</strong>} {csvMessageText(err, t)}
                       {err.column && <Typography component="span" color="text.secondary"> ({err.column})</Typography>}
                     </Typography>
                   }
@@ -127,7 +128,7 @@ export function CsvValidationResults({
                 <ListItemText
                   primary={
                     <Typography variant="body2">
-                      {warn.row > 0 && <strong>{t('csv.rowPrefix', { row: warn.row })}</strong>} {warn.message}
+                      {warn.row > 0 && <strong>{t('csv.rowPrefix', { row: warn.row })}</strong>} {csvMessageText(warn, t)}
                       {warn.column && <Typography component="span" color="text.secondary"> ({warn.column})</Typography>}
                     </Typography>
                   }

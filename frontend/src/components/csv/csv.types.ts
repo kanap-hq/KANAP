@@ -1,3 +1,5 @@
+import type { CsvReportMessage } from './csvMessage';
+
 /**
  * CSV Types and Interfaces for Frontend Components
  */
@@ -61,8 +63,8 @@ export interface CsvImportResult {
   inserted: number;
   updated: number;
   skipped: number;
-  errors: Array<{ row: number; column?: string; message: string }>;
-  warnings: Array<{ row: number; column?: string; message: string }>;
+  errors: CsvReportMessage[];
+  warnings: CsvReportMessage[];
 }
 
 /** Field info from backend */
