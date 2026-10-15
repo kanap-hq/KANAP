@@ -424,10 +424,11 @@ export class TenantsService {
   private async seedDefaultTaskTypes(manager: EntityManager, tenantId: string) {
     for (const def of DEFAULT_TASK_TYPES) {
       await manager.query(
-        `INSERT INTO portfolio_task_types (tenant_id, name, description, display_order, is_system)
-         VALUES ($1, $2, $3, $4, $5)
-         ON CONFLICT (tenant_id, name) DO NOTHING`,
-        [tenantId, def.name, def.description ?? null, def.display_order, def.is_system ?? false],
+        // No conflict target: a type already holding this name or this code (a renamed default) is kept.
+        `INSERT INTO portfolio_task_types (tenant_id, code, name, description, display_order, is_system)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT DO NOTHING`,
+        [tenantId, def.code, def.name, def.description ?? null, def.display_order, def.is_system ?? false],
       );
     }
   }
