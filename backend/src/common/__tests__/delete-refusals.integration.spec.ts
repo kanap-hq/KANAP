@@ -177,14 +177,20 @@ async function testUsers() {
     const svc = new UsersDeleteService(runner.manager.getRepository(User), noAudit);
     const me = await cc.seedUser(runner, t, 'me@refusals.test');
     const other = await cc.seedUser(runner, t, 'other@refusals.test');
+    // Refusals name a user by name; the e-mail stands in only when the user has no name.
+    await runner.query(`UPDATE users SET first_name = 'Marie', last_name = 'Curie' WHERE id = $1`, [me]);
+    await runner.query(`UPDATE users SET first_name = NULL, last_name = NULL WHERE id = $1`, [other]);
 
     assert.deepEqual(await svc.deleteCheck([other, me], me, { manager: runner.manager }), {
-      refused: [{ id: me, name: 'me@refusals.test', code: 'USER_OWN_ACCOUNT', usages: [] }],
+      refused: [{ id: me, name: 'Marie Curie', code: 'USER_OWN_ACCOUNT', usages: [] }],
+    });
+    assert.deepEqual(await svc.deleteCheck([other], other, { manager: runner.manager }), {
+      refused: [{ id: other, name: 'other@refusals.test', code: 'USER_OWN_ACCOUNT', usages: [] }],
     });
     await expectRefusal(runner, () => svc.deleteUser(me, me, { manager: runner.manager }), 'USER_OWN_ACCOUNT', [], /You cannot delete your own account/);
     const bulk = await svc.bulkDelete([me, other], me, { manager: runner.manager });
     assert.deepEqual(bulk.deleted, [other]);
-    assert.deepEqual(bulk.failed.map((f) => [f.code, f.usages]), [['USER_OWN_ACCOUNT', []]]);
+    assert.deepEqual(bulk.failed.map((f) => [f.code, f.name, f.usages]), [['USER_OWN_ACCOUNT', 'Marie Curie', []]]);
   });
 }
 

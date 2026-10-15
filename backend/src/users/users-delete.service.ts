@@ -24,11 +24,9 @@ export class UsersDeleteService extends BaseDeleteService<User> {
     });
   }
 
-  /**
-   * Get display name for a user
-   */
+  /** A user's name in refusals and delete reports: the full name, the e-mail only when the user has no name. */
   private getUserDisplayName(user: User): string {
-    return user.email || `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || user.id;
+    return `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || user.email || user.id;
   }
 
   /** The refusal of a user's delete: one's own account (`USER_OWN_ACCOUNT`: disable it instead), or null. */
