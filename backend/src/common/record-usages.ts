@@ -16,6 +16,7 @@ export type UsageType =
   | 'contracts'
   | 'applications'
   | 'assets'
+  | 'cost_centers'
   | 'locations'
   | 'projects'
   | 'requests'

@@ -3,16 +3,18 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { Company } from './company.entity';
 import { AuditService } from '../audit/audit.service';
-import { ReferenceCheckService } from '../common/reference-check.service';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
 import { withSavepoint } from '../common/savepoint.util';
+import { assertNotInUse, refusalDetails } from '../common/record-in-use';
+import { COMPANY_USAGE_QUERIES } from './company-usages';
 
 /** Tables whose foreign key can block a company delete, in plain words. */
 const COMPANY_REFERENCING_TABLES: Record<string, string> = {
   // The allocations of the OPEX and CAPEX lines alike (one family since lot Z1).
   spend_allocations: 'budget allocations',
   cost_centers: 'cost centers',
+  contracts: 'contracts',
 };
 
 @Injectable()
@@ -22,7 +24,6 @@ export class CompaniesDeleteService extends BaseDeleteService<Company> {
   constructor(
     @InjectRepository(Company) repository: Repository<Company>,
     audit: AuditService,
-    private readonly referenceCheck: ReferenceCheckService,
   ) {
     super(repository, null, audit, {
       entityName: 'Company',
@@ -32,15 +33,19 @@ export class CompaniesDeleteService extends BaseDeleteService<Company> {
   }
 
   /**
-   * Check for references before deletion
+   * A company that budget lines, contracts or cost centers still use cannot go (`COMPANY_IN_USE`,
+   * with the counts per kind). Disabling it is the way out.
    */
   protected override async beforeDelete(entity: Company, manager: EntityManager): Promise<void> {
-    await this.referenceCheck.assertNoReferences('company', entity.id, entity.name, { manager });
+    await assertNotInUse(manager, entity.tenant_id, entity.id, COMPANY_USAGE_QUERIES, {
+      code: 'COMPANY_IN_USE',
+      entity: 'company',
+      name: entity.name,
+    });
   }
 
   /**
-   * Delete a single company
-   * Will fail if company is referenced by OPEX or CAPEX items
+   * Delete a single company, refused while it is in use (`beforeDelete`).
    */
   override async delete(companyId: string, opts?: DeleteOptions): Promise<void> {
     const manager = opts?.manager ?? this.repository.manager;
@@ -109,6 +114,7 @@ export class CompaniesDeleteService extends BaseDeleteService<Company> {
           id: companyId,
           name,
           reason: error.message || 'Unknown error',
+          ...refusalDetails(error),
         });
       }
     }

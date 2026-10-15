@@ -9,7 +9,6 @@ import { AuditLog } from '../../audit/audit.entity';
 import { AuditService } from '../../audit/audit.service';
 import { CompaniesDeleteService } from '../../companies/companies-delete.service';
 import { Company } from '../../companies/company.entity';
-import { ReferenceCheckService } from '../../common/reference-check.service';
 import {
   backendPid,
   closeRunner,
@@ -351,6 +350,10 @@ async function testListReadsAsTheTree() {
 }
 
 /** A company that cost centers belong to is refused readably, single and bulk; the key backs it. */
+class UncheckedCompaniesDeleteService extends CompaniesDeleteService {
+  protected override async beforeDelete(): Promise<void> {}
+}
+
 async function testCompanyUsedByCostCenters() {
   await withRollback(async (runner) => {
     const { tenantId, paris, brussels, svc, ctx } = await seedBasics(runner, 'company');
@@ -359,17 +362,19 @@ async function testCompanyUsedByCostCenters() {
     await svc.create({ code: 'P-2', kind: 'cost_center', name: 'Paris two', company_id: paris }, ctx);
     await svc.create({ code: 'B-1', kind: 'cost_center', name: 'Brussels one', company_id: brussels }, ctx);
     const audit = new AuditService(runner.manager.getRepository(AuditLog));
-    const companies = new CompaniesDeleteService(runner.manager.getRepository(Company), audit, new ReferenceCheckService());
+    const companies = new CompaniesDeleteService(runner.manager.getRepository(Company), audit);
     const opts = { manager: runner.manager, userId: null };
 
-    await expectRefused(runner, /^Test company Paris is used by 2 cost centers\. Change their company or disable it instead\.$/, () =>
+    await expectRefused(runner, /^Cannot delete company "Test company Paris": it is used by 2 cost centers\. Disable it instead\.$/, () =>
       companies.delete(paris, opts));
     const bulk = await companies.bulkDelete([brussels, spare], null, { manager: runner.manager });
     assert.deepEqual(bulk.deleted, [spare]);
     assert.deepEqual(bulk.failed, [{
       id: brussels,
       name: 'Test company Brussels',
-      reason: 'Test company Brussels is used by 1 cost center. Change their company or disable it instead.',
+      reason: 'Cannot delete company "Test company Brussels": it is used by 1 cost center. Disable it instead.',
+      code: 'COMPANY_IN_USE',
+      usages: [{ type: 'cost_centers', total: 1 }],
     }]);
     const left = await runner.query(`SELECT name FROM companies WHERE tenant_id = $1 ORDER BY name`, [tenantId]);
     assert.deepEqual(left.map((row: any) => row.name), ['Test company Brussels', 'Test company Paris']);
@@ -377,11 +382,7 @@ async function testCompanyUsedByCostCenters() {
     assert.equal(n, 3, 'the cost centers are untouched');
 
     // Without the check, the database key (ON DELETE RESTRICT) refuses, reported in plain words.
-    const unchecked = new CompaniesDeleteService(
-      runner.manager.getRepository(Company),
-      audit,
-      { assertNoReferences: async () => undefined } as unknown as ReferenceCheckService,
-    );
+    const unchecked = new UncheckedCompaniesDeleteService(runner.manager.getRepository(Company), audit);
     await expectRefused(runner, /^Cannot delete company "Test company Paris": cost centers still use it\. You can disable it instead\.$/, () =>
       unchecked.delete(paris, opts));
   });
