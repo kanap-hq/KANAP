@@ -537,6 +537,10 @@
       "saveFailed": "Échec de l'enregistrement du contact.",
       "createFailed": "Échec de la création du contact.",
       "loadFailed": "Échec du chargement du contact."
+    },
+    "delete": {
+      "warning_one": "Il est retiré des fournisseurs, lignes budgétaires, contrats, applications, actifs, sites, projets et demandes qui le citent. Ces éléments restent. Cette action est irréversible.",
+      "warning_other": "Ils sont retirés des fournisseurs, lignes budgétaires, contrats, applications, actifs, sites, projets et demandes qui les citent. Ces éléments restent. Cette action est irréversible."
     }
   },
   "coa": {

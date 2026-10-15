@@ -537,6 +537,10 @@
       "saveFailed": "Der Kontakt konnte nicht gespeichert werden.",
       "createFailed": "Der Kontakt konnte nicht erstellt werden.",
       "loadFailed": "Der Kontakt konnte nicht geladen werden."
+    },
+    "delete": {
+      "warning_one": "Er wird aus den Lieferanten, Budgetzeilen, Verträgen, Anwendungen, Assets, Standorten, Projekten und Anfragen entfernt, die ihn nennen. Diese Einträge bleiben erhalten. Dies kann nicht rückgängig gemacht werden.",
+      "warning_other": "Sie werden aus den Lieferanten, Budgetzeilen, Verträgen, Anwendungen, Assets, Standorten, Projekten und Anfragen entfernt, die sie nennen. Diese Einträge bleiben erhalten. Dies kann nicht rückgängig gemacht werden."
     }
   },
   "coa": {

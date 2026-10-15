@@ -537,6 +537,10 @@
       "saveFailed": "No se pudo guardar el contacto.",
       "createFailed": "No se pudo crear el contacto.",
       "loadFailed": "No se pudo cargar el contacto."
+    },
+    "delete": {
+      "warning_one": "Se quita de los proveedores, líneas presupuestarias, contratos, aplicaciones, activos, ubicaciones, proyectos y solicitudes que lo mencionan. Esos elementos se conservan. Esta acción no se puede deshacer.",
+      "warning_other": "Se quitan de los proveedores, líneas presupuestarias, contratos, aplicaciones, activos, ubicaciones, proyectos y solicitudes que los mencionan. Esos elementos se conservan. Esta acción no se puede deshacer."
     }
   },
   "coa": {
