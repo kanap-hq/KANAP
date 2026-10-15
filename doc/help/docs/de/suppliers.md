@@ -86,7 +86,7 @@ Der Reiter **Kontakte** listet die mit diesem Lieferanten verknüpften Kontakte 
 - Jeder Abschnitt listet seine Kontakte mit Namen. Klicken Sie auf einen Namen, um die Kontaktseite zu öffnen.
 - **Vorhandenen hinzufügen**: Suchen Sie einen Kontakt nach Namen und wählen Sie ihn aus. Die Verknüpfung wird sofort gespeichert.
 - **Neuer Kontakt**: Öffnet das Kontaktformular mit bereits ausgefülltem Lieferanten und Kontakttyp. KANAP bringt Sie nach dem Erstellen des Kontakts zu diesem Reiter zurück.
-- Die Papierkorb-Schaltfläche entfernt die Verknüpfung. Der Kontakt selbst bleibt in Ihren Kontakten.
+- Die Papierkorb-Schaltfläche entfernt die Verknüpfung. Der Kontakt selbst bleibt in Ihren Kontakten. Eine Meldung bestätigt das, mit der Aktion **Rückgängig**, die den Kontakt wieder verknüpft.
 
 **Tipp**: Pflegen Sie mindestens einen Kontakt pro Lieferant, damit die Kommunikation mit ihm immer nur einen Klick entfernt ist.
 
@@ -111,7 +111,7 @@ Klicken Sie in der Liste auf **Neu**. Geben Sie den Namen (Pflicht), die ERP-Lie
 
 ## CSV-Import/Export
 
-**CSV exportieren** lädt alle Lieferanten mit ihren aktuellen Angaben herunter. **CSV importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei nur mit den Kopfzeilen.
+**CSV exportieren** lädt alle Lieferanten herunter, aktivierte und deaktivierte, nach Name sortiert. Suche und Filter der Liste gelten nicht. Der Dialog schließt sich, sobald die Datei heruntergeladen ist. **CSV importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei nur mit den Kopfzeilen. Er nennt die zulässigen Werte.
 
 Die Spalten:
 
@@ -119,17 +119,21 @@ Die Spalten:
 |---|---|
 | `name` | Pflicht. Der Name des Lieferanten. Zeilen werden über diesen Namen zugeordnet |
 | `erp_supplier_id` | Die ID des Lieferanten in Ihrem ERP |
-| `commercial_contact` | Die E-Mail-Adresse eines Kontakts. Das Laden verknüpft den Lieferanten mit dem Kontakt dieser Adresse und legt ihn an, wenn der Arbeitsbereich keinen hat |
+| `commercial_contact` | Die E-Mail-Adresse eines bestehenden Kontakts. Das Laden verknüpft den Lieferanten mit ihm |
 | `technical_contact` | Die E-Mail-Adresse eines Kontakts, wie oben |
 | `support_contact` | Die E-Mail-Adresse eines Kontakts, wie oben |
 | `notes` | Freier Text |
 | `status` | `enabled` oder `disabled` |
+| `disabled_at` | Das Gültigkeitsende: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Leer, wenn der Lieferant keines hat |
 
 **Import**:
 
 - Verwenden Sie die **Vorabprüfung**, um die Datei vor dem Anwenden zu prüfen, und dann **Laden**
 - Zeilen werden über `name` zugeordnet, unabhängig von Groß- und Kleinschreibung: Eine Zeile aktualisiert den Lieferanten, den sie nennt, jede andere Zeile legt einen an
 - `name` ist Pflicht. Jede andere Zelle ist optional
+- Jeder Lieferant belegt eine Zeile. Zwei Zeilen mit demselben Namen, auch in anderer Groß- und Kleinschreibung, werden bei der Vorabprüfung abgelehnt, mit beiden Zeilennummern
+- Die E-Mail-Adresse eines Kontakts muss zu einem Kontakt gehören, der unter **Kontakte** bereits existiert. Sonst wird die Zeile bei der Vorabprüfung abgelehnt: Legen Sie den Kontakt zuerst an
+- `disabled_at` setzt das Gültigkeitsende, der Status ergibt sich daraus. Ein Status, der dem Datum widerspricht, wird abgelehnt. Eine Datei ohne die Spalte `disabled_at` lässt sich weiterhin importieren: Dann bestimmt der Status allein den Lebenszyklus
 
 **Hinweise**:
 - Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen und die beiden Importschritte

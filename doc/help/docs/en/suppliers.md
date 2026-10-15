@@ -86,7 +86,7 @@ The **Contacts** tab lists the contacts linked to this supplier by contact type:
 - Each section lists its contacts by name. Click a name to open the contact page.
 - **Add existing**: Search for a contact by name and pick it. The link saves at once.
 - **New contact**: Opens the contact form with the supplier and the contact type already filled in. KANAP brings you back to this tab once the contact is created.
-- The bin button removes the link. The contact itself stays in your contacts.
+- The bin button removes the link. The contact itself stays in your contacts. A message confirms it, with an **Undo** action that links the contact again.
 
 **Tip**: Keep at least one contact per supplier so that vendor communication is always one click away.
 
@@ -111,7 +111,7 @@ Click **New** in the list. Fill in the name (required), the ERP supplier ID and 
 
 ## CSV import/export
 
-**Export CSV** downloads all suppliers with their current details. **Import CSV** reads a file back. The import dialog also carries **Download template**: a file with the headers only.
+**Export CSV** downloads every supplier, enabled and disabled, sorted by name. The search and filters of the list do not apply. The dialog closes once the file is downloaded. **Import CSV** reads a file back. The import dialog also carries **Download template**: a file with the headers only. The dialog lists the accepted values.
 
 The columns:
 
@@ -119,17 +119,21 @@ The columns:
 |---|---|
 | `name` | Required. The supplier name. Rows are matched on it |
 | `erp_supplier_id` | The supplier's ID in your ERP |
-| `commercial_contact` | The email of a contact. The load links the supplier to the contact with that email, and creates one when the workspace has none |
+| `commercial_contact` | The email of an existing contact. The load links the supplier to it |
 | `technical_contact` | The email of a contact, as above |
 | `support_contact` | The email of a contact, as above |
 | `notes` | Free text |
 | `status` | `enabled` or `disabled` |
+| `disabled_at` | The end of validity: a date (`2026-12-31`) or a full date and time. Empty when the supplier has none |
 
 **Import**:
 
 - Use **Preflight check** to validate the file before applying it, then **Load**
 - Rows are matched by `name`, whatever the case: a row updates the supplier it names, any other row creates one
 - `name` is required. Every other cell is optional
+- Each supplier takes one row. Two rows with the same name, even in a different case, are refused at the preflight check, with both row numbers
+- A contact email must belong to a contact that already exists in **Contacts**. Otherwise the row is refused at the preflight check: create the contact first
+- `disabled_at` sets the end of validity, and the status follows from it. A status that contradicts the date is refused. A file without the `disabled_at` column still imports: the status alone then sets the lifecycle
 
 **Notes**:
 - See [CSV files](csv-files.md) for the encoding, the separator and the two import steps

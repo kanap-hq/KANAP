@@ -347,7 +347,7 @@ function importers(manager: EntityManager, tenantId: string, seeds: Seeds): Impo
       label: 'suppliers',
       table: 'suppliers',
       nameColumn: 'name',
-      dateField: null,
+      dateField: 'disabled_at',
       text: { header: 'name', column: 'name', accented: 'Café Léman' },
       wrapped: 'name',
       key: (label) => label,
@@ -367,7 +367,7 @@ function importers(manager: EntityManager, tenantId: string, seeds: Seeds): Impo
       exportCsv: async (language) => (await suppliers.exportCsv('data', { manager, language })).content,
       snapshot: (runner, id) =>
         runner.query(
-          `SELECT name, erp_supplier_id, notes, status::text AS status
+          `SELECT name, erp_supplier_id, notes, status::text AS status, disabled_at
              FROM suppliers WHERE tenant_id = $1 ORDER BY name`,
           [id],
         ),

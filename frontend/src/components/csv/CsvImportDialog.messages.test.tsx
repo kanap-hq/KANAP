@@ -64,6 +64,30 @@ describe('CsvImportDialog messages', () => {
     expect(screen.getByText('Ligne 4 : Nature « both » invalide. Utilisez opex, capex ou laissez la cellule vide.')).toBeInTheDocument();
   });
 
+  it('translates the supplier row errors, with the column they are about', async () => {
+    check([
+      { row: 2, column: 'name', message: 'Name is required', code: 'CSV_VALUE_REQUIRED' },
+      { row: 3, column: 'status', message: "Invalid status 'actif'.", code: 'CSV_ENUM_INVALID', params: { value: 'actif', allowed: 'enabled, disabled' } },
+      { row: 4, column: 'name', message: "'qa-dup' is already on row 2.", code: 'CSV_SUPPLIER_NAME_DUPLICATE', params: { name: 'qa-dup', firstRow: 2 } },
+      { row: 5, column: 'technical_contact', message: 'Contact not found', code: 'CSV_CONTACT_NOT_FOUND', params: { email: 'nobody@example.com' } },
+      { row: 6, column: 'commercial_contact', message: 'Invalid commercial_contact email', code: 'CSV_EMAIL_INVALID', params: { value: 'not-an-email' } },
+    ]);
+    expect(await screen.findByText('Ligne 2, name : Une valeur est obligatoire.')).toBeInTheDocument();
+    expect(screen.getByText('Ligne 3, status : « actif » n\'est pas valide. Valeurs possibles : enabled, disabled.')).toBeInTheDocument();
+    expect(screen.getByText('Ligne 4, name : « qa-dup » figure déjà à la ligne 2. Gardez une seule ligne par fournisseur.')).toBeInTheDocument();
+    expect(screen.getByText('Ligne 5, technical_contact : Contact introuvable : nobody@example.com. Créez-le d\'abord dans Contacts.')).toBeInTheDocument();
+    expect(screen.getByText('Ligne 6, commercial_contact : « not-an-email » n\'est pas une adresse e-mail valide.')).toBeInTheDocument();
+  });
+
+  it('translates the end of validity that contradicts the status', async () => {
+    check([
+      { row: 2, column: 'status', message: 'Status is enabled but the end of validity has passed.', code: 'CSV_STATUS_DATE_PASSED' },
+      { row: 3, column: 'status', message: 'Status is disabled but the end of validity is still to come.', code: 'CSV_STATUS_DATE_FUTURE' },
+    ]);
+    expect(await screen.findByText(/^Ligne 2, status : Le statut est enabled mais la fin de validité est passée\./)).toBeInTheDocument();
+    expect(screen.getByText(/^Ligne 3, status : Le statut est disabled mais la fin de validité est encore à venir\./)).toBeInTheDocument();
+  });
+
   it('names an unknown column once when the header is refused for it', async () => {
     check(
       [{ row: 0, message: 'Header mismatch. Extra: x', code: 'CSV_HEADER_UNKNOWN_COLUMNS', params: { missing: '', extra: 'x' } }],

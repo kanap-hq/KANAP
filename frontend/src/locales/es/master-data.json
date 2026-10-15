@@ -389,6 +389,8 @@
     "noSuppliersFound": "No se encontraron proveedores",
     "export": "Exportar proveedores",
     "import": "Importar proveedores",
+    "exportScope": "El archivo contiene todos los proveedores, activados y desactivados, ordenados por nombre. La búsqueda y los filtros de la lista no se aplican.",
+    "importHint": "Valores aceptados para status: enabled o disabled. disabled_at contiene el fin de validez o queda vacío. Las columnas de contacto llevan el correo electrónico de un contacto que ya existe en Contactos.",
     "fields": {
       "name": "Nombre",
       "erpSupplierId": "ID de proveedor ERP",
@@ -404,6 +406,8 @@
       "selectContact": "Contacto para añadir ({{role}})",
       "searchPlaceholder": "Buscar contactos por nombre",
       "removeLink": "Eliminar vínculo",
+      "linkRemoved": "Vínculo eliminado. El contacto permanece en Contactos.",
+      "undo": "Deshacer",
       "saveFailed": "Error al actualizar los contactos del proveedor.",
       "loadFailed": "Error al cargar los contactos del proveedor."
     },

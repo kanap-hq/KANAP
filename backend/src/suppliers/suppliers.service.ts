@@ -8,7 +8,7 @@ import { SupplierContactLink, SupplierContactRole } from '../contacts/supplier-c
 import { buildWhereFromAgFilters, parseExportPagination, parsePagination } from '../common/pagination';
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import * as fs from 'fs';
-import { resolveLifecycleState, StatusState } from '../common/status';
+import { deriveStatusFromDisabledAt, resolveLifecycleState, StatusState } from '../common/status';
 import { extractStatusFilterFromAgModel } from '../common/status-filter';
 import { SupplierUpsertDto } from './dto/supplier.dto';
 import { assertSetFilterModes } from '../common/ag-grid-filtering';
@@ -19,10 +19,20 @@ import {
   CsvDateOrder,
   CsvLanguage,
   DecimalMark,
+  endOfValidityCell,
+  endOfValidityOf,
+  ImportReportError,
   readMasterDataFile,
   rowProblems,
   writeCsv,
 } from '../common/csv-sheet';
+import { csvLifecycleConflict } from '../spend/item-write.util';
+
+/** The contact columns of the file: one e-mail per contact type. */
+const CONTACT_COLUMNS = ['commercial_contact', 'technical_contact', 'support_contact'] as const;
+
+/** Columns a file may leave out: `disabled_at` came after the first exports. */
+const OPTIONAL_CSV_HEADERS = ['disabled_at'];
 
 const SORT_ALIAS = 'supplier';
 
@@ -280,7 +290,7 @@ export class SuppliersService {
   }
 
   private csvHeaders(): string[] {
-    return ['name', 'erp_supplier_id', 'commercial_contact', 'technical_contact', 'support_contact', 'notes', 'status'];
+    return ['name', 'erp_supplier_id', 'commercial_contact', 'technical_contact', 'support_contact', 'notes', 'status', 'disabled_at'];
   }
 
   async exportCsv(
@@ -294,20 +304,36 @@ export class SuppliersService {
       const repo = this.getRepo(opts?.manager);
       const mg = opts?.manager ?? repo.manager;
       const linkRepo = mg.getRepository(SupplierContactLink);
-      const items = await repo.find({ order: { created_at: 'DESC' as any } });
+      // The whole register, by name whatever its case (the list's search and filters do not apply).
+      const items = await repo
+        .createQueryBuilder('s')
+        .orderBy('LOWER(s.name)', 'ASC')
+        .addOrderBy('s.name', 'ASC')
+        .addOrderBy('s.id', 'ASC')
+        .getMany();
+      // One contact per supplier and contact type: the primary one first, then the oldest link.
+      const firstEmail = new Map<string, string>();
+      const links = items.length === 0 ? [] : await linkRepo.find({
+        where: { supplier_id: In(items.map((item) => item.id)) },
+        relations: ['contact'],
+        order: { is_primary: 'DESC' as any, created_at: 'ASC' as any } as any,
+      });
+      for (const link of links) {
+        const key = `${link.supplier_id}:${link.role}`;
+        if (!firstEmail.has(key) && link.contact?.email) firstEmail.set(key, link.contact.email);
+      }
+      const roleEmail = (supplierId: string, role: SupplierContactRole) => firstEmail.get(`${supplierId}:${role}`) ?? '';
       for (const s of items) {
-        const roleEmail = async (role: SupplierContactRole) => {
-          const link = await linkRepo.findOne({ where: { supplier_id: s.id, role }, relations: ['contact'], order: { is_primary: 'DESC' as any, created_at: 'ASC' as any } as any });
-          return link?.contact?.email ?? '';
-        };
         rows.push([
           s.name ?? '',
           s.erp_supplier_id ?? '',
-          await roleEmail(SupplierContactRole.COMMERCIAL),
-          await roleEmail(SupplierContactRole.TECHNICAL),
-          await roleEmail(SupplierContactRole.SUPPORT),
+          roleEmail(s.id, SupplierContactRole.COMMERCIAL),
+          roleEmail(s.id, SupplierContactRole.TECHNICAL),
+          roleEmail(s.id, SupplierContactRole.SUPPORT),
           s.notes ?? '',
-          String(s.status ?? 'enabled'),
+          // Read from the end of validity, so a fresh export never contradicts its own row.
+          deriveStatusFromDisabledAt(s.disabled_at),
+          endOfValidityCell(s.disabled_at, language),
         ]);
       }
     }
@@ -341,11 +367,13 @@ export class SuppliersService {
     const read = await readMasterDataFile({
       file: buf as Buffer,
       fields: expectedHeaders,
+      dateFields: ['disabled_at'],
+      optional: OPTIONAL_CSV_HEADERS,
       language: readLanguage,
       dateOrder,
       decimalMark,
     });
-    const errors: { row: number; message: string }[] = [];
+    const errors: ImportReportError[] = [];
     if (read.headerError) {
       return {
         ok: false, dryRun, total: 0, inserted: 0, updated: 0,
@@ -362,35 +390,99 @@ export class SuppliersService {
       technical_email: string | null;
       support_email: string | null;
     }> = [];
+    // An absent `disabled_at` column is not a blank cell: the file then sets the lifecycle through `status` alone.
+    const hasDisabledAt = read.present.includes('disabled_at');
+    // The first line of each name, whatever its case: a supplier takes one row.
+    const firstLineByName = new Map<string, number>();
+    // The e-mails to find among the contacts, with the cells that name them.
+    const contactCells: Array<{ row: number; column: string; email: string }> = [];
     read.rows.forEach((row) => {
       const line = row.line;
-      const problems = rowProblems(row);
+      const problems = rowProblems(row, ['disabled_at']);
       if (problems.length > 0) {
         errors.push(...problems.map((message) => ({ row: line, message })));
         return;
       }
       const name = cellOf(row, 'name');
       const statusRaw = cellOf(row, 'status').toLowerCase();
-      if (!name) errors.push({ row: line, message: 'Name is required' });
-      if (statusRaw && statusRaw !== 'enabled' && statusRaw !== 'disabled') {
-        errors.push({ row: line, message: `Invalid status '${statusRaw}'. Use 'enabled' or 'disabled'.` });
+      if (!name) errors.push({ row: line, column: 'name', message: 'Name is required', code: 'CSV_VALUE_REQUIRED' });
+      else {
+        const firstRow = firstLineByName.get(name.toLowerCase());
+        if (firstRow === undefined) firstLineByName.set(name.toLowerCase(), line);
+        else {
+          errors.push({
+            row: line,
+            column: 'name',
+            message: `'${name}' is already on row ${firstRow}. Keep one row per supplier.`,
+            code: 'CSV_SUPPLIER_NAME_DUPLICATE',
+            params: { name, firstRow },
+          });
+        }
+      }
+      const status = statusRaw === StatusState.ENABLED || statusRaw === StatusState.DISABLED ? (statusRaw as StatusState) : null;
+      if (statusRaw && !status) {
+        errors.push({
+          row: line,
+          column: 'status',
+          message: `Invalid status '${statusRaw}'. Use 'enabled' or 'disabled'.`,
+          code: 'CSV_ENUM_INVALID',
+          params: { value: statusRaw, allowed: 'enabled, disabled' },
+        });
+      }
+      const disabledAtRaw = hasDisabledAt ? cellOf(row, 'disabled_at') : '';
+      let disabledAt: Date | null = null;
+      if (disabledAtRaw) {
+        const end = endOfValidityOf(row, 'disabled_at');
+        if (end.error) {
+          errors.push({ row: line, column: 'disabled_at', message: end.error, code: 'CSV_DATE_INVALID', params: { value: disabledAtRaw } });
+        } else disabledAt = end.value;
+      }
+      const conflict = csvLifecycleConflict(status, disabledAt);
+      if (conflict) {
+        errors.push({
+          row: line,
+          column: 'status',
+          message: conflict,
+          code: status === StatusState.ENABLED ? 'CSV_STATUS_DATE_PASSED' : 'CSV_STATUS_DATE_FUTURE',
+        });
       }
       const body: SupplierUpsertDto = {
         name,
         erp_supplier_id: cellOf(row, 'erp_supplier_id') || null,
         notes: cellOf(row, 'notes') || null,
-        status: statusRaw === 'disabled' ? StatusState.DISABLED : StatusState.ENABLED,
+        // A date given decides the status (`resolveLifecycleState`); a blank status otherwise enables, as it always has.
+        ...(disabledAt ? { status: status ?? undefined, disabled_at: disabledAt.toISOString() } : { status: status ?? StatusState.ENABLED }),
       };
-      const commercial_email = (cellOf(row, 'commercial_contact').toLowerCase()) || null;
-      const technical_email = (cellOf(row, 'technical_contact').toLowerCase()) || null;
-      const support_email = (cellOf(row, 'support_contact').toLowerCase()) || null;
-      // Basic email sanity check when provided
+      const emails: Record<string, string | null> = {};
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (commercial_email && !emailRegex.test(commercial_email)) errors.push({ row: line, message: 'Invalid commercial_contact email' });
-      if (technical_email && !emailRegex.test(technical_email)) errors.push({ row: line, message: 'Invalid technical_contact email' });
-      if (support_email && !emailRegex.test(support_email)) errors.push({ row: line, message: 'Invalid support_contact email' });
-      normalized.push({ body, commercial_email, technical_email, support_email });
+      for (const column of CONTACT_COLUMNS) {
+        const email = cellOf(row, column).toLowerCase() || null;
+        emails[column] = email;
+        if (!email) continue;
+        if (!emailRegex.test(email)) {
+          errors.push({ row: line, column, message: `Invalid ${column} email`, code: 'CSV_EMAIL_INVALID', params: { value: email } });
+        } else contactCells.push({ row: line, column, email });
+      }
+      normalized.push({
+        body,
+        commercial_email: emails.commercial_contact,
+        technical_email: emails.technical_contact,
+        support_email: emails.support_contact,
+      });
     });
+    // A contact must exist already: the import links contacts, it does not create them.
+    const contactIdByEmail = await this.contactIdsByEmail(contactCells.map((cell) => cell.email), opts?.manager);
+    for (const cell of contactCells) {
+      if (contactIdByEmail.has(cell.email)) continue;
+      errors.push({
+        row: cell.row,
+        column: cell.column,
+        message: `Contact not found: ${cell.email}. Create it in Contacts first.`,
+        code: 'CSV_CONTACT_NOT_FOUND',
+        params: { email: cell.email },
+      });
+    }
+    errors.sort((a, b) => a.row - b.row);
     if (errors.length > 0) {
       return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors, ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
@@ -437,7 +529,7 @@ export class SuppliersService {
       if (!existing) inserted += 1;
       else if (
         sameStoredValues(existing as any, values as Record<string, unknown>)
-        && sameStoredLifecycle(existing, { status })
+        && sameStoredLifecycle(existing, { status, disabled_at: values.disabled_at })
         && linked(existing.id, item.commercial_email, SupplierContactRole.COMMERCIAL)
         && linked(existing.id, item.technical_email, SupplierContactRole.TECHNICAL)
         && linked(existing.id, item.support_email, SupplierContactRole.SUPPORT)
@@ -453,13 +545,11 @@ export class SuppliersService {
     // Commit changes
     let processed = 0;
     const attachByEmail = async (supplierId: string, email: string | null, role: any) => {
-      if (!email) return;
-      let contact = await contactRepo.findOne({ where: { email } });
-      if (!contact) {
-        contact = await contactRepo.save(contactRepo.create({ email, active: true }));
-      }
-      const dup = await linkRepo.findOne({ where: { supplier_id: supplierId, contact_id: contact.id, role } });
-      if (!dup) await linkRepo.save(linkRepo.create({ supplier_id: supplierId, contact_id: contact.id, role, is_primary: false }));
+      // Every e-mail of the file was found above: the row is refused otherwise.
+      const contactId = email ? contactIdByEmail.get(email) : undefined;
+      if (!contactId) return;
+      const dup = await linkRepo.findOne({ where: { supplier_id: supplierId, contact_id: contactId, role } });
+      if (!dup) await linkRepo.save(linkRepo.create({ supplier_id: supplierId, contact_id: contactId, role, is_primary: false }));
     };
     for (const item of toWrite) {
       const existing = existingByName.get(item.body.name as string);
@@ -478,5 +568,16 @@ export class SuppliersService {
       }
     }
     return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, unchanged, processed, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
+  }
+
+  /** The tenant's contacts among these e-mails (lowercase), by e-mail. */
+  private async contactIdsByEmail(emails: string[], manager?: EntityManager): Promise<Map<string, string>> {
+    const wanted = Array.from(new Set(emails));
+    if (wanted.length === 0) return new Map();
+    const contacts = await (manager ?? this.repo.manager).getRepository(ExternalContact).find({
+      where: { email: Raw((alias) => `LOWER(${alias}) = ANY(:emails)`, { emails: wanted }) },
+      select: ['id', 'email'],
+    });
+    return new Map(contacts.map((contact) => [contact.email.toLowerCase(), contact.id]));
   }
 }

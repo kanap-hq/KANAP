@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, IconButton, Typography } from '@mui/material';
+import { Alert, Box, Button, IconButton, Snackbar, Typography } from '@mui/material';
 import type { Theme } from '@mui/material/styles';
 import DeleteIcon from '@mui/icons-material/Delete';
 import api from '../../api';
@@ -48,6 +48,8 @@ export default function SupplierContactsTab({ supplierId, canManage }: { supplie
   const { data: links, error: loadError } = useSupplierContacts(supplierId);
   const [adding, setAdding] = React.useState<ContactRole | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  // The link just removed, until the message that offers to put it back closes.
+  const [removed, setRemoved] = React.useState<SupplierContactLink | null>(null);
   const addInputRef = React.useRef<HTMLInputElement>(null);
 
   // The search field opened by "Add existing" takes the focus.
@@ -70,15 +72,32 @@ export default function SupplierContactsTab({ supplierId, canManage }: { supplie
     }
   };
 
-  const detach = async (linkId: string) => {
+  const detach = async (removedLink: SupplierContactLink) => {
     if (!canManage) return;
     setError(null);
+    setRemoved(null);
     queryClient.setQueryData<SupplierContactLink[]>(
       supplierContactsKey(supplierId),
-      (prev) => prev?.filter((link) => link.id !== linkId),
+      (prev) => prev?.filter((link) => link.id !== removedLink.id),
     );
     try {
-      await api.delete(`/suppliers/${supplierId}/contacts/${linkId}`);
+      await api.delete(`/suppliers/${supplierId}/contacts/${removedLink.id}`);
+      setRemoved(removedLink);
+    } catch (e) {
+      setError(getApiErrorMessage(e, t, t('suppliers.contacts.saveFailed')));
+    } finally {
+      await refresh();
+    }
+  };
+
+  /** Puts the removed link back, with its contact type and primary flag. */
+  const undoDetach = async () => {
+    const link = removed;
+    setRemoved(null);
+    if (!link || !canManage) return;
+    setError(null);
+    try {
+      await api.post(`/suppliers/${supplierId}/contacts`, { contactId: link.contact_id, role: link.role, isPrimary: link.is_primary });
     } catch (e) {
       setError(getApiErrorMessage(e, t, t('suppliers.contacts.saveFailed')));
     } finally {
@@ -144,7 +163,7 @@ export default function SupplierContactsTab({ supplierId, canManage }: { supplie
                         size="small"
                         aria-label={t('suppliers.contacts.removeLink')}
                         title={t('suppliers.contacts.removeLink')}
-                        onClick={() => { void detach(link.id); }}
+                        onClick={() => { void detach(link); }}
                       >
                         <DeleteIcon fontSize="small" />
                       </IconButton>
@@ -173,6 +192,17 @@ export default function SupplierContactsTab({ supplierId, canManage }: { supplie
           </Box>
         );
       })}
+      <Snackbar
+        open={!!removed}
+        autoHideDuration={8000}
+        onClose={(_event, reason) => { if (reason !== 'clickaway') setRemoved(null); }}
+        message={t('suppliers.contacts.linkRemoved')}
+        action={(
+          <Button size="small" variant="text" onClick={() => { void undoDetach(); }}>
+            {t('suppliers.contacts.undo')}
+          </Button>
+        )}
+      />
     </Box>
   );
 }

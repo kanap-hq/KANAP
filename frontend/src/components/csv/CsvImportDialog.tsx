@@ -63,6 +63,7 @@ export default function CsvImportDialog({
   params,
   preflight = true,
   flexibleFormat = false,
+  hint,
 }: {
   // i18n handled below
   open: boolean;
@@ -79,6 +80,8 @@ export default function CsvImportDialog({
    * templates) leave this off.
    */
   flexibleFormat?: boolean;
+  /** The values the file's columns accept, when the template's titles do not say it, under the description. */
+  hint?: string;
 }) {
   const { t, i18n } = useTranslation(['common', 'ops']);
   const language = screenLanguage(i18n.resolvedLanguage || i18n.language);
@@ -226,6 +229,7 @@ export default function CsvImportDialog({
         <Typography variant="body2" sx={{ mb: 2 }}>
           {t(flexibleFormat ? 'csv.uploadDescriptionFlexible' : 'csv.uploadDescription')}
         </Typography>
+        {hint && <Typography variant="body2" sx={{ mb: 2 }}>{hint}</Typography>}
         <Button
           variant="text"
           size="small"

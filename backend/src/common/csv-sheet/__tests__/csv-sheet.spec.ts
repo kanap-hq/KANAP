@@ -595,6 +595,15 @@ async function testNotACsvFile() {
     readMasterDataFile({ file: minimalXls(), fields: ['name'], language: 'fr' }),
     (err: any) => err?.getStatus?.() === 400 && err.getResponse().code === 'CSV_FILE_EXCEL',
   );
+  // An empty file too: the English sentence stays for API clients, the code is for the interface.
+  for (const bytes of [Buffer.alloc(0), Buffer.from('  \n', 'utf8'), Buffer.from(';;\n', 'utf8')]) {
+    await assert.rejects(
+      readMasterDataFile({ file: bytes, fields: ['name'], language: 'fr' }),
+      (err: any) => err?.getStatus?.() === 400
+        && err.getResponse().code === 'CSV_FILE_EMPTY'
+        && err.getResponse().message === 'The file is empty.',
+    );
+  }
 }
 
 async function testRoundTrip() {

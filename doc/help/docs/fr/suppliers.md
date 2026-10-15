@@ -86,7 +86,7 @@ L'onglet **Contacts** liste les contacts liés à ce fournisseur par type de con
 - Chaque section liste ses contacts par nom. Cliquez sur un nom pour ouvrir la fiche du contact.
 - **Ajouter un existant** : recherchez un contact par son nom et choisissez-le. Le lien s'enregistre aussitôt.
 - **Nouveau contact** : ouvre le formulaire de contact avec le fournisseur et le type de contact déjà remplis. KANAP vous ramène à cet onglet une fois le contact créé.
-- Le bouton corbeille retire le lien. Le contact lui-même reste dans vos contacts.
+- Le bouton corbeille retire le lien. Le contact lui-même reste dans vos contacts. Un message le confirme, avec une action **Annuler** qui rattache de nouveau le contact.
 
 **Conseil** : gardez au moins un contact par fournisseur pour que la communication avec lui soit toujours à portée de clic.
 
@@ -111,7 +111,7 @@ Cliquez sur **Nouveau** dans la liste. Renseignez le nom (obligatoire), l'ID fou
 
 ## Import/export CSV
 
-**Exporter CSV** télécharge tous les fournisseurs avec leurs informations actuelles. **Importer CSV** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les seuls en-têtes.
+**Exporter CSV** télécharge tous les fournisseurs, activés et désactivés, triés par nom. La recherche et les filtres de la liste ne s'appliquent pas. La fenêtre se ferme une fois le fichier téléchargé. **Importer CSV** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les seuls en-têtes. Elle indique les valeurs acceptées.
 
 Les colonnes :
 
@@ -119,17 +119,21 @@ Les colonnes :
 |---|---|
 | `name` | Obligatoire. Le nom du fournisseur. Les lignes sont rapprochées par ce nom |
 | `erp_supplier_id` | L'ID du fournisseur dans votre ERP |
-| `commercial_contact` | L'e-mail d'un contact. Le chargement rattache le fournisseur au contact portant cet e-mail, et le crée lorsque l'espace de travail n'en a aucun |
+| `commercial_contact` | L'e-mail d'un contact existant. Le chargement y rattache le fournisseur |
 | `technical_contact` | L'e-mail d'un contact, comme ci-dessus |
 | `support_contact` | L'e-mail d'un contact, comme ci-dessus |
 | `notes` | Texte libre |
 | `status` | `enabled` ou `disabled` |
+| `disabled_at` | La fin de validité : une date (`2026-12-31`) ou une date et une heure complètes. Vide quand le fournisseur n'en a pas |
 
 **Import** :
 
 - Utilisez la **Vérification préalable** pour valider le fichier avant de l'appliquer, puis **Charger**
 - Les lignes sont rapprochées par `name`, quelle que soit la casse : une ligne met à jour le fournisseur qu'elle nomme, toute autre ligne en crée un
 - `name` est obligatoire. Toute autre cellule est facultative
+- Chaque fournisseur occupe une ligne. Deux lignes portant le même nom, même avec une casse différente, sont refusées à la vérification préalable, avec les deux numéros de ligne
+- L'e-mail d'un contact doit appartenir à un contact qui existe déjà dans **Contacts**. Sinon, la ligne est refusée à la vérification préalable : créez d'abord le contact
+- `disabled_at` fixe la fin de validité, et le statut en découle. Un statut qui contredit la date est refusé. Un fichier sans la colonne `disabled_at` s'importe toujours : le statut seul fixe alors le cycle de vie
 
 **Notes** :
 - Voir [Fichiers CSV](csv-files.md) pour l'encodage, le séparateur et les deux étapes d'import
