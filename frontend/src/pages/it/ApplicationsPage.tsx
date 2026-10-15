@@ -89,6 +89,8 @@ type AppRow = {
   // Structure summaries
   suites_count?: number;
   first_suite_name?: string | null;
+  /** Reference of the suite named by first_suite_name */
+  first_suite_ref?: string | null;
   components_count?: number;
   first_component_name?: string | null;
   instances?: AppInstanceSummary[];
@@ -255,6 +257,13 @@ export default function ApplicationsPage() {
     const sp = buildWorkspaceSearch();
     return `/it/applications/${routeId}/${workspaceTab}?${sp.toString()}`;
   }, [buildWorkspaceSearch]);
+
+  // The suite a row belongs to (its first one, the one named in the cell); the row itself as a fallback.
+  const buildSuiteHref = useCallback((row: AppRow | null | undefined) => (
+    row?.first_suite_ref
+      ? buildAppHref({ id: row.first_suite_ref, sequential_id: row.first_suite_ref } as AppRow, 'overview')
+      : buildAppHref(row, 'relations')
+  ), [buildAppHref]);
 
   const handleInternalNavigate = useCallback((event: React.MouseEvent, href: string | undefined) => {
     if (!href) return;
@@ -450,10 +459,11 @@ export default function ApplicationsPage() {
       const first = kind === 'suites' ? (data?.first_suite_name || null) : (data?.first_component_name || null);
       const extra = count && count > 1 ? ` +${count - 1}` : '';
       const title = first || '';
+      const href = kind === 'suites' ? buildSuiteHref(data) : buildAppHref(data as AppRow, 'relations');
       return (
         <Link
-          href={buildAppHref(data as AppRow, 'relations')}
-          onClick={(event) => handleInternalNavigate(event, buildAppHref(data as AppRow, 'relations'))}
+          href={href}
+          onClick={(event) => handleInternalNavigate(event, href)}
           sx={{ cursor: 'pointer', ...wholeCellLinkSx }}
           underline="none"
           color="inherit"
@@ -463,7 +473,7 @@ export default function ApplicationsPage() {
       );
     };
     return Cell;
-  }, [buildAppHref, handleInternalNavigate]);
+  }, [buildAppHref, buildSuiteHref, handleInternalNavigate]);
 
   const NameWithSuiteCell = useMemo(() => {
     const Cell: React.FC<ICellRendererParams<AppRow, any>> = (params) => {
@@ -491,11 +501,11 @@ export default function ApplicationsPage() {
           {(firstSuite && suitesCount > 0 && !suitesColVisible) && (
             <Box
               component="a"
-              href={buildAppHref(data as AppRow, 'relations')}
+              href={buildSuiteHref(data)}
               sx={{ px: 0.75, py: 0.25, borderRadius: 1, bgcolor: 'action.hover', color: 'text.secondary', cursor: 'pointer', fontSize: '0.75rem', ...aboveCellLinkSx }}
               onClick={(e) => {
                 e.stopPropagation();
-                handleInternalNavigate(e, buildAppHref(data as AppRow, 'relations'));
+                handleInternalNavigate(e, buildSuiteHref(data));
               }}
             >
               {t('pages.applications.includedIn')} {firstSuite}{extra}
@@ -505,7 +515,7 @@ export default function ApplicationsPage() {
       );
     };
     return Cell;
-  }, [buildAppHref, categoryLabel, handleInternalNavigate, suitesColVisible, t]);
+  }, [buildAppHref, buildSuiteHref, categoryLabel, handleInternalNavigate, suitesColVisible, t]);
 
   const EnvironmentCell = useMemo(() => {
     const mode = theme.palette.mode;
@@ -597,6 +607,8 @@ export default function ApplicationsPage() {
       colId: 'environments',
       width: 250,
       sortable: false,
+      // One link per pill: the rest of the cell keeps the default cursor the row rule overrides.
+      cellStyle: { cursor: 'default' },
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {

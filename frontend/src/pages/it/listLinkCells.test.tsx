@@ -37,12 +37,12 @@ import AssetsPage from './AssetsPage';
 import IncidentsPage from './IncidentsPage';
 import InterfacesPage from './InterfacesPage';
 
-type Col = { field?: string; colId?: string; cellRenderer?: unknown };
+type Col = { field?: string; colId?: string; cellRenderer?: unknown; cellStyle?: unknown };
 
 const ROW: Record<string, unknown> = {
   id: 'r1', item_number: 7, name: 'Okta', title: 'Outage', category: 'business', environment: 'prod',
   severity: 'high', status: 'open', cluster: 'Cluster A', is_cluster: false,
-  suites_count: 2, first_suite_name: 'Suite', components_count: 1, first_component_name: 'Part',
+  suites_count: 2, first_suite_name: 'Suite', first_suite_ref: 'APP-1', components_count: 1, first_component_name: 'Part',
   owners: ['Ann'], it_owners: ['Ann'], business_owners: ['Bob'], data_residency: ['FR'],
   spend_count: 2, spend_first_name: 'Line', capex_count: 1, capex_first_description: 'Capex', contracts_count: 1, contracts_first_name: 'Contract',
   binding_environments: ['prod', 'test'], interface_reference: 'INT-1',
@@ -106,6 +106,50 @@ describe('IT list link cells', () => {
   it('applications: the name, owners, residency, relations and structure cells cover their cell', () => {
     // The environments cell holds one pill per environment, each its own link: no single target.
     expectWholeCellLinks(<ApplicationsPage />, ['environments']);
+  });
+
+  it('applications: the environments cell is no link outside its pills', () => {
+    grid.mockClear();
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter><ApplicationsPage /></MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const columns = (grid.mock.calls[grid.mock.calls.length - 1][0] as { columns: Col[] }).columns;
+    cleanup();
+    const col = columns.find((c) => c.colId === 'environments') as Col;
+    // The row rule gives every cell a pointer: this cell takes it back, only its pills keep it.
+    expect(col.cellStyle).toMatchObject({ cursor: 'default' });
+    const Cell = col.cellRenderer as React.FC<any>;
+    const row = { ...ROW, instances: [{ environment: 'prod', status: 'enabled' }, { environment: 'test', status: 'enabled' }] };
+    const { container } = render(
+      <MemoryRouter>
+        <div className="ag-cell"><Cell value={null} data={row} colDef={{ colId: 'environments' }} /></div>
+      </MemoryRouter>,
+    );
+    const links = Array.from(container.querySelectorAll('a'));
+    expect(links.length).toBe(2);
+    for (const link of links) expect(coversItsCell(link)).toBe(false);
+  });
+
+  it('applications: the suite links open the suite, not the application', () => {
+    const cells = cellsOf(<ApplicationsPage />);
+    const draw = (key: string, data: Record<string, unknown>) => {
+      const { Cell } = cells.find((c) => c.key === key)!;
+      return render(
+        <MemoryRouter>
+          <Cell value={data[key] ?? data.name} valueFormatted={null} data={data} colDef={{ field: key }} />
+        </MemoryRouter>,
+      );
+    };
+    const row = { ...ROW, sequential_id: 'APP-2' };
+    // Suites column
+    const suites = draw('suites_count', row).container.querySelector('a')!;
+    expect(suites.getAttribute('href')).toMatch(/^\/it\/applications\/APP-1\/overview/);
+    cleanup();
+    // "Included in" chip of the name cell (shown while the suites column is hidden)
+    const chip = Array.from(draw('name', row).container.querySelectorAll('a')).find((a) => a.textContent?.includes('Suite'))!;
+    expect(chip.getAttribute('href')).toMatch(/^\/it\/applications\/APP-1\/overview/);
   });
 
   it('assets, incidents and interfaces: every link cell covers its cell', () => {
