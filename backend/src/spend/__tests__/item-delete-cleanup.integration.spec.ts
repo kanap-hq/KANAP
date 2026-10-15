@@ -26,13 +26,17 @@ function fakeStorage() {
   return { deleted, deleteObject: async (key: string) => { deleted.push(key); } };
 }
 
+// A real database error, raised on purpose: it aborts the transaction like any other. The service logs
+// the failed delete, so the run prints this message; it names itself so nobody chases it.
+const INJECTED_FAILURE = `DO $$ BEGIN RAISE EXCEPTION 'Injected database failure (test double)'; END $$`;
+
 /** Audit double; `sqlFailOn` runs a failing statement, which aborts the transaction like a real database error. */
 function auditDouble(sqlFailOn?: (entry: AuditEntry) => boolean) {
   const entries: AuditEntry[] = [];
   return {
     entries,
     log: async (entry: AuditEntry, opts?: { manager?: any }) => {
-      if (sqlFailOn?.(entry)) await opts!.manager.query('SELECT 1 / 0');
+      if (sqlFailOn?.(entry)) await opts!.manager.query(INJECTED_FAILURE);
       entries.push(entry);
     },
   };
@@ -344,7 +348,7 @@ function managerFailingReferenceCheck(runner: QueryRunner, failingPath: string) 
       if (prop === 'query') {
         return async (sql: string, params?: any[]) => {
           if (sql.includes('storage_path = ANY') && Array.isArray(params?.[1]) && params![1].includes(failingPath)) {
-            await target.query('SELECT 1 / 0');
+            await target.query(INJECTED_FAILURE);
           }
           return target.query(sql, params);
         };
