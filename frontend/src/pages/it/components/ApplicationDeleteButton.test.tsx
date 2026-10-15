@@ -31,8 +31,9 @@ function renderButton() {
 async function openConfirm() {
   fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
   const dialog = await screen.findByRole('dialog');
-  expect(within(dialog).getByText('Delete application?')).toBeInTheDocument();
-  expect(within(dialog).getByText(/Billing hub/)).toBeInTheDocument();
+  expect(within(dialog).getByText('Delete Billing hub?')).toBeInTheDocument();
+  expect(dialog).toHaveTextContent(/deployments/);
+  expect(within(dialog).getByText(/permanently deletes Billing hub/)).toBeInTheDocument();
   return dialog;
 }
 
@@ -65,14 +66,14 @@ describe('ApplicationDeleteButton', () => {
     expect(onDeleted).not.toHaveBeenCalled();
   });
 
-  it('reports the server message when the delete fails and stays on the page', async () => {
-    del.mockRejectedValue({ response: { data: { message: 'Application not found' } } });
+  it('reports a failed delete in the interface language and stays on the page', async () => {
+    del.mockRejectedValue({ response: { status: 404, data: { code: 'not_found', message: 'Application not found' } } });
     const { onDeleted, onError } = renderButton();
 
     const dialog = await openConfirm();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
 
-    await waitFor(() => expect(onError).toHaveBeenCalledWith('Application not found'));
+    await waitFor(() => expect(onError).toHaveBeenCalledWith('This item no longer exists. Reload the page to see the current list.'));
     expect(onDeleted).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Delete' })).toBeEnabled();
   });

@@ -73,6 +73,14 @@
         "dataClass": "Clasificación de datos",
         "containsPii": "Contiene PII",
         "dataResidency": "Residencia de datos"
+      },
+      "delete": {
+        "warning_one": "Sus despliegues, interfaces y vínculos con otros elementos se eliminan con ella. Esta acción no se puede deshacer.",
+        "warning_other": "Sus despliegues, interfaces y vínculos con otros elementos se eliminan con ellas. Esta acción no se puede deshacer.",
+        "toDelete_one": "{{count}} aplicación se eliminará:",
+        "toDelete_other": "{{count}} aplicaciones se eliminarán:",
+        "deleted_one": "{{count}} aplicación eliminada",
+        "deleted_other": "{{count}} aplicaciones eliminadas"
       }
     },
     "assets": {
@@ -925,11 +933,10 @@
       "next": "Aplicación siguiente",
       "loading": "Cargando la aplicación…",
       "notFound": "Aplicación no encontrada.",
-      "deleteTitle": "¿Eliminar la aplicación?",
-      "deleteMessage": "Esta acción elimina definitivamente {{name}}. No se puede deshacer.",
       "meta": {
         "goLive": "Puesta en marcha"
-      }
+      },
+      "deleteMessage": "Esto elimina definitivamente {{name}}, con sus despliegues, interfaces y vínculos con otros elementos. Esta acción no se puede deshacer."
     },
     "asset": {
       "title": "Servidor",

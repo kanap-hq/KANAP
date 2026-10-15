@@ -903,6 +903,13 @@ export default function ApplicationsPage() {
           endpoint="/applications/bulk"
           getItemId={(row) => row.id}
           getItemName={(row) => row.name}
+          // Nothing refuses an application delete: its deployments, interfaces and links go with it.
+          warning={t('pages.applications.delete.warning', { count: selectedRows.length })}
+          itemLabels={{
+            toDelete: (count) => t('pages.applications.delete.toDelete', { count }),
+            kept: (count) => t('common:delete.itemsKept', { count }),
+            deleted: (count) => t('pages.applications.delete.deleted', { count }),
+          }}
           gridApi={gridApiRef.current}
           onDeleteSuccess={() => { setRefreshKey((k) => k + 1); }}
         />

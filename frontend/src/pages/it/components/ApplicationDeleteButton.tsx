@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../../api';
 import { useKanapDialogs } from '../../../components/design';
+import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 
 type Props = {
   applicationId: string;
@@ -25,7 +26,7 @@ export default function ApplicationDeleteButton({ applicationId, applicationName
 
   const handleClick = async () => {
     const confirmed = await dialogs.confirm({
-      title: t('workspace.application.deleteTitle'),
+      title: t('common:delete.recordTitle', { name: applicationName }),
       message: t('workspace.application.deleteMessage', { name: applicationName }),
       confirmLabel: t('common:buttons.delete'),
       intent: 'danger',
@@ -40,7 +41,7 @@ export default function ApplicationDeleteButton({ applicationId, applicationName
       onDeleted();
     } catch (err: any) {
       setDeleting(false);
-      onError(err?.response?.data?.message || err?.message || t('messages.deleteApplicationFailed'));
+      onError(getApiErrorMessage(err, t, t('messages.deleteApplicationFailed')));
     }
   };
 

@@ -73,6 +73,14 @@
         "dataClass": "Datenklasse",
         "containsPii": "Enthält PII",
         "dataResidency": "Datenresidenz"
+      },
+      "delete": {
+        "warning_one": "Ihre Bereitstellungen, Schnittstellen und Verknüpfungen zu anderen Einträgen werden mit ihr gelöscht. Dies kann nicht rückgängig gemacht werden.",
+        "warning_other": "Ihre Bereitstellungen, Schnittstellen und Verknüpfungen zu anderen Einträgen werden mit ihnen gelöscht. Dies kann nicht rückgängig gemacht werden.",
+        "toDelete_one": "{{count}} Anwendung wird gelöscht:",
+        "toDelete_other": "{{count}} Anwendungen werden gelöscht:",
+        "deleted_one": "{{count}} Anwendung gelöscht",
+        "deleted_other": "{{count}} Anwendungen gelöscht"
       }
     },
     "assets": {
@@ -925,11 +933,10 @@
       "next": "Nächste Anwendung",
       "loading": "Anwendung wird geladen…",
       "notFound": "Anwendung nicht gefunden.",
-      "deleteTitle": "Anwendung löschen?",
-      "deleteMessage": "{{name}} wird endgültig gelöscht. Dies kann nicht rückgängig gemacht werden.",
       "meta": {
         "goLive": "Inbetriebnahme"
-      }
+      },
+      "deleteMessage": "Damit wird {{name}} endgültig gelöscht, mit ihren Bereitstellungen, Schnittstellen und Verknüpfungen zu anderen Einträgen. Dies kann nicht rückgängig gemacht werden."
     },
     "asset": {
       "title": "Server",

@@ -73,6 +73,14 @@
         "dataClass": "Classification des données",
         "containsPii": "Contient des PII",
         "dataResidency": "Résidence des données"
+      },
+      "delete": {
+        "warning_one": "Ses déploiements, interfaces et liens vers d’autres éléments sont supprimés avec elle. Cette action est irréversible.",
+        "warning_other": "Leurs déploiements, interfaces et liens vers d’autres éléments sont supprimés avec elles. Cette action est irréversible.",
+        "toDelete_one": "{{count}} application sera supprimée :",
+        "toDelete_other": "{{count}} applications seront supprimées :",
+        "deleted_one": "{{count}} application supprimée",
+        "deleted_other": "{{count}} applications supprimées"
       }
     },
     "assets": {
@@ -925,11 +933,10 @@
       "next": "Application suivante",
       "loading": "Chargement de l'application…",
       "notFound": "Application introuvable.",
-      "deleteTitle": "Supprimer l'application ?",
-      "deleteMessage": "Cette action supprime définitivement {{name}}. Elle est irréversible.",
       "meta": {
         "goLive": "Mise en service"
-      }
+      },
+      "deleteMessage": "Cette action supprime définitivement {{name}}, avec ses déploiements, ses interfaces et ses liens vers d’autres éléments. Elle est irréversible."
     },
     "asset": {
       "title": "Serveur",

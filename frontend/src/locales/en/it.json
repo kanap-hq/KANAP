@@ -73,6 +73,14 @@
         "dataClass": "Data class",
         "containsPii": "Contains PII",
         "dataResidency": "Data residency"
+      },
+      "delete": {
+        "warning_one": "Its deployments, interfaces and links to other records are deleted with it. This cannot be undone.",
+        "warning_other": "Their deployments, interfaces and links to other records are deleted with them. This cannot be undone.",
+        "toDelete_one": "{{count}} application will be deleted:",
+        "toDelete_other": "{{count}} applications will be deleted:",
+        "deleted_one": "{{count}} application deleted",
+        "deleted_other": "{{count}} applications deleted"
       }
     },
     "assets": {
@@ -925,11 +933,10 @@
       "next": "Next application",
       "loading": "Loading application…",
       "notFound": "Application not found.",
-      "deleteTitle": "Delete application?",
-      "deleteMessage": "This permanently deletes {{name}}. This cannot be undone.",
       "meta": {
         "goLive": "Go live"
-      }
+      },
+      "deleteMessage": "This permanently deletes {{name}}, with its deployments, interfaces and links to other records. This cannot be undone."
     },
     "asset": {
       "title": "Server",
