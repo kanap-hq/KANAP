@@ -17,6 +17,8 @@ type ImportReport = {
   /** Rows identical to what is stored, left untouched (budget rows import only). */
   unchanged?: number;
   errors: RowError[];
+  /** Rows that import, with a note on how (account numbers whose leading zeros are dropped). */
+  warnings?: RowError[];
   /** How the server read the dates and the amounts, in English, when it had to choose. */
   notices?: { dates: string | null; amounts: string | null };
   /** Headers the importer does not know and left out of the import. */
@@ -27,7 +29,7 @@ type ImportReport = {
  * `code`: the error code the interface translates, when the server gave one (MARKDOWN_TOO_LARGE, ...),
  * with the values its sentence names (`params`). Row 0 is the header.
  */
-type RowError = { row: number; column?: string; message: string; code?: string; params?: Record<string, string> };
+type RowError = { row: number; column?: string; message: string; code?: string; params?: Record<string, string | number> };
 
 /** A row error in the interface language when it has a code, with the column it is about. */
 function rowErrorText(err: RowError, t: TFunction): string {
@@ -95,6 +97,8 @@ export default function CsvImportDialog({
   const appliedDates = dateReadingOf(dateNotice);
   const appliedAmounts = amountReadingOf(amountNotice);
   const ignoredColumns = report?.ignoredColumns ?? [];
+  // Shown with the check, before the load: the rows import as the warnings say.
+  const warnings = report?.dryRun ? report.warnings ?? [] : [];
   // A dry run is re-checked and then loaded; a finished import only reports its outcome.
   const completed = !!report && report.ok && !report.dryRun;
 
@@ -305,6 +309,16 @@ export default function CsvImportDialog({
                   <Typography variant="caption">{t('csv.andMoreErrors', { count: (report as any).errors.length - 5 })}</Typography>
                 )}
               </Box>
+            )}
+            {warnings.length > 0 && (
+              <Alert severity="warning" sx={{ mt: 1 }} data-testid="csv-import-warnings">
+                {warnings.slice(0, 5).map((warning, i) => (
+                  <Box key={i} component="span" sx={{ display: 'block' }}>{rowErrorText(warning, t)}</Box>
+                ))}
+                {warnings.length > 5 && (
+                  <Box component="span" sx={{ display: 'block' }}>{t('csv.andMoreErrors', { count: warnings.length - 5 })}</Box>
+                )}
+              </Alert>
             )}
           </Box>
         )}

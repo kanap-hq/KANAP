@@ -36,9 +36,9 @@ import {
   remapToConsolidationAccount,
   resyncFromChart,
 } from './consolidation';
+import { ACCOUNT_NUMBER_MAX, ACCOUNT_NUMBER_MAX_DIGITS, ACCOUNT_NUMBER_RULE, readAccountNumber } from './account-number';
 
 const ACCOUNT_NUMBER_TOKEN = '__account_number__';
-const INT4_MAX = 2147483647;
 
 /** The columns an account file may leave out: an absent column keeps what is stored (a new account takes the defaults). */
 const OPTIONAL_CSV_HEADERS = [
@@ -70,10 +70,39 @@ function accountNumberWhere(rawModel: any) {
   return Raw((alias) => sql.split(ACCOUNT_NUMBER_TOKEN).join(alias), params);
 }
 
-/** A quick search that can be an account number: an integer within the column's range. */
+/** A quick search that can be an account number: an integer within the accounts' 15-digit bound. */
 function accountNumberQuery(q: string): number | null {
   const value = Number(q);
-  return Number.isInteger(value) && Math.abs(value) <= INT4_MAX ? value : null;
+  return Number.isInteger(value) && Math.abs(value) <= ACCOUNT_NUMBER_MAX ? value : null;
+}
+
+/**
+ * A CSV cell read as an account number (`readAccountNumber`): `tooLong` is the row error of a
+ * number above 15 digits, `leadingZeros` the row warning of zeros the stored number drops.
+ */
+function csvAccountNumber(raw: string, column: string, row: number): { value: number | null; tooLong?: ImportReportError; leadingZeros?: ImportReportError } {
+  const reading = readAccountNumber(raw);
+  if (reading.value == null) {
+    return reading.problem !== 'too_long' ? { value: null } : {
+      value: null,
+      tooLong: {
+        row, column, code: 'CSV_ACCOUNT_NUMBER_TOO_LONG', params: { value: raw, max: ACCOUNT_NUMBER_MAX_DIGITS },
+        message: `${column} '${raw}' has more than ${ACCOUNT_NUMBER_MAX_DIGITS} digits. Use at most ${ACCOUNT_NUMBER_MAX_DIGITS} digits.`,
+      },
+    };
+  }
+  return {
+    value: reading.value,
+    leadingZeros: reading.leadingZeros ? {
+      row, column, code: 'CSV_ACCOUNT_NUMBER_LEADING_ZEROS', params: { value: raw, stored: reading.value },
+      message: `${raw} will be stored as ${reading.value}.`,
+    } : undefined,
+  };
+}
+
+/** A write the database refused for a number out of range: a 400, never a 500. */
+function numberOutOfRange(e: any): boolean {
+  return e?.code === '22003' || e?.driverError?.code === '22003';
 }
 
 /** The `consolidationStatus` filter, added to any condition already on the consolidation number. */
@@ -479,6 +508,7 @@ export class AccountsService {
         // Likely unique on (tenant_id, coa_id, account_number)
         throw new BadRequestException('An account with this number already exists in the selected Chart of Accounts');
       }
+      if (numberOutOfRange(e)) throw new BadRequestException(`account_number ${ACCOUNT_NUMBER_RULE}`);
       throw e;
     }
     await this.auditWrite({ recordId: saved.id, action: 'create', before: null, after: saved }, userId, mg, audit, consolidation);
@@ -569,6 +599,7 @@ export class AccountsService {
         // Unique violation on (tenant_id, coa_id, account_number)
         throw new BadRequestException('An account with this number already exists in the target Chart of Accounts');
       }
+      if (numberOutOfRange(e)) throw new BadRequestException(`account_number ${ACCOUNT_NUMBER_RULE}`);
       throw e;
     }
     await this.auditWrite({ recordId: saved.id, action: 'update', before, after: saved }, userId, mg, audit, consolidation);
@@ -777,6 +808,8 @@ export class AccountsService {
     });
     const has = (column: string) => read.present.includes(column);
     const errors: ImportReportError[] = [];
+    // Row warnings: the row imports, the dry run says how (leading zeros dropped).
+    const warnings: ImportReportError[] = [];
     if (read.headerError) {
       return {
         ok: false, dryRun, total: 0, inserted: 0, updated: 0,
@@ -804,15 +837,13 @@ export class AccountsService {
       const name = cellOf(row, 'account_name');
       const statusRaw = cellOf(row, 'status').toLowerCase();
       const consolNumRaw = cellOf(row, 'consolidation_account_number');
-      const parseIntStrict = (v: string): number | null => {
-        if (v === '') return null;
-        const n = Number(v);
-        return Number.isInteger(n) ? n : null;
-      };
-      const account_number = parseIntStrict(numRaw);
-      if (account_number == null) {
+      const numberCell = csvAccountNumber(numRaw, 'account_number', line);
+      const account_number = numberCell.value;
+      if (numberCell.tooLong) errors.push(numberCell.tooLong);
+      else if (account_number == null) {
         errors.push({ row: line, message: 'account_number is required and must be an integer', code: 'CSV_ACCOUNT_NUMBER_REQUIRED' });
       }
+      if (numberCell.leadingZeros) warnings.push(numberCell.leadingZeros);
       if (!name) errors.push({ row: line, message: 'account_name is required', code: 'CSV_ACCOUNT_NAME_REQUIRED' });
       if (statusRaw && statusRaw !== 'enabled' && statusRaw !== 'disabled') {
         errors.push({
@@ -822,14 +853,17 @@ export class AccountsService {
           params: { value: statusRaw },
         });
       }
-      const consolidation_account_number = parseIntStrict(consolNumRaw);
-      if (consolNumRaw !== '' && consolidation_account_number == null) {
+      const consolidationCell = csvAccountNumber(consolNumRaw, 'consolidation_account_number', line);
+      const consolidation_account_number = consolidationCell.value;
+      if (consolidationCell.tooLong) errors.push(consolidationCell.tooLong);
+      else if (consolNumRaw !== '' && consolidation_account_number == null) {
         errors.push({
           row: line,
           message: 'consolidation_account_number must be an integer when provided',
           code: 'CSV_ACCOUNT_CONSOLIDATION_NUMBER_INVALID',
         });
       }
+      if (consolidationCell.leadingZeros) warnings.push(consolidationCell.leadingZeros);
       const natureRaw = cellOf(row, 'nature');
       const nature = has('nature') ? csvNature(natureRaw) : undefined;
       if (has('nature') && nature === undefined) {
@@ -855,7 +889,7 @@ export class AccountsService {
       });
     });
     if (errors.length > 0) {
-      return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors, ignoredColumns: read.ignoredColumns, notices: read.notices };
+      return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors, warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
     let targetCoaId: string | undefined = opts?.targetCoaId;
     if (!targetCoaId && opts?.allowCoaCodeColumn) {
@@ -896,7 +930,7 @@ export class AccountsService {
       if (existingByNumber.has(item.account_number as string)) updated += 1; else inserted += 1;
     }
     if (dryRun) {
-      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
+      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
     // Commit. The consolidation accounts the file refers to are read once, the audit lines of
     // the rows written in one statement at the end.
@@ -927,6 +961,6 @@ export class AccountsService {
     if (chartId && targetCoaId === chartId) {
       await resyncFromChart(mg, chartId, { userId });
     }
-    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, processed, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
+    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, processed, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
   }
 }

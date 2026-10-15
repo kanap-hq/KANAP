@@ -671,7 +671,7 @@
       "saveFailed": "Error al guardar la cuenta.",
       "createFailed": "Error al crear la cuenta.",
       "chartRequired": "Elija un plan de cuentas.",
-      "numberInvalid": "Introduzca un número entero mayor que cero.",
+      "numberInvalid": "Introduzca un número entero mayor que cero, de {{max}} dígitos como máximo.",
       "nameRequired": "Introduzca un nombre."
     }
   },
@@ -986,6 +986,7 @@
     },
     "account": {
       "accountNumberRequired": "El número de cuenta es obligatorio",
+      "accountNumberTooLong": "Utilice como máximo {{max}} dígitos",
       "accountNameRequired": "El nombre de la cuenta es obligatorio"
     }
   }

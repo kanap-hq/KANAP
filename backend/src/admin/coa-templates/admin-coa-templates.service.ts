@@ -7,6 +7,7 @@ import { format } from '@fast-csv/format';
 import { AuditService } from '../../audit/audit.service';
 import { denormalizeCsvRow } from '../../common/csv/csv-export.service';
 import { headerMismatchError } from '../../common/csv-sheet';
+import { ACCOUNT_NUMBER_MAX_DIGITS, ACCOUNT_NUMBER_RULE, parseAccountNumber, readAccountNumber } from '../../accounts/account-number';
 
 /** The OPEX/CAPEX nature of a template account (`nature` column, optional, empty = both). */
 const NATURES = ['opex', 'capex'] as const;
@@ -64,12 +65,8 @@ export class AdminCoaTemplatesService {
           // A payload uploaded from a neutralised accounts export carries the protective
           // apostrophe; accounts.importCsv strips it too, so both readers agree.
           const row = denormalizeCsvRow(rawRow);
-          const toInt = (v: any): number | null => {
-            const s = (v ?? '').toString().trim();
-            if (s === '') return null;
-            const n = Number(s);
-            return Number.isInteger(n) ? n : null;
-          };
+          // A number outside the accounts' bound (15 digits) reads as empty, like any other invalid value.
+          const toInt = (v: any): number | null => parseAccountNumber((v ?? '').toString());
           const statusRaw = (row['status'] ?? 'enabled').toString().trim().toLowerCase();
           rows.push({
             account_number: toInt(row['account_number']) ?? 0,
@@ -129,15 +126,15 @@ export class AdminCoaTemplatesService {
   }
 
   private validateRowPayload(body: any) {
-    const toInt = (v: any): number | null => {
-      if (v === '' || v == null) return null;
-      const n = Number(v);
-      return Number.isInteger(n) ? n : null;
-    };
-    const account_number = toInt(body?.account_number);
+    const account_number = parseAccountNumber(body?.account_number);
     const account_name = (body?.account_name ?? '').toString().trim();
     const status = (body?.status ?? 'enabled').toString().trim().toLowerCase();
-    if (account_number == null) throw new BadRequestException('account_number is required and must be an integer');
+    if (account_number == null) throw new BadRequestException(`account_number ${ACCOUNT_NUMBER_RULE}`);
+    const consolidationRaw = body?.consolidation_account_number;
+    const consolidation_account_number = consolidationRaw === '' || consolidationRaw == null ? null : parseAccountNumber(consolidationRaw);
+    if (consolidationRaw !== '' && consolidationRaw != null && consolidation_account_number == null) {
+      throw new BadRequestException(`consolidation_account_number ${ACCOUNT_NUMBER_RULE}`);
+    }
     if (!account_name) throw new BadRequestException('account_name is required');
     if (status && status !== 'enabled' && status !== 'disabled') throw new BadRequestException(`Invalid status '${status}'. Use 'enabled' or 'disabled'.`);
     const nature = natureOf(body?.nature);
@@ -147,7 +144,7 @@ export class AdminCoaTemplatesService {
       account_name,
       native_name: ((body?.native_name ?? '').toString().trim()) || null,
       description: ((body?.description ?? '').toString().trim()) || null,
-      consolidation_account_number: toInt(body?.consolidation_account_number),
+      consolidation_account_number,
       consolidation_account_name: ((body?.consolidation_account_name ?? '').toString().trim()) || null,
       consolidation_account_description: ((body?.consolidation_account_description ?? '').toString().trim()) || null,
       status: status === 'disabled' ? 'disabled' : 'enabled',
@@ -314,7 +311,7 @@ export class AdminCoaTemplatesService {
     const expected = this.csvHeaders();
     let headerOk = false;
     let total = 0;
-    const errors: Array<{ row: number; message: string }> = [];
+    const errors: Array<{ row: number; message: string; column?: string; code?: string; params?: Record<string, string | number> }> = [];
     await new Promise<void>((resolve, reject) => {
       parseString(content, { headers: true, delimiter, ignoreEmpty: true, trim: true })
         .on('headers', (headers: string[]) => {
@@ -325,8 +322,23 @@ export class AdminCoaTemplatesService {
         })
         .on('data', (row: Record<string, string>) => {
           total += 1;
-          const raw = denormalizeCsvRow(row)['nature'];
+          const cells = denormalizeCsvRow(row);
+          const raw = cells['nature'];
           if (natureOf(raw) === undefined) errors.push({ row: total + 1, message: invalidNature(raw) });
+          // Account numbers: whole numbers of at most 15 digits (`account-number.ts`); the consolidation number may be empty.
+          for (const column of ['account_number', 'consolidation_account_number']) {
+            const cell = (cells[column] ?? '').toString().trim();
+            if (column === 'consolidation_account_number' && cell === '') continue;
+            const reading = readAccountNumber(cell);
+            if (reading.value == null) {
+              errors.push(reading.problem === 'too_long'
+                ? {
+                  row: total + 1, column, code: 'CSV_ACCOUNT_NUMBER_TOO_LONG', params: { value: cell, max: ACCOUNT_NUMBER_MAX_DIGITS },
+                  message: `${column} '${cell}' has more than ${ACCOUNT_NUMBER_MAX_DIGITS} digits. Use at most ${ACCOUNT_NUMBER_MAX_DIGITS} digits.`,
+                }
+                : { row: total + 1, column, message: `${column} ${ACCOUNT_NUMBER_RULE}` });
+            }
+          }
         })
         .on('end', () => resolve())
         .on('error', (err) => reject(err));

@@ -671,7 +671,7 @@
       "saveFailed": "Failed to save the account.",
       "createFailed": "Failed to create the account.",
       "chartRequired": "Choose a chart of accounts.",
-      "numberInvalid": "Enter a whole number greater than zero.",
+      "numberInvalid": "Enter a whole number greater than zero, with at most {{max}} digits.",
       "nameRequired": "Enter a name."
     }
   },
@@ -986,6 +986,7 @@
     },
     "account": {
       "accountNumberRequired": "Account number is required",
+      "accountNumberTooLong": "Use at most {{max}} digits",
       "accountNameRequired": "Account name is required"
     }
   }

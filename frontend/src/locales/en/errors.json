@@ -55,6 +55,8 @@
   "CSV_HEADER_MISMATCH": "Missing columns: {{missing}}. Unknown columns: {{extra}}.",
   "CSV_ACCOUNT_COA_CODE_REQUIRED": "Enter the chart of accounts code (coa_code).",
   "CSV_ACCOUNT_NUMBER_REQUIRED": "The account number (account_number) is required and must be a whole number.",
+  "CSV_ACCOUNT_NUMBER_TOO_LONG": "{{value}} has more than {{max}} digits. Use at most {{max}} digits.",
+  "CSV_ACCOUNT_NUMBER_LEADING_ZEROS": "{{value}} will be stored as {{stored}}: the leading zeros are dropped.",
   "CSV_ACCOUNT_NAME_REQUIRED": "The account name (account_name) is required.",
   "CSV_ACCOUNT_STATUS_INVALID": "Invalid status \"{{value}}\". Use enabled or disabled.",
   "CSV_ACCOUNT_CONSOLIDATION_NUMBER_INVALID": "The consolidation account number (consolidation_account_number) must be a whole number.",

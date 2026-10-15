@@ -671,7 +671,7 @@
       "saveFailed": "Das Konto konnte nicht gespeichert werden.",
       "createFailed": "Das Konto konnte nicht erstellt werden.",
       "chartRequired": "Wählen Sie einen Kontenplan.",
-      "numberInvalid": "Geben Sie eine ganze Zahl größer als null ein.",
+      "numberInvalid": "Geben Sie eine ganze Zahl größer als null mit höchstens {{max}} Ziffern ein.",
       "nameRequired": "Geben Sie einen Namen ein."
     }
   },
@@ -986,6 +986,7 @@
     },
     "account": {
       "accountNumberRequired": "Kontonummer ist erforderlich",
+      "accountNumberTooLong": "Verwenden Sie höchstens {{max}} Ziffern",
       "accountNameRequired": "Kontoname ist erforderlich"
     }
   }

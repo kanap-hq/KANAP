@@ -220,6 +220,32 @@ describe('AccountWorkspacePage', () => {
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/accounts/acc-1', { account_number: 606200 }));
   });
 
+  it('accepts an account number of up to 15 digits and refuses a longer one', async () => {
+    renderAt('/master-data/accounts/acc-1/overview');
+    const number = await screen.findByLabelText('accounts.fields.accountNumber');
+    await waitFor(() => expect(number).toHaveValue('606100'));
+    fireEvent.change(number, { target: { value: '6156300000123456' } });
+    fireEvent.blur(number);
+    expect(await screen.findByText('accounts.messages.numberInvalid')).toBeInTheDocument();
+    expect(mocked.patch).not.toHaveBeenCalled();
+    fireEvent.change(number, { target: { value: '615630000012' } });
+    fireEvent.blur(number);
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/accounts/acc-1', { account_number: 615630000012 }));
+  });
+
+  it('matches a consolidation number the server sends as text with the chart account', async () => {
+    // A bigint column can reach the page as text: it is the same account as the number.
+    serve({ account: { ...ACCOUNT, consolidation_account_number: '1300' } });
+    renderAt('/master-data/accounts/acc-1/overview');
+    await screen.findByText('Software subscriptions');
+    await waitFor(() => expect(consolidationSelect()).not.toHaveAttribute('aria-disabled'));
+    expect(consolidationSelect()).toHaveTextContent('1300 · Impairments & write-offs');
+    expect(within(consolidationSelect()).queryByRole('img', { name: 'coa.outsideMarker:IFRS' })).toBeNull();
+    expect(screen.queryByText('accounts.consolidation.outside:IFRS')).toBeNull();
+    const listbox = await openConsolidation();
+    expect(within(listbox).getAllByRole('option', { name: /1300 · Impairments & write-offs/ })).toHaveLength(1);
+  });
+
   it('shows a number already used in the chart under the number field', async () => {
     mocked.patch.mockRejectedValueOnce({
       response: { status: 400, data: { message: 'An account with this number already exists in the target Chart of Accounts' } },

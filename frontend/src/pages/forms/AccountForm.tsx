@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { TFunction } from 'i18next';
 import { STATUS_DISABLED, STATUS_ENABLED, STATUS_VALUES, StatusValue, deriveStatusFromDisabledAt, normalizeDisabledAtInput } from '../../constants/status';
 import { ACCOUNT_NATURES, type AccountNature } from '../../constants/accountNature';
+import { ACCOUNT_NUMBER_MAX, ACCOUNT_NUMBER_MAX_DIGITS } from '../../constants/accountNumber';
 
 const optStr = (schema = z.string()) =>
   z.preprocess((v) => {
@@ -10,12 +11,13 @@ const optStr = (schema = z.string()) =>
     return result.success ? result.data : null;
   }, z.string().nullable());
 
-const optInt = () =>
+/** An optional account number (the consolidation number): at most 15 digits. */
+const optAccountNumber = (tooLong: string) =>
   z.preprocess((v) => {
     if (v === '' || v == null) return null;
     const num = Number(v);
     return isNaN(num) ? null : num;
-  }, z.number().int().nullable());
+  }, z.number().int().min(1).max(ACCOUNT_NUMBER_MAX, tooLong).nullable());
 
 const optDateTime = () =>
   z.preprocess((v) => {
@@ -29,11 +31,17 @@ const optNature = () =>
 
 export function createAccountFormSchema(t: TFunction) {
   return z.object({
-    account_number: z.number().int().min(1, t('master-data:formSchemas.account.accountNumberRequired')),
+    account_number: z
+      .number()
+      .int()
+      .min(1, t('master-data:formSchemas.account.accountNumberRequired'))
+      .max(ACCOUNT_NUMBER_MAX, t('master-data:formSchemas.account.accountNumberTooLong', { max: ACCOUNT_NUMBER_MAX_DIGITS })),
     account_name: z.string().min(1, t('master-data:formSchemas.account.accountNameRequired')),
     native_name: optStr(),
     description: optStr(),
-    consolidation_account_number: optInt(),
+    consolidation_account_number: optAccountNumber(
+      t('master-data:formSchemas.account.accountNumberTooLong', { max: ACCOUNT_NUMBER_MAX_DIGITS }),
+    ),
     consolidation_account_name: optStr(),
     consolidation_account_description: optStr(),
     nature: optNature(),

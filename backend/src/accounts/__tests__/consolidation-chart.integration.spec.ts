@@ -169,7 +169,8 @@ async function consolidationOf(runner: QueryRunner, accountId: string) {
      FROM accounts WHERE id = $1`,
     [accountId],
   );
-  return row;
+  // The column is bigint: pg returns it as text.
+  return row ? { ...row, number: row.number == null ? null : Number(row.number) } : row;
 }
 
 function chartAudits(audits: AuditEntry[], field: string) {

@@ -72,6 +72,22 @@ describe('account form schema: Used for', () => {
   });
 });
 
+describe('account form schema: account numbers', () => {
+  const base = { account_name: 'Maintenance', status: 'enabled' };
+
+  it('accepts numbers of up to 15 digits', () => {
+    const parsed = accountFormSchema.parse({ ...base, account_number: 615630000012, consolidation_account_number: '999999999999999' });
+    expect(parsed.account_number).toBe(615630000012);
+    expect(parsed.consolidation_account_number).toBe(999999999999999);
+  });
+
+  it('refuses longer numbers and a consolidation number below 1', () => {
+    expect(accountFormSchema.safeParse({ ...base, account_number: 6156300000123456 }).success).toBe(false);
+    expect(accountFormSchema.safeParse({ ...base, account_number: 6156100, consolidation_account_number: 6156300000123456 }).success).toBe(false);
+    expect(accountFormSchema.safeParse({ ...base, account_number: 6156100, consolidation_account_number: 0 }).success).toBe(false);
+  });
+});
+
 describe('platform admin template account editors: Used for', () => {
   beforeEach(() => {
     vi.clearAllMocks();
