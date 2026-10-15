@@ -86,7 +86,7 @@ Cliquez sur n'importe quelle cellule pour ouvrir l'espace de travail.
 
 - **Nouveau** : créer un groupe ou un centre de coûts (nécessite `cost_centers:member`)
 - **Importer CSV** : charger l'arbre depuis un fichier (nécessite `cost_centers:admin`)
-- **Exporter CSV** : télécharger tous les éléments (nécessite `cost_centers:admin`)
+- **Exporter CSV** : télécharger les éléments que la liste affiche, ou tous les éléments (nécessite `cost_centers:admin`)
 - **Supprimer la sélection** : supprimer les éléments sélectionnés (nécessite `cost_centers:admin`). Les éléments qui ne peuvent pas être supprimés sont conservés et listés avec la raison. Le contenu est supprimé avant son groupe : sélectionner un groupe avec tout ce qu'il contient supprime l'ensemble
 
 ---

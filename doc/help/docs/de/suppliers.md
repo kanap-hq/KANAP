@@ -111,7 +111,7 @@ Klicken Sie in der Liste auf **Neu**. Geben Sie den Namen (Pflicht), die ERP-Lie
 
 ## CSV-Import/Export
 
-**CSV exportieren** lädt alle Lieferanten herunter, aktivierte und deaktivierte, nach Name sortiert. Suche und Filter der Liste gelten nicht. Der Dialog schließt sich, sobald die Datei heruntergeladen ist. **CSV importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei nur mit den Kopfzeilen. Er nennt die zulässigen Werte.
+**CSV exportieren** lädt die Lieferanten herunter, die die Liste zeigt, mit ihrer Suche, ihren Filtern und ihrer Sortierung. Wählen Sie im Dialog **Das ganze Verzeichnis**, um alle Lieferanten herunterzuladen, aktivierte und deaktivierte. Der Dialog schließt sich, sobald die Datei heruntergeladen ist. **CSV importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei nur mit den Kopfzeilen. Er nennt die zulässigen Werte.
 
 Die Spalten:
 

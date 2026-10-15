@@ -46,7 +46,7 @@ The list shows all business processes for your tenant.
 - **New** (Manager+) -- create a new business process.
 - **Manage Categories** (Manager+) -- open the category management dialog.
 - **Import CSV** (Admin) -- bulk-import processes from a CSV file.
-- **Export CSV** (Admin) -- export all processes to CSV.
+- **Export CSV** (Admin) -- export the processes the list shows, or all processes, to CSV.
 - **Delete Selected** (Admin) -- delete one or more selected rows.
 
 ---

@@ -182,7 +182,7 @@ De nombreuses parties de l'application sont sensibles à l'année. Les société
 
 ## Import/export CSV
 
-**Exporter CSV** télécharge toutes les sociétés avec leurs métriques. **Importer CSV** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les seuls en-têtes, prêt à remplir.
+**Exporter CSV** télécharge les sociétés que la liste affiche (ou, sur demande dans la fenêtre, toutes les sociétés) avec leurs métriques. **Importer CSV** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les seuls en-têtes, prêt à remplir.
 
 Les colonnes, dans cet ordre. Les colonnes de métriques suivent l'année sélectionnée dans la barre d'outils de la liste : l'année précédente, celle-ci et la suivante.
 

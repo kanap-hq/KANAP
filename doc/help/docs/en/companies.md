@@ -182,7 +182,7 @@ Many parts of the app are year-aware. Companies have metrics per year:
 
 ## CSV import/export
 
-**Export CSV** downloads every company with its metrics. **Import CSV** reads a file back. The import dialog also carries **Download template**: a file with the headers only, ready to fill in.
+**Export CSV** downloads the companies the list shows (or, on request in the dialog, every company) with their metrics. **Import CSV** reads a file back. The import dialog also carries **Download template**: a file with the headers only, ready to fill in.
 
 The columns, in this order. The metric columns follow the year selected in the list toolbar: the year before, that year, and the year after.
 

@@ -111,7 +111,7 @@ Cliquez sur **Nouveau** dans la liste. Renseignez le nom (obligatoire), l'ID fou
 
 ## Import/export CSV
 
-**Exporter CSV** télécharge tous les fournisseurs, activés et désactivés, triés par nom. La recherche et les filtres de la liste ne s'appliquent pas. La fenêtre se ferme une fois le fichier téléchargé. **Importer CSV** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les seuls en-têtes. Elle indique les valeurs acceptées.
+**Exporter CSV** télécharge les fournisseurs que la liste affiche, avec sa recherche, ses filtres et son tri. Choisissez **Tout le référentiel** dans la fenêtre pour télécharger tous les fournisseurs, activés et désactivés. La fenêtre se ferme une fois le fichier téléchargé. **Importer CSV** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les seuls en-têtes. Elle indique les valeurs acceptées.
 
 Les colonnes :
 

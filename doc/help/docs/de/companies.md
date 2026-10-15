@@ -182,7 +182,7 @@ Viele Bereiche der App sind jahresbezogen. Unternehmen haben Kennzahlen pro Jahr
 
 ## CSV-Import/Export
 
-**CSV exportieren** lädt alle Unternehmen mit ihren Kennzahlen herunter. **CSV importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei nur mit den Kopfzeilen, bereit zum Ausfüllen.
+**CSV exportieren** lädt die Unternehmen der Liste (oder, auf Wunsch im Dialog, alle Unternehmen) mit ihren Kennzahlen herunter. **CSV importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei nur mit den Kopfzeilen, bereit zum Ausfüllen.
 
 Die Spalten in dieser Reihenfolge. Die Kennzahlenspalten folgen dem in der Symbolleiste der Liste gewählten Jahr: das Jahr davor, dieses Jahr und das Jahr danach.
 

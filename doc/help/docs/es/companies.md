@@ -182,7 +182,7 @@ Muchas partes de la aplicación son conscientes del año. Las empresas tienen m�
 
 ## Importación/exportación CSV
 
-**Exportar CSV** descarga todas las empresas con sus métricas. **Importar CSV** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo solo con los encabezados, listo para rellenar.
+**Exportar CSV** descarga las empresas que muestra la lista (o, a petición en el diálogo, todas las empresas) con sus métricas. **Importar CSV** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo solo con los encabezados, listo para rellenar.
 
 Las columnas, en este orden. Las columnas de métricas siguen el año seleccionado en la barra de herramientas de la lista: el año anterior, ese año y el siguiente.
 

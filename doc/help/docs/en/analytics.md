@@ -118,7 +118,7 @@ Click any cell to open the value's workspace.
 - **New value**: create a value in the selected dimension (requires `analytics:member`). While the selected dimension is disabled, the button is disabled and its tooltip says "Enable this dimension to add values."
 - **Reorder**: set the order of the selected dimension's values (requires `analytics:member`). The button is disabled while the dimension has fewer than two values. See [Ordering values](#ordering-values)
 - **Import CSV**: load values from a file (requires `analytics:admin`)
-- **Export CSV**: download the values of every dimension (requires `analytics:admin`)
+- **Export CSV**: download the values the list shows, or the values of every dimension (requires `analytics:admin`)
 - **Delete selected**: delete the selected values (requires `analytics:admin`). When some of them are used by budget lines, the confirmation says how many lines lose them, for example "2 selected values are used: they are removed from 5 budget lines. This data cannot be recovered.", and the button reads **Delete anyway**
 
 ---
