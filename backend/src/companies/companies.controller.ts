@@ -124,6 +124,14 @@ export class CompaniesController {
     );
   }
 
+  // What a delete of `ids` would refuse, asked before the confirmation.
+  @UseGuards(PermissionGuard)
+  @RequireLevel('companies', 'admin')
+  @Post('delete-check')
+  deleteCheck(@Body() body: { ids: string[] }, @Tenant() ctx: TenantRequest) {
+    return this.deleteSvc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], { manager: ctx.manager });
+  }
+
   @UseGuards(PermissionGuard)
   @RequireLevel('companies', 'admin')
   @Delete('bulk')

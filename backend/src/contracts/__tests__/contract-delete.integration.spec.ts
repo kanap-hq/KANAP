@@ -161,6 +161,7 @@ async function testImpactCounts() {
       attachments: 1,
       blocked: 0,
       recorded_requirements: 0,
+      refused: [],
     });
     // Several contracts: each linked object once, what belongs to a contract per contract.
     assert.deepEqual(await svc.deleteImpact([a.contractId, a.otherContractId, 'not-a-uuid'], opts), {
@@ -174,6 +175,7 @@ async function testImpactCounts() {
       attachments: 2,
       blocked: 0,
       recorded_requirements: 0,
+      refused: [],
     });
     // A contract with recorded requirements is refused: counted apart, its links not counted.
     await recordRequirements(runner, a.tenantId, a.contractId);
@@ -188,6 +190,12 @@ async function testImpactCounts() {
       attachments: 1,
       blocked: 1,
       recorded_requirements: 3,
+      refused: [{
+        id: a.contractId,
+        name: 'Delete contract ctdel-impact',
+        code: 'CONTRACT_HAS_COMPLIANCE_RECORDS',
+        usages: [{ type: 'compliance_requirements', total: 3 }],
+      }],
     });
   });
 }

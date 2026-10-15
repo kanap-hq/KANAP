@@ -8,7 +8,7 @@ import { StorageService } from '../common/storage/storage.service';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
 import { withSavepoint } from '../common/savepoint.util';
-import { englishList, RecordInUseException, refusalDetails } from '../common/record-in-use';
+import { englishList, RecordInUseException, refusalDetails, type DeleteRefusal } from '../common/record-in-use';
 import { BUDGET_NATURES, naturesAnd } from '../spend/budget-nature';
 import { currentTenantId, deleteBlobs, deleteItemTasks, unreferencedPaths } from '../spend/item-delete-cleanup';
 import { UserTimeAggregateService } from '../portfolio/services/user-time-aggregate.service';
@@ -31,6 +31,8 @@ export type ContractDeleteImpact = {
   attachments: number;
   blocked: number;
   recorded_requirements: number;
+  /** The refused contracts, as the bulk delete would report them (`RecordInUseException`), in the order asked. */
+  refused: DeleteRefusal[];
 };
 
 /** The refusal's code, worded by the screens (`errors:CONTRACT_HAS_COMPLIANCE_RECORDS`). */
@@ -41,7 +43,8 @@ export const CONTRACT_HAS_COMPLIANCE_RECORDS = 'CONTRACT_HAS_COMPLIANCE_RECORDS'
  * reference. Writing a requirement with neither removes its row, so every row is one; the
  * condition only guards against an empty row. "Not applicable" counts: it is an assessment.
  */
-const RECORDED = `(state IS NOT NULL OR NULLIF(btrim(reference), '') IS NOT NULL)`;
+const recordedOn = (alias = '') => `(${alias}state IS NOT NULL OR NULLIF(btrim(${alias}reference), '') IS NOT NULL)`;
+const RECORDED = recordedOn();
 
 /** Both natures of `spend_items` (`spend/budget-nature.ts`). */
 const LINE_NATURES = naturesAnd('i', BUDGET_NATURES);
@@ -119,7 +122,26 @@ export class ContractsDeleteService extends BaseDeleteService<Contract> {
       attachments: row.attachments,
       blocked: row.blocked,
       recorded_requirements: row.recorded_requirements,
+      refused: await this.refusedContracts(manager, tenantId, wanted),
     };
+  }
+
+  /** The asked contracts with recorded compliance requirements, with their count. */
+  private async refusedContracts(manager: EntityManager, tenantId: string, ids: string[]): Promise<DeleteRefusal[]> {
+    if (ids.length === 0) return [];
+    const rows: Array<{ id: string; name: string; total: number }> = await manager.query(
+      `SELECT c.id, c.name, count(*)::int AS total
+         FROM contracts c
+         JOIN contract_compliance_items i ON i.tenant_id = c.tenant_id AND i.contract_id = c.id AND ${recordedOn('i.')}
+        WHERE c.tenant_id = $1 AND c.id = ANY($2::uuid[])
+        GROUP BY c.id, c.name`,
+      [tenantId, ids],
+    );
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    return ids.flatMap((id) => {
+      const row = byId.get(id);
+      return row ? [{ id, name: row.name, code: CONTRACT_HAS_COMPLIANCE_RECORDS, usages: [{ type: 'compliance_requirements' as const, total: row.total }] }] : [];
+    });
   }
 
   override async delete(id: string, opts?: DeleteOptions): Promise<void> {

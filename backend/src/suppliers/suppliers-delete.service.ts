@@ -6,7 +6,7 @@ import { AuditService } from '../audit/audit.service';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
 import { withSavepoint } from '../common/savepoint.util';
-import { assertNotInUse, refusalDetails } from '../common/record-in-use';
+import { assertNotInUse, refusalDetails, refusalsOf, type DeleteRefusal } from '../common/record-in-use';
 import { SUPPLIER_USAGE_QUERIES } from './supplier-usages';
 
 @Injectable()
@@ -22,6 +22,11 @@ export class SuppliersDeleteService extends BaseDeleteService<Supplier> {
       auditTable: 'suppliers',
       cascadeRelations: [],
     });
+  }
+
+  /** The check before a delete (`POST /suppliers/delete-check`): which of `ids` would be refused, and why. */
+  async deleteCheck(ids: string[], opts?: { manager?: EntityManager }): Promise<{ refused: DeleteRefusal[] }> {
+    return refusalsOf(opts?.manager ?? this.repository.manager, 'suppliers', ids, SUPPLIER_USAGE_QUERIES, 'SUPPLIER_IN_USE');
   }
 
   /**

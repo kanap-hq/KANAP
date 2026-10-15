@@ -6,7 +6,7 @@ import { AuditService } from '../audit/audit.service';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
 import { withSavepoint } from '../common/savepoint.util';
-import { assertNotInUse, refusalDetails } from '../common/record-in-use';
+import { assertNotInUse, refusalDetails, refusalsOf, type DeleteRefusal } from '../common/record-in-use';
 import { COMPANY_USAGE_QUERIES } from './company-usages';
 
 /** Tables whose foreign key can block a company delete, in plain words. */
@@ -40,6 +40,11 @@ export class CompaniesDeleteService extends BaseDeleteService<Company> {
       auditTable: 'companies',
       cascadeRelations: [],
     });
+  }
+
+  /** The check before a delete (`POST /companies/delete-check`): which of `ids` would be refused, and why. */
+  async deleteCheck(ids: string[], opts?: { manager?: EntityManager }): Promise<{ refused: DeleteRefusal[] }> {
+    return refusalsOf(opts?.manager ?? this.repository.manager, 'companies', ids, COMPANY_USAGE_QUERIES, 'COMPANY_IN_USE');
   }
 
   /**

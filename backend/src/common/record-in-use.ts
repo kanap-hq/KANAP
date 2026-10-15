@@ -76,6 +76,40 @@ export async function assertNotInUse(
   );
 }
 
+/** A record a delete would refuse, as a check before the delete lists it (`refusalsOf`). */
+export type DeleteRefusal = { id: string; name: string; code: string; usages: UsageCount[] };
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * The check before a delete: of the asked records of the tenant (`table`, with a `name`), those
+ * `assertNotInUse` would refuse, with the counts per kind, in the order asked. Unknown or
+ * malformed ids are left out (the delete answers them). Nothing is written.
+ */
+export async function refusalsOf(
+  manager: EntityManager,
+  table: string,
+  ids: readonly string[],
+  queries: readonly UsageQuery[],
+  code: string,
+): Promise<{ refused: DeleteRefusal[] }> {
+  const wanted = Array.from(new Set((ids || []).map((id) => String(id || '').trim().toLowerCase()).filter((id) => UUID_RE.test(id))));
+  if (wanted.length === 0) return { refused: [] };
+  const rows: Array<{ id: string; name: string; tenant_id: string }> = await manager.query(
+    `SELECT id, name, tenant_id FROM ${table} WHERE tenant_id = app_current_tenant() AND id = ANY($1::uuid[])`,
+    [wanted],
+  );
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  const refused: DeleteRefusal[] = [];
+  for (const id of wanted) {
+    const row = byId.get(id);
+    if (!row) continue;
+    const { groups } = await readUsages(manager, row.tenant_id, row.id, { isAdmin: true }, queries);
+    if (groups.length > 0) refused.push({ id: row.id, name: row.name, code, usages: groups.map((g) => ({ type: g.type, total: g.total })) });
+  }
+  return { refused };
+}
+
 /** The translatable part of a refusal, for a bulk delete's failed item. */
 export function refusalDetails(error: unknown): { code?: string; usages?: UsageCount[] } {
   return error instanceof RecordInUseException ? { code: error.code, usages: error.usages } : {};

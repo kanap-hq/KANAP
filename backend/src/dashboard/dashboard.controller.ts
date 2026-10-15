@@ -33,7 +33,8 @@ export class DashboardController {
    */
   @Post('recent-items/existing')
   existingRecentItems(@Body() body: { items?: RecentItemRef[] }, @Tenant() ctx: TenantRequest) {
-    return existingRecentItems(ctx.manager, ctx.tenantId, Array.isArray(body?.items) ? body.items : []);
+    // The request transaction, with the tenant set (RLS), is always there behind JwtAuthGuard.
+    return existingRecentItems(ctx.manager!, ctx.tenantId, Array.isArray(body?.items) ? body.items : []);
   }
 
   /**
