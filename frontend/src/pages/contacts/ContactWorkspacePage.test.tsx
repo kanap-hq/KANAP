@@ -333,6 +333,14 @@ describe('ContactWorkspacePage create', () => {
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/suppliers/s-1/contacts'));
   });
 
+  it('names the suppliers on the way back when it opened from a supplier', async () => {
+    renderAt('/master-data/contacts/new/overview?supplier_id=s-1&supplier_role=technical&returnTo=/master-data/suppliers/s-1/contacts');
+    const back = within(screen.getByRole('banner')).getByRole('button', { name: 'suppliers.title' });
+    expect(within(screen.getByRole('banner')).queryByRole('button', { name: 'contacts.title' })).toBeNull();
+    fireEvent.click(back);
+    expect(navigateMock).toHaveBeenCalledWith('/master-data/suppliers/s-1/contacts');
+  });
+
   it('gives a supplier chosen on the form the default type', async () => {
     renderAt('/master-data/contacts/new/overview?sort=last_name%3AASC');
     fireEvent.change(screen.getByLabelText('contacts.fields.email'), { target: { value: 'sam@example.com' } });
@@ -436,6 +444,28 @@ describe('ContactWorkspacePage: used by', () => {
     await screen.findByRole('region', { name: 'shared.usages.title' });
     fireEvent.click(await screen.findByRole('button', { name: /shared\.usages\.title.*2/ }));
     expect(scroll).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
+  });
+
+  it('shows the new contact type of the supplier in the section once it is saved', async () => {
+    let roles = ['commercial'];
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/contacts/c-1') return { data: stored };
+      if (url === '/contacts/c-1/usages') {
+        return { data: { ...USAGES, groups: [{ ...USAGES.groups[0], items: [{ ...USAGES.groups[0].items[0], roles }] }, USAGES.groups[1]] } };
+      }
+      return { data: { items: [] } };
+    });
+    mocked.patch.mockImplementation(async (_url: string, body: Record<string, unknown>) => {
+      stored = { ...stored, ...body };
+      roles = [String(body.supplier_role)];
+      return { data: stored };
+    });
+    renderAt('/master-data/contacts/c-1/overview');
+    const section = await screen.findByRole('region', { name: 'shared.usages.title' });
+    expect(await within(section).findByRole('link', { name: /Supplier A/ })).toHaveTextContent('contacts.roles.commercial');
+    fireEvent.click(screen.getByRole('button', { name: 'contacts.fields.contactType' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'contacts.roles.technical' }));
+    await waitFor(() => expect(within(section).getByRole('link', { name: /Supplier A/ })).toHaveTextContent('contacts.roles.technical'));
   });
 
   it('sends the former Used by tab address to the overview', async () => {

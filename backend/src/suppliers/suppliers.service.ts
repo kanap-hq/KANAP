@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, ILike, In, Raw, Repository } from 'typeorm';
 import { Supplier } from './supplier.entity';
@@ -12,6 +12,8 @@ import { resolveLifecycleState, StatusState } from '../common/status';
 import { extractStatusFilterFromAgModel } from '../common/status-filter';
 import { SupplierUpsertDto } from './dto/supplier.dto';
 import { assertSetFilterModes } from '../common/ag-grid-filtering';
+import { checkListEngineSupport } from '../common/list-engine/list-engine-support';
+import { ICU_COLLATION } from '../common/list-engine/sql-fragments';
 import {
   cellOf,
   CsvDateOrder,
@@ -21,6 +23,8 @@ import {
   rowProblems,
   writeCsv,
 } from '../common/csv-sheet';
+
+const SORT_ALIAS = 'supplier';
 
 @Injectable()
 export class SuppliersService {
@@ -71,13 +75,51 @@ export class SuppliersService {
       ];
     }
 
-    const [items, total] = await repo.findAndCount({
-      where: whereArr ?? where,
-      order: { [sort.field]: sort.direction as any },
-      skip,
-      take: limit,
-    });
+    const qb = await this.sortedQuery(repo, whereArr ?? where, sort);
+    const [items, total] = await qb.offset(skip).limit(limit).getManyAndCount();
     return { items, total, page, limit };
+  }
+
+  /**
+   * The list's query in the requested order. A text column sorts alphabetically, ignoring case
+   * and accents (ICU root collation, as the OPEX and CAPEX lists); on a PostgreSQL without ICU,
+   * it ignores case only. The id breaks ties, so pages and the record navigation never shift.
+   */
+  private async sortedQuery(repo: Repository<Supplier>, where: any, sort: { field: string; direction: string }) {
+    const column = repo.metadata.findColumnWithPropertyName(sort.field);
+    if (!column) throw new BadRequestException(`Unknown sort field '${sort.field}'`);
+    const direction = String(sort.direction).toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
+    const qb = repo.createQueryBuilder(SORT_ALIAS).setFindOptions({ where });
+    const target = `${SORT_ALIAS}.${column.databaseName}`;
+    if (column.type === 'text') {
+      const icu = await checkListEngineSupport(repo.manager);
+      qb.orderBy(icu ? `${target} COLLATE ${ICU_COLLATION}` : `lower(${target})`, direction);
+    } else {
+      qb.orderBy(target, direction);
+    }
+    return qb.addOrderBy(`${SORT_ALIAS}.id`, 'ASC');
+  }
+
+  /**
+   * Supplier names are unique in the tenant whatever their case ("sap" when "SAP" exists): refused
+   * with the same answer as the database's unique key (409 `duplicate`).
+   */
+  private async assertNameFree(manager: EntityManager, name: string | null | undefined, exceptId?: string) {
+    if (!name) return;
+    const rows: Array<{ id: string }> = await manager.query(
+      `SELECT id FROM suppliers
+        WHERE tenant_id = app_current_tenant() AND lower(name) = lower($1) AND ($2::uuid IS NULL OR id <> $2)
+        LIMIT 1`,
+      [name, exceptId ?? null],
+    );
+    if (rows.length > 0) {
+      throw new ConflictException({
+        statusCode: HttpStatus.CONFLICT,
+        error: 'Conflict',
+        code: 'duplicate',
+        message: 'Another supplier already has this name.',
+      });
+    }
   }
 
   async get(id: string, opts?: { manager?: EntityManager }) {
@@ -125,13 +167,8 @@ export class SuppliersService {
 
     const limit = Math.min(Number(query?.limit) || 10000, 10000);
     const total = await repo.count({ where: whereArr ?? where });
-    const items = await repo.find({
-      where: whereArr ?? where,
-      order: { [sort.field]: sort.direction as any },
-      take: limit,
-      skip: 0,
-      select: ['id'],
-    });
+    const qb = await this.sortedQuery(repo, whereArr ?? where, sort);
+    const items = await qb.select(`${SORT_ALIAS}.id`).limit(limit).getMany();
     const ids = items.map((i) => i.id);
     return { ids, total };
   }
@@ -186,6 +223,7 @@ export class SuppliersService {
     const repo = this.getRepo(opts?.manager);
     const { status: statusInput, disabled_at, ...rest } = body ?? {};
     const lifecycle = resolveLifecycleState({ nextStatus: statusInput, nextDisabledAt: disabled_at });
+    await this.assertNameFree(repo.manager, rest.name);
     const entity = repo.create({
       ...rest,
       // NOT NULL on the entity while the DTO allows null
@@ -215,6 +253,7 @@ export class SuppliersService {
     const existing = await this.get(id, { manager: opts?.manager });
     const before = { ...existing };
     const { status: statusInput, disabled_at, ...rest } = body ?? {};
+    if (rest.name !== undefined && rest.name !== before.name) await this.assertNameFree(repo.manager, rest.name, id);
     Object.assign(existing, rest);
     const lifecycle = resolveLifecycleState({
       currentDisabledAt: before.disabled_at,
@@ -367,10 +406,14 @@ export class SuppliersService {
     const mg = opts?.manager ?? repo.manager;
     const contactRepo = mg.getRepository(ExternalContact);
     const linkRepo = mg.getRepository(SupplierContactLink);
+    // A row matches the supplier of the same name whatever its case ("sap" updates "SAP").
     const existingByName = new Map<string, Supplier>();
     for (const item of unique) {
-      const existing = await repo.findOne({ where: { name: item.body.name as string } });
-      if (existing) existingByName.set(item.body.name as string, existing);
+      const name = item.body.name as string;
+      const existing = await repo.createQueryBuilder(SORT_ALIAS)
+        .where(`${SORT_ALIAS}.tenant_id = app_current_tenant() AND lower(${SORT_ALIAS}.name) = lower(:name)`, { name })
+        .getOne();
+      if (existing) existingByName.set(name, existing);
     }
     // The contact links of the matched suppliers, as `${supplierId}:${role}:${email}`: the import only adds links.
     const storedLinks = new Set<string>();

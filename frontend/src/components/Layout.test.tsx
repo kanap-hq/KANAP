@@ -238,6 +238,39 @@ describe('Layout budget management sidebar', () => {
   });
 });
 
+describe('Layout master data sidebar', () => {
+  function renderAt(path: string) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={[path]}>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path="/master-data/contacts/:id/:tab" element={<div>contact</div>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+  }
+
+  it('selects Suppliers on a contact form opened from a supplier', () => {
+    renderAt('/master-data/contacts/new/overview?supplier_id=s-1&returnTo=%2Fmaster-data%2Fsuppliers%2Fs-1%2Fcontacts');
+    expect(screen.getByRole('link', { name: 'nav:sidebar.masterData.suppliers' })).toHaveClass('Mui-selected');
+    expect(screen.getByRole('link', { name: 'nav:sidebar.masterData.contacts' })).not.toHaveClass('Mui-selected');
+  });
+
+  it('selects Contacts on a contact form opened from the contacts list', () => {
+    renderAt('/master-data/contacts/new/overview');
+    expect(screen.getByRole('link', { name: 'nav:sidebar.masterData.contacts' })).toHaveClass('Mui-selected');
+  });
+
+  it('ignores a return address outside the app', () => {
+    renderAt('/master-data/contacts/new/overview?returnTo=%2F%2Fexample.com%2Fmaster-data%2Fsuppliers');
+    expect(screen.getByRole('link', { name: 'nav:sidebar.masterData.contacts' })).toHaveClass('Mui-selected');
+  });
+});
+
 describe('Layout administration sidebar: sample data', () => {
   afterEach(() => {
     access.isGlobalAdmin = false;
