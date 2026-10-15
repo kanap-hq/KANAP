@@ -18,6 +18,8 @@ export type RefusalKind =
   | 'companies'
   | 'values';
 export type UsageCount = { type: RefusalKind; total: number };
+/** Values a refusal's sentence names besides the counts (`errors:<code>` interpolates them): a column, a year. */
+export type RefusalParams = Record<string, string | number>;
 
 const ENGLISH: Record<RefusalKind, [string, string]> = {
   budget_lines: ['budget line', 'budget lines'],
@@ -69,6 +71,7 @@ export class RecordInUseException extends ConflictException {
     name: string,
     readonly usages: UsageCount[],
     message = `Cannot delete ${entity} "${name}": it is used by ${englishList(usages)}. Disable it instead.`,
+    readonly params?: RefusalParams,
   ) {
     super({
       statusCode: HttpStatus.CONFLICT,
@@ -76,6 +79,7 @@ export class RecordInUseException extends ConflictException {
       code,
       message,
       usages,
+      ...(params ? { params } : {}),
     });
   }
 }
@@ -102,7 +106,7 @@ export async function assertNotInUse(
 }
 
 /** A record a delete would refuse, as a check before the delete lists it (`refusalsOf`). */
-export type DeleteRefusal = { id: string; name: string; code: string; usages: UsageCount[] };
+export type DeleteRefusal = { id: string; name: string; code: string; usages: UsageCount[]; params?: RefusalParams };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -129,7 +133,9 @@ export async function refusalsFrom<R extends { id: string }>(
     const row = byId.get(id);
     if (!row) continue;
     const refusal = await refusalOf(row);
-    if (refusal) refused.push({ id: row.id, name: nameOf(row), code: refusal.code, usages: refusal.usages });
+    if (refusal) {
+      refused.push({ id: row.id, name: nameOf(row), code: refusal.code, usages: refusal.usages, ...(refusal.params ? { params: refusal.params } : {}) });
+    }
   }
   return { refused };
 }
@@ -164,6 +170,7 @@ export async function refusalsOf(
 }
 
 /** The translatable part of a refusal, for a bulk delete's failed item. */
-export function refusalDetails(error: unknown): { code?: string; usages?: UsageCount[] } {
-  return error instanceof RecordInUseException ? { code: error.code, usages: error.usages } : {};
+export function refusalDetails(error: unknown): { code?: string; usages?: UsageCount[]; params?: RefusalParams } {
+  if (!(error instanceof RecordInUseException)) return {};
+  return { code: error.code, usages: error.usages, ...(error.params ? { params: error.params } : {}) };
 }

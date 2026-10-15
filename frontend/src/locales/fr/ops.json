@@ -1853,6 +1853,12 @@
     "changeType": "Changer le type…",
     "typeOpex": "OPEX",
     "typeCapex": "CAPEX",
-    "line": "Ligne budgétaire"
+    "line": "Ligne budgétaire",
+    "delete": {
+      "toDelete_one": "{{count}} ligne budgétaire sera supprimée :",
+      "toDelete_other": "{{count}} lignes budgétaires seront supprimées :",
+      "kept_one": "{{count}} ligne budgétaire ne peut pas être supprimée et est conservée :",
+      "kept_other": "{{count}} lignes budgétaires ne peuvent pas être supprimées et sont conservées :"
+    }
   }
 }

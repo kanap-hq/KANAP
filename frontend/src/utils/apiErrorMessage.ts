@@ -9,6 +9,8 @@ type ApiErrorPayload = {
   variant?: unknown;
   /** A refused delete: what still uses the record, counted per kind (`{{usages}}` in the message). */
   usages?: unknown;
+  /** Values the refusal's sentence names besides the counts (a frozen column and its year). */
+  params?: unknown;
 };
 
 type ApiErrorLike = {
@@ -54,7 +56,9 @@ export function getApiErrorMessage(error: unknown, t: TFunction, fallback: strin
     const usages = Array.isArray(payload?.usages) ? (payload.usages as DeleteFailure['usages']) : null;
     // The language of `t` (a fixed one), else the interface's.
     const language = (t as { lng?: string }).lng || i18next.resolvedLanguage || i18next.language || 'en';
+    const params = payload?.params && typeof payload.params === 'object' ? (payload.params as Record<string, unknown>) : {};
     const translated = t(`errors:${code}`, {
+      ...params,
       defaultValue: message || fallback,
       ...(variant ? { context: variant } : {}),
       ...(usages ? { usages: refusalCounts({ usages }, t, language) } : {}),

@@ -180,7 +180,11 @@ export default function DeleteSelectedButton<T>({
   const deletable = items.filter((item) => !refusedById.has(item.id));
   const keptItems = items
     .filter((item) => refusedById.has(item.id))
-    .map((item) => ({ ...item, reason: refusalCounts(refusedById.get(item.id)!, t, language) }));
+    .map((item) => {
+      const refusal = refusedById.get(item.id)!;
+      // What uses it, counted; a refusal without counts (a frozen column) in its own words.
+      return { ...item, reason: refusal.usages?.length ? refusalCounts(refusal, t, language) : deleteFailureReason(refusal, t, language) };
+    });
   const keptLabel = (count: number) => itemLabels?.kept(count) ?? t('delete.itemsKept', { count });
   const onlyRefused = !!check && deletable.length === 0 && keptItems.length > 0;
 

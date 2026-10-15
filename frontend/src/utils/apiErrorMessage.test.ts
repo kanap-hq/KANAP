@@ -47,6 +47,11 @@ describe('getApiErrorMessage', () => {
       .toBe('Sie können Ihr eigenes Konto nicht löschen. Deaktivieren Sie es bei Bedarf.');
   });
 
+  it('names the values a refusal carries (a frozen column and its year)', () => {
+    const frozen = { response: { status: 409, data: { code: 'BUDGET_LINE_FROZEN', message: 'English', usages: [], params: { column: 'Budget', year: 2026 } } } };
+    expect(getApiErrorMessage(frozen, i18n.getFixedT('fr'), 'fallback')).toMatch(/^Cette ligne a des montants dans Budget 2026/);
+  });
+
   it('keeps the server message without a code, then the fallback', () => {
     expect(getApiErrorMessage({ response: { status: 500, data: { message: 'Server said' } } }, t, 'fallback')).toBe('Server said');
     expect(getApiErrorMessage({}, t, 'fallback')).toBe('fallback');

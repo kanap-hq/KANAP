@@ -92,6 +92,12 @@ describe('deleteFailureReason', () => {
       .toBe('Dieses Unternehmen wird noch verwendet: 2 Abteilungen, 14 Benutzer und 1 Teammitglied. Deaktivieren Sie es, statt es zu löschen.');
   });
 
+  it('names the values a refusal carries: a frozen column and its year', () => {
+    const frozen = { reason: 'English', code: 'BUDGET_LINE_FROZEN', usages: [], params: { column: 'Budget', year: 2026 } };
+    expect(deleteFailureReason(frozen, i18n.fr.t, 'fr')).toMatch(/^Cette ligne a des montants dans Budget 2026, une colonne budgétaire gelée\./);
+    expect(deleteFailureReason(frozen, i18n.en.t, 'en')).toMatch(/^This line has amounts in Budget 2026, a frozen budget column\./);
+  });
+
   it('keeps the reason of a failure without a code', () => {
     expect(deleteFailureReason({ reason: 'This line has amounts in a frozen budget column.' }, i18n.fr.t, 'fr'))
       .toBe('This line has amounts in a frozen budget column.');

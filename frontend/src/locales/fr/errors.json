@@ -104,5 +104,6 @@
   "RECORD_IN_USE": "D’autres éléments utilisent encore cet élément. Désactivez-le plutôt que de le supprimer.",
   "ANALYTICS_VALUE_IN_USE": "Cette valeur est utilisée par {{usages}}. Désactivez-la, ou supprimez-la quand même depuis sa page : les lignes la perdent.",
   "ANALYTICS_DIMENSION_HAS_VALUES": "Cette dimension contient encore {{usages}}. Supprimez-les d’abord, ou supprimez la dimension avec ses valeurs depuis sa page.",
-  "ANALYTICS_DEFAULT_DIMENSION": "Cette dimension ne peut pas être supprimée : d’anciens fichiers et des questions à l’IA l’utilisent. Désactivez plutôt ses valeurs."
+  "ANALYTICS_DEFAULT_DIMENSION": "Cette dimension ne peut pas être supprimée : d’anciens fichiers et des questions à l’IA l’utilisent. Désactivez plutôt ses valeurs.",
+  "BUDGET_LINE_FROZEN": "Cette ligne a des montants dans {{column}} {{year}}, une colonne budgétaire gelée. Dégelez d’abord la colonne, ou indiquez une fin de validité plutôt que de supprimer la ligne."
 }
