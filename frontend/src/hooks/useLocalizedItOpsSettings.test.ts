@@ -66,4 +66,29 @@ describe('useLocalizedItOpsSettings', () => {
       { code: 'web', label: 'Frontal web', graph_tier: 'top' },
     ]);
   });
+
+  // One shipped value per list: [list, code, shipped English label, French label].
+  it.each([
+    ['applicationCategories', 'line_of_business', 'Line-of-business', 'Métier'],
+    ['accessMethods', 'mobile', 'Mobile application', 'Application mobile'],
+    ['networkSegments', 'public_cloud', 'Public Cloud', 'Cloud public'],
+    ['entities', 'internal_users', 'Internal Users', 'Utilisateurs internes'],
+    ['ipAddressTypes', 'management', 'Management', 'Administration'],
+    ['domains', 'workgroup', 'Workgroup', 'Groupe de travail'],
+    ['pathHopFunctions', 'reverse_proxy', 'Reverse proxy', 'Proxy inverse'],
+    ['connectionTypes', 'unknown', 'Unknown', 'Inconnu'],
+    ['serverProviders', 'other', 'Other', 'Autre'],
+    ['hostingTypes', 'on_prem', 'On-prem', 'Sur site'],
+    ['interfaceProtocols', 'smb', 'SMB / Windows share', 'SMB / partage Windows'],
+    ['interfaceDataCategories', 'master_data', 'Master Data', 'Données de référence'],
+    ['interfaceTriggerTypes', 'scheduled', 'Scheduled', 'Planifié'],
+    ['interfacePatterns', 'etl_batch', 'ETL batch job', 'Traitement ETL par lots'],
+    ['interfaceFormats', 'txt_plain', 'Plain text', 'Texte brut'],
+    ['interfaceAuthModes', 'api_key', 'API key', 'Clé API'],
+    ['incidentCategories', 'supplier', 'Supplier', 'Fournisseur'],
+  ])('shows the shipped %s value %s in the user language until renamed', (list, code, shipped, french) => {
+    settings.data = { [list]: [{ code, label: shipped }, { code, label: 'Renamed' }] } as any;
+    const { result } = renderHook(() => useLocalizedItOpsSettings());
+    expect((result.current.data as any)?.[list]).toEqual([{ code, label: french }, { code, label: 'Renamed' }]);
+  });
 });

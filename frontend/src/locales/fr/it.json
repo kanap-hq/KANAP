@@ -1690,6 +1690,30 @@
     "no_recovery_test_in_the_last_twelve_months_for_an_application_at_the_most_critical_level": "Aucun test de reprise depuis douze mois pour une application au niveau le plus critique."
   },
   "catalogDefaults": {
+    "applicationCategories": {
+      "line_of_business": "Métier",
+      "productivity": "Productivité",
+      "security": "Sécurité",
+      "analytics": "Analytique",
+      "development": "Développement",
+      "integration": "Intégration",
+      "infrastructure": "Infrastructure"
+    },
+    "networkSegments": {
+      "industrial_lan": "LAN industriel",
+      "wifi": "Wi-Fi",
+      "public_cloud": "Cloud public",
+      "guest": "Invités",
+      "management": "Administration",
+      "storage": "Stockage"
+    },
+    "entities": {
+      "internal_users": "Utilisateurs internes",
+      "external_users": "Utilisateurs externes",
+      "internet": "Internet",
+      "customers": "Clients",
+      "partner_networks": "Réseaux partenaires"
+    },
     "serverKinds": {
       "physical_server": "Serveur physique",
       "virtual_machine": "Machine virtuelle",
@@ -1710,6 +1734,9 @@
       "industrial_machine": "Machine industrielle",
       "rack": "Baie"
     },
+    "serverProviders": {
+      "other": "Autre"
+    },
     "serverRoles": {
       "app": "Serveur d'applications",
       "backup": "Serveur de sauvegarde",
@@ -1725,6 +1752,97 @@
       "remote-desktop": "Bureau à distance",
       "virtualization": "Hôte de virtualisation",
       "web": "Serveur web"
+    },
+    "hostingTypes": {
+      "on_prem": "Sur site",
+      "colocation": "Colocation",
+      "public_cloud": "Cloud public",
+      "private_cloud": "Cloud privé"
+    },
+    "interfaceProtocols": {
+      "smb": "SMB / partage Windows",
+      "other": "Autre"
+    },
+    "interfaceDataCategories": {
+      "master_data": "Données de référence",
+      "transactional": "Transactionnelles",
+      "reporting": "Reporting",
+      "control": "Contrôle"
+    },
+    "interfaceTriggerTypes": {
+      "event_based": "Événementiel",
+      "scheduled": "Planifié",
+      "on_demand": "À la demande",
+      "real_time": "Temps réel"
+    },
+    "interfacePatterns": {
+      "rest_api_sync": "API REST (synchrone)",
+      "rest_api_async": "API REST (asynchrone / callback)",
+      "soap_webservice": "Service web SOAP",
+      "file_transfer_batch": "Transfert de fichiers (batch)",
+      "message_queue": "File de messages (point à point)",
+      "pub_sub_topic": "Pub/Sub (topic)",
+      "etl_batch": "Traitement ETL par lots",
+      "db_link_view": "Lien BD / lecture directe en base",
+      "scheduled_job": "Script / tâche planifiés",
+      "manual_import_export": "Import / export manuel",
+      "other": "Autre"
+    },
+    "interfaceFormats": {
+      "delimited": "Texte délimité",
+      "fixed_width": "Texte à largeur fixe",
+      "txt_plain": "Texte brut",
+      "binary_custom": "Binaire (personnalisé)",
+      "other": "Autre"
+    },
+    "interfaceAuthModes": {
+      "service_account": "Compte de service",
+      "api_key": "Clé API",
+      "certificate": "Certificat",
+      "none": "Aucune"
+    },
+    "connectionTypes": {
+      "zabbix": "Agent Zabbix",
+      "ad-repl": "Réplication AD",
+      "tcp": "TCP (personnalisé)",
+      "udp": "UDP (personnalisé)",
+      "other": "Autre",
+      "unknown": "Inconnu"
+    },
+    "ipAddressTypes": {
+      "host": "Hôte",
+      "management": "Administration"
+    },
+    "accessMethods": {
+      "local": "Application installée localement",
+      "mobile": "Application mobile",
+      "hmi": "IHM propriétaire (interface industrielle)",
+      "terminal": "Terminal / ligne de commande",
+      "vdi": "VDI / bureau à distance",
+      "kiosk": "Borne"
+    },
+    "pathHopFunctions": {
+      "vip": "IP virtuelle",
+      "firewall": "Pare-feu",
+      "reverse_proxy": "Proxy inverse",
+      "load_balancer": "Répartiteur de charge",
+      "api_gateway": "Passerelle API",
+      "vpn_endpoint": "Point de terminaison VPN",
+      "bastion": "Bastion / hôte de rebond",
+      "cdn_edge": "Nœud CDN",
+      "service_mesh": "Proxy de service mesh"
+    },
+    "incidentCategories": {
+      "infrastructure": "Infrastructure",
+      "security": "Sécurité",
+      "application": "Application",
+      "data": "Données",
+      "supplier": "Fournisseur",
+      "other": "Autre"
+    },
+    "domains": {
+      "workgroup": "Groupe de travail",
+      "n-a": "N/A"
     }
   }
 }
