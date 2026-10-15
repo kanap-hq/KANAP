@@ -32,7 +32,7 @@ La liste des fournisseurs vous offre un répertoire consultable et triable de to
 
 Chaque cellule d'une ligne est cliquable et ouvre la fiche du fournisseur.
 
-**Tri par défaut** : Par nom, alphabétique.
+**Tri par défaut** : Par nom, alphabétique. Le tri d'une colonne de texte ignore la casse et les accents.
 
 **Filtrage** :
 - Recherche rapide : Recherche dans les champs du fournisseur
@@ -52,7 +52,7 @@ Cliquez sur une ligne pour ouvrir la fiche du fournisseur. Utilisez les flèches
 
 La fiche comporte deux onglets : **Vue d'ensemble** et **Contacts**.
 
-**Titre** : le nom du fournisseur. Cliquez dessus pour le modifier ; la modification s'enregistre quand vous quittez le champ ou appuyez sur Entrée, et Échap l'annule. Le nom est obligatoire et doit différer de celui de tous les autres fournisseurs : KANAP affiche le message sous le nom et garde le nom enregistré.
+**Titre** : le nom du fournisseur. Cliquez dessus pour le modifier ; la modification s'enregistre quand vous quittez le champ ou appuyez sur Entrée, et Échap l'annule. Le nom est obligatoire et doit différer de celui de tous les autres fournisseurs, quelle que soit la casse (`SAP` et `sap` sont le même nom) : KANAP affiche le message sous le nom et garde le nom enregistré.
 
 **Référence** : l'ID fournisseur ERP, quand le fournisseur en a un, s'affiche avant le nom. Cliquez dessus pour le copier.
 
@@ -128,7 +128,7 @@ Les colonnes :
 **Import** :
 
 - Utilisez la **Vérification préalable** pour valider le fichier avant de l'appliquer, puis **Charger**
-- Les lignes sont rapprochées par `name` : une ligne met à jour le fournisseur qu'elle nomme, toute autre ligne en crée un
+- Les lignes sont rapprochées par `name`, quelle que soit la casse : une ligne met à jour le fournisseur qu'elle nomme, toute autre ligne en crée un
 - `name` est obligatoire. Toute autre cellule est facultative
 
 **Notes** :

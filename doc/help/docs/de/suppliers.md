@@ -32,7 +32,7 @@ Die Lieferantenliste bietet Ihnen ein durchsuchbares, sortierbares Verzeichnis a
 
 Jede Zelle in einer Zeile ist anklickbar und öffnet die Seite dieses Lieferanten.
 
-**Standardsortierung**: Nach Name, alphabetisch.
+**Standardsortierung**: Nach Name, alphabetisch. Die Sortierung einer Textspalte ignoriert Groß- und Kleinschreibung sowie Akzente.
 
 **Filtern**:
 - Schnellsuche: Durchsucht Lieferantenfelder
@@ -52,7 +52,7 @@ Klicken Sie auf eine Zeile, um die Seite des Lieferanten zu öffnen. Mit den Pfe
 
 Die Seite hat zwei Reiter: **Übersicht** und **Kontakte**.
 
-**Titel**: Der Name des Lieferanten. Klicken Sie darauf, um ihn zu bearbeiten; die Änderung wird gespeichert, wenn Sie das Feld verlassen oder Enter drücken, Escape verwirft sie. Der Name ist Pflicht und muss sich von den Namen aller anderen Lieferanten unterscheiden: KANAP zeigt die Meldung unter dem Namen und behält den gespeicherten Namen.
+**Titel**: Der Name des Lieferanten. Klicken Sie darauf, um ihn zu bearbeiten; die Änderung wird gespeichert, wenn Sie das Feld verlassen oder Enter drücken, Escape verwirft sie. Der Name ist Pflicht und muss sich von den Namen aller anderen Lieferanten unterscheiden, unabhängig von Groß- und Kleinschreibung (`SAP` und `sap` sind derselbe Name): KANAP zeigt die Meldung unter dem Namen und behält den gespeicherten Namen.
 
 **Referenz**: Die ERP-Lieferanten-ID steht, wenn der Lieferant eine hat, vor dem Namen. Klicken Sie darauf, um sie zu kopieren.
 
@@ -128,7 +128,7 @@ Die Spalten:
 **Import**:
 
 - Verwenden Sie die **Vorabprüfung**, um die Datei vor dem Anwenden zu prüfen, und dann **Laden**
-- Zeilen werden über `name` zugeordnet: Eine Zeile aktualisiert den Lieferanten, den sie nennt, jede andere Zeile legt einen an
+- Zeilen werden über `name` zugeordnet, unabhängig von Groß- und Kleinschreibung: Eine Zeile aktualisiert den Lieferanten, den sie nennt, jede andere Zeile legt einen an
 - `name` ist Pflicht. Jede andere Zelle ist optional
 
 **Hinweise**:

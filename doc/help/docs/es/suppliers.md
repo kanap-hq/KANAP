@@ -32,7 +32,7 @@ La lista de Proveedores ofrece un directorio buscable y ordenable de todos sus v
 
 Cada celda de una fila es clicable y abre la página de ese proveedor.
 
-**Ordenación predeterminada**: Por nombre, alfabético.
+**Ordenación predeterminada**: Por nombre, alfabético. La ordenación de una columna de texto ignora mayúsculas, minúsculas y acentos.
 
 **Filtrado**:
 - Búsqueda rápida: Busca en los campos del proveedor
@@ -52,7 +52,7 @@ Haga clic en una fila para abrir la página del proveedor. Use las flechas de la
 
 La página tiene dos pestañas: **Vista general** y **Contactos**.
 
-**Título**: el nombre del proveedor. Haga clic en él para editarlo; el cambio se guarda al salir del campo o al pulsar Intro, y Escape lo cancela. El nombre es obligatorio y debe ser distinto del de todos los demás proveedores: KANAP muestra el mensaje bajo el nombre y conserva el nombre guardado.
+**Título**: el nombre del proveedor. Haga clic en él para editarlo; el cambio se guarda al salir del campo o al pulsar Intro, y Escape lo cancela. El nombre es obligatorio y debe ser distinto del de todos los demás proveedores, sin distinguir mayúsculas y minúsculas (`SAP` y `sap` son el mismo nombre): KANAP muestra el mensaje bajo el nombre y conserva el nombre guardado.
 
 **Referencia**: el ID de proveedor ERP, cuando el proveedor tiene uno, aparece antes del nombre. Haga clic en él para copiarlo.
 
@@ -128,7 +128,7 @@ Las columnas:
 **Importación**:
 
 - Use la **Verificación previa** para validar el archivo antes de aplicarlo y después **Cargar**
-- Las filas se emparejan por `name`: una fila actualiza el proveedor que nombra, cualquier otra fila crea uno
+- Las filas se emparejan por `name`, sin distinguir mayúsculas y minúsculas: una fila actualiza el proveedor que nombra, cualquier otra fila crea uno
 - `name` es obligatorio. Cualquier otra celda es opcional
 
 **Notas**:
