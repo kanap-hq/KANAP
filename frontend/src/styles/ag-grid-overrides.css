@@ -170,18 +170,3 @@
 .ag-theme-quartz-dark.kanap-dense-grid {
   --ag-cell-horizontal-padding: 10px;
 }
-
-/* A link in a list cell covers the whole cell, padding included: a click anywhere in the cell
-   opens the row, and the anchor stays a real link (middle click, Ctrl/Cmd click, keyboard).
-   `.ag-cell` is positioned by AG Grid, so the stretched area stays inside its cell.
-   Content placed after the link (`endAdornment`) stays above it and keeps its own clicks. */
-.ag-cell .kanap-cell-link::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-}
-
-.ag-cell .kanap-cell-link-end {
-  position: relative;
-  z-index: 1;
-}

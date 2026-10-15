@@ -220,9 +220,7 @@ export function LinkCellRenderer<T = unknown>(
         maxWidth: maxWidth,
       }}
     >
-      {/* `kanap-cell-link` stretches the link over its whole grid cell (`ag-grid-overrides.css`). */}
       <Link
-        className="kanap-cell-link"
         href={href}
         onClick={handleClick}
         target={opensNewTab ? '_blank' : undefined}
@@ -248,6 +246,10 @@ export function LinkCellRenderer<T = unknown>(
           // The grid strips text decoration from cell links (`ag-grid-overrides.css`): the
           // underline goes on the text inside the link.
           ...(newTab ? { '&:hover > span, &:focus-visible > span': { textDecoration: 'underline' } } : {}),
+          // In a grid cell the link covers the whole cell, padding included: a click anywhere in
+          // the cell opens the row, and the anchor stays a real link (middle click, Ctrl/Cmd
+          // click, keyboard). AG Grid positions `.ag-cell`, so the area stays inside its cell.
+          '.ag-cell &::after': { content: '""', position: 'absolute', inset: 0 },
           ...linkSx,
         }}
       >
@@ -256,7 +258,8 @@ export function LinkCellRenderer<T = unknown>(
       {isExternal && showExternalIcon && (
         <OpenInNewIcon sx={{ fontSize: 14, color: 'text.secondary', flexShrink: 0 }} />
       )}
-      {endAdornment && <span className="kanap-cell-link-end">{endAdornment}</span>}
+      {/* Above the link's area: content after the link keeps its own clicks. */}
+      {endAdornment && <Box component="span" sx={{ position: 'relative', zIndex: 1 }}>{endAdornment}</Box>}
     </Box>
   );
 

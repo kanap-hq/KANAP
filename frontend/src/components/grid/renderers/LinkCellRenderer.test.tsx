@@ -1,6 +1,4 @@
 import React from 'react';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { ICellRendererParams } from 'ag-grid-community';
@@ -63,8 +61,6 @@ describe('LinkCellRenderer', () => {
       </div>,
     );
     const link = screen.getByRole('link', { name: 'Okta' });
-    // The class stretches the link over the whole cell (ag-grid-overrides.css), padding included.
-    expect(link).toHaveClass('kanap-cell-link');
     expect(link).toHaveAttribute('href', '/master-data/suppliers/s1');
     expect(container.querySelectorAll('a')).toHaveLength(1);
 
@@ -76,7 +72,9 @@ describe('LinkCellRenderer', () => {
     fireEvent.click(link);
     expect(onNavigate).toHaveBeenCalledWith('/master-data/suppliers/s1', row);
 
-    const css = readFileSync(resolve(__dirname, '../../../styles/ag-grid-overrides.css'), 'utf8').replace(/\s+/g, ' ');
-    expect(css).toMatch(/\.ag-cell \.kanap-cell-link::after \{[^}]*position: absolute;[^}]*inset: 0;/);
+    // Inside a grid cell, the link's ::after covers the whole cell, padding included.
+    const css = Array.from(document.querySelectorAll('style')).map((style) => style.textContent ?? '').join('');
+    const linkClasses = Array.from(link.classList).filter((name) => name.startsWith('css-'));
+    expect(linkClasses.some((name) => new RegExp(`\\.ag-cell \\.${name}::after\\{[^}]*position:absolute;[^}]*inset:0;`).test(css))).toBe(true);
   });
 });
