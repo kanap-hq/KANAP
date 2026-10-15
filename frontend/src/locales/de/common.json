@@ -164,7 +164,23 @@
       "assets_one": "{{count}} Asset",
       "assets_other": "{{count}} Assets",
       "cost_centers_one": "{{count}} Kostenstelle",
-      "cost_centers_other": "{{count}} Kostenstellen"
+      "cost_centers_other": "{{count}} Kostenstellen",
+      "departments_one": "{{count}} Abteilung",
+      "departments_other": "{{count}} Abteilungen",
+      "users_one": "{{count}} Benutzer",
+      "users_other": "{{count}} Benutzer",
+      "locations_one": "{{count}} Standort",
+      "locations_other": "{{count}} Standorte",
+      "tasks_one": "{{count}} Aufgabe",
+      "tasks_other": "{{count}} Aufgaben",
+      "interfaces_one": "{{count}} Schnittstelle",
+      "interfaces_other": "{{count}} Schnittstellen",
+      "projects_one": "{{count}} Projekt",
+      "projects_other": "{{count}} Projekte",
+      "requests_one": "{{count}} Anfrage",
+      "requests_other": "{{count}} Anfragen",
+      "team_members_one": "{{count}} Teammitglied",
+      "team_members_other": "{{count}} Teammitglieder"
     }
   },
   "messages": {

@@ -50,7 +50,10 @@ describe('deleteFailureReason', () => {
   });
 
   it('has the sentences and every kind in each language', () => {
-    const kinds = ['budget_lines', 'contracts', 'applications', 'assets', 'cost_centers'];
+    const kinds = [
+      'budget_lines', 'contracts', 'applications', 'assets', 'cost_centers', 'departments', 'users', 'locations', 'tasks',
+      'interfaces', 'projects', 'requests', 'team_members',
+    ];
     for (const language of LANGUAGES) {
       for (const code of ['SUPPLIER_IN_USE', 'COMPANY_IN_USE']) {
         expect(i18n[language].exists(`errors:${code}`), `${language} errors:${code}`).toBe(true);
@@ -62,6 +65,17 @@ describe('deleteFailureReason', () => {
         }
       }
     }
+  });
+
+  it('counts the new kinds of a company refusal', () => {
+    const refusal = {
+      code: 'COMPANY_IN_USE',
+      usages: [{ type: 'departments', total: 2 }, { type: 'users', total: 14 }, { type: 'team_members', total: 1 }],
+    };
+    expect(deleteFailureReason(refusal, i18n.fr.t, 'fr'))
+      .toBe("Cette société est utilisée par 2 départements, 14 utilisateurs et 1 membre d'équipe. Désactivez-la plutôt que de la supprimer.");
+    expect(deleteFailureReason(refusal, i18n.de.t, 'de'))
+      .toBe('Dieses Unternehmen wird noch verwendet: 2 Abteilungen, 14 Benutzer und 1 Teammitglied. Deaktivieren Sie es, statt es zu löschen.');
   });
 
   it('keeps the reason of a failure without a code', () => {

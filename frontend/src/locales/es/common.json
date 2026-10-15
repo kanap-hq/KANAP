@@ -164,7 +164,23 @@
       "assets_one": "{{count}} activo",
       "assets_other": "{{count}} activos",
       "cost_centers_one": "{{count}} centro de coste",
-      "cost_centers_other": "{{count}} centros de coste"
+      "cost_centers_other": "{{count}} centros de coste",
+      "departments_one": "{{count}} departamento",
+      "departments_other": "{{count}} departamentos",
+      "users_one": "{{count}} usuario",
+      "users_other": "{{count}} usuarios",
+      "locations_one": "{{count}} ubicación",
+      "locations_other": "{{count}} ubicaciones",
+      "tasks_one": "{{count}} tarea",
+      "tasks_other": "{{count}} tareas",
+      "interfaces_one": "{{count}} interfaz",
+      "interfaces_other": "{{count}} interfaces",
+      "projects_one": "{{count}} proyecto",
+      "projects_other": "{{count}} proyectos",
+      "requests_one": "{{count}} solicitud",
+      "requests_other": "{{count}} solicitudes",
+      "team_members_one": "{{count}} miembro del equipo",
+      "team_members_other": "{{count}} miembros del equipo"
     }
   },
   "messages": {
