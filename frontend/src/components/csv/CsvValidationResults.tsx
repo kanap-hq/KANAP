@@ -45,7 +45,7 @@ export function CsvValidationResults({
       >
         {result.ok ? (
           isValidation ? (
-            <>{t('csv.validationPassed', { total: result.total })}</>
+            <>{t('csv.validationPassed', { count: result.total })}</>
           ) : (
             <>{t('csv.importCompleted')}</>
           )

@@ -98,7 +98,9 @@ export default function CsvImportDialog({
   // What the shown report says, when it is one of the sentences the dialog knows.
   const appliedDates = dateReadingOf(dateNotice);
   const appliedAmounts = amountReadingOf(amountNotice);
-  const ignoredColumns = report?.ignoredColumns ?? [];
+  // A file refused for its header ignores nothing: the header error already names the unknown columns.
+  const headerRefused = (report?.errors ?? []).some((e) => e.row < 2);
+  const ignoredColumns = headerRefused ? [] : report?.ignoredColumns ?? [];
   // Shown with the check, before the load: the rows import as the warnings say.
   const warnings = report?.dryRun ? report.warnings ?? [] : [];
   // A dry run is re-checked and then loaded; a finished import only reports its outcome.
@@ -293,9 +295,9 @@ export default function CsvImportDialog({
               <Alert severity="success">
                 {preflight ? (
                   (report as any).dryRun ? (
-                    <>{t('csv.preflightOk', { total: (report as any).total, inserted: (report as any).inserted, updated: (report as any).updated })}</>
+                    <>{t('csv.preflightOk', { count: (report as any).total ?? 0, inserted: (report as any).inserted, updated: (report as any).updated })}</>
                   ) : (
-                    <>{t('csv.loadedSuccessfully', { total: (report as any).processed ?? (report as any).total ?? '' })}</>
+                    <>{t('csv.loadedSuccessfully', { count: (report as any).processed ?? (report as any).total ?? 0 })}</>
                   )
                 ) : (
                   <>{t('csv.uploadCompleted')}</>

@@ -106,4 +106,11 @@ describe('CsvImportDialogV2 messages', () => {
     pick('autre.csv');
     expect(screen.queryByText('Old refusal')).not.toBeInTheDocument();
   });
+
+  it('counts one row in the singular', async () => {
+    post.mockResolvedValueOnce({ data: report({ total: 1, inserted: 1 }) });
+    validate();
+    expect(await screen.findByText('Validation réussie. Prêt à importer 1 ligne.')).toBeInTheDocument();
+    expect(screen.getByText('1 ligne')).toBeInTheDocument();
+  });
 });
