@@ -150,8 +150,8 @@
     "dragSingleLibraryOnly": "Le glisser-déposer n'est disponible que dans une vue à bibliothèque unique.",
     "dragToFolderOrLibrary": "Glisser vers un dossier ou une autre bibliothèque",
     "folderMoved": "Dossier déplacé.",
-    "managedDocsCannotDelete": "Les documents gérés ne peuvent pas être supprimés depuis la base de connaissances.",
-    "managedDocsCannotMove": "Les documents gérés ne peuvent pas être déplacés depuis la base de connaissances.",
+    "managedDocsCannotDelete": "Les documents managés ne peuvent pas être supprimés depuis la base de connaissances.",
+    "managedDocsCannotMove": "Les documents managés ne peuvent pas être déplacés depuis la base de connaissances.",
     "moveDocumentsFailed": "Impossible de déplacer les documents.",
     "moveFolderFailed": "Impossible de déplacer le dossier.",
     "moveTemplatesSeparately": "Déplacez les documents modèles séparément des autres bibliothèques.",
@@ -285,12 +285,12 @@
       "properties": "Propriétés"
     },
     "tooltips": {
-      "managedFolder": "Les documents gérés conservent le placement en dossier contrôlé par l'espace de travail source.",
-      "managedRelations": "Les documents gérés conservent les relations source en lecture seule dans la base de connaissances.",
-      "managedStatus": "Les documents gérés conservent le statut contrôlé par l'espace de travail source. Le workflow de revue n'est pas disponible.",
-      "managedTemplate": "Les documents gérés conservent le modèle contrôlé par l'espace de travail source.",
-      "managedType": "Les documents gérés conservent le type de document contrôlé par l'espace de travail source.",
-      "managedWorkflow": "Les documents gérés n'utilisent pas le workflow de revue de la base de connaissances."
+      "managedFolder": "Les documents managés conservent le placement en dossier contrôlé par l'espace de travail source.",
+      "managedRelations": "Les documents managés conservent les relations source en lecture seule dans la base de connaissances.",
+      "managedStatus": "Les documents managés conservent le statut contrôlé par l'espace de travail source. Le workflow de revue n'est pas disponible.",
+      "managedTemplate": "Les documents managés conservent le modèle contrôlé par l'espace de travail source.",
+      "managedType": "Les documents managés conservent le type de document contrôlé par l'espace de travail source.",
+      "managedWorkflow": "Les documents managés n'utilisent pas le workflow de revue de la base de connaissances."
     },
     "values": {
       "default": "Par défaut",
