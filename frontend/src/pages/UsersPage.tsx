@@ -456,7 +456,7 @@ export default function UsersPage() {
             deleted: (count) => t('users.delete.deleted', { count }),
           }}
           getItemId={(row) => row.id}
-          getItemName={(row) => row.email || `${row.first_name ?? ''} ${row.last_name ?? ''}`.trim() || 'User'}
+          getItemName={userDisplayName}
           gridApi={gridApiRef.current}
           onDeleteSuccess={() => setRefreshKey((k) => k + 1)}
         />

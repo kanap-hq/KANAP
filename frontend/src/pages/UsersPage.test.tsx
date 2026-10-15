@@ -50,6 +50,9 @@ describe('UsersPage delete', () => {
     expect(String(props.itemLabels.toDelete(2))).toBe('users.delete.toDelete');
     expect(String(props.itemLabels.kept(1))).toBe('users.delete.kept');
     expect(String(props.itemLabels.deleted(2))).toBe('users.delete.deleted');
+    // The windows and messages name a user by name, the e-mail only when there is no name.
+    expect(props.getItemName({ first_name: 'Ana', last_name: 'Diaz', email: 'ana@example.test' })).toBe('Ana Diaz');
+    expect(props.getItemName({ first_name: null, last_name: '', email: 'bo@example.test' })).toBe('bo@example.test');
   });
 
   it('confirms a row delete without promising a refusal the delete cannot make', async () => {
