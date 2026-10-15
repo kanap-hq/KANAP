@@ -54,6 +54,11 @@ function testLifecycle() {
   assert.equal(sameStoredLifecycle({ disabled_at: past }, { status: StatusState.DISABLED }), true);
   assert.equal(sameStoredLifecycle({ disabled_at: null }, { status: StatusState.ENABLED }), true);
   assert.equal(sameStoredLifecycle({ disabled_at: null }, { status: StatusState.DISABLED }), false);
+  // An explicit enabled status with no date clears a stored end of validity still to come.
+  const future = new Date('2031-06-30T12:00:00.000Z');
+  assert.equal(sameStoredLifecycle({ disabled_at: future }, { status: StatusState.ENABLED }), false);
+  assert.equal(sameStoredLifecycle({ disabled_at: future }, {}), true);
+  assert.equal(sameStoredLifecycle({ disabled_at: future }, { status: StatusState.ENABLED, disabled_at: future.toISOString() }), true);
   assert.equal(sameStoredLifecycle({ disabled_at: past }, { status: StatusState.DISABLED, disabled_at: past.toISOString() }), true);
   assert.equal(sameStoredLifecycle({ disabled_at: past }, { disabled_at: '2021-06-30T12:00:00.000Z' }), false);
 }
