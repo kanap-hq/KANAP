@@ -545,7 +545,20 @@
     },
     "exportScopeList": "What the list shows",
     "exportScopeAll": "The whole register",
-    "exportRowLimit": "The file holds the first {{limit}} of {{total}} rows, in the list's order. Narrow the list to export the rest."
+    "exportRowLimit": "The file holds the first {{limit}} of {{total}} rows, in the list's order. Narrow the list to export the rest.",
+    "exportNoRows": {
+      "suppliers": "No suppliers to export",
+      "contracts": "No contracts to export",
+      "contacts": "No contacts to export",
+      "costCenters": "No cost centers to export",
+      "workingDayCalendars": "No calendars to export",
+      "users": "No users to export",
+      "departments": "No departments to export",
+      "companies": "No companies to export",
+      "analyticsValues": "No values to export",
+      "businessProcesses": "No business processes to export",
+      "accounts": "No accounts to export"
+    }
   },
   "selects": {
     "loading": "Loading...",

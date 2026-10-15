@@ -545,7 +545,20 @@
     },
     "exportScopeList": "Ce que la liste affiche",
     "exportScopeAll": "Tout le référentiel",
-    "exportRowLimit": "Le fichier contient les {{limit}} premières lignes sur {{total}}, dans l'ordre de la liste. Filtrez la liste pour exporter le reste."
+    "exportRowLimit": "Le fichier contient les {{limit}} premières lignes sur {{total}}, dans l'ordre de la liste. Filtrez la liste pour exporter le reste.",
+    "exportNoRows": {
+      "suppliers": "Aucun fournisseur à exporter",
+      "contracts": "Aucun contrat à exporter",
+      "contacts": "Aucun contact à exporter",
+      "costCenters": "Aucun centre de coûts à exporter",
+      "workingDayCalendars": "Aucun calendrier à exporter",
+      "users": "Aucun utilisateur à exporter",
+      "departments": "Aucun département à exporter",
+      "companies": "Aucune société à exporter",
+      "analyticsValues": "Aucune valeur à exporter",
+      "businessProcesses": "Aucun processus métier à exporter",
+      "accounts": "Aucun compte à exporter"
+    }
   },
   "selects": {
     "loading": "Chargement...",

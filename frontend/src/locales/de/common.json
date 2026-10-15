@@ -545,7 +545,20 @@
     },
     "exportScopeList": "Was die Liste zeigt",
     "exportScopeAll": "Das ganze Verzeichnis",
-    "exportRowLimit": "Die Datei enthält die ersten {{limit}} von {{total}} Zeilen in der Reihenfolge der Liste. Grenzen Sie die Liste ein, um den Rest zu exportieren."
+    "exportRowLimit": "Die Datei enthält die ersten {{limit}} von {{total}} Zeilen in der Reihenfolge der Liste. Grenzen Sie die Liste ein, um den Rest zu exportieren.",
+    "exportNoRows": {
+      "suppliers": "Keine Lieferanten zu exportieren",
+      "contracts": "Keine Verträge zu exportieren",
+      "contacts": "Keine Kontakte zu exportieren",
+      "costCenters": "Keine Kostenstellen zu exportieren",
+      "workingDayCalendars": "Keine Kalender zu exportieren",
+      "users": "Keine Benutzer zu exportieren",
+      "departments": "Keine Abteilungen zu exportieren",
+      "companies": "Keine Unternehmen zu exportieren",
+      "analyticsValues": "Keine Werte zu exportieren",
+      "businessProcesses": "Keine Geschäftsprozesse zu exportieren",
+      "accounts": "Keine Konten zu exportieren"
+    }
   },
   "selects": {
     "loading": "Wird geladen...",

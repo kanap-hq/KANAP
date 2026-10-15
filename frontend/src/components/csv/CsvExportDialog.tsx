@@ -54,9 +54,13 @@ export default function CsvExportDialog({
     if (open) setRows('list');
   }, [open]);
   const followsList = !!listRequest && !!entity;
+  // The list shows nothing: nothing to export from it (the whole register stays possible).
+  const listEmpty = followsList && rows === 'list' && listRequest!.total === 0;
   const title = followsList
     ? rows === 'list'
-      ? t(`csv.exportRows.${entity}`, { count: listRequest!.total })
+      ? listEmpty
+        ? t(`csv.exportNoRows.${entity}`)
+        : t(`csv.exportRows.${entity}`, { count: listRequest!.total })
       : t(`csv.exportAllRows.${entity}`)
     : titleProp || t('csv.exportTitle');
   const download = async (scope: 'template' | 'data') => {
@@ -116,7 +120,7 @@ export default function CsvExportDialog({
             <FormControlLabel value="all" control={<Radio size="small" />} label={t('csv.exportScopeAll')} />
           </RadioGroup>
         )}
-        <Button variant="contained" onClick={() => download('data')}>{t('csv.exportData')}</Button>
+        <Button variant="contained" disabled={listEmpty} onClick={() => download('data')}>{t('csv.exportData')}</Button>
         {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
       </DialogContent>
       <DialogActions>

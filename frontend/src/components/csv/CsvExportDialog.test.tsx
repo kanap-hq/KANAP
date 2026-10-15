@@ -97,4 +97,19 @@ describe('CsvExportDialog', () => {
     fireEvent.click(screen.getByRole('radio', { name: 'csv.exportScopeList' }));
     expect(screen.queryByText(/csv.exportRowLimit/)).toBeNull();
   });
+
+  it('has nothing to export from an empty list, the whole register still can be', async () => {
+    get.mockResolvedValue({ data: 'name\n', headers: {} });
+    const onClose = vi.fn();
+    render(<CsvExportDialog open onClose={onClose} endpoint="/suppliers" listRequest={{ params: { q: 'zzz' }, total: 0 }} entity="suppliers" />);
+    expect(screen.getByText('csv.exportNoRows.suppliers')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'csv.exportData' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('radio', { name: 'csv.exportScopeAll' }));
+    expect(screen.getByText('csv.exportAllRows.suppliers')).toBeInTheDocument();
+    const button = screen.getByRole('button', { name: 'csv.exportData' });
+    expect(button).toBeEnabled();
+    fireEvent.click(button);
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    expect(get).toHaveBeenLastCalledWith('/suppliers/export', expect.objectContaining({ params: { language: 'en', scope: 'data' } }));
+  });
 });
