@@ -16,7 +16,7 @@ import {
   touchLastActivity,
 } from './sessionStorage';
 import { getAccessToken, getAccessTokenExpiresAt, setAccessToken, subscribeAccessToken } from './accessTokenStore';
-import i18n, { detectBrowserLocale, LANGUAGE_OVERRIDE_STORAGE_KEY, SupportedLocale } from '../i18n';
+import { changeAppLanguage, detectBrowserLocale, LANGUAGE_OVERRIDE_STORAGE_KEY, SupportedLocale } from '../i18n';
 import { clearUserClientState } from './userClientState';
 
 type PermissionLevel = 'reader' | 'contributor' | 'member' | 'manager' | 'admin';
@@ -335,7 +335,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch {
         // Ignore localStorage failures
       }
-      void i18n.changeLanguage(profile.locale);
+      void changeAppLanguage(profile.locale);
       return;
     }
 
@@ -345,7 +345,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch {
         // Ignore localStorage failures
       }
-      void i18n.changeLanguage(detectBrowserLocale());
+      void changeAppLanguage(detectBrowserLocale());
     }
   }, [profile]);
 
