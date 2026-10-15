@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import PageHeader from '../components/PageHeader';
-import ServerDataGrid, { EnhancedColDef } from '../components/ServerDataGrid';
+import ServerDataGrid, { EnhancedColDef, type ListRequest } from '../components/ServerDataGrid';
 import { ICellRendererParams } from 'ag-grid-community';
 import { Button, Stack, Box, IconButton, Menu, MenuItem, useTheme } from '@mui/material';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
@@ -49,6 +49,8 @@ export default function UsersPage() {
   const queryClient = useQueryClient();
   const [refreshKey, setRefreshKey] = useState(0);
   const [exportOpen, setExportOpen] = useState(false);
+  // The list on screen: the CSV export follows it.
+  const [listRequest, setListRequest] = useState<ListRequest | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const gridApiRef = useRef<any>(null);
   const canManageUsers = hasLevel('users', 'admin');
@@ -465,6 +467,7 @@ export default function UsersPage() {
     <>
       <PageHeader title={t('users.title')} actions={actions} />
       <ServerDataGrid<any>
+        onListRequestChange={setListRequest}
         columns={columns}
         endpoint="/users"
         queryKey="users"
@@ -551,7 +554,7 @@ export default function UsersPage() {
           managedByEntra={tenantAuth?.sso_provider === 'entra' && tenantAuth?.sso_enabled && (defaultValues as any)?.external_auth_provider === 'entra'}
         />
       </FormModal>
-      <CsvExportDialog open={exportOpen} onClose={() => setExportOpen(false)} endpoint="/users" title={t('users.exportTitle')} flexibleFormat />
+      <CsvExportDialog listRequest={listRequest} entity="users" open={exportOpen} onClose={() => setExportOpen(false)} endpoint="/users" title={t('users.exportTitle')} flexibleFormat />
       <CsvImportDialog
         open={importOpen}
         onClose={() => setImportOpen(false)}

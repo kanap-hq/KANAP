@@ -65,7 +65,7 @@ Haga clic en cualquier celda para abrir el espacio de trabajo.
 
 - **Nuevo**: crear un calendario (requiere `working_day_profiles:member`)
 - **Importar CSV**: cargar calendarios y sus días laborables desde un archivo (requiere `working_day_profiles:admin`)
-- **Exportar CSV**: descargar todos los calendarios (requiere `working_day_profiles:admin`)
+- **Exportar CSV**: descargar los calendarios que muestra la lista, o todos los calendarios (requiere `working_day_profiles:admin`)
 - **Eliminar selección**: eliminar los calendarios seleccionados (requiere `working_day_profiles:admin`). Los calendarios que no se pueden eliminar se conservan y se listan con el motivo
 
 ---

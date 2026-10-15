@@ -1,3 +1,4 @@
+import { exportListQuery } from '../common/pagination';
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { DepartmentsService } from './departments.service';
 import { DepartmentsDeleteService } from './departments-delete.service';
@@ -57,11 +58,12 @@ export class DepartmentsController {
   async export(
     @Query('scope') scope: 'template' | 'data' = 'data',
     @Query('language') languageRaw: string | undefined,
+    @Query() query: any,
     @Res() res: Response,
     @Tenant() ctx: TenantRequest,
   ) {
     const language = await languageOf(ctx.manager as EntityManager, ctx.tenantId, ctx.userId ?? null, languageRaw);
-    const { filename, content } = await this.svc.exportCsv(scope, { manager: ctx.manager, language });
+    const { filename, content } = await this.svc.exportCsv(scope, { manager: ctx.manager, language, listQuery: exportListQuery(query) });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(filename));
     res.send(content);

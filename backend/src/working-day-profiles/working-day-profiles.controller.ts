@@ -1,3 +1,4 @@
+import { exportListQuery } from '../common/pagination';
 import {
   BadRequestException,
   Body,
@@ -85,6 +86,7 @@ export class WorkingDayProfilesController {
   async export(
     @Query('scope') scopeRaw: string,
     @Query('language') languageRaw: string | undefined,
+    @Query() query: any,
     @Res() res: Response,
     @Tenant() ctx: TenantRequest,
   ) {
@@ -92,7 +94,7 @@ export class WorkingDayProfilesController {
     if (!scope) throw new BadRequestException("scope must be 'data' or 'template'.");
     const caller = context(ctx);
     const language = await languageOf(caller.manager, caller.tenantId, caller.userId ?? null, languageRaw);
-    const { filename, content } = await this.csv.exportCsv(scope, caller, language);
+    const { filename, content } = await this.csv.exportCsv(scope, caller, language, exportListQuery(query));
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(filename));
     res.send(content);

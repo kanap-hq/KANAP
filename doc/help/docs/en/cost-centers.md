@@ -86,7 +86,7 @@ Click any cell to open the workspace.
 
 - **New**: create a group or a cost center (requires `cost_centers:member`)
 - **Import CSV**: load the tree from a file (requires `cost_centers:admin`)
-- **Export CSV**: download every node (requires `cost_centers:admin`)
+- **Export CSV**: download the nodes the list shows, or every node (requires `cost_centers:admin`)
 - **Delete selected**: delete the selected nodes (requires `cost_centers:admin`). Nodes that cannot be deleted are kept and listed with the reason. Contents are deleted before their group, so selecting a group together with everything it holds deletes all of it
 
 ---

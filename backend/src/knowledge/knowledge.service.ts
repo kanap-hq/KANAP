@@ -84,6 +84,20 @@ import { Document } from './document.entity';
 import { userNameSharedSql } from '../common/lookup/reference-lookups';
 import { trailingDigits } from '../common/text-scan';
 import { checkIds, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal } from '../common/record-in-use';
+import { textSortKey } from '../common/list-sort';
+
+/** The document list columns that sort alphabetically, and the expressions they read. */
+const KNOWLEDGE_TEXT_SORTS: Record<string, string> = {
+  title: 'd.title',
+  library_name: 'dl.name',
+  document_type_name: 'dtype.name',
+  template_name: 'td.title',
+  primary_owner_name: `(SELECT COALESCE(NULLIF(trim(concat_ws(' ', u.first_name, u.last_name)), ''), u.email, c.user_id::text)
+          FROM document_contributors c
+          LEFT JOIN users u ON u.id = c.user_id AND u.tenant_id = d.tenant_id
+          WHERE c.document_id = d.id AND c.tenant_id = d.tenant_id AND c.role = 'owner' AND c.is_primary = true
+          LIMIT 1)`,
+};
 
 export type RelationEntityType =
   | 'applications'
@@ -2740,16 +2754,10 @@ export class KnowledgeService {
       'template_name',
     ]);
     const sortField = allowedSort.has(sort.field) ? sort.field : 'updated_at';
-    // Alias-based sort fields need special handling
-    const sortExpression = sortField === 'primary_owner_name'
-      ? 'primary_owner_name'
-      : sortField === 'library_name'
-        ? 'library_name'
-        : sortField === 'document_type_name'
-          ? 'document_type_name'
-        : sortField === 'template_name'
-          ? 'template_name'
-          : `d.${sortField}`;
+    // Text sorts alphabetically, case and accents ignored (`textSortKey`), on the expressions the
+    // output aliases name (an alias cannot take a collation).
+    const textExpression = KNOWLEDGE_TEXT_SORTS[sortField];
+    const sortExpression = textExpression ? (await textSortKey(manager))(textExpression) : `d.${sortField}`;
 
     const qb = manager
       .getRepository(Document)

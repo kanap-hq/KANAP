@@ -287,7 +287,7 @@ On a contract in its first term with no decision due, **No** applies at once: th
 
 Keep your contract list in sync with other tools using CSV (`contracts:admin`).
 
-**Export**: downloads every contract with these columns: `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. The computed dates (term end, deadlines, state) are not exported.
+**Export**: downloads the contracts the list shows (or, on request in the dialog, every contract) with these columns: `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. The computed dates (term end, deadlines, state) are not exported.
 
 **Import**:
 

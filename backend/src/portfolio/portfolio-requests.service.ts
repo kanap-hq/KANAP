@@ -60,6 +60,7 @@ import {
   requestParticipantCondition,
 } from '../auth/business-contributor-scope';
 import { RecordInUseException } from '../common/record-in-use';
+import { orderListQuery } from '../common/list-sort';
 
 type InvolvementScope = { involvedUserId?: string; involvedTeamId?: string };
 type RequestServiceOpts = { manager?: EntityManager; tenantId?: string; accessScope?: ParticipationAccessScope };
@@ -443,7 +444,8 @@ export class PortfolioRequestsService {
     const sortField = validFields.has(sort.field) ? sort.field : 'created_at';
     // For priority_score, put NULLs last so requests without scores appear at the end
     const nullsOption = sortField === 'priority_score' ? 'NULLS LAST' : undefined;
-    qb.orderBy(`r.${sortField}`, sort.direction, nullsOption);
+    // The name alphabetically, case and accents ignored; the id breaks ties.
+    await orderListQuery(qb, `r.${sortField}`, sort.direction, { text: sortField === 'name', idExpr: 'r.id', nulls: nullsOption });
 
     // Count
     const total = await qb.getCount();
@@ -605,7 +607,8 @@ export class PortfolioRequestsService {
     const validFields = new Set(['name', 'status', 'source_id', 'category_id', 'stream_id', 'priority_score', 'target_delivery_date', 'created_at', 'updated_at']);
     const sortField = validFields.has(sort.field) ? sort.field : 'created_at';
     const nullsOption = sortField === 'priority_score' ? 'NULLS LAST' : undefined;
-    qb.orderBy(`r.${sortField}`, sort.direction, nullsOption);
+    // The name alphabetically, case and accents ignored; the id breaks ties.
+    await orderListQuery(qb, `r.${sortField}`, sort.direction, { text: sortField === 'name', idExpr: 'r.id', nulls: nullsOption });
 
     const total = await qb.clone().getCount();
     const limit = Math.min(Math.max(Number(query?.limit) || 10000, 1), 10000);

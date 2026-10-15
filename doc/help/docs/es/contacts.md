@@ -114,7 +114,7 @@ Las ubicaciones pueden tener contactos de soporte (gestores de instalaciones, co
 
 Gestione contactos de forma masiva usando CSV.
 
-**Exportar**: Descarga todos los contactos con sus detalles.
+**Exportar**: Descarga los contactos que muestra la lista con sus detalles. Elija **Todo el registro** en el diálogo para todos los contactos.
 
 **Importar**:
 - Utilice **Verificación previa** para validar antes de aplicar

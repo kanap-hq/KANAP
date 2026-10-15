@@ -4,7 +4,7 @@ import { Alert, Box, Button, Stack, Tooltip, Typography } from '@mui/material';
 import { ChipToggleContextLine } from '../../components/ChipToggleBar';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
-import ServerDataGrid, { EnhancedColDef, StatusScope } from '../../components/ServerDataGrid';
+import ServerDataGrid, { EnhancedColDef, StatusScope, type ListRequest } from '../../components/ServerDataGrid';
 import CsvExportDialog from '../../components/csv/CsvExportDialog';
 import CsvImportDialog from '../../components/csv/CsvImportDialog';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
@@ -129,6 +129,8 @@ export default function CoaPage() {
 
   const [accountsRefreshKey, setAccountsRefreshKey] = useState(0);
   const [exportOpen, setExportOpen] = useState(false);
+  // The list on screen: the CSV export follows it.
+  const [listRequest, setListRequest] = useState<ListRequest | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [createCoaOpen, setCreateCoaOpen] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
@@ -470,6 +472,7 @@ export default function CoaPage() {
 
         {coas.length > 0 && selectedCoaId && (
           <ServerDataGrid<AccountRow>
+            onListRequestChange={setListRequest}
             // The grid keeps its status scope internally: remount it so a consolidation filter shows
             // every status ("all", as the counts of the health line do) and its reset goes back to
             // enabled accounts.
@@ -533,7 +536,7 @@ export default function CoaPage() {
         }}
       />
 
-      <CsvExportDialog
+      <CsvExportDialog listRequest={listRequest} entity="accounts"
         open={exportOpen}
         onClose={() => setExportOpen(false)}
         endpoint={selectedCoaId ? `/chart-of-accounts/${selectedCoaId}/accounts` : '/accounts'}

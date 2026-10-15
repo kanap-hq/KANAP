@@ -65,7 +65,7 @@ Klicken Sie auf eine beliebige Zelle, um den Arbeitsbereich zu öffnen.
 
 - **Neu**: einen Kalender erstellen (erfordert `working_day_profiles:member`)
 - **CSV importieren**: Kalender und ihre Arbeitstage aus einer Datei laden (erfordert `working_day_profiles:admin`)
-- **CSV exportieren**: alle Kalender herunterladen (erfordert `working_day_profiles:admin`)
+- **CSV exportieren**: die Kalender der Liste herunterladen, oder alle Kalender (erfordert `working_day_profiles:admin`)
 - **Auswahl löschen**: die ausgewählten Kalender löschen (erfordert `working_day_profiles:admin`). Kalender, die nicht gelöscht werden können, bleiben erhalten und werden mit dem Grund aufgeführt
 
 ---

@@ -6,7 +6,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../api';
 import PageHeader from '../components/PageHeader';
-import ServerDataGrid, { EnhancedColDef, StatusScope } from '../components/ServerDataGrid';
+import ServerDataGrid, { EnhancedColDef, StatusScope, type ListRequest } from '../components/ServerDataGrid';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
 import DeleteSelectedButton, { type DeleteCheck } from '../components/DeleteSelectedButton';
@@ -75,6 +75,8 @@ function AnalyticsValuesList() {
 
   const [refreshKey, setRefreshKey] = useState(0);
   const [exportOpen, setExportOpen] = useState(false);
+  // The list on screen: the CSV export follows it.
+  const [listRequest, setListRequest] = useState<ListRequest | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [reorderOpen, setReorderOpen] = useState(false);
   const [selectedRows, setSelectedRows] = useState<AnalyticsValue[]>([]);
@@ -289,6 +291,7 @@ function AnalyticsValuesList() {
       )}
       {gridReady && (
         <ServerDataGrid<AnalyticsValue>
+          onListRequestChange={setListRequest}
           columns={columns}
           endpoint={ANALYTICS_VALUES_ENDPOINT}
           queryKey="analytics-categories"
@@ -324,7 +327,7 @@ function AnalyticsValuesList() {
           onSaved={refresh}
         />
       )}
-      <CsvExportDialog
+      <CsvExportDialog listRequest={listRequest} entity="analyticsValues"
         open={exportOpen}
         onClose={() => setExportOpen(false)}
         endpoint={ANALYTICS_VALUES_ENDPOINT}

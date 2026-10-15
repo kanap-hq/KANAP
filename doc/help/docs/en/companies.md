@@ -72,7 +72,7 @@ The list shows all companies for your workspace. Use it to review key informatio
 
 ## The company workspace
 
-Click a company name in the list to open its workspace. It has two tabs: **Overview** and **Details**.
+Click any row in the list to open the company workspace. It has two tabs: **Overview** and **Details**.
 
 - **Header**: the company name. Click it to rename the company. The arrows with "N of M" move between companies in the list's order and filters without returning to the list. The back link, **Companies**, returns to the list with your search context intact
 - **Properties panel** on the right: **Country**, **Base currency**, **Chart of accounts** and **Lifecycle**. Use the panel toggle next to it to collapse the panel or open it again
@@ -182,7 +182,7 @@ Many parts of the app are year-aware. Companies have metrics per year:
 
 ## CSV import/export
 
-**Export CSV** downloads every company with its metrics. **Import CSV** reads a file back. The import dialog also carries **Download template**: a file with the headers only, ready to fill in.
+**Export CSV** downloads the companies the list shows (or, on request in the dialog, every company) with their metrics. **Import CSV** reads a file back. The import dialog also carries **Download template**: a file with the headers only, ready to fill in.
 
 The columns, in this order. The metric columns follow the year selected in the list toolbar: the year before, that year, and the year after.
 

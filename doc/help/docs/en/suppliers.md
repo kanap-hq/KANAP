@@ -111,7 +111,7 @@ Click **New** in the list. Fill in the name (required), the ERP supplier ID and 
 
 ## CSV import/export
 
-**Export CSV** downloads every supplier, enabled and disabled, sorted by name. The search and filters of the list do not apply. The dialog closes once the file is downloaded. **Import CSV** reads a file back. The import dialog also carries **Download template**: a file with the headers only. The dialog lists the accepted values.
+**Export CSV** downloads the suppliers the list shows, with its search, filters and sort. Choose **The whole register** in the dialog to download every supplier, enabled and disabled. The dialog closes once the file is downloaded. **Import CSV** reads a file back. The import dialog also carries **Download template**: a file with the headers only. The dialog lists the accepted values.
 
 The columns:
 

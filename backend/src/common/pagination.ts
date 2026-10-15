@@ -58,6 +58,19 @@ export function parseExportPagination(query: any, defaultSort: Sort = { field: '
 }
 
 /**
+ * The list query a CSV export follows. `rows=list` (the export dialog's default): the list's
+ * search, column filters, Show scope, sort and extra parameters, every page up to the export
+ * bound. Anything else: `undefined`, the whole register (the API's default, kept for scripts).
+ * The service reads its rows through its own list query with the export bound
+ * (`parseExportPagination`), so the file holds exactly what the list shows.
+ */
+export function exportListQuery(query: any): Record<string, unknown> | undefined {
+  if (String(query?.rows ?? '') !== 'list') return undefined;
+  const { scope: _scope, language: _language, rows: _rows, page: _page, limit: _limit, ...list } = query ?? {};
+  return { ...list, page: '1', limit: String(MAX_EXPORT_LIMIT) };
+}
+
+/**
  * Names of the bound parameters of the set filters below. A where clause built here can be
  * merged with another one, or spread into several OR branches of one query, so each name is
  * unique in the process; the branches of one clause share the same operator, name and value.

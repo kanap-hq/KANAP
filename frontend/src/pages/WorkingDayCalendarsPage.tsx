@@ -4,7 +4,7 @@ import { Box, Button, Stack, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import PageHeader from '../components/PageHeader';
-import ServerDataGrid, { EnhancedColDef, StatusScope } from '../components/ServerDataGrid';
+import ServerDataGrid, { EnhancedColDef, StatusScope, type ListRequest } from '../components/ServerDataGrid';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
 import { useAuth } from '../auth/AuthContext';
@@ -59,6 +59,8 @@ function WorkingDayCalendarsList() {
 
   const [refreshKey, setRefreshKey] = useState(0);
   const [exportOpen, setExportOpen] = useState(false);
+  // The list on screen: the CSV export follows it.
+  const [listRequest, setListRequest] = useState<ListRequest | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [selectedRows, setSelectedRows] = useState<WorkingDayProfileListRow[]>([]);
   const gridApiRef = useRef<any>(null);
@@ -237,6 +239,7 @@ function WorkingDayCalendarsList() {
         </Typography>
       )}
       <ServerDataGrid<WorkingDayProfileListRow>
+        onListRequestChange={setListRequest}
         columns={columns}
         endpoint={WORKING_DAY_PROFILES_ENDPOINT}
         queryKey="working-day-profiles"
@@ -257,7 +260,7 @@ function WorkingDayCalendarsList() {
           lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {}, statusScope: scope };
         }}
       />
-      <CsvExportDialog open={exportOpen} onClose={() => setExportOpen(false)} endpoint={WORKING_DAY_PROFILES_ENDPOINT} title={t('workingDayCalendars.export')} flexibleFormat />
+      <CsvExportDialog listRequest={listRequest} entity="workingDayCalendars" open={exportOpen} onClose={() => setExportOpen(false)} endpoint={WORKING_DAY_PROFILES_ENDPOINT} title={t('workingDayCalendars.export')} flexibleFormat />
       <CsvImportDialog
         open={importOpen}
         onClose={() => setImportOpen(false)}

@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import PageHeader from '../components/PageHeader';
-import ServerDataGrid, { EnhancedColDef, StatusScope } from '../components/ServerDataGrid';
+import ServerDataGrid, { EnhancedColDef, StatusScope, type ListRequest } from '../components/ServerDataGrid';
 import { Button, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
@@ -42,6 +42,8 @@ export default function BusinessProcessesPage() {
 
   const [refreshKey, setRefreshKey] = useState(0);
   const [exportOpen, setExportOpen] = useState(false);
+  // The list on screen: the CSV export follows it.
+  const [listRequest, setListRequest] = useState<ListRequest | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
   const [selectedRows, setSelectedRows] = useState<BusinessProcessRow[]>([]);
@@ -167,6 +169,7 @@ export default function BusinessProcessesPage() {
     <>
       <PageHeader title={t("businessProcesses.title")} actions={actions} />
       <ServerDataGrid<BusinessProcessRow>
+        onListRequestChange={setListRequest}
         columns={columns}
         endpoint="/business-processes"
         queryKey="business-processes"
@@ -189,7 +192,7 @@ export default function BusinessProcessesPage() {
           lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {}, statusScope: scope };
         }}
       />
-      <CsvExportDialog
+      <CsvExportDialog listRequest={listRequest} entity="businessProcesses"
         open={exportOpen}
         onClose={() => setExportOpen(false)}
         endpoint="/business-processes"

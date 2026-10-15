@@ -80,6 +80,8 @@ const NUMBER_FILTER_PARAMS = {
 };
 
 type ServerResponse<T> = { items: T[]; total: number; page: number; limit: number };
+/** A list request without its paging, and the row count it answered. */
+export type ListRequest = { params: Record<string, unknown>; total: number };
 
 export type StatusScope = 'enabled' | 'disabled' | 'invited' | 'all';
 const DEFAULT_STATUS_SCOPES: StatusScope[] = ['all', 'enabled', 'disabled'];
@@ -119,6 +121,11 @@ export type ServerDataGridProps<T> = {
   onQueryStateChange?: (state: { sort: string; filterModel: any; q: string; statusScope?: StatusScope }) => void; // notify parent when sort/filter/search change
   /** The filtered row count from the latest page response. */
   onTotalChange?: (total: number) => void;
+  /**
+   * The list request behind the rows on screen (search, filters, Show scope, sort, extra and column
+   * parameters; no paging) and its row count, after each first page loads: the CSV export follows it.
+   */
+  onListRequestChange?: (request: ListRequest) => void;
   pinnedBottomRowData?: any[]; // optional pinned totals row(s)
   enableRowSelection?: boolean; // enable multi-row selection with checkboxes (default: false)
   onSelectionChanged?: (selectedRows: T[]) => void; // callback when selection changes
@@ -418,6 +425,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   onGridApiReady,
   onQueryStateChange,
   onTotalChange,
+  onListRequestChange,
   pinnedBottomRowData,
   enableRowSelection = false,
   onSelectionChanged,
@@ -868,6 +876,8 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   pageParamsRef.current = pageParams;
   const onTotalChangeRef = useRef(onTotalChange);
   onTotalChangeRef.current = onTotalChange;
+  const onListRequestChangeRef = useRef(onListRequestChange);
+  onListRequestChangeRef.current = onListRequestChange;
   // The page parameters the last block request was sent with: a column change that changes them
   // reloads the rows (see pageParamsChangedRef).
   const pageParamsKeyRef = useRef<string | undefined>(undefined);
@@ -975,6 +985,10 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
           setEmptyResult(total === 0 ? (narrowed ? 'filtered' : 'empty') : null);
         }
         onTotalChangeRef.current?.(total);
+        if (startRow === 0 && onListRequestChangeRef.current) {
+          const { page: _page, limit: _limit, ...listParams } = reqParams;
+          onListRequestChangeRef.current({ params: listParams, total });
+        }
         params.successCallback(rows, total);
       } catch (e: any) {
         if (superseded()) {

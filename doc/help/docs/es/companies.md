@@ -72,7 +72,7 @@ La lista muestra todas las empresas de su espacio de trabajo. Utilícela para re
 
 ## El espacio de trabajo de la empresa
 
-Haga clic en el nombre de una empresa en la lista para abrir su espacio de trabajo. Tiene dos pestañas: **Visión general** y **Detalles**.
+Haga clic en cualquier fila de la lista para abrir el espacio de trabajo de la empresa. Tiene dos pestañas: **Visión general** y **Detalles**.
 
 - **Encabezado**: el nombre de la empresa. Haga clic en él para cambiar el nombre de la empresa. Las flechas con «N de M» permiten moverse entre empresas en el orden y con los filtros de la lista, sin volver a ella. El enlace de retorno, **Empresas**, vuelve a la lista con su contexto de búsqueda intacto
 - **Panel Propiedades** a la derecha: **País**, **Moneda base**, **Plan de cuentas** y **Ciclo de vida**. Use el botón situado junto al panel para plegarlo o volver a abrirlo
@@ -182,7 +182,7 @@ Muchas partes de la aplicación son conscientes del año. Las empresas tienen m�
 
 ## Importación/exportación CSV
 
-**Exportar CSV** descarga todas las empresas con sus métricas. **Importar CSV** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo solo con los encabezados, listo para rellenar.
+**Exportar CSV** descarga las empresas que muestra la lista (o, a petición en el diálogo, todas las empresas) con sus métricas. **Importar CSV** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo solo con los encabezados, listo para rellenar.
 
 Las columnas, en este orden. Las columnas de métricas siguen el año seleccionado en la barra de herramientas de la lista: el año anterior, ese año y el siguiente.
 

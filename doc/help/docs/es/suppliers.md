@@ -111,7 +111,7 @@ Haga clic en **Nuevo** en la lista. Rellene el nombre (obligatorio), el ID de pr
 
 ## Importación/exportación CSV
 
-**Exportar CSV** descarga todos los proveedores, activados y desactivados, ordenados por nombre. La búsqueda y los filtros de la lista no se aplican. El diálogo se cierra una vez descargado el archivo. **Importar CSV** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo solo con los encabezados. Indica los valores aceptados.
+**Exportar CSV** descarga los proveedores que muestra la lista, con su búsqueda, sus filtros y su orden. Elija **Todo el registro** en el diálogo para descargar todos los proveedores, activados y desactivados. El diálogo se cierra una vez descargado el archivo. **Importar CSV** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo solo con los encabezados. Indica los valores aceptados.
 
 Las columnas:
 

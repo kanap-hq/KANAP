@@ -118,7 +118,7 @@ Klicken Sie auf eine beliebige Zelle, um den Arbeitsbereich des Werts zu öffnen
 - **Neuer Wert**: einen Wert in der ausgewählten Dimension erstellen (erfordert `analytics:member`). Solange die ausgewählte Dimension deaktiviert ist, ist die Schaltfläche deaktiviert, und ihr Tooltip lautet „Aktivieren Sie diese Dimension, um Werte hinzuzufügen.“
 - **Neu ordnen**: die Reihenfolge der Werte der ausgewählten Dimension festlegen (erfordert `analytics:member`). Die Schaltfläche ist deaktiviert, solange die Dimension weniger als zwei Werte hat. Siehe [Werte ordnen](#werte-ordnen)
 - **CSV importieren**: Werte aus einer Datei laden (erfordert `analytics:admin`)
-- **CSV exportieren**: die Werte aller Dimensionen herunterladen (erfordert `analytics:admin`)
+- **CSV exportieren**: die Werte der Liste herunterladen, oder die Werte aller Dimensionen (erfordert `analytics:admin`)
 - **Auswahl löschen**: die ausgewählten Werte löschen (erfordert `analytics:admin`). Werden einige davon von Budgetzeilen verwendet, nennt die Bestätigung, wie viele Zeilen sie verlieren, zum Beispiel „2 ausgewählte Werte werden verwendet: Sie werden aus 5 Budgetzeilen entfernt. Diese Daten können nicht wiederhergestellt werden.“, und die Schaltfläche heißt **Trotzdem löschen**
 
 ---
