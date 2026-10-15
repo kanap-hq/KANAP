@@ -224,6 +224,15 @@ describe('DeleteSelectedButton', () => {
       expect(within(dialog).getAllByRole('button').map((button) => button.textContent).filter(Boolean)).toEqual(['buttons.close']);
     });
 
+    it('sends the force key the check names, with its warning and label', async () => {
+      vi.mocked(api.delete).mockResolvedValue({ data: { deleted: ['a', 'b'], failed: [] } } as any);
+      renderChecked(rows, async () => ({ refused: [], warning: '2 budget lines lose it.', confirmLabel: 'Delete anyway', forceKey: 'force' }));
+      const dialog = await screen.findByRole('dialog');
+      expect(dialog).toHaveTextContent('2 budget lines lose it.');
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Delete anyway' }));
+      await waitFor(() => expect(api.delete).toHaveBeenCalledWith('/contracts/bulk', { data: { ids: ['a', 'b'], force: true } }));
+    });
+
     it('falls back to the usual confirmation when the check fails', async () => {
       renderChecked(rows, async () => { throw new Error('offline'); });
       const dialog = await screen.findByRole('dialog');

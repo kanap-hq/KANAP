@@ -1,4 +1,5 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { RecordInUseException } from '../common/record-in-use';
 import { AuditService } from '../audit/audit.service';
 import { deriveStatusFromDisabledAt, StatusState } from '../common/status';
 import {
@@ -115,6 +116,11 @@ const INT_MAX = 2147483647;
 
 export const DEFAULT_AXIS_LOCKED_MESSAGE = 'This dimension cannot be disabled: older files and AI questions use it.';
 export const DEFAULT_AXIS_DELETE_MESSAGE = 'This dimension cannot be deleted: older files and AI questions use it.';
+
+/** The refusal of the default dimension's delete, forced or not (`ANALYTICS_DEFAULT_DIMENSION`). */
+function defaultAxisRefusal(name: string | null): RecordInUseException {
+  return new RecordInUseException('ANALYTICS_DEFAULT_DIMENSION', 'dimension', name || '', [], DEFAULT_AXIS_DELETE_MESSAGE);
+}
 export const RESERVED_AXIS_NAME_MESSAGE = 'This name is reserved for the default dimension.';
 export const DEFAULT_AXIS_APPLIES_MESSAGE = 'The default dimension applies to OPEX and CAPEX lines.';
 
@@ -426,22 +432,23 @@ export class AnalyticsAxesService {
     // before (and is counted) or waits for this delete and then fails its key.
     const existing = await this.lock(ctx, id);
     if (!existing) throw new NotFoundException('Dimension not found.');
-    if (existing.is_default) throw new ConflictException(DEFAULT_AXIS_DELETE_MESSAGE);
+    if (existing.is_default) throw defaultAxisRefusal(existing.name);
     const [count] = await ctx.manager.query(
       `SELECT count(*)::int AS n FROM analytics_categories WHERE tenant_id = $1 AND axis_id = $2`,
       [ctx.tenantId, id],
     );
     const values = Number(count?.n ?? 0);
     if (values > 0) {
-      throw new ConflictException(
-        `${existing.name || 'This dimension'} still has ${plural(values, 'value', 'values')}. Delete them first.`,
-      );
+      // Without `force` only: the dimension's page offers the forced delete, which takes the values too.
+      throw new RecordInUseException('ANALYTICS_DIMENSION_HAS_VALUES', 'dimension', existing.name || '', [{ type: 'values', total: values }],
+        `${existing.name || 'This dimension'} still has ${plural(values, 'value', 'values')}. Delete them first.`);
     }
     try {
       await ctx.manager.query(`DELETE FROM analytics_axes WHERE tenant_id = $1 AND id = $2`, [ctx.tenantId, id]);
     } catch (err: any) {
       if (err?.code === '23503') {
-        throw new ConflictException(`${existing.name || 'This dimension'} still has values. Delete them first.`);
+        throw new RecordInUseException('RECORD_IN_USE', 'dimension', existing.name || '', [],
+          `${existing.name || 'This dimension'} still has values. Delete them first.`);
       }
       throw err;
     }
@@ -473,13 +480,13 @@ export class AnalyticsAxesService {
       [ctx.tenantId, id],
     );
     if (!found) throw new NotFoundException('Dimension not found.');
-    if (found.is_default) throw new ConflictException(DEFAULT_AXIS_DELETE_MESSAGE);
+    if (found.is_default) throw defaultAxisRefusal(null);
 
     await lockLinesUsing(ctx, { axisId: id });
     await lockValueRows(ctx, await dimensionValueIds(ctx, id));
     const existing = await this.lock(ctx, id);
     if (!existing) throw new NotFoundException('Dimension not found.');
-    if (existing.is_default) throw new ConflictException(DEFAULT_AXIS_DELETE_MESSAGE);
+    if (existing.is_default) throw defaultAxisRefusal(existing.name);
     const values = await lockValueRows<{ id: string }>(ctx, await dimensionValueIds(ctx, id));
 
     const counts = await deleteValuesAndLinks(ctx, this.audit, { axisId: id }, values, {

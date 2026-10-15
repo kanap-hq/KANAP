@@ -210,7 +210,9 @@
       "nodes_one": "{{count}} élément",
       "nodes_other": "{{count}} éléments",
       "companies_one": "{{count}} société",
-      "companies_other": "{{count}} sociétés"
+      "companies_other": "{{count}} sociétés",
+      "values_one": "{{count}} valeur",
+      "values_other": "{{count}} valeurs"
     }
   },
   "messages": {

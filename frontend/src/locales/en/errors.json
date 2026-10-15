@@ -101,5 +101,8 @@
   "USER_OWN_ACCOUNT": "You cannot delete your own account. Disable it instead if needed.",
   "ACCOUNT_IN_USE": "This account is used by {{usages}}. Disable it instead of deleting it.",
   "CHART_OF_ACCOUNTS_IN_USE": "This chart of accounts is used by {{usages}}. Move them to another chart of accounts first.",
-  "RECORD_IN_USE": "Other records still use this item. Disable it instead of deleting it."
+  "RECORD_IN_USE": "Other records still use this item. Disable it instead of deleting it.",
+  "ANALYTICS_VALUE_IN_USE": "This value is used by {{usages}}. Disable it, or delete it anyway from its page: the lines lose it.",
+  "ANALYTICS_DIMENSION_HAS_VALUES": "This dimension still has {{usages}}. Delete them first, or delete the dimension from its page with its values.",
+  "ANALYTICS_DEFAULT_DIMENSION": "This dimension cannot be deleted: older files and AI questions use it. Disable its values instead."
 }

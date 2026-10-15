@@ -15,7 +15,8 @@ export type RefusalKind =
   | 'app_assignments'
   | 'connections'
   | 'nodes'
-  | 'companies';
+  | 'companies'
+  | 'values';
 export type UsageCount = { type: RefusalKind; total: number };
 
 const ENGLISH: Record<RefusalKind, [string, string]> = {
@@ -40,6 +41,7 @@ const ENGLISH: Record<RefusalKind, [string, string]> = {
   connections: ['connection', 'connections'],
   nodes: ['node', 'nodes'],
   companies: ['company', 'companies'],
+  values: ['value', 'values'],
 };
 
 /** The OPEX and CAPEX line counts of a refusal, each kind only when not zero. */

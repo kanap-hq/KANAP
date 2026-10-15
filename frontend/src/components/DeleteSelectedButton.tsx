@@ -17,6 +17,8 @@ export type DeleteCheck = {
   refused: Array<DeleteFailure & { id: string; name?: string }>;
   warning?: string;
   confirmLabel?: string;
+  /** The body key sent `true` when the delete removes the dependants the warning names ("Delete anyway"). */
+  forceKey?: string;
 };
 
 export interface DeleteSelectedButtonProps<T> {
@@ -113,7 +115,9 @@ export default function DeleteSelectedButton<T>({
       if (options?.deleteRelated && cascadeOption) {
         data[cascadeOption.apiKey] = true;
       }
-      if (forceOption?.apiKey) data[forceOption.apiKey] = true;
+      // An answered check says what goes too; without one, the force option from the rows.
+      const forceKey = check ? check.forceKey : forceOption?.apiKey;
+      if (forceKey) data[forceKey] = true;
       const response = await api.delete(endpoint, { data });
 
       const { deleted = [], failed = [] } = response.data;
@@ -217,8 +221,8 @@ export default function DeleteSelectedButton<T>({
           onClose={handleCloseConfirm}
           onConfirm={handleConfirmDelete}
           title={t('delete.deleteSelectedTitle', { count: deletable.length })}
-          warning={check?.warning ?? forceOption?.message ?? warning}
-          confirmLabel={check?.confirmLabel ?? forceOption?.confirmLabel}
+          warning={check ? (check.warning ?? warning) : (forceOption?.message ?? warning)}
+          confirmLabel={check ? check.confirmLabel : forceOption?.confirmLabel}
           itemCount={deletable.length}
           items={deletable}
           itemsLabel={itemLabels?.toDelete(deletable.length)}

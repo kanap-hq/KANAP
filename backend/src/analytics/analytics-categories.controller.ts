@@ -153,6 +153,13 @@ export class AnalyticsCategoriesController {
     return this.svc.update(id, body, context.userId, context);
   }
 
+  // What a delete of `ids` would do, asked before the confirmation: `forced`, the values in use.
+  @RequireLevel('analytics', 'admin')
+  @Post('delete-check')
+  deleteCheck(@Body() body: { ids?: unknown }, @Tenant() ctx: TenantRequest) {
+    return this.svc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], analyticsContext(ctx));
+  }
+
   // `force: true` deletes values in use too: the lines lose them (analytics-forced-delete.ts).
   @RequireLevel('analytics', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
