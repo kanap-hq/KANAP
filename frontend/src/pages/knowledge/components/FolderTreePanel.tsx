@@ -483,6 +483,14 @@ const FolderTreePanel = React.memo(function FolderTreePanel({
       await qc.invalidateQueries({ queryKey: ['knowledge-folders-tree', libraryId] });
       if (selectedFolderId) onSelectFolder(null);
     },
+    // A refused delete (a folder with subfolders) says why, in the interface language.
+    onError: (error: any) => {
+      setFolderMoveSnackbar({
+        open: true,
+        message: getApiErrorMessage(error, t, t('folderTree.messages.deleteFailed')),
+        severity: 'error',
+      });
+    },
   });
 
   const handleRename = React.useCallback((id: string, name: string) => {

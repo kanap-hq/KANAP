@@ -934,6 +934,12 @@
       "exportTitle": "Exportar tareas",
       "importTitle": "Importar tareas",
       "presetEnrichment": "Enriquecimiento de datos"
+    },
+    "delete": {
+      "toDelete_one": "Se eliminará {{count}} tarea:",
+      "toDelete_other": "Se eliminarán {{count}} tareas:",
+      "kept_one": "{{count}} tarea no se puede eliminar y se conserva:",
+      "kept_other": "{{count}} tareas no se pueden eliminar y se conservan:"
     }
   },
   "projects": {

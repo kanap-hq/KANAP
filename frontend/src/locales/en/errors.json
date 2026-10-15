@@ -106,5 +106,20 @@
   "ANALYTICS_DIMENSION_HAS_VALUES": "This dimension still has {{usages}}. Delete them first, or delete the dimension from its page with its values.",
   "ANALYTICS_DEFAULT_DIMENSION": "This dimension cannot be deleted: older files and AI questions use it. Disable its values instead.",
   "BUDGET_LINE_FROZEN": "This line has amounts in {{column}} {{year}}, a frozen budget column. Unfreeze the column first, or set an end of validity date instead of deleting the line.",
-  "DEPARTMENT_IN_USE": "This department is used in the allocations of {{usages}}. Disable it instead of deleting it."
+  "DEPARTMENT_IN_USE": "This department is used in the allocations of {{usages}}. Disable it instead of deleting it.",
+  "BUILT_IN_RECORD": "This item comes with KANAP and cannot be deleted. Disable it instead.",
+  "RECORD_USED_BY": "This item is used by {{usages}}. Disable it instead of deleting it.",
+  "TEAM_NOT_EMPTY": "This team still has {{usages}}. Move them to another team first, or disable the team.",
+  "ROLE_BUILT_IN": "This role comes with KANAP and cannot be deleted. Duplicate it to make a role you can change.",
+  "ROLE_IN_USE": "This role is given to {{usages}}. Give them another role first.",
+  "APP_INSTANCE_IN_USE": "This instance still has {{usages}}. Remove them first.",
+  "INTERFACE_HAS_BINDINGS": "This interface has {{usages}}. Delete its bindings with it, or remove them first.",
+  "MAPPING_SET_DEFAULT": "The default mapping set cannot be deleted. Make another set the default first.",
+  "MAPPING_GROUP_DEFAULT": "Default mapping groups cannot be deleted. Leave the group empty if you do not need it.",
+  "REQUEST_CONVERTED": "This request became a project and stays as its origin. It cannot be deleted.",
+  "TASK_REQUEST_ORIGIN": "Request {{reference}} was created from this task. Close the task instead of deleting it.",
+  "KNOWLEDGE_DOCUMENT_MANAGED": "This document belongs to a record's page and is deleted with that record. It cannot be deleted from Knowledge.",
+  "KNOWLEDGE_LIBRARY_SYSTEM": "This library comes with KANAP and cannot be deleted.",
+  "KNOWLEDGE_LIBRARY_LAST": "This is the last library you can use. Create another library before deleting it.",
+  "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS": "This folder still has {{usages}}. Move or delete them first."
 }

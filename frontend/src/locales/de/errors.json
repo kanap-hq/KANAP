@@ -106,5 +106,20 @@
   "ANALYTICS_DIMENSION_HAS_VALUES": "Diese Dimension enthält noch {{usages}}. Löschen Sie diese zuerst, oder löschen Sie die Dimension mit ihren Werten auf ihrer Seite.",
   "ANALYTICS_DEFAULT_DIMENSION": "Diese Dimension kann nicht gelöscht werden: Ältere Dateien und KI-Fragen verwenden sie. Deaktivieren Sie stattdessen ihre Werte.",
   "BUDGET_LINE_FROZEN": "Diese Zeile hat Beträge in {{column}} {{year}}, einer eingefrorenen Budgetspalte. Heben Sie zuerst das Einfrieren der Spalte auf, oder setzen Sie ein Gültigkeitsende, statt die Zeile zu löschen.",
-  "DEPARTMENT_IN_USE": "Diese Abteilung wird in den Zuordnungen von {{usages}} verwendet. Deaktivieren Sie sie, statt sie zu löschen."
+  "DEPARTMENT_IN_USE": "Diese Abteilung wird in den Zuordnungen von {{usages}} verwendet. Deaktivieren Sie sie, statt sie zu löschen.",
+  "BUILT_IN_RECORD": "Dieses Element ist in KANAP enthalten und kann nicht gelöscht werden. Deaktivieren Sie es stattdessen.",
+  "RECORD_USED_BY": "Dieses Element wird von {{usages}} verwendet. Deaktivieren Sie es, statt es zu löschen.",
+  "TEAM_NOT_EMPTY": "Dieses Team hat noch {{usages}}. Verschieben Sie sie zuerst in ein anderes Team, oder deaktivieren Sie das Team.",
+  "ROLE_BUILT_IN": "Diese Rolle ist in KANAP enthalten und kann nicht gelöscht werden. Duplizieren Sie sie, um eine änderbare Rolle zu erhalten.",
+  "ROLE_IN_USE": "Diese Rolle ist {{usages}} zugewiesen. Weisen Sie ihnen zuerst eine andere Rolle zu.",
+  "APP_INSTANCE_IN_USE": "Diese Instanz hat noch {{usages}}. Entfernen Sie sie zuerst.",
+  "INTERFACE_HAS_BINDINGS": "Diese Schnittstelle hat {{usages}}. Löschen Sie ihre Bindungen mit, oder entfernen Sie sie zuerst.",
+  "MAPPING_SET_DEFAULT": "Der Standard-Mapping-Satz kann nicht gelöscht werden. Machen Sie zuerst einen anderen Satz zum Standard.",
+  "MAPPING_GROUP_DEFAULT": "Standard-Mapping-Gruppen können nicht gelöscht werden. Lassen Sie die Gruppe leer, wenn Sie sie nicht brauchen.",
+  "REQUEST_CONVERTED": "Diese Anfrage wurde zu einem Projekt und bleibt dessen Ursprung. Sie kann nicht gelöscht werden.",
+  "TASK_REQUEST_ORIGIN": "Die Anfrage {{reference}} wurde aus dieser Aufgabe erstellt. Schließen Sie die Aufgabe, statt sie zu löschen.",
+  "KNOWLEDGE_DOCUMENT_MANAGED": "Dieses Dokument gehört zur Seite eines Datensatzes und wird mit ihm gelöscht. Es kann nicht in Wissen gelöscht werden.",
+  "KNOWLEDGE_LIBRARY_SYSTEM": "Diese Bibliothek ist in KANAP enthalten und kann nicht gelöscht werden.",
+  "KNOWLEDGE_LIBRARY_LAST": "Dies ist die letzte Bibliothek, die Sie nutzen können. Erstellen Sie eine weitere Bibliothek, bevor Sie sie löschen.",
+  "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS": "Dieser Ordner enthält noch {{usages}}. Verschieben oder löschen Sie sie zuerst."
 }

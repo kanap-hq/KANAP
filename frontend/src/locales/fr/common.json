@@ -212,7 +212,21 @@
       "companies_one": "{{count}} société",
       "companies_other": "{{count}} sociétés",
       "values_one": "{{count}} valeur",
-      "values_other": "{{count}} valeurs"
+      "values_other": "{{count}} valeurs",
+      "sub_teams_one": "{{count}} sous-équipe",
+      "sub_teams_other": "{{count}} sous-équipes",
+      "contributors_one": "{{count}} contributeur",
+      "contributors_other": "{{count}} contributeurs",
+      "interface_bindings_one": "{{count}} liaison d'interface",
+      "interface_bindings_other": "{{count}} liaisons d'interface",
+      "server_assignments_one": "{{count}} affectation de serveur",
+      "server_assignments_other": "{{count}} affectations de serveur",
+      "business_processes_one": "{{count}} processus métier",
+      "business_processes_other": "{{count}} processus métier",
+      "documents_one": "{{count}} document",
+      "documents_other": "{{count}} documents",
+      "sub_folders_one": "{{count}} sous-dossier",
+      "sub_folders_other": "{{count}} sous-dossiers"
     }
   },
   "messages": {

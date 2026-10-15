@@ -9,6 +9,7 @@ import type { ICellRendererParams } from 'ag-grid-community';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import DeleteSelectedButton from '../components/DeleteSelectedButton';
+import { recordsInUseCheck } from '../utils/deleteCheck';
 import { CsvExportDialogV2, CsvImportDialogV2 } from '../components/csv';
 import ForbiddenPage from './ForbiddenPage';
 import api from '../api';
@@ -629,6 +630,12 @@ export default function TasksPage() {
         <DeleteSelectedButton
           selectedRows={selectedRows}
           endpoint="/tasks/bulk"
+          // Asked on click: a task a request was created from is kept, with why.
+          checkDelete={(ids) => recordsInUseCheck('/tasks', ids)}
+          itemLabels={{
+            toDelete: (count) => t('tasks.delete.toDelete', { count }),
+            kept: (count) => t('tasks.delete.kept', { count }),
+          }}
           getItemId={(row) => row.id}
           getItemName={(row) => row.title || row.related_object_name || row.id}
           gridApi={gridApiRef.current}

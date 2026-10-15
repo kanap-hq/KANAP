@@ -106,5 +106,20 @@
   "ANALYTICS_DIMENSION_HAS_VALUES": "Esta dimensión aún tiene {{usages}}. Elimínelos primero, o elimine la dimensión con sus valores desde su página.",
   "ANALYTICS_DEFAULT_DIMENSION": "Esta dimensión no se puede eliminar: archivos antiguos y preguntas a la IA la usan. Desactive sus valores en su lugar.",
   "BUDGET_LINE_FROZEN": "Esta línea tiene importes en {{column}} {{year}}, una columna presupuestaria congelada. Descongele primero la columna, o indique un fin de validez en lugar de eliminar la línea.",
-  "DEPARTMENT_IN_USE": "Este departamento se usa en las asignaciones de {{usages}}. Desactívelo en lugar de eliminarlo."
+  "DEPARTMENT_IN_USE": "Este departamento se usa en las asignaciones de {{usages}}. Desactívelo en lugar de eliminarlo.",
+  "BUILT_IN_RECORD": "Este elemento viene con KANAP y no se puede eliminar. Desactívelo en su lugar.",
+  "RECORD_USED_BY": "Este elemento lo usan {{usages}}. Desactívelo en lugar de eliminarlo.",
+  "TEAM_NOT_EMPTY": "Este equipo todavía tiene {{usages}}. Muévalos primero a otro equipo, o desactive el equipo.",
+  "ROLE_BUILT_IN": "Este rol viene con KANAP y no se puede eliminar. Duplíquelo para obtener un rol que pueda modificar.",
+  "ROLE_IN_USE": "Este rol está asignado a {{usages}}. Asígneles primero otro rol.",
+  "APP_INSTANCE_IN_USE": "Esta instancia todavía tiene {{usages}}. Quítelos primero.",
+  "INTERFACE_HAS_BINDINGS": "Esta interfaz tiene {{usages}}. Elimine sus enlaces con ella, o quítelos primero.",
+  "MAPPING_SET_DEFAULT": "El conjunto de correspondencias predeterminado no se puede eliminar. Defina primero otro conjunto como predeterminado.",
+  "MAPPING_GROUP_DEFAULT": "Los grupos de correspondencias predeterminados no se pueden eliminar. Deje el grupo vacío si no lo necesita.",
+  "REQUEST_CONVERTED": "Esta solicitud se convirtió en un proyecto y sigue siendo su origen. No se puede eliminar.",
+  "TASK_REQUEST_ORIGIN": "La solicitud {{reference}} se creó a partir de esta tarea. Cierre la tarea en lugar de eliminarla.",
+  "KNOWLEDGE_DOCUMENT_MANAGED": "Este documento forma parte de la página de un registro y se elimina con él. No se puede eliminar desde Conocimiento.",
+  "KNOWLEDGE_LIBRARY_SYSTEM": "Esta biblioteca viene con KANAP y no se puede eliminar.",
+  "KNOWLEDGE_LIBRARY_LAST": "Es la última biblioteca que puede usar. Cree otra biblioteca antes de eliminarla.",
+  "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS": "Esta carpeta todavía contiene {{usages}}. Muévalas o elimínelas primero."
 }

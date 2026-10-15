@@ -839,7 +839,8 @@
       "contactLocked": "Kontaktrollen werden vom System für die Verzeichnissichtbarkeit verwaltet und können nicht geändert werden.",
       "duplicated": "Rolle dupliziert.",
       "permissionsSaved": "Rollenberechtigungen gespeichert.",
-      "setAccessLevels": "Legen Sie die Zugriffsebenen pro Ressource für diese Rolle fest."
+      "setAccessLevels": "Legen Sie die Zugriffsebenen pro Ressource für diese Rolle fest.",
+      "deleteFailed": "Die Rolle konnte nicht gelöscht werden."
     },
     "resources": {
       "accounts": "Konten",

@@ -106,5 +106,20 @@
   "ANALYTICS_DIMENSION_HAS_VALUES": "Cette dimension contient encore {{usages}}. Supprimez-les d’abord, ou supprimez la dimension avec ses valeurs depuis sa page.",
   "ANALYTICS_DEFAULT_DIMENSION": "Cette dimension ne peut pas être supprimée : d’anciens fichiers et des questions à l’IA l’utilisent. Désactivez plutôt ses valeurs.",
   "BUDGET_LINE_FROZEN": "Cette ligne a des montants dans {{column}} {{year}}, une colonne budgétaire gelée. Dégelez d’abord la colonne, ou indiquez une fin de validité plutôt que de supprimer la ligne.",
-  "DEPARTMENT_IN_USE": "Ce département est utilisé dans les ventilations de {{usages}}. Désactivez-le plutôt que de le supprimer."
+  "DEPARTMENT_IN_USE": "Ce département est utilisé dans les ventilations de {{usages}}. Désactivez-le plutôt que de le supprimer.",
+  "BUILT_IN_RECORD": "Cet élément est fourni avec KANAP et ne peut pas être supprimé. Désactivez-le plutôt.",
+  "RECORD_USED_BY": "Cet élément est utilisé par {{usages}}. Désactivez-le plutôt que de le supprimer.",
+  "TEAM_NOT_EMPTY": "Cette équipe contient encore {{usages}}. Déplacez-les d’abord vers une autre équipe, ou désactivez l’équipe.",
+  "ROLE_BUILT_IN": "Ce rôle est fourni avec KANAP et ne peut pas être supprimé. Dupliquez-le pour obtenir un rôle modifiable.",
+  "ROLE_IN_USE": "Ce rôle est attribué à {{usages}}. Attribuez-leur d’abord un autre rôle.",
+  "APP_INSTANCE_IN_USE": "Cette instance a encore {{usages}}. Retirez-les d’abord.",
+  "INTERFACE_HAS_BINDINGS": "Cette interface a {{usages}}. Supprimez ses liaisons avec elle, ou retirez-les d’abord.",
+  "MAPPING_SET_DEFAULT": "Le jeu de correspondances par défaut ne peut pas être supprimé. Définissez d’abord un autre jeu par défaut.",
+  "MAPPING_GROUP_DEFAULT": "Les groupes de correspondances par défaut ne peuvent pas être supprimés. Laissez le groupe vide si vous n’en avez pas besoin.",
+  "REQUEST_CONVERTED": "Cette demande est devenue un projet et reste son origine. Elle ne peut pas être supprimée.",
+  "TASK_REQUEST_ORIGIN": "La demande {{reference}} a été créée à partir de cette tâche. Clôturez la tâche plutôt que de la supprimer.",
+  "KNOWLEDGE_DOCUMENT_MANAGED": "Ce document fait partie de la page d’un objet et est supprimé avec lui. Il ne peut pas être supprimé depuis Connaissances.",
+  "KNOWLEDGE_LIBRARY_SYSTEM": "Cette bibliothèque est fournie avec KANAP et ne peut pas être supprimée.",
+  "KNOWLEDGE_LIBRARY_LAST": "C’est la dernière bibliothèque que vous pouvez utiliser. Créez une autre bibliothèque avant de la supprimer.",
+  "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS": "Ce dossier contient encore {{usages}}. Déplacez-les ou supprimez-les d’abord."
 }

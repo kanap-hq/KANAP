@@ -934,6 +934,12 @@
       "exportTitle": "Aufgaben exportieren",
       "importTitle": "Aufgaben importieren",
       "presetEnrichment": "Datenanreicherung"
+    },
+    "delete": {
+      "toDelete_one": "{{count}} Aufgabe wird gelöscht:",
+      "toDelete_other": "{{count}} Aufgaben werden gelöscht:",
+      "kept_one": "{{count}} Aufgabe kann nicht gelöscht werden und bleibt erhalten:",
+      "kept_other": "{{count}} Aufgaben können nicht gelöscht werden und bleiben erhalten:"
     }
   },
   "projects": {

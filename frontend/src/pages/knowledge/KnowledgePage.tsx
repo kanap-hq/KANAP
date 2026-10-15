@@ -36,6 +36,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
+import { recordsInUseCheck } from '../../utils/deleteCheck';
 import ChipToggleBar, { ChipToggleContextLine } from '../../components/ChipToggleBar';
 import { KanapDialog, PropertyRow, StatusDot } from '../../components/design';
 import ServerDataGrid from '../../components/ServerDataGrid';
@@ -1205,6 +1206,12 @@ export default function KnowledgePage() {
             <DeleteSelectedButton<DocumentRow>
               selectedRows={selectedRows}
               endpoint="/knowledge/bulk"
+              // Asked on click: a document managed from a record's page is kept, with why.
+              checkDelete={(ids) => recordsInUseCheck('/knowledge', ids)}
+              itemLabels={{
+                toDelete: (count) => t('delete.toDelete', { count }),
+                kept: (count) => t('delete.kept', { count }),
+              }}
               getItemId={(row) => row.id}
               getItemName={(row) => `${row.item_ref}${row.title ? ` - ${row.title}` : ''}`}
               gridApi={gridApiRef.current}

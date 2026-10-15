@@ -839,7 +839,8 @@
       "contactLocked": "Les rôles de contact sont gérés par le système pour la visibilité de l'annuaire et ne peuvent pas être modifiés.",
       "duplicated": "Rôle dupliqué.",
       "permissionsSaved": "Autorisations du rôle enregistrées.",
-      "setAccessLevels": "Définissez les niveaux d'accès par ressource pour ce rôle."
+      "setAccessLevels": "Définissez les niveaux d'accès par ressource pour ce rôle.",
+      "deleteFailed": "Le rôle n’a pas pu être supprimé."
     },
     "resources": {
       "accounts": "Comptes",

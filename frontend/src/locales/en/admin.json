@@ -839,7 +839,8 @@
       "contactLocked": "Contact roles are system-managed for directory visibility and cannot be modified.",
       "duplicated": "Role duplicated.",
       "permissionsSaved": "Role permissions saved.",
-      "setAccessLevels": "Set per-resource access levels for this role."
+      "setAccessLevels": "Set per-resource access levels for this role.",
+      "deleteFailed": "The role could not be deleted."
     },
     "resources": {
       "accounts": "Accounts",

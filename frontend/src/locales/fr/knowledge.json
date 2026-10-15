@@ -123,7 +123,8 @@
     "messages": {
       "folderMoved": "Dossier déplacé.",
       "moveFailed": "Impossible de déplacer le dossier.",
-      "moveInProgress": "Déplacement du dossier en cours"
+      "moveInProgress": "Déplacement du dossier en cours",
+      "deleteFailed": "Impossible de supprimer le dossier."
     },
     "libraryRoot": "Racine",
     "title": "Dossiers",
@@ -482,5 +483,11 @@
       "loadFailedBody": "Vérifiez votre connexion, puis réessayez.",
       "backToLibrary": "Retour à la bibliothèque"
     }
+  },
+  "delete": {
+    "toDelete_one": "{{count}} document sera supprimé :",
+    "toDelete_other": "{{count}} documents seront supprimés :",
+    "kept_one": "{{count}} document ne peut pas être supprimé et est conservé :",
+    "kept_other": "{{count}} documents ne peuvent pas être supprimés et sont conservés :"
   }
 }

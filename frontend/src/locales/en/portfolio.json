@@ -934,6 +934,12 @@
       "exportTitle": "Export tasks",
       "importTitle": "Import tasks",
       "presetEnrichment": "Data enrichment"
+    },
+    "delete": {
+      "toDelete_one": "{{count}} task will be deleted:",
+      "toDelete_other": "{{count}} tasks will be deleted:",
+      "kept_one": "{{count}} task cannot be deleted and is kept:",
+      "kept_other": "{{count}} tasks cannot be deleted and are kept:"
     }
   },
   "projects": {

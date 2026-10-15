@@ -839,7 +839,8 @@
       "contactLocked": "Los roles de contacto son gestionados por el sistema para la visibilidad del directorio y no pueden ser modificados.",
       "duplicated": "Rol duplicado.",
       "permissionsSaved": "Permisos del rol guardados.",
-      "setAccessLevels": "Establezca los niveles de acceso por recurso para este rol."
+      "setAccessLevels": "Establezca los niveles de acceso por recurso para este rol.",
+      "deleteFailed": "No se pudo eliminar el rol."
     },
     "resources": {
       "accounts": "Cuentas",
