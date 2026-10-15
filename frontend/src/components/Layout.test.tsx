@@ -357,3 +357,14 @@ describe('Layout user menu: version', () => {
     expect(menu.queryByText(/KANAP/)).not.toBeInTheDocument();
   });
 });
+
+describe('Layout section tabs on a narrow window', () => {
+  it('scroll horizontally instead of clipping the first and last sections', () => {
+    renderShell();
+    const tablist = screen.getByRole('tablist', { name: 'nav:topBar.sectionNav' });
+    const tabs = tablist.closest('.MuiTabs-root') as HTMLElement;
+    // Centered tabs overflow on both sides and cut the first label; scrollable tabs keep every label whole.
+    expect(tabs.querySelector('.MuiTabs-scrollableX')).not.toBeNull();
+    expect(tablist.classList.contains('MuiTabs-centered')).toBe(false);
+  });
+});

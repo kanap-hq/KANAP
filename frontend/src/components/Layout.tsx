@@ -383,7 +383,7 @@ export default function Layout() {
             <Box
               component={Link}
               to="/"
-              sx={{ display: 'flex', alignItems: 'center', mr: 3, textDecoration: 'none' }}
+              sx={{ display: 'flex', alignItems: 'center', mr: { xs: 1, sm: 3 }, flexShrink: 0, textDecoration: 'none' }}
             >
               <Box
                 component="img"
@@ -397,7 +397,7 @@ export default function Layout() {
               variant="h6"
               component={Link}
               to="/"
-              sx={{ mr: 3, textDecoration: 'none', color: 'text.primary' }}
+              sx={{ mr: { xs: 1, sm: 3 }, flexShrink: 0, textDecoration: 'none', color: 'text.primary' }}
             >
               KANAP
             </Typography>
@@ -408,12 +408,22 @@ export default function Layout() {
               onChange={(_, val) => {
                 void guardedLeave(() => navigate(workspaceRoutes[val as WorkspaceKey] ?? workspaceRoutes.admin));
               }}
-              centered
+              // Scrollable rather than centered: on a narrow window centered tabs overflow on
+              // both sides and cut the first and last labels. The auto margins centre them
+              // while they fit; once they do not, the row scrolls and arrows appear.
+              variant="scrollable"
+              scrollButtons="auto"
+              allowScrollButtonsMobile
               sx={{
                 flex: 1,
+                minWidth: 0,
+                '& .MuiTabs-flexContainer > :first-of-type': { ml: 'auto' },
+                '& .MuiTabs-flexContainer > :last-of-type': { mr: 'auto' },
+                '& .MuiTabs-scrollButtons': { width: 28, flexShrink: 0, color: 'text.secondary' },
                 '& .MuiTab-root': {
                   color: 'text.secondary',
                   minHeight: 48,
+                  whiteSpace: 'nowrap',
                   textDecoration: 'none',
                   '&:visited, &:hover, &:active': {
                     textDecoration: 'none',
