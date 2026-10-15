@@ -148,20 +148,20 @@ export default function BusinessProcessWorkspacePage() {
         </Stack>
         <Stack direction="row" spacing={1} alignItems="center">
           <Button onClick={handlePrev} disabled={!hasPrev}>
-            Prev
+            {t('shared.labels.prev')}
           </Button>
           <Button onClick={handleReset} disabled={!dirty}>
-            Reset
+            {t('common:buttons.reset')}
           </Button>
           <Button variant="contained" onClick={() => void handleSave()} disabled={saveDisabled}>
-            Save
+            {t('common:buttons.save')}
           </Button>
           <Button onClick={handleNext} disabled={!hasNext}>
-            Next
+            {t('shared.labels.next')}
           </Button>
           <IconButton
-            aria-label="Close"
-            title="Close"
+            aria-label={t('common:buttons.close')}
+            title={t('common:buttons.close')}
             onClick={() => {
               const qs = listContextParams.toString();
               navigate(`/master-data/business-processes${qs ? `?${qs}` : ''}`);
