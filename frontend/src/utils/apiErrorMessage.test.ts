@@ -43,6 +43,10 @@ describe('getApiErrorMessage', () => {
     expect(getApiErrorMessage(refused, i18n.getFixedT('fr'), 'fallback')).toBe(
       'Cet actif est utilisé par 1 affectation à une application et 2 connexions. Retirez-le de ces éléments avant de le supprimer.',
     );
+    // One subfolder: the sentence says "it", not "them".
+    const folder = { response: { status: 409, data: { code: 'KNOWLEDGE_FOLDER_HAS_SUBFOLDERS', message: 'raw', usages: [{ type: 'sub_folders', total: 1 }] } } };
+    expect(getApiErrorMessage(folder, i18n.getFixedT('fr'), 'fallback')).toBe('Ce dossier contient encore 1 sous-dossier. Déplacez-le ou supprimez-le d’abord.');
+    expect(getApiErrorMessage(folder, t, 'fallback')).toBe('This folder still has 1 subfolder. Move or delete it first.');
     expect(getApiErrorMessage({ response: { status: 409, data: { code: 'USER_OWN_ACCOUNT', message: 'raw', usages: [] } } }, i18n.getFixedT('de'), 'fallback'))
       .toBe('Sie können Ihr eigenes Konto nicht löschen. Deaktivieren Sie es bei Bedarf.');
   });

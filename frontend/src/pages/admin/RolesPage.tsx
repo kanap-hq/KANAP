@@ -204,6 +204,7 @@ export default function RolesPage() {
   const usersOfSelected = selected?.user_count ?? 0;
   const deleteRefusal = usersOfSelected > 0
     ? t('errors:ROLE_IN_USE', {
+      count: usersOfSelected,
       usages: refusalCounts({ usages: [{ type: 'users', total: usersOfSelected }] }, t, i18n?.resolvedLanguage || i18n?.language || 'en'),
     })
     : deleteError;

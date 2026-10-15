@@ -1,5 +1,5 @@
 import i18next, { type TFunction } from 'i18next';
-import { refusalCounts, type DeleteFailure } from './deleteRefusal';
+import { refusalCounts, usageTotal, type DeleteFailure } from './deleteRefusal';
 
 type ApiErrorPayload = {
   message?: unknown;
@@ -61,7 +61,7 @@ export function getApiErrorMessage(error: unknown, t: TFunction, fallback: strin
       ...params,
       defaultValue: message || fallback,
       ...(variant ? { context: variant } : {}),
-      ...(usages ? { usages: refusalCounts({ usages }, t, language) } : {}),
+      ...(usages ? { ...usageTotal(usages), usages: refusalCounts({ usages }, t, language) } : {}),
     });
     if (typeof translated === 'string' && translated.trim()) {
       return translated;

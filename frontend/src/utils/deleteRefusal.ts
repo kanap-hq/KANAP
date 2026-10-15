@@ -20,6 +20,15 @@ function usageList(usages: NonNullable<DeleteFailure['usages']>, t: TFunction, l
   return joinNames(parts, language);
 }
 
+/**
+ * How many records hold the item, all kinds together: the count its sentence agrees with
+ * ("Move it first" for one, "Move them first" for more). Absent without usages.
+ */
+export function usageTotal(usages: DeleteFailure['usages'] | null | undefined): { count: number } | Record<string, never> {
+  const total = (usages ?? []).reduce((sum, usage) => sum + (Number(usage.total) || 0), 0);
+  return total > 0 ? { count: total } : {};
+}
+
 /** What makes the delete of an item refused, counted: "2 contracts and 1 application". */
 export function refusalCounts(failure: DeleteFailure, t: TFunction, language: string): string {
   return usageList(failure.usages ?? [], t, language);
@@ -31,6 +40,7 @@ export function deleteFailureReason(failure: DeleteFailure, t: TFunction, langua
   if (!failure.code) return reason;
   return t(`errors:${failure.code}`, {
     ...(failure.params ?? {}),
+    ...usageTotal(failure.usages),
     usages: usageList(failure.usages ?? [], t, language),
     defaultValue: reason,
   }) as string;

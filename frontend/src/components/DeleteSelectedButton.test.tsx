@@ -261,7 +261,8 @@ describe('DeleteSelectedButton', () => {
       vi.mocked(api.delete).mockResolvedValue({ data: { deleted: ['a'], failed: [] } } as any);
       renderChecked(rows, async () => ({ refused: [REFUSAL], warning: 'Also deleted: 1 task.', confirmLabel: 'Delete anyway' }));
       const dialog = await screen.findByRole('dialog');
-      expect(dialog).toHaveTextContent('delete.deleteSelectedTitle {"count":1}');
+      // The title counts the selection; the lists below say what goes and what stays.
+      expect(dialog).toHaveTextContent('delete.deleteSelectedTitle {"count":2}');
       expect(dialog).toHaveTextContent('to delete:1');
       expect(dialog).toHaveTextContent('First');
       expect(dialog).toHaveTextContent('kept:1');
@@ -270,6 +271,10 @@ describe('DeleteSelectedButton', () => {
       expect(dialog).toHaveTextContent('Also deleted: 1 task.');
       fireEvent.click(within(dialog).getByRole('button', { name: 'Delete anyway' }));
       await waitFor(() => expect(api.delete).toHaveBeenCalledWith('/contracts/bulk', { data: { ids: ['a'] } }));
+      // The message once done names what was deleted and what was kept.
+      const done = await screen.findByText(/^delete\.withKept/);
+      expect(done).toHaveTextContent(/delete\.keptDone .*Frozen/);
+      expect(done).toHaveTextContent(/delete\.successAll .*First/);
     });
 
     it('offers no delete when every selected item is refused', async () => {

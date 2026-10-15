@@ -136,7 +136,10 @@ export default function DeleteSelectedButton<T>({
 
       const { deleted = [], failed = [] } = response.data;
       const deletedIds: string[] = Array.isArray(deleted) ? deleted.map(String) : [];
-      const done = deletedMessage(deletedIds);
+      // What was deleted, then what the check kept, by name.
+      const done = keptItems.length > 0
+        ? t('delete.withKept', { deleted: deletedMessage(deletedIds), kept: keptMessage() })
+        : deletedMessage(deletedIds);
 
       if (failed.length === 0) {
         // All deleted successfully
@@ -192,12 +195,17 @@ export default function DeleteSelectedButton<T>({
   const deletedMessage = (ids: string[]) => {
     const what = itemLabels?.deleted?.(ids.length) ?? t('delete.successAll', { count: ids.length });
     const nameById = new Map(items.map((item) => [item.id, item.name]));
-    const names = ids.map((id) => nameById.get(id)).filter((name): name is string => !!name);
+    return namedMessage(what, ids.map((id) => nameById.get(id)).filter((name): name is string => !!name));
+  };
+  /** "<what>: Alpha, Beta, Gamma and 2 more", or `what` alone without names. */
+  const namedMessage = (what: string, names: string[]) => {
     if (names.length === 0) return what;
     const shown = names.slice(0, NAMED_DELETES);
     if (names.length > NAMED_DELETES) shown.push(t('delete.namesMore', { count: names.length - NAMED_DELETES }));
     return t('delete.namedList', { what, names: joinNames(shown, language) });
   };
+  /** "1 item kept: Beta", the names capped as for the deleted ones. */
+  const keptMessage = () => namedMessage(t('delete.keptDone', { count: keptItems.length }), keptItems.map((item) => item.name));
   // Refused rows stay out of the delete; each is listed as kept, with what makes it refused.
   const refusedById = new Map((check?.refused ?? []).map((refusal) => [refusal.id, refusal]));
   const deletable = items.filter((item) => !refusedById.has(item.id));
@@ -247,7 +255,8 @@ export default function DeleteSelectedButton<T>({
           open={confirmOpen}
           onClose={handleCloseConfirm}
           onConfirm={handleConfirmDelete}
-          title={t('delete.deleteSelectedTitle', { count: deletable.length })}
+          // The selection, counted: the lists below say what goes and what is kept.
+          title={t('delete.deleteSelectedTitle', { count: items.length })}
           // Once the check has answered, the refused items are listed as kept: no generic "referenced items are kept".
           warning={check ? (check.warning ?? warning ?? t('delete.cannotUndo')) : (forceOption?.message ?? warning)}
           confirmLabel={check ? check.confirmLabel : forceOption?.confirmLabel}
