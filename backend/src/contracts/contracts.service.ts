@@ -77,6 +77,7 @@ import {
   type ContractComplianceInputs,
 } from './contract-compliance';
 import { headerMismatchError, type CsvLanguage } from '../common/csv-sheet';
+import { sameStoredValues } from '../common/csv-sheet/unchanged';
 
 /**
  * The session tenant as a find condition: `app_current_tenant()`, the tenant RLS checks too,
@@ -101,6 +102,20 @@ const RENEWED_CONTRACT_RENEWAL_OFF =
 
 // Never written from a body: the row's identity, tenant and timestamps.
 const NOT_WRITABLE = ['id', 'tenant_id', 'created_at', 'updated_at'] as const;
+
+/**
+ * True when re-importing a CSV row over the stored contract writes nothing (`importCsv`): every
+ * column the row sets holds its value (company and owner resolved to their ids), and the status
+ * the row leaves is the stored one. A blank status, or one equal to the status read from the end
+ * of validity, keeps that date; the update would still rewrite a stored status that lags behind
+ * the date. The import writes no link, so there is nothing else to compare.
+ */
+function importRowUnchanged(stored: Contract, next: Partial<Record<keyof Contract, unknown>>, rowStatus: string | null, now: Date): boolean {
+  const status = deriveStatusFromDisabledAt(stored.disabled_at, now);
+  if (rowStatus && rowStatus !== status) return false;
+  if (stored.status !== status) return false;
+  return sameStoredValues(stored as unknown as Record<string, unknown>, next);
+}
 
 type ListItem = Contract & ContractTermFields & {
   supplier?: { id: string; name: string } | null;
@@ -1084,8 +1099,8 @@ export class ContractsService {
         .on('data', (r) => out.push(denormalizeCsvRow(r)))
         .on('end', () => resolve(out));
     });
-    if (!headerOk) return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, errors };
-    if (rows.length === 0) return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, errors: [{ row: 0, message: 'Empty CSV' }] };
+    if (!headerOk) return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, unchanged: 0, errors };
+    if (rows.length === 0) return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, unchanged: 0, errors: [{ row: 0, message: 'Empty CSV' }] };
 
     // Preload reference maps by name/email for resolution
     const allCompanies = await mg.query(`SELECT id, name FROM companies WHERE tenant_id = app_current_tenant()`);
@@ -1126,7 +1141,7 @@ export class ContractsService {
       if (!['monthly','quarterly','annual','other'].includes(billing_frequency)) errors.push({ row: line, message: 'billing_frequency invalid' });
       norm.push({ name, company_name, supplier_name, start_date, duration_months, auto_renewal, notice_period_months, yearly_amount_at_signature, currency, billing_frequency, status, owner_email, notes } as any);
     }
-    if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, errors };
+    if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors };
 
     // Deduplicate by composite key name+supplier_name (first wins)
     const uniqMap = new Map<string, typeof norm[number]>();
@@ -1136,25 +1151,44 @@ export class ContractsService {
     }
     const unique = Array.from(uniqMap.values());
 
-    // Determine inserts/updates by composite (name + supplier)
-    let inserted = 0; let updated = 0;
-    const today = utcDateYmd(new Date());
+    // Determine inserts/updates by composite (name + supplier). A row identical to the stored
+    // contract counts as unchanged and is not written: no audit line, no new `updated_at`.
+    let inserted = 0; let updated = 0; let unchanged = 0;
+    const toWrite: typeof unique = [];
+    const now = new Date();
+    const today = utcDateYmd(now);
     for (const item of unique) {
       const s = sByName.get(item.supplier_name);
       if (!s) { updated += 0; continue; }
       const exists = await repo.findOne({ where: { tenant_id: sessionTenant(), name: item.name as any, supplier_id: s.id as any } });
-      if (exists) updated += 1; else inserted += 1;
+      if (!exists) inserted += 1;
+      else if (importRowUnchanged(exists, {
+        company_id: cByName.get(item.company_name)?.id,
+        owner_user_id: item.owner_email ? uByEmail.get(item.owner_email.toLowerCase())?.id : null,
+        start_date: item.start_date,
+        duration_months: item.duration_months,
+        auto_renewal: item.auto_renewal,
+        notice_period_months: item.notice_period_months,
+        yearly_amount_at_signature: item.yearly_amount_at_signature,
+        currency: item.currency,
+        billing_frequency: item.billing_frequency,
+        notes: item.notes ?? null,
+      }, item.status ?? null, now)) {
+        unchanged += 1;
+        continue;
+      } else updated += 1;
+      toWrite.push(item);
       // The update would be refused (`update`): said for the row, dry run included.
       if (exists && turnsOffRenewalOfRenewedContract(exists, { ...exists, start_date: item.start_date as any, duration_months: item.duration_months, auto_renewal: item.auto_renewal }, today)) {
         errors.push({ row: norm.indexOf(item) + 2, message: `auto_renewal: ${RENEWED_CONTRACT_RENEWAL_OFF}` });
       }
     }
-    if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, errors };
-    if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, errors: [] };
+    if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors };
+    if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, errors: [] };
 
     // Commit
     let processed = 0;
-    for (const item of unique) {
+    for (const item of toWrite) {
       const company = cByName.get(item.company_name);
       const supplier = sByName.get(item.supplier_name);
       const owner = item.owner_email ? uByEmail.get(item.owner_email.toLowerCase()) : null;
@@ -1183,7 +1217,7 @@ export class ContractsService {
       if (exists) { await this.update(exists.id, payload, userId ?? undefined, { manager: mg }); processed += 1; }
       else { await this.create(payload, userId ?? undefined, { manager: mg }); processed += 1; }
     }
-    return { ok: true, dryRun: false, total: rows.length, inserted, updated, processed, errors: [] };
+    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, processed, errors: [] };
   }
 
   // Symmetric linking from OPEX side

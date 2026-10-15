@@ -86,8 +86,9 @@ async function testExportRoundTripsThroughImport() {
   );
   assert.equal(result.ok, true, `round-trip import failed: ${JSON.stringify(result.errors)}`);
   assert.equal(result.errors.length, 0);
-  assert.equal(result.updated, 1, 'exported row must match the existing contract');
-  assert.equal(result.inserted, 0);
+  assert.equal(result.inserted, 0, 'exported row must match the existing contract');
+  assert.equal(result.updated, 0, 'an exported row re-imported as is changes nothing');
+  assert.equal((result as any).unchanged, 1);
 }
 
 async function testImportRejectsWrongHeaders() {

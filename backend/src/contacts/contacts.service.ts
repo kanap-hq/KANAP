@@ -13,6 +13,7 @@ import * as fs from 'fs';
 import { CsvDecodeError, decodeCsv } from '../common/csv-sheet/decode';
 import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
 import { headerMismatchError } from '../common/csv-sheet';
+import { sameStoredValues } from '../common/csv-sheet/unchanged';
 import { assertSetFilterModes } from '../common/ag-grid-filtering';
 
 /** The request's tenant: every statement filters on it. */
@@ -538,7 +539,7 @@ export class ContactsService {
         .on('end', () => resolve());
     });
     if (!headerOk) {
-      return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, errors };
+      return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, unchanged: 0, errors };
     }
     const repo = this.getRepo(opts.manager);
 
@@ -571,32 +572,40 @@ export class ContactsService {
         active: active ?? true,
       });
     }
-    if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, errors };
+    if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors };
 
     // Deduplicate by email
     const uniqueMap = new Map<string, Norm>();
     for (const n of normalized) uniqueMap.set(n.email, n);
     const unique = [...uniqueMap.values()];
-    if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted: 0, updated: 0, errors: [] };
 
-    let inserted = 0, updated = 0;
     // Emails are stored lower-cased (create, update and this import), so one read finds every existing contact.
     const existingRows = unique.length > 0
       ? await repo.find({ where: { tenant_id: opts.tenantId, email: In(unique.map((item) => item.email)) as any } })
       : [];
     const existingByEmail = new Map(existingRows.map((row) => [row.email, row] as const));
+    // A row equal to the stored contact is unchanged and is not written. The import sets
+    // only columns of `contacts` (no supplier link), so those columns are all it compares.
+    let inserted = 0, updated = 0, unchanged = 0;
+    const toWrite: Array<{ item: Norm; existing: ExternalContact | undefined }> = [];
     for (const item of unique) {
       const existing = existingByEmail.get(item.email);
+      if (!existing) inserted += 1;
+      else if (sameStoredValues(existing as unknown as Record<string, unknown>, item)) { unchanged += 1; continue; }
+      else updated += 1;
+      toWrite.push({ item, existing });
+    }
+    if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, errors: [] };
+
+    for (const { item, existing } of toWrite) {
       if (existing) {
         Object.assign(existing, item);
         await repo.save(existing);
-        updated += 1;
       } else {
         const created = repo.create({ ...item, tenant_id: opts.tenantId });
         await repo.save(created);
-        inserted += 1;
       }
     }
-    return { ok: true, dryRun: false, total: rows.length, inserted, updated, errors: [] };
+    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, errors: [] };
   }
 }

@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, EntityManager, Repository } from 'typeorm';
 import { Department } from './department.entity';
+import { sameStoredLifecycle, sameStoredValues } from '../common/csv-sheet/unchanged';
 import { parseExportPagination, parsePagination } from '../common/pagination';
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { Company } from '../companies/company.entity';
@@ -648,20 +649,30 @@ export class DepartmentsService {
       if (!uniqueMap.has(key)) uniqueMap.set(key, item);
     }
     const unique = Array.from(uniqueMap.values());
-    // Count inserts/updates by unique key
+    // Count inserts, updates and the departments whose every value is already stored (not written).
     let inserted = 0;
     let updated = 0;
+    let unchanged = 0;
+    const toWrite: Array<{ item: (typeof unique)[number]; existing: Department | null }> = [];
     for (const item of unique) {
       const existing = await repo.findOne({ where: { company_id: item.company_id as string, name: item.name as string } });
-      if (existing) updated += 1; else inserted += 1;
+      const { lifecycle, ...values } = item;
+      if (!existing) inserted += 1;
+      else if (
+        sameStoredValues(existing as any, values)
+        && sameStoredLifecycle(existing, csvItemLifecycle(lifecycle.status, lifecycle.disabled_at, true))
+      ) {
+        unchanged += 1;
+        continue;
+      } else updated += 1;
+      toWrite.push({ item, existing });
     }
     if (dryRun) {
-      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
+      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, unchanged, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
     // Commit
     let processed = 0;
-    for (const item of unique) {
-      const existing = await repo.findOne({ where: { company_id: item.company_id as string, name: item.name as string } });
+    for (const { item, existing } of toWrite) {
       // A blank status or date keeps the stored value on an update; `update`/`create` resolve the rest.
       const { lifecycle, ...values } = item;
       const body: DepartmentUpsertDto = { ...values, ...csvItemLifecycle(lifecycle.status, lifecycle.disabled_at, !!existing) };
@@ -673,6 +684,6 @@ export class DepartmentsService {
         if (saved) processed += 1;
       }
     }
-    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, processed, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
+    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, unchanged, processed, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
   }
 }

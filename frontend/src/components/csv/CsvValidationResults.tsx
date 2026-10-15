@@ -72,6 +72,12 @@ export function CsvValidationResults({
             <Typography variant="body2" sx={{ color: getDotColor('info', mode), fontWeight: 500, fontSize: '0.8125rem' }}>{t('csv.toUpdate', { count: result.updated })}</Typography>
           </Box>
         )}
+        {(result.unchanged ?? 0) > 0 && (
+          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
+            <StatusDot color={getDotColor('default', mode)} />
+            <Typography variant="body2" sx={{ color: getDotColor('default', mode), fontWeight: 500, fontSize: '0.8125rem' }}>{t('csv.unchanged', { count: result.unchanged })}</Typography>
+          </Box>
+        )}
         {result.skipped > 0 && (
           <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
             <StatusDot color={getDotColor('warning', mode)} />

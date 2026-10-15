@@ -113,4 +113,11 @@ describe('CsvImportDialogV2 messages', () => {
     expect(await screen.findByText('Validation réussie. Prêt à importer 1 ligne.')).toBeInTheDocument();
     expect(screen.getByText('1 ligne')).toBeInTheDocument();
   });
+
+  it('shows the rows identical to what is stored as unchanged', async () => {
+    post.mockResolvedValueOnce({ data: report({ total: 3, inserted: 0, updated: 1, unchanged: 2 }) });
+    validate();
+    expect(await screen.findByText('2 inchangées')).toBeInTheDocument();
+    expect(screen.getByText('1 à mettre à jour')).toBeInTheDocument();
+  });
 });

@@ -1,7 +1,10 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Brackets, EntityManager, Repository } from 'typeorm';
+import { Brackets, EntityManager, In, Repository } from 'typeorm';
 import { Company } from './company.entity';
+import { CompanyMetric } from './company-metric.entity';
+import { Decimal } from '../common/decimal';
+import { sameStoredLifecycle, sameStoredValues } from '../common/csv-sheet/unchanged';
 import { ChartOfAccounts } from '../accounts/chart-of-accounts.entity';
 import { parseExportPagination, parsePagination } from '../common/pagination';
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
@@ -998,21 +1001,52 @@ export class CompaniesService {
       if (!uniqueByName.has(key)) uniqueByName.set(key, item);
     }
     const unique = Array.from(uniqueByName.values());
-    // Count inserts/updates by name
-    let inserted = 0;
-    let updated = 0;
+    // Count inserts, updates and the companies whose every value and yearly metric is already stored.
     const repo = this.getRepo(opts?.manager);
+    const existingByName = new Map<string, Company>();
     for (const item of unique) {
       const existing = await repo.findOne({ where: { name: item.company.name as string } });
-      if (existing) updated += 1; else inserted += 1;
+      if (existing) existingByName.set(item.company.name as string, existing);
+    }
+    const existingIds = Array.from(existingByName.values()).map((company) => company.id);
+    const storedMetrics = new Map<string, CompanyMetric>();
+    if (existingIds.length > 0 && metricYears.length > 0) {
+      const metricRepo = (opts?.manager ?? repo.manager).getRepository(CompanyMetric);
+      for (const metric of await metricRepo.find({ where: { company_id: In(existingIds), fiscal_year: In(metricYears) } })) {
+        storedMetrics.set(`${metric.company_id}:${metric.fiscal_year}`, metric);
+      }
+    }
+    /** A yearly metric of the file equal to the stored one: not written again. */
+    const sameMetric = (companyId: string, fy: number, metric: { headcount: number; it_users: number | null; turnover: string | null }) => {
+      const stored = storedMetrics.get(`${companyId}:${fy}`);
+      if (!stored || !sameStoredValues(stored as any, { headcount: metric.headcount, it_users: metric.it_users })) return false;
+      // numeric(18,3) reads back as '172.000' while the file gives '172': compared as decimals.
+      if (stored.turnover == null || metric.turnover == null) return stored.turnover == null && metric.turnover == null;
+      return Decimal.from(String(stored.turnover)).cmp(metric.turnover) === 0;
+    };
+    let inserted = 0;
+    let updated = 0;
+    let unchanged = 0;
+    const toWrite: Array<{ item: (typeof unique)[number]; existing: Company | undefined }> = [];
+    for (const item of unique) {
+      const existing = existingByName.get(item.company.name as string);
+      if (!existing) inserted += 1;
+      else if (
+        sameStoredValues(existing as any, item.company as Record<string, unknown>)
+        && sameStoredLifecycle(existing, csvItemLifecycle(item.lifecycle.status, item.lifecycle.disabled_at, true))
+        && Array.from(item.metrics.entries()).every(([fy, metric]) => sameMetric(existing.id, fy, metric))
+      ) {
+        unchanged += 1;
+        continue;
+      } else updated += 1;
+      toWrite.push({ item, existing });
     }
     if (dryRun) {
-      return { ok: true, dryRun: true, total, inserted, updated, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
+      return { ok: true, dryRun: true, total, inserted, updated, unchanged, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
     // Commit
     let processed = 0;
-    for (const item of unique) {
-      const existing = await repo.findOne({ where: { name: item.company.name as string } });
+    for (const { item, existing } of toWrite) {
       let saved: Company | null = null;
       // A blank status or date keeps the stored value on an update; `update`/`create` resolve the rest.
       const body = { ...item.company, ...csvItemLifecycle(item.lifecycle.status, item.lifecycle.disabled_at, !!existing) };
@@ -1024,10 +1058,11 @@ export class CompaniesService {
       if (saved) {
         processed += 1;
         for (const [fy, metric] of item.metrics.entries()) {
+          if (existing && sameMetric(existing.id, fy, metric)) continue;
           await this.companyMetrics.upsertForCompany(saved.id, fy, metric, userId ?? undefined, { manager: opts?.manager });
         }
       }
     }
-    return { ok: true, dryRun: false, total, inserted, updated, processed, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
+    return { ok: true, dryRun: false, total, inserted, updated, unchanged, processed, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
   }
 }
