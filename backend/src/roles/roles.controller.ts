@@ -10,6 +10,7 @@ import { RolePermission } from '../permissions/role-permission.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UserRole } from '../users/user-role.entity';
 import { AuditService } from '../audit/audit.service';
+import { RecordInUseException } from '../common/record-in-use';
 
 /** What the audit log keeps of a role: its name and description, and its permissions when given. */
 function roleSnapshot(role: Pick<Role, 'role_name' | 'role_description'>, permissions?: Record<string, unknown>) {
@@ -121,10 +122,16 @@ export class RolesController {
     const mg: EntityManager | undefined = req?.queryRunner?.manager;
     const role = await (mg ?? this.roleRepo.manager).getRepository(Role).findOne({ where: { id } });
     if (!role) throw new BadRequestException('Role not found');
-    if (role.is_system) throw new BadRequestException('Cannot delete system role');
-    if (role.is_built_in) throw new BadRequestException('Cannot delete built-in role');
+    // A refusal the interface words (ROLE_BUILT_IN, ROLE_IN_USE with its users counted), with what to do instead.
+    if (role.is_system || role.is_built_in) {
+      throw new RecordInUseException('ROLE_BUILT_IN', 'role', role.role_name, [],
+        `Cannot delete ${role.is_system ? 'system' : 'built-in'} role "${role.role_name}". Duplicate it to make a role you can change.`);
+    }
     const count = await (mg ?? this.userRoleRepo.manager).getRepository(UserRole).count({ where: { role_id: id } });
-    if (count > 0) throw new BadRequestException('Cannot delete role with users assigned');
+    if (count > 0) {
+      throw new RecordInUseException('ROLE_IN_USE', 'role', role.role_name, [{ type: 'users', total: count }],
+        `Cannot delete role "${role.role_name}" with users assigned. Give them another role first.`);
+    }
     const before = roleSnapshot(role, await this.perms.getRolePermissionsMap(id, { manager: mg }));
     await (mg ?? this.roleRepo.manager).getRepository(Role).delete({ id });
     await this.logRoleChange(req, id, 'delete', before, null);

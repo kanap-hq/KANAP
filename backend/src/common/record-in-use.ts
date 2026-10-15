@@ -16,7 +16,14 @@ export type RefusalKind =
   | 'connections'
   | 'nodes'
   | 'companies'
-  | 'values';
+  | 'values'
+  | 'sub_teams'
+  | 'contributors'
+  | 'interface_bindings'
+  | 'server_assignments'
+  | 'business_processes'
+  | 'documents'
+  | 'sub_folders';
 export type UsageCount = { type: RefusalKind; total: number };
 /** Values a refusal's sentence names besides the counts (`errors:<code>` interpolates them): a column, a year. */
 export type RefusalParams = Record<string, string | number>;
@@ -44,6 +51,13 @@ const ENGLISH: Record<RefusalKind, [string, string]> = {
   nodes: ['node', 'nodes'],
   companies: ['company', 'companies'],
   values: ['value', 'values'],
+  sub_teams: ['sub-team', 'sub-teams'],
+  contributors: ['contributor', 'contributors'],
+  interface_bindings: ['interface binding', 'interface bindings'],
+  server_assignments: ['server assignment', 'server assignments'],
+  business_processes: ['business process', 'business processes'],
+  documents: ['document', 'documents'],
+  sub_folders: ['subfolder', 'subfolders'],
 };
 
 /** The OPEX and CAPEX line counts of a refusal, each kind only when not zero. */

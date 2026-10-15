@@ -59,6 +59,7 @@ import {
   applyRequestParticipantScope,
   requestParticipantCondition,
 } from '../auth/business-contributor-scope';
+import { RecordInUseException } from '../common/record-in-use';
 
 type InvolvementScope = { involvedUserId?: string; involvedTeamId?: string };
 type RequestServiceOpts = { manager?: EntityManager; tenantId?: string; accessScope?: ParticipationAccessScope };
@@ -2856,7 +2857,8 @@ export class PortfolioRequestsService {
     if (!request) throw new NotFoundException('Request not found');
 
     if (request.status === 'converted') {
-      throw new BadRequestException('Converted requests cannot be deleted');
+      throw new RecordInUseException('REQUEST_CONVERTED', 'request', request.name, [],
+        'Converted requests cannot be deleted: the project keeps them as its origin.');
     }
 
     await this.integratedDocuments.deleteForEntity('requests', id, userId, { manager: mg });

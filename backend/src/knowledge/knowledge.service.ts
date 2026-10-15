@@ -83,6 +83,7 @@ import { DocumentVersion } from './document-version.entity';
 import { Document } from './document.entity';
 import { userNameSharedSql } from '../common/lookup/reference-lookups';
 import { trailingDigits } from '../common/text-scan';
+import { checkIds, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal } from '../common/record-in-use';
 
 export type RelationEntityType =
   | 'applications'
@@ -1097,6 +1098,31 @@ export class KnowledgeService {
     if (await this.getIntegratedBinding(documentId, manager)) {
       throw new BadRequestException('Managed integrated documents cannot be moved or deleted from Knowledge');
     }
+  }
+
+  /**
+   * The refusal of a managed document's delete (`KNOWLEDGE_DOCUMENT_MANAGED`): it belongs to a
+   * record's page and goes with that record. Null for any other document.
+   */
+  private async managedDocumentRefusal(
+    document: Pick<Document, 'id' | 'title'>,
+    manager: EntityManager,
+  ): Promise<RecordInUseException | null> {
+    if (!(await this.getIntegratedBinding(document.id, manager))) return null;
+    return new RecordInUseException('KNOWLEDGE_DOCUMENT_MANAGED', 'document', document.title, [],
+      'Managed integrated documents cannot be moved or deleted from Knowledge. They are deleted with their record.');
+  }
+
+  /** The check before a bulk delete (`POST /knowledge/delete-check`): the managed documents of `ids`, which it would refuse. Nothing is written. */
+  async deleteCheck(ids: unknown[], opts?: { manager?: EntityManager }): Promise<{ refused: DeleteRefusal[] }> {
+    const manager = this.getManager(opts);
+    const wanted = checkIds(ids);
+    if (wanted.length === 0) return { refused: [] };
+    const rows: Array<{ id: string; title: string }> = await manager.query(
+      `SELECT id::text AS id, title FROM documents WHERE tenant_id = app_current_tenant() AND id = ANY($1::uuid[])`,
+      [wanted],
+    );
+    return refusalsFrom(wanted, rows, (row) => row.title, (row) => this.managedDocumentRefusal(row, manager));
   }
 
   async assertIntegratedDocumentWorkflowRequestAllowed(
@@ -2619,7 +2645,9 @@ export class KnowledgeService {
       const repo = tx.getRepository(DocumentLibrary);
       const existing = await repo.findOne({ where: { id } as any });
       if (!existing) throw new NotFoundException('Library not found');
-      if (existing.is_system) throw new BadRequestException('System libraries cannot be deleted');
+      if (existing.is_system) {
+        throw new RecordInUseException('KNOWLEDGE_LIBRARY_SYSTEM', 'library', existing.name, [], 'System libraries cannot be deleted.');
+      }
       await this.assertLibraryManageable(existing.id, tx, userId);
 
       const accessibleFallbacks = (await this.listLibrariesWithAccess(tx, userId))
@@ -2627,7 +2655,8 @@ export class KnowledgeService {
       const fallback = accessibleFallbacks[0] ?? null;
 
       if (!fallback) {
-        throw new BadRequestException('Cannot delete the last accessible non-system library');
+        throw new RecordInUseException('KNOWLEDGE_LIBRARY_LAST', 'library', existing.name, [],
+          'Cannot delete the last accessible non-system library. Create another library first.');
       }
 
       const folders = await tx
@@ -4547,7 +4576,8 @@ export class KnowledgeService {
     if (!existing) throw new NotFoundException('Document not found');
 
     await this.assertDocumentWritable(existing.id, manager, userId);
-    await this.assertDocumentMoveDeleteAllowed(existing.id, manager);
+    const refusal = await this.managedDocumentRefusal(existing, manager);
+    if (refusal) throw refusal;
 
     await repo.delete({ id } as any);
 
@@ -4634,7 +4664,7 @@ export class KnowledgeService {
         } catch (lookupError: any) {
           this.logger.warn(`Failed to load document title for bulk delete error reporting: ${lookupError?.message || 'Unknown error'}`);
         }
-        result.failed.push({ id, name, reason: e?.message || 'Unknown error' });
+        result.failed.push({ id, name, reason: e?.message || 'Unknown error', ...refusalDetails(e) });
       }
     }
 
@@ -4775,7 +4805,7 @@ export class KnowledgeService {
       throw new NotFoundException('Document type not found');
     }
     if (type.is_system || type.is_default) {
-      throw new BadRequestException('System document types cannot be deleted');
+      throw new RecordInUseException('BUILT_IN_RECORD', 'document type', type.name, [], 'System document types cannot be deleted. Disable it instead.');
     }
 
     const refs = await manager
@@ -4785,7 +4815,8 @@ export class KnowledgeService {
       .getCount();
 
     if (refs > 0) {
-      throw new BadRequestException('Cannot delete document type in use');
+      throw new RecordInUseException('RECORD_USED_BY', 'document type', type.name, [{ type: 'documents', total: refs }],
+        'Cannot delete document type in use. Disable it instead.');
     }
 
     await manager.getRepository(DocumentType).delete({ id } as any);
@@ -5017,7 +5048,10 @@ export class KnowledgeService {
       manager.getRepository(Document).count({ where: { folder_id: id } as any }),
     ]);
 
-    if (children > 0) throw new BadRequestException('Cannot delete folder with child folders');
+    if (children > 0) {
+      throw new RecordInUseException('KNOWLEDGE_FOLDER_HAS_SUBFOLDERS', 'folder', existing.name, [{ type: 'sub_folders', total: children }],
+        'Cannot delete folder with child folders. Move or delete its subfolders first.');
+    }
     if (docs > 0) {
       await manager
         .getRepository(Document)

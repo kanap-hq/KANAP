@@ -27,6 +27,8 @@ import {
   ServiceOpts,
 } from './interfaces-base.service';
 import { assertMarkdownSize } from '../../common/markdown-limits';
+import { RecordInUseException, refusalDetails } from '../../common/record-in-use';
+import type { BulkDeleteResult } from '../../common/delete.types';
 
 /**
  * Texts the specification document of an interface is built from
@@ -433,7 +435,9 @@ export class InterfacesCrudService extends InterfacesBaseService {
 
     if (bindings.length > 0) {
       if (!opts?.deleteRelatedBindings) {
-        throw new BadRequestException('Cannot delete interface with bindings');
+        throw new RecordInUseException('INTERFACE_HAS_BINDINGS', 'interface', existing.name,
+          [{ type: 'interface_bindings', total: bindings.length }],
+          'Cannot delete interface with bindings. Delete its bindings with it, or remove them first.');
       }
       // Delete connection links first (they reference bindings)
       const bindingIds = bindings.map(b => b.id);
@@ -458,12 +462,12 @@ export class InterfacesCrudService extends InterfacesBaseService {
    */
   async bulkDelete(ids: string[], userId: string | null, opts?: ServiceOpts & { deleteRelatedBindings?: boolean }): Promise<{
     deleted: string[];
-    failed: Array<{ id: string; name: string; reason: string }>;
+    failed: BulkDeleteResult['failed'];
   }> {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = this.getRepo(mg);
 
-    const result: { deleted: string[]; failed: Array<{ id: string; name: string; reason: string }> } = {
+    const result: BulkDeleteResult = {
       deleted: [],
       failed: [],
     };
@@ -482,6 +486,7 @@ export class InterfacesCrudService extends InterfacesBaseService {
           id,
           name,
           reason: error?.message || 'Unknown error',
+          ...refusalDetails(error),
         });
       }
     }

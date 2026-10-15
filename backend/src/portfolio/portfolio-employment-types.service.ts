@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager } from 'typeorm';
 import { PortfolioEmploymentType, DEFAULT_EMPLOYMENT_TYPES } from './portfolio-employment-type.entity';
+import { RecordInUseException } from '../common/record-in-use';
 
 interface CreateEmploymentTypeDto {
   name: string;
@@ -125,15 +126,17 @@ export class PortfolioEmploymentTypesService {
     }
 
     if (type.is_system) {
-      throw new BadRequestException('Cannot delete a built-in contract type');
+      throw new RecordInUseException('BUILT_IN_RECORD', 'contract type', type.name, [],
+        `Cannot delete a built-in contract type ("${type.name}"). Disable it instead.`);
     }
 
-    const usage = await mg.query(
-      `SELECT COUNT(*) as count FROM portfolio_team_member_configs WHERE employment_type_id = $1`,
-      [id],
+    const [usage] = await mg.query(
+      `SELECT count(*)::int AS n FROM portfolio_team_member_configs WHERE tenant_id = $1 AND employment_type_id = $2`,
+      [tenantId, id],
     );
-    if (parseInt(usage[0].count, 10) > 0) {
-      throw new BadRequestException('Cannot delete a contract type that is assigned to contributors');
+    if (usage?.n > 0) {
+      throw new RecordInUseException('RECORD_USED_BY', 'contract type', type.name, [{ type: 'contributors', total: usage.n }],
+        `Cannot delete contract type "${type.name}": it is assigned to contributors. Disable it instead.`);
     }
 
     await repo.delete(id);

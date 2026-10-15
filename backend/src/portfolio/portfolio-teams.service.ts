@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager } from 'typeorm';
 import { PortfolioTeam, DEFAULT_TEAMS } from './portfolio-team.entity';
+import { RecordInUseException, type UsageCount } from '../common/record-in-use';
 
 interface CreateTeamDto {
   name: string;
@@ -161,24 +162,21 @@ export class PortfolioTeamsService {
     }
 
     if (team.is_system) {
-      throw new BadRequestException('Cannot delete system team');
+      throw new RecordInUseException('BUILT_IN_RECORD', 'team', team.name, [], `Cannot delete system team "${team.name}". Disable it instead.`);
     }
 
-    // Check if team has members
-    const memberCount = await mg.query(
-      `SELECT COUNT(*) as count FROM portfolio_team_member_configs WHERE team_id = $1`,
-      [id],
+    // Its members and its sub-teams keep it: counted, for the refusal (TEAM_NOT_EMPTY).
+    const [held] = await mg.query(
+      `SELECT (SELECT count(*)::int FROM portfolio_team_member_configs WHERE tenant_id = $1 AND team_id = $2) AS members,
+              (SELECT count(*)::int FROM portfolio_teams WHERE tenant_id = $1 AND parent_id = $2) AS children`,
+      [tenantId, id],
     );
-    if (parseInt(memberCount[0].count, 10) > 0) {
-      throw new BadRequestException('Cannot delete team that has members assigned');
-    }
-
-    // Check if team has children
-    const childCount = await repo.count({
-      where: { parent_id: id, tenant_id: tenantId },
-    });
-    if (childCount > 0) {
-      throw new BadRequestException('Cannot delete team that has sub-teams');
+    const usages: UsageCount[] = [];
+    if (held?.members > 0) usages.push({ type: 'team_members', total: held.members });
+    if (held?.children > 0) usages.push({ type: 'sub_teams', total: held.children });
+    if (usages.length > 0) {
+      throw new RecordInUseException('TEAM_NOT_EMPTY', 'team', team.name, usages,
+        `Cannot delete team "${team.name}": it still has members assigned or sub-teams. Move them to another team first.`);
     }
 
     await repo.delete(id);

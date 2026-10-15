@@ -303,6 +303,14 @@ export class TasksController {
     });
   }
 
+  // What a delete of `ids` would refuse, asked before the confirmation.
+  @UseGuards(PermissionGuard)
+  @RequireLevel('tasks', 'admin')
+  @Post('delete-check')
+  deleteCheck(@Body() body: { ids?: unknown }, @Req() req: any) {
+    return this.deleteSvc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], { manager: req?.queryRunner?.manager });
+  }
+
   @UseGuards(PermissionGuard)
   @RequireLevel('tasks', 'admin')
   @Delete('bulk')
