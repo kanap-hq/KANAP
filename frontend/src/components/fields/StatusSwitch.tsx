@@ -3,6 +3,8 @@ import { FormControlLabel, Switch, FormHelperText, Stack } from '@mui/material';
 
 type StatusSwitchProps = {
   label?: string;
+  /** Label shown while the switch is on, when it says more than `label` (the control keeps `label` as its name). */
+  onDisplayLabel?: string;
   /** Label shown while the switch is off. Defaults to `label`. */
   offLabel?: string;
   value?: boolean;
@@ -16,6 +18,7 @@ type StatusSwitchProps = {
 const StatusSwitch = React.forwardRef<HTMLButtonElement, StatusSwitchProps>(function StatusSwitch(
   {
     label = 'Enabled',
+    onDisplayLabel,
     offLabel,
     value = true,
     onChange,
@@ -39,7 +42,7 @@ const StatusSwitch = React.forwardRef<HTMLButtonElement, StatusSwitchProps>(func
             inputRef={ref}
           />
         }
-        label={value ? label : (offLabel ?? label)}
+        label={value ? (onDisplayLabel ?? label) : (offLabel ?? label)}
       />
       {helperText ? (
         <FormHelperText error={!!error} sx={{ ml: 1.75 }}>

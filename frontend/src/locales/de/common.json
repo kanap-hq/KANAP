@@ -716,7 +716,8 @@
   },
   "lifecycleField": {
     "endOfValidity": "Ende der Gültigkeit",
-    "endOfValidityHint": "Leer lassen, um unbegrenzt aktiv zu bleiben."
+    "endOfValidityHint": "Leer lassen, um unbegrenzt aktiv zu bleiben.",
+    "activeUntil": "Aktiv bis {{date}}"
   },
   "autosave": {
     "leaveTitle": "Änderungen nicht gespeichert",

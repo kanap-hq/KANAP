@@ -716,7 +716,8 @@
   },
   "lifecycleField": {
     "endOfValidity": "End of validity",
-    "endOfValidityHint": "Leave blank to keep active indefinitely."
+    "endOfValidityHint": "Leave blank to keep active indefinitely.",
+    "activeUntil": "Active until {{date}}"
   },
   "autosave": {
     "leaveTitle": "Changes not saved",

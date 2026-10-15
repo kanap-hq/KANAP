@@ -50,32 +50,20 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
   const onLabel = statusLabel ?? t('statuses.enabled');
   const offLabel = statusOffLabel ?? t('statuses.disabled');
 
-  const buildEndOfDayIsoFromToday = React.useCallback(() => {
-    // Use today's local end-of-day ISO
-    const t = new Date();
-    const local = new Date(t.getFullYear(), t.getMonth(), t.getDate(), 23, 59, 0, 0);
-    return local.toISOString();
-  }, []);
-
+  // Switching off disables now: the end of validity becomes this instant, unless one has already
+  // passed. A later end of validity is set in the date field.
   const handleStatusToggle = React.useCallback(
     (nextEnabled: boolean) => {
       if (nextEnabled) {
-        // Clear date
         onDisabledAtChange(null);
         onStatusChange(STATUS_ENABLED);
         return;
       }
-      if (hideDisabledAt) {
-        const nowIso = new Date().toISOString();
-        onDisabledAtChange(nowIso);
-        onStatusChange(STATUS_DISABLED);
-        return;
-      }
-      const nextValue = disabledAt ?? buildEndOfDayIsoFromToday();
-      onDisabledAtChange(nextValue);
-      onStatusChange(deriveStatusFromDisabledAt(nextValue));
+      const alreadyEnded = !!disabledAt && deriveStatusFromDisabledAt(disabledAt) === STATUS_DISABLED;
+      onDisabledAtChange(alreadyEnded ? disabledAt : new Date().toISOString());
+      onStatusChange(STATUS_DISABLED);
     },
-    [buildEndOfDayIsoFromToday, disabledAt, hideDisabledAt, onDisabledAtChange, onStatusChange],
+    [disabledAt, onDisabledAtChange, onStatusChange],
   );
 
   // Local text state to allow free typing (dd/mm/yyyy) without fighting controlled updates
@@ -87,6 +75,13 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
   const shownText = !focused && restYmd && inputText === isoToEuDate(disabledAt)
     ? formatShortDate(restYmd, locale, { year: 'always' })
     : inputText;
+  // A future end of validity keeps the record active until then: the switch says so.
+  const activeUntilYmd = status === STATUS_ENABLED && disabledAt && deriveStatusFromDisabledAt(disabledAt) === STATUS_ENABLED
+    ? isoToLocalDateInput(disabledAt)
+    : '';
+  const shownOnLabel = activeUntilYmd
+    ? t('lifecycleField.activeUntil', { date: formatShortDate(activeUntilYmd, locale, { year: 'always' }) })
+    : onLabel;
   // Sync from prop
   React.useEffect(() => {
     const formatted = isoToEuDate(disabledAt);
@@ -143,6 +138,7 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
     <Stack spacing={1.5} alignItems="flex-start">
       <StatusSwitch
         label={onLabel}
+        onDisplayLabel={shownOnLabel}
         offLabel={offLabel}
         value={status === STATUS_ENABLED}
         onChange={handleStatusToggle}
