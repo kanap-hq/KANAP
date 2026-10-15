@@ -420,6 +420,7 @@ export default function CoaPage() {
           itemLabels={{
             toDelete: (count) => t('coa.delete.toDelete', { count }),
             kept: (count) => t('coa.delete.kept', { count }),
+            deleted: (count) => t('coa.delete.deleted', { count }),
           }}
           getItemId={(row) => row.id}
           getItemName={(row) => row.account_name}

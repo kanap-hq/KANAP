@@ -1205,7 +1205,9 @@
       "toDelete_one": "{{count}} Benutzer wird gelöscht:",
       "toDelete_other": "{{count}} Benutzer werden gelöscht:",
       "kept_one": "{{count}} Benutzer kann nicht gelöscht werden und bleibt erhalten:",
-      "kept_other": "{{count}} Benutzer können nicht gelöscht werden und bleiben erhalten:"
+      "kept_other": "{{count}} Benutzer können nicht gelöscht werden und bleiben erhalten:",
+      "deleted_one": "{{count}} Benutzer gelöscht",
+      "deleted_other": "{{count}} Benutzer gelöscht"
     }
   },
   "aiModels": {

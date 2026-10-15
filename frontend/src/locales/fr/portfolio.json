@@ -939,7 +939,9 @@
       "toDelete_one": "{{count}} tâche sera supprimée :",
       "toDelete_other": "{{count}} tâches seront supprimées :",
       "kept_one": "{{count}} tâche ne peut pas être supprimée et est conservée :",
-      "kept_other": "{{count}} tâches ne peuvent pas être supprimées et sont conservées :"
+      "kept_other": "{{count}} tâches ne peuvent pas être supprimées et sont conservées :",
+      "deleted_one": "{{count}} tâche supprimée",
+      "deleted_other": "{{count}} tâches supprimées"
     }
   },
   "projects": {

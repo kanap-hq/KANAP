@@ -173,6 +173,7 @@ export default function DepartmentsPage() {
           itemLabels={{
             toDelete: (count) => t('departments.delete.toDelete', { count }),
             kept: (count) => t('departments.delete.kept', { count }),
+            deleted: (count) => t('departments.delete.deleted', { count }),
           }}
           getItemId={(row) => row.id}
           getItemName={(row) => row.name}

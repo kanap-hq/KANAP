@@ -180,7 +180,9 @@
       "toDelete_one": "{{count}} Unternehmen wird gelöscht:",
       "toDelete_other": "{{count}} Unternehmen werden gelöscht:",
       "kept_one": "{{count}} Unternehmen wird noch verwendet und bleibt erhalten. Deaktivieren Sie es stattdessen:",
-      "kept_other": "{{count}} Unternehmen werden noch verwendet und bleiben erhalten. Deaktivieren Sie sie stattdessen:"
+      "kept_other": "{{count}} Unternehmen werden noch verwendet und bleiben erhalten. Deaktivieren Sie sie stattdessen:",
+      "deleted_one": "{{count}} Unternehmen gelöscht",
+      "deleted_other": "{{count}} Unternehmen gelöscht"
     }
   },
   "departments": {
@@ -223,7 +225,9 @@
       "toDelete_one": "{{count}} Abteilung wird gelöscht:",
       "toDelete_other": "{{count}} Abteilungen werden gelöscht:",
       "kept_one": "{{count}} Abteilung kann nicht gelöscht werden und bleibt erhalten:",
-      "kept_other": "{{count}} Abteilungen können nicht gelöscht werden und bleiben erhalten:"
+      "kept_other": "{{count}} Abteilungen können nicht gelöscht werden und bleiben erhalten:",
+      "deleted_one": "{{count}} Abteilung gelöscht",
+      "deleted_other": "{{count}} Abteilungen gelöscht"
     }
   },
   "costCenters": {
@@ -297,7 +301,9 @@
       "toDelete_one": "{{count}} Kostenstelle wird gelöscht:",
       "toDelete_other": "{{count}} Kostenstellen werden gelöscht:",
       "kept_one": "{{count}} Kostenstelle kann nicht gelöscht werden und bleibt erhalten:",
-      "kept_other": "{{count}} Kostenstellen können nicht gelöscht werden und bleiben erhalten:"
+      "kept_other": "{{count}} Kostenstellen können nicht gelöscht werden und bleiben erhalten:",
+      "deleted_one": "{{count}} Kostenstelle gelöscht",
+      "deleted_other": "{{count}} Kostenstellen gelöscht"
     }
   },
   "workingDayCalendars": {
@@ -398,7 +404,9 @@
       "toDelete_one": "{{count}} Kalender wird gelöscht:",
       "toDelete_other": "{{count}} Kalender werden gelöscht:",
       "kept_one": "{{count}} Kalender kann nicht gelöscht werden und bleibt erhalten:",
-      "kept_other": "{{count}} Kalender können nicht gelöscht werden und bleiben erhalten:"
+      "kept_other": "{{count}} Kalender können nicht gelöscht werden und bleiben erhalten:",
+      "deleted_one": "{{count}} Kalender gelöscht",
+      "deleted_other": "{{count}} Kalender gelöscht"
     }
   },
   "suppliers": {
@@ -458,7 +466,9 @@
       "toDelete_one": "{{count}} Lieferant wird gelöscht:",
       "toDelete_other": "{{count}} Lieferanten werden gelöscht:",
       "kept_one": "{{count}} Lieferant wird noch verwendet und bleibt erhalten. Deaktivieren Sie ihn stattdessen:",
-      "kept_other": "{{count}} Lieferanten werden noch verwendet und bleiben erhalten. Deaktivieren Sie sie stattdessen:"
+      "kept_other": "{{count}} Lieferanten werden noch verwendet und bleiben erhalten. Deaktivieren Sie sie stattdessen:",
+      "deleted_one": "{{count}} Lieferant gelöscht",
+      "deleted_other": "{{count}} Lieferanten gelöscht"
     }
   },
   "contacts": {
@@ -658,7 +668,9 @@
       "toDelete_one": "{{count}} Konto wird gelöscht:",
       "toDelete_other": "{{count}} Konten werden gelöscht:",
       "kept_one": "{{count}} Konto kann nicht gelöscht werden und bleibt erhalten:",
-      "kept_other": "{{count}} Konten können nicht gelöscht werden und bleiben erhalten:"
+      "kept_other": "{{count}} Konten können nicht gelöscht werden und bleiben erhalten:",
+      "deleted_one": "{{count}} Konto gelöscht",
+      "deleted_other": "{{count}} Konten gelöscht"
     }
   },
   "accounts": {

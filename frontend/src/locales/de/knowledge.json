@@ -488,6 +488,8 @@
     "toDelete_one": "{{count}} Dokument wird gelöscht:",
     "toDelete_other": "{{count}} Dokumente werden gelöscht:",
     "kept_one": "{{count}} Dokument kann nicht gelöscht werden und bleibt erhalten:",
-    "kept_other": "{{count}} Dokumente können nicht gelöscht werden und bleiben erhalten:"
+    "kept_other": "{{count}} Dokumente können nicht gelöscht werden und bleiben erhalten:",
+    "deleted_one": "{{count}} Dokument gelöscht",
+    "deleted_other": "{{count}} Dokumente gelöscht"
   }
 }

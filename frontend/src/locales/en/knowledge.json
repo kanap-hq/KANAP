@@ -488,6 +488,8 @@
     "toDelete_one": "{{count}} document will be deleted:",
     "toDelete_other": "{{count}} documents will be deleted:",
     "kept_one": "{{count}} document cannot be deleted and is kept:",
-    "kept_other": "{{count}} documents cannot be deleted and are kept:"
+    "kept_other": "{{count}} documents cannot be deleted and are kept:",
+    "deleted_one": "{{count}} document deleted",
+    "deleted_other": "{{count}} documents deleted"
   }
 }

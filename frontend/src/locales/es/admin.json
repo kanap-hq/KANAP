@@ -1205,7 +1205,9 @@
       "toDelete_one": "Se eliminará {{count}} usuario:",
       "toDelete_other": "Se eliminarán {{count}} usuarios:",
       "kept_one": "{{count}} usuario no se puede eliminar y se conserva:",
-      "kept_other": "{{count}} usuarios no se pueden eliminar y se conservan:"
+      "kept_other": "{{count}} usuarios no se pueden eliminar y se conservan:",
+      "deleted_one": "{{count}} usuario eliminado",
+      "deleted_other": "{{count}} usuarios eliminados"
     }
   },
   "aiModels": {

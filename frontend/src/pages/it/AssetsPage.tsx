@@ -437,6 +437,7 @@ export default function AssetsPage() {
           itemLabels={{
             toDelete: (count) => t('pages.assets.delete.toDelete', { count }),
             kept: (count) => t('pages.assets.delete.kept', { count }),
+            deleted: (count) => t('pages.assets.delete.deleted', { count }),
           }}
           onDeleteSuccess={() => { setRefreshKey((k) => k + 1); }}
         />

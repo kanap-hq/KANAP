@@ -555,6 +555,7 @@ export default function ContractsPage() {
           itemLabels={{
             toDelete: (count) => t('contracts.delete.toDelete', { count }),
             kept: (count) => t('contracts.delete.kept', { count }),
+            deleted: (count) => t('contracts.delete.deleted', { count }),
           }}
         />
       )}

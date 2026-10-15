@@ -6,6 +6,7 @@ import DeleteConfirmDialog, { DeleteConfirmKept } from './DeleteConfirmDialog';
 import api from '../api';
 import { getApiErrorMessage } from '../utils/apiErrorMessage';
 import { deleteFailureReason, refusalCounts, type DeleteFailure } from '../utils/deleteRefusal';
+import { joinNames } from '../pages/working-day-calendars/workingDayCalendarFields';
 import { KanapDialog } from './design';
 
 /**
@@ -55,9 +56,19 @@ export interface DeleteSelectedButtonProps<T> {
    * window (the reason, Close only). A failed check falls back to the usual confirmation.
    */
   checkDelete?: (ids: string[]) => Promise<DeleteCheck>;
-  /** The item lines in the record's words: "2 contracts will be deleted:", "1 contract is kept:". */
-  itemLabels?: { toDelete: (count: number) => string; kept: (count: number) => string };
+  /**
+   * The item lines in the record's words: "2 contracts will be deleted:", "1 contract is kept:", and
+   * for the message once done, "2 contracts deleted" (else "Deleted 2 items").
+   */
+  itemLabels?: { toDelete: (count: number) => string; kept: (count: number) => string; deleted?: (count: number) => string };
 }
+
+/** The names a success message lists before "and n more". */
+const NAMED_DELETES = 3;
+
+type Item = { id: string; name: string };
+/** What the dialog shows, taken when it opens: it keeps saying it while it closes, after the selection is cleared. */
+type Opened = { items: Item[]; check: DeleteCheck | null };
 
 export default function DeleteSelectedButton<T>({
   selectedRows,
@@ -79,7 +90,8 @@ export default function DeleteSelectedButton<T>({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(false);
-  const [check, setCheck] = useState<DeleteCheck | null>(null);
+  const [opened, setOpened] = useState<Opened>({ items: [], check: null });
+  const check = opened.check;
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
@@ -88,17 +100,19 @@ export default function DeleteSelectedButton<T>({
 
   const handleOpenConfirm = async () => {
     if (selectedRows.length === 0) return;
-    setCheck(null);
+    const selection = selectedRows.map((row) => ({ id: getItemId(row), name: getItemName(row) }));
+    let answered: DeleteCheck | null = null;
     if (checkDelete) {
       setChecking(true);
       try {
-        setCheck(await checkDelete(selectedRows.map(getItemId)));
+        answered = await checkDelete(selection.map((item) => item.id));
       } catch {
         // No check: the usual confirmation, and the server still refuses what it must.
       } finally {
         setChecking(false);
       }
     }
+    setOpened({ items: selection, check: answered });
     setConfirmOpen(true);
   };
 
@@ -121,12 +135,14 @@ export default function DeleteSelectedButton<T>({
       const response = await api.delete(endpoint, { data });
 
       const { deleted = [], failed = [] } = response.data;
+      const deletedIds: string[] = Array.isArray(deleted) ? deleted.map(String) : [];
+      const done = deletedMessage(deletedIds);
 
       if (failed.length === 0) {
         // All deleted successfully
         setSnackbar({
           open: true,
-          message: t('delete.successAll', { count: deleted.length }),
+          message: done,
           severity: 'success',
         });
       } else {
@@ -134,11 +150,11 @@ export default function DeleteSelectedButton<T>({
         const reasons = failed
           .map((f: any) => `${f.productName || f.name || f.description || 'Item'}: ${deleteFailureReason(f, t, language)}`)
           .join('; ');
-        setSnackbar(deleted.length === 0
+        setSnackbar(deletedIds.length === 0
           ? { open: true, message: t('delete.failedAll', { reasons }), severity: 'error' }
           : {
             open: true,
-            message: `${t('delete.partialDeleted', { count: deleted.length })} ${t('delete.partialFailed', { count: failed.length, reasons })}`,
+            message: t('delete.partialResult', { deleted: done, failed: t('delete.partialFailed', { count: failed.length, reasons }) }),
             severity: 'warning',
           });
       }
@@ -171,10 +187,17 @@ export default function DeleteSelectedButton<T>({
     setSnackbar({ ...snackbar, open: false });
   };
 
-  const items = selectedRows.map((row) => ({
-    id: getItemId(row),
-    name: getItemName(row),
-  }));
+  const items = opened.items;
+  /** "2 contracts deleted: Alpha and Beta", the names capped ("…, and 2 more"). */
+  const deletedMessage = (ids: string[]) => {
+    const what = itemLabels?.deleted?.(ids.length) ?? t('delete.successAll', { count: ids.length });
+    const nameById = new Map(items.map((item) => [item.id, item.name]));
+    const names = ids.map((id) => nameById.get(id)).filter((name): name is string => !!name);
+    if (names.length === 0) return what;
+    const shown = names.slice(0, NAMED_DELETES);
+    if (names.length > NAMED_DELETES) shown.push(t('delete.namesMore', { count: names.length - NAMED_DELETES }));
+    return t('delete.namedList', { what, names: joinNames(shown, language) });
+  };
   // Refused rows stay out of the delete; each is listed as kept, with what makes it refused.
   const refusedById = new Map((check?.refused ?? []).map((refusal) => [refusal.id, refusal]));
   const deletable = items.filter((item) => !refusedById.has(item.id));
@@ -225,7 +248,8 @@ export default function DeleteSelectedButton<T>({
           onClose={handleCloseConfirm}
           onConfirm={handleConfirmDelete}
           title={t('delete.deleteSelectedTitle', { count: deletable.length })}
-          warning={check ? (check.warning ?? warning) : (forceOption?.message ?? warning)}
+          // Once the check has answered, the refused items are listed as kept: no generic "referenced items are kept".
+          warning={check ? (check.warning ?? warning ?? t('delete.cannotUndo')) : (forceOption?.message ?? warning)}
           confirmLabel={check ? check.confirmLabel : forceOption?.confirmLabel}
           itemCount={deletable.length}
           items={deletable}

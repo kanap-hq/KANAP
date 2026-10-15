@@ -349,6 +349,7 @@ function BudgetListPageView() {
           itemLabels={{
             toDelete: (count) => t('budget.delete.toDelete', { count }),
             kept: (count) => t('budget.delete.kept', { count }),
+            deleted: (count) => t('budget.delete.deleted', { count }),
           }}
           getItemId={(row) => row.id}
           getItemName={(row) => row.product_name}

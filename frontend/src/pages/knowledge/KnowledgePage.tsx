@@ -1211,6 +1211,7 @@ export default function KnowledgePage() {
               itemLabels={{
                 toDelete: (count) => t('delete.toDelete', { count }),
                 kept: (count) => t('delete.kept', { count }),
+                deleted: (count) => t('delete.deleted', { count }),
               }}
               getItemId={(row) => row.id}
               getItemName={(row) => `${row.item_ref}${row.title ? ` - ${row.title}` : ''}`}

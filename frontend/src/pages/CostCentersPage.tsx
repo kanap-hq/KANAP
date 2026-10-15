@@ -201,6 +201,7 @@ function CostCentersList() {
           itemLabels={{
             toDelete: (count) => t('costCenters.delete.toDelete', { count }),
             kept: (count) => t('costCenters.delete.kept', { count }),
+            deleted: (count) => t('costCenters.delete.deleted', { count }),
           }}
           getItemId={(row) => row.id}
           getItemName={(row) => row.code}

@@ -109,7 +109,9 @@
         "toDelete_one": "{{count}} asset will be deleted:",
         "toDelete_other": "{{count}} assets will be deleted:",
         "kept_one": "{{count}} asset cannot be deleted and is kept:",
-        "kept_other": "{{count}} assets cannot be deleted and are kept:"
+        "kept_other": "{{count}} assets cannot be deleted and are kept:",
+        "deleted_one": "{{count}} asset deleted",
+        "deleted_other": "{{count}} assets deleted"
       }
     },
     "connections": {

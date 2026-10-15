@@ -202,6 +202,7 @@ function WorkingDayCalendarsList() {
           itemLabels={{
             toDelete: (count) => t('workingDayCalendars.delete.toDelete', { count }),
             kept: (count) => t('workingDayCalendars.delete.kept', { count }),
+            deleted: (count) => t('workingDayCalendars.delete.deleted', { count }),
           }}
           getItemId={(row) => row.id}
           getItemName={(row) => row.name}

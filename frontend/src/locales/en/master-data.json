@@ -180,7 +180,9 @@
       "toDelete_one": "{{count}} company will be deleted:",
       "toDelete_other": "{{count}} companies will be deleted:",
       "kept_one": "{{count}} company is still in use and is kept. Disable it instead:",
-      "kept_other": "{{count}} companies are still in use and are kept. Disable them instead:"
+      "kept_other": "{{count}} companies are still in use and are kept. Disable them instead:",
+      "deleted_one": "{{count}} company deleted",
+      "deleted_other": "{{count}} companies deleted"
     }
   },
   "departments": {
@@ -223,7 +225,9 @@
       "toDelete_one": "{{count}} department will be deleted:",
       "toDelete_other": "{{count}} departments will be deleted:",
       "kept_one": "{{count}} department cannot be deleted and is kept:",
-      "kept_other": "{{count}} departments cannot be deleted and are kept:"
+      "kept_other": "{{count}} departments cannot be deleted and are kept:",
+      "deleted_one": "{{count}} department deleted",
+      "deleted_other": "{{count}} departments deleted"
     }
   },
   "costCenters": {
@@ -297,7 +301,9 @@
       "toDelete_one": "{{count}} cost center will be deleted:",
       "toDelete_other": "{{count}} cost centers will be deleted:",
       "kept_one": "{{count}} cost center cannot be deleted and is kept:",
-      "kept_other": "{{count}} cost centers cannot be deleted and are kept:"
+      "kept_other": "{{count}} cost centers cannot be deleted and are kept:",
+      "deleted_one": "{{count}} cost center deleted",
+      "deleted_other": "{{count}} cost centers deleted"
     }
   },
   "workingDayCalendars": {
@@ -398,7 +404,9 @@
       "toDelete_one": "{{count}} calendar will be deleted:",
       "toDelete_other": "{{count}} calendars will be deleted:",
       "kept_one": "{{count}} calendar cannot be deleted and is kept:",
-      "kept_other": "{{count}} calendars cannot be deleted and are kept:"
+      "kept_other": "{{count}} calendars cannot be deleted and are kept:",
+      "deleted_one": "{{count}} calendar deleted",
+      "deleted_other": "{{count}} calendars deleted"
     }
   },
   "suppliers": {
@@ -458,7 +466,9 @@
       "toDelete_one": "{{count}} supplier will be deleted:",
       "toDelete_other": "{{count}} suppliers will be deleted:",
       "kept_one": "{{count}} supplier is still in use and is kept. Disable it instead:",
-      "kept_other": "{{count}} suppliers are still in use and are kept. Disable them instead:"
+      "kept_other": "{{count}} suppliers are still in use and are kept. Disable them instead:",
+      "deleted_one": "{{count}} supplier deleted",
+      "deleted_other": "{{count}} suppliers deleted"
     }
   },
   "contacts": {
@@ -658,7 +668,9 @@
       "toDelete_one": "{{count}} account will be deleted:",
       "toDelete_other": "{{count}} accounts will be deleted:",
       "kept_one": "{{count}} account cannot be deleted and is kept:",
-      "kept_other": "{{count}} accounts cannot be deleted and are kept:"
+      "kept_other": "{{count}} accounts cannot be deleted and are kept:",
+      "deleted_one": "{{count}} account deleted",
+      "deleted_other": "{{count}} accounts deleted"
     }
   },
   "accounts": {

@@ -635,6 +635,7 @@ export default function TasksPage() {
           itemLabels={{
             toDelete: (count) => t('tasks.delete.toDelete', { count }),
             kept: (count) => t('tasks.delete.kept', { count }),
+            deleted: (count) => t('tasks.delete.deleted', { count }),
           }}
           getItemId={(row) => row.id}
           getItemName={(row) => row.title || row.related_object_name || row.id}

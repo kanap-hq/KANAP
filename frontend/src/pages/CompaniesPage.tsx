@@ -397,6 +397,7 @@ export default function CompaniesPage() {
           itemLabels={{
             toDelete: (count) => t('companies.delete.toDelete', { count }),
             kept: (count) => t('companies.delete.kept', { count }),
+            deleted: (count) => t('companies.delete.deleted', { count }),
           }}
           onDeleteSuccess={() => {
             setRefreshKey((k) => k + 1);

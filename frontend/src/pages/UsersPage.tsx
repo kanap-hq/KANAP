@@ -453,6 +453,7 @@ export default function UsersPage() {
           itemLabels={{
             toDelete: (count) => t('users.delete.toDelete', { count }),
             kept: (count) => t('users.delete.kept', { count }),
+            deleted: (count) => t('users.delete.deleted', { count }),
           }}
           getItemId={(row) => row.id}
           getItemName={(row) => row.email || `${row.first_name ?? ''} ${row.last_name ?? ''}`.trim() || 'User'}
