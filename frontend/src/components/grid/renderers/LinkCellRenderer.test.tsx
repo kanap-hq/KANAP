@@ -1,4 +1,6 @@
 import React from 'react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { ICellRendererParams } from 'ag-grid-community';
@@ -50,5 +52,31 @@ describe('LinkCellRenderer', () => {
     expect(link).not.toHaveAttribute('rel');
     fireEvent.click(link);
     expect(onNavigate).toHaveBeenCalledWith('/ops/budget/o1', row);
+  });
+
+  it('fills its grid cell with the link: any click in the cell opens the row, the href stays real', () => {
+    const onNavigate = vi.fn();
+    const row = { id: 's1', name: 'Okta' };
+    const { container } = render(
+      <div className="ag-cell">
+        <LinkCellRenderer<Row> {...params(row)} linkType="internal" getHref={() => '/master-data/suppliers/s1'} onNavigate={onNavigate} />
+      </div>,
+    );
+    const link = screen.getByRole('link', { name: 'Okta' });
+    // The class stretches the link over the whole cell (ag-grid-overrides.css), padding included.
+    expect(link).toHaveClass('kanap-cell-link');
+    expect(link).toHaveAttribute('href', '/master-data/suppliers/s1');
+    expect(container.querySelectorAll('a')).toHaveLength(1);
+
+    // Ctrl/Cmd and middle clicks keep the browser's new tab; a plain click navigates in the app.
+    const ctrlClick = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0, ctrlKey: true });
+    fireEvent(link, ctrlClick);
+    expect(ctrlClick.defaultPrevented).toBe(false);
+    expect(onNavigate).not.toHaveBeenCalled();
+    fireEvent.click(link);
+    expect(onNavigate).toHaveBeenCalledWith('/master-data/suppliers/s1', row);
+
+    const css = readFileSync(resolve(__dirname, '../../../styles/ag-grid-overrides.css'), 'utf8').replace(/\s+/g, ' ');
+    expect(css).toMatch(/\.ag-cell \.kanap-cell-link::after \{[^}]*position: absolute;[^}]*inset: 0;/);
   });
 });

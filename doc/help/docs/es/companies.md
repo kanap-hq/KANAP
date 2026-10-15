@@ -72,7 +72,7 @@ La lista muestra todas las empresas de su espacio de trabajo. Utilícela para re
 
 ## El espacio de trabajo de la empresa
 
-Haga clic en el nombre de una empresa en la lista para abrir su espacio de trabajo. Tiene dos pestañas: **Visión general** y **Detalles**.
+Haga clic en cualquier fila de la lista para abrir el espacio de trabajo de la empresa. Tiene dos pestañas: **Visión general** y **Detalles**.
 
 - **Encabezado**: el nombre de la empresa. Haga clic en él para cambiar el nombre de la empresa. Las flechas con «N de M» permiten moverse entre empresas en el orden y con los filtros de la lista, sin volver a ella. El enlace de retorno, **Empresas**, vuelve a la lista con su contexto de búsqueda intacto
 - **Panel Propiedades** a la derecha: **País**, **Moneda base**, **Plan de cuentas** y **Ciclo de vida**. Use el botón situado junto al panel para plegarlo o volver a abrirlo

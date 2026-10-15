@@ -72,7 +72,7 @@ The list shows all companies for your workspace. Use it to review key informatio
 
 ## The company workspace
 
-Click a company name in the list to open its workspace. It has two tabs: **Overview** and **Details**.
+Click any row in the list to open the company workspace. It has two tabs: **Overview** and **Details**.
 
 - **Header**: the company name. Click it to rename the company. The arrows with "N of M" move between companies in the list's order and filters without returning to the list. The back link, **Companies**, returns to the list with your search context intact
 - **Properties panel** on the right: **Country**, **Base currency**, **Chart of accounts** and **Lifecycle**. Use the panel toggle next to it to collapse the panel or open it again

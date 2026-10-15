@@ -220,7 +220,9 @@ export function LinkCellRenderer<T = unknown>(
         maxWidth: maxWidth,
       }}
     >
+      {/* `kanap-cell-link` stretches the link over its whole grid cell (`ag-grid-overrides.css`). */}
       <Link
+        className="kanap-cell-link"
         href={href}
         onClick={handleClick}
         target={opensNewTab ? '_blank' : undefined}
@@ -254,7 +256,7 @@ export function LinkCellRenderer<T = unknown>(
       {isExternal && showExternalIcon && (
         <OpenInNewIcon sx={{ fontSize: 14, color: 'text.secondary', flexShrink: 0 }} />
       )}
-      {endAdornment}
+      {endAdornment && <span className="kanap-cell-link-end">{endAdornment}</span>}
     </Box>
   );
 

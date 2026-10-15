@@ -72,7 +72,7 @@ Die Liste zeigt alle Unternehmen Ihres Arbeitsbereichs. Verwenden Sie sie, um wi
 
 ## Der Unternehmens-Arbeitsbereich
 
-Klicken Sie in der Liste auf einen Unternehmensnamen, um den Arbeitsbereich zu öffnen. Er hat zwei Tabs: **Übersicht** und **Details**.
+Klicken Sie auf eine beliebige Zeile der Liste, um den Arbeitsbereich des Unternehmens zu öffnen. Er hat zwei Tabs: **Übersicht** und **Details**.
 
 - **Kopfzeile**: der Name des Unternehmens. Klicken Sie darauf, um das Unternehmen umzubenennen. Die Pfeile mit „N von M" wechseln zwischen Unternehmen in der Reihenfolge und mit den Filtern der Liste, ohne zur Liste zurückzukehren. Der Zurück-Link **Unternehmen** führt mit erhaltenem Suchkontext zur Liste zurück
 - **Bereich Eigenschaften** rechts: **Land**, **Basiswährung**, **Kontenplan** und **Lebenszyklus**. Mit der Schaltfläche daneben klappen Sie den Bereich ein oder wieder aus
