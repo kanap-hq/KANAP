@@ -118,7 +118,7 @@ Klicken Sie auf eine beliebige Zelle, um den Arbeitsbereich des Werts zu öffnen
 - **Neuer Wert**: einen Wert in der ausgewählten Dimension erstellen (erfordert `analytics:member`). Solange die ausgewählte Dimension deaktiviert ist, ist die Schaltfläche deaktiviert, und ihr Tooltip lautet „Aktivieren Sie diese Dimension, um Werte hinzuzufügen.“
 - **Neu ordnen**: die Reihenfolge der Werte der ausgewählten Dimension festlegen (erfordert `analytics:member`). Die Schaltfläche ist deaktiviert, solange die Dimension weniger als zwei Werte hat. Siehe [Werte ordnen](#werte-ordnen)
 - **CSV importieren**: Werte aus einer Datei laden (erfordert `analytics:admin`)
-- **CSV exportieren**: die Werte aller Dimensionen herunterladen (erfordert `analytics:admin`)
+- **CSV exportieren**: die Werte der Liste herunterladen, oder die Werte aller Dimensionen (erfordert `analytics:admin`)
 - **Auswahl löschen**: die ausgewählten Werte löschen (erfordert `analytics:admin`). Werden einige davon von Budgetzeilen verwendet, nennt die Bestätigung, wie viele Zeilen sie verlieren, zum Beispiel „2 ausgewählte Werte werden verwendet: Sie werden aus 5 Budgetzeilen entfernt. Diese Daten können nicht wiederhergestellt werden.“, und die Schaltfläche heißt **Trotzdem löschen**
 
 ---
@@ -221,7 +221,7 @@ Solange die Einstellung eingeschaltet ist, helfen Ihnen Zeilen unter dem Schalte
 
 Die Schaltfläche **Löschen** in der Kopfzeile löscht die Dimension mit ihren Werten (erfordert `analytics:admin`):
 
-- Eine Dimension ohne Werte wird sofort gelöscht.
+- Eine Dimension ohne Werte fragt zuerst („Dies kann nicht rückgängig gemacht werden.“), dann **Löschen**.
 - Eine Dimension, deren Werte keine Zeile verwendet, fragt zuerst, zum Beispiel „Wiederkehr löschen?“ mit „Ihre 2 Werte werden ebenfalls gelöscht.“, dann **Löschen**.
 - Eine von Budgetzeilen verwendete Dimension fragt zuerst, mit der Anzahl der Zeilen: „Ihre 3 Werte werden gelöscht, und sie wird aus 6 Budgetzeilen entfernt. Diese Daten können nicht wiederhergestellt werden.“ Klicken Sie auf **Trotzdem löschen**, um fortzufahren. Die Zeilen verlieren ihren Wert in dieser Dimension, und ihr Verlauf erfasst die Änderung.
 
@@ -250,7 +250,7 @@ Klicken Sie auf **Neuer Wert**. Das Feld **Dimension** steht zunächst auf der D
 - **Eine Liste pro Dimension**: Namen sind innerhalb einer Dimension eindeutig, unabhängig von Groß- und Kleinschreibung. Zwei Dimensionen können jeweils einen Wert namens „Sonstiges“ haben. Ein doppelter Name wird abgelehnt, zum Beispiel „A value named Software already exists in Kostenart.“
 - **Ein Wert bleibt in seiner Dimension**: Die Dimension wird beim Erstellen des Werts festgelegt und kann sich nicht ändern. Um einen Wert zu verschieben, erstellen Sie ihn in der anderen Dimension, ändern Sie die Zeilen und löschen Sie dann den alten Wert.
 - **Umbenennen behält die Zeilen**: Zeilen verweisen auf den Wert selbst, daher erscheint der neue Name sofort in Listen und Berichten.
-- **Löschen**: Die Schaltfläche **Löschen** in der Kopfzeile löscht einen Wert, den keine Zeile verwendet, sofort (erfordert `analytics:admin`). Verwenden Budgetzeilen den Wert, fragt sie zuerst: „Er wird aus 4 Budgetzeilen entfernt. Diese Daten können nicht wiederhergestellt werden.“ Klicken Sie auf **Trotzdem löschen**, um fortzufahren, oder deaktivieren Sie den Wert stattdessen, um ihn auf den Zeilen zu behalten.
+- **Löschen**: Die Schaltfläche **Löschen** in der Kopfzeile löscht einen Wert, den keine Zeile verwendet, nach einer Bestätigung („Dies kann nicht rückgängig gemacht werden.“, dann **Löschen**; erfordert `analytics:admin`). Verwenden Budgetzeilen den Wert, fragt sie zuerst: „Er wird aus 4 Budgetzeilen entfernt. Diese Daten können nicht wiederhergestellt werden.“ Klicken Sie auf **Trotzdem löschen**, um fortzufahren, oder deaktivieren Sie den Wert stattdessen, um ihn auf den Zeilen zu behalten.
 
 ### Werte ordnen
 

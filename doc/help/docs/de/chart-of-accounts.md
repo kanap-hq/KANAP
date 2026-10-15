@@ -468,7 +468,7 @@ Sie können eine Liste Ihrer Kontenpläne exportieren (mit Metadaten wie Code, N
 
 Der globale `/accounts`-CSV enthält eine `coa_code`-Spalte, um zu identifizieren, zu welchem Kontenplan jedes Konto gehört. **CSV exportieren** und **CSV importieren** nutzen sie, wenn auf der Seite kein Kontenplan ausgewählt ist.
 
-  - **CSV exportieren**: Alle Konten mit ihren Kontenplan-Codes, Kontonummern, Namen, lokalen Namen, Beschreibungen, Konsolidierungszuordnungen, Status und **Verwendet für**
+  - **CSV exportieren**: die Konten der Liste (oder, auf Wunsch im Dialog, alle Konten) mit ihren Kontenplan-Codes, Kontonummern, Namen, lokalen Namen, Beschreibungen, Konsolidierungszuordnungen, Status und **Verwendet für**
   - **CSV importieren**: **Vorlage herunterladen** im Dialog liefert eine Datei nur mit den Kopfzeilen. Beginnen Sie mit der **Vorabprüfung**, um Struktur, Kodierung, Pflichtfelder und Duplikate zu prüfen, und dann **Laden**, um die Einfügungen und Aktualisierungen anzuwenden
   - **Zuordnung**: nach `(coa_code, account_number)` innerhalb Ihres Arbeitsbereichs
   - **Pflichtspalten**: `coa_code`, `account_number`, `account_name`. Alle Zeilen einer Datei müssen denselben `coa_code` tragen

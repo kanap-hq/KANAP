@@ -3,10 +3,11 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button, Stack, TextField } from '@mui/material';
 import PageHeader from '../components/PageHeader';
-import ServerDataGrid, { EnhancedColDef, StatusScope } from '../components/ServerDataGrid';
+import ServerDataGrid, { EnhancedColDef, StatusScope, type ListRequest } from '../components/ServerDataGrid';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
 import DeleteSelectedButton from '../components/DeleteSelectedButton';
+import { recordsInUseCheck } from '../utils/deleteCheck';
 import { useAuth } from '../auth/AuthContext';
 import { LinkCellRenderer } from '../components/grid/renderers';
 import { getWithListContext } from '../lib/listContext';
@@ -62,6 +63,8 @@ export default function CompaniesPage() {
 
   const [refreshKey, setRefreshKey] = useState(0);
   const [exportOpen, setExportOpen] = useState(false);
+  // The list on screen: the CSV export follows it.
+  const [listRequest, setListRequest] = useState<ListRequest | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [selectedRows, setSelectedRows] = useState<CompanyRow[]>([]);
   const gridApiRef = useRef<any>(null);
@@ -389,6 +392,12 @@ export default function CompaniesPage() {
           getItemId={(row) => row.id}
           getItemName={(row) => row.name}
           gridApi={gridApiRef.current}
+          // Asked on click: those still in use are kept, with what uses them.
+          checkDelete={(ids) => recordsInUseCheck('/companies', ids)}
+          itemLabels={{
+            toDelete: (count) => t('companies.delete.toDelete', { count }),
+            kept: (count) => t('companies.delete.kept', { count }),
+          }}
           onDeleteSuccess={() => {
             setRefreshKey((k) => k + 1);
           }}
@@ -410,6 +419,7 @@ export default function CompaniesPage() {
     <>
       <PageHeader title={t('companies.title')} actions={actions} />
       <ServerDataGrid<CompanyRow>
+        onListRequestChange={setListRequest}
         columns={columns}
         endpoint="/companies"
         queryKey="companies"
@@ -434,7 +444,7 @@ export default function CompaniesPage() {
         }}
       />
 
-      <CsvExportDialog
+      <CsvExportDialog listRequest={listRequest} entity="companies"
         open={exportOpen}
         onClose={() => setExportOpen(false)}
         endpoint="/companies"

@@ -22,6 +22,10 @@ import {
 } from '../../common/ag-grid-filtering';
 import { ApplicationsBaseService, ServiceOpts } from './applications-base.service';
 import { buildDerivedUsersByApp } from './derived-users';
+import { textSortKey } from '../../common/list-sort';
+
+/** The application list columns that sort alphabetically (the supplier name too). */
+const APPLICATION_TEXT_SORTS = new Set(['name', 'editor']);
 
 export type ClassificationSummary = {
   total: number; reviewed: number; stale: number; incomplete: number;
@@ -536,7 +540,8 @@ export class ApplicationsListService extends ApplicationsBaseService {
       qb.addSelect(classificationSort[sort.field], 'classification_sort_value');
       qb.orderBy('classification_sort_value', direction, 'NULLS LAST');
     } else if (sort.field === 'supplier_name' && needsSupplierJoin) {
-      qb.addOrderBy('s.name', direction);
+      qb.addSelect((await textSortKey(mg))('s.name'), 'text_sort_value');
+      qb.orderBy('text_sort_value', direction, 'NULLS LAST');
     } else if (sort.field === 'sequential_id') {
       qb.addSelect(SEQUENTIAL_ID_SORT_SQL, 'reference_sort_value');
       qb.orderBy('reference_sort_value', direction, 'NULLS LAST');
@@ -544,6 +549,10 @@ export class ApplicationsListService extends ApplicationsBaseService {
       // Through a selected alias: the paginated query cannot order on a raw subquery.
       qb.addSelect(COUNT_SORT_SQL[sort.field].sql, 'count_sort_value');
       qb.orderBy('count_sort_value', direction, direction === 'DESC' ? 'NULLS LAST' : 'NULLS FIRST');
+    } else if (APPLICATION_TEXT_SORTS.has(sort.field)) {
+      // Text alphabetically, case and accents ignored, through a selected alias (paged over joins).
+      qb.addSelect((await textSortKey(mg))(`a.${sort.field}`), 'text_sort_value');
+      qb.orderBy('text_sort_value', direction, 'NULLS LAST');
     } else if (appFields.has(sort.field)) {
       qb.orderBy(classificationTargets[sort.field]?.expression ?? `a.${sort.field}`, direction, 'NULLS LAST');
     } else {
@@ -607,6 +616,7 @@ export class ApplicationsListService extends ApplicationsBaseService {
           const co = expansions.componentsAgg[app.id];
           base.suites_count = su?.c || 0;
           base.first_suite_name = su?.first_name || null;
+          base.first_suite_ref = su?.first_ref || null;
           base.components_count = co?.c || 0;
           base.first_component_name = co?.first_name || null;
         }
@@ -652,6 +662,10 @@ export class ApplicationsListService extends ApplicationsBaseService {
     } else if (sort.field === 'sequential_id') {
       qb.addSelect(SEQUENTIAL_ID_SORT_SQL, 'reference_sort_value');
       qb.orderBy('reference_sort_value', direction, 'NULLS LAST');
+    } else if (APPLICATION_TEXT_SORTS.has(sort.field)) {
+      // Text alphabetically, case and accents ignored, through a selected alias (paged over joins).
+      qb.addSelect((await textSortKey(mg))(`a.${sort.field}`), 'text_sort_value');
+      qb.orderBy('text_sort_value', direction, 'NULLS LAST');
     } else if (appFields.has(sort.field)) {
       qb.orderBy(classificationTargets[sort.field]?.expression ?? `a.${sort.field}`, direction, 'NULLS LAST');
     } else {
@@ -1145,7 +1159,7 @@ export class ApplicationsListService extends ApplicationsBaseService {
     let spendAgg: Record<string, { c: number; first_name: string | null }> = {};
     let capexAgg: Record<string, { c: number; first_description: string | null }> = {};
     let contractAgg: Record<string, { c: number; first_name: string | null }> = {};
-    let suitesAgg: Record<string, { c: number; first_name: string | null }> = {};
+    let suitesAgg: Record<string, { c: number; first_name: string | null; first_ref: string | null }> = {};
     let componentsAgg: Record<string, { c: number; first_name: string | null }> = {};
 
     if (include.has('counts') && pageIds.length > 0) {
@@ -1179,8 +1193,10 @@ export class ApplicationsListService extends ApplicationsBaseService {
     }
 
     if (include.has('structure') && pageIds.length > 0) {
-      const suiteRows: Array<{ application_id: string; c: string; first_name: string | null }> = await mg.query(
-        `SELECT l.application_id, COUNT(*)::text as c, MIN(sa.name) as first_name
+      // first_ref: the reference of the suite named by first_name, for its link.
+      const suiteRows: Array<{ application_id: string; c: string; first_name: string | null; first_ref: string | null }> = await mg.query(
+        `SELECT l.application_id, COUNT(*)::text as c, MIN(sa.name) as first_name,
+                (array_agg(COALESCE(sa.sequential_id, sa.id::text) ORDER BY sa.name, sa.id))[1] as first_ref
          FROM application_suites l
          JOIN applications sa ON sa.id = l.suite_id AND sa.tenant_id = l.tenant_id
          WHERE l.application_id = ANY($1)
@@ -1195,7 +1211,7 @@ export class ApplicationsListService extends ApplicationsBaseService {
          GROUP BY l.suite_id`,
         [pageIds],
       );
-      suitesAgg = Object.fromEntries(suiteRows.map((r) => [r.application_id, { c: Number(r.c), first_name: r.first_name }]));
+      suitesAgg = Object.fromEntries(suiteRows.map((r) => [r.application_id, { c: Number(r.c), first_name: r.first_name, first_ref: r.first_ref }]));
       componentsAgg = Object.fromEntries(componentRows.map((r) => [r.application_id, { c: Number(r.c), first_name: r.first_name }]));
     }
 

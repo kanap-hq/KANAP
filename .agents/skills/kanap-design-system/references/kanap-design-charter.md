@@ -636,11 +636,13 @@ Never use the native `window.confirm()`, `alert()`, or `prompt()`. They break th
 - For destructive ops, set `saveLabel="Delete anyway"` / `saveLabel="Continue"` — never just `"OK"`. The label is the user's explicit consent statement, not an acknowledgement.
 - The dialog body must explain **what the action affects** and **what will survive**. For example: *"3 assets are currently assigned to Rack 5. Deleting this sub-location will leave them without a sub-location assignment. The asset records themselves are kept; only their sub-location link is cleared."*
 
-**Confirmation only when there are dependents:**
+**Deleting a record always asks:**
 
-- If a delete has no impact on related records (count of dependents = 0), execute it immediately — no dialog, no friction.
-- If a delete has dependents (count > 0), open the `KanapDialog` and show the precise count with correct singular/plural grammar.
-- Always include the dependent count in the list endpoint response (`usage_count`, `assignments_count`, etc.) so the frontend can branch synchronously without a second round-trip.
+- The Delete action of a record page, and a list's Delete selected, always open a confirmation, even when nothing depends on the record. The body says what happens in the record's own words (for example "This contract is linked to nothing and holds nothing. This cannot be undone."), never a generic sentence that does not apply; the main action reads "Delete".
+- With dependents (count > 0), the dialog gives each precise count with real singular/plural forms (`_one` / `_other`), says what is removed and what stays, and the main action reads "Delete anyway".
+- A record the server refuses to delete (for example a contract with recorded compliance requirements) gets the refusal and its reason (with its count) in place of the confirmation, and a suggestion such as disabling it.
+- Removing a row inside a record (a link, a contact, an assignment) that affects nothing else runs at once, with no dialog.
+- Include the dependent counts in the list or detail response (`usage_count`, `assignments_count`, etc.) when possible, so the dialog opens without a second round-trip.
 
 ### Loading states across tab transitions
 
@@ -1028,7 +1030,7 @@ Most form fields save on every change, optimistically update the UI, and show a 
 37. **No nested `Autocomplete`/`Select` inside a metadata-bar `Menu`/`Popover` for finite-list pickers.** Prefetch the list and render flat `MenuItem` rows so one click opens the picker and a second click selects.
 38. **No drag-reorder on lists that sort naturally alphabetically.** Reserve drag-and-drop for inherently manual ordering (timelines, prioritized rules, kanban). Sub-locations, contacts, options, tags etc. sort alphabetically server-side.
 39. **No `LinearProgress` on tab-content first paint.** Tab switching must not produce a flash of progress bar — show empty layout during fetch, then content. The shell may show a single progress bar on the initial root-entity fetch only.
-40. **No unconditional confirmation on delete.** If the count of impacted dependents is zero, delete directly. Show a `KanapDialog` only when `usage_count > 0` (or equivalent), and include the count in the list endpoint payload to avoid a second round-trip.
+40. **Record deletes always confirm.** A record page's Delete and a list's Delete selected always open a `KanapDialog`: "Delete" with a sentence about this record when nothing depends on it, "Delete anyway" with the exact counts when something does. Removing a row inside a record that affects nothing else needs no dialog.
 41. **No email subline in user picker lists.** All user pickers (MetadataUserPicker, ShareDialog recipients, mentions, share/notify lists) display names only; search matches names only. Email is internal data, not surface UI.
 
 ---
@@ -1071,7 +1073,7 @@ Before merging any new UI component, verify:
 - [ ] All confirmations and destructive prompts use `KanapDialog`; no `window.confirm`/`alert`/`prompt`
 - [ ] `Menu` wraps only `MenuItem` lists; form content lives in `Popover` with explicit anchor origins
 - [ ] Finite-list pickers (companies, locations, types) render flat `MenuItem` rows, not nested `Autocomplete`
-- [ ] Destructive deletes show the impacted-dependents count and skip confirmation when count is zero
+- [ ] Record deletes always confirm; the dialog gives the impacted-dependents counts ("Delete anyway") or says plainly what happens ("Delete")
 - [ ] No `LinearProgress` on tab-content first paint
 - [ ] List ordering is alphabetical server-side unless drag-reorder is semantically required
 - [ ] All user pickers (incl. ShareDialog recipients, mentions) display names only — no email subline

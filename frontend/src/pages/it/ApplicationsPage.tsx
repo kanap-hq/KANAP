@@ -5,7 +5,7 @@ import PageHeader from '../../components/PageHeader';
 import ServerDataGrid, { EnhancedColDef } from '../../components/ServerDataGrid';
 import { ICellRendererParams } from 'ag-grid-community';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LinkCellRenderer } from '../../components/grid/renderers';
+import { LinkCellRenderer, wholeCellLinkSx, aboveCellLinkSx } from '../../components/grid/renderers';
 import { getEnvDotColor } from '../../components/grid/renderers/StatusCellRenderer';
 import { StatusDot } from '../../components/design';
 import { useAuth } from '../../auth/AuthContext';
@@ -23,6 +23,7 @@ import { formatDuration } from './components/DurationEditor';
 
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '../../i18n/useLocale';
+import { formatShortDateTime } from '../../lib/dateFormat';
 import { setListFiltersParam, getWithListContext } from '../../lib/listContext';
 import { useUrlFilterModel } from '../../hooks/useListContextSearch';
 const ENV_SUMMARY = [
@@ -89,6 +90,8 @@ type AppRow = {
   // Structure summaries
   suites_count?: number;
   first_suite_name?: string | null;
+  /** Reference of the suite named by first_suite_name */
+  first_suite_ref?: string | null;
   components_count?: number;
   first_component_name?: string | null;
   instances?: AppInstanceSummary[];
@@ -256,6 +259,13 @@ export default function ApplicationsPage() {
     return `/it/applications/${routeId}/${workspaceTab}?${sp.toString()}`;
   }, [buildWorkspaceSearch]);
 
+  // The suite a row belongs to (its first one, the one named in the cell); the row itself as a fallback.
+  const buildSuiteHref = useCallback((row: AppRow | null | undefined) => (
+    row?.first_suite_ref
+      ? buildAppHref({ id: row.first_suite_ref, sequential_id: row.first_suite_ref } as AppRow, 'overview')
+      : buildAppHref(row, 'relations')
+  ), [buildAppHref]);
+
   const handleInternalNavigate = useCallback((event: React.MouseEvent, href: string | undefined) => {
     if (!href) return;
     if (!isPlainLeftClick(event)) return;
@@ -386,7 +396,7 @@ export default function ApplicationsPage() {
         <Link
           href={buildAppHref(params.data as AppRow, 'ownership')}
           onClick={(event) => handleInternalNavigate(event, buildAppHref(params.data as AppRow, 'ownership'))}
-          sx={{ cursor: 'pointer' }}
+          sx={{ cursor: 'pointer', ...wholeCellLinkSx }}
           underline="none"
           color="inherit"
         >
@@ -406,7 +416,7 @@ export default function ApplicationsPage() {
         <Link
           href={buildAppHref(params.data as AppRow, 'compliance')}
           onClick={(event) => handleInternalNavigate(event, buildAppHref(params.data as AppRow, 'compliance'))}
-          sx={{ cursor: 'pointer' }}
+          sx={{ cursor: 'pointer', ...wholeCellLinkSx }}
           underline="none"
           color="inherit"
         >
@@ -432,7 +442,7 @@ export default function ApplicationsPage() {
         <Link
           href={buildAppHref(data as AppRow, tab)}
           onClick={(event) => handleInternalNavigate(event, buildAppHref(data as AppRow, tab))}
-          sx={{ cursor: 'pointer' }}
+          sx={{ cursor: 'pointer', ...wholeCellLinkSx }}
           underline="none"
           color="inherit"
         >
@@ -450,11 +460,12 @@ export default function ApplicationsPage() {
       const first = kind === 'suites' ? (data?.first_suite_name || null) : (data?.first_component_name || null);
       const extra = count && count > 1 ? ` +${count - 1}` : '';
       const title = first || '';
+      const href = kind === 'suites' ? buildSuiteHref(data) : buildAppHref(data as AppRow, 'relations');
       return (
         <Link
-          href={buildAppHref(data as AppRow, 'relations')}
-          onClick={(event) => handleInternalNavigate(event, buildAppHref(data as AppRow, 'relations'))}
-          sx={{ cursor: 'pointer' }}
+          href={href}
+          onClick={(event) => handleInternalNavigate(event, href)}
+          sx={{ cursor: 'pointer', ...wholeCellLinkSx }}
           underline="none"
           color="inherit"
         >
@@ -463,7 +474,7 @@ export default function ApplicationsPage() {
       );
     };
     return Cell;
-  }, [buildAppHref, handleInternalNavigate]);
+  }, [buildAppHref, buildSuiteHref, handleInternalNavigate]);
 
   const NameWithSuiteCell = useMemo(() => {
     const Cell: React.FC<ICellRendererParams<AppRow, any>> = (params) => {
@@ -478,7 +489,7 @@ export default function ApplicationsPage() {
             <Link
               href={buildAppHref(data as AppRow, 'overview')}
               onClick={(event) => handleInternalNavigate(event, buildAppHref(data as AppRow, 'overview'))}
-              sx={{ cursor: 'pointer', display: 'block' }}
+              sx={{ cursor: 'pointer', display: 'block', ...wholeCellLinkSx }}
               underline="none"
               color="inherit"
             >
@@ -491,11 +502,11 @@ export default function ApplicationsPage() {
           {(firstSuite && suitesCount > 0 && !suitesColVisible) && (
             <Box
               component="a"
-              href={buildAppHref(data as AppRow, 'relations')}
-              sx={{ px: 0.75, py: 0.25, borderRadius: 1, bgcolor: 'action.hover', color: 'text.secondary', cursor: 'pointer', fontSize: '0.75rem' }}
+              href={buildSuiteHref(data)}
+              sx={{ px: 0.75, py: 0.25, borderRadius: 1, bgcolor: 'action.hover', color: 'text.secondary', cursor: 'pointer', fontSize: '0.75rem', ...aboveCellLinkSx }}
               onClick={(e) => {
                 e.stopPropagation();
-                handleInternalNavigate(e, buildAppHref(data as AppRow, 'relations'));
+                handleInternalNavigate(e, buildSuiteHref(data));
               }}
             >
               {t('pages.applications.includedIn')} {firstSuite}{extra}
@@ -505,7 +516,7 @@ export default function ApplicationsPage() {
       );
     };
     return Cell;
-  }, [buildAppHref, categoryLabel, handleInternalNavigate, suitesColVisible, t]);
+  }, [buildAppHref, buildSuiteHref, categoryLabel, handleInternalNavigate, suitesColVisible, t]);
 
   const EnvironmentCell = useMemo(() => {
     const mode = theme.palette.mode;
@@ -597,6 +608,8 @@ export default function ApplicationsPage() {
       colId: 'environments',
       width: 250,
       sortable: false,
+      // One link per pill: the rest of the cell keeps the default cursor the row rule overrides.
+      cellStyle: { cursor: 'default' },
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
@@ -643,7 +656,7 @@ export default function ApplicationsPage() {
     { headerName: classificationText("Classification reviewed"), field: 'classification_reviewed_at', filter: 'agDateColumnFilter', width: 180, defaultHidden: true, valueFormatter: (p: any) => p.value ? new Date(p.value).toLocaleDateString(locale) : classificationText('Not set'), cellRenderer: ClickToCompliance },
     { headerName: t('pages.applications.columns.publisher'), field: 'editor', width: 160, cellRenderer: ClickToOverview },
     { headerName: t('pages.applications.columns.derivedUsers'), field: 'derived_total_users', width: 170, cellRenderer: ClickToOwnership },
-    { headerName: t('pages.assets.columns.created'), field: 'created_at', width: 160, cellRenderer: ClickToOverview },
+    { headerName: t('pages.assets.columns.created'), field: 'created_at', width: 160, valueFormatter: (p: any) => formatShortDateTime(p.value as string | null, locale), cellRenderer: ClickToOverview },
 
     // Additional chooser columns (hidden by default)
     { headerName: t('pages.applications.columns.supplier'), field: 'supplier_name', width: 240, defaultHidden: true, sortable: true, filter: 'agTextColumnFilter', cellRenderer: ClickToOverview },

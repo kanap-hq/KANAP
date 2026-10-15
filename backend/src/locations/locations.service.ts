@@ -17,6 +17,7 @@ import { ExternalContact } from '../contacts/external-contact.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { shareRecipientsOf } from '../notifications/share-recipients';
+import { sortedFindQuery } from '../common/list-sort';
 
 type HostingCategory = 'on_prem' | 'cloud';
 
@@ -230,12 +231,8 @@ export class LocationsService {
     }
     const allowedSortFields = ['location_reference', 'name', 'hosting_type', 'provider', 'country_iso', 'city', 'created_at', 'updated_at'];
     const sortField = allowedSortFields.includes(sort.field) ? sort.field : 'created_at';
-    const [rows, total] = await repo.findAndCount({
-      where: whereArr ?? where,
-      order: { [sortField]: sort.direction as any },
-      skip,
-      take: limit,
-    });
+    const sorted = await sortedFindQuery(repo, 'location', whereArr ?? where, { field: sortField, direction: sort.direction });
+    const [rows, total] = await sorted.offset(skip).limit(limit).getManyAndCount();
     const mg = opts?.manager ?? repo.manager;
     const companyIds = Array.from(new Set(rows.map((row) => row.operating_company_id).filter(Boolean))) as string[];
     let companyMap: Record<string, string> = {};
@@ -307,13 +304,8 @@ export class LocationsService {
     const allowedSortFields = ['location_reference', 'name', 'hosting_type', 'provider', 'country_iso', 'city', 'created_at', 'updated_at'];
     const sortField = allowedSortFields.includes(sort.field) ? sort.field : 'created_at';
     const limit = Math.min(Math.max(Number(query?.limit) || 10000, 1), 10000);
-    const [rows, total] = await repo.findAndCount({
-      where: whereArr ?? where,
-      order: { [sortField]: sort.direction as any },
-      take: limit,
-      skip: 0,
-      select: ['id', 'location_reference'],
-    });
+    const sorted = await sortedFindQuery(repo, 'location', whereArr ?? where, { field: sortField, direction: sort.direction });
+    const [rows, total] = await sorted.select(['location.id', 'location.location_reference']).limit(limit).getManyAndCount();
     const ids = rows.map((row) => row.id);
     const refs = rows.map((row) => row.location_reference || row.id);
     return { ids, refs, total };

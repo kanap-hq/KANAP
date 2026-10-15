@@ -180,6 +180,12 @@
       "headcountInvalid": "Saisissez un nombre entier, 0 ou plus.",
       "itUsersInvalid": "Saisissez un nombre entier, 0 ou plus, ou laissez le champ vide.",
       "turnoverInvalid": "Saisissez un nombre, 0 ou plus, avec 3 décimales au plus, ou laissez le champ vide."
+    },
+    "delete": {
+      "toDelete_one": "{{count}} société sera supprimée :",
+      "toDelete_other": "{{count}} sociétés seront supprimées :",
+      "kept_one": "{{count}} société est encore utilisée et est conservée. Désactivez-la plutôt :",
+      "kept_other": "{{count}} sociétés sont encore utilisées et sont conservées. Désactivez-les plutôt :"
     }
   },
   "departments": {
@@ -394,7 +400,6 @@
     "noSuppliersFound": "Aucun fournisseur trouvé",
     "export": "Exporter les fournisseurs",
     "import": "Importer les fournisseurs",
-    "exportScope": "Le fichier contient tous les fournisseurs, activés et désactivés, triés par nom. La recherche et les filtres de la liste ne s'appliquent pas.",
     "importHint": "Valeurs acceptées pour status : enabled ou disabled. disabled_at contient la fin de validité, ou reste vide. Les colonnes de contact prennent l'e-mail d'un contact qui existe déjà dans Contacts.",
     "fields": {
       "name": "Nom",
@@ -435,7 +440,13 @@
       "createFailed": "Échec de la création du fournisseur."
     },
     "previous": "Fournisseur précédent",
-    "next": "Fournisseur suivant"
+    "next": "Fournisseur suivant",
+    "delete": {
+      "toDelete_one": "{{count}} fournisseur sera supprimé :",
+      "toDelete_other": "{{count}} fournisseurs seront supprimés :",
+      "kept_one": "{{count}} fournisseur est encore utilisé et est conservé. Désactivez-le plutôt :",
+      "kept_other": "{{count}} fournisseurs sont encore utilisés et sont conservés. Désactivez-les plutôt :"
+    }
   },
   "contacts": {
     "title": "Contacts",

@@ -3,6 +3,7 @@ import { InjectDataSource } from '@nestjs/typeorm';
 import { Repository, EntityManager, DataSource } from 'typeorm';
 import { ParticipationAccessScope, taskParticipantCondition } from '../auth/business-contributor-scope';
 import { incidentRelatedLabelSql } from '../incidents/incident-visibility';
+import { textSortKey } from '../common/list-sort';
 import { resolveRecordCreators } from '../audit/record-creator.util';
 import { assertSetFilterModes } from '../common/ag-grid-filtering';
 
@@ -631,6 +632,57 @@ const TASK_ASSETS_SQL = `
       AND asset_link.tenant_id = t.tenant_id
   ), '[]'::jsonb)`;
 
+/**
+ * The sort keys of the tasks list and of its ids, spelled out as expressions over the joins both
+ * queries share (an output alias cannot take a collation). `priority_score` is the computed
+ * column both queries project.
+ */
+const TASK_SORT_EXPRESSIONS: Record<string, string> = {
+  title: 't.title',
+  description: 't.description',
+  status: 't.status',
+  created_at: 't.created_at',
+  updated_at: 't.updated_at',
+  due_date: 't.due_date',
+  start_date: 't.start_date',
+  assignee_name: `COALESCE(u.first_name || ' ' || u.last_name, u.email)`,
+  creator_name: `COALESCE(uc.first_name || ' ' || uc.last_name, uc.email)`,
+  related_object_name: `CASE
+      WHEN t.related_object_type IS NULL THEN NULL
+      WHEN t.related_object_type = 'spend_item' THEN si.product_name
+      WHEN t.related_object_type = 'contract' THEN c.name
+      WHEN t.related_object_type = 'capex_item' THEN ci.product_name
+      WHEN t.related_object_type = 'incident' THEN ${incidentRelatedLabelSql('inc')}
+      WHEN t.related_object_type = 'project' THEN pp.name
+      ELSE ''
+    END`,
+  related_object_type: 't.related_object_type',
+  task_type_name: 'tt.name',
+  phase_name: 'phase.name',
+  priority_level: 't.priority_level',
+  priority_score: 'priority_score',
+  source_name: 'ps.name',
+  category_name: 'pc.name',
+  stream_name: 'pst.name',
+  company_name: 'comp.name',
+  project_stream_name: 'project_pst.name',
+  project_category_name: 'project_pc.name',
+  application_name: TASK_FIRST_APPLICATION_NAME_SQL,
+  asset_name: TASK_FIRST_ASSET_NAME_SQL,
+};
+/** The task list columns that sort alphabetically (`textSortKey`). */
+const TASK_TEXT_SORTS = new Set([
+  'title', 'description', 'assignee_name', 'creator_name', 'related_object_name', 'task_type_name', 'phase_name',
+  'source_name', 'category_name', 'stream_name', 'company_name', 'project_stream_name', 'project_category_name',
+  'application_name', 'asset_name',
+]);
+
+/** The ORDER BY key of a task list field: text alphabetically, the creation date by default. */
+async function taskSortKey(manager: EntityManager, field: string): Promise<string> {
+  const expr = TASK_SORT_EXPRESSIONS[field] ?? 't.created_at';
+  return TASK_TEXT_SORTS.has(field) ? (await textSortKey(manager))(expr) : expr;
+}
+
 @Injectable()
 export class TasksService {
   constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
@@ -681,33 +733,7 @@ export class TasksService {
     const countResult = await manager.query(countQuery, params);
     const total = countResult[0]?.count || 0;
 
-    // Map sort field
-    const sortFieldMap: Record<string, string> = {
-      title: 't.title',
-      description: 't.description',
-      status: 't.status',
-      created_at: 't.created_at',
-      updated_at: 't.updated_at',
-      due_date: 't.due_date',
-      start_date: 't.start_date',
-      assignee_name: 'assignee_name',
-      creator_name: 'creator_name',
-      related_object_name: 'related_object_name',
-      related_object_type: 't.related_object_type',
-      task_type_name: 'task_type_name',
-      phase_name: 'phase_name',
-      priority_level: 't.priority_level',
-      priority_score: 'priority_score',
-      source_name: 'source_name',
-      category_name: 'category_name',
-      stream_name: 'stream_name',
-      company_name: 'company_name',
-      project_stream_name: 'project_stream_name',
-      project_category_name: 'project_category_name',
-      application_name: TASK_FIRST_APPLICATION_NAME_SQL,
-      asset_name: TASK_FIRST_ASSET_NAME_SQL,
-    };
-    const sortField = sortFieldMap[sort.field] || 't.created_at';
+    const sortField = await taskSortKey(manager, sort.field);
 
     // Fetch paginated data
     const dataQuery = `
@@ -820,42 +846,7 @@ export class TasksService {
     const { sort, q, filters } = parsePagination({ ...query, page: 1, limit: query?.limit ?? 10000 });
     const { whereConditions, params } = buildWhereConditions(query, filters, q, undefined, tenantId, opts?.accessScope);
 
-    const sortFieldMap: Record<string, string> = {
-      title: 't.title',
-      description: 't.description',
-      status: 't.status',
-      created_at: 't.created_at',
-      updated_at: 't.updated_at',
-      due_date: 't.due_date',
-      start_date: 't.start_date',
-      // The ids query only projects id/item_number/priority_score, so sortable
-      // display names must be spelled out as expressions, not output aliases.
-      assignee_name: `COALESCE(u.first_name || ' ' || u.last_name, u.email)`,
-      creator_name: `COALESCE(uc.first_name || ' ' || uc.last_name, uc.email)`,
-      related_object_name: `CASE
-          WHEN t.related_object_type IS NULL THEN NULL
-          WHEN t.related_object_type = 'spend_item' THEN si.product_name
-          WHEN t.related_object_type = 'contract' THEN c.name
-          WHEN t.related_object_type = 'capex_item' THEN ci.product_name
-          WHEN t.related_object_type = 'incident' THEN ${incidentRelatedLabelSql('inc')}
-          WHEN t.related_object_type = 'project' THEN pp.name
-          ELSE ''
-        END`,
-      related_object_type: 't.related_object_type',
-      task_type_name: 'tt.name',
-      phase_name: 'phase.name',
-      priority_level: 't.priority_level',
-      priority_score: 'priority_score',
-      source_name: 'ps.name',
-      category_name: 'pc.name',
-      stream_name: 'pst.name',
-      company_name: 'comp.name',
-      project_stream_name: 'project_pst.name',
-      project_category_name: 'project_pc.name',
-      application_name: TASK_FIRST_APPLICATION_NAME_SQL,
-      asset_name: TASK_FIRST_ASSET_NAME_SQL,
-    };
-    const sortField = sortFieldMap[sort.field] || 't.created_at';
+    const sortField = await taskSortKey(manager, sort.field);
     const limit = Math.min(Math.max(Number(query?.limit) || 10000, 1), 10000);
 
     const countQuery = `

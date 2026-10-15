@@ -197,7 +197,7 @@ export default function AnalyticsWorkspacePage() {
   const axis = data ? axes.byId.get(data.axis_id) : undefined;
   const dimensionLabel = axis ? axes.label(axis) : analyticsAxisLabel({ name: data?.axis_name ?? null }, t);
   const lineCount = usedLineCount(data?.opex_count, data?.capex_count);
-  // Unused, it goes at once; used, the dialog says the lines lose it ("Delete anyway"). Disabling stays possible.
+  // Always asked: unused, a plain Delete; used, the dialog says the lines lose it ("Delete anyway"). Disabling stays possible.
   const confirmation = data ? deleteConfirmation(t, { kind: 'value', name: data.name, lineCount }) : null;
   const disabled = !canEdit;
 
@@ -206,7 +206,7 @@ export default function AnalyticsWorkspacePage() {
       variant="action-danger"
       startIcon={<DeleteIcon sx={{ fontSize: '14px !important' }} />}
       size="small"
-      onClick={() => (confirmation ? setConfirmOpen(true) : void handleDelete(false))}
+      onClick={() => setConfirmOpen(true)}
       disabled={deleting}
     >
       {t('common:buttons.delete')}
@@ -309,7 +309,7 @@ export default function AnalyticsWorkspacePage() {
           open={confirmOpen}
           title={confirmation.title}
           onClose={() => { if (!deleting) setConfirmOpen(false); }}
-          onSave={() => handleDelete(true)}
+          onSave={() => handleDelete(confirmation.force)}
           saveLabel={confirmation.confirmLabel}
           saveVariant="action-danger"
           saveLoading={deleting}

@@ -107,6 +107,7 @@ The row pinned at the bottom reads **Total (n contracts)**. It sums the yearly a
 - **Import CSV** and **Export CSV**: see [CSV import/export](#csv-importexport) (`contracts:admin`)
 - **Export the register**: the compliance register of the contracts the list shows (`contracts:admin`). See [Compliance](#compliance)
 - **Settings**: the decision window of the workspace (`contracts:admin`). See [Decision window](#decision-window)
+- **Delete**: delete the contracts you tick (`contracts:admin`). See [Deleting a contract](#deleting-a-contract)
 
 ---
 
@@ -215,6 +216,17 @@ Linking or removing an application or an asset in **Relations** updates the tab 
 
 Budget lines are linked on the [Budget](#budget) tab.
 
+### Deleting a contract
+
+**Delete** in the header of the contract page, or in the list for the contracts you tick, deletes contracts (`contracts:admin`). This cannot be undone.
+
+- The links go and the linked items stay: budget lines, applications, assets (also those whose support contract it is) and contacts lose their link to the contract
+- What belongs to the contract goes with it: its tasks (the renewal decision task included), relevant websites and attachments
+- A contract with recorded compliance requirements (a state, including **Not applicable**, or a reference) cannot be deleted: KANAP says how many are recorded and suggests disabling it instead. In the list, the confirmation names the contracts kept, with their count, before anything is deleted; the others are deleted
+- A confirmation always comes first. It counts what loses its link and what goes too, or says that the contract is linked to nothing
+
+To stop using a contract and keep its history, disable it instead.
+
 ---
 
 ## Renewal decisions
@@ -275,7 +287,7 @@ On a contract in its first term with no decision due, **No** applies at once: th
 
 Keep your contract list in sync with other tools using CSV (`contracts:admin`).
 
-**Export**: downloads every contract with these columns: `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. The computed dates (term end, deadlines, state) are not exported.
+**Export**: downloads the contracts the list shows (or, on request in the dialog, every contract) with these columns: `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. The computed dates (term end, deadlines, state) are not exported.
 
 **Import**:
 

@@ -114,7 +114,7 @@ Les sites peuvent avoir des contacts de support (responsables d'installations, c
 
 Gérez les contacts en masse via CSV.
 
-**Export** : Télécharge tous les contacts avec leurs détails.
+**Export** : Télécharge les contacts que la liste affiche avec leurs détails. Choisissez **Tout le référentiel** dans la fenêtre pour tous les contacts.
 
 **Import** :
 - Utilisez le **Contrôle préalable** pour valider avant d'appliquer

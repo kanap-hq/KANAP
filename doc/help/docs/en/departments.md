@@ -93,7 +93,7 @@ The Details tab manages year-by-year headcount metrics.
 
 ## CSV import/export
 
-**Export CSV** downloads every department with its company, name, description, status and end of validity. **Import CSV** reads a file back. The import dialog also carries **Download template**: a file with the headers only.
+**Export CSV** downloads the departments the list shows (or, on request in the dialog, every department) with its company, name, description, status and end of validity. **Import CSV** reads a file back. The import dialog also carries **Download template**: a file with the headers only.
 
 The columns:
 

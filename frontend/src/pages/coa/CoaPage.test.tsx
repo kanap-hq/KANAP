@@ -1,5 +1,6 @@
 import React from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { coversItsCell, keepsFollowingContentAbove } from '../../components/grid/renderers/wholeCellLink.testUtils';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -228,11 +229,16 @@ describe('CoaPage summary and consolidation health', () => {
       colDef: column,
     });
 
-    const { unmount } = render(<MemoryRouter>{column.cellRenderer(params('outside'))}</MemoryRouter>);
+    const { unmount } = render(<MemoryRouter><div className="ag-cell">{column.cellRenderer(params('outside'))}</div></MemoryRouter>);
     const marker = screen.getByRole('img', { name: 'Not in the consolidation chart IFRS' });
     // Inside the cell's own link row, right after the number (not pushed to the cell's edge).
     const link = screen.getByRole('link', { name: '9999' });
     expect(link.nextElementSibling).toBe(marker);
+    // The link covers the whole cell; the marker stays above it, with its own tooltip.
+    expect(coversItsCell(link)).toBe(true);
+    expect(keepsFollowingContentAbove(link)).toBe(true);
+    fireEvent.mouseOver(marker);
+    expect(await screen.findByRole('tooltip')).toBeInTheDocument();
     unmount();
 
     for (const status of ['mapped', null]) {

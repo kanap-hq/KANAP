@@ -96,7 +96,7 @@ Affiche jusqu'à 5 éléments.
 
 Affiche les éléments que vous avez récemment ouverts dans l'application -- projets, demandes, applications, actifs, interfaces, connexions, contrats, tâches, lignes OPEX et CAPEX, et documents de connaissances. Chaque entrée affiche le nom de l'élément, son type, et quand vous l'avez consulté pour la dernière fois.
 
-Les éléments récemment consultés sont stockés localement dans votre navigateur et limités au tenant et à l'utilisateur courants. Cliquez sur **Effacer** pour réinitialiser la liste. Les éléments auxquels vous n'avez plus l'autorisation d'accéder sont filtrés automatiquement.
+Les éléments récemment consultés sont stockés localement dans votre navigateur et limités au tenant et à l'utilisateur courants. Cliquez sur **Effacer** pour réinitialiser la liste. Les éléments auxquels vous n'avez plus l'autorisation d'accéder sont filtrés automatiquement. Les éléments supprimés depuis, seuls ou avec un autre élément (comme les tâches d'un contrat supprimé), quittent la liste.
 
 Affiche jusqu'à 5 éléments.
 

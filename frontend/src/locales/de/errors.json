@@ -92,5 +92,6 @@
   "CSV_STATUS_DATE_FUTURE": "Der Status ist disabled, aber das Gültigkeitsende liegt noch in der Zukunft. Setzen Sie den Status auf enabled oder geben Sie ein vergangenes Datum ein.",
   "CSV_IMPORT_FAILED": "Der Import ist fehlgeschlagen: {{reason}}",
   "SUPPLIER_IN_USE": "Dieser Lieferant wird noch verwendet: {{usages}}. Deaktivieren Sie ihn, statt ihn zu löschen.",
-  "COMPANY_IN_USE": "Dieses Unternehmen wird noch verwendet: {{usages}}. Deaktivieren Sie es, statt es zu löschen."
+  "COMPANY_IN_USE": "Dieses Unternehmen wird noch verwendet: {{usages}}. Deaktivieren Sie es, statt es zu löschen.",
+  "CONTRACT_HAS_COMPLIANCE_RECORDS": "Dieser Vertrag hat {{usages}}. Deaktivieren Sie ihn, statt ihn zu löschen."
 }

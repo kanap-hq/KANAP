@@ -6,6 +6,7 @@ import { BusinessProcessCategoryLink } from './business-process-category-link.en
 import { parsePagination } from '../common/pagination';
 import { BusinessProcessCategoryUpsertDto } from './dto/business-process-category.dto';
 import { AuditService } from '../audit/audit.service';
+import { textSortKey } from '../common/list-sort';
 
 @Injectable()
 export class BusinessProcessCategoriesService {
@@ -34,9 +35,12 @@ export class BusinessProcessCategoriesService {
     }
 
     const total = await qb.getCount();
+    // By position, then by name alphabetically (case and accents ignored), then the id.
     const items = await qb
+      .addSelect((await textSortKey(qb.connection.manager))('cat.name'), 'list_sort_key')
       .orderBy('cat.sort_order', 'ASC')
-      .addOrderBy('LOWER(cat.name)', 'ASC')
+      .addOrderBy('list_sort_key', 'ASC')
+      .addOrderBy('cat.id', 'ASC')
       .skip(skip)
       .take(limit)
       .getMany();

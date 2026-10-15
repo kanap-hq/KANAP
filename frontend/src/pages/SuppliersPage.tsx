@@ -1,13 +1,14 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import PageHeader from '../components/PageHeader';
-import ServerDataGrid, { EnhancedColDef, StatusScope } from '../components/ServerDataGrid';
+import ServerDataGrid, { EnhancedColDef, StatusScope, type ListRequest } from '../components/ServerDataGrid';
 import { Button, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
 import { useAuth } from '../auth/AuthContext';
 import DeleteSelectedButton from '../components/DeleteSelectedButton';
+import { recordsInUseCheck } from '../utils/deleteCheck';
 import { LinkCellRenderer } from '../components/grid/renderers';
 import { useLocale } from '../i18n/useLocale';
 import { formatShortDateTime } from '../lib/dateFormat';
@@ -26,6 +27,8 @@ export default function SuppliersPage() {
 
   const [refreshKey, setRefreshKey] = useState(0);
   const [exportOpen, setExportOpen] = useState(false);
+  // The list on screen: the CSV export follows it.
+  const [listRequest, setListRequest] = useState<ListRequest | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [selectedRows, setSelectedRows] = useState<any[]>([]);
   const gridApiRef = useRef<any>(null);
@@ -124,6 +127,12 @@ export default function SuppliersPage() {
           getItemId={(row) => row.id}
           getItemName={(row) => row.name}
           gridApi={gridApiRef.current}
+          // Asked on click: those still in use are kept, with what uses them.
+          checkDelete={(ids) => recordsInUseCheck('/suppliers', ids)}
+          itemLabels={{
+            toDelete: (count) => t('suppliers.delete.toDelete', { count }),
+            kept: (count) => t('suppliers.delete.kept', { count }),
+          }}
           onDeleteSuccess={() => { setRefreshKey((k) => k + 1); }}
         />
       )}
@@ -134,6 +143,7 @@ export default function SuppliersPage() {
     <>
       <PageHeader title={t("suppliers.title")} actions={actions} />
       <ServerDataGrid<any>
+        onListRequestChange={setListRequest}
         columns={columns}
         endpoint="/suppliers"
         queryKey="suppliers"
@@ -154,12 +164,11 @@ export default function SuppliersPage() {
           lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {}, statusScope: scope };
         }}
       />
-      <CsvExportDialog
+      <CsvExportDialog listRequest={listRequest} entity="suppliers"
         open={exportOpen}
         onClose={() => setExportOpen(false)}
         endpoint="/suppliers"
         title={t("suppliers.export")}
-        note={t('suppliers.exportScope')}
         flexibleFormat
       />
       <CsvImportDialog

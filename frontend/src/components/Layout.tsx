@@ -404,6 +404,10 @@ export default function Layout() {
           )}
           {!isPlatformHost && visibleWorkspaces.length > 0 && (
             <Tabs
+              // MUI watches the first and last tabs once, on mount, to show each scroll arrow only
+              // while that end is out of view. Workspaces that appear later (AI, once its
+              // capabilities load) would leave it watching stale tabs: remount on a new set.
+              key={visibleWorkspaces.join(',')}
               value={workspace === 'home' ? false : (visibleWorkspaces.includes(workspace) ? workspace : visibleWorkspaces[0])}
               onChange={(_, val) => {
                 void guardedLeave(() => navigate(workspaceRoutes[val as WorkspaceKey] ?? workspaceRoutes.admin));

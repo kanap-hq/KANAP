@@ -67,6 +67,20 @@ describe('deleteFailureReason', () => {
     }
   });
 
+  it('says how many compliance requirements a refused contract has recorded, in each language', () => {
+    const refusal = { code: 'CONTRACT_HAS_COMPLIANCE_RECORDS', usages: [{ type: 'compliance_requirements', total: 3 }] };
+    expect(deleteFailureReason(refusal, i18n.en.t, 'en'))
+      .toBe('This contract has 3 recorded compliance requirements. Disable it instead of deleting it.');
+    expect(deleteFailureReason({ ...refusal, usages: [{ type: 'compliance_requirements', total: 1 }] }, i18n.en.t, 'en'))
+      .toBe('This contract has 1 recorded compliance requirement. Disable it instead of deleting it.');
+    expect(deleteFailureReason(refusal, i18n.fr.t, 'fr'))
+      .toBe('Ce contrat a 3 exigences de conformité renseignées. Désactivez-le plutôt que de le supprimer.');
+    for (const language of LANGUAGES) {
+      expect(i18n[language].exists('errors:CONTRACT_HAS_COMPLIANCE_RECORDS'), language).toBe(true);
+      expect(deleteFailureReason(refusal, i18n[language].t, language), language).toMatch(/ 3 /);
+    }
+  });
+
   it('counts the new kinds of a company refusal', () => {
     const refusal = {
       code: 'COMPANY_IN_USE',

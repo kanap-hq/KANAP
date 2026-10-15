@@ -107,6 +107,7 @@ La ligne épinglée en bas indique **Total (n contrats)**. Elle additionne les m
 - **Importer CSV** et **Exporter CSV** : voir [Import/export CSV](#importexport-csv) (`contracts:admin`)
 - **Exporter le registre** : le registre de conformité des contrats affichés par la liste (`contracts:admin`). Voir [Conformité](#conformite)
 - **Réglages** : le délai de décision de l'espace de travail (`contracts:admin`). Voir [Délai de décision](#delai-de-decision)
+- **Supprimer** : supprimer les contrats cochés (`contracts:admin`). Voir [Supprimer un contrat](#supprimer-un-contrat)
 
 ---
 
@@ -215,6 +216,17 @@ Lier ou retirer une application ou un actif dans **Relations** met l'onglet à j
 
 Les lignes budgétaires se lient dans l'onglet [Budget](#budget).
 
+### Supprimer un contrat
+
+**Supprimer**, dans l'en-tête de la page du contrat ou dans la liste pour les contrats cochés, supprime des contrats (`contracts:admin`). Cette action est irréversible.
+
+- Les liens disparaissent et les éléments liés sont conservés : les lignes budgétaires, applications, actifs (y compris ceux dont c'est le contrat de support) et contacts perdent leur lien avec le contrat
+- Ce qui appartient au contrat est supprimé avec lui : ses tâches (y compris la tâche de décision de renouvellement), ses sites web pertinents et ses pièces jointes
+- Un contrat avec des exigences de conformité renseignées (un état, y compris **Sans objet**, ou une référence) ne peut pas être supprimé : KANAP indique combien sont renseignées et propose de le désactiver plutôt. Dans la liste, la confirmation nomme les contrats conservés, avec leur nombre, avant toute suppression ; les autres sont supprimés
+- Une confirmation vient toujours d'abord. Elle compte ce qui perd son lien et ce qui est supprimé aussi, ou indique que le contrat n'est lié à rien
+
+Pour ne plus utiliser un contrat tout en gardant son historique, désactivez-le plutôt.
+
 ---
 
 ## Décisions de renouvellement
@@ -275,7 +287,7 @@ Sur un contrat dans son premier terme sans décision attendue, **Non** s'appliqu
 
 Gardez votre liste de contrats synchronisée avec d'autres outils grâce au CSV (`contracts:admin`).
 
-**Export** : télécharge tous les contrats avec ces colonnes : `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. Les dates calculées (fin du terme, dates limites, état) ne sont pas exportées.
+**Export** : télécharge les contrats que la liste affiche (ou, sur demande dans la fenêtre, tous les contrats) avec ces colonnes : `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. Les dates calculées (fin du terme, dates limites, état) ne sont pas exportées.
 
 **Import** :
 

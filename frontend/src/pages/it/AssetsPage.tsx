@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
 import ServerDataGrid, { EnhancedColDef } from '../../components/ServerDataGrid';
 import { ICellRendererParams } from 'ag-grid-community';
-import { LinkCellRenderer } from '../../components/grid/renderers';
+import { LinkCellRenderer, wholeCellLinkSx } from '../../components/grid/renderers';
 import { getEnvDotColor } from '../../components/grid/renderers/StatusCellRenderer';
 import { StatusDot } from '../../components/design';
 import { useAuth } from '../../auth/AuthContext';
@@ -211,7 +211,7 @@ export default function AssetsPage() {
         <Link
           href={href}
           onClick={(event) => handleInternalNavigate(event, href)}
-          sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', textDecoration: 'none', color: 'text.primary', '&:hover': { textDecoration: 'none' } }}
+          sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', textDecoration: 'none', color: 'text.primary', '&:hover': { textDecoration: 'none' }, ...wholeCellLinkSx }}
         >
           <StatusDot color={getEnvDotColor(env, mode)} />
           {envLabel(env)}
@@ -233,7 +233,7 @@ export default function AssetsPage() {
         <Link
           href={href}
           onClick={(event) => handleInternalNavigate(event, href)}
-          sx={{ cursor: 'pointer' }}
+          sx={{ cursor: 'pointer', ...wholeCellLinkSx }}
           underline="none"
           color="inherit"
         >

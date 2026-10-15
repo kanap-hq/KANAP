@@ -27,6 +27,7 @@ import { useLocale } from '../../../i18n/useLocale';
 import { formatShortDate } from '../../../lib/dateFormat';
 import DashboardTile, { TileEmptyState } from './DashboardTile';
 import { useRelativeTime } from './useRelativeTime';
+import { useDropGoneRecentItems } from '../hooks/useDropGoneRecentItems';
 
 interface RecentlyViewedTileProps {
   config: Record<string, unknown>;
@@ -58,6 +59,8 @@ export default function RecentlyViewedTile({ config }: RecentlyViewedTileProps) 
   const locale = useLocale();
   const relativeTime = useRelativeTime();
   const limit = Math.min((config.limit as number) || 5, MAX_TILE_ITEMS);
+  // Entries whose record is gone (deleted with another one, or elsewhere) leave the list.
+  useDropGoneRecentItems(items);
 
   // Filter items by permission
   const visibleItems = items

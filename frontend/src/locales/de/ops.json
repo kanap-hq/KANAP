@@ -387,6 +387,36 @@
     }
   },
   "contracts": {
+    "delete": {
+      "title": "{{name}} löschen?",
+      "detached": "Diese Verknüpfungen werden entfernt: {{items}}. Die verknüpften Elemente bleiben erhalten.",
+      "removed": "Ebenfalls gelöscht: {{items}}.",
+      "cannotUndo": "Dies kann nicht rückgängig gemacht werden.",
+      "confirmAnyway": "Trotzdem löschen",
+      "failed": "Der Vertrag konnte nicht gelöscht werden.",
+      "nothingLinked_one": "Dieser Vertrag ist mit nichts verknüpft und enthält nichts. Dies kann nicht rückgängig gemacht werden.",
+      "nothingLinked_other": "Diese Verträge sind mit nichts verknüpft und enthalten nichts. Dies kann nicht rückgängig gemacht werden.",
+      "kinds": {
+        "budgetLines_one": "{{count}} Budgetzeile",
+        "budgetLines_other": "{{count}} Budgetzeilen",
+        "applications_one": "{{count}} Anwendung",
+        "applications_other": "{{count}} Anwendungen",
+        "assets_one": "{{count}} Asset",
+        "assets_other": "{{count}} Assets",
+        "contacts_one": "{{count}} Kontakt",
+        "contacts_other": "{{count}} Kontakte",
+        "tasks_one": "{{count}} Aufgabe",
+        "tasks_other": "{{count}} Aufgaben",
+        "links_one": "{{count}} Website-Link",
+        "links_other": "{{count}} Website-Links",
+        "attachments_one": "{{count}} Anhang",
+        "attachments_other": "{{count}} Anhänge"
+      },
+      "toDelete_one": "{{count}} Vertrag wird gelöscht:",
+      "toDelete_other": "{{count}} Verträge werden gelöscht:",
+      "kept_one": "{{count}} Vertrag bleibt erhalten. Deaktivieren Sie ihn stattdessen:",
+      "kept_other": "{{count}} Verträge bleiben erhalten. Deaktivieren Sie sie stattdessen:"
+    },
     "title": "Verträge",
     "newButton": "Neu",
     "importCsv": "CSV importieren",

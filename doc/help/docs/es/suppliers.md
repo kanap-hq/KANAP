@@ -101,7 +101,7 @@ La sección **Usado en**, bajo las notas de la pestaña **Vista general**, lista
 
 Haga clic en una fila para abrir su página. Los elementos desactivados muestran **Desactivado** y aparecen después de los demás. Una lista muestra hasta 50 elementos e indica cuántos hay en total. Con más de 50, las líneas presupuestarias, los contratos y las aplicaciones tienen un enlace como **Ver los 57** que abre su lista filtrada por este proveedor. Solo ve las listas que tiene permiso para leer: un usuario sin acceso a los contratos no ve la lista de contratos. Un proveedor que nada usa muestra una línea que lo indica.
 
-Consulte esta sección antes de desactivar o eliminar un proveedor. Un proveedor que aún usan líneas presupuestarias, contratos, aplicaciones o activos no se puede eliminar. El mensaje cuenta lo que lo usa, por ejemplo "Este proveedor se usa en 2 contratos y 1 aplicación". Desactívelo en su lugar.
+Consulte esta sección antes de desactivar o eliminar un proveedor. Un proveedor que aún usan líneas presupuestarias, contratos, aplicaciones o activos no se puede eliminar. El mensaje cuenta lo que lo usa, por ejemplo "Este proveedor se usa en 2 contratos y 1 aplicación". Desactívelo en su lugar. En la lista, la confirmación nombra los proveedores que se conservan así, con lo que los usa, antes de eliminar nada.
 
 ### Crear un proveedor
 
@@ -111,7 +111,7 @@ Haga clic en **Nuevo** en la lista. Rellene el nombre (obligatorio), el ID de pr
 
 ## Importación/exportación CSV
 
-**Exportar CSV** descarga todos los proveedores, activados y desactivados, ordenados por nombre. La búsqueda y los filtros de la lista no se aplican. El diálogo se cierra una vez descargado el archivo. **Importar CSV** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo solo con los encabezados. Indica los valores aceptados.
+**Exportar CSV** descarga los proveedores que muestra la lista, con su búsqueda, sus filtros y su orden. Elija **Todo el registro** en el diálogo para descargar todos los proveedores, activados y desactivados. El diálogo se cierra una vez descargado el archivo. **Importar CSV** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo solo con los encabezados. Indica los valores aceptados.
 
 Las columnas:
 

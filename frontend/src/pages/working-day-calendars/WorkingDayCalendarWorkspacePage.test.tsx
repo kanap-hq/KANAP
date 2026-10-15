@@ -1,10 +1,11 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
+import { KanapDialogProvider } from '../../components/design';
 import type { WorkingDayProfileDetail } from '../../services/workingDayProfiles';
 
 const navigateMock = vi.hoisted(() => vi.fn());
@@ -83,11 +84,13 @@ function renderAt(path: string) {
   return render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={createAppTheme('light')}>
+        <KanapDialogProvider>
         <MemoryRouter initialEntries={[path]}>
           <Routes>
             <Route path="/master-data/working-day-calendars/:id/:tab" element={<WorkingDayCalendarWorkspacePage />} />
           </Routes>
         </MemoryRouter>
+        </KanapDialogProvider>
       </ThemeProvider>
     </QueryClientProvider>,
   );
@@ -278,6 +281,11 @@ describe('WorkingDayCalendarWorkspacePage', () => {
     await screen.findByLabelText('workingDayCalendars.fields.code');
     expect(screen.queryByTestId('working-day-calendar-usage')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
+    // A record page always asks first.
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('common:delete.cannotUndo');
+    expect(mocked.deleteWorkingDayProfile).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:buttons.delete' }));
     await waitFor(() => expect(mocked.deleteWorkingDayProfile).toHaveBeenCalledWith('wd-1'));
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/working-day-calendars?sort=name%3AASC'));
   });

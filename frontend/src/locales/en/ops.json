@@ -387,6 +387,36 @@
     }
   },
   "contracts": {
+    "delete": {
+      "title": "Delete {{name}}?",
+      "detached": "These links are removed: {{items}}. The linked items stay.",
+      "removed": "Also deleted: {{items}}.",
+      "cannotUndo": "This cannot be undone.",
+      "confirmAnyway": "Delete anyway",
+      "failed": "The contract could not be deleted.",
+      "nothingLinked_one": "This contract is linked to nothing and holds nothing. This cannot be undone.",
+      "nothingLinked_other": "These contracts are linked to nothing and hold nothing. This cannot be undone.",
+      "kinds": {
+        "budgetLines_one": "{{count}} budget line",
+        "budgetLines_other": "{{count}} budget lines",
+        "applications_one": "{{count}} application",
+        "applications_other": "{{count}} applications",
+        "assets_one": "{{count}} asset",
+        "assets_other": "{{count}} assets",
+        "contacts_one": "{{count}} contact",
+        "contacts_other": "{{count}} contacts",
+        "tasks_one": "{{count}} task",
+        "tasks_other": "{{count}} tasks",
+        "links_one": "{{count}} website link",
+        "links_other": "{{count}} website links",
+        "attachments_one": "{{count}} attachment",
+        "attachments_other": "{{count}} attachments"
+      },
+      "toDelete_one": "{{count}} contract will be deleted:",
+      "toDelete_other": "{{count}} contracts will be deleted:",
+      "kept_one": "{{count}} contract is kept. Disable it instead:",
+      "kept_other": "{{count}} contracts are kept. Disable them instead:"
+    },
     "title": "Contracts",
     "newButton": "New",
     "importCsv": "Import CSV",
