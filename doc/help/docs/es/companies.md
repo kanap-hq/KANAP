@@ -154,12 +154,12 @@ Cada empresa puede vincularse a un **Plan de cuentas** (CoA), que define el conj
 Utilice el **Fin de validez** para controlar cuándo una empresa deja de estar activa.
 
 - Las empresas están **Activadas** por defecto. Deje el **Fin de validez** en blanco para que la empresa permanezca activa indefinidamente, o programe una fecha futura.
-- Si cambia la empresa a **Desactivado** sin fecha, el fin de validez se fija en hoy.
+- Pasar a **Desactivado** fija el fin de validez en este momento: la desactivación es inmediata. Mientras haya una fecha futura, el interruptor muestra **Activo hasta el** y esa fecha.
 - Cuando pasa el fin de validez, el estado cambia a **Desactivado** por sí solo en el plazo de una hora.
 - Después del fin de validez:
     - La empresa ya no aparece en las listas de selección para nuevas asignaciones y se excluye de los informes de años estrictamente posteriores.
     - Los datos históricos permanecen intactos; la empresa sigue apareciendo en informes que cubren años en los que estaba activa.
-- **Prefiera desactivar en lugar de eliminar.** La eliminación solo es posible si nada referencia a la empresa (sin asignaciones, gasto ni centros de coste). Una empresa a la que pertenecen centros de coste se rechaza con un mensaje como "Company A is used by 3 cost centers. Change their company or disable it instead."
+- **Prefiera desactivar en lugar de eliminar.** Una empresa que aún se usa no se puede eliminar: líneas presupuestarias (como empresa pagadora o en sus asignaciones), contratos, centros de coste, departamentos, usuarios, las ubicaciones que opera, tareas, aplicaciones, interfaces, proyectos y solicitudes del portafolio, y miembros del equipo cuya empresa predeterminada es. El mensaje cuenta lo que la usa, por ejemplo "Esta empresa se usa en 2 departamentos y 14 usuarios". Desactívela en su lugar. Sus métricas anuales se eliminan con ella.
 
 ## Métricas anuales
 

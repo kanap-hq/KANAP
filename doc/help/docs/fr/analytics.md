@@ -109,7 +109,7 @@ Cliquez sur n'importe quelle cellule pour ouvrir l'espace de travail de la valeu
 **Filtres** :
 
 - **Recherche rapide** : recherche dans le nom et la description
-- **Filtre de statut** : un filtre par cases à cocher sur la colonne **Statut**. Cliquer sur **Effacer** dans ce filtre, ou décocher les deux valeurs, n'affiche plus rien, quel que soit le choix de **Afficher**
+- **Filtre de statut** : le filtre de la colonne **Statut** reprend le choix de **Afficher** (**Tous**, **Activés** ou **Désactivés**) : changer l'un change l'autre
 - **Filtre Utilisé pour** : un filtre par cases à cocher sur la colonne **Utilisé pour**
 - **Portée du statut** : le bouton bascule **Afficher : Tous / Activés / Désactivés** au-dessus de la liste. Par défaut, la liste affiche les valeurs activées
 
@@ -297,7 +297,7 @@ Le champ d'une ligne OPEX propose les valeurs pour OPEX et celles pour les deux.
 Les dimensions et les valeurs ont chacune un statut (**Activé** ou **Désactivé**) et une **Fin de validité** facultative. Ils permettent de retirer une dimension ou une valeur sans la supprimer.
 
 - **Fin de validité** : la date à laquelle elle s'arrête. Laissez-la vide pour qu'elle reste active. Vous pouvez aussi programmer une date future.
-- Passer à **Désactivé** sans date fixe la fin de validité à aujourd'hui. Repasser à **Activé** efface la date.
+- Passer à **Désactivé** fixe la fin de validité à maintenant : la désactivation est immédiate. Tant qu'une date future est fixée, l'interrupteur affiche **Actif jusqu'au** et cette date. Repasser à **Activé** efface la date.
 - Une fois la fin de validité passée, le statut passe à **Désactivé** de lui-même dans l'heure.
 
 **Une valeur désactivée** :

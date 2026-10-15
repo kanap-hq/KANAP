@@ -99,7 +99,7 @@ La grille affiche uniquement les comptes du CoA sélectionné.
 **Filtrage** :
 - Recherche rapide : Recherche dans les colonnes texte visibles.
 - Périmètre par statut : le bouton bascule **Afficher : Tous / Activés / Désactivés** au-dessus de la grille. Par défaut **Activés**, qui n'affiche que les comptes actifs. Choisissez **Tous** pour inclure les comptes désactivés.
-- Filtres de colonnes : Utilisez les filtres des en-têtes de colonnes (par exemple, les colonnes **Statut** et **Utilisé pour** ont un filtre par liste de valeurs). Cliquer sur **Effacer** dans le filtre **Statut**, ou décocher les deux valeurs, n'affiche plus rien, quel que soit le choix de **Afficher**.
+- Filtres de colonnes : Utilisez les filtres des en-têtes de colonnes (par exemple, la colonne **Utilisé pour** a un filtre par liste de valeurs). Le filtre **Statut** reprend le choix de **Afficher** (**Tous**, **Activés** ou **Désactivés**) : changer l'un change l'autre.
 
 **Tri** : Par défaut, **N° de compte** par ordre croissant.
 
@@ -439,7 +439,7 @@ Les comptes suivent la même gestion du cycle de vie que les autres données de 
 
   - **Activé** par défaut
   - Définissez une **Fin de validité** pour cesser d'utiliser un compte à partir d'une date donnée. Laissez-la vide pour que le compte reste actif indéfiniment
-  - Passer le compte à **Désactivé** sans date fixe sa fin de validité à aujourd'hui
+  - Passer à **Désactivé** fixe la fin de validité à maintenant : la désactivation est immédiate. Tant qu'une date future est fixée, l'interrupteur affiche **Actif jusqu'au** et cette date
   - Une fois la fin de validité passée, le statut passe à **Désactivé** de lui-même dans l'heure
   - Après la fin de validité :
       - Le compte n'apparaît plus dans les menus déroulants de sélection pour les nouvelles lignes

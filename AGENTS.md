@@ -49,8 +49,9 @@ Tool-specific or private notes live in each tool's local files, never here.
 - Once validated ("send the PR"): open the PR as ready, not as a draft (`gh pr create`: problem,
   changes, testing notes, screenshots for UI). That is the agent's last step: the `auto-queue`
   workflow (`.github/workflows/auto-queue.yml`) puts the ready PRs opened by `kanap-it` into the
-  merge queue, one at a time, in the order they were opened. Open a PR as a draft when it must
-  not merge yet. From there the agent owns the PR up to a confirmed merge and reports the merge
+  merge queue, one at a time, in the order they were opened. Never open a ready PR before the
+  maintainer's go: open it as a draft instead. Turning a queued PR back into a draft takes it
+  out of the queue. From there the agent owns the PR up to a confirmed merge and reports the merge
   commit. The maintainer does not need to say "merge".
 - CI runs in the merge queue only, one PR at a time. The queue tests each PR on `main` plus the
   PRs ahead of it, in the order they were added, and merges it when `backend (cloud)`,
@@ -224,9 +225,12 @@ Every query must be scoped by `tenant_id`. This is critical for tenant isolation
 - Migrations are idempotent and self-healing: they may run on databases nobody can inspect. A
   migration that adds a constraint first repairs the rows that would violate it, deterministically
   (for example keep the earliest row by `created_at, id`), in its own transaction with RLS disabled
-  around the repair. It is rerun-safe, logs the repaired counts, and fails loudly only for data it
-  cannot repair safely. A spec runs it against a seeded dirty database
-  (precedent: `1853640000000-capex-versions-unique-year.ts`).
+  around the repair. It is rerun-safe and logs the repaired counts. A spec runs it against a
+  seeded dirty database (precedent: `1853640000000-capex-versions-unique-year.ts`).
+- A migration succeeds on its own on imperfect data: a release needs no manual step on any
+  installation. A foreign key on rows naming a missing object: delete link rows, set a nullable
+  column to NULL, and add the key `NOT VALID` on a NOT NULL column, validated once it is clean;
+  log the counts (`backend/src/common/migration-reference-keys.ts`).
 
 ## Cloud and on-premise modes
 

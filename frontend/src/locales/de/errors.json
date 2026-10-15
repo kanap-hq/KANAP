@@ -68,6 +68,7 @@
   "CSV_FILE_EXCEL": "Diese Datei ist eine Excel-Arbeitsmappe, keine CSV-Datei. In Excel: Datei › Speichern unter › CSV UTF-8 (durch Trennzeichen getrennt).",
   "CSV_FILE_OPENDOCUMENT": "Diese Datei ist eine OpenDocument-Tabelle, keine CSV-Datei. In LibreOffice Calc: Datei › Speichern unter › Text CSV.",
   "CSV_FILE_NOT_TEXT": "Diese Datei ist keine CSV-Datei. Speichern Sie sie als CSV UTF-8 und importieren Sie sie erneut.",
+  "CSV_FILE_EMPTY": "Die Datei ist leer.",
   "CSV_HEADER_IGNORED_COLUMNS": "Diese Spalten werden nicht importiert: {{extra}}.",
   "CSV_VALUE_REQUIRED": "Ein Wert ist erforderlich.",
   "CSV_VALUE_ONE_REQUIRED": "Füllen Sie mindestens eine Spalte {{column}} aus.",
@@ -84,7 +85,13 @@
   "CSV_CRITERION_UNKNOWN": "Unbekanntes Kriterium {{criterion}}.",
   "CSV_CRITERION_VALUE_UNKNOWN": "Das Kriterium {{criterion}} hat keinen Wert {{value}}.",
   "CSV_DUPLICATE_KEY": "Gleiche Werte in {{columns}} wie in Zeile {{firstRow}}.",
+  "CSV_SUPPLIER_NAME_DUPLICATE": "„{{name}}“ steht bereits in Zeile {{firstRow}}. Verwenden Sie eine Zeile pro Lieferant.",
+  "CSV_CONTACT_NOT_FOUND": "Kontakt nicht gefunden: {{email}}. Legen Sie ihn zuerst unter Kontakte an.",
+  "CSV_EMAIL_INVALID": "„{{value}}“ ist keine gültige E-Mail-Adresse.",
+  "CSV_STATUS_DATE_PASSED": "Der Status ist enabled, aber das Gültigkeitsende ist überschritten. Leeren Sie das Datum oder setzen Sie den Status auf disabled. Stammt die Datei aus einem älteren Export, exportieren Sie die Daten erneut.",
+  "CSV_STATUS_DATE_FUTURE": "Der Status ist disabled, aber das Gültigkeitsende liegt noch in der Zukunft. Setzen Sie den Status auf enabled oder geben Sie ein vergangenes Datum ein.",
   "CSV_IMPORT_FAILED": "Der Import ist fehlgeschlagen: {{reason}}",
-  "CONTRACT_HAS_COMPLIANCE_RECORDS_one": "Dieser Vertrag hat {{count}} erfasste Konformitätsanforderung. Deaktivieren Sie ihn, statt ihn zu löschen.",
-  "CONTRACT_HAS_COMPLIANCE_RECORDS_other": "Dieser Vertrag hat {{count}} erfasste Konformitätsanforderungen. Deaktivieren Sie ihn, statt ihn zu löschen."
+  "SUPPLIER_IN_USE": "Dieser Lieferant wird noch verwendet: {{usages}}. Deaktivieren Sie ihn, statt ihn zu löschen.",
+  "COMPANY_IN_USE": "Dieses Unternehmen wird noch verwendet: {{usages}}. Deaktivieren Sie es, statt es zu löschen.",
+  "CONTRACT_HAS_COMPLIANCE_RECORDS": "Dieser Vertrag hat {{usages}}. Deaktivieren Sie ihn, statt ihn zu löschen."
 }

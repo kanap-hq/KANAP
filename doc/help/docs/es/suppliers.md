@@ -32,7 +32,7 @@ La lista de Proveedores ofrece un directorio buscable y ordenable de todos sus v
 
 Cada celda de una fila es clicable y abre la página de ese proveedor.
 
-**Ordenación predeterminada**: Por nombre, alfabético.
+**Ordenación predeterminada**: Por nombre, alfabético. La ordenación de una columna de texto ignora mayúsculas, minúsculas y acentos.
 
 **Filtrado**:
 - Búsqueda rápida: Busca en los campos del proveedor
@@ -52,12 +52,12 @@ Haga clic en una fila para abrir la página del proveedor. Use las flechas de la
 
 La página tiene dos pestañas: **Vista general** y **Contactos**.
 
-**Título**: el nombre del proveedor. Haga clic en él para editarlo; el cambio se guarda al salir del campo o al pulsar Intro, y Escape lo cancela. El nombre es obligatorio y debe ser distinto del de todos los demás proveedores: KANAP muestra el mensaje bajo el nombre y conserva el nombre guardado.
+**Título**: el nombre del proveedor. Haga clic en él para editarlo; el cambio se guarda al salir del campo o al pulsar Intro, y Escape lo cancela. El nombre es obligatorio y debe ser distinto del de todos los demás proveedores, sin distinguir mayúsculas y minúsculas (`SAP` y `sap` son el mismo nombre): KANAP muestra el mensaje bajo el nombre y conserva el nombre guardado.
 
 **Referencia**: el ID de proveedor ERP, cuando el proveedor tiene uno, aparece antes del nombre. Haga clic en él para copiarlo.
 
 **Encabezado**, bajo el nombre:
-- **Estado**: **Activado** o **Desactivado**. Haga clic para cambiarlo. Elegir **Desactivado** fija el fin de validez en hoy.
+- **Estado**: **Activado** o **Desactivado**. Haga clic para cambiarlo. Elegir **Desactivado** desactiva el proveedor de inmediato: el fin de validez pasa a ser la hora actual.
 - **Contactos**: cuántos contactos están vinculados al proveedor. Haga clic para abrir la pestaña **Contactos**.
 - **Usado en**: cuántas líneas presupuestarias, contratos, aplicaciones y activos usan el proveedor. Haga clic para ir a la sección **Usado en** de la pestaña **Vista general**.
 
@@ -86,7 +86,7 @@ La pestaña **Contactos** lista los contactos vinculados a este proveedor por ti
 - Cada sección lista sus contactos por nombre. Haga clic en un nombre para abrir la página del contacto.
 - **Añadir existente**: busque un contacto por su nombre y elíjalo. El vínculo se guarda al instante.
 - **Nuevo contacto**: abre el formulario de contacto con el proveedor y el tipo de contacto ya rellenados. KANAP le devuelve a esta pestaña una vez creado el contacto.
-- El botón de papelera elimina el vínculo. El contacto sigue en sus contactos.
+- El botón de papelera elimina el vínculo. El contacto sigue en sus contactos. Un mensaje lo confirma, con una acción **Deshacer** que vuelve a vincular el contacto.
 
 **Consejo**: mantenga al menos un contacto por proveedor para que la comunicación con él esté siempre a un clic.
 
@@ -101,7 +101,7 @@ La sección **Usado en**, bajo las notas de la pestaña **Vista general**, lista
 
 Haga clic en una fila para abrir su página. Los elementos desactivados muestran **Desactivado** y aparecen después de los demás. Una lista muestra hasta 50 elementos e indica cuántos hay en total. Con más de 50, las líneas presupuestarias, los contratos y las aplicaciones tienen un enlace como **Ver los 57** que abre su lista filtrada por este proveedor. Solo ve las listas que tiene permiso para leer: un usuario sin acceso a los contratos no ve la lista de contratos. Un proveedor que nada usa muestra una línea que lo indica.
 
-Consulte esta sección antes de desactivar o eliminar un proveedor.
+Consulte esta sección antes de desactivar o eliminar un proveedor. Un proveedor que aún usan líneas presupuestarias, contratos, aplicaciones o activos no se puede eliminar. El mensaje cuenta lo que lo usa, por ejemplo "Este proveedor se usa en 2 contratos y 1 aplicación". Desactívelo en su lugar.
 
 ### Crear un proveedor
 
@@ -111,7 +111,7 @@ Haga clic en **Nuevo** en la lista. Rellene el nombre (obligatorio), el ID de pr
 
 ## Importación/exportación CSV
 
-**Exportar CSV** descarga todos los proveedores con sus datos actuales. **Importar CSV** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo solo con los encabezados.
+**Exportar CSV** descarga todos los proveedores, activados y desactivados, ordenados por nombre. La búsqueda y los filtros de la lista no se aplican. El diálogo se cierra una vez descargado el archivo. **Importar CSV** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo solo con los encabezados. Indica los valores aceptados.
 
 Las columnas:
 
@@ -119,17 +119,21 @@ Las columnas:
 |---|---|
 | `name` | Obligatoria. El nombre del proveedor. Las filas se emparejan por este nombre |
 | `erp_supplier_id` | El ID del proveedor en su ERP |
-| `commercial_contact` | El correo de un contacto. La carga vincula el proveedor con el contacto de ese correo y lo crea cuando el espacio de trabajo no tiene ninguno |
+| `commercial_contact` | El correo de un contacto existente. La carga vincula el proveedor con él |
 | `technical_contact` | El correo de un contacto, como arriba |
 | `support_contact` | El correo de un contacto, como arriba |
 | `notes` | Texto libre |
 | `status` | `enabled` o `disabled` |
+| `disabled_at` | El fin de validez: una fecha (`2026-12-31`) o una fecha y hora completas. Vacío cuando el proveedor no tiene |
 
 **Importación**:
 
 - Use la **Verificación previa** para validar el archivo antes de aplicarlo y después **Cargar**
-- Las filas se emparejan por `name`: una fila actualiza el proveedor que nombra, cualquier otra fila crea uno
+- Las filas se emparejan por `name`, sin distinguir mayúsculas y minúsculas: una fila actualiza el proveedor que nombra, cualquier otra fila crea uno
 - `name` es obligatorio. Cualquier otra celda es opcional
+- Cada proveedor ocupa una fila. Dos filas con el mismo nombre, aunque cambien mayúsculas y minúsculas, se rechazan en la verificación previa, con los dos números de fila
+- El correo de un contacto debe pertenecer a un contacto que ya existe en **Contactos**. Si no, la fila se rechaza en la verificación previa: cree primero el contacto
+- `disabled_at` fija el fin de validez, y el estado se deduce de él. Un estado que contradice la fecha se rechaza. Un archivo sin la columna `disabled_at` se sigue importando: el estado solo fija entonces el ciclo de vida
 
 **Notas**:
 - Consulte [Archivos CSV](csv-files.md) para la codificación, el separador y los dos pasos de importación

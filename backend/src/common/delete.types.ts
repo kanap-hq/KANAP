@@ -52,8 +52,11 @@ export interface DeleteOptions {
  */
 export interface BulkDeleteResult {
   deleted: string[];
-  /** `code` and `count`: a refusal the screen words in its language (`errors:<code>`, with the count). */
-  failed: Array<{ id: string; name: string; reason: string; code?: string; count?: number }>;
+  /**
+   * `code` and `usages`: a refusal the interface translates (`errors:<code>`), with what still
+   * uses the record counted per kind (`common/record-in-use.ts`).
+   */
+  failed: Array<{ id: string; name: string; reason: string; code?: string; usages?: Array<{ type: string; total: number }> }>;
 }
 
 /**

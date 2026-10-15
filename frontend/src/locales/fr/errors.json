@@ -68,6 +68,7 @@
   "CSV_FILE_EXCEL": "Ce fichier est un classeur Excel, pas un CSV. Dans Excel : Fichier › Enregistrer sous › CSV UTF-8 (délimité par des virgules).",
   "CSV_FILE_OPENDOCUMENT": "Ce fichier est un classeur OpenDocument, pas un CSV. Dans LibreOffice Calc : Fichier › Enregistrer sous › Texte CSV.",
   "CSV_FILE_NOT_TEXT": "Ce fichier n'est pas un fichier CSV. Enregistrez-le au format CSV UTF-8, puis importez-le de nouveau.",
+  "CSV_FILE_EMPTY": "Le fichier est vide.",
   "CSV_HEADER_IGNORED_COLUMNS": "Ces colonnes ne sont pas importées : {{extra}}.",
   "CSV_VALUE_REQUIRED": "Une valeur est obligatoire.",
   "CSV_VALUE_ONE_REQUIRED": "Renseignez au moins une colonne {{column}}.",
@@ -84,7 +85,13 @@
   "CSV_CRITERION_UNKNOWN": "Critère {{criterion}} inconnu.",
   "CSV_CRITERION_VALUE_UNKNOWN": "Le critère {{criterion}} n'a pas de valeur {{value}}.",
   "CSV_DUPLICATE_KEY": "Mêmes valeurs dans {{columns}} qu'à la ligne {{firstRow}}.",
+  "CSV_SUPPLIER_NAME_DUPLICATE": "« {{name}} » figure déjà à la ligne {{firstRow}}. Gardez une seule ligne par fournisseur.",
+  "CSV_CONTACT_NOT_FOUND": "Contact introuvable : {{email}}. Créez-le d'abord dans Contacts.",
+  "CSV_EMAIL_INVALID": "« {{value}} » n'est pas une adresse e-mail valide.",
+  "CSV_STATUS_DATE_PASSED": "Le statut est enabled mais la fin de validité est passée. Videz la date ou passez le statut à disabled. Si le fichier vient d'un ancien export, exportez à nouveau les données.",
+  "CSV_STATUS_DATE_FUTURE": "Le statut est disabled mais la fin de validité est encore à venir. Passez le statut à enabled ou indiquez une date passée.",
   "CSV_IMPORT_FAILED": "L'import a échoué : {{reason}}",
-  "CONTRACT_HAS_COMPLIANCE_RECORDS_one": "Ce contrat a {{count}} exigence de conformité renseignée. Désactivez-le plutôt que de le supprimer.",
-  "CONTRACT_HAS_COMPLIANCE_RECORDS_other": "Ce contrat a {{count}} exigences de conformité renseignées. Désactivez-le plutôt que de le supprimer."
+  "SUPPLIER_IN_USE": "Ce fournisseur est utilisé par {{usages}}. Désactivez-le plutôt que de le supprimer.",
+  "COMPANY_IN_USE": "Cette société est utilisée par {{usages}}. Désactivez-la plutôt que de la supprimer.",
+  "CONTRACT_HAS_COMPLIANCE_RECORDS": "Ce contrat a {{usages}}. Désactivez-le plutôt que de le supprimer."
 }

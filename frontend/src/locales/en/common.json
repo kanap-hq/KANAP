@@ -91,7 +91,12 @@
       "inRange": "from {{from}} to {{to}}",
       "or": "or",
       "and": "and"
-    }
+    },
+    "noResults": "No results",
+    "noResultsFiltered": "No results match the search or the filters.",
+    "clearAll": "Clear search and filters",
+    "resultCount_one": "{{count}} result",
+    "resultCount_other": "{{count}} results"
   },
   "columnChooser": {
     "searchPlaceholder": "Search columns",
@@ -162,7 +167,37 @@
     "partialDeleted_other": "{{count}} items deleted.",
     "partialFailed_one": "{{count}} item could not be deleted: {{reasons}}",
     "partialFailed_other": "{{count}} items could not be deleted: {{reasons}}",
-    "failedGeneric": "Failed to delete items"
+    "failedGeneric": "Failed to delete items",
+    "usages": {
+      "budget_lines_one": "{{count}} budget line",
+      "budget_lines_other": "{{count}} budget lines",
+      "contracts_one": "{{count}} contract",
+      "contracts_other": "{{count}} contracts",
+      "applications_one": "{{count}} application",
+      "applications_other": "{{count}} applications",
+      "assets_one": "{{count}} asset",
+      "assets_other": "{{count}} assets",
+      "cost_centers_one": "{{count}} cost center",
+      "cost_centers_other": "{{count}} cost centers",
+      "departments_one": "{{count}} department",
+      "departments_other": "{{count}} departments",
+      "users_one": "{{count}} user",
+      "users_other": "{{count}} users",
+      "locations_one": "{{count}} location",
+      "locations_other": "{{count}} locations",
+      "tasks_one": "{{count}} task",
+      "tasks_other": "{{count}} tasks",
+      "interfaces_one": "{{count}} interface",
+      "interfaces_other": "{{count}} interfaces",
+      "projects_one": "{{count}} project",
+      "projects_other": "{{count}} projects",
+      "requests_one": "{{count}} request",
+      "requests_other": "{{count}} requests",
+      "team_members_one": "{{count}} team member",
+      "team_members_other": "{{count}} team members",
+      "compliance_requirements_one": "{{count}} recorded compliance requirement",
+      "compliance_requirements_other": "{{count}} recorded compliance requirements"
+    }
   },
   "messages": {
     "loadFailed": "Failed to load data",
@@ -725,7 +760,8 @@
   },
   "lifecycleField": {
     "endOfValidity": "End of validity",
-    "endOfValidityHint": "Leave blank to keep active indefinitely."
+    "endOfValidityHint": "Leave blank to keep active indefinitely.",
+    "activeUntil": "Active until {{date}}"
   },
   "autosave": {
     "leaveTitle": "Changes not saved",

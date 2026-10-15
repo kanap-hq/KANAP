@@ -7,6 +7,7 @@ import api from '../../../api';
 import { useKanapDialogs } from '../../../components/design';
 import { useLocale } from '../../../i18n/useLocale';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { deleteFailureReason, type DeleteFailure } from '../../../utils/deleteRefusal';
 import { contractDeleteImpactText, fetchContractDeleteImpact } from '../contractDelete';
 
 type Props = {
@@ -36,7 +37,9 @@ export default function ContractDeleteButton({ contractId, contractName, beforeD
       const impact = await fetchContractDeleteImpact([contractId]);
       const title = t('contracts.delete.title', { name: contractName });
       if (impact.blocked > 0) {
-        await dialogs.alert({ title, message: t('errors:CONTRACT_HAS_COMPLIANCE_RECORDS', { count: impact.recorded_requirements }) });
+        // The refusal the server would give (`RecordInUseException`), worded the same way.
+        const refusal = { code: 'CONTRACT_HAS_COMPLIANCE_RECORDS', usages: [{ type: 'compliance_requirements', total: impact.recorded_requirements }] };
+        await dialogs.alert({ title, message: deleteFailureReason(refusal, t, locale) });
         setBusy(false);
         return;
       }
@@ -61,7 +64,9 @@ export default function ContractDeleteButton({ contractId, contractName, beforeD
       });
     } catch (err) {
       setBusy(false);
-      onError(getApiErrorMessage(err, t, t('contracts.delete.failed')));
+      // A refusal (a requirement recorded meanwhile) says why, with its counts.
+      const refusal = (err as { response?: { data?: DeleteFailure } })?.response?.data;
+      onError(refusal?.code ? deleteFailureReason(refusal, t, locale) : getApiErrorMessage(err, t, t('contracts.delete.failed')));
     }
   };
 

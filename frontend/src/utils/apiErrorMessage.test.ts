@@ -11,15 +11,6 @@ describe('getApiErrorMessage', () => {
       .toBe('The name typed does not match the name of the workspace.');
   });
 
-  it('words a refusal with its count, in the screen language', () => {
-    const refusal = { response: { status: 409, data: { code: 'CONTRACT_HAS_COMPLIANCE_RECORDS', count: 3, message: 'raw' } } };
-    expect(getApiErrorMessage(refusal, t, 'fallback'))
-      .toBe('This contract has 3 recorded compliance requirements. Disable it instead of deleting it.');
-    expect(getApiErrorMessage({ response: { status: 409, data: { code: 'CONTRACT_HAS_COMPLIANCE_RECORDS', count: 1 } } }, t, 'fallback'))
-      .toBe('This contract has 1 recorded compliance requirement. Disable it instead of deleting it.');
-    expect(getApiErrorMessage(refusal, i18n.getFixedT('fr'), 'fallback')).toContain('3 exigences de conformité renseignées');
-  });
-
   it('translates a rate limit, which carries no code', () => {
     expect(getApiErrorMessage(
       { response: { status: 429, data: { statusCode: 429, message: 'ThrottlerException: Too Many Requests' } } },

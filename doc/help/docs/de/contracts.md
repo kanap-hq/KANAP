@@ -98,7 +98,7 @@ Die unten angeheftete Zeile lautet **Gesamt (n Verträge)**. Sie summiert die Ja
 ### Suche, Filter und Bereich
 
 - **Schnellsuche**: Vertragsname, Lieferant und Unternehmen
-- **Spaltenfilter**: in jeder Spaltenüberschrift. **Stand**, **Konformität** und **Budgetdeckung** bieten ihre Werte als Kontrollkästchen an. Der Filter **Status** bietet **Aktiviert** und **Deaktiviert**. Wenn Sie darin auf **Leeren** klicken oder beide Werte abwählen, zeigt die Liste nichts mehr an, unabhängig von **Anzeigen**
+- **Spaltenfilter**: in jeder Spaltenüberschrift. **Stand**, **Konformität** und **Budgetdeckung** bieten ihre Werte als Kontrollkästchen an. Der Filter **Status** zeigt die Auswahl von **Anzeigen** (**Alle**, **Aktiv** oder **Deaktiviert**): Eine Änderung an einem ändert auch das andere
 - **Anzeigen: Alle / Aktiv / Deaktiviert**: der Umschalter über der Liste. Standardmäßig zeigt die Liste aktivierte Verträge. Wählen Sie **Alle** oder **Deaktiviert**, um Verträge zu finden, deren Ende der Gültigkeit überschritten ist
 
 ### Aktionen
@@ -123,7 +123,7 @@ Jede Änderung speichert sich selbst: Auswahllisten und Daten sofort, eingetippt
 
 **Lebenszyklus**:
 
-- Wenn Sie den Status ohne Datum auf **Deaktiviert** setzen, wird das Ende der Gültigkeit auf heute gesetzt. Zurück auf **Aktiviert** entfernt das Ende der Gültigkeit
+- Ein Wechsel auf **Deaktiviert** setzt das Ende der Gültigkeit auf jetzt: Die Deaktivierung gilt sofort. Solange ein zukünftiges Datum gesetzt ist, zeigt der Schalter **Aktiv bis** und dieses Datum. Zurück auf **Aktiviert** entfernt das Ende der Gültigkeit
 - **Ende der Gültigkeit**: Geben Sie ein Datum ein (TT/MM/JJJJ) oder nutzen Sie den Kalender. Leer lassen, damit der Vertrag aktiv bleibt
 - **Stillschweigende Verlängerung** folgt eigenen Regeln, wenn der Vertrag bereits verlängert wurde oder auf eine Entscheidung wartet. Siehe [Stillschweigende Verlängerung beenden oder wieder aktivieren](#stillschweigende-verlangerung-beenden-oder-wieder-aktivieren)
 

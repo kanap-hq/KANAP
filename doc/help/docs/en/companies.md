@@ -154,12 +154,12 @@ Each company can be linked to a **Chart of Accounts** (CoA), which defines the s
 Use the **End of validity** to control when a company stops being active.
 
 - Companies are **Enabled** by default. Leave the **End of validity** blank to keep the company active indefinitely, or schedule a future date.
-- Switching the company to **Disabled** without a date sets its end of validity to today.
+- Switching the company to **Disabled** ends its validity now: it is disabled at once. While a future date is set, the switch reads **Active until** and that date.
 - When the end of validity passes, the status switches to **Disabled** on its own within the hour.
 - After the end of validity:
     - The company no longer appears in selection lists for new allocations and is excluded from reports for strictly later years.
     - Historical data remains intact; the company still appears in reports covering years when it was active.
-- **Prefer disabling over deleting.** Deletion is only possible if nothing references the company (no allocations, spend or cost centers). A company that cost centers belong to is refused with a message such as "Company A is used by 3 cost centers. Change their company or disable it instead."
+- **Prefer disabling over deleting.** A company that anything still uses cannot be deleted: budget lines (as paying company or in their allocations), contracts, cost centers, departments, users, the locations it operates, tasks, applications, interfaces, portfolio projects and requests, and the team members whose default company it is. The message counts what uses it, for example "This company is used by 2 departments and 14 users". Disable it instead. Its yearly metrics are deleted with it.
 
 ## Yearly metrics
 

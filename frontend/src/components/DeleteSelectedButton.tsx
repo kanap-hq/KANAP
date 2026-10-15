@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 import api from '../api';
 import { getApiErrorMessage } from '../utils/apiErrorMessage';
+import { deleteFailureReason } from '../utils/deleteRefusal';
 
 export interface DeleteSelectedButtonProps<T> {
   selectedRows: T[];
@@ -49,7 +50,7 @@ export default function DeleteSelectedButton<T>({
   forceOption,
   warning,
 }: DeleteSelectedButtonProps<T>) {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState<{
@@ -89,12 +90,11 @@ export default function DeleteSelectedButton<T>({
           severity: 'success',
         });
       } else {
-        // Each failed item with its reason (for example a frozen budget column), all failed or not.
-        // A refusal with a code is worded in the screen language (`errors:<code>`, with its count).
-        const reasonOf = (f: any) => (f.code
-          ? t(`errors:${f.code}`, { defaultValue: f.reason, ...(typeof f.count === 'number' ? { count: f.count } : {}) })
-          : f.reason);
-        const reasons = failed.map((f: any) => `${f.productName || f.name || f.description || 'Item'}: ${reasonOf(f)}`).join('; ');
+        // Each failed item with its reason (for example a frozen budget column, or what still uses it), all failed or not.
+        const language = i18n?.resolvedLanguage || i18n?.language || 'en';
+        const reasons = failed
+          .map((f: any) => `${f.productName || f.name || f.description || 'Item'}: ${deleteFailureReason(f, t, language)}`)
+          .join('; ');
         setSnackbar(deleted.length === 0
           ? { open: true, message: t('delete.failedAll', { reasons }), severity: 'error' }
           : {

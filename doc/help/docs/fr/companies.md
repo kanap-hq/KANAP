@@ -154,12 +154,12 @@ Chaque société peut être liée à un **Plan comptable** (CoA), qui définit l
 Utilisez la **Fin de validité** pour contrôler quand une société cesse d'être active.
 
 - Les sociétés sont **Activées** par défaut. Laissez la **Fin de validité** vide pour que la société reste active indéfiniment, ou programmez une date future.
-- Passer la société à **Désactivé** sans date fixe sa fin de validité à aujourd'hui.
+- Passer à **Désactivé** fixe la fin de validité à maintenant : la désactivation est immédiate. Tant qu'une date future est fixée, l'interrupteur affiche **Actif jusqu'au** et cette date.
 - Une fois la fin de validité passée, le statut passe à **Désactivé** de lui-même dans l'heure.
 - Après la fin de validité :
     - La société n'apparaît plus dans les listes de sélection pour les nouvelles ventilations et est exclue des rapports pour les années strictement postérieures.
     - Les données historiques restent intactes ; la société apparaît toujours dans les rapports couvrant les années où elle était active.
-- **Préférez la désactivation à la suppression.** La suppression n'est possible que si rien ne référence la société (pas de ventilations, de dépenses ni de centres de coûts). Une société à laquelle appartiennent des centres de coûts est refusée avec un message tel que « Company A is used by 3 cost centers. Change their company or disable it instead. »
+- **Préférez la désactivation à la suppression.** Une société encore utilisée ne peut pas être supprimée : lignes budgétaires (comme société payeuse ou dans leurs ventilations), contrats, centres de coûts, départements, utilisateurs, sites qu'elle exploite, tâches, applications, interfaces, projets et demandes du portefeuille, et membres d'équipe dont elle est la société par défaut. Le message compte ce qui l'utilise, par exemple « Cette société est utilisée par 2 départements et 14 utilisateurs ». Désactivez-la à la place. Ses métriques annuelles sont supprimées avec elle.
 
 ## Métriques annuelles
 

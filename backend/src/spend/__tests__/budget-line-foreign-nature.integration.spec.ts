@@ -35,6 +35,9 @@ import { CostCentersService } from '../../cost-centers/cost-centers.service';
 import { AnalyticsAxesService } from '../../analytics/analytics-axes.service';
 import { AnalyticsCategoriesService } from '../../analytics/analytics-categories.service';
 import { ReferenceCheckService } from '../../common/reference-check.service';
+import { readUsages, type UsageQuery } from '../../common/record-usages';
+import { COMPANY_USAGE_QUERIES } from '../../companies/company-usages';
+import { SUPPLIER_USAGE_QUERIES } from '../../suppliers/supplier-usages';
 import { ScheduledNotificationsService } from '../../notifications/scheduled-notifications.service';
 import { CurrencyController } from '../../currency/currency.controller';
 import { FreezeService } from '../../freeze/freeze.service';
@@ -527,15 +530,20 @@ async function testCountsAndPeriphery() {
     assert.deepEqual(await valueUsage(), [{ opex: 1, capex: 1 }], 'value counts: the CAPEX line counts as CAPEX');
     await assertInvisible(runner, w, 'value OPEX counts', async () => (await valueUsage()).map((u) => u.opex));
     const references = new ReferenceCheckService();
-    // A company's references name its CAPEX lines too (as before lot Z1): the foreign line is one of them.
-    const companyRefs = async () => (await references.checkCompanyReferences(w.companyId, { manager: mg })).referenceDetails;
-    assert.ok((await companyRefs()).includes('1 CAPEX item(s) reference this as paying company'), 'company references: the CAPEX line counts as CAPEX');
+    // A company's and a supplier's delete checks count the budget lines of both natures
+    // (`common/record-in-use.ts`): the CAPEX line is one of them.
+    const budgetLineUsages = async (queries: readonly UsageQuery[], id: string) =>
+      (await readUsages(mg, w.tenantId, id, { isAdmin: true }, queries)).groups.find((group) => group.type === 'budget_lines')?.items ?? [];
+    assert.ok((await budgetLineUsages(COMPANY_USAGE_QUERIES, w.companyId)).some((item) => item.nature === 'capex'), 'company usages: the CAPEX line counts');
+    assert.deepEqual(
+      (await budgetLineUsages(SUPPLIER_USAGE_QUERIES, w.foreignSupplierId)).map((item) => item.nature),
+      ['capex'],
+      'supplier usages: the CAPEX line counts',
+    );
     // An account's references name its CAPEX lines too since lot Z1 (a delete would detach them otherwise).
     const accountRefs = async () => (await references.checkAccountReferences(w.accountId, { manager: mg })).referenceDetails;
     assert.ok((await accountRefs()).includes('1 CAPEX item(s) reference this account'), 'account references: the CAPEX line counts as CAPEX');
     await assertInvisible(runner, w, 'reference checks', async () => ({
-      company: (await companyRefs()).filter((detail) => detail.includes('OPEX')),
-      supplier: await references.checkSupplierReferences(w.foreignSupplierId, { manager: mg }),
       account: (await accountRefs()).filter((detail) => detail.includes('OPEX')),
     }));
 

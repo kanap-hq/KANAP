@@ -2,6 +2,7 @@ import React from 'react';
 import { Box } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material';
 import { AgGridReact } from 'ag-grid-react';
+import { useAgGridLocaleText } from '../grid/useAgGridLocaleText';
 import type { AgGridReactProps } from 'ag-grid-react';
 import type { ColDef, ColGroupDef } from 'ag-grid-community';
 import AgGridBox from '../AgGridBox';
@@ -161,12 +162,14 @@ function PrintTable<TData>({ rowData, columnDefs, pinnedBottomRowData, getRowSty
  */
 export default function ReportGrid<TData = any>({ wrapperSx, wrapperClassName, wrapperRef, ...gridProps }: ReportGridProps<TData>) {
   const printing = useReportPrinting();
+  // Before the early return: the hook count stays the same when printing starts or ends.
+  const localeText = useAgGridLocaleText();
   if (printing) {
     return <PrintTable<TData> {...gridProps} />;
   }
   return (
     <Box component={AgGridBox} ref={wrapperRef} className={wrapperClassName} sx={wrapperSx}>
-      <AgGridReact<TData> {...gridProps} />
+      <AgGridReact<TData> localeText={localeText} {...gridProps} />
     </Box>
   );
 }

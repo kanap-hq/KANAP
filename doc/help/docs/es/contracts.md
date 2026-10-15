@@ -98,7 +98,7 @@ La fila fijada abajo dice **Total (n contratos)**. Suma los importes anuales de 
 ### Búsqueda, filtros y alcance
 
 - **Búsqueda rápida**: nombre del contrato, proveedor y empresa
-- **Filtros de columna**: en cada encabezado de columna. **Situación**, **Conformidad** y **Cobertura del presupuesto** ofrecen sus valores como casillas. El filtro **Estado** ofrece **Activado** y **Desactivado**. Si hace clic en **Limpiar** dentro del filtro, o desmarca ambos valores, la lista no muestra nada, sea cual sea la opción de **Mostrar**
+- **Filtros de columna**: en cada encabezado de columna. **Situación**, **Conformidad** y **Cobertura del presupuesto** ofrecen sus valores como casillas. El filtro **Estado** muestra la opción de **Mostrar** (**Todos**, **Activos** o **Desactivados**): cambiar uno cambia el otro
 - **Mostrar: Todos / Activos / Desactivados**: el selector sobre la lista. La lista muestra por defecto los contratos activados. Elija **Todos** o **Desactivados** para encontrar los contratos cuyo fin de validez ya pasó
 
 ### Acciones
@@ -123,7 +123,7 @@ Cada cambio se guarda solo: listas y fechas al instante, valores escritos y nota
 
 **Ciclo de vida**:
 
-- Pasar el estado a **Desactivado** sin fecha fija el fin de validez en hoy. Volver a **Activado** quita el fin de validez
+- Pasar a **Desactivado** fija el fin de validez en este momento: la desactivación es inmediata. Mientras haya una fecha futura, el interruptor muestra **Activo hasta el** y esa fecha. Volver a **Activado** quita el fin de validez
 - **Fin de validez**: escriba una fecha (dd/mm/aaaa) o use el calendario. Déjelo en blanco para mantener el contrato activo
 - **Renovación tácita** tiene sus propias reglas cuando el contrato ya se ha renovado o espera una decisión. Vea [Desactivar o reactivar la renovación tácita](#desactivar-o-reactivar-la-renovacion-tacita)
 

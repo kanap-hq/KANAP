@@ -3,10 +3,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { Supplier } from './supplier.entity';
 import { AuditService } from '../audit/audit.service';
-import { ReferenceCheckService } from '../common/reference-check.service';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
 import { withSavepoint } from '../common/savepoint.util';
+import { assertNotInUse, refusalDetails } from '../common/record-in-use';
+import { SUPPLIER_USAGE_QUERIES } from './supplier-usages';
 
 @Injectable()
 export class SuppliersDeleteService extends BaseDeleteService<Supplier> {
@@ -15,7 +16,6 @@ export class SuppliersDeleteService extends BaseDeleteService<Supplier> {
   constructor(
     @InjectRepository(Supplier) repository: Repository<Supplier>,
     audit: AuditService,
-    private readonly referenceCheck: ReferenceCheckService,
   ) {
     super(repository, null, audit, {
       entityName: 'Supplier',
@@ -25,10 +25,16 @@ export class SuppliersDeleteService extends BaseDeleteService<Supplier> {
   }
 
   /**
-   * Check for references before deletion
+   * A supplier that anything in its "Used by" panel still names cannot go (`SUPPLIER_IN_USE`, with
+   * the counts per kind): deleting it would clear it on those objects, or leave a contract without
+   * its supplier. Disabling it is the way out.
    */
   protected override async beforeDelete(entity: Supplier, manager: EntityManager): Promise<void> {
-    await this.referenceCheck.assertNoReferences('supplier', entity.id, entity.name, { manager });
+    await assertNotInUse(manager, entity.tenant_id, entity.id, SUPPLIER_USAGE_QUERIES, {
+      code: 'SUPPLIER_IN_USE',
+      entity: 'supplier',
+      name: entity.name,
+    });
   }
 
   /**
@@ -50,11 +56,9 @@ export class SuppliersDeleteService extends BaseDeleteService<Supplier> {
       // Delete the entity
       await repo.delete({ id: supplierId } as any);
     } catch (error: any) {
-      // Catch database-level foreign key errors (e.g., from allocations)
+      // A key the check did not see (a row added since): the contracts key refuses it.
       if (error.code === '23503' || error.message?.includes('foreign key constraint')) {
-        throw new ConflictException(
-          `Cannot delete supplier "${supplier.name}": it is being used in allocations for OPEX or CAPEX items. You can disable it if it shouldn't be used actively anymore.`
-        );
+        throw new ConflictException(`Cannot delete supplier "${supplier.name}": other records still use it. Disable it instead.`);
       }
       throw error;
     }
@@ -100,6 +104,7 @@ export class SuppliersDeleteService extends BaseDeleteService<Supplier> {
           id: supplierId,
           name,
           reason: error.message || 'Unknown error',
+          ...refusalDetails(error),
         });
       }
     }

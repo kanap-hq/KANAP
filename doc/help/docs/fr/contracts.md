@@ -98,7 +98,7 @@ La ligne épinglée en bas indique **Total (n contrats)**. Elle additionne les m
 ### Recherche, filtres et périmètre
 
 - **Recherche rapide** : nom du contrat, fournisseur et société
-- **Filtres de colonnes** : sur chaque en-tête de colonne. **État**, **Conformité** et **Couverture du budget** proposent leurs valeurs en cases à cocher. Le filtre **Statut** propose **Activé** et **Désactivé**. Cliquer sur **Effacer** dans ce filtre, ou décocher les deux valeurs, n'affiche plus rien, quel que soit le choix de **Afficher**
+- **Filtres de colonnes** : sur chaque en-tête de colonne. **État**, **Conformité** et **Couverture du budget** proposent leurs valeurs en cases à cocher. Le filtre **Statut** reprend le choix de **Afficher** (**Tous**, **Activés** ou **Désactivés**) : changer l'un change l'autre
 - **Afficher : Tous / Activés / Désactivés** : le bouton bascule au-dessus de la liste. Par défaut, la liste affiche les contrats activés. Choisissez **Tous** ou **Désactivés** pour retrouver les contrats dont la fin de validité est passée
 
 ### Actions
@@ -123,7 +123,7 @@ Chaque modification s'enregistre d'elle-même : listes et dates aussitôt, valeu
 
 **Cycle de vie** :
 
-- Passer le statut à **Désactivé** sans date fixe la fin de validité à aujourd'hui. Le repasser à **Activé** retire la fin de validité
+- Passer à **Désactivé** fixe la fin de validité à maintenant : la désactivation est immédiate. Tant qu'une date future est fixée, l'interrupteur affiche **Actif jusqu'au** et cette date. Le repasser à **Activé** retire la fin de validité
 - **Fin de validité** : saisissez une date (jj/mm/aaaa) ou utilisez le calendrier. Laissez vide pour garder le contrat actif
 - **Reconduction tacite** a ses propres règles quand le contrat a déjà été reconduit ou attend une décision. Voir [Désactiver ou réactiver la reconduction tacite](#desactiver-ou-reactiver-la-reconduction-tacite)
 

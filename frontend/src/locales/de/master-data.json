@@ -389,6 +389,8 @@
     "noSuppliersFound": "Keine Lieferanten gefunden",
     "export": "Lieferanten exportieren",
     "import": "Lieferanten importieren",
+    "exportScope": "Die Datei enthält alle Lieferanten, aktivierte und deaktivierte, nach Name sortiert. Suche und Filter der Liste gelten nicht.",
+    "importHint": "Zulässige Werte für status: enabled oder disabled. disabled_at enthält das Gültigkeitsende oder bleibt leer. Die Kontaktspalten enthalten die E-Mail-Adresse eines Kontakts, der unter Kontakte bereits existiert.",
     "fields": {
       "name": "Name",
       "erpSupplierId": "ERP-Lieferanten-ID",
@@ -404,6 +406,8 @@
       "selectContact": "Hinzuzufügender Kontakt ({{role}})",
       "searchPlaceholder": "Kontakte nach Name suchen",
       "removeLink": "Verknüpfung entfernen",
+      "linkRemoved": "Verknüpfung entfernt. Der Kontakt bleibt unter Kontakte erhalten.",
+      "undo": "Rückgängig",
       "saveFailed": "Die Kontakte des Lieferanten konnten nicht aktualisiert werden.",
       "loadFailed": "Die Kontakte des Lieferanten konnten nicht geladen werden."
     },

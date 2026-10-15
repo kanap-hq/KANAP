@@ -91,7 +91,12 @@
       "inRange": "del {{from}} al {{to}}",
       "or": "o",
       "and": "y"
-    }
+    },
+    "noResults": "Sin resultados",
+    "noResultsFiltered": "Ningún resultado coincide con la búsqueda o los filtros.",
+    "clearAll": "Borrar la búsqueda y los filtros",
+    "resultCount_one": "{{count}} resultado",
+    "resultCount_other": "{{count}} resultados"
   },
   "columnChooser": {
     "searchPlaceholder": "Buscar columnas",
@@ -162,7 +167,37 @@
     "partialDeleted_other": "{{count}} elementos eliminados.",
     "partialFailed_one": "Error en {{count}} elemento: {{reasons}}",
     "partialFailed_other": "Error en {{count}} elementos: {{reasons}}",
-    "failedGeneric": "Error al eliminar los elementos"
+    "failedGeneric": "Error al eliminar los elementos",
+    "usages": {
+      "budget_lines_one": "{{count}} línea presupuestaria",
+      "budget_lines_other": "{{count}} líneas presupuestarias",
+      "contracts_one": "{{count}} contrato",
+      "contracts_other": "{{count}} contratos",
+      "applications_one": "{{count}} aplicación",
+      "applications_other": "{{count}} aplicaciones",
+      "assets_one": "{{count}} activo",
+      "assets_other": "{{count}} activos",
+      "cost_centers_one": "{{count}} centro de coste",
+      "cost_centers_other": "{{count}} centros de coste",
+      "departments_one": "{{count}} departamento",
+      "departments_other": "{{count}} departamentos",
+      "users_one": "{{count}} usuario",
+      "users_other": "{{count}} usuarios",
+      "locations_one": "{{count}} ubicación",
+      "locations_other": "{{count}} ubicaciones",
+      "tasks_one": "{{count}} tarea",
+      "tasks_other": "{{count}} tareas",
+      "interfaces_one": "{{count}} interfaz",
+      "interfaces_other": "{{count}} interfaces",
+      "projects_one": "{{count}} proyecto",
+      "projects_other": "{{count}} proyectos",
+      "requests_one": "{{count}} solicitud",
+      "requests_other": "{{count}} solicitudes",
+      "team_members_one": "{{count}} miembro del equipo",
+      "team_members_other": "{{count}} miembros del equipo",
+      "compliance_requirements_one": "{{count}} requisito de conformidad registrado",
+      "compliance_requirements_other": "{{count}} requisitos de conformidad registrados"
+    }
   },
   "messages": {
     "loadFailed": "No se pudieron cargar los datos",
@@ -725,7 +760,8 @@
   },
   "lifecycleField": {
     "endOfValidity": "Fin de validez",
-    "endOfValidityHint": "Dejar en blanco para permanecer activo indefinidamente."
+    "endOfValidityHint": "Dejar en blanco para permanecer activo indefinidamente.",
+    "activeUntil": "Activo hasta el {{date}}"
   },
   "autosave": {
     "leaveTitle": "Cambios sin guardar",

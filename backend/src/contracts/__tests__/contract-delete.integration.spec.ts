@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { QueryRunner } from 'typeorm';
 import { ContractsDeleteService } from '../contracts-delete.service';
+import { RecordInUseException } from '../../common/record-in-use';
 import { assert, captureAudit, CAPEX_NUMBER_OFFSET, inRolledBackTransaction, runSpecs, seedTenant, setTenant } from '../../spend/__tests__/round-inputs.fixtures';
 
 // Deleting a contract (`contracts-delete.service.ts`), against a real database:
@@ -10,7 +11,7 @@ import { assert, captureAudit, CAPEX_NUMBER_OFFSET, inRolledBackTransaction, run
 // - what belongs to the contract goes with it: its website links, attachments (rows, then the
 //   files no other attachment row uses) and its tasks (the renewal task too, and the rows of the
 //   former `contract_tasks` table), as a budget line deletes its tasks;
-// - a contract with recorded compliance requirements is refused (409, code and count);
+// - a contract with recorded compliance requirements is refused (RecordInUseException: 409, code, usages);
 // - the counts the confirmation shows, for one contract or several, refused ones apart;
 // - a bulk delete reports each contract it could not delete (another tenant's, a malformed id,
 //   one with recorded requirements) and deletes the others; another contract keeps everything;
@@ -260,8 +261,8 @@ async function testBulkDelete() {
     assert.deepEqual(result.failed.map((f) => f.id), [other.contractId, 'not-a-uuid', blockedId]);
     assert.ok(result.failed.slice(0, 2).every((f) => f.reason === 'Contract not found.'), JSON.stringify(result.failed));
     assert.deepEqual(
-      { name: result.failed[2].name, code: result.failed[2].code, count: result.failed[2].count },
-      { name: 'Audited contract', code: 'CONTRACT_HAS_COMPLIANCE_RECORDS', count: 3 },
+      { name: result.failed[2].name, code: result.failed[2].code, usages: result.failed[2].usages },
+      { name: 'Audited contract', code: 'CONTRACT_HAS_COMPLIANCE_RECORDS', usages: [{ type: 'compliance_requirements', total: 3 }] },
     );
     assert.equal(await exists(runner, 'contracts', blockedId), true);
     assert.equal(await exists(runner, 'contracts', a.contractId), false);
@@ -308,9 +309,10 @@ async function testRecordedRequirementsRefused() {
     }
     assert.ok(refusal instanceof ConflictException, `a 409, got ${String(refusal)}`);
     const body = (refusal as ConflictException).getResponse() as Record<string, unknown>;
+    assert.ok(refusal instanceof RecordInUseException, 'the shared refusal');
     assert.equal(body.code, 'CONTRACT_HAS_COMPLIANCE_RECORDS');
-    assert.equal(body.count, 3);
-    assert.match(String(body.message), /3 recorded compliance requirements/);
+    assert.deepEqual(body.usages, [{ type: 'compliance_requirements', total: 3 }]);
+    assert.equal(body.message, 'Cannot delete contract "Delete contract ctdel-audited": it has 3 recorded compliance requirements. Disable it instead.');
     // Nothing moved.
     assert.equal(await exists(runner, 'contracts', a.contractId), true);
     assert.equal(await exists(runner, 'tasks', a.taskId), true);

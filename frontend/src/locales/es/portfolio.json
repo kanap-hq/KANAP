@@ -502,8 +502,10 @@
           "noPhaseTasks": "No hay tareas en esta fase."
         },
         "values": {
-          "daysEarlier": "{{count}} día(s) antes",
-          "daysLater": "{{count}} día(s) después",
+          "daysEarlier_one": "{{count}} día antes",
+          "daysEarlier_other": "{{count}} días antes",
+          "daysLater_one": "{{count}} día después",
+          "daysLater_other": "{{count}} días después",
           "onTrack": "En plazo"
         },
         "views": {
@@ -1310,7 +1312,8 @@
         "allTaskTypes": "Todos los tipos de tarea",
         "statusReached": "Estado alcanzado",
         "allStatuses": "Todos los estados",
-        "selectedCount": "{{count}} seleccionado(s)"
+        "selectedCount_one": "{{count}} seleccionado",
+        "selectedCount_other": "{{count}} seleccionados"
       },
       "actions": {
         "exportCsv": "Exportar CSV",
@@ -1604,7 +1607,7 @@
       "summaryHeaderTooltip": "Competencias en nivel autónomo o superior, de las declaradas",
       "coverageRow": "Autónomo o experto",
       "coverageHeaderTooltip": "Cuántas personas pueden cubrir cada competencia por su cuenta",
-      "coverageTooltip": "{{skill}}: {{autonomous}} autónomo(s) o experto(s), {{declared}} con un nivel declarado",
+      "coverageTooltip": "{{skill}}: autónomos o expertos: {{autonomous}}, con un nivel declarado: {{declared}}",
       "cellTooltip": "{{contributor}} · {{skill}}: {{level}}",
       "showUnused": "Mostrar competencias sin uso",
       "sheetName": "Matriz de competencias",
@@ -2157,7 +2160,8 @@
         "dragDropFiles": "Arrastre y suelte archivos aquí, o use el botón para seleccionar",
         "loadFailed": "Error al cargar las relaciones",
         "saveFailed": "Error al guardar las relaciones",
-        "uploadingFiles": "Subiendo {{count}} archivo(s)..."
+        "uploadingFiles_one": "Subiendo {{count}} archivo...",
+        "uploadingFiles_other": "Subiendo {{count}} archivos..."
       },
       "placeholders": {
         "applications": "Buscar aplicaciones",

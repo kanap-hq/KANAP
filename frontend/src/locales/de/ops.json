@@ -151,7 +151,8 @@
       "dragDrop": "Dateien hierher ziehen oder über die Schaltfläche auswählen",
       "noUploadPermission": "Sie haben keine Berechtigung zum Hochladen von Anhängen.",
       "selectFiles": "Dateien auswählen",
-      "uploadingFiles": "{{count}} Datei(en) werden hochgeladen…",
+      "uploadingFiles_one": "{{count}} Datei wird hochgeladen…",
+      "uploadingFiles_other": "{{count}} Dateien werden hochgeladen…",
       "failedToLoad": "Verknüpfungen konnten nicht geladen werden",
       "failedToSave": "Verknüpfungen konnten nicht gespeichert werden"
     },
@@ -336,7 +337,8 @@
       "dragDrop": "Dateien hierher ziehen oder über die Schaltfläche auswählen",
       "noUploadPermission": "Sie haben keine Berechtigung zum Hochladen von Anhängen.",
       "selectFiles": "Dateien auswählen",
-      "uploadingFiles": "{{count}} Datei(en) werden hochgeladen…",
+      "uploadingFiles_one": "{{count}} Datei wird hochgeladen…",
+      "uploadingFiles_other": "{{count}} Dateien werden hochgeladen…",
       "failedToLoad": "Verknüpfungen konnten nicht geladen werden",
       "failedToSave": "Verknüpfungen konnten nicht gespeichert werden",
       "linkName": "Name",
@@ -1516,8 +1518,10 @@
       "subtitle": "Bis zu zehn Budgetspalten vergleichen",
       "yearGroupingSubtitle": "{{type}}: Jahresgruppierung",
       "yearGroupingSubtitle_all": "OPEX und CAPEX: Jahresgruppierung",
-      "selectionsSubtitle": "{{type}}: {{count}} Auswahl(en)",
-      "selectionsSubtitle_all": "OPEX und CAPEX: {{count}} Auswahl(en)",
+      "selectionsSubtitle_one": "{{type}}: {{count}} Auswahl",
+      "selectionsSubtitle_other": "{{type}}: {{count}} Auswahlen",
+      "selectionsSubtitle_all_one": "OPEX und CAPEX: {{count}} Auswahl",
+      "selectionsSubtitle_all_other": "OPEX und CAPEX: {{count}} Auswahlen",
       "addSelection": "Hinzufügen"
     },
     "consolidation": {

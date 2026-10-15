@@ -233,7 +233,6 @@ export const TENANT_PURGE_TABLES = [
   'department_metrics',
   'company_metrics',
   'departments',
-  'companies',
   'user_page_roles',
   'user_roles',
   'role_permissions',
@@ -242,6 +241,8 @@ export const TENANT_PURGE_TABLES = [
   'refresh_tokens',
   'password_reset_tokens',
   'users',
+  // After everything that names a company (every key into companies restricts, users included)
+  'companies',
   'roles',
   // Contacts must be purged before suppliers (supplier_contacts has FKs to both)
   'supplier_contacts',

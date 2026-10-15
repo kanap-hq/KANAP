@@ -7,6 +7,9 @@
 #
 #   auto-queue.sh
 #
+# A pull request of the queue that is turned back into a draft is taken out of the queue: a draft
+# is the way to stop one.
+#
 # Handled: pull requests on main that are ready (not drafts), come from this repository and were
 # opened by one of AUTO_QUEUE_AUTHORS. They enter the queue one at a time, lowest number first:
 # each run queues at most one, and the next run starts when GitHub reports it in the queue (the
@@ -18,7 +21,9 @@
 #   - one that contains the commits of another open pull request not yet in the queue (a
 #     stack): it waits for the one below it.
 # A pull request whose queueing is under way (auto-merge on, not yet in the queue) holds the
-# others back until it is in.
+# others back until it is in. GitHub can miss that entry (its mergeability was being recomputed
+# when auto-merge was turned on): after AUTO_QUEUE_RETRY_AFTER seconds (default 120) a run turns
+# auto-merge off and on again, which queues it.
 #
 # Nothing from the pull requests is run: their commits are fetched and compared as data.
 #
@@ -32,9 +37,10 @@ REPO=${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is not set}
 AUTHORS=" ${AUTO_QUEUE_AUTHORS:?AUTO_QUEUE_AUTHORS is not set} "
 DRY_RUN=${AUTO_QUEUE_DRY_RUN:-false}
 READ_TOKEN=${READ_TOKEN:-${GH_TOKEN:-}}
+RETRY_AFTER=${AUTO_QUEUE_RETRY_AFTER:-120}
 
 # Open pull requests on main, lowest number first, one per line:
-# <number> <head sha> <draft> <fork> <author> <in queue> <auto-merge on> <mergeable>.
+# <number> <head sha> <draft> <fork> <author> <in queue> <auto-merge since, or -> <mergeable>.
 # shellcheck disable=SC2016 # GraphQL variables
 open=$(GH_TOKEN=$READ_TOKEN gh api graphql --paginate -f owner="${REPO%%/*}" -f name="${REPO#*/}" -f query='
   query($owner: String!, $name: String!, $endCursor: String) {
@@ -46,7 +52,7 @@ open=$(GH_TOKEN=$READ_TOKEN gh api graphql --paginate -f owner="${REPO%%/*}" -f 
       }
     }
   }' --jq '.data.repository.pullRequests.nodes[]
-    | "\(.number) \(.headRefOid) \(.isDraft) \(.isCrossRepository) \(.author.login // "-") \(.mergeQueueEntry != null) \(.autoMergeRequest != null) \(.mergeable)"' | sort -n)
+    | "\(.number) \(.headRefOid) \(.isDraft) \(.isCrossRepository) \(.author.login // "-") \(.mergeQueueEntry != null) \(.autoMergeRequest.enabledAt // "-") \(.mergeable)"' | sort -n)
 
 if [ -z "$open" ]; then
   echo "No open pull request on main."
@@ -71,7 +77,17 @@ failed_in_queue() {
   [ "${count:-0}" -gt 0 ]
 }
 
-while read -r n head draft fork author queued automerge mergeable; do
+while read -r n head draft fork author queued automerge_since mergeable; do
+  if [ "$draft" = true ] && [ "$queued" = true ]; then
+    echo "#$n: a draft in the merge queue: taken out of it."
+    if [ "$DRY_RUN" != true ]; then
+      id=$(GH_TOKEN=$READ_TOKEN gh api "repos/$REPO/pulls/$n" --jq .node_id)
+      # shellcheck disable=SC2016 # GraphQL variable
+      gh api graphql -f id="$id" -f query='mutation($id: ID!) { dequeuePullRequest(input: {id: $id}) { clientMutationId } }' >/dev/null \
+        || echo "::warning::#$n could not be taken out of the merge queue."
+    fi
+    continue
+  fi
   if [ "$draft" = true ] || [ "$fork" = true ] || [[ "$AUTHORS" != *" $author "* ]]; then
     echo "#$n: left alone (draft, fork, or opened by $author)."
     continue
@@ -79,6 +95,17 @@ while read -r n head draft fork author queued automerge mergeable; do
   if [ "$queued" = true ]; then
     echo "#$n: in the merge queue."
     continue
+  fi
+  # Queueing requested a moment ago: it holds the others back, even while GitHub shows it as
+  # conflicting (it recomputes the mergeability of every pull request after each merge).
+  age=$RETRY_AFTER
+  if [ "$automerge_since" != - ]; then
+    since=$(date -d "$automerge_since" +%s 2>/dev/null || echo 0)
+    age=$(( $(date +%s) - since ))
+  fi
+  if [ "$age" -lt "$RETRY_AFTER" ]; then
+    echo "#$n: entering the merge queue; the others wait until it is in."
+    exit 0
   fi
   if [ "$mergeable" = CONFLICTING ]; then
     echo "#$n: conflicts with main; it waits for a fix."
@@ -99,9 +126,11 @@ while read -r n head draft fork author queued automerge mergeable; do
     echo "#$n: waits until #$below, below it in a stack, is in the merge queue."
     continue
   fi
-  if [ "$automerge" = true ]; then
-    echo "#$n: entering the merge queue; the others wait until it is in."
-    exit 0
+  if [ "$automerge_since" != - ]; then
+    echo "#$n: auto-merge on since $automerge_since and still not in the queue: turning it off and on."
+    if [ "$DRY_RUN" != true ]; then
+      gh pr merge "$n" --repo "$REPO" --disable-auto || true
+    fi
   fi
   if [ "$DRY_RUN" = true ]; then
     echo "#$n: would be queued; the others wait until it is in."

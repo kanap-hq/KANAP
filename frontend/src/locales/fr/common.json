@@ -91,7 +91,12 @@
       "inRange": "du {{from}} au {{to}}",
       "or": "ou",
       "and": "et"
-    }
+    },
+    "noResults": "Aucun résultat",
+    "noResultsFiltered": "Aucun résultat ne correspond à la recherche ou aux filtres.",
+    "clearAll": "Effacer la recherche et les filtres",
+    "resultCount_one": "{{count}} résultat",
+    "resultCount_other": "{{count}} résultats"
   },
   "columnChooser": {
     "searchPlaceholder": "Rechercher une colonne",
@@ -162,7 +167,37 @@
     "partialDeleted_other": "{{count}} éléments supprimés.",
     "partialFailed_one": "Échec pour {{count}} élément : {{reasons}}",
     "partialFailed_other": "Échec pour {{count}} éléments : {{reasons}}",
-    "failedGeneric": "Échec de la suppression des éléments"
+    "failedGeneric": "Échec de la suppression des éléments",
+    "usages": {
+      "budget_lines_one": "{{count}} ligne budgétaire",
+      "budget_lines_other": "{{count}} lignes budgétaires",
+      "contracts_one": "{{count}} contrat",
+      "contracts_other": "{{count}} contrats",
+      "applications_one": "{{count}} application",
+      "applications_other": "{{count}} applications",
+      "assets_one": "{{count}} actif",
+      "assets_other": "{{count}} actifs",
+      "cost_centers_one": "{{count}} centre de coûts",
+      "cost_centers_other": "{{count}} centres de coûts",
+      "departments_one": "{{count}} département",
+      "departments_other": "{{count}} départements",
+      "users_one": "{{count}} utilisateur",
+      "users_other": "{{count}} utilisateurs",
+      "locations_one": "{{count}} site",
+      "locations_other": "{{count}} sites",
+      "tasks_one": "{{count}} tâche",
+      "tasks_other": "{{count}} tâches",
+      "interfaces_one": "{{count}} interface",
+      "interfaces_other": "{{count}} interfaces",
+      "projects_one": "{{count}} projet",
+      "projects_other": "{{count}} projets",
+      "requests_one": "{{count}} demande",
+      "requests_other": "{{count}} demandes",
+      "team_members_one": "{{count}} membre d'équipe",
+      "team_members_other": "{{count}} membres d'équipe",
+      "compliance_requirements_one": "{{count}} exigence de conformité renseignée",
+      "compliance_requirements_other": "{{count}} exigences de conformité renseignées"
+    }
   },
   "messages": {
     "loadFailed": "Échec du chargement des données",
@@ -725,7 +760,8 @@
   },
   "lifecycleField": {
     "endOfValidity": "Fin de validité",
-    "endOfValidityHint": "Laisser vide pour rester actif indéfiniment."
+    "endOfValidityHint": "Laisser vide pour rester actif indéfiniment.",
+    "activeUntil": "Actif jusqu'au {{date}}"
   },
   "autosave": {
     "leaveTitle": "Modifications non enregistrées",

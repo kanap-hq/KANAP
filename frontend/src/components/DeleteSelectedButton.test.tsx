@@ -111,17 +111,30 @@ describe('DeleteSelectedButton', () => {
     expect(message).toHaveTextContent('delete.partialDeleted {"count":1}');
     expect(message).toHaveTextContent('delete.partialFailed {"count":1');
     expect(message).toHaveTextContent(`Frozen: ${FROZEN}`);
+    // The deleted count drives the plural forms.
+    expect(message).toHaveTextContent('"count":1');
+    expect(message).toHaveTextContent('"failed":1');
     await waitFor(() => expect(onDeleteSuccess).toHaveBeenCalled());
   });
 
-  it('words a refusal that carries a code, with its count', async () => {
+  it('translates a refusal that has a code, with what uses the item', async () => {
     vi.mocked(api.delete).mockResolvedValue({
-      data: { deleted: [], failed: [{ id: 'b', name: 'Audited', reason: 'raw', code: 'CONTRACT_HAS_COMPLIANCE_RECORDS', count: 3 }] },
+      data: {
+        deleted: ['a'],
+        failed: [{
+          id: 'b',
+          name: 'Acme',
+          reason: 'Cannot delete supplier "Acme": it is used by 2 contracts. Disable it instead.',
+          code: 'SUPPLIER_IN_USE',
+          usages: [{ type: 'contracts', total: 2 }],
+        }],
+      },
     } as any);
     renderButton();
-    const message = await screen.findByText(/delete\.failedAll/);
-    expect(message).toHaveTextContent('Audited: errors:CONTRACT_HAS_COMPLIANCE_RECORDS');
-    expect(message).toHaveTextContent('\\"count\\":3');
+    const message = await screen.findByText(/delete\.partial/);
+    expect(message).toHaveTextContent(/Acme: errors:SUPPLIER_IN_USE/);
+    expect(message).toHaveTextContent(/common:delete\.usages\.contracts/);
+    expect(message).not.toHaveTextContent(/Cannot delete supplier "Acme": it is used by 2 contracts\. Disable it instead\.;/);
   });
 
   it('counts the selection in the title and shows the warning it is given', async () => {

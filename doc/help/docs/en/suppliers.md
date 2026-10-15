@@ -32,7 +32,7 @@ The Suppliers list gives you a searchable, sortable directory of all your vendor
 
 Every cell in a row is clickable and opens that supplier's page.
 
-**Default sort**: By name, alphabetical.
+**Default sort**: By name, alphabetical. Sorting a text column ignores case and accents.
 
 **Filtering**:
 - Quick search: Searches across supplier fields
@@ -52,12 +52,12 @@ Click any row to open the supplier page. Use the arrows at the top, or the left 
 
 The page has two tabs: **Overview** and **Contacts**.
 
-**Title**: The supplier's name. Click it to edit it; the change saves when you leave the field or press Enter, and Escape cancels it. A name is required and must differ from the name of every other supplier: KANAP shows the message under the name and keeps the stored one.
+**Title**: The supplier's name. Click it to edit it; the change saves when you leave the field or press Enter, and Escape cancels it. A name is required and must differ from the name of every other supplier, whatever the case (`SAP` and `sap` are the same name): KANAP shows the message under the name and keeps the stored one.
 
 **Reference**: The ERP supplier ID, when the supplier has one, shows before the name. Click it to copy it.
 
 **Header**, under the name:
-- **Status**: **Enabled** or **Disabled**. Click it to change it. Choosing **Disabled** sets the end of validity to today.
+- **Status**: **Enabled** or **Disabled**. Click it to change it. Choosing **Disabled** disables the supplier at once: the end of validity becomes the current time.
 - **Contacts**: How many contacts are linked to the supplier. Click it to open the **Contacts** tab.
 - **Used by**: How many budget lines, contracts, applications and assets use the supplier. Click it to scroll to the **Used by** section of the **Overview** tab.
 
@@ -86,7 +86,7 @@ The **Contacts** tab lists the contacts linked to this supplier by contact type:
 - Each section lists its contacts by name. Click a name to open the contact page.
 - **Add existing**: Search for a contact by name and pick it. The link saves at once.
 - **New contact**: Opens the contact form with the supplier and the contact type already filled in. KANAP brings you back to this tab once the contact is created.
-- The bin button removes the link. The contact itself stays in your contacts.
+- The bin button removes the link. The contact itself stays in your contacts. A message confirms it, with an **Undo** action that links the contact again.
 
 **Tip**: Keep at least one contact per supplier so that vendor communication is always one click away.
 
@@ -101,7 +101,7 @@ The **Used by** section, under the notes on the **Overview** tab, lists what ref
 
 Click a row to open that page. Disabled items show **Disabled** and come after the others. A list shows up to 50 items and says how many there are in all. Past 50, budget lines, contracts and applications get a link such as **Show all 57** that opens their list filtered on this supplier. You only see the lists you are allowed to read: a user without access to contracts sees no contract list. A supplier that nothing uses shows one line that says so.
 
-Check this section before you disable or delete a supplier.
+Check this section before you disable or delete a supplier. A supplier still used by budget lines, contracts, applications or assets cannot be deleted. The message counts what uses it, for example "This supplier is used by 2 contracts and 1 application". Disable it instead.
 
 ### Creating a supplier
 
@@ -111,7 +111,7 @@ Click **New** in the list. Fill in the name (required), the ERP supplier ID and 
 
 ## CSV import/export
 
-**Export CSV** downloads all suppliers with their current details. **Import CSV** reads a file back. The import dialog also carries **Download template**: a file with the headers only.
+**Export CSV** downloads every supplier, enabled and disabled, sorted by name. The search and filters of the list do not apply. The dialog closes once the file is downloaded. **Import CSV** reads a file back. The import dialog also carries **Download template**: a file with the headers only. The dialog lists the accepted values.
 
 The columns:
 
@@ -119,17 +119,21 @@ The columns:
 |---|---|
 | `name` | Required. The supplier name. Rows are matched on it |
 | `erp_supplier_id` | The supplier's ID in your ERP |
-| `commercial_contact` | The email of a contact. The load links the supplier to the contact with that email, and creates one when the workspace has none |
+| `commercial_contact` | The email of an existing contact. The load links the supplier to it |
 | `technical_contact` | The email of a contact, as above |
 | `support_contact` | The email of a contact, as above |
 | `notes` | Free text |
 | `status` | `enabled` or `disabled` |
+| `disabled_at` | The end of validity: a date (`2026-12-31`) or a full date and time. Empty when the supplier has none |
 
 **Import**:
 
 - Use **Preflight check** to validate the file before applying it, then **Load**
-- Rows are matched by `name`: a row updates the supplier it names, any other row creates one
+- Rows are matched by `name`, whatever the case: a row updates the supplier it names, any other row creates one
 - `name` is required. Every other cell is optional
+- Each supplier takes one row. Two rows with the same name, even in a different case, are refused at the preflight check, with both row numbers
+- A contact email must belong to a contact that already exists in **Contacts**. Otherwise the row is refused at the preflight check: create the contact first
+- `disabled_at` sets the end of validity, and the status follows from it. A status that contradicts the date is refused. A file without the `disabled_at` column still imports: the status alone then sets the lifecycle
 
 **Notes**:
 - See [CSV files](csv-files.md) for the encoding, the separator and the two import steps

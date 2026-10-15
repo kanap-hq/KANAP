@@ -109,7 +109,7 @@ Click any cell to open the value's workspace.
 **Filtering**:
 
 - **Quick search**: searches the name and the description
-- **Status filter**: a checkbox filter on the **Status** column. Clicking **Clear** in it, or unticking both values, lists nothing, whatever **Show** says
+- **Status filter**: the filter of the **Status** column shows the **Show** choice (**All**, **Enabled** or **Disabled**): changing one changes the other
 - **Used for filter**: a checkbox filter on the **Used for** column
 - **Status scope**: the **Show: All / Enabled / Disabled** toggle above the list. The list shows enabled values by default
 
@@ -297,7 +297,7 @@ The field of an OPEX line offers the values for OPEX and for both. The field of 
 Dimensions and values each have a status (**Enabled** or **Disabled**) and an optional **End of validity**. Use them to retire a dimension or a value without deleting it.
 
 - **End of validity**: the date it stops. Leave it blank to keep it active. You can also schedule a future date.
-- Switching to **Disabled** without a date sets the end of validity to today. Switching back to **Enabled** clears the date.
+- Switching to **Disabled** ends its validity now: it is disabled at once. While a future date is set, the switch reads **Active until** and that date. Switching back to **Enabled** clears the date.
 - When the end of validity passes, the status switches to **Disabled** on its own within the hour.
 
 **A disabled value**:

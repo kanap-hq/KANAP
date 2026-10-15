@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { validate as isUuid } from 'uuid';
@@ -8,6 +8,7 @@ import { StorageService } from '../common/storage/storage.service';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
 import { withSavepoint } from '../common/savepoint.util';
+import { englishList, RecordInUseException, refusalDetails } from '../common/record-in-use';
 import { BUDGET_NATURES, naturesAnd } from '../spend/budget-nature';
 import { currentTenantId, deleteBlobs, deleteItemTasks, unreferencedPaths } from '../spend/item-delete-cleanup';
 import { UserTimeAggregateService } from '../portfolio/services/user-time-aggregate.service';
@@ -50,8 +51,8 @@ const NATURES = naturesAnd(null, BUDGET_NATURES);
  * Deletes contracts. Their links go and the linked objects stay: budget lines (the link rows and
  * a line's own `contract_id`), applications, assets (links and support contract) and contacts.
  * What belongs to the contract goes with it: its website links, attachments and tasks. A contract
- * with recorded compliance requirements is refused (409, `CONTRACT_HAS_COMPLIANCE_RECORDS`, with
- * the count): it is disabled instead. Every statement
+ * with recorded compliance requirements is refused (`RecordInUseException`, 409,
+ * `CONTRACT_HAS_COMPLIANCE_RECORDS`, `usages: [{ type: 'compliance_requirements', total }]`): it is disabled instead. Every statement
  * names the tenant; the links are removed here rather than left to foreign keys, as most link
  * tables have none. The search entry goes with the row (trigger). Attachment files go last, once
  * no attachment row of the tenant uses them.
@@ -146,13 +147,7 @@ export class ContractsDeleteService extends BaseDeleteService<Contract> {
             this.logger.warn(`Failed to fetch contract name for error reporting: ${err?.message || 'Unknown error'}`);
           }
         }
-        const body = error instanceof ConflictException ? (error.getResponse() as { code?: string; count?: number }) : null;
-        result.failed.push({
-          id,
-          name,
-          reason: error?.message || 'Unknown error',
-          ...(body?.code ? { code: body.code, count: body.count } : {}),
-        });
+        result.failed.push({ id, name, reason: error?.message || 'Unknown error', ...refusalDetails(error) });
       }
     }
 
@@ -177,11 +172,14 @@ export class ContractsDeleteService extends BaseDeleteService<Contract> {
       params,
     );
     if (recorded > 0) {
-      throw new ConflictException({
-        code: CONTRACT_HAS_COMPLIANCE_RECORDS,
-        count: recorded,
-        message: `This contract has ${recorded} recorded compliance requirement${recorded === 1 ? '' : 's'}. Disable it instead of deleting it.`,
-      });
+      const usages = [{ type: 'compliance_requirements' as const, total: recorded }];
+      throw new RecordInUseException(
+        CONTRACT_HAS_COMPLIANCE_RECORDS,
+        'contract',
+        contract.name,
+        usages,
+        `Cannot delete contract "${contract.name}": it has ${englishList(usages)}. Disable it instead.`,
+      );
     }
 
     const attachments: Array<{ storage_path: string }> = await manager.query(

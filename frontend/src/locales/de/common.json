@@ -91,7 +91,12 @@
       "inRange": "vom {{from}} bis {{to}}",
       "or": "oder",
       "and": "und"
-    }
+    },
+    "noResults": "Keine Ergebnisse",
+    "noResultsFiltered": "Keine Ergebnisse für die Suche oder die Filter.",
+    "clearAll": "Suche und Filter löschen",
+    "resultCount_one": "{{count}} Ergebnis",
+    "resultCount_other": "{{count}} Ergebnisse"
   },
   "columnChooser": {
     "searchPlaceholder": "Spalten suchen",
@@ -162,7 +167,37 @@
     "partialDeleted_other": "{{count}} Elemente gelöscht.",
     "partialFailed_one": "{{count}} Element konnte nicht gelöscht werden: {{reasons}}",
     "partialFailed_other": "{{count}} Elemente konnten nicht gelöscht werden: {{reasons}}",
-    "failedGeneric": "Elemente konnten nicht gelöscht werden"
+    "failedGeneric": "Elemente konnten nicht gelöscht werden",
+    "usages": {
+      "budget_lines_one": "{{count}} Budgetzeile",
+      "budget_lines_other": "{{count}} Budgetzeilen",
+      "contracts_one": "{{count}} Vertrag",
+      "contracts_other": "{{count}} Verträge",
+      "applications_one": "{{count}} Anwendung",
+      "applications_other": "{{count}} Anwendungen",
+      "assets_one": "{{count}} Asset",
+      "assets_other": "{{count}} Assets",
+      "cost_centers_one": "{{count}} Kostenstelle",
+      "cost_centers_other": "{{count}} Kostenstellen",
+      "departments_one": "{{count}} Abteilung",
+      "departments_other": "{{count}} Abteilungen",
+      "users_one": "{{count}} Benutzer",
+      "users_other": "{{count}} Benutzer",
+      "locations_one": "{{count}} Standort",
+      "locations_other": "{{count}} Standorte",
+      "tasks_one": "{{count}} Aufgabe",
+      "tasks_other": "{{count}} Aufgaben",
+      "interfaces_one": "{{count}} Schnittstelle",
+      "interfaces_other": "{{count}} Schnittstellen",
+      "projects_one": "{{count}} Projekt",
+      "projects_other": "{{count}} Projekte",
+      "requests_one": "{{count}} Anfrage",
+      "requests_other": "{{count}} Anfragen",
+      "team_members_one": "{{count}} Teammitglied",
+      "team_members_other": "{{count}} Teammitglieder",
+      "compliance_requirements_one": "{{count}} erfasste Konformitätsanforderung",
+      "compliance_requirements_other": "{{count}} erfasste Konformitätsanforderungen"
+    }
   },
   "messages": {
     "loadFailed": "Daten konnten nicht geladen werden",
@@ -725,7 +760,8 @@
   },
   "lifecycleField": {
     "endOfValidity": "Ende der Gültigkeit",
-    "endOfValidityHint": "Leer lassen, um unbegrenzt aktiv zu bleiben."
+    "endOfValidityHint": "Leer lassen, um unbegrenzt aktiv zu bleiben.",
+    "activeUntil": "Aktiv bis {{date}}"
   },
   "autosave": {
     "leaveTitle": "Änderungen nicht gespeichert",

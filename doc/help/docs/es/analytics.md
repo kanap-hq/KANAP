@@ -109,7 +109,7 @@ Haga clic en cualquier celda para abrir el espacio de trabajo del valor.
 **Filtrado**:
 
 - **Búsqueda rápida**: busca en el nombre y la descripción
-- **Filtro de estado**: un filtro de casillas en la columna **Estado**. Si hace clic en **Limpiar** dentro del filtro, o desmarca ambos valores, la lista no muestra nada, sea cual sea la opción de **Mostrar**
+- **Filtro de estado**: el filtro de la columna **Estado** muestra la opción de **Mostrar** (**Todos**, **Activos** o **Desactivados**): cambiar uno cambia el otro
 - **Filtro Usada para**: un filtro de casillas en la columna **Usada para**
 - **Ámbito de estado**: el selector **Mostrar: Todos / Activos / Desactivados** sobre la lista. La lista muestra por defecto los valores activados
 
@@ -297,7 +297,7 @@ El campo de una línea OPEX ofrece los valores para OPEX y para ambos. El campo 
 Las dimensiones y los valores tienen cada uno un estado (**Activado** o **Desactivado**) y un **Fin de validez** opcional. Úselos para retirar una dimensión o un valor sin eliminarlo.
 
 - **Fin de validez**: la fecha en que termina. Déjelo en blanco para mantenerlo activo. También puede programar una fecha futura.
-- Pasar a **Desactivado** sin fecha fija el fin de validez en hoy. Volver a **Activado** borra la fecha.
+- Pasar a **Desactivado** fija el fin de validez en este momento: la desactivación es inmediata. Mientras haya una fecha futura, el interruptor muestra **Activo hasta el** y esa fecha. Volver a **Activado** borra la fecha.
 - Cuando pasa el fin de validez, el estado cambia a **Desactivado** por sí solo en el plazo de una hora.
 
 **Un valor desactivado**:
