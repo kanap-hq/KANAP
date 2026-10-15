@@ -1,10 +1,38 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 import { AuditService } from '../audit/audit.service';
 import { BulkDeleteResult } from '../common/delete.types';
 import { withSavepoint } from '../common/savepoint.util';
+import { checkIds, lineUsages, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal } from '../common/record-in-use';
 import { costCenterLabel, loadCostCenterTree } from './cost-center-tree.util';
-import { CostCenterContext, CostCentersService, validateCostCenterGraph } from './cost-centers.service';
+import {
+  CostCenterContext,
+  CostCenterGraphNode,
+  CostCentersService,
+  CostCenterUsage,
+  validateCostCenterGraph,
+} from './cost-centers.service';
+
+/**
+ * The refusal of a node's delete from `graph`, or null: a group that holds nodes
+ * (`COST_CENTER_HAS_NODES`: move or delete them first), a cost center used by budget lines
+ * (`COST_CENTER_IN_USE`: disable it instead). The English sentence is the tree rules' own.
+ */
+export function costCenterDeleteRefusal(
+  node: CostCenterGraphNode,
+  graph: Map<string, CostCenterGraphNode>,
+  usage: CostCenterUsage | undefined,
+): RecordInUseException | null {
+  const after = new Map(graph);
+  after.delete(node.id);
+  const issues = validateCostCenterGraph({ before: graph, after, usage: new Map(usage ? [[node.id, usage]] : []) });
+  if (issues.length === 0) return null;
+  const message = issues.map((issue) => issue.message).join(' ');
+  const children = Array.from(graph.values()).filter((other) => other.parent_id === node.id).length;
+  return children > 0
+    ? new RecordInUseException('COST_CENTER_HAS_NODES', 'cost center', node.name, [{ type: 'nodes', total: children }], message)
+    : new RecordInUseException('COST_CENTER_IN_USE', 'cost center', node.name, lineUsages(usage), message);
+}
 
 @Injectable()
 export class CostCentersDeleteService {
@@ -24,18 +52,17 @@ export class CostCentersDeleteService {
     const [existing] = await this.costCenters.lockNodes(ctx, [id]);
     if (!existing) throw new NotFoundException('Cost center not found.');
 
-    const before = await this.costCenters.loadGraph(ctx);
-    const after = new Map(before);
-    after.delete(id);
+    const graph = await this.costCenters.loadGraph(ctx);
     const usage = await this.costCenters.countUsage(ctx, [id]);
-    const issues = validateCostCenterGraph({ before, after, usage });
-    if (issues.length > 0) throw new ConflictException(issues.map((issue) => issue.message).join(' '));
+    const node = graph.get(id);
+    const refusal = node ? costCenterDeleteRefusal(node, graph, usage.get(id)) : null;
+    if (refusal) throw refusal;
 
     try {
       await ctx.manager.query(`DELETE FROM cost_centers WHERE tenant_id = $1 AND id = $2`, [ctx.tenantId, id]);
     } catch (err: any) {
       if (err?.code === '23503') {
-        throw new ConflictException(`${existing.code} is still referenced. Disable it instead.`);
+        throw new RecordInUseException('RECORD_IN_USE', 'cost center', existing.name, [], `${existing.code} is still referenced. Disable it instead.`);
       }
       throw err;
     }
@@ -56,6 +83,43 @@ export class CostCentersDeleteService {
   }
 
   /**
+   * The check before a delete (`POST /cost-centers/delete-check`): which of `ids` the bulk delete
+   * would refuse, and why. Played in the bulk delete's order on the stored tree, so a group asked
+   * with all its content is not refused. Nothing is written or locked.
+   */
+  async deleteCheck(ids: string[], ctx: CostCenterContext): Promise<{ refused: DeleteRefusal[] }> {
+    const wanted = checkIds(ids);
+    if (wanted.length === 0) return { refused: [] };
+    const stored = await this.costCenters.loadGraph(ctx);
+    const graph = new Map(stored);
+    const usage = await this.costCenters.countUsage(ctx, wanted);
+    const refusals = new Map<string, RecordInUseException>();
+    for (const id of await this.deleteOrder(wanted, ctx)) {
+      const node = graph.get(id);
+      if (!node) continue;
+      const refusal = costCenterDeleteRefusal(node, graph, usage.get(id));
+      if (refusal) refusals.set(id, refusal);
+      else graph.delete(id);
+    }
+    return refusalsFrom(
+      wanted,
+      Array.from(refusals.keys(), (id) => stored.get(id)!),
+      costCenterLabel,
+      async (node) => refusals.get(node.id) ?? null,
+    );
+  }
+
+  /** Deeper nodes first, then in the order asked: a group and its content selected together go together. */
+  private async deleteOrder(ids: string[], ctx: CostCenterContext): Promise<string[]> {
+    const nodes = await loadCostCenterTree(ctx.manager, ctx.tenantId);
+    const depth = new Map(nodes.map((node) => [node.id, node.depth]));
+    return ids
+      .map((id, index) => ({ id, index }))
+      .sort((a, b) => (depth.get(b.id) ?? -1) - (depth.get(a.id) ?? -1) || a.index - b.index)
+      .map((entry) => entry.id);
+  }
+
+  /**
    * Deletes each node under its own savepoint, so a refusal leaves the others
    * deleted and the transaction usable. Deeper nodes go first: a group and
    * its content selected together are deleted together.
@@ -65,12 +129,7 @@ export class CostCentersDeleteService {
     const unique = Array.from(new Set((ids ?? []).map((id) => String(id))));
     if (unique.length === 0) return result;
 
-    const nodes = await loadCostCenterTree(ctx.manager, ctx.tenantId);
-    const depth = new Map(nodes.map((node) => [node.id, node.depth]));
-    const ordered = unique
-      .map((id, index) => ({ id, index }))
-      .sort((a, b) => (depth.get(b.id) ?? -1) - (depth.get(a.id) ?? -1) || a.index - b.index)
-      .map((entry) => entry.id);
+    const ordered = await this.deleteOrder(unique, ctx);
 
     for (const id of ordered) {
       if (!isUUID(id)) {
@@ -89,6 +148,7 @@ export class CostCentersDeleteService {
           id,
           name: row ? costCenterLabel(row) : 'Unknown',
           reason: err?.message || 'Unknown error',
+          ...refusalDetails(err),
         });
       }
     }

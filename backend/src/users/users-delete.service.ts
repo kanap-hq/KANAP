@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { User } from './user.entity';
@@ -7,6 +7,7 @@ import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult } from '../common/delete.types';
 import { withSavepoint } from '../common/savepoint.util';
 import { userAuditSnapshot } from './users.service';
+import { checkIds, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal } from '../common/record-in-use';
 
 @Injectable()
 export class UsersDeleteService extends BaseDeleteService<User> {
@@ -30,6 +31,24 @@ export class UsersDeleteService extends BaseDeleteService<User> {
     return user.email || `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || user.id;
   }
 
+  /** The refusal of a user's delete: one's own account (`USER_OWN_ACCOUNT`: disable it instead), or null. */
+  private refusalOf(user: User, actorId: string | null): RecordInUseException | null {
+    if (!actorId || actorId !== user.id) return null;
+    return new RecordInUseException('USER_OWN_ACCOUNT', 'user', this.getUserDisplayName(user), [], 'You cannot delete your own account. Disable it instead if needed.');
+  }
+
+  /** The check before a delete (`POST /users/delete-check`): which of `ids` would be refused, and why. Nothing is written. */
+  async deleteCheck(ids: string[], actorId: string | null, opts?: { manager?: EntityManager }): Promise<{ refused: DeleteRefusal[] }> {
+    const manager = opts?.manager ?? this.repository.manager;
+    const wanted = checkIds(ids);
+    if (wanted.length === 0) return { refused: [] };
+    const rows: User[] = await manager.query(
+      `SELECT id, email, first_name, last_name FROM users WHERE tenant_id = app_current_tenant() AND id = ANY($1::uuid[])`,
+      [wanted],
+    );
+    return refusalsFrom(wanted, rows, (row) => this.getUserDisplayName(row), async (row) => this.refusalOf(row, actorId));
+  }
+
   /**
    * Delete a user by ID
    * Note: actorId is used to prevent self-deletion
@@ -43,16 +62,19 @@ export class UsersDeleteService extends BaseDeleteService<User> {
       throw new NotFoundException('User not found');
     }
 
-    if (actorId && actorId === id) {
-      throw new ConflictException('You cannot delete your own account. Disable it instead if needed.');
-    }
+    const refusal = this.refusalOf(user, actorId);
+    if (refusal) throw refusal;
 
     try {
       await repo.delete({ id } as any);
     } catch (error: any) {
       if (error?.code === '23503' || error?.message?.includes('foreign key constraint')) {
         const label = this.getUserDisplayName(user);
-        throw new ConflictException(
+        throw new RecordInUseException(
+          'RECORD_IN_USE',
+          'user',
+          label,
+          [],
           `Cannot delete user "${label}": it is referenced by other records. Disable the user instead or remove references first.`,
         );
       }
@@ -94,7 +116,7 @@ export class UsersDeleteService extends BaseDeleteService<User> {
         } catch (err: any) {
           this.logger.warn(`Failed to fetch user name for error reporting: ${err?.message || 'Unknown error'}`);
         }
-        result.failed.push({ id, name, reason: error?.message || 'Unknown error' });
+        result.failed.push({ id, name, reason: error?.message || 'Unknown error', ...refusalDetails(error) });
       }
     }
 

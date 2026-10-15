@@ -1,9 +1,17 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 import { AuditService } from '../audit/audit.service';
 import { BulkDeleteResult } from '../common/delete.types';
 import { withSavepoint } from '../common/savepoint.util';
-import { calendarUsageText, WorkingDayProfileContext, WorkingDayProfilesService } from './working-day-profiles.service';
+import { checkIds, lineUsages, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal } from '../common/record-in-use';
+import { calendarUsageText, WorkingDayProfileContext, WorkingDayProfilesService, type WorkingDayProfileUsage } from './working-day-profiles.service';
+
+/** The refusal of a calendar's delete (`CALENDAR_IN_USE`: the budget lines counted, disable it instead), or null. */
+export function calendarDeleteRefusal(name: string, usage: WorkingDayProfileUsage | undefined): RecordInUseException | null {
+  const lines = calendarUsageText(usage);
+  if (!lines) return null;
+  return new RecordInUseException('CALENDAR_IN_USE', 'calendar', name, lineUsages(usage), `${name} is used by ${lines}. Disable it instead.`);
+}
 
 @Injectable()
 export class WorkingDayProfilesDeleteService {
@@ -23,15 +31,14 @@ export class WorkingDayProfilesDeleteService {
     // delete and then fails its key check.
     const [existing] = await this.calendars.lockByIds(ctx, [id]);
     if (!existing) throw new NotFoundException('Calendar not found.');
-    const usage = (await this.calendars.countUsage(ctx, [id])).get(id);
-    const lines = calendarUsageText(usage);
-    if (lines) throw new ConflictException(`${existing.name} is used by ${lines}. Disable it instead.`);
+    const refusal = calendarDeleteRefusal(existing.name, (await this.calendars.countUsage(ctx, [id])).get(id));
+    if (refusal) throw refusal;
 
     try {
       await ctx.manager.query(`DELETE FROM working_day_profiles WHERE tenant_id = $1 AND id = $2`, [ctx.tenantId, id]);
     } catch (err: any) {
       if (err?.code === '23503') {
-        throw new ConflictException(`${existing.name} is still used by budget lines. Disable it instead.`);
+        throw new RecordInUseException('RECORD_IN_USE', 'calendar', existing.name, [], `${existing.name} is still used by budget lines. Disable it instead.`);
       }
       throw err;
     }
@@ -51,6 +58,18 @@ export class WorkingDayProfilesDeleteService {
     );
   }
 
+  /** The check before a delete (`POST /working-day-profiles/delete-check`): which of `ids` would be refused, and why. Nothing is written. */
+  async deleteCheck(ids: string[], ctx: WorkingDayProfileContext): Promise<{ refused: DeleteRefusal[] }> {
+    const wanted = checkIds(ids);
+    if (wanted.length === 0) return { refused: [] };
+    const rows: Array<{ id: string; name: string }> = await ctx.manager.query(
+      `SELECT id, name FROM working_day_profiles WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+      [ctx.tenantId, wanted],
+    );
+    const usage = await this.calendars.countUsage(ctx, wanted);
+    return refusalsFrom(wanted, rows, (row) => row.name, async (row) => calendarDeleteRefusal(row.name, usage.get(row.id)));
+  }
+
   /** Deletes each calendar under its own savepoint, so a refusal leaves the others deleted and the transaction usable. */
   async bulkDelete(ids: string[], ctx: WorkingDayProfileContext): Promise<BulkDeleteResult> {
     const result: BulkDeleteResult = { deleted: [], failed: [] };
@@ -68,7 +87,7 @@ export class WorkingDayProfilesDeleteService {
           `SELECT name FROM working_day_profiles WHERE tenant_id = $1 AND id = $2`,
           [ctx.tenantId, id],
         );
-        result.failed.push({ id, name: row?.name ?? 'Unknown', reason: err?.message || 'Unknown error' });
+        result.failed.push({ id, name: row?.name ?? 'Unknown', reason: err?.message || 'Unknown error', ...refusalDetails(err) });
       }
     }
     return result;

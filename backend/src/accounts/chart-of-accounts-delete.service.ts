@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { ChartOfAccounts } from './chart-of-accounts.entity';
@@ -9,6 +9,7 @@ import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
 import { withSavepoint } from '../common/savepoint.util';
 import { CURRENT_TENANT, lockTenantCharts } from './consolidation';
+import { checkIds, lineUsages, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal, type UsageCount } from '../common/record-in-use';
 
 @Injectable()
 export class ChartOfAccountsDeleteService extends BaseDeleteService<ChartOfAccounts> {
@@ -41,6 +42,47 @@ export class ChartOfAccountsDeleteService extends BaseDeleteService<ChartOfAccou
   }
 
   /**
+   * The refusal of a chart's delete (`CHART_OF_ACCOUNTS_IN_USE`: the companies that use it and
+   * the budget lines on its accounts, counted), or null. Moving the companies to another chart
+   * and the lines to other accounts frees it.
+   */
+  private async refusalOf(coa: ChartOfAccounts, manager: EntityManager): Promise<RecordInUseException | null> {
+    const [counts]: Array<{ companies: number; opex: number; capex: number }> = await manager.query(
+      `SELECT
+         (SELECT count(*)::int FROM companies c WHERE c.tenant_id = ${CURRENT_TENANT} AND c.coa_id = $1) AS companies,
+         (SELECT count(*)::int FROM spend_items si JOIN accounts a ON a.id = si.account_id AND a.tenant_id = si.tenant_id
+           WHERE a.coa_id = $1 AND si.tenant_id = ${CURRENT_TENANT} AND si.nature = 'opex') AS opex,
+         (SELECT count(*)::int FROM spend_items ci JOIN accounts a ON a.id = ci.account_id AND a.tenant_id = ci.tenant_id
+           WHERE a.coa_id = $1 AND ci.tenant_id = ${CURRENT_TENANT} AND ci.nature = 'capex') AS capex`,
+      [coa.id],
+    );
+    const companies = Number(counts?.companies ?? 0);
+    const opex = Number(counts?.opex ?? 0);
+    const capex = Number(counts?.capex ?? 0);
+    if (companies + opex + capex === 0) return null;
+    const usages: UsageCount[] = [
+      ...(companies > 0 ? [{ type: 'companies' as const, total: companies }] : []),
+      ...lineUsages({ opex, capex }),
+    ];
+    const message = companies > 0
+      ? `Cannot delete: ${companies} companies reference this Chart of Accounts`
+      : `Cannot delete: ${opex} OPEX and ${capex} CAPEX item(s) reference accounts in this Chart of Accounts`;
+    return new RecordInUseException('CHART_OF_ACCOUNTS_IN_USE', 'chart of accounts', this.getCoaDisplayName(coa), usages, message);
+  }
+
+  /** The check before a delete (`POST /chart-of-accounts/delete-check`): which of `ids` would be refused, and why. Nothing is written. */
+  async deleteCheck(ids: string[], opts?: { manager?: EntityManager }): Promise<{ refused: DeleteRefusal[] }> {
+    const manager = opts?.manager ?? this.repository.manager;
+    const wanted = checkIds(ids);
+    if (wanted.length === 0) return { refused: [] };
+    const rows: ChartOfAccounts[] = await manager.query(
+      `SELECT id, code, name FROM chart_of_accounts WHERE tenant_id = ${CURRENT_TENANT} AND id = ANY($1::uuid[])`,
+      [wanted],
+    );
+    return refusalsFrom(wanted, rows, (row) => this.getCoaDisplayName(row), (row) => this.refusalOf(row, manager));
+  }
+
+  /**
    * Override delete to check for company references and OPEX/CAPEX usage
    */
   override async delete(id: string, opts?: DeleteOptions): Promise<void> {
@@ -54,35 +96,8 @@ export class ChartOfAccountsDeleteService extends BaseDeleteService<ChartOfAccou
       throw new NotFoundException('Chart of Accounts not found');
     }
 
-    // Check for company references
-    const companyCount = await manager.getRepository(Company).count({ where: { coa_id: id } as any });
-    if (companyCount > 0) {
-      throw new ConflictException(`Cannot delete: ${companyCount} companies reference this Chart of Accounts`);
-    }
-
-    // Count OPEX usage of accounts under this CoA
-    const opexUsageRows = await manager.query(
-      `SELECT COUNT(*)::int AS count
-       FROM spend_items si
-       JOIN accounts a ON a.id = si.account_id AND a.tenant_id = si.tenant_id
-       WHERE a.coa_id = $1 AND si.tenant_id = ${CURRENT_TENANT} AND si.nature = 'opex'`,
-      [id],
-    );
-    const opexCount = Number(opexUsageRows?.[0]?.count ?? 0);
-
-    // CAPEX usage: items referencing accounts under this CoA
-    const capexUsageRows = await manager.query(
-      `SELECT COUNT(*)::int AS count
-       FROM spend_items ci
-       JOIN accounts a ON a.id = ci.account_id AND a.tenant_id = ci.tenant_id
-       WHERE a.coa_id = $1 AND ci.tenant_id = ${CURRENT_TENANT} AND ci.nature = 'capex'`,
-      [id],
-    );
-    const capexCount = Number(capexUsageRows?.[0]?.count ?? 0);
-
-    if (opexCount + capexCount > 0) {
-      throw new ConflictException(`Cannot delete: ${opexCount} OPEX and ${capexCount} CAPEX item(s) reference accounts in this Chart of Accounts`);
-    }
+    const refusal = await this.refusalOf(existing, manager);
+    if (refusal) throw refusal;
 
     // No usage: remove accounts within this CoA, then delete the CoA
     await manager.getRepository(Account).delete({ coa_id: id } as any);
@@ -123,7 +138,7 @@ export class ChartOfAccountsDeleteService extends BaseDeleteService<ChartOfAccou
         } catch (e: any) {
           this.logger.warn(`Failed to fetch chart of accounts name for error reporting: ${e?.message || 'Unknown error'}`);
         }
-        result.failed.push({ id, name, reason: err?.message || 'Unknown error' });
+        result.failed.push({ id, name, reason: err?.message || 'Unknown error', ...refusalDetails(err) });
       }
     }
     return result;

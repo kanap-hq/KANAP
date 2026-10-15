@@ -64,6 +64,14 @@ export class UsersController {
     });
   }
 
+  // What a delete of `ids` would refuse, asked before the confirmation.
+  @UseGuards(PermissionGuard)
+  @RequireLevel('users', 'admin')
+  @Post('delete-check')
+  deleteCheck(@Body() body: { ids?: unknown }, @Req() req: any) {
+    return this.deleteSvc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+  }
+
   @UseGuards(PermissionGuard)
   @RequireLevel('users', 'admin')
   @Delete('bulk')

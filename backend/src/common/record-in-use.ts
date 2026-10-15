@@ -4,9 +4,18 @@ import { readUsages, type UsageQuery, type UsageType } from './record-usages';
 
 /**
  * What still uses or holds a record, counted per kind: the groups of its usages, or what a record
- * holds that forbids its delete (a contract's recorded compliance requirements).
+ * holds that forbids its delete (a contract's recorded compliance requirements, a group's nodes).
+ * The interface words each kind (`common:delete.usages.<kind>`).
  */
-export type RefusalKind = UsageType | 'compliance_requirements';
+export type RefusalKind =
+  | UsageType
+  | 'compliance_requirements'
+  | 'opex_lines'
+  | 'capex_lines'
+  | 'app_assignments'
+  | 'connections'
+  | 'nodes'
+  | 'companies';
 export type UsageCount = { type: RefusalKind; total: number };
 
 const ENGLISH: Record<RefusalKind, [string, string]> = {
@@ -25,7 +34,21 @@ const ENGLISH: Record<RefusalKind, [string, string]> = {
   team_members: ['team member', 'team members'],
   suppliers: ['supplier', 'suppliers'],
   compliance_requirements: ['recorded compliance requirement', 'recorded compliance requirements'],
+  opex_lines: ['OPEX line', 'OPEX lines'],
+  capex_lines: ['CAPEX line', 'CAPEX lines'],
+  app_assignments: ['application assignment', 'application assignments'],
+  connections: ['connection', 'connections'],
+  nodes: ['node', 'nodes'],
+  companies: ['company', 'companies'],
 };
+
+/** The OPEX and CAPEX line counts of a refusal, each kind only when not zero. */
+export function lineUsages(usage: { opex: number; capex: number } | undefined): UsageCount[] {
+  const usages: UsageCount[] = [];
+  if (usage && usage.opex > 0) usages.push({ type: 'opex_lines', total: usage.opex });
+  if (usage && usage.capex > 0) usages.push({ type: 'capex_lines', total: usage.capex });
+  return usages;
+}
 
 export function englishList(usages: readonly UsageCount[]): string {
   const parts = usages.map(({ type, total }) => `${total} ${ENGLISH[type][total === 1 ? 0 : 1]}`);
@@ -81,6 +104,34 @@ export type DeleteRefusal = { id: string; name: string; code: string; usages: Us
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** The ids a check reads: each well-formed uuid once, lower case, in the order asked. */
+export function checkIds(ids: readonly unknown[] | null | undefined): string[] {
+  return Array.from(new Set((Array.isArray(ids) ? ids : []).map((id) => String(id || '').trim().toLowerCase()).filter((id) => UUID_RE.test(id))));
+}
+
+/**
+ * The check before a delete whose refusal is not a usages list alone: `rows` are the asked records
+ * of the tenant (read by the caller), and `refusalOf` answers for each the refusal its delete
+ * would throw, or null. The same function guards the delete, so the check and the delete agree.
+ * In the order of `ids`; unknown ids are left out. Nothing is written.
+ */
+export async function refusalsFrom<R extends { id: string }>(
+  ids: readonly string[],
+  rows: readonly R[],
+  nameOf: (row: R) => string,
+  refusalOf: (row: R) => Promise<RecordInUseException | null>,
+): Promise<{ refused: DeleteRefusal[] }> {
+  const byId = new Map(rows.map((row) => [String(row.id).toLowerCase(), row]));
+  const refused: DeleteRefusal[] = [];
+  for (const id of ids) {
+    const row = byId.get(id);
+    if (!row) continue;
+    const refusal = await refusalOf(row);
+    if (refusal) refused.push({ id: row.id, name: nameOf(row), code: refusal.code, usages: refusal.usages });
+  }
+  return { refused };
+}
+
 /**
  * The check before a delete: of the asked records of the tenant (`table`, with a `name`), those
  * `assertNotInUse` would refuse, with the counts per kind, in the order asked. Unknown or
@@ -93,7 +144,7 @@ export async function refusalsOf(
   queries: readonly UsageQuery[],
   code: string,
 ): Promise<{ refused: DeleteRefusal[] }> {
-  const wanted = Array.from(new Set((ids || []).map((id) => String(id || '').trim().toLowerCase()).filter((id) => UUID_RE.test(id))));
+  const wanted = checkIds(ids);
   if (wanted.length === 0) return { refused: [] };
   const rows: Array<{ id: string; name: string; tenant_id: string }> = await manager.query(
     `SELECT id, name, tenant_id FROM ${table} WHERE tenant_id = app_current_tenant() AND id = ANY($1::uuid[])`,
