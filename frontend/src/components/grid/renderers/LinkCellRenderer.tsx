@@ -47,6 +47,21 @@ export interface LinkCellRendererProps<T = unknown> extends ICellRendererParams<
 }
 
 /**
+ * Spread into the `sx` of a list cell's link: in a grid cell the link covers the whole cell,
+ * padding included, so a click anywhere in the cell opens the row, and the anchor stays a real
+ * link (middle click, Ctrl/Cmd click, keyboard). AG Grid positions `.ag-cell`, so the area stays
+ * inside its cell. Every custom link cell of a list uses it, as LinkCellRenderer does.
+ */
+export const wholeCellLinkSx = {
+  '.ag-cell &::after': { content: '""', position: 'absolute', inset: 0 },
+} as const;
+
+/** Spread into the `sx` of another link or control in the same cell: it stays above the cell link. */
+export const aboveCellLinkSx = {
+  '.ag-cell &': { position: 'relative', zIndex: 1 },
+} as const;
+
+/**
  * Detect if a URL is external
  */
 function isExternalUrl(url: string): boolean {
@@ -246,10 +261,7 @@ export function LinkCellRenderer<T = unknown>(
           // The grid strips text decoration from cell links (`ag-grid-overrides.css`): the
           // underline goes on the text inside the link.
           ...(newTab ? { '&:hover > span, &:focus-visible > span': { textDecoration: 'underline' } } : {}),
-          // In a grid cell the link covers the whole cell, padding included: a click anywhere in
-          // the cell opens the row, and the anchor stays a real link (middle click, Ctrl/Cmd
-          // click, keyboard). AG Grid positions `.ag-cell`, so the area stays inside its cell.
-          '.ag-cell &::after': { content: '""', position: 'absolute', inset: 0 },
+          ...wholeCellLinkSx,
           // Content after the link (`endAdornment`) stays above that area and keeps its own clicks
           // and tooltips; the external link icon lets the click through to the link.
           '.ag-cell & ~ :not(svg)': { position: 'relative', zIndex: 1 },

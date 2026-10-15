@@ -69,6 +69,16 @@ describe('LinkCellRenderer', () => {
     fireEvent(link, ctrlClick);
     expect(ctrlClick.defaultPrevented).toBe(false);
     expect(onNavigate).not.toHaveBeenCalled();
+    const cmdClick = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0, metaKey: true });
+    fireEvent(link, cmdClick);
+    expect(cmdClick.defaultPrevented).toBe(false);
+    const middleClick = new MouseEvent('click', { bubbles: true, cancelable: true, button: 1 });
+    fireEvent(link, middleClick);
+    expect(middleClick.defaultPrevented).toBe(false);
+    const shiftClick = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0, shiftKey: true });
+    fireEvent(link, shiftClick);
+    expect(shiftClick.defaultPrevented).toBe(false);
+    expect(onNavigate).not.toHaveBeenCalled();
     fireEvent.click(link);
     expect(onNavigate).toHaveBeenCalledWith('/master-data/suppliers/s1', row);
 
