@@ -37,7 +37,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
 import ChipToggleBar, { ChipToggleContextLine } from '../../components/ChipToggleBar';
-import { KanapDialog, PropertyRow, StatusDot } from '../../components/design';
+import { KanapDialog, PropertyRow, StatusDot, useKanapDialogs } from '../../components/design';
 import ServerDataGrid from '../../components/ServerDataGrid';
 import type { EnhancedColDef } from '../../components/ServerDataGrid';
 import { LinkCellRenderer } from '../../components/grid/renderers';
@@ -133,6 +133,8 @@ type KnowledgeContributorOption = {
 };
 
 type KnowledgeLibraryDetail = DocumentLibrary & {
+  /** The default library: new documents go there, and it cannot be deleted. */
+  is_default?: boolean;
   owner: KnowledgeContributorOption | null;
   readers: KnowledgeContributorOption[];
   writers: KnowledgeContributorOption[];
@@ -183,6 +185,7 @@ export default function KnowledgePage() {
   const { hasLevel, profile } = useAuth();
   const { t } = useTranslation(['knowledge', 'common']);
   const locale = useLocale();
+  const dialogs = useKanapDialogs();
   const qc = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
@@ -1433,7 +1436,14 @@ export default function KnowledgePage() {
         footerLeft={(
           <Button
             variant="action-danger"
-            onClick={() => setDeleteLibraryConfirmOpen(true)}
+            onClick={() => {
+              // The default library cannot be deleted: say so, with nothing to confirm.
+              if (editingLibraryDetail?.is_default) {
+                void dialogs.alert({ title: t('dialogs.deleteLibrary.title'), message: t('errors:knowledge_default_library') });
+                return;
+              }
+              setDeleteLibraryConfirmOpen(true);
+            }}
             disabled={!editingLibrary || deleteLibraryMutation.isPending || editingLibraryLoading}
           >
             {t('common:buttons.delete')}

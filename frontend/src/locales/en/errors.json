@@ -26,6 +26,7 @@
   "duplicate": "This record already exists. Reload the page to see the current data.",
   "parent_gone": "Something this change depends on was deleted in the meantime. Reload the page to see the current data.",
   "in_use": "This change would remove something that is still used elsewhere, so it was not saved.",
+  "knowledge_default_library": "This is the default library: new documents go there. It cannot be deleted.",
   "retry": "Another change to the same data was saved at the same moment, so this one did not go through. Please try again.",
   "busy": "This data is busy with another operation. Please try again in a few seconds.",
   "notSavedYet": "Your last change is not saved yet because the server is busy. It stays on this page and is sent again with your next change.",

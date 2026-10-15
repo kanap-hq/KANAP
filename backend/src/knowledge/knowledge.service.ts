@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   GoneException,
+  HttpStatus,
   HttpException,
   Injectable,
   Logger,
@@ -182,6 +183,8 @@ type KnowledgeLibraryMemberView = {
   label: string;
 };
 type KnowledgeLibraryDetailView = KnowledgeLibraryView & {
+  /** The default library: new documents go there, and it cannot be deleted. */
+  is_default: boolean;
   owner: KnowledgeLibraryMemberView | null;
   readers: KnowledgeLibraryMemberView[];
   writers: KnowledgeLibraryMemberView[];
@@ -2490,8 +2493,10 @@ export class KnowledgeService {
       [library.id],
     );
 
+    const defaultLibrary = await this.resolveDefaultLibrary(manager);
     return {
       ...library,
+      is_default: defaultLibrary.id === library.id,
       owner: ownerRows[0] ?? null,
       readers: memberRows
         .filter((row) => row.access_level === 'reader')
@@ -2639,6 +2644,16 @@ export class KnowledgeService {
       if (!existing) throw new NotFoundException('Library not found');
       if (existing.is_system) throw new BadRequestException('System libraries cannot be deleted');
       await this.assertLibraryManageable(existing.id, tx, userId);
+      // The default library receives the documents created without a library, and those of a
+      // deleted library: it stays.
+      if ((await this.resolveDefaultLibrary(tx)).id === existing.id) {
+        throw new ConflictException({
+          statusCode: HttpStatus.CONFLICT,
+          error: 'Conflict',
+          code: 'knowledge_default_library',
+          message: 'This is the default library: new documents go there. It cannot be deleted.',
+        });
+      }
 
       const accessibleFallbacks = (await this.listLibrariesWithAccess(tx, userId))
         .filter((library) => library.id !== existing.id && !library.is_system);

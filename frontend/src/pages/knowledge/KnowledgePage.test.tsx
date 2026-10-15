@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -8,25 +8,36 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import frKnowledge from '../../locales/fr/knowledge.json';
 import frCommon from '../../locales/fr/common.json';
+import frErrors from '../../locales/fr/errors.json';
+import { KanapDialogProvider } from '../../components/design';
 
 // The shipped library and folders show in French; the library and folder columns filter on
 // stable keys (library slug, folder system key), whatever the language.
 const instance = i18next.createInstance();
 void instance.init({
   lng: 'fr',
-  resources: { fr: { knowledge: frKnowledge, common: frCommon } },
-  ns: ['knowledge', 'common'],
+  resources: { fr: { knowledge: frKnowledge, common: frCommon, errors: frErrors } },
+  ns: ['knowledge', 'common', 'errors'],
   defaultNS: 'knowledge',
   interpolation: { escapeValue: false },
   initImmediate: false,
 });
 const translation = vi.hoisted(() => ({ value: null as any }));
 vi.mock('react-i18next', () => ({
-  useTranslation: () => translation.value,
+  useTranslation: (ns?: string | string[]) => translation.value(ns),
 }));
-translation.value = {
-  t: (key: string, options?: Record<string, unknown>) => instance.t(key, options),
-  i18n: { language: 'fr', resolvedLanguage: 'fr' },
+// One stable `t` per namespace list (a new `t` on each render would loop effects).
+const translators = new Map<string, unknown>();
+translation.value = (ns?: string | string[]) => {
+  const key = JSON.stringify(ns ?? null);
+  if (!translators.has(key)) {
+    const namespaces = ns ? (Array.isArray(ns) ? ns : [ns]) : undefined;
+    translators.set(key, {
+      t: (k: string, options?: Record<string, unknown>) => instance.t(k, { ...(namespaces ? { ns: namespaces } : {}), ...options }),
+      i18n: { language: 'fr', resolvedLanguage: 'fr' },
+    });
+  }
+  return translators.get(key);
 };
 
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
@@ -51,20 +62,22 @@ import KnowledgePage from './KnowledgePage';
 
 const get = vi.mocked(api.get);
 const LIBRARIES = [
-  { id: 'lib-docs', name: 'Documents', slug: 'documents', is_system: false, display_order: 0, can_write: true },
+  { id: 'lib-docs', name: 'Documents', slug: 'documents', is_system: false, display_order: 0, can_write: true, can_manage: true },
   { id: 'lib-templates', name: 'Templates', slug: 'templates', is_system: true, display_order: 1, can_write: true },
   { id: 'lib-managed', name: 'Managed Docs', slug: 'managed-docs', is_system: true, display_order: 2, can_write: true },
   { id: 'lib-sd', name: 'Service Desk Docs', slug: 'service-desk-docs', is_system: false, display_order: 3, can_write: true },
 ];
 
-function renderPage() {
+function renderPage(url = '/knowledge?library=managed-docs&allLibraries=1') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <ThemeProvider theme={createAppTheme('light')}>
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={['/knowledge?library=managed-docs&allLibraries=1']}>
-          <KnowledgePage />
-        </MemoryRouter>
+        <KanapDialogProvider>
+          <MemoryRouter initialEntries={[url]}>
+            <KnowledgePage />
+          </MemoryRouter>
+        </KanapDialogProvider>
       </QueryClientProvider>
     </ThemeProvider>,
   );
@@ -80,6 +93,20 @@ describe('KnowledgePage library and folder names', () => {
     vi.stubGlobal('localStorage', { getItem: () => null, setItem: () => undefined, removeItem: () => undefined });
     get.mockImplementation(async (url: string, config?: any) => {
       if (url === '/knowledge-libraries') return { data: LIBRARIES } as any;
+      if (url === '/knowledge/contributor-options') return { data: [] } as any;
+      if (url === '/knowledge-libraries/lib-docs') {
+        return {
+          data: {
+            ...LIBRARIES[0],
+            can_manage: true,
+            is_default: true,
+            owner_user_id: 'user-1',
+            owner: { id: 'user-1', email: 'me@example.test', label: 'Me' },
+            readers: [],
+            writers: [],
+          },
+        } as any;
+      }
       if (url === '/knowledge/filter-values') {
         const field = config?.params?.fields;
         if (field === 'folder_key') return { data: { folder_key: ['integrated_requests', 'Requests', null] } } as any;
@@ -131,5 +158,19 @@ describe('KnowledgePage library and folder names', () => {
       value: 'managed-docs',
       data: { library_key: 'managed-docs', library_slug: 'managed-docs', library_name: 'Managed Docs' },
     })).toBe('Documents managés');
+  });
+
+  it('refuses to delete the default library in a single window, with Close only', async () => {
+    renderPage('/knowledge?library=documents&allLibraries=0');
+    fireEvent.click(await screen.findByText(frKnowledge.libraries.manage));
+    await waitFor(() => expect(get).toHaveBeenCalledWith('/knowledge-libraries/lib-docs'));
+    await screen.findByDisplayValue('Documents');
+    fireEvent.click(screen.getByRole('button', { name: frCommon.buttons.delete }));
+
+    const refusal = await screen.findByText(frErrors.knowledge_default_library);
+    const dialog = refusal.closest('[role="dialog"]') as HTMLElement;
+    expect(within(dialog).getByRole('button', { name: frCommon.buttons.close })).toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: frKnowledge.dialogs.deleteLibrary.actions.confirm })).not.toBeInTheDocument();
+    expect(screen.queryByText(frKnowledge.confirmations.deleteLibrary)).not.toBeInTheDocument();
   });
 });
