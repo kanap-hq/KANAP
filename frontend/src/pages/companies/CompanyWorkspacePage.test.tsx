@@ -210,7 +210,7 @@ describe('CompanyWorkspacePage', () => {
   it('saves a currency change on change', async () => {
     renderAt('/master-data/companies/co-1/overview');
     await screen.findByText('Acme France');
-    await pickOption('companies.fields.baseCurrency', 'United States', 'United States Dollar (USD)');
+    await pickOption('companies.fields.baseCurrency', 'US Dollar', 'US Dollar (USD)');
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/companies/co-1', { base_currency: 'USD' }));
   });
 

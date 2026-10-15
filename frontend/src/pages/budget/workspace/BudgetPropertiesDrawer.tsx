@@ -10,7 +10,8 @@ import CostCenterSelect from '../../../components/fields/CostCenterSelect';
 import DateEUField from '../../../components/fields/DateEUField';
 import StatusLifecycleField from '../../../components/fields/StatusLifecycleField';
 import UserSelect from '../../../components/fields/UserSelect';
-import { CURRENCY_OPTIONS, CurrencyOption } from '../../../constants/isoOptions';
+import type { CurrencyOption } from '../../../constants/isoOptions';
+import { useCurrencyOptions } from '../../../i18n/currencies';
 import useCurrencySettings from '../../../hooks/useCurrencySettings';
 import { STATUS_ENABLED, StatusValue } from '../../../constants/status';
 import { formatShortDate } from '../../../lib/dateFormat';
@@ -112,16 +113,17 @@ export default function BudgetPropertiesDrawer({
   const locale = useLocale();
   const config = BUDGET_NATURE_CONFIG[nature];
   const { data: currencySettings } = useCurrencySettings();
+  const allCurrencyOptions = useCurrencyOptions();
 
   const currencyOptions = React.useMemo<CurrencyOption[]>(() => {
     const allowed = currencySettings?.allowedCurrencies;
     if (allowed && allowed.length > 0) {
       const set = new Set(allowed.map((c: string) => c.toUpperCase()));
-      const filtered = CURRENCY_OPTIONS.filter((opt) => set.has(opt.code));
-      return filtered.length ? filtered : CURRENCY_OPTIONS;
+      const filtered = allCurrencyOptions.filter((opt) => set.has(opt.code));
+      return filtered.length ? filtered : allCurrencyOptions;
     }
-    return CURRENCY_OPTIONS;
-  }, [currencySettings]);
+    return allCurrencyOptions;
+  }, [allCurrencyOptions, currencySettings]);
 
   const currencyValue = React.useMemo<CurrencyOption | null>(() => {
     const code = (currency || '').toUpperCase();

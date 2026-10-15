@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Autocomplete, TextField } from '@mui/material';
-import { CURRENCY_OPTIONS } from '../../constants/isoOptions';
+import { useCurrencyOptions } from '../../i18n/currencies';
 import { useCountryOptions } from '../../i18n/countries';
 import { drawerAutocompleteListboxSx, drawerFieldValueSx } from '../../theme/formSx';
 import type { CoaListItem } from '../coa/useCoaList';
@@ -100,10 +100,11 @@ export function CountryField(props: FieldProps) {
 
 export function CurrencyField(props: FieldProps) {
   const { t } = useTranslation(['master-data']);
+  const options = useCurrencyOptions();
   return (
     <CodeAutocomplete
       {...props}
-      options={CURRENCY_OPTIONS}
+      options={options}
       label={t('companies.fields.baseCurrency')}
       placeholder={t('companies.placeholders.baseCurrency')}
     />
