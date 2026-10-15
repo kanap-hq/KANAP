@@ -426,7 +426,7 @@ describe('ContractsPage', () => {
     act(() => { grid.props?.onSelectionChanged([{ id: 'c-1', name: 'SAP' }, { id: 'c-3', name: 'Audited' }]); });
     fireEvent.click(screen.getByRole('button', { name: /buttons\.deleteSelected/ }));
     const dialog = await screen.findByRole('dialog');
-    expect(dialog).toHaveTextContent('delete.deleteSelectedTitle {"count":1}');
+    expect(dialog).toHaveTextContent('delete.deleteSelectedTitle {"count":2}');
     expect(dialog).toHaveTextContent('contracts.delete.toDelete {"count":1}');
     expect(dialog).toHaveTextContent('contracts.delete.kept {"count":1}');
     expect(within(screen.getByTestId('delete-kept')).getByText('Audited')).toBeInTheDocument();

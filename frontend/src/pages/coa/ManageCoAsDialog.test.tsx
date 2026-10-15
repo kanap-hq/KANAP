@@ -290,7 +290,7 @@ describe('ManageCoAsDialog', () => {
 
     fireEvent.click(within(await openMenu('DE-SKR')).getByRole('menuitem', { name: 'Delete' }));
     expect(await screen.findByText(
-      'DE-SKR was not deleted. This chart of accounts is used by 1 company. Move them to another chart of accounts first.',
+      'DE-SKR was not deleted. This chart of accounts is used by 1 company. Move it to another chart of accounts first.',
     )).toBeInTheDocument();
   });
 });
