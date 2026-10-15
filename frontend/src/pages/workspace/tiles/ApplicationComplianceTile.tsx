@@ -24,6 +24,7 @@ export function applicationsListPath(filters: FilterModel, sort?: string): strin
 
 /** Segmented review-state bar: reviewed, to review, to complete. Widths follow the counts; nothing is drawn on an empty scope. */
 export function ReviewStateBar({ summary }: { summary: ApplicationComplianceSummary }) {
+  const { t } = useTranslation('common');
   const theme = useTheme();
   const segments = [
     { key: 'reviewed', count: summary.reviewed, color: getDotColor('success', theme.palette.mode) },
@@ -32,7 +33,7 @@ export function ReviewStateBar({ summary }: { summary: ApplicationComplianceSumm
   ];
   if (!summary.total) return null;
   return (
-    <Box sx={{ display: 'flex', height: 6, borderRadius: '3px', overflow: 'hidden', bgcolor: 'kanap.border.soft' }} role="img" aria-label="review states">
+    <Box sx={{ display: 'flex', height: 6, borderRadius: '3px', overflow: 'hidden', bgcolor: 'kanap.border.soft' }} role="img" aria-label={t('labels.reviewStates')}>
       {segments.filter((segment) => segment.count > 0).map((segment) => (
         <Box key={segment.key} sx={{ width: `${(segment.count / summary.total) * 100}%`, bgcolor: segment.color }} />
       ))}

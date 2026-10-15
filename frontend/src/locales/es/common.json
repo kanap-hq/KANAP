@@ -34,12 +34,12 @@
     "moreActions": "Más acciones"
   },
   "status": {
-    "loading": "Cargando...",
-    "saving": "Guardando...",
-    "deleting": "Eliminando...",
-    "sending": "Enviando...",
-    "importing": "Importando...",
-    "exporting": "Exportando {{format}}...",
+    "loading": "Cargando…",
+    "saving": "Guardando…",
+    "deleting": "Eliminando…",
+    "sending": "Enviando…",
+    "importing": "Importando…",
+    "exporting": "Exportando {{format}}…",
     "saved": "Guardado"
   },
   "statuses": {
@@ -66,7 +66,7 @@
   "filters": {
     "quickFilter": "Filtro rápido",
     "clearQuickFilter": "Borrar filtro rápido",
-    "search": "Buscar...",
+    "search": "Buscar…",
     "noOptions": "Sin opciones",
     "blank": "(Vacío)",
     "selectedCount": "{{count}} seleccionados",
@@ -132,7 +132,14 @@
     "recommended": "Recomendado",
     "openCalendar": "Abrir calendario",
     "datePlaceholder": "dd/mm/aaaa",
-    "requiredTag": "(obligatorio)"
+    "requiredTag": "(obligatorio)",
+    "relatedTo": "Relacionado con",
+    "openInNewTab": "Abrir en una pestaña nueva",
+    "breadcrumb": "Ruta de navegación",
+    "reviewStates": "Estados de revisión",
+    "previousTask": "Tarea anterior",
+    "nextTask": "Tarea siguiente",
+    "closeDialog": "Cerrar el cuadro de diálogo"
   },
   "yearTabs": {
     "single": "Año: {{year}}",
@@ -233,7 +240,7 @@
     "dashboardSettings": "Configuración del panel",
     "noTilesEnabled": "No hay mosaicos activados. Haga clic en el icono de configuración para personalizar su panel.",
     "blankDocument": "Documento en blanco",
-    "fromTemplate": "Desde plantilla...",
+    "fromTemplate": "Desde plantilla…",
     "selectTemplate": "Seleccionar plantilla",
     "useTemplate": "Usar plantilla",
     "noTemplatesAvailable": "No hay plantillas publicadas disponibles.",
@@ -571,7 +578,7 @@
     }
   },
   "selects": {
-    "loading": "Cargando...",
+    "loading": "Cargando…",
     "loadingEllipsis": "Cargando…",
     "noAccountsFound": "No se encontraron cuentas",
     "noContactsFound": "No se encontraron contactos",
@@ -587,7 +594,7 @@
     "newCategory": "Nueva categoría",
     "editCategories": "Editar categorías",
     "inactiveSuffix": "(inactivo)",
-    "addTeamMember": "Agregar miembro del equipo...",
+    "addTeamMember": "Agregar miembro del equipo…",
     "noTeamMembers": "No hay miembros del equipo asignados.",
     "cluster": "Clúster:",
     "account": "Cuenta",
@@ -632,7 +639,7 @@
     "newDocument": "Nuevo documento",
     "newDocumentLower": "Nuevo documento",
     "blankDocument": "Documento en blanco",
-    "fromTemplate": "Desde plantilla...",
+    "fromTemplate": "Desde plantilla…",
     "selectTemplate": "Seleccionar plantilla",
     "noTemplatesAvailable": "No hay plantillas publicadas disponibles.",
     "useTemplate": "Usar plantilla",
@@ -645,8 +652,6 @@
     "failedToUpdateLinks": "No se pudieron actualizar los vínculos.",
     "failedToLoadContext": "No se pudo cargar el contexto.",
     "noStandaloneDocuments": "Sin documentos independientes.",
-    "restrictedDocuments": "{{count}} documento independiente está disponible para este elemento. Necesita el rol de Lector para verlo.",
-    "restrictedDocuments_plural": "{{count}} documentos independientes están disponibles para este elemento. Necesita el rol de Lector para verlos.",
     "linkedDocuments": "Documentos vinculados",
     "relatedDocuments": "Documentos relacionados",
     "openKnowledge": "Abrir documento",
@@ -657,13 +662,16 @@
     "linkedVia": "Vinculado por",
     "sourceObject": "Objeto de origen",
     "updatedColumn": "Actualizado",
-    "openColumn": "Abrir"
+    "openColumn": "Abrir",
+    "restrictedDocuments_one": "{{count}} documento independiente está disponible para este elemento. Necesita el rol de Lector para verlo.",
+    "restrictedDocuments_other": "{{count}} documentos independientes están disponibles para este elemento. Necesita el rol de Lector para verlos.",
+    "newDocumentOptions": "Opciones de nuevo documento"
   },
   "share": {
     "sendLink": "Enviar enlace",
-    "searchUsersOrEmail": "Buscar usuarios o escribir un correo electrónico...",
+    "searchUsersOrEmail": "Buscar usuarios o escribir un correo electrónico…",
     "messageOptional": "Mensaje (opcional)",
-    "addPersonalMessage": "Agregar un mensaje personal...",
+    "addPersonalMessage": "Agregar un mensaje personal…",
     "copied": "Copiado.",
     "copyLink": "Copiar enlace",
     "typeEmailAddress": "Escribir una dirección de correo electrónico",
@@ -765,7 +773,7 @@
     "title": "Contactos",
     "selectContact": "Seleccionar contacto",
     "noContactsLinked": "Sin contactos vinculados",
-    "loadingContacts": "Cargando contactos...",
+    "loadingContacts": "Cargando contactos…",
     "roleCommercial": "Comercial",
     "roleTechnical": "Técnico",
     "roleSupport": "Soporte",
@@ -909,5 +917,16 @@
     "reload": "Recargar",
     "reloadHint": "Recargar muestra estos cambios. Lo que está modificando se queda en pantalla.",
     "deleted": "Esta línea se ha eliminado"
+  },
+  "markdownEditor": {
+    "insertEmoji": "Insertar emoji",
+    "blockStyle": "Estilo de bloque"
+  },
+  "markdownLink": {
+    "url": "URL",
+    "anchorText": "Texto del enlace",
+    "editLink": "Editar enlace",
+    "copyUrl": "Copiar URL",
+    "removeLink": "Quitar enlace"
   }
 }

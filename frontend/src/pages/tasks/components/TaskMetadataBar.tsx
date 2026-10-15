@@ -252,7 +252,7 @@ export default function TaskMetadataBar({
           }}
         >
           <Box component="span" sx={{ ...metaLabelSx, color: theme.palette.kanap.text.tertiary }}>
-            Project
+            {t('context.project')}
           </Box>
           <Box
             component="span"

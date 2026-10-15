@@ -223,7 +223,7 @@ describe('NetboxSyncPage', () => {
     expect(await screen.findByText('par-esx-01')).toBeInTheDocument();
     expect(screen.getByText('Several assets could be this object. Choose one, or create a new asset.')).toBeInTheDocument();
     expect(screen.queryByText(/SHOULD NOT BE SHOWN/)).not.toBeInTheDocument();
-    expect(screen.getByText('Link to...')).toBeInTheDocument();
+    expect(screen.getByText('Link to…')).toBeInTheDocument();
     expect(screen.getByText('To decide 1')).toBeInTheDocument();
   });
 

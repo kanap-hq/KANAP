@@ -142,7 +142,7 @@
   },
   "menus": {
     "blankDocument": "Leeres Dokument",
-    "fromTemplate": "Aus Vorlage..."
+    "fromTemplate": "Aus Vorlage…"
   },
   "messages": {
     "documentMoved": "Dokument verschoben.",

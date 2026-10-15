@@ -93,7 +93,7 @@
         "projectLevel": "Project-level"
       },
       "states": {
-        "loading": "Loading tasks...",
+        "loading": "Loading tasks…",
         "empty": "No tasks yet.",
         "noMatches": "No tasks match the current filters."
       },
@@ -136,7 +136,7 @@
     }
   },
   "workspace": {
-    "loadingTab": "Loading tab...",
+    "loadingTab": "Loading tab…",
     "sidebarTitle": "Properties",
     "openProperties": "Open properties",
     "closeProperties": "Close properties",
@@ -255,11 +255,11 @@
       },
       "messages": {
         "loadFailed": "Failed to load project",
-        "loading": "Loading project...",
-        "loadingTabData": "Loading tab data...",
+        "loading": "Loading project…",
+        "loadingTabData": "Loading tab data…",
         "permissionSavePanel": "You do not have permission to save these panel changes.",
         "permissionSaveWorkspace": "You do not have permission to save this workspace.",
-        "refreshing": "Refreshing...",
+        "refreshing": "Refreshing…",
         "saveFailed": "Failed to save project",
         "savePanelFailed": "Failed to save project panel",
         "updateStatusFailed": "Failed to update status",
@@ -308,7 +308,7 @@
           "executionProgress": "Progress"
         },
         "placeholders": {
-          "purpose": "Describe the purpose of this project..."
+          "purpose": "Describe the purpose of this project…"
         },
         "values": {
           "activeTasks": "Active {{count}}",
@@ -498,7 +498,7 @@
           "noPlannedPhasesHelp": "Set planned start and end dates on phases to see them on the Gantt chart.",
           "noPlannedProjects": "No projects with planned dates",
           "noPlannedProjectsHelp": "Set planned start and end dates on projects to see them on the timeline.",
-          "selectTemplate": "Select a template...",
+          "selectTemplate": "Select a template…",
           "noPhaseTasks": "No tasks in this phase."
         },
         "values": {
@@ -563,13 +563,13 @@
       "messages": {
         "deleteFailed": "Failed to delete request",
         "loadFailed": "Failed to load request",
-        "loading": "Loading request...",
-        "loadingTabData": "Loading tab data...",
+        "loading": "Loading request…",
+        "loadingTabData": "Loading tab data…",
         "permissionSavePanel": "You do not have permission to save these panel changes.",
         "permissionSaveWorkspace": "You do not have permission to save this workspace.",
         "recommendationSubmitted": "{{outcome}} recommendation submitted.",
         "recommendationSubmittedFallback": "Recommendation submitted.",
-        "refreshing": "Refreshing...",
+        "refreshing": "Refreshing…",
         "saveFailed": "Failed to save request",
         "savePanelFailed": "Failed to save request panel",
         "updateStatusFailed": "Failed to update status",
@@ -615,7 +615,7 @@
           "latestRecommendation": "Latest recommendation"
         },
         "placeholders": {
-          "purpose": "Describe the purpose of this request..."
+          "purpose": "Describe the purpose of this request…"
         },
         "values": {
           "contributorsLinked": "{{count}} contributors linked across business and IT teams",
@@ -682,7 +682,7 @@
           "statusChanged": "Status changed: {{from}} → {{to}}"
         },
         "placeholders": {
-          "risksMitigations": "List key residual risks, mitigation actions, and responsible owners..."
+          "risksMitigations": "List key residual risks, mitigation actions, and responsible owners…"
         },
         "sections": {
           "analysisRecommendation": "Analysis recommendation",
@@ -709,7 +709,7 @@
       },
       "description": {
         "label": "Description",
-        "placeholder": "Describe the task..."
+        "placeholder": "Describe the task…"
       },
       "footer": {
         "created": "Created {{date}}",
@@ -743,7 +743,7 @@
       },
       "comments": {
         "placeholders": {
-          "writeComment": "Write a comment..."
+          "writeComment": "Write a comment…"
         }
       },
       "activity": {
@@ -754,7 +754,7 @@
           "logHours": "Log {{hours}}h",
           "setStatus": "Set {{status}}",
           "submit": "Submit",
-          "submitting": "Submitting..."
+          "submitting": "Submitting…"
         },
         "messages": {
           "doneRequiresTime": "Cannot mark task as done without logging time.",
@@ -802,7 +802,7 @@
       },
       "messages": {
         "createFailed": "Failed to create task",
-        "creating": "Creating task...",
+        "creating": "Creating task…",
         "deleteFailed": "Failed to delete task",
         "documentImportAfterCreate": "Save the task before importing a document.",
         "documentImportFailed": "Failed to import document",
@@ -812,7 +812,7 @@
         "invalidRelationType": "Invalid related object type",
         "invalidStandaloneRelation": "Standalone tasks cannot use that relation.",
         "loadFailed": "Failed to load task",
-        "loading": "Loading task...",
+        "loading": "Loading task…",
         "notFound": "Task not found",
         "relatedItemRequired": "Please select a related item",
         "saveFailed": "Failed to save task",
@@ -1251,7 +1251,7 @@
         "hideDetails": "Hide details"
       },
       "states": {
-        "loading": "Loading capacity data...",
+        "loading": "Loading capacity data…",
         "empty": "No capacity data for the selected filters.",
         "noUnassignedWork": "No unassigned work for the selected filters.",
         "profilelessLoad_one": "{{count}} person carries {{days}} days of project work without a contributor profile. Create the profile to give them a capacity.",
@@ -1318,7 +1318,7 @@
       "actions": {
         "exportCsv": "Export CSV",
         "exportXlsx": "Export XLSX",
-        "exporting": "Exporting..."
+        "exporting": "Exporting…"
       },
       "messages": {
         "invalidPeriod": "Start date must be before or equal to end date.",
@@ -1670,8 +1670,8 @@
     "dialog": {
       "title": "Add contributor",
       "selectUser": "Select user",
-      "searchUsers": "Search users...",
-      "adding": "Adding..."
+      "searchUsers": "Search users…",
+      "adding": "Adding…"
     },
     "messages": {
       "addFailed": "Failed to add contributor"
@@ -1723,19 +1723,20 @@
     "actions": {
       "addComment": "Add comment",
       "addDecision": "Add decision",
-      "adding": "Adding...",
-      "editComment": "Edit comment"
+      "adding": "Adding…",
+      "editComment": "Edit comment",
+      "submitShortcut": "Submit (Ctrl/Cmd+Enter)"
     },
     "placeholders": {
-      "editComment": "Edit your comment..."
+      "editComment": "Edit your comment…"
     },
     "messages": {
       "addCommentFailed": "Failed to add comment",
       "beFirstToAdd": "Be the first to add one!",
       "imageImportNotConfigured": "Image URL import not configured",
       "imageUploadNotConfigured": "Image upload not configured",
-      "loadingComments": "Loading comments...",
-      "loadingHistory": "Loading history...",
+      "loadingComments": "Loading comments…",
+      "loadingHistory": "Loading history…",
       "noComments": "No comments yet.",
       "noCommentsOrDecisions": "No comments or decisions yet.",
       "noHistory": "No history recorded yet.",
@@ -1745,7 +1746,7 @@
       "formalDecision": "Formal decision",
       "noChange": "(No change)",
       "fields": {
-        "changeStatus": "Change status to...",
+        "changeStatus": "Change status to…",
         "comment": "Add a comment",
         "contextMeeting": "Context / meeting",
         "contextOptional": "Context (optional)",
@@ -1753,10 +1754,10 @@
         "rationaleNotes": "Rationale / notes"
       },
       "placeholders": {
-        "comment": "Share your thoughts, updates, or questions...",
+        "comment": "Share your thoughts, updates, or questions…",
         "commentContext": "e.g., weekly review, stakeholder meeting",
         "decisionContext": "e.g., CAB meeting 2025-01-03",
-        "decisionNotes": "Explain the decision rationale..."
+        "decisionNotes": "Explain the decision rationale…"
       }
     },
     "history": {
@@ -1855,7 +1856,7 @@
         "current": "Current dependencies:"
       },
       "placeholders": {
-        "search": "Search requests or projects..."
+        "search": "Search requests or projects…"
       },
       "states": {
         "empty": "No dependencies defined."
@@ -1891,7 +1892,7 @@
         "submit": "Submit recommendation"
       },
       "fields": {
-        "changeStatus": "Change status to...",
+        "changeStatus": "Change status to…",
         "context": "Context",
         "decisionOutcome": "Decision outcome",
         "rationale": "Rationale"
@@ -1900,7 +1901,7 @@
         "submitFailed": "Failed to submit recommendation"
       },
       "placeholders": {
-        "rationale": "Summarize the recommendation, conditions, and key constraints..."
+        "rationale": "Summarize the recommendation, conditions, and key constraints…"
       },
       "validation": {
         "outcomeRequired": "Decision outcome is required"
@@ -1938,8 +1939,8 @@
         "saveFailed": "Failed to save time entry"
       },
       "placeholders": {
-        "notes": "Optional description of work done...",
-        "searchUsers": "Search users..."
+        "notes": "Optional description of work done…",
+        "searchUsers": "Search users…"
       },
       "validation": {
         "dateRequired": "Please select a date",
@@ -1981,7 +1982,7 @@
       },
       "states": {
         "empty": "No allocations - assign a {{effortType}} lead or team members",
-        "loading": "Loading allocations..."
+        "loading": "Loading allocations…"
       },
       "table": {
         "contributor": "Contributor"
@@ -1995,7 +1996,7 @@
     "convertToProject": {
       "title": "Convert to project",
       "actions": {
-        "converting": "Converting...",
+        "converting": "Converting…",
         "create": "Create project"
       },
       "fields": {
@@ -2016,8 +2017,8 @@
         "purpose": "Purpose"
       },
       "states": {
-        "loadingEffort": "Loading effort estimates...",
-        "loadingPurpose": "Loading current purpose..."
+        "loadingEffort": "Loading effort estimates…",
+        "loadingPurpose": "Loading current purpose…"
       }
     },
     "convertToRequest": {
@@ -2025,7 +2026,7 @@
       "summary": "Converting {{taskRef}}: {{taskTitle}} into a portfolio request",
       "actions": {
         "convert": "Convert to request",
-        "converting": "Converting..."
+        "converting": "Converting…"
       },
       "fields": {
         "closeTask": "Close the original task after conversion",
@@ -2070,7 +2071,7 @@
         "missingTaskId": "Task entry is missing task ID."
       },
       "states": {
-        "loadingProjects": "Loading project breakdown...",
+        "loadingProjects": "Loading project breakdown…",
         "noMatchingProjects": "No matching projects for this contributor.",
         "noTimeEntries": "No time entries yet."
       },
@@ -2160,8 +2161,8 @@
         "dragDropFiles": "Drag & drop files here, or use the button to select",
         "loadFailed": "Failed to load relations",
         "saveFailed": "Failed to save relations",
-        "uploadingFiles_one": "Uploading {{count}} file...",
-        "uploadingFiles_other": "Uploading {{count}} files..."
+        "uploadingFiles_one": "Uploading {{count}} file…",
+        "uploadingFiles_other": "Uploading {{count}} files…"
       },
       "placeholders": {
         "applications": "Search applications",
@@ -2211,7 +2212,7 @@
         "originalRequestScoring": "Original request scoring"
       },
       "states": {
-        "loadingOriginal": "Loading original scoring...",
+        "loadingOriginal": "Loading original scoring…",
         "noCriteria": "No evaluation criteria configured. Configure criteria in portfolio settings.",
         "unableToLoadOriginal": "Unable to load original request scoring."
       },

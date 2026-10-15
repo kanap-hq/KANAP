@@ -93,7 +93,7 @@
         "projectLevel": "Nivel de proyecto"
       },
       "states": {
-        "loading": "Cargando tareas...",
+        "loading": "Cargando tareas…",
         "empty": "Aún no hay tareas.",
         "noMatches": "Ninguna tarea coincide con los filtros actuales."
       },
@@ -136,7 +136,7 @@
     }
   },
   "workspace": {
-    "loadingTab": "Cargando pestaña...",
+    "loadingTab": "Cargando pestaña…",
     "sidebarTitle": "Propiedades",
     "openProperties": "Abrir propiedades",
     "closeProperties": "Cerrar propiedades",
@@ -255,11 +255,11 @@
       },
       "messages": {
         "loadFailed": "Error al cargar el proyecto",
-        "loading": "Cargando proyecto...",
-        "loadingTabData": "Cargando datos de la pestaña...",
+        "loading": "Cargando proyecto…",
+        "loadingTabData": "Cargando datos de la pestaña…",
         "permissionSavePanel": "No tiene permiso para guardar estos cambios del panel.",
         "permissionSaveWorkspace": "No tiene permiso para guardar este espacio de trabajo.",
-        "refreshing": "Actualizando...",
+        "refreshing": "Actualizando…",
         "saveFailed": "Error al guardar el proyecto",
         "savePanelFailed": "Error al guardar el panel del proyecto",
         "updateStatusFailed": "Error al actualizar el estado",
@@ -308,7 +308,7 @@
           "executionProgress": "Progreso"
         },
         "placeholders": {
-          "purpose": "Describa el objetivo de este proyecto..."
+          "purpose": "Describa el objetivo de este proyecto…"
         },
         "values": {
           "activeTasks": "Activas {{count}}",
@@ -498,7 +498,7 @@
           "noPlannedPhasesHelp": "Establezca fechas de inicio y fin planificadas en las fases para verlas en el diagrama de Gantt.",
           "noPlannedProjects": "No hay proyectos con fechas planificadas",
           "noPlannedProjectsHelp": "Establezca fechas de inicio y fin planificadas en los proyectos para verlos en el cronograma.",
-          "selectTemplate": "Seleccione una plantilla...",
+          "selectTemplate": "Seleccione una plantilla…",
           "noPhaseTasks": "No hay tareas en esta fase."
         },
         "values": {
@@ -563,13 +563,13 @@
       "messages": {
         "deleteFailed": "Error al eliminar la solicitud",
         "loadFailed": "Error al cargar la solicitud",
-        "loading": "Cargando solicitud...",
-        "loadingTabData": "Cargando datos de la pestaña...",
+        "loading": "Cargando solicitud…",
+        "loadingTabData": "Cargando datos de la pestaña…",
         "permissionSavePanel": "No tiene permiso para guardar estos cambios del panel.",
         "permissionSaveWorkspace": "No tiene permiso para guardar este espacio de trabajo.",
         "recommendationSubmitted": "Recomendación {{outcome}} enviada.",
         "recommendationSubmittedFallback": "Recomendación enviada.",
-        "refreshing": "Actualizando...",
+        "refreshing": "Actualizando…",
         "saveFailed": "Error al guardar la solicitud",
         "savePanelFailed": "Error al guardar el panel de la solicitud",
         "updateStatusFailed": "Error al actualizar el estado",
@@ -615,7 +615,7 @@
           "latestRecommendation": "Última recomendación"
         },
         "placeholders": {
-          "purpose": "Describa el objetivo de esta solicitud..."
+          "purpose": "Describa el objetivo de esta solicitud…"
         },
         "values": {
           "contributorsLinked": "{{count}} colaboradores vinculados entre equipos de negocio e IT",
@@ -682,7 +682,7 @@
           "statusChanged": "Cambio de estado: {{from}} → {{to}}"
         },
         "placeholders": {
-          "risksMitigations": "Liste los riesgos residuales principales, las acciones de mitigación y los responsables..."
+          "risksMitigations": "Liste los riesgos residuales principales, las acciones de mitigación y los responsables…"
         },
         "sections": {
           "analysisRecommendation": "Recomendación de análisis",
@@ -709,7 +709,7 @@
       },
       "description": {
         "label": "Descripción",
-        "placeholder": "Describa la tarea..."
+        "placeholder": "Describa la tarea…"
       },
       "footer": {
         "created": "Creada el {{date}}",
@@ -743,7 +743,7 @@
       },
       "comments": {
         "placeholders": {
-          "writeComment": "Escriba un comentario..."
+          "writeComment": "Escriba un comentario…"
         }
       },
       "activity": {
@@ -754,7 +754,7 @@
           "logHours": "Registrar {{hours}} h",
           "setStatus": "Establecer {{status}}",
           "submit": "Enviar",
-          "submitting": "Enviando..."
+          "submitting": "Enviando…"
         },
         "messages": {
           "doneRequiresTime": "No se puede marcar la tarea como completada sin registrar tiempo.",
@@ -802,7 +802,7 @@
       },
       "messages": {
         "createFailed": "Error al crear la tarea",
-        "creating": "Creando tarea...",
+        "creating": "Creando tarea…",
         "deleteFailed": "Error al eliminar la tarea",
         "documentImportAfterCreate": "Guarde la tarea antes de importar un documento.",
         "documentImportFailed": "Error al importar el documento",
@@ -812,7 +812,7 @@
         "invalidRelationType": "Tipo de objeto relacionado no válido",
         "invalidStandaloneRelation": "Las tareas independientes no pueden usar esa relación.",
         "loadFailed": "Error al cargar la tarea",
-        "loading": "Cargando tarea...",
+        "loading": "Cargando tarea…",
         "notFound": "Tarea no encontrada",
         "relatedItemRequired": "Seleccione un elemento relacionado",
         "saveFailed": "Error al guardar la tarea",
@@ -1251,7 +1251,7 @@
         "hideDetails": "Ocultar detalles"
       },
       "states": {
-        "loading": "Cargando datos de capacidad...",
+        "loading": "Cargando datos de capacidad…",
         "empty": "No hay datos de capacidad para los filtros seleccionados.",
         "noUnassignedWork": "No hay trabajo sin asignar para los filtros seleccionados.",
         "profilelessLoad_one": "{{count}} persona lleva {{days}} días de trabajo de proyecto sin ficha de colaborador. Cree su ficha para asignarle una capacidad.",
@@ -1318,7 +1318,7 @@
       "actions": {
         "exportCsv": "Exportar CSV",
         "exportXlsx": "Exportar XLSX",
-        "exporting": "Exportando..."
+        "exporting": "Exportando…"
       },
       "messages": {
         "invalidPeriod": "La fecha de inicio debe ser anterior o igual a la fecha de fin.",
@@ -1670,8 +1670,8 @@
     "dialog": {
       "title": "Agregar colaborador",
       "selectUser": "Seleccionar usuario",
-      "searchUsers": "Buscar usuarios...",
-      "adding": "Agregando..."
+      "searchUsers": "Buscar usuarios…",
+      "adding": "Agregando…"
     },
     "messages": {
       "addFailed": "Error al agregar el colaborador"
@@ -1723,19 +1723,20 @@
     "actions": {
       "addComment": "Agregar comentario",
       "addDecision": "Agregar decisión",
-      "adding": "Agregando...",
-      "editComment": "Editar comentario"
+      "adding": "Agregando…",
+      "editComment": "Editar comentario",
+      "submitShortcut": "Enviar (Ctrl/Cmd+Intro)"
     },
     "placeholders": {
-      "editComment": "Edite su comentario..."
+      "editComment": "Edite su comentario…"
     },
     "messages": {
       "addCommentFailed": "Error al agregar el comentario",
       "beFirstToAdd": "¡Sea el primero en agregar uno!",
       "imageImportNotConfigured": "Importación de imagen por URL no configurada",
       "imageUploadNotConfigured": "Carga de imagen no configurada",
-      "loadingComments": "Cargando comentarios...",
-      "loadingHistory": "Cargando historial...",
+      "loadingComments": "Cargando comentarios…",
+      "loadingHistory": "Cargando historial…",
       "noComments": "Aún no hay comentarios.",
       "noCommentsOrDecisions": "Aún no hay comentarios ni decisiones.",
       "noHistory": "Aún no se ha registrado historial.",
@@ -1745,7 +1746,7 @@
       "formalDecision": "Decisión formal",
       "noChange": "(Sin cambio)",
       "fields": {
-        "changeStatus": "Cambiar estado a...",
+        "changeStatus": "Cambiar estado a…",
         "comment": "Agregar un comentario",
         "contextMeeting": "Contexto / Reunión",
         "contextOptional": "Contexto (opcional)",
@@ -1753,10 +1754,10 @@
         "rationaleNotes": "Justificación / Notas"
       },
       "placeholders": {
-        "comment": "Comparta sus ideas, actualizaciones o preguntas...",
+        "comment": "Comparta sus ideas, actualizaciones o preguntas…",
         "commentContext": "ej.: Revisión semanal, Reunión de partes interesadas",
         "decisionContext": "ej.: Reunión CAB 03/01/2025",
-        "decisionNotes": "Explique la justificación de la decisión..."
+        "decisionNotes": "Explique la justificación de la decisión…"
       }
     },
     "history": {
@@ -1855,7 +1856,7 @@
         "current": "Dependencias actuales:"
       },
       "placeholders": {
-        "search": "Buscar solicitudes o proyectos..."
+        "search": "Buscar solicitudes o proyectos…"
       },
       "states": {
         "empty": "No hay dependencias definidas."
@@ -1891,7 +1892,7 @@
         "submit": "Enviar recomendación"
       },
       "fields": {
-        "changeStatus": "Cambiar estado a...",
+        "changeStatus": "Cambiar estado a…",
         "context": "Contexto",
         "decisionOutcome": "Resultado de la decisión",
         "rationale": "Justificación"
@@ -1900,7 +1901,7 @@
         "submitFailed": "Error al enviar la recomendación"
       },
       "placeholders": {
-        "rationale": "Resuma la recomendación, las condiciones y las restricciones principales..."
+        "rationale": "Resuma la recomendación, las condiciones y las restricciones principales…"
       },
       "validation": {
         "outcomeRequired": "El resultado de la decisión es obligatorio"
@@ -1938,8 +1939,8 @@
         "saveFailed": "Error al guardar la entrada de tiempo"
       },
       "placeholders": {
-        "notes": "Descripción opcional del trabajo realizado...",
-        "searchUsers": "Buscar usuarios..."
+        "notes": "Descripción opcional del trabajo realizado…",
+        "searchUsers": "Buscar usuarios…"
       },
       "validation": {
         "dateRequired": "Seleccione una fecha",
@@ -1981,7 +1982,7 @@
       },
       "states": {
         "empty": "Sin asignaciones - asigne un responsable o miembros de equipo de {{effortType}}",
-        "loading": "Cargando asignaciones..."
+        "loading": "Cargando asignaciones…"
       },
       "table": {
         "contributor": "Colaborador"
@@ -1995,7 +1996,7 @@
     "convertToProject": {
       "title": "Convertir en proyecto",
       "actions": {
-        "converting": "Convirtiendo...",
+        "converting": "Convirtiendo…",
         "create": "Crear proyecto"
       },
       "fields": {
@@ -2016,8 +2017,8 @@
         "purpose": "Objetivo"
       },
       "states": {
-        "loadingEffort": "Cargando estimaciones de esfuerzo...",
-        "loadingPurpose": "Cargando el objetivo actual..."
+        "loadingEffort": "Cargando estimaciones de esfuerzo…",
+        "loadingPurpose": "Cargando el objetivo actual…"
       }
     },
     "convertToRequest": {
@@ -2025,7 +2026,7 @@
       "summary": "Convirtiendo {{taskRef}}: {{taskTitle}} en una solicitud del portafolio",
       "actions": {
         "convert": "Convertir en solicitud",
-        "converting": "Convirtiendo..."
+        "converting": "Convirtiendo…"
       },
       "fields": {
         "closeTask": "Cerrar la tarea original después de la conversión",
@@ -2070,7 +2071,7 @@
         "missingTaskId": "La entrada de tarea no contiene el ID de la tarea."
       },
       "states": {
-        "loadingProjects": "Cargando desglose por proyecto...",
+        "loadingProjects": "Cargando desglose por proyecto…",
         "noMatchingProjects": "No hay proyectos correspondientes para este colaborador.",
         "noTimeEntries": "Aún no hay entradas de tiempo."
       },
@@ -2160,8 +2161,8 @@
         "dragDropFiles": "Arrastre y suelte archivos aquí, o use el botón para seleccionar",
         "loadFailed": "Error al cargar las relaciones",
         "saveFailed": "Error al guardar las relaciones",
-        "uploadingFiles_one": "Subiendo {{count}} archivo...",
-        "uploadingFiles_other": "Subiendo {{count}} archivos..."
+        "uploadingFiles_one": "Subiendo {{count}} archivo…",
+        "uploadingFiles_other": "Subiendo {{count}} archivos…"
       },
       "placeholders": {
         "applications": "Buscar aplicaciones",
@@ -2211,7 +2212,7 @@
         "originalRequestScoring": "Evaluación de la solicitud original"
       },
       "states": {
-        "loadingOriginal": "Cargando evaluación original...",
+        "loadingOriginal": "Cargando evaluación original…",
         "noCriteria": "No hay criterios de evaluación configurados. Configure los criterios en la configuración del portafolio.",
         "unableToLoadOriginal": "No se pudo cargar la evaluación de la solicitud original."
       },

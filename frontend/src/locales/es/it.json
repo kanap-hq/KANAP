@@ -140,7 +140,7 @@
       "duplicateDescription": "Crear una copia de \"{{name}}\".",
       "copyEnvBindings": "Copiar enlaces de entorno",
       "copyEnvBindingsDescription": "Las conexiones de instancia se conservarán, pero los detalles específicos del entorno (endpoints, autenticación, nombres de jobs) se borrarán.",
-      "duplicating": "Duplicando...",
+      "duplicating": "Duplicando…",
       "duplicate": "Duplicar",
       "columns": {
         "interfaceId": "ID de interfaz",
@@ -348,9 +348,9 @@
       "actions": {
         "syncNow": "Sincronizar ahora",
         "nextBatch": "Revisar el lote siguiente",
-        "preparing": "Preparando la vista previa...",
+        "preparing": "Preparando la vista previa…",
         "openSettings": "Abrir la configuración de la integración",
-        "linkTo": "Vincular a...",
+        "linkTo": "Vincular a…",
         "createAsset": "Crear un activo",
         "ignore": "Ignorar",
         "stopIgnoring": "Dejar de ignorar",
@@ -447,7 +447,7 @@
           "assets_one": "{{count}} activo",
           "assets_other": "{{count}} activos"
         },
-        "updating": "Actualizando la vista previa...",
+        "updating": "Actualizando la vista previa…",
         "filterLabel": "Filtrar la lista",
         "filterPlaceholder": "p. ej., par-esx",
         "candidates": "Sugerencias:",
@@ -469,8 +469,8 @@
         },
         "menu": {
           "linkToCandidate": "Vincular a {{name}}",
-          "linkToExisting": "Vincular a un activo existente...",
-          "linkToAnother": "Vincular a otro activo...",
+          "linkToExisting": "Vincular a un activo existente…",
+          "linkToAnother": "Vincular a otro activo…",
           "createNew": "Crear un activo nuevo",
           "createInstead": "Crear mejor un activo nuevo",
           "ignore": "No importar este objeto",
@@ -479,7 +479,7 @@
         "picker": {
           "label": "Buscar un activo",
           "placeholder": "p. ej., par-esx-01",
-          "searching": "Buscando...",
+          "searching": "Buscando…",
           "noResults": "No se ha encontrado ningún activo."
         },
         "hints": {
@@ -793,7 +793,7 @@
         "retiredDate": "Fecha de retiro",
         "licensing": "Licenciamiento",
         "notes": "Notas",
-        "descriptionPlaceholder": "Agregue una descripción para esta aplicación...",
+        "descriptionPlaceholder": "Agregue una descripción para esta aplicación…",
         "connections": "Conexiones",
         "connectedTo": "Conectada con",
         "receivesFrom": "Recibe de",
@@ -844,7 +844,7 @@
         "noSupportContacts": "No hay contactos de soporte.",
         "unnamedContact": "Contacto sin nombre",
         "removeContact": "Quitar a {{name}}",
-        "supportNotesPlaceholder": "Agregue notas de soporte...",
+        "supportNotesPlaceholder": "Agregue notas de soporte…",
         "newSupportContact": "Nuevo contacto de soporte"
       },
       "interfaces": {
@@ -1158,7 +1158,7 @@
         "resetLayers": "Restablecer capas",
         "addLayer": "Agregar capa",
         "saveLayers": "Guardar capas",
-        "saving": "Guardando...",
+        "saving": "Guardando…",
         "saveFirst": "Guarde primero la conexión para agregar capas.",
         "noLayers": "Aún no hay capas. Agregue reverse proxies, firewalls o saltos como segmentos (máx. 3).",
         "layer": "Capa {{index}}",
@@ -1166,7 +1166,7 @@
         "order": "Orden",
         "orderHelp": "1 = primer salto, hasta 3",
         "layerName": "Nombre",
-        "layerNamePlaceholder": "direct, reverse_proxy, firewall...",
+        "layerNamePlaceholder": "direct, reverse_proxy, firewall…",
         "source": "Origen",
         "destination": "Destino",
         "entityOrServer": "Entidad o servidor",
@@ -1191,7 +1191,7 @@
       },
       "interfaces": {
         "title": "Interfaces relacionadas",
-        "loadingLinked": "Cargando interfaces vinculadas...",
+        "loadingLinked": "Cargando interfaces vinculadas…",
         "noLinked": "Aún no hay enlaces de interfaz asociados.",
         "interface": "Interfaz",
         "environment": "Entorno",
@@ -1401,7 +1401,7 @@
       "bindingsHint": "Los enlaces conectan los segmentos de interfaz con los despliegues. Los detalles específicos del entorno se borrarán.",
       "suitesNotCopied": "Nota: las suites y los archivos adjuntos no se copian.",
       "selectInterfaces": "Seleccione las interfaces a migrar a la nueva versión. Las interfaces seleccionadas se duplicarán y vincularán a la nueva versión.",
-      "loadingInterfaces": "Cargando interfaces...",
+      "loadingInterfaces": "Cargando interfaces…",
       "noInterfaces": "No se encontraron interfaces para esta aplicación.",
       "selectAll": "Seleccionar todo",
       "deselectAll": "Deseleccionar todo",
@@ -1592,7 +1592,7 @@
     "remove": "Eliminar",
     "search": "Buscar",
     "actions": "Acciones",
-    "loading": "Cargando...",
+    "loading": "Cargando…",
     "name": "Nombre",
     "user": "Usuario",
     "lastName": "Apellido",

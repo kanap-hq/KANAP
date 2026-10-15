@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   IconButton,
@@ -113,6 +114,7 @@ function isActionHidden<T>(action: ActionDefinition<T>, data: T | undefined): bo
 export function ActionsCellRenderer<T = unknown>(
   props: ActionsCellRendererProps<T>
 ): React.ReactElement | null {
+  const { t } = useTranslation('common');
   const {
     data,
     actions = [],
@@ -201,7 +203,7 @@ export function ActionsCellRenderer<T = unknown>(
           <IconButton
             size={size}
             onClick={handleMenuOpen}
-            aria-label="More actions"
+            aria-label={t('buttons.moreActions')}
             aria-haspopup="true"
             aria-expanded={menuOpen ? 'true' : undefined}
           >

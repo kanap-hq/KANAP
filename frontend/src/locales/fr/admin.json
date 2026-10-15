@@ -2,11 +2,11 @@
   "aiAdmin": {
     "actions": {
       "createKey": "Créer une clé",
-      "creating": "Création en cours...",
+      "creating": "Création en cours…",
       "done": "Terminé",
       "saveSettings": "Enregistrer les paramètres",
       "testConnection": "Tester la connexion",
-      "testing": "Test en cours..."
+      "testing": "Test en cours…"
     },
     "dialogs": {
       "claudeCodeHelper": "Exécutez-la dans un terminal pour connecter Claude Code à KANAP avec cette clé.",
@@ -96,7 +96,7 @@
       "revokeMcpKeyFailed": "Impossible de révoquer la clé MCP.",
       "saveFailed": "Impossible d'enregistrer.",
       "settingsSaved": "Paramètres enregistrés.",
-      "testingWebSearch": "Test de la connectivité de recherche web...",
+      "testingWebSearch": "Test de la connectivité de recherche web…",
       "webSearchTestFailed": "Le test de recherche web a échoué."
     },
     "overview": {
@@ -345,15 +345,15 @@
     "title": "Journal d'audit",
     "values": {
       "unknownAccount": "Compte inconnu",
-      "unknownUser": "Inconnu ({{id}}...)"
+      "unknownUser": "Inconnu ({{id}}…)"
     }
   },
   "auth": {
     "actions": {
       "connect": "Connecter",
-      "connecting": "Connexion en cours...",
+      "connecting": "Connexion en cours…",
       "disconnect": "Déconnecter",
-      "disconnecting": "Déconnexion en cours...",
+      "disconnecting": "Déconnexion en cours…",
       "reconnect": "Reconnecter",
       "testSignIn": "Tester la connexion"
     },
@@ -494,10 +494,10 @@
       "clear": "Effacer",
       "discard": "Annuler",
       "removeLogo": "Supprimer le logo",
-      "removingLogo": "Suppression en cours...",
+      "removingLogo": "Suppression en cours…",
       "replaceSelectedFile": "Remplacer le fichier sélectionné",
       "resetToDefault": "Réinitialiser par défaut",
-      "resetting": "Réinitialisation en cours...",
+      "resetting": "Réinitialisation en cours…",
       "uploadLogo": "Téléverser le logo"
     },
     "colors": {
@@ -597,7 +597,7 @@
       "save": "Save",
       "savePlanLimits": "Enregistrer la limite",
       "test": "Test connection",
-      "testing": "Testing..."
+      "testing": "Testing…"
     },
     "cards": {
       "planLimits": "Messages IA inclus",
@@ -797,7 +797,7 @@
   "roles": {
     "actions": {
       "duplicate": "Dupliquer",
-      "duplicating": "Duplication en cours...",
+      "duplicating": "Duplication en cours…",
       "newRole": "Nouveau rôle",
       "saveDetails": "Enregistrer les détails",
       "savePermissions": "Enregistrer les autorisations"
@@ -1341,7 +1341,7 @@
       "actions": {
         "save": "Enregistrer les paramètres",
         "test": "Tester la connexion",
-        "testing": "Test en cours...",
+        "testing": "Test en cours…",
         "goToSync": "Configurer la synchronisation"
       }
     }

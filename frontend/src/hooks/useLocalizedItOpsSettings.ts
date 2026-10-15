@@ -2,7 +2,8 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useItOpsSettings } from './useItOpsSettings';
 import type { ItOpsSettings } from '../services/itOpsSettings';
-import { localizeCatalogList, toCatalogLocale } from '../utils/catalogLocalization';
+import i18n from '../i18n';
+import { localizeCatalogList, toCatalogLocale, type CatalogDefaults } from '../utils/catalogLocalization';
 import { classificationDefaults } from '../utils/applicationClassification';
 
 const CATALOG_LISTS = [
@@ -11,6 +12,26 @@ const CATALOG_LISTS = [
   'operatingSystems', 'connectionTypes', 'domains', 'ipAddressTypes', 'accessMethods', 'pathHopFunctions', 'incidentCategories',
   'businessCriticalityLevels', 'cyberCriticalityLevels', 'dataClasses', 'recoveryWaves',
 ] as const;
+
+// The four lifecycle states every tenant has (stored in English), shown in the user's language
+// while the tenant keeps the shipped name.
+const LIFECYCLE_SOURCE: Record<string, { label: string }> = {
+  proposed: { label: 'Proposed' },
+  active: { label: 'Active' },
+  deprecated: { label: 'Deprecated' },
+  retired: { label: 'Retired' },
+};
+const LIFECYCLE_DEFAULTS: CatalogDefaults = {
+  source: LIFECYCLE_SOURCE,
+  translated: (locale, code) => {
+    const label = i18n.getResource(locale, 'common', `statuses.${code}`);
+    return typeof label === 'string' ? { label } : undefined;
+  },
+};
+
+function catalogDefaults(key: (typeof CATALOG_LISTS)[number]): CatalogDefaults | undefined {
+  return key === 'lifecycleStates' ? LIFECYCLE_DEFAULTS : classificationDefaults(key);
+}
 
 /**
  * The single display projection of the IT Ops catalogs: every list localized for the user's language
@@ -24,7 +45,7 @@ export function useLocalizedItOpsSettings() {
   const data = useMemo<ItOpsSettings | undefined>(() => {
     if (!query.data) return undefined;
     const next: any = { ...query.data };
-    for (const key of CATALOG_LISTS) next[key] = localizeCatalogList((query.data as any)[key], locale, classificationDefaults(key));
+    for (const key of CATALOG_LISTS) next[key] = localizeCatalogList((query.data as any)[key], locale, catalogDefaults(key));
     return next as ItOpsSettings;
   }, [query.data, locale]);
   return { ...query, data };

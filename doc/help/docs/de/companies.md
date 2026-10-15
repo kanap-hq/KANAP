@@ -75,6 +75,7 @@ Die Liste zeigt alle Unternehmen Ihres Arbeitsbereichs. Verwenden Sie sie, um wi
 Klicken Sie auf eine beliebige Zeile der Liste, um den Arbeitsbereich des Unternehmens zu öffnen. Er hat zwei Tabs: **Übersicht** und **Details**.
 
 - **Kopfzeile**: der Name des Unternehmens. Klicken Sie darauf, um das Unternehmen umzubenennen. Die Pfeile mit „N von M" wechseln zwischen Unternehmen in der Reihenfolge und mit den Filtern der Liste, ohne zur Liste zurückzukehren. Der Zurück-Link **Unternehmen** führt mit erhaltenem Suchkontext zur Liste zurück
+- **Status**, unter dem Namen: **Aktiviert** oder **Deaktiviert**. Klicken Sie darauf, um ihn zu ändern. Die Wahl von **Deaktiviert** deaktiviert das Unternehmen sofort: Das Ende der Gültigkeit wird auf den aktuellen Zeitpunkt gesetzt
 - **Bereich Eigenschaften** rechts: **Land**, **Basiswährung**, **Kontenplan** und **Lebenszyklus**. Mit der Schaltfläche daneben klappen Sie den Bereich ein oder wieder aus
 
 **Automatisches Speichern**: Jede Änderung wird von selbst gespeichert, sobald Sie das Feld verlassen. Es gibt keine Schaltflächen zum Speichern, Zurücksetzen oder Schließen. Sie können weiterarbeiten, während eine Änderung gespeichert wird. Wird eine Änderung abgelehnt, erscheint der Grund unter dem Feld, das sie verursacht hat, außer beim Namen, dessen Ablehnung oben auf der Seite angezeigt wird.

@@ -406,7 +406,7 @@ function SidebarKnowledgeGroupList({
                   <IconButton
                     size="small"
                     color="error"
-                    aria-label="Unlink knowledge document"
+                    aria-label={t('knowledgePanel.unlinkDocument')}
                     title={t('knowledgePanel.unlinkDocument')}
                     onClick={() => onUnlink(item.id)}
                     disabled={unlinkPending}
@@ -776,7 +776,7 @@ export default function EntityKnowledgePanel({
           color: theme.palette.kanap.text.primary,
         })}
       >
-        Knowledge
+        {t('knowledgePanel.title')}
       </Typography>
     </Stack>
   ) : null);
@@ -798,7 +798,7 @@ export default function EntityKnowledgePanel({
             {headerActions}
             {(linkExistingMutation.isError || unlinkMutation.isError || createLinkedMutation.isError) && (
               <Alert severity="error">
-                Failed to update knowledge links.
+                {t('knowledgePanel.failedToUpdateLinks')}
               </Alert>
             )}
           </Stack>
@@ -891,8 +891,7 @@ export default function EntityKnowledgePanel({
 
       {!isLoading && !error && isRestricted && restrictedCount > 0 && (
         <Alert severity="info">
-          {restrictedCount} standalone knowledge {restrictedCount === 1 ? 'document is' : 'documents are'} available for this item.
-          You need the Knowledge Reader role to view them.
+          {t('knowledgePanel.restrictedDocuments', { count: restrictedCount })}
         </Alert>
       )}
 
@@ -925,12 +924,12 @@ export default function EntityKnowledgePanel({
       {!isLoading && !error && !isRestricted && displayGroups.length === 0 && (
         isSidebar ? (
           <Typography variant="body2" color="text.secondary">
-            No standalone knowledge documents.
+            {t('knowledgePanel.noStandaloneDocuments')}
           </Typography>
         ) : (
           <Paper variant="outlined" sx={{ p: 2 }}>
             <Typography variant="body2" color="text.secondary">
-              No standalone knowledge documents.
+              {t('knowledgePanel.noStandaloneDocuments')}
             </Typography>
           </Paper>
         )

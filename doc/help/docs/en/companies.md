@@ -75,6 +75,7 @@ The list shows all companies for your workspace. Use it to review key informatio
 Click any row in the list to open the company workspace. It has two tabs: **Overview** and **Details**.
 
 - **Header**: the company name. Click it to rename the company. The arrows with "N of M" move between companies in the list's order and filters without returning to the list. The back link, **Companies**, returns to the list with your search context intact
+- **Status**, under the name: **Enabled** or **Disabled**. Click it to change it. Choosing **Disabled** disables the company at once: the end of validity becomes the current time
 - **Properties panel** on the right: **Country**, **Base currency**, **Chart of accounts** and **Lifecycle**. Use the panel toggle next to it to collapse the panel or open it again
 
 **Autosave**: Every change saves on its own when you leave the field. There are no Save, Reset or Close buttons. You can keep working while a change saves. When a change is refused, the reason shows under the field that caused it, except for the name, which shows its refusal at the top of the page.

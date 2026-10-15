@@ -11,7 +11,7 @@
     "newChat": "Nouvelle conversation",
     "noMatch": "Aucune conversation ne correspond",
     "rename": "Renommer",
-    "search": "Rechercher une conversation...",
+    "search": "Rechercher une conversation…",
     "untitled": "Sans titre"
   },
   "errors": {
@@ -26,7 +26,7 @@
     "dropHint": "Déposer l'image pour la joindre",
     "hintEnter": "Entrée pour envoyer",
     "hintShiftEnter": "Maj+Entrée retour à la ligne",
-    "placeholder": "Posez votre question à Plaid sur vos données KANAP...",
+    "placeholder": "Posez votre question à Plaid sur vos données KANAP…",
     "removeAttachment": "Retirer la pièce jointe",
     "send": "Envoyer",
     "stop": "Arrêter la génération"
@@ -46,7 +46,7 @@
     "toolCallStreaming": "appel de {{name}}…",
     "toolUseCount_one": "{{count}} outil utilisé",
     "toolUseCount_other": "{{count}} outils utilisés",
-    "toolUseProgress": "Utilisation des outils...",
+    "toolUseProgress": "Utilisation des outils…",
     "userRole": "Vous"
   },
   "activity": {
@@ -144,7 +144,7 @@
   },
   "mention": {
     "noResults": "Aucun résultat",
-    "searching": "Recherche...",
+    "searching": "Recherche…",
     "entityTypes": {
       "knowledge": "Connaissances",
       "tasks": "Tâches",
@@ -213,7 +213,12 @@
       "search_all": "Rechercher tout",
       "search_knowledge": "Rechercher dans la base de connaissances",
       "web_search": "Recherche web"
-    }
+    },
+    "noGroups": "Aucun groupe trouvé.",
+    "noFilterValues": "Aucune valeur de filtre trouvée.",
+    "noFilterFields": "Aucun champ de filtre trouvé.",
+    "empty": "(vide)",
+    "aliases": "Alias : {{aliases}}"
   },
   "tokenUsage": {
     "total": "Tokens",

@@ -93,7 +93,7 @@
         "projectLevel": "Projektebene"
       },
       "states": {
-        "loading": "Aufgaben werden geladen...",
+        "loading": "Aufgaben werden geladen…",
         "empty": "Noch keine Aufgaben vorhanden.",
         "noMatches": "Keine Aufgaben entsprechen den aktuellen Filtern."
       },
@@ -136,7 +136,7 @@
     }
   },
   "workspace": {
-    "loadingTab": "Tab wird geladen...",
+    "loadingTab": "Tab wird geladen…",
     "sidebarTitle": "Eigenschaften",
     "openProperties": "Eigenschaften öffnen",
     "closeProperties": "Eigenschaften schließen",
@@ -255,11 +255,11 @@
       },
       "messages": {
         "loadFailed": "Projekt konnte nicht geladen werden",
-        "loading": "Projekt wird geladen...",
-        "loadingTabData": "Tab-Daten werden geladen...",
+        "loading": "Projekt wird geladen…",
+        "loadingTabData": "Tab-Daten werden geladen…",
         "permissionSavePanel": "Sie haben keine Berechtigung, diese Panel-Änderungen zu speichern.",
         "permissionSaveWorkspace": "Sie haben keine Berechtigung, diesen Arbeitsbereich zu speichern.",
-        "refreshing": "Wird aktualisiert...",
+        "refreshing": "Wird aktualisiert…",
         "saveFailed": "Projekt konnte nicht gespeichert werden",
         "savePanelFailed": "Projekt-Panel konnte nicht gespeichert werden",
         "updateStatusFailed": "Status konnte nicht aktualisiert werden",
@@ -308,7 +308,7 @@
           "executionProgress": "Fortschritt"
         },
         "placeholders": {
-          "purpose": "Beschreiben Sie den Zweck dieses Projekts..."
+          "purpose": "Beschreiben Sie den Zweck dieses Projekts…"
         },
         "values": {
           "activeTasks": "Aktiv {{count}}",
@@ -498,7 +498,7 @@
           "noPlannedPhasesHelp": "Legen Sie geplante Start- und Enddaten für Phasen fest, um sie im Gantt-Diagramm zu sehen.",
           "noPlannedProjects": "Keine Projekte mit geplanten Daten",
           "noPlannedProjectsHelp": "Legen Sie geplante Start- und Enddaten für Projekte fest, um sie auf dem Zeitstrahl zu sehen.",
-          "selectTemplate": "Vorlage auswählen...",
+          "selectTemplate": "Vorlage auswählen…",
           "noPhaseTasks": "Keine Aufgaben in dieser Phase."
         },
         "values": {
@@ -563,13 +563,13 @@
       "messages": {
         "deleteFailed": "Anfrage konnte nicht gelöscht werden",
         "loadFailed": "Anfrage konnte nicht geladen werden",
-        "loading": "Anfrage wird geladen...",
-        "loadingTabData": "Tab-Daten werden geladen...",
+        "loading": "Anfrage wird geladen…",
+        "loadingTabData": "Tab-Daten werden geladen…",
         "permissionSavePanel": "Sie haben keine Berechtigung, diese Panel-Änderungen zu speichern.",
         "permissionSaveWorkspace": "Sie haben keine Berechtigung, diesen Arbeitsbereich zu speichern.",
         "recommendationSubmitted": "Empfehlung {{outcome}} eingereicht.",
         "recommendationSubmittedFallback": "Empfehlung eingereicht.",
-        "refreshing": "Wird aktualisiert...",
+        "refreshing": "Wird aktualisiert…",
         "saveFailed": "Anfrage konnte nicht gespeichert werden",
         "savePanelFailed": "Anfrage-Panel konnte nicht gespeichert werden",
         "updateStatusFailed": "Status konnte nicht aktualisiert werden",
@@ -615,7 +615,7 @@
           "latestRecommendation": "Letzte Empfehlung"
         },
         "placeholders": {
-          "purpose": "Beschreiben Sie den Zweck dieser Anfrage..."
+          "purpose": "Beschreiben Sie den Zweck dieser Anfrage…"
         },
         "values": {
           "contributorsLinked": "{{count}} Mitwirkende über Fach- und IT-Teams hinweg verknüpft",
@@ -682,7 +682,7 @@
           "statusChanged": "Statusänderung: {{from}} → {{to}}"
         },
         "placeholders": {
-          "risksMitigations": "Listen Sie die wichtigsten Restrisiken, Gegenmaßnahmen und Verantwortlichen auf..."
+          "risksMitigations": "Listen Sie die wichtigsten Restrisiken, Gegenmaßnahmen und Verantwortlichen auf…"
         },
         "sections": {
           "analysisRecommendation": "Analyseempfehlung",
@@ -709,7 +709,7 @@
       },
       "description": {
         "label": "Beschreibung",
-        "placeholder": "Beschreiben Sie die Aufgabe..."
+        "placeholder": "Beschreiben Sie die Aufgabe…"
       },
       "footer": {
         "created": "Erstellt am {{date}}",
@@ -743,7 +743,7 @@
       },
       "comments": {
         "placeholders": {
-          "writeComment": "Einen Kommentar schreiben..."
+          "writeComment": "Einen Kommentar schreiben…"
         }
       },
       "activity": {
@@ -754,7 +754,7 @@
           "logHours": "{{hours}} Std. erfassen",
           "setStatus": "{{status}} setzen",
           "submit": "Absenden",
-          "submitting": "Wird gesendet..."
+          "submitting": "Wird gesendet…"
         },
         "messages": {
           "doneRequiresTime": "Aufgabe kann ohne Zeiterfassung nicht als erledigt markiert werden.",
@@ -802,7 +802,7 @@
       },
       "messages": {
         "createFailed": "Aufgabe konnte nicht erstellt werden",
-        "creating": "Aufgabe wird erstellt...",
+        "creating": "Aufgabe wird erstellt…",
         "deleteFailed": "Aufgabe konnte nicht gelöscht werden",
         "documentImportAfterCreate": "Speichern Sie die Aufgabe, bevor Sie ein Dokument importieren.",
         "documentImportFailed": "Dokumentimport fehlgeschlagen",
@@ -812,7 +812,7 @@
         "invalidRelationType": "Ungültiger verknüpfter Objekttyp",
         "invalidStandaloneRelation": "Eigenständige Aufgaben können diese Beziehung nicht verwenden.",
         "loadFailed": "Aufgabe konnte nicht geladen werden",
-        "loading": "Aufgabe wird geladen...",
+        "loading": "Aufgabe wird geladen…",
         "notFound": "Aufgabe nicht gefunden",
         "relatedItemRequired": "Bitte wählen Sie ein verknüpftes Element aus",
         "saveFailed": "Aufgabe konnte nicht gespeichert werden",
@@ -1251,7 +1251,7 @@
         "hideDetails": "Details ausblenden"
       },
       "states": {
-        "loading": "Kapazitätsdaten werden geladen...",
+        "loading": "Kapazitätsdaten werden geladen…",
         "empty": "Keine Kapazitätsdaten für die ausgewählten Filter.",
         "noUnassignedWork": "Keine nicht zugeordnete Arbeit für die ausgewählten Filter.",
         "profilelessLoad_one": "{{count}} Person trägt {{days}} Tage Projektarbeit ohne Mitwirkendenprofil. Legen Sie das Profil an, um ihr eine Kapazität zu geben.",
@@ -1318,7 +1318,7 @@
       "actions": {
         "exportCsv": "CSV exportieren",
         "exportXlsx": "XLSX exportieren",
-        "exporting": "Wird exportiert..."
+        "exporting": "Wird exportiert…"
       },
       "messages": {
         "invalidPeriod": "Das Startdatum muss vor oder gleich dem Enddatum liegen.",
@@ -1670,8 +1670,8 @@
     "dialog": {
       "title": "Mitwirkenden hinzufügen",
       "selectUser": "Benutzer auswählen",
-      "searchUsers": "Benutzer suchen...",
-      "adding": "Wird hinzugefügt..."
+      "searchUsers": "Benutzer suchen…",
+      "adding": "Wird hinzugefügt…"
     },
     "messages": {
       "addFailed": "Mitwirkender konnte nicht hinzugefügt werden"
@@ -1723,19 +1723,20 @@
     "actions": {
       "addComment": "Kommentar hinzufügen",
       "addDecision": "Entscheidung hinzufügen",
-      "adding": "Wird hinzugefügt...",
-      "editComment": "Kommentar bearbeiten"
+      "adding": "Wird hinzugefügt…",
+      "editComment": "Kommentar bearbeiten",
+      "submitShortcut": "Senden (Strg/Cmd+Eingabe)"
     },
     "placeholders": {
-      "editComment": "Bearbeiten Sie Ihren Kommentar..."
+      "editComment": "Bearbeiten Sie Ihren Kommentar…"
     },
     "messages": {
       "addCommentFailed": "Kommentar konnte nicht hinzugefügt werden",
       "beFirstToAdd": "Seien Sie der Erste!",
       "imageImportNotConfigured": "Bild-URL-Import nicht konfiguriert",
       "imageUploadNotConfigured": "Bild-Upload nicht konfiguriert",
-      "loadingComments": "Kommentare werden geladen...",
-      "loadingHistory": "Verlauf wird geladen...",
+      "loadingComments": "Kommentare werden geladen…",
+      "loadingHistory": "Verlauf wird geladen…",
       "noComments": "Noch keine Kommentare.",
       "noCommentsOrDecisions": "Noch keine Kommentare oder Entscheidungen.",
       "noHistory": "Noch kein Verlauf erfasst.",
@@ -1745,7 +1746,7 @@
       "formalDecision": "Formelle Entscheidung",
       "noChange": "(Keine Änderung)",
       "fields": {
-        "changeStatus": "Status ändern auf...",
+        "changeStatus": "Status ändern auf…",
         "comment": "Kommentar hinzufügen",
         "contextMeeting": "Kontext / Besprechung",
         "contextOptional": "Kontext (optional)",
@@ -1753,10 +1754,10 @@
         "rationaleNotes": "Begründung / Anmerkungen"
       },
       "placeholders": {
-        "comment": "Teilen Sie Ihre Gedanken, Aktualisierungen oder Fragen mit...",
+        "comment": "Teilen Sie Ihre Gedanken, Aktualisierungen oder Fragen mit…",
         "commentContext": "z. B. Wöchentliches Review, Stakeholder-Besprechung",
         "decisionContext": "z. B. CAB-Besprechung 03.01.2025",
-        "decisionNotes": "Erläutern Sie die Entscheidungsbegründung..."
+        "decisionNotes": "Erläutern Sie die Entscheidungsbegründung…"
       }
     },
     "history": {
@@ -1855,7 +1856,7 @@
         "current": "Aktuelle Abhängigkeiten:"
       },
       "placeholders": {
-        "search": "Anfragen oder Projekte suchen..."
+        "search": "Anfragen oder Projekte suchen…"
       },
       "states": {
         "empty": "Keine Abhängigkeiten definiert."
@@ -1891,7 +1892,7 @@
         "submit": "Empfehlung einreichen"
       },
       "fields": {
-        "changeStatus": "Status ändern auf...",
+        "changeStatus": "Status ändern auf…",
         "context": "Kontext",
         "decisionOutcome": "Entscheidungsergebnis",
         "rationale": "Begründung"
@@ -1900,7 +1901,7 @@
         "submitFailed": "Empfehlung konnte nicht eingereicht werden"
       },
       "placeholders": {
-        "rationale": "Fassen Sie die Empfehlung, Bedingungen und wesentlichen Einschränkungen zusammen..."
+        "rationale": "Fassen Sie die Empfehlung, Bedingungen und wesentlichen Einschränkungen zusammen…"
       },
       "validation": {
         "outcomeRequired": "Entscheidungsergebnis ist erforderlich"
@@ -1938,8 +1939,8 @@
         "saveFailed": "Zeiteintrag konnte nicht gespeichert werden"
       },
       "placeholders": {
-        "notes": "Optionale Beschreibung der durchgeführten Arbeit...",
-        "searchUsers": "Benutzer suchen..."
+        "notes": "Optionale Beschreibung der durchgeführten Arbeit…",
+        "searchUsers": "Benutzer suchen…"
       },
       "validation": {
         "dateRequired": "Bitte wählen Sie ein Datum aus",
@@ -1981,7 +1982,7 @@
       },
       "states": {
         "empty": "Keine Zuordnungen – weisen Sie einen {{effortType}}-Leiter oder Teammitglieder zu",
-        "loading": "Zuordnungen werden geladen..."
+        "loading": "Zuordnungen werden geladen…"
       },
       "table": {
         "contributor": "Mitwirkender"
@@ -1995,7 +1996,7 @@
     "convertToProject": {
       "title": "In Projekt konvertieren",
       "actions": {
-        "converting": "Wird konvertiert...",
+        "converting": "Wird konvertiert…",
         "create": "Projekt erstellen"
       },
       "fields": {
@@ -2016,8 +2017,8 @@
         "purpose": "Zweck"
       },
       "states": {
-        "loadingEffort": "Aufwandsschätzungen werden geladen...",
-        "loadingPurpose": "Aktueller Zweck wird geladen..."
+        "loadingEffort": "Aufwandsschätzungen werden geladen…",
+        "loadingPurpose": "Aktueller Zweck wird geladen…"
       }
     },
     "convertToRequest": {
@@ -2025,7 +2026,7 @@
       "summary": "Konvertierung von {{taskRef}}: {{taskTitle}} in eine Portfolio-Anfrage",
       "actions": {
         "convert": "In Anfrage konvertieren",
-        "converting": "Wird konvertiert..."
+        "converting": "Wird konvertiert…"
       },
       "fields": {
         "closeTask": "Ursprüngliche Aufgabe nach der Konvertierung schließen",
@@ -2070,7 +2071,7 @@
         "missingTaskId": "Dem Aufgabeneintrag fehlt die Aufgaben-ID."
       },
       "states": {
-        "loadingProjects": "Projektaufschlüsselung wird geladen...",
+        "loadingProjects": "Projektaufschlüsselung wird geladen…",
         "noMatchingProjects": "Keine passenden Projekte für diesen Mitwirkenden.",
         "noTimeEntries": "Noch keine Zeiteinträge."
       },
@@ -2160,8 +2161,8 @@
         "dragDropFiles": "Dateien hierher ziehen oder den Button zum Auswählen verwenden",
         "loadFailed": "Beziehungen konnten nicht geladen werden",
         "saveFailed": "Beziehungen konnten nicht gespeichert werden",
-        "uploadingFiles_one": "{{count}} Datei wird hochgeladen...",
-        "uploadingFiles_other": "{{count}} Dateien werden hochgeladen..."
+        "uploadingFiles_one": "{{count}} Datei wird hochgeladen…",
+        "uploadingFiles_other": "{{count}} Dateien werden hochgeladen…"
       },
       "placeholders": {
         "applications": "Anwendungen suchen",
@@ -2211,7 +2212,7 @@
         "originalRequestScoring": "Ursprüngliche Anfragebewertung"
       },
       "states": {
-        "loadingOriginal": "Ursprüngliche Bewertung wird geladen...",
+        "loadingOriginal": "Ursprüngliche Bewertung wird geladen…",
         "noCriteria": "Keine Bewertungskriterien konfiguriert. Konfigurieren Sie Kriterien in den Portfolio-Einstellungen.",
         "unableToLoadOriginal": "Ursprüngliche Anfragebewertung konnte nicht geladen werden."
       },
