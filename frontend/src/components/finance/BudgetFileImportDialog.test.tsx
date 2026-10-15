@@ -17,7 +17,7 @@ vi.mock('../../api', () => ({ default: { post: vi.fn() } }));
 import api from '../../api';
 import { createAppTheme } from '../../config/ThemeContext';
 import { formatShortDateTime } from '../../lib/dateFormat';
-import { OLD_LAYOUT_SENTENCE, STALE_SENTENCE } from './budgetFile';
+import { DECODE_SENTENCE_CODES, OLD_LAYOUT_SENTENCE, STALE_SENTENCE } from './budgetFile';
 import BudgetFileImportDialog from './BudgetFileImportDialog';
 
 const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
@@ -194,6 +194,14 @@ describe('BudgetFileImportDialog', () => {
     renderDialog();
     expect(await screen.findByText('operations.budgetFile.oldLayout')).toBeInTheDocument();
     expect(screen.queryByText(OLD_LAYOUT_SENTENCE)).toBeNull();
+  });
+
+  it('shows a workbook refusal in the screen language', async () => {
+    const sentence = Object.keys(DECODE_SENTENCE_CODES).find((text) => DECODE_SENTENCE_CODES[text] === 'CSV_FILE_EXCEL')!;
+    post.mockResolvedValueOnce({ data: report({ ok: false, notices: { dates: null, amounts: null }, fileErrors: [sentence] }) });
+    renderDialog();
+    expect(await screen.findByText(/^errors:CSV_FILE_EXCEL/)).toBeInTheDocument();
+    expect(screen.queryByText(sentence)).toBeNull();
   });
 
   it('loads with the snapshot of the check and shows the result', async () => {

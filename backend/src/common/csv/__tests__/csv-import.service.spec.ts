@@ -8,6 +8,7 @@ import {
   CsvFieldType,
   CsvImportParams,
 } from '../csv-field.types';
+import { minimalXls, minimalXlsx } from '../../csv-sheet/__tests__/office-files';
 
 /**
  * Create a mock file from CSV content
@@ -630,6 +631,49 @@ async function testUtf16FileIsRefusedWithClearMessage() {
   );
 }
 
+/** A workbook or another binary file is one 400 with a code, never a header report naming its bytes. */
+async function testNonCsvFilesAreRefusedBeforeTheHeader() {
+  const service = new CsvImportService(new CsvResolverService(), new CsvJsonValidators());
+  const cases: Array<[string, Buffer, string]> = [
+    ['xlsx', minimalXlsx(), 'CSV_FILE_EXCEL'],
+    ['xls', minimalXls(), 'CSV_FILE_EXCEL'],
+    ['binary', Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x37, 0x0a, 0x00, 0x00, 0xff, 0xfe, 0x01]), 'CSV_FILE_NOT_TEXT'],
+  ];
+  for (const [label, buffer, code] of cases) {
+    await assert.rejects(
+      service.import(createTestConfig(), createRawFile(buffer), { ...defaultParams, dryRun: true }, {
+        manager: createMockManager({ tasks: [] }),
+        tenantId: 't1',
+      }),
+      (err: any) => err?.getStatus?.() === 400 && err.getResponse().code === code,
+      label,
+    );
+  }
+}
+
+async function testAccentedWindows1252FileStillImports() {
+  const service = new CsvImportService(new CsvResolverService(), new CsvJsonValidators());
+  const config = createTestConfig();
+  let seenTitle: string | undefined;
+  config.beforeValidate = async (rows) => {
+    seenTitle = rows[0]?.raw.title;
+  };
+  // "Cœur d'été à 5 €", with a curly apostrophe: œ, ’ and € sit in 0x80-0x9F in Windows-1252.
+  const buffer = Buffer.concat([
+    Buffer.from('id;title;description;status;due_date;priority\r\n;C', 'ascii'),
+    Buffer.from([0x9c, 0x75, 0x72, 0x20, 0x64, 0x92, 0xe9, 0x74, 0xe9, 0x20, 0xe0, 0x20, 0x35, 0x20, 0x80]),
+    Buffer.from(';;open;;\r\n', 'ascii'),
+  ]);
+
+  const result = await service.import(config, createRawFile(buffer), { ...defaultParams, dryRun: true }, {
+    manager: createMockManager({ tasks: [] }),
+    tenantId: 't1',
+  });
+
+  assert.equal(result.ok, true, JSON.stringify(result.errors));
+  assert.equal(seenTitle, 'C\u0153ur d\u2019\u00e9t\u00e9 \u00e0 5 \u20ac');
+}
+
 // ===== Run tests =====
 
 (async () => {
@@ -655,6 +699,8 @@ async function testUtf16FileIsRefusedWithClearMessage() {
   await testBeforeValidateErrorsSurviveDryRun();
   await testWindows1252FileIsDecodedOnDryRun();
   await testUtf16FileIsRefusedWithClearMessage();
+  await testNonCsvFilesAreRefusedBeforeTheHeader();
+  await testAccentedWindows1252FileStillImports();
 
   console.log('CSV import service tests passed.');
 })().catch((err) => {

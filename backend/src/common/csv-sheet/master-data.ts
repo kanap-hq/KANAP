@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { endOfValidityFromDate } from '../status';
 import { DecimalMark } from './amount';
 import { formatCsvDate, formatCsvEndOfValidity } from './date';
+import { csvDecodeErrorCode } from './decode';
 import { readCsv } from './read';
 import { CsvAmountColumn, CsvDataRow, CsvDateOrder, CsvLanguage } from './types';
 
@@ -64,7 +65,10 @@ export async function readMasterDataFile(request: MasterDataFileRequest): Promis
     dateOrder: request.dateOrder,
     decimalMark: request.decimalMark,
   });
-  if (read.fileErrors.length > 0) throw new BadRequestException(read.fileErrors[0]);
+  if (read.fileErrors.length > 0) {
+    const code = csvDecodeErrorCode(read.fileErrors[0]);
+    throw new BadRequestException(code ? { message: read.fileErrors[0], code } : read.fileErrors[0]);
+  }
   const notices = { dates: read.dates?.notice ?? null, amounts: read.amounts?.notice ?? null };
   const headerError = headerProblem(request, read);
   return {

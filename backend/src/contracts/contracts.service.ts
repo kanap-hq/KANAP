@@ -1079,7 +1079,7 @@ export class ContractsService {
     try {
       text = decodeCsv(buf).text;
     } catch (err) {
-      if (err instanceof CsvDecodeError) throw new BadRequestException(err.message);
+      if (err instanceof CsvDecodeError) throw new BadRequestException({ message: err.message, code: err.code });
       throw err;
     }
     const expectedHeaders = this.csvHeaders();
