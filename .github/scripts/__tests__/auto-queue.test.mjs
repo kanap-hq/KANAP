@@ -30,11 +30,17 @@ const fs = require('node:fs');
 const statePath = process.env.FAKE_GH_STATE;
 const state = JSON.parse(fs.readFileSync(statePath, 'utf8'));
 const args = process.argv.slice(2);
-if (args[0] === 'api' && args[1] === 'graphql') {
+if (args[0] === 'api' && args[1] === 'graphql' && args.some((a) => a.includes('dequeuePullRequest'))) {
+  const id = args.find((a) => a.startsWith('id=')).slice(3);
+  state.dequeued = (state.dequeued || []).concat(Number(id.replace('PR_node_', '')));
+  fs.writeFileSync(statePath, JSON.stringify(state));
+} else if (args[0] === 'api' && args[1] === 'graphql') {
   for (const p of state.prs) {
     console.log([p.number, p.head, !!p.draft, !!p.fork, p.author || 'kanap-it',
       !!p.queued, p.automerge || '-', p.mergeable || 'MERGEABLE'].join(' '));
   }
+} else if (args[0] === 'api' && args[1].includes('/pulls/')) {
+  console.log('PR_node_' + args[1].split('/').pop());
 } else if (args[0] === 'api' && /check-runs/.test(args[1])) {
   const sha = args[1].split('/')[4];
   console.log((state.failed || []).includes(sha) ? 1 : 0);
@@ -98,7 +104,7 @@ function setup(t) {
     });
     assert.equal(r.status, 0, r.stdout + r.stderr);
     const st = JSON.parse(readFileSync(statePath, 'utf8'));
-    return { out: r.stdout, queued: st.queuedNow || [], disabled: st.disabled || [] };
+    return { out: r.stdout, queued: st.queuedNow || [], disabled: st.disabled || [], dequeued: st.dequeued || [] };
   };
   return { heads, run };
 }
@@ -168,4 +174,12 @@ test('a pull request just sent keeps its place while GitHub shows it as conflict
   const r = run([{ number: 1, head: heads.a, mergeable: 'CONFLICTING', automerge: new Date().toISOString() }, { number: 3, head: heads.c }]);
   assert.match(r.out, /#1: entering the merge queue; the others wait until it is in\./);
   assert.deepEqual(r.queued, []);
+});
+
+test('a draft in the queue is taken out of it, and nothing overtakes the order for it', (t) => {
+  const { heads, run } = setup(t);
+  const r = run([{ number: 1, head: heads.a, draft: true, queued: true }, { number: 3, head: heads.c }]);
+  assert.deepEqual(r.dequeued, [1]);
+  assert.match(r.out, /#1: a draft in the merge queue: taken out of it\./);
+  assert.deepEqual(r.queued, [3]);
 });

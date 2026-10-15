@@ -4,7 +4,8 @@ name: Auto queue
 # one at a time, in the order they were opened (.github/scripts/auto-queue.sh). The agent opens a
 # ready pull request once the maintainer has validated the change on dev; from there nobody has
 # to queue it, and a fix pushed after a failure in the queue sends it back by itself. A draft is
-# never queued. Dependabot pull requests have their own workflow (dependabot-queue.yml).
+# never queued, and a pull request of the queue turned back into a draft is taken out of it.
+# Dependabot pull requests have their own workflow (dependabot-queue.yml).
 #
 # Why a GitHub App: GitHub's built-in token cannot add pull requests to a merge queue. The org app
 # `kanap-queue` (installed on this repository only, Contents and Pull requests in write) gives a
@@ -17,7 +18,7 @@ name: Auto queue
 on:
   pull_request_target:
     branches: [ main ]
-    types: [ opened, reopened, ready_for_review, synchronize, closed, enqueued, dequeued ]
+    types: [ opened, reopened, ready_for_review, converted_to_draft, synchronize, closed, enqueued, dequeued ]
   workflow_dispatch:
     inputs:
       dry_run:

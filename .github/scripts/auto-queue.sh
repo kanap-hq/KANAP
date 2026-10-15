@@ -7,6 +7,9 @@
 #
 #   auto-queue.sh
 #
+# A pull request of the queue that is turned back into a draft is taken out of the queue: a draft
+# is the way to stop one.
+#
 # Handled: pull requests on main that are ready (not drafts), come from this repository and were
 # opened by one of AUTO_QUEUE_AUTHORS. They enter the queue one at a time, lowest number first:
 # each run queues at most one, and the next run starts when GitHub reports it in the queue (the
@@ -75,6 +78,16 @@ failed_in_queue() {
 }
 
 while read -r n head draft fork author queued automerge_since mergeable; do
+  if [ "$draft" = true ] && [ "$queued" = true ]; then
+    echo "#$n: a draft in the merge queue: taken out of it."
+    if [ "$DRY_RUN" != true ]; then
+      id=$(GH_TOKEN=$READ_TOKEN gh api "repos/$REPO/pulls/$n" --jq .node_id)
+      # shellcheck disable=SC2016 # GraphQL variable
+      gh api graphql -f id="$id" -f query='mutation($id: ID!) { dequeuePullRequest(input: {id: $id}) { clientMutationId } }' >/dev/null \
+        || echo "::warning::#$n could not be taken out of the merge queue."
+    fi
+    continue
+  fi
   if [ "$draft" = true ] || [ "$fork" = true ] || [[ "$AUTHORS" != *" $author "* ]]; then
     echo "#$n: left alone (draft, fork, or opened by $author)."
     continue
