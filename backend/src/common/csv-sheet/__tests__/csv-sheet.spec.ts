@@ -13,6 +13,7 @@ import {
   dateOrderNotice,
   formatCsvAmount,
   formatCsvDate,
+  headerMismatchError,
   matchCode,
   parseCsvAmount,
   parseCsvDateCell,
@@ -634,7 +635,22 @@ async function main() {
   await testRoundTrip();
   testHeaderWithoutBom();
   await testRowCap();
+  testHeaderMismatch();
   console.log('csv-sheet.spec: ok');
+}
+
+/** The header refusal names only the parts that apply, with a code per case for the interface. */
+function testHeaderMismatch() {
+  assert.equal(headerMismatchError([], []), null);
+  assert.deepEqual(headerMismatchError(['name'], []), {
+    row: 0, message: 'Header mismatch. Missing: name', code: 'CSV_HEADER_MISSING_COLUMNS', params: { missing: 'name', extra: '' },
+  });
+  assert.deepEqual(headerMismatchError([], ['label', 'notes']), {
+    row: 0, message: 'Header mismatch. Extra: label, notes', code: 'CSV_HEADER_UNKNOWN_COLUMNS', params: { missing: '', extra: 'label, notes' },
+  });
+  assert.deepEqual(headerMismatchError(['name'], ['label']), {
+    row: 0, message: 'Header mismatch. Missing: name, Extra: label', code: 'CSV_HEADER_MISMATCH', params: { missing: 'name', extra: 'label' },
+  });
 }
 
 main().catch((err) => {

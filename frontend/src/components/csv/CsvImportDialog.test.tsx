@@ -87,7 +87,7 @@ describe('CsvImportDialog', () => {
   it('heads a header mismatch with file not formatted, on row 1 (budget rows) as on row 0 (other importers)', async () => {
     for (const row of [1, 0]) {
       post.mockResolvedValueOnce({
-        data: report({ ok: false, total: 0, errors: [{ row, message: 'Header mismatch. Missing: year, Extra: -' }] }),
+        data: report({ ok: false, total: 0, errors: [{ row, message: 'Header mismatch. Missing: year' }] }),
       });
       const view = renderDialog();
       fireEvent.click(screen.getByRole('button', { name: 'csv.preflightCheck' }));
@@ -101,7 +101,7 @@ describe('CsvImportDialog', () => {
       data: report({
         ok: false,
         errors: [
-          { row: 0, message: 'Header mismatch. Missing: currency, Extra: -' },
+          { row: 0, message: 'Header mismatch. Missing: currency' },
           { row: 2, message: 'product_name is required' },
           { row: 5, message: 'Unknown supplier' },
         ],
@@ -110,7 +110,9 @@ describe('CsvImportDialog', () => {
     renderDialog();
     fireEvent.click(screen.getByRole('button', { name: 'csv.preflightCheck' }));
     expect(await screen.findByRole('alert')).toHaveTextContent(/^csv\.fileNotFormatted$/);
-    expect(screen.getAllByText('csv.rowError')).toHaveLength(3);
+    // The header problem is labelled as such, the others by their row.
+    expect(screen.getAllByText('csv.headerError')).toHaveLength(1);
+    expect(screen.getAllByText('csv.rowError')).toHaveLength(2);
   });
 
   it('shows the server message when the request fails', async () => {

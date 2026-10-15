@@ -280,13 +280,28 @@ export default function CoaPage() {
   ], [consolidationCode, getAccountHref, locale, navigate, t]);
 
   const updateSelectedCoa = useCallback((coaId: string) => {
-    const next = new URLSearchParams(searchParams);
-    next.set('selected', coaId);
-    next.delete('coaId');
-    // The consolidation filter belongs to one chart's health line.
-    next.delete('consolidation');
-    setSearchParams(next, { replace: true });
-  }, [searchParams, setSearchParams]);
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.set('selected', coaId);
+      next.delete('coaId');
+      // The consolidation filter belongs to one chart's health line.
+      next.delete('consolidation');
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
+
+  // A new chart is selected once the list holds it: selected earlier, the fallback above would
+  // put the previous chart back, and an import would then go to that chart.
+  const selectCreatedCoa = useCallback(async (coaId: string) => {
+    await refetch();
+    updateSelectedCoa(coaId);
+  }, [refetch, updateSelectedCoa]);
+
+  // The summary line and the health line count the accounts: an import or a deletion changes them.
+  const refreshAccounts = useCallback(() => {
+    setAccountsRefreshKey((key) => key + 1);
+    void refetch();
+  }, [refetch]);
 
   const setConsolidationFilter = useCallback((value: ConsolidationFilter | undefined) => {
     const next = new URLSearchParams(searchParams);
@@ -400,7 +415,7 @@ export default function CoaPage() {
           getItemId={(row) => row.id}
           getItemName={(row) => row.account_name}
           gridApi={gridApiRef.current}
-          onDeleteSuccess={() => setAccountsRefreshKey((key) => key + 1)}
+          onDeleteSuccess={refreshAccounts}
         />
       )}
     </>
@@ -487,8 +502,7 @@ export default function CoaPage() {
         onClose={() => setCreateCoaOpen(false)}
         onCreated={(newId) => {
           setCreateCoaOpen(false);
-          updateSelectedCoa(newId);
-          void refetch();
+          void selectCreatedCoa(newId);
         }}
       />
 
@@ -499,8 +513,7 @@ export default function CoaPage() {
           void refetch();
         }}
         onCoaCreated={(newId) => {
-          updateSelectedCoa(newId);
-          void refetch();
+          void selectCreatedCoa(newId);
         }}
         onCoaDeleted={() => {
           void refetch();
@@ -524,8 +537,8 @@ export default function CoaPage() {
         open={importOpen}
         onClose={() => setImportOpen(false)}
         endpoint={selectedCoaId ? `/chart-of-accounts/${selectedCoaId}/accounts` : '/accounts'}
-        title={t('coa.importAccounts')}
-        onImported={() => setAccountsRefreshKey((key) => key + 1)}
+        title={selectedCoa ? t('coa.importAccountsInto', { code: selectedCoa.code }) : undefined}
+        onImported={refreshAccounts}
         flexibleFormat
       />
     </>

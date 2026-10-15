@@ -174,6 +174,8 @@ Click **New** in the chip bar, or **New chart** in the Manage charts dialog. You
 
 In template mode, click **Check template** before creating to see how many accounts will be added and how many updated. Then click **Create**.
 
+Once created, the new chart is selected on the page: **Import CSV** loads into it.
+
 A new chart holds no role except the country default you tick here. To give it another role, use [Manage charts](#the-manage-charts-dialog).
 
 ### Loading from templates
@@ -467,8 +469,8 @@ The global `/accounts` CSV includes a `coa_code` column to identify which CoA ea
   - **Export CSV**: all accounts with their CoA codes, account numbers, names, native names, descriptions, consolidation mappings, status and **Used for**
   - **Import CSV**: **Download template** in the dialog gives a file with the headers only. Start with **Preflight check** to validate the structure, the encoding, the required fields and the duplicates, then **Load** to apply the inserts and the updates
   - **Matching**: by `(coa_code, account_number)` within your workspace
-  - **Required cells**: `coa_code`, `account_number`, `account_name`. All rows of one file must carry the same `coa_code`
-  - **Optional cells**: `native_name`, `description`, consolidation fields, `status`, `nature`
+  - **Required columns**: `coa_code`, `account_number`, `account_name`. All rows of one file must carry the same `coa_code`
+  - **Optional columns**: `native_name`, `description`, the consolidation columns, `status`, `nature`. A file can leave them out: the accounts it updates keep their stored values, and new accounts take the defaults (empty, enabled, **OPEX and CAPEX**). A column present in the file applies its cells, empty ones included
   - Duplicates in the file (same coa_code + account_number) are deduplicated; first occurrence wins
 
 **CSV schema** (the export writes the separator of the screen language; shown here with semicolons):
@@ -481,7 +483,8 @@ coa_code;account_number;account_name;native_name;description;consolidation_accou
 From the Charts of Accounts page, **Import CSV** and **Export CSV** are automatically scoped to the currently selected CoA.
 
   - **Export CSV**: accounts from this CoA (no `coa_code` column needed)
-  - **Import CSV**: accounts are inserted and updated in this CoA automatically
+  - **Import CSV**: accounts are inserted and updated in this CoA automatically. The dialog title names the chart, for example **Import accounts into FR-PCG**
+  - Only `account_number` and `account_name` are required. The other columns are optional, as in the global file
 
 **CSV schema** (CoA-scoped; shown here with semicolons):
 ```

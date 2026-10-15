@@ -415,6 +415,7 @@
     "fileNotFormatted": "Die bereitgestellte Datei ist nicht korrekt formatiert",
     "rowError": "Zeile {{row}}: {{message}}",
     "rowColumnError": "Zeile {{row}}, {{column}}: {{message}}",
+    "headerError": "Kopfzeile: {{message}}",
     "andMoreErrors": "…und {{count}} weitere",
     "ignoredColumns": "Ignorierte Spalten: {{columns}}.",
     "importWorkflow": "Import-Workflow",

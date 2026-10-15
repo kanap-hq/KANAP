@@ -789,7 +789,12 @@ async function testAccountNatureColumn() {
       { language: 'en' },
     );
     assert.equal(invalid.ok, false, 'an invalid nature is refused');
-    assert.deepEqual(invalid.errors, [{ row: 2, message: "Invalid nature 'both'. Use 'opex', 'capex' or leave it empty." }]);
+    assert.deepEqual(invalid.errors, [{
+      row: 2,
+      message: "Invalid nature 'both'. Use 'opex', 'capex' or leave it empty.",
+      code: 'CSV_ACCOUNT_NATURE_INVALID',
+      params: { value: 'both' },
+    }]);
     assert.deepEqual(await importer.snapshot(runner, tenantId), before, 'nothing is written');
   });
 }

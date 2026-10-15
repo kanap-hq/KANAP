@@ -174,6 +174,8 @@ Klicken Sie in der Chip-Leiste auf **Neu** oder im Dialog „Kontenpläne verwal
 
 Klicken Sie im Vorlagenmodus vor dem Erstellen auf **Vorlage prüfen**, um zu sehen, wie viele Konten hinzugefügt und wie viele aktualisiert werden. Klicken Sie dann auf **Erstellen**.
 
+Nach dem Erstellen ist der neue Kontenplan auf der Seite ausgewählt: **CSV importieren** lädt in diesen Kontenplan.
+
 Ein neuer Kontenplan hat keine Rolle, außer dem Länderstandard, den Sie hier ankreuzen. Für eine andere Rolle nutzen Sie [Kontenpläne verwalten](#der-dialog-kontenplane-verwalten).
 
 ### Aus Vorlagen laden
@@ -467,8 +469,8 @@ Der globale `/accounts`-CSV enthält eine `coa_code`-Spalte, um zu identifiziere
   - **CSV exportieren**: Alle Konten mit ihren Kontenplan-Codes, Kontonummern, Namen, lokalen Namen, Beschreibungen, Konsolidierungszuordnungen, Status und **Verwendet für**
   - **CSV importieren**: **Vorlage herunterladen** im Dialog liefert eine Datei nur mit den Kopfzeilen. Beginnen Sie mit der **Vorabprüfung**, um Struktur, Kodierung, Pflichtfelder und Duplikate zu prüfen, und dann **Laden**, um die Einfügungen und Aktualisierungen anzuwenden
   - **Zuordnung**: nach `(coa_code, account_number)` innerhalb Ihres Arbeitsbereichs
-  - **Pflichtzellen**: `coa_code`, `account_number`, `account_name`. Alle Zeilen einer Datei müssen denselben `coa_code` tragen
-  - **Optionale Zellen**: `native_name`, `description`, Konsolidierungsfelder, `status`, `nature`
+  - **Pflichtspalten**: `coa_code`, `account_number`, `account_name`. Alle Zeilen einer Datei müssen denselben `coa_code` tragen
+  - **Optionale Spalten**: `native_name`, `description`, die Konsolidierungsspalten, `status`, `nature`. Eine Datei kann sie weglassen: Die Konten, die sie aktualisiert, behalten ihre gespeicherten Werte, und neue Konten erhalten die Standardwerte (leer, enabled, **OPEX und CAPEX**). Eine Spalte, die in der Datei vorhanden ist, übernimmt ihre Zellen, auch leere
   - Duplikate in der Datei (gleicher coa_code + account_number) werden dedupliziert; erstes Vorkommen gewinnt
 
 **CSV-Schema** (der Export schreibt das Trennzeichen der Sprache der Oberfläche; hier mit Semikolons dargestellt):
@@ -481,7 +483,8 @@ coa_code;account_number;account_name;native_name;description;consolidation_accou
 Von der Kontenpläne-Seite aus sind **CSV importieren** und **CSV exportieren** automatisch auf den aktuell ausgewählten Kontenplan bezogen.
 
   - **CSV exportieren**: Konten aus diesem Kontenplan (keine `coa_code`-Spalte nötig)
-  - **CSV importieren**: Konten werden automatisch in diesen Kontenplan eingefügt oder aktualisiert
+  - **CSV importieren**: Konten werden automatisch in diesen Kontenplan eingefügt oder aktualisiert. Der Titel des Dialogs nennt den Kontenplan, zum Beispiel **Konten in FR-PCG importieren**
+  - Nur `account_number` und `account_name` sind Pflicht. Die anderen Spalten sind optional, wie in der globalen Datei
 
 **CSV-Schema** (Kontenplan-bezogen; hier mit Semikolons dargestellt):
 ```

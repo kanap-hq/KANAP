@@ -15,6 +15,7 @@ import {
   CsvDateOrder,
   CsvLanguage,
   DecimalMark,
+  ImportReportError,
   readMasterDataFile,
   rowProblems,
   writeCsv,
@@ -38,6 +39,18 @@ import {
 
 const ACCOUNT_NUMBER_TOKEN = '__account_number__';
 const INT4_MAX = 2147483647;
+
+/** The columns an account file may leave out: an absent column keeps what is stored (a new account takes the defaults). */
+const OPTIONAL_CSV_HEADERS = [
+  'native_name',
+  'description',
+  'consolidation_account_number',
+  'consolidation_account_name',
+  'consolidation_account_description',
+  'status',
+  // Older files have no `nature` column either.
+  'nature',
+];
 
 /**
  * `where.account_number` for a grid filter on it: the column is an integer, so
@@ -757,18 +770,17 @@ export class AccountsService {
     const read = await readMasterDataFile({
       file: buf as Buffer,
       fields: expectedHeaders,
-      // Older files have no `nature` column: it then leaves the natures as they are.
-      optional: ['nature'],
+      optional: OPTIONAL_CSV_HEADERS,
       language: readLanguage,
       dateOrder,
       decimalMark,
     });
-    const hasNature = read.present.includes('nature');
-    const errors: { row: number; message: string }[] = [];
+    const has = (column: string) => read.present.includes(column);
+    const errors: ImportReportError[] = [];
     if (read.headerError) {
       return {
         ok: false, dryRun, total: 0, inserted: 0, updated: 0,
-        errors: [{ row: 0, message: read.headerError }],
+        errors: [read.headerError],
         ignoredColumns: read.ignoredColumns, notices: read.notices,
       };
     }
@@ -785,12 +797,11 @@ export class AccountsService {
       }
       if (opts?.allowCoaCodeColumn) {
         const code = cellOf(row, 'coa_code');
-        if (!opts?.targetCoaId && !code) errors.push({ row: line, message: 'coa_code is required when not importing into a specific CoA' });
+        if (!opts?.targetCoaId && !code) errors.push({ row: line, message: 'coa_code is required when not importing into a specific CoA', code: 'CSV_ACCOUNT_COA_CODE_REQUIRED' });
         if (code) coaCodes.add(code);
       }
       const numRaw = cellOf(row, 'account_number');
       const name = cellOf(row, 'account_name');
-      const nativeName = cellOf(row, 'native_name') || null;
       const statusRaw = cellOf(row, 'status').toLowerCase();
       const consolNumRaw = cellOf(row, 'consolidation_account_number');
       const parseIntStrict = (v: string): number | null => {
@@ -799,25 +810,48 @@ export class AccountsService {
         return Number.isInteger(n) ? n : null;
       };
       const account_number = parseIntStrict(numRaw);
-      if (account_number == null) errors.push({ row: line, message: 'account_number is required and must be an integer' });
-      if (!name) errors.push({ row: line, message: 'account_name is required' });
-      if (statusRaw && statusRaw !== 'enabled' && statusRaw !== 'disabled') errors.push({ row: line, message: `Invalid status '${statusRaw}'. Use 'enabled' or 'disabled'.` });
+      if (account_number == null) {
+        errors.push({ row: line, message: 'account_number is required and must be an integer', code: 'CSV_ACCOUNT_NUMBER_REQUIRED' });
+      }
+      if (!name) errors.push({ row: line, message: 'account_name is required', code: 'CSV_ACCOUNT_NAME_REQUIRED' });
+      if (statusRaw && statusRaw !== 'enabled' && statusRaw !== 'disabled') {
+        errors.push({
+          row: line,
+          message: `Invalid status '${statusRaw}'. Use 'enabled' or 'disabled'.`,
+          code: 'CSV_ACCOUNT_STATUS_INVALID',
+          params: { value: statusRaw },
+        });
+      }
       const consolidation_account_number = parseIntStrict(consolNumRaw);
-      if (consolNumRaw !== '' && consolidation_account_number == null) errors.push({ row: line, message: 'consolidation_account_number must be an integer when provided' });
+      if (consolNumRaw !== '' && consolidation_account_number == null) {
+        errors.push({
+          row: line,
+          message: 'consolidation_account_number must be an integer when provided',
+          code: 'CSV_ACCOUNT_CONSOLIDATION_NUMBER_INVALID',
+        });
+      }
       const natureRaw = cellOf(row, 'nature');
-      const nature = hasNature ? csvNature(natureRaw) : undefined;
-      if (hasNature && nature === undefined) errors.push({ row: line, message: `Invalid nature '${natureRaw}'. Use 'opex', 'capex' or leave it empty.` });
+      const nature = has('nature') ? csvNature(natureRaw) : undefined;
+      if (has('nature') && nature === undefined) {
+        errors.push({
+          row: line,
+          message: `Invalid nature '${natureRaw}'. Use 'opex', 'capex' or leave it empty.`,
+          code: 'CSV_ACCOUNT_NATURE_INVALID',
+          params: { value: natureRaw },
+        });
+      }
+      // An absent column stays undefined: an update keeps the stored value, a new account takes the default.
+      const text = (column: string) => (has(column) ? cellOf(row, column) || null : undefined);
       normalized.push({
         account_number: String(account_number ?? ''),
         account_name: name,
-        native_name: nativeName,
-        description: cellOf(row, 'description') || null,
-        consolidation_account_number,
-        consolidation_account_name: cellOf(row, 'consolidation_account_name') || null,
-        consolidation_account_description: cellOf(row, 'consolidation_account_description') || null,
-        status: statusRaw === 'disabled' ? StatusState.DISABLED : StatusState.ENABLED,
-        // Absent column: undefined, so an update keeps the stored nature.
-        ...(hasNature ? { nature: nature ?? null } : {}),
+        native_name: text('native_name'),
+        description: text('description'),
+        ...(has('consolidation_account_number') ? { consolidation_account_number } : {}),
+        consolidation_account_name: text('consolidation_account_name'),
+        consolidation_account_description: text('consolidation_account_description'),
+        ...(has('status') ? { status: statusRaw === 'disabled' ? StatusState.DISABLED : StatusState.ENABLED } : {}),
+        ...(has('nature') ? { nature: nature ?? null } : {}),
       });
     });
     if (errors.length > 0) {
@@ -829,17 +863,17 @@ export class AccountsService {
       const codes = Array.from(coaCodes.values()).filter(Boolean);
       const uniqCodes = Array.from(new Set(codes));
       if (uniqCodes.length !== 1) {
-        return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors: [{ row: 0, message: 'All rows must specify the same coa_code or provide ?coaId parameter' }], ignoredColumns: read.ignoredColumns, notices: read.notices };
+        return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors: [{ row: 0, message: 'All rows must specify the same coa_code or provide ?coaId parameter', code: 'CSV_ACCOUNT_COA_CODE_MIXED' }], ignoredColumns: read.ignoredColumns, notices: read.notices };
       }
       const code = uniqCodes[0];
       const found = await repo.manager.query(`SELECT id FROM chart_of_accounts WHERE code = $1 AND tenant_id = current_setting('app.current_tenant', true)::uuid LIMIT 1`, [code]);
       if (!found?.[0]?.id) {
-        return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors: [{ row: 0, message: `Unknown coa_code '${code}' for this tenant` }], ignoredColumns: read.ignoredColumns, notices: read.notices };
+        return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors: [{ row: 0, message: `Unknown coa_code '${code}' for this tenant`, code: 'CSV_ACCOUNT_COA_CODE_UNKNOWN', params: { code } }], ignoredColumns: read.ignoredColumns, notices: read.notices };
       }
       targetCoaId = found[0].id;
     }
     if (!targetCoaId) {
-      return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors: [{ row: 0, message: 'Target CoA is required (use ?coaId or include coa_code column)' }], ignoredColumns: read.ignoredColumns, notices: read.notices };
+      return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors: [{ row: 0, message: 'Target CoA is required (use ?coaId or include coa_code column)', code: 'CSV_ACCOUNT_COA_REQUIRED' }], ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
     // Deduplicate by account_number: keep first occurrence
     const uniqueByNumber = new Map<string, AccountUpsertDto>();

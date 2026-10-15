@@ -76,7 +76,7 @@ import {
   type ComplianceSummary,
   type ContractComplianceInputs,
 } from './contract-compliance';
-import type { CsvLanguage } from '../common/csv-sheet';
+import { headerMismatchError, type CsvLanguage } from '../common/csv-sheet';
 
 /**
  * The session tenant as a find condition: `app_current_tenant()`, the tenant RLS checks too,
@@ -1077,9 +1077,8 @@ export class ContractsService {
           const missing = expectedHeaders.filter((h) => !headers.includes(h));
           const extras = headers.filter((h) => !expectedHeaders.includes(h));
           headerOk = missing.length === 0 && extras.length === 0;
-          if (!headerOk) {
-            errors.push({ row: 0, message: `Header mismatch. Missing: ${missing.join(', ') || '-'}, Extra: ${extras.join(', ') || '-'}` });
-          }
+          const headerError = headerMismatchError(missing, extras);
+          if (headerError) errors.push(headerError);
         })
         .on('error', (e) => reject(e))
         .on('data', (r) => out.push(denormalizeCsvRow(r)))

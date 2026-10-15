@@ -286,7 +286,7 @@ Public config: `GET /config/public` returns `features.sampleData` (`true` in mul
 - **Shared master-data CSV contract.** Every master-data route below (companies, departments, users, suppliers, accounts, cost centers, analytics values, working-day calendars) reads through `backend/src/common/csv-sheet/` and shares this contract:
   - `language` (`en|fr|de|es`) sets the separator, the decimal mark and the date form of an export and the reading conventions of an import. Without it, the user's stored locale, then English.
   - `dateOrder` (`day-first|month-first`) and `decimalMark` (`comma|dot`) are the switches used when the file itself does not settle the question.
-  - The report carries `notices: { dates: string | null, amounts: string | null }` (the one-line reading, for example "Dates read day first: 01/03/2027 is March 1.") and `ignoredColumns: string[]`, always empty for these files: a column KANAP does not know is a `row: 0` "Header mismatch. Missing: X, Extra: Y".
+  - The report carries `notices: { dates: string | null, amounts: string | null }` (the one-line reading, for example "Dates read day first: 01/03/2027 is March 1.") and `ignoredColumns: string[]`, always empty for these files: a column KANAP does not know is a `row: 0` "Header mismatch. Missing: X, Extra: Y", naming only the parts that apply. Errors may carry a `code` and `params` for the interface to translate (`CSV_HEADER_MISSING_COLUMNS`, `CSV_HEADER_UNKNOWN_COLUMNS`, `CSV_HEADER_MISMATCH` with `params: { missing, extra }`; the account import's row codes `CSV_ACCOUNT_*`); `message` stays in English.
   - A file that cannot be read at all (encoding, empty, over 20,000 rows, unclosed quote) is a 400 with the shared layer's message.
 
 ## Charts of Accounts (Tenant)
@@ -359,7 +359,7 @@ CSV schema (CoA-scoped):
 ```
 account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature
 ```
-Notes: `native_name` is optional (original local-language label). `account_number` must be integer-like; `status` is `enabled|disabled`; `nature` is `opex`, `capex` or empty.
+Notes: only `account_number` and `account_name` are required in the header; the other columns may be absent (an update keeps the stored values, a new account takes the defaults). `native_name` is the original local-language label. `account_number` must be integer-like; `status` is `enabled|disabled`; `nature` is `opex`, `capex` or empty.
 
 ## Platform Admin: CoA Templates & Standard Accounts
 - GET `/admin/coa-templates` → list templates `{ id, country_iso, template_code, template_name, version, created_at, updated_at }`
@@ -413,6 +413,7 @@ Validation/behavior:
 - `native_name`: optional (local-language label); exported and visible in UI tooltip
 - `consolidation_*`: optional; number must be integer-like when present
 - `nature`: optional last column, `opex`, `capex` or empty (both). An absent column leaves the stored natures unchanged; another value is a row error
+- Every column but `coa_code` (without `coaId`), `account_number` and `account_name` may be absent from the header: an update keeps the stored values of an absent column, a new account takes the defaults (empty, `enabled`, both natures)
 - Deduplicates by `(account_number, target CoA)`; classifies rows as insert/update in the target CoA; supports `dryRun` preflight
 
 ### Company Metrics (per year)

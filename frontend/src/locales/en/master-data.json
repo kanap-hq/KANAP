@@ -502,7 +502,7 @@
     "loadingCoA": "Loading charts of accounts…",
     "newAccount": "New account",
     "exportAccounts": "Export accounts",
-    "importAccounts": "Import accounts into selected CoA",
+    "importAccountsInto": "Import accounts into {{code}}",
     "columns": {
       "accountNumber": "Account #",
       "accountName": "Name",

@@ -49,5 +49,17 @@
   "MARKDOWN_TOO_COMPLEX": "This text is too complex to process. Put pasted logs or code in a code block, or close the formatting marks (* and _).",
   "MARKDOWN_BUSY": "The server is busy with other texts. Try again in a moment.",
   "MARKDOWN_UNAVAILABLE": "Formatted texts cannot be saved right now. Try again in a few minutes.",
-  "MARKDOWN_UNAVAILABLE_onprem": "Formatted texts cannot be saved on this server right now. Ask your administrator to check the API logs."
+  "MARKDOWN_UNAVAILABLE_onprem": "Formatted texts cannot be saved on this server right now. Ask your administrator to check the API logs.",
+  "CSV_HEADER_MISSING_COLUMNS": "Missing columns: {{missing}}.",
+  "CSV_HEADER_UNKNOWN_COLUMNS": "Unknown columns: {{extra}}.",
+  "CSV_HEADER_MISMATCH": "Missing columns: {{missing}}. Unknown columns: {{extra}}.",
+  "CSV_ACCOUNT_COA_CODE_REQUIRED": "Enter the chart of accounts code (coa_code).",
+  "CSV_ACCOUNT_NUMBER_REQUIRED": "The account number (account_number) is required and must be a whole number.",
+  "CSV_ACCOUNT_NAME_REQUIRED": "The account name (account_name) is required.",
+  "CSV_ACCOUNT_STATUS_INVALID": "Invalid status \"{{value}}\". Use enabled or disabled.",
+  "CSV_ACCOUNT_CONSOLIDATION_NUMBER_INVALID": "The consolidation account number (consolidation_account_number) must be a whole number.",
+  "CSV_ACCOUNT_NATURE_INVALID": "Invalid nature \"{{value}}\". Use opex, capex or leave the cell empty.",
+  "CSV_ACCOUNT_COA_CODE_MIXED": "Every row must name the same chart of accounts (coa_code).",
+  "CSV_ACCOUNT_COA_CODE_UNKNOWN": "No chart of accounts has the code \"{{code}}\".",
+  "CSV_ACCOUNT_COA_REQUIRED": "Choose a chart of accounts, or add a coa_code column."
 }

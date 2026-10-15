@@ -159,7 +159,7 @@ export class WorkingDayProfilesCsvService {
       errors: [...errors].sort((a, b) => a.row - b.row),
       ignoredColumns: read.ignoredColumns, notices: read.notices,
     });
-    if (read.headerError) return failed([{ row: 0, message: read.headerError }]);
+    if (read.headerError) return failed([read.headerError]);
     const { rows } = read;
     // An absent `disabled_at` column is not a blank cell: the file then sets the lifecycle through `status` alone.
     const hasDisabledAt = read.present.includes('disabled_at');

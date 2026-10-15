@@ -117,7 +117,12 @@ async function testImportRules() {
 
     // Header rules.
     const badHeader = await csv.importCsv({ file: csvFile('axis_code;label\nnature;x\n'), dryRun: true }, ctx);
-    assert.deepEqual(badHeader.errors, [{ row: 0, message: 'Header mismatch. Missing: name, Extra: label' }]);
+    assert.deepEqual(badHeader.errors, [{
+      row: 0,
+      message: 'Header mismatch. Missing: name, Extra: label',
+      code: 'CSV_HEADER_MISMATCH',
+      params: { missing: 'name', extra: 'label' },
+    }]);
   });
 }
 
