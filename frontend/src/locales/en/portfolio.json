@@ -694,7 +694,8 @@
         "targetDeliveryDate": "Target delivery date"
       },
       "values": {
-        "requestorMissing": "Requestor missing"
+        "requestorMissing": "Requestor missing",
+        "itOwnerMissing": "IT owner missing"
       },
       "sections": {
         "core": "Core properties",

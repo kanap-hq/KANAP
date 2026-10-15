@@ -187,6 +187,7 @@ export default function ItemContactsSection({ itemType, itemId, canManage, syncF
           <Box sx={{ width: '100%', maxWidth: 420 }}>
             <ContactSelect
               hideLabel
+              label={t('contacts.selectContact')}
               placeholder={t('contacts.selectContact')}
               value={selectedContact}
               onChange={setSelectedContact}

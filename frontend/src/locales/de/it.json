@@ -1364,7 +1364,8 @@
         "serverPlaceholder": "z. B. AST-12 oder Hostname",
         "hopPlaceholder": "z. B. waf-prod-1 oder AST-12",
         "noEntities": "Keine Entitäten konfiguriert (konfigurieren Sie sie in den IT-Einstellungen)",
-        "replaceServer": "Die Auswahl einer Entität ersetzt den ausgewählten Server"
+        "replaceServer": "Die Auswahl einer Entität ersetzt den ausgewählten Server",
+        "equipment": "Gerät"
       },
       "metadata": {
         "lifecycleMissing": "Lebenszyklus fehlt",
@@ -1790,7 +1791,10 @@
         "description": "Beschreibung",
         "internalRolePlaceholder": "z. B. Betriebsleitung",
         "externalRolePlaceholder": "z. B. Kundenbetreuer",
-        "openLink": "Link öffnen"
+        "openLink": "Link öffnen",
+        "addInternal": "+ Internen Kontakt hinzufügen",
+        "addExternal": "+ Externen Kontakt hinzufügen",
+        "addWebsite": "+ Website hinzufügen"
       },
       "relations": {
         "assetsTitle": "Assets an diesem Standort",
@@ -1816,7 +1820,8 @@
         "deleteAria": "Unterstandort löschen",
         "deleteUsage_one": "<strong>{{count}} Asset ist</strong> derzeit <strong>{{name}}</strong> zugeordnet. Wenn Sie diesen Unterstandort löschen, hat es keine Unterstandort-Zuordnung mehr.",
         "deleteUsage_other": "<strong>{{count}} Assets sind</strong> derzeit <strong>{{name}}</strong> zugeordnet. Wenn Sie diesen Unterstandort löschen, haben sie keine Unterstandort-Zuordnung mehr.",
-        "deleteKeepsAssets": "Die Asset-Datensätze selbst bleiben erhalten; nur ihre Unterstandort-Verknüpfung wird entfernt."
+        "deleteKeepsAssets": "Die Asset-Datensätze selbst bleiben erhalten; nur ihre Unterstandort-Verknüpfung wird entfernt.",
+        "deleteAnyway": "Trotzdem löschen"
       }
     }
   },

@@ -278,6 +278,7 @@ export default function BudgetPropertiesDrawer({
             <Box sx={hideInnerLabelSx}>
               <UserSelect
                 hideLabel
+                label={t('opex.metadata.itOwner')}
                 value={ownerItId || null}
                 onChange={(v) => onOwnerItChange?.(v ?? '')}
                 disabled={disabled}
@@ -289,6 +290,7 @@ export default function BudgetPropertiesDrawer({
             <Box sx={hideInnerLabelSx}>
               <UserSelect
                 hideLabel
+                label={t('opex.metadata.businessOwner')}
                 value={ownerBusinessId || null}
                 onChange={(v) => onOwnerBusinessChange?.(v ?? '')}
                 disabled={disabled}

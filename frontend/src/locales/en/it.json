@@ -1364,7 +1364,8 @@
         "serverPlaceholder": "e.g., AST-12 or hostname",
         "hopPlaceholder": "e.g., waf-prod-1 or AST-12",
         "noEntities": "No entities configured (configure them in IT settings)",
-        "replaceServer": "Picking an entity will replace the selected server"
+        "replaceServer": "Picking an entity will replace the selected server",
+        "equipment": "Equipment"
       },
       "metadata": {
         "lifecycleMissing": "Lifecycle missing",
@@ -1790,7 +1791,10 @@
         "description": "Description",
         "internalRolePlaceholder": "e.g., Ops lead",
         "externalRolePlaceholder": "e.g., Account manager",
-        "openLink": "Open link"
+        "openLink": "Open link",
+        "addInternal": "+ Add internal contact",
+        "addExternal": "+ Add external contact",
+        "addWebsite": "+ Add website"
       },
       "relations": {
         "assetsTitle": "Assets at this location",
@@ -1816,7 +1820,8 @@
         "deleteAria": "Delete sub-location",
         "deleteUsage_one": "<strong>{{count}} asset is</strong> currently assigned to <strong>{{name}}</strong>. Deleting this sub-location will leave it without a sub-location assignment.",
         "deleteUsage_other": "<strong>{{count}} assets are</strong> currently assigned to <strong>{{name}}</strong>. Deleting this sub-location will leave them without a sub-location assignment.",
-        "deleteKeepsAssets": "The asset records themselves are kept; only their sub-location link is cleared."
+        "deleteKeepsAssets": "The asset records themselves are kept; only their sub-location link is cleared.",
+        "deleteAnyway": "Delete anyway"
       }
     }
   },

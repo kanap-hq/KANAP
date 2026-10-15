@@ -116,7 +116,7 @@ export default function BusinessProcessCategoryManagerDialog({ open, onClose, on
 
   const handleCreate = async () => {
     const name = await dialogs.prompt({
-      title: 'New category name',
+      title: t('common:selects.newCategoryName'),
       required: true,
     });
     const trimmed = (name ?? '').trim();

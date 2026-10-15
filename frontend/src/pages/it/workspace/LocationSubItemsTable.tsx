@@ -287,7 +287,7 @@ export default function LocationSubItemsTable({ locationId, canManage, onCountCh
         onSave={async () => {
           if (pendingDelete) await performDelete(pendingDelete);
         }}
-        saveLabel="Delete anyway"
+        saveLabel={t('it:workspace.location.subItems.deleteAnyway')}
         saveDisabled={deleting}
         saveLoading={deleting}
       >

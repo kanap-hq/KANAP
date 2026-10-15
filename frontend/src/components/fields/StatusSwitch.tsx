@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { FormControlLabel, Switch, FormHelperText, Stack } from '@mui/material';
 
 type StatusSwitchProps = {
@@ -17,7 +18,7 @@ type StatusSwitchProps = {
 
 const StatusSwitch = React.forwardRef<HTMLButtonElement, StatusSwitchProps>(function StatusSwitch(
   {
-    label = 'Enabled',
+    label: labelProp,
     onDisplayLabel,
     offLabel,
     value = true,
@@ -29,6 +30,8 @@ const StatusSwitch = React.forwardRef<HTMLButtonElement, StatusSwitchProps>(func
   },
   ref,
 ) {
+  const { t } = useTranslation('common');
+  const label = labelProp ?? t('labels.enabled');
   return (
     <Stack spacing={0.5}>
       <FormControlLabel

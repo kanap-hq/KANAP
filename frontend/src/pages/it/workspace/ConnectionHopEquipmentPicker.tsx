@@ -32,7 +32,7 @@ const fieldSx = {
  * or nothing (a known intermediary whose specific equipment isn't documented).
  */
 export default function ConnectionHopEquipmentPicker({
-  label = 'Equipment',
+  label: labelProp,
   value,
   onChange,
   disabled = false,
@@ -40,6 +40,7 @@ export default function ConnectionHopEquipmentPicker({
   initialAssetReference,
 }: Props) {
   const { t } = useTranslation(['it', 'common']);
+  const label = labelProp ?? t('it:workspace.connection.picker.equipment');
   const { settings } = useItOpsEnumOptions();
   const entities = settings?.entities || [];
 

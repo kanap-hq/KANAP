@@ -177,6 +177,16 @@ describe('CostCenterWorkspacePage', () => {
     expect(screen.getByRole('complementary')).toContainElement(screen.getByText('costCenters.hints.owner'));
   });
 
+  it('names the parent group field after its own label, on the create page and in the drawer', async () => {
+    const { unmount } = renderAt('/master-data/cost-centers/new/overview');
+    expect(screen.getByRole('combobox', { name: 'costCenters.fields.parent' })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'selects.costCenter' })).not.toBeInTheDocument();
+    unmount();
+    renderAt('/master-data/cost-centers/cc-1/overview');
+    await screen.findByLabelText('costCenters.fields.code');
+    expect(within(screen.getByRole('complementary')).getByRole('combobox', { name: 'costCenters.fields.parent' })).toBeInTheDocument();
+  });
+
   it('saves the company and the owner on change', async () => {
     renderAt('/master-data/cost-centers/cc-1/overview');
     fireEvent.click(await screen.findByRole('button', { name: 'pick company' }));

@@ -431,7 +431,7 @@ export default function InterfaceRelationsEditor({
         open={!!pendingAttachmentDeleteId}
         title={t('it:workspace.interface.relations.deleteAttachmentTitle')}
         onClose={() => setPendingAttachmentDeleteId(null)}
-        saveLabel="Delete"
+        saveLabel={t('common:buttons.delete')}
         onSave={() => { void confirmAttachmentDelete(); }}
       >
         <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>

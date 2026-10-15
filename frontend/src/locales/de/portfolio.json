@@ -694,7 +694,8 @@
         "targetDeliveryDate": "Ziellieferdatum"
       },
       "values": {
-        "requestorMissing": "Antragsteller fehlt"
+        "requestorMissing": "Antragsteller fehlt",
+        "itOwnerMissing": "IT-Verantwortlicher fehlt"
       },
       "sections": {
         "core": "Kerneigenschaften",

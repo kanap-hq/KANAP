@@ -694,7 +694,8 @@
         "targetDeliveryDate": "Fecha de entrega objetivo"
       },
       "values": {
-        "requestorMissing": "Falta solicitante"
+        "requestorMissing": "Falta solicitante",
+        "itOwnerMissing": "Falta responsable de TI"
       },
       "sections": {
         "core": "Propiedades principales",

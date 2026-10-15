@@ -1364,7 +1364,8 @@
         "serverPlaceholder": "ex. : AST-12 ou nom d'hôte",
         "hopPlaceholder": "ex. : waf-prod-1 ou AST-12",
         "noEntities": "Aucune entité configurée (configurez-les dans les paramètres IT)",
-        "replaceServer": "Choisir une entité remplace le serveur sélectionné"
+        "replaceServer": "Choisir une entité remplace le serveur sélectionné",
+        "equipment": "Équipement"
       },
       "metadata": {
         "lifecycleMissing": "Cycle de vie manquant",
@@ -1790,7 +1791,10 @@
         "description": "Description",
         "internalRolePlaceholder": "ex. : responsable des opérations",
         "externalRolePlaceholder": "ex. : chargé de compte",
-        "openLink": "Ouvrir le lien"
+        "openLink": "Ouvrir le lien",
+        "addInternal": "+ Ajouter un contact interne",
+        "addExternal": "+ Ajouter un contact externe",
+        "addWebsite": "+ Ajouter un site web"
       },
       "relations": {
         "assetsTitle": "Actifs sur ce site",
@@ -1816,7 +1820,8 @@
         "deleteAria": "Supprimer le sous-site",
         "deleteUsage_one": "<strong>{{count}} actif est</strong> actuellement affecté à <strong>{{name}}</strong>. Supprimer ce sous-site le laissera sans sous-site.",
         "deleteUsage_other": "<strong>{{count}} actifs sont</strong> actuellement affectés à <strong>{{name}}</strong>. Supprimer ce sous-site les laissera sans sous-site.",
-        "deleteKeepsAssets": "Les fiches des actifs sont conservées ; seul leur lien au sous-site est effacé."
+        "deleteKeepsAssets": "Les fiches des actifs sont conservées ; seul leur lien au sous-site est effacé.",
+        "deleteAnyway": "Supprimer quand même"
       }
     }
   },

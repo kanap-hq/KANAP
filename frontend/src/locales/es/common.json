@@ -618,7 +618,13 @@
     "valueUnavailable": "Valor ya no disponible",
     "budgetLines": "Líneas presupuestarias",
     "searchBudgetLines": "Buscar líneas presupuestarias",
-    "noBudgetLinesFound": "No se encontraron líneas presupuestarias"
+    "noBudgetLinesFound": "No se encontraron líneas presupuestarias",
+    "company": "Empresa",
+    "supplier": "Proveedor",
+    "department": "Departamento",
+    "departments": "Departamentos",
+    "allDepartments": "Todos los departamentos",
+    "newCategoryName": "Nombre de la nueva categoría"
   },
   "documentEditor": {
     "expandDocument": "Expandir documento",
@@ -665,7 +671,9 @@
     "openColumn": "Abrir",
     "restrictedDocuments_one": "{{count}} documento independiente está disponible para este elemento. Necesita el rol de Lector para verlo.",
     "restrictedDocuments_other": "{{count}} documentos independientes están disponibles para este elemento. Necesita el rol de Lector para verlos.",
-    "newDocumentOptions": "Opciones de nuevo documento"
+    "newDocumentOptions": "Opciones de nuevo documento",
+    "noDocuments": "No hay documentos vinculados",
+    "newLinkedTitle": "Nuevo documento vinculado"
   },
   "share": {
     "sendLink": "Enviar enlace",
@@ -921,7 +929,149 @@
   "markdownEditor": {
     "insertEmoji": "Insertar emoji",
     "blockStyle": "Estilo de bloque",
-    "placeholder": "Empiece a escribir…"
+    "placeholder": "Empiece a escribir…",
+    "mdx": {
+      "admonitions": {
+        "caution": "Precaución",
+        "changeType": "Seleccionar el tipo de aviso",
+        "danger": "Peligro",
+        "info": "Información",
+        "note": "Nota",
+        "placeholder": "Tipo de aviso",
+        "tip": "Consejo"
+      },
+      "codeblock": {
+        "delete": "Eliminar el bloque de código"
+      },
+      "codeBlock": {
+        "inlineLanguage": "Lenguaje",
+        "language": "Lenguaje del bloque de código",
+        "selectLanguage": "Seleccionar el lenguaje del bloque de código"
+      },
+      "contentArea": {
+        "editableMarkdown": "Texto editable"
+      },
+      "createLink": {
+        "cancelTooltip": "Cancelar el cambio",
+        "saveTooltip": "Establecer la URL",
+        "text": "Texto del enlace",
+        "textTooltip": "El texto que se muestra para el enlace",
+        "title": "Título del enlace",
+        "titleTooltip": "El título del enlace, visible al pasar el cursor",
+        "urlPlaceholder": "Seleccione o pegue una URL",
+        "url": "URL"
+      },
+      "dialog": {
+        "close": "Cerrar el diálogo"
+      },
+      "dialogControls": {
+        "cancel": "Cancelar",
+        "save": "Guardar"
+      },
+      "frontmatterEditor": {
+        "addEntry": "Añadir entrada",
+        "dialogDescription": "Añada, edite o elimine las entradas clave-valor del encabezado del documento.",
+        "key": "Clave",
+        "title": "Editar el encabezado del documento",
+        "value": "Valor"
+      },
+      "imageEditor": {
+        "deleteImage": "Eliminar la imagen",
+        "editImage": "Editar la imagen"
+      },
+      "linkPreview": {
+        "copied": "Copiado",
+        "copyToClipboard": "Copiar al portapapeles",
+        "edit": "Editar la URL del enlace",
+        "open": "Abrir {{url}} en una ventana nueva",
+        "remove": "Quitar enlace"
+      },
+      "table": {
+        "alignCenter": "Centrar",
+        "alignLeft": "Alinear a la izquierda",
+        "alignRight": "Alinear a la derecha",
+        "columnMenu": "Menú de la columna",
+        "deleteColumn": "Eliminar esta columna",
+        "deleteRow": "Eliminar esta fila",
+        "deleteTable": "Eliminar la tabla",
+        "insertColumnLeft": "Insertar una columna a la izquierda",
+        "insertColumnRight": "Insertar una columna a la derecha",
+        "insertRowAbove": "Insertar una fila encima",
+        "insertRowBelow": "Insertar una fila debajo",
+        "rowMenu": "Menú de la fila",
+        "textAlignment": "Alineación del texto"
+      },
+      "toolbar": {
+        "admonition": "Insertar un aviso",
+        "blockTypeSelect": {
+          "placeholder": "Tipo de bloque",
+          "selectBlockTypeTooltip": "Seleccionar el tipo de bloque"
+        },
+        "blockTypes": {
+          "heading": "Título {{level}}",
+          "paragraph": "Párrafo",
+          "quote": "Cita"
+        },
+        "bold": "Negrita",
+        "bulletedList": "Lista con viñetas",
+        "checkList": "Lista de comprobación",
+        "codeBlock": "Insertar un bloque de código",
+        "diffMode": "Modo de diferencias",
+        "editFrontmatter": "Editar el encabezado",
+        "highlight": "Resaltar",
+        "image": "Insertar una imagen",
+        "inlineCode": "Código en línea",
+        "insertFrontmatter": "Insertar un encabezado",
+        "italic": "Cursiva",
+        "link": "Crear un enlace",
+        "numberedList": "Lista numerada",
+        "redo": "Rehacer {{shortcut}}",
+        "removeBold": "Quitar la negrita",
+        "removeHighlight": "Quitar el resaltado",
+        "removeInlineCode": "Quitar el formato de código",
+        "removeItalic": "Quitar la cursiva",
+        "removeStrikethrough": "Quitar el tachado",
+        "removeSubscript": "Quitar el subíndice",
+        "removeSuperscript": "Quitar el superíndice",
+        "removeUnderline": "Quitar el subrayado",
+        "richText": "Texto enriquecido",
+        "source": "Modo fuente",
+        "strikethrough": "Tachado",
+        "subscript": "Subíndice",
+        "superscript": "Superíndice",
+        "table": "Insertar una tabla",
+        "thematicBreak": "Insertar un separador",
+        "toggleGroup": "Grupo de botones",
+        "underline": "Subrayar",
+        "undo": "Deshacer {{shortcut}}"
+      },
+      "uploadImage": {
+        "addViaUrlInstructionsNoUpload": "Añadir una imagen desde una URL:",
+        "addViaUrlInstructions": "O añada una imagen desde una URL:",
+        "alt": "Texto alternativo:",
+        "autoCompletePlaceholder": "Seleccione o pegue la URL de una imagen",
+        "dialogDescription": "Inserte una imagen desde una URL o cargue una desde su dispositivo.",
+        "dialogDescriptionNoUpload": "Inserte una imagen desde una URL.",
+        "dialogTitle": "Cargar una imagen",
+        "height": "Alto:",
+        "title": "Título:",
+        "uploadInstructions": "Cargue una imagen desde su dispositivo:",
+        "width": "Ancho:"
+      }
+    },
+    "emoji": {
+      "smile": "Sonrisa",
+      "grin": "Sonrisa amplia",
+      "laugh": "Risa",
+      "love": "Amor",
+      "think": "Pensar",
+      "thumbsUp": "Pulgar arriba",
+      "celebrate": "Celebrar",
+      "fire": "Fuego",
+      "done": "Hecho",
+      "launch": "Lanzamiento"
+    },
+    "plainText": "Texto sin formato"
   },
   "markdownLink": {
     "url": "URL",
@@ -947,5 +1097,14 @@
       "incident": "Incidente"
     },
     "item": "Elemento"
+  },
+  "markdownContent": {
+    "copyCode": "Copiar código",
+    "copied": "Copiado"
+  },
+  "relevantWebsites": {
+    "name": "Nombre",
+    "empty": "No hay URL vinculadas.",
+    "delete": "Eliminar URL"
   }
 }

@@ -157,6 +157,7 @@ export default function DepartmentWorkspacePage() {
       <PropertyRow label={t('departments.fields.company')} required>
         <CompanySelect
           hideLabel
+          label={t('departments.fields.company')}
           value={data.company_id}
           onChange={(companyId) => {
             if (companyId && companyId !== data.company_id) void patch({ company_id: companyId }, 'company_id');
@@ -368,6 +369,7 @@ function DepartmentCreate({
           <PropertyRow label={t('departments.fields.company')} required valueSx={{ maxWidth: 520 }}>
             <CompanySelect
               hideLabel
+              label={t('departments.fields.company')}
               value={companyId}
               onChange={setCompanyId}
               error={!!errors.company_id}

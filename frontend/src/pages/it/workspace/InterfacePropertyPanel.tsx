@@ -229,6 +229,7 @@ export default function InterfacePropertyPanel({
             }}
             disabled={disabled}
             hideLabel
+            label={t('it:workspace.interface.fields.businessProcess')}
             textFieldSx={drawerFieldValueSx}
             placeholder={t('it:workspace.interface.fields.selectProcess')}
           />

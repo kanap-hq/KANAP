@@ -1364,7 +1364,8 @@
         "serverPlaceholder": "p. ej., AST-12 o nombre de host",
         "hopPlaceholder": "p. ej., waf-prod-1 o AST-12",
         "noEntities": "No hay entidades configuradas (configúrelas en los ajustes de IT)",
-        "replaceServer": "Elegir una entidad reemplaza el servidor seleccionado"
+        "replaceServer": "Elegir una entidad reemplaza el servidor seleccionado",
+        "equipment": "Equipo"
       },
       "metadata": {
         "lifecycleMissing": "Falta el ciclo de vida",
@@ -1790,7 +1791,10 @@
         "description": "Descripción",
         "internalRolePlaceholder": "p. ej., responsable de operaciones",
         "externalRolePlaceholder": "p. ej., gestor de cuenta",
-        "openLink": "Abrir el enlace"
+        "openLink": "Abrir el enlace",
+        "addInternal": "+ Añadir contacto interno",
+        "addExternal": "+ Añadir contacto externo",
+        "addWebsite": "+ Añadir sitio web"
       },
       "relations": {
         "assetsTitle": "Activos en esta ubicación",
@@ -1816,7 +1820,8 @@
         "deleteAria": "Eliminar la sub-ubicación",
         "deleteUsage_one": "<strong>{{count}} activo está</strong> asignado actualmente a <strong>{{name}}</strong>. Al eliminar esta sub-ubicación, quedará sin sub-ubicación asignada.",
         "deleteUsage_other": "<strong>{{count}} activos están</strong> asignados actualmente a <strong>{{name}}</strong>. Al eliminar esta sub-ubicación, quedarán sin sub-ubicación asignada.",
-        "deleteKeepsAssets": "Los registros de los activos se conservan; solo se borra su vínculo con la sub-ubicación."
+        "deleteKeepsAssets": "Los registros de los activos se conservan; solo se borra su vínculo con la sub-ubicación.",
+        "deleteAnyway": "Eliminar de todos modos"
       }
     }
   },

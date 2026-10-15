@@ -619,7 +619,7 @@ export default function EntityKnowledgePanel({
     mutationFn: async (params?: { templateDocumentId?: string | null; templateTitle?: string | null }) => {
       const templateTitle = String(params?.templateTitle || '').trim();
       const body = {
-        title: templateTitle || `New linked knowledge (${entityType.slice(0, -1)})`,
+        title: templateTitle || t('knowledgePanel.newLinkedTitle'),
         content_markdown: '',
         status: 'draft',
         relations: {

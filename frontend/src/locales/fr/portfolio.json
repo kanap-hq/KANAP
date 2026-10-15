@@ -694,7 +694,8 @@
         "targetDeliveryDate": "Date de livraison cible"
       },
       "values": {
-        "requestorMissing": "Demandeur manquant"
+        "requestorMissing": "Demandeur manquant",
+        "itOwnerMissing": "Responsable IT manquant"
       },
       "sections": {
         "core": "Propriétés principales",
@@ -2049,7 +2050,7 @@
         "changeStatus": "Changer le statut en…",
         "comment": "Ajouter un commentaire",
         "contextMeeting": "Contexte / Réunion",
-        "contextOptional": "Contexte (optionnel)",
+        "contextOptional": "Contexte (facultatif)",
         "decisionOutcome": "Issue de la décision",
         "rationaleNotes": "Justification / Notes"
       },

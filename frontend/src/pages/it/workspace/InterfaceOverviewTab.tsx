@@ -95,6 +95,7 @@ export default function InterfaceOverviewTab({
                 value={data?.business_process_id || null}
                 onChange={(value) => void onPatch({ business_process_id: value || null })}
                 hideLabel
+                label={t('it:workspace.interface.fields.businessProcess')}
                 textFieldSx={drawerFieldValueSx}
                 placeholder={t('it:workspace.interface.fields.selectProcess')}
               />
@@ -104,6 +105,7 @@ export default function InterfaceOverviewTab({
                 value={data?.source_application_id || null}
                 onChange={(value) => void onPatch({ source_application_id: value || '' })}
                 hideLabel
+                label={t('it:workspace.interface.fields.sourceApplication')}
                 textFieldSx={drawerFieldValueSx}
                 placeholder={t('it:workspace.interface.fields.selectSource')}
               />
@@ -113,6 +115,7 @@ export default function InterfaceOverviewTab({
                 value={data?.target_application_id || null}
                 onChange={(value) => void onPatch({ target_application_id: value || '' })}
                 hideLabel
+                label={t('it:workspace.interface.fields.targetApplication')}
                 textFieldSx={drawerFieldValueSx}
                 placeholder={t('it:workspace.interface.fields.selectTarget')}
               />

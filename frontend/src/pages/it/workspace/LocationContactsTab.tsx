@@ -285,7 +285,7 @@ export default function LocationContactsTab({ locationId, canManage }: Props) {
 
       <Section
         title={t('it:workspace.location.contacts.internalTitle')}
-        addLabel="+ Add internal contact"
+        addLabel={t('it:workspace.location.contacts.addInternal')}
         canManage={canManage}
         onAdd={addInternalSlot}
         empty={internal.length === 0 ? t('it:workspace.location.contacts.noInternal') : null}
@@ -328,7 +328,7 @@ export default function LocationContactsTab({ locationId, canManage }: Props) {
 
       <Section
         title={t('it:workspace.location.contacts.externalTitle')}
-        addLabel="+ Add external contact"
+        addLabel={t('it:workspace.location.contacts.addExternal')}
         canManage={canManage}
         onAdd={addExternalSlot}
         empty={external.length === 0 ? t('it:workspace.location.contacts.noExternal') : null}
@@ -370,7 +370,7 @@ export default function LocationContactsTab({ locationId, canManage }: Props) {
 
       <Section
         title={t('it:workspace.location.contacts.websitesTitle')}
-        addLabel="+ Add website"
+        addLabel={t('it:workspace.location.contacts.addWebsite')}
         canManage={canManage}
         onAdd={addLinkDraft}
         empty={links.length === 0 && linkDrafts.length === 0 ? t('it:workspace.location.contacts.noWebsites') : null}
