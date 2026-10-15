@@ -118,7 +118,7 @@ Cliquez sur n'importe quelle cellule pour ouvrir l'espace de travail de la valeu
 - **Nouvelle valeur** : créer une valeur dans la dimension sélectionnée (nécessite `analytics:member`). Tant que la dimension sélectionnée est désactivée, le bouton est désactivé et son info-bulle indique « Activez cette dimension pour ajouter des valeurs. »
 - **Réordonner** : définir l'ordre des valeurs de la dimension sélectionnée (nécessite `analytics:member`). Le bouton est désactivé tant que la dimension a moins de deux valeurs. Voir [Ordonner les valeurs](#ordonner-les-valeurs)
 - **Importer CSV** : charger des valeurs depuis un fichier (nécessite `analytics:admin`)
-- **Exporter CSV** : télécharger les valeurs de toutes les dimensions (nécessite `analytics:admin`)
+- **Exporter CSV** : télécharger les valeurs que la liste affiche, ou les valeurs de toutes les dimensions (nécessite `analytics:admin`)
 - **Supprimer la sélection** : supprimer les valeurs sélectionnées (nécessite `analytics:admin`). Lorsque certaines sont utilisées par des lignes budgétaires, la confirmation indique combien de lignes les perdent, par exemple « 2 valeurs sélectionnées sont utilisées : elles sont retirées de 5 lignes budgétaires. Ces données ne peuvent pas être récupérées. », et le bouton devient **Supprimer quand même**
 
 ---

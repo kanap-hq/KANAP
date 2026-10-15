@@ -1,3 +1,4 @@
+import { exportListQuery } from '../common/pagination';
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, Res, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
@@ -114,10 +115,11 @@ export class ChartOfAccountsController {
     @Query('scope') scope: 'template' | 'data' = 'data',
     @Query('language') languageRaw: string | undefined,
     @Req() req: any,
+    @Query() query: any,
     @Res() res: Response,
   ) {
     const language = await languageOf(req?.queryRunner?.manager, req.tenant.id, req.user?.sub ?? null, languageRaw);
-    const { filename, content } = await this.svc.exportAccountsCsv(id, { manager: req?.queryRunner?.manager, scope, language });
+    const { filename, content } = await this.svc.exportAccountsCsv(id, { manager: req?.queryRunner?.manager, scope, language, listQuery: exportListQuery(query) });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(filename));
     res.send(content);

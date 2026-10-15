@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Button, Stack, TextField } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../components/PageHeader';
-import ServerDataGrid, { EnhancedColDef, StatusScope } from '../components/ServerDataGrid';
+import ServerDataGrid, { EnhancedColDef, StatusScope, type ListRequest } from '../components/ServerDataGrid';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
 import { useAuth } from '../auth/AuthContext';
@@ -26,6 +26,8 @@ export default function DepartmentsPage() {
 
   const [refreshKey, setRefreshKey] = useState(0);
   const [exportOpen, setExportOpen] = useState(false);
+  // The list on screen: the CSV export follows it.
+  const [listRequest, setListRequest] = useState<ListRequest | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [selectedRows, setSelectedRows] = useState<any[]>([]);
   const gridApiRef = useRef<any>(null);
@@ -178,6 +180,7 @@ export default function DepartmentsPage() {
     <>
       <PageHeader title={t("departments.title")} actions={actions} />
       <ServerDataGrid<any>
+        onListRequestChange={setListRequest}
         columns={columns}
         endpoint="/departments"
         queryKey="departments"
@@ -199,7 +202,7 @@ export default function DepartmentsPage() {
           lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {}, statusScope: scope };
         }}
       />
-      <CsvExportDialog open={exportOpen} onClose={() => setExportOpen(false)} endpoint="/departments" title={t("departments.export")} flexibleFormat />
+      <CsvExportDialog listRequest={listRequest} entity="departments" open={exportOpen} onClose={() => setExportOpen(false)} endpoint="/departments" title={t("departments.export")} flexibleFormat />
       <CsvImportDialog
         open={importOpen}
         onClose={() => setImportOpen(false)}

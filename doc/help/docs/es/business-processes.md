@@ -46,7 +46,7 @@ La lista muestra todos los procesos de negocio de su espacio de trabajo.
 - **Nuevo** (Manager+) -- crear un nuevo proceso de negocio.
 - **Gestionar categorías** (Manager+) -- abrir el diálogo de gestión de categorías.
 - **Importar CSV** (Admin) -- importación masiva de procesos desde un archivo CSV.
-- **Exportar CSV** (Admin) -- exportar todos los procesos a CSV.
+- **Exportar CSV** (Admin) -- exportar los procesos que muestra la lista, o todos los procesos, a CSV.
 - **Eliminar seleccionados** (Admin) -- eliminar una o más filas seleccionadas.
 
 ---

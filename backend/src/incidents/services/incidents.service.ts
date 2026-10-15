@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
+import { textSortKey, type TextSortKey } from '../../common/list-sort';
 import { Incident, IncidentStatus } from '../incident.entity';
 import { IncidentChangedFields } from '../incident-entry.entity';
 import { AuditService } from '../../audit/audit.service';
@@ -71,6 +72,7 @@ const FIELD_EXPRESSIONS: Record<string, string> = {
   ...COUNT_EXPRESSIONS,
 };
 
+const INCIDENT_TEXT_SORTS = new Set(['title', 'owner_name', 'reporter_name', 'source_ref', 'linked_assets', 'linked_applications']);
 const DATE_FIELDS = new Set(['started_at', 'detected_at', 'resolved_at', 'closed_at', 'created_at', 'updated_at']);
 const NUMBER_FIELDS = new Set(Object.keys(COUNT_EXPRESSIONS));
 const BOOLEAN_FILTER_FIELDS = new Set<string>(['personal_data_affected', 'authority_notification_required', 'confidential']);
@@ -155,7 +157,7 @@ export class IncidentsService extends IncidentsBaseService {
     const items = await mg.query(
       `SELECT ${ROW_COLUMNS} ${BASE_FROM}
        WHERE ${where}
-       ORDER BY ${this.orderBy(sort)}
+       ORDER BY ${this.orderBy(sort, await textSortKey(mg))}
        LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
       [...params, limit, skip],
     );
@@ -181,7 +183,7 @@ export class IncidentsService extends IncidentsBaseService {
     const rows: Array<{ id: string; item_number: number }> = await mg.query(
       `SELECT i.id, i.item_number ${BASE_FROM}
        WHERE ${where}
-       ORDER BY ${this.orderBy(sort)}
+       ORDER BY ${this.orderBy(sort, await textSortKey(mg))}
        LIMIT $${params.length + 1}`,
       [...params, limit],
     );
@@ -218,8 +220,10 @@ export class IncidentsService extends IncidentsBaseService {
     return results;
   }
 
-  private orderBy(sort: Sort): string {
-    const expression = FIELD_EXPRESSIONS[sort.field] || FIELD_EXPRESSIONS.detected_at;
+  /** Text columns sort alphabetically, case and accents ignored (`textSortKey`). */
+  private orderBy(sort: Sort, textKey: TextSortKey): string {
+    const raw = FIELD_EXPRESSIONS[sort.field] || FIELD_EXPRESSIONS.detected_at;
+    const expression = INCIDENT_TEXT_SORTS.has(sort.field) ? textKey(raw) : raw;
     return `${expression} ${sort.direction} NULLS LAST, i.item_number ${sort.direction}`;
   }
 

@@ -1,7 +1,8 @@
 import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
-import { parsePagination } from '../common/pagination';
+import { parseExportPagination, parsePagination } from '../common/pagination';
+import { compareText } from '../common/list-sort';
 import { parseEndOfValidityInput, resolveLifecycleState, StatusState } from '../common/status';
 import {
   canonicalCountry,
@@ -348,7 +349,8 @@ function fieldValue(row: WorkingDayProfileListRow, field: string): unknown {
 }
 
 function compareValues(a: unknown, b: unknown): number {
-  return String(a).localeCompare(String(b), 'en', { numeric: true, sensitivity: 'base' });
+  if (typeof a === 'number' && typeof b === 'number') return a - b;
+  return compareText(String(a), String(b));
 }
 
 // ----------------------------------------------------------------- service ----
@@ -363,6 +365,11 @@ export class WorkingDayProfilesService {
     const parsed = parsePagination(query ?? {}, { field: 'code', direction: 'ASC' });
     const rows = await this.listRows(query, parsed, ctx);
     return { items: rows.slice(parsed.skip, parsed.skip + parsed.limit), total: rows.length, page: parsed.page, limit: parsed.limit };
+  }
+
+  /** Every row of the list for a query (its search, filters, scope and sort), for the CSV export. */
+  async listAll(query: any, ctx: WorkingDayProfileContext) {
+    return this.listRows(query, parseExportPagination(query, { field: 'code', direction: 'ASC' }), ctx);
   }
 
   async listIds(query: any, ctx: WorkingDayProfileContext): Promise<{ ids: string[]; total: number }> {

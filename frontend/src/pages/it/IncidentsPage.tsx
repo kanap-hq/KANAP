@@ -6,7 +6,7 @@ import { ICellRendererParams } from 'ag-grid-community';
 import PageHeader from '../../components/PageHeader';
 import { CsvExportDialogV2, CsvImportDialogV2 } from '../../components/csv';
 import ServerDataGrid, { EnhancedColDef } from '../../components/ServerDataGrid';
-import { LinkCellRenderer } from '../../components/grid/renderers';
+import { LinkCellRenderer, wholeCellLinkSx } from '../../components/grid/renderers';
 import { StatusDot } from '../../components/design';
 import { useAuth } from '../../auth/AuthContext';
 import ForbiddenPage from '../ForbiddenPage';
@@ -179,7 +179,7 @@ export default function IncidentsPage() {
         <Link
           href={href}
           onClick={(event) => handleInternalNavigate(event, href)}
-          sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', textDecoration: 'none', color: 'text.primary', '&:hover': { textDecoration: 'none' } }}
+          sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', textDecoration: 'none', color: 'text.primary', '&:hover': { textDecoration: 'none' }, ...wholeCellLinkSx }}
         >
           <StatusDot color={getDotColor(colorMap[value] ?? 'default', mode)} />
           {labelOf(value)}

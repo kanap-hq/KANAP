@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { sortedFindQuery } from '../common/list-sort';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DeepPartial, EntityManager, ILike, Repository } from 'typeorm';
 import { ChartOfAccounts } from './chart-of-accounts.entity';
@@ -59,12 +60,8 @@ export class ChartOfAccountsService {
     // If q present, use find with OR where array to combine code/name
     const whereArr = q ? [{ ...where, code: ILike(`%${q}%`) }, { ...where, name: ILike(`%${q}%`) }] : undefined;
 
-    const [baseItems, total] = await repo.findAndCount({
-      where: whereArr ?? where,
-      order: { [sort.field]: sort.direction as any },
-      skip,
-      take: limit,
-    });
+    const qb = await sortedFindQuery(repo, 'chart', whereArr ?? where, sort);
+    const [baseItems, total] = await qb.offset(skip).limit(limit).getManyAndCount();
 
     const counts = await this.countsByChart(baseItems.map((i) => i.id), mg);
     const items = baseItems.map((i) => ({ ...i, ...(counts.get(i.id) ?? NO_COUNTS) }));
@@ -124,13 +121,8 @@ export class ChartOfAccountsService {
     const whereArr = q ? [{ ...where, code: ILike(`%${q}%`) }, { ...where, name: ILike(`%${q}%`) }] : undefined;
     const limit = Math.min(Math.max(Number(query?.limit) || 10000, 1), 10000);
     const total = await repo.count({ where: whereArr ?? where });
-    const rows = await repo.find({
-      where: whereArr ?? where,
-      order: { [sort.field]: sort.direction as any },
-      take: limit,
-      skip: 0,
-      select: ['id'],
-    });
+    const qb = await sortedFindQuery(repo, 'chart', whereArr ?? where, sort);
+    const rows = await qb.select('chart.id').limit(limit).getMany();
     return { ids: rows.map((row) => row.id), total };
   }
 
@@ -492,12 +484,12 @@ export class ChartOfAccountsService {
 
   async exportAccountsCsv(
     coaId: string,
-    opts?: { manager?: EntityManager; scope?: 'template' | 'data'; language?: CsvLanguage },
+    opts?: { manager?: EntityManager; scope?: 'template' | 'data'; language?: CsvLanguage; listQuery?: Record<string, unknown> },
   ) {
     // Validate CoA belongs to tenant and exists
     await this.findOrFail(coaId, opts?.manager ?? this.repo.manager);
     const scope = opts?.scope ?? 'data';
-    return this.accountsSvc.exportCsv(scope, { manager: opts?.manager, coaId, includeCoaCode: false, language: opts?.language });
+    return this.accountsSvc.exportCsv(scope, { manager: opts?.manager, coaId, includeCoaCode: false, language: opts?.language, listQuery: opts?.listQuery });
   }
 
   async importAccountsCsv(

@@ -46,7 +46,7 @@ Die Liste zeigt alle Geschäftsprozesse Ihres Mandanten.
 - **Neu** (Manager+) -- einen neuen Geschäftsprozess erstellen.
 - **Kategorien verwalten** (Manager+) -- den Dialog zur Kategorieverwaltung öffnen.
 - **CSV importieren** (Admin) -- Prozesse aus einer CSV-Datei massenimportieren.
-- **CSV exportieren** (Admin) -- alle Prozesse als CSV exportieren.
+- **CSV exportieren** (Admin) -- die Prozesse der Liste, oder alle Prozesse, als CSV exportieren.
 - **Ausgewählte löschen** (Admin) -- eine oder mehrere ausgewählte Zeilen löschen.
 
 ---

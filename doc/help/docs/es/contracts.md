@@ -287,7 +287,7 @@ En un contrato en su primer periodo sin decisión pendiente, **No** se aplica al
 
 Mantenga su lista de contratos sincronizada con otras herramientas mediante CSV (`contracts:admin`).
 
-**Exportar**: descarga todos los contratos con estas columnas: `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. Las fechas calculadas (fin del periodo, fechas límite, situación) no se exportan.
+**Exportar**: descarga los contratos que muestra la lista (o, a petición en el diálogo, todos los contratos) con estas columnas: `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. Las fechas calculadas (fin del periodo, fechas límite, situación) no se exportan.
 
 **Importar**:
 

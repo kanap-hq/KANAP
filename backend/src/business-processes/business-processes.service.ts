@@ -4,7 +4,8 @@ import { EntityManager, In, Repository, SelectQueryBuilder } from 'typeorm';
 import { BusinessProcess } from './business-process.entity';
 import { BusinessProcessCategory } from './business-process-category.entity';
 import { BusinessProcessCategoryLink } from './business-process-category-link.entity';
-import { parseExportPagination, parsePagination } from '../common/pagination';
+import { parseExportPagination, parsePagination, MAX_EXPORT_LIMIT } from '../common/pagination';
+import { orderListQuery } from '../common/list-sort';
 import { applyStatusFilter, extractStatusFilterFromAgModel } from '../common/status-filter';
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { BusinessProcessUpsertDto } from './dto/business-process.dto';
@@ -101,25 +102,7 @@ export class BusinessProcessesService {
 
     const total = await qb.getCount();
 
-    const allowedSort = new Set(['name', 'status', 'updated_at', 'created_at', 'primary_category_name']);
-    const safeSortField = allowedSort.has(sort.field) ? sort.field : 'name';
-
-    if (safeSortField === 'primary_category_name') {
-      qb.orderBy(
-        `COALESCE(
-          (
-            SELECT MIN(c2.name)
-            FROM business_process_category_links l2
-            JOIN business_process_categories c2 ON c2.id = l2.category_id
-            WHERE l2.process_id = bp.id AND c2.is_active = true
-          ),
-          ''
-        )`,
-        sort.direction as 'ASC' | 'DESC',
-      ).addOrderBy('bp.name', 'ASC');
-    } else {
-      qb.orderBy(`bp.${safeSortField}`, sort.direction as 'ASC' | 'DESC');
-    }
+    await this.orderList(qb, sort);
 
     const items = await qb.skip(skip).take(limit).getMany();
     const ids = items.map((i) => i.id);
@@ -138,6 +121,25 @@ export class BusinessProcessesService {
   }
 
   /** The column filters of the list: the name (contains) and the primary category (set). */
+  /** The list order: name, status, dates or the first active category (then the name); text alphabetically; then the id. */
+  private async orderList(qb: SelectQueryBuilder<BusinessProcess>, sort: { field: string; direction: string }) {
+    const field = ['name', 'status', 'updated_at', 'created_at', 'primary_category_name'].includes(sort.field) ? sort.field : 'name';
+    if (field === 'primary_category_name') {
+      const firstCategory = `COALESCE(
+          (
+            SELECT MIN(c2.name)
+            FROM business_process_category_links l2
+            JOIN business_process_categories c2 ON c2.id = l2.category_id
+            WHERE l2.process_id = bp.id AND c2.is_active = true
+          ),
+          ''
+        )`;
+      await orderListQuery(qb, firstCategory, sort.direction, { text: true, idExpr: 'bp.id', thenByText: 'bp.name' });
+    } else {
+      await orderListQuery(qb, `bp.${field}`, sort.direction, { text: field === 'name', idExpr: 'bp.id' });
+    }
+  }
+
   private applyListFilters(qb: SelectQueryBuilder<BusinessProcess>, filters: any) {
     if (!filters || typeof filters !== 'object') return;
     const nameFilter = filters.name;
@@ -192,25 +194,7 @@ export class BusinessProcessesService {
 
     this.applyListFilters(qb, filtersToApply);
 
-    const allowedSort = new Set(['name', 'status', 'updated_at', 'created_at', 'primary_category_name']);
-    const safeSortField = allowedSort.has(sort.field) ? sort.field : 'name';
-
-    if (safeSortField === 'primary_category_name') {
-      qb.orderBy(
-        `COALESCE(
-          (
-            SELECT MIN(c2.name)
-            FROM business_process_category_links l2
-            JOIN business_process_categories c2 ON c2.id = l2.category_id
-            WHERE l2.process_id = bp.id AND c2.is_active = true
-          ),
-          ''
-        )`,
-        sort.direction as 'ASC' | 'DESC',
-      ).addOrderBy('bp.name', 'ASC');
-    } else {
-      qb.orderBy(`bp.${safeSortField}`, sort.direction as 'ASC' | 'DESC');
-    }
+    await this.orderList(qb, sort);
 
     const total = await qb.clone().getCount();
     const limit = Math.min(Number(query?.limit) || 10000, 10000);
@@ -426,13 +410,15 @@ export class BusinessProcessesService {
 
   async exportCsv(
     scope: 'template' | 'data' = 'data',
-    opts?: { manager?: EntityManager },
+    opts?: { manager?: EntityManager; listQuery?: Record<string, unknown> },
   ): Promise<{ filename: string; content: string }> {
     const headers = this.csvHeaders();
     const delimiter = ';';
     const rows: any[] = [];
     if (scope === 'data') {
-      const { items } = await this.list({ page: 1, limit: 10000, sort: 'name:ASC' }, { ...opts, exportAll: true });
+      // What the list shows (its search, filters, scope and sort), or the whole register by name.
+      const query = opts?.listQuery ?? { page: 1, limit: MAX_EXPORT_LIMIT, sort: 'name:ASC', includeDisabled: '1' };
+      const { items } = await this.list(query, { manager: opts?.manager, exportAll: true });
       for (const p of items as any[]) {
         const categoryNames = Array.isArray(p.categories)
           ? (p.categories as any[]).map((c) => c.name).join(';')

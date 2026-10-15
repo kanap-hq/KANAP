@@ -287,7 +287,7 @@ Bei einem Vertrag in seiner ersten Periode, für den keine Entscheidung ansteht,
 
 Halten Sie Ihre Vertragsliste per CSV mit anderen Werkzeugen synchron (`contracts:admin`).
 
-**Export**: lädt alle Verträge mit diesen Spalten herunter: `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. Die berechneten Daten (Laufzeitende, Kündigungstermine, Stand) werden nicht exportiert.
+**Export**: lädt die Verträge der Liste (oder, auf Wunsch im Dialog, alle Verträge) mit diesen Spalten herunter: `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. Die berechneten Daten (Laufzeitende, Kündigungstermine, Stand) werden nicht exportiert.
 
 **Import**:
 

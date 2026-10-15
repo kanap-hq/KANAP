@@ -72,7 +72,7 @@ La liste affiche toutes les sociétés de votre espace de travail. Utilisez-la p
 
 ## L'espace de travail de la société
 
-Cliquez sur un nom de société dans la liste pour ouvrir son espace de travail. Il comporte deux onglets : **Vue d'ensemble** et **Détails**.
+Cliquez sur n'importe quelle ligne de la liste pour ouvrir l'espace de travail de la société. Il comporte deux onglets : **Vue d'ensemble** et **Détails**.
 
 - **En-tête** : le nom de la société. Cliquez dessus pour renommer la société. Les flèches avec « N sur M » permettent de passer d'une société à l'autre dans l'ordre et avec les filtres de la liste, sans revenir à la liste. Le lien de retour, **Sociétés**, ramène à la liste avec votre contexte de recherche intact
 - **Panneau Propriétés** à droite : **Pays**, **Devise de base**, **Plan comptable** et **Cycle de vie**. Utilisez le bouton situé à côté pour replier le panneau ou le rouvrir
@@ -182,7 +182,7 @@ De nombreuses parties de l'application sont sensibles à l'année. Les société
 
 ## Import/export CSV
 
-**Exporter CSV** télécharge toutes les sociétés avec leurs métriques. **Importer CSV** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les seuls en-têtes, prêt à remplir.
+**Exporter CSV** télécharge les sociétés que la liste affiche (ou, sur demande dans la fenêtre, toutes les sociétés) avec leurs métriques. **Importer CSV** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les seuls en-têtes, prêt à remplir.
 
 Les colonnes, dans cet ordre. Les colonnes de métriques suivent l'année sélectionnée dans la barre d'outils de la liste : l'année précédente, celle-ci et la suivante.
 
