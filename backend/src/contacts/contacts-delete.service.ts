@@ -3,8 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { ExternalContact } from './external-contact.entity';
 import { SupplierContactLink } from './supplier-contact.entity';
-import { PortfolioProjectContact } from '../portfolio/portfolio-project-contact.entity';
-import { PortfolioRequestContact } from '../portfolio/portfolio-request-contact.entity';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { AuditService } from '../audit/audit.service';
 import { BulkDeleteResult } from '../common/delete.types';
@@ -28,18 +26,8 @@ export class ContactsDeleteService extends BaseDeleteService<ExternalContact> {
           foreignKey: 'contact_id',
           deleteStrategy: 'cascade',
         },
-        // No foreign key removes these links: the delete does, as for the supplier links.
-        // The other links (budget lines, contracts, applications, assets, locations) cascade in the database.
-        {
-          repository: PortfolioProjectContact,
-          foreignKey: 'contact_id',
-          deleteStrategy: 'cascade',
-        },
-        {
-          repository: PortfolioRequestContact,
-          foreignKey: 'contact_id',
-          deleteStrategy: 'cascade',
-        },
+        // The other links (budget lines, contracts, applications, assets, locations, projects and
+        // requests) cascade in the database (projects and requests since 1854150000000).
       ],
     });
   }
