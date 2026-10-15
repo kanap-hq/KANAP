@@ -155,14 +155,7 @@ type ApplicationMapSummary = {
 
 const EMPTY_GRAPH: GraphData = { nodes: [], links: [] };
 type DepthLimit = 'all' | 1 | 2 | 3 | 4 | 5;
-const DEPTH_OPTIONS: Array<{ label: string; value: DepthLimit }> = [
-  { label: 'All', value: 'all' },
-  { label: '1', value: 1 },
-  { label: '2', value: 2 },
-  { label: '3', value: 3 },
-  { label: '4', value: 4 },
-  { label: '5', value: 5 },
-];
+const DEPTH_OPTIONS: DepthLimit[] = ['all', 1, 2, 3, 4, 5];
 
 function toGraphNodes(nodes: ApiMapNode[]): MapGraphNode[] {
   return nodes.map((node) => ({
@@ -281,12 +274,12 @@ export default function InterfaceMapPage() {
   });
   const lifecycleOptions = React.useMemo(() => {
     const list = byField.lifecycleStatus || [];
-    if (list.length === 0) return [{ label: 'Active', value: 'active' }];
+    if (list.length === 0) return [{ label: t('pages.maps.active'), value: 'active' }];
     return list.map((item) => ({
       value: item.code,
-      label: item.deprecated ? `${item.label} (deprecated)` : item.label,
+      label: item.deprecated ? `${item.label} (${t('common:enumEditor.retiredSuffix')})` : item.label,
     }));
-  }, [byField.lifecycleStatus]);
+  }, [byField.lifecycleStatus, t]);
 
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery<InterfaceMapResponse>({
     queryKey: ['interface-map', environment, lifecycles.slice().sort().join(',')],
@@ -631,9 +624,9 @@ export default function InterfaceMapPage() {
           setDepthLimit(v);
         }}
       >
-        {DEPTH_OPTIONS.map((opt) => (
-          <MenuItem key={opt.value} value={opt.value}>
-            {opt.value === 'all' ? t('pages.maps.all') : opt.label}
+        {DEPTH_OPTIONS.map((depth) => (
+          <MenuItem key={depth} value={depth}>
+            {depth === 'all' ? t('pages.maps.all') : depth}
           </MenuItem>
         ))}
       </TextField>

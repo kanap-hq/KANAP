@@ -6,21 +6,21 @@ import baseline from './hardcodedText.baseline.json';
 // between tags, the attributes a user reads or hears (labels, titles, placeholders, aria labels,
 // and any prop named like one, such as `saveLabel` or `nameHeader`), the literal branches of a
 // condition or fallback given to them, the default values of such props, the same names in object
-// literals (`'aria-label': ...`, `title: ...`, `tooltip: ...`) and grid column headers. The
+// literals (`'aria-label': ...`, `title: ...`, `label: ...`) and grid column headers. The
 // baseline lists the files that still hold some, with their count: a file may lose hard-coded
 // texts, never gain one, and a file outside it holds none.
 const sources = import.meta.glob<string>(['../**/*.tsx', '!../**/*.test.tsx'], { query: '?raw', import: 'default', eager: true });
 
 const READ_ATTRIBUTES = new Set(['aria-label', 'title', 'placeholder', 'alt', 'label', 'helperText']);
 // Names, units and samples that read the same in every language.
-const NEUTRAL = new Set(['KANAP', 'SSO', 'MFA', 'URL', 'SVG', 'PNG', 'GLPI', 'Netbox', 'RSS', 'ms', 'EUR', 'EUR, USD, GBP', 'DOC-', '#9BC1FF', 'https://...', 'https://example.com', 'RTO', 'RPO', 'Logo']);
+const NEUTRAL = new Set(['KANAP', 'SSO', 'MFA', 'URL', 'SVG', 'PNG', 'GLPI', 'Netbox', 'RSS', 'ms', 'EUR', 'EUR, USD, GBP', 'DOC-', '#9BC1FF', 'https://...', 'https://example.com', 'RTO', 'RPO', 'Logo', 'PDF', 'DOCX', 'ODT']);
 const hasWords = (text: string) => /[A-Za-z]{2,}/.test(text.replace(/&[a-z]+;/gi, '')) && !NEUTRAL.has(text)
   && !/^#[0-9a-f]{3,8}$/i.test(text);
 // A prop named like a read attribute: `saveLabel`, `emptyLabel`, `nameHeader`, `ariaLabel`...
 const READ_PROP = /^(aria-label|ariaLabel|label|title|placeholder|helperText|alt|tooltip|[A-Za-z]+(Label|Title|Placeholder|Header|Tooltip))$/;
-// In an object literal `label` also names options and enum entries; the scan keeps to the names
-// that only ever hold a text for the user.
-const READ_PROPERTY = new Set(['aria-label', 'ariaLabel', 'title', 'tooltip', 'placeholder', 'helperText']);
+// In an object literal these names hold a text for the user, `label` included: option lists and
+// status maps take their names from the locale files, not from an English fallback.
+const READ_PROPERTY = new Set(['aria-label', 'ariaLabel', 'title', 'tooltip', 'placeholder', 'helperText', 'label']);
 // A key, an id or a file name ('title', 'task-description', 'origin.customerId') is no text.
 const isIdentifier = (text: string) => /^[a-z][A-Za-z0-9_.-]*$/.test(text);
 const literalText = (node: ts.Node | undefined): string | null =>
