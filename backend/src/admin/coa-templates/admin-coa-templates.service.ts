@@ -7,6 +7,7 @@ import { format } from '@fast-csv/format';
 import { AuditService } from '../../audit/audit.service';
 import { denormalizeCsvRow } from '../../common/csv/csv-export.service';
 import { headerMismatchError } from '../../common/csv-sheet';
+import { CsvDecodeError, decodeCsv } from '../../common/csv-sheet/decode';
 import { ACCOUNT_NUMBER_MAX_DIGITS, ACCOUNT_NUMBER_RULE, parseAccountNumber, readAccountNumber } from '../../accounts/account-number';
 
 /** The OPEX/CAPEX nature of a template account (`nature` column, optional, empty = both). */
@@ -306,7 +307,13 @@ export class AdminCoaTemplatesService {
     if (!file) throw new BadRequestException('No file uploaded');
     const buf = file.buffer ?? ((file as any).path ? require('fs').readFileSync((file as any).path) : undefined);
     if (!buf) throw new BadRequestException('Empty upload');
-    const content = buf.toString('utf8');
+    let content: string;
+    try {
+      content = decodeCsv(buf).text;
+    } catch (err) {
+      if (err instanceof CsvDecodeError) throw new BadRequestException({ message: err.message, code: err.code });
+      throw err;
+    }
     const delimiter = ';';
     const expected = this.csvHeaders();
     let headerOk = false;

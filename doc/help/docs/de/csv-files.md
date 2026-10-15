@@ -8,6 +8,8 @@ Jede Stammdatenseite hat **CSV exportieren** und **CSV importieren** in ihrer Sy
 
 **Kodierung und Trennzeichen.** Speichern Sie die Datei als UTF-8 („CSV UTF-8“ in Excel). Eine von Excel als einfache CSV gespeicherte Datei in Windows-1252 lässt sich ebenfalls importieren, Akzente eingeschlossen. Das Trennzeichen wird aus der Kopfzeile gelesen: `,`, `;` oder ein Tabulator. Der Export schreibt das Trennzeichen der Sprache, in der die Oberfläche angezeigt wird.
 
+**Arbeitsmappen und andere Dateien.** Ein Import liest nur CSV-Text. Eine Excel-Arbeitsmappe (`.xlsx`, `.xls`) oder eine OpenDocument-Tabelle (`.ods`) wird abgelehnt, bevor eine Spalte gelesen wird, mit einer Meldung, die erklärt, wie Sie sie als CSV speichern. In Excel: **Datei › Speichern unter › CSV UTF-8 (durch Trennzeichen getrennt)**. In LibreOffice Calc: **Datei › Speichern unter › Text CSV**. Jede andere Datei, die kein Text ist, wird ebenso abgelehnt.
+
 **Beträge und Datumsangaben folgen der Sprache der Oberfläche** beim Export, und ein Import liest beide Formen:
 
 | Sprache | Trennzeichen | Beträge | Datumsangaben |

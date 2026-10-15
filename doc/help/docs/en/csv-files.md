@@ -8,6 +8,8 @@ Every master data page has **Export CSV** and **Import CSV** in its toolbar, and
 
 **Encoding and separator.** Save the file as UTF-8 ("CSV UTF-8" in Excel). A file Excel saved as plain CSV, in Windows-1252, imports too, accents included. The separator is read from the header line: `,`, `;` or a tab. The export writes the separator of the language the screen is shown in.
 
+**Workbooks and other files.** An import reads CSV text only. An Excel workbook (`.xlsx`, `.xls`) or an OpenDocument spreadsheet (`.ods`) is refused before any column is read, with a message that says how to save it as CSV. In Excel: **File › Save As › CSV UTF-8 (Comma delimited)**. In LibreOffice Calc: **File › Save As › Text CSV**. Any other file that is not text is refused the same way.
+
 **Amounts and dates follow the screen language** on export, and an import reads both forms:
 
 | Language | Separator | Amounts | Dates |

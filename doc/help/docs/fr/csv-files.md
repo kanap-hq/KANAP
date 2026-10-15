@@ -8,6 +8,8 @@ Chaque page de données de référence dispose de **Exporter CSV** et **Importer
 
 **Encodage et séparateur.** Enregistrez le fichier en UTF-8 (« CSV UTF-8 » dans Excel). Un fichier enregistré par Excel au format CSV simple, en Windows-1252, s'importe aussi, accents compris. Le séparateur est lu sur la ligne d'en-tête : `,`, `;` ou une tabulation. L'export écrit le séparateur de la langue d'affichage de l'écran.
 
+**Classeurs et autres fichiers.** Un import lit uniquement du texte CSV. Un classeur Excel (`.xlsx`, `.xls`) ou un classeur OpenDocument (`.ods`) est refusé avant la lecture des colonnes, avec un message qui indique comment l'enregistrer en CSV. Dans Excel : **Fichier › Enregistrer sous › CSV UTF-8 (délimité par des virgules)**. Dans LibreOffice Calc : **Fichier › Enregistrer sous › Texte CSV**. Tout autre fichier qui n'est pas du texte est refusé de la même façon.
+
 **Les montants et les dates suivent la langue de l'écran** à l'export, et un import lit les deux formes :
 
 | Langue | Séparateur | Montants | Dates |

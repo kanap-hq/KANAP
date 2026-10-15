@@ -1,4 +1,4 @@
-import { BudgetFileFailure, OLD_LAYOUT_SENTENCE } from './budgetFile';
+import { BudgetFileFailure, DECODE_SENTENCE_CODES, OLD_LAYOUT_SENTENCE } from './budgetFile';
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
@@ -7,6 +7,8 @@ const K = 'operations.budgetFile.';
 /** A server sentence the dialog has in the screen language, or the sentence as the server wrote it. */
 export function serverSentence(text: string, t: Translate): string {
   if (text === OLD_LAYOUT_SENTENCE) return t(`${K}oldLayout`);
+  const code = DECODE_SENTENCE_CODES[text];
+  if (code) return t(`errors:${code}`, { defaultValue: text });
   return text;
 }
 

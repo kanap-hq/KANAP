@@ -8,6 +8,8 @@ Cada página de datos maestros tiene **Exportar CSV** e **Importar CSV** en su b
 
 **Codificación y separador.** Guarde el archivo en UTF-8 ("CSV UTF-8" en Excel). Un archivo guardado por Excel como CSV simple, en Windows-1252, también se importa, acentos incluidos. El separador se lee en la fila de encabezados: `,`, `;` o un tabulador. La exportación escribe el separador del idioma en que se muestra la pantalla.
 
+**Libros y otros archivos.** Una importación solo lee texto CSV. Un libro de Excel (`.xlsx`, `.xls`) o una hoja de cálculo OpenDocument (`.ods`) se rechaza antes de leer ninguna columna, con un mensaje que indica cómo guardarlo en CSV. En Excel: **Archivo › Guardar como › CSV UTF-8 (delimitado por comas)**. En LibreOffice Calc: **Archivo › Guardar como › Texto CSV**. Cualquier otro archivo que no sea texto se rechaza de la misma forma.
+
 **Los importes y las fechas siguen el idioma de la pantalla** en la exportación, y una importación lee ambas formas:
 
 | Idioma | Separador | Importes | Fechas |

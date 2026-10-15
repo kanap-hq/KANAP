@@ -18,12 +18,15 @@ import {
   parseCsvAmount,
   parseCsvDateCell,
   readCsv,
+  readMasterDataFile,
   resolveAmountConvention,
   resolveDateOrder,
   writeCsv,
   writeCsvHeader,
   writeCsvRows,
 } from '../index';
+import { CSV_DECODE_MESSAGES, decodeCsv } from '../decode';
+import { minimalDocx, minimalOds, minimalXls, minimalXlsx } from './office-files';
 
 // The shared reader and writer. Importers are not involved: this file never
 // opens a database and never calls a service that writes one.
@@ -552,6 +555,48 @@ async function testEncodingAndDamage() {
   assert.equal(valueOf(damaged.rows[0].amounts.budget_2027).cmp('12280.50'), 0);
 }
 
+/** A workbook or another binary file is refused before any of it is read as a header. */
+async function testNotACsvFile() {
+  const refusal = (buf: Buffer) => {
+    try {
+      decodeCsv(buf);
+      return null;
+    } catch (err: any) {
+      return err.code as string;
+    }
+  };
+  assert.equal(refusal(minimalXlsx()), 'CSV_FILE_EXCEL');
+  assert.equal(refusal(minimalXls()), 'CSV_FILE_EXCEL');
+  assert.equal(refusal(minimalOds()), 'CSV_FILE_OPENDOCUMENT');
+  assert.equal(refusal(minimalDocx()), 'CSV_FILE_NOT_TEXT');
+  assert.equal(refusal(minimalXls('WordDocument')), 'CSV_FILE_NOT_TEXT');
+  assert.equal(refusal(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d])), 'CSV_FILE_NOT_TEXT');
+  assert.equal(refusal(Buffer.from('name;notes\nAlpha;one\u0001two\n', 'utf8')), 'CSV_FILE_NOT_TEXT');
+
+  // Tabs, CRLF, a form feed and a DOS end-of-file mark are text. So are the
+  // Windows-1252 letters in 0x80-0x9F: the euro sign, the curly apostrophe, oe.
+  const win = Buffer.concat([
+    Buffer.from('name\tnotes\r\nR', 'ascii'),
+    Buffer.from([0xe9]),
+    Buffer.from('seau\tc', 'ascii'),
+    Buffer.from([0x9c, 0x75, 0x72, 0x20, 0x92, 0x80, 0x0c]),
+    Buffer.from('\r\n\x1a', 'latin1'),
+  ]);
+  assert.equal(refusal(win), null);
+  assert.equal(decodeCsv(win).text.split('\r\n')[1], 'R\u00e9seau\tc\u0153ur \u2019\u20ac\f');
+
+  const read = await readCsv(minimalXlsx(), schema('fr'));
+  assert.deepEqual(read.fileErrors, [CSV_DECODE_MESSAGES.CSV_FILE_EXCEL]);
+  assert.deepEqual(read.rawHeaders, []);
+  assert.deepEqual(read.ignoredColumns, []);
+
+  // The master-data importers answer 400 with the code the interface translates.
+  await assert.rejects(
+    readMasterDataFile({ file: minimalXls(), fields: ['name'], language: 'fr' }),
+    (err: any) => err?.getStatus?.() === 400 && err.getResponse().code === 'CSV_FILE_EXCEL',
+  );
+}
+
 async function testRoundTrip() {
   const headers = ['item_number', 'name', 'end_of_validity', 'notes', 'budget_2027'];
   for (const language of ['en', 'fr', 'de', 'es'] as const) {
@@ -632,6 +677,7 @@ async function main() {
   await testMixedAndMissingHints();
   await testReadingShape();
   await testEncodingAndDamage();
+  await testNotACsvFile();
   await testRoundTrip();
   testHeaderWithoutBom();
   await testRowCap();

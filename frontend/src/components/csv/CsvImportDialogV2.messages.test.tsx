@@ -99,6 +99,20 @@ describe('CsvImportDialogV2 messages', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent("Ce fichier n'est ni en UTF-8 ni en Windows-1252.");
   });
 
+  it('refuses an Excel workbook with one sentence, no column list', async () => {
+    post.mockRejectedValueOnce({
+      response: {
+        status: 400,
+        data: { statusCode: 400, message: 'This file is an Excel workbook, not a CSV.', code: 'CSV_FILE_EXCEL' },
+      },
+    });
+    validate();
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Ce fichier est un classeur Excel, pas un CSV. Dans Excel : Fichier › Enregistrer sous › CSV UTF-8 (délimité par des virgules).',
+    );
+    expect(screen.queryByText(/Colonnes manquantes|ne sont pas importées/)).not.toBeInTheDocument();
+  });
+
   it('drops the refusal of the previous file when another file is picked', async () => {
     post.mockRejectedValueOnce({ response: { status: 400, data: { message: 'Old refusal' } } });
     validate();
