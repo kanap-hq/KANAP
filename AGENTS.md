@@ -46,10 +46,13 @@ Tool-specific or private notes live in each tool's local files, never here.
 - The maintainer tests every change personally on the local dev stack before it goes anywhere.
 - Work and commit locally on a dev branch. **Nothing is pushed or opened before the maintainer
   has validated on dev.** Never push to `main`.
-- Once validated: `gh pr create` (problem, changes, testing notes, screenshots for UI), then put
-  the PR in the merge queue at once: `bash .github/scripts/queue-stack.sh <n>`. From there the
-  agent owns the PR up to a confirmed merge and reports the merge commit. The maintainer does not
-  need to say "merge".
+- Once validated ("send the PR"): open the PR as ready, not as a draft (`gh pr create`: problem,
+  changes, testing notes, screenshots for UI). That is the agent's last step: the `auto-queue`
+  workflow (`.github/workflows/auto-queue.yml`) puts the ready PRs opened by `kanap-it` into the
+  merge queue, one at a time, in the order they were opened. Never open a ready PR before the
+  maintainer's go: open it as a draft instead. Turning a queued PR back into a draft takes it
+  out of the queue. From there the agent owns the PR up to a confirmed merge and reports the merge
+  commit. The maintainer does not need to say "merge".
 - CI runs in the merge queue only, one PR at a time. The queue tests each PR on `main` plus the
   PRs ahead of it, in the order they were added, and merges it when `backend (cloud)`,
   `frontend (cloud)` and `build (onprem)` pass on that combination. On a PR these three jobs are
@@ -60,26 +63,38 @@ Tool-specific or private notes live in each tool's local files, never here.
   see `CLAUDE.md`) and report the merge commit on the next exchange. A merge needs no message:
   no news means it merged.
 - A failed check or a conflict with `main` drops that PR from the queue, along with the queued
-  PRs that contain it. Fix, merge `origin/main` into the branch, push, and queue it again with
-  the script.
+  PRs that contain it. Fix it, merge `origin/main` into the branch if it conflicts, and push:
+  the `auto-queue` workflow sends it back to the queue by itself. Meanwhile the PRs behind it go
+  ahead, except those that contain it.
 - A failed queue run shows up on the PR as a failing `merge queue` check and a comment naming the
   failed jobs (`.github/workflows/queue-failure.yml`). That check is not required: the next push
-  clears it.
+  clears it. `bash .github/scripts/queue-stack.sh <n>` queues a PR by hand, when the workflow
+  cannot (for a PR opened by another account, for instance).
 - Minor and patch Dependabot PRs enter the queue by themselves, through the `kanap-queue` app
   (`.github/workflows/dependabot-queue.yml`). One that fails leaves the queue and stays open: an
-  agent finds the cause, fixes it in a separate PR if needed, then queues it with `queue-stack.sh`.
+  agent finds the cause, fixes it in a separate PR if needed, then queues it with `queue-stack.sh`
+  (`auto-queue` leaves Dependabot PRs to their own workflow).
 - One PR at a time per change: no bundling of validated PRs, the queue handles throughput.
 - Releases and deploys to QA and prod are separate from merging and are the maintainer's
   decision (see "Versions and releases"); `main` is always releasable.
 - One PR per coherent lot. Keep diffs focused.
-- Stacked PRs: each PR of a stack targets `main` and contains the commits of the PR below it.
-  Open the whole stack as ready PRs (no drafts), then queue it in one go, bottom first:
-  `bash .github/scripts/queue-stack.sh <bottom> ... <top>`. The script queues each PR once the
-  previous one is in the queue, so the stack merges in that order. The `stack order` job refuses
-  a queued PR that contains a PR still open and not ahead of it in the queue (on a PR it only
-  warns). After a failure, fix the failing PR, merge `origin/main` into each branch of the stack
-  that left the queue, push, and rerun the script with the same list: it skips merged and queued
-  PRs. CI only runs for PRs targeting `main`.
+- Start every new subject from the latest `main`, in its own branch and worktree:
+  `git fetch origin`, then `git switch -c <branch> origin/main` (or `git worktree add -b <branch>
+  <dir> origin/main`). A worktree created from an older local branch is rebased on `origin/main`
+  before its first commit. Never start a subject from another subject's branch unless it needs
+  that work.
+- Avoid stacked PRs (a PR that contains the commits of another open PR). The repository
+  squashes, so once the lower PR merges, the upper one still holds the original commits while
+  `main` holds a new one, and the queue sees a conflict wherever both changed the same lines.
+  Put dependent changes in one PR, or open the next PR once the previous one has merged, from
+  the new `origin/main` (`git rebase --onto origin/main <head of the merged PR>` keeps only its
+  own commits). When a stack is opened anyway, `auto-queue` queues a PR only after the PR below
+  it, and the `stack order` job refuses a queued PR that contains a PR still open and not ahead
+  of it in the queue. CI only runs for PRs targeting `main`.
+- The docs translation manifest (`translation-state/docs-source-hashes.json`) keeps an empty
+  line between two keys, so that two PRs updating neighbouring pages merge without a conflict.
+  After the `translate-docs` skill writes it, run `node scripts/docs/format-translation-manifest.mjs`;
+  `build (onprem)` fails on a manifest that is not in that form.
 - When a task is finished, say so and ask the maintainer to test.
 - Commits: imperative mood, short scope prefix when useful (`backend: ...`, `frontend: ...`,
   `master data: ...`). Attribution footers only when the agent actually wrote the code.

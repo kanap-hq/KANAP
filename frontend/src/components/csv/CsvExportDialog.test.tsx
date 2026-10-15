@@ -1,0 +1,52 @@
+import React from 'react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('react-i18next', () => {
+  const translation = { t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } };
+  return { useTranslation: () => translation };
+});
+
+vi.mock('../../api', () => ({ default: { get: vi.fn() } }));
+
+import api from '../../api';
+import CsvExportDialog from './CsvExportDialog';
+
+const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
+
+describe('CsvExportDialog', () => {
+  const createObjectURL = vi.fn(() => 'blob:export');
+  const revokeObjectURL = vi.fn();
+
+  beforeEach(() => {
+    get.mockReset();
+    Object.assign(window.URL, { createObjectURL, revokeObjectURL });
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  it('downloads the file and closes', async () => {
+    get.mockResolvedValueOnce({ data: 'name\n', headers: { 'content-disposition': 'attachment; filename="suppliers.csv"' } });
+    const onClose = vi.fn();
+    render(<CsvExportDialog open onClose={onClose} endpoint="/suppliers" flexibleFormat />);
+    fireEvent.click(screen.getByRole('button', { name: 'csv.exportData' }));
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    expect(get).toHaveBeenCalledWith('/suppliers/export', expect.objectContaining({ params: expect.objectContaining({ scope: 'data' }) }));
+    expect(HTMLAnchorElement.prototype.click).toHaveBeenCalledTimes(1);
+  });
+
+  it('stays open with the error when the export fails', async () => {
+    get.mockRejectedValueOnce({ response: { status: 500, data: { message: 'Boom' } } });
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const onClose = vi.fn();
+    render(<CsvExportDialog open onClose={onClose} endpoint="/suppliers" />);
+    fireEvent.click(screen.getByRole('button', { name: 'csv.exportData' }));
+    expect(await screen.findByText('Boom')).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('says what the file holds when the page gives a note', () => {
+    render(<CsvExportDialog open onClose={() => undefined} endpoint="/suppliers" note="The whole register is exported." />);
+    expect(screen.getByText('The whole register is exported.')).toBeInTheDocument();
+  });
+});

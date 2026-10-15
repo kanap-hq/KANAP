@@ -154,7 +154,7 @@ Each company can be linked to a **Chart of Accounts** (CoA), which defines the s
 Use the **End of validity** to control when a company stops being active.
 
 - Companies are **Enabled** by default. Leave the **End of validity** blank to keep the company active indefinitely, or schedule a future date.
-- Switching the company to **Disabled** without a date sets its end of validity to today.
+- Switching the company to **Disabled** ends its validity now: it is disabled at once. While a future date is set, the switch reads **Active until** and that date.
 - When the end of validity passes, the status switches to **Disabled** on its own within the hour.
 - After the end of validity:
     - The company no longer appears in selection lists for new allocations and is excluded from reports for strictly later years.

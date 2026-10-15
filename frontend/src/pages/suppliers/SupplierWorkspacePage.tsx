@@ -32,6 +32,8 @@ type TabKey = 'overview' | 'contacts';
 const TAB_KEYS: readonly string[] = ['overview', 'contacts'];
 const DRAWER_KEY = 'kanap.suppliers.drawerOpen';
 const LIST_CONTEXT_KEYS = ['sort', 'q', 'filters', 'scope'];
+/** How long Saved stays after a field is saved, as the autosave of the notes. */
+const SAVED_LINGER_MS = 1500;
 
 type FieldKey = 'name' | 'erp_supplier_id' | 'notes' | 'status' | 'disabled_at';
 type FieldErrors = Partial<Record<FieldKey, string>>;
@@ -126,8 +128,27 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
     return result;
   }, [canEdit, detailKey, id, queryClient, t]);
 
+  // The fields saved at once (name, ERP ID, status, end of validity) show Saving, then Saved, as the notes do.
+  const [fieldSaves, setFieldSaves] = React.useState(0);
+  const [fieldSaved, setFieldSaved] = React.useState(false);
+  const savedTimerRef = React.useRef<number | null>(null);
+  React.useEffect(() => () => {
+    if (savedTimerRef.current != null) window.clearTimeout(savedTimerRef.current);
+  }, []);
+
   const saveNow = (patch: SupplierPatch, field: FieldKey, optimistic?: Partial<Supplier>) => {
-    void save(patch, field, optimistic).catch(() => undefined);
+    if (savedTimerRef.current != null) window.clearTimeout(savedTimerRef.current);
+    setFieldSaved(false);
+    setFieldSaves((n) => n + 1);
+    void save(patch, field, optimistic)
+      .then(() => {
+        setFieldSaved(true);
+        savedTimerRef.current = window.setTimeout(() => {
+          savedTimerRef.current = null;
+          setFieldSaved(false);
+        }, SAVED_LINGER_MS);
+      }, () => undefined)
+      .finally(() => setFieldSaves((n) => n - 1));
   };
 
   const changeStatus = (next: StatusValue) => {
@@ -157,9 +178,9 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
   const enabledColor = getDotColor('success', theme.palette.mode);
   const disabledColor = getDotColor('default', theme.palette.mode);
   const statusLabel = (value: StatusValue) => (value === STATUS_DISABLED ? t('suppliers.status.disabled') : t('suppliers.status.enabled'));
-  const savingHint = autosave.status === 'saving' || autosave.status === 'pending'
+  const savingHint = autosave.status === 'saving' || autosave.status === 'pending' || fieldSaves > 0
     ? t('common:status.saving')
-    : autosave.status === 'saved' ? t('common:status.saved') : null;
+    : autosave.status === 'saved' || fieldSaved ? t('common:status.saved') : null;
 
   const metadata = data ? (
     <>

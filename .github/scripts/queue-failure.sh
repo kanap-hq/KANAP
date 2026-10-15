@@ -154,13 +154,7 @@ $job_lines"
 From the backend log:
 $spec_lines"
 body+="
-Next steps: fix the failure on this branch, merge \`origin/main\` into it if needed, push, then add the pull request to the queue again:
-
-\`\`\`
-bash .github/scripts/queue-stack.sh $pr
-\`\`\`
-
-(or \`gh pr merge $pr --auto --squash\`). The failing \`$CHECK_NAME\` check is not a required check: the next push clears it."
+Next steps: fix the failure on this branch, merge \`origin/main\` into it if it conflicts, and push. The pull request then goes back into the queue by itself (\`.github/workflows/auto-queue.yml\`). The failing \`$CHECK_NAME\` check is not a required check: the next push clears it."
 
 check_json=$(jq -n --arg name "$CHECK_NAME" --arg sha "$head_sha" --arg url "$run_url" \
   --arg title "$title" --arg summary "$summary" \

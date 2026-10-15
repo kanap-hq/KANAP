@@ -1,0 +1,64 @@
+name: Auto queue
+
+# Puts the ready pull requests opened by the maintainer's account (kanap-it) into the merge queue,
+# one at a time, in the order they were opened (.github/scripts/auto-queue.sh). The agent opens a
+# ready pull request once the maintainer has validated the change on dev; from there nobody has
+# to queue it, and a fix pushed after a failure in the queue sends it back by itself. A draft is
+# never queued, and a pull request of the queue turned back into a draft is taken out of it.
+# Dependabot pull requests have their own workflow (dependabot-queue.yml).
+#
+# Why a GitHub App: GitHub's built-in token cannot add pull requests to a merge queue. The org app
+# `kanap-queue` (installed on this repository only, Contents and Pull requests in write) gives a
+# short-lived token instead; its client id and private key are Actions secrets of the repository
+# (and Dependabot secrets, for dependabot-queue.yml).
+#
+# pull_request_target runs the workflow and the script of main, never those of the pull request:
+# the pull request commits are only fetched and compared. Each run reads every open pull request,
+# so a missed or cancelled run costs nothing: the next event catches up.
+on:
+  pull_request_target:
+    branches: [ main ]
+    types: [ opened, reopened, ready_for_review, converted_to_draft, synchronize, closed, enqueued, dequeued ]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Print what would be queued, queue nothing
+        required: false
+        type: boolean
+        default: false
+
+# One run at a time; a newer event replaces a pending one (each run reads everything anyway).
+concurrency:
+  group: auto-queue
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  checks: read
+  pull-requests: read
+
+jobs:
+  queue:
+    name: queue ready pull requests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout the script from main
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: main
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+      - name: Create the kanap-queue app token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.KANAP_QUEUE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.KANAP_QUEUE_APP_PRIVATE_KEY }}
+      - name: Queue the next ready pull request
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          READ_TOKEN: ${{ github.token }}
+          AUTO_QUEUE_AUTHORS: kanap-it
+          AUTO_QUEUE_DRY_RUN: ${{ inputs.dry_run || false }}
+        run: bash .github/scripts/auto-queue.sh

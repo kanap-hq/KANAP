@@ -295,7 +295,7 @@
     "createHintStandard": "Les jours ouvrés de chaque année suivent les jours fériés de {{source}}. Vous pourrez ensuite modifier n'importe quel mois.",
     "wholeCountry": "Tout le pays",
     "yearsAll": "Toutes les années",
-    "yearsAllEdited": "Toutes les années, {{years}} modifiée(s)",
+    "yearsAllEdited": "Toutes les années, modifications en {{years}}",
     "columns": {
       "code": "Code",
       "name": "Nom",
@@ -389,6 +389,8 @@
     "noSuppliersFound": "Aucun fournisseur trouvé",
     "export": "Exporter les fournisseurs",
     "import": "Importer les fournisseurs",
+    "exportScope": "Le fichier contient tous les fournisseurs, activés et désactivés, triés par nom. La recherche et les filtres de la liste ne s'appliquent pas.",
+    "importHint": "Valeurs acceptées pour status : enabled ou disabled. disabled_at contient la fin de validité, ou reste vide. Les colonnes de contact prennent l'e-mail d'un contact qui existe déjà dans Contacts.",
     "fields": {
       "name": "Nom",
       "erpSupplierId": "ID fournisseur ERP",
@@ -404,6 +406,8 @@
       "selectContact": "Contact à ajouter ({{role}})",
       "searchPlaceholder": "Rechercher un contact par nom",
       "removeLink": "Retirer le lien",
+      "linkRemoved": "Lien retiré. Le contact reste dans Contacts.",
+      "undo": "Annuler",
       "saveFailed": "Échec de la mise à jour des contacts du fournisseur.",
       "loadFailed": "Échec du chargement des contacts du fournisseur."
     },

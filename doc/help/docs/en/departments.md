@@ -66,7 +66,7 @@ The Overview tab holds the description. The other fields are in the header and t
 - **Name**: Department name (required), in the header
 - **Company**: Parent company, linked to Companies master data (required). A company that already has a department with the same name is refused: "A department with this name already exists in the selected company."
 - **Description**: Free-text description
-- **Lifecycle**: the status switch, labelled with the current state (**Enabled** or **Disabled**), and the **End of validity** date. Leave the date blank to keep the department active indefinitely, or set a future date to schedule its end. Switching the department to **Disabled** without a date sets the end of validity to today
+- **Lifecycle**: the status switch, labelled with the current state (**Enabled** or **Disabled**), and the **End of validity** date. Leave the date blank to keep the department active indefinitely, or set a future date to schedule its end. Switching the department to **Disabled** ends its validity now: it is disabled at once. While a future date is set, the switch reads **Active until** and that date
 
 **Creating a department**: **New** opens a form with **Name**, **Company** and **Description**. Click **Create** to save it. The Details tab becomes available after you create the department.
 

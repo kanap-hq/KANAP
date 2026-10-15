@@ -1,0 +1,149 @@
+import React from 'react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+// The real AG Grid: these specs check what the shared grid shows around its rows.
+vi.mock('react-i18next', () => {
+  const translation = {
+    t: (key: string, options?: { count?: number }) => (options && 'count' in options ? `${key}:${options.count}` : key),
+    i18n: { language: 'en', resolvedLanguage: 'en', getResourceBundle: () => ({}) },
+  };
+  return { useTranslation: () => translation };
+});
+vi.mock('../api', () => ({ default: { get: vi.fn() } }));
+vi.mock('../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true, profile: { id: 'u-1' } }) }));
+vi.mock('../tenant/TenantContext', () => ({ useTenant: () => ({ tenantSlug: 'test' }) }));
+vi.mock('../config/ThemeContext', () => ({ useThemeMode: () => ({ resolvedMode: 'light' }) }));
+vi.mock('../i18n/useLocale', () => ({ useLocale: () => 'en' }));
+
+import api from '../api';
+import ServerDataGrid from './ServerDataGrid';
+import { statusColumnProps } from './grid/statusColumn';
+import { flushAgGridTimers } from '../test/agGridTimers';
+import { stubOffsetParent } from '../test/jsdomOffsetParent';
+
+const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
+type Config = { params: Record<string, string> };
+type Row = { id: string; name: string; status: string };
+
+const page = (names: string[]) => ({ data: { items: names.map((name) => ({ id: name, name, status: 'enabled' })), total: names.length, page: 1, limit: 50 } });
+const t = ((key: string) => key) as any;
+
+function Grid(props: { onGridApiReady?: (api: any) => void; withScope?: boolean }) {
+  return (
+    <MemoryRouter>
+      <ServerDataGrid<Row>
+        // Status first: jsdom has no width, and AG Grid draws only the first columns.
+        columns={[
+          { field: 'status', headerName: 'Status', ...statusColumnProps(t) },
+          { field: 'name', headerName: 'Name' },
+        ]}
+        endpoint="/things"
+        queryKey="things"
+        defaultSort={{ field: 'name', direction: 'ASC' }}
+        statusScopeConfig={props.withScope ? { defaultScope: 'enabled' } : undefined}
+        onGridApiReady={props.onGridApiReady}
+      />
+    </MemoryRouter>
+  );
+}
+
+describe('ServerDataGrid', () => {
+  beforeEach(() => {
+    get.mockReset();
+    stubOffsetParent();
+    vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} });
+    const stored = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => stored.get(key) ?? null,
+      setItem: (key: string, value: string) => { stored.set(key, value); },
+      removeItem: (key: string) => { stored.delete(key); },
+    });
+  });
+  afterEach(async () => {
+    await flushAgGridTimers();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  describe('empty list', () => {
+    it('says the list is empty once loaded, never while loading', async () => {
+      let answer: (value: unknown) => void = () => undefined;
+      get.mockImplementationOnce(() => new Promise((resolve) => { answer = resolve; }));
+      const view = render(<Grid />);
+      await waitFor(() => expect(get).toHaveBeenCalledTimes(1));
+      expect(screen.queryByText('common:filters.noResults')).not.toBeInTheDocument();
+
+      await act(async () => { answer(page([])); });
+      expect(await screen.findByText('common:filters.noResults')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'common:filters.clearAll' })).not.toBeInTheDocument();
+      expect(screen.getByText('common:filters.resultCount:0')).toBeInTheDocument();
+      view.unmount();
+    }, 20_000);
+
+    it('shows nothing of the kind when the rows fail to load', async () => {
+      get.mockRejectedValue(new Error('boom'));
+      const view = render(<Grid />);
+      expect(await screen.findByText('boom')).toBeInTheDocument();
+      expect(screen.queryByText('common:filters.noResults')).not.toBeInTheDocument();
+      view.unmount();
+    }, 20_000);
+
+    it('says a filter hides every row and clears the search and the filters in one click', async () => {
+      get.mockImplementation(async (_url: string, config: Config) => (config.params.filters || config.params.q ? page([]) : page(['Alpha', 'Beta'])));
+      let gridApi: any = null;
+      const view = render(<Grid onGridApiReady={(a) => { gridApi = a; }} />);
+      expect(await screen.findByText('Alpha')).toBeInTheDocument();
+      expect(screen.getByText('common:filters.resultCount:2')).toBeInTheDocument();
+
+      await act(async () => { gridApi.setFilterModel({ name: { filterType: 'text', type: 'contains', filter: 'zz' } }); });
+      expect(await screen.findByText('common:filters.noResultsFiltered')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'common:filters.clearAll' }));
+      expect(await screen.findByText('Alpha')).toBeInTheDocument();
+      expect(screen.queryByText('common:filters.noResultsFiltered')).not.toBeInTheDocument();
+      expect(gridApi.getFilterModel()).toEqual({});
+      view.unmount();
+    }, 20_000);
+  });
+
+  describe('status column and Show scope', () => {
+    it('keeps the status column filter and the Show scope in step, both ways', async () => {
+      get.mockImplementation(async () => page(['Alpha']));
+      const view = render(<Grid withScope />);
+      expect(await screen.findByText('Alpha')).toBeInTheDocument();
+      // Column 1 is AG Grid's selection column.
+      const statusFilter = () => document.querySelector('.ag-floating-filter[aria-colindex="2"]') as HTMLElement;
+      await waitFor(() => expect(within(statusFilter()).getByRole('button', { name: 'common:labels.enabled' })).toBeInTheDocument());
+
+      // Show scope → column filter.
+      fireEvent.click(screen.getByRole('radio', { name: 'common:labels.disabled' }));
+      await waitFor(() => expect(within(statusFilter()).getByRole('button', { name: 'common:labels.disabled' })).toBeInTheDocument());
+
+      // Column filter → Show scope.
+      fireEvent.click(within(statusFilter()).getByRole('button', { name: 'common:labels.disabled' }));
+      const popup = await waitFor(() => {
+        const element = document.querySelector('.ag-popup') as HTMLElement | null;
+        expect(element).not.toBeNull();
+        expect(within(element!).getByRole('radio', { name: 'common:labels.disabled' })).toBeChecked();
+        return element!;
+      });
+      fireEvent.click(within(popup).getByRole('radio', { name: 'common:labels.all' }));
+      await waitFor(() => {
+        const toolbarAll = screen.getAllByRole('radio', { name: 'common:labels.all' }).find((radio) => !popup.contains(radio));
+        expect(toolbarAll).toBeChecked();
+      });
+      const lastParams = () => (get.mock.calls[get.mock.calls.length - 1][1] as Config).params;
+      await waitFor(() => expect(lastParams()).toEqual(expect.objectContaining({ includeDisabled: '1' })));
+      expect(lastParams().filters).toBeUndefined();
+      expect(within(statusFilter()).getByRole('button', { name: 'common:labels.all' })).toBeInTheDocument();
+
+      // AG Grid listens for a click outside the popup from the tick after it opened.
+      await new Promise((resolve) => { setTimeout(resolve, 20); });
+      fireEvent.mouseDown(document.body);
+      await waitFor(() => expect(document.querySelector('.ag-popup')).toBeNull());
+      view.unmount();
+    }, 20_000);
+  });
+});

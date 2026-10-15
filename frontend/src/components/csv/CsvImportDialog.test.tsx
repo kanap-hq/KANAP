@@ -241,4 +241,9 @@ describe('CsvImportDialog', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/^csv\.preflightOk:14$/);
     expect(screen.queryByText(/csv\.ignoredColumns/)).not.toBeInTheDocument();
   });
+
+  it('shows the accepted values the page gives, under the description', () => {
+    render(<CsvImportDialog open onClose={() => undefined} endpoint="/suppliers" hint="status: enabled or disabled." />);
+    expect(screen.getByText('status: enabled or disabled.')).toBeInTheDocument();
+  });
 });

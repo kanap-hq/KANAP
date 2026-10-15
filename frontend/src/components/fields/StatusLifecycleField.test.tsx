@@ -72,6 +72,31 @@ describe('StatusLifecycleField', () => {
     expect(onStatusChange).toHaveBeenCalledWith(STATUS_DISABLED);
   });
 
+  // Switching off disables now: an end of validity later today left the record enabled until the
+  // evening, and the switch came back on after the save.
+  it('disables now when switched off', () => {
+    const { onStatusChange, onDisabledAtChange } = renderField({ status: STATUS_ENABLED });
+    const before = Date.now();
+    fireEvent.click(screen.getByRole('checkbox'));
+    const sent = new Date(onDisabledAtChange.mock.calls[0][0]).getTime();
+    expect(sent).toBeGreaterThanOrEqual(before);
+    expect(sent).toBeLessThanOrEqual(Date.now());
+    expect(onStatusChange).toHaveBeenCalledWith(STATUS_DISABLED);
+  });
+
+  it('disables now when switched off with a future end of validity', () => {
+    const { onStatusChange, onDisabledAtChange } = renderField({ status: STATUS_ENABLED, disabledAt: '2099-12-31T12:00:00.000Z' });
+    fireEvent.click(screen.getByRole('checkbox'));
+    expect(new Date(onDisabledAtChange.mock.calls[0][0]).getTime()).toBeLessThanOrEqual(Date.now());
+    expect(onStatusChange).toHaveBeenCalledWith(STATUS_DISABLED);
+  });
+
+  it('says until when a future end of validity keeps the record active', () => {
+    renderField({ status: STATUS_ENABLED, disabledAt: '2099-12-31T12:00:00.000Z' });
+    expect(screen.getByText(/^Active until .*2099/)).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Enabled' })).toBeChecked();
+  });
+
   it('picks the end of validity in the calendar, as the local end of that day', () => {
     const { onStatusChange, onDisabledAtChange } = renderField({ status: STATUS_ENABLED });
     fireEvent.click(screen.getByRole('button', { name: 'Open calendar' }));

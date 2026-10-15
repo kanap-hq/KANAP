@@ -91,7 +91,12 @@
       "inRange": "du {{from}} au {{to}}",
       "or": "ou",
       "and": "et"
-    }
+    },
+    "noResults": "Aucun résultat",
+    "noResultsFiltered": "Aucun résultat ne correspond à la recherche ou aux filtres.",
+    "clearAll": "Effacer la recherche et les filtres",
+    "resultCount_one": "{{count}} résultat",
+    "resultCount_other": "{{count}} résultats"
   },
   "columnChooser": {
     "searchPlaceholder": "Rechercher une colonne",
@@ -148,11 +153,8 @@
     "warningMessage": "Cette action est irréversible. Si l'élément est référencé ailleurs, la suppression sera bloquée ; sinon il sera définitivement supprimé.",
     "singleItem": "L'élément suivant sera supprimé :",
     "multipleItems": "{{count}} éléments seront supprimés :",
-    "andMore": "... et {{count}} élément(s) supplémentaire(s)",
     "confirmPrompt": "Êtes-vous sûr de vouloir continuer ?",
-    "successAll": "{{count}} élément(s) supprimé(s) avec succès",
     "failedAll": "Échec de la suppression : {{reasons}}",
-    "partial": "{{deleted}} élément(s) supprimé(s). Échec pour {{failed}} élément(s) : {{reasons}}",
     "failedGeneric": "Échec de la suppression des éléments",
     "usages": {
       "budget_lines_one": "{{count}} ligne budgétaire",
@@ -181,7 +183,13 @@
       "requests_other": "{{count}} demandes",
       "team_members_one": "{{count}} membre d'équipe",
       "team_members_other": "{{count}} membres d'équipe"
-    }
+    },
+    "andMore_one": "... et {{count}} autre élément",
+    "andMore_other": "... et {{count}} autres éléments",
+    "successAll_one": "{{count}} élément supprimé",
+    "successAll_other": "{{count}} éléments supprimés",
+    "partial_one": "{{count}} élément supprimé, {{failed}} en échec : {{reasons}}",
+    "partial_other": "{{count}} éléments supprimés, {{failed}} en échec : {{reasons}}"
   },
   "messages": {
     "loadFailed": "Échec du chargement des données",
@@ -744,7 +752,8 @@
   },
   "lifecycleField": {
     "endOfValidity": "Fin de validité",
-    "endOfValidityHint": "Laisser vide pour rester actif indéfiniment."
+    "endOfValidityHint": "Laisser vide pour rester actif indéfiniment.",
+    "activeUntil": "Actif jusqu'au {{date}}"
   },
   "autosave": {
     "leaveTitle": "Modifications non enregistrées",
