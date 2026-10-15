@@ -21,12 +21,17 @@ const PACKAGE_TEXTS: Record<SupportedLocale, Record<string, string>> = {
  * AG Grid's own texts (filter operators, pagination, the keyboard hints screen readers announce)
  * in the user language. Every grid of the app passes it as `localeText`.
  *
- * The texts come from `@ag-grid-community/locale`. The `grid` namespace only holds the keys the
- * package gets wrong or lacks, and wins over it:
- * - `ariaHeaderSelection`: missing in French, German and Spanish (English is in title case);
- * - `ariaChecked`, `ariaUnchecked`: German says "geprüft" (tested) for a checked box;
- * - `ariaRowDeselect`: misspelt in German ("abzuwaehlen").
- * The other languages keep the package wording for those keys. Ellipses are written as one character.
+ * The texts come from `@ag-grid-community/locale`. The `grid` namespace holds the keys where the
+ * package breaks our rules or is wrong, and wins over it (each key is in every language; a language
+ * with nothing to fix keeps the package wording):
+ * - title case in labels people see or hear (English, Spanish, French pagination): sentence case;
+ * - key names in capitals ("Press SPACE", "CTRL ENTER"): the language's usual names (Espace,
+ *   Ctrl+Entrée, die Leertaste, Pulse Intro), and usted in Spanish like the rest of the app;
+ * - missing texts: `ariaHeaderSelection` in French, German and Spanish;
+ * - wrong words: French "rang" for a dragged row, "Pas d'épingle", "1 à 20 de 100", "Plus de ou
+ *   égal à"; German "geprüft" (tested) for a checked box, "Nummer" for a number, "Filtereingang",
+ *   "abzuwaehlen"; Spanish "Más o igual que".
+ * Ellipses are written as one character.
  */
 export function useAgGridLocaleText(): Record<string, string> {
   const { i18n } = useTranslation('grid');
