@@ -931,4 +931,37 @@ describe('WeeklyReport task types', () => {
       await i18n.changeLanguage('en');
     }
   });
+
+  it('shows a type change in the reader\'s language', async () => {
+    mockApi(
+      report({
+        tasks: {
+          created: [],
+          modified: [
+            taskRow({
+              taskTypeId: 'tt-prob',
+              taskTypeName: 'Problem',
+              taskTypeCode: 'problem',
+              changes: { statusChain: [], fields: [{ key: 'task_type_id', before: 'Ticket', after: 'Problem', kind: 'ref' }] },
+            }),
+          ],
+          closed: [],
+        },
+      }),
+      {
+        ...EMPTY_FILTER_VALUES,
+        taskTypes: [
+          { id: 'tt-prob', name: 'Problem', code: 'problem' },
+          { id: 'tt-own', name: 'Ticket', code: null },
+        ],
+      },
+    );
+    await i18n.changeLanguage('es');
+    try {
+      renderReport();
+      await waitFor(() => expect(screen.getByText(/Ticket → Problema/)).toBeTruthy());
+    } finally {
+      await i18n.changeLanguage('en');
+    }
+  });
 });

@@ -1,4 +1,5 @@
-import i18n from '../i18n';
+// The app's i18next instance (initialised in ../i18n), read without importing that module.
+import i18n from 'i18next';
 import type { CatalogLocale } from '../services/itOpsSettings';
 import { localizeCatalogItem, type CatalogDefaults, type DefaultCopy } from './catalogLocalization';
 

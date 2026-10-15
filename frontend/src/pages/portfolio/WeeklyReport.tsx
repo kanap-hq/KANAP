@@ -770,7 +770,12 @@ export default function WeeklyReport() {
   const sourceBaseOptions = filterValuesData?.sources ?? [];
   const categoryBaseOptions = filterValuesData?.categories ?? [];
   const streamBaseOptions = filterValuesData?.streams ?? [];
-  const taskTypeBaseOptions = filterValuesData?.taskTypes ?? [];
+  const taskTypeBaseOptions = useMemo(() => filterValuesData?.taskTypes ?? [], [filterValuesData?.taskTypes]);
+  // A type change names the types; one still a shipped type the tenant kept is shown translated.
+  const taskTypeLabelByName = useMemo(
+    () => new Map(taskTypeBaseOptions.map((option) => [option.name, typeLabel(option.name, option.code)])),
+    [taskTypeBaseOptions, typeLabel],
+  );
 
   const requests = reportData?.requests ?? EMPTY_REQUESTS;
   const projects = reportData?.projects ?? EMPTY_PROJECTS;
@@ -955,13 +960,15 @@ export default function WeeklyReport() {
           ? changes.statusChain.map((status) => getStatusLabel(entity, status)).join(' → ')
           : '';
       const fields = changes.fields.map((field) => {
-        const before = formatChangeValue(field.kind, field.before, t, locale);
-        const after = formatChangeValue(field.kind, field.after, t, locale);
+        const typeName = (value: string | null) =>
+          (field.key === 'task_type_id' && value ? taskTypeLabelByName.get(value) : undefined) ?? value;
+        const before = formatChangeValue(field.kind, typeName(field.before), t, locale);
+        const after = formatChangeValue(field.kind, typeName(field.after), t, locale);
         return `${getWeeklyFieldLabel(t, entity, field.key)}${t('reports.weekly.changes.labelSeparator')}${before} → ${after}`;
       });
       return { chain, fields };
     },
-    [getStatusLabel, locale, t],
+    [getStatusLabel, locale, t, taskTypeLabelByName],
   );
 
   /** The chain and the first two fields, "+n" for the rest; the hover card lists everything. */
