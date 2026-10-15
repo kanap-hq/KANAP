@@ -3,6 +3,5 @@
   "pages/accounts/editors/AccountOverviewEditor.tsx": 9,
   "pages/business-processes/BusinessProcessCategoryManagerDialog.tsx": 10,
   "pages/business-processes/BusinessProcessWorkspacePage.tsx": 6,
-  "pages/it/components/InterfaceBindingsMatrix.tsx": 81,
-  "pages/it/workspace/InterfaceMappingTab.tsx": 61
+  "pages/it/components/InterfaceBindingsMatrix.tsx": 81
 }
