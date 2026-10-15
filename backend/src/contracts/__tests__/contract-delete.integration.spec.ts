@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { QueryRunner } from 'typeorm';
 import { ContractsDeleteService } from '../contracts-delete.service';
 import { assert, captureAudit, CAPEX_NUMBER_OFFSET, inRolledBackTransaction, runSpecs, seedTenant, setTenant } from '../../spend/__tests__/round-inputs.fixtures';
@@ -7,12 +7,13 @@ import { assert, captureAudit, CAPEX_NUMBER_OFFSET, inRolledBackTransaction, run
 // Deleting a contract (`contracts-delete.service.ts`), against a real database:
 // - the links go, the linked objects stay: budget lines of both natures (link rows and the
 //   line's own `contract_id`), applications, assets (links and support contract), contacts;
-//   the contract's tasks stay as tasks without a contract;
 // - what belongs to the contract goes with it: its website links, attachments (rows, then the
-//   files no other attachment row uses) and recorded compliance requirements;
-// - the counts the confirmation shows, for one contract or several;
-// - a bulk delete reports each contract it could not delete (another tenant's, a malformed id)
-//   and deletes the others; another contract of the tenant keeps everything;
+//   files no other attachment row uses) and its tasks (the renewal task too, and the rows of the
+//   former `contract_tasks` table), as a budget line deletes its tasks;
+// - a contract with recorded compliance requirements is refused (409, code and count);
+// - the counts the confirmation shows, for one contract or several, refused ones apart;
+// - a bulk delete reports each contract it could not delete (another tenant's, a malformed id,
+//   one with recorded requirements) and deletes the others; another contract keeps everything;
 // - a contract of another tenant is not found and nothing is removed.
 
 type Seed = {
@@ -84,10 +85,7 @@ async function seed(runner: QueryRunner, tag: string): Promise<Seed> {
       [tenantId, id, contactId],
     );
     await runner.query(`INSERT INTO contract_links (tenant_id, contract_id, url) VALUES ($1, $2, 'https://portal.example.com')`, [tenantId, id]);
-    await runner.query(
-      `INSERT INTO contract_compliance_items (tenant_id, contract_id, requirement, state) VALUES ($1, $2, 'gdpr_dpa', 'present')`,
-      [tenantId, id],
-    );
+    await runner.query(`INSERT INTO contract_tasks (tenant_id, contract_id, description) VALUES ($1, $2, 'Former task')`, [tenantId, id]);
   }
   await runner.query(
     `INSERT INTO contract_attachments (tenant_id, contract_id, original_filename, stored_filename, size, storage_path)
@@ -112,13 +110,23 @@ function captureStorage() {
 }
 
 function service(audit = captureAudit(), storage = captureStorage()): ContractsDeleteService {
-  return new ContractsDeleteService({ manager: null } as any, storage as any, audit as any);
+  const timeAggregates = { recalculateUserMonth: async () => undefined };
+  return new ContractsDeleteService({ manager: null } as any, storage as any, audit as any, timeAggregates as any);
+}
+
+/** Records compliance requirements on a contract: a state, a reference alone, "not applicable". */
+async function recordRequirements(runner: QueryRunner, tenantId: string, contractId: string) {
+  await runner.query(
+    `INSERT INTO contract_compliance_items (tenant_id, contract_id, requirement, state, reference)
+     VALUES ($1, $2, 'gdpr_dpa', 'present', NULL), ($1, $2, 'exit_plan', NULL, 'Annex 4'), ($1, $2, 'reversibility', 'not_applicable', NULL)`,
+    [tenantId, contractId],
+  );
 }
 
 /** Rows of each link table that name `contractId`. */
 async function linkRows(runner: QueryRunner, tenantId: string, contractId: string): Promise<Record<string, number>> {
   const counts: Record<string, number> = {};
-  for (const table of ['contract_spend_items', 'application_contracts', 'asset_contracts', 'contract_contacts', 'contract_links', 'contract_attachments', 'contract_compliance_items']) {
+  for (const table of ['contract_spend_items', 'application_contracts', 'asset_contracts', 'contract_contacts', 'contract_links', 'contract_attachments', 'contract_compliance_items', 'contract_tasks']) {
     const [row] = await runner.query(`SELECT count(*)::int AS n FROM ${table} WHERE tenant_id = $1 AND contract_id = $2`, [tenantId, contractId]);
     counts[table] = row.n;
   }
@@ -150,7 +158,8 @@ async function testImpactCounts() {
       tasks: 1,
       links: 1,
       attachments: 1,
-      compliance_items: 1,
+      blocked: 0,
+      recorded_requirements: 0,
     });
     // Several contracts: each linked object once, what belongs to a contract per contract.
     assert.deepEqual(await svc.deleteImpact([a.contractId, a.otherContractId, 'not-a-uuid'], opts), {
@@ -162,7 +171,22 @@ async function testImpactCounts() {
       tasks: 1,
       links: 2,
       attachments: 2,
-      compliance_items: 2,
+      blocked: 0,
+      recorded_requirements: 0,
+    });
+    // A contract with recorded requirements is refused: counted apart, its links not counted.
+    await recordRequirements(runner, a.tenantId, a.contractId);
+    assert.deepEqual(await svc.deleteImpact([a.contractId, a.otherContractId], opts), {
+      contracts: 1,
+      budget_lines: 2,
+      applications: 1,
+      assets: 1,
+      contacts: 1,
+      tasks: 0,
+      links: 1,
+      attachments: 1,
+      blocked: 1,
+      recorded_requirements: 3,
     });
   });
 }
@@ -185,12 +209,11 @@ async function testDeleteDetachesEverything() {
     // The linked objects stay.
     for (const [table, id] of [
       ['spend_items', a.opexId], ['spend_items', a.capexId], ['applications', a.appId], ['assets', a.assetId],
-      ['assets', a.supportedAssetId], ['contacts', a.contactId], ['tasks', a.taskId],
+      ['assets', a.supportedAssetId], ['contacts', a.contactId],
     ] as const) {
       assert.equal(await exists(runner, table, id), true, `${table} ${id} stays`);
     }
-    const [task] = await runner.query(`SELECT related_object_type, related_object_id FROM tasks WHERE id = $1`, [a.taskId]);
-    assert.deepEqual(task, { related_object_type: null, related_object_id: null }, 'the task stays, without a contract');
+    assert.equal(await exists(runner, 'tasks', a.taskId), false, 'the contract\'s task goes with it');
     const [support] = await runner.query(`SELECT support_contract_id FROM asset_support_info WHERE tenant_id = $1 AND asset_id = $2`, [a.tenantId, a.supportedAssetId]);
     assert.equal(support.support_contract_id, null, 'the asset keeps its support details');
     // The search no longer finds it.
@@ -198,8 +221,14 @@ async function testDeleteDetachesEverything() {
     assert.equal(found.length, 0, 'no search entry left');
     // The other contract keeps everything.
     assert.deepEqual(await linkRows(runner, a.tenantId, a.otherContractId), keptBefore);
-    // One audit row, the attachment's file removed.
-    assert.deepEqual(audit.entries.map((e) => [e.table, e.action, e.recordId, e.before?.name]), [['contracts', 'delete', a.contractId, 'Delete contract ctdel-one']]);
+    // One audit row for the contract (the task's activity goes with the task).
+    assert.deepEqual(
+      audit.entries.filter((e) => e.table === 'contracts').map((e) => [e.action, e.recordId, e.before?.name]),
+      [['delete', a.contractId, 'Delete contract ctdel-one']],
+    );
+    // The attachment's file, which no other attachment row uses, is deleted; the other contract's file stays.
+    const sharing = await runner.query(`SELECT 1 FROM contract_attachments WHERE tenant_id = $1 AND storage_path = $2`, [a.tenantId, a.attachmentPath]);
+    assert.equal(sharing.length, 0, 'no row uses the file any more');
     assert.deepEqual(storage.deleted, [a.attachmentPath]);
   });
 }
@@ -214,15 +243,27 @@ async function testBulkDelete() {
        VALUES ($1, $2, 'copy.pdf', 'copy.pdf', 10, $3)`,
       [a.tenantId, a.otherContractId, a.attachmentPath],
     );
+    // A third contract with recorded requirements is refused, with its code and count.
+    const blockedId = (await runner.query(
+      `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, start_date)
+       SELECT tenant_id, 'Audited contract', company_id, supplier_id, start_date FROM contracts WHERE id = $1 RETURNING id`,
+      [a.contractId],
+    ))[0].id as string;
+    await recordRequirements(runner, a.tenantId, blockedId);
     const audit = captureAudit();
     const storage = captureStorage();
     const svc = service(audit, storage);
 
-    const result = await svc.bulkDelete([a.contractId, other.contractId, 'not-a-uuid', a.otherContractId], null, { manager: runner.manager });
+    const result = await svc.bulkDelete([a.contractId, other.contractId, 'not-a-uuid', blockedId, a.otherContractId], null, { manager: runner.manager });
 
     assert.deepEqual(result.deleted, [a.contractId, a.otherContractId]);
-    assert.deepEqual(result.failed.map((f) => f.id), [other.contractId, 'not-a-uuid']);
-    assert.ok(result.failed.every((f) => f.reason === 'Contract not found.'), JSON.stringify(result.failed));
+    assert.deepEqual(result.failed.map((f) => f.id), [other.contractId, 'not-a-uuid', blockedId]);
+    assert.ok(result.failed.slice(0, 2).every((f) => f.reason === 'Contract not found.'), JSON.stringify(result.failed));
+    assert.deepEqual(
+      { name: result.failed[2].name, code: result.failed[2].code, count: result.failed[2].count },
+      { name: 'Audited contract', code: 'CONTRACT_HAS_COMPLIANCE_RECORDS', count: 3 },
+    );
+    assert.equal(await exists(runner, 'contracts', blockedId), true);
     assert.equal(await exists(runner, 'contracts', a.contractId), false);
     assert.equal(await exists(runner, 'contracts', a.otherContractId), false);
     assert.equal(await exists(runner, 'applications', a.appId), true);
@@ -251,6 +292,33 @@ async function testSharedFileStays() {
   });
 }
 
+async function testRecordedRequirementsRefused() {
+  await inRolledBackTransaction(async (runner) => {
+    const a = await seed(runner, 'ctdel-audited');
+    await recordRequirements(runner, a.tenantId, a.contractId);
+    const before = await linkRows(runner, a.tenantId, a.contractId);
+    const storage = captureStorage();
+    const svc = service(captureAudit(), storage);
+
+    let refusal: unknown = null;
+    try {
+      await svc.delete(a.contractId, { manager: runner.manager });
+    } catch (err) {
+      refusal = err;
+    }
+    assert.ok(refusal instanceof ConflictException, `a 409, got ${String(refusal)}`);
+    const body = (refusal as ConflictException).getResponse() as Record<string, unknown>;
+    assert.equal(body.code, 'CONTRACT_HAS_COMPLIANCE_RECORDS');
+    assert.equal(body.count, 3);
+    assert.match(String(body.message), /3 recorded compliance requirements/);
+    // Nothing moved.
+    assert.equal(await exists(runner, 'contracts', a.contractId), true);
+    assert.equal(await exists(runner, 'tasks', a.taskId), true);
+    assert.deepEqual(await linkRows(runner, a.tenantId, a.contractId), before);
+    assert.deepEqual(storage.deleted, []);
+  });
+}
+
 async function testOtherTenantNotFound() {
   await inRolledBackTransaction(async (runner) => {
     const a = await seed(runner, 'ctdel-a');
@@ -272,5 +340,6 @@ void runSpecs('contract-delete', [
   ['delete detaches every kind and keeps the linked objects', testDeleteDetachesEverything],
   ['bulk delete', testBulkDelete],
   ['a file another attachment uses stays', testSharedFileStays],
+  ['recorded compliance requirements refuse the delete', testRecordedRequirementsRefused],
   ['another tenant is not found', testOtherTenantNotFound],
 ]);

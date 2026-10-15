@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { validate as isUuid } from 'uuid';
@@ -9,12 +9,15 @@ import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
 import { withSavepoint } from '../common/savepoint.util';
 import { BUDGET_NATURES, naturesAnd } from '../spend/budget-nature';
-import { currentTenantId, deleteBlobs, unreferencedPaths } from '../spend/item-delete-cleanup';
+import { currentTenantId, deleteBlobs, deleteItemTasks, unreferencedPaths } from '../spend/item-delete-cleanup';
+import { UserTimeAggregateService } from '../portfolio/services/user-time-aggregate.service';
 
 /**
  * What deleting contracts removes, for the confirmation: the linked objects that lose their link
  * (each once, however many of the contracts name it) and what belongs to the contracts and goes
- * with them. Only contracts of the session tenant count.
+ * with them, for the `contracts` that can go. `blocked`: the contracts refused because they hold
+ * recorded compliance requirements (`recorded_requirements` of them). Only contracts of the
+ * session tenant count.
  */
 export type ContractDeleteImpact = {
   contracts: number;
@@ -25,8 +28,19 @@ export type ContractDeleteImpact = {
   tasks: number;
   links: number;
   attachments: number;
-  compliance_items: number;
+  blocked: number;
+  recorded_requirements: number;
 };
+
+/** The refusal's code, worded by the screens (`errors:CONTRACT_HAS_COMPLIANCE_RECORDS`). */
+export const CONTRACT_HAS_COMPLIANCE_RECORDS = 'CONTRACT_HAS_COMPLIANCE_RECORDS';
+
+/**
+ * A recorded compliance requirement: a row with a state (present, absent, not applicable) or a
+ * reference. Writing a requirement with neither removes its row, so every row is one; the
+ * condition only guards against an empty row. "Not applicable" counts: it is an assessment.
+ */
+const RECORDED = `(state IS NOT NULL OR NULLIF(btrim(reference), '') IS NOT NULL)`;
 
 /** Both natures of `spend_items` (`spend/budget-nature.ts`). */
 const LINE_NATURES = naturesAnd('i', BUDGET_NATURES);
@@ -34,9 +48,10 @@ const NATURES = naturesAnd(null, BUDGET_NATURES);
 
 /**
  * Deletes contracts. Their links go and the linked objects stay: budget lines (the link rows and
- * a line's own `contract_id`), applications, assets (links and support contract), contacts, and
- * the contract's tasks, which stay as tasks without a contract. What belongs to the contract goes
- * with it: its website links, attachments and recorded compliance requirements. Every statement
+ * a line's own `contract_id`), applications, assets (links and support contract) and contacts.
+ * What belongs to the contract goes with it: its website links, attachments and tasks. A contract
+ * with recorded compliance requirements is refused (409, `CONTRACT_HAS_COMPLIANCE_RECORDS`, with
+ * the count): it is disabled instead. Every statement
  * names the tenant; the links are removed here rather than left to foreign keys, as most link
  * tables have none. The search entry goes with the row (trigger). Attachment files go last, once
  * no attachment row of the tenant uses them.
@@ -49,6 +64,7 @@ export class ContractsDeleteService extends BaseDeleteService<Contract> {
     @InjectRepository(Contract) repository: Repository<Contract>,
     storage: StorageService,
     audit: AuditService,
+    private readonly timeAggregates: UserTimeAggregateService,
   ) {
     super(repository, storage, audit, {
       entityName: 'Contract',
@@ -62,9 +78,16 @@ export class ContractsDeleteService extends BaseDeleteService<Contract> {
     const tenantId = await currentTenantId(manager);
     const wanted = Array.from(new Set((ids || []).map((id) => String(id || '').trim().toLowerCase()).filter((id) => isUuid(id))));
     const [row]: Array<Record<keyof ContractDeleteImpact, number>> = await manager.query(
-      `WITH c AS (SELECT id FROM contracts WHERE tenant_id = $1 AND id = ANY($2::uuid[]))
+      `WITH asked AS (SELECT id FROM contracts WHERE tenant_id = $1 AND id = ANY($2::uuid[])),
+       recorded AS (
+         SELECT contract_id FROM contract_compliance_items
+          WHERE tenant_id = $1 AND contract_id IN (SELECT id FROM asked) AND ${RECORDED}
+       ),
+       c AS (SELECT id FROM asked WHERE id NOT IN (SELECT contract_id FROM recorded))
        SELECT
          (SELECT count(*)::int FROM c) AS contracts,
+         (SELECT count(DISTINCT contract_id)::int FROM recorded) AS blocked,
+         (SELECT count(*)::int FROM recorded) AS recorded_requirements,
          (SELECT count(*)::int FROM (
             SELECT l.spend_item_id FROM contract_spend_items l
               JOIN spend_items i ON i.tenant_id = l.tenant_id AND i.id = l.spend_item_id${LINE_NATURES}
@@ -81,8 +104,7 @@ export class ContractsDeleteService extends BaseDeleteService<Contract> {
          (SELECT count(DISTINCT contact_id)::int FROM contract_contacts WHERE tenant_id = $1 AND contract_id IN (SELECT id FROM c)) AS contacts,
          (SELECT count(*)::int FROM tasks WHERE tenant_id = $1 AND related_object_type = 'contract' AND related_object_id IN (SELECT id FROM c)) AS tasks,
          (SELECT count(*)::int FROM contract_links WHERE tenant_id = $1 AND contract_id IN (SELECT id FROM c)) AS links,
-         (SELECT count(*)::int FROM contract_attachments WHERE tenant_id = $1 AND contract_id IN (SELECT id FROM c)) AS attachments,
-         (SELECT count(*)::int FROM contract_compliance_items WHERE tenant_id = $1 AND contract_id IN (SELECT id FROM c)) AS compliance_items`,
+         (SELECT count(*)::int FROM contract_attachments WHERE tenant_id = $1 AND contract_id IN (SELECT id FROM c)) AS attachments`,
       [tenantId, wanted],
     );
     return {
@@ -94,7 +116,8 @@ export class ContractsDeleteService extends BaseDeleteService<Contract> {
       tasks: row.tasks,
       links: row.links,
       attachments: row.attachments,
-      compliance_items: row.compliance_items,
+      blocked: row.blocked,
+      recorded_requirements: row.recorded_requirements,
     };
   }
 
@@ -123,7 +146,13 @@ export class ContractsDeleteService extends BaseDeleteService<Contract> {
             this.logger.warn(`Failed to fetch contract name for error reporting: ${err?.message || 'Unknown error'}`);
           }
         }
-        result.failed.push({ id, name, reason: error?.message || 'Unknown error' });
+        const body = error instanceof ConflictException ? (error.getResponse() as { code?: string; count?: number }) : null;
+        result.failed.push({
+          id,
+          name,
+          reason: error?.message || 'Unknown error',
+          ...(body?.code ? { code: body.code, count: body.count } : {}),
+        });
       }
     }
 
@@ -142,6 +171,19 @@ export class ContractsDeleteService extends BaseDeleteService<Contract> {
     if (!contract) throw new NotFoundException('Contract not found.');
     const params = [tenantId, id];
 
+    // Recorded compliance requirements are evidence: the contract is disabled, not deleted.
+    const [{ recorded }]: Array<{ recorded: number }> = await manager.query(
+      `SELECT count(*)::int AS recorded FROM contract_compliance_items WHERE tenant_id = $1 AND contract_id = $2 AND ${RECORDED}`,
+      params,
+    );
+    if (recorded > 0) {
+      throw new ConflictException({
+        code: CONTRACT_HAS_COMPLIANCE_RECORDS,
+        count: recorded,
+        message: `This contract has ${recorded} recorded compliance requirement${recorded === 1 ? '' : 's'}. Disable it instead of deleting it.`,
+      });
+    }
+
     const attachments: Array<{ storage_path: string }> = await manager.query(
       `SELECT storage_path FROM contract_attachments WHERE tenant_id = $1 AND contract_id = $2`,
       params,
@@ -154,7 +196,7 @@ export class ContractsDeleteService extends BaseDeleteService<Contract> {
       'contract_spend_items',
       'application_contracts',
       'asset_contracts',
-      // The former task table: nothing writes it any more, its rows would outlive the contract.
+      // The former task table: nothing writes it any more, its rows go with the contract.
       'contract_tasks',
     ]) {
       await manager.query(`DELETE FROM ${table} WHERE tenant_id = $1 AND contract_id = $2`, params);
@@ -164,11 +206,8 @@ export class ContractsDeleteService extends BaseDeleteService<Contract> {
       params,
     );
     await manager.query(`UPDATE spend_items SET contract_id = NULL WHERE tenant_id = $1 AND contract_id = $2${NATURES}`, params);
-    await manager.query(
-      `UPDATE tasks SET related_object_type = NULL, related_object_id = NULL, updated_at = now()
-        WHERE tenant_id = $1 AND related_object_type = 'contract' AND related_object_id = $2`,
-      params,
-    );
+    // Its tasks go too (the renewal decision task included), as a budget line's do.
+    await deleteItemTasks(manager, 'contract', tenantId, id, { audit: this.audit, timeAggregates: this.timeAggregates, userId });
     await manager.query(`DELETE FROM contracts WHERE tenant_id = $1 AND id = $2`, params);
 
     if (!skipAudit) {

@@ -6,6 +6,7 @@ import { ContractLink } from './contract-link.entity';
 import { ContractAttachment } from './contract-attachment.entity';
 import { ContractsService } from './contracts.service';
 import { ContractsDeleteService } from './contracts-delete.service';
+import { UserTimeAggregateService } from '../portfolio/services/user-time-aggregate.service';
 import { ContractsController } from './contracts.controller';
 import { SpendItemContractsController } from './spend-item-contracts.controller';
 import { CapexItemContractsController } from './capex-item-contracts.controller';
@@ -30,7 +31,7 @@ import { ContractRenewalController } from './contract-renewal.controller';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Contract, ContractSpendItem, ContractLink, ContractAttachment, ContractContactLink, ExternalContact, SupplierContactLink, Tenant]), AuditModule, PermissionsModule, forwardRef(() => UsersModule), TasksModule, StorageModule, NotificationsModule, CurrencyModule, ScheduledTasksModule],
-  providers: [ContractsService, ContractsDeleteService, ContractContactsService, ContractSettingsService, ContractRenewalService],
+  providers: [ContractsService, ContractsDeleteService, UserTimeAggregateService, ContractContactsService, ContractSettingsService, ContractRenewalService],
   controllers: [ContractsController, ContractRenewalController, ContractSettingsController, SpendItemContractsController, CapexItemContractsController],
   exports: [ContractsService],
 })

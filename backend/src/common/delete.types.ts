@@ -52,7 +52,8 @@ export interface DeleteOptions {
  */
 export interface BulkDeleteResult {
   deleted: string[];
-  failed: Array<{ id: string; name: string; reason: string }>;
+  /** `code` and `count`: a refusal the screen words in its language (`errors:<code>`, with the count). */
+  failed: Array<{ id: string; name: string; reason: string; code?: string; count?: number }>;
 }
 
 /**
