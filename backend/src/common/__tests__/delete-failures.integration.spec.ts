@@ -74,6 +74,30 @@ async function testBulkFailuresCarryNotFound() {
   });
 }
 
+async function testContactFailureNamedByName() {
+  await withRollback(async (runner, t) => {
+    const m = runner.manager;
+    const [named] = await runner.query(
+      `INSERT INTO contacts (tenant_id, first_name, last_name, email) VALUES ($1, 'Ada', 'Lovelace', 'ada@example.com') RETURNING id`,
+      [t],
+    );
+    const [bare] = await runner.query(
+      `INSERT INTO contacts (tenant_id, email) VALUES ($1, 'nobody@example.com') RETURNING id`,
+      [t],
+    );
+    const svc = new ContactsDeleteService(m.getRepository(ExternalContact), m.getRepository(SupplierContactLink), noAudit);
+    (svc as any).delete = async () => {
+      throw new Error('refused');
+    };
+    const { failed } = await svc.bulkDelete([named.id, bare.id], { manager: m });
+    assert.deepEqual(
+      failed.map((f: any) => f.name),
+      ['Ada Lovelace', 'nobody@example.com'],
+      'a failed contact is named by its name, its email only when it has none',
+    );
+  });
+}
+
 async function testUnknownRoleIsNotFound() {
   await withRollback(async (runner) => {
     const m = runner.manager;
@@ -85,7 +109,7 @@ async function testUnknownRoleIsNotFound() {
 async function main() {
   await dataSource.initialize();
   try {
-    for (const test of [testConnectionsBulkNamesTheDeletedIds, testBulkFailuresCarryNotFound, testUnknownRoleIsNotFound]) {
+    for (const test of [testConnectionsBulkNamesTheDeletedIds, testBulkFailuresCarryNotFound, testContactFailureNamedByName, testUnknownRoleIsNotFound]) {
       await test();
     }
     console.log('delete-failures.integration.spec: ok');

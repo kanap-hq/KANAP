@@ -53,7 +53,7 @@ export class ContactsDeleteService extends BaseDeleteService<ExternalContact> {
         let name = 'Unknown';
         try {
           const c = await withSavepoint(manager, () => repo.findOne({ where: { id } }));
-          if (c) name = c.email;
+          if (c) name = [c.first_name, c.last_name].map((v) => v?.trim()).filter(Boolean).join(' ') || c.email;
         } catch (err: any) {
           this.logger.warn(`Failed to fetch contact name for error reporting: ${err?.message || 'Unknown error'}`);
         }
