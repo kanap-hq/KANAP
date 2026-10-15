@@ -142,9 +142,34 @@ async function testHttp(app: INestApplication) {
   assert.match(String(destroyed.body?.message), /interrupted/);
 }
 
+/** A CSV import refuses a workbook by its name with the translated sentence that says how to save it as CSV. */
+function testCsvFileFilter() {
+  const refusal = (originalname: string, mimetype: string) => {
+    let answer: { error: any; accepted: boolean } | null = null;
+    csvImportMulterOptions.fileFilter!({} as any, { originalname, mimetype } as any, (error: any, accepted?: boolean) => {
+      answer = { error, accepted: accepted === true };
+    });
+    return answer!;
+  };
+  assert.equal(refusal('budget.csv', 'text/csv').accepted, true);
+  const cases: Array<[string, string, string]> = [
+    ['projects.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'CSV_FILE_EXCEL'],
+    ['projects.xls', 'application/vnd.ms-excel', 'CSV_FILE_EXCEL'],
+    ['projects.ods', 'application/vnd.oasis.opendocument.spreadsheet', 'CSV_FILE_OPENDOCUMENT'],
+    ['projects.pdf', 'application/pdf', 'CSV_FILE_NOT_TEXT'],
+  ];
+  for (const [name, mimetype, code] of cases) {
+    const { error, accepted } = refusal(name, mimetype);
+    assert.equal(accepted, false, name);
+    assert.equal(error.getStatus(), 400, name);
+    assert.equal(error.getResponse().code, code, name);
+  }
+}
+
 async function run() {
   testOptionObjects();
   testMapping();
+  testCsvFileFilter();
   const app = await createApp();
   try {
     await testHttp(app);

@@ -2,6 +2,8 @@
 // Aligns attachment upload size across workspaces
 import { BadRequestException } from '@nestjs/common';
 import type { MulterOptions } from '@nestjs/platform-express/multer/interfaces/multer-options.interface';
+import * as path from 'path';
+import { CSV_DECODE_MESSAGES, CsvDecodeErrorCode } from './csv-sheet/decode';
 import { isUploadTypeAllowedForScope, UploadValidationScope } from './upload-validation';
 
 export const ATTACHMENT_MAX_BYTES = 20 * 1024 * 1024; // 20 MB
@@ -28,6 +30,14 @@ export function multipartLimits(fileSize: number): MultipartLimits {
   return { ...MULTIPART_LIMITS, fileSize };
 }
 
+/** A CSV import refuses a workbook by its name with the sentence that says how to save it as CSV. */
+function csvRefusalCode(originalName: string | undefined): CsvDecodeErrorCode {
+  const extension = path.extname(String(originalName || '')).toLowerCase();
+  if (['.xlsx', '.xlsm', '.xls'].includes(extension)) return 'CSV_FILE_EXCEL';
+  if (extension === '.ods') return 'CSV_FILE_OPENDOCUMENT';
+  return 'CSV_FILE_NOT_TEXT';
+}
+
 const buildFileFilter = (scope: UploadValidationScope): NonNullable<MulterOptions['fileFilter']> => {
   return (_req, file, cb) => {
     if (isUploadTypeAllowedForScope(file, { scope })) {
@@ -44,7 +54,8 @@ const buildFileFilter = (scope: UploadValidationScope): NonNullable<MulterOption
       return;
     }
     if (scope === 'csv-import') {
-      cb(new BadRequestException('Unsupported file type. Allowed: CSV'), false);
+      const code = csvRefusalCode(file.originalname);
+      cb(new BadRequestException({ message: CSV_DECODE_MESSAGES[code], code }), false);
       return;
     }
 
