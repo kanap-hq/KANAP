@@ -873,7 +873,7 @@ export class CompaniesService {
     if (read.headerError) {
       return {
         ok: false, dryRun, total: 0, inserted: 0, updated: 0,
-        errors: [{ row: 0, message: read.headerError }],
+        errors: [read.headerError],
         ignoredColumns: read.ignoredColumns, notices: read.notices,
       };
     }

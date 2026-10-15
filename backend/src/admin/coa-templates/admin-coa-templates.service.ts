@@ -6,6 +6,7 @@ import { parseString } from '@fast-csv/parse';
 import { format } from '@fast-csv/format';
 import { AuditService } from '../../audit/audit.service';
 import { denormalizeCsvRow } from '../../common/csv/csv-export.service';
+import { headerMismatchError } from '../../common/csv-sheet';
 
 /** The OPEX/CAPEX nature of a template account (`nature` column, optional, empty = both). */
 const NATURES = ['opex', 'capex'] as const;
@@ -320,7 +321,7 @@ export class AdminCoaTemplatesService {
           const missing = expected.filter((h) => !headers.includes(h) && !OPTIONAL_HEADERS.includes(h));
           const extras = headers.filter((h) => !expected.includes(h));
           headerOk = missing.length === 0 && extras.length === 0;
-          if (!headerOk) reject(new BadRequestException(`Header mismatch. Missing: ${missing.join(', ') || '-'}, Extra: ${extras.join(', ') || '-'}`));
+          if (!headerOk) reject(new BadRequestException(headerMismatchError(missing, extras)?.message));
         })
         .on('data', (row: Record<string, string>) => {
           total += 1;

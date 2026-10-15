@@ -27,9 +27,20 @@ export interface MasterDataFileRequest {
   decimalMark?: DecimalMark;
 }
 
+/**
+ * One problem of an import report. `row` 0 is the header. `code` and `params`
+ * let the interface translate the message; `message` stays in English for API clients.
+ */
+export interface ImportReportError {
+  row: number;
+  message: string;
+  code?: string;
+  params?: Record<string, string>;
+}
+
 export interface MasterDataFileRead {
-  /** Set when the file is refused for its headers. `rows` is then empty. */
-  headerError: string | null;
+  /** Set when the file is refused for its headers (row 0). `rows` is then empty. */
+  headerError: ImportReportError | null;
   rows: CsvDataRow[];
   /** The column ids the file carried, so a caller can tell an absent column from a blank cell. */
   present: string[];
@@ -63,18 +74,37 @@ export async function readMasterDataFile(request: MasterDataFileRequest): Promis
   };
 }
 
-/** The refusal these files have always written: the missing columns, then the unknown ones. */
+/** The refusal of a file for its headers: the missing columns, then the unknown ones. */
 function headerProblem(
   request: MasterDataFileRequest,
   read: { headerErrors: string[]; columns: Array<{ id: string }>; ignoredColumns: string[] },
-): string | null {
-  if (read.headerErrors.length > 0) return read.headerErrors.join(' ');
+): ImportReportError | null {
+  if (read.headerErrors.length > 0) return { row: 0, message: read.headerErrors.join(' ') };
   const optional = new Set(request.optional ?? []);
   const present = new Set(read.columns.map((column) => column.id));
   const missing = request.fields.filter((field) => !optional.has(field) && !present.has(field));
-  const extras = read.ignoredColumns;
+  return headerMismatchError(missing, read.ignoredColumns);
+}
+
+/**
+ * The header refusal every CSV import writes, or null when nothing is missing
+ * or unknown. The English message names only the parts that apply
+ * ("Header mismatch. Missing: a, b"); the code tells the interface which ones.
+ */
+export function headerMismatchError(missing: readonly string[], extras: readonly string[]): ImportReportError | null {
   if (missing.length === 0 && extras.length === 0) return null;
-  return `Header mismatch. Missing: ${missing.join(', ') || '-'}, Extra: ${extras.join(', ') || '-'}`;
+  const parts: string[] = [];
+  if (missing.length > 0) parts.push(`Missing: ${missing.join(', ')}`);
+  if (extras.length > 0) parts.push(`Extra: ${extras.join(', ')}`);
+  const code = missing.length === 0
+    ? 'CSV_HEADER_UNKNOWN_COLUMNS'
+    : extras.length === 0 ? 'CSV_HEADER_MISSING_COLUMNS' : 'CSV_HEADER_MISMATCH';
+  return {
+    row: 0,
+    message: `Header mismatch. ${parts.join(', ')}`,
+    code,
+    params: { missing: missing.join(', '), extra: extras.join(', ') },
+  };
 }
 
 /** A trimmed cell. A column the file does not carry, or an empty cell, is ''. */

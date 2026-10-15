@@ -7,6 +7,7 @@ export {
   cellOf,
   endOfValidityCell,
   endOfValidityOf,
+  headerMismatchError,
   invalidEndOfValidity,
   readMasterDataFile,
   rowProblems,
@@ -44,4 +45,4 @@ export type {
 export type { AmountConventionDecision, DecimalMark } from './amount';
 export type { CsvWriteRequest } from './write';
 export type { CsvProfile } from './language';
-export type { MasterDataFileRead, MasterDataFileRequest } from './master-data';
+export type { ImportReportError, MasterDataFileRead, MasterDataFileRequest } from './master-data';

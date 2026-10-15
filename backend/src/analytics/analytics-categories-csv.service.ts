@@ -132,7 +132,7 @@ export class AnalyticsCategoriesCsvService {
       ok: false, dryRun, total, inserted: 0, updated: 0, unchanged: 0, errors,
       ignoredColumns: read.ignoredColumns, notices: read.notices,
     });
-    if (read.headerError) return failed([{ row: 0, message: read.headerError }]);
+    if (read.headerError) return failed([read.headerError]);
     const { rows } = read;
     // An absent column is not a blank cell: it keeps what is stored, as it always has.
     const has = (header: string) => read.present.includes(header);

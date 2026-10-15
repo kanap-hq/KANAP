@@ -12,6 +12,7 @@ import { parseString } from '@fast-csv/parse';
 import * as fs from 'fs';
 import { decodeCsvBufferUtf8OrThrow } from '../common/encoding';
 import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
+import { headerMismatchError } from '../common/csv-sheet';
 import { assertSetFilterModes } from '../common/ag-grid-filtering';
 
 /** The request's tenant: every statement filters on it. */
@@ -529,9 +530,8 @@ export class ContactsService {
           const missing = expectedHeaders.filter((h) => !headers.includes(h));
           const extras = headers.filter((h) => !expectedHeaders.includes(h));
           headerOk = missing.length === 0 && extras.length === 0;
-          if (!headerOk) {
-            errors.push({ row: 0, message: `Header mismatch. Missing: ${missing.join(', ') || '-'}, Extra: ${extras.join(', ') || '-'}` });
-          }
+          const headerError = headerMismatchError(missing, extras);
+          if (headerError) errors.push(headerError);
         })
         .on('error', (err) => reject(err))
         .on('data', (row: Row) => rows.push(denormalizeCsvRow(row)))

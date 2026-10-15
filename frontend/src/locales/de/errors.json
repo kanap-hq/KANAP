@@ -49,5 +49,17 @@
   "MARKDOWN_TOO_COMPLEX": "Dieser Text ist zu komplex. Setzen Sie eingefügte Protokolle oder Code in einen Codeblock oder schließen Sie die Formatierungszeichen (* und _).",
   "MARKDOWN_BUSY": "Der Server ist mit anderen Texten ausgelastet. Versuchen Sie es gleich noch einmal.",
   "MARKDOWN_UNAVAILABLE": "Formatierte Texte können gerade nicht gespeichert werden. Versuchen Sie es in einigen Minuten erneut.",
-  "MARKDOWN_UNAVAILABLE_onprem": "Formatierte Texte können auf diesem Server gerade nicht gespeichert werden. Bitten Sie Ihren Administrator, die API-Protokolle zu prüfen."
+  "MARKDOWN_UNAVAILABLE_onprem": "Formatierte Texte können auf diesem Server gerade nicht gespeichert werden. Bitten Sie Ihren Administrator, die API-Protokolle zu prüfen.",
+  "CSV_HEADER_MISSING_COLUMNS": "Fehlende Spalten: {{missing}}.",
+  "CSV_HEADER_UNKNOWN_COLUMNS": "Unbekannte Spalten: {{extra}}.",
+  "CSV_HEADER_MISMATCH": "Fehlende Spalten: {{missing}}. Unbekannte Spalten: {{extra}}.",
+  "CSV_ACCOUNT_COA_CODE_REQUIRED": "Geben Sie den Code des Kontenplans an (coa_code).",
+  "CSV_ACCOUNT_NUMBER_REQUIRED": "Die Kontonummer (account_number) ist erforderlich und muss eine ganze Zahl sein.",
+  "CSV_ACCOUNT_NAME_REQUIRED": "Der Kontoname (account_name) ist erforderlich.",
+  "CSV_ACCOUNT_STATUS_INVALID": "Ungültiger Status „{{value}}“. Verwenden Sie enabled oder disabled.",
+  "CSV_ACCOUNT_CONSOLIDATION_NUMBER_INVALID": "Die Nummer des Konsolidierungskontos (consolidation_account_number) muss eine ganze Zahl sein.",
+  "CSV_ACCOUNT_NATURE_INVALID": "Ungültige Art „{{value}}“. Verwenden Sie opex, capex oder lassen Sie die Zelle leer.",
+  "CSV_ACCOUNT_COA_CODE_MIXED": "Alle Zeilen müssen denselben Kontenplan angeben (coa_code).",
+  "CSV_ACCOUNT_COA_CODE_UNKNOWN": "Kein Kontenplan hat den Code „{{code}}“.",
+  "CSV_ACCOUNT_COA_REQUIRED": "Wählen Sie einen Kontenplan oder fügen Sie eine Spalte coa_code hinzu."
 }

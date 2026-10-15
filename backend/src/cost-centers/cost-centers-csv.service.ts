@@ -130,7 +130,7 @@ export class CostCentersCsvService {
       ok: false, dryRun, total, inserted: 0, updated: 0, unchanged: 0, errors,
       ignoredColumns: read.ignoredColumns, notices: read.notices,
     });
-    if (read.headerError) return result([{ row: 0, message: read.headerError }]);
+    if (read.headerError) return result([read.headerError]);
     const { rows } = read;
     // An absent `disabled_at` column is not a blank cell: the file then sets the lifecycle through `status` alone.
     const hasDisabledAt = read.present.includes('disabled_at');

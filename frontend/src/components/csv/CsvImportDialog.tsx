@@ -23,14 +23,17 @@ type ImportReport = {
   ignoredColumns?: string[];
 };
 
-/** `code`: the error code the interface translates, when the server gave one (MARKDOWN_TOO_LARGE, ...). */
-type RowError = { row: number; column?: string; message: string; code?: string };
+/**
+ * `code`: the error code the interface translates, when the server gave one (MARKDOWN_TOO_LARGE, ...),
+ * with the values its sentence names (`params`). Row 0 is the header.
+ */
+type RowError = { row: number; column?: string; message: string; code?: string; params?: Record<string, string> };
 
 /** A row error in the interface language when it has a code, with the column it is about. */
 function rowErrorText(err: RowError, t: TFunction): string {
-  if (!err.code) return t('csv.rowError', { row: err.row, message: err.message });
-  const message = t(`errors:${err.code}`, { defaultValue: err.message });
-  return err.column
+  const message = err.code ? t(`errors:${err.code}`, { ...err.params, defaultValue: err.message }) : err.message;
+  if (err.row === 0) return t('csv.headerError', { message });
+  return err.code && err.column
     ? t('csv.rowColumnError', { row: err.row, column: err.column, message })
     : t('csv.rowError', { row: err.row, message });
 }
