@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useRef } from 'react';
 import { Box, Dialog, DialogContent, DialogTitle, IconButton, Typography } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { AgGridReact } from 'ag-grid-react';
+import { useAgGridLocaleText } from '../../../components/grid/useAgGridLocaleText';
 import type { ColDef } from 'ag-grid-community';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -49,6 +50,7 @@ export default function ContributorDrilldownDialog({
 }: ContributorDrilldownDialogProps) {
   const { t } = useTranslation('portfolio');
   const locale = useLocale();
+  const gridLocaleText = useAgGridLocaleText();
   const gridApiRef = useRef<any>(null);
   const navigate = useNavigate();
   const queryKey = ['portfolio-capacity-drilldown', contributorId, statuses];
@@ -150,6 +152,7 @@ export default function ContributorDrilldownDialog({
       <DialogContent sx={{ pt: 1.5 }}>
         <Box component={AgGridBox} sx={{ height: '60vh', minHeight: 320, width: '100%' }}>
           <AgGridReact
+            localeText={gridLocaleText}
             rowData={rows}
             columnDefs={columns}
             defaultColDef={{ sortable: true, resizable: true }}

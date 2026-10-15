@@ -11,6 +11,7 @@ import {
   useTheme,
 } from '@mui/material';
 import { AgGridReact } from 'ag-grid-react';
+import { useAgGridLocaleText } from '../../components/grid/useAgGridLocaleText';
 import type { ColDef } from 'ag-grid-community';
 import ReportLayout, { ReportFilter, reportFilterMenuProps, reportFilterSelectSx } from '../../components/reports/ReportLayout';
 import { useTranslation } from 'react-i18next';
@@ -49,6 +50,7 @@ export default function BudgetColumnResetPage() {
   const budgetColumns = useBudgetColumns();
   const BUDGET_COLUMNS: { value: BudgetColumn; label: string }[] = budgetColumns.shown.map((c) => ({ value: c.key, label: c.label }));
   const locale = useLocale();
+  const gridLocaleText = useAgGridLocaleText();
   const theme = useTheme();
   const queryClient = useQueryClient();
   const now = new Date();
@@ -281,6 +283,7 @@ export default function BudgetColumnResetPage() {
             </Typography>
             <Box component={AgGridBox}>
               <AgGridReact
+                localeText={gridLocaleText}
                 rowData={processedData}
                 columnDefs={columns}
                 defaultColDef={{ sortable: true, resizable: true }}

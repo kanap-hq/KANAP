@@ -33,7 +33,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useTenant } from '../tenant/TenantContext';
 import { useThemeMode } from '../config/ThemeContext';
-import { useLocale } from '../i18n/useLocale';
+import { useAgGridLocaleText } from './grid/useAgGridLocaleText';
 import { STATUS_SCOPE_PARAM, statusScopeParams } from '../utils/statusScopeParams';
 import {
   cachedListContextId,
@@ -422,11 +422,10 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   pageParams,
   setFilterExcludeMode = false,
 }: ServerDataGridProps<T>) {
-  const { t, i18n } = useTranslation(['common', 'grid']);
+  const { t } = useTranslation(['common', 'grid']);
   const { profile } = useAuth();
   const { tenantSlug } = useTenant();
   const { resolvedMode } = useThemeMode();
-  const locale = useLocale();
 
   // Determine which column gets the row-count label (first column without a valueFormatter)
   const rowCountField = useMemo(() => {
@@ -435,13 +434,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
     return col?.field || col?.colId || '';
   }, [showRowCount, columns]);
 
-  const localeText = useMemo(() => {
-    const bundle = i18n.getResourceBundle(locale, 'grid');
-    if (!bundle || typeof bundle !== 'object') {
-      return {};
-    }
-    return { ...(bundle as Record<string, string>) };
-  }, [i18n, locale]);
+  const localeText = useAgGridLocaleText();
 
   // Process columns to move custom properties to context to avoid AG Grid warnings
   const processedColumns = useMemo(() => {
