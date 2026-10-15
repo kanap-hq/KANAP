@@ -448,7 +448,7 @@ From the Applications list:
 
 ### Import workflow
 
-1. **Prepare your file**: Use UTF-8 encoding with semicolon (`;`) separators. Download a template to ensure correct headers.
+1. **Prepare your file**: Use UTF-8 encoding with semicolon (`;`) separators. A file Excel saved as plain CSV (Windows-1252) imports too. Download a template to ensure correct headers.
 
 2. **Choose import settings**:
    - **Mode**:

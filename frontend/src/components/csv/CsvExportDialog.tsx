@@ -1,8 +1,9 @@
-import React from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Stack, Typography } from '@mui/material';
+import React, { useState } from 'react';
+import { Alert, Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import { screenLanguage } from './readings';
+import { csvRequestErrorMessage } from './csvRequestError';
 
 export default function CsvExportDialog({
   open,
@@ -26,7 +27,9 @@ export default function CsvExportDialog({
 }) {
   const { t, i18n } = useTranslation('common');
   const language = screenLanguage(i18n.resolvedLanguage || i18n.language);
+  const [error, setError] = useState<string | null>(null);
   const download = async (scope: 'template' | 'data') => {
+    setError(null);
     try {
       const queryParams = { ...(params ?? {}), language, scope };
       const res = await api.get(`${endpoint}/export`, { params: queryParams, responseType: 'blob' });
@@ -46,8 +49,8 @@ export default function CsvExportDialog({
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch (e) {
-      // Minimal error handling; can be enhanced later
       console.error('Export failed', e);
+      setError(await csvRequestErrorMessage(e, t, t('messages.exportFailed')));
     }
   };
 
@@ -59,6 +62,7 @@ export default function CsvExportDialog({
           {t(flexibleFormat ? 'csv.exportDescriptionFlexible' : 'csv.exportDescription')}
         </Typography>
         <Button variant="contained" onClick={() => download('data')}>{t('csv.exportData')}</Button>
+        {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
       </DialogContent>
       <DialogActions>
         <Button variant="action" onClick={onClose}>{t('buttons.close')}</Button>

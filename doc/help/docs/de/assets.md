@@ -257,7 +257,7 @@ Aus der Asset-Liste:
 
 ### Import-Workflow
 
-1. **Datei vorbereiten**: Verwenden Sie UTF-8-Kodierung mit Semikolon (`;`) als Trennzeichen. Laden Sie eine Vorlage herunter, um korrekte Spaltenköpfe sicherzustellen.
+1. **Datei vorbereiten**: Verwenden Sie UTF-8-Kodierung mit Semikolon (`;`) als Trennzeichen. Eine von Excel als einfache CSV gespeicherte Datei (Windows-1252) wird ebenfalls importiert. Laden Sie eine Vorlage herunter, um korrekte Spaltenköpfe sicherzustellen.
 
 2. **Importeinstellungen wählen**:
    - **Modus**:

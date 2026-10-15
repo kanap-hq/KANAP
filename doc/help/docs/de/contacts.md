@@ -126,7 +126,7 @@ Verwalten Sie Kontakte in großen Mengen per CSV.
 **Optionale Felder**: Vorname, Nachname, Lieferantenname, Berufsbezeichnung, Telefon, Mobil, Land, Aktiv
 
 **Hinweise**:
-- Verwenden Sie **UTF-8-Kodierung** und **Semikolons** als Trennzeichen
+- Verwenden Sie **UTF-8-Kodierung** und **Semikolons** als Trennzeichen. Eine von Excel als einfache CSV gespeicherte Datei (Windows-1252) wird ebenfalls importiert
 - Der Lieferant wird nach Name zugeordnet -- stellen Sie sicher, dass der Lieferant vor dem Import existiert
 
 ---
