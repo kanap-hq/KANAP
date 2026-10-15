@@ -65,7 +65,7 @@ Click any cell to open the workspace.
 
 - **New**: create a calendar (requires `working_day_profiles:member`)
 - **Import CSV**: load calendars and their working days from a file (requires `working_day_profiles:admin`)
-- **Export CSV**: download every calendar (requires `working_day_profiles:admin`)
+- **Export CSV**: download the calendars the list shows, or every calendar (requires `working_day_profiles:admin`)
 - **Delete selected**: delete the selected calendars (requires `working_day_profiles:admin`). Calendars that cannot be deleted are kept and listed with the reason
 
 ---
@@ -160,7 +160,7 @@ Disable a calendar when it should no longer be used, for example after a change 
 
 ## Deleting
 
-The **Delete** button in the header deletes the calendar at once (requires `working_day_profiles:admin`). It is disabled, with the reason on one line, while budget lines use the calendar, for example "Used by 3 OPEX lines and 1 CAPEX line. Disable it instead."
+The **Delete** button in the header deletes the calendar after a confirmation (requires `working_day_profiles:admin`). It is disabled, with the reason on one line, while budget lines use the calendar, for example "Used by 3 OPEX lines and 1 CAPEX line. Disable it instead."
 
 The same rule applies to **Delete selected** in the list: a calendar used by budget lines is kept, with a reason such as "Head office staff is used by 3 OPEX lines and 1 CAPEX line. Disable it instead."
 

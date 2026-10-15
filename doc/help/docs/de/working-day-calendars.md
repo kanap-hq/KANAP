@@ -65,7 +65,7 @@ Klicken Sie auf eine beliebige Zelle, um den Arbeitsbereich zu öffnen.
 
 - **Neu**: einen Kalender erstellen (erfordert `working_day_profiles:member`)
 - **CSV importieren**: Kalender und ihre Arbeitstage aus einer Datei laden (erfordert `working_day_profiles:admin`)
-- **CSV exportieren**: alle Kalender herunterladen (erfordert `working_day_profiles:admin`)
+- **CSV exportieren**: die Kalender der Liste herunterladen, oder alle Kalender (erfordert `working_day_profiles:admin`)
 - **Auswahl löschen**: die ausgewählten Kalender löschen (erfordert `working_day_profiles:admin`). Kalender, die nicht gelöscht werden können, bleiben erhalten und werden mit dem Grund aufgeführt
 
 ---
@@ -160,7 +160,7 @@ Deaktivieren Sie einen Kalender, wenn er nicht mehr verwendet werden soll, zum B
 
 ## Löschen
 
-Die Schaltfläche **Löschen** in der Kopfzeile löscht den Kalender sofort (erfordert `working_day_profiles:admin`). Sie ist deaktiviert, mit dem Grund in einer Zeile, solange Budgetzeilen den Kalender verwenden, zum Beispiel „Verwendet von 3 OPEX-Zeilen und 1 CAPEX-Zeile. Deaktivieren Sie ihn stattdessen.“
+Die Schaltfläche **Löschen** in der Kopfzeile löscht den Kalender nach einer Bestätigung (erfordert `working_day_profiles:admin`). Sie ist deaktiviert, mit dem Grund in einer Zeile, solange Budgetzeilen den Kalender verwenden, zum Beispiel „Verwendet von 3 OPEX-Zeilen und 1 CAPEX-Zeile. Deaktivieren Sie ihn stattdessen.“
 
 Dieselbe Regel gilt für **Auswahl löschen** in der Liste: Ein Kalender, den Budgetzeilen verwenden, bleibt erhalten, mit einem Grund wie „Mitarbeitende am Hauptsitz is used by 3 OPEX lines and 1 CAPEX line. Disable it instead.“
 

@@ -65,12 +65,15 @@ export class CostCentersCsvService {
     scope: 'data' | 'template',
     ctx: CostCenterContext,
     language: CsvLanguage = 'en',
+    listQuery?: Record<string, unknown>,
   ): Promise<{ filename: string; content: string }> {
     const headers = [...COST_CENTER_CSV_HEADERS];
     const rows: string[][] = [];
     if (scope === 'data') {
-      // Tree order: a parent is always written before its children.
-      const nodes = await loadCostCenterTree(ctx.manager, ctx.tenantId);
+      // The whole register in tree order (a parent before its children), or what the list shows
+      // in its order: the import resolves parents against the stored tree as well.
+      const tree = await loadCostCenterTree(ctx.manager, ctx.tenantId);
+      const nodes = listQuery ? await this.costCenters.listAll(listQuery, ctx) : tree;
       const extras: Array<{ id: string; description: string | null; owner_email: string | null }> = await ctx.manager.query(
         `SELECT cc.id, cc.description, u.email AS owner_email
            FROM cost_centers cc
@@ -79,7 +82,7 @@ export class CostCentersCsvService {
         [ctx.tenantId],
       );
       const extraById = new Map(extras.map((row) => [row.id, row]));
-      const byId = new Map(nodes.map((node) => [node.id, node]));
+      const byId = new Map(tree.map((node) => [node.id, node]));
       for (const node of nodes) {
         const extra = extraById.get(node.id);
         rows.push([

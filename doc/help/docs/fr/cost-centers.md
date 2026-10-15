@@ -86,7 +86,7 @@ Cliquez sur n'importe quelle cellule pour ouvrir l'espace de travail.
 
 - **Nouveau** : créer un groupe ou un centre de coûts (nécessite `cost_centers:member`)
 - **Importer CSV** : charger l'arbre depuis un fichier (nécessite `cost_centers:admin`)
-- **Exporter CSV** : télécharger tous les éléments (nécessite `cost_centers:admin`)
+- **Exporter CSV** : télécharger les éléments que la liste affiche, ou tous les éléments (nécessite `cost_centers:admin`)
 - **Supprimer la sélection** : supprimer les éléments sélectionnés (nécessite `cost_centers:admin`). Les éléments qui ne peuvent pas être supprimés sont conservés et listés avec la raison. Le contenu est supprimé avant son groupe : sélectionner un groupe avec tout ce qu'il contient supprime l'ensemble
 
 ---
@@ -139,7 +139,7 @@ Chaque ligne OPEX et CAPEX qui a un centre de coûts affiche le responsable budg
 
 ### Supprimer
 
-Le bouton **Supprimer** de l'en-tête supprime l'élément immédiatement (nécessite `cost_centers:admin`). Il est désactivé, avec la raison sur une ligne, lorsque des lignes budgétaires utilisent le centre de coûts (par exemple « Utilisé par 3 lignes OPEX. Désactivez-le plutôt. ») ou lorsque le groupe contient encore des éléments (par exemple « Contient 2 éléments. »). Désactivez plutôt l'élément : il reste sur ses lignes et dans les rapports.
+Le bouton **Supprimer** de l'en-tête supprime l'élément après une confirmation (nécessite `cost_centers:admin`). Il est désactivé, avec la raison sur une ligne, lorsque des lignes budgétaires utilisent le centre de coûts (par exemple « Utilisé par 3 lignes OPEX. Désactivez-le plutôt. ») ou lorsque le groupe contient encore des éléments (par exemple « Contient 2 éléments. »). Désactivez plutôt l'élément : il reste sur ses lignes et dans les rapports.
 
 ---
 

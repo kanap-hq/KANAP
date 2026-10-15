@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '../api';
@@ -107,11 +107,11 @@ describe('DeleteSelectedButton', () => {
   it('shows the reason of each failed item when the others are deleted', async () => {
     vi.mocked(api.delete).mockResolvedValue({ data: { deleted: ['a'], failed: [{ id: 'b', name: 'Frozen', reason: FROZEN }] } } as any);
     const { onDeleteSuccess } = renderButton();
-    const message = await screen.findByText(/delete\.partial/);
+    const message = await screen.findByText(/delete\.partialDeleted/);
+    expect(message).toHaveTextContent('delete.partialDeleted {"count":1}');
+    expect(message).toHaveTextContent('delete.partialFailed {"count":1');
     expect(message).toHaveTextContent(`Frozen: ${FROZEN}`);
-    // The deleted count drives the plural forms.
-    expect(message).toHaveTextContent('"count":1');
-    expect(message).toHaveTextContent('"failed":1');
+    // Each count drives its own plural forms: the deleted ones, then the failed ones.
     await waitFor(() => expect(onDeleteSuccess).toHaveBeenCalled());
   });
 
@@ -135,10 +135,101 @@ describe('DeleteSelectedButton', () => {
     expect(message).not.toHaveTextContent(/Cannot delete supplier "Acme": it is used by 2 contracts\. Disable it instead\.;/);
   });
 
+  it('counts the selection in the title and shows the warning it is given', async () => {
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <DeleteSelectedButton<Row>
+          selectedRows={[rows[0]]}
+          endpoint="/contracts/bulk"
+          getItemId={(row) => row.id}
+          getItemName={(row) => row.name}
+          onDeleteSuccess={vi.fn()}
+          warning="This contract is linked to nothing."
+        />
+      </ThemeProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /buttons.deleteSelected/ }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('delete.deleteSelectedTitle {"count":1}');
+    expect(dialog).toHaveTextContent('delete.itemsToDelete {"count":1}');
+    expect(dialog).toHaveTextContent('This contract is linked to nothing.');
+    expect(dialog).not.toHaveTextContent('delete.warningMessage');
+    // No "Delete anyway": nothing goes besides the item.
+    expect(screen.getByRole('button', { name: 'buttons.delete' })).toBeInTheDocument();
+  });
+
   it('shows the reasons when every item fails', async () => {
     vi.mocked(api.delete).mockResolvedValue({ data: { deleted: [], failed: [{ id: 'b', name: 'Frozen', reason: FROZEN }] } } as any);
     renderButton();
     const message = await screen.findByText(/delete\.failedAll/);
     expect(message).toHaveTextContent(`Frozen: ${FROZEN}`);
+  });
+
+  describe('with a check before the dialog', () => {
+    const REFUSAL = { id: 'b', name: 'Frozen', code: 'CONTRACT_HAS_COMPLIANCE_RECORDS', usages: [{ type: 'compliance_requirements', total: 1 }] };
+    const itemLabels = { toDelete: (count: number) => `to delete:${count}`, kept: (count: number) => `kept:${count}` };
+
+    function renderChecked(selected: Row[], check: () => Promise<any>) {
+      const checkDelete = vi.fn(check);
+      render(
+        <ThemeProvider theme={createAppTheme('light')}>
+          <DeleteSelectedButton<Row>
+            selectedRows={selected}
+            endpoint="/contracts/bulk"
+            getItemId={(row) => row.id}
+            getItemName={(row) => row.name}
+            onDeleteSuccess={vi.fn()}
+            checkDelete={checkDelete}
+            itemLabels={itemLabels}
+          />
+        </ThemeProvider>,
+      );
+      fireEvent.click(screen.getByRole('button', { name: /buttons.deleteSelected/ }));
+      return checkDelete;
+    }
+
+    it('shows a single refused item as the record does: the reason and Close only', async () => {
+      const checkDelete = renderChecked([rows[1]], async () => ({ refused: [REFUSAL] }));
+      const dialog = await screen.findByRole('dialog');
+      expect(checkDelete).toHaveBeenCalledWith(['b']);
+      expect(dialog).toHaveTextContent('delete.recordTitle {"name":"Frozen"}');
+      expect(dialog).toHaveTextContent('errors:CONTRACT_HAS_COMPLIANCE_RECORDS');
+      expect(within(dialog).getAllByRole('button').map((button) => button.textContent).filter(Boolean)).toEqual(['buttons.close']);
+      fireEvent.click(within(dialog).getByRole('button', { name: 'buttons.close' }));
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+      expect(api.delete).not.toHaveBeenCalled();
+    });
+
+    it('lists what is deleted and what is kept, with why, and deletes only the rest', async () => {
+      vi.mocked(api.delete).mockResolvedValue({ data: { deleted: ['a'], failed: [] } } as any);
+      renderChecked(rows, async () => ({ refused: [REFUSAL], warning: 'Also deleted: 1 task.', confirmLabel: 'Delete anyway' }));
+      const dialog = await screen.findByRole('dialog');
+      expect(dialog).toHaveTextContent('delete.deleteSelectedTitle {"count":1}');
+      expect(dialog).toHaveTextContent('to delete:1');
+      expect(dialog).toHaveTextContent('First');
+      expect(dialog).toHaveTextContent('kept:1');
+      expect(dialog).toHaveTextContent('Frozen');
+      expect(dialog).toHaveTextContent('common:delete.usages.compliance_requirements');
+      expect(dialog).toHaveTextContent('Also deleted: 1 task.');
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Delete anyway' }));
+      await waitFor(() => expect(api.delete).toHaveBeenCalledWith('/contracts/bulk', { data: { ids: ['a'] } }));
+    });
+
+    it('offers no delete when every selected item is refused', async () => {
+      renderChecked(rows, async () => ({ refused: [{ ...REFUSAL, id: 'a', name: 'First' }, REFUSAL] }));
+      const dialog = await screen.findByRole('dialog');
+      expect(dialog).toHaveTextContent('kept:2');
+      expect(dialog).toHaveTextContent('First');
+      expect(dialog).toHaveTextContent('Frozen');
+      expect(within(dialog).getAllByRole('button').map((button) => button.textContent).filter(Boolean)).toEqual(['buttons.close']);
+    });
+
+    it('falls back to the usual confirmation when the check fails', async () => {
+      renderChecked(rows, async () => { throw new Error('offline'); });
+      const dialog = await screen.findByRole('dialog');
+      expect(dialog).toHaveTextContent('to delete:2');
+      expect(dialog).not.toHaveTextContent('kept:');
+      expect(within(dialog).getByRole('button', { name: 'buttons.delete' })).toBeInTheDocument();
+    });
   });
 });

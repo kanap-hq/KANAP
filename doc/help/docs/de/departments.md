@@ -93,7 +93,7 @@ Der Details-Tab verwaltet jahresbezogene Mitarbeiterzahl-Kennzahlen.
 
 ## CSV-Import/Export
 
-**CSV exportieren** lädt alle Abteilungen mit ihrem Unternehmen, Namen, Beschreibung, Status und Ende der Gültigkeit herunter. **CSV importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei nur mit den Kopfzeilen.
+**CSV exportieren** lädt die Abteilungen der Liste (oder, auf Wunsch im Dialog, alle Abteilungen) mit ihrem Unternehmen, Namen, Beschreibung, Status und Ende der Gültigkeit herunter. **CSV importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei nur mit den Kopfzeilen.
 
 Die Spalten:
 

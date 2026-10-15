@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { compareText } from '../common/list-sort';
 import * as fs from 'fs';
 import { resolveLifecycleState, StatusState } from '../common/status';
 import {
@@ -94,12 +95,19 @@ export class WorkingDayProfilesCsvService {
     scope: 'data' | 'template',
     ctx: WorkingDayProfileContext,
     language: CsvLanguage = 'en',
+    listQuery?: Record<string, unknown>,
   ): Promise<{ filename: string; content: string }> {
     const headers = [...WORKING_DAY_PROFILE_CSV_HEADERS];
     const rows: string[][] = [];
     if (scope === 'data') {
-      const stored = await this.calendars.loadStored(ctx);
-      stored.sort((a, b) => a.code.localeCompare(b.code, 'en', { numeric: true, sensitivity: 'base' }) || a.id.localeCompare(b.id));
+      // What the list shows, in its order, or the whole register by code.
+      let stored = await this.calendars.loadStored(ctx);
+      if (listQuery) {
+        const byId = new Map(stored.map((calendar) => [calendar.id, calendar]));
+        stored = (await this.calendars.listAll(listQuery, ctx)).map((row) => byId.get(row.id)!).filter(Boolean);
+      } else {
+        stored.sort((a, b) => compareText(a.code, b.code) || a.id.localeCompare(b.id));
+      }
       for (const calendar of stored) {
         const base = [
           calendar.code,

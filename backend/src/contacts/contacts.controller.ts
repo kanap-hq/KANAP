@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, InternalServerErrorException, Param, ParseUUIDPipe, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { exportListQuery } from '../common/pagination';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
@@ -28,8 +29,8 @@ export class ContactsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('contacts', 'admin')
   @Get('export')
-  async export(@Query('scope') scope: 'template' | 'data' = 'data', @Res() res: Response, @Req() req: any) {
-    const { filename, content } = await this.svc.exportCsv(scope, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id });
+  async export(@Query('scope') scope: 'template' | 'data' = 'data', @Query() query: any, @Res() res: Response, @Req() req: any) {
+    const { filename, content } = await this.svc.exportCsv(scope, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id, listQuery: exportListQuery(query) });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(filename));
     res.send(content);

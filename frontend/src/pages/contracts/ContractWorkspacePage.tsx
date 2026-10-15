@@ -37,6 +37,7 @@ import ContractPropertiesDrawer, { type ContractFormValues } from './workspace/C
 import ContractBudgetTab from './workspace/ContractBudgetTab';
 import ContractRelationsTab from './workspace/ContractRelationsTab';
 import ContractComplianceTab, { useContractCompliance } from './workspace/ContractComplianceTab';
+import ContractDeleteButton from './workspace/ContractDeleteButton';
 import { contractComplianceKey } from './contractCompliance';
 import { BillingField, CurrencyField, RenewalField, useDefaultContractCurrency } from './workspace/ContractFields';
 
@@ -115,6 +116,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
   const queryClient = useQueryClient();
   const { hasLevel } = useAuth();
   const canEdit = hasLevel('contracts', 'member');
+  const canDelete = hasLevel('contracts', 'admin');
   const { addToRecent } = useRecentlyViewed();
   const { searchParams, withContext } = useListContext();
 
@@ -377,6 +379,15 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
             )}
             {shownData && (
               <SendLinkButton itemType="contract" itemId={shownData.id} itemName={shownData.name || t('contracts.workspace.contract')} />
+            )}
+            {shownData && canDelete && !stale && (
+              <ContractDeleteButton
+                contractId={shownData.id}
+                contractName={shownData.name || t('contracts.workspace.contract')}
+                beforeDelete={() => registry.flushAll()}
+                onDeleted={() => navigate(withContext(LIST_PATH))}
+                onError={setSaveError}
+              />
             )}
             <IconButton aria-label={t('common:buttons.close')} title={t('common:buttons.close')} size="small" onClick={close}>
               <CloseIcon />

@@ -24,7 +24,7 @@ import PageHeader from '../../components/PageHeader';
 import ServerDataGrid, { EnhancedColDef } from '../../components/ServerDataGrid';
 import CheckboxSetFilter, { type CheckboxSetFilterOption } from '../../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
-import { LinkCellRenderer } from '../../components/grid/renderers';
+import { LinkCellRenderer, wholeCellLinkSx } from '../../components/grid/renderers';
 import { getEnvDotColor } from '../../components/grid/renderers/StatusCellRenderer';
 import { StatusDot } from '../../components/design';
 import { useAuth } from '../../auth/AuthContext';
@@ -183,6 +183,7 @@ export default function InterfacesPage() {
             height: '100%',
             color: 'inherit',
             textDecoration: 'none',
+            ...wholeCellLinkSx,
           }}
         >
           {envs.map((env) => (

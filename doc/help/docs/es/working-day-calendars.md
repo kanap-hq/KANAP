@@ -65,7 +65,7 @@ Haga clic en cualquier celda para abrir el espacio de trabajo.
 
 - **Nuevo**: crear un calendario (requiere `working_day_profiles:member`)
 - **Importar CSV**: cargar calendarios y sus días laborables desde un archivo (requiere `working_day_profiles:admin`)
-- **Exportar CSV**: descargar todos los calendarios (requiere `working_day_profiles:admin`)
+- **Exportar CSV**: descargar los calendarios que muestra la lista, o todos los calendarios (requiere `working_day_profiles:admin`)
 - **Eliminar selección**: eliminar los calendarios seleccionados (requiere `working_day_profiles:admin`). Los calendarios que no se pueden eliminar se conservan y se listan con el motivo
 
 ---
@@ -160,7 +160,7 @@ Desactive un calendario cuando ya no deba usarse, por ejemplo tras un cambio de 
 
 ## Eliminar
 
-El botón **Eliminar** del encabezado elimina el calendario de inmediato (requiere `working_day_profiles:admin`). Está desactivado, con el motivo en una línea, mientras haya líneas de presupuesto que usen el calendario, por ejemplo "Usado por 3 líneas OPEX y 1 línea CAPEX. Desactívelo en su lugar."
+El botón **Eliminar** del encabezado elimina el calendario tras una confirmación (requiere `working_day_profiles:admin`). Está desactivado, con el motivo en una línea, mientras haya líneas de presupuesto que usen el calendario, por ejemplo "Usado por 3 líneas OPEX y 1 línea CAPEX. Desactívelo en su lugar."
 
 La misma regla se aplica a **Eliminar selección** en la lista: un calendario usado por líneas de presupuesto se conserva, con un motivo como "Personal de la sede is used by 3 OPEX lines and 1 CAPEX line. Disable it instead."
 

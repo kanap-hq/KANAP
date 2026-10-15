@@ -387,6 +387,36 @@
     }
   },
   "contracts": {
+    "delete": {
+      "title": "¿Eliminar {{name}}?",
+      "detached": "Se quitan estos vínculos: {{items}}. Los elementos vinculados se conservan.",
+      "removed": "También se eliminan: {{items}}.",
+      "cannotUndo": "Esta acción no se puede deshacer.",
+      "confirmAnyway": "Eliminar de todos modos",
+      "failed": "No se pudo eliminar el contrato.",
+      "nothingLinked_one": "Este contrato no está vinculado a nada y no contiene nada. Esta acción no se puede deshacer.",
+      "nothingLinked_other": "Estos contratos no están vinculados a nada y no contienen nada. Esta acción no se puede deshacer.",
+      "kinds": {
+        "budgetLines_one": "{{count}} línea presupuestaria",
+        "budgetLines_other": "{{count}} líneas presupuestarias",
+        "applications_one": "{{count}} aplicación",
+        "applications_other": "{{count}} aplicaciones",
+        "assets_one": "{{count}} activo",
+        "assets_other": "{{count}} activos",
+        "contacts_one": "{{count}} contacto",
+        "contacts_other": "{{count}} contactos",
+        "tasks_one": "{{count}} tarea",
+        "tasks_other": "{{count}} tareas",
+        "links_one": "{{count}} enlace web",
+        "links_other": "{{count}} enlaces web",
+        "attachments_one": "{{count}} adjunto",
+        "attachments_other": "{{count}} adjuntos"
+      },
+      "toDelete_one": "Se eliminará {{count}} contrato:",
+      "toDelete_other": "Se eliminarán {{count}} contratos:",
+      "kept_one": "Se conserva {{count}} contrato. Desactívelo en su lugar:",
+      "kept_other": "Se conservan {{count}} contratos. Desactívelos en su lugar:"
+    },
     "title": "Contratos",
     "newButton": "Nuevo",
     "importCsv": "Importar CSV",

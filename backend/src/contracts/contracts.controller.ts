@@ -1,3 +1,4 @@
+import { exportListQuery } from '../common/pagination';
 import { Body, Controller, Get, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors, Delete } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ContractsService } from './contracts.service';
@@ -20,6 +21,7 @@ import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-ti
 import { canReadContractBudget } from './contract-budget';
 import { languageOf } from '../common/csv-sheet';
 import type { ComplianceItemPatch } from './contract-compliance';
+import { ContractsDeleteService } from './contracts-delete.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('contracts')
@@ -28,6 +30,7 @@ export class ContractsController {
     private readonly svc: ContractsService,
     private readonly storage: StorageService,
     private readonly contactsSvc: ContractContactsService,
+    private readonly deleteSvc: ContractsDeleteService,
   ) {}
 
   @UseGuards(PermissionGuard)
@@ -67,8 +70,12 @@ export class ContractsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'admin')
   @Get('export')
-  async export(@Query('scope') scope: 'template' | 'data' = 'data', @Res() res: Response, @Req() req: any) {
-    const { filename, content } = await this.svc.exportCsv(scope, { manager: req?.queryRunner?.manager });
+  async export(@Query('scope') scope: 'template' | 'data' = 'data', @Query() query: any, @Res() res: Response, @Req() req: any) {
+    const { filename, content } = await this.svc.exportCsv(scope, {
+      manager: req?.queryRunner?.manager,
+      budgetAccess: canReadContractBudget(req),
+      listQuery: exportListQuery(query),
+    });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(filename));
     res.send(content);
@@ -105,6 +112,29 @@ export class ContractsController {
   @Patch('attachments/:attachmentId/delete')
   deleteAttachment(@Param('attachmentId') attachmentId: string, @Req() req: any) {
     return this.svc.deleteAttachment(attachmentId, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+  }
+
+  // What deleting the given contracts removes, for the confirmation; before ':id'.
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'admin')
+  @Post('delete-impact')
+  deleteImpact(@Body() body: { ids: string[] }, @Req() req: any) {
+    return this.deleteSvc.deleteImpact(Array.isArray(body?.ids) ? body.ids : [], { manager: req?.queryRunner?.manager });
+  }
+
+  // Bulk delete before ':id'.
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'admin')
+  @Delete('bulk')
+  bulkDelete(@Body() body: { ids: string[] }, @Req() req: any) {
+    return this.deleteSvc.bulkDelete(Array.isArray(body?.ids) ? body.ids : [], req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'admin')
+  @Delete(':id')
+  delete(@Param('id') id: string, @Req() req: any) {
+    return this.deleteSvc.delete(id, { manager: req?.queryRunner?.manager, userId: req.user?.sub ?? null });
   }
 
   @UseGuards(PermissionGuard)

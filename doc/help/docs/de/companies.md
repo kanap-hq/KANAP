@@ -72,7 +72,7 @@ Die Liste zeigt alle Unternehmen Ihres Arbeitsbereichs. Verwenden Sie sie, um wi
 
 ## Der Unternehmens-Arbeitsbereich
 
-Klicken Sie in der Liste auf einen Unternehmensnamen, um den Arbeitsbereich zu öffnen. Er hat zwei Tabs: **Übersicht** und **Details**.
+Klicken Sie auf eine beliebige Zeile der Liste, um den Arbeitsbereich des Unternehmens zu öffnen. Er hat zwei Tabs: **Übersicht** und **Details**.
 
 - **Kopfzeile**: der Name des Unternehmens. Klicken Sie darauf, um das Unternehmen umzubenennen. Die Pfeile mit „N von M" wechseln zwischen Unternehmen in der Reihenfolge und mit den Filtern der Liste, ohne zur Liste zurückzukehren. Der Zurück-Link **Unternehmen** führt mit erhaltenem Suchkontext zur Liste zurück
 - **Status**, unter dem Namen: **Aktiviert** oder **Deaktiviert**. Klicken Sie darauf, um ihn zu ändern. Die Wahl von **Deaktiviert** deaktiviert das Unternehmen sofort: Das Ende der Gültigkeit wird auf den aktuellen Zeitpunkt gesetzt
@@ -160,7 +160,7 @@ Verwenden Sie das **Ende der Gültigkeit**, um zu steuern, wann ein Unternehmen 
 - Nach dem Ende der Gültigkeit:
     - Das Unternehmen erscheint nicht mehr in Auswahllisten für neue Zuordnungen und wird aus Berichten für strikt spätere Jahre ausgeschlossen.
     - Historische Daten bleiben erhalten; das Unternehmen erscheint weiterhin in Berichten, die Jahre abdecken, in denen es aktiv war.
-- **Deaktivieren statt löschen.** Ein Unternehmen, das noch verwendet wird, kann nicht gelöscht werden: von Budgetzeilen (als zahlendes Unternehmen oder in ihren Zuordnungen), Verträgen, Kostenstellen, Abteilungen, Benutzern, den Standorten, die es betreibt, Aufgaben, Anwendungen, Schnittstellen, Portfolio-Projekten und -Anfragen sowie Teammitgliedern, deren Standardunternehmen es ist. Die Meldung zählt auf, was es verwendet, zum Beispiel „Dieses Unternehmen wird noch verwendet: 2 Abteilungen und 14 Benutzer“. Deaktivieren Sie es stattdessen. Seine Jahreskennzahlen werden mit ihm gelöscht.
+- **Deaktivieren statt löschen.** Ein Unternehmen, das noch verwendet wird, kann nicht gelöscht werden: von Budgetzeilen (als zahlendes Unternehmen oder in ihren Zuordnungen), Verträgen, Kostenstellen, Abteilungen, Benutzern, den Standorten, die es betreibt, Aufgaben, Anwendungen, Schnittstellen, Portfolio-Projekten und -Anfragen sowie Teammitgliedern, deren Standardunternehmen es ist. Die Meldung zählt auf, was es verwendet, zum Beispiel „Dieses Unternehmen wird noch verwendet: 2 Abteilungen und 14 Benutzer“. Deaktivieren Sie es stattdessen. Seine Jahreskennzahlen werden mit ihm gelöscht. In der Liste nennt die Bestätigung die so erhaltenen Unternehmen mit dem, was sie verwendet, bevor etwas gelöscht wird.
 
 ## Jahreskennzahlen
 
@@ -183,7 +183,7 @@ Viele Bereiche der App sind jahresbezogen. Unternehmen haben Kennzahlen pro Jahr
 
 ## CSV-Import/Export
 
-**CSV exportieren** lädt alle Unternehmen mit ihren Kennzahlen herunter. **CSV importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei nur mit den Kopfzeilen, bereit zum Ausfüllen.
+**CSV exportieren** lädt die Unternehmen der Liste (oder, auf Wunsch im Dialog, alle Unternehmen) mit ihren Kennzahlen herunter. **CSV importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei nur mit den Kopfzeilen, bereit zum Ausfüllen.
 
 Die Spalten in dieser Reihenfolge. Die Kennzahlenspalten folgen dem in der Symbolleiste der Liste gewählten Jahr: das Jahr davor, dieses Jahr und das Jahr danach.
 

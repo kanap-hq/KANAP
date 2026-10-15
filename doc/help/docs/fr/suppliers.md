@@ -101,7 +101,7 @@ La section **Lié à**, sous les notes de l'onglet **Vue d'ensemble**, liste ce 
 
 Cliquez sur une ligne pour ouvrir sa fiche. Les éléments désactivés portent la mention **Désactivé** et viennent après les autres. Une liste montre jusqu'à 50 éléments et indique leur nombre total. Au-delà de 50, les lignes budgétaires, les contrats et les applications ont un lien comme **Voir les 57** qui ouvre leur liste filtrée sur ce fournisseur. Vous ne voyez que les listes que vous avez le droit de lire : un utilisateur sans accès aux contrats ne voit pas la liste des contrats. Un fournisseur que rien n'utilise affiche une ligne qui le dit.
 
-Consultez cette section avant de désactiver ou de supprimer un fournisseur. Un fournisseur encore utilisé par des lignes budgétaires, des contrats, des applications ou des actifs ne peut pas être supprimé. Le message compte ce qui l'utilise, par exemple « Ce fournisseur est utilisé par 2 contrats et 1 application ». Désactivez-le à la place.
+Consultez cette section avant de désactiver ou de supprimer un fournisseur. Un fournisseur encore utilisé par des lignes budgétaires, des contrats, des applications ou des actifs ne peut pas être supprimé. Le message compte ce qui l'utilise, par exemple « Ce fournisseur est utilisé par 2 contrats et 1 application ». Désactivez-le à la place. Dans la liste, la confirmation nomme les fournisseurs ainsi conservés, avec ce qui les utilise, avant toute suppression.
 
 ### Créer un fournisseur
 
@@ -111,7 +111,7 @@ Cliquez sur **Nouveau** dans la liste. Renseignez le nom (obligatoire), l'ID fou
 
 ## Import/export CSV
 
-**Exporter CSV** télécharge tous les fournisseurs, activés et désactivés, triés par nom. La recherche et les filtres de la liste ne s'appliquent pas. La fenêtre se ferme une fois le fichier téléchargé. **Importer CSV** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les seuls en-têtes. Elle indique les valeurs acceptées.
+**Exporter CSV** télécharge les fournisseurs que la liste affiche, avec sa recherche, ses filtres et son tri. Choisissez **Tout le référentiel** dans la fenêtre pour télécharger tous les fournisseurs, activés et désactivés. La fenêtre se ferme une fois le fichier téléchargé. **Importer CSV** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les seuls en-têtes. Elle indique les valeurs acceptées.
 
 Les colonnes :
 

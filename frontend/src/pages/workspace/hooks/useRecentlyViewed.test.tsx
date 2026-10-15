@@ -1,13 +1,14 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useRecentlyViewed } from './useRecentlyViewed';
+import { forgetRecentlyViewed } from '../../../lib/recentViews';
 
 vi.mock('../../../auth/AuthContext', () => ({ useAuth: () => ({ profile: { id: 'user-1' } }) }));
 vi.mock('../../../tenant/TenantContext', () => ({ useTenant: () => ({ tenantSlug: 'tenant-1' }) }));
 const KEY = 'kanap-recent-views:tenant-1:user-1';
 beforeEach(() => {
   const values = new Map<string, string>();
-  vi.stubGlobal('localStorage', { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value), removeItem: (key: string) => values.delete(key) });
+  vi.stubGlobal('localStorage', { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value), removeItem: (key: string) => values.delete(key), key: (index: number) => Array.from(values.keys())[index] ?? null, get length() { return values.size; } });
 });
 
 describe('recent budget lines', () => {
@@ -28,5 +29,16 @@ describe('recent budget lines', () => {
     ]));
     const { result } = renderHook(useRecentlyViewed);
     expect(result.current.items.map((item) => item.ref)).toEqual(['BL-12', 'PRJ-4']);
+  });
+});
+
+describe('a deleted record', () => {
+  it('leaves the open list at once', () => {
+    const { result } = renderHook(useRecentlyViewed);
+    act(() => result.current.addToRecent('contract', 'gone', 'Deleted contract'));
+    act(() => result.current.addToRecent('asset', 'kept', 'Server'));
+    act(() => forgetRecentlyViewed(['gone']));
+    expect(result.current.items.map((item) => item.id)).toEqual(['kept']);
+    expect(JSON.parse(localStorage.getItem(KEY)!).map((item: { id: string }) => item.id)).toEqual(['kept']);
   });
 });

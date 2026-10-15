@@ -1,12 +1,22 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Brackets, EntityManager, In, Repository } from 'typeorm';
+import { Brackets, EntityManager, In, Repository, SelectQueryBuilder } from 'typeorm';
 import { Company } from './company.entity';
 import { CompanyMetric } from './company-metric.entity';
 import { Decimal } from '../common/decimal';
 import { sameStoredLifecycle, sameStoredValues } from '../common/csv-sheet/unchanged';
 import { ChartOfAccounts } from '../accounts/chart-of-accounts.entity';
-import { parseExportPagination, parsePagination } from '../common/pagination';
+import { parseExportPagination, parsePagination, type Sort } from '../common/pagination';
+import { orderListQuery } from '../common/list-sort';
+
+const COMPANY_SORT_COLUMNS = new Set(['id', 'name', 'country_iso', 'city', 'postal_code', 'address1', 'address2', 'state', 'notes', 'reg_number', 'vat_number', 'base_currency', 'status', 'created_at', 'updated_at']);
+const COMPANY_TEXT_SORTS = new Set(['name', 'country_iso', 'city', 'postal_code', 'address1', 'address2', 'state', 'notes', 'reg_number', 'vat_number', 'base_currency']);
+const COMPANY_METRIC_SORTS: Record<string, string> = {
+  headcount_year: 'COALESCE(m.headcount, 0)',
+  it_users_year: 'COALESCE(m.it_users, 0)',
+  turnover_year: 'COALESCE(m.turnover, 0)',
+  metrics_frozen: 'COALESCE(m.is_frozen, false)',
+};
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import * as fs from 'fs';
 import { CompanyMetricsService } from './company-metrics.service';
@@ -234,28 +244,7 @@ export class CompaniesService {
     applyQuickSearch(qb);
     applyCompiledFilters(qb);
 
-    // Sorting: prefer real company columns; if sorting by derived metrics (when year provided), order by selected alias
-    const allowedCompanyFields = ['id','name','country_iso','city','postal_code','address1','address2','state','notes','reg_number','vat_number','base_currency','status','created_at','updated_at'];
-    const sortField = sort.field;
-    const direction: 'ASC' | 'DESC' = sort.direction as any;
-    if (allowedCompanyFields.includes(sortField)) {
-      qb.orderBy(`c.${sortField}`, direction);
-    } else if (year) {
-      const metricMap: Record<string, string> = {
-        headcount_year: 'headcount_sort',
-        it_users_year: 'it_users_sort',
-        turnover_year: 'turnover_sort',
-        metrics_frozen: 'is_frozen_sort',
-      };
-      const alias = metricMap[sortField];
-      if (alias) {
-        qb.addOrderBy(alias, direction);
-      } else {
-        qb.orderBy('c.name', 'ASC');
-      }
-    } else {
-      qb.orderBy('c.name', 'ASC');
-    }
+    await this.orderList(qb, sort, !!year);
     qb.skip(skip).take(limit);
 
     if (year) {
@@ -286,6 +275,20 @@ export class CompaniesService {
       .getOne();
     if (!found) throw new NotFoundException('Company not found');
     return { id: found.id, name: found.name };
+  }
+
+  /** The list order: a company column (text alphabetically) or a metric of the year; the name by default; then the id. */
+  private async orderList(qb: SelectQueryBuilder<Company>, sort: Sort, withYear: boolean) {
+    const field = String(sort.field);
+    const direction = String(sort.direction).toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
+    const metric = withYear ? COMPANY_METRIC_SORTS[field] : undefined;
+    if (COMPANY_SORT_COLUMNS.has(field)) {
+      await orderListQuery(qb, `c.${field}`, direction, { text: COMPANY_TEXT_SORTS.has(field), idExpr: 'c.id' });
+    } else if (metric) {
+      await orderListQuery(qb, metric, direction, { text: false, idExpr: 'c.id' });
+    } else {
+      await orderListQuery(qb, 'c.name', 'ASC', { text: true, idExpr: 'c.id' });
+    }
   }
 
   async listIds(query: any, opts?: { manager?: EntityManager }): Promise<{ ids: string[]; total: number }> {
@@ -434,24 +437,7 @@ export class CompaniesService {
     applyQuickSearch(qb);
     applyCompiledFilters(qb);
 
-    const allowedCompanyFields = ['id','name','country_iso','city','postal_code','address1','address2','state','notes','reg_number','vat_number','base_currency','status','created_at','updated_at'];
-    const sortField = sort.field;
-    const direction: 'ASC' | 'DESC' = sort.direction as any;
-    if (allowedCompanyFields.includes(sortField)) {
-      qb.orderBy(`c.${sortField}`, direction);
-    } else if (year) {
-      const metricMap: Record<string, string> = {
-        headcount_year: 'headcount_sort',
-        it_users_year: 'it_users_sort',
-        turnover_year: 'turnover_sort',
-        metrics_frozen: 'is_frozen_sort',
-      };
-      const alias = metricMap[sortField];
-      if (alias) qb.addOrderBy(alias, direction);
-      else qb.orderBy('c.name', 'ASC');
-    } else {
-      qb.orderBy('c.name', 'ASC');
-    }
+    await this.orderList(qb, sort, !!year);
 
     const total = await qb.clone().getCount();
     const limit = Math.min(Number(query?.limit) || 10000, 10000);
@@ -783,7 +769,7 @@ export class CompaniesService {
 
   async exportCsv(
     scope: 'template' | 'data' = 'data',
-    opts?: { manager?: EntityManager; year?: number; language?: CsvLanguage },
+    opts?: { manager?: EntityManager; year?: number; language?: CsvLanguage; listQuery?: Record<string, unknown> },
   ): Promise<{ filename: string; content: string }> {
     const language = opts?.language ?? 'en';
     const baseYear = this.normalizeYear(opts?.year);
@@ -791,7 +777,10 @@ export class CompaniesService {
     const rows: string[][] = [];
     if (scope === 'data') {
       const repo = this.getRepo(opts?.manager);
-      const items = await repo.find({ order: { created_at: 'DESC' as any } });
+      // What the list shows (its search, filters, scope and sort), or the whole register, newest first.
+      const items: Company[] = opts?.listQuery
+        ? (await this.list(opts.listQuery, { manager: opts.manager, exportAll: true })).items as Company[]
+        : await repo.find({ order: { created_at: 'DESC' as any, id: 'ASC' as any } });
       const years = this.metricYears(baseYear);
       const metricsByYear = new Map<number, Map<string, { headcount: number; it_users: number | null; turnover: number | string | null }>>();
       for (const year of years) {

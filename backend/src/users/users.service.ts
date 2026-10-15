@@ -6,7 +6,14 @@ import { Role } from '../roles/role.entity';
 import { RolesService } from '../roles/roles.service';
 import { UserRole } from './user-role.entity';
 import * as argon2 from 'argon2';
-import { parsePagination } from '../common/pagination';
+import { parsePagination, parseExportPagination } from '../common/pagination';
+import { orderListQuery, textSortKey } from '../common/list-sort';
+
+const USER_TEXT_SORTS = new Set(['email', 'first_name', 'last_name', 'job_title']);
+const AI_USER_TEXT_SORTS = new Set([
+  'display_name', 'email', 'first_name', 'last_name', 'job_title', 'company_name', 'department_name',
+  'primary_role_name', 'team_name', 'contributor_profile',
+]);
 import {
   buildQuickSearchConditions,
   compileAgFilterCondition,
@@ -229,7 +236,11 @@ export class UsersService {
       created_at: 'u.created_at',
       updated_at: 'u.updated_at',
     };
-    const sortField = sortFieldMap[sort.field] ?? 'u.last_name';
+    const rawSortField = sortFieldMap[sort.field] ?? 'u.last_name';
+    // Text alphabetically, case and accents ignored (`textSortKey`).
+    const sortField = AI_USER_TEXT_SORTS.has(sort.field in sortFieldMap ? sort.field : 'last_name')
+      ? (await textSortKey(qb.connection.manager))(rawSortField)
+      : rawSortField;
 
     const items = await qb
       .clone()
@@ -357,9 +368,9 @@ export class UsersService {
     return result;
   }
 
-  async list(query: any, opts?: { manager?: EntityManager; adminView?: boolean }) {
+  async list(query: any, opts?: { manager?: EntityManager; adminView?: boolean; exportAll?: boolean }) {
     const repo = this.getRepo(opts?.manager);
-    const { page, limit, skip, sort, status, q, filters } = parsePagination(query);
+    const { page, limit, skip, sort, status, q, filters } = opts?.exportAll ? parseExportPagination(query) : parsePagination(query);
     const allowedSortFields = [
       'email', 'first_name', 'last_name', 'job_title', 'status', 'created_at', 'updated_at', 'last_login_at'
     ];
@@ -403,11 +414,11 @@ export class UsersService {
     const sortField = allowedSortFields.includes(sort.field) ? sort.field : 'created_at';
     const direction = sort.direction === 'ASC' ? 'ASC' : 'DESC';
     // "Never signed in" rows sort last in both directions instead of Postgres' NULLS-first-on-DESC.
-    if (sortField === 'last_login_at') {
-      qb.orderBy('u.last_login_at', direction, 'NULLS LAST');
-    } else {
-      qb.orderBy(`u.${sortField}`, direction);
-    }
+    await orderListQuery(qb, `u.${sortField}`, direction, {
+      text: USER_TEXT_SORTS.has(sortField),
+      idExpr: 'u.id',
+      nulls: sortField === 'last_login_at' ? 'NULLS LAST' : undefined,
+    });
     qb.skip(skip).take(limit);
     const [items, total] = await qb.getManyAndCount();
 
@@ -678,14 +689,17 @@ export class UsersService {
 
   async exportCsv(
     scope: 'template' | 'data' = 'data',
-    opts?: { manager?: EntityManager; language?: CsvLanguage },
+    opts?: { manager?: EntityManager; language?: CsvLanguage; listQuery?: Record<string, unknown> },
   ): Promise<{ filename: string; content: string }> {
     const language = opts?.language ?? 'en';
     const headers = this.csvHeaders();
     const rows: string[][] = [];
     if (scope === 'data') {
       const repo = this.getRepo(opts?.manager);
-      const items = await repo.find({ order: { created_at: 'DESC' as any }, relations: ['role', 'company', 'department'] });
+      // What the list shows (its search, filters, scope and sort), or the whole register, newest first.
+      const items: User[] = opts?.listQuery
+        ? (await this.list(opts.listQuery, { manager: opts.manager, adminView: true, exportAll: true })).items as any
+        : await repo.find({ order: { created_at: 'DESC' as any, id: 'ASC' as any }, relations: ['role', 'company', 'department'] });
       for (const u of items) {
         rows.push([
           u.email ?? '',

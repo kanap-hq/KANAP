@@ -6,6 +6,7 @@ import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { csvImportMulterOptions } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
+import { exportListQuery } from '../common/pagination';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
 import { Tenant, TenantRequest } from '../common/decorators';
@@ -54,11 +55,12 @@ export class SuppliersController {
   async export(
     @Query('scope') scope: 'template' | 'data' = 'data',
     @Query('language') languageRaw: string | undefined,
+    @Query() query: any,
     @Res() res: Response,
     @Req() req: any,
   ) {
     const language = await languageOf(req?.queryRunner?.manager, req.tenant.id, req.user?.sub ?? null, languageRaw);
-    const { filename, content } = await this.svc.exportCsv(scope, { manager: req?.queryRunner?.manager, language });
+    const { filename, content } = await this.svc.exportCsv(scope, { manager: req?.queryRunner?.manager, language, listQuery: exportListQuery(query) });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(filename));
     res.send(content);
@@ -102,6 +104,14 @@ export class SuppliersController {
       },
       { manager: req?.queryRunner?.manager },
     );
+  }
+
+  // What a delete of `ids` would refuse, asked before the confirmation.
+  @UseGuards(PermissionGuard)
+  @RequireLevel('suppliers', 'admin')
+  @Post('delete-check')
+  deleteCheck(@Body() body: { ids: string[] }, @Req() req: any) {
+    return this.deleteSvc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], { manager: req?.queryRunner?.manager });
   }
 
   @UseGuards(PermissionGuard)

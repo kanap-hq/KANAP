@@ -15,6 +15,7 @@ import {
 } from '../../common/ag-grid-filtering';
 import { PortfolioProjectsBaseService, ServiceOpts } from './portfolio-projects-base.service';
 import { projectInvolvesUsersSql } from './portfolio-report-filters';
+import { orderListQuery } from '../../common/list-sort';
 
 type InvolvementScope = { involvedUserId?: string; involvedTeamId?: string };
 
@@ -365,7 +366,8 @@ export class PortfolioProjectsListService extends PortfolioProjectsBaseService {
     const sortField = validFields.has(sort.field) ? sort.field : 'created_at';
     // For priority_score, put NULLs last so projects without scores appear at the end
     const nullsOption = sortField === 'priority_score' ? 'NULLS LAST' : undefined;
-    qb.orderBy(`p.${sortField}`, sort.direction, nullsOption);
+    // The name alphabetically, case and accents ignored; the id breaks ties.
+    await orderListQuery(qb, `p.${sortField}`, sort.direction, { text: sortField === 'name', idExpr: 'p.id', nulls: nullsOption });
 
     // Count
     const total = await qb.getCount();
@@ -667,7 +669,8 @@ export class PortfolioProjectsListService extends PortfolioProjectsBaseService {
     ]);
     const sortField = validFields.has(sort.field) ? sort.field : 'created_at';
     const nullsOption = sortField === 'priority_score' ? 'NULLS LAST' : undefined;
-    qb.orderBy(`p.${sortField}`, sort.direction, nullsOption);
+    // The name alphabetically, case and accents ignored; the id breaks ties.
+    await orderListQuery(qb, `p.${sortField}`, sort.direction, { text: sortField === 'name', idExpr: 'p.id', nulls: nullsOption });
 
     const total = await qb.clone().getCount();
     const limit = Math.min(Math.max(Number(query?.limit) || 10000, 1), 10000);

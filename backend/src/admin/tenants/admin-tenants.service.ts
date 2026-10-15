@@ -16,6 +16,7 @@ import { TrialSignup } from '../../public/trial-signup.entity';
 import { StorageService } from '../../common/storage/storage.service';
 import { assertTenantPurgeConfiguration, TENANT_PURGE_TABLES } from './tenant-purge.inventory';
 import { deleteStorageObjects, purgeTenantTables } from './tenant-data-purge';
+import { orderListQuery } from '../../common/list-sort';
 
 @Injectable()
 export class AdminTenantsService {
@@ -46,8 +47,9 @@ export class AdminTenantsService {
     const sortable = new Set(['created_at', 'updated_at', 'slug', 'name', 'status']);
     const orderField = sortable.has(sort.field) ? sort.field : 'created_at';
     const total = await qb.getCount();
+    // The slug and name alphabetically, case and accents ignored; the id breaks ties.
+    await orderListQuery(qb, `tenant.${orderField}`, sort.direction, { text: orderField === 'slug' || orderField === 'name', idExpr: 'tenant.id' });
     const rows = await qb
-      .orderBy(`tenant.${orderField}`, sort.direction as 'ASC' | 'DESC')
       .skip(skip)
       .take(limit)
       .getMany();

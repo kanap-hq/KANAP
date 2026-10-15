@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { textSortKey } from '../../common/list-sort';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, EntityManager, In, Repository, SelectQueryBuilder } from 'typeorm';
 import { InterfaceEntity } from '../interface.entity';
@@ -51,6 +52,9 @@ const INTERFACE_SORT_EXPRESSIONS: Record<string, string> = {
   created_at: 'i.created_at',
   updated_at: 'i.updated_at',
 };
+
+/** The interface list columns that sort alphabetically. */
+const INTERFACE_TEXT_SORTS = new Set(['interface_reference', 'interface_id', 'name']);
 
 /**
  * Service for listing, filtering, and querying interfaces.
@@ -131,7 +135,9 @@ export class InterfacesListService extends InterfacesBaseService {
       qb.setParameters({ sortCritCodes: levels.map((level) => level.code), sortCritRanks: levels.map((level) => level.rank) });
     }
     // Parenthesized: TypeORM would take a bare `i.name` for the entity column and rename it.
-    qb.addSelect(`(${INTERFACE_SORT_EXPRESSIONS[field]})`, 'list_sort_key');
+    // Text alphabetically, case and accents ignored (`textSortKey`).
+    const expression = `(${INTERFACE_SORT_EXPRESSIONS[field]})`;
+    qb.addSelect(INTERFACE_TEXT_SORTS.has(field) ? (await textSortKey(mg))(expression) : expression, 'list_sort_key');
     qb.orderBy('list_sort_key', direction, 'NULLS LAST').addOrderBy('i.id', 'ASC');
   }
 

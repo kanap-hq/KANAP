@@ -114,7 +114,7 @@ Locations can have support contacts (facility managers, NOC contacts, etc.).
 
 Manage contacts in bulk using CSV.
 
-**Export**: Downloads all contacts with their details.
+**Export**: Downloads the contacts the list shows with their details. Choose **The whole register** in the dialog for every contact.
 
 **Import**:
 - Use **Preflight** to validate before applying

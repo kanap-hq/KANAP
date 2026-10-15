@@ -1,6 +1,7 @@
 import { useCallback, useState, useEffect } from 'react';
 import { useAuth } from '../../../auth/AuthContext';
 import { useTenant } from '../../../tenant/TenantContext';
+import { RECENT_VIEWS_CHANGED, RECENT_VIEWS_PREFIX } from '../../../lib/recentViews';
 
 const MAX_ITEMS = 10;
 const isBudgetLine = (type: RecentEntityType) => type === 'spend_item' || type === 'capex_item';
@@ -30,7 +31,7 @@ export interface RecentItem {
 }
 
 function getStorageKey(tenantSlug: string, userId: string): string {
-  return `kanap-recent-views:${tenantSlug}:${userId}`;
+  return `${RECENT_VIEWS_PREFIX}${tenantSlug}:${userId}`;
 }
 
 function loadFromStorage(storageKey: string): RecentItem[] {
@@ -63,9 +64,18 @@ export function useRecentlyViewed() {
 
   const [items, setItems] = useState<RecentItem[]>(() => loadFromStorage(storageKey));
 
-  // Reload items when tenant/user changes
+  // Reload items when tenant/user changes, and when a record leaves the lists (deleted or gone,
+  // `lib/recentViews.ts`) or another tab changes them.
   useEffect(() => {
     setItems(loadFromStorage(storageKey));
+    const reload = () => setItems(loadFromStorage(storageKey));
+    const onStorage = (event: StorageEvent) => { if (event.key === storageKey) reload(); };
+    window.addEventListener(RECENT_VIEWS_CHANGED, reload);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      window.removeEventListener(RECENT_VIEWS_CHANGED, reload);
+      window.removeEventListener('storage', onStorage);
+    };
   }, [storageKey]);
 
   const addToRecent = useCallback(

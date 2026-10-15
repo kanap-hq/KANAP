@@ -86,7 +86,7 @@ Klicken Sie auf eine beliebige Zelle, um den Arbeitsbereich zu öffnen.
 
 - **Neu**: eine Gruppe oder eine Kostenstelle erstellen (erfordert `cost_centers:member`)
 - **CSV importieren**: den Baum aus einer Datei laden (erfordert `cost_centers:admin`)
-- **CSV exportieren**: alle Elemente herunterladen (erfordert `cost_centers:admin`)
+- **CSV exportieren**: die Elemente der Liste herunterladen, oder alle Elemente (erfordert `cost_centers:admin`)
 - **Auswahl löschen**: die ausgewählten Elemente löschen (erfordert `cost_centers:admin`). Elemente, die nicht gelöscht werden können, bleiben erhalten und werden mit dem Grund aufgeführt. Inhalte werden vor ihrer Gruppe gelöscht, sodass die Auswahl einer Gruppe zusammen mit ihrem gesamten Inhalt alles löscht
 
 ---
@@ -139,7 +139,7 @@ Jede OPEX- und CAPEX-Zeile mit einer Kostenstelle zeigt den Budgetverantwortlich
 
 ### Löschen
 
-Die Schaltfläche **Löschen** in der Kopfzeile löscht das Element sofort (erfordert `cost_centers:admin`). Sie ist deaktiviert, mit dem Grund in einer Zeile, wenn Budgetzeilen die Kostenstelle verwenden (zum Beispiel „Verwendet von 3 OPEX-Zeilen. Deaktivieren Sie sie stattdessen.“) oder wenn die Gruppe noch Elemente enthält (zum Beispiel „Enthält 2 Elemente.“). Deaktivieren Sie das Element stattdessen: Es bleibt auf seinen Zeilen und in den Berichten.
+Die Schaltfläche **Löschen** in der Kopfzeile löscht das Element nach einer Bestätigung (erfordert `cost_centers:admin`). Sie ist deaktiviert, mit dem Grund in einer Zeile, wenn Budgetzeilen die Kostenstelle verwenden (zum Beispiel „Verwendet von 3 OPEX-Zeilen. Deaktivieren Sie sie stattdessen.“) oder wenn die Gruppe noch Elemente enthält (zum Beispiel „Enthält 2 Elemente.“). Deaktivieren Sie das Element stattdessen: Es bleibt auf seinen Zeilen und in den Berichten.
 
 ---
 

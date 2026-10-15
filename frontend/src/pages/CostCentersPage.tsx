@@ -4,7 +4,7 @@ import { Box, Button, Stack, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import PageHeader from '../components/PageHeader';
-import ServerDataGrid, { EnhancedColDef, StatusScope } from '../components/ServerDataGrid';
+import ServerDataGrid, { EnhancedColDef, StatusScope, type ListRequest } from '../components/ServerDataGrid';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
 import { useAuth } from '../auth/AuthContext';
@@ -55,6 +55,8 @@ function CostCentersList() {
 
   const [refreshKey, setRefreshKey] = useState(0);
   const [exportOpen, setExportOpen] = useState(false);
+  // The list on screen: the CSV export follows it.
+  const [listRequest, setListRequest] = useState<ListRequest | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [selectedRows, setSelectedRows] = useState<CostCenterListRow[]>([]);
   const [sortedByPath, setSortedByPath] = useState(true);
@@ -211,6 +213,7 @@ function CostCentersList() {
         </Typography>
       )}
       <ServerDataGrid<CostCenterListRow>
+        onListRequestChange={setListRequest}
         columns={columns}
         endpoint={COST_CENTERS_ENDPOINT}
         queryKey="cost-centers"
@@ -231,7 +234,7 @@ function CostCentersList() {
           setSortedByPath(!state.sort || state.sort.startsWith('path:'));
         }}
       />
-      <CsvExportDialog open={exportOpen} onClose={() => setExportOpen(false)} endpoint={COST_CENTERS_ENDPOINT} title={t('costCenters.export')} flexibleFormat />
+      <CsvExportDialog listRequest={listRequest} entity="costCenters" open={exportOpen} onClose={() => setExportOpen(false)} endpoint={COST_CENTERS_ENDPOINT} title={t('costCenters.export')} flexibleFormat />
       <CsvImportDialog
         open={importOpen}
         onClose={() => setImportOpen(false)}

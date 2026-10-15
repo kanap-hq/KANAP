@@ -101,7 +101,7 @@ The **Used by** section, under the notes on the **Overview** tab, lists what ref
 
 Click a row to open that page. Disabled items show **Disabled** and come after the others. A list shows up to 50 items and says how many there are in all. Past 50, budget lines, contracts and applications get a link such as **Show all 57** that opens their list filtered on this supplier. You only see the lists you are allowed to read: a user without access to contracts sees no contract list. A supplier that nothing uses shows one line that says so.
 
-Check this section before you disable or delete a supplier. A supplier still used by budget lines, contracts, applications or assets cannot be deleted. The message counts what uses it, for example "This supplier is used by 2 contracts and 1 application". Disable it instead.
+Check this section before you disable or delete a supplier. A supplier still used by budget lines, contracts, applications or assets cannot be deleted. The message counts what uses it, for example "This supplier is used by 2 contracts and 1 application". Disable it instead. In the list, the confirmation names the suppliers kept this way, with what uses them, before anything is deleted.
 
 ### Creating a supplier
 
@@ -111,7 +111,7 @@ Click **New** in the list. Fill in the name (required), the ERP supplier ID and 
 
 ## CSV import/export
 
-**Export CSV** downloads every supplier, enabled and disabled, sorted by name. The search and filters of the list do not apply. The dialog closes once the file is downloaded. **Import CSV** reads a file back. The import dialog also carries **Download template**: a file with the headers only. The dialog lists the accepted values.
+**Export CSV** downloads the suppliers the list shows, with its search, filters and sort. Choose **The whole register** in the dialog to download every supplier, enabled and disabled. The dialog closes once the file is downloaded. **Import CSV** reads a file back. The import dialog also carries **Download template**: a file with the headers only. The dialog lists the accepted values.
 
 The columns:
 

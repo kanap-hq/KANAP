@@ -72,7 +72,7 @@ La lista muestra todas las empresas de su espacio de trabajo. Utilícela para re
 
 ## El espacio de trabajo de la empresa
 
-Haga clic en el nombre de una empresa en la lista para abrir su espacio de trabajo. Tiene dos pestañas: **Visión general** y **Detalles**.
+Haga clic en cualquier fila de la lista para abrir el espacio de trabajo de la empresa. Tiene dos pestañas: **Visión general** y **Detalles**.
 
 - **Encabezado**: el nombre de la empresa. Haga clic en él para cambiar el nombre de la empresa. Las flechas con «N de M» permiten moverse entre empresas en el orden y con los filtros de la lista, sin volver a ella. El enlace de retorno, **Empresas**, vuelve a la lista con su contexto de búsqueda intacto
 - **Estado**, bajo el nombre: **Activado** o **Desactivado**. Haga clic para cambiarlo. Elegir **Desactivado** desactiva la empresa de inmediato: el fin de validez pasa a ser la hora actual
@@ -160,7 +160,7 @@ Utilice el **Fin de validez** para controlar cuándo una empresa deja de estar a
 - Después del fin de validez:
     - La empresa ya no aparece en las listas de selección para nuevas asignaciones y se excluye de los informes de años estrictamente posteriores.
     - Los datos históricos permanecen intactos; la empresa sigue apareciendo en informes que cubren años en los que estaba activa.
-- **Prefiera desactivar en lugar de eliminar.** Una empresa que aún se usa no se puede eliminar: líneas presupuestarias (como empresa pagadora o en sus asignaciones), contratos, centros de coste, departamentos, usuarios, las ubicaciones que opera, tareas, aplicaciones, interfaces, proyectos y solicitudes del portafolio, y miembros del equipo cuya empresa predeterminada es. El mensaje cuenta lo que la usa, por ejemplo "Esta empresa se usa en 2 departamentos y 14 usuarios". Desactívela en su lugar. Sus métricas anuales se eliminan con ella.
+- **Prefiera desactivar en lugar de eliminar.** Una empresa que aún se usa no se puede eliminar: líneas presupuestarias (como empresa pagadora o en sus asignaciones), contratos, centros de coste, departamentos, usuarios, las ubicaciones que opera, tareas, aplicaciones, interfaces, proyectos y solicitudes del portafolio, y miembros del equipo cuya empresa predeterminada es. El mensaje cuenta lo que la usa, por ejemplo "Esta empresa se usa en 2 departamentos y 14 usuarios". Desactívela en su lugar. Sus métricas anuales se eliminan con ella. En la lista, la confirmación nombra las empresas que se conservan así, con lo que las usa, antes de eliminar nada.
 
 ## Métricas anuales
 
@@ -183,7 +183,7 @@ Muchas partes de la aplicación son conscientes del año. Las empresas tienen m�
 
 ## Importación/exportación CSV
 
-**Exportar CSV** descarga todas las empresas con sus métricas. **Importar CSV** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo solo con los encabezados, listo para rellenar.
+**Exportar CSV** descarga las empresas que muestra la lista (o, a petición en el diálogo, todas las empresas) con sus métricas. **Importar CSV** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo solo con los encabezados, listo para rellenar.
 
 Las columnas, en este orden. Las columnas de métricas siguen el año seleccionado en la barra de herramientas de la lista: el año anterior, ese año y el siguiente.
 

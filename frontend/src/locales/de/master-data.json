@@ -180,6 +180,12 @@
       "headcountInvalid": "Geben Sie eine ganze Zahl ein, 0 oder mehr.",
       "itUsersInvalid": "Geben Sie eine ganze Zahl ein, 0 oder mehr, oder lassen Sie das Feld leer.",
       "turnoverInvalid": "Geben Sie eine Zahl ein, 0 oder mehr, mit höchstens 3 Dezimalstellen, oder lassen Sie das Feld leer."
+    },
+    "delete": {
+      "toDelete_one": "{{count}} Unternehmen wird gelöscht:",
+      "toDelete_other": "{{count}} Unternehmen werden gelöscht:",
+      "kept_one": "{{count}} Unternehmen wird noch verwendet und bleibt erhalten. Deaktivieren Sie es stattdessen:",
+      "kept_other": "{{count}} Unternehmen werden noch verwendet und bleiben erhalten. Deaktivieren Sie sie stattdessen:"
     }
   },
   "departments": {
@@ -394,7 +400,6 @@
     "noSuppliersFound": "Keine Lieferanten gefunden",
     "export": "Lieferanten exportieren",
     "import": "Lieferanten importieren",
-    "exportScope": "Die Datei enthält alle Lieferanten, aktivierte und deaktivierte, nach Name sortiert. Suche und Filter der Liste gelten nicht.",
     "importHint": "Zulässige Werte für status: enabled oder disabled. disabled_at enthält das Gültigkeitsende oder bleibt leer. Die Kontaktspalten enthalten die E-Mail-Adresse eines Kontakts, der unter Kontakte bereits existiert.",
     "fields": {
       "name": "Name",
@@ -435,7 +440,13 @@
       "createFailed": "Der Lieferant konnte nicht erstellt werden."
     },
     "previous": "Vorheriger Lieferant",
-    "next": "Nächster Lieferant"
+    "next": "Nächster Lieferant",
+    "delete": {
+      "toDelete_one": "{{count}} Lieferant wird gelöscht:",
+      "toDelete_other": "{{count}} Lieferanten werden gelöscht:",
+      "kept_one": "{{count}} Lieferant wird noch verwendet und bleibt erhalten. Deaktivieren Sie ihn stattdessen:",
+      "kept_other": "{{count}} Lieferanten werden noch verwendet und bleiben erhalten. Deaktivieren Sie sie stattdessen:"
+    }
   },
   "contacts": {
     "title": "Kontakte",

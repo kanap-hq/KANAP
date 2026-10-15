@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { TFunction } from 'i18next';
 import PageHeader from '../components/PageHeader';
-import ServerDataGrid, { DATE_COLUMN_FILTER, EnhancedColDef, StatusScope } from '../components/ServerDataGrid';
+import ServerDataGrid, { DATE_COLUMN_FILTER, EnhancedColDef, StatusScope, type ListRequest } from '../components/ServerDataGrid';
 import { Alert, Box, Button, MenuItem, Select, Stack, useTheme } from '@mui/material';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
@@ -36,6 +36,8 @@ import { screenLanguage } from '../components/csv/readings';
 import { downloadBlob, extractFilenameFromDisposition } from '../utils/downloadBlob';
 import { getApiErrorMessage } from '../utils/apiErrorMessage';
 import ContractSettingsDialog from './contracts/ContractSettingsDialog';
+import DeleteSelectedButton from '../components/DeleteSelectedButton';
+import { contractDeleteCheck } from './contracts/contractDelete';
 
 /** The states of a contract's terms, computed by the API (`backend/src/contracts/contract-terms.ts`). */
 const TERM_STATES = ['to_decide', 'in_progress', 'renewed', 'ending', 'expired'] as const;
@@ -310,10 +312,13 @@ export default function ContractsPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [exportOpen, setExportOpen] = useState(false);
+  // The list on screen: the CSV export follows it.
+  const [listRequest, setListRequest] = useState<ListRequest | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [registerError, setRegisterError] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [selectedRows, setSelectedRows] = useState<ContractRow[]>([]);
   const lastQueryRef = useRef<{ sort: string; q: string; filters: any; statusScope?: StatusScope } | null>(null);
   const gridApiRef = useRef<any>(null);
   // The request the grid shows (search, filters, status scope), which the footer and the quick filter follow.
@@ -536,6 +541,23 @@ export default function ContractsPage() {
       {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('contracts.exportCsv')}</Button>}
       {canAdmin && <Button variant="action" onClick={() => { void exportRegister(); }}>{t('contracts.compliance.exportRegister')}</Button>}
       {canAdmin && <Button variant="action" onClick={() => setSettingsOpen(true)}>{t('contracts.renewal.settings.button')}</Button>}
+      {canAdmin && (
+        <DeleteSelectedButton
+          selectedRows={selectedRows}
+          endpoint="/contracts/bulk"
+          getItemId={(row) => row.id}
+          getItemName={(row) => row.name}
+          gridApi={gridApiRef.current}
+          onDeleteSuccess={() => setRefreshKey((k) => k + 1)}
+          // Asked on click: the contracts refused for their recorded requirements, then for the
+          // others what loses its link and what goes too.
+          checkDelete={(ids) => contractDeleteCheck(ids, t, locale)}
+          itemLabels={{
+            toDelete: (count) => t('contracts.delete.toDelete', { count }),
+            kept: (count) => t('contracts.delete.kept', { count }),
+          }}
+        />
+      )}
     </Stack>
   );
 
@@ -590,6 +612,7 @@ export default function ContractsPage() {
       <PageHeader title={t("contracts.title")} actions={actions} />
       {registerError && <Alert severity="error" sx={{ mb: 1 }} onClose={() => setRegisterError(null)}>{registerError}</Alert>}
       <ServerDataGrid<ContractRow>
+        onListRequestChange={setListRequest}
         columns={columns}
         endpoint="/contracts"
         queryKey="contracts"
@@ -604,6 +627,8 @@ export default function ContractsPage() {
         toolbarExtras={quickFilter}
         pinnedBottomRowData={pinnedTotals}
         onGridApiReady={(api) => { gridApiRef.current = api; }}
+        enableRowSelection={canAdmin}
+        onSelectionChanged={setSelectedRows}
         onQueryStateChange={(state) => {
           const filters = state.filterModel || {};
           const statusScope = state.statusScope ?? 'enabled';
@@ -613,7 +638,7 @@ export default function ContractsPage() {
         }}
       />
 
-      <CsvExportDialog open={exportOpen} onClose={() => setExportOpen(false)} endpoint="/contracts" title={t("contracts.exportTitle")} />
+      <CsvExportDialog listRequest={listRequest} entity="contracts" open={exportOpen} onClose={() => setExportOpen(false)} endpoint="/contracts" title={t("contracts.exportTitle")} />
       <ContractSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} onSaved={() => setRefreshKey(k => k + 1)} />
       <CsvImportDialog open={importOpen} onClose={() => setImportOpen(false)} endpoint="/contracts" title={t("contracts.importTitle")} onImported={() => setRefreshKey(k => k + 1)} />
     </>
