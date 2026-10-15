@@ -21,11 +21,12 @@ const content: OfferContent = {
       'Start with the full open source platform. Add production support when sovereignty matters, or choose hosted KANAP when you want us to run the operations.',
     plans: [
       {
-        name: 'Self-host',
-        badge: 'Open source · Free forever',
+        name: 'Self-hosted',
+        badge: 'Open source',
         target: 'Unlimited users · unlimited workspaces',
         price: '€0',
         period: '',
+        subPrice: 'Free forever',
         features: [
           'Full feature set, no caps',
           'Plaid and agents included, no AI feature gate',
@@ -38,7 +39,6 @@ const content: OfferContent = {
         ctaLabel: 'Deploy from GitHub',
         ctaHref: 'https://github.com/kanap-hq/kanap',
         ctaVariant: 'primary',
-        note: 'Plaid and agents use an LLM, so you bring your own key and pay your provider for usage. Cap per-agent spend to keep running cost predictable.',
       },
       {
         name: 'Self-hosted support',
@@ -48,13 +48,13 @@ const content: OfferContent = {
         period: '/yr',
         subPrice: 'Annual billing',
         features: [
-          'Everything in self-host',
-          'Your data stays on your infrastructure',
+          'Everything in Self-hosted',
           'Priority email support',
           'Installation and upgrade assistance',
           'Direct line to the team for production issues',
           '60-min kickoff call with a KANAP expert',
-          'Consulting at €900 a day instead of €1,150',
+          'Over 20% off consulting days',
+          'Helps fund the open source project',
         ],
         ctaLabel: 'Subscribe',
         ctaHref: '#support-invoice',
@@ -86,14 +86,14 @@ const content: OfferContent = {
         period: '/mo',
         subPrice: 'or €2,490/yr (2 months free)',
         features: [
-          'Everything in self-host',
+          'Everything in Self-hosted',
           'We host, update, and back up KANAP for you',
           'EU hosting for European teams',
           '1,500 Plaid messages/mo included, or bring your own key, unlimited',
-          'Agents included, on the included messages or with your own LLM key',
           '60-min kickoff call with a KANAP expert',
           'Priority email support',
-          'Consulting at €900 a day instead of €1,150',
+          'Over 20% off consulting days',
+          'Helps fund the open source project',
         ],
         ctaLabel: 'Start free trial',
         ctaHref: '/trial/start',
@@ -107,11 +107,11 @@ const content: OfferContent = {
     intro: 'Choose based on who runs the operations. All plans include every product feature.',
     items: [
       {
-        title: 'Self-host · free',
+        title: 'Self-hosted · free',
         body: 'You have IT capacity and want full control. The best value, no strings attached. Community support.',
       },
       {
-        title: 'Self-host · with support',
+        title: 'Self-hosted · with support',
         body: 'You need the self-hosted deployment model for sovereignty, compliance, or privacy, but want production support and a direct line for issues.',
       },
       {
@@ -138,11 +138,12 @@ const content: OfferContent = {
     consulting: {
       title: 'Consulting',
       subtitle: 'Paid · billed by the day',
-      body: 'Optional help to get more value from KANAP: scheduled calls, deeper work, advisory. Rate: €1,150 a day, €900 for customers with a support or hosting plan, VAT not applicable (art. 293 B CGI).',
+      body: 'Delivered by an experienced CIO who knows your challenges first-hand. Optional help to get more value from KANAP: scheduled calls, deeper work, advisory, features built for you. Rate: €1,150 a day, €900 for customers with a support or hosting plan.',
       items: [
         'Setup, configuration, onboarding, training',
         'Workflow design and best practices',
         'CIO advisory on your IT governance model',
+        'Custom features developed to your needs',
         'Anything that needs a scheduled call',
       ],
     },
@@ -150,13 +151,14 @@ const content: OfferContent = {
 
   pilot: {
     title: 'Guided pilot',
-    subtitle: '€2,900 fixed · VAT not applicable (art. 293 B CGI)',
+    subtitle: '€2,900 fixed',
     body: 'One engagement that launches your team on KANAP: we set it up with you, bring your data in, train your people, and leave your first agent at work.',
     items: [
       'Installation on your servers, or hosted setup',
       'We help you import your first key data',
       'Team training and onboarding',
-      'Your first agent configured',
+      'Plaid and agents configured',
+      'Integrations set up (Entra ID, Claude or ChatGPT, NetBox…)',
     ],
     ctaLabel: 'Talk to us',
     ctaHref: '/contact',

@@ -22,10 +22,11 @@ const content: OfferContent = {
     plans: [
       {
         name: 'Autoalojado',
-        badge: 'Open source · gratis para siempre',
+        badge: 'Open source',
         target: 'Usuarios ilimitados · workspaces ilimitados',
         price: '0 €',
         period: '',
+        subPrice: 'Gratis para siempre',
         features: [
           'Funcionalidad completa, sin límites',
           'Plaid y agentes incluidos, sin feature gate de IA',
@@ -38,7 +39,6 @@ const content: OfferContent = {
         ctaLabel: 'Desplegar desde GitHub',
         ctaHref: 'https://github.com/kanap-hq/kanap',
         ctaVariant: 'primary',
-        note: 'Plaid y los agentes usan un LLM, así que usted aporta su propia clave y paga a su proveedor por el uso. Limite el gasto por agente para mantener previsible el coste de operación.',
       },
       {
         name: 'Soporte autoalojado',
@@ -49,12 +49,12 @@ const content: OfferContent = {
         subPrice: 'Facturación anual',
         features: [
           'Todo lo de Autoalojado',
-          'Sus datos permanecen en su infraestructura',
           'Soporte por email prioritario',
           'Asistencia de instalación y actualización',
           'Línea directa con el equipo para problemas de producción',
           'Sesión inicial de 60 min con un experto de KANAP',
-          'Consultoría a 900 € al día en lugar de 1 150 €',
+          'Más del 20 % de descuento en consultoría',
+          'Apoya el proyecto open source',
         ],
         ctaLabel: 'Suscribirse',
         ctaHref: '#support-invoice',
@@ -90,10 +90,10 @@ const content: OfferContent = {
           'Alojamos, actualizamos y respaldamos KANAP por usted',
           'Alojamiento en la UE para equipos europeos',
           '1 500 mensajes Plaid/mes incluidos, o su propia clave, sin límite',
-          'Agentes incluidos, con los mensajes incluidos o con su propia clave LLM',
           'Sesión inicial de 60 min con un experto de KANAP',
           'Soporte por email prioritario',
-          'Consultoría a 900 € al día en lugar de 1 150 €',
+          'Más del 20 % de descuento en consultoría',
+          'Apoya el proyecto open source',
         ],
         ctaLabel: 'Empezar prueba gratuita',
         ctaHref: '/trial/start',
@@ -138,11 +138,12 @@ const content: OfferContent = {
     consulting: {
       title: 'Consultoría',
       subtitle: 'De pago · facturada por jornada',
-      body: 'Ayuda opcional para sacar más valor de KANAP: llamadas programadas, trabajo más profundo, asesoramiento. Tarifa: 1 150 € la jornada, 900 € para clientes con contrato de soporte o alojamiento, IVA no aplicable (art. 293 B CGI).',
+      body: 'A cargo de un CIO experimentado, que conoce sus retos desde dentro. Ayuda opcional para sacar más valor de KANAP: llamadas programadas, trabajo más profundo, asesoramiento, funcionalidades a medida. Tarifa: 1 150 € la jornada, 900 € para clientes con contrato de soporte o alojamiento.',
       items: [
         'Instalación, configuración, onboarding, formación',
         'Diseño de flujos de trabajo y buenas prácticas',
         'Asesoramiento a CIO sobre su modelo de gobernanza de TI',
+        'Desarrollo de funcionalidades específicas para sus necesidades',
         'Cualquier cosa que requiera una llamada programada',
       ],
     },
@@ -150,13 +151,14 @@ const content: OfferContent = {
 
   pilot: {
     title: 'Piloto guiado',
-    subtitle: '2 900 € precio fijo · IVA no aplicable (art. 293 B CGI)',
+    subtitle: '2 900 € precio fijo',
     body: 'Un compromiso que pone a su equipo en marcha con KANAP: la instalamos con usted, traemos sus datos, formamos a su gente y su primer agente queda trabajando.',
     items: [
       'Instalación en sus servidores, o puesta en marcha alojada',
       'Le ayudamos a importar sus primeros datos clave',
       'Formación y onboarding de su equipo',
-      'Su primer agente configurado',
+      'Configuración de Plaid y de los agentes',
+      'Puesta en marcha de las integraciones (Entra ID, Claude o ChatGPT, NetBox…)',
     ],
     ctaLabel: 'Hable con nosotros',
     ctaHref: '/contact',

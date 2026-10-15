@@ -25,7 +25,7 @@ export function softwareApplicationLd(site: string) {
     description:
       'Open source IT governance platform: IT budget (OPEX and CAPEX, landing, chargeback, cost per FTE), application landscape, project portfolio and documentation in one record, with Plaid, a built-in AI agent. AGPL v3 licensed. Self-host free, or choose hosted KANAP.',
     offers: [
-      { '@type': 'Offer', name: 'Self-host', price: '0', priceCurrency: 'EUR' },
+      { '@type': 'Offer', name: 'Self-hosted', price: '0', priceCurrency: 'EUR' },
       { '@type': 'Offer', name: 'Hosted KANAP', price: '249', priceCurrency: 'EUR' },
       { '@type': 'Offer', name: 'Self-Hosted Support', price: '2490', priceCurrency: 'EUR' },
     ],
