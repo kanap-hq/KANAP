@@ -1218,7 +1218,8 @@
         "exportPng": "Exportar la ocupación a PNG",
         "noContributorData": "No hay datos de ocupación de colaboradores disponibles.",
         "noTeamData": "No hay datos de ocupación de equipos disponibles.",
-        "noTeam": "Sin equipo"
+        "noTeam": "Sin equipo",
+        "quarterYear": "T{{quarter}} {{year}}"
       },
       "gantt": {
         "title": "Gantt de solo lectura",
@@ -1349,6 +1350,33 @@
         "thisProject": "este proyecto",
         "startWeek": "Semana de inicio",
         "save": "Guardar fijación"
+      },
+      "classifications": {
+        "scheduled": "Planificado",
+        "reservation": "Reserva",
+        "unschedulable": "No planificable"
+      },
+      "explainText": {
+        "summaryUnschedulable": "{{project}} no se pudo planificar: {{reason}}",
+        "summaryNoStart": "{{project}} no tiene semana de inicio.",
+        "summaryHistorical": "{{project}} continúa un trabajo ya iniciado y aparece en la hoja de ruta a partir de la semana del {{week}}.",
+        "summaryConstraint": "{{project}} empezó la semana del {{week}} con esta restricción: {{constraint}}.",
+        "summaryConstraintConflict": "{{project}} empezó la semana del {{week}} con esta restricción: {{constraint}}. Conflicto: {{conflict}}",
+        "summaryCapacity": "{{project}} podía empezar desde la semana del {{eligible}} y empezó la semana del {{week}}, cuando hubo capacidad disponible.",
+        "summaryBlockers": "{{project}} empezó la semana del {{week}}, una vez levantados sus bloqueos.",
+        "summarySchedulable": "{{project}} empezó la semana del {{week}}, en cuanto se pudo planificar.",
+        "finalCapacity": "Podía empezar desde la semana del {{eligible}}, empezó la semana del {{week}} cuando hubo capacidad disponible.",
+        "finalBlockers": "Iniciado la semana del {{week}}, una vez levantados los bloqueos.",
+        "finalStarted": "Iniciado la semana del {{week}}.",
+        "conflict": {
+          "pinStartUnsatisfied": "No se pudo respetar el inicio fijado el {{week}}.",
+          "pinStartNormalized": "El inicio fijado el {{week}} se movió a la semana del {{normalized}} y luego se retrasó a la semana del {{actual}}.",
+          "pinStartSlipped": "El inicio fijado el {{week}} se retrasó a la semana del {{actual}}.",
+          "pinWindowUnsatisfied": "No se pudo respetar la ventana fijada del {{start}} al {{end}}.",
+          "pinWindowMissed": "No se respetó la ventana fijada del {{start}} al {{end}}. Planificación real: del {{actualStart}} al {{actualEnd}}.",
+          "notBeforeViolated": "El inicio el {{actual}} no respeta la restricción «no antes del {{week}}»."
+        },
+        "warningConflict": "{{project}}: {{conflict}}"
       }
     }
   },

@@ -1218,7 +1218,8 @@
         "exportPng": "Export occupation as PNG",
         "noContributorData": "No contributor occupation data available.",
         "noTeamData": "No team occupation data available.",
-        "noTeam": "No team"
+        "noTeam": "No team",
+        "quarterYear": "Q{{quarter}} {{year}}"
       },
       "gantt": {
         "title": "Read-only Gantt",
@@ -1349,6 +1350,33 @@
         "thisProject": "this project",
         "startWeek": "Start week",
         "save": "Save pin"
+      },
+      "classifications": {
+        "scheduled": "Scheduled",
+        "reservation": "Reservation",
+        "unschedulable": "Unschedulable"
+      },
+      "explainText": {
+        "summaryUnschedulable": "{{project}} could not be scheduled: {{reason}}",
+        "summaryNoStart": "{{project}} has no start week.",
+        "summaryHistorical": "{{project}} continues work already started and appears in the roadmap from the week of {{week}}.",
+        "summaryConstraint": "{{project}} started the week of {{week}} under this constraint: {{constraint}}.",
+        "summaryConstraintConflict": "{{project}} started the week of {{week}} under this constraint: {{constraint}}. Conflict: {{conflict}}",
+        "summaryCapacity": "{{project}} could start from the week of {{eligible}} and started the week of {{week}}, when capacity became available.",
+        "summaryBlockers": "{{project}} started the week of {{week}}, once its blockers were released.",
+        "summarySchedulable": "{{project}} started the week of {{week}}, as soon as it could be scheduled.",
+        "finalCapacity": "Could start from the week of {{eligible}}, started the week of {{week}} when capacity became available.",
+        "finalBlockers": "Started the week of {{week}}, once its blockers were released.",
+        "finalStarted": "Started the week of {{week}}.",
+        "conflict": {
+          "pinStartUnsatisfied": "The pinned start on {{week}} could not be met.",
+          "pinStartNormalized": "The pinned start on {{week}} moved to the week of {{normalized}}, then slipped to the week of {{actual}}.",
+          "pinStartSlipped": "The pinned start on {{week}} slipped to the week of {{actual}}.",
+          "pinWindowUnsatisfied": "The pinned window from {{start}} to {{end}} could not be met.",
+          "pinWindowMissed": "The pinned window from {{start}} to {{end}} was missed. Actual schedule: {{actualStart}} to {{actualEnd}}.",
+          "notBeforeViolated": "The start on {{actual}} breaks the \"not before {{week}}\" constraint."
+        },
+        "warningConflict": "{{project}}: {{conflict}}"
       }
     }
   },

@@ -1218,7 +1218,8 @@
         "exportPng": "Exporter l'occupation en PNG",
         "noContributorData": "Aucune donnée d'occupation des contributeurs disponible.",
         "noTeamData": "Aucune donnée d'occupation des équipes disponible.",
-        "noTeam": "Aucune équipe"
+        "noTeam": "Aucune équipe",
+        "quarterYear": "T{{quarter}} {{year}}"
       },
       "gantt": {
         "title": "Gantt en lecture seule",
@@ -1349,6 +1350,33 @@
         "thisProject": "ce projet",
         "startWeek": "Semaine de début",
         "save": "Enregistrer l'épingle"
+      },
+      "classifications": {
+        "scheduled": "Planifié",
+        "reservation": "Réservation",
+        "unschedulable": "Non planifiable"
+      },
+      "explainText": {
+        "summaryUnschedulable": "{{project}} n'a pas pu être planifié : {{reason}}",
+        "summaryNoStart": "{{project}} n'a pas de semaine de début.",
+        "summaryHistorical": "{{project}} poursuit un travail déjà commencé et apparaît dans la roadmap à partir de la semaine du {{week}}.",
+        "summaryConstraint": "{{project}} a démarré la semaine du {{week}} avec cette contrainte : {{constraint}}.",
+        "summaryConstraintConflict": "{{project}} a démarré la semaine du {{week}} avec cette contrainte : {{constraint}}. Conflit : {{conflict}}",
+        "summaryCapacity": "{{project}} pouvait démarrer dès la semaine du {{eligible}} et a démarré la semaine du {{week}}, quand de la capacité s'est libérée.",
+        "summaryBlockers": "{{project}} a démarré la semaine du {{week}}, une fois ses bloquants levés.",
+        "summarySchedulable": "{{project}} a démarré la semaine du {{week}}, dès qu'il a pu être planifié.",
+        "finalCapacity": "Pouvait démarrer dès la semaine du {{eligible}}, a démarré la semaine du {{week}} quand de la capacité s'est libérée.",
+        "finalBlockers": "Démarré la semaine du {{week}}, une fois les bloquants levés.",
+        "finalStarted": "Démarré la semaine du {{week}}.",
+        "conflict": {
+          "pinStartUnsatisfied": "Le début épinglé au {{week}} n'a pas pu être respecté.",
+          "pinStartNormalized": "Le début épinglé au {{week}} a été ramené à la semaine du {{normalized}}, puis a glissé à la semaine du {{actual}}.",
+          "pinStartSlipped": "Le début épinglé au {{week}} a glissé à la semaine du {{actual}}.",
+          "pinWindowUnsatisfied": "La fenêtre épinglée du {{start}} au {{end}} n'a pas pu être respectée.",
+          "pinWindowMissed": "La fenêtre épinglée du {{start}} au {{end}} n'a pas été respectée. Planning effectif : du {{actualStart}} au {{actualEnd}}.",
+          "notBeforeViolated": "Le début au {{actual}} ne respecte pas la contrainte « pas avant le {{week}} »."
+        },
+        "warningConflict": "{{project}} : {{conflict}}"
       }
     }
   },

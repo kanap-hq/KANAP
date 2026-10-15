@@ -55,6 +55,14 @@ import { useLocale } from '../../../i18n/useLocale';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { PortfolioGantt } from './PortfolioGantt';
 import { computeInactiveSegments } from './roadmap-inactive-segments';
+import {
+  buildExplanationTexts,
+  explanationConflict,
+  formatReasonLabel,
+  formatRoadmapConstraint,
+  formatRoadmapDate,
+  formatRoadmapDays,
+} from './roadmap-text';
 import { getDotColor, PROJECT_STATUS_COLORS } from '../../../utils/statusColors';
 import { kanapPalette, modeVal } from '../../tasks/theme/taskDetailTokens';
 import { downloadXlsxWorkbook } from '../../../lib/simpleXlsx';
@@ -394,20 +402,6 @@ const getTodayYmd = (): string => {
 
 const getExplanationKey = (itemRef: RoadmapItemRef): string | null => {
   return itemRef.projectId ?? itemRef.scenarioProjectId ?? itemRef.sourceRequestId;
-};
-
-const formatConstraint = (t: TFunction, constraint: ScheduleConstraint | null | undefined): string => {
-  if (!constraint) return t('portfolio:planning.roadmap.constraints.none');
-  switch (constraint.type) {
-    case 'pin_start':
-      return t('portfolio:planning.roadmap.values.pinStart', { week: constraint.startWeek });
-    case 'pin_window':
-      return t('portfolio:planning.roadmap.constraints.pinWindow', { start: constraint.startWeek, end: constraint.endWeek });
-    case 'not_before':
-      return t('portfolio:planning.roadmap.constraints.notBefore', { week: constraint.startWeek });
-    default:
-      return t('portfolio:planning.roadmap.constraints.none');
-  }
 };
 
 const addDaysUtcYmd = (ymd: string, days: number): string => {
@@ -1212,8 +1206,29 @@ export default function RoadmapGenerator({ onApplied }: Props) {
     )
     : null;
   const selectedExplanationTitle = selectedExplanation
-    ? (explanationSubjectByKey.get(getExplanationKey(selectedExplanation.itemRef) || '') ?? 'Explanation')
-    : 'Explanation';
+    ? (explanationSubjectByKey.get(getExplanationKey(selectedExplanation.itemRef) || '') ?? t('planning.roadmap.explain.overline'))
+    : t('planning.roadmap.explain.overline');
+  const selectedExplanationEndWeek = selectedExplanationKey
+    ? (scheduleRowsById.get(selectedExplanationKey)?.plannedEnd ?? null)
+    : null;
+  const selectedExplanationTexts = selectedExplanation
+    ? buildExplanationTexts(t, locale, selectedExplanation, {
+      projectName: selectedExplanationTitle,
+      actualEndWeek: selectedExplanationEndWeek,
+      unschedulableReason: response?.unschedulable.find((item) => item.projectId === selectedExplanationKey)?.reason ?? null,
+    })
+    : null;
+  const formatWarning = (warning: ScenarioWarning): string => {
+    const key = warning.itemRef ? getExplanationKey(warning.itemRef) : null;
+    const explanation = key ? explanationByKey.get(key) : undefined;
+    if (!key || !explanation || warning.code !== 'constraint_infeasible') return warning.message;
+    const conflict = explanationConflict(t, locale, explanation, scheduleRowsById.get(key)?.plannedEnd ?? null);
+    if (!conflict) return warning.message;
+    return t('planning.roadmap.explainText.warningConflict', {
+      project: explanationSubjectByKey.get(key) ?? explanation.itemRef.projectId ?? '',
+      conflict,
+    });
+  };
   const allRowsSelected = filteredProjectIds.length > 0
     && filteredProjectIds.every((projectId) => selectedProjectIds.has(projectId));
 
@@ -2367,7 +2382,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
               sourceRequestId: null,
               isScenarioProject: false,
             }) ?? 'global'}:${index}`} severity={warning.severity}>
-              {warning.message}
+              {formatWarning(warning)}
             </Alert>
           ))}
         </Stack>
@@ -2403,7 +2418,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                           <Typography variant="body2" sx={{ fontWeight: 500 }}>
                             {explanationSubjectByKey.get(override.projectId) || scheduleRowsById.get(override.projectId)?.projectName || override.projectId}
                           </Typography>
-                          <Box component="span" sx={{ color: getDotColor('info', mode), fontSize: '0.8125rem' }}>{formatConstraint(t, override.constraint)}</Box>
+                          <Box component="span" sx={{ color: getDotColor('info', mode), fontSize: '0.8125rem' }}>{formatRoadmapConstraint(t, locale, override.constraint)}</Box>
                           {warningCount > 0 && (
                             <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
                               <StatusDot color={getDotColor('warning', mode)} />
@@ -2441,7 +2456,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
               <Typography variant="body2" color="text.secondary">{t('planning.roadmap.summary.reservations', { count: response.reservations.length })}</Typography>
               <Typography variant="body2" color="text.secondary">{t('planning.roadmap.summary.externalBlockers', { count: response.diagnostics.reservationByReason?.external_blocker ?? 0 })}</Typography>
               <Typography variant="body2" color="text.secondary">{t('planning.roadmap.summary.unschedulable', { count: response.unschedulable.length })}</Typography>
-              <Typography variant="body2" color="text.secondary">{t('planning.roadmap.summary.roadmapEnd', { date: response.roadmapEndDate || t('planning.roadmap.values.na') })}</Typography>
+              <Typography variant="body2" color="text.secondary">{t('planning.roadmap.summary.roadmapEnd', { date: formatRoadmapDate(t, locale, response.roadmapEndDate) })}</Typography>
               <Typography variant="body2" color="text.secondary">{t('planning.roadmap.summary.run', { ms: response.diagnostics.runDurationMs })}</Typography>
               <Typography variant="body2" color="text.secondary">{t('planning.roadmap.summary.sensitivityReruns', { count: response.diagnostics.sensitivityReruns })}</Typography>
               {response.diagnostics.sensitivityTruncated && (
@@ -2600,7 +2615,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                                 <Stack spacing={0.75} alignItems="flex-start">
                                   {pinStartValue ? (
                                     <Typography variant="caption" color="text.secondary">
-                                      {t('planning.roadmap.values.pinStart', { week: pinStartValue })}
+                                      {t('planning.roadmap.values.pinStart', { week: formatRoadmapDate(t, locale, pinStartValue) })}
                                     </Typography>
                                   ) : (
                                     <Typography variant="caption" color="text.secondary">
@@ -2629,11 +2644,11 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                                   </Stack>
                                 </Stack>
                               </TableCell>
-                              <TableCell>{scenarioProject?.plannedStart || t('planning.roadmap.values.excluded')}</TableCell>
-                              <TableCell>{scenarioProject?.plannedEnd || t('planning.roadmap.values.excluded')}</TableCell>
+                              <TableCell>{scenarioProject?.plannedStart ? formatRoadmapDate(t, locale, scenarioProject.plannedStart) : t('planning.roadmap.values.excluded')}</TableCell>
+                              <TableCell>{scenarioProject?.plannedEnd ? formatRoadmapDate(t, locale, scenarioProject.plannedEnd) : t('planning.roadmap.values.excluded')}</TableCell>
                               <TableCell>{scenarioProject?.durationWeeks ?? t('planning.roadmap.values.excluded')}</TableCell>
                               <TableCell align="right">
-                                {priority != null ? priority.toFixed(1) : t('planning.roadmap.values.na')}
+                                {priority != null ? formatRoadmapDays(locale, priority, 1) : t('planning.roadmap.values.na')}
                               </TableCell>
                               <TableCell align="right">
                                 <Button
@@ -2787,8 +2802,8 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                                       ))}
                                     </Select>
                                   </TableCell>
-                                  <TableCell>{project.plannedStart}</TableCell>
-                                  <TableCell>{project.plannedEnd}</TableCell>
+                                  <TableCell>{formatRoadmapDate(t, locale, project.plannedStart)}</TableCell>
+                                  <TableCell>{formatRoadmapDate(t, locale, project.plannedEnd)}</TableCell>
                                 </TableRow>
                               );
                             })}
@@ -2873,10 +2888,10 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                                         {row.projectName}
                                       </Link>
                                     </TableCell>
-                                    <TableCell>{row.plannedStart}</TableCell>
-                                    <TableCell>{row.plannedEnd}</TableCell>
-                                    <TableCell align="right">{row.totalContributionDays.toFixed(1)}</TableCell>
-                                    <TableCell align="right">{row.spentDays.toFixed(1)}</TableCell>
+                                    <TableCell>{formatRoadmapDate(t, locale, row.plannedStart)}</TableCell>
+                                    <TableCell>{formatRoadmapDate(t, locale, row.plannedEnd)}</TableCell>
+                                    <TableCell align="right">{formatRoadmapDays(locale, row.totalContributionDays, 1)}</TableCell>
+                                    <TableCell align="right">{formatRoadmapDays(locale, row.spentDays, 1)}</TableCell>
                                   </TableRow>
                                 ))}
                               </TableBody>
@@ -3142,7 +3157,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                 {hiddenSupportSummary && (
                   <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
                     <StatusDot color={getDotColor('warning', mode)} />
-                    <Typography variant="body2" sx={{ color: getDotColor('warning', mode), fontWeight: 500, fontSize: '0.8125rem' }}>{t('planning.roadmap.gantt.hiddenSupport', { count: hiddenSupportSummary.count, days: hiddenSupportSummary.totalDays.toFixed(1) })}</Typography>
+                    <Typography variant="body2" sx={{ color: getDotColor('warning', mode), fontWeight: 500, fontSize: '0.8125rem' }}>{t('planning.roadmap.gantt.hiddenSupport', { count: hiddenSupportSummary.count, days: formatRoadmapDays(locale, hiddenSupportSummary.totalDays, 1) })}</Typography>
                   </Box>
                 )}
               </Stack>
@@ -3291,12 +3306,12 @@ export default function RoadmapGenerator({ onApplied }: Props) {
           {selectedExplanation && (
             <Stack spacing={2} sx={{ mt: 2 }}>
               <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                <Typography variant="body2" color="text.secondary">{selectedExplanation.classification}</Typography>
+                <Typography variant="body2" color="text.secondary">{t(`planning.roadmap.classifications.${selectedExplanation.classification}`)}</Typography>
                 <Typography variant="body2" color="text.secondary">{t(`planning.roadmap.schedulingModes.${selectedExplanation.schedulingMode}`)}</Typography>
               </Stack>
 
               <Box>
-                <Typography variant="body2">{selectedExplanation.summary}</Typography>
+                <Typography variant="body2">{selectedExplanationTexts?.summary}</Typography>
               </Box>
 
               <Divider />
@@ -3310,14 +3325,14 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                     {t('planning.roadmap.explain.startReason', { reason: t(`planning.roadmap.startReasons.${selectedExplanation.startReason}`) })}
                   </Typography>
                   <Typography variant="body2">
-                    {t('planning.roadmap.explain.earliestWeek', { week: selectedExplanation.earliestEligibleWeek || t('planning.roadmap.values.na') })}
+                    {t('planning.roadmap.explain.earliestWeek', { week: formatRoadmapDate(t, locale, selectedExplanation.earliestEligibleWeek) })}
                   </Typography>
                   <Typography variant="body2">
-                    {t('planning.roadmap.explain.actualWeek', { week: selectedExplanation.actualStartWeek || t('planning.roadmap.explain.notScheduled') })}
+                    {t('planning.roadmap.explain.actualWeek', { week: selectedExplanation.actualStartWeek ? formatRoadmapDate(t, locale, selectedExplanation.actualStartWeek) : t('planning.roadmap.explain.notScheduled') })}
                   </Typography>
-                  {selectedExplanation.finalReason && (
+                  {selectedExplanationTexts?.finalReason && (
                     <Typography variant="body2" color="text.secondary">
-                      {selectedExplanation.finalReason}
+                      {selectedExplanationTexts.finalReason}
                     </Typography>
                   )}
                 </Stack>
@@ -3337,10 +3352,10 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                   )}
                   {selectedExplanation.blockerReasons.map((reason, index) => (
                     <Paper key={`${reason.kind}:${reason.projectId || 'none'}:${index}`} variant="outlined" sx={{ p: 1.25 }}>
-                      <Typography variant="body2">{reason.label}</Typography>
+                      <Typography variant="body2">{formatReasonLabel(t, locale, selectedExplanation, reason, selectedExplanationEndWeek)}</Typography>
                       {(reason.fromWeek || reason.toWeek) && (
                         <Typography variant="caption" color="text.secondary">
-                          {t('planning.roadmap.explain.range', { from: reason.fromWeek || t('planning.roadmap.explain.unknown'), to: reason.toWeek || t('planning.roadmap.explain.unknown') })}
+                          {t('planning.roadmap.explain.range', { from: reason.fromWeek ? formatRoadmapDate(t, locale, reason.fromWeek) : t('planning.roadmap.explain.unknown'), to: reason.toWeek ? formatRoadmapDate(t, locale, reason.toWeek) : t('planning.roadmap.explain.unknown') })}
                         </Typography>
                       )}
                     </Paper>
@@ -3362,12 +3377,12 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                           name: 'contributorName' in selectedFocusTimeline
                             ? selectedFocusTimeline.contributorName
                             : selectedFocusTimeline.teamName,
-                          start: selectedFocusTimeline.activeStart,
-                          end: selectedFocusTimeline.activeEnd,
+                          start: formatRoadmapDate(t, locale, selectedFocusTimeline.activeStart),
+                          end: formatRoadmapDate(t, locale, selectedFocusTimeline.activeEnd),
                         })}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        {t('planning.roadmap.explain.plannedContribution', { days: selectedFocusTimeline.totalProjectDays.toFixed(2), count: selectedFocusTimeline.weekDetails.length })}
+                        {t('planning.roadmap.explain.plannedContribution', { days: formatRoadmapDays(locale, selectedFocusTimeline.totalProjectDays), count: selectedFocusTimeline.weekDetails.length })}
                       </Typography>
                       <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
                         <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
@@ -3379,7 +3394,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                         {selectedFocusTimeline.contributionShare != null && (
                           <Typography variant="body2" color="text.secondary">{t('planning.roadmap.explain.shareOfEffort', { percent: Math.round(selectedFocusTimeline.contributionShare * 100) })}</Typography>
                         )}
-                        <Typography variant="body2" color="text.secondary">{t('planning.roadmap.explain.avgPerWeek', { days: selectedFocusTimeline.averageDaysPerWeek.toFixed(2) })}</Typography>
+                        <Typography variant="body2" color="text.secondary">{t('planning.roadmap.explain.avgPerWeek', { days: formatRoadmapDays(locale, selectedFocusTimeline.averageDaysPerWeek) })}</Typography>
                       </Stack>
                       <Typography variant="caption" color="text.secondary">
                         {selectedFocusTimeline.significance === 'primary'
@@ -3388,15 +3403,15 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                       </Typography>
                       {selectedFocusTimeline.weekDetails.map((detail) => (
                         <Paper key={`${selectedFocusTimeline.projectId}:${detail.week}`} variant="outlined" sx={{ p: 1.25 }}>
-                          <Typography variant="body2">{t('planning.roadmap.explain.weekOf', { week: detail.week })}</Typography>
+                          <Typography variant="body2">{t('planning.roadmap.explain.weekOf', { week: formatRoadmapDate(t, locale, detail.week) })}</Typography>
                           <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                            {t('planning.roadmap.explain.projectLoad', { days: detail.projectDays.toFixed(2) })}
+                            {t('planning.roadmap.explain.projectLoad', { days: formatRoadmapDays(locale, detail.projectDays) })}
                           </Typography>
                           <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                            {t('planning.roadmap.explain.weeklyCapacity', { value: detail.capacityDays != null ? t('planning.roadmap.values.days', { days: detail.capacityDays.toFixed(2) }) : t('planning.roadmap.values.na') })}
+                            {t('planning.roadmap.explain.weeklyCapacity', { value: detail.capacityDays != null ? t('planning.roadmap.values.days', { days: formatRoadmapDays(locale, detail.capacityDays) }) : t('planning.roadmap.values.na') })}
                           </Typography>
                           <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                            {t('planning.roadmap.explain.totalAssigned', { days: detail.totalWeekEffortDays.toFixed(2) })}
+                            {t('planning.roadmap.explain.totalAssigned', { days: formatRoadmapDays(locale, detail.totalWeekEffortDays) })}
                           </Typography>
                           <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                             {t('planning.roadmap.explain.weeklyOccupation', { value: detail.occupationPct != null ? t('planning.roadmap.values.percent', { value: Math.round(detail.occupationPct) }) : t('planning.roadmap.values.na') })}
@@ -3418,7 +3433,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                   <Stack spacing={1}>
                     {selectedExplanationProject.plannedStart && (
                       <Typography variant="body2" color="text.secondary">
-                        {t('planning.roadmap.explain.scheduledWindow', { start: selectedExplanationProject.plannedStart, end: selectedExplanationProject.plannedEnd })}
+                        {t('planning.roadmap.explain.scheduledWindow', { start: formatRoadmapDate(t, locale, selectedExplanationProject.plannedStart), end: formatRoadmapDate(t, locale, selectedExplanationProject.plannedEnd) })}
                       </Typography>
                     )}
                     {selectedExplanationProject.contributorLoads.length === 0 && (
@@ -3430,15 +3445,16 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                       <Paper key={load.contributorId} variant="outlined" sx={{ p: 1.25 }}>
                         <Typography variant="body2">{load.contributorName}</Typography>
                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                          {t('planning.roadmap.explain.plannedLoad', { days: load.days.toFixed(2) })}
+                          {t('planning.roadmap.explain.plannedLoad', { days: formatRoadmapDays(locale, load.days) })}
                         </Typography>
                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                           {t('planning.roadmap.explain.weeklyCapacity', {
                             value: t('planning.roadmap.values.days', {
-                              days: (
+                              days: formatRoadmapDays(
+                                locale,
                                 selectedExplanation.limitingContributors.find((item) => item.contributorId === load.contributorId)?.weeklyCapacity
-                                ?? 0
-                              ).toFixed(2),
+                                ?? 0,
+                              ),
                             }),
                           })}
                         </Typography>
@@ -3467,10 +3483,10 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                         {t(`planning.roadmap.contributorReasons.${contributor.reason}`)}
                       </Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                        {t('planning.roadmap.explain.weeklyCapacity', { value: t('planning.roadmap.values.days', { days: contributor.weeklyCapacity.toFixed(2) }) })}
+                        {t('planning.roadmap.explain.weeklyCapacity', { value: t('planning.roadmap.values.days', { days: formatRoadmapDays(locale, contributor.weeklyCapacity) }) })}
                       </Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                        {t('planning.roadmap.explain.reservedLoad', { value: contributor.reservedLoad != null ? t('planning.roadmap.values.days', { days: contributor.reservedLoad.toFixed(2) }) : t('planning.roadmap.values.na') })}
+                        {t('planning.roadmap.explain.reservedLoad', { value: contributor.reservedLoad != null ? t('planning.roadmap.values.days', { days: formatRoadmapDays(locale, contributor.reservedLoad) }) : t('planning.roadmap.values.na') })}
                       </Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                         {t('planning.roadmap.explain.activeProjects', { value: contributor.activeProjectCount != null ? contributor.activeProjectCount : t('planning.roadmap.values.na') })}
@@ -3488,7 +3504,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   {selectedExplanation.activeConstraint
-                    ? formatConstraint(t, selectedExplanation.activeConstraint)
+                    ? formatRoadmapConstraint(t, locale, selectedExplanation.activeConstraint)
                     : t('planning.roadmap.explain.noOverrides')}
                 </Typography>
               </Box>
@@ -3507,7 +3523,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                   )}
                   {selectedExplanationWarnings.map((warning, index) => (
                     <Alert key={`${warning.code}:${index}`} severity={warning.severity}>
-                      {warning.message}
+                      {formatWarning(warning)}
                     </Alert>
                   ))}
                 </Stack>

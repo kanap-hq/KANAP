@@ -1218,7 +1218,8 @@
         "exportPng": "Auslastung als PNG exportieren",
         "noContributorData": "Keine Auslastungsdaten für Mitwirkende verfügbar.",
         "noTeamData": "Keine Auslastungsdaten für Teams verfügbar.",
-        "noTeam": "Kein Team"
+        "noTeam": "Kein Team",
+        "quarterYear": "Q{{quarter}} {{year}}"
       },
       "gantt": {
         "title": "Schreibgeschütztes Gantt",
@@ -1349,6 +1350,33 @@
         "thisProject": "dieses Projekt",
         "startWeek": "Startwoche",
         "save": "Fixierung speichern"
+      },
+      "classifications": {
+        "scheduled": "Geplant",
+        "reservation": "Reservierung",
+        "unschedulable": "Nicht planbar"
+      },
+      "explainText": {
+        "summaryUnschedulable": "{{project}} konnte nicht eingeplant werden: {{reason}}",
+        "summaryNoStart": "{{project}} hat keine Startwoche.",
+        "summaryHistorical": "{{project}} setzt bereits begonnene Arbeit fort und erscheint ab der Woche vom {{week}} in der Roadmap.",
+        "summaryConstraint": "{{project}} startete in der Woche vom {{week}} mit dieser Vorgabe: {{constraint}}.",
+        "summaryConstraintConflict": "{{project}} startete in der Woche vom {{week}} mit dieser Vorgabe: {{constraint}}. Konflikt: {{conflict}}",
+        "summaryCapacity": "{{project}} hätte ab der Woche vom {{eligible}} starten können und startete in der Woche vom {{week}}, als Kapazität frei wurde.",
+        "summaryBlockers": "{{project}} startete in der Woche vom {{week}}, nachdem seine Blocker aufgehoben waren.",
+        "summarySchedulable": "{{project}} startete in der Woche vom {{week}}, sobald es eingeplant werden konnte.",
+        "finalCapacity": "Start ab der Woche vom {{eligible}} möglich, gestartet in der Woche vom {{week}}, als Kapazität frei wurde.",
+        "finalBlockers": "Gestartet in der Woche vom {{week}}, nachdem die Blocker aufgehoben waren.",
+        "finalStarted": "Gestartet in der Woche vom {{week}}.",
+        "conflict": {
+          "pinStartUnsatisfied": "Der festgelegte Start am {{week}} konnte nicht eingehalten werden.",
+          "pinStartNormalized": "Der festgelegte Start am {{week}} wurde auf die Woche vom {{normalized}} gelegt und rutschte dann in die Woche vom {{actual}}.",
+          "pinStartSlipped": "Der festgelegte Start am {{week}} rutschte in die Woche vom {{actual}}.",
+          "pinWindowUnsatisfied": "Das festgelegte Zeitfenster vom {{start}} bis {{end}} konnte nicht eingehalten werden.",
+          "pinWindowMissed": "Das festgelegte Zeitfenster vom {{start}} bis {{end}} wurde verfehlt. Tatsächliche Planung: {{actualStart}} bis {{actualEnd}}.",
+          "notBeforeViolated": "Der Start am {{actual}} verletzt die Vorgabe „nicht vor dem {{week}}“."
+        },
+        "warningConflict": "{{project}}: {{conflict}}"
       }
     }
   },
