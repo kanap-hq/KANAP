@@ -25,12 +25,14 @@ import api from '../../../api';
 import { useAuth } from '../../../auth/AuthContext';
 import { useTenant } from '../../../tenant/TenantContext';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { localizeKnowledgeFolderTree } from '../../../utils/knowledgeNames';
 import { KanapDialog, PropertyRow } from '../../../components/design';
 import { drawerMenuItemSx, drawerSelectSx } from '../../../theme/formSx';
 
 type FolderNode = {
   id: string;
   name: string;
+  system_key?: string | null;
   children?: FolderNode[];
 };
 
@@ -395,13 +397,18 @@ const FolderTreePanel = React.memo(function FolderTreePanel({
     enabled: !!libraryId,
   });
 
+  // The Managed Docs folders in the reader's language.
+  const folderItems = React.useMemo(
+    () => localizeKnowledgeFolderTree(t, folderTree?.items),
+    [folderTree?.items, t],
+  );
   const flatFolders = React.useMemo(
-    () => flattenFolders(folderTree?.items || []),
-    [folderTree?.items],
+    () => flattenFolders(folderItems),
+    [folderItems],
   );
   const folderMetadata = React.useMemo(
-    () => collectFolderMetadata(folderTree?.items || []),
-    [folderTree?.items],
+    () => collectFolderMetadata(folderItems),
+    [folderItems],
   );
   const selectedFolderAncestorIds = React.useMemo(() => {
     if (!selectedFolderId) return [] as string[];
@@ -667,7 +674,7 @@ const FolderTreePanel = React.memo(function FolderTreePanel({
           )}
         </Box>
 
-        {(folderTree?.items || []).map((node) => (
+        {folderItems.map((node) => (
           <FolderTreeNode
             key={node.id}
             node={node}

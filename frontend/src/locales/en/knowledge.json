@@ -358,6 +358,21 @@
     "obsolete": "Obsolete",
     "published": "Published"
   },
+  "systemNames": {
+    "libraries": {
+      "documents": "Documents",
+      "templates": "Templates",
+      "managedDocs": "Managed Docs"
+    },
+    "folders": {
+      "integrated_requests": "Requests",
+      "integrated_projects": "Projects",
+      "integrated_interfaces": "Interfaces",
+      "integrated_applications": "Applications",
+      "integrated_assets": "Assets",
+      "integrated_incidents": "Incidents"
+    }
+  },
   "typesManager": {
     "columns": {
       "actions": "Actions",
