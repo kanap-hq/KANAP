@@ -440,7 +440,26 @@
     "andMoreWarnings": "...y {{count}} advertencia(s) más",
     "rowPrefix": "Fila {{row}}:",
     "rowsUnchanged_one": "{{count}} fila sin cambios.",
-    "rowsUnchanged_other": "{{count}} filas sin cambios."
+    "rowsUnchanged_other": "{{count}} filas sin cambios.",
+    "otherGroup": "Otros",
+    "workflowPresets": {
+      "merge": {
+        "label": "Combinar datos externos",
+        "description": "Añade los registros nuevos y actualiza los existentes. Las celdas vacías conservan los valores actuales."
+      },
+      "updateOnly": {
+        "label": "Solo actualizar los existentes",
+        "description": "Actualiza los registros que ya existen. Los registros nuevos se omiten."
+      },
+      "insertOnly": {
+        "label": "Solo añadir los nuevos",
+        "description": "Añade los registros nuevos. Los registros existentes se omiten."
+      },
+      "fullReplace": {
+        "label": "Reemplazo completo",
+        "description": "Reemplaza todos los valores, incluidas las celdas vacías. Una celda vacía borra el valor guardado."
+      }
+    }
   },
   "selects": {
     "loading": "Cargando...",

@@ -13,10 +13,12 @@ import {
   Select,
   Box,
   LinearProgress,
+  Alert,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import { useCsvExport } from './useCsvExport';
+import { csvRequestErrorMessage } from './csvRequestError';
 import { CsvFieldSelector } from './CsvFieldSelector';
 import { CsvFieldInfo, CsvExportPreset } from './csv.types';
 
@@ -42,6 +44,7 @@ export default function CsvExportDialogV2({
   const [backendPresets, setBackendPresets] = useState<CsvExportPreset[]>([]);
   const [loadingFields, setLoadingFields] = useState(false);
   const [showFieldSelector, setShowFieldSelector] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const {
     preset,
@@ -64,6 +67,7 @@ export default function CsvExportDialogV2({
   useEffect(() => {
     if (open && fieldsInfo.length === 0) {
       setLoadingFields(true);
+      setError(null);
       api
         .get(`${endpoint}/csv-fields`)
         .then((res) => {
@@ -75,17 +79,19 @@ export default function CsvExportDialogV2({
             setBackendPresets(res.data.presets ?? []);
           }
         })
-        .catch((err) => {
+        .catch(async (err) => {
           console.error('Failed to load CSV fields', err);
+          setError(await csvRequestErrorMessage(err, t, t('messages.loadFailedRefresh')));
         })
         .finally(() => {
           setLoadingFields(false);
         });
     }
-  }, [open, endpoint, fieldsInfo.length]);
+  }, [open, endpoint, fieldsInfo.length, t]);
 
   const download = async (scope: 'template' | 'data') => {
     setLoading(true);
+    setError(null);
     try {
       const queryParams: Record<string, any> = { ...(params ?? {}), scope };
 
@@ -117,6 +123,7 @@ export default function CsvExportDialogV2({
       window.URL.revokeObjectURL(url);
     } catch (e) {
       console.error('Export failed', e);
+      setError(await csvRequestErrorMessage(e, t, t('messages.exportFailed')));
     } finally {
       setLoading(false);
     }
@@ -196,6 +203,11 @@ export default function CsvExportDialogV2({
 
             {loading && <LinearProgress sx={{ mt: 2 }} />}
           </>
+        )}
+        {error && (
+          <Alert severity="error" sx={{ mt: 2 }}>
+            {error}
+          </Alert>
         )}
       </DialogContent>
       <DialogActions>

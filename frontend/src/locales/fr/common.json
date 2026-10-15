@@ -440,7 +440,26 @@
     "andMoreWarnings": "...et {{count}} avertissement(s) supplémentaire(s)",
     "rowPrefix": "Ligne {{row}} :",
     "rowsUnchanged_one": "{{count}} ligne inchangée.",
-    "rowsUnchanged_other": "{{count}} lignes inchangées."
+    "rowsUnchanged_other": "{{count}} lignes inchangées.",
+    "otherGroup": "Autres",
+    "workflowPresets": {
+      "merge": {
+        "label": "Fusionner des données externes",
+        "description": "Ajoute les nouveaux enregistrements et met à jour les existants. Les cellules vides conservent les valeurs actuelles."
+      },
+      "updateOnly": {
+        "label": "Mettre à jour l'existant uniquement",
+        "description": "Met à jour les enregistrements qui existent déjà. Les nouveaux enregistrements sont ignorés."
+      },
+      "insertOnly": {
+        "label": "Ajouter les nouveaux uniquement",
+        "description": "Ajoute les nouveaux enregistrements. Les enregistrements existants sont ignorés."
+      },
+      "fullReplace": {
+        "label": "Remplacement complet",
+        "description": "Remplace toutes les valeurs, cellules vides comprises. Une cellule vide efface la valeur enregistrée."
+      }
+    }
   },
   "selects": {
     "loading": "Chargement...",

@@ -117,12 +117,35 @@ async function testImportReportsUnresolvedReferences() {
   assert.ok(/user 'ghost@nowhere.io' not found/.test(messages), messages);
 }
 
+async function testImportReadsWindows1252() {
+  const svc = createService();
+  // Excel "CSV (semicolon)" on Windows writes Windows-1252: latin1 matches it for "é".
+  const row = 'Refonte CRM é;Société Test;Dell;2024-01-01;12;no;1;0;EUR;annual;enabled;alice@fromage.co;';
+  const result = await svc.importCsv(
+    { file: { buffer: Buffer.from(`${HEADER}\r\n${row}\r\n`, 'latin1') } as any, dryRun: true },
+    { manager: createMockManager() },
+  );
+  const messages = result.errors.map((e: any) => e.message).join(' | ');
+  assert.ok(/company 'Société Test' not found/.test(messages), messages);
+}
+
+async function testImportRefusesUtf16WithBadRequest() {
+  const svc = createService();
+  const buffer = Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(`${HEADER}\r\n`, 'utf16le')]);
+  await assert.rejects(
+    svc.importCsv({ file: { buffer } as any, dryRun: true }, { manager: createMockManager() }),
+    (err: any) => err?.getStatus?.() === 400 && /not UTF-8 or Windows-1252/.test(err.message),
+  );
+}
+
 (async () => {
   await testTemplateContainsHeaderRow();
   await testExportEmitsOwnerEmailAndIsoDate();
   await testExportRoundTripsThroughImport();
   await testImportRejectsWrongHeaders();
   await testImportReportsUnresolvedReferences();
+  await testImportReadsWindows1252();
+  await testImportRefusesUtf16WithBadRequest();
 
   console.log('Contracts CSV tests passed.');
 })().catch((err) => {

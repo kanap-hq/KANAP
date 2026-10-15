@@ -323,7 +323,7 @@ Audit records are exposed in the Admin workspace through `GET /audit-logs`, `GET
 
 - List pages consume REST endpoints with pagination, filter, and quick-search parameters shaped by `parsePagination` (`backend/src/common/pagination.ts`).
 - Mutations (`Create`, `Update`, `Disable`) run through React Query `useMutation`, invalidating cache keys (`queryClient.invalidateQueries`) to keep grids fresh.
-- CSV import/export flows leverage `fast-csv` adapters with UTF-8/BOM safeguards (`backend/src/common/encoding.ts`) and surface dialogs like `CsvImportDialog`/`CsvExportDialog` under each master data page.
+- CSV import/export flows leverage `fast-csv` adapters that read UTF-8 (with or without BOM) and Windows-1252 (`backend/src/common/csv-sheet/decode.ts`) and surface dialogs like `CsvImportDialog`/`CsvExportDialog` under each master data page.
 
 ---
 

@@ -288,7 +288,7 @@ Halten Sie Ihre Vertragsliste per CSV mit anderen Werkzeugen synchron (`contract
 
 **Hinweise**:
 
-- Verwenden Sie **UTF-8-Kodierung** und **Semikolons** als Trennzeichen
+- Verwenden Sie **UTF-8-Kodierung** und **Semikolons** als Trennzeichen. Eine von Excel als einfache CSV gespeicherte Datei (Windows-1252) wird ebenfalls importiert
 - Die Daten werden aus Beginn, Laufzeit, Kündigungsfrist und Verlängerung berechnet; sie werden nie importiert
 
 ---
