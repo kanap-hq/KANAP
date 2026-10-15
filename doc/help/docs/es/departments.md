@@ -103,7 +103,7 @@ Las columnas:
 | `name` | Obligatoria. El nombre del departamento |
 | `description` | Texto libre |
 | `status` | `enabled` o `disabled` |
-| `disabled_at` | El fin de validez: una fecha (`2026-12-31`) o una fecha y una hora completas |
+| `disabled_at` | El fin de validez: una fecha (`2026-12-31`) o una fecha y una hora completas. La exportación escribe solo la fecha. Importada de nuevo, esa fecha conserva el fin de validez guardado |
 
 **Importación**:
 

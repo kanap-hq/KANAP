@@ -196,7 +196,7 @@ The columns, in this order. The metric columns follow the year selected in the l
 | `reg_number`, `vat_number` | Registration and VAT numbers |
 | `base_currency` | Required. Three letters |
 | `status` | `enabled` or `disabled` |
-| `disabled_at` | The end of validity: a date (`2026-12-31`) or a full date and time |
+| `disabled_at` | The end of validity: a date (`2026-12-31`) or a full date and time. The export writes the date only. Imported again, that date keeps the stored end of validity |
 | `notes` | Free text |
 | `headcount_<year>` | Required when the row carries any metric for that year |
 | `it_users_<year>` | A whole number |

@@ -30,6 +30,7 @@ import {
   DecimalMark,
   endOfValidityCell,
   endOfValidityOf,
+  keepStoredEndOfValidity,
   ImportReportError,
   nameMatchedWarning,
   readMasterDataFile,
@@ -669,7 +670,14 @@ export class DepartmentsService {
         .getOne();
       const warning = existing ? nameMatchedWarning(lineOf.get(fileItem) ?? 0, 'name', fileItem.name, existing.name) : null;
       if (warning) warnings.push(warning);
-      const item = existing ? { ...fileItem, name: existing.name } : fileItem;
+      // The stored end of validity's day keeps its time of day: the export writes the day only.
+      const item = existing
+        ? {
+          ...fileItem,
+          name: existing.name,
+          lifecycle: { ...fileItem.lifecycle, disabled_at: keepStoredEndOfValidity(existing.disabled_at, fileItem.lifecycle.disabled_at) },
+        }
+        : fileItem;
       const { lifecycle, ...values } = item;
       if (!existing) inserted += 1;
       else if (

@@ -196,7 +196,7 @@ Les colonnes, dans cet ordre. Les colonnes de métriques suivent l'année sélec
 | `reg_number`, `vat_number` | Numéro d'immatriculation et numéro de TVA |
 | `base_currency` | Obligatoire. Trois lettres |
 | `status` | `enabled` ou `disabled` |
-| `disabled_at` | La fin de validité : une date (`2026-12-31`) ou une date et une heure complètes |
+| `disabled_at` | La fin de validité : une date (`2026-12-31`) ou une date et une heure complètes. L'export écrit la date seule. Réimportée, cette date conserve la fin de validité enregistrée |
 | `notes` | Texte libre |
 | `headcount_<année>` | Obligatoire lorsque la ligne porte une métrique pour cette année |
 | `it_users_<année>` | Un nombre entier |

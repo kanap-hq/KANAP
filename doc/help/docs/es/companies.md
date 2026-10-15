@@ -196,7 +196,7 @@ Las columnas, en este orden. Las columnas de métricas siguen el año selecciona
 | `reg_number`, `vat_number` | Número de registro y número de IVA |
 | `base_currency` | Obligatoria. Tres letras |
 | `status` | `enabled` o `disabled` |
-| `disabled_at` | El fin de validez: una fecha (`2026-12-31`) o una fecha y una hora completas |
+| `disabled_at` | El fin de validez: una fecha (`2026-12-31`) o una fecha y una hora completas. La exportación escribe solo la fecha. Importada de nuevo, esa fecha conserva el fin de validez guardado |
 | `notes` | Texto libre |
 | `headcount_<año>` | Obligatoria cuando la fila lleva alguna métrica de ese año |
 | `it_users_<año>` | Un número entero |

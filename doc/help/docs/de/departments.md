@@ -103,7 +103,7 @@ Die Spalten:
 | `name` | Pflicht. Der Name der Abteilung |
 | `description` | Freier Text |
 | `status` | `enabled` oder `disabled` |
-| `disabled_at` | Das Ende der Gültigkeit: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit |
+| `disabled_at` | Das Ende der Gültigkeit: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Der Export schreibt nur das Datum. Erneut importiert, behält dieses Datum das gespeicherte Gültigkeitsende |
 
 **Import**:
 

@@ -20,6 +20,7 @@ import {
   DecimalMark,
   endOfValidityCell,
   endOfValidityOf,
+  keepStoredEndOfValidity,
   ImportReportError,
   nameMatchedWarning,
   readMasterDataFile,
@@ -478,7 +479,12 @@ export class SuppliersService {
       if (!existing) continue;
       const warning = nameMatchedWarning(item.line, 'name', name, existing.name);
       if (warning) warnings.push(warning);
-      item.body = { ...item.body, name: existing.name };
+      // The stored end of validity's day keeps its time of day: the export writes the day only.
+      item.body = {
+        ...item.body,
+        name: existing.name,
+        disabled_at: keepStoredEndOfValidity(existing.disabled_at, item.body.disabled_at),
+      };
       existingByName.set(existing.name, existing);
     }
     // The contact links of the matched suppliers, as `${supplierId}:${role}:${email}`: the import only adds links.

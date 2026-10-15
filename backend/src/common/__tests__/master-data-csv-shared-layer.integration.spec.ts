@@ -53,6 +53,8 @@ import { BusinessProcessCategoryLink } from '../../business-processes/business-p
 //    shifts the next row to line 4;
 //  - a French round trip changes nothing;
 //  - re-importing an export counts every row as unchanged and writes nothing;
+//  - an end of validity with a time of day exports as its day, and that day
+//    read back keeps the stored instant;
 //  - an extra cell and an unreadable file are refused;
 //  - the accounts file's optional `nature` column: absent, it leaves the
 //    stored natures alone; an invalid value is a row error.
@@ -916,6 +918,63 @@ async function testIdenticalExportCountsUnchanged() {
   });
 }
 
+/**
+ * An end of validity with a time of day (the switch disables at the server's clock). The export
+ * writes the day only, the language's way. Re-importing that day keeps the stored instant: the
+ * rows count as unchanged, nothing is written and no audit line appears. Another day in the file
+ * is an update to that day, at noon UTC.
+ */
+async function testPreciseEndOfValidityRoundTrip() {
+  const PASSED = '2025-10-16T14:37:12.000Z';
+  const TO_COME = '2031-10-16T14:37:12.000Z';
+  await each('precise-end', async (importer, runner, tenantId) => {
+    if (!importer.dateField) return;
+    const passed = importer.key(`${importer.label} precise passed`);
+    const toCome = importer.key(`${importer.label} precise to come`);
+    const seeded = await importer.importCsv(
+      await fileFor(importer, [importer.base(passed), importer.base(toCome)], { language: 'fr' }),
+      { language: 'fr' },
+    );
+    assert.deepEqual([seeded.ok, seeded.errors], [true, []], `${importer.label} seed: ${JSON.stringify(seeded.errors)}`);
+    for (const [key, instant, status] of [[passed, PASSED, 'disabled'], [toCome, TO_COME, 'enabled']]) {
+      await runner.query(
+        `UPDATE ${importer.table} SET disabled_at = $1, status = $2 WHERE tenant_id = $3 AND ${importer.nameColumn} = $4`,
+        [instant, status, tenantId, key],
+      );
+    }
+    const stored = (await importer.snapshot(runner, tenantId)).length;
+    const audits = async () => Number((await runner.query(`SELECT count(*)::int AS n FROM audit_log`))[0].n);
+    const auditsBefore = await audits();
+
+    const french = await importer.exportCsv('fr');
+    assert.match(french, /;16\/10\/2025(;|\r?\n)/, `${importer.label}: the French export writes the day`);
+    assert.match(french, /;16\/10\/2031(;|\r?\n)/, `${importer.label}: the French export writes the day to come`);
+    assert.doesNotMatch(french, /14:37/, `${importer.label}: the export writes no time of day`);
+    assert.match(await importer.exportCsv('en'), /,2025-10-16(,|\r?\n)/, `${importer.label}: the English export writes the ISO day`);
+
+    for (const dryRun of [true, false]) {
+      const result = await importer.importCsv(french, { language: 'fr', dryRun });
+      assert.deepEqual([result.ok, result.errors], [true, []], `${importer.label}: ${JSON.stringify(result.errors)}`);
+      assert.deepEqual(
+        [result.inserted, result.updated, result.unchanged],
+        [0, 0, stored],
+        `${importer.label} ${dryRun ? 'dry run' : 'load'}: the day of the stored instant is unchanged`,
+      );
+    }
+    assert.equal(await audits(), auditsBefore, `${importer.label}: the load writes no audit line`);
+    assert.equal(await storedDate(importer, runner, tenantId, passed), PASSED, `${importer.label}: the stored time stays`);
+    assert.equal(await storedDate(importer, runner, tenantId, toCome), TO_COME, `${importer.label}: the stored time to come stays`);
+
+    const moved = await importer.importCsv(french.replace('16/10/2031', '17/10/2031'), { language: 'fr' });
+    assert.deepEqual([moved.ok, moved.errors, moved.updated], [true, [], 1], `${importer.label} other day: ${JSON.stringify(moved.errors)}`);
+    assert.equal(
+      await storedDate(importer, runner, tenantId, toCome),
+      '2031-10-17T12:00:00.000Z',
+      `${importer.label}: another day is that day at noon UTC`,
+    );
+  });
+}
+
 /** A non-empty cell past the header's last column is a row error, not a silently dropped value. */
 async function testMoreCellsThanTheHeader() {
   await each('extra-cell', async (importer) => {
@@ -1026,6 +1085,7 @@ async function main() {
     ['testPhysicalLineWithQuotedNewline', testPhysicalLineWithQuotedNewline],
     ['testFrenchRoundTripChangesNothing', testFrenchRoundTripChangesNothing],
     ['testIdenticalExportCountsUnchanged', testIdenticalExportCountsUnchanged],
+    ['testPreciseEndOfValidityRoundTrip', testPreciseEndOfValidityRoundTrip],
     ['testMoreCellsThanTheHeader', testMoreCellsThanTheHeader],
     ['testUnreadableFileIsRefused', testUnreadableFileIsRefused],
     ['testAccountNatureColumn', testAccountNatureColumn],

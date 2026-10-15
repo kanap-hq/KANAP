@@ -103,7 +103,7 @@ The columns:
 | `name` | Required. The department name |
 | `description` | Free text |
 | `status` | `enabled` or `disabled` |
-| `disabled_at` | The end of validity: a date (`2026-12-31`) or a full date and time |
+| `disabled_at` | The end of validity: a date (`2026-12-31`) or a full date and time. The export writes the date only. Imported again, that date keeps the stored end of validity |
 
 **Import**:
 

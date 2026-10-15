@@ -150,9 +150,9 @@ export function invalidEndOfValidity(field: string, raw: string): string {
 }
 
 /**
- * An end-of-validity cell for an export. A bare `YYYY-MM-DD` is the calendar
- * day it spells. A timestamp at noon UTC is the day the user picked, written
- * the language's way. Any other instant has a real time and stays ISO.
+ * An end-of-validity cell for an export: the calendar day, the language's
+ * way. A bare `YYYY-MM-DD` is the day it spells; an instant writes its UTC day
+ * (`formatCsvEndOfValidity`).
  */
 export function endOfValidityCell(value: Date | string | null | undefined, language: CsvLanguage): string {
   if (value == null) return '';

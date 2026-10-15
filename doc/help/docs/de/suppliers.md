@@ -124,7 +124,7 @@ Die Spalten:
 | `support_contact` | Die E-Mail-Adresse eines Kontakts, wie oben |
 | `notes` | Freier Text |
 | `status` | `enabled` oder `disabled` |
-| `disabled_at` | Das Gültigkeitsende: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Leer, wenn der Lieferant keines hat |
+| `disabled_at` | Das Gültigkeitsende: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Der Export schreibt nur das Datum. Erneut importiert, behält dieses Datum das gespeicherte Gültigkeitsende. Leer, wenn der Lieferant keines hat |
 
 **Import**:
 

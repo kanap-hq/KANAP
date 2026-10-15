@@ -124,7 +124,7 @@ Las columnas:
 | `support_contact` | El correo de un contacto, como arriba |
 | `notes` | Texto libre |
 | `status` | `enabled` o `disabled` |
-| `disabled_at` | El fin de validez: una fecha (`2026-12-31`) o una fecha y hora completas. Vacío cuando el proveedor no tiene |
+| `disabled_at` | El fin de validez: una fecha (`2026-12-31`) o una fecha y hora completas. La exportación escribe solo la fecha. Importada de nuevo, esa fecha conserva el fin de validez guardado. Vacío cuando el proveedor no tiene |
 
 **Importación**:
 

@@ -103,7 +103,7 @@ Les colonnes :
 | `name` | Obligatoire. Le nom du département |
 | `description` | Texte libre |
 | `status` | `enabled` ou `disabled` |
-| `disabled_at` | La fin de validité : une date (`2026-12-31`) ou une date et une heure complètes |
+| `disabled_at` | La fin de validité : une date (`2026-12-31`) ou une date et une heure complètes. L'export écrit la date seule. Réimportée, cette date conserve la fin de validité enregistrée |
 
 **Import** :
 

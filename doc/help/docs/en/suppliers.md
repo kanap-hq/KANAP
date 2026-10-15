@@ -124,7 +124,7 @@ The columns:
 | `support_contact` | The email of a contact, as above |
 | `notes` | Free text |
 | `status` | `enabled` or `disabled` |
-| `disabled_at` | The end of validity: a date (`2026-12-31`) or a full date and time. Empty when the supplier has none |
+| `disabled_at` | The end of validity: a date (`2026-12-31`) or a full date and time. The export writes the date only. Imported again, that date keeps the stored end of validity. Empty when the supplier has none |
 
 **Import**:
 

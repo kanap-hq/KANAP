@@ -39,6 +39,7 @@ import {
   CsvLanguage,
   DecimalMark,
   endOfValidityOf,
+  keepStoredEndOfValidity,
   formatCsvAmount,
   formatCsvEndOfValidity,
   ImportReportError,
@@ -1026,6 +1027,8 @@ export class CompaniesService {
       const warning = nameMatchedWarning(item.line, 'name', name, existing.name);
       if (warning) warnings.push(warning);
       item.company = { ...item.company, name: existing.name };
+      // The stored end of validity's day keeps its time of day: the export writes the day only.
+      item.lifecycle = { ...item.lifecycle, disabled_at: keepStoredEndOfValidity(existing.disabled_at, item.lifecycle.disabled_at) };
       existingByName.set(existing.name, existing);
     }
     const existingIds = Array.from(existingByName.values()).map((company) => company.id);

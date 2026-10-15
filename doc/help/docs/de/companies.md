@@ -196,7 +196,7 @@ Die Spalten in dieser Reihenfolge. Die Kennzahlenspalten folgen dem in der Symbo
 | `reg_number`, `vat_number` | Handelsregisternummer und Umsatzsteuer-Identifikationsnummer |
 | `base_currency` | Pflicht. Drei Buchstaben |
 | `status` | `enabled` oder `disabled` |
-| `disabled_at` | Das Ende der Gültigkeit: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit |
+| `disabled_at` | Das Ende der Gültigkeit: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Der Export schreibt nur das Datum. Erneut importiert, behält dieses Datum das gespeicherte Gültigkeitsende |
 | `notes` | Freier Text |
 | `headcount_<Jahr>` | Pflicht, wenn die Zeile für dieses Jahr eine Kennzahl trägt |
 | `it_users_<Jahr>` | Eine ganze Zahl |

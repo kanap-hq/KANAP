@@ -1,6 +1,6 @@
 export { parseCsvAmount, formatCsvAmount, resolveAmountConvention, amountConventionNotice } from './amount';
 export { matchCode } from './codes';
-export { parseCsvDateCell, formatCsvDate, formatCsvEndOfValidity, resolveDateOrder } from './date';
+export { parseCsvDateCell, formatCsvDate, formatCsvEndOfValidity, keepStoredEndOfValidity, resolveDateOrder } from './date';
 export { decodeCsv } from './decode';
 export { csvLanguage, csvProfile, dateOrderNotice } from './language';
 export {
