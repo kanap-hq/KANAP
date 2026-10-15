@@ -44,7 +44,7 @@
       "scope": {
         "show": "Afficher :",
         "myApps": "Mes applications",
-        "myTeamApps": "Les applications de mon équipe",
+        "myTeamApps": "Applications de mon équipe",
         "allApps": "Toutes les applications",
         "notAssignedToTeam": "Vous n'êtes affecté à aucune équipe"
       },

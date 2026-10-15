@@ -186,10 +186,10 @@
     "title": "Déplacer des documents"
   },
   "scope": {
-    "allDocs": "Tous",
+    "allDocs": "Tous les documents",
     "allLibraries": "Toutes les bibliothèques",
     "myDocs": "Mes documents",
-    "myTeamsDocs": "Mon équipe",
+    "myTeamsDocs": "Documents de mon équipe",
     "noTeamAssigned": "Vous n'êtes assigné à aucune équipe.",
     "show": "Afficher :"
   },

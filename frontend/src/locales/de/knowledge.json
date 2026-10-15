@@ -186,10 +186,10 @@
     "title": "Dokumente verschieben"
   },
   "scope": {
-    "allDocs": "Alle",
+    "allDocs": "Alle Dokumente",
     "allLibraries": "Alle Bibliotheken",
     "myDocs": "Meine Dokumente",
-    "myTeamsDocs": "Mein Team",
+    "myTeamsDocs": "Dokumente meines Teams",
     "noTeamAssigned": "Sie sind keinem Team zugeordnet.",
     "show": "Anzeigen:"
   },

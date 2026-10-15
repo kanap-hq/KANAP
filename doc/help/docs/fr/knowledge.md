@@ -68,11 +68,11 @@ Utilisez les dossiers pour des thématiques stables, pas pour des états de work
 
 Le filtre de périmètre de premier niveau change quels documents sont listés :
 
-- **Mes docs** se concentre sur les documents dont vous êtes responsable.
-- **Docs de mon équipe** se concentre sur les documents dont votre équipe est responsable.
-- **Tous les docs** supprime le périmètre de responsabilité et affiche la population complète que vous êtes autorisé à voir.
+- **Mes documents** se concentre sur les documents dont vous êtes responsable.
+- **Documents de mon équipe** se concentre sur les documents dont votre équipe est responsable.
+- **Tous les documents** supprime le périmètre de responsabilité et affiche la population complète que vous êtes autorisé à voir.
 
-Si vous n'êtes pas assigné à une équipe, le périmètre équipe est indisponible. La page s'ouvre sur **Tous les docs**, et votre dernier choix de périmètre est mémorisé, ce qui est pratique lorsqu'il correspond à votre mode de travail normal et légèrement déroutant lorsque vous oubliez l'avoir changé hier.
+Si vous n'êtes pas assigné à une équipe, le périmètre équipe est indisponible. La page s'ouvre sur **Tous les documents**, et votre dernier choix de périmètre est mémorisé, ce qui est pratique lorsqu'il correspond à votre mode de travail normal et légèrement déroutant lorsque vous oubliez l'avoir changé hier.
 
 ### Modèles et types de documents
 
