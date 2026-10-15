@@ -169,6 +169,7 @@ vi.mock('../../components/finance/ChangeTypeDialog', () => ({
 
 import api from '../../api';
 import BudgetLinePage from './BudgetLinePage';
+import BudgetLineRoute from './BudgetLineRoute';
 import { BUDGET_NATURE_CONFIG } from './natureConfig';
 
 let nature: 'opex' | 'capex' = 'opex';
@@ -2003,6 +2004,50 @@ describe('native contract and Type', () => {
     fireEvent.click(screen.getByRole('button', { name: 'back to list' }));
     const list = await screen.findByTestId('list-page');
     expect(new URLSearchParams(list.getAttribute('data-search') ?? '').has('list')).toBe(false);
+  });
+});
+
+// The workspace as the app mounts it: the route reads the line's type, then the page shows the line.
+describe('BudgetLinePage type changed in place', () => {
+  let stored: Record<string, unknown>;
+  beforeEach(() => {
+    auth.canEdit = true;
+    mocked.get.mockReset(); mocked.patch.mockReset(); mocked.post.mockReset();
+    stored = {
+      id: ITEM_ID, item_number: 7, nature, product_name: 'Monitoring', notes: 'Renewal', row_version: 3,
+      paying_company_id: 'company-1', account_id: `account-${nature}`, currency: 'EUR', effective_start: '2026-01-01',
+    };
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/budget-lines/resolve/BL-7') return { data: { id: stored.id, nature: stored.nature, reference: 'BL-7' } };
+      if (url === '/budget-lines/BL-7') return { data: stored };
+      return { data: {} };
+    });
+  });
+
+  it('shows the new type and the fields that follow it once the change ends, without a reload', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <MemoryRouter initialEntries={['/ops/budget/BL-7/overview']} useTransitions={false}>
+            <Routes>
+              <Route path="/ops/budget/:ref/:tab" element={<BudgetLineRoute />} />
+            </Routes>
+          </MemoryRouter>
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    await screen.findByDisplayValue('Renewal');
+    expect(screen.getByTestId('line-type')).toHaveTextContent(nature);
+    fireEvent.click(screen.getByRole('button', { name: 'budget.changeType' }));
+    await screen.findByTestId('change-type-dialog');
+    // The server changed the line in place: same id and reference, the other type and an account of that type.
+    const target = otherNature();
+    stored = { ...stored, nature: target, account_id: `account-${target}`, row_version: 4 };
+    fireEvent.click(screen.getByRole('button', { name: 'confirm type change' }));
+    await waitFor(() => expect(screen.getByTestId('line-type')).toHaveTextContent(target));
+    await waitFor(() => expect(screen.getByTestId('line-type').parentElement).toHaveAttribute('data-account', `account-${target}`));
+    expect(screen.queryByTestId('change-type-dialog')).not.toBeInTheDocument();
   });
 });
 
