@@ -125,10 +125,17 @@ describe('CHANGELOG.md entries', () => {
     assert.equal(isUnchangedSkeleton(entry.body.replace(/^One or two lines.*$/m, 'Dependency updates.')), false);
   });
 
-  it('has a CHANGELOG.md whose header holds no entry heading', () => {
+  it('has a CHANGELOG.md whose header holds no entry heading, and whose entries are version headings', () => {
     const text = readFileSync(path.join(ROOT, 'CHANGELOG.md'), 'utf8');
-    assert.doesNotMatch(text, /^## /m);
-    assert.match(insertEntry(text, '## 26.10.1 (2026-10-11)\n\nFirst.\n'), /\n\n## 26\.10\.1 \(2026-10-11\)\n\nFirst\.\n$/);
+    const firstEntry = text.search(/^## /m);
+    const header = firstEntry === -1 ? text : text.slice(0, firstEntry);
+    assert.doesNotMatch(header, /^## /m);
+    for (const heading of text.match(/^## .*$/gm) ?? []) {
+      assert.match(heading, /^## \d{2}\.\d{1,2}\.\d+ \(\d{4}-\d{2}-\d{2}\)( · Action required)?$/);
+    }
+    const inserted = insertEntry(text, '## 99.12.1 (2099-12-31)\n\nNext.\n');
+    assert.ok(inserted.startsWith(`${header.trimEnd()}\n\n## 99.12.1 (2099-12-31)\n\nNext.\n`));
+    assert.ok(inserted.endsWith(firstEntry === -1 ? 'Next.\n' : text.slice(firstEntry)));
   });
 });
 
