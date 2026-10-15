@@ -56,7 +56,7 @@ Click any row to open the workspace. It has two tabs: **Overview** and **Details
 - **Header**: the department name. Click it to rename the department. **Prev** / **Next** move between departments in the list's order and filters without returning to the list, and the close button returns to the list
 - **Properties panel** on the right: **Company** and **Lifecycle**
 
-**Autosave**: Every change saves on its own. There is no Save button. The name and the description save when you leave the field; the company and the lifecycle save as soon as you change them. You can keep working while a change saves. When a change is refused, the reason shows under the field that caused it, except for the name, which shows its refusal at the top of the page.
+**Autosave**: Every change saves on its own. There is no Save button. The name and the description save when you leave the field; the company and the lifecycle save as soon as you change them. You can keep working while a change saves. When a change is refused, the reason shows under the field that caused it.
 
 ### Overview
 

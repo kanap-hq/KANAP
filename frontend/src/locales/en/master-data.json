@@ -217,6 +217,7 @@
       "saveFailed": "Failed to save the department.",
       "createFailed": "Failed to create the department.",
       "nameRequired": "Enter a name.",
+      "nameTaken": "Another department of this company already has this name.",
       "companyRequired": "Choose a company.",
       "headcountInvalid": "Enter a whole number, 0 or more."
     }
@@ -902,7 +903,8 @@
       "itOwner": "IT owner",
       "itOwnerHelper": "IT contact responsible for tools / systems supporting this process",
       "notesPlaceholder": "Internal notes, links to SOPs or process maps",
-      "nameRequired": "Name is required"
+      "nameRequired": "Name is required",
+      "nameTaken": "Another business process already has this name."
     },
     "categoryManager": {
       "title": "Manage business process categories",

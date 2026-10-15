@@ -56,7 +56,7 @@ Haga clic en cualquier fila para abrir el espacio de trabajo. Tiene dos pestaña
 - **Encabezado**: el nombre del departamento. Haga clic en él para cambiar el nombre del departamento. **Ant.** / **Sig.** permiten moverse entre departamentos en el orden y con los filtros de la lista sin volver a ella, y el botón de cierre vuelve a la lista
 - **Panel Propiedades** a la derecha: **Empresa** y **Ciclo de vida**
 
-**Guardado automático**: Cada cambio se guarda por sí solo. No hay botón Guardar. El nombre y la descripción se guardan al salir del campo; la empresa y el ciclo de vida se guardan en cuanto los cambia. Puede seguir trabajando mientras se guarda un cambio. Cuando se rechaza un cambio, el motivo aparece bajo el campo que lo causó, salvo para el nombre, cuyo rechazo se muestra en la parte superior de la página.
+**Guardado automático**: Cada cambio se guarda por sí solo. No hay botón Guardar. El nombre y la descripción se guardan al salir del campo; la empresa y el ciclo de vida se guardan en cuanto los cambia. Puede seguir trabajando mientras se guarda un cambio. Cuando se rechaza un cambio, el motivo aparece bajo el campo que lo causó.
 
 ### Visión general
 

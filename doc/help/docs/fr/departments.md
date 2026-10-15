@@ -56,7 +56,7 @@ Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. Il comporte 
 - **En-tête** : le nom du département. Cliquez dessus pour renommer le département. **Préc** / **Suiv** parcourent les départements dans l'ordre et les filtres de la liste sans revenir à la liste, et le bouton de fermeture ramène à la liste
 - **Panneau Propriétés** à droite : **Société** et **Cycle de vie**
 
-**Enregistrement automatique** : chaque modification s'enregistre d'elle-même. Il n'y a pas de bouton Enregistrer. Le nom et la description s'enregistrent quand vous quittez le champ ; la société et le cycle de vie s'enregistrent dès que vous les changez. Vous pouvez continuer à travailler pendant l'enregistrement. Lorsqu'une modification est refusée, la raison s'affiche sous le champ concerné, sauf pour le nom, dont le refus s'affiche en haut de la page.
+**Enregistrement automatique** : chaque modification s'enregistre d'elle-même. Il n'y a pas de bouton Enregistrer. Le nom et la description s'enregistrent quand vous quittez le champ ; la société et le cycle de vie s'enregistrent dès que vous les changez. Vous pouvez continuer à travailler pendant l'enregistrement. Lorsqu'une modification est refusée, la raison s'affiche sous le champ concerné.
 
 ### Vue d'ensemble
 

@@ -217,6 +217,7 @@
       "saveFailed": "Error al guardar el departamento.",
       "createFailed": "Error al crear el departamento.",
       "nameRequired": "Introduzca un nombre.",
+      "nameTaken": "Otro departamento de esta empresa ya tiene este nombre.",
       "companyRequired": "Elija una empresa.",
       "headcountInvalid": "Introduzca un número entero, 0 o más."
     }
@@ -902,7 +903,8 @@
       "itOwner": "Responsable IT",
       "itOwnerHelper": "Contacto IT responsable de las herramientas / sistemas que soportan este proceso",
       "notesPlaceholder": "Notas internas, enlaces a SOPs o mapas de procesos",
-      "nameRequired": "El nombre es obligatorio"
+      "nameRequired": "El nombre es obligatorio",
+      "nameTaken": "Otro proceso de negocio ya tiene este nombre."
     },
     "categoryManager": {
       "title": "Gestionar categorías de procesos de negocio",

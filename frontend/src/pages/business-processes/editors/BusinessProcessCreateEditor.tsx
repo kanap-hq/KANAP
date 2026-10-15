@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Alert, Stack, TextField, Typography } from '@mui/material';
 import { Controller, useForm } from 'react-hook-form';
 import api from '../../../api';
+import { isDuplicateError } from '../../../utils/apiErrorMessage';
 import StatusSwitch from '../../../components/fields/StatusSwitch';
 import { STATUS_ENABLED, STATUS_DISABLED, StatusValue, deriveStatusFromDisabledAt, normalizeStatus } from '../../../constants/status';
 import BusinessProcessCategoryMultiSelect from '../../../components/fields/BusinessProcessCategoryMultiSelect';
@@ -74,8 +75,13 @@ export default forwardRef<BusinessProcessCreateEditorHandle, Props>(function Bus
       onDirtyChange?.(false);
       return String(res.data?.id ?? res.data?.uuid ?? null);
     } catch (e: any) {
-      const msg = e?.response?.data?.message || e?.message || t('shared.messages.failedToCreate', { entity: t('businessProcesses.entity') });
-      setServerError(msg);
+      if (isDuplicateError(e)) {
+        // A name another business process has: the reason shows under the name.
+        form.setError('name', { type: 'server', message: t('businessProcesses.fields.nameTaken') });
+      } else {
+        const msg = e?.response?.data?.message || e?.message || t('shared.messages.failedToCreate', { entity: t('businessProcesses.entity') });
+        setServerError(msg);
+      }
       throw e;
     } finally {
       setSaving(false);

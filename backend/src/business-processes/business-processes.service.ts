@@ -15,6 +15,7 @@ import { parseString } from '@fast-csv/parse';
 import * as fs from 'fs';
 import { CsvDecodeError, decodeCsv } from '../common/csv-sheet/decode';
 import { User } from '../users/user.entity';
+import { duplicateNameException } from '../common/duplicate-name';
 import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
 import { headerMismatchError } from '../common/csv-sheet';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
@@ -273,9 +274,7 @@ export class BusinessProcessesService {
       .createQueryBuilder('bp')
       .where('LOWER(bp.name) = LOWER(:name)', { name: rawName })
       .getOne();
-    if (duplicate) {
-      throw new BadRequestException('A business process with this name already exists');
-    }
+    if (duplicate) throw duplicateNameException('Another business process already has this name.');
 
     const lifecycle = resolveLifecycleState({ nextStatus: body.status, nextDisabledAt: body.disabled_at });
     const entity = repo.create({
@@ -321,7 +320,7 @@ export class BusinessProcessesService {
           .where('LOWER(bp.name) = LOWER(:name)', { name: trimmed })
           .andWhere('bp.id <> :id', { id })
           .getOne();
-        if (duplicate) throw new BadRequestException('Another business process already uses this name');
+        if (duplicate) throw duplicateNameException('Another business process already has this name.');
         (existing as any).name = trimmed;
       }
     }

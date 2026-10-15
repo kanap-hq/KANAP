@@ -217,6 +217,7 @@
       "saveFailed": "Échec de l'enregistrement du département.",
       "createFailed": "Échec de la création du département.",
       "nameRequired": "Saisissez un nom.",
+      "nameTaken": "Un autre département de cette société porte déjà ce nom.",
       "companyRequired": "Choisissez une société.",
       "headcountInvalid": "Saisissez un nombre entier, 0 ou plus."
     }
@@ -902,7 +903,8 @@
       "itOwner": "Responsable IT",
       "itOwnerHelper": "Contact IT responsable des outils / systèmes supportant ce processus",
       "notesPlaceholder": "Notes internes, liens vers les procédures ou les cartographies de processus",
-      "nameRequired": "Le nom est requis"
+      "nameRequired": "Le nom est requis",
+      "nameTaken": "Un autre processus métier porte déjà ce nom."
     },
     "categoryManager": {
       "title": "Gérer les catégories de processus métier",
