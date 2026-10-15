@@ -286,6 +286,12 @@
       "nameRequired": "Introduzca un nombre.",
       "companyRequired": "Elija una empresa.",
       "chooseCompany": "Elija la empresa para convertir este grupo en un centro de coste."
+    },
+    "delete": {
+      "toDelete_one": "Se eliminará {{count}} centro de coste:",
+      "toDelete_other": "Se eliminarán {{count}} centros de coste:",
+      "kept_one": "{{count}} centro de coste no se puede eliminar y se conserva:",
+      "kept_other": "{{count}} centros de coste no se pueden eliminar y se conservan:"
     }
   },
   "workingDayCalendars": {
@@ -381,6 +387,12 @@
       "deleteFailed": "Error al eliminar el calendario.",
       "codeRequired": "Introduzca un código.",
       "nameRequired": "Introduzca un nombre."
+    },
+    "delete": {
+      "toDelete_one": "Se eliminará {{count}} calendario:",
+      "toDelete_other": "Se eliminarán {{count}} calendarios:",
+      "kept_one": "{{count}} calendario no se puede eliminar y se conserva:",
+      "kept_other": "{{count}} calendarios no se pueden eliminar y se conservan:"
     }
   },
   "suppliers": {
@@ -636,6 +648,12 @@
       "unmapped_one": "{{count}} cuenta no tiene cuenta de consolidación",
       "unmapped_other": "{{count}} cuentas no tienen cuenta de consolidación",
       "showAll": "Mostrar todas las cuentas"
+    },
+    "delete": {
+      "toDelete_one": "Se eliminará {{count}} cuenta:",
+      "toDelete_other": "Se eliminarán {{count}} cuentas:",
+      "kept_one": "{{count}} cuenta no se puede eliminar y se conserva:",
+      "kept_other": "{{count}} cuentas no se pueden eliminar y se conservan:"
     }
   },
   "accounts": {

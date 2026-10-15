@@ -8,6 +8,7 @@ import ServerDataGrid, { EnhancedColDef, StatusScope } from '../../components/Se
 import CsvExportDialog from '../../components/csv/CsvExportDialog';
 import CsvImportDialog from '../../components/csv/CsvImportDialog';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
+import { recordsInUseCheck } from '../../utils/deleteCheck';
 import ForbiddenPage from '../ForbiddenPage';
 import { useAuth } from '../../auth/AuthContext';
 import { LinkCellRenderer } from '../../components/grid/renderers';
@@ -412,6 +413,12 @@ export default function CoaPage() {
         <DeleteSelectedButton
           selectedRows={selectedRows}
           endpoint="/accounts/bulk"
+          // Asked on click: those that cannot go are kept, with why.
+          checkDelete={(ids) => recordsInUseCheck('/accounts', ids)}
+          itemLabels={{
+            toDelete: (count) => t('coa.delete.toDelete', { count }),
+            kept: (count) => t('coa.delete.kept', { count }),
+          }}
           getItemId={(row) => row.id}
           getItemName={(row) => row.account_name}
           gridApi={gridApiRef.current}

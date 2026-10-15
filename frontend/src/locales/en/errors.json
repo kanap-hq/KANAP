@@ -93,5 +93,13 @@
   "CSV_IMPORT_FAILED": "The import failed: {{reason}}",
   "SUPPLIER_IN_USE": "This supplier is used by {{usages}}. Disable it instead of deleting it.",
   "COMPANY_IN_USE": "This company is used by {{usages}}. Disable it instead of deleting it.",
-  "CONTRACT_HAS_COMPLIANCE_RECORDS": "This contract has {{usages}}. Disable it instead of deleting it."
+  "CONTRACT_HAS_COMPLIANCE_RECORDS": "This contract has {{usages}}. Disable it instead of deleting it.",
+  "ASSET_IN_USE": "This asset is used by {{usages}}. Remove it from them before deleting it.",
+  "COST_CENTER_IN_USE": "This cost center is used by {{usages}}. Disable it instead of deleting it.",
+  "COST_CENTER_HAS_NODES": "This group contains {{usages}}. Move or delete them first.",
+  "CALENDAR_IN_USE": "This calendar is used by {{usages}}. Disable it instead of deleting it.",
+  "USER_OWN_ACCOUNT": "You cannot delete your own account. Disable it instead if needed.",
+  "ACCOUNT_IN_USE": "This account is used by {{usages}}. Disable it instead of deleting it.",
+  "CHART_OF_ACCOUNTS_IN_USE": "This chart of accounts is used by {{usages}}. Move them to another chart of accounts first.",
+  "RECORD_IN_USE": "Other records still use this item. Disable it instead of deleting it."
 }

@@ -286,6 +286,12 @@
       "nameRequired": "Saisissez un nom.",
       "companyRequired": "Choisissez une société.",
       "chooseCompany": "Choisissez la société pour faire de ce groupe un centre de coûts."
+    },
+    "delete": {
+      "toDelete_one": "{{count}} centre de coûts sera supprimé :",
+      "toDelete_other": "{{count}} centres de coûts seront supprimés :",
+      "kept_one": "{{count}} centre de coûts ne peut pas être supprimé et est conservé :",
+      "kept_other": "{{count}} centres de coûts ne peuvent pas être supprimés et sont conservés :"
     }
   },
   "workingDayCalendars": {
@@ -381,6 +387,12 @@
       "deleteFailed": "Échec de la suppression du calendrier.",
       "codeRequired": "Saisissez un code.",
       "nameRequired": "Saisissez un nom."
+    },
+    "delete": {
+      "toDelete_one": "{{count}} calendrier sera supprimé :",
+      "toDelete_other": "{{count}} calendriers seront supprimés :",
+      "kept_one": "{{count}} calendrier ne peut pas être supprimé et est conservé :",
+      "kept_other": "{{count}} calendriers ne peuvent pas être supprimés et sont conservés :"
     }
   },
   "suppliers": {
@@ -636,6 +648,12 @@
       "unmapped_one": "{{count}} compte n'a pas de compte de consolidation",
       "unmapped_other": "{{count}} comptes n'ont pas de compte de consolidation",
       "showAll": "Afficher tous les comptes"
+    },
+    "delete": {
+      "toDelete_one": "{{count}} compte sera supprimé :",
+      "toDelete_other": "{{count}} comptes seront supprimés :",
+      "kept_one": "{{count}} compte ne peut pas être supprimé et est conservé :",
+      "kept_other": "{{count}} comptes ne peuvent pas être supprimés et sont conservés :"
     }
   },
   "accounts": {

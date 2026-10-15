@@ -286,6 +286,12 @@
       "nameRequired": "Enter a name.",
       "companyRequired": "Choose a company.",
       "chooseCompany": "Choose the company to make this group a cost center."
+    },
+    "delete": {
+      "toDelete_one": "{{count}} cost center will be deleted:",
+      "toDelete_other": "{{count}} cost centers will be deleted:",
+      "kept_one": "{{count}} cost center cannot be deleted and is kept:",
+      "kept_other": "{{count}} cost centers cannot be deleted and are kept:"
     }
   },
   "workingDayCalendars": {
@@ -381,6 +387,12 @@
       "deleteFailed": "Failed to delete the calendar.",
       "codeRequired": "Enter a code.",
       "nameRequired": "Enter a name."
+    },
+    "delete": {
+      "toDelete_one": "{{count}} calendar will be deleted:",
+      "toDelete_other": "{{count}} calendars will be deleted:",
+      "kept_one": "{{count}} calendar cannot be deleted and is kept:",
+      "kept_other": "{{count}} calendars cannot be deleted and are kept:"
     }
   },
   "suppliers": {
@@ -636,6 +648,12 @@
       "unmapped_one": "{{count}} account has no consolidation account",
       "unmapped_other": "{{count}} accounts have no consolidation account",
       "showAll": "Show all accounts"
+    },
+    "delete": {
+      "toDelete_one": "{{count}} account will be deleted:",
+      "toDelete_other": "{{count}} accounts will be deleted:",
+      "kept_one": "{{count}} account cannot be deleted and is kept:",
+      "kept_other": "{{count}} accounts cannot be deleted and are kept:"
     }
   },
   "accounts": {

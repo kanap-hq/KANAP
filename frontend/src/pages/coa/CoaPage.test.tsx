@@ -10,6 +10,8 @@ import { KanapDialogProvider } from '../../components/design';
 
 const state = vi.hoisted(() => ({ coas: [] as any[], level: 'admin' as 'none' | 'reader' | 'member' | 'admin' }));
 const grid = vi.hoisted(() => ({ props: null as null | Record<string, any>, mounts: 0 }));
+const deleteButton = vi.hoisted(() => ({ props: null as null | Record<string, any> }));
+const deleteCheckPost = vi.hoisted(() => vi.fn());
 const manage = vi.hoisted(() => ({ open: false }));
 const dialogs = vi.hoisted(() => ({ create: null as null | Record<string, any>, csvImport: null as null | Record<string, any> }));
 
@@ -19,8 +21,16 @@ vi.mock('../../api', () => ({
       if (url === '/chart-of-accounts') return { data: { items: state.coas } };
       return { data: { items: [] } };
     }),
+    post: deleteCheckPost,
   },
 }));
+vi.mock('../../components/DeleteSelectedButton', () => ({
+  default: (props: Record<string, any>) => {
+    deleteButton.props = props;
+    return null;
+  },
+}));
+
 vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({
     hasLevel: (_resource: string, level: string) => {
@@ -283,5 +293,20 @@ describe('CoaPage summary and consolidation health', () => {
     expect(await screen.findByTestId('coa-summary')).toBeInTheDocument();
     expect(errors.mock.calls.flat().join(' ')).not.toMatch(/change in the order of Hooks|Rendered more hooks/);
     errors.mockRestore();
+  });
+});
+
+describe('CoaPage delete', () => {
+  it('asks the delete check before its confirmation, and names the records in its words', async () => {
+    renderPage();
+    const props = await waitFor(() => {
+      expect(deleteButton.props).not.toBeNull();
+      return deleteButton.props!;
+    });
+    deleteCheckPost.mockResolvedValueOnce({ data: { refused: [{ id: 'a', name: 'A', code: 'X', usages: [] }] } });
+    expect(await props.checkDelete(['a', 'b'])).toEqual({ refused: [{ id: 'a', name: 'A', code: 'X', usages: [] }] });
+    expect(deleteCheckPost).toHaveBeenCalledWith('/accounts/delete-check', { ids: ['a', 'b'] });
+    expect(props.itemLabels.toDelete(2)).toBe('2 accounts will be deleted:');
+    expect(props.itemLabels.kept(1)).toBe('1 account cannot be deleted and is kept:');
   });
 });

@@ -104,6 +104,12 @@
         "noLocation": "(Kein Standort)",
         "noSubLocation": "(Kein Unterstandort)",
         "blank": "(Leer)"
+      },
+      "delete": {
+        "toDelete_one": "{{count}} Asset wird gelöscht:",
+        "toDelete_other": "{{count}} Assets werden gelöscht:",
+        "kept_one": "{{count}} Asset kann nicht gelöscht werden und bleibt erhalten:",
+        "kept_other": "{{count}} Assets können nicht gelöscht werden und bleiben erhalten:"
       }
     },
     "connections": {

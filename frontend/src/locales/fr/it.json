@@ -104,6 +104,12 @@
         "noLocation": "(Aucun site)",
         "noSubLocation": "(Aucun sous-site)",
         "blank": "(Vide)"
+      },
+      "delete": {
+        "toDelete_one": "{{count}} actif sera supprimé :",
+        "toDelete_other": "{{count}} actifs seront supprimés :",
+        "kept_one": "{{count}} actif ne peut pas être supprimé et est conservé :",
+        "kept_other": "{{count}} actifs ne peuvent pas être supprimés et sont conservés :"
       }
     },
     "connections": {

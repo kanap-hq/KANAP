@@ -1199,6 +1199,12 @@
     },
     "lastLogin": {
       "never": "Jamais"
+    },
+    "delete": {
+      "toDelete_one": "{{count}} utilisateur sera supprimé :",
+      "toDelete_other": "{{count}} utilisateurs seront supprimés :",
+      "kept_one": "{{count}} utilisateur ne peut pas être supprimé et est conservé :",
+      "kept_other": "{{count}} utilisateurs ne peuvent pas être supprimés et sont conservés :"
     }
   },
   "aiModels": {

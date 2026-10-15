@@ -30,6 +30,23 @@ describe('getApiErrorMessage', () => {
     expect(getApiErrorMessage(unavailable('onprem'), i18n.getFixedT('fr'), 'fallback')).toMatch(/^Les textes mis en forme ne peuvent pas être enregistrés sur ce serveur/);
   });
 
+  it('words a refused delete with its counts, in the language of the interface', () => {
+    const refused = {
+      response: {
+        status: 409,
+        data: { code: 'ASSET_IN_USE', message: 'Cannot delete asset "srv-01": is linked to 2 connection(s)', usages: [{ type: 'app_assignments', total: 1 }, { type: 'connections', total: 2 }] },
+      },
+    };
+    expect(getApiErrorMessage(refused, t, 'fallback')).toBe(
+      'This asset is used by 1 application assignment and 2 connections. Remove it from them before deleting it.',
+    );
+    expect(getApiErrorMessage(refused, i18n.getFixedT('fr'), 'fallback')).toBe(
+      'Cet actif est utilisé par 1 affectation à une application et 2 connexions. Retirez-le de ces éléments avant de le supprimer.',
+    );
+    expect(getApiErrorMessage({ response: { status: 409, data: { code: 'USER_OWN_ACCOUNT', message: 'raw', usages: [] } } }, i18n.getFixedT('de'), 'fallback'))
+      .toBe('Sie können Ihr eigenes Konto nicht löschen. Deaktivieren Sie es bei Bedarf.');
+  });
+
   it('keeps the server message without a code, then the fallback', () => {
     expect(getApiErrorMessage({ response: { status: 500, data: { message: 'Server said' } } }, t, 'fallback')).toBe('Server said');
     expect(getApiErrorMessage({}, t, 'fallback')).toBe('fallback');

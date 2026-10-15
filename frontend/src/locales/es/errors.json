@@ -93,5 +93,13 @@
   "CSV_IMPORT_FAILED": "La importación falló: {{reason}}",
   "SUPPLIER_IN_USE": "Este proveedor se usa en {{usages}}. Desactívelo en lugar de eliminarlo.",
   "COMPANY_IN_USE": "Esta empresa se usa en {{usages}}. Desactívela en lugar de eliminarla.",
-  "CONTRACT_HAS_COMPLIANCE_RECORDS": "Este contrato tiene {{usages}}. Desactívelo en lugar de eliminarlo."
+  "CONTRACT_HAS_COMPLIANCE_RECORDS": "Este contrato tiene {{usages}}. Desactívelo en lugar de eliminarlo.",
+  "ASSET_IN_USE": "Este activo se usa en {{usages}}. Quítelo de ellos antes de eliminarlo.",
+  "COST_CENTER_IN_USE": "Este centro de coste se usa en {{usages}}. Desactívelo en lugar de eliminarlo.",
+  "COST_CENTER_HAS_NODES": "Este grupo contiene {{usages}}. Muévalos o elimínelos primero.",
+  "CALENDAR_IN_USE": "Este calendario se usa en {{usages}}. Desactívelo en lugar de eliminarlo.",
+  "USER_OWN_ACCOUNT": "No puede eliminar su propia cuenta. Desactívela si es necesario.",
+  "ACCOUNT_IN_USE": "Esta cuenta se usa en {{usages}}. Desactívela en lugar de eliminarla.",
+  "CHART_OF_ACCOUNTS_IN_USE": "Este plan de cuentas se usa en {{usages}}. Páselos primero a otro plan de cuentas.",
+  "RECORD_IN_USE": "Otros registros todavía usan este elemento. Desactívelo en lugar de eliminarlo."
 }

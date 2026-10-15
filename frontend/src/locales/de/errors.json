@@ -93,5 +93,13 @@
   "CSV_IMPORT_FAILED": "Der Import ist fehlgeschlagen: {{reason}}",
   "SUPPLIER_IN_USE": "Dieser Lieferant wird noch verwendet: {{usages}}. Deaktivieren Sie ihn, statt ihn zu löschen.",
   "COMPANY_IN_USE": "Dieses Unternehmen wird noch verwendet: {{usages}}. Deaktivieren Sie es, statt es zu löschen.",
-  "CONTRACT_HAS_COMPLIANCE_RECORDS": "Dieser Vertrag hat {{usages}}. Deaktivieren Sie ihn, statt ihn zu löschen."
+  "CONTRACT_HAS_COMPLIANCE_RECORDS": "Dieser Vertrag hat {{usages}}. Deaktivieren Sie ihn, statt ihn zu löschen.",
+  "ASSET_IN_USE": "Dieses Asset wird noch verwendet: {{usages}}. Entfernen Sie es dort, bevor Sie es löschen.",
+  "COST_CENTER_IN_USE": "Diese Kostenstelle wird noch verwendet: {{usages}}. Deaktivieren Sie sie, statt sie zu löschen.",
+  "COST_CENTER_HAS_NODES": "Diese Gruppe enthält {{usages}}. Verschieben oder löschen Sie diese zuerst.",
+  "CALENDAR_IN_USE": "Dieser Kalender wird noch verwendet: {{usages}}. Deaktivieren Sie ihn, statt ihn zu löschen.",
+  "USER_OWN_ACCOUNT": "Sie können Ihr eigenes Konto nicht löschen. Deaktivieren Sie es bei Bedarf.",
+  "ACCOUNT_IN_USE": "Dieses Konto wird noch verwendet: {{usages}}. Deaktivieren Sie es, statt es zu löschen.",
+  "CHART_OF_ACCOUNTS_IN_USE": "Dieser Kontenplan wird noch verwendet: {{usages}}. Ordnen Sie diese zuerst einem anderen Kontenplan zu.",
+  "RECORD_IN_USE": "Andere Datensätze verwenden dieses Element noch. Deaktivieren Sie es, statt es zu löschen."
 }

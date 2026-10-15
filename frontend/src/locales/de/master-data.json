@@ -286,6 +286,12 @@
       "nameRequired": "Geben Sie einen Namen ein.",
       "companyRequired": "Wählen Sie ein Unternehmen.",
       "chooseCompany": "Wählen Sie das Unternehmen, um diese Gruppe in eine Kostenstelle umzuwandeln."
+    },
+    "delete": {
+      "toDelete_one": "{{count}} Kostenstelle wird gelöscht:",
+      "toDelete_other": "{{count}} Kostenstellen werden gelöscht:",
+      "kept_one": "{{count}} Kostenstelle kann nicht gelöscht werden und bleibt erhalten:",
+      "kept_other": "{{count}} Kostenstellen können nicht gelöscht werden und bleiben erhalten:"
     }
   },
   "workingDayCalendars": {
@@ -381,6 +387,12 @@
       "deleteFailed": "Der Kalender konnte nicht gelöscht werden.",
       "codeRequired": "Geben Sie einen Code ein.",
       "nameRequired": "Geben Sie einen Namen ein."
+    },
+    "delete": {
+      "toDelete_one": "{{count}} Kalender wird gelöscht:",
+      "toDelete_other": "{{count}} Kalender werden gelöscht:",
+      "kept_one": "{{count}} Kalender kann nicht gelöscht werden und bleibt erhalten:",
+      "kept_other": "{{count}} Kalender können nicht gelöscht werden und bleiben erhalten:"
     }
   },
   "suppliers": {
@@ -636,6 +648,12 @@
       "unmapped_one": "{{count}} Konto hat kein Konsolidierungskonto",
       "unmapped_other": "{{count}} Konten haben kein Konsolidierungskonto",
       "showAll": "Alle Konten anzeigen"
+    },
+    "delete": {
+      "toDelete_one": "{{count}} Konto wird gelöscht:",
+      "toDelete_other": "{{count}} Konten werden gelöscht:",
+      "kept_one": "{{count}} Konto kann nicht gelöscht werden und bleibt erhalten:",
+      "kept_other": "{{count}} Konten können nicht gelöscht werden und bleiben erhalten:"
     }
   },
   "accounts": {

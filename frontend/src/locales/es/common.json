@@ -198,7 +198,19 @@
       "team_members_one": "{{count}} miembro del equipo",
       "team_members_other": "{{count}} miembros del equipo",
       "compliance_requirements_one": "{{count}} requisito de conformidad registrado",
-      "compliance_requirements_other": "{{count}} requisitos de conformidad registrados"
+      "compliance_requirements_other": "{{count}} requisitos de conformidad registrados",
+      "opex_lines_one": "{{count}} línea OPEX",
+      "opex_lines_other": "{{count}} líneas OPEX",
+      "capex_lines_one": "{{count}} línea CAPEX",
+      "capex_lines_other": "{{count}} líneas CAPEX",
+      "app_assignments_one": "{{count}} asignación de aplicación",
+      "app_assignments_other": "{{count}} asignaciones de aplicación",
+      "connections_one": "{{count}} conexión",
+      "connections_other": "{{count}} conexiones",
+      "nodes_one": "{{count}} elemento",
+      "nodes_other": "{{count}} elementos",
+      "companies_one": "{{count}} empresa",
+      "companies_other": "{{count}} empresas"
     }
   },
   "messages": {

@@ -93,5 +93,13 @@
   "CSV_IMPORT_FAILED": "L'import a échoué : {{reason}}",
   "SUPPLIER_IN_USE": "Ce fournisseur est utilisé par {{usages}}. Désactivez-le plutôt que de le supprimer.",
   "COMPANY_IN_USE": "Cette société est utilisée par {{usages}}. Désactivez-la plutôt que de la supprimer.",
-  "CONTRACT_HAS_COMPLIANCE_RECORDS": "Ce contrat a {{usages}}. Désactivez-le plutôt que de le supprimer."
+  "CONTRACT_HAS_COMPLIANCE_RECORDS": "Ce contrat a {{usages}}. Désactivez-le plutôt que de le supprimer.",
+  "ASSET_IN_USE": "Cet actif est utilisé par {{usages}}. Retirez-le de ces éléments avant de le supprimer.",
+  "COST_CENTER_IN_USE": "Ce centre de coûts est utilisé par {{usages}}. Désactivez-le plutôt que de le supprimer.",
+  "COST_CENTER_HAS_NODES": "Ce groupe contient {{usages}}. Déplacez-les ou supprimez-les d’abord.",
+  "CALENDAR_IN_USE": "Ce calendrier est utilisé par {{usages}}. Désactivez-le plutôt que de le supprimer.",
+  "USER_OWN_ACCOUNT": "Vous ne pouvez pas supprimer votre propre compte. Désactivez-le si nécessaire.",
+  "ACCOUNT_IN_USE": "Ce compte est utilisé par {{usages}}. Désactivez-le plutôt que de le supprimer.",
+  "CHART_OF_ACCOUNTS_IN_USE": "Ce plan comptable est utilisé par {{usages}}. Rattachez-les d’abord à un autre plan comptable.",
+  "RECORD_IN_USE": "D’autres éléments utilisent encore cet élément. Désactivez-le plutôt que de le supprimer."
 }
