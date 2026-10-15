@@ -928,5 +928,23 @@
     "editLink": "Modifier le lien",
     "copyUrl": "Copier l'URL",
     "removeLink": "Supprimer le lien"
+  },
+  "taskTypes": {
+    "task": {
+      "label": "Tâche",
+      "description": "Tâche ou élément de travail standard"
+    },
+    "bug": {
+      "label": "Bug",
+      "description": "Défaut ou erreur logicielle"
+    },
+    "problem": {
+      "label": "Problème",
+      "description": "Problème opérationnel nécessitant une analyse"
+    },
+    "incident": {
+      "label": "Incident",
+      "description": "Interruption de service ou événement de sécurité"
+    }
   }
 }

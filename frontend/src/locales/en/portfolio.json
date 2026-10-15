@@ -2366,7 +2366,8 @@
       },
       "taskTypeDialog": {
         "editTitle": "Edit task type",
-        "createTitle": "Create task type"
+        "createTitle": "Create task type",
+        "shippedNameHint": "Shown in each user's language while it keeps this name."
       },
       "confirmations": {
         "deleteSource": "Delete this source?",

@@ -18,6 +18,7 @@ import { useGridScopePreference } from '../hooks/useGridScopePreference';
 import { ACTIVE_TASK_STATUSES, TASK_STATUS_COLORS, TASK_STATUS_LABELS } from './tasks/task.constants';
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '../i18n/useLocale';
+import { useLocalizedTaskTypes, useTaskTypeLabel } from '../hooks/useLocalizedTaskTypes';
 import { formatShortDate } from '../lib/dateFormat';
 import { getDotColor } from '../utils/statusColors';
 import { useTheme } from '@mui/material/styles';
@@ -33,6 +34,8 @@ type TaskRow = {
   status: string;
   task_type_id: string | null;
   task_type_name: string | null;
+  /** The shipped type it started as, null for a tenant's own type. */
+  task_type_code?: string | null;
   priority_level: string;
   priority_score: number;
   due_date: string | null;
@@ -89,7 +92,7 @@ const PRIORITY_LABEL_MAP: Record<string, string> = {
 };
 
 function TaskTypeCellRenderer(props: any) {
-  const typeName = props.value;
+  const typeName = props.valueFormatted || props.value;
   if (!typeName) {
     return <Box component="span" sx={{ color: 'text.disabled' }}>-</Box>;
   }
@@ -118,6 +121,9 @@ export default function TasksPage() {
   const { hasLevel, profile } = useAuth();
   const { t } = useTranslation(['portfolio', 'common']);
   const locale = useLocale();
+  const typeLabel = useTaskTypeLabel();
+  // The type filter lists stored names: each one is shown as the type is shown in the rows.
+  const { labelByName: taskTypeLabelMap } = useLocalizedTaskTypes();
   const theme = useTheme();
 
   if (!hasLevel('tasks', 'reader')) {
@@ -403,9 +409,10 @@ export default function TasksPage() {
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getTaskFilterValues('task_type_name'),
+        getValues: getTaskFilterValues('task_type_name', { labelMap: taskTypeLabelMap }),
         searchable: false,
       },
+      valueFormatter: (p: any) => typeLabel(p.value, p.data?.task_type_code) ?? '',
       cellRenderer: TaskTypeCellRenderer,
     },
     {
@@ -608,7 +615,7 @@ export default function TasksPage() {
       cellRenderer: clickableCellRenderer,
       hide: true,
     },
-  ], [clickableCellRenderer, contextLabelMap, getTaskFilterValues, locale, renderPriorityCell, renderStatusCell, renderTypeCell, statusLabelMap, t]);
+  ], [clickableCellRenderer, contextLabelMap, getTaskFilterValues, locale, renderPriorityCell, renderStatusCell, renderTypeCell, statusLabelMap, t, taskTypeLabelMap, typeLabel]);
 
   const actions = (
     <Stack direction="row" spacing={1}>

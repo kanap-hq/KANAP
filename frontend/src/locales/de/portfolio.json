@@ -2366,7 +2366,8 @@
       },
       "taskTypeDialog": {
         "editTitle": "Aufgabentyp bearbeiten",
-        "createTitle": "Aufgabentyp erstellen"
+        "createTitle": "Aufgabentyp erstellen",
+        "shippedNameHint": "Wird in der Sprache jedes Benutzers angezeigt, solange dieser Name bleibt."
       },
       "confirmations": {
         "deleteSource": "Diese Quelle löschen?",

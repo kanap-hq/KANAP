@@ -895,3 +895,40 @@ describe('WeeklyReport type', () => {
   });
 
 });
+
+describe('WeeklyReport task types', () => {
+  it('shows a shipped task type in the reader\'s language, in the rows and in the filter', async () => {
+    mockApi(
+      report({
+        tasks: {
+          created: [
+            taskRow({ taskTypeId: 'tt-prob', taskTypeName: 'Problem', taskTypeCode: 'problem' }),
+            taskRow({ taskId: 't2', ref: 'T-2', itemPath: '/portfolio/tasks/T-2/overview', taskTypeId: 'tt-own', taskTypeName: 'Ticket', taskTypeCode: null }),
+          ],
+          modified: [],
+          closed: [],
+        },
+      }),
+      {
+        ...EMPTY_FILTER_VALUES,
+        taskTypes: [
+          { id: 'tt-prob', name: 'Problem', code: 'problem' },
+          { id: 'tt-inc', name: 'Incident', code: 'incident' },
+          { id: 'tt-own', name: 'Ticket', code: null },
+        ],
+      },
+    );
+    await i18n.changeLanguage('es');
+    try {
+      renderReport();
+      await waitFor(() => expect(screen.getByText('Problema')).toBeTruthy());
+      expect(screen.getByText('Ticket')).toBeTruthy();
+
+      fireEvent.mouseDown(screen.getByText(i18n.t('portfolio:reports.weekly.filters.allTaskTypes')));
+      const listbox = await screen.findByRole('listbox');
+      expect(within(listbox).getAllByRole('option').map((node) => node.textContent)).toEqual(['Problema', 'Incidente', 'Ticket']);
+    } finally {
+      await i18n.changeLanguage('en');
+    }
+  });
+});
