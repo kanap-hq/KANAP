@@ -17,6 +17,22 @@ version brings, followed by three lists:
 To upgrade across several versions, read every entry between your version and the target: the
 actions add up. The release process is described in `doc/releasing.md`.
 
+## 26.10.2 (2026-10-15)
+
+A small follow-up to 26.10.1: one fix on the budget line workspace, and the launch article on the website.
+
+### Changes
+- The website's changelog page lists the release articles of the blog, starting with the 26.10.1 launch article. (#583)
+
+### Fixes
+- After a budget line's type is changed between OPEX and CAPEX, the Properties panel shows the new type and its fields right away, with no reload. (#584)
+- The 26.10.1 entry links the on-premise operations page at its real address. (#582)
+
+### On-premise
+- Action required: none. `.env` is unchanged.
+- Migrations: none.
+- Recommended: none.
+
 ## 26.10.1 (2026-10-15)
 
 First published version of KANAP. From now on, KANAP comes in numbered and dated versions, about one a month. Self-hosted installations follow the `stable` branch, and each GitHub release carries its notes and an inventory of the components it contains.
