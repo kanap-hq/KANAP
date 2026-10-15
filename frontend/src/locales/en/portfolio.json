@@ -2292,13 +2292,13 @@
           "high": "High"
         }
       },
-      "confirmDelete": "Delete this criterion? Existing evaluations will be removed.",
       "messages": {
         "updateFailed": "Failed to update criterion",
         "updateSettingsFailed": "Failed to update settings",
         "deleteFailed": "Failed to delete criterion",
         "reorderFailed": "Failed to reorder criteria"
-      }
+      },
+      "confirmDelete": "Its existing evaluations are removed too. This cannot be undone."
     },
     "skills": {
       "empty": "No skills configured yet. Use Seed defaults to populate with standard skills, or add skills manually.",
@@ -2310,7 +2310,6 @@
         "categoryPlaceholder": "Select or type a new category",
         "name": "Skill name"
       },
-      "confirmDelete": "Delete this skill?",
       "messages": {
         "seedDefaultsFailed": "Failed to seed defaults",
         "updateFailed": "Failed to update skill",
@@ -2338,7 +2337,6 @@
           "milestoneName": "Phase {{number}} complete"
         }
       },
-      "confirmDelete": "Delete this phase template?",
       "messages": {
         "deleteFailed": "Failed to delete template"
       }
@@ -2376,10 +2374,7 @@
         "createTitle": "Create task type"
       },
       "confirmations": {
-        "deleteSource": "Delete this source?",
-        "deleteCategory": "Delete this category and all its streams?",
-        "deleteStream": "Delete this stream?",
-        "deleteTaskType": "Delete this task type?"
+        "deleteCategory": "Its streams are deleted with it. This cannot be undone."
       },
       "messages": {
         "deleteSourceFailed": "Failed to delete source",
@@ -2401,7 +2396,6 @@
         "editTitle": "Edit team",
         "createTitle": "Create team"
       },
-      "confirmDelete": "Delete this team?",
       "messages": {
         "seedDefaultsFailed": "Failed to seed defaults",
         "deleteFailed": "Failed to delete team",
