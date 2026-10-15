@@ -71,10 +71,22 @@
     "legacy": "Histórico"
   },
   "scope": {
-    "my": "Mis {{entity}}",
-    "myTeam": "{{entity}} de mi equipo",
-    "all": "Todos los {{entity}}",
-    "teamUnavailable": "No está asignado a ningún equipo"
+    "teamUnavailable": "No está asignado a ningún equipo",
+    "tasks": {
+      "my": "Mis tareas",
+      "myTeam": "Tareas de mi equipo",
+      "all": "Todas las tareas"
+    },
+    "projects": {
+      "my": "Mis proyectos",
+      "myTeam": "Proyectos de mi equipo",
+      "all": "Todos los proyectos"
+    },
+    "requests": {
+      "my": "Mis solicitudes",
+      "myTeam": "Solicitudes de mi equipo",
+      "all": "Todas las solicitudes"
+    }
   },
   "shared": {
     "blankValue": "(Vacío)",

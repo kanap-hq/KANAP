@@ -71,10 +71,22 @@
     "legacy": "Legacy"
   },
   "scope": {
-    "my": "My {{entity}}",
-    "myTeam": "My team's {{entity}}",
-    "all": "All {{entity}}",
-    "teamUnavailable": "You are not assigned to a team"
+    "teamUnavailable": "You are not assigned to a team",
+    "tasks": {
+      "my": "My tasks",
+      "myTeam": "My team's tasks",
+      "all": "All tasks"
+    },
+    "projects": {
+      "my": "My projects",
+      "myTeam": "My team's projects",
+      "all": "All projects"
+    },
+    "requests": {
+      "my": "My requests",
+      "myTeam": "My team's requests",
+      "all": "All requests"
+    }
   },
   "shared": {
     "blankValue": "(Blank)",

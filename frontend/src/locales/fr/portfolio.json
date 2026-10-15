@@ -71,10 +71,22 @@
     "legacy": "Historique"
   },
   "scope": {
-    "my": "Mes {{entity}}",
-    "myTeam": "{{entity}} de mon équipe",
-    "all": "Tous les {{entity}}",
-    "teamUnavailable": "Vous n'êtes affecté à aucune équipe"
+    "teamUnavailable": "Vous n'êtes affecté à aucune équipe",
+    "tasks": {
+      "my": "Mes tâches",
+      "myTeam": "Tâches de mon équipe",
+      "all": "Toutes les tâches"
+    },
+    "projects": {
+      "my": "Mes projets",
+      "myTeam": "Projets de mon équipe",
+      "all": "Tous les projets"
+    },
+    "requests": {
+      "my": "Mes demandes",
+      "myTeam": "Demandes de mon équipe",
+      "all": "Toutes les demandes"
+    }
   },
   "shared": {
     "blankValue": "(Vide)",

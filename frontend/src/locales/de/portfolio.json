@@ -71,10 +71,22 @@
     "legacy": "Altbestand"
   },
   "scope": {
-    "my": "Meine {{entity}}",
-    "myTeam": "{{entity}} meines Teams",
-    "all": "Alle {{entity}}",
-    "teamUnavailable": "Sie sind keinem Team zugeordnet"
+    "teamUnavailable": "Sie sind keinem Team zugeordnet",
+    "tasks": {
+      "my": "Meine Aufgaben",
+      "myTeam": "Aufgaben meines Teams",
+      "all": "Alle Aufgaben"
+    },
+    "projects": {
+      "my": "Meine Projekte",
+      "myTeam": "Projekte meines Teams",
+      "all": "Alle Projekte"
+    },
+    "requests": {
+      "my": "Meine Anfragen",
+      "myTeam": "Anfragen meines Teams",
+      "all": "Alle Anfragen"
+    }
   },
   "shared": {
     "blankValue": "(Leer)",
