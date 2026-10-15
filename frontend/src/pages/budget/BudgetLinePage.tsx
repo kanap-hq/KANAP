@@ -34,6 +34,7 @@ import {
   StatusValue,
   deriveStatusFromDisabledAt,
   normalizeDisabledAtInput,
+  statusChoicePatch,
 } from '../../constants/status';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import SendLinkButton from '../../components/workspace/SendLinkButton';
@@ -957,18 +958,15 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
 
   // ----- Status lifecycle handlers -----
   const handleStatusChange = (next: StatusValue) => {
-    // Disabled with no end of validity: the server sets it (now, or keeps one already passed).
-    // Each window sending its own clock's now would make two people disabling the line a
-    // conflict on the end of validity (lot 3C review).
-    if (next === STATUS_DISABLED && !form.disabled_at) {
-      void patchNow({ status: STATUS_DISABLED });
-      return;
-    }
-    const disabled_at = next === STATUS_DISABLED ? form.disabled_at : null;
-    void patchNow({ status: deriveStatusFromDisabledAt(disabled_at), disabled_at });
+    // The status shown sends nothing (a future end of validity stays). Disabled goes alone: the
+    // server sets the end of validity (now, or keeps one already passed). Each window sending its
+    // own clock's now would make two people disabling the line a conflict (lot 3C review).
+    const patch = statusChoicePatch(next, form);
+    if (patch) void patchNow(patch);
   };
   const handleDisabledAtChange = (next: string | null) => {
     const disabled_at = normalizeDisabledAtInput(next);
+    if (disabled_at === normalizeDisabledAtInput(form.disabled_at)) return;
     void patchNow({ status: deriveStatusFromDisabledAt(disabled_at), disabled_at });
   };
 

@@ -47,3 +47,25 @@ export function lifecyclePayload(
   if (status === STATUS_DISABLED && !disabled_at) return { status: STATUS_DISABLED };
   return { status: deriveStatusFromDisabledAt(disabled_at), disabled_at };
 }
+
+/** Whether two lifecycles are the same: the status and the end of validity, as instants. */
+export function sameLifecycle(
+  a: { status: unknown; disabled_at: string | Date | null | undefined },
+  b: { status: unknown; disabled_at: string | Date | null | undefined },
+): boolean {
+  return normalizeStatus(a.status) === normalizeStatus(b.status)
+    && normalizeDisabledAtInput(a.disabled_at) === normalizeDisabledAtInput(b.disabled_at);
+}
+
+/**
+ * The patch a status menu sends, or null when the choice changes nothing. Choosing the status
+ * shown sends nothing, so a future end of validity stays. Disabled goes alone: the server ends
+ * the record now, on its own clock, or keeps an end already passed. Enabled clears the end.
+ */
+export function statusChoicePatch(
+  next: StatusValue,
+  current: { status: unknown; disabled_at: string | Date | null | undefined },
+): { status: StatusValue; disabled_at?: null } | null {
+  if (next === normalizeStatus(current.status) && next === deriveStatusFromDisabledAt(current.disabled_at)) return null;
+  return next === STATUS_DISABLED ? { status: STATUS_DISABLED } : { status: STATUS_ENABLED, disabled_at: null };
+}

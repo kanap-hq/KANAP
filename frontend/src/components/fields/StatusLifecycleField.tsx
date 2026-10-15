@@ -104,11 +104,12 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
     const formatted = formatEuPartial(raw);
     setInputText(formatted);
     const iso = euDateToIsoEndOfDay(formatted);
-    if (iso) {
+    // The day already stored, typed again: it keeps its time of day (a switch sets one), nothing is sent.
+    if (iso && formatted !== isoToEuDate(disabledAt)) {
       onDisabledAtChange(iso);
       onStatusChange(deriveStatusFromDisabledAt(iso));
     }
-  }, [onDisabledAtChange, onStatusChange]);
+  }, [disabledAt, onDisabledAtChange, onStatusChange]);
 
   const handleDisabledAtBlur = React.useCallback(() => {
     setFocused(false);
@@ -140,6 +141,8 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
     const [y, m, d] = yyyyMmDd.split('-');
     const ddmmyyyy = `${d}/${m}/${y}`;
     setInputText(ddmmyyyy);
+    // The day already stored, picked again: it keeps its time of day, nothing is sent.
+    if (ddmmyyyy === isoToEuDate(disabledAt)) return;
     const iso = euDateToIsoEndOfDay(ddmmyyyy);
     onDisabledAtChange(iso);
     onStatusChange(deriveStatusFromDisabledAt(iso));

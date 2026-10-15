@@ -119,6 +119,27 @@ describe('StatusLifecycleField', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
+  it('keeps a stored end of validity, time included, when its own day is typed or picked again', () => {
+    const stored = '2031-10-16T14:37:12.000Z';
+    const { onStatusChange, onDisabledAtChange } = renderField({ status: STATUS_ENABLED, disabledAt: stored });
+    const input = screen.getByPlaceholderText(i18n.t('common:labels.datePlaceholder')) as HTMLInputElement;
+    const local = new Date(stored);
+    const sameDay = `${String(local.getDate()).padStart(2, '0')}/${String(local.getMonth() + 1).padStart(2, '0')}/${local.getFullYear()}`;
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: sameDay } });
+    fireEvent.blur(input);
+    fireEvent.click(screen.getByRole('button', { name: 'Open calendar' }));
+    const label = new Intl.DateTimeFormat('en', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(local);
+    fireEvent.click(screen.getByRole('button', { name: label }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(onDisabledAtChange).not.toHaveBeenCalled();
+    expect(onStatusChange).not.toHaveBeenCalled();
+
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '17/10/2031' } });
+    expect(onDisabledAtChange).toHaveBeenCalledWith(new Date(2031, 9, 17, 23, 59, 0, 0).toISOString());
+  });
+
   it('clears the end of validity from the calendar', () => {
     const { onStatusChange, onDisabledAtChange } = renderField({
       status: STATUS_DISABLED,

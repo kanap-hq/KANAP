@@ -131,6 +131,24 @@ describe('platform admin template account editors: Used for', () => {
     expect(body).not.toHaveProperty('disabled_at');
   });
 
+  it('leaves the status and a future end of validity out of a save that does not touch them', async () => {
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === `${BASE}/2050`) return { data: { ...TEMPLATE_ACCOUNT, disabled_at: '2031-10-16T14:37:12.000Z' } };
+      if (url === '/chart-of-accounts') return { data: { items: CHARTS } };
+      return { data: {} };
+    });
+    const ref = React.createRef<AccountOverviewEditorHandle>();
+    wrap(<AccountOverviewEditor ref={ref} id="2050" basePath={BASE} />);
+    await waitFor(() => expect(natureSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.capex'));
+    await pickNature('master-data:shared.lineTypeUsage.both');
+    await ref.current!.save().catch(() => undefined);
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalled());
+    const [, body] = mocked.patch.mock.calls[0];
+    expect(body.nature).toBeNull();
+    expect(body).not.toHaveProperty('status');
+    expect(body).not.toHaveProperty('disabled_at');
+  });
+
   it('creates a template account with its choice', async () => {
     // The editor preselects the chart named in the address.
     window.history.replaceState(null, '', '/?selected=coa-1');
