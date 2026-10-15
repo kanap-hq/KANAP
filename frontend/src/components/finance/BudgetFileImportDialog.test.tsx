@@ -204,6 +204,13 @@ describe('BudgetFileImportDialog', () => {
     expect(screen.queryByText(sentence)).toBeNull();
   });
 
+  it('shows an empty file in the screen language', async () => {
+    post.mockResolvedValueOnce({ data: report({ ok: false, notices: { dates: null, amounts: null }, fileErrors: ['The file is empty.'] }) });
+    renderDialog();
+    expect(await screen.findByText(/^errors:CSV_FILE_EMPTY/)).toBeInTheDocument();
+    expect(screen.queryByText('The file is empty.')).toBeNull();
+  });
+
   it('loads with the snapshot of the check and shows the result', async () => {
     const onImported = vi.fn();
     post.mockResolvedValueOnce({ data: report() });

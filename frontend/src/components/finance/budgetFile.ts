@@ -134,6 +134,8 @@ export const DECODE_SENTENCE_CODES: Record<string, string> = {
   'This file is an Excel workbook, not a CSV. In Excel: File › Save As › CSV UTF-8 (Comma delimited).': 'CSV_FILE_EXCEL',
   'This file is an OpenDocument spreadsheet, not a CSV. In LibreOffice Calc: File › Save As › Text CSV.': 'CSV_FILE_OPENDOCUMENT',
   'This file is not a CSV file. Save it as CSV UTF-8 and import it again.': 'CSV_FILE_NOT_TEXT',
+  // `common/csv-sheet/read.ts` CSV_FILE_EMPTY_MESSAGE.
+  'The file is empty.': 'CSV_FILE_EMPTY',
 };
 const SUPPLIERS_MISSING = /^(\d+) suppliers? do(?:es)? not exist\./;
 

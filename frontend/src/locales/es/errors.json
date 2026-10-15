@@ -68,6 +68,7 @@
   "CSV_FILE_EXCEL": "Este archivo es un libro de Excel, no un CSV. En Excel: Archivo › Guardar como › CSV UTF-8 (delimitado por comas).",
   "CSV_FILE_OPENDOCUMENT": "Este archivo es una hoja de cálculo OpenDocument, no un CSV. En LibreOffice Calc: Archivo › Guardar como › Texto CSV.",
   "CSV_FILE_NOT_TEXT": "Este archivo no es un archivo CSV. Guárdelo como CSV UTF-8 e impórtelo de nuevo.",
+  "CSV_FILE_EMPTY": "El archivo está vacío.",
   "CSV_HEADER_IGNORED_COLUMNS": "Estas columnas no se importan: {{extra}}.",
   "CSV_VALUE_REQUIRED": "Se requiere un valor.",
   "CSV_VALUE_ONE_REQUIRED": "Rellene al menos una columna {{column}}.",

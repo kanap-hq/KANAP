@@ -3,7 +3,7 @@ import { endOfValidityFromDate } from '../status';
 import { DecimalMark } from './amount';
 import { formatCsvDate, formatCsvEndOfValidity } from './date';
 import { csvDecodeErrorCode } from './decode';
-import { readCsv } from './read';
+import { CSV_FILE_EMPTY_MESSAGE, readCsv } from './read';
 import { CsvAmountColumn, CsvDataRow, CsvDateOrder, CsvLanguage } from './types';
 
 /**
@@ -66,7 +66,8 @@ export async function readMasterDataFile(request: MasterDataFileRequest): Promis
     decimalMark: request.decimalMark,
   });
   if (read.fileErrors.length > 0) {
-    const code = csvDecodeErrorCode(read.fileErrors[0]);
+    const code = csvDecodeErrorCode(read.fileErrors[0])
+      ?? (read.fileErrors[0] === CSV_FILE_EMPTY_MESSAGE ? 'CSV_FILE_EMPTY' : null);
     throw new BadRequestException(code ? { message: read.fileErrors[0], code } : read.fileErrors[0]);
   }
   const notices = { dates: read.dates?.notice ?? null, amounts: read.amounts?.notice ?? null };

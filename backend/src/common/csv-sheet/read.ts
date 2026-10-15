@@ -23,6 +23,9 @@ interface RawRow {
 
 const SEPARATORS: readonly CsvSeparator[] = [',', ';', '\t'];
 
+/** The refusal of a file with no header, translated by the interface as `CSV_FILE_EMPTY`. */
+export const CSV_FILE_EMPTY_MESSAGE = 'The file is empty.';
+
 /**
  * Read one spreadsheet file. Parsing is a stream and stops once the row cap
  * is passed. The rows are returned because a preflight needs every one of
@@ -37,11 +40,11 @@ export async function readCsv(input: Buffer | string, schema: CsvReadSchema): Pr
   const decoded = decodeInput(input);
   if (decoded.error) return baseResult(decoded.encoding, null, [decoded.error]);
   const text = normalizeNewlines(stripBom(decoded.text));
-  if (text.trim() === '') return baseResult(decoded.encoding, null, ['The file is empty.']);
+  if (text.trim() === '') return baseResult(decoded.encoding, null, [CSV_FILE_EMPTY_MESSAGE]);
 
   const opened = firstRecord(text);
   if (opened.error) return baseResult(decoded.encoding, null, [opened.error]);
-  if (!opened.record) return baseResult(decoded.encoding, null, ['The file is empty.']);
+  if (!opened.record) return baseResult(decoded.encoding, null, [CSV_FILE_EMPTY_MESSAGE]);
   const separator = chooseSeparator(opened.record);
   if (!separator) return baseResult(decoded.encoding, null, ['The separator could not be read from the header.']);
 
@@ -50,12 +53,12 @@ export async function readCsv(input: Buffer | string, schema: CsvReadSchema): Pr
     return baseResult(decoded.encoding, separator, [`This file has more than ${CSV_ROW_CAP.toLocaleString('en-US')} rows.`]);
   }
   if (parsed.error) return baseResult(decoded.encoding, separator, [parsed.error]);
-  if (parsed.rows.length === 0) return baseResult(decoded.encoding, separator, ['The file is empty.']);
+  if (parsed.rows.length === 0) return baseResult(decoded.encoding, separator, [CSV_FILE_EMPTY_MESSAGE]);
 
   const headerRow = parsed.rows[0];
   // `name;notes;` is a trailing delimiter, not an empty column.
   const headerCells = withoutTrailingBlanks(headerRow.cells);
-  if (headerCells.length === 0) return baseResult(decoded.encoding, separator, ['The file is empty.']);
+  if (headerCells.length === 0) return baseResult(decoded.encoding, separator, [CSV_FILE_EMPTY_MESSAGE]);
   const classified = classifyHeaders(headerCells, schema);
   const built = buildRows(parsed.rows.slice(1), classified.slots, schema);
   return {

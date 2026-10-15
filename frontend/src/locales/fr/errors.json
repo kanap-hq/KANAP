@@ -68,6 +68,7 @@
   "CSV_FILE_EXCEL": "Ce fichier est un classeur Excel, pas un CSV. Dans Excel : Fichier › Enregistrer sous › CSV UTF-8 (délimité par des virgules).",
   "CSV_FILE_OPENDOCUMENT": "Ce fichier est un classeur OpenDocument, pas un CSV. Dans LibreOffice Calc : Fichier › Enregistrer sous › Texte CSV.",
   "CSV_FILE_NOT_TEXT": "Ce fichier n'est pas un fichier CSV. Enregistrez-le au format CSV UTF-8, puis importez-le de nouveau.",
+  "CSV_FILE_EMPTY": "Le fichier est vide.",
   "CSV_HEADER_IGNORED_COLUMNS": "Ces colonnes ne sont pas importées : {{extra}}.",
   "CSV_VALUE_REQUIRED": "Une valeur est obligatoire.",
   "CSV_VALUE_ONE_REQUIRED": "Renseignez au moins une colonne {{column}}.",

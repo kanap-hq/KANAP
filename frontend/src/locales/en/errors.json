@@ -68,6 +68,7 @@
   "CSV_FILE_EXCEL": "This file is an Excel workbook, not a CSV. In Excel: File › Save As › CSV UTF-8 (Comma delimited).",
   "CSV_FILE_OPENDOCUMENT": "This file is an OpenDocument spreadsheet, not a CSV. In LibreOffice Calc: File › Save As › Text CSV.",
   "CSV_FILE_NOT_TEXT": "This file is not a CSV file. Save it as CSV UTF-8 and import it again.",
+  "CSV_FILE_EMPTY": "The file is empty.",
   "CSV_HEADER_IGNORED_COLUMNS": "These columns are not imported: {{extra}}.",
   "CSV_VALUE_REQUIRED": "A value is required.",
   "CSV_VALUE_ONE_REQUIRED": "Fill in at least one {{column}} column.",
