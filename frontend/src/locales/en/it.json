@@ -1849,6 +1849,23 @@
     "domains": {
       "workgroup": "Workgroup",
       "n-a": "N/A"
+    },
+    "connectionTypeCategories": {
+      "application": "Application",
+      "database": "Database",
+      "authentication": "Authentication",
+      "remote_access": "Remote access",
+      "file_transfer": "File transfer",
+      "file_sharing": "File sharing",
+      "storage": "Storage",
+      "messaging": "Messaging",
+      "email": "Email",
+      "monitoring": "Monitoring",
+      "network_services": "Network services",
+      "replication": "Replication",
+      "vpn_tunnel": "VPN / tunnel",
+      "backup": "Backup",
+      "generic": "Generic"
     }
   }
 }

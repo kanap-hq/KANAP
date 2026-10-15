@@ -186,3 +186,34 @@ export function itOpsCatalogDefaults(list: string): CatalogDefaults | undefined 
   };
 }
 
+
+/**
+ * The categories of the shipped connection types (`category` of `defaultConnectionTypes` in the
+ * backend), by English text. A category is free text with no code: one still written as shipped is
+ * shown in the user's language (`it:catalogDefaults.connectionTypeCategories.<key>`).
+ */
+const SHIPPED_CONNECTION_TYPE_CATEGORIES: Record<string, string> = {
+  'Application': 'application',
+  'Database': 'database',
+  'Authentication': 'authentication',
+  'Remote Access': 'remote_access',
+  'File Transfer': 'file_transfer',
+  'File Sharing': 'file_sharing',
+  'Storage': 'storage',
+  'Messaging': 'messaging',
+  'Email': 'email',
+  'Monitoring': 'monitoring',
+  'Network Services': 'network_services',
+  'Replication': 'replication',
+  'VPN / Tunnel': 'vpn_tunnel',
+  'Backup': 'backup',
+  'Generic': 'generic',
+};
+
+/** A connection type category as shown in `locale`: translated when it is a shipped one, as typed otherwise. */
+export function connectionTypeCategoryLabel(category: string, locale: string): string {
+  const key = Object.prototype.hasOwnProperty.call(SHIPPED_CONNECTION_TYPE_CATEGORIES, category) ? SHIPPED_CONNECTION_TYPE_CATEGORIES[category] : undefined;
+  if (!key) return category;
+  const label = i18n.getResource(locale, 'it', `catalogDefaults.connectionTypeCategories.${key}`);
+  return typeof label === 'string' ? label : category;
+}
