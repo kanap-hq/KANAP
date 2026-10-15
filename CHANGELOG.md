@@ -17,6 +17,25 @@ version brings, followed by three lists:
 To upgrade across several versions, read every entry between your version and the target: the
 actions add up. The release process is described in `doc/releasing.md`.
 
+## 26.10.3 (2026-10-15)
+
+CSV imports that handle real files, longer account numbers, and the launch article in its final form.
+
+### Changes
+- CSV imports accept files saved by Excel in Windows-1252 as well as UTF-8, refuse an Excel or OpenDocument workbook with a message that says how to save it as CSV, and show the reason when a file or a download is refused. Unknown columns are reported as a warning and no longer block an import. (#589, #592, #594)
+- Re-importing a CSV file of projects, requests, assets, incidents, applications or tasks reports the rows identical to the stored records as unchanged and leaves those records and their history untouched. (#593, #596)
+- Account numbers can have up to 15 digits. The CSV import reports a longer number as a row error and warns when leading zeros are dropped. (#591)
+- A new chart of accounts is selected right after it is created, the import dialog names the chart it loads into, and account counts refresh after an import. (#590)
+- Website: the 26.10.1 launch article in its final wording, the offer page tightened, and permanent redirects for the old author page and `/opex`. (#587, #588, #595)
+
+### Fixes
+- Import and export messages of the CSV dialogs, presets and buttons are translated. (#589, #590, #592)
+
+### On-premise
+- Action required: none. `.env` is unchanged.
+- Migrations: run automatically at start (1854060000000-account-number-bigint). It widens the account number columns and needs no action.
+- Recommended: none.
+
 ## 26.10.2 (2026-10-15)
 
 A small follow-up to 26.10.1: one fix on the budget line workspace, and the launch article on the website.
