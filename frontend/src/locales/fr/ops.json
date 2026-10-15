@@ -830,7 +830,7 @@
       }
     },
     "freeze": {
-      "title": "Geler / Dégeler les données",
+      "title": "Geler / dégeler les données",
       "freezeError": "Impossible de geler les colonnes.",
       "unfreezeError": "Impossible de dégeler les colonnes.",
       "loadError": "Impossible de charger l'état de gel. Essayez de sélectionner une autre année.",
@@ -1803,7 +1803,7 @@
     },
     "frozen": {
       "title": "La colonne {{column}} {{year}} est gelée",
-      "hint": "Lecture seule. Un administrateur peut la dégeler dans Administration › Geler / Dégeler les données."
+      "hint": "Lecture seule. Un administrateur peut la dégeler dans Administration › Geler / dégeler les données."
     },
     "atADate": "À une date",
     "date": "Date",

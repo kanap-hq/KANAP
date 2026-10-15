@@ -830,7 +830,7 @@
       }
     },
     "freeze": {
-      "title": "Congelar / Descongelar datos",
+      "title": "Congelar / descongelar datos",
       "freezeError": "No se pudieron congelar las columnas.",
       "unfreezeError": "No se pudieron descongelar las columnas.",
       "loadError": "No se pudo cargar el estado de congelación. Intente seleccionar otro año.",
@@ -1802,7 +1802,7 @@
     },
     "frozen": {
       "title": "La columna {{column}} {{year}} está congelada",
-      "hint": "Solo lectura. Un administrador puede descongelarla en Administración › Congelar / Descongelar datos."
+      "hint": "Solo lectura. Un administrador puede descongelarla en Administración › Congelar / descongelar datos."
     },
     "atADate": "En una fecha",
     "date": "Fecha",
