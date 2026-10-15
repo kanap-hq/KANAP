@@ -185,7 +185,7 @@ describe('BudgetPropertiesDrawer end of validity', () => {
   });
 
   it('keeps the end of validity inside the lifecycle group when editing', () => {
-    renderDrawer({ mode: 'edit', disabledAt: null, onDisabledAtChange: noop });
+    renderDrawer({ mode: 'edit', disabledAt: null, onDisabledAtChange: noop, onDisableNow: noop });
 
     expect(screen.getAllByText('opex.fields.endOfValidity')).toHaveLength(1);
     expect(screen.queryByText('opex.fields.effectiveEnd')).toBeNull();
@@ -198,7 +198,7 @@ describe('BudgetPropertiesDrawer end of validity', () => {
     const onStatusChange = vi.fn();
     // A caller still wiring a status handler must not get a second write from the same pick.
     const legacy = { onStatusChange } as Partial<React.ComponentProps<typeof BudgetPropertiesDrawer>>;
-    renderDrawer({ mode: 'edit', status: 'enabled', disabledAt: null, onDisabledAtChange, ...legacy });
+    renderDrawer({ mode: 'edit', status: 'enabled', disabledAt: null, onDisabledAtChange, onDisableNow: noop, ...legacy });
 
     // The calendar inside the lifecycle group (the dates group has its own), picking today.
     const lifecycle = screen.getByText('opex.fields.lifecycle').parentElement as HTMLElement;
@@ -209,6 +209,17 @@ describe('BudgetPropertiesDrawer end of validity', () => {
     const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 0, 0);
     expect(onDisabledAtChange.mock.calls).toEqual([[endOfToday.toISOString()]]);
     expect(onStatusChange).not.toHaveBeenCalled();
+  });
+
+  // The server sets the end of validity from its own clock: no browser time leaves the drawer.
+  it('asks the page to disable now when the switch is turned off', () => {
+    const onDisabledAtChange = vi.fn();
+    const onDisableNow = vi.fn();
+    renderDrawer({ mode: 'edit', status: 'enabled', disabledAt: null, onDisabledAtChange, onDisableNow });
+    const lifecycle = screen.getByText('opex.fields.lifecycle').parentElement as HTMLElement;
+    fireEvent.click(within(lifecycle).getByRole('checkbox'));
+    expect(onDisableNow).toHaveBeenCalledTimes(1);
+    expect(onDisabledAtChange).not.toHaveBeenCalled();
   });
 });
 

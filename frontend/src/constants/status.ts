@@ -33,3 +33,17 @@ export function normalizeDisabledAtInput(value: string | Date | null | undefined
   const date = parseDate(value);
   return date ? date.toISOString() : null;
 }
+
+/**
+ * The lifecycle a form sends. Disabled with no end of validity is "disable now" (the lifecycle
+ * switch turned off): the status goes alone and the server sets the end of validity from its own
+ * clock. Otherwise the end of validity decides the status.
+ */
+export function lifecyclePayload(
+  status: StatusValue,
+  disabledAt: string | Date | null | undefined,
+): { status: StatusValue; disabled_at?: string | null } {
+  const disabled_at = normalizeDisabledAtInput(disabledAt);
+  if (status === STATUS_DISABLED && !disabled_at) return { status: STATUS_DISABLED };
+  return { status: deriveStatusFromDisabledAt(disabled_at), disabled_at };
+}

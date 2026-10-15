@@ -119,6 +119,18 @@ describe('platform admin template account editors: Used for', () => {
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith(`${BASE}/2050`, expect.objectContaining({ nature: 'capex' })));
   });
 
+  it('sends the status alone when switched off, for the server to date it', async () => {
+    const ref = React.createRef<AccountOverviewEditorHandle>();
+    wrap(<AccountOverviewEditor ref={ref} id="2050" basePath={BASE} />);
+    await waitFor(() => expect(natureSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.capex'));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'statuses.enabled' }));
+    await ref.current!.save().catch(() => undefined);
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalled());
+    const [, body] = mocked.patch.mock.calls[0];
+    expect(body.status).toBe('disabled');
+    expect(body).not.toHaveProperty('disabled_at');
+  });
+
   it('creates a template account with its choice', async () => {
     // The editor preselects the chart named in the address.
     window.history.replaceState(null, '', '/?selected=coa-1');

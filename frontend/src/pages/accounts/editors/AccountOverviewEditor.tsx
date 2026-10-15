@@ -9,7 +9,7 @@ import StatusLifecycleField from '../../../components/fields/StatusLifecycleFiel
 import { accountFormSchema, AccountFormValues } from '../../forms/AccountForm';
 import { z } from 'zod';
 import { ACCOUNT_NATURES, accountNatureLabel, parseAccountNature } from '../../../constants/accountNature';
-import { STATUS_ENABLED, deriveStatusFromDisabledAt, normalizeDisabledAtInput } from '../../../constants/status';
+import { STATUS_DISABLED, STATUS_ENABLED, deriveStatusFromDisabledAt, lifecyclePayload, normalizeDisabledAtInput } from '../../../constants/status';
 
 export type AccountOverviewEditorHandle = {
   isDirty: () => boolean;
@@ -74,13 +74,9 @@ function normalizeEmptyToNull<T extends Record<string, any>>(obj: T): T {
 }
 
 const toPayload = (values: AccountUpdateFormValues) => {
-  const disabled_at = values.disabled_at ?? null;
-  const base = {
-    ...values,
-    status: deriveStatusFromDisabledAt(disabled_at),
-    disabled_at,
-  };
-  return normalizeEmptyToNull(base);
+  const { status, disabled_at, ...rest } = values;
+  // Switched off with no end of validity: the status alone, the server dates it.
+  return normalizeEmptyToNull({ ...rest, ...lifecyclePayload(status, disabled_at) });
 };
 
 const accountUpdateFormSchema = accountFormSchema.extend({
@@ -309,6 +305,10 @@ export default forwardRef<AccountOverviewEditorHandle, Props>(function AccountOv
               shouldDirty: true,
               shouldValidate: true,
             })}
+            onDisableNow={() => {
+              setValue('disabled_at', null, { shouldDirty: true, shouldValidate: true });
+              field.onChange(STATUS_DISABLED);
+            }}
             statusName={field.name}
             statusError={!!err.status}
             statusHelperText={err.status?.message as string}

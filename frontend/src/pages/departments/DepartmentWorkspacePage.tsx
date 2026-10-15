@@ -11,7 +11,7 @@ import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetai
 import { PropertyGroup, PropertyRow } from '../../components/design';
 import CompanySelect from '../../components/fields/CompanySelect';
 import StatusLifecycleField from '../../components/fields/StatusLifecycleField';
-import { deriveStatusFromDisabledAt, normalizeStatus } from '../../constants/status';
+import { STATUS_DISABLED, deriveStatusFromDisabledAt, normalizeStatus } from '../../constants/status';
 import { drawerFieldValueSx, longFormSurfaceFieldSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import DepartmentHeadcountTab from './DepartmentHeadcountTab';
@@ -181,6 +181,8 @@ export default function DepartmentWorkspacePage() {
             if (disabledAt === data.disabled_at) return;
             void patch({ status: deriveStatusFromDisabledAt(disabledAt), disabled_at: disabledAt }, 'disabled_at');
           }}
+          // Disable now: the status alone, the server sets the end of validity from its own clock.
+          onDisableNow={() => void patch({ status: STATUS_DISABLED }, 'disabled_at')}
           disabled={disabled}
           disabledAtError={!!errors.disabled_at}
           disabledAtHelperText={errors.disabled_at}

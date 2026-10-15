@@ -1184,6 +1184,8 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
             onRunBuildChange={(v) => void patchNow({ run_build: v })}
             onEffectiveStartChange={(v) => void patchNow({ effective_start: v })}
             onDisabledAtChange={handleDisabledAtChange}
+            // Disable now: the status alone, the server sets the end of validity from its own clock.
+            onDisableNow={() => void patchNow({ status: STATUS_DISABLED })}
           />
         )}
       >
