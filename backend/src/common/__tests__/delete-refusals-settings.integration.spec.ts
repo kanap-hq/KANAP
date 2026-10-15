@@ -6,6 +6,7 @@ import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { AppInstancesService } from '../../app-instances/app-instances.service';
 import { BusinessProcessCategoriesService } from '../../business-processes/business-process-categories.service';
+import { InterfacesCrudService } from '../../interfaces/services/interfaces-crud.service';
 import { KnowledgeService } from '../../knowledge/knowledge.service';
 import { PortfolioClassificationService } from '../../portfolio/portfolio-classification.service';
 import { PortfolioEmploymentTypesService } from '../../portfolio/portfolio-employment-types.service';
@@ -268,10 +269,47 @@ async function testRequestsAndTasks() {
   });
 }
 
+async function testInterfaces() {
+  await withRollback(async (runner, t) => {
+    const m = runner.manager;
+    const svc = Object.create(InterfacesCrudService.prototype) as InterfacesCrudService;
+    Object.assign(svc, { audit: noAudit, integratedDocuments: { deleteForEntity: async () => undefined } });
+    const source = await one(runner, `INSERT INTO applications (tenant_id, name) VALUES ($1, 'CRM') RETURNING id`, [t]);
+    const target = await one(runner, `INSERT INTO applications (tenant_id, name) VALUES ($1, 'ERP') RETURNING id`, [t]);
+    const from = await one(runner, `INSERT INTO app_instances (tenant_id, application_id, environment) VALUES ($1, $2, 'prod') RETURNING id`, [t, source]);
+    const to = await one(runner, `INSERT INTO app_instances (tenant_id, application_id, environment) VALUES ($1, $2, 'prod') RETURNING id`, [t, target]);
+    const iface = (name: string, ref: string) => one(runner,
+      `INSERT INTO interfaces (tenant_id, name, business_purpose, source_application_id, target_application_id, data_category,
+         integration_route_type, interface_reference)
+       VALUES ($1, $2, 'Sync', $3, $4, 'master_data', 'direct', $5) RETURNING id`, [t, name, source, target, ref]);
+    const free = await iface('Free', 'INT-9001');
+    const bound = await iface('Orders', 'INT-9002');
+    const leg = await one(runner,
+      `INSERT INTO interface_legs (tenant_id, interface_id, leg_type, from_role, to_role, trigger_type, integration_pattern, data_format, order_index)
+       VALUES ($1, $2, 'direct', 'source', 'target', 'event', 'api', 'json', 0) RETURNING id`, [t, bound]);
+    for (const environment of ['prod', 'test']) {
+      await runner.query(
+        `INSERT INTO interface_bindings (tenant_id, interface_id, interface_leg_id, environment, source_instance_id, target_instance_id)
+         VALUES ($1, $2, $3, $4, $5, $6)`, [t, bound, leg, environment, from, to]);
+    }
+
+    await expectRefusal(runner, () => svc.delete(bound, null, { manager: m }), 'INTERFACE_HAS_BINDINGS',
+      [{ type: 'interface_bindings', total: 2 }], /^Cannot delete interface with bindings/);
+    // The check before the delete answers the same refusal, and nothing for the free interface.
+    assert.deepEqual(await svc.deleteCheck([free, bound, 'nope'], { manager: m }), {
+      refused: [{ id: bound, name: 'Orders', code: 'INTERFACE_HAS_BINDINGS', usages: [{ type: 'interface_bindings', total: 2 }] }],
+    });
+    assert.equal((await runner.query(`SELECT count(*)::int AS n FROM interface_bindings WHERE interface_id = $1`, [bound]))[0].n, 2);
+    // The window's alternative: deleting the bindings with it lifts the refusal.
+    await svc.delete(bound, null, { manager: m, deleteRelatedBindings: true });
+    assert.equal((await runner.query(`SELECT count(*)::int AS n FROM interfaces WHERE id = $1`, [bound]))[0].n, 0);
+  });
+}
+
 async function run() {
   await dataSource.initialize();
   try {
-    for (const test of [testClassification, testTeamsAndContractTypes, testRolesAndProcessCategories, testAppInstances, testKnowledge, testRequestsAndTasks]) {
+    for (const test of [testClassification, testTeamsAndContractTypes, testRolesAndProcessCategories, testAppInstances, testKnowledge, testRequestsAndTasks, testInterfaces]) {
       await test();
       console.log(`  ok ${test.name}`);
     }

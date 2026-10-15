@@ -27,7 +27,7 @@ import {
   ServiceOpts,
 } from './interfaces-base.service';
 import { assertMarkdownSize } from '../../common/markdown-limits';
-import { RecordInUseException, refusalDetails } from '../../common/record-in-use';
+import { checkIds, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal } from '../../common/record-in-use';
 import type { BulkDeleteResult } from '../../common/delete.types';
 
 /**
@@ -434,11 +434,7 @@ export class InterfacesCrudService extends InterfacesBaseService {
     const bindings = await bindingRepo.find({ where: { interface_id: interfaceDbId } as any });
 
     if (bindings.length > 0) {
-      if (!opts?.deleteRelatedBindings) {
-        throw new RecordInUseException('INTERFACE_HAS_BINDINGS', 'interface', existing.name,
-          [{ type: 'interface_bindings', total: bindings.length }],
-          'Cannot delete interface with bindings. Delete its bindings with it, or remove them first.');
-      }
+      if (!opts?.deleteRelatedBindings) throw bindingsRefusal(existing.name, bindings.length);
       // Delete connection links first (they reference bindings)
       const bindingIds = bindings.map(b => b.id);
       if (bindingIds.length > 0) {
@@ -455,6 +451,22 @@ export class InterfacesCrudService extends InterfacesBaseService {
       { manager: mg },
     );
     return { deleted: true, bindingsDeleted: bindings.length };
+  }
+
+  /**
+   * The check before a delete (`POST /interfaces/delete-check`): the interfaces of `ids` with
+   * bindings, which the delete refuses unless it deletes their bindings too. Nothing is written.
+   */
+  async deleteCheck(ids: string[], opts?: ServiceOpts): Promise<{ refused: DeleteRefusal[] }> {
+    const mg = opts?.manager ?? this.repo.manager;
+    const wanted = checkIds(ids);
+    if (wanted.length === 0) return { refused: [] };
+    const rows: Array<{ id: string; name: string; bindings: number }> = await mg.query(
+      `SELECT i.id, i.name, (SELECT count(*)::int FROM interface_bindings b WHERE b.tenant_id = i.tenant_id AND b.interface_id = i.id) AS bindings
+       FROM interfaces i WHERE i.tenant_id = app_current_tenant() AND i.id = ANY($1::uuid[])`,
+      [wanted],
+    );
+    return refusalsFrom(wanted, rows, (row) => row.name, async (row) => (row.bindings > 0 ? bindingsRefusal(row.name, row.bindings) : null));
   }
 
   /**
@@ -731,4 +743,11 @@ export class InterfacesCrudService extends InterfacesBaseService {
 
     return savedInterface;
   }
+}
+
+/** The refusal of an interface's delete while it has bindings: the window offers to delete them with it. */
+function bindingsRefusal(name: string, total: number): RecordInUseException {
+  return new RecordInUseException('INTERFACE_HAS_BINDINGS', 'interface', name,
+    [{ type: 'interface_bindings', total }],
+    'Cannot delete interface with bindings. Delete its bindings with it, or remove them first.');
 }
