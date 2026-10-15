@@ -10,6 +10,7 @@ import {
   CsvFieldDefinition,
   CsvFieldType,
   CsvImportContext,
+  CsvCellError,
   CsvImportError,
   CsvImportParams,
   CsvImportResult,
@@ -85,7 +86,7 @@ export class CsvImportService {
     opts: CsvImportOptions,
   ): Promise<CsvImportResult> {
     // Decode and parse CSV
-    const { rows, headerErrors } = await this.parseCsv(config, file);
+    const { rows, headerErrors, headerWarnings } = await this.parseCsv(config, file);
 
     // Early return if header errors
     if (headerErrors.length > 0) {
@@ -97,7 +98,7 @@ export class CsvImportService {
         updated: 0,
         skipped: 0,
         errors: headerErrors,
-        warnings: [],
+        warnings: headerWarnings,
       };
     }
 
@@ -134,7 +135,7 @@ export class CsvImportService {
 
     // Collect all errors
     const allErrors: CsvImportError[] = [];
-    const allWarnings: CsvImportWarning[] = [];
+    const allWarnings: CsvImportWarning[] = [...headerWarnings];
 
     for (const row of parsedRows) {
       allErrors.push(...row.errors);
@@ -193,7 +194,12 @@ export class CsvImportService {
         inserted: 0,
         updated: 0,
         skipped: rows.length,
-        errors: [{ row: 0, message: `Import failed: ${error.message}` }],
+        errors: [{
+          row: 0,
+          message: `Import failed: ${error.message}`,
+          code: 'CSV_IMPORT_FAILED',
+          params: { reason: error.message },
+        }],
         warnings: allWarnings,
       };
     }
@@ -216,7 +222,11 @@ export class CsvImportService {
   private async parseCsv(
     config: CsvEntityConfig,
     file: Express.Multer.File,
-  ): Promise<{ rows: Record<string, string>[]; headerErrors: CsvImportError[] }> {
+  ): Promise<{
+    rows: Record<string, string>[];
+    headerErrors: CsvImportError[];
+    headerWarnings: CsvImportWarning[];
+  }> {
     const buf = file.buffer ?? (file as any).path;
     if (!buf) {
       throw new BadRequestException('No file uploaded');
@@ -228,12 +238,15 @@ export class CsvImportService {
         typeof buf === 'string' ? require('fs').readFileSync(buf) : buf,
       ).text;
     } catch (err) {
-      if (err instanceof CsvDecodeError) throw new BadRequestException(err.message);
+      if (err instanceof CsvDecodeError) {
+        throw new BadRequestException({ message: err.message, code: err.code });
+      }
       throw err;
     }
 
     const rows: Record<string, string>[] = [];
     const headerErrors: CsvImportError[] = [];
+    const headerWarnings: CsvImportWarning[] = [];
 
     // Get expected headers for importable fields
     const expectedHeaders = this.getExpectedHeaders(config);
@@ -256,13 +269,18 @@ export class CsvImportService {
             headerErrors.push({
               row: 0,
               message: `Missing required columns: ${missing.join(', ')}`,
+              code: 'CSV_HEADER_MISSING_COLUMNS',
+              params: { missing: missing.join(', ') },
             });
           }
 
+          // The rows are read by column name: an unknown column is left out of the import.
           if (extra.length > 0) {
-            headerErrors.push({
+            headerWarnings.push({
               row: 0,
               message: `Unknown columns (will be ignored): ${extra.join(', ')}`,
+              code: 'CSV_HEADER_IGNORED_COLUMNS',
+              params: { extra: extra.join(', ') },
             });
           }
         })
@@ -278,7 +296,7 @@ export class CsvImportService {
         .on('end', () => resolve());
     });
 
-    return { rows, headerErrors };
+    return { rows, headerErrors, headerWarnings };
   }
 
   /**
@@ -442,6 +460,7 @@ export class CsvImportService {
         row: row.rowNumber,
         column: field.csvColumn,
         message: `${field.csvColumn} is required`,
+        code: 'CSV_VALUE_REQUIRED',
       });
       return;
     }
@@ -463,12 +482,14 @@ export class CsvImportService {
         row.parsed[field.entityProperty] = parsedValue;
       }
     } catch (error: any) {
-      const code = error?.getResponse?.()?.code;
+      const code = error instanceof CsvCellError ? error.code : error?.getResponse?.()?.code;
+      const params = error instanceof CsvCellError ? error.params : undefined;
       row.errors.push({
         row: row.rowNumber,
         column: field.csvColumn,
         message: error.message,
         ...(typeof code === 'string' ? { code } : {}),
+        ...(params ? { params } : {}),
       });
     }
   }
@@ -677,12 +698,16 @@ export class CsvImportService {
             row: row.rowNumber,
             column: colName,
             message: `${field.fkEntity} not found: "${rawValue}"`,
+            code: 'CSV_REFERENCE_NOT_FOUND',
+            params: { value: rawValue },
           });
         } else {
           row.warnings.push({
             row: row.rowNumber,
             column: colName,
             message: `${field.fkEntity} not found: "${rawValue}" (skipped)`,
+            code: 'CSV_REFERENCE_NOT_FOUND_SKIPPED',
+            params: { value: rawValue },
           });
         }
       } else {
@@ -696,6 +721,8 @@ export class CsvImportService {
         row: row.rowNumber,
         column: `${baseName}_1`,
         message: `At least one ${baseName} is required`,
+        code: 'CSV_VALUE_ONE_REQUIRED',
+        params: { column: baseName },
       });
       return;
     }
@@ -789,7 +816,7 @@ export class CsvImportService {
 
     const num = Number(normalized);
     if (isNaN(num)) {
-      throw new Error(`Invalid number in ${columnName}: "${value}"`);
+      throw new CsvCellError('CSV_NUMBER_INVALID', `Invalid number in ${columnName}: "${value}"`, { value });
     }
     return num;
   }
@@ -819,7 +846,7 @@ export class CsvImportService {
       return parsed.toISOString().split('T')[0];
     }
 
-    throw new Error(`Invalid date in ${columnName}: "${value}"`);
+    throw new CsvCellError('CSV_DATE_INVALID', `Invalid date in ${columnName}: "${value}"`, { value });
   }
 
   /**
@@ -833,7 +860,11 @@ export class CsvImportService {
     if (['false', 'no', '0', 'n', 'off', ''].includes(normalized)) {
       return false;
     }
-    throw new Error(`Invalid boolean in ${columnName}: "${value}". Use true/false, yes/no, or 1/0.`);
+    throw new CsvCellError(
+      'CSV_BOOLEAN_INVALID',
+      `Invalid boolean in ${columnName}: "${value}". Use true/false, yes/no, or 1/0.`,
+      { value },
+    );
   }
 
   /**
@@ -848,8 +879,10 @@ export class CsvImportService {
     const match = field.enumValues.find((v) => v.toLowerCase() === normalized);
 
     if (!match) {
-      throw new Error(
+      throw new CsvCellError(
+        'CSV_ENUM_INVALID',
         `Invalid ${field.csvColumn}: "${value}". Valid values: ${field.enumValues.join(', ')}`,
+        { value, allowed: field.enumValues.join(', ') },
       );
     }
 
@@ -873,12 +906,14 @@ export class CsvImportService {
 
     if (!resolved) {
       if (field.fkRequired) {
-        throw new Error(`${field.fkEntity} not found: "${value}"`);
+        throw new CsvCellError('CSV_REFERENCE_NOT_FOUND', `${field.fkEntity} not found: "${value}"`, { value });
       } else {
         row.warnings.push({
           row: row.rowNumber,
           column: field.csvColumn,
           message: `${field.fkEntity} not found: "${value}" (set to null)`,
+          code: 'CSV_REFERENCE_NOT_FOUND_CLEARED',
+          params: { value },
         });
         return null;
       }
@@ -900,7 +935,7 @@ export class CsvImportService {
     try {
       parsed = JSON.parse(value);
     } catch {
-      throw new Error(`Invalid JSON in ${field.csvColumn}`);
+      throw new CsvCellError('CSV_JSON_INVALID', `Invalid JSON in ${field.csvColumn}`);
     }
 
     return parsed;
@@ -926,11 +961,7 @@ export class CsvImportService {
           );
 
           for (const err of errors) {
-            row.errors.push({
-              row: row.rowNumber,
-              column: field.csvColumn,
-              message: err,
-            });
+            row.errors.push({ row: row.rowNumber, column: field.csvColumn, ...err });
           }
         }
       }
@@ -1074,6 +1105,9 @@ export class CsvImportService {
     if (config.upsertKey.length === 0) {
       return errors;
     }
+    const keyColumns = config.upsertKey
+      .map((key) => config.fields.find((f) => f.entityProperty === key)?.csvColumn ?? key)
+      .join(', ');
 
     for (const row of rows) {
       const keyValues: string[] = [];
@@ -1089,6 +1123,8 @@ export class CsvImportService {
         errors.push({
           row: row.rowNumber,
           message: `Duplicate key [${config.upsertKey.join(', ')}]: same values as row ${firstRow}`,
+          code: 'CSV_DUPLICATE_KEY',
+          params: { columns: keyColumns, firstRow },
         });
       } else if (keyValues.every((v) => v)) {
         seen.set(keyStr, row.rowNumber);

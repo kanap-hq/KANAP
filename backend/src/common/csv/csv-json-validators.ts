@@ -2,19 +2,29 @@ import { Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 
 /**
+ * A value a validator refuses: the English message, the code the interface
+ * translates and the values its sentence names.
+ */
+export interface CsvValidationProblem {
+  message: string;
+  code?: string;
+  params?: Record<string, string | number>;
+}
+
+/**
  * Validator function type
  */
 type ValidatorFn = (
   value: any,
   tenantId: string,
   manager: EntityManager,
-) => string[] | Promise<string[]>;
+) => CsvValidationProblem[] | Promise<CsvValidationProblem[]>;
 
 /**
  * Service for validating JSON fields in CSV imports.
  *
  * Provides named validators that can be referenced in field definitions.
- * Each validator returns an array of error messages (empty = valid).
+ * Each validator returns the problems it finds (empty = valid).
  */
 @Injectable()
 export class CsvJsonValidators {
@@ -43,17 +53,17 @@ export class CsvJsonValidators {
    * @param value - Value to validate
    * @param tenantId - Current tenant ID
    * @param manager - TypeORM EntityManager
-   * @returns Array of error messages (empty = valid)
+   * @returns The problems found (empty = valid)
    */
   async validate(
     validatorName: string,
     value: any,
     tenantId: string,
     manager: EntityManager,
-  ): Promise<string[]> {
+  ): Promise<CsvValidationProblem[]> {
     const validator = this.validators.get(validatorName);
     if (!validator) {
-      return [`Unknown validator: ${validatorName}`];
+      return [{ message: `Unknown validator: ${validatorName}` }];
     }
 
     return validator(value, tenantId, manager);
@@ -83,11 +93,11 @@ export class CsvJsonValidators {
     value: any,
     tenantId: string,
     manager: EntityManager,
-  ): Promise<string[]> {
-    const errors: string[] = [];
+  ): Promise<CsvValidationProblem[]> {
+    const errors: CsvValidationProblem[] = [];
 
     if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-      return ['criteria_values must be an object'];
+      return [{ message: 'criteria_values must be an object', code: 'CSV_JSON_OBJECT_REQUIRED' }];
     }
 
     const criterionIds = Object.keys(value);
@@ -105,7 +115,11 @@ export class CsvJsonValidators {
     // Check each criterion ID
     for (const criterionId of criterionIds) {
       if (!validIds.has(criterionId)) {
-        errors.push(`Unknown criterion ID: ${criterionId}`);
+        errors.push({
+          message: `Unknown criterion ID: ${criterionId}`,
+          code: 'CSV_CRITERION_UNKNOWN',
+          params: { criterion: criterionId },
+        });
       }
 
       // Also validate the value ID exists for this criterion
@@ -118,7 +132,11 @@ export class CsvJsonValidators {
         const validValueIds = new Set(values.map((v: any) => v.id));
 
         if (!validValueIds.has(valueId)) {
-          errors.push(`Invalid value ID ${valueId} for criterion ${criterionId}`);
+          errors.push({
+            message: `Invalid value ID ${valueId} for criterion ${criterionId}`,
+            code: 'CSV_CRITERION_VALUE_UNKNOWN',
+            params: { value: String(valueId), criterion: criterionId },
+          });
         }
       }
     }
@@ -129,9 +147,9 @@ export class CsvJsonValidators {
   /**
    * Validate that value is a plain object.
    */
-  private validateObject(value: any): string[] {
+  private validateObject(value: any): CsvValidationProblem[] {
     if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-      return ['Value must be a plain object'];
+      return [{ message: 'Value must be a plain object', code: 'CSV_JSON_OBJECT_REQUIRED' }];
     }
     return [];
   }
@@ -139,9 +157,9 @@ export class CsvJsonValidators {
   /**
    * Validate that value is an array.
    */
-  private validateArray(value: any): string[] {
+  private validateArray(value: any): CsvValidationProblem[] {
     if (!Array.isArray(value)) {
-      return ['Value must be an array'];
+      return [{ message: 'Value must be an array', code: 'CSV_JSON_ARRAY_REQUIRED' }];
     }
     return [];
   }

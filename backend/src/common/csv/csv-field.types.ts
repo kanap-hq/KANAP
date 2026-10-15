@@ -169,6 +169,8 @@ export interface CsvImportError {
   message: string;
   /** Error code the interface translates, when the message has one (MARKDOWN_TOO_LARGE, ...) */
   code?: string;
+  /** The values the translated sentence names (`value`, `missing`, ...) */
+  params?: Record<string, string | number>;
 }
 
 /**
@@ -181,6 +183,9 @@ export interface CsvImportWarning {
   column?: string;
   /** Warning message */
   message: string;
+  /** Warning code the interface translates, with the values its sentence names */
+  code?: string;
+  params?: Record<string, string | number>;
 }
 
 /**
@@ -297,4 +302,19 @@ export interface CsvFieldInfo {
   enumValues?: string[];
   /** Description/help text */
   description?: string;
+}
+
+/**
+ * A cell the import refuses, with the code the interface translates and the
+ * values its sentence names. The English message stays for the API and the logs.
+ */
+export class CsvCellError extends Error {
+  constructor(
+    readonly code: string,
+    message: string,
+    readonly params?: Record<string, string | number>,
+  ) {
+    super(message);
+    this.name = 'CsvCellError';
+  }
 }
