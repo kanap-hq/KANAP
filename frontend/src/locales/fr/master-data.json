@@ -295,7 +295,7 @@
     "createHintStandard": "Les jours ouvrés de chaque année suivent les jours fériés de {{source}}. Vous pourrez ensuite modifier n'importe quel mois.",
     "wholeCountry": "Tout le pays",
     "yearsAll": "Toutes les années",
-    "yearsAllEdited": "Toutes les années, {{years}} modifiée(s)",
+    "yearsAllEdited": "Toutes les années, modifications en {{years}}",
     "columns": {
       "code": "Code",
       "name": "Nom",

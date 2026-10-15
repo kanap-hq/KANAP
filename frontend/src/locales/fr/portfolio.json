@@ -502,8 +502,10 @@
           "noPhaseTasks": "Aucune tâche dans cette phase."
         },
         "values": {
-          "daysEarlier": "{{count}} jour(s) plus tôt",
-          "daysLater": "{{count}} jour(s) plus tard",
+          "daysEarlier_one": "{{count}} jour plus tôt",
+          "daysEarlier_other": "{{count}} jours plus tôt",
+          "daysLater_one": "{{count}} jour plus tard",
+          "daysLater_other": "{{count}} jours plus tard",
           "onTrack": "Dans les temps"
         },
         "views": {
@@ -1310,7 +1312,8 @@
         "allTaskTypes": "Tous les types de tâche",
         "statusReached": "Statut d'arrivée",
         "allStatuses": "Tous les statuts",
-        "selectedCount": "{{count}} sélectionné(s)"
+        "selectedCount_one": "{{count}} sélectionné",
+        "selectedCount_other": "{{count}} sélectionnés"
       },
       "actions": {
         "exportCsv": "Exporter CSV",
@@ -1604,7 +1607,7 @@
       "summaryHeaderTooltip": "Compétences au niveau autonome ou supérieur, sur celles déclarées",
       "coverageRow": "Autonome ou expert",
       "coverageHeaderTooltip": "Combien de personnes peuvent porter chaque compétence seules",
-      "coverageTooltip": "{{skill}} : {{autonomous}} autonome(s) ou expert(s), {{declared}} avec un niveau déclaré",
+      "coverageTooltip": "{{skill}} : autonomes ou experts : {{autonomous}}, avec un niveau déclaré : {{declared}}",
       "cellTooltip": "{{contributor}} · {{skill}} : {{level}}",
       "showUnused": "Afficher les compétences non utilisées",
       "sheetName": "Matrice de compétences",
@@ -2157,7 +2160,8 @@
         "dragDropFiles": "Glissez-déposez des fichiers ici, ou utilisez le bouton pour sélectionner",
         "loadFailed": "Échec du chargement des relations",
         "saveFailed": "Échec de l'enregistrement des relations",
-        "uploadingFiles": "Téléversement de {{count}} fichier(s)..."
+        "uploadingFiles_one": "Téléversement de {{count}} fichier...",
+        "uploadingFiles_other": "Téléversement de {{count}} fichiers..."
       },
       "placeholders": {
         "applications": "Rechercher des applications",

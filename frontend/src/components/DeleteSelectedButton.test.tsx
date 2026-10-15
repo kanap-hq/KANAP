@@ -109,6 +109,9 @@ describe('DeleteSelectedButton', () => {
     const { onDeleteSuccess } = renderButton();
     const message = await screen.findByText(/delete\.partial/);
     expect(message).toHaveTextContent(`Frozen: ${FROZEN}`);
+    // The deleted count drives the plural forms.
+    expect(message).toHaveTextContent('"count":1');
+    expect(message).toHaveTextContent('"failed":1');
     await waitFor(() => expect(onDeleteSuccess).toHaveBeenCalled());
   });
 

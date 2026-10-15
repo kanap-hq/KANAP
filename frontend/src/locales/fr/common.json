@@ -148,11 +148,14 @@
     "warningMessage": "Cette action est irréversible. Si l'élément est référencé ailleurs, la suppression sera bloquée ; sinon il sera définitivement supprimé.",
     "singleItem": "L'élément suivant sera supprimé :",
     "multipleItems": "{{count}} éléments seront supprimés :",
-    "andMore": "... et {{count}} élément(s) supplémentaire(s)",
+    "andMore_one": "... et {{count}} autre élément",
+    "andMore_other": "... et {{count}} autres éléments",
     "confirmPrompt": "Êtes-vous sûr de vouloir continuer ?",
-    "successAll": "{{count}} élément(s) supprimé(s) avec succès",
+    "successAll_one": "{{count}} élément supprimé",
+    "successAll_other": "{{count}} éléments supprimés",
     "failedAll": "Échec de la suppression : {{reasons}}",
-    "partial": "{{deleted}} élément(s) supprimé(s). Échec pour {{failed}} élément(s) : {{reasons}}",
+    "partial_one": "{{count}} élément supprimé, {{failed}} en échec : {{reasons}}",
+    "partial_other": "{{count}} éléments supprimés, {{failed}} en échec : {{reasons}}",
     "failedGeneric": "Échec de la suppression des éléments"
   },
   "messages": {

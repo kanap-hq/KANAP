@@ -148,11 +148,14 @@
     "warningMessage": "Esta acción no se puede deshacer. Si el elemento está referenciado en otro lugar, la eliminación será bloqueada; de lo contrario, se eliminará permanentemente.",
     "singleItem": "Se eliminará el siguiente elemento:",
     "multipleItems": "Se eliminarán {{count}} elementos:",
-    "andMore": "... y {{count}} elemento(s) más",
+    "andMore_one": "... y {{count}} elemento más",
+    "andMore_other": "... y {{count}} elementos más",
     "confirmPrompt": "¿Está seguro de que desea continuar?",
-    "successAll": "{{count}} elemento(s) eliminado(s) correctamente",
+    "successAll_one": "{{count}} elemento eliminado",
+    "successAll_other": "{{count}} elementos eliminados",
     "failedAll": "Error al eliminar: {{reasons}}",
-    "partial": "{{deleted}} elemento(s) eliminado(s). Error en {{failed}} elemento(s): {{reasons}}",
+    "partial_one": "{{count}} elemento eliminado, {{failed}} con errores: {{reasons}}",
+    "partial_other": "{{count}} elementos eliminados, {{failed}} con errores: {{reasons}}",
     "failedGeneric": "Error al eliminar los elementos"
   },
   "messages": {
