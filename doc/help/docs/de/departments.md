@@ -66,7 +66,7 @@ Der Übersichts-Tab enthält die Beschreibung. Die übrigen Felder befinden sich
 - **Name**: Abteilungsname (Pflicht), in der Kopfzeile
 - **Unternehmen**: Übergeordnetes Unternehmen, verknüpft mit den Unternehmen-Stammdaten (Pflicht). Ein Unternehmen, das bereits eine Abteilung mit gleichem Namen hat, wird abgelehnt: „A department with this name already exists in the selected company."
 - **Beschreibung**: Freitext-Beschreibung
-- **Lebenszyklus**: der Statusschalter, dessen Beschriftung den aktuellen Zustand zeigt (**Aktiviert** oder **Deaktiviert**), und das Datum **Ende der Gültigkeit**. Lassen Sie das Datum leer, damit die Abteilung unbegrenzt aktiv bleibt, oder setzen Sie ein zukünftiges Datum, um ihr Ende zu planen. Wenn Sie die Abteilung ohne Datum auf **Deaktiviert** setzen, wird das Ende der Gültigkeit auf heute gesetzt
+- **Lebenszyklus**: der Statusschalter, dessen Beschriftung den aktuellen Zustand zeigt (**Aktiviert** oder **Deaktiviert**), und das Datum **Ende der Gültigkeit**. Lassen Sie das Datum leer, damit die Abteilung unbegrenzt aktiv bleibt, oder setzen Sie ein zukünftiges Datum, um ihr Ende zu planen. Ein Wechsel auf **Deaktiviert** setzt das Ende der Gültigkeit auf jetzt: Die Deaktivierung gilt sofort. Solange ein zukünftiges Datum gesetzt ist, zeigt der Schalter **Aktiv bis** und dieses Datum
 
 **Eine Abteilung erstellen**: **Neu** öffnet ein Formular mit **Name**, **Unternehmen** und **Beschreibung**. Klicken Sie auf **Erstellen**, um sie zu speichern. Der Details-Tab wird verfügbar, nachdem Sie die Abteilung erstellt haben.
 

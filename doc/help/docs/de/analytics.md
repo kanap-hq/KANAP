@@ -109,7 +109,7 @@ Klicken Sie auf eine beliebige Zelle, um den Arbeitsbereich des Werts zu öffnen
 **Filtern**:
 
 - **Schnellsuche**: durchsucht den Namen und die Beschreibung
-- **Statusfilter**: ein Kontrollkästchen-Filter auf der Spalte **Status**. Wenn Sie darin auf **Leeren** klicken oder beide Werte abwählen, zeigt die Liste nichts mehr an, unabhängig von **Anzeigen**
+- **Statusfilter**: der Filter der Spalte **Status** zeigt die Auswahl von **Anzeigen** (**Alle**, **Aktiv** oder **Deaktiviert**): Eine Änderung an einem ändert auch das andere
 - **Filter Verwendet für**: ein Kontrollkästchen-Filter auf der Spalte **Verwendet für**
 - **Statusbereich**: der Umschalter **Anzeigen: Alle / Aktiv / Deaktiviert** über der Liste. Standardmäßig zeigt die Liste aktivierte Werte
 
@@ -297,7 +297,7 @@ Das Feld einer OPEX-Zeile bietet die Werte für OPEX und für beide an. Das Feld
 Dimensionen und Werte haben jeweils einen Status (**Aktiviert** oder **Deaktiviert**) und ein optionales **Ende der Gültigkeit**. Damit stellen Sie eine Dimension oder einen Wert außer Dienst, ohne sie zu löschen.
 
 - **Ende der Gültigkeit**: das Datum, an dem die Dimension oder der Wert endet. Lassen Sie es leer, damit sie aktiv bleiben. Sie können auch ein zukünftiges Datum planen.
-- Ein Wechsel auf **Deaktiviert** ohne Datum setzt das Ende der Gültigkeit auf heute. Ein Wechsel zurück auf **Aktiviert** löscht das Datum.
+- Ein Wechsel auf **Deaktiviert** setzt das Ende der Gültigkeit auf jetzt: Die Deaktivierung gilt sofort. Solange ein zukünftiges Datum gesetzt ist, zeigt der Schalter **Aktiv bis** und dieses Datum. Ein Wechsel zurück auf **Aktiviert** löscht das Datum.
 - Sobald das Ende der Gültigkeit vorbei ist, wechselt der Status innerhalb einer Stunde von selbst auf **Deaktiviert**.
 
 **Ein deaktivierter Wert**:

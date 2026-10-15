@@ -99,7 +99,7 @@ Das Grid zeigt nur Konten für den ausgewählten Kontenplan.
 **Filtern**:
 - Schnellsuche: Durchsucht sichtbare Textspalten.
 - Statusbereich: der Umschalter **Anzeigen: Alle / Aktiv / Deaktiviert** über dem Grid. Standard ist **Aktiv**, zeigt nur aktive Konten. Wählen Sie **Alle**, um deaktivierte Konten einzubeziehen.
-- Spaltenfilter: Spaltenüberschriftsfilter verwenden (z. B. haben die Spalten **Status** und **Verwendet für** einen Set-Filter). Wenn Sie im **Status**-Filter auf **Leeren** klicken oder beide Werte abwählen, zeigt die Liste nichts mehr an, unabhängig von **Anzeigen**.
+- Spaltenfilter: Spaltenüberschriftsfilter verwenden (z. B. hat die Spalte **Verwendet für** einen Set-Filter). Der Filter **Status** zeigt die Auswahl von **Anzeigen** (**Alle**, **Aktiv** oder **Deaktiviert**): Eine Änderung an einem ändert auch das andere.
 
 **Sortierung**: Standard ist **Kontonr.** aufsteigend.
 
@@ -439,7 +439,7 @@ Konten verwenden das gleiche Lebenszyklusmanagement wie andere Stammdaten:
 
   - Standardmäßig **aktiviert**
   - Setzen Sie ein **Ende der Gültigkeit**, um ein Konto ab einem bestimmten Datum nicht mehr zu verwenden. Lassen Sie es leer, damit das Konto unbegrenzt aktiv bleibt
-  - Wenn Sie das Konto ohne Datum auf **Deaktiviert** setzen, wird das Ende der Gültigkeit auf heute gesetzt
+  - Ein Wechsel auf **Deaktiviert** setzt das Ende der Gültigkeit auf jetzt: Die Deaktivierung gilt sofort. Solange ein zukünftiges Datum gesetzt ist, zeigt der Schalter **Aktiv bis** und dieses Datum
   - Sobald das Ende der Gültigkeit vorbei ist, wechselt der Status innerhalb einer Stunde von selbst auf **Deaktiviert**
   - Nach dem Ende der Gültigkeit:
       - Das Konto erscheint nicht mehr in Auswahl-Dropdowns für neue Budgetzeilen

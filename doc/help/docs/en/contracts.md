@@ -98,7 +98,7 @@ The row pinned at the bottom reads **Total (n contracts)**. It sums the yearly a
 ### Search, filters and scope
 
 - **Quick search**: contract name, supplier and company
-- **Column filters**: on each column header. **State**, **Compliance** and **Budget coverage** offer their values as checkboxes. The **Status** filter offers **Enabled** and **Disabled**. Clicking **Clear** in it, or unticking both values, lists nothing, whatever **Show** says
+- **Column filters**: on each column header. **State**, **Compliance** and **Budget coverage** offer their values as checkboxes. The **Status** filter shows the **Show** choice (**All**, **Enabled** or **Disabled**): changing one changes the other
 - **Show: All / Enabled / Disabled**: the toggle above the list. The list shows enabled contracts by default. Pick **All** or **Disabled** to find contracts past their end of validity
 
 ### Actions
@@ -122,7 +122,7 @@ Every change saves itself: lists and dates at once, typed values and notes after
 
 **Lifecycle**:
 
-- Switching the status to **Disabled** without a date sets the end of validity to today. Switching it back to **Enabled** removes the end of validity
+- Switching the status to **Disabled** ends its validity now: it is disabled at once. While a future date is set, the switch reads **Active until** and that date. Switching it back to **Enabled** removes the end of validity
 - **End of validity**: type a date (dd/mm/yyyy) or use the calendar. Leave it blank to keep the contract active
 - **Tacit renewal** has its own rules when the contract has already been renewed or awaits a decision. See [Turning the tacit renewal off or back on](#turning-the-tacit-renewal-off-or-back-on)
 

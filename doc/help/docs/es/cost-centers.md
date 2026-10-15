@@ -79,7 +79,7 @@ Haga clic en cualquier celda para abrir el espacio de trabajo.
 **Filtrado**:
 
 - **Búsqueda rápida**: busca en el código, el nombre y la ruta completa. Buscar el nombre de un grupo también encuentra todo lo que contiene
-- **Filtros de columna**: **Tipo**, **Superior**, **Empresa** y **Estado** usan filtros de casillas. Si hace clic en **Limpiar** en el filtro **Estado**, o desmarca ambos valores, la lista no muestra nada, sea cual sea la opción de **Mostrar**
+- **Filtros de columna**: **Tipo**, **Superior** y **Empresa** usan filtros de casillas. El filtro **Estado** muestra la opción de **Mostrar** (**Todos**, **Activos** o **Desactivados**): cambiar uno cambia el otro
 - **Ámbito de estado**: el selector **Mostrar: Todos / Activos / Desactivados** sobre la lista. La lista muestra por defecto los elementos activados
 
 **Acciones**:
@@ -121,7 +121,7 @@ Haga clic en cualquier fila de la lista para abrir el espacio de trabajo.
 | **Grupo superior** | Un grupo, o vacío para el nivel superior. Un elemento no puede moverse bajo sí mismo ni bajo algo que contiene, por lo que estos no aparecen en la lista | Su organigrama o el árbol de centros de coste de su equipo de finanzas |
 | **Empresa** | Una empresa activada. Solo centros de coste | La entidad jurídica que paga los costes de este centro de coste. Es una de sus empresas en **Datos maestros > Empresas** |
 | **Responsable del presupuesto** | Un usuario activo | La persona que rinde cuentas de esta partida presupuestaria en la revisión del presupuesto. La indicación bajo el campo lo recuerda |
-| **Ciclo de vida** | El interruptor de estado, cuya etiqueta muestra el estado actual (**Activado** o **Desactivado**), y la fecha de **Fin de validez** | Indique una fecha futura para programar el fin, o desactive el interruptor para desactivarlo hoy |
+| **Ciclo de vida** | El interruptor de estado, cuya etiqueta muestra el estado actual (**Activado** o **Desactivado**), y la fecha de **Fin de validez** | Indique una fecha futura para programar el fin (el interruptor muestra entonces **Activo hasta el** y la fecha), o desactive el interruptor para desactivarlo de inmediato |
 
 ### Responsable del presupuesto en las líneas de presupuesto
 

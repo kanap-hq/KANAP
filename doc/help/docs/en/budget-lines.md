@@ -131,7 +131,7 @@ A column layout you saved keeps its own choice of columns. The layout you had sa
 **Filtering**:
 
 - **Quick search**: Searches the reference (`BL-12`, and the former `OPX-12` or `CPX-3`), product name, description, supplier, paying company, account, contract, project names, allocation, owners, analytics values, cost center (code, name and path), budget holder, notes, currency and status. Filters the list in real time as you type, ignoring accents and case
-- **Column filters**: Click the filter icon in any column header. **Type**, **Supplier**, **Paying company**, **Account**, **Allocation**, **Currency**, **IT owner**, **Business owner**, each analytics dimension, **Cost center**, **Budget holder**, **Run or build**, **FTE declared** and **Enabled** use checkbox set filters (multi-select). The **FTE declared** filter offers **Yes** and **No**. The **Enabled** filter offers **Enabled** and **Disabled**, with the same meaning as **Show**, and narrows the list when **Show** is set to **All**. Clicking **Clear** in it, or unticking both values, lists nothing, whatever **Show** says
+- **Column filters**: Click the filter icon in any column header. **Type**, **Supplier**, **Paying company**, **Account**, **Allocation**, **Currency**, **IT owner**, **Business owner**, each analytics dimension, **Cost center**, **Budget holder**, **Run or build** and **FTE declared** use checkbox set filters (multi-select). The **FTE declared** filter offers **Yes** and **No**. The **Enabled** filter shows the **Show** choice (**All**, **Enabled** or **Disabled**): changing one changes the other
 - **All but a few**: Tick **All**, then untick the values you want to leave out: the filter keeps everything except those (the header reads, for example, **All but 3**), and a value created later is included automatically
 - **Amount filters**: Every amount column has a number filter. A number typed in the box under the header keeps the lines with at least that amount. Open the filter menu for the other conditions: greater than, less than, equal, not equal, or between two amounts
 - **FTE filters**: Every FTE column has a number filter with the same conditions, plus blank and not blank. **Blank** keeps the lines whose column has no quantity and price lines
@@ -610,7 +610,7 @@ Every line has a **status** (Enabled or Disabled) and an optional **End of valid
 **Setting status**:
 
 - When you create the line, you can set its **End of validity** in the **Properties** panel
-- Later, change the **Status** in the metadata bar, or use the **Lifecycle** field in the **Properties** panel (the status switch and **End of validity**). Switching a line to Disabled without a date sets its end of validity to today
+- Later, change the **Status** in the metadata bar, or use the **Lifecycle** field in the **Properties** panel (the status switch and **End of validity**). Switching a line to **Disabled** ends its validity now: it is disabled at once. While a future date is set, the switch reads **Active until** and that date
 - You can schedule a future end of validity, for example the end of a contract, a planned disposal or the end of an asset's useful life
 
 **Viewing disabled lines**:

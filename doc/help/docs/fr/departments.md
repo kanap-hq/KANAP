@@ -66,7 +66,7 @@ L'onglet Vue d'ensemble contient la description. Les autres champs se trouvent d
 - **Nom** : Nom du département (obligatoire), dans l'en-tête
 - **Société** : Société parente, liée aux données de référence Sociétés (obligatoire). Une société qui a déjà un département du même nom est refusée : « A department with this name already exists in the selected company. »
 - **Description** : Description libre
-- **Cycle de vie** : l'interrupteur de statut, dont le libellé indique l'état actuel (**Activé** ou **Désactivé**), et la date de **Fin de validité**. Laissez la date vide pour que le département reste actif indéfiniment, ou fixez une date future pour programmer sa fin. Passer le département à **Désactivé** sans date fixe la fin de validité à aujourd'hui
+- **Cycle de vie** : l'interrupteur de statut, dont le libellé indique l'état actuel (**Activé** ou **Désactivé**), et la date de **Fin de validité**. Laissez la date vide pour que le département reste actif indéfiniment, ou fixez une date future pour programmer sa fin. Passer à **Désactivé** fixe la fin de validité à maintenant : la désactivation est immédiate. Tant qu'une date future est fixée, l'interrupteur affiche **Actif jusqu'au** et cette date
 
 **Créer un département** : **Nouveau** ouvre un formulaire avec **Nom**, **Société** et **Description**. Cliquez sur **Créer** pour l'enregistrer. L'onglet Détails devient disponible après la création du département.
 
