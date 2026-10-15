@@ -1,5 +1,4 @@
 {
-  "pages/ProjectsPage.tsx": 2,
   "pages/accounts/editors/AccountCreateEditor.tsx": 9,
   "pages/accounts/editors/AccountOverviewEditor.tsx": 9,
   "pages/business-processes/BusinessProcessCategoryManagerDialog.tsx": 10,
@@ -30,9 +29,5 @@
   "pages/it/workspace/LocationOverviewTab.tsx": 4,
   "pages/it/workspace/LocationRelationsTab.tsx": 13,
   "pages/it/workspace/LocationSubItemsTable.tsx": 17,
-  "pages/portfolio/components/EffortAllocationDialog.tsx": 1,
-  "pages/portfolio/components/EffortAllocationTable.tsx": 1,
-  "pages/portfolio/components/RoadmapGenerator.tsx": 147,
-  "pages/portfolio/workspace/project/ProjectEffortTab.tsx": 27,
   "tenant/TenantContext.tsx": 3
 }

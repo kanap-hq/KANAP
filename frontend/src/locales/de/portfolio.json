@@ -399,7 +399,10 @@
           "estimatedEffort": "Geschätzter Aufwand",
           "progressAndConsumption": "Fortschritt & Aufwandsverbrauch",
           "timeBreakdown": "Zeitaufschlüsselung",
-          "timeLog": "Zeiterfassung"
+          "timeLog": "Zeiterfassung",
+          "allocation": "Zuordnung",
+          "effortBaseline": "Aufwands-Baseline",
+          "capturedAtInProgress": "erfasst bei In Bearbeitung"
         },
         "states": {
           "noTimeLogged": "Noch keine Zeit erfasst. Klicken Sie auf «Zeit erfassen», um Einträge hinzuzufügen."
@@ -416,7 +419,31 @@
           "taskSourceFallback": "Aufgabe",
           "taskTime": "Aufgabenzeit",
           "totalLogged": "Gesamt erfasst",
-          "workloadConsumption": "Aufwandsverbrauch: {{actual}} / {{planned}} PT"
+          "workloadConsumption": "Aufwandsverbrauch: {{actual}} / {{planned}} PT",
+          "mdUnit": "PT",
+          "actualOfEstimated": "{{actual}} / {{estimated}} PT",
+          "actualSplit": "(Projekt {{project}} · Aufgabe {{task}})"
+        },
+        "overview": {
+          "progress": "Fortschritt",
+          "setManually": "manuell festgelegt",
+          "fromTimeLog": "automatisch aus der Zeiterfassung berechnet"
+        },
+        "actions": {
+          "logTime": "+ Zeit erfassen"
+        },
+        "aria": {
+          "estimatedEffort": "Geschätzter Aufwand {{type}} in PT"
+        },
+        "baseline": {
+          "itEffort": "IT-Aufwand",
+          "businessEffort": "Fachlicher Aufwand",
+          "estimated": "Geschätzt",
+          "estimatedTooltip": "Aktuell geschätzter Aufwand, festgelegt von der Projektleitung",
+          "baseline": "Baseline",
+          "baselineTooltip": "Momentaufnahme des geschätzten Aufwands, erfasst beim Übergang des Projekts zu In Bearbeitung",
+          "variance": "Abweichung",
+          "varianceTooltip": "Differenz zwischen aktueller Schätzung und Baseline"
         }
       },
       "timeline": {
@@ -1048,6 +1075,267 @@
         "paused_other": "Pausiert: ~{{count}} Wochen",
         "dragToPin": "Ziehen, um die Startwoche festzulegen",
         "clickForExplanation": "Klicken für Erklärung"
+      }
+    },
+    "roadmap": {
+      "title": "Roadmap-Generator",
+      "fields": {
+        "startDate": "Startdatum",
+        "statuses": "Status",
+        "capacityMode": "Kapazitätsmodus",
+        "constraintScope": "Umfang der Einschränkungen",
+        "parallelLimit": "Parallelitätsgrenze",
+        "recalculateScheduled": "Bereits geplante Projekte neu berechnen",
+        "contextSwitchPenalty": "Kontextwechsel-Abzug: {{value}} %",
+        "contextSwitchGrace": "Kontextwechsel-Toleranz"
+      },
+      "capacityModes": {
+        "theoretical": "Theoretisch",
+        "historical": "Historisch"
+      },
+      "constraintScopes": {
+        "full": "Gesamtes Portfolio",
+        "itOnly": "Nur IT"
+      },
+      "optimization": {
+        "priorityFocused": "Priorität zuerst",
+        "completionFocused": "Fertigstellung zuerst"
+      },
+      "help": {
+        "recalculate": "Wenn aktiviert, werden Projekte mit bereits geplanten Daten neu berechnet und können sich verschieben.",
+        "itOnly": "Im Modus „Nur IT“ werden fachliche Kapazität, Auslastung und rein fachliche Projekte in der erzeugten Roadmap ausgeblendet."
+      },
+      "actions": {
+        "generate": "Erzeugen",
+        "generating": "Wird erzeugt…",
+        "editPin": "Fixierung bearbeiten",
+        "pinStart": "Start fixieren",
+        "why": "Warum?"
+      },
+      "states": {
+        "empty": "Erzeugen Sie eine Roadmap, um vorgeschlagene Daten, Engpässe und die Auslastung der Mitwirkenden vorab anzuzeigen."
+      },
+      "overrides": {
+        "title": "Szenario-Anpassungen",
+        "resetAll": "Alle Anpassungen zurücksetzen"
+      },
+      "chips": {
+        "conflict_one": "Konflikt",
+        "conflict_other": "Konflikte",
+        "pinned": "Fixiert"
+      },
+      "summary": {
+        "scheduled": "Geplant: {{count}}",
+        "reservations": "Reservierungen: {{count}}",
+        "externalBlockers": "Externe Blocker: {{count}}",
+        "unschedulable": "Nicht planbar: {{count}}",
+        "roadmapEnd": "Roadmap-Ende: {{date}}",
+        "run": "Laufzeit: {{ms}} ms",
+        "sensitivityReruns": "Sensitivitätsläufe: {{count}}",
+        "sensitivityTruncated": "Sensitivität stichprobenartig (gekürzt)"
+      },
+      "values": {
+        "na": "k. A.",
+        "excluded": "Ausgeschlossen",
+        "pinStart": "Fixierter Start: {{week}}",
+        "noConstraint": "Keine Szenario-Einschränkung",
+        "days": "{{days}} T",
+        "percent": "{{value}} %"
+      },
+      "panel": {
+        "title": "Zeitplan, Engpässe und Auslastung"
+      },
+      "tabs": {
+        "schedule": "Zeitplan",
+        "bottlenecks": "Engpässe",
+        "occupation": "Auslastung"
+      },
+      "selection": {
+        "clearVisible": "Sichtbare Auswahl aufheben",
+        "selectVisible": "Sichtbare auswählen",
+        "selectedInGantt_one": "{{count}} in der Gantt-Vorschau ausgewählt",
+        "selectedInGantt_other": "{{count}} in der Gantt-Vorschau ausgewählt",
+        "excludedHelp": "Nicht markierte Projekte sind vom Szenario ausgeschlossen und verbrauchen keine Kapazität."
+      },
+      "columns": {
+        "project": "Projekt",
+        "status": "Status",
+        "scheduling": "Planung",
+        "scenario": "Szenario",
+        "start": "Beginn",
+        "end": "Ende",
+        "weeks": "Wochen",
+        "priority": "Priorität",
+        "explain": "Erklärung",
+        "reason": "Grund"
+      },
+      "unschedulable": {
+        "title": "Nicht planbare Projekte",
+        "item": "{{project}} ({{mode}}): {{reason}}"
+      },
+      "reservations": {
+        "title": "Kapazitätsreservierungen",
+        "help": "Diese Projekte werden nicht neu berechnet, reservieren aber weiterhin Kapazität der Mitwirkenden."
+      },
+      "bottlenecks": {
+        "empty": "Keine Engpassdaten verfügbar.",
+        "collapse": "Projekte des Mitwirkenden einklappen",
+        "expand": "Projekte des Mitwirkenden ausklappen",
+        "days_one": "{{count}} Tag",
+        "days_other": "{{count}} Tage",
+        "columns": {
+          "projectName": "Projektname",
+          "start": "Projektstartdatum",
+          "end": "Projektenddatum",
+          "totalContribution": "Gesamtbeitrag (Tage)",
+          "spent": "Bereits aufgewendete Zeit (Tage)"
+        },
+        "noProjects": "Keine geplanten Projekte für diesen Mitwirkenden im aktuellen Szenario."
+      },
+      "occupation": {
+        "contributors": "Mitwirkende",
+        "teams": "Teams",
+        "team": "Team",
+        "contributor": "Mitwirkender",
+        "average": "Durchschnitt",
+        "avg": "Ø",
+        "week": "KW{{week}}",
+        "weekYear": "KW{{week}} {{year}}",
+        "exportExcel": "Auslastung als Excel exportieren",
+        "exportPng": "Auslastung als PNG exportieren",
+        "noContributorData": "Keine Auslastungsdaten für Mitwirkende verfügbar.",
+        "noTeamData": "Keine Auslastungsdaten für Teams verfügbar.",
+        "noTeam": "Kein Team"
+      },
+      "gantt": {
+        "title": "Schreibgeschütztes Gantt",
+        "primaryOnly": "Nur primär",
+        "all": "Alle",
+        "showReservations": "Reservierungen anzeigen",
+        "exportPng": "Gantt als PNG exportieren",
+        "contributorView": "Relevanzansicht nach Mitwirkendem",
+        "teamView": "Relevanzansicht nach Team",
+        "hiddenSupport_one": "Ausgeblendete Unterstützungsarbeit: {{count}} Projekt, {{days}} T",
+        "hiddenSupport_other": "Ausgeblendete Unterstützungsarbeit: {{count}} Projekte, {{days}} T",
+        "legend": "Ein voller Balken zeigt aktive geplante Arbeit. Ein gestrichelter Vorlauf markiert einen früheren historischen Start mit Pause vor der Wiederaufnahme. Schraffierte Balken sind Kapazitätsreservierungen. Eine gepunktete Überlagerung markiert Planungslücken, eine diagonale graue Überlagerung pausierte Zeiträume.",
+        "dragHelp": "Ziehen Sie einen Projektbalken, um einen nur für das Szenario geltenden fixierten Start zu erstellen oder zu ändern. Klicken Sie auf einen Projektbalken, um seine Erklärung zu öffnen."
+      },
+      "filters": {
+        "allContributors": "Alle Mitwirkenden",
+        "allTeams": "Alle Teams",
+        "allSources": "Alle Quellen"
+      },
+      "apply": {
+        "summary_one": "Daten auf {{count}} ausgewähltes sichtbares Projekt anwenden",
+        "summary_other": "Daten auf {{count}} ausgewählte sichtbare Projekte anwenden",
+        "button": "Daten anwenden",
+        "applying": "Wird angewendet…",
+        "dialogTitle": "Roadmap-Daten anwenden",
+        "confirm_one": "Die geplanten Start- und Enddaten von {{count}} ausgewähltem sichtbarem Projekt werden aktualisiert. Die Änderung ist transaktional: Schlägt die Prüfung eines Projekts fehl, werden keine Daten angewendet.",
+        "confirm_other": "Die geplanten Start- und Enddaten von {{count}} ausgewählten sichtbaren Projekten werden aktualisiert. Die Änderung ist transaktional: Schlägt die Prüfung eines Projekts fehl, werden keine Daten angewendet."
+      },
+      "messages": {
+        "applied_one": "Roadmap-Daten auf {{count}} Projekt angewendet.",
+        "applied_other": "Roadmap-Daten auf {{count}} Projekte angewendet.",
+        "applyFailed": "Roadmap-Daten konnten nicht angewendet werden",
+        "applyFailedFor": "{{project}}: {{error}}",
+        "schedulingModeUpdated": "Planungsmodus auf {{mode}} gesetzt.",
+        "schedulingModeFailed": "Planungsmodus konnte nicht aktualisiert werden",
+        "generateFailed": "Roadmap konnte nicht erzeugt werden",
+        "exportGanttFailed": "Gantt konnte nicht als PNG exportiert werden",
+        "exportOccupationExcelFailed": "Auslastung konnte nicht als Excel exportiert werden",
+        "exportOccupationPngFailed": "Auslastung konnte nicht als PNG exportiert werden"
+      },
+      "schedulingModes": {
+        "independent": "Unabhängig",
+        "collaborative": "Kollaborativ"
+      },
+      "reasons": {
+        "zero_remaining_effort": "Kein verbleibender Aufwand",
+        "no_assigned_contributors": "Keine Mitwirkenden",
+        "missing_blocker_date": "Fehlendes Datum des Blockers",
+        "blocker_on_hold": "Blocker pausiert",
+        "blocked_unfinished_project": "Durch ein nicht abgeschlossenes Projekt blockiert",
+        "expired_fixed_plan": "Abgelaufener fester Plan",
+        "cyclic_dependency": "Zyklische Abhängigkeit",
+        "not_ready_within_horizon": "Über den Horizont hinaus blockiert",
+        "no_free_slot": "Kein freier Platz",
+        "no_effective_capacity": "Keine effektive Kapazität",
+        "below_minimum_start_threshold": "Unter der Mindeststartschwelle",
+        "unfinished_within_horizon": "Begonnen, aber nicht abgeschlossen",
+        "insufficient_capacity": "Unzureichende Kapazität",
+        "missing_contributor_capacity": "Fehlende Kapazität der Mitwirkenden"
+      },
+      "reservationReasons": {
+        "not_recalculated": "Nicht neu berechnet",
+        "external_blocker": "Externer Blocker"
+      },
+      "startReasons": {
+        "historical_start": "Historischer Start",
+        "dependency_release": "Freigabe der Abhängigkeit",
+        "capacity_available": "Kapazität wurde verfügbar",
+        "constraint_pin_start": "Fixierter Start",
+        "constraint_pin_window": "Fixiertes Zeitfenster",
+        "constraint_not_before": "Einschränkung „nicht vor“",
+        "fixed_reservation": "Feste Reservierung",
+        "unscheduled": "Nicht geplant"
+      },
+      "contributorReasons": {
+        "slot": "Grenze paralleler Plätze",
+        "capacity": "Kapazitätsdruck",
+        "collaborative_bottleneck": "Kollaborativer Engpass",
+        "reservation": "Reservierungsdruck"
+      },
+      "constraints": {
+        "none": "Keine",
+        "pinWindow": "Fixiertes Zeitfenster: {{start}} bis {{end}}",
+        "notBefore": "Nicht vor: {{week}}"
+      },
+      "explain": {
+        "overline": "Erklärbarkeit",
+        "whyStart": "Warum diese Startwoche",
+        "startReason": "Startgrund: {{reason}}",
+        "earliestWeek": "Früheste mögliche Woche: {{week}}",
+        "actualWeek": "Tatsächliche Startwoche: {{week}}",
+        "notScheduled": "Nicht geplant",
+        "whyNotEarlier": "Warum nicht früher",
+        "noBlockers": "Für dieses Element wurden keine weiteren Blockierungsdetails erfasst.",
+        "range": "{{from}} bis {{to}}",
+        "unknown": "Unbekannt",
+        "contributorTimeline": "Zeitleiste des ausgewählten Mitwirkenden",
+        "teamTimeline": "Zeitleiste des ausgewählten Teams",
+        "focusWindow": "{{name}}: {{start}} bis {{end}}",
+        "plannedContribution_one": "Geplanter Beitrag: {{days}} T über {{count}} aktive Woche",
+        "plannedContribution_other": "Geplanter Beitrag: {{days}} T über {{count}} aktive Wochen",
+        "primaryWork": "Primäre Roadmap-Arbeit",
+        "supportWork": "Unterstützungsarbeit",
+        "shareOfEffort": "{{percent}} % des Projektaufwands",
+        "avgPerWeek": "Ø {{days}} T/Woche",
+        "primaryHelp": "Dieses Projekt wird für den gewählten Fokus in der primären Roadmap-Ansicht angezeigt.",
+        "supportHelp": "Dieses Projekt gilt als Unterstützungsarbeit und wird ausgeblendet, wenn das Gantt auf „Nur primär“ steht.",
+        "weekOf": "Woche vom {{week}}",
+        "projectLoad": "Projektlast: {{days}} T",
+        "weeklyCapacity": "Wöchentliche Kapazität: {{value}}",
+        "totalAssigned": "Gesamter zugewiesener Aufwand in dieser Woche: {{days}} T",
+        "weeklyOccupation": "Wöchentliche Auslastung: {{value}}",
+        "projectContributors": "Mitwirkende des Projekts",
+        "scheduledWindow": "Geplantes Zeitfenster: {{start}} bis {{end}}",
+        "noLoads": "Für dieses Element sind keine Lastdetails der Mitwirkenden verfügbar.",
+        "plannedLoad": "Geplante Last: {{days}} T",
+        "limiting": "Limitierende Mitwirkende",
+        "noLimiting": "Für dieses Element wurden keine limitierenden Mitwirkenden erfasst.",
+        "reservedLoad": "Reservierte Last: {{value}}",
+        "activeProjects": "Aktive Projekte: {{value}}",
+        "activeOverrides": "Aktive Szenario-Anpassungen",
+        "noOverrides": "Keine aktiven Szenario-Anpassungen für dieses Element.",
+        "finalWarnings": "Abschließende Warnungen",
+        "noWarnings": "Für dieses Element wurden keine Szenario-Warnungen erfasst."
+      },
+      "pinDialog": {
+        "description": "Erstellen oder ändern Sie eine nur für das Szenario geltende Startfixierung für {{project}}.",
+        "thisProject": "dieses Projekt",
+        "startWeek": "Startwoche",
+        "save": "Fixierung speichern"
       }
     }
   },
@@ -1985,7 +2273,8 @@
         "loading": "Zuordnungen werden geladen…"
       },
       "table": {
-        "contributor": "Mitwirkender"
+        "contributor": "Mitwirkender",
+        "md": "PT"
       },
       "validation": {
         "pinnedTotalExceeded": "Manuelle Zeilen überschreiten 100 %. Reduzieren Sie zuerst einen manuellen Wert.",
