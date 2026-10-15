@@ -159,7 +159,7 @@ Verwenden Sie das **Ende der Gültigkeit**, um zu steuern, wann ein Unternehmen 
 - Nach dem Ende der Gültigkeit:
     - Das Unternehmen erscheint nicht mehr in Auswahllisten für neue Zuordnungen und wird aus Berichten für strikt spätere Jahre ausgeschlossen.
     - Historische Daten bleiben erhalten; das Unternehmen erscheint weiterhin in Berichten, die Jahre abdecken, in denen es aktiv war.
-- **Deaktivieren statt löschen.** Das Löschen ist nur möglich, wenn nichts das Unternehmen referenziert (keine Zuordnungen, Ausgaben oder Kostenstellen). Ein Unternehmen, zu dem Kostenstellen gehören, wird mit einer Meldung wie „Company A is used by 3 cost centers. Change their company or disable it instead." abgelehnt.
+- **Deaktivieren statt löschen.** Ein Unternehmen, das noch von Budgetzeilen (als zahlendes Unternehmen oder in ihren Zuordnungen), Verträgen oder Kostenstellen verwendet wird, kann nicht gelöscht werden. Die Meldung zählt auf, was es verwendet, zum Beispiel „Dieses Unternehmen wird noch verwendet: 3 Verträge und 2 Kostenstellen“. Deaktivieren Sie es stattdessen.
 
 ## Jahreskennzahlen
 

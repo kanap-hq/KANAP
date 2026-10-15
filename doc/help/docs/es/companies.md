@@ -159,7 +159,7 @@ Utilice el **Fin de validez** para controlar cuándo una empresa deja de estar a
 - Después del fin de validez:
     - La empresa ya no aparece en las listas de selección para nuevas asignaciones y se excluye de los informes de años estrictamente posteriores.
     - Los datos históricos permanecen intactos; la empresa sigue apareciendo en informes que cubren años en los que estaba activa.
-- **Prefiera desactivar en lugar de eliminar.** La eliminación solo es posible si nada referencia a la empresa (sin asignaciones, gasto ni centros de coste). Una empresa a la que pertenecen centros de coste se rechaza con un mensaje como "Company A is used by 3 cost centers. Change their company or disable it instead."
+- **Prefiera desactivar en lugar de eliminar.** Una empresa que aún usan líneas presupuestarias (como empresa pagadora o en sus asignaciones), contratos o centros de coste no se puede eliminar. El mensaje cuenta lo que la usa, por ejemplo "Esta empresa se usa en 3 contratos y 2 centros de coste". Desactívela en su lugar.
 
 ## Métricas anuales
 
