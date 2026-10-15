@@ -11,6 +11,8 @@ import { ContactsService } from '../../contacts/contacts.service';
 import { DepartmentsService } from '../../departments/departments.service';
 import { AssetsListService } from '../../assets/services/assets-list.service';
 import { LocationsService } from '../../locations/locations.service';
+import { CostCentersService } from '../../cost-centers/cost-centers.service';
+import { CostCentersCsvService } from '../../cost-centers/cost-centers-csv.service';
 
 // Lists sort text alphabetically, ignoring case and accents ("Okta" before "OVHcloud", "Élodie"
 // among the Es), with the shared helpers (`common/list-sort.ts`); and a CSV export asked with
@@ -172,6 +174,25 @@ async function testQueryFamilies() {
   });
 }
 
+/** A list sorted in memory (cost centers): the export follows its search, scope and sort, or holds the whole register. */
+async function testCostCentersExport() {
+  await withTenant(async (runner, tenantId) => {
+    const ctx = { manager: runner.manager, tenantId };
+    for (const [index, name] of NAMES.entries()) {
+      await runner.query(`INSERT INTO cost_centers (tenant_id, code, kind, name) VALUES ($1, $2, 'group', $3)`, [tenantId, `CC${index + 1}`, name]);
+    }
+    await runner.query(`INSERT INTO cost_centers (tenant_id, code, kind, name, status, disabled_at) VALUES ($1, 'CC9', 'group', 'Orange', 'disabled', $2)`, [tenantId, PAST]);
+    const centers = new CostCentersService(audit);
+    const csv = new CostCentersCsvService(centers);
+    assert.deepEqual((await centers.list({ sort: 'name:ASC' }, ctx)).items.map((c: any) => c.name), ALPHABETICAL, 'cost centers list: alphabetical');
+
+    const all = await csv.exportCsv('data', ctx, 'en');
+    assert.deepEqual(namesIn(all.content, [...NAMES, 'Orange'], 2).sort(), [...NAMES, 'Orange'].sort(), 'cost centers export: the whole register, disabled included');
+    const shown = await csv.exportCsv('data', ctx, 'en', exportListQuery({ rows: 'list', q: 'o', sort: 'name:DESC' }));
+    assert.deepEqual(namesIn(shown.content, [...NAMES, 'Orange'], 2), ['Zoé', 'OVHcloud', 'Okta', 'Élodie'], 'cost centers export: search, scope and sort');
+  });
+}
+
 async function main() {
   await dataSource.initialize();
   try {
@@ -180,6 +201,7 @@ async function main() {
     await testCompaniesAndDepartments();
     await testContacts();
     await testQueryFamilies();
+    await testCostCentersExport();
   } finally {
     await dataSource.destroy();
   }
