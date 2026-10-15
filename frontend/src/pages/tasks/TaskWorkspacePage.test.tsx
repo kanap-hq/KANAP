@@ -325,10 +325,9 @@ describe('TaskWorkspacePage create mode', () => {
     const titlePlaceholder = 'portfolio:workspace.task.title.placeholder__0';
     const descriptionPlaceholder = 'portfolio:workspace.task.description.placeholder__0';
 
-    await screen.findByPlaceholderText(titlePlaceholder);
-
-    const titleInput = screen.getByPlaceholderText(titlePlaceholder);
-    const descriptionInput = screen.getByPlaceholderText(descriptionPlaceholder);
+    const titleInput = await screen.findByPlaceholderText(titlePlaceholder);
+    // The description editor mounts after the title field: wait for it too.
+    const descriptionInput = await screen.findByPlaceholderText(descriptionPlaceholder);
 
     fireEvent.change(titleInput, { target: { value: 'Investigate disappearing draft' } });
     fireEvent.change(descriptionInput, { target: { value: 'The form should keep this text.' } });
