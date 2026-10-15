@@ -327,7 +327,7 @@ export default function UnifiedActivityForm({
               event.preventDefault();
             }}
             onClick={handleSubmit}
-            title="Submit (Ctrl/Cmd+Enter)"
+            title={t('portfolio:activity.actions.submitShortcut')}
             disabled={submitting || readOnly || (!hasAnyAction && !feedbackLabel)}
             sx={(theme) => ({
               flexShrink: 0,

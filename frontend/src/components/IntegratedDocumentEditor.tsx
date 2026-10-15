@@ -823,7 +823,7 @@ export const IntegratedDocumentEditor = React.forwardRef<
           variant="outlined"
           onClick={() => { void discardChanges(); }}
         >
-          Discard
+          {t('buttons.discard')}
         </Button>
       )}
       {showDocumentControls && editMode && canEdit && (
@@ -834,7 +834,7 @@ export const IntegratedDocumentEditor = React.forwardRef<
           disabled={!dirty || saveMutation.isPending}
           onClick={() => { void save(); }}
         >
-          Save
+          {t('buttons.save')}
         </Button>
       )}
       {canEditContent && (

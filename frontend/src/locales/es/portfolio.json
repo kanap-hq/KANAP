@@ -1724,7 +1724,8 @@
       "addComment": "Agregar comentario",
       "addDecision": "Agregar decisión",
       "adding": "Agregando…",
-      "editComment": "Editar comentario"
+      "editComment": "Editar comentario",
+      "submitShortcut": "Enviar (Ctrl/Cmd+Intro)"
     },
     "placeholders": {
       "editComment": "Edite su comentario…"

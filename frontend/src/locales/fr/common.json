@@ -132,7 +132,14 @@
     "recommended": "Recommandé",
     "openCalendar": "Ouvrir le calendrier",
     "datePlaceholder": "jj/mm/aaaa",
-    "requiredTag": "(obligatoire)"
+    "requiredTag": "(obligatoire)",
+    "relatedTo": "Lié à",
+    "openInNewTab": "Ouvrir dans un nouvel onglet",
+    "breadcrumb": "Fil d'Ariane",
+    "reviewStates": "États de revue",
+    "previousTask": "Tâche précédente",
+    "nextTask": "Tâche suivante",
+    "closeDialog": "Fermer la boîte de dialogue"
   },
   "yearTabs": {
     "single": "Année : {{year}}",
@@ -582,8 +589,8 @@
     "failedToUpdateLinks": "Échec de la mise à jour des liens.",
     "failedToLoadContext": "Échec du chargement du contexte.",
     "noStandaloneDocuments": "Aucun document autonome.",
-    "restrictedDocuments": "{{count}} document autonome est disponible pour cet élément. Vous devez disposer du rôle Lecteur pour le consulter.",
-    "restrictedDocuments_plural": "{{count}} documents autonomes sont disponibles pour cet élément. Vous devez disposer du rôle Lecteur pour les consulter.",
+    "restrictedDocuments_one": "{{count}} document autonome est disponible pour cet élément. Vous devez disposer du rôle Lecteur pour le consulter.",
+    "restrictedDocuments_other": "{{count}} documents autonomes sont disponibles pour cet élément. Vous devez disposer du rôle Lecteur pour les consulter.",
     "linkedDocuments": "Documents liés",
     "relatedDocuments": "Documents associés",
     "openKnowledge": "Ouvrir le document",
@@ -594,7 +601,8 @@
     "linkedVia": "Lié via",
     "sourceObject": "Objet source",
     "updatedColumn": "Mis à jour",
-    "openColumn": "Ouvrir"
+    "openColumn": "Ouvrir",
+    "newDocumentOptions": "Options du nouveau document"
   },
   "share": {
     "sendLink": "Envoyer le lien",
@@ -846,5 +854,16 @@
     "reload": "Recharger",
     "reloadHint": "Recharger affiche ces modifications. Ce que vous êtes en train de modifier reste à l'écran.",
     "deleted": "Cette ligne a été supprimée"
+  },
+  "markdownEditor": {
+    "insertEmoji": "Insérer un emoji",
+    "blockStyle": "Style de bloc"
+  },
+  "markdownLink": {
+    "url": "URL",
+    "anchorText": "Texte du lien",
+    "editLink": "Modifier le lien",
+    "copyUrl": "Copier l'URL",
+    "removeLink": "Supprimer le lien"
   }
 }

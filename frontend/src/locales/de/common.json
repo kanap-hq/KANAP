@@ -132,7 +132,14 @@
     "recommended": "Empfohlen",
     "openCalendar": "Kalender öffnen",
     "datePlaceholder": "tt/mm/jjjj",
-    "requiredTag": "(erforderlich)"
+    "requiredTag": "(erforderlich)",
+    "relatedTo": "Bezogen auf",
+    "openInNewTab": "In neuem Tab öffnen",
+    "breadcrumb": "Navigationspfad",
+    "reviewStates": "Prüfstatus",
+    "previousTask": "Vorherige Aufgabe",
+    "nextTask": "Nächste Aufgabe",
+    "closeDialog": "Dialog schließen"
   },
   "yearTabs": {
     "single": "Jahr: {{year}}",
@@ -582,8 +589,8 @@
     "failedToUpdateLinks": "Verknüpfungen konnten nicht aktualisiert werden.",
     "failedToLoadContext": "Kontext konnte nicht geladen werden.",
     "noStandaloneDocuments": "Keine eigenständigen Wissensdokumente.",
-    "restrictedDocuments": "{{count}} eigenständiges Wissensdokument ist für dieses Element verfügbar. Sie benötigen die Rolle Wissensleser, um es anzuzeigen.",
-    "restrictedDocuments_plural": "{{count}} eigenständige Wissensdokumente sind für dieses Element verfügbar. Sie benötigen die Rolle Wissensleser, um sie anzuzeigen.",
+    "restrictedDocuments_one": "{{count}} eigenständiges Wissensdokument ist für dieses Element verfügbar. Sie benötigen die Rolle Wissensleser, um es anzuzeigen.",
+    "restrictedDocuments_other": "{{count}} eigenständige Wissensdokumente sind für dieses Element verfügbar. Sie benötigen die Rolle Wissensleser, um sie anzuzeigen.",
     "linkedDocuments": "Verknüpfte Dokumente",
     "relatedDocuments": "Zugehörige Dokumente",
     "openKnowledge": "Wissensdokument öffnen",
@@ -594,7 +601,8 @@
     "linkedVia": "Verknüpft über",
     "sourceObject": "Quellobjekt",
     "updatedColumn": "Aktualisiert",
-    "openColumn": "Öffnen"
+    "openColumn": "Öffnen",
+    "newDocumentOptions": "Optionen für neues Dokument"
   },
   "share": {
     "sendLink": "Link senden",
@@ -846,5 +854,16 @@
     "reload": "Neu laden",
     "reloadHint": "Neu laden zeigt diese Änderungen. Was Sie gerade bearbeiten, bleibt auf dem Bildschirm.",
     "deleted": "Diese Zeile wurde gelöscht"
+  },
+  "markdownEditor": {
+    "insertEmoji": "Emoji einfügen",
+    "blockStyle": "Absatzformat"
+  },
+  "markdownLink": {
+    "url": "URL",
+    "anchorText": "Linktext",
+    "editLink": "Link bearbeiten",
+    "copyUrl": "URL kopieren",
+    "removeLink": "Link entfernen"
   }
 }

@@ -132,7 +132,14 @@
     "recommended": "Recommended",
     "openCalendar": "Open calendar",
     "datePlaceholder": "dd/mm/yyyy",
-    "requiredTag": "(required)"
+    "requiredTag": "(required)",
+    "relatedTo": "Related to",
+    "openInNewTab": "Open in new tab",
+    "breadcrumb": "Breadcrumb",
+    "reviewStates": "Review states",
+    "previousTask": "Previous task",
+    "nextTask": "Next task",
+    "closeDialog": "Close dialog"
   },
   "yearTabs": {
     "single": "Year: {{year}}",
@@ -582,8 +589,8 @@
     "failedToUpdateLinks": "Failed to update knowledge links.",
     "failedToLoadContext": "Failed to load knowledge context.",
     "noStandaloneDocuments": "No standalone knowledge documents.",
-    "restrictedDocuments": "{{count}} standalone knowledge document is available for this item. You need the Knowledge Reader role to view them.",
-    "restrictedDocuments_plural": "{{count}} standalone knowledge documents are available for this item. You need the Knowledge Reader role to view them.",
+    "restrictedDocuments_one": "{{count}} standalone knowledge document is available for this item. You need the Knowledge Reader role to view them.",
+    "restrictedDocuments_other": "{{count}} standalone knowledge documents are available for this item. You need the Knowledge Reader role to view them.",
     "linkedDocuments": "Linked documents",
     "relatedDocuments": "Related documents",
     "openKnowledge": "Open knowledge document",
@@ -594,7 +601,8 @@
     "linkedVia": "Linked via",
     "sourceObject": "Source object",
     "updatedColumn": "Updated",
-    "openColumn": "Open"
+    "openColumn": "Open",
+    "newDocumentOptions": "New document options"
   },
   "share": {
     "sendLink": "Send link",
@@ -846,5 +854,16 @@
     "reload": "Reload",
     "reloadHint": "Reload shows these changes. What you are editing stays on screen.",
     "deleted": "This line was deleted"
+  },
+  "markdownEditor": {
+    "insertEmoji": "Insert emoji",
+    "blockStyle": "Block style"
+  },
+  "markdownLink": {
+    "url": "URL",
+    "anchorText": "Anchor text",
+    "editLink": "Edit link",
+    "copyUrl": "Copy URL",
+    "removeLink": "Remove link"
   }
 }

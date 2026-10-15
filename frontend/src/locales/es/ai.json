@@ -213,7 +213,12 @@
       "search_all": "Buscar todo",
       "search_knowledge": "Buscar en la base de conocimiento",
       "web_search": "Buscar en la web"
-    }
+    },
+    "noGroups": "No se encontraron grupos.",
+    "noFilterValues": "No se encontraron valores de filtro.",
+    "noFilterFields": "No se encontraron campos de filtro.",
+    "empty": "(vacío)",
+    "aliases": "Alias: {{aliases}}"
   },
   "tokenUsage": {
     "total": "Tokens",

@@ -1724,7 +1724,8 @@
       "addComment": "Add comment",
       "addDecision": "Add decision",
       "adding": "Adding…",
-      "editComment": "Edit comment"
+      "editComment": "Edit comment",
+      "submitShortcut": "Submit (Ctrl/Cmd+Enter)"
     },
     "placeholders": {
       "editComment": "Edit your comment…"

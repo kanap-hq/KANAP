@@ -1836,7 +1836,7 @@ export default function KnowledgeWorkspacePage() {
   return (
     <>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1, flexWrap: 'wrap', gap: 1 }}>
-        <Breadcrumbs aria-label="breadcrumb">
+        <Breadcrumbs aria-label={t('common:labels.breadcrumb')}>
           <MLink component={Link} underline="hover" color="inherit" to="/knowledge">{t('workspace.breadcrumbs.knowledge')}</MLink>
           {libraryName && (
             <MLink component={Link} underline="hover" color="inherit" to={libraryListUrl}>{libraryName}</MLink>
