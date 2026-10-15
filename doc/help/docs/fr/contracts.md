@@ -222,7 +222,7 @@ Les lignes budgétaires se lient dans l'onglet [Budget](#budget).
 
 - Les liens disparaissent et les éléments liés sont conservés : les lignes budgétaires, applications, actifs (y compris ceux dont c'est le contrat de support) et contacts perdent leur lien avec le contrat
 - Ce qui appartient au contrat est supprimé avec lui : ses tâches (y compris la tâche de décision de renouvellement), ses sites web pertinents et ses pièces jointes
-- Un contrat avec des exigences de conformité renseignées (un état, y compris **Sans objet**, ou une référence) ne peut pas être supprimé : KANAP indique combien sont renseignées et propose de le désactiver plutôt. Dans la liste, ces contrats sont conservés et les autres sont supprimés
+- Un contrat avec des exigences de conformité renseignées (un état, y compris **Sans objet**, ou une référence) ne peut pas être supprimé : KANAP indique combien sont renseignées et propose de le désactiver plutôt. Dans la liste, la confirmation nomme les contrats conservés, avec leur nombre, avant toute suppression ; les autres sont supprimés
 - Une confirmation vient toujours d'abord. Elle compte ce qui perd son lien et ce qui est supprimé aussi, ou indique que le contrat n'est lié à rien
 
 Pour ne plus utiliser un contrat tout en gardant son historique, désactivez-le plutôt.

@@ -222,7 +222,7 @@ Budgetzeilen werden im Reiter [Budget](#budget) verknüpft.
 
 - Die Verknüpfungen werden entfernt, die verknüpften Elemente bleiben erhalten: Budgetzeilen, Anwendungen, Assets (auch die, deren Supportvertrag er ist) und Kontakte verlieren ihre Verknüpfung mit dem Vertrag
 - Was zum Vertrag gehört, wird mit ihm gelöscht: seine Aufgaben (auch die Aufgabe zur Verlängerungsentscheidung), relevanten Websites und Anhänge
-- Ein Vertrag mit erfassten Konformitätsanforderungen (ein Status, auch **Nicht zutreffend**, oder eine Referenz) kann nicht gelöscht werden: KANAP nennt ihre Anzahl und schlägt vor, ihn stattdessen zu deaktivieren. In der Liste bleiben solche Verträge erhalten, die übrigen werden gelöscht
+- Ein Vertrag mit erfassten Konformitätsanforderungen (ein Status, auch **Nicht zutreffend**, oder eine Referenz) kann nicht gelöscht werden: KANAP nennt ihre Anzahl und schlägt vor, ihn stattdessen zu deaktivieren. In der Liste nennt die Bestätigung die erhaltenen Verträge mit ihrer Anzahl, bevor etwas gelöscht wird; die übrigen werden gelöscht
 - Zuerst kommt immer eine Bestätigung. Sie zählt, was seine Verknüpfung verliert und was ebenfalls gelöscht wird, oder sagt, dass der Vertrag mit nichts verknüpft ist
 
 Um einen Vertrag nicht mehr zu nutzen und seinen Verlauf zu behalten, deaktivieren Sie ihn stattdessen.

@@ -222,7 +222,7 @@ Las líneas presupuestarias se vinculan en la pestaña [Presupuesto](#presupuest
 
 - Los vínculos se quitan y los elementos vinculados se conservan: las líneas presupuestarias, aplicaciones, activos (también aquellos de los que es el contrato de soporte) y contactos pierden su vínculo con el contrato
 - Lo que pertenece al contrato se elimina con él: sus tareas (incluida la tarea de decisión de renovación), sitios web relevantes y adjuntos
-- Un contrato con requisitos de conformidad registrados (un estado, incluido **No aplica**, o una referencia) no se puede eliminar: KANAP indica cuántos hay registrados y propone desactivarlo en su lugar. En la lista, esos contratos se conservan y los demás se eliminan
+- Un contrato con requisitos de conformidad registrados (un estado, incluido **No aplica**, o una referencia) no se puede eliminar: KANAP indica cuántos hay registrados y propone desactivarlo en su lugar. En la lista, la confirmación nombra los contratos que se conservan, con su número, antes de eliminar nada; los demás se eliminan
 - Siempre aparece primero una confirmación. Cuenta lo que pierde su vínculo y lo que también se elimina, o indica que el contrato no está vinculado a nada
 
 Para dejar de usar un contrato y conservar su historial, desactívelo en su lugar.

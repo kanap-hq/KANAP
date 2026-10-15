@@ -96,7 +96,7 @@ Displays up to 5 items.
 
 Shows items you have recently opened across the application: projects, requests, applications, assets, interfaces, connections, contracts, tasks, OPEX and CAPEX lines, and Knowledge documents. Each entry shows the item name, its type, and when you last viewed it.
 
-Recently viewed items are stored locally in your browser and are scoped to the current tenant and user. Click **Clear** to reset the list. Items you no longer have permission to access are filtered out automatically.
+Recently viewed items are stored locally in your browser and are scoped to the current tenant and user. Click **Clear** to reset the list. Items you no longer have permission to access are filtered out automatically. Items deleted since, alone or with another item (such as the tasks of a deleted contract), leave the list.
 
 Displays up to 5 items.
 

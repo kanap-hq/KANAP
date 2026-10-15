@@ -222,7 +222,7 @@ Budget lines are linked on the [Budget](#budget) tab.
 
 - The links go and the linked items stay: budget lines, applications, assets (also those whose support contract it is) and contacts lose their link to the contract
 - What belongs to the contract goes with it: its tasks (the renewal decision task included), relevant websites and attachments
-- A contract with recorded compliance requirements (a state, including **Not applicable**, or a reference) cannot be deleted: KANAP says how many are recorded and suggests disabling it instead. In the list, such contracts are kept and the others are deleted
+- A contract with recorded compliance requirements (a state, including **Not applicable**, or a reference) cannot be deleted: KANAP says how many are recorded and suggests disabling it instead. In the list, the confirmation names the contracts kept, with their count, before anything is deleted; the others are deleted
 - A confirmation always comes first. It counts what loses its link and what goes too, or says that the contract is linked to nothing
 
 To stop using a contract and keep its history, disable it instead.
