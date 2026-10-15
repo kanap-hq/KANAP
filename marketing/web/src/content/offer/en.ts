@@ -22,10 +22,11 @@ const content: OfferContent = {
     plans: [
       {
         name: 'Self-hosted',
-        badge: 'Open source · Free forever',
+        badge: 'Open source',
         target: 'Unlimited users · unlimited workspaces',
         price: '€0',
         period: '',
+        subPrice: 'Free forever',
         features: [
           'Full feature set, no caps',
           'Plaid and agents included, no AI feature gate',
@@ -38,7 +39,6 @@ const content: OfferContent = {
         ctaLabel: 'Deploy from GitHub',
         ctaHref: 'https://github.com/kanap-hq/kanap',
         ctaVariant: 'primary',
-        note: 'Plaid and agents use an LLM, so you bring your own key and pay your provider for usage. Cap per-agent spend to keep running cost predictable.',
       },
       {
         name: 'Self-hosted support',

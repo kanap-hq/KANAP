@@ -22,10 +22,11 @@ const content: OfferContent = {
     plans: [
       {
         name: 'Autoalojado',
-        badge: 'Open source · gratis para siempre',
+        badge: 'Open source',
         target: 'Usuarios ilimitados · workspaces ilimitados',
         price: '0 €',
         period: '',
+        subPrice: 'Gratis para siempre',
         features: [
           'Funcionalidad completa, sin límites',
           'Plaid y agentes incluidos, sin feature gate de IA',
@@ -38,7 +39,6 @@ const content: OfferContent = {
         ctaLabel: 'Desplegar desde GitHub',
         ctaHref: 'https://github.com/kanap-hq/kanap',
         ctaVariant: 'primary',
-        note: 'Plaid y los agentes usan un LLM, así que usted aporta su propia clave y paga a su proveedor por el uso. Limite el gasto por agente para mantener previsible el coste de operación.',
       },
       {
         name: 'Soporte autoalojado',

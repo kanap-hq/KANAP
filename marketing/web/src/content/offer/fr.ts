@@ -21,10 +21,11 @@ const content: OfferContent = {
     plans: [
       {
         name: 'Auto-hébergé',
-        badge: 'Open source · gratuit à vie',
+        badge: 'Open source',
         target: 'Utilisateurs illimités · workspaces illimités',
         price: '0 €',
         period: '',
+        subPrice: 'Gratuit à vie',
         features: [
           'Toutes les fonctionnalités, sans plafond',
           "Plaid et agents inclus, sans verrou fonctionnel sur l'IA",
@@ -37,7 +38,6 @@ const content: OfferContent = {
         ctaLabel: 'Déployer depuis GitHub',
         ctaHref: 'https://github.com/kanap-hq/kanap',
         ctaVariant: 'primary',
-        note: "Plaid et les agents utilisent un LLM, vous apportez donc votre propre clé et payez votre fournisseur pour l'usage. Plafonnez la dépense par agent pour garder un coût de fonctionnement prévisible.",
       },
       {
         name: 'Support auto-hébergé',
