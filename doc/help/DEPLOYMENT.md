@@ -20,12 +20,17 @@ This guide explains how to deploy the KANAP user documentation to Cloudflare Pag
 
 | Setting | Value |
 |---------|-------|
-| **Project name** | `kanap-docs` |
-| **Production branch** | `main` |
+| **Project name** | `kanap-help` |
+| **Production branch** | `stable` |
 | **Framework preset** | None |
 | **Build command** | `pip install -r requirements.txt && mkdocs build` |
 | **Build output directory** | `site` |
 | **Root directory** | `doc/help` |
+| **Preview deployments** | None |
+
+The production branch is `stable`, which `release.mjs publish` moves to each published version (see `doc/releasing.md`). The published manual therefore always matches the version that cloud and self-hosted installations run. A documentation change merged on `main` goes live with the next version.
+
+The project `kanap-help` was created on 2026-10-15 on the repository `kanap-hq/KANAP`, after the transfer of the repository to the `kanap-hq` organization: a Pages project cannot follow a transferred repository. The former project `kanap-docs` is kept with its automatic deployments disabled, pending deletion.
 
 ### 2. Set environment variables (if needed)
 
@@ -48,8 +53,10 @@ By default, Cloudflare Pages rebuilds on every push to the production branch. To
 1. Go to **Settings** → **Builds & deployments**
 2. Under **Build watch paths**, add:
    ```
-   doc/help/**/*
+   doc/help/*
    ```
+
+The `kanap-help` project watches `doc/help/*`.
 
 This prevents unnecessary rebuilds when only application code changes.
 
@@ -101,9 +108,9 @@ mkdocs serve
 
 ### Automatic (Recommended)
 
-1. Make changes to documentation in `doc/help/docs/en/`
-2. Commit and push to `main` branch
-3. Cloudflare Pages automatically rebuilds (~60 seconds)
+1. Make changes to documentation in `doc/help/docs/en/` (then the translations)
+2. Merge them on `main` through a pull request
+3. At the next `release.mjs publish`, the `stable` branch moves and Cloudflare Pages rebuilds (~60 seconds)
 4. Changes are live at https://doc.kanap.net
 
 ### Manual (via Wrangler CLI)
@@ -121,7 +128,7 @@ pip install -r requirements.txt
 mkdocs build
 
 # Deploy
-wrangler pages deploy site --project-name=kanap-docs
+wrangler pages deploy site --project-name=kanap-help
 ```
 
 ## Adding a New Language
@@ -172,7 +179,7 @@ Ensure the `search` plugin is enabled in `mkdocs.yml` and the build completed su
 
 ## Monitoring
 
-- **Build status**: Cloudflare Dashboard → Workers & Pages → kanap-docs
+- **Build status**: Cloudflare Dashboard → Workers & Pages → kanap-help
 - **Analytics**: Cloudflare Dashboard → Analytics & Logs (if Web Analytics enabled)
 - **Errors**: Check build logs for any Python/MkDocs errors
 
