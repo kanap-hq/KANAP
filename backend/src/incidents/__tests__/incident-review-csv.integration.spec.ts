@@ -300,7 +300,8 @@ const MULTILINE_REVIEW = [
 async function testExportImportRoundTrip() {
   await withFixture(async (runner, f) => {
     const services = createServices(runner.manager);
-    const incident = await createIncident(runner, f, services);
+    // The category is exported as its name, the import resolves it back to its code.
+    const incident = await createIncident(runner, f, services, { category: 'security', personal_data_affected: true });
 
     // Creation provisions the review from the template.
     const provisioned = await readReview(runner, f, incident.id);
@@ -319,9 +320,28 @@ async function testExportImportRoundTrip() {
     assert.ok(exported.content.includes('review'), 'the review column is exported by default');
     assert.ok(exported.content.includes('- 300 mailboxes'), 'the multiline body is exported');
 
+    // Re-importing the export changes nothing: every row counts as unchanged, in both modes.
+    const exportedFile = exported.content.replace(/^﻿/, '');
+    for (const mode of ['enrich', 'replace'] as const) {
+      const dry = await services.csv.import(
+        csvFile(exportedFile),
+        { dryRun: true, mode, operation: 'upsert' },
+        importOpts(runner, f, f.users.admin),
+      );
+      assert.deepEqual(dry.errors, []);
+      assert.deepEqual([dry.updated, dry.unchanged], [0, 1], `${mode}: the exported row is unchanged`);
+    }
+    // An edited review is an update.
+    const edited = await services.csv.import(
+      csvFile(exportedFile.replace('- 300 mailboxes', '- 400 mailboxes')),
+      { dryRun: true, mode: 'enrich', operation: 'upsert' },
+      importOpts(runner, f, f.users.admin),
+    );
+    assert.deepEqual([edited.updated, edited.unchanged], [1, 0], 'an edited review is an update');
+
     const before = await readReview(runner, f, incident.id);
     const result = await services.csv.import(
-      csvFile(exported.content.replace(/^﻿/, '')),
+      csvFile(exportedFile),
       { dryRun: false, mode: 'enrich', operation: 'upsert' },
       importOpts(runner, f, f.users.admin),
     );

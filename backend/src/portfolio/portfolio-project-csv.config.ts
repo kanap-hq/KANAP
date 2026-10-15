@@ -4,6 +4,53 @@ import {
   CsvImportContext,
 } from '../common/csv';
 import { allocateItemNumbers } from '../common/item-number.service';
+import { sameAsStoredWithDocuments } from '../knowledge/integrated-document-bodies';
+
+// Status label to code mapping
+const statusLookup = new Map<string, string>([
+  // Codes map to themselves
+  ['waiting_list', 'waiting_list'],
+  ['planned', 'planned'],
+  ['in_progress', 'in_progress'],
+  ['in_testing', 'in_testing'],
+  ['on_hold', 'on_hold'],
+  ['done', 'done'],
+  ['cancelled', 'cancelled'],
+  // Common labels
+  ['waiting list', 'waiting_list'],
+  ['waiting', 'waiting_list'],
+  ['in progress', 'in_progress'],
+  ['active', 'in_progress'],
+  ['in testing', 'in_testing'],
+  ['testing', 'in_testing'],
+  ['on hold', 'on_hold'],
+  ['paused', 'on_hold'],
+  ['completed', 'done'],
+  ['complete', 'done'],
+  ['finished', 'done'],
+  ['canceled', 'cancelled'],
+]);
+
+// Origin label to code mapping
+const originLookup = new Map<string, string>([
+  // Codes map to themselves
+  ['standard', 'standard'],
+  ['fast_track', 'fast_track'],
+  ['legacy', 'legacy'],
+  // Common labels
+  ['fast track', 'fast_track'],
+  ['fasttrack', 'fast_track'],
+  ['fast-track', 'fast_track'],
+]);
+
+/** Status and origin accept a code or a common label. */
+function normalizeCodes(entity: any): void {
+  for (const [key, lookup] of [['status', statusLookup], ['origin', originLookup]] as const) {
+    if (!entity[key]) continue;
+    const resolved = lookup.get(String(entity[key]).trim().toLowerCase());
+    if (resolved) entity[key] = resolved;
+  }
+}
 
 /**
  * CSV configuration for Portfolio Projects entity
@@ -391,61 +438,15 @@ export const portfolioProjectCsvConfig: CsvEntityConfig = {
     },
   ],
 
+  /** The purpose lives in bound documents (the CSV service writes them there), the rest in columns. */
+  sameAsStored: (rows, context) => sameAsStoredWithDocuments(rows, context, 'projects', { purpose: 'purpose' }, normalizeCodes),
+
   /**
    * Hook to normalize status and origin values before commit.
    * Accepts both codes and common labels for these fields.
    */
   beforeCommit: async (entities: any[], context: CsvImportContext) => {
-    // Status label to code mapping
-    const statusLookup = new Map<string, string>([
-      // Codes map to themselves
-      ['waiting_list', 'waiting_list'],
-      ['planned', 'planned'],
-      ['in_progress', 'in_progress'],
-      ['in_testing', 'in_testing'],
-      ['on_hold', 'on_hold'],
-      ['done', 'done'],
-      ['cancelled', 'cancelled'],
-      // Common labels
-      ['waiting list', 'waiting_list'],
-      ['waiting', 'waiting_list'],
-      ['in progress', 'in_progress'],
-      ['active', 'in_progress'],
-      ['in testing', 'in_testing'],
-      ['testing', 'in_testing'],
-      ['on hold', 'on_hold'],
-      ['paused', 'on_hold'],
-      ['completed', 'done'],
-      ['complete', 'done'],
-      ['finished', 'done'],
-      ['canceled', 'cancelled'],
-    ]);
-
-    // Origin label to code mapping
-    const originLookup = new Map<string, string>([
-      // Codes map to themselves
-      ['standard', 'standard'],
-      ['fast_track', 'fast_track'],
-      ['legacy', 'legacy'],
-      // Common labels
-      ['fast track', 'fast_track'],
-      ['fasttrack', 'fast_track'],
-      ['fast-track', 'fast_track'],
-    ]);
-
-    for (const entity of entities) {
-      if (entity.status) {
-        const input = String(entity.status).trim().toLowerCase();
-        const resolved = statusLookup.get(input);
-        if (resolved) entity.status = resolved;
-      }
-
-      if (entity.origin) {
-        const input = String(entity.origin).trim().toLowerCase();
-        const resolved = originLookup.get(input);
-        if (resolved) entity.origin = resolved;
-      }
-    }
+    for (const entity of entities) normalizeCodes(entity);
 
     // Assign item_numbers to new entities
     const newEntities = entities.filter(e => !e.item_number);

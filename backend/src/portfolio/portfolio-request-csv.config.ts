@@ -4,6 +4,31 @@ import {
   CsvImportContext,
 } from '../common/csv';
 import { allocateItemNumbers } from '../common/item-number.service';
+import { sameAsStoredWithDocuments } from '../knowledge/integrated-document-bodies';
+
+// Status label to code mapping
+const statusLookup = new Map<string, string>([
+  // Codes map to themselves
+  ['pending_review', 'pending_review'],
+  ['candidate', 'candidate'],
+  ['approved', 'approved'],
+  ['on_hold', 'on_hold'],
+  ['rejected', 'rejected'],
+  ['converted', 'converted'],
+  // Common labels
+  ['pending review', 'pending_review'],
+  ['pending', 'pending_review'],
+  ['on hold', 'on_hold'],
+]);
+
+/** Status accepts a code or a common label. */
+function normalizeCodes(entity: any): void {
+  for (const [key, lookup] of [['status', statusLookup]] as const) {
+    if (!entity[key]) continue;
+    const resolved = lookup.get(String(entity[key]).trim().toLowerCase());
+    if (resolved) entity[key] = resolved;
+  }
+}
 
 /**
  * CSV configuration for Portfolio Requests entity
@@ -297,33 +322,15 @@ export const portfolioRequestCsvConfig: CsvEntityConfig = {
     },
   ],
 
+  /** The purpose and the risks live in bound documents (the CSV service writes them there), the rest in columns. */
+  sameAsStored: (rows, context) => sameAsStoredWithDocuments(rows, context, 'requests', { purpose: 'purpose', risks: 'risks_mitigations' }, normalizeCodes),
+
   /**
    * Hook to normalize status values before commit.
    * Accepts both codes and common labels for status field.
    */
   beforeCommit: async (entities: any[], context: CsvImportContext) => {
-    // Status label to code mapping
-    const statusLookup = new Map<string, string>([
-      // Codes map to themselves
-      ['pending_review', 'pending_review'],
-      ['candidate', 'candidate'],
-      ['approved', 'approved'],
-      ['on_hold', 'on_hold'],
-      ['rejected', 'rejected'],
-      ['converted', 'converted'],
-      // Common labels
-      ['pending review', 'pending_review'],
-      ['pending', 'pending_review'],
-      ['on hold', 'on_hold'],
-    ]);
-
-    for (const entity of entities) {
-      if (entity.status) {
-        const input = String(entity.status).trim().toLowerCase();
-        const resolved = statusLookup.get(input);
-        if (resolved) entity.status = resolved;
-      }
-    }
+    for (const entity of entities) normalizeCodes(entity);
 
     // Assign item_numbers to new entities
     const newEntities = entities.filter(e => !e.item_number);

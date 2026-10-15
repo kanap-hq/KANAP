@@ -7,6 +7,83 @@ import {
 } from '../common/csv';
 import { allocateItemNumbers } from '../common/item-number.service';
 import { assertMarkdownSize } from '../common/markdown-limits';
+import { sameStoredValues } from '../common/csv-sheet/unchanged';
+
+// Status label to code mapping
+const statusLookup = new Map<string, string>([
+  // Codes map to themselves
+  ['open', 'open'],
+  ['in_progress', 'in_progress'],
+  ['pending', 'pending'],
+  ['in_testing', 'in_testing'],
+  ['done', 'done'],
+  ['cancelled', 'cancelled'],
+  // Common labels
+  ['in progress', 'in_progress'],
+  ['active', 'in_progress'],
+  ['working', 'in_progress'],
+  ['in testing', 'in_testing'],
+  ['testing', 'in_testing'],
+  ['completed', 'done'],
+  ['complete', 'done'],
+  ['finished', 'done'],
+  ['closed', 'done'],
+  ['canceled', 'cancelled'],
+  ['cancelled', 'cancelled'],
+]);
+
+// Priority level label to code mapping
+const priorityLookup = new Map<string, string>([
+  // Codes map to themselves
+  ['blocker', 'blocker'],
+  ['high', 'high'],
+  ['normal', 'normal'],
+  ['low', 'low'],
+  ['optional', 'optional'],
+  // Common labels
+  ['critical', 'blocker'],
+  ['urgent', 'blocker'],
+  ['medium', 'normal'],
+  ['default', 'normal'],
+  ['nice to have', 'optional'],
+  ['nice-to-have', 'optional'],
+]);
+
+// Related object type label to code mapping
+const objectTypeLookup = new Map<string, string>([
+  // Codes map to themselves
+  ['spend_item', 'spend_item'],
+  ['contract', 'contract'],
+  ['capex_item', 'capex_item'],
+  ['project', 'project'],
+  ['incident', 'incident'],
+  // Common labels
+  ['spend item', 'spend_item'],
+  ['spend', 'spend_item'],
+  ['capex item', 'capex_item'],
+  ['capex', 'capex_item'],
+]);
+
+/** Status, priority and related object type accept a code or a common label. */
+function normalizeTaskCodes(entity: any): void {
+  for (const [key, lookup] of [['status', statusLookup], ['priority_level', priorityLookup], ['related_object_type', objectTypeLookup]] as const) {
+    if (!entity[key]) continue;
+    const resolved = lookup.get(String(entity[key]).trim().toLowerCase());
+    if (resolved) entity[key] = resolved;
+  }
+}
+
+/** The users a row's numbered email columns name, in order; null when none (as TasksCsvService writes them). */
+function csvUserIds(raw: Record<string, string>, prefix: string, userByEmail: Map<string, string>): string[] | null {
+  const ids: string[] = [];
+  for (let i = 1; i <= 4; i++) {
+    const id = userByEmail.get((raw[`${prefix}_${i}`] || '').trim().toLowerCase());
+    if (id) ids.push(id);
+  }
+  return ids.length > 0 ? ids : null;
+}
+
+const hasColumns = (raw: Record<string, string>, prefix: string) => [1, 2, 3, 4].some((i) => `${prefix}_${i}` in raw);
 
 /**
  * CSV configuration for Tasks entity
@@ -453,66 +530,57 @@ export const taskCsvConfig: CsvEntityConfig = {
   ],
 
   /**
+   * The row as the commit stores it: codes normalized, the related object named by its id, the
+   * phase re-anchored to the task's project, and the viewers and owners TasksCsvService writes
+   * after the import.
+   */
+  sameAsStored: async (rows, context) => {
+    const ids = rows.map((row) => row.existingEntity.id);
+    const phaseIds = [...new Set(rows.flatMap((row) => [row.parsed.phase_id, row.existingEntity.phase_id]).filter(Boolean))];
+    const [users, phases] = ids.length === 0 ? [[], []] : await Promise.all([
+      context.manager.query(`SELECT id, email FROM users WHERE tenant_id = $1`, [context.tenantId]),
+      phaseIds.length === 0 ? [] : context.manager.query(
+        `SELECT id, name, project_id FROM portfolio_project_phases WHERE tenant_id = $1 AND id = ANY($2)`,
+        [context.tenantId, phaseIds],
+      ),
+    ]);
+    const userByEmail = new Map<string, string>(users.map((u: any) => [String(u.email).toLowerCase(), u.id]));
+    const phaseById = new Map<string, any>(phases.map((p: any) => [p.id, p]));
+
+    return rows.map((row) => {
+      const stored = row.existingEntity;
+      const next: Record<string, any> = { ...row.parsed };
+      normalizeTaskCodes(next);
+      const relatedId = next.related_object_id ?? stored.related_object_id;
+      // A name without an id is resolved by the commit: not proven equal here.
+      if (!relatedId && next._related_object_name) return false;
+      delete next._related_object_name;
+
+      // The phase resolver matches names tenant-wide; the commit moves the phase to the task's
+      // project. The stored phase is kept when it is that project's phase of the same name.
+      const parsedPhase = phaseById.get(next.phase_id);
+      const storedPhase = phaseById.get(stored.phase_id);
+      if (parsedPhase && storedPhase && parsedPhase.id !== storedPhase.id
+        && next.related_object_type === 'project' && parsedPhase.project_id !== relatedId
+        && storedPhase.project_id === relatedId
+        && String(storedPhase.name).toLowerCase() === String(parsedPhase.name).toLowerCase()) {
+        next.phase_id = storedPhase.id;
+      }
+
+      delete next._viewer_emails;
+      delete next._owner_emails;
+      if (hasColumns(row.raw, 'viewer_email')) next.viewer_ids = csvUserIds(row.raw, 'viewer_email', userByEmail);
+      if (hasColumns(row.raw, 'owner_email')) next.owner_ids = csvUserIds(row.raw, 'owner_email', userByEmail);
+      return sameStoredValues(stored, next);
+    });
+  },
+
+  /**
    * Hook to normalize status, priority_level, related_object_type values and resolve
    * related_object_name to related_object_id before commit.
    * Accepts both codes and common labels for enum fields.
    */
   beforeCommit: async (entities: any[], context: CsvImportContext) => {
-    // Status label to code mapping
-    const statusLookup = new Map<string, string>([
-      // Codes map to themselves
-      ['open', 'open'],
-      ['in_progress', 'in_progress'],
-      ['pending', 'pending'],
-      ['in_testing', 'in_testing'],
-      ['done', 'done'],
-      ['cancelled', 'cancelled'],
-      // Common labels
-      ['in progress', 'in_progress'],
-      ['active', 'in_progress'],
-      ['working', 'in_progress'],
-      ['in testing', 'in_testing'],
-      ['testing', 'in_testing'],
-      ['completed', 'done'],
-      ['complete', 'done'],
-      ['finished', 'done'],
-      ['closed', 'done'],
-      ['canceled', 'cancelled'],
-      ['cancelled', 'cancelled'],
-    ]);
-
-    // Priority level label to code mapping
-    const priorityLookup = new Map<string, string>([
-      // Codes map to themselves
-      ['blocker', 'blocker'],
-      ['high', 'high'],
-      ['normal', 'normal'],
-      ['low', 'low'],
-      ['optional', 'optional'],
-      // Common labels
-      ['critical', 'blocker'],
-      ['urgent', 'blocker'],
-      ['medium', 'normal'],
-      ['default', 'normal'],
-      ['nice to have', 'optional'],
-      ['nice-to-have', 'optional'],
-    ]);
-
-    // Related object type label to code mapping
-    const objectTypeLookup = new Map<string, string>([
-      // Codes map to themselves
-      ['spend_item', 'spend_item'],
-      ['contract', 'contract'],
-      ['capex_item', 'capex_item'],
-      ['project', 'project'],
-      ['incident', 'incident'],
-      // Common labels
-      ['spend item', 'spend_item'],
-      ['spend', 'spend_item'],
-      ['capex item', 'capex_item'],
-      ['capex', 'capex_item'],
-    ]);
-
     // Table mapping for related object resolution. `where`: a `spend_item` names an OPEX line
     // (`spend/budget-nature.ts`), never a line of another nature with the same name.
     const tableMap: Record<string, { table: string; nameColumn: string; where?: string }> = {
@@ -524,25 +592,7 @@ export const taskCsvConfig: CsvEntityConfig = {
     };
 
     // First pass: normalize enum values
-    for (const entity of entities) {
-      if (entity.status) {
-        const input = String(entity.status).trim().toLowerCase();
-        const resolved = statusLookup.get(input);
-        if (resolved) entity.status = resolved;
-      }
-
-      if (entity.priority_level) {
-        const input = String(entity.priority_level).trim().toLowerCase();
-        const resolved = priorityLookup.get(input);
-        if (resolved) entity.priority_level = resolved;
-      }
-
-      if (entity.related_object_type) {
-        const input = String(entity.related_object_type).trim().toLowerCase();
-        const resolved = objectTypeLookup.get(input);
-        if (resolved) entity.related_object_type = resolved;
-      }
-    }
+    for (const entity of entities) normalizeTaskCodes(entity);
 
     // Second pass: resolve related_object_name to related_object_id
     // Group entities by type to batch queries

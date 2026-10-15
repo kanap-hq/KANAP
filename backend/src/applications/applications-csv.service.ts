@@ -18,7 +18,7 @@ import {
   CsvFieldInfo,
   CsvResolverService,
 } from '../common/csv';
-import { applicationCsvConfig } from './application-csv.config';
+import { applicationCsvConfig, csvOwnerKeys, sameKeys } from './application-csv.config';
 
 /**
  * Service for importing and exporting Applications via CSV (V2)
@@ -268,33 +268,16 @@ export class ApplicationsCsvService {
       const ownerRepo = manager.getRepository(ApplicationOwner);
       const beforeRows = await ownerRepo.find({ where: { application_id: appId } as any });
 
+      // Owners named by the columns (deduped by owner type + user to avoid unique violations)
+      const ownerKeys = csvOwnerKeys(row, userByEmail);
+      if (sameKeys(beforeRows.map((r) => `${r.owner_type}:${r.user_id}`), ownerKeys)) continue;
+      const newOwners = ownerKeys.map((key) => {
+        const [owner_type, user_id] = key.split(':') as ['business' | 'it', string];
+        return { user_id, owner_type };
+      });
+
       // Clear existing owners
       await manager.query(`DELETE FROM application_owners WHERE application_id = $1`, [appId]);
-
-      // Collect new owners (dedupe by owner type + user to avoid unique violations)
-      const newOwners: Array<{ user_id: string; owner_type: 'business' | 'it' }> = [];
-      const ownerKeys = new Set<string>();
-      const addOwner = (email: string, ownerType: 'business' | 'it') => {
-        if (!email) return;
-        const userId = userByEmail.get(email);
-        if (!userId) return;
-        const key = `${ownerType}:${userId}`;
-        if (ownerKeys.has(key)) return;
-        ownerKeys.add(key);
-        newOwners.push({ user_id: userId, owner_type: ownerType });
-      };
-
-      // Business owners
-      for (let i = 1; i <= 4; i++) {
-        const email = (row[`business_owner_email_${i}`] || '').trim().toLowerCase();
-        addOwner(email, 'business');
-      }
-
-      // IT owners
-      for (let i = 1; i <= 4; i++) {
-        const email = (row[`it_owner_email_${i}`] || '').trim().toLowerCase();
-        addOwner(email, 'it');
-      }
 
       // Insert new owners
       let afterRows: ApplicationOwner[] = [];

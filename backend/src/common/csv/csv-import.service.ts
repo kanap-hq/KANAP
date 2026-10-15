@@ -145,6 +145,15 @@ export class CsvImportService {
     }
     allErrors.push(...duplicateErrors);
 
+    // Matched rows identical to what is stored: counted, never written.
+    if (params.operation !== 'insert_only') {
+      const matched = parsedRows.filter((row) => row.errors.length === 0 && !row.isInsert);
+      const same = config.sameAsStored
+        ? await config.sameAsStored(matched, context)
+        : matched.map((row) => sameStoredValues(row.existingEntity, row.parsed));
+      matched.forEach((row, i) => { row.unchanged = same[i] === true; });
+    }
+
     // Count operations
     let insertCount = 0;
     let updateCount = 0;
@@ -166,9 +175,7 @@ export class CsvImportService {
       } else {
         if (params.operation === 'insert_only') {
           skipCount++;
-        } else if (sameStoredValues(row.existingEntity, row.parsed)) {
-          // Every value equals the stored one: nothing to write, no audit line.
-          row.unchanged = true;
+        } else if (row.unchanged) {
           unchangedCount++;
         } else {
           updateCount++;
@@ -185,7 +192,7 @@ export class CsvImportService {
         inserted: insertCount,
         updated: updateCount,
         skipped: skipCount,
-      unchanged: unchangedCount,
+        unchanged: unchangedCount,
         errors: allErrors,
         warnings: allWarnings,
       };
