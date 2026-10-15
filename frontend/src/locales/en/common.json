@@ -865,5 +865,12 @@
     "editLink": "Edit link",
     "copyUrl": "Copy URL",
     "removeLink": "Remove link"
+  },
+  "tenant": {
+    "notFound": {
+      "title": "Tenant not found",
+      "message": "This tenant does not exist or is no longer available. You will be redirected to our website shortly.",
+      "redirecting": "Redirecting to {{url}}"
+    }
   }
 }

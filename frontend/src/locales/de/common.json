@@ -865,5 +865,12 @@
     "editLink": "Link bearbeiten",
     "copyUrl": "URL kopieren",
     "removeLink": "Link entfernen"
+  },
+  "tenant": {
+    "notFound": {
+      "title": "Mandant nicht gefunden",
+      "message": "Dieser Mandant existiert nicht oder ist nicht mehr verfügbar. Sie werden in Kürze auf unsere Website weitergeleitet.",
+      "redirecting": "Weiterleitung zu {{url}}"
+    }
   }
 }

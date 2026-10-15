@@ -865,5 +865,12 @@
     "editLink": "Modifier le lien",
     "copyUrl": "Copier l'URL",
     "removeLink": "Supprimer le lien"
+  },
+  "tenant": {
+    "notFound": {
+      "title": "Tenant introuvable",
+      "message": "Ce tenant n'existe pas ou n'est plus disponible. Vous allez être redirigé vers notre site dans quelques instants.",
+      "redirecting": "Redirection vers {{url}}"
+    }
   }
 }

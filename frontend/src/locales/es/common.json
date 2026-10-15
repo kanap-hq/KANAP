@@ -865,5 +865,12 @@
     "editLink": "Editar enlace",
     "copyUrl": "Copiar URL",
     "removeLink": "Quitar enlace"
+  },
+  "tenant": {
+    "notFound": {
+      "title": "Espacio de trabajo no encontrado",
+      "message": "Este espacio de trabajo no existe o ya no está disponible. En breve se le redirigirá a nuestro sitio web.",
+      "redirecting": "Redirigiendo a {{url}}"
+    }
   }
 }

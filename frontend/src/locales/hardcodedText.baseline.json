@@ -10,6 +10,5 @@
   "pages/it/workspace/InterfaceMetadataBar.tsx": 3,
   "pages/it/workspace/InterfaceOverviewTab.tsx": 17,
   "pages/it/workspace/InterfacePropertyPanel.tsx": 26,
-  "pages/it/workspace/InterfaceRelationsEditor.tsx": 20,
-  "tenant/TenantContext.tsx": 3
+  "pages/it/workspace/InterfaceRelationsEditor.tsx": 20
 }
