@@ -225,7 +225,7 @@ Load or update calendars and their working days from a file.
 - **"Give the country of region BY."**: a region needs its country.
 - **"The country of a calendar cannot be changed. Create another calendar."**: the row gives another country or region than the stored calendar. Leave both cells empty, or give the calendar's own values.
 - **"A calendar named ... already exists."**: another calendar already uses this name. Names are unique regardless of case.
-- **"Header mismatch"**: download a fresh template.
+- **"Header: Missing columns: ..."** or **"Header: Unknown columns: ..."**: download a fresh template.
 
 ---
 

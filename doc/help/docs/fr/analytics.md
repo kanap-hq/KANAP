@@ -410,7 +410,7 @@ Seule la colonne `name` est obligatoire. Lorsque la colonne `description`, `stat
 - **« The ... dimension is for OPEX lines only. »** (ou CAPEX) : la ligne réserve une valeur au type de ligne que sa dimension exclut. Corrigez la cellule `applies_to`, ou changez le réglage **Utilisé pour** de la dimension.
 - **« Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again. »** : la ligne est activée avec une date déjà passée. Un fichier exporté avant cette date indique encore `enabled` : exportez à nouveau, ou corrigez la cellule.
 - **« Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed. »** : la ligne est désactivée avec une date encore à venir. Corrigez la cellule `status` ou `disabled_at`.
-- **« Header mismatch »** : téléchargez un nouveau modèle.
+- **« En-tête : Colonnes manquantes : ... »** ou **« En-tête : Colonnes inconnues : ... »** : téléchargez un nouveau modèle.
 
 ---
 

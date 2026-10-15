@@ -174,6 +174,8 @@ Haga clic en **Nuevo** en la barra de chips, o en **Nuevo plan** en el cuadro Ge
 
 En modo plantilla, haga clic en **Verificar plantilla** antes de crear para ver cuántas cuentas se añadirán y cuántas se actualizarán. Después haga clic en **Crear**.
 
+Una vez creado, el nuevo plan queda seleccionado en la página: **Importar CSV** carga en ese plan.
+
 Un plan nuevo no tiene ningún rol, salvo el predeterminado de país que marque aquí. Para darle otro rol, use [Gestionar planes](#el-cuadro-gestionar-planes).
 
 ### Cargar desde plantillas
@@ -467,8 +469,8 @@ El CSV global `/accounts` incluye una columna `coa_code` para identificar a qué
   - **Exportar CSV**: todas las cuentas con sus códigos de CoA, números de cuenta, nombres, nombres locales, descripciones, mapeos de consolidación, estado y **Usada para**
   - **Importar CSV**: **Descargar plantilla** en el diálogo da un archivo solo con los encabezados. Empiece por la **Verificación previa** para validar la estructura, la codificación, los campos obligatorios y los duplicados, y después **Cargar** para aplicar las inserciones y las actualizaciones
   - **Coincidencia**: por `(coa_code, account_number)` dentro de su espacio de trabajo
-  - **Celdas obligatorias**: `coa_code`, `account_number`, `account_name`. Todas las filas de un archivo deben llevar el mismo `coa_code`
-  - **Celdas opcionales**: `native_name`, `description`, campos de consolidación, `status`, `nature`
+  - **Columnas obligatorias**: `coa_code`, `account_number`, `account_name`. Todas las filas de un archivo deben llevar el mismo `coa_code`
+  - **Columnas opcionales**: `native_name`, `description`, las columnas de consolidación, `status`, `nature`. Un archivo puede omitirlas: las cuentas que actualiza conservan sus valores guardados, y las cuentas nuevas toman los valores predeterminados (vacío, enabled, **OPEX y CAPEX**). Una columna presente en el archivo aplica sus celdas, incluidas las vacías
   - Los duplicados en el archivo (mismo coa_code + account_number) se deduplican; gana la primera ocurrencia
 
 **Esquema CSV** (la exportación escribe el separador del idioma de la pantalla; aquí se muestra con puntos y coma):
@@ -481,7 +483,8 @@ coa_code;account_number;account_name;native_name;description;consolidation_accou
 Desde la página de Planes de cuentas, **Importar CSV** y **Exportar CSV** se limitan automáticamente al CoA seleccionado actualmente.
 
   - **Exportar CSV**: cuentas de este CoA (no se necesita columna `coa_code`)
-  - **Importar CSV**: las cuentas se insertan o se actualizan en este CoA automáticamente
+  - **Importar CSV**: las cuentas se insertan o se actualizan en este CoA automáticamente. El título del diálogo nombra el plan, por ejemplo **Importar cuentas en FR-PCG**
+  - Solo `account_number` y `account_name` son obligatorias. Las demás columnas son opcionales, como en el archivo global
 
 **Esquema CSV** (con alcance de CoA; aquí se muestra con puntos y coma):
 ```

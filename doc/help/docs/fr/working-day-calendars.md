@@ -225,7 +225,7 @@ Chargez ou mettez à jour des calendriers et leurs jours ouvrés depuis un fichi
 - **« Give the country of region BY. »** : une région a besoin de son pays.
 - **« The country of a calendar cannot be changed. Create another calendar. »** : la ligne donne un autre pays ou une autre région que le calendrier enregistré. Laissez les deux cellules vides, ou donnez les valeurs du calendrier.
 - **« A calendar named ... already exists. »** : un autre calendrier utilise déjà ce nom. Les noms sont uniques sans tenir compte de la casse.
-- **« Header mismatch »** : téléchargez un nouveau modèle.
+- **« En-tête : Colonnes manquantes : ... »** ou **« En-tête : Colonnes inconnues : ... »** : téléchargez un nouveau modèle.
 
 ---
 

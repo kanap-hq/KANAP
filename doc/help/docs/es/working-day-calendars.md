@@ -225,7 +225,7 @@ Cargue o actualice calendarios y sus días laborables desde un archivo.
 - **"Give the country of region BY."**: una región necesita su país.
 - **"The country of a calendar cannot be changed. Create another calendar."**: la fila indica otro país u otra región que el calendario guardado. Deje las dos celdas vacías, o indique los valores del propio calendario.
 - **"A calendar named ... already exists."**: otro calendario ya usa este nombre. Los nombres son únicos sin distinguir mayúsculas y minúsculas.
-- **"Header mismatch"**: descargue una plantilla nueva.
+- **"Encabezado: Columnas que faltan: ..."** o **"Encabezado: Columnas desconocidas: ..."**: descargue una plantilla nueva.
 
 ---
 

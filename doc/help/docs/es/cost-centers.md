@@ -212,7 +212,7 @@ Cargue o actualice todo el árbol desde un archivo.
 - **"Type must be 'group' or 'cost_center'."**: corrija la celda `kind`.
 - **"Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again."**: la fila está activada con una fecha ya pasada. Un archivo exportado antes de esa fecha todavía indica `enabled`: vuelva a exportar o corrija la celda.
 - **"Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed."**: la fila está desactivada con una fecha aún por llegar. Corrija la celda `status` o `disabled_at`.
-- **"Header mismatch"**: descargue una plantilla nueva.
+- **"Encabezado: Columnas que faltan: ..."** o **"Encabezado: Columnas desconocidas: ..."**: descargue una plantilla nueva.
 
 ---
 

@@ -225,7 +225,7 @@ Laden oder aktualisieren Sie Kalender und ihre Arbeitstage aus einer Datei.
 - **„Give the country of region BY.“**: Eine Region erfordert ihr Land.
 - **„The country of a calendar cannot be changed. Create another calendar.“**: Die Zeile nennt ein anderes Land oder eine andere Region als der gespeicherte Kalender. Lassen Sie beide Zellen leer oder geben Sie die Werte des Kalenders an.
 - **„A calendar named ... already exists.“**: Ein anderer Kalender verwendet diesen Namen bereits. Namen sind unabhängig von Groß- und Kleinschreibung eindeutig.
-- **„Header mismatch“**: Laden Sie eine neue Vorlage herunter.
+- **„Kopfzeile: Fehlende Spalten: ...“** oder **„Kopfzeile: Unbekannte Spalten: ...“**: Laden Sie eine neue Vorlage herunter.
 
 ---
 

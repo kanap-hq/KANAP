@@ -212,7 +212,7 @@ Load or update the whole tree from a file.
 - **"Type must be 'group' or 'cost_center'."**: fix the `kind` cell.
 - **"Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again."**: the row is enabled with a date that has passed. A file exported before the date passed still says `enabled`: export it again, or fix the cell.
 - **"Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed."**: the row is disabled with a date still to come. Fix the `status` or the `disabled_at` cell.
-- **"Header mismatch"**: download a fresh template.
+- **"Header: Missing columns: ..."** or **"Header: Unknown columns: ..."**: download a fresh template.
 
 ---
 

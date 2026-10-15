@@ -26,7 +26,7 @@ The rest of this page describes the shared sheet layer first, then the budget fi
 
 - Read at any position; case, spaces, underscores and hyphens are ignored.
 - **Budget files**: unknown columns are ignored and listed in `ignoredColumns`. A header that looks like an amount column and does not parse (a year-like or month-like tail, or a stem one letter from a column name: `budget_27`, `budjet_2027`, `actual_2026_13`) is a header error. An `analytics:<code>` column naming no dimension is a header error.
-- **Master-data files**: strict. A missing column and an unknown one both refuse the file with `Header mismatch. Missing: X, Extra: Y`. `ignoredColumns` is therefore always empty for them.
+- **Master-data files**: strict. A missing column and an unknown one both refuse the file with a `row: 0` error `Header mismatch. Missing: X, Extra: Y` that names only the parts that apply (`headerMismatchError` in `common/csv-sheet/master-data.ts`). It carries a `code` (`CSV_HEADER_MISSING_COLUMNS`, `CSV_HEADER_UNKNOWN_COLUMNS` or `CSV_HEADER_MISMATCH`) and `params: { missing, extra }`, which `CsvImportDialog` translates from `errors.json` and shows on a **Header** line. `ignoredColumns` is therefore always empty for them.
 
 ### Dates
 
