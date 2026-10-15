@@ -1,6 +1,6 @@
 {
   "name": "cio-frontend",
-  "version": "26.10.1",
+  "version": "26.10.2",
   "private": true,
   "license": "AGPL-3.0-only",
   "scripts": {
