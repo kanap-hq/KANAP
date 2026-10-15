@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { endOfValidityFromDate } from '../status';
-import { DecimalMark } from './amount';
+import { DecimalMark, ParsedAmount, parseCsvAmount, resolveAmountConvention } from './amount';
 import { formatCsvDate, formatCsvEndOfValidity } from './date';
 import { csvDecodeErrorCode } from './decode';
 import { CSV_FILE_EMPTY_MESSAGE, readCsv } from './read';
@@ -175,5 +175,25 @@ export function nameMatchedWarning(row: number, column: string, fileName: string
     message: `'${fileName}' was matched to '${storedName}'.`,
     code: 'CSV_NAME_MATCHED_CASE',
     params: { name: fileName, stored: storedName },
+  };
+}
+
+/**
+ * A decimal column without a year (a contract's amount at signature), read the way the amount
+ * columns are: the file's cells settle the decimal mark, then the switch, then the language. Two
+ * conventions in one column are a file error; a mark the cells could not settle comes with the
+ * same notice as the amount columns.
+ */
+export function fieldAmounts(
+  rows: readonly CsvDataRow[],
+  field: string,
+  language: CsvLanguage,
+  decimalMark?: DecimalMark,
+): { error: string | null; notice: string | null; amountOf(row: CsvDataRow): ParsedAmount } {
+  const decision = resolveAmountConvention(rows.map((row) => cellOf(row, field)), language, decimalMark);
+  return {
+    error: decision.error,
+    notice: decision.notice,
+    amountOf: (row) => parseCsvAmount(cellOf(row, field), decision.decimal ?? undefined),
   };
 }

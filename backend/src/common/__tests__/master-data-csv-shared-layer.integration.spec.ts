@@ -29,9 +29,16 @@ import {
 } from '../../working-day-profiles/working-day-profiles-csv.service';
 import { WorkingDayProfilesService } from '../../working-day-profiles/working-day-profiles.service';
 import { CsvLanguage } from '../csv-sheet';
+import { ContactsService } from '../../contacts/contacts.service';
+import { ContractsService } from '../../contracts/contracts.service';
+import { BusinessProcessesService } from '../../business-processes/business-processes.service';
+import { BusinessProcess } from '../../business-processes/business-process.entity';
+import { BusinessProcessCategory } from '../../business-processes/business-process-category.entity';
+import { BusinessProcessCategoryLink } from '../../business-processes/business-process-category-link.entity';
 
-// The eight master-data files (companies, departments, users, suppliers,
-// accounts, cost centers, analytics values, calendars) all read through
+// The master-data files (companies, departments, users, suppliers, accounts,
+// cost centers, analytics values, calendars, contacts, contracts, business
+// processes) all read through
 // `readMasterDataFile` and write through `writeCsv`. This spec is the table of
 // what that shared layer promises them:
 //
@@ -56,6 +63,7 @@ import { CsvLanguage } from '../csv-sheet';
 const COMPANY = 'Shared layer company';
 const DEPARTMENT = 'Shared layer department';
 const ROLE = 'Shared layer role';
+const SUPPLIER = 'Shared layer supplier';
 /** A day above 12: the file itself then settles day-first, on every screen. */
 const SETTLED_DAY = '2031-12-31';
 const AMBIGUOUS = '01/03/2027';
@@ -105,7 +113,7 @@ type Importer = {
   snapshot(runner: QueryRunner, tenantId: string): Promise<Array<Record<string, any>>>;
 };
 
-type Seeds = { companyId: string; departmentId: string; coaId: string; axisId: string };
+type Seeds = { companyId: string; departmentId: string; coaId: string; axisId: string; supplierId: string };
 
 /** The separator the writer picks for a language: English uses `,`, the others `;`. */
 const separatorOf = (language: CsvLanguage = 'en') => (language === 'en' ? ',' : ';');
@@ -246,6 +254,48 @@ function importers(manager: EntityManager, tenantId: string, seeds: Seeds): Impo
     description: 'Shared layer calendar',
     ...calendarMonths('20'),
     year: '2026',
+  });
+
+  const contacts = new ContactsService(undefined as any, undefined as any, undefined as any, undefined as any, audit);
+  const contactBase = (key: string): Row => ({
+    email: key,
+    first_name: 'Shared',
+    last_name: 'Layer',
+    country: 'FR',
+    notes: 'Shared layer contact',
+    active: 'true',
+  });
+
+  const contractArgs: any[] = Array.from({ length: 10 }, () => undefined);
+  contractArgs[4] = audit;
+  contractArgs[7] = { syncFromSupplier: async () => undefined };
+  const contracts = new (ContractsService as any)(...contractArgs) as ContractsService;
+  const contractBase = (key: string): Row => ({
+    name: key,
+    company_name: COMPANY,
+    supplier_name: SUPPLIER,
+    start_date: '2026-01-15',
+    duration_months: '12',
+    auto_renewal: 'yes',
+    notice_period_months: '1',
+    yearly_amount_at_signature: '1200',
+    currency: 'EUR',
+    billing_frequency: 'annual',
+    notes: 'Shared layer contract',
+  });
+
+  const processes = new BusinessProcessesService(
+    manager.getRepository(BusinessProcess),
+    manager.getRepository(BusinessProcessCategory),
+    manager.getRepository(BusinessProcessCategoryLink),
+    manager.getRepository(User),
+    audit,
+  );
+  const processBase = (key: string): Row => ({
+    name: key,
+    categories: '',
+    description: 'Shared layer process',
+    notes: '',
   });
 
   return [
@@ -502,7 +552,128 @@ function importers(manager: EntityManager, tenantId: string, seeds: Seeds): Impo
           [id],
         ),
     },
+    {
+      label: 'contacts',
+      table: 'contacts',
+      nameColumn: 'email',
+      // The contacts file has no end of validity: `active` says whether a contact is in use.
+      dateField: null,
+      text: { header: 'notes', column: 'notes', accented: 'Café Léman' },
+      wrapped: 'notes',
+      key: (label) => `${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}@contact.test`,
+      headers: async (language) => headersOf((await contacts.exportCsv('template', { manager, tenantId, language })).content, language),
+      base: contactBase,
+      samples: () => [
+        { ...contactBase('round-trip-a@contact.test'), job_title: 'Buyer', phone: '+33 1 23 45 67 89' },
+        { ...contactBase('round-trip-b@contact.test'), active: 'false', country: '' },
+      ],
+      broken: (key) => ({ ...contactBase(key), email: '' }),
+      brokenMessage: /^email is required$/,
+      importCsv: (content, options) =>
+        contacts.importCsv(
+          { file: upload(content), dryRun: !!options?.dryRun, language: options?.language },
+          { manager, tenantId },
+        ) as Promise<Result>,
+      exportCsv: async (language) => (await contacts.exportCsv('data', { manager, tenantId, language })).content,
+      snapshot: (runner, id) =>
+        runner.query(
+          `SELECT email, first_name, last_name, job_title, phone, mobile, country, notes, active
+             FROM contacts WHERE tenant_id = $1 ORDER BY email`,
+          [id],
+        ),
+    },
+    {
+      label: 'contracts',
+      table: 'contracts',
+      nameColumn: 'name',
+      // The contracts file has no end of validity column: the status column carries it.
+      dateField: null,
+      text: { header: 'notes', column: 'notes', accented: 'Café Léman' },
+      wrapped: 'notes',
+      key: (label) => label,
+      headers: async (language) => headersOf((await contracts.exportCsv('template', { manager, language })).content, language),
+      base: contractBase,
+      samples: () => [
+        // A local start date and a decimal comma: the French way, read back unchanged.
+        { ...contractBase('Round trip contract A'), start_date: '31/12/2025', yearly_amount_at_signature: '1250,5', status: 'enabled' },
+        { ...contractBase('Round trip contract B'), auto_renewal: 'no', status: 'disabled' },
+      ],
+      broken: (key) => ({ ...contractBase(key), name: '' }),
+      brokenMessage: /^name is required$/,
+      importCsv: (content, options) =>
+        contracts.importCsv(
+          { file: upload(content), dryRun: !!options?.dryRun, userId: null, language: options?.language },
+          { manager },
+        ) as Promise<Result>,
+      exportCsv: async (language) => (await contracts.exportCsv('data', { manager, language })).content,
+      snapshot: (runner, id) =>
+        runner.query(
+          `SELECT name, company_id, supplier_id, start_date::text AS start_date, duration_months, auto_renewal,
+                  notice_period_months, yearly_amount_at_signature::text AS amount, currency, billing_frequency,
+                  status::text AS status, disabled_at, notes
+             FROM contracts WHERE tenant_id = $1 ORDER BY name`,
+          [id],
+        ),
+    },
+    {
+      label: 'business processes',
+      table: 'business_processes',
+      nameColumn: 'name',
+      // The business processes file has no end of validity column: the status column carries it.
+      dateField: null,
+      text: { header: 'description', column: 'description', accented: 'Café Léman' },
+      wrapped: 'description',
+      key: (label) => label,
+      headers: async (language) => headersOf((await processes.exportCsv('template', { manager, language })).content, language),
+      base: processBase,
+      samples: () => [
+        { ...processBase('Round trip process A'), categories: 'Finance;Sales', status: 'enabled' },
+        { ...processBase('Round trip process B'), notes: 'Retired', status: 'disabled' },
+      ],
+      broken: (key) => ({ ...processBase(key), name: '' }),
+      brokenMessage: /^Name is required$/,
+      importCsv: (content, options) =>
+        processes.importCsv(
+          { file: upload(content), dryRun: !!options?.dryRun, userId: null, language: options?.language },
+          { manager },
+        ) as Promise<Result>,
+      exportCsv: async (language) => (await processes.exportCsv('data', { manager, language })).content,
+      snapshot: (runner, id) =>
+        runner.query(
+          `SELECT p.name, p.description, p.notes, p.status::text AS status, p.disabled_at,
+                  (SELECT string_agg(c.name, ';' ORDER BY c.name)
+                     FROM business_process_category_links l JOIN business_process_categories c ON c.id = l.category_id
+                    WHERE l.process_id = p.id) AS categories
+             FROM business_processes p WHERE p.tenant_id = $1 ORDER BY p.name`,
+          [id],
+        ),
+    },
   ];
+}
+
+/**
+ * Contracts write their start date and their amount at signature the language's way, and read
+ * both back in either language: `31/12/2025` and `1250,5` in French, `2025-12-31` and `1250.5`
+ * in English. A file with the old English layout (`;`, ISO date, decimal dot) still loads.
+ */
+async function testContractDatesAndAmounts() {
+  await withTenant('contract-values', async (runner, tenantId, seeds) => {
+    const [importer] = importers(runner.manager, tenantId, seeds).filter((entry) => entry.label === 'contracts');
+    const row = { ...importer.base('Contract values'), start_date: '31/12/2025', yearly_amount_at_signature: '1250,5', status: 'enabled' };
+    const seeded = await importer.importCsv(await fileFor(importer, [row], { language: 'fr' }), { language: 'fr' });
+    assert.deepEqual([seeded.ok, seeded.errors], [true, []], JSON.stringify(seeded.errors));
+    const [stored] = await importer.snapshot(runner, tenantId);
+    assert.deepEqual([stored.start_date, stored.amount], ['2025-12-31', '1250.50'], 'the French cells are the day and the amount they spell');
+
+    const line = (content: string) => content.replace(/^\uFEFF/, '').split('\n')[1];
+    assert.match(line(await importer.exportCsv('fr')), /;31\/12\/2025;.*;1250,5;EUR;/, 'French: local date, decimal comma');
+    assert.match(line(await importer.exportCsv('en')), /,2025-12-31,.*,1250\.5,EUR,/, 'English: ISO date, decimal dot');
+
+    // The file the import has always taken: semicolons, an ISO date and a decimal dot, on an English screen.
+    const legacy = await fileFor(importer, [{ ...row, start_date: '2025-12-31', yearly_amount_at_signature: '1250.5' }], { separator: ';' });
+    const again = await importer.importCsv(legacy, { language: 'en', dryRun: true });
+    assert.deepEqual([again.ok, again.errors, again.unchanged], [true, [], 1], `the old layout still loads: ${JSON.stringify(again.errors)}`);
+  });
 }
 
 /** One transaction with one tenant, its prerequisites and its service table; rolled back at the end. */
@@ -538,7 +709,11 @@ async function withTenant(tag: string, fn: (runner: QueryRunner, tenantId: strin
       `INSERT INTO analytics_axes (tenant_id, code, name) VALUES ($1, 'nature', 'Nature') RETURNING id`,
       [tenantId],
     );
-    await fn(runner, tenantId, { companyId: company.id, departmentId: department.id, coaId: coa.id, axisId: axis.id });
+    const [supplier] = await runner.query(
+      `INSERT INTO suppliers (tenant_id, name) VALUES ($1, $2) RETURNING id`,
+      [tenantId, SUPPLIER],
+    );
+    await fn(runner, tenantId, { companyId: company.id, departmentId: department.id, coaId: coa.id, axisId: axis.id, supplierId: supplier.id });
   } finally {
     await runner.rollbackTransaction();
     await runner.release();
@@ -854,6 +1029,7 @@ async function main() {
     ['testMoreCellsThanTheHeader', testMoreCellsThanTheHeader],
     ['testUnreadableFileIsRefused', testUnreadableFileIsRefused],
     ['testAccountNatureColumn', testAccountNatureColumn],
+    ['testContractDatesAndAmounts', testContractDatesAndAmounts],
   ];
   try {
     for (const [name, test] of tests) {

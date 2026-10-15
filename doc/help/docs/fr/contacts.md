@@ -123,11 +123,10 @@ Gérez les contacts en masse via CSV.
 
 **Champs obligatoires** : Email
 
-**Champs optionnels** : Prénom, Nom, Nom du fournisseur, Intitulé de poste, Téléphone, Mobile, Pays, Actif
+**Champs optionnels** : `first_name`, `last_name`, `job_title`, `phone`, `mobile`, `country`, `notes`, `active`
 
 **Notes** :
-- Utilisez l'**encodage UTF-8** et les **points-virgules** comme séparateurs. Un fichier enregistré par Excel en CSV simple (Windows-1252) est accepté aussi
-- Le fournisseur est mis en correspondance par nom — assurez-vous que le fournisseur existe avant d'importer
+- Voir [Fichiers CSV](csv-files.md) pour l'encodage, le séparateur et les deux étapes d'import
 
 ---
 

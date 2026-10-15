@@ -7,6 +7,7 @@ export {
   cellOf,
   endOfValidityCell,
   endOfValidityOf,
+  fieldAmounts,
   headerMismatchError,
   invalidEndOfValidity,
   nameMatchedWarning,
