@@ -7,6 +7,7 @@ import { DashboardService } from './dashboard.service';
 import { DashboardDataService } from './dashboard-data.service';
 import { UpdateDashboardConfigDto } from './dto/update-dashboard-config.dto';
 import { resolveBusinessContributorScopeForUser } from '../auth/business-contributor-scope';
+import { existingRecentItems, type RecentItemRef } from './recent-items';
 
 /** Query numbers come in as strings; keep them inside the bounds the tiles offer (a negative LIMIT is a 500). */
 function clampInt(raw: string | undefined, fallback: number, min: number, max: number): number {
@@ -25,6 +26,15 @@ export class DashboardController {
 
   // ==================== CONFIG ENDPOINTS ====================
   // These use JwtAuthGuard only - user's own data
+
+  /**
+   * Of the user's "Recently viewed" entries, the records that still exist (`recent-items.ts`);
+   * the list drops the others.
+   */
+  @Post('recent-items/existing')
+  existingRecentItems(@Body() body: { items?: RecentItemRef[] }, @Tenant() ctx: TenantRequest) {
+    return existingRecentItems(ctx.manager, ctx.tenantId, Array.isArray(body?.items) ? body.items : []);
+  }
 
   /**
    * Get user's dashboard configuration (or default if none exists)
