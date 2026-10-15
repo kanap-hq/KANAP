@@ -367,7 +367,7 @@ export default function InterfacePropertyPanel({
               disabled={disabled}
             />
             <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
-              {data?.contains_pii ? 'Yes' : 'No'}
+              {data?.contains_pii ? t('it:enums.yesNo.yes') : t('it:enums.yesNo.no')}
             </Typography>
           </Box>
         </PropertyRow>

@@ -40,7 +40,7 @@ export default function ConnectionEndpointPicker({
   initialAssetReference,
 }: Props) {
   const { t } = useTranslation(['it', 'common']);
-  const { settings } = useItOpsEnumOptions();
+  const { settings, labelFor } = useItOpsEnumOptions();
   const entities = settings?.entities || [];
 
   // Mode follows the value when it has data; otherwise stays at the user's last choice.
@@ -180,7 +180,7 @@ export default function ConnectionEndpointPicker({
             <TextField
               {...params}
               variant="standard"
-              placeholder={value.entity_code ? t('it:workspace.connection.picker.entityPlaceholder', { code: value.entity_code }) : t('it:workspace.connection.picker.serverPlaceholder')}
+              placeholder={value.entity_code ? t('it:workspace.connection.picker.entityPlaceholder', { code: labelFor('entity', value.entity_code) }) : t('it:workspace.connection.picker.serverPlaceholder')}
               sx={fieldSx}
             />
           )}

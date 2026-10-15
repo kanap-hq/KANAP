@@ -519,7 +519,7 @@ export default function ConnectionMapPage() {
 
   const nodeOptions = React.useMemo(() => {
     const order: Record<string, number> = { entity: 0, cluster: 1, server: 2 };
-    const labelForKind = (k: string) => (k === 'entity' ? 'Entities' : k === 'cluster' ? 'Clusters' : 'Servers');
+    const labelForKind = (k: string) => t(`it:pages.connectionMap.nodeGroups.${k === 'entity' || k === 'cluster' ? k : 'server'}`);
     return graphData.nodes
       .map((n) => ({
         id: n.id,
@@ -534,7 +534,7 @@ export default function ConnectionMapPage() {
         if (oa !== ob) return oa - ob;
         return a.name.localeCompare(b.name);
       });
-  }, [graphData.nodes]);
+  }, [graphData.nodes, t]);
 
   React.useEffect(() => {
     if (rootNodeIds.length === 0) return;

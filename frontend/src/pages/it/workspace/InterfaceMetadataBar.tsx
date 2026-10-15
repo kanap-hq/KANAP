@@ -115,7 +115,7 @@ export default function InterfaceMetadataBar({
       <PortfolioMetadataItem disabled>
         <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
           <Typography component="span" sx={{ fontSize: 12 }}>
-            {containsPii ? 'PII' : 'No PII'}
+            {containsPii ? t('it:workspace.connection.compliance.effectivePii') : t('it:workspace.interface.bindings.noPii')}
           </Typography>
         </Box>
       </PortfolioMetadataItem>

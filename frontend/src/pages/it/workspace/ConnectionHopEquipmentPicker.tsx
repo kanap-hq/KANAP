@@ -41,7 +41,7 @@ export default function ConnectionHopEquipmentPicker({
 }: Props) {
   const { t } = useTranslation(['it', 'common']);
   const label = labelProp ?? t('it:workspace.connection.picker.equipment');
-  const { settings } = useItOpsEnumOptions();
+  const { settings, labelFor } = useItOpsEnumOptions();
   const entities = settings?.entities || [];
 
   const [mode, setMode] = React.useState<'server' | 'entity'>(
@@ -161,7 +161,7 @@ export default function ConnectionHopEquipmentPicker({
             <TextField
               {...params}
               variant="standard"
-              placeholder={value.entity_code ? t('it:workspace.connection.picker.entityPlaceholder', { code: value.entity_code }) : t('it:workspace.connection.picker.hopPlaceholder')}
+              placeholder={value.entity_code ? t('it:workspace.connection.picker.entityPlaceholder', { code: labelFor('entity', value.entity_code) }) : t('it:workspace.connection.picker.hopPlaceholder')}
               sx={fieldSx}
             />
           )}

@@ -444,7 +444,7 @@ export default function ConnectionOverviewTab({
                   <TableCell sx={{ fontSize: 13 }}>
                     {classificationCatalog?.dataClasses.find((item) => item.code === row.interface_data_class)?.label || row.interface_data_class || '—'}
                   </TableCell>
-                  <TableCell sx={{ fontSize: 13 }}>{row.interface_contains_pii ? 'Yes' : 'No'}</TableCell>
+                  <TableCell sx={{ fontSize: 13 }}>{row.interface_contains_pii ? t('it:enums.yesNo.yes') : t('it:enums.yesNo.no')}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

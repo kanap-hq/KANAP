@@ -218,7 +218,12 @@
       "interfaceLeg": "Tramo de interfaz: {{leg}} · Entorno: {{env}}",
       "patternValue": "Patrón: {{value}}",
       "openInterface": "Abrir interfaz",
-      "viewInInterfaceMap": "Ver en el mapa de interfaces"
+      "viewInInterfaceMap": "Ver en el mapa de interfaces",
+      "nodeGroups": {
+        "entity": "Entidades",
+        "cluster": "Clusters",
+        "server": "Servidores"
+      }
     },
     "interfaceMap": {
       "title": "Mapa de interfaces",
@@ -719,7 +724,9 @@
       "criticalityLabel": "Criticidad:",
       "protocolsLabel": "Protocolos:",
       "sourceEndpoint": "Punto de conexión de origen: {{value}}",
-      "targetEndpoint": "Punto de conexión de destino: {{value}}"
+      "targetEndpoint": "Punto de conexión de destino: {{value}}",
+      "interfaceCount_one": "{{count}} interfaz",
+      "interfaceCount_other": "{{count}} interfaces"
     }
   },
   "workspace": {
@@ -1360,7 +1367,7 @@
       },
       "picker": {
         "entity": "Entidad",
-        "entityPlaceholder": "entidad: {{code}} (cambie para elegir un servidor)",
+        "entityPlaceholder": "Entidad: {{code}} (cambie para elegir un servidor)",
         "serverPlaceholder": "p. ej., AST-12 o nombre de host",
         "hopPlaceholder": "p. ej., waf-prod-1 o AST-12",
         "noEntities": "No hay entidades configuradas (configúrelas en los ajustes de IT)",
@@ -1384,7 +1391,8 @@
       "protocolsTable": {
         "protocol": "Protocolo",
         "defaultPort": "Puerto predeterminado",
-        "port": "Puerto"
+        "port": "Puerto",
+        "portPlaceholder": "p. ej., 8443"
       },
       "linkInterfaces": {
         "loadFailed": "No se pudieron cargar los enlaces de interfaz",

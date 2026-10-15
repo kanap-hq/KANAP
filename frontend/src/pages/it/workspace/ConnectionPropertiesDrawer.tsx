@@ -185,7 +185,7 @@ export default function ConnectionPropertiesDrawer({
         <PropertyRow label={t('it:workspace.connection.compliance.containsPii')}>
           {isDerived ? (
             <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>
-              {effectiveContainsPii ? 'Yes' : 'No'}
+              {effectiveContainsPii ? t('it:enums.yesNo.yes') : t('it:enums.yesNo.no')}
             </Typography>
           ) : (
             <Switch

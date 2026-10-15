@@ -218,7 +218,12 @@
       "interfaceLeg": "Schnittstellenabschnitt: {{leg}} · Umgebung: {{env}}",
       "patternValue": "Muster: {{value}}",
       "openInterface": "Schnittstelle öffnen",
-      "viewInInterfaceMap": "In der Schnittstellenkarte anzeigen"
+      "viewInInterfaceMap": "In der Schnittstellenkarte anzeigen",
+      "nodeGroups": {
+        "entity": "Entitäten",
+        "cluster": "Cluster",
+        "server": "Server"
+      }
     },
     "interfaceMap": {
       "title": "Schnittstellenkarte",
@@ -719,7 +724,9 @@
       "criticalityLabel": "Kritikalität:",
       "protocolsLabel": "Protokolle:",
       "sourceEndpoint": "Quell-Endpunkt: {{value}}",
-      "targetEndpoint": "Ziel-Endpunkt: {{value}}"
+      "targetEndpoint": "Ziel-Endpunkt: {{value}}",
+      "interfaceCount_one": "{{count}} Schnittstelle",
+      "interfaceCount_other": "{{count}} Schnittstellen"
     }
   },
   "workspace": {
@@ -1384,7 +1391,8 @@
       "protocolsTable": {
         "protocol": "Protokoll",
         "defaultPort": "Standardport",
-        "port": "Port"
+        "port": "Port",
+        "portPlaceholder": "z. B. 8443"
       },
       "linkInterfaces": {
         "loadFailed": "Schnittstellen-Bindungen konnten nicht geladen werden",

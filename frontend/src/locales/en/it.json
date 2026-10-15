@@ -218,7 +218,12 @@
       "interfaceLeg": "Interface leg: {{leg}} · Env: {{env}}",
       "patternValue": "Pattern: {{value}}",
       "openInterface": "Open interface",
-      "viewInInterfaceMap": "View in interface map"
+      "viewInInterfaceMap": "View in interface map",
+      "nodeGroups": {
+        "entity": "Entities",
+        "cluster": "Clusters",
+        "server": "Servers"
+      }
     },
     "interfaceMap": {
       "title": "Interface map",
@@ -719,7 +724,9 @@
       "criticalityLabel": "Criticality:",
       "protocolsLabel": "Protocols:",
       "sourceEndpoint": "Source endpoint: {{value}}",
-      "targetEndpoint": "Target endpoint: {{value}}"
+      "targetEndpoint": "Target endpoint: {{value}}",
+      "interfaceCount_one": "{{count}} interface",
+      "interfaceCount_other": "{{count}} interfaces"
     }
   },
   "workspace": {
@@ -1360,7 +1367,7 @@
       },
       "picker": {
         "entity": "Entity",
-        "entityPlaceholder": "entity: {{code}} (switch to pick a server)",
+        "entityPlaceholder": "Entity: {{code}} (switch to pick a server)",
         "serverPlaceholder": "e.g., AST-12 or hostname",
         "hopPlaceholder": "e.g., waf-prod-1 or AST-12",
         "noEntities": "No entities configured (configure them in IT settings)",
@@ -1384,7 +1391,8 @@
       "protocolsTable": {
         "protocol": "Protocol",
         "defaultPort": "Default port",
-        "port": "Port"
+        "port": "Port",
+        "portPlaceholder": "e.g., 8443"
       },
       "linkInterfaces": {
         "loadFailed": "Failed to load interface bindings",

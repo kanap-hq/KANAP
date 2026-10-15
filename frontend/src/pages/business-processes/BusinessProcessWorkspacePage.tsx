@@ -14,8 +14,8 @@ import { useKanapDialogs } from '../../components/design';
 
 type TabKey = 'overview';
 
-const tabs: Array<{ key: TabKey; label: string }> = [
-  { key: 'overview', label: 'Overview' },
+const tabs: Array<{ key: TabKey; labelKey: string }> = [
+  { key: 'overview', labelKey: 'shared.labels.overview' },
 ];
 
 export default function BusinessProcessWorkspacePage() {
@@ -183,8 +183,8 @@ export default function BusinessProcessWorkspacePage() {
           onChange={(_, value) => onTabChange(null as any, value as TabKey)}
           sx={{ borderRight: 1, borderColor: 'divider', minWidth: 160 }}
         >
-          {tabs.map((t) => (
-            <Tab key={t.key} label={t.label} value={t.key} disabled={isCreate && t.key !== 'overview'} />
+          {tabs.map((tab) => (
+            <Tab key={tab.key} label={t(tab.labelKey)} value={tab.key} disabled={isCreate && tab.key !== 'overview'} />
           ))}
         </Tabs>
 
