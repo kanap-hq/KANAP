@@ -27,6 +27,16 @@ function run() {
   assert.deepEqual(Reflect.getMetadata(REQUIRE_LEVEL_KEY, proto.exportComplianceRegister), { resource: 'contracts', level: 'admin' }, 'exportComplianceRegister');
   assert.deepEqual(Reflect.getMetadata(REQUIRE_LEVEL_KEY, proto.export), { resource: 'contracts', level: 'admin' }, 'export');
 
+  // Deleting contracts, and the counts its confirmation shows: administrators, as for suppliers.
+  for (const route of ['delete', 'bulkDelete', 'deleteImpact']) {
+    assert.equal(typeof proto[route], 'function', route);
+    assert.deepEqual(Reflect.getMetadata(REQUIRE_LEVEL_KEY, proto[route]), { resource: 'contracts', level: 'admin' }, route);
+  }
+  // Nest matches routes in declaration order: `DELETE bulk` comes before `DELETE :id`.
+  const methods = Object.getOwnPropertyNames(ContractsController.prototype);
+  assert.ok(methods.indexOf('bulkDelete') < methods.indexOf('delete'), 'bulk before :id');
+  assert.ok(methods.indexOf('deleteImpact') < methods.indexOf('get'), 'delete-impact before :id');
+
   // The budget figures of a contract (its Budget tab, the list's budget columns) also need the budget.
   assert.equal(canReadContractBudget({ isAdmin: true, permissions: {} }), true, 'administrator');
   assert.equal(canReadContractBudget({ permissions: { contracts: 'reader', budget: 'reader' } }), true, 'budget reader');
