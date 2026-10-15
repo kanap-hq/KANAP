@@ -438,6 +438,8 @@
     "totalRows_other": "{{count}} filas",
     "toInsert": "{{count}} por insertar",
     "toUpdate": "{{count}} por actualizar",
+    "unchanged_one": "{{count}} sin cambios",
+    "unchanged_other": "{{count}} sin cambios",
     "skipped_one": "{{count}} omitida",
     "skipped_other": "{{count}} omitidas",
     "errors": "Errores ({{count}})",

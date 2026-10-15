@@ -204,6 +204,8 @@ export interface CsvImportResult {
   updated: number;
   /** Number of rows skipped (update_only mode with no match, insert_only with match) */
   skipped: number;
+  /** Number of matched rows identical to what is stored: not written */
+  unchanged: number;
   /** Validation and processing errors */
   errors: CsvImportError[];
   /** Non-fatal warnings */
@@ -274,6 +276,8 @@ export interface CsvImportRow {
   existingEntity?: any;
   /** Whether this row will be inserted (vs updated) */
   isInsert: boolean;
+  /** A matched row whose values all equal the stored entity: counted, not written */
+  unchanged?: boolean;
   /** Row-level errors */
   errors: CsvImportError[];
   /** Row-level warnings */

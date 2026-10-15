@@ -37,10 +37,12 @@ function createMockManager(data: Record<string, any[]>) {
       const tenantId = params[0];
       return data[tableName]?.filter((row) => row.tenant_id === tenantId) || [];
     },
-    getRepository: () => ({
+    getRepository: (target: unknown) => ({
+      create: (entity: any) => entity,
       save: async (entities: any | any[]) => {
         const arr = Array.isArray(entities) ? entities : [entities];
-        saved.push(...arr);
+        // The audit lines of the import are not the saved entities.
+        if (typeof target === 'string') saved.push(...arr);
         return arr;
       },
     }),
@@ -225,6 +227,35 @@ async function testIdentityResolutionByUpsertKey() {
 
   assert.equal(result.ok, true);
   assert.equal(result.updated, 1);
+}
+
+/** A row equal to the stored entity, as the database returns it, counts as unchanged and is not saved. */
+async function testIdenticalRowIsUnchanged() {
+  const service = new CsvImportService(new CsvResolverService(), new CsvJsonValidators());
+  const stored = (id: string, title: string) => ({
+    id, tenant_id: 't1', title, description: null, status: 'open',
+    due_date: new Date(2026, 8, 2), priority: '3', updated_at: new Date(2020, 0, 1),
+  });
+  const csv = `id;title;description;status;due_date;priority
+a;Same;;open;2026-09-02;3
+b;Other;Now described;open;2026-09-02;3`;
+
+  for (const mode of ['replace', 'enrich'] as const) {
+    const check = await service.import(createTestConfig(), createMockFile(csv), { ...defaultParams, mode }, {
+      manager: createMockManager({ tasks: [stored('a', 'Same'), stored('b', 'Other')] }),
+      tenantId: 't1',
+    });
+    assert.equal(check.ok, true, JSON.stringify(check.errors));
+    assert.deepEqual([check.inserted, check.updated, check.unchanged], [0, 1, 1], `${mode}: ${JSON.stringify(check)}`);
+
+    const manager = createMockManager({ tasks: [stored('a', 'Same'), stored('b', 'Other')] });
+    const load = await service.import(createTestConfig(), createMockFile(csv), { ...defaultParams, mode, dryRun: false }, {
+      manager,
+      tenantId: 't1',
+    });
+    assert.deepEqual([load.inserted, load.updated, load.unchanged], [0, 1, 1], mode);
+    assert.deepEqual(manager.getSaved().map((entity: any) => entity.id), ['b'], `${mode}: only the changed row is saved`);
+  }
 }
 
 async function testDuplicateKeysInFileError() {
@@ -610,6 +641,7 @@ async function testUtf16FileIsRefusedWithClearMessage() {
   await testIdentityResolutionById();
   await testIdentityResolutionByUpsertKey();
   await testDuplicateKeysInFileError();
+  await testIdenticalRowIsUnchanged();
   await testEnrichModePreservesExisting();
   await testReplaceModeNullifiesEmpty();
   await testUpdateOnlyOperationSkipsInserts();

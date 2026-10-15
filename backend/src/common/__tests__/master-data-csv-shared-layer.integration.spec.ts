@@ -44,6 +44,7 @@ import { CsvLanguage } from '../csv-sheet';
 //  - row errors name the physical line, so a quoted cell spanning two lines
 //    shifts the next row to line 4;
 //  - a French round trip changes nothing;
+//  - re-importing an export counts every row as unchanged and writes nothing;
 //  - an extra cell and an unreadable file are refused;
 //  - the accounts file's optional `nature` column: absent, it leaves the
 //    stored natures alone; an invalid value is a row error.
@@ -63,6 +64,9 @@ const EXTRA_CELLS = 'This row has more cells than the header.';
 
 type Result = {
   ok: boolean;
+  inserted?: number;
+  updated?: number;
+  unchanged?: number;
   errors: Array<{ row: number; message: string }>;
   ignoredColumns: string[];
   notices: { dates: string | null; amounts: string | null };
@@ -700,6 +704,32 @@ async function testFrenchRoundTripChangesNothing() {
   });
 }
 
+/**
+ * Re-importing an export: every row equals what is stored, so the dry run and the load both
+ * count it as unchanged, nothing as an update, and the load writes no audit line.
+ */
+async function testIdenticalExportCountsUnchanged() {
+  await each('unchanged', async (importer, runner, tenantId) => {
+    const seeded = await importer.importCsv(await fileFor(importer, importer.samples(), { language: 'fr' }), { language: 'fr' });
+    assert.equal(seeded.ok, true, `${importer.label} seed: ${JSON.stringify(seeded.errors)}`);
+    const stored = (await importer.snapshot(runner, tenantId)).length;
+    const audits = async () => Number((await runner.query(`SELECT count(*)::int AS n FROM audit_log`))[0].n);
+    const auditsBefore = await audits();
+
+    const exported = await importer.exportCsv('fr');
+    for (const dryRun of [true, false]) {
+      const result = await importer.importCsv(exported, { language: 'fr', dryRun });
+      assert.equal(result.ok, true, `${importer.label}: ${JSON.stringify(result.errors)}`);
+      assert.deepEqual(
+        [result.inserted, result.updated, result.unchanged],
+        [0, 0, stored],
+        `${importer.label} ${dryRun ? 'dry run' : 'load'}: every exported row is unchanged`,
+      );
+    }
+    assert.equal(await audits(), auditsBefore, `${importer.label}: the load writes no audit line`);
+  });
+}
+
 /** A non-empty cell past the header's last column is a row error, not a silently dropped value. */
 async function testMoreCellsThanTheHeader() {
   await each('extra-cell', async (importer) => {
@@ -809,6 +839,7 @@ async function main() {
     ['testLocalEndOfValidity', testLocalEndOfValidity],
     ['testPhysicalLineWithQuotedNewline', testPhysicalLineWithQuotedNewline],
     ['testFrenchRoundTripChangesNothing', testFrenchRoundTripChangesNothing],
+    ['testIdenticalExportCountsUnchanged', testIdenticalExportCountsUnchanged],
     ['testMoreCellsThanTheHeader', testMoreCellsThanTheHeader],
     ['testUnreadableFileIsRefused', testUnreadableFileIsRefused],
     ['testAccountNatureColumn', testAccountNatureColumn],

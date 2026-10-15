@@ -16,6 +16,33 @@ import { CsvDecodeError, decodeCsv } from '../common/csv-sheet/decode';
 import { User } from '../users/user.entity';
 import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
 import { headerMismatchError } from '../common/csv-sheet';
+import { sameStoredValues } from '../common/csv-sheet/unchanged';
+
+/**
+ * True when re-importing a CSV row over the stored process writes nothing (`importCsv`): the
+ * description, notes and lifecycle it sets are stored, and its categories are exactly the linked
+ * ones. A category the file names that does not exist yet (the import would create it), or whose
+ * name matches several categories, makes the row an update.
+ */
+function importRowUnchanged(
+  stored: BusinessProcess,
+  body: BusinessProcessUpsertDto,
+  categoryNames: string[],
+  categoryIdsByName: Map<string, string[]>,
+  linkedCategoryIds: Set<string>,
+  now: Date,
+): boolean {
+  const lifecycle = resolveLifecycleState({ currentDisabledAt: stored.disabled_at ?? null, nextStatus: body.status, nowFactory: () => now });
+  const values = { description: body.description, notes: body.notes, status: lifecycle.status, disabled_at: lifecycle.disabled_at };
+  if (!sameStoredValues(stored as unknown as Record<string, unknown>, values)) return false;
+  const wanted = new Set<string>();
+  for (const name of categoryNames) {
+    const ids = categoryIdsByName.get(name.toLowerCase());
+    if (!ids || ids.length !== 1) return false;
+    wanted.add(ids[0]);
+  }
+  return wanted.size === linkedCategoryIds.size && [...wanted].every((id) => linkedCategoryIds.has(id));
+}
 
 @Injectable()
 export class BusinessProcessesService {
@@ -481,11 +508,12 @@ export class BusinessProcessesService {
     });
 
     if (!headerOk) {
-      return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, errors };
+      return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, unchanged: 0, errors };
     }
 
     let inserted = 0;
     let updated = 0;
+    let unchanged = 0;
     const normalized: Array<{
       body: BusinessProcessUpsertDto;
       categoryNames: string[];
@@ -514,7 +542,7 @@ export class BusinessProcessesService {
     });
 
     if (errors.length > 0) {
-      return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, errors };
+      return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors };
     }
 
     const uniqueMap = new Map<string, { body: BusinessProcessUpsertDto; categoryNames: string[] }>();
@@ -528,19 +556,52 @@ export class BusinessProcessesService {
     const repo = this.getRepo(manager);
     const categoriesRepo = this.getCategoriesRepo(manager);
 
+    // A row identical to the stored process, categories included, counts as unchanged and is not
+    // written: no audit line, no new `updated_at`. Categories and links are read once.
+    const found: Array<{ item: (typeof unique)[number]; existing: BusinessProcess | null }> = [];
     for (const item of unique) {
-      const existing = await repo.findOne({ where: { name: item.body.name as string } });
-      if (existing) updated += 1;
-      else inserted += 1;
+      found.push({ item, existing: await repo.findOne({ where: { name: item.body.name as string } }) });
+    }
+    const existingIds = found.flatMap(({ existing }) => (existing ? [existing.id] : []));
+    const categoryIdsByName = new Map<string, string[]>();
+    const linkedByProcess = new Map<string, Set<string>>();
+    if (existingIds.length > 0) {
+      const categories: Array<{ id: string; name: string }> = await manager.query(
+        `SELECT id, name FROM business_process_categories WHERE tenant_id = app_current_tenant()`,
+      );
+      for (const category of categories) {
+        const key = category.name.toLowerCase();
+        categoryIdsByName.set(key, [...(categoryIdsByName.get(key) ?? []), category.id]);
+      }
+      const links: Array<{ process_id: string; category_id: string }> = await manager.query(
+        `SELECT process_id, category_id FROM business_process_category_links
+          WHERE tenant_id = app_current_tenant() AND process_id = ANY($1)`,
+        [existingIds],
+      );
+      for (const link of links) {
+        const set = linkedByProcess.get(link.process_id) ?? new Set<string>();
+        set.add(link.category_id);
+        linkedByProcess.set(link.process_id, set);
+      }
+    }
+    const now = new Date();
+    const toWrite: typeof unique = [];
+    for (const { item, existing } of found) {
+      if (!existing) inserted += 1;
+      else if (importRowUnchanged(existing, item.body, item.categoryNames, categoryIdsByName, linkedByProcess.get(existing.id) ?? new Set(), now)) {
+        unchanged += 1;
+        continue;
+      } else updated += 1;
+      toWrite.push(item);
     }
 
     if (dryRun) {
-      return { ok: true, dryRun: true, total: rows.length, inserted, updated, errors: [] };
+      return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, errors: [] };
     }
 
     let processed = 0;
 
-    for (const item of unique) {
+    for (const item of toWrite) {
       const existing = await repo.findOne({ where: { name: item.body.name as string } });
 
       const categoryIds: string[] = [];
@@ -568,6 +629,6 @@ export class BusinessProcessesService {
       }
     }
 
-    return { ok: true, dryRun: false, total: rows.length, inserted, updated, processed, errors: [] };
+    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, processed, errors: [] };
   }
 }

@@ -38,6 +38,7 @@ import {
   rowProblems,
   writeCsv,
 } from '../common/csv-sheet';
+import { sameStoredValues } from '../common/csv-sheet/unchanged';
 
 const SUPPORTED_USER_LOCALES = ['en', 'fr', 'de', 'es'] as const;
 const SELF_SERVICE_FIELDS = ['first_name', 'last_name', 'job_title', 'business_phone', 'mobile_phone', 'locale'] as const;
@@ -734,7 +735,7 @@ export class UsersService {
     const errors: { row: number; message: string }[] = [];
     if (read.headerError) {
       return {
-        ok: false, dryRun, total: 0, inserted: 0, updated: 0,
+        ok: false, dryRun, total: 0, inserted: 0, updated: 0, unchanged: 0,
         errors: [read.headerError],
         rolesToCreate: [], ignoredColumns: read.ignoredColumns, notices: read.notices,
       };
@@ -844,7 +845,7 @@ export class UsersService {
 
     if (errors.length > 0) {
       return {
-        ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors,
+        ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, unchanged: 0, errors,
         // Nothing would be written: no role is offered for creation either.
         rolesToCreate: [], ignoredColumns: read.ignoredColumns, notices: read.notices,
       };
@@ -857,7 +858,7 @@ export class UsersService {
         const created = await this.rolesService.createRole({ role_name: name, role_description: `${name} role` }, { manager: opts?.manager });
         if (!created) {
           return {
-            ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0,
+            ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, unchanged: 0,
             errors: [{ row: 0, message: `Unknown role '${name}'` }],
             rolesToCreate: [], ignoredColumns: read.ignoredColumns, notices: read.notices,
           };
@@ -874,24 +875,36 @@ export class UsersService {
     }
     const unique = Array.from(uniqueByEmail.values());
 
-    // Count inserts/updates
+    // Count inserts, updates and unchanged rows. A row equal to the stored user is
+    // unchanged and is not written: no save, no audit line. The import writes only
+    // columns of `users` (the role as `role_id`), so those columns are all it compares.
+    // A role the load still has to create has no id yet: the row is an update.
     let inserted = 0;
     let updated = 0;
+    let unchanged = 0;
+    const toWrite: Array<{ item: Normalized; existing: User | null }> = [];
     for (const item of unique) {
       const existing = await repo.findOne({ where: { email: item.email } });
-      if (existing) updated += 1; else inserted += 1;
+      if (!existing) {
+        inserted += 1;
+      } else if (this.importRowUnchanged(existing, item)) {
+        unchanged += 1;
+        continue;
+      } else {
+        updated += 1;
+      }
+      toWrite.push({ item, existing });
     }
     if (dryRun) {
       return {
-        ok: true, dryRun: true, total: read.rows.length, inserted, updated, errors: [],
+        ok: true, dryRun: true, total: read.rows.length, inserted, updated, unchanged, errors: [],
         rolesToCreate, ignoredColumns: read.ignoredColumns, notices: read.notices,
       };
     }
 
     // Commit: upsert by email
     let processed = 0;
-    for (const item of unique) {
-      const existing = await repo.findOne({ where: { email: item.email } });
+    for (const { item, existing } of toWrite) {
       // The role is a lookup of this import, not a column: only its id is written.
       // A check leaves an id unset and writes nothing; a load resolved them all above.
       const { role, ...rest } = item;
@@ -934,9 +947,19 @@ export class UsersService {
       }
     }
     return {
-      ok: true, dryRun: false, total: read.rows.length, inserted, updated, processed, errors: [],
+      ok: true, dryRun: false, total: read.rows.length, inserted, updated, unchanged, processed, errors: [],
       rolesToCreate, ignoredColumns: read.ignoredColumns, notices: read.notices,
     };
+  }
+
+  /** Whether a CSV row sets only what the stored user already holds, its resolved role included. */
+  private importRowUnchanged(
+    existing: User,
+    item: { role: { id: string | null }; [key: string]: unknown },
+  ): boolean {
+    const { role, ...rest } = item;
+    if (!role.id) return false;
+    return sameStoredValues(existing as unknown as Record<string, unknown>, { ...rest, role_id: role.id });
   }
 
   async enableUser(id: string, actorId?: string | null, opts?: { manager?: EntityManager }) {

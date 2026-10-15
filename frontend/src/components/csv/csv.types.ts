@@ -63,6 +63,8 @@ export interface CsvImportResult {
   inserted: number;
   updated: number;
   skipped: number;
+  /** Matched rows identical to what is stored: not written. */
+  unchanged?: number;
   errors: CsvReportMessage[];
   warnings: CsvReportMessage[];
 }

@@ -1,7 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, ILike, Raw, Repository } from 'typeorm';
+import { EntityManager, ILike, In, Raw, Repository } from 'typeorm';
 import { Supplier } from './supplier.entity';
+import { sameStoredLifecycle, sameStoredValues } from '../common/csv-sheet/unchanged';
 import { ExternalContact } from '../contacts/external-contact.entity';
 import { SupplierContactLink, SupplierContactRole } from '../contacts/supplier-contact.entity';
 import { buildWhereFromAgFilters, parseExportPagination, parsePagination } from '../common/pagination';
@@ -363,18 +364,51 @@ export class SuppliersService {
     const unique = Array.from(uniqueMap.values());
 
     const repo = this.getRepo(opts?.manager);
-    for (const item of unique) {
-      const existing = await repo.findOne({ where: { name: item.body.name as string } });
-      if (existing) updated += 1; else inserted += 1;
-    }
-    if (dryRun) {
-      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
-    }
-    // Commit changes
-    let processed = 0;
     const mg = opts?.manager ?? repo.manager;
     const contactRepo = mg.getRepository(ExternalContact);
     const linkRepo = mg.getRepository(SupplierContactLink);
+    const existingByName = new Map<string, Supplier>();
+    for (const item of unique) {
+      const existing = await repo.findOne({ where: { name: item.body.name as string } });
+      if (existing) existingByName.set(item.body.name as string, existing);
+    }
+    // The contact links of the matched suppliers, as `${supplierId}:${role}:${email}`: the import only adds links.
+    const storedLinks = new Set<string>();
+    const existingIds = Array.from(existingByName.values()).map((supplier) => supplier.id);
+    if (existingIds.length > 0) {
+      const links = await linkRepo.find({ where: { supplier_id: In(existingIds) } });
+      const contactIds = Array.from(new Set(links.map((link) => link.contact_id)));
+      const emails = new Map(
+        (contactIds.length > 0 ? await contactRepo.find({ where: { id: In(contactIds) } }) : [])
+          .map((contact) => [contact.id, contact.email]),
+      );
+      for (const link of links) storedLinks.add(`${link.supplier_id}:${link.role}:${emails.get(link.contact_id)}`);
+    }
+    const linked = (supplierId: string, email: string | null, role: SupplierContactRole) =>
+      !email || storedLinks.has(`${supplierId}:${role}:${email}`);
+    let unchanged = 0;
+    const toWrite: typeof unique = [];
+    for (const item of unique) {
+      const existing = existingByName.get(item.body.name as string);
+      const { status, ...values } = item.body;
+      if (!existing) inserted += 1;
+      else if (
+        sameStoredValues(existing as any, values as Record<string, unknown>)
+        && sameStoredLifecycle(existing, { status })
+        && linked(existing.id, item.commercial_email, SupplierContactRole.COMMERCIAL)
+        && linked(existing.id, item.technical_email, SupplierContactRole.TECHNICAL)
+        && linked(existing.id, item.support_email, SupplierContactRole.SUPPORT)
+      ) {
+        unchanged += 1;
+        continue;
+      } else updated += 1;
+      toWrite.push(item);
+    }
+    if (dryRun) {
+      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, unchanged, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
+    }
+    // Commit changes
+    let processed = 0;
     const attachByEmail = async (supplierId: string, email: string | null, role: any) => {
       if (!email) return;
       let contact = await contactRepo.findOne({ where: { email } });
@@ -384,8 +418,8 @@ export class SuppliersService {
       const dup = await linkRepo.findOne({ where: { supplier_id: supplierId, contact_id: contact.id, role } });
       if (!dup) await linkRepo.save(linkRepo.create({ supplier_id: supplierId, contact_id: contact.id, role, is_primary: false }));
     };
-    for (const item of unique) {
-      const existing = await repo.findOne({ where: { name: item.body.name as string } });
+    for (const item of toWrite) {
+      const existing = existingByName.get(item.body.name as string);
       if (existing) {
         const saved = await this.update(existing.id, item.body, userId ?? undefined, { manager: opts?.manager });
         await attachByEmail(saved.id, item.commercial_email, SupplierContactRole.COMMERCIAL);
@@ -400,6 +434,6 @@ export class SuppliersService {
         if (saved) processed += 1;
       }
     }
-    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, processed, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
+    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, unchanged, processed, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
   }
 }

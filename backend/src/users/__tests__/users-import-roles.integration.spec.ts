@@ -23,6 +23,7 @@ type Result = {
   dryRun: boolean;
   inserted: number;
   updated: number;
+  unchanged?: number;
   processed?: number;
   errors: Array<{ row: number; message: string }>;
   rolesToCreate?: string[];
@@ -188,6 +189,72 @@ async function testBlankRoleAsksForTheDefault() {
   });
 }
 
+// A re-imported row equal to the stored user counts as unchanged: the load does
+// not write it, so it leaves no audit line. Dry run and load give the same counts.
+async function testIdenticalRowsUnchanged() {
+  await withTenant('unchanged', async (runner, tenantId) => {
+    await seedRole(runner, tenantId, 'Administrator');
+    const [company] = await runner.query(
+      `INSERT INTO companies (tenant_id, name, country_iso, city) VALUES ($1, 'Acme', 'FR', 'Paris') RETURNING id`,
+      [tenantId],
+    );
+    await runner.query(
+      `INSERT INTO departments (tenant_id, company_id, name) VALUES ($1, $2, 'Finance')`,
+      [tenantId, company.id],
+    );
+    const users = usersService(runner.manager);
+    const same = 'Same.Person@example.test';
+    const other = 'other.person@example.test';
+    const original = [
+      `${same},Ada,Lovelace,administrator,Acme,Finance,Enabled`,
+      `${other},Alan,Turing,Administrator,,,disabled`,
+    ];
+    const first: Result = await users.importCsv(
+      { file: file(original), dryRun: false, userId: null },
+      { manager: runner.manager },
+    );
+    assert.equal(first.ok, true, JSON.stringify(first.errors));
+    assert.equal(first.inserted, 2);
+
+    const auditCount = async (email: string): Promise<number> => {
+      const [row] = await runner.query(
+        `SELECT count(*)::int AS n FROM audit_log a JOIN users u ON u.id = a.record_id AND u.tenant_id = a.tenant_id
+          WHERE a.tenant_id = $1 AND a.table_name = 'users' AND u.email = $2`,
+        [tenantId, email],
+      );
+      return row.n;
+    };
+    const sameAudit = await auditCount(same);
+    const otherAudit = await auditCount(other);
+
+    const again = file([original[0], `${other},Alan,Turing,Administrator,,,enabled`]);
+    const dry: Result = await users.importCsv({ file: again, dryRun: true, userId: null }, { manager: runner.manager });
+    assert.equal(dry.ok, true, JSON.stringify(dry.errors));
+    assert.deepEqual(
+      { inserted: dry.inserted, updated: dry.updated, unchanged: dry.unchanged },
+      { inserted: 0, updated: 1, unchanged: 1 },
+      'the check counts the identical row as unchanged',
+    );
+
+    const loaded: Result = await users.importCsv({ file: again, dryRun: false, userId: null }, { manager: runner.manager });
+    assert.equal(loaded.ok, true, JSON.stringify(loaded.errors));
+    assert.deepEqual(
+      { inserted: loaded.inserted, updated: loaded.updated, unchanged: loaded.unchanged },
+      { inserted: 0, updated: 1, unchanged: 1 },
+      'the load gives the counts of the check',
+    );
+    assert.equal(await auditCount(same), sameAudit, 'the identical user is not written');
+    assert.equal(await auditCount(other), otherAudit + 1, 'the changed user is written');
+    const [row] = await runner.query(`SELECT status FROM users WHERE tenant_id = $1 AND email = $2`, [tenantId, other]);
+    assert.equal(row.status, 'enabled');
+
+    // A role the load would create is a change, even when the user is otherwise identical.
+    const newRole = file([`${same},Ada,Lovelace,Auditor,Acme,Finance,enabled`]);
+    const dryRole: Result = await users.importCsv({ file: newRole, dryRun: true, userId: null }, { manager: runner.manager });
+    assert.deepEqual({ updated: dryRole.updated, unchanged: dryRole.unchanged }, { updated: 1, unchanged: 0 });
+  });
+}
+
 async function main() {
   await dataSource.initialize();
   const tests: Array<[string, () => Promise<void>]> = [
@@ -196,6 +263,7 @@ async function main() {
     ['testRefusedFileCreatesNothing', testRefusedFileCreatesNothing],
     ['testKnownRolesAreNotListed', testKnownRolesAreNotListed],
     ['testBlankRoleAsksForTheDefault', testBlankRoleAsksForTheDefault],
+    ['testIdenticalRowsUnchanged', testIdenticalRowsUnchanged],
   ];
   let failed = 0;
   try {

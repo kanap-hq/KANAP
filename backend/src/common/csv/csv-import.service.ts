@@ -2,6 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { EntityManager, In } from 'typeorm';
 import { parseString } from '@fast-csv/parse';
 import { CsvDecodeError, decodeCsv } from '../csv-sheet/decode';
+import { sameStoredValues } from '../csv-sheet/unchanged';
 import { AuditLog } from '../../audit/audit.entity';
 import { omitAuditSecrets } from '../../audit/audit.service';
 import {
@@ -97,6 +98,7 @@ export class CsvImportService {
         inserted: 0,
         updated: 0,
         skipped: 0,
+        unchanged: 0,
         errors: headerErrors,
         warnings: headerWarnings,
       };
@@ -147,6 +149,7 @@ export class CsvImportService {
     let insertCount = 0;
     let updateCount = 0;
     let skipCount = 0;
+    let unchangedCount = 0;
 
     for (const row of parsedRows) {
       if (row.errors.length > 0) {
@@ -163,6 +166,10 @@ export class CsvImportService {
       } else {
         if (params.operation === 'insert_only') {
           skipCount++;
+        } else if (sameStoredValues(row.existingEntity, row.parsed)) {
+          // Every value equals the stored one: nothing to write, no audit line.
+          row.unchanged = true;
+          unchangedCount++;
         } else {
           updateCount++;
         }
@@ -178,6 +185,7 @@ export class CsvImportService {
         inserted: insertCount,
         updated: updateCount,
         skipped: skipCount,
+      unchanged: unchangedCount,
         errors: allErrors,
         warnings: allWarnings,
       };
@@ -194,6 +202,7 @@ export class CsvImportService {
         inserted: 0,
         updated: 0,
         skipped: rows.length,
+        unchanged: 0,
         errors: [{
           row: 0,
           message: `Import failed: ${error.message}`,
@@ -211,6 +220,7 @@ export class CsvImportService {
       inserted: insertCount,
       updated: updateCount,
       skipped: skipCount,
+      unchanged: unchangedCount,
       errors: [],
       warnings: allWarnings,
     };
@@ -1159,6 +1169,9 @@ export class CsvImportService {
         continue;
       }
       if (!row.isInsert && context.params.operation === 'insert_only') {
+        continue;
+      }
+      if (row.unchanged) {
         continue;
       }
 

@@ -438,6 +438,8 @@
     "totalRows_other": "{{count}} Zeilen",
     "toInsert": "{{count}} zum Einfügen",
     "toUpdate": "{{count}} zum Aktualisieren",
+    "unchanged_one": "{{count}} unverändert",
+    "unchanged_other": "{{count}} unverändert",
     "skipped_one": "{{count}} übersprungen",
     "skipped_other": "{{count}} übersprungen",
     "errors": "Fehler ({{count}})",
