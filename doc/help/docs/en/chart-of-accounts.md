@@ -121,7 +121,7 @@ Click any row in the accounts grid to open the account workspace.
 - **Properties panel** on the right: **Chart of accounts**, **Account number**, **Used for** and **Lifecycle** (the status switch and the **End of validity** date). Use the panel toggle to collapse it or open it again. See [Status and lifecycle](#status-and-lifecycle).
 - **Main column**: **Native name (local language)**, **Description** and the **Consolidation** section.
 
-**Changes save automatically.** Each field saves when you leave it, and there is no Save button. If a value is refused, a message appears under the field. The **Account number** must be a whole number greater than zero.
+**Changes save automatically.** Each field saves when you leave it, and there is no Save button. If a value is refused, a message appears under the field. The **Account number** must be a whole number greater than zero, with at most 15 digits.
 
 You need `accounts:manager` to edit. Read-only users see the same page with the fields locked.
 
@@ -291,7 +291,9 @@ The roles change as soon as you pick an action. The table updates on the spot.
 
 ### Account numbers
 
-An account number is a whole number greater than zero (for example `6011`). Within a CoA, each number is used once.
+An account number is a whole number greater than zero, with at most 15 digits (for example `6011` or `615630000012`). Within a CoA, each number is used once.
+
+The number is stored as a number, so leading zeros are dropped: `06156` is stored as `6156`.
 
 ### Native names for multilingual support
 
@@ -495,6 +497,7 @@ account_number;account_name;native_name;description;consolidation_account_number
   - See [CSV files](csv-files.md) for the encoding, the separator, the date forms and the two import steps
   - The `coa_code` must match an existing Chart of Accounts in your workspace
   - Account numbers should be unique within a CoA
+  - `account_number` and `consolidation_account_number`: whole numbers of at most 15 digits. A longer number is refused for that row. Leading zeros are dropped (`06156` is stored as `6156`): the **Preflight check** lists these rows as warnings, and the file still loads
   - Status values: `enabled` or `disabled` (defaults to enabled)
   - `nature` is the **Used for** setting, always the last column. Values: `opex`, `capex`, or empty for **OPEX and CAPEX**. A file without this column leaves the settings unchanged. An empty cell sets **OPEX and CAPEX**. Any other value is refused for that row
   - Consolidation columns: when `consolidation_account_number` exists in your consolidation chart, its name and description replace the `consolidation_account_name` and `consolidation_account_description` cells. An empty number clears all three. See [Setting up consolidation mappings](#setting-up-consolidation-mappings)

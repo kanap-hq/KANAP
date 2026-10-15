@@ -121,7 +121,7 @@ Haga clic en cualquier fila de la cuadrícula de cuentas para abrir el espacio d
 - **Panel de propiedades** a la derecha: **Plan de cuentas**, **Número de cuenta**, **Usada para** y **Ciclo de vida** (el interruptor de estado y la fecha de **Fin de validez**). El botón del panel permite contraerlo o volver a abrirlo. Consulte [Estado y ciclo de vida](#estado-y-ciclo-de-vida).
 - **Columna principal**: **Nombre local (idioma local)**, **Descripción** y la sección **Consolidación**.
 
-**Los cambios se guardan automáticamente.** Cada campo se guarda al salir de él y no hay botón Guardar. Si se rechaza un valor, aparece un mensaje bajo el campo. El **Número de cuenta** debe ser un número entero mayor que cero.
+**Los cambios se guardan automáticamente.** Cada campo se guarda al salir de él y no hay botón Guardar. Si se rechaza un valor, aparece un mensaje bajo el campo. El **Número de cuenta** debe ser un número entero mayor que cero, de 15 dígitos como máximo.
 
 Necesita `accounts:manager` para editar. Los usuarios de solo lectura ven la misma página con los campos bloqueados.
 
@@ -291,7 +291,9 @@ Los roles cambian en cuanto elige una acción. La tabla se actualiza al instante
 
 ### Números de cuenta
 
-Un número de cuenta es un número entero mayor que cero (por ejemplo, `6011`). Dentro de un CoA, cada número se usa una sola vez.
+Un número de cuenta es un número entero mayor que cero, de 15 dígitos como máximo (por ejemplo, `6011` o `615630000012`). Dentro de un CoA, cada número se usa una sola vez.
+
+El número se guarda como un número, por lo que se eliminan los ceros a la izquierda: `06156` se guarda como `6156`.
 
 ### Nombres locales para soporte multilingüe
 
@@ -495,6 +497,7 @@ account_number;account_name;native_name;description;consolidation_account_number
   - Consulte [Archivos CSV](csv-files.md) para la codificación, el separador, los formatos de fecha y los dos pasos de importación
   - El `coa_code` debe coincidir con un Plan de cuentas existente en su espacio de trabajo
   - Los números de cuenta deben ser únicos dentro de un CoA
+  - `account_number` y `consolidation_account_number`: números enteros de 15 dígitos como máximo. Un número más largo se rechaza para esa fila. Se eliminan los ceros a la izquierda (`06156` se guarda como `6156`): la **Verificación previa** muestra esas filas como advertencias, y el archivo se carga igualmente
   - Valores de estado: `enabled` o `disabled` (predeterminado: enabled)
   - `nature` es el ajuste **Usada para**, siempre la última columna. Valores: `opex`, `capex` o vacío para **OPEX y CAPEX**. Un archivo sin esta columna deja los ajustes sin cambios. Una celda vacía aplica **OPEX y CAPEX**. Cualquier otro valor se rechaza para esa fila
   - Columnas de consolidación: cuando `consolidation_account_number` existe en su plan de consolidación, su nombre y su descripción sustituyen las celdas `consolidation_account_name` y `consolidation_account_description`. Un número vacío borra las tres. Consulte [Configurar mapeos de consolidación](#configurar-mapeos-de-consolidacion)

@@ -121,7 +121,7 @@ Cliquez sur n'importe quelle ligne de la grille des comptes pour ouvrir l'espace
 - **Panneau des propriétés** à droite : **Plan comptable**, **Numéro de compte**, **Utilisé pour** et **Cycle de vie** (l'interrupteur de statut et la date de **Fin de validité**). Le bouton du panneau permet de le réduire ou de le rouvrir. Voir [Statut et cycle de vie](#statut-et-cycle-de-vie).
 - **Colonne principale** : **Nom local (langue locale)**, **Description** et la section **Consolidation**.
 
-**Les modifications s'enregistrent automatiquement.** Chaque champ s'enregistre lorsque vous le quittez, et il n'y a pas de bouton Enregistrer. Si une valeur est refusée, un message apparaît sous le champ. Le **Numéro de compte** doit être un nombre entier supérieur à zéro.
+**Les modifications s'enregistrent automatiquement.** Chaque champ s'enregistre lorsque vous le quittez, et il n'y a pas de bouton Enregistrer. Si une valeur est refusée, un message apparaît sous le champ. Le **Numéro de compte** doit être un nombre entier supérieur à zéro, de 15 chiffres au plus.
 
 Vous avez besoin de `accounts:manager` pour modifier. Les utilisateurs en lecture seule voient la même page, avec les champs verrouillés.
 
@@ -291,7 +291,9 @@ Les rôles changent dès que vous choisissez une action. Le tableau se met à jo
 
 ### Numéros de compte
 
-Un numéro de compte est un nombre entier supérieur à zéro (par exemple `6011`). Au sein d'un CoA, chaque numéro n'est utilisé qu'une fois.
+Un numéro de compte est un nombre entier supérieur à zéro, de 15 chiffres au plus (par exemple `6011` ou `615630000012`). Au sein d'un CoA, chaque numéro n'est utilisé qu'une fois.
+
+Le numéro est enregistré comme un nombre, les zéros en tête sont donc supprimés : `06156` est enregistré comme `6156`.
 
 ### Noms locaux pour le multilinguisme
 
@@ -495,6 +497,7 @@ account_number;account_name;native_name;description;consolidation_account_number
   - Voir [Fichiers CSV](csv-files.md) pour l'encodage, le séparateur, les formes de dates et les deux étapes d'import
   - Le `coa_code` doit correspondre à un plan comptable existant de votre espace de travail
   - Les numéros de compte doivent être uniques au sein d'un CoA
+  - `account_number` et `consolidation_account_number` : nombres entiers de 15 chiffres au plus. Un numéro plus long est refusé pour cette ligne. Les zéros en tête sont supprimés (`06156` est enregistré comme `6156`) : la **Vérification préalable** signale ces lignes par un avertissement, et le fichier se charge quand même
   - Valeurs de statut : `enabled` ou `disabled` (enabled par défaut)
   - `nature` est le réglage **Utilisé pour**, toujours la dernière colonne. Valeurs : `opex`, `capex`, ou vide pour **OPEX et CAPEX**. Un fichier sans cette colonne laisse les réglages inchangés. Une cellule vide applique **OPEX et CAPEX**. Toute autre valeur est refusée pour cette ligne
   - Colonnes de consolidation : lorsque `consolidation_account_number` existe dans votre plan de consolidation, son nom et sa description remplacent les cellules `consolidation_account_name` et `consolidation_account_description`. Un numéro vide efface les trois. Voir [Configurer les correspondances de consolidation](#configurer-les-correspondances-de-consolidation)
