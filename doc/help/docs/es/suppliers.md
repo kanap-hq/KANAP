@@ -57,7 +57,7 @@ La página tiene dos pestañas: **Vista general** y **Contactos**.
 **Referencia**: el ID de proveedor ERP, cuando el proveedor tiene uno, aparece antes del nombre. Haga clic en él para copiarlo.
 
 **Encabezado**, bajo el nombre:
-- **Estado**: **Activado** o **Desactivado**. Haga clic para cambiarlo. Elegir **Desactivado** fija el fin de validez en hoy.
+- **Estado**: **Activado** o **Desactivado**. Haga clic para cambiarlo. Elegir **Desactivado** desactiva el proveedor de inmediato: el fin de validez pasa a ser la hora actual.
 - **Contactos**: cuántos contactos están vinculados al proveedor. Haga clic para abrir la pestaña **Contactos**.
 - **Usado en**: cuántas líneas presupuestarias, contratos, aplicaciones y activos usan el proveedor. Haga clic para ir a la sección **Usado en** de la pestaña **Vista general**.
 

@@ -57,7 +57,7 @@ The page has two tabs: **Overview** and **Contacts**.
 **Reference**: The ERP supplier ID, when the supplier has one, shows before the name. Click it to copy it.
 
 **Header**, under the name:
-- **Status**: **Enabled** or **Disabled**. Click it to change it. Choosing **Disabled** sets the end of validity to today.
+- **Status**: **Enabled** or **Disabled**. Click it to change it. Choosing **Disabled** disables the supplier at once: the end of validity becomes the current time.
 - **Contacts**: How many contacts are linked to the supplier. Click it to open the **Contacts** tab.
 - **Used by**: How many budget lines, contracts, applications and assets use the supplier. Click it to scroll to the **Used by** section of the **Overview** tab.
 

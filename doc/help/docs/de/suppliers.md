@@ -57,7 +57,7 @@ Die Seite hat zwei Reiter: **Übersicht** und **Kontakte**.
 **Referenz**: Die ERP-Lieferanten-ID steht, wenn der Lieferant eine hat, vor dem Namen. Klicken Sie darauf, um sie zu kopieren.
 
 **Kopfzeile**, unter dem Namen:
-- **Status**: **Aktiviert** oder **Deaktiviert**. Klicken Sie darauf, um ihn zu ändern. Die Wahl von **Deaktiviert** setzt das Ende der Gültigkeit auf heute.
+- **Status**: **Aktiviert** oder **Deaktiviert**. Klicken Sie darauf, um ihn zu ändern. Die Wahl von **Deaktiviert** deaktiviert den Lieferanten sofort: Das Ende der Gültigkeit wird auf den aktuellen Zeitpunkt gesetzt.
 - **Kontakte**: Die Anzahl der mit dem Lieferanten verknüpften Kontakte. Klicken Sie darauf, um den Reiter **Kontakte** zu öffnen.
 - **Verwendet in**: Die Anzahl der Budgetzeilen, Verträge, Anwendungen und Assets, die den Lieferanten verwenden. Klicken Sie darauf, um zum Abschnitt **Verwendet in** im Reiter **Übersicht** zu springen.
 

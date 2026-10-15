@@ -57,7 +57,7 @@ La fiche comporte deux onglets : **Vue d'ensemble** et **Contacts**.
 **Référence** : l'ID fournisseur ERP, quand le fournisseur en a un, s'affiche avant le nom. Cliquez dessus pour le copier.
 
 **En-tête**, sous le nom :
-- **Statut** : **Activé** ou **Désactivé**. Cliquez dessus pour le changer. Choisir **Désactivé** fixe la fin de validité à aujourd'hui.
+- **Statut** : **Activé** ou **Désactivé**. Cliquez dessus pour le changer. Choisir **Désactivé** désactive le fournisseur aussitôt : la fin de validité devient l'heure actuelle.
 - **Contacts** : le nombre de contacts liés au fournisseur. Cliquez dessus pour ouvrir l'onglet **Contacts**.
 - **Lié à** : le nombre de lignes budgétaires, contrats, applications et actifs liés au fournisseur. Cliquez dessus pour aller à la section **Lié à** de l'onglet **Vue d'ensemble**.
 
