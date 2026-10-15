@@ -99,7 +99,7 @@ Les deux ouvrent le dialogue **Gérer les catégories de processus métier**.
 
 - **Renommer** — modifiez le nom directement dans le champ texte.
 - **Activer / Désactiver** — basculez si une catégorie apparaît dans les sélecteurs. Les catégories inactives sont masquées des nouvelles affectations mais préservées sur les processus existants.
-- **Supprimer** — supprimez une catégorie. La suppression ne fonctionne que si aucun processus ne l'utilise ; sinon, le message compte les processus qui l'utilisent. Désactivez-la plutôt.
+- **Supprimer** : supprimez une catégorie. La suppression ne fonctionne que si aucun processus ne l'utilise ; sinon, le message compte les processus qui l'utilisent. Désactivez-la plutôt.
 - **Nouvelle catégorie** — ajoutez une nouvelle ligne en haut du dialogue.
 
 **Comportement d'enregistrement et d'annulation** :

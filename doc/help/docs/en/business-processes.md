@@ -99,7 +99,7 @@ Both open the **Manage Business Process Categories** dialog.
 
 - **Rename** -- edit the name directly in the text field.
 - **Activate / Deactivate** -- toggle whether a category appears in selectors. Inactive categories are hidden from new assignments but preserved on existing processes.
-- **Delete** -- remove a category. Deletion only works if no process is using it; otherwise the message counts the processes that use it. Disable it instead.
+- **Delete**: remove a category. Deletion only works if no process is using it; otherwise the message counts the processes that use it. Disable it instead.
 - **New category** -- add a new row at the top of the dialog.
 
 **Save and cancel behavior**:

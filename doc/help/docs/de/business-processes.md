@@ -99,7 +99,7 @@ Beide öffnen den Dialog **Geschäftsprozess-Kategorien verwalten**.
 
 - **Umbenennen** -- den Namen direkt im Textfeld bearbeiten.
 - **Aktivieren / Deaktivieren** -- umschalten, ob eine Kategorie in Auswahlfeldern erscheint. Inaktive Kategorien werden bei neuen Zuweisungen ausgeblendet, bleiben aber bei bestehenden Prozessen erhalten.
-- **Löschen** -- eine Kategorie entfernen. Das Löschen funktioniert nur, wenn kein Prozess sie verwendet; andernfalls zählt die Meldung die Prozesse, die sie verwenden. Deaktivieren Sie sie stattdessen.
+- **Löschen**: eine Kategorie entfernen. Das Löschen funktioniert nur, wenn kein Prozess sie verwendet; andernfalls zählt die Meldung die Prozesse, die sie verwenden. Deaktivieren Sie sie stattdessen.
 - **Neue Kategorie** -- eine neue Zeile oben im Dialog hinzufügen.
 
 **Speichern und Abbrechen**:

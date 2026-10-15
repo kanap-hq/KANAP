@@ -99,7 +99,7 @@ Ambos abren el diálogo **Gestionar categorías de procesos de negocio**.
 
 - **Renombrar** -- edite el nombre directamente en el campo de texto.
 - **Activar / Desactivar** -- controle si una categoría aparece en los selectores. Las categorías inactivas se ocultan de las nuevas asignaciones pero se conservan en los procesos existentes.
-- **Eliminar** -- eliminar una categoría. La eliminación solo funciona si ningún proceso la utiliza; de lo contrario, el mensaje cuenta los procesos que la usan. Desactívela en su lugar.
+- **Eliminar**: eliminar una categoría. La eliminación solo funciona si ningún proceso la utiliza; de lo contrario, el mensaje cuenta los procesos que la usan. Desactívela en su lugar.
 - **Nueva categoría** -- añadir una nueva fila en la parte superior del diálogo.
 
 **Comportamiento de guardar y cancelar**:
