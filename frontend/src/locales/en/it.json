@@ -1273,6 +1273,12 @@
         "applicationsRequired": "Select source and target applications.",
         "dataCategoryRequired": "Select a data category.",
         "noIdentifier": "The interface was created, but no identifier was returned."
+      },
+      "pii": {
+        "label": "PII",
+        "none": "No PII",
+        "contains": "Contains PII",
+        "description": "PII description"
       }
     },
     "location": {

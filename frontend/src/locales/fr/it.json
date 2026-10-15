@@ -1273,6 +1273,12 @@
         "applicationsRequired": "Sélectionnez les applications source et cible.",
         "dataCategoryRequired": "Sélectionnez une catégorie de données.",
         "noIdentifier": "L'interface a été créée, mais aucun identifiant n'a été renvoyé."
+      },
+      "pii": {
+        "label": "PII",
+        "none": "Pas de PII",
+        "contains": "Contient des PII",
+        "description": "Description des PII"
       }
     },
     "location": {

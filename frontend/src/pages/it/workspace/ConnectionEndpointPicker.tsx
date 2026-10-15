@@ -178,7 +178,7 @@ export default function ConnectionEndpointPicker({
             <TextField
               {...params}
               variant="standard"
-              placeholder={value.entity_code ? `entity:${value.entity_code} (switch to pick a server)` : 'e.g., AST-12 or hostname'}
+              placeholder={value.entity_code ? (entities.find((ent: any) => ent.code === value.entity_code)?.label || value.entity_code) : 'e.g., AST-12 or hostname'}
               sx={fieldSx}
             />
           )}

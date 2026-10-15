@@ -1981,7 +1981,7 @@ export default function InterfaceBindingsMatrix({
                             {`Criticality: ${classificationCatalog?.businessCriticalityLevels.find((item) => item.code === link.connection.criticality)?.label || link.connection.criticality || 'Not set'}`}
                           </Typography>
                           <Typography variant="body2" color={link.connection.contains_pii ? 'warning.main' : 'text.secondary'}>
-                            {link.connection.contains_pii ? 'Contains PII' : 'No PII'}
+                            {link.connection.contains_pii ? t('workspace.interface.pii.contains') : t('workspace.interface.pii.none')}
                           </Typography>
                         </Stack>
                         {link.notes && (

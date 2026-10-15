@@ -1273,6 +1273,12 @@
         "applicationsRequired": "Seleccione las aplicaciones de origen y destino.",
         "dataCategoryRequired": "Seleccione una categoría de datos.",
         "noIdentifier": "La interfaz se creó, pero no se devolvió ningún identificador."
+      },
+      "pii": {
+        "label": "PII",
+        "none": "Sin PII",
+        "contains": "Contiene PII",
+        "description": "Descripción de PII"
       }
     },
     "location": {

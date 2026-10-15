@@ -1273,6 +1273,12 @@
         "applicationsRequired": "Wählen Sie Quell- und Zielanwendung aus.",
         "dataCategoryRequired": "Wählen Sie eine Datenkategorie aus.",
         "noIdentifier": "Die Schnittstelle wurde erstellt, aber es wurde keine Kennung zurückgegeben."
+      },
+      "pii": {
+        "label": "PII",
+        "none": "Keine PII",
+        "contains": "Enthält PII",
+        "description": "Beschreibung der PII"
       }
     },
     "location": {
