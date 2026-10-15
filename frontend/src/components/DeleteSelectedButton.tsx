@@ -20,6 +20,11 @@ export type DeleteCheck = {
   confirmLabel?: string;
   /** The body key sent `true` when the delete removes the dependants the warning names ("Delete anyway"). */
   forceKey?: string;
+  /**
+   * The refusal codes the window's `cascadeOption` lifts (an interface's bindings): those items are
+   * listed as kept, and checking the option moves them to the items deleted.
+   */
+  cascadeLifts?: string[];
 };
 
 export interface DeleteSelectedButtonProps<T> {
@@ -91,6 +96,7 @@ export default function DeleteSelectedButton<T>({
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(false);
   const [opened, setOpened] = useState<Opened>({ items: [], check: null });
+  const [deleteRelated, setDeleteRelated] = useState(false);
   const check = opened.check;
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
@@ -113,6 +119,7 @@ export default function DeleteSelectedButton<T>({
       }
     }
     setOpened({ items: selection, check: answered });
+    setDeleteRelated(false);
     setConfirmOpen(true);
   };
 
@@ -124,7 +131,7 @@ export default function DeleteSelectedButton<T>({
   const handleConfirmDelete = async (options?: { deleteRelated?: boolean }) => {
     setLoading(true);
     try {
-      const ids = deletable.map((item) => item.id);
+      const ids = toDelete.map((item) => item.id);
       const data: Record<string, any> = { ids };
       if (options?.deleteRelated && cascadeOption) {
         data[cascadeOption.apiKey] = true;
@@ -137,7 +144,7 @@ export default function DeleteSelectedButton<T>({
       const { deleted = [], failed = [] } = response.data;
       const deletedIds: string[] = Array.isArray(deleted) ? deleted.map(String) : [];
       // What was deleted, then what the check kept, by name.
-      const done = keptItems.length > 0
+      const done = shownKept.length > 0
         ? t('delete.withKept', { deleted: deletedMessage(deletedIds), kept: keptMessage() })
         : deletedMessage(deletedIds);
 
@@ -205,7 +212,7 @@ export default function DeleteSelectedButton<T>({
     return t('delete.namedList', { what, names: joinNames(shown, language) });
   };
   /** "1 item kept: Beta", the names capped as for the deleted ones. */
-  const keptMessage = () => namedMessage(t('delete.keptDone', { count: keptItems.length }), keptItems.map((item) => item.name));
+  const keptMessage = () => namedMessage(t('delete.keptDone', { count: shownKept.length }), shownKept.map((item) => item.name));
   // Refused rows stay out of the delete; each is listed as kept, with what makes it refused.
   const refusedById = new Map((check?.refused ?? []).map((refusal) => [refusal.id, refusal]));
   const deletable = items.filter((item) => !refusedById.has(item.id));
@@ -216,8 +223,15 @@ export default function DeleteSelectedButton<T>({
       // What uses it, counted; a refusal without counts (a frozen column) in its own words.
       return { ...item, reason: refusal.usages?.length ? refusalCounts(refusal, t, language) : deleteFailureReason(refusal, t, language) };
     });
+  // Kept items whose refusal the window's option lifts: checked, they are deleted too.
+  const lifts = new Set(cascadeOption ? check?.cascadeLifts ?? [] : []);
+  const liftable = keptItems.filter((item) => lifts.has(refusedById.get(item.id)!.code ?? ''));
+  const released = deleteRelated ? liftable : [];
+  const releasedIds = new Set(released.map((item) => item.id));
+  const toDelete = items.filter((item) => !refusedById.has(item.id) || releasedIds.has(item.id));
+  const shownKept = keptItems.filter((item) => !releasedIds.has(item.id));
   const keptLabel = (count: number) => itemLabels?.kept(count) ?? t('delete.itemsKept', { count });
-  const onlyRefused = !!check && deletable.length === 0 && keptItems.length > 0;
+  const onlyRefused = !!check && deletable.length === 0 && keptItems.length > 0 && liftable.length === 0;
 
   return (
     <>
@@ -260,12 +274,15 @@ export default function DeleteSelectedButton<T>({
           // Once the check has answered, the refused items are listed as kept: no generic "referenced items are kept".
           warning={check ? (check.warning ?? warning ?? t('delete.cannotUndo')) : (forceOption?.message ?? warning)}
           confirmLabel={check ? check.confirmLabel : forceOption?.confirmLabel}
-          itemCount={deletable.length}
-          items={deletable}
-          itemsLabel={itemLabels?.toDelete(deletable.length)}
-          kept={keptItems.length > 0 ? { label: keptLabel(keptItems.length), items: keptItems } : undefined}
+          itemCount={toDelete.length}
+          items={toDelete}
+          itemsLabel={itemLabels?.toDelete(toDelete.length)}
+          kept={shownKept.length > 0 ? { label: keptLabel(shownKept.length), items: shownKept } : undefined}
           loading={loading}
           cascadeOption={cascadeOption ? { label: cascadeOption.label, description: cascadeOption.description } : undefined}
+          deleteRelated={deleteRelated}
+          onDeleteRelatedChange={setDeleteRelated}
+          confirmDisabled={toDelete.length === 0}
         />
       )}
 

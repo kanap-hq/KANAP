@@ -973,7 +973,9 @@
     "exportTitle": "Exporter les comptes du modèle",
     "importTitle": "Importer les comptes du modèle",
     "templateLabel": "Modèle",
-    "title": "Comptes standards (Admin plateforme)"
+    "title": "Comptes standards (Admin plateforme)",
+    "deleteWarning_one": "Cette action est irréversible. Le compte est retiré de ce modèle. Les plans comptables déjà chargés depuis ce modèle gardent leurs comptes.",
+    "deleteWarning_other": "Cette action est irréversible. Les comptes sont retirés de ce modèle. Les plans comptables déjà chargés depuis ce modèle gardent leurs comptes."
   },
   "tenants": {
     "actions": {

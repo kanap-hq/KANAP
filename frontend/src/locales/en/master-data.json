@@ -956,7 +956,9 @@
       "failedToDelete": "Failed to delete category",
       "failedToCreate": "Failed to create category",
       "failedToUpdate": "Failed to update category"
-    }
+    },
+    "deleteWarning_one": "This cannot be undone. Interfaces and requests linked to this process stay, without the link.",
+    "deleteWarning_other": "This cannot be undone. Interfaces and requests linked to these processes stay, without the link."
   },
   "admin": {
     "copy": {

@@ -144,14 +144,24 @@
         "derivedFromInterfaces": "Derivado de {{count}} interfaces",
         "derivedNoInterfaces": "Derivado (sin interfaces vinculadas)",
         "manual": "Manual"
-      }
+      },
+      "deleteWarning_one": "Esta acción no se puede deshacer. Sus servidores, interfaces y documentos se conservan; solo se eliminan sus vínculos con esta conexión.",
+      "deleteWarning_other": "Esta acción no se puede deshacer. Sus servidores, interfaces y documentos se conservan; solo se eliminan sus vínculos con estas conexiones."
     },
     "interfaces": {
       "title": "Interfaces",
       "addInterface": "Agregar interfaz",
       "duplicateInterface": "Duplicar interfaz",
       "alsoDeleteBindings": "Eliminar también los enlaces relacionados",
-      "deleteBindingsDescription": "Si se desmarca, las interfaces con enlaces no serán eliminadas.",
+      "deleteBindingsDescription": "Las interfaces con enlaces se eliminan entonces con sus enlaces. Las conexiones se conservan.",
+      "delete": {
+        "toDelete_one": "Se eliminará {{count}} interfaz:",
+        "toDelete_other": "Se eliminarán {{count}} interfaces:",
+        "kept_one": "{{count}} interfaz tiene enlaces y se conserva:",
+        "kept_other": "{{count}} interfaces tienen enlaces y se conservan:",
+        "deleted_one": "{{count}} interfaz eliminada",
+        "deleted_other": "{{count}} interfaces eliminadas"
+      },
       "duplicateDialogTitle": "Duplicar interfaz",
       "duplicateDescription": "Crear una copia de \"{{name}}\".",
       "copyEnvBindings": "Copiar enlaces de entorno",

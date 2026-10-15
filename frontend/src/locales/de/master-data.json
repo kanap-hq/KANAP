@@ -956,7 +956,9 @@
       "failedToDelete": "Fehler beim Löschen der Kategorie",
       "failedToCreate": "Fehler beim Erstellen der Kategorie",
       "failedToUpdate": "Fehler beim Aktualisieren der Kategorie"
-    }
+    },
+    "deleteWarning_one": "Dies kann nicht rückgängig gemacht werden. Schnittstellen und Anfragen, die mit diesem Prozess verknüpft sind, bleiben ohne die Verknüpfung erhalten.",
+    "deleteWarning_other": "Dies kann nicht rückgängig gemacht werden. Schnittstellen und Anfragen, die mit diesen Prozessen verknüpft sind, bleiben ohne die Verknüpfung erhalten."
   },
   "admin": {
     "copy": {

@@ -144,14 +144,24 @@
         "derivedFromInterfaces": "Dérivé de {{count}} interfaces",
         "derivedNoInterfaces": "Dérivé (aucune interface liée)",
         "manual": "Manuel"
-      }
+      },
+      "deleteWarning_one": "Cette action est irréversible. Ses serveurs, interfaces et documents sont conservés ; seuls leurs liens avec cette connexion sont supprimés.",
+      "deleteWarning_other": "Cette action est irréversible. Leurs serveurs, interfaces et documents sont conservés ; seuls leurs liens avec ces connexions sont supprimés."
     },
     "interfaces": {
       "title": "Interfaces",
       "addInterface": "Ajouter une interface",
       "duplicateInterface": "Dupliquer l'interface",
       "alsoDeleteBindings": "Supprimer également les liaisons associées",
-      "deleteBindingsDescription": "Si cette option est décochée, les interfaces avec des liaisons ne seront pas supprimées.",
+      "deleteBindingsDescription": "Les interfaces qui ont des liaisons sont alors supprimées avec leurs liaisons. Les connexions sont conservées.",
+      "delete": {
+        "toDelete_one": "{{count}} interface sera supprimée :",
+        "toDelete_other": "{{count}} interfaces seront supprimées :",
+        "kept_one": "{{count}} interface a des liaisons et est conservée :",
+        "kept_other": "{{count}} interfaces ont des liaisons et sont conservées :",
+        "deleted_one": "{{count}} interface supprimée",
+        "deleted_other": "{{count}} interfaces supprimées"
+      },
       "duplicateDialogTitle": "Dupliquer l'interface",
       "duplicateDescription": "Créer une copie de « {{name}} ».",
       "copyEnvBindings": "Copier les liaisons d'environnement",

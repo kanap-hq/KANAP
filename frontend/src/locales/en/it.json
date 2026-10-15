@@ -144,14 +144,24 @@
         "derivedFromInterfaces": "Derived from {{count}} interfaces",
         "derivedNoInterfaces": "Derived (no interfaces linked)",
         "manual": "Manual"
-      }
+      },
+      "deleteWarning_one": "This cannot be undone. Its servers, interfaces and documents stay; only their links to this connection go.",
+      "deleteWarning_other": "This cannot be undone. Their servers, interfaces and documents stay; only their links to these connections go."
     },
     "interfaces": {
       "title": "Interfaces",
       "addInterface": "Add interface",
       "duplicateInterface": "Duplicate interface",
       "alsoDeleteBindings": "Also delete related bindings",
-      "deleteBindingsDescription": "If unchecked, interfaces with bindings will not be deleted.",
+      "deleteBindingsDescription": "Interfaces with bindings are then deleted with their bindings. Connections stay.",
+      "delete": {
+        "toDelete_one": "{{count}} interface will be deleted:",
+        "toDelete_other": "{{count}} interfaces will be deleted:",
+        "kept_one": "{{count}} interface has bindings and is kept:",
+        "kept_other": "{{count}} interfaces have bindings and are kept:",
+        "deleted_one": "{{count}} interface deleted",
+        "deleted_other": "{{count}} interfaces deleted"
+      },
       "duplicateDialogTitle": "Duplicate interface",
       "duplicateDescription": "Create a copy of \"{{name}}\".",
       "copyEnvBindings": "Copy environment bindings",

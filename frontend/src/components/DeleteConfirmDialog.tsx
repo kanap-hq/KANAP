@@ -35,6 +35,11 @@ export interface DeleteConfirmDialogProps {
     label: string;
     description?: string;
   };
+  /** The checkbox's state, when the caller owns it (what it deletes changes with it). */
+  deleteRelated?: boolean;
+  onDeleteRelatedChange?: (checked: boolean) => void;
+  /** No main action while nothing would be deleted (every item kept until the option is checked). */
+  confirmDisabled?: boolean;
 }
 
 export default function DeleteConfirmDialog({
@@ -52,15 +57,23 @@ export default function DeleteConfirmDialog({
   itemsLabel,
   kept,
   cascadeOption,
+  deleteRelated: ownedDeleteRelated,
+  onDeleteRelatedChange,
+  confirmDisabled = false,
 }: DeleteConfirmDialogProps) {
   const { t } = useTranslation('common');
-  const [deleteRelated, setDeleteRelated] = React.useState(false);
+  const [localDeleteRelated, setLocalDeleteRelated] = React.useState(false);
+  const deleteRelated = ownedDeleteRelated ?? localDeleteRelated;
+  const setDeleteRelated = (checked: boolean) => {
+    setLocalDeleteRelated(checked);
+    onDeleteRelatedChange?.(checked);
+  };
   const displayItems = items.slice(0, maxDisplayItems);
   const hasMore = items.length > maxDisplayItems;
 
   // Reset checkbox when dialog closes
   React.useEffect(() => {
-    if (!open) setDeleteRelated(false);
+    if (!open) setLocalDeleteRelated(false);
   }, [open]);
 
   return (
@@ -72,6 +85,7 @@ export default function DeleteConfirmDialog({
       saveLabel={loading ? t('status.deleting') : confirmLabel ?? t('buttons.delete')}
       saveVariant="action-danger"
       saveLoading={loading}
+      saveDisabled={confirmDisabled}
       cancelLabel={t('buttons.cancel')}
     >
       <Alert severity="warning" sx={{ mb: 2 }}>

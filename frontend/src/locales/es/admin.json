@@ -973,7 +973,9 @@
     "exportTitle": "Exportar cuentas de la plantilla",
     "importTitle": "Importar cuentas de la plantilla",
     "templateLabel": "Plantilla",
-    "title": "Cuentas estándar (Admin plataforma)"
+    "title": "Cuentas estándar (Admin plataforma)",
+    "deleteWarning_one": "Esta acción no se puede deshacer. La cuenta se retira de esta plantilla. Los planes de cuentas ya cargados desde ella conservan sus cuentas.",
+    "deleteWarning_other": "Esta acción no se puede deshacer. Las cuentas se retiran de esta plantilla. Los planes de cuentas ya cargados desde ella conservan sus cuentas."
   },
   "tenants": {
     "actions": {

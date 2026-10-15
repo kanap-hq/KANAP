@@ -144,14 +144,24 @@
         "derivedFromInterfaces": "Abgeleitet von {{count}} Schnittstellen",
         "derivedNoInterfaces": "Abgeleitet (keine Schnittstellen verknüpft)",
         "manual": "Manuell"
-      }
+      },
+      "deleteWarning_one": "Dies kann nicht rückgängig gemacht werden. Ihre Server, Schnittstellen und Dokumente bleiben erhalten; nur ihre Verknüpfungen mit dieser Verbindung werden entfernt.",
+      "deleteWarning_other": "Dies kann nicht rückgängig gemacht werden. Ihre Server, Schnittstellen und Dokumente bleiben erhalten; nur ihre Verknüpfungen mit diesen Verbindungen werden entfernt."
     },
     "interfaces": {
       "title": "Schnittstellen",
       "addInterface": "Schnittstelle hinzufügen",
       "duplicateInterface": "Schnittstelle duplizieren",
       "alsoDeleteBindings": "Zugehörige Bindungen ebenfalls löschen",
-      "deleteBindingsDescription": "Wenn diese Option deaktiviert ist, werden Schnittstellen mit Bindungen nicht gelöscht.",
+      "deleteBindingsDescription": "Schnittstellen mit Bindungen werden dann mit ihren Bindungen gelöscht. Verbindungen bleiben erhalten.",
+      "delete": {
+        "toDelete_one": "{{count}} Schnittstelle wird gelöscht:",
+        "toDelete_other": "{{count}} Schnittstellen werden gelöscht:",
+        "kept_one": "{{count}} Schnittstelle hat Bindungen und bleibt erhalten:",
+        "kept_other": "{{count}} Schnittstellen haben Bindungen und bleiben erhalten:",
+        "deleted_one": "{{count}} Schnittstelle gelöscht",
+        "deleted_other": "{{count}} Schnittstellen gelöscht"
+      },
       "duplicateDialogTitle": "Schnittstelle duplizieren",
       "duplicateDescription": "Eine Kopie von \"{{name}}\" erstellen.",
       "copyEnvBindings": "Umgebungs-Bindungen kopieren",

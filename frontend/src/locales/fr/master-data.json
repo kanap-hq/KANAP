@@ -956,7 +956,9 @@
       "failedToDelete": "Échec de la suppression de la catégorie",
       "failedToCreate": "Échec de la création de la catégorie",
       "failedToUpdate": "Échec de la mise à jour de la catégorie"
-    }
+    },
+    "deleteWarning_one": "Cette action est irréversible. Les interfaces et les demandes liées à ce processus sont conservées, sans ce lien.",
+    "deleteWarning_other": "Cette action est irréversible. Les interfaces et les demandes liées à ces processus sont conservées, sans ce lien."
   },
   "admin": {
     "copy": {

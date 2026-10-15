@@ -973,7 +973,9 @@
     "exportTitle": "Vorlagenkonten exportieren",
     "importTitle": "Vorlagenkonten importieren",
     "templateLabel": "Vorlage",
-    "title": "Standardkonten (Plattform-Admin)"
+    "title": "Standardkonten (Plattform-Admin)",
+    "deleteWarning_one": "Dies kann nicht rückgängig gemacht werden. Das Konto wird aus dieser Vorlage entfernt. Bereits aus ihr geladene Kontenpläne behalten ihre Konten.",
+    "deleteWarning_other": "Dies kann nicht rückgängig gemacht werden. Die Konten werden aus dieser Vorlage entfernt. Bereits aus ihr geladene Kontenpläne behalten ihre Konten."
   },
   "tenants": {
     "actions": {

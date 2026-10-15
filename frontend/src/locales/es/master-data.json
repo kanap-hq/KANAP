@@ -956,7 +956,9 @@
       "failedToDelete": "Error al eliminar la categoría",
       "failedToCreate": "Error al crear la categoría",
       "failedToUpdate": "Error al actualizar la categoría"
-    }
+    },
+    "deleteWarning_one": "Esta acción no se puede deshacer. Las interfaces y solicitudes vinculadas a este proceso se conservan, sin el vínculo.",
+    "deleteWarning_other": "Esta acción no se puede deshacer. Las interfaces y solicitudes vinculadas a estos procesos se conservan, sin el vínculo."
   },
   "admin": {
     "copy": {

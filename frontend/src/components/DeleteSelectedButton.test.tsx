@@ -302,6 +302,69 @@ describe('DeleteSelectedButton', () => {
       expect(dialog).toHaveTextContent('delete.cannotUndo');
     });
 
+    describe('when the option in the window lifts the refusal', () => {
+      const BOUND = { id: 'b', name: 'Frozen', code: 'INTERFACE_HAS_BINDINGS', usages: [{ type: 'interface_bindings', total: 2 }] };
+      const cascadeOption = { label: 'Also delete bindings', apiKey: 'deleteRelatedBindings' };
+
+      function renderLiftable(selected: Row[], refused: any[]) {
+        render(
+          <ThemeProvider theme={createAppTheme('light')}>
+            <DeleteSelectedButton<Row>
+              selectedRows={selected}
+              endpoint="/interfaces/bulk"
+              getItemId={(row) => row.id}
+              getItemName={(row) => row.name}
+              onDeleteSuccess={vi.fn()}
+              checkDelete={async () => ({ refused, cascadeLifts: ['INTERFACE_HAS_BINDINGS'] })}
+              itemLabels={itemLabels}
+              cascadeOption={cascadeOption}
+            />
+          </ThemeProvider>,
+        );
+        fireEvent.click(screen.getByRole('button', { name: /buttons.deleteSelected/ }));
+      }
+
+      it('lists the item as kept, then deletes it with the option checked', async () => {
+        vi.mocked(api.delete).mockResolvedValue({ data: { deleted: ['a', 'b'], failed: [] } } as any);
+        renderLiftable(rows, [BOUND]);
+        const dialog = await screen.findByRole('dialog');
+        expect(dialog).toHaveTextContent('to delete:1');
+        expect(within(dialog).getByTestId('delete-kept')).toHaveTextContent('Frozen');
+        fireEvent.click(within(dialog).getByRole('checkbox', { name: 'Also delete bindings' }));
+        expect(dialog).toHaveTextContent('to delete:2');
+        expect(within(dialog).queryByTestId('delete-kept')).toBeNull();
+        fireEvent.click(within(dialog).getByRole('button', { name: 'buttons.delete' }));
+        await waitFor(() => expect(api.delete).toHaveBeenCalledWith('/interfaces/bulk', { data: { ids: ['a', 'b'], deleteRelatedBindings: true } }));
+      });
+
+      it('sends only the free items with the option unchecked', async () => {
+        vi.mocked(api.delete).mockResolvedValue({ data: { deleted: ['a'], failed: [] } } as any);
+        renderLiftable(rows, [BOUND]);
+        const dialog = await screen.findByRole('dialog');
+        fireEvent.click(within(dialog).getByRole('button', { name: 'buttons.delete' }));
+        await waitFor(() => expect(api.delete).toHaveBeenCalledWith('/interfaces/bulk', { data: { ids: ['a'] } }));
+      });
+
+      it('offers the option for a single refused item, the delete disabled until it is checked', async () => {
+        vi.mocked(api.delete).mockResolvedValue({ data: { deleted: ['b'], failed: [] } } as any);
+        renderLiftable([rows[1]], [BOUND]);
+        const dialog = await screen.findByRole('dialog');
+        expect(within(dialog).getByTestId('delete-kept')).toHaveTextContent('Frozen');
+        const remove = within(dialog).getByRole('button', { name: 'buttons.delete' });
+        expect(remove).toBeDisabled();
+        fireEvent.click(within(dialog).getByRole('checkbox', { name: 'Also delete bindings' }));
+        expect(remove).toBeEnabled();
+        fireEvent.click(remove);
+        await waitFor(() => expect(api.delete).toHaveBeenCalledWith('/interfaces/bulk', { data: { ids: ['b'], deleteRelatedBindings: true } }));
+      });
+
+      it('keeps the Close-only window for a refusal the option does not lift', async () => {
+        renderLiftable([rows[1]], [{ ...BOUND, code: 'OTHER' }]);
+        const dialog = await screen.findByRole('dialog');
+        expect(within(dialog).getAllByRole('button').map((button) => button.textContent).filter(Boolean)).toEqual(['buttons.close']);
+      });
+    });
+
     it('falls back to the usual confirmation when the check fails', async () => {
       renderChecked(rows, async () => { throw new Error('offline'); });
       const dialog = await screen.findByRole('dialog');
