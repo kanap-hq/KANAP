@@ -1,7 +1,8 @@
 import * as assert from 'node:assert/strict';
 import { BadRequestException } from '@nestjs/common';
-import { assertSetFilterModes, buildQuickSearchConditions, compileAgFilterCondition, createParamNameGenerator, escapeLikePattern, isExcludeSetModel, setFilterMode } from '../ag-grid-filtering';
-import { buildWhereFromAgFilters } from '../pagination';
+import { FindOperator } from 'typeorm';
+import { assertSetFilterModes, buildQuickSearchConditions, compileAgFilterCondition, compileReferenceFilter, createParamNameGenerator, escapeLikePattern, isExcludeSetModel, setFilterMode } from '../ag-grid-filtering';
+import { assertEntityFilterFields, buildWhereFromAgFilters } from '../pagination';
 
 // The shared grid filter compiler of the 24 SQL lists. Include mode must stay
 // exactly as it was before the exclude mode (decision Q3, lot 2B): the
@@ -207,6 +208,64 @@ function testLikeOperatorsMatchTheValueLiterally() {
   ], 'the quick search escapes the backslash too');
 }
 
+/** A date column takes date models, sets and blank checks; a text model on it is a 400 (ILIKE on a date fails in the database). */
+function testDateTargets() {
+  const date: Target = { expression: 'c.start_date', dataType: 'date' };
+  const compile = (model: any) => compileAgFilterCondition(model, date, createParamNameGenerator('p'));
+  assert.deepEqual(compile({ filterType: 'date', type: 'equals', dateFrom: '2026-01-02 00:00:00' }), {
+    sql: 'CAST(c.start_date AS DATE) = CAST(:p0 AS DATE)', params: { p0: '2026-01-02 00:00:00' },
+  });
+  assert.deepEqual(compile({ filterType: 'text', type: 'blank' }), { sql: 'c.start_date IS NULL', params: {} });
+  assert.deepEqual(compile({ filterType: 'text', type: 'notBlank' }), { sql: 'c.start_date IS NOT NULL', params: {} });
+  for (const model of [{ filterType: 'text', type: 'contains', filter: '2026' }, { filterType: 'number', type: 'equals', filter: 3 }]) {
+    assert.throws(() => compile(model), (err: unknown) => err instanceof BadRequestException && /date filter/.test((err as Error).message), JSON.stringify(model));
+  }
+}
+
+/** A reference column (`REQ-12`): its text models match the number's digits, with or without the prefix. */
+function testReferenceFilter() {
+  const compile = (model: any) => compileReferenceFilter(model, 'r.item_number', 'REQ', createParamNameGenerator('p'));
+  assert.deepEqual(compile({ filterType: 'text', type: 'contains', filter: '12' }), { sql: '(r.item_number)::text ILIKE :p0', params: { p0: '%12%' } });
+  assert.deepEqual(compile({ filterType: 'text', type: 'equals', filter: ' req-12 ' }), { sql: '(r.item_number)::text = :p0', params: { p0: '12' } });
+  assert.deepEqual(compile({ filterType: 'text', type: 'startsWith', filter: 'REQ1' }), { sql: '(r.item_number)::text ILIKE :p0', params: { p0: '1%' } });
+  assert.deepEqual(compile({ filterType: 'number', type: 'greaterThan', filter: 4 }), { sql: 'r.item_number > :p0', params: { p0: 4 } });
+  assert.deepEqual(compile({ filterType: 'text', type: 'blank' }), { sql: "NULLIF((r.item_number)::text, '') IS NULL", params: {} });
+  assert.equal(compile({ filterType: 'text', type: 'contains', filter: 'REQ-' }), null, 'the prefix alone filters nothing');
+}
+
+/** The lists that hand their filters to TypeORM: a date model reaches the column by day; an unknown column or a text model on a date is a 400. */
+function testTypeOrmListFilters() {
+  const where = buildWhereFromAgFilters({ created_at: { filterType: 'date', type: 'lessThan', dateFrom: '2026-03-04 00:00:00' } });
+  const operator = where.created_at as FindOperator<any>;
+  assert.ok(operator instanceof FindOperator && operator.type === 'raw', 'a date model compiles to a raw condition');
+  const [param] = Object.keys(operator.objectLiteralParameters ?? {});
+  assert.equal(operator.getSql!('s.created_at'), `CAST(s.created_at AS DATE) < CAST(:${param} AS DATE)`);
+  assert.equal(operator.objectLiteralParameters?.[param], '2026-03-04 00:00:00');
+
+  const metadata = { columns: [
+    { propertyName: 'name', type: 'text' },
+    { propertyName: 'created_at', type: 'timestamptz' },
+    { propertyName: 'active', type: Boolean },
+    { propertyName: 'headcount', type: 'int' },
+  ] } as any;
+  const refused = (filters: any, pattern: RegExp) => assert.throws(() => assertEntityFilterFields(filters, metadata),
+    (err: unknown) => err instanceof BadRequestException && pattern.test((err as Error).message), JSON.stringify(filters));
+  refused({ no_such_column: { filterType: 'text', type: 'contains', filter: 'a' } }, /Unknown filter column "no_such_column"/);
+  refused({ created_at: { filterType: 'text', type: 'contains', filter: '2026' } }, /takes a date/);
+  refused({ active: { filterType: 'text', type: 'contains', filter: 'y' } }, /yes or no/);
+  refused({ headcount: { filterType: 'text', type: 'contains', filter: '1' } }, /takes a number/);
+  refused({ headcount: { filterType: 'text', type: 'equals', filter: 'abc' } }, /takes a number/);
+  assertEntityFilterFields({
+    name: { filterType: 'text', type: 'contains', filter: 'a' },
+    created_at: { filterType: 'date', type: 'equals', dateFrom: '2026-01-01' },
+    active: { filterType: 'set', values: ['true'] },
+  }, metadata);
+  assertEntityFilterFields({ created_at: { filterType: 'text', type: 'blank' }, active: { type: 'equals', filter: 'true' }, headcount: { type: 'equals', filter: '12' } }, metadata);
+}
+
+testDateTargets();
+testReferenceFilter();
+testTypeOrmListFilters();
 testIncludeModeUnchanged();
 testLikeOperatorsMatchTheValueLiterally();
 testExcludeModeIsTheComplement();
