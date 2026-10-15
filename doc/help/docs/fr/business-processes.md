@@ -47,7 +47,7 @@ La liste affiche tous les processus métier de votre tenant.
 - **Gérer les catégories** (Manager+) — ouvrir le dialogue de gestion des catégories.
 - **Importer CSV** (Admin) — import en masse de processus depuis un fichier CSV.
 - **Exporter CSV** (Admin) — exporter les processus que la liste affiche, ou tous les processus, en CSV.
-- **Supprimer la sélection** (Admin) — supprimer une ou plusieurs lignes sélectionnées.
+- **Supprimer la sélection** (Admin) : supprimer une ou plusieurs lignes sélectionnées. Les interfaces et les demandes liées à un processus supprimé sont conservées, sans ce lien.
 
 ---
 

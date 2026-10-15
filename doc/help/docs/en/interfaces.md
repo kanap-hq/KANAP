@@ -56,7 +56,7 @@ The Interfaces grid shows your integration registry at a glance.
 
 - **Add interface**: Create a new interface (requires `applications:manager`)
 - **Duplicate interface**: Create a copy of a selected interface (requires `applications:manager`). Select exactly one row to enable this action. A dialog lets you choose whether to copy environment bindings -- see [Copying interfaces](#copying-interfaces) below.
-- **Delete selected**: Remove selected interfaces (requires `applications:admin`). A checkbox option lets you also delete related bindings; if unchecked, interfaces with bindings will not be deleted. The message then names the interfaces deleted and those kept, with the reason.
+- **Delete selected**: Remove selected interfaces (requires `applications:admin`). Before the confirmation, the window lists the interfaces that have bindings as kept, with their count of bindings. Check **Also delete related bindings** to delete them with their bindings; their connections stay. The message then names the interfaces deleted and those kept, with the reason.
 
 ---
 
