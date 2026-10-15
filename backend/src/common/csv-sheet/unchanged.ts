@@ -84,5 +84,7 @@ export function sameStoredLifecycle(
   next: { status?: StatusState | null; disabled_at?: Date | string | null },
 ): boolean {
   if (next.disabled_at !== undefined && !sameStoredValue(stored.disabled_at ?? null, next.disabled_at)) return false;
+  // An enabled status with no date clears a stored end of validity, even one still to come.
+  if (next.status === StatusState.ENABLED && next.disabled_at === undefined && !isBlank(stored.disabled_at)) return false;
   return next.status == null || next.status === deriveStatusFromDisabledAt(stored.disabled_at ?? null);
 }
