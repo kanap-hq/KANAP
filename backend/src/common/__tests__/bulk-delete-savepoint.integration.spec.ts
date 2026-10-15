@@ -4,7 +4,6 @@ import { randomUUID } from 'node:crypto';
 import { EntityManager } from 'typeorm';
 import dataSource from '../../data-source';
 import { BulkDeleteResult } from '../delete.types';
-import { ReferenceCheckService } from '../reference-check.service';
 import { Department } from '../../departments/department.entity';
 import { DepartmentsDeleteService } from '../../departments/departments-delete.service';
 import { Company } from '../../companies/company.entity';
@@ -174,7 +173,7 @@ async function testCompaniesMixedBatch() {
       return { free, inUse, free2 };
     });
 
-    const service = new CompaniesDeleteService(dataSource.getRepository(Company), noAudit, new ReferenceCheckService());
+    const service = new CompaniesDeleteService(dataSource.getRepository(Company), noAudit);
     const result = await asRequest(tenantId, (manager) =>
       service.bulkDelete([ids.free, ids.inUse, ids.free2], null, { manager }),
     );
@@ -202,7 +201,7 @@ async function testSuppliersMixedBatch() {
       return { free, inUse, free2 };
     });
 
-    const service = new SuppliersDeleteService(dataSource.getRepository(Supplier), noAudit, new ReferenceCheckService());
+    const service = new SuppliersDeleteService(dataSource.getRepository(Supplier), noAudit);
     const result = await asRequest(tenantId, (manager) =>
       service.bulkDelete([ids.free, MALFORMED_ID, ids.inUse, ids.free2], null, { manager }),
     );

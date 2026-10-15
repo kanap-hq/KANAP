@@ -90,5 +90,7 @@
   "CSV_EMAIL_INVALID": "\"{{value}}\" is not a valid e-mail address.",
   "CSV_STATUS_DATE_PASSED": "The status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again.",
   "CSV_STATUS_DATE_FUTURE": "The status is disabled but the end of validity is still to come. Set the status to enabled or enter a date that has passed.",
-  "CSV_IMPORT_FAILED": "The import failed: {{reason}}"
+  "CSV_IMPORT_FAILED": "The import failed: {{reason}}",
+  "SUPPLIER_IN_USE": "This supplier is used by {{usages}}. Disable it instead of deleting it.",
+  "COMPANY_IN_USE": "This company is used by {{usages}}. Disable it instead of deleting it."
 }

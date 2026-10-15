@@ -163,6 +163,14 @@ Tool-specific or private notes live in each tool's local files, never here.
 - CI runs the backend and frontend suites in the cloud jobs, and builds both sides in on-premise
   mode. These jobs run in the merge queue only (see "Workflow with the maintainer"); on a PR only
   the stack order warning runs. A failing spec drops the PR from the queue.
+- Each queue run checks only what the queued changes reach (`changed files` job,
+  `.github/scripts/ci-changes.sh`): the backend suite for `backend/`, `infra/`, a Dockerfile or
+  the frontend modules the backend specs import; only the three specs that read the user manual
+  for `doc/help/docs/`; the frontend build and tests for `frontend/` and `backend/fixtures/`; the
+  on-premise builds when either suite runs. A change under `.github/` runs everything. A required
+  job that is not needed is skipped, which counts as passed. The script checks of
+  `build (onprem)` (licenses, lockfiles, release, queue scripts, docs manifest) always run. A new
+  spec that reads files outside its own tree must be added to the rules of `ci-changes.sh`.
 - The frontend check runs as a `frontend build` job and three `frontend tests (i/3)` shards in
   parallel (`vitest run --shard`, split by file); the `frontend (cloud)` job only gathers their
   results. To rerun one shard locally: `npm test -- --shard=2/3` in `frontend/`.
@@ -225,9 +233,12 @@ Every query must be scoped by `tenant_id`. This is critical for tenant isolation
 - Migrations are idempotent and self-healing: they may run on databases nobody can inspect. A
   migration that adds a constraint first repairs the rows that would violate it, deterministically
   (for example keep the earliest row by `created_at, id`), in its own transaction with RLS disabled
-  around the repair. It is rerun-safe, logs the repaired counts, and fails loudly only for data it
-  cannot repair safely. A spec runs it against a seeded dirty database
-  (precedent: `1853640000000-capex-versions-unique-year.ts`).
+  around the repair. It is rerun-safe and logs the repaired counts. A spec runs it against a
+  seeded dirty database (precedent: `1853640000000-capex-versions-unique-year.ts`).
+- A migration succeeds on its own on imperfect data: a release needs no manual step on any
+  installation. A foreign key on rows naming a missing object: delete link rows, set a nullable
+  column to NULL, and add the key `NOT VALID` on a NOT NULL column, validated once it is clean;
+  log the counts (`backend/src/common/migration-reference-keys.ts`).
 
 ## Cloud and on-premise modes
 

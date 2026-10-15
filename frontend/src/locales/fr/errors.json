@@ -90,5 +90,7 @@
   "CSV_EMAIL_INVALID": "« {{value}} » n'est pas une adresse e-mail valide.",
   "CSV_STATUS_DATE_PASSED": "Le statut est enabled mais la fin de validité est passée. Videz la date ou passez le statut à disabled. Si le fichier vient d'un ancien export, exportez à nouveau les données.",
   "CSV_STATUS_DATE_FUTURE": "Le statut est disabled mais la fin de validité est encore à venir. Passez le statut à enabled ou indiquez une date passée.",
-  "CSV_IMPORT_FAILED": "L'import a échoué : {{reason}}"
+  "CSV_IMPORT_FAILED": "L'import a échoué : {{reason}}",
+  "SUPPLIER_IN_USE": "Ce fournisseur est utilisé par {{usages}}. Désactivez-le plutôt que de le supprimer.",
+  "COMPANY_IN_USE": "Cette société est utilisée par {{usages}}. Désactivez-la plutôt que de la supprimer."
 }
