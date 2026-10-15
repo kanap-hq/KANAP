@@ -109,12 +109,11 @@
       "rootActions": "Acciones de carpeta"
     },
     "confirmations": {
-      "deleteFolder": "¿Eliminar \"{{name}}\"? Los documentos se moverán a Sin clasificar. Las carpetas con subcarpetas no se pueden eliminar."
+      "deleteFolder": "Los documentos de «{{name}}» se moverán a Sin clasificar. Esta acción no se puede deshacer."
     },
     "dialogs": {
       "createFolderTitle": "Crear carpeta",
-      "createSubfolderTitle": "Crear subcarpeta",
-      "deleteFolderTitle": "Eliminar carpeta"
+      "createSubfolderTitle": "Crear subcarpeta"
     },
     "fields": {
       "folderName": "Nombre de la carpeta",

@@ -109,12 +109,11 @@
       "rootActions": "Ordneraktionen"
     },
     "confirmations": {
-      "deleteFolder": "\"{{name}}\" löschen? Dokumente werden nach Nicht abgelegt verschoben. Ordner mit Unterordnern können nicht gelöscht werden."
+      "deleteFolder": "Dokumente in „{{name}}“ werden nach Nicht abgelegt verschoben. Dies kann nicht rückgängig gemacht werden."
     },
     "dialogs": {
       "createFolderTitle": "Ordner erstellen",
-      "createSubfolderTitle": "Unterordner erstellen",
-      "deleteFolderTitle": "Ordner löschen"
+      "createSubfolderTitle": "Unterordner erstellen"
     },
     "fields": {
       "folderName": "Ordnername",

@@ -109,12 +109,11 @@
       "rootActions": "Actions des dossiers"
     },
     "confirmations": {
-      "deleteFolder": "Supprimer \"{{name}}\" ? Les documents seront déplacés vers Non classés. Les dossiers contenant des sous-dossiers ne peuvent pas être supprimés."
+      "deleteFolder": "Les documents de « {{name}} » seront déplacés vers Non classé. Cette action est irréversible."
     },
     "dialogs": {
       "createFolderTitle": "Créer un dossier",
-      "createSubfolderTitle": "Créer un sous-dossier",
-      "deleteFolderTitle": "Supprimer le dossier"
+      "createSubfolderTitle": "Créer un sous-dossier"
     },
     "fields": {
       "folderName": "Nom du dossier",
