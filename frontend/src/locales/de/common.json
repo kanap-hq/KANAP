@@ -94,8 +94,8 @@
     "noResults": "Keine Ergebnisse",
     "noResultsFiltered": "Keine Ergebnisse für die Suche oder die Filter.",
     "clearAll": "Suche und Filter löschen",
-    "resultCount_one": "{{count}} Ergebnis",
-    "resultCount_other": "{{count}} Ergebnisse"
+    "resultCount_one": "{{count, count}} Ergebnis",
+    "resultCount_other": "{{count, count}} Ergebnisse"
   },
   "columnChooser": {
     "searchPlaceholder": "Spalten suchen",
@@ -110,7 +110,7 @@
     "disabled": "Deaktiviert",
     "invited": "Eingeladen",
     "email": "E-Mail",
-    "totalWithCount": "Gesamt ({{count}})",
+    "totalWithCount": "Gesamt ({{count, count}})",
     "noData": "Keine Daten",
     "none": "Keine",
     "year": "Jahr",

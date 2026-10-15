@@ -7,6 +7,7 @@ import {
   AG_GRID_LOCALE_FR,
 } from '@ag-grid-community/locale';
 import type { SupportedLocale } from '../../i18n';
+import { numberSeparators } from '../../i18n/formatters';
 import { useLocale } from '../../i18n/useLocale';
 
 // The official AG Grid translations, at the version of ag-grid-community.
@@ -31,7 +32,9 @@ const PACKAGE_TEXTS: Record<SupportedLocale, Record<string, string>> = {
  * - wrong words: French "rang" for a dragged row, "Pas d'épingle", "1 à 20 de 100", "Plus de ou
  *   égal à"; German "geprüft" (tested) for a checked box, "Nummer" for a number, "Filtereingang",
  *   "abzuwaehlen"; Spanish "Más o igual que".
- * Ellipses are written as one character.
+ * Ellipses are written as one character. The thousand and decimal separators AG Grid writes in the
+ * pagination ("1 à 100 sur 7 486") come from Intl, like our own counts: the package gives "," in
+ * French and Spanish.
  */
 export function useAgGridLocaleText(): Record<string, string> {
   const { i18n } = useTranslation('grid');
@@ -45,6 +48,9 @@ export function useAgGridLocaleText(): Record<string, string> {
     for (const key of Object.keys(texts)) {
       if (typeof texts[key] === 'string') texts[key] = texts[key].replace(/\.\.\./g, '…');
     }
+    const separators = numberSeparators(locale);
+    texts.thousandSeparator = separators.thousand;
+    texts.decimalSeparator = separators.decimal;
     return texts;
   }, [i18n, locale]);
 }

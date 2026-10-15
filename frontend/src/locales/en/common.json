@@ -94,8 +94,8 @@
     "noResults": "No results",
     "noResultsFiltered": "No results match the search or the filters.",
     "clearAll": "Clear search and filters",
-    "resultCount_one": "{{count}} result",
-    "resultCount_other": "{{count}} results"
+    "resultCount_one": "{{count, count}} result",
+    "resultCount_other": "{{count, count}} results"
   },
   "columnChooser": {
     "searchPlaceholder": "Search columns",
@@ -110,7 +110,7 @@
     "disabled": "Disabled",
     "invited": "Invited",
     "email": "Email",
-    "totalWithCount": "Total ({{count}})",
+    "totalWithCount": "Total ({{count, count}})",
     "noData": "No data",
     "none": "None",
     "year": "Year",

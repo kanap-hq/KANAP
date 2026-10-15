@@ -94,8 +94,8 @@
     "noResults": "Sin resultados",
     "noResultsFiltered": "Ningún resultado coincide con la búsqueda o los filtros.",
     "clearAll": "Borrar la búsqueda y los filtros",
-    "resultCount_one": "{{count}} resultado",
-    "resultCount_other": "{{count}} resultados"
+    "resultCount_one": "{{count, count}} resultado",
+    "resultCount_other": "{{count, count}} resultados"
   },
   "columnChooser": {
     "searchPlaceholder": "Buscar columnas",
@@ -110,7 +110,7 @@
     "disabled": "Desactivados",
     "invited": "Invitados",
     "email": "Correo electrónico",
-    "totalWithCount": "Total ({{count}})",
+    "totalWithCount": "Total ({{count, count}})",
     "noData": "Sin datos",
     "none": "Ninguno",
     "year": "Año",
