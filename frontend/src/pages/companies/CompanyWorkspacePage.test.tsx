@@ -210,7 +210,7 @@ describe('CompanyWorkspacePage', () => {
   it('saves a currency change on change', async () => {
     renderAt('/master-data/companies/co-1/overview');
     await screen.findByText('Acme France');
-    await pickOption('companies.fields.baseCurrency', 'US Dollar', 'US Dollar (USD)');
+    await pickOption('companies.fields.baseCurrency', 'US Dollar', 'USD · US Dollar');
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/companies/co-1', { base_currency: 'USD' }));
   });
 
@@ -255,7 +255,7 @@ describe('CompanyWorkspacePage', () => {
     fireEvent.change(screen.getByLabelText('companies.fields.name'), { target: { value: 'Acme Germany' } });
     await pickOption('companies.fields.country', 'Germ', 'Germany (DE)');
     await waitFor(() => expect(screen.getByLabelText('companies.fields.chartOfAccounts')).toHaveValue('COA-DE · German chart'));
-    await pickOption('companies.fields.baseCurrency', 'Euro', 'Euro (EUR)');
+    await pickOption('companies.fields.baseCurrency', 'Euro', 'EUR · Euro');
     fireEvent.change(screen.getByLabelText('companies.fields.city'), { target: { value: 'Berlin' } });
     fireEvent.change(screen.getByLabelText('companies.fields.vatNumber'), { target: { value: 'DE123' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
@@ -283,7 +283,7 @@ describe('CompanyWorkspacePage', () => {
     renderAt('/master-data/companies/new/overview');
     fireEvent.change(screen.getByLabelText('companies.fields.name'), { target: { value: 'Acme' } });
     await pickOption('companies.fields.country', 'Fran', 'France (FR)');
-    await pickOption('companies.fields.baseCurrency', 'Euro', 'Euro (EUR)');
+    await pickOption('companies.fields.baseCurrency', 'Euro', 'EUR · Euro');
     fireEvent.change(screen.getByLabelText('companies.fields.city'), { target: { value: 'Paris' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('Name already used.')).toBeInTheDocument();

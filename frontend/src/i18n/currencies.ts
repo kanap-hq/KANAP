@@ -29,6 +29,11 @@ export function currencyOptionsFor(locale: string): CurrencyOption[] {
   return options;
 }
 
+/** The one currency label of the app: "EUR · Euro" (the code alone when the name is unknown). */
+export function currencyLabel(option: CurrencyOption): string {
+  return option.name && option.name !== option.code ? `${option.code} · ${option.name}` : option.code;
+}
+
 export function useCurrencyOptions(): CurrencyOption[] {
   const locale = useLocale();
   return useMemo(() => currencyOptionsFor(locale), [locale]);

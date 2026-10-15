@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { currencyOptionsFor } from './currencies';
+import { currencyLabel, currencyOptionsFor } from './currencies';
 
 describe('currency names', () => {
   it('names every currency in the reader\'s language and keeps the ISO code', () => {
@@ -13,5 +13,11 @@ describe('currency names', () => {
   it('keeps the list in code order', () => {
     const codes = currencyOptionsFor('es').map((option) => option.code);
     expect(codes).toEqual([...codes].sort());
+  });
+
+  it('writes one label everywhere: the code, then the name in the reader\'s language', () => {
+    const euro = currencyOptionsFor('fr').find((option) => option.code === 'EUR')!;
+    expect(currencyLabel(euro)).toBe('EUR · Euro');
+    expect(currencyLabel({ code: 'XYZ', name: 'XYZ' })).toBe('XYZ');
   });
 });

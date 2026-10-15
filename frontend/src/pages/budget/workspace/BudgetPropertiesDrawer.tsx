@@ -11,7 +11,7 @@ import DateEUField from '../../../components/fields/DateEUField';
 import StatusLifecycleField from '../../../components/fields/StatusLifecycleField';
 import UserSelect from '../../../components/fields/UserSelect';
 import type { CurrencyOption } from '../../../constants/isoOptions';
-import { useCurrencyOptions } from '../../../i18n/currencies';
+import { currencyLabel, useCurrencyOptions } from '../../../i18n/currencies';
 import useCurrencySettings from '../../../hooks/useCurrencySettings';
 import { STATUS_ENABLED, StatusValue } from '../../../constants/status';
 import { formatShortDate } from '../../../lib/dateFormat';
@@ -204,7 +204,7 @@ export default function BudgetPropertiesDrawer({
             disableClearable
             value={currencyValue ?? undefined}
             onChange={(_e, option) => onCurrencyChange(option?.code ?? currency)}
-            getOptionLabel={(option) => `${option.code} · ${option.name}`}
+            getOptionLabel={currencyLabel}
             isOptionEqualToValue={(option, value) => option.code === value.code}
             disabled={disabled}
             renderInput={(params) => (
