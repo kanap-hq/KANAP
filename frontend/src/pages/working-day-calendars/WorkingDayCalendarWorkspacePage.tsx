@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, Button, Stack, TextField, Typography } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useTranslation } from 'react-i18next';
+import { useKanapDialogs } from '../../components/design';
 import { useAuth } from '../../auth/AuthContext';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import {
@@ -41,6 +42,7 @@ type FieldErrors = Partial<Record<WorkingDayCalendarField, string>>;
 
 export default function WorkingDayCalendarWorkspacePage() {
   const { t } = useTranslation(['master-data', 'common']);
+  const dialogs = useKanapDialogs();
   const { hasLevel } = useAuth();
   const navigate = useNavigate();
   const params = useParams();
@@ -149,6 +151,14 @@ export default function WorkingDayCalendarWorkspacePage() {
 
   const handleDelete = async () => {
     if (!data || !canDelete) return;
+    // A record page always asks first.
+    const confirmed = await dialogs.confirm({
+      title: t('common:delete.recordTitle', { name: data.name }),
+      message: t('common:delete.cannotUndo'),
+      confirmLabel: t('common:buttons.delete'),
+      intent: 'danger',
+    });
+    if (!confirmed) return;
     setDeleting(true);
     setPageError(null);
     try {

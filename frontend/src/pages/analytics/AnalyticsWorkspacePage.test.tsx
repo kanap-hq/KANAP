@@ -299,8 +299,11 @@ describe('AnalyticsWorkspacePage', () => {
     expect(screen.getByTestId('analytics-value-usage')).toHaveTextContent('analytics.usage.valueUnused');
     expect(within(screen.getByTestId('analytics-value-usage')).queryByRole('link')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
-    // Unused: deleted at once, no dialog, no force.
-    expect(screen.queryByRole('dialog')).toBeNull();
+    // Unused: a plain confirmation, then no force.
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByTestId('analytics-delete-confirmation')).toHaveTextContent('common:delete.cannotUndo');
+    expect(mocked.deleteAnalyticsValue).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:buttons.delete' }));
     await waitFor(() => expect(mocked.deleteAnalyticsValue).toHaveBeenCalledWith('v-1'));
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/analytics?axis=ax-nature'));
   });
@@ -443,7 +446,7 @@ describe('AnalyticsWorkspacePage', () => {
     expect(navigateMock).toHaveBeenLastCalledWith('/master-data/analytics?axis=ax-nature');
   });
 
-  it('refreshes the dimension counts once a value is deleted, so its Delete asks no more', async () => {
+  it('refreshes the dimension counts once a value is deleted, so its Delete no longer says a value goes too', async () => {
     levels.value = 'admin';
     // The app keeps data fresh for 30 s: only an invalidation brings the new counts.
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 30_000 } } });
@@ -465,13 +468,15 @@ describe('AnalyticsWorkspacePage', () => {
     const second = renderAt('/master-data/analytics/v-1/overview?axis=ax-nature', queryClient);
     await findTitle();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'common:buttons.delete' }));
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/analytics?axis=ax-nature'));
     second.unmount();
 
     mocked.getAnalyticsAxis.mockResolvedValue({ ...nature, value_count: 0 });
     renderAt('/master-data/analytics/dimensions/ax-nature/overview', queryClient);
     await waitFor(() => expect(screen.getByTestId('analytics-dimension-usage')).toHaveTextContent('analytics.usage.noValues'));
-    expect(screen.getByRole('button', { name: 'common:buttons.delete' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
+    expect(within(await screen.findByRole('dialog')).getByTestId('analytics-delete-confirmation')).toHaveTextContent('common:delete.cannotUndo');
   });
 
   it('drops a late delete refusal once the user has moved to another value', async () => {
@@ -484,9 +489,11 @@ describe('AnalyticsWorkspacePage', () => {
     renderAt('/master-data/analytics/v-1/overview?axis=ax-nature');
     await findTitle();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'common:buttons.delete' }));
     await waitFor(() => expect(mocked.deleteAnalyticsValue).toHaveBeenCalledWith('v-1'));
-    fireEvent.click(screen.getByRole('link', { name: 'go to v-2' }));
-    await waitFor(() => expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Hardware'));
+    // The dialog waits for the answer; the page moves on behind it (as prev / next would).
+    fireEvent.click(screen.getByRole('link', { name: 'go to v-2', hidden: true }));
+    await waitFor(() => expect(screen.getByRole('heading', { level: 1, hidden: true })).toHaveTextContent('Hardware'));
     failDelete({ response: { status: 409, data: { message: 'Licenses is used by 3 OPEX lines. Disable it instead.' } } });
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(screen.queryByText('Licenses is used by 3 OPEX lines. Disable it instead.')).toBeNull();

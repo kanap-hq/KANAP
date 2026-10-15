@@ -59,9 +59,19 @@ describe('delete confirmations', () => {
     opts ? `${key}(${Object.entries(opts).map(([name, value]) => `${name}=${value}`).join(', ')})` : key
   )) as unknown as TFunction;
 
-  it('deletes a dimension without values, or a value no line uses, without asking', () => {
-    expect(deleteConfirmation(t, { kind: 'dimension', name: 'Menu', valueCount: 0, lineCount: 0 })).toBeNull();
-    expect(deleteConfirmation(t, { kind: 'value', name: 'Dessert', lineCount: 0 })).toBeNull();
+  it('asks before deleting a dimension without values, or a value no line uses, with a plain Delete', () => {
+    expect(deleteConfirmation(t, { kind: 'dimension', name: 'Menu', valueCount: 0, lineCount: 0 })).toEqual({
+      title: 'analytics.forceDelete.title(name=Menu)',
+      body: 'common:delete.cannotUndo',
+      confirmLabel: 'common:buttons.delete',
+      force: false,
+    });
+    expect(deleteConfirmation(t, { kind: 'value', name: 'Dessert', lineCount: 0 })).toEqual({
+      title: 'analytics.forceDelete.title(name=Dessert)',
+      body: 'common:delete.cannotUndo',
+      confirmLabel: 'common:buttons.delete',
+      force: false,
+    });
   });
 
   it('says the values of a dimension no line uses go too, with a plain Delete', () => {
@@ -69,6 +79,7 @@ describe('delete confirmations', () => {
       title: 'analytics.forceDelete.title(name=Menu)',
       body: 'analytics.forceDelete.dimensionValues(count=3)',
       confirmLabel: 'common:buttons.delete',
+      force: true,
     });
   });
 
@@ -78,6 +89,7 @@ describe('delete confirmations', () => {
       body: 'analytics.forceDelete.dimensionUsed(values=analytics.forceDelete.dimensionUsedValues(count=3), '
         + 'lines=analytics.forceDelete.budgetLines(count=6))',
       confirmLabel: 'analytics.forceDelete.confirmAnyway',
+      force: true,
     });
   });
 
@@ -86,6 +98,7 @@ describe('delete confirmations', () => {
       title: 'analytics.forceDelete.title(name=Dessert)',
       body: 'analytics.forceDelete.valueUsed(count=4)',
       confirmLabel: 'analytics.forceDelete.confirmAnyway',
+      force: true,
     });
   });
 
