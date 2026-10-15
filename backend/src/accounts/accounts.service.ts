@@ -100,6 +100,27 @@ function csvAccountNumber(raw: string, column: string, row: number): { value: nu
   };
 }
 
+/** The text and choice columns an import row may set, compared as they are stored. */
+const IMPORT_COMPARED_FIELDS = [
+  'account_name',
+  'native_name',
+  'description',
+  'consolidation_account_name',
+  'consolidation_account_description',
+  'status',
+  'nature',
+] as const;
+
+/** True when every column the row carries already holds its value: re-importing it writes nothing. */
+function importRowUnchanged(existing: Account, row: AccountUpsertDto): boolean {
+  for (const field of IMPORT_COMPARED_FIELDS) {
+    const value = (row as any)[field];
+    if (value !== undefined && (value ?? null) !== ((existing as any)[field] ?? null)) return false;
+  }
+  return row.consolidation_account_number === undefined
+    || numberOrNull(row.consolidation_account_number) === numberOrNull(existing.consolidation_account_number);
+}
+
 /** A write the database refused for a number out of range: a 400, never a 500. */
 function numberOutOfRange(e: any): boolean {
   return e?.code === '22003' || e?.driverError?.code === '22003';
@@ -923,25 +944,33 @@ export class AccountsService {
     const existingByNumber = new Map(
       (await repo.find({ where: { coa_id: targetCoaId } as any })).map((account) => [String(account.account_number), account]),
     );
-    // Count inserts/updates
+    // Count inserts, updates and the rows identical to the stored account, which are not written.
     let inserted = 0;
     let updated = 0;
+    let unchanged = 0;
+    const toWrite: AccountUpsertDto[] = [];
     for (const item of unique) {
-      if (existingByNumber.has(item.account_number as string)) updated += 1; else inserted += 1;
+      const existing = existingByNumber.get(item.account_number as string);
+      if (!existing) inserted += 1;
+      else if (importRowUnchanged(existing, item)) {
+        unchanged += 1;
+        continue;
+      } else updated += 1;
+      toWrite.push(item);
     }
     if (dryRun) {
-      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
+      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, unchanged, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
     // Commit. The consolidation accounts the file refers to are read once, the audit lines of
     // the rows written in one statement at the end.
     const consolidation: ConsolidationContext = {
       chartId,
-      accounts: chartId ? await consolidationAccounts(mg, chartId, unique.map((item) => item.consolidation_account_number)) : new Map(),
+      accounts: chartId ? await consolidationAccounts(mg, chartId, toWrite.map((item) => item.consolidation_account_number)) : new Map(),
       propagate: false,
       audits: [],
     };
     let processed = 0;
-    for (const item of unique) {
+    for (const item of toWrite) {
       const existing = existingByNumber.get(item.account_number as string);
       if (existing) {
         if (opts?.updateExisting === false) {
@@ -961,6 +990,6 @@ export class AccountsService {
     if (chartId && targetCoaId === chartId) {
       await resyncFromChart(mg, chartId, { userId });
     }
-    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, processed, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
+    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, unchanged, processed, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
   }
 }

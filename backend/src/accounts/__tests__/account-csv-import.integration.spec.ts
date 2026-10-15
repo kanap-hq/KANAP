@@ -12,7 +12,8 @@ import { AccountsService } from '../accounts.service';
 //   absent column keeps what is stored on update and takes the default on create;
 // - a header refusal names only the parts that apply and carries a code the
 //   interface translates;
-// - the row refusals carry codes too, with the value they are about.
+// - the row refusals carry codes too, with the value they are about;
+// - a row identical to the stored account counts as unchanged and writes nothing.
 
 async function inRolledBackTransaction(fn: (runner: QueryRunner) => Promise<void>) {
   const runner = dataSource.createQueryRunner();
@@ -165,11 +166,45 @@ async function testRowCodes() {
   });
 }
 
+async function testIdenticalRowsUnchanged() {
+  await inRolledBackTransaction(async (runner) => {
+    const { tenantId, chartId } = await seedTenant(runner);
+    const [kept] = await runner.query(
+      `INSERT INTO accounts (tenant_id, coa_id, account_number, account_name, native_name, description,
+                             consolidation_account_number, consolidation_account_name, nature, status, disabled_at)
+       VALUES ($1, $2, 6156100, 'Maintenance', 'Entretien', 'Kept description', 6150, 'Kept consolidation', 'opex', 'disabled', '2020-01-01T00:00:00Z')
+       RETURNING id`,
+      [tenantId, chartId],
+    );
+    await runner.query(
+      `INSERT INTO accounts (tenant_id, coa_id, account_number, account_name, status) VALUES ($1, $2, 6156200, 'Repairs', 'enabled')`,
+      [tenantId, chartId],
+    );
+    const accounts = service();
+    const opts = { manager: runner.manager, targetCoaId: chartId };
+    const upload = file([
+      'account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;nature;status',
+      '6156100;Maintenance;Entretien;Kept description;6150;Kept consolidation;;opex;disabled',
+      '6156200;Repairs renamed;;;;;;;enabled',
+    ]);
+
+    const check: any = await accounts.importCsv({ file: upload, dryRun: true, language: 'en' }, opts);
+    assert.equal(check.ok, true, JSON.stringify(check.errors));
+    assert.deepEqual([check.inserted, check.updated, check.unchanged], [0, 1, 1]);
+
+    const load: any = await accounts.importCsv({ file: upload, dryRun: false, language: 'en' }, opts);
+    assert.equal(load.ok, true, JSON.stringify(load.errors));
+    assert.deepEqual([load.inserted, load.updated, load.unchanged], [0, 1, 1]);
+    const [audits] = await runner.query(`SELECT count(*)::int AS n FROM audit_log WHERE record_id = $1`, [kept.id]);
+    assert.equal(audits.n, 0, 'the unchanged account is not written');
+  });
+}
+
 async function main() {
   await dataSource.initialize();
   const failures: string[] = [];
   try {
-    for (const test of [testOptionalColumns, testHeaderRefusal, testRowCodes]) {
+    for (const test of [testOptionalColumns, testHeaderRefusal, testRowCodes, testIdenticalRowsUnchanged]) {
       try {
         await test();
         console.log(`ok - ${test.name}`);
