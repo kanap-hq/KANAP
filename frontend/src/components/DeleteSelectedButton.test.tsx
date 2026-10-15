@@ -107,9 +107,44 @@ describe('DeleteSelectedButton', () => {
   it('shows the reason of each failed item when the others are deleted', async () => {
     vi.mocked(api.delete).mockResolvedValue({ data: { deleted: ['a'], failed: [{ id: 'b', name: 'Frozen', reason: FROZEN }] } } as any);
     const { onDeleteSuccess } = renderButton();
-    const message = await screen.findByText(/delete\.partial/);
+    const message = await screen.findByText(/delete\.partialDeleted/);
+    expect(message).toHaveTextContent('delete.partialDeleted {"count":1}');
+    expect(message).toHaveTextContent('delete.partialFailed {"count":1');
     expect(message).toHaveTextContent(`Frozen: ${FROZEN}`);
     await waitFor(() => expect(onDeleteSuccess).toHaveBeenCalled());
+  });
+
+  it('words a refusal that carries a code, with its count', async () => {
+    vi.mocked(api.delete).mockResolvedValue({
+      data: { deleted: [], failed: [{ id: 'b', name: 'Audited', reason: 'raw', code: 'CONTRACT_HAS_COMPLIANCE_RECORDS', count: 3 }] },
+    } as any);
+    renderButton();
+    const message = await screen.findByText(/delete\.failedAll/);
+    expect(message).toHaveTextContent('Audited: errors:CONTRACT_HAS_COMPLIANCE_RECORDS');
+    expect(message).toHaveTextContent('\\"count\\":3');
+  });
+
+  it('counts the selection in the title and shows the warning it is given', async () => {
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <DeleteSelectedButton<Row>
+          selectedRows={[rows[0]]}
+          endpoint="/contracts/bulk"
+          getItemId={(row) => row.id}
+          getItemName={(row) => row.name}
+          onDeleteSuccess={vi.fn()}
+          warning="This contract is linked to nothing."
+        />
+      </ThemeProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /buttons.deleteSelected/ }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('delete.deleteSelectedTitle {"count":1}');
+    expect(dialog).toHaveTextContent('delete.itemsToDelete {"count":1}');
+    expect(dialog).toHaveTextContent('This contract is linked to nothing.');
+    expect(dialog).not.toHaveTextContent('delete.warningMessage');
+    // No "Delete anyway": nothing goes besides the item.
+    expect(screen.getByRole('button', { name: 'buttons.delete' })).toBeInTheDocument();
   });
 
   it('shows the reasons when every item fails', async () => {

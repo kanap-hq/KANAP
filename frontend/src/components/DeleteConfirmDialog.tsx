@@ -69,7 +69,7 @@ export default function DeleteConfirmDialog({
       cancelLabel={t('buttons.cancel')}
     >
       <Alert severity="warning" sx={{ mb: 2 }}>
-        {warning ?? t('delete.warningMessage')}
+        {warning ?? t('delete.warningMessage', { count: itemCount })}
       </Alert>
 
       {message && (
@@ -79,9 +79,7 @@ export default function DeleteConfirmDialog({
       )}
 
       <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-        {itemCount === 1
-          ? t('delete.singleItem')
-          : t('delete.multipleItems', { count: itemCount })}
+        {t('delete.itemsToDelete', { count: itemCount })}
       </Typography>
 
       {displayItems.length > 0 && (

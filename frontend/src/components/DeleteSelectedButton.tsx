@@ -32,6 +32,8 @@ export interface DeleteSelectedButtonProps<T> {
     confirmLabel: string;
     apiKey?: string;
   };
+  /** The dialog's warning for these items when nothing else goes with them (in place of the generic one). */
+  warning?: string;
 }
 
 export default function DeleteSelectedButton<T>({
@@ -45,6 +47,7 @@ export default function DeleteSelectedButton<T>({
   label,
   cascadeOption,
   forceOption,
+  warning,
 }: DeleteSelectedButtonProps<T>) {
   const { t } = useTranslation('common');
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -87,10 +90,18 @@ export default function DeleteSelectedButton<T>({
         });
       } else {
         // Each failed item with its reason (for example a frozen budget column), all failed or not.
-        const reasons = failed.map((f: any) => `${f.productName || f.name || f.description || 'Item'}: ${f.reason}`).join('; ');
+        // A refusal with a code is worded in the screen language (`errors:<code>`, with its count).
+        const reasonOf = (f: any) => (f.code
+          ? t(`errors:${f.code}`, { defaultValue: f.reason, ...(typeof f.count === 'number' ? { count: f.count } : {}) })
+          : f.reason);
+        const reasons = failed.map((f: any) => `${f.productName || f.name || f.description || 'Item'}: ${reasonOf(f)}`).join('; ');
         setSnackbar(deleted.length === 0
           ? { open: true, message: t('delete.failedAll', { reasons }), severity: 'error' }
-          : { open: true, message: t('delete.partial', { deleted: deleted.length, failed: failed.length, reasons }), severity: 'warning' });
+          : {
+            open: true,
+            message: `${t('delete.partialDeleted', { count: deleted.length })} ${t('delete.partialFailed', { count: failed.length, reasons })}`,
+            severity: 'warning',
+          });
       }
 
       setConfirmOpen(false);
@@ -142,8 +153,8 @@ export default function DeleteSelectedButton<T>({
         open={confirmOpen}
         onClose={handleCloseConfirm}
         onConfirm={handleConfirmDelete}
-        title={t('delete.deleteSelectedTitle')}
-        warning={forceOption?.message}
+        title={t('delete.deleteSelectedTitle', { count: selectedRows.length })}
+        warning={forceOption?.message ?? warning}
         confirmLabel={forceOption?.confirmLabel}
         itemCount={selectedRows.length}
         items={items}

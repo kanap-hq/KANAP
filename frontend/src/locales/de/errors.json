@@ -84,5 +84,7 @@
   "CSV_CRITERION_UNKNOWN": "Unbekanntes Kriterium {{criterion}}.",
   "CSV_CRITERION_VALUE_UNKNOWN": "Das Kriterium {{criterion}} hat keinen Wert {{value}}.",
   "CSV_DUPLICATE_KEY": "Gleiche Werte in {{columns}} wie in Zeile {{firstRow}}.",
-  "CSV_IMPORT_FAILED": "Der Import ist fehlgeschlagen: {{reason}}"
+  "CSV_IMPORT_FAILED": "Der Import ist fehlgeschlagen: {{reason}}",
+  "CONTRACT_HAS_COMPLIANCE_RECORDS_one": "Dieser Vertrag hat {{count}} erfasste Konformitätsanforderung. Deaktivieren Sie ihn, statt ihn zu löschen.",
+  "CONTRACT_HAS_COMPLIANCE_RECORDS_other": "Dieser Vertrag hat {{count}} erfasste Konformitätsanforderungen. Deaktivieren Sie ihn, statt ihn zu löschen."
 }
