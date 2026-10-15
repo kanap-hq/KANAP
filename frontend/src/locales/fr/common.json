@@ -228,7 +228,13 @@
       "documents_one": "{{count}} document",
       "documents_other": "{{count}} documents",
       "sub_folders_one": "{{count}} sous-dossier",
-      "sub_folders_other": "{{count}} sous-dossiers"
+      "sub_folders_other": "{{count}} sous-dossiers",
+      "app_instances_one": "{{count}} déploiement",
+      "app_instances_other": "{{count}} déploiements",
+      "incidents_one": "{{count}} incident",
+      "incidents_other": "{{count}} incidents",
+      "subnets_one": "{{count}} sous-réseau",
+      "subnets_other": "{{count}} sous-réseaux"
     }
   },
   "messages": {

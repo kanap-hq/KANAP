@@ -52,6 +52,26 @@ describe('getApiErrorMessage', () => {
     expect(getApiErrorMessage(frozen, i18n.getFixedT('fr'), 'fallback')).toMatch(/^Cette ligne a des montants dans Budget 2026/);
   });
 
+  it('words a settings save that removes a value records still use', () => {
+    const inUse = {
+      response: {
+        status: 409,
+        data: { code: 'CATALOG_VALUE_IN_USE', message: 'English', usages: [{ type: 'applications', total: 2 }, { type: 'app_instances', total: 1 }], params: { value: 'Analytics' } },
+      },
+    };
+    expect(getApiErrorMessage(inUse, t, 'fallback')).toBe(
+      '"Analytics" is still used by 2 applications and 1 deployment. Mark it as no longer offered instead of removing it.',
+    );
+    expect(getApiErrorMessage(inUse, i18n.getFixedT('fr'), 'fallback')).toBe(
+      '« Analytics » est encore utilisée par 2 applications et 1 déploiement. Cochez « Ne plus proposer » au lieu de la supprimer.',
+    );
+    for (const lang of ['de', 'es']) {
+      const text = getApiErrorMessage(inUse, i18n.getFixedT(lang), 'fallback');
+      expect(text, lang).toContain('Analytics');
+      expect(text, lang).not.toBe('English');
+    }
+  });
+
   it('keeps the server message without a code, then the fallback', () => {
     expect(getApiErrorMessage({ response: { status: 500, data: { message: 'Server said' } } }, t, 'fallback')).toBe('Server said');
     expect(getApiErrorMessage({}, t, 'fallback')).toBe('fallback');

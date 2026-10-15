@@ -228,7 +228,13 @@
       "documents_one": "{{count}} documento",
       "documents_other": "{{count}} documentos",
       "sub_folders_one": "{{count}} subcarpeta",
-      "sub_folders_other": "{{count}} subcarpetas"
+      "sub_folders_other": "{{count}} subcarpetas",
+      "app_instances_one": "{{count}} despliegue",
+      "app_instances_other": "{{count}} despliegues",
+      "incidents_one": "{{count}} incidente",
+      "incidents_other": "{{count}} incidentes",
+      "subnets_one": "{{count}} subred",
+      "subnets_other": "{{count}} subredes"
     }
   },
   "messages": {

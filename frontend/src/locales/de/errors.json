@@ -103,6 +103,7 @@
   "ACCOUNT_IN_USE": "Dieses Konto wird noch verwendet: {{usages}}. Deaktivieren Sie es, statt es zu löschen.",
   "CHART_OF_ACCOUNTS_IN_USE": "Dieser Kontenplan wird noch verwendet: {{usages}}. Ordnen Sie diese zuerst einem anderen Kontenplan zu.",
   "RECORD_IN_USE": "Andere Datensätze verwenden dieses Element noch. Deaktivieren Sie es, statt es zu löschen.",
+  "CATALOG_VALUE_IN_USE": "„{{value}}“ wird noch von {{usages}} verwendet. Markieren Sie den Wert als „Nicht mehr anbieten“, statt ihn zu entfernen.",
   "ANALYTICS_VALUE_IN_USE": "Dieser Wert wird noch verwendet: {{usages}}. Deaktivieren Sie ihn, oder löschen Sie ihn trotzdem auf seiner Seite: Die Zeilen verlieren ihn.",
   "ANALYTICS_DIMENSION_HAS_VALUES": "Diese Dimension enthält noch {{usages}}. Löschen Sie diese zuerst, oder löschen Sie die Dimension mit ihren Werten auf ihrer Seite.",
   "ANALYTICS_DEFAULT_DIMENSION": "Diese Dimension kann nicht gelöscht werden: Ältere Dateien und KI-Fragen verwenden sie. Deaktivieren Sie stattdessen ihre Werte.",
