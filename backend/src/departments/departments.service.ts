@@ -25,6 +25,8 @@ import {
   DecimalMark,
   endOfValidityCell,
   endOfValidityOf,
+  ImportReportError,
+  nameMatchedWarning,
   readMasterDataFile,
   rowProblems,
   writeCsv,
@@ -591,6 +593,7 @@ export class DepartmentsService {
     };
     // Validate and normalize rows
     const normalized: Array<DepartmentUpsertDto & { company_id: string; name: string; lifecycle: { status: StatusState | null; disabled_at: string | null } }> = [];
+    const lineOf = new Map<object, number>();
     for (const row of read.rows) {
       const line = row.line;
       const problems = rowProblems(row, ['disabled_at']);
@@ -630,12 +633,14 @@ export class DepartmentsService {
         const comp = await findCompanyByName(company_name);
         if (!comp) errors.push({ row: line, message: `Unknown company '${company_name}'` });
         else {
-          normalized.push({
+          const item = {
             company_id: comp.id,
             name,
             description: cellOf(row, 'description') || null,
             lifecycle: { status: statusValue, disabled_at: disabled_at_iso },
-          });
+          };
+          normalized.push(item);
+          lineOf.set(item, line);
         }
       }
     }
@@ -654,8 +659,16 @@ export class DepartmentsService {
     let updated = 0;
     let unchanged = 0;
     const toWrite: Array<{ item: (typeof unique)[number]; existing: Department | null }> = [];
-    for (const item of unique) {
-      const existing = await repo.findOne({ where: { company_id: item.company_id as string, name: item.name as string } });
+    // A row matches the company's department of the same name whatever its case ("FINANCE" updates
+    // "Finance"): the stored spelling stays, and the report says which department the row matched.
+    const warnings: ImportReportError[] = [];
+    for (const fileItem of unique) {
+      const existing = await repo.createQueryBuilder('d')
+        .where('d.company_id = :companyId AND lower(d.name) = lower(:name)', { companyId: fileItem.company_id, name: fileItem.name })
+        .getOne();
+      const warning = existing ? nameMatchedWarning(lineOf.get(fileItem) ?? 0, 'name', fileItem.name, existing.name) : null;
+      if (warning) warnings.push(warning);
+      const item = existing ? { ...fileItem, name: existing.name } : fileItem;
       const { lifecycle, ...values } = item;
       if (!existing) inserted += 1;
       else if (
@@ -668,7 +681,7 @@ export class DepartmentsService {
       toWrite.push({ item, existing });
     }
     if (dryRun) {
-      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, unchanged, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
+      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, unchanged, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
     // Commit
     let processed = 0;
@@ -684,6 +697,6 @@ export class DepartmentsService {
         if (saved) processed += 1;
       }
     }
-    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, unchanged, processed, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
+    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, unchanged, processed, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
   }
 }

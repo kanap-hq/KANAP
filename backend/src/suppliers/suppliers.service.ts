@@ -22,6 +22,7 @@ import {
   endOfValidityCell,
   endOfValidityOf,
   ImportReportError,
+  nameMatchedWarning,
   readMasterDataFile,
   rowProblems,
   writeCsv,
@@ -385,6 +386,7 @@ export class SuppliersService {
     let inserted = 0;
     let updated = 0;
     const normalized: Array<{
+      line: number;
       body: SupplierUpsertDto;
       commercial_email: string | null;
       technical_email: string | null;
@@ -464,6 +466,7 @@ export class SuppliersService {
         } else contactCells.push({ row: line, column, email });
       }
       normalized.push({
+        line,
         body,
         commercial_email: emails.commercial_contact,
         technical_email: emails.technical_contact,
@@ -486,26 +489,27 @@ export class SuppliersService {
     if (errors.length > 0) {
       return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors, ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
-    // Deduplicate identical suppliers (same content) and then determine inserts/updates by name match
-    const uniqueMap = new Map<string, { body: SupplierUpsertDto; commercial_email: string | null; technical_email: string | null; support_email: string | null }>();
-    for (const item of normalized) {
-      const key = JSON.stringify(item.body);
-      if (!uniqueMap.has(key)) uniqueMap.set(key, item);
-    }
-    const unique = Array.from(uniqueMap.values());
+    // One row per supplier name (a second one is refused above).
+    const unique = normalized;
 
     const repo = this.getRepo(opts?.manager);
     const mg = opts?.manager ?? repo.manager;
     const contactRepo = mg.getRepository(ExternalContact);
     const linkRepo = mg.getRepository(SupplierContactLink);
-    // A row matches the supplier of the same name whatever its case ("sap" updates "SAP").
+    // A row matches the supplier of the same name whatever its case ("sap" updates "SAP"). The
+    // stored spelling stays, and the report says which supplier the row matched.
     const existingByName = new Map<string, Supplier>();
+    const warnings: ImportReportError[] = [];
     for (const item of unique) {
       const name = item.body.name as string;
       const existing = await repo.createQueryBuilder(SORT_ALIAS)
         .where(`${SORT_ALIAS}.tenant_id = app_current_tenant() AND lower(${SORT_ALIAS}.name) = lower(:name)`, { name })
         .getOne();
-      if (existing) existingByName.set(name, existing);
+      if (!existing) continue;
+      const warning = nameMatchedWarning(item.line, 'name', name, existing.name);
+      if (warning) warnings.push(warning);
+      item.body = { ...item.body, name: existing.name };
+      existingByName.set(existing.name, existing);
     }
     // The contact links of the matched suppliers, as `${supplierId}:${role}:${email}`: the import only adds links.
     const storedLinks = new Set<string>();
@@ -540,7 +544,7 @@ export class SuppliersService {
       toWrite.push(item);
     }
     if (dryRun) {
-      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, unchanged, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
+      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, unchanged, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
     // Commit changes
     let processed = 0;
@@ -567,7 +571,7 @@ export class SuppliersService {
         if (saved) processed += 1;
       }
     }
-    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, unchanged, processed, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
+    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, unchanged, processed, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
   }
 
   /** The tenant's contacts among these e-mails (lowercase), by e-mail. */

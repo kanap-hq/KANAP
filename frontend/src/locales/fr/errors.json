@@ -85,6 +85,7 @@
   "CSV_CRITERION_UNKNOWN": "Critère {{criterion}} inconnu.",
   "CSV_CRITERION_VALUE_UNKNOWN": "Le critère {{criterion}} n'a pas de valeur {{value}}.",
   "CSV_DUPLICATE_KEY": "Mêmes valeurs dans {{columns}} qu'à la ligne {{firstRow}}.",
+  "CSV_NAME_MATCHED_CASE": "« {{name}} » a été rapproché de « {{stored}} ».",
   "CSV_SUPPLIER_NAME_DUPLICATE": "« {{name}} » figure déjà à la ligne {{firstRow}}. Gardez une seule ligne par fournisseur.",
   "CSV_CONTACT_NOT_FOUND": "Contact introuvable : {{email}}. Créez-le d'abord dans Contacts.",
   "CSV_EMAIL_INVALID": "« {{value}} » n'est pas une adresse e-mail valide.",

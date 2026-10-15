@@ -8,7 +8,9 @@ import {
   DecimalMark,
   endOfValidityCell,
   endOfValidityOf,
+  ImportReportError,
   MasterDataFileRead,
+  nameMatchedWarning,
   readMasterDataFile,
   rowProblems,
   writeCsv,
@@ -50,6 +52,8 @@ export interface AnalyticsValueImportResult {
   updated: number;
   unchanged: number;
   errors: Array<{ row: number; message: string }>;
+  /** Rows that import, with a note: a name matched a stored value written in another case. */
+  warnings?: ImportReportError[];
   /** The unknown headers the file carried, and what the shared layer noticed. */
   ignoredColumns: string[];
   notices: { dates: string | null; amounts: string | null };
@@ -153,6 +157,8 @@ export class AnalyticsCategoriesCsvService {
 
     const errors: AnalyticsValueImportResult['errors'] = [];
     const parsedRows: ParsedRow[] = [];
+    // Rows whose name matched a stored value written in another case.
+    const warnings: ImportReportError[] = [];
     const lineByKey = new Map<string, number>();
     rows.forEach((raw) => {
       // The physical line Excel shows, blank lines included.
@@ -251,6 +257,8 @@ export class AnalyticsCategoriesCsvService {
         errors.push({ row: line, message: `${analyticsAxisSubject(disabledAxis)} is disabled. Enable it or leave it out.` });
         return;
       }
+      const matched = existing && name ? nameMatchedWarning(line, 'name', name, existing.name) : null;
+      if (matched) warnings.push(matched);
       parsedRows.push({ line, existing, axisName, values });
     });
     if (errors.length > 0) return failed([...errors].sort((a, b) => a.row - b.row), rows.length);
@@ -284,7 +292,7 @@ export class AnalyticsCategoriesCsvService {
         await this.categories.persist(ctx, row.existing, row.values, { name: row.axisName });
       }
     }
-    return { ok: true, dryRun, total: rows.length, inserted, updated, unchanged, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
+    return { ok: true, dryRun, total: rows.length, inserted, updated, unchanged, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
   }
 
   private parseFile(

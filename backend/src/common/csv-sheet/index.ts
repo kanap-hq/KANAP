@@ -9,6 +9,7 @@ export {
   endOfValidityOf,
   headerMismatchError,
   invalidEndOfValidity,
+  nameMatchedWarning,
   readMasterDataFile,
   rowProblems,
 } from './master-data';

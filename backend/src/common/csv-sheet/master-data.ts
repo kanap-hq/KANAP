@@ -161,3 +161,19 @@ export function endOfValidityCell(value: Date | string | null | undefined, langu
   if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return formatCsvDate(text, language);
   return formatCsvEndOfValidity(text, language);
 }
+
+/**
+ * The warning of a row whose name matched a stored record written in another case ("sap" when
+ * "SAP" exists): the row updates that record and the stored spelling stays. Null when the
+ * spellings are the same.
+ */
+export function nameMatchedWarning(row: number, column: string, fileName: string, storedName: string): ImportReportError | null {
+  if (fileName === storedName) return null;
+  return {
+    row,
+    column,
+    message: `'${fileName}' was matched to '${storedName}'.`,
+    code: 'CSV_NAME_MATCHED_CASE',
+    params: { name: fileName, stored: storedName },
+  };
+}

@@ -85,6 +85,7 @@
   "CSV_CRITERION_UNKNOWN": "Criterio {{criterion}} desconocido.",
   "CSV_CRITERION_VALUE_UNKNOWN": "El criterio {{criterion}} no tiene el valor {{value}}.",
   "CSV_DUPLICATE_KEY": "Mismos valores en {{columns}} que en la fila {{firstRow}}.",
+  "CSV_NAME_MATCHED_CASE": "«{{name}}» se ha asociado a «{{stored}}».",
   "CSV_SUPPLIER_NAME_DUPLICATE": "«{{name}}» ya figura en la fila {{firstRow}}. Deje una sola fila por proveedor.",
   "CSV_CONTACT_NOT_FOUND": "Contacto no encontrado: {{email}}. Créelo primero en Contactos.",
   "CSV_EMAIL_INVALID": "«{{value}}» no es una dirección de correo electrónico válida.",
