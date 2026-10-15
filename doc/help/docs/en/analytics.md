@@ -221,7 +221,7 @@ While the setting is on, lines under the switch help you complete the existing l
 
 The **Delete** button in the header deletes the dimension with its values (requires `analytics:admin`):
 
-- A dimension without values is deleted at once.
+- A dimension without values asks first ("This cannot be undone."), then **Delete**.
 - A dimension whose values no line uses asks first, for example "Delete Recurrence?" with "Its 2 values are deleted too.", then **Delete**.
 - A dimension used by budget lines asks first, with the number of lines: "Its 3 values are deleted, and it is removed from 6 budget lines. This data cannot be recovered." Click **Delete anyway** to go on. The lines lose their value on this dimension, and their history records the change.
 
@@ -250,7 +250,7 @@ Changes save on their own, as in the dimension workspace. A name refused in the 
 - **One list per dimension**: names are unique within a dimension, regardless of case. Two dimensions can each have a value called "Other". A duplicate is refused, for example "A value named Software already exists in Cost pool."
 - **A value stays in its dimension**: the dimension is set when the value is created and cannot change. To move a value, create it in the other dimension, change the lines, then delete the old value.
 - **Renaming keeps the lines**: lines point to the value itself, so the new name shows at once in lists and reports.
-- **Deleting**: the **Delete** button in the header deletes a value no line uses at once (requires `analytics:admin`). When budget lines use the value, it asks first: "It is removed from 4 budget lines. This data cannot be recovered." Click **Delete anyway** to go on, or disable the value instead to keep it on the lines.
+- **Deleting**: the **Delete** button in the header deletes a value no line uses after a confirmation ("This cannot be undone.", then **Delete**; requires `analytics:admin`). When budget lines use the value, it asks first: "It is removed from 4 budget lines. This data cannot be recovered." Click **Delete anyway** to go on, or disable the value instead to keep it on the lines.
 
 ### Ordering values
 

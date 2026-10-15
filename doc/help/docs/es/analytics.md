@@ -221,7 +221,7 @@ Mientras el ajuste está activado, unas líneas bajo el interruptor le ayudan a 
 
 El botón **Eliminar** del encabezado elimina la dimensión con sus valores (requiere `analytics:admin`):
 
-- Una dimensión sin valores se elimina de inmediato.
+- Una dimensión sin valores pregunta primero («Esta acción no se puede deshacer.»), luego **Eliminar**.
 - Una dimensión cuyos valores no usa ninguna línea pregunta primero, por ejemplo «¿Eliminar Recurrencia?» con «También se eliminan sus 2 valores.», y luego **Eliminar**.
 - Una dimensión que usan líneas de presupuesto pregunta primero, con el número de líneas: «Se eliminan sus 3 valores, y se quita de 6 líneas presupuestarias. Estos datos no se pueden recuperar.» Haga clic en **Eliminar de todos modos** para seguir. Las líneas pierden su valor en esta dimensión, y su historial registra el cambio.
 
@@ -250,7 +250,7 @@ Los cambios se guardan por sí solos, como en el espacio de trabajo de la dimens
 - **Una lista por dimensión**: los nombres son únicos dentro de una dimensión, sin distinguir mayúsculas y minúsculas. Dos dimensiones pueden tener cada una un valor llamado "Other". Un duplicado se rechaza, por ejemplo "A value named Software already exists in Tipo de coste."
 - **Un valor se queda en su dimensión**: la dimensión se fija al crear el valor y no puede cambiar. Para mover un valor, créelo en la otra dimensión, cambie las líneas y después elimine el valor antiguo.
 - **Cambiar el nombre conserva las líneas**: las líneas apuntan al propio valor, de modo que el nuevo nombre aparece de inmediato en las listas y los informes.
-- **Eliminar**: el botón **Eliminar** del encabezado elimina de inmediato un valor que ninguna línea usa (requiere `analytics:admin`). Cuando hay líneas de presupuesto que usan el valor, pregunta primero: «Se quita de 4 líneas presupuestarias. Estos datos no se pueden recuperar.» Haga clic en **Eliminar de todos modos** para seguir, o desactive el valor para conservarlo en las líneas.
+- **Eliminar**: el botón **Eliminar** del encabezado elimina un valor que ninguna línea usa tras una confirmación («Esta acción no se puede deshacer.», luego **Eliminar**; requiere `analytics:admin`). Cuando hay líneas de presupuesto que usan el valor, pregunta primero: «Se quita de 4 líneas presupuestarias. Estos datos no se pueden recuperar.» Haga clic en **Eliminar de todos modos** para seguir, o desactive el valor para conservarlo en las líneas.
 
 ### Ordenar los valores
 

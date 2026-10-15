@@ -104,6 +104,14 @@ export class SuppliersController {
     );
   }
 
+  // What a delete of `ids` would refuse, asked before the confirmation.
+  @UseGuards(PermissionGuard)
+  @RequireLevel('suppliers', 'admin')
+  @Post('delete-check')
+  deleteCheck(@Body() body: { ids: string[] }, @Req() req: any) {
+    return this.deleteSvc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], { manager: req?.queryRunner?.manager });
+  }
+
   @UseGuards(PermissionGuard)
   @RequireLevel('suppliers', 'admin')
   @Delete('bulk')

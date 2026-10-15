@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
+import { KanapDialogProvider } from '../../components/design';
 import type { CostCenterDetail } from '../../services/costCenters';
 
 const navigateMock = vi.hoisted(() => vi.fn());
@@ -91,12 +92,14 @@ function renderAt(path: string) {
   return render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={createAppTheme('light')}>
+        <KanapDialogProvider>
         <MemoryRouter initialEntries={[path]}>
           <Link to="/master-data/cost-centers/cc-2/overview">go to cc-2</Link>
           <Routes>
             <Route path="/master-data/cost-centers/:id/:tab" element={<CostCenterWorkspacePage />} />
           </Routes>
         </MemoryRouter>
+        </KanapDialogProvider>
       </ThemeProvider>
     </QueryClientProvider>,
   );
@@ -210,6 +213,11 @@ describe('CostCenterWorkspacePage', () => {
     renderAt('/master-data/cost-centers/cc-1/overview');
     await screen.findByLabelText('costCenters.fields.code');
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
+    // A record page always asks first.
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('common:delete.cannotUndo');
+    expect(mocked.deleteCostCenter).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:buttons.delete' }));
     expect(await screen.findByText('IT-300 is used by 3 OPEX lines and 1 CAPEX line. Disable it instead.')).toBeInTheDocument();
     expect(navigateMock).not.toHaveBeenCalled();
   });

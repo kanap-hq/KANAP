@@ -175,6 +175,12 @@
       "headcountInvalid": "Introduzca un número entero, 0 o más.",
       "itUsersInvalid": "Introduzca un número entero, 0 o más, o deje el campo vacío.",
       "turnoverInvalid": "Introduzca un número, 0 o más, con 3 decimales como máximo, o deje el campo vacío."
+    },
+    "delete": {
+      "toDelete_one": "Se eliminará {{count}} empresa:",
+      "toDelete_other": "Se eliminarán {{count}} empresas:",
+      "kept_one": "{{count}} empresa sigue en uso y se conserva. Desactívela en su lugar:",
+      "kept_other": "{{count}} empresas siguen en uso y se conservan. Desactívelas en su lugar:"
     }
   },
   "departments": {
@@ -430,7 +436,13 @@
       "createFailed": "Error al crear el proveedor."
     },
     "previous": "Proveedor anterior",
-    "next": "Proveedor siguiente"
+    "next": "Proveedor siguiente",
+    "delete": {
+      "toDelete_one": "Se eliminará {{count}} proveedor:",
+      "toDelete_other": "Se eliminarán {{count}} proveedores:",
+      "kept_one": "{{count}} proveedor sigue en uso y se conserva. Desactívelo en su lugar:",
+      "kept_other": "{{count}} proveedores siguen en uso y se conservan. Desactívelos en su lugar:"
+    }
   },
   "contacts": {
     "title": "Contactos",

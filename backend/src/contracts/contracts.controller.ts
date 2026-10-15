@@ -20,6 +20,7 @@ import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-ti
 import { canReadContractBudget } from './contract-budget';
 import { languageOf } from '../common/csv-sheet';
 import type { ComplianceItemPatch } from './contract-compliance';
+import { ContractsDeleteService } from './contracts-delete.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('contracts')
@@ -28,6 +29,7 @@ export class ContractsController {
     private readonly svc: ContractsService,
     private readonly storage: StorageService,
     private readonly contactsSvc: ContractContactsService,
+    private readonly deleteSvc: ContractsDeleteService,
   ) {}
 
   @UseGuards(PermissionGuard)
@@ -105,6 +107,29 @@ export class ContractsController {
   @Patch('attachments/:attachmentId/delete')
   deleteAttachment(@Param('attachmentId') attachmentId: string, @Req() req: any) {
     return this.svc.deleteAttachment(attachmentId, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+  }
+
+  // What deleting the given contracts removes, for the confirmation; before ':id'.
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'admin')
+  @Post('delete-impact')
+  deleteImpact(@Body() body: { ids: string[] }, @Req() req: any) {
+    return this.deleteSvc.deleteImpact(Array.isArray(body?.ids) ? body.ids : [], { manager: req?.queryRunner?.manager });
+  }
+
+  // Bulk delete before ':id'.
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'admin')
+  @Delete('bulk')
+  bulkDelete(@Body() body: { ids: string[] }, @Req() req: any) {
+    return this.deleteSvc.bulkDelete(Array.isArray(body?.ids) ? body.ids : [], req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'admin')
+  @Delete(':id')
+  delete(@Param('id') id: string, @Req() req: any) {
+    return this.deleteSvc.delete(id, { manager: req?.queryRunner?.manager, userId: req.user?.sub ?? null });
   }
 
   @UseGuards(PermissionGuard)

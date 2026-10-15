@@ -107,6 +107,7 @@ Die unten angeheftete Zeile lautet **Gesamt (n Verträge)**. Sie summiert die Ja
 - **CSV importieren** und **CSV exportieren**: siehe [CSV-Import und -Export](#csv-import-und-export) (`contracts:admin`)
 - **Register exportieren**: das Konformitätsregister der Verträge, die die Liste zeigt (`contracts:admin`). Siehe [Konformität](#konformitat)
 - **Einstellungen**: der Entscheidungszeitraum des Arbeitsbereichs (`contracts:admin`). Siehe [Entscheidungszeitraum](#entscheidungszeitraum)
+- **Löschen**: die angehakten Verträge löschen (`contracts:admin`). Siehe [Einen Vertrag löschen](#einen-vertrag-loschen)
 
 ---
 
@@ -214,6 +215,17 @@ Das Verknüpfen oder Entfernen einer Anwendung oder eines Assets unter **Verknü
 - **Anhänge**: eine Liste von Dateien. Nutzen Sie **Dateien hinzufügen** oder ziehen Sie Dateien auf den Abschnitt. Klicken Sie auf eine Datei, um sie herunterzuladen
 
 Budgetzeilen werden im Reiter [Budget](#budget) verknüpft.
+
+### Einen Vertrag löschen
+
+**Löschen** in der Kopfzeile der Vertragsseite, oder in der Liste für die angehakten Verträge, löscht Verträge (`contracts:admin`). Dies kann nicht rückgängig gemacht werden.
+
+- Die Verknüpfungen werden entfernt, die verknüpften Elemente bleiben erhalten: Budgetzeilen, Anwendungen, Assets (auch die, deren Supportvertrag er ist) und Kontakte verlieren ihre Verknüpfung mit dem Vertrag
+- Was zum Vertrag gehört, wird mit ihm gelöscht: seine Aufgaben (auch die Aufgabe zur Verlängerungsentscheidung), relevanten Websites und Anhänge
+- Ein Vertrag mit erfassten Konformitätsanforderungen (ein Status, auch **Nicht zutreffend**, oder eine Referenz) kann nicht gelöscht werden: KANAP nennt ihre Anzahl und schlägt vor, ihn stattdessen zu deaktivieren. In der Liste nennt die Bestätigung die erhaltenen Verträge mit ihrer Anzahl, bevor etwas gelöscht wird; die übrigen werden gelöscht
+- Zuerst kommt immer eine Bestätigung. Sie zählt, was seine Verknüpfung verliert und was ebenfalls gelöscht wird, oder sagt, dass der Vertrag mit nichts verknüpft ist
+
+Um einen Vertrag nicht mehr zu nutzen und seinen Verlauf zu behalten, deaktivieren Sie ihn stattdessen.
 
 ---
 

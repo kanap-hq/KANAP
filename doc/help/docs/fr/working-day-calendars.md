@@ -160,7 +160,7 @@ Désactivez un calendrier lorsqu'il ne doit plus être utilisé, par exemple apr
 
 ## Supprimer
 
-Le bouton **Supprimer** de l'en-tête supprime le calendrier immédiatement (nécessite `working_day_profiles:admin`). Il est désactivé, avec la raison sur une ligne, tant que des lignes budgétaires utilisent le calendrier, par exemple « Utilisé par 3 lignes OPEX et 1 ligne CAPEX. Désactivez-le plutôt. »
+Le bouton **Supprimer** de l'en-tête supprime le calendrier après une confirmation (nécessite `working_day_profiles:admin`). Il est désactivé, avec la raison sur une ligne, tant que des lignes budgétaires utilisent le calendrier, par exemple « Utilisé par 3 lignes OPEX et 1 ligne CAPEX. Désactivez-le plutôt. »
 
 La même règle s'applique à **Supprimer la sélection** dans la liste : un calendrier utilisé par des lignes budgétaires est conservé, avec une raison comme « Personnel du siège is used by 3 OPEX lines and 1 CAPEX line. Disable it instead. »
 

@@ -18,6 +18,11 @@ function usageList(usages: NonNullable<DeleteFailure['usages']>, t: TFunction, l
   return joinNames(parts, language);
 }
 
+/** What makes the delete of an item refused, counted: "2 contracts and 1 application". */
+export function refusalCounts(failure: DeleteFailure, t: TFunction, language: string): string {
+  return usageList(failure.usages ?? [], t, language);
+}
+
 /** Why an item was not deleted, in the interface language when the server gave a code. */
 export function deleteFailureReason(failure: DeleteFailure, t: TFunction, language: string): string {
   const reason = failure.reason ?? '';

@@ -8,6 +8,7 @@ import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
 import { useAuth } from '../auth/AuthContext';
 import DeleteSelectedButton from '../components/DeleteSelectedButton';
+import { recordsInUseCheck } from '../utils/deleteCheck';
 import { LinkCellRenderer } from '../components/grid/renderers';
 import { useLocale } from '../i18n/useLocale';
 import { formatShortDateTime } from '../lib/dateFormat';
@@ -124,6 +125,12 @@ export default function SuppliersPage() {
           getItemId={(row) => row.id}
           getItemName={(row) => row.name}
           gridApi={gridApiRef.current}
+          // Asked on click: those still in use are kept, with what uses them.
+          checkDelete={(ids) => recordsInUseCheck('/suppliers', ids)}
+          itemLabels={{
+            toDelete: (count) => t('suppliers.delete.toDelete', { count }),
+            kept: (count) => t('suppliers.delete.kept', { count }),
+          }}
           onDeleteSuccess={() => { setRefreshKey((k) => k + 1); }}
         />
       )}

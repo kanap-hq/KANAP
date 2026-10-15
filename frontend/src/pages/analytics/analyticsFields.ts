@@ -65,29 +65,33 @@ export function linesUsageText(t: TFunction, kind: 'dimension' | 'value', lineCo
     : t(`analytics.usage.${kind}Unused`);
 }
 
-/** What a delete confirmation says: its title, its body and the label of its main action. */
-export type DeleteConfirmation = { title: string; body: string; confirmLabel: string };
+/**
+ * What a delete confirmation says: its title, its body and the label of its main action.
+ * `force`: the delete removes dependants too, and says so to the API.
+ */
+export type DeleteConfirmation = { title: string; body: string; confirmLabel: string; force: boolean };
 
 /**
- * The confirmation of a delete, or null when it needs none (nothing depends on the target).
- * A dimension with values: "Its 3 values are deleted too." (Delete). A dimension or a value used by
+ * The confirmation of a delete; a record page always asks. Nothing depends on the target: "This
+ * cannot be undone." (Delete). A dimension with values: "Its 3 values are deleted too." (Delete). A dimension or a value used by
  * budget lines: what the lines lose, "This data cannot be recovered." (Delete anyway). `name` is the
  * name the screen shows; `lineCount` the distinct lines using it (`usedLineCount`).
  */
 export function deleteConfirmation(
   t: TFunction,
   target: { kind: 'dimension'; name: string; valueCount: number; lineCount: number } | { kind: 'value'; name: string; lineCount: number },
-): DeleteConfirmation | null {
+): DeleteConfirmation {
   const title = t('analytics.forceDelete.title', { name: target.name });
   const anyway = t('analytics.forceDelete.confirmAnyway');
+  const plain = { title, body: t('common:delete.cannotUndo'), confirmLabel: t('common:buttons.delete'), force: false };
   if (target.kind === 'value') {
     return target.lineCount > 0
-      ? { title, body: t('analytics.forceDelete.valueUsed', { count: target.lineCount }), confirmLabel: anyway }
-      : null;
+      ? { title, body: t('analytics.forceDelete.valueUsed', { count: target.lineCount }), confirmLabel: anyway, force: true }
+      : plain;
   }
-  if (target.valueCount <= 0) return null;
+  if (target.valueCount <= 0) return plain;
   if (target.lineCount <= 0) {
-    return { title, body: t('analytics.forceDelete.dimensionValues', { count: target.valueCount }), confirmLabel: t('common:buttons.delete') };
+    return { title, body: t('analytics.forceDelete.dimensionValues', { count: target.valueCount }), confirmLabel: t('common:buttons.delete'), force: true };
   }
   return {
     title,
@@ -96,6 +100,7 @@ export function deleteConfirmation(
       lines: t('analytics.forceDelete.budgetLines', { count: target.lineCount }),
     }),
     confirmLabel: anyway,
+    force: true,
   };
 }
 
