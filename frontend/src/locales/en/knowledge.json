@@ -142,7 +142,7 @@
   },
   "menus": {
     "blankDocument": "Blank document",
-    "fromTemplate": "From template..."
+    "fromTemplate": "From template…"
   },
   "messages": {
     "documentMoved": "Document moved.",

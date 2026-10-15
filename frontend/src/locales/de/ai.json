@@ -11,7 +11,7 @@
     "newChat": "Neue Konversation",
     "noMatch": "Keine Konversation passt",
     "rename": "Umbenennen",
-    "search": "Konversationen durchsuchen...",
+    "search": "Konversationen durchsuchen…",
     "untitled": "Ohne Titel"
   },
   "errors": {
@@ -26,7 +26,7 @@
     "dropHint": "Bild zum Anhängen ablegen",
     "hintEnter": "Eingabe zum Senden",
     "hintShiftEnter": "Umschalt+Eingabe für neue Zeile",
-    "placeholder": "Fragen Sie Plaid zu Ihren KANAP-Daten...",
+    "placeholder": "Fragen Sie Plaid zu Ihren KANAP-Daten…",
     "removeAttachment": "Anhang entfernen",
     "send": "Senden",
     "stop": "Generierung stoppen"
@@ -46,7 +46,7 @@
     "toolCallStreaming": "{{name}} wird aufgerufen…",
     "toolUseCount_one": "{{count}} Tool verwendet",
     "toolUseCount_other": "{{count}} Tools verwendet",
-    "toolUseProgress": "Tools werden verwendet...",
+    "toolUseProgress": "Tools werden verwendet…",
     "userRole": "Sie"
   },
   "activity": {
@@ -144,7 +144,7 @@
   },
   "mention": {
     "noResults": "Keine Treffer",
-    "searching": "Suche...",
+    "searching": "Suche…",
     "entityTypes": {
       "knowledge": "Wissen",
       "tasks": "Aufgaben",

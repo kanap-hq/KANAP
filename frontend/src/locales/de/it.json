@@ -140,7 +140,7 @@
       "duplicateDescription": "Eine Kopie von \"{{name}}\" erstellen.",
       "copyEnvBindings": "Umgebungs-Bindungen kopieren",
       "copyEnvBindingsDescription": "Instanzverbindungen werden beibehalten, aber umgebungsspezifische Details (Endpoints, Authentifizierung, Job-Namen) werden gelöscht.",
-      "duplicating": "Wird dupliziert...",
+      "duplicating": "Wird dupliziert…",
       "duplicate": "Duplizieren",
       "columns": {
         "interfaceId": "Schnittstellen-ID",
@@ -348,9 +348,9 @@
       "actions": {
         "syncNow": "Jetzt synchronisieren",
         "nextBatch": "Nächsten Stapel prüfen",
-        "preparing": "Vorschau wird vorbereitet...",
+        "preparing": "Vorschau wird vorbereitet…",
         "openSettings": "Integrationseinstellungen öffnen",
-        "linkTo": "Verknüpfen mit...",
+        "linkTo": "Verknüpfen mit…",
         "createAsset": "Neues Asset anlegen",
         "ignore": "Ignorieren",
         "stopIgnoring": "Nicht mehr ignorieren",
@@ -447,7 +447,7 @@
           "assets_one": "{{count}} Asset",
           "assets_other": "{{count}} Assets"
         },
-        "updating": "Vorschau wird aktualisiert...",
+        "updating": "Vorschau wird aktualisiert…",
         "filterLabel": "Liste filtern",
         "filterPlaceholder": "z. B. par-esx",
         "candidates": "Vorschläge:",
@@ -469,8 +469,8 @@
         },
         "menu": {
           "linkToCandidate": "Mit {{name}} verknüpfen",
-          "linkToExisting": "Mit einem vorhandenen Asset verknüpfen...",
-          "linkToAnother": "Mit einem anderen Asset verknüpfen...",
+          "linkToExisting": "Mit einem vorhandenen Asset verknüpfen…",
+          "linkToAnother": "Mit einem anderen Asset verknüpfen…",
           "createNew": "Neues Asset anlegen",
           "createInstead": "Stattdessen ein neues Asset anlegen",
           "ignore": "Dieses Objekt nicht importieren",
@@ -479,7 +479,7 @@
         "picker": {
           "label": "Asset suchen",
           "placeholder": "z. B. par-esx-01",
-          "searching": "Suche läuft...",
+          "searching": "Suche läuft…",
           "noResults": "Kein Asset gefunden."
         },
         "hints": {
@@ -793,7 +793,7 @@
         "retiredDate": "Außerbetriebnahmedatum",
         "licensing": "Lizenzierung",
         "notes": "Notizen",
-        "descriptionPlaceholder": "Fügen Sie eine Beschreibung für diese Anwendung hinzu...",
+        "descriptionPlaceholder": "Fügen Sie eine Beschreibung für diese Anwendung hinzu…",
         "connections": "Verbindungen",
         "connectedTo": "Verbunden mit",
         "receivesFrom": "Empfängt von",
@@ -844,7 +844,7 @@
         "noSupportContacts": "Keine Support-Kontakte.",
         "unnamedContact": "Unbenannter Kontakt",
         "removeContact": "{{name}} entfernen",
-        "supportNotesPlaceholder": "Support-Notizen hinzufügen...",
+        "supportNotesPlaceholder": "Support-Notizen hinzufügen…",
         "newSupportContact": "Neuer Support-Kontakt"
       },
       "interfaces": {
@@ -1158,7 +1158,7 @@
         "resetLayers": "Schichten zurücksetzen",
         "addLayer": "Schicht hinzufügen",
         "saveLayers": "Schichten speichern",
-        "saving": "Wird gespeichert...",
+        "saving": "Wird gespeichert…",
         "saveFirst": "Speichern Sie zuerst die Verbindung, um Schichten hinzuzufügen.",
         "noLayers": "Noch keine Schichten. Fügen Sie Reverse Proxys, Firewalls oder Hops als Abschnitte hinzu (max. 3).",
         "layer": "Schicht {{index}}",
@@ -1166,7 +1166,7 @@
         "order": "Reihenfolge",
         "orderHelp": "1 = erster Hop, bis zu 3",
         "layerName": "Name",
-        "layerNamePlaceholder": "direct, reverse_proxy, firewall...",
+        "layerNamePlaceholder": "direct, reverse_proxy, firewall…",
         "source": "Quelle",
         "destination": "Ziel",
         "entityOrServer": "Entität oder Server",
@@ -1191,7 +1191,7 @@
       },
       "interfaces": {
         "title": "Zugehörige Schnittstellen",
-        "loadingLinked": "Verknüpfte Schnittstellen werden geladen...",
+        "loadingLinked": "Verknüpfte Schnittstellen werden geladen…",
         "noLinked": "Noch keine Schnittstellen-Bindungen verknüpft.",
         "interface": "Schnittstelle",
         "environment": "Umgebung",
@@ -1401,7 +1401,7 @@
       "bindingsHint": "Bindungen verbinden Schnittstellenabschnitte mit Bereitstellungen. Umgebungsspezifische Details werden gelöscht.",
       "suitesNotCopied": "Hinweis: Suites und Anhänge werden nicht kopiert.",
       "selectInterfaces": "Wählen Sie Schnittstellen zur Migration in die neue Version. Ausgewählte Schnittstellen werden dupliziert und mit der neuen Version verknüpft.",
-      "loadingInterfaces": "Schnittstellen werden geladen...",
+      "loadingInterfaces": "Schnittstellen werden geladen…",
       "noInterfaces": "Keine Schnittstellen für diese Anwendung gefunden.",
       "selectAll": "Alle auswählen",
       "deselectAll": "Alle abwählen",
@@ -1592,7 +1592,7 @@
     "remove": "Entfernen",
     "search": "Suchen",
     "actions": "Aktionen",
-    "loading": "Wird geladen...",
+    "loading": "Wird geladen…",
     "name": "Name",
     "user": "Benutzer",
     "lastName": "Nachname",
