@@ -36,6 +36,8 @@ import { screenLanguage } from '../components/csv/readings';
 import { downloadBlob, extractFilenameFromDisposition } from '../utils/downloadBlob';
 import { getApiErrorMessage } from '../utils/apiErrorMessage';
 import ContractSettingsDialog from './contracts/ContractSettingsDialog';
+import DeleteSelectedButton from '../components/DeleteSelectedButton';
+import { contractDeleteImpactText, fetchContractDeleteImpact } from './contracts/contractDelete';
 
 /** The states of a contract's terms, computed by the API (`backend/src/contracts/contract-terms.ts`). */
 const TERM_STATES = ['to_decide', 'in_progress', 'renewed', 'ending', 'expired'] as const;
@@ -314,6 +316,7 @@ export default function ContractsPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [registerError, setRegisterError] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [selectedRows, setSelectedRows] = useState<ContractRow[]>([]);
   const lastQueryRef = useRef<{ sort: string; q: string; filters: any; statusScope?: StatusScope } | null>(null);
   const gridApiRef = useRef<any>(null);
   // The request the grid shows (search, filters, status scope), which the footer and the quick filter follow.
@@ -339,6 +342,16 @@ export default function ContractsPage() {
       return res.data;
     },
   });
+
+  // What deleting the selection removes, counted for its confirmation (administrators only).
+  const canDelete = hasLevel('contracts', 'admin');
+  const selectedIds = useMemo(() => selectedRows.map((row) => row.id).sort(), [selectedRows]);
+  const deleteImpact = useQuery({
+    queryKey: ['contract-delete-impact', selectedIds],
+    enabled: canDelete && selectedIds.length > 0,
+    queryFn: () => fetchContractDeleteImpact(selectedIds),
+  });
+  const deleteImpactText = deleteImpact.data && selectedIds.length > 0 ? contractDeleteImpactText(t, locale, deleteImpact.data) : null;
 
   const handleNew = () => {
     const sp = new URLSearchParams(searchParams);
@@ -536,6 +549,19 @@ export default function ContractsPage() {
       {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('contracts.exportCsv')}</Button>}
       {canAdmin && <Button variant="action" onClick={() => { void exportRegister(); }}>{t('contracts.compliance.exportRegister')}</Button>}
       {canAdmin && <Button variant="action" onClick={() => setSettingsOpen(true)}>{t('contracts.renewal.settings.button')}</Button>}
+      {canAdmin && (
+        <DeleteSelectedButton
+          selectedRows={selectedRows}
+          endpoint="/contracts/bulk"
+          getItemId={(row) => row.id}
+          getItemName={(row) => row.name}
+          gridApi={gridApiRef.current}
+          onDeleteSuccess={() => setRefreshKey((k) => k + 1)}
+          // The counts come first: the confirmation says what loses its link and what goes too.
+          disabled={deleteImpact.isFetching}
+          forceOption={deleteImpactText ? { message: deleteImpactText, confirmLabel: t('contracts.delete.confirmAnyway') } : undefined}
+        />
+      )}
     </Stack>
   );
 
@@ -604,6 +630,8 @@ export default function ContractsPage() {
         toolbarExtras={quickFilter}
         pinnedBottomRowData={pinnedTotals}
         onGridApiReady={(api) => { gridApiRef.current = api; }}
+        enableRowSelection={canAdmin}
+        onSelectionChanged={setSelectedRows}
         onQueryStateChange={(state) => {
           const filters = state.filterModel || {};
           const statusScope = state.statusScope ?? 'enabled';

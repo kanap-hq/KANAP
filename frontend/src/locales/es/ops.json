@@ -385,6 +385,32 @@
     }
   },
   "contracts": {
+    "delete": {
+      "title": "¿Eliminar {{name}}?",
+      "detached": "Se quitan estos vínculos: {{items}}. Los elementos vinculados se conservan.",
+      "removed": "También se eliminan: {{items}}.",
+      "cannotUndo": "Esta acción no se puede deshacer.",
+      "confirmAnyway": "Eliminar de todos modos",
+      "failed": "No se pudo eliminar el contrato.",
+      "kinds": {
+        "budgetLines_one": "{{count}} línea presupuestaria",
+        "budgetLines_other": "{{count}} líneas presupuestarias",
+        "applications_one": "{{count}} aplicación",
+        "applications_other": "{{count}} aplicaciones",
+        "assets_one": "{{count}} activo",
+        "assets_other": "{{count}} activos",
+        "contacts_one": "{{count}} contacto",
+        "contacts_other": "{{count}} contactos",
+        "tasks_one": "{{count}} tarea",
+        "tasks_other": "{{count}} tareas",
+        "links_one": "{{count}} enlace web",
+        "links_other": "{{count}} enlaces web",
+        "attachments_one": "{{count}} adjunto",
+        "attachments_other": "{{count}} adjuntos",
+        "complianceItems_one": "{{count}} requisito registrado",
+        "complianceItems_other": "{{count}} requisitos registrados"
+      }
+    },
     "title": "Contratos",
     "newButton": "Nuevo",
     "importCsv": "Importar CSV",
