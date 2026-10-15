@@ -1176,7 +1176,7 @@
       "invitePartialFail_other": "{{count}} Benutzer eingeladen; {{failed}} fehlgeschlagen",
       "inviteFailed": "Ausgewählte Benutzer konnten nicht eingeladen werden",
       "disableConfirm": "{{name}} verliert den Zugriff und wird sofort abgemeldet. Dieses Konto deaktivieren?",
-      "deleteConfirm": "{{name}} löschen? Dies kann nicht rückgängig gemacht werden. Wenn der Benutzer von anderen Datensätzen referenziert wird, deaktivieren Sie stattdessen das Konto.",
+      "deleteConfirm": "{{name}} löschen? Dies kann nicht rückgängig gemacht werden.",
       "inviteSentOne": "Einladung an {{email}} gesendet",
       "resetSent": "E-Mail zum Zurücksetzen des Passworts an {{email}} gesendet",
       "rolesSaveFailed": "Der Benutzer wurde gespeichert, aber die Rollen konnten nicht aktualisiert werden. Öffnen Sie den Benutzer erneut und versuchen Sie es noch einmal.",

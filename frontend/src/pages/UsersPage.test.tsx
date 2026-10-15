@@ -51,4 +51,15 @@ describe('UsersPage delete', () => {
     expect(String(props.itemLabels.kept(1))).toBe('users.delete.kept');
     expect(String(props.itemLabels.deleted(2))).toBe('users.delete.deleted');
   });
+
+  it('confirms a row delete without promising a refusal the delete cannot make', async () => {
+    // One's own account is the only refusal (asked first, with its own window): no foreign key can
+    // refuse a user delete, so the confirmation says nothing about referenced users.
+    for (const lang of ['en', 'fr', 'de', 'es']) {
+      const admin = (await import(`../locales/${lang}/admin.json`)).default as any;
+      const text: string = admin.users.messages.deleteConfirm;
+      expect(text, lang).toContain('{{name}}');
+      expect(text, lang).not.toMatch(/referen|désactiv|deaktivier|desactiv|disable/i);
+    }
+  });
 });

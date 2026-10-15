@@ -188,6 +188,29 @@ async function testUsers() {
   });
 }
 
+// The users delete-check reports one's own account only: no foreign key can refuse a user delete.
+// Every key to `users`, directly or through a cascade, cascades or sets a nullable column to null.
+// A new RESTRICT or NO ACTION key (or SET NULL on a NOT NULL column) fails here: the delete-check
+// and the users list's confirmation text must then learn that refusal.
+async function testNoForeignKeyRefusesAUserDelete() {
+  const blocking: Array<{ parent: string; child: string; column: string }> = await dataSource.query(
+    `WITH RECURSIVE casc(rel) AS (
+       SELECT 'users'::regclass
+       UNION
+       SELECT c.conrelid::regclass FROM pg_constraint c JOIN casc ON c.confrelid = casc.rel
+        WHERE c.contype = 'f' AND c.confdeltype = 'c'
+     )
+     SELECT casc.rel::text AS parent, c.conrelid::regclass::text AS child, a.attname AS column
+       FROM casc
+       JOIN pg_constraint c ON c.confrelid = casc.rel AND c.contype = 'f'
+       JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY (c.conkey)
+      WHERE c.confdeltype IN ('a', 'r')
+         OR (c.confdeltype IN ('n', 'd') AND a.attnotnull)
+      ORDER BY 1, 2, 3`,
+  );
+  assert.deepEqual(blocking, [], 'a foreign key can refuse a user delete: report it in the users delete-check');
+}
+
 async function testAccountsAndCharts() {
   await withRollback(async (runner, t) => {
     const accounts = new AccountsDeleteService(runner.manager.getRepository(Account), noAudit, new ReferenceCheckService());
@@ -284,7 +307,7 @@ async function testDepartments() {
 async function run() {
   await dataSource.initialize();
   try {
-    for (const test of [testAssets, testCostCenters, testCalendars, testUsers, testAccountsAndCharts, testDepartments]) {
+    for (const test of [testAssets, testCostCenters, testCalendars, testUsers, testNoForeignKeyRefusesAUserDelete, testAccountsAndCharts, testDepartments]) {
       await test();
       console.log(`  ok ${test.name}`);
     }
