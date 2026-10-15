@@ -2,7 +2,8 @@ import { BadRequestException, Injectable, InternalServerErrorException, NotFound
 import { randomUUID } from 'node:crypto';
 import { EntityManager } from 'typeorm';
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
-import { parsePagination } from '../common/pagination';
+import { parseExportPagination, parsePagination } from '../common/pagination';
+import { compareText } from '../common/list-sort';
 import { isActiveAt, parseEndOfValidityInput, resolveLifecycleState, StatusState } from '../common/status';
 import { COST_CENTER_KINDS, CostCenterKind } from './cost-center.entity';
 import { CostCenterTreeNode, loadCostCenterTree } from './cost-center-tree.util';
@@ -330,7 +331,7 @@ function passesFilter(value: unknown, raw: any): boolean {
 
 function compareValues(a: unknown, b: unknown): number {
   if (typeof a === 'number' && typeof b === 'number') return a - b;
-  return String(a).localeCompare(String(b), 'en', { numeric: true, sensitivity: 'base' });
+  return compareText(String(a), String(b));
 }
 
 // ----------------------------------------------------------------- service ----
@@ -358,6 +359,11 @@ export class CostCentersService {
     const parsed = parsePagination(query, { field: 'path', direction: 'ASC' });
     const rows = await this.listRows(query, parsed, ctx);
     return { items: rows.slice(parsed.skip, parsed.skip + parsed.limit), total: rows.length, page: parsed.page, limit: parsed.limit };
+  }
+
+  /** Every row of the list for a query (its search, filters, scope and sort), for the CSV export. */
+  async listAll(query: any, ctx: CostCenterContext) {
+    return this.listRows(query, parseExportPagination(query, { field: 'path', direction: 'ASC' }), ctx);
   }
 
   async listIds(query: any, ctx: CostCenterContext): Promise<{ ids: string[]; total: number }> {

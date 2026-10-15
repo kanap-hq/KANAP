@@ -1,11 +1,14 @@
 import { BadRequestException, Inject, Injectable, NotFoundException, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Brackets, EntityManager, In, Repository } from 'typeorm';
+import { Brackets, EntityManager, In, Repository, SelectQueryBuilder } from 'typeorm';
 import { ExternalContact } from './external-contact.entity';
 import { SupplierContactLink, SupplierContactRole } from './supplier-contact.entity';
 import { Supplier } from '../suppliers/supplier.entity';
 import { SupplierContactsContext, SupplierContactsService } from '../suppliers/supplier-contacts.service';
-import { buildWhereFromAgFilters, parsePagination } from '../common/pagination';
+import { buildWhereFromAgFilters, parseExportPagination, parsePagination } from '../common/pagination';
+import { orderListQuery } from '../common/list-sort';
+
+const CONTACT_TEXT_SORTS = new Set(['last_name', 'first_name', 'email', 'country', 'supplier_name']);
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { format } from '@fast-csv/format';
 import { parseString } from '@fast-csv/parse';
@@ -122,9 +125,9 @@ export class ContactsService {
     return anyLink?.role ?? null;
   }
 
-  async list(query: any, opts: TenantOpts) {
+  async list(query: any, opts: TenantOpts & { exportAll?: boolean }) {
     const repo = this.getRepo(opts.manager);
-    const { page, limit, skip, sort, q, filters } = parsePagination(query);
+    const { page, limit, skip, sort, q, filters } = opts.exportAll ? parseExportPagination(query) : parsePagination(query);
     assertSetFilterModes(filters);
     const allowedSortFields = [
       'last_name', 'first_name', 'email', 'country', 'active', 'created_at', 'updated_at', 'supplier_name'
@@ -193,14 +196,19 @@ export class ContactsService {
       ));
     }
 
-    const orderField = allowedSortFields.includes(sort.field) ? sort.field : 'created_at';
-    if (orderField === 'supplier_name') qb.orderBy('s.name', sort.direction as any);
-    else qb.orderBy(`c.${orderField}`, sort.direction as any);
+    await this.orderList(qb, allowedSortFields, sort);
 
     qb.skip(skip).take(limit);
     const [items, total] = await qb.getManyAndCount();
     const withSupplier = items.map(({ supplier, ...rest }) => ({ ...rest, supplier_name: supplier?.name ?? null }));
     return { items: withSupplier, total, page, limit };
+  }
+
+  /** The list order: text columns alphabetically, then the id. */
+  private async orderList(qb: SelectQueryBuilder<ExternalContact>, allowed: string[], sort: { field: string; direction: string }) {
+    const field = allowed.includes(sort.field) ? sort.field : 'created_at';
+    const expr = field === 'supplier_name' ? 's.name' : `c.${field}`;
+    await orderListQuery(qb, expr, sort.direction, { text: CONTACT_TEXT_SORTS.has(field), idExpr: 'c.id' });
   }
 
   async listIds(query: any, opts: TenantOpts): Promise<{ ids: string[]; total: number }> {
@@ -274,9 +282,7 @@ export class ContactsService {
       ));
     }
 
-    const orderField = allowedSortFields.includes(sort.field) ? sort.field : 'created_at';
-    if (orderField === 'supplier_name') qb.orderBy('s.name', sort.direction as any);
-    else qb.orderBy(`c.${orderField}`, sort.direction as any);
+    await this.orderList(qb, allowedSortFields, sort);
 
     const total = await qb.clone().getCount();
     const limit = Math.min(Math.max(Number(query?.limit) || 10000, 1), 10000);
@@ -461,13 +467,16 @@ export class ContactsService {
     ];
   }
 
-  async exportCsv(scope: 'template' | 'data', opts: TenantOpts): Promise<{ filename: string; content: string }> {
+  async exportCsv(scope: 'template' | 'data', opts: TenantOpts & { listQuery?: Record<string, unknown> }): Promise<{ filename: string; content: string }> {
     const repo = this.getRepo(opts.manager);
     const headers = this.csvHeaders();
     const delimiter = ';';
     const rows: any[] = [];
     if (scope === 'data') {
-      const items = await repo.find({ where: { tenant_id: opts.tenantId }, order: { created_at: 'DESC' as any } });
+      // What the list shows (its search, filters and sort), or the whole register, newest first.
+      const items: ExternalContact[] = opts.listQuery
+        ? (await this.list(opts.listQuery, { ...opts, exportAll: true })).items as any
+        : await repo.find({ where: { tenant_id: opts.tenantId }, order: { created_at: 'DESC' as any, id: 'ASC' as any } });
       for (const c of items) {
         rows.push({
           first_name: c.first_name ?? '',

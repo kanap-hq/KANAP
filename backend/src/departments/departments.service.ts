@@ -1,9 +1,13 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Brackets, EntityManager, Repository } from 'typeorm';
+import { Brackets, EntityManager, Repository, SelectQueryBuilder } from 'typeorm';
 import { Department } from './department.entity';
 import { sameStoredLifecycle, sameStoredValues } from '../common/csv-sheet/unchanged';
-import { parseExportPagination, parsePagination } from '../common/pagination';
+import { parseExportPagination, parsePagination, type Sort } from '../common/pagination';
+import { orderListQuery } from '../common/list-sort';
+
+const DEPARTMENT_SORT_COLUMNS = new Set(['id', 'company_id', 'name', 'description', 'status', 'created_at', 'updated_at']);
+const DEPARTMENT_TEXT_SORTS = new Set(['name', 'description']);
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { Company } from '../companies/company.entity';
 import * as fs from 'fs';
@@ -178,29 +182,7 @@ export class DepartmentsService {
     applyQuickSearch(qb);
     applyCompiledFilters(qb);
 
-    // Sorting: prefer real department columns; if sorting by derived metrics (when year provided), order by selected alias
-    const allowedDeptFields = ['id','company_id','name','description','status','created_at','updated_at'];
-    const sortField = sort.field;
-    const direction: 'ASC' | 'DESC' = sort.direction as any;
-    if (allowedDeptFields.includes(sortField)) {
-      qb.orderBy(`d.${sortField}`, direction);
-    } else if (sortField === 'company_name') {
-      qb.addOrderBy('company_name', direction);
-    } else if (year) {
-      const metricMap: Record<string, string> = {
-        headcount_year: 'metrics_headcount',
-        metrics_frozen: 'metrics_is_frozen',
-      };
-      const alias = metricMap[sortField];
-      if (alias) {
-        const nullsPlacement = direction === 'DESC' ? 'NULLS LAST' : 'NULLS FIRST';
-        qb.addOrderBy(alias, direction, nullsPlacement);
-      } else {
-        qb.orderBy('d.name', 'ASC');
-      }
-    } else {
-      qb.orderBy('d.name', 'ASC');
-    }
+    await this.orderList(qb, sort, !!year, { company_name: 'c.name', headcount_year: 'm.headcount', metrics_frozen: 'm.is_frozen' });
     qb.skip(skip).take(limit);
 
     if (year) {
@@ -331,6 +313,24 @@ export class DepartmentsService {
     return saved;
   }
 
+  /**
+   * The list order: a department column, the company name, or a metric of the year (blanks
+   * first ascending); text columns alphabetically; the name by default; then the id.
+   */
+  private async orderList(qb: SelectQueryBuilder<Department>, sort: Sort, withYear: boolean, derived: Record<'company_name' | 'headcount_year' | 'metrics_frozen', string>) {
+    const field = String(sort.field);
+    const direction = String(sort.direction).toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
+    if (DEPARTMENT_SORT_COLUMNS.has(field)) {
+      await orderListQuery(qb, `d.${field}`, direction, { text: DEPARTMENT_TEXT_SORTS.has(field), idExpr: 'd.id' });
+    } else if (field === 'company_name') {
+      await orderListQuery(qb, derived.company_name, direction, { text: true, idExpr: 'd.id' });
+    } else if (withYear && (field === 'headcount_year' || field === 'metrics_frozen')) {
+      await orderListQuery(qb, derived[field], direction, { text: false, idExpr: 'd.id', nulls: direction === 'DESC' ? 'NULLS LAST' : 'NULLS FIRST' });
+    } else {
+      await orderListQuery(qb, 'd.name', 'ASC', { text: true, idExpr: 'd.id' });
+    }
+  }
+
   async listIds(query: any, opts?: { manager?: EntityManager }): Promise<{ ids: string[]; total: number }> {
     const repo = this.getRepo(opts?.manager);
     const parsed = parsePagination({ ...query, page: 1, limit: query?.limit ?? 10000 });
@@ -434,24 +434,7 @@ export class DepartmentsService {
     }
     compiledFilters.forEach((cond) => qb.andWhere(cond.sql, cond.params));
 
-    // Sorting: prefer real department/company columns; if sorting by derived metrics (when year provided), use aliases
-    const allowedFields = ['id','name','description','status','created_at','updated_at','company_name'];
-    const sortField = sort.field;
-    const direction: 'ASC' | 'DESC' = sort.direction as any;
-    if (allowedFields.includes(sortField)) {
-      if (sortField === 'company_name') qb.orderBy('c.name', direction);
-      else qb.orderBy(`d.${sortField}`, direction);
-    } else if (year) {
-      const metricMap: Record<string, string> = {
-        headcount_year: 'headcount_sort',
-        metrics_frozen: 'is_frozen_sort',
-      };
-      const alias = metricMap[sortField];
-      if (alias) qb.addOrderBy(alias, direction);
-      else qb.orderBy('d.name', 'ASC');
-    } else {
-      qb.orderBy('d.name', 'ASC');
-    }
+    await this.orderList(qb, sort, !!year, { company_name: 'c.name', headcount_year: 'm.headcount', metrics_frozen: 'm.is_frozen' });
 
     const total = await qb.clone().getCount();
     const limit = Math.min(Number(query?.limit) || 10000, 10000);
@@ -512,12 +495,24 @@ export class DepartmentsService {
 
   async exportCsv(
     scope: 'template' | 'data' = 'data',
-    opts?: { manager?: EntityManager; language?: CsvLanguage },
+    opts?: { manager?: EntityManager; language?: CsvLanguage; listQuery?: Record<string, unknown> },
   ): Promise<{ filename: string; content: string }> {
     const language = opts?.language ?? 'en';
     const headers = this.csvHeaders();
     const rows: string[][] = [];
-    if (scope === 'data') {
+    if (scope === 'data' && opts?.listQuery) {
+      // What the list shows: its search, filters, scope and sort.
+      const { items } = await this.list(opts.listQuery, { manager: opts.manager, exportAll: true });
+      for (const d of items as Array<Department & { company_name?: string | null }>) {
+        rows.push([
+          d.company_name ?? '',
+          d.name ?? '',
+          d.description ?? '',
+          String(deriveStatusFromDisabledAt(d.disabled_at ?? null)),
+          endOfValidityCell(d.disabled_at ?? null, language),
+        ]);
+      }
+    } else if (scope === 'data') {
       const repo = this.getRepo(opts?.manager);
       const items = await repo.createQueryBuilder('d')
         .leftJoin(Company, 'c', 'c.id = d.company_id')

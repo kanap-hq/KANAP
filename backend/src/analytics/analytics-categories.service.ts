@@ -4,9 +4,9 @@ import { isUUID } from 'class-validator';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { compileAgFilterCondition, createParamNameGenerator } from '../common/ag-grid-filtering';
-import { ICU_COLLATION } from '../common/list-engine/sql-fragments';
 import { BulkDeleteResult } from '../common/delete.types';
-import { parsePagination } from '../common/pagination';
+import { parseExportPagination, parsePagination } from '../common/pagination';
+import { textSortKey, type TextSortKey } from '../common/list-sort';
 import { withSavepoint } from '../common/savepoint.util';
 import { deriveStatusFromDisabledAt, StatusState } from '../common/status';
 import { applyStatusFilter, extractStatusFilterFromAgModel } from '../common/status-filter';
@@ -92,6 +92,7 @@ export interface AnalyticsCategoryInput {
 const SORT_FIELDS = new Set(['sort_order', 'name', 'description', 'applies_to', 'status', 'created_at', 'updated_at', 'disabled_at']);
 /** The list's default: the dimension's own order. */
 const DEFAULT_SORT = { field: 'sort_order', direction: 'ASC' as const };
+const ANALYTICS_TEXT_SORTS = new Set(['name', 'description', 'applies_to']);
 // Grid and AI filter fields and the SQL they compile to (the dimension label as the AI registry shows it).
 const FILTER_EXPRESSIONS: Record<string, string> = {
   name: 'cat.name',
@@ -129,7 +130,8 @@ export function valueAppliesToConflict(
  * joins the dimension (`ax`, the list): its position, name, code and id as the dimensions list
  * sorts them, so the values of two dimensions never interleave; then the value's position, its
  * name (ICU order) and id, all in the same direction (descending is the exact reverse). Every
- * other field breaks ties on the id. The keys are selected aliases: with a join, TypeORM pages
+ * other field breaks ties on the id. Text sorts alphabetically (`textSortKey`, case and accents
+ * ignored). The keys are selected aliases: with a join, TypeORM pages
  * through a subquery that only orders by columns or selected aliases.
  */
 function orderValues<T extends SelectQueryBuilder<any>>(
@@ -137,13 +139,15 @@ function orderValues<T extends SelectQueryBuilder<any>>(
   field: string,
   direction: 'ASC' | 'DESC',
   joinsDimension: boolean,
+  textKey: TextSortKey,
 ): T {
   if (field !== 'sort_order') {
-    return qb.orderBy(`cat.${field}`, direction).addOrderBy('cat.id', 'ASC');
+    const key = ANALYTICS_TEXT_SORTS.has(field) ? textKey(`cat.${field}`) : `cat.${field}`;
+    return qb.addSelect(key, 'cat_sort_key').orderBy('cat_sort_key', direction).addOrderBy('cat.id', 'ASC');
   }
   if (joinsDimension) {
     qb.addSelect('ax.sort_order', 'ax_order_key')
-      .addSelect(`lower(coalesce(ax.name, ''))`, 'ax_name_key')
+      .addSelect(textKey(`coalesce(ax.name, '')`), 'ax_name_key')
       .addSelect('ax.code', 'ax_code_key')
       .addSelect('ax.id', 'ax_id_key')
       .addOrderBy('ax_order_key', direction)
@@ -151,7 +155,7 @@ function orderValues<T extends SelectQueryBuilder<any>>(
       .addOrderBy('ax_code_key', direction)
       .addOrderBy('ax_id_key', direction);
   }
-  return qb.addSelect(`cat.name COLLATE ${ICU_COLLATION}`, 'cat_name_key')
+  return qb.addSelect(textKey('cat.name'), 'cat_name_key')
     .addOrderBy('cat.sort_order', direction)
     .addOrderBy('cat_name_key', direction)
     .addOrderBy('cat.id', direction);
@@ -186,13 +190,13 @@ export class AnalyticsCategoriesService {
 
   // Reads ------------------------------------------------------------------
 
-  async list(query: any, opts?: AnalyticsCallOptions) {
+  async list(query: any, opts?: AnalyticsCallOptions & { exportAll?: boolean }) {
     const ctx = await this.context(opts);
-    const { page, limit, skip, sort } = parsePagination(query ?? {}, DEFAULT_SORT);
+    const { page, limit, skip, sort } = (opts?.exportAll ? parseExportPagination : parsePagination)(query ?? {}, DEFAULT_SORT);
     const qb = this.buildQuery(ctx, query ?? {});
     const total = await qb.getCount();
     const field = SORT_FIELDS.has(sort.field) ? sort.field : DEFAULT_SORT.field;
-    const items = await orderValues(qb, field, sort.direction, true)
+    const items = await orderValues(qb, field, sort.direction, true, await textSortKey(ctx.manager))
       .skip(skip)
       .take(limit)
       .getMany();
@@ -224,7 +228,7 @@ export class AnalyticsCategoriesService {
     const total = await qb.clone().getCount();
     const field = SORT_FIELDS.has(sort.field) ? sort.field : DEFAULT_SORT.field;
     const limit = Math.min(Number(query?.limit) || MAX_IDS, MAX_IDS);
-    const rows = await orderValues(qb.select('cat.id', 'id'), field, sort.direction, true)
+    const rows = await orderValues(qb.select('cat.id', 'id'), field, sort.direction, true, await textSortKey(ctx.manager))
       .limit(limit)
       .getRawMany();
     return { ids: rows.map((row: any) => row.id as string).filter(Boolean), total };
@@ -477,6 +481,7 @@ export class AnalyticsCategoriesService {
       'sort_order',
       'ASC',
       false,
+      await textSortKey(ctx.manager),
     ).getMany();
     return { items };
   }
