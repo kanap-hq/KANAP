@@ -85,5 +85,10 @@
   "CSV_CRITERION_UNKNOWN": "Critère {{criterion}} inconnu.",
   "CSV_CRITERION_VALUE_UNKNOWN": "Le critère {{criterion}} n'a pas de valeur {{value}}.",
   "CSV_DUPLICATE_KEY": "Mêmes valeurs dans {{columns}} qu'à la ligne {{firstRow}}.",
+  "CSV_SUPPLIER_NAME_DUPLICATE": "« {{name}} » figure déjà à la ligne {{firstRow}}. Gardez une seule ligne par fournisseur.",
+  "CSV_CONTACT_NOT_FOUND": "Contact introuvable : {{email}}. Créez-le d'abord dans Contacts.",
+  "CSV_EMAIL_INVALID": "« {{value}} » n'est pas une adresse e-mail valide.",
+  "CSV_STATUS_DATE_PASSED": "Le statut est enabled mais la fin de validité est passée. Videz la date ou passez le statut à disabled. Si le fichier vient d'un ancien export, exportez à nouveau les données.",
+  "CSV_STATUS_DATE_FUTURE": "Le statut est disabled mais la fin de validité est encore à venir. Passez le statut à enabled ou indiquez une date passée.",
   "CSV_IMPORT_FAILED": "L'import a échoué : {{reason}}"
 }
