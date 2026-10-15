@@ -24,6 +24,14 @@ export class DocumentFoldersController {
     return this.docs.createFolder(body, ctx.userId || null, { manager: ctx.manager });
   }
 
+  /** The check before a folder's delete: the folders of `ids` it would refuse, and why. Nothing is written. */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('knowledge', 'member')
+  @Post('delete-check')
+  deleteCheck(@Body() body: { ids?: unknown }, @Tenant() ctx: TenantRequest) {
+    return this.docs.folderDeleteCheck(Array.isArray(body?.ids) ? body.ids : [], { manager: ctx.manager });
+  }
+
   @UseGuards(PermissionGuard)
   @RequireLevel('knowledge', 'member')
   @Patch(':id')

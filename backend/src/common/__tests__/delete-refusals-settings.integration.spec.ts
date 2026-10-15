@@ -108,6 +108,28 @@ async function testClassification() {
     await expectRefusal(runner, () => svc.deleteCategory(category, t, opts), 'RECORD_USED_BY', [{ type: 'requests', total: 2 }], /Growth/);
     await expectRefusal(runner, () => svc.deleteStream(stream, t, opts), 'RECORD_USED_BY', [{ type: 'requests', total: 2 }], /Sales/);
     await expectRefusal(runner, () => svc.deleteTaskType(taskType, t, opts), 'RECORD_USED_BY', [{ type: 'tasks', total: 1 }], /Review/);
+
+    // The check before the delete answers the same refusals, and nothing for a free item.
+    const freeSource = await one(runner, `INSERT INTO portfolio_sources (tenant_id, name) VALUES ($1, 'Free') RETURNING id`, [t]);
+    const freeCategory = await one(runner, `INSERT INTO portfolio_categories (tenant_id, name) VALUES ($1, 'Free') RETURNING id`, [t]);
+    const freeStream = await one(runner, `INSERT INTO portfolio_streams (tenant_id, category_id, name) VALUES ($1, $2, 'Free') RETURNING id`, [t, freeCategory]);
+    const freeTaskType = await one(runner, `INSERT INTO portfolio_task_types (tenant_id, name) VALUES ($1, 'Free') RETURNING id`, [t]);
+    assert.deepEqual(await svc.deleteCheck('sources', [system, source, freeSource, 'nope'], t, opts), {
+      refused: [
+        { id: system, name: 'Built in', code: 'BUILT_IN_RECORD', usages: [] },
+        { id: source, name: 'Board', code: 'RECORD_USED_BY', usages: [{ type: 'requests', total: 2 }, { type: 'projects', total: 1 }] },
+      ],
+    });
+    assert.deepEqual(await svc.deleteCheck('categories', [category, freeCategory], t, opts), {
+      refused: [{ id: category, name: 'Growth', code: 'RECORD_USED_BY', usages: [{ type: 'requests', total: 2 }] }],
+    });
+    assert.deepEqual(await svc.deleteCheck('streams', [freeStream, stream], t, opts), {
+      refused: [{ id: stream, name: 'Sales', code: 'RECORD_USED_BY', usages: [{ type: 'requests', total: 2 }] }],
+    });
+    assert.deepEqual(await svc.deleteCheck('task-types', [taskType, freeTaskType], t, opts), {
+      refused: [{ id: taskType, name: 'Review', code: 'RECORD_USED_BY', usages: [{ type: 'tasks', total: 1 }] }],
+    });
+    assert.equal((await runner.query(`SELECT count(*)::int AS n FROM portfolio_sources WHERE tenant_id = $1`, [t]))[0].n, 3);
   });
 }
 
@@ -131,6 +153,18 @@ async function testTeamsAndContractTypes() {
       [{ type: 'team_members', total: 1 }, { type: 'sub_teams', total: 1 }], /^Cannot delete team "Apps"/);
     await expectRefusal(runner, () => types.delete(type, t, { manager: m }), 'RECORD_USED_BY',
       [{ type: 'contributors', total: 1 }], /assigned to contributors/);
+
+    const freeTeam = await one(runner, `INSERT INTO portfolio_teams (tenant_id, name) VALUES ($1, 'Free') RETURNING id`, [t]);
+    const freeType = await one(runner, `INSERT INTO portfolio_employment_types (tenant_id, name) VALUES ($1, 'Free') RETURNING id`, [t]);
+    assert.deepEqual(await teams.deleteCheck([builtIn, team, freeTeam, 'nope'], t, { manager: m }), {
+      refused: [
+        { id: builtIn, name: 'Core', code: 'BUILT_IN_RECORD', usages: [] },
+        { id: team, name: 'Apps', code: 'TEAM_NOT_EMPTY', usages: [{ type: 'team_members', total: 1 }, { type: 'sub_teams', total: 1 }] },
+      ],
+    });
+    assert.deepEqual(await types.deleteCheck([freeType, type], t, { manager: m }), {
+      refused: [{ id: type, name: 'Contractor', code: 'RECORD_USED_BY', usages: [{ type: 'contributors', total: 1 }] }],
+    });
   });
 }
 
@@ -190,7 +224,7 @@ async function testKnowledge() {
       `INSERT INTO integrated_document_bindings (tenant_id, source_entity_type, source_entity_id, slot_key, document_id) VALUES ($1, 'requests', $2, 'purpose', $3)`,
       [t, randomUUID(), managed]);
     const folder = await one(runner, `INSERT INTO document_folders (tenant_id, name, library_id) VALUES ($1, 'Ops', $2) RETURNING id`, [t, library]);
-    await one(runner, `INSERT INTO document_folders (tenant_id, name, library_id, parent_id) VALUES ($1, 'Night', $2, $3) RETURNING id`, [t, library, folder]);
+    const child = await one(runner, `INSERT INTO document_folders (tenant_id, name, library_id, parent_id) VALUES ($1, 'Night', $2, $3) RETURNING id`, [t, library, folder]);
 
     assert.deepEqual(await svc.deleteCheck([free, managed, 'nope'], { manager: m }), {
       refused: [{ id: managed, name: 'Request brief', code: 'KNOWLEDGE_DOCUMENT_MANAGED', usages: [] }],
@@ -199,6 +233,10 @@ async function testKnowledge() {
     await expectRefusal(runner, () => svc.deleteType(type, { manager: m }), 'RECORD_USED_BY', [{ type: 'documents', total: 2 }], /document type in use/);
     await expectRefusal(runner, () => svc.deleteFolder(folder, { manager: m }), 'KNOWLEDGE_FOLDER_HAS_SUBFOLDERS',
       [{ type: 'sub_folders', total: 1 }], /child folders/);
+    // The check before a folder's delete: the folder with subfolders, not the empty one.
+    assert.deepEqual(await svc.folderDeleteCheck([child, folder, 'nope'], { manager: m }), {
+      refused: [{ id: folder, name: 'Ops', code: 'KNOWLEDGE_FOLDER_HAS_SUBFOLDERS', usages: [{ type: 'sub_folders', total: 1 }] }],
+    });
     const bulk = await svc.bulkRemove([free, managed], null, { manager: m });
     assert.deepEqual(bulk.deleted, [free]);
     assert.deepEqual(bulk.failed.map((f) => [f.code, f.usages]), [['KNOWLEDGE_DOCUMENT_MANAGED', []]]);

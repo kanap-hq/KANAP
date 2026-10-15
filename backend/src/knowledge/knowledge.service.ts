@@ -5051,15 +5051,9 @@ export class KnowledgeService {
     this.assertManagedFolderWritable(existing);
     await this.assertLibraryWritable(existing.library_id, manager, opts?.userId || null);
 
-    const [children, docs] = await Promise.all([
-      repo.count({ where: { parent_id: id } as any }),
-      manager.getRepository(Document).count({ where: { folder_id: id } as any }),
-    ]);
-
-    if (children > 0) {
-      throw new RecordInUseException('KNOWLEDGE_FOLDER_HAS_SUBFOLDERS', 'folder', existing.name, [{ type: 'sub_folders', total: children }],
-        'Cannot delete folder with child folders. Move or delete its subfolders first.');
-    }
+    const refusal = await this.folderRefusal(existing, manager);
+    if (refusal) throw refusal;
+    const docs = await manager.getRepository(Document).count({ where: { folder_id: id } as any });
     if (docs > 0) {
       await manager
         .getRepository(Document)
@@ -5072,6 +5066,29 @@ export class KnowledgeService {
 
     await repo.delete({ id } as any);
     return { ok: true, moved_documents_to_unfiled: docs };
+  }
+
+  /**
+   * The refusal of a folder's delete, or null: a folder with subfolders
+   * (`KNOWLEDGE_FOLDER_HAS_SUBFOLDERS`, counted). The delete and its check both ask it.
+   */
+  private async folderRefusal(folder: { id: string; name: string }, manager: EntityManager): Promise<RecordInUseException | null> {
+    const children = await manager.getRepository(DocumentFolder).count({ where: { parent_id: folder.id } as any });
+    if (children === 0) return null;
+    return new RecordInUseException('KNOWLEDGE_FOLDER_HAS_SUBFOLDERS', 'folder', folder.name, [{ type: 'sub_folders', total: children }],
+      'Cannot delete folder with child folders. Move or delete its subfolders first.');
+  }
+
+  /** The check before a folder's delete (`POST /knowledge-folders/delete-check`): the folders of `ids` it would refuse, and why. Nothing is written. */
+  async folderDeleteCheck(ids: unknown[], opts?: { manager?: EntityManager }): Promise<{ refused: DeleteRefusal[] }> {
+    const manager = this.getManager(opts);
+    const wanted = checkIds(ids);
+    if (wanted.length === 0) return { refused: [] };
+    const rows: Array<{ id: string; name: string }> = await manager.query(
+      `SELECT id::text AS id, name FROM document_folders WHERE tenant_id = app_current_tenant() AND id = ANY($1::uuid[])`,
+      [wanted],
+    );
+    return refusalsFrom(wanted, rows, (row) => row.name, (row) => this.folderRefusal(row, manager));
   }
 
   async listFolderDocuments(folderId: string, query: any, opts?: { manager?: EntityManager; userId?: string | null }) {

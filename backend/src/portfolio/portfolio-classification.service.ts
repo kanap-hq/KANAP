@@ -5,12 +5,24 @@ import { PortfolioSource, DEFAULT_SOURCES } from './portfolio-source.entity';
 import { PortfolioCategory, DEFAULT_CATEGORIES } from './portfolio-category.entity';
 import { PortfolioStream, DEFAULT_STREAMS } from './portfolio-stream.entity';
 import { PortfolioTaskType, DEFAULT_TASK_TYPES } from './portfolio-task-type.entity';
-import { RecordInUseException, type UsageCount } from '../common/record-in-use';
+import { checkIds, RecordInUseException, refusalsFrom, type DeleteRefusal, type UsageCount } from '../common/record-in-use';
 
 /** A built-in classification item cannot be deleted (`BUILT_IN_RECORD`): disable it instead. */
 function builtInRefusal(entity: string, name: string): RecordInUseException {
   return new RecordInUseException('BUILT_IN_RECORD', entity, name, [], `Cannot delete system ${entity} "${name}". Disable it instead.`);
 }
+
+/** The classification lists whose items a check before the delete answers (`POST .../<kind>/delete-check`). */
+export type ClassificationKind = 'sources' | 'categories' | 'streams' | 'task-types';
+
+const CLASSIFICATION_TABLES: Record<ClassificationKind, string> = {
+  sources: 'portfolio_sources',
+  categories: 'portfolio_categories',
+  streams: 'portfolio_streams',
+  'task-types': 'portfolio_task_types',
+};
+
+type ClassificationRow = { id: string; name: string; is_system?: boolean };
 
 /** A classification item that requests, projects or tasks still name (`RECORD_USED_BY`, counted): disable it instead. */
 function usedByRefusal(entity: string, name: string, usages: UsageCount[]): RecordInUseException | null {
@@ -187,11 +199,50 @@ export class PortfolioClassificationService {
       throw new NotFoundException('Source not found');
     }
 
-    if (source.is_system) throw builtInRefusal('source', source.name);
-    const refusal = usedByRefusal('source', source.name, await this.portfolioUsages('source_id', id, tenantId, mg));
+    const refusal = await this.refusalOf('sources', source, tenantId, mg);
     if (refusal) throw refusal;
 
     await repo.delete(id);
+  }
+
+  /**
+   * The refusal the delete of a classification item would throw, or null: a built-in item
+   * (`BUILT_IN_RECORD`), or one that requests, projects or tasks still name (`RECORD_USED_BY`).
+   * The delete and its check both ask it, so they agree.
+   */
+  private async refusalOf(kind: ClassificationKind, row: ClassificationRow, tenantId: string, mg: EntityManager): Promise<RecordInUseException | null> {
+    switch (kind) {
+      case 'sources':
+        if (row.is_system) return builtInRefusal('source', row.name);
+        return usedByRefusal('source', row.name, await this.portfolioUsages('source_id', row.id, tenantId, mg));
+      case 'categories':
+        if (row.is_system) return builtInRefusal('category', row.name);
+        return usedByRefusal('category', row.name, await this.portfolioUsages('category_id', row.id, tenantId, mg));
+      case 'streams':
+        return usedByRefusal('stream', row.name, await this.portfolioUsages('stream_id', row.id, tenantId, mg));
+      case 'task-types': {
+        if (row.is_system) return builtInRefusal('task type', row.name);
+        const [used] = await mg.query(
+          `SELECT count(*)::int AS n FROM tasks WHERE tenant_id = $1 AND task_type_id = $2`,
+          [tenantId, row.id],
+        );
+        return usedByRefusal('task type', row.name, used?.n > 0 ? [{ type: 'tasks', total: used.n }] : []);
+      }
+    }
+  }
+
+  /** The check before a delete (`POST .../<kind>/delete-check`): the items of `ids` the delete would refuse, and why. Nothing is written. */
+  async deleteCheck(kind: ClassificationKind, ids: unknown[], tenantId: string, opts?: ServiceOpts): Promise<{ refused: DeleteRefusal[] }> {
+    const mg = opts?.manager ?? this.sourceRepo.manager;
+    const wanted = checkIds(ids);
+    if (wanted.length === 0) return { refused: [] };
+    const table = CLASSIFICATION_TABLES[kind];
+    const systemColumn = kind === 'streams' ? 'false' : 'is_system';
+    const rows: ClassificationRow[] = await mg.query(
+      `SELECT id::text AS id, name, ${systemColumn} AS is_system FROM ${table} WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+      [tenantId, wanted],
+    );
+    return refusalsFrom(wanted, rows, (row) => row.name, (row) => this.refusalOf(kind, row, tenantId, mg));
   }
 
   /** The requests and projects whose `column` names `id`, each kind only when not zero. */
@@ -321,8 +372,7 @@ export class PortfolioClassificationService {
       throw new NotFoundException('Category not found');
     }
 
-    if (category.is_system) throw builtInRefusal('category', category.name);
-    const refusal = usedByRefusal('category', category.name, await this.portfolioUsages('category_id', id, tenantId, mg));
+    const refusal = await this.refusalOf('categories', category, tenantId, mg);
     if (refusal) throw refusal;
 
     // Streams will be cascade deleted
@@ -473,7 +523,7 @@ export class PortfolioClassificationService {
       throw new NotFoundException('Stream not found');
     }
 
-    const refusal = usedByRefusal('stream', stream.name, await this.portfolioUsages('stream_id', id, tenantId, mg));
+    const refusal = await this.refusalOf('streams', stream, tenantId, mg);
     if (refusal) throw refusal;
 
     await repo.delete(id);
@@ -601,12 +651,7 @@ export class PortfolioClassificationService {
       throw new NotFoundException('Task type not found');
     }
 
-    if (taskType.is_system) throw builtInRefusal('task type', taskType.name);
-    const [used] = await mg.query(
-      `SELECT count(*)::int AS n FROM tasks WHERE tenant_id = $1 AND task_type_id = $2`,
-      [tenantId, id],
-    );
-    const refusal = usedByRefusal('task type', taskType.name, used?.n > 0 ? [{ type: 'tasks', total: used.n }] : []);
+    const refusal = await this.refusalOf('task-types', taskType, tenantId, mg);
     if (refusal) throw refusal;
 
     await repo.delete(id);

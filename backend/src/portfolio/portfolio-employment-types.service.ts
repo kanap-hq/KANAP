@@ -2,7 +2,7 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager } from 'typeorm';
 import { PortfolioEmploymentType, DEFAULT_EMPLOYMENT_TYPES } from './portfolio-employment-type.entity';
-import { RecordInUseException } from '../common/record-in-use';
+import { checkIds, RecordInUseException, refusalsFrom, type DeleteRefusal } from '../common/record-in-use';
 
 interface CreateEmploymentTypeDto {
   name: string;
@@ -125,21 +125,40 @@ export class PortfolioEmploymentTypesService {
       throw new NotFoundException('Contract type not found');
     }
 
-    if (type.is_system) {
-      throw new RecordInUseException('BUILT_IN_RECORD', 'contract type', type.name, [],
-        `Cannot delete a built-in contract type ("${type.name}"). Disable it instead.`);
-    }
-
-    const [usage] = await mg.query(
-      `SELECT count(*)::int AS n FROM portfolio_team_member_configs WHERE tenant_id = $1 AND employment_type_id = $2`,
-      [tenantId, id],
-    );
-    if (usage?.n > 0) {
-      throw new RecordInUseException('RECORD_USED_BY', 'contract type', type.name, [{ type: 'contributors', total: usage.n }],
-        `Cannot delete contract type "${type.name}": it is assigned to contributors. Disable it instead.`);
-    }
+    const refusal = await this.refusalOf(type, tenantId, mg);
+    if (refusal) throw refusal;
 
     await repo.delete(id);
+  }
+
+  /**
+   * The refusal the delete of a contract type would throw, or null: a built-in type
+   * (`BUILT_IN_RECORD`), or one contributors still have (`RECORD_USED_BY`). The delete and its check both ask it.
+   */
+  private async refusalOf(type: { id: string; name: string; is_system: boolean }, tenantId: string, mg: EntityManager): Promise<RecordInUseException | null> {
+    if (type.is_system) {
+      return new RecordInUseException('BUILT_IN_RECORD', 'contract type', type.name, [],
+        `Cannot delete a built-in contract type ("${type.name}"). Disable it instead.`);
+    }
+    const [usage] = await mg.query(
+      `SELECT count(*)::int AS n FROM portfolio_team_member_configs WHERE tenant_id = $1 AND employment_type_id = $2`,
+      [tenantId, type.id],
+    );
+    if (!(usage?.n > 0)) return null;
+    return new RecordInUseException('RECORD_USED_BY', 'contract type', type.name, [{ type: 'contributors', total: usage.n }],
+      `Cannot delete contract type "${type.name}": it is assigned to contributors. Disable it instead.`);
+  }
+
+  /** The check before a delete (`POST /portfolio/employment-types/delete-check`): the types of `ids` the delete would refuse, and why. Nothing is written. */
+  async deleteCheck(ids: unknown[], tenantId: string, opts?: { manager?: EntityManager }): Promise<{ refused: DeleteRefusal[] }> {
+    const mg = opts?.manager ?? this.typeRepo.manager;
+    const wanted = checkIds(ids);
+    if (wanted.length === 0) return { refused: [] };
+    const rows: Array<{ id: string; name: string; is_system: boolean }> = await mg.query(
+      `SELECT id::text AS id, name, is_system FROM portfolio_employment_types WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+      [tenantId, wanted],
+    );
+    return refusalsFrom(wanted, rows, (row) => row.name, (row) => this.refusalOf(row, tenantId, mg));
   }
 
   async seedDefaults(tenantId: string, manager?: EntityManager): Promise<{ created: number }> {
