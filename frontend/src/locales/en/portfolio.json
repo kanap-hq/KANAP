@@ -502,8 +502,10 @@
           "noPhaseTasks": "No tasks in this phase."
         },
         "values": {
-          "daysEarlier": "{{count}} day(s) earlier",
-          "daysLater": "{{count}} day(s) later",
+          "daysEarlier_one": "{{count}} day earlier",
+          "daysEarlier_other": "{{count}} days earlier",
+          "daysLater_one": "{{count}} day later",
+          "daysLater_other": "{{count}} days later",
           "onTrack": "On track"
         },
         "views": {
@@ -1310,7 +1312,8 @@
         "allTaskTypes": "All task types",
         "statusReached": "Status reached",
         "allStatuses": "All statuses",
-        "selectedCount": "{{count}} selected"
+        "selectedCount_one": "{{count}} selected",
+        "selectedCount_other": "{{count}} selected"
       },
       "actions": {
         "exportCsv": "Export CSV",
@@ -2157,7 +2160,8 @@
         "dragDropFiles": "Drag & drop files here, or use the button to select",
         "loadFailed": "Failed to load relations",
         "saveFailed": "Failed to save relations",
-        "uploadingFiles": "Uploading {{count}} file(s)..."
+        "uploadingFiles_one": "Uploading {{count}} file...",
+        "uploadingFiles_other": "Uploading {{count}} files..."
       },
       "placeholders": {
         "applications": "Search applications",

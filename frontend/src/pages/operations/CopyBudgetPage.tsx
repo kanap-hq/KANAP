@@ -16,6 +16,7 @@ import {
   useTheme,
 } from '@mui/material';
 import { AgGridReact } from 'ag-grid-react';
+import { useAgGridLocaleText } from '../../components/grid/useAgGridLocaleText';
 import type { CellStyle, ColDef } from 'ag-grid-community';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
@@ -129,6 +130,7 @@ export default function CopyBudgetPage() {
   const dialogs = useKanapDialogs();
   const theme = useTheme();
   const locale = useLocale();
+  const gridLocaleText = useAgGridLocaleText();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
 
@@ -676,6 +678,7 @@ export default function CopyBudgetPage() {
           )}
           <Box component={AgGridBox}>
             <AgGridReact<Row>
+              localeText={gridLocaleText}
               rowData={rows}
               columnDefs={columns}
               getRowId={(p) => p.data.id}

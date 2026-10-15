@@ -99,7 +99,7 @@ La cuadrícula muestra cuentas solo del CoA seleccionado.
 **Filtrado**:
 - Búsqueda rápida: Busca en las columnas de texto visibles.
 - Alcance de estado: el selector **Mostrar: Todos / Activos / Desactivados** sobre la cuadrícula. Por defecto **Activos**, mostrando solo cuentas activas. Elija **Todos** para incluir cuentas desactivadas.
-- Filtros de columna: Use filtros en los encabezados de columna (p. ej., las columnas **Estado** y **Usada para** tienen un filtro de conjunto). Si hace clic en **Limpiar** en el filtro **Estado**, o desmarca ambos valores, la lista no muestra nada, sea cual sea la opción de **Mostrar**.
+- Filtros de columna: Use filtros en los encabezados de columna (p. ej., la columna **Usada para** tiene un filtro de conjunto). El filtro **Estado** muestra la opción de **Mostrar** (**Todos**, **Activos** o **Desactivados**): cambiar uno cambia el otro.
 
 **Ordenación**: Predeterminada por **N.º de cuenta** ascendente.
 
@@ -439,7 +439,7 @@ Las cuentas utilizan la misma gestión de ciclo de vida que otros datos maestros
 
   - **Activadas** por defecto
   - Establezca un **Fin de validez** para dejar de usar una cuenta a partir de una fecha específica. Déjelo en blanco para que la cuenta permanezca activa indefinidamente
-  - Si cambia la cuenta a **Desactivado** sin fecha, el fin de validez se fija en hoy
+  - Pasar a **Desactivado** fija el fin de validez en este momento: la desactivación es inmediata. Mientras haya una fecha futura, el interruptor muestra **Activo hasta el** y esa fecha
   - Cuando pasa el fin de validez, el estado cambia a **Desactivado** por sí solo en el plazo de una hora
   - Después del fin de validez:
       - La cuenta ya no aparece en los desplegables de selección para nuevos elementos

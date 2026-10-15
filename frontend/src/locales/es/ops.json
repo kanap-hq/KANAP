@@ -151,7 +151,8 @@
       "dragDrop": "Arrastre y suelte archivos aquí, o use el botón para seleccionar",
       "noUploadPermission": "No tiene permiso para subir adjuntos.",
       "selectFiles": "Seleccionar archivos",
-      "uploadingFiles": "Subiendo {{count}} archivo(s)…",
+      "uploadingFiles_one": "Subiendo {{count}} archivo…",
+      "uploadingFiles_other": "Subiendo {{count}} archivos…",
       "failedToLoad": "No se pudieron cargar las relaciones",
       "failedToSave": "No se pudieron guardar las relaciones"
     },
@@ -336,7 +337,8 @@
       "dragDrop": "Arrastre y suelte archivos aquí, o use el botón para seleccionar",
       "noUploadPermission": "No tiene permiso para subir adjuntos.",
       "selectFiles": "Seleccionar archivos",
-      "uploadingFiles": "Subiendo {{count}} archivo(s)…",
+      "uploadingFiles_one": "Subiendo {{count}} archivo…",
+      "uploadingFiles_other": "Subiendo {{count}} archivos…",
       "failedToLoad": "No se pudieron cargar las relaciones",
       "failedToSave": "No se pudieron guardar las relaciones",
       "linkName": "Nombre",
@@ -1488,8 +1490,10 @@
       "subtitle": "Comparar hasta diez columnas presupuestarias",
       "yearGroupingSubtitle": "{{type}}: agrupación por año",
       "yearGroupingSubtitle_all": "OPEX y CAPEX: agrupación por año",
-      "selectionsSubtitle": "{{type}}: {{count}} selección(es)",
-      "selectionsSubtitle_all": "OPEX y CAPEX: {{count}} selección(es)",
+      "selectionsSubtitle_one": "{{type}}: {{count}} selección",
+      "selectionsSubtitle_other": "{{type}}: {{count}} selecciones",
+      "selectionsSubtitle_all_one": "OPEX y CAPEX: {{count}} selección",
+      "selectionsSubtitle_all_other": "OPEX y CAPEX: {{count}} selecciones",
       "addSelection": "Agregar"
     },
     "consolidation": {

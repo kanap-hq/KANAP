@@ -28,6 +28,7 @@ import {
   useTheme,
 } from '@mui/material';
 import { AgGridReact } from 'ag-grid-react';
+import { useAgGridLocaleText } from '../../../components/grid/useAgGridLocaleText';
 import type { ColDef, ICellRendererParams, RowClickedEvent } from 'ag-grid-community';
 import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
 import AddIcon from '@mui/icons-material/Add';
@@ -870,6 +871,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
   onDirtyChange,
 }, ref) {
   const { t } = useTranslation(['it', 'common']);
+  const gridLocaleText = useAgGridLocaleText();
   const theme = useTheme();
   const [loading, setLoading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
@@ -1888,6 +1890,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
 
           <Box component={AgGridBox} sx={[mappingRulesGridSx, { height: mappingRulesGridHeight }]}>
             <AgGridReact<MappingRuleGridRow>
+              localeText={gridLocaleText}
               rowData={mappingRuleRows}
               columnDefs={mappingRuleColumns}
               defaultColDef={mappingRuleDefaultColDef}

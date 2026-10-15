@@ -91,7 +91,12 @@
       "inRange": "vom {{from}} bis {{to}}",
       "or": "oder",
       "and": "und"
-    }
+    },
+    "noResults": "Keine Ergebnisse",
+    "noResultsFiltered": "Keine Ergebnisse für die Suche oder die Filter.",
+    "clearAll": "Suche und Filter löschen",
+    "resultCount_one": "{{count}} Ergebnis",
+    "resultCount_other": "{{count}} Ergebnisse"
   },
   "columnChooser": {
     "searchPlaceholder": "Spalten suchen",
@@ -148,11 +153,14 @@
     "warningMessage": "Diese Aktion kann nicht rückgängig gemacht werden. Wenn das Element anderweitig referenziert wird, wird das Löschen blockiert; andernfalls wird es dauerhaft entfernt.",
     "singleItem": "Das folgende Element wird gelöscht:",
     "multipleItems": "{{count}} Elemente werden gelöscht:",
-    "andMore": "... und {{count}} weitere(s) Element(e)",
+    "andMore_one": "... und {{count}} weiteres Element",
+    "andMore_other": "... und {{count}} weitere Elemente",
     "confirmPrompt": "Möchten Sie wirklich fortfahren?",
-    "successAll": "{{count}} Element(e) erfolgreich gelöscht",
+    "successAll_one": "{{count}} Element gelöscht",
+    "successAll_other": "{{count}} Elemente gelöscht",
     "failedAll": "Löschen fehlgeschlagen: {{reasons}}",
-    "partial": "{{deleted}} Element(e) gelöscht. {{failed}} Element(e) konnten nicht gelöscht werden: {{reasons}}",
+    "partial_one": "{{count}} Element gelöscht, {{failed}} fehlgeschlagen: {{reasons}}",
+    "partial_other": "{{count}} Elemente gelöscht, {{failed}} fehlgeschlagen: {{reasons}}",
     "failedGeneric": "Elemente konnten nicht gelöscht werden"
   },
   "messages": {
@@ -716,7 +724,8 @@
   },
   "lifecycleField": {
     "endOfValidity": "Ende der Gültigkeit",
-    "endOfValidityHint": "Leer lassen, um unbegrenzt aktiv zu bleiben."
+    "endOfValidityHint": "Leer lassen, um unbegrenzt aktiv zu bleiben.",
+    "activeUntil": "Aktiv bis {{date}}"
   },
   "autosave": {
     "leaveTitle": "Änderungen nicht gespeichert",

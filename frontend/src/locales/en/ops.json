@@ -185,7 +185,8 @@
       "dragDrop": "Drag & drop files here, or use the button to select",
       "noUploadPermission": "You do not have permission to upload attachments.",
       "selectFiles": "Select files",
-      "uploadingFiles": "Uploading {{count}} file(s)…",
+      "uploadingFiles_one": "Uploading {{count}} file…",
+      "uploadingFiles_other": "Uploading {{count}} files…",
       "failedToLoad": "Failed to load relations",
       "failedToSave": "Failed to save relations"
     }
@@ -336,7 +337,8 @@
       "dragDrop": "Drag & drop files here, or use the button to select",
       "noUploadPermission": "You do not have permission to upload attachments.",
       "selectFiles": "Select files",
-      "uploadingFiles": "Uploading {{count}} file(s)…",
+      "uploadingFiles_one": "Uploading {{count}} file…",
+      "uploadingFiles_other": "Uploading {{count}} files…",
       "failedToLoad": "Failed to load relations",
       "failedToSave": "Failed to save relations",
       "linkName": "Name",
@@ -1488,8 +1490,10 @@
       "subtitle": "Compare up to ten budget columns",
       "yearGroupingSubtitle": "{{type}}: year grouping",
       "yearGroupingSubtitle_all": "OPEX and CAPEX: year grouping",
-      "selectionsSubtitle": "{{type}}: {{count}} selection(s)",
-      "selectionsSubtitle_all": "OPEX and CAPEX: {{count}} selection(s)",
+      "selectionsSubtitle_one": "{{type}}: {{count}} selection",
+      "selectionsSubtitle_other": "{{type}}: {{count}} selections",
+      "selectionsSubtitle_all_one": "OPEX and CAPEX: {{count}} selection",
+      "selectionsSubtitle_all_other": "OPEX and CAPEX: {{count}} selections",
       "addSelection": "Add"
     },
     "consolidation": {

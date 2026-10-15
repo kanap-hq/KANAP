@@ -99,7 +99,7 @@ The grid shows accounts for the selected CoA only.
 **Filtering**:
 - Quick search: Searches across visible text columns.
 - Status scope: the **Show: All / Enabled / Disabled** toggle above the grid. It defaults to **Enabled**, showing only active accounts. Pick **All** to include disabled accounts.
-- Column filters: Use column header filters (e.g., the **Status** and **Used for** columns have a set filter). Clicking **Clear** in the **Status** filter, or unticking both values, lists nothing, whatever **Show** says.
+- Column filters: Use column header filters (e.g., the **Used for** column has a set filter). The **Status** filter shows the **Show** choice (**All**, **Enabled** or **Disabled**): changing one changes the other.
 
 **Sort**: Defaults to **Account #** ascending.
 
@@ -439,7 +439,7 @@ Accounts use the same lifecycle management as other master data:
 
   - **Enabled** by default
   - Set an **End of validity** to stop using an account from a specific date. Leave it blank to keep the account active indefinitely
-  - Switching the account to **Disabled** without a date sets its end of validity to today
+  - Switching the account to **Disabled** ends its validity now: it is disabled at once. While a future date is set, the switch reads **Active until** and that date
   - When the end of validity passes, the status switches to **Disabled** on its own within the hour
   - After the end of validity:
       - The account no longer appears in selection dropdowns for new lines

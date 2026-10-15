@@ -91,7 +91,12 @@
       "inRange": "from {{from}} to {{to}}",
       "or": "or",
       "and": "and"
-    }
+    },
+    "noResults": "No results",
+    "noResultsFiltered": "No results match the search or the filters.",
+    "clearAll": "Clear search and filters",
+    "resultCount_one": "{{count}} result",
+    "resultCount_other": "{{count}} results"
   },
   "columnChooser": {
     "searchPlaceholder": "Search columns",
@@ -148,11 +153,14 @@
     "warningMessage": "This action cannot be undone. If the item is referenced elsewhere, deletion will be blocked; otherwise it will be permanently removed.",
     "singleItem": "The following item will be deleted:",
     "multipleItems": "{{count}} items will be deleted:",
-    "andMore": "... and {{count}} more item(s)",
+    "andMore_one": "... and {{count}} more item",
+    "andMore_other": "... and {{count}} more items",
     "confirmPrompt": "Are you sure you want to proceed?",
-    "successAll": "Successfully deleted {{count}} item(s)",
+    "successAll_one": "Deleted {{count}} item",
+    "successAll_other": "Deleted {{count}} items",
     "failedAll": "Failed to delete items: {{reasons}}",
-    "partial": "Deleted {{deleted}} item(s). Failed to delete {{failed}} item(s): {{reasons}}",
+    "partial_one": "Deleted {{count}} item, {{failed}} failed: {{reasons}}",
+    "partial_other": "Deleted {{count}} items, {{failed}} failed: {{reasons}}",
     "failedGeneric": "Failed to delete items"
   },
   "messages": {
@@ -716,7 +724,8 @@
   },
   "lifecycleField": {
     "endOfValidity": "End of validity",
-    "endOfValidityHint": "Leave blank to keep active indefinitely."
+    "endOfValidityHint": "Leave blank to keep active indefinitely.",
+    "activeUntil": "Active until {{date}}"
   },
   "autosave": {
     "leaveTitle": "Changes not saved",

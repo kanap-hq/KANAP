@@ -90,7 +90,7 @@ export default function DeleteSelectedButton<T>({
         const reasons = failed.map((f: any) => `${f.productName || f.name || f.description || 'Item'}: ${f.reason}`).join('; ');
         setSnackbar(deleted.length === 0
           ? { open: true, message: t('delete.failedAll', { reasons }), severity: 'error' }
-          : { open: true, message: t('delete.partial', { deleted: deleted.length, failed: failed.length, reasons }), severity: 'warning' });
+          : { open: true, message: t('delete.partial', { count: deleted.length, failed: failed.length, reasons }), severity: 'warning' });
       }
 
       setConfirmOpen(false);

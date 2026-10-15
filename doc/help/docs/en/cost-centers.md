@@ -79,7 +79,7 @@ Click any cell to open the workspace.
 **Filtering**:
 
 - **Quick search**: searches the code, the name and the full path. Searching for a group's name also finds everything inside it
-- **Column filters**: **Type**, **Parent**, **Company** and **Status** use checkbox filters. Clicking **Clear** in the **Status** filter, or unticking both values, lists nothing, whatever **Show** says
+- **Column filters**: **Type**, **Parent** and **Company** use checkbox filters. The **Status** filter shows the **Show** choice (**All**, **Enabled** or **Disabled**): changing one changes the other
 - **Status scope**: the **Show: All / Enabled / Disabled** toggle above the list. The list shows enabled nodes by default
 
 **Actions**:
@@ -121,7 +121,7 @@ Click any row in the list to open the workspace.
 | **Parent group** | A group, or empty for the top level. A node cannot move under itself or under something it contains, so these are left out of the list | Your organization chart or your finance team's cost center tree |
 | **Company** | An enabled company. Cost centers only | The legal entity that pays the costs of this cost center. It is one of your companies in **Master data > Companies** |
 | **Budget holder** | An active user | The person accountable for this budget envelope at budget review. The hint under the field says so |
-| **Lifecycle** | The status switch, labelled with the current state (**Enabled** or **Disabled**), and the **End of validity** date | Set a future date to schedule the end, or switch it off to disable it today |
+| **Lifecycle** | The status switch, labelled with the current state (**Enabled** or **Disabled**), and the **End of validity** date | Set a future date to schedule the end (the switch then reads **Active until** and the date), or switch it off to disable it at once |
 
 ### Budget holder on budget lines
 

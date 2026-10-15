@@ -17,6 +17,7 @@ import {
   useTheme,
 } from '@mui/material';
 import { AgGridReact } from 'ag-grid-react';
+import { useAgGridLocaleText } from '../../../components/grid/useAgGridLocaleText';
 import type { ColDef, CellStyle } from 'ag-grid-community';
 import ReportLayout from '../../../components/reports/ReportLayout';
 import AgGridBox from '../../../components/AgGridBox';
@@ -65,6 +66,7 @@ export default function MasterDataCopyPage() {
   const theme = useTheme();
   const { t } = useTranslation(['master-data', 'common']);
   const locale = useLocale();
+  const gridLocaleText = useAgGridLocaleText();
   const years = useYearOptions();
   const { hasLevel } = useAuth();
   const canManageCompanies = hasLevel('companies', 'admin') || hasLevel('budget_ops', 'admin');
@@ -384,6 +386,7 @@ export default function MasterDataCopyPage() {
           <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>{t('admin.copy.dataPreview')}</Typography>
           <Box component={AgGridBox}>
             <AgGridReact
+              localeText={gridLocaleText}
               rowData={previewData}
               columnDefs={columns}
               defaultColDef={{ sortable: true, resizable: true }}

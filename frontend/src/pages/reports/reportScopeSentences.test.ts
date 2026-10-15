@@ -11,7 +11,7 @@ const locales = { en, fr, de, es } as Record<string, { reports: Strings }>;
 /** The report sentences naming the line type: "Largest {{type}} lines…". */
 const typedKeys = Object.entries((en as { reports: Strings }).reports).flatMap(([section, strings]) =>
   Object.entries(strings)
-    .filter(([key, text]) => typeof text === 'string' && text.includes('{{type}}') && !key.endsWith('_all'))
+    .filter(([key, text]) => typeof text === 'string' && text.includes('{{type}}') && !/_all(_one|_other)?$/.test(key))
     .map(([key]) => `${section}.${key}`));
 
 describe('report sentences on All', () => {
@@ -23,9 +23,12 @@ describe('report sentences on All', () => {
   it.each(Object.keys(locales))('%s has a sentence for both types, without the type label', (lang) => {
     for (const path of typedKeys) {
       const [section, key] = path.split('.');
-      const text = locales[lang].reports[section]?.[`${key}_all`];
-      expect(typeof text, `${lang} reports.${path}_all`).toBe('string');
-      expect(text as string, `${lang} reports.${path}_all`).not.toContain('{{type}}');
+      // A counted sentence takes the context before the plural suffix (`x_all_one`), as i18next reads it.
+      const plural = /_(one|other)$/.exec(key);
+      const allKey = plural ? `${key.slice(0, plural.index)}_all${plural[0]}` : `${key}_all`;
+      const text = locales[lang].reports[section]?.[allKey];
+      expect(typeof text, `${lang} reports.${section}.${allKey}`).toBe('string');
+      expect(text as string, `${lang} reports.${section}.${allKey}`).not.toContain('{{type}}');
     }
   });
 
@@ -37,5 +40,7 @@ describe('report sentences on All', () => {
     expect(t('reports.costPerFte.subtitle', { type: 'All', context: 'all', group: 'cost center' })).toBe('Yearly cost of one FTE or average daily rate, by cost center');
     expect(t('reports.topOpex.chartTitle', { type: 'All', context: 'all', count: 10, metric: 'Budget', year: 2025 })).toBe('Top 10 lines · Budget 2025');
     expect(t('reports.topOpex.subtitle', { type: 'OPEX', context: 'opex', metric: 'Budget' })).toBe('Largest OPEX lines by selected year (Budget)');
+    expect(t('reports.budgetColumnsCompare.selectionsSubtitle', { type: 'OPEX', context: 'opex', count: 1 })).toBe('OPEX: 1 selection');
+    expect(t('reports.budgetColumnsCompare.selectionsSubtitle', { type: 'All', context: 'all', count: 2 })).toBe('OPEX and CAPEX: 2 selections');
   });
 });

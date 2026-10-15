@@ -132,7 +132,7 @@ export default function UsersPage() {
       const results = await Promise.allSettled(selectedRows.map((row) => api.post(`/users/${row.id}/disable`)));
       const success = results.filter((r) => r.status === 'fulfilled').length;
       const failed = results.length - success;
-      if (failed > 0) await dialogs.alert(t('users.messages.disableSelectedResult', { success, failed }));
+      if (failed > 0) await dialogs.alert(t('users.messages.disableSelectedResult', { count: success, failed }));
       setRefreshKey((k) => k + 1);
     } finally {
       setDeactivating(false);
@@ -394,9 +394,9 @@ export default function UsersPage() {
       const success = results.filter((r) => r.status === 'fulfilled').length;
       const failed = results.length - success;
       if (failed === 0) {
-        await dialogs.alert(t('users.messages.inviteSuccess', { success }));
+        await dialogs.alert(t('users.messages.inviteSuccess', { count: success }));
       } else {
-        await dialogs.alert(t('users.messages.invitePartialFail', { success, failed }));
+        await dialogs.alert(t('users.messages.invitePartialFail', { count: success, failed }));
       }
       setRefreshKey((k) => k + 1);
     } catch (err) {

@@ -91,7 +91,12 @@
       "inRange": "du {{from}} au {{to}}",
       "or": "ou",
       "and": "et"
-    }
+    },
+    "noResults": "Aucun résultat",
+    "noResultsFiltered": "Aucun résultat ne correspond à la recherche ou aux filtres.",
+    "clearAll": "Effacer la recherche et les filtres",
+    "resultCount_one": "{{count}} résultat",
+    "resultCount_other": "{{count}} résultats"
   },
   "columnChooser": {
     "searchPlaceholder": "Rechercher une colonne",
@@ -148,11 +153,14 @@
     "warningMessage": "Cette action est irréversible. Si l'élément est référencé ailleurs, la suppression sera bloquée ; sinon il sera définitivement supprimé.",
     "singleItem": "L'élément suivant sera supprimé :",
     "multipleItems": "{{count}} éléments seront supprimés :",
-    "andMore": "... et {{count}} élément(s) supplémentaire(s)",
+    "andMore_one": "... et {{count}} autre élément",
+    "andMore_other": "... et {{count}} autres éléments",
     "confirmPrompt": "Êtes-vous sûr de vouloir continuer ?",
-    "successAll": "{{count}} élément(s) supprimé(s) avec succès",
+    "successAll_one": "{{count}} élément supprimé",
+    "successAll_other": "{{count}} éléments supprimés",
     "failedAll": "Échec de la suppression : {{reasons}}",
-    "partial": "{{deleted}} élément(s) supprimé(s). Échec pour {{failed}} élément(s) : {{reasons}}",
+    "partial_one": "{{count}} élément supprimé, {{failed}} en échec : {{reasons}}",
+    "partial_other": "{{count}} éléments supprimés, {{failed}} en échec : {{reasons}}",
     "failedGeneric": "Échec de la suppression des éléments"
   },
   "messages": {
@@ -716,7 +724,8 @@
   },
   "lifecycleField": {
     "endOfValidity": "Fin de validité",
-    "endOfValidityHint": "Laisser vide pour rester actif indéfiniment."
+    "endOfValidityHint": "Laisser vide pour rester actif indéfiniment.",
+    "activeUntil": "Actif jusqu'au {{date}}"
   },
   "autosave": {
     "leaveTitle": "Modifications non enregistrées",

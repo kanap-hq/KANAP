@@ -154,7 +154,7 @@ Cada empresa puede vincularse a un **Plan de cuentas** (CoA), que define el conj
 Utilice el **Fin de validez** para controlar cuándo una empresa deja de estar activa.
 
 - Las empresas están **Activadas** por defecto. Deje el **Fin de validez** en blanco para que la empresa permanezca activa indefinidamente, o programe una fecha futura.
-- Si cambia la empresa a **Desactivado** sin fecha, el fin de validez se fija en hoy.
+- Pasar a **Desactivado** fija el fin de validez en este momento: la desactivación es inmediata. Mientras haya una fecha futura, el interruptor muestra **Activo hasta el** y esa fecha.
 - Cuando pasa el fin de validez, el estado cambia a **Desactivado** por sí solo en el plazo de una hora.
 - Después del fin de validez:
     - La empresa ya no aparece en las listas de selección para nuevas asignaciones y se excluye de los informes de años estrictamente posteriores.

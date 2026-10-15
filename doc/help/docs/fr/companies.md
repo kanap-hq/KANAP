@@ -154,7 +154,7 @@ Chaque société peut être liée à un **Plan comptable** (CoA), qui définit l
 Utilisez la **Fin de validité** pour contrôler quand une société cesse d'être active.
 
 - Les sociétés sont **Activées** par défaut. Laissez la **Fin de validité** vide pour que la société reste active indéfiniment, ou programmez une date future.
-- Passer la société à **Désactivé** sans date fixe sa fin de validité à aujourd'hui.
+- Passer à **Désactivé** fixe la fin de validité à maintenant : la désactivation est immédiate. Tant qu'une date future est fixée, l'interrupteur affiche **Actif jusqu'au** et cette date.
 - Une fois la fin de validité passée, le statut passe à **Désactivé** de lui-même dans l'heure.
 - Après la fin de validité :
     - La société n'apparaît plus dans les listes de sélection pour les nouvelles ventilations et est exclue des rapports pour les années strictement postérieures.

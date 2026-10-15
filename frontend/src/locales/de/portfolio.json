@@ -502,8 +502,10 @@
           "noPhaseTasks": "Keine Aufgaben in dieser Phase."
         },
         "values": {
-          "daysEarlier": "{{count}} Tag(e) früher",
-          "daysLater": "{{count}} Tag(e) später",
+          "daysEarlier_one": "{{count}} Tag früher",
+          "daysEarlier_other": "{{count}} Tage früher",
+          "daysLater_one": "{{count}} Tag später",
+          "daysLater_other": "{{count}} Tage später",
           "onTrack": "Im Plan"
         },
         "views": {
@@ -1310,7 +1312,8 @@
         "allTaskTypes": "Alle Aufgabentypen",
         "statusReached": "Erreichter Status",
         "allStatuses": "Alle Status",
-        "selectedCount": "{{count}} ausgewählt"
+        "selectedCount_one": "{{count}} ausgewählt",
+        "selectedCount_other": "{{count}} ausgewählt"
       },
       "actions": {
         "exportCsv": "CSV exportieren",
@@ -2157,7 +2160,8 @@
         "dragDropFiles": "Dateien hierher ziehen oder den Button zum Auswählen verwenden",
         "loadFailed": "Beziehungen konnten nicht geladen werden",
         "saveFailed": "Beziehungen konnten nicht gespeichert werden",
-        "uploadingFiles": "{{count}} Datei(en) werden hochgeladen..."
+        "uploadingFiles_one": "{{count}} Datei wird hochgeladen...",
+        "uploadingFiles_other": "{{count}} Dateien werden hochgeladen..."
       },
       "placeholders": {
         "applications": "Anwendungen suchen",

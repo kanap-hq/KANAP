@@ -66,7 +66,7 @@ La pestaña Visión general contiene la descripción. Los demás campos están e
 - **Nombre**: Nombre del departamento (obligatorio), en el encabezado
 - **Empresa**: Empresa matriz, vinculada a los datos maestros de Empresas (obligatorio). Una empresa que ya tiene un departamento con el mismo nombre se rechaza: "A department with this name already exists in the selected company."
 - **Descripción**: Descripción de texto libre
-- **Ciclo de vida**: el interruptor de estado, cuya etiqueta muestra el estado actual (**Activado** o **Desactivado**), y la fecha de **Fin de validez**. Deje la fecha en blanco para que el departamento permanezca activo indefinidamente, o fije una fecha futura para programar su fin. Si cambia el departamento a **Desactivado** sin fecha, el fin de validez se fija en hoy
+- **Ciclo de vida**: el interruptor de estado, cuya etiqueta muestra el estado actual (**Activado** o **Desactivado**), y la fecha de **Fin de validez**. Deje la fecha en blanco para que el departamento permanezca activo indefinidamente, o fije una fecha futura para programar su fin. Pasar a **Desactivado** fija el fin de validez en este momento: la desactivación es inmediata. Mientras haya una fecha futura, el interruptor muestra **Activo hasta el** y esa fecha
 
 **Crear un departamento**: **Nuevo** abre un formulario con **Nombre**, **Empresa** y **Descripción**. Haga clic en **Crear** para guardarlo. La pestaña Detalles está disponible después de crear el departamento.
 
