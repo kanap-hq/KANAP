@@ -153,7 +153,19 @@
     "successAll": "{{count}} elemento(s) eliminado(s) correctamente",
     "failedAll": "Error al eliminar: {{reasons}}",
     "partial": "{{deleted}} elemento(s) eliminado(s). Error en {{failed}} elemento(s): {{reasons}}",
-    "failedGeneric": "Error al eliminar los elementos"
+    "failedGeneric": "Error al eliminar los elementos",
+    "usages": {
+      "budget_lines_one": "{{count}} línea presupuestaria",
+      "budget_lines_other": "{{count}} líneas presupuestarias",
+      "contracts_one": "{{count}} contrato",
+      "contracts_other": "{{count}} contratos",
+      "applications_one": "{{count}} aplicación",
+      "applications_other": "{{count}} aplicaciones",
+      "assets_one": "{{count}} activo",
+      "assets_other": "{{count}} activos",
+      "cost_centers_one": "{{count}} centro de coste",
+      "cost_centers_other": "{{count}} centros de coste"
+    }
   },
   "messages": {
     "loadFailed": "No se pudieron cargar los datos",

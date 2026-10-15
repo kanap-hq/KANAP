@@ -153,7 +153,19 @@
     "successAll": "Successfully deleted {{count}} item(s)",
     "failedAll": "Failed to delete items: {{reasons}}",
     "partial": "Deleted {{deleted}} item(s). Failed to delete {{failed}} item(s): {{reasons}}",
-    "failedGeneric": "Failed to delete items"
+    "failedGeneric": "Failed to delete items",
+    "usages": {
+      "budget_lines_one": "{{count}} budget line",
+      "budget_lines_other": "{{count}} budget lines",
+      "contracts_one": "{{count}} contract",
+      "contracts_other": "{{count}} contracts",
+      "applications_one": "{{count}} application",
+      "applications_other": "{{count}} applications",
+      "assets_one": "{{count}} asset",
+      "assets_other": "{{count}} assets",
+      "cost_centers_one": "{{count}} cost center",
+      "cost_centers_other": "{{count}} cost centers"
+    }
   },
   "messages": {
     "loadFailed": "Failed to load data",

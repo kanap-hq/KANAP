@@ -112,6 +112,26 @@ describe('DeleteSelectedButton', () => {
     await waitFor(() => expect(onDeleteSuccess).toHaveBeenCalled());
   });
 
+  it('translates a refusal that has a code, with what uses the item', async () => {
+    vi.mocked(api.delete).mockResolvedValue({
+      data: {
+        deleted: ['a'],
+        failed: [{
+          id: 'b',
+          name: 'Acme',
+          reason: 'Cannot delete supplier "Acme": it is used by 2 contracts. Disable it instead.',
+          code: 'SUPPLIER_IN_USE',
+          usages: [{ type: 'contracts', total: 2 }],
+        }],
+      },
+    } as any);
+    renderButton();
+    const message = await screen.findByText(/delete\.partial/);
+    expect(message).toHaveTextContent(/Acme: errors:SUPPLIER_IN_USE/);
+    expect(message).toHaveTextContent(/common:delete\.usages\.contracts/);
+    expect(message).not.toHaveTextContent(/Cannot delete supplier "Acme": it is used by 2 contracts\. Disable it instead\.;/);
+  });
+
   it('shows the reasons when every item fails', async () => {
     vi.mocked(api.delete).mockResolvedValue({ data: { deleted: [], failed: [{ id: 'b', name: 'Frozen', reason: FROZEN }] } } as any);
     renderButton();

@@ -84,5 +84,7 @@
   "CSV_CRITERION_UNKNOWN": "Unknown criterion {{criterion}}.",
   "CSV_CRITERION_VALUE_UNKNOWN": "Criterion {{criterion}} has no value {{value}}.",
   "CSV_DUPLICATE_KEY": "Same values in {{columns}} as row {{firstRow}}.",
-  "CSV_IMPORT_FAILED": "The import failed: {{reason}}"
+  "CSV_IMPORT_FAILED": "The import failed: {{reason}}",
+  "SUPPLIER_IN_USE": "This supplier is used by {{usages}}. Disable it instead of deleting it.",
+  "COMPANY_IN_USE": "This company is used by {{usages}}. Disable it instead of deleting it."
 }
