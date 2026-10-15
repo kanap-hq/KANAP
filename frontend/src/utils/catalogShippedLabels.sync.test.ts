@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import '../i18n';
-import { SHIPPED_CATALOG_LABELS } from '../../../backend/src/it-ops-settings/catalog-shipped-labels.data';
+import { SHIPPED_CATALOG_LABELS, SHIPPED_TASK_TYPE_LABELS } from '../../../backend/src/it-ops-settings/catalog-shipped-labels.data';
 import { CATALOG_LISTS, catalogDefaults } from '../hooks/useLocalizedItOpsSettings';
 import { localizeCatalogItem } from './catalogLocalization';
+import { keepsShippedName, localizeTaskType } from './taskTypeLocalization';
 
 // The backend accepts in imports the labels the app shows for shipped catalog values
 // (backend/src/it-ops-settings/catalog-shipped-labels.data.ts). This keeps that table equal to what
@@ -31,6 +32,16 @@ describe('shipped catalog labels shared with the backend import', () => {
           expect(`${list}.${code}.${locale}: ${localizeCatalogItem({ code, label: entry.source }, locale, defaults).label}`)
             .toBe(`${list}.${code}.${locale}: ${entry[locale]}`);
         }
+      }
+    }
+  });
+
+  it('gives each shipped task type the name the frontend shows in each language', () => {
+    expect(Object.keys(SHIPPED_TASK_TYPE_LABELS).sort()).toEqual(['bug', 'incident', 'problem', 'task']);
+    for (const [code, entry] of Object.entries(SHIPPED_TASK_TYPE_LABELS)) {
+      expect(keepsShippedName(entry.source, code)).toBe(true);
+      for (const locale of LOCALES) {
+        expect(`${code}.${locale}: ${localizeTaskType({ name: entry.source, code }, locale).name}`).toBe(`${code}.${locale}: ${entry[locale]}`);
       }
     }
   });

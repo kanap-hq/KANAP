@@ -196,3 +196,14 @@ export const SHIPPED_CATALOG_LABELS: Record<string, Record<string, ShippedLabels
     'n-a': { source: 'N/A', en: 'N/A', fr: 'N/A', de: 'k. A.', es: 'N/D' },
   },
 };
+
+/**
+ * The task types KANAP ships, by code (`DEFAULT_TASK_TYPES`): the English name stored for a tenant
+ * and the name the app shows in each language while the tenant keeps it (`common:taskTypes`).
+ */
+export const SHIPPED_TASK_TYPE_LABELS: Record<string, ShippedLabels> = {
+  task: { source: 'Task', en: 'Task', fr: 'Tâche', de: 'Aufgabe', es: 'Tarea' },
+  bug: { source: 'Bug', en: 'Bug', fr: 'Bug', de: 'Bug', es: 'Bug' },
+  problem: { source: 'Problem', en: 'Problem', fr: 'Problème', de: 'Problem', es: 'Problema' },
+  incident: { source: 'Incident', en: 'Incident', fr: 'Incident', de: 'Vorfall', es: 'Incidente' },
+};
