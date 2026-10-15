@@ -1,10 +1,14 @@
 import { Injectable } from '@nestjs/common';
+import { textSortKey } from '../../common/list-sort';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Asset } from '../asset.entity';
 import { parsePagination } from '../../common/pagination';
 import { AssetsBaseService, ServiceOpts } from './assets-base.service';
 import { assertSetFilterModes } from '../../common/ag-grid-filtering';
+
+/** The asset list columns that sort alphabetically. */
+const ASSET_TEXT_SORTS = new Set(['name', 'asset_reference', 'provider', 'region', 'zone', 'hostname', 'fqdn', 'operating_system', 'location_name', 'sub_location_name', 'cluster']);
 
 /**
  * Service for listing and filtering assets.
@@ -49,7 +53,10 @@ export class AssetsListService extends AssetsBaseService {
       sub_location_name: 'sl.name',
       cluster: 'cluster_asset.name',
     };
-    const sortField = sortFieldMap[sort.field] || 'a.created_at';
+    // Text alphabetically, case and accents ignored; the id breaks ties.
+    const sortField = ASSET_TEXT_SORTS.has(sort.field) && sortFieldMap[sort.field]
+      ? (await textSortKey(mg))(sortFieldMap[sort.field])
+      : sortFieldMap[sort.field] || 'a.created_at';
 
     // Count query
     const countQuery = `
@@ -93,7 +100,7 @@ export class AssetsListService extends AssetsBaseService {
       LEFT JOIN asset_cluster_members acm ON acm.asset_id = a.id AND acm.tenant_id = a.tenant_id
       LEFT JOIN assets cluster_asset ON cluster_asset.id = acm.cluster_id AND cluster_asset.tenant_id = a.tenant_id
       WHERE ${whereConditions}
-      ORDER BY ${sortField} ${sort.direction}
+      ORDER BY ${sortField} ${sort.direction}, a.id ASC
       LIMIT $${params.length + 1} OFFSET $${params.length + 2}
     `;
 
@@ -164,7 +171,10 @@ export class AssetsListService extends AssetsBaseService {
       sub_location_name: 'sl.name',
       cluster: 'cluster_asset.name',
     };
-    const sortField = sortFieldMap[sort.field] || 'a.created_at';
+    // Text alphabetically, case and accents ignored; the id breaks ties.
+    const sortField = ASSET_TEXT_SORTS.has(sort.field) && sortFieldMap[sort.field]
+      ? (await textSortKey(mg))(sortFieldMap[sort.field])
+      : sortFieldMap[sort.field] || 'a.created_at';
 
     const countQuery = `
       SELECT COUNT(DISTINCT a.id)::int as count
@@ -188,7 +198,7 @@ export class AssetsListService extends AssetsBaseService {
       LEFT JOIN asset_cluster_members acm ON acm.asset_id = a.id AND acm.tenant_id = a.tenant_id
       LEFT JOIN assets cluster_asset ON cluster_asset.id = acm.cluster_id AND cluster_asset.tenant_id = a.tenant_id
       WHERE ${whereConditions}
-      ORDER BY ${sortField} ${sort.direction}
+      ORDER BY ${sortField} ${sort.direction}, a.id ASC
       LIMIT $${params.length + 1}
     `;
 

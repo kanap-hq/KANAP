@@ -7,9 +7,13 @@ import { RolesService } from '../roles/roles.service';
 import { UserRole } from './user-role.entity';
 import * as argon2 from 'argon2';
 import { parsePagination, parseExportPagination } from '../common/pagination';
-import { orderListQuery } from '../common/list-sort';
+import { orderListQuery, textSortKey } from '../common/list-sort';
 
 const USER_TEXT_SORTS = new Set(['email', 'first_name', 'last_name', 'job_title']);
+const AI_USER_TEXT_SORTS = new Set([
+  'display_name', 'email', 'first_name', 'last_name', 'job_title', 'company_name', 'department_name',
+  'primary_role_name', 'team_name', 'contributor_profile',
+]);
 import {
   buildQuickSearchConditions,
   compileAgFilterCondition,
@@ -232,7 +236,11 @@ export class UsersService {
       created_at: 'u.created_at',
       updated_at: 'u.updated_at',
     };
-    const sortField = sortFieldMap[sort.field] ?? 'u.last_name';
+    const rawSortField = sortFieldMap[sort.field] ?? 'u.last_name';
+    // Text alphabetically, case and accents ignored (`textSortKey`).
+    const sortField = AI_USER_TEXT_SORTS.has(sort.field in sortFieldMap ? sort.field : 'last_name')
+      ? (await textSortKey(qb.connection.manager))(rawSortField)
+      : rawSortField;
 
     const items = await qb
       .clone()

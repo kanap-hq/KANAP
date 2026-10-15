@@ -9,6 +9,8 @@ import { SuppliersService } from '../../suppliers/suppliers.service';
 import { CompaniesService } from '../../companies/companies.service';
 import { ContactsService } from '../../contacts/contacts.service';
 import { DepartmentsService } from '../../departments/departments.service';
+import { AssetsListService } from '../../assets/services/assets-list.service';
+import { LocationsService } from '../../locations/locations.service';
 
 // Lists sort text alphabetically, ignoring case and accents ("Okta" before "OVHcloud", "Élodie"
 // among the Es), with the shared helpers (`common/list-sort.ts`); and a CSV export asked with
@@ -148,6 +150,28 @@ async function testContacts() {
   });
 }
 
+/** One list per query style: raw SQL (assets), TypeORM find options (locations), query builder (companies above). */
+async function testQueryFamilies() {
+  await withTenant(async (runner, tenantId) => {
+    const opts = { manager: runner.manager, tenantId };
+    for (const [index, name] of NAMES.entries()) {
+      await runner.query(`INSERT INTO assets (tenant_id, name, kind, environment) VALUES ($1, $2, 'vm', 'prod')`, [tenantId, name]);
+      await runner.query(`INSERT INTO locations (tenant_id, name, hosting_type, location_reference) VALUES ($1, $2, 'on_prem', $3)`, [tenantId, name, `LOC-T${index}`]);
+    }
+    const assets = new AssetsListService(undefined as any);
+    const assetPage = await assets.list({ sort: 'name:ASC' }, opts as any);
+    assert.deepEqual(assetPage.items.map((a: any) => a.name), ALPHABETICAL, 'assets list (raw SQL): alphabetical');
+    const assetIds = await assets.listIds({ sort: 'name:DESC' }, opts as any);
+    assert.deepEqual(assetIds.ids, [...assetPage.items].reverse().map((a: any) => a.id), 'assets ids (raw SQL): the reverse order');
+
+    const locations = new LocationsService(undefined as any, audit, undefined as any, undefined as any);
+    const locationPage = await locations.list({ sort: 'name:ASC' }, opts);
+    assert.deepEqual(locationPage.items.map((l: any) => l.name), ALPHABETICAL, 'locations list (find options): alphabetical');
+    const created = await locations.list({ sort: 'created_at:DESC', limit: '2', page: '2' }, opts);
+    assert.equal(created.items.length, 2, 'locations list: a plain column still pages');
+  });
+}
+
 async function main() {
   await dataSource.initialize();
   try {
@@ -155,6 +179,7 @@ async function main() {
     await testSuppliers();
     await testCompaniesAndDepartments();
     await testContacts();
+    await testQueryFamilies();
   } finally {
     await dataSource.destroy();
   }
