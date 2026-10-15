@@ -126,7 +126,7 @@ Gestione contactos de forma masiva usando CSV.
 **Campos opcionales**: Nombre, Apellido, Nombre del proveedor, Puesto de trabajo, Teléfono, Móvil, País, Activo
 
 **Notas**:
-- Utilice codificación **UTF-8** y **puntos y coma** como separadores
+- Utilice codificación **UTF-8** y **puntos y coma** como separadores. Un archivo que Excel guardó como CSV simple (Windows-1252) también se importa
 - El proveedor se busca por nombre -- asegúrese de que el proveedor exista antes de importar
 
 ---

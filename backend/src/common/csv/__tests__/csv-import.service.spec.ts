@@ -447,6 +447,54 @@ async function testBeforeValidateErrorsSurviveDryRun() {
   assert.equal(result.errors.some((error) => error.message === 'blocked by hook'), true);
 }
 
+function createRawFile(buffer: Buffer): Express.Multer.File {
+  return {
+    buffer,
+    fieldname: 'file',
+    originalname: 'test.csv',
+    encoding: '7bit',
+    mimetype: 'text/csv',
+    size: buffer.length,
+  } as Express.Multer.File;
+}
+
+async function testWindows1252FileIsDecodedOnDryRun() {
+  const resolver = new CsvResolverService();
+  const validators = new CsvJsonValidators();
+  const service = new CsvImportService(resolver, validators);
+  const config = createTestConfig();
+  let seenTitle: string | undefined;
+  config.beforeValidate = async (rows) => {
+    seenTitle = rows[0]?.raw.title;
+  };
+
+  // Excel "CSV (semicolon)" on Windows writes Windows-1252: latin1 matches it for "é".
+  const buffer = Buffer.from('id;title;description;status;due_date;priority\r\n;Refonte CRM é;;open;;\r\n', 'latin1');
+  assert.equal(buffer.includes(0xe9), true);
+
+  const result = await service.import(config, createRawFile(buffer), { ...defaultParams, dryRun: true }, {
+    manager: createMockManager({ tasks: [] }),
+    tenantId: 't1',
+  });
+
+  assert.equal(result.ok, true, JSON.stringify(result.errors));
+  assert.equal(result.inserted, 1);
+  assert.equal(seenTitle, 'Refonte CRM é');
+}
+
+async function testUtf16FileIsRefusedWithClearMessage() {
+  const service = new CsvImportService(new CsvResolverService(), new CsvJsonValidators());
+  const buffer = Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from('id;title\r\n', 'utf16le')]);
+
+  await assert.rejects(
+    service.import(createTestConfig(), createRawFile(buffer), defaultParams, {
+      manager: createMockManager({ tasks: [] }),
+      tenantId: 't1',
+    }),
+    (err: any) => err?.getStatus?.() === 400 && /not UTF-8 or Windows-1252/.test(err.message),
+  );
+}
+
 // ===== Run tests =====
 
 (async () => {
@@ -466,6 +514,8 @@ async function testBeforeValidateErrorsSurviveDryRun() {
   await testCaseInsensitiveEnumMatching();
   await testFormulaApostropheIsStrippedOnImport();
   await testBeforeValidateErrorsSurviveDryRun();
+  await testWindows1252FileIsDecodedOnDryRun();
+  await testUtf16FileIsRefusedWithClearMessage();
 
   console.log('CSV import service tests passed.');
 })().catch((err) => {

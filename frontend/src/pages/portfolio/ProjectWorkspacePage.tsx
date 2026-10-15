@@ -922,7 +922,7 @@ export default function ProjectWorkspacePage() {
                   ? formatMetadataUserName(form.it_lead)
                   : null
               }
-              placeholder={t('portfolio:workspace.project.values.itLeadMissing', 'IT lead missing')}
+              placeholder={t('portfolio:activity.history.values.itLeadMissing')}
               searchPlaceholder={t('portfolio:workspace.project.fields.itLead')}
               disabled={!canManage}
               onChange={(value) => {

@@ -232,9 +232,9 @@ export class ApplicationsCsvService {
 
     // Re-parse the file to get owner columns
     const { parseString } = await import('@fast-csv/parse');
-    const { decodeCsvBufferUtf8OrThrow } = await import('../common/encoding');
+    const { decodeCsv } = await import('../common/csv-sheet/decode');
 
-    const text = decodeCsvBufferUtf8OrThrow(file.buffer);
+    const text = decodeCsv(file.buffer).text;
     const rows: Record<string, string>[] = [];
 
     await new Promise<void>((resolve, reject) => {
@@ -334,9 +334,9 @@ export class ApplicationsCsvService {
 
     // Re-parse the file
     const { parseString } = await import('@fast-csv/parse');
-    const { decodeCsvBufferUtf8OrThrow } = await import('../common/encoding');
+    const { decodeCsv } = await import('../common/csv-sheet/decode');
 
-    const text = decodeCsvBufferUtf8OrThrow(file.buffer);
+    const text = decodeCsv(file.buffer).text;
     const rows: Record<string, string>[] = [];
 
     await new Promise<void>((resolve, reject) => {

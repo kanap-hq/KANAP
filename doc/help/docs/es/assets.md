@@ -257,7 +257,7 @@ Desde la lista de Activos:
 
 ### Flujo de trabajo de importación
 
-1. **Prepare su archivo**: Use codificación UTF-8 con separadores de punto y coma (`;`). Descargue una plantilla para asegurar encabezados correctos.
+1. **Prepare su archivo**: Use codificación UTF-8 con separadores de punto y coma (`;`). Un archivo que Excel guardó como CSV simple (Windows-1252) también se importa. Descargue una plantilla para asegurar encabezados correctos.
 
 2. **Elija la configuración de importación**:
    - **Modo**:
