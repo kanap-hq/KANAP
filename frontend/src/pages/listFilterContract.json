@@ -1,0 +1,759 @@
+{
+  "/tasks": {
+    "params": {},
+    "filters": {
+      "item_number": "text",
+      "title": "text",
+      "task_type_name": "set",
+      "related_object_type": "set",
+      "related_object_name": "text",
+      "phase_name": "text",
+      "status": "set",
+      "priority_level": "text",
+      "priority_score": "text",
+      "assignee_name": "text",
+      "assignee_user_id": "set",
+      "related_object_id": "set",
+      "assignee_team_id": "set",
+      "creator_name": "text",
+      "due_date": "date",
+      "created_at": "date",
+      "updated_at": "date",
+      "description": "text",
+      "source_name": "set",
+      "category_name": "set",
+      "stream_name": "set",
+      "company_name": "set"
+    },
+    "fields": [
+      "item_number",
+      "title",
+      "task_type_name",
+      "related_object_type",
+      "related_object_name",
+      "phase_name",
+      "status",
+      "priority_level",
+      "priority_score",
+      "assignee_name",
+      "assignee_user_id",
+      "related_object_id",
+      "creator_name",
+      "due_date",
+      "created_at",
+      "updated_at",
+      "description",
+      "source_name",
+      "category_name",
+      "stream_name",
+      "company_name"
+    ]
+  },
+  "/business-processes": {
+    "params": {},
+    "filters": {
+      "name": "text",
+      "primary_category_name": "text",
+      "owner_name": "text",
+      "status": "set",
+      "updated_at": "text"
+    },
+    "fields": [
+      "name",
+      "primary_category_name",
+      "status",
+      "updated_at"
+    ]
+  },
+  "/working-day-profiles": {
+    "params": {
+      "lang": "en"
+    },
+    "filters": {
+      "country": "text",
+      "status": "set"
+    },
+    "fields": [
+      "code",
+      "name",
+      "years",
+      "status",
+      "updated_at"
+    ]
+  },
+  "/users": {
+    "params": {},
+    "filters": {
+      "last_name": "text",
+      "first_name": "text",
+      "email": "text",
+      "job_title": "text",
+      "status": "set",
+      "last_login_at": "date",
+      "roles": "set",
+      "account_type": "set",
+      "company": "text",
+      "department": "text",
+      "business_phone": "text",
+      "mobile_phone": "text",
+      "mfa_enabled": "text",
+      "created_at": "date"
+    },
+    "fields": [
+      "last_name",
+      "first_name",
+      "email",
+      "job_title",
+      "status",
+      "last_login_at",
+      "business_phone",
+      "mobile_phone",
+      "created_at"
+    ]
+  },
+  "/companies": {
+    "params": {
+      "year": "<year>"
+    },
+    "filters": {
+      "name": "text",
+      "country_iso": "text",
+      "city": "text",
+      "postal_code": "text",
+      "address1": "text",
+      "address2": "text",
+      "state": "text",
+      "notes": "text",
+      "base_currency": "text",
+      "headcount_year": "number",
+      "it_users_year": "number",
+      "turnover_year": "number",
+      "status": "set",
+      "created_at": "text"
+    },
+    "fields": [
+      "name",
+      "country_iso",
+      "city",
+      "postal_code",
+      "address1",
+      "address2",
+      "state",
+      "notes",
+      "base_currency",
+      "headcount_year",
+      "it_users_year",
+      "turnover_year",
+      "status",
+      "created_at"
+    ]
+  },
+  "/cost-centers": {
+    "params": {},
+    "filters": {
+      "kind": "set",
+      "parent_name": "set",
+      "company_name": "set",
+      "status": "set"
+    },
+    "fields": [
+      "code",
+      "name",
+      "kind",
+      "parent_name",
+      "company_name",
+      "owner_name",
+      "status"
+    ]
+  },
+  "/analytics-categories": {
+    "params": {},
+    "filters": {
+      "name": "text",
+      "description": "text",
+      "status": "set",
+      "applies_to": "set",
+      "updated_at": "text"
+    },
+    "fields": [
+      "sort_order",
+      "name",
+      "description",
+      "status",
+      "applies_to",
+      "updated_at"
+    ]
+  },
+  "/portfolio/requests": {
+    "params": {
+      "include": "company,requestor,classification"
+    },
+    "filters": {
+      "item_number": "text",
+      "name": "text",
+      "linked_project_id": "set",
+      "involved_team_id": "set",
+      "priority_score": "number",
+      "status": "set",
+      "source_name": "set",
+      "category_name": "set",
+      "stream_name": "set",
+      "company_name": "set",
+      "requestor_name": "set",
+      "target_delivery_date": "date",
+      "created_at": "date",
+      "updated_at": "date"
+    },
+    "fields": [
+      "item_number",
+      "name",
+      "priority_score",
+      "status",
+      "source_name",
+      "category_name",
+      "stream_name",
+      "target_delivery_date",
+      "created_at",
+      "updated_at"
+    ]
+  },
+  "/portfolio/projects": {
+    "params": {
+      "include": "company,classification"
+    },
+    "filters": {
+      "item_number": "text",
+      "name": "text",
+      "id": "set",
+      "involved_team_id": "set",
+      "priority_score": "number",
+      "status": "set",
+      "origin": "set",
+      "execution_progress": "number",
+      "source_name": "set",
+      "category_name": "set",
+      "stream_name": "set",
+      "company_name": "set",
+      "planned_start": "date",
+      "planned_end": "date",
+      "created_at": "date",
+      "updated_at": "date"
+    },
+    "fields": [
+      "item_number",
+      "name",
+      "id",
+      "priority_score",
+      "status",
+      "origin",
+      "execution_progress",
+      "source_name",
+      "category_name",
+      "stream_name",
+      "planned_start",
+      "planned_end",
+      "created_at",
+      "updated_at"
+    ]
+  },
+  "/applications": {
+    "params": {
+      "include": "supplier,owners,residency,hosting,counts,structure,instances"
+    },
+    "filters": {
+      "name": "text",
+      "category": "set",
+      "environments": "set",
+      "suites_count": "number",
+      "lifecycle": "set",
+      "criticality": "set",
+      "cyber_criticality": "set",
+      "recovery_wave": "set",
+      "rto_minutes": "number",
+      "rpo_minutes": "number",
+      "classification_review_state": "set",
+      "classification_reviewed_at": "date",
+      "editor": "text",
+      "derived_total_users": "text",
+      "created_at": "text",
+      "supplier_name": "text",
+      "owners_business": "text",
+      "owners_it": "text",
+      "hosting_types": "set",
+      "external_facing": "set",
+      "sso_enabled": "set",
+      "mfa_supported": "set",
+      "etl_enabled": "set",
+      "spend_count": "number",
+      "capex_count": "number",
+      "contracts_count": "number",
+      "components_count": "number",
+      "data_class": "set",
+      "contains_pii": "set",
+      "data_residency": "text"
+    },
+    "fields": [
+      "name",
+      "category",
+      "suites_count",
+      "lifecycle",
+      "criticality",
+      "cyber_criticality",
+      "recovery_wave",
+      "rto_minutes",
+      "rpo_minutes",
+      "classification_review_state",
+      "classification_reviewed_at",
+      "editor",
+      "derived_total_users",
+      "created_at",
+      "supplier_name",
+      "owners_business",
+      "owners_it",
+      "hosting_types",
+      "external_facing",
+      "sso_enabled",
+      "mfa_supported",
+      "etl_enabled",
+      "spend_count",
+      "capex_count",
+      "contracts_count",
+      "components_count",
+      "data_class",
+      "contains_pii",
+      "data_residency"
+    ]
+  },
+  "/incidents": {
+    "params": {},
+    "filters": {
+      "title": "text",
+      "category": "set",
+      "severity": "set",
+      "status": "set",
+      "detected_at": "date",
+      "resolved_at": "date",
+      "closed_at": "date",
+      "owner_name": "set",
+      "created_at": "date"
+    },
+    "fields": [
+      "title",
+      "category",
+      "severity",
+      "status",
+      "detected_at",
+      "resolved_at",
+      "closed_at",
+      "owner_name",
+      "confidential",
+      "asset_count",
+      "application_count",
+      "task_count",
+      "created_at"
+    ]
+  },
+  "/interfaces": {
+    "params": {},
+    "filters": {
+      "interface_reference": "text",
+      "interface_id": "text",
+      "name": "text",
+      "binding_environments": "text",
+      "source_application_name": "text",
+      "target_application_name": "text",
+      "lifecycle": "set",
+      "criticality": "set",
+      "created_at": "text",
+      "business_process_id": "set",
+      "data_category": "set",
+      "contains_pii": "set"
+    },
+    "fields": [
+      "interface_reference",
+      "interface_id",
+      "name",
+      "binding_environments",
+      "source_application_name",
+      "target_application_name",
+      "lifecycle",
+      "criticality",
+      "created_at",
+      "business_process_id",
+      "data_category",
+      "contains_pii",
+      "environment_coverage",
+      "bindings_count"
+    ]
+  },
+  "/locations": {
+    "params": {},
+    "filters": {
+      "location_reference": "text",
+      "name": "text",
+      "hosting_type": "set",
+      "provider": "text",
+      "country_iso": "text",
+      "city": "text",
+      "created_at": "text"
+    },
+    "fields": [
+      "location_reference",
+      "name",
+      "hosting_type",
+      "country_iso",
+      "city",
+      "servers_count",
+      "created_at"
+    ]
+  },
+  "/connections": {
+    "params": {},
+    "filters": {
+      "connection_reference": "text",
+      "name": "text",
+      "topology": "set",
+      "criticality": "set",
+      "data_class": "set",
+      "contains_pii": "set",
+      "lifecycle": "set",
+      "created_at": "text"
+    },
+    "fields": [
+      "connection_reference",
+      "name",
+      "topology",
+      "source_label",
+      "protocol_labels",
+      "criticality",
+      "data_class",
+      "contains_pii",
+      "lifecycle",
+      "linked_interface_count",
+      "created_at"
+    ]
+  },
+  "/accounts": {
+    "params": {
+      "coaId": "<chart>"
+    },
+    "filters": {
+      "account_number": "text",
+      "account_name": "text",
+      "nature": "set",
+      "native_name": "text",
+      "description": "text",
+      "consolidation_account_number": "text",
+      "consolidation_account_name": "text",
+      "consolidation_account_description": "text",
+      "status": "set",
+      "created_at": "text"
+    },
+    "fields": [
+      "account_number",
+      "account_name",
+      "nature",
+      "native_name",
+      "description",
+      "consolidation_account_number",
+      "consolidation_account_name",
+      "consolidation_account_description",
+      "status",
+      "created_at"
+    ]
+  },
+  "/suppliers": {
+    "params": {},
+    "filters": {
+      "name": "text",
+      "erp_supplier_id": "text",
+      "notes": "text",
+      "status": "set",
+      "created_at": "text"
+    },
+    "fields": [
+      "name",
+      "erp_supplier_id",
+      "notes",
+      "status",
+      "created_at"
+    ]
+  },
+  "/departments": {
+    "params": {
+      "year": "<year>"
+    },
+    "filters": {
+      "name": "text",
+      "company_name": "text",
+      "headcount_year": "number",
+      "status": "set",
+      "created_at": "text"
+    },
+    "fields": [
+      "name",
+      "company_name",
+      "headcount_year",
+      "status",
+      "created_at"
+    ]
+  },
+  "/assets": {
+    "params": {},
+    "filters": {
+      "asset_reference": "text",
+      "name": "text",
+      "kind": "set",
+      "cluster": "set",
+      "environment": "set",
+      "location_name": "set",
+      "sub_location_name": "set",
+      "hosting_type": "set",
+      "operating_system": "set",
+      "network_segment": "set",
+      "status": "set",
+      "go_live_date": "text",
+      "end_of_life_date": "text",
+      "created_at": "text"
+    },
+    "fields": [
+      "name",
+      "kind",
+      "cluster",
+      "environment",
+      "location_name",
+      "sub_location_name",
+      "hosting_type",
+      "operating_system",
+      "network_segment",
+      "status",
+      "go_live_date",
+      "end_of_life_date",
+      "assignments_count",
+      "created_at"
+    ]
+  },
+  "/budget-lines/summary": {
+    "params": {
+      "shape": "grid",
+      "fte": "fte_yMinus1Budget,fte_yMinus1Revision,fte_yMinus1Forecast,fte_yMinus1FollowUp,fte_yMinus1Landing,fte_yBudget,fte_yRevision,fte_yForecast,fte_yFollowUp,fte_yLanding,fte_yPlus1Budget,fte_yPlus1Revision,fte_yPlus1Forecast,fte_yPlus1FollowUp,fte_yPlus1Landing,fte_yPlus2Budget,fte_yPlus2Revision,fte_yPlus2Forecast,fte_yPlus2FollowUp,fte_yPlus2Landing"
+    },
+    "filters": {
+      "item_number": "text",
+      "nature": "set",
+      "product_name": "text",
+      "supplier_name": "set",
+      "paying_company_name": "set",
+      "contract_name": "text",
+      "account_display": "set",
+      "account_id": "set",
+      "account_warning": "set",
+      "allocation_label": "set",
+      "yMinus1Budget": "number",
+      "yMinus1Revision": "number",
+      "yMinus1Forecast": "number",
+      "yMinus1FollowUp": "number",
+      "yMinus1Landing": "number",
+      "yBudget": "number",
+      "yRevision": "number",
+      "yForecast": "number",
+      "yFollowUp": "number",
+      "yLanding": "number",
+      "yPlus1Budget": "number",
+      "yPlus1Revision": "number",
+      "yPlus1Forecast": "number",
+      "yPlus1FollowUp": "number",
+      "yPlus1Landing": "number",
+      "yPlus2Budget": "number",
+      "yPlus2Revision": "number",
+      "yPlus2Forecast": "number",
+      "yPlus2FollowUp": "number",
+      "yPlus2Landing": "number",
+      "fte_yMinus1Budget": "number",
+      "fte_yMinus1Revision": "number",
+      "fte_yMinus1Forecast": "number",
+      "fte_yMinus1FollowUp": "number",
+      "fte_yMinus1Landing": "number",
+      "fte_yBudget": "number",
+      "fte_yRevision": "number",
+      "fte_yForecast": "number",
+      "fte_yFollowUp": "number",
+      "fte_yLanding": "number",
+      "fte_yPlus1Budget": "number",
+      "fte_yPlus1Revision": "number",
+      "fte_yPlus1Forecast": "number",
+      "fte_yPlus1FollowUp": "number",
+      "fte_yPlus1Landing": "number",
+      "fte_yPlus2Budget": "number",
+      "fte_yPlus2Revision": "number",
+      "fte_yPlus2Forecast": "number",
+      "fte_yPlus2FollowUp": "number",
+      "fte_yPlus2Landing": "number",
+      "has_fte": "set",
+      "latest_task_text": "text",
+      "status": "set",
+      "description": "text",
+      "currency": "set",
+      "effective_start": "date",
+      "disabled_at": "date",
+      "owner_it_name": "set",
+      "owner_business_name": "set",
+      "analytics_category_name": "set",
+      "cost_center_label": "set",
+      "budget_holder_name": "set",
+      "run_build": "set",
+      "project_name": "text",
+      "notes": "text",
+      "created_at": "date",
+      "updated_at": "date"
+    },
+    "fields": [
+      "nature",
+      "product_name",
+      "paying_company_name",
+      "status",
+      "description",
+      "currency",
+      "effective_start",
+      "disabled_at",
+      "cost_center_label",
+      "budget_holder_name",
+      "run_build",
+      "project_name",
+      "notes",
+      "created_at",
+      "updated_at"
+    ]
+  },
+  "/audit-logs": {
+    "params": {},
+    "filters": {
+      "created_at": "date",
+      "table_name": "set",
+      "action": "set",
+      "source": "set",
+      "record_id": "text",
+      "user_email": "text",
+      "user_id": "text",
+      "user_name": "text",
+      "source_ref": "text",
+      "tenant_id": "text"
+    },
+    "fields": [
+      "created_at",
+      "table_name",
+      "action",
+      "source",
+      "record_id",
+      "user_id",
+      "user_name",
+      "source_ref",
+      "tenant_id"
+    ]
+  },
+  "/knowledge": {
+    "params": {
+      "root_folder": "1"
+    },
+    "filters": {
+      "item_ref": "text",
+      "title": "text",
+      "status": "set",
+      "document_type_name": "set",
+      "current_version_number": "text",
+      "primary_owner_name": "set",
+      "folder_name": "set",
+      "template_name": "set",
+      "library_name": "set",
+      "updated_at": "text"
+    },
+    "fields": [
+      "item_ref",
+      "title",
+      "status",
+      "document_type_name",
+      "current_version_number",
+      "primary_owner_name",
+      "folder_name",
+      "template_name",
+      "library_name",
+      "updated_at"
+    ]
+  },
+  "/contracts": {
+    "params": {
+      "budget_year": "<year>",
+      "budget_column": "planned"
+    },
+    "filters": {
+      "name": "text",
+      "supplier_name": "text",
+      "company_name": "text",
+      "next_due_date": "date",
+      "term_state": "set",
+      "yearly_amount_at_signature": "text",
+      "currency": "text",
+      "budget_committed": "number",
+      "budget_linked": "number",
+      "budget_gap": "number",
+      "budget_state": "set",
+      "compliance_state": "set",
+      "linked_lines_count": "text",
+      "status": "set",
+      "start_date": "text",
+      "duration_months": "text",
+      "auto_renewal": "text",
+      "notice_period_months": "text",
+      "end_date": "text",
+      "cancellation_deadline": "text",
+      "billing_frequency": "text",
+      "latest_task_text": "text"
+    },
+    "fields": [
+      "name",
+      "next_due_date",
+      "term_state",
+      "yearly_amount_at_signature",
+      "currency",
+      "budget_committed",
+      "budget_linked",
+      "budget_gap",
+      "budget_state",
+      "status",
+      "start_date",
+      "duration_months",
+      "auto_renewal",
+      "notice_period_months",
+      "end_date",
+      "cancellation_deadline",
+      "billing_frequency"
+    ]
+  },
+  "/contacts": {
+    "params": {},
+    "filters": {
+      "last_name": "text",
+      "first_name": "text",
+      "supplier_name": "text",
+      "job_title": "text",
+      "email": "text",
+      "phone": "text",
+      "mobile": "text",
+      "country": "text",
+      "active": "text",
+      "created_at": "text"
+    },
+    "fields": [
+      "last_name",
+      "first_name",
+      "supplier_name",
+      "job_title",
+      "email",
+      "phone",
+      "mobile",
+      "country",
+      "active",
+      "created_at"
+    ]
+  }
+}
