@@ -920,7 +920,8 @@
   },
   "markdownEditor": {
     "insertEmoji": "Insert emoji",
-    "blockStyle": "Block style"
+    "blockStyle": "Block style",
+    "placeholder": "Start typing…"
   },
   "markdownLink": {
     "url": "URL",
@@ -935,5 +936,16 @@
       "message": "This tenant does not exist or is no longer available. You will be redirected to our website shortly.",
       "redirecting": "Redirecting to {{url}}"
     }
+  },
+  "relatedObject": {
+    "types": {
+      "standalone": "Standalone",
+      "project": "Project",
+      "spendItem": "Budget (OPEX)",
+      "contract": "Contract",
+      "capexItem": "CAPEX",
+      "incident": "Incident"
+    },
+    "item": "Item"
   }
 }

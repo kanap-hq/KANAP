@@ -321,7 +321,7 @@ const captureRootEditorPlugin = realmPlugin<{ editorRef: React.MutableRefObject<
 const MarkdownEditor = React.memo(function MarkdownEditor({
   value,
   onChange,
-  placeholder = 'Start typing...',
+  placeholder,
   minRows = 10,
   maxRows = 18,
   collapsedRows,
@@ -338,6 +338,7 @@ const MarkdownEditor = React.memo(function MarkdownEditor({
   onModEnter,
   onModSave,
 }: MarkdownEditorProps) {
+  const { t } = useTranslation('common');
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
   const minHeight = minRows * 24;
@@ -967,7 +968,7 @@ const MarkdownEditor = React.memo(function MarkdownEditor({
           ref={mdxRef}
           markdown={currentMarkdownRef.current}
           readOnly={disabled}
-          placeholder={placeholder}
+          placeholder={placeholder ?? t('markdownEditor.placeholder')}
           className={mdxRootClassName}
           contentEditableClassName="kanap-mdx-content"
           onChange={handleChange}

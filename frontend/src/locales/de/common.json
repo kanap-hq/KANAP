@@ -920,7 +920,8 @@
   },
   "markdownEditor": {
     "insertEmoji": "Emoji einfügen",
-    "blockStyle": "Absatzformat"
+    "blockStyle": "Absatzformat",
+    "placeholder": "Beginnen Sie zu schreiben…"
   },
   "markdownLink": {
     "url": "URL",
@@ -935,5 +936,16 @@
       "message": "Dieser Mandant existiert nicht oder ist nicht mehr verfügbar. Sie werden in Kürze auf unsere Website weitergeleitet.",
       "redirecting": "Weiterleitung zu {{url}}"
     }
+  },
+  "relatedObject": {
+    "types": {
+      "standalone": "Eigenständig",
+      "project": "Projekt",
+      "spendItem": "Budget (OPEX)",
+      "contract": "Vertrag",
+      "capexItem": "CAPEX",
+      "incident": "Vorfall"
+    },
+    "item": "Element"
   }
 }

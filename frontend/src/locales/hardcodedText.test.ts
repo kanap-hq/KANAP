@@ -48,4 +48,23 @@ describe('hard-coded texts in components', () => {
     });
     expect(offenders).toEqual([]);
   });
+
+  // A text that trails off ("Loading...") is written with the ellipsis character in the locale
+  // files. Three dots at the end of a string in component code is a text that skipped i18n.
+  it('ends no string with three dots', () => {
+    const offenders = Object.entries(sources).flatMap(([path, source]) => {
+      const sf = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+      const found: string[] = [];
+      const visit = (node: ts.Node) => {
+        if ((ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node) || node.kind === ts.SyntaxKind.JsxText)
+          && /[A-Za-z]\.\.\.\s*$/.test(ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node) ? node.text : node.getText(sf))) {
+          found.push(`${path.replace(/^\.\.\//, '')}: ${node.getText(sf).trim()}`);
+        }
+        ts.forEachChild(node, visit);
+      };
+      visit(sf);
+      return found;
+    });
+    expect(offenders).toEqual([]);
+  });
 });

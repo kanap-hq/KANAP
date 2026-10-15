@@ -920,7 +920,8 @@
   },
   "markdownEditor": {
     "insertEmoji": "Insertar emoji",
-    "blockStyle": "Estilo de bloque"
+    "blockStyle": "Estilo de bloque",
+    "placeholder": "Empiece a escribir…"
   },
   "markdownLink": {
     "url": "URL",
@@ -935,5 +936,16 @@
       "message": "Este espacio de trabajo no existe o ya no está disponible. En breve se le redirigirá a nuestro sitio web.",
       "redirecting": "Redirigiendo a {{url}}"
     }
+  },
+  "relatedObject": {
+    "types": {
+      "standalone": "Independiente",
+      "project": "Proyecto",
+      "spendItem": "Presupuesto (OPEX)",
+      "contract": "Contrato",
+      "capexItem": "CAPEX",
+      "incident": "Incidente"
+    },
+    "item": "Elemento"
   }
 }
