@@ -78,7 +78,6 @@
     "valueCount": "{{formatted}} Werte",
     "valueCount_one": "{{formatted}} Wert",
     "clearFilter": "Filter löschen",
-    "columnPlaceholder": "Filtern…",
     "filterColumn": "{{column}} filtern",
     "linkFiltersLost": "Die Filter dieses Links sind nicht mehr verfügbar.",
     "date": {
