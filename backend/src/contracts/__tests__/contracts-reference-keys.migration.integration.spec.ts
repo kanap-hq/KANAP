@@ -6,23 +6,24 @@ import dataSource from '../../data-source';
 import { ContractsReferenceKeys1854070000000 } from '../../migrations/1854070000000-contracts-reference-keys';
 
 // Migration 1854070000000 against a seeded dirty database, in one transaction rolled back at the
-// end (the keys are dropped first, so it runs whether the database has them or not): a contract
-// whose supplier is missing stops it with a readable list and no key added; once that contract
-// is fixed it adds the three keys, clears an owner that does not exist, and a second run changes
-// nothing.
+// end (the keys are dropped first, so it runs whether the database has them or not). It succeeds
+// with no manual step: contracts whose supplier or company is missing are kept under NOT VALID
+// keys, a missing owner is cleared under a validated key, and the counts are logged. Once the
+// contracts are fixed, a rerun validates the keys.
 
-const KEYS = { fk_contracts_supplier: 'r', fk_contracts_company: 'r', fk_contracts_owner_user: 'n' } as const;
+const KEYS = ['fk_contracts_supplier', 'fk_contracts_company', 'fk_contracts_owner_user'];
 
 async function setTenant(runner: QueryRunner, tenantId: string) {
   await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
 }
 
+/** name → `<action>/<validated>`. */
 async function keys(runner: QueryRunner): Promise<Record<string, string>> {
   const rows = await runner.query(
-    `SELECT conname, confdeltype FROM pg_constraint WHERE conrelid = 'contracts'::regclass AND contype = 'f' AND conname = ANY($1)`,
-    [Object.keys(KEYS)],
+    `SELECT conname, confdeltype, convalidated FROM pg_constraint WHERE conrelid = 'contracts'::regclass AND contype = 'f' AND conname = ANY($1)`,
+    [KEYS],
   );
-  return Object.fromEntries(rows.map((row: { conname: string; confdeltype: string }) => [row.conname, row.confdeltype]));
+  return Object.fromEntries(rows.map((row: any) => [row.conname, `${row.confdeltype}/${row.convalidated ? 'valid' : 'not valid'}`]));
 }
 
 async function rlsStates(runner: QueryRunner) {
@@ -37,12 +38,25 @@ async function one(runner: QueryRunner, sql: string, params: unknown[]): Promise
   return (await runner.query(sql, params))[0].id as string;
 }
 
-async function testMigrationRefusesOrphansThenAddsTheKeys() {
+/** Runs `fn` and returns what it logged. */
+async function logged(fn: () => Promise<void>): Promise<string> {
+  const lines: string[] = [];
+  const original = console.log;
+  console.log = (...args: unknown[]) => { lines.push(args.map(String).join(' ')); };
+  try {
+    await fn();
+  } finally {
+    console.log = original;
+  }
+  return lines.join('\n');
+}
+
+async function testMigrationKeepsOrphansUnderNotValidKeys() {
   const runner = dataSource.createQueryRunner();
   await runner.connect();
   await runner.startTransaction();
   try {
-    for (const name of Object.keys(KEYS)) await runner.query(`ALTER TABLE contracts DROP CONSTRAINT IF EXISTS ${name}`);
+    for (const name of KEYS) await runner.query(`ALTER TABLE contracts DROP CONSTRAINT IF EXISTS ${name}`);
     const rlsBefore = await rlsStates(runner);
 
     const tenantId = randomUUID();
@@ -67,52 +81,50 @@ async function testMigrationRefusesOrphansThenAddsTheKeys() {
        VALUES ($1, 'Keys', 'Owner', $2, null, $3, false, 'enabled') RETURNING id`,
       [tenantId, `${slug}@contract-keys.test`, roleId],
     );
-    const contract = (name: string, supplier: string, owner: string | null) =>
+    const contract = (name: string, company: string, supplier: string, owner: string | null) =>
       one(
         runner,
         `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, owner_user_id, start_date)
          VALUES ($1, $2, $3, $4, $5, '2024-01-01') RETURNING id`,
-        [tenantId, name, companyId, supplier, owner],
+        [tenantId, name, company, supplier, owner],
       );
-    const sound = await contract('Sound contract', supplierId, ownerId);
-    const orphan = await contract('Orphan contract', randomUUID(), null);
-    const ownerless = await contract('Gone owner contract', supplierId, randomUUID());
+    const sound = await contract('Sound contract', companyId, supplierId, ownerId);
+    const noSupplier = await contract('No supplier contract', companyId, randomUUID(), null);
+    const noCompany = await contract('No company contract', randomUUID(), supplierId, null);
+    const goneOwner = await contract('Gone owner contract', companyId, supplierId, randomUUID());
     await setTenant(runner, '');
 
     const migration = new ContractsReferenceKeys1854070000000();
-    await assert.rejects(migration.up(runner), (err: Error) => {
-      assert.match(err.message, /contract\(s\) name a supplier or a company that does not exist in their tenant\. No key was added\./);
-      assert.ok(
-        err.message.includes(`tenant ${slug} (${tenantId}): contract ${orphan} "Orphan contract": supplier missing`),
-        `the orphan is listed with its tenant, id, name and missing reference:\n${err.message}`,
-      );
-      assert.ok(!err.message.includes(sound) && !err.message.includes(ownerless), 'the other contracts are not listed');
-      return true;
-    });
-    assert.deepEqual(await keys(runner), {}, 'no key was added');
-    assert.deepEqual(await rlsStates(runner), rlsBefore, 'RLS is put back as found');
-
-    await setTenant(runner, tenantId);
-    const [before] = await runner.query(`SELECT owner_user_id FROM contracts WHERE id = $1`, [ownerless]);
-    assert.notEqual(before.owner_user_id, null, 'the refused run cleared nothing');
-    await runner.query(`UPDATE contracts SET supplier_id = $2 WHERE id = $1`, [orphan, supplierId]);
-    await setTenant(runner, '');
-
-    await migration.up(runner);
-    assert.deepEqual(await keys(runner), KEYS, 'the three keys, RESTRICT on supplier and company, SET NULL on owner');
+    const log = await logged(() => migration.up(runner));
+    assert.deepEqual(await keys(runner), {
+      fk_contracts_supplier: 'r/not valid',
+      fk_contracts_company: 'r/not valid',
+      fk_contracts_owner_user: 'n/valid',
+    }, 'NOT VALID keys on the NOT NULL columns, a validated key on the owner');
+    assert.match(log, new RegExp(`tenant ${slug} \\(${tenantId}\\): contracts\\.supplier_id: 1 row\\(s\\) name a missing suppliers row \\(${noSupplier}\\)`));
+    assert.match(log, new RegExp(`tenant ${slug} \\(${tenantId}\\): contracts\\.company_id: 1 row\\(s\\) name a missing companies row \\(${noCompany}\\)`));
+    assert.match(log, new RegExp(`tenant ${slug} \\(${tenantId}\\): contracts\\.owner_user_id: 1 row\\(s\\) naming a missing users row cleared`));
     assert.deepEqual(await rlsStates(runner), rlsBefore, 'RLS is put back as found');
     const [{ tenant }] = await runner.query(`SELECT current_setting('app.current_tenant', true) AS tenant`);
     assert.equal(tenant ?? '', '', 'the migration leaves no tenant set');
 
     await setTenant(runner, tenantId);
-    const owners = await runner.query(`SELECT id, owner_user_id FROM contracts WHERE tenant_id = $1`, [tenantId]);
-    const ownerOf = new Map(owners.map((row: { id: string; owner_user_id: string | null }) => [row.id, row.owner_user_id]));
-    assert.equal(ownerOf.get(ownerless), null, 'the missing owner is cleared');
+    const rows = await runner.query(`SELECT id, owner_user_id FROM contracts WHERE tenant_id = $1`, [tenantId]);
+    const ownerOf = new Map(rows.map((row: { id: string; owner_user_id: string | null }) => [row.id, row.owner_user_id]));
+    assert.equal(rows.length, 4, 'every contract is kept');
+    assert.equal(ownerOf.get(goneOwner), null, 'the missing owner is cleared');
     assert.equal(ownerOf.get(sound), ownerId, 'an existing owner is kept');
-    await setTenant(runner, '');
 
+    // Fixed in the application: the rerun validates the keys.
+    await runner.query(`UPDATE contracts SET supplier_id = $2 WHERE id = $1`, [noSupplier, supplierId]);
+    await runner.query(`UPDATE contracts SET company_id = $2 WHERE id = $1`, [noCompany, companyId]);
+    await setTenant(runner, '');
     await migration.up(runner);
-    assert.deepEqual(await keys(runner), KEYS, 'a second run changes nothing');
+    assert.deepEqual(await keys(runner), {
+      fk_contracts_supplier: 'r/valid',
+      fk_contracts_company: 'r/valid',
+      fk_contracts_owner_user: 'n/valid',
+    }, 'a rerun validates the keys once the contracts are fixed');
   } finally {
     await runner.rollbackTransaction();
     await runner.release();
@@ -122,7 +134,7 @@ async function testMigrationRefusesOrphansThenAddsTheKeys() {
 async function main() {
   await dataSource.initialize();
   try {
-    await testMigrationRefusesOrphansThenAddsTheKeys();
+    await testMigrationKeepsOrphansUnderNotValidKeys();
   } finally {
     await dataSource.destroy();
   }
