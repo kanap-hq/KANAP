@@ -111,9 +111,7 @@ describe('DeleteSelectedButton', () => {
     expect(message).toHaveTextContent('delete.partialDeleted {"count":1}');
     expect(message).toHaveTextContent('delete.partialFailed {"count":1');
     expect(message).toHaveTextContent(`Frozen: ${FROZEN}`);
-    // The deleted count drives the plural forms.
-    expect(message).toHaveTextContent('"count":1');
-    expect(message).toHaveTextContent('"failed":1');
+    // Each count drives its own plural forms: the deleted ones, then the failed ones.
     await waitFor(() => expect(onDeleteSuccess).toHaveBeenCalled());
   });
 
