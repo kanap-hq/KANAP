@@ -9,6 +9,46 @@ import {
   CsvImportContext,
 } from '../common/csv';
 import { assertMarkdownSize } from '../common/markdown-limits';
+import { sameStoredValues } from '../common/csv-sheet/unchanged';
+import { ItOpsSettings } from '../it-ops-settings/it-ops-settings.service';
+
+const OWNER_COLUMN = /^(business|it)_owner_email_/;
+
+function resolveApplicationCatalogs(entity: any, settings: ItOpsSettings): void {
+  if (entity.category) entity.category = resolveCatalogCode(entity.category, settings.applicationCategories);
+  if (entity.lifecycle) entity.lifecycle = resolveCatalogCode(entity.lifecycle, settings.lifecycleStates);
+  if (Array.isArray(entity.access_methods)) entity.access_methods = entity.access_methods.map((item: string) => resolveCatalogCode(item, settings.accessMethods) ?? item);
+}
+
+/** The owners a row's columns name, as `owner_type:user_id`; unknown emails are left out. */
+export function csvOwnerKeys(raw: Record<string, string>, userByEmail: Map<string, string>): string[] {
+  const keys: string[] = [];
+  for (const ownerType of ['business', 'it'] as const) {
+    for (let i = 1; i <= 4; i++) {
+      const userId = userByEmail.get((raw[`${ownerType}_owner_email_${i}`] || '').trim().toLowerCase());
+      if (userId && !keys.includes(`${ownerType}:${userId}`)) keys.push(`${ownerType}:${userId}`);
+    }
+  }
+  return keys;
+}
+
+/** The ISO country codes of a `data_residency` cell. */
+export function csvResidencyCodes(value: string | undefined): string[] {
+  return [...new Set((value || '').split(',').map((code) => code.trim().toUpperCase()).filter((code) => code.length === 2))];
+}
+
+/** Same members, in any order. */
+export function sameKeys(a: string[] | undefined, b: string[]): boolean {
+  const left = [...new Set(a ?? [])].sort();
+  const right = [...new Set(b)].sort();
+  return left.length === right.length && left.every((key, i) => key === right[i]);
+}
+
+function groupKeys<T>(rows: T[], id: (row: T) => string, key: (row: T) => string): Map<string, string[]> {
+  const byId = new Map<string, string[]>();
+  for (const row of rows) byId.set(id(row), [...(byId.get(id(row)) ?? []), key(row)]);
+  return byId;
+}
 
 /**
  * CSV configuration for Applications entity (V2)
@@ -525,13 +565,50 @@ export const applicationCsvConfig: CsvEntityConfig = {
     }
   },
 
+  /**
+   * The row as the commit stores it (catalog names resolved, classification patched), plus the
+   * owners and the data residency ApplicationsCsvService writes after the import.
+   */
+  sameAsStored: async (rows, context) => {
+    const settings = await requireImportCatalogs(context);
+    const ids = rows.map((row) => row.existingEntity.id);
+    const [owners, residency, users] = ids.length === 0 ? [[], [], []] : await Promise.all([
+      context.manager.query(
+        `SELECT application_id, user_id, owner_type FROM application_owners WHERE tenant_id = $1 AND application_id = ANY($2)`,
+        [context.tenantId, ids],
+      ),
+      context.manager.query(
+        `SELECT application_id, country_iso FROM application_data_residency WHERE tenant_id = $1 AND application_id = ANY($2)`,
+        [context.tenantId, ids],
+      ),
+      context.manager.query(`SELECT id, email FROM users WHERE tenant_id = $1`, [context.tenantId]),
+    ]);
+    const userByEmail = new Map<string, string>(users.map((u: any) => [String(u.email).toLowerCase(), u.id]));
+    const ownersById = groupKeys(owners, (o: any) => o.application_id, (o: any) => `${o.owner_type}:${o.user_id}`);
+    const residencyById = groupKeys(residency, (r: any) => r.application_id, (r: any) => String(r.country_iso).trim().toUpperCase());
+
+    return rows.map((row) => {
+      const stored = row.existingEntity;
+      if (Object.keys(row.raw).some((key) => OWNER_COLUMN.test(key))) {
+        if (!sameKeys(ownersById.get(stored.id), csvOwnerKeys(row.raw, userByEmail))) return false;
+      }
+      const codes = csvResidencyCodes(row.raw.data_residency);
+      if (codes.length > 0 && !sameKeys(residencyById.get(stored.id), codes)) return false;
+
+      const next = { ...row.parsed };
+      delete next._owners;
+      try {
+        resolveApplicationCatalogs(next, settings);
+      } catch {
+        return false;
+      }
+      return sameStoredValues(stored, next);
+    });
+  },
+
   beforeCommit: async (entities: any[], context: CsvImportContext) => {
     // Effective catalogs (defaults included), the same ones the export writes names from.
     const settings = await requireImportCatalogs(context);
-    for (const entity of entities) {
-      if (entity.category) entity.category = resolveCatalogCode(entity.category, settings.applicationCategories);
-      if (entity.lifecycle) entity.lifecycle = resolveCatalogCode(entity.lifecycle, settings.lifecycleStates);
-      if (Array.isArray(entity.access_methods)) entity.access_methods = entity.access_methods.map((item: string) => resolveCatalogCode(item, settings.accessMethods) ?? item);
-    }
+    for (const entity of entities) resolveApplicationCatalogs(entity, settings);
   },
 };

@@ -5,6 +5,46 @@ import {
   CsvFieldType,
   CsvImportContext,
 } from '../common/csv';
+import { sameStoredValues } from '../common/csv-sheet/unchanged';
+import { ItOpsSettings } from '../it-ops-settings/it-ops-settings.service';
+
+/**
+ * Settings-backed fields (kind, status, operating_system, domain) accept a code or a name;
+ * ambiguity is refused. IP addresses get their type resolved and their values trimmed.
+ */
+function resolveAssetCatalogs(entity: any, settings: ItOpsSettings): void {
+  if (entity.kind) entity.kind = resolveCatalogCode(entity.kind, settings.serverKinds);
+  if (entity.status) entity.status = resolveCatalogCode(entity.status, settings.lifecycleStates);
+  if (entity.operating_system) entity.operating_system = resolveCatalogCode(entity.operating_system, settings.operatingSystems);
+  if (entity.domain) entity.domain = resolveCatalogCode(entity.domain, settings.domains);
+  if (!Array.isArray(entity.ip_addresses)) return;
+
+  const normalizedIps: Array<{ type: string; ip: string; subnet_cidr: string | null }> = [];
+  for (const ip of entity.ip_addresses) {
+    if (!ip || typeof ip !== 'object' || !ip.ip) {
+      continue;
+    }
+
+    const typeInput = String(ip.type || '').trim().toLowerCase();
+    const resolvedType = typeInput ? findCatalogOption(typeInput, settings.ipAddressTypes)?.code : undefined;
+
+    // Validate IP type against settings
+    if (typeInput && !resolvedType) {
+      const validTypes = settings.ipAddressTypes.map((option) => option.label).join(', ');
+      throw new Error(
+        `Invalid IP address type "${ip.type}" for asset "${entity.name}". Valid types: ${validTypes || '(none configured)'}`,
+      );
+    }
+
+    normalizedIps.push({
+      type: resolvedType || typeInput,
+      ip: String(ip.ip || '').trim(),
+      subnet_cidr: ip.subnet_cidr ? String(ip.subnet_cidr).trim() : null,
+    });
+  }
+
+  entity.ip_addresses = normalizedIps.length > 0 ? normalizedIps : null;
+}
 
 /**
  * CSV configuration for Assets entity
@@ -314,6 +354,22 @@ export const assetCsvConfig: CsvEntityConfig = {
     },
   ],
 
+  /** The row as the commit stores it: catalog names resolved, provider kept (filled only when blank). */
+  sameAsStored: async (rows, context) => {
+    const settings = await requireImportCatalogs(context);
+    return rows.map((row) => {
+      const stored = row.existingEntity;
+      if (!stored.provider && (row.parsed.location_id ?? stored.location_id)) return false;
+      const next = { ...row.parsed };
+      try {
+        resolveAssetCatalogs(next, settings);
+      } catch {
+        return false;
+      }
+      return sameStoredValues(stored, next);
+    });
+  },
+
   /**
    * Hook to normalize and validate fields before commit.
    * - Derives Provider from Location (required at DB level but auto-populated in frontend)
@@ -347,42 +403,7 @@ export const assetCsvConfig: CsvEntityConfig = {
       }
     }
 
-    // 3. Resolve settings-backed fields (accepts a code or a name; ambiguity is refused)
-    for (const entity of entities) {
-      if (entity.kind) entity.kind = resolveCatalogCode(entity.kind, settings.serverKinds);
-      if (entity.status) entity.status = resolveCatalogCode(entity.status, settings.lifecycleStates);
-      if (entity.operating_system) entity.operating_system = resolveCatalogCode(entity.operating_system, settings.operatingSystems);
-      if (entity.domain) entity.domain = resolveCatalogCode(entity.domain, settings.domains);
-
-      // 4. Normalize IP addresses (resolve type from label/code, trim values)
-      if (Array.isArray(entity.ip_addresses)) {
-        const normalizedIps: Array<{ type: string; ip: string; subnet_cidr: string | null }> = [];
-
-        for (const ip of entity.ip_addresses) {
-          if (!ip || typeof ip !== 'object' || !ip.ip) {
-            continue;
-          }
-
-          const typeInput = String(ip.type || '').trim().toLowerCase();
-          const resolvedType = typeInput ? findCatalogOption(typeInput, settings.ipAddressTypes)?.code : undefined;
-
-          // Validate IP type against settings
-          if (typeInput && !resolvedType) {
-            const validTypes = settings.ipAddressTypes.map((option) => option.label).join(', ');
-            throw new Error(
-              `Invalid IP address type "${ip.type}" for asset "${entity.name}". Valid types: ${validTypes || '(none configured)'}`,
-            );
-          }
-
-          normalizedIps.push({
-            type: resolvedType || typeInput,
-            ip: String(ip.ip || '').trim(),
-            subnet_cidr: ip.subnet_cidr ? String(ip.subnet_cidr).trim() : null,
-          });
-        }
-
-        entity.ip_addresses = normalizedIps.length > 0 ? normalizedIps : null;
-      }
-    }
+    // 3. Resolve settings-backed fields and normalize IP addresses
+    for (const entity of entities) resolveAssetCatalogs(entity, settings);
   },
 };

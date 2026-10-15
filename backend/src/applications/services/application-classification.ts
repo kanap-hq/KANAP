@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { sameStoredValue } from '../../common/csv-sheet/unchanged';
 import { ClassificationCatalog, resolveClassificationOption, validateDuration } from '../../it-ops-settings/classification-catalog';
 
 export type ClassificationReview = { user_id: string; reviewed_at: string; revision: number };
@@ -25,13 +26,12 @@ export function classificationPatch(input: Record<string, any>, existing: Record
     if (typeof patch.classification_justification !== 'string' || patch.classification_justification.length > 8000) throw new BadRequestException('classification_justification must be text of at most 8000 characters or null');
     patch.classification_justification = patch.classification_justification.trim() || null;
   }
-  const changed = Object.entries(patch).some(([key, value]) => comparable(value) !== comparable(existing?.[key] ?? null));
+  // A date cell is text and the stored date a Date: compared as values, so an identical re-import keeps the revision.
+  const changed = Object.entries(patch).some(([key, value]) => !sameStoredValue(existing?.[key] ?? null, value));
   patch.classification_revision = (existing?.classification_revision ?? 0) + (changed ? 1 : 0);
   if (!existing) patch.classification_review = null;
   return patch;
 }
-
-function comparable(value: any): string { return value instanceof Date ? value.toISOString().slice(0, 10) : JSON.stringify(value); }
 
 export function isClassificationComplete(app: Record<string, any>): boolean {
   return !!app.criticality?.trim() && !!app.cyber_criticality && !!app.data_class && !!app.recovery_wave && !!app.classification_justification?.trim();

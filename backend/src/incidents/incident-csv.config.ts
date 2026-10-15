@@ -6,6 +6,7 @@ import {
 import { allocateItemNumbers } from '../common/item-number.service';
 import { normalizeMarkdownRichText } from '../common/markdown-worker';
 import { findCatalogOption, requireImportCatalogs } from '../it-ops-settings/catalog-resolve';
+import { sameAsStoredWithDocuments } from '../knowledge/integrated-document-bodies';
 import { INCIDENT_SEVERITIES, INCIDENT_STATUSES } from './incident.entity';
 import { incidentVisibleToViewer, type IncidentViewer } from './incident-visibility';
 
@@ -175,7 +176,9 @@ function resolveUser(value: string, column: string, context: CsvImportContext): 
   return resolved;
 }
 
-function dateTimeField(csvColumn: string, label: string, group: string) {
+const DATE_TIME_COLUMNS = ['started_at', 'detected_at', 'resolved_at', 'closed_at', 'authority_notified_at'] as const;
+
+function dateTimeField(csvColumn: (typeof DATE_TIME_COLUMNS)[number], label: string, group: string) {
   return {
     csvColumn,
     entityProperty: csvColumn,
@@ -399,6 +402,30 @@ export const incidentCsvConfig: CsvEntityConfig = {
         message: `Unknown incident reference(s): INC-${n}. ${UNKNOWN_REF_HINT}`,
       });
     }
+  },
+
+  /**
+   * The category is resolved to its code and the review compared with its document (a blank
+   * review cell leaves it as it is); the other columns as stored.
+   */
+  sameAsStored: async (rows, context) => {
+    const categories = (await requireImportCatalogs(context)).incidentCategories;
+    return sameAsStoredWithDocuments(rows, context, 'incidents', { [REVIEW_ENTITY_PROPERTY]: 'review' }, (next, stored) => {
+      // The export writes instants to the second: the stored instant at that precision is the same value.
+      for (const column of DATE_TIME_COLUMNS) {
+        if (next[column] instanceof Date && stored[column] instanceof Date
+          && Math.floor(stored[column].getTime() / 1000) * 1000 === next[column].getTime()) next[column] = stored[column];
+      }
+      // As beforeCommit: blank booleans are false, a blank confidential flag keeps the stored one.
+      for (const column of ['personal_data_affected', 'authority_notification_required']) {
+        if (column in next) next[column] = next[column] ?? false;
+      }
+      if (next.confidential == null) delete next.confidential;
+      if (!next.category) return;
+      const resolved = findCatalogOption(next.category, categories)?.code;
+      if (!resolved) throw new Error(`unknown category "${next.category}"`);
+      next.category = resolved;
+    }, { blankKeepsDocument: true });
   },
 
   /**

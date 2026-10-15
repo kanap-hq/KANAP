@@ -115,6 +115,14 @@ export interface CsvEntityConfig {
   beforeValidate?: (rows: CsvImportRow[], context: CsvImportContext) => Promise<void>;
   /** Validate resolved rows identically in dry-run and execution, after identity resolution. */
   afterValidate?: (rows: CsvImportRow[], context: CsvImportContext) => Promise<void>;
+  /**
+   * Which matched rows leave everything as stored, one answer per row (the rows to update,
+   * free of errors). Replaces the plain comparison of each parsed value with its stored
+   * column, for configs whose hooks resolve names to codes, read virtual columns or write
+   * texts and links elsewhere. A row may be true only when the commit, its hooks and the
+   * entity service's follow-up writes would change nothing.
+   */
+  sameAsStored?: (rows: CsvImportRow[], context: CsvImportContext) => Promise<boolean[]>;
   /** Hook called before import commit */
   beforeCommit?: (entities: any[], context: CsvImportContext) => Promise<void>;
   /** Hook called after import commit */
