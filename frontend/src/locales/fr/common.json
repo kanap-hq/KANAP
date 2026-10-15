@@ -91,7 +91,12 @@
       "inRange": "du {{from}} au {{to}}",
       "or": "ou",
       "and": "et"
-    }
+    },
+    "noResults": "Aucun résultat",
+    "noResultsFiltered": "Aucun résultat ne correspond à la recherche ou aux filtres.",
+    "clearAll": "Effacer la recherche et les filtres",
+    "resultCount_one": "{{count}} résultat",
+    "resultCount_other": "{{count}} résultats"
   },
   "columnChooser": {
     "searchPlaceholder": "Rechercher une colonne",

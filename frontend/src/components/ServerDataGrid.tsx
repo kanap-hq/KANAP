@@ -34,6 +34,13 @@ import { useAuth } from '../auth/AuthContext';
 import { useTenant } from '../tenant/TenantContext';
 import { useThemeMode } from '../config/ThemeContext';
 import { useAgGridLocaleText } from './grid/useAgGridLocaleText';
+import {
+  StatusScopeColumnFilter,
+  StatusScopeContext,
+  StatusScopeFloatingFilter,
+  columnFollowsStatusScope,
+  scopeOfStatusModel,
+} from './grid/statusScopeFilter';
 import { STATUS_SCOPE_PARAM, statusScopeParams } from '../utils/statusScopeParams';
 import {
   cachedListContextId,
@@ -436,12 +443,29 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
 
   const localeText = useAgGridLocaleText();
 
+  // The status column of a list with a Show scope shows that scope as its filter (one value for
+  // both), when every status its filter offers is a scope of the list.
+  const offeredScopesKey = (statusScopeConfig?.scopes ?? DEFAULT_STATUS_SCOPES).join(',');
+  const scopeColumnField = useMemo(() => {
+    if (!statusScopeConfig) return null;
+    const field = statusScopeConfig.columnField ?? 'status';
+    const column = columns.find((col) => (col.field || col.colId) === field);
+    return column && columnFollowsStatusScope(column.filterParams, offeredScopesKey.split(',') as StatusScope[]) ? field : null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [!!statusScopeConfig, statusScopeConfig?.columnField, offeredScopesKey, columns]);
+
   // Process columns to move custom properties to context to avoid AG Grid warnings
   const processedColumns = useMemo(() => {
     return columns.map(col => {
       const { required, defaultHidden, category, ...agGridCol } = col;
 
       const field = col.field || col.colId || '';
+
+      if (field === scopeColumnField) {
+        agGridCol.filter = StatusScopeColumnFilter;
+        agGridCol.floatingFilterComponent = StatusScopeFloatingFilter;
+        delete agGridCol.filterParams;
+      }
 
       // AG Grid replaces (does not merge) defaultColDef.filterParams with the column's own, so a date or
       // number column without filterParams would inherit the text options above ("contains"…): the
@@ -484,7 +508,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
         },
       };
     });
-  }, [columns, showRowCount, rowCountField]);
+  }, [columns, showRowCount, rowCountField, scopeColumnField]);
   const navigate = useNavigate();
   const location = useLocation();
   const urlParams = new URLSearchParams(location.search);
@@ -512,6 +536,9 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   const debouncedSearch = useDebouncedValue(search, 400);
   const [loadError, setLoadError] = useState<Error | undefined>();
   const [totalRowCount, setTotalRowCount] = useState<number | null>(null);
+  // Set once the first page of the current query came back empty: 'filtered' when a search, a filter
+  // or a Show scope other than the default narrows it. Never while loading or after an error.
+  const [emptyResult, setEmptyResult] = useState<null | 'empty' | 'filtered'>(null);
 
   const gridApiRef = useRef<any>(null);
   const columnApiRef = useRef<any>(null); // deprecated in AG Grid v32+, keep for backward compat (unused)
@@ -537,6 +564,8 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   useEffect(() => {
     statusScopeRef.current = statusScope;
   }, [statusScope]);
+  const scopeNarrowsRef = useRef<() => boolean>(() => false);
+  scopeNarrowsRef.current = () => !!statusScopeConfig && statusScopeRef.current !== defaultStatusScope;
 
   // Set once the page requests' column parameters can be compared (see pageParams).
   const pageParamsChangedRef = useRef<() => void>(() => undefined);
@@ -807,6 +836,25 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
     } catch {}
   }, [onQueryStateChange, defaultStatusScope, navigate]);
 
+  /**
+   * A status filter in a starting model (an address written before the status column followed the
+   * Show scope) becomes the scope; the model goes on without it. Other models pass unchanged.
+   */
+  const adoptStatusFilter = useCallback(<M,>(model: M): M => {
+    const filters = model as Record<string, unknown> | null | undefined;
+    if (!scopeColumnField || !filters || typeof filters !== 'object' || !(scopeColumnField in filters)) return model;
+    const { [scopeColumnField]: statusModel, ...rest } = filters;
+    const scope = scopeOfStatusModel(statusModel, offeredScopesKey.split(',') as StatusScope[]);
+    if (scope && scope !== statusScopeRef.current) handleStatusScopeChange(scope);
+    return rest as M;
+  }, [scopeColumnField, offeredScopesKey, handleStatusScopeChange]);
+
+  const statusScopeState = useMemo(
+    () => ({ scope: statusScope, scopes: offeredScopes, setScope: handleStatusScopeChange }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [statusScope, offeredScopesKey, handleStatusScopeChange],
+  );
+
   const extraParamsRef = useRef(extraParams);
   const extraParamsKey = useMemo(() => JSON.stringify(extraParams ?? {}), [extraParams]);
   useEffect(() => { extraParamsRef.current = extraParams; }, [extraParamsKey]);
@@ -887,6 +935,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
       try {
         setLoadError(undefined);
         const startRow = params.startRow ?? 0;
+        if (startRow === 0) setEmptyResult(null);
         const limit = cacheBlockSize;
         const page = Math.floor(startRow / limit) + 1;
         const columnParams = currentPageParams();
@@ -921,6 +970,10 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
         const rows = (res.data?.items ?? []) as any[];
         const total = res.data?.total ?? rows.length;
         setTotalRowCount(total);
+        if (startRow === 0) {
+          const narrowed = !!reqParams.q || !!reqParams.filters || scopeNarrowsRef.current();
+          setEmptyResult(total === 0 ? (narrowed ? 'filtered' : 'empty') : null);
+        }
         onTotalChangeRef.current?.(total);
         params.successCallback(rows, total);
       } catch (e: any) {
@@ -958,7 +1011,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
     // If initialState provided, apply the filter model
     if (!appliedInitialFilterRef.current && initialState?.filter?.filterModel) {
       try {
-        const targetFilterModel = initialState.filter.filterModel;
+        const targetFilterModel = adoptStatusFilter(initialState.filter.filterModel);
         (event.api as any).setFilterModel?.(targetFilterModel);
         filterModelRef.current = targetFilterModel;
         appliedInitialFilterRef.current = true;
@@ -970,8 +1023,9 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
     // Legacy path: apply explicit initialFilterModel BEFORE setting datasource
     if (!appliedInitialFilterRef.current && initialFilterModel && !initialState) {
       try {
-        (event.api as any).setFilterModel?.(initialFilterModel);
-        filterModelRef.current = initialFilterModel;
+        const startingModel = adoptStatusFilter(initialFilterModel);
+        (event.api as any).setFilterModel?.(startingModel);
+        filterModelRef.current = startingModel;
         appliedInitialFilterRef.current = true;
       } catch {}
     }
@@ -1012,7 +1066,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
     };
 
     // Filters of the address, when the page hands none: inline ones at once.
-    const urlFilters = filtersFromUrlRef.current;
+    const urlFilters = adoptStatusFilter(filtersFromUrlRef.current);
     if (!appliedInitialFilterRef.current && urlFilters) {
       appliedInitialFilterRef.current = true;
       try {
@@ -1030,8 +1084,9 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
       loadListContext(ctxId)
         .then(({ list, filters }) => {
           if (!filters || list !== listKeyOf(endpointRef.current) || (event.api as any).isDestroyed?.()) return;
-          (event.api as any).setFilterModel?.(filters);
-          filterModelRef.current = filters;
+          const startingModel = adoptStatusFilter(filters);
+          (event.api as any).setFilterModel?.(startingModel);
+          filterModelRef.current = startingModel;
         })
         .catch((error) => {
           if (!isListContextNotFound(error) || (event.api as any).isDestroyed?.()) return;
@@ -1044,7 +1099,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
       return;
     }
     start();
-  }, [sortModel, initialState, initialFilterModel, columnStateManager, columnPreferencesKey, onGridApiReady, onQueryStateChange, revealFilteredColumns]);
+  }, [sortModel, initialState, initialFilterModel, columnStateManager, columnPreferencesKey, onGridApiReady, onQueryStateChange, revealFilteredColumns, adoptStatusFilter]);
 
   const onSortChanged = useCallback((e: any) => {
     const api = e?.api ?? gridApiRef.current;
@@ -1085,8 +1140,15 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   const onFilterChanged = useCallback((e: any) => {
     const api = e?.api ?? gridApiRef.current;
     const fm = api?.getFilterModel?.() ?? {};
+    // A status model set from code: the Show scope takes it, and the grid reloads without it.
+    const adopted = adoptStatusFilter(fm);
+    if (adopted !== fm) {
+      api?.setFilterModel?.(adopted);
+      return;
+    }
     filterModelRef.current = fm;
     setLinkFiltersLost(false);
+    setEmptyResult(null);
     // AG Grid reloads the rows on a filter change by itself: no purge here, which would load them twice.
     abortOtherQueries(api);
     try {
@@ -1104,8 +1166,16 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
     } catch {}
     // After the parent: a page that fills its address from its stored list state reads the new one.
     syncFiltersInUrl(fm);
-  }, [abortOtherQueries, defaultSort, enablePagination, onQueryStateChange, syncFiltersInUrl]);
+  }, [abortOtherQueries, adoptStatusFilter, defaultSort, enablePagination, onQueryStateChange, syncFiltersInUrl]);
 
+
+  // The empty list's one-click way out: no search, no column filter, the default Show scope.
+  const clearSearchAndFilters = useCallback(() => {
+    setSearch('');
+    searchRef.current = '';
+    if (statusScopeConfig && statusScopeRef.current !== defaultStatusScope) handleStatusScopeChange(defaultStatusScope);
+    gridApiRef.current?.setFilterModel?.(null);
+  }, [statusScopeConfig, defaultStatusScope, handleStatusScopeChange]);
 
   // Reload when the search, extra params, refreshKey, endpoint or status scope change: AG Grid does
   // not see those. It reloads on a sort or filter change by itself.
@@ -1118,6 +1188,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
     const api = gridApiRef.current;
     // update URL handled in other effect; here we simply purge cache to refetch with new params
     supersedeRequests();
+    setEmptyResult(null);
     try {
       if (enablePagination) {
         (api as any)?.paginationGoToFirstPage?.();
@@ -1314,6 +1385,8 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   }, [showRowCount, totalRowCount, rowCountField, pinnedBottomRowData, t]);
 
   const showAuxHorizontalScrollbar = showTopScroll && !enablePagination;
+  // Pages with their own count (a totals row, a footer fed by onTotalChange) do not get a second one.
+  const showResultCount = !showRowCount && !onTotalChange && totalRowCount !== null && !loadError;
 
   return (
     // No percentage height: list pages render the grid as a direct child of the bounded page
@@ -1370,14 +1443,23 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
           </Alert>
         )}
         {!!loadError && <Alert severity="error">{getApiErrorMessage(loadError, t, t('common:messages.loadFailed'))}</Alert>}
-        {enableColumnChooser && (
-          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-            <Button size="small" onClick={handleShowColumnChooser}>
-              {t('common:buttons.chooseColumns')}
-            </Button>
-            <Button size="small" onClick={handleResetColumns}>
-              {t('common:buttons.resetColumns')}
-            </Button>
+        {(enableColumnChooser || showResultCount) && (
+          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" alignItems="center">
+            {enableColumnChooser && (
+              <>
+                <Button size="small" onClick={handleShowColumnChooser}>
+                  {t('common:buttons.chooseColumns')}
+                </Button>
+                <Button size="small" onClick={handleResetColumns}>
+                  {t('common:buttons.resetColumns')}
+                </Button>
+              </>
+            )}
+            {showResultCount && (
+              <Typography sx={{ ml: 'auto', fontSize: 12, color: 'kanap.text.tertiary', fontVariantNumeric: 'tabular-nums' }}>
+                {t('common:filters.resultCount', { count: totalRowCount ?? 0 })}
+              </Typography>
+            )}
           </Stack>
         )}
       </Stack>
@@ -1392,6 +1474,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
         className={resolvedMode === 'dark' ? 'ag-theme-quartz-dark' : 'ag-theme-quartz'}
         ref={gridDivRef}
       >
+        <StatusScopeContext.Provider value={statusScopeConfig ? statusScopeState : null}>
         <AgGridReact<T>
           columnDefs={processedColumns}
           rowModelType="infinite"
@@ -1439,6 +1522,38 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
         // Preserve user order when column defs update between renders
         maintainColumnOrder
       />
+        </StatusScopeContext.Provider>
+
+        {/* AG Grid shows no "no rows" overlay with the infinite row model: the empty list says so here. */}
+        {emptyResult && !loadError && (
+          <Box
+            role="status"
+            sx={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 0.5,
+              px: 2,
+              textAlign: 'center',
+              pointerEvents: 'none',
+              zIndex: 1,
+            }}
+          >
+            <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
+              {t(emptyResult === 'filtered' ? 'common:filters.noResultsFiltered' : 'common:filters.noResults')}
+            </Typography>
+            {emptyResult === 'filtered' && (
+              <Button size="small" onClick={clearSearchAndFilters} sx={{ pointerEvents: 'auto' }}>
+                {t('common:filters.clearAll')}
+              </Button>
+            )}
+          </Box>
+        )}
 
         {/* Sticky bottom horizontal scrollbar for wide tables */}
         {showAuxHorizontalScrollbar && (
