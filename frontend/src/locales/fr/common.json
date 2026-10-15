@@ -544,7 +544,8 @@
       "accounts": "Exporter tous les comptes"
     },
     "exportScopeList": "Ce que la liste affiche",
-    "exportScopeAll": "Tout le référentiel"
+    "exportScopeAll": "Tout le référentiel",
+    "exportRowLimit": "Le fichier contient les {{limit}} premières lignes sur {{total}}, dans l'ordre de la liste. Filtrez la liste pour exporter le reste."
   },
   "selects": {
     "loading": "Chargement...",

@@ -544,7 +544,8 @@
       "accounts": "Alle Konten exportieren"
     },
     "exportScopeList": "Was die Liste zeigt",
-    "exportScopeAll": "Das ganze Verzeichnis"
+    "exportScopeAll": "Das ganze Verzeichnis",
+    "exportRowLimit": "Die Datei enthält die ersten {{limit}} von {{total}} Zeilen in der Reihenfolge der Liste. Grenzen Sie die Liste ein, um den Rest zu exportieren."
   },
   "selects": {
     "loading": "Wird geladen...",

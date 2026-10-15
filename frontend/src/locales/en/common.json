@@ -544,7 +544,8 @@
       "accounts": "Export all accounts"
     },
     "exportScopeList": "What the list shows",
-    "exportScopeAll": "The whole register"
+    "exportScopeAll": "The whole register",
+    "exportRowLimit": "The file holds the first {{limit}} of {{total}} rows, in the list's order. Narrow the list to export the rest."
   },
   "selects": {
     "loading": "Loading...",

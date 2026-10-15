@@ -71,7 +71,7 @@ async function testHelpers() {
   assert.deepEqual(
     exportListQuery({ scope: 'data', language: 'fr', rows: 'list', q: 'o', sort: 'name:DESC', page: '3', limit: '20' }),
     { q: 'o', sort: 'name:DESC', page: '1', limit: '50000' },
-    'rows=list: the list query, every page',
+    'rows=list: the list query, every page up to 50,000 rows (the dialog warns past EXPORT_ROW_LIMIT, kept equal)',
   );
 }
 

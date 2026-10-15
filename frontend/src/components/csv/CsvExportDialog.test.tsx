@@ -3,7 +3,9 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('react-i18next', () => {
-  const t = (key: string, options?: { count?: number }) => (options?.count === undefined ? key : `${key}:${options.count}`);
+  const t = (key: string, options?: { count?: number; limit?: string; total?: string }) => (
+    options?.count !== undefined ? `${key}:${options.count}` : options?.total !== undefined ? `${key}:${options.limit}/${options.total}` : key
+  );
   const translation = { t, i18n: { language: 'en', resolvedLanguage: 'en' } };
   return { useTranslation: () => translation };
 });
@@ -82,5 +84,17 @@ describe('CsvExportDialog', () => {
     render(<CsvExportDialog open onClose={() => undefined} endpoint="/admin/coa-templates/t1" title="Export template" />);
     expect(screen.getByText('Export template')).toBeInTheDocument();
     expect(screen.queryByRole('radio')).toBeNull();
+  });
+
+  it('says when the list holds more rows than an export can', () => {
+    const big = { params: { sort: 'name:ASC' }, total: 60_000 };
+    const { rerender } = render(<CsvExportDialog open onClose={() => undefined} endpoint="/suppliers" listRequest={big} entity="suppliers" />);
+    expect(screen.getByText('csv.exportRowLimit:50,000/60,000')).toBeInTheDocument();
+    // The whole register is not cut: no warning there.
+    fireEvent.click(screen.getByRole('radio', { name: 'csv.exportScopeAll' }));
+    expect(screen.queryByText(/csv.exportRowLimit/)).toBeNull();
+    rerender(<CsvExportDialog open onClose={() => undefined} endpoint="/suppliers" listRequest={{ ...big, total: 50_000 }} entity="suppliers" />);
+    fireEvent.click(screen.getByRole('radio', { name: 'csv.exportScopeList' }));
+    expect(screen.queryByText(/csv.exportRowLimit/)).toBeNull();
   });
 });

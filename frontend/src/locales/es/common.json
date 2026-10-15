@@ -544,7 +544,8 @@
       "accounts": "Exportar todas las cuentas"
     },
     "exportScopeList": "Lo que muestra la lista",
-    "exportScopeAll": "Todo el registro"
+    "exportScopeAll": "Todo el registro",
+    "exportRowLimit": "El archivo contiene las primeras {{limit}} de {{total}} filas, en el orden de la lista. Acote la lista para exportar el resto."
   },
   "selects": {
     "loading": "Cargando...",

@@ -7,6 +7,12 @@ import type { ListRequest } from '../ServerDataGrid';
 import { screenLanguage } from './readings';
 import { csvRequestErrorMessage } from './csvRequestError';
 
+/**
+ * The rows an export following the list can hold: the backend's `MAX_EXPORT_LIMIT`
+ * (`backend/src/common/pagination.ts`). Past it, the dialog says the file stops there.
+ */
+export const EXPORT_ROW_LIMIT = 50_000;
+
 export default function CsvExportDialog({
   open,
   onClose,
@@ -92,6 +98,14 @@ export default function CsvExportDialog({
           {t(flexibleFormat ? 'csv.exportDescriptionFlexible' : 'csv.exportDescription')}
         </Typography>
         {note && <Typography variant="body2" sx={{ mb: 2 }}>{note}</Typography>}
+        {followsList && rows === 'list' && listRequest!.total > EXPORT_ROW_LIMIT && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            {t('csv.exportRowLimit', {
+              limit: EXPORT_ROW_LIMIT.toLocaleString(i18n.resolvedLanguage || i18n.language),
+              total: listRequest!.total.toLocaleString(i18n.resolvedLanguage || i18n.language),
+            })}
+          </Alert>
+        )}
         {followsList && (
           <RadioGroup
             value={rows}
