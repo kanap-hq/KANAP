@@ -49,8 +49,9 @@ Tool-specific or private notes live in each tool's local files, never here.
 - Once validated ("send the PR"): open the PR as ready, not as a draft (`gh pr create`: problem,
   changes, testing notes, screenshots for UI). That is the agent's last step: the `auto-queue`
   workflow (`.github/workflows/auto-queue.yml`) puts the ready PRs opened by `kanap-it` into the
-  merge queue, one at a time, in the order they were opened. Open a PR as a draft when it must
-  not merge yet. From there the agent owns the PR up to a confirmed merge and reports the merge
+  merge queue, one at a time, in the order they were opened. Never open a ready PR before the
+  maintainer's go: open it as a draft instead. Turning a queued PR back into a draft takes it
+  out of the queue. From there the agent owns the PR up to a confirmed merge and reports the merge
   commit. The maintainer does not need to say "merge".
 - CI runs in the merge queue only, one PR at a time. The queue tests each PR on `main` plus the
   PRs ahead of it, in the order they were added, and merges it when `backend (cloud)`,
