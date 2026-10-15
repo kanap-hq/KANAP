@@ -11,6 +11,7 @@ import { KanapDialogProvider } from '../../components/design';
 const state = vi.hoisted(() => ({ coas: [] as any[], level: 'admin' as 'none' | 'reader' | 'member' | 'admin' }));
 const grid = vi.hoisted(() => ({ props: null as null | Record<string, any>, mounts: 0 }));
 const manage = vi.hoisted(() => ({ open: false }));
+const dialogs = vi.hoisted(() => ({ create: null as null | Record<string, any>, csvImport: null as null | Record<string, any> }));
 
 vi.mock('../../api', () => ({
   default: {
@@ -41,6 +42,19 @@ vi.mock('./ManageCoAsDialog', () => ({
   default: (props: { open: boolean }) => {
     manage.open = props.open;
     return props.open ? <div data-testid="manage-dialog" /> : null;
+  },
+}));
+
+vi.mock('./CreateCoADialog', () => ({
+  default: (props: Record<string, any>) => {
+    dialogs.create = props;
+    return null;
+  },
+}));
+vi.mock('../../components/csv/CsvImportDialog', () => ({
+  default: (props: Record<string, any>) => {
+    dialogs.csvImport = props;
+    return null;
   },
 }));
 
@@ -103,6 +117,8 @@ describe('CoaPage summary and consolidation health', () => {
     grid.props = null;
     grid.mounts = 0;
     manage.open = false;
+    dialogs.create = null;
+    dialogs.csvImport = null;
   });
 
   it('describes the selected chart and its roles in words', async () => {
@@ -225,6 +241,36 @@ describe('CoaPage summary and consolidation health', () => {
       expect(screen.getByRole('link', { name: '9999' })).toBeInTheDocument();
       rendered.unmount();
     }
+  });
+
+  it('selects the chart just created, so an import goes into it', async () => {
+    renderPage();
+    await screen.findByTestId('coa-summary');
+    const ES = chart({ id: 'es', code: 'ES-PGC', name: 'Plan general contable', country_iso: 'ES' });
+    // The server holds the new chart from now on; the page still shows the list it read before.
+    state.coas = [FR, IFRS, IT, ES];
+    act(() => dialogs.create!.onCreated('es'));
+    await waitFor(() => expect(screen.getByTestId('coa-summary')).toHaveTextContent('ES-PGC · 0 accounts'));
+    expect(grid.props?.extraParams).toEqual({ coaId: 'es' });
+    expect(dialogs.csvImport?.endpoint).toBe('/chart-of-accounts/es/accounts');
+    expect(dialogs.csvImport?.title).toBe('Import accounts into ES-PGC');
+  });
+
+  it('refreshes the account count and the health line after an import', async () => {
+    const EMPTY = chart({ id: 'empty', code: 'FR-PCG-2', name: 'Plan comptable 2', country_iso: 'FR' });
+    state.coas = [EMPTY, IFRS];
+    renderPage('/master-data/coa?selected=empty');
+    const summary = await screen.findByTestId('coa-summary');
+    expect(summary).toHaveTextContent('FR-PCG-2 · 0 accounts');
+    expect(screen.queryByTestId('coa-consolidation-health')).not.toBeInTheDocument();
+
+    state.coas = [{ ...EMPTY, accounts_count: 11, accounts_unmapped_count: 11 }, IFRS];
+    const refreshKey = grid.props?.refreshKey;
+    act(() => dialogs.csvImport!.onImported());
+    await waitFor(() => expect(screen.getByTestId('coa-summary')).toHaveTextContent('FR-PCG-2 · 11 accounts'));
+    expect(screen.getByRole('button', { name: '11 accounts have no consolidation account' })).toBeInTheDocument();
+    expect(grid.props?.refreshKey).not.toBe(refreshKey);
+    expect(dialogs.csvImport?.title).toBe('Import accounts into FR-PCG-2');
   });
 
   it('keeps the hook order when access is granted after a forbidden render', async () => {

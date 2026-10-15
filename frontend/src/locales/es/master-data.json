@@ -502,7 +502,7 @@
     "loadingCoA": "Cargando planes de cuentas…",
     "newAccount": "Nueva cuenta",
     "exportAccounts": "Exportar cuentas",
-    "importAccounts": "Importar cuentas en el plan de cuentas seleccionado",
+    "importAccountsInto": "Importar cuentas en {{code}}",
     "columns": {
       "accountNumber": "N.º de cuenta",
       "accountName": "Nombre",
