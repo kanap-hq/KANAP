@@ -67,7 +67,15 @@ For each file in the work list, for each target language:
 
 ### Step 4: Update manifest
 
-Write `translation-state/docs-source-hashes.json`:
+Write `translation-state/docs-source-hashes.json`, then put it in its canonical form (keys sorted,
+an empty line between two keys, so that two pull requests updating neighbouring pages merge
+without a conflict; the `build (onprem)` check refuses any other form):
+
+```bash
+node scripts/docs/format-translation-manifest.mjs
+```
+
+The content:
 ```json
 {
   "files": {

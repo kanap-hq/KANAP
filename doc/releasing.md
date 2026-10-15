@@ -86,8 +86,9 @@ node scripts/release/release.mjs prepare 26.10.2 --commit
 
 It checks the entry again (an entry that is still the empty skeleton is refused), commits
 `Release 26.10.2` with the two `package.json`, the two lockfiles and `CHANGELOG.md`, pushes the
-branch, opens the pull request `Release 26.10.2` with the entry as its description, and adds it to
-the merge queue with `.github/scripts/queue-stack.sh`. The release pull request is pushed without
+branch, and opens the pull request `Release 26.10.2` with the entry as its description. The
+`auto-queue` workflow puts it in the merge queue; the command also runs
+`.github/scripts/queue-stack.sh`, which leaves it alone once it is queued. The release pull request is pushed without
 a separate validation on the dev stack: its content was validated pull request by pull request.
 
 A rerun is safe: an existing entry is kept, an open pull request for the branch is reused, and a
