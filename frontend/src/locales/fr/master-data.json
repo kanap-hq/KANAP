@@ -389,7 +389,6 @@
     "noSuppliersFound": "Aucun fournisseur trouvé",
     "export": "Exporter les fournisseurs",
     "import": "Importer les fournisseurs",
-    "exportScope": "Le fichier contient tous les fournisseurs, activés et désactivés, triés par nom. La recherche et les filtres de la liste ne s'appliquent pas.",
     "importHint": "Valeurs acceptées pour status : enabled ou disabled. disabled_at contient la fin de validité, ou reste vide. Les colonnes de contact prennent l'e-mail d'un contact qui existe déjà dans Contacts.",
     "fields": {
       "name": "Nom",

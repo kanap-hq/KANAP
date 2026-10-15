@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { TFunction } from 'i18next';
 import PageHeader from '../components/PageHeader';
-import ServerDataGrid, { DATE_COLUMN_FILTER, EnhancedColDef, StatusScope } from '../components/ServerDataGrid';
+import ServerDataGrid, { DATE_COLUMN_FILTER, EnhancedColDef, StatusScope, type ListRequest } from '../components/ServerDataGrid';
 import { Alert, Box, Button, MenuItem, Select, Stack, useTheme } from '@mui/material';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
@@ -310,6 +310,8 @@ export default function ContractsPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [exportOpen, setExportOpen] = useState(false);
+  // The list on screen: the CSV export follows it.
+  const [listRequest, setListRequest] = useState<ListRequest | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [registerError, setRegisterError] = useState<string | null>(null);
@@ -590,6 +592,7 @@ export default function ContractsPage() {
       <PageHeader title={t("contracts.title")} actions={actions} />
       {registerError && <Alert severity="error" sx={{ mb: 1 }} onClose={() => setRegisterError(null)}>{registerError}</Alert>}
       <ServerDataGrid<ContractRow>
+        onListRequestChange={setListRequest}
         columns={columns}
         endpoint="/contracts"
         queryKey="contracts"
@@ -613,7 +616,7 @@ export default function ContractsPage() {
         }}
       />
 
-      <CsvExportDialog open={exportOpen} onClose={() => setExportOpen(false)} endpoint="/contracts" title={t("contracts.exportTitle")} />
+      <CsvExportDialog listRequest={listRequest} entity="contracts" open={exportOpen} onClose={() => setExportOpen(false)} endpoint="/contracts" title={t("contracts.exportTitle")} />
       <ContractSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} onSaved={() => setRefreshKey(k => k + 1)} />
       <CsvImportDialog open={importOpen} onClose={() => setImportOpen(false)} endpoint="/contracts" title={t("contracts.importTitle")} onImported={() => setRefreshKey(k => k + 1)} />
     </>
