@@ -288,7 +288,7 @@ Keep your contract list in sync with other tools using CSV (`contracts:admin`).
 
 **Notes**:
 
-- Use **UTF-8 encoding** and **semicolons** as separators
+- Use **UTF-8 encoding** and **semicolons** as separators. A file Excel saved as plain CSV (Windows-1252) imports too
 - Dates are computed from the start, duration, notice and renewal; they are never imported
 
 ---

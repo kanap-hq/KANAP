@@ -12,7 +12,7 @@ import { StatusState, resolveLifecycleState } from '../common/status';
 import { format } from '@fast-csv/format';
 import { parseString } from '@fast-csv/parse';
 import * as fs from 'fs';
-import { decodeCsvBufferUtf8OrThrow } from '../common/encoding';
+import { CsvDecodeError, decodeCsv } from '../common/csv-sheet/decode';
 import { User } from '../users/user.entity';
 import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
 
@@ -460,13 +460,9 @@ export class BusinessProcessesService {
       }
       let content: string;
       try {
-        content = decodeCsvBufferUtf8OrThrow(buf as Buffer);
-      } catch {
-        reject(
-          new BadRequestException(
-            'Invalid file encoding. Please export or save the CSV as UTF-8 (CSV UTF-8) and use semicolons as separators.',
-          ),
-        );
+        content = decodeCsv(buf as Buffer).text;
+      } catch (err) {
+        reject(err instanceof CsvDecodeError ? new BadRequestException(err.message) : err);
         return;
       }
       parseString(content, { headers: true, delimiter, ignoreEmpty: true, trim: true })

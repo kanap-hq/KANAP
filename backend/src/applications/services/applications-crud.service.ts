@@ -7,7 +7,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { format } from '@fast-csv/format';
 import { parseString } from '@fast-csv/parse';
-import { decodeCsvBufferUtf8OrThrow } from '../../common/encoding';
 import { assertMarkdownSize } from '../../common/markdown-limits';
 import { Application } from '../application.entity';
 import { ApplicationOwner } from '../application-owner.entity';

@@ -448,7 +448,7 @@ Depuis la liste des Applications :
 
 ### Processus d'import
 
-1. **Préparez votre fichier** : Utilisez l'encodage UTF-8 avec des séparateurs point-virgule (`;`). Téléchargez un modèle pour vous assurer des bons en-têtes.
+1. **Préparez votre fichier** : Utilisez l'encodage UTF-8 avec des séparateurs point-virgule (`;`). Un fichier enregistré par Excel en CSV simple (Windows-1252) est accepté aussi. Téléchargez un modèle pour vous assurer des bons en-têtes.
 
 2. **Choisissez les paramètres d'import** :
    - **Mode** :
