@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { coversItsCell, staysAboveCellLink } from '../../components/grid/renderers/wholeCellLink.testUtils';
+import { formatShortDateTime } from '../../lib/dateFormat';
 
 // Every custom link cell of the IT lists covers its whole grid cell, as LinkCellRenderer does: a
 // click in the empty part of the cell opens the row. A second link in the same cell (the suite
@@ -37,7 +38,7 @@ import AssetsPage from './AssetsPage';
 import IncidentsPage from './IncidentsPage';
 import InterfacesPage from './InterfacesPage';
 
-type Col = { field?: string; colId?: string; cellRenderer?: unknown; cellStyle?: unknown };
+type Col = { field?: string; colId?: string; cellRenderer?: unknown; cellStyle?: unknown; valueFormatter?: (p: { value: unknown }) => string };
 
 const ROW: Record<string, unknown> = {
   id: 'r1', item_number: 7, name: 'Okta', title: 'Outage', category: 'business', environment: 'prod',
@@ -150,6 +151,20 @@ describe('IT list link cells', () => {
     // "Included in" chip of the name cell (shown while the suites column is hidden)
     const chip = Array.from(draw('name', row).container.querySelectorAll('a')).find((a) => a.textContent?.includes('Suite'))!;
     expect(chip.getAttribute('href')).toMatch(/^\/it\/applications\/APP-1\/overview/);
+  });
+
+  it('applications: the created column shows a formatted date, not the raw timestamp', () => {
+    grid.mockClear();
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter><ApplicationsPage /></MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const columns = (grid.mock.calls[grid.mock.calls.length - 1][0] as { columns: Col[] }).columns;
+    cleanup();
+    const col = columns.find((c) => c.field === 'created_at') as Col;
+    const iso = '2026-10-15T08:30:00.000Z';
+    expect(col.valueFormatter?.({ value: iso })).toBe(formatShortDateTime(iso, 'en'));
   });
 
   it('assets, incidents and interfaces: every link cell covers its cell', () => {

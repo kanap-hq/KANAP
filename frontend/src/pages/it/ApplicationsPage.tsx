@@ -23,6 +23,7 @@ import { formatDuration } from './components/DurationEditor';
 
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '../../i18n/useLocale';
+import { formatShortDateTime } from '../../lib/dateFormat';
 import { setListFiltersParam, getWithListContext } from '../../lib/listContext';
 import { useUrlFilterModel } from '../../hooks/useListContextSearch';
 const ENV_SUMMARY = [
@@ -655,7 +656,7 @@ export default function ApplicationsPage() {
     { headerName: classificationText("Classification reviewed"), field: 'classification_reviewed_at', filter: 'agDateColumnFilter', width: 180, defaultHidden: true, valueFormatter: (p: any) => p.value ? new Date(p.value).toLocaleDateString(locale) : classificationText('Not set'), cellRenderer: ClickToCompliance },
     { headerName: t('pages.applications.columns.publisher'), field: 'editor', width: 160, cellRenderer: ClickToOverview },
     { headerName: t('pages.applications.columns.derivedUsers'), field: 'derived_total_users', width: 170, cellRenderer: ClickToOwnership },
-    { headerName: t('pages.assets.columns.created'), field: 'created_at', width: 160, cellRenderer: ClickToOverview },
+    { headerName: t('pages.assets.columns.created'), field: 'created_at', width: 160, valueFormatter: (p: any) => formatShortDateTime(p.value as string | null, locale), cellRenderer: ClickToOverview },
 
     // Additional chooser columns (hidden by default)
     { headerName: t('pages.applications.columns.supplier'), field: 'supplier_name', width: 240, defaultHidden: true, sortable: true, filter: 'agTextColumnFilter', cellRenderer: ClickToOverview },
