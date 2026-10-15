@@ -392,6 +392,10 @@
       "cannotUndo": "This cannot be undone.",
       "confirmAnyway": "Delete anyway",
       "failed": "The contract could not be deleted.",
+      "blocked_one": "{{count}} selected contract has recorded compliance requirements: it is kept. Disable it instead.",
+      "blocked_other": "{{count}} selected contracts have recorded compliance requirements: they are kept. Disable them instead.",
+      "nothingLinked_one": "This contract is linked to nothing and holds nothing. This cannot be undone.",
+      "nothingLinked_other": "These contracts are linked to nothing and hold nothing. This cannot be undone.",
       "kinds": {
         "budgetLines_one": "{{count}} budget line",
         "budgetLines_other": "{{count}} budget lines",
@@ -406,9 +410,7 @@
         "links_one": "{{count}} website link",
         "links_other": "{{count}} website links",
         "attachments_one": "{{count}} attachment",
-        "attachments_other": "{{count}} attachments",
-        "complianceItems_one": "{{count}} recorded requirement",
-        "complianceItems_other": "{{count}} recorded requirements"
+        "attachments_other": "{{count}} attachments"
       }
     },
     "title": "Contracts",

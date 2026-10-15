@@ -4,7 +4,9 @@ import { namesInSentence } from '../../components/finance/heldChoices';
 
 /**
  * `POST /contracts/delete-impact`: what deleting the given contracts removes
- * (`backend/src/contracts/contracts-delete.service.ts`). The linked objects count once each.
+ * (`backend/src/contracts/contracts-delete.service.ts`), for the `contracts` that can go; the
+ * linked objects count once each. `blocked`: the contracts refused for their recorded compliance
+ * requirements (`recorded_requirements` of them), which are kept.
  */
 export type ContractDeleteImpact = {
   contracts: number;
@@ -15,7 +17,8 @@ export type ContractDeleteImpact = {
   tasks: number;
   links: number;
   attachments: number;
-  compliance_items: number;
+  blocked: number;
+  recorded_requirements: number;
 };
 
 export async function fetchContractDeleteImpact(ids: string[]): Promise<ContractDeleteImpact> {
@@ -28,30 +31,36 @@ const DETACHED = [
   ['applications', 'applications'],
   ['assets', 'assets'],
   ['contacts', 'contacts'],
-  ['tasks', 'tasks'],
 ] as const;
 
 /** What belongs to the contract: it goes with it. */
 const REMOVED = [
+  ['tasks', 'tasks'],
   ['links', 'links'],
   ['attachments', 'attachments'],
-  ['compliance_items', 'complianceItems'],
 ] as const;
 
 /**
  * The confirmation's text: the links removed, then what is deleted with the contracts, with their
- * counts. Null when the contracts have no link and hold nothing (no confirmation is needed).
+ * counts, or that they hold nothing; then the selected contracts kept for their recorded
+ * requirements. `dependants`: something besides the contracts goes or loses its link (the
+ * confirmation then reads "Delete anyway").
  */
-export function contractDeleteImpactText(t: TFunction, locale: string, impact: ContractDeleteImpact): string | null {
+export function contractDeleteImpactText(t: TFunction, locale: string, impact: ContractDeleteImpact): { text: string; dependants: boolean } {
   const counted = (kinds: ReadonlyArray<readonly [keyof ContractDeleteImpact, string]>) => kinds
     .filter(([field]) => impact[field] > 0)
     .map(([field, key]) => t(`contracts.delete.kinds.${key}`, { count: impact[field] }) as string);
   const detached = counted(DETACHED);
   const removed = counted(REMOVED);
-  if (detached.length === 0 && removed.length === 0) return null;
-  return [
-    detached.length > 0 ? t('contracts.delete.detached', { items: namesInSentence(locale, detached) }) : null,
-    removed.length > 0 ? t('contracts.delete.removed', { items: namesInSentence(locale, removed) }) : null,
-    t('contracts.delete.cannotUndo'),
-  ].filter(Boolean).join(' ');
+  const dependants = detached.length > 0 || removed.length > 0;
+  const parts: string[] = [];
+  if (dependants) {
+    if (detached.length > 0) parts.push(t('contracts.delete.detached', { items: namesInSentence(locale, detached) }));
+    if (removed.length > 0) parts.push(t('contracts.delete.removed', { items: namesInSentence(locale, removed) }));
+    parts.push(t('contracts.delete.cannotUndo'));
+  } else if (impact.contracts > 0) {
+    parts.push(t('contracts.delete.nothingLinked', { count: impact.contracts }));
+  }
+  if (impact.blocked > 0) parts.push(t('contracts.delete.blocked', { count: impact.blocked }));
+  return { text: parts.join(' '), dependants };
 }

@@ -7,7 +7,7 @@ import es from '../../locales/es/ops.json';
 import { contractDeleteImpactText, type ContractDeleteImpact } from './contractDelete';
 
 const NOTHING: ContractDeleteImpact = {
-  contracts: 1, budget_lines: 0, applications: 0, assets: 0, contacts: 0, tasks: 0, links: 0, attachments: 0, compliance_items: 0,
+  contracts: 1, budget_lines: 0, applications: 0, assets: 0, contacts: 0, tasks: 0, links: 0, attachments: 0, blocked: 0, recorded_requirements: 0,
 };
 
 async function translator(lng: string, resources: unknown) {
@@ -17,30 +17,49 @@ async function translator(lng: string, resources: unknown) {
 }
 
 describe('contractDeleteImpactText', () => {
-  it('says nothing when the contracts have no link and hold nothing', async () => {
-    expect(contractDeleteImpactText(await translator('en', en), 'en', NOTHING)).toBeNull();
+  it('says what happens to a contract linked to nothing', async () => {
+    const t = await translator('en', en);
+    expect(contractDeleteImpactText(t, 'en', NOTHING)).toEqual({
+      text: 'This contract is linked to nothing and holds nothing. This cannot be undone.',
+      dependants: false,
+    });
+    expect(contractDeleteImpactText(t, 'en', { ...NOTHING, contracts: 2 }).text)
+      .toBe('These contracts are linked to nothing and hold nothing. This cannot be undone.');
   });
 
-  it('counts what loses its link and what goes with the contract', async () => {
+  it('counts what loses its link and what goes with the contract, tasks included', async () => {
     const t = await translator('en', en);
     expect(contractDeleteImpactText(t, 'en', {
-      ...NOTHING, budget_lines: 3, applications: 1, assets: 2, contacts: 1, tasks: 2, links: 1, attachments: 2, compliance_items: 4,
-    })).toBe(
-      'These links are removed: 3 budget lines, 1 application, 2 assets, 1 contact, and 2 tasks. The linked items stay. '
-      + 'Also deleted: 1 website link, 2 attachments, and 4 recorded requirements. This cannot be undone.',
+      ...NOTHING, budget_lines: 3, applications: 1, assets: 2, contacts: 1, tasks: 2, links: 1, attachments: 2,
+    })).toEqual({
+      text: 'These links are removed: 3 budget lines, 1 application, 2 assets, and 1 contact. The linked items stay. '
+        + 'Also deleted: 2 tasks, 1 website link, and 2 attachments. This cannot be undone.',
+      dependants: true,
+    });
+    expect(contractDeleteImpactText(t, 'en', { ...NOTHING, tasks: 1 }).text).toBe('Also deleted: 1 task. This cannot be undone.');
+  });
+
+  it('says which selected contracts are kept for their recorded requirements', async () => {
+    const t = await translator('en', en);
+    expect(contractDeleteImpactText(t, 'en', { ...NOTHING, contracts: 1, blocked: 2, recorded_requirements: 5, links: 1 }).text).toBe(
+      'Also deleted: 1 website link. This cannot be undone. '
+      + '2 selected contracts have recorded compliance requirements: they are kept. Disable them instead.',
     );
-    expect(contractDeleteImpactText(t, 'en', { ...NOTHING, tasks: 1 })).toBe(
-      'These links are removed: 1 task. The linked items stay. This cannot be undone.',
-    );
-    expect(contractDeleteImpactText(t, 'en', { ...NOTHING, attachments: 1 })).toBe('Also deleted: 1 attachment. This cannot be undone.');
+    expect(contractDeleteImpactText(t, 'en', { ...NOTHING, contracts: 0, blocked: 1, recorded_requirements: 1 })).toEqual({
+      text: '1 selected contract has recorded compliance requirements: it is kept. Disable it instead.',
+      dependants: false,
+    });
   });
 
   it.each([['fr', fr], ['de', de], ['es', es]])('has every sentence in %s', async (lng, resources) => {
     const t = await translator(lng, resources);
-    const text = contractDeleteImpactText(t, lng, {
-      ...NOTHING, budget_lines: 2, applications: 2, assets: 2, contacts: 2, tasks: 2, links: 2, attachments: 2, compliance_items: 2,
-    })!;
-    expect(text).not.toMatch(/contracts\.delete|\{\{/);
-    expect(text).toContain('2');
+    for (const impact of [
+      { ...NOTHING, budget_lines: 2, applications: 2, assets: 2, contacts: 2, tasks: 2, links: 2, attachments: 2, blocked: 2, recorded_requirements: 2 },
+      NOTHING,
+      { ...NOTHING, contracts: 2 },
+    ]) {
+      const { text } = contractDeleteImpactText(t, lng, impact);
+      expect(text).not.toMatch(/contracts\.delete|\{\{/);
+    }
   });
 });

@@ -392,6 +392,10 @@
       "cannotUndo": "Esta acción no se puede deshacer.",
       "confirmAnyway": "Eliminar de todos modos",
       "failed": "No se pudo eliminar el contrato.",
+      "blocked_one": "{{count}} contrato seleccionado tiene requisitos de conformidad registrados: se conserva. Desactívelo en su lugar.",
+      "blocked_other": "{{count}} contratos seleccionados tienen requisitos de conformidad registrados: se conservan. Desactívelos en su lugar.",
+      "nothingLinked_one": "Este contrato no está vinculado a nada y no contiene nada. Esta acción no se puede deshacer.",
+      "nothingLinked_other": "Estos contratos no están vinculados a nada y no contienen nada. Esta acción no se puede deshacer.",
       "kinds": {
         "budgetLines_one": "{{count}} línea presupuestaria",
         "budgetLines_other": "{{count}} líneas presupuestarias",
@@ -406,9 +410,7 @@
         "links_one": "{{count}} enlace web",
         "links_other": "{{count}} enlaces web",
         "attachments_one": "{{count}} adjunto",
-        "attachments_other": "{{count}} adjuntos",
-        "complianceItems_one": "{{count}} requisito registrado",
-        "complianceItems_other": "{{count}} requisitos registrados"
+        "attachments_other": "{{count}} adjuntos"
       }
     },
     "title": "Contratos",

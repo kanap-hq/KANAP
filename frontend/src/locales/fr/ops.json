@@ -392,6 +392,10 @@
       "cannotUndo": "Cette action est irréversible.",
       "confirmAnyway": "Supprimer quand même",
       "failed": "Le contrat n'a pas pu être supprimé.",
+      "blocked_one": "{{count}} contrat sélectionné a des exigences de conformité renseignées : il est conservé. Désactivez-le plutôt.",
+      "blocked_other": "{{count}} contrats sélectionnés ont des exigences de conformité renseignées : ils sont conservés. Désactivez-les plutôt.",
+      "nothingLinked_one": "Ce contrat n'est lié à rien et ne contient rien. Cette action est irréversible.",
+      "nothingLinked_other": "Ces contrats ne sont liés à rien et ne contiennent rien. Cette action est irréversible.",
       "kinds": {
         "budgetLines_one": "{{count}} ligne budgétaire",
         "budgetLines_other": "{{count}} lignes budgétaires",
@@ -406,9 +410,7 @@
         "links_one": "{{count}} lien de site web",
         "links_other": "{{count}} liens de sites web",
         "attachments_one": "{{count}} pièce jointe",
-        "attachments_other": "{{count}} pièces jointes",
-        "complianceItems_one": "{{count}} exigence renseignée",
-        "complianceItems_other": "{{count}} exigences renseignées"
+        "attachments_other": "{{count}} pièces jointes"
       }
     },
     "title": "Contrats",

@@ -19,11 +19,12 @@ type Props = {
 };
 
 /**
- * Delete action of the contract page. A contract with links or with its own website links,
- * attachments or recorded requirements asks first, with the counts; one with nothing goes at once.
+ * Delete action of the contract page. It always asks first, with what loses its link and what
+ * goes too ("Delete anyway" when something does). A contract with recorded compliance
+ * requirements is refused up front: the dialog says how many and to disable it instead.
  */
 export default function ContractDeleteButton({ contractId, contractName, beforeDelete, onDeleted, onError }: Props) {
-  const { t } = useTranslation(['ops', 'common']);
+  const { t } = useTranslation(['ops', 'common', 'errors']);
   const locale = useLocale();
   const dialogs = useKanapDialogs();
   const queryClient = useQueryClient();
@@ -32,18 +33,23 @@ export default function ContractDeleteButton({ contractId, contractName, beforeD
   const handleClick = async () => {
     setBusy(true);
     try {
-      const text = contractDeleteImpactText(t, locale, await fetchContractDeleteImpact([contractId]));
-      if (text) {
-        const confirmed = await dialogs.confirm({
-          title: t('contracts.delete.title', { name: contractName }),
-          message: text,
-          confirmLabel: t('contracts.delete.confirmAnyway'),
-          intent: 'danger',
-        });
-        if (!confirmed) {
-          setBusy(false);
-          return;
-        }
+      const impact = await fetchContractDeleteImpact([contractId]);
+      const title = t('contracts.delete.title', { name: contractName });
+      if (impact.blocked > 0) {
+        await dialogs.alert({ title, message: t('errors:CONTRACT_HAS_COMPLIANCE_RECORDS', { count: impact.recorded_requirements }) });
+        setBusy(false);
+        return;
+      }
+      const { text, dependants } = contractDeleteImpactText(t, locale, impact);
+      const confirmed = await dialogs.confirm({
+        title,
+        message: text,
+        confirmLabel: dependants ? t('contracts.delete.confirmAnyway') : t('common:buttons.delete'),
+        intent: 'danger',
+      });
+      if (!confirmed) {
+        setBusy(false);
+        return;
       }
       await beforeDelete();
       await api.delete(`/contracts/${contractId}`);

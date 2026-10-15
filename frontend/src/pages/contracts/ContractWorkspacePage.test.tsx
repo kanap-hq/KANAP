@@ -506,7 +506,7 @@ describe('ContractWorkspacePage', () => {
 
   it('deletes the contract after a confirmation that counts what it is linked to', async () => {
     mocked.post.mockImplementation(async (url: string) => (url === '/contracts/delete-impact'
-      ? { data: { contracts: 1, budget_lines: 2, applications: 1, assets: 1, contacts: 0, tasks: 2, links: 1, attachments: 1, compliance_items: 1 } }
+      ? { data: { contracts: 1, budget_lines: 2, applications: 1, assets: 1, contacts: 0, tasks: 2, links: 1, attachments: 1, blocked: 0, recorded_requirements: 0 } }
       : { data: {} }));
     mocked.delete.mockResolvedValue({ data: undefined });
     renderAt('/ops/contracts/c-1/overview?sort=name%3AASC');
@@ -525,7 +525,7 @@ describe('ContractWorkspacePage', () => {
   });
 
   it('keeps the contract when the confirmation is cancelled', async () => {
-    mocked.post.mockResolvedValue({ data: { contracts: 1, budget_lines: 1, applications: 0, assets: 0, contacts: 0, tasks: 0, links: 0, attachments: 0, compliance_items: 0 } });
+    mocked.post.mockResolvedValue({ data: { contracts: 1, budget_lines: 1, applications: 0, assets: 0, contacts: 0, tasks: 0, links: 0, attachments: 0, blocked: 0, recorded_requirements: 0 } });
     renderAt('/ops/contracts/c-1/overview');
     fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.delete' }));
     const dialog = await screen.findByRole('dialog');
@@ -535,14 +535,28 @@ describe('ContractWorkspacePage', () => {
     expect(navigateMock).not.toHaveBeenCalled();
   });
 
-  it('deletes a contract linked to nothing without asking', async () => {
-    mocked.post.mockResolvedValue({ data: { contracts: 1, budget_lines: 0, applications: 0, assets: 0, contacts: 0, tasks: 0, links: 0, attachments: 0, compliance_items: 0 } });
+  it('asks before deleting a contract linked to nothing too', async () => {
+    mocked.post.mockResolvedValue({ data: { contracts: 1, budget_lines: 0, applications: 0, assets: 0, contacts: 0, tasks: 0, links: 0, attachments: 0, blocked: 0, recorded_requirements: 0 } });
     mocked.delete.mockResolvedValue({ data: undefined });
     renderAt('/ops/contracts/c-1/overview');
     fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.delete' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('contracts.delete.nothingLinked:1');
+    expect(mocked.delete).not.toHaveBeenCalled();
+    // Nothing else goes: the plain "Delete", not "Delete anyway".
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:buttons.delete' }));
     await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith('/contracts/c-1'));
-    expect(screen.queryByRole('dialog')).toBeNull();
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/ops/contracts'));
+  });
+
+  it('refuses to delete a contract with recorded compliance requirements and says why', async () => {
+    mocked.post.mockResolvedValue({ data: { contracts: 0, budget_lines: 0, applications: 0, assets: 0, contacts: 0, tasks: 0, links: 0, attachments: 0, blocked: 1, recorded_requirements: 3 } });
+    renderAt('/ops/contracts/c-1/overview');
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.delete' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('errors:CONTRACT_HAS_COMPLIANCE_RECORDS:3');
+    expect(within(dialog).queryByRole('button', { name: /confirmAnyway|common:buttons\.delete/ })).toBeNull();
+    expect(mocked.delete).not.toHaveBeenCalled();
   });
 
   it('offers no delete to a member who is not an administrator', async () => {

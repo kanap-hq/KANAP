@@ -384,7 +384,7 @@ describe('ContractsPage', () => {
   });
 
   it('deletes the selected contracts after a confirmation that counts what they are linked to', async () => {
-    api.post.mockResolvedValue({ data: { contracts: 2, budget_lines: 3, applications: 0, assets: 1, contacts: 0, tasks: 0, links: 0, attachments: 2, compliance_items: 0 } });
+    api.post.mockResolvedValue({ data: { contracts: 2, budget_lines: 3, applications: 0, assets: 1, contacts: 0, tasks: 0, links: 0, attachments: 2, blocked: 0, recorded_requirements: 0 } });
     api.delete.mockResolvedValue({ data: { deleted: ['c-1', 'c-2'], failed: [] } });
     renderPage();
     expect(grid.props?.enableRowSelection).toBe(true);
@@ -403,8 +403,8 @@ describe('ContractsPage', () => {
     await waitFor(() => expect(api.delete).toHaveBeenCalledWith('/contracts/bulk', { data: { ids: ['c-2', 'c-1'] } }));
   });
 
-  it('keeps the usual confirmation for contracts linked to nothing', async () => {
-    api.post.mockResolvedValue({ data: { contracts: 1, budget_lines: 0, applications: 0, assets: 0, contacts: 0, tasks: 0, links: 0, attachments: 0, compliance_items: 0 } });
+  it('says what happens to contracts linked to nothing, in place of the generic warning', async () => {
+    api.post.mockResolvedValue({ data: { contracts: 1, budget_lines: 0, applications: 0, assets: 0, contacts: 0, tasks: 0, links: 0, attachments: 0, blocked: 0, recorded_requirements: 0 } });
     renderPage();
     act(() => { grid.props?.onSelectionChanged([{ id: 'c-1', name: 'SAP' }]); });
     const button = screen.getByRole('button', { name: /buttons\.deleteSelected/ });
@@ -412,7 +412,8 @@ describe('ContractsPage', () => {
     await waitFor(() => expect(button).toBeEnabled());
     fireEvent.click(button);
     const dialog = await screen.findByRole('dialog');
-    expect(dialog).toHaveTextContent('delete.warningMessage');
+    expect(dialog).toHaveTextContent('contracts.delete.nothingLinked {"count":1}');
+    expect(dialog).not.toHaveTextContent('delete.warningMessage');
     expect(within(dialog).getByRole('button', { name: 'buttons.delete' })).toBeInTheDocument();
   });
 

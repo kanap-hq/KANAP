@@ -559,7 +559,8 @@ export default function ContractsPage() {
           onDeleteSuccess={() => setRefreshKey((k) => k + 1)}
           // The counts come first: the confirmation says what loses its link and what goes too.
           disabled={deleteImpact.isFetching}
-          forceOption={deleteImpactText ? { message: deleteImpactText, confirmLabel: t('contracts.delete.confirmAnyway') } : undefined}
+          forceOption={deleteImpactText?.dependants ? { message: deleteImpactText.text, confirmLabel: t('contracts.delete.confirmAnyway') } : undefined}
+          warning={deleteImpactText && !deleteImpactText.dependants ? deleteImpactText.text : undefined}
         />
       )}
     </Stack>
