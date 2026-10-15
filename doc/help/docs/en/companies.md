@@ -160,6 +160,7 @@ Use the **End of validity** to control when a company stops being active.
     - The company no longer appears in selection lists for new allocations and is excluded from reports for strictly later years.
     - Historical data remains intact; the company still appears in reports covering years when it was active.
 - **Prefer disabling over deleting.** A company that anything still uses cannot be deleted: budget lines (as paying company or in their allocations), contracts, cost centers, departments, users, the locations it operates, tasks, applications, interfaces, portfolio projects and requests, and the team members whose default company it is. The message counts what uses it, for example "This company is used by 2 departments and 14 users". Disable it instead. Its yearly metrics are deleted with it.
+- **To delete a company anyway**, first remove what uses it. Set another company on its users, budget lines and their allocations, contracts, cost centers, the locations it operates, tasks, applications, interfaces, portfolio projects and requests, and team members. Move its departments to another company, or delete them last, once nothing uses them. Then delete the company.
 
 ## Yearly metrics
 

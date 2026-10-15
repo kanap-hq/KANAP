@@ -160,6 +160,7 @@ Verwenden Sie das **Ende der Gültigkeit**, um zu steuern, wann ein Unternehmen 
     - Das Unternehmen erscheint nicht mehr in Auswahllisten für neue Zuordnungen und wird aus Berichten für strikt spätere Jahre ausgeschlossen.
     - Historische Daten bleiben erhalten; das Unternehmen erscheint weiterhin in Berichten, die Jahre abdecken, in denen es aktiv war.
 - **Deaktivieren statt löschen.** Ein Unternehmen, das noch verwendet wird, kann nicht gelöscht werden: von Budgetzeilen (als zahlendes Unternehmen oder in ihren Zuordnungen), Verträgen, Kostenstellen, Abteilungen, Benutzern, den Standorten, die es betreibt, Aufgaben, Anwendungen, Schnittstellen, Portfolio-Projekten und -Anfragen sowie Teammitgliedern, deren Standardunternehmen es ist. Die Meldung zählt auf, was es verwendet, zum Beispiel „Dieses Unternehmen wird noch verwendet: 2 Abteilungen und 14 Benutzer“. Deaktivieren Sie es stattdessen. Seine Jahreskennzahlen werden mit ihm gelöscht.
+- **Um ein Unternehmen dennoch zu löschen**, entfernen Sie zuerst, was es verwendet. Tragen Sie bei seinen Benutzern, Budgetzeilen und deren Zuordnungen, Verträgen, Kostenstellen, den Standorten, die es betreibt, Aufgaben, Anwendungen, Schnittstellen, Portfolio-Projekten und -Anfragen sowie Teammitgliedern ein anderes Unternehmen ein. Verschieben Sie seine Abteilungen in ein anderes Unternehmen, oder löschen Sie sie zuletzt, wenn nichts sie mehr verwendet. Löschen Sie dann das Unternehmen.
 
 ## Jahreskennzahlen
 

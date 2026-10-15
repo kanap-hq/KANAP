@@ -160,6 +160,7 @@ Utilisez la **Fin de validité** pour contrôler quand une société cesse d'êt
     - La société n'apparaît plus dans les listes de sélection pour les nouvelles ventilations et est exclue des rapports pour les années strictement postérieures.
     - Les données historiques restent intactes ; la société apparaît toujours dans les rapports couvrant les années où elle était active.
 - **Préférez la désactivation à la suppression.** Une société encore utilisée ne peut pas être supprimée : lignes budgétaires (comme société payeuse ou dans leurs ventilations), contrats, centres de coûts, départements, utilisateurs, sites qu'elle exploite, tâches, applications, interfaces, projets et demandes du portefeuille, et membres d'équipe dont elle est la société par défaut. Le message compte ce qui l'utilise, par exemple « Cette société est utilisée par 2 départements et 14 utilisateurs ». Désactivez-la à la place. Ses métriques annuelles sont supprimées avec elle.
+- **Pour supprimer une société malgré tout**, retirez d'abord ce qui l'utilise. Indiquez une autre société sur ses utilisateurs, ses lignes budgétaires et leurs ventilations, ses contrats, ses centres de coûts, les sites qu'elle exploite, ses tâches, applications, interfaces, projets et demandes du portefeuille, et ses membres d'équipe. Déplacez ses départements vers une autre société, ou supprimez-les en dernier, quand plus rien ne les utilise. Supprimez ensuite la société.
 
 ## Métriques annuelles
 

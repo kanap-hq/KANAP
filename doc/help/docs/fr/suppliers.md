@@ -101,7 +101,7 @@ La section **Lié à**, sous les notes de l'onglet **Vue d'ensemble**, liste ce 
 
 Cliquez sur une ligne pour ouvrir sa fiche. Les éléments désactivés portent la mention **Désactivé** et viennent après les autres. Une liste montre jusqu'à 50 éléments et indique leur nombre total. Au-delà de 50, les lignes budgétaires, les contrats et les applications ont un lien comme **Voir les 57** qui ouvre leur liste filtrée sur ce fournisseur. Vous ne voyez que les listes que vous avez le droit de lire : un utilisateur sans accès aux contrats ne voit pas la liste des contrats. Un fournisseur que rien n'utilise affiche une ligne qui le dit.
 
-Consultez cette section avant de désactiver ou de supprimer un fournisseur. Un fournisseur encore utilisé par des lignes budgétaires, des contrats, des applications ou des actifs ne peut pas être supprimé. Le message compte ce qui l'utilise, par exemple « Ce fournisseur est utilisé par 2 contrats et 1 application ». Désactivez-le à la place.
+Consultez cette section avant de désactiver ou de supprimer un fournisseur. Un fournisseur encore utilisé par des lignes budgétaires, des contrats, des applications ou des actifs ne peut pas être supprimé. Le message compte ce qui l'utilise, par exemple « Ce fournisseur est utilisé par 2 contrats et 1 application ». Désactivez-le à la place. Pour le supprimer malgré tout, indiquez d'abord un autre fournisseur sur ces lignes budgétaires, contrats, applications et actifs, ou retirez-le là où il est facultatif (un contrat en exige toujours un). Supprimez-le ensuite.
 
 ### Créer un fournisseur
 
@@ -129,7 +129,7 @@ Les colonnes :
 **Import** :
 
 - Utilisez la **Vérification préalable** pour valider le fichier avant de l'appliquer, puis **Charger**
-- Les lignes sont rapprochées par `name`, quelle que soit la casse : une ligne met à jour le fournisseur qu'elle nomme, toute autre ligne en crée un
+- Les lignes sont rapprochées par `name`, quelle que soit la casse : une ligne met à jour le fournisseur qu'elle nomme, toute autre ligne en crée un. Le nom enregistré ne change pas : une ligne `sap` met à jour `SAP`, et la vérification préalable indique « sap » a été rapproché de « SAP »
 - `name` est obligatoire. Toute autre cellule est facultative
 - Chaque fournisseur occupe une ligne. Deux lignes portant le même nom, même avec une casse différente, sont refusées à la vérification préalable, avec les deux numéros de ligne
 - L'e-mail d'un contact doit appartenir à un contact qui existe déjà dans **Contacts**. Sinon, la ligne est refusée à la vérification préalable : créez d'abord le contact

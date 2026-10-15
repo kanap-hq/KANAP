@@ -160,6 +160,7 @@ Utilice el **Fin de validez** para controlar cuándo una empresa deja de estar a
     - La empresa ya no aparece en las listas de selección para nuevas asignaciones y se excluye de los informes de años estrictamente posteriores.
     - Los datos históricos permanecen intactos; la empresa sigue apareciendo en informes que cubren años en los que estaba activa.
 - **Prefiera desactivar en lugar de eliminar.** Una empresa que aún se usa no se puede eliminar: líneas presupuestarias (como empresa pagadora o en sus asignaciones), contratos, centros de coste, departamentos, usuarios, las ubicaciones que opera, tareas, aplicaciones, interfaces, proyectos y solicitudes del portafolio, y miembros del equipo cuya empresa predeterminada es. El mensaje cuenta lo que la usa, por ejemplo "Esta empresa se usa en 2 departamentos y 14 usuarios". Desactívela en su lugar. Sus métricas anuales se eliminan con ella.
+- **Para eliminar una empresa de todos modos**, quite primero lo que la usa. Indique otra empresa en sus usuarios, líneas presupuestarias y sus asignaciones, contratos, centros de coste, las ubicaciones que opera, tareas, aplicaciones, interfaces, proyectos y solicitudes del portafolio, y miembros del equipo. Mueva sus departamentos a otra empresa, o elimínelos al final, cuando nada los use. Después elimine la empresa.
 
 ## Métricas anuales
 

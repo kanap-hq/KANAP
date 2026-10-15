@@ -101,7 +101,7 @@ La sección **Usado en**, bajo las notas de la pestaña **Vista general**, lista
 
 Haga clic en una fila para abrir su página. Los elementos desactivados muestran **Desactivado** y aparecen después de los demás. Una lista muestra hasta 50 elementos e indica cuántos hay en total. Con más de 50, las líneas presupuestarias, los contratos y las aplicaciones tienen un enlace como **Ver los 57** que abre su lista filtrada por este proveedor. Solo ve las listas que tiene permiso para leer: un usuario sin acceso a los contratos no ve la lista de contratos. Un proveedor que nada usa muestra una línea que lo indica.
 
-Consulte esta sección antes de desactivar o eliminar un proveedor. Un proveedor que aún usan líneas presupuestarias, contratos, aplicaciones o activos no se puede eliminar. El mensaje cuenta lo que lo usa, por ejemplo "Este proveedor se usa en 2 contratos y 1 aplicación". Desactívelo en su lugar.
+Consulte esta sección antes de desactivar o eliminar un proveedor. Un proveedor que aún usan líneas presupuestarias, contratos, aplicaciones o activos no se puede eliminar. El mensaje cuenta lo que lo usa, por ejemplo "Este proveedor se usa en 2 contratos y 1 aplicación". Desactívelo en su lugar. Para eliminarlo de todos modos, indique primero otro proveedor en esas líneas presupuestarias, contratos, aplicaciones y activos, o quítelo donde sea opcional (un contrato siempre necesita uno). Después elimínelo.
 
 ### Crear un proveedor
 
@@ -129,7 +129,7 @@ Las columnas:
 **Importación**:
 
 - Use la **Verificación previa** para validar el archivo antes de aplicarlo y después **Cargar**
-- Las filas se emparejan por `name`, sin distinguir mayúsculas y minúsculas: una fila actualiza el proveedor que nombra, cualquier otra fila crea uno
+- Las filas se emparejan por `name`, sin distinguir mayúsculas y minúsculas: una fila actualiza el proveedor que nombra, cualquier otra fila crea uno. La grafía guardada se mantiene: una fila `sap` actualiza `SAP`, y la verificación previa indica «sap» se ha asociado a «SAP»
 - `name` es obligatorio. Cualquier otra celda es opcional
 - Cada proveedor ocupa una fila. Dos filas con el mismo nombre, aunque cambien mayúsculas y minúsculas, se rechazan en la verificación previa, con los dos números de fila
 - El correo de un contacto debe pertenecer a un contacto que ya existe en **Contactos**. Si no, la fila se rechaza en la verificación previa: cree primero el contacto
