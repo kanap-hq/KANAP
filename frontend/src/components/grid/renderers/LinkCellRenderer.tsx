@@ -250,6 +250,9 @@ export function LinkCellRenderer<T = unknown>(
           // the cell opens the row, and the anchor stays a real link (middle click, Ctrl/Cmd
           // click, keyboard). AG Grid positions `.ag-cell`, so the area stays inside its cell.
           '.ag-cell &::after': { content: '""', position: 'absolute', inset: 0 },
+          // Content after the link (`endAdornment`) stays above that area and keeps its own clicks
+          // and tooltips; the external link icon lets the click through to the link.
+          '.ag-cell & ~ :not(svg)': { position: 'relative', zIndex: 1 },
           ...linkSx,
         }}
       >
@@ -258,8 +261,7 @@ export function LinkCellRenderer<T = unknown>(
       {isExternal && showExternalIcon && (
         <OpenInNewIcon sx={{ fontSize: 14, color: 'text.secondary', flexShrink: 0 }} />
       )}
-      {/* Above the link's area: content after the link keeps its own clicks. */}
-      {endAdornment && <Box component="span" sx={{ position: 'relative', zIndex: 1 }}>{endAdornment}</Box>}
+      {endAdornment}
     </Box>
   );
 

@@ -142,8 +142,8 @@ function orderValues<T extends SelectQueryBuilder<any>>(
   textKey: TextSortKey,
 ): T {
   if (field !== 'sort_order') {
-    const key = ANALYTICS_TEXT_SORTS.has(field) ? textKey(`cat.${field}`) : `cat.${field}`;
-    return qb.addSelect(key, 'cat_sort_key').orderBy('cat_sort_key', direction).addOrderBy('cat.id', 'ASC');
+    if (!ANALYTICS_TEXT_SORTS.has(field)) return qb.orderBy(`cat.${field}`, direction).addOrderBy('cat.id', 'ASC');
+    return qb.addSelect(textKey(`cat.${field}`), 'cat_sort_key').orderBy('cat_sort_key', direction).addOrderBy('cat.id', 'ASC');
   }
   if (joinsDimension) {
     qb.addSelect('ax.sort_order', 'ax_order_key')

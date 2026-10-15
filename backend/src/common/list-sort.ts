@@ -71,12 +71,14 @@ export async function sortedFindQuery<T extends ObjectLiteral>(
   return qb.addOrderBy(`${alias}.id`, 'ASC');
 }
 
+const COLUMN_PATH = /^\w+\.\w+$/;
+
 /** The output column a query builder sorts on (`orderListQuery`). */
 export const LIST_SORT_KEY = 'list_sort_key';
 
 /**
  * Orders a query builder by one list column, then by the row id: a `text` column alphabetically
- * (`textSortKey`). The key is selected under `list_sort_key` and the query orders by that name,
+ * (`textSortKey`). An expression is selected under `list_sort_key` and the query orders by that name,
  * which TypeORM also carries through `skip`/`take` paging over joins (it cannot map an
  * expression there).
  */
@@ -88,7 +90,13 @@ export async function orderListQuery(
 ): Promise<SelectQueryBuilder<any>> {
   const manager: EntityManager = (qb as any).queryRunner?.manager ?? qb.connection.manager;
   const textKey = await textSortKey(manager);
-  qb.addSelect(opts.text ? textKey(expr) : expr, LIST_SORT_KEY).orderBy(LIST_SORT_KEY, sortDirection(direction), opts.nulls);
+  if (!opts.text && COLUMN_PATH.test(expr)) {
+    // A plain column orders as it is: TypeORM maps `alias.column` through its paging, and selecting
+    // an entity column under another name would hide it from the entity.
+    qb.orderBy(expr, sortDirection(direction), opts.nulls);
+  } else {
+    qb.addSelect(opts.text ? textKey(expr) : expr, LIST_SORT_KEY).orderBy(LIST_SORT_KEY, sortDirection(direction), opts.nulls);
+  }
   // A second text key for the ties (a name under a shared category), ascending.
   if (opts.thenByText) qb.addSelect(textKey(opts.thenByText), `${LIST_SORT_KEY}_2`).addOrderBy(`${LIST_SORT_KEY}_2`, 'ASC');
   return qb.addOrderBy(opts.idExpr, 'ASC');

@@ -182,7 +182,7 @@ export class DepartmentsService {
     applyQuickSearch(qb);
     applyCompiledFilters(qb);
 
-    await this.orderList(qb, sort, !!year, { company_name: 'c.name', headcount_year: 'm.headcount', metrics_frozen: 'm.is_frozen' });
+    await this.orderList(qb, sort, !!year, { company_name: 'c.name', headcount_year: '(m.headcount)', metrics_frozen: '(m.is_frozen)' });
     qb.skip(skip).take(limit);
 
     if (year) {
@@ -315,7 +315,8 @@ export class DepartmentsService {
 
   /**
    * The list order: a department column, the company name, or a metric of the year (blanks
-   * first ascending); text columns alphabetically; the name by default; then the id.
+   * first ascending); text columns alphabetically; the name by default; then the id. The metrics
+   * come from a joined subquery: in parentheses, they sort through a selected alias.
    */
   private async orderList(qb: SelectQueryBuilder<Department>, sort: Sort, withYear: boolean, derived: Record<'company_name' | 'headcount_year' | 'metrics_frozen', string>) {
     const field = String(sort.field);
@@ -434,7 +435,7 @@ export class DepartmentsService {
     }
     compiledFilters.forEach((cond) => qb.andWhere(cond.sql, cond.params));
 
-    await this.orderList(qb, sort, !!year, { company_name: 'c.name', headcount_year: 'm.headcount', metrics_frozen: 'm.is_frozen' });
+    await this.orderList(qb, sort, !!year, { company_name: 'c.name', headcount_year: '(m.headcount)', metrics_frozen: '(m.is_frozen)' });
 
     const total = await qb.clone().getCount();
     const limit = Math.min(Number(query?.limit) || 10000, 10000);
