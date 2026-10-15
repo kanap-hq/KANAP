@@ -1377,6 +1377,34 @@
           "notBeforeViolated": "The start on {{actual}} breaks the \"not before {{week}}\" constraint."
         },
         "warningConflict": "{{project}}: {{conflict}}"
+      },
+      "text": {
+        "missingContributorCapacityFor": "No contributor capacity configured for: {{names}}",
+        "blockerOnHold": "The blocker {{blocker}} is on hold",
+        "blockerFixedPlanExpired": "The blocker {{blocker}} is not finished and its fixed plan ended before the roadmap start",
+        "blockerCannotBeScheduled": "The blocker {{blocker}} is not finished and cannot be scheduled. Reason: {{reason}}",
+        "missingBlockerDateFor": "No date for the blocker {{blocker}}",
+        "noFreeSlotFor": "No free parallel slot for: {{contributors}}",
+        "noAllocableCapacityFor": "No weekly capacity available for: {{contributors}}",
+        "collaborativeBurnBelowThreshold": "The projected collaborative start effort is {{burn}} d, below the {{threshold}} d threshold",
+        "collaborativeBurnStalledFor": "Collaborative work stalled for: {{contributors}}",
+        "independentBurnBelowThreshold": "The projected independent start effort is {{burn}} d, below the {{threshold}} d threshold",
+        "noCapacityRemainedFor": "No effective weekly capacity left for: {{contributors}}",
+        "capacityPreventedScheduling": "Capacity constraints prevented scheduling",
+        "waitingOnBlockers": "Still waiting for the blockers: {{blockers}}",
+        "earliestStartBeyondHorizon_one": "The earliest possible start is {{week}}, beyond the {{count}}-week horizon",
+        "earliestStartBeyondHorizon_other": "The earliest possible start is {{week}}, beyond the {{count}}-week horizon",
+        "neverReadyWithinHorizon": "The project never became ready within the scheduling horizon",
+        "remainingAfterHorizon_one": "{{remainingDays}} d remaining after {{count}} week. Biggest unresolved loads: {{loads}}",
+        "remainingAfterHorizon_other": "{{remainingDays}} d remaining after {{count}} weeks. Biggest unresolved loads: {{loads}}",
+        "noAllocableWeek": "No week could be allocated under the current capacity constraints",
+        "contributorCapacity": "{{name}} ({{weeklyCapacity}} d/week)",
+        "contributorRemainingLoad": "{{name}}: {{remainingDays}} d remaining at {{weeklyCapacity}} d/week",
+        "waitingFor": "Waiting for {{blocker}}",
+        "waitingForUntil": "Waiting for {{blocker}} until the week of {{week}}",
+        "blockerIsOnHold": "{{blocker}} is on hold",
+        "blockerHasExpiredFixedPlan": "{{blocker}} has an expired fixed plan",
+        "blockerIsUnschedulable": "{{blocker}} cannot be scheduled: {{reason}}"
       }
     }
   },

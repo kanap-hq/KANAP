@@ -1377,6 +1377,34 @@
           "notBeforeViolated": "Der Start am {{actual}} verletzt die Vorgabe „nicht vor dem {{week}}“."
         },
         "warningConflict": "{{project}}: {{conflict}}"
+      },
+      "text": {
+        "missingContributorCapacityFor": "Keine Kapazität der Mitwirkenden konfiguriert für: {{names}}",
+        "blockerOnHold": "Der Blocker {{blocker}} ist pausiert",
+        "blockerFixedPlanExpired": "Der Blocker {{blocker}} ist nicht abgeschlossen und sein fester Plan endete vor dem Start der Roadmap",
+        "blockerCannotBeScheduled": "Der Blocker {{blocker}} ist nicht abgeschlossen und kann nicht eingeplant werden. Grund: {{reason}}",
+        "missingBlockerDateFor": "Kein Datum für den Blocker {{blocker}}",
+        "noFreeSlotFor": "Kein freier paralleler Platz für: {{contributors}}",
+        "noAllocableCapacityFor": "Keine wöchentliche Kapazität verfügbar für: {{contributors}}",
+        "collaborativeBurnBelowThreshold": "Der erwartete gemeinsame Startaufwand beträgt {{burn}} T und liegt unter der Schwelle von {{threshold}} T",
+        "collaborativeBurnStalledFor": "Die gemeinsame Arbeit stockt für: {{contributors}}",
+        "independentBurnBelowThreshold": "Der erwartete unabhängige Startaufwand beträgt {{burn}} T und liegt unter der Schwelle von {{threshold}} T",
+        "noCapacityRemainedFor": "Keine effektive wöchentliche Kapazität mehr für: {{contributors}}",
+        "capacityPreventedScheduling": "Kapazitätsgrenzen haben die Einplanung verhindert",
+        "waitingOnBlockers": "Wartet noch auf die Blocker: {{blockers}}",
+        "earliestStartBeyondHorizon_one": "Der früheste mögliche Start ist der {{week}}, jenseits des Horizonts von {{count}} Woche",
+        "earliestStartBeyondHorizon_other": "Der früheste mögliche Start ist der {{week}}, jenseits des Horizonts von {{count}} Wochen",
+        "neverReadyWithinHorizon": "Das Projekt wurde innerhalb des Planungshorizonts nie bereit",
+        "remainingAfterHorizon_one": "{{remainingDays}} T verbleiben nach {{count}} Woche. Größte offene Lasten: {{loads}}",
+        "remainingAfterHorizon_other": "{{remainingDays}} T verbleiben nach {{count}} Wochen. Größte offene Lasten: {{loads}}",
+        "noAllocableWeek": "Mit den aktuellen Kapazitätsgrenzen konnte keine Woche zugeteilt werden",
+        "contributorCapacity": "{{name}} ({{weeklyCapacity}} T/Woche)",
+        "contributorRemainingLoad": "{{name}}: {{remainingDays}} T verbleibend bei {{weeklyCapacity}} T/Woche",
+        "waitingFor": "Wartet auf {{blocker}}",
+        "waitingForUntil": "Wartet auf {{blocker}} bis zur Woche vom {{week}}",
+        "blockerIsOnHold": "{{blocker}} ist pausiert",
+        "blockerHasExpiredFixedPlan": "{{blocker}} hat einen abgelaufenen festen Plan",
+        "blockerIsUnschedulable": "{{blocker}} kann nicht eingeplant werden: {{reason}}"
       }
     }
   },

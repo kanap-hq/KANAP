@@ -1377,6 +1377,34 @@
           "notBeforeViolated": "El inicio el {{actual}} no respeta la restricción «no antes del {{week}}»."
         },
         "warningConflict": "{{project}}: {{conflict}}"
+      },
+      "text": {
+        "missingContributorCapacityFor": "No hay capacidad de colaborador configurada para: {{names}}",
+        "blockerOnHold": "El bloqueo {{blocker}} está en pausa",
+        "blockerFixedPlanExpired": "El bloqueo {{blocker}} no está terminado y su plan fijo terminó antes del inicio de la hoja de ruta",
+        "blockerCannotBeScheduled": "El bloqueo {{blocker}} no está terminado y no se puede planificar. Motivo: {{reason}}",
+        "missingBlockerDateFor": "Sin fecha para el bloqueo {{blocker}}",
+        "noFreeSlotFor": "Sin hueco paralelo libre para: {{contributors}}",
+        "noAllocableCapacityFor": "Sin capacidad semanal disponible para: {{contributors}}",
+        "collaborativeBurnBelowThreshold": "El esfuerzo colaborativo previsto al inicio es de {{burn}} d, por debajo del umbral de {{threshold}} d",
+        "collaborativeBurnStalledFor": "El trabajo colaborativo está detenido para: {{contributors}}",
+        "independentBurnBelowThreshold": "El esfuerzo independiente previsto al inicio es de {{burn}} d, por debajo del umbral de {{threshold}} d",
+        "noCapacityRemainedFor": "Ya no queda capacidad semanal efectiva para: {{contributors}}",
+        "capacityPreventedScheduling": "Las restricciones de capacidad impidieron la planificación",
+        "waitingOnBlockers": "Todavía a la espera de los bloqueos: {{blockers}}",
+        "earliestStartBeyondHorizon_one": "El inicio más temprano posible es el {{week}}, más allá del horizonte de {{count}} semana",
+        "earliestStartBeyondHorizon_other": "El inicio más temprano posible es el {{week}}, más allá del horizonte de {{count}} semanas",
+        "neverReadyWithinHorizon": "El proyecto nunca estuvo listo dentro del horizonte de planificación",
+        "remainingAfterHorizon_one": "Quedan {{remainingDays}} d después de {{count}} semana. Mayores cargas sin resolver: {{loads}}",
+        "remainingAfterHorizon_other": "Quedan {{remainingDays}} d después de {{count}} semanas. Mayores cargas sin resolver: {{loads}}",
+        "noAllocableWeek": "No se pudo asignar ninguna semana con las restricciones de capacidad actuales",
+        "contributorCapacity": "{{name}} ({{weeklyCapacity}} d/semana)",
+        "contributorRemainingLoad": "{{name}}: quedan {{remainingDays}} d a {{weeklyCapacity}} d/semana",
+        "waitingFor": "A la espera de {{blocker}}",
+        "waitingForUntil": "A la espera de {{blocker}} hasta la semana del {{week}}",
+        "blockerIsOnHold": "{{blocker}} está en pausa",
+        "blockerHasExpiredFixedPlan": "{{blocker}} tiene un plan fijo vencido",
+        "blockerIsUnschedulable": "{{blocker}} no se puede planificar: {{reason}}"
       }
     }
   },

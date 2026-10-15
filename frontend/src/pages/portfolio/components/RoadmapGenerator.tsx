@@ -57,11 +57,12 @@ import { PortfolioGantt } from './PortfolioGantt';
 import { computeInactiveSegments } from './roadmap-inactive-segments';
 import {
   buildExplanationTexts,
-  explanationConflict,
   formatReasonLabel,
   formatRoadmapConstraint,
   formatRoadmapDate,
   formatRoadmapDays,
+  formatRoadmapText,
+  type RoadmapText,
 } from './roadmap-text';
 import { getDotColor, PROJECT_STATUS_COLORS } from '../../../utils/statusColors';
 import { kanapPalette, modeVal } from '../../tasks/theme/taskDetailTokens';
@@ -135,6 +136,7 @@ type UnschedulableProject = {
   schedulingMode: SchedulingMode;
   reason: string;
   details?: string;
+  detailsText?: RoadmapText;
 };
 
 type ScenarioProjectOverride = {
@@ -189,6 +191,7 @@ type ExplanationReasonEntry = {
     | 'fixed_plan'
     | 'unschedulable_blocker';
   label: string;
+  labelText: RoadmapText;
   projectId: string | null;
   scenarioProjectId: string | null;
   fromWeek: string | null;
@@ -207,6 +210,7 @@ type ExplanationContributorEntry = {
 type ProjectExplanation = {
   itemRef: RoadmapItemRef;
   summary: string;
+  summaryText: RoadmapText;
   classification: 'scheduled' | 'reservation' | 'unschedulable';
   schedulingMode: SchedulingMode;
   earliestEligibleWeek: string | null;
@@ -225,6 +229,7 @@ type ProjectExplanation = {
   blockerReasons: ExplanationReasonEntry[];
   limitingContributors: ExplanationContributorEntry[];
   finalReason: string | null;
+  finalReasonText: RoadmapText | null;
 };
 
 type ScenarioWarning = {
@@ -238,6 +243,7 @@ type ScenarioWarning = {
     | 'apply_skips_scenario_projects';
   itemRef: RoadmapItemRef | null;
   message: string;
+  messageText: RoadmapText;
 };
 
 type RoadmapImpactSummary = {
@@ -1208,27 +1214,10 @@ export default function RoadmapGenerator({ onApplied }: Props) {
   const selectedExplanationTitle = selectedExplanation
     ? (explanationSubjectByKey.get(getExplanationKey(selectedExplanation.itemRef) || '') ?? t('planning.roadmap.explain.overline'))
     : t('planning.roadmap.explain.overline');
-  const selectedExplanationEndWeek = selectedExplanationKey
-    ? (scheduleRowsById.get(selectedExplanationKey)?.plannedEnd ?? null)
-    : null;
   const selectedExplanationTexts = selectedExplanation
-    ? buildExplanationTexts(t, locale, selectedExplanation, {
-      projectName: selectedExplanationTitle,
-      actualEndWeek: selectedExplanationEndWeek,
-      unschedulableReason: response?.unschedulable.find((item) => item.projectId === selectedExplanationKey)?.reason ?? null,
-    })
+    ? buildExplanationTexts(t, locale, selectedExplanation)
     : null;
-  const formatWarning = (warning: ScenarioWarning): string => {
-    const key = warning.itemRef ? getExplanationKey(warning.itemRef) : null;
-    const explanation = key ? explanationByKey.get(key) : undefined;
-    if (!key || !explanation || warning.code !== 'constraint_infeasible') return warning.message;
-    const conflict = explanationConflict(t, locale, explanation, scheduleRowsById.get(key)?.plannedEnd ?? null);
-    if (!conflict) return warning.message;
-    return t('planning.roadmap.explainText.warningConflict', {
-      project: explanationSubjectByKey.get(key) ?? explanation.itemRef.projectId ?? '',
-      conflict,
-    });
-  };
+  const formatWarning = (warning: ScenarioWarning): string => formatRoadmapText(t, locale, warning.messageText);
   const allRowsSelected = filteredProjectIds.length > 0
     && filteredProjectIds.every((projectId) => selectedProjectIds.has(projectId));
 
@@ -2689,7 +2678,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                             justifyContent="space-between"
                           >
                             <Stack spacing={0.5} sx={{ flex: 1 }}>
-                              <Tooltip title={item.details || ''} placement="top-start">
+                              <Tooltip title={item.detailsText ? formatRoadmapText(t, locale, item.detailsText) : ''} placement="top-start">
                                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                                   {t('planning.roadmap.unschedulable.item', { project: item.projectName, mode: t(`planning.roadmap.schedulingModes.${item.schedulingMode}`), reason: t(`planning.roadmap.reasons.${item.reason}`, { defaultValue: item.reason }) })}
                                 </Typography>
@@ -3352,7 +3341,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                   )}
                   {selectedExplanation.blockerReasons.map((reason, index) => (
                     <Paper key={`${reason.kind}:${reason.projectId || 'none'}:${index}`} variant="outlined" sx={{ p: 1.25 }}>
-                      <Typography variant="body2">{formatReasonLabel(t, locale, selectedExplanation, reason, selectedExplanationEndWeek)}</Typography>
+                      <Typography variant="body2">{formatReasonLabel(t, locale, reason)}</Typography>
                       {(reason.fromWeek || reason.toWeek) && (
                         <Typography variant="caption" color="text.secondary">
                           {t('planning.roadmap.explain.range', { from: reason.fromWeek ? formatRoadmapDate(t, locale, reason.fromWeek) : t('planning.roadmap.explain.unknown'), to: reason.toWeek ? formatRoadmapDate(t, locale, reason.toWeek) : t('planning.roadmap.explain.unknown') })}
