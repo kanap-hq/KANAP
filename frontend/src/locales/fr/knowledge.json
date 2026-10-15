@@ -18,7 +18,7 @@
     "version": "Version"
   },
   "confirmations": {
-    "deleteLibrary": "Supprimer cette bibliothèque ? Les documents et dossiers seront déplacés vers la bibliothèque par défaut.",
+    "deleteLibrary": "Supprimer cette bibliothèque ? Ses documents et dossiers iront dans la première bibliothèque de la barre à laquelle vous avez accès, normalement la bibliothèque par défaut.",
     "resetLibraryAccess": "Repasser cette bibliothèque en accès ouvert et effacer les listes personnalisées de lecteurs et rédacteurs ?"
   },
   "dialogs": {

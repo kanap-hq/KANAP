@@ -18,7 +18,7 @@
     "version": "Version"
   },
   "confirmations": {
-    "deleteLibrary": "Delete this library? Knowledge items and folders will be moved to the fallback library.",
+    "deleteLibrary": "Delete this library? Its documents and folders move to the first library you can open in the bar, normally the default library.",
     "resetLibraryAccess": "Switch this library back to open access and clear the custom reader and writer lists?"
   },
   "dialogs": {

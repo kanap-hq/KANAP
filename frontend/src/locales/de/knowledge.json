@@ -18,7 +18,7 @@
     "version": "Version"
   },
   "confirmations": {
-    "deleteLibrary": "Diese Bibliothek löschen? Dokumente und Ordner werden in die Standardbibliothek verschoben.",
+    "deleteLibrary": "Diese Bibliothek löschen? Ihre Dokumente und Ordner werden in die erste Bibliothek der Leiste verschoben, auf die Sie Zugriff haben, normalerweise die Standardbibliothek.",
     "resetLibraryAccess": "Diese Bibliothek wieder für alle freigeben und die benutzerdefinierten Leser- und Bearbeiterlisten löschen?"
   },
   "dialogs": {
