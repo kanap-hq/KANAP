@@ -92,7 +92,7 @@ export function CsvValidationResults({
                 <ListItemText
                   primary={
                     <Typography variant="body2">
-                      {err.row > 0 && <strong>Row {err.row}:</strong>} {err.message}
+                      {err.row > 0 && <strong>{t('csv.rowPrefix', { row: err.row })}</strong>} {err.message}
                       {err.column && <Typography component="span" color="text.secondary"> ({err.column})</Typography>}
                     </Typography>
                   }
@@ -127,7 +127,7 @@ export function CsvValidationResults({
                 <ListItemText
                   primary={
                     <Typography variant="body2">
-                      {warn.row > 0 && <strong>Row {warn.row}:</strong>} {warn.message}
+                      {warn.row > 0 && <strong>{t('csv.rowPrefix', { row: warn.row })}</strong>} {warn.message}
                       {warn.column && <Typography component="span" color="text.secondary"> ({warn.column})</Typography>}
                     </Typography>
                   }

@@ -19,6 +19,7 @@ import DownloadIcon from '@mui/icons-material/Download';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import { useCsvImport } from './useCsvImport';
+import { csvRequestErrorMessage } from './csvRequestError';
 import { CsvImportWorkflowPresets } from './CsvImportWorkflowPresets';
 import { CsvImportAdvancedOptions } from './CsvImportAdvancedOptions';
 import { CsvValidationResults } from './CsvValidationResults';
@@ -104,20 +105,10 @@ export default function CsvImportDialogV2({
       if (!dryRun && data.ok) {
         onImported?.();
       }
-    } catch (e: any) {
+    } catch (e) {
+      // The request itself failed (a refused file, a server error): its message replaces the report.
       console.error('Import failed', e);
-      const errorMsg = e.response?.data?.message || e.message || 'Import failed';
-      setError(errorMsg);
-      setResult({
-        ok: false,
-        dryRun,
-        total: 0,
-        inserted: 0,
-        updated: 0,
-        skipped: 0,
-        errors: [{ row: 0, message: errorMsg }],
-        warnings: [],
-      });
+      setError(await csvRequestErrorMessage(e, t, t('messages.importFailed')));
     } finally {
       setLoading(false);
     }
@@ -127,6 +118,7 @@ export default function CsvImportDialogV2({
   const canImport = result?.ok && result?.dryRun && !loading;
 
   const downloadTemplate = async () => {
+    setError(null);
     try {
       const queryParams = { ...(params ?? {}), scope: 'template' };
       const res = await api.get(`${endpoint}/export`, { params: queryParams, responseType: 'blob' });
@@ -147,6 +139,7 @@ export default function CsvImportDialogV2({
       window.URL.revokeObjectURL(url);
     } catch (e) {
       console.error('Template download failed', e);
+      setError(await csvRequestErrorMessage(e, t, t('messages.exportFailed')));
     }
   };
 
@@ -225,7 +218,7 @@ export default function CsvImportDialogV2({
 
         {loading && <LinearProgress sx={{ mt: 2 }} />}
 
-        {error && !result && (
+        {error && (
           <Alert severity="error" sx={{ mt: 2 }}>
             {error}
           </Alert>
@@ -249,7 +242,7 @@ export default function CsvImportDialogV2({
         {phase === 'validate' && (
           <>
             <Button variant="action" onClick={goBack}>{t('buttons.back')}</Button>
-            <Button variant="action" onClick={handleClose}>Cancel</Button>
+            <Button variant="action" onClick={handleClose}>{t('buttons.cancel')}</Button>
             <Button
               variant="action-primary"
               onClick={() => upload(false)}

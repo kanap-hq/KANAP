@@ -440,7 +440,26 @@
     "andMoreWarnings": "...and {{count}} more warnings",
     "rowPrefix": "Row {{row}}:",
     "rowsUnchanged_one": "{{count}} row unchanged.",
-    "rowsUnchanged_other": "{{count}} rows unchanged."
+    "rowsUnchanged_other": "{{count}} rows unchanged.",
+    "otherGroup": "Other",
+    "workflowPresets": {
+      "merge": {
+        "label": "Merge external data",
+        "description": "Add new records and update existing ones. Empty cells keep the current values."
+      },
+      "updateOnly": {
+        "label": "Update existing only",
+        "description": "Update the records that already exist. New records are skipped."
+      },
+      "insertOnly": {
+        "label": "Add new only",
+        "description": "Add new records. Existing records are skipped."
+      },
+      "fullReplace": {
+        "label": "Full replace",
+        "description": "Replace every value, empty cells included. An empty cell clears the stored value."
+      }
+    }
   },
   "selects": {
     "loading": "Loading...",

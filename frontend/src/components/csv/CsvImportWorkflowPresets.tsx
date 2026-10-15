@@ -52,7 +52,7 @@ export function CsvImportWorkflowPresets({
               label={
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Typography variant="body2" fontWeight="medium">
-                    {preset.label}
+                    {t(preset.labelKey)}
                   </Typography>
                   {preset.recommended && (
                     <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem' }}>{t('labels.recommended')}</Typography>
@@ -62,7 +62,7 @@ export function CsvImportWorkflowPresets({
               sx={{ m: 0 }}
             />
             <Typography variant="caption" color="text.secondary" sx={{ ml: 4, display: 'block' }}>
-              {preset.description}
+              {t(preset.descriptionKey)}
             </Typography>
           </Box>
         ))}

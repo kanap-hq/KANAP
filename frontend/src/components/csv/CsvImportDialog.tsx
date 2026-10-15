@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import api from '../../api';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import { csvRequestErrorMessage } from './csvRequestError';
 import { AmountReading, DateReading, amountReadingOf, dateReadingOf, screenLanguage } from './readings';
 
 type ImportReport = {
@@ -180,6 +181,7 @@ export default function CsvImportDialog({
   const canLoad = useMemo(() => !!report && (report as any).ok && (report as any).dryRun, [report]);
 
   const downloadTemplate = async () => {
+    setRequestError(null);
     try {
       const queryParams = { ...(params ?? {}), language, scope: 'template' };
       const res = await api.get(`${endpoint}/export`, { params: queryParams, responseType: 'blob' });
@@ -200,6 +202,7 @@ export default function CsvImportDialog({
       window.URL.revokeObjectURL(url);
     } catch (e) {
       console.error('Template download failed', e);
+      setRequestError(await csvRequestErrorMessage(e, t, t('messages.exportFailed')));
     }
   };
 
