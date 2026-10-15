@@ -186,7 +186,7 @@ Toolbar actions:
 | **Export CSV** | Export user list | `users:admin` |
 | **Invite** | Send login invitations to selected users | `users:admin` |
 | **Disable** | Disable the selected users. They are signed out immediately. | `users:admin` |
-| **Delete** | Remove selected users permanently. Your own account is kept: the confirmation says so before anything is deleted | `users:admin` |
+| **Delete** | Remove selected users permanently. Your own account is kept: the confirmation says so before anything is deleted. To keep a user's history and block their access, disable them instead | `users:admin` |
 
 `users:reader` is enough to open the page and read the list. Every action above, and the row actions below, require `users:admin`.
 
@@ -198,7 +198,7 @@ Row actions, from the menu at the end of each row:
 | **Enable** / **Disable** | Switch the account on or off. Disabling signs the person out immediately. |
 | **Send invite** | Email a sign-in invitation. Hidden for Microsoft Entra accounts. |
 | **Send password reset** | Email a password reset link. Shown for enabled local accounts only. |
-| **Delete** | Remove the user permanently. The records the user worked on stay, without the user. You cannot delete your own account. |
+| **Delete** | Remove the user permanently. The records the user worked on stay, without the user. You cannot delete your own account. To block a person's access and keep the account, disable it instead. |
 
 ### Users CSV
 

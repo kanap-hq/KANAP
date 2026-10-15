@@ -162,7 +162,7 @@ Desactive un calendario cuando ya no deba usarse, por ejemplo tras un cambio de 
 
 El botón **Eliminar** del encabezado elimina el calendario tras una confirmación (requiere `working_day_profiles:admin`). Está desactivado, con el motivo en una línea, mientras haya líneas de presupuesto que usen el calendario, por ejemplo "Usado por 3 líneas OPEX y 1 línea CAPEX. Desactívelo en su lugar."
 
-La misma regla se aplica a **Eliminar selección** en la lista: un calendario usado por líneas de presupuesto se conserva, con un motivo como "Personal de la sede is used by 3 OPEX lines and 1 CAPEX line. Disable it instead."
+La misma regla se aplica a **Eliminar selección** en la lista: un calendario usado por líneas de presupuesto se conserva, con un motivo como "Este calendario se usa en 3 líneas OPEX y 1 línea CAPEX. Desactívelo en lugar de eliminarlo."
 
 Una línea de presupuesto usa un calendario cuando una de sus columnas, en cualquier año, tiene una línea con precio por día sobre él. Quitar esa línea en la pestaña Presupuesto, o **Restablecer columna presupuestaria** en la Administración presupuestaria, quita el vínculo. Consulte [Restablecer columna presupuestaria](budget-operations.md#restablecer-columna-presupuestaria).
 

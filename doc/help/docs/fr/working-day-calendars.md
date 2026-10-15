@@ -162,7 +162,7 @@ Désactivez un calendrier lorsqu'il ne doit plus être utilisé, par exemple apr
 
 Le bouton **Supprimer** de l'en-tête supprime le calendrier après une confirmation (nécessite `working_day_profiles:admin`). Il est désactivé, avec la raison sur une ligne, tant que des lignes budgétaires utilisent le calendrier, par exemple « Utilisé par 3 lignes OPEX et 1 ligne CAPEX. Désactivez-le plutôt. »
 
-La même règle s'applique à **Supprimer la sélection** dans la liste : un calendrier utilisé par des lignes budgétaires est conservé, avec une raison comme « Personnel du siège is used by 3 OPEX lines and 1 CAPEX line. Disable it instead. »
+La même règle s'applique à **Supprimer la sélection** dans la liste : un calendrier utilisé par des lignes budgétaires est conservé, avec une raison comme « Ce calendrier est utilisé par 3 lignes OPEX et 1 ligne CAPEX. Désactivez-le plutôt que de le supprimer. »
 
 Une ligne budgétaire utilise un calendrier lorsque l'une de ses colonnes, pour n'importe quelle année, contient une ligne au prix par jour sur ce calendrier. Supprimer cette ligne dans l'onglet Budget, ou **Réinitialiser une colonne budgétaire** dans l'Administration budgétaire, retire le lien. Voir [Réinitialiser une colonne budgétaire](budget-operations.md#reinitialiser-une-colonne-budgetaire).
 

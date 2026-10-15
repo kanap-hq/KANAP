@@ -118,7 +118,7 @@ The Applications grid provides a comprehensive view of your application portfoli
 - **Import CSV**: Bulk import from CSV file (`applications:admin`)
 - **Export CSV**: Export the list to CSV (`applications:admin`). Catalog-backed columns (category, lifecycle, criticality, cyber criticality, recovery wave, data class, access methods) are exported as their names; the import accepts a name or the internal code.
 - **Copy item**: Duplicate a selected application with all its core relations (`applications:manager`). See [Copying applications](#copying-applications) for what is and is not copied.
-- **Delete Selected**: Remove selected applications (`applications:admin`)
+- **Delete Selected**: Remove selected applications (`applications:admin`). Their deployments, interfaces and links to other records are deleted with them; the confirmation says so
 
 ---
 
@@ -137,7 +137,7 @@ The header shows:
 - **Go live** date
 - **Send link**: copy a shareable link to this workspace
 - **Create new version**: launch the version migration wizard (see [Version management](#version-management))
-- **Delete** (`applications:admin`)
+- **Delete** (`applications:admin`): asks first, naming the application, then deletes it with its deployments, interfaces and links to other records
 - **Previous / Next**: walk through the filtered list without returning to the grid
 
 ### Properties drawer (right panel)

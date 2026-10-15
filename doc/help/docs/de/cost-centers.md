@@ -145,8 +145,8 @@ Die Schaltfläche **Löschen** in der Kopfzeile löscht das Element nach einer B
 
 ## Regeln, auf die Sie stoßen werden
 
-- **Eine Kostenstelle, die von Budgetzeilen verwendet wird, kann weder eine Gruppe werden noch gelöscht werden.** Deaktivieren Sie sie stattdessen. Die Meldung nennt die Zeilen, zum Beispiel „IT-300 is used by 3 OPEX lines and 1 CAPEX line. Disable it instead.“
-- **Eine Gruppe, die Elemente enthält, kann weder gelöscht werden noch eine Kostenstelle werden.** Verschieben oder löschen Sie zuerst ihren Inhalt. Die Meldung nennt die Anzahl, zum Beispiel „Infrastructure still contains 4 nodes. Move or delete them first.“
+- **Eine Kostenstelle, die von Budgetzeilen verwendet wird, kann weder eine Gruppe werden noch gelöscht werden.** Deaktivieren Sie sie stattdessen. Die Meldung nennt die Zeilen, zum Beispiel „Diese Kostenstelle wird noch verwendet: 3 OPEX-Zeilen und 1 CAPEX-Zeile. Deaktivieren Sie sie, statt sie zu löschen.“
+- **Eine Gruppe, die Elemente enthält, kann weder gelöscht werden noch eine Kostenstelle werden.** Verschieben oder löschen Sie zuerst ihren Inhalt. Die Meldung nennt die Anzahl, zum Beispiel „Diese Gruppe enthält 4 Elemente. Verschieben oder löschen Sie diese zuerst.“
 - **Nur eine Gruppe kann übergeordnet sein.** Eine Kostenstelle hat keine untergeordneten Elemente.
 - **Keine Schleifen.** Eine Gruppe kann nicht unter sich selbst oder unter eine ihrer eigenen Gruppen verschoben werden.
 - **Deaktivierte Elemente bleiben, wo sie sind.** Eine deaktivierte Kostenstelle bleibt auf den Budgetzeilen, die sie bereits haben, und zählt weiterhin in den Berichten. In den Auswahllisten ist sie als **Deaktiviert** markiert und kann nicht für eine neue Zeile gewählt werden. Das Deaktivieren einer Gruppe ändert ihren Inhalt nicht, und eine deaktivierte Gruppe kann weiterhin Elemente aufnehmen.

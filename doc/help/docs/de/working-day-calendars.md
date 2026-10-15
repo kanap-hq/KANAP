@@ -162,7 +162,7 @@ Deaktivieren Sie einen Kalender, wenn er nicht mehr verwendet werden soll, zum B
 
 Die Schaltfläche **Löschen** in der Kopfzeile löscht den Kalender nach einer Bestätigung (erfordert `working_day_profiles:admin`). Sie ist deaktiviert, mit dem Grund in einer Zeile, solange Budgetzeilen den Kalender verwenden, zum Beispiel „Verwendet von 3 OPEX-Zeilen und 1 CAPEX-Zeile. Deaktivieren Sie ihn stattdessen.“
 
-Dieselbe Regel gilt für **Auswahl löschen** in der Liste: Ein Kalender, den Budgetzeilen verwenden, bleibt erhalten, mit einem Grund wie „Mitarbeitende am Hauptsitz is used by 3 OPEX lines and 1 CAPEX line. Disable it instead.“
+Dieselbe Regel gilt für **Auswahl löschen** in der Liste: Ein Kalender, den Budgetzeilen verwenden, bleibt erhalten, mit einem Grund wie „Dieser Kalender wird noch verwendet: 3 OPEX-Zeilen und 1 CAPEX-Zeile. Deaktivieren Sie ihn, statt ihn zu löschen.“
 
 Eine Budgetzeile verwendet einen Kalender, wenn eine ihrer Spalten, in einem beliebigen Jahr, eine Zeile mit Preis pro Tag auf diesem Kalender hat. Das Entfernen dieser Zeile im Budget-Tab oder **Budgetspalte zurücksetzen** in der Budgetadministration hebt die Verknüpfung auf. Siehe [Budgetspalte zurücksetzen](budget-operations.md#budgetspalte-zurucksetzen).
 

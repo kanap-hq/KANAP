@@ -118,7 +118,7 @@ La cuadrícula de Aplicaciones proporciona una vista completa de su portafolio d
 - **Importar CSV**: Importación masiva desde archivo CSV (`applications:admin`)
 - **Exportar CSV**: Exportar la lista a CSV (`applications:admin`). Las columnas respaldadas por catálogos (categoría, ciclo de vida, criticidad, criticidad cibernética, ola de recuperación, clase de datos, métodos de acceso) se exportan con sus nombres; la importación acepta un nombre o el código interno.
 - **Copiar elemento**: Duplicar una aplicación seleccionada con todas sus relaciones principales (`applications:manager`). Consulte [Copiar aplicaciones](#copiar-aplicaciones) para saber qué se copia y qué no.
-- **Eliminar seleccionadas**: Eliminar aplicaciones seleccionadas (`applications:admin`)
+- **Eliminar seleccionadas**: Eliminar aplicaciones seleccionadas (`applications:admin`). Sus despliegues, interfaces y vínculos con otros elementos se eliminan con ellas; la confirmación lo indica
 
 ---
 
@@ -137,7 +137,7 @@ El encabezado muestra:
 - Fecha de **Puesta en marcha**
 - **Enviar enlace**: copiar un enlace compartible a este espacio de trabajo
 - **Crear nueva versión**: lanzar el asistente de migración de versión (consulte [Gestión de versiones](#gestion-de-versiones))
-- **Eliminar** (`applications:admin`)
+- **Eliminar** (`applications:admin`): pide confirmación nombrando la aplicación y luego la elimina con sus despliegues, interfaces y vínculos con otros elementos
 - **Anterior / Siguiente**: recorrer la lista filtrada sin volver a la cuadrícula
 
 ### Panel de propiedades (panel derecho)

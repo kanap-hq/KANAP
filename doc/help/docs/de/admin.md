@@ -186,7 +186,7 @@ Aktionen in der Symbolleiste:
 | **CSV exportieren** | Benutzerliste exportieren | `users:admin` |
 | **Einladen** | Anmeldeeinladungen an ausgewählte Benutzer senden | `users:admin` |
 | **Deaktivieren** | Die ausgewählten Benutzer deaktivieren. Sie werden sofort abgemeldet. | `users:admin` |
-| **Löschen** | Ausgewählte Benutzer dauerhaft entfernen. Ihr eigenes Konto bleibt erhalten: Die Bestätigung nennt es vor dem Löschen | `users:admin` |
+| **Löschen** | Ausgewählte Benutzer dauerhaft entfernen. Ihr eigenes Konto bleibt erhalten: Die Bestätigung nennt es vor dem Löschen. Um den Verlauf eines Benutzers zu behalten und seinen Zugang zu sperren, deaktivieren Sie ihn stattdessen | `users:admin` |
 
 `users:reader` genügt, um die Seite zu öffnen und die Liste zu lesen. Alle Aktionen oben und die folgenden Zeilenaktionen erfordern `users:admin`.
 
@@ -198,7 +198,7 @@ Zeilenaktionen über das Menü am Ende jeder Zeile:
 | **Aktivieren** / **Deaktivieren** | Schaltet das Konto ein oder aus. Beim Deaktivieren wird die Person sofort abgemeldet. |
 | **Einladung senden** | Sendet eine Anmeldeeinladung per E-Mail. Für Microsoft Entra-Konten ausgeblendet. |
 | **Passwort-Zurücksetzung senden** | Sendet einen Link zum Zurücksetzen des Passworts per E-Mail. Nur für aktive lokale Konten sichtbar. |
-| **Löschen** | Entfernt den Benutzer dauerhaft. Die Datensätze, an denen er gearbeitet hat, bleiben ohne ihn erhalten. Ihr eigenes Konto können Sie nicht löschen. |
+| **Löschen** | Entfernt den Benutzer dauerhaft. Die Datensätze, an denen er gearbeitet hat, bleiben ohne ihn erhalten. Ihr eigenes Konto können Sie nicht löschen. Um den Zugang einer Person zu sperren und das Konto zu behalten, deaktivieren Sie es stattdessen. |
 
 ### CSV-Datei der Benutzer
 

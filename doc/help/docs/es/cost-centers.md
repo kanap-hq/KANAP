@@ -145,8 +145,8 @@ El botón **Eliminar** del encabezado elimina el elemento tras una confirmación
 
 ## Reglas que encontrará
 
-- **Un centro de coste usado por líneas de presupuesto no puede convertirse en grupo ni eliminarse.** Desactívelo en su lugar. El mensaje indica las líneas, por ejemplo "IT-300 is used by 3 OPEX lines and 1 CAPEX line. Disable it instead."
-- **Un grupo que contiene elementos no puede eliminarse ni convertirse en centro de coste.** Mueva o elimine antes su contenido. El mensaje indica el número, por ejemplo "Infrastructure still contains 4 nodes. Move or delete them first."
+- **Un centro de coste usado por líneas de presupuesto no puede convertirse en grupo ni eliminarse.** Desactívelo en su lugar. El mensaje indica las líneas, por ejemplo "Este centro de coste se usa en 3 líneas OPEX y 1 línea CAPEX. Desactívelo en lugar de eliminarlo."
+- **Un grupo que contiene elementos no puede eliminarse ni convertirse en centro de coste.** Mueva o elimine antes su contenido. El mensaje indica el número, por ejemplo "Este grupo contiene 4 elementos. Muévalos o elimínelos primero."
 - **Solo un grupo puede ser superior.** Un centro de coste no tiene elementos hijos.
 - **Sin bucles.** Un grupo no puede moverse bajo sí mismo ni bajo uno de sus propios grupos.
 - **Los elementos desactivados se quedan donde están.** Un centro de coste desactivado se mantiene en las líneas de presupuesto que ya lo tienen y sigue contando en los informes. En los selectores aparece marcado como **Desactivado** y no se puede elegir para una línea nueva. Desactivar un grupo no cambia lo que contiene, y un grupo desactivado todavía puede recibir elementos.

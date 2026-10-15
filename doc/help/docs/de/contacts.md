@@ -45,7 +45,7 @@ Das Kontakte-Grid bietet ein durchsuchbares Verzeichnis aller externen Kontakte.
 - **Neu**: Neuen Kontakt erstellen (erfordert `contacts:manager`)
 - **CSV importieren**: Massenimport von Kontakten (erfordert `contacts:admin`)
 - **CSV exportieren**: Als CSV exportieren (erfordert `contacts:admin`)
-- **Ausgewählte löschen**: Ausgewählte Kontakte entfernen (erfordert `contacts:admin`)
+- **Ausgewählte löschen**: Ausgewählte Kontakte entfernen (erfordert `contacts:admin`). Sie werden aus den Lieferanten, Budgetzeilen, Verträgen, Anwendungen, Assets, Standorten, Projekten und Anfragen entfernt, die sie nennen; diese Einträge bleiben erhalten
 
 ---
 

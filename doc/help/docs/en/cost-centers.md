@@ -145,8 +145,8 @@ The **Delete** button in the header deletes the node after a confirmation (requi
 
 ## Rules you will meet
 
-- **A cost center used by budget lines cannot become a group, and cannot be deleted.** Disable it instead. The message names the lines, for example "IT-300 is used by 3 OPEX lines and 1 CAPEX line. Disable it instead."
-- **A group that contains nodes cannot be deleted, and cannot become a cost center.** Move or delete its content first. The message gives the count, for example "Infrastructure still contains 4 nodes. Move or delete them first."
+- **A cost center used by budget lines cannot become a group, and cannot be deleted.** Disable it instead. The message names the lines, for example "This cost center is used by 3 OPEX lines and 1 CAPEX line. Disable it instead of deleting it."
+- **A group that contains nodes cannot be deleted, and cannot become a cost center.** Move or delete its content first. The message gives the count, for example "This group contains 4 nodes. Move or delete them first."
 - **Only a group can be a parent.** A cost center has no children.
 - **No loops.** A group cannot move under itself or under one of its own groups.
 - **Disabled nodes stay where they are.** A disabled cost center stays on the budget lines that already have it and keeps counting in reports. In the pickers it is marked **Disabled** and cannot be chosen for a new line. Disabling a group does not change what it contains, and a disabled group can still receive nodes.

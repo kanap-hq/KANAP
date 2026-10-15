@@ -186,7 +186,7 @@ Acciones de la barra de herramientas:
 | **Exportar CSV** | Exportar lista de usuarios | `users:admin` |
 | **Invitar** | Enviar invitaciones de inicio de sesión a los usuarios seleccionados | `users:admin` |
 | **Desactivar** | Desactivar los usuarios seleccionados. Se cierra su sesión de inmediato. | `users:admin` |
-| **Eliminar** | Eliminar permanentemente los usuarios seleccionados. Su propia cuenta se conserva: la confirmación lo indica antes de eliminar nada | `users:admin` |
+| **Eliminar** | Eliminar permanentemente los usuarios seleccionados. Su propia cuenta se conserva: la confirmación lo indica antes de eliminar nada. Para conservar el historial de un usuario y bloquear su acceso, desactívelo en su lugar | `users:admin` |
 
 `users:reader` basta para abrir la página y consultar la lista. Todas las acciones anteriores, y las acciones de fila siguientes, requieren `users:admin`.
 
@@ -198,7 +198,7 @@ Acciones de fila, desde el menú al final de cada fila:
 | **Activar** / **Desactivar** | Activar o desactivar la cuenta. Al desactivarla se cierra la sesión de la persona de inmediato. |
 | **Enviar invitación** | Enviar por correo una invitación de inicio de sesión. Oculta para las cuentas de Microsoft Entra. |
 | **Enviar restablecimiento de contraseña** | Enviar por correo un enlace de restablecimiento de contraseña. Se muestra solo para cuentas locales activadas. |
-| **Eliminar** | Eliminar el usuario permanentemente. Los registros en los que trabajó se conservan, sin él. No puede eliminar su propia cuenta. |
+| **Eliminar** | Eliminar el usuario permanentemente. Los registros en los que trabajó se conservan, sin él. No puede eliminar su propia cuenta. Para bloquear el acceso de una persona y conservar la cuenta, desactívela en su lugar. |
 
 ### Archivo CSV de usuarios
 

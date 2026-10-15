@@ -162,7 +162,7 @@ Disable a calendar when it should no longer be used, for example after a change 
 
 The **Delete** button in the header deletes the calendar after a confirmation (requires `working_day_profiles:admin`). It is disabled, with the reason on one line, while budget lines use the calendar, for example "Used by 3 OPEX lines and 1 CAPEX line. Disable it instead."
 
-The same rule applies to **Delete selected** in the list: a calendar used by budget lines is kept, with a reason such as "Head office staff is used by 3 OPEX lines and 1 CAPEX line. Disable it instead."
+The same rule applies to **Delete selected** in the list: a calendar used by budget lines is kept, with a reason such as "This calendar is used by 3 OPEX lines and 1 CAPEX line. Disable it instead of deleting it."
 
 A budget line uses a calendar when one of its columns, in any year, has a line priced per day on it. Removing that line in the budget tab, or **Reset budget column** in Budget Administration, removes the link. See [Reset budget column](budget-operations.md#reset-budget-column).
 

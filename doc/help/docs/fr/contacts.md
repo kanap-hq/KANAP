@@ -45,7 +45,7 @@ La grille Contacts fournit un répertoire consultable de tous les contacts exter
 - **Nouveau** : Créer un nouveau contact (nécessite `contacts:manager`)
 - **Importer CSV** : Import en masse de contacts (nécessite `contacts:admin`)
 - **Exporter CSV** : Exporter en CSV (nécessite `contacts:admin`)
-- **Supprimer la sélection** : Supprimer les contacts sélectionnés (nécessite `contacts:admin`)
+- **Supprimer la sélection** : Supprimer les contacts sélectionnés (nécessite `contacts:admin`). Ils sont retirés des fournisseurs, lignes budgétaires, contrats, applications, actifs, sites, projets et demandes qui les citent ; ces éléments restent
 
 ---
 
