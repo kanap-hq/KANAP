@@ -1,10 +1,11 @@
-import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { BusinessProcess } from './business-process.entity';
 import { AuditService } from '../audit/audit.service';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
+import { RecordInUseException, refusalDetails } from '../common/record-in-use';
 import { withSavepoint } from '../common/savepoint.util';
 
 @Injectable()
@@ -38,7 +39,8 @@ export class BusinessProcessesDeleteService extends BaseDeleteService<BusinessPr
       await repo.delete({ id } as any);
     } catch (error: any) {
       if (error?.code === '23503' || error?.message?.includes('foreign key constraint')) {
-        throw new ConflictException(
+        throw new RecordInUseException(
+          'RECORD_IN_USE', 'business process', existing.name, [],
           `Cannot delete business process "${existing.name}": it is referenced by other records. You can disable it if it shouldn't be used actively anymore.`,
         );
       }
@@ -84,6 +86,7 @@ export class BusinessProcessesDeleteService extends BaseDeleteService<BusinessPr
           id,
           name,
           reason: error?.message || 'Unknown error',
+          ...refusalDetails(error),
         });
       }
     }

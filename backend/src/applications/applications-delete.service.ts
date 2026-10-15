@@ -7,6 +7,7 @@ import { AuditService } from '../audit/audit.service';
 import { StorageService } from '../common/storage/storage.service';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
+import { refusalDetails } from '../common/record-in-use';
 import { withSavepoint } from '../common/savepoint.util';
 
 @Injectable()
@@ -97,7 +98,7 @@ export class ApplicationsDeleteService extends BaseDeleteService<Application> {
         } catch (err: any) {
           this.logger.warn(`Failed to fetch application name for error reporting: ${err?.message || 'Unknown error'}`);
         }
-        result.failed.push({ id, name, reason: e?.message || 'Unknown error' });
+        result.failed.push({ id, name, reason: e?.message || 'Unknown error', ...refusalDetails(e) });
       }
     }
 

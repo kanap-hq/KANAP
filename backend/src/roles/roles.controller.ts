@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, Get, Param, Post, Put, UseGuards, Req } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, NotFoundException, Param, Post, Put, UseGuards, Req } from '@nestjs/common';
 import { RolesService } from './roles.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager } from 'typeorm';
@@ -121,7 +121,7 @@ export class RolesController {
   async deleteRole(@Param('id') id: string, @Req() req: any) {
     const mg: EntityManager | undefined = req?.queryRunner?.manager;
     const role = await (mg ?? this.roleRepo.manager).getRepository(Role).findOne({ where: { id } });
-    if (!role) throw new BadRequestException('Role not found');
+    if (!role) throw new NotFoundException('Role not found');
     // A refusal the interface words (ROLE_BUILT_IN, ROLE_IN_USE with its users counted), with what to do instead.
     if (role.is_system || role.is_built_in) {
       throw new RecordInUseException('ROLE_BUILT_IN', 'role', role.role_name, [],

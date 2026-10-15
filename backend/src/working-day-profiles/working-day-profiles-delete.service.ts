@@ -76,7 +76,7 @@ export class WorkingDayProfilesDeleteService {
     const unique = Array.from(new Set((ids ?? []).map((id) => String(id))));
     for (const id of unique) {
       if (!isUUID(id)) {
-        result.failed.push({ id, name: 'Unknown', reason: 'Calendar not found.' });
+        result.failed.push({ id, name: 'Unknown', reason: 'Calendar not found.', code: 'not_found' });
         continue;
       }
       try {

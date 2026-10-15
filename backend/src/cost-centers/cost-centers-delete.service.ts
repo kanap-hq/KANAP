@@ -133,7 +133,7 @@ export class CostCentersDeleteService {
 
     for (const id of ordered) {
       if (!isUUID(id)) {
-        result.failed.push({ id, name: 'Unknown', reason: 'Cost center not found.' });
+        result.failed.push({ id, name: 'Unknown', reason: 'Cost center not found.', code: 'not_found' });
         continue;
       }
       try {

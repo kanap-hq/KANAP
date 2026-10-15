@@ -121,7 +121,7 @@ export class TasksDeleteService extends BaseDeleteService<Task> {
           return true;
         });
         if (!found) {
-          result.failed.push({ id, name: 'Unknown', reason: 'Not found' });
+          result.failed.push({ id, name: 'Unknown', reason: 'Not found', code: 'not_found' });
           continue;
         }
         result.deleted.push(id);

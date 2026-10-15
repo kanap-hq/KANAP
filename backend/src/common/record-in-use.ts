@@ -1,5 +1,6 @@
-import { ConflictException, HttpStatus } from '@nestjs/common';
+import { ConflictException, HttpStatus, NotFoundException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
+import { mapDatabaseError } from './filters/database-error.mapping';
 import { readUsages, type UsageQuery, type UsageType } from './record-usages';
 
 /**
@@ -183,8 +184,18 @@ export async function refusalsOf(
   return { refused };
 }
 
-/** The translatable part of a refusal, for a bulk delete's failed item. */
-export function refusalDetails(error: unknown): { code?: string; usages?: UsageCount[]; params?: RefusalParams } {
-  if (!(error instanceof RecordInUseException)) return {};
-  return { code: error.code, usages: error.usages, ...(error.params ? { params: error.params } : {}) };
+/**
+ * The translatable part of a bulk delete's failed item: a refusal's code, counts and params; a
+ * record gone meanwhile (`not_found`); a database refusal's mapped code (`in_use`, `retry`, ...)
+ * with its English sentence as `reason`, in place of the driver's. Spread after `reason`.
+ */
+export function refusalDetails(error: unknown): { code?: string; usages?: UsageCount[]; params?: RefusalParams; reason?: string } {
+  if (error instanceof RecordInUseException) {
+    return { code: error.code, usages: error.usages, ...(error.params ? { params: error.params } : {}) };
+  }
+  if (error instanceof NotFoundException) return { code: 'not_found' };
+  const mapped = mapDatabaseError(error);
+  if (!mapped) return {};
+  const message = (mapped.exception.getResponse() as { message?: unknown }).message;
+  return { code: mapped.code, ...(typeof message === 'string' ? { reason: message } : {}) };
 }

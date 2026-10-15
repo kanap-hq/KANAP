@@ -6,6 +6,7 @@ import { SupplierContactLink } from './supplier-contact.entity';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { AuditService } from '../audit/audit.service';
 import { BulkDeleteResult } from '../common/delete.types';
+import { refusalDetails } from '../common/record-in-use';
 import { withSavepoint } from '../common/savepoint.util';
 
 @Injectable()
@@ -56,7 +57,7 @@ export class ContactsDeleteService extends BaseDeleteService<ExternalContact> {
         } catch (err: any) {
           this.logger.warn(`Failed to fetch contact name for error reporting: ${err?.message || 'Unknown error'}`);
         }
-        result.failed.push({ id, name, reason: e?.message || 'Unknown error' });
+        result.failed.push({ id, name, reason: e?.message || 'Unknown error', ...refusalDetails(e) });
       }
     }
     return result;

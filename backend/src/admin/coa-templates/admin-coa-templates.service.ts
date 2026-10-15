@@ -491,7 +491,7 @@ export class AdminCoaTemplatesService {
     const rows = await this.parseTemplateRows(csv);
     const toDelete = new Set(ids.map((x) => Number(x)));
     const deleted: string[] = [];
-    const failed: Array<{ id: string; reason: string }> = [];
+    const failed: Array<{ id: string; reason: string; code?: string }> = [];
     const next: typeof rows = [];
     const removedRows: typeof rows = [];
     for (const r of rows) {
@@ -505,7 +505,7 @@ export class AdminCoaTemplatesService {
     }
     // Mark missing ones as failed
     for (const idNum of toDelete) {
-      if (!deleted.includes(String(idNum))) failed.push({ id: String(idNum), reason: 'Not found' });
+      if (!deleted.includes(String(idNum))) failed.push({ id: String(idNum), reason: 'Not found', code: 'not_found' });
     }
     const encoded = await this.encodeTemplateRows(next);
     await this.update(id, { csv_payload: encoded }, userId, { manager: opts?.manager, skipAudit: true });
