@@ -253,6 +253,12 @@ jobs:
           node --test scripts/sbom/__tests__/*.test.mjs
           node --test scripts/release/__tests__/*.test.mjs
           node scripts/sbom/check-licenses.mjs
+      # The script that queues the ready pull requests (auto-queue.yml) and the form of the docs
+      # translation manifest that keeps neighbouring updates mergeable.
+      - name: Test the queueing script and the docs translation manifest
+        run: |
+          node --test .github/scripts/__tests__/*.test.mjs
+          node --test scripts/docs/__tests__/*.test.mjs
       - name: Build backend (onprem)
         working-directory: backend
         run: npm ci && npm run build
