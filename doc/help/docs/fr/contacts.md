@@ -126,7 +126,7 @@ Gérez les contacts en masse via CSV.
 **Champs optionnels** : Prénom, Nom, Nom du fournisseur, Intitulé de poste, Téléphone, Mobile, Pays, Actif
 
 **Notes** :
-- Utilisez l'**encodage UTF-8** et les **points-virgules** comme séparateurs
+- Utilisez l'**encodage UTF-8** et les **points-virgules** comme séparateurs. Un fichier enregistré par Excel en CSV simple (Windows-1252) est accepté aussi
 - Le fournisseur est mis en correspondance par nom — assurez-vous que le fournisseur existe avant d'importer
 
 ---

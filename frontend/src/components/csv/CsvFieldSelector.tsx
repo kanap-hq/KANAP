@@ -9,6 +9,7 @@ import {
   AccordionDetails,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { useTranslation } from 'react-i18next';
 import { CsvFieldInfo } from './csv.types';
 
 interface CsvFieldSelectorProps {
@@ -24,15 +25,16 @@ export function CsvFieldSelector({
   onToggle,
   groupBy = 'group',
 }: CsvFieldSelectorProps) {
-  // Group fields
+  const { t } = useTranslation('common');
+  // Group fields: '' holds the fields without a group (or every field when not grouped)
   const groupedFields = React.useMemo(() => {
     if (groupBy === 'none') {
-      return { All: fields };
+      return { '': fields };
     }
 
     const groups: Record<string, CsvFieldInfo[]> = {};
     for (const field of fields) {
-      const group = field.group || 'Other';
+      const group = field.group || '';
       if (!groups[group]) {
         groups[group] = [];
       }
@@ -57,7 +59,9 @@ export function CsvFieldSelector({
           <Accordion key={groupName} defaultExpanded={groupBy === 'none'} disableGutters>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-                <Typography variant="subtitle2">{groupName}</Typography>
+                <Typography variant="subtitle2">
+                  {groupName || (groupBy === 'none' ? t('labels.all') : t('csv.otherGroup'))}
+                </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem' }}>
                   {`${selectedCount}/${groupFields.length}`}
                 </Typography>

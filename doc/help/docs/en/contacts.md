@@ -126,7 +126,7 @@ Manage contacts in bulk using CSV.
 **Optional fields**: First Name, Last Name, Supplier Name, Job Title, Phone, Mobile, Country, Active
 
 **Notes**:
-- Use **UTF-8 encoding** and **semicolons** as separators
+- Use **UTF-8 encoding** and **semicolons** as separators. A file Excel saved as plain CSV (Windows-1252) imports too
 - Supplier is matched by name -- ensure the supplier exists before importing
 
 ---

@@ -10,7 +10,7 @@ import { AuditService } from '../audit/audit.service';
 import { parseExportPagination, parsePagination, type Sort } from '../common/pagination';
 import { format } from '@fast-csv/format';
 import { parseString } from '@fast-csv/parse';
-import { decodeCsvBufferUtf8OrThrow } from '../common/encoding';
+import { CsvDecodeError, decodeCsv } from '../common/csv-sheet/decode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { deriveStatusFromDisabledAt, resolveLifecycleState } from '../common/status';
@@ -1060,7 +1060,13 @@ export class ContractsService {
     if (!file) throw new BadRequestException('No file uploaded');
     const buf = file.buffer || null;
     if (!buf) throw new BadRequestException('Empty upload');
-    const text = decodeCsvBufferUtf8OrThrow(buf);
+    let text: string;
+    try {
+      text = decodeCsv(buf).text;
+    } catch (err) {
+      if (err instanceof CsvDecodeError) throw new BadRequestException(err.message);
+      throw err;
+    }
     const expectedHeaders = this.csvHeaders();
     const errors: { row: number; message: string }[] = [];
     let headerOk = false;

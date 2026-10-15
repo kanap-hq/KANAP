@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { EntityManager, In } from 'typeorm';
 import { parseString } from '@fast-csv/parse';
-import { decodeCsvBufferUtf8OrThrow } from '../encoding';
+import { CsvDecodeError, decodeCsv } from '../csv-sheet/decode';
 import { AuditLog } from '../../audit/audit.entity';
 import { omitAuditSecrets } from '../../audit/audit.service';
 import {
@@ -224,13 +224,12 @@ export class CsvImportService {
 
     let content: string;
     try {
-      content = decodeCsvBufferUtf8OrThrow(
+      content = decodeCsv(
         typeof buf === 'string' ? require('fs').readFileSync(buf) : buf,
-      );
-    } catch {
-      throw new BadRequestException(
-        'Invalid file encoding. Please save the CSV as UTF-8 and use semicolons as separators.',
-      );
+      ).text;
+    } catch (err) {
+      if (err instanceof CsvDecodeError) throw new BadRequestException(err.message);
+      throw err;
     }
 
     const rows: Record<string, string>[] = [];

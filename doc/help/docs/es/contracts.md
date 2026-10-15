@@ -288,7 +288,7 @@ Mantenga su lista de contratos sincronizada con otras herramientas mediante CSV 
 
 **Notas**:
 
-- Use **codificación UTF-8** y **punto y coma** como separador
+- Use **codificación UTF-8** y **punto y coma** como separador. Un archivo que Excel guardó como CSV simple (Windows-1252) también se importa
 - Las fechas se calculan a partir del inicio, la duración, el preaviso y la renovación; nunca se importan
 
 ---

@@ -11,8 +11,10 @@ export type ImportOperation = 'upsert' | 'update_only' | 'insert_only';
 /** Workflow preset combining mode and operation */
 export interface WorkflowPreset {
   id: string;
-  label: string;
-  description: string;
+  /** i18n key (common namespace) of the preset name */
+  labelKey: string;
+  /** i18n key (common namespace) of the preset description */
+  descriptionKey: string;
   mode: ImportMode;
   operation: ImportOperation;
   recommended?: boolean;
@@ -22,30 +24,30 @@ export interface WorkflowPreset {
 export const WORKFLOW_PRESETS: WorkflowPreset[] = [
   {
     id: 'merge',
-    label: 'Merge external data',
-    description: 'Add new records and update existing ones. Empty cells preserve current values.',
+    labelKey: 'csv.workflowPresets.merge.label',
+    descriptionKey: 'csv.workflowPresets.merge.description',
     mode: 'enrich',
     operation: 'upsert',
     recommended: true,
   },
   {
     id: 'update_only',
-    label: 'Update existing only',
-    description: 'Only update records that already exist. New records are skipped.',
+    labelKey: 'csv.workflowPresets.updateOnly.label',
+    descriptionKey: 'csv.workflowPresets.updateOnly.description',
     mode: 'enrich',
     operation: 'update_only',
   },
   {
     id: 'insert_only',
-    label: 'Add new only',
-    description: 'Only add new records. Existing records are skipped.',
+    labelKey: 'csv.workflowPresets.insertOnly.label',
+    descriptionKey: 'csv.workflowPresets.insertOnly.description',
     mode: 'enrich',
     operation: 'insert_only',
   },
   {
     id: 'full_replace',
-    label: 'Full replace',
-    description: 'Replace all values including empty cells. Empty cells will clear existing data.',
+    labelKey: 'csv.workflowPresets.fullReplace.label',
+    descriptionKey: 'csv.workflowPresets.fullReplace.description',
     mode: 'replace',
     operation: 'upsert',
   },

@@ -441,7 +441,26 @@
     "andMoreWarnings": "...und {{count}} weitere Warnungen",
     "rowPrefix": "Zeile {{row}}:",
     "rowsUnchanged_one": "{{count}} Zeile unverändert.",
-    "rowsUnchanged_other": "{{count}} Zeilen unverändert."
+    "rowsUnchanged_other": "{{count}} Zeilen unverändert.",
+    "otherGroup": "Sonstige",
+    "workflowPresets": {
+      "merge": {
+        "label": "Externe Daten zusammenführen",
+        "description": "Fügt neue Datensätze hinzu und aktualisiert vorhandene. Leere Zellen behalten die aktuellen Werte."
+      },
+      "updateOnly": {
+        "label": "Nur vorhandene aktualisieren",
+        "description": "Aktualisiert die bereits vorhandenen Datensätze. Neue Datensätze werden übersprungen."
+      },
+      "insertOnly": {
+        "label": "Nur neue hinzufügen",
+        "description": "Fügt neue Datensätze hinzu. Vorhandene Datensätze werden übersprungen."
+      },
+      "fullReplace": {
+        "label": "Vollständig ersetzen",
+        "description": "Ersetzt alle Werte, auch leere Zellen. Eine leere Zelle löscht den gespeicherten Wert."
+      }
+    }
   },
   "selects": {
     "loading": "Wird geladen...",
