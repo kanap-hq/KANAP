@@ -671,7 +671,7 @@
       "saveFailed": "Échec de l'enregistrement du compte.",
       "createFailed": "Échec de la création du compte.",
       "chartRequired": "Choisissez un plan comptable.",
-      "numberInvalid": "Saisissez un nombre entier supérieur à zéro.",
+      "numberInvalid": "Saisissez un nombre entier supérieur à zéro, de {{max}} chiffres au plus.",
       "nameRequired": "Saisissez un nom."
     }
   },
@@ -986,6 +986,7 @@
     },
     "account": {
       "accountNumberRequired": "Le numéro de compte est requis",
+      "accountNumberTooLong": "Utilisez au plus {{max}} chiffres",
       "accountNameRequired": "Le nom du compte est requis"
     }
   }

@@ -26,13 +26,12 @@ import LineTypeUsageSelect, { LineTypeUsageConflictNote } from '../../components
 import { oneOffListLink } from '../reports/reportListLink';
 import ListLinkAnchor from '../reports/ListLinkAnchor';
 import { keepValues } from '../reports/reportAggregates';
+import { ACCOUNT_NUMBER_MAX_DIGITS, parseAccountNumber, toAccountNumber } from '../../constants/accountNumber';
 
 const LIST_PATH = '/master-data/coa';
 const ACCOUNT_PATH = '/master-data/accounts';
 /** The charts of accounts page's state, carried to the workspace and back. */
 const LIST_CONTEXT_KEYS = ['sort', 'q', 'filters', 'scope', 'selected', 'coaId', 'consolidation'];
-/** Account numbers are stored as a 32-bit integer. */
-const MAX_ACCOUNT_NUMBER = 2_147_483_647;
 
 type Account = {
   id: string;
@@ -41,7 +40,8 @@ type Account = {
   account_name: string;
   native_name: string | null;
   description: string | null;
-  consolidation_account_number: number | null;
+  /** A number; text when the server sends a large number as text (bigint column). */
+  consolidation_account_number: number | string | null;
   consolidation_account_name: string | null;
   consolidation_account_description: string | null;
   /** Null when the tenant has no consolidation chart. */
@@ -73,14 +73,6 @@ function accountRefusalField(error: unknown): AccountField | null {
 
 function httpStatus(error: unknown): number | undefined {
   return (error as { response?: { status?: number } } | null)?.response?.status;
-}
-
-/** A positive whole number that fits the column, or null. */
-function parseAccountNumber(raw: string): number | null {
-  const trimmed = raw.trim();
-  if (!/^\d+$/.test(trimmed)) return null;
-  const value = Number(trimmed);
-  return value >= 1 && value <= MAX_ACCOUNT_NUMBER ? value : null;
 }
 
 function parseConsolidationFilter(raw: string | null): 'outside' | 'unmapped' | undefined {
@@ -228,7 +220,7 @@ export default function AccountWorkspacePage() {
     if (!data) return;
     const next = parseAccountNumber(raw);
     if (next == null) {
-      setErrors((prev) => ({ ...prev, account_number: t('accounts.messages.numberInvalid') }));
+      setErrors((prev) => ({ ...prev, account_number: t('accounts.messages.numberInvalid', { max: ACCOUNT_NUMBER_MAX_DIGITS }) }));
       return;
     }
     commitTyped('account_number', next, Number(data.account_number));
@@ -366,7 +358,7 @@ export default function AccountWorkspacePage() {
               <Typography sx={sectionLabelSx}>{t('accounts.sections.consolidation')}</Typography>
               <PropertyRow label={t('accounts.fields.consolidationAccount')} valueSx={{ maxWidth: 520 }}>
                 <ConsolidationAccountField
-                  value={data.consolidation_account_number}
+                  value={toAccountNumber(data.consolidation_account_number)}
                   storedName={data.consolidation_account_name}
                   storedDescription={data.consolidation_account_description}
                   serverStatus={data.consolidation_status}
@@ -641,7 +633,7 @@ function AccountCreate({
     const number = parseAccountNumber(values.account_number);
     const nextErrors: FieldErrors = {};
     if (!coaId) nextErrors.coa_id = t('accounts.messages.chartRequired');
-    if (number == null) nextErrors.account_number = t('accounts.messages.numberInvalid');
+    if (number == null) nextErrors.account_number = t('accounts.messages.numberInvalid', { max: ACCOUNT_NUMBER_MAX_DIGITS });
     if (!name) nextErrors.account_name = t('accounts.messages.nameRequired');
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;

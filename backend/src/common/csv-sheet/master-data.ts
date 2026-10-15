@@ -28,14 +28,16 @@ export interface MasterDataFileRequest {
 }
 
 /**
- * One problem of an import report. `row` 0 is the header. `code` and `params`
+ * One problem of an import report (an error, or a warning on a row that imports). `row` 0 is
+ * the header, `column` the cell's column when the problem is about one. `code` and `params`
  * let the interface translate the message; `message` stays in English for API clients.
  */
 export interface ImportReportError {
   row: number;
   message: string;
+  column?: string;
   code?: string;
-  params?: Record<string, string>;
+  params?: Record<string, string | number>;
 }
 
 export interface MasterDataFileRead {

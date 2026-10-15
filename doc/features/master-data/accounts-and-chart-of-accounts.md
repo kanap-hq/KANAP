@@ -181,11 +181,11 @@ RLS is enforced; all queries run with `tenant_id = app.current_tenant()`.
 - `id uuid` (PK)
 - `tenant_id uuid` (RLS)
 - `coa_id uuid NOT NULL` (scoped to a CoA)
-- `account_number text` (stored as text for compatibility; accepts numeric input via transformer)
+- `account_number bigint` (migration `1854060000000`; a whole number from 1 to 15 digits (`backend/src/accounts/account-number.ts`). pg returns bigint as text: the entity transformer reads it back as a number, raw SQL compares it as text, `account_number::text = $n::text`)
 - `account_name text` (English UI label)
 - `native_name text NULL` (original local-language label)
 - `description text NULL`
-- `consolidation_account_number int NULL`
+- `consolidation_account_number bigint NULL` (same bound and transformer)
 - `consolidation_account_name text NULL`
 - `consolidation_account_description text NULL`
 - `nature text NULL` (`opex` | `capex`, CHECK `accounts_nature_check`; NULL = OPEX and CAPEX, see [Account nature](#account-nature))
@@ -195,10 +195,11 @@ RLS is enforced; all queries run with `tenant_id = app.current_tenant()`.
 
 Planned constraint post backfill: unique `(tenant_id, coa_id, account_number)` and NOT NULL on `coa_id`.
 
-**Note on `account_number` validation**: The DTO uses `@Transform` to automatically convert numeric values to strings before validation, ensuring compatibility when frontends send numbers instead of strings:
+**Note on `account_number` validation**: The DTO uses `@Transform` to automatically convert numeric values to strings before validation, ensuring compatibility when frontends send numbers instead of strings. `@IsAccountNumber()` then applies the 15-digit bound, to `consolidation_account_number` too. The CSV import, the template service and the AI mutations apply the same helper:
 ```typescript
 @Transform(({ value }) => (value != null ? String(value) : value))
 @IsString()
+@IsAccountNumber()
 account_number?: string | null;
 ```
 
@@ -316,12 +317,12 @@ account_number;account_name;native_name;description;consolidation_account_number
 ```
 
 Validation rules:
-- `account_number`: required, integer (stored as text for compatibility)
+- `account_number`: required, whole number from 1 to 15 digits (`backend/src/accounts/account-number.ts`). A longer number is a row error with `code: CSV_ACCOUNT_NUMBER_TOO_LONG`. Leading zeros are dropped (`06156` is stored as 6156) and reported in `warnings[]` (`code: CSV_ACCOUNT_NUMBER_LEADING_ZEROS`, `params: { value, stored }`); the row still imports
 - `account_name`: required (English UI name)
 - `native_name`: optional (original local-language name)
 - `status`: `enabled|disabled` (defaults to enabled); disable uses `disabled_at` in the model
 - `nature`: optional last column, `opex`, `capex` or empty (NULL). An absent column leaves the stored natures unchanged (it is an optional header, like the optional columns of the cost centers file). An empty cell sets NULL. Another value is a row error: `Invalid nature 'x'. Use 'opex', 'capex' or leave it empty.` Template loading goes through this import and so loads the natures
-- `consolidation_*`: optional; `consolidation_account_number` must be an integer if provided. When it matches an account of the consolidation chart, the file's consolidation name and description are replaced by that account's; when it is empty, they are cleared. Otherwise the file's name and description are kept (an empty cell clears the stored value).
+- `consolidation_*`: optional; `consolidation_account_number` follows the `account_number` rules when provided. When it matches an account of the consolidation chart, the file's consolidation name and description are replaced by that account's; when it is empty, they are cleared. Otherwise the file's name and description are kept (an empty cell clears the stored value).
 
 Import behavior:
 - Deduplicates by `account_number` within the target CoA (first row wins)

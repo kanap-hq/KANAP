@@ -8,6 +8,7 @@ import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import { STATUS_DISABLED, deriveStatusFromDisabledAt } from '../../constants/status';
 import { attentionDotSx, drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
 import type { CoaListItem } from '../coa/useCoaList';
+import { toAccountNumber } from '../../constants/accountNumber';
 
 export type ConsolidationStatus = 'mapped' | 'outside' | 'unmapped';
 
@@ -91,8 +92,8 @@ function AccountLabel({
 }
 
 type Props = {
-  /** The stored consolidation number. */
-  value: number | null;
+  /** The stored consolidation number (text when the server sends a large number as text). */
+  value: number | string | null;
   /** The stored consolidation name and description (derived by the server). */
   storedName: string | null;
   storedDescription: string | null;
@@ -118,7 +119,7 @@ type Props = {
  * that says what to do.
  */
 export default function ConsolidationAccountField({
-  value,
+  value: storedValue,
   storedName,
   storedDescription,
   serverStatus,
@@ -130,6 +131,8 @@ export default function ConsolidationAccountField({
   onChange,
 }: Props) {
   const { t } = useTranslation(['master-data', 'common']);
+  // Compared with the options' numbers: the same type on both sides.
+  const value = toAccountNumber(storedValue);
   const { data: options } = useConsolidationOptions(chart?.id);
   const noChart = chartsLoaded && !chart;
   // Until the charts and the consolidation accounts are loaded the menu would hold only "None"

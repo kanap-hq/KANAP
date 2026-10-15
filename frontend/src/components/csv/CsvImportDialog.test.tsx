@@ -4,13 +4,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('react-i18next', () => {
   // Counted messages come back as `key:count`, the ignored columns as
-  // `key:columns` and a row error about a column as `key:column:message`, so the
+  // `key:columns`, a row error about a column as `key:column:message` and a
+  // message with a value and what is stored as `key:value:stored`, so the
   // tests can read what was passed.
-  const t = (key: string, options?: { count?: number; columns?: string; column?: string; message?: string }) => (
+  const t = (key: string, options?: { count?: number; columns?: string; column?: string; message?: string; value?: string; stored?: number }) => (
     typeof options?.count === 'number' ? `${key}:${options.count}`
       : options?.columns ? `${key}:${options.columns}`
         : options?.column ? `${key}:${options.column}:${options.message}`
-          : key
+          : options?.stored != null ? `${key}:${options.value}:${options.stored}`
+            : key
   );
   const translation = { t, i18n: { language: 'en', resolvedLanguage: 'en' } };
   return { useTranslation: () => translation };
@@ -82,6 +84,24 @@ describe('CsvImportDialog', () => {
     expect(await screen.findByText('csv.rowColumnError:description:errors:MARKDOWN_TOO_LARGE')).toBeInTheDocument();
     // A row error without a code reads as before.
     expect(screen.getByText('csv.rowError')).toBeInTheDocument();
+  });
+
+  it('shows the warnings of a check that passed, translated with their values, and not after the load', async () => {
+    const warnings = [{
+      row: 2, column: 'account_number', code: 'CSV_ACCOUNT_NUMBER_LEADING_ZEROS',
+      params: { value: '06156', stored: 6156 }, message: '06156 will be stored as 6156.',
+    }];
+    post.mockResolvedValueOnce({ data: report({ warnings }) });
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'csv.preflightCheck' }));
+    expect(await screen.findByTestId('csv-import-warnings'))
+      .toHaveTextContent('csv.rowColumnError:account_number:errors:CSV_ACCOUNT_NUMBER_LEADING_ZEROS:06156:6156');
+    expect(screen.getByRole('button', { name: 'csv.load' })).toBeEnabled();
+
+    post.mockResolvedValueOnce({ data: report({ dryRun: false, processed: 14, warnings }) });
+    fireEvent.click(screen.getByRole('button', { name: 'csv.load' }));
+    expect(await screen.findByText('csv.loadedSuccessfully')).toBeInTheDocument();
+    expect(screen.queryByTestId('csv-import-warnings')).toBeNull();
   });
 
   it('heads a header mismatch with file not formatted, on row 1 (budget rows) as on row 0 (other importers)', async () => {

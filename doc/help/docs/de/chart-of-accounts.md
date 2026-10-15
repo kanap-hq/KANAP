@@ -121,7 +121,7 @@ Klicken Sie auf eine beliebige Zeile im Konten-Grid, um den Konten-Arbeitsbereic
 - **Eigenschaften-Bereich** rechts: **Kontenplan**, **Kontonummer**, **Verwendet für** und **Lebenszyklus** (der Statusschalter und das Datum **Ende der Gültigkeit**). Mit der Bereichsschaltfläche klappen Sie ihn ein oder wieder aus. Siehe [Status und Lebenszyklus](#status-und-lebenszyklus).
 - **Hauptspalte**: **Lokaler Name (Landessprache)**, **Beschreibung** und der Abschnitt **Konsolidierung**.
 
-**Änderungen werden automatisch gespeichert.** Jedes Feld wird gespeichert, sobald Sie es verlassen, und es gibt keine Schaltfläche „Speichern". Wird ein Wert abgelehnt, erscheint unter dem Feld eine Meldung. Die **Kontonummer** muss eine ganze Zahl größer als null sein.
+**Änderungen werden automatisch gespeichert.** Jedes Feld wird gespeichert, sobald Sie es verlassen, und es gibt keine Schaltfläche „Speichern". Wird ein Wert abgelehnt, erscheint unter dem Feld eine Meldung. Die **Kontonummer** muss eine ganze Zahl größer als null mit höchstens 15 Ziffern sein.
 
 Zum Bearbeiten benötigen Sie `accounts:manager`. Benutzer mit Leserechten sehen dieselbe Seite mit gesperrten Feldern.
 
@@ -291,7 +291,9 @@ Die Rollen ändern sich, sobald Sie eine Aktion wählen. Die Tabelle wird sofort
 
 ### Kontonummern
 
-Eine Kontonummer ist eine ganze Zahl größer als null (zum Beispiel `6011`). Innerhalb eines Kontenplans wird jede Nummer nur einmal verwendet.
+Eine Kontonummer ist eine ganze Zahl größer als null mit höchstens 15 Ziffern (zum Beispiel `6011` oder `615630000012`). Innerhalb eines Kontenplans wird jede Nummer nur einmal verwendet.
+
+Die Nummer wird als Zahl gespeichert, führende Nullen entfallen daher: `06156` wird als `6156` gespeichert.
 
 ### Lokale Namen für Mehrsprachigkeit
 
@@ -495,6 +497,7 @@ account_number;account_name;native_name;description;consolidation_account_number
   - Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
   - Der `coa_code` muss einem bestehenden Kontenplan in Ihrem Arbeitsbereich entsprechen
   - Kontonummern sollten innerhalb eines Kontenplans eindeutig sein
+  - `account_number` und `consolidation_account_number`: ganze Zahlen mit höchstens 15 Ziffern. Eine längere Nummer wird für diese Zeile abgelehnt. Führende Nullen entfallen (`06156` wird als `6156` gespeichert): die **Vorabprüfung** führt diese Zeilen als Warnungen auf, und die Datei wird trotzdem geladen
   - Statuswerte: `enabled` oder `disabled` (Standard ist enabled)
   - `nature` ist die Einstellung **Verwendet für**, immer die letzte Spalte. Werte: `opex`, `capex` oder leer für **OPEX und CAPEX**. Eine Datei ohne diese Spalte lässt die Einstellungen unverändert. Eine leere Zelle setzt **OPEX und CAPEX**. Jeder andere Wert wird für diese Zeile abgelehnt
   - Konsolidierungsspalten: Existiert `consolidation_account_number` in Ihrem Konsolidierungskontenplan, ersetzen dessen Name und Beschreibung die Zellen `consolidation_account_name` und `consolidation_account_description`. Eine leere Nummer löscht alle drei. Siehe [Konsolidierungszuordnungen einrichten](#konsolidierungszuordnungen-einrichten)

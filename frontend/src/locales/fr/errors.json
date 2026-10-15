@@ -55,6 +55,8 @@
   "CSV_HEADER_MISMATCH": "Colonnes manquantes : {{missing}}. Colonnes inconnues : {{extra}}.",
   "CSV_ACCOUNT_COA_CODE_REQUIRED": "Indiquez le code du plan comptable (coa_code).",
   "CSV_ACCOUNT_NUMBER_REQUIRED": "Le numéro de compte (account_number) est obligatoire et doit être un nombre entier.",
+  "CSV_ACCOUNT_NUMBER_TOO_LONG": "{{value}} dépasse {{max}} chiffres. Utilisez au plus {{max}} chiffres.",
+  "CSV_ACCOUNT_NUMBER_LEADING_ZEROS": "{{value}} sera enregistré comme {{stored}} : les zéros en tête sont supprimés.",
   "CSV_ACCOUNT_NAME_REQUIRED": "Le nom du compte (account_name) est obligatoire.",
   "CSV_ACCOUNT_STATUS_INVALID": "Statut « {{value}} » invalide. Utilisez enabled ou disabled.",
   "CSV_ACCOUNT_CONSOLIDATION_NUMBER_INVALID": "Le numéro de compte de consolidation (consolidation_account_number) doit être un nombre entier.",

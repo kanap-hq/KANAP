@@ -104,9 +104,9 @@ export async function consolidationAccounts(
 ): Promise<Map<number, ConsolidationAccount>> {
   const wanted = Array.from(new Set(numbers.filter((n): n is number => n != null).map(Number)));
   if (wanted.length === 0) return new Map();
-  const rows: Array<{ account_number: number; account_name: string; description: string | null }> = await mg.query(
+  const rows: Array<{ account_number: string; account_name: string; description: string | null }> = await mg.query(
     `SELECT account_number, account_name, description FROM accounts
-     WHERE tenant_id = ${CURRENT_TENANT} AND coa_id = $1::uuid AND account_number = ANY($2::int[])`,
+     WHERE tenant_id = ${CURRENT_TENANT} AND coa_id = $1::uuid AND account_number = ANY($2::bigint[])`,
     [chartId, wanted],
   );
   return new Map(rows.map((r) => [Number(r.account_number), { name: r.account_name, description: r.description ?? null }]));
@@ -122,12 +122,12 @@ export async function consolidationLookup(mg: EntityManager, numbers: Array<numb
   const wanted = Array.from(new Set(numbers.filter((n): n is number => n != null).map(Number)));
   // No number asked: every account is unmapped, whatever the chart.
   if (wanted.length === 0) return { chartId: null, numbers: new Set() };
-  const [row]: Array<{ chart_id: string; numbers: number[] }> = await mg.query(
+  const [row]: Array<{ chart_id: string; numbers: string[] }> = await mg.query(
     `SELECT cc.id::text AS chart_id,
             COALESCE(array_agg(ca.account_number) FILTER (WHERE ca.account_number IS NOT NULL), '{}') AS numbers
      FROM chart_of_accounts cc
      LEFT JOIN accounts ca
-       ON ca.tenant_id = cc.tenant_id AND ca.coa_id = cc.id AND ca.account_number = ANY($1::int[])
+       ON ca.tenant_id = cc.tenant_id AND ca.coa_id = cc.id AND ca.account_number = ANY($1::bigint[])
      WHERE cc.tenant_id = ${CURRENT_TENANT} AND cc.is_consolidation
      GROUP BY cc.id`,
     [wanted],
@@ -223,15 +223,15 @@ export async function remapToConsolidationAccount(
        SELECT a.*
        FROM accounts a
        WHERE a.tenant_id = ${CURRENT_TENANT}
-         AND a.consolidation_account_number = ANY($1::int[])
+         AND a.consolidation_account_number = ANY($1::bigint[])
          AND a.id <> $2::uuid
-         AND (a.consolidation_account_number IS DISTINCT FROM $3::int
+         AND (a.consolidation_account_number IS DISTINCT FROM $3::bigint
               OR a.consolidation_account_name IS DISTINCT FROM $4::text
               OR a.consolidation_account_description IS DISTINCT FROM $5::text)
      ),
      changed AS (
        UPDATE accounts a
-       SET consolidation_account_number = $3::int,
+       SET consolidation_account_number = $3::bigint,
            consolidation_account_name = $4::text,
            consolidation_account_description = $5::text,
            updated_at = now()

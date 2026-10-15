@@ -359,7 +359,7 @@ CSV schema (CoA-scoped):
 ```
 account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature
 ```
-Notes: only `account_number` and `account_name` are required in the header; the other columns may be absent (an update keeps the stored values, a new account takes the defaults). `native_name` is the original local-language label. `account_number` must be integer-like; `status` is `enabled|disabled`; `nature` is `opex`, `capex` or empty.
+Notes: only `account_number` and `account_name` are required in the header; the other columns may be absent (an update keeps the stored values, a new account takes the defaults). `native_name` is the original local-language label. `account_number` and `consolidation_account_number` are whole numbers from 1 to 15 digits; `status` is `enabled|disabled`; `nature` is `opex`, `capex` or empty.
 
 ## Platform Admin: CoA Templates & Standard Accounts
 - GET `/admin/coa-templates` → list templates `{ id, country_iso, template_code, template_name, version, created_at, updated_at }`
@@ -408,10 +408,10 @@ CSV schema (Global):
 coa_code;account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature
 ```
 Validation/behavior:
-- `account_number`: required integer-like (stored as text)
+- `account_number`: required, a whole number from 1 to 15 digits (`bigint`). A longer one is a row error with `code: CSV_ACCOUNT_NUMBER_TOO_LONG`; leading zeros are dropped and listed in `warnings: [{ row, column, code: CSV_ACCOUNT_NUMBER_LEADING_ZEROS, params: { value, stored }, message }]`
 - `account_name`: required (English UI label)
 - `native_name`: optional (local-language label); exported and visible in UI tooltip
-- `consolidation_*`: optional; number must be integer-like when present
+- `consolidation_*`: optional; the number follows the `account_number` rules when present
 - `nature`: optional last column, `opex`, `capex` or empty (both). An absent column leaves the stored natures unchanged; another value is a row error
 - Every column but `coa_code` (without `coaId`), `account_number` and `account_name` may be absent from the header: an update keeps the stored values of an absent column, a new account takes the defaults (empty, `enabled`, both natures)
 - Deduplicates by `(account_number, target CoA)`; classifies rows as insert/update in the target CoA; supports `dryRun` preflight

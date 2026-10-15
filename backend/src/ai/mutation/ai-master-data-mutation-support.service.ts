@@ -27,6 +27,7 @@ import {
   AiPreparedMutationPreview,
 } from './ai-mutation-operation.types';
 import { buildAiMutationAudit } from './ai-mutation-audit.util';
+import { ACCOUNT_NUMBER_RULE, parseAccountNumber } from '../../accounts/account-number';
 import { AiTaskMutationSupportService } from './ai-task-mutation-support.service';
 
 export const AI_MASTER_DATA_ENTITY_TYPES = [
@@ -589,6 +590,15 @@ export class AiMasterDataMutationSupportService {
         return { value: null, displayValue: null };
       }
       throw new BadRequestException(`${field.label} cannot be empty.`);
+    }
+
+    // Account numbers: whole numbers of at most 15 digits, as the API and the CSV import accept.
+    if (entityType === 'accounts' && (fieldName === 'account_number' || fieldName === 'consolidation_account_number')) {
+      const parsed = parseAccountNumber(typeof rawValue === 'number' ? rawValue : String(rawValue));
+      if (parsed == null) {
+        throw new BadRequestException(`${field.label} ${ACCOUNT_NUMBER_RULE}.`);
+      }
+      return { value: fieldName === 'account_number' ? String(parsed) : parsed, displayValue: String(parsed) };
     }
 
     if (field.kind === 'relation') {

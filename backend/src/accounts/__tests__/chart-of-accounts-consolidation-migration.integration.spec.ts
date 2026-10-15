@@ -91,7 +91,8 @@ async function consolidationOf(runner: QueryRunner, tenantId: string, accountId:
      FROM accounts WHERE id = $1`,
     [accountId],
   );
-  return row;
+  // The column is bigint since 1854060000000: pg returns it as text.
+  return row ? { ...row, number: row.number == null ? null : Number(row.number) } : row;
 }
 
 async function seedChart(runner: QueryRunner, tenantId: string, chart: ChartSeed): Promise<string> {

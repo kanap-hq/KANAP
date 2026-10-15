@@ -1,7 +1,8 @@
 import { Transform, Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString } from 'class-validator';
+import { IsIn, IsOptional, IsString } from 'class-validator';
 import { StatusLifecycleDto } from '../../common/dto/status-lifecycle.dto';
 import { ACCOUNT_NATURES, AccountNature } from '../account.entity';
+import { IsAccountNumber } from '../account-number';
 
 export class AccountUpsertDto extends StatusLifecycleDto {
   @IsOptional()
@@ -10,6 +11,7 @@ export class AccountUpsertDto extends StatusLifecycleDto {
   @IsOptional()
   @Transform(({ value }) => (value != null ? String(value) : value))
   @IsString()
+  @IsAccountNumber()
   account_number?: string | null;
 
   @IsOptional()
@@ -26,7 +28,7 @@ export class AccountUpsertDto extends StatusLifecycleDto {
 
   @IsOptional()
   @Type(() => Number)
-  @IsInt()
+  @IsAccountNumber()
   consolidation_account_number?: number | null;
 
   @IsOptional()

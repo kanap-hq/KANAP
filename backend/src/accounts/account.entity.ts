@@ -1,5 +1,14 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn, ValueTransformer } from 'typeorm';
 import { StatusState } from '../common/status';
+
+/**
+ * A bigint account number read as a JavaScript number (exact: 15 digits stay below 2^53), so
+ * the API keeps sending numbers. Written as given.
+ */
+const BIGINT_AS_NUMBER: ValueTransformer = {
+  from: (value: unknown) => (value == null ? value : Number(value)),
+  to: (value: unknown) => value,
+};
 
 export const ACCOUNT_NATURES = ['opex', 'capex'] as const;
 export type AccountNature = (typeof ACCOUNT_NATURES)[number];
@@ -15,9 +24,11 @@ export class Account {
   @Column('uuid', { nullable: true })
   coa_id!: string | null;
 
-  // The DB column is integer (pg returns a number). Writes and the DTO still pass strings,
-  // so the property stays typed string; raw SQL must cast it (`account_number::text = $n::text`).
-  @Column('integer')
+  // The DB column is bigint (at most 15 digits, `account-number.ts`): pg returns it as text,
+  // the transformer reads it back as a number, as the integer column did. Writes and the DTO
+  // still pass strings, so the property stays typed string; raw SQL reads it as text and must
+  // cast it (`account_number::text = $n::text`).
+  @Column('bigint', { transformer: BIGINT_AS_NUMBER })
   account_number!: string;
 
   @Column('text')
@@ -29,7 +40,8 @@ export class Account {
   @Column('text', { nullable: true })
   description!: string | null;
 
-  @Column('integer', { nullable: true })
+  // bigint like `account_number`, read back as a number.
+  @Column('bigint', { nullable: true, transformer: BIGINT_AS_NUMBER })
   consolidation_account_number!: number | null;
 
   @Column('text', { nullable: true })
