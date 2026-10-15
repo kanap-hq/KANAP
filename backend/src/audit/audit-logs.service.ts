@@ -4,7 +4,7 @@ import { Brackets, EntityManager, In, Repository } from 'typeorm';
 import { buildWhereFromAgFilters, parsePagination } from '../common/pagination';
 import { User } from '../users/user.entity';
 import { AuditLog } from './audit.entity';
-import { assertSetFilterModes, compileAgFilterCondition, createParamNameGenerator, normalizeAgFilterModel } from '../common/ag-grid-filtering';
+import { assertSetFilterModes, compileAgFilterCondition, createParamNameGenerator, normalizeAgFilterModel, type FilterTargetConfig } from '../common/ag-grid-filtering';
 import { neutralizeCsvRow } from '../common/csv/csv-export.service';
 import { writeCsvHeader, writeCsvRows } from '../common/csv-sheet/write';
 import { AUTH_EVENT_TABLE, EXPORT_EVENT_TABLE } from './security-events';
@@ -185,6 +185,22 @@ export function auditExportRow(row: AuditExportRaw): string[] {
   ];
 }
 
+/** The person a line names, as the list shows it: first and last name, else nothing. */
+const AUDIT_USER_NAME_SQL = `NULLIF(concat_ws(' ', NULLIF(btrim(u.first_name), ''), NULLIF(btrim(u.last_name), '')), '')`;
+
+/**
+ * The text filters of the audit columns. The User column shows the name, else the e-mail; the
+ * identifiers match their text form (an id pasted whole or in part).
+ */
+const AUDIT_TEXT_FILTERS: Record<string, FilterTargetConfig> = {
+  record_id: { expression: 'a.record_id', textExpression: 'a.record_id::text' },
+  user_email: { expression: `COALESCE(${AUDIT_USER_NAME_SQL}, u.email)` },
+  user_id: { expression: 'a.user_id', textExpression: 'a.user_id::text' },
+  user_name: { expression: AUDIT_USER_NAME_SQL },
+  source_ref: { expression: 'a.source_ref' },
+  tenant_id: { expression: 'a.tenant_id', textExpression: 'a.tenant_id::text' },
+};
+
 @Injectable()
 export class AuditLogsService {
   /** The most rows one export writes (AUDIT_LOG_EXPORT_MAX_ROWS). */
@@ -240,6 +256,22 @@ export class AuditLogsService {
     }
     const compiled = compileAgFilterCondition(model, { expression: 'a.created_at' }, createParamNameGenerator('f_created_at_'));
     if (compiled) qb.andWhere(compiled.sql, compiled.params);
+  }
+
+  /**
+   * The text filters of the other columns, on what each one shows (`AUDIT_TEXT_FILTERS`). The
+   * user id's exact value and its set stay with `extractUserIdFilter` (the report links).
+   */
+  private applyTextFilters(qb: ReturnType<Repository<AuditLog>['createQueryBuilder']>, filters: any) {
+    if (!filters || typeof filters !== 'object') return;
+    const nextParam = createParamNameGenerator('f_text_');
+    for (const [field, target] of Object.entries(AUDIT_TEXT_FILTERS)) {
+      const model = normalizeAgFilterModel(filters[field]);
+      if (!model || typeof model !== 'object' || model.filterType === 'set' || model.type === 'set') continue;
+      if (field === 'user_id' && String(model.type ?? '') === 'equals') continue;
+      const compiled = compileAgFilterCondition(model, target, nextParam);
+      if (compiled) qb.andWhere(`(${compiled.sql})`, compiled.params);
+    }
   }
 
   private applyFindOperatorFilter(
@@ -352,6 +384,7 @@ export class AuditLogsService {
       this.applyFindOperatorFilter(qb, field, value, `f_${field}_${idx}`);
     });
     this.applyDateFilter(qb, filters);
+    this.applyTextFilters(qb, filters);
 
     if (excludeField !== 'user_id') {
       const userIdFilter = this.extractUserIdFilter(filters);

@@ -5,7 +5,7 @@ import { ParticipationAccessScope, taskParticipantCondition } from '../auth/busi
 import { incidentRelatedLabelSql } from '../incidents/incident-visibility';
 import { textSortKey } from '../common/list-sort';
 import { resolveRecordCreators } from '../audit/record-creator.util';
-import { assertSetFilterModes } from '../common/ag-grid-filtering';
+import { assertSetFilterModes, compileAgFilterCondition, compileReferenceFilter, createParamNameGenerator, type CompiledCondition } from '../common/ag-grid-filtering';
 
 export interface TaskListItem {
   id: string;
@@ -116,6 +116,19 @@ function buildWhereConditions(
     params.push(accessScope.userId);
     whereConditions += ` AND ${taskParticipantCondition('t', `$${params.length}`)}`;
   }
+
+  // A condition of the shared compiler (`:name` parameters), appended with positional ones.
+  const namedParam = createParamNameGenerator('task_filter_');
+  const applyCompiled = (compiled: CompiledCondition | null) => {
+    if (!compiled) return;
+    const sql = compiled.sql.replace(/:(\.\.\.)?([A-Za-z_][A-Za-z0-9_]*)/g, (match, spread: string | undefined, name: string) => {
+      if (!Object.prototype.hasOwnProperty.call(compiled.params, name)) return match;
+      const value = compiled.params[name];
+      const bind = (entry: unknown) => { params.push(entry); return `$${params.length}`; };
+      return spread && Array.isArray(value) ? value.map(bind).join(', ') : bind(value);
+    });
+    whereConditions += ` AND (${sql})`;
+  };
 
   const applySetFilter = (model: any, expression: string) => {
     if (!isSetFilter(model)) return false;
@@ -504,6 +517,15 @@ function buildWhereConditions(
     applyRelationNameFilter(filters.asset_name, 'task_assets', 'asset_id', 'assets', 'name');
   }
 
+  // The reference column shows `T-12`: its digits, with or without the prefix (`compileReferenceFilter`).
+  if (!shouldSkip('item_number') && filters.item_number) {
+    applyCompiled(compileReferenceFilter(filters.item_number, 't.item_number', 'T', namedParam));
+  }
+
+  if (!shouldSkip('priority_score') && filters.priority_score) {
+    applyCompiled(compileAgFilterCondition(filters.priority_score, { expression: TASK_PRIORITY_SCORE_SQL, dataType: 'number' }, namedParam));
+  }
+
   if (!shouldSkip('description') && filters.description?.filter) {
     params.push(`%${filters.description.filter}%`);
     whereConditions += ` AND t.description ILIKE $${params.length}`;
@@ -631,6 +653,34 @@ const TASK_ASSETS_SQL = `
     WHERE asset_link.task_id = t.id
       AND asset_link.tenant_id = t.tenant_id
   ), '[]'::jsonb)`;
+
+/**
+ * The priority score of a task (`t`, its project `pp`): the project's score moved by the task's
+ * priority level, within 0 and 100, or a score from the level alone. The lists project it and the
+ * grid filters on it.
+ */
+const TASK_PRIORITY_SCORE_SQL = `CASE
+  WHEN t.related_object_type = 'project' AND pp.priority_score IS NOT NULL THEN
+    ROUND(LEAST(GREATEST(
+      pp.priority_score +
+      CASE t.priority_level
+        WHEN 'blocker' THEN 10
+        WHEN 'high' THEN 5
+        WHEN 'normal' THEN 0
+        WHEN 'low' THEN -5
+        WHEN 'optional' THEN -10
+        ELSE 0
+      END, 0), 100))
+  ELSE
+    CASE t.priority_level
+      WHEN 'blocker' THEN 110
+      WHEN 'high' THEN 90
+      WHEN 'normal' THEN 70
+      WHEN 'low' THEN 50
+      WHEN 'optional' THEN 30
+      ELSE 70
+    END
+END`;
 
 /**
  * The sort keys of the tasks list and of its ids, spelled out as expressions over the joins both
@@ -767,28 +817,7 @@ export class TasksService {
         t.phase_id,
         phase.name as phase_name,
         t.priority_level,
-        CASE
-          WHEN t.related_object_type = 'project' AND pp.priority_score IS NOT NULL THEN
-            ROUND(LEAST(GREATEST(
-              pp.priority_score +
-              CASE t.priority_level
-                WHEN 'blocker' THEN 10
-                WHEN 'high' THEN 5
-                WHEN 'normal' THEN 0
-                WHEN 'low' THEN -5
-                WHEN 'optional' THEN -10
-                ELSE 0
-              END, 0), 100))
-          ELSE
-            CASE t.priority_level
-              WHEN 'blocker' THEN 110
-              WHEN 'high' THEN 90
-              WHEN 'normal' THEN 70
-              WHEN 'low' THEN 50
-              WHEN 'optional' THEN 30
-              ELSE 70
-            END
-        END as priority_score,
+        ${TASK_PRIORITY_SCORE_SQL} as priority_score,
         t.labels,
         pp.name as project_name,
         project_pst.name as project_stream_name,
@@ -875,28 +904,7 @@ export class TasksService {
     const idsQuery = `
       SELECT t.id,
         t.item_number,
-        CASE
-          WHEN t.related_object_type = 'project' AND pp.priority_score IS NOT NULL THEN
-            ROUND(LEAST(GREATEST(
-              pp.priority_score +
-              CASE t.priority_level
-                WHEN 'blocker' THEN 10
-                WHEN 'high' THEN 5
-                WHEN 'normal' THEN 0
-                WHEN 'low' THEN -5
-                WHEN 'optional' THEN -10
-                ELSE 0
-              END, 0), 100))
-          ELSE
-            CASE t.priority_level
-              WHEN 'blocker' THEN 110
-              WHEN 'high' THEN 90
-              WHEN 'normal' THEN 70
-              WHEN 'low' THEN 50
-              WHEN 'optional' THEN 30
-              ELSE 70
-            END
-        END as priority_score
+        ${TASK_PRIORITY_SCORE_SQL} as priority_score
       FROM tasks t
       LEFT JOIN users u ON t.assignee_user_id = u.id AND u.tenant_id = t.tenant_id
       LEFT JOIN users uc ON t.creator_id = uc.id AND uc.tenant_id = t.tenant_id
@@ -1083,28 +1091,7 @@ export class TasksService {
         t.phase_id,
         phase.name as phase_name,
         t.priority_level,
-        CASE
-          WHEN t.related_object_type = 'project' AND pp.priority_score IS NOT NULL THEN
-            ROUND(LEAST(GREATEST(
-              pp.priority_score +
-              CASE t.priority_level
-                WHEN 'blocker' THEN 10
-                WHEN 'high' THEN 5
-                WHEN 'normal' THEN 0
-                WHEN 'low' THEN -5
-                WHEN 'optional' THEN -10
-                ELSE 0
-              END, 0), 100))
-          ELSE
-            CASE t.priority_level
-              WHEN 'blocker' THEN 110
-              WHEN 'high' THEN 90
-              WHEN 'normal' THEN 70
-              WHEN 'low' THEN 50
-              WHEN 'optional' THEN 30
-              ELSE 70
-            END
-        END as priority_score,
+        ${TASK_PRIORITY_SCORE_SQL} as priority_score,
         t.labels,
         -- Classification (task value wins, falls back to project)
         COALESCE(t.source_id, pp.source_id) as source_id,

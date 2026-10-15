@@ -10,7 +10,7 @@
       "phase_name": "text",
       "status": "set",
       "priority_level": "text",
-      "priority_score": "text",
+      "priority_score": "number",
       "assignee_name": "text",
       "assignee_user_id": "set",
       "related_object_id": "set",
@@ -56,7 +56,7 @@
       "primary_category_name": "text",
       "owner_name": "text",
       "status": "set",
-      "updated_at": "text"
+      "updated_at": "date"
     },
     "fields": [
       "name",
@@ -96,7 +96,7 @@
       "department": "text",
       "business_phone": "text",
       "mobile_phone": "text",
-      "mfa_enabled": "text",
+      "mfa_enabled": "set",
       "created_at": "date"
     },
     "fields": [
@@ -173,7 +173,7 @@
       "description": "text",
       "status": "set",
       "applies_to": "set",
-      "updated_at": "text"
+      "updated_at": "date"
     },
     "fields": [
       "sort_order",
@@ -274,7 +274,7 @@
       "classification_review_state": "set",
       "classification_reviewed_at": "date",
       "editor": "text",
-      "derived_total_users": "text",
+      "derived_total_users": "number",
       "created_at": "text",
       "supplier_name": "text",
       "owners_business": "text",
@@ -447,7 +447,7 @@
       "consolidation_account_name": "text",
       "consolidation_account_description": "text",
       "status": "set",
-      "created_at": "text"
+      "created_at": "date"
     },
     "fields": [
       "account_number",
@@ -469,7 +469,7 @@
       "erp_supplier_id": "text",
       "notes": "text",
       "status": "set",
-      "created_at": "text"
+      "created_at": "date"
     },
     "fields": [
       "name",
@@ -660,12 +660,12 @@
       "title": "text",
       "status": "set",
       "document_type_name": "set",
-      "current_version_number": "text",
+      "current_version_number": "number",
       "primary_owner_name": "set",
       "folder_name": "set",
       "template_name": "set",
       "library_name": "set",
-      "updated_at": "text"
+      "updated_at": "date"
     },
     "fields": [
       "item_ref",
@@ -698,14 +698,14 @@
       "budget_gap": "number",
       "budget_state": "set",
       "compliance_state": "set",
-      "linked_lines_count": "text",
+      "linked_lines_count": "number",
       "status": "set",
-      "start_date": "text",
+      "start_date": "date",
       "duration_months": "text",
-      "auto_renewal": "text",
+      "auto_renewal": "set",
       "notice_period_months": "text",
-      "end_date": "text",
-      "cancellation_deadline": "text",
+      "end_date": "date",
+      "cancellation_deadline": "date",
       "billing_frequency": "text",
       "latest_task_text": "text"
     },
@@ -740,8 +740,8 @@
       "phone": "text",
       "mobile": "text",
       "country": "text",
-      "active": "text",
-      "created_at": "text"
+      "active": "set",
+      "created_at": "date"
     },
     "fields": [
       "last_name",

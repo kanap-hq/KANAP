@@ -12,6 +12,7 @@ import {
   buildQuickSearchConditions,
   normalizeAgFilterModel,
   assertSetFilterModes,
+  compileReferenceFilter,
 } from '../../common/ag-grid-filtering';
 import { PortfolioProjectsBaseService, ServiceOpts } from './portfolio-projects-base.service';
 import { projectInvolvesUsersSql } from './portfolio-report-filters';
@@ -106,6 +107,8 @@ const projectDateFields = new Map<string, string>([
   // The creation day, not the instant: the grid sends plain days, and the portfolio reports
   // link to age brackets counted in whole days.
   ['created_at', 'p.created_at::date'],
+  // The day of the last change, for the same reason.
+  ['updated_at', 'p.updated_at::date'],
 ]);
 
 const compileDateFilterCondition = (
@@ -297,6 +300,12 @@ export class PortfolioProjectsListService extends PortfolioProjectsBaseService {
             compiledFilters.push(cond);
             continue;
           }
+        }
+        // The reference column shows `PRJ-12` (`compileReferenceFilter`).
+        if (field === 'item_number') {
+          const cond = compileReferenceFilter(model, 'p.item_number', 'PRJ', nextParam);
+          if (cond) compiledFilters.push(cond);
+          continue;
         }
         const target = targets[field];
         if (!target) continue;
@@ -616,6 +625,12 @@ export class PortfolioProjectsListService extends PortfolioProjectsBaseService {
             continue;
           }
         }
+        // The reference column shows `PRJ-12` (`compileReferenceFilter`).
+        if (field === 'item_number') {
+          const cond = compileReferenceFilter(model, 'p.item_number', 'PRJ', nextParam);
+          if (cond) compiledFilters.push(cond);
+          continue;
+        }
         const target = targets[field];
         if (!target) continue;
         const cond = compileAgFilterCondition(model, target, nextParam);
@@ -800,6 +815,20 @@ export class PortfolioProjectsListService extends PortfolioProjectsBaseService {
           const linkCond = compileProjectLinkFilter(filterField, model, nextParam);
           if (linkCond !== undefined) {
             if (linkCond) compiledFilters.push(linkCond);
+            continue;
+          }
+          const dateField = projectDateFields.get(filterField);
+          if (dateField) {
+            const cond = compileDateFilterCondition(model, dateField, nextParam);
+            if (cond) {
+              compiledFilters.push(cond);
+              continue;
+            }
+          }
+          // The reference column shows `PRJ-12` (`compileReferenceFilter`).
+          if (filterField === 'item_number') {
+            const cond = compileReferenceFilter(model, 'p.item_number', 'PRJ', nextParam);
+            if (cond) compiledFilters.push(cond);
             continue;
           }
           const target = targets[filterField];

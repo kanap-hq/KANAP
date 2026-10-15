@@ -42,47 +42,12 @@ const CONTRACT: Record<string, ListContract> = JSON.parse(
 );
 
 /**
- * Filters the screens offer and the server does not honour yet, found by this spec when it was
- * written (`<endpoint> <column>`, or the endpoint alone when an unknown column fails the request
- * or changes it, so the comparison cannot tell). Each must still fail: fix one, then remove it.
+ * Filters the screens offer and the server does not honour yet (`<endpoint> <column>`, or the
+ * endpoint alone when an unknown column fails the request or changes it, so the comparison cannot
+ * tell). Each must still fail: fix one, then remove it. The 35 found when this spec was written
+ * are fixed; keep it empty.
  */
-const KNOWN_GAPS = new Set([
-  '/tasks item_number',
-  '/tasks priority_score',
-  '/business-processes primary_category_name',
-  '/business-processes owner_name',
-  '/business-processes updated_at',
-  '/users mfa_enabled',
-  '/analytics-categories updated_at',
-  '/portfolio/requests item_number',
-  '/portfolio/requests updated_at',
-  '/portfolio/projects item_number',
-  '/portfolio/projects updated_at',
-  '/applications derived_total_users',
-  '/accounts',
-  '/suppliers',
-  '/budget-lines/summary',
-  '/audit-logs record_id',
-  '/audit-logs user_email',
-  '/audit-logs user_id',
-  '/audit-logs user_name',
-  '/audit-logs source_ref',
-  '/audit-logs tenant_id',
-  '/knowledge item_ref',
-  '/knowledge title',
-  '/knowledge status',
-  '/knowledge current_version_number',
-  '/knowledge updated_at',
-  '/contracts linked_lines_count',
-  '/contracts start_date',
-  '/contracts auto_renewal',
-  '/contracts end_date',
-  '/contracts cancellation_deadline',
-  '/contracts latest_task_text',
-  '/contacts job_title',
-  '/contacts active',
-  '/contacts created_at',
-]);
+const KNOWN_GAPS = new Set<string>([]);
 
 /** A filter model of each kind, as the grid sends it. */
 function filterModel(kind: Kind): Record<string, unknown> {
@@ -197,6 +162,9 @@ async function testEveryOfferedFilterReachesTheDatabase() {
 
     for (const [endpoint, { params: listParams, filters: fields, fields: shown }] of Object.entries(CONTRACT)) {
       const pageParams = Object.fromEntries(Object.entries(listParams).map(([key, value]) => [key, placeholders[value] ?? value]));
+      // A first request may fill a cache once (the budget lists store the exchange rates of their
+      // years): the comparison starts after it.
+      await statementsOf(port, host, token, endpoint, pageParams);
       const baseline = await statementsOf(port, host, token, endpoint, pageParams);
       if (baseline.status !== 200) {
         fail(endpoint, `${endpoint}: the list answers ${baseline.status} ${baseline.body.slice(0, 200)}`);
@@ -226,6 +194,52 @@ async function testEveryOfferedFilterReachesTheDatabase() {
           fail(`${endpoint} ${field}`, `${endpoint} ${field} (${kind}): ignored by the server`);
         }
       }
+    }
+
+    // The derived users of an application are computed for the page after the read; their filter
+    // runs the same rule in SQL (`derivedTotalUsersSql`): each value the rows show keeps exactly
+    // the rows that show it.
+    const appRows = (path: string) => send(port, 'GET', path, host, token).then((res) => {
+      assert.equal(res.status, 200, `${path}: ${res.body.slice(0, 200)}`);
+      return JSON.parse(res.body).items as Array<{ id: string; derived_total_users: number }>;
+    });
+    // The sample applications derive no users (no company figures): four of them get the cases of
+    // the rule. Manual (42); IT users of a company read for the closest earlier year (30), plus the
+    // headcount of a department of another company (7); the headcount of a company (50), its own
+    // department skipped; a company with figures for a later year only and no IT users (12).
+    const Y = new Date().getFullYear();
+    await app.get(DataSource).transaction(async (m) => {
+      const tid = tenant!.tenantId;
+      await m.query(`SELECT set_config('app.current_tenant', $1, true)`, [tid]);
+      const appIds: string[] = (await m.query(`SELECT id FROM applications WHERE tenant_id = $1 ORDER BY name, id LIMIT 4`, [tid])).map((row: any) => row.id);
+      const [companyA, companyB]: string[] = (await m.query(`SELECT id FROM companies WHERE tenant_id = $1 ORDER BY name, id LIMIT 2`, [tid])).map((row: any) => row.id);
+      assert.ok(appIds.length === 4 && companyB, 'four sample applications and two companies');
+      const [a1, a2, a3, a4] = appIds;
+      await m.query(`DELETE FROM application_companies WHERE tenant_id = $1 AND application_id = ANY($2)`, [tid, appIds]);
+      await m.query(`DELETE FROM application_departments WHERE tenant_id = $1 AND application_id = ANY($2)`, [tid, appIds]);
+      await m.query(`DELETE FROM company_metrics WHERE tenant_id = $1 AND company_id = ANY($2)`, [tid, [companyA, companyB]]);
+      const [{ id: deptA }] = await m.query(`INSERT INTO departments (tenant_id, company_id, name) VALUES ($1, $2, 'Derived users A') RETURNING id`, [tid, companyA]);
+      const [{ id: deptB }] = await m.query(`INSERT INTO departments (tenant_id, company_id, name) VALUES ($1, $2, 'Derived users B') RETURNING id`, [tid, companyB]);
+      await m.query(`INSERT INTO company_metrics (tenant_id, company_id, fiscal_year, headcount, it_users) VALUES
+        ($1, $2, $4 - 1, 50, 30), ($1, $2, $4 + 1, 80, 99), ($1, $3, $4 + 2, 12, NULL)`, [tid, companyA, companyB, Y]);
+      await m.query(`INSERT INTO department_metrics (tenant_id, department_id, fiscal_year, headcount) VALUES ($1, $2, $4, 1000), ($1, $3, $4, 7)`, [tid, deptA, deptB, Y]);
+      await m.query(`UPDATE applications SET users_mode = 'manual', users_override = 42 WHERE id = $1`, [a1]);
+      await m.query(`UPDATE applications SET users_mode = 'it_users' WHERE id = ANY($1)`, [[a2, a4]]);
+      await m.query(`UPDATE applications SET users_mode = 'headcount' WHERE id = $1`, [a3]);
+      await m.query(`INSERT INTO application_companies (tenant_id, application_id, company_id) VALUES ($1, $2, $4), ($1, $3, $4), ($1, $5, $6)`, [tid, a2, a3, companyA, a4, companyB]);
+      await m.query(`INSERT INTO application_departments (tenant_id, application_id, department_id) VALUES ($1, $2, $3), ($1, $4, $5)`, [tid, a2, deptB, a3, deptA]);
+    });
+    const apps = await appRows('/applications?page=1&limit=1000');
+    const derivedValues = [...new Set(apps.map((app) => app.derived_total_users))];
+    for (const value of [42, 37, 50, 12]) assert.ok(derivedValues.includes(value), `an application derives ${value} users: ${derivedValues}`);
+    for (const value of derivedValues) {
+      const filters = JSON.stringify({ derived_total_users: { filterType: 'number', type: 'equals', filter: value } });
+      const kept = await appRows(`/applications?page=1&limit=1000&filters=${encodeURIComponent(filters)}`);
+      assert.deepEqual(
+        kept.map((app) => app.id).sort(),
+        apps.filter((app) => app.derived_total_users === value).map((app) => app.id).sort(),
+        `derived users = ${value}: the rows showing it`,
+      );
     }
   } finally {
     PostgresQueryRunner.prototype.query = realQuery;

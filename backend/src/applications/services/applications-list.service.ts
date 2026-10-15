@@ -21,7 +21,7 @@ import {
   assertSetFilterModes,
 } from '../../common/ag-grid-filtering';
 import { ApplicationsBaseService, ServiceOpts } from './applications-base.service';
-import { buildDerivedUsersByApp } from './derived-users';
+import { buildDerivedUsersByApp, derivedTotalUsersSql } from './derived-users';
 import { textSortKey } from '../../common/list-sort';
 
 /** The application list columns that sort alphabetically (the supplier name too). */
@@ -414,6 +414,9 @@ export class ApplicationsListService extends ApplicationsBaseService {
     targets['contracts_count'] = { expression: 'a.id', numericExpression: `(SELECT COUNT(*) FROM application_contracts l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id)`, dataType: 'number' };
     targets['suites_count'] = { expression: 'a.id', numericExpression: `(SELECT COUNT(*) FROM application_suites l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id)`, dataType: 'number' };
     targets['components_count'] = { expression: 'a.id', numericExpression: `(SELECT COUNT(*) FROM application_suites l WHERE l.suite_id = a.id AND l.tenant_id = a.tenant_id)`, dataType: 'number' };
+    // Derived users: computed for the page after the read, filtered with the same rule in SQL.
+    const derivedUsers = derivedTotalUsersSql('a');
+    targets['derived_total_users'] = { expression: derivedUsers, textExpression: `CAST(${derivedUsers} AS TEXT)`, dataType: 'number' };
     targets['owners_business'] = { expression: 'a.id', textExpression: buildApplicationOwnerNamesSql('business'), dataType: 'string' };
     targets['owners_it'] = { expression: 'a.id', textExpression: buildApplicationOwnerNamesSql('it'), dataType: 'string' };
     targets['data_residency'] = { expression: 'a.id', textExpression: `COALESCE((SELECT string_agg(dr.country_iso, ',') FROM application_data_residency dr WHERE dr.application_id = a.id AND dr.tenant_id = a.tenant_id), '')`, dataType: 'string' };

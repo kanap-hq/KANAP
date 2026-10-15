@@ -39,6 +39,7 @@ import {
   buildQuickSearchConditions,
   normalizeAgFilterModel,
   assertSetFilterModes,
+  compileReferenceFilter,
 } from '../common/ag-grid-filtering';
 import { PortfolioCriteriaService } from './portfolio-criteria.service';
 import { validateUploadedFile } from '../common/upload-validation';
@@ -162,6 +163,8 @@ const requestDateFields = new Map<string, string>([
   // The creation day, not the instant: the grid sends plain days, and the portfolio reports
   // link to age brackets counted in whole days.
   ['created_at', 'r.created_at::date'],
+  // The day of the last change, for the same reason.
+  ['updated_at', 'r.updated_at::date'],
 ]);
 
 const compileDateFilterCondition = (
@@ -378,6 +381,12 @@ export class PortfolioRequestsService {
             continue;
           }
         }
+        // The reference column shows `REQ-12` (`compileReferenceFilter`).
+        if (field === 'item_number') {
+          const cond = compileReferenceFilter(model, 'r.item_number', 'REQ', nextParam);
+          if (cond) compiledFilters.push(cond);
+          continue;
+        }
         const target = targets[field];
         if (!target) continue;
         const cond = compileAgFilterCondition(model, target, nextParam);
@@ -556,6 +565,12 @@ export class PortfolioRequestsService {
             compiledFilters.push(cond);
             continue;
           }
+        }
+        // The reference column shows `REQ-12` (`compileReferenceFilter`).
+        if (field === 'item_number') {
+          const cond = compileReferenceFilter(model, 'r.item_number', 'REQ', nextParam);
+          if (cond) compiledFilters.push(cond);
+          continue;
         }
         const target = targets[field];
         if (!target) continue;
@@ -752,6 +767,12 @@ export class PortfolioRequestsService {
               compiledFilters.push(cond);
               continue;
             }
+          }
+          // The reference column shows `REQ-12` (`compileReferenceFilter`).
+          if (filterField === 'item_number') {
+            const cond = compileReferenceFilter(model, 'r.item_number', 'REQ', nextParam);
+            if (cond) compiledFilters.push(cond);
+            continue;
           }
           const target = targets[filterField];
           if (!target) continue;

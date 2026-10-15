@@ -7,6 +7,7 @@ import { BusinessProcessCategoryLink } from './business-process-category-link.en
 import { parseExportPagination, parsePagination, MAX_EXPORT_LIMIT } from '../common/pagination';
 import { orderListQuery } from '../common/list-sort';
 import { applyStatusFilter, extractStatusFilterFromAgModel } from '../common/status-filter';
+import { compileAgFilterCondition, createParamNameGenerator, type FilterTargetConfig } from '../common/ag-grid-filtering';
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { BusinessProcessUpsertDto } from './dto/business-process.dto';
 import { StatusState, resolveLifecycleState } from '../common/status';
@@ -44,6 +45,24 @@ function importRowUnchanged(
   }
   return wanted.size === linkedCategoryIds.size && [...wanted].every((id) => linkedCategoryIds.has(id));
 }
+
+/**
+ * The list's column filters compiled by the shared compiler. The categories column shows every
+ * category of the process, by name; the owner column the owner's name, else the e-mail.
+ */
+const BUSINESS_PROCESS_FILTER_TARGETS: Record<string, FilterTargetConfig> = {
+  primary_category_name: {
+    expression: `(SELECT string_agg(cat.name, ', ' ORDER BY cat.name)
+      FROM business_process_category_links link
+      JOIN business_process_categories cat ON cat.id = link.category_id AND cat.tenant_id = link.tenant_id
+      WHERE link.process_id = bp.id AND link.tenant_id = bp.tenant_id)`,
+  },
+  owner_name: {
+    expression: `(SELECT COALESCE(NULLIF(concat_ws(' ', NULLIF(btrim(u.first_name), ''), NULLIF(btrim(u.last_name), '')), ''), u.email)
+      FROM users u WHERE u.id = bp.owner_user_id AND u.tenant_id = bp.tenant_id)`,
+  },
+  updated_at: { expression: 'bp.updated_at', dataType: 'date' },
+};
 
 @Injectable()
 export class BusinessProcessesService {
@@ -163,6 +182,16 @@ export class BusinessProcessesService {
         ...(withNull ? [`${primary} IS NULL`] : []),
       ];
       qb.andWhere(clauses.length ? `(${clauses.join(' OR ')})` : '1=0', { primaryCategoryNames: names });
+    }
+    // The text filters of the other columns, on what each column shows: the categories by name,
+    // the owner's name, the day of the last change.
+    const nextParam = createParamNameGenerator('bp_filter_');
+    for (const [field, target] of Object.entries(BUSINESS_PROCESS_FILTER_TARGETS)) {
+      const model = filters[field];
+      // The primary category's set filter is read above.
+      if (!model || typeof model !== 'object' || (field === 'primary_category_name' && model.filterType === 'set')) continue;
+      const compiled = compileAgFilterCondition(model, target, nextParam);
+      if (compiled) qb.andWhere(`(${compiled.sql})`, compiled.params);
     }
   }
 

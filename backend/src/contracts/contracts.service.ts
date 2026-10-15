@@ -206,10 +206,10 @@ export class ContractsService {
       company_id: { expression: 'c.company_id', dataType: 'string' },
       supplier_id: { expression: 'c.supplier_id', dataType: 'string' },
       owner_user_id: { expression: 'c.owner_user_id', dataType: 'string' },
-      start_date: { expression: 'c.start_date', dataType: 'string' },
-      end_date: { expression: terms.currentTermEnd, dataType: 'string' },
-      cancellation_deadline: { expression: terms.cancellationDeadline, dataType: 'string' },
-      next_due_date: { expression: terms.nextDueDate, dataType: 'string' },
+      start_date: { expression: 'c.start_date', dataType: 'date' },
+      end_date: { expression: terms.currentTermEnd, dataType: 'date' },
+      cancellation_deadline: { expression: terms.cancellationDeadline, dataType: 'date' },
+      next_due_date: { expression: terms.nextDueDate, dataType: 'date' },
       term_state: { expression: terms.termState, dataType: 'string' },
       duration_months: {
         expression: 'c.duration_months',
@@ -237,6 +237,18 @@ export class ContractsService {
       updated_at: { expression: 'c.updated_at', textExpression: 'CAST(c.updated_at AS TEXT)', dataType: 'string' },
       company_name: { expression: 'comp.name', dataType: 'string' },
       supplier_name: { expression: 'sup.name', dataType: 'string' },
+      // The budget lines linked to the contract, of both natures, as the list counts them.
+      linked_lines_count: {
+        expression: `(SELECT COUNT(*) FROM contract_spend_items l WHERE l.tenant_id = c.tenant_id AND l.contract_id = c.id${ANY_LINE_LINK})`,
+        dataType: 'number',
+      },
+      // The Task column: the status and the description of the contract's latest task.
+      latest_task_text: {
+        expression: `(SELECT concat_ws(': ', NULLIF(lt.status::text, ''), lt.description) FROM tasks lt
+          WHERE lt.tenant_id = c.tenant_id AND lt.related_object_type = 'contract' AND lt.related_object_id = c.id
+          ORDER BY lt.created_at DESC LIMIT 1)`,
+        dataType: 'string',
+      },
     };
   }
 

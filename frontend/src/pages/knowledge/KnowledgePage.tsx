@@ -527,6 +527,7 @@ export default function KnowledgePage() {
       field: 'current_version_number',
       headerName: t('columns.version'),
       width: 90,
+      filter: 'agNumberColumnFilter',
       cellRenderer: ClickableCell,
       valueFormatter: (p: any) => p.value != null ? `v${p.value}` : '',
     });
@@ -582,6 +583,7 @@ export default function KnowledgePage() {
       field: 'updated_at',
       headerName: t('columns.updated'),
       width: 120,
+      filter: 'agDateColumnFilter',
       cellRenderer: ClickableCell,
       valueFormatter: (params) => formatShortDate(params.value, locale),
     });

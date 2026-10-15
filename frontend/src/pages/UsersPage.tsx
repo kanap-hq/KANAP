@@ -366,7 +366,23 @@ export default function UsersPage() {
     { field: 'department', headerName: t('users.columns.department'), width: 200, valueGetter: (params) => params.data?.department?.name || '', cellRenderer: canManageUsers ? ClickableCellGeneric : undefined },
     { field: 'business_phone', headerName: t('users.columns.businessPhone'), width: 180, defaultHidden: true, cellRenderer: canManageUsers ? ClickableCellGeneric : undefined },
     { field: 'mobile_phone', headerName: t('users.columns.mobilePhone'), width: 160, defaultHidden: true, cellRenderer: canManageUsers ? ClickableCellGeneric : undefined },
-    { field: 'mfa_enabled', headerName: t('users.columns.mfaEnabled'), width: 120, defaultHidden: true, valueGetter: (params) => params.data?.mfa_enabled ? t('users.mfaValues.yes') : t('users.mfaValues.no'), cellRenderer: canManageUsers ? ClickableCellGeneric : undefined },
+    {
+      field: 'mfa_enabled',
+      headerName: t('users.columns.mfaEnabled'),
+      width: 120,
+      defaultHidden: true,
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: {
+        values: [
+          { value: 'true', label: t('users.mfaValues.yes') },
+          { value: 'false', label: t('users.mfaValues.no') },
+        ],
+        searchable: false,
+      },
+      valueGetter: (params) => params.data?.mfa_enabled ? t('users.mfaValues.yes') : t('users.mfaValues.no'),
+      cellRenderer: canManageUsers ? ClickableCellGeneric : undefined,
+    },
     {
       field: 'created_at',
       headerName: t('users.columns.created'),
