@@ -184,7 +184,7 @@ Catégorie (par ex., "Transformation numérique")
 **Éléments système** :
 - Catégories et types prédéfinis marqués d'une pastille « Système »
 - Peuvent être modifiés ou désactivés mais pas supprimés
-- Un élément encore utilisé par des demandes ou des projets, ou un type de tâche utilisé par des tâches, ne peut pas être supprimé. Le message compte ce qui l'utilise. Désactivez-le plutôt
+- Un élément encore utilisé par des demandes ou des projets, ou un type de tâche utilisé par des tâches, ne peut pas être supprimé. KANAP l'indique avant de vous demander de confirmer et compte ce qui l'utilise. Désactivez-le plutôt
 
 ### Bonnes pratiques
 
@@ -217,7 +217,7 @@ Quatre types sont créés avec chaque espace de travail :
 
 **Pour désactiver un type** : utilisez l'interrupteur. Un type inactif disparaît de la liste déroulante pour les nouvelles affectations, mais les contributeurs qui le portent déjà le conservent et continuent de l'afficher.
 
-**Pour supprimer un type** : cliquez sur l'icône de suppression. Elle n'est disponible que pour les types que vous avez créés vous-même et qu'aucun contributeur n'utilise ; le compteur à côté de chaque type indique combien de personnes le portent. Les quatre types intégrés peuvent être renommés mais jamais supprimés. Pour retirer un type que des contributeurs portent, désactivez-le avec l'interrupteur.
+**Pour supprimer un type** : cliquez sur l'icône de suppression. Un type intégré, ou un type que des contributeurs portent, est refusé avant la confirmation, avec la raison. Le compteur à côté de chaque type indique combien de contributeurs le portent. Les quatre types intégrés peuvent être renommés mais jamais supprimés. Pour retirer un type que des contributeurs portent, désactivez-le avec l'interrupteur.
 
 **Initialiser les valeurs par défaut** : si la liste est vide, **Initialiser les valeurs par défaut** recrée Interne, Externe, Apprenti et Autre.
 

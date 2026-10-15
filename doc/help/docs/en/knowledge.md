@@ -60,7 +60,7 @@ Important behavior:
 - In a single-library view, documents can be dragged into folders for quick reorganization.
 - Folders can be nested to create a browsing structure.
 - Deleting a folder does not delete its documents. Documents move back to **Unfiled** instead.
-- A folder with subfolders cannot be deleted: move or delete its subfolders first.
+- A folder with subfolders cannot be deleted: KANAP says so before asking you to confirm. Move or delete its subfolders first.
 
 Use folders for stable subject areas, not for temporary workflow states. Status and workflow already exist for that.
 

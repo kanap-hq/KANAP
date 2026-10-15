@@ -60,7 +60,7 @@ Wichtiges Verhalten:
 - In einer Einzelbibliotheks-Ansicht können Dokumente per Drag-and-Drop in Ordner gezogen werden, um sie schnell zu reorganisieren.
 - Ordner können verschachtelt werden, um eine Browsing-Struktur zu erstellen.
 - Das Löschen eines Ordners löscht nicht seine Dokumente. Dokumente werden stattdessen zurück nach **Nicht eingeordnet** verschoben.
-- Ein Ordner mit Unterordnern kann nicht gelöscht werden: Verschieben oder löschen Sie zuerst seine Unterordner.
+- Ein Ordner mit Unterordnern kann nicht gelöscht werden: KANAP sagt es, bevor Sie bestätigen. Verschieben oder löschen Sie zuerst seine Unterordner.
 
 Verwenden Sie Ordner für stabile Themenbereiche, nicht für temporäre Workflow-Status. Status und Workflow existieren bereits dafür.
 

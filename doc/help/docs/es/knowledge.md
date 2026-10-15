@@ -60,7 +60,7 @@ Comportamiento importante:
 - En una vista de biblioteca única, los documentos pueden arrastrarse a carpetas para una reorganización rápida.
 - Las carpetas pueden anidarse para crear una estructura de navegación.
 - Eliminar una carpeta no elimina sus documentos. En su lugar, los documentos vuelven a **Sin archivar**.
-- Una carpeta con subcarpetas no se puede eliminar: mueva o elimine primero sus subcarpetas.
+- Una carpeta con subcarpetas no se puede eliminar: KANAP lo indica antes de pedirle confirmación. Mueva o elimine primero sus subcarpetas.
 
 Use carpetas para áreas temáticas estables, no para estados de flujo de trabajo temporales. El estado y el flujo de trabajo ya existen para eso.
 

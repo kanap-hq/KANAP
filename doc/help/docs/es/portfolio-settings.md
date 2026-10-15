@@ -184,7 +184,7 @@ Categoría (p. ej., "Transformación digital")
 **Elementos del sistema**:
 - Categorías y tipos predefinidos marcados con etiqueta "Sistema"
 - Se pueden editar o deshabilitar pero no eliminar
-- Un elemento que todavía usan solicitudes o proyectos, o un tipo de tarea que usan tareas, no se puede eliminar. El mensaje cuenta lo que lo usa. Desactívelo en su lugar
+- Un elemento que todavía usan solicitudes o proyectos, o un tipo de tarea que usan tareas, no se puede eliminar. KANAP lo indica antes de pedirle confirmación y cuenta lo que lo usa. Desactívelo en su lugar
 
 ### Buenas prácticas
 
@@ -217,7 +217,7 @@ Cuatro tipos se crean con cada espacio de trabajo:
 
 **Para desactivar un tipo**: use el interruptor. Un tipo inactivo desaparece del desplegable para las nuevas asignaciones, pero los colaboradores que ya lo tienen lo conservan y lo siguen mostrando.
 
-**Para eliminar un tipo**: haga clic en el icono de eliminación. Solo está disponible para los tipos que usted mismo creó y que ningún colaborador usa; el contador junto a cada tipo indica cuántos lo tienen. Los cuatro tipos integrados pueden renombrarse pero nunca eliminarse. Para retirar un tipo que tienen colaboradores, desactívelo con el interruptor.
+**Para eliminar un tipo**: haga clic en el icono de eliminación. Un tipo integrado, o un tipo que tienen colaboradores, se rechaza antes de la confirmación, con el motivo. El contador junto a cada tipo indica cuántos colaboradores lo tienen. Los cuatro tipos integrados pueden renombrarse pero nunca eliminarse. Para retirar un tipo que tienen colaboradores, desactívelo con el interruptor.
 
 **Cargar valores predeterminados**: si la lista llegara a quedar vacía, **Cargar valores predeterminados** vuelve a crear Interno, Externo, Aprendiz y Otro.
 

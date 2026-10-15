@@ -1549,6 +1549,7 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
 - POST `/suppliers/:id/contacts` — attach `{ contactId, role: 'commercial'|'technical'|'support'|'other', isPrimary? }`. [Requires: suppliers:manager]
 - DELETE `/suppliers/:id/contacts/:linkId` — detach. [Requires: suppliers:manager]
 - POST `/suppliers/delete-check` and POST `/companies/delete-check` with `{ ids: string[] }` [Requires: suppliers:admin / companies:admin] → `{ refused: Array<{ id, name, code, usages }> }`: the records of the tenant a delete would refuse (`SUPPLIER_IN_USE`, `COMPANY_IN_USE`, with the counts per kind), asked before the list's confirmation. Nothing is written (`common/record-in-use.ts`, `refusalsOf`).
+- The same check, same body and answer, for the portfolio settings lists and knowledge folders: POST `/portfolio/classification/{sources,categories,streams,task-types}/delete-check`, `/portfolio/teams/delete-check`, `/portfolio/employment-types/delete-check` [Requires: portfolio_settings:admin] (`BUILT_IN_RECORD`, `RECORD_USED_BY`, `TEAM_NOT_EMPTY`), and `/knowledge-folders/delete-check` [Requires: knowledge:member] (`KNOWLEDGE_FOLDER_HAS_SUBFOLDERS`). Each delete asks the same refusal function (`refusalsFrom`).
 
 ### Suppliers CSV (contacts columns)
 - GET `/suppliers/export?scope=template|data&language=…` and POST `/suppliers/import?dryRun=true|false&language=…&dateOrder=…&decimalMark=…` (multipart `file`). Same shared master-data contract as `/companies/import`.

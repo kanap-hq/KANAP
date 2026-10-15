@@ -60,7 +60,7 @@ Comportement important :
 - Dans une vue de bibliothèque unique, les documents peuvent être glissés-déposés dans des dossiers pour une réorganisation rapide.
 - Les dossiers peuvent être imbriqués pour créer une structure de navigation.
 - Supprimer un dossier ne supprime pas ses documents. Les documents reviennent à **Non classés** à la place.
-- Un dossier avec des sous-dossiers ne peut pas être supprimé : déplacez ou supprimez d'abord ses sous-dossiers.
+- Un dossier avec des sous-dossiers ne peut pas être supprimé : KANAP l'indique avant de vous demander de confirmer. Déplacez ou supprimez d'abord ses sous-dossiers.
 
 Utilisez les dossiers pour des thématiques stables, pas pour des états de workflow temporaires. Le statut et le workflow existent déjà pour cela.
 
