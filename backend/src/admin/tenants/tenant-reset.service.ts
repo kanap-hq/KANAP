@@ -127,6 +127,8 @@ export class TenantResetService {
     assertTenantResetConfiguration();
     await manager.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
 
+    // The kept users lose their company before the companies go (users.company_id restricts).
+    await manager.query(`UPDATE users SET company_id = NULL WHERE tenant_id = $1 AND company_id IS NOT NULL`, [tenantId]);
     const { report, storagePaths } = await purgeTenantTables(manager, TENANT_RESET_PURGE_TABLES);
     const demoUsersRemoved = await this.removeDemoUsers(manager, tenantId, actorId);
     // The kept users' search entries went with the purge of search_index: write them again.

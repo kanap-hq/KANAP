@@ -101,7 +101,7 @@ Der Abschnitt **Verwendet in**, unter den Notizen im Reiter **Übersicht**, list
 
 Klicken Sie auf eine Zeile, um die zugehörige Seite zu öffnen. Deaktivierte Einträge tragen den Hinweis **Deaktiviert** und stehen nach den anderen. Eine Liste zeigt bis zu 50 Einträge und nennt ihre Gesamtzahl. Bei mehr als 50 haben Budgetzeilen, Verträge und Anwendungen einen Link wie **Alle 57 anzeigen**, der ihre Liste gefiltert auf diesen Lieferanten öffnet. Sie sehen nur die Listen, die Sie lesen dürfen: Ein Benutzer ohne Zugriff auf Verträge sieht keine Vertragsliste. Ein Lieferant, den nichts verwendet, zeigt eine Zeile, die das sagt.
 
-Prüfen Sie diesen Abschnitt, bevor Sie einen Lieferanten deaktivieren oder löschen.
+Prüfen Sie diesen Abschnitt, bevor Sie einen Lieferanten deaktivieren oder löschen. Ein Lieferant, den noch Budgetzeilen, Verträge, Anwendungen oder Assets verwenden, kann nicht gelöscht werden. Die Meldung zählt auf, was ihn verwendet, zum Beispiel „Dieser Lieferant wird noch verwendet: 2 Verträge und 1 Anwendung“. Deaktivieren Sie ihn stattdessen.
 
 ### Einen Lieferanten erstellen
 

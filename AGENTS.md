@@ -225,9 +225,12 @@ Every query must be scoped by `tenant_id`. This is critical for tenant isolation
 - Migrations are idempotent and self-healing: they may run on databases nobody can inspect. A
   migration that adds a constraint first repairs the rows that would violate it, deterministically
   (for example keep the earliest row by `created_at, id`), in its own transaction with RLS disabled
-  around the repair. It is rerun-safe, logs the repaired counts, and fails loudly only for data it
-  cannot repair safely. A spec runs it against a seeded dirty database
-  (precedent: `1853640000000-capex-versions-unique-year.ts`).
+  around the repair. It is rerun-safe and logs the repaired counts. A spec runs it against a
+  seeded dirty database (precedent: `1853640000000-capex-versions-unique-year.ts`).
+- A migration succeeds on its own on imperfect data: a release needs no manual step on any
+  installation. A foreign key on rows naming a missing object: delete link rows, set a nullable
+  column to NULL, and add the key `NOT VALID` on a NOT NULL column, validated once it is clean;
+  log the counts (`backend/src/common/migration-reference-keys.ts`).
 
 ## Cloud and on-premise modes
 

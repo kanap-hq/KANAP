@@ -362,6 +362,26 @@ describe('ContractWorkspacePage', () => {
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/contracts/c-1', { billing_frequency: 'quarterly' }));
   });
 
+  it('opens a contract whose supplier is missing and repairs it with another supplier', async () => {
+    const base = mocked.get.getMockImplementation() as (url: string, options?: unknown) => Promise<unknown>;
+    mocked.get.mockImplementation(async (url: string, options?: { params?: Record<string, unknown> }) => {
+      if (url === '/contracts/c-1') return { data: { ...CONTRACT, supplier_id: 'sup-gone', supplier_name: null } };
+      if (url === '/suppliers/lookup') {
+        return options?.params?.ids
+          ? { data: { items: [], has_more: false } }
+          : { data: { items: [{ id: 'sup-2', name: 'Acme', erp_supplier_id: null, status: 'enabled' }], has_more: false } };
+      }
+      return base(url, options);
+    });
+    renderAt('/ops/contracts/c-1/overview');
+    expect((await screen.findAllByText('contracts.metadata.supplierMissing')).length).toBeGreaterThan(0);
+    const supplier = screen.getByRole('combobox', { name: 'contracts.fields.supplier' });
+    fireEvent.mouseDown(supplier);
+    fireEvent.change(supplier, { target: { value: 'Ac' } });
+    fireEvent.click(await screen.findByRole('option', { name: /Acme/ }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/contracts/c-1', { supplier_id: 'sup-2' }));
+  });
+
   it('saves a typed duration after a pause, and a decimal amount', async () => {
     renderAt('/ops/contracts/c-1/overview');
     const duration = await screen.findByLabelText('contracts.fields.durationMonths');

@@ -90,5 +90,7 @@
   "CSV_EMAIL_INVALID": "„{{value}}“ ist keine gültige E-Mail-Adresse.",
   "CSV_STATUS_DATE_PASSED": "Der Status ist enabled, aber das Gültigkeitsende ist überschritten. Leeren Sie das Datum oder setzen Sie den Status auf disabled. Stammt die Datei aus einem älteren Export, exportieren Sie die Daten erneut.",
   "CSV_STATUS_DATE_FUTURE": "Der Status ist disabled, aber das Gültigkeitsende liegt noch in der Zukunft. Setzen Sie den Status auf enabled oder geben Sie ein vergangenes Datum ein.",
-  "CSV_IMPORT_FAILED": "Der Import ist fehlgeschlagen: {{reason}}"
+  "CSV_IMPORT_FAILED": "Der Import ist fehlgeschlagen: {{reason}}",
+  "SUPPLIER_IN_USE": "Dieser Lieferant wird noch verwendet: {{usages}}. Deaktivieren Sie ihn, statt ihn zu löschen.",
+  "COMPANY_IN_USE": "Dieses Unternehmen wird noch verwendet: {{usages}}. Deaktivieren Sie es, statt es zu löschen."
 }
