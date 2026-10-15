@@ -167,6 +167,38 @@ async function run(seeded: Seeded, tenantId: string) {
   );
 }
 
+// `GET /knowledge/ids` gives the ordered ids of the list as the user sees it: same search, column
+// filters, scope and sort as `list`.
+async function runIds(seeded: Seeded, tenantId: string) {
+  const ids = async (query: Record<string, unknown>) =>
+    (await inTenant(tenantId, (manager) => knowledgeService().listIds(query, { manager, tenantId }))).ids;
+  const cases: Array<Record<string, unknown>> = [
+    { filters: JSON.stringify({ folder_key: setFilter(['integrated_requests']) }) },
+    { filters: JSON.stringify({ library_key: setFilter(['zeta']) }), sort: 'title:DESC' },
+    { filters: JSON.stringify({ library_name: setFilter(['Zeta']) }), sort: 'title:ASC' },
+    { filters: JSON.stringify({ status: setFilter(['draft']) }), sort: 'library_key:ASC' },
+    { q: 'Gamma' },
+  ];
+  for (const query of cases) {
+    assert.deepEqual(await ids(query), await listIds(tenantId, query), `ids follow the list for ${JSON.stringify(query)}`);
+  }
+  assert.deepEqual(
+    await ids({ filters: JSON.stringify({ folder_key: setFilter(['integrated_requests']) }) }),
+    [seeded.managedRequest],
+  );
+  assert.deepEqual(await ids({ sort: 'title:DESC' }), [seeded.zetaDoc, seeded.tenantRequest, seeded.managedRequest]);
+}
+
+async function testListIdsFollowsTheList() {
+  const tenantId = randomUUID();
+  try {
+    const seeded = await seed(tenantId);
+    await runIds(seeded, tenantId);
+  } finally {
+    await cleanup(tenantId);
+  }
+}
+
 async function testListFiltersOnStableKeys() {
   const tenantId = randomUUID();
   try {
@@ -181,7 +213,7 @@ async function main() {
   await dataSource.initialize();
   const failures: string[] = [];
   try {
-    for (const test of [testListFiltersOnStableKeys]) {
+    for (const test of [testListFiltersOnStableKeys, testListIdsFollowsTheList]) {
       try {
         await test();
         console.log(`  ok ${test.name}`);
