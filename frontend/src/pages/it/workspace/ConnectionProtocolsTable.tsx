@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Table, TableBody, TableCell, TableHead, TableRow, TextField } from '@mui/material';
 import { tableCellTextFieldSx } from '../../../theme/formSx';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
@@ -31,6 +32,7 @@ export default function ConnectionProtocolsTable({
   disabled = false,
   onProtocolsChange,
 }: Props) {
+  const { t } = useTranslation(['it']);
   const { settings } = useItOpsEnumOptions();
 
   const rows = React.useMemo(() => {
@@ -93,9 +95,9 @@ export default function ConnectionProtocolsTable({
     <Table size="small">
       <TableHead>
         <TableRow>
-          <TableCell sx={{ ...headSx, pl: 0 }}>Protocol</TableCell>
-          <TableCell sx={headSx}>Default port</TableCell>
-          <TableCell sx={{ ...headSx, width: 160 }}>Port</TableCell>
+          <TableCell sx={{ ...headSx, pl: 0 }}>{t('it:workspace.connection.protocolsTable.protocol')}</TableCell>
+          <TableCell sx={headSx}>{t('it:workspace.connection.protocolsTable.defaultPort')}</TableCell>
+          <TableCell sx={{ ...headSx, width: 160 }}>{t('it:workspace.connection.protocolsTable.port')}</TableCell>
         </TableRow>
       </TableHead>
       <TableBody>

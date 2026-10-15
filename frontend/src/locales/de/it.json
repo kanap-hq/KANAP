@@ -122,7 +122,8 @@
         "pii": "PII",
         "risk": "Risiko",
         "lifecycle": "Lebenszyklus",
-        "created": "Erstellt"
+        "created": "Erstellt",
+        "linkedInterfaces": "Verknüpfte Schnittstellen"
       },
       "risk": {
         "derivedFromInterfaces": "Abgeleitet von {{count}} Schnittstellen",
@@ -175,10 +176,80 @@
       }
     },
     "connectionMap": {
-      "title": "Verbindungskarte"
+      "title": "Verbindungskarte",
+      "appEnv": "App-Umgebung",
+      "selectEnv": "Umgebung wählen",
+      "loadingServers": "Server werden geladen…",
+      "servers": "Server",
+      "selectServers": "Server, Cluster oder Entitäten auswählen",
+      "selectedServers": "Ausgewählte Server ({{count}})",
+      "showMultiServer": "Multi-Server-Verbindungen anzeigen",
+      "showLayers": "Verbindungsschichten anzeigen",
+      "roleBased": "Platzierung nach Rolle",
+      "building": "Verbindungskarte wird erstellt…",
+      "loadFailed": "Verbindungskarte konnte nicht geladen werden",
+      "empty": "Keine Verbindungen entsprechen den aktuellen Filtern (Lebenszyklus, Tiefe, Schichten).",
+      "nodeDetails": "Knotendetails",
+      "connectionDetails": "Verbindungsdetails",
+      "cluster": "Cluster",
+      "typeValue": "Typ: {{value}}",
+      "environmentValue": "Umgebung: {{value}}",
+      "serverType": "Servertyp:",
+      "serverLocation": "Serverstandort:",
+      "operatingSystem": "Betriebssystem:",
+      "networkSegment": "Netzwerksegment:",
+      "ipAddress": "IP-Adresse:",
+      "assignedApplications": "Zugeordnete Anwendungen:",
+      "noApplications": "Keine Anwendungen zugeordnet.",
+      "viewCluster": "Cluster anzeigen",
+      "editServer": "Server bearbeiten",
+      "clusterHint": "Clusterknoten: Mitglieder im Bereich Server verwalten.",
+      "purpose": "Zweck:",
+      "typicalPorts": "Typische Ports:",
+      "topology": "Topologie:",
+      "editConnection": "Verbindung bearbeiten",
+      "noLinked": "Noch keine Schnittstellen mit dieser Verbindung verknüpft.",
+      "interfaceLeg": "Schnittstellenabschnitt: {{leg}} · Umgebung: {{env}}",
+      "patternValue": "Muster: {{value}}",
+      "openInterface": "Schnittstelle öffnen",
+      "viewInInterfaceMap": "In der Schnittstellenkarte anzeigen"
     },
     "interfaceMap": {
-      "title": "Schnittstellenkarte"
+      "title": "Schnittstellenkarte",
+      "infraServices": "Infrastrukturdienste",
+      "businessView": "Fachliche Sicht: logische Schnittstellen zwischen Anwendungen.",
+      "technicalView": "Technische Sicht: Routen über Middleware- und ETL-Anwendungen aufgelöst.",
+      "showMiddleware": "Middleware anzeigen",
+      "building": "Schnittstellenkarte für {{env}} wird erstellt…",
+      "loadFailed": "Schnittstellenkarte konnte nicht geladen werden",
+      "empty": "Keine Schnittstellen entsprechen den aktuellen Filtern (Umgebung, Lebenszyklus, Tiefe).",
+      "applicationDetails": "Anwendungsdetails",
+      "interfaceDetails": "Schnittstellendetails",
+      "description": "Beschreibung:",
+      "publisher": "Hersteller:",
+      "servers": "Server:",
+      "noServers": "Keine Server zugeordnet.",
+      "businessOwners": "Fachliche Verantwortliche:",
+      "itOwners": "IT-Verantwortliche:",
+      "noneListed": "Keine angegeben.",
+      "support": "Support-Informationen:",
+      "noSupport": "Keine Support-Kontakte.",
+      "editApplication": "Anwendung bearbeiten",
+      "criticalityValue": "Kritikalität: {{value}}",
+      "route": "Route: {{value}}",
+      "bindings": "Bindungen: {{count}}",
+      "viaMiddleware": "Über Middleware: {{value}}",
+      "endpointsEnv": "Endpunkte (Umgebung: {{env}})",
+      "job": "Job: {{value}}",
+      "infraConnections": "Infrastrukturverbindungen (Umgebung: {{env}})",
+      "loadingInfra": "Infrastrukturverbindungen werden geladen…",
+      "noInfra": "Keine Infrastrukturverbindungen für diese Schnittstelle in {{env}} verknüpft.",
+      "sourceValue": "Quelle: {{value}}",
+      "destinationValue": "Ziel: {{value}}",
+      "protocolsValue": "Protokolle: {{value}}",
+      "bindingValue": "Bindung: {{env}} · {{leg}}",
+      "viewInConnectionMap": "In der Verbindungskarte anzeigen",
+      "editInterface": "Schnittstelle bearbeiten"
     },
     "settings": {
       "title": "IT-Landschaft Einstellungen",
@@ -621,6 +692,28 @@
         "failed": "ausgefallen",
         "paused": "pausiert"
       }
+    },
+    "maps": {
+      "freeze": "Layout fixieren (keine Reaktionen)",
+      "unfreeze": "Layout freigeben (Reaktionen aktivieren)",
+      "autoCenterOn": "Automatische Zentrierung bei Auswahl aktivieren",
+      "autoCenterOff": "Automatische Zentrierung bei Auswahl deaktivieren",
+      "zoomIn": "Vergrößern",
+      "zoomOut": "Verkleinern",
+      "snapToGrid": "Am Raster ausrichten (Knoten ausrichten)",
+      "exportSvg": "Als SVG exportieren",
+      "exportPng": "Als PNG exportieren",
+      "applications": "Anwendungen",
+      "selectApplications": "Anwendungen auswählen",
+      "depth": "Tiefe",
+      "all": "Alle",
+      "updating": "Wird aktualisiert…",
+      "loadingDetails": "Details werden geladen…",
+      "active": "Aktiv",
+      "criticalityLabel": "Kritikalität:",
+      "protocolsLabel": "Protokolle:",
+      "sourceEndpoint": "Quell-Endpunkt: {{value}}",
+      "targetEndpoint": "Ziel-Endpunkt: {{value}}"
     }
   },
   "workspace": {
@@ -1150,7 +1243,24 @@
         "protocolsPlaceholder": "Protokolle auswählen (aus Verbindungstypen)",
         "typicalPorts": "Typische Ports",
         "lifecycle": "Lebenszyklus",
-        "notes": "Notizen"
+        "notes": "Notizen",
+        "descriptionPlaceholder": "Was diese Verbindung tut, warum sie existiert, Besonderheiten…",
+        "serversMin": "Server (mindestens 2)",
+        "addServer": "Server hinzufügen",
+        "addProtocol": "Protokoll hinzufügen",
+        "needTwoServers": "Eine Multi-Server-Verbindung benötigt mindestens zwei Server.",
+        "riskDerivation_one": "Risikoableitung ({{count}} Schnittstelle)",
+        "riskDerivation_other": "Risikoableitung ({{count}} Schnittstellen)",
+        "linkExisting": "Vorhandene verknüpfen",
+        "linkedInterfaces": "Verknüpfte Schnittstellen ({{count}})",
+        "noLinkedBindings": "Noch ist keine Schnittstellen-Bindung mit dieser Verbindung verknüpft.",
+        "linkBinding": "Schnittstellen-Bindung verknüpfen",
+        "leg": "Abschnitt",
+        "pattern": "Muster",
+        "target": "Ziel",
+        "unlinkBinding": "Schnittstellen-Bindung lösen",
+        "unlink": "Lösen",
+        "unlinkFailed": "Schnittstellen-Bindung konnte nicht gelöst werden"
       },
       "layers": {
         "title": "Schichten",
@@ -1241,6 +1351,65 @@
         "toServerToServer": "Beim Wechsel zu Server zu Server wird die Multi-Server-Liste gelöscht.",
         "layersKept_one": "{{count}} vorhandene Schicht bleibt erhalten; prüfen Sie ihre Endpunkte nach der Änderung.",
         "layersKept_other": "{{count}} vorhandene Schichten bleiben erhalten; prüfen Sie ihre Endpunkte nach der Änderung."
+      },
+      "picker": {
+        "entity": "Entität",
+        "entityPlaceholder": "Entität: {{code}} (umschalten, um einen Server zu wählen)",
+        "serverPlaceholder": "z. B. AST-12 oder Hostname",
+        "hopPlaceholder": "z. B. waf-prod-1 oder AST-12",
+        "noEntities": "Keine Entitäten konfiguriert (konfigurieren Sie sie in den IT-Einstellungen)",
+        "replaceServer": "Die Auswahl einer Entität ersetzt den ausgewählten Server"
+      },
+      "metadata": {
+        "lifecycleMissing": "Lebenszyklus fehlt",
+        "criticalityMissing": "Kritikalität fehlt",
+        "protocolsMissing": "Protokolle fehlen",
+        "derivedFrom": "(abgeleitet von {{count}})",
+        "derived": "(abgeleitet)"
+      },
+      "properties": {
+        "removeHops": "Entfernen Sie alle Hops, um die Topologie zu ändern",
+        "derivedFromInterfaces": "Aus Schnittstellen abgeleitet",
+        "linkToDerive": "Verknüpfen Sie eine Schnittstellen-Bindung, um das abgeleitete Risiko zu aktivieren",
+        "created": "Erstellt",
+        "updated": "Aktualisiert"
+      },
+      "protocolsTable": {
+        "protocol": "Protokoll",
+        "defaultPort": "Standardport",
+        "port": "Port"
+      },
+      "linkInterfaces": {
+        "loadFailed": "Schnittstellen-Bindungen konnten nicht geladen werden",
+        "linkFailed": "Schnittstellen-Bindungen konnten nicht verknüpft werden",
+        "title": "Schnittstellen-Bindungen verknüpfen",
+        "linkCount": "{{count}} verknüpfen",
+        "searchPlaceholder": "Nach Schnittstelle, Umgebung oder Endpunkt suchen…",
+        "noMatch": "Keine Schnittstellen-Bindung entspricht Ihrer Suche.",
+        "allLinked": "Alle Schnittstellen-Bindungen sind bereits mit dieser Verbindung verknüpft.",
+        "selected_one": "{{count}} Bindung ausgewählt",
+        "selected_other": "{{count}} Bindungen ausgewählt",
+        "selectHint": "Wählen Sie eine oder mehrere Schnittstellen-Bindungen aus, die mit dieser Verbindung verknüpft werden sollen."
+      },
+      "path": {
+        "title_one": "Netzwerkpfad ({{count}} Hop)",
+        "title_other": "Netzwerkpfad ({{count}} Hops)",
+        "longWarning": "Langer Netzwerkpfad ({{count}} Hops). Prüfen Sie, ob alle Zwischenstationen einzeln dokumentiert werden müssen.",
+        "hop": "Hop {{index}}",
+        "functionMissing": "Funktion fehlt",
+        "moveHopUp": "Hop nach oben verschieben",
+        "moveUp": "Nach oben",
+        "moveHopDown": "Hop nach unten verschieben",
+        "moveDown": "Nach unten",
+        "removeHop": "Hop entfernen",
+        "protocolsOverride": "Protokolle (überschrieben)",
+        "notesPlaceholder": "z. B. übernimmt die TLS-Terminierung",
+        "destinationPorts": "Ports des Zieldienstes: festgelegt in {{tab}}",
+        "addHop": "Hop hinzufügen",
+        "saveFailed": "Hop konnte nicht gespeichert werden",
+        "addFailed": "Hop konnte nicht hinzugefügt werden",
+        "removeFailed": "Hop konnte nicht entfernt werden",
+        "reorderFailed": "Hops konnten nicht neu angeordnet werden"
       }
     },
     "interface": {
@@ -1319,6 +1488,49 @@
         "jumpToSubLocations": "Zu den Unterstandorten",
         "subLocationCount_one": "{{count}} Unterstandort",
         "subLocationCount_other": "{{count}} Unterstandorte"
+      },
+      "overview": {
+        "notesPlaceholder": "Notizen zu diesem Standort (Betriebsdetails, Zugangsverfahren usw.)"
+      },
+      "contacts": {
+        "internalTitle": "Interne Kontakte",
+        "noInternal": "Noch keine internen Kontakte.",
+        "pickUser": "Internen Benutzer auswählen",
+        "externalTitle": "Externe Kontakte",
+        "noExternal": "Noch keine externen Kontakte.",
+        "contact": "Kontakt",
+        "websitesTitle": "Relevante Websites",
+        "noWebsites": "Noch keine Websites verknüpft.",
+        "description": "Beschreibung",
+        "internalRolePlaceholder": "z. B. Betriebsleitung",
+        "externalRolePlaceholder": "z. B. Kundenbetreuer",
+        "openLink": "Link öffnen"
+      },
+      "relations": {
+        "assetsTitle": "Assets an diesem Standort",
+        "noAssets": "Keine Assets mit diesem Standort verknüpft.",
+        "subLocation": "Unterstandort",
+        "type": "Typ",
+        "provider": "Anbieter",
+        "regionZone": "Region / Zone",
+        "status": "Status",
+        "applicationsTitle": "Anwendungen an diesem Standort",
+        "noApplications": "Keine Anwendungen für diesen Standort erkannt.",
+        "environments": "Umgebungen"
+      },
+      "subItems": {
+        "title": "Unterstandorte",
+        "add": "+ Unterstandort hinzufügen",
+        "empty": "Keine Unterstandorte definiert. Fügen Sie Gebäude, Räume, Racks oder andere physische Bereiche hinzu.",
+        "usage": "Nutzung",
+        "namePlaceholder": "z. B. Gebäude A — Raum 1 — Rack 5",
+        "descriptionPlaceholder": "Optionale Beschreibung",
+        "nameRequired": "Der Name des Unterstandorts ist erforderlich.",
+        "deleteTitle": "Unterstandort löschen?",
+        "deleteAria": "Unterstandort löschen",
+        "deleteUsage_one": "<strong>{{count}} Asset ist</strong> derzeit <strong>{{name}}</strong> zugeordnet. Wenn Sie diesen Unterstandort löschen, hat es keine Unterstandort-Zuordnung mehr.",
+        "deleteUsage_other": "<strong>{{count}} Assets sind</strong> derzeit <strong>{{name}}</strong> zugeordnet. Wenn Sie diesen Unterstandort löschen, haben sie keine Unterstandort-Zuordnung mehr.",
+        "deleteKeepsAssets": "Die Asset-Datensätze selbst bleiben erhalten; nur ihre Unterstandort-Verknüpfung wird entfernt."
       }
     }
   },
@@ -1687,6 +1899,7 @@
     "summary_incomplete_other": "{{count}} zu vervollständigen",
     "classification": "Klassifizierung",
     "data_at_the_highest_confidentiality_level_with_the_lowest_cyber_criticality_check_the_cyber_assessment": "Daten auf der höchsten Vertraulichkeitsstufe mit der niedrigsten Cyber-Kritikalität: prüfen Sie die Cyber-Bewertung.",
-    "no_recovery_test_in_the_last_twelve_months_for_an_application_at_the_most_critical_level": "Kein Wiederherstellungstest in den letzten zwölf Monaten für eine Anwendung auf der kritischsten Stufe."
+    "no_recovery_test_in_the_last_twelve_months_for_an_application_at_the_most_critical_level": "Kein Wiederherstellungstest in den letzten zwölf Monaten für eine Anwendung auf der kritischsten Stufe.",
+    "e_g_tier_1": "z. B. Stufe 1"
   }
 }

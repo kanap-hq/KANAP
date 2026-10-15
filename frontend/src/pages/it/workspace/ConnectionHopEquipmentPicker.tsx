@@ -1,5 +1,6 @@
 import React from 'react';
 import { Autocomplete, Box, MenuItem, TextField, Typography } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import api from '../../../api';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { drawerMenuItemSx, drawerSelectSx } from '../../../theme/formSx';
@@ -38,6 +39,7 @@ export default function ConnectionHopEquipmentPicker({
   initialAssetName,
   initialAssetReference,
 }: Props) {
+  const { t } = useTranslation(['it', 'common']);
   const { settings } = useItOpsEnumOptions();
   const entities = settings?.entities || [];
 
@@ -118,7 +120,7 @@ export default function ConnectionHopEquipmentPicker({
               '&:disabled': { opacity: 0.5 },
             }}
           >
-            Server
+            {t('it:workspace.connection.server')}
           </Box>
           <Box component="span" sx={{ fontSize: 11, color: 'kanap.text.tertiary' }}>·</Box>
           <Box
@@ -137,7 +139,7 @@ export default function ConnectionHopEquipmentPicker({
               '&:disabled': { opacity: 0.5 },
             }}
           >
-            Entity
+            {t('it:workspace.connection.picker.entity')}
           </Box>
         </Box>
       </Box>
@@ -158,7 +160,7 @@ export default function ConnectionHopEquipmentPicker({
             <TextField
               {...params}
               variant="standard"
-              placeholder={value.entity_code ? `entity:${value.entity_code} (switch to pick a server)` : 'e.g., waf-prod-1 or AST-12'}
+              placeholder={value.entity_code ? t('it:workspace.connection.picker.entityPlaceholder', { code: value.entity_code }) : t('it:workspace.connection.picker.hopPlaceholder')}
               sx={fieldSx}
             />
           )}
@@ -175,9 +177,9 @@ export default function ConnectionHopEquipmentPicker({
           SelectProps={{ displayEmpty: true }}
           helperText={
             entities.length === 0
-              ? 'No entities configured (configure them in IT settings)'
+              ? t('it:workspace.connection.picker.noEntities')
               : value.asset_id
-                ? 'Picking an entity will replace the selected server'
+                ? t('it:workspace.connection.picker.replaceServer')
                 : undefined
           }
           FormHelperTextProps={{ sx: { fontSize: 11, mt: 0.25, ml: 0 } }}

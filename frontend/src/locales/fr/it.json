@@ -122,7 +122,8 @@
         "pii": "PII",
         "risk": "Risque",
         "lifecycle": "Cycle de vie",
-        "created": "Créé"
+        "created": "Créé",
+        "linkedInterfaces": "Interfaces associées"
       },
       "risk": {
         "derivedFromInterfaces": "Dérivé de {{count}} interfaces",
@@ -175,10 +176,80 @@
       }
     },
     "connectionMap": {
-      "title": "Carte des connexions"
+      "title": "Carte des connexions",
+      "appEnv": "Env. de l'app",
+      "selectEnv": "Choisir l'env.",
+      "loadingServers": "Chargement des serveurs…",
+      "servers": "Serveurs",
+      "selectServers": "Sélectionner des serveurs, clusters ou entités",
+      "selectedServers": "Serveurs sélectionnés ({{count}})",
+      "showMultiServer": "Afficher les connexions multi-serveurs",
+      "showLayers": "Afficher les couches de connexion",
+      "roleBased": "Placement par rôle",
+      "building": "Construction de la carte des connexions…",
+      "loadFailed": "Échec du chargement de la carte des connexions",
+      "empty": "Aucune connexion ne correspond aux filtres actuels (cycle de vie, profondeur, couches).",
+      "nodeDetails": "Détails du nœud",
+      "connectionDetails": "Détails de la connexion",
+      "cluster": "Cluster",
+      "typeValue": "Type : {{value}}",
+      "environmentValue": "Environnement : {{value}}",
+      "serverType": "Type de serveur :",
+      "serverLocation": "Site du serveur :",
+      "operatingSystem": "Système d'exploitation :",
+      "networkSegment": "Segment réseau :",
+      "ipAddress": "Adresse IP :",
+      "assignedApplications": "Applications affectées :",
+      "noApplications": "Aucune application affectée.",
+      "viewCluster": "Voir le cluster",
+      "editServer": "Modifier le serveur",
+      "clusterHint": "Nœud de cluster : gérez les membres dans l'espace Serveurs.",
+      "purpose": "Objet :",
+      "typicalPorts": "Ports usuels :",
+      "topology": "Topologie :",
+      "editConnection": "Modifier la connexion",
+      "noLinked": "Aucune interface associée à cette connexion pour le moment.",
+      "interfaceLeg": "Tronçon d'interface : {{leg}} · Env. : {{env}}",
+      "patternValue": "Modèle : {{value}}",
+      "openInterface": "Ouvrir l'interface",
+      "viewInInterfaceMap": "Voir dans la carte des interfaces"
     },
     "interfaceMap": {
-      "title": "Carte des interfaces"
+      "title": "Carte des interfaces",
+      "infraServices": "Services d'infrastructure",
+      "businessView": "Vue métier : interfaces logiques entre applications.",
+      "technicalView": "Vue technique : routes détaillées à travers les middlewares et les applications ETL.",
+      "showMiddleware": "Afficher les middlewares",
+      "building": "Construction de la carte des interfaces pour {{env}}…",
+      "loadFailed": "Échec du chargement de la carte des interfaces",
+      "empty": "Aucune interface ne correspond aux filtres actuels (environnement, cycle de vie, profondeur).",
+      "applicationDetails": "Détails de l'application",
+      "interfaceDetails": "Détails de l'interface",
+      "description": "Description :",
+      "publisher": "Éditeur :",
+      "servers": "Serveurs :",
+      "noServers": "Aucun serveur affecté.",
+      "businessOwners": "Responsables métier :",
+      "itOwners": "Responsables IT :",
+      "noneListed": "Aucun.",
+      "support": "Informations de support :",
+      "noSupport": "Aucun contact de support.",
+      "editApplication": "Modifier l'application",
+      "criticalityValue": "Criticité : {{value}}",
+      "route": "Route : {{value}}",
+      "bindings": "Liaisons : {{count}}",
+      "viaMiddleware": "Via middleware : {{value}}",
+      "endpointsEnv": "Points de terminaison (environnement : {{env}})",
+      "job": "Tâche : {{value}}",
+      "infraConnections": "Connexions d'infrastructure (environnement : {{env}})",
+      "loadingInfra": "Chargement des connexions d'infrastructure…",
+      "noInfra": "Aucune connexion d'infrastructure liée à cette interface en {{env}}.",
+      "sourceValue": "Source : {{value}}",
+      "destinationValue": "Destination : {{value}}",
+      "protocolsValue": "Protocoles : {{value}}",
+      "bindingValue": "Liaison : {{env}} · {{leg}}",
+      "viewInConnectionMap": "Voir dans la carte des connexions",
+      "editInterface": "Modifier l'interface"
     },
     "settings": {
       "title": "Paramètres de la cartographie SI",
@@ -621,6 +692,28 @@
         "failed": "en panne",
         "paused": "en pause"
       }
+    },
+    "maps": {
+      "freeze": "Figer la disposition (sans réaction)",
+      "unfreeze": "Libérer la disposition (réactions activées)",
+      "autoCenterOn": "Activer le centrage automatique sur la sélection",
+      "autoCenterOff": "Désactiver le centrage automatique sur la sélection",
+      "zoomIn": "Zoom avant",
+      "zoomOut": "Zoom arrière",
+      "snapToGrid": "Aligner sur la grille (aligner les nœuds)",
+      "exportSvg": "Exporter en SVG",
+      "exportPng": "Exporter en PNG",
+      "applications": "Applications",
+      "selectApplications": "Sélectionner des applications",
+      "depth": "Profondeur",
+      "all": "Tout",
+      "updating": "Mise à jour…",
+      "loadingDetails": "Chargement des détails…",
+      "active": "Actif",
+      "criticalityLabel": "Criticité :",
+      "protocolsLabel": "Protocoles :",
+      "sourceEndpoint": "Point de terminaison source : {{value}}",
+      "targetEndpoint": "Point de terminaison cible : {{value}}"
     }
   },
   "workspace": {
@@ -1150,7 +1243,24 @@
         "protocolsPlaceholder": "Sélectionnez les protocoles (à partir des types de connexion)",
         "typicalPorts": "Ports courants",
         "lifecycle": "Cycle de vie",
-        "notes": "Notes"
+        "notes": "Notes",
+        "descriptionPlaceholder": "Ce que fait cette connexion, pourquoi elle existe, points d'attention…",
+        "serversMin": "Serveurs (2 minimum)",
+        "addServer": "Ajouter un serveur",
+        "addProtocol": "Ajouter un protocole",
+        "needTwoServers": "Une connexion multi-serveur nécessite au moins deux serveurs.",
+        "riskDerivation_one": "Dérivation du risque ({{count}} interface)",
+        "riskDerivation_other": "Dérivation du risque ({{count}} interfaces)",
+        "linkExisting": "Associer une existante",
+        "linkedInterfaces": "Interfaces associées ({{count}})",
+        "noLinkedBindings": "Aucune liaison d'interface n'est encore associée à cette connexion.",
+        "linkBinding": "Associer une liaison d'interface",
+        "leg": "Tronçon",
+        "pattern": "Modèle",
+        "target": "Cible",
+        "unlinkBinding": "Dissocier la liaison d'interface",
+        "unlink": "Dissocier",
+        "unlinkFailed": "Échec de la dissociation de la liaison d'interface"
       },
       "layers": {
         "title": "Couches",
@@ -1241,6 +1351,65 @@
         "toServerToServer": "Passer en serveur à serveur effacera la liste multi-serveur.",
         "layersKept_one": "{{count}} couche existante est conservée ; vérifiez ses endpoints après le changement.",
         "layersKept_other": "{{count}} couches existantes sont conservées ; vérifiez leurs endpoints après le changement."
+      },
+      "picker": {
+        "entity": "Entité",
+        "entityPlaceholder": "entité : {{code}} (basculez pour choisir un serveur)",
+        "serverPlaceholder": "ex. : AST-12 ou nom d'hôte",
+        "hopPlaceholder": "ex. : waf-prod-1 ou AST-12",
+        "noEntities": "Aucune entité configurée (configurez-les dans les paramètres IT)",
+        "replaceServer": "Choisir une entité remplace le serveur sélectionné"
+      },
+      "metadata": {
+        "lifecycleMissing": "Cycle de vie manquant",
+        "criticalityMissing": "Criticité manquante",
+        "protocolsMissing": "Protocoles manquants",
+        "derivedFrom": "(dérivée de {{count}})",
+        "derived": "(dérivée)"
+      },
+      "properties": {
+        "removeHops": "Supprimez tous les sauts pour changer de topologie",
+        "derivedFromInterfaces": "Dérivé des interfaces",
+        "linkToDerive": "Associez une liaison d'interface pour activer le risque dérivé",
+        "created": "Créée",
+        "updated": "Mise à jour"
+      },
+      "protocolsTable": {
+        "protocol": "Protocole",
+        "defaultPort": "Port par défaut",
+        "port": "Port"
+      },
+      "linkInterfaces": {
+        "loadFailed": "Échec du chargement des liaisons d'interface",
+        "linkFailed": "Échec de l'association des liaisons d'interface",
+        "title": "Associer des liaisons d'interface",
+        "linkCount": "Associer {{count}}",
+        "searchPlaceholder": "Rechercher par interface, environnement ou point de terminaison…",
+        "noMatch": "Aucune liaison d'interface ne correspond à votre recherche.",
+        "allLinked": "Toutes les liaisons d'interface sont déjà associées à cette connexion.",
+        "selected_one": "{{count}} liaison sélectionnée",
+        "selected_other": "{{count}} liaisons sélectionnées",
+        "selectHint": "Sélectionnez une ou plusieurs liaisons d'interface à associer à cette connexion."
+      },
+      "path": {
+        "title_one": "Chemin réseau ({{count}} saut)",
+        "title_other": "Chemin réseau ({{count}} sauts)",
+        "longWarning": "Chemin réseau long ({{count}} sauts). Vérifiez si tous les intermédiaires doivent être documentés séparément.",
+        "hop": "Saut {{index}}",
+        "functionMissing": "Fonction manquante",
+        "moveHopUp": "Monter le saut",
+        "moveUp": "Monter",
+        "moveHopDown": "Descendre le saut",
+        "moveDown": "Descendre",
+        "removeHop": "Retirer le saut",
+        "protocolsOverride": "Protocoles (surcharge)",
+        "notesPlaceholder": "ex. : assure la terminaison TLS",
+        "destinationPorts": "Ports du service de destination : définis dans {{tab}}",
+        "addHop": "Ajouter un saut",
+        "saveFailed": "Échec de l'enregistrement du saut",
+        "addFailed": "Échec de l'ajout du saut",
+        "removeFailed": "Échec du retrait du saut",
+        "reorderFailed": "Échec du réordonnancement des sauts"
       }
     },
     "interface": {
@@ -1319,6 +1488,49 @@
         "jumpToSubLocations": "Aller aux sous-sites",
         "subLocationCount_one": "{{count}} sous-site",
         "subLocationCount_other": "{{count}} sous-sites"
+      },
+      "overview": {
+        "notesPlaceholder": "Notes sur ce site (détails opérationnels, procédures d'accès, etc.)"
+      },
+      "contacts": {
+        "internalTitle": "Contacts internes",
+        "noInternal": "Aucun contact interne pour le moment.",
+        "pickUser": "Choisir un utilisateur interne",
+        "externalTitle": "Contacts externes",
+        "noExternal": "Aucun contact externe pour le moment.",
+        "contact": "Contact",
+        "websitesTitle": "Sites web utiles",
+        "noWebsites": "Aucun site web lié pour le moment.",
+        "description": "Description",
+        "internalRolePlaceholder": "ex. : responsable des opérations",
+        "externalRolePlaceholder": "ex. : chargé de compte",
+        "openLink": "Ouvrir le lien"
+      },
+      "relations": {
+        "assetsTitle": "Actifs sur ce site",
+        "noAssets": "Aucun actif lié à ce site.",
+        "subLocation": "Sous-site",
+        "type": "Type",
+        "provider": "Fournisseur",
+        "regionZone": "Région / zone",
+        "status": "Statut",
+        "applicationsTitle": "Applications sur ce site",
+        "noApplications": "Aucune application détectée pour ce site.",
+        "environments": "Environnements"
+      },
+      "subItems": {
+        "title": "Sous-sites",
+        "add": "+ Ajouter un sous-site",
+        "empty": "Aucun sous-site défini. Ajoutez des bâtiments, des salles, des baies ou d'autres zones physiques.",
+        "usage": "Utilisation",
+        "namePlaceholder": "ex. : Bâtiment A — Salle 1 — Baie 5",
+        "descriptionPlaceholder": "Description facultative",
+        "nameRequired": "Le nom du sous-site est obligatoire.",
+        "deleteTitle": "Supprimer le sous-site ?",
+        "deleteAria": "Supprimer le sous-site",
+        "deleteUsage_one": "<strong>{{count}} actif est</strong> actuellement affecté à <strong>{{name}}</strong>. Supprimer ce sous-site le laissera sans sous-site.",
+        "deleteUsage_other": "<strong>{{count}} actifs sont</strong> actuellement affectés à <strong>{{name}}</strong>. Supprimer ce sous-site les laissera sans sous-site.",
+        "deleteKeepsAssets": "Les fiches des actifs sont conservées ; seul leur lien au sous-site est effacé."
       }
     }
   },
@@ -1687,6 +1899,7 @@
     "summary_incomplete_other": "{{count}} à compléter",
     "classification": "Classification",
     "data_at_the_highest_confidentiality_level_with_the_lowest_cyber_criticality_check_the_cyber_assessment": "Données au niveau de confidentialité le plus élevé avec la criticité cyber la plus faible : vérifiez l'évaluation cyber.",
-    "no_recovery_test_in_the_last_twelve_months_for_an_application_at_the_most_critical_level": "Aucun test de reprise depuis douze mois pour une application au niveau le plus critique."
+    "no_recovery_test_in_the_last_twelve_months_for_an_application_at_the_most_critical_level": "Aucun test de reprise depuis douze mois pour une application au niveau le plus critique.",
+    "e_g_tier_1": "ex. : Niveau 1"
   }
 }

@@ -7,6 +7,7 @@ import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { formatShortDate } from '../../../lib/dateFormat';
 import { useLocale } from '../../../i18n/useLocale';
 import { classificationText } from '../../../utils/applicationClassification';
+import { useTranslation } from 'react-i18next';
 
 
 type Props = {
@@ -58,8 +59,9 @@ export default function ConnectionPropertiesDrawer({
   onDataClassChange,
   onContainsPiiChange,
 }: Props) {
+  const { t } = useTranslation(['it', 'common']);
   const { data: classificationCatalog } = useApplicationClassificationCatalog();
-  const CRITICALITIES = [{ code: '', label: 'Not set' }, ...(classificationCatalog?.businessCriticalityLevels || [])];
+  const CRITICALITIES = [{ code: '', label: classificationText('Not set') }, ...(classificationCatalog?.businessCriticalityLevels || [])];
   const { byField } = useItOpsEnumOptions();
   const locale = useLocale();
   const lifecycleOptions = byField.lifecycleStatus || [];
@@ -70,7 +72,7 @@ export default function ConnectionPropertiesDrawer({
   return (
     <>
       <PropertyGroup>
-        <PropertyRow label="Lifecycle">
+        <PropertyRow label={t('it:common.lifecycle')}>
           <TextField
             select
             value={lifecycle || ''}
@@ -86,7 +88,7 @@ export default function ConnectionPropertiesDrawer({
             ))}
           </TextField>
         </PropertyRow>
-        <PropertyRow label="Topology">
+        <PropertyRow label={t('it:workspace.asset.connections.topology')}>
           <TextField
             select
             value={topology}
@@ -94,17 +96,17 @@ export default function ConnectionPropertiesDrawer({
             variant="standard"
             sx={drawerSelectSx}
             disabled={disabled || topologyDisabled}
-            helperText={topologyDisabled ? 'Remove all hops to change topology' : undefined}
+            helperText={topologyDisabled ? t('it:workspace.connection.properties.removeHops') : undefined}
             FormHelperTextProps={{ sx: { fontSize: 11, mt: 0.5 } }}
           >
-            <MenuItem value="server_to_server" sx={drawerMenuItemSx}>Server to server</MenuItem>
-            <MenuItem value="multi_server" sx={drawerMenuItemSx}>Multi-server</MenuItem>
+            <MenuItem value="server_to_server" sx={drawerMenuItemSx}>{t('it:enums.topology.serverToServer')}</MenuItem>
+            <MenuItem value="multi_server" sx={drawerMenuItemSx}>{t('it:enums.topology.multiServer')}</MenuItem>
           </TextField>
         </PropertyRow>
       </PropertyGroup>
 
       <PropertyGroup>
-        <PropertyRow label="Risk mode">
+        <PropertyRow label={t('it:workspace.connection.compliance.riskMode')}>
           <TextField
             select
             value={riskMode}
@@ -117,27 +119,27 @@ export default function ConnectionPropertiesDrawer({
             sx={drawerSelectSx}
             disabled={disabled}
           >
-            <MenuItem value="manual" sx={drawerMenuItemSx}>Manual</MenuItem>
+            <MenuItem value="manual" sx={drawerMenuItemSx}>{t('it:enums.riskMode.manual')}</MenuItem>
             <MenuItem
               value="derived"
               disabled={!derivedAvailable && riskMode !== 'derived'}
               sx={drawerMenuItemSx}
             >
-              Derived from interfaces
+              {t('it:workspace.connection.properties.derivedFromInterfaces')}
             </MenuItem>
           </TextField>
           {!derivedAvailable && riskMode === 'manual' && (
             <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary', mt: 0.25 }}>
-              Link an interface binding to enable derived risk
+              {t('it:workspace.connection.properties.linkToDerive')}
             </Typography>
           )}
         </PropertyRow>
-        <PropertyRow label="Criticality">
+        <PropertyRow label={t('it:workspace.connection.compliance.criticality')}>
           {isDerived ? (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, fontSize: 13, color: 'kanap.text.primary' }}>
               {CRITICALITIES.find((c) => c.code === effectiveCriticality)?.label || effectiveCriticality}
               <Typography component="span" sx={{ fontSize: 11, color: 'kanap.text.tertiary' }}>
-                (derived from {derivedInterfaceCount})
+                {t('it:workspace.connection.metadata.derivedFrom', { count: derivedInterfaceCount })}
               </Typography>
               {classificationIncomplete && (
                 <Typography component="span" sx={{ fontSize: 11, color: 'kanap.text.tertiary' }}>
@@ -160,10 +162,10 @@ export default function ConnectionPropertiesDrawer({
             </TextField>
           )}
         </PropertyRow>
-        <PropertyRow label="Data class">
+        <PropertyRow label={t('it:workspace.connection.compliance.dataClass')}>
           {isDerived ? (
             <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>
-              {classificationCatalog?.dataClasses.find((item) => item.code === effectiveDataClass)?.label || effectiveDataClass || 'Not set'}
+              {classificationCatalog?.dataClasses.find((item) => item.code === effectiveDataClass)?.label || effectiveDataClass || classificationText('Not set')}
             </Typography>
           ) : (
             <TextField
@@ -180,7 +182,7 @@ export default function ConnectionPropertiesDrawer({
             </TextField>
           )}
         </PropertyRow>
-        <PropertyRow label="Contains PII">
+        <PropertyRow label={t('it:workspace.connection.compliance.containsPii')}>
           {isDerived ? (
             <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>
               {effectiveContainsPii ? 'Yes' : 'No'}
@@ -197,11 +199,11 @@ export default function ConnectionPropertiesDrawer({
       </PropertyGroup>
 
       <PropertyGroup>
-        <PropertyRow label="Created">
-          <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{formatShortDate(createdAt, locale, { empty: 'Not set' })}</Typography>
+        <PropertyRow label={t('it:workspace.connection.properties.created')}>
+          <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{formatShortDate(createdAt, locale, { empty: classificationText('Not set') })}</Typography>
         </PropertyRow>
-        <PropertyRow label="Updated">
-          <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{formatShortDate(updatedAt, locale, { empty: 'Not set' })}</Typography>
+        <PropertyRow label={t('it:workspace.connection.properties.updated')}>
+          <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{formatShortDate(updatedAt, locale, { empty: classificationText('Not set') })}</Typography>
         </PropertyRow>
       </PropertyGroup>
     </>

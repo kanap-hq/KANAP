@@ -219,10 +219,10 @@ export default function ConnectionsPage() {
           <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, height: '100%' }}>
             <StatusDot color={color} />
             <Box component="span" sx={{ fontSize: 13 }}>
-              {classificationCatalog?.businessCriticalityLevels.find((item) => item.code === value)?.label || value || 'Not set'}
+              {classificationCatalog?.businessCriticalityLevels.find((item) => item.code === value)?.label || value || classificationText('Not set')}
               {isDerived && (
                 <Box component="span" sx={{ fontSize: 11, color: 'kanap.text.tertiary', ml: 0.5 }}>
-                  (derived)
+                  {t('it:workspace.connection.metadata.derived')}
                 </Box>
               )}
               {row?.classification_incomplete && (
@@ -246,14 +246,14 @@ export default function ConnectionsPage() {
       },
     },
     {
-      headerName: 'Data class',
+      headerName: t('it:pages.connections.columns.dataClass'),
       field: 'data_class',
       width: 130,
       valueFormatter: (p) => {
         const row = p.data as ConnectionRow | undefined;
         // A derived connection shows its effective value, unknown (not set) when no interface is linked.
         const value = row?.risk_mode === 'derived' ? row.effective_data_class : p.value;
-        return classificationCatalog?.dataClasses.find((item) => item.code === value)?.label || (value || 'Not set');
+        return classificationCatalog?.dataClasses.find((item) => item.code === value)?.label || (value || classificationText('Not set'));
       },
       cellRenderer: ClickToWorkspace,
       filter: CheckboxSetFilter,
@@ -309,7 +309,7 @@ export default function ConnectionsPage() {
       },
     },
     {
-      headerName: 'Linked interfaces',
+      headerName: t('it:pages.connections.columns.linkedInterfaces'),
       field: 'linked_interface_count',
       width: 130,
       sortable: false,

@@ -122,7 +122,8 @@
         "pii": "PII",
         "risk": "Risk",
         "lifecycle": "Lifecycle",
-        "created": "Created"
+        "created": "Created",
+        "linkedInterfaces": "Linked interfaces"
       },
       "risk": {
         "derivedFromInterfaces": "Derived from {{count}} interfaces",
@@ -175,10 +176,80 @@
       }
     },
     "connectionMap": {
-      "title": "Connection map"
+      "title": "Connection map",
+      "appEnv": "App env",
+      "selectEnv": "Select env",
+      "loadingServers": "Loading servers…",
+      "servers": "Servers",
+      "selectServers": "Select servers, clusters or entities",
+      "selectedServers": "Selected servers ({{count}})",
+      "showMultiServer": "Show multi-server connections",
+      "showLayers": "Show connection layers",
+      "roleBased": "Role-based placement",
+      "building": "Building connection map…",
+      "loadFailed": "Failed to load connection map",
+      "empty": "No connections match the current filters (lifecycle, depth, layers).",
+      "nodeDetails": "Node details",
+      "connectionDetails": "Connection details",
+      "cluster": "Cluster",
+      "typeValue": "Type: {{value}}",
+      "environmentValue": "Environment: {{value}}",
+      "serverType": "Server type:",
+      "serverLocation": "Server location:",
+      "operatingSystem": "Operating system:",
+      "networkSegment": "Network segment:",
+      "ipAddress": "IP address:",
+      "assignedApplications": "Assigned applications:",
+      "noApplications": "No applications assigned.",
+      "viewCluster": "View cluster",
+      "editServer": "Edit server",
+      "clusterHint": "Cluster node: manage members in the Servers workspace.",
+      "purpose": "Purpose:",
+      "typicalPorts": "Typical ports:",
+      "topology": "Topology:",
+      "editConnection": "Edit connection",
+      "noLinked": "No interfaces linked to this connection yet.",
+      "interfaceLeg": "Interface leg: {{leg}} · Env: {{env}}",
+      "patternValue": "Pattern: {{value}}",
+      "openInterface": "Open interface",
+      "viewInInterfaceMap": "View in interface map"
     },
     "interfaceMap": {
-      "title": "Interface map"
+      "title": "Interface map",
+      "infraServices": "Infrastructure services",
+      "businessView": "Business view: logical interfaces between applications.",
+      "technicalView": "Technical view: routes expanded through middleware and ETL applications.",
+      "showMiddleware": "Show middleware",
+      "building": "Building interface map for {{env}}…",
+      "loadFailed": "Failed to load interface map",
+      "empty": "No interfaces match the current filters (environment, lifecycle, depth selection).",
+      "applicationDetails": "Application details",
+      "interfaceDetails": "Interface details",
+      "description": "Description:",
+      "publisher": "Publisher:",
+      "servers": "Servers:",
+      "noServers": "No servers assigned.",
+      "businessOwners": "Business owners:",
+      "itOwners": "IT owners:",
+      "noneListed": "None listed.",
+      "support": "Support information:",
+      "noSupport": "No support contacts.",
+      "editApplication": "Edit application",
+      "criticalityValue": "Criticality: {{value}}",
+      "route": "Route: {{value}}",
+      "bindings": "Bindings: {{count}}",
+      "viaMiddleware": "Via middleware: {{value}}",
+      "endpointsEnv": "Endpoints (environment: {{env}})",
+      "job": "Job: {{value}}",
+      "infraConnections": "Infra connections (environment: {{env}})",
+      "loadingInfra": "Loading infra connections…",
+      "noInfra": "No infra connections linked for this interface in {{env}}.",
+      "sourceValue": "Source: {{value}}",
+      "destinationValue": "Destination: {{value}}",
+      "protocolsValue": "Protocols: {{value}}",
+      "bindingValue": "Binding: {{env}} · {{leg}}",
+      "viewInConnectionMap": "View in connection map",
+      "editInterface": "Edit interface"
     },
     "settings": {
       "title": "IT landscape settings",
@@ -621,6 +692,28 @@
         "failed": "failed",
         "paused": "paused"
       }
+    },
+    "maps": {
+      "freeze": "Freeze layout (no reactions)",
+      "unfreeze": "Unfreeze layout (enable reactions)",
+      "autoCenterOn": "Enable auto-center on selection",
+      "autoCenterOff": "Disable auto-center on selection",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "snapToGrid": "Snap to grid (align nodes)",
+      "exportSvg": "Export as SVG",
+      "exportPng": "Export as PNG",
+      "applications": "Applications",
+      "selectApplications": "Select applications",
+      "depth": "Depth",
+      "all": "All",
+      "updating": "Updating…",
+      "loadingDetails": "Loading details…",
+      "active": "Active",
+      "criticalityLabel": "Criticality:",
+      "protocolsLabel": "Protocols:",
+      "sourceEndpoint": "Source endpoint: {{value}}",
+      "targetEndpoint": "Target endpoint: {{value}}"
     }
   },
   "workspace": {
@@ -1150,7 +1243,24 @@
         "protocolsPlaceholder": "Select protocols (from connection types)",
         "typicalPorts": "Typical ports",
         "lifecycle": "Lifecycle",
-        "notes": "Notes"
+        "notes": "Notes",
+        "descriptionPlaceholder": "What this connection does, why it exists, special considerations…",
+        "serversMin": "Servers (min 2)",
+        "addServer": "Add a server",
+        "addProtocol": "Add a protocol",
+        "needTwoServers": "A multi-server connection needs at least two servers.",
+        "riskDerivation_one": "Risk derivation ({{count}} interface)",
+        "riskDerivation_other": "Risk derivation ({{count}} interfaces)",
+        "linkExisting": "Link existing",
+        "linkedInterfaces": "Linked interfaces ({{count}})",
+        "noLinkedBindings": "No interface bindings link to this connection yet.",
+        "linkBinding": "Link an interface binding",
+        "leg": "Leg",
+        "pattern": "Pattern",
+        "target": "Target",
+        "unlinkBinding": "Unlink interface binding",
+        "unlink": "Unlink",
+        "unlinkFailed": "Failed to unlink interface binding"
       },
       "layers": {
         "title": "Layers",
@@ -1241,6 +1351,65 @@
         "toServerToServer": "Switching to server-to-server will clear the multi-server list.",
         "layersKept_one": "{{count}} existing layer is kept; review its endpoints after the change.",
         "layersKept_other": "{{count}} existing layers are kept; review their endpoints after the change."
+      },
+      "picker": {
+        "entity": "Entity",
+        "entityPlaceholder": "entity: {{code}} (switch to pick a server)",
+        "serverPlaceholder": "e.g., AST-12 or hostname",
+        "hopPlaceholder": "e.g., waf-prod-1 or AST-12",
+        "noEntities": "No entities configured (configure them in IT settings)",
+        "replaceServer": "Picking an entity will replace the selected server"
+      },
+      "metadata": {
+        "lifecycleMissing": "Lifecycle missing",
+        "criticalityMissing": "Criticality missing",
+        "protocolsMissing": "Protocols missing",
+        "derivedFrom": "(derived from {{count}})",
+        "derived": "(derived)"
+      },
+      "properties": {
+        "removeHops": "Remove all hops to change topology",
+        "derivedFromInterfaces": "Derived from interfaces",
+        "linkToDerive": "Link an interface binding to enable derived risk",
+        "created": "Created",
+        "updated": "Updated"
+      },
+      "protocolsTable": {
+        "protocol": "Protocol",
+        "defaultPort": "Default port",
+        "port": "Port"
+      },
+      "linkInterfaces": {
+        "loadFailed": "Failed to load interface bindings",
+        "linkFailed": "Failed to link interface bindings",
+        "title": "Link interface bindings",
+        "linkCount": "Link {{count}}",
+        "searchPlaceholder": "Search by interface, environment or endpoint…",
+        "noMatch": "No interface bindings match your search.",
+        "allLinked": "All interface bindings are already linked to this connection.",
+        "selected_one": "{{count}} binding selected",
+        "selected_other": "{{count}} bindings selected",
+        "selectHint": "Select one or more interface bindings to link to this connection."
+      },
+      "path": {
+        "title_one": "Network path ({{count}} hop)",
+        "title_other": "Network path ({{count}} hops)",
+        "longWarning": "Long network path ({{count}} hops). Consider whether all intermediaries need to be documented separately.",
+        "hop": "Hop {{index}}",
+        "functionMissing": "Function missing",
+        "moveHopUp": "Move hop up",
+        "moveUp": "Move up",
+        "moveHopDown": "Move hop down",
+        "moveDown": "Move down",
+        "removeHop": "Remove hop",
+        "protocolsOverride": "Protocols (override)",
+        "notesPlaceholder": "e.g., handles TLS termination",
+        "destinationPorts": "Destination service ports: defined in {{tab}}",
+        "addHop": "Add hop",
+        "saveFailed": "Failed to save hop",
+        "addFailed": "Failed to add hop",
+        "removeFailed": "Failed to remove hop",
+        "reorderFailed": "Failed to reorder hops"
       }
     },
     "interface": {
@@ -1319,6 +1488,49 @@
         "jumpToSubLocations": "Jump to sub-locations",
         "subLocationCount_one": "{{count}} sub-location",
         "subLocationCount_other": "{{count}} sub-locations"
+      },
+      "overview": {
+        "notesPlaceholder": "Notes about this location (operational details, access procedures, etc.)"
+      },
+      "contacts": {
+        "internalTitle": "Internal contacts",
+        "noInternal": "No internal contacts yet.",
+        "pickUser": "Pick an internal user",
+        "externalTitle": "External contacts",
+        "noExternal": "No external contacts yet.",
+        "contact": "Contact",
+        "websitesTitle": "Relevant websites",
+        "noWebsites": "No websites linked yet.",
+        "description": "Description",
+        "internalRolePlaceholder": "e.g., Ops lead",
+        "externalRolePlaceholder": "e.g., Account manager",
+        "openLink": "Open link"
+      },
+      "relations": {
+        "assetsTitle": "Assets at this location",
+        "noAssets": "No assets linked to this location.",
+        "subLocation": "Sub-location",
+        "type": "Type",
+        "provider": "Provider",
+        "regionZone": "Region / zone",
+        "status": "Status",
+        "applicationsTitle": "Applications at this location",
+        "noApplications": "No applications detected for this location.",
+        "environments": "Environments"
+      },
+      "subItems": {
+        "title": "Sub-locations",
+        "add": "+ Add sub-location",
+        "empty": "No sub-locations defined. Add buildings, rooms, racks or other physical areas.",
+        "usage": "Usage",
+        "namePlaceholder": "e.g., Building A — Room 1 — Rack 5",
+        "descriptionPlaceholder": "Optional description",
+        "nameRequired": "Sub-location name is required.",
+        "deleteTitle": "Delete sub-location?",
+        "deleteAria": "Delete sub-location",
+        "deleteUsage_one": "<strong>{{count}} asset is</strong> currently assigned to <strong>{{name}}</strong>. Deleting this sub-location will leave it without a sub-location assignment.",
+        "deleteUsage_other": "<strong>{{count}} assets are</strong> currently assigned to <strong>{{name}}</strong>. Deleting this sub-location will leave them without a sub-location assignment.",
+        "deleteKeepsAssets": "The asset records themselves are kept; only their sub-location link is cleared."
       }
     }
   },
@@ -1687,6 +1899,7 @@
     "summary_incomplete_other": "{{count}} to complete",
     "classification": "Classification",
     "data_at_the_highest_confidentiality_level_with_the_lowest_cyber_criticality_check_the_cyber_assessment": "Data at the highest confidentiality level with the lowest cyber criticality: check the cyber assessment.",
-    "no_recovery_test_in_the_last_twelve_months_for_an_application_at_the_most_critical_level": "No recovery test in the last twelve months for an application at the most critical level."
+    "no_recovery_test_in_the_last_twelve_months_for_an_application_at_the_most_critical_level": "No recovery test in the last twelve months for an application at the most critical level.",
+    "e_g_tier_1": "e.g., Tier 1"
   }
 }

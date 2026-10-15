@@ -10,7 +10,7 @@ const sources = import.meta.glob<string>(['../**/*.tsx', '!../**/*.test.tsx'], {
 
 const READ_ATTRIBUTES = new Set(['aria-label', 'title', 'placeholder', 'alt', 'label', 'helperText']);
 // Names, units and samples that read the same in every language.
-const NEUTRAL = new Set(['KANAP', 'GLPI', 'Netbox', 'RSS', 'ms', 'EUR', 'EUR, USD, GBP', 'DOC-', '#9BC1FF', 'https://...', 'https://example.com']);
+const NEUTRAL = new Set(['KANAP', 'SSO', 'MFA', 'URL', 'SVG', 'PNG', 'GLPI', 'Netbox', 'RSS', 'ms', 'EUR', 'EUR, USD, GBP', 'DOC-', '#9BC1FF', 'https://...', 'https://example.com']);
 const hasWords = (text: string) => /[A-Za-z]{2,}/.test(text.replace(/&[a-z]+;/gi, '')) && !NEUTRAL.has(text);
 
 function hardcodedTexts(file: string, source: string): string[] {

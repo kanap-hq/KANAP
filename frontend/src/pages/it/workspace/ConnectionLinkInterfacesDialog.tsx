@@ -72,7 +72,7 @@ export default function ConnectionLinkInterfacesDialog({
       } catch (e: any) {
         if (!cancelled) {
           setOptions([]);
-          setError(getApiErrorMessage(e, t, 'Failed to load interface bindings'));
+          setError(getApiErrorMessage(e, t, t('it:workspace.connection.linkInterfaces.loadFailed')));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -108,7 +108,7 @@ export default function ConnectionLinkInterfacesDialog({
       onLinked(res.data.linked || 0);
       onClose();
     } catch (e: any) {
-      setError(getApiErrorMessage(e, t, 'Failed to link interface bindings'));
+      setError(getApiErrorMessage(e, t, t('it:workspace.connection.linkInterfaces.linkFailed')));
     } finally {
       setSubmitting(false);
     }
@@ -117,10 +117,10 @@ export default function ConnectionLinkInterfacesDialog({
   return (
     <KanapDialog
       open={open}
-      title="Link interface bindings"
+      title={t('it:workspace.connection.linkInterfaces.title')}
       onClose={() => !submitting && onClose()}
       onSave={handleSave}
-      saveLabel={selectedIds.size > 0 ? `Link ${selectedIds.size}` : 'Link'}
+      saveLabel={selectedIds.size > 0 ? t('it:workspace.connection.linkInterfaces.linkCount', { count: selectedIds.size }) : t('common:buttons.link')}
       saveDisabled={submitting || selectedIds.size === 0}
       saveLoading={submitting}
       sx={{ maxWidth: 720 }}
@@ -132,7 +132,7 @@ export default function ConnectionLinkInterfacesDialog({
           variant="standard"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by interface, env, endpoint..."
+          placeholder={t('it:workspace.connection.linkInterfaces.searchPlaceholder')}
           autoFocus
           sx={(theme) => ({
             '& input': { fontSize: 13, padding: '8px 12px' },
@@ -159,8 +159,8 @@ export default function ConnectionLinkInterfacesDialog({
             <Box sx={{ p: 3, textAlign: 'center' }}>
               <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>
                 {search
-                  ? 'No interface bindings match your search.'
-                  : 'All interface bindings are already linked to this connection.'}
+                  ? t('it:workspace.connection.linkInterfaces.noMatch')
+                  : t('it:workspace.connection.linkInterfaces.allLinked')}
               </Typography>
             </Box>
           )}
@@ -221,8 +221,8 @@ export default function ConnectionLinkInterfacesDialog({
         </Box>
         <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary' }}>
           {selectedIds.size > 0
-            ? `${selectedIds.size} binding${selectedIds.size > 1 ? 's' : ''} selected`
-            : 'Select one or more interface bindings to link to this connection.'}
+            ? t('it:workspace.connection.linkInterfaces.selected', { count: selectedIds.size })
+            : t('it:workspace.connection.linkInterfaces.selectHint')}
         </Typography>
       </Stack>
     </KanapDialog>

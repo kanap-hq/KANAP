@@ -39,6 +39,7 @@ import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import ConnectionMapGraph, { ClusterMembership, ConnectionMapLink, ConnectionMapNode, GraphControlsApi } from './components/ConnectionMapGraph';
 
 import { useTranslation } from 'react-i18next';
+import { classificationText } from '../../utils/applicationClassification';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 type ApiConnectionMapNode = {
   id: string;
@@ -323,7 +324,7 @@ function buildLinks(
 
 export default function ConnectionMapPage() {
   const { data: classificationCatalog } = useApplicationClassificationCatalog();
-  const businessLabel = (code?: string | null) => classificationCatalog?.businessCriticalityLevels.find((item) => item.code === code)?.label || code || 'Not set';
+  const businessLabel = (code?: string | null) => classificationCatalog?.businessCriticalityLevels.find((item) => item.code === code)?.label || code || classificationText('Not set');
   const { t } = useTranslation(['it', 'common']);
   const navigate = useNavigate();
   const { byField, labelFor, settings } = useItOpsEnumOptions();
@@ -376,7 +377,7 @@ export default function ConnectionMapPage() {
 
   const lifecycleOptions = React.useMemo(() => {
     const list = byField.lifecycleStatus || [];
-    if (list.length === 0) return [{ label: 'Active', value: 'active' }];
+    if (list.length === 0) return [{ label: t('pages.maps.active'), value: 'active' }];
     return list.map((item) => ({
       value: item.code,
       label: item.deprecated ? `${item.label} (deprecated)` : item.label,
@@ -748,11 +749,11 @@ export default function ConnectionMapPage() {
     <Stack spacing={1} direction="column" sx={{ width: '100%' }}>
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} alignItems={{ xs: 'stretch', md: 'center' }} flexWrap="wrap">
         <FormControl size="small" sx={{ minWidth: 220 }}>
-          <InputLabel id="connection-map-lifecycle-label">Lifecycle</InputLabel>
+          <InputLabel id="connection-map-lifecycle-label">{t('common.lifecycle')}</InputLabel>
           <Select
             labelId="connection-map-lifecycle-label"
             multiple
-            label="Lifecycle"
+            label={t('common.lifecycle')}
             value={lifecycleSelectValue}
             renderValue={(selected) => (selected as string[])
               .map((value) => lifecycleOptions.find((opt) => opt.value === value)?.label || labelFor('lifecycleStatus', value) || value)
@@ -802,8 +803,8 @@ export default function ConnectionMapPage() {
           renderInput={(params) => (
             <TextField
               {...params}
-              label="Applications"
-              placeholder="Select applications"
+              label={t('pages.maps.applications')}
+              placeholder={t('pages.maps.selectApplications')}
               InputLabelProps={{ shrink: true }}
               InputProps={{
                 ...params.InputProps,
@@ -818,13 +819,13 @@ export default function ConnectionMapPage() {
           )}
         />
         <FormControl size="small" sx={{ minWidth: 140 }} disabled={selectedAppIds.length === 0}>
-          <InputLabel id="app-env-label" shrink>App Env</InputLabel>
+          <InputLabel id="app-env-label" shrink>{t('pages.connectionMap.appEnv')}</InputLabel>
           <Select
             notched
             displayEmpty
             labelId="app-env-label"
             multiple
-            label="App Env"
+            label={t('pages.connectionMap.appEnv')}
             value={selectedAppEnvs}
             onChange={(e) => {
               const val = typeof e.target.value === 'string'
@@ -835,7 +836,7 @@ export default function ConnectionMapPage() {
             renderValue={(selected) => {
               const arr = selected as string[];
               if (arr.length === 0) {
-                return <span style={{ opacity: 0.5 }}>Select Env</span>;
+                return <span style={{ opacity: 0.5 }}>{t('pages.connectionMap.selectEnv')}</span>;
               }
               return arr.map((s) => s.toUpperCase()).join(', ');
             }}
@@ -851,7 +852,7 @@ export default function ConnectionMapPage() {
         {appServersLoading && (
           <Stack direction="row" spacing={0.5} alignItems="center">
             <CircularProgress size={14} />
-            <Typography variant="caption" color="text.disabled">Loading servers...</Typography>
+            <Typography variant="caption" color="text.disabled">{t('pages.connectionMap.loadingServers')}</Typography>
           </Stack>
         )}
         <Autocomplete
@@ -904,8 +905,8 @@ export default function ConnectionMapPage() {
           renderInput={(params) => (
             <TextField
               {...params}
-              label="Servers"
-              placeholder="Select servers, clusters or entities"
+              label={t('pages.connectionMap.servers')}
+              placeholder={t('pages.connectionMap.selectServers')}
               InputLabelProps={{ shrink: true }}
             />
           )}
@@ -919,7 +920,7 @@ export default function ConnectionMapPage() {
         >
           <Box sx={{ p: 1, maxHeight: 300, overflow: 'auto', minWidth: 200 }}>
             <Typography variant="caption" color="text.secondary" sx={{ px: 1 }}>
-              Selected servers ({rootNodeIds.length})
+              {t('pages.connectionMap.selectedServers', { count: rootNodeIds.length })}
             </Typography>
             <List dense>
               {nodeOptions
@@ -952,7 +953,7 @@ export default function ConnectionMapPage() {
         <TextField
           select
           size="small"
-          label="Depth"
+          label={t('pages.maps.depth')}
           sx={{ minWidth: 120 }}
           value={depthLimit}
           onChange={(e) => {
@@ -962,7 +963,7 @@ export default function ConnectionMapPage() {
         >
           {DEPTH_OPTIONS.map((opt) => (
             <MenuItem key={opt.value} value={opt.value}>
-              {opt.label}
+              {opt.value === 'all' ? t('pages.maps.all') : opt.label}
             </MenuItem>
           ))}
         </TextField>
@@ -980,7 +981,7 @@ export default function ConnectionMapPage() {
               }}
             />
           )}
-          label="Show multi-server connections"
+          label={t('pages.connectionMap.showMultiServer')}
         />
         <FormControlLabel
           control={(
@@ -993,7 +994,7 @@ export default function ConnectionMapPage() {
               }}
             />
           )}
-          label="Show connection layers"
+          label={t('pages.connectionMap.showLayers')}
         />
         <FormControlLabel
           control={(
@@ -1003,9 +1004,9 @@ export default function ConnectionMapPage() {
               onChange={(e) => setRoleTierEnabled(e.target.checked)}
             />
           )}
-          label="Role-based placement"
+          label={t('pages.connectionMap.roleBased')}
         />
-        {isFetching && <Typography variant="caption" color="text.disabled">Updating…</Typography>}
+        {isFetching && <Typography variant="caption" color="text.disabled">{t('pages.maps.updating')}</Typography>}
       </Stack>
     </Stack>
   );
@@ -1021,7 +1022,7 @@ export default function ConnectionMapPage() {
           <Stack spacing={2} alignItems="center">
             <CircularProgress size={32} />
             <Typography variant="body2" color="text.secondary">
-              Building connection map…
+              {t('pages.connectionMap.building')}
             </Typography>
           </Stack>
         </Box>
@@ -1029,15 +1030,15 @@ export default function ConnectionMapPage() {
       {!isLoading && isError && (
         <Alert
           severity="error"
-          action={<Button color="inherit" size="small" onClick={() => refetch()}>Retry</Button>}
+          action={<Button color="inherit" size="small" onClick={() => refetch()}>{t('common:buttons.retry')}</Button>}
           sx={{ mb: 2 }}
         >
-          {error instanceof Error ? error.message : 'Failed to load connection map'}
+          {error instanceof Error ? error.message : t('pages.connectionMap.loadFailed')}
         </Alert>
       )}
       {!isLoading && !isError && filteredGraph.nodes.length === 0 && (
         <Alert severity="info" sx={{ mb: 2 }}>
-          No connections match the current filters (lifecycle, depth, layers).
+          {t('pages.connectionMap.empty')}
         </Alert>
       )}
       {!isLoading && !isError && filteredGraph.nodes.length > 0 && (
@@ -1065,7 +1066,7 @@ export default function ConnectionMapPage() {
             }}
           >
             <Stack spacing={0.5}>
-              <Tooltip title={isFrozen ? 'Unfreeze layout (enable reactions)' : 'Freeze layout (no reactions)'}>
+              <Tooltip title={isFrozen ? t('pages.maps.unfreeze') : t('pages.maps.freeze')}>
                 <IconButton
                   size="small"
                   onClick={() => setIsFrozen((prev) => !prev)}
@@ -1074,7 +1075,7 @@ export default function ConnectionMapPage() {
                   {isFrozen ? <PlayCircleOutlineIcon fontSize="small" /> : <PauseCircleOutlineIcon fontSize="small" />}
                 </IconButton>
               </Tooltip>
-              <Tooltip title={autoCenterEnabled ? 'Disable auto-center on selection' : 'Enable auto-center on selection'}>
+              <Tooltip title={autoCenterEnabled ? t('pages.maps.autoCenterOff') : t('pages.maps.autoCenterOn')}>
                 <IconButton
                   size="small"
                   onClick={() => setAutoCenterEnabled((prev) => !prev)}
@@ -1083,23 +1084,23 @@ export default function ConnectionMapPage() {
                   <CenterFocusStrongIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
-              <Tooltip title="Zoom in">
+              <Tooltip title={t('pages.maps.zoomIn')}>
                 <IconButton size="small" onClick={() => zoomApiRef.current?.zoomIn()}>
                   <ZoomInIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
-              <Tooltip title="Zoom out">
+              <Tooltip title={t('pages.maps.zoomOut')}>
                 <IconButton size="small" onClick={() => zoomApiRef.current?.zoomOut()}>
                   <ZoomOutIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
               <Box sx={{ borderTop: '1px solid', borderColor: 'divider', my: 0.5 }} />
-              <Tooltip title="Snap to grid (align nodes)">
+              <Tooltip title={t('pages.maps.snapToGrid')}>
                 <IconButton size="small" onClick={() => graphControlsRef.current?.snapToGrid()}>
                   <GridOnIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
-              <Tooltip title="Export as SVG">
+              <Tooltip title={t('pages.maps.exportSvg')}>
                 <IconButton size="small" onClick={() => graphControlsRef.current?.exportSvg()}>
                   <Typography
                     variant="caption"
@@ -1109,7 +1110,7 @@ export default function ConnectionMapPage() {
                   </Typography>
                 </IconButton>
               </Tooltip>
-              <Tooltip title="Export as PNG">
+              <Tooltip title={t('pages.maps.exportPng')}>
                 <IconButton size="small" onClick={() => graphControlsRef.current?.exportPng()}>
                   <Typography
                     variant="caption"
@@ -1167,7 +1168,7 @@ export default function ConnectionMapPage() {
             >
               <Stack direction="row" justifyContent="space-between" alignItems="center">
                 <Typography variant="subtitle1">
-                  {selectedNode ? 'Node details' : 'Connection details'}
+                  {selectedNode ? t('pages.connectionMap.nodeDetails') : t('pages.connectionMap.connectionDetails')}
                 </Typography>
                 <Button
                   size="small"
@@ -1176,7 +1177,7 @@ export default function ConnectionMapPage() {
                     setSelectedLinkId(null);
                   }}
                 >
-                  Close
+                  {t('common:buttons.close')}
                 </Button>
               </Stack>
 
@@ -1187,13 +1188,13 @@ export default function ConnectionMapPage() {
                     const summary = serverSummaries[selectedNode.id];
                     const kindLabel =
                       labelFor('serverKind', summary?.data?.kind) ||
-                      (selectedNode.kind === 'cluster' ? 'Cluster' : selectedNode.kind === 'server' ? 'Server' : selectedNode.kind);
+                      (selectedNode.kind === 'cluster' ? t('pages.connectionMap.cluster') : selectedNode.kind === 'server' ? t('workspace.connection.server') : selectedNode.kind);
                     if (selectedNode.kind !== 'server' && selectedNode.kind !== 'cluster') {
                       return (
                         <Stack spacing={0.5}>
-                          <Typography variant="body2">Type: {selectedNode.kind}</Typography>
+                          <Typography variant="body2">{t('pages.connectionMap.typeValue', { value: selectedNode.kind })}</Typography>
                           {selectedNode.environment && (
-                            <Typography variant="body2">Environment: {selectedNode.environment.toUpperCase()}</Typography>
+                            <Typography variant="body2">{t('pages.connectionMap.environmentValue', { value: selectedNode.environment.toUpperCase() })}</Typography>
                           )}
                         </Stack>
                       );
@@ -1201,35 +1202,35 @@ export default function ConnectionMapPage() {
                     return (
                       <Stack spacing={0.75}>
                         {summary?.loading && (
-                          <Typography variant="body2" color="text.secondary">Loading details…</Typography>
+                          <Typography variant="body2" color="text.secondary">{t('pages.maps.loadingDetails')}</Typography>
                         )}
                         {summary?.error && (
                           <Typography variant="body2" color="error">{summary.error}</Typography>
                         )}
-                        <Typography variant="body2"><strong>Server type:</strong> {kindLabel || '—'}</Typography>
+                        <Typography variant="body2"><strong>{t('pages.connectionMap.serverType')}</strong> {kindLabel || '—'}</Typography>
                         <Typography variant="body2">
-                          <strong>Server location:</strong>{' '}
+                          <strong>{t('pages.connectionMap.serverLocation')}</strong>{' '}
                           {summary?.data?.location_reference && summary?.data?.location_name
                             ? `${summary.data.location_reference} · ${summary.data.location_name}`
                             : summary?.data?.location_reference || summary?.data?.location_name || '—'}
                         </Typography>
                         <Typography variant="body2">
-                          <strong>Operating system:</strong>{' '}
+                          <strong>{t('pages.connectionMap.operatingSystem')}</strong>{' '}
                           {summary?.data?.operating_system
                             ? labelFor('operatingSystem', summary.data.operating_system) || summary.data.operating_system
                             : '—'}
                         </Typography>
                         <Typography variant="body2">
-                          <strong>Network segment:</strong>{' '}
+                          <strong>{t('pages.connectionMap.networkSegment')}</strong>{' '}
                           {summary?.data?.network_segment
                             ? labelFor('networkSegment', summary.data.network_segment) || summary.data.network_segment
                             : '—'}
                         </Typography>
                         <Typography variant="body2">
-                          <strong>IP address:</strong> {summary?.data?.ip || '—'}
+                          <strong>{t('pages.connectionMap.ipAddress')}</strong> {summary?.data?.ip || '—'}
                         </Typography>
                         <Box sx={{ mt: 0.75 }}>
-                          <Typography variant="body2"><strong>Assigned applications:</strong></Typography>
+                          <Typography variant="body2"><strong>{t('pages.connectionMap.assignedApplications')}</strong></Typography>
                           {summary?.data?.assigned_applications?.length ? (
                             <Stack spacing={0.6} sx={{ mt: 0.5 }}>
                               {(() => {
@@ -1272,7 +1273,7 @@ export default function ConnectionMapPage() {
                             </Stack>
                           ) : (
                             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                              No applications assigned.
+                              {t('pages.connectionMap.noApplications')}
                             </Typography>
                           )}
                         </Box>
@@ -1284,11 +1285,11 @@ export default function ConnectionMapPage() {
                               navigate(`/it/assets/${selectedNode.id}/overview`);
                             }}
                           >
-                            {selectedNode.kind === 'cluster' ? 'View cluster' : 'Edit server'}
+                            {selectedNode.kind === 'cluster' ? t('pages.connectionMap.viewCluster') : t('pages.connectionMap.editServer')}
                           </Button>
                           {selectedNode.kind === 'cluster' && (
                             <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
-                              Cluster node — manage members in the Servers workspace.
+                              {t('pages.connectionMap.clusterHint')}
                             </Typography>
                           )}
                         </Box>
@@ -1310,13 +1311,13 @@ export default function ConnectionMapPage() {
                   </Stack>
 
                   <Stack spacing={0.5}>
-                    <Typography variant="body2"><strong>Purpose:</strong> {selectedLink.purpose || '—'}</Typography>
-                    <Typography variant="body2"><strong>Protocols:</strong> {selectedLink.protocolLabels.join(', ') || '—'}</Typography>
-                    <Typography variant="body2"><strong>Typical ports:</strong> {selectedLink.typicalPorts || '—'}</Typography>
-                    <Typography variant="body2"><strong>Criticality:</strong> {renderCriticality(selectedLink.criticality)}</Typography>
+                    <Typography variant="body2"><strong>{t('pages.connectionMap.purpose')}</strong> {selectedLink.purpose || '—'}</Typography>
+                    <Typography variant="body2"><strong>{t('pages.maps.protocolsLabel')}</strong> {selectedLink.protocolLabels.join(', ') || '—'}</Typography>
+                    <Typography variant="body2"><strong>{t('pages.connectionMap.typicalPorts')}</strong> {selectedLink.typicalPorts || '—'}</Typography>
+                    <Typography variant="body2"><strong>{t('pages.maps.criticalityLabel')}</strong> {renderCriticality(selectedLink.criticality)}</Typography>
                   </Stack>
 
-                  <Typography variant="body2"><strong>Topology:</strong> {selectedLink.topology === 'multi_server' ? 'Multi-server' : 'Server to server'}</Typography>
+                  <Typography variant="body2"><strong>{t('pages.connectionMap.topology')}</strong> {selectedLink.topology === 'multi_server' ? t('enums.topology.multiServer') : t('enums.topology.serverToServer')}</Typography>
 
                   <Box sx={{ mt: 0.5 }}>
                     <Button
@@ -1328,15 +1329,15 @@ export default function ConnectionMapPage() {
                         if (routeId) navigate(`/it/connections/${routeId}/overview`);
                       }}
                     >
-                      Edit connection
+                      {t('pages.connectionMap.editConnection')}
                     </Button>
                   </Box>
 
                   <Box sx={{ mt: 0.5 }}>
-                    <Typography variant="subtitle2">Linked interfaces</Typography>
+                    <Typography variant="subtitle2">{t('pages.connections.columns.linkedInterfaces')}</Typography>
                     {linkedInterfacesLoading && (
                       <Typography variant="body2" color="text.secondary">
-                        Loading linked interfaces…
+                        {t('workspace.connection.interfaces.loadingLinked')}
                       </Typography>
                     )}
                     {linkedInterfacesError && (
@@ -1346,7 +1347,7 @@ export default function ConnectionMapPage() {
                     )}
                     {!linkedInterfacesLoading && !linkedInterfacesError && linkedInterfaces.length === 0 && (
                       <Typography variant="body2" color="text.secondary">
-                        No interfaces linked to this connection yet.
+                        {t('pages.connectionMap.noLinked')}
                       </Typography>
                     )}
                     {!linkedInterfacesLoading && linkedInterfaces.length > 0 && (
@@ -1365,11 +1366,11 @@ export default function ConnectionMapPage() {
                                 {link.interface_name} ({link.interface_reference || link.interface_code})
                               </Typography>
                               <Typography variant="caption" color="text.secondary">
-                                Interface leg: {link.leg_type.toUpperCase()} · Env: {link.environment.toUpperCase()}
+                                {t('pages.connectionMap.interfaceLeg', { leg: link.leg_type.toUpperCase(), env: link.environment.toUpperCase() })}
                               </Typography>
-                              <Typography variant="body2">Pattern: {link.pattern || '—'}</Typography>
-                              <Typography variant="body2">Source endpoint: {link.source_endpoint || '—'}</Typography>
-                              <Typography variant="body2">Target endpoint: {link.target_endpoint || '—'}</Typography>
+                              <Typography variant="body2">{t('pages.connectionMap.patternValue', { value: link.pattern || '—' })}</Typography>
+                              <Typography variant="body2">{t('pages.maps.sourceEndpoint', { value: link.source_endpoint || '—' })}</Typography>
+                              <Typography variant="body2">{t('pages.maps.targetEndpoint', { value: link.target_endpoint || '—' })}</Typography>
                             </Stack>
                             <Stack spacing={0.25} sx={{ mt: 0.5 }}>
                             </Stack>
@@ -1381,7 +1382,7 @@ export default function ConnectionMapPage() {
                                   navigate(`/it/interfaces/${link.interface_reference || link.interface_id}/overview`);
                                 }}
                               >
-                                Open interface
+                                {t('pages.connectionMap.openInterface')}
                               </Button>
                               <Button
                                 size="small"
@@ -1399,7 +1400,7 @@ export default function ConnectionMapPage() {
                                   navigate(`/it/interface-map?${params.toString()}`);
                                 }}
                               >
-                                View in Interface Map
+                                {t('pages.connectionMap.viewInInterfaceMap')}
                               </Button>
                             </Stack>
                           </Box>
