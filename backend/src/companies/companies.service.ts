@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, EntityManager, In, Repository } from 'typeorm';
 import { Company } from './company.entity';
 import { CompanyMetric } from './company-metric.entity';
+import { Decimal } from '../common/decimal';
 import { sameStoredLifecycle, sameStoredValues } from '../common/csv-sheet/unchanged';
 import { ChartOfAccounts } from '../accounts/chart-of-accounts.entity';
 import { parseExportPagination, parsePagination } from '../common/pagination';
@@ -1018,7 +1019,10 @@ export class CompaniesService {
     /** A yearly metric of the file equal to the stored one: not written again. */
     const sameMetric = (companyId: string, fy: number, metric: { headcount: number; it_users: number | null; turnover: string | null }) => {
       const stored = storedMetrics.get(`${companyId}:${fy}`);
-      return !!stored && sameStoredValues(stored as any, metric);
+      if (!stored || !sameStoredValues(stored as any, { headcount: metric.headcount, it_users: metric.it_users })) return false;
+      // numeric(18,3) reads back as '172.000' while the file gives '172': compared as decimals.
+      if (stored.turnover == null || metric.turnover == null) return stored.turnover == null && metric.turnover == null;
+      return Decimal.from(String(stored.turnover)).cmp(metric.turnover) === 0;
     };
     let inserted = 0;
     let updated = 0;

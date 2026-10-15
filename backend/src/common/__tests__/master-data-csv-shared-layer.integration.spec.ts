@@ -8,6 +8,7 @@ import { AuditLog } from '../../audit/audit.entity';
 import { AuditService } from '../../audit/audit.service';
 import { Company } from '../../companies/company.entity';
 import { CompaniesService } from '../../companies/companies.service';
+import { CompanyMetricsService } from '../../companies/company-metrics.service';
 import { Department } from '../../departments/department.entity';
 import { DepartmentsService } from '../../departments/departments.service';
 import { Role } from '../../roles/role.entity';
@@ -61,6 +62,8 @@ const AMBIGUOUS = '01/03/2027';
 const MONTH_FIRST_NOTICE = 'Dates read month first: 01/03/2027 is January 3.';
 const DAY_FIRST_NOTICE = 'Dates read day first: 01/03/2027 is March 1.';
 const EXTRA_CELLS = 'This row has more cells than the header.';
+/** A year the companies file carries metric columns for. */
+const METRIC_YEAR = new Date().getFullYear();
 
 type Result = {
   ok: boolean;
@@ -164,7 +167,9 @@ function importers(manager: EntityManager, tenantId: string, seeds: Seeds): Impo
     ({ buffer: typeof content === 'string' ? Buffer.from(content, 'utf8') : content }) as Express.Multer.File;
 
   // No metrics in these files: the companies export reads none.
-  const companies = new CompaniesService(undefined as any, audit, { list: async () => ({ items: [] }) } as any);
+  // The real yearly metrics, with no year frozen.
+  const metrics = new CompanyMetricsService(undefined as any, audit, { assertNotFrozen: async () => undefined } as any);
+  const companies = new CompaniesService(undefined as any, audit, metrics);
   const companyBase = (key: string): Row => ({
     name: key,
     country_iso: 'FR',
@@ -255,7 +260,13 @@ function importers(manager: EntityManager, tenantId: string, seeds: Seeds): Impo
       headers: async (language) => headersOf((await companies.exportCsv('template', { manager, language })).content, language),
       base: companyBase,
       samples: () => [
-        { ...companyBase('Round trip company A'), status: 'enabled' },
+        // A yearly metric with a decimal turnover: stored as numeric(18,3), read back as '1250.500'.
+        {
+          ...companyBase('Round trip company A'),
+          status: 'enabled',
+          [`headcount_${METRIC_YEAR}`]: '10',
+          [`turnover_${METRIC_YEAR}`]: '1250,5',
+        },
         { ...companyBase('Round trip company B'), status: 'disabled', disabled_at: '2020-03-31' },
       ],
       broken: (key) => ({ ...companyBase(key), name: '' }),
