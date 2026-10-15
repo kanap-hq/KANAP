@@ -20,7 +20,7 @@ const content: OfferContent = {
       'Starten Sie mit der vollständigen Open-Source-Plattform. Ergänzen Sie Produktionssupport, wenn Souveränität zählt, oder wählen Sie Hosted KANAP, wenn wir den Betrieb übernehmen sollen.',
     plans: [
       {
-        name: 'Self-Hosting',
+        name: 'Self-Hosted',
         badge: 'Open Source · für immer kostenlos',
         target: 'Unbegrenzte Nutzer · unbegrenzte Workspaces',
         price: '0 €',
@@ -47,13 +47,13 @@ const content: OfferContent = {
         period: '/Jahr',
         subPrice: 'Jährliche Abrechnung',
         features: [
-          'Alles aus Self-Hosting',
-          'Ihre Daten bleiben auf Ihrer Infrastruktur',
+          'Alles aus Self-Hosted',
           'Prioritärer E-Mail-Support',
           'Unterstützung bei Installation und Upgrades',
           'Direkte Linie zum Team für Produktionsprobleme',
           '60-min Kickoff-Call mit einem KANAP-Experten',
-          'Beratung für 900 € pro Tag statt 1.150 €',
+          'Über 20 % Rabatt auf Beratung',
+          'Unterstützt das Open-Source-Projekt',
         ],
         ctaLabel: 'Abonnieren',
         ctaHref: '#support-invoice',
@@ -84,14 +84,14 @@ const content: OfferContent = {
         period: '/Mon',
         subPrice: 'oder 2.490 €/Jahr (2 Monate gratis)',
         features: [
-          'Alles aus Self-Hosting',
+          'Alles aus Self-Hosted',
           'Wir hosten, aktualisieren und sichern KANAP für Sie',
           'EU-Hosting für europäische Teams',
           '1.500 Plaid-Nachrichten/Mon enthalten oder eigener Schlüssel ohne Limit',
-          'Agenten enthalten, mit den enthaltenen Nachrichten oder mit Ihrem eigenen LLM-Schlüssel',
           '60-min Kickoff-Call mit einem KANAP-Experten',
           'Prioritärer E-Mail-Support',
-          'Beratung für 900 € pro Tag statt 1.150 €',
+          'Über 20 % Rabatt auf Beratung',
+          'Unterstützt das Open-Source-Projekt',
         ],
         ctaLabel: 'Testversion starten',
         ctaHref: '/trial/start',
@@ -105,11 +105,11 @@ const content: OfferContent = {
     intro: 'Wählen Sie danach, wer den Betrieb führt. Jeder Plan enthält alle Produktfunktionen.',
     items: [
       {
-        title: 'Self-Hosting · kostenlos',
+        title: 'Self-Hosted · kostenlos',
         body: 'Sie haben IT-Kapazität und wollen volle Kontrolle. Bestes Preis-Leistungs-Verhältnis ohne Haken. Community-Support.',
       },
       {
-        title: 'Self-Hosting · mit Support',
+        title: 'Self-Hosted · mit Support',
         body: 'Sie brauchen das Selbsthosting-Modell wegen Souveränität, Compliance oder Datenschutz, möchten aber Produktionssupport und eine direkte Linie bei Problemen.',
       },
       {
@@ -136,11 +136,12 @@ const content: OfferContent = {
     consulting: {
       title: 'Beratung',
       subtitle: 'Kostenpflichtig · Abrechnung pro Tag',
-      body: 'Optionale Hilfe, um mehr Wert aus KANAP zu ziehen: geplante Calls, tiefergehende Arbeit, Advisory. Tarif: 1.150 € pro Tag, 900 € für Kunden mit Support- oder Hosting-Vertrag, MwSt. entfällt (Art. 293 B CGI).',
+      body: 'Durchgeführt von einem erfahrenen CIO, der Ihre Herausforderungen aus eigener Praxis kennt. Optionale Hilfe, um mehr Wert aus KANAP zu ziehen: geplante Calls, tiefergehende Arbeit, Advisory, Funktionen nach Maß. Tarif: 1.150 € pro Tag, 900 € für Kunden mit Support- oder Hosting-Vertrag.',
       items: [
         'Einrichtung, Konfiguration, Onboarding, Schulung',
         'Workflow-Design und Best Practices',
         'CIO-Advisory zu Ihrem IT-Governance-Modell',
+        'Entwicklung spezifischer Funktionen für Ihren Bedarf',
         'Alles, was einen geplanten Call erfordert',
       ],
     },
@@ -148,13 +149,14 @@ const content: OfferContent = {
 
   pilot: {
     title: 'Begleiteter Pilot',
-    subtitle: '2.900 € Festpreis · MwSt. entfällt (Art. 293 B CGI)',
+    subtitle: '2.900 € Festpreis',
     body: 'Ein Engagement, das Ihr Team auf KANAP startet: Wir richten die Plattform mit Ihnen ein, importieren Ihre Daten, schulen Ihr Team, und am Ende arbeitet Ihr erster Agent.',
     items: [
       'Installation auf Ihren Servern oder Einrichtung in der Hosted Cloud',
       'Wir helfen beim Import Ihrer ersten Schlüsseldaten',
       'Schulung und Onboarding Ihres Teams',
-      'Ihr erster Agent konfiguriert',
+      'Konfiguration von Plaid und Agenten',
+      'Einrichtung der Integrationen (Entra ID, Claude oder ChatGPT, NetBox…)',
     ],
     ctaLabel: 'Sprechen Sie mit uns',
     ctaHref: '/contact',

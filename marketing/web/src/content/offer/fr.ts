@@ -20,7 +20,7 @@ const content: OfferContent = {
       'Démarrez avec la plateforme open source complète. Ajoutez le support de production quand la souveraineté compte, ou choisissez KANAP hébergé si vous voulez nous confier l\'exploitation.',
     plans: [
       {
-        name: 'Auto-hébergement',
+        name: 'Auto-hébergé',
         badge: 'Open source · gratuit à vie',
         target: 'Utilisateurs illimités · workspaces illimités',
         price: '0 €',
@@ -47,13 +47,13 @@ const content: OfferContent = {
         period: '/an',
         subPrice: 'Facturation annuelle',
         features: [
-          'Tout ce qui est inclus en auto-hébergement',
-          'Vos données restent sur votre infrastructure',
+          'Tout ce qui est inclus dans Auto-hébergé',
           'Support email prioritaire',
           'Assistance installation et mises à jour',
           'Ligne directe avec l\'équipe pour les incidents de production',
           'Session de cadrage 60 min avec un expert KANAP',
-          'Conseil à 900 € la journée au lieu de 1 150 €',
+          'Plus de 20 % de remise sur le conseil',
+          'Soutient le projet open source',
         ],
         ctaLabel: 'Souscrire',
         ctaHref: '#support-invoice',
@@ -84,14 +84,14 @@ const content: OfferContent = {
         period: '/mois',
         subPrice: 'ou 2 490 €/an (2 mois offerts)',
         features: [
-          'Tout ce qui est inclus en auto-hébergement',
+          'Tout ce qui est inclus dans Auto-hébergé',
           'Nous hébergeons, mettons à jour et sauvegardons KANAP pour vous',
           'Hébergement UE pour les équipes européennes',
           '1 500 messages Plaid/mois inclus, ou votre propre clé en illimité',
-          'Agents inclus, sur les messages inclus ou avec votre propre clé LLM',
           'Session de cadrage 60 min avec un expert KANAP',
           'Support email prioritaire',
-          'Conseil à 900 € la journée au lieu de 1 150 €',
+          'Plus de 20 % de remise sur le conseil',
+          'Soutient le projet open source',
         ],
         ctaLabel: 'Essai gratuit',
         ctaHref: '/trial/start',
@@ -105,11 +105,11 @@ const content: OfferContent = {
     intro: 'Choisissez selon qui opère la plateforme. Toutes les fonctionnalités produit sont dans chaque plan.',
     items: [
       {
-        title: 'Auto-hébergement · gratuit',
+        title: 'Auto-hébergé · gratuit',
         body: 'Vous avez les ressources IT et voulez le contrôle complet. Le meilleur rapport, sans contrepartie. Support communautaire.',
       },
       {
-        title: 'Auto-hébergement · avec support',
+        title: 'Auto-hébergé · avec support',
         body: 'Vous avez besoin du mode auto-hébergé pour la souveraineté, la conformité ou la confidentialité, mais vous voulez un support de production et une ligne directe en cas de problème.',
       },
       {
@@ -136,11 +136,12 @@ const content: OfferContent = {
     consulting: {
       title: 'Conseil',
       subtitle: 'Payant · facturé à la journée',
-      body: 'Aide optionnelle pour tirer plus de valeur de KANAP : appels programmés, travail approfondi, advisory. Tarif : 1 150 € la journée, 900 € pour les clients sous contrat de support ou d\'hébergement, TVA non applicable (art. 293 B du CGI).',
+      body: 'Assuré par un DSI expérimenté, qui connaît vos enjeux de l\'intérieur. Aide optionnelle pour tirer plus de valeur de KANAP : appels programmés, travail approfondi, advisory, fonctionnalités développées pour vous. Tarif : 1 150 € la journée, 900 € pour les clients sous contrat de support ou d\'hébergement.',
       items: [
         'Installation, configuration, onboarding, formation',
         'Conception de workflows et bonnes pratiques',
         'Advisory CIO sur votre modèle de gouvernance IT',
+        'Développement de fonctionnalités spécifiques à vos besoins',
         'Tout ce qui nécessite un appel programmé',
       ],
     },
@@ -148,13 +149,14 @@ const content: OfferContent = {
 
   pilot: {
     title: 'Pilote accompagné',
-    subtitle: '2 900 € forfait · TVA non applicable (art. 293 B du CGI)',
+    subtitle: '2 900 € forfait',
     body: 'Un engagement qui lance votre équipe sur KANAP : nous l\'installons avec vous, importons vos données, formons vos équipes et laissons votre premier agent au travail.',
     items: [
       'Installation sur vos serveurs, ou mise en place hébergée',
       'Nous vous aidons à importer vos premières données clés',
       'Formation et onboarding de votre équipe',
-      'Votre premier agent configuré',
+      'Configuration de Plaid et des agents',
+      'Mise en place des intégrations (Entra ID, Claude ou ChatGPT, NetBox…)',
     ],
     ctaLabel: 'Parlez-nous',
     ctaHref: '/contact',
