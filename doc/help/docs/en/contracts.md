@@ -107,6 +107,7 @@ The row pinned at the bottom reads **Total (n contracts)**. It sums the yearly a
 - **Import CSV** and **Export CSV**: see [CSV import/export](#csv-importexport) (`contracts:admin`)
 - **Export the register**: the compliance register of the contracts the list shows (`contracts:admin`). See [Compliance](#compliance)
 - **Settings**: the decision window of the workspace (`contracts:admin`). See [Decision window](#decision-window)
+- **Delete**: delete the contracts you tick (`contracts:admin`). See [Deleting a contract](#deleting-a-contract)
 
 ---
 
@@ -214,6 +215,16 @@ Linking or removing an application or an asset in **Relations** updates the tab 
 - **Attachments**: a list of files. Use **Add files** or drop files on the section. Click a file to download it
 
 Budget lines are linked on the [Budget](#budget) tab.
+
+### Deleting a contract
+
+**Delete** in the header of the contract page, or in the list for the contracts you tick, deletes contracts (`contracts:admin`). This cannot be undone.
+
+- The links go and the linked items stay: budget lines, applications, assets (also those whose support contract it is) and contacts lose their link to the contract. Its tasks stay, without a contract
+- What belongs to the contract goes with it: its relevant websites, attachments and recorded compliance requirements
+- A confirmation first counts what loses its link and what goes too. A contract linked to nothing and holding nothing is deleted from its page at once
+
+To stop using a contract and keep its history, disable it instead.
 
 ---
 

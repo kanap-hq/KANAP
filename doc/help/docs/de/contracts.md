@@ -107,6 +107,7 @@ Die unten angeheftete Zeile lautet **Gesamt (n Verträge)**. Sie summiert die Ja
 - **CSV importieren** und **CSV exportieren**: siehe [CSV-Import und -Export](#csv-import-und-export) (`contracts:admin`)
 - **Register exportieren**: das Konformitätsregister der Verträge, die die Liste zeigt (`contracts:admin`). Siehe [Konformität](#konformitat)
 - **Einstellungen**: der Entscheidungszeitraum des Arbeitsbereichs (`contracts:admin`). Siehe [Entscheidungszeitraum](#entscheidungszeitraum)
+- **Löschen**: die angehakten Verträge löschen (`contracts:admin`). Siehe [Einen Vertrag löschen](#einen-vertrag-loschen)
 
 ---
 
@@ -214,6 +215,16 @@ Das Verknüpfen oder Entfernen einer Anwendung oder eines Assets unter **Verknü
 - **Anhänge**: eine Liste von Dateien. Nutzen Sie **Dateien hinzufügen** oder ziehen Sie Dateien auf den Abschnitt. Klicken Sie auf eine Datei, um sie herunterzuladen
 
 Budgetzeilen werden im Reiter [Budget](#budget) verknüpft.
+
+### Einen Vertrag löschen
+
+**Löschen** in der Kopfzeile der Vertragsseite, oder in der Liste für die angehakten Verträge, löscht Verträge (`contracts:admin`). Dies kann nicht rückgängig gemacht werden.
+
+- Die Verknüpfungen werden entfernt, die verknüpften Elemente bleiben erhalten: Budgetzeilen, Anwendungen, Assets (auch die, deren Supportvertrag er ist) und Kontakte verlieren ihre Verknüpfung mit dem Vertrag. Seine Aufgaben bleiben erhalten, ohne Vertrag
+- Was zum Vertrag gehört, wird mit ihm gelöscht: seine relevanten Websites, Anhänge und erfassten Konformitätsanforderungen
+- Eine Bestätigung zählt zuerst, was seine Verknüpfung verliert und was ebenfalls gelöscht wird. Ein Vertrag ohne Verknüpfung und ohne Inhalt wird auf seiner Seite sofort gelöscht
+
+Um einen Vertrag nicht mehr zu nutzen und seinen Verlauf zu behalten, deaktivieren Sie ihn stattdessen.
 
 ---
 

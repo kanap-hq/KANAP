@@ -107,6 +107,7 @@ La fila fijada abajo dice **Total (n contratos)**. Suma los importes anuales de 
 - **Importar CSV** y **Exportar CSV**: vea [Importación y exportación CSV](#importacion-y-exportacion-csv) (`contracts:admin`)
 - **Exportar el registro**: el registro de conformidad de los contratos que muestra la lista (`contracts:admin`). Vea [Conformidad](#conformidad)
 - **Ajustes**: el plazo de decisión del espacio de trabajo (`contracts:admin`). Vea [Plazo de decisión](#plazo-de-decision)
+- **Eliminar**: eliminar los contratos marcados (`contracts:admin`). Vea [Eliminar un contrato](#eliminar-un-contrato)
 
 ---
 
@@ -214,6 +215,16 @@ Vincular o quitar una aplicación o un activo en **Relaciones** actualiza la pes
 - **Adjuntos**: una lista de archivos. Use **Agregar archivos** o suelte archivos sobre la sección. Haga clic en un archivo para descargarlo
 
 Las líneas presupuestarias se vinculan en la pestaña [Presupuesto](#presupuesto).
+
+### Eliminar un contrato
+
+**Eliminar**, en la cabecera de la página del contrato o en la lista para los contratos marcados, elimina contratos (`contracts:admin`). Esta acción no se puede deshacer.
+
+- Los vínculos se quitan y los elementos vinculados se conservan: las líneas presupuestarias, aplicaciones, activos (también aquellos de los que es el contrato de soporte) y contactos pierden su vínculo con el contrato. Sus tareas se conservan, sin contrato
+- Lo que pertenece al contrato se elimina con él: sus sitios web relevantes, adjuntos y requisitos de conformidad registrados
+- Una confirmación cuenta primero lo que pierde su vínculo y lo que también se elimina. Un contrato sin vínculos y sin contenido se elimina desde su página sin confirmación
+
+Para dejar de usar un contrato y conservar su historial, desactívelo en su lugar.
 
 ---
 

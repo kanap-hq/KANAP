@@ -107,6 +107,7 @@ La ligne épinglée en bas indique **Total (n contrats)**. Elle additionne les m
 - **Importer CSV** et **Exporter CSV** : voir [Import/export CSV](#importexport-csv) (`contracts:admin`)
 - **Exporter le registre** : le registre de conformité des contrats affichés par la liste (`contracts:admin`). Voir [Conformité](#conformite)
 - **Réglages** : le délai de décision de l'espace de travail (`contracts:admin`). Voir [Délai de décision](#delai-de-decision)
+- **Supprimer** : supprimer les contrats cochés (`contracts:admin`). Voir [Supprimer un contrat](#supprimer-un-contrat)
 
 ---
 
@@ -214,6 +215,16 @@ Lier ou retirer une application ou un actif dans **Relations** met l'onglet à j
 - **Pièces jointes** : une liste de fichiers. Utilisez **Ajouter des fichiers** ou déposez des fichiers sur la section. Cliquez sur un fichier pour le télécharger
 
 Les lignes budgétaires se lient dans l'onglet [Budget](#budget).
+
+### Supprimer un contrat
+
+**Supprimer**, dans l'en-tête de la page du contrat ou dans la liste pour les contrats cochés, supprime des contrats (`contracts:admin`). Cette action est irréversible.
+
+- Les liens disparaissent et les éléments liés sont conservés : les lignes budgétaires, applications, actifs (y compris ceux dont c'est le contrat de support) et contacts perdent leur lien avec le contrat. Ses tâches sont conservées, sans contrat
+- Ce qui appartient au contrat est supprimé avec lui : ses sites web pertinents, ses pièces jointes et ses exigences de conformité renseignées
+- Une confirmation compte d'abord ce qui perd son lien et ce qui est supprimé aussi. Un contrat qui n'est lié à rien et ne contient rien est supprimé depuis sa page sans confirmation
+
+Pour ne plus utiliser un contrat tout en gardant son historique, désactivez-le plutôt.
 
 ---
 
