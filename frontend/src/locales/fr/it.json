@@ -1688,5 +1688,43 @@
     "classification": "Classification",
     "data_at_the_highest_confidentiality_level_with_the_lowest_cyber_criticality_check_the_cyber_assessment": "Données au niveau de confidentialité le plus élevé avec la criticité cyber la plus faible : vérifiez l'évaluation cyber.",
     "no_recovery_test_in_the_last_twelve_months_for_an_application_at_the_most_critical_level": "Aucun test de reprise depuis douze mois pour une application au niveau le plus critique."
+  },
+  "catalogDefaults": {
+    "serverKinds": {
+      "physical_server": "Serveur physique",
+      "virtual_machine": "Machine virtuelle",
+      "container": "Conteneur",
+      "serverless": "Serverless",
+      "appliance": "Appliance",
+      "saas": "SaaS",
+      "other": "Autre",
+      "switch": "Switch",
+      "firewall": "Pare-feu",
+      "load_balancer": "Répartiteur de charge",
+      "access_point": "Point d'accès",
+      "san": "SAN",
+      "nas": "NAS",
+      "backup_appliance": "Appliance de sauvegarde",
+      "tape_library": "Librairie de bandes",
+      "industrial_robot": "Robot industriel",
+      "industrial_machine": "Machine industrielle",
+      "rack": "Baie"
+    },
+    "serverRoles": {
+      "app": "Serveur d'applications",
+      "backup": "Serveur de sauvegarde",
+      "cloud-service": "Service cloud",
+      "db": "Serveur de bases de données",
+      "domain-controller": "Contrôleur de domaine",
+      "file": "Serveur de fichiers",
+      "mail": "Messagerie",
+      "monitoring": "Serveur de supervision",
+      "other": "Autre",
+      "print": "Serveur d'impression",
+      "proxy": "Proxy / passerelle",
+      "remote-desktop": "Bureau à distance",
+      "virtualization": "Hôte de virtualisation",
+      "web": "Serveur web"
+    }
   }
 }

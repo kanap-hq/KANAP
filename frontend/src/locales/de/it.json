@@ -1688,5 +1688,43 @@
     "classification": "Klassifizierung",
     "data_at_the_highest_confidentiality_level_with_the_lowest_cyber_criticality_check_the_cyber_assessment": "Daten auf der höchsten Vertraulichkeitsstufe mit der niedrigsten Cyber-Kritikalität: prüfen Sie die Cyber-Bewertung.",
     "no_recovery_test_in_the_last_twelve_months_for_an_application_at_the_most_critical_level": "Kein Wiederherstellungstest in den letzten zwölf Monaten für eine Anwendung auf der kritischsten Stufe."
+  },
+  "catalogDefaults": {
+    "serverKinds": {
+      "physical_server": "Physischer Server",
+      "virtual_machine": "Virtuelle Maschine",
+      "container": "Container",
+      "serverless": "Serverless",
+      "appliance": "Appliance",
+      "saas": "SaaS",
+      "other": "Sonstiges",
+      "switch": "Switch",
+      "firewall": "Firewall",
+      "load_balancer": "Load Balancer",
+      "access_point": "Access Point",
+      "san": "SAN",
+      "nas": "NAS",
+      "backup_appliance": "Backup-Appliance",
+      "tape_library": "Bandbibliothek",
+      "industrial_robot": "Industrieroboter",
+      "industrial_machine": "Industriemaschine",
+      "rack": "Rack"
+    },
+    "serverRoles": {
+      "app": "Applikationsserver",
+      "backup": "Backup-Server",
+      "cloud-service": "Cloud-Dienst",
+      "db": "Datenbankserver",
+      "domain-controller": "Domänencontroller",
+      "file": "Dateiserver",
+      "mail": "Mail / Messaging",
+      "monitoring": "Monitoring-Server",
+      "other": "Sonstiges",
+      "print": "Druckserver",
+      "proxy": "Proxy / Gateway",
+      "remote-desktop": "Remote Desktop",
+      "virtualization": "Virtualisierungshost",
+      "web": "Webserver"
+    }
   }
 }

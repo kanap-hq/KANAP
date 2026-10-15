@@ -1688,5 +1688,43 @@
     "classification": "Clasificación",
     "data_at_the_highest_confidentiality_level_with_the_lowest_cyber_criticality_check_the_cyber_assessment": "Datos en el nivel de confidencialidad más alto con la criticidad cibernética más baja: compruebe la evaluación cibernética.",
     "no_recovery_test_in_the_last_twelve_months_for_an_application_at_the_most_critical_level": "Ninguna prueba de recuperación en los últimos doce meses para una aplicación en el nivel más crítico."
+  },
+  "catalogDefaults": {
+    "serverKinds": {
+      "physical_server": "Servidor físico",
+      "virtual_machine": "Máquina virtual",
+      "container": "Contenedor",
+      "serverless": "Serverless",
+      "appliance": "Appliance",
+      "saas": "SaaS",
+      "other": "Otro",
+      "switch": "Switch",
+      "firewall": "Cortafuegos",
+      "load_balancer": "Balanceador de carga",
+      "access_point": "Punto de acceso",
+      "san": "SAN",
+      "nas": "NAS",
+      "backup_appliance": "Appliance de copia de seguridad",
+      "tape_library": "Librería de cintas",
+      "industrial_robot": "Robot industrial",
+      "industrial_machine": "Máquina industrial",
+      "rack": "Rack"
+    },
+    "serverRoles": {
+      "app": "Servidor de aplicaciones",
+      "backup": "Servidor de copias de seguridad",
+      "cloud-service": "Servicio en la nube",
+      "db": "Servidor de base de datos",
+      "domain-controller": "Controlador de dominio",
+      "file": "Servidor de archivos",
+      "mail": "Correo / mensajería",
+      "monitoring": "Servidor de monitorización",
+      "other": "Otro",
+      "print": "Servidor de impresión",
+      "proxy": "Proxy / pasarela",
+      "remote-desktop": "Escritorio remoto",
+      "virtualization": "Host de virtualización",
+      "web": "Servidor web"
+    }
   }
 }

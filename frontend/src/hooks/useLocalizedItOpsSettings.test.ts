@@ -39,4 +39,31 @@ describe('useLocalizedItOpsSettings', () => {
     const { result } = renderHook(() => useLocalizedItOpsSettings());
     expect(result.current.data?.lifecycleStates).toEqual([{ code: 'active', label: 'In service' }]);
   });
+
+  it('shows the shipped asset types and server roles in the user language until the tenant renames them', () => {
+    settings.data = {
+      serverKinds: [
+        { code: 'physical_server', label: 'Physical Server', is_physical: true },
+        { code: 'access_point', label: 'Access Point', is_physical: true },
+        { code: 'virtual_machine', label: 'VM', is_physical: false },
+        { code: 'cloud_instance', label: 'Cloud Instance', is_physical: false },
+      ],
+      serverRoles: [
+        { code: 'app', label: 'Application server', graph_tier: 'upper' },
+        { code: 'web', label: 'Frontal web', graph_tier: 'top' },
+      ],
+    } as any;
+    const { result } = renderHook(() => useLocalizedItOpsSettings());
+    expect(result.current.data?.serverKinds).toEqual([
+      { code: 'physical_server', label: 'Serveur physique', is_physical: true },
+      { code: 'access_point', label: "Point d'accès", is_physical: true },
+      // Renamed by the tenant, or added by the tenant: kept as they are.
+      { code: 'virtual_machine', label: 'VM', is_physical: false },
+      { code: 'cloud_instance', label: 'Cloud Instance', is_physical: false },
+    ]);
+    expect(result.current.data?.serverRoles).toEqual([
+      { code: 'app', label: "Serveur d'applications", graph_tier: 'upper' },
+      { code: 'web', label: 'Frontal web', graph_tier: 'top' },
+    ]);
+  });
 });

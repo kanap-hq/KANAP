@@ -1688,5 +1688,43 @@
     "classification": "Classification",
     "data_at_the_highest_confidentiality_level_with_the_lowest_cyber_criticality_check_the_cyber_assessment": "Data at the highest confidentiality level with the lowest cyber criticality: check the cyber assessment.",
     "no_recovery_test_in_the_last_twelve_months_for_an_application_at_the_most_critical_level": "No recovery test in the last twelve months for an application at the most critical level."
+  },
+  "catalogDefaults": {
+    "serverKinds": {
+      "physical_server": "Physical server",
+      "virtual_machine": "Virtual machine",
+      "container": "Container",
+      "serverless": "Serverless",
+      "appliance": "Appliance",
+      "saas": "SaaS",
+      "other": "Other",
+      "switch": "Switch",
+      "firewall": "Firewall",
+      "load_balancer": "Load balancer",
+      "access_point": "Access point",
+      "san": "SAN",
+      "nas": "NAS",
+      "backup_appliance": "Backup appliance",
+      "tape_library": "Tape library",
+      "industrial_robot": "Industrial robot",
+      "industrial_machine": "Industrial machine",
+      "rack": "Rack"
+    },
+    "serverRoles": {
+      "app": "Application server",
+      "backup": "Backup server",
+      "cloud-service": "Cloud service",
+      "db": "Database server",
+      "domain-controller": "Domain controller",
+      "file": "File server",
+      "mail": "Mail / messaging",
+      "monitoring": "Monitoring server",
+      "other": "Other",
+      "print": "Print server",
+      "proxy": "Proxy / gateway",
+      "remote-desktop": "Remote desktop",
+      "virtualization": "Virtualization host",
+      "web": "Web server"
+    }
   }
 }
