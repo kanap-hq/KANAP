@@ -139,7 +139,7 @@ Jede OPEX- und CAPEX-Zeile mit einer Kostenstelle zeigt den Budgetverantwortlich
 
 ### Löschen
 
-Die Schaltfläche **Löschen** in der Kopfzeile löscht das Element sofort (erfordert `cost_centers:admin`). Sie ist deaktiviert, mit dem Grund in einer Zeile, wenn Budgetzeilen die Kostenstelle verwenden (zum Beispiel „Verwendet von 3 OPEX-Zeilen. Deaktivieren Sie sie stattdessen.“) oder wenn die Gruppe noch Elemente enthält (zum Beispiel „Enthält 2 Elemente.“). Deaktivieren Sie das Element stattdessen: Es bleibt auf seinen Zeilen und in den Berichten.
+Die Schaltfläche **Löschen** in der Kopfzeile löscht das Element nach einer Bestätigung (erfordert `cost_centers:admin`). Sie ist deaktiviert, mit dem Grund in einer Zeile, wenn Budgetzeilen die Kostenstelle verwenden (zum Beispiel „Verwendet von 3 OPEX-Zeilen. Deaktivieren Sie sie stattdessen.“) oder wenn die Gruppe noch Elemente enthält (zum Beispiel „Enthält 2 Elemente.“). Deaktivieren Sie das Element stattdessen: Es bleibt auf seinen Zeilen und in den Berichten.
 
 ---
 

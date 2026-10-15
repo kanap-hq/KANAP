@@ -220,9 +220,10 @@ Les lignes budgétaires se lient dans l'onglet [Budget](#budget).
 
 **Supprimer**, dans l'en-tête de la page du contrat ou dans la liste pour les contrats cochés, supprime des contrats (`contracts:admin`). Cette action est irréversible.
 
-- Les liens disparaissent et les éléments liés sont conservés : les lignes budgétaires, applications, actifs (y compris ceux dont c'est le contrat de support) et contacts perdent leur lien avec le contrat. Ses tâches sont conservées, sans contrat
-- Ce qui appartient au contrat est supprimé avec lui : ses sites web pertinents, ses pièces jointes et ses exigences de conformité renseignées
-- Une confirmation compte d'abord ce qui perd son lien et ce qui est supprimé aussi. Un contrat qui n'est lié à rien et ne contient rien est supprimé depuis sa page sans confirmation
+- Les liens disparaissent et les éléments liés sont conservés : les lignes budgétaires, applications, actifs (y compris ceux dont c'est le contrat de support) et contacts perdent leur lien avec le contrat
+- Ce qui appartient au contrat est supprimé avec lui : ses tâches (y compris la tâche de décision de renouvellement), ses sites web pertinents et ses pièces jointes
+- Un contrat avec des exigences de conformité renseignées (un état, y compris **Sans objet**, ou une référence) ne peut pas être supprimé : KANAP indique combien sont renseignées et propose de le désactiver plutôt. Dans la liste, ces contrats sont conservés et les autres sont supprimés
+- Une confirmation vient toujours d'abord. Elle compte ce qui perd son lien et ce qui est supprimé aussi, ou indique que le contrat n'est lié à rien
 
 Pour ne plus utiliser un contrat tout en gardant son historique, désactivez-le plutôt.
 

@@ -220,9 +220,10 @@ Las líneas presupuestarias se vinculan en la pestaña [Presupuesto](#presupuest
 
 **Eliminar**, en la cabecera de la página del contrato o en la lista para los contratos marcados, elimina contratos (`contracts:admin`). Esta acción no se puede deshacer.
 
-- Los vínculos se quitan y los elementos vinculados se conservan: las líneas presupuestarias, aplicaciones, activos (también aquellos de los que es el contrato de soporte) y contactos pierden su vínculo con el contrato. Sus tareas se conservan, sin contrato
-- Lo que pertenece al contrato se elimina con él: sus sitios web relevantes, adjuntos y requisitos de conformidad registrados
-- Una confirmación cuenta primero lo que pierde su vínculo y lo que también se elimina. Un contrato sin vínculos y sin contenido se elimina desde su página sin confirmación
+- Los vínculos se quitan y los elementos vinculados se conservan: las líneas presupuestarias, aplicaciones, activos (también aquellos de los que es el contrato de soporte) y contactos pierden su vínculo con el contrato
+- Lo que pertenece al contrato se elimina con él: sus tareas (incluida la tarea de decisión de renovación), sitios web relevantes y adjuntos
+- Un contrato con requisitos de conformidad registrados (un estado, incluido **No aplica**, o una referencia) no se puede eliminar: KANAP indica cuántos hay registrados y propone desactivarlo en su lugar. En la lista, esos contratos se conservan y los demás se eliminan
+- Siempre aparece primero una confirmación. Cuenta lo que pierde su vínculo y lo que también se elimina, o indica que el contrato no está vinculado a nada
 
 Para dejar de usar un contrato y conservar su historial, desactívelo en su lugar.
 

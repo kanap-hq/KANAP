@@ -220,9 +220,10 @@ Budgetzeilen werden im Reiter [Budget](#budget) verknüpft.
 
 **Löschen** in der Kopfzeile der Vertragsseite, oder in der Liste für die angehakten Verträge, löscht Verträge (`contracts:admin`). Dies kann nicht rückgängig gemacht werden.
 
-- Die Verknüpfungen werden entfernt, die verknüpften Elemente bleiben erhalten: Budgetzeilen, Anwendungen, Assets (auch die, deren Supportvertrag er ist) und Kontakte verlieren ihre Verknüpfung mit dem Vertrag. Seine Aufgaben bleiben erhalten, ohne Vertrag
-- Was zum Vertrag gehört, wird mit ihm gelöscht: seine relevanten Websites, Anhänge und erfassten Konformitätsanforderungen
-- Eine Bestätigung zählt zuerst, was seine Verknüpfung verliert und was ebenfalls gelöscht wird. Ein Vertrag ohne Verknüpfung und ohne Inhalt wird auf seiner Seite sofort gelöscht
+- Die Verknüpfungen werden entfernt, die verknüpften Elemente bleiben erhalten: Budgetzeilen, Anwendungen, Assets (auch die, deren Supportvertrag er ist) und Kontakte verlieren ihre Verknüpfung mit dem Vertrag
+- Was zum Vertrag gehört, wird mit ihm gelöscht: seine Aufgaben (auch die Aufgabe zur Verlängerungsentscheidung), relevanten Websites und Anhänge
+- Ein Vertrag mit erfassten Konformitätsanforderungen (ein Status, auch **Nicht zutreffend**, oder eine Referenz) kann nicht gelöscht werden: KANAP nennt ihre Anzahl und schlägt vor, ihn stattdessen zu deaktivieren. In der Liste bleiben solche Verträge erhalten, die übrigen werden gelöscht
+- Zuerst kommt immer eine Bestätigung. Sie zählt, was seine Verknüpfung verliert und was ebenfalls gelöscht wird, oder sagt, dass der Vertrag mit nichts verknüpft ist
 
 Um einen Vertrag nicht mehr zu nutzen und seinen Verlauf zu behalten, deaktivieren Sie ihn stattdessen.
 

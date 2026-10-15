@@ -220,9 +220,10 @@ Budget lines are linked on the [Budget](#budget) tab.
 
 **Delete** in the header of the contract page, or in the list for the contracts you tick, deletes contracts (`contracts:admin`). This cannot be undone.
 
-- The links go and the linked items stay: budget lines, applications, assets (also those whose support contract it is) and contacts lose their link to the contract. Its tasks stay, without a contract
-- What belongs to the contract goes with it: its relevant websites, attachments and recorded compliance requirements
-- A confirmation first counts what loses its link and what goes too. A contract linked to nothing and holding nothing is deleted from its page at once
+- The links go and the linked items stay: budget lines, applications, assets (also those whose support contract it is) and contacts lose their link to the contract
+- What belongs to the contract goes with it: its tasks (the renewal decision task included), relevant websites and attachments
+- A contract with recorded compliance requirements (a state, including **Not applicable**, or a reference) cannot be deleted: KANAP says how many are recorded and suggests disabling it instead. In the list, such contracts are kept and the others are deleted
+- A confirmation always comes first. It counts what loses its link and what goes too, or says that the contract is linked to nothing
 
 To stop using a contract and keep its history, disable it instead.
 
