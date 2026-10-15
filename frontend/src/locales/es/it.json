@@ -260,7 +260,8 @@
       "protocolsValue": "Protocolos: {{value}}",
       "bindingValue": "Enlace: {{env}} · {{leg}}",
       "viewInConnectionMap": "Ver en el mapa de conexiones",
-      "editInterface": "Editar interfaz"
+      "editInterface": "Editar interfaz",
+      "clusterEndpoint": "{{name}} (clúster)"
     },
     "settings": {
       "title": "Configuración del panorama IT",
@@ -1986,6 +1987,13 @@
     "routeType": {
       "direct": "Directo",
       "viaMiddleware": "Vía middleware"
+    },
+    "entity": {
+      "internal_users": "Usuarios internos",
+      "external_users": "Usuarios externos",
+      "internet": "Internet",
+      "customers": "Clientes",
+      "partner_networks": "Redes de socios"
     }
   },
   "confirmations": {

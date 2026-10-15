@@ -319,7 +319,7 @@ export default function ConnectionMapPage() {
   const businessLabel = (code?: string | null) => classificationCatalog?.businessCriticalityLevels.find((item) => item.code === code)?.label || code || classificationText('Not set');
   const { t } = useTranslation(['it', 'common']);
   const navigate = useNavigate();
-  const { byField, labelFor, settings } = useItOpsEnumOptions();
+  const { byField, labelFor, settings, entityName } = useItOpsEnumOptions();
   const [searchParams, setSearchParams] = useSearchParams();
   const [lifecycles, setLifecycles] = React.useState<string[]>(() => {
     const raw = searchParams.get('lifecycles');
@@ -483,7 +483,9 @@ export default function ConnectionMapPage() {
 
   const graphData = React.useMemo<GraphData>(() => {
     if (!data) return EMPTY_GRAPH;
-    const allNodes = toGraphNodes(data.nodes || []);
+    const allNodes = toGraphNodes(data.nodes || []).map((node) => (
+      node.kind === 'entity' ? { ...node, name: entityName(node.id.replace(/^entity:/, ''), node.name) } : node
+    ));
     const typicalPortsByCode = new Map<string, string>();
     (settings?.connectionTypes || []).forEach((ct) => {
       if (ct.code) typicalPortsByCode.set(ct.code, (ct as any).typicalPorts || (ct as any).typical_ports || '');
@@ -499,7 +501,7 @@ export default function ConnectionMapPage() {
     });
     const nodes = allNodes.filter((n) => nodeIds.has(n.id));
     return { nodes, links };
-  }, [data, showMultiServer, showLayers, settings?.connectionTypes]);
+  }, [data, showMultiServer, showLayers, settings?.connectionTypes, entityName]);
 
   // Memoize clusterMemberships to avoid triggering graph re-render on every parent render
   const clusterMembershipsRaw = React.useMemo(() => {

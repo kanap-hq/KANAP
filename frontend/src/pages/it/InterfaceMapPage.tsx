@@ -251,7 +251,7 @@ export default function InterfaceMapPage() {
   const [autoCenterEnabled, setAutoCenterEnabled] = React.useState<boolean>(true);
   const zoomApiRef = React.useRef<{ zoomIn: () => void; zoomOut: () => void } | null>(null);
   const graphControlsRef = React.useRef<GraphControlsApi | null>(null);
-  const { byField, labelFor, settings } = useItOpsEnumOptions();
+  const { byField, labelFor, settings, entityName } = useItOpsEnumOptions();
   const protocolLabelMap = React.useMemo(
     () => new Map((settings?.connectionTypes || []).map((ct: any) => [String(ct.code || ''), ct.label || ct.code])),
     [settings?.connectionTypes],
@@ -1035,9 +1035,9 @@ export default function InterfaceMapPage() {
                                   entityCode?: string | null,
                                   isCluster?: boolean | null,
                                 ) => {
-                                  const label = serverName || entityLabel || entityCode || serverId;
+                                  const label = serverName || (entityCode ? entityName(entityCode, entityLabel) : entityLabel) || serverId;
                                   if (!label) return '-';
-                                  return isCluster ? `${label} (cluster)` : label;
+                                  return isCluster ? t('pages.interfaceMap.clusterEndpoint', { name: label }) : label;
                                 };
                                 const source = formatEndpoint(
                                   link.connection.source_server_name,

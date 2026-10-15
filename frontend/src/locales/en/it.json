@@ -260,7 +260,8 @@
       "protocolsValue": "Protocols: {{value}}",
       "bindingValue": "Binding: {{env}} · {{leg}}",
       "viewInConnectionMap": "View in connection map",
-      "editInterface": "Edit interface"
+      "editInterface": "Edit interface",
+      "clusterEndpoint": "{{name}} (cluster)"
     },
     "settings": {
       "title": "IT landscape settings",
@@ -1986,6 +1987,13 @@
     "routeType": {
       "direct": "Direct",
       "viaMiddleware": "Via middleware"
+    },
+    "entity": {
+      "internal_users": "Internal users",
+      "external_users": "External users",
+      "internet": "Internet",
+      "customers": "Customers",
+      "partner_networks": "Partner networks"
     }
   },
   "confirmations": {

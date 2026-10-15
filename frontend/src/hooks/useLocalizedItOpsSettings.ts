@@ -29,8 +29,27 @@ const LIFECYCLE_DEFAULTS: CatalogDefaults = {
   },
 };
 
+// The five entities every tenant starts with (stored in English, backend `defaultEntities`), shown in
+// the user's language while the tenant keeps the shipped name.
+const ENTITY_SOURCE: Record<string, { label: string }> = {
+  internal_users: { label: 'Internal Users' },
+  external_users: { label: 'External Users' },
+  internet: { label: 'Internet' },
+  customers: { label: 'Customers' },
+  partner_networks: { label: 'Partner Networks' },
+};
+const ENTITY_DEFAULTS: CatalogDefaults = {
+  source: ENTITY_SOURCE,
+  translated: (locale, code) => {
+    const label = i18n.getResource(locale, 'it', `enums.entity.${code}`);
+    return typeof label === 'string' ? { label } : undefined;
+  },
+};
+
 function catalogDefaults(key: (typeof CATALOG_LISTS)[number]): CatalogDefaults | undefined {
-  return key === 'lifecycleStates' ? LIFECYCLE_DEFAULTS : classificationDefaults(key);
+  if (key === 'lifecycleStates') return LIFECYCLE_DEFAULTS;
+  if (key === 'entities') return ENTITY_DEFAULTS;
+  return classificationDefaults(key);
 }
 
 /**

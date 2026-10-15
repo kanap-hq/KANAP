@@ -260,7 +260,8 @@
       "protocolsValue": "Protokolle: {{value}}",
       "bindingValue": "Bindung: {{env}} · {{leg}}",
       "viewInConnectionMap": "In der Verbindungskarte anzeigen",
-      "editInterface": "Schnittstelle bearbeiten"
+      "editInterface": "Schnittstelle bearbeiten",
+      "clusterEndpoint": "{{name}} (Cluster)"
     },
     "settings": {
       "title": "IT-Landschaft Einstellungen",
@@ -1986,6 +1987,13 @@
     "routeType": {
       "direct": "Direkt",
       "viaMiddleware": "Über Middleware"
+    },
+    "entity": {
+      "internal_users": "Interne Benutzer",
+      "external_users": "Externe Benutzer",
+      "internet": "Internet",
+      "customers": "Kunden",
+      "partner_networks": "Partnernetzwerke"
     }
   },
   "confirmations": {

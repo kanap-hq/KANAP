@@ -260,7 +260,8 @@
       "protocolsValue": "Protocoles : {{value}}",
       "bindingValue": "Liaison : {{env}} · {{leg}}",
       "viewInConnectionMap": "Voir dans la carte des connexions",
-      "editInterface": "Modifier l'interface"
+      "editInterface": "Modifier l'interface",
+      "clusterEndpoint": "{{name}} (cluster)"
     },
     "settings": {
       "title": "Paramètres de la cartographie SI",
@@ -1986,6 +1987,13 @@
     "routeType": {
       "direct": "Direct",
       "viaMiddleware": "Via middleware"
+    },
+    "entity": {
+      "internal_users": "Utilisateurs internes",
+      "external_users": "Utilisateurs externes",
+      "internet": "Internet",
+      "customers": "Clients",
+      "partner_networks": "Réseaux partenaires"
     }
   },
   "confirmations": {
