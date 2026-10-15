@@ -11,9 +11,14 @@ const ENGLISH: Record<UsageType, [string, string]> = {
   applications: ['application', 'applications'],
   assets: ['asset', 'assets'],
   cost_centers: ['cost center', 'cost centers'],
+  departments: ['department', 'departments'],
+  users: ['user', 'users'],
   locations: ['location', 'locations'],
+  tasks: ['task', 'tasks'],
+  interfaces: ['interface', 'interfaces'],
   projects: ['project', 'projects'],
   requests: ['request', 'requests'],
+  team_members: ['team member', 'team members'],
   suppliers: ['supplier', 'suppliers'],
 };
 

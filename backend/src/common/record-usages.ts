@@ -17,9 +17,14 @@ export type UsageType =
   | 'applications'
   | 'assets'
   | 'cost_centers'
+  | 'departments'
+  | 'users'
   | 'locations'
+  | 'tasks'
+  | 'interfaces'
   | 'projects'
   | 'requests'
+  | 'team_members'
   | 'suppliers';
 
 export type UsageItem = {

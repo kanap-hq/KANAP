@@ -15,6 +15,16 @@ const COMPANY_REFERENCING_TABLES: Record<string, string> = {
   spend_allocations: 'budget allocations',
   cost_centers: 'cost centers',
   contracts: 'contracts',
+  spend_items: 'budget lines',
+  departments: 'departments',
+  users: 'users',
+  locations: 'locations',
+  tasks: 'tasks',
+  application_companies: 'applications',
+  interface_companies: 'interfaces',
+  portfolio_projects: 'projects',
+  portfolio_requests: 'requests',
+  portfolio_team_member_configs: 'team members',
 };
 
 @Injectable()
@@ -33,8 +43,8 @@ export class CompaniesDeleteService extends BaseDeleteService<Company> {
   }
 
   /**
-   * A company that budget lines, contracts or cost centers still use cannot go (`COMPANY_IN_USE`,
-   * with the counts per kind). Disabling it is the way out.
+   * A company that anything still uses cannot go (`COMPANY_IN_USE`, with the counts per kind,
+   * `company-usages.ts`). Disabling it is the way out.
    */
   protected override async beforeDelete(entity: Company, manager: EntityManager): Promise<void> {
     await assertNotInUse(manager, entity.tenant_id, entity.id, COMPANY_USAGE_QUERIES, {
