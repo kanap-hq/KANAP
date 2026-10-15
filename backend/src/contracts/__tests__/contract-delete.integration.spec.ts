@@ -1,4 +1,5 @@
 import 'dotenv/config';
+// @database-spec: the database comes through round-inputs.fixtures (data-source).
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { QueryRunner } from 'typeorm';
 import { ContractsDeleteService } from '../contracts-delete.service';

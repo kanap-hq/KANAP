@@ -1,4 +1,5 @@
 import 'dotenv/config';
+// @database-spec: the database comes through round-inputs.fixtures (data-source).
 import { randomUUID } from 'crypto';
 import { existingRecentItems } from '../recent-items';
 import { assert, CAPEX_NUMBER_OFFSET, inRolledBackTransaction, runSpecs, seedTenant, setTenant } from '../../spend/__tests__/round-inputs.fixtures';
