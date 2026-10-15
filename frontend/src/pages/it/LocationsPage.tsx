@@ -13,6 +13,8 @@ import { useCountryName } from '../../i18n/countries';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 
 import { useTranslation } from 'react-i18next';
+import { useLocale } from '../../i18n/useLocale';
+import { formatShortDateTime } from '../../lib/dateFormat';
 import { setListFiltersParam } from '../../lib/listContext';
 type LocationRow = {
   id: string;
@@ -30,6 +32,7 @@ type LocationRow = {
 
 export default function LocationsPage() {
   const { t } = useTranslation(['it', 'common']);
+  const locale = useLocale();
   const navigate = useNavigate();
   const { hasLevel } = useAuth();
   const { labelFor, settings, byField } = useItOpsEnumOptions();
@@ -136,7 +139,7 @@ export default function LocationsPage() {
     },
     { headerName: t('pages.locations.columns.city'), field: 'city', width: 160, filter: 'agTextColumnFilter', cellRenderer: ClickableCell },
     {
-      headerName: 'Sub-locations',
+      headerName: t('pages.locations.columns.subLocations'),
       field: 'sub_locations',
       width: 130,
       filter: false,
@@ -161,7 +164,7 @@ export default function LocationsPage() {
         fontVariantNumeric: 'tabular-nums',
       },
     },
-    { headerName: t('pages.assets.columns.created'), field: 'created_at', width: 160, cellRenderer: ClickableCell },
+    { headerName: t('pages.locations.columns.created'), field: 'created_at', width: 160, valueFormatter: (p: any) => formatShortDateTime(p.value as string | null, locale), cellRenderer: ClickableCell },
   ];
 
   const actions = (

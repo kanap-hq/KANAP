@@ -4,13 +4,13 @@ import baseline from './hardcodedText.baseline.json';
 
 // Every user-facing text goes through i18n. This scan finds English left in the JSX of the
 // components: text between tags and the attributes a user reads or hears (labels, titles,
-// placeholders, aria labels). The baseline lists the files that still hold some, with their
+// placeholders, aria labels) and grid column headers. The baseline lists the files that still hold some, with their
 // count: a file may lose hard-coded texts, never gain one, and a file outside it holds none.
 const sources = import.meta.glob<string>(['../**/*.tsx', '!../**/*.test.tsx'], { query: '?raw', import: 'default', eager: true });
 
 const READ_ATTRIBUTES = new Set(['aria-label', 'title', 'placeholder', 'alt', 'label', 'helperText']);
 // Names, units and samples that read the same in every language.
-const NEUTRAL = new Set(['KANAP', 'SSO', 'MFA', 'URL', 'SVG', 'PNG', 'GLPI', 'Netbox', 'RSS', 'ms', 'EUR', 'EUR, USD, GBP', 'DOC-', '#9BC1FF', 'https://...', 'https://example.com']);
+const NEUTRAL = new Set(['KANAP', 'SSO', 'MFA', 'URL', 'SVG', 'PNG', 'GLPI', 'Netbox', 'RSS', 'ms', 'EUR', 'EUR, USD, GBP', 'DOC-', '#9BC1FF', 'https://...', 'https://example.com', 'RTO', 'RPO']);
 const hasWords = (text: string) => /[A-Za-z]{2,}/.test(text.replace(/&[a-z]+;/gi, '')) && !NEUTRAL.has(text);
 
 function hardcodedTexts(file: string, source: string): string[] {
@@ -29,6 +29,10 @@ function hardcodedTexts(file: string, source: string): string[] {
           ? init.expression
           : null;
       if (literal && hasWords(literal.text)) found.push(literal.text);
+    } else if (ts.isPropertyAssignment(node) && node.name.getText(sf) === 'headerName'
+      && (ts.isStringLiteral(node.initializer) || ts.isNoSubstitutionTemplateLiteral(node.initializer))
+      && hasWords(node.initializer.text)) {
+      found.push(node.initializer.text);
     }
     ts.forEachChild(node, visit);
   };

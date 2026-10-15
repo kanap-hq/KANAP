@@ -34,6 +34,8 @@ import DeleteSelectedButton from '../../components/DeleteSelectedButton';
 import api from '../../api';
 
 import { useTranslation } from 'react-i18next';
+import { useLocale } from '../../i18n/useLocale';
+import { formatShortDateTime } from '../../lib/dateFormat';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { classificationText } from '../../utils/applicationClassification';
 import { setListFiltersParam } from '../../lib/listContext';
@@ -61,6 +63,7 @@ export default function InterfacesPage() {
   const { data: classificationCatalog } = useApplicationClassificationCatalog();
   const businessLabel = (code?: string | null) => classificationCatalog?.businessCriticalityLevels.find((item) => item.code === code)?.label || code || classificationText('Not set');
   const { t } = useTranslation(['it', 'common']);
+  const locale = useLocale();
   const theme = useTheme();
   const navigate = useNavigate();
   const { hasLevel } = useAuth();
@@ -286,7 +289,7 @@ export default function InterfacesPage() {
       ]),
       cellRenderer: ClickToWorkspace,
     },
-    { headerName: t('pages.assets.columns.created'), field: 'created_at', width: 180, cellRenderer: ClickToWorkspace },
+    { headerName: t('pages.assets.columns.created'), field: 'created_at', width: 180, valueFormatter: (p: any) => formatShortDateTime(p.value as string | null, locale), cellRenderer: ClickToWorkspace },
     {
       headerName: t('pages.interfaces.columns.businessProcess'),
       field: 'business_process_id',

@@ -16,6 +16,8 @@ import CheckboxSetFilter from '../../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
 
 import { useTranslation } from 'react-i18next';
+import { useLocale } from '../../i18n/useLocale';
+import { formatShortDate, formatShortDateTime } from '../../lib/dateFormat';
 import { setListFiltersParam, getWithListContext } from '../../lib/listContext';
 type AssetRow = {
   id: string;
@@ -52,6 +54,7 @@ const ENV_ORDER = ['prod', 'pre_prod', 'qa', 'test', 'dev', 'sandbox'];
 
 export default function AssetsPage() {
   const { t } = useTranslation(['it', 'common']);
+  const locale = useLocale();
   const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -391,6 +394,7 @@ export default function AssetsPage() {
       field: 'go_live_date',
       width: 120,
       hide: true,
+      valueFormatter: (p: any) => formatShortDate(p.value as string | null, locale, { year: 'always' }),
       cellRenderer: ClickToWorkspace,
     },
     {
@@ -398,6 +402,7 @@ export default function AssetsPage() {
       field: 'end_of_life_date',
       width: 120,
       hide: true,
+      valueFormatter: (p: any) => formatShortDate(p.value as string | null, locale, { year: 'always' }),
       cellRenderer: ClickToWorkspace,
     },
     {
@@ -409,7 +414,7 @@ export default function AssetsPage() {
       valueFormatter: (p) => p.value ?? 0,
       cellRenderer: ClickToWorkspace,
     },
-    { headerName: t('pages.assets.columns.created'), field: 'created_at', width: 180, cellRenderer: ClickToWorkspace },
+    { headerName: t('pages.assets.columns.created'), field: 'created_at', width: 180, valueFormatter: (p: any) => formatShortDateTime(p.value as string | null, locale), cellRenderer: ClickToWorkspace },
   ], [ClickToWorkspace, ClusterCell, EnvironmentCell, envLabel, envLabelMap, getAssetFilterValues, labelFor, lifecycleLabel, t]);
 
   const actions = (

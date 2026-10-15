@@ -123,13 +123,16 @@
         "risk": "Risiko",
         "lifecycle": "Lebenszyklus",
         "created": "Erstellt",
-        "linkedInterfaces": "Verknüpfte Schnittstellen"
+        "linkedInterfaces": "Verknüpfte Schnittstellen",
+        "endpoints": "Endpunkte"
       },
       "risk": {
         "derivedFromInterfaces": "Abgeleitet von {{count}} Schnittstellen",
         "derivedNoInterfaces": "Abgeleitet (keine Schnittstellen verknüpft)",
         "manual": "Manuell"
-      }
+      },
+      "serverCount_one": "{{count}} Server",
+      "serverCount_other": "{{count}} Server"
     },
     "interfaces": {
       "title": "Schnittstellen",
@@ -174,7 +177,8 @@
         "country": "Land",
         "city": "Stadt",
         "assets": "Assets",
-        "created": "Erstellt"
+        "created": "Erstellt",
+        "subLocations": "Unterstandorte"
       }
     },
     "connectionMap": {
