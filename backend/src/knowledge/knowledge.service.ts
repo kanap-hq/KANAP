@@ -98,6 +98,10 @@ const KNOWLEDGE_TEXT_SORTS: Record<string, string> = {
           LIMIT 1)`,
 };
 
+/** The stable keys the library and folder filters of the screen use (see `list`). */
+const KNOWLEDGE_LIBRARY_KEY_SQL = 'dl.slug';
+const KNOWLEDGE_FOLDER_KEY_SQL = 'COALESCE(f.system_key, f.name)';
+
 export type RelationEntityType =
   | 'applications'
   | 'assets'
@@ -2721,14 +2725,22 @@ export class KnowledgeService {
       'current_version_number',
       'primary_owner_name',
       'library_name',
+      'library_key',
       'document_type_name',
       'template_name',
     ]);
     const sortField = allowedSort.has(sort.field) ? sort.field : 'updated_at';
     // Text sorts alphabetically, case and accents ignored (`textSortKey`), on the expressions the
-    // output aliases name (an alias cannot take a collation).
+    // output aliases name (an alias cannot take a collation). The library column of the screen
+    // (`library_key`) follows the library bar order: the shipped libraries show in the reader's
+    // language, so an order on the stored English name would look random.
     const textExpression = KNOWLEDGE_TEXT_SORTS[sortField];
-    const sortExpression = textExpression ? (await textSortKey(manager))(textExpression) : `d.${sortField}`;
+    const sortExpression = sortField === 'library_key'
+      ? 'dl.display_order'
+      : textExpression ? (await textSortKey(manager))(textExpression) : `d.${sortField}`;
+    const secondarySortExpression = sortField === 'library_key'
+      ? (await textSortKey(manager))(KNOWLEDGE_TEXT_SORTS.library_name)
+      : null;
 
     const qb = manager
       .getRepository(Document)
@@ -2758,8 +2770,11 @@ export class KnowledgeService {
         'd.created_at AS created_at',
         'd.updated_at AS updated_at',
         'f.name AS folder_name',
+        'f.system_key AS folder_system_key',
+        `${KNOWLEDGE_FOLDER_KEY_SQL} AS folder_key`,
         'dl.name AS library_name',
         'dl.slug AS library_slug',
+        `${KNOWLEDGE_LIBRARY_KEY_SQL} AS library_key`,
         'dtype.name AS document_type_name',
         'td.title AS template_name',
         `(SELECT w.requested_revision
@@ -2975,6 +2990,26 @@ export class KnowledgeService {
       }
     }
 
+    // CheckboxSetFilter on the stable keys of the screen: the library slug, and the folder's system
+    // key (a tenant folder, which has none, by its name). The shipped library and folders show in
+    // the reader's language, so their English names cannot be the filter values.
+    for (const [field, expression, param] of [
+      ['library_key', KNOWLEDGE_LIBRARY_KEY_SQL, 'libraryKeys'],
+      ['folder_key', KNOWLEDGE_FOLDER_KEY_SQL, 'folderKeys'],
+    ] as const) {
+      const keyFilter = (filters as any)?.[field];
+      if (keyFilter?.filterType !== 'set' || !Array.isArray(keyFilter.values) || keyFilter.values.length === 0) continue;
+      const hasNull = keyFilter.values.includes(null);
+      const nonNull = keyFilter.values.filter((v: any) => v !== null).map((v: any) => String(v));
+      if (hasNull && nonNull.length > 0) {
+        qb.andWhere(`(${expression} = ANY(:${param}) OR ${expression} IS NULL)`, { [param]: nonNull });
+      } else if (hasNull) {
+        qb.andWhere(`${expression} IS NULL`);
+      } else {
+        qb.andWhere(`${expression} = ANY(:${param})`, { [param]: nonNull });
+      }
+    }
+
     // CheckboxSetFilter: primary_owner_name
     const ownerNameFilter = (filters as any)?.primary_owner_name;
     if (ownerNameFilter?.filterType === 'set' && Array.isArray(ownerNameFilter.values) && ownerNameFilter.values.length > 0) {
@@ -2998,8 +3033,9 @@ export class KnowledgeService {
 
     const total = await qb.getCount();
 
+    qb.orderBy(sortExpression, sort.direction as 'ASC' | 'DESC');
+    if (secondarySortExpression) qb.addOrderBy(secondarySortExpression, sort.direction as 'ASC' | 'DESC');
     const rows = await qb
-      .orderBy(sortExpression, sort.direction as 'ASC' | 'DESC')
       .addOrderBy('d.item_number', 'DESC')
       .offset(skip)
       .limit(limit)
@@ -3181,6 +3217,23 @@ export class KnowledgeService {
            ORDER BY 1`,
           scopeParams,
         ).then((rows: any[]) => ['folder_name', rows.map((r: any) => r.name)]),
+      );
+    }
+
+    for (const [field, expression, join] of [
+      ['library_key', KNOWLEDGE_LIBRARY_KEY_SQL, 'LEFT JOIN document_libraries dl ON dl.id = d.library_id AND dl.tenant_id = d.tenant_id'],
+      ['folder_key', KNOWLEDGE_FOLDER_KEY_SQL, 'LEFT JOIN document_folders f ON f.id = d.folder_id AND f.tenant_id = d.tenant_id'],
+    ] as const) {
+      if (!shouldReturn(field)) continue;
+      promises.push(
+        manager.query(
+          `SELECT DISTINCT ${expression} AS value
+           FROM documents d
+           ${join}
+           WHERE ${scopeWhere}
+           ORDER BY 1`,
+          scopeParams,
+        ).then((rows: any[]) => [field, rows.map((r: any) => r.value)]),
       );
     }
 
@@ -3573,6 +3626,7 @@ export class KnowledgeService {
     const rows = await manager.query(
       `SELECT d.*,
               f.name AS folder_name,
+              f.system_key AS folder_system_key,
               dl.name AS library_name,
               dl.slug AS library_slug,
               dtype.name AS document_type_name,
