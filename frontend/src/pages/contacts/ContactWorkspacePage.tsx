@@ -31,7 +31,8 @@ import {
   safeReturnTo,
 } from './contactModel';
 import { ContactNameTitle, ContactPhoneField, ContactRoleSelect, MetadataMenu, useContactRoleOptions } from './ContactFields';
-import RecordUsagesSection, { scrollToUsages, useRecordUsages } from '../../components/usages/RecordUsagesSection';
+import RecordUsagesSection, { recordUsagesKey, scrollToUsages, useRecordUsages } from '../../components/usages/RecordUsagesSection';
+import { SUPPLIERS_PATH } from '../suppliers/supplierModel';
 
 const LIST_PATH = '/master-data/contacts';
 const DRAWER_KEY = 'kanap.contacts.drawerOpen';
@@ -124,6 +125,10 @@ function ContactEditor({ id }: { id: string }) {
         void queryClient.invalidateQueries({ queryKey: detailKey, exact: true });
         // Supplier pages list their contacts with names, roles and phones.
         void queryClient.invalidateQueries({ queryKey: ['supplier-contacts'] });
+        // The "Used by" section shows the supplier with the contact type.
+        if (field === 'supplier_id' || field === 'supplier_role') {
+          void queryClient.invalidateQueries({ queryKey: recordUsagesKey('contacts', id), exact: true });
+        }
       } catch (e) {
         const status = (e as { response?: { status?: number } } | null)?.response?.status;
         const message = field === 'email' && status === 400
@@ -552,6 +557,8 @@ function ContactCreate() {
   const rawRole = searchParams.get('supplier_role');
   const prefillRole = prefillSupplierId && isContactRole(rawRole) ? rawRole : null;
   const returnTo = safeReturnTo(searchParams.get('returnTo'));
+  // Opened from a supplier, the way back names the suppliers.
+  const backLabel = returnTo?.startsWith(`${SUPPLIERS_PATH}/`) ? t('suppliers.title') : t('contacts.title');
 
   const [values, setValues] = React.useState<CreateValues>({
     email: '',
@@ -658,7 +665,7 @@ function ContactCreate() {
         tabs={[{ key: 'overview', label: t('shared.labels.overview') }]}
         onTabChange={() => undefined}
         drawerStorageKey={DRAWER_KEY}
-        backLabel={t('contacts.title')}
+        backLabel={backLabel}
         onBack={close}
         title={title ?? ''}
         titleFallback={t('contacts.newContact')}

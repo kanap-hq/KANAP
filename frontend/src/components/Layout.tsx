@@ -576,8 +576,14 @@ export default function Layout() {
             });
             // One item selected: the one whose path matches the page most closely, so a section's
             // home (`/ops`) is not selected on every page under it (`/ops/budget`).
-            const matches = (to: string) => location.pathname === to || location.pathname.startsWith(to + '/')
-              || (to === '/ops/budget' && /^\/ops\/(opex|capex)(\/|$)/.test(location.pathname));
+            // A form opened from another page of the app (`returnTo`, a contact created from a
+            // supplier) keeps that page's entry selected.
+            const returnTo = new URLSearchParams(location.search).get('returnTo');
+            const navPath = returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//')
+              ? returnTo.split(/[?#]/)[0]
+              : location.pathname;
+            const matches = (to: string) => navPath === to || navPath.startsWith(to + '/')
+              || (to === '/ops/budget' && /^\/ops\/(opex|capex)(\/|$)/.test(navPath));
             const selectedTo = visible.filter(isNavItem).map((entry) => entry.to).filter(matches)
               .reduce<string | null>((best, to) => (best == null || to.length > best.length ? to : best), null);
 
