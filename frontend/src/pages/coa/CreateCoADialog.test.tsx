@@ -62,6 +62,17 @@ describe('CreateCoADialog', () => {
     expect(onCreated).toHaveBeenCalledWith('new-chart');
   });
 
+  it('drops "Choose a country." once all countries is chosen', async () => {
+    renderDialog();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Code' }), { target: { value: 'GROUP' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), { target: { value: 'Group chart' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    expect(await screen.findByText('Choose a country.')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('radio', { name: 'All countries' }));
+    expect(screen.queryByText('Choose a country.')).not.toBeInTheDocument();
+  });
+
   it('creates an all-countries chart without country or default', async () => {
     renderDialog();
     fireEvent.change(screen.getByRole('textbox', { name: 'Code' }), { target: { value: 'GROUP' } });

@@ -463,7 +463,7 @@ export class BusinessProcessesService {
       try {
         content = decodeCsv(buf as Buffer).text;
       } catch (err) {
-        reject(err instanceof CsvDecodeError ? new BadRequestException(err.message) : err);
+        reject(err instanceof CsvDecodeError ? new BadRequestException({ message: err.message, code: err.code }) : err);
         return;
       }
       parseString(content, { headers: true, delimiter, ignoreEmpty: true, trim: true })

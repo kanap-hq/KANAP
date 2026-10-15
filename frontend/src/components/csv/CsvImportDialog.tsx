@@ -6,6 +6,7 @@ import type { TFunction } from 'i18next';
 import api from '../../api';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { csvRequestErrorMessage } from './csvRequestError';
+import { CsvReportMessage, csvMessageText } from './csvMessage';
 import { AmountReading, DateReading, amountReadingOf, dateReadingOf, screenLanguage } from './readings';
 
 type ImportReport = {
@@ -30,11 +31,11 @@ type ImportReport = {
  * `code`: the error code the interface translates, when the server gave one (MARKDOWN_TOO_LARGE, ...),
  * with the values its sentence names (`params`). Row 0 is the header.
  */
-type RowError = { row: number; column?: string; message: string; code?: string; params?: Record<string, string | number> };
+type RowError = CsvReportMessage;
 
 /** A row error in the interface language when it has a code, with the column it is about. */
 function rowErrorText(err: RowError, t: TFunction): string {
-  const message = err.code ? t(`errors:${err.code}`, { ...err.params, defaultValue: err.message }) : err.message;
+  const message = csvMessageText(err, t);
   if (err.row === 0) return t('csv.headerError', { message });
   return err.code && err.column
     ? t('csv.rowColumnError', { row: err.row, column: err.column, message })
@@ -97,7 +98,9 @@ export default function CsvImportDialog({
   // What the shown report says, when it is one of the sentences the dialog knows.
   const appliedDates = dateReadingOf(dateNotice);
   const appliedAmounts = amountReadingOf(amountNotice);
-  const ignoredColumns = report?.ignoredColumns ?? [];
+  // A file refused for its header ignores nothing: the header error already names the unknown columns.
+  const headerRefused = (report?.errors ?? []).some((e) => e.row < 2);
+  const ignoredColumns = headerRefused ? [] : report?.ignoredColumns ?? [];
   // Shown with the check, before the load: the rows import as the warnings say.
   const warnings = report?.dryRun ? report.warnings ?? [] : [];
   // A dry run is re-checked and then loaded; a finished import only reports its outcome.
@@ -118,6 +121,9 @@ export default function CsvImportDialog({
     // A new file decides its own reading: the next check starts from the server's choice.
     setDateOrder(null);
     setAmountReading(null);
+    // The report and the error were about the previous file.
+    setReport(null);
+    setRequestError(null);
     setFile(next);
   };
 
@@ -289,9 +295,9 @@ export default function CsvImportDialog({
               <Alert severity="success">
                 {preflight ? (
                   (report as any).dryRun ? (
-                    <>{t('csv.preflightOk', { total: (report as any).total, inserted: (report as any).inserted, updated: (report as any).updated })}</>
+                    <>{t('csv.preflightOk', { count: (report as any).total ?? 0, inserted: (report as any).inserted, updated: (report as any).updated })}</>
                   ) : (
-                    <>{t('csv.loadedSuccessfully', { total: (report as any).processed ?? (report as any).total ?? '' })}</>
+                    <>{t('csv.loadedSuccessfully', { count: (report as any).processed ?? (report as any).total ?? 0 })}</>
                   )
                 ) : (
                   <>{t('csv.uploadCompleted')}</>

@@ -1,6 +1,9 @@
 export type CsvEncoding = 'utf-8' | 'windows-1252';
 
 export class CsvDecodeError extends Error {
+  /** The code the interface translates. */
+  readonly code = 'CSV_ENCODING_UNSUPPORTED';
+
   constructor(message: string) {
     super(message);
     this.name = 'CsvDecodeError';

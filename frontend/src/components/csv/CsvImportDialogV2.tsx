@@ -74,17 +74,23 @@ export default function CsvImportDialogV2({
     setTimeout(reset, 300);
   }, [onClose, reset]);
 
+  const chooseFile = (next: File | null | undefined) => {
+    if (!next) return;
+    // The report and the error were about the previous file.
+    setResult(null);
+    setError(null);
+    setFile(next);
+  };
+
   const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setHover(false);
-    const f = e.dataTransfer.files?.[0];
-    if (f) setFile(f);
+    chooseFile(e.dataTransfer.files?.[0]);
   };
 
   const onPick = () => inputRef.current?.click();
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0] || null;
-    if (f) setFile(f);
+    chooseFile(e.target.files?.[0]);
   };
 
   const upload = async (dryRun: boolean) => {

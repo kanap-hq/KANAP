@@ -268,7 +268,10 @@ export default function CreateCoADialog({
             row
             aria-label={t('coa.createDialog.coverageLabel')}
             value={scope}
-            onChange={(e) => setScope(e.target.value as 'GLOBAL' | 'COUNTRY')}
+            onChange={(e) => {
+              setScope(e.target.value as 'GLOBAL' | 'COUNTRY');
+              setError(null);
+            }}
           >
             <FormControlLabel value="COUNTRY" control={<Radio size="small" />} label={t('coa.createDialog.scopeCountry')} sx={choiceLabelSx} disabled={coverageFixed} />
             <FormControlLabel value="GLOBAL" control={<Radio size="small" />} label={t('coa.createDialog.scopeGlobal')} sx={choiceLabelSx} disabled={coverageFixed} />

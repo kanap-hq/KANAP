@@ -55,7 +55,7 @@ describe('CsvImportDialog', () => {
 
     post.mockResolvedValueOnce({ data: report({ dryRun: false, processed: 14, unchanged: 12 }) });
     fireEvent.click(screen.getByRole('button', { name: 'csv.load' }));
-    expect(await screen.findByText('csv.loadedSuccessfully')).toBeInTheDocument();
+    expect(await screen.findByText(/^csv\.loadedSuccessfully:/)).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('csv.rowsUnchanged:12');
   });
 
@@ -100,7 +100,7 @@ describe('CsvImportDialog', () => {
 
     post.mockResolvedValueOnce({ data: report({ dryRun: false, processed: 14, warnings }) });
     fireEvent.click(screen.getByRole('button', { name: 'csv.load' }));
-    expect(await screen.findByText('csv.loadedSuccessfully')).toBeInTheDocument();
+    expect(await screen.findByText(/^csv\.loadedSuccessfully:/)).toBeInTheDocument();
     expect(screen.queryByTestId('csv-import-warnings')).toBeNull();
   });
 
@@ -156,7 +156,7 @@ describe('CsvImportDialog', () => {
     renderDialog();
     fireEvent.click(screen.getByRole('button', { name: 'csv.preflightCheck' }));
     const preflight = await screen.findByRole('alert');
-    expect(preflight).toHaveTextContent(/^csv\.preflightOk$/);
+    expect(preflight).toHaveTextContent(/^csv\.preflightOk:14$/);
     expect(screen.queryByText(/csv\.rowsUnchanged/)).not.toBeInTheDocument();
   });
 
@@ -211,9 +211,20 @@ describe('CsvImportDialog', () => {
     await screen.findByText('operations.budgetFile.datesDayFirst');
     post.mockResolvedValueOnce({ data: report({ dryRun: false, processed: 14 }) });
     fireEvent.click(screen.getByRole('button', { name: 'csv.load' }));
-    expect(await screen.findByText('csv.loadedSuccessfully')).toBeInTheDocument();
+    expect(await screen.findByText(/^csv\.loadedSuccessfully:/)).toBeInTheDocument();
     expect(lastCall()?.[0]).toBe('/suppliers/import');
     expect(lastParams()).toEqual({ language: 'en', dryRun: false, dateOrder: 'day-first', decimalMark: 'comma' });
+  });
+
+  it('drops the report of the previous file when another file is picked', async () => {
+    post.mockResolvedValueOnce({ data: report({ ok: false, errors: [{ row: 2, message: 'Old problem' }] }) });
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'csv.preflightCheck' }));
+    expect(await screen.findByText('csv.rowError')).toBeInTheDocument();
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [new File(['c;d'], 'other.csv', { type: 'text/csv' })] } });
+    expect(screen.queryByText('csv.rowError')).not.toBeInTheDocument();
   });
 
   it('names the ignored columns the response lists', async () => {
@@ -227,7 +238,7 @@ describe('CsvImportDialog', () => {
     post.mockResolvedValueOnce({ data: report({ ignoredColumns: [] }) });
     renderDialog();
     fireEvent.click(screen.getByRole('button', { name: 'csv.preflightCheck' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent(/^csv\.preflightOk$/);
+    expect(await screen.findByRole('alert')).toHaveTextContent(/^csv\.preflightOk:14$/);
     expect(screen.queryByText(/csv\.ignoredColumns/)).not.toBeInTheDocument();
   });
 });

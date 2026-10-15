@@ -379,6 +379,107 @@ async function testMissingHeaderError() {
 
   assert.equal(result.ok, false);
   assert.ok(result.errors.some((e) => e.message.includes('Missing')));
+  assert.deepEqual(
+    result.errors.map((e) => ({ row: e.row, code: e.code, params: e.params })),
+    [{ row: 0, code: 'CSV_HEADER_MISSING_COLUMNS', params: { missing: 'title' } }],
+  );
+}
+
+/** The columns the import does not know are left out of it: a warning, not a refusal. */
+async function testUnknownColumnsAreAWarning() {
+  const service = new CsvImportService(new CsvResolverService(), new CsvJsonValidators());
+
+  const csv = `id;title;notes;owner_phone
+;Task;x;y`;
+
+  const result = await service.import(createTestConfig(), createMockFile(csv), defaultParams, {
+    manager: createMockManager({ tasks: [] }),
+    tenantId: 't1',
+  });
+
+  assert.equal(result.ok, true, JSON.stringify(result.errors));
+  assert.equal(result.inserted, 1);
+  assert.deepEqual(
+    result.warnings.map((w) => ({ row: w.row, code: w.code, params: w.params })),
+    [{ row: 0, code: 'CSV_HEADER_IGNORED_COLUMNS', params: { extra: 'notes, owner_phone' } }],
+  );
+}
+
+/** Every row message carries a code and the values its sentence names, for the interface to translate. */
+async function testRowMessagesCarryCodes() {
+  const service = new CsvImportService(new CsvResolverService(), new CsvJsonValidators());
+  const config = createTestConfig();
+  config.fields.push(
+    { csvColumn: 'billable', entityProperty: 'billable', type: CsvFieldType.BOOLEAN },
+    { csvColumn: 'payload', entityProperty: 'payload', type: CsvFieldType.JSON },
+  );
+
+  const csv = `id;title;status;due_date;priority;billable;payload
+;;open;;;;
+;Bad enum;nope;;;;
+;Bad date;open;someday;;;
+;Bad number;open;;high;;
+;Bad boolean;open;;;perhaps;
+;Bad json;open;;;;{oops
+;Twice;open;;;;
+;Twice;open;;;;`;
+
+  const result = await service.import(config, createMockFile(csv), defaultParams, {
+    manager: createMockManager({ tasks: [] }),
+    tenantId: 't1',
+  });
+
+  assert.equal(result.ok, false);
+  assert.deepEqual(
+    result.errors.map((e) => ({ row: e.row, column: e.column, code: e.code, params: e.params })),
+    [
+      { row: 2, column: 'title', code: 'CSV_VALUE_REQUIRED', params: undefined },
+      { row: 3, column: 'status', code: 'CSV_ENUM_INVALID', params: { value: 'nope', allowed: 'open, in_progress, done' } },
+      { row: 4, column: 'due_date', code: 'CSV_DATE_INVALID', params: { value: 'someday' } },
+      { row: 5, column: 'priority', code: 'CSV_NUMBER_INVALID', params: { value: 'high' } },
+      { row: 6, column: 'billable', code: 'CSV_BOOLEAN_INVALID', params: { value: 'perhaps' } },
+      { row: 7, column: 'payload', code: 'CSV_JSON_INVALID', params: undefined },
+      { row: 9, column: undefined, code: 'CSV_DUPLICATE_KEY', params: { columns: 'title', firstRow: 8 } },
+    ],
+  );
+}
+
+/** A name the tenant does not have: an error when the reference is required, a warning otherwise. */
+async function testReferenceNotFoundCarriesCodes() {
+  const service = new CsvImportService(new CsvResolverService(), new CsvJsonValidators());
+  const config = createTestConfig();
+  config.fields.push(
+    { csvColumn: 'owner_email', entityProperty: 'owner_id', type: CsvFieldType.FK_BY_EMAIL, fkEntity: 'users' },
+    { csvColumn: 'company_name', entityProperty: 'company_id', type: CsvFieldType.FK_BY_NAME, fkEntity: 'companies', fkRequired: true },
+    {
+      csvColumn: 'contributor_1',
+      entityProperty: 'contributor_ids',
+      type: CsvFieldType.ARRAY,
+      arrayStrategy: ArrayStrategy.NUMBERED_COLUMNS,
+      fkEntity: 'users',
+      maxItems: 1,
+    },
+  );
+
+  const csv = `id;title;owner_email;company_name;contributor_1
+;Task;ghost@example.com;Nowhere;nobody@example.com`;
+
+  const result = await service.import(config, createMockFile(csv), defaultParams, {
+    manager: createMockManager({ tasks: [], users: [], companies: [] }),
+    tenantId: 't1',
+  });
+
+  assert.deepEqual(
+    result.errors.map((e) => ({ column: e.column, code: e.code, params: e.params })),
+    [{ column: 'company_name', code: 'CSV_REFERENCE_NOT_FOUND', params: { value: 'Nowhere' } }],
+  );
+  assert.deepEqual(
+    result.warnings.map((w) => ({ column: w.column, code: w.code, params: w.params })).sort((a, b) => a.column!.localeCompare(b.column!)),
+    [
+      { column: 'contributor_1', code: 'CSV_REFERENCE_NOT_FOUND_SKIPPED', params: { value: 'nobody@example.com' } },
+      { column: 'owner_email', code: 'CSV_REFERENCE_NOT_FOUND_CLEARED', params: { value: 'ghost@example.com' } },
+    ],
+  );
 }
 
 async function testCaseInsensitiveEnumMatching() {
@@ -491,7 +592,10 @@ async function testUtf16FileIsRefusedWithClearMessage() {
       manager: createMockManager({ tasks: [] }),
       tenantId: 't1',
     }),
-    (err: any) => err?.getStatus?.() === 400 && /not UTF-8 or Windows-1252/.test(err.message),
+    (err: any) =>
+      err?.getStatus?.() === 400
+      && /not UTF-8 or Windows-1252/.test(err.message)
+      && err.getResponse().code === 'CSV_ENCODING_UNSUPPORTED',
   );
 }
 
@@ -511,6 +615,9 @@ async function testUtf16FileIsRefusedWithClearMessage() {
   await testUpdateOnlyOperationSkipsInserts();
   await testInsertOnlyOperationSkipsUpdates();
   await testMissingHeaderError();
+  await testUnknownColumnsAreAWarning();
+  await testRowMessagesCarryCodes();
+  await testReferenceNotFoundCarriesCodes();
   await testCaseInsensitiveEnumMatching();
   await testFormulaApostropheIsStrippedOnImport();
   await testBeforeValidateErrorsSurviveDryRun();

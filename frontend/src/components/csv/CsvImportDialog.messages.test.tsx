@@ -28,8 +28,8 @@ import CsvImportDialog from './CsvImportDialog';
 
 const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
 
-function check(errors: unknown[]) {
-  post.mockResolvedValueOnce({ data: { ok: false, dryRun: true, total: 0, inserted: 0, updated: 0, errors } });
+function check(errors: unknown[], over: Record<string, unknown> = {}) {
+  post.mockResolvedValueOnce({ data: { ok: false, dryRun: true, total: 0, inserted: 0, updated: 0, errors, ...over } });
   render(<CsvImportDialog open onClose={() => undefined} endpoint="/chart-of-accounts/fr/accounts" />);
   const input = document.querySelector('input[type="file"]') as HTMLInputElement;
   fireEvent.change(input, { target: { files: [new File(['a;b'], 'comptes.csv', { type: 'text/csv' })] } });
@@ -62,5 +62,20 @@ describe('CsvImportDialog messages', () => {
     ]);
     expect(await screen.findByText('Ligne 3 : Le numéro de compte (account_number) est obligatoire et doit être un nombre entier.')).toBeInTheDocument();
     expect(screen.getByText('Ligne 4 : Nature « both » invalide. Utilisez opex, capex ou laissez la cellule vide.')).toBeInTheDocument();
+  });
+
+  it('names an unknown column once when the header is refused for it', async () => {
+    check(
+      [{ row: 0, message: 'Header mismatch. Extra: x', code: 'CSV_HEADER_UNKNOWN_COLUMNS', params: { missing: '', extra: 'x' } }],
+      { ignoredColumns: ['x'] },
+    );
+    expect(await screen.findByText('En-tête : Colonnes inconnues : x.')).toBeInTheDocument();
+    expect(screen.queryByText(/Colonnes ignorées/)).not.toBeInTheDocument();
+  });
+
+  it('counts one row in the singular, and zero too in French', async () => {
+    check([], { ok: true, total: 1, inserted: 1, updated: 0, unchanged: 0 });
+    expect(await screen.findByText(/Vérification OK : 1 ligne\./)).toBeInTheDocument();
+    expect(screen.getByText('0 ligne inchangée.')).toBeInTheDocument();
   });
 });
