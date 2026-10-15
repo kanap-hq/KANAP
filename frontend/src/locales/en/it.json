@@ -159,7 +159,9 @@
         "containsPii": "Contains PII",
         "envCoverage": "Env coverage",
         "bindings": "Bindings"
-      }
+      },
+      "duplicated": "Interface duplicated as \"{{name}}\"",
+      "thisInterface": "this interface"
     },
     "locations": {
       "title": "Locations",
@@ -1442,6 +1444,83 @@
         "applicationsRequired": "Select source and target applications.",
         "dataCategoryRequired": "Select a data category.",
         "noIdentifier": "The interface was created, but no identifier was returned."
+      },
+      "fields": {
+        "name": "Name",
+        "namePlaceholder": "e.g., PLM to ERP item master sync",
+        "interfaceCode": "Interface code",
+        "interfaceCodePlaceholder": "e.g., ERP-ORDERS-SYNC",
+        "businessProcess": "Business process",
+        "selectProcess": "Select process",
+        "sourceApplication": "Source application",
+        "selectSource": "Select source",
+        "targetApplication": "Target application",
+        "selectTarget": "Select target",
+        "dataCategory": "Data category",
+        "routeType": "Route type",
+        "middlewareApplications": "Middleware applications",
+        "addMiddleware": "Add middleware",
+        "reference": "Reference",
+        "assignedOnCreate": "Assigned on create",
+        "created": "Created",
+        "updated": "Updated",
+        "businessOwners": "Business owners",
+        "itOwners": "IT owners",
+        "impactedCompanies": "Impacted companies",
+        "addCompanies": "Add companies",
+        "piiDescription": "PII description",
+        "piiPlaceholder": "e.g., customer contact data",
+        "dataResidency": "Data residency",
+        "addCountries": "Add countries"
+      },
+      "overview": {
+        "createTitle": "Create interface",
+        "specification": "Specification",
+        "specificationDocument": "Specification document",
+        "specificationPlaceholder": "Capture the managed interface specification here."
+      },
+      "flow": {
+        "logicalFlow": "Logical flow",
+        "legTemplate": "Leg template",
+        "noLegs": "No legs defined yet. Select source and target applications, then save the interface route.",
+        "leg": "Leg",
+        "fromTo": "From / to",
+        "triggerType": "Trigger type",
+        "pattern": "Pattern",
+        "format": "Format",
+        "jobName": "Job name",
+        "optional": "Optional",
+        "source": "Source",
+        "target": "Target",
+        "middleware": "Middleware"
+      },
+      "metadata": {
+        "flow": "Flow",
+        "route": "Route",
+        "data": "Data",
+        "applicationsMissing": "Applications missing",
+        "deprecated": "{{label}} (deprecated)"
+      },
+      "relations": {
+        "dependencies": "Interface dependencies",
+        "upstream": "Upstream interfaces",
+        "selectUpstream": "Select upstream interfaces",
+        "downstream": "Downstream interfaces",
+        "selectDownstream": "Select downstream interfaces",
+        "externalUrls": "External URLs",
+        "addLink": "Add link",
+        "noLinks": "No links added yet.",
+        "description": "Description",
+        "openLink": "Open link",
+        "attachments": "Attachments",
+        "dropHint": "Drag and drop files here, or use the button to select them",
+        "selectFiles": "Select files",
+        "saveFirst": "Save the interface once before uploading attachments.",
+        "uploading_one": "Uploading {{count}} file…",
+        "uploading_other": "Uploading {{count}} files…",
+        "noAttachments": "No attachments uploaded yet.",
+        "deleteAttachmentTitle": "Delete attachment",
+        "deleteAttachmentMessage": "Delete this attachment from the interface."
       }
     },
     "location": {
@@ -1683,6 +1762,10 @@
     "riskMode": {
       "manual": "Manual",
       "derived": "Derived"
+    },
+    "routeType": {
+      "direct": "Direct",
+      "viaMiddleware": "Via middleware"
     }
   },
   "confirmations": {

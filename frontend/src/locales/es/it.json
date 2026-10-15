@@ -159,7 +159,9 @@
         "containsPii": "Contiene PII",
         "envCoverage": "Cobertura de entorno",
         "bindings": "Enlaces"
-      }
+      },
+      "duplicated": "Interfaz duplicada como «{{name}}»",
+      "thisInterface": "esta interfaz"
     },
     "locations": {
       "title": "Ubicaciones",
@@ -1442,6 +1444,83 @@
         "applicationsRequired": "Seleccione las aplicaciones de origen y destino.",
         "dataCategoryRequired": "Seleccione una categoría de datos.",
         "noIdentifier": "La interfaz se creó, pero no se devolvió ningún identificador."
+      },
+      "fields": {
+        "name": "Nombre",
+        "namePlaceholder": "p. ej., sincronización de artículos del PLM al ERP",
+        "interfaceCode": "Código de interfaz",
+        "interfaceCodePlaceholder": "p. ej., ERP-ORDERS-SYNC",
+        "businessProcess": "Proceso de negocio",
+        "selectProcess": "Seleccionar proceso",
+        "sourceApplication": "Aplicación de origen",
+        "selectSource": "Seleccionar origen",
+        "targetApplication": "Aplicación de destino",
+        "selectTarget": "Seleccionar destino",
+        "dataCategory": "Categoría de datos",
+        "routeType": "Tipo de ruta",
+        "middlewareApplications": "Aplicaciones middleware",
+        "addMiddleware": "Añadir middleware",
+        "reference": "Referencia",
+        "assignedOnCreate": "Se asigna al crear",
+        "created": "Creada",
+        "updated": "Actualizada",
+        "businessOwners": "Responsables de negocio",
+        "itOwners": "Responsables de IT",
+        "impactedCompanies": "Empresas afectadas",
+        "addCompanies": "Añadir empresas",
+        "piiDescription": "Descripción de los datos personales",
+        "piiPlaceholder": "p. ej., datos de contacto de clientes",
+        "dataResidency": "Residencia de los datos",
+        "addCountries": "Añadir países"
+      },
+      "overview": {
+        "createTitle": "Crear interfaz",
+        "specification": "Especificación",
+        "specificationDocument": "Documento de especificación",
+        "specificationPlaceholder": "Registre aquí la especificación de la interfaz."
+      },
+      "flow": {
+        "logicalFlow": "Flujo lógico",
+        "legTemplate": "Plantilla de tramos",
+        "noLegs": "Aún no hay tramos definidos. Seleccione las aplicaciones de origen y destino y guarde la ruta de la interfaz.",
+        "leg": "Tramo",
+        "fromTo": "De / a",
+        "triggerType": "Tipo de disparador",
+        "pattern": "Patrón",
+        "format": "Formato",
+        "jobName": "Nombre del trabajo",
+        "optional": "Opcional",
+        "source": "Origen",
+        "target": "Destino",
+        "middleware": "Middleware"
+      },
+      "metadata": {
+        "flow": "Flujo",
+        "route": "Ruta",
+        "data": "Datos",
+        "applicationsMissing": "Faltan las aplicaciones",
+        "deprecated": "{{label}} (obsoleto)"
+      },
+      "relations": {
+        "dependencies": "Dependencias de la interfaz",
+        "upstream": "Interfaces anteriores",
+        "selectUpstream": "Seleccionar interfaces anteriores",
+        "downstream": "Interfaces posteriores",
+        "selectDownstream": "Seleccionar interfaces posteriores",
+        "externalUrls": "URL externas",
+        "addLink": "Añadir enlace",
+        "noLinks": "Aún no se han añadido enlaces.",
+        "description": "Descripción",
+        "openLink": "Abrir el enlace",
+        "attachments": "Archivos adjuntos",
+        "dropHint": "Arrastre y suelte archivos aquí, o use el botón para seleccionarlos",
+        "selectFiles": "Seleccionar archivos",
+        "saveFirst": "Guarde la interfaz una vez antes de subir archivos adjuntos.",
+        "uploading_one": "Subiendo {{count}} archivo…",
+        "uploading_other": "Subiendo {{count}} archivos…",
+        "noAttachments": "Aún no se han subido archivos adjuntos.",
+        "deleteAttachmentTitle": "Eliminar archivo adjunto",
+        "deleteAttachmentMessage": "Eliminar este archivo adjunto de la interfaz."
       }
     },
     "location": {
@@ -1683,6 +1762,10 @@
     "riskMode": {
       "manual": "Manual",
       "derived": "Derivado"
+    },
+    "routeType": {
+      "direct": "Directo",
+      "viaMiddleware": "Vía middleware"
     }
   },
   "confirmations": {

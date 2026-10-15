@@ -59,7 +59,7 @@ type InterfaceRow = {
 
 export default function InterfacesPage() {
   const { data: classificationCatalog } = useApplicationClassificationCatalog();
-  const businessLabel = (code?: string | null) => classificationCatalog?.businessCriticalityLevels.find((item) => item.code === code)?.label || code || 'Not set';
+  const businessLabel = (code?: string | null) => classificationCatalog?.businessCriticalityLevels.find((item) => item.code === code)?.label || code || classificationText('Not set');
   const { t } = useTranslation(['it', 'common']);
   const theme = useTheme();
   const navigate = useNavigate();
@@ -131,7 +131,7 @@ export default function InterfacesPage() {
       const newInterface = response.data;
       setSnackbar({
         open: true,
-        message: `Interface duplicated as "${newInterface.name}"`,
+        message: t('it:pages.interfaces.duplicated', { name: newInterface.name }),
         severity: 'success',
       });
       setRefreshKey((k) => k + 1);
@@ -409,10 +409,10 @@ export default function InterfacesPage() {
 
       {/* Duplicate Interface Dialog */}
       <Dialog open={duplicateDialogOpen} onClose={handleCloseDuplicateDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>Duplicate Interface</DialogTitle>
+        <DialogTitle>{t('it:pages.interfaces.duplicateDialogTitle')}</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Create a copy of "{selectedRows[0]?.name || 'this interface'}".
+            {t('it:pages.interfaces.duplicateDescription', { name: selectedRows[0]?.name || t('it:pages.interfaces.thisInterface') })}
           </Typography>
           <FormControlLabel
             control={
@@ -422,15 +422,15 @@ export default function InterfacesPage() {
                 disabled={duplicating}
               />
             }
-            label="Copy environment bindings"
+            label={t('it:pages.interfaces.copyEnvBindings')}
           />
           <Typography variant="caption" color="text.secondary" display="block" sx={{ ml: 4 }}>
-            Instance connections will be preserved, but environment-specific details (endpoints, authentication, job names) will be cleared.
+            {t('it:pages.interfaces.copyEnvBindingsDescription')}
           </Typography>
         </DialogContent>
         <DialogActions>
           <Button variant="action" onClick={handleCloseDuplicateDialog} disabled={duplicating}>
-            Cancel
+            {t('common:buttons.cancel')}
           </Button>
           <Button
             onClick={handleConfirmDuplicate}
@@ -438,7 +438,7 @@ export default function InterfacesPage() {
             disabled={duplicating}
             startIcon={duplicating ? <CircularProgress size={16} /> : undefined}
           >
-            {duplicating ? 'Duplicating...' : 'Duplicate'}
+            {duplicating ? t('it:pages.interfaces.duplicating') : t('it:pages.interfaces.duplicate')}
           </Button>
         </DialogActions>
       </Dialog>

@@ -10,6 +10,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
+import { classificationText } from '../../../utils/applicationClassification';
 import { useLookupHydration, useLookupPicker } from '../../../hooks/useLookupPicker';
 import { formatUserOption, USERS_LOOKUP_ENDPOINT, type UserOption } from '../../../components/fields/userLookup';
 import BusinessProcessSelect from '../../../components/fields/BusinessProcessSelect';
@@ -170,7 +171,7 @@ export default function InterfacePropertyPanel({
     return options.filter((item) => !item.deprecated || item.value === current);
   }, [byField.lifecycleStatus, data?.lifecycle]);
 
-  const criticalityOptions = [{ value: '', label: 'Not set' }, ...(classificationCatalog?.businessCriticalityLevels || []).filter((item) => !item.deprecated || item.code === data?.criticality).map((item) => ({ value: item.code, label: item.label }))];
+  const criticalityOptions = [{ value: '', label: classificationText('Not set') }, ...(classificationCatalog?.businessCriticalityLevels || []).filter((item) => !item.deprecated || item.code === data?.criticality).map((item) => ({ value: item.code, label: item.label }))];
 
   const residencyCodes = React.useMemo(
     () => residency.map((item) => String(item.country_iso || '').toUpperCase()).filter((item) => item.length === 2),
@@ -181,7 +182,7 @@ export default function InterfacePropertyPanel({
   const residencyOptions = React.useMemo<CountryOption[]>(() => {
     const extras = residencyCodes
       .filter((code) => !countryOptions.some((option) => option.code === code))
-      .map((code) => ({ code, name: `Unknown (${code})` }));
+      .map((code) => ({ code, name: t('it:workspace.location.fields.unknownCountry', { code }) }));
     return [...countryOptions, ...extras];
   }, [countryOptions, residencyCodes]);
 
@@ -195,11 +196,11 @@ export default function InterfacePropertyPanel({
 
       <PropertyGroup>
         {!isCreate && (
-          <PropertyRow label="Reference">
-            <ReadOnlyValue>{data?.interface_reference || 'Assigned on create'}</ReadOnlyValue>
+          <PropertyRow label={t('it:workspace.interface.fields.reference')}>
+            <ReadOnlyValue>{data?.interface_reference || t('it:workspace.interface.fields.assignedOnCreate')}</ReadOnlyValue>
           </PropertyRow>
         )}
-        <PropertyRow label="Interface code">
+        <PropertyRow label={t('it:workspace.interface.fields.interfaceCode')}>
           <TextField
             value={interfaceIdDraft}
             onChange={(event) => {
@@ -216,11 +217,11 @@ export default function InterfacePropertyPanel({
             }}
             variant="standard"
             sx={drawerFieldValueSx}
-            placeholder="e.g., ERP-ORDERS-SYNC"
+            placeholder={t('it:workspace.interface.fields.interfaceCodePlaceholder')}
             disabled={disabled}
           />
         </PropertyRow>
-        <PropertyRow label="Business process">
+        <PropertyRow label={t('it:workspace.interface.fields.businessProcess')}>
           <BusinessProcessSelect
             value={data?.business_process_id || null}
             onChange={(value) => {
@@ -229,12 +230,12 @@ export default function InterfacePropertyPanel({
             disabled={disabled}
             hideLabel
             textFieldSx={drawerFieldValueSx}
-            placeholder="Select process"
+            placeholder={t('it:workspace.interface.fields.selectProcess')}
           />
         </PropertyRow>
-        <PropertyRow label="Lifecycle">
+        <PropertyRow label={t('it:common.lifecycle')}>
           <EnumAutocomplete
-            label="Lifecycle"
+            label={t('it:common.lifecycle')}
             value={data?.lifecycle || 'active'}
             onChange={(value) => {
               void runPersist(() => onPatch({ lifecycle: value }));
@@ -248,11 +249,11 @@ export default function InterfacePropertyPanel({
         </PropertyRow>
         {!isCreate && (
           <>
-            <PropertyRow label="Created">
-              <ReadOnlyValue>{formatShortDate(data?.created_at, locale, { empty: 'Not set' })}</ReadOnlyValue>
+            <PropertyRow label={t('it:workspace.interface.fields.created')}>
+              <ReadOnlyValue>{formatShortDate(data?.created_at, locale, { empty: classificationText('Not set') })}</ReadOnlyValue>
             </PropertyRow>
-            <PropertyRow label="Updated">
-              <ReadOnlyValue>{formatShortDate(data?.updated_at, locale, { empty: 'Not set' })}</ReadOnlyValue>
+            <PropertyRow label={t('it:workspace.interface.fields.updated')}>
+              <ReadOnlyValue>{formatShortDate(data?.updated_at, locale, { empty: classificationText('Not set') })}</ReadOnlyValue>
             </PropertyRow>
           </>
         )}
@@ -260,9 +261,9 @@ export default function InterfacePropertyPanel({
 
       {!isCreate && (
         <PropertyGroup>
-          <PropertyRow label="Business owners">
+          <PropertyRow label={t('it:workspace.interface.fields.businessOwners')}>
             <TeamMemberMultiSelect
-              label="Business owners"
+              label={t('it:workspace.interface.fields.businessOwners')}
               value={enrichOwners('business')}
               onChange={async (userIds) => runPersist(() => onReplaceOwners('business', userIds))}
               disabled={!canManage}
@@ -270,9 +271,9 @@ export default function InterfacePropertyPanel({
               textFieldSx={drawerFieldValueSx}
             />
           </PropertyRow>
-          <PropertyRow label="IT owners">
+          <PropertyRow label={t('it:workspace.interface.fields.itOwners')}>
             <TeamMemberMultiSelect
-              label="IT owners"
+              label={t('it:workspace.interface.fields.itOwners')}
               value={enrichOwners('it')}
               onChange={async (userIds) => runPersist(() => onReplaceOwners('it', userIds))}
               disabled={!canManage}
@@ -280,7 +281,7 @@ export default function InterfacePropertyPanel({
               textFieldSx={drawerFieldValueSx}
             />
           </PropertyRow>
-          <PropertyRow label="Impacted companies">
+          <PropertyRow label={t('it:workspace.interface.fields.impactedCompanies')}>
             <Autocomplete
               multiple
               size="small"
@@ -302,7 +303,7 @@ export default function InterfacePropertyPanel({
                   {...params}
                   variant="standard"
                   sx={drawerFieldValueSx}
-                  placeholder="Add companies"
+                  placeholder={t('it:workspace.interface.fields.addCompanies')}
                 />
               )}
               disabled={!canManage || companyPicker.hydrating}
@@ -312,9 +313,9 @@ export default function InterfacePropertyPanel({
       )}
 
       <PropertyGroup>
-        <PropertyRow label="Criticality">
+        <PropertyRow label={t('it:workspace.connection.compliance.criticality')}>
           <EnumAutocomplete
-            label="Criticality"
+            label={t('it:workspace.connection.compliance.criticality')}
             value={data?.criticality || ''}
             onChange={(value) => {
               void runPersist(() => onPatch({ criticality: value as InterfaceDetail['criticality'] }));
@@ -326,9 +327,9 @@ export default function InterfacePropertyPanel({
             disabled={disabled}
           />
         </PropertyRow>
-        <PropertyRow label="Data category" required>
+        <PropertyRow label={t('it:workspace.interface.fields.dataCategory')} required>
           <EnumAutocomplete
-            label="Data category"
+            label={t('it:workspace.interface.fields.dataCategory')}
             value={data?.data_category || ''}
             onChange={(value) => {
               void runPersist(() => onPatch({ data_category: value }));
@@ -340,9 +341,9 @@ export default function InterfacePropertyPanel({
             disabled={disabled}
           />
         </PropertyRow>
-        <PropertyRow label="Data class">
+        <PropertyRow label={t('it:workspace.connection.compliance.dataClass')}>
           <EnumAutocomplete
-            label="Data class"
+            label={t('it:workspace.connection.compliance.dataClass')}
             value={data?.data_class || ''}
             onChange={(value) => {
               void runPersist(() => onPatch({ data_class: value }));
@@ -354,7 +355,7 @@ export default function InterfacePropertyPanel({
             disabled={disabled}
           />
         </PropertyRow>
-        <PropertyRow label="Contains PII">
+        <PropertyRow label={t('it:workspace.connection.compliance.containsPii')}>
           <Box sx={{ minHeight: 26, display: 'flex', alignItems: 'center', gap: 1 }}>
             <Switch
               size="small"
@@ -370,7 +371,7 @@ export default function InterfacePropertyPanel({
           </Box>
         </PropertyRow>
         {data?.contains_pii && (
-          <PropertyRow label="PII description">
+          <PropertyRow label={t('it:workspace.interface.fields.piiDescription')}>
             <TextField
               value={piiDescriptionDraft}
               onChange={(event) => {
@@ -387,14 +388,14 @@ export default function InterfacePropertyPanel({
               }}
               variant="standard"
               sx={drawerFieldValueSx}
-              placeholder="e.g., customer contact data"
+              placeholder={t('it:workspace.interface.fields.piiPlaceholder')}
               disabled={disabled}
               multiline
               minRows={2}
             />
           </PropertyRow>
         )}
-        <PropertyRow label="Data residency">
+        <PropertyRow label={t('it:workspace.interface.fields.dataResidency')}>
           <Autocomplete
             multiple
             size="small"
@@ -411,7 +412,7 @@ export default function InterfacePropertyPanel({
                 {...params}
                 variant="standard"
                 sx={drawerFieldValueSx}
-                placeholder="Add countries"
+                placeholder={t('it:workspace.interface.fields.addCountries')}
               />
             )}
             renderOption={(props, option, state) => (

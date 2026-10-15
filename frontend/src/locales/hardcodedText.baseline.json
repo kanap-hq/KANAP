@@ -3,12 +3,6 @@
   "pages/accounts/editors/AccountOverviewEditor.tsx": 9,
   "pages/business-processes/BusinessProcessCategoryManagerDialog.tsx": 10,
   "pages/business-processes/BusinessProcessWorkspacePage.tsx": 6,
-  "pages/it/InterfacesPage.tsx": 5,
   "pages/it/components/InterfaceBindingsMatrix.tsx": 81,
-  "pages/it/workspace/InterfaceFlowTab.tsx": 17,
-  "pages/it/workspace/InterfaceMappingTab.tsx": 61,
-  "pages/it/workspace/InterfaceMetadataBar.tsx": 3,
-  "pages/it/workspace/InterfaceOverviewTab.tsx": 17,
-  "pages/it/workspace/InterfacePropertyPanel.tsx": 26,
-  "pages/it/workspace/InterfaceRelationsEditor.tsx": 20
+  "pages/it/workspace/InterfaceMappingTab.tsx": 61
 }

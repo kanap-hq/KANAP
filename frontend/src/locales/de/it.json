@@ -159,7 +159,9 @@
         "containsPii": "Enthält PII",
         "envCoverage": "Umgebungsabdeckung",
         "bindings": "Bindungen"
-      }
+      },
+      "duplicated": "Schnittstelle dupliziert als „{{name}}“",
+      "thisInterface": "diese Schnittstelle"
     },
     "locations": {
       "title": "Standorte",
@@ -1442,6 +1444,83 @@
         "applicationsRequired": "Wählen Sie Quell- und Zielanwendung aus.",
         "dataCategoryRequired": "Wählen Sie eine Datenkategorie aus.",
         "noIdentifier": "Die Schnittstelle wurde erstellt, aber es wurde keine Kennung zurückgegeben."
+      },
+      "fields": {
+        "name": "Name",
+        "namePlaceholder": "z. B. Artikelstamm-Synchronisierung PLM zu ERP",
+        "interfaceCode": "Schnittstellencode",
+        "interfaceCodePlaceholder": "z. B. ERP-ORDERS-SYNC",
+        "businessProcess": "Geschäftsprozess",
+        "selectProcess": "Prozess auswählen",
+        "sourceApplication": "Quellanwendung",
+        "selectSource": "Quelle auswählen",
+        "targetApplication": "Zielanwendung",
+        "selectTarget": "Ziel auswählen",
+        "dataCategory": "Datenkategorie",
+        "routeType": "Routentyp",
+        "middlewareApplications": "Middleware-Anwendungen",
+        "addMiddleware": "Middleware hinzufügen",
+        "reference": "Referenz",
+        "assignedOnCreate": "Wird bei der Erstellung vergeben",
+        "created": "Erstellt",
+        "updated": "Aktualisiert",
+        "businessOwners": "Fachliche Verantwortliche",
+        "itOwners": "IT-Verantwortliche",
+        "impactedCompanies": "Betroffene Unternehmen",
+        "addCompanies": "Unternehmen hinzufügen",
+        "piiDescription": "Beschreibung der personenbezogenen Daten",
+        "piiPlaceholder": "z. B. Kontaktdaten von Kunden",
+        "dataResidency": "Datenresidenz",
+        "addCountries": "Länder hinzufügen"
+      },
+      "overview": {
+        "createTitle": "Schnittstelle erstellen",
+        "specification": "Spezifikation",
+        "specificationDocument": "Spezifikationsdokument",
+        "specificationPlaceholder": "Erfassen Sie hier die Spezifikation der Schnittstelle."
+      },
+      "flow": {
+        "logicalFlow": "Logischer Fluss",
+        "legTemplate": "Abschnittsvorlage",
+        "noLegs": "Noch keine Abschnitte definiert. Wählen Sie Quell- und Zielanwendung und speichern Sie dann die Route der Schnittstelle.",
+        "leg": "Abschnitt",
+        "fromTo": "Von / nach",
+        "triggerType": "Auslösertyp",
+        "pattern": "Muster",
+        "format": "Format",
+        "jobName": "Jobname",
+        "optional": "Optional",
+        "source": "Quelle",
+        "target": "Ziel",
+        "middleware": "Middleware"
+      },
+      "metadata": {
+        "flow": "Fluss",
+        "route": "Route",
+        "data": "Daten",
+        "applicationsMissing": "Anwendungen fehlen",
+        "deprecated": "{{label}} (veraltet)"
+      },
+      "relations": {
+        "dependencies": "Schnittstellenabhängigkeiten",
+        "upstream": "Vorgelagerte Schnittstellen",
+        "selectUpstream": "Vorgelagerte Schnittstellen auswählen",
+        "downstream": "Nachgelagerte Schnittstellen",
+        "selectDownstream": "Nachgelagerte Schnittstellen auswählen",
+        "externalUrls": "Externe URLs",
+        "addLink": "Link hinzufügen",
+        "noLinks": "Noch keine Links hinzugefügt.",
+        "description": "Beschreibung",
+        "openLink": "Link öffnen",
+        "attachments": "Anhänge",
+        "dropHint": "Ziehen Sie Dateien hierher oder wählen Sie sie über die Schaltfläche aus",
+        "selectFiles": "Dateien auswählen",
+        "saveFirst": "Speichern Sie die Schnittstelle einmal, bevor Sie Anhänge hochladen.",
+        "uploading_one": "{{count}} Datei wird hochgeladen…",
+        "uploading_other": "{{count}} Dateien werden hochgeladen…",
+        "noAttachments": "Noch keine Anhänge hochgeladen.",
+        "deleteAttachmentTitle": "Anhang löschen",
+        "deleteAttachmentMessage": "Diesen Anhang aus der Schnittstelle löschen."
       }
     },
     "location": {
@@ -1683,6 +1762,10 @@
     "riskMode": {
       "manual": "Manuell",
       "derived": "Abgeleitet"
+    },
+    "routeType": {
+      "direct": "Direkt",
+      "viaMiddleware": "Über Middleware"
     }
   },
   "confirmations": {
