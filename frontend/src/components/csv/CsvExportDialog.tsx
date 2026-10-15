@@ -12,6 +12,7 @@ export default function CsvExportDialog({
   title: titleProp,
   params,
   flexibleFormat = false,
+  note,
 }: {
   open: boolean;
   onClose: () => void;
@@ -24,6 +25,8 @@ export default function CsvExportDialog({
    * business processes, CoA templates) leave this off.
    */
   flexibleFormat?: boolean;
+  /** A sentence on what the file holds (the whole register, its order), under the description. */
+  note?: string;
 }) {
   const { t, i18n } = useTranslation('common');
   const language = screenLanguage(i18n.resolvedLanguage || i18n.language);
@@ -48,6 +51,8 @@ export default function CsvExportDialog({
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
+      // The browser shows the download: the dialog has nothing left to say.
+      onClose();
     } catch (e) {
       console.error('Export failed', e);
       setError(await csvRequestErrorMessage(e, t, t('messages.exportFailed')));
@@ -61,6 +66,7 @@ export default function CsvExportDialog({
         <Typography variant="body2" sx={{ mb: 2 }}>
           {t(flexibleFormat ? 'csv.exportDescriptionFlexible' : 'csv.exportDescription')}
         </Typography>
+        {note && <Typography variant="body2" sx={{ mb: 2 }}>{note}</Typography>}
         <Button variant="contained" onClick={() => download('data')}>{t('csv.exportData')}</Button>
         {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
       </DialogContent>

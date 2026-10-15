@@ -389,6 +389,8 @@
     "noSuppliersFound": "No suppliers found",
     "export": "Export suppliers",
     "import": "Import suppliers",
+    "exportScope": "The file holds all suppliers, enabled and disabled, sorted by name. The search and filters of the list do not apply.",
+    "importHint": "Accepted status values: enabled or disabled. disabled_at holds the end of validity, or stays empty. The contact columns take the e-mail of a contact that already exists in Contacts.",
     "fields": {
       "name": "Name",
       "erpSupplierId": "ERP supplier ID",
@@ -404,6 +406,8 @@
       "selectContact": "Contact to add ({{role}})",
       "searchPlaceholder": "Search contacts by name",
       "removeLink": "Remove link",
+      "linkRemoved": "Link removed. The contact stays in Contacts.",
+      "undo": "Undo",
       "saveFailed": "Failed to update the supplier contacts.",
       "loadFailed": "Failed to load the supplier contacts."
     },
