@@ -93,7 +93,7 @@ L'onglet Détails gère les métriques d'effectif année par année.
 
 ## Import/export CSV
 
-**Exporter CSV** télécharge tous les départements avec leur société, leur nom, leur description, leur statut et leur fin de validité. **Importer CSV** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les seuls en-têtes.
+**Exporter CSV** télécharge les départements que la liste affiche (ou, sur demande dans la fenêtre, tous les départements) avec leur société, leur nom, leur description, leur statut et leur fin de validité. **Importer CSV** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les seuls en-têtes.
 
 Les colonnes :
 

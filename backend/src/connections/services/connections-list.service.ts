@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { textSortKey } from '../../common/list-sort';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, In, Repository, SelectQueryBuilder } from 'typeorm';
 import { Connection } from '../connection.entity';
@@ -65,6 +66,9 @@ const CONNECTION_SORT_EXPRESSIONS: Record<string, string> = {
   created_at: 'c.created_at',
   updated_at: 'c.updated_at',
 };
+
+/** The connection list columns that sort alphabetically. */
+const CONNECTION_TEXT_SORTS = new Set(['connection_reference', 'name']);
 
 /**
  * Service for listing, filtering, and querying connections.
@@ -218,11 +222,13 @@ export class ConnectionsListService extends ConnectionsBaseService {
   }
 
   /** Orders a query built by buildFilteredQuery; the id breaks ties so pages never overlap. */
-  private applySort(qb: SelectQueryBuilder<Connection>, sort: { field: string; direction: string }): void {
+  private async applySort(qb: SelectQueryBuilder<Connection>, sort: { field: string; direction: string }, mg: EntityManager): Promise<void> {
     const field = CONNECTION_SORT_EXPRESSIONS[sort.field] ? sort.field : 'created_at';
     const direction = sort.direction === 'ASC' ? 'ASC' : 'DESC';
     // Parenthesized: TypeORM would take a bare `c.name` for the entity column and rename it.
-    qb.addSelect(`(${CONNECTION_SORT_EXPRESSIONS[field]})`, 'list_sort_key');
+    // Text alphabetically, case and accents ignored (`textSortKey`).
+    const expression = `(${CONNECTION_SORT_EXPRESSIONS[field]})`;
+    qb.addSelect(CONNECTION_TEXT_SORTS.has(field) ? (await textSortKey(mg))(expression) : expression, 'list_sort_key');
     qb.orderBy('list_sort_key', direction, 'NULLS LAST').addOrderBy('c.id', 'ASC');
   }
 
@@ -238,7 +244,7 @@ export class ConnectionsListService extends ConnectionsBaseService {
     const total = await qb.clone().getCount();
 
     selectEffectiveRisk(qb);
-    this.applySort(qb, sort);
+    await this.applySort(qb, sort, mg);
     // One row per connection (the risk join is grouped by connection), so offset/limit page exactly.
     qb.offset(skip).limit(limit);
     const { entities: itemsRaw, raw } = await qb.getRawAndEntities();
@@ -261,7 +267,7 @@ export class ConnectionsListService extends ConnectionsBaseService {
     const total = await qb.clone().getCount();
     const limit = Math.min(Math.max(Number(query?.limit) || 10000, 1), 10000);
     qb.select('c.id', 'id').addSelect('c.connection_reference', 'ref');
-    this.applySort(qb, sort);
+    await this.applySort(qb, sort, mg);
     const rows: Array<{ id: string; ref: string | null }> = await qb.limit(limit).getRawMany();
     const ids = rows.map((row) => row.id);
     const refs = rows.map((row) => row.ref || row.id);

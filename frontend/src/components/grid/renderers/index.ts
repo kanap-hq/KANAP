@@ -54,6 +54,8 @@ export type { UserCellRendererProps, UserData } from './UserCellRenderer';
 export {
   LinkCellRenderer,
   createLinkCellRenderer,
+  wholeCellLinkSx,
+  aboveCellLinkSx,
   ExternalLinkRenderer,
   EmailLinkRenderer,
   PhoneLinkRenderer,

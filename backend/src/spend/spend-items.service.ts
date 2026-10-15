@@ -7,6 +7,7 @@ import { Company } from '../companies/company.entity';
 import { Account } from '../accounts/account.entity';
 import { Supplier } from '../suppliers/supplier.entity';
 import { parsePagination, buildWhereFromAgFilters } from '../common/pagination';
+import { isTextColumn, orderListQuery, sortedFindQuery } from '../common/list-sort';
 import { AuditService } from '../audit/audit.service';
 import { AllocationCalculatorService } from './allocation-calculator.service';
 import { SUMMARY_SCOPES, SummaryDeps } from './spend-summary.builder';
@@ -199,10 +200,9 @@ export class SpendItemsService {
     if (!capex) {
       // The id breaks ties (lines imported together share their created_at), as the summary does:
       // a page never repeats or skips a line of the previous one.
-      const order: Record<string, any> = safeSortField === 'id'
-        ? { id: sort.direction }
-        : { [safeSortField]: sort.direction, id: 'DESC' };
-      const [itemsRaw, total] = await mg.getRepository(SpendItem).findAndCount({ where, order, skip, take: limit });
+      // Text columns sort alphabetically, case and accents ignored (`sortedFindQuery`).
+      const sorted = await sortedFindQuery(mg.getRepository(SpendItem), 'item', where, { field: safeSortField, direction });
+      const [itemsRaw, total] = await sorted.offset(skip).limit(limit).getManyAndCount();
       // The default dimension's value, read from the analytics links.
       const analyticsByItem = itemsRaw.length > 0
         ? await loadItemAnalyticsValues(mg, this.nature, tenantId, itemsRaw.map((item) => item.id))
@@ -218,11 +218,10 @@ export class SpendItemsService {
     const sortSql = safeSortField === 'item_number' ? lineNumberSql('i', 'capex')
       : safeSortField === 'description' ? 'i.product_name'
         : `i.${safeSortField}`;
-    const qb = selectLineColumns(mg.getRepository(SpendItem).createQueryBuilder('i').where(where), 'i', 'capex')
-      .orderBy(sortSql, direction)
-      .addOrderBy('i.id', 'DESC')
-      .skip(skip)
-      .take(limit);
+    const qb = selectLineColumns(mg.getRepository(SpendItem).createQueryBuilder('i').where(where), 'i', 'capex');
+    const sortColumn = mg.getRepository(SpendItem).metadata.findColumnWithPropertyName(safeSortField === 'description' ? 'product_name' : safeSortField);
+    await orderListQuery(qb, sortSql, direction, { text: safeSortField !== 'item_number' && !!sortColumn && isTextColumn(sortColumn), idExpr: 'i.id' });
+    qb.skip(skip).take(limit);
     const [itemsRaw, total] = await qb.getManyAndCount();
     const items = await this.enrichCapexListItems(itemsRaw, mg, tenantId);
     return { items, total, page, limit };

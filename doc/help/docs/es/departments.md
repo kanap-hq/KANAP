@@ -93,7 +93,7 @@ La pestaña Detalles gestiona las métricas de plantilla año a año.
 
 ## Importación/exportación CSV
 
-**Exportar CSV** descarga todos los departamentos con su empresa, su nombre, su descripción, su estado y su fin de validez. **Importar CSV** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo solo con los encabezados.
+**Exportar CSV** descarga los departamentos que muestra la lista (o, a petición en el diálogo, todos los departamentos) con su empresa, su nombre, su descripción, su estado y su fin de validez. **Importar CSV** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo solo con los encabezados.
 
 Las columnas:
 

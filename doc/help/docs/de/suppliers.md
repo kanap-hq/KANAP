@@ -101,7 +101,7 @@ Der Abschnitt **Verwendet in**, unter den Notizen im Reiter **Übersicht**, list
 
 Klicken Sie auf eine Zeile, um die zugehörige Seite zu öffnen. Deaktivierte Einträge tragen den Hinweis **Deaktiviert** und stehen nach den anderen. Eine Liste zeigt bis zu 50 Einträge und nennt ihre Gesamtzahl. Bei mehr als 50 haben Budgetzeilen, Verträge und Anwendungen einen Link wie **Alle 57 anzeigen**, der ihre Liste gefiltert auf diesen Lieferanten öffnet. Sie sehen nur die Listen, die Sie lesen dürfen: Ein Benutzer ohne Zugriff auf Verträge sieht keine Vertragsliste. Ein Lieferant, den nichts verwendet, zeigt eine Zeile, die das sagt.
 
-Prüfen Sie diesen Abschnitt, bevor Sie einen Lieferanten deaktivieren oder löschen. Ein Lieferant, den noch Budgetzeilen, Verträge, Anwendungen oder Assets verwenden, kann nicht gelöscht werden. Die Meldung zählt auf, was ihn verwendet, zum Beispiel „Dieser Lieferant wird noch verwendet: 2 Verträge und 1 Anwendung“. Deaktivieren Sie ihn stattdessen. Um ihn dennoch zu löschen, tragen Sie zuerst bei diesen Budgetzeilen, Verträgen, Anwendungen und Assets einen anderen Lieferanten ein oder entfernen ihn dort, wo er optional ist (ein Vertrag braucht immer einen). Löschen Sie ihn dann.
+Prüfen Sie diesen Abschnitt, bevor Sie einen Lieferanten deaktivieren oder löschen. Ein Lieferant, den noch Budgetzeilen, Verträge, Anwendungen oder Assets verwenden, kann nicht gelöscht werden. Die Meldung zählt auf, was ihn verwendet, zum Beispiel „Dieser Lieferant wird noch verwendet: 2 Verträge und 1 Anwendung“. Deaktivieren Sie ihn stattdessen. In der Liste nennt die Bestätigung die so erhaltenen Lieferanten mit dem, was sie verwendet, bevor etwas gelöscht wird. Um ihn dennoch zu löschen, tragen Sie zuerst bei diesen Budgetzeilen, Verträgen, Anwendungen und Assets einen anderen Lieferanten ein oder entfernen ihn dort, wo er optional ist (ein Vertrag braucht immer einen). Löschen Sie ihn dann.
 
 ### Einen Lieferanten erstellen
 
@@ -111,7 +111,7 @@ Klicken Sie in der Liste auf **Neu**. Geben Sie den Namen (Pflicht), die ERP-Lie
 
 ## CSV-Import/Export
 
-**CSV exportieren** lädt alle Lieferanten herunter, aktivierte und deaktivierte, nach Name sortiert. Suche und Filter der Liste gelten nicht. Der Dialog schließt sich, sobald die Datei heruntergeladen ist. **CSV importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei nur mit den Kopfzeilen. Er nennt die zulässigen Werte.
+**CSV exportieren** lädt die Lieferanten herunter, die die Liste zeigt, mit ihrer Suche, ihren Filtern und ihrer Sortierung. Wählen Sie im Dialog **Das ganze Verzeichnis**, um alle Lieferanten herunterzuladen, aktivierte und deaktivierte. Der Dialog schließt sich, sobald die Datei heruntergeladen ist. **CSV importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei nur mit den Kopfzeilen. Er nennt die zulässigen Werte.
 
 Die Spalten:
 

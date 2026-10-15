@@ -12,8 +12,7 @@ import { deriveStatusFromDisabledAt, resolveLifecycleState, StatusState } from '
 import { extractStatusFilterFromAgModel } from '../common/status-filter';
 import { SupplierUpsertDto } from './dto/supplier.dto';
 import { assertSetFilterModes } from '../common/ag-grid-filtering';
-import { checkListEngineSupport } from '../common/list-engine/list-engine-support';
-import { ICU_COLLATION } from '../common/list-engine/sql-fragments';
+import { sortedFindQuery } from '../common/list-sort';
 import {
   cellOf,
   CsvDateOrder,
@@ -86,29 +85,9 @@ export class SuppliersService {
       ];
     }
 
-    const qb = await this.sortedQuery(repo, whereArr ?? where, sort);
+    const qb = await sortedFindQuery(repo, SORT_ALIAS, whereArr ?? where, sort);
     const [items, total] = await qb.offset(skip).limit(limit).getManyAndCount();
     return { items, total, page, limit };
-  }
-
-  /**
-   * The list's query in the requested order. A text column sorts alphabetically, ignoring case
-   * and accents (ICU root collation, as the OPEX and CAPEX lists); on a PostgreSQL without ICU,
-   * it ignores case only. The id breaks ties, so pages and the record navigation never shift.
-   */
-  private async sortedQuery(repo: Repository<Supplier>, where: any, sort: { field: string; direction: string }) {
-    const column = repo.metadata.findColumnWithPropertyName(sort.field);
-    if (!column) throw new BadRequestException(`Unknown sort field '${sort.field}'`);
-    const direction = String(sort.direction).toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
-    const qb = repo.createQueryBuilder(SORT_ALIAS).setFindOptions({ where });
-    const target = `${SORT_ALIAS}.${column.databaseName}`;
-    if (column.type === 'text') {
-      const icu = await checkListEngineSupport(repo.manager);
-      qb.orderBy(icu ? `${target} COLLATE ${ICU_COLLATION}` : `lower(${target})`, direction);
-    } else {
-      qb.orderBy(target, direction);
-    }
-    return qb.addOrderBy(`${SORT_ALIAS}.id`, 'ASC');
   }
 
   /**
@@ -178,7 +157,7 @@ export class SuppliersService {
 
     const limit = Math.min(Number(query?.limit) || 10000, 10000);
     const total = await repo.count({ where: whereArr ?? where });
-    const qb = await this.sortedQuery(repo, whereArr ?? where, sort);
+    const qb = await sortedFindQuery(repo, SORT_ALIAS, whereArr ?? where, sort);
     const items = await qb.select(`${SORT_ALIAS}.id`).limit(limit).getMany();
     const ids = items.map((i) => i.id);
     return { ids, total };
@@ -296,7 +275,7 @@ export class SuppliersService {
 
   async exportCsv(
     scope: 'template' | 'data' = 'data',
-    opts?: { manager?: EntityManager; language?: CsvLanguage },
+    opts?: { manager?: EntityManager; language?: CsvLanguage; listQuery?: Record<string, unknown> },
   ): Promise<{ filename: string; content: string }> {
     const language = opts?.language ?? 'en';
     const headers = this.csvHeaders();
@@ -305,13 +284,10 @@ export class SuppliersService {
       const repo = this.getRepo(opts?.manager);
       const mg = opts?.manager ?? repo.manager;
       const linkRepo = mg.getRepository(SupplierContactLink);
-      // The whole register, by name whatever its case (the list's search and filters do not apply).
-      const items = await repo
-        .createQueryBuilder('s')
-        .orderBy('LOWER(s.name)', 'ASC')
-        .addOrderBy('s.name', 'ASC')
-        .addOrderBy('s.id', 'ASC')
-        .getMany();
+      // What the list shows (its search, filters, scope and sort), or the whole register by name.
+      const items = opts?.listQuery
+        ? (await this.list(opts.listQuery, { manager: opts.manager, exportAll: true })).items
+        : await (await sortedFindQuery(repo, SORT_ALIAS, {}, { field: 'name', direction: 'ASC' })).getMany();
       // One contact per supplier and contact type: the primary one first, then the oldest link.
       const firstEmail = new Map<string, string>();
       const links = items.length === 0 ? [] : await linkRepo.find({

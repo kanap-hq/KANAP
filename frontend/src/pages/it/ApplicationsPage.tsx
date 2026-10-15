@@ -5,7 +5,7 @@ import PageHeader from '../../components/PageHeader';
 import ServerDataGrid, { EnhancedColDef } from '../../components/ServerDataGrid';
 import { ICellRendererParams } from 'ag-grid-community';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LinkCellRenderer } from '../../components/grid/renderers';
+import { LinkCellRenderer, wholeCellLinkSx, aboveCellLinkSx } from '../../components/grid/renderers';
 import { getEnvDotColor } from '../../components/grid/renderers/StatusCellRenderer';
 import { StatusDot } from '../../components/design';
 import { useAuth } from '../../auth/AuthContext';
@@ -386,7 +386,7 @@ export default function ApplicationsPage() {
         <Link
           href={buildAppHref(params.data as AppRow, 'ownership')}
           onClick={(event) => handleInternalNavigate(event, buildAppHref(params.data as AppRow, 'ownership'))}
-          sx={{ cursor: 'pointer' }}
+          sx={{ cursor: 'pointer', ...wholeCellLinkSx }}
           underline="none"
           color="inherit"
         >
@@ -406,7 +406,7 @@ export default function ApplicationsPage() {
         <Link
           href={buildAppHref(params.data as AppRow, 'compliance')}
           onClick={(event) => handleInternalNavigate(event, buildAppHref(params.data as AppRow, 'compliance'))}
-          sx={{ cursor: 'pointer' }}
+          sx={{ cursor: 'pointer', ...wholeCellLinkSx }}
           underline="none"
           color="inherit"
         >
@@ -432,7 +432,7 @@ export default function ApplicationsPage() {
         <Link
           href={buildAppHref(data as AppRow, tab)}
           onClick={(event) => handleInternalNavigate(event, buildAppHref(data as AppRow, tab))}
-          sx={{ cursor: 'pointer' }}
+          sx={{ cursor: 'pointer', ...wholeCellLinkSx }}
           underline="none"
           color="inherit"
         >
@@ -454,7 +454,7 @@ export default function ApplicationsPage() {
         <Link
           href={buildAppHref(data as AppRow, 'relations')}
           onClick={(event) => handleInternalNavigate(event, buildAppHref(data as AppRow, 'relations'))}
-          sx={{ cursor: 'pointer' }}
+          sx={{ cursor: 'pointer', ...wholeCellLinkSx }}
           underline="none"
           color="inherit"
         >
@@ -478,7 +478,7 @@ export default function ApplicationsPage() {
             <Link
               href={buildAppHref(data as AppRow, 'overview')}
               onClick={(event) => handleInternalNavigate(event, buildAppHref(data as AppRow, 'overview'))}
-              sx={{ cursor: 'pointer', display: 'block' }}
+              sx={{ cursor: 'pointer', display: 'block', ...wholeCellLinkSx }}
               underline="none"
               color="inherit"
             >
@@ -492,7 +492,7 @@ export default function ApplicationsPage() {
             <Box
               component="a"
               href={buildAppHref(data as AppRow, 'relations')}
-              sx={{ px: 0.75, py: 0.25, borderRadius: 1, bgcolor: 'action.hover', color: 'text.secondary', cursor: 'pointer', fontSize: '0.75rem' }}
+              sx={{ px: 0.75, py: 0.25, borderRadius: 1, bgcolor: 'action.hover', color: 'text.secondary', cursor: 'pointer', fontSize: '0.75rem', ...aboveCellLinkSx }}
               onClick={(e) => {
                 e.stopPropagation();
                 handleInternalNavigate(e, buildAppHref(data as AppRow, 'relations'));

@@ -80,6 +80,7 @@ export class AnalyticsCategoriesCsvService {
     scope: 'data' | 'template',
     ctx: AnalyticsContext,
     language: CsvLanguage = 'en',
+    listQuery?: Record<string, unknown>,
   ): Promise<{ filename: string; content: string }> {
     const headers = [...ANALYTICS_VALUE_CSV_HEADERS];
     const rows: string[][] = [];
@@ -88,11 +89,18 @@ export class AnalyticsCategoriesCsvService {
       const order = new Map(axes.map((axis, index) => [axis.id, index]));
       const codeById = new Map(axes.map((axis) => [axis.id, axis.code]));
       // The dimensions in their order, each dimension's values in theirs (a stable sort keeps the latter).
-      const values: StoredAnalyticsCategory[] = await ctx.manager.query(
+      let values: StoredAnalyticsCategory[] = await ctx.manager.query(
         `SELECT * FROM analytics_categories c WHERE c.tenant_id = $1 ORDER BY ${ANALYTICS_VALUE_ORDER_SQL}`,
         [ctx.tenantId],
       );
-      values.sort((a, b) => (order.get(a.axis_id) ?? 0) - (order.get(b.axis_id) ?? 0));
+      if (listQuery) {
+        // What the list shows (its search, filters, scope and sort), in its order.
+        const byId = new Map(values.map((value) => [value.id, value]));
+        const { items } = await this.categories.list(listQuery, { ...ctx, exportAll: true });
+        values = items.map((item) => byId.get(item.id)!).filter(Boolean);
+      } else {
+        values.sort((a, b) => (order.get(a.axis_id) ?? 0) - (order.get(b.axis_id) ?? 0));
+      }
       for (const value of values) {
         rows.push([
           codeById.get(value.axis_id) ?? '',

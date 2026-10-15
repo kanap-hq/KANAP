@@ -86,7 +86,7 @@ Haga clic en cualquier celda para abrir el espacio de trabajo.
 
 - **Nuevo**: crear un grupo o un centro de coste (requiere `cost_centers:member`)
 - **Importar CSV**: cargar el árbol desde un archivo (requiere `cost_centers:admin`)
-- **Exportar CSV**: descargar todos los elementos (requiere `cost_centers:admin`)
+- **Exportar CSV**: descargar los elementos que muestra la lista, o todos los elementos (requiere `cost_centers:admin`)
 - **Eliminar selección**: eliminar los elementos seleccionados (requiere `cost_centers:admin`). Los elementos que no se pueden eliminar se conservan y se listan con el motivo. El contenido se elimina antes que su grupo, de modo que seleccionar un grupo junto con todo lo que contiene lo elimina todo
 
 ---
@@ -139,7 +139,7 @@ Cada línea OPEX y CAPEX con un centro de coste muestra el responsable del presu
 
 ### Eliminar
 
-El botón **Eliminar** del encabezado elimina el elemento de inmediato (requiere `cost_centers:admin`). Está desactivado, con el motivo en una línea, cuando hay líneas de presupuesto que usan el centro de coste (por ejemplo "Usado por 3 líneas OPEX. Desactívelo en su lugar.") o cuando el grupo aún contiene elementos (por ejemplo "Contiene 2 elementos."). En su lugar, desactive el elemento: se mantiene en sus líneas y en los informes.
+El botón **Eliminar** del encabezado elimina el elemento tras una confirmación (requiere `cost_centers:admin`). Está desactivado, con el motivo en una línea, cuando hay líneas de presupuesto que usan el centro de coste (por ejemplo "Usado por 3 líneas OPEX. Desactívelo en su lugar.") o cuando el grupo aún contiene elementos (por ejemplo "Contiene 2 elementos."). En su lugar, desactive el elemento: se mantiene en sus líneas y en los informes.
 
 ---
 

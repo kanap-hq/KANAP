@@ -93,5 +93,6 @@
   "CSV_STATUS_DATE_FUTURE": "Le statut est disabled mais la fin de validité est encore à venir. Passez le statut à enabled ou indiquez une date passée.",
   "CSV_IMPORT_FAILED": "L'import a échoué : {{reason}}",
   "SUPPLIER_IN_USE": "Ce fournisseur est utilisé par {{usages}}. Désactivez-le plutôt que de le supprimer.",
-  "COMPANY_IN_USE": "Cette société est utilisée par {{usages}}. Désactivez-la plutôt que de la supprimer."
+  "COMPANY_IN_USE": "Cette société est utilisée par {{usages}}. Désactivez-la plutôt que de la supprimer.",
+  "CONTRACT_HAS_COMPLIANCE_RECORDS": "Ce contrat a {{usages}}. Désactivez-le plutôt que de le supprimer."
 }

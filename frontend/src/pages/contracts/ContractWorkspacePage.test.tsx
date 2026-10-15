@@ -8,7 +8,7 @@ import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../../components/design';
 
 const navigateMock = vi.hoisted(() => vi.fn());
-const auth = vi.hoisted(() => ({ canEdit: true }));
+const auth = vi.hoisted(() => ({ canEdit: true, canAdmin: true }));
 // A stable `t`: a new one per render would loop the effects that depend on it.
 const i18n = vi.hoisted(() => {
   const t = (key: string, options?: unknown) => {
@@ -27,7 +27,7 @@ vi.mock('react-router-dom', async (importOriginal) => ({
   useNavigate: () => navigateMock,
 }));
 vi.mock('../../auth/AuthContext', () => ({
-  useAuth: () => ({ hasLevel: () => auth.canEdit, profile: { id: 'user-1', first_name: 'Ada', last_name: 'Admin' } }),
+  useAuth: () => ({ hasLevel: (_resource: string, level?: string) => (level === 'admin' ? auth.canAdmin : auth.canEdit), profile: { id: 'user-1', first_name: 'Ada', last_name: 'Admin' } }),
 }));
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
 vi.mock('../../tenant/TenantContext', () => ({ useTenant: () => ({ tenantSlug: 'fromage' }) }));
@@ -49,6 +49,7 @@ const mocked = api as unknown as {
   get: ReturnType<typeof vi.fn>;
   post: ReturnType<typeof vi.fn>;
   patch: ReturnType<typeof vi.fn>;
+  delete: ReturnType<typeof vi.fn>;
 };
 
 const CONTRACT = {
@@ -136,6 +137,7 @@ describe('ContractWorkspacePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     auth.canEdit = true;
+    auth.canAdmin = true;
     try { window.localStorage?.clear?.(); } catch { /* no storage in this environment */ }
     mocked.get.mockImplementation(async (url: string, options?: { params?: { year: number; column: string } }) => {
       if (url === '/contracts/c-1') return { data: CONTRACT };
@@ -520,6 +522,69 @@ describe('ContractWorkspacePage', () => {
     expect(dpa).toHaveTextContent('Annex 4');
     expect(within(dpa).queryByRole('combobox')).toBeNull();
     expect(within(dpa).queryByRole('textbox')).toBeNull();
+  });
+
+  it('deletes the contract after a confirmation that counts what it is linked to', async () => {
+    mocked.post.mockImplementation(async (url: string) => (url === '/contracts/delete-impact'
+      ? { data: { contracts: 1, budget_lines: 2, applications: 1, assets: 1, contacts: 0, tasks: 2, links: 1, attachments: 1, blocked: 0, recorded_requirements: 0, refused: [] } }
+      : { data: {} }));
+    mocked.delete.mockResolvedValue({ data: undefined });
+    renderAt('/ops/contracts/c-1/overview?sort=name%3AASC');
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.delete' }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(mocked.post).toHaveBeenCalledWith('/contracts/delete-impact', { ids: ['c-1'] });
+    expect(dialog).toHaveTextContent('contracts.delete.title');
+    expect(dialog).toHaveTextContent('contracts.delete.detached');
+    expect(dialog).toHaveTextContent('contracts.delete.removed');
+    expect(mocked.delete).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'contracts.delete.confirmAnyway' }));
+
+    await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith('/contracts/c-1'));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/ops/contracts?sort=name%3AASC'));
+  });
+
+  it('keeps the contract when the confirmation is cancelled', async () => {
+    mocked.post.mockResolvedValue({ data: { contracts: 1, budget_lines: 1, applications: 0, assets: 0, contacts: 0, tasks: 0, links: 0, attachments: 0, blocked: 0, recorded_requirements: 0, refused: [] } });
+    renderAt('/ops/contracts/c-1/overview');
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.delete' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'buttons.cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(mocked.delete).not.toHaveBeenCalled();
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it('asks before deleting a contract linked to nothing too', async () => {
+    mocked.post.mockResolvedValue({ data: { contracts: 1, budget_lines: 0, applications: 0, assets: 0, contacts: 0, tasks: 0, links: 0, attachments: 0, blocked: 0, recorded_requirements: 0, refused: [] } });
+    mocked.delete.mockResolvedValue({ data: undefined });
+    renderAt('/ops/contracts/c-1/overview');
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.delete' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('contracts.delete.nothingLinked:1');
+    expect(mocked.delete).not.toHaveBeenCalled();
+    // Nothing else goes: the plain "Delete", not "Delete anyway".
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:buttons.delete' }));
+    await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith('/contracts/c-1'));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/ops/contracts'));
+  });
+
+  it('refuses to delete a contract with recorded compliance requirements and says why', async () => {
+    mocked.post.mockResolvedValue({ data: { contracts: 0, budget_lines: 0, applications: 0, assets: 0, contacts: 0, tasks: 0, links: 0, attachments: 0, blocked: 1, recorded_requirements: 3, refused: [{ id: 'c-1', name: 'SAP Maintenance', code: 'CONTRACT_HAS_COMPLIANCE_RECORDS', usages: [{ type: 'compliance_requirements', total: 3 }] }] } });
+    renderAt('/ops/contracts/c-1/overview');
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.delete' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('errors:CONTRACT_HAS_COMPLIANCE_RECORDS');
+    expect(dialog).not.toHaveTextContent('contracts.delete.detached');
+    expect(within(dialog).queryByRole('button', { name: /confirmAnyway|common:buttons\.delete/ })).toBeNull();
+    expect(mocked.delete).not.toHaveBeenCalled();
+  });
+
+  it('offers no delete to a member who is not an administrator', async () => {
+    auth.canAdmin = false;
+    renderAt('/ops/contracts/c-1/overview');
+    expect(await screen.findByText('SAP Maintenance')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).toBeNull();
   });
 
   it('creates a contract with the real fields only', async () => {

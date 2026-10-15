@@ -1,6 +1,7 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig, type InternalAxiosRequestConfig } from 'axios';
 import { clearSessionActivity, isIdleExpired, setRefreshTtlMs } from './auth/sessionStorage';
 import { getAccessToken, setAccessToken } from './auth/accessTokenStore';
+import { forgetRecentlyViewed, recentIdsGone } from './lib/recentViews';
 
 const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
@@ -209,9 +210,21 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// A record deleted, or that its own address no longer finds, leaves the "Recently viewed" lists.
+function forgetGoneRecords(answer: { config?: { method?: string; url?: string }; status?: number; data?: unknown } | undefined) {
+  if (!answer?.config) return;
+  forgetRecentlyViewed(recentIdsGone({ method: answer.config.method, url: answer.config.url, status: answer.status, data: answer.data }));
+}
+
 api.interceptors.response.use(
-  (response) => response,
-  (error) => refreshTokenAndRetry(error, api),
+  (response) => {
+    forgetGoneRecords(response);
+    return response;
+  },
+  (error) => {
+    if (error?.response?.status === 404) forgetGoneRecords({ ...error.response, config: error.config });
+    return refreshTokenAndRetry(error, api);
+  },
 );
 
 export default api;

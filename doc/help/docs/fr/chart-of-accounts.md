@@ -468,7 +468,7 @@ Vous pouvez exporter la liste de vos CoA (avec des métadonnées comme le code, 
 
 Le CSV global `/accounts` inclut une colonne `coa_code` qui identifie le CoA de chaque compte. **Exporter CSV** et **Importer CSV** l'utilisent lorsqu'aucun CoA n'est sélectionné sur la page.
 
-  - **Exporter CSV** : tous les comptes avec leur code CoA, numéro, nom, nom local, description, correspondances de consolidation, statut et **Utilisé pour**
+  - **Exporter CSV** : les comptes que la liste affiche (ou, sur demande dans la fenêtre, tous les comptes) avec leur code CoA, numéro, nom, nom local, description, correspondances de consolidation, statut et **Utilisé pour**
   - **Importer CSV** : **Télécharger le modèle** dans la fenêtre donne un fichier avec les seuls en-têtes. Commencez par la **Vérification préalable** pour valider la structure, l'encodage, les champs obligatoires et les doublons, puis **Charger** pour appliquer les insertions et les mises à jour
   - **Correspondance** : par `(coa_code, account_number)` dans votre espace de travail
   - **Colonnes obligatoires** : `coa_code`, `account_number`, `account_name`. Toutes les lignes d'un fichier doivent porter le même `coa_code`

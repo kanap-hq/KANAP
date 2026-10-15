@@ -252,8 +252,10 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     renderAt('/master-data/analytics/dimensions/ax-nature/overview');
     await screen.findByLabelText('analytics.fields.code');
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'common:buttons.delete' }));
     await waitFor(() => expect(mocked.deleteAnalyticsAxis).toHaveBeenCalledWith('ax-nature'));
-    fireEvent.click(screen.getByRole('link', { name: 'go to the default' }));
+    // The dialog waits for the answer; the page moves on behind it (as prev / next would).
+    fireEvent.click(screen.getByRole('link', { name: 'go to the default', hidden: true }));
     await waitFor(() => expect(screen.getByTestId('analytics-dimension-locked')).toBeInTheDocument());
     failDelete({ response: { status: 409, data: { message: 'Nature still has values. Delete them first.' } } });
     await new Promise((resolve) => setTimeout(resolve, 20));
@@ -294,14 +296,17 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     expect(within(usage).queryByRole('link')).toBeNull();
   });
 
-  it('deletes a dimension without values at once, with no dialog', async () => {
+  it('asks before deleting a dimension without values, with a plain Delete', async () => {
     mocked.getAnalyticsAxis.mockResolvedValue({ ...NATURE, value_count: 0, opex_count: 0, capex_count: 0 });
     mocked.deleteAnalyticsAxis.mockResolvedValue(undefined);
     renderAt('/master-data/analytics/dimensions/ax-nature/overview');
     expect(await screen.findByTestId('analytics-dimension-usage')).toHaveTextContent('analytics.usage.noValues');
     expect(screen.queryByText(/deleteBlocked/)).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
-    expect(screen.queryByRole('dialog')).toBeNull();
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByTestId('analytics-delete-confirmation')).toHaveTextContent('common:delete.cannotUndo');
+    expect(mocked.deleteAnalyticsAxis).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:buttons.delete' }));
     await waitFor(() => expect(mocked.deleteAnalyticsAxis).toHaveBeenCalledWith('ax-nature'));
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/analytics'));
   });

@@ -114,7 +114,7 @@ Standorte können Support-Kontakte haben (Facility Manager, NOC-Kontakte usw.).
 
 Verwalten Sie Kontakte in großen Mengen per CSV.
 
-**Export**: Lädt alle Kontakte mit ihren Details herunter.
+**Export**: Lädt die Kontakte der Liste mit ihren Details herunter. Wählen Sie im Dialog **Das ganze Verzeichnis** für alle Kontakte.
 
 **Import**:
 - Verwenden Sie die **Vorprüfung** zum Validieren vor dem Anwenden

@@ -129,14 +129,15 @@ export async function deleteItemDependents(
 }
 
 /**
- * A task turned into a request is the request's `origin_task_id` (RESTRICT):
+ * Deletes the tasks of one object (`related_object_type` / `related_object_id`): a budget line's,
+ * a contract's. A task turned into a request is the request's `origin_task_id` (RESTRICT):
  * the request keeps its own copy of the task, so only the link is cleared, and
  * the request's history says which task it was ("T-n: title", read before the
  * delete, like the conversion's own entry). Task attachment blobs stay: a
  * converted request shares their paths, and the weekly ghost sweep removes the
  * unshared ones.
  */
-async function deleteItemTasks(
+export async function deleteItemTasks(
   manager: EntityManager,
   taskObjectType: string,
   tenantId: string,

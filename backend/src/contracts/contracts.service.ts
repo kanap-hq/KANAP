@@ -8,6 +8,7 @@ import { ContractLink } from './contract-link.entity';
 import { ContractAttachment } from './contract-attachment.entity';
 import { AuditService } from '../audit/audit.service';
 import { parseExportPagination, parsePagination, type Sort } from '../common/pagination';
+import { textSortKey } from '../common/list-sort';
 import { format } from '@fast-csv/format';
 import { parseString } from '@fast-csv/parse';
 import { CsvDecodeError, decodeCsv } from '../common/csv-sheet/decode';
@@ -137,6 +138,8 @@ type ListItem = Contract & ContractTermFields & {
 
 /** Who reads a list: the budget figures need the right to read the budget too. */
 type ListReadOptions = { manager?: EntityManager; budgetAccess?: boolean };
+/** The list columns that sort alphabetically. */
+const CONTRACT_TEXT_SORTS = new Set(['name', 'company_name', 'supplier_name', 'currency', 'billing_frequency']);
 
 /** A contract link `l` to an OPEX line (`spend/budget-nature.ts`): the OPEX side lists, counts and replaces those only. */
 const OPEX_LINK = linkedLineOf('l.tenant_id', 'l.spend_item_id', 'opex');
@@ -322,7 +325,7 @@ export class ContractsService {
    * Orders a list query. The term values sort through a selected alias; the next due date puts
    * the contracts without one (ended) last in both directions.
    */
-  private applyListSort(qb: SelectQueryBuilder<Contract>, sort: Sort, filterTargets: Record<string, FilterTargetConfig>) {
+  private async applyListSort(qb: SelectQueryBuilder<Contract>, sort: Sort, filterTargets: Record<string, FilterTargetConfig>) {
     // The budget figures sort when the list joins them (a budget year and column were given).
     const budgetSorts = filterTargets.budget_state ? BUDGET_FIELDS : {};
     // The compliance summary sorts when the list joins it (`listQuery`).
@@ -354,6 +357,11 @@ export class ContractsService {
       qb.addSelect(sortExpr, `sort_${sortField}`);
       // Without a value (no next due date, no rate for the currency): last in both directions.
       qb.orderBy(`sort_${sortField}`, direction, sortField === 'next_due_date' || budgetSorts[sortField] ? 'NULLS LAST' : undefined);
+    } else if (CONTRACT_TEXT_SORTS.has(sortField)) {
+      // Text alphabetically, case and accents ignored, through a selected alias (paged over joins).
+      const textKey = await textSortKey(qb.connection.manager);
+      qb.addSelect(textKey(sortExpr), `sort_${sortField}`);
+      qb.orderBy(`sort_${sortField}`, direction);
     } else {
       qb.orderBy(sortExpr, direction);
     }
@@ -391,7 +399,7 @@ export class ContractsService {
 
     const total = await qbBase.clone().getCount();
     const qb = qbBase.clone();
-    this.applyListSort(qb, sort, filterTargets);
+    await this.applyListSort(qb, sort, filterTargets);
     qb.skip(skip).take(limit);
     const items = await qb.getMany();
 
@@ -878,7 +886,7 @@ export class ContractsService {
     // navigation that calls this sends no limit, so it only ever knew 20 contracts.
     const limit = Math.min(Number(query?.limit) || 10000, 10000);
     qb.select(['c.id']);
-    this.applyListSort(qb, sort, filterTargets);
+    await this.applyListSort(qb, sort, filterTargets);
     qb.offset(skip).limit(limit);
 
     const [rows, total] = await qb.getManyAndCount();
@@ -1002,7 +1010,7 @@ export class ContractsService {
       'name','company_name','supplier_name','start_date','duration_months','auto_renewal','notice_period_months','yearly_amount_at_signature','currency','billing_frequency','status','owner_email','notes'
     ];
   }
-  async exportCsv(scope: 'template' | 'data' = 'data', opts?: { manager?: EntityManager }) {
+  async exportCsv(scope: 'template' | 'data' = 'data', opts?: ListReadOptions & { listQuery?: Record<string, unknown> }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(Contract);
     const headers = this.csvHeaders();
@@ -1017,7 +1025,15 @@ export class ContractsService {
       return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString().slice(0, 10);
     };
     if (scope === 'data') {
-      const items = await repo.find({ where: { tenant_id: sessionTenant() }, order: { created_at: 'DESC' as any } });
+      // What the list shows (its search, filters, scope and sort), or the whole register, newest first.
+      let items: Contract[];
+      if (opts?.listQuery) {
+        const listed = (await this.list(opts.listQuery, { ...opts, exportAll: true })).items as Array<{ id: string }>;
+        const byId = new Map((listed.length ? await repo.find({ where: { tenant_id: sessionTenant(), id: In(listed.map((row) => row.id)) } }) : []).map((row) => [row.id, row]));
+        items = listed.map((row) => byId.get(row.id)!).filter(Boolean);
+      } else {
+        items = await repo.find({ where: { tenant_id: sessionTenant() }, order: { created_at: 'DESC' as any, id: 'ASC' as any } });
+      }
       if (items.length) {
         const sIds = Array.from(new Set(items.map(i => i.supplier_id)));
         const cIds = Array.from(new Set(items.map(i => i.company_id)));

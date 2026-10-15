@@ -132,6 +132,27 @@ async function testCompanyUsedByAContractIsRefused() {
   });
 }
 
+/** The check before a delete: per id, what would be refused and why, with nothing deleted. */
+async function testDeleteCheckListsRefusalsFirst() {
+  await withRollback(async (runner, t) => {
+    const companyId = await company(runner, t, 'Check company');
+    const freeCompany = await company(runner, t, 'Free check company');
+    const free = await supplier(runner, t, 'Free check supplier');
+    const used = await supplier(runner, t, 'Used check supplier');
+    await contract(runner, t, 'Check contract', companyId, used);
+    const suppliers = new SuppliersDeleteService(runner.manager.getRepository(Supplier), noAudit);
+    const companies = new CompaniesDeleteService(runner.manager.getRepository(Company), noAudit);
+
+    assert.deepEqual(await suppliers.deleteCheck([free, used, 'not-a-uuid', randomUUID()], { manager: runner.manager }), {
+      refused: [{ id: used, name: 'Used check supplier', code: 'SUPPLIER_IN_USE', usages: [{ type: 'contracts', total: 1 }] }],
+    });
+    assert.deepEqual(await companies.deleteCheck([companyId, freeCompany], { manager: runner.manager }), {
+      refused: [{ id: companyId, name: 'Check company', code: 'COMPANY_IN_USE', usages: [{ type: 'contracts', total: 1 }] }],
+    });
+    assert.deepEqual(await remaining(runner, 'suppliers', [free, used]), [free, used].sort(), 'nothing deleted');
+  });
+}
+
 /** The keys refuse what bypasses the services, and a deleted owner leaves the contract without one. */
 async function testForeignKeysBackTheRefusal() {
   await withRollback(async (runner, t) => {
@@ -321,6 +342,7 @@ async function main() {
       testCompanyUsedByEveryKindIsRefused,
       testCompanyKeysRestrictEveryKind,
       testSupplierDeleteRemovesItsContactLinks,
+      testDeleteCheckListsRefusalsFirst,
     ]) {
       try {
         await test();

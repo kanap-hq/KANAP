@@ -3,7 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DeepPartial, EntityManager, Equal, ILike, IsNull, Raw, Repository } from 'typeorm';
 import { Account, ACCOUNT_NATURES, AccountNature } from './account.entity';
 import { Company } from '../companies/company.entity';
-import { buildWhereFromAgFilters, parsePagination } from '../common/pagination';
+import { buildWhereFromAgFilters, parseExportPagination, parsePagination } from '../common/pagination';
+import { sortedFindQuery } from '../common/list-sort';
 import { compileAgFilterCondition, createParamNameGenerator, assertSetFilterModes } from '../common/ag-grid-filtering';
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import * as fs from 'fs';
@@ -181,9 +182,9 @@ export class AccountsService {
     return manager ? manager.getRepository(Account) : this.repo;
   }
 
-  async list(query: any, opts?: { manager?: EntityManager }) {
+  async list(query: any, opts?: { manager?: EntityManager; exportAll?: boolean }) {
     const repo = this.getRepo(opts?.manager);
-    const { page, limit, skip, sort, status, q, filters } = parsePagination(query);
+    const { page, limit, skip, sort, status, q, filters } = opts?.exportAll ? parseExportPagination(query) : parsePagination(query);
     assertSetFilterModes(filters, ['status', 'account_number']);
     const consolidationStatus = parseConsolidationStatus(query?.consolidationStatus);
     const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
@@ -310,12 +311,8 @@ export class AccountsService {
     // Map virtual fields to actual DB columns for sorting
     const sortField = sort.field === 'coa_code' ? 'coa_id' : sort.field;
 
-    const [items, total] = await repo.findAndCount({
-      where: whereArr ?? where,
-      order: { [sortField]: sort.direction as any },
-      skip,
-      take: limit,
-    });
+    const qb = await sortedFindQuery(repo, 'account', whereArr ?? where, { field: sortField, direction: sort.direction });
+    const [items, total] = await qb.offset(skip).limit(limit).getManyAndCount();
     // Enrich with CoA code and consolidation status for UI
     const ids = Array.from(new Set(items.map((i) => i.coa_id).filter(Boolean))) as string[];
     let codeById = new Map<string, string>();
@@ -472,13 +469,8 @@ export class AccountsService {
     const sortField = sort.field === 'coa_code' ? 'coa_id' : sort.field;
 
     const total = await repo.count({ where: whereArr ?? where });
-    const items = await repo.find({
-      where: whereArr ?? where,
-      order: { [sortField]: sort.direction as any },
-      take: limit,
-      skip: 0,
-      select: ['id'],
-    });
+    const qb = await sortedFindQuery(repo, 'account', whereArr ?? where, { field: sortField, direction: sort.direction });
+    const items = await qb.select('account.id').limit(limit).getMany();
     const ids = items.map((i) => i.id);
     return { ids, total };
   }
@@ -758,7 +750,7 @@ export class AccountsService {
 
   async exportCsv(
     scope: 'template' | 'data' = 'data',
-    opts?: { manager?: EntityManager; coaId?: string; includeCoaCode?: boolean; language?: CsvLanguage },
+    opts?: { manager?: EntityManager; coaId?: string; includeCoaCode?: boolean; language?: CsvLanguage; listQuery?: Record<string, unknown> },
   ): Promise<{ filename: string; content: string }> {
     const language = opts?.language ?? 'en';
     const includeCoa = !!opts?.includeCoaCode;
@@ -768,7 +760,12 @@ export class AccountsService {
       const repo = this.getRepo(opts?.manager);
       const where: any = {};
       if (opts?.coaId) where.coa_id = opts.coaId;
-      const items = await repo.find({ where, order: { created_at: 'DESC' as any } });
+      // What the list shows (its search, filters, scope and sort, within the chart when one is
+      // given), or the whole register, newest first.
+      const listQuery = opts?.listQuery && (opts.coaId ? { ...opts.listQuery, coaId: opts.coaId } : opts.listQuery);
+      const items: Account[] = listQuery
+        ? (await this.list(listQuery, { manager: opts?.manager, exportAll: true })).items
+        : await repo.find({ where, order: { created_at: 'DESC' as any, id: 'ASC' as any } });
       let codeById = new Map<string, string>();
       if (includeCoa) {
         const ids = Array.from(new Set(items.map((a) => a.coa_id).filter(Boolean))) as string[];

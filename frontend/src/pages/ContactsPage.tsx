@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import PageHeader from '../components/PageHeader';
-import ServerDataGrid, { EnhancedColDef } from '../components/ServerDataGrid';
+import ServerDataGrid, { EnhancedColDef, type ListRequest } from '../components/ServerDataGrid';
 import { Button, Stack } from '@mui/material';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
@@ -25,6 +25,8 @@ export default function ContactsPage() {
 
   const [refreshKey, setRefreshKey] = useState(0);
   const [exportOpen, setExportOpen] = useState(false);
+  // The list on screen: the CSV export follows it.
+  const [listRequest, setListRequest] = useState<ListRequest | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const gridApiRef = useRef<any>(null);
   const lastQueryRef = useRef<{ sort: string; q: string; filters: any } | null>(null);
@@ -163,6 +165,7 @@ export default function ContactsPage() {
     <>
       <PageHeader title={t("contacts.title")} actions={actions} />
       <ServerDataGrid<any>
+        onListRequestChange={setListRequest}
         columns={columns}
         endpoint="/contacts"
         queryKey="contacts"
@@ -181,7 +184,7 @@ export default function ContactsPage() {
           lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {} };
         }}
       />
-      <CsvExportDialog open={exportOpen} onClose={() => setExportOpen(false)} endpoint="/contacts" title={t("contacts.export")} />
+      <CsvExportDialog listRequest={listRequest} entity="contacts" open={exportOpen} onClose={() => setExportOpen(false)} endpoint="/contacts" title={t("contacts.export")} />
       <CsvImportDialog
         open={importOpen}
         onClose={() => setImportOpen(false)}

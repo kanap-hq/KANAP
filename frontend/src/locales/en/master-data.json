@@ -175,6 +175,12 @@
       "headcountInvalid": "Enter a whole number, 0 or more.",
       "itUsersInvalid": "Enter a whole number, 0 or more, or leave it empty.",
       "turnoverInvalid": "Enter a number, 0 or more, with up to 3 decimals, or leave it empty."
+    },
+    "delete": {
+      "toDelete_one": "{{count}} company will be deleted:",
+      "toDelete_other": "{{count}} companies will be deleted:",
+      "kept_one": "{{count}} company is still in use and is kept. Disable it instead:",
+      "kept_other": "{{count}} companies are still in use and are kept. Disable them instead:"
     }
   },
   "departments": {
@@ -389,7 +395,6 @@
     "noSuppliersFound": "No suppliers found",
     "export": "Export suppliers",
     "import": "Import suppliers",
-    "exportScope": "The file holds all suppliers, enabled and disabled, sorted by name. The search and filters of the list do not apply.",
     "importHint": "Accepted status values: enabled or disabled. disabled_at holds the end of validity, or stays empty. The contact columns take the e-mail of a contact that already exists in Contacts.",
     "fields": {
       "name": "Name",
@@ -430,7 +435,13 @@
       "createFailed": "Failed to create the supplier."
     },
     "previous": "Previous supplier",
-    "next": "Next supplier"
+    "next": "Next supplier",
+    "delete": {
+      "toDelete_one": "{{count}} supplier will be deleted:",
+      "toDelete_other": "{{count}} suppliers will be deleted:",
+      "kept_one": "{{count}} supplier is still in use and is kept. Disable it instead:",
+      "kept_other": "{{count}} suppliers are still in use and are kept. Disable them instead:"
+    }
   },
   "contacts": {
     "title": "Contacts",

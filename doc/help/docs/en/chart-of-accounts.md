@@ -468,7 +468,7 @@ You can export a list of your CoAs (with metadata like code, name, country, defa
 
 The global `/accounts` CSV includes a `coa_code` column to identify which CoA each account belongs to. **Export CSV** and **Import CSV** use it when no CoA is selected on the page.
 
-  - **Export CSV**: all accounts with their CoA codes, account numbers, names, native names, descriptions, consolidation mappings, status and **Used for**
+  - **Export CSV**: the accounts the list shows (or, on request in the dialog, all accounts) with their CoA codes, account numbers, names, native names, descriptions, consolidation mappings, status and **Used for**
   - **Import CSV**: **Download template** in the dialog gives a file with the headers only. Start with **Preflight check** to validate the structure, the encoding, the required fields and the duplicates, then **Load** to apply the inserts and the updates
   - **Matching**: by `(coa_code, account_number)` within your workspace
   - **Required columns**: `coa_code`, `account_number`, `account_name`. All rows of one file must carry the same `coa_code`

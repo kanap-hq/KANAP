@@ -72,7 +72,7 @@ La liste affiche toutes les sociétés de votre espace de travail. Utilisez-la p
 
 ## L'espace de travail de la société
 
-Cliquez sur un nom de société dans la liste pour ouvrir son espace de travail. Il comporte deux onglets : **Vue d'ensemble** et **Détails**.
+Cliquez sur n'importe quelle ligne de la liste pour ouvrir l'espace de travail de la société. Il comporte deux onglets : **Vue d'ensemble** et **Détails**.
 
 - **En-tête** : le nom de la société. Cliquez dessus pour renommer la société. Les flèches avec « N sur M » permettent de passer d'une société à l'autre dans l'ordre et avec les filtres de la liste, sans revenir à la liste. Le lien de retour, **Sociétés**, ramène à la liste avec votre contexte de recherche intact
 - **Panneau Propriétés** à droite : **Pays**, **Devise de base**, **Plan comptable** et **Cycle de vie**. Utilisez le bouton situé à côté pour replier le panneau ou le rouvrir
@@ -159,7 +159,7 @@ Utilisez la **Fin de validité** pour contrôler quand une société cesse d'êt
 - Après la fin de validité :
     - La société n'apparaît plus dans les listes de sélection pour les nouvelles ventilations et est exclue des rapports pour les années strictement postérieures.
     - Les données historiques restent intactes ; la société apparaît toujours dans les rapports couvrant les années où elle était active.
-- **Préférez la désactivation à la suppression.** Une société encore utilisée ne peut pas être supprimée : lignes budgétaires (comme société payeuse ou dans leurs ventilations), contrats, centres de coûts, départements, utilisateurs, sites qu'elle exploite, tâches, applications, interfaces, projets et demandes du portefeuille, et membres d'équipe dont elle est la société par défaut. Le message compte ce qui l'utilise, par exemple « Cette société est utilisée par 2 départements et 14 utilisateurs ». Désactivez-la à la place. Ses métriques annuelles sont supprimées avec elle.
+- **Préférez la désactivation à la suppression.** Une société encore utilisée ne peut pas être supprimée : lignes budgétaires (comme société payeuse ou dans leurs ventilations), contrats, centres de coûts, départements, utilisateurs, sites qu'elle exploite, tâches, applications, interfaces, projets et demandes du portefeuille, et membres d'équipe dont elle est la société par défaut. Le message compte ce qui l'utilise, par exemple « Cette société est utilisée par 2 départements et 14 utilisateurs ». Désactivez-la à la place. Ses métriques annuelles sont supprimées avec elle. Dans la liste, la confirmation nomme les sociétés ainsi conservées, avec ce qui les utilise, avant toute suppression.
 - **Pour supprimer une société malgré tout**, retirez d'abord ce qui l'utilise. Indiquez une autre société sur ses utilisateurs, ses lignes budgétaires et leurs ventilations, ses contrats, ses centres de coûts, les sites qu'elle exploite, ses tâches, applications, interfaces, projets et demandes du portefeuille, et ses membres d'équipe. Déplacez ses départements vers une autre société, ou supprimez-les en dernier, quand plus rien ne les utilise. Supprimez ensuite la société.
 
 ## Métriques annuelles
@@ -183,7 +183,7 @@ De nombreuses parties de l'application sont sensibles à l'année. Les société
 
 ## Import/export CSV
 
-**Exporter CSV** télécharge toutes les sociétés avec leurs métriques. **Importer CSV** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les seuls en-têtes, prêt à remplir.
+**Exporter CSV** télécharge les sociétés que la liste affiche (ou, sur demande dans la fenêtre, toutes les sociétés) avec leurs métriques. **Importer CSV** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les seuls en-têtes, prêt à remplir.
 
 Les colonnes, dans cet ordre. Les colonnes de métriques suivent l'année sélectionnée dans la barre d'outils de la liste : l'année précédente, celle-ci et la suivante.
 

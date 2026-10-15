@@ -169,7 +169,7 @@ export default function AnalyticsDimensionWorkspacePage() {
   const isDefault = !!data?.is_default;
   const disabled = !canEdit;
   const valueCount = data?.value_count ?? 0;
-  // Without values it goes at once; with values the dialog says what goes with it (from the detail's counts).
+  // Always asked: without values a plain Delete; with values the dialog says what goes with it (from the detail's counts).
   const confirmation = data ? deleteConfirmation(t, {
     kind: 'dimension',
     name: axes.label(data),
@@ -183,7 +183,7 @@ export default function AnalyticsDimensionWorkspacePage() {
       variant="action-danger"
       startIcon={<DeleteIcon sx={{ fontSize: '14px !important' }} />}
       size="small"
-      onClick={() => (confirmation ? setConfirmOpen(true) : void handleDelete(false))}
+      onClick={() => setConfirmOpen(true)}
       disabled={deleting}
     >
       {t('common:buttons.delete')}
@@ -278,7 +278,7 @@ export default function AnalyticsDimensionWorkspacePage() {
           open={confirmOpen}
           title={confirmation.title}
           onClose={() => { if (!deleting) setConfirmOpen(false); }}
-          onSave={() => handleDelete(true)}
+          onSave={() => handleDelete(confirmation.force)}
           saveLabel={confirmation.confirmLabel}
           saveVariant="action-danger"
           saveLoading={deleting}
