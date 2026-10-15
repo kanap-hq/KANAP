@@ -394,8 +394,6 @@
       "cannotUndo": "Esta acción no se puede deshacer.",
       "confirmAnyway": "Eliminar de todos modos",
       "failed": "No se pudo eliminar el contrato.",
-      "blocked_one": "{{count}} contrato seleccionado tiene requisitos de conformidad registrados: se conserva. Desactívelo en su lugar.",
-      "blocked_other": "{{count}} contratos seleccionados tienen requisitos de conformidad registrados: se conservan. Desactívelos en su lugar.",
       "nothingLinked_one": "Este contrato no está vinculado a nada y no contiene nada. Esta acción no se puede deshacer.",
       "nothingLinked_other": "Estos contratos no están vinculados a nada y no contienen nada. Esta acción no se puede deshacer.",
       "kinds": {
@@ -413,7 +411,11 @@
         "links_other": "{{count}} enlaces web",
         "attachments_one": "{{count}} adjunto",
         "attachments_other": "{{count}} adjuntos"
-      }
+      },
+      "toDelete_one": "Se eliminará {{count}} contrato:",
+      "toDelete_other": "Se eliminarán {{count}} contratos:",
+      "kept_one": "Se conserva {{count}} contrato. Desactívelo en su lugar:",
+      "kept_other": "Se conservan {{count}} contratos. Desactívelos en su lugar:"
     },
     "title": "Contratos",
     "newButton": "Nuevo",

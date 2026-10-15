@@ -155,6 +155,8 @@
     "warningMessage_other": "Cette action est irréversible. Les éléments référencés ailleurs sont conservés ; les autres sont définitivement supprimés.",
     "itemsToDelete_one": "L'élément suivant sera supprimé :",
     "itemsToDelete_other": "{{count}} éléments seront supprimés :",
+    "itemsKept_one": "{{count}} élément est conservé :",
+    "itemsKept_other": "{{count}} éléments sont conservés :",
     "andMore_one": "… et {{count}} autre élément",
     "andMore_other": "… et {{count}} autres éléments",
     "confirmPrompt": "Êtes-vous sûr de vouloir continuer ?",

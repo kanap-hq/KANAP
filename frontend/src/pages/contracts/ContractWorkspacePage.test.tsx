@@ -526,7 +526,7 @@ describe('ContractWorkspacePage', () => {
 
   it('deletes the contract after a confirmation that counts what it is linked to', async () => {
     mocked.post.mockImplementation(async (url: string) => (url === '/contracts/delete-impact'
-      ? { data: { contracts: 1, budget_lines: 2, applications: 1, assets: 1, contacts: 0, tasks: 2, links: 1, attachments: 1, blocked: 0, recorded_requirements: 0 } }
+      ? { data: { contracts: 1, budget_lines: 2, applications: 1, assets: 1, contacts: 0, tasks: 2, links: 1, attachments: 1, blocked: 0, recorded_requirements: 0, refused: [] } }
       : { data: {} }));
     mocked.delete.mockResolvedValue({ data: undefined });
     renderAt('/ops/contracts/c-1/overview?sort=name%3AASC');
@@ -545,7 +545,7 @@ describe('ContractWorkspacePage', () => {
   });
 
   it('keeps the contract when the confirmation is cancelled', async () => {
-    mocked.post.mockResolvedValue({ data: { contracts: 1, budget_lines: 1, applications: 0, assets: 0, contacts: 0, tasks: 0, links: 0, attachments: 0, blocked: 0, recorded_requirements: 0 } });
+    mocked.post.mockResolvedValue({ data: { contracts: 1, budget_lines: 1, applications: 0, assets: 0, contacts: 0, tasks: 0, links: 0, attachments: 0, blocked: 0, recorded_requirements: 0, refused: [] } });
     renderAt('/ops/contracts/c-1/overview');
     fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.delete' }));
     const dialog = await screen.findByRole('dialog');
@@ -556,7 +556,7 @@ describe('ContractWorkspacePage', () => {
   });
 
   it('asks before deleting a contract linked to nothing too', async () => {
-    mocked.post.mockResolvedValue({ data: { contracts: 1, budget_lines: 0, applications: 0, assets: 0, contacts: 0, tasks: 0, links: 0, attachments: 0, blocked: 0, recorded_requirements: 0 } });
+    mocked.post.mockResolvedValue({ data: { contracts: 1, budget_lines: 0, applications: 0, assets: 0, contacts: 0, tasks: 0, links: 0, attachments: 0, blocked: 0, recorded_requirements: 0, refused: [] } });
     mocked.delete.mockResolvedValue({ data: undefined });
     renderAt('/ops/contracts/c-1/overview');
     fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.delete' }));
@@ -570,7 +570,7 @@ describe('ContractWorkspacePage', () => {
   });
 
   it('refuses to delete a contract with recorded compliance requirements and says why', async () => {
-    mocked.post.mockResolvedValue({ data: { contracts: 0, budget_lines: 0, applications: 0, assets: 0, contacts: 0, tasks: 0, links: 0, attachments: 0, blocked: 1, recorded_requirements: 3 } });
+    mocked.post.mockResolvedValue({ data: { contracts: 0, budget_lines: 0, applications: 0, assets: 0, contacts: 0, tasks: 0, links: 0, attachments: 0, blocked: 1, recorded_requirements: 3, refused: [{ id: 'c-1', name: 'SAP Maintenance', code: 'CONTRACT_HAS_COMPLIANCE_RECORDS', usages: [{ type: 'compliance_requirements', total: 3 }] }] } });
     renderAt('/ops/contracts/c-1/overview');
     fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.delete' }));
     const dialog = await screen.findByRole('dialog');

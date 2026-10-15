@@ -7,7 +7,7 @@ import es from '../../locales/es/ops.json';
 import { contractDeleteImpactText, type ContractDeleteImpact } from './contractDelete';
 
 const NOTHING: ContractDeleteImpact = {
-  contracts: 1, budget_lines: 0, applications: 0, assets: 0, contacts: 0, tasks: 0, links: 0, attachments: 0, blocked: 0, recorded_requirements: 0,
+  contracts: 1, budget_lines: 0, applications: 0, assets: 0, contacts: 0, tasks: 0, links: 0, attachments: 0, blocked: 0, recorded_requirements: 0, refused: [],
 };
 
 async function translator(lng: string, resources: unknown) {
@@ -39,16 +39,13 @@ describe('contractDeleteImpactText', () => {
     expect(contractDeleteImpactText(t, 'en', { ...NOTHING, tasks: 1 }).text).toBe('Also deleted: 1 task. This cannot be undone.');
   });
 
-  it('says which selected contracts are kept for their recorded requirements', async () => {
+  it('leaves the refused contracts to the list of kept ones', async () => {
     const t = await translator('en', en);
-    expect(contractDeleteImpactText(t, 'en', { ...NOTHING, contracts: 1, blocked: 2, recorded_requirements: 5, links: 1 }).text).toBe(
-      'Also deleted: 1 website link. This cannot be undone. '
-      + '2 selected contracts have recorded compliance requirements: they are kept. Disable them instead.',
-    );
-    expect(contractDeleteImpactText(t, 'en', { ...NOTHING, contracts: 0, blocked: 1, recorded_requirements: 1 })).toEqual({
-      text: '1 selected contract has recorded compliance requirements: it is kept. Disable it instead.',
-      dependants: false,
-    });
+    // One contract can go (a website link goes with it), two are refused: the text speaks of the one.
+    expect(contractDeleteImpactText(t, 'en', { ...NOTHING, contracts: 1, blocked: 2, recorded_requirements: 5, links: 1 }).text)
+      .toBe('Also deleted: 1 website link. This cannot be undone.');
+    expect(contractDeleteImpactText(t, 'en', { ...NOTHING, contracts: 0, blocked: 1, recorded_requirements: 1 }))
+      .toEqual({ text: '', dependants: false });
   });
 
   it.each([['fr', fr], ['de', de], ['es', es]])('has every sentence in %s', async (lng, resources) => {

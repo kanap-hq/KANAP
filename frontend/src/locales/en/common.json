@@ -155,6 +155,8 @@
     "warningMessage_other": "This action cannot be undone. Items referenced elsewhere are kept; the others are permanently removed.",
     "itemsToDelete_one": "The following item will be deleted:",
     "itemsToDelete_other": "{{count}} items will be deleted:",
+    "itemsKept_one": "{{count}} item is kept:",
+    "itemsKept_other": "{{count}} items are kept:",
     "andMore_one": "… and {{count}} more item",
     "andMore_other": "… and {{count}} more items",
     "confirmPrompt": "Are you sure you want to proceed?",

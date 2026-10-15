@@ -383,8 +383,11 @@ describe('ContractsPage', () => {
     await waitFor(() => expect(download.blob).toHaveBeenCalledWith(expect.any(Blob), 'contract-compliance-register.csv'));
   });
 
+  const IMPACT = { contracts: 0, budget_lines: 0, applications: 0, assets: 0, contacts: 0, tasks: 0, links: 0, attachments: 0, blocked: 0, recorded_requirements: 0, refused: [] };
+  const AUDITED = { id: 'c-3', name: 'Audited', code: 'CONTRACT_HAS_COMPLIANCE_RECORDS', usages: [{ type: 'compliance_requirements', total: 1 }] };
+
   it('deletes the selected contracts after a confirmation that counts what they are linked to', async () => {
-    api.post.mockResolvedValue({ data: { contracts: 2, budget_lines: 3, applications: 0, assets: 1, contacts: 0, tasks: 0, links: 0, attachments: 2, blocked: 0, recorded_requirements: 0 } });
+    api.post.mockResolvedValue({ data: { ...IMPACT, contracts: 2, budget_lines: 3, assets: 1, attachments: 2 } });
     api.delete.mockResolvedValue({ data: { deleted: ['c-1', 'c-2'], failed: [] } });
     renderPage();
     expect(grid.props?.enableRowSelection).toBe(true);
@@ -392,11 +395,13 @@ describe('ContractsPage', () => {
     expect(button).toBeDisabled();
 
     act(() => { grid.props?.onSelectionChanged([{ id: 'c-2', name: 'Oracle' }, { id: 'c-1', name: 'SAP' }]); });
-    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/contracts/delete-impact', { ids: ['c-1', 'c-2'] }));
-    await waitFor(() => expect(button).toBeEnabled());
+    // Asked on click, not on every selection change.
+    expect(api.post).not.toHaveBeenCalled();
     fireEvent.click(button);
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/contracts/delete-impact', { ids: ['c-2', 'c-1'] }));
 
     const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('contracts.delete.toDelete {"count":2}');
     expect(dialog).toHaveTextContent('contracts.delete.detached');
     expect(dialog).toHaveTextContent('contracts.delete.removed');
     fireEvent.click(within(dialog).getByRole('button', { name: 'contracts.delete.confirmAnyway' }));
@@ -404,17 +409,41 @@ describe('ContractsPage', () => {
   });
 
   it('says what happens to contracts linked to nothing, in place of the generic warning', async () => {
-    api.post.mockResolvedValue({ data: { contracts: 1, budget_lines: 0, applications: 0, assets: 0, contacts: 0, tasks: 0, links: 0, attachments: 0, blocked: 0, recorded_requirements: 0 } });
+    api.post.mockResolvedValue({ data: { ...IMPACT, contracts: 1 } });
     renderPage();
     act(() => { grid.props?.onSelectionChanged([{ id: 'c-1', name: 'SAP' }]); });
-    const button = screen.getByRole('button', { name: /buttons\.deleteSelected/ });
-    await waitFor(() => expect(api.post).toHaveBeenCalled());
-    await waitFor(() => expect(button).toBeEnabled());
-    fireEvent.click(button);
+    fireEvent.click(screen.getByRole('button', { name: /buttons\.deleteSelected/ }));
     const dialog = await screen.findByRole('dialog');
     expect(dialog).toHaveTextContent('contracts.delete.nothingLinked {"count":1}');
     expect(dialog).not.toHaveTextContent('delete.warningMessage');
     expect(within(dialog).getByRole('button', { name: 'buttons.delete' })).toBeInTheDocument();
+  });
+
+  it('names the contract it keeps for its recorded requirements and deletes only the other', async () => {
+    api.post.mockResolvedValue({ data: { ...IMPACT, contracts: 1, blocked: 1, recorded_requirements: 1, refused: [AUDITED] } });
+    api.delete.mockResolvedValue({ data: { deleted: ['c-1'], failed: [] } });
+    renderPage();
+    act(() => { grid.props?.onSelectionChanged([{ id: 'c-1', name: 'SAP' }, { id: 'c-3', name: 'Audited' }]); });
+    fireEvent.click(screen.getByRole('button', { name: /buttons\.deleteSelected/ }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('delete.deleteSelectedTitle {"count":1}');
+    expect(dialog).toHaveTextContent('contracts.delete.toDelete {"count":1}');
+    expect(dialog).toHaveTextContent('contracts.delete.kept {"count":1}');
+    expect(within(screen.getByTestId('delete-kept')).getByText('Audited')).toBeInTheDocument();
+    expect(screen.getByTestId('delete-kept')).toHaveTextContent('common:delete.usages.compliance_requirements');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'buttons.delete' }));
+    await waitFor(() => expect(api.delete).toHaveBeenCalledWith('/contracts/bulk', { data: { ids: ['c-1'] } }));
+  });
+
+  it('shows the refusal, with Close only, for a single contract with recorded requirements', async () => {
+    api.post.mockResolvedValue({ data: { ...IMPACT, blocked: 1, recorded_requirements: 1, refused: [AUDITED] } });
+    renderPage();
+    act(() => { grid.props?.onSelectionChanged([{ id: 'c-3', name: 'Audited' }]); });
+    fireEvent.click(screen.getByRole('button', { name: /buttons\.deleteSelected/ }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('errors:CONTRACT_HAS_COMPLIANCE_RECORDS');
+    expect(within(dialog).getAllByRole('button').map((b) => b.textContent).filter(Boolean)).toEqual(['buttons.close']);
+    expect(api.delete).not.toHaveBeenCalled();
   });
 
   it('shows no budget figure to a user who cannot read the budget', () => {

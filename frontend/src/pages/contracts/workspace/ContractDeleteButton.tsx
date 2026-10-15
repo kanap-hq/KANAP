@@ -36,10 +36,9 @@ export default function ContractDeleteButton({ contractId, contractName, beforeD
     try {
       const impact = await fetchContractDeleteImpact([contractId]);
       const title = t('contracts.delete.title', { name: contractName });
-      if (impact.blocked > 0) {
+      if (impact.refused.length > 0) {
         // The refusal the server would give (`RecordInUseException`), worded the same way.
-        const refusal = { code: 'CONTRACT_HAS_COMPLIANCE_RECORDS', usages: [{ type: 'compliance_requirements', total: impact.recorded_requirements }] };
-        await dialogs.alert({ title, message: deleteFailureReason(refusal, t, locale) });
+        await dialogs.alert({ title, message: deleteFailureReason(impact.refused[0], t, locale) });
         setBusy(false);
         return;
       }

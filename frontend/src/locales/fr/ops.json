@@ -394,8 +394,6 @@
       "cannotUndo": "Cette action est irréversible.",
       "confirmAnyway": "Supprimer quand même",
       "failed": "Le contrat n'a pas pu être supprimé.",
-      "blocked_one": "{{count}} contrat sélectionné a des exigences de conformité renseignées : il est conservé. Désactivez-le plutôt.",
-      "blocked_other": "{{count}} contrats sélectionnés ont des exigences de conformité renseignées : ils sont conservés. Désactivez-les plutôt.",
       "nothingLinked_one": "Ce contrat n'est lié à rien et ne contient rien. Cette action est irréversible.",
       "nothingLinked_other": "Ces contrats ne sont liés à rien et ne contiennent rien. Cette action est irréversible.",
       "kinds": {
@@ -413,7 +411,11 @@
         "links_other": "{{count}} liens de sites web",
         "attachments_one": "{{count}} pièce jointe",
         "attachments_other": "{{count}} pièces jointes"
-      }
+      },
+      "toDelete_one": "{{count}} contrat sera supprimé :",
+      "toDelete_other": "{{count}} contrats seront supprimés :",
+      "kept_one": "{{count}} contrat est conservé. Désactivez-le plutôt :",
+      "kept_other": "{{count}} contrats sont conservés. Désactivez-les plutôt :"
     },
     "title": "Contrats",
     "newButton": "Nouveau",

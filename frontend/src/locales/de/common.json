@@ -155,6 +155,8 @@
     "warningMessage_other": "Diese Aktion kann nicht rückgängig gemacht werden. Anderweitig referenzierte Elemente bleiben erhalten; die übrigen werden dauerhaft entfernt.",
     "itemsToDelete_one": "Das folgende Element wird gelöscht:",
     "itemsToDelete_other": "{{count}} Elemente werden gelöscht:",
+    "itemsKept_one": "{{count}} Element bleibt erhalten:",
+    "itemsKept_other": "{{count}} Elemente bleiben erhalten:",
     "andMore_one": "… und {{count}} weiteres Element",
     "andMore_other": "… und {{count}} weitere Elemente",
     "confirmPrompt": "Möchten Sie wirklich fortfahren?",

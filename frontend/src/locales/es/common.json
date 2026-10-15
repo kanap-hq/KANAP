@@ -155,6 +155,8 @@
     "warningMessage_other": "Esta acción no se puede deshacer. Los elementos referenciados en otro lugar se conservan; los demás se eliminan permanentemente.",
     "itemsToDelete_one": "Se eliminará el siguiente elemento:",
     "itemsToDelete_other": "Se eliminarán {{count}} elementos:",
+    "itemsKept_one": "Se conserva {{count}} elemento:",
+    "itemsKept_other": "Se conservan {{count}} elementos:",
     "andMore_one": "… y {{count}} elemento más",
     "andMore_other": "… y {{count}} elementos más",
     "confirmPrompt": "¿Está seguro de que desea continuar?",

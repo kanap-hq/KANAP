@@ -1,12 +1,13 @@
 import type { TFunction } from 'i18next';
 import api from '../../api';
+import type { DeleteCheck } from '../../components/DeleteSelectedButton';
 import { namesInSentence } from '../../components/finance/heldChoices';
 
 /**
  * `POST /contracts/delete-impact`: what deleting the given contracts removes
  * (`backend/src/contracts/contracts-delete.service.ts`), for the `contracts` that can go; the
- * linked objects count once each. `blocked`: the contracts refused for their recorded compliance
- * requirements (`recorded_requirements` of them), which are kept.
+ * linked objects count once each. `refused`: the contracts refused for their recorded compliance
+ * requirements, as the bulk delete reports them (`blocked` of them, `recorded_requirements` in all).
  */
 export type ContractDeleteImpact = {
   contracts: number;
@@ -19,11 +20,14 @@ export type ContractDeleteImpact = {
   attachments: number;
   blocked: number;
   recorded_requirements: number;
+  refused: Array<{ id: string; name: string; code: string; usages: Array<{ type: string; total: number }> }>;
 };
 
 export async function fetchContractDeleteImpact(ids: string[]): Promise<ContractDeleteImpact> {
   return (await api.post<ContractDeleteImpact>('/contracts/delete-impact', { ids })).data;
 }
+
+type CountField = 'budget_lines' | 'applications' | 'assets' | 'contacts' | 'tasks' | 'links' | 'attachments';
 
 /** Linked objects: they lose their link and stay. */
 const DETACHED = [
@@ -42,12 +46,11 @@ const REMOVED = [
 
 /**
  * The confirmation's text: the links removed, then what is deleted with the contracts, with their
- * counts, or that they hold nothing; then the selected contracts kept for their recorded
- * requirements. `dependants`: something besides the contracts goes or loses its link (the
+ * counts, or that they hold nothing (the refused ones are listed apart). `dependants`: something besides the contracts goes or loses its link (the
  * confirmation then reads "Delete anyway").
  */
 export function contractDeleteImpactText(t: TFunction, locale: string, impact: ContractDeleteImpact): { text: string; dependants: boolean } {
-  const counted = (kinds: ReadonlyArray<readonly [keyof ContractDeleteImpact, string]>) => kinds
+  const counted = (kinds: ReadonlyArray<readonly [CountField, string]>) => kinds
     .filter(([field]) => impact[field] > 0)
     .map(([field, key]) => t(`contracts.delete.kinds.${key}`, { count: impact[field] }) as string);
   const detached = counted(DETACHED);
@@ -61,6 +64,16 @@ export function contractDeleteImpactText(t: TFunction, locale: string, impact: C
   } else if (impact.contracts > 0) {
     parts.push(t('contracts.delete.nothingLinked', { count: impact.contracts }));
   }
-  if (impact.blocked > 0) parts.push(t('contracts.delete.blocked', { count: impact.blocked }));
   return { text: parts.join(' '), dependants };
+}
+
+/** The list's check before its delete dialog (`DeleteSelectedButton.checkDelete`). */
+export async function contractDeleteCheck(ids: string[], t: TFunction, locale: string): Promise<DeleteCheck> {
+  const impact = await fetchContractDeleteImpact(ids);
+  const { text, dependants } = contractDeleteImpactText(t, locale, impact);
+  return {
+    refused: impact.refused,
+    warning: text || undefined,
+    confirmLabel: dependants ? t('contracts.delete.confirmAnyway') : undefined,
+  };
 }

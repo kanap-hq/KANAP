@@ -394,8 +394,6 @@
       "cannotUndo": "Dies kann nicht rückgängig gemacht werden.",
       "confirmAnyway": "Trotzdem löschen",
       "failed": "Der Vertrag konnte nicht gelöscht werden.",
-      "blocked_one": "{{count}} ausgewählter Vertrag hat erfasste Konformitätsanforderungen: Er bleibt erhalten. Deaktivieren Sie ihn stattdessen.",
-      "blocked_other": "{{count}} ausgewählte Verträge haben erfasste Konformitätsanforderungen: Sie bleiben erhalten. Deaktivieren Sie sie stattdessen.",
       "nothingLinked_one": "Dieser Vertrag ist mit nichts verknüpft und enthält nichts. Dies kann nicht rückgängig gemacht werden.",
       "nothingLinked_other": "Diese Verträge sind mit nichts verknüpft und enthalten nichts. Dies kann nicht rückgängig gemacht werden.",
       "kinds": {
@@ -413,7 +411,11 @@
         "links_other": "{{count}} Website-Links",
         "attachments_one": "{{count}} Anhang",
         "attachments_other": "{{count}} Anhänge"
-      }
+      },
+      "toDelete_one": "{{count}} Vertrag wird gelöscht:",
+      "toDelete_other": "{{count}} Verträge werden gelöscht:",
+      "kept_one": "{{count}} Vertrag bleibt erhalten. Deaktivieren Sie ihn stattdessen:",
+      "kept_other": "{{count}} Verträge bleiben erhalten. Deaktivieren Sie sie stattdessen:"
     },
     "title": "Verträge",
     "newButton": "Neu",

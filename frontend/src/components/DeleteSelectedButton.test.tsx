@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '../api';
@@ -163,5 +163,73 @@ describe('DeleteSelectedButton', () => {
     renderButton();
     const message = await screen.findByText(/delete\.failedAll/);
     expect(message).toHaveTextContent(`Frozen: ${FROZEN}`);
+  });
+
+  describe('with a check before the dialog', () => {
+    const REFUSAL = { id: 'b', name: 'Frozen', code: 'CONTRACT_HAS_COMPLIANCE_RECORDS', usages: [{ type: 'compliance_requirements', total: 1 }] };
+    const itemLabels = { toDelete: (count: number) => `to delete:${count}`, kept: (count: number) => `kept:${count}` };
+
+    function renderChecked(selected: Row[], check: () => Promise<any>) {
+      const checkDelete = vi.fn(check);
+      render(
+        <ThemeProvider theme={createAppTheme('light')}>
+          <DeleteSelectedButton<Row>
+            selectedRows={selected}
+            endpoint="/contracts/bulk"
+            getItemId={(row) => row.id}
+            getItemName={(row) => row.name}
+            onDeleteSuccess={vi.fn()}
+            checkDelete={checkDelete}
+            itemLabels={itemLabels}
+          />
+        </ThemeProvider>,
+      );
+      fireEvent.click(screen.getByRole('button', { name: /buttons.deleteSelected/ }));
+      return checkDelete;
+    }
+
+    it('shows a single refused item as the record does: the reason and Close only', async () => {
+      const checkDelete = renderChecked([rows[1]], async () => ({ refused: [REFUSAL] }));
+      const dialog = await screen.findByRole('dialog');
+      expect(checkDelete).toHaveBeenCalledWith(['b']);
+      expect(dialog).toHaveTextContent('delete.recordTitle {"name":"Frozen"}');
+      expect(dialog).toHaveTextContent('errors:CONTRACT_HAS_COMPLIANCE_RECORDS');
+      expect(within(dialog).getAllByRole('button').map((button) => button.textContent).filter(Boolean)).toEqual(['buttons.close']);
+      fireEvent.click(within(dialog).getByRole('button', { name: 'buttons.close' }));
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+      expect(api.delete).not.toHaveBeenCalled();
+    });
+
+    it('lists what is deleted and what is kept, with why, and deletes only the rest', async () => {
+      vi.mocked(api.delete).mockResolvedValue({ data: { deleted: ['a'], failed: [] } } as any);
+      renderChecked(rows, async () => ({ refused: [REFUSAL], warning: 'Also deleted: 1 task.', confirmLabel: 'Delete anyway' }));
+      const dialog = await screen.findByRole('dialog');
+      expect(dialog).toHaveTextContent('delete.deleteSelectedTitle {"count":1}');
+      expect(dialog).toHaveTextContent('to delete:1');
+      expect(dialog).toHaveTextContent('First');
+      expect(dialog).toHaveTextContent('kept:1');
+      expect(dialog).toHaveTextContent('Frozen');
+      expect(dialog).toHaveTextContent('common:delete.usages.compliance_requirements');
+      expect(dialog).toHaveTextContent('Also deleted: 1 task.');
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Delete anyway' }));
+      await waitFor(() => expect(api.delete).toHaveBeenCalledWith('/contracts/bulk', { data: { ids: ['a'] } }));
+    });
+
+    it('offers no delete when every selected item is refused', async () => {
+      renderChecked(rows, async () => ({ refused: [{ ...REFUSAL, id: 'a', name: 'First' }, REFUSAL] }));
+      const dialog = await screen.findByRole('dialog');
+      expect(dialog).toHaveTextContent('kept:2');
+      expect(dialog).toHaveTextContent('First');
+      expect(dialog).toHaveTextContent('Frozen');
+      expect(within(dialog).getAllByRole('button').map((button) => button.textContent).filter(Boolean)).toEqual(['buttons.close']);
+    });
+
+    it('falls back to the usual confirmation when the check fails', async () => {
+      renderChecked(rows, async () => { throw new Error('offline'); });
+      const dialog = await screen.findByRole('dialog');
+      expect(dialog).toHaveTextContent('to delete:2');
+      expect(dialog).not.toHaveTextContent('kept:');
+      expect(within(dialog).getByRole('button', { name: 'buttons.delete' })).toBeInTheDocument();
+    });
   });
 });

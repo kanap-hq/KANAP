@@ -26,6 +26,10 @@ export interface DeleteConfirmDialogProps {
   items?: Array<{ id: string; name: string }>;
   loading?: boolean;
   maxDisplayItems?: number;
+  /** The line above the items, in the record's words ("2 contracts will be deleted:"). */
+  itemsLabel?: string;
+  /** Selected items the delete would refuse, kept, each with why (`reason`), under their own line. */
+  kept?: { label: string; items: Array<{ id: string; name: string; reason?: string }> };
   /** Optional checkbox for cascade deletion of related data */
   cascadeOption?: {
     label: string;
@@ -45,6 +49,8 @@ export default function DeleteConfirmDialog({
   items = [],
   loading = false,
   maxDisplayItems = 10,
+  itemsLabel,
+  kept,
   cascadeOption,
 }: DeleteConfirmDialogProps) {
   const { t } = useTranslation('common');
@@ -79,7 +85,7 @@ export default function DeleteConfirmDialog({
       )}
 
       <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-        {t('delete.itemsToDelete', { count: itemCount })}
+        {itemsLabel ?? t('delete.itemsToDelete', { count: itemCount })}
       </Typography>
 
       {displayItems.length > 0 && (
@@ -112,6 +118,12 @@ export default function DeleteConfirmDialog({
         </Typography>
       )}
 
+      {kept && kept.items.length > 0 && (
+        <Box sx={{ mt: 2 }}>
+          <DeleteConfirmKept label={kept.label} items={kept.items} />
+        </Box>
+      )}
+
       {cascadeOption && (
         <Box sx={{ mt: 2, p: 1.5, bgcolor: 'action.hover', borderRadius: '6px' }}>
           <FormControlLabel
@@ -136,5 +148,28 @@ export default function DeleteConfirmDialog({
         {t('delete.confirmPrompt')}
       </Typography>
     </KanapDialog>
+  );
+}
+
+/** The selected items a delete keeps (refused), each with why: "Acme" / "2 contracts and 1 application". */
+export function DeleteConfirmKept({ label, items }: { label: string; items: Array<{ id: string; name: string; reason?: string }> }) {
+  return (
+    <Box data-testid="delete-kept">
+      <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>{label}</Typography>
+      <Box sx={{ maxHeight: 160, overflowY: 'auto', border: '1px solid', borderColor: 'kanap.border.default', borderRadius: '6px' }}>
+        <List dense disablePadding>
+          {items.map((item) => (
+            <ListItem key={item.id} divider>
+              <ListItemText
+                primary={item.name}
+                secondary={item.reason}
+                primaryTypographyProps={{ variant: 'body2' }}
+                secondaryTypographyProps={{ variant: 'caption' }}
+              />
+            </ListItem>
+          ))}
+        </List>
+      </Box>
+    </Box>
   );
 }

@@ -37,7 +37,7 @@ import { downloadBlob, extractFilenameFromDisposition } from '../utils/downloadB
 import { getApiErrorMessage } from '../utils/apiErrorMessage';
 import ContractSettingsDialog from './contracts/ContractSettingsDialog';
 import DeleteSelectedButton from '../components/DeleteSelectedButton';
-import { contractDeleteImpactText, fetchContractDeleteImpact } from './contracts/contractDelete';
+import { contractDeleteCheck } from './contracts/contractDelete';
 
 /** The states of a contract's terms, computed by the API (`backend/src/contracts/contract-terms.ts`). */
 const TERM_STATES = ['to_decide', 'in_progress', 'renewed', 'ending', 'expired'] as const;
@@ -343,16 +343,6 @@ export default function ContractsPage() {
     },
   });
 
-  // What deleting the selection removes, counted for its confirmation (administrators only).
-  const canDelete = hasLevel('contracts', 'admin');
-  const selectedIds = useMemo(() => selectedRows.map((row) => row.id).sort(), [selectedRows]);
-  const deleteImpact = useQuery({
-    queryKey: ['contract-delete-impact', selectedIds],
-    enabled: canDelete && selectedIds.length > 0,
-    queryFn: () => fetchContractDeleteImpact(selectedIds),
-  });
-  const deleteImpactText = deleteImpact.data && selectedIds.length > 0 ? contractDeleteImpactText(t, locale, deleteImpact.data) : null;
-
   const handleNew = () => {
     const sp = new URLSearchParams(searchParams);
     navigate(`/ops/contracts/new/overview?${sp.toString()}`);
@@ -557,10 +547,13 @@ export default function ContractsPage() {
           getItemName={(row) => row.name}
           gridApi={gridApiRef.current}
           onDeleteSuccess={() => setRefreshKey((k) => k + 1)}
-          // The counts come first: the confirmation says what loses its link and what goes too.
-          disabled={deleteImpact.isFetching}
-          forceOption={deleteImpactText?.dependants ? { message: deleteImpactText.text, confirmLabel: t('contracts.delete.confirmAnyway') } : undefined}
-          warning={deleteImpactText && !deleteImpactText.dependants ? deleteImpactText.text : undefined}
+          // Asked on click: the contracts refused for their recorded requirements, then for the
+          // others what loses its link and what goes too.
+          checkDelete={(ids) => contractDeleteCheck(ids, t, locale)}
+          itemLabels={{
+            toDelete: (count) => t('contracts.delete.toDelete', { count }),
+            kept: (count) => t('contracts.delete.kept', { count }),
+          }}
         />
       )}
     </Stack>

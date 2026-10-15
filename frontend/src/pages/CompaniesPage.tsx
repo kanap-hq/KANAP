@@ -7,6 +7,7 @@ import ServerDataGrid, { EnhancedColDef, StatusScope } from '../components/Serve
 import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
 import DeleteSelectedButton from '../components/DeleteSelectedButton';
+import { recordsInUseCheck } from '../utils/deleteCheck';
 import { useAuth } from '../auth/AuthContext';
 import { LinkCellRenderer } from '../components/grid/renderers';
 import { getWithListContext } from '../lib/listContext';
@@ -389,6 +390,12 @@ export default function CompaniesPage() {
           getItemId={(row) => row.id}
           getItemName={(row) => row.name}
           gridApi={gridApiRef.current}
+          // Asked on click: those still in use are kept, with what uses them.
+          checkDelete={(ids) => recordsInUseCheck('/companies', ids)}
+          itemLabels={{
+            toDelete: (count) => t('companies.delete.toDelete', { count }),
+            kept: (count) => t('companies.delete.kept', { count }),
+          }}
           onDeleteSuccess={() => {
             setRefreshKey((k) => k + 1);
           }}
