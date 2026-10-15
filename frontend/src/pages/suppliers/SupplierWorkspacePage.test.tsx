@@ -209,6 +209,7 @@ describe('SupplierWorkspacePage', () => {
     fireEvent.change(erp, { target: { value: 'SUP-2' } });
     fireEvent.blur(erp);
     expect(await screen.findByText('erp_supplier_id must be a string')).toBeInTheDocument();
+    expect(screen.queryByText('common:status.saved')).toBeNull();
   });
 
   it('saves the notes after a pause in typing, and at once when focus leaves them', async () => {
@@ -222,6 +223,29 @@ describe('SupplierWorkspacePage', () => {
     fireEvent.change(notes, { target: { value: 'Net 60' } });
     fireEvent.blur(notes);
     await waitFor(() => expect(lastPatch()).toEqual(['/suppliers/s-1', { notes: 'Net 60' }]));
+  });
+
+  it('confirms a saved note with Saved', async () => {
+    renderAt('/master-data/suppliers/s-1/overview');
+    const notes = await screen.findByLabelText('suppliers.fields.notes');
+    await waitFor(() => expect(notes).toHaveValue('Net 30'));
+    fireEvent.focus(notes);
+    fireEvent.change(notes, { target: { value: 'Net 45' } });
+    expect(await screen.findByText('common:status.saving')).toBeInTheDocument();
+    fireEvent.blur(notes);
+    await waitFor(() => expect(lastPatch()).toEqual(['/suppliers/s-1', { notes: 'Net 45' }]));
+    expect(await screen.findByText('common:status.saved')).toBeInTheDocument();
+  });
+
+  it('confirms a field saved at once with Saved', async () => {
+    renderAt('/master-data/suppliers/s-1/overview');
+    const erp = await screen.findByLabelText('suppliers.fields.erpSupplierId');
+    await waitFor(() => expect(erp).toHaveValue('SUP-001'));
+    fireEvent.focus(erp);
+    fireEvent.change(erp, { target: { value: 'SUP-100' } });
+    fireEvent.blur(erp);
+    await waitFor(() => expect(lastPatch()).toEqual(['/suppliers/s-1', { erp_supplier_id: 'SUP-100' }]));
+    expect(await screen.findByText('common:status.saved')).toBeInTheDocument();
   });
 
   it('saves the status from the metadata menu', async () => {
