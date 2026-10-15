@@ -185,7 +185,7 @@ La pestaña Despliegues documenta dónde se ejecuta realmente la aplicación -- 
 - **SSO habilitado** / **MFA soportado**
 - **Notas**
 
-**Añadir despliegue** abre un diálogo donde define entorno, ciclo de vida, URL base, indicadores SSO/MFA y notas. Cada entorno solo puede añadirse una vez. El chip de ciclo de vida en el encabezado de un despliegue también puede cambiarse en línea desde un menú emergente.
+**Añadir despliegue** abre un diálogo donde define entorno, ciclo de vida, URL base, indicadores SSO/MFA y notas. Cada entorno solo puede añadirse una vez. El chip de ciclo de vida en el encabezado de un despliegue también puede cambiarse en línea desde un menú emergente. Un despliegue que todavía tiene servidores o enlaces de interfaz no se puede eliminar: retírelos primero.
 
 **Servidores por despliegue**: Cada bloque de despliegue muestra una tabla de servidores asignados:
 

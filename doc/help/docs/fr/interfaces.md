@@ -56,7 +56,7 @@ La grille Interfaces affiche votre registre d'intégration en un coup d'œil.
 
 - **Ajouter une interface** : Créer une nouvelle interface (nécessite `applications:manager`)
 - **Dupliquer l'interface** : Créer une copie d'une interface sélectionnée (nécessite `applications:manager`). Sélectionnez exactement une ligne pour activer cette action. Une boîte de dialogue vous permet de choisir si vous voulez copier les liaisons d'environnement -- voir [Copier des interfaces](#copier-des-interfaces) ci-dessous.
-- **Supprimer la sélection** : Supprimer les interfaces sélectionnées (nécessite `applications:admin`). Une option à cocher vous permet également de supprimer les liaisons associées ; sans cela, les interfaces ayant des liaisons ne seront pas supprimées.
+- **Supprimer la sélection** : Supprimer les interfaces sélectionnées (nécessite `applications:admin`). Une option à cocher vous permet également de supprimer les liaisons associées ; sans cela, les interfaces ayant des liaisons ne seront pas supprimées. Le message nomme ensuite les interfaces supprimées et celles conservées, avec la raison.
 
 ---
 

@@ -116,7 +116,7 @@ Das Aufgaben-Raster zeigt alle Aufgaben in Ihrer Organisation.
   - **Neu**: Eine eigenständige Aufgabe erstellen (erfordert `tasks:member`)
   - **CSV importieren**: Eine CSV-Datei hochladen, um Aufgaben zu erstellen oder zu aktualisieren (erfordert `tasks:admin`)
   - **CSV exportieren**: Aufgaben in eine CSV-Datei herunterladen (erfordert `tasks:admin`)
-  - **Ausgewählte löschen**: Ausgewählte Aufgaben entfernen (erfordert `tasks:admin`)
+  - **Ausgewählte löschen**: Ausgewählte Aufgaben entfernen (erfordert `tasks:admin`). Eine Aufgabe, aus der eine Anfrage erstellt wurde, kann nicht gelöscht werden: Schließen Sie sie stattdessen. Vor dem Löschen nennt die Bestätigung die behaltenen Aufgaben mit dem Grund
 
 ---
 

@@ -185,7 +185,7 @@ Der Reiter Bereitstellungen dokumentiert, wo die Anwendung tatsächlich läuft -
 - **SSO aktiviert** / **MFA unterstützt**
 - **Notizen**
 
-**Bereitstellung hinzufügen** öffnet einen Dialog, in dem Sie Umgebung, Lebenszyklus, Basis-URL, SSO/MFA-Flags und Notizen festlegen. Jede Umgebung kann nur einmal hinzugefügt werden. Der Lebenszyklus-Chip auf einer Bereitstellungs-Kopfzeile kann auch inline aus einem Popup-Menü geändert werden.
+**Bereitstellung hinzufügen** öffnet einen Dialog, in dem Sie Umgebung, Lebenszyklus, Basis-URL, SSO/MFA-Flags und Notizen festlegen. Jede Umgebung kann nur einmal hinzugefügt werden. Der Lebenszyklus-Chip auf einer Bereitstellungs-Kopfzeile kann auch inline aus einem Popup-Menü geändert werden. Eine Bereitstellung, die noch Server oder Schnittstellenbindungen hat, kann nicht gelöscht werden: Entfernen Sie diese zuerst.
 
 **Server pro Bereitstellung**: Jeder Bereitstellungsblock zeigt eine Tabelle der zugewiesenen Server:
 

@@ -116,7 +116,7 @@ La cuadrícula de Tareas muestra todas las tareas de su organización.
   - **Nuevo**: Crear una tarea independiente (requiere `tasks:member`)
   - **Importar CSV**: Subir un archivo CSV para crear o actualizar tareas (requiere `tasks:admin`)
   - **Exportar CSV**: Descargar tareas a un archivo CSV (requiere `tasks:admin`)
-  - **Eliminar seleccionados**: Eliminar las tareas seleccionadas (requiere `tasks:admin`)
+  - **Eliminar seleccionados**: Eliminar las tareas seleccionadas (requiere `tasks:admin`). Una tarea a partir de la cual se creó una solicitud no se puede eliminar: ciérrela en su lugar. Antes de eliminar nada, la confirmación enumera las tareas que se conservan, con el motivo
 
 ---
 

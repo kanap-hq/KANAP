@@ -116,7 +116,7 @@ La grille Tâches affiche toutes les tâches de votre organisation.
   - **Nouvelle** : Créer une tâche autonome (nécessite `tasks:member`)
   - **Import CSV** : Téléverser un fichier CSV pour créer ou mettre à jour des tâches (nécessite `tasks:admin`)
   - **Export CSV** : Télécharger les tâches dans un fichier CSV (nécessite `tasks:admin`)
-  - **Supprimer la sélection** : Supprimer les tâches sélectionnées (nécessite `tasks:admin`)
+  - **Supprimer la sélection** : Supprimer les tâches sélectionnées (nécessite `tasks:admin`). Une tâche à partir de laquelle une demande a été créée ne peut pas être supprimée : clôturez-la plutôt. Avant toute suppression, la confirmation liste les tâches conservées, avec la raison
 
 ---
 

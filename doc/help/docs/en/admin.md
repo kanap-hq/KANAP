@@ -186,7 +186,7 @@ Toolbar actions:
 | **Export CSV** | Export user list | `users:admin` |
 | **Invite** | Send login invitations to selected users | `users:admin` |
 | **Disable** | Disable the selected users. They are signed out immediately. | `users:admin` |
-| **Delete** | Remove selected users permanently | `users:admin` |
+| **Delete** | Remove selected users permanently. Your own account is kept: the confirmation says so before anything is deleted | `users:admin` |
 
 `users:reader` is enough to open the page and read the list. Every action above, and the row actions below, require `users:admin`.
 
@@ -198,7 +198,7 @@ Row actions, from the menu at the end of each row:
 | **Enable** / **Disable** | Switch the account on or off. Disabling signs the person out immediately. |
 | **Send invite** | Email a sign-in invitation. Hidden for Microsoft Entra accounts. |
 | **Send password reset** | Email a password reset link. Shown for enabled local accounts only. |
-| **Delete** | Remove the user permanently. Disable the account instead if other records reference it. |
+| **Delete** | Remove the user permanently. The records the user worked on stay, without the user. You cannot delete your own account. |
 
 ### Users CSV
 
@@ -419,7 +419,7 @@ The Roles page has a two-panel layout:
 **Actions**:
 - **New Role**: Create a custom role from scratch
 - **Duplicate**: Copy an existing role (including built-in roles) as a starting point. Not available for System roles.
-- **Delete**: Remove a custom role (only if no users are assigned)
+- **Delete**: Remove a custom role. A role given to users cannot be deleted: give them another role first. The window says so before any confirmation.
 - **Save Details**: Update the role name and description
 - **Save Permissions**: Apply permission changes
 

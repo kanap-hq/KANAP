@@ -87,7 +87,7 @@ Klicken Sie auf eine beliebige Zelle, um den Arbeitsbereich zu öffnen.
 - **Neu**: eine Gruppe oder eine Kostenstelle erstellen (erfordert `cost_centers:member`)
 - **CSV importieren**: den Baum aus einer Datei laden (erfordert `cost_centers:admin`)
 - **CSV exportieren**: die Elemente der Liste herunterladen, oder alle Elemente (erfordert `cost_centers:admin`)
-- **Auswahl löschen**: die ausgewählten Elemente löschen (erfordert `cost_centers:admin`). Elemente, die nicht gelöscht werden können, bleiben erhalten und werden mit dem Grund aufgeführt. Inhalte werden vor ihrer Gruppe gelöscht, sodass die Auswahl einer Gruppe zusammen mit ihrem gesamten Inhalt alles löscht
+- **Auswahl löschen**: die ausgewählten Elemente löschen (erfordert `cost_centers:admin`). Vor dem Löschen nennt die Bestätigung die behaltenen Elemente mit dem Grund. Inhalte werden vor ihrer Gruppe gelöscht, sodass die Auswahl einer Gruppe zusammen mit ihrem gesamten Inhalt alles löscht
 
 ---
 

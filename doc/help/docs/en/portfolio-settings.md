@@ -184,6 +184,7 @@ Category (e.g., "Digital Transformation")
 **System items**:
 - Pre-defined categories and types marked with "System" chip
 - Can be edited or disabled but not deleted
+- An item that requests or projects still use, or a task type that tasks use, cannot be deleted. The message counts what uses it. Disable it instead
 
 ### Best Practices
 
@@ -216,7 +217,7 @@ Four types are created with every workspace:
 
 **To switch a type off**: Use the toggle. An inactive type disappears from the dropdown for new assignments, but contributors already on it keep it and still show it.
 
-**To delete a type**: Click the delete icon. It is only available for types you created yourself and that no contributor uses -- the count beside each type tells you how many are on it. The four built-in types can be renamed but never deleted.
+**To delete a type**: Click the delete icon. It is only available for types you created yourself and that no contributor uses -- the count beside each type tells you how many are on it. The four built-in types can be renamed but never deleted. To retire a type that contributors use, switch it off.
 
 **Seed defaults**: If the list is ever empty, **Seed defaults** recreates Internal, External, Apprentice and Other.
 

@@ -66,7 +66,7 @@ Click any cell to open the workspace.
 - **New**: create a calendar (requires `working_day_profiles:member`)
 - **Import CSV**: load calendars and their working days from a file (requires `working_day_profiles:admin`)
 - **Export CSV**: download the calendars the list shows, or every calendar (requires `working_day_profiles:admin`)
-- **Delete selected**: delete the selected calendars (requires `working_day_profiles:admin`). Calendars that cannot be deleted are kept and listed with the reason
+- **Delete selected**: delete the selected calendars (requires `working_day_profiles:admin`). Before anything is deleted, the confirmation lists the calendars kept, with the reason
 
 ---
 

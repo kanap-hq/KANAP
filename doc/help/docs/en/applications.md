@@ -185,7 +185,7 @@ The Deployments tab documents where the application actually runs -- one block p
 - **SSO enabled** / **MFA supported**
 - **Notes**
 
-**Add deployment** opens a dialog where you set environment, lifecycle, base URL, SSO/MFA flags and notes. Each environment can only be added once. The lifecycle chip on a deployment header can also be changed inline from a popup menu.
+**Add deployment** opens a dialog where you set environment, lifecycle, base URL, SSO/MFA flags and notes. Each environment can only be added once. The lifecycle chip on a deployment header can also be changed inline from a popup menu. A deployment that still has servers or interface bindings cannot be deleted: remove them first.
 
 **Servers per deployment**: Each deployment block shows a table of assigned servers:
 

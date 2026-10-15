@@ -185,7 +185,7 @@ L'onglet Déploiements documente où l'application s'exécute réellement -- un 
 - **SSO activé** / **MFA supporté**
 - **Notes**
 
-**Ajouter un déploiement** ouvre une boîte de dialogue où vous définissez l'environnement, le cycle de vie, l'URL de base, les indicateurs SSO/MFA et les notes. Chaque environnement ne peut être ajouté qu'une seule fois. La pastille de cycle de vie sur l'en-tête d'un déploiement peut aussi être modifiée en ligne depuis un menu contextuel.
+**Ajouter un déploiement** ouvre une boîte de dialogue où vous définissez l'environnement, le cycle de vie, l'URL de base, les indicateurs SSO/MFA et les notes. Chaque environnement ne peut être ajouté qu'une seule fois. La pastille de cycle de vie sur l'en-tête d'un déploiement peut aussi être modifiée en ligne depuis un menu contextuel. Un déploiement qui a encore des serveurs ou des liaisons d'interface ne peut pas être supprimé : retirez-les d'abord.
 
 **Serveurs par déploiement** : Chaque bloc de déploiement affiche un tableau des serveurs assignés :
 
