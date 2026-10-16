@@ -18,7 +18,7 @@
     "version": "Versión"
   },
   "confirmations": {
-    "deleteLibrary": "¿Eliminar esta biblioteca? Los documentos y carpetas se moverán a la biblioteca predeterminada.",
+    "deleteLibrary": "¿Eliminar esta biblioteca? Sus documentos y carpetas pasarán a la primera biblioteca de la barra a la que tenga acceso, normalmente la biblioteca predeterminada.",
     "resetLibraryAccess": "¿Volver a dejar esta biblioteca abierta a todos y borrar las listas personalizadas de lectores y editores?"
   },
   "dialogs": {
@@ -357,6 +357,21 @@
     "in_review": "En revisión",
     "obsolete": "Obsoleto",
     "published": "Publicado"
+  },
+  "systemNames": {
+    "libraries": {
+      "documents": "Documentos",
+      "templates": "Plantillas",
+      "managedDocs": "Documentos gestionados"
+    },
+    "folders": {
+      "integrated_requests": "Solicitudes",
+      "integrated_projects": "Proyectos",
+      "integrated_interfaces": "Interfaces",
+      "integrated_applications": "Aplicaciones",
+      "integrated_assets": "Activos",
+      "integrated_incidents": "Incidentes"
+    }
   },
   "typesManager": {
     "columns": {

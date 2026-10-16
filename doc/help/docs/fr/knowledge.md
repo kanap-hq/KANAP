@@ -33,7 +33,7 @@ Conséquences du choix de bibliothèque :
 - Dans **Modèles**, les documents publiés deviennent des points de départ réutilisables pour de nouveaux articles et sont regroupés par type de document dans le sélecteur de modèles.
 - Dans **Documents managés**, les articles peuvent rester lisibles et modifiables, mais certaines métadonnées sont contrôlées par l'espace de travail source plutôt que depuis la base de connaissances elle-même.
 
-L'administration des bibliothèques est intentionnellement plus stricte que l'édition des documents. La création, le renommage, la suppression ou la réorganisation des bibliothèques est une responsabilité d'administrateur car ces changements affectent la navigation et la responsabilité pour tout le monde.
+L'administration des bibliothèques est intentionnellement plus stricte que l'édition des documents. La création, le renommage, la suppression ou la réorganisation des bibliothèques est une responsabilité d'administrateur car ces changements affectent la navigation et la responsabilité pour tout le monde. La bibliothèque par défaut (la première de la barre, où sont créés les nouveaux documents) ne peut pas être supprimée.
 
 ### Bibliothèques restreintes
 

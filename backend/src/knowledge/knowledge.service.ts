@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   GoneException,
+  HttpStatus,
   HttpException,
   Injectable,
   Logger,
@@ -97,6 +98,10 @@ const KNOWLEDGE_TEXT_SORTS: Record<string, string> = {
           LIMIT 1)`,
 };
 
+/** The stable keys the library and folder filters of the screen use (see `list`). */
+const KNOWLEDGE_LIBRARY_KEY_SQL = 'dl.slug';
+const KNOWLEDGE_FOLDER_KEY_SQL = 'COALESCE(f.system_key, f.name)';
+
 export type RelationEntityType =
   | 'applications'
   | 'assets'
@@ -177,6 +182,8 @@ type KnowledgeLibraryMemberView = {
   label: string;
 };
 type KnowledgeLibraryDetailView = KnowledgeLibraryView & {
+  /** The default library: new documents go there, and it cannot be deleted. */
+  is_default: boolean;
   owner: KnowledgeLibraryMemberView | null;
   readers: KnowledgeLibraryMemberView[];
   writers: KnowledgeLibraryMemberView[];
@@ -2485,8 +2492,10 @@ export class KnowledgeService {
       [library.id],
     );
 
+    const defaultLibrary = await this.resolveDefaultLibrary(manager);
     return {
       ...library,
+      is_default: defaultLibrary.id === library.id,
       owner: ownerRows[0] ?? null,
       readers: memberRows
         .filter((row) => row.access_level === 'reader')
@@ -2634,6 +2643,16 @@ export class KnowledgeService {
       if (!existing) throw new NotFoundException('Library not found');
       if (existing.is_system) throw new BadRequestException('System libraries cannot be deleted');
       await this.assertLibraryManageable(existing.id, tx, userId);
+      // The default library receives the documents created without a library, and those of a
+      // deleted library: it stays.
+      if ((await this.resolveDefaultLibrary(tx)).id === existing.id) {
+        throw new ConflictException({
+          statusCode: HttpStatus.CONFLICT,
+          error: 'Conflict',
+          code: 'knowledge_default_library',
+          message: 'This is the default library: new documents go there. It cannot be deleted.',
+        });
+      }
 
       const accessibleFallbacks = (await this.listLibrariesWithAccess(tx, userId))
         .filter((library) => library.id !== existing.id && !library.is_system);
@@ -2689,13 +2708,7 @@ export class KnowledgeService {
 
   async list(query: any, opts?: { manager?: EntityManager; tenantId?: string; userId?: string | null }) {
     const manager = this.getManager(opts);
-    const tenantId = String(opts?.tenantId || '').trim();
-    const { page, limit, skip, sort, q, filters } = parsePagination(query, { field: 'updated_at', direction: 'DESC' });
-    assertSetFilterModes(filters);
-    let reviewDueDateParamIndex = 0;
-    const nextReviewDueDateParam = () => `reviewDueDate${reviewDueDateParamIndex++}`;
-    let linkedEntityParamIndex = 0;
-    const nextLinkedEntityParam = () => `linkedEntity${linkedEntityParamIndex++}`;
+    const { page, limit, skip } = parsePagination(query, { field: 'updated_at', direction: 'DESC' });
     const accessibleLibraryViews = opts?.userId
       ? await this.listLibrariesWithAccess(manager, opts.userId || null)
       : null;
@@ -2709,6 +2722,100 @@ export class KnowledgeService {
       return { items: [], total: 0, page, limit };
     }
 
+    const { qb, orderBy } = await this.buildDocumentListQuery(manager, query, {
+      tenantId: String(opts?.tenantId || '').trim(),
+      userId: opts?.userId || null,
+      accessibleLibraryIds: accessibleLibraries,
+    });
+    qb.select([
+      'd.id AS id',
+      'd.item_number AS item_number',
+      'd.title AS title',
+      'd.summary AS summary',
+      'd.status AS status',
+      'd.revision AS revision',
+      'd.current_version_number AS current_version_number',
+      'd.folder_id AS folder_id',
+      'd.library_id AS library_id',
+      'd.document_type_id AS document_type_id',
+      'd.template_document_id AS template_document_id',
+      'd.published_at AS published_at',
+      'd.last_reviewed_at AS last_reviewed_at',
+      'd.review_due_at AS review_due_at',
+      'd.created_by AS created_by',
+      'd.updated_by AS updated_by',
+      'd.created_at AS created_at',
+      'd.updated_at AS updated_at',
+      'f.name AS folder_name',
+      'f.system_key AS folder_system_key',
+      `${KNOWLEDGE_FOLDER_KEY_SQL} AS folder_key`,
+      'dl.name AS library_name',
+      'dl.slug AS library_slug',
+      `${KNOWLEDGE_LIBRARY_KEY_SQL} AS library_key`,
+      'dtype.name AS document_type_name',
+      'td.title AS template_name',
+      `(SELECT w.requested_revision
+        FROM document_workflows w
+        WHERE w.document_id = d.id
+          AND w.tenant_id = d.tenant_id
+          AND w.status = 'approved'
+        ORDER BY coalesce(w.completed_at, w.requested_at) DESC
+        LIMIT 1) AS validated_revision`,
+      `(SELECT w.completed_at
+        FROM document_workflows w
+        WHERE w.document_id = d.id
+          AND w.tenant_id = d.tenant_id
+          AND w.status = 'approved'
+        ORDER BY coalesce(w.completed_at, w.requested_at) DESC
+        LIMIT 1) AS validated_at`,
+    `(SELECT COALESCE(NULLIF(trim(concat_ws(' ', u.first_name, u.last_name)), ''), u.email, c.user_id::text)
+        FROM document_contributors c
+        LEFT JOIN users u ON u.id = c.user_id AND u.tenant_id = d.tenant_id
+        WHERE c.document_id = d.id AND c.tenant_id = d.tenant_id AND c.role = 'owner' AND c.is_primary = true
+        LIMIT 1) AS primary_owner_name`,
+    ]);
+
+    const total = await qb.getCount();
+
+    orderBy(qb);
+    const rows = await qb
+      .offset(skip)
+      .limit(limit)
+      .getRawMany();
+
+    const items = rows.map((row: any) => ({
+      ...row,
+      item_ref: `DOC-${row.item_number}`,
+      can_write: writableLibraryIds ? writableLibraryIds.has(String(row.library_id || '')) : false,
+      validated_revision: row.validated_revision != null ? Number(row.validated_revision) : null,
+      validated_at: row.validated_at || null,
+      is_validated_current_revision:
+        String(row.status || '').toLowerCase() === 'published'
+        && row.validated_revision != null
+        && Number(row.validated_revision) === Number(row.revision || 0),
+    }));
+
+    return { items, total, page, limit };
+  }
+
+  /**
+   * The document list query: joins, search, scope, column filters and sort, shared by `list` and
+   * `listIds` so record navigation follows the list the user sees. The caller picks the columns.
+   */
+  private async buildDocumentListQuery(
+    manager: EntityManager,
+    query: any,
+    opts: { tenantId: string; userId: string | null; accessibleLibraryIds: string[] | null },
+  ) {
+    const { tenantId } = opts;
+    const accessibleLibraries = opts.accessibleLibraryIds;
+    const { sort, q, filters } = parsePagination(query, { field: 'updated_at', direction: 'DESC' });
+    assertSetFilterModes(filters);
+    let reviewDueDateParamIndex = 0;
+    const nextReviewDueDateParam = () => `reviewDueDate${reviewDueDateParamIndex++}`;
+    let linkedEntityParamIndex = 0;
+    const nextLinkedEntityParam = () => `linkedEntity${linkedEntityParamIndex++}`;
+
     const allowedSort = new Set([
       'updated_at',
       'created_at',
@@ -2720,14 +2827,22 @@ export class KnowledgeService {
       'current_version_number',
       'primary_owner_name',
       'library_name',
+      'library_key',
       'document_type_name',
       'template_name',
     ]);
     const sortField = allowedSort.has(sort.field) ? sort.field : 'updated_at';
     // Text sorts alphabetically, case and accents ignored (`textSortKey`), on the expressions the
-    // output aliases name (an alias cannot take a collation).
+    // output aliases name (an alias cannot take a collation). The library column of the screen
+    // (`library_key`) follows the library bar order: the shipped libraries show in the reader's
+    // language, so an order on the stored English name would look random.
     const textExpression = KNOWLEDGE_TEXT_SORTS[sortField];
-    const sortExpression = textExpression ? (await textSortKey(manager))(textExpression) : `d.${sortField}`;
+    const sortExpression = sortField === 'library_key'
+      ? 'dl.display_order'
+      : textExpression ? (await textSortKey(manager))(textExpression) : `d.${sortField}`;
+    const secondarySortExpression = sortField === 'library_key'
+      ? (await textSortKey(manager))(KNOWLEDGE_TEXT_SORTS.library_name)
+      : null;
 
     const qb = manager
       .getRepository(Document)
@@ -2736,51 +2851,7 @@ export class KnowledgeService {
       .leftJoin('document_folders', 'f', 'f.id = d.folder_id AND f.tenant_id = d.tenant_id')
       .leftJoin('document_libraries', 'dl', 'dl.id = d.library_id AND dl.tenant_id = d.tenant_id')
       .leftJoin('document_types', 'dtype', 'dtype.id = d.document_type_id AND dtype.tenant_id = d.tenant_id')
-      .leftJoin('documents', 'td', 'td.id = d.template_document_id AND td.tenant_id = d.tenant_id')
-      .select([
-        'd.id AS id',
-        'd.item_number AS item_number',
-        'd.title AS title',
-        'd.summary AS summary',
-        'd.status AS status',
-        'd.revision AS revision',
-        'd.current_version_number AS current_version_number',
-        'd.folder_id AS folder_id',
-        'd.library_id AS library_id',
-        'd.document_type_id AS document_type_id',
-        'd.template_document_id AS template_document_id',
-        'd.published_at AS published_at',
-        'd.last_reviewed_at AS last_reviewed_at',
-        'd.review_due_at AS review_due_at',
-        'd.created_by AS created_by',
-        'd.updated_by AS updated_by',
-        'd.created_at AS created_at',
-        'd.updated_at AS updated_at',
-        'f.name AS folder_name',
-        'dl.name AS library_name',
-        'dl.slug AS library_slug',
-        'dtype.name AS document_type_name',
-        'td.title AS template_name',
-        `(SELECT w.requested_revision
-          FROM document_workflows w
-          WHERE w.document_id = d.id
-            AND w.tenant_id = d.tenant_id
-            AND w.status = 'approved'
-          ORDER BY coalesce(w.completed_at, w.requested_at) DESC
-          LIMIT 1) AS validated_revision`,
-        `(SELECT w.completed_at
-          FROM document_workflows w
-          WHERE w.document_id = d.id
-            AND w.tenant_id = d.tenant_id
-            AND w.status = 'approved'
-          ORDER BY coalesce(w.completed_at, w.requested_at) DESC
-          LIMIT 1) AS validated_at`,
-      `(SELECT COALESCE(NULLIF(trim(concat_ws(' ', u.first_name, u.last_name)), ''), u.email, c.user_id::text)
-          FROM document_contributors c
-          LEFT JOIN users u ON u.id = c.user_id AND u.tenant_id = d.tenant_id
-          WHERE c.document_id = d.id AND c.tenant_id = d.tenant_id AND c.role = 'owner' AND c.is_primary = true
-          LIMIT 1) AS primary_owner_name`,
-      ]);
+      .leftJoin('documents', 'td', 'td.id = d.template_document_id AND td.tenant_id = d.tenant_id');
     if (tenantId) {
       qb.andWhere('d.tenant_id = :tenantId', { tenantId });
     }
@@ -2790,7 +2861,7 @@ export class KnowledgeService {
     {
       const acl = documentIncidentVisibilityQueryBuilderClause(
         'd',
-        await resolveDocumentIncidentViewer(manager, opts?.userId || null, tenantId || null),
+        await resolveDocumentIncidentViewer(manager, opts.userId, tenantId || null),
       );
       qb.andWhere(acl.clause, acl.params);
     }
@@ -2974,6 +3045,26 @@ export class KnowledgeService {
       }
     }
 
+    // CheckboxSetFilter on the stable keys of the screen: the library slug, and the folder's system
+    // key (a tenant folder, which has none, by its name). The shipped library and folders show in
+    // the reader's language, so their English names cannot be the filter values.
+    for (const [field, expression, param] of [
+      ['library_key', KNOWLEDGE_LIBRARY_KEY_SQL, 'libraryKeys'],
+      ['folder_key', KNOWLEDGE_FOLDER_KEY_SQL, 'folderKeys'],
+    ] as const) {
+      const keyFilter = (filters as any)?.[field];
+      if (keyFilter?.filterType !== 'set' || !Array.isArray(keyFilter.values) || keyFilter.values.length === 0) continue;
+      const hasNull = keyFilter.values.includes(null);
+      const nonNull = keyFilter.values.filter((v: any) => v !== null).map((v: any) => String(v));
+      if (hasNull && nonNull.length > 0) {
+        qb.andWhere(`(${expression} = ANY(:${param}) OR ${expression} IS NULL)`, { [param]: nonNull });
+      } else if (hasNull) {
+        qb.andWhere(`${expression} IS NULL`);
+      } else {
+        qb.andWhere(`${expression} = ANY(:${param})`, { [param]: nonNull });
+      }
+    }
+
     // CheckboxSetFilter: primary_owner_name
     const ownerNameFilter = (filters as any)?.primary_owner_name;
     if (ownerNameFilter?.filterType === 'set' && Array.isArray(ownerNameFilter.values) && ownerNameFilter.values.length > 0) {
@@ -2995,98 +3086,31 @@ export class KnowledgeService {
 
     applyDocumentLinkedEntityFilters(qb, filters as Record<string, any> | undefined, nextLinkedEntityParam);
 
-    const total = await qb.getCount();
 
-    const rows = await qb
-      .orderBy(sortExpression, sort.direction as 'ASC' | 'DESC')
-      .addOrderBy('d.item_number', 'DESC')
-      .offset(skip)
-      .limit(limit)
-      .getRawMany();
-
-    const items = rows.map((row: any) => ({
-      ...row,
-      item_ref: `DOC-${row.item_number}`,
-      can_write: writableLibraryIds ? writableLibraryIds.has(String(row.library_id || '')) : false,
-      validated_revision: row.validated_revision != null ? Number(row.validated_revision) : null,
-      validated_at: row.validated_at || null,
-      is_validated_current_revision:
-        String(row.status || '').toLowerCase() === 'published'
-        && row.validated_revision != null
-        && Number(row.validated_revision) === Number(row.revision || 0),
-    }));
-
-    return { items, total, page, limit };
+    const direction = sort.direction as 'ASC' | 'DESC';
+    const orderBy = (target: typeof qb) => {
+      target.orderBy(sortExpression, direction);
+      if (secondarySortExpression) target.addOrderBy(secondarySortExpression, direction);
+      target.addOrderBy('d.item_number', 'DESC');
+    };
+    return { qb, orderBy };
   }
 
   async listIds(query: any, opts?: { manager?: EntityManager; tenantId?: string; userId?: string | null }): Promise<{ ids: string[]; total: number }> {
     const manager = this.getManager(opts);
-    const tenantId = String(opts?.tenantId || '').trim();
-    const parsed = parsePagination({ ...query, page: 1, limit: query?.limit ?? 10000 }, { field: 'updated_at', direction: 'DESC' });
-    const search = this.getDocumentSearchState(parsed.q);
-    const filters = parsed.filters as Record<string, any> | undefined;
-    assertSetFilterModes(filters);
-    let linkedEntityParamIndex = 0;
-    const nextLinkedEntityParam = () => `linkedEntity${linkedEntityParamIndex++}`;
     const accessibleLibraries = await this.listAccessibleLibraryIds(manager, opts?.userId || null, 'reader');
     if (accessibleLibraries && accessibleLibraries.length === 0) {
       return { ids: [], total: 0 };
     }
-
-    const qb = manager
-      .getRepository(Document)
-      .createQueryBuilder('d')
-      .where('d.tenant_id = app_current_tenant()')
-      .select('d.id', 'id');
-    if (tenantId) {
-      qb.andWhere('d.tenant_id = :tenantId', { tenantId });
-    }
-    if (accessibleLibraries) {
-      qb.andWhere('d.library_id IN (:...accessibleLibraryIds)', { accessibleLibraryIds: accessibleLibraries });
-    }
-    {
-      const acl = documentIncidentVisibilityQueryBuilderClause(
-        'd',
-        await resolveDocumentIncidentViewer(manager, opts?.userId || null, tenantId || null),
-      );
-      qb.andWhere(acl.clause, acl.params);
-    }
-
-    if (search) {
-      const params: Record<string, string | number> = {
-        searchTerm: search.term,
-      };
-      const searchClauses = [`d.search_vector @@ ${bilingualDocumentTsQuerySql(':searchTerm')}`];
-      if (search.itemNumber != null) {
-        params.searchItemNumber = search.itemNumber;
-        searchClauses.unshift('d.item_number = :searchItemNumber');
-      }
-      qb.andWhere(`(${searchClauses.join(' OR ')})`, params);
-    }
-
-    const status = query?.status;
-    if (status && isDocumentStatus(String(status))) {
-      qb.andWhere('d.status = :status', { status: String(status) });
-    }
-
-    const libraryId = query?.library_id;
-    if (libraryId) {
-      qb.andWhere('d.library_id = :libraryId', { libraryId: String(libraryId) });
-    }
-
-    const rootFolder = ['1', 'true'].includes(String(query?.root_folder || '').toLowerCase());
-    const folderId = query?.folder_id || (filters as any)?.folder_id?.filter;
-    if (rootFolder) {
-      qb.andWhere('d.folder_id IS NULL');
-    } else if (folderId) {
-      qb.andWhere('d.folder_id = :folderId', { folderId: String(folderId) });
-    }
-
-    applyDocumentLinkedEntityFilters(qb, filters, nextLinkedEntityParam);
-
-    const total = await qb.clone().getCount();
+    const { qb, orderBy } = await this.buildDocumentListQuery(manager, query, {
+      tenantId: String(opts?.tenantId || '').trim(),
+      userId: opts?.userId || null,
+      accessibleLibraryIds: accessibleLibraries,
+    });
+    qb.select('d.id', 'id');
+    const total = await qb.getCount();
+    orderBy(qb);
     const rows = await qb
-      .orderBy('d.updated_at', 'DESC')
       .limit(Math.min(Number(query?.limit) || 10000, 10000))
       .getRawMany();
 
@@ -3180,6 +3204,23 @@ export class KnowledgeService {
            ORDER BY 1`,
           scopeParams,
         ).then((rows: any[]) => ['folder_name', rows.map((r: any) => r.name)]),
+      );
+    }
+
+    for (const [field, expression, join] of [
+      ['library_key', KNOWLEDGE_LIBRARY_KEY_SQL, 'LEFT JOIN document_libraries dl ON dl.id = d.library_id AND dl.tenant_id = d.tenant_id'],
+      ['folder_key', KNOWLEDGE_FOLDER_KEY_SQL, 'LEFT JOIN document_folders f ON f.id = d.folder_id AND f.tenant_id = d.tenant_id'],
+    ] as const) {
+      if (!shouldReturn(field)) continue;
+      promises.push(
+        manager.query(
+          `SELECT DISTINCT ${expression} AS value
+           FROM documents d
+           ${join}
+           WHERE ${scopeWhere}
+           ORDER BY 1`,
+          scopeParams,
+        ).then((rows: any[]) => [field, rows.map((r: any) => r.value)]),
       );
     }
 
@@ -3572,6 +3613,7 @@ export class KnowledgeService {
     const rows = await manager.query(
       `SELECT d.*,
               f.name AS folder_name,
+              f.system_key AS folder_system_key,
               dl.name AS library_name,
               dl.slug AS library_slug,
               dtype.name AS document_type_name,

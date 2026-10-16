@@ -33,7 +33,7 @@ Consecuencias de la elección de la biblioteca:
 - En **Plantillas**, los documentos publicados se convierten en puntos de partida reutilizables para nuevos artículos y se agrupan por tipo de documento en el selector de plantillas.
 - En **Documentos gestionados**, los artículos pueden seguir siendo legibles y editables, pero algunos metadatos están controlados por el espacio de trabajo de origen en lugar de desde la propia Base de conocimiento.
 
-La administración de bibliotecas es intencionadamente más estricta que la edición de documentos. Crear, renombrar, eliminar o reorganizar bibliotecas es responsabilidad del administrador porque esos cambios afectan a la navegación y la propiedad para todos.
+La administración de bibliotecas es intencionadamente más estricta que la edición de documentos. Crear, renombrar, eliminar o reorganizar bibliotecas es responsabilidad del administrador porque esos cambios afectan a la navegación y la propiedad para todos. La biblioteca predeterminada (la primera de la barra, donde se crean los documentos nuevos) no se puede eliminar.
 
 ### Bibliotecas restringidas
 
