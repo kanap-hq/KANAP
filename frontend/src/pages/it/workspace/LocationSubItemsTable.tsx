@@ -340,9 +340,14 @@ function SubItemRow({
   const { t } = useTranslation(['it', 'common']);
   const [name, setName] = React.useState(row.name);
   const [description, setDescription] = React.useState(row.description || '');
-
-  React.useEffect(() => { setName(row.name); }, [row.name]);
-  React.useEffect(() => { setDescription(row.description || ''); }, [row.description]);
+  // The fields follow the stored row (a refused rename puts the name back) during the render that
+  // receives it. An effect would run after the commit and could overwrite what was typed meanwhile.
+  const [shown, setShown] = React.useState({ name: row.name, description: row.description });
+  if (shown.name !== row.name || shown.description !== row.description) {
+    setShown({ name: row.name, description: row.description });
+    if (shown.name !== row.name) setName(row.name);
+    if (shown.description !== row.description) setDescription(row.description || '');
+  }
 
   return (
     <Box component="tr">
