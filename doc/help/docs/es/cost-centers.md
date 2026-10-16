@@ -87,7 +87,7 @@ Haga clic en cualquier celda para abrir el espacio de trabajo.
 - **Nuevo**: crear un grupo o un centro de coste (requiere `cost_centers:member`)
 - **Importar CSV**: cargar el árbol desde un archivo (requiere `cost_centers:admin`)
 - **Exportar CSV**: descargar los elementos que muestra la lista, o todos los elementos (requiere `cost_centers:admin`)
-- **Eliminar selección**: eliminar los elementos seleccionados (requiere `cost_centers:admin`). Los elementos que no se pueden eliminar se conservan y se listan con el motivo. El contenido se elimina antes que su grupo, de modo que seleccionar un grupo junto con todo lo que contiene lo elimina todo
+- **Eliminar selección**: eliminar los elementos seleccionados (requiere `cost_centers:admin`). Antes de eliminar nada, la confirmación enumera los elementos que se conservan, con el motivo. El contenido se elimina antes que su grupo, de modo que seleccionar un grupo junto con todo lo que contiene lo elimina todo
 
 ---
 
@@ -145,8 +145,8 @@ El botón **Eliminar** del encabezado elimina el elemento tras una confirmación
 
 ## Reglas que encontrará
 
-- **Un centro de coste usado por líneas de presupuesto no puede convertirse en grupo ni eliminarse.** Desactívelo en su lugar. El mensaje indica las líneas, por ejemplo "IT-300 is used by 3 OPEX lines and 1 CAPEX line. Disable it instead."
-- **Un grupo que contiene elementos no puede eliminarse ni convertirse en centro de coste.** Mueva o elimine antes su contenido. El mensaje indica el número, por ejemplo "Infrastructure still contains 4 nodes. Move or delete them first."
+- **Un centro de coste usado por líneas de presupuesto no puede convertirse en grupo ni eliminarse.** Desactívelo en su lugar. El mensaje indica las líneas, por ejemplo "Este centro de coste se usa en 3 líneas OPEX y 1 línea CAPEX. Desactívelo en lugar de eliminarlo."
+- **Un grupo que contiene elementos no puede eliminarse ni convertirse en centro de coste.** Mueva o elimine antes su contenido. El mensaje indica el número, por ejemplo "Este grupo contiene 4 elementos. Muévalos o elimínelos primero."
 - **Solo un grupo puede ser superior.** Un centro de coste no tiene elementos hijos.
 - **Sin bucles.** Un grupo no puede moverse bajo sí mismo ni bajo uno de sus propios grupos.
 - **Los elementos desactivados se quedan donde están.** Un centro de coste desactivado se mantiene en las líneas de presupuesto que ya lo tienen y sigue contando en los informes. En los selectores aparece marcado como **Desactivado** y no se puede elegir para una línea nueva. Desactivar un grupo no cambia lo que contiene, y un grupo desactivado todavía puede recibir elementos.
@@ -186,7 +186,7 @@ Cargue o actualice todo el árbol desde un archivo.
 | `owner_email` | El correo electrónico del responsable del presupuesto, un usuario activo. Vacía para ningún responsable del presupuesto |
 | `description` | Texto libre |
 | `status` | `enabled` o `disabled`. Vacía significa `enabled` para un nodo nuevo y conserva el estado guardado en una actualización |
-| `disabled_at` | Columna opcional. El fin de validez: una fecha (`2026-12-31`) o una fecha y hora completas. Vacía si no hay fin. En una actualización, un `status` vacío y un `disabled_at` vacío conservan los valores guardados. `enabled` con una fecha vacía borra el fin de validez. `disabled` con una fecha vacía conserva una fecha ya pasada y, si no, termina el nodo hoy |
+| `disabled_at` | Columna opcional. El fin de validez: una fecha (`2026-12-31`) o una fecha y hora completas. La exportación escribe solo la fecha. Importada de nuevo, esa fecha conserva el fin de validez guardado. Vacía si no hay fin. En una actualización, un `status` vacío y un `disabled_at` vacío conservan los valores guardados. `enabled` con una fecha vacía borra el fin de validez. `disabled` con una fecha vacía conserva una fecha ya pasada y, si no, termina el nodo hoy |
 
 **Importar**:
 

@@ -170,7 +170,7 @@ Une disposition de colonnes que vous avez enregistrée garde son propre choix de
 - **Nouvelle ligne** : Créer une ligne (nécessite `budget:member`)
 - **Importer CSV** : Charger des lignes en masse depuis un fichier budgétaire (nécessite `budget:admin`)
 - **Exporter CSV** : Exporter les lignes dans un fichier budgétaire (nécessite `budget:admin`)
-- **Supprimer la sélection** : Suppression en masse des lignes sélectionnées (nécessite `budget:admin` ; sélectionnez-les via les cases à cocher). Une ligne qui a des montants dans une colonne gelée ne peut pas être supprimée : les autres sont supprimées, et le message nomme chaque ligne refusée avec sa raison
+- **Supprimer la sélection** : Suppression en masse des lignes sélectionnées (nécessite `budget:admin` ; sélectionnez-les via les cases à cocher). Une ligne qui a des montants dans une colonne gelée ne peut pas être supprimée. Avant toute suppression, la confirmation liste les lignes conservées, avec la colonne gelée. Les autres sont supprimées
 
 **Navigation Préc./Suiv.** :
 

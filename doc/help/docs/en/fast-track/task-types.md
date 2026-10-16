@@ -246,6 +246,8 @@ All work item types are **configurable** in **Portfolio > Settings**. You can:
 - **Disable** existing types you don't need
 - **Rename** types to fit your terminology
 
+The four default types (Task, Bug, Problem, Incident) show in each user's language while you keep their names. A renamed type shows its new name in every language.
+
 The list in this guide is a starting point. Adapt it to how your IT department actually works.
 
 ---

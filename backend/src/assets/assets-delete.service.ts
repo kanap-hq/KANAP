@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { Asset } from './asset.entity';
@@ -6,6 +6,7 @@ import { AuditService } from '../audit/audit.service';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult } from '../common/delete.types';
 import { withSavepoint } from '../common/savepoint.util';
+import { checkIds, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal, type UsageCount } from '../common/record-in-use';
 
 @Injectable()
 export class AssetsDeleteService extends BaseDeleteService<Asset> {
@@ -93,18 +94,40 @@ export class AssetsDeleteService extends BaseDeleteService<Asset> {
   }
 
   /**
+   * The refusal of an asset's delete (`ASSET_IN_USE`, with its application assignments and
+   * connections counted), or null when nothing uses it. Removing those links frees the asset.
+   */
+  private async refusalOf(asset: Asset, tenantId: string, manager: EntityManager): Promise<RecordInUseException | null> {
+    const assignments = await this.findAssignments(asset.id, tenantId, manager);
+    const connections = await this.findConnections(asset.id, tenantId, manager);
+    if (assignments.count === 0 && connections.count === 0) return null;
+    const usages: UsageCount[] = [];
+    if (assignments.count > 0) usages.push({ type: 'app_assignments', total: assignments.count });
+    if (connections.count > 0) usages.push({ type: 'connections', total: connections.count });
+    return new RecordInUseException('ASSET_IN_USE', 'asset', asset.name, usages, this.buildConflictMessage(asset.name, assignments, connections));
+  }
+
+  /** The check before a delete (`POST /assets/delete-check`): which of `ids` would be refused, and why. */
+  async deleteCheck(ids: string[], tenantId: string, opts?: { manager?: EntityManager }): Promise<{ refused: DeleteRefusal[] }> {
+    const manager = opts?.manager ?? this.repository.manager;
+    const wanted = checkIds(ids);
+    if (wanted.length === 0) return { refused: [] };
+    const rows: Asset[] = await manager.query(
+      `SELECT id, name FROM assets WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+      [tenantId, wanted],
+    );
+    return refusalsFrom(wanted, rows, (row) => row.name, (row) => this.refusalOf(row, tenantId, manager));
+  }
+
+  /**
    * Delete an asset by ID with tenant context
    */
   async deleteAsset(id: string, tenantId: string, userId: string | null, opts?: { manager?: EntityManager }): Promise<{ deleted: boolean }> {
     const manager = opts?.manager ?? this.repository.manager;
     const asset = await this.ensureAsset(id, tenantId, manager);
 
-    const assignments = await this.findAssignments(id, tenantId, manager);
-    const connections = await this.findConnections(id, tenantId, manager);
-
-    if (assignments.count > 0 || connections.count > 0) {
-      throw new ConflictException(this.buildConflictMessage(asset.name, assignments, connections));
-    }
+    const refusal = await this.refusalOf(asset, tenantId, manager);
+    if (refusal) throw refusal;
 
     await this.getRepo(manager).delete({ id } as any);
 
@@ -126,20 +149,7 @@ export class AssetsDeleteService extends BaseDeleteService<Asset> {
 
     for (const id of ids || []) {
       try {
-        await withSavepoint(manager, async () => {
-          const asset = await this.ensureAsset(id, tenantId, manager);
-          const assignments = await this.findAssignments(id, tenantId, manager);
-          const connections = await this.findConnections(id, tenantId, manager);
-          if (assignments.count > 0 || connections.count > 0) {
-            throw new ConflictException(this.buildConflictMessage(asset.name, assignments, connections));
-          }
-
-          await repo.delete({ id } as any);
-          await this.audit.log(
-            { table: 'assets', recordId: id, action: 'delete', before: asset, after: null, userId },
-            { manager },
-          );
-        });
+        await withSavepoint(manager, () => this.deleteAsset(id, tenantId, userId, { manager }));
         result.deleted.push(id);
       } catch (error: any) {
         let name = 'Unknown';
@@ -149,7 +159,7 @@ export class AssetsDeleteService extends BaseDeleteService<Asset> {
         } catch (err: any) {
           this.logger.warn(`Failed to fetch asset name for error reporting: ${err?.message || 'Unknown error'}`);
         }
-        result.failed.push({ id, name, reason: error?.message || 'Unknown error' });
+        result.failed.push({ id, name, reason: error?.message || 'Unknown error', ...refusalDetails(error) });
       }
     }
 

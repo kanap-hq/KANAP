@@ -335,16 +335,14 @@ export class InterfaceBindingsManagementService extends InterfacesBaseService {
       );
       csRows.forEach((r) => addServer(r.connection_id, r.asset_id));
 
-      const legRows: Array<{ connection_id: string; source_asset_id: string | null; destination_asset_id: string | null }> = await mg.query(
-        `SELECT connection_id, source_asset_id, destination_asset_id
+      // A leg names one piece of equipment the connection passes through (migration 1850300000000).
+      const legRows: Array<{ connection_id: string; equipment_asset_id: string | null }> = await mg.query(
+        `SELECT connection_id, equipment_asset_id
          FROM connection_legs
          WHERE connection_id = ANY($1::uuid[])`,
         [connIds],
       );
-      legRows.forEach((r) => {
-        addServer(r.connection_id, r.source_asset_id);
-        addServer(r.connection_id, r.destination_asset_id);
-      });
+      legRows.forEach((r) => addServer(r.connection_id, r.equipment_asset_id));
     }
 
     items.forEach((item) => {

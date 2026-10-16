@@ -56,6 +56,7 @@ import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import type { InterfaceDetail, InterfaceLeg } from '../components/interface-workspace/types';
 import { getDotColor, LIFECYCLE_COLORS } from '../../../utils/statusColors';
 import { drawerAutocompleteListboxSx, drawerFieldValueSx, drawerMenuItemSx, drawerSelectSx, longFormSurfaceFieldSx } from '../../../theme/formSx';
+import { legTypeLabel } from '../../../utils/interfaceLegType';
 
 export type InterfaceMappingTabHandle = {
   save: () => Promise<boolean>;
@@ -916,7 +917,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
   }, [data?.source_application_name, data?.target_application_name, t]);
 
   const legLabel = React.useCallback((leg: InterfaceLeg) => (
-    `${String(leg.leg_type || '').toUpperCase()} • ${getRoleLabel(leg.from_role)} -> ${getRoleLabel(leg.to_role)}`
+    `${legTypeLabel(t, leg.leg_type)} • ${getRoleLabel(leg.from_role)} -> ${getRoleLabel(leg.to_role)}`
   ), [getRoleLabel]);
 
   const load = React.useCallback(async () => {

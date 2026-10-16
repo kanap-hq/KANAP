@@ -1202,15 +1202,27 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
 
   // Reload when the search, extra params, refreshKey, endpoint or status scope change: AG Grid does
   // not see those. It reloads on a sort or filter change by itself.
+  const reloadQueryRef = useRef<string | undefined>(undefined);
   useEffect(() => {
+    const query = JSON.stringify([debouncedSearch, extraParamsKey, endpoint, statusScope, enablePagination]);
+    const sameQuery = reloadQueryRef.current === query;
+    reloadQueryRef.current = query;
     // Skip first run to avoid double-fetch on mount
     if (!initializedRef.current) {
       initializedRef.current = true;
       return;
     }
     const api = gridApiRef.current;
-    // update URL handled in other effect; here we simply purge cache to refetch with new params
     supersedeRequests();
+    if (sameQuery) {
+      // A refresh alone (after a delete, an import, an edit): the same rows asked again, the ones on
+      // screen kept until the new ones arrive, at the same place. No empty grid meanwhile.
+      try {
+        (api as any)?.refreshInfiniteCache?.();
+      } catch {}
+      return;
+    }
+    // update URL handled in other effect; here we simply purge cache to refetch with new params
     setEmptyResult(null);
     try {
       if (enablePagination) {

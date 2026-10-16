@@ -12,9 +12,11 @@ import {
   Typography,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
+import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import api from '../../../api';
 import KanapDialog from '../../../components/design/KanapDialog';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { legTypeLabel } from '../../../utils/interfaceLegType';
 
 export type LinkOption = {
   binding_id: string;
@@ -44,6 +46,7 @@ export default function ConnectionLinkInterfacesDialog({
   onLinked,
 }: Props) {
   const { t } = useTranslation(['it', 'common']);
+  const { labelFor } = useItOpsEnumOptions();
   const [search, setSearch] = React.useState('');
   const [options, setOptions] = React.useState<LinkOption[]>([]);
   const [loading, setLoading] = React.useState(false);
@@ -202,8 +205,8 @@ export default function ConnectionLinkInterfacesDialog({
                         </Stack>
                         <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.25, flexWrap: 'wrap' }}>
                           <Typography component="span" sx={{ fontSize: 11, color: 'kanap.text.tertiary' }}>
-                            {opt.environment.toUpperCase()} · {opt.leg_type.toUpperCase()}
-                            {opt.pattern ? ` · ${opt.pattern}` : ''}
+                            {opt.environment.toUpperCase()} · {legTypeLabel(t, opt.leg_type)}
+                            {opt.pattern ? ` · ${labelFor('interfacePattern', opt.pattern)}` : ''}
                           </Typography>
                           {endpointLine && (
                             <Typography component="span" sx={{ fontSize: 11, color: 'kanap.text.tertiary' }}>

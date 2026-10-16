@@ -78,7 +78,6 @@
     "valueCount": "{{formatted}} valeurs",
     "valueCount_one": "{{formatted}} valeur",
     "clearFilter": "Effacer le filtre",
-    "columnPlaceholder": "Filtrer…",
     "filterColumn": "Filtrer {{column}}",
     "linkFiltersLost": "Les filtres de ce lien ne sont plus disponibles.",
     "date": {
@@ -95,8 +94,8 @@
     "noResults": "Aucun résultat",
     "noResultsFiltered": "Aucun résultat ne correspond à la recherche ou aux filtres.",
     "clearAll": "Effacer la recherche et les filtres",
-    "resultCount_one": "{{count}} résultat",
-    "resultCount_other": "{{count}} résultats"
+    "resultCount_one": "{{count, count}} résultat",
+    "resultCount_other": "{{count, count}} résultats"
   },
   "columnChooser": {
     "searchPlaceholder": "Rechercher une colonne",
@@ -111,7 +110,7 @@
     "disabled": "Désactivés",
     "invited": "Invités",
     "email": "E-mail",
-    "totalWithCount": "Total ({{count}})",
+    "totalWithCount": "Total ({{count, count}})",
     "noData": "Aucune donnée",
     "none": "Aucun",
     "year": "Année",
@@ -128,7 +127,7 @@
     "role": "Rôle",
     "unknown": "Inconnu",
     "readOnly": "Lecture seule",
-    "managedDoc": "Document géré",
+    "managedDoc": "Document managé",
     "recommended": "Recommandé",
     "openCalendar": "Ouvrir le calendrier",
     "datePlaceholder": "jj/mm/aaaa",
@@ -173,9 +172,14 @@
     "cannotUndo": "Cette action est irréversible.",
     "successAll_one": "{{count}} élément supprimé",
     "successAll_other": "{{count}} éléments supprimés",
+    "keptDone_one": "{{count}} élément conservé",
+    "keptDone_other": "{{count}} éléments conservés",
+    "withKept": "{{deleted}}. {{kept}}",
+    "namedList": "{{what}} : {{names}}",
+    "namesMore_one": "{{count}} autre",
+    "namesMore_other": "{{count}} autres",
+    "partialResult": "{{deleted}}. {{failed}}",
     "failedAll": "Échec de la suppression : {{reasons}}",
-    "partialDeleted_one": "{{count}} élément supprimé.",
-    "partialDeleted_other": "{{count}} éléments supprimés.",
     "partialFailed_one": "Échec pour {{count}} élément : {{reasons}}",
     "partialFailed_other": "Échec pour {{count}} éléments : {{reasons}}",
     "failedGeneric": "Échec de la suppression des éléments",
@@ -207,7 +211,41 @@
       "team_members_one": "{{count}} membre d'équipe",
       "team_members_other": "{{count}} membres d'équipe",
       "compliance_requirements_one": "{{count}} exigence de conformité renseignée",
-      "compliance_requirements_other": "{{count}} exigences de conformité renseignées"
+      "compliance_requirements_other": "{{count}} exigences de conformité renseignées",
+      "opex_lines_one": "{{count}} ligne OPEX",
+      "opex_lines_other": "{{count}} lignes OPEX",
+      "capex_lines_one": "{{count}} ligne CAPEX",
+      "capex_lines_other": "{{count}} lignes CAPEX",
+      "app_assignments_one": "{{count}} affectation à une application",
+      "app_assignments_other": "{{count}} affectations à des applications",
+      "connections_one": "{{count}} connexion",
+      "connections_other": "{{count}} connexions",
+      "nodes_one": "{{count}} élément",
+      "nodes_other": "{{count}} éléments",
+      "companies_one": "{{count}} société",
+      "companies_other": "{{count}} sociétés",
+      "values_one": "{{count}} valeur",
+      "values_other": "{{count}} valeurs",
+      "sub_teams_one": "{{count}} sous-équipe",
+      "sub_teams_other": "{{count}} sous-équipes",
+      "contributors_one": "{{count}} contributeur",
+      "contributors_other": "{{count}} contributeurs",
+      "interface_bindings_one": "{{count}} liaison d'interface",
+      "interface_bindings_other": "{{count}} liaisons d'interface",
+      "server_assignments_one": "{{count}} affectation de serveur",
+      "server_assignments_other": "{{count}} affectations de serveur",
+      "business_processes_one": "{{count}} processus métier",
+      "business_processes_other": "{{count}} processus métier",
+      "documents_one": "{{count}} document",
+      "documents_other": "{{count}} documents",
+      "sub_folders_one": "{{count}} sous-dossier",
+      "sub_folders_other": "{{count}} sous-dossiers",
+      "app_instances_one": "{{count}} déploiement",
+      "app_instances_other": "{{count}} déploiements",
+      "incidents_one": "{{count}} incident",
+      "incidents_other": "{{count}} incidents",
+      "subnets_one": "{{count}} sous-réseau",
+      "subnets_other": "{{count}} sous-réseaux"
     }
   },
   "messages": {
@@ -450,7 +488,6 @@
     "exportTitle": "Exporter en CSV",
     "importTitle": "Importer un CSV",
     "exportDescription": "Exporter les données au format CSV. Les fichiers utilisent le séparateur point-virgule.",
-    "exportDescriptionExcel": "Exporter les données au format CSV. Les fichiers utilisent le séparateur point-virgule pour la compatibilité Excel.",
     "exportDescriptionFlexible": "Exporter les données au format CSV. Le séparateur, le séparateur décimal et les dates suivent la langue de l'écran.",
     "exportData": "Exporter les données",
     "exportPreset": "Préréglage d'export",
@@ -459,7 +496,6 @@
     "fieldsSelected": "{{selected}} sur {{total}} champs sélectionnés",
     "downloadTemplate": "Télécharger le modèle",
     "uploadDescription": "Téléversez un CSV avec des séparateurs point-virgule et les titres de colonnes exactement identiques au modèle.",
-    "uploadDescriptionShort": "Téléversez un CSV avec des séparateurs point-virgule.",
     "uploadDescriptionFlexible": "Téléversez un fichier CSV avec les titres de colonnes du modèle. Les virgules et les points-virgules conviennent, et un fichier enregistré par Excel aussi.",
     "dragDropOrClick": "Glissez-déposez un CSV ici, ou cliquez pour sélectionner",
     "preflightCheck": "Vérification préalable",
@@ -635,11 +671,11 @@
     "retryLock": "Réessayer le verrouillage",
     "lockExpired": "Le verrouillage d'édition a expiré. Repassez en mode édition pour continuer.",
     "failedToSave": "Échec de l'enregistrement du document",
-    "failedToLoad": "Échec du chargement du document géré",
-    "contentUnavailable": "Le contenu du document géré est indisponible jusqu'à la résolution de l'erreur de chargement.",
-    "lockedBy": "Ce document géré est verrouillé par {{name}}",
-    "lockedByUntil": "Ce document géré est verrouillé par {{name}} jusqu'au {{expires}}. Vous pouvez le lire tant que le verrou est actif.",
-    "lockedByReadOnly": "Ce document géré est verrouillé par {{name}}. Vous pouvez le lire tant que le verrou est actif.",
+    "failedToLoad": "Échec du chargement du document managé",
+    "contentUnavailable": "Le contenu du document managé est indisponible jusqu'à la résolution de l'erreur de chargement.",
+    "lockedBy": "Ce document managé est verrouillé par {{name}}",
+    "lockedByUntil": "Ce document managé est verrouillé par {{name}} jusqu'au {{expires}}. Vous pouvez le lire tant que le verrou est actif.",
+    "lockedByReadOnly": "Ce document managé est verrouillé par {{name}}. Vous pouvez le lire tant que le verrou est actif.",
     "importFailed": "Échec de l'importation du document"
   },
   "knowledgePanel": {
@@ -1081,6 +1117,24 @@
     "editLink": "Modifier le lien",
     "copyUrl": "Copier l'URL",
     "removeLink": "Supprimer le lien"
+  },
+  "taskTypes": {
+    "task": {
+      "label": "Tâche",
+      "description": "Tâche ou élément de travail standard"
+    },
+    "bug": {
+      "label": "Bug",
+      "description": "Défaut ou erreur logicielle"
+    },
+    "problem": {
+      "label": "Problème",
+      "description": "Problème opérationnel nécessitant une analyse"
+    },
+    "incident": {
+      "label": "Incident",
+      "description": "Interruption de service ou événement de sécurité"
+    }
   },
   "tenant": {
     "notFound": {

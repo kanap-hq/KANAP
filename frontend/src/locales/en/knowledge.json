@@ -18,7 +18,7 @@
     "version": "Version"
   },
   "confirmations": {
-    "deleteLibrary": "Delete this library? Knowledge items and folders will be moved to the fallback library.",
+    "deleteLibrary": "Delete this library? Its documents and folders move to the first library you can open in the bar, normally the default library.",
     "resetLibraryAccess": "Switch this library back to open access and clear the custom reader and writer lists?"
   },
   "dialogs": {
@@ -109,12 +109,11 @@
       "rootActions": "Folder actions"
     },
     "confirmations": {
-      "deleteFolder": "Delete \"{{name}}\"? Documents will be moved to unfiled. Folders with subfolders cannot be deleted."
+      "deleteFolder": "Documents in \"{{name}}\" will be moved to Unfiled. This cannot be undone."
     },
     "dialogs": {
       "createFolderTitle": "Create folder",
-      "createSubfolderTitle": "Create subfolder",
-      "deleteFolderTitle": "Delete folder"
+      "createSubfolderTitle": "Create subfolder"
     },
     "fields": {
       "folderName": "Folder name",
@@ -123,7 +122,8 @@
     "messages": {
       "folderMoved": "Folder moved.",
       "moveFailed": "Unable to move folder.",
-      "moveInProgress": "Folder move in progress"
+      "moveInProgress": "Folder move in progress",
+      "deleteFailed": "Unable to delete the folder."
     },
     "libraryRoot": "Library root",
     "title": "Folders",
@@ -358,6 +358,21 @@
     "obsolete": "Obsolete",
     "published": "Published"
   },
+  "systemNames": {
+    "libraries": {
+      "documents": "Documents",
+      "templates": "Templates",
+      "managedDocs": "Managed Docs"
+    },
+    "folders": {
+      "integrated_requests": "Requests",
+      "integrated_projects": "Projects",
+      "integrated_interfaces": "Interfaces",
+      "integrated_applications": "Applications",
+      "integrated_assets": "Assets",
+      "integrated_incidents": "Incidents"
+    }
+  },
   "typesManager": {
     "columns": {
       "actions": "Actions",
@@ -482,5 +497,13 @@
       "loadFailedBody": "Check your connection and try again.",
       "backToLibrary": "Back to the library"
     }
+  },
+  "delete": {
+    "toDelete_one": "{{count}} document will be deleted:",
+    "toDelete_other": "{{count}} documents will be deleted:",
+    "kept_one": "{{count}} document cannot be deleted and is kept:",
+    "kept_other": "{{count}} documents cannot be deleted and are kept:",
+    "deleted_one": "{{count}} document deleted",
+    "deleted_other": "{{count}} documents deleted"
   }
 }

@@ -37,6 +37,7 @@ import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import { useTranslation } from 'react-i18next';
 import { classificationText } from '../../utils/applicationClassification';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import { legTypeLabel } from '../../utils/interfaceLegType';
 // Label keys under it:enums.environment.
 const ENVIRONMENT_OPTIONS = [
   { labelKey: 'production', value: 'prod' },
@@ -1067,7 +1068,7 @@ export default function InterfaceMapPage() {
                                       {t('pages.interfaceMap.protocolsValue', { value: protocolLabels.length > 0 ? protocolLabels.join(', ') : '—' })}
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary">
-                                      {t('pages.interfaceMap.bindingValue', { env: link.environment.toUpperCase(), leg: link.leg_type.toUpperCase() })}
+                                      {t('pages.interfaceMap.bindingValue', { env: link.environment.toUpperCase(), leg: legTypeLabel(t, link.leg_type) })}
                                     </Typography>
                                   </Stack>
                                 );

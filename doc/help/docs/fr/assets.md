@@ -73,7 +73,7 @@ La plupart des colonnes prennent en charge des filtres par jeu de cases à coche
 **Actions** :
 - **Ajouter un actif** : Créer un nouvel actif (`infrastructure:member`)
 - **Import CSV** / **Export CSV** : Opérations en masse (`infrastructure:admin`)
-- **Supprimer un actif** (lignes sélectionnées) : Supprimer les actifs sélectionnés (`infrastructure:admin`)
+- **Supprimer un actif** (lignes sélectionnées) : Supprimer les actifs sélectionnés (`infrastructure:admin`). Un actif encore affecté à des applications ou lié à des connexions ne peut pas être supprimé : retirez-le d'abord de ces éléments. Avant toute suppression, la confirmation liste les actifs conservés, avec la raison
 
 ---
 
@@ -101,7 +101,7 @@ L'en-tête affiche :
 - **Référence de l'actif** (ex. : `AST-123`) : identifiant copiable
 - Pastille **Cycle de vie** (également modifiable depuis le tiroir des propriétés)
 - **Envoyer le lien** : copier un lien partageable vers cet espace de travail
-- **Supprimer** (`infrastructure:admin`)
+- **Supprimer** (`infrastructure:admin`). Pour un actif encore utilisé, la raison s'affiche avant toute confirmation
 - **Précédent / Suivant** (ex. : « 3 sur 47 ») : naviguer dans la liste filtrée sans y revenir
 
 ### Tiroir des propriétés (panneau de droite)
@@ -257,7 +257,7 @@ Depuis la liste des Actifs :
 
 ### Processus d'import
 
-1. **Préparez votre fichier** : Utilisez l'encodage UTF-8 avec des séparateurs point-virgule (`;`). Un fichier enregistré par Excel en CSV simple (Windows-1252) est accepté aussi. Téléchargez un modèle pour vous assurer des bons en-têtes.
+1. **Préparez votre fichier** : enregistrez-le en UTF-8. Les virgules et les points-virgules conviennent tous les deux, de même qu'un fichier enregistré par Excel en CSV simple (Windows-1252). Téléchargez un modèle pour vous assurer des bons en-têtes. Le séparateur, les montants, les dates et les oui ou non de chaque langue sont dans [Fichiers CSV](csv-files.md).
 
 2. **Choisissez les paramètres d'import** :
    - **Mode** :
@@ -284,7 +284,7 @@ Depuis la liste des Actifs :
 | `kind` | Type d'actif | Oui | Accepte un code ou un libellé (ex. : `vm` ou `Virtual Machine`) |
 | `environment` | Environnement | Oui | `prod`, `pre_prod`, `qa`, `test`, `dev`, `sandbox` |
 | `status` | Statut de cycle de vie | Non | Accepte un code ou un libellé (ex. : `active` ou `Active`) |
-| `is_cluster` | Est-ce un cluster | Non | `true` ou `false` |
+| `is_cluster` | Est-ce un cluster | Non | `oui` ou `non` |
 | `hostname` | Nom d'hôte réseau | Non | |
 | `domain` | Domaine DNS | Non | Accepte un code ou un libellé depuis les Paramètres |
 | `aliases` | Alias DNS | Non | Liste séparée par virgules |
@@ -343,7 +343,7 @@ Certains champs sont calculés et ne peuvent pas être importés :
 **Erreur « Le fichier n'est pas correctement formaté »** : Cela indique généralement un problème d'encodage. Assurez-vous que votre CSV est enregistré en **UTF-8** :
 
 - **Dans LibreOffice** : Lors de l'ouverture d'un CSV, sélectionnez `UTF-8` dans le menu déroulant Jeu de caractères (pas « Japanese (Macintosh) » ni d'autres encodages). Lors de l'enregistrement, cochez « Modifier les paramètres de filtre » et choisissez UTF-8.
-- **Dans Excel** : Enregistrer sous > CSV UTF-8 (délimité par des virgules), puis ouvrez dans un éditeur de texte pour remplacer les virgules par des points-virgules.
+- **Dans Excel** : Enregistrer sous > CSV UTF-8 (délimité par des virgules).
 - **Conseil général** : Si vous voyez des caractères illisibles au début de votre fichier, l'encodage est incorrect.
 
 ### Exemple CSV

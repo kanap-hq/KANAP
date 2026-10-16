@@ -1003,7 +1003,8 @@
       "contactLocked": "Los roles de contacto son gestionados por el sistema para la visibilidad del directorio y no pueden ser modificados.",
       "duplicated": "Rol duplicado.",
       "permissionsSaved": "Permisos del rol guardados.",
-      "setAccessLevels": "Establezca los niveles de acceso por recurso para este rol."
+      "setAccessLevels": "Establezca los niveles de acceso por recurso para este rol.",
+      "deleteFailed": "No se pudo eliminar el rol."
     },
     "resources": {
       "accounts": "Cuentas",
@@ -1136,7 +1137,9 @@
     "exportTitle": "Exportar cuentas de la plantilla",
     "importTitle": "Importar cuentas de la plantilla",
     "templateLabel": "Plantilla",
-    "title": "Cuentas estándar (Admin plataforma)"
+    "title": "Cuentas estándar (Admin plataforma)",
+    "deleteWarning_one": "Esta acción no se puede deshacer. La cuenta se retira de esta plantilla. Los planes de cuentas ya cargados desde ella conservan sus cuentas.",
+    "deleteWarning_other": "Esta acción no se puede deshacer. Las cuentas se retiran de esta plantilla. Los planes de cuentas ya cargados desde ella conservan sus cuentas."
   },
   "tenants": {
     "actions": {
@@ -1339,7 +1342,7 @@
       "invitePartialFail_other": "{{count}} usuarios invitados; {{failed}} con errores",
       "inviteFailed": "No se pudieron invitar los usuarios seleccionados",
       "disableConfirm": "{{name}} perderá el acceso y se cerrará su sesión inmediatamente. ¿Desactivar esta cuenta?",
-      "deleteConfirm": "¿Eliminar {{name}}? Esta acción no se puede deshacer. Si el usuario está referenciado por otros registros, desactive la cuenta en su lugar.",
+      "deleteConfirm": "¿Eliminar {{name}}? Esta acción no se puede deshacer.",
       "inviteSentOne": "Invitación enviada a {{email}}",
       "resetSent": "Correo de restablecimiento enviado a {{email}}",
       "rolesSaveFailed": "El usuario se guardó pero los roles no se pudieron actualizar. Vuelva a abrir el usuario e inténtelo de nuevo.",
@@ -1363,6 +1366,14 @@
     },
     "lastLogin": {
       "never": "Nunca"
+    },
+    "delete": {
+      "toDelete_one": "Se eliminará {{count}} usuario:",
+      "toDelete_other": "Se eliminarán {{count}} usuarios:",
+      "kept_one": "{{count}} usuario no se puede eliminar y se conserva:",
+      "kept_other": "{{count}} usuarios no se pueden eliminar y se conservan:",
+      "deleted_one": "{{count}} usuario eliminado",
+      "deleted_other": "{{count}} usuarios eliminados"
     }
   },
   "aiModels": {

@@ -258,12 +258,58 @@ async function testOtherTenantUntouched() {
   });
 }
 
+/** A refusal's translatable part: a 409 with its code and the counts per kind. */
+async function refusalOf(runner: QueryRunner, run: () => Promise<unknown>) {
+  await runner.query('SAVEPOINT refusal_code');
+  try {
+    await run();
+  } catch (error: any) {
+    await runner.query('ROLLBACK TO SAVEPOINT refusal_code');
+    const body = error?.getResponse?.() ?? {};
+    return { status: error?.getStatus?.(), code: body.code, usages: body.usages };
+  }
+  await runner.query('ROLLBACK TO SAVEPOINT refusal_code');
+  return assert.fail('the call should have been refused');
+}
+
+async function testRefusalCodesAndCheck() {
+  await withRollback(async (runner) => {
+    const tenantId = await seedTenant(runner, 'refusal-codes');
+    const { axes, values } = services(runner.manager);
+    const ctx = context(runner.manager, tenantId);
+    const run = await values.create({ name: 'Run' }, null, ctx);
+    const menu = await axes.create({ code: 'menu', name: 'Menu' }, ctx);
+    const dessert = await values.create({ axis_id: menu.id, name: 'Zabaglione' }, null, ctx);
+    const spare = await values.create({ axis_id: menu.id, name: 'Spare' }, null, ctx);
+    await linkValue(runner, 'opex', tenantId, await seedLine(runner, 'opex', tenantId), menu.id, dessert.id);
+    await linkValue(runner, 'capex', tenantId, await seedLine(runner, 'capex', tenantId), menu.id, dessert.id);
+    const lines = [{ type: 'opex_lines', total: 1 }, { type: 'capex_lines', total: 1 }];
+
+    assert.deepEqual(await refusalOf(runner, () => values.delete(dessert.id, null, ctx)),
+      { status: 409, code: 'ANALYTICS_VALUE_IN_USE', usages: lines });
+    assert.deepEqual(await refusalOf(runner, () => axes.delete(menu.id, ctx)),
+      { status: 409, code: 'ANALYTICS_DIMENSION_HAS_VALUES', usages: [{ type: 'values', total: 2 }] });
+    assert.deepEqual(await refusalOf(runner, () => axes.delete(run.axis_id, ctx, { force: true })),
+      { status: 409, code: 'ANALYTICS_DEFAULT_DIMENSION', usages: [] });
+    const bulk = await values.bulkDelete([dessert.id], null, ctx);
+    assert.deepEqual(bulk.failed.map((f) => [f.code, f.usages]), [['ANALYTICS_VALUE_IN_USE', lines]]);
+
+    // The check: nothing a forced delete cannot remove; what it removes, per value. Nothing written.
+    assert.deepEqual(await values.deleteCheck([spare.id, dessert.id, 'nope'], ctx), {
+      refused: [],
+      forced: [{ id: dessert.id, name: 'Zabaglione', code: 'ANALYTICS_VALUE_IN_USE', usages: lines }],
+    });
+    assert.equal(await linkCount(runner, tenantId, 'category_id', dessert.id), 2);
+  });
+}
+
 runSpecs('analytics-forced-delete.integration.spec', [
   testForcedDimensionDelete,
   testForcedDimensionWithoutLines,
   testDefaultRefusedEvenForced,
   testForcedValueDelete,
   testOtherTenantUntouched,
+  testRefusalCodesAndCheck,
 ]).catch((err) => {
   console.error(err);
   process.exit(1);

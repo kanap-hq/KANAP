@@ -243,13 +243,14 @@ type TotalsRow = {
   closed_count: number | string;
   measured_count: number | string;
   median_days: number | string | null;
-  by_type: Array<{ taskTypeId: string | null; taskTypeName: string | null } & RawLead> | null;
+  by_type: Array<{ taskTypeId: string | null; taskTypeName: string | null; taskTypeCode: string | null } & RawLead> | null;
   by_outcome: Record<string, RawLead> | null;
   done: (RawLead & { withPlannedEnd: number; medianOverrunDays: number | null }) | null;
 };
 type AgeSqlRow = {
   task_type_id: string | null;
   task_type_name: string | null;
+  task_type_code: string | null;
   up_to_7: number | string;
   from_8_to_30: number | string;
   from_31_to_90: number | string;
@@ -549,6 +550,7 @@ export class PortfolioFlowReportService {
             json_build_object(
               'taskTypeId', x.type_id,
               'taskTypeName', x.type_name,
+              'taskTypeCode', x.type_code,
               'closedCount', x.closed_count,
               'measuredCount', x.measured_count,
               'medianDays', x.median_days
@@ -558,6 +560,7 @@ export class PortfolioFlowReportService {
           FROM (
             SELECT tt.id::text AS type_id,
                    tt.name AS type_name,
+                   tt.code AS type_code,
                    tt.display_order,
                    (tt.id IS NULL) AS no_type,
                    COUNT(*)::int AS closed_count,
@@ -565,7 +568,7 @@ export class PortfolioFlowReportService {
                    ${medianOf('TRUE')} AS median_days
             FROM lead_time lt
             LEFT JOIN portfolio_task_types tt ON tt.id = lt.task_type_id AND tt.tenant_id = $1
-            GROUP BY tt.id, tt.name, tt.display_order
+            GROUP BY tt.id, tt.name, tt.code, tt.display_order
           ) x
         )
       `
@@ -733,6 +736,7 @@ export class PortfolioFlowReportService {
       byType: (totals?.by_type ?? []).map((entry) => ({
         taskTypeId: entry.taskTypeId ?? null,
         taskTypeName: entry.taskTypeName ?? null,
+        taskTypeCode: entry.taskTypeCode ?? null,
         ...shapeLead(entry),
       })),
       byOutcome: Object.fromEntries(
@@ -772,6 +776,7 @@ export class PortfolioFlowReportService {
       )
       SELECT tt.id::text AS task_type_id,
              tt.name AS task_type_name,
+             tt.code AS task_type_code,
              COUNT(*) FILTER (WHERE o.age_days <= 7)::int AS up_to_7,
              COUNT(*) FILTER (WHERE o.age_days BETWEEN 8 AND 30)::int AS from_8_to_30,
              COUNT(*) FILTER (WHERE o.age_days BETWEEN 31 AND 90)::int AS from_31_to_90,
@@ -779,7 +784,7 @@ export class PortfolioFlowReportService {
              COUNT(*)::int AS total
       FROM open_tasks o
       LEFT JOIN portfolio_task_types tt ON tt.id = o.task_type_id AND tt.tenant_id = $1
-      GROUP BY tt.id, tt.name, tt.display_order
+      GROUP BY tt.id, tt.name, tt.code, tt.display_order
       ORDER BY (tt.id IS NULL), tt.display_order, tt.name
       `,
       params,
@@ -788,6 +793,7 @@ export class PortfolioFlowReportService {
     const shaped: AgeRow[] = rows.map((row) => ({
       taskTypeId: row.task_type_id ?? null,
       taskTypeName: row.task_type_name ?? null,
+      taskTypeCode: row.task_type_code ?? null,
       buckets: {
         upTo7: num(row.up_to_7),
         from8To30: num(row.from_8_to_30),
@@ -800,6 +806,7 @@ export class PortfolioFlowReportService {
     const total: AgeRow = {
       taskTypeId: null,
       taskTypeName: null,
+      taskTypeCode: null,
       buckets: AGE_BUCKETS.reduce(
         (acc, bucket) => ({
           ...acc,

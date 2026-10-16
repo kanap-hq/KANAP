@@ -8,11 +8,13 @@ import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
 import { useAuth } from '../auth/AuthContext';
 import DeleteSelectedButton from '../components/DeleteSelectedButton';
+import { recordsInUseCheck } from '../utils/deleteCheck';
 import { LinkCellRenderer } from '../components/grid/renderers';
 import { useLocale } from '../i18n/useLocale';
 import { formatShortDateTime } from '../lib/dateFormat';
 import ForbiddenPage from './ForbiddenPage';
 import { statusColumnProps } from '../components/grid/statusColumn';
+import { countValueFormatter } from '../components/grid/countValueFormatter';
 
 export default function DepartmentsPage() {
   const { t } = useTranslation(['master-data', 'common']);
@@ -94,6 +96,7 @@ export default function DepartmentsPage() {
     },
     {
       field: 'headcount_year',
+      valueFormatter: countValueFormatter,
       headerName: t('departments.columns.headcountYear', { year }),
       width: 180,
       filter: 'agNumberColumnFilter',
@@ -167,6 +170,13 @@ export default function DepartmentsPage() {
         <DeleteSelectedButton
           selectedRows={selectedRows}
           endpoint="/departments/bulk"
+          // Asked on click: a department budget allocations use is kept, with why.
+          checkDelete={(ids) => recordsInUseCheck('/departments', ids)}
+          itemLabels={{
+            toDelete: (count) => t('departments.delete.toDelete', { count }),
+            kept: (count) => t('departments.delete.kept', { count }),
+            deleted: (count) => t('departments.delete.deleted', { count }),
+          }}
           getItemId={(row) => row.id}
           getItemName={(row) => row.name}
           gridApi={gridApiRef.current}

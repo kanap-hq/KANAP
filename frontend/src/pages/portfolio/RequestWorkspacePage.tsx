@@ -1277,7 +1277,7 @@ export default function RequestWorkspacePage() {
 
       <KanapDialog
         open={deleteConfirmOpen}
-        title={t('portfolio:workspace.request.deleteDialog.title')}
+        title={data?.name ? t('common:delete.recordTitle', { name: data.name }) : t('portfolio:workspace.request.deleteDialog.title')}
         onClose={() => setDeleteConfirmOpen(false)}
         onSave={() => void handleDelete()}
         saveLabel={t('common:buttons.delete')}

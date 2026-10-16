@@ -974,6 +974,14 @@
       "exportTitle": "Aufgaben exportieren",
       "importTitle": "Aufgaben importieren",
       "presetEnrichment": "Datenanreicherung"
+    },
+    "delete": {
+      "toDelete_one": "{{count}} Aufgabe wird gelöscht:",
+      "toDelete_other": "{{count}} Aufgaben werden gelöscht:",
+      "kept_one": "{{count}} Aufgabe kann nicht gelöscht werden und bleibt erhalten:",
+      "kept_other": "{{count}} Aufgaben können nicht gelöscht werden und bleiben erhalten:",
+      "deleted_one": "{{count}} Aufgabe gelöscht",
+      "deleted_other": "{{count}} Aufgaben gelöscht"
     }
   },
   "projects": {
@@ -2643,13 +2651,13 @@
           "high": "Hoch"
         }
       },
-      "confirmDelete": "Dieses Kriterium löschen? Bestehende Bewertungen werden entfernt.",
       "messages": {
         "updateFailed": "Kriterium konnte nicht aktualisiert werden",
         "updateSettingsFailed": "Einstellungen konnten nicht aktualisiert werden",
         "deleteFailed": "Kriterium konnte nicht gelöscht werden",
         "reorderFailed": "Kriterien konnten nicht neu angeordnet werden"
-      }
+      },
+      "confirmDelete": "Seine bestehenden Bewertungen werden ebenfalls entfernt. Dies kann nicht rückgängig gemacht werden."
     },
     "skills": {
       "empty": "Noch keine Kompetenzen konfiguriert. Verwenden Sie «Standardwerte laden», um Standardkompetenzen zu laden, oder fügen Sie Kompetenzen manuell hinzu.",
@@ -2661,7 +2669,6 @@
         "categoryPlaceholder": "Wählen oder geben Sie eine neue Kategorie ein",
         "name": "Kompetenzname"
       },
-      "confirmDelete": "Diese Kompetenz löschen?",
       "messages": {
         "seedDefaultsFailed": "Standardwerte konnten nicht geladen werden",
         "updateFailed": "Kompetenz konnte nicht aktualisiert werden",
@@ -2689,7 +2696,6 @@
           "milestoneName": "Phase {{number}} abgeschlossen"
         }
       },
-      "confirmDelete": "Diese Phasenvorlage löschen?",
       "messages": {
         "deleteFailed": "Vorlage konnte nicht gelöscht werden"
       }
@@ -2724,13 +2730,11 @@
       },
       "taskTypeDialog": {
         "editTitle": "Aufgabentyp bearbeiten",
-        "createTitle": "Aufgabentyp erstellen"
+        "createTitle": "Aufgabentyp erstellen",
+        "shippedNameHint": "Wird in der Sprache jedes Benutzers angezeigt, solange dieser Name bleibt."
       },
       "confirmations": {
-        "deleteSource": "Diese Quelle löschen?",
-        "deleteCategory": "Diese Kategorie und alle zugehörigen Streams löschen?",
-        "deleteStream": "Diesen Stream löschen?",
-        "deleteTaskType": "Diesen Aufgabentyp löschen?"
+        "deleteCategory": "Ihre Streams werden mit ihr gelöscht. Dies kann nicht rückgängig gemacht werden."
       },
       "messages": {
         "deleteSourceFailed": "Quelle konnte nicht gelöscht werden",
@@ -2752,7 +2756,6 @@
         "editTitle": "Team bearbeiten",
         "createTitle": "Team erstellen"
       },
-      "confirmDelete": "Dieses Team löschen?",
       "messages": {
         "seedDefaultsFailed": "Standardwerte konnten nicht geladen werden",
         "deleteFailed": "Team konnte nicht gelöscht werden",

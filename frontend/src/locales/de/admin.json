@@ -1003,7 +1003,8 @@
       "contactLocked": "Kontaktrollen werden vom System für die Verzeichnissichtbarkeit verwaltet und können nicht geändert werden.",
       "duplicated": "Rolle dupliziert.",
       "permissionsSaved": "Rollenberechtigungen gespeichert.",
-      "setAccessLevels": "Legen Sie die Zugriffsebenen pro Ressource für diese Rolle fest."
+      "setAccessLevels": "Legen Sie die Zugriffsebenen pro Ressource für diese Rolle fest.",
+      "deleteFailed": "Die Rolle konnte nicht gelöscht werden."
     },
     "resources": {
       "accounts": "Konten",
@@ -1136,7 +1137,9 @@
     "exportTitle": "Vorlagenkonten exportieren",
     "importTitle": "Vorlagenkonten importieren",
     "templateLabel": "Vorlage",
-    "title": "Standardkonten (Plattform-Admin)"
+    "title": "Standardkonten (Plattform-Admin)",
+    "deleteWarning_one": "Dies kann nicht rückgängig gemacht werden. Das Konto wird aus dieser Vorlage entfernt. Bereits aus ihr geladene Kontenpläne behalten ihre Konten.",
+    "deleteWarning_other": "Dies kann nicht rückgängig gemacht werden. Die Konten werden aus dieser Vorlage entfernt. Bereits aus ihr geladene Kontenpläne behalten ihre Konten."
   },
   "tenants": {
     "actions": {
@@ -1339,7 +1342,7 @@
       "invitePartialFail_other": "{{count}} Benutzer eingeladen; {{failed}} fehlgeschlagen",
       "inviteFailed": "Ausgewählte Benutzer konnten nicht eingeladen werden",
       "disableConfirm": "{{name}} verliert den Zugriff und wird sofort abgemeldet. Dieses Konto deaktivieren?",
-      "deleteConfirm": "{{name}} löschen? Dies kann nicht rückgängig gemacht werden. Wenn der Benutzer von anderen Datensätzen referenziert wird, deaktivieren Sie stattdessen das Konto.",
+      "deleteConfirm": "{{name}} löschen? Dies kann nicht rückgängig gemacht werden.",
       "inviteSentOne": "Einladung an {{email}} gesendet",
       "resetSent": "E-Mail zum Zurücksetzen des Passworts an {{email}} gesendet",
       "rolesSaveFailed": "Der Benutzer wurde gespeichert, aber die Rollen konnten nicht aktualisiert werden. Öffnen Sie den Benutzer erneut und versuchen Sie es noch einmal.",
@@ -1363,6 +1366,14 @@
     },
     "lastLogin": {
       "never": "Nie"
+    },
+    "delete": {
+      "toDelete_one": "{{count}} Benutzer wird gelöscht:",
+      "toDelete_other": "{{count}} Benutzer werden gelöscht:",
+      "kept_one": "{{count}} Benutzer kann nicht gelöscht werden und bleibt erhalten:",
+      "kept_other": "{{count}} Benutzer können nicht gelöscht werden und bleiben erhalten:",
+      "deleted_one": "{{count}} Benutzer gelöscht",
+      "deleted_other": "{{count}} Benutzer gelöscht"
     }
   },
   "aiModels": {

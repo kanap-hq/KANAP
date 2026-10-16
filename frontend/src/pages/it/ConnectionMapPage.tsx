@@ -41,6 +41,7 @@ import ConnectionMapGraph, { ClusterMembership, ConnectionMapLink, ConnectionMap
 import { useTranslation } from 'react-i18next';
 import { classificationText } from '../../utils/applicationClassification';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import { legTypeLabel } from '../../utils/interfaceLegType';
 type ApiConnectionMapNode = {
   id: string;
   name: string;
@@ -156,12 +157,13 @@ type ServerMapSummary = {
   is_cluster?: boolean;
 };
 
-function toGraphNodes(nodes: ApiConnectionMapNode[]): ConnectionMapNode[] {
+/** `entityName` gives an entity node the entity's name in the reader's language (its id is `entity:<code>`). */
+export function toGraphNodes(nodes: ApiConnectionMapNode[], entityName: (code: string) => string | undefined = () => undefined): ConnectionMapNode[] {
   return nodes.map((n) => {
     const isCluster = n.kind === 'cluster' || (n as any).is_cluster;
     return {
       id: n.id,
-      name: n.name,
+      name: (n.kind === 'entity' && n.id.startsWith('entity:') ? entityName(n.id.slice('entity:'.length)) : undefined) || n.name,
       kind: isCluster ? 'cluster' : n.kind,
       isCluster,
       environment: n.environment,
@@ -1360,7 +1362,7 @@ export default function ConnectionMapPage() {
                                 {link.interface_name} ({link.interface_reference || link.interface_code})
                               </Typography>
                               <Typography variant="caption" color="text.secondary">
-                                {t('pages.connectionMap.interfaceLeg', { leg: link.leg_type.toUpperCase(), env: link.environment.toUpperCase() })}
+                                {t('pages.connectionMap.interfaceLeg', { leg: legTypeLabel(t, link.leg_type), env: link.environment.toUpperCase() })}
                               </Typography>
                               <Typography variant="body2">{t('pages.connectionMap.patternValue', { value: link.pattern || '—' })}</Typography>
                               <Typography variant="body2">{t('pages.maps.sourceEndpoint', { value: link.source_endpoint || '—' })}</Typography>

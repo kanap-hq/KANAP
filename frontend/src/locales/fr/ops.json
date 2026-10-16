@@ -415,7 +415,9 @@
       "toDelete_one": "{{count}} contrat sera supprimé :",
       "toDelete_other": "{{count}} contrats seront supprimés :",
       "kept_one": "{{count}} contrat est conservé. Désactivez-le plutôt :",
-      "kept_other": "{{count}} contrats sont conservés. Désactivez-les plutôt :"
+      "kept_other": "{{count}} contrats sont conservés. Désactivez-les plutôt :",
+      "deleted_one": "{{count}} contrat supprimé",
+      "deleted_other": "{{count}} contrats supprimés"
     },
     "title": "Contrats",
     "newButton": "Nouveau",
@@ -1848,11 +1850,19 @@
     "importTitle": "Importer des lignes budgétaires",
     "opex": "OPEX",
     "capex": "CAPEX",
-    "totalWithCount_one": "Total ({{count}} ligne)",
-    "totalWithCount_other": "Total ({{count}} lignes)",
+    "totalWithCount_one": "Total ({{count, count}} ligne)",
+    "totalWithCount_other": "Total ({{count, count}} lignes)",
     "changeType": "Changer le type…",
     "typeOpex": "OPEX",
     "typeCapex": "CAPEX",
-    "line": "Ligne budgétaire"
+    "line": "Ligne budgétaire",
+    "delete": {
+      "toDelete_one": "{{count}} ligne budgétaire sera supprimée :",
+      "toDelete_other": "{{count}} lignes budgétaires seront supprimées :",
+      "kept_one": "{{count}} ligne budgétaire ne peut pas être supprimée et est conservée :",
+      "kept_other": "{{count}} lignes budgétaires ne peuvent pas être supprimées et sont conservées :",
+      "deleted_one": "{{count}} ligne budgétaire supprimée",
+      "deleted_other": "{{count}} lignes budgétaires supprimées"
+    }
   }
 }

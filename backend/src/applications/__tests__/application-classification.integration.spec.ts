@@ -29,7 +29,7 @@ async function main() {
   const manager = runner.manager;
   const audit = new AuditService(manager.getRepository(AuditLog));
   const settings = new ItOpsSettingsService(manager.getRepository(Tenant), manager.getRepository(Location), audit);
-  const crud = new ApplicationsCrudService(manager.getRepository(Application), audit, null as any, settings, null as any, null as any);
+  const crud = new ApplicationsCrudService(manager.getRepository(Application), audit, null as any, settings, null as any);
   const list = new ApplicationsListService(manager.getRepository(Application));
   const tenantA = randomUUID(), tenantB = randomUUID(), userId = randomUUID();
   try {
@@ -142,7 +142,7 @@ async function main() {
     const dry=await csv.import(file,{dryRun:true,mode:'enrich',operation:'upsert'},{manager,tenantId:tenantA,userId}); assert.equal(dry.ok,true,JSON.stringify(dry.errors));
     const applied=await csv.import(file,{dryRun:false,mode:'enrich',operation:'upsert'},{manager,tenantId:tenantA,userId}); assert.equal(applied.ok,true,JSON.stringify(applied.errors));
     const imported=await manager.getRepository(Application).findOneByOrFail({name:'CSV Atlas',tenant_id:tenantA}); assert.equal(imported.criticality,'business_critical'); assert.equal(imported.cyber_criticality,'high'); assert.equal(imported.rpo_minutes,0);
-    const exported=await csv.export({manager,tenantId:tenantA,fields:['name','criticality','cyber_criticality'],query:{filters:JSON.stringify({name:{filterType:'text',type:'equals',filter:'CSV Atlas'}})}}); assert.equal(exported.rowCount,1); assert.match(exported.content,/High;CSV Atlas;Critical/,'export writes catalog names, not codes'); assert.doesNotMatch(exported.content,/business_critical/);
+    const exported=await csv.export({manager,tenantId:tenantA,language:'fr',fields:['name','criticality','cyber_criticality'],query:{filters:JSON.stringify({name:{filterType:'text',type:'equals',filter:'CSV Atlas'}})}}); assert.equal(exported.rowCount,1); assert.match(exported.content,/High;CSV Atlas;Critical/,'export writes catalog names, not codes'); assert.doesNotMatch(exported.content,/business_critical/);
     const importedAudit=await manager.query("SELECT source FROM audit_log WHERE record_id=$1 AND table_name='applications'",[imported.id]); assert.ok(importedAudit.length);
     // Plaid parity with the Compliance tile. The tile reads the dashboard scope (no query: retired left out);
     // Plaid reads with include_inactive and its adapted filters, as query_entities does.

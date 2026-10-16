@@ -122,6 +122,14 @@ export class BudgetLinesController {
     res.send(content);
   }
 
+  // Which lines a delete would refuse (amounts in a frozen column), asked before the confirmation.
+  @UseGuards(PermissionGuard)
+  @RequireLevel('budget', 'admin')
+  @Post('delete-check')
+  deleteCheck(@Body() body: { ids?: unknown }, @Tenant() ctx: TenantRequest) {
+    return this.svc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], { manager: ctx.manager as EntityManager });
+  }
+
   @UseGuards(PermissionGuard)
   @RequireLevel('budget', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)

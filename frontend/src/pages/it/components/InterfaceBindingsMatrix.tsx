@@ -43,6 +43,7 @@ import { getDotColor, LIFECYCLE_COLORS } from '../../../utils/statusColors';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { legTypeLabel } from '../../../utils/interfaceLegType';
 const ENVIRONMENTS = ['prod', 'pre_prod', 'qa', 'test', 'dev', 'sandbox'] as const;
 // Set to false to restore the previous per-environment tables while evaluating the matrix workflow.
 const USE_RUNTIME_MATRIX_EXPERIMENT = true;
@@ -1511,7 +1512,7 @@ export default function InterfaceBindingsMatrix({
               <TableCell sx={{ verticalAlign: 'top' }}>
                 <Stack spacing={0.75}>
                   <Typography sx={{ fontSize: 13, lineHeight: 1.35, fontWeight: 500, color: 'kanap.text.primary' }}>
-                    {String(leg.leg_type || '').toUpperCase()}
+                    {legTypeLabel(t, leg.leg_type)}
                   </Typography>
                   <Typography sx={{ fontSize: 12, lineHeight: 1.35, color: 'kanap.text.tertiary' }}>
                     {`${getRoleLabel(t, leg.from_role, sourceApplicationName, targetApplicationName)} → ${getRoleLabel(t, leg.to_role, sourceApplicationName, targetApplicationName)}`}
@@ -1579,7 +1580,7 @@ export default function InterfaceBindingsMatrix({
                 textOverflow: 'ellipsis',
               }}
             >
-              {`${formatEnvironment(dialogState.environment)} · ${String(dialogState.leg.leg_type || '').toUpperCase()}`}
+              {`${formatEnvironment(dialogState.environment)} · ${legTypeLabel(t, dialogState.leg.leg_type)}`}
             </Typography>
             {autosaveStatusText && (
               <Typography
@@ -1636,7 +1637,7 @@ export default function InterfaceBindingsMatrix({
     return (
       <TableRow key={`env-${env}-${leg.id}`}>
         <TableCell sx={{ fontWeight: 500 }}>
-          {String(leg.leg_type || '').toUpperCase()}
+          {legTypeLabel(t, leg.leg_type)}
         </TableCell>
         <TableCell>
           <Stack spacing={0.25}>
@@ -1934,7 +1935,7 @@ export default function InterfaceBindingsMatrix({
           {manageConnections && (
             <Stack spacing={2}>
               <Typography variant="subtitle2" color="text.secondary">
-                {t('it:workspace.interface.bindings.envLegLine', { env: manageConnections.binding.environment.toUpperCase(), leg: manageConnections.binding.leg_type.toUpperCase() })}
+                {t('it:workspace.interface.bindings.envLegLine', { env: manageConnections.binding.environment.toUpperCase(), leg: legTypeLabel(t, manageConnections.binding.leg_type) })}
               </Typography>
               {linksLoadingBindingId === manageConnections.binding.id && (
                 <Typography variant="body2" color="text.secondary">

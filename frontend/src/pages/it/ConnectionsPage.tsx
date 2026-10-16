@@ -19,6 +19,7 @@ import { useLocale } from '../../i18n/useLocale';
 import { formatShortDateTime } from '../../lib/dateFormat';
 import { classificationText } from '../../utils/applicationClassification';
 import { setListFiltersParam } from '../../lib/listContext';
+import { countValueFormatter } from '../../components/grid/countValueFormatter';
 
 type ConnectionRow = {
   id: string;
@@ -38,6 +39,9 @@ type ConnectionRow = {
   linked_interface_count?: number;
   source_label?: string | null;
   destination_label?: string | null;
+  source_entity_code?: string | null;
+  destination_entity_code?: string | null;
+  protocols?: string[];
   protocol_labels?: string[];
   multi_server_count?: number;
   created_at: string;
@@ -81,7 +85,11 @@ export default function ConnectionsPage() {
   const locale = useLocale();
   const navigate = useNavigate();
   const { hasLevel } = useAuth();
-  const { labelFor, byField } = useItOpsEnumOptions();
+  const { labelFor, byField, settings } = useItOpsEnumOptions();
+  // Endpoints and protocols in the reader's language: an entity by its name, a protocol by its name.
+  const endpointName = (entityCode: string | null | undefined, label: string | null | undefined) =>
+    (entityCode ? labelFor('entity', entityCode) : label) || '?';
+  const protocolName = (code: string) => settings?.connectionTypes?.find((ct) => ct.code === code)?.label || code;
   const gridApiRef = useRef<any>(null);
   const [selectedRows, setSelectedRows] = useState<ConnectionRow[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -171,8 +179,8 @@ export default function ConnectionsPage() {
         const row = params.data;
         if (!row) return null;
         if (row.topology === 'server_to_server') {
-          const src = row.source_label || '?';
-          const dst = row.destination_label || '?';
+          const src = endpointName(row.source_entity_code, row.source_label);
+          const dst = endpointName(row.destination_entity_code, row.destination_label);
           return (
             <LinkCellRenderer
               {...(params as any)}
@@ -202,7 +210,8 @@ export default function ConnectionsPage() {
       sortable: false,
       filter: false,
       valueFormatter: (p) => {
-        const list = (p.value || []) as string[];
+        const codes = (p.data as ConnectionRow | undefined)?.protocols;
+        const list = (codes ? codes.map(protocolName) : (p.value || [])) as string[];
         if (list.length === 0) return '';
         if (list.length <= 3) return list.join(', ');
         return `${list.slice(0, 2).join(', ')} +${list.length - 2}`;
@@ -319,7 +328,7 @@ export default function ConnectionsPage() {
       sortable: false,
       filter: false,
       cellStyle: { ...TABULAR_STYLE, textAlign: 'right' as const },
-      valueFormatter: (p) => String(p.value ?? 0),
+      valueFormatter: (p) => countValueFormatter({ value: p.value ?? 0 }),
       cellRenderer: ClickToWorkspace,
     },
     {
@@ -345,6 +354,8 @@ export default function ConnectionsPage() {
           getItemId={(row) => row.id}
           getItemName={(row) => row.name}
           gridApi={gridApiRef.current}
+          // Nothing refuses a connection's delete: the warning says what goes with it.
+          warning={t('pages.connections.deleteWarning', { count: selectedRows.length })}
           onDeleteSuccess={() => setRefreshKey((k) => k + 1)}
         />
       )}

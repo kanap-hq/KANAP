@@ -23,7 +23,7 @@ import {
   updateWorkingDayProfile,
   type WorkingDayProfilePatch,
 } from '../../services/workingDayProfiles';
-import { deriveStatusFromDisabledAt } from '../../constants/status';
+import { STATUS_DISABLED, deriveStatusFromDisabledAt } from '../../constants/status';
 import { longFormSurfaceFieldSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import WorkingDayCalendarPropertiesDrawer from './WorkingDayCalendarPropertiesDrawer';
@@ -240,6 +240,8 @@ export default function WorkingDayCalendarWorkspacePage() {
               if (disabledAt === data.disabled_at) return;
               void patch({ status: deriveStatusFromDisabledAt(disabledAt), disabled_at: disabledAt }, 'disabled_at');
             }}
+            // Disable now: the status alone, the server sets the end of validity from its own clock.
+            onDisableNow={() => void patch({ status: STATUS_DISABLED }, 'disabled_at')}
           />
         ) : <Box />}
       >

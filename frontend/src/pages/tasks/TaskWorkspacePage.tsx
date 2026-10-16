@@ -18,6 +18,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import api from '../../api';
 import { useTaskNav } from '../../hooks/useTaskNav';
 import { useClassificationDefaults } from '../../hooks/useClassificationDefaults';
+import { useLocalizedTaskTypes } from '../../hooks/useLocalizedTaskTypes';
 import { useAuth } from '../../auth/AuthContext';
 import ExportButton from '../../components/ExportButton';
 import ImportButton from '../../components/ImportButton';
@@ -79,6 +80,8 @@ interface TaskData {
   status: TaskStatus;
   task_type_id: string | null;
   task_type_name: string | null;
+  /** The shipped type it started as, null for a tenant's own type. */
+  task_type_code?: string | null;
   priority_level: 'blocker' | 'high' | 'normal' | 'low' | 'optional';
   priority_score: number;
   start_date: string | null;
@@ -404,6 +407,7 @@ export default function TaskWorkspacePage() {
     status: source.status,
     task_type_id: source.task_type_id,
     task_type_name: source.task_type_name,
+    task_type_code: source.task_type_code,
     priority_level: source.priority_level,
     start_date: source.start_date,
     due_date: source.due_date,
@@ -630,19 +634,13 @@ export default function TaskWorkspacePage() {
   }, [buildTaskFormFromTask, resetClassificationTouched, task, taskMatchesCurrentRoute]);
 
   // Fetch task types for default task type
-  const { data: taskTypesData } = useQuery({
-    queryKey: ['portfolio-task-types'],
-    queryFn: async () => {
-      const res = await api.get<Array<{ id: string; name: string; is_active: boolean }>>('/portfolio/classification/task-types');
-      return res.data;
-    },
-    enabled: isCreate,
-  });
+  const { raw: taskTypesData } = useLocalizedTaskTypes({ enabled: isCreate });
 
-  // Find the default "Task" type ID
+  // The default type: the shipped "Task", renamed or not (by name for a tenant created before the codes)
   const defaultTaskTypeId = React.useMemo(() => {
     if (!taskTypesData) return null;
-    const taskType = taskTypesData.find(t => t.name === 'Task' && t.is_active);
+    const taskType = taskTypesData.find(t => t.code === 'task' && t.is_active)
+      ?? taskTypesData.find(t => t.name === 'Task' && t.is_active);
     return taskType?.id || null;
   }, [taskTypesData]);
 

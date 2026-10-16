@@ -22,7 +22,6 @@ import { SpendItemUpsertDto } from './dto/spend-item.dto';
 import { SpendLink } from './spend-link.entity';
 import { SpendAttachment } from './spend-attachment.entity';
 import * as path from 'path';
-import * as fs from 'fs';
 import { StorageService } from '../common/storage/storage.service';
 import { randomUUID } from 'crypto';
 import { Application } from '../applications/application.entity';
@@ -33,7 +32,7 @@ import { PortfolioProjectOpex } from '../portfolio/portfolio-project-opex.entity
 import { PortfolioProject } from '../portfolio/portfolio-project.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { validateUploadedFile } from '../common/upload-validation';
-import { fixMulterFilename } from '../common/upload';
+import { fixMulterFilename, uploadedBytes } from '../common/upload';
 import { ItemNumberService } from '../common/item-number.service';
 import { resolveToUuid } from '../common/resolve-item-id';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
@@ -728,8 +727,7 @@ export class SpendItemsService {
       now.getUTCFullYear().toString(), String(now.getUTCMonth() + 1).padStart(2, '0'),
       `${id}_${rand}${ext}`,
     ].join('/');
-    const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : null);
-    if (!buf) throw new BadRequestException('Empty upload');
+    const buf = uploadedBytes(file);
     const validated = validateUploadedFile({
       originalName: decodedName,
       mimeType: (file as any).mimetype,

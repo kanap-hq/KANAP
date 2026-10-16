@@ -1,5 +1,6 @@
 import useApplicationClassificationCatalog from '../../../hooks/useApplicationClassificationCatalog';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, MenuItem, Popover, Typography, useTheme } from '@mui/material';
 import {
   PortfolioMetadataItem,

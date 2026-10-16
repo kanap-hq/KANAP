@@ -170,7 +170,7 @@ Eine von Ihnen gespeicherte Spaltenanordnung behält ihre eigene Auswahl an Spal
 - **Neue Zeile**: Eine Zeile erstellen (erfordert `budget:member`)
 - **CSV importieren**: Zeilen aus einer Budgetdatei in großer Zahl laden (erfordert `budget:admin`)
 - **CSV exportieren**: Die Zeilen in eine Budgetdatei exportieren (erfordert `budget:admin`)
-- **Auswahl löschen**: Massenlöschung ausgewählter Zeilen (erfordert `budget:admin`; Zeilen über Kontrollkästchen auswählen). Eine Zeile mit Beträgen in einer eingefrorenen Spalte kann nicht gelöscht werden: Die anderen werden gelöscht, und die Meldung nennt jede abgelehnte Zeile mit ihrem Grund
+- **Auswahl löschen**: Massenlöschung ausgewählter Zeilen (erfordert `budget:admin`; Zeilen über Kontrollkästchen auswählen). Eine Zeile mit Beträgen in einer eingefrorenen Spalte kann nicht gelöscht werden. Vor dem Löschen nennt die Bestätigung die behaltenen Zeilen mit der eingefrorenen Spalte. Die anderen werden gelöscht
 
 **Zurück/Weiter-Navigation**:
 

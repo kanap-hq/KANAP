@@ -277,3 +277,39 @@ describe('KnowledgeWorkspacePage — autosave', () => {
     }
   });
 });
+
+describe('KnowledgeWorkspacePage — library and folder names', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(api.get).mockImplementation(async (url: string) => {
+      if (url === DOC_URL) {
+        return {
+          data: {
+            id: 'doc-9',
+            item_number: 9,
+            title: 'Purpose',
+            content_markdown: 'Body',
+            revision: 1,
+            can_write: true,
+            edit_lock: null,
+            library_id: 'lib-managed',
+            library_slug: 'managed-docs',
+            library_name: 'Managed Docs',
+            folder_id: 'folder-requests',
+            folder_name: 'Requests',
+            folder_system_key: 'integrated_requests',
+          },
+        } as any;
+      }
+      return { data: [] } as any;
+    });
+  });
+
+  it('names the shipped library in the reader language in the breadcrumb', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, retryDelay: 0 } } });
+    renderWorkspace(queryClient);
+    // The test `t` returns the key: the breadcrumb goes through the translation, not the stored name.
+    expect(await screen.findByText('knowledge:systemNames.libraries.managedDocs')).toBeInTheDocument();
+    expect(screen.queryByText('Managed Docs')).not.toBeInTheDocument();
+  });
+});

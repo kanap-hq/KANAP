@@ -170,7 +170,7 @@ A column layout you saved keeps its own choice of columns. The layout you had sa
 - **New line**: Create a line (requires `budget:member`)
 - **Import CSV**: Bulk-load lines from a budget file (requires `budget:admin`)
 - **Export CSV**: Export the lines to a budget file (requires `budget:admin`)
-- **Delete selected**: Bulk-delete selected lines (requires `budget:admin`; select rows via checkboxes). A line with amounts in a frozen column cannot be deleted: the others are deleted, and the message names each refused line with its reason
+- **Delete selected**: Bulk-delete selected lines (requires `budget:admin`; select rows via checkboxes). A line with amounts in a frozen column cannot be deleted. Before anything is deleted, the confirmation lists the lines kept, with the frozen column. The others are deleted
 
 **Prev/Next navigation**:
 

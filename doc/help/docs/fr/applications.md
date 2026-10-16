@@ -118,7 +118,7 @@ La grille Applications offre une vue complète de votre portefeuille applicatif.
 - **Import CSV** : Import en masse depuis un fichier CSV (`applications:admin`)
 - **Export CSV** : Exporter la liste en CSV (`applications:admin`). Les colonnes issues des catalogues (catégorie, cycle de vie, criticité, criticité cyber, vague de reprise, classification de données, méthodes d'accès) sont exportées avec leurs noms ; l'import accepte un nom ou le code interne.
 - **Copier l'élément** : Dupliquer une application sélectionnée avec toutes ses relations principales (`applications:manager`). Voir [Copier des applications](#copier-des-applications) pour ce qui est et n'est pas copié.
-- **Supprimer la sélection** : Supprimer les applications sélectionnées (`applications:admin`)
+- **Supprimer la sélection** : Supprimer les applications sélectionnées (`applications:admin`). Une application source ou cible d’une interface ne peut pas être supprimée : désactivez-la plutôt, ou supprimez d’abord ses interfaces. Avant la confirmation, la fenêtre liste ces applications comme conservées, avec leur nombre d’interfaces. Les autres sont supprimées avec leurs déploiements et leurs liens vers d’autres éléments ; la confirmation compte les déploiements
 
 ---
 
@@ -137,7 +137,7 @@ L'en-tête affiche :
 - Date de **Mise en production**
 - **Envoyer le lien** : copier un lien partageable vers cet espace de travail
 - **Créer une nouvelle version** : lancer l'assistant de migration de version (voir [Gestion des versions](#gestion-des-versions))
-- **Supprimer** (`applications:admin`)
+- **Supprimer** (`applications:admin`) : une application qui a des interfaces reçoit le refus et sa raison, avec seulement Fermer. Sinon, la confirmation nomme l’application et compte les déploiements supprimés avec elle, ainsi que ses liens vers d’autres éléments
 - **Précédent / Suivant** : parcourir la liste filtrée sans revenir à la grille
 
 ### Tiroir des propriétés (panneau de droite)
@@ -185,7 +185,7 @@ L'onglet Déploiements documente où l'application s'exécute réellement -- un 
 - **SSO activé** / **MFA supporté**
 - **Notes**
 
-**Ajouter un déploiement** ouvre une boîte de dialogue où vous définissez l'environnement, le cycle de vie, l'URL de base, les indicateurs SSO/MFA et les notes. Chaque environnement ne peut être ajouté qu'une seule fois. La pastille de cycle de vie sur l'en-tête d'un déploiement peut aussi être modifiée en ligne depuis un menu contextuel.
+**Ajouter un déploiement** ouvre une boîte de dialogue où vous définissez l'environnement, le cycle de vie, l'URL de base, les indicateurs SSO/MFA et les notes. Chaque environnement ne peut être ajouté qu'une seule fois. La pastille de cycle de vie sur l'en-tête d'un déploiement peut aussi être modifiée en ligne depuis un menu contextuel. Un déploiement qui a encore des serveurs ou des liaisons d'interface ne peut pas être supprimé : retirez-les d'abord.
 
 **Serveurs par déploiement** : Chaque bloc de déploiement affiche un tableau des serveurs assignés :
 
@@ -448,7 +448,7 @@ Depuis la liste des Applications :
 
 ### Processus d'import
 
-1. **Préparez votre fichier** : Utilisez l'encodage UTF-8 avec des séparateurs point-virgule (`;`). Un fichier enregistré par Excel en CSV simple (Windows-1252) est accepté aussi. Téléchargez un modèle pour vous assurer des bons en-têtes.
+1. **Préparez votre fichier** : enregistrez-le en UTF-8. Les virgules et les points-virgules conviennent tous les deux, de même qu'un fichier enregistré par Excel en CSV simple (Windows-1252). Téléchargez un modèle pour vous assurer des bons en-têtes. Le séparateur, les montants, les dates et les oui ou non de chaque langue sont dans [Fichiers CSV](csv-files.md).
 
 2. **Choisissez les paramètres d'import** :
    - **Mode** :
@@ -477,7 +477,7 @@ Depuis la liste des Applications :
 | `editor` | Éditeur du logiciel | Non | Texte libre (ex. : Microsoft, SAP) |
 | `criticality` | Criticité business | Non | Accepte un code ou un libellé depuis les Paramètres ; `__CLEAR__` l'efface |
 | `lifecycle` | Statut actuel | Non | Accepte un code ou un libellé depuis les Paramètres |
-| `is_suite` | Peut avoir des apps enfants | Non | `true` ou `false` |
+| `is_suite` | Peut avoir des apps enfants | Non | `oui` ou `non` |
 | `status` | Activé/désactivé | Non | `enabled` ou `disabled` |
 
 **Champs de version** :
@@ -494,8 +494,8 @@ Depuis la liste des Applications :
 | Colonne CSV | Description | Notes |
 |-------------|-------------|-------|
 | `access_methods` | Comment les utilisateurs accèdent | Codes ou libellés séparés par virgules depuis les Paramètres (ex. : `web,mobile,vdi`) |
-| `external_facing` | Accessible depuis Internet | `true` ou `false` |
-| `etl_enabled` | Intégration de données | `true` ou `false` |
+| `external_facing` | Accessible depuis Internet | `oui` ou `non` |
+| `etl_enabled` | Intégration de données | `oui` ou `non` |
 | `support_notes` | Informations de support | Texte libre |
 | `licensing` | Conditions de licence | Texte libre |
 | `notes` | Notes internes | Texte libre |
@@ -506,7 +506,7 @@ Depuis la liste des Applications :
 |-------------|-------------|-------|
 | `data_class` | Classification des données | Accepte un code ou un libellé depuis les Paramètres |
 | `last_dr_test` | Date du dernier test PRA | Format de date : YYYY-MM-DD |
-| `contains_pii` | Stocke des données personnelles | `true` ou `false` |
+| `contains_pii` | Stocke des données personnelles | `oui` ou `non` |
 | `data_residency` | Pays de stockage des données | Export uniquement (codes ISO) |
 
 **Champs de classification** :
@@ -573,7 +573,7 @@ Si vous incluez la colonne `id` avec un UUID valide, la correspondance utilise d
 **Erreur « Le fichier n'est pas correctement formaté »** : Cela indique généralement un problème d'encodage. Assurez-vous que votre CSV est enregistré en **UTF-8** :
 
 - **Dans LibreOffice** : Lors de l'ouverture d'un CSV, sélectionnez `UTF-8` dans le menu déroulant Jeu de caractères (pas « Japanese (Macintosh) » ni d'autres encodages). Lors de l'enregistrement, cochez « Modifier les paramètres de filtre » et choisissez UTF-8.
-- **Dans Excel** : Enregistrer sous > CSV UTF-8 (délimité par des virgules), puis ouvrez dans un éditeur de texte pour remplacer les virgules par des points-virgules.
+- **Dans Excel** : Enregistrer sous > CSV UTF-8 (délimité par des virgules).
 - **Conseil général** : Si vous voyez des caractères illisibles (`?¿`, `ï»¿`) au début de votre fichier, l'encodage est incorrect.
 
 ### Exemple CSV

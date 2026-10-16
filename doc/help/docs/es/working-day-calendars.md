@@ -66,7 +66,7 @@ Haga clic en cualquier celda para abrir el espacio de trabajo.
 - **Nuevo**: crear un calendario (requiere `working_day_profiles:member`)
 - **Importar CSV**: cargar calendarios y sus días laborables desde un archivo (requiere `working_day_profiles:admin`)
 - **Exportar CSV**: descargar los calendarios que muestra la lista, o todos los calendarios (requiere `working_day_profiles:admin`)
-- **Eliminar selección**: eliminar los calendarios seleccionados (requiere `working_day_profiles:admin`). Los calendarios que no se pueden eliminar se conservan y se listan con el motivo
+- **Eliminar selección**: eliminar los calendarios seleccionados (requiere `working_day_profiles:admin`). Antes de eliminar nada, la confirmación enumera los calendarios que se conservan, con el motivo
 
 ---
 
@@ -162,7 +162,7 @@ Desactive un calendario cuando ya no deba usarse, por ejemplo tras un cambio de 
 
 El botón **Eliminar** del encabezado elimina el calendario tras una confirmación (requiere `working_day_profiles:admin`). Está desactivado, con el motivo en una línea, mientras haya líneas de presupuesto que usen el calendario, por ejemplo "Usado por 3 líneas OPEX y 1 línea CAPEX. Desactívelo en su lugar."
 
-La misma regla se aplica a **Eliminar selección** en la lista: un calendario usado por líneas de presupuesto se conserva, con un motivo como "Personal de la sede is used by 3 OPEX lines and 1 CAPEX line. Disable it instead."
+La misma regla se aplica a **Eliminar selección** en la lista: un calendario usado por líneas de presupuesto se conserva, con un motivo como "Este calendario se usa en 3 líneas OPEX y 1 línea CAPEX. Desactívelo en lugar de eliminarlo."
 
 Una línea de presupuesto usa un calendario cuando una de sus columnas, en cualquier año, tiene una línea con precio por día sobre él. Quitar esa línea en la pestaña Presupuesto, o **Restablecer columna presupuestaria** en la Administración presupuestaria, quita el vínculo. Consulte [Restablecer columna presupuestaria](budget-operations.md#restablecer-columna-presupuestaria).
 
@@ -190,7 +190,7 @@ Cargue o actualice calendarios y sus días laborables desde un archivo.
 | `country` | Opcional. El código de país de dos letras de un calendario estándar, por ejemplo `FR`. Vacía para un calendario personalizado |
 | `region` | Opcional. El código de la región, por ejemplo `57` para Mosela o `BY` para Baviera. Necesita un país. Vacía para todo el país |
 | `status` | `enabled` o `disabled`. Vacía significa `enabled` |
-| `disabled_at` | Columna opcional. El fin de validez: una fecha (`2026-12-31`) o una fecha y hora completas. Vacía si no hay fin |
+| `disabled_at` | Columna opcional. El fin de validez: una fecha (`2026-12-31`) o una fecha y hora completas. La exportación escribe solo la fecha. Importada de nuevo, esa fecha conserva el fin de validez guardado. Vacía si no hay fin |
 | `year` | Cuatro dígitos, de 2000 a 2100. Vacía en una fila que solo define los campos del calendario |
 | `jan` a `dec` | Los días laborables de cada mes, con un punto como separador decimal (también se acepta la coma). Obligatorias en una fila con año |
 

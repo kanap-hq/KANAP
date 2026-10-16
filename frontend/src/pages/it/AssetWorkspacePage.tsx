@@ -49,6 +49,8 @@ import { useLocale } from '../../i18n/useLocale';
 
 import { useTranslation } from 'react-i18next';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import { recordRefusal } from '../../utils/deleteCheck';
+import { deleteFailureReason } from '../../utils/deleteRefusal';
 import { isValidHostname, sanitizeHostname } from '../../utils/hostname';
 import { KanapDialog, PropertyGroup, PropertyRow, useKanapDialogs } from '../../components/design';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
@@ -1247,12 +1249,26 @@ export default function AssetWorkspacePage() {
           size="small"
           onClick={async () => {
             if (!id) return;
+            // Asked first: an asset still in use gets the refusal and why, with Close only.
+            const refusal = await recordRefusal('/assets', id);
+            if (refusal) {
+              await dialogs.alert({
+                title: t('common:delete.recordTitle', { name: data?.name || name }),
+                message: deleteFailureReason(refusal, t, locale),
+              });
+              return;
+            }
             if (!(await dialogs.confirm({
               message: t('workspace.asset.deleteConfirm', { name: data?.name || name }),
               confirmLabel: t('common:buttons.delete'),
               intent: 'danger',
             }))) return;
-            await api.delete(`/assets/${id}`);
+            try {
+              await api.delete(`/assets/${id}`);
+            } catch (e) {
+              setError(getApiErrorMessage(e, t, t('common:delete.failedGeneric')));
+              return;
+            }
             await handleClose();
           }}
         >

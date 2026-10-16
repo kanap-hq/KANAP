@@ -26,13 +26,17 @@ function fakeStorage() {
   return { deleted, deleteObject: async (key: string) => { deleted.push(key); } };
 }
 
+// A real database error, raised on purpose: it aborts the transaction like any other. The service logs
+// the failed delete, so the run prints this message; it names itself so nobody chases it.
+const INJECTED_FAILURE = `DO $$ BEGIN RAISE EXCEPTION 'Injected database failure (test double)'; END $$`;
+
 /** Audit double; `sqlFailOn` runs a failing statement, which aborts the transaction like a real database error. */
 function auditDouble(sqlFailOn?: (entry: AuditEntry) => boolean) {
   const entries: AuditEntry[] = [];
   return {
     entries,
     log: async (entry: AuditEntry, opts?: { manager?: any }) => {
-      if (sqlFailOn?.(entry)) await opts!.manager.query('SELECT 1 / 0');
+      if (sqlFailOn?.(entry)) await opts!.manager.query(INJECTED_FAILURE);
       entries.push(entry);
     },
   };
@@ -277,7 +281,9 @@ async function testDeleteRefusedWithFrozenAmounts(kind: Kind) {
     await runner.query('SAVEPOINT frozen_delete');
     await assert.rejects(
       deleteService(kind, runner, audit, fakeStorage()).delete(itemId, { manager: runner.manager, userId: null }),
-      (err: any) => err?.status === 403 && err.message === FROZEN_MESSAGE,
+      (err: any) => err?.status === 409 && err.message === FROZEN_MESSAGE
+        && err.response?.code === 'BUDGET_LINE_FROZEN'
+        && JSON.stringify(err.response?.params) === JSON.stringify({ column: 'Plan initial', year: 2026 }),
       `${kind}: the delete is refused, naming the column and the year`,
     );
     await runner.query('ROLLBACK TO SAVEPOINT frozen_delete');
@@ -301,11 +307,17 @@ async function testBulkDeleteReportsTheFrozenItem(kind: Kind) {
     const other = await seedVersion(runner, kind, tenantId, ids[0], 2025);
     await seedMonths(runner, kind, tenantId, other, 2025, { planned: Array(12).fill(5) });
 
-    const result = await deleteService(kind, runner, auditDouble(), fakeStorage()).bulkDelete(ids, null, { manager: runner.manager });
+    // The check names the frozen line, its column and year, before anything is deleted.
+    const service = deleteService(kind, runner, auditDouble(), fakeStorage());
+    assert.deepEqual(await service.deleteCheck([...ids, 'nope'], { manager: runner.manager }), {
+      refused: [{ id: ids[1], name: 'Frozen', code: 'BUDGET_LINE_FROZEN', usages: [], params: { column: 'Plan initial', year: 2026 } }],
+    }, `${kind}: the check names the frozen line`);
+
+    const result = await service.bulkDelete(ids, null, { manager: runner.manager });
     assert.deepEqual(result.deleted, [ids[0], ids[2]], `${kind}: the other lines are deleted`);
     assert.deepEqual(
-      result.failed.map((f) => [f.id, f.name, f.reason]),
-      [[ids[1], 'Frozen', FROZEN_MESSAGE]],
+      result.failed.map((f) => [f.id, f.name, f.reason, f.code, f.params]),
+      [[ids[1], 'Frozen', FROZEN_MESSAGE, 'BUDGET_LINE_FROZEN', { column: 'Plan initial', year: 2026 }]],
       `${kind}: the frozen line is reported with the reason`,
     );
     assert.ok(runner.isTransactionActive, `${kind}: the request transaction is still open`);
@@ -336,7 +348,7 @@ function managerFailingReferenceCheck(runner: QueryRunner, failingPath: string) 
       if (prop === 'query') {
         return async (sql: string, params?: any[]) => {
           if (sql.includes('storage_path = ANY') && Array.isArray(params?.[1]) && params![1].includes(failingPath)) {
-            await target.query('SELECT 1 / 0');
+            await target.query(INJECTED_FAILURE);
           }
           return target.query(sql, params);
         };

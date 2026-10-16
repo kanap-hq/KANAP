@@ -246,7 +246,7 @@ async function run() {
           measured_count: 6,
           median_days: 12.44,
           by_type: [
-            { taskTypeId: 't1', taskTypeName: 'Bug', closedCount: 4, measuredCount: 4, medianDays: 8.2 },
+            { taskTypeId: 't1', taskTypeName: 'Bug', taskTypeCode: 'bug', closedCount: 4, measuredCount: 4, medianDays: 8.2 },
             { taskTypeId: null, taskTypeName: null, closedCount: 2, measuredCount: 2, medianDays: 21 },
           ],
           by_outcome: null,
@@ -383,8 +383,8 @@ async function run() {
 
   assert.deepEqual(report.leadTime.tasks, { closedCount: 6, measuredCount: 6, medianDays: 12.4 });
   assert.deepEqual(report.leadTime.tasksByType, [
-    { taskTypeId: 't1', taskTypeName: 'Bug', closedCount: 4, measuredCount: 4, medianDays: 8.2 },
-    { taskTypeId: null, taskTypeName: null, closedCount: 2, measuredCount: 2, medianDays: 21 },
+    { taskTypeId: 't1', taskTypeName: 'Bug', taskTypeCode: 'bug', closedCount: 4, measuredCount: 4, medianDays: 8.2 },
+    { taskTypeId: null, taskTypeName: null, taskTypeCode: null, closedCount: 2, measuredCount: 2, medianDays: 21 },
   ]);
   // The closings stay at five, the median is read on the three real transitions.
   assert.deepEqual(report.leadTime.requests, {
@@ -409,12 +409,14 @@ async function run() {
   assert.deepEqual(report.age.tasks.rows[1], {
     taskTypeId: null,
     taskTypeName: null,
+    taskTypeCode: null,
     buckets: { upTo7: 1, from8To30: 0, from31To90: 0, over90: 0 },
     total: 1,
   });
   assert.deepEqual(report.age.tasks.total, {
     taskTypeId: null,
     taskTypeName: null,
+    taskTypeCode: null,
     buckets: { upTo7: 3, from8To30: 1, from31To90: 0, over90: 3 },
     total: 7,
   });

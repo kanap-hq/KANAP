@@ -1,4 +1,5 @@
 import { exportListQuery } from '../common/pagination';
+import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
 import {
   Body,
   Controller,
@@ -70,11 +71,13 @@ export class BusinessProcessesController {
   @Get('export')
   async export(
     @Query('scope') scope: 'template' | 'data' = 'data',
+    @Query('language') languageRaw: string | undefined,
     @Query() query: any,
     @Res() res: Response,
     @Req() req: any,
   ) {
-    const { filename, content } = await this.svc.exportCsv(scope, { manager: req?.queryRunner?.manager, listQuery: exportListQuery(query) });
+    const language = await languageOf(req?.queryRunner?.manager, req.tenant.id, req.user?.sub ?? null, languageRaw);
+    const { filename, content } = await this.svc.exportCsv(scope, { manager: req?.queryRunner?.manager, language, listQuery: exportListQuery(query) });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(filename));
     res.send(content);
@@ -123,10 +126,24 @@ export class BusinessProcessesController {
   async import(
     @UploadedFile() file: Express.Multer.File,
     @Query('dryRun') dryRunRaw: string,
+    @Query('language') languageRaw: string | undefined,
+    @Query('dateOrder') dateOrderRaw: string | undefined,
+    @Query('decimalMark') decimalMarkRaw: string | undefined,
     @Req() req: any,
   ) {
     const dryRun = String(dryRunRaw ?? 'true').toLowerCase() !== 'false';
-    return this.svc.importCsv({ file, dryRun, userId: req.user?.sub ?? null }, { manager: req?.queryRunner?.manager });
+    const language = await languageOf(req?.queryRunner?.manager, req.tenant.id, req.user?.sub ?? null, languageRaw);
+    return this.svc.importCsv(
+      {
+        file,
+        dryRun,
+        userId: req.user?.sub ?? null,
+        language,
+        dateOrder: parseDateOrder(dateOrderRaw),
+        decimalMark: parseDecimalMark(decimalMarkRaw),
+      },
+      { manager: req?.queryRunner?.manager },
+    );
   }
 }
 

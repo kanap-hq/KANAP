@@ -175,6 +175,33 @@ async function testGetLookupColumn() {
 
 // ===== Run tests =====
 
+// A task type the tenant kept as shipped also answers to the name it is shown with in each
+// language ("Tâche", "Aufgabe"); a renamed one only to its own name, and a tenant's own type
+// named like a translation wins. Exports still write the stored name.
+async function testTaskTypesAcceptTheirShownNames() {
+  const service = new CsvResolverService();
+  const mockData = {
+    portfolio_task_types: [
+      { id: 'tt-task', name: 'Task', code: 'task', tenant_id: 't1' },
+      { id: 'tt-bug', name: 'Defect', code: 'bug', tenant_id: 't1' },
+      { id: 'tt-problem', name: 'Problem', code: 'problem', tenant_id: 't1' },
+      { id: 'tt-own', name: 'Problème', code: null, tenant_id: 't1' },
+    ],
+  };
+  const fields: CsvFieldDefinition[] = [
+    { csvColumn: 'task_type_name', entityProperty: 'task_type_id', type: CsvFieldType.FK_BY_NAME, fkEntity: 'portfolio_task_types' },
+  ];
+  const cache = await service.preloadResolvers('t1', fields, createMockManager(mockData));
+  assert.equal(service.resolveId('portfolio_task_types', 'Task', cache), 'tt-task');
+  assert.equal(service.resolveId('portfolio_task_types', 'Tâche', cache), 'tt-task', 'French name of a kept shipped type');
+  assert.equal(service.resolveId('portfolio_task_types', 'aufgabe', cache), 'tt-task', 'German name, any case');
+  assert.equal(service.resolveId('portfolio_task_types', 'Anomalie', cache), null, 'a renamed type answers to its own name only');
+  assert.equal(service.resolveId('portfolio_task_types', 'Defect', cache), 'tt-bug');
+  assert.equal(service.resolveId('portfolio_task_types', 'Problème', cache), 'tt-own', 'a tenant type named like a translation wins');
+  assert.equal(service.resolveId('portfolio_task_types', 'Problema', cache), 'tt-problem');
+  assert.equal(service.reverseResolve('portfolio_task_types', 'tt-task', cache), 'Task', 'exports write the stored name');
+}
+
 (async () => {
   await testPreloadResolversLoadsUsers();
   await testResolveWithCaseInsensitiveMatch();
@@ -184,6 +211,7 @@ async function testGetLookupColumn() {
   await testPreloadMultipleEntityTypes();
   await testIsSupportedEntity();
   await testGetLookupColumn();
+  await testTaskTypesAcceptTheirShownNames();
 
   console.log('CSV resolver service tests passed.');
 })().catch((err) => {

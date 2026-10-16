@@ -10,17 +10,19 @@ import StatusLifecycleField from './StatusLifecycleField';
 function renderField(props: Partial<React.ComponentProps<typeof StatusLifecycleField>> & { status: StatusValue }) {
   const onStatusChange = vi.fn();
   const onDisabledAtChange = vi.fn();
+  const onDisableNow = vi.fn();
   render(
     <ThemeProvider theme={createAppTheme('light')}>
       <StatusLifecycleField
         disabledAt={null}
         onStatusChange={onStatusChange}
         onDisabledAtChange={onDisabledAtChange}
+        onDisableNow={onDisableNow}
         {...props}
       />
     </ThemeProvider>,
   );
-  return { onStatusChange, onDisabledAtChange };
+  return { onStatusChange, onDisabledAtChange, onDisableNow };
 }
 
 describe('StatusLifecycleField', () => {
@@ -82,29 +84,35 @@ describe('StatusLifecycleField', () => {
     expect(onStatusChange).toHaveBeenCalledWith(STATUS_ENABLED);
   });
 
-  it('stamps a date and disables when switched off without a date field', () => {
-    const { onStatusChange, onDisabledAtChange } = renderField({ status: STATUS_ENABLED, hideDisabledAt: true });
+  // Switching off disables now, on the server's clock: the field hands no browser time to the
+  // caller, which sends the status alone (the server sets the end of validity).
+  it('asks the caller to disable now, without a browser time, when switched off', () => {
+    const { onStatusChange, onDisabledAtChange, onDisableNow } = renderField({ status: STATUS_ENABLED });
     fireEvent.click(screen.getByRole('checkbox'));
-    expect(onDisabledAtChange).toHaveBeenCalledWith(expect.any(String));
-    expect(onStatusChange).toHaveBeenCalledWith(STATUS_DISABLED);
+    expect(onDisableNow).toHaveBeenCalledTimes(1);
+    expect(onDisabledAtChange).not.toHaveBeenCalled();
+    expect(onStatusChange).not.toHaveBeenCalled();
   });
 
-  // Switching off disables now: an end of validity later today left the record enabled until the
-  // evening, and the switch came back on after the save.
-  it('disables now when switched off', () => {
-    const { onStatusChange, onDisabledAtChange } = renderField({ status: STATUS_ENABLED });
-    const before = Date.now();
+  it('asks the caller to disable now when switched off without a date field', () => {
+    const { onDisabledAtChange, onDisableNow } = renderField({ status: STATUS_ENABLED, hideDisabledAt: true });
     fireEvent.click(screen.getByRole('checkbox'));
-    const sent = new Date(onDisabledAtChange.mock.calls[0][0]).getTime();
-    expect(sent).toBeGreaterThanOrEqual(before);
-    expect(sent).toBeLessThanOrEqual(Date.now());
-    expect(onStatusChange).toHaveBeenCalledWith(STATUS_DISABLED);
+    expect(onDisableNow).toHaveBeenCalledTimes(1);
+    expect(onDisabledAtChange).not.toHaveBeenCalled();
   });
 
-  it('disables now when switched off with a future end of validity', () => {
-    const { onStatusChange, onDisabledAtChange } = renderField({ status: STATUS_ENABLED, disabledAt: '2099-12-31T12:00:00.000Z' });
+  it('asks the caller to disable now when switched off with a future end of validity', () => {
+    const { onDisabledAtChange, onDisableNow } = renderField({ status: STATUS_ENABLED, disabledAt: '2099-12-31T12:00:00.000Z' });
     fireEvent.click(screen.getByRole('checkbox'));
-    expect(new Date(onDisabledAtChange.mock.calls[0][0]).getTime()).toBeLessThanOrEqual(Date.now());
+    expect(onDisableNow).toHaveBeenCalledTimes(1);
+    expect(onDisabledAtChange).not.toHaveBeenCalled();
+  });
+
+  it('keeps an end of validity already passed when switched off', () => {
+    const { onStatusChange, onDisabledAtChange, onDisableNow } = renderField({ status: STATUS_ENABLED, disabledAt: '2020-01-31T12:00:00.000Z' });
+    fireEvent.click(screen.getByRole('checkbox'));
+    expect(onDisableNow).not.toHaveBeenCalled();
+    expect(onDisabledAtChange).toHaveBeenCalledWith('2020-01-31T12:00:00.000Z');
     expect(onStatusChange).toHaveBeenCalledWith(STATUS_DISABLED);
   });
 
@@ -126,6 +134,27 @@ describe('StatusLifecycleField', () => {
     expect(onDisabledAtChange).toHaveBeenCalledWith(iso);
     expect(onStatusChange).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('keeps a stored end of validity, time included, when its own day is typed or picked again', () => {
+    const stored = '2031-10-16T14:37:12.000Z';
+    const { onStatusChange, onDisabledAtChange } = renderField({ status: STATUS_ENABLED, disabledAt: stored });
+    const input = screen.getByPlaceholderText(i18n.t('common:labels.datePlaceholder')) as HTMLInputElement;
+    const local = new Date(stored);
+    const sameDay = `${String(local.getDate()).padStart(2, '0')}/${String(local.getMonth() + 1).padStart(2, '0')}/${local.getFullYear()}`;
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: sameDay } });
+    fireEvent.blur(input);
+    fireEvent.click(screen.getByRole('button', { name: 'Open calendar' }));
+    const label = new Intl.DateTimeFormat('en', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(local);
+    fireEvent.click(screen.getByRole('button', { name: label }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(onDisabledAtChange).not.toHaveBeenCalled();
+    expect(onStatusChange).not.toHaveBeenCalled();
+
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '17/10/2031' } });
+    expect(onDisabledAtChange).toHaveBeenCalledWith(new Date(2031, 9, 17, 23, 59, 0, 0).toISOString());
   });
 
   it('clears the end of validity from the calendar', () => {

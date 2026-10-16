@@ -11,6 +11,7 @@ import { useAuth } from '../../auth/AuthContext';
 import ForbiddenPage from '../ForbiddenPage';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
+import { recordsInUseCheck } from '../../utils/deleteCheck';
 import { CsvExportDialogV2, CsvImportDialogV2 } from '../../components/csv';
 import CheckboxSetFilter from '../../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
@@ -19,6 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { useLocale } from '../../i18n/useLocale';
 import { formatShortDate, formatShortDateTime } from '../../lib/dateFormat';
 import { setListFiltersParam, getWithListContext } from '../../lib/listContext';
+import { countValueFormatter } from '../../components/grid/countValueFormatter';
 type AssetRow = {
   id: string;
   asset_reference: string | null;
@@ -411,7 +413,7 @@ export default function AssetsPage() {
       width: 140,
       sortable: false,
       filter: false,
-      valueFormatter: (p) => p.value ?? 0,
+      valueFormatter: (p) => countValueFormatter({ value: p.value ?? 0 }),
       cellRenderer: ClickToWorkspace,
     },
     { headerName: t('pages.assets.columns.created'), field: 'created_at', width: 180, valueFormatter: (p: any) => formatShortDateTime(p.value as string | null, locale), cellRenderer: ClickToWorkspace },
@@ -436,6 +438,13 @@ export default function AssetsPage() {
           getItemId={(row) => row.id}
           getItemName={(row) => row.name}
           gridApi={gridApiRef.current}
+          // Asked on click: those still in use are kept, with what uses them.
+          checkDelete={(ids) => recordsInUseCheck('/assets', ids)}
+          itemLabels={{
+            toDelete: (count) => t('pages.assets.delete.toDelete', { count }),
+            kept: (count) => t('pages.assets.delete.kept', { count }),
+            deleted: (count) => t('pages.assets.delete.deleted', { count }),
+          }}
           onDeleteSuccess={() => { setRefreshKey((k) => k + 1); }}
         />
       )}

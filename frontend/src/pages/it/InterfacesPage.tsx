@@ -31,6 +31,7 @@ import { useAuth } from '../../auth/AuthContext';
 import ForbiddenPage from '../ForbiddenPage';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
+import { recordsInUseCheck } from '../../utils/deleteCheck';
 import api from '../../api';
 
 import { useTranslation } from 'react-i18next';
@@ -39,6 +40,7 @@ import { formatShortDateTime } from '../../lib/dateFormat';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { classificationText } from '../../utils/applicationClassification';
 import { setListFiltersParam } from '../../lib/listContext';
+import { countValueFormatter } from '../../components/grid/countValueFormatter';
 type InterfaceRow = {
   id: string;
   interface_reference: string;
@@ -325,7 +327,7 @@ export default function InterfacesPage() {
       width: 140,
       sortable: false,
       filter: false,
-      valueFormatter: (p) => p.value ?? 0,
+      valueFormatter: (p) => countValueFormatter({ value: p.value ?? 0 }),
       cellRenderer: ClickToWorkspace,
       defaultHidden: true,
     },
@@ -335,7 +337,7 @@ export default function InterfacesPage() {
       width: 120,
       sortable: false,
       filter: false,
-      valueFormatter: (p) => p.value ?? 0,
+      valueFormatter: (p) => countValueFormatter({ value: p.value ?? 0 }),
       cellRenderer: ClickToWorkspace,
       defaultHidden: true,
     },
@@ -367,6 +369,13 @@ export default function InterfacesPage() {
           gridApi={gridApiRef.current}
           onDeleteSuccess={() => {
             setRefreshKey((k) => k + 1);
+          }}
+          // Asked on click: interfaces with bindings are kept, unless the option deletes their bindings too.
+          checkDelete={async (ids) => ({ ...(await recordsInUseCheck('/interfaces', ids)), cascadeLifts: ['INTERFACE_HAS_BINDINGS'] })}
+          itemLabels={{
+            toDelete: (count) => t('pages.interfaces.delete.toDelete', { count }),
+            kept: (count) => t('pages.interfaces.delete.kept', { count }),
+            deleted: (count) => t('pages.interfaces.delete.deleted', { count }),
           }}
           cascadeOption={{
             label: t('pages.interfaces.alsoDeleteBindings'),

@@ -5,6 +5,7 @@ import { AppInstance } from './app-instance.entity';
 import { Application } from '../applications/application.entity';
 import { InterfaceBinding } from '../interface-bindings/interface-binding.entity';
 import { AppAssetAssignment } from '../app-asset-assignments/app-asset-assignment.entity';
+import { RecordInUseException, type UsageCount } from '../common/record-in-use';
 import { AuditService } from '../audit/audit.service';
 import { resolveLifecycleState, DisabledAtInput } from '../common/status';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
@@ -277,14 +278,15 @@ export class AppInstancesService {
       .createQueryBuilder('b')
       .where('b.source_instance_id = :id OR b.target_instance_id = :id', { id: instanceId })
       .getCount();
-    if (bindingCount > 0) {
-      throw new BadRequestException('Cannot delete instance with active interface bindings');
-    }
-
     const assignmentsRepo = this.getAssignmentsRepo(mg);
     const assignmentCount = await assignmentsRepo.count({ where: { app_instance_id: instanceId } as any });
-    if (assignmentCount > 0) {
-      throw new BadRequestException('Cannot delete instance with server assignments');
+    // Both counted, for one refusal the interface words (APP_INSTANCE_IN_USE): remove them first.
+    const usages: UsageCount[] = [];
+    if (bindingCount > 0) usages.push({ type: 'interface_bindings', total: bindingCount });
+    if (assignmentCount > 0) usages.push({ type: 'server_assignments', total: assignmentCount });
+    if (usages.length > 0) {
+      throw new RecordInUseException('APP_INSTANCE_IN_USE', 'instance', instance.environment, usages,
+        `Cannot delete instance with ${bindingCount > 0 ? 'active interface bindings' : 'server assignments'}. Remove them first.`);
     }
 
     await repo.delete({ id: instanceId } as any);

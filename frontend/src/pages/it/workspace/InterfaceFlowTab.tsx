@@ -25,6 +25,7 @@ import type {
   InterfaceDetail,
   InterfaceLeg,
 } from '../components/interface-workspace/types';
+import { legTypeLabel } from '../../../utils/interfaceLegType';
 
 type Props = {
   canManage: boolean;
@@ -263,7 +264,7 @@ export default function InterfaceFlowTab({
               {legs.map((leg) => (
                 <TableRow key={leg.id}>
                   <TableCell sx={{ fontWeight: 500 }}>
-                    {String(leg.leg_type || '').toUpperCase()}
+                    {legTypeLabel(t, leg.leg_type)}
                   </TableCell>
                   <TableCell>
                     {getRoleLabel(leg.from_role)} / {getRoleLabel(leg.to_role)}

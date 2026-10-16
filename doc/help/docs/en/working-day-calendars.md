@@ -66,7 +66,7 @@ Click any cell to open the workspace.
 - **New**: create a calendar (requires `working_day_profiles:member`)
 - **Import CSV**: load calendars and their working days from a file (requires `working_day_profiles:admin`)
 - **Export CSV**: download the calendars the list shows, or every calendar (requires `working_day_profiles:admin`)
-- **Delete selected**: delete the selected calendars (requires `working_day_profiles:admin`). Calendars that cannot be deleted are kept and listed with the reason
+- **Delete selected**: delete the selected calendars (requires `working_day_profiles:admin`). Before anything is deleted, the confirmation lists the calendars kept, with the reason
 
 ---
 
@@ -162,7 +162,7 @@ Disable a calendar when it should no longer be used, for example after a change 
 
 The **Delete** button in the header deletes the calendar after a confirmation (requires `working_day_profiles:admin`). It is disabled, with the reason on one line, while budget lines use the calendar, for example "Used by 3 OPEX lines and 1 CAPEX line. Disable it instead."
 
-The same rule applies to **Delete selected** in the list: a calendar used by budget lines is kept, with a reason such as "Head office staff is used by 3 OPEX lines and 1 CAPEX line. Disable it instead."
+The same rule applies to **Delete selected** in the list: a calendar used by budget lines is kept, with a reason such as "This calendar is used by 3 OPEX lines and 1 CAPEX line. Disable it instead of deleting it."
 
 A budget line uses a calendar when one of its columns, in any year, has a line priced per day on it. Removing that line in the budget tab, or **Reset budget column** in Budget Administration, removes the link. See [Reset budget column](budget-operations.md#reset-budget-column).
 
@@ -190,7 +190,7 @@ Load or update calendars and their working days from a file.
 | `country` | Optional. The two-letter country code of a standard calendar, for example `FR`. Empty for a custom calendar |
 | `region` | Optional. The region code, for example `57` for Moselle or `BY` for Bavaria. Needs a country. Empty for the whole country |
 | `status` | `enabled` or `disabled`. Empty means `enabled` |
-| `disabled_at` | Optional column. The end of validity: a date (`2026-12-31`) or a full date and time. Empty if there is no end |
+| `disabled_at` | Optional column. The end of validity: a date (`2026-12-31`) or a full date and time. The export writes the date only. Imported again, that date keeps the stored end of validity. Empty if there is no end |
 | `year` | Four digits, from 2000 to 2100. Empty on a row that only sets the calendar's fields |
 | `jan` to `dec` | The working days of each month, with a dot as decimal separator (a comma is accepted too). Required on a row with a year |
 

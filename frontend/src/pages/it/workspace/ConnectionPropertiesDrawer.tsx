@@ -1,5 +1,6 @@
 import useApplicationClassificationCatalog from '../../../hooks/useApplicationClassificationCatalog';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, MenuItem, Switch, TextField, Typography } from '@mui/material';
 import { PropertyGroup, PropertyRow } from '../../../components/design/PropertyRow';
 import { drawerSelectSx, drawerMenuItemSx } from '../../../theme/formSx';

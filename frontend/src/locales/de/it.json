@@ -73,6 +73,20 @@
         "dataClass": "Datenklasse",
         "containsPii": "Enthält PII",
         "dataResidency": "Datenresidenz"
+      },
+      "delete": {
+        "warning_one": "Ihre Bereitstellungen und Verknüpfungen zu anderen Einträgen werden mit ihr gelöscht. Dies kann nicht rückgängig gemacht werden.",
+        "warning_other": "Ihre Bereitstellungen und Verknüpfungen zu anderen Einträgen werden mit ihnen gelöscht. Dies kann nicht rückgängig gemacht werden.",
+        "warningCounted_one": "Ihre {{deployments}} und Verknüpfungen zu anderen Einträgen werden mit ihr gelöscht. Dies kann nicht rückgängig gemacht werden.",
+        "warningCounted_other": "Ihre {{deployments}} und Verknüpfungen zu anderen Einträgen werden mit ihnen gelöscht. Dies kann nicht rückgängig gemacht werden.",
+        "warningLinks_one": "Ihre Verknüpfungen zu anderen Einträgen werden mit ihr gelöscht. Dies kann nicht rückgängig gemacht werden.",
+        "warningLinks_other": "Ihre Verknüpfungen zu anderen Einträgen werden mit ihnen gelöscht. Dies kann nicht rückgängig gemacht werden.",
+        "toDelete_one": "{{count}} Anwendung wird gelöscht:",
+        "toDelete_other": "{{count}} Anwendungen werden gelöscht:",
+        "kept_one": "{{count}} Anwendung kann nicht gelöscht werden und bleibt erhalten:",
+        "kept_other": "{{count}} Anwendungen können nicht gelöscht werden und bleiben erhalten:",
+        "deleted_one": "{{count}} Anwendung gelöscht",
+        "deleted_other": "{{count}} Anwendungen gelöscht"
       }
     },
     "assets": {
@@ -104,6 +118,14 @@
         "noLocation": "(Kein Standort)",
         "noSubLocation": "(Kein Unterstandort)",
         "blank": "(Leer)"
+      },
+      "delete": {
+        "toDelete_one": "{{count}} Asset wird gelöscht:",
+        "toDelete_other": "{{count}} Assets werden gelöscht:",
+        "kept_one": "{{count}} Asset kann nicht gelöscht werden und bleibt erhalten:",
+        "kept_other": "{{count}} Assets können nicht gelöscht werden und bleiben erhalten:",
+        "deleted_one": "{{count}} Asset gelöscht",
+        "deleted_other": "{{count}} Assets gelöscht"
       }
     },
     "connections": {
@@ -131,6 +153,8 @@
         "derivedNoInterfaces": "Abgeleitet (keine Schnittstellen verknüpft)",
         "manual": "Manuell"
       },
+      "deleteWarning_one": "Dies kann nicht rückgängig gemacht werden. Ihre Server, Schnittstellen und Dokumente bleiben erhalten; nur ihre Verknüpfungen mit dieser Verbindung werden entfernt.",
+      "deleteWarning_other": "Dies kann nicht rückgängig gemacht werden. Ihre Server, Schnittstellen und Dokumente bleiben erhalten; nur ihre Verknüpfungen mit diesen Verbindungen werden entfernt.",
       "serverCount_one": "{{count}} Server",
       "serverCount_other": "{{count}} Server"
     },
@@ -139,7 +163,15 @@
       "addInterface": "Schnittstelle hinzufügen",
       "duplicateInterface": "Schnittstelle duplizieren",
       "alsoDeleteBindings": "Zugehörige Bindungen ebenfalls löschen",
-      "deleteBindingsDescription": "Wenn diese Option deaktiviert ist, werden Schnittstellen mit Bindungen nicht gelöscht.",
+      "deleteBindingsDescription": "Schnittstellen mit Bindungen werden dann mit ihren Bindungen gelöscht. Verbindungen bleiben erhalten.",
+      "delete": {
+        "toDelete_one": "{{count}} Schnittstelle wird gelöscht:",
+        "toDelete_other": "{{count}} Schnittstellen werden gelöscht:",
+        "kept_one": "{{count}} Schnittstelle hat Bindungen und bleibt erhalten:",
+        "kept_other": "{{count}} Schnittstellen haben Bindungen und bleiben erhalten:",
+        "deleted_one": "{{count}} Schnittstelle gelöscht",
+        "deleted_other": "{{count}} Schnittstellen gelöscht"
+      },
       "duplicateDialogTitle": "Schnittstelle duplizieren",
       "duplicateDescription": "Eine Kopie von \"{{name}}\" erstellen.",
       "copyEnvBindings": "Umgebungs-Bindungen kopieren",
@@ -1024,11 +1056,11 @@
       "next": "Nächste Anwendung",
       "loading": "Anwendung wird geladen…",
       "notFound": "Anwendung nicht gefunden.",
-      "deleteTitle": "Anwendung löschen?",
-      "deleteMessage": "{{name}} wird endgültig gelöscht. Dies kann nicht rückgängig gemacht werden.",
       "meta": {
         "goLive": "Inbetriebnahme"
-      }
+      },
+      "deleteMessage": "Damit wird {{name}} endgültig gelöscht, mit ihren Verknüpfungen zu anderen Einträgen. Dies kann nicht rückgängig gemacht werden.",
+      "deleteMessageWithDeployments": "Damit wird {{name}} endgültig gelöscht, mit ihren {{deployments}} und Verknüpfungen zu anderen Einträgen. Dies kann nicht rückgängig gemacht werden."
     },
     "asset": {
       "title": "Server",
@@ -1458,6 +1490,12 @@
         "applicationsRequired": "Wählen Sie Quell- und Zielanwendung aus.",
         "dataCategoryRequired": "Wählen Sie eine Datenkategorie aus.",
         "noIdentifier": "Die Schnittstelle wurde erstellt, aber es wurde keine Kennung zurückgegeben."
+      },
+      "pii": {
+        "label": "PII",
+        "none": "Keine PII",
+        "contains": "Enthält PII",
+        "description": "Beschreibung der PII"
       },
       "fields": {
         "name": "Name",
@@ -1984,16 +2022,15 @@
       "manual": "Manuell",
       "derived": "Abgeleitet"
     },
+    "legType": {
+      "extract": "Extraktion",
+      "transform": "Transformation",
+      "load": "Laden",
+      "direct": "Direkt"
+    },
     "routeType": {
       "direct": "Direkt",
       "viaMiddleware": "Über Middleware"
-    },
-    "entity": {
-      "internal_users": "Interne Benutzer",
-      "external_users": "Externe Benutzer",
-      "internet": "Internet",
-      "customers": "Kunden",
-      "partner_networks": "Partnernetzwerke"
     }
   },
   "confirmations": {
@@ -2056,6 +2093,8 @@
     "providerRequired": "Anbieter ist erforderlich.",
     "codeRequired": "Code ist erforderlich.",
     "nameRequired": "Name ist erforderlich.",
+    "locationNameTaken": "Ein anderer Standort hat bereits diesen Namen.",
+    "subLocationNameTaken": "Ein anderer Unterstandort dieses Standorts hat bereits diesen Namen.",
     "hostingTypeRequired": "Hosting-Typ ist erforderlich.",
     "saveLayersFirst": "Speichern Sie zuerst die Verbindung, dann fügen Sie Schichten hinzu.",
     "roleRequired": "Rolle ist erforderlich.",
@@ -2212,5 +2251,178 @@
     "data_at_the_highest_confidentiality_level_with_the_lowest_cyber_criticality_check_the_cyber_assessment": "Daten auf der höchsten Vertraulichkeitsstufe mit der niedrigsten Cyber-Kritikalität: prüfen Sie die Cyber-Bewertung.",
     "no_recovery_test_in_the_last_twelve_months_for_an_application_at_the_most_critical_level": "Kein Wiederherstellungstest in den letzten zwölf Monaten für eine Anwendung auf der kritischsten Stufe.",
     "e_g_tier_1": "z. B. Stufe 1"
+  },
+  "catalogDefaults": {
+    "applicationCategories": {
+      "line_of_business": "Fachanwendung",
+      "productivity": "Produktivität",
+      "security": "Sicherheit",
+      "analytics": "Analytik",
+      "development": "Entwicklung",
+      "integration": "Integration",
+      "infrastructure": "Infrastruktur"
+    },
+    "networkSegments": {
+      "industrial_lan": "Industrie-LAN",
+      "wifi": "WLAN",
+      "public_cloud": "Public Cloud",
+      "guest": "Gäste",
+      "management": "Management",
+      "storage": "Speicher"
+    },
+    "entities": {
+      "internal_users": "Interne Benutzer",
+      "external_users": "Externe Benutzer",
+      "internet": "Internet",
+      "customers": "Kunden",
+      "partner_networks": "Partnernetzwerke"
+    },
+    "serverKinds": {
+      "physical_server": "Physischer Server",
+      "virtual_machine": "Virtuelle Maschine",
+      "container": "Container",
+      "serverless": "Serverless",
+      "appliance": "Appliance",
+      "saas": "SaaS",
+      "other": "Sonstiges",
+      "switch": "Switch",
+      "firewall": "Firewall",
+      "load_balancer": "Load Balancer",
+      "access_point": "Access Point",
+      "san": "SAN",
+      "nas": "NAS",
+      "backup_appliance": "Backup-Appliance",
+      "tape_library": "Bandbibliothek",
+      "industrial_robot": "Industrieroboter",
+      "industrial_machine": "Industriemaschine",
+      "rack": "Rack"
+    },
+    "serverProviders": {
+      "other": "Sonstiges"
+    },
+    "serverRoles": {
+      "app": "Applikationsserver",
+      "backup": "Backup-Server",
+      "cloud-service": "Cloud-Dienst",
+      "db": "Datenbankserver",
+      "domain-controller": "Domänencontroller",
+      "file": "Dateiserver",
+      "mail": "Mail / Messaging",
+      "monitoring": "Monitoring-Server",
+      "other": "Sonstiges",
+      "print": "Druckserver",
+      "proxy": "Proxy / Gateway",
+      "remote-desktop": "Remote Desktop",
+      "virtualization": "Virtualisierungshost",
+      "web": "Webserver"
+    },
+    "hostingTypes": {
+      "on_prem": "On-Premise",
+      "colocation": "Colocation",
+      "public_cloud": "Public Cloud",
+      "private_cloud": "Private Cloud"
+    },
+    "interfaceProtocols": {
+      "smb": "SMB / Windows-Freigabe",
+      "other": "Sonstiges"
+    },
+    "interfaceDataCategories": {
+      "master_data": "Stammdaten",
+      "transactional": "Transaktionsdaten",
+      "reporting": "Reporting",
+      "control": "Steuerung"
+    },
+    "interfaceTriggerTypes": {
+      "event_based": "Ereignisbasiert",
+      "scheduled": "Geplant",
+      "on_demand": "Auf Anforderung",
+      "real_time": "Echtzeit"
+    },
+    "interfacePatterns": {
+      "rest_api_sync": "REST-API (synchron)",
+      "rest_api_async": "REST-API (asynchron / Callback)",
+      "soap_webservice": "SOAP-Webservice",
+      "file_transfer_batch": "Dateiübertragung (Batch)",
+      "message_queue": "Message Queue (Punkt-zu-Punkt)",
+      "pub_sub_topic": "Pub/Sub (Topic)",
+      "etl_batch": "ETL-Batch-Job",
+      "db_link_view": "DB-Link / direkter DB-Zugriff",
+      "scheduled_job": "Geplantes Skript / Job",
+      "manual_import_export": "Manueller Import / Export",
+      "other": "Sonstiges"
+    },
+    "interfaceFormats": {
+      "delimited": "Text mit Trennzeichen",
+      "fixed_width": "Text mit fester Breite",
+      "txt_plain": "Klartext",
+      "binary_custom": "Binär (benutzerdefiniert)",
+      "other": "Sonstiges"
+    },
+    "interfaceAuthModes": {
+      "service_account": "Dienstkonto",
+      "api_key": "API-Schlüssel",
+      "certificate": "Zertifikat",
+      "none": "Keine"
+    },
+    "connectionTypes": {
+      "zabbix": "Zabbix-Agent",
+      "ad-repl": "AD-Replikation",
+      "tcp": "TCP (benutzerdefiniert)",
+      "udp": "UDP (benutzerdefiniert)",
+      "other": "Sonstiges",
+      "unknown": "Unbekannt"
+    },
+    "ipAddressTypes": {
+      "host": "Host",
+      "management": "Management"
+    },
+    "accessMethods": {
+      "local": "Lokal installierte Anwendung",
+      "mobile": "Mobile Anwendung",
+      "hmi": "Proprietäre HMI (Industrieschnittstelle)",
+      "terminal": "Terminal / CLI",
+      "vdi": "VDI / Remote Desktop",
+      "kiosk": "Kiosk"
+    },
+    "pathHopFunctions": {
+      "vip": "Virtuelle IP",
+      "firewall": "Firewall",
+      "reverse_proxy": "Reverse Proxy",
+      "load_balancer": "Load Balancer",
+      "api_gateway": "API-Gateway",
+      "vpn_endpoint": "VPN-Endpunkt",
+      "bastion": "Bastion / Jump Host",
+      "cdn_edge": "CDN-Edge",
+      "service_mesh": "Service-Mesh-Proxy"
+    },
+    "incidentCategories": {
+      "infrastructure": "Infrastruktur",
+      "security": "Sicherheit",
+      "application": "Anwendung",
+      "data": "Daten",
+      "supplier": "Lieferant",
+      "other": "Sonstiges"
+    },
+    "domains": {
+      "workgroup": "Arbeitsgruppe",
+      "n-a": "k. A."
+    },
+    "connectionTypeCategories": {
+      "application": "Anwendung",
+      "database": "Datenbank",
+      "authentication": "Authentifizierung",
+      "remote_access": "Fernzugriff",
+      "file_transfer": "Dateiübertragung",
+      "file_sharing": "Dateifreigabe",
+      "storage": "Speicher",
+      "messaging": "Messaging",
+      "email": "E-Mail",
+      "monitoring": "Monitoring",
+      "network_services": "Netzwerkdienste",
+      "replication": "Replikation",
+      "vpn_tunnel": "VPN / Tunnel",
+      "backup": "Backup",
+      "generic": "Generisch"
+    }
   }
 }

@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   Box,
+  FormHelperText,
   IconButton,
   Stack,
   Tab,
@@ -60,6 +61,8 @@ type PortfolioDetailWorkspaceShellProps = {
   properties?: React.ReactNode;
   tabs: PortfolioDetailWorkspaceTab[];
   title: string;
+  /** A refusal of the last title save (a name another record has), shown under the click-to-edit title. */
+  titleError?: string | null;
   /** Replaces the click-to-edit title, for a title made of several fields (a contact's first and last name). */
   titleEditor?: React.ReactNode;
   titleFallback: string;
@@ -259,6 +262,7 @@ export default function PortfolioDetailWorkspaceShell({
   tabs,
   title,
   titleEditor,
+  titleError,
   titleFallback,
 }: PortfolioDetailWorkspaceShellProps) {
   const theme = useTheme();
@@ -436,12 +440,15 @@ export default function PortfolioDetailWorkspaceShell({
                 )}
                 <Box sx={{ flex: 1, minWidth: isCompact ? '100%' : 0, overflowWrap: 'anywhere' }}>
                   {titleEditor ?? (
-                    <EditableTitle
-                      value={title}
-                      fallback={titleFallback}
-                      canEdit={canEditTitle}
-                      onSave={onTitleSave}
-                    />
+                    <>
+                      <EditableTitle
+                        value={title}
+                        fallback={titleFallback}
+                        canEdit={canEditTitle}
+                        onSave={onTitleSave}
+                      />
+                      {titleError && <FormHelperText error sx={{ mt: 0.5 }}>{titleError}</FormHelperText>}
+                    </>
                   )}
                 </Box>
               </Box>

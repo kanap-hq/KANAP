@@ -182,7 +182,8 @@ async function testContractsReadTheEndOfValidity() {
       return found.map((row: any) => [row.id, row.disabled_at ? new Date(row.disabled_at).toISOString() : null]);
     };
     const before = await dates();
-    const exported = await svc.exportCsv('data', opts);
+    // A French file (`;`), as the contracts file was before it followed the screen language.
+    const exported = await svc.exportCsv('data', { ...opts, language: 'fr' });
     const lines = exported.content.replace(/^\uFEFF/, '').trim().split('\n');
     const statusIndex = lines[0].split(';').indexOf('status');
     const exportedStatus = (name: string) => lines.find((line) => line.startsWith(`${name};`))!.split(';')[statusIndex];
@@ -191,13 +192,13 @@ async function testContractsReadTheEndOfValidity() {
       ['enabled', 'disabled', 'disabled', 'enabled'],
       'contracts export: the status is read from the end of validity',
     );
-    const reimported = await svc.importCsv({ file: { buffer: Buffer.from(exported.content, 'utf8') } as any, dryRun: false, userId: null }, opts);
+    const reimported = await svc.importCsv({ file: { buffer: Buffer.from(exported.content, 'utf8') } as any, dryRun: false, userId: null, language: 'fr' }, opts);
     assert.equal(reimported.ok, true, `contracts round trip: accepted (${JSON.stringify(reimported.errors)})`);
     assert.deepEqual(await dates(), before, 'contracts round trip: no end of validity changes');
     // A real edit still applies: enabling the closed contract clears its date.
     const edited = exported.content.replace(/^(\uFEFF?Closed contract;.*?;)disabled;/m, '$1enabled;');
     assert.notEqual(edited, exported.content, 'the closed contract row is edited');
-    const applied = await svc.importCsv({ file: { buffer: Buffer.from(edited, 'utf8') } as any, dryRun: false, userId: null }, opts);
+    const applied = await svc.importCsv({ file: { buffer: Buffer.from(edited, 'utf8') } as any, dryRun: false, userId: null, language: 'fr' }, opts);
     assert.equal(applied.ok, true, `contracts edit: accepted (${JSON.stringify(applied.errors)})`);
     const [closedRow] = await runner.query(`SELECT disabled_at, status::text AS status FROM contracts WHERE id = $1`, [closed]);
     assert.deepEqual(closedRow, { disabled_at: null, status: 'enabled' }, 'contracts edit: the status change applies');
