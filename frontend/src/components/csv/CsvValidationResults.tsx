@@ -16,7 +16,21 @@ import ErrorIcon from '@mui/icons-material/Error';
 import WarningIcon from '@mui/icons-material/Warning';
 import { useTranslation } from 'react-i18next';
 import { CsvImportResult } from './csv.types';
-import { csvMessageText } from './csvMessage';
+import { csvMessageColumn, csvMessageText, type CsvReportMessage } from './csvMessage';
+
+/** One error or warning: its row, the sentence, then its column when the sentence does not name it. */
+function ReportLine({ item }: { item: CsvReportMessage }) {
+  const { t } = useTranslation('common');
+  const text = csvMessageText(item, t);
+  const column = csvMessageColumn(item, text);
+  return (
+    <Typography variant="body2">
+      {item.row > 0 && <><strong>{t('csv.rowPrefix', { row: item.row })}</strong>{' '}</>}
+      {text}
+      {column && <Typography component="span" color="text.secondary"> ({column})</Typography>}
+    </Typography>
+  );
+}
 
 interface CsvValidationResultsProps {
   result: CsvImportResult;
@@ -97,11 +111,9 @@ export function CsvValidationResults({
             {result.errors.slice(0, maxErrors).map((err, i) => (
               <ListItem key={i} sx={{ py: 0.5 }}>
                 <ListItemText
+                  disableTypography
                   primary={
-                    <Typography variant="body2">
-                      {err.row > 0 && <strong>{t('csv.rowPrefix', { row: err.row })}</strong>} {csvMessageText(err, t)}
-                      {err.column && <Typography component="span" color="text.secondary"> ({err.column})</Typography>}
-                    </Typography>
+                    <ReportLine item={err} />
                   }
                 />
               </ListItem>
@@ -132,11 +144,9 @@ export function CsvValidationResults({
             {result.warnings.slice(0, maxWarnings).map((warn, i) => (
               <ListItem key={i} sx={{ py: 0.5 }}>
                 <ListItemText
+                  disableTypography
                   primary={
-                    <Typography variant="body2">
-                      {warn.row > 0 && <strong>{t('csv.rowPrefix', { row: warn.row })}</strong>} {csvMessageText(warn, t)}
-                      {warn.column && <Typography component="span" color="text.secondary"> ({warn.column})</Typography>}
-                    </Typography>
+                    <ReportLine item={warn} />
                   }
                 />
               </ListItem>

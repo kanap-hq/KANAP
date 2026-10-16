@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { formatCsvBoolean } from '../csv-sheet/boolean';
-import { formatCsvDate } from '../csv-sheet/date';
+import { formatCsvDate, timeZoneHeader } from '../csv-sheet/date';
 import { csvProfile } from '../csv-sheet/language';
 import { CsvLanguage } from '../csv-sheet/types';
 import { writeCsvHeader, writeCsvRows } from '../csv-sheet/write';
@@ -105,6 +105,11 @@ export interface CsvExportOptions {
    * decimal mark and yes or no follow it. The headers are the same in every language.
    */
   language: CsvLanguage;
+  /**
+   * The zone the date-times (`zonedDateTime` fields) are written in, named in their header
+   * (`detected_at (Europe/Paris)`): the exporting user's. UTC when not given.
+   */
+  timeZone?: string;
 }
 
 /**
@@ -144,12 +149,20 @@ export class CsvExportService {
 
     // Build CSV headers from field definitions
     const headers = this.buildHeaders(exportFields);
+    // A date-time column names the zone of its cells after its stable name; the template
+    // names it too, so a filled template is read in the zone its user typed.
+    const timeZone = opts.timeZone ?? 'UTC';
+    const zoned = new Set(exportFields.filter((f) => f.zonedDateTime).map((f) => f.csvColumn));
+    const headerLine = writeCsvHeader(
+      opts.language,
+      headers.map((header) => (zoned.has(header) ? timeZoneHeader(header, timeZone) : header)),
+    );
 
     // Template export: return headers only
     if (opts.scope === 'template') {
       return {
         filename: `${config.entityName}_template.csv`,
-        content: writeCsvHeader(opts.language, headers),
+        content: headerLine,
         rowCount: 0,
         warnings: [],
       };
@@ -171,6 +184,7 @@ export class CsvExportService {
       manager: opts.manager,
       resolverCache,
       language: opts.language,
+      timeZone,
     };
 
     // Process relation handlers if any
@@ -194,7 +208,7 @@ export class CsvExportService {
 
     return {
       filename: `${config.entityName}_export.csv`,
-      content: writeCsvHeader(opts.language, headers) + writeCsvRows({ language: opts.language, headers, rows }),
+      content: headerLine + writeCsvRows({ language: opts.language, headers, rows }),
       rowCount: entities.length,
       warnings,
     };

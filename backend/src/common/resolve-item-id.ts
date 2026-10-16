@@ -90,6 +90,14 @@ const LINE_NATURE: Partial<Record<EntityType, 'opex' | 'capex'>> = { spend: 'ope
 const OTHER_NATURE_NOT_FOUND: Partial<Record<EntityType, string>> = { spend: 'Item not found', capex: 'CAPEX item not found' };
 
 /**
+ * The 404 of an incident, missing or hidden from the reader (confidential) alike, with the code
+ * the interface translates (`errors:INCIDENT_NOT_FOUND`).
+ */
+export function incidentNotFound(): NotFoundException {
+  return new NotFoundException({ code: 'INCIDENT_NOT_FOUND', message: 'Incident not found' });
+}
+
+/**
  * Resolve an item reference (UUID, prefixed ref like T-1, or plain number) to a UUID.
  * Item numbers are per tenant: the lookup filters on the request's tenant
  * (`app_current_tenant()`, the session tenant the request transaction sets from
@@ -140,7 +148,7 @@ export async function resolveToUuid(
   if (rows.length === 0) {
     // Incidents answer "Incident not found" whether the record is missing or
     // hidden (confidential), so the message never reveals which one it is.
-    throw new NotFoundException(entityType === 'incident' ? 'Incident not found' : 'Item not found');
+    throw entityType === 'incident' ? incidentNotFound() : new NotFoundException('Item not found');
   }
   return rows[0].id;
 }

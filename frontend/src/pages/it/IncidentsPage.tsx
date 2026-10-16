@@ -45,6 +45,8 @@ export default function IncidentsPage() {
   const [importOpen, setImportOpen] = useState(false);
   const [selectedRows, setSelectedRows] = useState<IncidentRow[]>([]);
   const gridApiRef = useRef<any>(null);
+  // The file writes date-times in the local time the screen shows, and names the zone in their header.
+  const csvParams = useMemo(() => ({ timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }), []);
 
   // Read filters from URL to restore state when returning from the workspace
   const urlFilters = useMemo(() => {
@@ -398,12 +400,14 @@ export default function IncidentsPage() {
         open={exportOpen}
         onClose={() => setExportOpen(false)}
         endpoint="/incidents"
+        params={csvParams}
         title={t('pages.incidents.exportTitle')}
       />
       <CsvImportDialogV2
         open={importOpen}
         onClose={() => setImportOpen(false)}
         endpoint="/incidents"
+        params={csvParams}
         title={t('pages.incidents.importTitle')}
         onImported={() => setRefreshKey((k) => k + 1)}
       />

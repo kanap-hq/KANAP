@@ -92,7 +92,11 @@ vi.mock('../../components/MarkdownContent', () => ({
 
 vi.mock('../../components/ExportButton', () => ({ default: () => null }));
 vi.mock('../../components/ImportButton', () => ({ default: () => null }));
-vi.mock('../../components/EntityKnowledgePanel', () => ({ default: () => null }));
+vi.mock('../../components/EntityKnowledgePanel', () => ({
+  default: ({ onLinksChange }: { onLinksChange?: () => void }) => (
+    <button type="button" onClick={() => onLinksChange?.()}>knowledge-link-saved</button>
+  ),
+}));
 vi.mock('./workspace/IncidentMetadataBar', () => ({ default: () => null }));
 vi.mock('./workspace/IncidentPropertiesDrawer', () => ({ default: () => null }));
 vi.mock('./workspace/IncidentRelationsTab', () => ({ default: () => null }));
@@ -103,8 +107,9 @@ vi.mock('./workspace/IncidentJournalTab', () => ({
 }));
 
 vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
-  default: ({ children, actions, onBack, onTabChange, onSaveShortcut, nav }: any) => (
+  default: ({ children, actions, onBack, onTabChange, onSaveShortcut, nav, tabs }: any) => (
     <div>
+      {tabs?.map((tab: any) => <span key={tab.key} data-testid={`tab-${tab.key}`}>{tab.badge ?? ''}</span>)}
       <button type="button" onClick={() => onBack?.()}>shell-back</button>
       <button type="button" onClick={() => onTabChange?.('journal')}>shell-tab-journal</button>
       <button type="button" onClick={() => onSaveShortcut?.()}>shell-save-shortcut</button>
@@ -149,12 +154,12 @@ const incident: Incident = {
   counts: { entries: 0, assets: 0, applications: 0, tasks: 0, documents: 0, attachments: 0 },
 };
 
-function renderPage() {
+function renderPage(tab = 'overview') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const view = render(
     <ThemeProvider theme={theme}>
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={['/it/incidents/INC-1/overview']}>
+        <MemoryRouter initialEntries={[`/it/incidents/INC-1/${tab}`]}>
           <Routes>
             <Route path="/it/incidents/:id/:tab" element={<IncidentWorkspacePage />} />
           </Routes>
@@ -475,5 +480,28 @@ describe('IncidentWorkspacePage — delete', () => {
     renderPage();
     await screen.findByText('workspace.incident.actions.exportPdf');
     expect(screen.queryByText('common:buttons.delete')).toBeNull();
+  });
+});
+
+// QA lot 14: linking or unlinking a document left the Documents badge as it was until a reload.
+describe('IncidentWorkspacePage — Documents badge', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    authLevel.incidents = 'admin';
+    vi.mocked(api.get).mockResolvedValue({ data: { id: 'doc-1', item_number: 12, item_ref: 'DOC-12', content_markdown: '', revision: 1, edit_lock: null } } as any);
+  });
+
+  it('follows a link and an unlink made in the Documents tab, without a reload', async () => {
+    const withDocuments = (documents: number): Incident => ({ ...incident, counts: { ...incident.counts, documents } });
+    vi.mocked(incidentsApi.get)
+      .mockResolvedValueOnce(withDocuments(0))
+      .mockResolvedValueOnce(withDocuments(1))
+      .mockResolvedValueOnce(withDocuments(0));
+    renderPage('documents');
+    fireEvent.click(await screen.findByText('knowledge-link-saved'));
+    await waitFor(() => expect(screen.getByTestId('tab-documents')).toHaveTextContent('1'));
+    fireEvent.click(screen.getByText('knowledge-link-saved'));
+    await waitFor(() => expect(screen.getByTestId('tab-documents')).toHaveTextContent(/^$/));
+    expect(incidentsApi.get).toHaveBeenCalledTimes(3);
   });
 });

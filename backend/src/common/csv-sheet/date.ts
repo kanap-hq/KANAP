@@ -141,17 +141,84 @@ export function formatCsvDate(value: string, language: CsvLanguage): string {
 }
 
 /**
- * An instant written for a file: its UTC calendar day the language's way, then
- * the UTC time (`16/10/2026 08:38`, `2026-10-16 08:38:59`). Seconds only when
- * set. The shared reader takes this form back (`parseCsvDateCell`); an
- * unreadable value is written as given.
+ * An instant written for a file: its calendar day the language's way, then the
+ * time, both as a clock in `timeZone` shows them (`16/10/2026 10:38` in
+ * Europe/Paris for 08:38 UTC; `2026-10-16 08:38:59` in UTC). Seconds only when
+ * set. The shared reader takes this form back (`parseCsvDateCell`), and
+ * `instantInTimeZone` turns it into the instant again; the header of the column
+ * names the zone (`timeZoneHeader`). An unreadable value is written as given.
  */
-export function formatCsvDateTime(value: Date | string, language: CsvLanguage): string {
+export function formatCsvDateTime(value: Date | string, language: CsvLanguage, timeZone = 'UTC'): string {
   const date = value instanceof Date ? value : new Date(String(value).trim());
   if (Number.isNaN(date.getTime())) return String(value);
-  const iso = date.toISOString();
-  const seconds = iso.slice(17, 19);
-  return `${formatCsvDate(iso.slice(0, 10), language)} ${iso.slice(11, 16)}${seconds === '00' ? '' : `:${seconds}`}`;
+  const wall = new Date(date.getTime() + zoneOffset(date.getTime(), timeZone)).toISOString();
+  const seconds = wall.slice(17, 19);
+  return `${formatCsvDate(wall.slice(0, 10), language)} ${wall.slice(11, 16)}${seconds === '00' ? '' : `:${seconds}`}`;
+}
+
+/**
+ * The instant a clock in `timeZone` shows as this day and time (`HH:mm` or
+ * `HH:mm:ss`; no time is the zone's midnight). In the hour the clocks repeat
+ * in autumn, the second pass is taken; a time the clocks skip in spring reads
+ * as the instant one hour later on the clock.
+ */
+export function instantInTimeZone(isoDate: string, time: string | null, timeZone: string): Date {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  const [hour, minute, second] = (time ?? '00:00').split(':').map(Number);
+  const wall = Date.UTC(year, month - 1, day, hour, minute, second || 0);
+  const first = wall - zoneOffset(wall, timeZone);
+  return new Date(wall - zoneOffset(first, timeZone));
+}
+
+/** The zone's canonical IANA name (`europe/paris` is Europe/Paris), or null for a zone nobody knows. */
+export function knownTimeZone(value: string | null | undefined): string | null {
+  const text = String(value ?? '').trim();
+  if (!text) return null;
+  try {
+    return new Intl.DateTimeFormat('en-US', { timeZone: text }).resolvedOptions().timeZone;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The header of a date-time column: the stable column name, then the zone its
+ * cells are written in (`detected_at (Europe/Paris)`).
+ */
+export function timeZoneHeader(column: string, timeZone: string): string {
+  return `${column} (${timeZone})`;
+}
+
+/** A header that names a zone, split into its column and its zone (as written, unchecked); null otherwise. */
+export function readTimeZoneHeader(header: string): { column: string; zone: string } | null {
+  const match = /^\s*(.*?\S)\s*\(\s*([^()]*?)\s*\)\s*$/.exec(header);
+  return match ? { column: match[1], zone: match[2] } : null;
+}
+
+const ZONE_CLOCKS = new Map<string, Intl.DateTimeFormat>();
+
+/** How far the zone's clocks are ahead of UTC at this instant, in milliseconds. */
+function zoneOffset(epochMs: number, timeZone: string): number {
+  let clock = ZONE_CLOCKS.get(timeZone);
+  if (!clock) {
+    clock = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      hourCycle: 'h23',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+    ZONE_CLOCKS.set(timeZone, clock);
+  }
+  const parts: Record<string, number> = {};
+  for (const part of clock.formatToParts(new Date(epochMs))) {
+    if (part.type !== 'literal') parts[part.type] = Number(part.value);
+  }
+  const wall = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour % 24, parts.minute, parts.second);
+  return wall - Math.floor(epochMs / 1000) * 1000;
 }
 
 /**

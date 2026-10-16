@@ -4,7 +4,7 @@ import {
   CsvFieldType,
   CsvImportContext,
 } from '../common/csv';
-import { formatCsvDateTime } from '../common/csv-sheet';
+import { formatCsvDateTime, instantInTimeZone } from '../common/csv-sheet';
 import { allocateItemNumbers } from '../common/item-number.service';
 import { normalizeMarkdownRichText } from '../common/markdown-worker';
 import { findCatalogOption, requireImportCatalogs } from '../it-ops-settings/catalog-resolve';
@@ -108,37 +108,27 @@ function parseRef(value: string): number | null {
 }
 
 /**
- * Date + time entry. Accepts ISO (what the export writes: 2026-09-02T14:32:00Z),
- * a plain date, and the European formats Excel produces (02/09/2026 14:32).
- * Date-only values are read as local midnight.
+ * Date + time entry, read in the zone the column's header names (`detected_at
+ * (Europe/Paris)`, as the export writes it), UTC when it names none. Accepts the
+ * export's form (`16/10/2026 10:38`, `2026-10-16 10:38`), the European formats
+ * Excel produces, a plain day (the zone's midnight) and ISO with its own offset
+ * (2026-09-02T14:32:00Z), which wins over the header.
  */
-function parseDateTime(value: string, column: string): Date | null {
+function parseDateTime(value: string, column: string, timeZone = 'UTC'): Date | null {
   const text = value.trim();
   if (text === '') return null;
+  const pad = (part: string) => part.padStart(2, '0');
 
-  const isoDateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
-  if (isoDateOnly) {
-    return new Date(Number(isoDateOnly[1]), Number(isoDateOnly[2]) - 1, Number(isoDateOnly[3]));
-  }
-
-  // A day and a time without a zone, as the export writes them: UTC, like the export.
-  const yearFirstTime = /^(\d{4})-(\d{2})-(\d{2}) (\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(text);
-  if (yearFirstTime) {
-    return new Date(Date.UTC(
-      Number(yearFirstTime[1]), Number(yearFirstTime[2]) - 1, Number(yearFirstTime[3]),
-      Number(yearFirstTime[4]), Number(yearFirstTime[5]), Number(yearFirstTime[6] || 0),
-    ));
-  }
-
+  const yearFirst = /^(\d{4})-(\d{2})-(\d{2})(?: (\d{1,2}):(\d{2})(?::(\d{2}))?)?$/.exec(text);
   const euro = /^(\d{1,2})[/.](\d{1,2})[/.](\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/.exec(text);
-  if (euro && euro[4] != null) {
-    return new Date(Date.UTC(
-      Number(euro[3]), Number(euro[2]) - 1, Number(euro[1]),
-      Number(euro[4]), Number(euro[5]), Number(euro[6] || 0),
-    ));
-  }
-  if (euro) {
-    return new Date(Number(euro[3]), Number(euro[2]) - 1, Number(euro[1]));
+  const parts = yearFirst
+    ? [yearFirst[1], yearFirst[2], yearFirst[3], yearFirst[4], yearFirst[5], yearFirst[6]]
+    : euro ? [euro[3], euro[2], euro[1], euro[4], euro[5], euro[6]] : null;
+  if (parts) {
+    const [year, month, day, hour, minute, second] = parts;
+    const time = hour == null ? null : `${pad(hour)}:${minute}:${second ?? '00'}`;
+    const read = instantInTimeZone(`${year}-${pad(month)}-${pad(day)}`, time, timeZone);
+    if (!isNaN(read.getTime())) return read;
   }
 
   const parsed = new Date(text);
@@ -201,11 +191,15 @@ function dateTimeField(csvColumn: (typeof DATE_TIME_COLUMNS)[number], label: str
     defaultExport: true,
     label,
     group,
-    importTransformFn: (value: string) => parseDateTime(value, csvColumn),
-    // The export language's day and the UTC time (`16/10/2026 08:38`); `parseDateTime` reads it back.
+    // The header names the zone of the cells: `detected_at (Europe/Paris)`.
+    zonedDateTime: true,
+    importTransformFn: (value: string, _row: Record<string, string>, context: CsvImportContext) =>
+      parseDateTime(value, csvColumn, context?.timeZones?.[csvColumn]),
+    // The export language's day and the time of the exporting user's zone (`16/10/2026 10:38`);
+    // `parseDateTime` reads it back in the zone the header names.
     exportFn: (entity: Record<string, unknown>, context: CsvExportContext) => {
       const value = entity[csvColumn];
-      return value == null || value === '' ? '' : formatCsvDateTime(value as Date | string, context.language);
+      return value == null || value === '' ? '' : formatCsvDateTime(value as Date | string, context.language, context.timeZone);
     },
   };
 }

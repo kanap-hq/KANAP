@@ -52,6 +52,8 @@ type EntityKnowledgePanelProps = {
   canCreate?: boolean;
   controlsMaxWidth?: number | string;
   variant?: 'default' | 'sidebar';
+  /** Called once a link, an unlink or a new linked document is saved: the record refreshes its counts. */
+  onLinksChange?: () => void;
 };
 
 type DocumentListItem = KnowledgeLinkOption;
@@ -449,6 +451,7 @@ export default function EntityKnowledgePanel({
   canCreate = false,
   controlsMaxWidth,
   variant = 'default',
+  onLinksChange,
 }: EntityKnowledgePanelProps) {
   const navigate = useNavigate();
   const { t } = useTranslation('common');
@@ -631,6 +634,7 @@ export default function EntityKnowledgePanel({
       return res.data;
     },
     onSuccess: async (created) => {
+      onLinksChange?.();
       await invalidateKnowledgeQueries();
       openCreatedDocument(created);
     },
@@ -643,6 +647,7 @@ export default function EntityKnowledgePanel({
     },
     onSuccess: async () => {
       setLinkOptionsOpen(false);
+      onLinksChange?.();
       await invalidateKnowledgeQueries();
     },
   });
@@ -653,6 +658,7 @@ export default function EntityKnowledgePanel({
       return documentId;
     },
     onSuccess: async () => {
+      onLinksChange?.();
       await invalidateKnowledgeQueries();
     },
   });

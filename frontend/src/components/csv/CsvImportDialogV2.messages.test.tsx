@@ -65,6 +65,26 @@ describe('CsvImportDialogV2 messages', () => {
     expect(screen.getByRole('button', { name: 'Importer' })).toBeEnabled();
   });
 
+  it('says which date-times without a zone are read as UTC, and lets the import go on', async () => {
+    post.mockResolvedValueOnce({
+      data: report({
+        inserted: 0,
+        updated: 1,
+        warnings: [{
+          row: 0,
+          message: 'Times without a time zone, read as UTC: started_at, detected_at',
+          code: 'CSV_HEADER_ZONELESS_DATE_TIMES',
+          params: { columns: 'started_at, detected_at', example: 'started_at' },
+        }],
+      }),
+    });
+    validate();
+    expect(await screen.findByText(
+      'Heures sans fuseau lues en UTC : started_at, detected_at. Nommez le fuseau après la colonne, par exemple started_at (Europe/Paris).',
+    )).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Importer' })).toBeEnabled();
+  });
+
   it('translates the row errors with the values they name', async () => {
     post.mockResolvedValueOnce({
       data: report({
@@ -133,5 +153,37 @@ describe('CsvImportDialogV2 messages', () => {
     validate();
     expect(await screen.findByText('2 inchangées')).toBeInTheDocument();
     expect(screen.getByText('1 à mettre à jour')).toBeInTheDocument();
+  });
+
+  it('counts one unchanged and one skipped row in the singular', async () => {
+    post.mockResolvedValueOnce({ data: report({ total: 2, inserted: 0, unchanged: 1, skipped: 1 }) });
+    validate();
+    expect(await screen.findByText('1 inchangée')).toBeInTheDocument();
+    expect(screen.getByText('1 ignorée')).toBeInTheDocument();
+  });
+
+  it('names the column after a message only when the message does not', async () => {
+    post.mockResolvedValueOnce({
+      data: report({
+        ok: false,
+        inserted: 0,
+        errors: [
+          {
+            row: 0,
+            column: 'detected_at',
+            message: 'Unknown time zone in the detected_at column: "Foo/Bar".',
+            code: 'CSV_HEADER_UNKNOWN_TIME_ZONE',
+            params: { column: 'detected_at', zone: 'Foo/Bar' },
+          },
+          { row: 2, column: 'name', message: 'name is required', code: 'CSV_VALUE_REQUIRED' },
+        ],
+      }),
+    });
+    validate();
+    await screen.findByText(/Fuseau horaire inconnu/);
+    expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'Fuseau horaire inconnu dans la colonne detected_at : Foo/Bar. Utilisez un fuseau comme Europe/Paris ou UTC.',
+      'Ligne 2 : Une valeur est obligatoire. (name)',
+    ]);
   });
 });

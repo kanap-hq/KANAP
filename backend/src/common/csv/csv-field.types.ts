@@ -87,6 +87,12 @@ export interface CsvFieldDefinition {
   group?: string;
   /** Human-readable label for UI display */
   label?: string;
+  /**
+   * An instant written as a day and a time in a zone, the zone named in the header after the
+   * column name (`detected_at (Europe/Paris)`). The import hands the zone its header names to
+   * the transform (`CsvImportContext.timeZones`) and refuses a zone nobody knows.
+   */
+  zonedDateTime?: boolean;
   /** Custom export function (for COMPUTED fields) */
   exportFn?: (entity: any, context: CsvExportContext) => string | null;
   /** Custom import transform function */
@@ -247,6 +253,8 @@ export interface CsvExportContext {
   resolverCache: Map<string, Map<string, any>>;
   /** The file's language: its separator, days, decimal mark and yes or no. */
   language: CsvLanguage;
+  /** The zone the date-times are written in (`zonedDateTime` fields): the exporting user's. */
+  timeZone: string;
 }
 
 /**
@@ -269,6 +277,11 @@ export interface CsvImportContext {
   viewer?: { userId: string | null; isAdmin: boolean };
   /** Effective IT Ops catalogs (defaults included), read with the tenant shared lock by the entity CSV service. */
   itOpsSettings?: import('../../it-ops-settings/it-ops-settings.service').ItOpsSettings;
+  /**
+   * The zone named in the header of each `zonedDateTime` column, by column (`detected_at`:
+   * `Europe/Paris`). A column whose header names no zone is absent: its cells are UTC.
+   */
+  timeZones?: Record<string, string>;
   /** Time budget of the rich-text cells of the file, processed in the Markdown workers (markdown-worker.ts). */
   markdownBudget?: import('../markdown-worker').MarkdownWorkBudget;
 }
