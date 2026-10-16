@@ -150,7 +150,25 @@ async function testLinkKeys() {
   });
 }
 
-runSpecs('technologies-migration.integration.spec', [['migrated and rerun', testMigratedAndRerun], ['link keys', testLinkKeys]]).catch((err) => {
+/** Migration 1854200000000: a technology is in the global search under TEC-n, and leaves it with its row. */
+async function testSearchIndex() {
+  await inRolledBackTransaction(async (runner) => {
+    const s = await seed(runner, 'tecsearch');
+    await runner.query(`UPDATE technologies SET editor = 'Microsoft', cpe_products = '{a:microsoft:sql_server}' WHERE id = $1`, [s.sql]);
+    const [entry] = await runner.query(
+      `SELECT ref_prefix, ref_number, label, extra_json->>'editor' AS editor,
+              search_vector @@ to_tsquery('simple', 'sql_server') AS cpe_found
+         FROM search_index WHERE tenant_id = $1 AND entity_type = 'technologies' AND entity_id = $2`,
+      [s.tenantId, s.sql],
+    );
+    assert.deepEqual(entry, { ref_prefix: 'TEC', ref_number: 1, label: 'SQL Server', editor: 'Microsoft', cpe_found: true });
+    await runner.query(`DELETE FROM technologies WHERE id = $1`, [s.sql]);
+    const gone = await runner.query(`SELECT 1 FROM search_index WHERE tenant_id = $1 AND entity_id = $2`, [s.tenantId, s.sql]);
+    assert.equal(gone.length, 0);
+  });
+}
+
+runSpecs('technologies-migration.integration.spec', [['migrated and rerun', testMigratedAndRerun], ['link keys', testLinkKeys], ['search index', testSearchIndex]]).catch((err) => {
   console.error(err);
   process.exit(1);
 });

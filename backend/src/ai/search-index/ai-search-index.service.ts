@@ -37,6 +37,7 @@ export const SEARCH_INDEX_ENTITY_TYPES = [
   'spend_items',
   'suppliers',
   'tasks',
+  'technologies',
   'users',
 ] as const;
 
