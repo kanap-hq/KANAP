@@ -71,6 +71,7 @@
   "CSV_FILE_NOT_TEXT": "Este archivo no es un archivo CSV. Guárdelo como CSV UTF-8 e impórtelo de nuevo.",
   "CSV_FILE_EMPTY": "El archivo está vacío.",
   "CSV_HEADER_IGNORED_COLUMNS": "Estas columnas no se importan: {{extra}}.",
+  "CSV_HEADER_UNKNOWN_TIME_ZONE": "Zona horaria desconocida en la columna {{column}}: {{zone}}. Use una zona como Europe/Paris o UTC.",
   "CSV_VALUE_REQUIRED": "Se requiere un valor.",
   "CSV_VALUE_ONE_REQUIRED": "Rellene al menos una columna {{column}}.",
   "CSV_NUMBER_INVALID": "«{{value}}» no es un número.",

@@ -15,6 +15,10 @@ import {
   formatCsvDate,
   formatCsvDateTime,
   headerMismatchError,
+  instantInTimeZone,
+  knownTimeZone,
+  readTimeZoneHeader,
+  timeZoneHeader,
   matchCode,
   parseCsvAmount,
   parseCsvDateCell,
@@ -179,6 +183,44 @@ function testDateTimes() {
   // The shared reader takes the written form back, time included.
   const read = parseCsvDateCell(formatCsvDateTime(instant, 'fr'), 'day-first');
   assert.deepEqual(read, { ok: true, blank: false, value: { kind: 'date', isoDate: '2026-10-16', time: '08:38:59' } });
+
+  // The local time of the zone the user exports from: what the screen shows.
+  assert.equal(formatCsvDateTime('2026-10-16T08:38:00Z', 'fr', 'Europe/Paris'), '16/10/2026 10:38');
+  assert.equal(formatCsvDateTime('2026-10-16T08:38:00Z', 'en', 'America/New_York'), '2026-10-16 04:38');
+  assert.equal(formatCsvDateTime('2026-10-16T23:30:00Z', 'de', 'Europe/Paris'), '17.10.2026 01:30', 'the local day, not the UTC one');
+  assert.equal(formatCsvDateTime('2026-10-16T08:38:00Z', 'fr', 'UTC'), '16/10/2026 08:38');
+  // Read back in the same zone, the instant is unchanged, on both sides of a change of time.
+  const instants = [
+    '2026-10-16T08:38:00Z', '2026-01-15T07:00:00Z',
+    '2026-03-29T00:30:00Z', '2026-03-29T10:00:00Z', // the March change day in Paris (02:00 -> 03:00)
+    '2026-10-25T02:30:00Z', '2026-10-25T10:00:00Z', // the October change day (03:00 -> 02:00)
+  ];
+  for (const zone of ['Europe/Paris', 'America/New_York', 'Asia/Kolkata', 'UTC']) {
+    for (const value of instants) {
+      const written = formatCsvDateTime(value, 'fr', zone);
+      const cell = parseCsvDateCell(written, 'day-first');
+      assert.ok(cell.ok && cell.value.kind === 'date', `${zone} ${written}`);
+      const date = cell.value;
+      assert.equal(instantInTimeZone(date.isoDate, date.time, zone).toISOString(), new Date(value).toISOString(), `${zone} ${written}`);
+    }
+  }
+  assert.equal(formatCsvDateTime('2026-03-29T10:00:00Z', 'fr', 'Europe/Paris'), '29/03/2026 12:00');
+  assert.equal(formatCsvDateTime('2026-10-25T10:00:00Z', 'fr', 'Europe/Paris'), '25/10/2026 11:00');
+  // A day alone is the zone's midnight.
+  assert.equal(instantInTimeZone('2026-10-16', null, 'Europe/Paris').toISOString(), '2026-10-15T22:00:00.000Z');
+  // A time the clocks skip (02:30 on the March change day) still reads as an instant.
+  assert.ok(!Number.isNaN(instantInTimeZone('2026-03-29', '02:30', 'Europe/Paris').getTime()));
+
+  // The zone travels in the header, after the stable column name.
+  assert.equal(timeZoneHeader('detected_at', 'Europe/Paris'), 'detected_at (Europe/Paris)');
+  assert.deepEqual(readTimeZoneHeader('detected_at (Europe/Paris)'), { column: 'detected_at', zone: 'Europe/Paris' });
+  assert.deepEqual(readTimeZoneHeader(' detected_at  ( UTC ) '), { column: 'detected_at', zone: 'UTC' });
+  assert.equal(readTimeZoneHeader('detected_at'), null);
+  assert.equal(knownTimeZone('Europe/Paris'), 'Europe/Paris');
+  assert.equal(knownTimeZone('europe/paris'), 'Europe/Paris');
+  assert.equal(knownTimeZone('UTC'), 'UTC');
+  assert.equal(knownTimeZone('Mars/Olympus'), null);
+  assert.equal(knownTimeZone(''), null);
 }
 
 function testCodes() {

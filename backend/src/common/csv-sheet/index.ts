@@ -1,7 +1,18 @@
 export { parseCsvAmount, formatCsvAmount, resolveAmountConvention, amountConventionNotice } from './amount';
 export { formatCsvBoolean, parseCsvBoolean } from './boolean';
 export { matchCode } from './codes';
-export { parseCsvDateCell, formatCsvDate, formatCsvDateTime, formatCsvEndOfValidity, keepStoredEndOfValidity, resolveDateOrder } from './date';
+export {
+  parseCsvDateCell,
+  formatCsvDate,
+  formatCsvDateTime,
+  formatCsvEndOfValidity,
+  instantInTimeZone,
+  keepStoredEndOfValidity,
+  knownTimeZone,
+  readTimeZoneHeader,
+  resolveDateOrder,
+  timeZoneHeader,
+} from './date';
 export { decodeCsv } from './decode';
 export { csvLanguage, csvProfile, dateOrderNotice } from './language';
 export {
@@ -18,7 +29,7 @@ export {
   rowProblems,
 } from './master-data';
 export { csvSeparatorOf, readCsv } from './read';
-export { languageOf, parseDateOrder, parseDecimalMark } from './request-options';
+export { languageOf, parseDateOrder, parseDecimalMark, timeZoneOf } from './request-options';
 export { writeCsv, writeCsvHeader, writeCsvLine, writeCsvRows } from './write';
 export {
   BUDGET_AMOUNT_COLUMNS,

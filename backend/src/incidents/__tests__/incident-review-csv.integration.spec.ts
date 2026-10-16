@@ -19,6 +19,7 @@ import { CsvExportService } from '../../common/csv/csv-export.service';
 import { CsvImportService } from '../../common/csv/csv-import.service';
 import { CsvJsonValidators } from '../../common/csv/csv-json-validators';
 import { CsvResolverService } from '../../common/csv/csv-resolver.service';
+import { timeZoneOf } from '../../common/csv-sheet';
 import { ItemNumberService } from '../../common/item-number.service';
 import { KnowledgeService } from '../../knowledge/knowledge.service';
 import { IntegratedDocumentsService } from '../../knowledge/integrated-documents.service';
@@ -358,6 +359,115 @@ async function testExportImportRoundTrip() {
     const after = await readReview(runner, f, incident.id);
     assert.equal(after.content_markdown, MULTILINE_REVIEW, 'the Markdown round-trips unchanged');
     assert.equal(after.versions, before.versions, 'an identical body creates no version');
+  });
+}
+
+/**
+ * Date-times are written in the local time of the user who exports, and the
+ * header of each date-time column names that zone (`detected_at (Europe/Paris)`).
+ * The import reads each cell in the zone its header names, UTC when it names none.
+ */
+async function testDateTimesInTheExportersZone() {
+  await withFixture(async (runner, f) => {
+    const services = createServices(runner.manager);
+    const incident = await createIncident(runner, f, services, { detected_at: '2026-10-16T08:38:00Z' });
+    // Both changes of time in Paris: the March change day, then the October one.
+    await runner.query(
+      `UPDATE incidents SET started_at = '2026-03-29T10:00:00Z', resolved_at = '2026-10-25T10:00:00Z'
+       WHERE tenant_id = $1 AND id = $2`,
+      [f.tenantId, incident.id],
+    );
+    const stored = async () => (await runner.query(
+      `SELECT started_at, detected_at, resolved_at FROM incidents WHERE tenant_id = $1 AND id = $2`,
+      [f.tenantId, incident.id],
+    ))[0];
+    const instants = async () => {
+      const row = await stored();
+      return [row.started_at, row.detected_at, row.resolved_at].map((value: Date) => value.toISOString());
+    };
+    const original = await instants();
+
+    const exported = await services.csv.export({
+      manager: runner.manager,
+      tenantId: f.tenantId,
+      language: 'fr',
+      viewer: { userId: f.users.admin, isAdmin: true },
+      timeZone: 'Europe/Paris',
+    });
+    const file = exported.content.replace(/^\uFEFF/, '');
+    const header = file.split('\n')[0].split(';');
+    for (const column of ['started_at', 'detected_at', 'resolved_at', 'closed_at', 'authority_notified_at']) {
+      assert.ok(header.includes(`${column} (Europe/Paris)`), `${column} names its zone: ${header.join(';')}`);
+    }
+    for (const column of ['ref', 'title', 'severity', 'status', 'review']) {
+      assert.ok(header.includes(column), `${column} keeps its plain header`);
+    }
+    assert.ok(file.includes('16/10/2026 10:38'), 'the local time of Paris, not 08:38 UTC');
+    assert.ok(file.includes('29/03/2026 12:00'), 'summer time after the March change');
+    assert.ok(file.includes('25/10/2026 11:00'), 'winter time after the October change');
+
+    // Round trip: the export re-imports unchanged and restores the same instants.
+    for (const mode of ['enrich', 'replace'] as const) {
+      const dry = await services.csv.import(
+        csvFile(file),
+        { dryRun: true, mode, operation: 'upsert' },
+        importOpts(runner, f, f.users.admin),
+      );
+      assert.deepEqual(dry.errors, []);
+      assert.deepEqual([dry.updated, dry.unchanged], [0, 1], `${mode}: the exported row is unchanged`);
+    }
+    const edited = file.replace('16/10/2026 10:38', '16/10/2026 10:45');
+    const applied = await services.csv.import(
+      csvFile(edited),
+      { dryRun: false, mode: 'replace', operation: 'upsert' },
+      importOpts(runner, f, f.users.admin),
+    );
+    assert.deepEqual(applied.errors, []);
+    assert.deepEqual(await instants(), [original[0], '2026-10-16T08:45:00.000Z', original[2]], 'read in Paris time');
+    await services.csv.import(
+      csvFile(file),
+      { dryRun: false, mode: 'replace', operation: 'upsert' },
+      importOpts(runner, f, f.users.admin),
+    );
+    assert.deepEqual(await instants(), original, 'the export restores the same instants');
+
+    // A header without a zone (an older file, a hand-made one) is read as UTC.
+    const plain = file.replace(/ \(Europe\/Paris\)/g, '');
+    const utc = await services.csv.import(
+      csvFile(plain),
+      { dryRun: false, mode: 'replace', operation: 'upsert' },
+      importOpts(runner, f, f.users.admin),
+    );
+    assert.deepEqual(utc.errors, []);
+    assert.deepEqual(await instants(), ['2026-03-29T12:00:00.000Z', '2026-10-16T10:38:00.000Z', '2026-10-25T11:00:00.000Z']);
+
+    // A zone nobody knows is refused, with the coded error the screen translates.
+    const unknown = await services.csv.import(
+      csvFile(file.replace('detected_at (Europe/Paris)', 'detected_at (Mars/Olympus)')),
+      { dryRun: true, mode: 'enrich', operation: 'upsert' },
+      importOpts(runner, f, f.users.admin),
+    );
+    assert.equal(unknown.ok, false);
+    assert.deepEqual(
+      unknown.errors.map((e) => [e.row, e.column, e.code, e.params]),
+      [[0, 'detected_at', 'CSV_HEADER_UNKNOWN_TIME_ZONE', { column: 'detected_at', zone: 'Mars/Olympus' }]],
+    );
+  });
+}
+
+/** The zone of the export: the browser's, then the user's notification zone, then UTC. */
+async function testExportTimeZoneSource() {
+  await withFixture(async (runner, f) => {
+    const manager = runner.manager;
+    await runner.query(
+      `INSERT INTO user_notification_preferences (tenant_id, user_id, timezone) VALUES ($1, $2, 'America/New_York')`,
+      [f.tenantId, f.users.admin],
+    );
+    assert.equal(await timeZoneOf(manager, f.tenantId, f.users.admin, 'Asia/Tokyo'), 'Asia/Tokyo');
+    assert.equal(await timeZoneOf(manager, f.tenantId, f.users.admin, undefined), 'America/New_York');
+    assert.equal(await timeZoneOf(manager, f.tenantId, f.users.admin, 'Not/AZone'), 'America/New_York');
+    assert.equal(await timeZoneOf(manager, f.tenantId, f.users.other, undefined), 'UTC', 'no stored zone');
+    assert.equal(await timeZoneOf(manager, f.tenantId, null, undefined), 'UTC');
   });
 }
 
@@ -972,6 +1082,8 @@ async function run() {
   await dataSource.initialize();
   try {
     await testExportImportRoundTrip();
+    await testDateTimesInTheExportersZone();
+    await testExportTimeZoneSource();
     await testEmptyCellAndDryRun();
     await testReviewTemplateFollowsTheCreatorLanguage();
   await testInsertedRowsAreProvisioned();

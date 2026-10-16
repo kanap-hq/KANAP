@@ -8,6 +8,7 @@
 import * as assert from 'node:assert/strict';
 import { CsvEntityConfig, CsvFieldType } from '../csv-field.types';
 import { CsvResolverService } from '../csv-resolver.service';
+import { readTimeZoneHeader } from '../../csv-sheet';
 import { assetCsvConfig } from '../../../assets/asset-csv.config';
 import { applicationCsvConfig } from '../../../applications/application-csv.config';
 import { taskCsvConfig } from '../../../tasks/task-csv.config';
@@ -124,9 +125,21 @@ async function testTemplateHeadersRoundTripThroughImportValidation() {
       tenantId: 't1',
       scope: 'template',
       language: 'fr',
+      timeZone: 'Europe/Paris',
     });
     const headerLine = result.content.replace(/^﻿/, '').split('\n')[0].trim();
-    const headers = headerLine.split(';');
+    // A date-time column names its zone after its name (`detected_at (Europe/Paris)`); the import
+    // reads it by that name. Every other column keeps its plain name.
+    const zoned = new Set(config.fields.filter((f) => f.zonedDateTime).map((f) => f.csvColumn));
+    const headers = headerLine.split(';').map((h) => {
+      const named = readTimeZoneHeader(h);
+      if (!named || !zoned.has(named.column)) return h;
+      assert.equal(named.zone, 'Europe/Paris', `${config.entityName}: ${h}`);
+      return named.column;
+    });
+    for (const column of zoned) {
+      assert.ok(headerLine.split(';').includes(`${column} (Europe/Paris)`), `${config.entityName}: ${column} names its zone`);
+    }
     const importable = new Set(
       config.fields.filter((f) => f.importable !== false).map((f) => f.csvColumn),
     );
@@ -185,6 +198,17 @@ async function testIncidentRefAndValueParsing() {
   assert.equal((transform(incidentCsvConfig, 'detected_at', '02.09.2026 14:32:05') as Date).toISOString(), '2026-09-02T14:32:05.000Z');
   assert.equal((transform(incidentCsvConfig, 'detected_at', '2026-09-02 14:32') as Date).toISOString(), '2026-09-02T14:32:00.000Z');
   assert.throws(() => transform(incidentCsvConfig, 'detected_at', 'last tuesday'), /Invalid date/);
+  // The zone the header names (`detected_at (Europe/Paris)`): the local time of that zone.
+  const paris = field(incidentCsvConfig, 'detected_at').importTransformFn!('16/10/2026 10:38', {}, { timeZones: { detected_at: 'Europe/Paris' } } as any) as Date;
+  assert.equal(paris.toISOString(), '2026-10-16T08:38:00.000Z');
+  // An explicit offset wins over the header.
+  const offset = field(incidentCsvConfig, 'detected_at').importTransformFn!('2026-10-16T08:38:00Z', {}, { timeZones: { detected_at: 'Europe/Paris' } } as any) as Date;
+  assert.equal(offset.toISOString(), '2026-10-16T08:38:00.000Z');
+  // The date-time columns are the ones whose header names a zone.
+  assert.deepEqual(
+    incidentCsvConfig.fields.filter((f) => f.zonedDateTime).map((f) => f.csvColumn),
+    ['started_at', 'detected_at', 'resolved_at', 'closed_at', 'authority_notified_at'],
+  );
 }
 
 /**

@@ -2,6 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { EntityManager, In } from 'typeorm';
 import { parseString } from '@fast-csv/parse';
 import { parseCsvBoolean } from '../csv-sheet/boolean';
+import { knownTimeZone, readTimeZoneHeader } from '../csv-sheet/date';
 import { CsvDecodeError, decodeCsv } from '../csv-sheet/decode';
 import { csvSeparatorOf } from '../csv-sheet/read';
 import { sameStoredValues } from '../csv-sheet/unchanged';
@@ -88,7 +89,7 @@ export class CsvImportService {
     opts: CsvImportOptions,
   ): Promise<CsvImportResult> {
     // Decode and parse CSV
-    const { rows, headerErrors, headerWarnings } = await this.parseCsv(config, file);
+    const { rows, headerErrors, headerWarnings, timeZones } = await this.parseCsv(config, file);
 
     // Early return if header errors
     if (headerErrors.length > 0) {
@@ -126,6 +127,7 @@ export class CsvImportService {
       viewer: opts.viewer ?? { userId: opts.userId ?? null, isAdmin: opts.isAdmin === true },
       itOpsSettings: opts.itOpsSettings,
       markdownBudget: markdownWorkBudget(),
+      timeZones,
     };
 
     // Phase 1: Validate and parse all rows
@@ -244,6 +246,7 @@ export class CsvImportService {
     rows: Record<string, string>[];
     headerErrors: CsvImportError[];
     headerWarnings: CsvImportWarning[];
+    timeZones: Record<string, string>;
   }> {
     const buf = uploadedBytes(file);
 
@@ -264,9 +267,34 @@ export class CsvImportService {
     // Get expected headers for importable fields
     const expectedHeaders = this.getExpectedHeaders(config);
 
+    // A date-time column may name the zone of its cells after its name (`detected_at
+    // (Europe/Paris)`, as the export writes it): the row is read by the plain name, and the
+    // transform reads the cells in that zone. Without a zone, the cells are UTC.
+    const zonedColumns = new Set(
+      config.fields.filter((f) => f.zonedDateTime && f.importable !== false).map((f) => f.csvColumn),
+    );
+    const timeZones: Record<string, string> = {};
+    const readHeader = (header: string | null | undefined) => {
+      const named = header == null ? null : readTimeZoneHeader(header);
+      if (!named || !zonedColumns.has(named.column)) return header;
+      const zone = knownTimeZone(named.zone);
+      if (zone) {
+        timeZones[named.column] = zone;
+      } else {
+        headerErrors.push({
+          row: 0,
+          column: named.column,
+          message: `Unknown time zone in the ${named.column} column: "${named.zone}". Use a zone such as Europe/Paris or UTC.`,
+          code: 'CSV_HEADER_UNKNOWN_TIME_ZONE',
+          params: { column: named.column, zone: named.zone },
+        });
+      }
+      return named.column;
+    };
+
     await new Promise<void>((resolve, reject) => {
       parseString(content, {
-        headers: true,
+        headers: (headers) => headers.map(readHeader),
         // Read from the header, as the shared layer does: an English export uses commas, the
         // other languages and every older file semicolons.
         delimiter: csvSeparatorOf(content) ?? ';',
@@ -311,7 +339,7 @@ export class CsvImportService {
         .on('end', () => resolve());
     });
 
-    return { rows, headerErrors, headerWarnings };
+    return { rows, headerErrors, headerWarnings, timeZones };
   }
 
   /**

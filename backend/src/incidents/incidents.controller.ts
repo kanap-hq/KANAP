@@ -1,4 +1,4 @@
-import { languageOf } from '../common/csv-sheet';
+import { languageOf, timeZoneOf } from '../common/csv-sheet';
 import {
   Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, Res,
   UploadedFile, UseGuards, UseInterceptors,
@@ -145,6 +145,7 @@ export class IncidentsController {
   @Get('export')
   async exportCsv(
     @Query('language') languageRaw: string | undefined,
+    @Query('timeZone') timeZoneRaw: string | undefined,
     @Query('scope') scope: 'template' | 'data' = 'data',
     @Query('fields') fields: string | undefined,
     @Res() res: Response,
@@ -152,8 +153,11 @@ export class IncidentsController {
   ): Promise<void> {
     // The screen's language (the user's own when the screen sends none), as every shared-layer file.
     const language = await languageOf(ctx.manager as EntityManager, ctx.tenantId, ctx.userId ?? null, languageRaw);
+    // Date-times in the local time the user sees: the browser's zone, else the user's own, else UTC.
+    const timeZone = await timeZoneOf(ctx.manager as EntityManager, ctx.tenantId, ctx.userId ?? null, timeZoneRaw);
     const result = await this.csvSvc.export({
       language,
+      timeZone,
       manager: ctx.manager as EntityManager,
       tenantId: ctx.tenantId,
       viewer: incidentViewerFromContext(ctx),

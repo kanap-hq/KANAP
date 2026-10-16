@@ -25,7 +25,7 @@ import {
 } from './incident-csv.config';
 import { INCIDENT_FROZEN_STATUSES, IncidentViewer, incidentVisibilitySql } from './incident-visibility';
 
-/** Timestamps travel as unambiguous UTC ISO so an export re-imports without losing the time. */
+/** Timestamps are read as UTC ISO; the config writes them in the exporting user's zone. */
 const isoUtc = (column: string) => `to_char(i.${column} AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS ${column}`;
 
 const EXPORT_COLUMNS = `
@@ -84,6 +84,8 @@ export class IncidentsCsvService {
     tenantId: string;
     /** The screen language: separator, days, decimal mark and yes or no (`csv-sheet`). */
     language: CsvLanguage;
+    /** The zone the date-times are written in and their headers name (`timeZoneOf`). UTC when not given. */
+    timeZone?: string;
     viewer?: IncidentViewer;
     scope?: 'template' | 'data';
     fields?: string[];
@@ -108,7 +110,9 @@ export class IncidentsCsvService {
       for (const row of rows) exportCatalogLabels(row, { category: settings.incidentCategories });
     }
 
-    return this.exportSvc.export(incidentCsvConfig, rows, { manager, tenantId, scope, fields, language: opts.language });
+    return this.exportSvc.export(incidentCsvConfig, rows, {
+      manager, tenantId, scope, fields, language: opts.language, timeZone: opts.timeZone,
+    });
   }
 
   /**

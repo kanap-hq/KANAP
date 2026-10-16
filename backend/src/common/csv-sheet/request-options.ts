@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { DecimalMark } from './amount';
+import { knownTimeZone } from './date';
 import { csvLanguage } from './language';
 import { CsvDateOrder, CsvLanguage } from './types';
 
@@ -31,6 +32,27 @@ export async function languageOf(
     [tenantId, userId],
   );
   return csvLanguage(rows[0]?.locale);
+}
+
+/**
+ * The zone a file writes its date-times in: the local time the user sees. The
+ * screen sends the browser's zone; without it (or with one nobody knows), the
+ * user's own zone from the notification settings, then UTC. There is no tenant zone.
+ */
+export async function timeZoneOf(
+  manager: EntityManager,
+  tenantId: string,
+  userId: string | null,
+  requested: unknown,
+): Promise<string> {
+  const sent = typeof requested === 'string' ? knownTimeZone(requested) : null;
+  if (sent) return sent;
+  if (!userId) return 'UTC';
+  const rows: Array<{ timezone: string | null }> = await manager.query(
+    `SELECT timezone FROM user_notification_preferences WHERE tenant_id = $1 AND user_id = $2`,
+    [tenantId, userId],
+  );
+  return knownTimeZone(rows[0]?.timezone) ?? 'UTC';
 }
 
 /** The date order switch, used only when the file itself does not show one. */

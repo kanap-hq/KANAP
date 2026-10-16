@@ -71,6 +71,7 @@
   "CSV_FILE_NOT_TEXT": "This file is not a CSV file. Save it as CSV UTF-8 and import it again.",
   "CSV_FILE_EMPTY": "The file is empty.",
   "CSV_HEADER_IGNORED_COLUMNS": "These columns are not imported: {{extra}}.",
+  "CSV_HEADER_UNKNOWN_TIME_ZONE": "Unknown time zone in the {{column}} column: {{zone}}. Use a zone such as Europe/Paris or UTC.",
   "CSV_VALUE_REQUIRED": "A value is required.",
   "CSV_VALUE_ONE_REQUIRED": "Fill in at least one {{column}} column.",
   "CSV_NUMBER_INVALID": "\"{{value}}\" is not a number.",
