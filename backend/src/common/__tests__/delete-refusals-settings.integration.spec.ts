@@ -5,6 +5,8 @@ import { ConflictException } from '@nestjs/common';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { AppInstancesService } from '../../app-instances/app-instances.service';
+import { Application } from '../../applications/application.entity';
+import { ApplicationsDeleteService } from '../../applications/applications-delete.service';
 import { BusinessProcessCategoriesService } from '../../business-processes/business-process-categories.service';
 import { InterfacesCrudService } from '../../interfaces/services/interfaces-crud.service';
 import { KnowledgeService } from '../../knowledge/knowledge.service';
@@ -306,10 +308,55 @@ async function testInterfaces() {
   });
 }
 
+async function testApplications() {
+  await withRollback(async (runner, t) => {
+    const m = runner.manager;
+    const svc = new ApplicationsDeleteService(m.getRepository(Application), noAudit, null as any);
+    const app = (name: string) => one(runner, `INSERT INTO applications (tenant_id, name) VALUES ($1, $2) RETURNING id`, [t, name]);
+    const crm = await app('CRM');
+    const erp = await app('ERP');
+    const hub = await app('Hub');
+    const free = await app('Free');
+    for (const environment of ['prod', 'test']) {
+      await runner.query(`INSERT INTO app_instances (tenant_id, application_id, environment) VALUES ($1, $2, $3)`, [t, free, environment]);
+    }
+    let ref = 9100;
+    const iface = (source: string, target: string) => runner.query(
+      `INSERT INTO interfaces (tenant_id, name, business_purpose, source_application_id, target_application_id, data_category,
+         integration_route_type, interface_reference)
+       VALUES ($1, 'Flow', 'Sync', $2, $3, 'master_data', 'direct', $4)`, [t, source, target, `INT-${(ref += 1)}`]);
+    await iface(crm, erp);
+    await iface(erp, hub);
+
+    // Source or target: an application with interfaces is refused, counted, and stays.
+    await expectRefusal(runner, () => svc.delete(erp, { manager: m }), 'APPLICATION_HAS_INTERFACES',
+      [{ type: 'interfaces', total: 2 }], /^Cannot delete application "ERP": it is used by 2 interfaces\. Disable it instead\./);
+    await expectRefusal(runner, () => svc.delete(hub, { manager: m }), 'APPLICATION_HAS_INTERFACES', [{ type: 'interfaces', total: 1 }], /Hub/);
+
+    // The check: the refusals in the order asked, and the deployments the others take with them.
+    assert.deepEqual(await svc.deleteCheck([free, erp, crm, 'nope'], { manager: m }), {
+      refused: [
+        { id: erp, name: 'ERP', code: 'APPLICATION_HAS_INTERFACES', usages: [{ type: 'interfaces', total: 2 }] },
+        { id: crm, name: 'CRM', code: 'APPLICATION_HAS_INTERFACES', usages: [{ type: 'interfaces', total: 1 }] },
+      ],
+      removes: [{ type: 'app_instances', total: 2 }],
+    });
+    assert.deepEqual(await svc.deleteCheck([crm], { manager: m }), {
+      refused: [{ id: crm, name: 'CRM', code: 'APPLICATION_HAS_INTERFACES', usages: [{ type: 'interfaces', total: 1 }] }],
+      removes: [],
+    });
+
+    const bulk = await svc.bulkDelete([free, erp], null, { manager: m });
+    assert.deepEqual(bulk.deleted, [free]);
+    assert.deepEqual(bulk.failed.map((f) => [f.name, f.code, f.usages]), [['ERP', 'APPLICATION_HAS_INTERFACES', [{ type: 'interfaces', total: 2 }]]]);
+    assert.equal((await runner.query(`SELECT count(*)::int AS n FROM interfaces WHERE tenant_id = $1`, [t]))[0].n, 2);
+  });
+}
+
 async function run() {
   await dataSource.initialize();
   try {
-    for (const test of [testClassification, testTeamsAndContractTypes, testRolesAndProcessCategories, testAppInstances, testKnowledge, testRequestsAndTasks, testInterfaces]) {
+    for (const test of [testClassification, testTeamsAndContractTypes, testRolesAndProcessCategories, testAppInstances, testKnowledge, testRequestsAndTasks, testInterfaces, testApplications]) {
       await test();
       console.log(`  ok ${test.name}`);
     }

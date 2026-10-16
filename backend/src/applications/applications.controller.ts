@@ -200,6 +200,14 @@ export class ApplicationsController {
     return this.svc.deleteAttachment(attachmentId, ctx.userId || null, { manager: ctx.manager });
   }
 
+  // What a delete of `ids` would refuse (applications with interfaces) and take with it, asked before the confirmation.
+  @UseGuards(PermissionGuard)
+  @RequireLevel('applications', 'admin')
+  @Post('delete-check')
+  deleteCheck(@Body() body: { ids: string[] }, @Tenant() ctx: TenantRequest) {
+    return this.deleteSvc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], { manager: ctx.manager });
+  }
+
   // Bulk delete before parameterized ':id'
   @UseGuards(PermissionGuard)
   @RequireLevel('applications', 'admin')

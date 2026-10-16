@@ -7,7 +7,7 @@ import { AuditService } from '../audit/audit.service';
 import { StorageService } from '../common/storage/storage.service';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
-import { refusalDetails } from '../common/record-in-use';
+import { checkIds, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal, type UsageCount } from '../common/record-in-use';
 import { withSavepoint } from '../common/savepoint.util';
 
 @Injectable()
@@ -34,6 +34,40 @@ export class ApplicationsDeleteService extends BaseDeleteService<Application> {
     });
   }
 
+  /** The interfaces an application is the source or target of, which refuse its delete (disable it instead). */
+  private refusalOf(app: { name: string; interfaces: number }): RecordInUseException | null {
+    if (app.interfaces === 0) return null;
+    return new RecordInUseException('APPLICATION_HAS_INTERFACES', 'application', app.name, [{ type: 'interfaces', total: app.interfaces }]);
+  }
+
+  /** The asked applications of the tenant, with their interface and deployment counts. */
+  private async readCounts(ids: string[], manager: EntityManager): Promise<Array<{ id: string; name: string; interfaces: number; deployments: number }>> {
+    return manager.query(
+      `SELECT a.id, a.name,
+              (SELECT count(*)::int FROM interfaces i
+                WHERE i.tenant_id = a.tenant_id AND (i.source_application_id = a.id OR i.target_application_id = a.id)) AS interfaces,
+              (SELECT count(*)::int FROM app_instances d WHERE d.tenant_id = a.tenant_id AND d.application_id = a.id) AS deployments
+         FROM applications a
+        WHERE a.tenant_id = app_current_tenant() AND a.id = ANY($1::uuid[])`,
+      [ids],
+    );
+  }
+
+  /**
+   * The check before a delete (`POST /applications/delete-check`): the applications of `ids` with
+   * interfaces, which the delete refuses, and what the others take with them (`removes`, their
+   * deployments counted). Nothing is written.
+   */
+  async deleteCheck(ids: string[], opts?: { manager?: EntityManager }): Promise<{ refused: DeleteRefusal[]; removes: UsageCount[] }> {
+    const manager = opts?.manager ?? this.repository.manager;
+    const wanted = checkIds(ids);
+    if (wanted.length === 0) return { refused: [], removes: [] };
+    const rows = await this.readCounts(wanted, manager);
+    const { refused } = await refusalsFrom(wanted, rows, (row) => row.name, async (row) => this.refusalOf(row));
+    const deployments = rows.filter((row) => row.interfaces === 0).reduce((total, row) => total + row.deployments, 0);
+    return { refused, removes: deployments > 0 ? [{ type: 'app_instances', total: deployments }] : [] };
+  }
+
   /**
    * Override delete to handle attachment cleanup before deletion
    */
@@ -45,6 +79,9 @@ export class ApplicationsDeleteService extends BaseDeleteService<Application> {
     if (!app) {
       throw new NotFoundException('Application not found');
     }
+    const [counts] = await this.readCounts([applicationId], manager);
+    const refusal = counts ? this.refusalOf(counts) : null;
+    if (refusal) throw refusal;
 
     // Attachment paths are read before the DB cascade removes their rows; the
     // files go only once the delete has gone through, so a failed delete keeps them.
