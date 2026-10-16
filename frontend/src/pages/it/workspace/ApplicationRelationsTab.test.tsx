@@ -172,4 +172,61 @@ describe('ApplicationRelationsTab', () => {
     expect(screen.queryByRole('button', { name: /relations\.remove/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /relations\.linkNamed/ })).toBeNull();
   });
+
+  it('adds a total line from two budget lines or contracts on, one per contract currency, without disabled contracts', async () => {
+    renderTab(relations({
+      budget_lines: [
+        { id: 'bl-12', item_number: 12, nature: 'opex', product_name: 'Licences Talend', supplier_name: 'Talend SAS', amount: 48000, currency: 'EUR', status: 'enabled' },
+        { id: 'bl-27', item_number: 27, nature: 'opex', product_name: 'Support Talend', supplier_name: 'Talend SAS', amount: 36000, currency: 'EUR', status: 'enabled' },
+        { id: 'bl-41', item_number: 41, nature: 'capex', product_name: 'Serveurs ETL', supplier_name: null, amount: null, currency: 'EUR', status: 'enabled' },
+      ],
+      contracts: [
+        { id: 'ct-1', name: 'Maintenance Talend', supplier_name: 'Talend SAS', end_date: '2027-05-31', yearly_amount: 36000, currency: 'EUR', auto_renewal: true, in_renewal_window: false, status: 'enabled' },
+        { id: 'ct-2', name: 'Licences Talend', supplier_name: 'Talend SAS', end_date: '2026-12-14', yearly_amount: 48000, currency: 'EUR', auto_renewal: false, in_renewal_window: true, status: 'enabled' },
+        { id: 'ct-3', name: 'Support US', supplier_name: 'Talend Inc', end_date: '2027-01-31', yearly_amount: 10000, currency: 'USD', auto_renewal: false, in_renewal_window: false, status: 'enabled' },
+        { id: 'ct-4', name: 'Ancien contrat', supplier_name: 'Talend SAS', end_date: '2025-01-31', yearly_amount: 99000, currency: 'EUR', auto_renewal: false, in_renewal_window: false, status: 'disabled' },
+      ],
+    }));
+    const lines = await screen.findByRole('table', { name: 'workspace.application.relations.sections.budgetLines' });
+    const lineTotals = lines.querySelectorAll('tfoot tr');
+    expect(lineTotals).toHaveLength(1);
+    expect(lineTotals[0].textContent).toMatch(/^workspace\.application\.relations\.total84\s000$/);
+
+    const contracts = screen.getByRole('table', { name: 'workspace.application.relations.sections.contracts' });
+    const contractTotals = [...contracts.querySelectorAll('tfoot tr')].map((row) => row.textContent);
+    expect(contractTotals).toHaveLength(2);
+    expect(contractTotals[0]).toMatch(/84\s000 EUR$/);
+    expect(contractTotals[1]).toMatch(/10\s000 USD$/);
+  });
+
+  it('shows no total line under a single row', async () => {
+    renderTab(relations());
+    const lines = await screen.findByRole('table', { name: 'workspace.application.relations.sections.budgetLines' });
+    expect(lines.querySelector('tfoot')).toBeNull();
+    expect(screen.getByRole('table', { name: 'workspace.application.relations.sections.contracts' }).querySelector('tfoot')).toBeNull();
+  });
+
+  it('gives the year of a contract end, even in the current year', async () => {
+    const thisYear = new Date().getFullYear();
+    renderTab(relations({
+      contracts: [
+        { id: 'ct-2', name: 'Licences Talend', supplier_name: 'Talend SAS', end_date: `${thisYear}-12-14`, yearly_amount: 48000, currency: 'EUR', auto_renewal: false, in_renewal_window: false, status: 'enabled' },
+      ],
+    }));
+    const contracts = await screen.findByRole('table', { name: 'workspace.application.relations.sections.contracts' });
+    expect(within(contracts).getByText(new RegExp(`14 Dec ${thisYear}`))).toBeTruthy();
+  });
+
+  it('opens the picker on the Add button and takes the first match with Enter', async () => {
+    mocked.post.mockResolvedValue({ data: { ok: true, changed: true } } as never);
+    renderTab(relations());
+    await screen.findByText('Migration Talend Cloud');
+    const section = screen.getByRole('region', { name: 'workspace.application.relations.sections.projects' });
+    const button = within(section).getByText('workspace.application.relations.add');
+    fireEvent.click(button);
+    expect(button.closest('button')?.getAttribute('aria-expanded')).toBe('true');
+    await screen.findByRole('option', { name: /Refonte du datalake/ });
+    fireEvent.keyDown(screen.getByRole('combobox', { name: 'workspace.application.relations.search.projects' }), { key: 'Enter' });
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/applications/app-1/relations/projects', { id: 'prj-9' }));
+  });
 });

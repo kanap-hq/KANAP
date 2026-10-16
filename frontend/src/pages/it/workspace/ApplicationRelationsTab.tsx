@@ -58,7 +58,12 @@ type SectionSpec<T extends AnyRow> = {
   label: (row: T) => string;
   muted?: (row: T) => boolean;
   search: (q: string, signal?: AbortSignal) => Promise<RelationOption[]>;
+  /** Total lines under the table, shown from two rows on. */
+  totals?: (rows: T[]) => Array<{ key: string; label: React.ReactNode; cells: Record<string, React.ReactNode> }>;
 };
+
+/** Totals appear from this many rows on (fried, 2026-10-16). */
+const TOTALS_FROM = 2;
 
 const SUGGESTION_KIND: Record<Suggestion['type'], RelationKind> = { budget_line: 'budget_lines', contract: 'contracts', project: 'projects' };
 const DONE_TASK = new Set(['done', 'cancelled']);
@@ -94,7 +99,7 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
   const canEdit = hasLevel('applications', 'manager');
   const queryClient = useQueryClient();
   const budgetColumns = useBudgetColumns();
-  const [adding, setAdding] = React.useState<RelationKind | null>(null);
+  const [adding, setAdding] = React.useState<{ kind: RelationKind; anchor: HTMLElement } | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const key = applicationRelationsKey(id);
   const lang = i18n.language;
@@ -192,6 +197,12 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
         });
         return (res.data?.items || []).map((row) => ({ id: row.id, label: row.product_name, ref: refOf('budget', row.item_number ?? null), hint: t(`ops:budget.${row.nature}`) }));
       },
+      // Every amount is in the reporting currency: one sum. A line without a budget for the year adds nothing.
+      totals: (rows: BudgetLineRow[]) => {
+        const amounts = rows.map((row) => row.amount).filter((amount): amount is number => amount != null);
+        if (amounts.length === 0) return [];
+        return [{ key: 'total', label: t('workspace.application.relations.total'), cells: { amount: formatAmount(amounts.reduce((sum, value) => sum + value, 0)) } }];
+      },
     },
     {
       kind: 'contracts',
@@ -208,7 +219,9 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
         {
           key: 'end', header: t('workspace.application.relations.columns.end'), width: 110,
           render: (row: ContractRow) => (
-            <Box component="span" sx={row.in_renewal_window && row.status !== 'disabled' ? { color: 'kanap.orange' } : undefined}>{date(row.end_date)}</Box>
+            <Box component="span" sx={row.in_renewal_window && row.status !== 'disabled' ? { color: 'kanap.orange' } : undefined}>
+              {row.end_date ? formatShortDate(row.end_date, lang, { year: 'always' }) : dash}
+            </Box>
           ),
         },
         {
@@ -223,6 +236,23 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
       search: async (q, signal) => {
         const res = await api.get<{ items: Array<{ id: string; name: string }> }>('/contracts/lookup', { params: { limit: PAGE, ...(q ? { q } : {}) }, signal });
         return (res.data?.items || []).map((row) => ({ id: row.id, label: row.name }));
+      },
+      // Active contracts only (a disabled one has ended), one total per currency: amounts in two
+      // currencies are never added up.
+      totals: (rows: ContractRow[]) => {
+        const byCurrency = new Map<string, number>();
+        rows.forEach((row) => {
+          if (row.status === 'disabled' || row.yearly_amount == null) return;
+          const currency = row.currency ?? '';
+          byCurrency.set(currency, (byCurrency.get(currency) ?? 0) + row.yearly_amount);
+        });
+        return [...byCurrency.entries()]
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([currency, sum]) => ({
+            key: currency || 'none',
+            label: t('workspace.application.relations.total'),
+            cells: { amount: `${formatAmount(sum)}${currency ? ` ${currency}` : ''}` },
+          }));
       },
     },
     {
@@ -331,11 +361,13 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
             key={section.kind}
             title={section.title}
             count={data ? rows.length : undefined}
-            onAdd={canEdit && data ? () => setAdding((current) => (current === section.kind ? null : section.kind)) : undefined}
+            onAdd={canEdit && data ? (anchor) => setAdding({ kind: section.kind, anchor }) : undefined}
+            adding={adding?.kind === section.kind}
             addLabel={t('workspace.application.relations.add')}
           >
-            {adding === section.kind && (
+            {adding?.kind === section.kind && (
               <RelationAddPicker
+                anchorEl={adding.anchor}
                 searchKey={`application-${section.kind}`}
                 search={section.search}
                 excludeIds={linkedIds}
@@ -357,6 +389,7 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
                 rowMuted={section.muted}
                 onRemove={canEdit ? (row) => { void unlink(section.kind, row.id); } : undefined}
                 removeLabel={(row) => t('workspace.application.relations.remove', { name: section.label(row) })}
+                totals={rows.length >= TOTALS_FROM ? section.totals?.(rows) : undefined}
               />
             )}
           </RelationsSection>

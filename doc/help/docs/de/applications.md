@@ -296,6 +296,8 @@ Der Reiter Verknüpfungen zeigt, womit diese Anwendung verknüpft ist: ihre Budg
 
 Orange Daten verlangen Aufmerksamkeit: ein Vertrag, dessen Verlängerungsentscheidung in Ihr Entscheidungsfenster für Verträge fällt, oder eine offene Aufgabe nach ihrer Fälligkeit. Eine deaktivierte Budgetzeile oder ein deaktivierter Vertrag bleibt mit ausgegrautem Namen aufgeführt. Sie sehen nur die Abschnitte der Module, die Sie lesen dürfen.
 
+Ab zwei Zeilen enden Budgetzeilen und Verträge mit einer Summenzeile. Die Summe der Budgetzeilen steht in der Berichtswährung. Verträge erhalten eine Summe je Währung, ohne die deaktivierten Verträge.
+
 **Verknüpfungen hinzufügen und entfernen** (`applications:manager`): **Hinzufügen** rechts neben einem Abschnitt öffnet eine Suche. Geben Sie einen Namen oder eine Referenz ein und wählen Sie ein Ergebnis: Die Verknüpfung wird sofort gespeichert. Um eine Verknüpfung zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz am Zeilenende. Das Entfernen einer Verknüpfung löscht nichts anderes. Vorfälle werden vom Vorfall selbst aus verknüpft.
 
 **Verwandt**: Vorschläge von Datensätzen, die Sie verknüpfen könnten, jeweils mit dem Grund des Vorschlags:

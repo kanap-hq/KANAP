@@ -1151,7 +1151,8 @@
         "linkNamed": "{{name}} verknüpfen",
         "remove": "Verknüpfung mit {{name}} lösen",
         "suggestions_one": "{{count}} Vorschlag",
-        "suggestions_other": "{{count}} Vorschläge"
+        "suggestions_other": "{{count}} Vorschläge",
+        "total": "Gesamt"
       },
       "untitled": "Unbenannte Anwendung",
       "previous": "Vorherige Anwendung",

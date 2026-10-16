@@ -296,6 +296,8 @@ La pestaña Relaciones muestra con qué está vinculada esta aplicación: sus l�
 
 Las fechas en naranja requieren atención: un contrato cuya decisión de renovación cae dentro de su ventana de decisión de contratos, o una tarea abierta con el vencimiento pasado. Una línea presupuestaria o un contrato desactivado sigue en la lista con el nombre atenuado. Solo ve las secciones de los módulos que puede leer.
 
+A partir de dos filas, las líneas presupuestarias y los contratos terminan con una fila de total. El total de las líneas presupuestarias está en la moneda de reporte. Los contratos tienen un total por moneda, sin los contratos desactivados.
+
 **Añadir y quitar vínculos** (`applications:manager`): **Añadir**, a la derecha de una sección, abre una búsqueda. Escriba un nombre o una referencia y elija un resultado: el vínculo se guarda al instante. Para quitar un vínculo, pase el cursor sobre la fila y haga clic en la cruz al final. Quitar un vínculo no elimina nada más. Los incidentes se vinculan desde el propio incidente.
 
 **Relacionados**: sugerencias de registros que podría vincular, cada una con el motivo de la sugerencia:

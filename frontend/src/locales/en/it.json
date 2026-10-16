@@ -1151,7 +1151,8 @@
         "linkNamed": "Link {{name}}",
         "remove": "Unlink {{name}}",
         "suggestions_one": "{{count}} suggestion",
-        "suggestions_other": "{{count}} suggestions"
+        "suggestions_other": "{{count}} suggestions",
+        "total": "Total"
       },
       "untitled": "Untitled application",
       "previous": "Previous application",

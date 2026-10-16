@@ -1151,7 +1151,8 @@
         "linkNamed": "Vincular {{name}}",
         "remove": "Desvincular {{name}}",
         "suggestions_one": "{{count}} sugerencia",
-        "suggestions_other": "{{count}} sugerencias"
+        "suggestions_other": "{{count}} sugerencias",
+        "total": "Total"
       },
       "untitled": "Aplicación sin nombre",
       "previous": "Aplicación anterior",

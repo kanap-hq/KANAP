@@ -27,6 +27,8 @@ type TableProps<T> = {
   removeLabel?: (row: T) => string;
   /** A trailing action column (for example "Link" on a suggestion). */
   action?: { width: number; render: (row: T) => React.ReactNode };
+  /** Total lines under the rows: a label in the first column, then cells by column key. */
+  totals?: Array<{ key: string; label: React.ReactNode; cells: Record<string, React.ReactNode> }>;
   ariaLabel?: string;
 };
 
@@ -44,7 +46,7 @@ export function RelationRef({ children }: { children: React.ReactNode }) {
  * headers, 13px cells, horizontal borders only, row hover, the whole row opens the object, and an
  * unlink icon revealed on hover. Shared by every object that shows its relations.
  */
-export function RelationsTable<T>({ columns, rows, rowKey, rowHref, rowMuted, onRemove, removeLabel, action, ariaLabel }: TableProps<T>) {
+export function RelationsTable<T>({ columns, rows, rowKey, rowHref, rowMuted, onRemove, removeLabel, action, totals, ariaLabel }: TableProps<T>) {
   const theme = useTheme();
   const navigate = useNavigate();
   const open = (row: T) => {
@@ -78,6 +80,7 @@ export function RelationsTable<T>({ columns, rows, rowKey, rowHref, rowMuted, on
           textOverflow: 'ellipsis',
         },
         '& .r': { textAlign: 'right' },
+        '& tfoot td': { fontWeight: 500, borderBottom: 'none', borderTop: `1px solid ${theme.palette.kanap.border.default}` },
         '& tbody tr:hover td': { backgroundColor: theme.palette.kanap.bg.hover },
         '& tbody tr[data-href]': { cursor: 'pointer' },
         '& tbody tr:focus-visible': { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: -2 },
@@ -136,6 +139,20 @@ export function RelationsTable<T>({ columns, rows, rowKey, rowHref, rowMuted, on
           );
         })}
       </tbody>
+      {totals && totals.length > 0 && (
+        <tfoot>
+          {totals.map((total) => (
+            <tr key={total.key}>
+              {columns.map((column, index) => (
+                <td key={column.key} className={column.align === 'right' ? 'r' : undefined}>
+                  {index === 0 ? total.label : total.cells[column.key] ?? null}
+                </td>
+              ))}
+              {trailing > 0 && <td />}
+            </tr>
+          ))}
+        </tfoot>
+      )}
     </Box>
   );
 }
@@ -144,14 +161,16 @@ type SectionProps = {
   title: string;
   /** The count after the title (tertiary); text such as "3 suggestions" is allowed. */
   count?: React.ReactNode;
-  /** The "Add" text action, absent for readers. */
-  onAdd?: () => void;
+  /** The "Add" text action, absent for readers; it receives the button, where the picker anchors. */
+  onAdd?: (anchor: HTMLElement) => void;
+  /** The picker of this section is open (the button stays highlighted). */
+  adding?: boolean;
   addLabel?: string;
   children: React.ReactNode;
 };
 
 /** A Relations section: title and count, an "Add" text action on the right, then its content. */
-export function RelationsSection({ title, count, onAdd, addLabel, children }: SectionProps) {
+export function RelationsSection({ title, count, onAdd, adding, addLabel, children }: SectionProps) {
   return (
     <Box component="section" aria-label={title}>
       <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', mb: 0.75, minHeight: 28 }}>
@@ -162,7 +181,14 @@ export function RelationsSection({ title, count, onAdd, addLabel, children }: Se
           {count != null && <Typography component="span" sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>{count}</Typography>}
         </Box>
         {onAdd && (
-          <Button variant="text" size="small" onClick={onAdd} sx={{ fontSize: 12, minWidth: 0, px: 1 }}>
+          <Button
+            variant="text"
+            size="small"
+            aria-haspopup="listbox"
+            aria-expanded={adding ? true : undefined}
+            onClick={(event) => onAdd(event.currentTarget)}
+            sx={(theme) => ({ fontSize: 12, minWidth: 0, px: 1, ...(adding ? { backgroundColor: theme.palette.kanap.bg.hover } : {}) })}
+          >
             {addLabel}
           </Button>
         )}

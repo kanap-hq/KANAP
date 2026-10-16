@@ -1151,7 +1151,8 @@
         "linkNamed": "Lier {{name}}",
         "remove": "Délier {{name}}",
         "suggestions_one": "{{count}} suggestion",
-        "suggestions_other": "{{count}} suggestions"
+        "suggestions_other": "{{count}} suggestions",
+        "total": "Total"
       },
       "untitled": "Application sans nom",
       "previous": "Application précédente",
