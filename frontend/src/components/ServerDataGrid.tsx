@@ -57,6 +57,7 @@ import {
 import { getApiErrorMessage } from '../utils/apiErrorMessage';
 import { foldText } from '../utils/foldText';
 import { fieldResetSx } from '../theme/formSx';
+import { GRID_DATE_COMPONENTS } from './GridDateField';
 
 // AG Grid merges a column's filterParams into defaultColDef's, so each set names its own default
 // option: the text filters' `contains` is not a date or number operator. A filter reset (Clear, a
@@ -1498,6 +1499,8 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
           defaultColDef={defaultColDef}
           context={gridContext}
           localeText={localeText}
+          // Date filters type and pick dates in the app's language, not the browser's.
+          components={GRID_DATE_COMPONENTS}
           pinnedBottomRowData={mergedPinnedBottomRowData}
           cacheBlockSize={cacheBlockSize}
           maxConcurrentDatasourceRequests={1}
