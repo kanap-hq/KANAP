@@ -2,6 +2,7 @@ import i18n, { type Resource, type ResourceLanguage } from 'i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import { initReactI18next } from 'react-i18next';
 import { z } from 'zod';
+import { mergeAbbreviationPeriods } from '../lib/dateFormat';
 
 export const LANGUAGE_OVERRIDE_STORAGE_KEY = 'kanap_language';
 export const NAMESPACES = [
@@ -117,7 +118,14 @@ z.setErrorMap((issue) => {
 void i18n
   .use(LanguageDetector)
   .use(initReactI18next)
+  .use({
+    type: 'postProcessor',
+    name: 'abbreviationPeriod',
+    process: (value: string, _key: unknown, options: { lng?: string } | undefined, translator: { language?: string }) =>
+      mergeAbbreviationPeriods(value, options?.lng ?? translator?.language ?? 'en'),
+  })
   .init({
+    postProcess: ['abbreviationPeriod'],
     resources,
     fallbackLng: 'en',
     supportedLngs: [...SUPPORTED_LOCALE_CODES],

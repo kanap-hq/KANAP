@@ -106,7 +106,7 @@ describe('roadmap texts', () => {
     expect(formatRoadmapText(fr, 'fr', text('summary_unschedulable', samples.summary_unschedulable)))
       .toBe("ERP n'a pas pu être planifié : Alice (4,62 j/semaine)");
     expect(formatRoadmapText(fr, 'fr', text('warning_constraint_conflict', samples.warning_constraint_conflict)))
-      .toBe(`ERP : Le début épinglé au ${formatShortDate('2026-10-19', 'fr')} a glissé à la semaine du ${formatShortDate('2026-11-02', 'fr')}.`);
+      .toBe(`ERP : Le début épinglé au ${formatShortDate('2026-10-19', 'fr')} a glissé à la semaine du ${formatShortDate('2026-11-02', 'fr')}`);
     expect(formatRoadmapText(fr, 'fr', text('summary_schedulable', { project: 'ERP', week: null })))
       .toBe("ERP n'a pas de semaine de début.");
   });
@@ -115,7 +115,8 @@ describe('roadmap texts', () => {
 describe('roadmap explanation texts', () => {
   it('builds the summary and the final reason from the server codes', () => {
     const { summary, finalReason } = buildExplanationTexts(tFor('fr'), 'fr', base);
-    expect(finalReason).toBe(`Démarré la semaine du ${formatShortDate('2026-10-19', 'fr')}.`);
+    expect(finalReason).toBe(`Démarré la semaine du ${formatShortDate('2026-10-19', 'fr')}`.replace(/\.$/, '') + '.');
+    expect(finalReason).not.toContain('..');
     expect(finalReason).toContain('19 oct.');
     expect(summary).toContain('ERP');
     expect(summary).not.toMatch(/started|2026-10-19/);
