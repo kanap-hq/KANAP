@@ -13,6 +13,10 @@ import { ensureDefaultAnalyticsAxis } from '../../analytics/analytics-axes.util'
 //   default column, `SERVICE_FALLBACK_SORT`, or fails). Every filter field is applied: the
 //   statements differ from the unfiltered ones. Checked on the SQL each call sends, so the
 //   check does not depend on the data's values (ties, nulls).
+// - Every shape of filter the adapter sends for a field (each number and date operator, a blank
+//   date, a set to exclude) is accepted by the list, through the queries and the aggregates: the
+//   lists answer 400 to a filter on a column they do not hold or a model its type cannot take,
+//   and an AI answer must never meet one.
 // - On seeded data, two rows per family created a year apart: created_at desc lists the newer
 //   first, asc the older first, and each item carries its created_at.
 // - A sort field the registry does not advertise is never dropped silently: the result names it
@@ -362,6 +366,60 @@ async function testAmountsCurrency(harness: Harness, runner: QueryRunner, seed: 
   assert.deepEqual(budgetFxMissingYears(row, 2026), [2026], 'a year without a rate for another currency is named, not the reporting currency');
 }
 
+/** Every filter value the AI may send for a field, one per shape the adapter turns it into. */
+function filterShapes(entityType: string, field: any): Array<[string, unknown]> {
+  if (field.type === 'set') {
+    const value = field.values?.find((entry: unknown) => entry !== null) ?? '__contract_probe__';
+    return [['set', [value]], ['set with blank', [value, null]], ['set to exclude', { not: [value] }]];
+  }
+  if (field.type === 'text') return [['text', '__contract_probe__']];
+  if (field.type === 'number') {
+    return [...['eq', 'gt', 'gte', 'lt', 'lte'].map((op): [string, unknown] => [op, { op, value: 3 }]), ['between', { op: 'between', value: 1, valueTo: 9 }]];
+  }
+  return [
+    ...['eq', 'before', 'after'].map((op): [string, unknown] => [op, { op, value: '2026-02-03' }]),
+    ['between', { op: 'between', value: '2026-01-01', valueTo: '2026-12-31' }],
+    ...(field.blankable ? [['blank', [null]] as [string, unknown]] : []),
+  ];
+}
+
+/** One aggregate in a savepoint: its error, if any. */
+async function runAggregate(runner: QueryRunner, aggregates: any, ctx: any, input: Record<string, unknown>): Promise<string | null> {
+  await runner.query('SAVEPOINT contract_aggregate');
+  try {
+    const result = await aggregates.execute(ctx, input);
+    await runner.query('RELEASE SAVEPOINT contract_aggregate');
+    return result?.status === 'invalid_filter' ? `invalid filter ${JSON.stringify(result.filters_ignored)}` : null;
+  } catch (error: any) {
+    await runner.query('ROLLBACK TO SAVEPOINT contract_aggregate');
+    return String(error?.message ?? error);
+  }
+}
+
+async function testEveryFilterShapeIsAccepted(harness: Harness, runner: QueryRunner, seed: Seed) {
+  const ctx = context(runner, seed);
+  const failures: string[] = [];
+  let checked = 0;
+  for (const entityType of Object.keys(harness.registries.aiEntityRegistries)) {
+    const registry = await harness.registries.resolveAiEntityRegistry(ctx, entityType);
+    const groupBy = Object.entries<any>(registry.fields).find(([, field]) => field.groupable)?.[0];
+    for (const [name, field] of Object.entries<any>(registry.fields)) {
+      for (const [shape, value] of filterShapes(entityType, field)) {
+        checked += 1;
+        const label = `${entityType} filter ${name} (${field.grid}, ${shape})`;
+        const query = await runQuery(runner, harness.executor, ctx, { entity_type: entityType, filters: { [name]: value } });
+        if (query.error) failures.push(`${label}: the query fails: ${query.error}`);
+        if (!groupBy) continue;
+        const error = await runAggregate(runner, harness.aggregates, ctx, { entity_type: entityType, group_by: groupBy, filters: { [name]: value } });
+        // A shape the adapter does not send for this column (an exclude set where the list has no exclude mode) is reported, not sent.
+        if (error && !(shape === 'set to exclude' && /invalid filter/.test(error))) failures.push(`${label}: the aggregate fails: ${error}`);
+      }
+    }
+  }
+  assert.ok(checked > 100, `the filter shapes are checked (${checked})`);
+  assert.deepEqual(failures, [], `every filter the AI may send is accepted:\n${failures.join('\n')}`);
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -372,6 +430,7 @@ async function run() {
     try {
       const seed = await seedTenant(runner);
       await testEveryAdvertisedSortAndFilterApplies(harness, runner, seed);
+      await testEveryFilterShapeIsAccepted(harness, runner, seed);
       await testCreatedAtOrderOnSeededRows(harness, runner, seed);
       await testUnknownSortIsReported(harness, runner, seed);
       await testPageSizes(harness, runner, seed);
