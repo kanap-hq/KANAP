@@ -1282,7 +1282,57 @@
         "goLive": "Go live"
       },
       "deleteMessage": "This permanently deletes {{name}}, with its links to other records. This cannot be undone.",
-      "deleteMessageWithDeployments": "This permanently deletes {{name}}, with its {{deployments}} and its links to other records. This cannot be undone."
+      "deleteMessageWithDeployments": "This permanently deletes {{name}}, with its {{deployments}} and its links to other records. This cannot be undone.",
+      "convert": {
+        "action": "Convert to technology",
+        "title": "Convert {{name}} to a technology",
+        "test": "Convert when another application can fail or become vulnerable because of it.",
+        "loading": "Checking what the conversion changes…",
+        "family": "Family",
+        "familyPlaceholder": "Choose a family",
+        "modeInstalled": "It becomes a technology installed on its servers.",
+        "modeSubscribed": "It has no servers: it becomes a subscribed technology.",
+        "movesTitle": "Moves to the technology",
+        "lossesTitle": "Lost with the application",
+        "nothing": "Nothing",
+        "lostAlways": "Also lost: the fields specific to applications (users, access methods, SSO, MFA, personal data) and the reference {{reference}}.",
+        "refused": "This application cannot be converted:",
+        "refusedHint": "Remove these links first, or keep it as an application.",
+        "refusals": {
+          "interfaces": "Source or target of interfaces: {{count}}",
+          "middleware": "Middleware of interfaces: {{count}}",
+          "integration_tool": "Integration tool of interface bindings: {{count}}",
+          "suite_components": "Suite with components: {{count}}",
+          "interface_bindings": "Interface bindings on its deployments: {{count}}",
+          "name_taken": "A technology with this name already exists"
+        },
+        "moved": {
+          "owners": "Owners",
+          "contracts": "Contracts",
+          "budget_lines": "Budget lines",
+          "projects": "Projects",
+          "links": "Web links",
+          "attachments": "Documents",
+          "incidents": "Incidents",
+          "servers": "Servers"
+        },
+        "lost": {
+          "instances": "Deployments and environments",
+          "suites": "Suite membership",
+          "predecessor": "Predecessor",
+          "successors": "Link to its successors",
+          "data_residency": "Data residency",
+          "support_contacts": "Support contacts",
+          "knowledge_links": "Knowledge links",
+          "managed_documents": "Managed documents",
+          "tasks": "Linked tasks",
+          "requests": "Linked requests",
+          "business_processes": "Business processes",
+          "technologies": "Technologies it depends on"
+        },
+        "confirm": "Convert",
+        "failed": "The conversion failed."
+      }
     },
     "asset": {
       "title": "Server",

@@ -1282,7 +1282,57 @@
         "goLive": "Puesta en marcha"
       },
       "deleteMessage": "Esto elimina definitivamente {{name}}, con sus vínculos con otros elementos. Esta acción no se puede deshacer.",
-      "deleteMessageWithDeployments": "Esto elimina definitivamente {{name}}, con sus {{deployments}} y sus vínculos con otros elementos. Esta acción no se puede deshacer."
+      "deleteMessageWithDeployments": "Esto elimina definitivamente {{name}}, con sus {{deployments}} y sus vínculos con otros elementos. Esta acción no se puede deshacer.",
+      "convert": {
+        "action": "Convertir en tecnología",
+        "title": "Convertir {{name}} en tecnología",
+        "test": "Conviértala cuando otra aplicación pueda caer o volverse vulnerable por su causa.",
+        "loading": "Comprobando lo que cambia la conversión…",
+        "family": "Familia",
+        "familyPlaceholder": "Elegir una familia",
+        "modeInstalled": "Se convierte en una tecnología instalada en sus servidores.",
+        "modeSubscribed": "No tiene servidores: se convierte en una tecnología suscrita.",
+        "movesTitle": "Pasa a la tecnología",
+        "lossesTitle": "Se pierde con la aplicación",
+        "nothing": "Nada",
+        "lostAlways": "También se pierden: los campos propios de las aplicaciones (usuarios, modos de acceso, SSO, MFA, datos personales) y la referencia {{reference}}.",
+        "refused": "Esta aplicación no se puede convertir:",
+        "refusedHint": "Quite primero estos vínculos o manténgala como aplicación.",
+        "refusals": {
+          "interfaces": "Origen o destino de interfaces: {{count}}",
+          "middleware": "Middleware de interfaces: {{count}}",
+          "integration_tool": "Herramienta de integración de enlaces de interfaz: {{count}}",
+          "suite_components": "Suite con componentes: {{count}}",
+          "interface_bindings": "Enlaces de interfaz en sus despliegues: {{count}}",
+          "name_taken": "Ya existe una tecnología con este nombre"
+        },
+        "moved": {
+          "owners": "Responsables",
+          "contracts": "Contratos",
+          "budget_lines": "Líneas presupuestarias",
+          "projects": "Proyectos",
+          "links": "Enlaces web",
+          "attachments": "Documentos",
+          "incidents": "Incidentes",
+          "servers": "Servidores"
+        },
+        "lost": {
+          "instances": "Despliegues y entornos",
+          "suites": "Pertenencia a una suite",
+          "predecessor": "Predecesora",
+          "successors": "Vínculo con sus sucesoras",
+          "data_residency": "Residencia de datos",
+          "support_contacts": "Contactos de soporte",
+          "knowledge_links": "Vínculos de conocimiento",
+          "managed_documents": "Documentos gestionados",
+          "tasks": "Tareas vinculadas",
+          "requests": "Solicitudes vinculadas",
+          "business_processes": "Procesos de negocio",
+          "technologies": "Tecnologías de las que depende"
+        },
+        "confirm": "Convertir",
+        "failed": "La conversión ha fallado."
+      }
     },
     "asset": {
       "title": "Servidor",

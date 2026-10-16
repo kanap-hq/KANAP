@@ -1282,7 +1282,57 @@
         "goLive": "Mise en service"
       },
       "deleteMessage": "Cette action supprime définitivement {{name}}, avec ses liens vers d’autres éléments. Elle est irréversible.",
-      "deleteMessageWithDeployments": "Cette action supprime définitivement {{name}}, avec ses {{deployments}} et ses liens vers d’autres éléments. Elle est irréversible."
+      "deleteMessageWithDeployments": "Cette action supprime définitivement {{name}}, avec ses {{deployments}} et ses liens vers d’autres éléments. Elle est irréversible.",
+      "convert": {
+        "action": "Convertir en technologie",
+        "title": "Convertir {{name}} en technologie",
+        "test": "Convertissez quand une autre application peut tomber ou devenir vulnérable à cause de lui.",
+        "loading": "Vérification de ce que la conversion change…",
+        "family": "Famille",
+        "familyPlaceholder": "Choisir une famille",
+        "modeInstalled": "Elle devient une technologie installée sur ses serveurs.",
+        "modeSubscribed": "Elle n’a pas de serveur : elle devient une technologie souscrite.",
+        "movesTitle": "Passe à la technologie",
+        "lossesTitle": "Perdu avec l’application",
+        "nothing": "Rien",
+        "lostAlways": "Également perdus : les champs propres aux applications (utilisateurs, modes d’accès, SSO, MFA, données personnelles) et la référence {{reference}}.",
+        "refused": "Cette application ne peut pas être convertie :",
+        "refusedHint": "Retirez d’abord ces liens, ou gardez-la comme application.",
+        "refusals": {
+          "interfaces": "Source ou cible d’interfaces : {{count}}",
+          "middleware": "Middleware d’interfaces : {{count}}",
+          "integration_tool": "Outil d’intégration de liaisons d’interface : {{count}}",
+          "suite_components": "Suite avec des composants : {{count}}",
+          "interface_bindings": "Liaisons d’interface sur ses déploiements : {{count}}",
+          "name_taken": "Une technologie porte déjà ce nom"
+        },
+        "moved": {
+          "owners": "Responsables",
+          "contracts": "Contrats",
+          "budget_lines": "Lignes budgétaires",
+          "projects": "Projets",
+          "links": "Liens web",
+          "attachments": "Documents",
+          "incidents": "Incidents",
+          "servers": "Serveurs"
+        },
+        "lost": {
+          "instances": "Déploiements et environnements",
+          "suites": "Appartenance à une suite",
+          "predecessor": "Prédécesseur",
+          "successors": "Lien vers ses successeurs",
+          "data_residency": "Résidence des données",
+          "support_contacts": "Contacts de support",
+          "knowledge_links": "Liens de base de connaissance",
+          "managed_documents": "Documents gérés",
+          "tasks": "Tâches liées",
+          "requests": "Demandes liées",
+          "business_processes": "Processus métier",
+          "technologies": "Technologies dont elle dépend"
+        },
+        "confirm": "Convertir",
+        "failed": "La conversion a échoué."
+      }
     },
     "asset": {
       "title": "Serveur",

@@ -1282,7 +1282,57 @@
         "goLive": "Inbetriebnahme"
       },
       "deleteMessage": "Damit wird {{name}} endgültig gelöscht, mit ihren Verknüpfungen zu anderen Einträgen. Dies kann nicht rückgängig gemacht werden.",
-      "deleteMessageWithDeployments": "Damit wird {{name}} endgültig gelöscht, mit ihren {{deployments}} und Verknüpfungen zu anderen Einträgen. Dies kann nicht rückgängig gemacht werden."
+      "deleteMessageWithDeployments": "Damit wird {{name}} endgültig gelöscht, mit ihren {{deployments}} und Verknüpfungen zu anderen Einträgen. Dies kann nicht rückgängig gemacht werden.",
+      "convert": {
+        "action": "In Technologie umwandeln",
+        "title": "{{name}} in eine Technologie umwandeln",
+        "test": "Wandeln Sie um, wenn eine andere Anwendung dadurch ausfallen oder verwundbar werden kann.",
+        "loading": "Prüfen, was die Umwandlung ändert…",
+        "family": "Familie",
+        "familyPlaceholder": "Familie wählen",
+        "modeInstalled": "Sie wird eine auf ihren Servern installierte Technologie.",
+        "modeSubscribed": "Sie hat keine Server: Sie wird eine abonnierte Technologie.",
+        "movesTitle": "Geht an die Technologie",
+        "lossesTitle": "Geht mit der Anwendung verloren",
+        "nothing": "Nichts",
+        "lostAlways": "Ebenfalls verloren: die anwendungsspezifischen Felder (Benutzer, Zugriffsarten, SSO, MFA, personenbezogene Daten) und die Referenz {{reference}}.",
+        "refused": "Diese Anwendung kann nicht umgewandelt werden:",
+        "refusedHint": "Entfernen Sie zuerst diese Verknüpfungen oder behalten Sie sie als Anwendung.",
+        "refusals": {
+          "interfaces": "Quelle oder Ziel von Schnittstellen: {{count}}",
+          "middleware": "Middleware von Schnittstellen: {{count}}",
+          "integration_tool": "Integrationswerkzeug von Schnittstellenbindungen: {{count}}",
+          "suite_components": "Suite mit Komponenten: {{count}}",
+          "interface_bindings": "Schnittstellenbindungen auf ihren Bereitstellungen: {{count}}",
+          "name_taken": "Eine Technologie mit diesem Namen existiert bereits"
+        },
+        "moved": {
+          "owners": "Verantwortliche",
+          "contracts": "Verträge",
+          "budget_lines": "Budgetpositionen",
+          "projects": "Projekte",
+          "links": "Weblinks",
+          "attachments": "Dokumente",
+          "incidents": "Vorfälle",
+          "servers": "Server"
+        },
+        "lost": {
+          "instances": "Bereitstellungen und Umgebungen",
+          "suites": "Zugehörigkeit zu einer Suite",
+          "predecessor": "Vorgänger",
+          "successors": "Verknüpfung zu ihren Nachfolgern",
+          "data_residency": "Datenresidenz",
+          "support_contacts": "Supportkontakte",
+          "knowledge_links": "Wissensverknüpfungen",
+          "managed_documents": "Verwaltete Dokumente",
+          "tasks": "Verknüpfte Aufgaben",
+          "requests": "Verknüpfte Anfragen",
+          "business_processes": "Geschäftsprozesse",
+          "technologies": "Technologien, von denen sie abhängt"
+        },
+        "confirm": "Umwandeln",
+        "failed": "Die Umwandlung ist fehlgeschlagen."
+      }
     },
     "asset": {
       "title": "Server",
