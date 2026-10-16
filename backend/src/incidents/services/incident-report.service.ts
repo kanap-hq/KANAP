@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DocumentExportService, ExportImageFetchOptions } from '../../common/document-export.service';
 import { normalizeReportTimeZone } from '../../common/report-period';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
-import { INCIDENT_REVIEW_TEMPLATE_CONTENT_MARKDOWN } from '../../knowledge/integrated-document.constants';
+import { isIncidentReviewSystemTemplate } from '../../knowledge/integrated-document.constants';
 import { incidentRef } from './incidents-base.service';
 import { IncidentRecordOpts, IncidentRecordService } from './incident-record.service';
 
@@ -530,30 +530,22 @@ function heading(level: number, text: string): string {
   return `${'#'.repeat(level)} ${text}`;
 }
 
-/** The five system H2 headings of the §3.2 template, in order. */
-const SYSTEM_REVIEW_TEMPLATE_LINES = INCIDENT_REVIEW_TEMPLATE_CONTENT_MARKDOWN
-  .split('\n')
-  .map((line) => line.trim())
-  .filter((line) => line.length > 0);
-
 export function normalizeReviewMarkdown(value: string | null | undefined): string {
   return String(value ?? '').replace(/\r\n?/g, '\n');
 }
 
 /**
  * True when the review carries nothing an author wrote: either blank, or
- * exactly the five system headings of the §3.2 template, in the same order and
- * with nothing else. Headings are never stripped to decide this — a free
- * heading such as `## Main router outage` is real content — and the current
- * library template is never consulted: it may have changed since the incident
- * was created.
+ * exactly the five system headings of the §3.2 template in one of the interface
+ * languages, in the same order and with nothing else. Headings are never stripped
+ * to decide this — a free heading such as `## Main router outage` is real content —
+ * and the current library template is never consulted: it may have changed since
+ * the incident was created.
  */
 export function isSystemTemplateOnlyReview(markdown: string | null | undefined): boolean {
   const text = normalizeReviewMarkdown(markdown);
   if (!text.trim()) return true;
-  const lines = text.split('\n').map((line) => line.trim()).filter((line) => line.length > 0);
-  if (lines.length !== SYSTEM_REVIEW_TEMPLATE_LINES.length) return false;
-  return lines.every((line, index) => line === SYSTEM_REVIEW_TEMPLATE_LINES[index]);
+  return isIncidentReviewSystemTemplate(text);
 }
 
 function bulletList(items: string[]): string {

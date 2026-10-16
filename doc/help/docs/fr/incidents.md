@@ -140,6 +140,8 @@ Un nouvel incident démarre à partir du modèle **Revue d'incident**, qui propo
 
 Réécrivez-les, retirez celles dont vous n'avez pas besoin, ajoutez les vôtres. Pour un incident mineur, la description courte suffit. Pour un incident majeur, la revue constitue le post-mortem.
 
+Les titres sont dans la langue de la personne qui enregistre l'incident (anglais, français, allemand ou espagnol). Un modèle réécrit par vos administrateurs garde ses propres termes.
+
 Le modèle est un document ordinaire de la base de connaissances, rangé dans la bibliothèque **Modèles** sous le type de document **Incident review** : un administrateur de la base de connaissances peut le réécrire pour coller à votre propre format de post-mortem. Un nouveau modèle s'applique aux incidents enregistrés ensuite et ne réécrit jamais une revue déjà existante.
 
 Chaque enregistrement qui modifie la revue conserve une version : le texte peut donc être relu tel qu'il était à n'importe quel moment, y compris à la clôture de l'incident. Voir [Journal](#journal).

@@ -140,6 +140,8 @@ Ein neuer Vorfall startet aus der Vorlage **Vorfallanalyse**, die die fünf Teil
 
 Schreiben Sie sie um, entfernen Sie, was Sie nicht brauchen, ergänzen Sie Eigenes. Bei einem geringfügigen Vorfall genügt die kurze Beschreibung. Bei einem schwerwiegenden ist die Analyse der Post-Mortem-Bericht.
 
+Die Überschriften erscheinen in der Sprache der Person, die den Vorfall erfasst (Englisch, Französisch, Deutsch oder Spanisch). Eine von Ihren Administratoren umgeschriebene Vorlage behält ihren eigenen Wortlaut.
+
 Die Vorlage ist ein gewöhnliches Dokument der Wissensdatenbank, gespeichert in der Bibliothek **Vorlagen** unter dem Dokumenttyp **Vorfallanalyse**. Ein Administrator der Wissensdatenbank kann sie also an Ihr eigenes Post-Mortem-Format anpassen. Eine neue Vorlage gilt für die danach erfassten Vorfälle und schreibt eine bereits vorhandene Analyse nie um.
 
 Jedes Speichern, das die Analyse verändert, hält eine Version fest. Der Text lässt sich damit so nachlesen, wie er zu jedem Zeitpunkt stand, auch beim Schließen des Vorfalls. Siehe [Journal](#journal).

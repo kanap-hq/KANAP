@@ -140,6 +140,8 @@ A new incident starts from the **Incident review** template, which proposes the 
 
 Rewrite them, remove the ones you do not need, add your own. For a minor incident the short description alone is enough. For a major one, the review is the post-mortem.
 
+The headings come in the language of the person who logs the incident (English, French, German or Spanish). A template your administrators have rewritten keeps its own words.
+
 The template is an ordinary Knowledge document, stored in the **Templates** library under the **Incident review** document type, so a knowledge administrator can rewrite it to match your own post-mortem format. A new template applies to the incidents logged afterwards and never rewrites a review that already exists.
 
 Every save that changes the review keeps a version, so the text can be read back as it stood at any moment, including at the closure of the incident. See [Journal](#journal).

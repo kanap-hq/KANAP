@@ -140,6 +140,8 @@ Un incidente nuevo parte de la plantilla **Revisión del incidente**, que propon
 
 Reescríbalas, elimine las que no necesite, añada las suyas. Para un incidente menor basta con la descripción breve. Para uno mayor, la revisión es el post-mortem.
 
+Los títulos aparecen en el idioma de la persona que registra el incidente (inglés, francés, alemán o español). Una plantilla que sus administradores hayan reescrito conserva sus propios términos.
+
 La plantilla es un documento ordinario de la base de conocimiento, almacenado en la biblioteca **Plantillas** bajo el tipo de documento **Revisión del incidente**, de modo que un administrador de la base de conocimiento puede reescribirla para adaptarla a su propio formato de post-mortem. Una plantilla nueva se aplica a los incidentes registrados después y nunca reescribe una revisión que ya existe.
 
 Cada guardado que modifica la revisión conserva una versión, así que el texto puede releerse tal como estaba en cualquier momento, incluido el cierre del incidente. Consulte [Diario](#diario).

@@ -24,6 +24,9 @@ import { DocumentAttachment } from './document-attachment.entity';
 import { IntegratedDocumentBinding } from './integrated-document-binding.entity';
 import {
   INCIDENT_REVIEW_SLOT,
+  incidentReviewLanguage,
+  incidentReviewTemplateMarkdown,
+  isIncidentReviewSystemTemplate,
   INTEGRATED_DOCUMENT_SLOT_DEFINITIONS,
   IntegratedDocumentSlotKey,
 } from './integrated-document.constants';
@@ -2234,9 +2237,23 @@ export class IntegratedDocumentsService {
   ): Promise<void> {
     const manager = this.getManager(opts);
     const context = await this.loadSourceRecoveryContext('incidents', incidentId, manager);
-    await this.ensureBoundDocument('incidents', context.source, 'review', null, userId, manager, {
+    await this.ensureBoundDocument('incidents', context.source, 'review', await this.incidentReviewStart(userId, manager), userId, manager, {
       ownerUserId: context.ownerUserId,
     });
+  }
+
+  /**
+   * The body a new incident review starts from: the shipped template in the creating
+   * user's language (`users.locale`), or null to start from the library template when
+   * the tenant has edited it (a renamed or rewritten template keeps its own words).
+   */
+  private async incidentReviewStart(userId: string | null | undefined, manager: EntityManager): Promise<string | null> {
+    const slotSetting = await this.getSlotSetting('incidents', 'review', manager);
+    if (!isIncidentReviewSystemTemplate(slotSetting.template_content_markdown)) return null;
+    const rows: Array<{ locale: string | null }> = userId
+      ? await manager.query(`SELECT locale FROM users WHERE id = $1 AND tenant_id = app_current_tenant()`, [userId])
+      : [];
+    return incidentReviewTemplateMarkdown(incidentReviewLanguage(rows[0]?.locale));
   }
 
   /**
