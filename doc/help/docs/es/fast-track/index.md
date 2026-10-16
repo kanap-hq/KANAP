@@ -218,7 +218,7 @@ Mueva el proyecto a través de los estados a medida que avanza el trabajo. En la
 
 **Lista de espera / Planificado** --> **En progreso** --> **En pruebas** --> **Completado**
 
-### Registre tiempo: es fundamental
+### Registre tiempo: esto es fundamental
 
 !!! warning "Advertencia"
     Sin registro de tiempo no hay programación automática. El registro de tiempo no es solo para informes: impulsa directamente el generador de hoja de ruta.
