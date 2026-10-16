@@ -23,6 +23,8 @@ const access = vi.hoisted(() => ({
   deploymentMode: 'multi-tenant' as 'multi-tenant' | 'single-tenant',
   sampleData: false,
   version: 'unknown',
+  aiChat: false,
+  aiData: undefined as unknown,
 }));
 vi.mock('../auth/AuthContext', () => ({
   useAuth: () => ({
@@ -48,7 +50,7 @@ vi.mock('../config/FeaturesContext', () => ({
   useFeatures: () => ({
     config: {
       deploymentMode: access.deploymentMode,
-      features: { billing: true, aiChat: false, aiSettings: false, sso: false, email: false, sampleData: access.sampleData },
+      features: { billing: true, aiChat: access.aiChat, aiSettings: false, sso: false, email: false, sampleData: access.sampleData },
       version: access.version,
     },
     isLoading: false,
@@ -60,7 +62,7 @@ vi.mock('../config/ThemeContext', () => ({
 }));
 
 vi.mock('../ai/useAiCapabilities', () => ({
-  useAiCapabilities: () => ({ data: undefined, isLoading: false, isFetching: false }),
+  useAiCapabilities: () => ({ data: access.aiData, isLoading: false, isFetching: false }),
 }));
 
 vi.mock('../ai/aiApi', () => ({
@@ -77,9 +79,8 @@ vi.mock('../hooks/useBusinessContributorApplicationVisibility', () => ({
   }),
 }));
 
-function renderShell() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+function shell(client: QueryClient) {
+  return (
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={['/ops/opex']}>
         <Routes>
@@ -92,8 +93,14 @@ function renderShell() {
           </Route>
         </Routes>
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+}
+
+function renderShell() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const view = render(shell(client));
+  return { ...view, rerenderShell: () => view.rerender(shell(client)) };
 }
 
 describe('Layout page scroller', () => {
@@ -355,5 +362,52 @@ describe('Layout user menu: version', () => {
     const menu = within(screen.getByRole('menu'));
     expect(menu.getByRole('menuitem', { name: 'nav:userMenu.logout' })).toBeInTheDocument();
     expect(menu.queryByText(/KANAP/)).not.toBeInTheDocument();
+  });
+});
+
+describe('Layout section tabs on a narrow window', () => {
+  it('scroll horizontally instead of clipping the first and last sections', () => {
+    renderShell();
+    const tablist = screen.getByRole('tablist', { name: 'nav:topBar.sectionNav' });
+    const tabs = tablist.closest('.MuiTabs-root') as HTMLElement;
+    // Centered tabs overflow on both sides and cut the first label; scrollable tabs keep every label whole.
+    expect(tabs.querySelector('.MuiTabs-scrollableX')).not.toBeNull();
+    expect(tablist.classList.contains('MuiTabs-centered')).toBe(false);
+  });
+});
+
+describe('Layout section tabs scroll arrows', () => {
+  // MUI shows each arrow while the first (or last) tab is out of view, watched by an IntersectionObserver.
+  type Watch = { targets: Element[]; live: boolean };
+  const watches: Watch[] = [];
+  class FakeObserver {
+    private watch: Watch = { targets: [], live: true };
+    constructor() { watches.push(this.watch); }
+    observe(target: Element) { this.watch.targets.push(target); }
+    unobserve() {}
+    disconnect() { this.watch.live = false; }
+    takeRecords() { return []; }
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    watches.length = 0;
+    access.aiChat = false;
+    access.aiData = undefined;
+  });
+
+  it('watches the tab that is first now, after a workspace appears in front', () => {
+    vi.stubGlobal('IntersectionObserver', FakeObserver);
+    access.aiChat = true;
+    const { rerenderShell } = renderShell();
+    // The AI capabilities arrive after the first render and add the AI tab in first place.
+    access.aiData = { surfaces: { chat: { available: true }, settings: { available: false } }, instance_features: { ai_settings: false } };
+    rerenderShell();
+    const nav = screen.getByRole('tablist', { name: 'nav:topBar.sectionNav' });
+    const tabs = within(nav).getAllByRole('tab');
+    expect(tabs[0]).toHaveTextContent('nav:workspaces.ai');
+    const watched = watches.filter((w) => w.live).flatMap((w) => w.targets);
+    expect(watched).toContain(tabs[0]);
+    expect(watched).toContain(tabs[tabs.length - 1]);
   });
 });

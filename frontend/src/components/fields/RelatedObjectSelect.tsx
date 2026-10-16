@@ -131,7 +131,7 @@ export default function RelatedObjectSelect({
   return (
     <Stack spacing={1.5}>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px', width: '100%' }}>
-        {!hideLabel && <FieldLabel>Related To</FieldLabel>}
+        {!hideLabel && <FieldLabel>{t('labels.relatedTo')}</FieldLabel>}
         <EnumAutocomplete
           label=""
           hideLabel={hideLabel}

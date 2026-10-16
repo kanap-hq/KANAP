@@ -140,7 +140,7 @@
       "duplicateDescription": "Create a copy of \"{{name}}\".",
       "copyEnvBindings": "Copy environment bindings",
       "copyEnvBindingsDescription": "Instance connections will be preserved, but environment-specific details (endpoints, authentication, job names) will be cleared.",
-      "duplicating": "Duplicating...",
+      "duplicating": "Duplicating…",
       "duplicate": "Duplicate",
       "columns": {
         "interfaceId": "Interface ID",
@@ -348,9 +348,9 @@
       "actions": {
         "syncNow": "Synchronise now",
         "nextBatch": "Review the next batch",
-        "preparing": "Preparing the preview...",
+        "preparing": "Preparing the preview…",
         "openSettings": "Open the integration settings",
-        "linkTo": "Link to...",
+        "linkTo": "Link to…",
         "createAsset": "Create new asset",
         "ignore": "Ignore",
         "stopIgnoring": "Stop ignoring",
@@ -447,7 +447,7 @@
           "assets_one": "{{count}} asset",
           "assets_other": "{{count}} assets"
         },
-        "updating": "Updating the preview...",
+        "updating": "Updating the preview…",
         "filterLabel": "Filter the list",
         "filterPlaceholder": "e.g., par-esx",
         "candidates": "Suggested:",
@@ -469,8 +469,8 @@
         },
         "menu": {
           "linkToCandidate": "Link to {{name}}",
-          "linkToExisting": "Link to an existing asset...",
-          "linkToAnother": "Link to another asset...",
+          "linkToExisting": "Link to an existing asset…",
+          "linkToAnother": "Link to another asset…",
           "createNew": "Create a new asset",
           "createInstead": "Create a new asset instead",
           "ignore": "Do not import this object",
@@ -479,7 +479,7 @@
         "picker": {
           "label": "Search for an asset",
           "placeholder": "e.g., par-esx-01",
-          "searching": "Searching...",
+          "searching": "Searching…",
           "noResults": "No asset found."
         },
         "hints": {
@@ -793,7 +793,7 @@
         "retiredDate": "Retired date",
         "licensing": "Licensing",
         "notes": "Notes",
-        "descriptionPlaceholder": "Add a description for this application...",
+        "descriptionPlaceholder": "Add a description for this application…",
         "connections": "Connections",
         "connectedTo": "Connected to",
         "receivesFrom": "Receives from",
@@ -844,7 +844,7 @@
         "noSupportContacts": "No support contacts.",
         "unnamedContact": "Unnamed contact",
         "removeContact": "Remove {{name}}",
-        "supportNotesPlaceholder": "Add support notes...",
+        "supportNotesPlaceholder": "Add support notes…",
         "newSupportContact": "New support contact"
       },
       "interfaces": {
@@ -1158,7 +1158,7 @@
         "resetLayers": "Reset layers",
         "addLayer": "Add layer",
         "saveLayers": "Save layers",
-        "saving": "Saving...",
+        "saving": "Saving…",
         "saveFirst": "Save the connection first to add layers.",
         "noLayers": "No layers yet. Add reverse proxies, firewalls, or hops as legs (max 3).",
         "layer": "Layer {{index}}",
@@ -1166,7 +1166,7 @@
         "order": "Order",
         "orderHelp": "1 = first hop, up to 3",
         "layerName": "Name",
-        "layerNamePlaceholder": "direct, reverse_proxy, firewall...",
+        "layerNamePlaceholder": "direct, reverse_proxy, firewall…",
         "source": "Source",
         "destination": "Destination",
         "entityOrServer": "Entity or server",
@@ -1191,7 +1191,7 @@
       },
       "interfaces": {
         "title": "Related interfaces",
-        "loadingLinked": "Loading linked interfaces...",
+        "loadingLinked": "Loading linked interfaces…",
         "noLinked": "No interface bindings linked yet.",
         "interface": "Interface",
         "environment": "Environment",
@@ -1401,7 +1401,7 @@
       "bindingsHint": "Bindings connect interface legs to deployments. Environment-specific details will be cleared.",
       "suitesNotCopied": "Note: Suites and attachments are not copied.",
       "selectInterfaces": "Select interfaces to migrate to the new version. Selected interfaces will be duplicated and linked to the new version.",
-      "loadingInterfaces": "Loading interfaces...",
+      "loadingInterfaces": "Loading interfaces…",
       "noInterfaces": "No interfaces found for this application.",
       "selectAll": "Select all",
       "deselectAll": "Deselect all",
@@ -1594,7 +1594,7 @@
     "remove": "Remove",
     "search": "Search",
     "actions": "Actions",
-    "loading": "Loading...",
+    "loading": "Loading…",
     "name": "Name",
     "user": "User",
     "lastName": "Last name",

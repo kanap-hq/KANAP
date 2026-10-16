@@ -214,7 +214,7 @@ export default function DrawerKnowledgeSection({ taskId, canCreate }: DrawerKnow
                     href={`/knowledge/${ref}`}
                     target="_blank"
                     rel="noopener"
-                    aria-label="Open in new tab"
+                    aria-label={t('common:labels.openInNewTab')}
                     sx={(theme) => ({ color: theme.palette.kanap.text.tertiary, textDecoration: 'none', fontSize: 12, lineHeight: 1, p: '0 2px', '&:hover': { color: theme.palette.kanap.text.primary } })}
                   >
                     ↗
@@ -223,7 +223,7 @@ export default function DrawerKnowledgeSection({ taskId, canCreate }: DrawerKnow
                     <Box
                       component="button"
                       onClick={() => unlinkMutation.mutate(doc.id)}
-                      aria-label="Unlink document"
+                      aria-label={t('common:knowledgePanel.unlinkDocument')}
                       sx={(theme) => ({ background: 'none', border: 'none', cursor: 'pointer', color: theme.palette.kanap.text.tertiary, fontSize: 14, lineHeight: 1, p: '0 2px', '&:hover': { color: theme.palette.kanap.danger } })}
                     >
                       ×
@@ -250,7 +250,7 @@ export default function DrawerKnowledgeSection({ taskId, canCreate }: DrawerKnow
             onClick={() => setLinkOpen(true)}
             sx={tealLinkSx}
           >
-            + Link existing
+            + {t('common:knowledgePanel.linkExisting')}
           </Box>
 
           {/* Split link: + New document ▾ */}
@@ -261,13 +261,13 @@ export default function DrawerKnowledgeSection({ taskId, canCreate }: DrawerKnow
               disabled={createBlankMutation.isPending}
               sx={tealLinkSx}
             >
-              + New document
+              + {t('common:knowledgePanel.newDocument')}
             </Box>
             <Box
               component="button"
               onClick={(e) => setNewDocAnchor(e.currentTarget as HTMLElement)}
               sx={(theme) => ({ color: theme.palette.kanap.teal, fontSize: 9, background: 'none', border: 'none', cursor: 'pointer', p: '0 2px', lineHeight: 1 })}
-              aria-label="New document options"
+              aria-label={t('common:knowledgePanel.newDocumentOptions')}
             >
               ▾
             </Box>

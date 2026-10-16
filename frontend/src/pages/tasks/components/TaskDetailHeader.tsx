@@ -204,7 +204,7 @@ export default function TaskDetailHeader({
       >
         <Box
           component="nav"
-          aria-label="breadcrumb"
+          aria-label={t('common:labels.breadcrumb')}
           sx={{ display: 'flex', alignItems: 'center', gap: taskDetailTokens.breadcrumb.gap, fontSize: '12px', minWidth: 0, overflow: 'hidden' }}
         >
           {originCrumb && (
@@ -346,7 +346,7 @@ export default function TaskDetailHeader({
             <IconButton
               onClick={onClose}
               size="small"
-              aria-label="Close"
+              aria-label={t('common:buttons.close')}
               sx={(theme) => ({ color: theme.palette.kanap.text.tertiary, ml: '4px' })}
             >
               <CloseIcon sx={{ fontSize: 18 }} />

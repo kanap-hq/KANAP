@@ -344,7 +344,7 @@ export default function TaskPropertiesDrawer({
                   onClick={() => setLogTimeOpen(true)}
                   sx={tealLinkSx}
                 >
-                  + Log time
+                  + {t('dialogs.logTime.actions.logTime')}
                 </Box>
               )}
             </Box>

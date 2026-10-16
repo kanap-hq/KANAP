@@ -132,6 +132,7 @@
       "baseCurrency": "Moneda base",
       "chartOfAccounts": "Plan de cuentas",
       "lifecycle": "Ciclo de vida",
+      "status": "Estado",
       "address1": "Dirección, línea 1",
       "address2": "Dirección, línea 2",
       "postalCode": "Código postal",
@@ -144,6 +145,10 @@
       "headcount": "Plantilla",
       "itUsers": "Usuarios IT",
       "turnover": "Facturación (M€)"
+    },
+    "status": {
+      "enabled": "Activado",
+      "disabled": "Desactivado"
     },
     "sections": {
       "address": "Dirección",

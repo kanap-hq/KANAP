@@ -132,6 +132,7 @@
       "baseCurrency": "Base currency",
       "chartOfAccounts": "Chart of accounts",
       "lifecycle": "Lifecycle",
+      "status": "Status",
       "address1": "Address line 1",
       "address2": "Address line 2",
       "postalCode": "Postal code",
@@ -144,6 +145,10 @@
       "headcount": "Headcount",
       "itUsers": "IT users",
       "turnover": "Turnover (M€)"
+    },
+    "status": {
+      "enabled": "Enabled",
+      "disabled": "Disabled"
     },
     "sections": {
       "address": "Address",

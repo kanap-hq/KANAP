@@ -75,6 +75,7 @@ La lista muestra todas las empresas de su espacio de trabajo. Utilícela para re
 Haga clic en cualquier fila de la lista para abrir el espacio de trabajo de la empresa. Tiene dos pestañas: **Visión general** y **Detalles**.
 
 - **Encabezado**: el nombre de la empresa. Haga clic en él para cambiar el nombre de la empresa. Las flechas con «N de M» permiten moverse entre empresas en el orden y con los filtros de la lista, sin volver a ella. El enlace de retorno, **Empresas**, vuelve a la lista con su contexto de búsqueda intacto
+- **Estado**, bajo el nombre: **Activado** o **Desactivado**. Haga clic para cambiarlo. Elegir **Desactivado** desactiva la empresa de inmediato: el fin de validez pasa a ser la hora actual
 - **Panel Propiedades** a la derecha: **País**, **Moneda base**, **Plan de cuentas** y **Ciclo de vida**. Use el botón situado junto al panel para plegarlo o volver a abrirlo
 
 **Guardado automático**: Cada cambio se guarda por sí solo al salir del campo. No hay botones Guardar, Restablecer ni Cerrar. Puede seguir trabajando mientras se guarda un cambio. Cuando se rechaza un cambio, el motivo aparece bajo el campo que lo causó.

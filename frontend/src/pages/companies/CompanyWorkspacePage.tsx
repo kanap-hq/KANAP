@@ -3,16 +3,25 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, Button, Stack, TextField, Typography } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import { useCompanyNav } from '../../hooks/useCompanyNav';
 import { useFieldDraft } from '../../hooks/useFieldDraft';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
+import { PortfolioMetadataItem, PortfolioStatusMetadata } from '../portfolio/workspace/PortfolioMetadataBar';
 import { PropertyGroup, PropertyRow } from '../../components/design';
 import StatusLifecycleField from '../../components/fields/StatusLifecycleField';
-import { STATUS_DISABLED, STATUS_ENABLED, deriveStatusFromDisabledAt, normalizeStatus } from '../../constants/status';
+import {
+  STATUS_DISABLED,
+  STATUS_ENABLED,
+  type StatusValue,
+  deriveStatusFromDisabledAt,
+  normalizeStatus,
+} from '../../constants/status';
 import { drawerFieldValueSx, longFormSurfaceFieldSx } from '../../theme/formSx';
 import { getApiErrorMessage, isDuplicateError } from '../../utils/apiErrorMessage';
+import { getDotColor } from '../../utils/statusColors';
 import { useCoaList } from '../coa/useCoaList';
 import { CoaField, CountryField, CurrencyField, defaultCoaFor } from './CompanyFields';
 import CompanyMetricsTab from './CompanyMetricsTab';
@@ -83,6 +92,7 @@ function useOptionalSections() {
 
 export default function CompanyWorkspacePage() {
   const { t } = useTranslation(['master-data', 'common']);
+  const theme = useTheme();
   const navigate = useNavigate();
   const params = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -221,6 +231,33 @@ export default function CompanyWorkspacePage() {
     { key: 'details', label: t('shared.labels.details') },
   ];
 
+  // The header shows the status as the supplier's does: the menu disables at once (end of
+  // validity now, set by the server) or enables again (no end of validity).
+  const status = normalizeStatus(data?.status);
+  const enabledColor = getDotColor('success', theme.palette.mode);
+  const disabledColor = getDotColor('default', theme.palette.mode);
+  const statusLabel = (value: StatusValue) => (value === STATUS_DISABLED ? t('companies.status.disabled') : t('companies.status.enabled'));
+  const changeStatus = (next: StatusValue) => {
+    if (!data || next === status) return;
+    if (next === STATUS_DISABLED) void patch({ status: STATUS_DISABLED }, 'disabled_at');
+    else void patch({ status: STATUS_ENABLED, disabled_at: null }, 'disabled_at');
+  };
+  const metadata = data ? (
+    <PortfolioMetadataItem label={t('companies.fields.status')}>
+      <PortfolioStatusMetadata
+        value={status}
+        label={statusLabel(status)}
+        color={status === STATUS_DISABLED ? disabledColor : enabledColor}
+        options={[
+          { value: STATUS_ENABLED, label: statusLabel(STATUS_ENABLED), color: enabledColor },
+          { value: STATUS_DISABLED, label: statusLabel(STATUS_DISABLED), color: disabledColor },
+        ]}
+        onChange={(value) => changeStatus(value as StatusValue)}
+        disabled={disabled}
+      />
+    </PortfolioMetadataItem>
+  ) : undefined;
+
   const properties = data ? (
     <PropertyGroup>
       <PropertyRow label={t('companies.fields.country')} required>
@@ -262,7 +299,7 @@ export default function CompanyWorkspacePage() {
           {t('companies.fields.lifecycle')}
         </Typography>
         <StatusLifecycleField
-          status={normalizeStatus(data.status)}
+          status={status}
           // The date carries the change (the switch sets it too); the server derives the status from it.
           onStatusChange={() => undefined}
           disabledAt={data.disabled_at}
@@ -324,6 +361,7 @@ export default function CompanyWorkspacePage() {
           previousLabel: t('companies.previous'),
           nextLabel: t('companies.next'),
         } : undefined}
+        metadata={metadata}
         properties={properties}
       >
         {data && tab === 'overview' && (

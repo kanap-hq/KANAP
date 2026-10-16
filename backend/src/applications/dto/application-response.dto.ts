@@ -198,6 +198,8 @@ export interface ApplicationListItemResponse extends ApplicationResponse {
   suites_count?: number;
   /** First suite name (when include=structure) */
   first_suite_name?: string | null;
+  /** Reference of that first suite, for its link (when include=structure) */
+  first_suite_ref?: string | null;
   /** Component apps count (when include=structure) */
   components_count?: number;
   /** First component name (when include=structure) */

@@ -132,6 +132,7 @@
       "baseCurrency": "Basiswährung",
       "chartOfAccounts": "Kontenplan",
       "lifecycle": "Lebenszyklus",
+      "status": "Status",
       "address1": "Adresszeile 1",
       "address2": "Adresszeile 2",
       "postalCode": "Postleitzahl",
@@ -144,6 +145,10 @@
       "headcount": "Mitarbeiterzahl",
       "itUsers": "IT-Benutzer",
       "turnover": "Umsatz (Mio. €)"
+    },
+    "status": {
+      "enabled": "Aktiviert",
+      "disabled": "Deaktiviert"
     },
     "sections": {
       "address": "Adresse",

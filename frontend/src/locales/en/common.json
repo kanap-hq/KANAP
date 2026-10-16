@@ -34,12 +34,12 @@
     "moreActions": "More actions"
   },
   "status": {
-    "loading": "Loading...",
-    "saving": "Saving...",
-    "deleting": "Deleting...",
-    "sending": "Sending...",
-    "importing": "Importing...",
-    "exporting": "Exporting {{format}}...",
+    "loading": "Loading…",
+    "saving": "Saving…",
+    "deleting": "Deleting…",
+    "sending": "Sending…",
+    "importing": "Importing…",
+    "exporting": "Exporting {{format}}…",
     "saved": "Saved"
   },
   "statuses": {
@@ -66,7 +66,7 @@
   "filters": {
     "quickFilter": "Quick filter",
     "clearQuickFilter": "Clear quick filter",
-    "search": "Search...",
+    "search": "Search…",
     "noOptions": "No options",
     "blank": "(Blank)",
     "selectedCount": "{{count}} selected",
@@ -132,7 +132,14 @@
     "recommended": "Recommended",
     "openCalendar": "Open calendar",
     "datePlaceholder": "dd/mm/yyyy",
-    "requiredTag": "(required)"
+    "requiredTag": "(required)",
+    "relatedTo": "Related to",
+    "openInNewTab": "Open in new tab",
+    "breadcrumb": "Breadcrumb",
+    "reviewStates": "Review states",
+    "previousTask": "Previous task",
+    "nextTask": "Next task",
+    "closeDialog": "Close dialog"
   },
   "yearTabs": {
     "single": "Year: {{year}}",
@@ -233,7 +240,7 @@
     "dashboardSettings": "Dashboard settings",
     "noTilesEnabled": "No tiles enabled. Click the settings icon to configure your dashboard.",
     "blankDocument": "Blank document",
-    "fromTemplate": "From template...",
+    "fromTemplate": "From template…",
     "selectTemplate": "Select template",
     "useTemplate": "Use template",
     "noTemplatesAvailable": "No published templates are available.",
@@ -569,7 +576,7 @@
     }
   },
   "selects": {
-    "loading": "Loading...",
+    "loading": "Loading…",
     "loadingEllipsis": "Loading…",
     "noAccountsFound": "No accounts found",
     "noContactsFound": "No contacts found",
@@ -585,7 +592,7 @@
     "newCategory": "New category",
     "editCategories": "Edit categories",
     "inactiveSuffix": "(inactive)",
-    "addTeamMember": "Add team member...",
+    "addTeamMember": "Add team member…",
     "noTeamMembers": "No team members assigned.",
     "cluster": "Cluster:",
     "account": "Account",
@@ -630,7 +637,7 @@
     "newDocument": "New document",
     "newDocumentLower": "New document",
     "blankDocument": "Blank document",
-    "fromTemplate": "From template...",
+    "fromTemplate": "From template…",
     "selectTemplate": "Select template",
     "noTemplatesAvailable": "No published templates are available.",
     "useTemplate": "Use template",
@@ -643,8 +650,6 @@
     "failedToUpdateLinks": "Failed to update knowledge links.",
     "failedToLoadContext": "Failed to load knowledge context.",
     "noStandaloneDocuments": "No standalone knowledge documents.",
-    "restrictedDocuments": "{{count}} standalone knowledge document is available for this item. You need the Knowledge Reader role to view them.",
-    "restrictedDocuments_plural": "{{count}} standalone knowledge documents are available for this item. You need the Knowledge Reader role to view them.",
     "linkedDocuments": "Linked documents",
     "relatedDocuments": "Related documents",
     "openKnowledge": "Open knowledge document",
@@ -655,13 +660,16 @@
     "linkedVia": "Linked via",
     "sourceObject": "Source object",
     "updatedColumn": "Updated",
-    "openColumn": "Open"
+    "openColumn": "Open",
+    "restrictedDocuments_one": "{{count}} standalone knowledge document is available for this item. You need the Knowledge Reader role to view them.",
+    "restrictedDocuments_other": "{{count}} standalone knowledge documents are available for this item. You need the Knowledge Reader role to view them.",
+    "newDocumentOptions": "New document options"
   },
   "share": {
     "sendLink": "Send link",
-    "searchUsersOrEmail": "Search users or type an email...",
+    "searchUsersOrEmail": "Search users or type an email…",
     "messageOptional": "Message (optional)",
-    "addPersonalMessage": "Add a personal message...",
+    "addPersonalMessage": "Add a personal message…",
     "copied": "Copied!",
     "copyLink": "Copy link",
     "typeEmailAddress": "Type an email address",
@@ -763,7 +771,7 @@
     "title": "Contacts",
     "selectContact": "Select contact",
     "noContactsLinked": "No contacts linked",
-    "loadingContacts": "Loading contacts...",
+    "loadingContacts": "Loading contacts…",
     "roleCommercial": "Commercial",
     "roleTechnical": "Technical",
     "roleSupport": "Support",
@@ -907,5 +915,16 @@
     "reload": "Reload",
     "reloadHint": "Reload shows these changes. What you are editing stays on screen.",
     "deleted": "This line was deleted"
+  },
+  "markdownEditor": {
+    "insertEmoji": "Insert emoji",
+    "blockStyle": "Block style"
+  },
+  "markdownLink": {
+    "url": "URL",
+    "anchorText": "Anchor text",
+    "editLink": "Edit link",
+    "copyUrl": "Copy URL",
+    "removeLink": "Remove link"
   }
 }

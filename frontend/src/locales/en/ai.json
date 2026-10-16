@@ -11,7 +11,7 @@
     "newChat": "New conversation",
     "noMatch": "No conversation matches",
     "rename": "Rename",
-    "search": "Search conversations...",
+    "search": "Search conversations…",
     "untitled": "Untitled"
   },
   "errors": {
@@ -26,7 +26,7 @@
     "dropHint": "Drop image to attach",
     "hintEnter": "Enter to send",
     "hintShiftEnter": "Shift+Enter for new line",
-    "placeholder": "Ask Plaid about your KANAP data...",
+    "placeholder": "Ask Plaid about your KANAP data…",
     "removeAttachment": "Remove attachment",
     "send": "Send",
     "stop": "Stop generating"
@@ -46,7 +46,7 @@
     "toolCallStreaming": "calling {{name}}…",
     "toolUseCount_one": "{{count}} tool used",
     "toolUseCount_other": "{{count}} tools used",
-    "toolUseProgress": "Using tools...",
+    "toolUseProgress": "Using tools…",
     "userRole": "You"
   },
   "activity": {
@@ -144,7 +144,7 @@
   },
   "mention": {
     "noResults": "No matches",
-    "searching": "Searching...",
+    "searching": "Searching…",
     "entityTypes": {
       "knowledge": "Knowledge",
       "tasks": "Tasks",
@@ -213,7 +213,12 @@
       "search_all": "Search all",
       "search_knowledge": "Search knowledge",
       "web_search": "Search the web"
-    }
+    },
+    "noGroups": "No groups found.",
+    "noFilterValues": "No filter values found.",
+    "noFilterFields": "No filter fields found.",
+    "empty": "(empty)",
+    "aliases": "Aliases: {{aliases}}"
   },
   "tokenUsage": {
     "total": "Tokens",

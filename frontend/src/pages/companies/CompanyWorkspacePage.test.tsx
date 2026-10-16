@@ -114,6 +114,23 @@ describe('CompanyWorkspacePage', () => {
     expect(screen.getByRole('tab', { name: 'shared.labels.details' })).toBeInTheDocument();
   });
 
+  it('shows the status in the header and saves it from the metadata menu, as a supplier', async () => {
+    renderAt('/master-data/companies/co-1/overview');
+    fireEvent.click(await screen.findByRole('button', { name: 'companies.status.enabled' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'companies.status.disabled' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenLastCalledWith('/companies/co-1', { status: 'disabled' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'companies.status.disabled' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'companies.status.enabled' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenLastCalledWith('/companies/co-1', { status: 'enabled', disabled_at: null }));
+  });
+
+  it('shows a read-only user the status without a menu', async () => {
+    auth.canEdit = false;
+    renderAt('/master-data/companies/co-1/overview');
+    fireEvent.click(await screen.findByRole('button', { name: 'companies.status.enabled' }));
+    expect(screen.queryByRole('menuitem', { name: 'companies.status.disabled' })).toBeNull();
+  });
+
   it('saves a name change on blur', async () => {
     renderAt('/master-data/companies/co-1/overview');
     fireEvent.click(await screen.findByText('Acme France'));

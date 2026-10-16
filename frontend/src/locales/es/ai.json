@@ -11,7 +11,7 @@
     "newChat": "Nueva conversación",
     "noMatch": "Ninguna conversación coincide",
     "rename": "Renombrar",
-    "search": "Buscar conversaciones...",
+    "search": "Buscar conversaciones…",
     "untitled": "Sin título"
   },
   "errors": {
@@ -26,7 +26,7 @@
     "dropHint": "Suelta la imagen para adjuntar",
     "hintEnter": "Intro para enviar",
     "hintShiftEnter": "Mayús+Intro para nueva línea",
-    "placeholder": "Pregunta a Plaid sobre tus datos KANAP...",
+    "placeholder": "Pregunta a Plaid sobre tus datos KANAP…",
     "removeAttachment": "Quitar adjunto",
     "send": "Enviar",
     "stop": "Detener la generación"
@@ -46,7 +46,7 @@
     "toolCallStreaming": "llamando a {{name}}…",
     "toolUseCount_one": "{{count}} herramienta utilizada",
     "toolUseCount_other": "{{count}} herramientas utilizadas",
-    "toolUseProgress": "Usando herramientas...",
+    "toolUseProgress": "Usando herramientas…",
     "userRole": "Tú"
   },
   "activity": {
@@ -144,7 +144,7 @@
   },
   "mention": {
     "noResults": "Sin coincidencias",
-    "searching": "Buscando...",
+    "searching": "Buscando…",
     "entityTypes": {
       "knowledge": "Conocimiento",
       "tasks": "Tareas",
@@ -213,7 +213,12 @@
       "search_all": "Buscar todo",
       "search_knowledge": "Buscar en la base de conocimiento",
       "web_search": "Buscar en la web"
-    }
+    },
+    "noGroups": "No se encontraron grupos.",
+    "noFilterValues": "No se encontraron valores de filtro.",
+    "noFilterFields": "No se encontraron campos de filtro.",
+    "empty": "(vacío)",
+    "aliases": "Alias: {{aliases}}"
   },
   "tokenUsage": {
     "total": "Tokens",

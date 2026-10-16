@@ -1960,7 +1960,7 @@ export default function TaskWorkspacePage() {
                 <Box component="span" sx={{ fontSize: '14px', lineHeight: 1 }}>
                   {drawerOpen ? '›' : '‹'}
                 </Box>
-                <span>Properties</span>
+                <span>{t('workspace.sidebarTitle')}</span>
               </Box>
             </Box>
           </Box>

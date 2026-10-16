@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Button,
@@ -58,6 +59,7 @@ function LinkEditForm({
   onSubmit,
   onCancel,
 }: LinkEditFormProps) {
+  const { t } = useTranslation('common');
   const [url, setUrl] = React.useState(initialUrl);
   const [text, setText] = React.useState(initialText);
 
@@ -72,7 +74,7 @@ function LinkEditForm({
       sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1.25 }}
     >
       <TextField
-        label="URL"
+        label={t('markdownLink.url')}
         placeholder="https://example.com"
         value={url}
         onChange={(e) => setUrl(e.target.value)}
@@ -83,7 +85,7 @@ function LinkEditForm({
       />
       {withAnchorText && (
         <TextField
-          label="Anchor text"
+          label={t('markdownLink.anchorText')}
           value={text}
           onChange={(e) => setText(e.target.value)}
           size="small"
@@ -93,10 +95,10 @@ function LinkEditForm({
       )}
       <Stack direction="row" justifyContent="flex-end" spacing={1}>
         <Button variant="action" onClick={onCancel}>
-          Cancel
+          {t('buttons.cancel')}
         </Button>
         <Button type="submit" variant="action-primary">
-          Save
+          {t('buttons.save')}
         </Button>
       </Stack>
     </Box>
@@ -104,6 +106,7 @@ function LinkEditForm({
 }
 
 export default function MarkdownLinkDialog() {
+  const { t } = useTranslation('common');
   const theme = useTheme();
   const state = useCellValue(linkDialogState$);
   const activeEditor = useCellValue(activeEditor$);
@@ -221,17 +224,17 @@ export default function MarkdownLinkDialog() {
           {urlIsExternal && (
             <OpenInNewIcon sx={{ fontSize: 14, color: 'text.secondary', flexShrink: 0 }} />
           )}
-          <Tooltip title="Edit link">
+          <Tooltip title={t('markdownLink.editLink')}>
             <IconButton size="small" onClick={() => switchToEdit()}>
               <EditIcon fontSize="small" />
             </IconButton>
           </Tooltip>
-          <Tooltip title="Copy URL">
+          <Tooltip title={t('markdownLink.copyUrl')}>
             <IconButton size="small" onClick={() => void navigator.clipboard?.writeText(state.url)}>
               <ContentCopyIcon fontSize="small" />
             </IconButton>
           </Tooltip>
-          <Tooltip title="Remove link">
+          <Tooltip title={t('markdownLink.removeLink')}>
             <IconButton size="small" onClick={() => removeLink()}>
               <LinkOffIcon fontSize="small" />
             </IconButton>

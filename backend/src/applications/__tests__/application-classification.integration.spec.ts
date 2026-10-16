@@ -177,6 +177,18 @@ async function main() {
     assert.ok(testDates.length>=3&&testDates.every((date:string)=>/^\d{4}-\d{2}-\d{2}$/.test(date)),testDates.join(','));
     assert.deepEqual(testDates,[...testDates].sort().reverse(),'last_dr_test sorts newest first');
     assert.ok(testDates.indexOf(recent)<testDates.indexOf(cutoff));
+    // The structure columns name the first suite by name and give its reference, for the list's link.
+    const suiteA=await crud.create({name:'Aaa suite'},userId,{manager});
+    const suiteZ=await crud.create({name:'Zzz suite'},userId,{manager});
+    const member=await crud.create({name:'Suite member'},userId,{manager});
+    for (const suite of [suiteZ,suiteA]) await manager.query('INSERT INTO application_suites(tenant_id,application_id,suite_id) VALUES ($1,$2,$3)',[tenantA,member.id,suite.id]);
+    const structured=(await list.list({include_inactive:true,include:'structure',limit:200},{manager,tenantId:tenantA})).items.find((row:any)=>row.id===member.id) as any;
+    assert.equal(structured.suites_count,2);
+    assert.equal(structured.first_suite_name,'Aaa suite');
+    const refs=new Map<string,string>((await manager.query('SELECT id,sequential_id FROM applications WHERE id = ANY($1)',[[suiteA.id,member.id]])).map((r:any)=>[r.id,r.sequential_id]));
+    assert.ok(refs.get(suiteA.id));
+    assert.equal(structured.first_suite_ref,refs.get(suiteA.id),'first_suite_ref is the reference of the suite named');
+    assert.notEqual(structured.first_suite_ref,refs.get(member.id));
     await manager.query(`SELECT set_config('app.current_tenant',$1,true)`,[tenantB]);
     await assert.rejects(()=>crud.get(app.id,{manager}),/not found/i);
     await assert.rejects(()=>list.listRecoveryDependencies(app.id,{manager,tenantId:tenantB}),/not found/i);
