@@ -279,15 +279,34 @@ Zwei dezente Hinweise können erscheinen: Daten auf der höchsten Vertraulichkei
 
 ### Verknüpfungen
 
-Der Reiter Verknüpfungen verbindet diese Anwendung mit Ihren Finanz-, Vertrags-, Projekt- und Aufgabendatensätzen. Das Reiter-Badge zählt alle verknüpften Elemente. Änderungen werden automatisch gespeichert.
+Der Reiter Verknüpfungen zeigt, womit diese Anwendung verknüpft ist: ihre Budgetzeilen, Verträge, Projekte, Anfragen, Aufgaben und Vorfälle, jeweils in einer eigenen Tabelle. Klicken Sie auf eine Zeile, um den Datensatz zu öffnen. Das Reiter-Badge zählt die verknüpften Budgetzeilen, Verträge, Projekte, Vorfälle, Websites und Anhänge.
 
 **Komponenten** (nur wenn „Kann Unteranwendungen haben" aktiviert ist): eine Tabelle, die die Unteranwendungen dieser Suite mit ihrem Lebenszyklus und ihrer Kritikalität auflistet. Klicken Sie auf eine Zeile, um den Arbeitsbereich der Unteranwendung zu öffnen.
 
-**Verknüpfungen**:
-- **Budgetzeilen**: die OPEX- und CAPEX-Zeilen dieser Anwendung in einer Liste. Suchen Sie nach Titel oder Referenz (`BL-12`); jeder Vorschlag zeigt seinen Typ
-- **Verträge**: Lieferantenverträge
-- **Projekte**: Portfolio-Projekte, die mit dieser Anwendung verknüpft sind
-- **Aufgaben**: Aufgaben, die mit dieser Anwendung verknüpft sind. Diese Liste ist hier schreibgeschützt. Aufgaben gewinnen oder verlieren diese Verknüpfung, wenn Sie das Feld **App / Dienst** auf einer Aufgabe in der Aufgabenseite festlegen.
+**Verknüpfte Datensätze**, jeweils eine Tabelle:
+
+| Abschnitt | Spalten |
+|---|---|
+| **Budgetzeilen** | Referenz (`BL-12`), Name, Typ (OPEX oder CAPEX), Lieferant und der Betrag des laufenden Jahres in Ihrer Standard-Budgetspalte, in der Berichtswährung. Ein Strich bedeutet, dass die Zeile für das Jahr kein Budget hat |
+| **Verträge** | Name, Lieferant, Ende der laufenden Laufzeit, Jahresbetrag in der Vertragswährung, Verlängerung (stillschweigend oder manuell) |
+| **Projekte** | Referenz (`PRJ-7`), Name, Status, geplantes Ende |
+| **Anfragen** | Referenz (`REQ-23`), Name, Status, gewünschte Lieferung |
+| **Aufgaben** | Referenz (`T-118`), Titel, Status, zugewiesene Person, Fälligkeit. Es erscheinen nur die Aufgaben, die mit dieser Anwendung selbst verknüpft sind, nicht die Aufgaben ihrer Projekte |
+| **Vorfälle** | Referenz (`INC-14`), Titel, Schweregrad, Status, Erkennungsdatum |
+
+Orange Daten verlangen Aufmerksamkeit: ein Vertrag, dessen Verlängerungsentscheidung in Ihr Entscheidungsfenster für Verträge fällt, oder eine offene Aufgabe nach ihrer Fälligkeit. Eine deaktivierte Budgetzeile oder ein deaktivierter Vertrag bleibt mit ausgegrautem Namen aufgeführt. Sie sehen nur die Abschnitte der Module, die Sie lesen dürfen.
+
+**Verknüpfungen hinzufügen und entfernen** (`applications:manager`): **Hinzufügen** rechts neben einem Abschnitt öffnet eine Suche. Geben Sie einen Namen oder eine Referenz ein und wählen Sie ein Ergebnis: Die Verknüpfung wird sofort gespeichert. Um eine Verknüpfung zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz am Zeilenende. Das Entfernen einer Verknüpfung löscht nichts anderes. Vorfälle werden vom Vorfall selbst aus verknüpft.
+
+**Verwandt**: Vorschläge von Datensätzen, die Sie verknüpfen könnten, jeweils mit dem Grund des Vorschlags:
+
+- Verträge und Budgetzeilen des Lieferanten der Anwendung;
+- Budgetzeilen eines verknüpften Vertrags oder eines verknüpften Projekts;
+- Projekte, die eine mit der Anwendung verknüpfte Aufgabe enthalten.
+
+Klicken Sie auf **Verknüpfen**, um den Vorschlag seinem Abschnitt hinzuzufügen. Der Abschnitt fehlt, wenn es nichts vorzuschlagen gibt.
+
+**Ebenfalls verknüpft**: Eine Zeile unter den Vorschlägen zählt die Assets der Bereitstellungen der Anwendung, ihre Schnittstellen und ihre Wissensdokumente. Jede Zahl öffnet den passenden Reiter oder Abschnitt.
 
 **Relevante Websites**: URLs mit optionalen Namen hinzufügen, nützlich für Lieferantenportale, Monitoring-Dashboards oder Dokumentationslinks. **URL hinzufügen** öffnet einen Dialog; vorhandene Einträge können bearbeitet oder gelöscht werden.
 
@@ -596,4 +615,4 @@ Custom ERP;lob;;Moderate;Active;2018-03-20;false
 - **Dokumentieren Sie die Zielgruppe**: Legen Sie Unternehmens- und Abteilungs-Zielgruppen in der Eigenschaftsleiste fest; die Benutzeranzahl wird dann automatisch abgeleitet und in Berichten verwendet.
 - **Kategorie-Filterung nutzen**: Verwenden Sie den Kategorie-Spaltenfilter, um sich auf bestimmte Anwendungstypen zu konzentrieren (z. B. nur Line-of-business-Apps anzeigen oder Produktivitätswerkzeuge ausschließen).
 - **Wissensdatenbank frühzeitig anhängen**: Verknüpfen Sie Runbooks und Architekturdokumente im Reiter Übersicht, damit das Team weiß, wo es bei Vorfällen nachschlagen muss.
-- **Aufgaben kommen von der Aufgabenseite**: Um eine Aufgabe an eine Anwendung anzuhängen, setzen Sie das Feld App / Dienst auf der Aufgabe selbst; sie erscheint dann unter Verknüpfungen > Aufgaben.
+- **Aufgaben von beiden Seiten verknüpfen**: Fügen Sie eine Aufgabe unter Verknüpfungen > Aufgaben hinzu oder setzen Sie das Feld App / Dienst auf der Aufgabe selbst; beide zeigen dieselbe Verknüpfung.

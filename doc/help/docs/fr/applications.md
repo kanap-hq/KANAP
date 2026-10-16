@@ -279,15 +279,34 @@ Deux indications discrètes peuvent apparaître : des données au niveau de conf
 
 ### Relations
 
-L'onglet Relations lie cette application à vos enregistrements financiers, contractuels, projet et tâches. Le badge de l'onglet compte tous les éléments liés. Les modifications sont enregistrées automatiquement.
+L'onglet Relations montre ce à quoi cette application est liée : ses lignes budgétaires, contrats, projets, demandes, tâches et incidents, chacun dans son propre tableau. Cliquez sur une ligne pour ouvrir l'enregistrement. Le badge de l'onglet compte les lignes budgétaires, contrats, projets, incidents, sites web et pièces jointes liés.
 
 **Composants** (uniquement lorsque « Peut avoir des apps enfants » est activé) : un tableau listant les applications enfants de cette Suite, avec leur cycle de vie et criticité. Cliquez sur une ligne pour ouvrir l'espace de travail enfant.
 
-**Relations** :
-- **Lignes budgétaires** : les lignes OPEX et CAPEX de cette application, dans une seule liste. Recherchez par titre ou par référence (`BL-12`) ; chaque suggestion affiche son type
-- **Contrats** : contrats fournisseurs
-- **Projets** : projets du portefeuille liés à cette application
-- **Tâches** : tâches liées à cette application. Cette liste est en lecture seule ici : les tâches gagnent ou perdent ce lien lorsque vous définissez le champ **App / Service** sur une tâche dans la page Tâches.
+**Enregistrements liés**, un tableau chacun :
+
+| Section | Colonnes |
+|---|---|
+| **Lignes budgétaires** | Référence (`BL-12`), nom, type (OPEX ou CAPEX), fournisseur, et le montant de l'année en cours dans votre colonne budgétaire par défaut, dans la devise de reporting. Un tiret signifie que la ligne n'a pas de budget pour l'année |
+| **Contrats** | Nom, fournisseur, fin de la période en cours, montant annuel dans la devise du contrat, renouvellement (tacite ou manuel) |
+| **Projets** | Référence (`PRJ-7`), nom, statut, fin prévue |
+| **Demandes** | Référence (`REQ-23`), nom, statut, livraison souhaitée |
+| **Tâches** | Référence (`T-118`), titre, statut, assigné, échéance. Seules les tâches liées à cette application elle-même apparaissent, pas les tâches de ses projets |
+| **Incidents** | Référence (`INC-14`), titre, sévérité, statut, date de détection |
+
+Les dates en orange demandent votre attention : un contrat dont la décision de renouvellement tombe dans votre fenêtre de décision des contrats, ou une tâche ouverte dont l'échéance est passée. Une ligne budgétaire ou un contrat désactivé reste affiché, son nom grisé. Vous ne voyez que les sections des modules que vous pouvez lire.
+
+**Ajouter et retirer des liens** (`applications:manager`) : **Ajouter**, à droite d'une section, ouvre une recherche. Tapez un nom ou une référence et choisissez un résultat : le lien est enregistré aussitôt. Pour retirer un lien, survolez la ligne et cliquez sur la croix en fin de ligne. Retirer un lien ne supprime rien d'autre. Les incidents se lient depuis l'incident lui-même.
+
+**Apparentés** : des suggestions d'enregistrements que vous pourriez lier, chacune avec la raison de la suggestion :
+
+- contrats et lignes budgétaires du fournisseur de l'application ;
+- lignes budgétaires d'un contrat lié ou d'un projet lié ;
+- projets qui portent une tâche liée à l'application.
+
+Cliquez sur **Lier** pour ajouter la suggestion à sa section. La section est absente quand il n'y a rien à suggérer.
+
+**Aussi relié** : une ligne sous les suggestions compte les actifs des déploiements de l'application, ses interfaces et ses documents de connaissance. Chaque nombre ouvre l'onglet ou la section correspondante.
 
 **Sites web pertinents** : ajoutez des URL avec des noms optionnels, utiles pour les portails fournisseurs, tableaux de bord de monitoring ou liens de documentation. **Ajouter une URL** ouvre une boîte de dialogue ; les entrées existantes peuvent être modifiées ou supprimées.
 
@@ -596,4 +615,4 @@ Custom ERP;lob;;Moderate;Active;2018-03-20;false
 - **Documentez l'audience** : Définissez les audiences société et département dans le tiroir des propriétés ; le nombre d'utilisateurs est alors dérivé automatiquement et utilisé dans les rapports.
 - **Exploitez le filtrage par catégorie** : Utilisez le filtre de la colonne Catégorie pour vous concentrer sur des types d'applications spécifiques (ex. : afficher uniquement les apps Métier, ou exclure les outils de Productivité).
 - **Attachez les connaissances tôt** : Liez les runbooks et les documents d'architecture depuis l'onglet Vue d'ensemble pour que l'équipe sache où chercher lors des incidents.
-- **Les tâches viennent de la page Tâches** : Pour rattacher une tâche à une application, définissez le champ App / Service sur la tâche elle-même ; elle apparaîtra alors sous Relations > Tâches.
+- **Liez les tâches depuis l'un ou l'autre côté** : Ajoutez une tâche depuis Relations > Tâches, ou définissez le champ App / Service sur la tâche elle-même ; les deux affichent le même lien.

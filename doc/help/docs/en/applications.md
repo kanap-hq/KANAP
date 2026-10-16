@@ -279,15 +279,34 @@ Two discreet hints may appear: data at the highest confidentiality level combine
 
 ### Relations
 
-The Relations tab links this application to your financial, contract, project and task records. The tab badge counts all linked items. Changes save automatically.
+The Relations tab shows what this application is linked to: its budget lines, contracts, projects, requests, tasks and incidents, each in its own table. Click a row to open the record. The tab badge counts the linked budget lines, contracts, projects, incidents, websites and attachments.
 
 **Components** (only when "Can have child apps" is enabled): a table listing the child applications of this Suite, with their lifecycle and criticality. Click a row to open the child workspace.
 
-**Relations**:
-- **Budget lines**: the OPEX and CAPEX lines of this application, in one list. Search by title or reference (`BL-12`); each suggestion shows its type
-- **Contracts**: vendor contracts
-- **Projects**: portfolio projects linked to this application
-- **Tasks**: tasks linked to this application. This list is read-only here: tasks gain or lose this link when you set the **App / Service** field on a task in the Tasks page.
+**Linked records**, one table each:
+
+| Section | Columns |
+|---|---|
+| **Budget lines** | Reference (`BL-12`), name, type (OPEX or CAPEX), supplier, and the amount of the current year in your default budget column, in the reporting currency. A dash means the line has no budget for the year |
+| **Contracts** | Name, supplier, end of the current term, yearly amount in the contract currency, renewal (tacit or manual) |
+| **Projects** | Reference (`PRJ-7`), name, status, planned end |
+| **Requests** | Reference (`REQ-23`), name, status, desired delivery |
+| **Tasks** | Reference (`T-118`), title, status, assignee, due date. Only the tasks linked to this application itself appear, not the tasks of its projects |
+| **Incidents** | Reference (`INC-14`), title, severity, status, detection date |
+
+Dates in orange need attention: a contract whose renewal decision is due within your contract decision window, or an open task past its due date. A disabled budget line or contract stays listed with its name greyed out. You only see the sections of the modules you can read.
+
+**Adding and removing links** (`applications:manager`): **Add** at the right of a section opens a search. Type a name or a reference and pick a result: the link is saved at once. To remove a link, hover the row and click the cross at its end. Removing a link deletes nothing else. Incidents are linked from the incident itself.
+
+**Related**: suggestions of records you may want to link, each with the reason it is suggested:
+
+- contracts and budget lines of the application's supplier;
+- budget lines of a linked contract or of a linked project;
+- projects that carry a task linked to the application.
+
+Click **Link** to add the suggestion to its section. The section is absent when there is nothing to suggest.
+
+**Also related**: a line under the suggestions counts the assets of the application's deployments, its interfaces and its knowledge documents. Each count opens the matching tab or section.
 
 **Relevant websites**: add URLs with optional names, useful for vendor portals, monitoring dashboards, or documentation links. **Add URL** opens a dialog; existing entries can be edited or deleted.
 
@@ -596,4 +615,4 @@ Custom ERP;lob;;Moderate;Active;2018-03-20;false
 - **Document the audience**: Set company and department audiences in the properties drawer; the user count is then derived automatically and used in reports.
 - **Leverage category filtering**: Use the Category column filter to focus on specific application types (e.g., show only Line-of-business apps, or exclude Productivity tools).
 - **Attach knowledge early**: Link runbooks and architecture documents from the Overview tab so the team knows where to look during incidents.
-- **Tasks come from the Tasks page**: To attach a task to an application, set the App / Service field on the task itself; it will then appear under Relations > Tasks.
+- **Link tasks from either side**: Add a task from Relations > Tasks, or set the App / Service field on the task itself; both show the same link.
