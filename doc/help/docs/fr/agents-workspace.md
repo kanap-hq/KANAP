@@ -22,7 +22,7 @@ Juste sous le nom de l'agent se trouve une fine barre de commandes, alignée à 
 
 ### Le contrôle de mode de fonctionnement
 
-La première commande, c'est l'agent lui-même. Fermé, le contrôle affiche l'état réel de l'agent sous forme d'une pastille de couleur et d'un libellé : **Surveillance — avec validation**, **Surveillance — partiellement automatique**, **Test**, **Désactivé**, **En pause**, **Non démarré** ou **Archivé**. Ouvrez-le (administrateurs, sur un agent qui n'est ni en pause ni archivé) et il propose les trois modes de fonctionnement :
+La première commande, c'est l'agent lui-même. Fermé, le contrôle affiche l'état réel de l'agent sous forme d'une pastille de couleur et d'un libellé : **Surveillance (avec validation)**, **Surveillance (partiellement automatique)**, **Test**, **Désactivé**, **En pause**, **Non démarré** ou **Archivé**. Ouvrez-le (administrateurs, sur un agent qui n'est ni en pause ni archivé) et il propose les trois modes de fonctionnement :
 
 | Mode | Signification |
 | --- | --- |

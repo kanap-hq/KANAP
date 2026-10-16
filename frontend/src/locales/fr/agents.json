@@ -20,7 +20,7 @@
     "dismissedMany": "{{count}} propositions écartées.",
     "dismissManyFailed": "{{count}} écartées, {{failed}} en échec.",
     "pollComplete": "Contrôle terminé : {{status}}. {{processed}} traités, {{enqueued}} mis en file.",
-    "pollCompleteWithReason": "Contrôle terminé : {{status}}. {{processed}} traités, {{enqueued}} mis en file — {{reason}}",
+    "pollCompleteWithReason": "Contrôle terminé : {{status}}. {{processed}} traités, {{enqueued}} mis en file ({{reason}})",
     "pollFailed": "Impossible de contrôler les tickets.",
     "monitoringPollFailed": "Impossible de vérifier les alertes.",
     "settingsSaved": "Paramètres enregistrés.",
@@ -58,8 +58,8 @@
     "off": "Désactivé",
     "archived": "Archivé",
     "testing": "Test",
-    "watchingAutomatic": "Surveillance — partiellement automatique",
-    "watchingAskFirst": "Surveillance — avec validation"
+    "watchingAutomatic": "Surveillance (partiellement automatique)",
+    "watchingAskFirst": "Surveillance (avec validation)"
   },
   "status": {
     "queued": "En attente de démarrage",
@@ -153,7 +153,7 @@
     },
     "newAgentSreDefaultName": "Agent de supervision d'infrastructure",
     "newAgentSreDescription": "Agent de supervision en brouillon : il lit les alertes, les met en relation avec vos données KANAP et prépare des notes de diagnostic à relire.",
-    "cost": "Coût — aujourd’hui / 7 jours",
+    "cost": "Coût : aujourd’hui / 7 jours",
     "includedModelPaused": "Les agents qui utilisent le modèle inclus KANAP sont en pause jusqu'à ce qu'un administrateur le confirme dans Administration > Plaid.",
     "includedModelOpenSettings": "Ouvrir les réglages Plaid"
   },
@@ -440,7 +440,7 @@
       "manual": "Ne s’exécute que sur demande (Vérifier maintenant, tests).",
       "watching": "Vérifie tout seul, en plus de tout ce que fait le mode manuel."
     },
-    "archivedNoteViewer": "Archivé — un administrateur peut le restaurer."
+    "archivedNoteViewer": "Archivé. Un administrateur peut le restaurer."
   },
   "performance": {
     "acceptance": "Acceptation",
@@ -552,7 +552,7 @@
       "replace": "Remplacer",
       "includesSubcategories": "Les sous-catégories sont incluses",
       "includesSubentities": "Les sous-entités sont incluses",
-      "entityHint": "Ouvrez le ticket dans votre outil de tickets — c'est l'organisation ou le site dans l'en-tête du ticket.",
+      "entityHint": "Ouvrez le ticket dans votre outil de tickets : c'est l'organisation ou le site dans l'en-tête du ticket.",
       "inactivityCloses": "L'agent peut proposer de clôturer les tickets silencieux depuis aussi longtemps.",
       "newTicketsHours_one": "Uniquement les tickets ouverts dans la dernière heure.",
       "newTicketsHours_other": "Uniquement les tickets ouverts dans les {{count}} dernières heures.",
@@ -747,7 +747,7 @@
     },
     "maxAlerts": "Alertes traitées par vérification",
     "maxMonitoringRequests": "Requêtes vers l'outil de supervision par vérification",
-    "monitoringNotConnected": "Aucun outil de supervision connecté — cet agent ne peut pas fonctionner.",
+    "monitoringNotConnected": "Aucun outil de supervision connecté : cet agent ne peut pas fonctionner.",
     "kanapDataEnabled": "Rechercher dans les données KANAP",
     "kanapDataHint": "Permet à l'agent de consulter votre inventaire informatique pour enrichir le diagnostic de contexte métier.",
     "kanapDataDomains": {
@@ -769,7 +769,7 @@
     "checkIntervalInfo": "Fréquence à laquelle l’agent cherche de nouveaux tickets lorsqu’il surveille. Entre 5 minutes et 24 heures. « Contrôler maintenant » s’exécute toujours immédiatement, quelle que soit cette valeur.",
     "checkIntervalAlertsInfo": "Fréquence à laquelle l’agent cherche de nouvelles alertes lorsqu’il surveille. Entre 5 minutes et 24 heures. « Chercher de nouvelles alertes » s’exécute toujours immédiatement, quelle que soit cette valeur.",
     "purposeInfo": "Ce que cet agent est là pour faire, en une ligne. Il le relit à chaque exécution.",
-    "instructionsInfo": "Les règles que l’agent suit — rédigez-les librement, en lignes ou en paragraphes. Elles ne peuvent pas élargir ce que l’agent a le droit de faire.",
+    "instructionsInfo": "Les règles que l’agent suit. Rédigez-les librement, en lignes ou en paragraphes. Elles ne peuvent pas élargir ce que l’agent a le droit de faire.",
     "replyLanguageInfo": "La langue dans laquelle l’agent rédige. « Langue du ticket » le fait répondre dans la langue utilisée par le demandeur.",
     "capabilitiesInfo": "Ce que cet agent peut préparer. Tout ce qui est désactivé ici n’est jamais proposé, quelles que soient les instructions.",
     "reference": {

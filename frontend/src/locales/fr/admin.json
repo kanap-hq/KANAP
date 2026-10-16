@@ -107,7 +107,7 @@
         "totalTokens": "Tokens totaux",
         "window": "Fenêtre"
       },
-      "description": "Conversations, consommation de tokens et messages IA de l'organisation. Un message correspond à une question posée à Plaid ou à un ticket examiné par un agent — l'unité comptée par le volume mensuel inclus.",
+      "description": "Conversations, consommation de tokens et messages IA de l'organisation. Un message correspond à une question posée à Plaid ou à un ticket examiné par un agent, l'unité comptée par le volume mensuel inclus.",
       "metrics": {
         "activeConversations30d": "Conversations actives (30j)",
         "activeConversations7d": "Conversations actives (7j)",
@@ -177,8 +177,8 @@
         "loadFailed": "Impossible de charger l'intégration de supervision.",
         "nextStep": "Un agent de supervision SRE peut maintenant être créé depuis la page Agents.",
         "testFailed": "Le test de connexion PRTG a échoué.",
-        "testSuccess_one": "Connecté — PRTG {{version}}, {{count}} capteur visible",
-        "testSuccess_other": "Connecté — PRTG {{version}}, {{count}} capteurs visibles"
+        "testSuccess_one": "Connecté : PRTG {{version}}, {{count}} capteur visible",
+        "testSuccess_other": "Connecté : PRTG {{version}}, {{count}} capteurs visibles"
       },
       "placeholders": {
         "apiKeySaved": "Clé API enregistrée (laissez vide pour conserver)",
@@ -191,7 +191,7 @@
         "disabled": "Désactivé",
         "notConfigured": "Non configuré"
       },
-      "title": "Supervision — PRTG"
+      "title": "Supervision : PRTG"
     },
     "sections": {
       "features": "Fonctionnalités",
@@ -580,7 +580,7 @@
       }
     },
     "exportTitle": "Exporter le modèle {{code}} {{version}}",
-    "importTitle": "Importer le CSV du modèle — {{code}} {{version}}",
+    "importTitle": "Importer le CSV du modèle : {{code}} {{version}}",
     "shared": {
       "allCountries": "Tous les pays",
       "no": "Non",

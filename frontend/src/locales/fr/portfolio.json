@@ -214,7 +214,7 @@
       },
       "aria": {
         "skillLevel": "Niveau {{skill}}",
-        "levelOption": "{{level}} – {{label}}",
+        "levelOption": "{{level}} : {{label}}",
         "removeSkill": "Retirer {{skill}}"
       },
       "nav": {
@@ -2266,7 +2266,7 @@
       "mandatoryBypassDescription": "Lorsque cette option est activée, les demandes marquées comme obligatoires reçoivent un score de priorité de 100, indépendamment des autres critères. La surcharge manuelle est bloquée.",
       "empty": "Aucun critère d'évaluation configuré pour le moment. Ajoutez des critères pour activer l'évaluation des demandes.",
       "dragToReorder": "Glisser pour réorganiser",
-      "reorderHint": "Faites glisser la poignée à gauche pour réorganiser les critères — l'ordre s'applique à l'évaluation des demandes.",
+      "reorderHint": "Faites glisser la poignée à gauche pour réorganiser les critères. L'ordre s'applique à l'évaluation des demandes.",
       "chips": {
         "inverted": "Inversé",
         "weight": "Pondération : {{value}}"

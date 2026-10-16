@@ -56,7 +56,7 @@
       "asAssignee": "Assigné à une tâche",
       "asRequestor": "Demandeur d'une tâche",
       "asViewer": "Observateur d'une tâche",
-      "viewerHint": "Peut être fréquent — désactivé par défaut",
+      "viewerHint": "Peut être fréquent, désactivé par défaut",
       "eventTypes": "Types d'événements :",
       "statusChanges": "Changements de statut",
       "comments": "Commentaires"

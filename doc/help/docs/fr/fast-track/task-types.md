@@ -1,6 +1,6 @@
 ---
 title: "Fast Track Types de tâches : Run, Build & Tâches"
-description: Comprendre les différents types d'éléments de travail dans KANAP -- incidents, problèmes, demandes, projets, bugs et tâches -- et comment travailler avec les tâches au quotidien.
+description: Comprendre les différents types d'éléments de travail dans KANAP (incidents, problèmes, demandes, projets, bugs et tâches) et comment travailler avec les tâches au quotidien.
 ---
 
 # Fast Track Types de tâches : Run, Build & Tâches
