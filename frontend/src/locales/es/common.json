@@ -180,6 +180,8 @@
     "usages": {
       "budget_lines_one": "{{count}} línea presupuestaria",
       "budget_lines_other": "{{count}} líneas presupuestarias",
+      "allocation_rules_one": "{{count}} método de asignación por defecto",
+      "allocation_rules_other": "{{count}} métodos de asignación por defecto",
       "contracts_one": "{{count}} contrato",
       "contracts_other": "{{count}} contratos",
       "applications_one": "{{count}} aplicación",

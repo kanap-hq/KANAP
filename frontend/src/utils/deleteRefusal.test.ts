@@ -52,7 +52,7 @@ describe('deleteFailureReason', () => {
   it('has the sentences and every kind in each language', () => {
     const kinds = [
       'budget_lines', 'contracts', 'applications', 'assets', 'cost_centers', 'departments', 'users', 'locations', 'tasks',
-      'interfaces', 'projects', 'requests', 'team_members',
+      'interfaces', 'projects', 'requests', 'team_members', 'allocation_rules',
     ];
     for (const language of LANGUAGES) {
       for (const code of ['SUPPLIER_IN_USE', 'COMPANY_IN_USE']) {

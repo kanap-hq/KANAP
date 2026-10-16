@@ -180,6 +180,8 @@
     "usages": {
       "budget_lines_one": "{{count}} ligne budgétaire",
       "budget_lines_other": "{{count}} lignes budgétaires",
+      "allocation_rules_one": "{{count}} méthode de ventilation par défaut",
+      "allocation_rules_other": "{{count}} méthodes de ventilation par défaut",
       "contracts_one": "{{count}} contrat",
       "contracts_other": "{{count}} contrats",
       "applications_one": "{{count}} application",
