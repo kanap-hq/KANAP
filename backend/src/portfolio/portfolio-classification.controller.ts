@@ -13,7 +13,7 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
-import { PortfolioClassificationService } from './portfolio-classification.service';
+import { PortfolioClassificationService, type ClassificationKind } from './portfolio-classification.service';
 
 const PORTFOLIO_READER_REQUIREMENTS = [
   { resource: 'tasks', level: 'reader' as const },
@@ -59,6 +59,14 @@ export class PortfolioClassificationController {
   getSource(@Param('id') id: string, @Req() req: any) {
     const tenantId = req?.tenant?.id ?? '';
     return this.svc.getSource(id, tenantId, { manager: req?.queryRunner?.manager });
+  }
+
+  /** The check before a delete: the items of `ids` it would refuse, and why. Nothing is written. */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('portfolio_settings', 'admin')
+  @Post('sources/delete-check')
+  deleteCheckSources(@Body() body: { ids?: unknown }, @Req() req: any) {
+    return this.deleteCheck('sources', body, req);
   }
 
   @UseGuards(PermissionGuard)
@@ -120,6 +128,14 @@ export class PortfolioClassificationController {
     return this.svc.getCategory(id, tenantId, { manager: req?.queryRunner?.manager });
   }
 
+  /** The check before a delete: the items of `ids` it would refuse, and why. Nothing is written. */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('portfolio_settings', 'admin')
+  @Post('categories/delete-check')
+  deleteCheckCategories(@Body() body: { ids?: unknown }, @Req() req: any) {
+    return this.deleteCheck('categories', body, req);
+  }
+
   @UseGuards(PermissionGuard)
   @RequireLevel('portfolio_settings', 'admin')
   @Post('categories')
@@ -169,6 +185,14 @@ export class PortfolioClassificationController {
   getStream(@Param('id') id: string, @Req() req: any) {
     const tenantId = req?.tenant?.id ?? '';
     return this.svc.getStream(id, tenantId, { manager: req?.queryRunner?.manager });
+  }
+
+  /** The check before a delete: the items of `ids` it would refuse, and why. Nothing is written. */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('portfolio_settings', 'admin')
+  @Post('streams/delete-check')
+  deleteCheckStreams(@Body() body: { ids?: unknown }, @Req() req: any) {
+    return this.deleteCheck('streams', body, req);
   }
 
   @UseGuards(PermissionGuard)
@@ -236,6 +260,14 @@ export class PortfolioClassificationController {
     return this.svc.getTaskType(id, tenantId, { manager: req?.queryRunner?.manager });
   }
 
+  /** The check before a delete: the items of `ids` it would refuse, and why. Nothing is written. */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('portfolio_settings', 'admin')
+  @Post('task-types/delete-check')
+  deleteCheckTaskTypes(@Body() body: { ids?: unknown }, @Req() req: any) {
+    return this.deleteCheck('task-types', body, req);
+  }
+
   @UseGuards(PermissionGuard)
   @RequireLevel('portfolio_settings', 'admin')
   @Post('task-types')
@@ -265,6 +297,11 @@ export class PortfolioClassificationController {
   deleteTaskType(@Param('id') id: string, @Req() req: any) {
     const tenantId = req?.tenant?.id ?? '';
     return this.svc.deleteTaskType(id, tenantId, { manager: req?.queryRunner?.manager });
+  }
+
+  private deleteCheck(kind: ClassificationKind, body: { ids?: unknown }, req: any) {
+    const tenantId = req?.tenant?.id ?? '';
+    return this.svc.deleteCheck(kind, Array.isArray(body?.ids) ? body.ids : [], tenantId, { manager: req?.queryRunner?.manager });
   }
 
   // ============================================

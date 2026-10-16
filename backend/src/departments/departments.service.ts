@@ -10,7 +10,6 @@ const DEPARTMENT_SORT_COLUMNS = new Set(['id', 'company_id', 'name', 'descriptio
 const DEPARTMENT_TEXT_SORTS = new Set(['name', 'description']);
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { Company } from '../companies/company.entity';
-import * as fs from 'fs';
 import {
   buildQuickSearchConditions,
   compileAgFilterCondition,
@@ -22,6 +21,7 @@ import { applyStatusFilter, extractStatusFilterFromAgModel } from '../common/sta
 import { StatusState, STATUS_STATES, deriveStatusFromDisabledAt, resolveLifecycleState } from '../common/status';
 import { csvItemLifecycle, csvLifecycleConflict } from '../spend/item-write.util';
 import { DepartmentUpsertDto } from './dto/department.dto';
+import { duplicateNameException } from '../common/duplicate-name';
 import {
   cellOf,
   CsvDateOrder,
@@ -29,10 +29,14 @@ import {
   DecimalMark,
   endOfValidityCell,
   endOfValidityOf,
+  keepStoredEndOfValidity,
+  ImportReportError,
+  nameMatchedWarning,
   readMasterDataFile,
   rowProblems,
   writeCsv,
 } from '../common/csv-sheet';
+import { uploadedBytes } from '../common/upload';
 
 type DepartmentLookupItem = { id: string; name: string; company_id: string };
 
@@ -224,6 +228,20 @@ export class DepartmentsService {
     return { id: found.id, name: found.name, company_id: found.company_id };
   }
 
+  /**
+   * Department names are unique in their company whatever their case ("FINANCE" when "Finance"
+   * exists): refused with the same answer as the database's unique key (409 `duplicate`).
+   */
+  private async assertNameFree(manager: EntityManager, companyId: string, name: string, exceptId?: string) {
+    const rows: Array<{ id: string }> = await manager.query(
+      `SELECT id FROM departments
+        WHERE tenant_id = app_current_tenant() AND company_id = $1 AND lower(name) = lower($2) AND ($3::uuid IS NULL OR id <> $3)
+        LIMIT 1`,
+      [companyId, name, exceptId ?? null],
+    );
+    if (rows.length > 0) throw duplicateNameException('Another department of this company already has this name.');
+  }
+
   async create(body: DepartmentUpsertDto, userId?: string, opts?: { manager?: EntityManager; audit?: AuditSourceOptions }) {
     const repo = this.getRepo(opts?.manager);
     const compRepo = this.getCompanyRepo(opts?.manager);
@@ -231,6 +249,7 @@ export class DepartmentsService {
     if (!body.name) throw new BadRequestException('name is required');
     const comp = await compRepo.findOne({ where: { id: body.company_id as string } });
     if (!comp) throw new BadRequestException('company_id is invalid');
+    await this.assertNameFree(repo.manager, body.company_id as string, body.name as string);
     const { status: statusInput, disabled_at, ...rest } = body ?? {};
     const lifecycle = resolveLifecycleState({ nextStatus: statusInput, nextDisabledAt: disabled_at });
     const entity = repo.create({
@@ -241,15 +260,7 @@ export class DepartmentsService {
       status: lifecycle.status,
       disabled_at: lifecycle.disabled_at,
     });
-    let saved: Department;
-    try {
-      saved = await repo.save(entity);
-    } catch (err: any) {
-      if (err && (err.code === '23505' || /unique/i.test(String(err.detail || err.message || '')))) {
-        throw new BadRequestException('A department with this name already exists in the selected company.');
-      }
-      throw err;
-    }
+    const saved = await repo.save(entity);
     await this.audit.log(
       {
         table: 'departments',
@@ -276,6 +287,11 @@ export class DepartmentsService {
     }
     const before = { ...existing };
     const { status: statusInput, disabled_at, ...rest } = body ?? {};
+    const nextCompany = (rest.company_id ?? existing.company_id) as string;
+    const nextName = (rest.name ?? existing.name) as string;
+    if (nextCompany !== before.company_id || nextName !== before.name) {
+      await this.assertNameFree(repo.manager, nextCompany, nextName, id);
+    }
     Object.assign(existing, rest);
     const lifecycle = resolveLifecycleState({
       currentDisabledAt: before.disabled_at,
@@ -284,15 +300,7 @@ export class DepartmentsService {
     });
     existing.status = lifecycle.status;
     existing.disabled_at = lifecycle.disabled_at;
-    let saved: Department;
-    try {
-      saved = await repo.save(existing);
-    } catch (err: any) {
-      if (err && (err.code === '23505' || /unique/i.test(String(err.detail || err.message || '')))) {
-        throw new BadRequestException('A department with this name already exists in the selected company.');
-      }
-      throw err;
-    }
+    const saved = await repo.save(existing);
     await this.audit.log(
       {
         table: 'departments',
@@ -548,8 +556,7 @@ export class DepartmentsService {
     if (!file) throw new BadRequestException('No file uploaded');
     const readLanguage = language ?? 'en';
     const expectedHeaders = this.csvHeaders();
-    const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
-    if (!buf) throw new BadRequestException('Empty upload');
+    const buf = uploadedBytes(file);
     const read = await readMasterDataFile({
       file: buf as Buffer,
       fields: expectedHeaders,
@@ -579,6 +586,7 @@ export class DepartmentsService {
     };
     // Validate and normalize rows
     const normalized: Array<DepartmentUpsertDto & { company_id: string; name: string; lifecycle: { status: StatusState | null; disabled_at: string | null } }> = [];
+    const lineOf = new Map<object, number>();
     for (const row of read.rows) {
       const line = row.line;
       const problems = rowProblems(row, ['disabled_at']);
@@ -618,12 +626,14 @@ export class DepartmentsService {
         const comp = await findCompanyByName(company_name);
         if (!comp) errors.push({ row: line, message: `Unknown company '${company_name}'` });
         else {
-          normalized.push({
+          const item = {
             company_id: comp.id,
             name,
             description: cellOf(row, 'description') || null,
             lifecycle: { status: statusValue, disabled_at: disabled_at_iso },
-          });
+          };
+          normalized.push(item);
+          lineOf.set(item, line);
         }
       }
     }
@@ -642,8 +652,23 @@ export class DepartmentsService {
     let updated = 0;
     let unchanged = 0;
     const toWrite: Array<{ item: (typeof unique)[number]; existing: Department | null }> = [];
-    for (const item of unique) {
-      const existing = await repo.findOne({ where: { company_id: item.company_id as string, name: item.name as string } });
+    // A row matches the company's department of the same name whatever its case ("FINANCE" updates
+    // "Finance"): the stored spelling stays, and the report says which department the row matched.
+    const warnings: ImportReportError[] = [];
+    for (const fileItem of unique) {
+      const existing = await repo.createQueryBuilder('d')
+        .where('d.company_id = :companyId AND lower(d.name) = lower(:name)', { companyId: fileItem.company_id, name: fileItem.name })
+        .getOne();
+      const warning = existing ? nameMatchedWarning(lineOf.get(fileItem) ?? 0, 'name', fileItem.name, existing.name) : null;
+      if (warning) warnings.push(warning);
+      // The stored end of validity's day keeps its time of day: the export writes the day only.
+      const item = existing
+        ? {
+          ...fileItem,
+          name: existing.name,
+          lifecycle: { ...fileItem.lifecycle, disabled_at: keepStoredEndOfValidity(existing.disabled_at, fileItem.lifecycle.disabled_at) },
+        }
+        : fileItem;
       const { lifecycle, ...values } = item;
       if (!existing) inserted += 1;
       else if (
@@ -656,7 +681,7 @@ export class DepartmentsService {
       toWrite.push({ item, existing });
     }
     if (dryRun) {
-      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, unchanged, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
+      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, unchanged, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
     // Commit
     let processed = 0;
@@ -672,6 +697,6 @@ export class DepartmentsService {
         if (saved) processed += 1;
       }
     }
-    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, unchanged, processed, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
+    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, unchanged, processed, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
   }
 }

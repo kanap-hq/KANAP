@@ -22,7 +22,7 @@ type DepartmentMultiSelectProps = {
 };
 
 export default function DepartmentMultiSelect({
-  label = 'Departments',
+  label: labelProp,
   value,
   onChange,
   companyId,
@@ -33,6 +33,7 @@ export default function DepartmentMultiSelect({
   textFieldSx,
 }: DepartmentMultiSelectProps) {
   const { t } = useTranslation(['master-data', 'common']);
+  const label = labelProp ?? t('common:selects.departments');
   const naked = hideLabel || label === '';
   // The company's departments, searched as the user types; nothing before a company is chosen.
   const picker = useLookupPicker<Department>({
@@ -90,7 +91,7 @@ export default function DepartmentMultiSelect({
               !companyId
                 ? t('departments.selectCompanyFirst')
                 : (selected.length === 0
-                    ? (placeholder ?? (naked ? t('common:selects.notSet') : 'All departments'))
+                    ? (placeholder ?? (naked ? t('common:selects.notSet') : t('common:selects.allDepartments')))
                     : undefined)
             }
             size={size}

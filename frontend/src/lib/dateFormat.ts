@@ -73,7 +73,11 @@ export function formatShortDate(
     month: 'short',
     year: 'numeric',
   }).formatToParts(date);
-  const dayPart = parts.find((part) => part.type === 'day')?.value;
+  const dayIndex = parts.findIndex((part) => part.type === 'day');
+  // German writes the day as an ordinal ("19. Okt."): keep the period Intl puts after it.
+  const dayPart = dayIndex >= 0
+    ? `${parts[dayIndex].value}${parts[dayIndex + 1]?.type === 'literal' && parts[dayIndex + 1].value.startsWith('.') ? '.' : ''}`
+    : undefined;
   const monthPart = parts.find((part) => part.type === 'month')?.value;
   const yearPart = showYear ? parts.find((part) => part.type === 'year')?.value : undefined;
 
@@ -97,3 +101,33 @@ export function formatShortDateTime(
   }).format(date);
   return `${datePart}, ${timePart}`;
 }
+
+const abbreviatedMonths = new Map<string, RegExp | null>();
+
+/** The months a locale abbreviates with a period ("oct.", "Okt."), as a pattern, or null when none. */
+function abbreviatedMonthPattern(locale: string): RegExp | null {
+  const language = (locale || 'en').split('-')[0];
+  if (abbreviatedMonths.has(language)) return abbreviatedMonths.get(language)!;
+  const formatter = new Intl.DateTimeFormat(language, { day: 'numeric', month: 'short' });
+  const months = Array.from({ length: 12 }, (_, month) => formatter
+    .formatToParts(new Date(2001, month, 15))
+    .find((part) => part.type === 'month')?.value ?? '')
+    .filter((month) => month.endsWith('.'));
+  const escape = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = months.length > 0
+    ? new RegExp(`(^|[\\s\\u00a0])(${months.map(escape).join('|')})\\.(?=$|[\\s\\u00a0)»”"])`, 'g')
+    : null;
+  abbreviatedMonths.set(language, pattern);
+  return pattern;
+}
+
+/**
+ * A sentence that ends on an abbreviated month keeps a single period: "la semaine du 19 oct." and not
+ * "19 oct..". Applied to every translated text (i18n post-processor).
+ */
+export function mergeAbbreviationPeriods(text: string, locale: string): string {
+  if (!text.includes('..')) return text;
+  const pattern = abbreviatedMonthPattern(locale);
+  return pattern ? text.replace(pattern, '$1$2') : text;
+}
+

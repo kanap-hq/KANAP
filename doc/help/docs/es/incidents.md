@@ -152,7 +152,7 @@ La revisión es en sí misma un documento de la base de conocimiento, con su pro
 
 El diario es lo que convierte esto en un registro y no en un formulario. Enumera todo lo que le ha ocurrido al incidente, de lo más reciente a lo más antiguo, y **nada de lo que contiene puede editarse ni eliminarse**, por nadie, en ningún momento.
 
-**Añadir una nota**: escríbala en el redactor de la parte superior y haga clic en **Añadir** (o pulse Ctrl+Intro). La fecha y la hora junto al botón fijan el momento al que se refiere la nota. Por defecto es ahora, y puede situarla en el pasado: una nota añadida el martes puede registrarse como ocurrida a las 23:40 del sábado, y se ordenará en ese punto de la cronología. KANAP guarda por separado el momento en que la nota se grabó realmente, y esa marca de tiempo nunca es editable: así el registro retroactivo sigue siendo honesto.
+**Añadir una nota**: escríbala en el redactor de la parte superior y haga clic en **Añadir** (o pulse Ctrl+Intro). La fecha y la hora junto al botón fijan el momento al que se refiere la nota. La hora se escribe en formato de 24 horas (23:40). Por defecto es ahora, y puede situarla en el pasado: una nota añadida el martes puede registrarse como ocurrida a las 23:40 del sábado, y se ordenará en ese punto de la cronología. KANAP guarda por separado el momento en que la nota se grabó realmente, y esa marca de tiempo nunca es editable: así el registro retroactivo sigue siendo honesto.
 
 **Las entradas automáticas** aparecen junto a sus notas:
 

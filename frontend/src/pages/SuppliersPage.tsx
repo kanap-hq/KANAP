@@ -133,6 +133,7 @@ export default function SuppliersPage() {
           itemLabels={{
             toDelete: (count) => t('suppliers.delete.toDelete', { count }),
             kept: (count) => t('suppliers.delete.kept', { count }),
+            deleted: (count) => t('suppliers.delete.deleted', { count }),
           }}
           onDeleteSuccess={() => { setRefreshKey((k) => k + 1); }}
         />

@@ -27,6 +27,15 @@ export class PortfolioTeamsController {
     return this.svc.list(tenantId, { manager: req?.queryRunner?.manager });
   }
 
+  /** The check before a delete: the teams of `ids` it would refuse, and why. Nothing is written. */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('portfolio_settings', 'admin')
+  @Post('delete-check')
+  deleteCheck(@Body() body: { ids?: unknown }, @Req() req: any) {
+    const tenantId = req?.tenant?.id ?? '';
+    return this.svc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], tenantId, { manager: req?.queryRunner?.manager });
+  }
+
   @UseGuards(PermissionGuard)
   @RequireLevel('portfolio_requests', 'reader')
   @Get(':id')

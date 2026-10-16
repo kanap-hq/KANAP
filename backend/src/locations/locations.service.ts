@@ -18,6 +18,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { shareRecipientsOf } from '../notifications/share-recipients';
 import { sortedFindQuery } from '../common/list-sort';
+import { duplicateNameException } from '../common/duplicate-name';
 
 type HostingCategory = 'on_prem' | 'cloud';
 
@@ -129,9 +130,7 @@ export class LocationsService {
       `SELECT id FROM locations WHERE tenant_id = $3 AND lower(name) = lower($1) AND ($2::uuid IS NULL OR id <> $2) LIMIT 1`,
       [value, excludeId, tenantId],
     );
-    if (rows && rows.length > 0) {
-      throw new BadRequestException(`Name already exists`);
-    }
+    if (rows && rows.length > 0) throw duplicateNameException('Another location already has this name.');
   }
 
   private async resolveHostingType(
@@ -1007,9 +1006,7 @@ export class LocationsService {
       .andWhere('si.tenant_id = :tenantId', { tenantId })
       .andWhere('lower(si.name) = lower(:name)', { name })
       .getOne();
-    if (duplicate) {
-      throw new BadRequestException(`Sub-location "${name}" already exists at this location`);
-    }
+    if (duplicate) throw duplicateNameException(`Sub-location "${name}" already exists at this location`);
 
     // Assign display_order = MAX + 1
     const maxResult = await repo
@@ -1074,9 +1071,7 @@ export class LocationsService {
         .andWhere('lower(si.name) = lower(:name)', { name })
         .andWhere('si.id != :id', { id: subItemId })
         .getOne();
-      if (duplicate) {
-        throw new BadRequestException(`Sub-location "${name}" already exists at this location`);
-      }
+      if (duplicate) throw duplicateNameException(`Sub-location "${name}" already exists at this location`);
       existing.name = name;
     }
 

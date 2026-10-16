@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { CsvFieldDefinition, CsvFieldType } from './csv-field.types';
+import { SHIPPED_TASK_TYPE_LABELS } from '../../it-ops-settings/catalog-shipped-labels.data';
 
 /**
  * Supported FK entity types for resolution
@@ -80,6 +81,7 @@ export class CsvResolverService {
       tableName: 'portfolio_task_types',
       lookupColumn: 'name',
       idColumn: 'id',
+      additionalColumns: ['code'],
     },
     companies: {
       tableName: 'companies',
@@ -343,7 +345,27 @@ export class CsvResolverService {
       }
     }
 
+    if (entityType === 'portfolio_task_types') this.addShippedTaskTypeNames(cache);
     return cache;
+  }
+
+  /**
+   * A task type the tenant kept as shipped (its code and English name) also answers to the name the
+   * app shows for it in each language ("Tâche"). The stored names were added first and keep
+   * precedence; the export still writes the stored name (`_originalLookupValue`).
+   */
+  private addShippedTaskTypeNames(cache: Map<string, FkCacheEntry>): void {
+    const kept = [...new Set(cache.values())].filter((entry) => {
+      const shipped = entry.code ? SHIPPED_TASK_TYPE_LABELS[entry.code] : undefined;
+      return !!shipped && shipped.source === entry._originalLookupValue;
+    });
+    for (const entry of kept) {
+      const shipped = SHIPPED_TASK_TYPE_LABELS[entry.code];
+      for (const label of [shipped.en, shipped.fr, shipped.de, shipped.es]) {
+        const key = this.normalizeValue(label);
+        if (!cache.has(key)) cache.set(key, entry);
+      }
+    }
   }
 
   /**

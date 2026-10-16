@@ -7,7 +7,6 @@ import { assertEntityFilterFields, buildWhereFromAgFilters, parseExportPaginatio
 import { sortedFindQuery } from '../common/list-sort';
 import { compileAgFilterCondition, createParamNameGenerator, assertSetFilterModes } from '../common/ag-grid-filtering';
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
-import * as fs from 'fs';
 import { resolveLifecycleState, StatusState } from '../common/status';
 import { extractStatusFilterFromAgModel } from '../common/status-filter';
 import { AccountUpsertDto } from './dto/account.dto';
@@ -38,6 +37,7 @@ import {
   resyncFromChart,
 } from './consolidation';
 import { ACCOUNT_NUMBER_MAX, ACCOUNT_NUMBER_MAX_DIGITS, ACCOUNT_NUMBER_RULE, readAccountNumber } from './account-number';
+import { uploadedBytes } from '../common/upload';
 
 const ACCOUNT_NUMBER_TOKEN = '__account_number__';
 
@@ -826,8 +826,7 @@ export class AccountsService {
     if (!file) throw new BadRequestException('No file uploaded');
     const readLanguage = language ?? 'en';
     const expectedHeaders = this.csvHeaders(!!opts?.allowCoaCodeColumn);
-    const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
-    if (!buf) throw new BadRequestException('Empty upload');
+    const buf = uploadedBytes(file);
     const read = await readMasterDataFile({
       file: buf as Buffer,
       fields: expectedHeaders,

@@ -51,7 +51,7 @@ La liste vous offre une vue filtrable de chaque connexion de votre registre.
 
 **Actions** :
   - **Ajouter une connexion** : Créer une nouvelle connexion (nécessite `infrastructure:member`)
-  - **Supprimer la connexion** : Supprimer les connexions sélectionnées (nécessite `infrastructure:admin`)
+  - **Supprimer la connexion** : Supprimer les connexions sélectionnées (nécessite `infrastructure:admin`). Leurs serveurs, interfaces et documents sont conservés ; seuls leurs liens avec la connexion sont supprimés.
 
 ---
 

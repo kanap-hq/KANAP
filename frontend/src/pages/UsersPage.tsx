@@ -12,6 +12,9 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../api';
 import { useAuth } from '../auth/AuthContext';
 import DeleteSelectedButton from '../components/DeleteSelectedButton';
+import { recordRefusal, recordsInUseCheck } from '../utils/deleteCheck';
+import { deleteFailureReason } from '../utils/deleteRefusal';
+import { getApiErrorMessage } from '../utils/apiErrorMessage';
 import { useLocale } from '../i18n/useLocale';
 import { formatShortDateTime } from '../lib/dateFormat';
 import { useTranslation } from 'react-i18next';
@@ -110,6 +113,15 @@ export default function UsersPage() {
   };
   const handleRowDelete = async (row: any) => {
     closeRowMenu();
+    // Asked first: one's own account gets the refusal and why, with Close only.
+    const refusal = await recordRefusal('/users', row.id);
+    if (refusal) {
+      await dialogs.alert({
+        title: t('common:delete.recordTitle', { name: userDisplayName(row) }),
+        message: deleteFailureReason(refusal, t, locale),
+      });
+      return;
+    }
     const okToGo = await dialogs.confirm({
       message: t('users.messages.deleteConfirm', { name: userDisplayName(row) }),
       confirmLabel: t('users.actions.delete'),
@@ -119,7 +131,7 @@ export default function UsersPage() {
     try {
       await api.delete(`/users/${row.id}`);
       setRefreshKey((k) => k + 1);
-    } catch (e: any) { await dialogs.alert(e?.response?.data?.message || String(e)); }
+    } catch (e: any) { await dialogs.alert(getApiErrorMessage(e, t, t('common:delete.failedGeneric'))); }
   };
   const handleDeactivateSelected = async () => {
     if (!selectedRows.length) return;
@@ -452,8 +464,15 @@ export default function UsersPage() {
         <DeleteSelectedButton
           selectedRows={selectedRows}
           endpoint="/users/bulk"
+          // Asked on click: those that cannot go are kept, with why.
+          checkDelete={(ids) => recordsInUseCheck('/users', ids)}
+          itemLabels={{
+            toDelete: (count) => t('users.delete.toDelete', { count }),
+            kept: (count) => t('users.delete.kept', { count }),
+            deleted: (count) => t('users.delete.deleted', { count }),
+          }}
           getItemId={(row) => row.id}
-          getItemName={(row) => row.email || `${row.first_name ?? ''} ${row.last_name ?? ''}`.trim() || 'User'}
+          getItemName={userDisplayName}
           gridApi={gridApiRef.current}
           onDeleteSuccess={() => setRefreshKey((k) => k + 1)}
         />

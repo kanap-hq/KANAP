@@ -57,6 +57,7 @@ import {
 import { getApiErrorMessage } from '../utils/apiErrorMessage';
 import { foldText } from '../utils/foldText';
 import { fieldResetSx } from '../theme/formSx';
+import { GRID_DATE_COMPONENTS } from './GridDateField';
 
 // AG Grid merges a column's filterParams into defaultColDef's, so each set names its own default
 // option: the text filters' `contains` is not a date or number operator. A filter reset (Clear, a
@@ -101,6 +102,8 @@ export type ServerDataGridProps<T> = {
   enableSearch?: boolean; // deprecated with floating filters; kept for compatibility
   defaultSort?: { field: string; direction: 'ASC' | 'DESC' };
   extraParams?: Record<string, any>;
+  /** Parameters added to a request that carries a search, from its text (`q`). */
+  searchParams?: (q: string) => Record<string, unknown>;
   refreshKey?: number | string; // bump to refresh grid after mutations
   initialFilterModel?: any; // deprecated: prefer `initialState`
   initialState?: any; // AG Grid initialState, applied once at grid creation
@@ -411,6 +414,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   enableSearch = true,
   defaultSort = { field: 'created_at', direction: 'DESC' },
   extraParams = {},
+  searchParams,
   refreshKey,
   initialFilterModel,
   initialState,
@@ -863,6 +867,8 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
     [statusScope, offeredScopesKey, handleStatusScopeChange],
   );
 
+  const searchParamsRef = useRef(searchParams);
+  searchParamsRef.current = searchParams;
   const extraParamsRef = useRef(extraParams);
   const extraParamsKey = useMemo(() => JSON.stringify(extraParams ?? {}), [extraParams]);
   useEffect(() => { extraParamsRef.current = extraParams; }, [extraParamsKey]);
@@ -969,7 +975,10 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
         }
         // include global quick search (server-side)
         const q = searchRef.current;
-        if (enableSearch && q) reqParams.q = q;
+        if (enableSearch && q) {
+          reqParams.q = q;
+          Object.assign(reqParams, searchParamsRef.current?.(q));
+        }
         // Filters too long for a URL go as a saved list context (`ctx`), saved again if the server
         // no longer has it.
         const res = await getWithListContext<ServerResponse<T>>(endpointRef.current, reqParams, { signal: controller.signal });
@@ -1193,15 +1202,27 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
 
   // Reload when the search, extra params, refreshKey, endpoint or status scope change: AG Grid does
   // not see those. It reloads on a sort or filter change by itself.
+  const reloadQueryRef = useRef<string | undefined>(undefined);
   useEffect(() => {
+    const query = JSON.stringify([debouncedSearch, extraParamsKey, endpoint, statusScope, enablePagination]);
+    const sameQuery = reloadQueryRef.current === query;
+    reloadQueryRef.current = query;
     // Skip first run to avoid double-fetch on mount
     if (!initializedRef.current) {
       initializedRef.current = true;
       return;
     }
     const api = gridApiRef.current;
-    // update URL handled in other effect; here we simply purge cache to refetch with new params
     supersedeRequests();
+    if (sameQuery) {
+      // A refresh alone (after a delete, an import, an edit): the same rows asked again, the ones on
+      // screen kept until the new ones arrive, at the same place. No empty grid meanwhile.
+      try {
+        (api as any)?.refreshInfiniteCache?.();
+      } catch {}
+      return;
+    }
+    // update URL handled in other effect; here we simply purge cache to refetch with new params
     setEmptyResult(null);
     try {
       if (enablePagination) {
@@ -1498,6 +1519,8 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
           defaultColDef={defaultColDef}
           context={gridContext}
           localeText={localeText}
+          // Date filters type and pick dates in the app's language, not the browser's.
+          components={GRID_DATE_COMPONENTS}
           pinnedBottomRowData={mergedPinnedBottomRowData}
           cacheBlockSize={cacheBlockSize}
           maxConcurrentDatasourceRequests={1}

@@ -10,14 +10,17 @@ Jede Stammdatenseite hat **CSV exportieren** und **CSV importieren** in ihrer Sy
 
 **Arbeitsmappen und andere Dateien.** Ein Import liest nur CSV-Text. Eine Excel-Arbeitsmappe (`.xlsx`, `.xls`) oder eine OpenDocument-Tabelle (`.ods`) wird abgelehnt, bevor eine Spalte gelesen wird, mit einer Meldung, die erklärt, wie Sie sie als CSV speichern. In Excel: **Datei › Speichern unter › CSV UTF-8 (durch Trennzeichen getrennt)**. In LibreOffice Calc: **Datei › Speichern unter › Text CSV**. Jede andere Datei, die kein Text ist, wird ebenso abgelehnt.
 
-**Beträge und Datumsangaben folgen der Sprache der Oberfläche** beim Export, und ein Import liest beide Formen:
+**Beträge, Datumsangaben und Ja oder Nein folgen der Sprache der Oberfläche** beim Export, und ein Import liest jede Form:
 
-| Sprache | Trennzeichen | Beträge | Datumsangaben |
-|---|---|---|---|
-| Englisch | `,` | `12280.50` | `2027-03-01` |
-| Französisch, Spanisch | `;` | `12280,50` | `01/03/2027` |
-| Deutsch | `;` | `12280,50` | `01.03.2027` |
+| Sprache | Trennzeichen | Beträge | Datumsangaben | Ja, nein |
+|---|---|---|---|---|
+| Englisch | `,` | `12280.50` | `2027-03-01` | `yes`, `no` |
+| Französisch | `;` | `12280,50` | `01/03/2027` | `oui`, `non` |
+| Spanisch | `;` | `12280,50` | `01/03/2027` | `sí`, `no` |
+| Deutsch | `;` | `12280,50` | `01.03.2027` | `ja`, `nein` |
 
 Ein Datum, das die Datei nicht selbst entscheiden kann, zum Beispiel `01/03/2027`, wird in der Reihenfolge der Sprache gelesen, in der die Oberfläche angezeigt wird: Tag zuerst auf Französisch, Deutsch und Spanisch, Monat zuerst auf Englisch. Die Prüfung sagt, wie sie die Datei gelesen hat, mit einer Schaltfläche zum Ändern der Lesart. Ein Datum mit einem Tag über 12 entscheidet die Frage selbst, und die Datei trägt keinen Hinweis auf die Sprache, in der sie exportiert wurde.
+
+Ein Import liest Ja oder Nein in jeder dieser Sprachen sowie `true`, `false`, `1` und `0` älterer Dateien. Die Dateien der Anwendungen, Assets, Incidents, Projekte, Anfragen und Aufgaben folgen derselben Tabelle.
 
 **Größe.** Eine Datei enthält bis zu 20.000 Zeilen.

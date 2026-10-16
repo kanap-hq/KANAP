@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import CloseIcon from '@mui/icons-material/Close';
+import FilterListIcon from '@mui/icons-material/FilterList';
 import { IconButton } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import type {
@@ -163,7 +164,6 @@ const ClearableColumnFloatingFilter = React.forwardRef<ClearableColumnFloatingFi
           onKeyDown={handleKeyDown}
           onBlur={flushPending}
           aria-label={t('filters.filterColumn', { column: columnDef.headerName ?? columnDef.field ?? '' }).trim()}
-          placeholder={t('filters.columnPlaceholder')}
           className="ag-input-field-input ag-text-field-input"
           style={{
             flex: 1,
@@ -175,20 +175,22 @@ const ClearableColumnFloatingFilter = React.forwardRef<ClearableColumnFloatingFi
           }}
         />
       </div>
-      <IconButton
-        size="small"
-        // Keeps the focus in the box: leaving it would apply the typed text first, then the clear.
-        onMouseDown={(event) => event.preventDefault()}
-        onClick={handleClear}
-        aria-label={t('filters.clearFilter')}
-        sx={{
-          visibility: hasValue ? 'visible' : 'hidden',
-          ml: 0.5,
-          p: 0.25,
-        }}
-      >
-        <CloseIcon fontSize="inherit" />
-      </IconButton>
+      {hasValue ? (
+        <IconButton
+          size="small"
+          // Keeps the focus in the box: leaving it would apply the typed text first, then the clear.
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={handleClear}
+          aria-label={t('filters.clearFilter')}
+          sx={{ ml: 0.5, p: 0.25 }}
+        >
+          <CloseIcon fontSize="inherit" />
+        </IconButton>
+      ) : (
+        // An empty box shows an icon, not a word a narrow column would cut short ("Filt…"). Same
+        // size as the clear button that replaces it.
+        <FilterListIcon aria-hidden sx={{ ml: 0.5, p: 0.25, fontSize: 22, boxSizing: 'border-box', color: 'kanap.text.tertiary', flexShrink: 0 }} />
+      )}
     </div>
   );
 });

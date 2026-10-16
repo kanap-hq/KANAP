@@ -6,7 +6,7 @@ import CompanySelect from '../../../components/fields/CompanySelect';
 import DateEUField from '../../../components/fields/DateEUField';
 import StatusLifecycleField from '../../../components/fields/StatusLifecycleField';
 import MetadataUserPicker from '../../../components/workspace/MetadataUserPicker';
-import { deriveStatusFromDisabledAt, normalizeDisabledAtInput, type StatusValue } from '../../../constants/status';
+import { STATUS_DISABLED, deriveStatusFromDisabledAt, normalizeDisabledAtInput, type StatusValue } from '../../../constants/status';
 import { useLocale } from '../../../i18n/useLocale';
 import { formatShortDate } from '../../../lib/dateFormat';
 import type { BillingFrequency, ContractPatch } from '../contractForm';
@@ -186,6 +186,8 @@ export default function ContractPropertiesDrawer({ values, names, disabled, onPa
               if (disabledAt === values.disabled_at) return;
               onPatch({ status: deriveStatusFromDisabledAt(disabledAt), disabled_at: disabledAt });
             }}
+            // Disable now: the status alone, the server sets the end of validity from its own clock.
+            onDisableNow={() => onPatch({ status: STATUS_DISABLED })}
             disabled={disabled}
             statusLabel={t('opex.status.enabled')}
             statusOffLabel={t('opex.status.disabled')}

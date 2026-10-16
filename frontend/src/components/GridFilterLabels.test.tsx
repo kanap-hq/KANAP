@@ -66,15 +66,21 @@ describe('floating filters', () => {
     expect(screen.getByRole('button', { name: 'labels.none' })).toBeInTheDocument();
   });
 
-  it('translates the text filter placeholder and labels', () => {
+  it('labels the text filter and marks an empty one with an icon, in every language', () => {
     const props = {
       api: gridApi({}),
       column: { getColDef: () => ({ headerName: 'Name', field: 'name' }), getColId: () => 'name' },
     } as any;
-    const { container } = render(<ClearableColumnFloatingFilter {...props} />);
-    const input = screen.getByPlaceholderText('filters.columnPlaceholder');
-    expect(input).toHaveAttribute('aria-label', 'filters.filterColumn(Name)');
-    // The clear button stays in the layout, hidden until there is a value.
-    expect(container.querySelector('button[aria-label="filters.clearFilter"]')).not.toBeNull();
+    render(<ClearableColumnFloatingFilter {...props} />);
+    const input = screen.getByRole('textbox', { name: 'filters.filterColumn(Name)' });
+    // No word to cut short in a narrow column ("Filt…"): an empty box shows the filter icon.
+    expect(input).not.toHaveAttribute('placeholder');
+    expect(screen.getByTestId('FilterListIcon')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'filters.clearFilter' })).toBeNull();
+
+    // A value: the clear button takes the icon's place.
+    fireEvent.change(input, { target: { value: 'acme' } });
+    expect(screen.getByRole('button', { name: 'filters.clearFilter' })).toBeInTheDocument();
+    expect(screen.queryByTestId('FilterListIcon')).toBeNull();
   });
 });

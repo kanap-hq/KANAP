@@ -3,6 +3,7 @@ import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
 import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
 import BrightnessAutoIcon from '@mui/icons-material/BrightnessAuto';
 import { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useThemeMode } from '../config/ThemeContext';
 import { useTenant } from '../tenant/TenantContext';
 
@@ -11,10 +12,11 @@ interface AuthFrameProps {
 }
 
 export default function AuthFrame({ children }: AuthFrameProps) {
+  const { t } = useTranslation(['nav', 'settings']);
   const { mode, resolvedMode, setMode } = useThemeMode();
   const { logoUrl, tenantName, useLogoInDark } = useTenant();
 
-  const themeModeLabel = mode === 'system' ? 'System' : mode === 'dark' ? 'Dark' : 'Light';
+  const themeModeLabel = t(`settings:appearance.${mode === 'system' ? 'system' : mode === 'dark' ? 'dark' : 'light'}`);
   const themeModeIcon = mode === 'dark'
     ? <DarkModeOutlinedIcon />
     : mode === 'light'
@@ -63,12 +65,12 @@ export default function AuthFrame({ children }: AuthFrameProps) {
             )}
           </Box>
 
-          <Tooltip title={`Theme: ${themeModeLabel} (click to switch)`}>
+          <Tooltip title={t('nav:topBar.themeTooltip', { mode: themeModeLabel })}>
             <IconButton
               size="small"
               color="inherit"
               onClick={() => setMode(mode === 'light' ? 'dark' : mode === 'dark' ? 'system' : 'light')}
-              aria-label={`Theme: ${themeModeLabel}`}
+              aria-label={t('nav:topBar.themeLabel', { mode: themeModeLabel })}
             >
               {themeModeIcon}
             </IconButton>

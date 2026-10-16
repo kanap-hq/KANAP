@@ -20,7 +20,7 @@ Generate and maintain French, German, and Spanish translations from the English 
 ### Frontend locale files (14 namespaces)
 - Source: `frontend/src/locales/en/*.json`
 - Targets: `frontend/src/locales/{fr,de,es}/*.json`
-- Namespaces: common, nav, auth, settings, portfolio, ops, master-data, it, admin, knowledge, ai, validation, errors, grid
+- Namespaces: common, nav, auth, settings, portfolio, ops, master-data, it, admin, knowledge, ai, validation, errors, grid (AG Grid texts come from `@ag-grid-community/locale`; `grid` only holds overrides)
 
 ### Backend email locale files
 - Source: `backend/src/i18n/email-locales/en.ts`

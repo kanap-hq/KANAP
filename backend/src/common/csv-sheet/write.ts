@@ -45,6 +45,15 @@ export function writeCsvRows(request: CsvWriteRequest): string {
   return text;
 }
 
+/**
+ * One line of a file whose blocks have different columns (the weekly report): the language's
+ * separator, quoting and the formula guard, with no line break.
+ */
+export function writeCsvLine(language: CsvLanguage, cells: readonly string[]): string {
+  const separator = csvProfile(language).separator;
+  return cells.map((cell) => quoteCell(cell, separator)).join(separator);
+}
+
 function quoteCell(value: string, separator: string): string {
   const text = neutralizeCsvFormulaValue(value);
   if (text.includes('"') || text.includes(separator) || text.includes('\n') || text.includes('\r')) {

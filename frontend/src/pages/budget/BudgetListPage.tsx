@@ -13,6 +13,7 @@ import { useAuth } from '../../auth/AuthContext';
 import BudgetFileExportDialog from '../../components/finance/BudgetFileExportDialog';
 import BudgetFileImportDialog from '../../components/finance/BudgetFileImportDialog';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
+import { recordsInUseCheck } from '../../utils/deleteCheck';
 import { LinkCellRenderer } from '../../components/grid/renderers';
 import { formatItemRef } from '../../utils/item-ref';
 import { budgetTypeChipSx } from './budgetTypeChipSx';
@@ -343,6 +344,13 @@ function BudgetListPageView() {
         <DeleteSelectedButton
           selectedRows={selectedRows}
           endpoint="/budget-lines/bulk"
+          // Asked on click: a line with amounts in a frozen column is kept, with the column and year.
+          checkDelete={(ids) => recordsInUseCheck('/budget-lines', ids)}
+          itemLabels={{
+            toDelete: (count) => t('budget.delete.toDelete', { count }),
+            kept: (count) => t('budget.delete.kept', { count }),
+            deleted: (count) => t('budget.delete.deleted', { count }),
+          }}
           getItemId={(row) => row.id}
           getItemName={(row) => row.product_name}
           gridApi={gridApiRef.current}

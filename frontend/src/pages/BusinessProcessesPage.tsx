@@ -158,6 +158,8 @@ export default function BusinessProcessesPage() {
           getItemId={(row) => row.id}
           getItemName={(row) => row.name}
           gridApi={gridApiRef.current}
+          // Nothing refuses a process's delete: the warning says what keeps it.
+          warning={t('businessProcesses.deleteWarning', { count: selectedRows.length })}
           onDeleteSuccess={() => {
             setRefreshKey((k) => k + 1);
           }}
@@ -198,6 +200,7 @@ export default function BusinessProcessesPage() {
         onClose={() => setExportOpen(false)}
         endpoint="/business-processes"
         title={t("businessProcesses.export")}
+        flexibleFormat
       />
       <CsvImportDialog
         open={importOpen}
@@ -205,6 +208,7 @@ export default function BusinessProcessesPage() {
         endpoint="/business-processes"
         title={t("businessProcesses.import")}
         onImported={() => setRefreshKey((k) => k + 1)}
+        flexibleFormat
       />
       <BusinessProcessCategoryManagerDialog
         open={categoryManagerOpen}

@@ -13,6 +13,8 @@ import { useQuery } from '@tanstack/react-query';
 import ForbiddenPage from '../ForbiddenPage';
 import { CsvExportDialogV2, CsvImportDialogV2 } from '../../components/csv';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
+import { refusalCounts } from '../../utils/deleteRefusal';
+import { applicationDeleteCheck } from './applicationDeleteCheck';
 import api from '../../api';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import CheckboxSetFilter from '../../components/CheckboxSetFilter';
@@ -933,6 +935,24 @@ export default function ApplicationsPage() {
           endpoint="/applications/bulk"
           getItemId={(row) => row.id}
           getItemName={(row) => row.name}
+          // Asked on click: applications with interfaces are kept, the others go with their deployments (counted) and links.
+          checkDelete={async (ids) => {
+            const { refused, removes } = await applicationDeleteCheck(ids);
+            const count = ids.length - refused.length;
+            return {
+              refused,
+              warning: removes.length > 0
+                ? t('pages.applications.delete.warningCounted', { count, deployments: refusalCounts({ usages: removes }, t, locale) })
+                : t('pages.applications.delete.warningLinks', { count }),
+            };
+          }}
+          // Without an answered check: what goes, the delete still refusing applications with interfaces.
+          warning={t('pages.applications.delete.warning', { count: selectedRows.length })}
+          itemLabels={{
+            toDelete: (count) => t('pages.applications.delete.toDelete', { count }),
+            kept: (count) => t('pages.applications.delete.kept', { count }),
+            deleted: (count) => t('pages.applications.delete.deleted', { count }),
+          }}
           gridApi={gridApiRef.current}
           onDeleteSuccess={() => { setRefreshKey((k) => k + 1); }}
         />

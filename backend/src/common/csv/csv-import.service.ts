@@ -1,7 +1,9 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { EntityManager, In } from 'typeorm';
 import { parseString } from '@fast-csv/parse';
+import { parseCsvBoolean } from '../csv-sheet/boolean';
 import { CsvDecodeError, decodeCsv } from '../csv-sheet/decode';
+import { csvSeparatorOf } from '../csv-sheet/read';
 import { sameStoredValues } from '../csv-sheet/unchanged';
 import { AuditLog } from '../../audit/audit.entity';
 import { omitAuditSecrets } from '../../audit/audit.service';
@@ -22,6 +24,7 @@ import { CsvResolverService } from './csv-resolver.service';
 import { denormalizeCsvFormulaValue } from './csv-export.service';
 import { CsvJsonValidators } from './csv-json-validators';
 import { markdownWorkBudget } from '../markdown-worker';
+import { uploadedBytes } from '../upload';
 
 /**
  * Import options
@@ -54,8 +57,6 @@ export interface CsvImportOptions {
  */
 @Injectable()
 export class CsvImportService {
-  /** CSV delimiter */
-  private readonly DELIMITER = ';';
   /** Default max items for array fields */
   private readonly DEFAULT_MAX_ITEMS = 4;
   private readonly AUDITED_IMPORT_TABLES = new Set<string>([
@@ -244,16 +245,11 @@ export class CsvImportService {
     headerErrors: CsvImportError[];
     headerWarnings: CsvImportWarning[];
   }> {
-    const buf = file.buffer ?? (file as any).path;
-    if (!buf) {
-      throw new BadRequestException('No file uploaded');
-    }
+    const buf = uploadedBytes(file);
 
     let content: string;
     try {
-      content = decodeCsv(
-        typeof buf === 'string' ? require('fs').readFileSync(buf) : buf,
-      ).text;
+      content = decodeCsv(buf).text;
     } catch (err) {
       if (err instanceof CsvDecodeError) {
         throw new BadRequestException({ message: err.message, code: err.code });
@@ -271,7 +267,9 @@ export class CsvImportService {
     await new Promise<void>((resolve, reject) => {
       parseString(content, {
         headers: true,
-        delimiter: this.DELIMITER,
+        // Read from the header, as the shared layer does: an English export uses commas, the
+        // other languages and every older file semicolons.
+        delimiter: csvSeparatorOf(content) ?? ';',
         ignoreEmpty: true,
         trim: true,
       })
@@ -870,16 +868,12 @@ export class CsvImportService {
    * Parse a boolean value.
    */
   private parseBoolean(value: string, columnName: string): boolean {
-    const normalized = value.toLowerCase().trim();
-    if (['true', 'yes', '1', 'y', 'on'].includes(normalized)) {
-      return true;
-    }
-    if (['false', 'no', '0', 'n', 'off', ''].includes(normalized)) {
-      return false;
-    }
+    // Yes or no in any language, or the true/false and 1/0 of older files. A blank cell is no.
+    const parsed = parseCsvBoolean(value);
+    if (parsed !== undefined) return parsed ?? false;
     throw new CsvCellError(
       'CSV_BOOLEAN_INVALID',
-      `Invalid boolean in ${columnName}: "${value}". Use true/false, yes/no, or 1/0.`,
+      `Invalid boolean in ${columnName}: "${value}". Use yes or no.`,
       { value },
     );
   }

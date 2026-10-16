@@ -1,7 +1,8 @@
-import { ConflictException, Logger, NotFoundException } from '@nestjs/common';
+import { Logger, NotFoundException } from '@nestjs/common';
 import { EntityManager, ObjectLiteral, Repository } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { StorageService } from './storage/storage.service';
+import { RecordInUseException } from './record-in-use';
 import {
   CascadeRelation,
   DeleteConfig,
@@ -58,7 +59,7 @@ export abstract class BaseDeleteService<T extends ObjectLiteral> {
    * @param id The entity ID to delete
    * @param opts Delete options including manager for transaction support
    * @throws NotFoundException if entity is not found
-   * @throws ConflictException if restrict strategy prevents deletion
+   * @throws RecordInUseException (409) if restrict strategy prevents deletion
    */
   async delete(id: string, opts?: DeleteOptions): Promise<void> {
     const manager = opts?.manager ?? this.repository.manager;
@@ -148,7 +149,7 @@ export abstract class BaseDeleteService<T extends ObjectLiteral> {
         // Check if any related records exist
         const count = await relatedRepo.count({ where: whereClause });
         if (count > 0) {
-          throw new ConflictException(
+          throw new RecordInUseException('RECORD_IN_USE', this.config.entityName, '', [],
             `Cannot delete ${this.config.entityName}: ${count} related record(s) exist and must be removed first`,
           );
         }

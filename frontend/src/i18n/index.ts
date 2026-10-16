@@ -2,6 +2,8 @@ import i18n, { type Resource, type ResourceLanguage } from 'i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import { initReactI18next } from 'react-i18next';
 import { z } from 'zod';
+import { formatCount } from './formatters';
+import { mergeAbbreviationPeriods } from '../lib/dateFormat';
 
 export const LANGUAGE_OVERRIDE_STORAGE_KEY = 'kanap_language';
 export const NAMESPACES = [
@@ -117,7 +119,14 @@ z.setErrorMap((issue) => {
 void i18n
   .use(LanguageDetector)
   .use(initReactI18next)
+  .use({
+    type: 'postProcessor',
+    name: 'abbreviationPeriod',
+    process: (value: string, _key: unknown, options: { lng?: string } | undefined, translator: { language?: string }) =>
+      mergeAbbreviationPeriods(value, options?.lng ?? translator?.language ?? 'en'),
+  })
   .init({
+    postProcess: ['abbreviationPeriod'],
     resources,
     fallbackLng: 'en',
     supportedLngs: [...SUPPORTED_LOCALE_CODES],
@@ -138,5 +147,9 @@ void i18n
     },
     returnNull: false,
   });
+
+// `{{count, count}}` in a text writes the number with the thousand separator of the language.
+i18n.services.formatter?.add('count', (value: unknown, lng: string | undefined) =>
+  typeof value === 'number' ? formatCount(value, lng ?? 'en') : String(value ?? ''));
 
 export default i18n;

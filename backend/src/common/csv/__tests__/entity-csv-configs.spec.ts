@@ -123,6 +123,7 @@ async function testTemplateHeadersRoundTripThroughImportValidation() {
       manager: { query: async () => [] } as any,
       tenantId: 't1',
       scope: 'template',
+      language: 'fr',
     });
     const headerLine = result.content.replace(/^﻿/, '').split('\n')[0].trim();
     const headers = headerLine.split(';');

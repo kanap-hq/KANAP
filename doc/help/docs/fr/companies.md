@@ -15,7 +15,7 @@ Rendez-vous dans **Données de référence > Sociétés** pour ouvrir la liste.
 - **Ville** : ville où la société est basée
 - **Devise de base** : code devise ISO (recherche par nom ou code)
 
-**Conseil** : Gardez des noms uniques pour éviter la confusion dans les imports et les listes de sélection.
+**Noms uniques** : chaque société a son propre nom, quelle que soit la casse (`Acme` et `acme` sont le même nom). Un nom déjà porté par une autre société est refusé, avec un message sous le nom.
 
 ## Travailler avec la liste
 
@@ -78,7 +78,7 @@ Cliquez sur n'importe quelle ligne de la liste pour ouvrir l'espace de travail d
 - **Statut**, sous le nom : **Activé** ou **Désactivé**. Cliquez dessus pour le changer. Choisir **Désactivé** désactive la société aussitôt : la fin de validité devient l'heure actuelle
 - **Panneau Propriétés** à droite : **Pays**, **Devise de base**, **Plan comptable** et **Cycle de vie**. Utilisez le bouton situé à côté pour replier le panneau ou le rouvrir
 
-**Enregistrement automatique** : chaque modification s'enregistre d'elle-même quand vous quittez le champ. Il n'y a ni bouton Enregistrer, ni bouton Réinitialiser, ni bouton Fermer. Vous pouvez continuer à travailler pendant l'enregistrement. Lorsqu'une modification est refusée, la raison s'affiche sous le champ concerné, sauf pour le nom, dont le refus s'affiche en haut de la page.
+**Enregistrement automatique** : chaque modification s'enregistre d'elle-même quand vous quittez le champ. Il n'y a ni bouton Enregistrer, ni bouton Réinitialiser, ni bouton Fermer. Vous pouvez continuer à travailler pendant l'enregistrement. Lorsqu'une modification est refusée, la raison s'affiche sous le champ concerné.
 
 ---
 
@@ -161,6 +161,7 @@ Utilisez la **Fin de validité** pour contrôler quand une société cesse d'êt
     - La société n'apparaît plus dans les listes de sélection pour les nouvelles ventilations et est exclue des rapports pour les années strictement postérieures.
     - Les données historiques restent intactes ; la société apparaît toujours dans les rapports couvrant les années où elle était active.
 - **Préférez la désactivation à la suppression.** Une société encore utilisée ne peut pas être supprimée : lignes budgétaires (comme société payeuse ou dans leurs ventilations), contrats, centres de coûts, départements, utilisateurs, sites qu'elle exploite, tâches, applications, interfaces, projets et demandes du portefeuille, et membres d'équipe dont elle est la société par défaut. Le message compte ce qui l'utilise, par exemple « Cette société est utilisée par 2 départements et 14 utilisateurs ». Désactivez-la à la place. Ses métriques annuelles sont supprimées avec elle. Dans la liste, la confirmation nomme les sociétés ainsi conservées, avec ce qui les utilise, avant toute suppression.
+- **Pour supprimer une société malgré tout**, retirez d'abord ce qui l'utilise. Indiquez une autre société sur ses utilisateurs, ses lignes budgétaires et leurs ventilations, ses contrats, ses centres de coûts, les sites qu'elle exploite, ses tâches, applications, interfaces, projets et demandes du portefeuille, et ses membres d'équipe. Déplacez ses départements vers une autre société, ou supprimez-les en dernier, quand plus rien ne les utilise. Supprimez ensuite la société.
 
 ## Métriques annuelles
 
@@ -196,7 +197,7 @@ Les colonnes, dans cet ordre. Les colonnes de métriques suivent l'année sélec
 | `reg_number`, `vat_number` | Numéro d'immatriculation et numéro de TVA |
 | `base_currency` | Obligatoire. Trois lettres |
 | `status` | `enabled` ou `disabled` |
-| `disabled_at` | La fin de validité : une date (`2026-12-31`) ou une date et une heure complètes |
+| `disabled_at` | La fin de validité : une date (`2026-12-31`) ou une date et une heure complètes. L'export écrit la date seule. Réimportée, cette date conserve la fin de validité enregistrée |
 | `notes` | Texte libre |
 | `headcount_<année>` | Obligatoire lorsque la ligne porte une métrique pour cette année |
 | `it_users_<année>` | Un nombre entier |
@@ -205,7 +206,7 @@ Les colonnes, dans cet ordre. Les colonnes de métriques suivent l'année sélec
 **Import** :
 
 - Commencez par la **Vérification préalable**. Elle valide les en-têtes, l'encodage, les champs obligatoires, les doublons et les métriques. Si la vérification est propre, **Charger** applique les insertions et les mises à jour
-- **Correspondance** : par `name` de société. Un nom présent deux fois dans le fichier n'est gardé qu'une fois, la première ligne l'emportant
+- **Correspondance** : par `name` de société, quelle que soit la casse. Le nom enregistré ne change pas : une ligne `ACME` met à jour `Acme`, et la vérification préalable indique « ACME » a été rapproché de « Acme ». Un nom présent deux fois dans le fichier n'est gardé qu'une fois, la première ligne l'emportant
 - **Champs obligatoires** : `name`, `country_iso` et `base_currency`
 - **Statut et fin de validité** : l'export écrit le statut déduit de la fin de validité. Une nouvelle société est activée sauf si la ligne indique `disabled`. Lors d'une mise à jour, un `status` vide et un `disabled_at` vide conservent les valeurs enregistrées. `enabled` avec une date vide efface la fin de validité. `disabled` avec une date vide conserve une date déjà passée, et sinon termine la société aujourd'hui
 - Une ligne dont le statut contredit sa date est refusée avec une erreur de ligne : « Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again. » ou « Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed. »

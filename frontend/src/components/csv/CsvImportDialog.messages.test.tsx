@@ -79,6 +79,15 @@ describe('CsvImportDialog messages', () => {
     expect(screen.getByText('Ligne 6, commercial_contact : « not-an-email » n\'est pas une adresse e-mail valide.')).toBeInTheDocument();
   });
 
+  it('says which stored record a row matched when the case of its name differs', async () => {
+    check([], {
+      ok: true,
+      updated: 1,
+      warnings: [{ row: 2, column: 'name', message: "'sap' was matched to 'SAP'.", code: 'CSV_NAME_MATCHED_CASE', params: { name: 'sap', stored: 'SAP' } }],
+    });
+    expect(await screen.findByText('Ligne 2, name : « sap » a été rapproché de « SAP ».')).toBeInTheDocument();
+  });
+
   it('translates the end of validity that contradicts the status', async () => {
     check([
       { row: 2, column: 'status', message: 'Status is enabled but the end of validity has passed.', code: 'CSV_STATUS_DATE_PASSED' },

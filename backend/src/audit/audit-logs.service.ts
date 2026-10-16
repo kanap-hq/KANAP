@@ -29,6 +29,22 @@ const AUDIT_FILTER_VALUE_FIELDS = ['table_name', 'action', 'source'] as const;
 type AuditFilterValueField = (typeof AUDIT_FILTER_VALUE_FIELDS)[number];
 
 const AUDIT_SORT_FIELDS = ['created_at', 'table_name', 'action'];
+/** How many table codes a search may carry (`q_tables`): more than the audited tables. */
+const MAX_SEARCH_TABLES = 300;
+const TABLE_CODE = /^[a-z][a-z0-9_]{0,62}$/;
+
+/**
+ * The table codes a search carries besides its text (`q_tables`, comma-separated or repeated): the
+ * tables whose label, in the reader's language, contains the text ("Fournisseurs" → `suppliers`).
+ * The labels live in the web app, which sends the codes. Anything but a table code is dropped.
+ */
+export function parseSearchTables(value: unknown): string[] {
+  const parts = (Array.isArray(value) ? value : [value])
+    .flatMap((item) => (typeof item === 'string' ? item.split(',') : []))
+    .map((item) => item.trim())
+    .filter((item) => TABLE_CODE.test(item));
+  return Array.from(new Set(parts)).slice(0, MAX_SEARCH_TABLES);
+}
 
 /** The CSV export of the audit log stops after this many rows (in the list's order, newest first by default). */
 export const AUDIT_LOG_EXPORT_MAX_ROWS = 100_000;
@@ -423,9 +439,12 @@ export class AuditLogsService {
 
     if (q) {
       const like = `%${q}%`;
+      const searchTables = parseSearchTables(query?.q_tables);
       qb.andWhere(
         new Brackets((sub) => {
-          sub.where('a.table_name ILIKE :q', { q: like })
+          sub.where('a.table_name ILIKE :q', { q: like });
+          if (searchTables.length > 0) sub.orWhere('a.table_name IN (:...searchTables)', { searchTables });
+          sub
             .orWhere('a.action ILIKE :q', { q: like })
             .orWhere('u.email ILIKE :q', { q: like })
             .orWhere(`concat_ws(' ', coalesce(u.first_name, ''), coalesce(u.last_name, '')) ILIKE :q`, { q: like });

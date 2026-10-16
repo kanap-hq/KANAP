@@ -36,8 +36,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
+import { recordsInUseCheck } from '../../utils/deleteCheck';
 import ChipToggleBar, { ChipToggleContextLine } from '../../components/ChipToggleBar';
-import { KanapDialog, PropertyRow, StatusDot } from '../../components/design';
+import { KanapDialog, PropertyRow, StatusDot, useKanapDialogs } from '../../components/design';
 import ServerDataGrid from '../../components/ServerDataGrid';
 import type { EnhancedColDef } from '../../components/ServerDataGrid';
 import { LinkCellRenderer } from '../../components/grid/renderers';
@@ -58,6 +59,12 @@ import { useLocale } from '../../i18n/useLocale';
 import { formatShortDate } from '../../lib/dateFormat';
 import { getDotColor, KNOWLEDGE_STATUS_COLORS } from '../../utils/statusColors';
 import { drawerAutocompleteListboxSx, drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
+import {
+  knowledgeFolderKeyLabel,
+  knowledgeFolderName,
+  knowledgeLibraryKeyLabels,
+  knowledgeLibraryName,
+} from '../../utils/knowledgeNames';
 import { setListFiltersParam, getWithListContext } from '../../lib/listContext';
 
 const STATUS_LABELS: Record<string, string> = {
@@ -87,8 +94,14 @@ type DocumentRow = {
   folder_id: string | null;
   library_id: string | null;
   folder_name: string | null;
+  /** Stable folder key the folder column filters on: the system key, or a tenant folder's name. */
+  folder_key: string | null;
+  folder_system_key: string | null;
   template_name: string | null;
   library_name: string | null;
+  /** The library slug, the key the library column filters on. */
+  library_key: string | null;
+  library_slug: string | null;
   validated_revision: number | null;
   validated_at: string | null;
   is_validated_current_revision: boolean;
@@ -121,6 +134,8 @@ type KnowledgeContributorOption = {
 };
 
 type KnowledgeLibraryDetail = DocumentLibrary & {
+  /** The default library: new documents go there, and it cannot be deleted. */
+  is_default?: boolean;
   owner: KnowledgeContributorOption | null;
   readers: KnowledgeContributorOption[];
   writers: KnowledgeContributorOption[];
@@ -171,6 +186,7 @@ export default function KnowledgePage() {
   const { hasLevel, profile } = useAuth();
   const { t } = useTranslation(['knowledge', 'common']);
   const locale = useLocale();
+  const dialogs = useKanapDialogs();
   const qc = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
@@ -206,6 +222,8 @@ export default function KnowledgePage() {
   const [createLibraryOpen, setCreateLibraryOpen] = useState(false);
   const [newLibraryName, setNewLibraryName] = useState('');
   const [editingLibrary, setEditingLibrary] = useState<DocumentLibrary | null>(null);
+  // The delete window of a library, and its refusal when it is the default one, name the library.
+  const deleteLibraryTitle = editingLibrary?.name ? t('common:delete.recordTitle', { name: editingLibrary.name }) : t('dialogs.deleteLibrary.title');
   const [librarySettingsName, setLibrarySettingsName] = useState('');
   const [librarySettingsOwnerId, setLibrarySettingsOwnerId] = useState<string | null>(null);
   const [librarySettingsAccessMode, setLibrarySettingsAccessMode] = useState<'default' | 'restricted'>('default');
@@ -214,10 +232,15 @@ export default function KnowledgePage() {
   const [accessResetConfirmOpen, setAccessResetConfirmOpen] = useState(false);
   const [deleteLibraryConfirmOpen, setDeleteLibraryConfirmOpen] = useState(false);
 
-  const { data: libraries = [] } = useQuery({
+  const { data: storedLibraries = [] } = useQuery({
     queryKey: ['knowledge-libraries'],
     queryFn: async () => (await api.get('/knowledge-libraries')).data as DocumentLibrary[],
   });
+  // The shipped libraries in the reader's language; the library settings read the stored name.
+  const libraries = useMemo(
+    () => storedLibraries.map((library) => ({ ...library, name: knowledgeLibraryName(t, library) })),
+    [storedLibraries, t],
+  );
 
   const { data: editingLibraryDetail, isLoading: editingLibraryLoading, error: editingLibraryError } = useQuery({
     queryKey: ['knowledge-library', editingLibrary?.id],
@@ -371,8 +394,14 @@ export default function KnowledgePage() {
 
   const dragToFolderEnabled = canManageDocuments && !searchAllLibraries && !!activeLibrary?.id && !!activeLibrary?.can_write;
 
-  const getDocFilterValues = useCallback((field: string, opts?: { labelMap?: Record<string, string>; order?: Array<string | null>; emptyLabel?: string }) => {
+  const getDocFilterValues = useCallback((field: string, opts?: {
+    labelMap?: Record<string, string>;
+    formatLabel?: (value: string) => string;
+    order?: Array<string | null>;
+    emptyLabel?: string;
+  }) => {
     const labelMap = opts?.labelMap;
+    const formatLabel = opts?.formatLabel;
     const order = opts?.order;
     const emptyLabel = opts?.emptyLabel ?? t('shared.blank');
     return async ({ context }: any) => {
@@ -392,7 +421,9 @@ export default function KnowledgePage() {
       let options = values.map((value) => {
         if (value == null) return { value, label: emptyLabel };
         const key = String(value);
-        const label = labelMap && Object.prototype.hasOwnProperty.call(labelMap, key) ? labelMap[key] : key;
+        const label = labelMap && Object.prototype.hasOwnProperty.call(labelMap, key)
+          ? labelMap[key]
+          : formatLabel ? formatLabel(key) : key;
         return { value, label };
       });
       if (order && order.length > 0) {
@@ -543,17 +574,25 @@ export default function KnowledgePage() {
       },
       cellRenderer: ClickableCell,
     });
+    // Folder and library filter and sort on stable keys; the cells and the filter show the names,
+    // the shipped ones in the reader's language.
     nextColumns.push({
-      field: 'folder_name',
+      field: 'folder_key',
       headerName: t('columns.folder'),
       width: 150,
+      sortable: false,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getDocFilterValues('folder_name', { emptyLabel: t('shared.unfiled') }),
+        getValues: getDocFilterValues('folder_key', {
+          emptyLabel: t('shared.unfiled'),
+          formatLabel: (value) => knowledgeFolderKeyLabel(t, value),
+        }),
       },
       cellRenderer: ClickableCell,
-      valueFormatter: (p: any) => p.value || t('shared.unfiled'),
+      valueFormatter: (p: any) => (p.data?.folder_name
+        ? knowledgeFolderName(t, { system_key: p.data.folder_system_key, name: p.data.folder_name })
+        : t('shared.unfiled')),
     });
     nextColumns.push({
       field: 'template_name',
@@ -568,15 +607,19 @@ export default function KnowledgePage() {
       hide: true,
     });
     nextColumns.push({
-      field: 'library_name',
+      field: 'library_key',
       headerName: t('columns.library'),
       width: 160,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getDocFilterValues('library_name', { emptyLabel: t('shared.unknown') }),
+        getValues: getDocFilterValues('library_key', {
+          emptyLabel: t('shared.unknown'),
+          labelMap: knowledgeLibraryKeyLabels(t, storedLibraries),
+        }),
       },
       cellRenderer: ClickableCell,
+      valueFormatter: (p: any) => knowledgeLibraryName(t, { slug: p.data?.library_slug, name: p.data?.library_name }),
       hide: !searchAllLibraries,
     });
     nextColumns.push({
@@ -589,7 +632,7 @@ export default function KnowledgePage() {
     });
 
     return nextColumns;
-  }, [ClickableCell, DragHandleCell, dragToFolderEnabled, getDocFilterValues, locale, searchAllLibraries, t]);
+  }, [ClickableCell, DragHandleCell, dragToFolderEnabled, getDocFilterValues, locale, searchAllLibraries, storedLibraries, t]);
 
   const createLibraryMutation = useMutation({
     mutationFn: async () => {
@@ -1207,6 +1250,13 @@ export default function KnowledgePage() {
             <DeleteSelectedButton<DocumentRow>
               selectedRows={selectedRows}
               endpoint="/knowledge/bulk"
+              // Asked on click: a document managed from a record's page is kept, with why.
+              checkDelete={(ids) => recordsInUseCheck('/knowledge', ids)}
+              itemLabels={{
+                toDelete: (count) => t('delete.toDelete', { count }),
+                kept: (count) => t('delete.kept', { count }),
+                deleted: (count) => t('delete.deleted', { count }),
+              }}
               getItemId={(row) => row.id}
               getItemName={(row) => `${row.item_ref}${row.title ? ` - ${row.title}` : ''}`}
               gridApi={gridApiRef.current}
@@ -1398,7 +1448,17 @@ export default function KnowledgePage() {
         footerLeft={(
           <Button
             variant="action-danger"
-            onClick={() => setDeleteLibraryConfirmOpen(true)}
+            onClick={() => {
+              // The default library cannot be deleted: say so, with nothing to confirm.
+              if (editingLibraryDetail?.is_default) {
+                void dialogs.alert({
+                  title: deleteLibraryTitle,
+                  message: t('errors:knowledge_default_library'),
+                });
+                return;
+              }
+              setDeleteLibraryConfirmOpen(true);
+            }}
             disabled={!editingLibrary || deleteLibraryMutation.isPending || editingLibraryLoading}
           >
             {t('common:buttons.delete')}
@@ -1598,7 +1658,7 @@ export default function KnowledgePage() {
 
       <KanapDialog
         open={deleteLibraryConfirmOpen}
-        title={t('dialogs.deleteLibrary.title')}
+        title={deleteLibraryTitle}
         onClose={() => setDeleteLibraryConfirmOpen(false)}
         onSave={() => {
           setDeleteLibraryConfirmOpen(false);

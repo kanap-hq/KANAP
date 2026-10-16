@@ -6,7 +6,7 @@ import StatusSwitch from './StatusSwitch';
 import DateCalendarPopover from './DateCalendarPopover';
 import { FieldLabel } from '../design';
 import { STATUS_ENABLED, STATUS_DISABLED, StatusValue, deriveStatusFromDisabledAt } from '../../constants/status';
-import { isoToEuDate, euDateToIsoEndOfDay, formatEuPartial } from '../../lib/date-eu';
+import { dateInputSeparator, isoToEuDate, euDateToIsoEndOfDay, formatEuPartial } from '../../lib/date-eu';
 import { isoToLocalDateInput } from '../../lib/datetime';
 import { formatShortDate } from '../../lib/dateFormat';
 import { useLocale } from '../../i18n/useLocale';
@@ -16,6 +16,12 @@ type StatusLifecycleFieldProps = {
   onStatusChange: (next: StatusValue) => void;
   disabledAt: string | null;
   onDisabledAtChange: (next: string | null) => void;
+  /**
+   * Switched off with no end of validity already passed: disable now. The caller sends the status
+   * alone (`{ status: 'disabled' }`, no `disabled_at`) and the server sets the end of validity from
+   * its own clock. The browser clock never decides it.
+   */
+  onDisableNow: () => void;
   disabled?: boolean;
   hideDisabledAt?: boolean;
   statusLabel?: string;
@@ -34,6 +40,7 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
   onStatusChange,
   disabledAt,
   onDisabledAtChange,
+  onDisableNow,
   disabled = false,
   hideDisabledAt = false,
   statusLabel,
@@ -50,8 +57,8 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
   const onLabel = statusLabel ?? t('statuses.enabled');
   const offLabel = statusOffLabel ?? t('statuses.disabled');
 
-  // Switching off disables now: the end of validity becomes this instant, unless one has already
-  // passed. A later end of validity is set in the date field.
+  // Switching off disables now, on the server's clock (`onDisableNow`), unless an end of validity
+  // has already passed. A later end of validity is set in the date field.
   const handleStatusToggle = React.useCallback(
     (nextEnabled: boolean) => {
       if (nextEnabled) {
@@ -60,19 +67,25 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
         return;
       }
       const alreadyEnded = !!disabledAt && deriveStatusFromDisabledAt(disabledAt) === STATUS_DISABLED;
-      onDisabledAtChange(alreadyEnded ? disabledAt : new Date().toISOString());
+      if (!alreadyEnded) {
+        onDisableNow();
+        return;
+      }
+      onDisabledAtChange(disabledAt);
       onStatusChange(STATUS_DISABLED);
     },
-    [disabledAt, onDisabledAtChange, onStatusChange],
+    [disabledAt, onDisabledAtChange, onDisableNow, onStatusChange],
   );
 
   // Local text state to allow free typing (dd/mm/yyyy) without fighting controlled updates
   const [inputText, setInputText] = React.useState<string>('');
   const [focused, setFocused] = React.useState(false);
   const locale = useLocale();
+  // Typed dates follow the language: 31/12/2027, or 31.12.2027 in German.
+  const sep = dateInputSeparator(locale);
   // At rest the date shows the charter display format, as DateEUField; numeric dd/mm/yyyy only while editing.
   const restYmd = isoToLocalDateInput(disabledAt);
-  const shownText = !focused && restYmd && inputText === isoToEuDate(disabledAt)
+  const shownText = !focused && restYmd && inputText === isoToEuDate(disabledAt, sep)
     ? formatShortDate(restYmd, locale, { year: 'always' })
     : inputText;
   // A future end of validity keeps the record active until then: the switch says so.
@@ -84,20 +97,21 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
     : onLabel;
   // Sync from prop
   React.useEffect(() => {
-    const formatted = isoToEuDate(disabledAt);
+    const formatted = isoToEuDate(disabledAt, sep);
     setInputText(formatted);
-  }, [disabledAt]);
+  }, [disabledAt, sep]);
 
   const handleDisabledAtTextChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const raw = event.target.value;
-    const formatted = formatEuPartial(raw);
+    const formatted = formatEuPartial(raw, sep);
     setInputText(formatted);
     const iso = euDateToIsoEndOfDay(formatted);
-    if (iso) {
+    // The day already stored, typed again: it keeps its time of day (a switch sets one), nothing is sent.
+    if (iso && formatted !== isoToEuDate(disabledAt, sep)) {
       onDisabledAtChange(iso);
       onStatusChange(deriveStatusFromDisabledAt(iso));
     }
-  }, [onDisabledAtChange, onStatusChange]);
+  }, [disabledAt, onDisabledAtChange, onStatusChange, sep]);
 
   const handleDisabledAtBlur = React.useCallback(() => {
     setFocused(false);
@@ -113,9 +127,9 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
       setInputText('');
     } else {
       // Normalize displayed value
-      setInputText(isoToEuDate(iso));
+      setInputText(isoToEuDate(iso, sep));
     }
-  }, [inputText, onDisabledAtChange, onStatusChange]);
+  }, [inputText, onDisabledAtChange, onStatusChange, sep]);
 
   // In-page calendar, hung from the date input box.
   const dateFieldRef = React.useRef<HTMLDivElement | null>(null);
@@ -127,8 +141,10 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
   const onCalendarSelect = (yyyyMmDd: string) => {
     if (!yyyyMmDd) { setInputText(''); onDisabledAtChange(null); onStatusChange(deriveStatusFromDisabledAt(null)); return; }
     const [y, m, d] = yyyyMmDd.split('-');
-    const ddmmyyyy = `${d}/${m}/${y}`;
+    const ddmmyyyy = `${d}${sep}${m}${sep}${y}`;
     setInputText(ddmmyyyy);
+    // The day already stored, picked again: it keeps its time of day, nothing is sent.
+    if (ddmmyyyy === isoToEuDate(disabledAt, sep)) return;
     const iso = euDateToIsoEndOfDay(ddmmyyyy);
     onDisabledAtChange(iso);
     onStatusChange(deriveStatusFromDisabledAt(iso));

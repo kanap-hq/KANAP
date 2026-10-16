@@ -17,6 +17,8 @@ import { KanapDialog, useKanapDialogs } from '../../components/design';
 import { useAuth } from '../../auth/AuthContext';
 import api from '../../api';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import { recordRefusal } from '../../utils/deleteCheck';
+import { deleteFailureReason, type DeleteFailure } from '../../utils/deleteRefusal';
 import { drawerMenuItemSx } from '../../theme/formSx';
 import CreateCoADialog from './CreateCoADialog';
 import { coaCoverage, coaRoleLabels } from './coaRoles';
@@ -84,7 +86,8 @@ export default function ManageCoAsDialog({
   onCoaUpdated?: () => void;
 }) {
   const { hasLevel } = useAuth();
-  const { t } = useTranslation(['master-data', 'common']);
+  const { t, i18n } = useTranslation(['master-data', 'common']);
+  const language = i18n?.resolvedLanguage || i18n?.language || 'en';
   const dialogs = useKanapDialogs();
   const canManage = hasLevel('accounts', 'manager');
   const canAdmin = hasLevel('accounts', 'admin');
@@ -169,6 +172,12 @@ export default function ManageCoAsDialog({
   };
 
   const deleteChart = async (coa: CoaListItem) => {
+    // Asked first: a chart still in use says why and is not offered for deletion.
+    const refused = await recordRefusal('/chart-of-accounts', coa.id);
+    if (refused) {
+      setActionError(t('coa.manageDialog.deleteRefused', { code: coa.code, reason: deleteFailureReason(refused, t, language) }).trim());
+      return;
+    }
     const accounts = coa.accounts_count ?? 0;
     if (accounts > 0) {
       const lines = [t('coa.manageDialog.deleteConfirm.accounts', { count: accounts, code: coa.code })];
@@ -185,10 +194,10 @@ export default function ManageCoAsDialog({
     setBusyId(coa.id);
     try {
       const res = await api.delete('/chart-of-accounts/bulk', { data: { ids: [coa.id] } });
-      const failed = (res.data?.failed ?? []) as Array<{ id: string; reason?: string }>;
+      const failed = (res.data?.failed ?? []) as Array<DeleteFailure & { id: string }>;
       const refusal = failed.find((item) => item.id === coa.id) ?? failed[0];
       if (refusal) {
-        setActionError(t('coa.manageDialog.deleteRefused', { code: coa.code, reason: refusal.reason || '' }).trim());
+        setActionError(t('coa.manageDialog.deleteRefused', { code: coa.code, reason: deleteFailureReason(refusal, t, language) }).trim());
         return;
       }
       onCoaDeleted?.(coa.id);

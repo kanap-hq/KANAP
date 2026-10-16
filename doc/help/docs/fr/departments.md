@@ -45,7 +45,7 @@ La grille des départements vous offre une vue d'ensemble de tous les départeme
 - **Nouveau** : Créer un nouveau département (nécessite `departments:manager`)
 - **Importer CSV** : Import en masse de départements (nécessite `departments:admin`)
 - **Exporter CSV** : Exporter en CSV (nécessite `departments:admin`)
-- **Supprimer la sélection** : Supprimer les départements sélectionnés (nécessite `departments:admin`)
+- **Supprimer la sélection** : Supprimer les départements sélectionnés (nécessite `departments:admin`). Un département utilisé dans les ventilations de lignes budgétaires ne peut pas être supprimé : désactivez-le plutôt. Avant toute suppression, la confirmation liste les départements conservés, avec la raison
 
 ---
 
@@ -56,7 +56,7 @@ Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. Il comporte 
 - **En-tête** : le nom du département. Cliquez dessus pour renommer le département. **Préc** / **Suiv** parcourent les départements dans l'ordre et les filtres de la liste sans revenir à la liste, et le bouton de fermeture ramène à la liste
 - **Panneau Propriétés** à droite : **Société** et **Cycle de vie**
 
-**Enregistrement automatique** : chaque modification s'enregistre d'elle-même. Il n'y a pas de bouton Enregistrer. Le nom et la description s'enregistrent quand vous quittez le champ ; la société et le cycle de vie s'enregistrent dès que vous les changez. Vous pouvez continuer à travailler pendant l'enregistrement. Lorsqu'une modification est refusée, la raison s'affiche sous le champ concerné, sauf pour le nom, dont le refus s'affiche en haut de la page.
+**Enregistrement automatique** : chaque modification s'enregistre d'elle-même. Il n'y a pas de bouton Enregistrer. Le nom et la description s'enregistrent quand vous quittez le champ ; la société et le cycle de vie s'enregistrent dès que vous les changez. Vous pouvez continuer à travailler pendant l'enregistrement. Lorsqu'une modification est refusée, la raison s'affiche sous le champ concerné.
 
 ### Vue d'ensemble
 
@@ -103,7 +103,7 @@ Les colonnes :
 | `name` | Obligatoire. Le nom du département |
 | `description` | Texte libre |
 | `status` | `enabled` ou `disabled` |
-| `disabled_at` | La fin de validité : une date (`2026-12-31`) ou une date et une heure complètes |
+| `disabled_at` | La fin de validité : une date (`2026-12-31`) ou une date et une heure complètes. L'export écrit la date seule. Réimportée, cette date conserve la fin de validité enregistrée |
 
 **Import** :
 

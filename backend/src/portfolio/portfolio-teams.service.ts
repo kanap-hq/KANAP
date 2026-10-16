@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager } from 'typeorm';
 import { PortfolioTeam, DEFAULT_TEAMS } from './portfolio-team.entity';
+import { checkIds, RecordInUseException, refusalsFrom, type DeleteRefusal, type UsageCount } from '../common/record-in-use';
 
 interface CreateTeamDto {
   name: string;
@@ -160,28 +161,43 @@ export class PortfolioTeamsService {
       throw new NotFoundException('Team not found');
     }
 
-    if (team.is_system) {
-      throw new BadRequestException('Cannot delete system team');
-    }
-
-    // Check if team has members
-    const memberCount = await mg.query(
-      `SELECT COUNT(*) as count FROM portfolio_team_member_configs WHERE team_id = $1`,
-      [id],
-    );
-    if (parseInt(memberCount[0].count, 10) > 0) {
-      throw new BadRequestException('Cannot delete team that has members assigned');
-    }
-
-    // Check if team has children
-    const childCount = await repo.count({
-      where: { parent_id: id, tenant_id: tenantId },
-    });
-    if (childCount > 0) {
-      throw new BadRequestException('Cannot delete team that has sub-teams');
-    }
+    const refusal = await this.refusalOf(team, tenantId, mg);
+    if (refusal) throw refusal;
 
     await repo.delete(id);
+  }
+
+  /**
+   * The refusal the delete of a team would throw, or null: a built-in team (`BUILT_IN_RECORD`), or
+   * one its members or sub-teams still keep (`TEAM_NOT_EMPTY`, counted). The delete and its check both ask it.
+   */
+  private async refusalOf(team: { id: string; name: string; is_system: boolean }, tenantId: string, mg: EntityManager): Promise<RecordInUseException | null> {
+    if (team.is_system) {
+      return new RecordInUseException('BUILT_IN_RECORD', 'team', team.name, [], `Cannot delete system team "${team.name}". Disable it instead.`);
+    }
+    const [held] = await mg.query(
+      `SELECT (SELECT count(*)::int FROM portfolio_team_member_configs WHERE tenant_id = $1 AND team_id = $2) AS members,
+              (SELECT count(*)::int FROM portfolio_teams WHERE tenant_id = $1 AND parent_id = $2) AS children`,
+      [tenantId, team.id],
+    );
+    const usages: UsageCount[] = [];
+    if (held?.members > 0) usages.push({ type: 'team_members', total: held.members });
+    if (held?.children > 0) usages.push({ type: 'sub_teams', total: held.children });
+    if (usages.length === 0) return null;
+    return new RecordInUseException('TEAM_NOT_EMPTY', 'team', team.name, usages,
+      `Cannot delete team "${team.name}": it still has members assigned or sub-teams. Move them to another team first.`);
+  }
+
+  /** The check before a delete (`POST /portfolio/teams/delete-check`): the teams of `ids` the delete would refuse, and why. Nothing is written. */
+  async deleteCheck(ids: unknown[], tenantId: string, opts?: { manager?: EntityManager }): Promise<{ refused: DeleteRefusal[] }> {
+    const mg = opts?.manager ?? this.teamRepo.manager;
+    const wanted = checkIds(ids);
+    if (wanted.length === 0) return { refused: [] };
+    const rows: Array<{ id: string; name: string; is_system: boolean }> = await mg.query(
+      `SELECT id::text AS id, name, is_system FROM portfolio_teams WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+      [tenantId, wanted],
+    );
+    return refusalsFrom(wanted, rows, (row) => row.name, (row) => this.refusalOf(row, tenantId, mg));
   }
 
   async seedDefaults(tenantId: string, manager?: EntityManager): Promise<{ created: number }> {

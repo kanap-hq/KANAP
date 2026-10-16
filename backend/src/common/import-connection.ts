@@ -1,4 +1,3 @@
-import * as fs from 'fs';
 import { BadRequestException } from '@nestjs/common';
 import { DataSource, EntityManager, QueryRunner } from 'typeorm';
 import { DatabaseConnectionError } from './filters/database-error.mapping';
@@ -9,6 +8,7 @@ import {
   requestDbTimeoutsOf,
   startTenantTransaction,
 } from './request-db-timeouts';
+import { uploadedBytes } from './upload';
 
 export type ReleaseConnectionResult<T> = {
   result: T;
@@ -29,10 +29,7 @@ export function readUploadedFileBuffer(file: Express.Multer.File | null | undefi
     throw new BadRequestException('No file uploaded');
   }
 
-  const buffer = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : null);
-  if (!buffer) {
-    throw new BadRequestException('Empty upload');
-  }
+  const buffer = uploadedBytes(file);
 
   return buffer;
 }

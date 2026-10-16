@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { Supplier } from './supplier.entity';
@@ -6,7 +6,7 @@ import { AuditService } from '../audit/audit.service';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
 import { withSavepoint } from '../common/savepoint.util';
-import { assertNotInUse, refusalDetails, refusalsOf, type DeleteRefusal } from '../common/record-in-use';
+import { assertNotInUse, RecordInUseException, refusalDetails, refusalsOf, type DeleteRefusal } from '../common/record-in-use';
 import { SUPPLIER_USAGE_QUERIES } from './supplier-usages';
 
 @Injectable()
@@ -63,7 +63,7 @@ export class SuppliersDeleteService extends BaseDeleteService<Supplier> {
     } catch (error: any) {
       // A key the check did not see (a row added since): the contracts key refuses it.
       if (error.code === '23503' || error.message?.includes('foreign key constraint')) {
-        throw new ConflictException(`Cannot delete supplier "${supplier.name}": other records still use it. Disable it instead.`);
+        throw new RecordInUseException('RECORD_IN_USE', 'supplier', supplier.name, [], `Cannot delete supplier "${supplier.name}": other records still use it. Disable it instead.`);
       }
       throw error;
     }

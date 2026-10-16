@@ -51,7 +51,7 @@ Die Liste gibt Ihnen einen filterbaren Überblick über jede Verbindung in Ihrem
 
 **Aktionen**:
   - **Verbindung hinzufügen**: Eine neue Verbindung erstellen (erfordert `infrastructure:member`)
-  - **Verbindung löschen**: Ausgewählte Verbindungen entfernen (erfordert `infrastructure:admin`)
+  - **Verbindung löschen**: Ausgewählte Verbindungen entfernen (erfordert `infrastructure:admin`). Ihre Server, Schnittstellen und Dokumente bleiben erhalten; nur ihre Verknüpfungen mit der Verbindung werden entfernt.
 
 ---
 

@@ -5,6 +5,30 @@ import { PortfolioSource, DEFAULT_SOURCES } from './portfolio-source.entity';
 import { PortfolioCategory, DEFAULT_CATEGORIES } from './portfolio-category.entity';
 import { PortfolioStream, DEFAULT_STREAMS } from './portfolio-stream.entity';
 import { PortfolioTaskType, DEFAULT_TASK_TYPES } from './portfolio-task-type.entity';
+import { checkIds, RecordInUseException, refusalsFrom, type DeleteRefusal, type UsageCount } from '../common/record-in-use';
+
+/** A built-in classification item cannot be deleted (`BUILT_IN_RECORD`): disable it instead. */
+function builtInRefusal(entity: string, name: string): RecordInUseException {
+  return new RecordInUseException('BUILT_IN_RECORD', entity, name, [], `Cannot delete system ${entity} "${name}". Disable it instead.`);
+}
+
+/** The classification lists whose items a check before the delete answers (`POST .../<kind>/delete-check`). */
+export type ClassificationKind = 'sources' | 'categories' | 'streams' | 'task-types';
+
+const CLASSIFICATION_TABLES: Record<ClassificationKind, string> = {
+  sources: 'portfolio_sources',
+  categories: 'portfolio_categories',
+  streams: 'portfolio_streams',
+  'task-types': 'portfolio_task_types',
+};
+
+type ClassificationRow = { id: string; name: string; is_system?: boolean };
+
+/** A classification item that requests, projects or tasks still name (`RECORD_USED_BY`, counted): disable it instead. */
+function usedByRefusal(entity: string, name: string, usages: UsageCount[]): RecordInUseException | null {
+  if (usages.length === 0) return null;
+  return new RecordInUseException('RECORD_USED_BY', entity, name, usages);
+}
 
 interface CreateSourceDto {
   name: string;
@@ -175,35 +199,68 @@ export class PortfolioClassificationService {
       throw new NotFoundException('Source not found');
     }
 
-    if (source.is_system) {
-      throw new BadRequestException('Cannot delete system source');
-    }
-
-    // Check if source is in use
-    const inUse = await this.isSourceInUse(id, tenantId, mg);
-    if (inUse) {
-      throw new BadRequestException('Cannot delete source that is in use by requests or projects');
-    }
+    const refusal = await this.refusalOf('sources', source, tenantId, mg);
+    if (refusal) throw refusal;
 
     await repo.delete(id);
   }
 
-  private async isSourceInUse(sourceId: string, tenantId: string, mg: EntityManager): Promise<boolean> {
-    // Check requests
-    const requestCount = await mg.query(
-      `SELECT COUNT(*) as count FROM portfolio_requests WHERE tenant_id = $1 AND source_id = $2`,
-      [tenantId, sourceId],
-    );
-    if (parseInt(requestCount[0].count, 10) > 0) return true;
+  /**
+   * The refusal the delete of a classification item would throw, or null: a built-in item
+   * (`BUILT_IN_RECORD`), or one that requests, projects or tasks still name (`RECORD_USED_BY`).
+   * The delete and its check both ask it, so they agree.
+   */
+  private async refusalOf(kind: ClassificationKind, row: ClassificationRow, tenantId: string, mg: EntityManager): Promise<RecordInUseException | null> {
+    switch (kind) {
+      case 'sources':
+        if (row.is_system) return builtInRefusal('source', row.name);
+        return usedByRefusal('source', row.name, await this.portfolioUsages('source_id', row.id, tenantId, mg));
+      case 'categories':
+        if (row.is_system) return builtInRefusal('category', row.name);
+        return usedByRefusal('category', row.name, await this.portfolioUsages('category_id', row.id, tenantId, mg));
+      case 'streams':
+        return usedByRefusal('stream', row.name, await this.portfolioUsages('stream_id', row.id, tenantId, mg));
+      case 'task-types': {
+        if (row.is_system) return builtInRefusal('task type', row.name);
+        const [used] = await mg.query(
+          `SELECT count(*)::int AS n FROM tasks WHERE tenant_id = $1 AND task_type_id = $2`,
+          [tenantId, row.id],
+        );
+        return usedByRefusal('task type', row.name, used?.n > 0 ? [{ type: 'tasks', total: used.n }] : []);
+      }
+    }
+  }
 
-    // Check projects
-    const projectCount = await mg.query(
-      `SELECT COUNT(*) as count FROM portfolio_projects WHERE tenant_id = $1 AND source_id = $2`,
-      [tenantId, sourceId],
+  /** The check before a delete (`POST .../<kind>/delete-check`): the items of `ids` the delete would refuse, and why. Nothing is written. */
+  async deleteCheck(kind: ClassificationKind, ids: unknown[], tenantId: string, opts?: ServiceOpts): Promise<{ refused: DeleteRefusal[] }> {
+    const mg = opts?.manager ?? this.sourceRepo.manager;
+    const wanted = checkIds(ids);
+    if (wanted.length === 0) return { refused: [] };
+    const table = CLASSIFICATION_TABLES[kind];
+    const systemColumn = kind === 'streams' ? 'false' : 'is_system';
+    const rows: ClassificationRow[] = await mg.query(
+      `SELECT id::text AS id, name, ${systemColumn} AS is_system FROM ${table} WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+      [tenantId, wanted],
     );
-    if (parseInt(projectCount[0].count, 10) > 0) return true;
+    return refusalsFrom(wanted, rows, (row) => row.name, (row) => this.refusalOf(kind, row, tenantId, mg));
+  }
 
-    return false;
+  /** The requests and projects whose `column` names `id`, each kind only when not zero. */
+  private async portfolioUsages(
+    column: 'source_id' | 'category_id' | 'stream_id',
+    id: string,
+    tenantId: string,
+    mg: EntityManager,
+  ): Promise<UsageCount[]> {
+    const [row] = await mg.query(
+      `SELECT (SELECT count(*)::int FROM portfolio_requests WHERE tenant_id = $1 AND ${column} = $2) AS requests,
+              (SELECT count(*)::int FROM portfolio_projects WHERE tenant_id = $1 AND ${column} = $2) AS projects`,
+      [tenantId, id],
+    );
+    const usages: UsageCount[] = [];
+    if (row?.requests > 0) usages.push({ type: 'requests', total: row.requests });
+    if (row?.projects > 0) usages.push({ type: 'projects', total: row.projects });
+    return usages;
   }
 
   async seedDefaultSources(tenantId: string, manager?: EntityManager): Promise<void> {
@@ -315,36 +372,11 @@ export class PortfolioClassificationService {
       throw new NotFoundException('Category not found');
     }
 
-    if (category.is_system) {
-      throw new BadRequestException('Cannot delete system category');
-    }
-
-    // Check if category is in use
-    const inUse = await this.isCategoryInUse(id, tenantId, mg);
-    if (inUse) {
-      throw new BadRequestException('Cannot delete category that is in use by requests or projects');
-    }
+    const refusal = await this.refusalOf('categories', category, tenantId, mg);
+    if (refusal) throw refusal;
 
     // Streams will be cascade deleted
     await repo.delete(id);
-  }
-
-  private async isCategoryInUse(categoryId: string, tenantId: string, mg: EntityManager): Promise<boolean> {
-    // Check requests
-    const requestCount = await mg.query(
-      `SELECT COUNT(*) as count FROM portfolio_requests WHERE tenant_id = $1 AND category_id = $2`,
-      [tenantId, categoryId],
-    );
-    if (parseInt(requestCount[0].count, 10) > 0) return true;
-
-    // Check projects
-    const projectCount = await mg.query(
-      `SELECT COUNT(*) as count FROM portfolio_projects WHERE tenant_id = $1 AND category_id = $2`,
-      [tenantId, categoryId],
-    );
-    if (parseInt(projectCount[0].count, 10) > 0) return true;
-
-    return false;
   }
 
   async seedDefaultCategories(tenantId: string, manager?: EntityManager): Promise<void> {
@@ -491,31 +523,10 @@ export class PortfolioClassificationService {
       throw new NotFoundException('Stream not found');
     }
 
-    // Check if stream is in use
-    const inUse = await this.isStreamInUse(id, tenantId, mg);
-    if (inUse) {
-      throw new BadRequestException('Cannot delete stream that is in use by requests or projects');
-    }
+    const refusal = await this.refusalOf('streams', stream, tenantId, mg);
+    if (refusal) throw refusal;
 
     await repo.delete(id);
-  }
-
-  private async isStreamInUse(streamId: string, tenantId: string, mg: EntityManager): Promise<boolean> {
-    // Check requests
-    const requestCount = await mg.query(
-      `SELECT COUNT(*) as count FROM portfolio_requests WHERE tenant_id = $1 AND stream_id = $2`,
-      [tenantId, streamId],
-    );
-    if (parseInt(requestCount[0].count, 10) > 0) return true;
-
-    // Check projects
-    const projectCount = await mg.query(
-      `SELECT COUNT(*) as count FROM portfolio_projects WHERE tenant_id = $1 AND stream_id = $2`,
-      [tenantId, streamId],
-    );
-    if (parseInt(projectCount[0].count, 10) > 0) return true;
-
-    return false;
   }
 
   async seedDefaultStreams(tenantId: string, manager?: EntityManager): Promise<void> {
@@ -621,10 +632,12 @@ export class PortfolioClassificationService {
       }
     }
 
-    Object.assign(taskType, {
-      ...data,
-      updated_at: new Date(),
-    });
+    // Only the editable fields: the code stays with the type through a rename.
+    if (data.name !== undefined) taskType.name = data.name;
+    if (data.description !== undefined) taskType.description = data.description;
+    if (data.is_active !== undefined) taskType.is_active = data.is_active;
+    if (data.display_order !== undefined) taskType.display_order = data.display_order;
+    taskType.updated_at = new Date();
 
     return repo.save(taskType);
   }
@@ -640,33 +653,22 @@ export class PortfolioClassificationService {
       throw new NotFoundException('Task type not found');
     }
 
-    if (taskType.is_system) {
-      throw new BadRequestException('Cannot delete system task type');
-    }
-
-    // Check if task type is in use
-    const inUse = await this.isTaskTypeInUse(id, tenantId, mg);
-    if (inUse) {
-      throw new BadRequestException('Cannot delete task type that is in use by tasks');
-    }
+    const refusal = await this.refusalOf('task-types', taskType, tenantId, mg);
+    if (refusal) throw refusal;
 
     await repo.delete(id);
-  }
-
-  private async isTaskTypeInUse(taskTypeId: string, tenantId: string, mg: EntityManager): Promise<boolean> {
-    const taskCount = await mg.query(
-      `SELECT COUNT(*) as count FROM tasks WHERE tenant_id = $1 AND task_type_id = $2`,
-      [tenantId, taskTypeId],
-    );
-    return parseInt(taskCount[0].count, 10) > 0;
   }
 
   async seedDefaultTaskTypes(tenantId: string, manager?: EntityManager): Promise<void> {
     const repo = manager ? manager.getRepository(PortfolioTaskType) : this.taskTypeRepo;
 
     for (const def of DEFAULT_TASK_TYPES) {
+      // A renamed default keeps its code: it is still there.
       const existing = await repo.findOne({
-        where: { tenant_id: tenantId, name: def.name },
+        where: [
+          { tenant_id: tenantId, name: def.name },
+          { tenant_id: tenantId, code: def.code },
+        ],
       });
       if (!existing) {
         const taskType = repo.create({

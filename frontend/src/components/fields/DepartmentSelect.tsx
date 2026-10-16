@@ -36,7 +36,7 @@ function assignRef<T>(target: React.Ref<T | null> | undefined, value: T | null) 
 
 const DepartmentSelect = React.forwardRef<HTMLInputElement, DepartmentSelectProps>(function DepartmentSelect(
   {
-    label = 'Department',
+    label: labelProp,
     value,
     onChange,
     companyId,
@@ -52,6 +52,7 @@ const DepartmentSelect = React.forwardRef<HTMLInputElement, DepartmentSelectProp
   ref,
 ) {
   const { t } = useTranslation(['master-data', 'common']);
+  const label = labelProp ?? t('common:selects.department');
   const naked = hideLabel || label === '';
   // The company's departments, searched as the user types; nothing before a company is chosen.
   const picker = useLookupPicker<Department>({

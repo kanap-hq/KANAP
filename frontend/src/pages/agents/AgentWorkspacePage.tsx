@@ -100,6 +100,7 @@ import AgentsApprovalsPage from './AgentsApprovalsPage';
 import AgentsActivityPage from './AgentsActivityPage';
 import { SHARED_CONTEXT_PROFILES_QUERY_KEY, useAgentControlData } from './useAgentControlData';
 import { useLocalStorageState } from '../../hooks/useLocalStorageState';
+import { knowledgeLibraryName } from '../../utils/knowledgeNames';
 
 type WorkspaceTab = 'monitor' | 'approvals' | 'performance' | 'settings';
 const TABS: WorkspaceTab[] = ['monitor', 'approvals', 'performance', 'settings'];
@@ -2402,7 +2403,10 @@ function SettingsTab({ definition, autosaveRegistry, saveQueue }: {
                         return <Typography component="span" variant="body2" color="text.secondary">{t('settings.librariesPlaceholder')}</Typography>;
                       }
                       return ids
-                        .map((id) => (librariesQuery.data ?? []).find((lib) => lib.id === id)?.name ?? id)
+                        .map((id) => {
+                          const library = (librariesQuery.data ?? []).find((lib) => lib.id === id);
+                          return library ? knowledgeLibraryName(t, library) : id;
+                        })
                         .join(', ');
                     }}
                     onChange={(event) => {
@@ -2411,7 +2415,7 @@ function SettingsTab({ definition, autosaveRegistry, saveQueue }: {
                     }}
                     MenuProps={compactSelectMenuProps}
                   >
-                    {(librariesQuery.data ?? []).map((lib) => <MenuItem key={lib.id} value={lib.id} sx={drawerMenuItemSx}>{lib.name}</MenuItem>)}
+                    {(librariesQuery.data ?? []).map((lib) => <MenuItem key={lib.id} value={lib.id} sx={drawerMenuItemSx}>{knowledgeLibraryName(t, lib)}</MenuItem>)}
                   </Select>
                 </SettingsField>
               )}

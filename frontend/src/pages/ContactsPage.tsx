@@ -161,6 +161,8 @@ export default function ContactsPage() {
         <DeleteSelectedButton
           selectedRows={selectedRows}
           endpoint="/contacts/bulk"
+          // Nothing refuses a contact delete: its links go, the linked records stay.
+          warning={t('contacts.delete.warning', { count: selectedRows.length })}
           getItemId={(row) => row.id}
           getItemName={(row) => (row.first_name || row.last_name) ? `${row.first_name || ''} ${row.last_name || ''}`.trim() : row.email}
           gridApi={gridApiRef.current}
@@ -193,13 +195,14 @@ export default function ContactsPage() {
           lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {} };
         }}
       />
-      <CsvExportDialog listRequest={listRequest} entity="contacts" open={exportOpen} onClose={() => setExportOpen(false)} endpoint="/contacts" title={t("contacts.export")} />
+      <CsvExportDialog listRequest={listRequest} entity="contacts" open={exportOpen} onClose={() => setExportOpen(false)} endpoint="/contacts" title={t("contacts.export")} flexibleFormat />
       <CsvImportDialog
         open={importOpen}
         onClose={() => setImportOpen(false)}
         endpoint="/contacts"
         title={t("contacts.import")}
         onImported={() => setRefreshKey((k) => k + 1)}
+        flexibleFormat
       />
     </>
   );

@@ -104,6 +104,11 @@ async function testImportRules() {
       dryRun: false,
     }, ctx);
     assert.deepEqual([update.ok, update.inserted, update.updated, update.unchanged], [true, 0, 1, 1]);
+    // The report says which stored value each row matched when the case differs.
+    assert.deepEqual((update as any).warnings?.map((w: any) => [w.row, w.code, w.params]), [
+      [2, 'CSV_NAME_MATCHED_CASE', { name: 'HARDWARE', stored: 'Hardware' }],
+      [3, 'CSV_NAME_MATCHED_CASE', { name: 'licences', stored: 'Licences' }],
+    ]);
     const [hardware] = await runner.query(
       `SELECT name, status::text AS status FROM analytics_categories WHERE tenant_id = $1 AND axis_id = $2 AND lower(name) = 'hardware'`,
       [tenantId, nature.id],

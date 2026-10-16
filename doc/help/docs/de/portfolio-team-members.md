@@ -273,7 +273,7 @@ Mitwirkende können organisatorischen Teams zugewiesen werden, um die Organisati
 - Gehen Sie zu **Portfolio > Einstellungen** und klicken Sie auf den Reiter **Teams**
 - Teams hinzufügen, bearbeiten oder deaktivieren
 - Verwenden Sie **Standardwerte laden**, um mit Standardteams zu befüllen
-- Teams mit zugewiesenen Mitgliedern können nicht gelöscht werden
+- Ein Team mit Mitgliedern oder Unterteams kann nicht gelöscht werden: Verschieben Sie diese zuerst in ein anderes Team, oder deaktivieren Sie das Team. Integrierte Teams können nicht gelöscht werden
 
 ---
 

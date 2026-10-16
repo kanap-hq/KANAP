@@ -27,6 +27,8 @@ type Props = {
   onCompanyChange: (companyId: string | null) => void;
   onOwnerChange: (userId: string | null) => void;
   onDisabledAtChange: (disabledAt: string | null) => void;
+  /** Switched off: disable now, on the server's clock (the status alone). */
+  onDisableNow: () => void;
 };
 
 export function ErrorLine({ message }: { message?: string }) {
@@ -51,6 +53,7 @@ export default function CostCenterPropertiesDrawer({
   onCompanyChange,
   onOwnerChange,
   onDisabledAtChange,
+  onDisableNow,
 }: Props) {
   const { t } = useTranslation(['master-data', 'common']);
   // A refused code stays in the field so it can be corrected; a stored change replaces it,
@@ -110,6 +113,7 @@ export default function CostCenterPropertiesDrawer({
         <PropertyRow label={t('costCenters.fields.parent')}>
           <CostCenterSelect
             hideLabel
+            label={t('costCenters.fields.parent')}
             selectable="groups"
             value={node.parent_id}
             excludeIds={excludeParentIds}
@@ -125,6 +129,7 @@ export default function CostCenterPropertiesDrawer({
           <PropertyRow label={t('costCenters.fields.company')} required helperText={t('costCenters.hints.company')}>
             <CompanySelect
               hideLabel
+              label={t('costCenters.fields.company')}
               value={node.company_id}
               onChange={onCompanyChange}
               disabled={disabled}
@@ -163,6 +168,7 @@ export default function CostCenterPropertiesDrawer({
             onStatusChange={() => undefined}
             disabledAt={node.disabled_at}
             onDisabledAtChange={onDisabledAtChange}
+            onDisableNow={onDisableNow}
             disabled={disabled}
             disabledAtError={!!errors.disabled_at}
             disabledAtHelperText={errors.disabled_at}
