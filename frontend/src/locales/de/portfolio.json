@@ -214,7 +214,7 @@
       },
       "aria": {
         "skillLevel": "Niveau {{skill}}",
-        "levelOption": "{{level}} – {{label}}",
+        "levelOption": "{{level}}: {{label}}",
         "removeSkill": "{{skill}} entfernen"
       },
       "nav": {
@@ -1981,7 +1981,7 @@
         "saveFailed": "Zuordnungen konnten nicht gespeichert werden"
       },
       "states": {
-        "empty": "Keine Zuordnungen – weisen Sie einen {{effortType}}-Leiter oder Teammitglieder zu",
+        "empty": "Keine Zuordnungen. Weisen Sie einen {{effortType}}-Leiter oder Teammitglieder zu",
         "loading": "Zuordnungen werden geladen…"
       },
       "table": {
@@ -2044,7 +2044,7 @@
     },
     "contributorDrilldown": {
       "title": "Projektaufschlüsselung",
-      "titleWithName": "{{name}} – Projektaufschlüsselung",
+      "titleWithName": "{{name}}: Projektaufschlüsselung",
       "actions": {
         "close": "Schließen",
         "delete": "Löschen",
@@ -2266,7 +2266,7 @@
       "mandatoryBypassDescription": "Wenn aktiviert, erhalten als obligatorisch markierte Anfragen einen Prioritätsscore von 100, unabhängig von anderen Kriterien. Die manuelle Überschreibung wird blockiert.",
       "empty": "Noch keine Bewertungskriterien konfiguriert. Fügen Sie Kriterien hinzu, um die Anfragebewertung zu aktivieren.",
       "dragToReorder": "Zum Sortieren ziehen",
-      "reorderHint": "Ziehen Sie den linken Griff, um Kriterien zu sortieren – die Reihenfolge gilt für die Anfragebewertung.",
+      "reorderHint": "Ziehen Sie den linken Griff, um Kriterien zu sortieren. Die Reihenfolge gilt für die Anfragebewertung.",
       "chips": {
         "inverted": "Invertiert",
         "weight": "Gewichtung: {{value}}"

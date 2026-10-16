@@ -41,7 +41,7 @@ Fünf gebündelte Kennzahlen stehen ganz oben. Sie beschreiben die gesamte Flott
 - **Aktionen heute**: wie viele Vorschläge heute tatsächlich ausgeführt wurden (freigegeben und angewendet oder automatisch angewendet).
 - **Annahme**: der Anteil der entschiedenen Vorschläge, die freigegeben statt abgelehnt wurden. Zeigt **Nicht genug Daten** an, bis genügend Entscheidungsverlauf vorliegt, um aussagekräftig zu sein.
 - **Verworfen**: der Anteil der von einem Menschen geprüften Vorschläge, die beiseitegelegt statt freigegeben oder abgelehnt wurden. Ein Verwerfen belastet den Agenten nicht; ein dauerhaft hoher Wert deutet daher meist auf ein Zielauswahl-Problem hin (der Agent greift Tickets auf, die er nicht bearbeiten sollte) und nicht auf schlechte Antwortqualität; beheben Sie es in der Zielauswahl des Agenten. Zeigt ebenfalls **Nicht genug Daten** an, bis genügend Prüfverlauf vorliegt.
-- **Kosten — heute / 7 Tage**: was Ihre Agenten tatsächlich an KI-Ausgaben verursachen, in EUR: die heutige Summe und die vergangenen sieben Tage (heute eingeschlossen). Das umfasst **jeden** Agenten im Mandanten, Desk- wie Überwachungs-Agenten, und ist damit die Zahl, die Sie ansehen, wenn Sie wissen wollen, was die Flotte Sie kostet. Punkt. Die Wirtschaftlichkeit einzelner Agenten (Kosten pro Ticket, Limits pro Lauf und pro Tag) finden Sie auf den Registerkarten **Leistung und Autonomie** und **Einstellungen** des jeweiligen Agenten.
+- **Kosten (heute / 7 Tage)**: was Ihre Agenten tatsächlich an KI-Ausgaben verursachen, in EUR: die heutige Summe und die vergangenen sieben Tage (heute eingeschlossen). Das umfasst **jeden** Agenten im Mandanten, Desk- wie Überwachungs-Agenten, und ist damit die Zahl, die Sie ansehen, wenn Sie wissen wollen, was die gesamte Flotte kostet. Die Wirtschaftlichkeit einzelner Agenten (Kosten pro Ticket, Limits pro Lauf und pro Tag) finden Sie auf den Registerkarten **Leistung und Autonomie** und **Einstellungen** des jeweiligen Agenten.
 
 Betrachten Sie diese als Gesundheitszustand der Flotte, nicht als Abrechnung pro Agent. Für die Zahlen eines einzelnen Agenten öffnen Sie dessen Arbeitsbereich und verwenden die Registerkarte **Leistung und Autonomie**.
 
@@ -55,8 +55,8 @@ Unterhalb des Dashboards zeigt der Bereich **Agentenflotte** eine Karte pro Agen
 
 | Status | Farbe | Was er bedeutet |
 | --- | --- | --- |
-| **Überwachung — mit Rückfrage** | Grün | Überwacht eigenständig, aber jeder Aktionstyp wird weiterhin zu Ihrer Freigabe geleitet. |
-| **Überwachung — teilweise automatisch** | Grün | Überwacht, wobei mindestens ein Aktionstyp so hochgestuft wurde, dass er ohne Freigabe läuft. Der Rest fragt weiterhin zuerst. |
+| **Überwachung (mit Rückfrage)** | Grün | Überwacht eigenständig, aber jeder Aktionstyp wird weiterhin zu Ihrer Freigabe geleitet. |
+| **Überwachung (teilweise automatisch)** | Grün | Überwacht, wobei mindestens ein Aktionstyp so hochgestuft wurde, dass er ohne Freigabe läuft. Der Rest fragt weiterhin zuerst. |
 | **Test** | Blau | Eingeschaltet, aber nicht überwachend: der Modus **Nur manuell**. Er läuft, wenn Sie ihn von Hand prüfen oder testen, nie von selbst. |
 | **Pausiert** | Rot | Durch eine Notfallpause angehalten (mandantenweit oder nur für diesen Agenten). Prüfungen und ausstehende Schreibvorgänge sind eingefroren, bis die Pause aufgehoben wird. |
 | **Nicht gestartet** | Grau | Erstellt, aber noch nie ausgeführt. Hier beginnt jeder neue Agent. |

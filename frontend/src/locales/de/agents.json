@@ -20,7 +20,7 @@
     "dismissedMany": "{{count}} Vorschläge verworfen.",
     "dismissManyFailed": "{{count}} verworfen, {{failed}} fehlgeschlagen.",
     "pollComplete": "Prüfung abgeschlossen: {{status}}. {{processed}} verarbeitet, {{enqueued}} eingereiht.",
-    "pollCompleteWithReason": "Prüfung abgeschlossen: {{status}}. {{processed}} verarbeitet, {{enqueued}} eingereiht — {{reason}}",
+    "pollCompleteWithReason": "Prüfung abgeschlossen: {{status}}. {{processed}} verarbeitet, {{enqueued}} eingereiht ({{reason}})",
     "pollFailed": "Tickets konnten nicht geprüft werden.",
     "monitoringPollFailed": "Alarme konnten nicht geprüft werden.",
     "settingsSaved": "Einstellungen gespeichert.",
@@ -29,7 +29,7 @@
     "agentCreateFailed": "Agent konnte nicht erstellt werden.",
     "agentSaved": "Agent gespeichert.",
     "agentSaveFailed": "Agent konnte nicht gespeichert werden.",
-    "sectionSaveFailed": "„{{section}}“ wurde nicht gespeichert. Ihre Änderung ist weiterhin sichtbar – bearbeiten Sie sie erneut, um es noch einmal zu versuchen.",
+    "sectionSaveFailed": "„{{section}}“ wurde nicht gespeichert. Ihre Änderung ist weiterhin sichtbar. Bearbeiten Sie sie erneut, um es noch einmal zu versuchen.",
     "agentDeleted": "Agent gelöscht.",
     "agentDeleteFailed": "Agent konnte nicht gelöscht werden.",
     "autonomySaved": "Autonomie aktualisiert.",
@@ -58,8 +58,8 @@
     "off": "Aus",
     "archived": "Archiviert",
     "testing": "Test",
-    "watchingAutomatic": "Überwachung — teilweise automatisch",
-    "watchingAskFirst": "Überwachung — mit Rückfrage"
+    "watchingAutomatic": "Überwachung (teilweise automatisch)",
+    "watchingAskFirst": "Überwachung (mit Rückfrage)"
   },
   "status": {
     "queued": "Wartet auf Start",
@@ -153,7 +153,7 @@
     },
     "newAgentSreDefaultName": "Agent für Infrastruktur-Überwachung",
     "newAgentSreDescription": "Überwachungs-Agent im Entwurf: liest Alarme, verknüpft sie mit Ihren KANAP-Daten und bereitet Diagnosenotizen zur Prüfung vor.",
-    "cost": "Kosten — heute / 7 Tage",
+    "cost": "Kosten (heute / 7 Tage)",
     "includedModelPaused": "Agenten, die das inklusive KANAP-Modell verwenden, sind pausiert, bis ein Administrator es unter Administration > Plaid bestätigt.",
     "includedModelOpenSettings": "Plaid-Einstellungen öffnen"
   },
@@ -440,7 +440,7 @@
       "manual": "Läuft nur auf Anfrage (Jetzt prüfen, Tests).",
       "watching": "Prüft selbstständig, zusätzlich zu allem aus dem manuellen Modus."
     },
-    "archivedNoteViewer": "Archiviert — eine Administratorin oder ein Administrator kann ihn wiederherstellen."
+    "archivedNoteViewer": "Archiviert. Eine Administratorin oder ein Administrator kann ihn wiederherstellen."
   },
   "performance": {
     "acceptance": "Annahme",
@@ -552,7 +552,7 @@
       "replace": "Ersetzen",
       "includesSubcategories": "Unterkategorien sind eingeschlossen",
       "includesSubentities": "Untereinheiten sind eingeschlossen",
-      "entityHint": "Öffnen Sie das Ticket in Ihrem Ticketsystem — das ist die Organisation oder der Standort in der Ticketkopfzeile.",
+      "entityHint": "Öffnen Sie das Ticket in Ihrem Ticketsystem. Das ist die Organisation oder der Standort in der Ticketkopfzeile.",
       "inactivityCloses": "Der Agent darf vorschlagen, Tickets zu schließen, die so lange still waren.",
       "newTicketsHours_one": "Nur Tickets, die in der letzten Stunde eröffnet wurden.",
       "newTicketsHours_other": "Nur Tickets, die in den letzten {{count}} Stunden eröffnet wurden.",
@@ -747,7 +747,7 @@
     },
     "maxAlerts": "Bearbeitete Alarme pro Prüfung",
     "maxMonitoringRequests": "Anfragen an das Überwachungstool pro Prüfung",
-    "monitoringNotConnected": "Kein Überwachungstool verbunden — dieser Agent kann nicht arbeiten.",
+    "monitoringNotConnected": "Kein Überwachungstool verbunden. Dieser Agent kann nicht arbeiten.",
     "kanapDataEnabled": "KANAP-Daten durchsuchen",
     "kanapDataHint": "Erlaubt dem Agenten, Ihr IT-Inventar nachzuschlagen, um Diagnosen mit Geschäftskontext anzureichern.",
     "kanapDataDomains": {
@@ -769,9 +769,9 @@
     "checkIntervalInfo": "Wie oft der Agent nach neuen Tickets sucht, solange er überwacht. Zwischen 5 Minuten und 24 Stunden. „Jetzt prüfen“ läuft immer sofort, unabhängig davon.",
     "checkIntervalAlertsInfo": "Wie oft der Agent nach neuen Warnmeldungen sucht, solange er überwacht. Zwischen 5 Minuten und 24 Stunden. „Nach neuen Warnmeldungen suchen“ läuft immer sofort, unabhängig davon.",
     "purposeInfo": "Wofür dieser Agent da ist, in einer Zeile. Er liest sie bei jedem Lauf.",
-    "instructionsInfo": "Die Regeln, denen der Agent folgt — frei formuliert, in Zeilen oder Absätzen. Sie können nicht erweitern, was der Agent tun darf.",
+    "instructionsInfo": "Die Regeln, denen der Agent folgt (frei formuliert, in Zeilen oder Absätzen). Sie können nicht erweitern, was der Agent tun darf.",
     "replyLanguageInfo": "Die Sprache, in der der Agent schreibt. „Sprache des Tickets“ lässt ihn in der Sprache des Anfragenden antworten.",
-    "capabilitiesInfo": "Was dieser Agent vorbereiten darf. Alles, was hier aus ist, wird nie vorgeschlagen — unabhängig von den Anweisungen.",
+    "capabilitiesInfo": "Was dieser Agent vorbereiten darf. Alles, was hier aus ist, wird nie vorgeschlagen, unabhängig von den Anweisungen.",
     "reference": {
       "title": "In den Anweisungen verwendbare Namen",
       "insertHint": "Klicken Sie auf einen Namen, um ihn in die Anweisungen einzufügen.",
@@ -804,7 +804,7 @@
     "onStaleInfo": "Was mit einem wartenden Vorschlag geschieht, wenn sich das Ticket vor Ihrer Entscheidung ändert: erneut prüfen, verwerfen oder unverändert anwenden.",
     "ticketActorRoleInfo": "Wie der Agent nach dem Schreiben unter den Akteuren des Tickets erscheint. Übernehmen weist das Ticket dem GLPI-Benutzer des Agenten zu. Interne Notizen weisen nie zu; sie fügen den Agenten höchstens als Beobachter hinzu.",
     "perRunTokensInfo": "Höchstzahl der Wörter, die der Agent für ein Ticket aufwenden darf. Ist sie erreicht, stoppt dieses Ticket und es wird nichts vorgeschlagen.",
-    "perRunCostInfo": "Höchstbetrag, den der Agent für ein Ticket ausgeben darf, geschätzt nach den Preisen des zugewiesenen Modells. Ein kostenloses Modell (0 EUR) erreicht ihn nie — das Wortlimit bleibt der eigentliche Schutz.",
+    "perRunCostInfo": "Höchstbetrag, den der Agent für ein Ticket ausgeben darf, geschätzt nach den Preisen des zugewiesenen Modells. Ein kostenloses Modell (0 EUR) erreicht ihn nie. Das Wortlimit bleibt der eigentliche Schutz.",
     "dailyRunsInfo": "Stoppt den Agenten für den Tag, sobald er so viele Tickets bearbeitet hat. Am nächsten Tag läuft er wieder.",
     "dailyTokensInfo": "Stoppt den Agenten für den Tag, sobald er so viele Wörter aufgewendet hat. Am nächsten Tag läuft er wieder.",
     "dailyCostInfo": "Stoppt den Agenten für den Tag, sobald er so viel gekostet hat, geschätzt nach den Preisen des zugewiesenen Modells. Am nächsten Tag läuft er wieder.",

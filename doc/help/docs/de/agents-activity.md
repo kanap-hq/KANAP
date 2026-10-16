@@ -35,7 +35,7 @@ Jeder Eintrag steht für ein einzelnes Ereignis und enthält genug Kontext, um e
 - Einen **Aktionstyp-Chip** (wenn das Ereignis eine bestimmte Art von Ticketarbeit betrifft): **Interne Notiz**, **Antwort an Anfragende**, **Klassifizierung aktualisieren**, **Status aktualisieren**, **Zuweisung** oder **Beteiligte**.
 - Einen **Statuspunkt** mit einer verständlichen Beschriftung (zum Beispiel „Wartet auf Freigabe", „Fertig", „Abgelehnt", „Verworfen", „Aufmerksamkeit erforderlich"), die beschreibt, wo dieses Element steht.
 - Den **Agentennamen** und das betroffene **Ticket** (angezeigt als `#N`).
-- Einen **Ereignistitel**: zum Beispiel „Vorschlag erstellt" oder „Ticket-Prüfung — 3 neue Tickets".
+- Einen **Ereignistitel**: zum Beispiel „Vorschlag erstellt" oder „Ticket-Prüfung: 3 neue Tickets".
 - Eine **einzeilige Vorschau** des Inhalts (die erste Zeile einer entworfenen Nachricht, eine Feldänderung oder den Grund), sodass Sie oft nichts erweitern müssen.
 - Einen **Zeitstempel** sowie **Details anzeigen** und, wenn eine Prüfung hinter dem Ereignis steht, **Trace**.
 
@@ -59,10 +59,10 @@ Sie müssen sich diese nicht merken: die Ereignistitel sind in verständlicher S
 
 Ein Prüfungseintrag sagt Ihnen bereits im Titel, was der Agent gefunden hat, ohne dass Sie etwas erweitern müssen:
 
-- **Ticket-Prüfung — keine neuen Tickets**: er hat nachgesehen, und es gab nichts zu tun. So sieht ein gesunder, ruhiger Agent aus.
-- **Ticket-Prüfung — 3 neue Tickets**: drei Tickets wurden zur Bearbeitung aufgegriffen.
-- **Ticket-Prüfung — 3 neue Tickets, 2 bereits gesehen, 1 Fehler**: dasselbe, zuzüglich bereits bearbeiteter Tickets und eines aufgetretenen Problems.
-- **Ticket-Prüfung — Überwachung aus** / **Pausiert** / **Übersprungen** / **Fehlgeschlagen**: die Prüfung hat ihre normale Arbeit nicht verrichtet, und der Grund folgt, sofern es einen gibt.
+- **Ticket-Prüfung: keine neuen Tickets**: er hat nachgesehen, und es gab nichts zu tun. So sieht ein gesunder, ruhiger Agent aus.
+- **Ticket-Prüfung: 3 neue Tickets**: drei Tickets wurden zur Bearbeitung aufgegriffen.
+- **Ticket-Prüfung: 3 neue Tickets, 2 bereits gesehen, 1 Fehler**: dasselbe, zuzüglich bereits bearbeiteter Tickets und eines aufgetretenen Problems.
+- **Ticket-Prüfung: Überwachung aus** / **Pausiert** / **Übersprungen** / **Fehlgeschlagen**: die Prüfung hat ihre normale Arbeit nicht verrichtet, und der Grund folgt, sofern es einen gibt.
 
 **Details anzeigen** schlüsselt dieselbe Prüfung in vier Zahlen auf (**Gesehen**, **Eingereiht**, **Bereits gesehen**, **Bearbeitet**), zuzüglich des Grundes und etwaiger Fehlermeldungen. Das ist der ehrliche Weg, die Frage „Warum hat der Agent Ticket #482 nicht aufgegriffen?" zu beantworten: Ist **Gesehen** hoch, aber **Eingereiht** null, wurde das Ticket angesehen und von Ihrer Zielauswahl herausgefiltert; ist **Gesehen** null, hat der Agent es überhaupt nie gesehen.
 

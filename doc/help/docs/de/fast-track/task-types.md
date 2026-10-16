@@ -1,6 +1,6 @@
 ---
 title: "Aufgabentypen-Schnelleinstieg: Run, Build & Aufgaben"
-description: Verstehen Sie die verschiedenen Arbeitstypen in KANAP -- Incidents, Problems, Anfragen, Projekte, Bugs und Aufgaben -- und wie Sie im Alltag mit Aufgaben arbeiten.
+description: Verstehen Sie die verschiedenen Arbeitstypen in KANAP (Incidents, Problems, Anfragen, Projekte, Bugs und Aufgaben) und wie Sie im Alltag mit Aufgaben arbeiten.
 ---
 
 # Aufgabentypen-Schnelleinstieg: Run, Build & Aufgaben

@@ -22,7 +22,7 @@ Direkt unter dem Namen des Agenten sitzt eine schmale, rechtsbündige Leiste mit
 
 ### Der Betriebsmodus
 
-Das erste Bedienelement ist der Agent selbst. Geschlossen zeigt es seinen tatsächlichen Zustand als farbigen Punkt mit Beschriftung: **Überwachung — mit Rückfrage**, **Überwachung — teilweise automatisch**, **Test**, **Aus**, **Pausiert**, **Nicht gestartet** oder **Archiviert**. Öffnen Sie es (als Administrator, bei einem Agenten, der weder pausiert noch archiviert ist), bietet es die drei Betriebsmodi an:
+Das erste Bedienelement ist der Agent selbst. Geschlossen zeigt es seinen tatsächlichen Zustand als farbigen Punkt mit Beschriftung: **Überwachung (mit Rückfrage)**, **Überwachung (teilweise automatisch)**, **Test**, **Aus**, **Pausiert**, **Nicht gestartet** oder **Archiviert**. Öffnen Sie es (als Administrator, bei einem Agenten, der weder pausiert noch archiviert ist), bietet es die drei Betriebsmodi an:
 
 | Modus | Was er bedeutet |
 | --- | --- |
@@ -30,7 +30,7 @@ Das erste Bedienelement ist der Agent selbst. Geschlossen zeigt es seinen tatsä
 | **Nur manuell** | Läuft nur auf Anfrage: **Jetzt prüfen** und Tests funktionieren, aber der Agent sieht nie von selbst nach. |
 | **Beobachtung** | Prüft selbstständig in der von Ihnen festgelegten Frequenz, zusätzlich zu allem, was **Nur manuell** kann. |
 
-Lesen Sie die geschlossene Beschriftung als die Wahrheit und das Menü als die Absicht: Ein Agent, der auf **Beobachtung** steht, aber gerade durch eine Pause angehalten wird, zeigt **Pausiert** an und nicht **Überwachung — mit Rückfrage**. So behauptet das Bedienelement nie, der Agent arbeite, wenn er es nicht tut.
+Lesen Sie die geschlossene Beschriftung als die Wahrheit und das Menü als die Absicht: Ein Agent, der auf **Beobachtung** steht, aber gerade durch eine Pause angehalten wird, zeigt **Pausiert** an und nicht **Überwachung (mit Rückfrage)**. So behauptet das Bedienelement nie, der Agent arbeite, wenn er es nicht tut.
 
 **Nur manuell** ist der Modus, der einen neuen Agenten gefahrlos ausprobierbar macht. Hier sollten Sie bleiben, solange Sie eine Persona und ihre Zielauswahl abstimmen: Sie können den Agenten so oft Sie möchten gegen echte Tickets laufen lassen, aber nichts geschieht, ohne dass Sie es anstoßen. Wechseln Sie erst zu **Beobachtung**, wenn Sie mit seinen Entwürfen zufrieden sind.
 
