@@ -414,6 +414,7 @@ export class IncidentsService extends IncidentsBaseService {
          ${REPORTER_NAME} AS reporter_name,
          ${COUNT_COLUMNS},
          (SELECT COUNT(*) FROM incident_entries e WHERE e.incident_id = i.id AND e.tenant_id = i.tenant_id)::int AS entry_count,
+         (SELECT COUNT(*) FROM incident_technologies it WHERE it.incident_id = i.id AND it.tenant_id = i.tenant_id)::int AS technology_count,
          -- What the Documents tab lists: the incident's own review is hidden from it.
          (SELECT COUNT(*) FROM document_incidents di
            WHERE di.incident_id = i.id AND di.tenant_id = i.tenant_id
@@ -430,13 +431,15 @@ export class IncidentsService extends IncidentsBaseService {
        WHERE i.id = $1 AND i.tenant_id = $2`,
       [id, tenantId],
     );
-    const { entry_count, document_count, attachment_count, ...incident } = row;
+    const { entry_count, technology_count, document_count, attachment_count, ...incident } = row;
     return {
       ...incident,
       counts: {
         entries: entry_count,
         assets: incident.asset_count,
         applications: incident.application_count,
+        // The Relations tab shows them to a reader of the infrastructure only (the client adds them).
+        technologies: technology_count,
         tasks: incident.task_count,
         documents: document_count,
         attachments: attachment_count,

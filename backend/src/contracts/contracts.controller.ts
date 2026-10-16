@@ -1,5 +1,5 @@
 import { exportListQuery } from '../common/pagination';
-import { Body, Controller, Get, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors, Delete } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors, Delete } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ContractsService } from './contracts.service';
 import { Response } from 'express';
@@ -19,6 +19,7 @@ import { ContractContactsService } from './contract-contacts.service';
 import { SupplierContactRole } from '../contacts/supplier-contact.entity';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { canReadContractBudget } from './contract-budget';
+import { canReadResource } from '../common/record-usages';
 import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
 import type { ComplianceItemPatch } from './contract-compliance';
 import { ContractsDeleteService } from './contracts-delete.service';
@@ -192,7 +193,9 @@ export class ContractsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'reader')
   @Get(':id/relation-counts')
-  relationCounts(@Param('id') id: string, @Req() req: any) { return this.svc.relationCounts(id, { manager: req?.queryRunner?.manager }); }
+  relationCounts(@Param('id') id: string, @Req() req: any) {
+    return this.svc.relationCounts(id, { manager: req?.queryRunner?.manager, technologies: canReadResource(req ?? {}, 'infrastructure') });
+  }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'reader')
@@ -254,12 +257,18 @@ export class ContractsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'reader')
   @Get(':id/technologies')
-  listTechnologies(@Param('id') id: string, @Req() req: any) { return this.svc.listTechnologies(id, { manager: req?.queryRunner?.manager }); }
+  async listTechnologies(@Param('id') id: string, @Req() req: any) {
+    // Without the right to read the infrastructure the section is null (the contract is still checked).
+    const list = await this.svc.listTechnologies(id, { manager: req?.queryRunner?.manager });
+    return canReadResource(req ?? {}, 'infrastructure') ? list : { items: null };
+  }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'member')
   @Post(':id/technologies/bulk-replace')
   bulkReplaceTechnologies(@Param('id') id: string, @Body() body: { technology_ids: string[] }, @Req() req: any) {
+    // A set the caller cannot read is never replaced (an empty list would remove every link).
+    if (!canReadResource(req ?? {}, 'infrastructure')) throw new ForbiddenException('You cannot read technologies.');
     return this.svc.replaceRelations(id, 'technologies', body?.technology_ids ?? [], req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 

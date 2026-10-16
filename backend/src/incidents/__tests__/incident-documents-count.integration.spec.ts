@@ -57,6 +57,22 @@ async function testReviewIsNotCounted() {
   });
 }
 
+// The Relations tab badge takes the incident's technologies (`counts.technologies`, lot T2b).
+async function testTechnologiesCounted() {
+  await inRolledBackTransaction(async (runner) => {
+    const s = await seed(runner, 'incdoc-tech');
+    const opts = { manager: runner.manager, tenantId: s.tenantId };
+    assert.equal((await service(runner).get(s.incidentId, opts)).counts.technologies, 0);
+    const [{ id: techId }] = await runner.query(
+      `INSERT INTO technologies (tenant_id, item_number, name, family) VALUES ($1, 1, 'SQL Server', 'database') RETURNING id`,
+      [s.tenantId],
+    );
+    await runner.query(`INSERT INTO incident_technologies (tenant_id, incident_id, technology_id) VALUES ($1, $2, $3)`, [s.tenantId, s.incidentId, techId]);
+    assert.equal((await service(runner).get(s.incidentId, opts)).counts.technologies, 1);
+  });
+}
+
 void runSpecs('incident-documents-count', [
   ['the review is not counted among the incident documents', testReviewIsNotCounted],
+  ['the technologies are counted for the Relations tab', testTechnologiesCounted],
 ]);

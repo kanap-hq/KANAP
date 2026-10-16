@@ -1494,9 +1494,10 @@ export class ContractsService {
     return { filename: 'contract-compliance-register.csv', content };
   }
 
-  async relationCounts(contractId: string, opts?: { manager?: EntityManager }) {
+  /** `technologies`: the caller reads the infrastructure (the technologies are counted for it only). */
+  async relationCounts(contractId: string, opts?: { manager?: EntityManager; technologies?: boolean }) {
     const mg = opts?.manager ?? this.repo.manager;
-    return contractRelationCounts(mg, await this.findContract(contractId, mg));
+    return contractRelationCounts(mg, await this.findContract(contractId, mg), { technologies: opts?.technologies === true });
   }
 
   /**
