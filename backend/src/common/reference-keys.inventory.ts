@@ -65,11 +65,11 @@ export const UNKEYED_REFERENCE_COLUMNS: Readonly<Record<string, string>> = {
 
   // Polymorphic references and lists, cleaned by the delete services.
   'tasks.related_object_id':
-    'Polymorphic (related_object_type). Deleting a budget line or a contract deletes its tasks ' +
-    '(spend/item-delete-cleanup.ts, deleteItemTasks); projects and incidents are never deleted.',
+    'Polymorphic (related_object_type). Deleting a budget line, a contract or an incident deletes its tasks ' +
+    '(spend/item-delete-cleanup.ts, deleteItemTasks); projects are never deleted.',
   'integrated_document_bindings.source_entity_id':
-    'Polymorphic (source_entity_type). Deleting an application, an interface or a request deletes its managed ' +
-    'documents (IntegratedDocumentsService.deleteForEntity); projects and incidents are never deleted. A document ' +
+    'Polymorphic (source_entity_type). Deleting an application, an interface, a request or an incident deletes its managed ' +
+    'documents (IntegratedDocumentsService.deleteForEntity); projects are never deleted. A document ' +
     'whose source is gone anyway is released by the daily cleanup (knowledge/integrated-document-orphans.ts).',
   'tasks.owner_ids': 'List of users (jsonb). Deleting a user removes it from the lists (UsersDeleteService).',
   'tasks.viewer_ids': 'List of users (jsonb). Deleting a user removes it from the lists (UsersDeleteService).',

@@ -334,6 +334,8 @@
       "empty": "-"
     },
     "sources": {
+      "ai_chat": "KI-Chat",
+      "budget_file": "Import der Budgetdatei",
       "system": "System",
       "user": "Benutzer",
       "webhook": "Webhook"

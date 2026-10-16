@@ -83,7 +83,8 @@ const namespaceLoaders = byLocale(localeLoaders);
 /** Pending or finished downloads, by `<language>/<namespace>`; a failed one is forgotten so it can be retried. */
 const namespaceLoads = new Map<string, Promise<void>>();
 
-function loadNamespace(locale: SupportedLocale, namespace: string): Promise<void> {
+/** Downloads one namespace of a language and adds it to i18next (no-op when it is already there). */
+export function loadNamespace(locale: SupportedLocale, namespace: string): Promise<void> {
   if (i18n.store && i18n.hasResourceBundle(locale, namespace)) return Promise.resolve();
   const load = namespaceLoaders.get(locale)?.get(namespace);
   if (!load) return Promise.resolve();

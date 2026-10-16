@@ -223,6 +223,23 @@ async function runOriginTask() {
   const french = await svc.exportCsv(requestQuery, { manager: requestStub(), language: 'fr' });
   const frenchLine = french.content.split('\n').find((entry) => entry.startsWith('REQ-12;'));
   assert.ok(frenchLine?.includes("Tâche d'origine : T-12: Tune the cellar probes → vide"), frenchLine);
+
+  // The task type column names a shipped type the tenant kept in the file's language; a renamed one keeps its name.
+  const typed = [
+    taskRow({ record_id: 't7', item_number: 7, task_type_id: 'tt-task', task_type_name: 'Task', task_type_code: 'task' }),
+    taskRow({ record_id: 't8', item_number: 8, task_type_id: 'tt-ticket', task_type_name: 'Ticket', task_type_code: 'task' }),
+    taskRow({ record_id: 't9', item_number: 9, task_type_id: 'tt-problem', task_type_name: 'Problem', task_type_code: 'problem' }),
+  ];
+  const typedCsv = async (language: 'en' | 'fr' | 'de' | 'es') =>
+    (await svc.exportCsv(query, { manager: stub(typed, {}).manager, language })).content.split('\n');
+  const cellsOf = (lines: string[], ref: string) => lines.find((entry) => entry.startsWith(`${ref};`) || entry.startsWith(`${ref},`))?.split(/[;,]/);
+  const fr = await typedCsv('fr');
+  assert.equal(cellsOf(fr, 'T-7')?.[2], 'Tâche', fr.join('\n'));
+  assert.equal(cellsOf(fr, 'T-8')?.[2], 'Ticket');
+  assert.equal(cellsOf(fr, 'T-9')?.[2], 'Problème');
+  assert.equal(cellsOf(await typedCsv('de'), 'T-7')?.[2], 'Aufgabe');
+  assert.equal(cellsOf(await typedCsv('es'), 'T-9')?.[2], 'Problema');
+  assert.equal(cellsOf(await typedCsv('en'), 'T-7')?.[2], 'Task');
 }
 
 run().catch((error) => {

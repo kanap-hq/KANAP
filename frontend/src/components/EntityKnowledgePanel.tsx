@@ -657,6 +657,15 @@ export default function EntityKnowledgePanel({
     },
   });
 
+  // A refusal with a code the interface knows says why (a managed document belongs to its record);
+  // anything else keeps the general message, never the server's own sentence.
+  const linkError = linkExistingMutation.error || unlinkMutation.error || createLinkedMutation.error;
+  const linkErrorCode = (linkError as { response?: { data?: { code?: unknown } } } | null)?.response?.data?.code;
+  const linkErrorMessage = linkError
+    ? (typeof linkErrorCode === 'string' && t(`errors:${linkErrorCode}`, { defaultValue: '' }))
+      || t('knowledgePanel.failedToUpdateLinks')
+    : null;
+
   const handleCreateBlank = React.useCallback(() => {
     setNewDocAnchorEl(null);
     createLinkedMutation.mutate({});
@@ -787,18 +796,18 @@ export default function EntityKnowledgePanel({
         isSidebar ? (
           <Stack spacing={1.25}>
             {headerActions}
-            {(linkExistingMutation.isError || unlinkMutation.isError || createLinkedMutation.isError) && (
+            {linkErrorMessage && (
               <Alert severity="error">
-                {t('knowledgePanel.failedToUpdateLinks')}
+                {linkErrorMessage}
               </Alert>
             )}
           </Stack>
         ) : (
           <Stack spacing={1.25} sx={{ width: '100%', maxWidth: controlsMaxWidth }}>
             {headerActions}
-            {(linkExistingMutation.isError || unlinkMutation.isError || createLinkedMutation.isError) && (
+            {linkErrorMessage && (
               <Alert severity="error">
-                {t('knowledgePanel.failedToUpdateLinks')}
+                {linkErrorMessage}
               </Alert>
             )}
           </Stack>

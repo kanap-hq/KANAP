@@ -41,6 +41,15 @@ const journalFooterSx = {
   p: '10px 16px 12px',
 } as const;
 
+// The server writes these system entries in English; they are shown in the reader's language,
+// existing entries included. Any other content is someone's text and is shown as written.
+const SYSTEM_ENTRY_KEYS: Record<string, string> = {
+  'Incident logged': 'workspace.incident.journal.systemEntries.logged',
+  'Imported from CSV': 'workspace.incident.journal.systemEntries.importedFromCsv',
+  'Incident review imported from CSV': 'workspace.incident.journal.systemEntries.reviewImportedFromCsv',
+  'Incident review imported': 'workspace.incident.journal.systemEntries.reviewImported',
+};
+
 export function incidentEntriesQueryKey(incidentId: string) {
   return ['incident-entries', incidentId] as const;
 }
@@ -239,7 +248,9 @@ export default function IncidentJournalTab({ incidentId, canAdd, onEntryAdded }:
                 )}
                 {entry.content && (
                   <Typography sx={{ mt: '4px', fontSize: 13, lineHeight: 1.55, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
-                    {entry.content}
+                    {entry.kind === 'system' && Object.prototype.hasOwnProperty.call(SYSTEM_ENTRY_KEYS, entry.content)
+                      ? t(SYSTEM_ENTRY_KEYS[entry.content])
+                      : entry.content}
                   </Typography>
                 )}
               </Box>

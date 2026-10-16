@@ -123,7 +123,7 @@ Dieser Reiter steuert die Risikoklassifizierung und Datenschutzeinstellungen.
 
 **Risikomodus**:
   - **Manuell**: Sie legen Kritikalität, Datenklasse und PII direkt fest
-  - **Abgeleitet**: Werte werden aus verknüpften Schnittstellen-Bindungen aggregiert: der Reiter zeigt die effektiven Werte und wie viele Bindungen beitragen
+  - **Abgeleitet**: Werte werden aus verknüpften Schnittstellen-Bindungen aggregiert: der Reiter zeigt die effektiven Werte und listet jede beitragende Schnittstelle einmal auf, mit den Umgebungen, in denen sie gebunden ist
 
 **Felder**:
   - **Kritikalität**: Geschäftskritisch, Hoch, Mittel oder Niedrig

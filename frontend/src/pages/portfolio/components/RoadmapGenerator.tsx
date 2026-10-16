@@ -2335,15 +2335,20 @@ export default function RoadmapGenerator({ onApplied }: Props) {
               />
             </Box>
 
-            <TextField
-              label={t('planning.roadmap.fields.contextSwitchGrace')}
-              type="number"
-              size="small"
-              value={contextSwitchGrace}
-              onChange={(e) => setContextSwitchGrace(Math.max(0, Number(e.target.value || '0')))}
-              inputProps={{ min: 0, max: 10 }}
-              sx={{ width: 180 }}
-            />
+            {/* Label above the field, like the slider beside it: inside a narrow field it was cut. */}
+            <Box>
+              <Typography id="roadmap-context-switch-grace" variant="body2" sx={{ mb: 0.5 }}>
+                {t('planning.roadmap.fields.contextSwitchGrace')}
+              </Typography>
+              <TextField
+                type="number"
+                size="small"
+                value={contextSwitchGrace}
+                onChange={(e) => setContextSwitchGrace(Math.max(0, Number(e.target.value || '0')))}
+                inputProps={{ min: 0, max: 10, 'aria-labelledby': 'roadmap-context-switch-grace' }}
+                sx={{ width: 120 }}
+              />
+            </Box>
 
             <Box sx={{ flex: 1 }} />
             <Button

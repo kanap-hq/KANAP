@@ -42,7 +42,11 @@ export class KnowledgeRelationsService {
     }
 
     if (await this.knowledge.getIntegratedBinding(documentId, manager)) {
-      throw new BadRequestException('Managed integrated document relations cannot be changed from Knowledge');
+      // A managed document belongs to its record: the record's page links it, not Knowledge.
+      throw new BadRequestException({
+        code: 'KNOWLEDGE_DOCUMENT_MANAGED_RELATIONS',
+        message: 'Managed integrated document relations cannot be changed from Knowledge',
+      });
     }
 
     return { manager, documentId };

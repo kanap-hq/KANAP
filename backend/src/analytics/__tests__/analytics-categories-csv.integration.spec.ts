@@ -11,6 +11,11 @@ import {
   withRollback,
 } from './analytics-test-helpers';
 
+/** The row and English message of each report entry: these cases check the wording; the codes have their own specs. */
+function plainErrors(errors: Array<{ row: number; message: string }>): Array<{ row: number; message: string }> {
+  return errors.map(({ row, message }) => ({ row, message }));
+}
+
 // The values CSV (`axis_code;name;description;status;disabled_at;applies_to`):
 // a blank dimension code is the default dimension, an unknown code or a
 // disabled dimension is a row error, a dry run writes nothing, the whole file
@@ -56,7 +61,7 @@ async function testImportRules() {
       dryRun: false,
     }, ctx);
     assert.equal(refused.ok, false);
-    assert.deepEqual(refused.errors, [
+    assert.deepEqual(plainErrors(refused.errors), [
       { row: 3, message: "Unknown dimension 'unknown'." },
       { row: 4, message: 'The Retired dimension is disabled. Enable it or leave it out.' },
       { row: 5, message: "Invalid status 'maybe'. Use 'enabled' or 'disabled'." },
@@ -172,7 +177,7 @@ async function testExportImportRoundTrip() {
       dryRun: false,
     }, ctx);
     assert.equal(edited.ok, false);
-    assert.deepEqual(edited.errors, [
+    assert.deepEqual(plainErrors(edited.errors), [
       { row: 2, message: 'The Retired dimension is disabled. Enable it or leave it out.' },
       { row: 3, message: 'The Retired dimension is disabled. Enable it or leave it out.' },
     ]);
@@ -249,7 +254,7 @@ async function testEndOfValidityFormat() {
       dryRun: false,
     }, ctx);
     assert.equal(refused.ok, false);
-    assert.deepEqual(refused.errors, [
+    assert.deepEqual(plainErrors(refused.errors), [
       { row: 2, message: message('-') },
       { row: 3, message: message('not-a-date') },
     ]);
@@ -316,7 +321,7 @@ async function testAppliesToColumn() {
       dryRun: false,
     }, ctx);
     assert.equal(refused.ok, false);
-    assert.deepEqual(refused.errors, [
+    assert.deepEqual(plainErrors(refused.errors), [
       { row: 2, message: "Invalid applies_to 'both'. Use 'opex', 'capex' or leave it empty." },
       { row: 3, message: 'The Nature dimension is for OPEX lines only.' },
     ]);

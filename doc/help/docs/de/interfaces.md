@@ -107,7 +107,7 @@ Der Reiter Technisch definiert die gemeinsamen **Legs**, aus denen die Schnittst
 
 Für jeden Leg können Sie bearbeiten:
 
-- **Leg-Typ**: EXTRACT, TRANSFORM, LOAD oder DIRECT (automatisch basierend auf der Integrationsroute festgelegt)
+- **Leg-Typ**: Extraktion, Transformation, Laden oder Direkt (automatisch basierend auf der Integrationsroute festgelegt)
 - **Von -> Zu**: Welche Rolle jeden Schritt verarbeitet (Quell-App, Ziel-App oder Middleware)
 - **Auslöser-Typ**: Was diesen Leg initiiert (z. B. geplant, ereignisgesteuert, manuell)
 - **Muster**: Das Integrationsmuster (z. B. Batch, Echtzeit, Pub/Sub)

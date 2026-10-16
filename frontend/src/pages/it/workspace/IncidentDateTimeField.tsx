@@ -80,6 +80,21 @@ export default function IncidentDateTimeField({ value, onChange, disabled = fals
     commit(ymd, parsed);
   };
 
+  // The whole time is selected when the field is entered, so typing replaces it ("14:30" over
+  // "00:00", not "0:14:30"). A click places the caret after the focus: select again on that first
+  // mouse up, and only that one, so a second click can still place the caret.
+  const selectOnMouseUpRef = React.useRef(false);
+  const onTimeFocus = (event: React.FocusEvent<HTMLInputElement>) => {
+    event.target.select();
+    selectOnMouseUpRef.current = true;
+  };
+  const onTimeMouseUp = (event: React.MouseEvent<HTMLInputElement>) => {
+    if (!selectOnMouseUpRef.current) return;
+    selectOnMouseUpRef.current = false;
+    event.preventDefault();
+    event.currentTarget.select();
+  };
+
   const fieldSx = inline ? [drawerFieldValueSx, drawerDatePickerSx, inlineControlSx] : [drawerFieldValueSx, drawerDatePickerSx];
 
   return (
@@ -97,14 +112,19 @@ export default function IncidentDateTimeField({ value, onChange, disabled = fals
       <TextField
         value={time}
         onChange={(event) => setTime(event.target.value)}
-        onBlur={onTimeBlur}
+        onFocus={onTimeFocus}
+        onBlur={() => {
+          selectOnMouseUpRef.current = false;
+          onTimeBlur();
+        }}
         onKeyDown={(event) => {
+          selectOnMouseUpRef.current = false;
           if (event.key === 'Enter') onTimeBlur();
         }}
         disabled={disabled || !ymd}
         placeholder={t('labels.timePlaceholder')}
         variant="standard"
-        inputProps={{ inputMode: 'numeric', 'aria-label': t('labels.time') }}
+        inputProps={{ inputMode: 'numeric', 'aria-label': t('labels.time'), onMouseUp: onTimeMouseUp }}
         sx={[...fieldSx, { width: 64, flexShrink: 0 }]}
       />
     </Box>

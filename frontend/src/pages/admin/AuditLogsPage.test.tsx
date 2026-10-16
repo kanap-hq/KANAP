@@ -180,6 +180,26 @@ describe('AuditLogsPage', () => {
     expect(screen.queryByText(/contract_links/)).toBeNull();
   });
 
+  it('names the budget file import source, and dates the detail like the list', async () => {
+    await i18n.changeLanguage('fr');
+    const row = {
+      id: 'a-2', tenant_id: 't-1', table_name: 'suppliers', record_id: 'r-1', action: 'update',
+      before_json: null, after_json: { id: 'r-1' }, user_id: null, user_email: null, user_name: null,
+      source: 'budget_file', source_ref: null, created_at: '2026-10-16T07:19:02Z',
+    };
+    getMock.mockResolvedValue({ data: row } as any);
+    renderPage();
+    expect(column('source').valueFormatter({ value: 'budget_file' })).toBe('Import du fichier budgétaire');
+    expect(column('source').filterParams.labelFormatter('budget_file')).toBe('Import du fichier budgétaire');
+    expect(column('source').valueFormatter({ value: 'ai_chat' })).toBe('Chat IA');
+    const listDate = column('created_at').valueFormatter({ value: row.created_at });
+    act(() => {
+      grid.props?.onCellClicked({ data: row });
+    });
+    expect(await screen.findByText('Source : Import du fichier budgétaire')).toBeTruthy();
+    expect(screen.getByText(`Date : ${listDate}`)).toBeTruthy();
+  });
+
   it('searches the table labels of the reader language: the list, the filter values and the export send their codes', async () => {
     await i18n.changeLanguage('fr');
     getMock.mockResolvedValue(csvResponse() as any);

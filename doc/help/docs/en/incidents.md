@@ -43,7 +43,7 @@ Navigate to **IT Landscape > Incidents** to see the register. Click **New incide
 
 - View: `incidents:reader`
 - Create, edit, journal, links, attachments: `incidents:contributor`
-- Reopen, cancel, and lift a restriction: `incidents:admin`
+- Reopen, cancel, delete, and lift a restriction: `incidents:admin`
 
 These permissions also cover the incident review and the PDF export, so someone who works on incidents does not need any Knowledge permission to write the review. See [Overview](#overview).
 
@@ -140,6 +140,8 @@ A new incident starts from the **Incident review** template, which proposes the 
 
 Rewrite them, remove the ones you do not need, add your own. For a minor incident the short description alone is enough. For a major one, the review is the post-mortem.
 
+The headings come in the language of the person who logs the incident (English, French, German or Spanish). A template your administrators have rewritten keeps its own words.
+
 The template is an ordinary Knowledge document, stored in the **Templates** library under the **Incident review** document type, so a knowledge administrator can rewrite it to match your own post-mortem format. A new template applies to the incidents logged afterwards and never rewrites a review that already exists.
 
 Every save that changes the review keeps a version, so the text can be read back as it stood at any moment, including at the closure of the incident. See [Journal](#journal).
@@ -208,7 +210,13 @@ Closing locks the incident. Fields, the incident review, journal notes, links, a
 
 **Cancel** (`incidents:admin`) is for a record that should never have existed: a duplicate, or an event logged in error. A reason is required, the status becomes Cancelled, and the incident is locked like a closed one. Nothing is deleted and the number stays in place, so `INC-13` never disappears between `INC-12` and `INC-14`. A gap in the numbering would be the first thing an auditor asks about.
 
-There is no delete.
+### Deleting an incident
+
+**Delete** (`incidents:admin`) is on the incident page, and on the list once you select rows. It removes a record that has no place in the register, such as a test entry. Other users see neither the button nor the selection.
+
+Before anything is removed, a confirmation lists what goes with the incident: its incident review, its tasks, its journal entries and its attachments (the files too). It also lists the links that are removed: applications, assets and Knowledge documents stay, only their link to the incident goes. The deletion is recorded in the audit trail.
+
+An incident that holds regulatory reporting data cannot be deleted: **Personal data affected** or **Authority notification required** ticked, **Notified on** or **Parties informed** filled in. Such a record is audit evidence (NIS2 authority notification, and GDPR article 33(5), which requires every personal data breach to be documented). The confirmation says so before anything happens: cancel or close the incident instead. In a selection, those incidents are kept and the others are deleted.
 
 ---
 
@@ -235,6 +243,8 @@ Deadlines and thresholds depend on your jurisdiction and sector. KANAP records t
 **Importing an existing register**: **Import CSV** on the list takes a CSV file. Leave the reference column empty to create incidents (KANAP allocates the next INC numbers), or keep the INC-N reference to update the matching records. Each imported incident gets a journal entry saying it came from a file. Export first if you want the exact column layout.
 
 The file carries the short **Description** in one column and the whole **Incident review** in another, as formatted text. That single review column replaces the former Impact, Root cause, Corrective actions and Lessons learned columns. Headings, lists and links survive the round trip; pasted images do not, because they live in the document. An empty review cell leaves the existing text untouched.
+
+Dates and times are written the way the export language writes dates, in UTC (Coordinated Universal Time), for example `16/10/2026 08:38` in French. The import reads them back the same way, and also accepts `2026-10-16T08:38:00Z`.
 
 Importing is the one operation that still writes to a closed or cancelled incident, so a correction that arrives months later can be filed without reopening the record. It creates a new version of the review and a journal entry pointing at it, and it never rewrites the version the closure refers to. Nothing else is relaxed: the register permissions apply, and a restricted incident you are not allowed to see is refused.
 

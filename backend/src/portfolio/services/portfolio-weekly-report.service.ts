@@ -3,6 +3,7 @@ import AdmZip = require('adm-zip');
 import { EntityManager } from 'typeorm';
 import { CsvLanguage, csvProfile, formatCsvDate, writeCsvLine } from '../../common/csv-sheet';
 import { WEEKLY_EXPORT_LABELS, WeeklyExportLabels } from './portfolio-weekly-report-labels';
+import { DEFAULT_TASK_TYPES } from '../portfolio-task-type.entity';
 import { normalizeReportTimeZone } from '../../common/report-period';
 import {
   projectProjectTeamPredicates,
@@ -304,6 +305,16 @@ const dateHeaders = (shape: ExportShape, { labels }: ExportWords): string[] => {
   if (shape === 'modified') return [labels.columns.modifiedOn];
   if (shape === 'closed') return [labels.columns.createdOn, labels.columns.closedOn];
   return [labels.columns.createdOn, labels.columns.date];
+};
+
+/**
+ * A task's type as the screen shows it: a shipped type the tenant kept (its code, its shipped
+ * English name) in the file's language; a renamed or added type under its own name.
+ */
+const taskTypeCell = (row: { taskTypeName: string | null; taskTypeCode: string | null }, { labels }: ExportWords): string | null => {
+  const shipped = row.taskTypeCode ? DEFAULT_TASK_TYPES.find((type) => type.code === row.taskTypeCode) : undefined;
+  if (!shipped || shipped.name !== row.taskTypeName) return row.taskTypeName;
+  return labels.taskTypes[shipped.code] ?? row.taskTypeName;
 };
 
 /** A day of the report (`YYYY-MM-DD`) written the language's way, as the CSV files write days. */
@@ -930,7 +941,7 @@ export class PortfolioWeeklyReportService {
     return [
       row.ref,
       row.name,
-      row.taskTypeName,
+      taskTypeCell(row, words),
       row.priority,
       row.sourceName,
       row.categoryName,

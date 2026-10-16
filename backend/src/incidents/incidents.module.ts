@@ -23,8 +23,10 @@ import {
   IncidentReportService,
   IncidentRelationsService,
   IncidentsAttachmentsService,
+  IncidentsDeleteService,
   IncidentsService,
 } from './services';
+import { UserTimeAggregateService } from '../portfolio/services/user-time-aggregate.service';
 
 @Module({
   imports: [
@@ -48,6 +50,8 @@ import {
     IncidentRecordService,
     IncidentReportService,
     IncidentsCsvService,
+    IncidentsDeleteService,
+    UserTimeAggregateService,
   ],
   exports: [IncidentsService, IncidentRecordService],
 })

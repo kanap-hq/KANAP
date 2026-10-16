@@ -78,7 +78,7 @@ Ambas categorías también muestran:
 Debajo del formulario principal, el panel de **Sub-ubicaciones** le permite dividir una ubicación en áreas físicas más pequeñas: edificios, salas, racks, jaulas o cualquier otra subdivisión que tenga sentido para su infraestructura.
 
 Cada sub-ubicación tiene:
-- **Nombre**: Una etiqueta corta (p. ej., "Edificio A - Sala 1 - Rack 5")
+- **Nombre**: Una etiqueta corta (p. ej., "Edificio A, Sala 1, Rack 5")
 - **Descripción**: Detalle adicional opcional
 
 Las sub-ubicaciones están disponibles en cuanto la ubicación existe (después de hacer clic en **Crear**). Cada fila se guarda por sí sola al salir del campo, y eliminar una sub-ubicación pide confirmación primero.

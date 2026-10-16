@@ -320,6 +320,12 @@ async function testExportImportRoundTrip() {
     });
     assert.ok(exported.content.includes('review'), 'the review column is exported by default');
     assert.ok(exported.content.includes('- 300 mailboxes'), 'the multiline body is exported');
+    // Date-times in the export language's form (UTC), the way the other exports write days.
+    const detected = new Date(incident.detected_at);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const frenchDay = `${pad(detected.getUTCDate())}/${pad(detected.getUTCMonth() + 1)}/${detected.getUTCFullYear()}`;
+    assert.ok(exported.content.includes(`${frenchDay} ${pad(detected.getUTCHours())}:${pad(detected.getUTCMinutes())}`), exported.content);
+    assert.ok(!/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(exported.content), 'no ISO timestamp left in the file');
 
     // Re-importing the export changes nothing: every row counts as unchanged, in both modes.
     const exportedFile = exported.content.replace(/^﻿/, '');
@@ -415,6 +421,38 @@ async function testEmptyCellAndDryRun() {
 // ---------------------------------------------------------------------------
 // 3. Insert rows: provisioning + review body
 // ---------------------------------------------------------------------------
+
+// The shipped template is written in the creating user's language; a template the tenant edited is kept as it is.
+async function testReviewTemplateFollowsTheCreatorLanguage() {
+  await withFixture(async (runner, f) => {
+    const services = createServices(runner.manager);
+    const english = await createIncident(runner, f, services);
+    assert.match((await readReview(runner, f, english.id)).content_markdown, /^## Detailed description\n/);
+
+    await runner.manager.query(`UPDATE users SET locale = 'fr' WHERE id = $1`, [f.users.admin]);
+    const french = await createIncident(runner, f, services);
+    assert.equal(
+      (await readReview(runner, f, french.id)).content_markdown.trim(),
+      ['## Description détaillée', '## Impact', '## Cause racine', '## Actions correctives', '## Enseignements'].join('\n\n'),
+    );
+    await runner.manager.query(`UPDATE users SET locale = 'de' WHERE id = $1`, [f.users.admin]);
+    const german = await createIncident(runner, f, services);
+    assert.match((await readReview(runner, f, german.id)).content_markdown, /^## Ausführliche Beschreibung\n/);
+
+    // The first review keeps its English headings: existing documents are user content.
+    assert.match((await readReview(runner, f, english.id)).content_markdown, /^## Detailed description\n/);
+
+    await runner.manager.query(
+      `UPDATE documents d SET content_markdown = '## Our own template'
+       FROM integrated_document_slot_settings s
+       WHERE s.tenant_id = $1 AND s.source_entity_type = 'incidents' AND s.slot_key = 'review'
+         AND d.id = s.template_document_id AND d.tenant_id = s.tenant_id`,
+      [f.tenantId],
+    );
+    const custom = await createIncident(runner, f, services);
+    assert.equal((await readReview(runner, f, custom.id)).content_markdown.trim(), '## Our own template');
+  });
+}
 
 async function testInsertedRowsAreProvisioned() {
   await withFixture(async (runner, f) => {
@@ -935,7 +973,8 @@ async function run() {
   try {
     await testExportImportRoundTrip();
     await testEmptyCellAndDryRun();
-    await testInsertedRowsAreProvisioned();
+    await testReviewTemplateFollowsTheCreatorLanguage();
+  await testInsertedRowsAreProvisioned();
     await testClosedIncidentImportIsAllowedAndVersioned();
     await testInvisibleIncidentRefused();
     await testLockConflictRollsBackTheUpsert();

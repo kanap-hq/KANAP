@@ -323,7 +323,7 @@ export default function AuditLogsPage() {
           {detail && !detailQuery.isLoading && (
             <Stack spacing={2}>
               <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap alignItems="center">
-                <Typography variant="body2" color="text.secondary">{t('auditLogs.details.date', { value: new Date(detail.created_at).toLocaleString(locale) })}</Typography>
+                <Typography variant="body2" color="text.secondary">{t('auditLogs.details.date', { value: formatShortDateTime(detail.created_at, locale) })}</Typography>
                 <Typography variant="body2" color="text.secondary">{t('auditLogs.details.table', { value: auditTableFilterLabel(detail.table_name, t) })}</Typography>
                 {detail.table_name === EXPORT_EVENT_TABLE && <Typography variant="body2" color="text.secondary">{t('auditLogs.details.exported', { value: auditTableLabel(detail, t) })}</Typography>}
                 <Typography variant="body2" color="text.secondary">{t('auditLogs.details.action', { value: t(`auditLogs.actions.${detail.action}`, { defaultValue: detail.action }) })}</Typography>

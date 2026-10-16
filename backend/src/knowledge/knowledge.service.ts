@@ -6037,6 +6037,14 @@ export class KnowledgeService {
         params,
       ).replace(/^\s*AND\s/, ''),
     );
+    // A managed document belongs to its record and cannot be linked to another one
+    // (`KNOWLEDGE_DOCUMENT_MANAGED_RELATIONS`): the picker does not offer it.
+    whereClauses.push(`NOT EXISTS (
+      SELECT 1
+      FROM integrated_document_bindings b
+      WHERE b.document_id = d.id
+        AND b.tenant_id = d.tenant_id
+    )`);
 
     if (rawSearch) {
       params.push(`%${rawSearch}%`);

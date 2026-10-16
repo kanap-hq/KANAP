@@ -1020,7 +1020,7 @@ async function testMoreCellsThanTheHeader() {
     const line = [...headers.map((header) => csvCell(cells[header] ?? '', ',')), 'extra'].join(',');
     const result = await importer.importCsv(`${headers.join(',')}\n${line}\n`, { language: 'en' });
     assert.equal(result.ok, false, `${importer.label}: the file is refused`);
-    assert.deepEqual(result.errors, [{ row: 2, message: EXTRA_CELLS }], `${importer.label}: ${JSON.stringify(result.errors)}`);
+    assert.deepEqual(result.errors, [{ row: 2, message: EXTRA_CELLS, code: 'CSV_ROW_TOO_MANY_CELLS' }], `${importer.label}: ${JSON.stringify(result.errors)}`);
   });
 }
 

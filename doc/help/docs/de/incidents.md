@@ -43,7 +43,7 @@ Der **Melder** sind standardmäßig Sie. Beide Daten akzeptieren Werte in der Ve
 
 - Ansicht: `incidents:reader`
 - Anlegen, bearbeiten, Journal, Verknüpfungen, Anhänge: `incidents:contributor`
-- Wieder öffnen, abbrechen und eine Einschränkung aufheben: `incidents:admin`
+- Wieder öffnen, abbrechen, löschen und eine Einschränkung aufheben: `incidents:admin`
 
 Diese Berechtigungen decken auch die Vorfallanalyse und den PDF-Export ab. Wer an Vorfällen arbeitet, braucht also keine Berechtigung für die Wissensdatenbank, um die Analyse zu schreiben. Siehe [Übersicht](#ubersicht).
 
@@ -140,6 +140,8 @@ Ein neuer Vorfall startet aus der Vorlage **Vorfallanalyse**, die die fünf Teil
 
 Schreiben Sie sie um, entfernen Sie, was Sie nicht brauchen, ergänzen Sie Eigenes. Bei einem geringfügigen Vorfall genügt die kurze Beschreibung. Bei einem schwerwiegenden ist die Analyse der Post-Mortem-Bericht.
 
+Die Überschriften erscheinen in der Sprache der Person, die den Vorfall erfasst (Englisch, Französisch, Deutsch oder Spanisch). Eine von Ihren Administratoren umgeschriebene Vorlage behält ihren eigenen Wortlaut.
+
 Die Vorlage ist ein gewöhnliches Dokument der Wissensdatenbank, gespeichert in der Bibliothek **Vorlagen** unter dem Dokumenttyp **Vorfallanalyse**. Ein Administrator der Wissensdatenbank kann sie also an Ihr eigenes Post-Mortem-Format anpassen. Eine neue Vorlage gilt für die danach erfassten Vorfälle und schreibt eine bereits vorhandene Analyse nie um.
 
 Jedes Speichern, das die Analyse verändert, hält eine Version fest. Der Text lässt sich damit so nachlesen, wie er zu jedem Zeitpunkt stand, auch beim Schließen des Vorfalls. Siehe [Journal](#journal).
@@ -208,7 +210,13 @@ Das Schließen sperrt den Vorfall. Felder, die Vorfallanalyse, Journalnotizen, V
 
 **Vorfall abbrechen** (`incidents:admin`) ist für einen Datensatz gedacht, den es nie hätte geben dürfen: ein Duplikat oder ein irrtümlich erfasstes Ereignis. Ein Grund ist erforderlich, der Status wird Abgebrochen, und der Vorfall wird wie ein geschlossener gesperrt. Nichts wird gelöscht und die Nummer bleibt erhalten: `INC-13` verschwindet nie zwischen `INC-12` und `INC-14`. Eine Lücke in der Nummerierung wäre das Erste, wonach ein Prüfer fragt.
 
-Löschen gibt es nicht.
+### Einen Vorfall löschen
+
+**Löschen** (`incidents:admin`) steht auf der Seite des Vorfalls und in der Liste, sobald Zeilen ausgewählt sind. Es entfernt einen Datensatz, der nicht ins Register gehört, etwa einen Testeintrag. Andere Benutzer sehen weder die Schaltfläche noch die Auswahl.
+
+Bevor etwas entfernt wird, listet eine Bestätigung auf, was mit dem Vorfall gelöscht wird: seine Vorfallsanalyse, seine Aufgaben, seine Journaleinträge und seine Anhänge (samt Dateien). Sie listet auch die entfernten Verknüpfungen auf: Anwendungen, Assets und Knowledge-Dokumente bleiben erhalten, nur ihre Verknüpfung mit dem Vorfall entfällt. Die Löschung wird im Audit-Trail festgehalten.
+
+Ein Vorfall mit Daten der behördlichen Meldung kann nicht gelöscht werden: **Personenbezogene Daten betroffen** oder **Meldung an Behörde erforderlich** angehakt, **Gemeldet am** oder **Informierte Parteien** ausgefüllt. Ein solcher Datensatz ist ein Prüfnachweis (Meldung an die Behörde nach NIS2 und Artikel 33(5) DSGVO, der die Dokumentation jeder Verletzung des Schutzes personenbezogener Daten verlangt). Die Bestätigung sagt das, bevor etwas geschieht: Brechen Sie den Vorfall stattdessen ab oder schließen Sie ihn. In einer Auswahl bleiben diese Vorfälle erhalten und die anderen werden gelöscht.
 
 ---
 
@@ -235,6 +243,8 @@ Fristen und Schwellenwerte hängen von Ihrer Rechtsordnung und Ihrer Branche ab.
 **Ein bestehendes Register importieren**: **CSV importieren** in der Liste nimmt eine CSV-Datei entgegen. Lassen Sie die Referenzspalte leer, um Vorfälle anzulegen (KANAP vergibt die nächsten INC-Nummern), oder behalten Sie die Referenz INC-N bei, um die passenden Datensätze zu aktualisieren. Jeder importierte Vorfall erhält einen Journaleintrag, der auf die Herkunft aus einer Datei hinweist. Exportieren Sie zuerst, wenn Sie das exakte Spaltenlayout möchten.
 
 Die Datei führt die kurze **Beschreibung** in einer Spalte und die gesamte **Vorfallanalyse** in einer anderen, als formatierten Text. Diese eine Analysespalte ersetzt die früheren Spalten Auswirkung, Ursache, Korrekturmaßnahmen und Erkenntnisse. Überschriften, Listen und Links überstehen den Hin- und Rückweg; eingefügte Bilder nicht, denn sie liegen im Dokument. Eine leere Analysezelle lässt den vorhandenen Text unverändert.
+
+Datum und Uhrzeit stehen so in der Datei, wie die Exportsprache Daten schreibt, in UTC (koordinierte Weltzeit), zum Beispiel `16.10.2026 08:38` auf Deutsch. Der Import liest sie genauso wieder ein und akzeptiert auch `2026-10-16T08:38:00Z`.
 
 Der Import ist der einzige Vorgang, der noch in einen geschlossenen oder abgebrochenen Vorfall schreibt. Eine Korrektur, die Monate später eintrifft, lässt sich also festhalten, ohne den Datensatz wieder zu öffnen. Er erzeugt eine neue Version der Analyse und einen Journaleintrag, der darauf verweist, und er schreibt die Version, auf die sich das Schließen bezieht, nie um. Sonst wird nichts gelockert: Die Berechtigungen des Registers gelten, und ein eingeschränkter Vorfall, den Sie nicht sehen dürfen, wird abgewiesen.
 

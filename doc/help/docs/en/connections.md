@@ -123,7 +123,7 @@ This tab controls risk classification and data protection settings.
 
 **Risk mode**:
   - **Manual**: You set criticality, data class, and PII directly
-  - **Derived**: Values are aggregated from linked interface bindings. The tab shows the effective values and how many bindings contribute
+  - **Derived**: Values are aggregated from linked interface bindings. The tab shows the effective values and lists each contributing interface once, with the environments it is bound in
 
 **Fields**:
   - **Criticality**: Business critical, High, Medium, or Low

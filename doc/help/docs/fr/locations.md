@@ -78,7 +78,7 @@ Les deux catégories affichent aussi :
 Sous le formulaire principal, le panneau **Sous-sites** vous permet de décomposer un site en zones physiques plus petites : bâtiments, salles, racks, cages, ou toute autre subdivision qui a du sens pour votre infrastructure.
 
 Chaque sous-site possède :
-- **Nom** : Un libellé court (par ex., « Bâtiment A - Salle 1 - Rack 5 »)
+- **Nom** : Un libellé court (par ex., « Bâtiment A, Salle 1, Baie 5 »)
 - **Description** : Détail supplémentaire optionnel
 
 Les sous-sites sont disponibles dès que le site existe (après avoir cliqué sur **Créer**). Chaque ligne s'enregistre seule lorsque vous quittez le champ, et la suppression d'un sous-site demande d'abord une confirmation.

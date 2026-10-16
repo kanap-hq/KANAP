@@ -126,6 +126,9 @@ export interface CsvRowError {
   /** Column id, or null when the row itself is wrong. */
   column: string | null;
   message: string;
+  /** The shared code the interface translates (`errors:CSV_*`), with the values its sentence names. */
+  code?: string;
+  params?: Record<string, string | number>;
 }
 
 export interface CsvDataRow {

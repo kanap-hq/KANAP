@@ -43,7 +43,7 @@ El **Declarante** es usted por defecto. Ambas fechas admiten valores pasados: un
 
 - Consulta: `incidents:reader`
 - Creación, edición, diario, enlaces, archivos adjuntos: `incidents:contributor`
-- Reabrir, cancelar y levantar una restricción: `incidents:admin`
+- Reabrir, cancelar, eliminar y levantar una restricción: `incidents:admin`
 
 Estos permisos cubren también la revisión del incidente y la exportación PDF: quien trabaja con incidentes no necesita ningún permiso sobre la base de conocimiento para redactar la revisión. Consulte [Vista general](#vista-general).
 
@@ -140,6 +140,8 @@ Un incidente nuevo parte de la plantilla **Revisión del incidente**, que propon
 
 Reescríbalas, elimine las que no necesite, añada las suyas. Para un incidente menor basta con la descripción breve. Para uno mayor, la revisión es el post-mortem.
 
+Los títulos aparecen en el idioma de la persona que registra el incidente (inglés, francés, alemán o español). Una plantilla que sus administradores hayan reescrito conserva sus propios términos.
+
 La plantilla es un documento ordinario de la base de conocimiento, almacenado en la biblioteca **Plantillas** bajo el tipo de documento **Revisión del incidente**, de modo que un administrador de la base de conocimiento puede reescribirla para adaptarla a su propio formato de post-mortem. Una plantilla nueva se aplica a los incidentes registrados después y nunca reescribe una revisión que ya existe.
 
 Cada guardado que modifica la revisión conserva una versión, así que el texto puede releerse tal como estaba en cualquier momento, incluido el cierre del incidente. Consulte [Diario](#diario).
@@ -208,7 +210,13 @@ Cerrar bloquea el incidente. Campos, revisión del incidente, notas del diario, 
 
 **Cancelar incidente** (`incidents:admin`) es para un registro que nunca debió existir: un duplicado o un evento registrado por error. El motivo es obligatorio, el estado pasa a Cancelado y el incidente queda bloqueado como uno cerrado. No se elimina nada y el número se mantiene: `INC-13` nunca desaparece entre `INC-12` e `INC-14`. Un hueco en la numeración sería lo primero por lo que preguntaría un auditor.
 
-No existe la eliminación.
+### Eliminar un incidente
+
+**Eliminar** (`incidents:admin`) está en la página del incidente y en la lista una vez seleccionadas las filas. Retira un registro que no tiene cabida en el registro de incidentes, como una entrada de prueba. Los demás usuarios no ven ni el botón ni la selección.
+
+Antes de retirar nada, una confirmación indica lo que se va con el incidente: su revisión de incidente, sus tareas, sus entradas del diario y sus adjuntos (también los archivos). También indica los vínculos que se quitan: las aplicaciones, los activos y los documentos de Knowledge se mantienen, solo desaparece su vínculo con el incidente. La eliminación queda registrada en la pista de auditoría.
+
+Un incidente con datos de notificación regulatoria no se puede eliminar: **Datos personales afectados** o **Requiere notificación a la autoridad** marcada, **Notificado el** o **Partes informadas** completados. Ese registro es evidencia de auditoría (notificación a la autoridad según NIS2, y artículo 33(5) del RGPD, que exige documentar toda violación de datos personales). La confirmación lo indica antes de hacer nada: cancele o cierre el incidente en su lugar. En una selección, esos incidentes se conservan y los demás se eliminan.
 
 ---
 
@@ -235,6 +243,8 @@ Los plazos y umbrales dependen de su jurisdicción y de su sector. KANAP registr
 **Importar un registro existente**: **Importar CSV** en la lista acepta un archivo CSV. Deje la columna de referencia vacía para crear incidentes (KANAP asigna los siguientes números INC), o conserve la referencia INC-N para actualizar los registros correspondientes. Cada incidente importado recibe una entrada de diario que indica que procede de un archivo. Exporte primero si quiere la disposición exacta de las columnas.
 
 El archivo lleva la **Descripción** breve en una columna y toda la **Revisión del incidente** en otra, como texto con formato. Esa única columna de revisión sustituye a las antiguas columnas Impacto, Causa raíz, Acciones correctivas y Lecciones aprendidas. Los títulos, las listas y los enlaces sobreviven al viaje de ida y vuelta; las imágenes pegadas no, porque viven en el documento. Una celda de revisión vacía deja intacto el texto existente.
+
+Las fechas y horas se escriben como la lengua de la exportación escribe las fechas, en UTC (tiempo universal coordinado), por ejemplo `16/10/2026 08:38` en español. La importación las lee de la misma forma y también acepta `2026-10-16T08:38:00Z`.
 
 La importación es la única operación que sigue escribiendo en un incidente cerrado o cancelado, para que una corrección que llega meses después pueda archivarse sin reabrir la ficha. Crea una versión nueva de la revisión y una entrada de diario que apunta a ella, y nunca reescribe la versión a la que se refiere el cierre. Nada más se relaja: los permisos del registro se aplican, y un incidente restringido que usted no tenga derecho a ver se rechaza.
 

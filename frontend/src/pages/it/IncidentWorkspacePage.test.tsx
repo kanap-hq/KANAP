@@ -40,8 +40,14 @@ vi.mock('react-router-dom', async (importOriginal) => ({
   useNavigate: () => navigateMock,
 }));
 
+// The incident level the user holds (every other resource: admin).
+const authLevel = vi.hoisted(() => ({ incidents: 'admin' }));
+const RANK: Record<string, number> = { reader: 1, contributor: 2, member: 3, admin: 4 };
 vi.mock('../../auth/AuthContext', () => ({
-  useAuth: () => ({ hasLevel: () => true, profile: { id: 'user-1' } }),
+  useAuth: () => ({
+    hasLevel: (resource: string, level: string) => resource !== 'incidents' || RANK[authLevel.incidents] >= RANK[level],
+    profile: { id: 'user-1' },
+  }),
 }));
 
 vi.mock('../../tenant/TenantContext', () => ({
@@ -420,5 +426,54 @@ describe('IncidentWorkspacePage — description autosave across incidents', () =
     const after = vi.mocked(incidentsApi.update).mock.calls.slice(5);
     expect(after).toEqual([['inc-2', { description: 'text for INC-2' }]]);
     expect(vi.mocked(incidentsApi.update).mock.calls.every(([id, patch]) => id === 'inc-1' || (patch as any).description !== 'text for INC-1')).toBe(true);
+  });
+});
+
+describe('IncidentWorkspacePage — delete', () => {
+  const impact = {
+    incidents: 1, review_documents: 1, tasks: 2, entries: 3, attachments: 0, applications: 1, assets: 0, documents: 0, blocked: 0, refused: [],
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    authLevel.incidents = 'admin';
+    vi.mocked(incidentsApi.get).mockResolvedValue(incident);
+    vi.mocked(api.get).mockResolvedValue({ data: { id: 'doc-1', item_number: 12, item_ref: 'DOC-12', content_markdown: '', revision: 1, edit_lock: null } } as any);
+    vi.mocked(api.delete).mockResolvedValue({ data: { deleted: true } } as any);
+  });
+
+  it('asks with what goes and what loses its link, then deletes and leaves the register page', async () => {
+    vi.mocked(api.post).mockImplementation(async (url: string) => (url === '/incidents/delete-check' ? { data: impact } : { data: {} }) as any);
+    renderPage();
+    fireEvent.click(await screen.findByText('common:buttons.delete'));
+
+    await waitFor(() => expect(dialogsMock.confirm).toHaveBeenCalled());
+    expect(api.post).toHaveBeenCalledWith('/incidents/delete-check', { ids: [incident.id] });
+    const asked = (dialogsMock.confirm.mock.calls[0] as any[])[0];
+    expect(asked.message).toContain('it:pages.incidents.delete.removed');
+    expect(asked.message).toContain('it:pages.incidents.delete.detached');
+    expect(asked.confirmLabel).toBe('it:pages.incidents.delete.confirmAnyway');
+    await waitFor(() => expect(api.delete).toHaveBeenCalledWith(`/incidents/${incident.id}`));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalled());
+  });
+
+  it('refuses an incident holding regulatory reporting data before any confirmation', async () => {
+    vi.mocked(api.post).mockImplementation(async (url: string) => (url === '/incidents/delete-check'
+      ? { data: { ...impact, incidents: 0, blocked: 1, refused: [{ id: incident.id, name: 'INC-1', code: 'INCIDENT_HAS_REGULATORY_RECORDS', usages: [{ type: 'regulatory_records', total: 1 }] }] } }
+      : { data: {} }) as any);
+    renderPage();
+    fireEvent.click(await screen.findByText('common:buttons.delete'));
+
+    await waitFor(() => expect(dialogsMock.alert).toHaveBeenCalled());
+    expect((dialogsMock.alert.mock.calls[0] as any[])[0].message).toBe('errors:INCIDENT_HAS_REGULATORY_RECORDS');
+    expect(dialogsMock.confirm).not.toHaveBeenCalled();
+    expect(api.delete).not.toHaveBeenCalled();
+  });
+
+  it.each(['reader', 'contributor', 'member'])('offers no delete to an incident %s', async (level) => {
+    authLevel.incidents = level;
+    renderPage();
+    await screen.findByText('workspace.incident.actions.exportPdf');
+    expect(screen.queryByText('common:buttons.delete')).toBeNull();
   });
 });

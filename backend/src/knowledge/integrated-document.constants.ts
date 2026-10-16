@@ -74,22 +74,45 @@ export const MANAGED_DOCS_FOLDER_DEFINITIONS: ManagedDocsFolderDefinition[] = [
   { sourceEntityType: 'incidents', systemKey: 'integrated_incidents', name: 'Incidents', displayOrder: 5 },
 ];
 
+export type IncidentReviewLanguage = 'en' | 'fr' | 'de' | 'es';
+
 /**
  * Incident review body: the five sections the incident register used to hold as
- * plain-text columns. Seeded in English for every tenant (no tenant language).
+ * plain-text columns, in each interface language. A new review starts from the
+ * headings of the creating user's language (`incidentReviewTemplateFor`).
  */
-export const INCIDENT_REVIEW_TEMPLATE_CONTENT_MARKDOWN = [
-  '## Detailed description',
-  '',
-  '## Impact',
-  '',
-  '## Root cause',
-  '',
-  '## Corrective actions',
-  '',
-  '## Lessons learned',
-  '',
-].join('\n');
+export const INCIDENT_REVIEW_HEADINGS: Record<IncidentReviewLanguage, readonly string[]> = {
+  en: ['Detailed description', 'Impact', 'Root cause', 'Corrective actions', 'Lessons learned'],
+  fr: ['Description détaillée', 'Impact', 'Cause racine', 'Actions correctives', 'Enseignements'],
+  de: ['Ausführliche Beschreibung', 'Auswirkungen', 'Grundursache', 'Korrekturmaßnahmen', 'Erkenntnisse'],
+  es: ['Descripción detallada', 'Impacto', 'Causa raíz', 'Acciones correctivas', 'Lecciones aprendidas'],
+};
+
+/** The review template in one language: the five H2 headings, each followed by a blank line. */
+export function incidentReviewTemplateMarkdown(language: IncidentReviewLanguage): string {
+  return INCIDENT_REVIEW_HEADINGS[language].flatMap((heading) => [`## ${heading}`, '']).join('\n');
+}
+
+/** The template seeded as every tenant's library template (English: a tenant has no language). */
+export const INCIDENT_REVIEW_TEMPLATE_CONTENT_MARKDOWN = incidentReviewTemplateMarkdown('en');
+
+/** A user's locale (`fr`, `fr-FR`, null) as a review language; anything else is English. */
+export function incidentReviewLanguage(locale: string | null | undefined): IncidentReviewLanguage {
+  const language = String(locale ?? '').trim().toLowerCase().split(/[-_]/)[0];
+  return language === 'fr' || language === 'de' || language === 'es' ? language : 'en';
+}
+
+/**
+ * True when the text is exactly the five system headings of one language, in order and with
+ * nothing else (blank lines and surrounding spaces aside). Such a text carries nothing an
+ * author wrote: an untouched review, or the shipped template.
+ */
+export function isIncidentReviewSystemTemplate(markdown: string | null | undefined): boolean {
+  const lines = String(markdown ?? '').replace(/\r\n?/g, '\n').split('\n').map((line) => line.trim()).filter(Boolean);
+  return Object.values(INCIDENT_REVIEW_HEADINGS).some((headings) => (
+    lines.length === headings.length && lines.every((line, index) => line === `## ${headings[index]}`)
+  ));
+}
 
 export const INTEGRATED_DOCUMENT_SLOT_DEFINITIONS: IntegratedDocumentSlotDefinition[] = [
   {

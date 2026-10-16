@@ -77,4 +77,37 @@ describe('ApplicationsPage', () => {
     );
     expect(screen.getByText(/pages\.applications\.includedIn/).textContent).toContain('HR suite +1');
   });
+
+  it('keeps the "Included in" chip on one line, cut with its full text on hover', () => {
+    renderPage();
+    act(() => {
+      lastProps().onColumnStateChange([{ colId: 'name' }, { colId: 'suites_count', hide: true }]);
+    });
+    const Cell = lastProps().columns.find((column) => column.field === 'name')!.cellRenderer!;
+    render(
+      <MemoryRouter>
+        <Cell value="Exchange Online" data={{ id: 'a-1', name: 'Exchange Online', suites_count: 1, first_suite_name: 'Microsoft 365' }} />
+      </MemoryRouter>,
+    );
+    const chip = screen.getByText(/pages\.applications\.includedIn/);
+    expect(chip).toHaveAttribute('title', 'pages.applications.includedIn Microsoft 365');
+    const style = window.getComputedStyle(chip);
+    expect(style.whiteSpace).toBe('nowrap');
+    expect(style.textOverflow).toBe('ellipsis');
+  });
+
+  it('centres "No active environments" in the row like the environment pills', () => {
+    renderPage();
+    const Cell = lastProps().columns.find((column) => (column as { colId?: string }).colId === 'environments')!.cellRenderer!;
+    render(
+      <MemoryRouter>
+        <Cell data={{ id: 'a-1', name: 'Payroll', instances: [] }} />
+      </MemoryRouter>,
+    );
+    const container = screen.getByText('pages.applications.noActiveEnvironments').parentElement!;
+    const style = window.getComputedStyle(container);
+    expect(style.display).toBe('flex');
+    expect(style.alignItems).toBe('center');
+    expect(style.height).toBe('100%');
+  });
 });

@@ -414,7 +414,17 @@ export class IncidentsService extends IncidentsBaseService {
          ${REPORTER_NAME} AS reporter_name,
          ${COUNT_COLUMNS},
          (SELECT COUNT(*) FROM incident_entries e WHERE e.incident_id = i.id AND e.tenant_id = i.tenant_id)::int AS entry_count,
-         (SELECT COUNT(*) FROM document_incidents di WHERE di.incident_id = i.id AND di.tenant_id = i.tenant_id)::int AS document_count,
+         -- What the Documents tab lists: the incident's own review is hidden from it.
+         (SELECT COUNT(*) FROM document_incidents di
+           WHERE di.incident_id = i.id AND di.tenant_id = i.tenant_id
+             AND NOT EXISTS (
+               SELECT 1 FROM integrated_document_bindings b
+               WHERE b.document_id = di.document_id
+                 AND b.tenant_id = di.tenant_id
+                 AND b.source_entity_type = 'incidents'
+                 AND b.source_entity_id = i.id
+                 AND b.hidden_from_entity_knowledge = true
+             ))::int AS document_count,
          (SELECT COUNT(*) FROM incident_attachments att WHERE att.incident_id = i.id AND att.tenant_id = i.tenant_id AND att.deleted_at IS NULL)::int AS attachment_count
        ${BASE_FROM}
        WHERE i.id = $1 AND i.tenant_id = $2`,

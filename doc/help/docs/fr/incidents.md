@@ -43,7 +43,7 @@ Le **Déclarant** est vous par défaut. Les deux dates acceptent des valeurs pas
 
 - Consultation : `incidents:reader`
 - Création, modification, journal, liens, pièces jointes : `incidents:contributor`
-- Réouverture, annulation et levée d'une restriction : `incidents:admin`
+- Réouverture, annulation, suppression et levée d'une restriction : `incidents:admin`
 
 Ces autorisations couvrent aussi la revue d'incident et l'export PDF : celui qui traite les incidents n'a besoin d'aucune autorisation sur la base de connaissances pour rédiger la revue. Voir [Vue d'ensemble](#vue-densemble).
 
@@ -140,6 +140,8 @@ Un nouvel incident démarre à partir du modèle **Revue d'incident**, qui propo
 
 Réécrivez-les, retirez celles dont vous n'avez pas besoin, ajoutez les vôtres. Pour un incident mineur, la description courte suffit. Pour un incident majeur, la revue constitue le post-mortem.
 
+Les titres sont dans la langue de la personne qui enregistre l'incident (anglais, français, allemand ou espagnol). Un modèle réécrit par vos administrateurs garde ses propres termes.
+
 Le modèle est un document ordinaire de la base de connaissances, rangé dans la bibliothèque **Modèles** sous le type de document **Incident review** : un administrateur de la base de connaissances peut le réécrire pour coller à votre propre format de post-mortem. Un nouveau modèle s'applique aux incidents enregistrés ensuite et ne réécrit jamais une revue déjà existante.
 
 Chaque enregistrement qui modifie la revue conserve une version : le texte peut donc être relu tel qu'il était à n'importe quel moment, y compris à la clôture de l'incident. Voir [Journal](#journal).
@@ -208,7 +210,13 @@ La clôture verrouille l'incident. Champs, revue d'incident, notes de journal, l
 
 **Annuler l'incident** (`incidents:admin`) s'utilise pour un enregistrement qui n'aurait jamais dû exister : un doublon, ou un événement saisi par erreur. Un motif est obligatoire, le statut devient Annulé et l'incident est verrouillé comme s'il était clôturé. Rien n'est supprimé et le numéro reste en place : `INC-13` ne disparaît jamais entre `INC-12` et `INC-14`. Un trou dans la numérotation serait la première chose sur laquelle un auditeur reviendrait.
 
-Il n'y a pas de suppression.
+### Supprimer un incident
+
+**Supprimer** (`incidents:admin`) se trouve sur la fiche de l'incident, et sur la liste une fois des lignes sélectionnées. Il retire un enregistrement qui n'a pas sa place dans le registre, comme une saisie de test. Les autres utilisateurs ne voient ni le bouton ni la sélection.
+
+Avant toute suppression, une confirmation liste ce qui part avec l'incident : sa revue d'incident, ses tâches, ses entrées du journal et ses pièces jointes (fichiers compris). Elle liste aussi les liens retirés : les applications, les actifs et les documents Knowledge restent, seul leur lien avec l'incident disparaît. La suppression est inscrite dans la piste d'audit.
+
+Un incident qui porte des données de déclaration réglementaire ne peut pas être supprimé : **Données personnelles concernées** ou **Notification aux autorités requise** cochée, **Notifié le** ou **Parties informées** renseigné. Un tel enregistrement est une preuve d'audit (notification à l'autorité NIS2, et article 33(5) du RGPD, qui impose de documenter toute violation de données personnelles). La confirmation le dit avant toute action : annulez ou clôturez l'incident à la place. Dans une sélection, ces incidents sont conservés et les autres sont supprimés.
 
 ---
 
@@ -235,6 +243,8 @@ Les délais et les seuils dépendent de votre juridiction et de votre secteur. K
 **Importer un registre existant** : **Importer CSV** dans la liste accepte un fichier CSV. Laissez la colonne référence vide pour créer des incidents (KANAP attribue les numéros INC suivants), ou conservez la référence INC-N pour mettre à jour les enregistrements correspondants. Chaque incident importé reçoit une entrée de journal indiquant qu'il provient d'un fichier. Exportez d'abord si vous voulez la disposition exacte des colonnes.
 
 Le fichier porte la **Description** courte dans une colonne et toute la **Revue d'incident** dans une autre, sous forme de texte mis en forme. Cette unique colonne de revue remplace les anciennes colonnes Impact, Cause racine, Actions correctives et Enseignements. Titres, listes et liens survivent à l'aller-retour ; les images collées, non, puisqu'elles vivent dans le document. Une cellule de revue vide laisse le texte existant intact.
+
+Les dates et heures s'écrivent comme la langue de l'export écrit les dates, en UTC (temps universel coordonné), par exemple `16/10/2026 08:38` en français. L'import les relit de la même façon et accepte aussi `2026-10-16T08:38:00Z`.
 
 L'import est la seule opération qui écrit encore dans un incident clôturé ou annulé : une correction qui arrive des mois plus tard peut donc être déposée sans rouvrir l'enregistrement. Elle crée une nouvelle version de la revue et une entrée de journal qui la référence, et elle ne réécrit jamais la version à laquelle la clôture se rapporte. Rien d'autre n'est assoupli : les autorisations du registre s'appliquent, et un incident restreint que vous n'avez pas le droit de voir est refusé.
 

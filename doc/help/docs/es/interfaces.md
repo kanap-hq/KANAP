@@ -107,7 +107,7 @@ La pestaña Técnico define los **tramos** compartidos que componen la interfaz.
 
 Para cada tramo puede editar:
 
-- **Tipo de tramo**: EXTRACT, TRANSFORM, LOAD o DIRECT (definido automáticamente según la ruta de integración)
+- **Tipo de tramo**: Extracción, Transformación, Carga o Directo (definido automáticamente según la ruta de integración)
 - **De -> A**: Qué rol maneja cada paso (App de origen, App de destino o Middleware)
 - **Tipo de disparador**: Qué inicia este tramo (p. ej., programado, basado en eventos, manual)
 - **Patrón**: El patrón de integración (p. ej., lote, tiempo real, pub/sub)

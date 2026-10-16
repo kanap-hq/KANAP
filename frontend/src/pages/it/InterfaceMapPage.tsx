@@ -37,7 +37,7 @@ import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import { useTranslation } from 'react-i18next';
 import { classificationText } from '../../utils/applicationClassification';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
-import { legTypeLabel } from '../../utils/interfaceLegType';
+import { legTypeLabel, routeTypeLabel } from '../../utils/interfaceLegType';
 // Label keys under it:enums.environment.
 const ENVIRONMENT_OPTIONS = [
   { labelKey: 'production', value: 'prod' },
@@ -958,7 +958,7 @@ export default function InterfaceMapPage() {
                   <Typography variant="h6">{selectedLink.interfaceId}</Typography>
                   <Stack spacing={0.5}>
                     <Typography variant="body2">{t('pages.interfaceMap.criticalityValue', { value: businessLabel(selectedLink.criticality) })}</Typography>
-                    <Typography variant="body2">{t('pages.interfaceMap.route', { value: selectedLink.integrationRouteType || '-' })}</Typography>
+                    <Typography variant="body2">{t('pages.interfaceMap.route', { value: routeTypeLabel(t, selectedLink.integrationRouteType) || '-' })}</Typography>
                     <Typography variant="body2">{t('pages.interfaceMap.bindings', { count: selectedLink.bindingsCount })}</Typography>
                     <Typography variant="body2">{t('pages.interfaceMap.viaMiddleware', { value: selectedLink.hasMiddleware ? t('enums.yesNo.yes') : t('enums.yesNo.no') })}</Typography>
                   </Stack>
@@ -974,7 +974,7 @@ export default function InterfaceMapPage() {
                         return (
                           <Box key={binding.id} sx={{ mb: 0.5 }}>
                             <Typography variant="body2" color="text.secondary">
-                              {`${sourceApp} → ${targetApp} (${binding.leg_type})`}
+                              {`${sourceApp} → ${targetApp} (${legTypeLabel(t, binding.leg_type)})`}
                             </Typography>
                             {jobName && (
                               <Typography variant="body2">

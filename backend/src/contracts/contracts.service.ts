@@ -80,7 +80,8 @@ import {
   formatCsvAmount,
   formatCsvDate,
   readMasterDataFile,
-  rowProblems,
+  rowError,
+  rowProblemErrors,
   writeCsv,
   type CsvDateOrder,
   type CsvLanguage,
@@ -113,6 +114,8 @@ const RENEWED_CONTRACT_RENEWAL_OFF =
 
 // Never written from a body: the row's identity, tenant and timestamps.
 const NOT_WRITABLE = ['id', 'tenant_id', 'created_at', 'updated_at'] as const;
+/** The billing frequencies a contract stores (create and import). */
+const BILLING_FREQUENCIES = ['monthly', 'quarterly', 'annual', 'other'];
 
 /**
  * True when re-importing a CSV row over the stored contract writes nothing (`importCsv`): every
@@ -1153,9 +1156,9 @@ export class ContractsService {
     const norm: Array<ContractUpsertDto & { line: number; supplier_name: string; company_name: string; owner_email?: string | null }> = [];
     for (const r of rows) {
       const line = r.line;
-      const problems = rowProblems(r);
+      const problems = rowProblemErrors(r);
       if (problems.length > 0) {
-        errors.push(...problems.map((message) => ({ row: line, message })));
+        errors.push(...problems);
         continue;
       }
       const name = cellOf(r, 'name');
@@ -1168,7 +1171,9 @@ export class ContractsService {
       // Yes or no in any language, or the true/false and 1/0 of older files; blank is no, as before.
       const autoCell = parseCsvBoolean(cellOf(r, 'auto_renewal'));
       if (autoCell === undefined) {
-        errors.push({ row: line, message: `auto_renewal: Invalid value '${cellOf(r, 'auto_renewal')}'. Use yes or no.` });
+        // The shared coded error (`errors:CSV_BOOLEAN_INVALID`): the dialog words it in the interface language.
+        const value = cellOf(r, 'auto_renewal');
+        errors.push(rowError(line, 'auto_renewal', 'CSV_BOOLEAN_INVALID', `Invalid value '${value}'. Use yes or no.`, { value }));
         continue;
       }
       const auto_renewal = autoCell ?? false;
@@ -1176,7 +1181,8 @@ export class ContractsService {
       // Blank is 0, as before; the decimal mark is the file's (`fieldAmounts`).
       const amount = amounts.amountOf(r);
       if (amount.kind === 'invalid' || amount.kind === 'clear') {
-        errors.push({ row: line, message: `yearly_amount_at_signature: Invalid amount '${cellOf(r, 'yearly_amount_at_signature')}'.` });
+        const value = cellOf(r, 'yearly_amount_at_signature');
+        errors.push(rowError(line, 'yearly_amount_at_signature', 'CSV_NUMBER_INVALID', `Invalid amount '${value}'.`, { value }));
         continue;
       }
       const yearly_amount_at_signature = amount.kind === 'value' ? Number(amount.decimal.toString()) : 0;
@@ -1187,15 +1193,18 @@ export class ContractsService {
       const status = statusRaw === 'disabled' ? 'disabled' : statusRaw ? 'enabled' : null;
       const owner_email = cellOf(r, 'owner_email') || null;
       const notes = cellOf(r, 'notes') || null;
-      if (!name) errors.push({ row: line, message: 'name is required' });
-      if (!company_name) errors.push({ row: line, message: 'company_name is required' });
-      else if (!cByName.has(company_name)) errors.push({ row: line, message: `company '${company_name}' not found` });
-      if (!supplier_name) errors.push({ row: line, message: 'supplier_name is required' });
-      else if (!sByName.has(supplier_name)) errors.push({ row: line, message: `supplier '${supplier_name}' not found` });
-      if (owner_email && !uByEmail.has(owner_email.toLowerCase())) errors.push({ row: line, message: `user '${owner_email}' not found` });
-      if (!start_date) errors.push({ row: line, message: 'start_date is required' });
-      if (currency && currency.length !== 3) errors.push({ row: line, message: 'currency must be 3 letters' });
-      if (!['monthly','quarterly','annual','other'].includes(billing_frequency)) errors.push({ row: line, message: 'billing_frequency invalid' });
+      // Coded on their column (`errors:CSV_*`): the dialog words them in the interface language.
+      if (!name) errors.push(rowError(line, 'name', 'CSV_VALUE_REQUIRED', 'name is required'));
+      if (!company_name) errors.push(rowError(line, 'company_name', 'CSV_VALUE_REQUIRED', 'company_name is required'));
+      else if (!cByName.has(company_name)) errors.push(rowError(line, 'company_name', 'CSV_REFERENCE_NOT_FOUND', `company '${company_name}' not found`, { value: company_name }));
+      if (!supplier_name) errors.push(rowError(line, 'supplier_name', 'CSV_VALUE_REQUIRED', 'supplier_name is required'));
+      else if (!sByName.has(supplier_name)) errors.push(rowError(line, 'supplier_name', 'CSV_REFERENCE_NOT_FOUND', `supplier '${supplier_name}' not found`, { value: supplier_name }));
+      if (owner_email && !uByEmail.has(owner_email.toLowerCase())) errors.push(rowError(line, 'owner_email', 'CSV_REFERENCE_NOT_FOUND', `user '${owner_email}' not found`, { value: owner_email }));
+      if (!start_date) errors.push(rowError(line, 'start_date', 'CSV_VALUE_REQUIRED', 'start_date is required'));
+      if (currency && currency.length !== 3) errors.push(rowError(line, 'currency', 'CSV_CURRENCY_INVALID', 'currency must be 3 letters', { value: currency }));
+      if (!BILLING_FREQUENCIES.includes(billing_frequency)) {
+        errors.push(rowError(line, 'billing_frequency', 'CSV_ENUM_INVALID', 'billing_frequency invalid', { value: billing_frequency, allowed: BILLING_FREQUENCIES.join(', ') }));
+      }
       norm.push({ line, name, company_name, supplier_name, start_date, duration_months, auto_renewal, notice_period_months, yearly_amount_at_signature, currency, billing_frequency, status, owner_email, notes } as any);
     }
     if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report };

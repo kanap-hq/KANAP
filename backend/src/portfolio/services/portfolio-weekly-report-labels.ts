@@ -27,6 +27,8 @@ export interface WeeklyExportLabels {
   portfolioFields: Record<string, string>;
   taskFields: Record<string, string>;
   values: { empty: string; unknown: string; yes: string; no: string; itemOne: string; itemOther: string };
+  /** The shipped task types by code, as the screen names them (`common.json` `taskTypes.*.label`). */
+  taskTypes: Record<string, string>;
   /** Between a changed column's label and its values (`: `, ` : ` in French). */
   labelSeparator: string;
 }
@@ -186,7 +188,13 @@ export const WEEKLY_EXPORT_LABELS: Record<CsvLanguage, WeeklyExportLabels> = {
       "itemOne": "{{count}} item",
       "itemOther": "{{count}} items"
     },
-    "labelSeparator": ": "
+    "labelSeparator": ": ",
+    "taskTypes": {
+      "task": "Task",
+      "bug": "Bug",
+      "problem": "Problem",
+      "incident": "Incident"
+    }
   },
   fr: {
     "columns": {
@@ -342,7 +350,13 @@ export const WEEKLY_EXPORT_LABELS: Record<CsvLanguage, WeeklyExportLabels> = {
       "itemOne": "{{count}} élément",
       "itemOther": "{{count}} éléments"
     },
-    "labelSeparator": " : "
+    "labelSeparator": " : ",
+    "taskTypes": {
+      "task": "Tâche",
+      "bug": "Bug",
+      "problem": "Problème",
+      "incident": "Incident"
+    }
   },
   de: {
     "columns": {
@@ -498,7 +512,13 @@ export const WEEKLY_EXPORT_LABELS: Record<CsvLanguage, WeeklyExportLabels> = {
       "itemOne": "{{count}} Element",
       "itemOther": "{{count}} Elemente"
     },
-    "labelSeparator": ": "
+    "labelSeparator": ": ",
+    "taskTypes": {
+      "task": "Aufgabe",
+      "bug": "Bug",
+      "problem": "Problem",
+      "incident": "Vorfall"
+    }
   },
   es: {
     "columns": {
@@ -654,6 +674,12 @@ export const WEEKLY_EXPORT_LABELS: Record<CsvLanguage, WeeklyExportLabels> = {
       "itemOne": "{{count}} elemento",
       "itemOther": "{{count}} elementos"
     },
-    "labelSeparator": ": "
+    "labelSeparator": ": ",
+    "taskTypes": {
+      "task": "Tarea",
+      "bug": "Bug",
+      "problem": "Problema",
+      "incident": "Incidente"
+    }
   },
 };

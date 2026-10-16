@@ -334,6 +334,8 @@
       "empty": "-"
     },
     "sources": {
+      "ai_chat": "Chat de IA",
+      "budget_file": "Importación del archivo de presupuesto",
       "system": "Sistema",
       "user": "Usuario",
       "webhook": "Webhook"

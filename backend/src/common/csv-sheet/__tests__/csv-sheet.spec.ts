@@ -13,6 +13,7 @@ import {
   dateOrderNotice,
   formatCsvAmount,
   formatCsvDate,
+  formatCsvDateTime,
   headerMismatchError,
   matchCode,
   parseCsvAmount,
@@ -169,6 +170,17 @@ function testDates() {
   assert.equal(formatCsvDate('2027-03-01T15:04:05+02:00', 'de'), '2027-03-01T13:04:05.000Z');
 }
 
+function testDateTimes() {
+  const instant = '2026-10-16T08:38:59Z';
+  assert.equal(formatCsvDateTime(instant, 'fr'), '16/10/2026 08:38:59');
+  assert.equal(formatCsvDateTime(new Date('2026-10-16T08:38:00Z'), 'de'), '16.10.2026 08:38');
+  assert.equal(formatCsvDateTime('2026-10-16T22:05:00+02:00', 'en'), '2026-10-16 20:05');
+  assert.equal(formatCsvDateTime('not a date', 'fr'), 'not a date');
+  // The shared reader takes the written form back, time included.
+  const read = parseCsvDateCell(formatCsvDateTime(instant, 'fr'), 'day-first');
+  assert.deepEqual(read, { ok: true, blank: false, value: { kind: 'date', isoDate: '2026-10-16', time: '08:38:59' } });
+}
+
 function testCodes() {
   assert.deepEqual(matchCode('007', ['7']), { kind: 'stripped', code: '7' });
   assert.deepEqual(matchCode('007', ['007']), { kind: 'exact', code: '007' });
@@ -319,7 +331,7 @@ async function testDateOrderInAFile() {
   assert.equal(german.rows[0].dates.end_of_validity.kind === 'date' && german.rows[0].dates.end_of_validity.isoDate, '2027-01-03');
 
   const bad = await readCsv('end_of_validity\n31/04/2027\n', schema('fr'));
-  assert.deepEqual(bad.rows[0].errors, [{ column: 'end_of_validity', message: "Invalid date '31/04/2027'." }]);
+  assert.deepEqual(bad.rows[0].errors, [{ column: 'end_of_validity', message: "Invalid date '31/04/2027'.", code: 'CSV_DATE_INVALID', params: { value: '31/04/2027' } }]);
 
   const iso = await readCsv('end_of_validity\n2027-03-01\n2027-03-01T15:04:05.000Z\n', schema('fr'));
   assert.equal(iso.dates, null);
@@ -458,7 +470,7 @@ async function testReadingShape() {
   const trailing = await readCsv('name;note\nAda;hi;\n', { fields: ['name', 'note'], language: 'fr' });
   assert.equal(trailing.rows[0].errors.length, 0);
   const extra = await readCsv('name;note\nAda;hi;more\n', { fields: ['name', 'note'], language: 'fr' });
-  assert.deepEqual(extra.rows[0].errors, [{ column: null, message: 'This row has more cells than the header.' }]);
+  assert.deepEqual(extra.rows[0].errors, [{ column: null, message: 'This row has more cells than the header.', code: 'CSV_ROW_TOO_MANY_CELLS' }]);
 
   const quoted = await readCsv('"name;still",notes\n"a;b",c\n', { fields: ['name;still', 'notes'], language: 'en' });
   assert.equal(quoted.separator, ',');
@@ -675,6 +687,7 @@ async function main() {
   testLanguageProfiles();
   testAmounts();
   testDates();
+  testDateTimes();
   testCodes();
   testApiParserIsUntouched();
   await testHeaders();

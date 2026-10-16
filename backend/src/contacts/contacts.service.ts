@@ -19,7 +19,8 @@ import {
   DecimalMark,
   ImportReportError,
   readMasterDataFile,
-  rowProblems,
+  rowError,
+  rowProblemErrors,
   writeCsv,
 } from '../common/csv-sheet';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
@@ -489,19 +490,19 @@ export class ContactsService {
     const normalized: Norm[] = [];
     for (const row of read.rows) {
       const line = row.line;
-      const problems = rowProblems(row);
+      const problems = rowProblemErrors(row);
       if (problems.length > 0) {
-        errors.push(...problems.map((message) => ({ row: line, message })));
+        errors.push(...problems);
         continue;
       }
       const email = cellOf(row, 'email').toLowerCase();
-      if (!email) { errors.push({ row: line, message: 'email is required' }); continue; }
+      if (!email) { errors.push(rowError(line, 'email', 'CSV_VALUE_REQUIRED', 'email is required')); continue; }
       // Yes or no in any language, or the true/false of older files; blank keeps the default.
       const activeCell = parseCsvBoolean(cellOf(row, 'active'));
-      if (activeCell === undefined) { errors.push({ row: line, message: 'invalid active value' }); continue; }
+      if (activeCell === undefined) { errors.push(rowError(line, 'active', 'CSV_BOOLEAN_INVALID', 'invalid active value', { value: cellOf(row, 'active') })); continue; }
       const active = activeCell ?? undefined;
       const country = cellOf(row, 'country');
-      if (country && country.length !== 2) { errors.push({ row: line, message: 'country must be 2-letter ISO code' }); continue; }
+      if (country && country.length !== 2) { errors.push(rowError(line, 'country', 'CSV_COUNTRY_INVALID', 'country must be 2-letter ISO code', { value: country })); continue; }
       normalized.push({
         email,
         first_name: cellOf(row, 'first_name') || null,

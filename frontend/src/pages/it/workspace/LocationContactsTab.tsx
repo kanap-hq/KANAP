@@ -34,6 +34,11 @@ type LinkRow = {
   url: string;
 };
 
+// A link row keeps its key from the moment it is added: saving a new link only fills `link`, so the
+// row being typed in stays mounted and keeps its focus and what was typed.
+type LinkEntry = { key: string; link: LinkRow | null };
+type LinkPatch = Partial<{ description: string | null; url: string }>;
+
 type Props = {
   locationId: string;
   canManage: boolean;
@@ -105,8 +110,7 @@ export default function LocationContactsTab({ locationId, canManage }: Props) {
   const { t } = useTranslation(['it', 'common']);
   const [internal, setInternal] = React.useState<InternalContact[]>([]);
   const [external, setExternal] = React.useState<ExternalContact[]>([]);
-  const [links, setLinks] = React.useState<LinkRow[]>([]);
-  const [linkDrafts, setLinkDrafts] = React.useState<Array<{ draftId: string; description: string; url: string }>>([]);
+  const [links, setLinks] = React.useState<LinkEntry[]>([]);
   const [internalAdding, setInternalAdding] = React.useState(false);
   const [externalAdding, setExternalAdding] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -121,7 +125,14 @@ export default function LocationContactsTab({ locationId, canManage }: Props) {
       ]);
       setInternal((intRes.data || []) as InternalContact[]);
       setExternal((extRes.data || []) as ExternalContact[]);
-      setLinks((linksRes.data || []) as LinkRow[]);
+      const stored = (linksRes.data || []) as LinkRow[];
+      setLinks((prev) => {
+        const keyById = new Map(prev.flatMap((e) => (e.link ? [[e.link.id, e.key] as const] : [])));
+        return [
+          ...stored.map((link) => ({ key: keyById.get(link.id) ?? link.id, link })),
+          ...prev.filter((e) => !e.link),
+        ];
+      });
     } catch (e: any) {
       setError(getApiErrorMessage(e, t, t('messages.loadContactsFailed')));
     }
@@ -213,53 +224,30 @@ export default function LocationContactsTab({ locationId, canManage }: Props) {
   };
 
   const addLinkDraft = () => {
-    setLinkDrafts((rows) => [
-      ...rows,
-      { draftId: `draft-${Date.now()}-${rows.length}`, description: '', url: '' },
-    ]);
+    setLinks((rows) => [...rows, { key: `draft-${Date.now()}-${rows.length}`, link: null }]);
   };
 
-  const updateLinkDraft = (
-    draftId: string,
-    patch: Partial<{ description: string; url: string }>,
-  ) => {
-    setLinkDrafts((rows) => rows.map((r) => (r.draftId === draftId ? { ...r, ...patch } : r)));
-  };
-
-  const removeLinkDraft = (draftId: string) => {
-    setLinkDrafts((rows) => rows.filter((r) => r.draftId !== draftId));
-  };
-
-  const commitLinkDraft = async (draft: { draftId: string; description: string; url: string }) => {
-    const url = draft.url.trim();
-    if (!url) {
-      removeLinkDraft(draft.draftId);
-      return;
-    }
+  const createLink = async (key: string, values: { url: string; description: string | null }) => {
     try {
-      const res = await api.post(`/locations/${locationId}/links`, {
-        url,
-        description: draft.description.trim() || null,
-      });
-      setLinks((prev) => [...prev, res.data as LinkRow]);
-      removeLinkDraft(draft.draftId);
+      const res = await api.post(`/locations/${locationId}/links`, values);
+      const saved = res.data as LinkRow;
+      setLinks((prev) => prev.map((e) => (e.key === key ? { ...e, link: saved } : e)));
+      return saved;
     } catch (e: any) {
       setError(getApiErrorMessage(e, t, t('messages.saveContactsFailed')));
+      return null;
     }
   };
 
-  const handleUpdateLink = async (
-    row: LinkRow,
-    patch: Partial<{ description: string | null; url: string }>,
-  ) => {
+  const handleUpdateLink = async (row: LinkRow, patch: LinkPatch) => {
     if (!canManage) return;
     const nextUrl = patch.url ?? row.url;
     if (!nextUrl.trim()) return;
-    setLinks((prev) => prev.map((r) => (r.id === row.id ? { ...r, ...patch } : r)));
+    setLinks((prev) => prev.map((e) => (e.link && e.link.id === row.id ? { ...e, link: { ...e.link, ...patch } } : e)));
     try {
       await api.patch(`/locations/${locationId}/links/${row.id}`, {
         url: nextUrl.trim(),
-        description: patch.description ?? row.description,
+        description: 'description' in patch ? patch.description : row.description,
       });
     } catch (e: any) {
       setError(getApiErrorMessage(e, t, t('messages.saveContactsFailed')));
@@ -267,10 +255,12 @@ export default function LocationContactsTab({ locationId, canManage }: Props) {
     }
   };
 
-  const handleRemoveLink = async (row: LinkRow) => {
+  const handleRemoveLink = async (entry: LinkEntry) => {
     if (!canManage) return;
     const prev = links;
-    setLinks((current) => current.filter((r) => r.id !== row.id));
+    setLinks((current) => current.filter((e) => e.key !== entry.key));
+    const row = entry.link;
+    if (!row) return;
     try {
       await api.delete(`/locations/${locationId}/links/${row.id}`);
     } catch (e: any) {
@@ -373,9 +363,9 @@ export default function LocationContactsTab({ locationId, canManage }: Props) {
         addLabel={t('it:workspace.location.contacts.addWebsite')}
         canManage={canManage}
         onAdd={addLinkDraft}
-        empty={links.length === 0 && linkDrafts.length === 0 ? t('it:workspace.location.contacts.noWebsites') : null}
+        empty={links.length === 0 ? t('it:workspace.location.contacts.noWebsites') : null}
       >
-        {(links.length > 0 || linkDrafts.length > 0) && (
+        {links.length > 0 && (
           <Box component="table" sx={tableSx}>
             <Box component="thead">
               <Box component="tr">
@@ -385,45 +375,15 @@ export default function LocationContactsTab({ locationId, canManage }: Props) {
               </Box>
             </Box>
             <Box component="tbody">
-              {links.map((row) => (
+              {links.map((entry) => (
                 <LinkRowComponent
-                  key={row.id}
-                  row={row}
+                  key={entry.key}
+                  row={entry.link}
                   canManage={canManage}
-                  onSave={(patch) => handleUpdateLink(row, patch)}
-                  onRemove={() => handleRemoveLink(row)}
+                  onCreate={(values) => createLink(entry.key, values)}
+                  onSave={handleUpdateLink}
+                  onRemove={() => handleRemoveLink(entry)}
                 />
-              ))}
-              {linkDrafts.map((draft) => (
-                <Box component="tr" key={draft.draftId}>
-                  <Box component="td">
-                    <TextField
-                      value={draft.description}
-                      onChange={(e) => updateLinkDraft(draft.draftId, { description: e.target.value })}
-                      placeholder={t('it:workspace.location.contacts.description')}
-                      variant="standard"
-                      fullWidth
-                      sx={inputSx}
-                    />
-                  </Box>
-                  <Box component="td">
-                    <TextField
-                      value={draft.url}
-                      onChange={(e) => updateLinkDraft(draft.draftId, { url: e.target.value })}
-                      onBlur={() => void commitLinkDraft(draft)}
-                      placeholder="https://..."
-                      variant="standard"
-                      fullWidth
-                      autoFocus
-                      sx={inputSx}
-                    />
-                  </Box>
-                  <Box component="td">
-                    <IconButton size="small" onClick={() => removeLinkDraft(draft.draftId)} aria-label={t('common:buttons.discard')}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
-                </Box>
               ))}
             </Box>
           </Box>
@@ -480,7 +440,7 @@ function Section({
   );
 }
 
-function InternalRow({
+export function InternalRow({
   row,
   canManage,
   onRoleChange,
@@ -493,7 +453,13 @@ function InternalRow({
 }) {
   const { t } = useTranslation(['it', 'common']);
   const [role, setRole] = React.useState(row.role || '');
-  React.useEffect(() => { setRole(row.role || ''); }, [row.role]);
+  // The field follows the stored role during the render that receives it, as the sub-location
+  // rows do: an effect would run after the commit and could overwrite what was typed meanwhile.
+  const [shownRole, setShownRole] = React.useState(row.role);
+  if (shownRole !== row.role) {
+    setShownRole(row.role);
+    setRole(row.role || '');
+  }
 
   return (
     <Box component="tr">
@@ -521,7 +487,7 @@ function InternalRow({
   );
 }
 
-function ExternalRow({
+export function ExternalRow({
   row,
   canManage,
   onRoleChange,
@@ -534,7 +500,13 @@ function ExternalRow({
 }) {
   const { t } = useTranslation(['it', 'common']);
   const [role, setRole] = React.useState(row.role || '');
-  React.useEffect(() => { setRole(row.role || ''); }, [row.role]);
+  // The field follows the stored role during the render that receives it, as the sub-location
+  // rows do: an effect would run after the commit and could overwrite what was typed meanwhile.
+  const [shownRole, setShownRole] = React.useState(row.role);
+  if (shownRole !== row.role) {
+    setShownRole(row.role);
+    setRole(row.role || '');
+  }
 
   return (
     <Box component="tr">
@@ -562,32 +534,75 @@ function ExternalRow({
   );
 }
 
-function LinkRowComponent({
+export function LinkRowComponent({
   row,
   canManage,
+  onCreate,
   onSave,
   onRemove,
 }: {
-  row: LinkRow;
+  /** The stored link, or null while the row is new and not saved yet. */
+  row: LinkRow | null;
   canManage: boolean;
-  onSave: (patch: Partial<{ description: string | null; url: string }>) => void;
+  onCreate: (values: { url: string; description: string | null }) => Promise<LinkRow | null>;
+  onSave: (row: LinkRow, patch: LinkPatch) => void;
   onRemove: () => void;
 }) {
   const { t } = useTranslation(['it', 'common']);
-  const [description, setDescription] = React.useState(row.description || '');
-  const [url, setUrl] = React.useState(row.url);
-  React.useEffect(() => { setDescription(row.description || ''); }, [row.description]);
-  React.useEffect(() => { setUrl(row.url); }, [row.url]);
+  const [description, setDescription] = React.useState(row?.description || '');
+  const [url, setUrl] = React.useState(row?.url ?? '');
+  // The fields follow the stored link during the render that receives it (see InternalRow). A new
+  // row keeps what was typed while it was being saved: it is not a change of the stored link.
+  const [shown, setShown] = React.useState(row ? { description: row.description, url: row.url } : null);
+  if (row && (!shown || shown.description !== row.description || shown.url !== row.url)) {
+    setShown({ description: row.description, url: row.url });
+    if (shown && shown.description !== row.description) setDescription(row.description || '');
+    if (shown && shown.url !== row.url) setUrl(row.url);
+  }
+
+  // Read after the creation request returns, so they hold what was typed meanwhile.
+  const typed = React.useRef({ description, url });
+  const editing = React.useRef<'description' | 'url' | null>(null);
+  const creating = React.useRef(false);
+  const rowRef = React.useRef<HTMLTableRowElement | null>(null);
+
+  const create = async () => {
+    const nextUrl = url.trim();
+    if (creating.current || !nextUrl) return;
+    creating.current = true;
+    const saved = await onCreate({ url: nextUrl, description: description.trim() || null });
+    creating.current = false;
+    if (!saved) return;
+    // A field left while the link was being saved is saved now; the one still being edited is
+    // saved when it is left, against the stored link.
+    const patch: LinkPatch = {};
+    const nextDescription = typed.current.description.trim() || null;
+    if (editing.current !== 'description' && nextDescription !== (saved.description || null)) {
+      patch.description = nextDescription;
+    }
+    const latestUrl = typed.current.url.trim();
+    if (editing.current !== 'url' && latestUrl && latestUrl !== saved.url) patch.url = latestUrl;
+    if (Object.keys(patch).length > 0) onSave(saved, patch);
+  };
 
   return (
-    <Box component="tr">
+    <Box component="tr" ref={rowRef}>
       <Box component="td">
         <TextField
           value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          onChange={(e) => {
+            typed.current.description = e.target.value;
+            setDescription(e.target.value);
+          }}
+          onFocus={() => { editing.current = 'description'; }}
           onBlur={() => {
+            editing.current = null;
+            if (!row) {
+              void create();
+              return;
+            }
             const next = description || null;
-            if (next !== (row.description || null)) onSave({ description: next });
+            if (next !== (row.description || null)) onSave(row, { description: next });
           }}
           placeholder={t('it:workspace.location.contacts.description')}
           variant="standard"
@@ -599,29 +614,50 @@ function LinkRowComponent({
       <Box component="td">
         <TextField
           value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          onBlur={() => {
-            if (url.trim() && url !== row.url) onSave({ url });
+          onChange={(e) => {
+            typed.current.url = e.target.value;
+            setUrl(e.target.value);
+          }}
+          onFocus={() => { editing.current = 'url'; }}
+          onBlur={(e) => {
+            editing.current = null;
+            if (!row) {
+              // A new row left empty goes away, unless the focus moves to its description.
+              const stillInRow = rowRef.current?.contains(e.relatedTarget as Node | null) ?? false;
+              if (url.trim()) void create();
+              else if (!description.trim() && !stillInRow) onRemove();
+              return;
+            }
+            if (url.trim() && url !== row.url) onSave(row, { url });
           }}
           placeholder="https://..."
           variant="standard"
           fullWidth
+          autoFocus={!row}
           disabled={!canManage}
           sx={inputSx}
         />
       </Box>
       <Box component="td">
         <Box sx={{ display: 'flex', gap: 0.5 }}>
-          <IconButton
-            size="small"
-            disabled={!row.url}
-            onClick={() => row.url && window.open(row.url, '_blank', 'noopener,noreferrer')}
-            aria-label={t('it:workspace.location.contacts.openLink')}
-          >
-            <OpenInNewIcon fontSize="small" />
-          </IconButton>
-          {canManage && (
-            <IconButton size="small" onClick={onRemove} aria-label={t('common:markdownLink.removeLink')}>
+          {row ? (
+            <>
+              <IconButton
+                size="small"
+                disabled={!row.url}
+                onClick={() => row.url && window.open(row.url, '_blank', 'noopener,noreferrer')}
+                aria-label={t('it:workspace.location.contacts.openLink')}
+              >
+                <OpenInNewIcon fontSize="small" />
+              </IconButton>
+              {canManage && (
+                <IconButton size="small" onClick={onRemove} aria-label={t('common:markdownLink.removeLink')}>
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              )}
+            </>
+          ) : (
+            <IconButton size="small" onClick={onRemove} aria-label={t('common:buttons.discard')}>
               <DeleteIcon fontSize="small" />
             </IconButton>
           )}

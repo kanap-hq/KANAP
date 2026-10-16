@@ -23,7 +23,7 @@ import {
   ImportReportError,
   nameMatchedWarning,
   readMasterDataFile,
-  rowProblems,
+  rowProblemErrors,
   writeCsv,
 } from '../common/csv-sheet';
 import { csvLifecycleConflict } from '../spend/item-write.util';
@@ -372,9 +372,9 @@ export class SuppliersService {
     const contactCells: Array<{ row: number; column: string; email: string }> = [];
     read.rows.forEach((row) => {
       const line = row.line;
-      const problems = rowProblems(row, ['disabled_at']);
+      const problems = rowProblemErrors(row, ['disabled_at']);
       if (problems.length > 0) {
-        errors.push(...problems.map((message) => ({ row: line, message })));
+        errors.push(...problems);
         return;
       }
       const name = cellOf(row, 'name');

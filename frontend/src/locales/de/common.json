@@ -214,6 +214,8 @@
       "team_members_other": "{{count}} Teammitglieder",
       "compliance_requirements_one": "{{count}} erfasste Konformitätsanforderung",
       "compliance_requirements_other": "{{count}} erfasste Konformitätsanforderungen",
+      "regulatory_records_one": "{{count}} ausgefülltes Feld der behördlichen Meldung",
+      "regulatory_records_other": "{{count}} ausgefüllte Felder der behördlichen Meldung",
       "opex_lines_one": "{{count}} OPEX-Zeile",
       "opex_lines_other": "{{count}} OPEX-Zeilen",
       "capex_lines_one": "{{count}} CAPEX-Zeile",

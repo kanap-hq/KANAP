@@ -78,7 +78,7 @@ Both categories also show:
 Below the main form, the **Sub-locations** panel lets you break a location into smaller physical areas: buildings, rooms, racks, cages, or any other subdivision that makes sense for your infrastructure.
 
 Each sub-location has:
-- **Name**: A short label (e.g., "Building A - Room 1 - Rack 5")
+- **Name**: A short label (e.g., "Building A, Room 1, Rack 5")
 - **Description**: Optional additional detail
 
 Sub-locations are available once the location exists (after you click **Create**). Each row saves on its own when you leave the field, and deleting a sub-location asks for confirmation first.

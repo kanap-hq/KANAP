@@ -20,6 +20,8 @@ import { getDotColor, INCIDENT_SEVERITY_COLORS, INCIDENT_STATUS_COLORS } from '.
 import { INCIDENT_SEVERITIES, INCIDENT_STATUSES, type IncidentRow } from '../../api/endpoints/incidents';
 import { setListFiltersParam, getWithListContext } from '../../lib/listContext';
 import { countValueFormatter } from '../../components/grid/countValueFormatter';
+import DeleteSelectedButton from '../../components/DeleteSelectedButton';
+import { incidentDeleteCheck } from './incidents/incidentDelete';
 
 const DEFAULT_SORT = 'detected_at:DESC';
 
@@ -41,6 +43,8 @@ export default function IncidentsPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [selectedRows, setSelectedRows] = useState<IncidentRow[]>([]);
+  const gridApiRef = useRef<any>(null);
 
   // Read filters from URL to restore state when returning from the workspace
   const urlFilters = useMemo(() => {
@@ -332,6 +336,8 @@ export default function IncidentsPage() {
     return <ForbiddenPage />;
   }
 
+  // Deleting incidents is for incident administrators only (the server refuses everyone else).
+  const canDelete = hasLevel('incidents', 'admin');
   const actions = (
     <Stack direction="row" spacing={1}>
       {hasLevel('incidents', 'contributor') && (
@@ -346,6 +352,24 @@ export default function IncidentsPage() {
         <Button variant="action" onClick={() => setImportOpen(true)}>{t('pages.incidents.importCsv')}</Button>
       )}
       <Button variant="action" onClick={() => setExportOpen(true)}>{t('pages.incidents.exportCsv')}</Button>
+      {canDelete && (
+        <DeleteSelectedButton
+          selectedRows={selectedRows}
+          endpoint="/incidents/bulk"
+          getItemId={(row) => row.id}
+          getItemName={(row) => `${formatItemRef('incident', row.item_number)} ${row.title}`}
+          gridApi={gridApiRef.current}
+          onDeleteSuccess={() => setRefreshKey((k) => k + 1)}
+          // Asked on click: the incidents kept for their regulatory reporting data, then for the
+          // others what goes too and what loses its link.
+          checkDelete={(ids) => incidentDeleteCheck(ids, t, locale)}
+          itemLabels={{
+            toDelete: (count) => t('pages.incidents.delete.toDelete', { count }),
+            kept: (count) => t('pages.incidents.delete.kept', { count }),
+            deleted: (count) => t('pages.incidents.delete.deleted', { count }),
+          }}
+        />
+      )}
     </Stack>
   );
 
@@ -363,6 +387,9 @@ export default function IncidentsPage() {
         columnPreferencesKey="kanap.incidents.columns"
         refreshKey={refreshKey}
         initialState={initialGridState}
+        onGridApiReady={(api) => { gridApiRef.current = api; }}
+        enableRowSelection={canDelete}
+        onSelectionChanged={setSelectedRows}
         onQueryStateChange={(state) => {
           lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {} };
         }}

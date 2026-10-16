@@ -41,7 +41,8 @@ import {
   CsvLanguage,
   DecimalMark,
   readMasterDataFile,
-  rowProblems,
+  rowError,
+  rowProblemErrors,
   writeCsv,
 } from '../common/csv-sheet';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
@@ -804,9 +805,9 @@ export class UsersService {
     const normalized: Normalized[] = [];
     for (const row of read.rows) {
       const line = row.line;
-      const problems = rowProblems(row);
+      const problems = rowProblemErrors(row);
       if (problems.length > 0) {
-        errors.push(...problems.map((message) => ({ row: line, message })));
+        errors.push(...problems);
         continue;
       }
       const email = cellOf(row, 'email');
@@ -817,10 +818,10 @@ export class UsersService {
       const departmentName = cellOf(row, 'department_name');
       const statusRaw = cellOf(row, 'status').toLowerCase();
 
-      if (!email) errors.push({ row: line, message: 'email is required' });
-      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push({ row: line, message: 'email must be valid' });
+      if (!email) errors.push(rowError(line, 'email', 'CSV_VALUE_REQUIRED', 'email is required'));
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push(rowError(line, 'email', 'CSV_EMAIL_INVALID', 'email must be valid', { value: email }));
       if (statusRaw && !['enabled','disabled','contact','invited'].includes(statusRaw)) {
-        errors.push({ row: line, message: `Invalid status '${statusRaw}'. Use 'contact', 'invited', 'enabled' or 'disabled'.` });
+        errors.push(rowError(line, 'status', 'CSV_ENUM_INVALID', `Invalid status '${statusRaw}'. Use 'contact', 'invited', 'enabled' or 'disabled'.`, { value: statusRaw, allowed: 'contact, invited, enabled, disabled' }));
       }
 
       let role: FileRole | null = null;
@@ -830,16 +831,16 @@ export class UsersService {
       let company: Company | null = null;
       if (companyName) {
         company = await getCompanyByName(companyName);
-        if (!company) errors.push({ row: line, message: `Unknown company '${companyName}'` });
+        if (!company) errors.push(rowError(line, 'company_name', 'CSV_REFERENCE_NOT_FOUND', `Unknown company '${companyName}'`, { value: companyName }));
       }
 
       let department: Department | null = null;
       if (departmentName) {
         if (!company) {
-          errors.push({ row: line, message: 'department_name provided but company_name is missing or invalid' });
+          errors.push(rowError(line, 'department_name', 'CSV_DEPARTMENT_COMPANY_REQUIRED', 'department_name provided but company_name is missing or invalid'));
         } else {
           department = await getDepartmentByName(company.id, departmentName);
-          if (!department) errors.push({ row: line, message: `Unknown department '${departmentName}' for company '${company.name}'` });
+          if (!department) errors.push(rowError(line, 'department_name', 'CSV_REFERENCE_NOT_FOUND', `Unknown department '${departmentName}' for company '${company.name}'`, { value: departmentName }));
         }
       }
 

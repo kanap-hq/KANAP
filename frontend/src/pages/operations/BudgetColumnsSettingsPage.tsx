@@ -15,7 +15,7 @@ import {
   updateBudgetColumns,
 } from '../../services/budgetColumns';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
-import enOps from '../../locales/en/ops.json';
+import { loadNamespace } from '../../i18n';
 
 /** The server's limit on a column name, in characters (code points). */
 const MAX_NAME_LENGTH = 40;
@@ -25,12 +25,8 @@ const CONTROL_OR_FORMAT = /[\p{Cc}\p{Cf}]/u;
 /** Names compare like the server compares them: composed form, case folded. */
 const fold = (name: string) => name.normalize('NFC').toLowerCase();
 
-/** The English product name of a column: the server checks names against it, whatever the viewer's language. */
-function englishName(labelKey: string): string {
-  let node: unknown = enOps;
-  for (const part of labelKey.replace(/^ops:/, '').split('.')) node = (node as Record<string, unknown> | undefined)?.[part];
-  return typeof node === 'string' ? node : '';
-}
+/** English product name of a column, by its label key, or '' while the English texts are not loaded. */
+export type EnglishColumnName = (labelKey: string) => string;
 
 /** Draft of the page: names as typed, flags and default as chosen. */
 export type BudgetColumnsDraft = {
@@ -68,7 +64,11 @@ export type DraftErrors = {
  * The server's rules, checked first with translated messages. A column without a name of its own
  * goes by its standard name: the translated one the user sees and the English one the server checks.
  */
-export function validateBudgetColumnsDraft(draft: BudgetColumnsDraft, t: TFunction): DraftErrors {
+export function validateBudgetColumnsDraft(
+  draft: BudgetColumnsDraft,
+  t: TFunction,
+  englishName: EnglishColumnName = () => '',
+): DraftErrors {
   const names: DraftErrors['names'] = {};
   const earlier: Array<{ measure: AmountMeasure; custom: boolean; names: string[] }> = [];
   for (const { measure, labelKey } of AMOUNT_COLUMNS) {
@@ -133,7 +133,24 @@ function HeadWithInfo({ label, info }: { label: string; info: string }) {
 }
 
 export default function BudgetColumnsSettingsPage() {
-  const { t } = useTranslation(['ops', 'common']);
+  const { t, i18n } = useTranslation(['ops', 'common']);
+  // The server checks names against the English product names, whatever the viewer's language:
+  // the English texts of the page are loaded on demand like any other namespace.
+  const [englishReady, setEnglishReady] = React.useState(() => i18n.hasResourceBundle('en', 'ops'));
+  React.useEffect(() => {
+    if (englishReady) return undefined;
+    let live = true;
+    loadNamespace('en', 'ops').then(
+      () => { if (live) setEnglishReady(true); },
+      () => undefined,
+    );
+    return () => { live = false; };
+  }, [englishReady]);
+  const englishName = React.useCallback<EnglishColumnName>((labelKey) => {
+    if (!englishReady) return '';
+    const key = labelKey.replace(/^ops:/, '');
+    return i18n.exists(key, { lng: 'en', ns: 'ops' }) ? i18n.getFixedT('en', 'ops')(key) : '';
+  }, [englishReady, i18n]);
   const { hasLevel } = useAuth();
   const canEdit = hasLevel('budget_ops', 'admin');
   const queryClient = useQueryClient();
@@ -145,7 +162,7 @@ export default function BudgetColumnsSettingsPage() {
   // Follow the stored setting when it loads or a save lands.
   React.useEffect(() => { setDraft(draftFromSettings(saved)); }, [saved]);
 
-  const errors = React.useMemo(() => validateBudgetColumnsDraft(draft, t), [draft, t]);
+  const errors = React.useMemo(() => validateBudgetColumnsDraft(draft, t, englishName), [draft, t, englishName]);
   const patch = React.useMemo(() => buildBudgetColumnsPatch(saved, draft), [saved, draft]);
   const dirty = Object.keys(patch).length > 0;
   const valid = !errors.form && Object.keys(errors.names).length === 0;

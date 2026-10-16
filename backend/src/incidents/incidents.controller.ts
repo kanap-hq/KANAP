@@ -32,6 +32,7 @@ import {
   IncidentRelationsService,
   IncidentReportService,
   IncidentsAttachmentsService,
+  IncidentsDeleteService,
   IncidentsService,
 } from './services';
 import { IncidentsCsvService } from './incidents-csv.service';
@@ -63,6 +64,7 @@ export class IncidentsController {
     private readonly integratedDocuments: IntegratedDocumentsService,
     private readonly dataSource: DataSource,
     private readonly inlineImages: InlineImageResolverService,
+    private readonly deleteSvc: IncidentsDeleteService,
   ) {}
 
   private resolveId(id: string, manager: EntityManager): Promise<string> {
@@ -585,6 +587,32 @@ export class IncidentsController {
     const id = await this.visibleId(idOrRef, ctx);
     const { confidential } = parseIncidentConfidentiality(body);
     return this.svc.setConfidentiality(id, confidential, ctx.userId || null, this.opts(ctx));
+  }
+
+  // Delete (admin). What a delete removes or refuses, for the confirmation; before ':id'.
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('incidents', 'admin')
+  @Post('delete-check')
+  deleteCheck(@Body() body: { ids: string[] }, @Tenant() ctx: TenantRequest) {
+    return this.deleteSvc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], { manager: ctx.manager as EntityManager });
+  }
+
+  // Bulk delete before ':id'.
+  @UseGuards(PermissionGuard)
+  @RequireLevel('incidents', 'admin')
+  @Delete('bulk')
+  bulkDelete(@Body() body: { ids: string[] }, @Tenant() ctx: TenantRequest) {
+    return this.deleteSvc.bulkDelete(Array.isArray(body?.ids) ? body.ids : [], ctx.userId || null, { manager: ctx.manager as EntityManager });
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('incidents', 'admin')
+  @Delete(':id')
+  async delete(@Param('id') idOrRef: string, @Tenant() ctx: TenantRequest) {
+    const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
+    await this.deleteSvc.delete(id, { manager: ctx.manager as EntityManager, userId: ctx.userId || null });
+    return { deleted: true };
   }
 
   // CRUD

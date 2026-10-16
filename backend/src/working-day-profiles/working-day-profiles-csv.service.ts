@@ -12,7 +12,9 @@ import {
   keepStoredEndOfValidity,
   MasterDataFileRead,
   readMasterDataFile,
-  rowProblems,
+  ImportReportError,
+  rowError,
+  rowProblemErrors,
   writeCsv,
 } from '../common/csv-sheet';
 import { mergeDaysByYear } from './working-day-profiles.util';
@@ -318,12 +320,12 @@ export class WorkingDayProfilesCsvService {
     hasDisabledAt: boolean,
     errors: WorkingDayProfileImportResult['errors'],
   ): ParsedRow | null {
-    const rowErrors: string[] = rowProblems(raw, ['disabled_at']);
+    const rowErrors: ImportReportError[] = rowProblemErrors(raw, ['disabled_at']);
     const attempt = <T>(fn: () => T): T | undefined => {
       try {
         return fn();
       } catch (err) {
-        rowErrors.push(refusalMessage(err));
+        rowErrors.push({ row: line, message: refusalMessage(err) });
         return undefined;
       }
     };
@@ -332,14 +334,14 @@ export class WorkingDayProfilesCsvService {
 
     const statusRaw = cellOf(raw, 'status').toLowerCase();
     if (statusRaw && statusRaw !== StatusState.ENABLED && statusRaw !== StatusState.DISABLED) {
-      rowErrors.push(`Invalid status '${cellOf(raw, 'status')}'. Use 'enabled' or 'disabled'.`);
+      rowErrors.push(rowError(line, 'status', 'CSV_ENUM_INVALID', `Invalid status '${cellOf(raw, 'status')}'. Use 'enabled' or 'disabled'.`, { value: cellOf(raw, 'status'), allowed: 'enabled, disabled' }));
     }
     const disabledAtRaw = hasDisabledAt ? cellOf(raw, 'disabled_at') : '';
     let disabledAt: Date | null | undefined;
     if (disabledAtRaw) {
       // A bare day at noon UTC, a full ISO timestamp kept; an unreadable cell is a row error.
       const end = endOfValidityOf(raw, 'disabled_at');
-      if (end.error) rowErrors.push(end.error);
+      if (end.error) rowErrors.push(rowError(line, 'disabled_at', 'CSV_DATE_INVALID', end.error, { value: disabledAtRaw }));
       else disabledAt = end.value;
     }
 
@@ -348,7 +350,7 @@ export class WorkingDayProfilesCsvService {
     let normalizedYear: string | null = null;
     let days: string[] | null = null;
     if (!year) {
-      if (months.some((value) => value !== '')) rowErrors.push('Give the year of these working days.');
+      if (months.some((value) => value !== '')) rowErrors.push({ row: line, message: 'Give the year of these working days.' });
     } else {
       const normalized = attempt(() => normalizeCalendarDays({ [year]: months }, false));
       const [entry] = Object.entries(normalized ?? {});
@@ -356,7 +358,7 @@ export class WorkingDayProfilesCsvService {
     }
 
     if (rowErrors.length > 0 || !code || !name) {
-      for (const message of rowErrors) errors.push({ row: line, message });
+      errors.push(...rowErrors);
       return null;
     }
     return {

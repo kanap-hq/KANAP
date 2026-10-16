@@ -4,6 +4,11 @@ import { QueryRunner } from 'typeorm';
 import { WORKING_DAY_PROFILE_CSV_HEADERS } from '../working-day-profiles-csv.service';
 import { auditCount, context, FR218, runSpecs, seedTenant, services, withRollback } from './working-day-profile-test-helpers';
 
+/** The row and English message of each report entry: these cases check the wording; the codes have their own specs. */
+function plainErrors(errors: Array<{ row: number; message: string }>): Array<{ row: number; message: string }> {
+  return errors.map(({ row, message }) => ({ row, message }));
+}
+
 // The calendars CSV: one row per calendar and year, folded into one calendar
 // per code; the whole file is validated before anything is written (rows of a
 // code agree, a year appears once, a row with a year gives twelve months);
@@ -157,7 +162,7 @@ async function testRowErrors() {
       dryRun: false,
     }, ctx);
     assert.equal(result.ok, false);
-    assert.deepEqual(result.errors, [
+    assert.deepEqual(plainErrors(result.errors), [
       { row: 3, message: 'Rows of FR218 disagree on the name.' },
       { row: 4, message: 'FR218 has 2026 twice (rows 2 and 4).' },
       { row: 5, message: 'Rows of FR218 disagree on the description.' },
@@ -173,7 +178,7 @@ async function testRowErrors() {
 
     // Two calendars of the file cannot share a name either.
     const clash = await csv.importCsv({ file: file([row('A', 'Same', '', noDays), row('B', 'same', '', noDays)]), dryRun: true }, ctx);
-    assert.deepEqual(clash.errors, [{ row: 3, message: 'A calendar named same already exists.' }]);
+    assert.deepEqual(plainErrors(clash.errors), [{ row: 3, message: 'A calendar named same already exists.' }]);
 
     const badHeader = await csv.importCsv({ file: file(['x'], 'code;name;year;jan'), dryRun: true }, ctx);
     assert.equal(badHeader.ok, false);
@@ -201,7 +206,7 @@ async function testOptionalEndOfValidity() {
       ]),
       dryRun: true,
     }, ctx);
-    assert.deepEqual(dated.errors, [{ row: 3, message: 'Rows of FR218 disagree on the end of validity.' }]);
+    assert.deepEqual(plainErrors(dated.errors), [{ row: 3, message: 'Rows of FR218 disagree on the end of validity.' }]);
     const [stored] = await runner.query(`SELECT disabled_at FROM working_day_profiles WHERE tenant_id = $1`, [tenantId]);
     assert.equal(stored.disabled_at, null);
   });
@@ -258,7 +263,7 @@ async function testEndOfValidityFormat() {
       dryRun: false,
     }, ctx);
     assert.equal(refused.ok, false);
-    assert.deepEqual(refused.errors, [
+    assert.deepEqual(plainErrors(refused.errors), [
       { row: 2, message: message('-') },
       { row: 3, message: message('not-a-date') },
     ]);
@@ -341,7 +346,7 @@ async function testStandardCalendars() {
       dryRun: false,
     }, ctx);
     assert.equal(refused.ok, false);
-    assert.deepEqual(refused.errors, [
+    assert.deepEqual(plainErrors(refused.errors), [
       { row: 2, message: 'Country ZZ is not in the list.' },
       { row: 3, message: 'BY is not a region of France.' },
       { row: 4, message: 'Give the country of region 57.' },

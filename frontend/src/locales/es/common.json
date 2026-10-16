@@ -214,6 +214,8 @@
       "team_members_other": "{{count}} miembros del equipo",
       "compliance_requirements_one": "{{count}} requisito de conformidad registrado",
       "compliance_requirements_other": "{{count}} requisitos de conformidad registrados",
+      "regulatory_records_one": "{{count}} dato de notificación regulatoria registrado",
+      "regulatory_records_other": "{{count}} datos de notificación regulatoria registrados",
       "opex_lines_one": "{{count}} línea OPEX",
       "opex_lines_other": "{{count}} líneas OPEX",
       "capex_lines_one": "{{count}} línea CAPEX",

@@ -6,6 +6,11 @@ import dataSource from '../../data-source';
 import { COST_CENTER_CSV_HEADERS } from '../cost-centers-csv.service';
 import { context, seedCompany, seedLine, seedTenant, seedUser, services, withRollback } from './cost-center-test-helpers';
 
+/** The row and English message of each report entry: these cases check the wording; the codes have their own specs. */
+function plainErrors(errors: Array<{ row: number; message: string }>): Array<{ row: number; message: string }> {
+  return errors.map(({ row, message }) => ({ row, message }));
+}
+
 // The cost center CSV: any row order imports (parents resolved in a second
 // pass), the whole resulting tree is checked before anything is written, row
 // errors carry the file line, a dry run writes nothing, and an export imports
@@ -99,7 +104,7 @@ async function testRowErrors() {
       dryRun: false,
     }, ctx);
     assert.equal(result.ok, false);
-    assert.deepEqual(result.errors, [
+    assert.deepEqual(plainErrors(result.errors), [
       { row: 2, message: "Unknown company 'Nowhere Inc'." },
       { row: 3, message: "Unknown parent code 'ZZZ'." },
       { row: 6, message: `Budget holder '${disabledEmail}' is not an active user.` },
@@ -120,7 +125,7 @@ async function testRowErrors() {
       dryRun: false,
     }, ctx);
     assert.equal(tree.ok, false);
-    assert.deepEqual(tree.errors, [
+    assert.deepEqual(plainErrors(tree.errors), [
       { row: 2, message: 'A group has no company.' },
       { row: 3, message: 'A cost center needs a company.' },
       { row: 5, message: 'Only a group can be a parent. F is a cost center.' },
@@ -201,7 +206,7 @@ async function testConversionInFileAgainstLines() {
     await seedLine(runner, 'capex', tenantId, leaf.id);
     const result = await csv.importCsv({ file: file(['USED;group;Used;;;;;enabled;']), dryRun: true }, ctx);
     assert.equal(result.ok, false);
-    assert.deepEqual(result.errors, [
+    assert.deepEqual(plainErrors(result.errors), [
       { row: 2, message: 'USED is used by 1 CAPEX line. A cost center used by budget lines cannot become a group.' },
     ]);
   });
@@ -250,7 +255,7 @@ async function testEndOfValidityFormat() {
       dryRun: false,
     }, ctx);
     assert.equal(refused.ok, false);
-    assert.deepEqual(refused.errors, [
+    assert.deepEqual(plainErrors(refused.errors), [
       { row: 2, message: message('-') },
       { row: 3, message: message('not-a-date') },
     ]);

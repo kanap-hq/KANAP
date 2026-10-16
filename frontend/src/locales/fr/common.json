@@ -214,6 +214,8 @@
       "team_members_other": "{{count}} membres d'équipe",
       "compliance_requirements_one": "{{count}} exigence de conformité renseignée",
       "compliance_requirements_other": "{{count}} exigences de conformité renseignées",
+      "regulatory_records_one": "{{count}} donnée de déclaration réglementaire renseignée",
+      "regulatory_records_other": "{{count}} données de déclaration réglementaire renseignées",
       "opex_lines_one": "{{count}} ligne OPEX",
       "opex_lines_other": "{{count}} lignes OPEX",
       "capex_lines_one": "{{count}} ligne CAPEX",

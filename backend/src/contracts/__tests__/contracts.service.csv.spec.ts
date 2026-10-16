@@ -126,6 +126,56 @@ async function testImportReportsUnresolvedReferences() {
   assert.ok(/user 'ghost@nowhere.io' not found/.test(messages), messages);
 }
 
+// A yes/no cell that is neither: the shared coded error, worded by the interface, on its column.
+async function testImportCodesAnInvalidYesNo() {
+  const svc = createService();
+  const row = 'New Deal;Fromage Co;Dell;2024-01-01;12;maybe;1;0;EUR;annual;enabled;;';
+  const result = await svc.importCsv(
+    { file: { buffer: Buffer.from(`${HEADER}\n${row}\n`, 'utf8') } as any, dryRun: true },
+    { manager: createMockManager() },
+  );
+  assert.equal(result.ok, false);
+  const error: any = result.errors.find((e: any) => e.row === 2);
+  assert.ok(error, JSON.stringify(result.errors));
+  assert.equal(error.code, 'CSV_BOOLEAN_INVALID', JSON.stringify(error));
+  assert.equal(error.column, 'auto_renewal');
+  assert.deepEqual(error.params, { value: 'maybe' });
+}
+
+// Every row problem carries a shared code on its column, so the dialog words it in the interface language.
+async function testImportCodesEveryRowProblem() {
+  const svc = createService();
+  const rows = [
+    ';Ghost Corp;;2024-01-01;12;no;1;0;EURO;weekly;enabled;ghost@nowhere.io;',
+    'Deal;;Ghost Supplier;;12;no;1;0;EUR;annual;enabled;;',
+    'Deal 3;Fromage Co;Dell;not a date;12;no;1;0;EUR;annual;enabled;;',
+  ];
+  const result = await svc.importCsv(
+    { file: { buffer: Buffer.from(`${HEADER}\n${rows.join('\n')}\n`, 'utf8') } as any, dryRun: true },
+    { manager: createMockManager() },
+  );
+  assert.equal(result.ok, false);
+  const uncoded = result.errors.filter((e: any) => !e.code || !e.column);
+  assert.deepEqual(uncoded, [], JSON.stringify(uncoded));
+  const byColumn = (row: number) => Object.fromEntries(
+    result.errors.filter((e: any) => e.row === row).map((e: any) => [e.column, { code: e.code, params: e.params ?? {} }]),
+  );
+  assert.deepEqual(byColumn(2), {
+    name: { code: 'CSV_VALUE_REQUIRED', params: {} },
+    company_name: { code: 'CSV_REFERENCE_NOT_FOUND', params: { value: 'Ghost Corp' } },
+    supplier_name: { code: 'CSV_VALUE_REQUIRED', params: {} },
+    owner_email: { code: 'CSV_REFERENCE_NOT_FOUND', params: { value: 'ghost@nowhere.io' } },
+    currency: { code: 'CSV_CURRENCY_INVALID', params: { value: 'EURO' } },
+    billing_frequency: { code: 'CSV_ENUM_INVALID', params: { value: 'weekly', allowed: 'monthly, quarterly, annual, other' } },
+  });
+  assert.deepEqual(byColumn(3), {
+    company_name: { code: 'CSV_VALUE_REQUIRED', params: {} },
+    supplier_name: { code: 'CSV_REFERENCE_NOT_FOUND', params: { value: 'Ghost Supplier' } },
+    start_date: { code: 'CSV_VALUE_REQUIRED', params: {} },
+  });
+  assert.deepEqual(byColumn(4), { start_date: { code: 'CSV_DATE_INVALID', params: { value: 'not a date' } } });
+}
+
 async function testImportReadsWindows1252() {
   const svc = createService();
   // Excel "CSV (semicolon)" on Windows writes Windows-1252: latin1 matches it for "é".
@@ -153,6 +203,8 @@ async function testImportRefusesUtf16WithBadRequest() {
   await testExportRoundTripsThroughImport();
   await testImportRejectsWrongHeaders();
   await testImportReportsUnresolvedReferences();
+  await testImportCodesAnInvalidYesNo();
+  await testImportCodesEveryRowProblem();
   await testImportReadsWindows1252();
   await testImportRefusesUtf16WithBadRequest();
 

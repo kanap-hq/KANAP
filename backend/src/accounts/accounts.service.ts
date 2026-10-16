@@ -17,7 +17,7 @@ import {
   DecimalMark,
   ImportReportError,
   readMasterDataFile,
-  rowProblems,
+  rowProblemErrors,
   writeCsv,
 } from '../common/csv-sheet';
 import {
@@ -852,9 +852,9 @@ export class AccountsService {
     const coaCodes: Set<string> = new Set();
     read.rows.forEach((row) => {
       const line = row.line;
-      const problems = rowProblems(row);
+      const problems = rowProblemErrors(row);
       if (problems.length > 0) {
-        errors.push(...problems.map((message) => ({ row: line, message })));
+        errors.push(...problems);
         return;
       }
       if (opts?.allowCoaCodeColumn) {

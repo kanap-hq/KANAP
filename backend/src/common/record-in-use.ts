@@ -11,6 +11,7 @@ import { readUsages, type UsageQuery, type UsageType } from './record-usages';
 export type RefusalKind =
   | UsageType
   | 'compliance_requirements'
+  | 'regulatory_records'
   | 'opex_lines'
   | 'capex_lines'
   | 'app_assignments'
@@ -49,6 +50,7 @@ const ENGLISH: Record<RefusalKind, [string, string]> = {
   team_members: ['team member', 'team members'],
   suppliers: ['supplier', 'suppliers'],
   compliance_requirements: ['recorded compliance requirement', 'recorded compliance requirements'],
+  regulatory_records: ['regulatory reporting record', 'regulatory reporting records'],
   opex_lines: ['OPEX line', 'OPEX lines'],
   capex_lines: ['CAPEX line', 'CAPEX lines'],
   app_assignments: ['application assignment', 'application assignments'],

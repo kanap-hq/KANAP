@@ -1,5 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from '@mui/material/styles';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../../i18n';
@@ -62,6 +63,28 @@ describe('IncidentDateTimeField', () => {
     fireEvent.blur(time);
     expect(onChange).not.toHaveBeenCalled();
     expect(time.value).toBe('00:00');
+  });
+
+  it('selects the time on click, so a typed time replaces the prefilled 00:00', async () => {
+    const user = userEvent.setup();
+    const { onChange, date, time } = renderField(null);
+    fireEvent.focus(date);
+    fireEvent.change(date, { target: { value: '01022026' } });
+    expect(time.value).toBe('00:00');
+    onChange.mockClear();
+    await user.click(time);
+    await user.keyboard('14:30');
+    expect(time.value).toBe('14:30');
+    await user.tab();
+    expect(onChange).toHaveBeenLastCalledWith(iso(2026, 2, 1, 14, 30));
+  });
+
+  it('selects the time when reached with the keyboard too', async () => {
+    const user = userEvent.setup();
+    const { time } = renderField(iso(2026, 10, 15, 14, 5));
+    time.focus();
+    await user.keyboard('9');
+    expect(time.value).toBe('9');
   });
 
   it('clears with the date', () => {
