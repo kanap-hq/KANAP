@@ -253,6 +253,8 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
             const nextStatus = deriveStatusFromDisabledAt(disabledAt);
             saveNow({ status: nextStatus, disabled_at: disabledAt }, 'disabled_at', { status: nextStatus, disabled_at: disabledAt });
           }}
+          // Disable now: the status alone, the server sets the end of validity from its own clock.
+          onDisableNow={() => saveNow({ status: STATUS_DISABLED }, 'disabled_at', { status: STATUS_DISABLED })}
           disabled={disabled}
           disabledAtError={!!errors.disabled_at}
           disabledAtHelperText={errors.disabled_at}

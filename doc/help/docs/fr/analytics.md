@@ -379,7 +379,7 @@ Pour renseigner des valeurs sur les lignes budgétaires depuis un fichier, utili
 | `name` | Obligatoire. Le nom de la valeur |
 | `description` | Texte libre |
 | `status` | `enabled` ou `disabled`. Vide signifie `enabled` pour une nouvelle valeur et conserve le statut enregistré lors d'une mise à jour |
-| `disabled_at` | La fin de validité : une date (`2026-12-31`) ou une date et une heure complètes. Vide s'il n'y a pas de fin. Lors d'une mise à jour, un `status` vide et un `disabled_at` vide conservent les valeurs enregistrées. `enabled` avec une date vide efface la fin de validité. `disabled` avec une date vide conserve une date déjà passée, et sinon termine la valeur aujourd'hui |
+| `disabled_at` | La fin de validité : une date (`2026-12-31`) ou une date et une heure complètes. L'export écrit la date seule. Réimportée, cette date conserve la fin de validité enregistrée. Vide s'il n'y a pas de fin. Lors d'une mise à jour, un `status` vide et un `disabled_at` vide conservent les valeurs enregistrées. `enabled` avec une date vide efface la fin de validité. `disabled` avec une date vide conserve une date déjà passée, et sinon termine la valeur aujourd'hui |
 | `applies_to` | Le réglage **Utilisé pour**, toujours la dernière colonne. `opex`, `capex`, ou vide pour **OPEX et CAPEX**. Un fichier sans cette colonne laisse les réglages tels quels. Une cellule vide règle sur **OPEX et CAPEX** |
 
 Seule la colonne `name` est obligatoire. Lorsque la colonne `description`, `status`, `disabled_at` ou `applies_to` manque, les valeurs existantes conservent ce qui est enregistré, et les nouvelles valeurs sont activées, sans description. Un fichier sans `axis_code` place toutes les lignes dans la dimension par défaut.

@@ -711,6 +711,8 @@ describe('WeeklyReport by person', () => {
     const call = get.mock.calls.find(([url]: any[]) => url === '/portfolio/reports/weekly/export');
     expect(call?.[1]?.params?.groupBy).toBe('person');
     expect(call?.[1]?.params?.format).toBe('csv');
+    // The file follows the screen language: separator, days and decimals.
+    expect(call?.[1]?.params?.language).toBe('en');
   });
 
   it('has no type filter in the by-person view, which reads tasks only', async () => {

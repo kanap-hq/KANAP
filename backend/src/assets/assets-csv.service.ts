@@ -1,3 +1,4 @@
+import type { CsvLanguage } from '../common/csv-sheet';
 import { Injectable } from '@nestjs/common';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
 import { exportCatalogLabels } from '../it-ops-settings/catalog-resolve';
@@ -32,6 +33,8 @@ export class AssetsCsvService {
   async export(opts: {
     manager: EntityManager;
     tenantId: string;
+    /** The screen language: separator, days, decimal mark and yes or no (`csv-sheet`). */
+    language: CsvLanguage;
     scope?: 'template' | 'data';
     fields?: string[];
     preset?: string;
@@ -78,6 +81,7 @@ export class AssetsCsvService {
       scope,
       fields,
       preset,
+      language: opts.language,
     });
   }
 

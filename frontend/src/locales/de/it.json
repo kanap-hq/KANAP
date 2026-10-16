@@ -1533,6 +1533,8 @@
     "providerRequired": "Anbieter ist erforderlich.",
     "codeRequired": "Code ist erforderlich.",
     "nameRequired": "Name ist erforderlich.",
+    "locationNameTaken": "Ein anderer Standort hat bereits diesen Namen.",
+    "subLocationNameTaken": "Ein anderer Unterstandort dieses Standorts hat bereits diesen Namen.",
     "hostingTypeRequired": "Hosting-Typ ist erforderlich.",
     "saveLayersFirst": "Speichern Sie zuerst die Verbindung, dann fügen Sie Schichten hinzu.",
     "roleRequired": "Rolle ist erforderlich.",

@@ -1533,6 +1533,8 @@
     "providerRequired": "Le fournisseur est requis.",
     "codeRequired": "Le code est requis.",
     "nameRequired": "Le nom est requis.",
+    "locationNameTaken": "Un autre site porte déjà ce nom.",
+    "subLocationNameTaken": "Un autre sous-site de ce site porte déjà ce nom.",
     "hostingTypeRequired": "Le type d'hébergement est requis.",
     "saveLayersFirst": "Enregistrez d'abord la connexion, puis ajoutez des couches.",
     "roleRequired": "Le rôle est requis.",

@@ -59,6 +59,8 @@ type Props = {
   onRunBuildChange: (next: RunBuild | '') => void;
   onEffectiveStartChange: (next: string) => void;
   onDisabledAtChange?: (next: string | null) => void;
+  /** Switched off: disable now, on the server's clock (the status alone). */
+  onDisableNow?: () => void;
   onOwnerItChange?: (next: string) => void;
   onOwnerBusinessChange?: (next: string) => void;
   /** Labels of the chosen supplier, company and account from the detail: the pickers show them without a request. */
@@ -105,6 +107,7 @@ export default function BudgetPropertiesDrawer({
   onRunBuildChange,
   onEffectiveStartChange,
   onDisabledAtChange,
+  onDisableNow,
   onOwnerItChange,
   onOwnerBusinessChange,
 }: Props) {
@@ -297,7 +300,7 @@ export default function BudgetPropertiesDrawer({
         </PropertyGroup>
       )}
 
-      {mode === 'edit' && onDisabledAtChange && (
+      {mode === 'edit' && onDisabledAtChange && onDisableNow && (
         <PropertyGroup>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, py: '5px' }}>
             <Typography sx={{ fontSize: 12, lineHeight: 1.3, color: 'kanap.text.tertiary' }}>{t('opex.fields.lifecycle')}</Typography>
@@ -307,6 +310,7 @@ export default function BudgetPropertiesDrawer({
               onStatusChange={() => undefined}
               disabledAt={disabledAt}
               onDisabledAtChange={onDisabledAtChange}
+              onDisableNow={onDisableNow}
               disabled={disabled}
               statusLabel={t('opex.status.enabled')}
               statusOffLabel={t('opex.status.disabled')}

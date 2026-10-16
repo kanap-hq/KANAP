@@ -9,14 +9,21 @@ import { orderListQuery } from '../common/list-sort';
 import { applyStatusFilter, extractStatusFilterFromAgModel } from '../common/status-filter';
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { BusinessProcessUpsertDto } from './dto/business-process.dto';
-import { StatusState, resolveLifecycleState } from '../common/status';
-import { format } from '@fast-csv/format';
-import { parseString } from '@fast-csv/parse';
+import { StatusState, deriveStatusFromDisabledAt, resolveLifecycleState } from '../common/status';
 import * as fs from 'fs';
-import { CsvDecodeError, decodeCsv } from '../common/csv-sheet/decode';
 import { User } from '../users/user.entity';
-import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
-import { headerMismatchError } from '../common/csv-sheet';
+import { duplicateNameException } from '../common/duplicate-name';
+import {
+  cellOf,
+  CsvDateOrder,
+  CsvLanguage,
+  DecimalMark,
+  ImportReportError,
+  nameMatchedWarning,
+  readMasterDataFile,
+  rowProblems,
+  writeCsv,
+} from '../common/csv-sheet';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
 
 /**
@@ -273,9 +280,7 @@ export class BusinessProcessesService {
       .createQueryBuilder('bp')
       .where('LOWER(bp.name) = LOWER(:name)', { name: rawName })
       .getOne();
-    if (duplicate) {
-      throw new BadRequestException('A business process with this name already exists');
-    }
+    if (duplicate) throw duplicateNameException('Another business process already has this name.');
 
     const lifecycle = resolveLifecycleState({ nextStatus: body.status, nextDisabledAt: body.disabled_at });
     const entity = repo.create({
@@ -321,7 +326,7 @@ export class BusinessProcessesService {
           .where('LOWER(bp.name) = LOWER(:name)', { name: trimmed })
           .andWhere('bp.id <> :id', { id })
           .getOne();
-        if (duplicate) throw new BadRequestException('Another business process already uses this name');
+        if (duplicate) throw duplicateNameException('Another business process already has this name.');
         (existing as any).name = trimmed;
       }
     }
@@ -408,13 +413,16 @@ export class BusinessProcessesService {
     return ['name', 'categories', 'description', 'notes', 'status'];
   }
 
+  /**
+   * The business processes file in the screen's language (`common/csv-sheet`). The status is read
+   * from the end of validity, as on screen: the file has no date column.
+   */
   async exportCsv(
     scope: 'template' | 'data' = 'data',
-    opts?: { manager?: EntityManager; listQuery?: Record<string, unknown> },
+    opts?: { manager?: EntityManager; language?: CsvLanguage; listQuery?: Record<string, unknown> },
   ): Promise<{ filename: string; content: string }> {
     const headers = this.csvHeaders();
-    const delimiter = ';';
-    const rows: any[] = [];
+    const rows: string[][] = [];
     if (scope === 'data') {
       // What the list shows (its search, filters, scope and sort), or the whole register by name.
       const query = opts?.listQuery ?? { page: 1, limit: MAX_EXPORT_LIMIT, sort: 'name:ASC', includeDisabled: '1' };
@@ -423,117 +431,104 @@ export class BusinessProcessesService {
         const categoryNames = Array.isArray(p.categories)
           ? (p.categories as any[]).map((c) => c.name).join(';')
           : '';
-        rows.push({
-          name: p.name ?? '',
-          categories: categoryNames,
-          description: p.description ?? '',
-          notes: p.notes ?? '',
-          status: p.status ?? 'enabled',
-        });
+        rows.push([
+          p.name ?? '',
+          categoryNames,
+          p.description ?? '',
+          p.notes ?? '',
+          deriveStatusFromDisabledAt(p.disabled_at ?? null),
+        ]);
       }
     }
-
     const filename = scope === 'template' ? 'business_processes_template.csv' : 'business_processes.csv';
-    const chunks: string[] = [];
-    await new Promise<void>((resolve, reject) => {
-      const stream = format({ headers, delimiter, transform: neutralizeCsvRow });
-      stream.on('data', (chunk) => chunks.push(chunk.toString('utf8')));
-      stream.on('end', () => resolve());
-      stream.on('error', (err) => reject(err));
-      if (scope === 'template') {
-        const headerLine = headers.join(delimiter) + '\n';
-        chunks.push(headerLine);
-        stream.end();
-      } else {
-        for (const row of rows) stream.write(row);
-        stream.end();
-      }
-    });
-    const content = '\ufeff' + chunks.join('');
-    return { filename, content };
+    return { filename, content: writeCsv({ language: opts?.language ?? 'en', headers, rows }) };
   }
 
+  /**
+   * Reads the business processes file through the shared layer: either separator, UTF-8 or
+   * Windows-1252, physical line numbers. A row matches the process of the same name whatever its
+   * case (the stored spelling stays). The file has no end of validity: a blank status, or the
+   * status the process already has, keeps the stored date; a new process is enabled unless the
+   * row says disabled.
+   */
   async importCsv(
-    { file, dryRun, userId }: { file: Express.Multer.File; dryRun: boolean; userId?: string | null },
+    {
+      file,
+      dryRun,
+      userId,
+      language,
+      dateOrder,
+      decimalMark,
+    }: {
+      file: Express.Multer.File;
+      dryRun: boolean;
+      userId?: string | null;
+      language?: CsvLanguage;
+      dateOrder?: CsvDateOrder;
+      decimalMark?: DecimalMark;
+    },
     opts?: { manager?: EntityManager },
   ) {
     if (!file) throw new BadRequestException('No file uploaded');
-    const delimiter = ';';
-    const expectedHeaders = this.csvHeaders();
-    type Row = Record<string, string>;
-    const rows: Row[] = [];
-    const errors: { row: number; message: string }[] = [];
-    let headerOk = false;
-    let headerSet: string[] = [];
-
-    await new Promise<void>((resolve, reject) => {
-      const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
-      if (!buf) {
-        reject(new BadRequestException('Empty upload'));
-        return;
-      }
-      let content: string;
-      try {
-        content = decodeCsv(buf as Buffer).text;
-      } catch (err) {
-        reject(err instanceof CsvDecodeError ? new BadRequestException({ message: err.message, code: err.code }) : err);
-        return;
-      }
-      parseString(content, { headers: true, delimiter, ignoreEmpty: true, trim: true })
-        .on('headers', (headers: string[]) => {
-          headerSet = headers;
-          const missing = expectedHeaders.filter((h) => !headers.includes(h));
-          const extras = headers.filter((h) => !expectedHeaders.includes(h));
-          headerOk = missing.length === 0 && extras.length === 0;
-          const headerError = headerMismatchError(missing, extras);
-          if (headerError) errors.push(headerError);
-        })
-        .on('error', (err) => reject(err))
-        .on('data', (row: Row) => rows.push(denormalizeCsvRow(row)))
-        .on('end', () => resolve());
+    const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
+    if (!buf) throw new BadRequestException('Empty upload');
+    const read = await readMasterDataFile({
+      file: buf as Buffer,
+      fields: this.csvHeaders(),
+      language: language ?? 'en',
+      dateOrder,
+      decimalMark,
     });
-
-    if (!headerOk) {
-      return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, unchanged: 0, errors };
+    const report = { ignoredColumns: read.ignoredColumns, notices: read.notices };
+    if (read.headerError) {
+      return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, unchanged: 0, errors: [read.headerError], ...report };
     }
+    const errors: ImportReportError[] = [];
+    const rows = read.rows;
 
     let inserted = 0;
     let updated = 0;
     let unchanged = 0;
     const normalized: Array<{
+      line: number;
       body: BusinessProcessUpsertDto;
+      status: StatusState | null;
       categoryNames: string[];
     }> = [];
 
-    rows.forEach((r, idx) => {
-      const line = idx + 2;
-      const name = (r['name'] ?? '').toString().trim();
-      const rawStatus = (r['status'] ?? 'enabled').toString().trim().toLowerCase();
+    for (const row of rows) {
+      const line = row.line;
+      const problems = rowProblems(row);
+      if (problems.length > 0) {
+        errors.push(...problems.map((message) => ({ row: line, message })));
+        continue;
+      }
+      const name = cellOf(row, 'name');
+      const rawStatus = cellOf(row, 'status').toLowerCase();
       if (!name) errors.push({ row: line, message: 'Name is required' });
       if (rawStatus && rawStatus !== 'enabled' && rawStatus !== 'disabled') {
         errors.push({ row: line, message: `Invalid status '${rawStatus}'. Use 'enabled' or 'disabled'.` });
       }
       const body: BusinessProcessUpsertDto = {
         name,
-        description: (r['description'] ?? '').toString().trim() || null,
-        notes: (r['notes'] ?? '').toString().trim() || null,
-        status: rawStatus === 'disabled' ? StatusState.DISABLED : StatusState.ENABLED,
+        description: cellOf(row, 'description') || null,
+        notes: cellOf(row, 'notes') || null,
       };
-      const categoryNames = (r['categories'] ?? '')
-        .toString()
+      const categoryNames = cellOf(row, 'categories')
         .split(';')
         .map((v) => v.trim())
         .filter((v) => !!v);
-      normalized.push({ body, categoryNames });
-    });
-
-    if (errors.length > 0) {
-      return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors };
+      const status = rawStatus === 'disabled' ? StatusState.DISABLED : rawStatus === 'enabled' ? StatusState.ENABLED : null;
+      normalized.push({ line, body, status, categoryNames });
     }
 
-    const uniqueMap = new Map<string, { body: BusinessProcessUpsertDto; categoryNames: string[] }>();
+    if (errors.length > 0) {
+      return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report };
+    }
+
+    const uniqueMap = new Map<string, (typeof normalized)[number]>();
     for (const item of normalized) {
-      const key = JSON.stringify(item.body);
+      const key = JSON.stringify([item.body, item.status, item.categoryNames]);
       if (!uniqueMap.has(key)) uniqueMap.set(key, item);
     }
     const unique = Array.from(uniqueMap.values());
@@ -544,9 +539,24 @@ export class BusinessProcessesService {
 
     // A row identical to the stored process, categories included, counts as unchanged and is not
     // written: no audit line, no new `updated_at`. Categories and links are read once.
+    // A row matches the process of the same name whatever its case ("order to cash" updates
+    // "Order to cash"): the stored spelling stays, and the report says which process it matched.
+    const warnings: ImportReportError[] = [];
     const found: Array<{ item: (typeof unique)[number]; existing: BusinessProcess | null }> = [];
-    for (const item of unique) {
-      found.push({ item, existing: await repo.findOne({ where: { name: item.body.name as string } }) });
+    for (const fileItem of unique) {
+      const name = fileItem.body.name as string;
+      const existing = await repo.createQueryBuilder('bp')
+        .where('bp.tenant_id = app_current_tenant() AND lower(bp.name) = lower(:name)', { name })
+        .getOne();
+      const warning = existing ? nameMatchedWarning(fileItem.line, 'name', name, existing.name) : null;
+      if (warning) warnings.push(warning);
+      // The status the row writes: on an update, only one that differs from the current one
+      // (read from the end of validity), so a re-imported export keeps a future end of validity.
+      const status = existing
+        ? (fileItem.status && fileItem.status !== deriveStatusFromDisabledAt(existing.disabled_at ?? null) ? fileItem.status : undefined)
+        : (fileItem.status ?? StatusState.ENABLED);
+      const body = { ...fileItem.body, name: existing ? existing.name : name, ...(status ? { status } : {}) };
+      found.push({ item: { ...fileItem, body }, existing });
     }
     const existingIds = found.flatMap(({ existing }) => (existing ? [existing.id] : []));
     const categoryIdsByName = new Map<string, string[]>();
@@ -571,25 +581,23 @@ export class BusinessProcessesService {
       }
     }
     const now = new Date();
-    const toWrite: typeof unique = [];
+    const toWrite: Array<{ item: (typeof unique)[number]; existing: BusinessProcess | null }> = [];
     for (const { item, existing } of found) {
       if (!existing) inserted += 1;
       else if (importRowUnchanged(existing, item.body, item.categoryNames, categoryIdsByName, linkedByProcess.get(existing.id) ?? new Set(), now)) {
         unchanged += 1;
         continue;
       } else updated += 1;
-      toWrite.push(item);
+      toWrite.push({ item, existing });
     }
 
     if (dryRun) {
-      return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, errors: [] };
+      return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, errors: [], warnings, ...report };
     }
 
     let processed = 0;
 
-    for (const item of toWrite) {
-      const existing = await repo.findOne({ where: { name: item.body.name as string } });
-
+    for (const { item, existing } of toWrite) {
       const categoryIds: string[] = [];
       for (const catNameRaw of item.categoryNames) {
         const catName = catNameRaw.trim();
@@ -615,6 +623,6 @@ export class BusinessProcessesService {
       }
     }
 
-    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, processed, errors: [] };
+    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, processed, errors: [], warnings, ...report };
   }
 }

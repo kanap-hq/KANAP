@@ -297,6 +297,23 @@ describe('ContractWorkspacePage', () => {
     await waitFor(() => expect(screen.getByRole('combobox', { name: 'contracts.fields.autoRenewal' })).toHaveTextContent('contracts.fields.yes'));
   });
 
+  it('keeps a future end of validity when the status shown is chosen again, and disables now alone', async () => {
+    const base = mocked.get.getMockImplementation() as (url: string, options?: unknown) => Promise<unknown>;
+    const ending = { ...CONTRACT, disabled_at: `${NEXT_YEAR}-06-30T14:37:12.000Z`, status: 'enabled' };
+    mocked.get.mockImplementation(async (url: string, options?: unknown) => (
+      url === '/contracts/c-1' ? { data: ending } : base(url, options)
+    ));
+    renderAt('/ops/contracts/c-1/overview');
+    fireEvent.click(await screen.findByRole('button', { name: 'opex.status.enabled' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'opex.status.enabled' }));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(mocked.patch).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'opex.status.enabled' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'opex.status.disabled' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/contracts/c-1', { status: 'disabled' }));
+  });
+
   it('turns the renewal on at once when no end of validity is set', async () => {
     const base = mocked.get.getMockImplementation() as (url: string, options?: unknown) => Promise<unknown>;
     mocked.get.mockImplementation(async (url: string, options?: unknown) => (

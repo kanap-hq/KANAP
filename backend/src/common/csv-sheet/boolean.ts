@@ -1,0 +1,30 @@
+import { CsvLanguage } from './types';
+
+/** Yes and no as each language writes them in a file. */
+const WORDS: Record<CsvLanguage, readonly [string, string]> = {
+  en: ['yes', 'no'],
+  fr: ['oui', 'non'],
+  de: ['ja', 'nein'],
+  es: ['sí', 'no'],
+};
+
+// Read whatever the screen language: yes or no of every language, and the forms older files wrote.
+const TRUE = new Set(['yes', 'oui', 'ja', 'sí', 'si', 'true', '1', 'y', 'on', 't']);
+const FALSE = new Set(['no', 'non', 'nein', 'false', '0', 'n', 'off', 'f']);
+
+/** A yes or no cell, in the file's language. */
+export function formatCsvBoolean(value: boolean, language: CsvLanguage): string {
+  return WORDS[language][value ? 0 : 1];
+}
+
+/**
+ * A yes or no cell: null when it is blank, undefined when it is neither. Yes and no are read in
+ * every language, with true/false, 1/0, y/n, on/off and t/f, whatever the case.
+ */
+export function parseCsvBoolean(raw: string): boolean | null | undefined {
+  const text = raw.trim().toLowerCase();
+  if (text === '') return null;
+  if (TRUE.has(text)) return true;
+  if (FALSE.has(text)) return false;
+  return undefined;
+}

@@ -22,7 +22,7 @@ import {
   type AnalyticsValueDetail,
   type AnalyticsValuePatch,
 } from '../../services/analytics';
-import { deriveStatusFromDisabledAt, normalizeStatus } from '../../constants/status';
+import { STATUS_DISABLED, deriveStatusFromDisabledAt, normalizeStatus } from '../../constants/status';
 import { lineTypeUsageConflict, parseLineTypeUsage, type LineType } from '../../constants/lineTypeUsage';
 import { axisListColumn, oneOffListLink } from '../reports/reportListLink';
 import ListLinkAnchor from '../reports/ListLinkAnchor';
@@ -272,6 +272,8 @@ export default function AnalyticsWorkspacePage() {
                   if (disabledAt === data.disabled_at) return;
                   void patch({ status: deriveStatusFromDisabledAt(disabledAt), disabled_at: disabledAt }, 'disabled_at');
                 }}
+                // Disable now: the status alone, the server sets the end of validity from its own clock.
+                onDisableNow={() => void patch({ status: STATUS_DISABLED }, 'disabled_at')}
                 disabled={disabled}
                 disabledAtError={!!errors.disabled_at}
                 disabledAtHelperText={errors.disabled_at}

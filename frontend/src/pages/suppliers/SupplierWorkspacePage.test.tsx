@@ -258,6 +258,14 @@ describe('SupplierWorkspacePage', () => {
     await waitFor(() => expect(lastPatch()).toEqual(['/suppliers/s-1', { status: 'enabled', disabled_at: null }]));
   });
 
+  it('disables now from the properties switch with the status alone', async () => {
+    renderAt('/master-data/suppliers/s-1/overview');
+    await screen.findByText('Acme Software');
+    fireEvent.click(screen.getByRole('checkbox', { name: 'statuses.enabled' }));
+    // The server sets the end of validity from its own clock.
+    await waitFor(() => expect(lastPatch()).toEqual(['/suppliers/s-1', { status: 'disabled' }]));
+  });
+
   it('saves an end of validity typed in the properties', async () => {
     renderAt('/master-data/suppliers/s-1/overview');
     await screen.findByText('Acme Software');

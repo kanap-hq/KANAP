@@ -1,3 +1,4 @@
+import { languageOf } from '../common/csv-sheet';
 import {
   BadRequestException,
   Body,
@@ -191,6 +192,7 @@ export class TasksController {
   @RequireLevel('tasks', 'admin')
   @Get('export')
   async exportCsv(
+    @Query('language') languageRaw: string | undefined,
     @Query('scope') scope: 'template' | 'data' = 'data',
     @Query('fields') fields: string | undefined,
     @Query('preset') preset: string | undefined,
@@ -200,7 +202,10 @@ export class TasksController {
     @Res() res: Response,
   ) {
     const tenantId = req?.tenant?.id ?? '';
+    // The screen's language (the user's own when the screen sends none), as every shared-layer file.
+    const language = await languageOf(req?.queryRunner?.manager, tenantId, req.user?.sub ?? null, languageRaw);
     const result = await this.csvSvc.export({
+      language,
       manager: req?.queryRunner?.manager,
       tenantId,
       scope,

@@ -1,3 +1,4 @@
+import { languageOf } from '../common/csv-sheet';
 import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
@@ -148,6 +149,7 @@ export class ApplicationsController {
   @Get('export')
   async export(
     @Query() query: Record<string, unknown>,
+    @Query('language') languageRaw: string | undefined,
     @Query('scope') scope: 'template' | 'data' = 'data',
     @Query('fields') fields: string | undefined,
     @Query('preset') preset: string | undefined,
@@ -157,7 +159,10 @@ export class ApplicationsController {
     @Res() res: Response,
     @Tenant() ctx: TenantRequest,
   ): Promise<void> {
+    // The screen's language (the user's own when the screen sends none), as every shared-layer file.
+    const language = await languageOf(this.requireManager(ctx), ctx.tenantId, ctx.userId ?? null, languageRaw);
     const result = await this.csvSvc.export({
+      language,
       manager: this.requireManager(ctx),
       tenantId: ctx.tenantId,
       query,
