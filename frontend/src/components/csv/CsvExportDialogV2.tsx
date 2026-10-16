@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import { useCsvExport } from './useCsvExport';
 import { csvRequestErrorMessage } from './csvRequestError';
+import { screenLanguage } from './readings';
 import { CsvFieldSelector } from './CsvFieldSelector';
 import { CsvFieldInfo, CsvExportPreset } from './csv.types';
 
@@ -39,7 +40,9 @@ export default function CsvExportDialogV2({
   params,
   presets: propPresets = [],
 }: CsvExportDialogV2Props) {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
+  // The file follows the screen: separator, days, decimal mark and yes or no.
+  const language = screenLanguage(i18n.resolvedLanguage || i18n.language);
   const [fieldsInfo, setFieldsInfo] = useState<CsvFieldInfo[]>([]);
   const [backendPresets, setBackendPresets] = useState<CsvExportPreset[]>([]);
   const [loadingFields, setLoadingFields] = useState(false);
@@ -93,7 +96,7 @@ export default function CsvExportDialogV2({
     setLoading(true);
     setError(null);
     try {
-      const queryParams: Record<string, any> = { ...(params ?? {}), scope };
+      const queryParams: Record<string, any> = { ...(params ?? {}), scope, language };
 
       // Add field selection based on preset
       if (preset === 'custom' && scope === 'data') {
@@ -144,7 +147,7 @@ export default function CsvExportDialogV2({
         ) : (
           <>
             <Typography variant="body2" sx={{ mb: 2 }}>
-              {t('csv.exportDescriptionExcel')}
+              {t('csv.exportDescriptionFlexible')}
             </Typography>
 
             {/* Preset selector */}

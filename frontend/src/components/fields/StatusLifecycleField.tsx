@@ -16,6 +16,12 @@ type StatusLifecycleFieldProps = {
   onStatusChange: (next: StatusValue) => void;
   disabledAt: string | null;
   onDisabledAtChange: (next: string | null) => void;
+  /**
+   * Switched off with no end of validity already passed: disable now. The caller sends the status
+   * alone (`{ status: 'disabled' }`, no `disabled_at`) and the server sets the end of validity from
+   * its own clock. The browser clock never decides it.
+   */
+  onDisableNow: () => void;
   disabled?: boolean;
   hideDisabledAt?: boolean;
   statusLabel?: string;
@@ -34,6 +40,7 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
   onStatusChange,
   disabledAt,
   onDisabledAtChange,
+  onDisableNow,
   disabled = false,
   hideDisabledAt = false,
   statusLabel,
@@ -50,8 +57,8 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
   const onLabel = statusLabel ?? t('statuses.enabled');
   const offLabel = statusOffLabel ?? t('statuses.disabled');
 
-  // Switching off disables now: the end of validity becomes this instant, unless one has already
-  // passed. A later end of validity is set in the date field.
+  // Switching off disables now, on the server's clock (`onDisableNow`), unless an end of validity
+  // has already passed. A later end of validity is set in the date field.
   const handleStatusToggle = React.useCallback(
     (nextEnabled: boolean) => {
       if (nextEnabled) {
@@ -60,10 +67,14 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
         return;
       }
       const alreadyEnded = !!disabledAt && deriveStatusFromDisabledAt(disabledAt) === STATUS_DISABLED;
-      onDisabledAtChange(alreadyEnded ? disabledAt : new Date().toISOString());
+      if (!alreadyEnded) {
+        onDisableNow();
+        return;
+      }
+      onDisabledAtChange(disabledAt);
       onStatusChange(STATUS_DISABLED);
     },
-    [disabledAt, onDisabledAtChange, onStatusChange],
+    [disabledAt, onDisabledAtChange, onDisableNow, onStatusChange],
   );
 
   // Local text state to allow free typing (dd/mm/yyyy) without fighting controlled updates
@@ -93,11 +104,12 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
     const formatted = formatEuPartial(raw);
     setInputText(formatted);
     const iso = euDateToIsoEndOfDay(formatted);
-    if (iso) {
+    // The day already stored, typed again: it keeps its time of day (a switch sets one), nothing is sent.
+    if (iso && formatted !== isoToEuDate(disabledAt)) {
       onDisabledAtChange(iso);
       onStatusChange(deriveStatusFromDisabledAt(iso));
     }
-  }, [onDisabledAtChange, onStatusChange]);
+  }, [disabledAt, onDisabledAtChange, onStatusChange]);
 
   const handleDisabledAtBlur = React.useCallback(() => {
     setFocused(false);
@@ -129,6 +141,8 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
     const [y, m, d] = yyyyMmDd.split('-');
     const ddmmyyyy = `${d}/${m}/${y}`;
     setInputText(ddmmyyyy);
+    // The day already stored, picked again: it keeps its time of day, nothing is sent.
+    if (ddmmyyyy === isoToEuDate(disabledAt)) return;
     const iso = euDateToIsoEndOfDay(ddmmyyyy);
     onDisabledAtChange(iso);
     onStatusChange(deriveStatusFromDisabledAt(iso));

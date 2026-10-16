@@ -1,3 +1,4 @@
+import type { CsvLanguage } from '../common/csv-sheet';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager } from 'typeorm';
@@ -35,6 +36,8 @@ export class TasksCsvService {
   async export(opts: {
     manager: EntityManager;
     tenantId: string;
+    /** The screen language: separator, days, decimal mark and yes or no (`csv-sheet`). */
+    language: CsvLanguage;
     scope?: 'template' | 'data';
     fields?: string[];
     preset?: string;
@@ -73,6 +76,7 @@ export class TasksCsvService {
       scope,
       fields,
       preset,
+      language: opts.language,
     });
   }
 
@@ -167,12 +171,13 @@ export class TasksCsvService {
     // Re-parse the file to get viewer/owner columns
     const { parseString } = await import('@fast-csv/parse');
     const { decodeCsv } = await import('../common/csv-sheet/decode');
+    const { csvSeparatorOf } = await import('../common/csv-sheet/read');
 
     const text = decodeCsv(file.buffer).text;
     const rows: Record<string, string>[] = [];
 
     await new Promise<void>((resolve, reject) => {
-      parseString(text, { headers: true, delimiter: ';', ignoreEmpty: true })
+      parseString(text, { headers: true, delimiter: csvSeparatorOf(text) ?? ';', ignoreEmpty: true })
         .on('data', (row) => rows.push(row))
         .on('end', () => resolve())
         .on('error', (err) => reject(err));

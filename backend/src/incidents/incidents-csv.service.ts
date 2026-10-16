@@ -1,3 +1,4 @@
+import type { CsvLanguage } from '../common/csv-sheet';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
 import { exportCatalogLabels } from '../it-ops-settings/catalog-resolve';
@@ -81,6 +82,8 @@ export class IncidentsCsvService {
   async export(opts: {
     manager: EntityManager;
     tenantId: string;
+    /** The screen language: separator, days, decimal mark and yes or no (`csv-sheet`). */
+    language: CsvLanguage;
     viewer?: IncidentViewer;
     scope?: 'template' | 'data';
     fields?: string[];
@@ -105,7 +108,7 @@ export class IncidentsCsvService {
       for (const row of rows) exportCatalogLabels(row, { category: settings.incidentCategories });
     }
 
-    return this.exportSvc.export(incidentCsvConfig, rows, { manager, tenantId, scope, fields });
+    return this.exportSvc.export(incidentCsvConfig, rows, { manager, tenantId, scope, fields, language: opts.language });
   }
 
   /**

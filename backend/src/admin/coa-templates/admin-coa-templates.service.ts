@@ -1,3 +1,4 @@
+import { csvSeparatorOf } from '../../common/csv-sheet/read';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, ILike, Repository } from 'typeorm';
@@ -58,7 +59,8 @@ export class AdminCoaTemplatesService {
   }
 
   private async parseTemplateRows(csv: string): Promise<Array<Record<string, any>>> {
-    const delimiter = ';';
+    // A payload saved as uploaded may come from any export: its separator is read from the header.
+    const delimiter = csvSeparatorOf(csv) ?? ';';
     const rows: Record<string, any>[] = [];
     await new Promise<void>((resolve, reject) => {
       parseString(csv, { headers: true, delimiter, ignoreEmpty: true, trim: true })

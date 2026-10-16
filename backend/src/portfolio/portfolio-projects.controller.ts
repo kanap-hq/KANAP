@@ -1,3 +1,4 @@
+import { languageOf } from '../common/csv-sheet';
 import {
   Body, Controller, Delete, ForbiddenException, Get, Param, ParseUUIDPipe, Patch, Post, Query, Req, Res,
   UploadedFile, UseGuards, UseInterceptors,
@@ -125,6 +126,7 @@ export class PortfolioProjectsController {
   @RequireLevel('portfolio_projects', 'admin')
   @Get('export')
   async exportCsv(
+    @Query('language') languageRaw: string | undefined,
     @Query('scope') scope: 'template' | 'data' = 'data',
     @Query('fields') fields: string | undefined,
     @Query('preset') preset: string | undefined,
@@ -132,7 +134,10 @@ export class PortfolioProjectsController {
     @Tenant() ctx: TenantRequest,
     @Res() res: Response,
   ) {
+    // The screen's language (the user's own when the screen sends none), as every shared-layer file.
+    const language = await languageOf(this.requireManager(ctx), ctx.tenantId, ctx.userId ?? null, languageRaw);
     const result = await this.csvSvc.export({
+      language,
       manager: this.requireManager(ctx),
       tenantId: ctx.tenantId,
       scope,

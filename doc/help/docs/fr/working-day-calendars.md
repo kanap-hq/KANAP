@@ -190,7 +190,7 @@ Chargez ou mettez à jour des calendriers et leurs jours ouvrés depuis un fichi
 | `country` | Facultative. Le code pays à deux lettres d'un calendrier standard, par exemple `FR`. Vide pour un calendrier personnalisé |
 | `region` | Facultative. Le code de la région, par exemple `57` pour la Moselle ou `BY` pour la Bavière. Nécessite un pays. Vide pour tout le pays |
 | `status` | `enabled` ou `disabled`. Vide signifie `enabled` |
-| `disabled_at` | Colonne facultative. La fin de validité : une date (`2026-12-31`) ou une date et une heure complètes. Vide s'il n'y a pas de fin |
+| `disabled_at` | Colonne facultative. La fin de validité : une date (`2026-12-31`) ou une date et une heure complètes. L'export écrit la date seule. Réimportée, cette date conserve la fin de validité enregistrée. Vide s'il n'y a pas de fin |
 | `year` | Quatre chiffres, de 2000 à 2100. Vide sur une ligne qui ne définit que les champs du calendrier |
 | `jan` à `dec` | Les jours ouvrés de chaque mois, avec un point comme séparateur décimal (la virgule est aussi acceptée). Obligatoires sur une ligne qui a une année |
 

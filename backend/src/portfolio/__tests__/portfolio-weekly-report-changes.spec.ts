@@ -149,26 +149,41 @@ async function run() {
     assert.ok(taskSql.params[5].includes(key), `${key} is noise`);
   }
 
-  // The export writes it all on one cell, in English.
-  const { manager: exportManager } = stub(rows, {
+  // The export writes it all on one cell, in the screen language: labels, statuses, values, days.
+  const refs = {
     users: [
       { id: 'u-thomas', name: 'Thomas Berger' },
       { id: 'u-isabelle', name: 'Isabelle Moreau' },
     ],
     portfolio_task_types: [{ id: 'tt-bug', name: 'Bug' }],
-  });
-  const csv = await svc.exportCsv(query, { manager: exportManager });
-  const line = csv.content.split('\n').find((entry) => entry.startsWith('T-1;'));
-  assert.ok(line, 'the modified task has its line');
+  };
+  const lineIn = async (language: 'en' | 'fr' | 'de' | 'es') => {
+    const csv = await svc.exportCsv(query, { manager: stub(rows, refs).manager, language });
+    const line = csv.content.split('\n').find((entry) => /^"?T-1[,;]/.test(entry));
+    assert.ok(line, `${language}: the modified task has its line`);
+    return line!;
+  };
+  const line = await lineIn('en');
   assert.ok(
-    line!.includes('Open → In progress → In testing → Done; Assignee: Thomas Berger → Isabelle Moreau; '),
+    line.includes('Open → In progress → In testing → Done; Assignee: Thomas Berger → Isabelle Moreau; '),
     line,
   );
-  assert.ok(line!.includes('Description: Long cellar note.'));
-  assert.ok(line!.includes('… → empty'));
-  assert.ok(line!.includes('Due date: empty → 2026-09-30'));
-  assert.ok(line!.includes('Labels: 0 items → 2 items'));
-  assert.ok(line!.includes('Task type: unknown → Bug'));
+  assert.ok(line.includes('Description: Long cellar note.'));
+  assert.ok(line.includes('… → empty'));
+  assert.ok(line.includes('Due date: empty → 2026-09-30'));
+  assert.ok(line.includes('Labels: 0 items → 2 items'));
+  assert.ok(line.includes('Task type: unknown → Bug'));
+
+  const french = await lineIn('fr');
+  assert.ok(french.includes('Ouvert → En cours → En test → Terminé'), french);
+  assert.ok(french.includes('Échéance : vide → 30/09/2026'), french);
+  assert.ok(french.includes('Étiquettes : 0 élément → 2 éléments'), french);
+  assert.ok(french.includes('Type de tâche : inconnu → Bug'), french);
+  const german = await lineIn('de');
+  assert.ok(german.includes('Offen → In Bearbeitung → Im Test → Erledigt'), german);
+  assert.ok(german.includes('Fälligkeitsdatum: leer → 30.09.2026'), german);
+  const spanish = await lineIn('es');
+  assert.ok(spanish.includes('Fecha de vencimiento: vacío → 30/09/2026'), spanish);
 
   await runOriginTask();
   console.log('portfolio-weekly-report-changes.spec.ts: ok');
@@ -202,9 +217,12 @@ async function runOriginTask() {
   assert.deepEqual(result.requests.modified[0].changes?.fields, [
     { key: 'origin_task', before: 'T-12: Tune the cellar probes', after: null, kind: 'text' },
   ]);
-  const csv = await svc.exportCsv(requestQuery, { manager: requestStub() });
-  const line = csv.content.split('\n').find((entry) => entry.startsWith('REQ-12;'));
+  const csv = await svc.exportCsv(requestQuery, { manager: requestStub(), language: 'en' });
+  const line = csv.content.split('\n').find((entry) => /^"?REQ-12,/.test(entry));
   assert.ok(line?.includes('Origin task: T-12: Tune the cellar probes → empty'), line);
+  const french = await svc.exportCsv(requestQuery, { manager: requestStub(), language: 'fr' });
+  const frenchLine = french.content.split('\n').find((entry) => entry.startsWith('REQ-12;'));
+  assert.ok(frenchLine?.includes("Tâche d'origine : T-12: Tune the cellar probes → vide"), frenchLine);
 }
 
 run().catch((error) => {
