@@ -18,6 +18,7 @@ import {
 import { backendPath } from './backend-root';
 import { applyHttpMiddleware, applyTenancyAndPipeline } from '../../http-app';
 import { DemoDataService } from '../../demo-data/demo-data.service';
+import { currentRequestContext } from '../tenancy/request-tenant-context';
 
 // The list filter contract, server side. `frontend/src/pages/listFilterContract.json` lists, per
 // list endpoint, every column its screen lets the user filter and the kind of filter model the grid
@@ -59,13 +60,17 @@ function filterModel(kind: Kind): Record<string, unknown> {
   }
 }
 
-/** Every statement the database receives while recording, with its parameters. */
+/**
+ * Every statement a request runs while recording, with its parameters. Statements run outside a
+ * request are left out: the application's scheduled tasks tick every minute in this process, and
+ * one falling inside a recording made the same request look different (#625).
+ */
 const recorded: string[] = [];
 let recording = false;
 const realQuery = PostgresQueryRunner.prototype.query;
 PostgresQueryRunner.prototype.query = function patchedQuery(this: PostgresQueryRunner, query: string, parameters?: any[], ...rest: any[]) {
   // The time of the request (a validity date compared with now) differs from one request to the next.
-  if (recording) recorded.push(`${query.replace(/\s+/g, ' ').trim()} -- ${JSON.stringify(parameters ?? []).replace(/\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?Z/g, '<now>')}`);
+  if (recording && currentRequestContext()) recorded.push(`${query.replace(/\s+/g, ' ').trim()} -- ${JSON.stringify(parameters ?? []).replace(/\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?Z/g, '<now>')}`);
   return (realQuery as any).call(this, query, parameters, ...rest);
 } as any;
 
