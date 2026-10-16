@@ -10,7 +10,6 @@ const DEPARTMENT_SORT_COLUMNS = new Set(['id', 'company_id', 'name', 'descriptio
 const DEPARTMENT_TEXT_SORTS = new Set(['name', 'description']);
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { Company } from '../companies/company.entity';
-import * as fs from 'fs';
 import {
   buildQuickSearchConditions,
   compileAgFilterCondition,
@@ -37,6 +36,7 @@ import {
   rowProblems,
   writeCsv,
 } from '../common/csv-sheet';
+import { uploadedBytes } from '../common/upload';
 
 type DepartmentLookupItem = { id: string; name: string; company_id: string };
 
@@ -564,8 +564,7 @@ export class DepartmentsService {
     if (!file) throw new BadRequestException('No file uploaded');
     const readLanguage = language ?? 'en';
     const expectedHeaders = this.csvHeaders();
-    const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
-    if (!buf) throw new BadRequestException('Empty upload');
+    const buf = uploadedBytes(file);
     const read = await readMasterDataFile({
       file: buf as Buffer,
       fields: expectedHeaders,

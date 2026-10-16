@@ -10,7 +10,6 @@ import { applyStatusFilter, extractStatusFilterFromAgModel } from '../common/sta
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { BusinessProcessUpsertDto } from './dto/business-process.dto';
 import { StatusState, deriveStatusFromDisabledAt, resolveLifecycleState } from '../common/status';
-import * as fs from 'fs';
 import { User } from '../users/user.entity';
 import { duplicateNameException } from '../common/duplicate-name';
 import {
@@ -25,6 +24,7 @@ import {
   writeCsv,
 } from '../common/csv-sheet';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
+import { uploadedBytes } from '../common/upload';
 
 /**
  * True when re-importing a CSV row over the stored process writes nothing (`importCsv`): the
@@ -469,9 +469,7 @@ export class BusinessProcessesService {
     },
     opts?: { manager?: EntityManager },
   ) {
-    if (!file) throw new BadRequestException('No file uploaded');
-    const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
-    if (!buf) throw new BadRequestException('Empty upload');
+    const buf = uploadedBytes(file);
     const read = await readMasterDataFile({
       file: buf as Buffer,
       fields: this.csvHeaders(),

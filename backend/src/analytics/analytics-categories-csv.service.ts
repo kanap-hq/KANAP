@@ -1,5 +1,4 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import * as fs from 'fs';
 import { resolveLifecycleState, StatusState } from '../common/status';
 import {
   cellOf,
@@ -33,6 +32,7 @@ import {
   valueAppliesToConflict,
 } from './analytics-categories.service';
 import { AXIS_APPLIES_TO, AxisAppliesTo } from './analytics-axis.entity';
+import { uploadedBytes } from '../common/upload';
 
 export const ANALYTICS_VALUE_CSV_HEADERS = ['axis_code', 'name', 'description', 'status', 'disabled_at', 'applies_to'] as const;
 /** Only the name is required; an absent column keeps what is stored (a new value gets the default). */
@@ -311,9 +311,7 @@ export class AnalyticsCategoriesCsvService {
     dateOrder?: CsvDateOrder,
     decimalMark?: DecimalMark,
   ): Promise<MasterDataFileRead> {
-    if (!file) throw new BadRequestException('No file uploaded');
-    const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
-    if (!buf) throw new BadRequestException('Empty upload');
+    const buf = uploadedBytes(file);
     return readMasterDataFile({
       file: buf as Buffer,
       fields: ANALYTICS_VALUE_CSV_HEADERS,

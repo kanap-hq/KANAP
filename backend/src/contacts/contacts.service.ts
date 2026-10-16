@@ -10,7 +10,6 @@ import { orderListQuery } from '../common/list-sort';
 
 const CONTACT_TEXT_SORTS = new Set(['last_name', 'first_name', 'email', 'country', 'supplier_name']);
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
-import * as fs from 'fs';
 import {
   formatCsvBoolean,
   parseCsvBoolean,
@@ -25,6 +24,7 @@ import {
 } from '../common/csv-sheet';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
 import { assertSetFilterModes } from '../common/ag-grid-filtering';
+import { uploadedBytes } from '../common/upload';
 
 /** The request's tenant: every statement filters on it. */
 type TenantOpts = { manager?: EntityManager; tenantId: string };
@@ -526,9 +526,7 @@ export class ContactsService {
     },
     opts: TenantOpts,
   ) {
-    if (!file) throw new BadRequestException('No file uploaded');
-    const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
-    if (!buf) throw new BadRequestException('Empty upload');
+    const buf = uploadedBytes(file);
     const read = await readMasterDataFile({
       file: buf as Buffer,
       fields: this.csvHeaders(),

@@ -18,7 +18,6 @@ const COMPANY_METRIC_SORTS: Record<string, string> = {
   metrics_frozen: 'COALESCE(m.is_frozen, false)',
 };
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
-import * as fs from 'fs';
 import { CompanyMetricsService } from './company-metrics.service';
 import {
   buildQuickSearchConditions,
@@ -48,6 +47,7 @@ import {
   rowProblems,
   writeCsv,
 } from '../common/csv-sheet';
+import { uploadedBytes } from '../common/upload';
 
 type CompanyFilterTarget = FilterTargetConfig & { requiresMetrics?: boolean };
 type CompanyLookupItem = { id: string; name: string };
@@ -871,8 +871,7 @@ export class CompaniesService {
     const baseYear = this.normalizeYear(year);
     const expectedHeaders = this.csvHeaders(baseYear);
     const metricYears = this.metricYears(baseYear);
-    const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
-    if (!buf) throw new BadRequestException('Empty upload');
+    const buf = uploadedBytes(file);
     const read = await readMasterDataFile({
       file: buf as Buffer,
       fields: expectedHeaders,

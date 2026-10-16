@@ -7,7 +7,6 @@ import { ExternalContact } from '../contacts/external-contact.entity';
 import { SupplierContactLink, SupplierContactRole } from '../contacts/supplier-contact.entity';
 import { buildWhereFromAgFilters, parseExportPagination, parsePagination } from '../common/pagination';
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
-import * as fs from 'fs';
 import { deriveStatusFromDisabledAt, resolveLifecycleState, StatusState } from '../common/status';
 import { extractStatusFilterFromAgModel } from '../common/status-filter';
 import { SupplierUpsertDto } from './dto/supplier.dto';
@@ -29,6 +28,7 @@ import {
 } from '../common/csv-sheet';
 import { csvLifecycleConflict } from '../spend/item-write.util';
 import { duplicateNameException } from '../common/duplicate-name';
+import { uploadedBytes } from '../common/upload';
 
 /** The contact columns of the file: one e-mail per contact type. */
 const CONTACT_COLUMNS = ['commercial_contact', 'technical_contact', 'support_contact'] as const;
@@ -334,8 +334,7 @@ export class SuppliersService {
     if (!file) throw new BadRequestException('No file uploaded');
     const readLanguage = language ?? 'en';
     const expectedHeaders = this.csvHeaders();
-    const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
-    if (!buf) throw new BadRequestException('Empty upload');
+    const buf = uploadedBytes(file);
     const read = await readMasterDataFile({
       file: buf as Buffer,
       fields: expectedHeaders,
