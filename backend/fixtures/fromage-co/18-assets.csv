@@ -34,3 +34,9 @@ NYC-AP-01;NYC-OFF;Access Point;prod;false;active;2025-01-01;;;Cisco Meraki;Merak
 AWS-EC2-BOUTIQUE;AWS-EU;Cloud Instance;prod;true;active;2025-06-15;;;Amazon Linux 2023;La Boutique web tier — 3x EC2 m6i.xlarge behind ALB in eu-west-1
 AWS-RDS-BOUTIQUE;AWS-EU;Cloud Database;prod;false;active;2025-06-15;;;Amazon RDS;La Boutique database — RDS PostgreSQL 16 Multi-AZ in eu-west-1
 AWS-ECS-API;AWS-EU;Cloud Instance;dev;true;active;2025-09-01;;;Amazon Linux 2023;API microservices — ECS Fargate cluster for La Boutique backend
+PAR-AD-02;PAR-DC1;Virtual Machine;prod;false;active;2022-01-10;;par-ad-02.fromage-co.local;Windows Server 2022;Second Active Directory domain controller + DNS
+PAR-VCENTER-01;PAR-DC1;Virtual Machine;prod;false;active;2023-06-01;;par-vcenter-01.fromage-co.local;;vCenter Server appliance — manages the Paris vSphere cluster
+PAR-VSPHERE-CL01;PAR-DC1;Other;prod;true;active;2023-06-01;;;;vSphere cluster of PAR-ESX-01 and PAR-ESX-02 — HA and DRS
+PAR-SQL-01;PAR-DC1;Virtual Machine;prod;false;active;2020-02-01;;par-sql-01.fromage-co.local;Windows Server 2022;SQL Server cluster node 1
+PAR-SQL-02;PAR-DC1;Virtual Machine;prod;false;active;2024-03-01;;par-sql-02.fromage-co.local;Windows Server 2022;SQL Server cluster node 2 — upgraded first, the other node follows
+PAR-SQL-CL01;PAR-DC1;Other;prod;true;active;2020-02-01;;;;SQL Server Always On cluster — CheeseTrack and Sage X3 databases
