@@ -51,7 +51,7 @@ export default function TaskNavChip({ currentIndex, totalCount, onPrev, onNext, 
       <IconButton
         onClick={onPrev}
         disabled={!hasPrev}
-        aria-label="Previous task"
+        aria-label={t('labels.previousTask')}
         sx={navButtonSx}
         size="small"
       >
@@ -72,7 +72,7 @@ export default function TaskNavChip({ currentIndex, totalCount, onPrev, onNext, 
       <IconButton
         onClick={onNext}
         disabled={!hasNext}
-        aria-label="Next task"
+        aria-label={t('labels.nextTask')}
         sx={navButtonSx}
         size="small"
       >

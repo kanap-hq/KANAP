@@ -114,6 +114,23 @@ describe('CompanyWorkspacePage', () => {
     expect(screen.getByRole('tab', { name: 'shared.labels.details' })).toBeInTheDocument();
   });
 
+  it('shows the status in the header and saves it from the metadata menu, as a supplier', async () => {
+    renderAt('/master-data/companies/co-1/overview');
+    fireEvent.click(await screen.findByRole('button', { name: 'companies.status.enabled' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'companies.status.disabled' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenLastCalledWith('/companies/co-1', { status: 'disabled' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'companies.status.disabled' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'companies.status.enabled' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenLastCalledWith('/companies/co-1', { status: 'enabled', disabled_at: null }));
+  });
+
+  it('shows a read-only user the status without a menu', async () => {
+    auth.canEdit = false;
+    renderAt('/master-data/companies/co-1/overview');
+    fireEvent.click(await screen.findByRole('button', { name: 'companies.status.enabled' }));
+    expect(screen.queryByRole('menuitem', { name: 'companies.status.disabled' })).toBeNull();
+  });
+
   it('saves a name change on blur', async () => {
     renderAt('/master-data/companies/co-1/overview');
     fireEvent.click(await screen.findByText('Acme France'));
@@ -124,14 +141,27 @@ describe('CompanyWorkspacePage', () => {
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/companies/co-1', { name: 'Acme France SAS' }));
   });
 
-  it('shows a refused name above the page', async () => {
+  it('shows a refused name under the name', async () => {
     mocked.patch.mockRejectedValueOnce({ response: { data: { message: 'Name refused.' } } });
     renderAt('/master-data/companies/co-1/overview');
     fireEvent.click(await screen.findByText('Acme France'));
     const input = screen.getByDisplayValue('Acme France');
     fireEvent.change(input, { target: { value: 'Other' } });
     fireEvent.blur(input);
-    expect(await screen.findByRole('alert')).toHaveTextContent('Name refused.');
+    expect(await screen.findByText('Name refused.')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('says another company has the name, under the name, on a 409 duplicate', async () => {
+    mocked.patch.mockRejectedValueOnce({ response: { status: 409, data: { code: 'duplicate', message: 'Another company already has this name.' } } });
+    renderAt('/master-data/companies/co-1/overview');
+    fireEvent.click(await screen.findByText('Acme France'));
+    const input = screen.getByDisplayValue('Acme France');
+    fireEvent.change(input, { target: { value: 'acme germany' } });
+    fireEvent.blur(input);
+    expect(await screen.findByText('companies.messages.nameTaken')).toBeInTheDocument();
+    // The stored name stays.
+    expect(screen.getByText('Acme France')).toBeInTheDocument();
   });
 
   it('saves an address field on blur, and nothing when it is unchanged', async () => {
@@ -259,6 +289,19 @@ describe('CompanyWorkspacePage', () => {
       notes: null,
     }));
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/companies/co-new/overview?year=2026'));
+  });
+
+  it('says another company has the name, under the name field, when a create is refused as a duplicate', async () => {
+    mocked.post.mockRejectedValueOnce({ response: { status: 409, data: { code: 'duplicate', message: 'Another company already has this name.' } } });
+    renderAt('/master-data/companies/new/overview');
+    fireEvent.change(screen.getByLabelText('companies.fields.name'), { target: { value: 'acme' } });
+    await pickOption('companies.fields.country', 'Fran', 'France (FR)');
+    await pickOption('companies.fields.baseCurrency', 'Euro', 'Euro (EUR)');
+    fireEvent.change(screen.getByLabelText('companies.fields.city'), { target: { value: 'Paris' } });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    expect(await screen.findByText('companies.messages.nameTaken')).toBeInTheDocument();
+    expect(screen.getByLabelText('companies.fields.name')).toHaveAttribute('aria-invalid', 'true');
+    expect(navigateMock).not.toHaveBeenCalled();
   });
 
   it('shows a create refusal under the field the body names', async () => {

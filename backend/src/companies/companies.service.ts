@@ -18,7 +18,6 @@ const COMPANY_METRIC_SORTS: Record<string, string> = {
   metrics_frozen: 'COALESCE(m.is_frozen, false)',
 };
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
-import * as fs from 'fs';
 import { CompanyMetricsService } from './company-metrics.service';
 import {
   buildQuickSearchConditions,
@@ -32,18 +31,23 @@ import { StatusState, STATUS_STATES, deriveStatusFromDisabledAt, resolveLifecycl
 import { csvItemLifecycle, csvLifecycleConflict } from '../spend/item-write.util';
 import { CompanyUpsertDto } from './dto/company.dto';
 import { createCompanyStandardCalendar } from '../working-day-profiles/company-standard-calendar';
+import { duplicateNameException } from '../common/duplicate-name';
 import {
   cellOf,
   CsvDateOrder,
   CsvLanguage,
   DecimalMark,
   endOfValidityOf,
+  keepStoredEndOfValidity,
   formatCsvAmount,
   formatCsvEndOfValidity,
+  ImportReportError,
+  nameMatchedWarning,
   readMasterDataFile,
   rowProblems,
   writeCsv,
 } from '../common/csv-sheet';
+import { uploadedBytes } from '../common/upload';
 
 type CompanyFilterTarget = FilterTargetConfig & { requiresMetrics?: boolean };
 type CompanyLookupItem = { id: string; name: string };
@@ -632,6 +636,21 @@ export class CompaniesService {
     return { headcount, it_users, turnover, year };
   }
 
+  /**
+   * Company names are unique in the tenant whatever their case ("acme" when "Acme" exists): refused
+   * with the same answer as the database's unique key (409 `duplicate`).
+   */
+  private async assertNameFree(manager: EntityManager, name: string | null | undefined, exceptId?: string) {
+    if (!name) return;
+    const rows: Array<{ id: string }> = await manager.query(
+      `SELECT id FROM companies
+        WHERE tenant_id = app_current_tenant() AND lower(name) = lower($1) AND ($2::uuid IS NULL OR id <> $2)
+        LIMIT 1`,
+      [name, exceptId ?? null],
+    );
+    if (rows.length > 0) throw duplicateNameException('Another company already has this name.');
+  }
+
   async get(id: string, opts?: { manager?: EntityManager }) {
     const repo = this.getRepo(opts?.manager);
     const found = await repo.findOne({ where: { id } });
@@ -642,6 +661,7 @@ export class CompaniesService {
   async create(body: CompanyUpsertDto, userId?: string, opts?: { manager?: EntityManager; audit?: AuditSourceOptions }) {
     const repo = this.getRepo(opts?.manager);
     const { status: statusInput, disabled_at, ...rest } = body ?? {};
+    await this.assertNameFree(repo.manager, rest.name);
     const lifecycle = resolveLifecycleState({ nextStatus: statusInput, nextDisabledAt: disabled_at });
     const entity = repo.create({
       ...rest,
@@ -697,6 +717,7 @@ export class CompaniesService {
     const existing = await this.get(id, { manager: opts?.manager });
     const before = { ...existing };
     const { status: statusInput, disabled_at, ...rest } = body ?? {};
+    if (rest.name !== undefined && rest.name !== before.name) await this.assertNameFree(repo.manager, rest.name, id);
     Object.assign(existing, rest);
     // Auto-assign or adjust CoA when country changes or missing
     try {
@@ -850,8 +871,7 @@ export class CompaniesService {
     const baseYear = this.normalizeYear(year);
     const expectedHeaders = this.csvHeaders(baseYear);
     const metricYears = this.metricYears(baseYear);
-    const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
-    if (!buf) throw new BadRequestException('Empty upload');
+    const buf = uploadedBytes(file);
     const read = await readMasterDataFile({
       file: buf as Buffer,
       fields: expectedHeaders,
@@ -871,7 +891,7 @@ export class CompaniesService {
     }
     // Validate and normalize
     type CsvLifecycle = { status: StatusState | null; disabled_at: string | null };
-    const normalized: { company: CompanyUpsertDto; metrics: Map<number, { headcount: number; it_users: number | null; turnover: string | null }>; lifecycle: CsvLifecycle }[] = [];
+    const normalized: { line: number; company: CompanyUpsertDto; metrics: Map<number, { headcount: number; it_users: number | null; turnover: string | null }>; lifecycle: CsvLifecycle }[] = [];
     read.rows.forEach((row) => {
       const line = row.line;
       const problems = rowProblems(row, ['disabled_at']);
@@ -962,6 +982,7 @@ export class CompaniesService {
         metrics.set(fy, { headcount: headcountVal, it_users: itUsersVal, turnover: turnoverVal });
       }
       normalized.push({
+        line,
         company: {
           name,
           country_iso: country_iso.toUpperCase(),
@@ -992,10 +1013,22 @@ export class CompaniesService {
     const unique = Array.from(uniqueByName.values());
     // Count inserts, updates and the companies whose every value and yearly metric is already stored.
     const repo = this.getRepo(opts?.manager);
+    // A row matches the company of the same name whatever its case ("acme" updates "Acme"). The
+    // stored spelling stays, and the report says which company the row matched.
     const existingByName = new Map<string, Company>();
+    const warnings: ImportReportError[] = [];
     for (const item of unique) {
-      const existing = await repo.findOne({ where: { name: item.company.name as string } });
-      if (existing) existingByName.set(item.company.name as string, existing);
+      const name = item.company.name as string;
+      const existing = await repo.createQueryBuilder('c')
+        .where('c.tenant_id = app_current_tenant() AND lower(c.name) = lower(:name)', { name })
+        .getOne();
+      if (!existing) continue;
+      const warning = nameMatchedWarning(item.line, 'name', name, existing.name);
+      if (warning) warnings.push(warning);
+      item.company = { ...item.company, name: existing.name };
+      // The stored end of validity's day keeps its time of day: the export writes the day only.
+      item.lifecycle = { ...item.lifecycle, disabled_at: keepStoredEndOfValidity(existing.disabled_at, item.lifecycle.disabled_at) };
+      existingByName.set(existing.name, existing);
     }
     const existingIds = Array.from(existingByName.values()).map((company) => company.id);
     const storedMetrics = new Map<string, CompanyMetric>();
@@ -1031,7 +1064,7 @@ export class CompaniesService {
       toWrite.push({ item, existing });
     }
     if (dryRun) {
-      return { ok: true, dryRun: true, total, inserted, updated, unchanged, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
+      return { ok: true, dryRun: true, total, inserted, updated, unchanged, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
     // Commit
     let processed = 0;
@@ -1052,6 +1085,6 @@ export class CompaniesService {
         }
       }
     }
-    return { ok: true, dryRun: false, total, inserted, updated, unchanged, processed, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
+    return { ok: true, dryRun: false, total, inserted, updated, unchanged, processed, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
   }
 }

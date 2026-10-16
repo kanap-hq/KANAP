@@ -33,7 +33,7 @@ Consequences of the library choice:
 - In **Templates**, published documents become reusable starting points for new articles and are grouped by document type in the template picker.
 - In **Managed Docs**, articles may still be readable and editable, but some metadata is controlled by the source workspace rather than from Knowledge itself.
 
-Library administration is intentionally stricter than document editing. Creating, renaming, deleting, or reorganizing libraries is an admin responsibility because those changes affect navigation and ownership for everyone. A built-in library cannot be deleted, nor the last library you can use: create another one first.
+Library administration is intentionally stricter than document editing. Creating, renaming, deleting, or reorganizing libraries is an admin responsibility because those changes affect navigation and ownership for everyone. The default library (the first one in the bar, where new documents go) cannot be deleted. A built-in library cannot be deleted either, nor the last library you can use: create another one first.
 
 ### Restricted libraries
 

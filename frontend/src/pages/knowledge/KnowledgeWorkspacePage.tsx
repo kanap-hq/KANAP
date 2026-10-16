@@ -40,6 +40,7 @@ import ValidatedBadge from './components/ValidatedBadge';
 import { CircularProgress } from '@mui/material';
 import { getApiErrorMessage, getDocumentSaveErrorMessage } from '../../utils/apiErrorMessage';
 import { getDotColor, KNOWLEDGE_STATUS_COLORS } from '../../utils/statusColors';
+import { knowledgeFolderName, knowledgeLibraryName } from '../../utils/knowledgeNames';
 import { normalizeMarkdownForRichTextEditor } from '../../lib/markdownEditorNormalization';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import { classifyKnowledgeLoadError } from './knowledgeLoadError';
@@ -1130,7 +1131,7 @@ export default function KnowledgeWorkspacePage() {
     const out: Array<{ id: string; label: string }> = [];
     const walk = (nodes: Array<any>, depth: number) => {
       nodes.forEach((node) => {
-        out.push({ id: node.id, label: `${'  '.repeat(depth)}${node.name}` });
+        out.push({ id: node.id, label: `${'  '.repeat(depth)}${knowledgeFolderName(t, node)}` });
         if (Array.isArray(node.children) && node.children.length > 0) {
           walk(node.children, depth + 1);
         }
@@ -1138,7 +1139,7 @@ export default function KnowledgeWorkspacePage() {
     };
     walk(folderTree?.items || [], 0);
     return out;
-  }, [folderTree?.items]);
+  }, [folderTree?.items, t]);
 
   const allRelationOptions = React.useMemo<Record<RelationKey, RelationOption[]>>(
     () => ({
@@ -1779,7 +1780,10 @@ export default function KnowledgeWorkspacePage() {
     },
   } as const;
 
-  const libraryName = isCreate ? activeCreateLibrary?.name : doc?.library_name;
+  const libraryName = knowledgeLibraryName(
+    t,
+    isCreate ? activeCreateLibrary : { slug: doc?.library_slug, name: doc?.library_name },
+  );
   const libraryListUrl = `/knowledge?library=${encodeURIComponent(workspaceLibrarySlug || '')}&allLibraries=0`;
   const workflow = doc?.workflow || null;
   const workflowActive = !!workflow?.is_active;
@@ -1836,7 +1840,7 @@ export default function KnowledgeWorkspacePage() {
   return (
     <>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1, flexWrap: 'wrap', gap: 1 }}>
-        <Breadcrumbs aria-label="breadcrumb">
+        <Breadcrumbs aria-label={t('common:labels.breadcrumb')}>
           <MLink component={Link} underline="hover" color="inherit" to="/knowledge">{t('workspace.breadcrumbs.knowledge')}</MLink>
           {libraryName && (
             <MLink component={Link} underline="hover" color="inherit" to={libraryListUrl}>{libraryName}</MLink>

@@ -164,7 +164,7 @@ function yearTotal(months: Array<{ cents: bigint | null }>): bigint {
   return months.reduce((sum, month) => sum + (month.cents ?? 0n), 0n);
 }
 
-/** A noon-UTC end of validity is a calendar day. Any other instant stays ISO. */
+/** An end of validity is written as its calendar day (`formatCsvEndOfValidity`). */
 export const formatEnd = formatCsvEndOfValidity;
 
 function asText(raw: unknown): string {

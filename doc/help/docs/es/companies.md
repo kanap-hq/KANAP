@@ -15,7 +15,7 @@ Navegue a **Datos maestros > Empresas** para abrir la lista.
 - **Ciudad**: ciudad donde tiene sede la empresa
 - **Moneda base**: código de moneda ISO (búsqueda por nombre o código)
 
-**Consejo**: Mantenga nombres únicos para evitar confusión en importaciones y listas de selección.
+**Nombres únicos**: cada empresa tiene su propio nombre, sin distinguir mayúsculas y minúsculas (`Acme` y `acme` son el mismo nombre). Un nombre que ya tiene otra empresa se rechaza, con un mensaje bajo el nombre.
 
 ## Trabajar con la lista
 
@@ -75,9 +75,10 @@ La lista muestra todas las empresas de su espacio de trabajo. Utilícela para re
 Haga clic en cualquier fila de la lista para abrir el espacio de trabajo de la empresa. Tiene dos pestañas: **Visión general** y **Detalles**.
 
 - **Encabezado**: el nombre de la empresa. Haga clic en él para cambiar el nombre de la empresa. Las flechas con «N de M» permiten moverse entre empresas en el orden y con los filtros de la lista, sin volver a ella. El enlace de retorno, **Empresas**, vuelve a la lista con su contexto de búsqueda intacto
+- **Estado**, bajo el nombre: **Activado** o **Desactivado**. Haga clic para cambiarlo. Elegir **Desactivado** desactiva la empresa de inmediato: el fin de validez pasa a ser la hora actual
 - **Panel Propiedades** a la derecha: **País**, **Moneda base**, **Plan de cuentas** y **Ciclo de vida**. Use el botón situado junto al panel para plegarlo o volver a abrirlo
 
-**Guardado automático**: Cada cambio se guarda por sí solo al salir del campo. No hay botones Guardar, Restablecer ni Cerrar. Puede seguir trabajando mientras se guarda un cambio. Cuando se rechaza un cambio, el motivo aparece bajo el campo que lo causó, salvo para el nombre, cuyo rechazo se muestra en la parte superior de la página.
+**Guardado automático**: Cada cambio se guarda por sí solo al salir del campo. No hay botones Guardar, Restablecer ni Cerrar. Puede seguir trabajando mientras se guarda un cambio. Cuando se rechaza un cambio, el motivo aparece bajo el campo que lo causó.
 
 ---
 
@@ -160,6 +161,7 @@ Utilice el **Fin de validez** para controlar cuándo una empresa deja de estar a
     - La empresa ya no aparece en las listas de selección para nuevas asignaciones y se excluye de los informes de años estrictamente posteriores.
     - Los datos históricos permanecen intactos; la empresa sigue apareciendo en informes que cubren años en los que estaba activa.
 - **Prefiera desactivar en lugar de eliminar.** Una empresa que aún se usa no se puede eliminar: líneas presupuestarias (como empresa pagadora o en sus asignaciones), contratos, centros de coste, departamentos, usuarios, las ubicaciones que opera, tareas, aplicaciones, interfaces, proyectos y solicitudes del portafolio, y miembros del equipo cuya empresa predeterminada es. El mensaje cuenta lo que la usa, por ejemplo "Esta empresa se usa en 2 departamentos y 14 usuarios". Desactívela en su lugar. Sus métricas anuales se eliminan con ella. En la lista, la confirmación nombra las empresas que se conservan así, con lo que las usa, antes de eliminar nada.
+- **Para eliminar una empresa de todos modos**, quite primero lo que la usa. Indique otra empresa en sus usuarios, líneas presupuestarias y sus asignaciones, contratos, centros de coste, las ubicaciones que opera, tareas, aplicaciones, interfaces, proyectos y solicitudes del portafolio, y miembros del equipo. Mueva sus departamentos a otra empresa, o elimínelos al final, cuando nada los use. Después elimine la empresa.
 
 ## Métricas anuales
 
@@ -195,7 +197,7 @@ Las columnas, en este orden. Las columnas de métricas siguen el año selecciona
 | `reg_number`, `vat_number` | Número de registro y número de IVA |
 | `base_currency` | Obligatoria. Tres letras |
 | `status` | `enabled` o `disabled` |
-| `disabled_at` | El fin de validez: una fecha (`2026-12-31`) o una fecha y una hora completas |
+| `disabled_at` | El fin de validez: una fecha (`2026-12-31`) o una fecha y una hora completas. La exportación escribe solo la fecha. Importada de nuevo, esa fecha conserva el fin de validez guardado |
 | `notes` | Texto libre |
 | `headcount_<año>` | Obligatoria cuando la fila lleva alguna métrica de ese año |
 | `it_users_<año>` | Un número entero |
@@ -204,7 +206,7 @@ Las columnas, en este orden. Las columnas de métricas siguen el año selecciona
 **Importación**:
 
 - Empiece por la **Verificación previa**. Valida los encabezados, la codificación, los campos obligatorios, los duplicados y las métricas. Si la comprobación es correcta, **Cargar** aplica las inserciones y las actualizaciones
-- **Emparejamiento**: por el `name` de la empresa. Un nombre que aparece dos veces en el archivo se conserva una vez, gana la primera fila
+- **Emparejamiento**: por el `name` de la empresa, sin distinguir mayúsculas y minúsculas. La grafía guardada se mantiene: una fila `ACME` actualiza `Acme`, y la verificación previa indica «ACME» se ha asociado a «Acme». Un nombre que aparece dos veces en el archivo se conserva una vez, gana la primera fila
 - **Campos obligatorios**: `name`, `country_iso` y `base_currency`
 - **Estado y fin de validez**: la exportación escribe el estado deducido del fin de validez. Una empresa nueva se activa salvo que la fila indique `disabled`. En una actualización, un `status` vacío y un `disabled_at` vacío conservan los valores guardados. `enabled` con una fecha vacía borra el fin de validez. `disabled` con una fecha vacía conserva una fecha ya pasada y, si no, finaliza la empresa hoy
 - Una fila cuyo estado contradice su fecha se rechaza con un error de fila: "Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again." o "Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed."

@@ -190,7 +190,7 @@ Laden oder aktualisieren Sie Kalender und ihre Arbeitstage aus einer Datei.
 | `country` | Optional. Der zweistellige Ländercode eines Standardkalenders, zum Beispiel `FR`. Leer bei einem individuellen Kalender |
 | `region` | Optional. Der Regionscode, zum Beispiel `57` für Moselle oder `BY` für Bayern. Erfordert ein Land. Leer für das ganze Land |
 | `status` | `enabled` oder `disabled`. Leer bedeutet `enabled` |
-| `disabled_at` | Optionale Spalte. Das Ende der Gültigkeit: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Leer, wenn es kein Ende gibt |
+| `disabled_at` | Optionale Spalte. Das Ende der Gültigkeit: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Der Export schreibt nur das Datum. Erneut importiert, behält dieses Datum das gespeicherte Gültigkeitsende. Leer, wenn es kein Ende gibt |
 | `year` | Vier Ziffern, von 2000 bis 2100. Leer bei einer Zeile, die nur die Felder des Kalenders setzt |
 | `jan` bis `dec` | Die Arbeitstage jedes Monats, mit einem Punkt als Dezimaltrennzeichen (ein Komma wird auch akzeptiert). Pflicht bei einer Zeile mit Jahr |
 

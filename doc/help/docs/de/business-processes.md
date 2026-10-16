@@ -121,7 +121,7 @@ Klicken Sie auf der Listenseite auf **CSV exportieren**. Sie können exportieren
 - Eine **Vorlage** (nur Kopfzeile) als Ausgangspunkt.
 - **Daten** (alle Prozesse des aktuellen Mandanten).
 
-Die Datei verwendet Semikolons (`;`) als Trennzeichen und ist als UTF-8 mit BOM für Excel-Kompatibilität codiert.
+Das Trennzeichen folgt der Sprache Ihres Bildschirms. Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen und die beiden Importschritte.
 
 **Spalten**: `name`, `categories`, `description`, `notes`, `status`.
 
@@ -131,15 +131,15 @@ Die Spalte `categories` kann mehrere durch Semikolons getrennte Kategorienamen i
 
 Klicken Sie auf der Listenseite auf **CSV importieren**, dann:
 
-1. Laden Sie Ihre CSV-Datei hoch (muss den Vorlagenkopfzeilen entsprechen und `;` als Trennzeichen verwenden).
+1. Laden Sie Ihre CSV-Datei mit den Spaltentiteln der Vorlage hoch. Kommas und Semikolons funktionieren beide.
 2. Führen Sie die **Vorprüfung** durch -- diese validiert Kopfzeilen und Daten und zeigt, wie viele Zeilen erstellt bzw. aktualisiert werden.
 3. Wenn die Vorprüfung bestanden wird, klicken Sie auf **Laden** zum Anwenden.
 
 **Zuordnungsregeln**:
 
-- Zeilen werden anhand des **Namens** zugeordnet (Groß-/Kleinschreibung wird ignoriert). Ein übereinstimmender Name aktualisiert den bestehenden Prozess; ein neuer Name erstellt einen neuen Prozess.
+- Zeilen werden anhand des **Namens** zugeordnet, unabhängig von Groß- und Kleinschreibung. Ein übereinstimmender Name aktualisiert den bestehenden Prozess und behält die gespeicherte Schreibweise (die Vorabprüfung meldet, welchem Prozess die Zeile zugeordnet wurde); ein neuer Name erstellt einen neuen Prozess.
 - Jede Kategorie in der Zelle `categories` wird getrimmt und anhand des Namens zugeordnet. Wenn eine Kategorie noch nicht existiert, wird sie automatisch als aktive Kategorie erstellt.
-- Die Spalte `status` legt den Aktiviert/Deaktiviert-Zustand fest. Lebenszyklusdaten werden nicht importiert -- passen Sie diese bei Bedarf im Arbeitsbereich an.
+- Die Datei hat keine Spalte für das Gültigkeitsende. Bei einer Aktualisierung behält ein leerer `status` oder einer, der dem aktuellen Status des Prozesses entspricht, dessen Gültigkeitsende. Ein anderer Status wird angewendet: `enabled` löscht das Gültigkeitsende, und `disabled` beendet den Prozess heute, sofern sein Gültigkeitsende nicht bereits vergangen ist. Ein neuer Prozess ist aktiviert, sofern die Zeile nicht `disabled` angibt.
 
 **Tipp**: Exportieren Sie zuerst Ihre aktuellen Daten, ändern Sie die CSV und importieren Sie erneut. Dies vermeidet versehentliche Duplikate und stellt sicher, dass Sie mit dem aktuellsten Stand arbeiten.
 

@@ -639,9 +639,9 @@ export default function ContractsPage() {
         }}
       />
 
-      <CsvExportDialog listRequest={listRequest} entity="contracts" open={exportOpen} onClose={() => setExportOpen(false)} endpoint="/contracts" title={t("contracts.exportTitle")} />
+      <CsvExportDialog listRequest={listRequest} entity="contracts" open={exportOpen} onClose={() => setExportOpen(false)} endpoint="/contracts" title={t("contracts.exportTitle")} flexibleFormat />
       <ContractSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} onSaved={() => setRefreshKey(k => k + 1)} />
-      <CsvImportDialog open={importOpen} onClose={() => setImportOpen(false)} endpoint="/contracts" title={t("contracts.importTitle")} onImported={() => setRefreshKey(k => k + 1)} />
+      <CsvImportDialog open={importOpen} onClose={() => setImportOpen(false)} endpoint="/contracts" title={t("contracts.importTitle")} onImported={() => setRefreshKey(k => k + 1)} flexibleFormat />
     </>
   );
 }

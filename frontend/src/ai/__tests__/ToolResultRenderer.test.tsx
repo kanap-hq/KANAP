@@ -154,6 +154,6 @@ describe('ToolResultBody', () => {
 
     expect(screen.getByText('assignee')).toBeInTheDocument();
     expect(screen.getByText('user display name')).toBeInTheDocument();
-    expect(screen.getByText('aliases: assignee_id')).toBeInTheDocument();
+    expect(screen.getByText('toolResults.aliases')).toBeInTheDocument();
   });
 });

@@ -158,7 +158,7 @@ export default function ConnectionHopEquipmentPicker({
             <TextField
               {...params}
               variant="standard"
-              placeholder={value.entity_code ? `entity:${value.entity_code} (switch to pick a server)` : 'e.g., waf-prod-1 or AST-12'}
+              placeholder={value.entity_code ? (entities.find((ent: any) => ent.code === value.entity_code)?.label || value.entity_code) : 'e.g., waf-prod-1 or AST-12'}
               sx={fieldSx}
             />
           )}

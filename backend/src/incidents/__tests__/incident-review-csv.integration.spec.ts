@@ -315,6 +315,7 @@ async function testExportImportRoundTrip() {
     const exported = await services.csv.export({
       manager: runner.manager,
       tenantId: f.tenantId,
+      language: 'fr',
       viewer: { userId: f.users.admin, isAdmin: true },
     });
     assert.ok(exported.content.includes('review'), 'the review column is exported by default');

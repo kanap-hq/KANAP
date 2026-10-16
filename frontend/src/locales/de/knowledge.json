@@ -18,7 +18,7 @@
     "version": "Version"
   },
   "confirmations": {
-    "deleteLibrary": "Diese Bibliothek löschen? Dokumente und Ordner werden in die Standardbibliothek verschoben.",
+    "deleteLibrary": "Diese Bibliothek löschen? Ihre Dokumente und Ordner werden in die erste Bibliothek der Leiste verschoben, auf die Sie Zugriff haben, normalerweise die Standardbibliothek.",
     "resetLibraryAccess": "Diese Bibliothek wieder für alle freigeben und die benutzerdefinierten Leser- und Bearbeiterlisten löschen?"
   },
   "dialogs": {
@@ -142,7 +142,7 @@
   },
   "menus": {
     "blankDocument": "Leeres Dokument",
-    "fromTemplate": "Aus Vorlage..."
+    "fromTemplate": "Aus Vorlage…"
   },
   "messages": {
     "documentMoved": "Dokument verschoben.",
@@ -357,6 +357,21 @@
     "in_review": "In Prüfung",
     "obsolete": "Veraltet",
     "published": "Veröffentlicht"
+  },
+  "systemNames": {
+    "libraries": {
+      "documents": "Dokumente",
+      "templates": "Vorlagen",
+      "managedDocs": "Verwaltete Dokumente"
+    },
+    "folders": {
+      "integrated_requests": "Anfragen",
+      "integrated_projects": "Projekte",
+      "integrated_interfaces": "Schnittstellen",
+      "integrated_applications": "Anwendungen",
+      "integrated_assets": "Assets",
+      "integrated_incidents": "Vorfälle"
+    }
   },
   "typesManager": {
     "columns": {

@@ -18,7 +18,7 @@
     "version": "Version"
   },
   "confirmations": {
-    "deleteLibrary": "Delete this library? Knowledge items and folders will be moved to the fallback library.",
+    "deleteLibrary": "Delete this library? Its documents and folders move to the first library you can open in the bar, normally the default library.",
     "resetLibraryAccess": "Switch this library back to open access and clear the custom reader and writer lists?"
   },
   "dialogs": {
@@ -142,7 +142,7 @@
   },
   "menus": {
     "blankDocument": "Blank document",
-    "fromTemplate": "From template..."
+    "fromTemplate": "From template…"
   },
   "messages": {
     "documentMoved": "Document moved.",
@@ -357,6 +357,21 @@
     "in_review": "In review",
     "obsolete": "Obsolete",
     "published": "Published"
+  },
+  "systemNames": {
+    "libraries": {
+      "documents": "Documents",
+      "templates": "Templates",
+      "managedDocs": "Managed Docs"
+    },
+    "folders": {
+      "integrated_requests": "Requests",
+      "integrated_projects": "Projects",
+      "integrated_interfaces": "Interfaces",
+      "integrated_applications": "Applications",
+      "integrated_assets": "Assets",
+      "integrated_incidents": "Incidents"
+    }
   },
   "typesManager": {
     "columns": {

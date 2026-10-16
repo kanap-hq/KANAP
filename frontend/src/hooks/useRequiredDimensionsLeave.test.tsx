@@ -134,7 +134,7 @@ describe('useRequiredDimensionsLeave', () => {
     const page = setup({ lineId: 'line-a', axes: [MENU], values: {} });
     act(() => page.leave().noteChange());
     const { answer } = ask(page.leave());
-    fireEvent.click(await screen.findByRole('button', { name: 'Close dialog' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'labels.closeDialog' }));
     await expect(answer).resolves.toBe(false);
   });
 

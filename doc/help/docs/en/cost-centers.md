@@ -186,7 +186,7 @@ Load or update the whole tree from a file.
 | `owner_email` | The email of the budget holder, an active user. Empty for no budget holder |
 | `description` | Free text |
 | `status` | `enabled` or `disabled`. Empty means `enabled` for a new node and keeps the stored status on an update |
-| `disabled_at` | Optional column. The end of validity: a date (`2026-12-31`) or a full date and time. Empty if there is no end. On an update, a blank `status` and a blank `disabled_at` keep the stored values. `enabled` with an empty date clears the end of validity. `disabled` with an empty date keeps a date that has already passed, and otherwise ends the node today |
+| `disabled_at` | Optional column. The end of validity: a date (`2026-12-31`) or a full date and time. The export writes the date only. Imported again, that date keeps the stored end of validity. Empty if there is no end. On an update, a blank `status` and a blank `disabled_at` keep the stored values. `enabled` with an empty date clears the end of validity. `disabled` with an empty date keeps a date that has already passed, and otherwise ends the node today |
 
 **Import**:
 

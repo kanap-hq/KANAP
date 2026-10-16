@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
@@ -6,6 +7,7 @@ import api from '../api';
 import { sanitizeLoginRedirect } from '../auth/loginRedirect';
 
 export default function LoginCallbackPage() {
+  const { t } = useTranslation('auth');
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -82,7 +84,7 @@ export default function LoginCallbackPage() {
       <Box textAlign="center">
         <CircularProgress />
         <Typography variant="body2" sx={{ mt: 2 }}>
-          Signing you in…
+          {t('callback.signingIn')}
         </Typography>
       </Box>
     </Box>

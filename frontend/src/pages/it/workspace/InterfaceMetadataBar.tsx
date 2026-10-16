@@ -1,5 +1,6 @@
 import useApplicationClassificationCatalog from '../../../hooks/useApplicationClassificationCatalog';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, MenuItem, Popover, Typography, useTheme } from '@mui/material';
 import {
   PortfolioMetadataItem,
@@ -47,6 +48,7 @@ export default function InterfaceMetadataBar({
   onDataClassChange,
   onFlowClick,
 }: Props) {
+  const { t } = useTranslation('it');
   const { data: classificationCatalog } = useApplicationClassificationCatalog();
   const theme = useTheme();
   const { byField, labelFor } = useItOpsEnumOptions();
@@ -104,7 +106,7 @@ export default function InterfaceMetadataBar({
         {routeLabel}
       </PortfolioMetadataItem>
       <PortfolioMetadataItem
-        label="Data"
+        label={t('classification.data')}
         onClick={(event) => !disabled && setDataClassAnchor(event.currentTarget)}
         disabled={disabled}
       >
@@ -113,7 +115,7 @@ export default function InterfaceMetadataBar({
       <PortfolioMetadataItem disabled>
         <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
           <Typography component="span" sx={{ fontSize: 12 }}>
-            {containsPii ? 'PII' : 'No PII'}
+            {containsPii ? t('workspace.interface.pii.label') : t('workspace.interface.pii.none')}
           </Typography>
         </Box>
       </PortfolioMetadataItem>

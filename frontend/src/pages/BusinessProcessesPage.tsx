@@ -199,6 +199,7 @@ export default function BusinessProcessesPage() {
         onClose={() => setExportOpen(false)}
         endpoint="/business-processes"
         title={t("businessProcesses.export")}
+        flexibleFormat
       />
       <CsvImportDialog
         open={importOpen}
@@ -206,6 +207,7 @@ export default function BusinessProcessesPage() {
         endpoint="/business-processes"
         title={t("businessProcesses.import")}
         onImported={() => setRefreshKey((k) => k + 1)}
+        flexibleFormat
       />
       <BusinessProcessCategoryManagerDialog
         open={categoryManagerOpen}

@@ -132,6 +132,7 @@
       "baseCurrency": "Moneda base",
       "chartOfAccounts": "Plan de cuentas",
       "lifecycle": "Ciclo de vida",
+      "status": "Estado",
       "address1": "Dirección, línea 1",
       "address2": "Dirección, línea 2",
       "postalCode": "Código postal",
@@ -144,6 +145,10 @@
       "headcount": "Plantilla",
       "itUsers": "Usuarios IT",
       "turnover": "Facturación (M€)"
+    },
+    "status": {
+      "enabled": "Activado",
+      "disabled": "Desactivado"
     },
     "sections": {
       "address": "Dirección",
@@ -169,6 +174,7 @@
       "saveFailed": "Error al guardar la empresa.",
       "createFailed": "Error al crear la empresa.",
       "nameRequired": "Introduzca un nombre.",
+      "nameTaken": "Otra empresa ya tiene este nombre.",
       "countryRequired": "Elija un país.",
       "currencyRequired": "Elija una moneda base.",
       "cityRequired": "Introduzca una ciudad.",
@@ -218,6 +224,7 @@
       "saveFailed": "Error al guardar el departamento.",
       "createFailed": "Error al crear el departamento.",
       "nameRequired": "Introduzca un nombre.",
+      "nameTaken": "Otro departamento de esta empresa ya tiene este nombre.",
       "companyRequired": "Elija una empresa.",
       "headcountInvalid": "Introduzca un número entero, 0 o más."
     },
@@ -941,7 +948,8 @@
       "itOwner": "Responsable IT",
       "itOwnerHelper": "Contacto IT responsable de las herramientas / sistemas que soportan este proceso",
       "notesPlaceholder": "Notas internas, enlaces a SOPs o mapas de procesos",
-      "nameRequired": "El nombre es obligatorio"
+      "nameRequired": "El nombre es obligatorio",
+      "nameTaken": "Otro proceso de negocio ya tiene este nombre."
     },
     "categoryManager": {
       "title": "Gestionar categorías de procesos de negocio",

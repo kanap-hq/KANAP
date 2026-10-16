@@ -145,18 +145,6 @@ export class ApplicationsService {
     return this.crudService.deleteAttachment(attachmentId, userId, opts);
   }
 
-  // CSV operations
-  exportCsv(scope: 'template' | 'data', opts?: ServiceOpts) {
-    return this.crudService.exportCsv(scope, opts);
-  }
-
-  importCsv(
-    params: { file: Express.Multer.File; dryRun: boolean; userId?: string | null },
-    opts?: ServiceOpts,
-  ) {
-    return this.crudService.importCsv(params, opts);
-  }
-
   // Derived users
   getTotalUsers(appId: string, yearOverride?: number, opts?: ServiceOpts) {
     return this.crudService.getTotalUsers(appId, yearOverride, opts);

@@ -1263,7 +1263,7 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
 
 - GET `/tasks?status=open|in_progress|pending|in_testing|done|cancelled&page=1&limit=50&sort=created_at:DESC&q&filters` — list all tasks (aggregated) **[Requires: tasks:reader]**
   - Response: `{ items: TaskRow[], total, page, limit }`
-  - TaskRow: `{ id, tenant_id, title, description, status, due_date, created_at, assignee_user_id, assignee_name, related_object_type, related_object_id, related_object_name, priority_level, priority_score, task_type_id, task_type_name, source_id, source_name, category_id, category_name, stream_id, stream_name, company_id, company_name }`
+  - TaskRow: `{ id, tenant_id, title, description, status, due_date, created_at, assignee_user_id, assignee_name, related_object_type, related_object_id, related_object_name, priority_level, priority_score, task_type_id, task_type_name, task_type_code, source_id, source_name, category_id, category_name, stream_id, stream_name, company_id, company_name }`
   - Filtering: supports AG Grid filter model via `filters` JSON and `q` quick search; default sort `created_at:DESC`
     - Text filters: `{ filterType: 'text', type: 'contains' | 'equals' | ... , filter: string }`
     - Set filters: `{ filterType: 'set', values: string[] }` (empty array = match nothing)

@@ -123,11 +123,10 @@ Gestione contactos de forma masiva usando CSV.
 
 **Campos obligatorios**: Correo electrónico
 
-**Campos opcionales**: Nombre, Apellido, Nombre del proveedor, Puesto de trabajo, Teléfono, Móvil, País, Activo
+**Campos opcionales**: `first_name`, `last_name`, `job_title`, `phone`, `mobile`, `country`, `notes`, `active`
 
 **Notas**:
-- Utilice codificación **UTF-8** y **puntos y coma** como separadores. Un archivo que Excel guardó como CSV simple (Windows-1252) también se importa
-- El proveedor se busca por nombre. Asegúrese de que el proveedor exista antes de importar.
+- Consulte [Archivos CSV](csv-files.md) para la codificación, el separador y los dos pasos de importación
 
 ---
 

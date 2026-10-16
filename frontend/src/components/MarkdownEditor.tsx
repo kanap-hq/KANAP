@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, ClickAwayListener, GlobalStyles, MenuItem, MenuList, Paper, Popper } from '@mui/material';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { alpha, useTheme } from '@mui/material/styles';
@@ -105,6 +106,7 @@ const EMOJI_OPTIONS = [
 ] as const;
 
 function EmojiPickerButton() {
+  const { t } = useTranslation('common');
   const insertMarkdown = usePublisher(insertMarkdown$);
   const items = React.useMemo(
     () => EMOJI_OPTIONS.map(({ value, label }) => ({
@@ -121,7 +123,7 @@ function EmojiPickerButton() {
 
   return (
     <ButtonOrDropdownButton
-      title="Insert emoji"
+      title={t('markdownEditor.insertEmoji')}
       items={items}
       onChoose={(value) => {
         insertMarkdown(value);
@@ -139,6 +141,7 @@ function KanapBlockStyleSelect({
 }: {
   allowedHeadingLevels: MarkdownEditorHeadingLevel[];
 }) {
+  const { t } = useTranslation('common');
   const theme = useTheme();
   const convertSelectionToNode = usePublisher(convertSelectionToNode$);
   const currentBlockType = useCellValue(currentBlockType$);
@@ -264,7 +267,7 @@ function KanapBlockStyleSelect({
             <MenuList
               dense
               disablePadding
-              aria-label="Block style"
+              aria-label={t('markdownEditor.blockStyle')}
               onKeyDown={(event) => {
                 if (event.key === 'Escape' || event.key === 'Tab') {
                   setAnchorEl(null);

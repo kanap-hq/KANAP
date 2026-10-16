@@ -121,7 +121,7 @@ Click **Export CSV** on the list page. You can export:
 - A **template** (header row only) to use as a starting point.
 - **Data** (all processes for the current tenant).
 
-The file uses semicolons (`;`) as separators and is encoded as UTF-8 with BOM for Excel compatibility.
+The separator follows the language of your screen. See [CSV files](csv-files.md) for the encoding, the separator and the two import steps.
 
 **Columns**: `name`, `categories`, `description`, `notes`, `status`.
 
@@ -131,15 +131,15 @@ The `categories` column may contain multiple category names separated by semicol
 
 Click **Import CSV** on the list page, then:
 
-1. Upload your CSV file (must match the template headers and use `;` as separator).
+1. Upload your CSV file with the column titles of the template. Commas or semicolons both work.
 2. Run the **Preflight** check -- this validates headers and data, and shows how many rows will be created vs. updated.
 3. If preflight passes, click **Load** to apply changes.
 
 **Matching rules**:
 
-- Rows are matched by **Name** (case-insensitive). A matching name updates the existing process; a new name creates a new process.
+- Rows are matched by **Name**, whatever the case. A matching name updates the existing process and keeps its stored spelling (the preflight check says which process the row matched); a new name creates a new process.
 - Each category in the `categories` cell is trimmed and matched by name. If a category does not exist yet, it is created automatically as an active category.
-- The `status` column sets enabled/disabled state. Lifecycle dates are not imported -- adjust them in the workspace if needed.
+- The file has no end of validity column. On an update, a blank `status`, or one equal to the process's current status, keeps its end of validity. A different status applies it: `enabled` clears the end of validity, and `disabled` ends the process today unless its end of validity has already passed. A new process is enabled unless the row says `disabled`.
 
 **Tip**: export your current data first, modify the CSV, and re-import. This avoids accidental duplicates and ensures you are working from the latest state.
 

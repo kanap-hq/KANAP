@@ -12,7 +12,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import api from '../../../api';
 import { useTranslation } from 'react-i18next';
 import KanapDialog from '../../../components/design/KanapDialog';
-import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { getApiErrorMessage, isDuplicateError } from '../../../utils/apiErrorMessage';
 
 type SubItem = {
   id: string;
@@ -64,6 +64,14 @@ export default function LocationSubItemsTable({ locationId, canManage, onCountCh
   const [items, setItems] = React.useState<SubItem[]>([]);
   const [drafts, setDrafts] = React.useState<DraftRow[]>([]);
   const [error, setError] = React.useState<string | null>(null);
+  // A name another sub-location of the location has shows under that row's name, by row or draft id.
+  const [nameErrors, setNameErrors] = React.useState<Record<string, string>>({});
+  const setNameError = (key: string, message: string | null) => setNameErrors((prev) => {
+    const next = { ...prev };
+    if (message) next[key] = message;
+    else delete next[key];
+    return next;
+  });
   const [pendingDelete, setPendingDelete] = React.useState<SubItem | null>(null);
   const [deleting, setDeleting] = React.useState(false);
 
@@ -89,6 +97,7 @@ export default function LocationSubItemsTable({ locationId, canManage, onCountCh
       return;
     }
     setItems((prev) => sortByName(prev.map((r) => (r.id === item.id ? { ...r, ...patch } : r))));
+    setNameError(item.id, null);
     try {
       await api.patch(`/locations/${locationId}/sub-items/${item.id}`, {
         name: trimmedName,
@@ -96,7 +105,8 @@ export default function LocationSubItemsTable({ locationId, canManage, onCountCh
       });
       setError(null);
     } catch (e: any) {
-      setError(getApiErrorMessage(e, t, t('messages.saveSubLocationsFailed')));
+      if (isDuplicateError(e)) setNameError(item.id, t('messages.subLocationNameTaken'));
+      else setError(getApiErrorMessage(e, t, t('messages.saveSubLocationsFailed')));
       void load();
     }
   };
@@ -138,6 +148,7 @@ export default function LocationSubItemsTable({ locationId, canManage, onCountCh
 
   const removeDraft = (draftId: string) => {
     setDrafts((rows) => rows.filter((r) => r.draftId !== draftId));
+    setNameError(draftId, null);
   };
 
   const commitDraft = async (draft: DraftRow) => {
@@ -160,7 +171,8 @@ export default function LocationSubItemsTable({ locationId, canManage, onCountCh
       removeDraft(draft.draftId);
       setError(null);
     } catch (e: any) {
-      setError(getApiErrorMessage(e, t, t('messages.saveSubLocationsFailed')));
+      if (isDuplicateError(e)) setNameError(draft.draftId, t('messages.subLocationNameTaken'));
+      else setError(getApiErrorMessage(e, t, t('messages.saveSubLocationsFailed')));
     }
   };
 
@@ -238,6 +250,7 @@ export default function LocationSubItemsTable({ locationId, canManage, onCountCh
                 key={row.id}
                 row={row}
                 canManage={canManage}
+                nameError={nameErrors[row.id]}
                 onSave={(patch) => handleSaveRow(row, patch)}
                 onDelete={() => requestDelete(row)}
               />
@@ -250,6 +263,8 @@ export default function LocationSubItemsTable({ locationId, canManage, onCountCh
                     onChange={(e) => updateDraft(draft.draftId, { name: e.target.value })}
                     onBlur={() => { void commitDraft(draft); }}
                     placeholder="e.g., Building A — Room 1 — Rack 5"
+                    error={!!nameErrors[draft.draftId]}
+                    helperText={nameErrors[draft.draftId]}
                     variant="standard"
                     fullWidth
                     autoFocus
@@ -315,11 +330,13 @@ export default function LocationSubItemsTable({ locationId, canManage, onCountCh
 function SubItemRow({
   row,
   canManage,
+  nameError,
   onSave,
   onDelete,
 }: {
   row: SubItem;
   canManage: boolean;
+  nameError?: string;
   onSave: (patch: Partial<{ name: string; description: string | null }>) => void;
   onDelete: () => void;
 }) {
@@ -339,6 +356,8 @@ function SubItemRow({
             onBlur={() => {
               if (name.trim() !== row.name) onSave({ name });
             }}
+            error={!!nameError}
+            helperText={nameError}
             variant="standard"
             fullWidth
             disabled={!canManage}

@@ -2,11 +2,11 @@
   "aiAdmin": {
     "actions": {
       "createKey": "Crear clave",
-      "creating": "Creando...",
+      "creating": "Creando…",
       "done": "Listo",
       "saveSettings": "Guardar configuración",
       "testConnection": "Probar conexión",
-      "testing": "Probando..."
+      "testing": "Probando…"
     },
     "dialogs": {
       "claudeCodeHelper": "Ejecútelo en un terminal para conectar Claude Code a KANAP con esta clave.",
@@ -96,7 +96,7 @@
       "revokeMcpKeyFailed": "No se pudo revocar la clave MCP.",
       "saveFailed": "No se pudo guardar.",
       "settingsSaved": "Configuración guardada.",
-      "testingWebSearch": "Probando conectividad de búsqueda web...",
+      "testingWebSearch": "Probando conectividad de búsqueda web…",
       "webSearchTestFailed": "La prueba de búsqueda web falló."
     },
     "overview": {
@@ -345,15 +345,15 @@
     "title": "Registro de auditoría",
     "values": {
       "unknownAccount": "Cuenta desconocida",
-      "unknownUser": "Desconocido ({{id}}...)"
+      "unknownUser": "Desconocido ({{id}}…)"
     }
   },
   "auth": {
     "actions": {
       "connect": "Conectar",
-      "connecting": "Conectando...",
+      "connecting": "Conectando…",
       "disconnect": "Desconectar",
-      "disconnecting": "Desconectando...",
+      "disconnecting": "Desconectando…",
       "reconnect": "Reconectar",
       "testSignIn": "Probar inicio de sesión"
     },
@@ -494,10 +494,10 @@
       "clear": "Borrar",
       "discard": "Descartar",
       "removeLogo": "Eliminar logo",
-      "removingLogo": "Eliminando...",
+      "removingLogo": "Eliminando…",
       "replaceSelectedFile": "Reemplazar archivo seleccionado",
       "resetToDefault": "Restablecer a predeterminado",
-      "resetting": "Restableciendo...",
+      "resetting": "Restableciendo…",
       "uploadLogo": "Subir logo"
     },
     "colors": {
@@ -597,7 +597,7 @@
       "save": "Save",
       "savePlanLimits": "Guardar límite",
       "test": "Test connection",
-      "testing": "Testing..."
+      "testing": "Testing…"
     },
     "cards": {
       "planLimits": "Mensajes de IA incluidos",
@@ -797,7 +797,7 @@
   "roles": {
     "actions": {
       "duplicate": "Duplicar",
-      "duplicating": "Duplicando...",
+      "duplicating": "Duplicando…",
       "newRole": "Nuevo rol",
       "saveDetails": "Guardar detalles",
       "savePermissions": "Guardar permisos"
@@ -1352,7 +1352,7 @@
       "actions": {
         "save": "Guardar configuración",
         "test": "Probar conexión",
-        "testing": "Probando...",
+        "testing": "Probando…",
         "goToSync": "Configurar la sincronización"
       }
     }

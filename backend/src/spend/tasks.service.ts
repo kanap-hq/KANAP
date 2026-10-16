@@ -26,6 +26,8 @@ export interface TaskListItem {
   // Task type (FK to portfolio_task_types)
   task_type_id: string | null;
   task_type_name: string | null;
+  /** The shipped type it started as (`task`, `bug`...), null for a tenant's own type. */
+  task_type_code: string | null;
   // Project-specific fields
   phase_id: string | null;
   phase_name: string | null;
@@ -764,6 +766,7 @@ export class TasksService {
         END as related_object_name,
         t.task_type_id,
         tt.name as task_type_name,
+        tt.code as task_type_code,
         t.phase_id,
         phase.name as phase_name,
         t.priority_level,
@@ -1080,6 +1083,7 @@ export class TasksService {
         END as related_object_name,
         t.task_type_id,
         tt.name as task_type_name,
+        tt.code as task_type_code,
         t.phase_id,
         phase.name as phase_name,
         t.priority_level,

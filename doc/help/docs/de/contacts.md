@@ -123,11 +123,10 @@ Verwalten Sie Kontakte in großen Mengen per CSV.
 
 **Pflichtfelder**: E-Mail
 
-**Optionale Felder**: Vorname, Nachname, Lieferantenname, Berufsbezeichnung, Telefon, Mobil, Land, Aktiv
+**Optionale Felder**: `first_name`, `last_name`, `job_title`, `phone`, `mobile`, `country`, `notes`, `active`
 
 **Hinweise**:
-- Verwenden Sie **UTF-8-Kodierung** und **Semikolons** als Trennzeichen. Eine von Excel als einfache CSV gespeicherte Datei (Windows-1252) wird ebenfalls importiert
-- Der Lieferant wird nach Name zugeordnet. Stellen Sie sicher, dass der Lieferant vor dem Import existiert.
+- Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen und die beiden Importschritte
 
 ---
 

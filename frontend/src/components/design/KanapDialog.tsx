@@ -161,7 +161,7 @@ export default function KanapDialog({
               </Typography>
             ) : null}
           </Box>
-          <IconButton aria-label="Close dialog" onClick={onClose} size="small">
+          <IconButton aria-label={t('labels.closeDialog')} onClick={onClose} size="small">
             <CloseIcon sx={{ fontSize: 18 }} />
           </IconButton>
         </Box>

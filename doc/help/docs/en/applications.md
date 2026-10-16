@@ -448,7 +448,7 @@ From the Applications list:
 
 ### Import workflow
 
-1. **Prepare your file**: Use UTF-8 encoding with semicolon (`;`) separators. A file Excel saved as plain CSV (Windows-1252) imports too. Download a template to ensure correct headers.
+1. **Prepare your file**: Save it as UTF-8. Commas or semicolons both work, and so does a file Excel saved as plain CSV (Windows-1252). Download a template to ensure correct headers. The separator, amounts, dates and yes or no of each language are in [CSV files](csv-files.md).
 
 2. **Choose import settings**:
    - **Mode**:
@@ -477,7 +477,7 @@ From the Applications list:
 | `editor` | Software publisher | No | Free text (e.g., Microsoft, SAP) |
 | `criticality` | Business criticality | No | Accepts code or label from Settings; `__CLEAR__` clears it |
 | `lifecycle` | Current status | No | Accepts code or label from Settings |
-| `is_suite` | Can have child apps | No | `true` or `false` |
+| `is_suite` | Can have child apps | No | `yes` or `no` |
 | `status` | Enabled/disabled | No | `enabled` or `disabled` |
 
 **Version fields**:
@@ -494,8 +494,8 @@ From the Applications list:
 | CSV Column | Description | Notes |
 |------------|-------------|-------|
 | `access_methods` | How users access | Comma-separated codes or labels from Settings (e.g., `web,mobile,vdi`) |
-| `external_facing` | Internet accessible | `true` or `false` |
-| `etl_enabled` | Data integration | `true` or `false` |
+| `external_facing` | Internet accessible | `yes` or `no` |
+| `etl_enabled` | Data integration | `yes` or `no` |
 | `support_notes` | Support information | Free text |
 | `licensing` | License terms | Free text |
 | `notes` | Internal notes | Free text |
@@ -506,7 +506,7 @@ From the Applications list:
 |------------|-------------|-------|
 | `data_class` | Data classification | Accepts code or label from Settings |
 | `last_dr_test` | Last DR test date | Date format: YYYY-MM-DD |
-| `contains_pii` | Stores personal data | `true` or `false` |
+| `contains_pii` | Stores personal data | `yes` or `no` |
 | `data_residency` | Data storage countries | Export only (ISO codes) |
 
 **Classification fields**:
@@ -573,7 +573,7 @@ If you include the `id` column with a valid UUID, matching uses ID first, then f
 **"File isn't properly formatted" error**: This usually indicates an encoding issue. Ensure your CSV is saved as **UTF-8**:
 
 - **In LibreOffice**: When opening a CSV, select `UTF-8` in the Character set dropdown (not "Japanese (Macintosh)" or other encodings). When saving, check "Edit filter settings" and choose UTF-8.
-- **In Excel**: Save As > CSV UTF-8 (Comma delimited), then open in a text editor to change commas to semicolons.
+- **In Excel**: Save As > CSV UTF-8 (Comma delimited).
 - **General tip**: If you see garbled characters (`?¿`, `ï»¿`) at the start of your file, the encoding is incorrect.
 
 ### Example CSV

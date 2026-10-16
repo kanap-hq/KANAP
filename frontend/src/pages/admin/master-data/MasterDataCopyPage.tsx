@@ -301,7 +301,7 @@ export default function MasterDataCopyPage() {
               <MenuItem value="departments" disabled={disabledScopes.departments}>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Typography variant="body2">{t('admin.freeze.scopeDepartments')}</Typography>
-                  {disabledScopes.departments && <Typography variant="caption" color="text.secondary">No admin access</Typography>}
+                  {disabledScopes.departments && <Typography variant="caption" color="text.secondary">{t('admin.copy.noAdminAccess')}</Typography>}
                 </Stack>
               </MenuItem>
             </Select>

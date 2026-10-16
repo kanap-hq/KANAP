@@ -14,6 +14,7 @@ import { useLocale } from '../i18n/useLocale';
 import { formatShortDateTime } from '../lib/dateFormat';
 import ForbiddenPage from './ForbiddenPage';
 import { statusColumnProps } from '../components/grid/statusColumn';
+import { countValueFormatter } from '../components/grid/countValueFormatter';
 
 export default function DepartmentsPage() {
   const { t } = useTranslation(['master-data', 'common']);
@@ -95,6 +96,7 @@ export default function DepartmentsPage() {
     },
     {
       field: 'headcount_year',
+      valueFormatter: countValueFormatter,
       headerName: t('departments.columns.headcountYear', { year }),
       width: 180,
       filter: 'agNumberColumnFilter',

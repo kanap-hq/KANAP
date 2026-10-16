@@ -173,13 +173,14 @@ function RepairSuggestions({ result }: { result: any }) {
 }
 
 function AggregateGroups({ result }: { result: any }) {
+  const { t } = useTranslation(['ai']);
   const groups = Array.isArray(result?.groups) ? result.groups : [];
-  if (!groups.length) return <Typography variant="body2" color="text.secondary">No groups found.</Typography>;
+  if (!groups.length) return <Typography variant="body2" color="text.secondary">{t('toolResults.noGroups')}</Typography>;
   return (
     <Stack spacing={0.5}>
       {groups.slice(0, 20).map((group: any, index: number) => (
         <Stack key={`${group.key ?? 'empty'}-${index}`} direction="row" spacing={1} alignItems="center">
-          <Typography variant="body2" sx={{ flex: 1 }}>{group.key ?? '(empty)'}</Typography>
+          <Typography variant="body2" sx={{ flex: 1 }}>{group.key ?? t('toolResults.empty')}</Typography>
           <Typography variant="body2" sx={{ fontFamily: "'JetBrains Mono Variable', ui-monospace, monospace", color: 'text.secondary' }}>
             {group.count ?? group.value ?? 0}
           </Typography>
@@ -190,16 +191,17 @@ function AggregateGroups({ result }: { result: any }) {
 }
 
 function FilterValues({ result }: { result: any }) {
+  const { t } = useTranslation(['ai']);
   const values = result?.values && typeof result.values === 'object' ? result.values : {};
   const fields = Object.entries(values);
-  if (!fields.length) return <Typography variant="body2" color="text.secondary">No filter values found.</Typography>;
+  if (!fields.length) return <Typography variant="body2" color="text.secondary">{t('toolResults.noFilterValues')}</Typography>;
   return (
     <Stack spacing={0.75}>
       {fields.map(([field, entries]) => (
         <Stack key={field} spacing={0.25}>
           <Typography variant="caption" color="text.secondary">{field}</Typography>
           <Typography variant="body2">
-            {(Array.isArray(entries) ? entries : []).slice(0, 12).map((entry) => entry === null ? '(empty)' : String(entry)).join(', ')}
+            {(Array.isArray(entries) ? entries : []).slice(0, 12).map((entry) => entry === null ? t('toolResults.empty') : String(entry)).join(', ')}
           </Typography>
         </Stack>
       ))}
@@ -208,8 +210,9 @@ function FilterValues({ result }: { result: any }) {
 }
 
 function FilterDescriptions({ result }: { result: any }) {
+  const { t } = useTranslation(['ai']);
   const fields = Array.isArray(result?.fields) ? result.fields : [];
-  if (!fields.length) return <Typography variant="body2" color="text.secondary">No filter fields found.</Typography>;
+  if (!fields.length) return <Typography variant="body2" color="text.secondary">{t('toolResults.noFilterFields')}</Typography>;
   return (
     <Stack spacing={0.75}>
       {fields.slice(0, 24).map((field: any) => (
@@ -223,7 +226,7 @@ function FilterDescriptions({ result }: { result: any }) {
           </Stack>
           {field.aliases?.length > 0 && (
             <Typography variant="caption" color="text.secondary">
-              aliases: {field.aliases.join(', ')}
+              {t('toolResults.aliases', { aliases: field.aliases.join(', ') })}
             </Typography>
           )}
         </Stack>

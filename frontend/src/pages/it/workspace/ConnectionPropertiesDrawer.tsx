@@ -1,5 +1,6 @@
 import useApplicationClassificationCatalog from '../../../hooks/useApplicationClassificationCatalog';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, MenuItem, Switch, TextField, Typography } from '@mui/material';
 import { PropertyGroup, PropertyRow } from '../../../components/design/PropertyRow';
 import { drawerSelectSx, drawerMenuItemSx } from '../../../theme/formSx';
@@ -58,6 +59,7 @@ export default function ConnectionPropertiesDrawer({
   onDataClassChange,
   onContainsPiiChange,
 }: Props) {
+  const { t } = useTranslation('it');
   const { data: classificationCatalog } = useApplicationClassificationCatalog();
   const CRITICALITIES = [{ code: '', label: 'Not set' }, ...(classificationCatalog?.businessCriticalityLevels || [])];
   const { byField } = useItOpsEnumOptions();
@@ -180,10 +182,10 @@ export default function ConnectionPropertiesDrawer({
             </TextField>
           )}
         </PropertyRow>
-        <PropertyRow label="Contains PII">
+        <PropertyRow label={t('workspace.connection.compliance.containsPii')}>
           {isDerived ? (
             <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>
-              {effectiveContainsPii ? 'Yes' : 'No'}
+              {effectiveContainsPii ? t('enums.yesNo.yes') : t('enums.yesNo.no')}
             </Typography>
           ) : (
             <Switch

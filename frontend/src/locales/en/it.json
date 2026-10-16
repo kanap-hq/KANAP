@@ -172,7 +172,7 @@
       "duplicateDescription": "Create a copy of \"{{name}}\".",
       "copyEnvBindings": "Copy environment bindings",
       "copyEnvBindingsDescription": "Instance connections will be preserved, but environment-specific details (endpoints, authentication, job names) will be cleared.",
-      "duplicating": "Duplicating...",
+      "duplicating": "Duplicating…",
       "duplicate": "Duplicate",
       "columns": {
         "interfaceId": "Interface ID",
@@ -380,9 +380,9 @@
       "actions": {
         "syncNow": "Synchronise now",
         "nextBatch": "Review the next batch",
-        "preparing": "Preparing the preview...",
+        "preparing": "Preparing the preview…",
         "openSettings": "Open the integration settings",
-        "linkTo": "Link to...",
+        "linkTo": "Link to…",
         "createAsset": "Create new asset",
         "ignore": "Ignore",
         "stopIgnoring": "Stop ignoring",
@@ -479,7 +479,7 @@
           "assets_one": "{{count}} asset",
           "assets_other": "{{count}} assets"
         },
-        "updating": "Updating the preview...",
+        "updating": "Updating the preview…",
         "filterLabel": "Filter the list",
         "filterPlaceholder": "e.g., par-esx",
         "candidates": "Suggested:",
@@ -501,8 +501,8 @@
         },
         "menu": {
           "linkToCandidate": "Link to {{name}}",
-          "linkToExisting": "Link to an existing asset...",
-          "linkToAnother": "Link to another asset...",
+          "linkToExisting": "Link to an existing asset…",
+          "linkToAnother": "Link to another asset…",
           "createNew": "Create a new asset",
           "createInstead": "Create a new asset instead",
           "ignore": "Do not import this object",
@@ -511,7 +511,7 @@
         "picker": {
           "label": "Search for an asset",
           "placeholder": "e.g., par-esx-01",
-          "searching": "Searching...",
+          "searching": "Searching…",
           "noResults": "No asset found."
         },
         "hints": {
@@ -825,7 +825,7 @@
         "retiredDate": "Retired date",
         "licensing": "Licensing",
         "notes": "Notes",
-        "descriptionPlaceholder": "Add a description for this application...",
+        "descriptionPlaceholder": "Add a description for this application…",
         "connections": "Connections",
         "connectedTo": "Connected to",
         "receivesFrom": "Receives from",
@@ -876,7 +876,7 @@
         "noSupportContacts": "No support contacts.",
         "unnamedContact": "Unnamed contact",
         "removeContact": "Remove {{name}}",
-        "supportNotesPlaceholder": "Add support notes...",
+        "supportNotesPlaceholder": "Add support notes…",
         "newSupportContact": "New support contact"
       },
       "interfaces": {
@@ -1190,7 +1190,7 @@
         "resetLayers": "Reset layers",
         "addLayer": "Add layer",
         "saveLayers": "Save layers",
-        "saving": "Saving...",
+        "saving": "Saving…",
         "saveFirst": "Save the connection first to add layers.",
         "noLayers": "No layers yet. Add reverse proxies, firewalls, or hops as legs (max 3).",
         "layer": "Layer {{index}}",
@@ -1198,7 +1198,7 @@
         "order": "Order",
         "orderHelp": "1 = first hop, up to 3",
         "layerName": "Name",
-        "layerNamePlaceholder": "direct, reverse_proxy, firewall...",
+        "layerNamePlaceholder": "direct, reverse_proxy, firewall…",
         "source": "Source",
         "destination": "Destination",
         "entityOrServer": "Entity or server",
@@ -1223,7 +1223,7 @@
       },
       "interfaces": {
         "title": "Related interfaces",
-        "loadingLinked": "Loading linked interfaces...",
+        "loadingLinked": "Loading linked interfaces…",
         "noLinked": "No interface bindings linked yet.",
         "interface": "Interface",
         "environment": "Environment",
@@ -1305,6 +1305,12 @@
         "applicationsRequired": "Select source and target applications.",
         "dataCategoryRequired": "Select a data category.",
         "noIdentifier": "The interface was created, but no identifier was returned."
+      },
+      "pii": {
+        "label": "PII",
+        "none": "No PII",
+        "contains": "Contains PII",
+        "description": "PII description"
       }
     },
     "location": {
@@ -1433,7 +1439,7 @@
       "bindingsHint": "Bindings connect interface legs to deployments. Environment-specific details will be cleared.",
       "suitesNotCopied": "Note: Suites and attachments are not copied.",
       "selectInterfaces": "Select interfaces to migrate to the new version. Selected interfaces will be duplicated and linked to the new version.",
-      "loadingInterfaces": "Loading interfaces...",
+      "loadingInterfaces": "Loading interfaces…",
       "noInterfaces": "No interfaces found for this application.",
       "selectAll": "Select all",
       "deselectAll": "Deselect all",
@@ -1503,6 +1509,12 @@
     "riskMode": {
       "manual": "Manual",
       "derived": "Derived"
+    },
+    "legType": {
+      "extract": "Extract",
+      "transform": "Transform",
+      "load": "Load",
+      "direct": "Direct"
     }
   },
   "confirmations": {
@@ -1565,6 +1577,8 @@
     "providerRequired": "Provider is required.",
     "codeRequired": "Code is required.",
     "nameRequired": "Name is required.",
+    "locationNameTaken": "Another location already has this name.",
+    "subLocationNameTaken": "Another sub-location of this location already has this name.",
     "hostingTypeRequired": "Hosting type is required.",
     "saveLayersFirst": "Save the connection first, then add layers.",
     "roleRequired": "Role is required.",
@@ -1624,7 +1638,7 @@
     "remove": "Remove",
     "search": "Search",
     "actions": "Actions",
-    "loading": "Loading...",
+    "loading": "Loading…",
     "name": "Name",
     "user": "User",
     "lastName": "Last name",
@@ -1720,5 +1734,178 @@
     "classification": "Classification",
     "data_at_the_highest_confidentiality_level_with_the_lowest_cyber_criticality_check_the_cyber_assessment": "Data at the highest confidentiality level with the lowest cyber criticality: check the cyber assessment.",
     "no_recovery_test_in_the_last_twelve_months_for_an_application_at_the_most_critical_level": "No recovery test in the last twelve months for an application at the most critical level."
+  },
+  "catalogDefaults": {
+    "applicationCategories": {
+      "line_of_business": "Line of business",
+      "productivity": "Productivity",
+      "security": "Security",
+      "analytics": "Analytics",
+      "development": "Development",
+      "integration": "Integration",
+      "infrastructure": "Infrastructure"
+    },
+    "networkSegments": {
+      "industrial_lan": "Industrial LAN",
+      "wifi": "WiFi",
+      "public_cloud": "Public cloud",
+      "guest": "Guest",
+      "management": "Management",
+      "storage": "Storage"
+    },
+    "entities": {
+      "internal_users": "Internal users",
+      "external_users": "External users",
+      "internet": "Internet",
+      "customers": "Customers",
+      "partner_networks": "Partner networks"
+    },
+    "serverKinds": {
+      "physical_server": "Physical server",
+      "virtual_machine": "Virtual machine",
+      "container": "Container",
+      "serverless": "Serverless",
+      "appliance": "Appliance",
+      "saas": "SaaS",
+      "other": "Other",
+      "switch": "Switch",
+      "firewall": "Firewall",
+      "load_balancer": "Load balancer",
+      "access_point": "Access point",
+      "san": "SAN",
+      "nas": "NAS",
+      "backup_appliance": "Backup appliance",
+      "tape_library": "Tape library",
+      "industrial_robot": "Industrial robot",
+      "industrial_machine": "Industrial machine",
+      "rack": "Rack"
+    },
+    "serverProviders": {
+      "other": "Other"
+    },
+    "serverRoles": {
+      "app": "Application server",
+      "backup": "Backup server",
+      "cloud-service": "Cloud service",
+      "db": "Database server",
+      "domain-controller": "Domain controller",
+      "file": "File server",
+      "mail": "Mail / messaging",
+      "monitoring": "Monitoring server",
+      "other": "Other",
+      "print": "Print server",
+      "proxy": "Proxy / gateway",
+      "remote-desktop": "Remote desktop",
+      "virtualization": "Virtualization host",
+      "web": "Web server"
+    },
+    "hostingTypes": {
+      "on_prem": "On-prem",
+      "colocation": "Colocation",
+      "public_cloud": "Public cloud",
+      "private_cloud": "Private cloud"
+    },
+    "interfaceProtocols": {
+      "smb": "SMB / Windows share",
+      "other": "Other"
+    },
+    "interfaceDataCategories": {
+      "master_data": "Master data",
+      "transactional": "Transactional",
+      "reporting": "Reporting",
+      "control": "Control"
+    },
+    "interfaceTriggerTypes": {
+      "event_based": "Event-based",
+      "scheduled": "Scheduled",
+      "on_demand": "On-demand",
+      "real_time": "Real-time"
+    },
+    "interfacePatterns": {
+      "rest_api_sync": "REST API (sync)",
+      "rest_api_async": "REST API (async / callback)",
+      "soap_webservice": "SOAP web service",
+      "file_transfer_batch": "File transfer (batch)",
+      "message_queue": "Message queue (point-to-point)",
+      "pub_sub_topic": "Pub/Sub (topic)",
+      "etl_batch": "ETL batch job",
+      "db_link_view": "DB link / direct DB read",
+      "scheduled_job": "Scheduled script / job",
+      "manual_import_export": "Manual import / export",
+      "other": "Other"
+    },
+    "interfaceFormats": {
+      "delimited": "Delimited text",
+      "fixed_width": "Fixed-width text",
+      "txt_plain": "Plain text",
+      "binary_custom": "Binary (custom)",
+      "other": "Other"
+    },
+    "interfaceAuthModes": {
+      "service_account": "Service account",
+      "api_key": "API key",
+      "certificate": "Certificate",
+      "none": "None"
+    },
+    "connectionTypes": {
+      "zabbix": "Zabbix agent",
+      "ad-repl": "AD replication",
+      "tcp": "TCP (custom)",
+      "udp": "UDP (custom)",
+      "other": "Other",
+      "unknown": "Unknown"
+    },
+    "ipAddressTypes": {
+      "host": "Host",
+      "management": "Management"
+    },
+    "accessMethods": {
+      "local": "Locally installed application",
+      "mobile": "Mobile application",
+      "hmi": "Proprietary HMI (industrial interface)",
+      "terminal": "Terminal / CLI",
+      "vdi": "VDI / remote desktop",
+      "kiosk": "Kiosk"
+    },
+    "pathHopFunctions": {
+      "vip": "Virtual IP",
+      "firewall": "Firewall",
+      "reverse_proxy": "Reverse proxy",
+      "load_balancer": "Load balancer",
+      "api_gateway": "API gateway",
+      "vpn_endpoint": "VPN endpoint",
+      "bastion": "Bastion / jump host",
+      "cdn_edge": "CDN edge",
+      "service_mesh": "Service mesh proxy"
+    },
+    "incidentCategories": {
+      "infrastructure": "Infrastructure",
+      "security": "Security",
+      "application": "Application",
+      "data": "Data",
+      "supplier": "Supplier",
+      "other": "Other"
+    },
+    "domains": {
+      "workgroup": "Workgroup",
+      "n-a": "N/A"
+    },
+    "connectionTypeCategories": {
+      "application": "Application",
+      "database": "Database",
+      "authentication": "Authentication",
+      "remote_access": "Remote access",
+      "file_transfer": "File transfer",
+      "file_sharing": "File sharing",
+      "storage": "Storage",
+      "messaging": "Messaging",
+      "email": "Email",
+      "monitoring": "Monitoring",
+      "network_services": "Network services",
+      "replication": "Replication",
+      "vpn_tunnel": "VPN / tunnel",
+      "backup": "Backup",
+      "generic": "Generic"
+    }
   }
 }

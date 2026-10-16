@@ -33,8 +33,13 @@ vi.mock('../services/budgetColumns', async (importOriginal) => {
 vi.mock('../components/PageHeader', () => ({ default: ({ actions }: { actions?: React.ReactNode }) => <div>{actions}</div> }));
 const download = vi.hoisted(() => ({ blob: vi.fn() }));
 vi.mock('../utils/downloadBlob', () => ({ downloadBlob: download.blob, extractFilenameFromDisposition: () => null }));
-vi.mock('../components/csv/CsvExportDialog', () => ({ default: () => null }));
-vi.mock('../components/csv/CsvImportDialog', () => ({ default: () => null }));
+const csvDialogs = vi.hoisted(() => ({ export: null as null | Record<string, any>, import: null as null | Record<string, any> }));
+vi.mock('../components/csv/CsvExportDialog', () => ({
+  default: (props: Record<string, any>) => { csvDialogs.export = props; return null; },
+}));
+vi.mock('../components/csv/CsvImportDialog', () => ({
+  default: (props: Record<string, any>) => { csvDialogs.import = props; return null; },
+}));
 vi.mock('../api', () => ({ default: { get: api.get, post: api.post, delete: api.delete } }));
 vi.mock('../lib/listContext', () => ({
   getWithListContext: (endpoint: string, params: Record<string, unknown>) => api.get(endpoint, params),
@@ -368,6 +373,12 @@ describe('ContractsPage', () => {
     expect(screen.getByText(/contracts\.compliance\.summary\.toCheck \{"count":1\}/)).toBeInTheDocument();
     renderCell('compliance_state', { id: 'c-2', compliance: { expected: 0, missing: 0, to_check: 0, state: 'none' } });
     expect(screen.getByText('contracts.compliance.summary.none')).toBeInTheDocument();
+  });
+
+  it('reads and writes the contracts file in the screen language, as the other master-data files', () => {
+    renderPage();
+    expect(csvDialogs.export).toMatchObject({ endpoint: '/contracts', flexibleFormat: true });
+    expect(csvDialogs.import).toMatchObject({ endpoint: '/contracts', flexibleFormat: true });
   });
 
   it('exports the register of the contracts the list shows, in the screen language', async () => {

@@ -6,9 +6,8 @@ import { StorageService } from '../common/storage/storage.service';
 import { AuditService } from '../audit/audit.service';
 import { randomUUID } from 'crypto';
 import * as path from 'path';
-import * as fs from 'fs';
 import { validateUploadedFile } from '../common/upload-validation';
-import { fixMulterFilename } from '../common/upload';
+import { fixMulterFilename, uploadedBytes } from '../common/upload';
 import { RemoteInlineImageImportService } from '../common/remote-inline-image-import.service';
 import { DocumentImportService, ImportedDocumentResult } from '../common/document-import.service';
 import { extractInlineImageUrls } from '../common/content-image-urls';
@@ -62,8 +61,7 @@ export class TaskAttachmentsService {
       `${id}_${rand}${ext}`,
     ].join('/');
 
-    const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : null);
-    if (!buf) throw new BadRequestException('Empty upload');
+    const buf = uploadedBytes(file);
     const validated = validateUploadedFile({
       originalName: decodedName,
       mimeType: file.mimetype,

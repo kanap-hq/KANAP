@@ -132,6 +132,7 @@
       "baseCurrency": "Basiswährung",
       "chartOfAccounts": "Kontenplan",
       "lifecycle": "Lebenszyklus",
+      "status": "Status",
       "address1": "Adresszeile 1",
       "address2": "Adresszeile 2",
       "postalCode": "Postleitzahl",
@@ -144,6 +145,10 @@
       "headcount": "Mitarbeiterzahl",
       "itUsers": "IT-Benutzer",
       "turnover": "Umsatz (Mio. €)"
+    },
+    "status": {
+      "enabled": "Aktiviert",
+      "disabled": "Deaktiviert"
     },
     "sections": {
       "address": "Adresse",
@@ -169,6 +174,7 @@
       "saveFailed": "Das Unternehmen konnte nicht gespeichert werden.",
       "createFailed": "Das Unternehmen konnte nicht erstellt werden.",
       "nameRequired": "Geben Sie einen Namen ein.",
+      "nameTaken": "Ein anderes Unternehmen hat bereits diesen Namen.",
       "countryRequired": "Wählen Sie ein Land.",
       "currencyRequired": "Wählen Sie eine Basiswährung.",
       "cityRequired": "Geben Sie eine Stadt ein.",
@@ -218,6 +224,7 @@
       "saveFailed": "Die Abteilung konnte nicht gespeichert werden.",
       "createFailed": "Die Abteilung konnte nicht erstellt werden.",
       "nameRequired": "Geben Sie einen Namen ein.",
+      "nameTaken": "Eine andere Abteilung dieses Unternehmens hat bereits diesen Namen.",
       "companyRequired": "Wählen Sie ein Unternehmen.",
       "headcountInvalid": "Geben Sie eine ganze Zahl ein, 0 oder mehr."
     },
@@ -941,7 +948,8 @@
       "itOwner": "IT-Verantwortlicher",
       "itOwnerHelper": "IT-Kontakt, verantwortlich für Tools / Systeme, die diesen Prozess unterstützen",
       "notesPlaceholder": "Interne Notizen, Links zu SOPs oder Prozesslandkarten",
-      "nameRequired": "Name ist erforderlich"
+      "nameRequired": "Name ist erforderlich",
+      "nameTaken": "Ein anderer Geschäftsprozess hat bereits diesen Namen."
     },
     "categoryManager": {
       "title": "Geschäftsprozess-Kategorien verwalten",

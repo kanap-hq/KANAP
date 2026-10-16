@@ -109,7 +109,7 @@ export default function MasterDataFreezePage() {
             </Typography>
             {info?.frozenBy && (
               <Typography variant="caption" color="text.secondary">
-                by {info.frozenBy}
+                {t('admin.freeze.frozenBy', { name: info.frozenBy })}
               </Typography>
             )}
           </Box>
@@ -153,7 +153,7 @@ export default function MasterDataFreezePage() {
               <TextField
                 select
                 size="small"
-                label="Year"
+                label={t('shared.fields.year')}
                 value={year}
                 onChange={(e) => { setYear(Number(e.target.value)); setFeedback(null); }}
                 sx={{ width: 160 }}

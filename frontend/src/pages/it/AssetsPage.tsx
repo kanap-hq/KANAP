@@ -18,6 +18,7 @@ import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilte
 
 import { useTranslation } from 'react-i18next';
 import { setListFiltersParam, getWithListContext } from '../../lib/listContext';
+import { countValueFormatter } from '../../components/grid/countValueFormatter';
 type AssetRow = {
   id: string;
   asset_reference: string | null;
@@ -407,7 +408,7 @@ export default function AssetsPage() {
       width: 140,
       sortable: false,
       filter: false,
-      valueFormatter: (p) => p.value ?? 0,
+      valueFormatter: (p) => countValueFormatter({ value: p.value ?? 0 }),
       cellRenderer: ClickToWorkspace,
     },
     { headerName: t('pages.assets.columns.created'), field: 'created_at', width: 180, cellRenderer: ClickToWorkspace },

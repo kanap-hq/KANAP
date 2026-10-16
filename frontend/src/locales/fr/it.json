@@ -172,7 +172,7 @@
       "duplicateDescription": "Créer une copie de « {{name}} ».",
       "copyEnvBindings": "Copier les liaisons d'environnement",
       "copyEnvBindingsDescription": "Les connexions d'instance seront conservées, mais les détails spécifiques à l'environnement (endpoints, authentification, noms de jobs) seront effacés.",
-      "duplicating": "Duplication en cours...",
+      "duplicating": "Duplication en cours…",
       "duplicate": "Dupliquer",
       "columns": {
         "interfaceId": "ID d'interface",
@@ -380,9 +380,9 @@
       "actions": {
         "syncNow": "Synchroniser maintenant",
         "nextBatch": "Vérifier le lot suivant",
-        "preparing": "Préparation de l'aperçu...",
+        "preparing": "Préparation de l'aperçu…",
         "openSettings": "Ouvrir les paramètres de l'intégration",
-        "linkTo": "Lier à...",
+        "linkTo": "Lier à…",
         "createAsset": "Créer un actif",
         "ignore": "Ignorer",
         "stopIgnoring": "Ne plus ignorer",
@@ -479,7 +479,7 @@
           "assets_one": "{{count}} actif",
           "assets_other": "{{count}} actifs"
         },
-        "updating": "Mise à jour de l'aperçu...",
+        "updating": "Mise à jour de l'aperçu…",
         "filterLabel": "Filtrer la liste",
         "filterPlaceholder": "ex. : par-esx",
         "candidates": "Suggestions :",
@@ -501,8 +501,8 @@
         },
         "menu": {
           "linkToCandidate": "Lier à {{name}}",
-          "linkToExisting": "Lier à un actif existant...",
-          "linkToAnother": "Lier à un autre actif...",
+          "linkToExisting": "Lier à un actif existant…",
+          "linkToAnother": "Lier à un autre actif…",
           "createNew": "Créer un nouvel actif",
           "createInstead": "Créer plutôt un nouvel actif",
           "ignore": "Ne pas importer cet objet",
@@ -511,7 +511,7 @@
         "picker": {
           "label": "Rechercher un actif",
           "placeholder": "ex. : par-esx-01",
-          "searching": "Recherche...",
+          "searching": "Recherche…",
           "noResults": "Aucun actif trouvé."
         },
         "hints": {
@@ -825,7 +825,7 @@
         "retiredDate": "Date de retrait",
         "licensing": "Licence",
         "notes": "Notes",
-        "descriptionPlaceholder": "Ajoutez une description pour cette application...",
+        "descriptionPlaceholder": "Ajoutez une description pour cette application…",
         "connections": "Connexions",
         "connectedTo": "Connectée à",
         "receivesFrom": "Reçoit de",
@@ -876,7 +876,7 @@
         "noSupportContacts": "Aucun contact de support.",
         "unnamedContact": "Contact sans nom",
         "removeContact": "Retirer {{name}}",
-        "supportNotesPlaceholder": "Ajoutez des notes de support...",
+        "supportNotesPlaceholder": "Ajoutez des notes de support…",
         "newSupportContact": "Nouveau contact de support"
       },
       "interfaces": {
@@ -1190,7 +1190,7 @@
         "resetLayers": "Réinitialiser les couches",
         "addLayer": "Ajouter une couche",
         "saveLayers": "Enregistrer les couches",
-        "saving": "Enregistrement...",
+        "saving": "Enregistrement…",
         "saveFirst": "Enregistrez d'abord la connexion pour ajouter des couches.",
         "noLayers": "Aucune couche pour le moment. Ajoutez des reverse proxies, des pare-feu ou des sauts en tant que segments (max. 3).",
         "layer": "Couche {{index}}",
@@ -1198,7 +1198,7 @@
         "order": "Ordre",
         "orderHelp": "1 = premier saut, jusqu'à 3",
         "layerName": "Nom",
-        "layerNamePlaceholder": "direct, reverse_proxy, firewall...",
+        "layerNamePlaceholder": "direct, reverse_proxy, firewall…",
         "source": "Source",
         "destination": "Destination",
         "entityOrServer": "Entité ou serveur",
@@ -1223,7 +1223,7 @@
       },
       "interfaces": {
         "title": "Interfaces associées",
-        "loadingLinked": "Chargement des interfaces liées...",
+        "loadingLinked": "Chargement des interfaces liées…",
         "noLinked": "Aucune liaison d'interface associée pour le moment.",
         "interface": "Interface",
         "environment": "Environnement",
@@ -1305,6 +1305,12 @@
         "applicationsRequired": "Sélectionnez les applications source et cible.",
         "dataCategoryRequired": "Sélectionnez une catégorie de données.",
         "noIdentifier": "L'interface a été créée, mais aucun identifiant n'a été renvoyé."
+      },
+      "pii": {
+        "label": "PII",
+        "none": "Pas de PII",
+        "contains": "Contient des PII",
+        "description": "Description des PII"
       }
     },
     "location": {
@@ -1433,7 +1439,7 @@
       "bindingsHint": "Les liaisons connectent les segments d'interface aux déploiements. Les détails propres à chaque environnement seront effacés.",
       "suitesNotCopied": "Remarque : les suites et les pièces jointes ne sont pas copiées.",
       "selectInterfaces": "Sélectionnez les interfaces à migrer vers la nouvelle version. Les interfaces sélectionnées seront dupliquées et liées à la nouvelle version.",
-      "loadingInterfaces": "Chargement des interfaces...",
+      "loadingInterfaces": "Chargement des interfaces…",
       "noInterfaces": "Aucune interface trouvée pour cette application.",
       "selectAll": "Tout sélectionner",
       "deselectAll": "Tout désélectionner",
@@ -1503,6 +1509,12 @@
     "riskMode": {
       "manual": "Manuel",
       "derived": "Dérivé"
+    },
+    "legType": {
+      "extract": "Extraction",
+      "transform": "Transformation",
+      "load": "Chargement",
+      "direct": "Direct"
     }
   },
   "confirmations": {
@@ -1565,6 +1577,8 @@
     "providerRequired": "Le fournisseur est requis.",
     "codeRequired": "Le code est requis.",
     "nameRequired": "Le nom est requis.",
+    "locationNameTaken": "Un autre site porte déjà ce nom.",
+    "subLocationNameTaken": "Un autre sous-site de ce site porte déjà ce nom.",
     "hostingTypeRequired": "Le type d'hébergement est requis.",
     "saveLayersFirst": "Enregistrez d'abord la connexion, puis ajoutez des couches.",
     "roleRequired": "Le rôle est requis.",
@@ -1624,7 +1638,7 @@
     "remove": "Retirer",
     "search": "Rechercher",
     "actions": "Actions",
-    "loading": "Chargement...",
+    "loading": "Chargement…",
     "name": "Nom",
     "user": "Utilisateur",
     "lastName": "Nom",
@@ -1720,5 +1734,178 @@
     "classification": "Classification",
     "data_at_the_highest_confidentiality_level_with_the_lowest_cyber_criticality_check_the_cyber_assessment": "Données au niveau de confidentialité le plus élevé avec la criticité cyber la plus faible : vérifiez l'évaluation cyber.",
     "no_recovery_test_in_the_last_twelve_months_for_an_application_at_the_most_critical_level": "Aucun test de reprise depuis douze mois pour une application au niveau le plus critique."
+  },
+  "catalogDefaults": {
+    "applicationCategories": {
+      "line_of_business": "Métier",
+      "productivity": "Productivité",
+      "security": "Sécurité",
+      "analytics": "Analytique",
+      "development": "Développement",
+      "integration": "Intégration",
+      "infrastructure": "Infrastructure"
+    },
+    "networkSegments": {
+      "industrial_lan": "LAN industriel",
+      "wifi": "Wi-Fi",
+      "public_cloud": "Cloud public",
+      "guest": "Invités",
+      "management": "Administration",
+      "storage": "Stockage"
+    },
+    "entities": {
+      "internal_users": "Utilisateurs internes",
+      "external_users": "Utilisateurs externes",
+      "internet": "Internet",
+      "customers": "Clients",
+      "partner_networks": "Réseaux partenaires"
+    },
+    "serverKinds": {
+      "physical_server": "Serveur physique",
+      "virtual_machine": "Machine virtuelle",
+      "container": "Conteneur",
+      "serverless": "Serverless",
+      "appliance": "Appliance",
+      "saas": "SaaS",
+      "other": "Autre",
+      "switch": "Switch",
+      "firewall": "Pare-feu",
+      "load_balancer": "Répartiteur de charge",
+      "access_point": "Point d'accès",
+      "san": "SAN",
+      "nas": "NAS",
+      "backup_appliance": "Appliance de sauvegarde",
+      "tape_library": "Librairie de bandes",
+      "industrial_robot": "Robot industriel",
+      "industrial_machine": "Machine industrielle",
+      "rack": "Baie"
+    },
+    "serverProviders": {
+      "other": "Autre"
+    },
+    "serverRoles": {
+      "app": "Serveur d'applications",
+      "backup": "Serveur de sauvegarde",
+      "cloud-service": "Service cloud",
+      "db": "Serveur de bases de données",
+      "domain-controller": "Contrôleur de domaine",
+      "file": "Serveur de fichiers",
+      "mail": "Messagerie",
+      "monitoring": "Serveur de supervision",
+      "other": "Autre",
+      "print": "Serveur d'impression",
+      "proxy": "Proxy / passerelle",
+      "remote-desktop": "Bureau à distance",
+      "virtualization": "Hôte de virtualisation",
+      "web": "Serveur web"
+    },
+    "hostingTypes": {
+      "on_prem": "Sur site",
+      "colocation": "Colocation",
+      "public_cloud": "Cloud public",
+      "private_cloud": "Cloud privé"
+    },
+    "interfaceProtocols": {
+      "smb": "SMB / partage Windows",
+      "other": "Autre"
+    },
+    "interfaceDataCategories": {
+      "master_data": "Données de référence",
+      "transactional": "Transactionnelles",
+      "reporting": "Reporting",
+      "control": "Contrôle"
+    },
+    "interfaceTriggerTypes": {
+      "event_based": "Événementiel",
+      "scheduled": "Planifié",
+      "on_demand": "À la demande",
+      "real_time": "Temps réel"
+    },
+    "interfacePatterns": {
+      "rest_api_sync": "API REST (synchrone)",
+      "rest_api_async": "API REST (asynchrone / callback)",
+      "soap_webservice": "Service web SOAP",
+      "file_transfer_batch": "Transfert de fichiers (batch)",
+      "message_queue": "File de messages (point à point)",
+      "pub_sub_topic": "Pub/Sub (topic)",
+      "etl_batch": "Traitement ETL par lots",
+      "db_link_view": "Lien BD / lecture directe en base",
+      "scheduled_job": "Script / tâche planifiés",
+      "manual_import_export": "Import / export manuel",
+      "other": "Autre"
+    },
+    "interfaceFormats": {
+      "delimited": "Texte délimité",
+      "fixed_width": "Texte à largeur fixe",
+      "txt_plain": "Texte brut",
+      "binary_custom": "Binaire (personnalisé)",
+      "other": "Autre"
+    },
+    "interfaceAuthModes": {
+      "service_account": "Compte de service",
+      "api_key": "Clé API",
+      "certificate": "Certificat",
+      "none": "Aucune"
+    },
+    "connectionTypes": {
+      "zabbix": "Agent Zabbix",
+      "ad-repl": "Réplication AD",
+      "tcp": "TCP (personnalisé)",
+      "udp": "UDP (personnalisé)",
+      "other": "Autre",
+      "unknown": "Inconnu"
+    },
+    "ipAddressTypes": {
+      "host": "Hôte",
+      "management": "Administration"
+    },
+    "accessMethods": {
+      "local": "Application installée localement",
+      "mobile": "Application mobile",
+      "hmi": "IHM propriétaire (interface industrielle)",
+      "terminal": "Terminal / ligne de commande",
+      "vdi": "VDI / bureau à distance",
+      "kiosk": "Borne"
+    },
+    "pathHopFunctions": {
+      "vip": "IP virtuelle",
+      "firewall": "Pare-feu",
+      "reverse_proxy": "Proxy inverse",
+      "load_balancer": "Répartiteur de charge",
+      "api_gateway": "Passerelle API",
+      "vpn_endpoint": "Point de terminaison VPN",
+      "bastion": "Bastion / hôte de rebond",
+      "cdn_edge": "Nœud CDN",
+      "service_mesh": "Proxy de service mesh"
+    },
+    "incidentCategories": {
+      "infrastructure": "Infrastructure",
+      "security": "Sécurité",
+      "application": "Application",
+      "data": "Données",
+      "supplier": "Fournisseur",
+      "other": "Autre"
+    },
+    "domains": {
+      "workgroup": "Groupe de travail",
+      "n-a": "N/A"
+    },
+    "connectionTypeCategories": {
+      "application": "Application",
+      "database": "Base de données",
+      "authentication": "Authentification",
+      "remote_access": "Accès distant",
+      "file_transfer": "Transfert de fichiers",
+      "file_sharing": "Partage de fichiers",
+      "storage": "Stockage",
+      "messaging": "Messagerie",
+      "email": "E-mail",
+      "monitoring": "Supervision",
+      "network_services": "Services réseau",
+      "replication": "Réplication",
+      "vpn_tunnel": "VPN / tunnel",
+      "backup": "Sauvegarde",
+      "generic": "Générique"
+    }
   }
 }

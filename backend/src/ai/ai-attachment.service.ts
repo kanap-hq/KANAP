@@ -1,4 +1,3 @@
-import * as fs from 'fs';
 import * as path from 'path';
 import { randomUUID } from 'crypto';
 import {
@@ -10,7 +9,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, In, Repository } from 'typeorm';
 import { StorageService } from '../common/storage/storage.service';
-import { fixMulterFilename } from '../common/upload';
+import { fixMulterFilename, uploadedBytes } from '../common/upload';
 import { validateUploadedFile } from '../common/upload-validation';
 import { AiConversation } from './ai-conversation.entity';
 import { AiMessageAttachment } from './ai-message-attachment.entity';
@@ -65,9 +64,7 @@ export class AiAttachmentService {
     const decodedName = fixMulterFilename(input.file.originalname);
     const ext = path.extname(decodedName || '') || '';
 
-    const buf = input.file.buffer
-      ?? ((input.file as any).path ? fs.readFileSync((input.file as any).path) : null);
-    if (!buf) throw new BadRequestException('Empty upload');
+    const buf = uploadedBytes(input.file);
 
     const validated = validateUploadedFile(
       {

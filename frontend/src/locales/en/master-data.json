@@ -132,6 +132,7 @@
       "baseCurrency": "Base currency",
       "chartOfAccounts": "Chart of accounts",
       "lifecycle": "Lifecycle",
+      "status": "Status",
       "address1": "Address line 1",
       "address2": "Address line 2",
       "postalCode": "Postal code",
@@ -144,6 +145,10 @@
       "headcount": "Headcount",
       "itUsers": "IT users",
       "turnover": "Turnover (M€)"
+    },
+    "status": {
+      "enabled": "Enabled",
+      "disabled": "Disabled"
     },
     "sections": {
       "address": "Address",
@@ -169,6 +174,7 @@
       "saveFailed": "Failed to save the company.",
       "createFailed": "Failed to create the company.",
       "nameRequired": "Enter a name.",
+      "nameTaken": "Another company already has this name.",
       "countryRequired": "Choose a country.",
       "currencyRequired": "Choose a base currency.",
       "cityRequired": "Enter a city.",
@@ -218,6 +224,7 @@
       "saveFailed": "Failed to save the department.",
       "createFailed": "Failed to create the department.",
       "nameRequired": "Enter a name.",
+      "nameTaken": "Another department of this company already has this name.",
       "companyRequired": "Choose a company.",
       "headcountInvalid": "Enter a whole number, 0 or more."
     },
@@ -941,7 +948,8 @@
       "itOwner": "IT owner",
       "itOwnerHelper": "IT contact responsible for tools / systems supporting this process",
       "notesPlaceholder": "Internal notes, links to SOPs or process maps",
-      "nameRequired": "Name is required"
+      "nameRequired": "Name is required",
+      "nameTaken": "Another business process already has this name."
     },
     "categoryManager": {
       "title": "Manage business process categories",

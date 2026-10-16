@@ -1,5 +1,4 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import * as fs from 'fs';
 import { randomUUID } from 'node:crypto';
 import { isActiveAt, resolveLifecycleState, StatusState } from '../common/status';
 import {
@@ -9,6 +8,7 @@ import {
   DecimalMark,
   endOfValidityCell,
   endOfValidityOf,
+  keepStoredEndOfValidity,
   MasterDataFileRead,
   readMasterDataFile,
   rowProblems,
@@ -29,6 +29,7 @@ import {
   StoredCostCenter,
   validateCostCenterGraph,
 } from './cost-centers.service';
+import { uploadedBytes } from '../common/upload';
 
 export const COST_CENTER_CSV_HEADERS = [
   'code', 'kind', 'name', 'parent_code', 'company_name', 'owner_email', 'description', 'status', 'disabled_at',
@@ -220,9 +221,10 @@ export class CostCentersCsvService {
       let disabledAt: Date | null = null;
       if (disabledAtRaw) {
         // A bare day at noon UTC, a full ISO timestamp kept; an unreadable cell is a row error.
+        // The stored end of validity's day keeps its time of day: the export writes the day only.
         const end = endOfValidityOf(raw, 'disabled_at');
         if (end.error) rowErrors.push(end.error);
-        else disabledAt = end.value;
+        else disabledAt = keepStoredEndOfValidity(existing?.disabled_at, end.value);
       }
       const lifecycleConflict = csvLifecycleConflict(status, disabledAt);
       if (lifecycleConflict) rowErrors.push(lifecycleConflict);
@@ -319,9 +321,7 @@ export class CostCentersCsvService {
     dateOrder?: CsvDateOrder,
     decimalMark?: DecimalMark,
   ): Promise<MasterDataFileRead> {
-    if (!file) throw new BadRequestException('No file uploaded');
-    const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
-    if (!buf) throw new BadRequestException('Empty upload');
+    const buf = uploadedBytes(file);
     return readMasterDataFile({
       file: buf as Buffer,
       fields: COST_CENTER_CSV_HEADERS,

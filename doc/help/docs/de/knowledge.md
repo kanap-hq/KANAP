@@ -33,7 +33,7 @@ Konsequenzen der Bibliothekswahl:
 - In **Vorlagen** werden veröffentlichte Dokumente zu wiederverwendbaren Ausgangspunkten für neue Artikel und werden im Vorlagen-Picker nach Dokumenttyp gruppiert.
 - In **Verwaltete Dokumente** sind Artikel möglicherweise immer noch lesbar und bearbeitbar, aber einige Metadaten werden vom Quell-Arbeitsbereich gesteuert anstatt von der Wissensdatenbank selbst.
 
-Die Bibliotheksverwaltung ist absichtlich strenger als die Dokumentbearbeitung. Das Erstellen, Umbenennen, Löschen oder Reorganisieren von Bibliotheken ist eine Admin-Verantwortung, weil diese Änderungen die Navigation und Verantwortlichkeit für alle beeinflussen. Eine integrierte Bibliothek kann nicht gelöscht werden, ebenso wenig die letzte Bibliothek, die Sie verwenden können: Legen Sie zuerst eine andere an.
+Die Bibliotheksverwaltung ist absichtlich strenger als die Dokumentbearbeitung. Das Erstellen, Umbenennen, Löschen oder Reorganisieren von Bibliotheken ist eine Admin-Verantwortung, weil diese Änderungen die Navigation und Verantwortlichkeit für alle beeinflussen. Die Standardbibliothek (die erste in der Leiste, in der neue Dokumente angelegt werden) kann nicht gelöscht werden. Ebenso wenig eine integrierte Bibliothek oder die letzte Bibliothek, die Sie verwenden können: Legen Sie zuerst eine andere an.
 
 ### Eingeschränkte Bibliotheken
 

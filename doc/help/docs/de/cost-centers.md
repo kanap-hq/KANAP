@@ -186,7 +186,7 @@ Laden oder aktualisieren Sie den gesamten Baum aus einer Datei.
 | `owner_email` | Die E-Mail-Adresse des Budgetverantwortlichen, eines aktiven Benutzers. Leer für keinen Budgetverantwortlichen |
 | `description` | Freitext |
 | `status` | `enabled` oder `disabled`. Leer bedeutet `enabled` für einen neuen Knoten und behält bei einer Aktualisierung den gespeicherten Status |
-| `disabled_at` | Optionale Spalte. Das Ende der Gültigkeit: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Leer, wenn es kein Ende gibt. Bei einer Aktualisierung behalten ein leerer `status` und ein leeres `disabled_at` die gespeicherten Werte. `enabled` mit leerem Datum löscht das Ende der Gültigkeit. `disabled` mit leerem Datum behält ein bereits vergangenes Datum und beendet den Knoten sonst heute |
+| `disabled_at` | Optionale Spalte. Das Ende der Gültigkeit: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Der Export schreibt nur das Datum. Erneut importiert, behält dieses Datum das gespeicherte Gültigkeitsende. Leer, wenn es kein Ende gibt. Bei einer Aktualisierung behalten ein leerer `status` und ein leeres `disabled_at` die gespeicherten Werte. `enabled` mit leerem Datum löscht das Ende der Gültigkeit. `disabled` mit leerem Datum behält ein bereits vergangenes Datum und beendet den Knoten sonst heute |
 
 **Import**:
 

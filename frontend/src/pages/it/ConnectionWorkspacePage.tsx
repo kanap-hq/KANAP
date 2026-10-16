@@ -155,7 +155,9 @@ export default function ConnectionWorkspacePage() {
   const navigate = useNavigate();
   const params = useParams();
   const [searchParams] = useSearchParams();
-  const { settings, byField } = useItOpsEnumOptions();
+  const { settings, byField, labelFor } = useItOpsEnumOptions();
+  // An entity endpoint shows the entity's name, never its key.
+  const entityName = (code: string) => labelFor('entity', code) || code;
   const routeId = String(params.id || '');
   const isCreate = routeId === 'new';
   const isConnectionReferenceRoute = /^CONN-\d+(?:-.+)?$/i.test(routeId);
@@ -595,7 +597,7 @@ export default function ConnectionWorkspacePage() {
       const fmt = (assetId: string | null, entityCode: string | null, asset: AssetSummary | null) => {
         if (assetId && asset) return asset.asset_reference || asset.name;
         if (assetId) return t('workspace.connection.server');
-        if (entityCode) return `entity:${entityCode}`;
+        if (entityCode) return entityName(entityCode);
         return '?';
       };
       const src = fmt(data.source_asset_id, data.source_entity_code, data.source_server);
@@ -998,13 +1000,13 @@ export default function ConnectionWorkspacePage() {
             )}
             sourceLabel={(() => {
               if (data.source_asset_id && data.source_server) return data.source_server.asset_reference ? `${data.source_server.asset_reference} · ${data.source_server.name}` : data.source_server.name;
-              if (data.source_entity_code) return `entity:${data.source_entity_code}`;
+              if (data.source_entity_code) return entityName(data.source_entity_code);
               if (data.topology === 'multi_server') return t('workspace.connection.multiServerCount', { count: (data.servers || []).length });
               return t('workspace.connection.sourceMissing');
             })()}
             destinationLabel={(() => {
               if (data.destination_asset_id && data.destination_server) return data.destination_server.asset_reference ? `${data.destination_server.asset_reference} · ${data.destination_server.name}` : data.destination_server.name;
-              if (data.destination_entity_code) return `entity:${data.destination_entity_code}`;
+              if (data.destination_entity_code) return entityName(data.destination_entity_code);
               if (data.topology === 'multi_server') return t('workspace.connection.multiServerCount', { count: (data.servers || []).length });
               return t('workspace.connection.destinationMissing');
             })()}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogTitle,
@@ -41,6 +42,7 @@ export default function FormModal({
   maxWidth = 'sm',
   actions,
 }: FormModalProps) {
+  const { t } = useTranslation('common');
   const titleId = 'form-modal-title';
   const handleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
     if (e.key !== 'Enter') return;
@@ -82,7 +84,7 @@ export default function FormModal({
         <Typography variant="h6" component="div" sx={{ flex: 1 }}>
           {title}
         </Typography>
-        <IconButton aria-label="Close" onClick={onClose} size="small">
+        <IconButton aria-label={t('buttons.close')} onClick={onClose} size="small">
           <CloseIcon />
         </IconButton>
       </DialogTitle>
@@ -94,7 +96,7 @@ export default function FormModal({
           actions
         ) : (
           <>
-            <Button variant="action" onClick={onClose}>Cancel</Button>
+            <Button variant="action" onClick={onClose}>{t('buttons.cancel')}</Button>
             <Button
               type="submit"
               form={formId}

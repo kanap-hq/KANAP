@@ -93,7 +93,7 @@
         "projectLevel": "Niveau projet"
       },
       "states": {
-        "loading": "Chargement des tâches...",
+        "loading": "Chargement des tâches…",
         "empty": "Aucune tâche pour le moment.",
         "noMatches": "Aucune tâche ne correspond aux filtres actuels."
       },
@@ -136,7 +136,7 @@
     }
   },
   "workspace": {
-    "loadingTab": "Chargement de l'onglet...",
+    "loadingTab": "Chargement de l'onglet…",
     "sidebarTitle": "Propriétés",
     "openProperties": "Ouvrir les propriétés",
     "closeProperties": "Fermer les propriétés",
@@ -255,11 +255,11 @@
       },
       "messages": {
         "loadFailed": "Échec du chargement du projet",
-        "loading": "Chargement du projet...",
-        "loadingTabData": "Chargement des données de l'onglet...",
+        "loading": "Chargement du projet…",
+        "loadingTabData": "Chargement des données de l'onglet…",
         "permissionSavePanel": "Vous n'avez pas la permission d'enregistrer ces modifications de panneau.",
         "permissionSaveWorkspace": "Vous n'avez pas la permission d'enregistrer cet espace de travail.",
-        "refreshing": "Actualisation...",
+        "refreshing": "Actualisation…",
         "saveFailed": "Échec de l'enregistrement du projet",
         "savePanelFailed": "Échec de l'enregistrement du panneau du projet",
         "updateStatusFailed": "Échec de la mise à jour du statut",
@@ -308,7 +308,7 @@
           "executionProgress": "Progression"
         },
         "placeholders": {
-          "purpose": "Décrivez l'objectif de ce projet..."
+          "purpose": "Décrivez l'objectif de ce projet…"
         },
         "values": {
           "activeTasks": "Actives {{count}}",
@@ -498,7 +498,7 @@
           "noPlannedPhasesHelp": "Définissez les dates de début et de fin prévues sur les phases pour les voir sur le diagramme de Gantt.",
           "noPlannedProjects": "Aucun projet avec des dates planifiées",
           "noPlannedProjectsHelp": "Définissez les dates de début et de fin prévues sur les projets pour les voir sur la chronologie.",
-          "selectTemplate": "Sélectionnez un modèle...",
+          "selectTemplate": "Sélectionnez un modèle…",
           "noPhaseTasks": "Aucune tâche dans cette phase."
         },
         "values": {
@@ -563,13 +563,13 @@
       "messages": {
         "deleteFailed": "Échec de la suppression de la demande",
         "loadFailed": "Échec du chargement de la demande",
-        "loading": "Chargement de la demande...",
-        "loadingTabData": "Chargement des données de l'onglet...",
+        "loading": "Chargement de la demande…",
+        "loadingTabData": "Chargement des données de l'onglet…",
         "permissionSavePanel": "Vous n'avez pas la permission d'enregistrer ces modifications de panneau.",
         "permissionSaveWorkspace": "Vous n'avez pas la permission d'enregistrer cet espace de travail.",
         "recommendationSubmitted": "Recommandation {{outcome}} soumise.",
         "recommendationSubmittedFallback": "Recommandation soumise.",
-        "refreshing": "Actualisation...",
+        "refreshing": "Actualisation…",
         "saveFailed": "Échec de l'enregistrement de la demande",
         "savePanelFailed": "Échec de l'enregistrement du panneau de la demande",
         "updateStatusFailed": "Échec de la mise à jour du statut",
@@ -615,7 +615,7 @@
           "latestRecommendation": "Dernière recommandation"
         },
         "placeholders": {
-          "purpose": "Décrivez l'objectif de cette demande..."
+          "purpose": "Décrivez l'objectif de cette demande…"
         },
         "values": {
           "contributorsLinked": "{{count}} contributeurs liés entre les équipes métier et IT",
@@ -682,7 +682,7 @@
           "statusChanged": "Changement de statut : {{from}} → {{to}}"
         },
         "placeholders": {
-          "risksMitigations": "Listez les risques résiduels principaux, les actions d'atténuation et les responsables..."
+          "risksMitigations": "Listez les risques résiduels principaux, les actions d'atténuation et les responsables…"
         },
         "sections": {
           "analysisRecommendation": "Recommandation d'analyse",
@@ -709,7 +709,7 @@
       },
       "description": {
         "label": "Description",
-        "placeholder": "Décrivez la tâche..."
+        "placeholder": "Décrivez la tâche…"
       },
       "footer": {
         "created": "Créé le {{date}}",
@@ -743,7 +743,7 @@
       },
       "comments": {
         "placeholders": {
-          "writeComment": "Écrivez un commentaire..."
+          "writeComment": "Écrivez un commentaire…"
         }
       },
       "activity": {
@@ -754,7 +754,7 @@
           "logHours": "Saisir {{hours}} h",
           "setStatus": "Définir {{status}}",
           "submit": "Soumettre",
-          "submitting": "Envoi en cours..."
+          "submitting": "Envoi en cours…"
         },
         "messages": {
           "doneRequiresTime": "Impossible de marquer la tâche comme terminée sans saisir du temps.",
@@ -802,7 +802,7 @@
       },
       "messages": {
         "createFailed": "Échec de la création de la tâche",
-        "creating": "Création de la tâche...",
+        "creating": "Création de la tâche…",
         "deleteFailed": "Échec de la suppression de la tâche",
         "documentImportAfterCreate": "Enregistrez la tâche avant d'importer un document.",
         "documentImportFailed": "Échec de l'importation du document",
@@ -812,7 +812,7 @@
         "invalidRelationType": "Type d'objet lié invalide",
         "invalidStandaloneRelation": "Les tâches autonomes ne peuvent pas utiliser cette relation.",
         "loadFailed": "Échec du chargement de la tâche",
-        "loading": "Chargement de la tâche...",
+        "loading": "Chargement de la tâche…",
         "notFound": "Tâche introuvable",
         "relatedItemRequired": "Veuillez sélectionner un élément lié",
         "saveFailed": "Échec de l'enregistrement de la tâche",
@@ -1259,7 +1259,7 @@
         "hideDetails": "Masquer les détails"
       },
       "states": {
-        "loading": "Chargement des données de capacité...",
+        "loading": "Chargement des données de capacité…",
         "empty": "Aucune donnée de capacité pour les filtres sélectionnés.",
         "noUnassignedWork": "Aucun travail non affecté pour les filtres sélectionnés.",
         "profilelessLoad_one": "{{count}} personne porte {{days}} jours de travail projet sans fiche contributeur. Créez sa fiche pour lui donner une capacité.",
@@ -1326,7 +1326,7 @@
       "actions": {
         "exportCsv": "Exporter CSV",
         "exportXlsx": "Exporter XLSX",
-        "exporting": "Export en cours..."
+        "exporting": "Export en cours…"
       },
       "messages": {
         "invalidPeriod": "La date de début doit être antérieure ou égale à la date de fin.",
@@ -1678,8 +1678,8 @@
     "dialog": {
       "title": "Ajouter un contributeur",
       "selectUser": "Sélectionner un utilisateur",
-      "searchUsers": "Rechercher des utilisateurs...",
-      "adding": "Ajout en cours..."
+      "searchUsers": "Rechercher des utilisateurs…",
+      "adding": "Ajout en cours…"
     },
     "messages": {
       "addFailed": "Échec de l'ajout du contributeur"
@@ -1731,19 +1731,20 @@
     "actions": {
       "addComment": "Ajouter un commentaire",
       "addDecision": "Ajouter une décision",
-      "adding": "Ajout en cours...",
-      "editComment": "Modifier le commentaire"
+      "adding": "Ajout en cours…",
+      "editComment": "Modifier le commentaire",
+      "submitShortcut": "Envoyer (Ctrl/Cmd+Entrée)"
     },
     "placeholders": {
-      "editComment": "Modifiez votre commentaire..."
+      "editComment": "Modifiez votre commentaire…"
     },
     "messages": {
       "addCommentFailed": "Échec de l'ajout du commentaire",
       "beFirstToAdd": "Soyez le premier à en ajouter un !",
       "imageImportNotConfigured": "Import d'image par URL non configuré",
       "imageUploadNotConfigured": "Téléversement d'image non configuré",
-      "loadingComments": "Chargement des commentaires...",
-      "loadingHistory": "Chargement de l'historique...",
+      "loadingComments": "Chargement des commentaires…",
+      "loadingHistory": "Chargement de l'historique…",
       "noComments": "Aucun commentaire pour le moment.",
       "noCommentsOrDecisions": "Aucun commentaire ou décision pour le moment.",
       "noHistory": "Aucun historique enregistré pour le moment.",
@@ -1753,7 +1754,7 @@
       "formalDecision": "Décision formelle",
       "noChange": "(Aucun changement)",
       "fields": {
-        "changeStatus": "Changer le statut en...",
+        "changeStatus": "Changer le statut en…",
         "comment": "Ajouter un commentaire",
         "contextMeeting": "Contexte / Réunion",
         "contextOptional": "Contexte (optionnel)",
@@ -1761,10 +1762,10 @@
         "rationaleNotes": "Justification / Notes"
       },
       "placeholders": {
-        "comment": "Partagez vos réflexions, mises à jour ou questions...",
+        "comment": "Partagez vos réflexions, mises à jour ou questions…",
         "commentContext": "ex. : Revue hebdomadaire, Réunion des parties prenantes",
         "decisionContext": "ex. : Réunion CAB 03/01/2025",
-        "decisionNotes": "Expliquez la justification de la décision..."
+        "decisionNotes": "Expliquez la justification de la décision…"
       }
     },
     "history": {
@@ -1863,7 +1864,7 @@
         "current": "Dépendances actuelles :"
       },
       "placeholders": {
-        "search": "Rechercher des demandes ou des projets..."
+        "search": "Rechercher des demandes ou des projets…"
       },
       "states": {
         "empty": "Aucune dépendance définie."
@@ -1899,7 +1900,7 @@
         "submit": "Soumettre la recommandation"
       },
       "fields": {
-        "changeStatus": "Changer le statut en...",
+        "changeStatus": "Changer le statut en…",
         "context": "Contexte",
         "decisionOutcome": "Issue de la décision",
         "rationale": "Justification"
@@ -1908,7 +1909,7 @@
         "submitFailed": "Échec de la soumission de la recommandation"
       },
       "placeholders": {
-        "rationale": "Résumez la recommandation, les conditions et les contraintes principales..."
+        "rationale": "Résumez la recommandation, les conditions et les contraintes principales…"
       },
       "validation": {
         "outcomeRequired": "L'issue de la décision est obligatoire"
@@ -1946,8 +1947,8 @@
         "saveFailed": "Échec de l'enregistrement de l'entrée de temps"
       },
       "placeholders": {
-        "notes": "Description optionnelle du travail effectué...",
-        "searchUsers": "Rechercher des utilisateurs..."
+        "notes": "Description optionnelle du travail effectué…",
+        "searchUsers": "Rechercher des utilisateurs…"
       },
       "validation": {
         "dateRequired": "Veuillez sélectionner une date",
@@ -1989,7 +1990,7 @@
       },
       "states": {
         "empty": "Aucune ventilation - assignez un responsable ou des membres d'équipe {{effortType}}",
-        "loading": "Chargement des ventilations..."
+        "loading": "Chargement des ventilations…"
       },
       "table": {
         "contributor": "Contributeur"
@@ -2003,7 +2004,7 @@
     "convertToProject": {
       "title": "Convertir en projet",
       "actions": {
-        "converting": "Conversion en cours...",
+        "converting": "Conversion en cours…",
         "create": "Créer le projet"
       },
       "fields": {
@@ -2024,8 +2025,8 @@
         "purpose": "Objectif"
       },
       "states": {
-        "loadingEffort": "Chargement des estimations de charge...",
-        "loadingPurpose": "Chargement de l'objectif actuel..."
+        "loadingEffort": "Chargement des estimations de charge…",
+        "loadingPurpose": "Chargement de l'objectif actuel…"
       }
     },
     "convertToRequest": {
@@ -2033,7 +2034,7 @@
       "summary": "Conversion de {{taskRef}} : {{taskTitle}} en demande du portefeuille",
       "actions": {
         "convert": "Convertir en demande",
-        "converting": "Conversion en cours..."
+        "converting": "Conversion en cours…"
       },
       "fields": {
         "closeTask": "Fermer la tâche d'origine après conversion",
@@ -2078,7 +2079,7 @@
         "missingTaskId": "L'entrée de tâche ne contient pas l'identifiant de la tâche."
       },
       "states": {
-        "loadingProjects": "Chargement de la répartition par projet...",
+        "loadingProjects": "Chargement de la répartition par projet…",
         "noMatchingProjects": "Aucun projet correspondant pour ce contributeur.",
         "noTimeEntries": "Aucune entrée de temps pour le moment."
       },
@@ -2168,8 +2169,8 @@
         "dragDropFiles": "Glissez-déposez des fichiers ici, ou utilisez le bouton pour sélectionner",
         "loadFailed": "Échec du chargement des relations",
         "saveFailed": "Échec de l'enregistrement des relations",
-        "uploadingFiles_one": "Téléversement de {{count}} fichier...",
-        "uploadingFiles_other": "Téléversement de {{count}} fichiers..."
+        "uploadingFiles_one": "Téléversement de {{count}} fichier…",
+        "uploadingFiles_other": "Téléversement de {{count}} fichiers…"
       },
       "placeholders": {
         "applications": "Rechercher des applications",
@@ -2219,7 +2220,7 @@
         "originalRequestScoring": "Évaluation de la demande d'origine"
       },
       "states": {
-        "loadingOriginal": "Chargement de l'évaluation d'origine...",
+        "loadingOriginal": "Chargement de l'évaluation d'origine…",
         "noCriteria": "Aucun critère d'évaluation configuré. Configurez les critères dans les paramètres du portefeuille.",
         "unableToLoadOriginal": "Impossible de charger l'évaluation de la demande d'origine."
       },
@@ -2371,7 +2372,8 @@
       },
       "taskTypeDialog": {
         "editTitle": "Modifier le type de tâche",
-        "createTitle": "Créer un type de tâche"
+        "createTitle": "Créer un type de tâche",
+        "shippedNameHint": "Affiché dans la langue de chaque utilisateur tant que ce nom est conservé."
       },
       "confirmations": {
         "deleteCategory": "Ses filières sont supprimées avec elle. Cette action est irréversible."

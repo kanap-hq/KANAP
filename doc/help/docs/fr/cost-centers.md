@@ -186,7 +186,7 @@ Chargez ou mettez à jour l'arbre entier depuis un fichier.
 | `owner_email` | L'e-mail du responsable budgétaire, un utilisateur actif. Vide pour aucun responsable budgétaire |
 | `description` | Texte libre |
 | `status` | `enabled` ou `disabled`. Vide signifie `enabled` pour un nouveau nœud et conserve le statut enregistré lors d'une mise à jour |
-| `disabled_at` | Colonne facultative. La fin de validité : une date (`2026-12-31`) ou une date et une heure complètes. Vide s'il n'y a pas de fin. Lors d'une mise à jour, un `status` vide et un `disabled_at` vide conservent les valeurs enregistrées. `enabled` avec une date vide efface la fin de validité. `disabled` avec une date vide conserve une date déjà passée, et sinon termine le nœud aujourd'hui |
+| `disabled_at` | Colonne facultative. La fin de validité : une date (`2026-12-31`) ou une date et une heure complètes. L'export écrit la date seule. Réimportée, cette date conserve la fin de validité enregistrée. Vide s'il n'y a pas de fin. Lors d'une mise à jour, un `status` vide et un `disabled_at` vide conservent les valeurs enregistrées. `enabled` avec une date vide efface la fin de validité. `disabled` avec une date vide conserve une date déjà passée, et sinon termine le nœud aujourd'hui |
 
 **Import** :
 

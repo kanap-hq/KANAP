@@ -448,7 +448,7 @@ Desde la lista de Aplicaciones:
 
 ### Flujo de trabajo de importación
 
-1. **Prepare su archivo**: Use codificación UTF-8 con separadores de punto y coma (`;`). Un archivo que Excel guardó como CSV simple (Windows-1252) también se importa. Descargue una plantilla para asegurar encabezados correctos.
+1. **Prepare su archivo**: guárdelo en UTF-8. Las comas y los puntos y coma funcionan, y también un archivo que Excel guardó como CSV simple (Windows-1252). Descargue una plantilla para asegurar los encabezados correctos. El separador, los importes, las fechas y los sí o no de cada idioma están en [Archivos CSV](csv-files.md).
 
 2. **Elija la configuración de importación**:
    - **Modo**:
@@ -477,7 +477,7 @@ Desde la lista de Aplicaciones:
 | `editor` | Editor del software | No | Texto libre (p. ej., Microsoft, SAP) |
 | `criticality` | Criticidad de negocio | No | Acepta código o etiqueta de Configuración; `__CLEAR__` lo borra |
 | `lifecycle` | Estado actual | No | Acepta código o etiqueta de Configuración |
-| `is_suite` | Puede tener apps hijas | No | `true` o `false` |
+| `is_suite` | Puede tener apps hijas | No | `sí` o `no` |
 | `status` | Habilitado/deshabilitado | No | `enabled` o `disabled` |
 
 **Campos de versión**:
@@ -494,8 +494,8 @@ Desde la lista de Aplicaciones:
 | Columna CSV | Descripción | Notas |
 |-------------|-------------|-------|
 | `access_methods` | Cómo acceden los usuarios | Códigos o etiquetas separados por comas de Configuración (p. ej., `web,mobile,vdi`) |
-| `external_facing` | Accesible desde internet | `true` o `false` |
-| `etl_enabled` | Integración de datos | `true` o `false` |
+| `external_facing` | Accesible desde internet | `sí` o `no` |
+| `etl_enabled` | Integración de datos | `sí` o `no` |
 | `support_notes` | Información de soporte | Texto libre |
 | `licensing` | Términos de licencia | Texto libre |
 | `notes` | Notas internas | Texto libre |
@@ -506,7 +506,7 @@ Desde la lista de Aplicaciones:
 |-------------|-------------|-------|
 | `data_class` | Clasificación de datos | Acepta código o etiqueta de Configuración |
 | `last_dr_test` | Fecha de última prueba DR | Formato de fecha: AAAA-MM-DD |
-| `contains_pii` | Almacena datos personales | `true` o `false` |
+| `contains_pii` | Almacena datos personales | `sí` o `no` |
 | `data_residency` | Países de almacenamiento de datos | Solo exportación (códigos ISO) |
 
 **Campos de clasificación**:
@@ -573,7 +573,7 @@ Si incluye la columna `id` con un UUID válido, la coincidencia usa primero el I
 **Error "El archivo no tiene el formato correcto"**: Esto generalmente indica un problema de codificación. Asegúrese de que su CSV esté guardado como **UTF-8**:
 
 - **En LibreOffice**: Al abrir un CSV, seleccione `UTF-8` en el desplegable de Juego de caracteres (no "Japanese (Macintosh)" u otras codificaciones). Al guardar, marque "Editar configuración de filtro" y elija UTF-8.
-- **En Excel**: Guardar como > CSV UTF-8 (delimitado por comas), luego abra en un editor de texto para cambiar comas por puntos y coma.
+- **En Excel**: Guardar como > CSV UTF-8 (delimitado por comas).
 - **Consejo general**: Si ve caracteres ilegibles (`?¿`, `ï»¿`) al inicio de su archivo, la codificación es incorrecta.
 
 ### Ejemplo CSV

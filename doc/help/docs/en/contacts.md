@@ -123,11 +123,10 @@ Manage contacts in bulk using CSV.
 
 **Required fields**: Email
 
-**Optional fields**: First Name, Last Name, Supplier Name, Job Title, Phone, Mobile, Country, Active
+**Optional fields**: `first_name`, `last_name`, `job_title`, `phone`, `mobile`, `country`, `notes`, `active`
 
 **Notes**:
-- Use **UTF-8 encoding** and **semicolons** as separators. A file Excel saved as plain CSV (Windows-1252) imports too
-- Supplier is matched by name. Make sure the supplier exists before importing.
+- See [CSV files](csv-files.md) for the encoding, the separator and the two import steps
 
 ---
 

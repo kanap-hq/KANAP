@@ -2,11 +2,11 @@
   "aiAdmin": {
     "actions": {
       "createKey": "Create key",
-      "creating": "Creating...",
+      "creating": "Creating…",
       "done": "Done",
       "saveSettings": "Save settings",
       "testConnection": "Test connection",
-      "testing": "Testing..."
+      "testing": "Testing…"
     },
     "dialogs": {
       "claudeCodeHelper": "Run it in a terminal to connect Claude Code to KANAP with this key.",
@@ -96,7 +96,7 @@
       "revokeMcpKeyFailed": "Failed to revoke MCP key.",
       "saveFailed": "Failed to save.",
       "settingsSaved": "Settings saved.",
-      "testingWebSearch": "Testing web search connectivity...",
+      "testingWebSearch": "Testing web search connectivity…",
       "webSearchTestFailed": "Web search test failed."
     },
     "overview": {
@@ -345,15 +345,15 @@
     "title": "Audit log",
     "values": {
       "unknownAccount": "Unknown account",
-      "unknownUser": "Unknown ({{id}}...)"
+      "unknownUser": "Unknown ({{id}}…)"
     }
   },
   "auth": {
     "actions": {
       "connect": "Connect",
-      "connecting": "Connecting...",
+      "connecting": "Connecting…",
       "disconnect": "Disconnect",
-      "disconnecting": "Disconnecting...",
+      "disconnecting": "Disconnecting…",
       "reconnect": "Reconnect",
       "testSignIn": "Test sign-in"
     },
@@ -494,10 +494,10 @@
       "clear": "Clear",
       "discard": "Discard",
       "removeLogo": "Remove logo",
-      "removingLogo": "Removing...",
+      "removingLogo": "Removing…",
       "replaceSelectedFile": "Replace selected file",
       "resetToDefault": "Reset to default",
-      "resetting": "Resetting...",
+      "resetting": "Resetting…",
       "uploadLogo": "Upload logo"
     },
     "colors": {
@@ -597,7 +597,7 @@
       "save": "Save",
       "savePlanLimits": "Save limit",
       "test": "Test connection",
-      "testing": "Testing..."
+      "testing": "Testing…"
     },
     "cards": {
       "planLimits": "Free AI messages",
@@ -797,7 +797,7 @@
   "roles": {
     "actions": {
       "duplicate": "Duplicate",
-      "duplicating": "Duplicating...",
+      "duplicating": "Duplicating…",
       "newRole": "New role",
       "saveDetails": "Save details",
       "savePermissions": "Save permissions"
@@ -1352,7 +1352,7 @@
       "actions": {
         "save": "Save settings",
         "test": "Test connection",
-        "testing": "Testing...",
+        "testing": "Testing…",
         "goToSync": "Set up the synchronisation"
       }
     }

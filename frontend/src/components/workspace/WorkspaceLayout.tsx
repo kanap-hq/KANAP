@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Box,
@@ -121,12 +122,13 @@ export function WorkspaceActions({
   loading,
   showReset = true,
 }: WorkspaceActionsProps) {
+  const { t } = useTranslation('common');
   return (
     <Stack direction="row" spacing={1}>
-      <Button onClick={onClose}>Close</Button>
+      <Button onClick={onClose}>{t('buttons.close')}</Button>
       {showReset && onReset && (
         <Button onClick={onReset} disabled={!dirty || loading}>
-          Reset
+          {t('buttons.reset')}
         </Button>
       )}
       <Button
@@ -134,7 +136,7 @@ export function WorkspaceActions({
         onClick={onSave}
         disabled={!dirty || loading}
       >
-        Save
+        {t('buttons.save')}
       </Button>
     </Stack>
   );

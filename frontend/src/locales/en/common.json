@@ -34,12 +34,12 @@
     "moreActions": "More actions"
   },
   "status": {
-    "loading": "Loading...",
-    "saving": "Saving...",
-    "deleting": "Deleting...",
-    "sending": "Sending...",
-    "importing": "Importing...",
-    "exporting": "Exporting {{format}}...",
+    "loading": "Loading…",
+    "saving": "Saving…",
+    "deleting": "Deleting…",
+    "sending": "Sending…",
+    "importing": "Importing…",
+    "exporting": "Exporting {{format}}…",
     "saved": "Saved"
   },
   "statuses": {
@@ -66,7 +66,7 @@
   "filters": {
     "quickFilter": "Quick filter",
     "clearQuickFilter": "Clear quick filter",
-    "search": "Search...",
+    "search": "Search…",
     "noOptions": "No options",
     "blank": "(Blank)",
     "selectedCount": "{{count}} selected",
@@ -78,7 +78,6 @@
     "valueCount": "{{formatted}} values",
     "valueCount_one": "{{formatted}} value",
     "clearFilter": "Clear filter",
-    "columnPlaceholder": "Filter…",
     "filterColumn": "Filter {{column}}",
     "linkFiltersLost": "The filters of this link are no longer available.",
     "date": {
@@ -95,8 +94,8 @@
     "noResults": "No results",
     "noResultsFiltered": "No results match the search or the filters.",
     "clearAll": "Clear search and filters",
-    "resultCount_one": "{{count}} result",
-    "resultCount_other": "{{count}} results"
+    "resultCount_one": "{{count, count}} result",
+    "resultCount_other": "{{count, count}} results"
   },
   "columnChooser": {
     "searchPlaceholder": "Search columns",
@@ -111,7 +110,7 @@
     "disabled": "Disabled",
     "invited": "Invited",
     "email": "Email",
-    "totalWithCount": "Total ({{count}})",
+    "totalWithCount": "Total ({{count, count}})",
     "noData": "No data",
     "none": "None",
     "year": "Year",
@@ -132,7 +131,14 @@
     "recommended": "Recommended",
     "openCalendar": "Open calendar",
     "datePlaceholder": "dd/mm/yyyy",
-    "requiredTag": "(required)"
+    "requiredTag": "(required)",
+    "relatedTo": "Related to",
+    "openInNewTab": "Open in new tab",
+    "breadcrumb": "Breadcrumb",
+    "reviewStates": "Review states",
+    "previousTask": "Previous task",
+    "nextTask": "Next task",
+    "closeDialog": "Close dialog"
   },
   "yearTabs": {
     "single": "Year: {{year}}",
@@ -272,7 +278,7 @@
     "dashboardSettings": "Dashboard settings",
     "noTilesEnabled": "No tiles enabled. Click the settings icon to configure your dashboard.",
     "blankDocument": "Blank document",
-    "fromTemplate": "From template...",
+    "fromTemplate": "From template…",
     "selectTemplate": "Select template",
     "useTemplate": "Use template",
     "noTemplatesAvailable": "No published templates are available.",
@@ -480,7 +486,6 @@
     "exportTitle": "Export CSV",
     "importTitle": "Import CSV",
     "exportDescription": "Export data as CSV. Files use semicolon separators.",
-    "exportDescriptionExcel": "Export data as CSV. Files use semicolon separators for Excel compatibility.",
     "exportDescriptionFlexible": "Export data as CSV. The separator, the decimal mark and the dates follow the language of the screen.",
     "exportData": "Export data",
     "exportPreset": "Export preset",
@@ -489,7 +494,6 @@
     "fieldsSelected": "{{selected}} of {{total}} fields selected",
     "downloadTemplate": "Download template",
     "uploadDescription": "Upload a CSV with semicolon separators and exact column titles from the template.",
-    "uploadDescriptionShort": "Upload a CSV with semicolon separators.",
     "uploadDescriptionFlexible": "Upload a CSV file with the column titles of the template. Commas or semicolons both work, and so does a file saved by Excel.",
     "dragDropOrClick": "Drag & drop CSV here, or click to select",
     "preflightCheck": "Preflight check",
@@ -529,10 +533,10 @@
     "skipped_other": "{{count}} skipped",
     "errors": "Errors ({{count}})",
     "warnings": "Warnings ({{count}})",
-    "andMoreErrors2_one": "...and {{count}} more error",
-    "andMoreErrors2_other": "...and {{count}} more errors",
-    "andMoreWarnings_one": "...and {{count}} more warning",
-    "andMoreWarnings_other": "...and {{count}} more warnings",
+    "andMoreErrors2_one": "…and {{count}} more error",
+    "andMoreErrors2_other": "…and {{count}} more errors",
+    "andMoreWarnings_one": "…and {{count}} more warning",
+    "andMoreWarnings_other": "…and {{count}} more warnings",
     "rowPrefix": "Row {{row}}:",
     "rowsUnchanged_one": "{{count}} row unchanged.",
     "rowsUnchanged_other": "{{count}} rows unchanged.",
@@ -610,7 +614,7 @@
     }
   },
   "selects": {
-    "loading": "Loading...",
+    "loading": "Loading…",
     "loadingEllipsis": "Loading…",
     "noAccountsFound": "No accounts found",
     "noContactsFound": "No contacts found",
@@ -626,7 +630,7 @@
     "newCategory": "New category",
     "editCategories": "Edit categories",
     "inactiveSuffix": "(inactive)",
-    "addTeamMember": "Add team member...",
+    "addTeamMember": "Add team member…",
     "noTeamMembers": "No team members assigned.",
     "cluster": "Cluster:",
     "account": "Account",
@@ -671,7 +675,7 @@
     "newDocument": "New document",
     "newDocumentLower": "New document",
     "blankDocument": "Blank document",
-    "fromTemplate": "From template...",
+    "fromTemplate": "From template…",
     "selectTemplate": "Select template",
     "noTemplatesAvailable": "No published templates are available.",
     "useTemplate": "Use template",
@@ -684,8 +688,6 @@
     "failedToUpdateLinks": "Failed to update knowledge links.",
     "failedToLoadContext": "Failed to load knowledge context.",
     "noStandaloneDocuments": "No standalone knowledge documents.",
-    "restrictedDocuments": "{{count}} standalone knowledge document is available for this item. You need the Knowledge Reader role to view them.",
-    "restrictedDocuments_plural": "{{count}} standalone knowledge documents are available for this item. You need the Knowledge Reader role to view them.",
     "linkedDocuments": "Linked documents",
     "relatedDocuments": "Related documents",
     "openKnowledge": "Open knowledge document",
@@ -696,13 +698,16 @@
     "linkedVia": "Linked via",
     "sourceObject": "Source object",
     "updatedColumn": "Updated",
-    "openColumn": "Open"
+    "openColumn": "Open",
+    "restrictedDocuments_one": "{{count}} standalone knowledge document is available for this item. You need the Knowledge Reader role to view them.",
+    "restrictedDocuments_other": "{{count}} standalone knowledge documents are available for this item. You need the Knowledge Reader role to view them.",
+    "newDocumentOptions": "New document options"
   },
   "share": {
     "sendLink": "Send link",
-    "searchUsersOrEmail": "Search users or type an email...",
+    "searchUsersOrEmail": "Search users or type an email…",
     "messageOptional": "Message (optional)",
-    "addPersonalMessage": "Add a personal message...",
+    "addPersonalMessage": "Add a personal message…",
     "copied": "Copied!",
     "copyLink": "Copy link",
     "typeEmailAddress": "Type an email address",
@@ -804,7 +809,7 @@
     "title": "Contacts",
     "selectContact": "Select contact",
     "noContactsLinked": "No contacts linked",
-    "loadingContacts": "Loading contacts...",
+    "loadingContacts": "Loading contacts…",
     "roleCommercial": "Commercial",
     "roleTechnical": "Technical",
     "roleSupport": "Support",
@@ -948,5 +953,34 @@
     "reload": "Reload",
     "reloadHint": "Reload shows these changes. What you are editing stays on screen.",
     "deleted": "This line was deleted"
+  },
+  "markdownEditor": {
+    "insertEmoji": "Insert emoji",
+    "blockStyle": "Block style"
+  },
+  "markdownLink": {
+    "url": "URL",
+    "anchorText": "Anchor text",
+    "editLink": "Edit link",
+    "copyUrl": "Copy URL",
+    "removeLink": "Remove link"
+  },
+  "taskTypes": {
+    "task": {
+      "label": "Task",
+      "description": "Standard task or work item"
+    },
+    "bug": {
+      "label": "Bug",
+      "description": "Software defect or error"
+    },
+    "problem": {
+      "label": "Problem",
+      "description": "Operational issue requiring investigation"
+    },
+    "incident": {
+      "label": "Incident",
+      "description": "Service disruption or security event"
+    }
   }
 }

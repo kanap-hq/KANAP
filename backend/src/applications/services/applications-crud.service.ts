@@ -1,12 +1,9 @@
-import { ApplicationsCsvService } from '../applications-csv.service';
 import { linkedLineOf } from '../../spend/budget-nature';
 import { copyClassification } from './application-classification';
 import { classificationPatch, classificationReadState } from './application-classification';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { format } from '@fast-csv/format';
-import { parseString } from '@fast-csv/parse';
 import { assertMarkdownSize } from '../../common/markdown-limits';
 import { Application } from '../application.entity';
 import { ApplicationOwner } from '../application-owner.entity';
@@ -47,7 +44,6 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     private readonly storage: StorageService,
     private readonly itOpsSettings: ItOpsSettingsService,
     private readonly notifications: NotificationsService,
-    private readonly csvService: ApplicationsCsvService,
   ) {
     super(appRepo);
   }
@@ -445,18 +441,6 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     try { await this.storage.deleteObject((found as any).storage_path); } catch {}
     await this.audit.log({ table: 'application_attachments', recordId: found.id, action: 'update', before: found, after: null, userId }, { manager: mg });
     return { ok: true };
-  }
-
-  // CSV Export/Import
-  async exportCsv(scope: 'template' | 'data' = 'data', opts?: ServiceOpts) {
-    const manager = this.getManager(opts);
-    const result = await this.csvService.export({ manager, tenantId: await this.getCurrentTenantId(manager), scope });
-    return result.content;
-  }
-
-  async importCsv({ file, dryRun, userId }: { file: Express.Multer.File; dryRun: boolean; userId?: string | null }, opts?: ServiceOpts) {
-    const manager = this.getManager(opts);
-    return this.csvService.import(file, { dryRun, mode: 'enrich', operation: 'upsert' }, { manager, tenantId: await this.getCurrentTenantId(manager), userId });
   }
 
   async copyApplication(id: string, name: string, userId: string | null, opts?: ServiceOpts) {

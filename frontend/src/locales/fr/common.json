@@ -34,12 +34,12 @@
     "moreActions": "Plus d'actions"
   },
   "status": {
-    "loading": "Chargement...",
-    "saving": "Enregistrement...",
-    "deleting": "Suppression...",
-    "sending": "Envoi...",
-    "importing": "Importation...",
-    "exporting": "Exportation {{format}}...",
+    "loading": "Chargement…",
+    "saving": "Enregistrement…",
+    "deleting": "Suppression…",
+    "sending": "Envoi…",
+    "importing": "Importation…",
+    "exporting": "Exportation {{format}}…",
     "saved": "Enregistré"
   },
   "statuses": {
@@ -66,7 +66,7 @@
   "filters": {
     "quickFilter": "Filtre rapide",
     "clearQuickFilter": "Effacer le filtre rapide",
-    "search": "Rechercher...",
+    "search": "Rechercher…",
     "noOptions": "Aucune option",
     "blank": "(Vide)",
     "selectedCount": "{{count}} sélectionnés",
@@ -78,7 +78,6 @@
     "valueCount": "{{formatted}} valeurs",
     "valueCount_one": "{{formatted}} valeur",
     "clearFilter": "Effacer le filtre",
-    "columnPlaceholder": "Filtrer…",
     "filterColumn": "Filtrer {{column}}",
     "linkFiltersLost": "Les filtres de ce lien ne sont plus disponibles.",
     "date": {
@@ -95,8 +94,8 @@
     "noResults": "Aucun résultat",
     "noResultsFiltered": "Aucun résultat ne correspond à la recherche ou aux filtres.",
     "clearAll": "Effacer la recherche et les filtres",
-    "resultCount_one": "{{count}} résultat",
-    "resultCount_other": "{{count}} résultats"
+    "resultCount_one": "{{count, count}} résultat",
+    "resultCount_other": "{{count, count}} résultats"
   },
   "columnChooser": {
     "searchPlaceholder": "Rechercher une colonne",
@@ -111,7 +110,7 @@
     "disabled": "Désactivés",
     "invited": "Invités",
     "email": "E-mail",
-    "totalWithCount": "Total ({{count}})",
+    "totalWithCount": "Total ({{count, count}})",
     "noData": "Aucune donnée",
     "none": "Aucun",
     "year": "Année",
@@ -128,11 +127,18 @@
     "role": "Rôle",
     "unknown": "Inconnu",
     "readOnly": "Lecture seule",
-    "managedDoc": "Document géré",
+    "managedDoc": "Document managé",
     "recommended": "Recommandé",
     "openCalendar": "Ouvrir le calendrier",
     "datePlaceholder": "jj/mm/aaaa",
-    "requiredTag": "(obligatoire)"
+    "requiredTag": "(obligatoire)",
+    "relatedTo": "Lié à",
+    "openInNewTab": "Ouvrir dans un nouvel onglet",
+    "breadcrumb": "Fil d'Ariane",
+    "reviewStates": "États de revue",
+    "previousTask": "Tâche précédente",
+    "nextTask": "Tâche suivante",
+    "closeDialog": "Fermer la boîte de dialogue"
   },
   "yearTabs": {
     "single": "Année : {{year}}",
@@ -272,7 +278,7 @@
     "dashboardSettings": "Paramètres du tableau de bord",
     "noTilesEnabled": "Aucune tuile activée. Cliquez sur l'icône de paramètres pour configurer votre tableau de bord.",
     "blankDocument": "Document vierge",
-    "fromTemplate": "À partir d'un modèle...",
+    "fromTemplate": "À partir d'un modèle…",
     "selectTemplate": "Sélectionner un modèle",
     "useTemplate": "Utiliser le modèle",
     "noTemplatesAvailable": "Aucun modèle publié n'est disponible.",
@@ -480,7 +486,6 @@
     "exportTitle": "Exporter en CSV",
     "importTitle": "Importer un CSV",
     "exportDescription": "Exporter les données au format CSV. Les fichiers utilisent le séparateur point-virgule.",
-    "exportDescriptionExcel": "Exporter les données au format CSV. Les fichiers utilisent le séparateur point-virgule pour la compatibilité Excel.",
     "exportDescriptionFlexible": "Exporter les données au format CSV. Le séparateur, le séparateur décimal et les dates suivent la langue de l'écran.",
     "exportData": "Exporter les données",
     "exportPreset": "Préréglage d'export",
@@ -489,7 +494,6 @@
     "fieldsSelected": "{{selected}} sur {{total}} champs sélectionnés",
     "downloadTemplate": "Télécharger le modèle",
     "uploadDescription": "Téléversez un CSV avec des séparateurs point-virgule et les titres de colonnes exactement identiques au modèle.",
-    "uploadDescriptionShort": "Téléversez un CSV avec des séparateurs point-virgule.",
     "uploadDescriptionFlexible": "Téléversez un fichier CSV avec les titres de colonnes du modèle. Les virgules et les points-virgules conviennent, et un fichier enregistré par Excel aussi.",
     "dragDropOrClick": "Glissez-déposez un CSV ici, ou cliquez pour sélectionner",
     "preflightCheck": "Vérification préalable",
@@ -529,10 +533,10 @@
     "skipped_other": "{{count}} ignorées",
     "errors": "Erreurs ({{count}})",
     "warnings": "Avertissements ({{count}})",
-    "andMoreErrors2_one": "...et {{count}} erreur supplémentaire",
-    "andMoreErrors2_other": "...et {{count}} erreurs supplémentaires",
-    "andMoreWarnings_one": "...et {{count}} avertissement supplémentaire",
-    "andMoreWarnings_other": "...et {{count}} avertissements supplémentaires",
+    "andMoreErrors2_one": "…et {{count}} erreur supplémentaire",
+    "andMoreErrors2_other": "…et {{count}} erreurs supplémentaires",
+    "andMoreWarnings_one": "…et {{count}} avertissement supplémentaire",
+    "andMoreWarnings_other": "…et {{count}} avertissements supplémentaires",
     "rowPrefix": "Ligne {{row}} :",
     "rowsUnchanged_one": "{{count}} ligne inchangée.",
     "rowsUnchanged_other": "{{count}} lignes inchangées.",
@@ -610,7 +614,7 @@
     }
   },
   "selects": {
-    "loading": "Chargement...",
+    "loading": "Chargement…",
     "loadingEllipsis": "Chargement…",
     "noAccountsFound": "Aucun compte trouvé",
     "noContactsFound": "Aucun contact trouvé",
@@ -626,7 +630,7 @@
     "newCategory": "Nouvelle catégorie",
     "editCategories": "Modifier les catégories",
     "inactiveSuffix": "(inactif)",
-    "addTeamMember": "Ajouter un membre d'équipe...",
+    "addTeamMember": "Ajouter un membre d'équipe…",
     "noTeamMembers": "Aucun membre d'équipe assigné.",
     "cluster": "Cluster :",
     "account": "Compte",
@@ -659,11 +663,11 @@
     "retryLock": "Réessayer le verrouillage",
     "lockExpired": "Le verrouillage d'édition a expiré. Repassez en mode édition pour continuer.",
     "failedToSave": "Échec de l'enregistrement du document",
-    "failedToLoad": "Échec du chargement du document géré",
-    "contentUnavailable": "Le contenu du document géré est indisponible jusqu'à la résolution de l'erreur de chargement.",
-    "lockedBy": "Ce document géré est verrouillé par {{name}}",
-    "lockedByUntil": "Ce document géré est verrouillé par {{name}} jusqu'au {{expires}}. Vous pouvez le lire tant que le verrou est actif.",
-    "lockedByReadOnly": "Ce document géré est verrouillé par {{name}}. Vous pouvez le lire tant que le verrou est actif.",
+    "failedToLoad": "Échec du chargement du document managé",
+    "contentUnavailable": "Le contenu du document managé est indisponible jusqu'à la résolution de l'erreur de chargement.",
+    "lockedBy": "Ce document managé est verrouillé par {{name}}",
+    "lockedByUntil": "Ce document managé est verrouillé par {{name}} jusqu'au {{expires}}. Vous pouvez le lire tant que le verrou est actif.",
+    "lockedByReadOnly": "Ce document managé est verrouillé par {{name}}. Vous pouvez le lire tant que le verrou est actif.",
     "importFailed": "Échec de l'importation du document"
   },
   "knowledgePanel": {
@@ -671,7 +675,7 @@
     "newDocument": "Nouveau document",
     "newDocumentLower": "Nouveau document",
     "blankDocument": "Document vierge",
-    "fromTemplate": "À partir d'un modèle...",
+    "fromTemplate": "À partir d'un modèle…",
     "selectTemplate": "Sélectionner un modèle",
     "noTemplatesAvailable": "Aucun modèle publié n'est disponible.",
     "useTemplate": "Utiliser le modèle",
@@ -684,8 +688,6 @@
     "failedToUpdateLinks": "Échec de la mise à jour des liens.",
     "failedToLoadContext": "Échec du chargement du contexte.",
     "noStandaloneDocuments": "Aucun document autonome.",
-    "restrictedDocuments": "{{count}} document autonome est disponible pour cet élément. Vous devez disposer du rôle Lecteur pour le consulter.",
-    "restrictedDocuments_plural": "{{count}} documents autonomes sont disponibles pour cet élément. Vous devez disposer du rôle Lecteur pour les consulter.",
     "linkedDocuments": "Documents liés",
     "relatedDocuments": "Documents associés",
     "openKnowledge": "Ouvrir le document",
@@ -696,13 +698,16 @@
     "linkedVia": "Lié via",
     "sourceObject": "Objet source",
     "updatedColumn": "Mis à jour",
-    "openColumn": "Ouvrir"
+    "openColumn": "Ouvrir",
+    "restrictedDocuments_one": "{{count}} document autonome est disponible pour cet élément. Vous devez disposer du rôle Lecteur pour le consulter.",
+    "restrictedDocuments_other": "{{count}} documents autonomes sont disponibles pour cet élément. Vous devez disposer du rôle Lecteur pour les consulter.",
+    "newDocumentOptions": "Options du nouveau document"
   },
   "share": {
     "sendLink": "Envoyer le lien",
-    "searchUsersOrEmail": "Rechercher des utilisateurs ou saisir un e-mail...",
+    "searchUsersOrEmail": "Rechercher des utilisateurs ou saisir un e-mail…",
     "messageOptional": "Message (facultatif)",
-    "addPersonalMessage": "Ajouter un message personnel...",
+    "addPersonalMessage": "Ajouter un message personnel…",
     "copied": "Copié !",
     "copyLink": "Copier le lien",
     "typeEmailAddress": "Saisir une adresse e-mail",
@@ -804,7 +809,7 @@
     "title": "Contacts",
     "selectContact": "Sélectionner un contact",
     "noContactsLinked": "Aucun contact lié",
-    "loadingContacts": "Chargement des contacts...",
+    "loadingContacts": "Chargement des contacts…",
     "roleCommercial": "Commercial",
     "roleTechnical": "Technique",
     "roleSupport": "Support",
@@ -948,5 +953,34 @@
     "reload": "Recharger",
     "reloadHint": "Recharger affiche ces modifications. Ce que vous êtes en train de modifier reste à l'écran.",
     "deleted": "Cette ligne a été supprimée"
+  },
+  "markdownEditor": {
+    "insertEmoji": "Insérer un emoji",
+    "blockStyle": "Style de bloc"
+  },
+  "markdownLink": {
+    "url": "URL",
+    "anchorText": "Texte du lien",
+    "editLink": "Modifier le lien",
+    "copyUrl": "Copier l'URL",
+    "removeLink": "Supprimer le lien"
+  },
+  "taskTypes": {
+    "task": {
+      "label": "Tâche",
+      "description": "Tâche ou élément de travail standard"
+    },
+    "bug": {
+      "label": "Bug",
+      "description": "Défaut ou erreur logicielle"
+    },
+    "problem": {
+      "label": "Problème",
+      "description": "Problème opérationnel nécessitant une analyse"
+    },
+    "incident": {
+      "label": "Incident",
+      "description": "Interruption de service ou événement de sécurité"
+    }
   }
 }

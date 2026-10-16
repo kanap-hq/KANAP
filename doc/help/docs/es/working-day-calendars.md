@@ -190,7 +190,7 @@ Cargue o actualice calendarios y sus días laborables desde un archivo.
 | `country` | Opcional. El código de país de dos letras de un calendario estándar, por ejemplo `FR`. Vacía para un calendario personalizado |
 | `region` | Opcional. El código de la región, por ejemplo `57` para Mosela o `BY` para Baviera. Necesita un país. Vacía para todo el país |
 | `status` | `enabled` o `disabled`. Vacía significa `enabled` |
-| `disabled_at` | Columna opcional. El fin de validez: una fecha (`2026-12-31`) o una fecha y hora completas. Vacía si no hay fin |
+| `disabled_at` | Columna opcional. El fin de validez: una fecha (`2026-12-31`) o una fecha y hora completas. La exportación escribe solo la fecha. Importada de nuevo, esa fecha conserva el fin de validez guardado. Vacía si no hay fin |
 | `year` | Cuatro dígitos, de 2000 a 2100. Vacía en una fila que solo define los campos del calendario |
 | `jan` a `dec` | Los días laborables de cada mes, con un punto como separador decimal (también se acepta la coma). Obligatorias en una fila con año |
 

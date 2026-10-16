@@ -257,7 +257,7 @@ Aus der Asset-Liste:
 
 ### Import-Workflow
 
-1. **Datei vorbereiten**: Verwenden Sie UTF-8-Kodierung mit Semikolon (`;`) als Trennzeichen. Eine von Excel als einfache CSV gespeicherte Datei (Windows-1252) wird ebenfalls importiert. Laden Sie eine Vorlage herunter, um korrekte Spaltenköpfe sicherzustellen.
+1. **Datei vorbereiten**: Speichern Sie sie als UTF-8. Kommas und Semikolons funktionieren beide, ebenso eine von Excel als einfache CSV gespeicherte Datei (Windows-1252). Laden Sie eine Vorlage herunter, um korrekte Spaltenköpfe sicherzustellen. Trennzeichen, Beträge, Datumsangaben und Ja oder Nein jeder Sprache stehen unter [CSV-Dateien](csv-files.md).
 
 2. **Importeinstellungen wählen**:
    - **Modus**:
@@ -284,7 +284,7 @@ Aus der Asset-Liste:
 | `kind` | Asset-Typ | Ja | Akzeptiert Code oder Bezeichnung (z. B. `vm` oder `Virtual Machine`) |
 | `environment` | Umgebung | Ja | `prod`, `pre_prod`, `qa`, `test`, `dev`, `sandbox` |
 | `status` | Lebenszyklus-Status | Nein | Akzeptiert Code oder Bezeichnung (z. B. `active` oder `Active`) |
-| `is_cluster` | Ist dies ein Cluster | Nein | `true` oder `false` |
+| `is_cluster` | Ist dies ein Cluster | Nein | `ja` oder `nein` |
 | `hostname` | Netzwerk-Hostname | Nein | |
 | `domain` | DNS-Domäne | Nein | Akzeptiert Code oder Bezeichnung aus den Einstellungen |
 | `aliases` | DNS-Aliase | Nein | Komma-getrennte Liste |
@@ -343,7 +343,7 @@ Einige Felder werden berechnet und können nicht importiert werden:
 **Fehler „Datei ist nicht richtig formatiert"**: Dies weist normalerweise auf ein Kodierungsproblem hin. Stellen Sie sicher, dass Ihre CSV als **UTF-8** gespeichert ist:
 
 - **In LibreOffice**: Wählen Sie beim Öffnen einer CSV `UTF-8` im Zeichensatz-Dropdown (nicht „Japanese (Macintosh)" oder andere Kodierungen). Beim Speichern aktivieren Sie „Filtereinstellungen bearbeiten" und wählen Sie UTF-8.
-- **In Excel**: Speichern unter > CSV UTF-8 (Komma-getrennt), dann in einem Texteditor öffnen, um Kommas in Semikolons zu ändern.
+- **In Excel**: Speichern unter > CSV UTF-8 (Komma-getrennt).
 - **Allgemeiner Tipp**: Wenn Sie verstümmelte Zeichen am Anfang Ihrer Datei sehen, ist die Kodierung falsch.
 
 ### Beispiel-CSV

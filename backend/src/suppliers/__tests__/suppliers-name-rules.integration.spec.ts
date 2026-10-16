@@ -85,16 +85,30 @@ void runSpecs('suppliers name rules', [
       const svc = service();
       const tenantId = await seedTenant(runner, 'supplier-import');
       await svc.create({ name: 'SAP', erp_supplier_id: 'SUP-1' }, undefined, { manager: runner.manager });
-      const file = await csvFile(svc, runner, ['sap,SUP-1,,,,,enabled']);
+      const file = await csvFile(svc, runner, ['sap,SUP-1,,,,Updated,enabled']);
       const preview = await svc.importCsv({ file, dryRun: true, language: 'en' }, { manager: runner.manager });
       assert.strictEqual(preview.ok, true, JSON.stringify(preview.errors));
       assert.strictEqual(preview.inserted, 0, 'no new supplier in the preview');
+      assert.strictEqual(preview.updated, 1);
+      // The preview says which stored supplier the row matched.
+      assert.deepStrictEqual(preview.warnings, [{
+        row: 2,
+        column: 'name',
+        message: "'sap' was matched to 'SAP'.",
+        code: 'CSV_NAME_MATCHED_CASE',
+        params: { name: 'sap', stored: 'SAP' },
+      }]);
       await setTenant(runner, tenantId);
       const result = await svc.importCsv({ file, dryRun: false, language: 'en' }, { manager: runner.manager });
       assert.strictEqual(result.ok, true, JSON.stringify(result.errors));
       assert.strictEqual(result.inserted, 0);
-      const rows: Array<{ count: string }> = await runner.query(`SELECT count(*)::text AS count FROM suppliers`);
-      assert.strictEqual(rows[0].count, '1', 'the import created no second supplier');
+      const rows: Array<{ name: string; notes: string }> = await runner.query(`SELECT name, notes FROM suppliers`);
+      // The row updates the supplier and keeps its stored spelling.
+      assert.deepStrictEqual(rows, [{ name: 'SAP', notes: 'Updated' }], 'one supplier, still named SAP');
+      // Imported again, the row is unchanged: the case of the name is not a change.
+      const again = await svc.importCsv({ file, dryRun: true, language: 'en' }, { manager: runner.manager });
+      assert.strictEqual(again.updated, 0);
+      assert.strictEqual(again.unchanged, 1);
     });
   }],
   ['the list sorts names alphabetically, ignoring case and accents, and listIds follows it', async () => {

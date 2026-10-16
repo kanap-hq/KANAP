@@ -186,7 +186,7 @@ Cargue o actualice todo el árbol desde un archivo.
 | `owner_email` | El correo electrónico del responsable del presupuesto, un usuario activo. Vacía para ningún responsable del presupuesto |
 | `description` | Texto libre |
 | `status` | `enabled` o `disabled`. Vacía significa `enabled` para un nodo nuevo y conserva el estado guardado en una actualización |
-| `disabled_at` | Columna opcional. El fin de validez: una fecha (`2026-12-31`) o una fecha y hora completas. Vacía si no hay fin. En una actualización, un `status` vacío y un `disabled_at` vacío conservan los valores guardados. `enabled` con una fecha vacía borra el fin de validez. `disabled` con una fecha vacía conserva una fecha ya pasada y, si no, termina el nodo hoy |
+| `disabled_at` | Columna opcional. El fin de validez: una fecha (`2026-12-31`) o una fecha y hora completas. La exportación escribe solo la fecha. Importada de nuevo, esa fecha conserva el fin de validez guardado. Vacía si no hay fin. En una actualización, un `status` vacío y un `disabled_at` vacío conservan los valores guardados. `enabled` con una fecha vacía borra el fin de validez. `disabled` con una fecha vacía conserva una fecha ya pasada y, si no, termina el nodo hoy |
 
 **Importar**:
 

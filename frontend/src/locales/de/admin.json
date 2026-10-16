@@ -2,11 +2,11 @@
   "aiAdmin": {
     "actions": {
       "createKey": "Schlüssel erstellen",
-      "creating": "Wird erstellt...",
+      "creating": "Wird erstellt…",
       "done": "Fertig",
       "saveSettings": "Einstellungen speichern",
       "testConnection": "Verbindung testen",
-      "testing": "Wird getestet..."
+      "testing": "Wird getestet…"
     },
     "dialogs": {
       "claudeCodeHelper": "Führen Sie ihn in einem Terminal aus, um Claude Code mit diesem Schlüssel an KANAP anzubinden.",
@@ -96,7 +96,7 @@
       "revokeMcpKeyFailed": "MCP-Schlüssel konnte nicht widerrufen werden.",
       "saveFailed": "Speichern fehlgeschlagen.",
       "settingsSaved": "Einstellungen gespeichert.",
-      "testingWebSearch": "Websuche-Konnektivität wird getestet...",
+      "testingWebSearch": "Websuche-Konnektivität wird getestet…",
       "webSearchTestFailed": "Websuche-Test fehlgeschlagen."
     },
     "overview": {
@@ -345,15 +345,15 @@
     "title": "Audit-Protokoll",
     "values": {
       "unknownAccount": "Unbekanntes Konto",
-      "unknownUser": "Unbekannt ({{id}}...)"
+      "unknownUser": "Unbekannt ({{id}}…)"
     }
   },
   "auth": {
     "actions": {
       "connect": "Verbinden",
-      "connecting": "Verbindung wird hergestellt...",
+      "connecting": "Verbindung wird hergestellt…",
       "disconnect": "Trennen",
-      "disconnecting": "Wird getrennt...",
+      "disconnecting": "Wird getrennt…",
       "reconnect": "Erneut verbinden",
       "testSignIn": "Anmeldung testen"
     },
@@ -494,10 +494,10 @@
       "clear": "Leeren",
       "discard": "Verwerfen",
       "removeLogo": "Logo entfernen",
-      "removingLogo": "Wird entfernt...",
+      "removingLogo": "Wird entfernt…",
       "replaceSelectedFile": "Ausgewählte Datei ersetzen",
       "resetToDefault": "Auf Standard zurücksetzen",
-      "resetting": "Wird zurückgesetzt...",
+      "resetting": "Wird zurückgesetzt…",
       "uploadLogo": "Logo hochladen"
     },
     "colors": {
@@ -597,7 +597,7 @@
       "save": "Save",
       "savePlanLimits": "Limit speichern",
       "test": "Test connection",
-      "testing": "Testing..."
+      "testing": "Testing…"
     },
     "cards": {
       "planLimits": "Inklusive KI-Nachrichten",
@@ -797,7 +797,7 @@
   "roles": {
     "actions": {
       "duplicate": "Duplizieren",
-      "duplicating": "Wird dupliziert...",
+      "duplicating": "Wird dupliziert…",
       "newRole": "Neue Rolle",
       "saveDetails": "Details speichern",
       "savePermissions": "Berechtigungen speichern"
@@ -1352,7 +1352,7 @@
       "actions": {
         "save": "Einstellungen speichern",
         "test": "Verbindung testen",
-        "testing": "Wird getestet...",
+        "testing": "Wird getestet…",
         "goToSync": "Synchronisierung einrichten"
       }
     }

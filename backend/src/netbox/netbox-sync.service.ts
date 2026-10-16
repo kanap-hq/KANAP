@@ -320,16 +320,23 @@ export function plainErrorMessage(error: unknown): string {
  * connection, which is demonstrably working if we got this far.
  */
 export function objectFailureNotice(error: unknown): NetboxNotice {
-  if (error instanceof BadRequestException) {
+  if (error instanceof BadRequestException || isDuplicateNameRefusal(error)) {
     const detail = httpExceptionMessage(error);
     if (detail) return netboxNotice('validation_failed', { detail });
   }
   return netboxNotice('save_failed');
 }
 
+/** A name another record already has (409 `duplicate`, `common/duplicate-name.ts`): its message reads plainly. */
+function isDuplicateNameRefusal(error: unknown): error is ConflictException {
+  if (!(error instanceof ConflictException)) return false;
+  const response = error.getResponse();
+  return typeof response === 'object' && response !== null && (response as { code?: unknown }).code === 'duplicate';
+}
+
 /** The locations service refusing a name another sub-location already holds. */
 function isSubLocationNameRejection(error: unknown): boolean {
-  return error instanceof BadRequestException
+  return isDuplicateNameRefusal(error)
     && /already exists at this location/i.test(httpExceptionMessage(error) ?? '');
 }
 

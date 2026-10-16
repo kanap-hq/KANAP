@@ -18,7 +18,7 @@
     "version": "Version"
   },
   "confirmations": {
-    "deleteLibrary": "Supprimer cette bibliothèque ? Les documents et dossiers seront déplacés vers la bibliothèque par défaut.",
+    "deleteLibrary": "Supprimer cette bibliothèque ? Ses documents et dossiers iront dans la première bibliothèque de la barre à laquelle vous avez accès, normalement la bibliothèque par défaut.",
     "resetLibraryAccess": "Repasser cette bibliothèque en accès ouvert et effacer les listes personnalisées de lecteurs et rédacteurs ?"
   },
   "dialogs": {
@@ -142,7 +142,7 @@
   },
   "menus": {
     "blankDocument": "Document vierge",
-    "fromTemplate": "À partir d'un modèle..."
+    "fromTemplate": "À partir d'un modèle…"
   },
   "messages": {
     "documentMoved": "Document déplacé.",
@@ -150,8 +150,8 @@
     "dragSingleLibraryOnly": "Le glisser-déposer n'est disponible que dans une vue à bibliothèque unique.",
     "dragToFolderOrLibrary": "Glisser vers un dossier ou une autre bibliothèque",
     "folderMoved": "Dossier déplacé.",
-    "managedDocsCannotDelete": "Les documents gérés ne peuvent pas être supprimés depuis la base de connaissances.",
-    "managedDocsCannotMove": "Les documents gérés ne peuvent pas être déplacés depuis la base de connaissances.",
+    "managedDocsCannotDelete": "Les documents managés ne peuvent pas être supprimés depuis la base de connaissances.",
+    "managedDocsCannotMove": "Les documents managés ne peuvent pas être déplacés depuis la base de connaissances.",
     "moveDocumentsFailed": "Impossible de déplacer les documents.",
     "moveFolderFailed": "Impossible de déplacer le dossier.",
     "moveTemplatesSeparately": "Déplacez les documents modèles séparément des autres bibliothèques.",
@@ -285,12 +285,12 @@
       "properties": "Propriétés"
     },
     "tooltips": {
-      "managedFolder": "Les documents gérés conservent le placement en dossier contrôlé par l'espace de travail source.",
-      "managedRelations": "Les documents gérés conservent les relations source en lecture seule dans la base de connaissances.",
-      "managedStatus": "Les documents gérés conservent le statut contrôlé par l'espace de travail source. Le workflow de revue n'est pas disponible.",
-      "managedTemplate": "Les documents gérés conservent le modèle contrôlé par l'espace de travail source.",
-      "managedType": "Les documents gérés conservent le type de document contrôlé par l'espace de travail source.",
-      "managedWorkflow": "Les documents gérés n'utilisent pas le workflow de revue de la base de connaissances."
+      "managedFolder": "Les documents managés conservent le placement en dossier contrôlé par l'espace de travail source.",
+      "managedRelations": "Les documents managés conservent les relations source en lecture seule dans la base de connaissances.",
+      "managedStatus": "Les documents managés conservent le statut contrôlé par l'espace de travail source. Le workflow de revue n'est pas disponible.",
+      "managedTemplate": "Les documents managés conservent le modèle contrôlé par l'espace de travail source.",
+      "managedType": "Les documents managés conservent le type de document contrôlé par l'espace de travail source.",
+      "managedWorkflow": "Les documents managés n'utilisent pas le workflow de revue de la base de connaissances."
     },
     "values": {
       "default": "Par défaut",
@@ -357,6 +357,21 @@
     "in_review": "En revue",
     "obsolete": "Obsolète",
     "published": "Publié"
+  },
+  "systemNames": {
+    "libraries": {
+      "documents": "Documents",
+      "templates": "Modèles",
+      "managedDocs": "Documents managés"
+    },
+    "folders": {
+      "integrated_requests": "Demandes",
+      "integrated_projects": "Projets",
+      "integrated_interfaces": "Interfaces",
+      "integrated_applications": "Applications",
+      "integrated_assets": "Actifs",
+      "integrated_incidents": "Incidents"
+    }
   },
   "typesManager": {
     "columns": {

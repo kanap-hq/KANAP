@@ -30,6 +30,7 @@ import ConnectionLinkInterfacesDialog from './ConnectionLinkInterfacesDialog';
 import ConnectionProtocolsTable, { type ConnectionProtocol } from './ConnectionProtocolsTable';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { legTypeLabel } from '../../../utils/interfaceLegType';
 
 const NOTES_DEBOUNCE_MS = 900;
 
@@ -443,7 +444,7 @@ export default function ConnectionOverviewTab({
                   <TableCell sx={{ fontSize: 13 }}>
                     {classificationCatalog?.dataClasses.find((item) => item.code === row.interface_data_class)?.label || row.interface_data_class || '—'}
                   </TableCell>
-                  <TableCell sx={{ fontSize: 13 }}>{row.interface_contains_pii ? 'Yes' : 'No'}</TableCell>
+                  <TableCell sx={{ fontSize: 13 }}>{row.interface_contains_pii ? t('enums.yesNo.yes') : t('enums.yesNo.no')}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -540,8 +541,8 @@ export default function ConnectionOverviewTab({
                     </Stack>
                   </TableCell>
                   <TableCell sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{row.environment.toUpperCase()}</TableCell>
-                  <TableCell sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{row.leg_type.toUpperCase()}</TableCell>
-                  <TableCell sx={{ fontSize: 13 }}>{row.pattern || '—'}</TableCell>
+                  <TableCell sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{legTypeLabel(t, row.leg_type)}</TableCell>
+                  <TableCell sx={{ fontSize: 13 }}>{labelFor('interfacePattern', row.pattern) || '—'}</TableCell>
                   <TableCell sx={{ fontSize: 13 }}>{row.source_endpoint || '—'}</TableCell>
                   <TableCell sx={{ fontSize: 13 }}>{row.target_endpoint || '—'}</TableCell>
                   <TableCell align="right" sx={{ p: 0, width: 36 }}>
