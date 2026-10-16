@@ -14,7 +14,8 @@ const NEUTRAL = new Set(['KANAP', 'GLPI', 'Netbox', 'RSS', 'ms', 'EUR', 'EUR, US
 const hasWords = (text: string) => /[A-Za-z]{2,}/.test(text.replace(/&[a-z]+;/gi, '')) && !NEUTRAL.has(text);
 
 function hardcodedTexts(file: string, source: string): string[] {
-  const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  // No parent links: `getText(sf)` reads positions only, and the walk goes down from the root.
+  const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, false, ts.ScriptKind.TSX);
   const found: string[] = [];
   const visit = (node: ts.Node) => {
     if (node.kind === ts.SyntaxKind.JsxText) {
@@ -47,5 +48,7 @@ describe('hard-coded texts in components', () => {
         : [];
     });
     expect(offenders).toEqual([]);
-  });
+    // It parses every component of the app (about 2 s alone): the default 5 s fails it when other
+    // suites share the machine.
+  }, 30_000);
 });
