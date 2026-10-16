@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MemoryRouter } from 'react-router-dom';
@@ -114,6 +114,7 @@ describe('i18n loads the active language only', () => {
 
     expect(await screen.findByText((await import('../locales/es/auth.json')).default.reset.submit)).toBeInTheDocument();
     expect(downloaded('es')).toHaveLength(namespaceCount);
-    expect(i18n.resolvedLanguage).toBe('es');
+    // The language is applied again once the texts are in, after they first render.
+    await waitFor(() => expect(i18n.resolvedLanguage).toBe('es'));
   });
 });
