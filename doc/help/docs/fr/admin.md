@@ -92,7 +92,7 @@ Les événements de connexion et de session sont supprimés après **365 jours**
 
 **Colonnes par défaut** :
 - **Date** : Quand la modification ou l'événement a eu lieu
-- **Table** : Quelle table a été affectée. Les événements de connexion et de session affichent **Connexion et session**, et un export affiche ce qui a été exporté (par exemple **Fournisseurs**)
+- **Table** : Le type d'enregistrement concerné, sous son nom dans l'application (par exemple **Fournisseurs** ou **Liens de contrat**). Le filtre et le détail affichent les mêmes noms. Les événements de connexion et de session affichent **Connexion et session**, et un export affiche ce qui a été exporté (par exemple **Fournisseurs**)
 - **Action** : Le type de modification ou d'événement (créer, mettre à jour, supprimer, désactiver, restaurer, connexion, export, etc.). **Restaurer** marque une colonne budgétaire ramenée à ses valeurs d'ouverture depuis l'onglet Budget d'une ligne
 - **Source** : Qui ou quoi a déclenché la modification (utilisateur, système, webhook)
 - **Utilisateur** : Nom de l'utilisateur qui a fait la modification, ou son adresse e-mail s'il n'a pas de nom. Affiche « Système » ou « Webhook » pour les sources non-utilisateur, et « Compte inconnu » pour une tentative de connexion sur une adresse inconnue.

@@ -92,7 +92,7 @@ Los eventos de acceso y de sesión se eliminan después de **365 días**. Los ca
 
 **Columnas predeterminadas**:
 - **Fecha**: Cuándo ocurrió el cambio o el evento
-- **Tabla**: Qué tabla fue afectada. Los eventos de acceso y de sesión muestran **Acceso y sesiones**, y una exportación muestra qué se exportó (por ejemplo **Proveedores**)
+- **Tabla**: El tipo de registro afectado, con su nombre en la aplicación (por ejemplo **Proveedores** o **Enlaces de contrato**). El filtro y el detalle muestran los mismos nombres. Los eventos de acceso y de sesión muestran **Acceso y sesiones**, y una exportación muestra qué se exportó (por ejemplo **Proveedores**)
 - **Acción**: El tipo de cambio o de evento (crear, actualizar, eliminar, desactivar, restaurar, inicio de sesión, exportación, etc.). **Restaurar** marca una columna presupuestaria devuelta a sus valores de apertura desde la pestaña Presupuesto de una línea
 - **Origen**: Quién o qué desencadenó el cambio (usuario, sistema, webhook)
 - **Usuario**: Nombre del usuario que realizó el cambio, o su correo si no tiene nombre. Muestra "Sistema" o "Webhook" para orígenes no humanos, y "Cuenta desconocida" para un intento de acceso con una dirección desconocida.

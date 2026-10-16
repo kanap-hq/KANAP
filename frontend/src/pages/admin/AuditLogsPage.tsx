@@ -320,7 +320,7 @@ export default function AuditLogsPage() {
             <Stack spacing={2}>
               <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap alignItems="center">
                 <Typography variant="body2" color="text.secondary">{t('auditLogs.details.date', { value: new Date(detail.created_at).toLocaleString(locale) })}</Typography>
-                <Typography component="span" variant="body2" sx={{ fontFamily: "'JetBrains Mono Variable', ui-monospace, monospace", fontSize: '12px', color: 'text.secondary' }}>{t('auditLogs.details.table', { value: detail.table_name })}</Typography>
+                <Typography variant="body2" color="text.secondary">{t('auditLogs.details.table', { value: auditTableFilterLabel(detail.table_name, t) })}</Typography>
                 {detail.table_name === EXPORT_EVENT_TABLE && <Typography variant="body2" color="text.secondary">{t('auditLogs.details.exported', { value: auditTableLabel(detail, t) })}</Typography>}
                 <Typography variant="body2" color="text.secondary">{t('auditLogs.details.action', { value: t(`auditLogs.actions.${detail.action}`, { defaultValue: detail.action }) })}</Typography>
                 <Typography variant="body2" color="text.secondary">{t('auditLogs.details.source', { value: t(`auditLogs.sources.${detail.source || 'system'}`, { defaultValue: detail.source || 'system' }) })}</Typography>

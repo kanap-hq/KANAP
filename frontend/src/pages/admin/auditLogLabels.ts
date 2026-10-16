@@ -1,7 +1,8 @@
 /**
- * Plain-language labels of the audit log's sign-in, session and export rows (backend
- * `audit/security-events.ts`). The codes stay as stored; the page shows these labels
- * (`admin` namespace, `auditLogs.*`), and an unknown code shows as it is.
+ * Plain-language labels of the audit log: the tables it names (`auditLogs.tableNames.<table>`)
+ * and its sign-in, session and export rows (backend `audit/security-events.ts`). The codes stay
+ * as stored; the page shows these labels (`admin` namespace, `auditLogs.*`), and an unknown code
+ * shows as it is. Every audited table has a label (auditTableNames.test.ts).
  */
 
 /** `table_name` of sign-in and session events. */
@@ -112,21 +113,20 @@ export function auditUserLabel(row: AuditRowLike | null | undefined, t: Translat
   return t('auditLogs.sources.system');
 }
 
-/** The table cell: sign-in and session events, what an export exported, else the stored table name. */
+/** The table cell: what an export exported, else the table's label. */
 export function auditTableLabel(row: AuditRowLike | null | undefined, t: Translate): string {
   const table = String(row?.table_name || '');
   if (table === EXPORT_EVENT_TABLE) {
     const key = exportResourceKey(row?.after_json?.resource);
-    return key ? t(`auditLogs.exportResources.${key}`) : t('auditLogs.tables.export');
+    return key ? t(`auditLogs.exportResources.${key}`) : t(`auditLogs.tableNames.${EXPORT_EVENT_TABLE}`);
   }
   return auditTableFilterLabel(table, t);
 }
 
-/** A value of the table filter. */
+/** A table in the reader's language (the table filter, the detail): its label, else the stored name. */
 export function auditTableFilterLabel(table: string | null, t: Translate): string {
   if (!table) return t('auditLogs.shared.empty');
-  if (table === AUTH_EVENT_TABLE || table === EXPORT_EVENT_TABLE) return t(`auditLogs.tables.${table}`);
-  return table;
+  return t(`auditLogs.tableNames.${table}`, { defaultValue: table });
 }
 
 /** The reason of a sign-in or session event in plain language; other rows keep their reference. */

@@ -150,7 +150,7 @@ describe('AuditLogsPage', () => {
     expect(user.valueGetter({ data: { table_name: 'auth', user_id: 'u-1', user_name: 'Alice Admin', user_email: 'alice@example.com' } })).toBe('Alice Admin');
     expect(column('table_name').valueFormatter({ data: { table_name: 'export', after_json: { resource: 'incidents/report' } } })).toBe('Incident report');
     expect(column('table_name').valueFormatter({ data: { table_name: 'auth' } })).toBe('Sign-in and session');
-    expect(column('table_name').valueFormatter({ data: { table_name: 'suppliers' } })).toBe('suppliers');
+    expect(column('table_name').valueFormatter({ data: { table_name: 'suppliers' } })).toBe('Suppliers');
     expect(column('table_name').filterParams.labelFormatter('export')).toBe('Export');
     expect(column('action').filterParams.labelFormatter('login_failed')).toBe('Failed sign-in');
     expect(column('source_ref').valueFormatter({ data: { table_name: 'auth', source_ref: 'bad_password' } })).toBe('Wrong password');
@@ -158,6 +158,25 @@ describe('AuditLogsPage', () => {
     expect(auditReasonLabel({ table_name: 'suppliers', source_ref: 'import-7' }, t)).toBe('import-7');
     expect(auditTableLabel({ table_name: 'export', after_json: { resource: 'something-new' } }, t)).toBe('Export');
     expect(auditUserLabel({ table_name: 'auth', user_id: null }, t)).toBe('Unknown account');
+  });
+
+  it('names the tables in the reader language in the list, the filter and the detail', async () => {
+    await i18n.changeLanguage('fr');
+    const row = {
+      id: 'a-1', tenant_id: 't-1', table_name: 'contract_links', record_id: 'r-1', action: 'create',
+      before_json: null, after_json: { id: 'r-1' }, user_id: null, user_email: null, user_name: null,
+      source: 'user', source_ref: null, created_at: '2026-10-15T08:00:00Z',
+    };
+    getMock.mockResolvedValue({ data: row } as any);
+    renderPage();
+    expect(column('table_name').valueFormatter({ data: { table_name: 'suppliers' } })).toBe('Fournisseurs');
+    expect(column('table_name').filterParams.labelFormatter('spend_items')).toBe('Lignes OPEX');
+    expect(column('table_name').filterParams.labelFormatter('some_new_table')).toBe('some_new_table');
+    act(() => {
+      grid.props?.onCellClicked({ data: row });
+    });
+    expect(await screen.findByText('Table : Liens de contrat')).toBeTruthy();
+    expect(screen.queryByText(/contract_links/)).toBeNull();
   });
 
   it('has every audit log text in the four languages', () => {
@@ -174,7 +193,7 @@ describe('AuditLogsPage', () => {
       ...AUDIT_EVENT_ACTIONS.map((action) => `actions.${action}`),
       ...AUTH_EVENT_REASONS.map((reason) => `reasons.${reason}`),
       ...Object.values(EXPORT_RESOURCE_KEYS).map((key) => `exportResources.${key}`),
-      'values.unknownAccount', 'tables.auth', 'tables.export',
+      'values.unknownAccount', 'tableNames.auth', 'tableNames.export',
       'export.button', 'export.failed', 'export.tooMany', 'export.truncated',
       'details.reason', 'details.exported',
     ];
