@@ -1,6 +1,6 @@
 # Interfaces
 
-Las interfaces documentan los flujos lógicos de datos entre sus aplicaciones. Cada interfaz representa una integración de negocio -- el "por qué" y el "qué" del intercambio de datos -- independiente de cómo se implementa técnicamente. El espacio de trabajo le permite describir la interfaz, definir los tramos que mueven datos a través de su panorama, configurar enlaces específicos por entorno, capturar las reglas de mapeo a nivel de campo y vincular interfaces, documentos y adjuntos relacionados.
+Las interfaces documentan los flujos lógicos de datos entre sus aplicaciones. Cada interfaz representa una integración de negocio (el "por qué" y el "qué" del intercambio de datos), independiente de cómo se implementa técnicamente. El espacio de trabajo le permite describir la interfaz, definir los tramos que mueven datos a través de su panorama, configurar enlaces específicos por entorno, capturar las reglas de mapeo a nivel de campo y vincular interfaces, documentos y adjuntos relacionados.
 
 ## Primeros pasos
 
@@ -55,7 +55,7 @@ La cuadrícula de Interfaces muestra su registro de integraciones de un vistazo.
 **Acciones**:
 
 - **Añadir interfaz**: Crear una nueva interfaz (requiere `applications:manager`)
-- **Duplicar interfaz**: Crear una copia de una interfaz seleccionada (requiere `applications:manager`). Seleccione exactamente una fila para activar esta acción. Un diálogo le permite elegir si copiar los enlaces de entorno -- consulte [Copiar interfaces](#copiar-interfaces) más abajo.
+- **Duplicar interfaz**: Crear una copia de una interfaz seleccionada (requiere `applications:manager`). Seleccione exactamente una fila para activar esta acción. Un diálogo le permite elegir si copiar los enlaces de entorno; consulte [Copiar interfaces](#copiar-interfaces) más abajo.
 - **Eliminar seleccionadas**: Eliminar interfaces seleccionadas (requiere `applications:admin`). Antes de la confirmación, la ventana muestra como conservadas las interfaces que tienen enlaces, con su número de enlaces. Marque **Eliminar también los enlaces relacionados** para eliminarlas con sus enlaces; sus conexiones se conservan. El mensaje nombra después las interfaces eliminadas y las conservadas, con el motivo.
 
 ---
@@ -95,7 +95,7 @@ Los cambios en los campos del panel lateral se guardan automáticamente al salir
 
 ### Especificación
 
-La pestaña Especificación es un documento de texto enriquecido gestionado donde describe la interfaz de principio a fin -- contexto de negocio, alcance, contrato, ejemplos. Es el documento narrativo principal de la interfaz.
+La pestaña Especificación es un documento de texto enriquecido gestionado donde describe la interfaz de principio a fin: contexto de negocio, alcance, contrato, ejemplos. Es el documento narrativo principal de la interfaz.
 
 **Consejo**: Use esta pestaña como su única fuente de verdad para la prosa. Las reglas de mapeo y los tramos técnicos viven en las pestañas dedicadas a continuación; mantenga este documento centrado en la intención, el alcance y el resumen legible para humanos.
 
@@ -148,7 +148,7 @@ La pestaña Entornos gestiona los enlaces por entorno que convierten las plantil
 
 La pestaña Mapeo es donde describe cómo los campos de origen se convierten en campos de destino. Está organizada alrededor de dos conceptos:
 
-- Las **reglas de mapeo** describen una única decisión de mapeo -- uno o más campos de origen, uno o más campos de destino, una operación (copia directa, transformación, búsqueda, división, fusión, filtro, valor predeterminado o una operación personalizada) y notas opcionales de condición / negocio / middleware.
+- Las **reglas de mapeo** describen una única decisión de mapeo: uno o más campos de origen, uno o más campos de destino, una operación (copia directa, transformación, búsqueda, división, fusión, filtro, valor predeterminado o una operación personalizada) y notas opcionales de condición / negocio / middleware.
 - Los **grupos de mapeo** son carpetas que organizan las reglas en secciones temáticas (por ejemplo "Cabecera", "Bloque del cliente", "Líneas de detalle", "Pie"). Las reglas pueden asignarse a un grupo o dejarse sin agrupar. Dos grupos base, **Head** e **Item**, están siempre presentes; puede añadir más.
 
 La pestaña trabaja sobre el **conjunto de mapeo predeterminado** de la interfaz. La barra del encabezado muestra el nombre del conjunto, el número de revisión actual, los conteos de reglas y grupos.
@@ -189,7 +189,7 @@ Haga clic en **Añadir regla** o haga clic en cualquier fila de regla para abrir
 
 La tabla de mapeo resume cada regla listando los enlaces de origen, una flecha y los enlaces de destino, además de la operación, el grupo al que pertenece y el alcance del tramo. Haga clic en una fila para editarla, o use los iconos de la fila para editar o eliminar.
 
-**Consejo**: Mantenga una regla por decisión lógica en lugar de una regla por campo. Una regla que toma tres campos de origen y produce un campo de destino concatenado es más clara que tres filas casi idénticas -- y el campo de operación hace explícita la intención.
+**Consejo**: Mantenga una regla por decisión lógica en lugar de una regla por campo. Una regla que toma tres campos de origen y produce un campo de destino concatenado es más clara que tres filas casi idénticas, y el campo de operación hace explícita la intención.
 
 ---
 
@@ -211,12 +211,12 @@ Hay dos formas de copiar interfaces en KANAP.
 
 ### Duplicar Interfaz (desde la cuadrícula de Interfaces)
 
-Use esto cuando desee una copia independiente de una interfaz -- típicamente para crear una integración similar entre las mismas o diferentes aplicaciones.
+Use esto cuando desee una copia independiente de una interfaz, típicamente para crear una integración similar entre las mismas o diferentes aplicaciones.
 
 1. Seleccione una interfaz en la cuadrícula
 2. Haga clic en **Duplicar interfaz**
 3. Elija si copiar los enlaces de entorno:
-   - **Sin enlaces**: Una copia limpia -- solo la definición de la interfaz, los tramos, los responsables y los metadatos
+   - **Sin enlaces**: Una copia limpia: solo la definición de la interfaz, los tramos, los responsables y los metadatos
    - **Con enlaces**: También copia los enlaces de entorno, pero borra los detalles específicos del entorno (puntos finales, autenticación, nombres de trabajo) para que pueda configurarlos de nuevo
 
 **Qué se copia**:
@@ -260,7 +260,7 @@ Use esto al actualizar una aplicación a una nueva versión y necesite migrar in
 
 - **Documente primero el "por qué"**: Use la pestaña Especificación y el campo **Propósito de negocio** del panel lateral para capturar la intención antes de sumergirse en tramos y enlaces.
 - **Use el panel lateral desde cualquier pestaña**: Responsables, criticidad, tipo de ruta, indicador PII y el resto persisten inmediatamente, de modo que puede actualizarlos mientras revisa reglas o enlaces.
-- **Una interfaz, muchos entornos**: No cree interfaces separadas para cada entorno -- use una interfaz y configure cada entorno en la pestaña Entornos.
+- **Una interfaz, muchos entornos**: No cree interfaces separadas para cada entorno. Use una interfaz y configure cada entorno en la pestaña Entornos.
 - **Agrupe sus reglas de mapeo**: Para interfaces con más de un puñado de campos, organice las reglas en grupos de mapeo (Cabecera, Líneas de detalle, Pie, etc.). Hace que la revisión y el análisis de impacto sean mucho más fáciles.
 - **Mantenga el middleware explícito**: Si los datos fluyen a través de middleware, defina el tipo de ruta como **Vía middleware** y elija las aplicaciones middleware. El Mapa de interfaces renderizará entonces la ruta de datos real.
 - **Duplique para interfaces similares**: Al crear una nueva interfaz que es similar a una existente, use **Duplicar interfaz** para copiar todas las configuraciones, luego modifique lo que sea diferente. Opcionalmente incluya enlaces para obtener una ventaja en la configuración del entorno.

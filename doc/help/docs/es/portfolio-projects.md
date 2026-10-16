@@ -185,11 +185,11 @@ Debajo de Propósito, la pestaña Resumen incluye el flujo de actividad del proy
 - **Comentarios** para discusión, notas contextuales y decisiones formales
 - **Historial** para la pista de auditoría de cambios de campo y estado
 
-**Historial** enumera los cambios registrados — cambios de estado, ediciones de campos, cambios de equipo y relaciones, ediciones del documento Objetivo — y termina con la entrada de creación: quién creó el proyecto y cuándo.
+**Historial** enumera los cambios registrados (cambios de estado, ediciones de campos, cambios de equipo y relaciones, ediciones del documento Objetivo) y termina con la entrada de creación: quién creó el proyecto y cuándo.
 
 Los gestores pueden añadir y editar comentarios del proyecto. Los comentarios también pueden registrarse como decisiones formales, con un resultado y un cambio de estado opcional. Use eso cuando la propia discusión cambie el rumbo del proyecto.
 
-Las imágenes pueden incluirse en los comentarios de actividad cuando la evidencia visual sea útil — bocetos de arquitectura, capturas de pantalla o evidencia de revisión.
+Las imágenes pueden incluirse en los comentarios de actividad cuando la evidencia visual sea útil: bocetos de arquitectura, capturas de pantalla o evidencia de revisión.
 
 Use **Historial** cuando necesite saber qué cambió. Use **Comentarios** cuando necesite saber por qué.
 
@@ -227,7 +227,7 @@ Los proyectos pueden empezar con una plantilla de fases o un plan de fases total
 - cada fila de fase incluye una casilla de hito; marcarla crea un hito de finalización de fase para esa fase
 - cada fase tiene un atajo para crear una tarea ya vinculada a esa fase y proyecto
 - **Añadir fase** añade una nueva fase vacía
-- **Reemplazar con plantilla** reconstruye la estructura de fases a partir de una plantilla — úselo solo cuando realmente quiera decir "empezar de nuevo el modelo de fases"
+- **Reemplazar con plantilla** reconstruye la estructura de fases a partir de una plantilla. Úselo solo cuando realmente quiera decir "empezar de nuevo el modelo de fases"
 
 El modelo de fases afecta a más que el cronograma:
 

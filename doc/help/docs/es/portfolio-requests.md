@@ -174,7 +174,7 @@ El historial es la vista de auditoría. Úselo cuando necesite responder pregunt
 - cuándo cambiaron las asignaciones de equipo
 - si un cambio de evaluación o análisis ocurrió antes o después de una decisión
 
-La lista termina con la entrada de creación — quién creó la solicitud y cuándo — bajo los cambios registrados, que incluyen las ediciones de los documentos Objetivo y Riesgos.
+La lista termina con la entrada de creación (quién creó la solicitud y cuándo), bajo los cambios registrados, que incluyen las ediciones de los documentos Objetivo y Riesgos.
 
 Si necesita narrativa, use Comentarios. Si necesita prueba, use Historial.
 
@@ -261,7 +261,7 @@ Una solicitud con datos débiles de dependencia puede parecer inofensiva hasta q
 
 ### Otras relaciones
 
-Debajo de las dependencias, la pestaña Relaciones también le permite mantener otros vínculos del portafolio — por ejemplo, solicitudes relacionadas, proyectos relacionados u otros objetos de negocio y técnicos conectados. Cada relación se autoguarda.
+Debajo de las dependencias, la pestaña Relaciones también le permite mantener otros vínculos del portafolio, por ejemplo, solicitudes relacionadas, proyectos relacionados u otros objetos de negocio y técnicos conectados. Cada relación se autoguarda.
 
 Para los proyectos producidos a partir de esta solicitud después de la conversión, consulte el grupo **Proyectos resultantes** en el panel de Propiedades.
 

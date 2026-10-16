@@ -226,7 +226,7 @@
       },
       "aria": {
         "skillLevel": "Nivel de {{skill}}",
-        "levelOption": "{{level}} – {{label}}",
+        "levelOption": "{{level}}: {{label}}",
         "removeSkill": "Quitar {{skill}}"
       },
       "nav": {

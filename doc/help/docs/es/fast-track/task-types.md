@@ -1,6 +1,6 @@
 ---
 title: "Guía rápida de tipos de trabajo: Run, Build y Tareas"
-description: Comprenda los diferentes tipos de elementos de trabajo en KANAP — incidentes, problemas, solicitudes, proyectos, bugs y tareas — y cómo trabajar con tareas en el día a día.
+description: Comprenda los diferentes tipos de elementos de trabajo en KANAP (incidentes, problemas, solicitudes, proyectos, bugs y tareas) y cómo trabajar con tareas en el día a día.
 ---
 
 # Guía rápida de tipos de trabajo: Run, Build y Tareas
@@ -8,7 +8,7 @@ description: Comprenda los diferentes tipos de elementos de trabajo en KANAP —
 Esta guía explica los diferentes tipos de elementos de trabajo registrados en KANAP y cómo diferenciarlos. Cubre el Run (mantener las cosas funcionando), el Build (mejorar las cosas) y la Tarea transversal que conecta ambos. La segunda mitad es una hoja de referencia práctica para trabajar con tareas cada día.
 
 !!! tip "¿Prefiere un resumen en una página? :material-file-pdf-box:"
-    Todas las definiciones clave en una sola página A4 — imprímala, cuélguela, compártala con su equipo.
+    Todas las definiciones clave en una sola página A4: imprímala, cuélguela, compártala con su equipo.
 
     [:material-download: Descargar la hoja de referencia (PDF)](downloads/kanap-task-types-fast-track.pdf){ .md-button .md-button--primary }
 
@@ -16,7 +16,7 @@ Esta guía explica los diferentes tipos de elementos de trabajo registrados en K
 
 ## El panorama general
 
-Todo lo que hace su departamento IT cae en una de dos categorías — más una unidad de trabajo universal que cruza ambas:
+Todo lo que hace su departamento IT cae en una de dos categorías, más una unidad de trabajo universal que cruza ambas:
 
 | Categoría | Propósito | Elementos de trabajo |
 |-----------|-----------|---------------------|
@@ -26,7 +26,7 @@ Todo lo que hace su departamento IT cae en una de dos categorías — más una u
 
 ---
 
-## Run — Mantener las luces encendidas
+## Run: mantener las luces encendidas
 
 Todos participan en el Run. Asegura la **continuidad operativa** (MCO) y el **mantenimiento de seguridad** (MCS) de los sistemas existentes.
 
@@ -35,7 +35,7 @@ Todos participan en el Run. Asegura la **continuidad operativa** (MCO) y el **ma
 Una **interrupción o degradación no planificada** de un servicio en producción.
 
 - Tiene un impacto significativo en el funcionamiento del sistema de información
-- El objetivo es la **restauración del servicio** — hacer que las cosas funcionen de nuevo, rápido
+- El objetivo es la **restauración del servicio**: hacer que las cosas funcionen de nuevo, rápido
 - De naturaleza reactiva: algo se rompió y los usuarios se ven afectados
 
 !!! example "Ejemplos"
@@ -48,7 +48,7 @@ Una **interrupción o degradación no planificada** de un servicio en producció
 Una **investigación de causa raíz** desencadenada por incidentes recurrentes.
 
 - Típicamente identificado por IT después de detectar un **patrón de incidentes similares**
-- El objetivo es una **resolución permanente** — corregir la causa subyacente, no solo los síntomas
+- El objetivo es una **resolución permanente**: corregir la causa subyacente, no solo los síntomas
 - Proactivo: IT abre un Problema para prevenir incidentes futuros
 
 !!! example "Ejemplos"
@@ -57,7 +57,7 @@ Una **investigación de causa raíz** desencadenada por incidentes recurrentes.
 
 ---
 
-## Build — Evolucionando el panorama
+## Build: evolucionando el panorama
 
 El Build cubre todas las **evoluciones y construcciones** del sistema de información. Todos participan.
 
@@ -82,7 +82,7 @@ Una **solicitud planificada para modificar** el sistema de información.
 
 Un **conjunto coordinado de tareas** organizadas en torno a un objetivo definido, con alcance, cronograma, presupuesto y entregables identificados.
 
-- Mismos criterios que una Solicitud — normalmente se origina de una Solicitud aprobada
+- Mismos criterios que una Solicitud. Normalmente se origina de una Solicitud aprobada
 - **Vía rápida**: algunos proyectos se imponen sin pasar por la etapa de Solicitud (decisión ejecutiva, cambio regulatorio urgente...). Entran directamente como Proyecto.
 
 !!! example "Ejemplos"
@@ -93,7 +93,7 @@ Un **conjunto coordinado de tareas** organizadas en torno a un objetivo definido
 
 Un **defecto encontrado en un sistema en desarrollo**.
 
-- Demasiado complejo para manejarse con un simple ticket — requiere análisis en profundidad
+- Demasiado complejo para manejarse con un simple ticket: requiere análisis en profundidad
 - Estrictamente un concepto de Build: el sistema no está aún en producción (o el defecto está en un componente aún en construcción)
 
 !!! example "Ejemplos"
@@ -110,7 +110,7 @@ Un **defecto encontrado en un sistema en desarrollo**.
 
 ---
 
-## Transversal — La Tarea
+## Transversal: la Tarea
 
 Las Tareas son la **unidad atómica de trabajo** en KANAP. Cruzan la frontera entre Run y Build.
 
@@ -121,7 +121,7 @@ Una **acción claramente delimitada** con una persona responsable definida, esta
 - Puede ser **independiente** o vinculada a un **Proyecto**, **línea OPEX**, **Contrato** o **línea CAPEX**
 - Conlleva un esfuerzo concreto
 - El impacto en usuarios o servicios está contenido y bien entendido
-- No requiere coordinación entre múltiples equipos — incluso si toma mucho tiempo, permanece llevada por una sola persona sin requerir análisis interfuncional
+- No requiere coordinación entre múltiples equipos: incluso si toma mucho tiempo, permanece llevada por una sola persona sin requerir análisis interfuncional
 
 !!! example "Ejemplos"
     - Instalar un nuevo controlador de dominio
@@ -152,7 +152,7 @@ Una **acción claramente delimitada** con una persona responsable definida, esta
 
 ---
 
-## Trabajar con tareas — Hoja de referencia
+## Trabajar con tareas: hoja de referencia
 
 El resto de esta guía cubre lo esencial práctico. Para el detalle completo, consulte [Tareas](../tasks.md).
 
@@ -174,7 +174,7 @@ Todas las tareas aparecen en la lista central **Portafolio > Tareas** independie
 |--------|-------|-------------|
 | **Abierto** | Gris | Aún no comenzado |
 | **En progreso** | Naranja | Alguien está trabajando en ello |
-| **Pendiente** | Azul | Bloqueado — esperando información o decisión |
+| **Pendiente** | Azul | Bloqueado, esperando información o decisión |
 | **En pruebas** | Púrpura | Implementación hecha, esperando validación |
 | **Completado** | Verde | Terminado (requiere tiempo registrado para tareas de proyecto) |
 | **Cancelado** | Rojo | Ya no es necesario |
@@ -183,40 +183,40 @@ Todas las tareas aparecen en la lista central **Portafolio > Tareas** independie
 
 | Prioridad | Cuándo usar |
 |-----------|-------------|
-| **Bloqueante** | Bloquea otro trabajo — atención inmediata |
+| **Bloqueante** | Bloquea otro trabajo: atención inmediata |
 | **Alta** | Importante y urgente |
 | **Normal** | Prioridad estándar (predeterminada) |
 | **Baja** | Puede aplazarse |
 | **Opcional** | Deseable |
 
-### El espacio de trabajo de tareas — áreas clave
+### El espacio de trabajo de tareas: áreas clave
 
 Cuando abre una tarea, tiene una barra lateral a la izquierda y un área de contenido principal a la derecha.
 
 **Secciones de la barra lateral**:
 
-- **Contexto** — a qué está vinculada la tarea (o Independiente)
-- **Detalles de la tarea** — tipo, prioridad, estado
-- **Clasificación** — Origen, Categoría, Flujo, Empresa (solo tareas independientes y de proyecto; valores predeterminados de la configuración de la organización o del proyecto padre)
-- **Tiempo** — tiempo total invertido y botón Registrar tiempo (solo tareas independientes y de proyecto)
-- **Personas** — solicitante, asignado, visores
-- **Fechas** — fechas de inicio y vencimiento
-- **Base de conocimiento** — vincular artículos de conocimiento a la tarea
+- **Contexto**: a qué está vinculada la tarea (o Independiente)
+- **Detalles de la tarea**: tipo, prioridad, estado
+- **Clasificación**: Origen, Categoría, Flujo, Empresa (solo tareas independientes y de proyecto; valores predeterminados de la configuración de la organización o del proyecto padre)
+- **Tiempo**: tiempo total invertido y botón Registrar tiempo (solo tareas independientes y de proyecto)
+- **Personas**: solicitante, asignado, visores
+- **Fechas**: fechas de inicio y vencimiento
+- **Base de conocimiento**: vincular artículos de conocimiento a la tarea
 
 **Contenido principal**:
 
-- **Descripción** — un editor markdown con soporte para formato, listas, bloques de código, enlaces e imágenes pegadas
-- **Importar / Exportar** — importar un archivo `.docx` en la descripción, o exportar como PDF, DOCX u ODT
-- **Adjuntos** — subida de archivos por arrastrar y soltar (hasta 20 MB por archivo)
-- **Actividad** — pestañas de Comentarios, Historial y Registro de tiempo
+- **Descripción**: un editor markdown con soporte para formato, listas, bloques de código, enlaces e imágenes pegadas
+- **Importar / Exportar**: importar un archivo `.docx` en la descripción, o exportar como PDF, DOCX u ODT
+- **Adjuntos**: subida de archivos por arrastrar y soltar (hasta 20 MB por archivo)
+- **Actividad**: pestañas de Comentarios, Historial y Registro de tiempo
 
 ### Acciones rápidas que conviene conocer
 
 | Acción | Cómo |
 |--------|------|
 | **Guardar** | Haga clic en **Guardar** o pulse **Ctrl+S** (Cmd+S en Mac) |
-| **Convertir a solicitud** | Barra de herramientas del encabezado — promueve una tarea a solicitud formal del portafolio cuando el alcance crece |
-| **Enviar enlace** | Barra de herramientas del encabezado — enviar un enlace por correo a colegas o contactos externos |
+| **Convertir a solicitud** | Barra de herramientas del encabezado. Promueve una tarea a solicitud formal del portafolio cuando el alcance crece |
+| **Enviar enlace** | Barra de herramientas del encabezado. Enviar un enlace por correo a colegas o contactos externos |
 | **Registrar tiempo en línea** | En la pestaña Comentarios, combine un comentario + cambio de estado + entrada de tiempo en un solo envío |
 | **Copiar referencia** | Haga clic en el chip de referencia (p. ej., T-42) para copiarlo al portapapeles |
 
@@ -234,7 +234,7 @@ No todas las funcionalidades están disponibles en todos los contextos. Esto es 
 
 ### Valores predeterminados de clasificación
 
-Cuando crea una **tarea independiente**, KANAP prerellena los campos de clasificación (Origen, Categoría, Flujo, Empresa) desde la configuración predeterminada de su organización — ahorrándole unos clics. Para **tareas de proyecto**, los valores predeterminados de clasificación provienen del proyecto padre pero pueden cambiarse independientemente en cada tarea.
+Cuando crea una **tarea independiente**, KANAP prerellena los campos de clasificación (Origen, Categoría, Flujo, Empresa) desde la configuración predeterminada de su organización, ahorrándole unos clics. Para **tareas de proyecto**, los valores predeterminados de clasificación provienen del proyecto padre pero pueden cambiarse independientemente en cada tarea.
 
 ---
 
@@ -254,11 +254,11 @@ La lista de esta guía es un punto de partida. Adáptela a cómo funciona realme
 
 ## Adónde ir a continuación
 
-- [Tareas](../tasks.md) — referencia completa para estados, importación/exportación CSV, seguimiento de tiempo y cada funcionalidad del espacio de trabajo
+- [Tareas](../tasks.md): referencia completa para estados, importación/exportación CSV, seguimiento de tiempo y cada funcionalidad del espacio de trabajo
 - [Líneas presupuestarias](../budget-lines.md): gestionar las líneas OPEX y CAPEX y sus tareas
-- [Contratos](../contracts.md) — gestionar contratos y sus tareas
-- [Proyectos del portafolio](../portfolio-projects.md) — ejecución de proyectos, fases, seguimiento de esfuerzo y tareas a nivel de proyecto
-- [Primeros pasos](getting-started.md) — si es nuevo en KANAP
+- [Contratos](../contracts.md): gestionar contratos y sus tareas
+- [Proyectos del portafolio](../portfolio-projects.md): ejecución de proyectos, fases, seguimiento de esfuerzo y tareas a nivel de proyecto
+- [Primeros pasos](getting-started.md): si es nuevo en KANAP
 
 !!! success "Está listo"
     Ahora comprende cómo KANAP categoriza el trabajo y cómo usar tareas en el día a día. Cuando dude sobre el tipo de elemento de trabajo adecuado, pregúntese: **¿mantiene las cosas funcionando (Run) o mejora las cosas (Build)?** Luego elija el tipo correspondiente. Para todo lo demás, hay una Tarea.

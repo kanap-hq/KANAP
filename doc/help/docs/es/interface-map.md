@@ -72,7 +72,7 @@ Limite cuántos saltos desde las aplicaciones seleccionadas se muestran:
 - **Todos**: Mostrar cada nodo conectado (sin límite)
 - **1-5**: Mostrar solo los nodos dentro de N saltos de las aplicaciones seleccionadas
 
-Los nodos middleware no cuentan como un salto -- el contador de profundidad solo se incrementa al atravesar un nodo de aplicación principal.
+Los nodos middleware no cuentan como un salto: el contador de profundidad solo se incrementa al atravesar un nodo de aplicación principal.
 
 Este filtro solo surte efecto cuando tiene al menos una aplicación seleccionada; sin selección el valor está bloqueado en **Todos**.
 

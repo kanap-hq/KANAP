@@ -1,6 +1,6 @@
 # Procesos de negocio
 
-Los Procesos de negocio le permiten construir y mantener un catálogo centralizado de los procesos centrales de extremo a extremo de su organización -- como Pedido a cobro, Compra a pago o Contratación a jubilación. Al mantener nombres de procesos, categorías y responsables en un solo lugar, crea un punto de referencia único al que el resto de KANAP puede vincularse para propiedad, informes y auditorías.
+Los Procesos de negocio le permiten construir y mantener un catálogo centralizado de los procesos centrales de extremo a extremo de su organización, como Pedido a cobro, Compra a pago o Contratación a jubilación. Al mantener nombres de procesos, categorías y responsables en un solo lugar, crea un punto de referencia único al que el resto de KANAP puede vincularse para propiedad, informes y auditorías.
 
 ## Primeros pasos
 
@@ -26,14 +26,14 @@ La lista muestra todos los procesos de negocio de su espacio de trabajo.
 
 **Columnas predeterminadas**:
 
-- **Nombre** -- el nombre del proceso. Haga clic para abrir el espacio de trabajo.
-- **Categorías** -- una o más categorías a las que pertenece el proceso (p. ej., "Cliente y ventas", "Finanzas y control"). Múltiples categorías se muestran como lista separada por comas.
-- **Responsable del proceso** -- el usuario responsable del proceso.
+- **Nombre**: el nombre del proceso. Haga clic para abrir el espacio de trabajo.
+- **Categorías**: una o más categorías a las que pertenece el proceso (p. ej., "Cliente y ventas", "Finanzas y control"). Múltiples categorías se muestran como lista separada por comas.
+- **Responsable del proceso**: el usuario responsable del proceso.
 
 **Columnas adicionales** (ocultas por defecto; actívelas con el selector de columnas):
 
-- **Estado** -- `habilitado` o `deshabilitado`.
-- **Actualizado** -- cuándo se modificó el proceso por última vez.
+- **Estado**: `habilitado` o `deshabilitado`.
+- **Actualizado**: cuándo se modificó el proceso por última vez.
 
 **Filtrado y ordenación**:
 
@@ -43,24 +43,24 @@ La lista muestra todos los procesos de negocio de su espacio de trabajo.
 
 **Acciones** (barra de herramientas superior derecha):
 
-- **Nuevo** (Manager+) -- crear un nuevo proceso de negocio.
-- **Gestionar categorías** (Manager+) -- abrir el diálogo de gestión de categorías.
-- **Importar CSV** (Admin) -- importación masiva de procesos desde un archivo CSV.
-- **Exportar CSV** (Admin) -- exportar los procesos que muestra la lista, o todos los procesos, a CSV.
+- **Nuevo** (Manager+): crear un nuevo proceso de negocio.
+- **Gestionar categorías** (Manager+): abrir el diálogo de gestión de categorías.
+- **Importar CSV** (Admin): importación masiva de procesos desde un archivo CSV.
+- **Exportar CSV** (Admin): exportar los procesos que muestra la lista, o todos los procesos, a CSV.
 - **Eliminar seleccionados** (Admin): eliminar una o más filas seleccionadas. Las interfaces y solicitudes vinculadas a un proceso eliminado se conservan, sin el vínculo.
 
 ---
 
 ## El espacio de trabajo de Procesos de negocio
 
-Haga clic en cualquier fila de la lista -- o en el botón **Nuevo** -- para abrir el espacio de trabajo.
+Haga clic en cualquier fila de la lista (o en el botón **Nuevo**) para abrir el espacio de trabajo.
 
 El espacio de trabajo tiene una única pestaña **Visión general** a la izquierda, y una barra de herramientas en la parte superior:
 
-- **Anterior / Siguiente** -- recorrer los procesos en el orden actual de la lista.
-- **Restablecer** -- descartar cambios no guardados.
-- **Guardar** -- persistir los cambios.
-- **Cerrar** (icono X) -- volver a la lista, manteniendo sus filtros y ordenación intactos.
+- **Anterior / Siguiente**: recorrer los procesos en el orden actual de la lista.
+- **Restablecer**: descartar cambios no guardados.
+- **Guardar**: persistir los cambios.
+- **Cerrar** (icono X): volver a la lista, manteniendo sus filtros y ordenación intactos.
 
 Si navega fuera con cambios sin guardar, se le solicitará que guarde o descarte.
 
@@ -70,19 +70,19 @@ La pestaña Visión general está organizada en tres secciones.
 
 **Información básica**
 
-- **Nombre** (obligatorio) -- utilice un nombre claro incluyendo el código corto, p. ej., "Pedido a cobro (O2C)" o "Contratación a jubilación (H2R)".
-- **Descripción** -- un breve resumen de lo que cubre el proceso. Una buena descripción captura los puntos de inicio y fin (p. ej., "Desde el pedido del cliente hasta la entrega, facturación y cobro.").
-- **Interruptor de estado** -- su etiqueta muestra el estado actual (**Activado** o **Desactivado**). Los procesos activados aparecen en los selectores de toda la aplicación. Desactive un proceso para retirarlo sin eliminarlo, para que las referencias históricas permanezcan intactas.
+- **Nombre** (obligatorio): utilice un nombre claro incluyendo el código corto, p. ej., "Pedido a cobro (O2C)" o "Contratación a jubilación (H2R)".
+- **Descripción**: un breve resumen de lo que cubre el proceso. Una buena descripción captura los puntos de inicio y fin (p. ej., "Desde el pedido del cliente hasta la entrega, facturación y cobro.").
+- **Interruptor de estado**: su etiqueta muestra el estado actual (**Activado** o **Desactivado**). Los procesos activados aparecen en los selectores de toda la aplicación. Desactive un proceso para retirarlo sin eliminarlo, para que las referencias históricas permanezcan intactas.
 
 **Clasificación**
 
-- **Categorías** (selección múltiple) -- asigne una o más categorías. Puede elegir entre categorías existentes, crear una nueva en línea con **Nueva categoría**, o hacer clic en **Editar categorías** para abrir el diálogo completo de gestión de categorías.
-- **Responsable del proceso** -- el usuario responsable último del proceso. Se muestra en la cuadrícula de la lista y disponible para futuras notificaciones y aprobaciones.
-- **Responsable IT** -- el usuario responsable de los sistemas y herramientas IT que soportan este proceso.
+- **Categorías** (selección múltiple): asigne una o más categorías. Puede elegir entre categorías existentes, crear una nueva en línea con **Nueva categoría**, o hacer clic en **Editar categorías** para abrir el diálogo completo de gestión de categorías.
+- **Responsable del proceso**: el usuario responsable último del proceso. Se muestra en la cuadrícula de la lista y disponible para futuras notificaciones y aprobaciones.
+- **Responsable IT**: el usuario responsable de los sistemas y herramientas IT que soportan este proceso.
 
 **Detalles**
 
-- **Notas** -- campo de texto libre para información interna como enlaces a mapas de procesos, procedimientos operativos estándar, notas de alcance o planes de mejora.
+- **Notas**: campo de texto libre para información interna como enlaces a mapas de procesos, procedimientos operativos estándar, notas de alcance o planes de mejora.
 
 ---
 
@@ -97,10 +97,10 @@ Ambos abren el diálogo **Gestionar categorías de procesos de negocio**.
 
 **Qué puede hacer**:
 
-- **Renombrar** -- edite el nombre directamente en el campo de texto.
-- **Activar / Desactivar** -- controle si una categoría aparece en los selectores. Las categorías inactivas se ocultan de las nuevas asignaciones pero se conservan en los procesos existentes.
+- **Renombrar**: edite el nombre directamente en el campo de texto.
+- **Activar / Desactivar**: controle si una categoría aparece en los selectores. Las categorías inactivas se ocultan de las nuevas asignaciones pero se conservan en los procesos existentes.
 - **Eliminar**: eliminar una categoría. La eliminación solo funciona si ningún proceso la utiliza; de lo contrario, el mensaje cuenta los procesos que la usan. Desactívela en su lugar.
-- **Nueva categoría** -- añadir una nueva fila en la parte superior del diálogo.
+- **Nueva categoría**: añadir una nueva fila en la parte superior del diálogo.
 
 **Comportamiento de guardar y cancelar**:
 
@@ -132,7 +132,7 @@ La columna `categories` puede contener múltiples nombres de categorías separad
 Haga clic en **Importar CSV** en la página de la lista, luego:
 
 1. Suba su archivo CSV con los títulos de columna de la plantilla. Funcionan tanto las comas como los puntos y coma.
-2. Ejecute la **Verificación previa** -- esto valida encabezados y datos, y muestra cuántas filas se crearán vs. actualizarán.
+2. Ejecute la **Verificación previa**: valida encabezados y datos, y muestra cuántas filas se crearán vs. actualizarán.
 3. Si la verificación previa es correcta, haga clic en **Cargar** para aplicar los cambios.
 
 **Reglas de coincidencia**:
@@ -147,7 +147,7 @@ Haga clic en **Importar CSV** en la página de la lista, luego:
 
 ## Consejos
 
-- **Convención de nomenclatura** -- siga el formato "Nombre descriptivo (CÓDIGO)" (p. ej., "Pedido a cobro (O2C)") para que los procesos sean fáciles de buscar y reconocibles de un vistazo.
-- **Retire, no elimine** -- desactive los procesos que ya no utilice en lugar de eliminarlos. Esto preserva las referencias históricas y los registros de auditoría.
-- **Categorías primero** -- configure su estructura de categorías antes de importar procesos de forma masiva. La importación creará automáticamente las categorías faltantes, pero planificar con antelación mantiene todo ordenado.
-- **Responsable del proceso desde el principio** -- asignar un responsable del proceso ahora significa que los datos de propiedad ya están en su lugar cuando futuras funcionalidades como notificaciones y enrutamiento de tareas entren en funcionamiento.
+- **Convención de nomenclatura**: siga el formato "Nombre descriptivo (CÓDIGO)" (p. ej., "Pedido a cobro (O2C)") para que los procesos sean fáciles de buscar y reconocibles de un vistazo.
+- **Retire, no elimine**: desactive los procesos que ya no utilice en lugar de eliminarlos. Esto preserva las referencias históricas y los registros de auditoría.
+- **Categorías primero**: configure su estructura de categorías antes de importar procesos de forma masiva. La importación creará automáticamente las categorías faltantes, pero planificar con antelación mantiene todo ordenado.
+- **Responsable del proceso desde el principio**: asignar un responsable del proceso ahora significa que los datos de propiedad ya están en su lugar cuando futuras funcionalidades como notificaciones y enrutamiento de tareas entren en funcionamiento.

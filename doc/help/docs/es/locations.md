@@ -1,6 +1,6 @@
 # Ubicaciones
 
-Las Ubicaciones documentan dónde está alojada su infraestructura IT -- centros de datos, regiones en la nube, salas de servidores de oficina e instalaciones de colocación. Asignar activos y aplicaciones a ubicaciones le da visibilidad geográfica, ayuda con la planificación de capacidad y mantiene los contactos de las instalaciones al alcance cuando los necesite.
+Las Ubicaciones documentan dónde está alojada su infraestructura IT: centros de datos, regiones en la nube, salas de servidores de oficina e instalaciones de colocación. Asignar activos y aplicaciones a ubicaciones le da visibilidad geográfica, ayuda con la planificación de capacidad y mantiene los contactos de las instalaciones al alcance cuando los necesite.
 
 ## Primeros pasos
 
@@ -9,7 +9,7 @@ Navegue a **Panorama IT > Ubicaciones** para abrir el registro de ubicaciones. H
 **Campos obligatorios**:
 - **Código**: Un identificador corto único (p. ej., `DC-EU-WEST`, `AWS-US-EAST-1`)
 - **Nombre**: Un nombre descriptivo para mostrar
-- **Tipo de alojamiento**: El tipo de instalación -- centro de datos propio, colocación, región en la nube, etc.
+- **Tipo de alojamiento**: El tipo de instalación: centro de datos propio, colocación, región en la nube, etc.
 
 **Muy recomendado**:
 - **País**: Dónde se encuentra la ubicación geográficamente
@@ -57,7 +57,7 @@ La pestaña Vista general captura información de identidad y geográfica, divid
 - **Nombre**: Nombre para mostrar (obligatorio)
 - **Tipo de alojamiento**: Categoría de instalación (obligatorio). Los tipos de alojamiento son configurables en **Panorama IT > Configuración**.
 
-**Detalles de ubicación** -- los campos mostrados aquí dependen de la categoría del tipo de alojamiento:
+**Detalles de ubicación**: los campos mostrados aquí dependen de la categoría del tipo de alojamiento:
 
 Para tipos de alojamiento **propios**:
 - **Empresa operadora**: La empresa que gestiona la instalación. Seleccionar una empresa rellena automáticamente País y Ciudad si están vacíos.
@@ -75,7 +75,7 @@ Ambas categorías también muestran:
 
 #### Sub-ubicaciones
 
-Debajo del formulario principal, el panel de **Sub-ubicaciones** le permite dividir una ubicación en áreas físicas más pequeñas -- edificios, salas, racks, jaulas o cualquier otra subdivisión que tenga sentido para su infraestructura.
+Debajo del formulario principal, el panel de **Sub-ubicaciones** le permite dividir una ubicación en áreas físicas más pequeñas: edificios, salas, racks, jaulas o cualquier otra subdivisión que tenga sentido para su infraestructura.
 
 Cada sub-ubicación tiene:
 - **Nombre**: Una etiqueta corta (p. ej., "Edificio A - Sala 1 - Rack 5")
@@ -103,7 +103,7 @@ Los cambios se guardan automáticamente. Añadir un contacto o un enlace lo guar
 
 ### Relaciones
 
-La pestaña Relaciones muestra las entidades vinculadas a esta ubicación. Es de solo lectura -- las relaciones se gestionan desde los propios registros relacionados.
+La pestaña Relaciones muestra las entidades vinculadas a esta ubicación. Es de solo lectura: las relaciones se gestionan desde los propios registros relacionados.
 
 **Activos**: Una tabla de activos alojados en esta ubicación, mostrando Nombre, Entorno, Tipo, Proveedor, Región/Zona y Estado. Cuando la ubicación tiene sub-ubicaciones, aparece una columna adicional de **Sub-ubicación** mostrando a qué sub-ubicación está asignado cada activo. Haga clic en el nombre de un activo para ir a su espacio de trabajo.
 
@@ -116,7 +116,7 @@ La pestaña Relaciones muestra las entidades vinculadas a esta ubicación. Es de
 Desde el encabezado del espacio de trabajo, haga clic en **Eliminar** para eliminar una ubicación.
 
 - Requiere permiso `locations:member`.
-- Los activos vinculados no se eliminan -- se desasignan automáticamente (se borra su referencia de ubicación).
+- Los activos vinculados no se eliminan: se desasignan automáticamente (se borra su referencia de ubicación).
 - Si tiene cambios sin guardar en el espacio de trabajo, esos cambios se pierden al eliminar.
 
 ---

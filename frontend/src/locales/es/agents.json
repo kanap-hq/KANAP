@@ -20,7 +20,7 @@
     "dismissedMany": "{{count}} propuestas descartadas.",
     "dismissManyFailed": "{{count}} descartadas, {{failed}} fallidas.",
     "pollComplete": "Comprobación completa: {{status}}. {{processed}} procesados, {{enqueued}} en cola.",
-    "pollCompleteWithReason": "Comprobación completa: {{status}}. {{processed}} procesados, {{enqueued}} en cola — {{reason}}",
+    "pollCompleteWithReason": "Comprobación completa: {{status}}. {{processed}} procesados, {{enqueued}} en cola ({{reason}})",
     "pollFailed": "No se pudieron comprobar los tickets.",
     "monitoringPollFailed": "No se pudieron comprobar las alertas.",
     "settingsSaved": "Configuración guardada.",
@@ -58,8 +58,8 @@
     "off": "Desactivado",
     "archived": "Archivado",
     "testing": "Prueba",
-    "watchingAutomatic": "Vigilancia — parcialmente automática",
-    "watchingAskFirst": "Vigilancia — con aprobación"
+    "watchingAutomatic": "Vigilancia (parcialmente automática)",
+    "watchingAskFirst": "Vigilancia (con aprobación)"
   },
   "status": {
     "queued": "Esperando para iniciar",
@@ -153,7 +153,7 @@
     },
     "newAgentSreDefaultName": "Agente de supervisión de infraestructura",
     "newAgentSreDescription": "Agente de supervisión en borrador: lee alertas, las relaciona con sus datos de KANAP y prepara notas de diagnóstico para revisión.",
-    "cost": "Coste — hoy / 7 días",
+    "cost": "Coste: hoy / 7 días",
     "includedModelPaused": "Los agentes que usan el modelo incluido de KANAP están en pausa hasta que un administrador lo confirme en Administración > Plaid.",
     "includedModelOpenSettings": "Abrir la configuración de Plaid"
   },
@@ -442,7 +442,7 @@
       "manual": "Solo se ejecuta cuando lo pides (Comprobar ahora, pruebas).",
       "watching": "Comprueba por su cuenta, además de todo lo del modo manual."
     },
-    "archivedNoteViewer": "Archivado — un administrador puede restaurarlo."
+    "archivedNoteViewer": "Archivado. Un administrador puede restaurarlo."
   },
   "performance": {
     "acceptance": "Aceptación",
@@ -749,7 +749,7 @@
     },
     "maxAlerts": "Alertas gestionadas por comprobación",
     "maxMonitoringRequests": "Solicitudes a la herramienta de supervisión por comprobación",
-    "monitoringNotConnected": "Ninguna herramienta de supervisión conectada — este agente no puede funcionar.",
+    "monitoringNotConnected": "Ninguna herramienta de supervisión conectada: este agente no puede funcionar.",
     "kanapDataEnabled": "Buscar en los datos de KANAP",
     "kanapDataHint": "Permite al agente consultar su inventario de TI para añadir contexto de negocio al diagnóstico.",
     "kanapDataDomains": {
@@ -771,7 +771,7 @@
     "checkIntervalInfo": "Con qué frecuencia busca el agente tickets nuevos mientras vigila. Entre 5 minutos y 24 horas. «Comprobar ahora» siempre se ejecuta al momento, sea cual sea este valor.",
     "checkIntervalAlertsInfo": "Con qué frecuencia busca el agente alertas nuevas mientras vigila. Entre 5 minutos y 24 horas. «Buscar alertas nuevas» siempre se ejecuta al momento, sea cual sea este valor.",
     "purposeInfo": "Para qué está este agente, en una línea. Lo lee en cada ejecución.",
-    "instructionsInfo": "Las reglas que sigue el agente — escríbalas libremente, en líneas o párrafos. No pueden ampliar lo que el agente puede hacer.",
+    "instructionsInfo": "Las reglas que sigue el agente. Escríbalas libremente, en líneas o párrafos. No pueden ampliar lo que el agente puede hacer.",
     "replyLanguageInfo": "El idioma en el que escribe el agente. «Idioma del ticket» hace que responda en el idioma que usó el solicitante.",
     "capabilitiesInfo": "Lo que este agente puede preparar. Todo lo que esté desactivado aquí nunca se propone, digan lo que digan las instrucciones.",
     "reference": {

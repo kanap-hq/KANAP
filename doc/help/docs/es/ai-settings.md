@@ -18,10 +18,10 @@ Esta página controla el [asistente de chat Plaid](ai-assistant.md): con qué mo
 
 Un único selector decide qué modelo responde a las preguntas del chat:
 
-- **Modelo predeterminado (*nombre*)** — el predeterminado de la organización definido en la página [Modelos IA](ai-models.md), con su nombre para que vea lo que está usando. Es la primera opción y la respuesta habitual: déjelo aquí y Plaid seguirá al predeterminado allá donde lo mueva.
+- **Modelo predeterminado (*nombre*)**: el predeterminado de la organización definido en la página [Modelos IA](ai-models.md), con su nombre para que vea lo que está usando. Es la primera opción y la respuesta habitual: déjelo aquí y Plaid seguirá al predeterminado allá donde lo mueva.
 - **Modelo incluido de KANAP**: se muestra en lugar del anterior cuando no hay ningún predeterminado definido, en el servicio alojado. Plaid funciona entonces con el modelo incluido en su suscripción, dentro de su volumen mensual de mensajes. Un administrador confirma antes el proveedor y el lugar donde trata los datos: consulte [Confirmar el modelo incluido de KANAP](#confirmar-el-modelo-incluido-de-kanap).
-- **Ningún modelo configurado** — se muestra cuando no hay predeterminado *ni* modelo incluido, que es el caso de las instalaciones locales. Tenga en cuenta que esta opción sigue diciendo *Ningún modelo configurado* hasta que algún modelo se marque con la estrella como predeterminado de la organización, aunque ya haya registrado varios: describe la alternativa por defecto, no su registro de modelos.
-- **Cualquier modelo activo, por su nombre** — fije Plaid a un modelo concreto, con independencia del predeterminado. Los modelos archivados no se ofrecen.
+- **Ningún modelo configurado**: se muestra cuando no hay predeterminado *ni* modelo incluido, que es el caso de las instalaciones locales. Tenga en cuenta que esta opción sigue diciendo *Ningún modelo configurado* hasta que algún modelo se marque con la estrella como predeterminado de la organización, aunque ya haya registrado varios: describe la alternativa por defecto, no su registro de modelos.
+- **Cualquier modelo activo, por su nombre**: fije Plaid a un modelo concreto, con independencia del predeterminado. Los modelos archivados no se ofrecen.
 
 Así que hay dos formas de poner el chat en marcha: marcar un predeterminado con la estrella en la página [Modelos IA](ai-models.md) y dejar este selector en la primera opción, o elegir aquí un modelo por su nombre. Fijar uno aquí funciona exista o no un predeterminado.
 
@@ -45,7 +45,7 @@ En una instalación local no hay modelo incluido, así que esta sección no se a
 
 ### Uso integrado
 
-Cuando Plaid funciona con el modelo incluido de KANAP —sin elección explícita y sin predeterminado de la organización— aparece una tarjeta **Uso integrado** con:
+Cuando Plaid funciona con el modelo incluido de KANAP (sin elección explícita y sin predeterminado de la organización), aparece una tarjeta **Uso integrado** con:
 
 - Cuántos **mensajes lleva utilizados este mes** frente al límite, con una barra de progreso que se vuelve ámbar pasadas tres cuartas partes y roja cerca del tope
 - La fecha en la que se **restablece** el volumen
@@ -57,8 +57,8 @@ Como dice la tarjeta, el chat y los agentes de este espacio de trabajo comparten
 
 El encabezado de la tarjeta Proveedor muestra tres indicadores de un vistazo:
 
-- **Chat habilitado / Chat deshabilitado** — el conmutador maestro para el chat del usuario final
-- **MCP habilitado / MCP deshabilitado** — si los clientes MCP externos pueden conectarse
+- **Chat habilitado / Chat deshabilitado**: el conmutador maestro para el chat del usuario final
+- **MCP habilitado / MCP deshabilitado**: si los clientes MCP externos pueden conectarse
 - **Proveedor listo / Proveedor incompleto**: si el modelo al que resuelve Plaid es realmente utilizable. Mientras solo falte la confirmación del modelo incluido, este indicador se oculta y la línea de estado de arriba ocupa su lugar.
 
 Cuando falta algo, **Errores de validación del proveedor actual** lo enumera encima del formulario: un modelo incompleto, o directamente ningún modelo. La solución está normalmente en la página [Modelos IA](ai-models.md) y no aquí.
@@ -71,13 +71,13 @@ La sección **Funcionalidades** activa o desactiva las superficies de IA opciona
 
 - **Habilitar chat**: activa o desactiva el espacio de chat dentro de la app para los usuarios finales. No se puede activar mientras el encabezado diga **Proveedor incompleto**: el guardado se rechaza indicando los motivos, y esos motivos se corrigen antes en la página [Modelos IA](ai-models.md). Una confirmación pendiente del modelo incluido es la excepción: el guardado abre entonces la ventana de confirmación. La misma comprobación se ejecuta en cada guardado mientras el chat ya está activo, de modo que un modelo que quede incompleto más adelante bloqueará cambios sin ninguna relación en esta página hasta que se resuelva.
 - **Habilitar MCP**: activa o desactiva la API MCP para los clientes externos. No espera a la confirmación del modelo incluido. Las solicitudes MCP no cuentan en el volumen mensual incluido.
-- **Búsqueda web** — permite al asistente de chat Plaid buscar en la web. Requiere que la clave de búsqueda web a nivel de instancia esté configurada; sin ella, el conmutador está deshabilitado y un tooltip explica por qué. Al activarlo se ejecuta automáticamente una prueba de conectividad y se informa del resultado. Este conmutador se aplica **solo al asistente de chat**: los agentes IA tienen su propia configuración de búsqueda web independiente, en la [pestaña Configuración](agents-workspace.md) de cada agente, que se basa en la misma configuración a nivel de instancia.
+- **Búsqueda web**: permite al asistente de chat Plaid buscar en la web. Requiere que la clave de búsqueda web a nivel de instancia esté configurada; sin ella, el conmutador está deshabilitado y un tooltip explica por qué. Al activarlo se ejecuta automáticamente una prueba de conectividad y se informa del resultado. Este conmutador se aplica **solo al asistente de chat**: los agentes IA tienen su propia configuración de búsqueda web independiente, en la [pestaña Configuración](agents-workspace.md) de cada agente, que se basa en la misma configuración a nivel de instancia.
 
 ---
 
 ## Retención
 
-- **Retención de conversaciones (días)** — las conversaciones de chat y sus mensajes con una antigüedad superior a este valor pasan a ser elegibles para la limpieza automática. Déjelo vacío para conservarlas indefinidamente.
+- **Retención de conversaciones (días)**: las conversaciones de chat y sus mensajes con una antigüedad superior a este valor pasan a ser elegibles para la limpieza automática. Déjelo vacío para conservarlas indefinidamente.
 
 Los cambios en **Proveedor**, **Funcionalidades**, **Retención** *y* el campo **Vida útil máxima de la clave (días)** de más abajo se aplican todos con el único botón **Guardar configuración** del final de esta tarjeta. Nada de esta página se guarda por sí solo.
 

@@ -11,7 +11,7 @@ Sin CoA, todas las cuentas están disponibles para todas las empresas, lo que fa
   - **Simplificar la selección**: Los desplegables de cuentas muestran solo cuentas relevantes, no todo su catálogo
   - **Habilitar plantillas**: Cargue conjuntos de cuentas preconfigurados desde plantillas específicas por país
 
-**Ejemplo**: Su filial francesa utiliza el PCG (Plan Comptable General) francés, mientras que su entidad del Reino Unido usa UK GAAP. Cree dos CoA -- uno para cada estándar -- y asigne las empresas en consecuencia. Al registrar gasto, los usuarios ven automáticamente las cuentas correctas.
+**Ejemplo**: Su filial francesa utiliza el PCG (Plan Comptable General) francés, mientras que su entidad del Reino Unido usa UK GAAP. Cree dos CoA (uno para cada estándar) y asigne las empresas en consecuencia. Al registrar gasto, los usuarios ven automáticamente las cuentas correctas.
 
 ## La relación: CoA -> Empresa -> Cuentas
 
@@ -192,7 +192,7 @@ Las plantillas son conjuntos de cuentas estándar gestionados por los administra
   - Haga clic en **Verificar plantilla** para ver cuántas cuentas se añadirán y cuántas se actualizarán
   - Haga clic en **Crear** para copiar las cuentas en su CoA
 
-**Qué se copia**: Números de cuenta, nombres, nombres locales (idioma local), descripciones, mapeos de consolidación, **Usada para** y estado. Las cuentas pasan a ser suyas para editar -- los cambios en la plantilla de la plataforma no afectan a su CoA a menos que la recargue explícitamente. Si su espacio de trabajo tiene un plan de consolidación, el nombre y la descripción de consolidación de cada cuenta se toman de ese plan (consulte [El plan de consolidación](#el-plan-de-consolidacion)).
+**Qué se copia**: Números de cuenta, nombres, nombres locales (idioma local), descripciones, mapeos de consolidación, **Usada para** y estado. Las cuentas pasan a ser suyas para editar: los cambios en la plantilla de la plataforma no afectan a su CoA a menos que la recargue explícitamente. Si su espacio de trabajo tiene un plan de consolidación, el nombre y la descripción de consolidación de cada cuenta se toman de ese plan (consulte [El plan de consolidación](#el-plan-de-consolidacion)).
 
 **Consejo**: Después de cargar una plantilla, puede añadir cuentas específicas de la empresa, renombrar entradas o deshabilitar cuentas no utilizadas. Las plantillas proporcionan un punto de partida, no una estructura bloqueada.
 
@@ -200,7 +200,7 @@ Las plantillas son conjuntos de cuentas estándar gestionados por los administra
 
 KANAP incluye **20 plantillas preconfiguradas** que cubren 10 estándares contables. Cada estándar viene en dos versiones:
 
-- **v1.0 (Simple)**: Un conjunto enfocado de ~20 cuentas relevantes para IT -- licencias de software, alojamiento en la nube, ciberseguridad, telecomunicaciones, consultoría, costes de personal, formación y más. Ideal para organizaciones que quieren un punto de partida ligero.
+- **v1.0 (Simple)**: Un conjunto enfocado de ~20 cuentas relevantes para IT: licencias de software, alojamiento en la nube, ciberseguridad, telecomunicaciones, consultoría, costes de personal, formación y más. Ideal para organizaciones que quieren un punto de partida ligero.
 - **v2.0 (Detallado)**: Todo lo de v1.0 más subcuentas granulares adicionales (~30 cuentas). Añade desgloses como Software comprado vs. Desarrollado internamente, Equipos de red, SaaS vs. Licencias perpetuas, Comunicaciones móviles, Bonificaciones IT, Seguro IT y más. Ideal para organizaciones que necesitan un seguimiento de costes más fino.
 
 Ambas versiones usan **números de cuenta reales del estándar contable oficial de cada país** e incluyen nombres locales en el idioma local. Cada cuenta lleva además su ajuste **Usada para**: las cuentas de activos son para CAPEX, las cuentas de gastos son para OPEX, y las cuentas de amortización y deterioro son para ambos.
@@ -225,11 +225,11 @@ Ambas versiones usan **números de cuenta reales del estándar contable oficial 
 
 ### Consolidación IFRS integrada
 
-Todas las plantillas -- independientemente del país -- mapean cada cuenta a una de **14 cuentas de consolidación IFRS estandarizadas**. Esto significa que los informes a nivel de grupo funcionan desde el principio, incluso entre diferentes estándares locales.
+Todas las plantillas, independientemente del país, mapean cada cuenta a una de **14 cuentas de consolidación IFRS estandarizadas**. Esto significa que los informes a nivel de grupo funcionan desde el principio, incluso entre diferentes estándares locales.
 
 | # | Cuenta de consolidación | Qué cubre |
 |---|-------------------------|-----------|
-| 1000 | Activos tangibles (CAPEX) | Equipamiento IT físico -- servidores, estaciones de trabajo, equipos de red |
+| 1000 | Activos tangibles (CAPEX) | Equipamiento IT físico: servidores, estaciones de trabajo, equipos de red |
 | 1100 | Activos intangibles (CAPEX) | Software capitalizado y costes de desarrollo |
 | 1200 | Depreciación y amortización | Depreciación de hardware y software |
 | 1300 | Deterioros y provisiones | Deterioros y reducciones de valor de activos |
@@ -401,7 +401,7 @@ Las **cuentas legado** son cuentas sin un `coa_id` (creadas antes de que se intr
 
 **Cómo funcionan**:
   - Las empresas SIN CoA pueden usar cuentas legado
-  - Las empresas CON CoA no pueden usar cuentas legado -- se filtran automáticamente
+  - Las empresas CON CoA no pueden usar cuentas legado: se filtran automáticamente
   - Las cuentas legado pueden migrarse vía CSV (`coa_code`) y flujos de trabajo de reasignación
 
 **Ruta de migración**:
@@ -504,7 +504,7 @@ account_number;account_name;native_name;description;consolidation_account_number
 
 ## Consejos
 
-  - **Comience con plantillas**: KANAP incluye plantillas para 9 países más IFRS. Cargue una en lugar de construir desde cero -- obtiene números de cuenta adecuados, nombres locales y mapeos de consolidación IFRS desde el principio. Comience con v1.0 (Simple) si no está seguro; actualice a v2.0 (Detallado) si necesita más granularidad.
+  - **Comience con plantillas**: KANAP incluye plantillas para 9 países más IFRS. Cargue una en lugar de construir desde cero: obtiene números de cuenta adecuados, nombres locales y mapeos de consolidación IFRS desde el principio. Comience con v1.0 (Simple) si no está seguro; actualice a v2.0 (Detallado) si necesita más granularidad.
   - **Un predeterminado por país**: Haga de un CoA el plan predeterminado de cada país, para que las nuevas empresas empiecen con la estructura de cuentas correcta.
   - **Nombres locales para conformidad**: Utilice el campo **Nombre local (idioma local)** si la normativa local requiere cuentas en el idioma local. Habilite la columna **Nombre local** en la cuadrícula para ver ambos nombres de un vistazo.
   - **Migre gradualmente**: No tiene que convertir todo a la vez. Las empresas sin CoA continúan trabajando con cuentas legado.
@@ -526,7 +526,7 @@ Tiene filiales en Francia, Reino Unido y Alemania, cada una siguiendo estándare
   2. Haga de cada una el plan predeterminado de su país (**Gestionar planes**, luego **Hacer plan predeterminado del país**)
   3. Asigne empresas a sus CoA respectivos
   4. Las nuevas empresas obtienen automáticamente el CoA correcto; la selección de cuentas se filtra en consecuencia
-  5. Los mapeos de consolidación ya están en su lugar -- los informes de grupo funcionan inmediatamente
+  5. Los mapeos de consolidación ya están en su lugar: los informes de grupo funcionan inmediatamente
 
 ### Escenario 2: Migrar de legado a CoA
 
@@ -557,9 +557,9 @@ Su grupo tiene filiales en Francia, Reino Unido y Alemania. Cada país usa su es
 
 **Configuración**:
   1. Cargue plantillas de país con consolidación IFRS integrada:
-      - **FR-PCG v1.0** -- Plan Comptable General francés (20 cuentas)
-      - **GB-UKGAAP v1.0** -- UK GAAP (20 cuentas)
-      - **DE-SKR03 v1.0** -- Standardkontenrahmen 03 (20 cuentas)
+      - **FR-PCG v1.0**: Plan Comptable General francés (20 cuentas)
+      - **GB-UKGAAP v1.0**: UK GAAP (20 cuentas)
+      - **DE-SKR03 v1.0**: Standardkontenrahmen 03 (20 cuentas)
 
   2. Cada cuenta en estas plantillas ya se mapea a una de las 14 cuentas de consolidación IFRS. Por ejemplo:
       - FR-PCG `205000` (Logiciels informatiques) -> IFRS `1100` (Intangible Assets)
@@ -573,7 +573,7 @@ Su grupo tiene filiales en Francia, Reino Unido y Alemania. Cada país usa su es
   - Los usuarios del Reino Unido trabajan con cuentas UK GAAP
   - Los usuarios alemanes trabajan con cuentas SKR03 y nombres locales en alemán
   - Finanzas de grupo ejecuta informes por cuenta de consolidación para ver el gasto total en categorías IFRS
-  - No se necesita trabajo manual de mapeo -- las plantillas lo gestionan todo
+  - No se necesita trabajo manual de mapeo: las plantillas lo gestionan todo
   - Tanto los informes estatutarios locales como los informes IFRS de grupo funcionan sin problemas desde los mismos datos
 
 ## Preguntas frecuentes
@@ -606,7 +606,7 @@ R: No, son opcionales. Si solo opera en un país o no necesita consolidación a 
 R: Sí, ese es precisamente el objetivo. Muchas cuentas locales de diferentes CoA pueden mapearse a la misma cuenta de consolidación. Así es como se agregan costes de diferentes países en una sola categoría consolidada.
 
 **P: ¿Qué pasa si cambio un mapeo de consolidación?**
-R: Las líneas OPEX/CAPEX existentes no almacenan datos de consolidación directamente -- referencian la cuenta, que tiene el mapeo de consolidación. Cuando cambia un mapeo, todas las líneas históricas y futuras que usen esa cuenta se reportarán bajo la nueva cuenta de consolidación. Actualice los mapeos con cuidado si necesita preservar categorías de informes históricos.
+R: Las líneas OPEX/CAPEX existentes no almacenan datos de consolidación directamente: referencian la cuenta, que tiene el mapeo de consolidación. Cuando cambia un mapeo, todas las líneas históricas y futuras que usen esa cuenta se reportarán bajo la nueva cuenta de consolidación. Actualice los mapeos con cuidado si necesita preservar categorías de informes históricos.
 
 **P: ¿Tiene que ser el plan de consolidación el predeterminado para otros países?**
 R: No. Los dos roles son independientes. En la configuración habitual, un mismo plan IFRS tiene ambos, y puede dárselos a planes distintos en cualquier momento en **Gestionar planes**.
