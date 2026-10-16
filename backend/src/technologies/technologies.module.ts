@@ -13,6 +13,8 @@ import { TechnologiesRelationsService } from './technologies-relations.service';
 import { TechnologiesService } from './technologies.service';
 import { TechnologyLinksService } from './technology-links.service';
 import { TechnologyReachService } from './technology-reach.service';
+import { EndOfSupportController } from './reports/end-of-support.controller';
+import { EndOfSupportService } from './reports/end-of-support.service';
 
 /**
  * The technology layer (lot S): technologies, versions, the starting catalog, their links to
@@ -22,7 +24,8 @@ import { TechnologyReachService } from './technology-reach.service';
  */
 @Module({
   imports: [AuditModule, PermissionsModule, forwardRef(() => UsersModule), StorageModule, ItOpsSettingsModule, CurrencyModule, IncidentsModule],
-  controllers: [TechnologiesController],
+  // The report's controller first: its static paths are registered before `technologies/:id`.
+  controllers: [EndOfSupportController, TechnologiesController],
   providers: [
     TechnologiesService,
     TechnologyLinksService,
@@ -30,6 +33,7 @@ import { TechnologyReachService } from './technology-reach.service';
     TechnologiesRelationsService,
     TechnologiesDeleteService,
     TechnologyCatalogService,
+    EndOfSupportService,
   ],
   exports: [TechnologiesService, TechnologyLinksService, TechnologyReachService, TechnologyCatalogService],
 })
