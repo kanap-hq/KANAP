@@ -34,6 +34,8 @@ import PageHeader from '../../components/PageHeader';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import { keepsShippedName, localizeTaskType } from '../../utils/taskTypeLocalization';
+import { useCatalogLocale } from '../../hooks/useLocalizedTaskTypes';
 import { useKanapDialogs } from '../../components/design';
 
 interface CriterionValue {
@@ -111,6 +113,8 @@ interface PortfolioSource {
 interface PortfolioTaskType {
   id: string;
   name: string;
+  /** The shipped type it started as, null for a tenant's own type. */
+  code?: string | null;
   description: string | null;
   is_active: boolean;
   display_order: number;
@@ -1691,6 +1695,7 @@ function ClassificationSection({
   onToggleTaskType: (taskType: PortfolioTaskType) => void;
 }) {
   const { t } = useTranslation(['portfolio', 'common']);
+  const catalogLocale = useCatalogLocale();
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
 
   const toggleCategory = (id: string) => {
@@ -1950,10 +1955,10 @@ function ClassificationSection({
                     size="small"
                     disabled={!canEdit}
                   />
-                  <Typography sx={{ flex: 1 }}>{taskType.name}</Typography>
+                  <Typography sx={{ flex: 1 }}>{localizeTaskType(taskType, catalogLocale).name}</Typography>
                   {taskType.description && (
                     <Typography variant="caption" color="text.secondary" sx={{ flex: 2 }}>
-                      {taskType.description}
+                      {localizeTaskType(taskType, catalogLocale).description}
                     </Typography>
                   )}
                   {taskType.is_system && (
@@ -2294,6 +2299,7 @@ function TaskTypeEditDialog({
             onChange={(e) => setName(e.target.value)}
             fullWidth
             required
+            helperText={taskType && keepsShippedName(name, taskType.code) ? t('settings.classification.taskTypeDialog.shippedNameHint') : undefined}
           />
           <TextField
             label={t('settings.fields.description')}

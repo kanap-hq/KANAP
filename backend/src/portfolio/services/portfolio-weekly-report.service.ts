@@ -130,6 +130,8 @@ export type WeeklyTaskRow = WeeklyRowCommon & {
   taskId: string;
   taskTypeId: string | null;
   taskTypeName: string | null;
+  /** The shipped type it started as, for display in the reader's language; null for a tenant's own type. */
+  taskTypeCode: string | null;
   priority: number | null;
 };
 
@@ -188,7 +190,7 @@ export type WeeklyFilterValues = {
   sources: Array<{ id: string; name: string }>;
   categories: Array<{ id: string; name: string }>;
   streams: Array<{ id: string; name: string; categoryId: string | null }>;
-  taskTypes: Array<{ id: string; name: string }>;
+  taskTypes: Array<{ id: string; name: string; code: string | null }>;
 };
 
 type ServiceOpts = { manager?: EntityManager };
@@ -524,6 +526,7 @@ type RawTaskEventRow = RawEventRow & {
   priority: number | string | null;
   task_type_id: string | null;
   task_type_name: string | null;
+  task_type_code: string | null;
   /** Person columns, selected in person mode only. */
   creator_user_id?: string | null;
   modifier_user_ids?: string[] | null;
@@ -627,7 +630,7 @@ export class PortfolioWeeklyReportService {
       ),
       mg.query(
         `
-        SELECT id, name
+        SELECT id, name, code
         FROM portfolio_task_types
         WHERE tenant_id = $1
           AND is_active = true
@@ -651,9 +654,10 @@ export class PortfolioWeeklyReportService {
         name: row.name,
         categoryId: row.category_id ?? null,
       })),
-      taskTypes: (taskTypesRaw as Array<{ id: string; name: string }>).map((row) => ({
+      taskTypes: (taskTypesRaw as Array<{ id: string; name: string; code: string | null }>).map((row) => ({
         id: row.id,
         name: row.name,
+        code: row.code ?? null,
       })),
     };
   }
@@ -1301,6 +1305,7 @@ export class PortfolioWeeklyReportService {
         t.item_number,
         pt.id AS task_type_id,
         pt.name AS task_type_name,
+        pt.code AS task_type_code,
         CASE t.priority_level
           WHEN 'blocker' THEN 110
           WHEN 'high' THEN 90
@@ -1361,6 +1366,7 @@ export class PortfolioWeeklyReportService {
         ...this.commonFields(row, listKey, 'T', '/portfolio/tasks', 'overview', timeZone),
         taskTypeId: row.task_type_id ?? null,
         taskTypeName: row.task_type_name ?? null,
+        taskTypeCode: row.task_type_code ?? null,
         priority: toNumber(row.priority),
       };
       entries.push({ row: built, listKey, raw: row });

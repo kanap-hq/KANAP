@@ -925,5 +925,23 @@
     "editLink": "Link bearbeiten",
     "copyUrl": "URL kopieren",
     "removeLink": "Link entfernen"
+  },
+  "taskTypes": {
+    "task": {
+      "label": "Aufgabe",
+      "description": "Standardaufgabe oder Arbeitselement"
+    },
+    "bug": {
+      "label": "Bug",
+      "description": "Softwarefehler oder Defekt"
+    },
+    "problem": {
+      "label": "Problem",
+      "description": "Betriebliches Problem, das untersucht werden muss"
+    },
+    "incident": {
+      "label": "Vorfall",
+      "description": "Serviceunterbrechung oder Sicherheitsereignis"
+    }
   }
 }

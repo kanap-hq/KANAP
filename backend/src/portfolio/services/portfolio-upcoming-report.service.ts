@@ -74,6 +74,7 @@ type RawTaskRow = {
   due_date: string | null;
   priority_level: string | null;
   task_type_name: string | null;
+  task_type_code: string | null;
   assignee_name: string | null;
   project_id: string | null;
   project_number: number | string | null;
@@ -202,6 +203,7 @@ export class PortfolioUpcomingReportService {
                t.due_date::text AS due_date,
                t.priority_level,
                tt.name AS task_type_name,
+               tt.code AS task_type_code,
                ${userNameSql('u')} AS assignee_name,
                pp.id::text AS project_id,
                pp.item_number AS project_number,
@@ -232,6 +234,7 @@ export class PortfolioUpcomingReportService {
           name: row.title ?? '',
           status: row.status ?? '',
           taskTypeName: row.task_type_name ?? null,
+          taskTypeCode: row.task_type_code ?? null,
           priorityLevel: row.priority_level ?? null,
           assigneeName: row.assignee_name ?? null,
           dueDate: row.due_date ?? '',

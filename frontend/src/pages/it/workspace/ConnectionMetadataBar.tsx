@@ -53,7 +53,9 @@ export default function ConnectionMetadataBar({
   const connectionTypes = settings?.connectionTypes || [];
 
   const safeProtocolCodes = protocolCodes || [];
-  const safeProtocolLabels = protocolLabels && protocolLabels.length > 0 ? protocolLabels : safeProtocolCodes;
+  // Each protocol by its name in the reader's language; a value that is no known code is shown as given.
+  const safeProtocolLabels = (protocolLabels && protocolLabels.length > 0 ? protocolLabels : safeProtocolCodes)
+    .map((value) => connectionTypes.find((ct: any) => ct.code === value)?.label || value);
 
   const [lifecycleAnchor, setLifecycleAnchor] = React.useState<HTMLElement | null>(null);
   const [topologyAnchor, setTopologyAnchor] = React.useState<HTMLElement | null>(null);

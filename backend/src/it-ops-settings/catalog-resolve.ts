@@ -1,17 +1,19 @@
 import { BadRequestException } from '@nestjs/common';
-import { catalogAliases, normalizeAlias, type CatalogTranslations } from './catalog-codes';
+import { matchCatalogAliases, normalizeAlias, type CatalogTranslations } from './catalog-codes';
+import { withShippedLabels } from './catalog-shipped-labels';
 
-export type CatalogOptionLike = { code: string; label?: string | null; deprecated?: boolean; translations?: CatalogTranslations };
+export type CatalogOptionLike = { code: string; label?: string | null; deprecated?: boolean; translations?: CatalogTranslations; shippedLabels?: string[] };
 
 /**
  * Shared resolution policy for catalog values coming from the API, CSV or Plaid: an input matches an
- * entry when it equals its code or its name (trimmed, case-insensitive). Exactly one entry must match;
+ * entry when it equals its code or its name (trimmed, case-insensitive), else, for an import, a label
+ * the app shows for a shipped value in any language (`withShippedLabels`). Exactly one entry must match;
  * several matches are an ambiguity and are refused rather than letting "the last alias win".
  */
 export function findCatalogOption<T extends CatalogOptionLike>(input: unknown, options: T[]): T | null {
   const key = normalizeAlias(input);
   if (!key) return null;
-  const matches = options.filter((option) => catalogAliases(option).includes(key));
+  const matches = matchCatalogAliases(options, key);
   const distinct = [...new Map(matches.map((option) => [option.code, option])).values()];
   if (distinct.length > 1) throw new BadRequestException(`"${String(input)}" matches several values (${distinct.map((option) => option.label || option.code).join(', ')}); use the exact name of one of them`);
   return distinct[0] ?? null;
@@ -26,10 +28,14 @@ export function resolveCatalogCode<T extends CatalogOptionLike>(input: unknown, 
   return String(input).trim();
 }
 
-/** Import hooks need the effective catalogs; the entity CSV service preloads them under the tenant lock. */
+/**
+ * Import hooks need the effective catalogs; the entity CSV service preloads them under the tenant lock.
+ * They come with the labels shown for the shipped values in every language, so a value typed as the
+ * user sees it ("Serveur physique") resolves to its code.
+ */
 export async function requireImportCatalogs(context: { itOpsSettings?: import('./it-ops-settings.service').ItOpsSettings }): Promise<import('./it-ops-settings.service').ItOpsSettings> {
   if (!context.itOpsSettings) throw new Error('CSV import context is missing the IT Ops catalogs');
-  return context.itOpsSettings;
+  return withShippedLabels(context.itOpsSettings);
 }
 
 /** Replaces catalog codes by names on an export row (arrays element-wise); unknown codes stay as they are. */

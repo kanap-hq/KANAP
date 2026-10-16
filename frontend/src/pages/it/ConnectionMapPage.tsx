@@ -40,6 +40,7 @@ import ConnectionMapGraph, { ClusterMembership, ConnectionMapLink, ConnectionMap
 
 import { useTranslation } from 'react-i18next';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import { legTypeLabel } from '../../utils/interfaceLegType';
 type ApiConnectionMapNode = {
   id: string;
   name: string;
@@ -163,12 +164,13 @@ type ServerMapSummary = {
   is_cluster?: boolean;
 };
 
-function toGraphNodes(nodes: ApiConnectionMapNode[]): ConnectionMapNode[] {
+/** `entityName` gives an entity node the entity's name in the reader's language (its id is `entity:<code>`). */
+export function toGraphNodes(nodes: ApiConnectionMapNode[], entityName: (code: string) => string | undefined = () => undefined): ConnectionMapNode[] {
   return nodes.map((n) => {
     const isCluster = n.kind === 'cluster' || (n as any).is_cluster;
     return {
       id: n.id,
-      name: n.name,
+      name: (n.kind === 'entity' && n.id.startsWith('entity:') ? entityName(n.id.slice('entity:'.length)) : undefined) || n.name,
       kind: isCluster ? 'cluster' : n.kind,
       isCluster,
       environment: n.environment,
@@ -490,7 +492,7 @@ export default function ConnectionMapPage() {
 
   const graphData = React.useMemo<GraphData>(() => {
     if (!data) return EMPTY_GRAPH;
-    const allNodes = toGraphNodes(data.nodes || []);
+    const allNodes = toGraphNodes(data.nodes || [], (code) => labelFor('entity', code));
     const typicalPortsByCode = new Map<string, string>();
     (settings?.connectionTypes || []).forEach((ct) => {
       if (ct.code) typicalPortsByCode.set(ct.code, (ct as any).typicalPorts || (ct as any).typical_ports || '');
@@ -506,7 +508,7 @@ export default function ConnectionMapPage() {
     });
     const nodes = allNodes.filter((n) => nodeIds.has(n.id));
     return { nodes, links };
-  }, [data, showMultiServer, showLayers, settings?.connectionTypes]);
+  }, [data, showMultiServer, showLayers, settings?.connectionTypes, labelFor]);
 
   // Memoize clusterMemberships to avoid triggering graph re-render on every parent render
   const clusterMembershipsRaw = React.useMemo(() => {
@@ -1365,7 +1367,7 @@ export default function ConnectionMapPage() {
                                 {link.interface_name} ({link.interface_reference || link.interface_code})
                               </Typography>
                               <Typography variant="caption" color="text.secondary">
-                                Interface leg: {link.leg_type.toUpperCase()} · Env: {link.environment.toUpperCase()}
+                                Interface leg: {legTypeLabel(t, link.leg_type)} · Env: {link.environment.toUpperCase()}
                               </Typography>
                               <Typography variant="body2">Pattern: {link.pattern || '—'}</Typography>
                               <Typography variant="body2">Source endpoint: {link.source_endpoint || '—'}</Typography>

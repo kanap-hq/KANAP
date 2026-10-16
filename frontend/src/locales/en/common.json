@@ -925,5 +925,23 @@
     "editLink": "Edit link",
     "copyUrl": "Copy URL",
     "removeLink": "Remove link"
+  },
+  "taskTypes": {
+    "task": {
+      "label": "Task",
+      "description": "Standard task or work item"
+    },
+    "bug": {
+      "label": "Bug",
+      "description": "Software defect or error"
+    },
+    "problem": {
+      "label": "Problem",
+      "description": "Operational issue requiring investigation"
+    },
+    "incident": {
+      "label": "Incident",
+      "description": "Service disruption or security event"
+    }
   }
 }

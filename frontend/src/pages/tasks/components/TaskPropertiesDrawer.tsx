@@ -20,6 +20,7 @@ import DrawerKnowledgeSection from './DrawerKnowledgeSection';
 import TaskLogTimeDialog from './TaskLogTimeDialog';
 import { taskDetailTokens, taskDetailTypography } from '../theme/taskDetailTokens';
 import { getInitials } from '../../../utils/userDisplay';
+import { useLocalizedTaskTypes, useTaskTypeLabel } from '../../../hooks/useLocalizedTaskTypes';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                             */
@@ -30,6 +31,7 @@ interface TaskData {
   status: string;
   task_type_id?: string | null;
   task_type_name?: string | null;
+  task_type_code?: string | null;
   priority_level: string;
   start_date: string | null;
   due_date: string | null;
@@ -76,7 +78,6 @@ interface TaskPropertiesDrawerProps {
 interface ClassificationSource { id: string; name: string; is_active: boolean }
 interface ClassificationStream { id: string; name: string; category_id: string; is_active: boolean }
 interface ClassificationCategory { id: string; name: string; is_active: boolean }
-interface TaskType { id: string; name: string; description: string | null; is_active: boolean; display_order: number }
 
 type SelectOption = { label: string; value: string };
 
@@ -141,14 +142,13 @@ export default function TaskPropertiesDrawer({
   const supportsTimeLogging = isStandalone || !timeExcluded.includes(task.related_object_type || '');
 
   /* ---- Data queries ---- */
-  const { data: taskTypesData } = useQuery({
-    queryKey: ['portfolio-task-types'],
-    queryFn: async () => { const res = await api.get('/portfolio/classification/task-types'); return res.data as TaskType[]; },
-  });
+  const { data: taskTypesData } = useLocalizedTaskTypes();
+  const typeLabel = useTaskTypeLabel();
+  const currentTypeLabel = typeLabel(task.task_type_name, task.task_type_code);
   const taskTypeOptions = React.useMemo(() => {
     const active = (taskTypesData || []).filter((tt) => tt.is_active).map((tt) => ({ label: tt.name, value: tt.id }));
-    return withCurrentOption(active, task.task_type_id, task.task_type_name);
-  }, [taskTypesData, task.task_type_id, task.task_type_name]);
+    return withCurrentOption(active, task.task_type_id, currentTypeLabel);
+  }, [taskTypesData, task.task_type_id, currentTypeLabel]);
 
   const { data: classificationData } = useQuery({
     queryKey: ['portfolio-classification'],
@@ -227,14 +227,14 @@ export default function TaskPropertiesDrawer({
         {/* Task type */}
         <PropertyRow label={t('workspace.task.sidebar.fields.taskType')}>
           {readOnly ? (
-            <Typography sx={{ fontSize: 13 }}>{task.task_type_name || taskTypeOptions.find((o) => o.value === task.task_type_id)?.label || '-'}</Typography>
+            <Typography sx={{ fontSize: 13 }}>{taskTypeOptions.find((o) => o.value === task.task_type_id)?.label || currentTypeLabel || '-'}</Typography>
           ) : (
             <Select
               value={task.task_type_id || ''}
               onChange={(e) => onPatch({ task_type_id: e.target.value || null })}
               variant="standard"
               displayEmpty
-              renderValue={(v) => (v ? (taskTypeOptions.find((o) => o.value === v)?.label ?? task.task_type_name ?? '') : selectPlaceholder(t('common:selects.notSet')))}
+              renderValue={(v) => (v ? (taskTypeOptions.find((o) => o.value === v)?.label ?? currentTypeLabel ?? '') : selectPlaceholder(t('common:selects.notSet')))}
               sx={drawerSelectSx}
             >
               <MenuItem value="" sx={drawerMenuItemSx}><em>—</em></MenuItem>
