@@ -27,6 +27,7 @@ import {
   AUTH_EVENT_TABLE,
   EXPORT_EVENT_TABLE,
   auditReasonLabel,
+  auditSearchParams,
   auditTableFilterLabel,
   auditTableLabel,
   auditUserLabel,
@@ -91,7 +92,7 @@ export default function AuditLogsPage() {
       const state = lastQueryRef.current;
       const params: Record<string, unknown> = {};
       if (state?.sort) params.sort = state.sort;
-      if (state?.q) params.q = state.q;
+      if (state?.q) Object.assign(params, { q: state.q }, auditSearchParams(state.q, t));
       if (state?.filterModel && Object.keys(state.filterModel).length > 0) params.filters = JSON.stringify(state.filterModel);
       // Filters too long for a URL go as the list's saved context.
       const sent = await withListContext('/audit-logs', params);
@@ -138,7 +139,7 @@ export default function AuditLogsPage() {
       const params: Record<string, any> = {
         fields: field,
       };
-      if (queryState.q) params.q = queryState.q;
+      if (queryState.q) Object.assign(params, { q: queryState.q }, auditSearchParams(queryState.q, t));
       if (Object.keys(filters).length > 0) {
         params.filters = JSON.stringify(filters);
       }
@@ -146,7 +147,9 @@ export default function AuditLogsPage() {
       const values = (res.data?.[field] || []) as Array<string | null>;
       return values.map((value) => ({ value }));
     };
-  }, []);
+  }, [t]);
+  // A search also finds the tables whose label, in the reader's language, holds the text.
+  const searchParams = React.useCallback((q: string) => auditSearchParams(q, t), [t]);
 
   const columns = React.useMemo<EnhancedColDef<AuditLogItem>[]>(() => {
     return [
@@ -283,6 +286,7 @@ export default function AuditLogsPage() {
         enablePagination
         paginationPageSize={100}
         enableSearch
+        searchParams={searchParams}
         defaultSort={{ field: 'created_at', direction: 'DESC' }}
         columnPreferencesKey="admin-audit-logs"
         enableColumnChooser={true}
@@ -320,7 +324,7 @@ export default function AuditLogsPage() {
             <Stack spacing={2}>
               <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap alignItems="center">
                 <Typography variant="body2" color="text.secondary">{t('auditLogs.details.date', { value: new Date(detail.created_at).toLocaleString(locale) })}</Typography>
-                <Typography component="span" variant="body2" sx={{ fontFamily: "'JetBrains Mono Variable', ui-monospace, monospace", fontSize: '12px', color: 'text.secondary' }}>{t('auditLogs.details.table', { value: detail.table_name })}</Typography>
+                <Typography variant="body2" color="text.secondary">{t('auditLogs.details.table', { value: auditTableFilterLabel(detail.table_name, t) })}</Typography>
                 {detail.table_name === EXPORT_EVENT_TABLE && <Typography variant="body2" color="text.secondary">{t('auditLogs.details.exported', { value: auditTableLabel(detail, t) })}</Typography>}
                 <Typography variant="body2" color="text.secondary">{t('auditLogs.details.action', { value: t(`auditLogs.actions.${detail.action}`, { defaultValue: detail.action }) })}</Typography>
                 <Typography variant="body2" color="text.secondary">{t('auditLogs.details.source', { value: t(`auditLogs.sources.${detail.source || 'system'}`, { defaultValue: detail.source || 'system' }) })}</Typography>

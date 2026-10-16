@@ -28,12 +28,12 @@ interface RelatedOption {
 const STANDALONE_VALUE = '__standalone__';
 
 const TYPE_OPTIONS = [
-  { label: 'Standalone', value: STANDALONE_VALUE },
-  { label: 'Project', value: 'project' },
-  { label: 'Budget (OPEX)', value: 'spend_item' },
-  { label: 'Contract', value: 'contract' },
-  { label: 'CAPEX', value: 'capex_item' },
-  { label: 'Incident', value: 'incident' },
+  { labelKey: 'standalone', value: STANDALONE_VALUE },
+  { labelKey: 'project', value: 'project' },
+  { labelKey: 'spendItem', value: 'spend_item' },
+  { labelKey: 'contract', value: 'contract' },
+  { labelKey: 'capexItem', value: 'capex_item' },
+  { labelKey: 'incident', value: 'incident' },
 ];
 
 export default function RelatedObjectSelect({
@@ -126,7 +126,11 @@ export default function RelatedObjectSelect({
     onChangeId(option?.id || null, option?.name || null);
   };
 
-  const itemLabel = TYPE_OPTIONS.find((o) => o.value === relationType)?.label || 'Item';
+  const typeOptions = React.useMemo(
+    () => TYPE_OPTIONS.map((option) => ({ value: option.value, label: t(`relatedObject.types.${option.labelKey}`) })),
+    [t],
+  );
+  const itemLabel = typeOptions.find((o) => o.value === relationType)?.label || t('relatedObject.item');
 
   return (
     <Stack spacing={1.5}>
@@ -138,7 +142,7 @@ export default function RelatedObjectSelect({
           textFieldSx={undefined}
           value={relationType ?? STANDALONE_VALUE}
           onChange={handleTypeChange}
-          options={TYPE_OPTIONS}
+          options={typeOptions}
           size={size}
           disabled={disabled}
         />
@@ -166,7 +170,7 @@ export default function RelatedObjectSelect({
           renderInput={(params) => (
             <TextField
               {...params}
-              placeholder={hideLabel ? t('selects.notSet') : 'Search...'}
+              placeholder={hideLabel ? t('selects.notSet') : t('filters.search')}
               size={size}
               variant="standard"
               sx={undefined}

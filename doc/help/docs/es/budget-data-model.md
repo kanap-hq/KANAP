@@ -108,7 +108,7 @@ Cada línea tiene las mismas cinco columnas para cada año. Se definen una vez p
 
 - Un administrador del presupuesto puede renombrar una columna (hasta 40 caracteres), ocultarla y elegir la columna por defecto. El nombre en los archivos no cambia, así que un archivo sigue funcionando después de un cambio de nombre. Consulte [Columnas presupuestarias](budget-operations.md#columnas-presupuestarias).
 - Una columna oculta conserva sus importes y sigue aceptando importaciones.
-- Las columnas se congelan por año, por columna y por tipo (OPEX o CAPEX). Una columna congelada rechaza las modificaciones, las importaciones, las copias y los restablecimientos. Consulte [Congelar / Descongelar datos](budget-operations.md#congelar-descongelar-datos).
+- Las columnas se congelan por año, por columna y por tipo (OPEX o CAPEX). Una columna congelada rechaza las modificaciones, las importaciones, las copias y los restablecimientos. Consulte [Congelar / descongelar datos](budget-operations.md#congelar-descongelar-datos).
 
 No hay una sexta columna. Para conservar varias rondas presupuestarias, use una columna por ronda, o copie una columna a otro año u otra columna con [Copiar columnas presupuestarias](budget-operations.md#copiar-columnas-presupuestarias).
 

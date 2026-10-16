@@ -798,7 +798,7 @@ async function createSuppliers(
     `INSERT INTO suppliers (tenant_id, name, erp_supplier_id, status)
      SELECT $1, n.name, NULLIF(n.erp, ''), 'enabled'::status_state
        FROM unnest($2::text[], $3::text[]) AS n(name, erp)
-     ON CONFLICT ON CONSTRAINT uq_suppliers_tenant_name DO NOTHING
+     ON CONFLICT (tenant_id, lower(name)) DO NOTHING
      RETURNING id::text AS id, name`,
     [tenantId, rows.map((row) => row.name), rows.map((row) => row.erpId ?? '')],
   );

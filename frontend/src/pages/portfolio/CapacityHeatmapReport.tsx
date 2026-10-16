@@ -75,23 +75,9 @@ type CapacityHeatmapResponse = {
 type TeamOption = { id: string; name: string };
 
 const NO_TEAM_ID = 'no-team';
-// Sentence case: these labels are only the fallback when a translation is missing.
-const STATUS_OPTIONS = [
-  { value: 'waiting_list', label: 'Waiting list' },
-  { value: 'planned', label: 'Planned' },
-  { value: 'in_progress', label: 'In progress' },
-  { value: 'in_testing', label: 'In testing' },
-  { value: 'on_hold', label: 'On hold' },
-  { value: 'done', label: 'Done' },
-  { value: 'cancelled', label: 'Cancelled' },
-];
+const STATUS_VALUES = ['waiting_list', 'planned', 'in_progress', 'in_testing', 'on_hold', 'done', 'cancelled'];
 
 const DEFAULT_STATUSES = ['waiting_list', 'planned', 'in_progress', 'in_testing', 'on_hold'];
-
-const STATUS_LABELS: Record<string, string> = STATUS_OPTIONS.reduce((acc, curr) => {
-  acc[curr.value] = curr.label;
-  return acc;
-}, {} as Record<string, string>);
 
 const HEATMAP_COLORS: Record<CapacityColorBand, string> = {
   green: '#C8E6C9',
@@ -202,10 +188,7 @@ export default function CapacityHeatmapReport() {
   });
 
   const statusOptions = useMemo(
-    () => STATUS_OPTIONS.map((option) => ({
-      ...option,
-      label: t(`statuses.project.${option.value}`, { defaultValue: option.label }),
-    })),
+    () => STATUS_VALUES.map((value) => ({ value, label: t(`statuses.project.${value}`) })),
     [t],
   );
 

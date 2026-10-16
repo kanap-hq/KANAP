@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -409,5 +409,74 @@ describe('Layout section tabs scroll arrows', () => {
     const watched = watches.filter((w) => w.live).flatMap((w) => w.targets);
     expect(watched).toContain(tabs[0]);
     expect(watched).toContain(tabs[tabs.length - 1]);
+  });
+
+  it('at 375 px, each arrow follows its end of the row and a click scrolls by the tabs that fit', () => {
+    // The row's sizes on a 375 px phone: the scroller between the two arrows, each tab ~90 px.
+    const SCROLLER = 247;
+    const TAB = 90;
+    const width = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(function (this: HTMLElement) {
+      if (this.classList.contains('MuiTabs-scroller')) return SCROLLER;
+      if (this.classList.contains('MuiTab-root')) return TAB;
+      return 0;
+    });
+    // The observers report on demand, as the browser does once the row is laid out.
+    const live: Array<{ callback: IntersectionObserverCallback; targets: Element[]; on: boolean }> = [];
+    class ReportingObserver {
+      private entry: { callback: IntersectionObserverCallback; targets: Element[]; on: boolean };
+      constructor(callback: IntersectionObserverCallback) { this.entry = { callback, targets: [], on: true }; live.push(this.entry); }
+      observe(target: Element) { this.entry.targets.push(target); }
+      unobserve() {}
+      disconnect() { this.entry.on = false; }
+      takeRecords() { return []; }
+    }
+    vi.stubGlobal('IntersectionObserver', ReportingObserver);
+    // MUI animates the scroll over animation frames: run them on demand, 16 ms apart.
+    let frames: FrameRequestCallback[] = [];
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => { frames.push(cb); return frames.length; });
+    const runFrames = () => {
+      for (let time = 0; frames.length > 0 && time < 2000; time += 16) {
+        const due = frames;
+        frames = [];
+        due.forEach((cb) => cb(time));
+      }
+    };
+    try {
+      renderShell();
+      const nav = screen.getByRole('tablist', { name: 'nav:topBar.sectionNav' });
+      const root = nav.closest('.MuiTabs-root') as HTMLElement;
+      const scroller = root.querySelector('.MuiTabs-scroller') as HTMLElement;
+      let scrollLeft = 0;
+      Object.defineProperty(scroller, 'scrollLeft', { configurable: true, get: () => scrollLeft, set: (value: number) => { scrollLeft = value; } });
+      const tabs = within(nav).getAllByRole('tab');
+      expect(tabs.length * TAB).toBeGreaterThan(SCROLLER);
+      const report = (first: boolean, last: boolean) => act(() => {
+        for (const watch of live.filter((w) => w.on)) {
+          for (const target of watch.targets) {
+            const isIntersecting = target === tabs[0] ? first : last;
+            watch.callback([{ isIntersecting, target } as unknown as IntersectionObserverEntry], {} as IntersectionObserver);
+          }
+        }
+      });
+      const arrows = () => Array.from(root.querySelectorAll('.MuiTabScrollButton-root')) as HTMLElement[];
+
+      // At the start: the first tab in view, the last out of view.
+      report(true, false);
+      expect(arrows()).toHaveLength(2);
+      expect(arrows()[0]).toHaveClass('Mui-disabled');
+      expect(arrows()[1]).not.toHaveClass('Mui-disabled');
+
+      // A click on the end arrow scrolls by the whole tabs that fit in the scroller: two of them.
+      fireEvent.click(arrows()[1]);
+      runFrames();
+      expect(scrollLeft).toBe(2 * TAB);
+
+      // At the end: the start arrow on, the end arrow off.
+      report(false, true);
+      expect(arrows()[0]).not.toHaveClass('Mui-disabled');
+      expect(arrows()[1]).toHaveClass('Mui-disabled');
+    } finally {
+      width.mockRestore();
+    }
   });
 });

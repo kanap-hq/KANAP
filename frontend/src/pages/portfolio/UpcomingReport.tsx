@@ -16,6 +16,7 @@ import {
   useReportFilterValues,
 } from '../../components/reports/ProjectTeamFilters';
 import { useLocale } from '../../i18n/useLocale';
+import { useTaskTypeLabel } from '../../hooks/useLocalizedTaskTypes';
 import { formatShortDate } from '../../lib/dateFormat';
 import { textTabSx, textTabsSx } from '../../theme/formSx';
 import {
@@ -39,6 +40,8 @@ type RowCommon = { ref: string; itemPath: string; name: string; status: string }
 
 export type UpcomingTaskRow = RowCommon & {
   taskTypeName: string | null;
+  /** The shipped type it started as, null for a tenant's own type. */
+  taskTypeCode?: string | null;
   priorityLevel: string | null;
   assigneeName: string | null;
   dueDate: string;
@@ -322,6 +325,7 @@ function UpcomingSection({
 export default function UpcomingReport() {
   const { t } = useTranslation('portfolio');
   const locale = useLocale();
+  const typeLabel = useTaskTypeLabel();
   const navigate = useNavigate();
   const mode = useTheme().palette.mode;
   const [horizons, setHorizons] = useState<Record<HorizonKey, number>>(() => ({
@@ -505,7 +509,12 @@ export default function UpcomingReport() {
     const tasks: ColDef<UpcomingTaskRow>[] = [
       ref<UpcomingTaskRow>(),
       name<UpcomingTaskRow>(t('reports.upcoming.columns.task')),
-      { field: 'taskTypeName', headerName: t('reports.upcoming.columns.type'), width: 140, valueFormatter: (p) => String(p.value || '') },
+      {
+        field: 'taskTypeName',
+        headerName: t('reports.upcoming.columns.type'),
+        width: 140,
+        valueFormatter: (p) => typeLabel(p.value ? String(p.value) : '', p.data?.taskTypeCode) ?? '',
+      },
       {
         field: 'priorityLevel',
         headerName: t('reports.upcoming.columns.priority'),
@@ -570,7 +579,7 @@ export default function UpcomingReport() {
       pendingRequests: requests('createdOn'),
       requestDeliveries: requests('targetDeliveryDate'),
     };
-  }, [NameCell, ProjectCell, locale, statusCell, t]);
+  }, [NameCell, ProjectCell, locale, statusCell, t, typeLabel]);
 
   const grid = <TRow extends { ref: string }>(rows: TRow[], columnDefs: ColDef<TRow>[]) => (
     // As tall as the rows need, never taller than the screen below the filter bar.

@@ -1,5 +1,9 @@
 import '@testing-library/jest-dom';
-import { afterAll } from 'vitest';
+import { afterAll, vi } from 'vitest';
+
+// Tests keep every language in memory from the first import of `src/i18n`, as before the app
+// downloaded the active language only: specs switch languages synchronously and read other bundles.
+vi.mock('../i18n/localeSource', () => import('../i18n/localeSource.eager'));
 
 // React 18 uses this flag to decide whether async state updates should be
 // validated under act() in the current test environment.

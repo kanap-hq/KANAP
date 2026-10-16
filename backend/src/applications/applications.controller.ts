@@ -1,3 +1,4 @@
+import { languageOf } from '../common/csv-sheet';
 import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
@@ -148,6 +149,7 @@ export class ApplicationsController {
   @Get('export')
   async export(
     @Query() query: Record<string, unknown>,
+    @Query('language') languageRaw: string | undefined,
     @Query('scope') scope: 'template' | 'data' = 'data',
     @Query('fields') fields: string | undefined,
     @Query('preset') preset: string | undefined,
@@ -157,7 +159,10 @@ export class ApplicationsController {
     @Res() res: Response,
     @Tenant() ctx: TenantRequest,
   ): Promise<void> {
+    // The screen's language (the user's own when the screen sends none), as every shared-layer file.
+    const language = await languageOf(this.requireManager(ctx), ctx.tenantId, ctx.userId ?? null, languageRaw);
     const result = await this.csvSvc.export({
+      language,
       manager: this.requireManager(ctx),
       tenantId: ctx.tenantId,
       query,
@@ -198,6 +203,14 @@ export class ApplicationsController {
     @Tenant() ctx: TenantRequest,
   ): Promise<{ ok: boolean }> {
     return this.svc.deleteAttachment(attachmentId, ctx.userId || null, { manager: ctx.manager });
+  }
+
+  // What a delete of `ids` would refuse (applications with interfaces) and take with it, asked before the confirmation.
+  @UseGuards(PermissionGuard)
+  @RequireLevel('applications', 'admin')
+  @Post('delete-check')
+  deleteCheck(@Body() body: { ids: string[] }, @Tenant() ctx: TenantRequest) {
+    return this.deleteSvc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], { manager: ctx.manager });
   }
 
   // Bulk delete before parameterized ':id'

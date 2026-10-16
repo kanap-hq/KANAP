@@ -4,10 +4,26 @@ import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../../../config/ThemeContext';
 import ProjectEffortTab from './ProjectEffortTab';
+import enPortfolio from '../../../../locales/en/portfolio.json';
+
+// A stable t that reads the English portfolio strings, so labels read as users see them.
+const { t } = vi.hoisted(() => {
+  const lookup = (key: string): unknown => key.replace(/^portfolio:/, '').split('.')
+    .reduce<any>((node, part) => (node == null ? undefined : node[part]), enPortfolio);
+  let enPortfolio: any = {};
+  return {
+    t: Object.assign((key: string, options?: Record<string, unknown>) => {
+      const value = lookup(key);
+      if (typeof value !== 'string') return key;
+      return value.replace(/{{(\w+)}}/g, (_, name) => String(options?.[name] ?? ''));
+    }, { load: (resource: unknown) => { enPortfolio = resource; } }),
+  };
+});
+t.load(enPortfolio);
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t,
     i18n: {
       language: 'en',
       resolvedLanguage: 'en',

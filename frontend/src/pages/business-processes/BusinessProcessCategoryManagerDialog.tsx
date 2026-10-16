@@ -15,6 +15,7 @@ import {
   Typography,
 } from '@mui/material';
 import api from '../../api';
+import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { useKanapDialogs } from '../../components/design';
 
 type BusinessProcessCategory = {
@@ -116,7 +117,7 @@ export default function BusinessProcessCategoryManagerDialog({ open, onClose, on
 
   const handleCreate = async () => {
     const name = await dialogs.prompt({
-      title: 'New category name',
+      title: t('common:selects.newCategoryName'),
       required: true,
     });
     const trimmed = (name ?? '').trim();
@@ -152,8 +153,8 @@ export default function BusinessProcessCategoryManagerDialog({ open, onClose, on
           try {
             await api.delete(`/business-process-categories/${orig.id}`);
           } catch (e: any) {
-            const msg = e?.response?.data?.message || e?.message || t('businessProcesses.categoryManager.failedToDelete');
-            setError(msg);
+            // A category processes use is refused (RECORD_USED_BY): said in the interface language.
+            setError(getApiErrorMessage(e, t, t('businessProcesses.categoryManager.failedToDelete')));
             setSaving(false);
             return;
           }

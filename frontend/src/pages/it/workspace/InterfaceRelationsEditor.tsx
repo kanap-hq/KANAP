@@ -185,7 +185,7 @@ export default function InterfaceRelationsEditor({
 
       <Box>
         <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-          Interface dependencies
+          {t('it:workspace.interface.relations.dependencies')}
         </Typography>
         <Stack spacing={1.25}>
           <Autocomplete
@@ -210,8 +210,8 @@ export default function InterfaceRelationsEditor({
             renderInput={(params) => (
               <TextField
                 {...params}
-                label="Upstream interfaces"
-                placeholder="Select upstream interfaces"
+                label={t('it:workspace.interface.relations.upstream')}
+                placeholder={t('it:workspace.interface.relations.selectUpstream')}
                 InputProps={{
                   ...params.InputProps,
                   endAdornment: (
@@ -249,8 +249,8 @@ export default function InterfaceRelationsEditor({
             renderInput={(params) => (
               <TextField
                 {...params}
-                label="Downstream interfaces"
-                placeholder="Select downstream interfaces"
+                label={t('it:workspace.interface.relations.downstream')}
+                placeholder={t('it:workspace.interface.relations.selectDownstream')}
                 InputProps={{
                   ...params.InputProps,
                   endAdornment: (
@@ -271,16 +271,16 @@ export default function InterfaceRelationsEditor({
       <Box>
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-            External URLs
+            {t('it:workspace.interface.relations.externalUrls')}
           </Typography>
           <Button startIcon={<AddIcon />} onClick={addLink} size="small">
-            Add link
+            {t('it:workspace.interface.relations.addLink')}
           </Button>
         </Stack>
         <Stack spacing={1}>
           {links.length === 0 ? (
             <Typography variant="body2" color="text.secondary">
-              No links added yet.
+              {t('it:workspace.interface.relations.noLinks')}
             </Typography>
           ) : (
             links.map((link, index) => (
@@ -294,7 +294,7 @@ export default function InterfaceRelationsEditor({
                 }}
               >
                 <TextField
-                  label="Description"
+                  label={t('it:workspace.interface.relations.description')}
                   size="small"
                   value={link.description || ''}
                   onChange={(event) => handleLinkChange(index, 'description', event.target.value)}
@@ -306,7 +306,7 @@ export default function InterfaceRelationsEditor({
                   onChange={(event) => handleLinkChange(index, 'url', event.target.value)}
                 />
                 <IconButton
-                  aria-label="Open link"
+                  aria-label={t('it:workspace.interface.relations.openLink')}
                   size="small"
                   component="a"
                   href={normalizeUrl(link.url)}
@@ -317,7 +317,7 @@ export default function InterfaceRelationsEditor({
                   <OpenInNewIcon fontSize="small" />
                 </IconButton>
                 <IconButton
-                  aria-label={t('common:remove')}
+                  aria-label={t('common:buttons.remove')}
                   size="small"
                   onClick={() => removeLink(index)}
                 >
@@ -331,7 +331,7 @@ export default function InterfaceRelationsEditor({
 
       <Box>
         <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-          Attachments
+          {t('it:workspace.interface.relations.attachments')}
         </Typography>
         <Stack spacing={1}>
           <Box
@@ -359,7 +359,7 @@ export default function InterfaceRelationsEditor({
             }}
           >
             <Typography variant="body2" color="text.secondary">
-              Drag & drop files here, or use the button to select
+              {t('it:workspace.interface.relations.dropHint')}
             </Typography>
             <Box sx={{ mt: 1 }}>
               <Button
@@ -368,7 +368,7 @@ export default function InterfaceRelationsEditor({
                 variant="outlined"
                 disabled={!data?.id || uploading || !canManage}
               >
-                Select files
+                {t('it:workspace.interface.relations.selectFiles')}
                 <input
                   type="file"
                   hidden
@@ -389,19 +389,19 @@ export default function InterfaceRelationsEditor({
           </Box>
           {isCreate && (
             <Typography variant="caption" color="text.secondary">
-              Save the interface once before uploading attachments.
+              {t('it:workspace.interface.relations.saveFirst')}
             </Typography>
           )}
           {uploading && <LinearProgress sx={{ mt: 1 }} />}
           {uploading && (
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-              Uploading {uploadCount} file{uploadCount === 1 ? '' : 's'}...
+              {t('it:workspace.interface.relations.uploading', { count: uploadCount })}
             </Typography>
           )}
           <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
             {attachments.length === 0 ? (
               <Typography variant="body2" color="text.secondary">
-                No attachments uploaded yet.
+                {t('it:workspace.interface.relations.noAttachments')}
               </Typography>
             ) : (
               attachments.map((attachment) => (
@@ -429,13 +429,13 @@ export default function InterfaceRelationsEditor({
 
       <KanapDialog
         open={!!pendingAttachmentDeleteId}
-        title="Delete attachment"
+        title={t('it:workspace.interface.relations.deleteAttachmentTitle')}
         onClose={() => setPendingAttachmentDeleteId(null)}
-        saveLabel="Delete"
+        saveLabel={t('common:buttons.delete')}
         onSave={() => { void confirmAttachmentDelete(); }}
       >
         <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
-          Delete this attachment from the interface.
+          {t('it:workspace.interface.relations.deleteAttachmentMessage')}
         </Typography>
       </KanapDialog>
     </Stack>

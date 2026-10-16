@@ -56,7 +56,7 @@ Das Schnittstellenraster zeigt Ihr Integrationsverzeichnis auf einen Blick.
 
 - **Schnittstelle hinzufügen**: Eine neue Schnittstelle erstellen (erfordert `applications:manager`)
 - **Schnittstelle duplizieren**: Eine Kopie einer ausgewählten Schnittstelle erstellen (erfordert `applications:manager`). Wählen Sie genau eine Zeile aus, um diese Aktion zu aktivieren. Ein Dialog ermöglicht es Ihnen zu wählen, ob Umgebungs-Bindungen kopiert werden sollen -- siehe [Schnittstellen kopieren](#schnittstellen-kopieren) unten.
-- **Ausgewählte löschen**: Ausgewählte Schnittstellen entfernen (erfordert `applications:admin`). Eine Kontrollkästchen-Option ermöglicht es Ihnen auch, verwandte Bindungen zu löschen; wenn nicht aktiviert, werden Schnittstellen mit Bindungen nicht gelöscht.
+- **Ausgewählte löschen**: Ausgewählte Schnittstellen entfernen (erfordert `applications:admin`). Vor der Bestätigung führt das Fenster die Schnittstellen mit Bindungen als behalten auf, mit der Anzahl ihrer Bindungen. Aktivieren Sie **Zugehörige Bindungen ebenfalls löschen**, um sie mit ihren Bindungen zu löschen; ihre Verbindungen bleiben erhalten. Die Meldung nennt danach die gelöschten und die behaltenen Schnittstellen mit dem Grund.
 
 ---
 

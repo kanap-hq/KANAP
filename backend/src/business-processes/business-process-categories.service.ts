@@ -5,6 +5,7 @@ import { BusinessProcessCategory } from './business-process-category.entity';
 import { BusinessProcessCategoryLink } from './business-process-category-link.entity';
 import { parsePagination } from '../common/pagination';
 import { BusinessProcessCategoryUpsertDto } from './dto/business-process-category.dto';
+import { RecordInUseException } from '../common/record-in-use';
 import { AuditService } from '../audit/audit.service';
 import { textSortKey } from '../common/list-sort';
 
@@ -134,7 +135,8 @@ export class BusinessProcessCategoriesService {
 
     const linkCount = await linksRepo.count({ where: { category_id: id } as any });
     if (linkCount > 0) {
-      throw new BadRequestException('Cannot delete category because it is used by one or more business processes');
+      throw new RecordInUseException('RECORD_USED_BY', 'category', existing.name, [{ type: 'business_processes', total: linkCount }],
+        `Cannot delete category "${existing.name}" because it is used by one or more business processes. Disable it instead.`);
     }
     await repo.delete({ id });
     await this.audit.log(

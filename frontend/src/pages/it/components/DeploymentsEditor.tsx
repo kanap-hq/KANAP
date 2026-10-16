@@ -542,6 +542,7 @@ export default function DeploymentsEditor({
                 onChange={(value) => setAssignmentDraft((prev) => (prev ? { ...prev, server_id: value } : prev))}
                 allowClusters={false}
                 hideLabel
+                label={t('common:selects.server')}
                 textFieldSx={drawerFieldValueSx}
               />
             </PropertyRow>

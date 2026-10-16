@@ -86,7 +86,7 @@ The workspace header gives you operational context without leaving the page:
 - a metadata strip with **Status**, **Score**, **Requestor**, **IT owner**, **Target Delivery Date**, and (when applicable) the **Source Task** the request was created from
 - **Send link** for sharing
 - **Convert to Project** when the request is **Approved** or **Converted**
-- **Delete** for administrators (when the request is not yet converted)
+- **Delete** for administrators (when the request is not yet converted). A converted request stays as the origin of its project and cannot be deleted
 - previous/next navigation based on the exact list context you came from
 
 ### Properties drawer

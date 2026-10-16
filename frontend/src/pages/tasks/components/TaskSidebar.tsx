@@ -24,6 +24,7 @@ import CompanySelect from '../../../components/fields/CompanySelect';
 import TaskLogTimeDialog from './TaskLogTimeDialog';
 import { useAuth } from '../../../auth/AuthContext';
 import { getPriorityLabel, getTaskStatusOptions } from '../../../utils/portfolioI18n';
+import { useLocalizedTaskTypes, useTaskTypeLabel } from '../../../hooks/useLocalizedTaskTypes';
 import EntityKnowledgePanel from '../../../components/EntityKnowledgePanel';
 import { PropertyRow } from '../../../components/design';
 
@@ -90,6 +91,7 @@ interface TaskData {
   status: string;
   task_type_id?: string | null;
   task_type_name?: string | null;
+  task_type_code?: string | null;
   priority_level: string;
   start_date: string | null;
   due_date: string | null;
@@ -114,14 +116,6 @@ interface TaskData {
   stream_name: string | null;
   company_id?: string | null;
   company_name?: string | null;
-}
-
-interface TaskType {
-  id: string;
-  name: string;
-  description: string | null;
-  is_active: boolean;
-  display_order: number;
 }
 
 interface RelationChangeParams {
@@ -184,20 +178,16 @@ export default function TaskSidebar({
   ]), [t]);
   const statusOptions = React.useMemo(() => getTaskStatusOptions(t), [t]);
 
-  // Fetch task types from classification API
-  const { data: taskTypesData } = useQuery({
-    queryKey: ['portfolio-task-types'],
-    queryFn: async () => {
-      const res = await api.get('/portfolio/classification/task-types');
-      return res.data as TaskType[];
-    },
-  });
+  // Task types, shown in the user's language while the tenant keeps the shipped ones
+  const { data: taskTypesData } = useLocalizedTaskTypes();
+  const typeLabel = useTaskTypeLabel();
+  const currentTypeLabel = typeLabel(task.task_type_name, task.task_type_code);
   const taskTypeOptions = React.useMemo(() => {
     const activeOptions = (taskTypesData || [])
       .filter((t) => t.is_active)
       .map((t) => ({ label: t.name, value: t.id }));
-    return withCurrentOption(activeOptions, task.task_type_id, task.task_type_name);
-  }, [taskTypesData, task.task_type_id, task.task_type_name]);
+    return withCurrentOption(activeOptions, task.task_type_id, currentTypeLabel);
+  }, [taskTypesData, task.task_type_id, currentTypeLabel]);
 
   // Fetch classification data (sources, categories, streams) for standalone tasks
   const { data: classificationData } = useQuery({
@@ -385,7 +375,7 @@ export default function TaskSidebar({
           <Stack spacing={1.25} sx={compactFieldSx}>
             {readOnly ? (
               <PropertyRow label={t('workspace.task.sidebar.fields.taskType')}>
-                {task.task_type_name || taskTypeOptions.find((o) => o.value === task.task_type_id)?.label || '-'}
+                {taskTypeOptions.find((o) => o.value === task.task_type_id)?.label || currentTypeLabel || '-'}
               </PropertyRow>
             ) : (
               <EnumAutocomplete

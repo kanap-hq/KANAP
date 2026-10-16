@@ -10,14 +10,17 @@ Chaque page de données de référence dispose de **Exporter CSV** et **Importer
 
 **Classeurs et autres fichiers.** Un import lit uniquement du texte CSV. Un classeur Excel (`.xlsx`, `.xls`) ou un classeur OpenDocument (`.ods`) est refusé avant la lecture des colonnes, avec un message qui indique comment l'enregistrer en CSV. Dans Excel : **Fichier › Enregistrer sous › CSV UTF-8 (délimité par des virgules)**. Dans LibreOffice Calc : **Fichier › Enregistrer sous › Texte CSV**. Tout autre fichier qui n'est pas du texte est refusé de la même façon.
 
-**Les montants et les dates suivent la langue de l'écran** à l'export, et un import lit les deux formes :
+**Les montants, les dates et les oui ou non suivent la langue de l'écran** à l'export, et un import lit toutes les formes :
 
-| Langue | Séparateur | Montants | Dates |
-|---|---|---|---|
-| Anglais | `,` | `12280.50` | `2027-03-01` |
-| Français, espagnol | `;` | `12280,50` | `01/03/2027` |
-| Allemand | `;` | `12280,50` | `01.03.2027` |
+| Langue | Séparateur | Montants | Dates | Oui, non |
+|---|---|---|---|---|
+| Anglais | `,` | `12280.50` | `2027-03-01` | `yes`, `no` |
+| Français | `;` | `12280,50` | `01/03/2027` | `oui`, `non` |
+| Espagnol | `;` | `12280,50` | `01/03/2027` | `sí`, `no` |
+| Allemand | `;` | `12280,50` | `01.03.2027` | `ja`, `nein` |
 
 Une date que le fichier ne peut pas trancher seul, comme `01/03/2027`, est lue dans l'ordre de la langue d'affichage de l'écran : jour d'abord en français, en allemand et en espagnol, mois d'abord en anglais. La vérification indique comment elle a lu le fichier, avec un bouton pour changer la lecture. Une date dont le jour est supérieur à 12 tranche la question seule, et le fichier ne porte aucune trace de la langue dans laquelle il a été exporté.
+
+Un import lit oui ou non dans chacune de ces langues, ainsi que les `true`, `false`, `1` et `0` des fichiers plus anciens. Les fichiers des applications, des actifs, des incidents, des projets, des demandes et des tâches suivent le même tableau.
 
 **Taille.** Un fichier contient jusqu'à 20 000 lignes.

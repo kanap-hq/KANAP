@@ -31,8 +31,8 @@ export default function CsvExportDialog({
   params?: Record<string, string | number | boolean | null | undefined>;
   /**
    * The master-data files: the separator, the decimal mark and the dates follow
-   * the screen language. The files that keep the semicolon (contacts, contracts,
-   * business processes, CoA templates) leave this off.
+   * the screen language. The files that keep the semicolon (CoA templates, the
+   * IT and portfolio registers) leave this off.
    */
   flexibleFormat?: boolean;
   /** A sentence on what the file holds (its order, for example), under the description. */

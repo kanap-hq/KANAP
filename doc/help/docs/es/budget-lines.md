@@ -49,7 +49,7 @@ Cada línea tiene un tipo, visible en la columna **Tipo** de la lista y en la pr
 - **Cuentas**: una cuenta puede estar como **OPEX y CAPEX**, **Solo OPEX** o **Solo CAPEX**. Consulte [Cuentas OPEX o CAPEX](chart-of-accounts.md#cuentas-opex-o-capex)
 - **Dimensiones y valores**: una dimensión o un valor puede usarse solo para un tipo, y una dimensión puede ser obligatoria para un tipo. El panel **Propiedades** muestra solo las dimensiones usadas para el tipo de la línea. Consulte [Dimensiones OPEX o CAPEX](analytics.md#dimensiones-opex-o-capex)
 - **Contracargo**: los informes de contracargo se abren en las líneas OPEX y ofrecen las líneas CAPEX o ambas. Consulte [Informes](reports.md)
-- **Congelaciones**: una columna presupuestaria se congela por año y por tipo. Consulte [Congelar / Descongelar datos](budget-operations.md#congelar-descongelar-datos)
+- **Congelaciones**: una columna presupuestaria se congela por año y por tipo. Consulte [Congelar / descongelar datos](budget-operations.md#congelar-descongelar-datos)
 
 El tipo de una línea se cambia con **Cambiar el tipo…**. Consulte [Cambiar el tipo](#cambiar-el-tipo).
 
@@ -151,7 +151,7 @@ Una disposición de columnas que haya guardado conserva su propia elección de c
 **Fila de totales**:
 
 - Una sola fila **Total** queda fijada bajo la lista. Muestra **Total (12 líneas)**, con el número de líneas de la lista, y el total de cada columna de importe
-- Un icono de candado delante de un total indica que la columna está congelada para ese año. Sigue la congelación de cada tipo que contiene la lista. Si la lista está filtrada por un tipo, el candado aparece cuando ese tipo está congelado. Si contiene ambos tipos, aparece cuando la columna está congelada para los dos. Pase el cursor por encima para leer **Congelado**. Consulte [Congelar / Descongelar datos](budget-operations.md#congelar-descongelar-datos)
+- Un icono de candado delante de un total indica que la columna está congelada para ese año. Sigue la congelación de cada tipo que contiene la lista. Si la lista está filtrada por un tipo, el candado aparece cuando ese tipo está congelado. Si contiene ambos tipos, aparece cuando la columna está congelada para los dos. Pase el cursor por encima para leer **Congelado**. Consulte [Congelar / descongelar datos](budget-operations.md#congelar-descongelar-datos)
 - Cada columna de ETC visible muestra la suma del ETC de las líneas. Cuando algunas líneas no tienen ETC, el recuento sigue al total, por ejemplo «3.50 · 12 desconocidas». Pase el cursor por encima para ver la frase completa: «Desconocido para 12 líneas». Cuando ninguna línea tiene ETC, el total queda vacío y solo se muestra el recuento
 - Los totales respetan sus filtros y búsqueda actuales
 
@@ -170,7 +170,7 @@ Una disposición de columnas que haya guardado conserva su propia elección de c
 - **Nueva línea**: Crear una línea (requiere `budget:member`)
 - **Importar CSV**: Carga masiva de líneas desde un archivo de presupuesto (requiere `budget:admin`)
 - **Exportar CSV**: Exportar las líneas a un archivo de presupuesto (requiere `budget:admin`)
-- **Eliminar seleccionadas**: Eliminación masiva de líneas seleccionadas (requiere `budget:admin`; seleccione filas mediante casillas de verificación). Una línea con importes en una columna congelada no se puede eliminar: las demás se eliminan, y el mensaje nombra cada línea rechazada con su motivo
+- **Eliminar seleccionadas**: Eliminación masiva de líneas seleccionadas (requiere `budget:admin`; seleccione filas mediante casillas de verificación). Una línea con importes en una columna congelada no se puede eliminar. Antes de eliminar nada, la confirmación enumera las líneas que se conservan, con la columna congelada. Las demás se eliminan
 
 **Navegación Anterior/Siguiente**:
 
@@ -364,7 +364,7 @@ En una columna vacía, un clic en una pestaña cambia de inmediato. En una colum
 **Comportamiento de congelación**:
 
 - Si las columnas presupuestarias de un año están congeladas para el tipo de la línea (a través de la Administración presupuestaria), la tarjeta de cada columna congelada muestra un candado, igual que su cabecera en la tabla
-- Una columna congelada es de solo lectura. Su editor indica, por ejemplo, «La columna Presupuesto 2026 está congelada» y «Solo lectura. Un administrador puede descongelarla en Administración › Congelar / Descongelar datos.», con su total y el origen de sus importes
+- Una columna congelada es de solo lectura. Su editor indica, por ejemplo, «La columna Presupuesto 2026 está congelada» y «Solo lectura. Un administrador puede descongelarla en Administración › Congelar / descongelar datos.», con su total y el origen de sus importes
 - Cuando hay columnas congeladas, una línea bajo el gráfico indica «Algunas columnas están congeladas y son de solo lectura.»
 - Cada columna puede congelarse de forma independiente
 

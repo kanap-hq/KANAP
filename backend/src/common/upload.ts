@@ -26,6 +26,16 @@ export const MULTIPART_LIMITS = {
 
 export type MultipartLimits = typeof MULTIPART_LIMITS & { fileSize: number };
 
+/**
+ * The bytes of an uploaded file. Uploads stay in memory (no route configures multer disk
+ * storage), so a file is its buffer; reading a path the request names is never needed.
+ */
+export function uploadedBytes(file: Express.Multer.File | undefined): Buffer {
+  if (!file) throw new BadRequestException('No file uploaded');
+  if (!file.buffer) throw new BadRequestException('Empty upload');
+  return file.buffer;
+}
+
 export function multipartLimits(fileSize: number): MultipartLimits {
   return { ...MULTIPART_LIMITS, fileSize };
 }

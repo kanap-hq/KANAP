@@ -1,11 +1,35 @@
-import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { Department } from './department.entity';
 import { AuditService } from '../audit/audit.service';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
+import { checkIds, lineUsages, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal } from '../common/record-in-use';
 import { withSavepoint } from '../common/savepoint.util';
+
+/** The budget lines of each nature whose allocations name each of `ids` (`spend_allocations` keeps its department). */
+async function allocatedLines(manager: EntityManager, ids: string[]): Promise<Map<string, { opex: number; capex: number }>> {
+  const rows: Array<{ department_id: string; opex: number; capex: number }> = ids.length === 0 ? [] : await manager.query(
+    `SELECT a.department_id::text AS department_id,
+            count(DISTINCT si.id) FILTER (WHERE si.nature = 'opex')::int AS opex,
+            count(DISTINCT si.id) FILTER (WHERE si.nature = 'capex')::int AS capex
+       FROM spend_allocations a
+       JOIN spend_versions v ON v.tenant_id = a.tenant_id AND v.id = a.version_id
+       JOIN spend_items si ON si.tenant_id = v.tenant_id AND si.id = v.spend_item_id AND si.nature IN ('opex', 'capex')
+      WHERE a.tenant_id = app_current_tenant() AND a.department_id = ANY($1::uuid[])
+      GROUP BY a.department_id`,
+    [ids],
+  );
+  return new Map(rows.map((row) => [row.department_id, { opex: row.opex, capex: row.capex }]));
+}
+
+/** The refusal of a department's delete (`DEPARTMENT_IN_USE`: the allocated budget lines counted, disable it instead), or null. */
+function departmentRefusal(name: string, lines: { opex: number; capex: number } | undefined): RecordInUseException | null {
+  if (!lines || lines.opex + lines.capex === 0) return null;
+  return new RecordInUseException('DEPARTMENT_IN_USE', 'department', name, lineUsages(lines),
+    `Cannot delete department "${name}": it is being used in allocations for OPEX or CAPEX items. You can disable it if it shouldn't be used actively anymore.`);
+}
 
 @Injectable()
 export class DepartmentsDeleteService extends BaseDeleteService<Department> {
@@ -34,15 +58,17 @@ export class DepartmentsDeleteService extends BaseDeleteService<Department> {
       throw new NotFoundException('Department not found');
     }
 
+    // The allocations keep their department (the only key that refuses): counted first, for the refusal.
+    const refusal = departmentRefusal(department.name, (await allocatedLines(manager, [departmentId])).get(departmentId));
+    if (refusal) throw refusal;
     try {
-      // Simple deletion for departments (no reference checking needed)
       await repo.delete({ id: departmentId } as any);
     } catch (error: any) {
-      // Catch database-level foreign key errors (e.g., from allocations)
-      if (error.code === '23503' || error.message?.includes('foreign key constraint')) {
-        throw new ConflictException(
-          `Cannot delete department "${department.name}": it is being used in allocations for OPEX or CAPEX items. You can disable it if it shouldn't be used actively anymore.`
-        );
+      // An allocation written meanwhile, or a key the count does not see.
+      if (error.code === '23503') {
+        throw departmentRefusal(department.name, (await allocatedLines(manager, [departmentId])).get(departmentId))
+          ?? new RecordInUseException('RECORD_IN_USE', 'department', department.name, [],
+            `Cannot delete department "${department.name}": other records still use it. Disable it instead.`);
       }
       throw error;
     }
@@ -61,6 +87,19 @@ export class DepartmentsDeleteService extends BaseDeleteService<Department> {
         { manager }
       );
     }
+  }
+
+  /** The check before a delete (`POST /departments/delete-check`): which of `ids` would be refused, and why. Nothing is written. */
+  async deleteCheck(ids: unknown[], opts?: { manager?: EntityManager }): Promise<{ refused: DeleteRefusal[] }> {
+    const manager = opts?.manager ?? this.repository.manager;
+    const wanted = checkIds(ids);
+    if (wanted.length === 0) return { refused: [] };
+    const rows: Array<{ id: string; name: string }> = await manager.query(
+      `SELECT id::text AS id, name FROM departments WHERE tenant_id = app_current_tenant() AND id = ANY($1::uuid[])`,
+      [wanted],
+    );
+    const lines = await allocatedLines(manager, wanted);
+    return refusalsFrom(wanted, rows, (row) => row.name, async (row) => departmentRefusal(row.name, lines.get(row.id)));
   }
 
   /**
@@ -88,6 +127,7 @@ export class DepartmentsDeleteService extends BaseDeleteService<Department> {
           id: departmentId,
           name,
           reason: error.message || 'Unknown error',
+          ...refusalDetails(error),
         });
       }
     }

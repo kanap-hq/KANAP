@@ -33,7 +33,7 @@ Conséquences du choix de bibliothèque :
 - Dans **Modèles**, les documents publiés deviennent des points de départ réutilisables pour de nouveaux articles et sont regroupés par type de document dans le sélecteur de modèles.
 - Dans **Documents managés**, les articles peuvent rester lisibles et modifiables, mais certaines métadonnées sont contrôlées par l'espace de travail source plutôt que depuis la base de connaissances elle-même.
 
-L'administration des bibliothèques est intentionnellement plus stricte que l'édition des documents. La création, le renommage, la suppression ou la réorganisation des bibliothèques est une responsabilité d'administrateur car ces changements affectent la navigation et la responsabilité pour tout le monde.
+L'administration des bibliothèques est intentionnellement plus stricte que l'édition des documents. La création, le renommage, la suppression ou la réorganisation des bibliothèques est une responsabilité d'administrateur car ces changements affectent la navigation et la responsabilité pour tout le monde. La bibliothèque par défaut (la première de la barre, où sont créés les nouveaux documents) ne peut pas être supprimée. Une bibliothèque intégrée ne peut pas non plus être supprimée, ni la dernière bibliothèque que vous pouvez utiliser : créez-en d'abord une autre.
 
 ### Bibliothèques restreintes
 
@@ -60,7 +60,7 @@ Comportement important :
 - Dans une vue de bibliothèque unique, les documents peuvent être glissés-déposés dans des dossiers pour une réorganisation rapide.
 - Les dossiers peuvent être imbriqués pour créer une structure de navigation.
 - Supprimer un dossier ne supprime pas ses documents. Les documents reviennent à **Non classés** à la place.
-- Un dossier avec des sous-dossiers ne peut pas être supprimé tant que la hiérarchie n'est pas nettoyée.
+- Un dossier avec des sous-dossiers ne peut pas être supprimé : KANAP l'indique avant de vous demander de confirmer. Déplacez ou supprimez d'abord ses sous-dossiers.
 
 Utilisez les dossiers pour des thématiques stables, pas pour des états de workflow temporaires. Le statut et le workflow existent déjà pour cela.
 
@@ -68,11 +68,11 @@ Utilisez les dossiers pour des thématiques stables, pas pour des états de work
 
 Le filtre de périmètre de premier niveau change quels documents sont listés :
 
-- **Mes docs** se concentre sur les documents dont vous êtes responsable.
-- **Docs de mon équipe** se concentre sur les documents dont votre équipe est responsable.
-- **Tous les docs** supprime le périmètre de responsabilité et affiche la population complète que vous êtes autorisé à voir.
+- **Mes documents** se concentre sur les documents dont vous êtes responsable.
+- **Documents de mon équipe** se concentre sur les documents dont votre équipe est responsable.
+- **Tous les documents** supprime le périmètre de responsabilité et affiche la population complète que vous êtes autorisé à voir.
 
-Si vous n'êtes pas assigné à une équipe, le périmètre équipe est indisponible. La page s'ouvre sur **Tous les docs**, et votre dernier choix de périmètre est mémorisé, ce qui est pratique lorsqu'il correspond à votre mode de travail normal et légèrement déroutant lorsque vous oubliez l'avoir changé hier.
+Si vous n'êtes pas assigné à une équipe, le périmètre équipe est indisponible. La page s'ouvre sur **Tous les documents**, et votre dernier choix de périmètre est mémorisé, ce qui est pratique lorsqu'il correspond à votre mode de travail normal et légèrement déroutant lorsque vous oubliez l'avoir changé hier.
 
 ### Modèles et types de documents
 
@@ -161,7 +161,7 @@ Les déplacements de dossiers suivent la même idée que les déplacements de do
 
 - **Nouveau** (bouton à options) : crée un document vierge dans la bibliothèque active, ou ouvre le sélecteur de modèles pour créer à partir d'un modèle publié
 - **Déplacer** : déplace les documents sélectionnés vers un autre dossier ou bibliothèque
-- **Supprimer** : supprime définitivement les documents sélectionnés (admin uniquement ; indisponible pour les documents managés)
+- **Supprimer** : supprime définitivement les documents sélectionnés (admin uniquement ; indisponible pour les documents managés). Avant toute suppression, la confirmation liste les documents conservés, avec la raison
 - **Gérer les types** : visible uniquement à l'intérieur de la bibliothèque **Modèles** pour les administrateurs ; ouvre l'éditeur de types de documents
 
 ## Créer et façonner un document

@@ -19,6 +19,8 @@ export type UpcomingProjectLink = { ref: string; name: string; itemPath: string 
 
 export type UpcomingTaskRow = UpcomingRowCommon & {
   taskTypeName: string | null;
+  /** The shipped type it started as, for display in the reader's language; null for a tenant's own type. */
+  taskTypeCode: string | null;
   /** `blocker`, `high`, `normal`, `low` or `optional`. */
   priorityLevel: string | null;
   assigneeName: string | null;

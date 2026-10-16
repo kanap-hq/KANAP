@@ -10,7 +10,7 @@ export type CompanyOption = { id: string; name: string };
 type Company = CompanyOption;
 
 export default function CompanySelect({
-  label = 'Company',
+  label: labelProp,
   value,
   onChange,
   disabled,
@@ -42,6 +42,7 @@ export default function CompanySelect({
   selectedOption?: CompanyOption | null;
 }) {
   const { t } = useTranslation('common');
+  const label = labelProp ?? t('selects.company');
   const naked = hideLabel || label === '';
   // A hidden label still names the field for assistive technology; the placeholder must not.
   const ariaLabel = naked && label ? label : undefined;

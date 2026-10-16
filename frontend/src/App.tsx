@@ -28,7 +28,6 @@ const SuppliersPage = React.lazy(() => import('./pages/SuppliersPage'));
 const SupplierWorkspacePage = React.lazy(() => import('./pages/suppliers/SupplierWorkspacePage'));
 const AccountWorkspacePage = React.lazy(() => import('./pages/accounts/AccountWorkspacePage'));
 const UsersPage = React.lazy(() => import('./pages/UsersPage'));
-const ProjectsPage = React.lazy(() => import('./pages/ProjectsPage'));
 const AnalyticsCategoriesPage = React.lazy(() => import('./pages/AnalyticsCategoriesPage'));
 const AnalyticsWorkspacePage = React.lazy(() => import('./pages/analytics/AnalyticsWorkspacePage'));
 const AnalyticsDimensionWorkspacePage = React.lazy(() => import('./pages/analytics/AnalyticsDimensionWorkspacePage'));

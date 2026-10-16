@@ -249,6 +249,11 @@ async function testCompanyUsedByEveryKindIsRefused() {
     const supplierId = await supplier(runner, t, 'Usage supplier');
     await contract(runner, t, 'Usage contract', used, supplierId);
     await runner.query(`INSERT INTO cost_centers (tenant_id, code, kind, name, company_id) VALUES ($1, 'U-1', 'cost_center', 'Usage center', $2)`, [t, used]);
+    // A year's default allocation method spread over chosen companies (an array, no foreign key).
+    await runner.query(
+      `INSERT INTO allocation_rules (tenant_id, fiscal_year, mode, method, company_ids) VALUES ($1, 2031, 'manual_company', 'headcount', ARRAY[$2]::uuid[])`,
+      [t, used],
+    );
     const svc = new CompaniesDeleteService(runner.manager.getRepository(Company), noAudit);
 
     await runner.query('SAVEPOINT every_kind');
@@ -257,6 +262,7 @@ async function testCompanyUsedByEveryKindIsRefused() {
       'COMPANY_IN_USE',
       [
         { type: 'budget_lines', total: 1 },
+        { type: 'allocation_rules', total: 1 },
         { type: 'contracts', total: 1 },
         { type: 'cost_centers', total: 1 },
         { type: 'departments', total: 1 },
@@ -269,7 +275,7 @@ async function testCompanyUsedByEveryKindIsRefused() {
         { type: 'requests', total: 1 },
         { type: 'team_members', total: 1 },
       ],
-      /^Cannot delete company "Busy company": it is used by 1 budget line, 1 contract, 1 cost center, 1 department, 1 user, 1 location, 1 task, 1 application, 1 interface, 1 project, 1 request and 1 team member\. Disable it instead\.$/,
+      /^Cannot delete company "Busy company": it is used by 1 budget line, 1 default allocation method, 1 contract, 1 cost center, 1 department, 1 user, 1 location, 1 task, 1 application, 1 interface, 1 project, 1 request and 1 team member\. Disable it instead\.$/,
     );
     await runner.query('ROLLBACK TO SAVEPOINT every_kind');
 

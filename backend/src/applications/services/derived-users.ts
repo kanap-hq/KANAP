@@ -117,3 +117,31 @@ export async function buildDerivedUsersByApp(
 
   return out;
 }
+
+/**
+ * The derived users of the application `alias` (a row of `applications`) in SQL, for the list's
+ * filter: the rule of `buildDerivedUsersByApp` for `currentYear`. Manual: the override, at least
+ * 0. Otherwise the metric of each linked company (its IT users in `it_users` mode, else its
+ * headcount) plus the headcount of each linked department whose company is not linked, each read
+ * for the year as `pickMetricForYear` picks it (that year, else the closest earlier one, else the
+ * closest later one). Both must stay the same rule.
+ */
+export function derivedTotalUsersSql(alias: string, currentYear: number = new Date().getFullYear()): string {
+  const year = Math.trunc(currentYear);
+  const pick = (table: string, idColumn: string, id: string, value: string) => `(SELECT ${value} FROM ${table} m
+      WHERE m.tenant_id = ${alias}.tenant_id AND m.${idColumn} = ${id}
+      ORDER BY (m.fiscal_year > ${year}), abs(m.fiscal_year - ${year})
+      LIMIT 1)`;
+  const companyMetric = `CASE WHEN ${alias}.users_mode = 'it_users' THEN COALESCE(m.it_users, m.headcount, 0) ELSE COALESCE(m.headcount, 0) END`;
+  return `(CASE WHEN ${alias}.users_mode = 'manual' THEN GREATEST(0, COALESCE(${alias}.users_override, 0))
+    ELSE COALESCE((SELECT SUM(${pick('company_metrics', 'company_id', 'lc.company_id', companyMetric)})
+        FROM (SELECT DISTINCT l.company_id FROM application_companies l
+          WHERE l.application_id = ${alias}.id AND l.tenant_id = ${alias}.tenant_id) lc), 0)
+      + COALESCE((SELECT SUM(${pick('department_metrics', 'department_id', 'ld.department_id', 'COALESCE(m.headcount, 0)')})
+        FROM (SELECT DISTINCT l.department_id FROM application_departments l
+          LEFT JOIN departments d ON d.id = l.department_id AND d.tenant_id = l.tenant_id
+          WHERE l.application_id = ${alias}.id AND l.tenant_id = ${alias}.tenant_id
+            AND NOT EXISTS (SELECT 1 FROM application_companies c
+              WHERE c.application_id = ${alias}.id AND c.tenant_id = ${alias}.tenant_id AND c.company_id = d.company_id)) ld), 0)
+  END)`;
+}

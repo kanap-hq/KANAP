@@ -3,11 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DeepPartial, EntityManager, Equal, ILike, IsNull, Raw, Repository } from 'typeorm';
 import { Account, ACCOUNT_NATURES, AccountNature } from './account.entity';
 import { Company } from '../companies/company.entity';
-import { buildWhereFromAgFilters, parseExportPagination, parsePagination } from '../common/pagination';
+import { assertEntityFilterFields, buildWhereFromAgFilters, parseExportPagination, parsePagination } from '../common/pagination';
 import { sortedFindQuery } from '../common/list-sort';
 import { compileAgFilterCondition, createParamNameGenerator, assertSetFilterModes } from '../common/ag-grid-filtering';
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
-import * as fs from 'fs';
 import { resolveLifecycleState, StatusState } from '../common/status';
 import { extractStatusFilterFromAgModel } from '../common/status-filter';
 import { AccountUpsertDto } from './dto/account.dto';
@@ -38,6 +37,7 @@ import {
   resyncFromChart,
 } from './consolidation';
 import { ACCOUNT_NUMBER_MAX, ACCOUNT_NUMBER_MAX_DIGITS, ACCOUNT_NUMBER_RULE, readAccountNumber } from './account-number';
+import { uploadedBytes } from '../common/upload';
 
 const ACCOUNT_NUMBER_TOKEN = '__account_number__';
 
@@ -58,10 +58,10 @@ const OPTIONAL_CSV_HEADERS = [
  * a text filter ("contains 60") compares its text, as the grid shows it (an
  * ILIKE on the integer would fail in SQL). A combined model applies each condition.
  */
-function accountNumberWhere(rawModel: any) {
+function accountNumberWhere(rawModel: any, paramPrefix = 'account_number_') {
   const combined = rawModel && Array.isArray(rawModel.conditions) && rawModel.conditions.length > 0
     && (rawModel.operator === 'AND' || rawModel.operator === 'OR');
-  const nextParam = createParamNameGenerator('account_number_');
+  const nextParam = createParamNameGenerator(paramPrefix);
   const parts = ((combined ? rawModel.conditions : [rawModel]) as any[])
     .map((model) => compileAgFilterCondition(model, { expression: `CAST(${ACCOUNT_NUMBER_TOKEN} AS text)` }, nextParam))
     .filter((part): part is NonNullable<typeof part> => !!part);
@@ -196,6 +196,9 @@ export class AccountsService {
       const mappedFilters = { ...filtersToApply };
       const accountNumberFilter = mappedFilters.account_number;
       delete mappedFilters.account_number;
+      // The consolidation number is a number too, filtered on its digits like the account number.
+      const consolidationNumberFilter = mappedFilters.consolidation_account_number;
+      delete mappedFilters.consolidation_account_number;
 
       // Special handling for coa_code: look up CoA IDs by code pattern
       if ('coa_code' in mappedFilters) {
@@ -245,9 +248,12 @@ export class AccountsService {
         }
       }
 
+      assertEntityFilterFields(mappedFilters, repo.metadata);
       Object.assign(where, buildWhereFromAgFilters(mappedFilters));
       const accountNumberCondition = accountNumberFilter ? accountNumberWhere(accountNumberFilter) : undefined;
       if (accountNumberCondition) where.account_number = accountNumberCondition;
+      const consolidationNumberCondition = consolidationNumberFilter ? accountNumberWhere(consolidationNumberFilter, 'consolidation_number_') : undefined;
+      if (consolidationNumberCondition) where.consolidation_account_number = consolidationNumberCondition;
     }
     const includeDisabled =
       String(query.includeDisabled ?? '').toLowerCase() === '1' ||
@@ -354,6 +360,9 @@ export class AccountsService {
       const mappedFilters = { ...filtersToApply };
       const accountNumberFilter = mappedFilters.account_number;
       delete mappedFilters.account_number;
+      // The consolidation number is a number too, filtered on its digits like the account number.
+      const consolidationNumberFilter = mappedFilters.consolidation_account_number;
+      delete mappedFilters.consolidation_account_number;
 
       // Special handling for coa_code: look up CoA IDs by code pattern
       if ('coa_code' in mappedFilters) {
@@ -403,9 +412,12 @@ export class AccountsService {
         }
       }
 
+      assertEntityFilterFields(mappedFilters, repo.metadata);
       Object.assign(where, buildWhereFromAgFilters(mappedFilters));
       const accountNumberCondition = accountNumberFilter ? accountNumberWhere(accountNumberFilter) : undefined;
       if (accountNumberCondition) where.account_number = accountNumberCondition;
+      const consolidationNumberCondition = consolidationNumberFilter ? accountNumberWhere(consolidationNumberFilter, 'consolidation_number_') : undefined;
+      if (consolidationNumberCondition) where.consolidation_account_number = consolidationNumberCondition;
     }
     const includeDisabled =
       String(query.includeDisabled ?? '').toLowerCase() === '1' ||
@@ -814,8 +826,7 @@ export class AccountsService {
     if (!file) throw new BadRequestException('No file uploaded');
     const readLanguage = language ?? 'en';
     const expectedHeaders = this.csvHeaders(!!opts?.allowCoaCodeColumn);
-    const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
-    if (!buf) throw new BadRequestException('Empty upload');
+    const buf = uploadedBytes(file);
     const read = await readMasterDataFile({
       file: buf as Buffer,
       fields: expectedHeaders,

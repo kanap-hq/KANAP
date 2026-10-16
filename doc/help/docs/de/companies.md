@@ -15,7 +15,7 @@ Navigieren Sie zu **Stammdaten > Unternehmen**, um die Liste zu öffnen.
 - **Stadt**: Stadt, in der das Unternehmen ansässig ist
 - **Basiswährung**: ISO-Währungscode (nach Name oder Code durchsuchbar)
 
-**Tipp**: Halten Sie die Namen eindeutig, um Verwechslungen bei Importen und Auswahllisten zu vermeiden.
+**Eindeutige Namen**: Jedes Unternehmen hat seinen eigenen Namen, unabhängig von Groß- und Kleinschreibung (`Acme` und `acme` sind derselbe Name). Ein Name, den bereits ein anderes Unternehmen trägt, wird abgelehnt, mit einer Meldung unter dem Namen.
 
 ## Mit der Liste arbeiten
 
@@ -78,7 +78,7 @@ Klicken Sie auf eine beliebige Zeile der Liste, um den Arbeitsbereich des Untern
 - **Status**, unter dem Namen: **Aktiviert** oder **Deaktiviert**. Klicken Sie darauf, um ihn zu ändern. Die Wahl von **Deaktiviert** deaktiviert das Unternehmen sofort: Das Ende der Gültigkeit wird auf den aktuellen Zeitpunkt gesetzt
 - **Bereich Eigenschaften** rechts: **Land**, **Basiswährung**, **Kontenplan** und **Lebenszyklus**. Mit der Schaltfläche daneben klappen Sie den Bereich ein oder wieder aus
 
-**Automatisches Speichern**: Jede Änderung wird von selbst gespeichert, sobald Sie das Feld verlassen. Es gibt keine Schaltflächen zum Speichern, Zurücksetzen oder Schließen. Sie können weiterarbeiten, während eine Änderung gespeichert wird. Wird eine Änderung abgelehnt, erscheint der Grund unter dem Feld, das sie verursacht hat, außer beim Namen, dessen Ablehnung oben auf der Seite angezeigt wird.
+**Automatisches Speichern**: Jede Änderung wird von selbst gespeichert, sobald Sie das Feld verlassen. Es gibt keine Schaltflächen zum Speichern, Zurücksetzen oder Schließen. Sie können weiterarbeiten, während eine Änderung gespeichert wird. Wird eine Änderung abgelehnt, erscheint der Grund unter dem Feld, das sie verursacht hat.
 
 ---
 
@@ -161,6 +161,7 @@ Verwenden Sie das **Ende der Gültigkeit**, um zu steuern, wann ein Unternehmen 
     - Das Unternehmen erscheint nicht mehr in Auswahllisten für neue Zuordnungen und wird aus Berichten für strikt spätere Jahre ausgeschlossen.
     - Historische Daten bleiben erhalten; das Unternehmen erscheint weiterhin in Berichten, die Jahre abdecken, in denen es aktiv war.
 - **Deaktivieren statt löschen.** Ein Unternehmen, das noch verwendet wird, kann nicht gelöscht werden: von Budgetzeilen (als zahlendes Unternehmen oder in ihren Zuordnungen), Verträgen, Kostenstellen, Abteilungen, Benutzern, den Standorten, die es betreibt, Aufgaben, Anwendungen, Schnittstellen, Portfolio-Projekten und -Anfragen sowie Teammitgliedern, deren Standardunternehmen es ist. Die Meldung zählt auf, was es verwendet, zum Beispiel „Dieses Unternehmen wird noch verwendet: 2 Abteilungen und 14 Benutzer“. Deaktivieren Sie es stattdessen. Seine Jahreskennzahlen werden mit ihm gelöscht. In der Liste nennt die Bestätigung die so erhaltenen Unternehmen mit dem, was sie verwendet, bevor etwas gelöscht wird.
+- **Um ein Unternehmen dennoch zu löschen**, entfernen Sie zuerst, was es verwendet. Tragen Sie bei seinen Benutzern, Budgetzeilen und deren Zuordnungen, Verträgen, Kostenstellen, den Standorten, die es betreibt, Aufgaben, Anwendungen, Schnittstellen, Portfolio-Projekten und -Anfragen sowie Teammitgliedern ein anderes Unternehmen ein. Verschieben Sie seine Abteilungen in ein anderes Unternehmen, oder löschen Sie sie zuletzt, wenn nichts sie mehr verwendet. Löschen Sie dann das Unternehmen.
 
 ## Jahreskennzahlen
 
@@ -196,7 +197,7 @@ Die Spalten in dieser Reihenfolge. Die Kennzahlenspalten folgen dem in der Symbo
 | `reg_number`, `vat_number` | Handelsregisternummer und Umsatzsteuer-Identifikationsnummer |
 | `base_currency` | Pflicht. Drei Buchstaben |
 | `status` | `enabled` oder `disabled` |
-| `disabled_at` | Das Ende der Gültigkeit: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit |
+| `disabled_at` | Das Ende der Gültigkeit: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Der Export schreibt nur das Datum. Erneut importiert, behält dieses Datum das gespeicherte Gültigkeitsende |
 | `notes` | Freier Text |
 | `headcount_<Jahr>` | Pflicht, wenn die Zeile für dieses Jahr eine Kennzahl trägt |
 | `it_users_<Jahr>` | Eine ganze Zahl |
@@ -205,7 +206,7 @@ Die Spalten in dieser Reihenfolge. Die Kennzahlenspalten folgen dem in der Symbo
 **Import**:
 
 - Beginnen Sie mit der **Vorabprüfung**. Sie prüft die Kopfzeilen, die Kodierung, die Pflichtfelder, die Duplikate und die Kennzahlen. Ist die Prüfung sauber, wendet **Laden** die Einfügungen und Aktualisierungen an
-- **Zuordnung**: über den `name` des Unternehmens. Ein Name, der zweimal in der Datei steht, wird einmal behalten, die erste Zeile gewinnt
+- **Zuordnung**: über den `name` des Unternehmens, unabhängig von Groß- und Kleinschreibung. Die gespeicherte Schreibweise bleibt: Eine Zeile `ACME` aktualisiert `Acme`, und die Vorabprüfung meldet „ACME“ wurde „Acme“ zugeordnet. Ein Name, der zweimal in der Datei steht, wird einmal behalten, die erste Zeile gewinnt
 - **Pflichtfelder**: `name`, `country_iso` und `base_currency`
 - **Status und Ende der Gültigkeit**: Der Export schreibt den aus dem Ende der Gültigkeit abgeleiteten Status. Ein neues Unternehmen ist aktiviert, außer die Zeile sagt `disabled`. Bei einer Aktualisierung behalten ein leeres `status` und ein leeres `disabled_at` die gespeicherten Werte. `enabled` mit leerem Datum löscht das Ende der Gültigkeit. `disabled` mit leerem Datum behält ein bereits vergangenes Datum, andernfalls beendet es das Unternehmen heute
 - Eine Zeile, deren Status ihrem Datum widerspricht, wird mit einem Zeilenfehler abgelehnt: „Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again.“ oder „Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed.“

@@ -225,14 +225,14 @@ export default function ProjectsPage() {
         <FormControlLabel
           value="my"
           control={<Radio size="small" />}
-          label={t('scope.my', { entity: t('projects.entityName') })}
+          label={t('scope.projects.my')}
         />
         <Tooltip title={hasTeam ? '' : t('scope.teamUnavailable')}>
           <span>
             <FormControlLabel
               value="team"
               control={<Radio size="small" />}
-              label={t('scope.myTeam', { entity: t('projects.entityName') })}
+              label={t('scope.projects.myTeam')}
               disabled={!hasTeam}
             />
           </span>
@@ -240,7 +240,7 @@ export default function ProjectsPage() {
         <FormControlLabel
           value="all"
           control={<Radio size="small" />}
-          label={t('scope.all', { entity: t('projects.entityName') })}
+          label={t('scope.projects.all')}
         />
       </RadioGroup>
     </Stack>
