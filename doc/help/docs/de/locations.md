@@ -78,7 +78,7 @@ Beide Kategorien zeigen außerdem:
 Unterhalb des Hauptformulars ermöglicht das Panel **Unter-Standorte**, einen Standort in kleinere physische Bereiche aufzuteilen: Gebäude, Räume, Racks, Cages oder jede andere Unterteilung, die für Ihre Infrastruktur sinnvoll ist.
 
 Jeder Unter-Standort hat:
-- **Name**: Eine kurze Bezeichnung (z. B. „Gebäude A - Raum 1 - Rack 5")
+- **Name**: Eine kurze Bezeichnung (z. B. „Gebäude A, Raum 1, Rack 5")
 - **Beschreibung**: Optionale zusätzliche Details
 
 Unter-Standorte sind verfügbar, sobald der Standort existiert (nachdem Sie auf **Erstellen** geklickt haben). Jede Zeile wird einzeln gespeichert, wenn Sie das Feld verlassen, und das Löschen eines Unter-Standorts muss zuerst bestätigt werden.
