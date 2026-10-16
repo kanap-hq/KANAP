@@ -40,6 +40,7 @@ import ConnectionMapGraph, { ClusterMembership, ConnectionMapLink, ConnectionMap
 
 import { useTranslation } from 'react-i18next';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import { legTypeLabel } from '../../utils/interfaceLegType';
 type ApiConnectionMapNode = {
   id: string;
   name: string;
@@ -1366,7 +1367,7 @@ export default function ConnectionMapPage() {
                                 {link.interface_name} ({link.interface_reference || link.interface_code})
                               </Typography>
                               <Typography variant="caption" color="text.secondary">
-                                Interface leg: {link.leg_type.toUpperCase()} · Env: {link.environment.toUpperCase()}
+                                Interface leg: {legTypeLabel(t, link.leg_type)} · Env: {link.environment.toUpperCase()}
                               </Typography>
                               <Typography variant="body2">Pattern: {link.pattern || '—'}</Typography>
                               <Typography variant="body2">Source endpoint: {link.source_endpoint || '—'}</Typography>

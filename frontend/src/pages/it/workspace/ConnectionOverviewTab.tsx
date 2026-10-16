@@ -30,6 +30,7 @@ import ConnectionLinkInterfacesDialog from './ConnectionLinkInterfacesDialog';
 import ConnectionProtocolsTable, { type ConnectionProtocol } from './ConnectionProtocolsTable';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { legTypeLabel } from '../../../utils/interfaceLegType';
 
 const NOTES_DEBOUNCE_MS = 900;
 
@@ -540,7 +541,7 @@ export default function ConnectionOverviewTab({
                     </Stack>
                   </TableCell>
                   <TableCell sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{row.environment.toUpperCase()}</TableCell>
-                  <TableCell sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t(`enums.legType.${row.leg_type}`, { defaultValue: row.leg_type })}</TableCell>
+                  <TableCell sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{legTypeLabel(t, row.leg_type)}</TableCell>
                   <TableCell sx={{ fontSize: 13 }}>{labelFor('interfacePattern', row.pattern) || '—'}</TableCell>
                   <TableCell sx={{ fontSize: 13 }}>{row.source_endpoint || '—'}</TableCell>
                   <TableCell sx={{ fontSize: 13 }}>{row.target_endpoint || '—'}</TableCell>

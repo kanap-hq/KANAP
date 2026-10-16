@@ -36,6 +36,7 @@ import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 
 import { useTranslation } from 'react-i18next';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import { legTypeLabel } from '../../utils/interfaceLegType';
 const ENVIRONMENT_OPTIONS = [
   { label: 'Production', value: 'prod' },
   { label: 'Pre-Prod', value: 'pre_prod' },
@@ -1070,7 +1071,7 @@ export default function InterfaceMapPage() {
                                       Protocols: {protocolLabels.length > 0 ? protocolLabels.join(', ') : '—'}
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary">
-                                      {`Binding: ${link.environment.toUpperCase()} · ${link.leg_type.toUpperCase()}`}
+                                      {`Binding: ${link.environment.toUpperCase()} · ${legTypeLabel(t, link.leg_type)}`}
                                     </Typography>
                                   </Stack>
                                 );

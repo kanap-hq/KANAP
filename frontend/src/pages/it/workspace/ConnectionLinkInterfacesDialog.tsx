@@ -16,6 +16,7 @@ import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import api from '../../../api';
 import KanapDialog from '../../../components/design/KanapDialog';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { legTypeLabel } from '../../../utils/interfaceLegType';
 
 export type LinkOption = {
   binding_id: string;
@@ -204,7 +205,7 @@ export default function ConnectionLinkInterfacesDialog({
                         </Stack>
                         <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.25, flexWrap: 'wrap' }}>
                           <Typography component="span" sx={{ fontSize: 11, color: 'kanap.text.tertiary' }}>
-                            {opt.environment.toUpperCase()} · {t(`enums.legType.${opt.leg_type}`, { defaultValue: opt.leg_type })}
+                            {opt.environment.toUpperCase()} · {legTypeLabel(t, opt.leg_type)}
                             {opt.pattern ? ` · ${labelFor('interfacePattern', opt.pattern)}` : ''}
                           </Typography>
                           {endpointLine && (
