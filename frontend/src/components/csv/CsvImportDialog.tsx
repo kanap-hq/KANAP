@@ -43,7 +43,8 @@ function rowErrorText(err: RowError, t: TFunction): string {
 }
 
 /** The notice sentences and the switch labels, shared with the budget file import. */
-const K = 'operations.budgetFile.';
+// `t` is bound to `common` (the first namespace): the `ops` keys need their prefix.
+const K = 'ops:operations.budgetFile.';
 
 /**
  * The heading of a refused file. Every importer numbers the data rows from 2 (row 1 is the header):

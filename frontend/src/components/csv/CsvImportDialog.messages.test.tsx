@@ -4,12 +4,14 @@ import i18next from 'i18next';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import frCommon from '../../locales/fr/common.json';
 import frErrors from '../../locales/fr/errors.json';
+import frOps from '../../locales/fr/ops.json';
+import { DATE_DAY, AMOUNT_COMMA } from './readings';
 
 // The real French strings: the import report must read in the interface language.
 const instance = i18next.createInstance();
 void instance.init({
   lng: 'fr',
-  resources: { fr: { common: frCommon, errors: frErrors } },
+  resources: { fr: { common: frCommon, errors: frErrors, ops: frOps } },
   defaultNS: 'common',
   interpolation: { escapeValue: false },
   initImmediate: false,
@@ -38,6 +40,15 @@ function check(errors: unknown[], over: Record<string, unknown> = {}) {
 
 describe('CsvImportDialog messages', () => {
   beforeEach(() => post.mockReset());
+
+  // `useTranslation(['common', 'ops'])` binds `t` to `common`: a key of `ops` needs its prefix.
+  it('words the date and amount readings, not their keys', async () => {
+    check([], { ok: true, notices: { dates: DATE_DAY, amounts: AMOUNT_COMMA } });
+    expect(await screen.findByText(frOps.operations.budgetFile.datesDayFirst)).toBeTruthy();
+    expect(screen.getByText(frOps.operations.budgetFile.readMonthFirst)).toBeTruthy();
+    expect(screen.getByText(frOps.operations.budgetFile.amountsComma)).toBeTruthy();
+    expect(screen.queryByText(/operations\.budgetFile/)).toBeNull();
+  });
 
   it('labels a header problem as the header and translates it with its columns', async () => {
     check([{
