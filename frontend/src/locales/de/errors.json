@@ -72,6 +72,7 @@
   "CSV_FILE_EMPTY": "Die Datei ist leer.",
   "CSV_HEADER_IGNORED_COLUMNS": "Diese Spalten werden nicht importiert: {{extra}}.",
   "CSV_HEADER_UNKNOWN_TIME_ZONE": "Unbekannte Zeitzone in der Spalte {{column}}: {{zone}}. Verwenden Sie eine Zeitzone wie Europe/Paris oder UTC.",
+  "CSV_HEADER_ZONELESS_DATE_TIMES": "Uhrzeiten ohne Zeitzone, als UTC gelesen: {{columns}}. Geben Sie die Zeitzone nach der Spalte an, zum Beispiel {{example}} (Europe/Paris).",
   "CSV_VALUE_REQUIRED": "Ein Wert ist erforderlich.",
   "CSV_VALUE_ONE_REQUIRED": "Füllen Sie mindestens eine Spalte {{column}} aus.",
   "CSV_NUMBER_INVALID": "„{{value}}“ ist keine Zahl.",

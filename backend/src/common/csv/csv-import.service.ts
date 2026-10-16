@@ -269,14 +269,19 @@ export class CsvImportService {
 
     // A date-time column may name the zone of its cells after its name (`detected_at
     // (Europe/Paris)`, as the export writes it): the row is read by the plain name, and the
-    // transform reads the cells in that zone. Without a zone, the cells are UTC.
+    // transform reads the cells in that zone. Without a zone, the cells are UTC, and the report
+    // says which columns were read that way.
     const zonedColumns = new Set(
       config.fields.filter((f) => f.zonedDateTime && f.importable !== false).map((f) => f.csvColumn),
     );
     const timeZones: Record<string, string> = {};
+    const zoneless: string[] = [];
     const readHeader = (header: string | null | undefined) => {
       const named = header == null ? null : readTimeZoneHeader(header);
-      if (!named || !zonedColumns.has(named.column)) return header;
+      if (!named || !zonedColumns.has(named.column)) {
+        if (header != null && zonedColumns.has(header)) zoneless.push(header);
+        return header;
+      }
       const zone = knownTimeZone(named.zone);
       if (zone) {
         timeZones[named.column] = zone;
@@ -314,6 +319,15 @@ export class CsvImportService {
               message: `Missing required columns: ${missing.join(', ')}`,
               code: 'CSV_HEADER_MISSING_COLUMNS',
               params: { missing: missing.join(', ') },
+            });
+          }
+
+          if (zoneless.length > 0) {
+            headerWarnings.push({
+              row: 0,
+              message: `Times without a time zone, read as UTC: ${zoneless.join(', ')}`,
+              code: 'CSV_HEADER_ZONELESS_DATE_TIMES',
+              params: { columns: zoneless.join(', '), example: zoneless[0] },
             });
           }
 

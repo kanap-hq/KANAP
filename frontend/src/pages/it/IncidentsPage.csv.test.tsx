@@ -53,11 +53,13 @@ describe('IncidentsPage CSV', () => {
     expect(dialogs.import?.params).toEqual({ timeZone: 'Europe/Paris' });
   });
 
-  it('words the unknown zone of a date-time header in each language', async () => {
+  it('words the zone messages of the date-time headers in each language', async () => {
     for (const lang of ['en', 'fr', 'de', 'es']) {
       const errors = (await import(`../../locales/${lang}/errors.json`)).default as Record<string, string>;
       expect(errors.CSV_HEADER_UNKNOWN_TIME_ZONE, lang).toContain('{{column}}');
       expect(errors.CSV_HEADER_UNKNOWN_TIME_ZONE, lang).toContain('{{zone}}');
+      expect(errors.CSV_HEADER_ZONELESS_DATE_TIMES, lang).toContain('{{columns}}');
+      expect(errors.CSV_HEADER_ZONELESS_DATE_TIMES, lang).toContain('{{example}}');
     }
   });
 });

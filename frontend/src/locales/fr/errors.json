@@ -72,6 +72,7 @@
   "CSV_FILE_EMPTY": "Le fichier est vide.",
   "CSV_HEADER_IGNORED_COLUMNS": "Ces colonnes ne sont pas importées : {{extra}}.",
   "CSV_HEADER_UNKNOWN_TIME_ZONE": "Fuseau horaire inconnu dans la colonne {{column}} : {{zone}}. Utilisez un fuseau comme Europe/Paris ou UTC.",
+  "CSV_HEADER_ZONELESS_DATE_TIMES": "Heures sans fuseau lues en UTC : {{columns}}. Nommez le fuseau après la colonne, par exemple {{example}} (Europe/Paris).",
   "CSV_VALUE_REQUIRED": "Une valeur est obligatoire.",
   "CSV_VALUE_ONE_REQUIRED": "Renseignez au moins une colonne {{column}}.",
   "CSV_NUMBER_INVALID": "« {{value}} » n'est pas un nombre.",

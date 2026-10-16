@@ -72,6 +72,7 @@
   "CSV_FILE_EMPTY": "El archivo está vacío.",
   "CSV_HEADER_IGNORED_COLUMNS": "Estas columnas no se importan: {{extra}}.",
   "CSV_HEADER_UNKNOWN_TIME_ZONE": "Zona horaria desconocida en la columna {{column}}: {{zone}}. Use una zona como Europe/Paris o UTC.",
+  "CSV_HEADER_ZONELESS_DATE_TIMES": "Horas sin zona horaria, leídas en UTC: {{columns}}. Indique la zona después de la columna, por ejemplo {{example}} (Europe/Paris).",
   "CSV_VALUE_REQUIRED": "Se requiere un valor.",
   "CSV_VALUE_ONE_REQUIRED": "Rellene al menos una columna {{column}}.",
   "CSV_NUMBER_INVALID": "«{{value}}» no es un número.",

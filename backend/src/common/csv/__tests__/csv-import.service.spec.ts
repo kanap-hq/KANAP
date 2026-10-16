@@ -725,6 +725,47 @@ async function testFilesOfEveryLanguageLoad() {
   assert.equal(refused.ok, false, 'an unknown yes or no is refused');
 }
 
+/**
+ * Date-time columns whose header names no zone are read as UTC: the report says which ones, for
+ * the dry run and the import alike. A header that names its zone, an absent column and a plain
+ * column that is no date-time stay out of it.
+ */
+async function testZonelessDateTimesAreAWarning() {
+  const service = new CsvImportService(new CsvResolverService(), new CsvJsonValidators());
+  const config = createTestConfig();
+  config.fields.push(
+    { csvColumn: 'started_at', entityProperty: 'started_at', type: CsvFieldType.STRING, zonedDateTime: true },
+    { csvColumn: 'detected_at', entityProperty: 'detected_at', type: CsvFieldType.STRING, zonedDateTime: true },
+    { csvColumn: 'closed_at', entityProperty: 'closed_at', type: CsvFieldType.STRING, zonedDateTime: true },
+    { csvColumn: 'resolved_at', entityProperty: 'resolved_at', type: CsvFieldType.STRING, zonedDateTime: true },
+  );
+  const zoneless = (result: { warnings: Array<{ row: number; code?: string; params?: unknown }> }) =>
+    result.warnings.filter((w) => w.code === 'CSV_HEADER_ZONELESS_DATE_TIMES').map((w) => ({ row: w.row, params: w.params }));
+
+  const csv = `title;started_at;due_date;closed_at (Europe/Paris);detected_at
+Task;16/10/2026 14:30;;;16/10/2026 15:00`;
+  for (const dryRun of [true, false]) {
+    const result = await service.import(config, createMockFile(csv), { ...defaultParams, dryRun }, {
+      manager: createMockManager({ tasks: [] }),
+      tenantId: 't1',
+    });
+    assert.equal(result.ok, true, JSON.stringify(result.errors));
+    assert.deepEqual(
+      zoneless(result),
+      [{ row: 0, params: { columns: 'started_at, detected_at', example: 'started_at' } }],
+      `dryRun=${dryRun}: the date-times without a zone, in the order of the file`,
+    );
+  }
+
+  const named = await service.import(
+    config,
+    createMockFile('title;started_at (UTC);detected_at (Europe/Paris)\nTask;;'),
+    defaultParams,
+    { manager: createMockManager({ tasks: [] }), tenantId: 't1' },
+  );
+  assert.deepEqual(zoneless(named), [], 'every date-time names its zone');
+}
+
 // ===== Run tests =====
 
 (async () => {
@@ -743,6 +784,7 @@ async function testFilesOfEveryLanguageLoad() {
   await testInsertOnlyOperationSkipsUpdates();
   await testMissingHeaderError();
   await testUnknownColumnsAreAWarning();
+  await testZonelessDateTimesAreAWarning();
   await testRowMessagesCarryCodes();
   await testReferenceNotFoundCarriesCodes();
   await testCaseInsensitiveEnumMatching();

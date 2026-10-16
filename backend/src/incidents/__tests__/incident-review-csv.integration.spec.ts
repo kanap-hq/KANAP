@@ -338,6 +338,7 @@ async function testExportImportRoundTrip() {
       );
       assert.deepEqual(dry.errors, []);
       assert.deepEqual([dry.updated, dry.unchanged], [0, 1], `${mode}: the exported row is unchanged`);
+      assert.deepEqual(dry.warnings, [], `${mode}: every date-time names its zone`);
     }
     // An edited review is an update.
     const edited = await services.csv.import(
@@ -439,6 +440,13 @@ async function testDateTimesInTheExportersZone() {
       importOpts(runner, f, f.users.admin),
     );
     assert.deepEqual(utc.errors, []);
+    const columns = header.filter((h) => h.endsWith(' (Europe/Paris)')).map((h) => h.replace(' (Europe/Paris)', ''));
+    assert.ok(columns.includes('started_at') && columns.includes('detected_at'));
+    assert.deepEqual(
+      utc.warnings.map((w) => [w.row, w.code, w.params]),
+      [[0, 'CSV_HEADER_ZONELESS_DATE_TIMES', { columns: columns.join(', '), example: columns[0] }]],
+      'the report names the date-times read as UTC',
+    );
     assert.deepEqual(await instants(), ['2026-03-29T12:00:00.000Z', '2026-10-16T10:38:00.000Z', '2026-10-25T11:00:00.000Z']);
 
     // A zone nobody knows is refused, with the coded error the screen translates.
