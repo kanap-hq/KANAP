@@ -1,8 +1,10 @@
 import {
   CsvEntityConfig,
+  CsvExportContext,
   CsvFieldType,
   CsvImportContext,
 } from '../common/csv';
+import { formatCsvDateTime } from '../common/csv-sheet';
 import { allocateItemNumbers } from '../common/item-number.service';
 import { normalizeMarkdownRichText } from '../common/markdown-worker';
 import { findCatalogOption, requireImportCatalogs } from '../it-ops-settings/catalog-resolve';
@@ -119,12 +121,24 @@ function parseDateTime(value: string, column: string): Date | null {
     return new Date(Number(isoDateOnly[1]), Number(isoDateOnly[2]) - 1, Number(isoDateOnly[3]));
   }
 
+  // A day and a time without a zone, as the export writes them: UTC, like the export.
+  const yearFirstTime = /^(\d{4})-(\d{2})-(\d{2}) (\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(text);
+  if (yearFirstTime) {
+    return new Date(Date.UTC(
+      Number(yearFirstTime[1]), Number(yearFirstTime[2]) - 1, Number(yearFirstTime[3]),
+      Number(yearFirstTime[4]), Number(yearFirstTime[5]), Number(yearFirstTime[6] || 0),
+    ));
+  }
+
   const euro = /^(\d{1,2})[/.](\d{1,2})[/.](\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/.exec(text);
-  if (euro) {
-    return new Date(
+  if (euro && euro[4] != null) {
+    return new Date(Date.UTC(
       Number(euro[3]), Number(euro[2]) - 1, Number(euro[1]),
-      Number(euro[4] || 0), Number(euro[5] || 0), Number(euro[6] || 0),
-    );
+      Number(euro[4]), Number(euro[5]), Number(euro[6] || 0),
+    ));
+  }
+  if (euro) {
+    return new Date(Number(euro[3]), Number(euro[2]) - 1, Number(euro[1]));
   }
 
   const parsed = new Date(text);
@@ -188,6 +202,11 @@ function dateTimeField(csvColumn: (typeof DATE_TIME_COLUMNS)[number], label: str
     label,
     group,
     importTransformFn: (value: string) => parseDateTime(value, csvColumn),
+    // The export language's day and the UTC time (`16/10/2026 08:38`); `parseDateTime` reads it back.
+    exportFn: (entity: Record<string, unknown>, context: CsvExportContext) => {
+      const value = entity[csvColumn];
+      return value == null || value === '' ? '' : formatCsvDateTime(value as Date | string, context.language);
+    },
   };
 }
 

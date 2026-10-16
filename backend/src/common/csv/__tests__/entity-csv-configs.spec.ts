@@ -175,16 +175,15 @@ async function testIncidentRefAndValueParsing() {
   assert.equal(transform(incidentCsvConfig, 'status', 'in_progress'), 'in_progress');
   assert.throws(() => transform(incidentCsvConfig, 'severity', 'blocker'), /Invalid severity/);
 
-  // Timestamps keep their time: ISO (what the export writes) and the European
-  // format Excel produces must both round-trip.
+  // Timestamps keep their time: ISO and the export language's form (what the export
+  // writes, the European format Excel produces) must both round-trip.
   const iso = transform(incidentCsvConfig, 'detected_at', '2026-09-02T14:32:00Z') as Date;
   assert.equal(iso.toISOString(), '2026-09-02T14:32:00.000Z');
+  // A day and a time without a zone are UTC, as the export writes them (`16/10/2026 08:38`).
   const euro = transform(incidentCsvConfig, 'detected_at', '02/09/2026 14:32') as Date;
-  assert.equal(euro.getFullYear(), 2026);
-  assert.equal(euro.getMonth(), 8);
-  assert.equal(euro.getDate(), 2);
-  assert.equal(euro.getHours(), 14);
-  assert.equal(euro.getMinutes(), 32);
+  assert.equal(euro.toISOString(), '2026-09-02T14:32:00.000Z');
+  assert.equal((transform(incidentCsvConfig, 'detected_at', '02.09.2026 14:32:05') as Date).toISOString(), '2026-09-02T14:32:05.000Z');
+  assert.equal((transform(incidentCsvConfig, 'detected_at', '2026-09-02 14:32') as Date).toISOString(), '2026-09-02T14:32:00.000Z');
   assert.throws(() => transform(incidentCsvConfig, 'detected_at', 'last tuesday'), /Invalid date/);
 }
 

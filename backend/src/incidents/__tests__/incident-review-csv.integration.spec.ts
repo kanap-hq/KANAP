@@ -320,6 +320,12 @@ async function testExportImportRoundTrip() {
     });
     assert.ok(exported.content.includes('review'), 'the review column is exported by default');
     assert.ok(exported.content.includes('- 300 mailboxes'), 'the multiline body is exported');
+    // Date-times in the export language's form (UTC), the way the other exports write days.
+    const detected = new Date(incident.detected_at);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const frenchDay = `${pad(detected.getUTCDate())}/${pad(detected.getUTCMonth() + 1)}/${detected.getUTCFullYear()}`;
+    assert.ok(exported.content.includes(`${frenchDay} ${pad(detected.getUTCHours())}:${pad(detected.getUTCMinutes())}`), exported.content);
+    assert.ok(!/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(exported.content), 'no ISO timestamp left in the file');
 
     // Re-importing the export changes nothing: every row counts as unchanged, in both modes.
     const exportedFile = exported.content.replace(/^﻿/, '');

@@ -404,8 +404,8 @@ export class CsvExportService {
     relationData: Map<string, Map<string, Record<string, string>>>,
     context: CsvExportContext,
   ): string {
-    // Handle computed fields
-    if (field.type === CsvFieldType.COMPUTED && field.exportFn) {
+    // Computed fields, and fields that write their own cell (an incident's date-times)
+    if (field.exportFn) {
       return field.exportFn(entity, context) ?? '';
     }
 

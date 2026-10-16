@@ -244,6 +244,8 @@ Deadlines and thresholds depend on your jurisdiction and sector. KANAP records t
 
 The file carries the short **Description** in one column and the whole **Incident review** in another, as formatted text. That single review column replaces the former Impact, Root cause, Corrective actions and Lessons learned columns. Headings, lists and links survive the round trip; pasted images do not, because they live in the document. An empty review cell leaves the existing text untouched.
 
+Dates and times are written the way the export language writes dates, in UTC (Coordinated Universal Time), for example `16/10/2026 08:38` in French. The import reads them back the same way, and also accepts `2026-10-16T08:38:00Z`.
+
 Importing is the one operation that still writes to a closed or cancelled incident, so a correction that arrives months later can be filed without reopening the record. It creates a new version of the review and a journal entry pointing at it, and it never rewrites the version the closure refers to. Nothing else is relaxed: the register permissions apply, and a restricted incident you are not allowed to see is refused.
 
 ---

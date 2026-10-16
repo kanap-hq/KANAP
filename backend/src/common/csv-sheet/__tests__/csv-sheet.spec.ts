@@ -13,6 +13,7 @@ import {
   dateOrderNotice,
   formatCsvAmount,
   formatCsvDate,
+  formatCsvDateTime,
   headerMismatchError,
   matchCode,
   parseCsvAmount,
@@ -167,6 +168,17 @@ function testDates() {
   assert.equal(formatCsvDate('2027-03-01', 'de'), '01.03.2027');
   assert.equal(formatCsvDate('2027-03-01T15:04:05.000Z', 'fr'), '2027-03-01T15:04:05.000Z');
   assert.equal(formatCsvDate('2027-03-01T15:04:05+02:00', 'de'), '2027-03-01T13:04:05.000Z');
+}
+
+function testDateTimes() {
+  const instant = '2026-10-16T08:38:59Z';
+  assert.equal(formatCsvDateTime(instant, 'fr'), '16/10/2026 08:38:59');
+  assert.equal(formatCsvDateTime(new Date('2026-10-16T08:38:00Z'), 'de'), '16.10.2026 08:38');
+  assert.equal(formatCsvDateTime('2026-10-16T22:05:00+02:00', 'en'), '2026-10-16 20:05');
+  assert.equal(formatCsvDateTime('not a date', 'fr'), 'not a date');
+  // The shared reader takes the written form back, time included.
+  const read = parseCsvDateCell(formatCsvDateTime(instant, 'fr'), 'day-first');
+  assert.deepEqual(read, { ok: true, blank: false, value: { kind: 'date', isoDate: '2026-10-16', time: '08:38:59' } });
 }
 
 function testCodes() {
@@ -675,6 +687,7 @@ async function main() {
   testLanguageProfiles();
   testAmounts();
   testDates();
+  testDateTimes();
   testCodes();
   testApiParserIsUntouched();
   await testHeaders();

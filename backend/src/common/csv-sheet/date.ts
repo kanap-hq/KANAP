@@ -141,6 +141,20 @@ export function formatCsvDate(value: string, language: CsvLanguage): string {
 }
 
 /**
+ * An instant written for a file: its UTC calendar day the language's way, then
+ * the UTC time (`16/10/2026 08:38`, `2026-10-16 08:38:59`). Seconds only when
+ * set. The shared reader takes this form back (`parseCsvDateCell`); an
+ * unreadable value is written as given.
+ */
+export function formatCsvDateTime(value: Date | string, language: CsvLanguage): string {
+  const date = value instanceof Date ? value : new Date(String(value).trim());
+  if (Number.isNaN(date.getTime())) return String(value);
+  const iso = date.toISOString();
+  const seconds = iso.slice(17, 19);
+  return `${formatCsvDate(iso.slice(0, 10), language)} ${iso.slice(11, 16)}${seconds === '00' ? '' : `:${seconds}`}`;
+}
+
+/**
  * A stored end of validity written for a file: its calendar day (UTC), the
  * language's way. The time of day is left out so a spreadsheet reads the cell
  * as a date. A day picked by a user is stored at noon UTC, so it writes the

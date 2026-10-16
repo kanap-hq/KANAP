@@ -244,6 +244,8 @@ Les délais et les seuils dépendent de votre juridiction et de votre secteur. K
 
 Le fichier porte la **Description** courte dans une colonne et toute la **Revue d'incident** dans une autre, sous forme de texte mis en forme. Cette unique colonne de revue remplace les anciennes colonnes Impact, Cause racine, Actions correctives et Enseignements. Titres, listes et liens survivent à l'aller-retour ; les images collées, non, puisqu'elles vivent dans le document. Une cellule de revue vide laisse le texte existant intact.
 
+Les dates et heures s'écrivent comme la langue de l'export écrit les dates, en UTC (temps universel coordonné), par exemple `16/10/2026 08:38` en français. L'import les relit de la même façon et accepte aussi `2026-10-16T08:38:00Z`.
+
 L'import est la seule opération qui écrit encore dans un incident clôturé ou annulé : une correction qui arrive des mois plus tard peut donc être déposée sans rouvrir l'enregistrement. Elle crée une nouvelle version de la revue et une entrée de journal qui la référence, et elle ne réécrit jamais la version à laquelle la clôture se rapporte. Rien d'autre n'est assoupli : les autorisations du registre s'appliquent, et un incident restreint que vous n'avez pas le droit de voir est refusé.
 
 ---

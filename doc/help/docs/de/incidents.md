@@ -244,6 +244,8 @@ Fristen und Schwellenwerte hängen von Ihrer Rechtsordnung und Ihrer Branche ab.
 
 Die Datei führt die kurze **Beschreibung** in einer Spalte und die gesamte **Vorfallanalyse** in einer anderen, als formatierten Text. Diese eine Analysespalte ersetzt die früheren Spalten Auswirkung, Ursache, Korrekturmaßnahmen und Erkenntnisse. Überschriften, Listen und Links überstehen den Hin- und Rückweg; eingefügte Bilder nicht, denn sie liegen im Dokument. Eine leere Analysezelle lässt den vorhandenen Text unverändert.
 
+Datum und Uhrzeit stehen so in der Datei, wie die Exportsprache Daten schreibt, in UTC (koordinierte Weltzeit), zum Beispiel `16.10.2026 08:38` auf Deutsch. Der Import liest sie genauso wieder ein und akzeptiert auch `2026-10-16T08:38:00Z`.
+
 Der Import ist der einzige Vorgang, der noch in einen geschlossenen oder abgebrochenen Vorfall schreibt. Eine Korrektur, die Monate später eintrifft, lässt sich also festhalten, ohne den Datensatz wieder zu öffnen. Er erzeugt eine neue Version der Analyse und einen Journaleintrag, der darauf verweist, und er schreibt die Version, auf die sich das Schließen bezieht, nie um. Sonst wird nichts gelockert: Die Berechtigungen des Registers gelten, und ein eingeschränkter Vorfall, den Sie nicht sehen dürfen, wird abgewiesen.
 
 ---

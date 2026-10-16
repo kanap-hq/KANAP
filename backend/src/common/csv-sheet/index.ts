@@ -1,7 +1,7 @@
 export { parseCsvAmount, formatCsvAmount, resolveAmountConvention, amountConventionNotice } from './amount';
 export { formatCsvBoolean, parseCsvBoolean } from './boolean';
 export { matchCode } from './codes';
-export { parseCsvDateCell, formatCsvDate, formatCsvEndOfValidity, keepStoredEndOfValidity, resolveDateOrder } from './date';
+export { parseCsvDateCell, formatCsvDate, formatCsvDateTime, formatCsvEndOfValidity, keepStoredEndOfValidity, resolveDateOrder } from './date';
 export { decodeCsv } from './decode';
 export { csvLanguage, csvProfile, dateOrderNotice } from './language';
 export {

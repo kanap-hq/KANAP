@@ -244,6 +244,8 @@ Los plazos y umbrales dependen de su jurisdicción y de su sector. KANAP registr
 
 El archivo lleva la **Descripción** breve en una columna y toda la **Revisión del incidente** en otra, como texto con formato. Esa única columna de revisión sustituye a las antiguas columnas Impacto, Causa raíz, Acciones correctivas y Lecciones aprendidas. Los títulos, las listas y los enlaces sobreviven al viaje de ida y vuelta; las imágenes pegadas no, porque viven en el documento. Una celda de revisión vacía deja intacto el texto existente.
 
+Las fechas y horas se escriben como la lengua de la exportación escribe las fechas, en UTC (tiempo universal coordinado), por ejemplo `16/10/2026 08:38` en español. La importación las lee de la misma forma y también acepta `2026-10-16T08:38:00Z`.
+
 La importación es la única operación que sigue escribiendo en un incidente cerrado o cancelado, para que una corrección que llega meses después pueda archivarse sin reabrir la ficha. Crea una versión nueva de la revisión y una entrada de diario que apunta a ella, y nunca reescribe la versión a la que se refiere el cierre. Nada más se relaja: los permisos del registro se aplican, y un incidente restringido que usted no tenga derecho a ver se rechaza.
 
 ---
