@@ -27,6 +27,7 @@ import {
   AUTH_EVENT_TABLE,
   EXPORT_EVENT_TABLE,
   auditReasonLabel,
+  auditSearchParams,
   auditTableFilterLabel,
   auditTableLabel,
   auditUserLabel,
@@ -91,7 +92,7 @@ export default function AuditLogsPage() {
       const state = lastQueryRef.current;
       const params: Record<string, unknown> = {};
       if (state?.sort) params.sort = state.sort;
-      if (state?.q) params.q = state.q;
+      if (state?.q) Object.assign(params, { q: state.q }, auditSearchParams(state.q, t));
       if (state?.filterModel && Object.keys(state.filterModel).length > 0) params.filters = JSON.stringify(state.filterModel);
       // Filters too long for a URL go as the list's saved context.
       const sent = await withListContext('/audit-logs', params);
@@ -138,7 +139,7 @@ export default function AuditLogsPage() {
       const params: Record<string, any> = {
         fields: field,
       };
-      if (queryState.q) params.q = queryState.q;
+      if (queryState.q) Object.assign(params, { q: queryState.q }, auditSearchParams(queryState.q, t));
       if (Object.keys(filters).length > 0) {
         params.filters = JSON.stringify(filters);
       }
@@ -146,7 +147,9 @@ export default function AuditLogsPage() {
       const values = (res.data?.[field] || []) as Array<string | null>;
       return values.map((value) => ({ value }));
     };
-  }, []);
+  }, [t]);
+  // A search also finds the tables whose label, in the reader's language, holds the text.
+  const searchParams = React.useCallback((q: string) => auditSearchParams(q, t), [t]);
 
   const columns = React.useMemo<EnhancedColDef<AuditLogItem>[]>(() => {
     return [
@@ -283,6 +286,7 @@ export default function AuditLogsPage() {
         enablePagination
         paginationPageSize={100}
         enableSearch
+        searchParams={searchParams}
         defaultSort={{ field: 'created_at', direction: 'DESC' }}
         columnPreferencesKey="admin-audit-logs"
         enableColumnChooser={true}

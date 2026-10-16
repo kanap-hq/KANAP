@@ -76,7 +76,7 @@ Anmelde- und Sitzungsereignisse werden nach **365 Tagen** gelöscht. Datenänder
 
 ### Was Sie tun können
 
-- Suche über Tabellenname, Aktion und Akteur (E-Mail/Name)
+- Suche über die Tabelle (ihr angezeigter Name in Ihrer Sprache, zum Beispiel **Lieferanten**), Aktion und Akteur (E-Mail/Name)
 - Filtern nach:
   - Datum
   - Tabelle

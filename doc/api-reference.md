@@ -1673,12 +1673,12 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
 
 ## Audit Logs (Admin)
 - Permission: `users:admin`
-- GET `/audit-logs?page=1&limit=100&sort=created_at:DESC&q=...&from=YYYY-MM-DD&to=YYYY-MM-DD&table_name=...&action=...&source=...&user_id=...&filters=<agGridFilterModel>`
+- GET `/audit-logs?page=1&limit=100&sort=created_at:DESC&q=...&q_tables=...&from=YYYY-MM-DD&to=YYYY-MM-DD&table_name=...&action=...&source=...&user_id=...&filters=<agGridFilterModel>`
   - Returns paginated audit entries for the current tenant:
     - `{ items, total, page, limit }`
   - Item shape:
     - `{ id, tenant_id, table_name, record_id, action, before_json, after_json, user_id, user_email, user_name, source, source_ref, created_at }`
-  - Supports quick search (`q`) across `table_name`, `action`, and actor name/email.
+  - Supports quick search (`q`) across `table_name`, `action`, and actor name/email. With a search, `q_tables=<code>,<code>` (optional) also matches those tables: the web app sends the codes whose label, in the reader's language, holds the text ("Fournisseurs" → `suppliers`). Values other than table codes (`[a-z][a-z0-9_]*`) are ignored; at most 300. The export and `filter-values` take it too.
   - Supports date range filtering:
     - `from` is inclusive (`>=`)
     - `to` is exclusive (`<`) when a full datetime is provided; for `YYYY-MM-DD`, API treats it as end-of-day inclusive by shifting to the next day internally.

@@ -102,6 +102,8 @@ export type ServerDataGridProps<T> = {
   enableSearch?: boolean; // deprecated with floating filters; kept for compatibility
   defaultSort?: { field: string; direction: 'ASC' | 'DESC' };
   extraParams?: Record<string, any>;
+  /** Parameters added to a request that carries a search, from its text (`q`). */
+  searchParams?: (q: string) => Record<string, unknown>;
   refreshKey?: number | string; // bump to refresh grid after mutations
   initialFilterModel?: any; // deprecated: prefer `initialState`
   initialState?: any; // AG Grid initialState, applied once at grid creation
@@ -412,6 +414,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   enableSearch = true,
   defaultSort = { field: 'created_at', direction: 'DESC' },
   extraParams = {},
+  searchParams,
   refreshKey,
   initialFilterModel,
   initialState,
@@ -864,6 +867,8 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
     [statusScope, offeredScopesKey, handleStatusScopeChange],
   );
 
+  const searchParamsRef = useRef(searchParams);
+  searchParamsRef.current = searchParams;
   const extraParamsRef = useRef(extraParams);
   const extraParamsKey = useMemo(() => JSON.stringify(extraParams ?? {}), [extraParams]);
   useEffect(() => { extraParamsRef.current = extraParams; }, [extraParamsKey]);
@@ -970,7 +975,10 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
         }
         // include global quick search (server-side)
         const q = searchRef.current;
-        if (enableSearch && q) reqParams.q = q;
+        if (enableSearch && q) {
+          reqParams.q = q;
+          Object.assign(reqParams, searchParamsRef.current?.(q));
+        }
         // Filters too long for a URL go as a saved list context (`ctx`), saved again if the server
         // no longer has it.
         const res = await getWithListContext<ServerResponse<T>>(endpointRef.current, reqParams, { signal: controller.signal });

@@ -17,6 +17,7 @@ import {
   EXPORT_RESOURCE_KEYS,
   auditReasonLabel,
   auditTableLabel,
+  auditTablesMatchingSearch,
   auditUserLabel,
 } from './auditLogLabels';
 import AuditLogsPage from './AuditLogsPage';
@@ -177,6 +178,31 @@ describe('AuditLogsPage', () => {
     });
     expect(await screen.findByText('Table : Liens de contrat')).toBeTruthy();
     expect(screen.queryByText(/contract_links/)).toBeNull();
+  });
+
+  it('searches the table labels of the reader language: the list, the filter values and the export send their codes', async () => {
+    await i18n.changeLanguage('fr');
+    getMock.mockResolvedValue(csvResponse() as any);
+    renderPage();
+    // The grid adds these parameters to its request when the search box holds the text.
+    expect(grid.props?.searchParams('fournisseur')).toEqual({ q_tables: 'supplier_contacts,suppliers' });
+    expect(grid.props?.searchParams('Liens de contrat')).toEqual({ q_tables: 'contract_links' });
+    expect(grid.props?.searchParams('zzz')).toEqual({});
+    expect(grid.props?.searchParams('e')).toEqual({});
+    getMock.mockResolvedValueOnce({ data: { table_name: [] } } as any);
+    await column('table_name').filterParams.getValues({ context: { getQueryState: () => ({ q: 'Fournisseurs', filters: {} }) } });
+    expect(getMock).toHaveBeenCalledWith('/audit-logs/filter-values', { params: { fields: 'table_name', q: 'Fournisseurs', q_tables: 'suppliers' } });
+    act(() => {
+      grid.props?.onQueryStateChange({ sort: 'created_at:DESC', filterModel: {}, q: 'Fournisseurs' });
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Exporter CSV' }));
+    await waitFor(() => expect(downloadBlob).toHaveBeenCalledTimes(1));
+    expect(getMock).toHaveBeenCalledWith('/audit-logs/export', {
+      params: { sort: 'created_at:DESC', q: 'Fournisseurs', q_tables: 'suppliers' },
+      responseType: 'blob',
+    });
+    // Accents and case aside, as the server folds a search.
+    expect(auditTablesMatchingSearch('societes', i18n.getFixedT('fr', 'admin') as any)).toContain('companies');
   });
 
   it('has every audit log text in the four languages', () => {

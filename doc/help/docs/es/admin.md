@@ -76,7 +76,7 @@ Los eventos de acceso y de sesión se eliminan después de **365 días**. Los ca
 
 ### Qué puede hacer
 
-- Buscar por nombre de tabla, acción y actor (correo/nombre)
+- Buscar por la tabla (su nombre tal como aparece en su idioma, por ejemplo **Proveedores**), acción y actor (correo/nombre)
 - Filtrar por:
   - Fecha
   - Tabla

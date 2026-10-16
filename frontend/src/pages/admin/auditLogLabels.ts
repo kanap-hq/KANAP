@@ -1,3 +1,5 @@
+import { foldText } from '../../utils/foldText';
+
 /**
  * Plain-language labels of the audit log: the tables it names (`auditLogs.tableNames.<table>`)
  * and its sign-in, session and export rows (backend `audit/security-events.ts`). The codes stay
@@ -86,6 +88,32 @@ export function exportResourceKey(resource: unknown): string | null {
 }
 
 export type Translate = (key: string, options?: Record<string, unknown>) => string;
+
+/** The search parameter carrying the table codes whose label matches the search (backend `parseSearchTables`). */
+export const SEARCH_TABLES_PARAM = 'q_tables';
+
+/**
+ * The tables whose label, in the reader's language, holds the searched text ("fournisseur" →
+ * `supplier_contacts`, `suppliers`), accents and case aside, as the server folds a search. The
+ * server matches the stored codes only: the page sends these codes with the search. Nothing for a
+ * text under two characters, which the codes already match.
+ */
+export function auditTablesMatchingSearch(q: string | null | undefined, t: Translate): string[] {
+  const text = foldText(String(q ?? '').trim());
+  if (text.length < 2) return [];
+  const labels = (t as unknown as (key: string, options: { returnObjects: true }) => unknown)('auditLogs.tableNames', { returnObjects: true });
+  if (!labels || typeof labels !== 'object') return [];
+  return Object.entries(labels as Record<string, unknown>)
+    .filter(([, label]) => typeof label === 'string' && foldText(label).includes(text))
+    .map(([code]) => code)
+    .sort();
+}
+
+/** The search parameters of a text: the codes of the matching tables, when there are some. */
+export function auditSearchParams(q: string | null | undefined, t: Translate): Record<string, string> {
+  const codes = auditTablesMatchingSearch(q, t);
+  return codes.length > 0 ? { [SEARCH_TABLES_PARAM]: codes.join(',') } : {};
+}
 
 /** The fields of an audit row the labels read. */
 export type AuditRowLike = {

@@ -76,7 +76,7 @@ Sign-in and session events are deleted after **365 days**. Data changes, role ch
 
 ### What You Can Do
 
-- Search across table name, action, and actor (email/name)
+- Search across the table (its name as shown in your language, for example **Suppliers**), action, and actor (email/name)
 - Filter by:
   - Date
   - Table

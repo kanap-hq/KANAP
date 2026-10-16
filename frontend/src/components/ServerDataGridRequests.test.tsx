@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -39,7 +39,7 @@ function deferred({ honourAbort = true } = {}) {
 
 const page = (names: string[]) => ({ data: { items: names.map((name) => ({ id: name, name })), total: names.length, page: 1, limit: 50 } });
 
-function Grid(props: { refreshKey?: number; onGridApiReady?: (api: any) => void }) {
+function Grid(props: { refreshKey?: number; onGridApiReady?: (api: any) => void; searchParams?: (q: string) => Record<string, unknown> }) {
   return (
     <MemoryRouter>
       <ServerDataGrid<{ id: string; name: string }>
@@ -106,6 +106,17 @@ describe('ServerDataGrid block requests', () => {
     expect(await screen.findByText('Fresh')).toBeInTheDocument();
     expect(screen.queryByText('Stale')).not.toBeInTheDocument();
     expect(get).toHaveBeenCalledTimes(2);
+  }, 20_000);
+
+  it('a search adds the parameters the page derives from its text, and only with a search', async () => {
+    get.mockImplementation(async () => page(['One']));
+    const searchParams = vi.fn((q: string) => ({ q_tables: `${q}-codes` }));
+    render(<Grid searchParams={searchParams} />);
+    await waitFor(() => expect(get).toHaveBeenCalledTimes(1));
+    expect((get.mock.calls[0][1] as Config).params).not.toHaveProperty('q_tables');
+    fireEvent.change(screen.getByPlaceholderText('common:filters.quickFilter'), { target: { value: 'Four' } });
+    await waitFor(() => expect((get.mock.calls[get.mock.calls.length - 1][1] as Config).params.q).toBe('Four'), { timeout: 3000 });
+    expect((get.mock.calls[get.mock.calls.length - 1][1] as Config).params.q_tables).toBe('Four-codes');
   }, 20_000);
 
   it('a sort change aborts the page in flight and asks once with the new sort', async () => {

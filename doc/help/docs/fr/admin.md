@@ -76,7 +76,7 @@ Les événements de connexion et de session sont supprimés après **365 jours**
 
 ### Ce que vous pouvez faire
 
-- Rechercher dans le nom de table, l'action et l'acteur (e-mail/nom)
+- Rechercher dans la table (son nom tel qu'affiché dans votre langue, par exemple **Fournisseurs**), l'action et l'acteur (e-mail/nom)
 - Filtrer par :
   - Date
   - Table
