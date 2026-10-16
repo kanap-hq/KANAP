@@ -4,6 +4,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
+import { incidentViewerFromContext } from '../incidents/incident-visibility';
 import { ApplicationConversionService } from './application-conversion.service';
 import { hasLevel } from './technologies.controller';
 import { requireManager } from './technology-rows';
@@ -22,12 +23,20 @@ export class ApplicationConversionController {
     return { manager: requireManager(ctx.manager), tenantId: ctx.tenantId, userId: ctx.userId || null };
   }
 
-  /** What would move to the technology, what would be lost, and the refusals. Nothing is written. */
+  /**
+   * What would move to the technology, what would be lost, and the refusals. Nothing is written.
+   * A count of a module the caller cannot read is `null`; incidents follow the confidentiality rule.
+   */
   @UseGuards(PermissionGuard)
   @RequireLevel('applications', 'admin')
   @Get(':id/conversion-preview')
   async preview(@Param('id') id: string, @Tenant() ctx: TenantRequest) {
-    return this.svc.preview(id, this.opts(ctx));
+    const reads = (resource: string) => hasLevel(ctx, resource, 'reader');
+    return this.svc.preview(id, {
+      ...this.opts(ctx),
+      access: { contracts: reads('contracts'), budget_lines: reads('budget'), projects: reads('portfolio_projects'), incidents: reads('incidents') },
+      incidentViewer: incidentViewerFromContext(ctx),
+    });
   }
 
   /**

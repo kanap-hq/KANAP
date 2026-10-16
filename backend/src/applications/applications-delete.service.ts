@@ -80,7 +80,11 @@ export class ApplicationsDeleteService extends BaseDeleteService<Application> {
   /**
    * Override delete to handle attachment cleanup before deletion
    */
-  override async delete(applicationId: string, opts?: DeleteOptions): Promise<void> {
+  /**
+   * `keepManagedDocuments`: its managed documents stay bound, for the caller to release them once
+   * the application is gone (the conversion to a technology keeps their text and files).
+   */
+  override async delete(applicationId: string, opts?: DeleteOptions & { keepManagedDocuments?: boolean }): Promise<void> {
     const manager = opts?.manager ?? this.repository.manager;
     const appRepo = this.getRepo(manager);
 
@@ -99,10 +103,12 @@ export class ApplicationsDeleteService extends BaseDeleteService<Application> {
     // Its managed documents (overview and the other integrated slots) name it without a foreign
     // key: they go here, as an interface's or a request's do, audited under the actor. The
     // application delete right covers them: the Knowledge library rights are not checked again.
-    await this.integratedDocuments.deleteForEntity('applications', applicationId, opts?.userId ?? null, {
-      manager,
-      checkAccess: false,
-    });
+    if (!opts?.keepManagedDocuments) {
+      await this.integratedDocuments.deleteForEntity('applications', applicationId, opts?.userId ?? null, {
+        manager,
+        checkAccess: false,
+      });
+    }
 
     // Delete the base application row (child rows cascade via FKs)
     await appRepo.delete({ id: applicationId } as any);

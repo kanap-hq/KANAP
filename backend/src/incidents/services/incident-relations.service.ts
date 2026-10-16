@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityTarget, In, ObjectLiteral, Repository } from 'typeorm';
+import { EntityManager, EntityTarget, In, ObjectLiteral, Repository } from 'typeorm';
 import { Incident } from '../incident.entity';
 import { IncidentAsset } from '../incident-asset.entity';
 import { IncidentApplication } from '../incident-application.entity';
@@ -112,6 +112,28 @@ export class IncidentRelationsService extends IncidentsBaseService {
     const next = add ? [...ids, technologyId] : ids.filter((value) => value !== technologyId);
     await this.bulkReplace(TECHNOLOGY_LINK, incident.id, next, userId, opts);
     return { changed: true };
+  }
+
+  /**
+   * The journal of an application converted to a technology (lot C1): one link change per incident
+   * whose application link became the technology's, written in the caller's transaction. The
+   * incidents are not checked for visibility or state: no new object is linked.
+   */
+  async journalApplicationConversion(
+    incidentIds: string[],
+    application: string,
+    technology: string,
+    userId: string | null,
+    opts: { manager: EntityManager; tenantId: string },
+  ): Promise<void> {
+    for (const id of incidentIds) {
+      await this.addEntry(opts.manager, { id, tenant_id: opts.tenantId } as Incident, {
+        kind: 'link_change',
+        content: `Application ${application} converted to technology ${technology}.`,
+        changed_fields: { applications: { from: [application], to: [] }, technologies: { from: [], to: [technology] } },
+        author_id: userId,
+      });
+    }
   }
 
   private async listLinked(spec: LinkSpec, incidentId: string, opts?: ServiceOpts): Promise<IncidentLinkedObject[]> {
