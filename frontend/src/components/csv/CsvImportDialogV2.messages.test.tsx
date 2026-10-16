@@ -154,4 +154,36 @@ describe('CsvImportDialogV2 messages', () => {
     expect(await screen.findByText('2 inchangées')).toBeInTheDocument();
     expect(screen.getByText('1 à mettre à jour')).toBeInTheDocument();
   });
+
+  it('counts one unchanged and one skipped row in the singular', async () => {
+    post.mockResolvedValueOnce({ data: report({ total: 2, inserted: 0, unchanged: 1, skipped: 1 }) });
+    validate();
+    expect(await screen.findByText('1 inchangée')).toBeInTheDocument();
+    expect(screen.getByText('1 ignorée')).toBeInTheDocument();
+  });
+
+  it('names the column after a message only when the message does not', async () => {
+    post.mockResolvedValueOnce({
+      data: report({
+        ok: false,
+        inserted: 0,
+        errors: [
+          {
+            row: 0,
+            column: 'detected_at',
+            message: 'Unknown time zone in the detected_at column: "Foo/Bar".',
+            code: 'CSV_HEADER_UNKNOWN_TIME_ZONE',
+            params: { column: 'detected_at', zone: 'Foo/Bar' },
+          },
+          { row: 2, column: 'name', message: 'name is required', code: 'CSV_VALUE_REQUIRED' },
+        ],
+      }),
+    });
+    validate();
+    await screen.findByText(/Fuseau horaire inconnu/);
+    expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'Fuseau horaire inconnu dans la colonne detected_at : Foo/Bar. Utilisez un fuseau comme Europe/Paris ou UTC.',
+      'Ligne 2 : Une valeur est obligatoire. (name)',
+    ]);
+  });
 });
