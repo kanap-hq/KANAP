@@ -480,7 +480,7 @@ function Section({
   );
 }
 
-function InternalRow({
+export function InternalRow({
   row,
   canManage,
   onRoleChange,
@@ -493,7 +493,13 @@ function InternalRow({
 }) {
   const { t } = useTranslation(['it', 'common']);
   const [role, setRole] = React.useState(row.role || '');
-  React.useEffect(() => { setRole(row.role || ''); }, [row.role]);
+  // The field follows the stored role during the render that receives it, as the sub-location
+  // rows do: an effect would run after the commit and could overwrite what was typed meanwhile.
+  const [shownRole, setShownRole] = React.useState(row.role);
+  if (shownRole !== row.role) {
+    setShownRole(row.role);
+    setRole(row.role || '');
+  }
 
   return (
     <Box component="tr">
@@ -521,7 +527,7 @@ function InternalRow({
   );
 }
 
-function ExternalRow({
+export function ExternalRow({
   row,
   canManage,
   onRoleChange,
@@ -534,7 +540,13 @@ function ExternalRow({
 }) {
   const { t } = useTranslation(['it', 'common']);
   const [role, setRole] = React.useState(row.role || '');
-  React.useEffect(() => { setRole(row.role || ''); }, [row.role]);
+  // The field follows the stored role during the render that receives it, as the sub-location
+  // rows do: an effect would run after the commit and could overwrite what was typed meanwhile.
+  const [shownRole, setShownRole] = React.useState(row.role);
+  if (shownRole !== row.role) {
+    setShownRole(row.role);
+    setRole(row.role || '');
+  }
 
   return (
     <Box component="tr">
@@ -562,7 +574,7 @@ function ExternalRow({
   );
 }
 
-function LinkRowComponent({
+export function LinkRowComponent({
   row,
   canManage,
   onSave,
@@ -576,8 +588,13 @@ function LinkRowComponent({
   const { t } = useTranslation(['it', 'common']);
   const [description, setDescription] = React.useState(row.description || '');
   const [url, setUrl] = React.useState(row.url);
-  React.useEffect(() => { setDescription(row.description || ''); }, [row.description]);
-  React.useEffect(() => { setUrl(row.url); }, [row.url]);
+  // The fields follow the stored link during the render that receives it (see InternalRow).
+  const [shown, setShown] = React.useState({ description: row.description, url: row.url });
+  if (shown.description !== row.description || shown.url !== row.url) {
+    setShown({ description: row.description, url: row.url });
+    if (shown.description !== row.description) setDescription(row.description || '');
+    if (shown.url !== row.url) setUrl(row.url);
+  }
 
   return (
     <Box component="tr">

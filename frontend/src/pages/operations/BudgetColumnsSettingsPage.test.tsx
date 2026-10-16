@@ -24,11 +24,19 @@ vi.mock('react-i18next', async () => {
   const fixed: Record<string, ReturnType<typeof real.getFixedT>> = { en: real.getFixedT('en'), fr: real.getFixedT('fr') };
   const translations = Object.fromEntries(['en', 'fr'].map((lng) => [lng, {
     t: (key: string, options?: unknown) => fixed[lng](key, options as Record<string, unknown>),
-    i18n: { language: lng, resolvedLanguage: lng },
+    i18n: {
+      language: lng,
+      resolvedLanguage: lng,
+      hasResourceBundle: real.hasResourceBundle.bind(real),
+      exists: real.exists.bind(real),
+      getFixedT: real.getFixedT.bind(real),
+    },
   }]));
   return { useTranslation: () => translations[lang.current] };
 });
 vi.mock('../../api', () => ({ default: { get: vi.fn(), patch: vi.fn() } }));
+// The English texts are already in the test instance: nothing to download.
+vi.mock('../../i18n', () => ({ loadNamespace: vi.fn(async () => undefined) }));
 const auth = vi.hoisted(() => ({ admin: true }));
 vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({ hasLevel: (resource: string, level: string) => resource === 'budget_ops' && level === 'admin' && auth.admin }),
