@@ -798,7 +798,12 @@ export function IncidentWorkspacePage() {
               />
             )}
             {validTab === 'documents' && (
-              <EntityKnowledgePanel entityType="incidents" entityId={data.id} canCreate={editable} />
+              <EntityKnowledgePanel
+                entityType="incidents"
+                entityId={data.id}
+                canCreate={editable}
+                onLinksChange={() => { void queryClient.invalidateQueries({ queryKey }); }}
+              />
             )}
             {validTab === 'attachments' && (
               <IncidentAttachmentsTab
