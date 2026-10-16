@@ -1178,7 +1178,7 @@ export default function WeeklyReport() {
         groupBy,
       }) as Record<string, string>;
       params.format = format;
-      // The CSV follows the screen language: separator, days and decimals.
+      // The file (CSV or XLSX) follows the screen language: words, days, decimals, CSV separator.
       params.language = screenLanguage(locale);
 
       const res = await api.get('/portfolio/reports/weekly/export', {

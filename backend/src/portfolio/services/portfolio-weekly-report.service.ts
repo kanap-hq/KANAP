@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import AdmZip = require('adm-zip');
 import { EntityManager } from 'typeorm';
 import { CsvLanguage, csvProfile, formatCsvDate, writeCsvLine } from '../../common/csv-sheet';
+import { WEEKLY_EXPORT_LABELS, WeeklyExportLabels } from './portfolio-weekly-report-labels';
 import { normalizeReportTimeZone } from '../../common/report-period';
 import {
   projectProjectTeamPredicates,
@@ -281,14 +282,12 @@ const REF_TABLES: Record<string, RefTable> = {
   origin_task_id: namedTable('tasks', 'title'),
 };
 
-/**
- * KANAP vocabulary for `portfolio_projects.origin`. The exports have no i18n, so they
- * carry the English labels the UI shows for the same values.
- */
-const ORIGIN_EXPORT_LABELS: Record<string, string> = {
-  standard: 'Request',
-  fast_track: 'Fast-track',
-  legacy: 'Legacy',
+/** The words and the language of one export: the screen's (`WEEKLY_EXPORT_LABELS`). */
+type ExportWords = { labels: WeeklyExportLabels; language: CsvLanguage };
+
+const wordsOf = (language: CsvLanguage | undefined): ExportWords => {
+  const lang = language ?? 'en';
+  return { labels: WEEKLY_EXPORT_LABELS[lang], language: lang };
 };
 
 /**
@@ -298,24 +297,28 @@ const ORIGIN_EXPORT_LABELS: Record<string, string> = {
 type ExportShape = 'created' | 'modified' | 'closed' | 'all';
 
 /** Date columns of an export block, in order. */
-const dateHeaders = (shape: ExportShape): string[] => {
-  if (shape === 'created') return ['Created on'];
-  if (shape === 'modified') return ['Modified on'];
-  if (shape === 'closed') return ['Created on', 'Closed on'];
-  return ['Created on', 'Date'];
+const dateHeaders = (shape: ExportShape, { labels }: ExportWords): string[] => {
+  if (shape === 'created') return [labels.columns.createdOn];
+  if (shape === 'modified') return [labels.columns.modifiedOn];
+  if (shape === 'closed') return [labels.columns.createdOn, labels.columns.closedOn];
+  return [labels.columns.createdOn, labels.columns.date];
 };
 
-const dateCells = (row: WeeklyRowCommon, shape: ExportShape): SheetCellValue[] => {
-  if (shape === 'created') return [row.eventAt];
-  if (shape === 'modified') return [row.eventAt];
-  return [row.createdAt, row.eventAt];
+/** A day of the report (`YYYY-MM-DD`) written the language's way, as the CSV files write days. */
+const exportDay = (value: string | null, language: CsvLanguage): string | null =>
+  value && ISO_DAY.test(value) ? formatCsvDate(value, language) : value;
+
+const dateCells = (row: WeeklyRowCommon, shape: ExportShape, { language }: ExportWords): SheetCellValue[] => {
+  if (shape === 'created') return [exportDay(row.eventAt, language)];
+  if (shape === 'modified') return [exportDay(row.eventAt, language)];
+  return [exportDay(row.createdAt, language), exportDay(row.eventAt, language)];
 };
 
-const changeHeaders = (shape: ExportShape): string[] =>
-  shape === 'modified' || shape === 'all' ? ['Changes'] : [];
+const changeHeaders = (shape: ExportShape, { labels }: ExportWords): string[] =>
+  shape === 'modified' || shape === 'all' ? [labels.columns.changes] : [];
 
-const changeCells = (row: WeeklyRowCommon, shape: ExportShape, entity: ExportChangeEntity): SheetCellValue[] =>
-  shape === 'modified' || shape === 'all' ? [formatChanges(row.changes, entity)] : [];
+const changeCells = (row: WeeklyRowCommon, shape: ExportShape, entity: ExportChangeEntity, words: ExportWords): SheetCellValue[] =>
+  shape === 'modified' || shape === 'all' ? [formatChanges(row.changes, entity, words)] : [];
 
 /** The status reached over the period, as `status_reached` resolves it in `eventCtes`. */
 const STATUS_REACHED_EXPR = 'sr.status';
@@ -330,19 +333,14 @@ const xmlEscape = (value: unknown): string =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&apos;');
 
-/**
- * One cell of the CSV in the file's language: a day column (`YYYY-MM-DD`) written the
- * language's way, a number with its decimal mark. The words of the report, the "Changes"
- * summary included, stay English as in the XLSX.
- */
+/** One cell of the CSV: a number with the language's decimal mark. Words and days come translated. */
 const csvCell = (value: unknown, language: CsvLanguage): string => {
   if (value === null || value === undefined) return '';
   if (typeof value === 'number') {
     const text = String(value);
     return csvProfile(language).decimal === ',' ? text.replace('.', ',') : text;
   }
-  const text = String(value);
-  return ISO_DAY.test(text) ? formatCsvDate(text, language) : text;
+  return String(value);
 };
 
 const columnNumberToName = (columnNumber: number): string => {
@@ -362,76 +360,10 @@ const toNumber = (value: number | string | null): number | null => {
   return Number.isFinite(next) ? next : null;
 };
 
-/**
- * English labels of the changed columns, the words the screen uses (`WeeklyReportChangeLabels.ts`
- * on the frontend, from the item history labels). The exports have no i18n, so the English
- * wording is kept here; a column missing from both maps falls back to `humanizeKey`.
- */
-const PORTFOLIO_CHANGE_LABELS: Record<string, string> = {
-  name: 'Name',
-  purpose: 'Purpose',
-  current_situation: 'Current situation',
-  expected_benefits: 'Expected benefits',
-  risks: 'Risks',
-  feasibility_review: 'Feasibility review',
-  source_id: 'Source',
-  category_id: 'Category',
-  stream_id: 'Stream',
-  requestor_id: 'Requestor',
-  target_delivery_date: 'Target delivery date',
-  origin_task_id: 'Origin task',
-  origin_task: 'Origin task',
-  company_id: 'Company',
-  department_id: 'Department',
-  business_sponsor_id: 'Business sponsor',
-  business_lead_id: 'Business lead',
-  it_sponsor_id: 'IT sponsor',
-  it_lead_id: 'IT lead',
-  planned_start: 'Planned start',
-  planned_end: 'Planned end',
-  actual_start: 'Actual start',
-  actual_end: 'Actual end',
-  converted_date: 'Converted on',
-  estimated_effort_it: 'IT effort',
-  estimated_effort_business: 'Business effort',
-  actual_effort_it: 'Actual IT effort',
-  actual_effort_business: 'Actual business effort',
-  execution_progress: 'Effort',
-  priority_score: 'Priority score',
-  priority_override: 'Priority override',
-  override_value: 'Override value',
-  override_justification: 'Override justification',
-  criteria_values: 'Evaluation criteria',
-  scheduling_mode: 'Scheduling mode',
-  it_effort_allocation_mode: 'IT effort allocation mode',
-  business_effort_allocation_mode: 'Business effort allocation mode',
-};
-
-const TASK_CHANGE_LABELS: Record<string, string> = {
-  title: 'Title',
-  description: 'Description',
-  task_type_id: 'Task type',
-  priority_level: 'Priority',
-  creator_id: 'Requestor',
-  assignee_user_id: 'Assignee',
-  due_date: 'Due date',
-  start_date: 'Start date',
-  labels: 'Labels',
-  phase_id: 'Phase',
-  source_id: 'Source',
-  category_id: 'Category',
-  stream_id: 'Stream',
-  company_id: 'Company',
-  owner_ids: 'Owners',
-  viewer_ids: 'Viewers',
-  related_object_id: 'Related to',
-  related_object_type: 'Related to',
-};
-
 type ExportChangeEntity = 'request' | 'project' | 'task';
 
-const changeLabel = (entity: ExportChangeEntity, key: string): string =>
-  (entity === 'task' ? TASK_CHANGE_LABELS[key] : PORTFOLIO_CHANGE_LABELS[key]) ?? humanizeKey(key);
+const changeLabel = (entity: ExportChangeEntity, key: string, { labels }: ExportWords): string =>
+  (entity === 'task' ? labels.taskFields[key] : labels.portfolioFields[key]) ?? humanizeKey(key);
 
 const humanizeKey = (key: string): string =>
   key
@@ -442,15 +374,24 @@ const humanizeKey = (key: string): string =>
 const humanizeStatus = (status: string): string =>
   status.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
 
+/** A status in the language, for the object it belongs to: the same value can mean two things. */
+const statusLabel = (entity: ExportChangeEntity, status: string, { labels }: ExportWords): string =>
+  labels.statuses[entity][status] ?? humanizeStatus(status);
+
 /**
- * One changed value in the export, the way the screen writes it but in English: the exports
- * have no i18n. Days stay `YYYY-MM-DD`, like every other date column of the export.
+ * One changed value in the export, the way the screen writes it, in the screen language:
+ * yes or no, a count of items, a day the language's way.
  */
-export const formatExportChangeValue = (kind: WeeklyChangeKind, value: string | null): string => {
-  if (value === null) return 'empty';
-  if (kind === 'ref' && value === '') return 'unknown';
-  if (kind === 'boolean') return value === 'true' ? 'Yes' : 'No';
-  if (kind === 'list') return Number(value) === 1 ? '1 item' : `${value} items`;
+export const formatExportChangeValue = (kind: WeeklyChangeKind, value: string | null, { labels, language }: ExportWords): string => {
+  if (value === null) return labels.values.empty;
+  if (kind === 'ref' && value === '') return labels.values.unknown;
+  if (kind === 'boolean') return value === 'true' ? labels.values.yes : labels.values.no;
+  if (kind === 'list') {
+    const count = Number(value) || 0;
+    const form = new Intl.PluralRules(language).select(count) === 'one' ? labels.values.itemOne : labels.values.itemOther;
+    return form.replace('{{count}}', String(count));
+  }
+  if (kind === 'date') return exportDay(value, language) ?? value;
   return value;
 };
 
@@ -458,16 +399,16 @@ export const formatExportChangeValue = (kind: WeeklyChangeKind, value: string | 
  * Human readable "Changes" cell for the exports: the status chain, then one
  * "Label: before → after" per field, `;` between the parts.
  */
-export const formatChanges = (changes: WeeklyChangeSummary | null, entity: ExportChangeEntity): string => {
+export const formatChanges = (changes: WeeklyChangeSummary | null, entity: ExportChangeEntity, words: ExportWords): string => {
   if (!changes) return '';
   const parts: string[] = [];
   if (changes.statusChain.length > 1) {
-    parts.push(changes.statusChain.map(humanizeStatus).join(' → '));
+    parts.push(changes.statusChain.map((status) => statusLabel(entity, status, words)).join(' → '));
   }
   changes.fields.forEach((field) => {
-    const before = formatExportChangeValue(field.kind, field.before);
-    const after = formatExportChangeValue(field.kind, field.after);
-    parts.push(`${changeLabel(entity, field.key)}: ${before} → ${after}`);
+    const before = formatExportChangeValue(field.kind, field.before, words);
+    const after = formatExportChangeValue(field.kind, field.after, words);
+    parts.push(`${changeLabel(entity, field.key, words)}${words.labels.labelSeparator}${before} → ${after}`);
   });
   return parts.join('; ');
 };
@@ -724,7 +665,9 @@ export class PortfolioWeeklyReportService {
    */
   async exportCsv(query: WeeklyReportQuery, opts?: ServiceOpts & { language?: CsvLanguage }): Promise<ExportResult<string>> {
     const { requests, projects, tasks, byPerson } = await this.list(query, opts);
-    const language = opts?.language ?? 'en';
+    const words = wordsOf(opts?.language);
+    const { labels, language } = words;
+    const listIndex = { created: 0, modified: 1, closed: 2 } as const;
 
     const lines: string[] = [];
     const addRow = (values: unknown[]) => {
@@ -742,9 +685,9 @@ export class PortfolioWeeklyReportService {
     if (covers(query, 'request')) {
       (['created', 'modified', 'closed'] as const).forEach((listKey) => {
         addBlock(
-          `Requests ${listKey}`,
-          this.requestHeaders(listKey),
-          requests[listKey].map((row) => this.requestCells(row, listKey)),
+          labels.blocks.request[listIndex[listKey]],
+          this.requestHeaders(listKey, words),
+          requests[listKey].map((row) => this.requestCells(row, listKey, words)),
         );
       });
     }
@@ -752,9 +695,9 @@ export class PortfolioWeeklyReportService {
     if (covers(query, 'project')) {
       (['created', 'modified', 'closed'] as const).forEach((listKey) => {
         addBlock(
-          `Projects ${listKey}`,
-          this.projectHeaders(listKey),
-          projects[listKey].map((row) => this.projectCells(row, listKey)),
+          labels.blocks.project[listIndex[listKey]],
+          this.projectHeaders(listKey, words),
+          projects[listKey].map((row) => this.projectCells(row, listKey, words)),
         );
       });
     }
@@ -763,16 +706,16 @@ export class PortfolioWeeklyReportService {
       // No task block at all.
     } else if (byPerson) {
       addBlock(
-        'Tasks by person',
-        this.personTaskHeaders(),
-        this.personTaskRows(byPerson).map((row) => row.cells),
+        labels.tasksByPerson,
+        this.personTaskHeaders(words),
+        this.personTaskRows(byPerson, words).map((row) => row.cells),
       );
     } else {
       (['created', 'modified', 'closed'] as const).forEach((listKey) => {
         addBlock(
-          `Tasks ${listKey}`,
-          this.taskHeaders(listKey),
-          tasks[listKey].map((row) => this.taskCells(row, listKey)),
+          labels.blocks.task[listIndex[listKey]],
+          this.taskHeaders(listKey, words),
+          tasks[listKey].map((row) => this.taskCells(row, listKey, words)),
         );
       });
     }
@@ -786,48 +729,50 @@ export class PortfolioWeeklyReportService {
   async exportXlsx(
     query: WeeklyReportQuery,
     appBaseUrl: string | null,
-    opts?: ServiceOpts,
+    opts?: ServiceOpts & { language?: CsvLanguage },
   ): Promise<ExportResult<Buffer>> {
     const { requests, projects, tasks, byPerson } = await this.list(query, opts);
-
-    const eventLabel = { created: 'Created', modified: 'Modified', closed: 'Closed' } as const;
+    // The words and the days of the screen language, as in the CSV.
+    const words = wordsOf(opts?.language);
+    const { labels } = words;
+    const eventLabel = labels.lists;
     const listKeys = ['created', 'modified', 'closed'] as const;
 
     const taskSheet: XlsxSheetConfig = byPerson
       ? {
-          name: 'Tasks',
-          headers: this.personTaskHeaders(),
-          rows: this.personTaskRows(byPerson),
+          name: labels.sheets.task,
+          headers: this.personTaskHeaders(words),
+          rows: this.personTaskRows(byPerson, words),
           // Team, person and list come first: the reference sits on the fourth column.
           linkColumnNumber: 4,
         }
       : {
-          name: 'Tasks',
-          headers: ['Event', ...this.taskHeaders('all')],
+          name: labels.sheets.task,
+          headers: [labels.columns.event, ...this.taskHeaders('all', words)],
           rows: listKeys.flatMap((listKey) =>
             tasks[listKey].map((row) => ({
-              cells: [eventLabel[listKey], ...this.taskCells(row, 'all')] as SheetCellValue[],
+              cells: [eventLabel[listKey], ...this.taskCells(row, 'all', words)] as SheetCellValue[],
               linkPath: row.itemPath,
             })),
           ),
         };
 
     const requestSheet: XlsxSheetConfig = {
-      name: 'Requests',
-      headers: ['Event', ...this.requestHeaders('all')],
+      name: labels.sheets.request,
+      headers: [labels.columns.event, ...this.requestHeaders('all', words)],
       rows: listKeys.flatMap((listKey) =>
         requests[listKey].map((row) => ({
-          cells: [eventLabel[listKey], ...this.requestCells(row, 'all')] as SheetCellValue[],
+          cells: [eventLabel[listKey], ...this.requestCells(row, 'all', words)] as SheetCellValue[],
           linkPath: row.itemPath,
         })),
       ),
     };
     const projectSheet: XlsxSheetConfig = {
-      name: 'Projects',
-      headers: ['Event', ...this.projectHeaders('all')],
+      name: labels.sheets.project,
+      headers: [labels.columns.event, ...this.projectHeaders('all', words)],
       rows: listKeys.flatMap((listKey) =>
         projects[listKey].map((row) => ({
-          cells: [eventLabel[listKey], ...this.projectCells(row, 'all')] as SheetCellValue[],
+          cells: [eventLabel[listKey], ...this.projectCells(row, 'all', words)] as SheetCellValue[],
           linkPath: row.itemPath,
         })),
       ),
@@ -854,21 +799,22 @@ export class PortfolioWeeklyReportService {
   /*  Export cell shapes                                              */
   /* ---------------------------------------------------------------- */
 
-  private requestHeaders(shape: ExportShape): string[] {
+  private requestHeaders(shape: ExportShape, words: ExportWords): string[] {
+    const { columns } = words.labels;
     return [
-      'Reference',
-      'Request name',
-      'Source',
-      'Category',
-      'Stream',
-      'Company',
-      'Status',
-      ...dateHeaders(shape),
-      ...changeHeaders(shape),
+      columns.reference,
+      columns.requestName,
+      columns.source,
+      columns.category,
+      columns.stream,
+      columns.company,
+      columns.status,
+      ...dateHeaders(shape, words),
+      ...changeHeaders(shape, words),
     ];
   }
 
-  private requestCells(row: WeeklyRequestRow, shape: ExportShape): SheetCellValue[] {
+  private requestCells(row: WeeklyRequestRow, shape: ExportShape, words: ExportWords): SheetCellValue[] {
     return [
       row.ref,
       row.name,
@@ -876,72 +822,74 @@ export class PortfolioWeeklyReportService {
       row.categoryName,
       row.streamName,
       row.company,
-      humanizeStatus(row.status),
-      ...dateCells(row, shape),
-      ...changeCells(row, shape, 'request'),
+      statusLabel('request', row.status, words),
+      ...dateCells(row, shape, words),
+      ...changeCells(row, shape, 'request', words),
     ];
   }
 
-  private projectHeaders(shape: ExportShape): string[] {
+  private projectHeaders(shape: ExportShape, words: ExportWords): string[] {
+    const { columns } = words.labels;
     return [
-      'Reference',
-      'Project name',
-      'Origin',
-      'Priority',
-      'Source',
-      'Category',
-      'Stream',
-      'Company',
-      'Effort',
-      'Status',
-      ...dateHeaders(shape),
-      ...changeHeaders(shape),
+      columns.reference,
+      columns.projectName,
+      columns.origin,
+      columns.priority,
+      columns.source,
+      columns.category,
+      columns.stream,
+      columns.company,
+      columns.progress,
+      columns.status,
+      ...dateHeaders(shape, words),
+      ...changeHeaders(shape, words),
     ];
   }
 
-  private projectCells(row: WeeklyProjectRow, shape: ExportShape): SheetCellValue[] {
+  private projectCells(row: WeeklyProjectRow, shape: ExportShape, words: ExportWords): SheetCellValue[] {
     return [
       row.ref,
       row.name,
-      this.projectOriginLabel(row),
+      this.projectOriginLabel(row, words),
       row.priority,
       row.sourceName,
       row.categoryName,
       row.streamName,
       row.company,
       row.progress == null ? null : `${Math.round(row.progress)}%`,
-      humanizeStatus(row.status),
-      ...dateCells(row, shape),
-      ...changeCells(row, shape, 'project'),
+      statusLabel('project', row.status, words),
+      ...dateCells(row, shape, words),
+      ...changeCells(row, shape, 'project', words),
     ];
   }
 
   /** The request a project came from, or the KANAP label of its own origin value. */
-  private projectOriginLabel(row: WeeklyProjectRow): string {
+  private projectOriginLabel(row: WeeklyProjectRow, { labels }: ExportWords): string {
     if (row.origin) return `${row.origin.ref} ${row.origin.name}`.trim();
     if (!row.originValue) return '';
-    return ORIGIN_EXPORT_LABELS[row.originValue] ?? humanizeStatus(row.originValue);
+    return labels.origins[row.originValue] ?? humanizeStatus(row.originValue);
   }
 
   /** Task columns of the by-person export: who and which list, then the usual task columns. */
-  private personTaskHeaders(): string[] {
-    return ['Team', 'Person', 'List', ...this.taskHeaders('all')];
+  private personTaskHeaders(words: ExportWords): string[] {
+    const { columns } = words.labels;
+    return [columns.team, columns.person, columns.list, ...this.taskHeaders('all', words)];
   }
 
   /**
    * One line per person, list and task. A task two people modified is written twice, once under
    * each of them, exactly as the screen shows it.
    */
-  private personTaskRows(byPerson: WeeklyByPerson): Array<{ cells: SheetCellValue[]; linkPath: string | null }> {
+  private personTaskRows(byPerson: WeeklyByPerson, words: ExportWords): Array<{ cells: SheetCellValue[]; linkPath: string | null }> {
     const listKeys = ['created', 'modified', 'closed'] as const;
-    const listLabel = { created: 'Created', modified: 'Modified', closed: 'Closed' } as const;
+    const listLabel = words.labels.lists;
     const rows: Array<{ cells: SheetCellValue[]; linkPath: string | null }> = [];
 
     const push = (team: string, person: string, lists: WeeklyPersonLists) => {
       listKeys.forEach((listKey) => {
         lists[listKey].forEach((row) => {
           rows.push({
-            cells: [team, person, listLabel[listKey], ...this.taskCells(row, 'all')] as SheetCellValue[],
+            cells: [team, person, listLabel[listKey], ...this.taskCells(row, 'all', words)] as SheetCellValue[],
             linkPath: row.itemPath,
           });
         });
@@ -949,31 +897,32 @@ export class PortfolioWeeklyReportService {
     };
 
     byPerson.teams.forEach((team) => {
-      const teamName = team.teamName ?? 'No team';
+      const teamName = team.teamName ?? words.labels.noTeam;
       team.members.forEach((member) => push(teamName, member.name, member));
     });
-    push('', 'Unassigned', byPerson.unassigned);
+    push('', words.labels.unassigned, byPerson.unassigned);
 
     return rows;
   }
 
-  private taskHeaders(shape: ExportShape): string[] {
+  private taskHeaders(shape: ExportShape, words: ExportWords): string[] {
+    const { columns } = words.labels;
     return [
-      'Reference',
-      'Task name',
-      'Task type',
-      'Priority',
-      'Source',
-      'Category',
-      'Stream',
-      'Company',
-      'Status',
-      ...dateHeaders(shape),
-      ...changeHeaders(shape),
+      columns.reference,
+      columns.taskName,
+      columns.taskType,
+      columns.priority,
+      columns.source,
+      columns.category,
+      columns.stream,
+      columns.company,
+      columns.status,
+      ...dateHeaders(shape, words),
+      ...changeHeaders(shape, words),
     ];
   }
 
-  private taskCells(row: WeeklyTaskRow, shape: ExportShape): SheetCellValue[] {
+  private taskCells(row: WeeklyTaskRow, shape: ExportShape, words: ExportWords): SheetCellValue[] {
     return [
       row.ref,
       row.name,
@@ -983,9 +932,9 @@ export class PortfolioWeeklyReportService {
       row.categoryName,
       row.streamName,
       row.company,
-      humanizeStatus(row.status),
-      ...dateCells(row, shape),
-      ...changeCells(row, shape, 'task'),
+      statusLabel('task', row.status, words),
+      ...dateCells(row, shape, words),
+      ...changeCells(row, shape, 'task', words),
     ];
   }
 
