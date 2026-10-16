@@ -1,6 +1,7 @@
 import React from 'react';
-import { AppBar, Box, CircularProgress, Divider, Drawer, IconButton, List, ListItemButton, ListItemIcon, ListItemText, ListSubheader, Toolbar, Typography, Tooltip, Tabs, Tab, Menu, MenuItem } from '@mui/material';
+import { AppBar, Box, CircularProgress, Divider, Drawer, IconButton, LinearProgress, List, ListItemButton, ListItemIcon, ListItemText, ListSubheader, Toolbar, Typography, Tooltip, Tabs, Tab, Menu, MenuItem } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
+import { keyframes } from '@emotion/react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
@@ -57,10 +58,14 @@ import { useAiCapabilities } from '../ai/useAiCapabilities';
 import { chatAwaitsIncludedModelConfirmation } from '../ai/includedModel';
 import { aiAgentControlApi } from '../ai/aiApi';
 import { useTranslation } from 'react-i18next';
+import { PagePendingContext } from '../lib/deferredPage';
 import { useLocale } from '../i18n/useLocale';
 import { useBusinessContributorApplicationVisibility } from '../hooks/useBusinessContributorApplicationVisibility';
 import { useGuardedLeave, useInAppLinkGuard } from '../hooks/leaveGuard';
 import { canUseAnyOperation } from '../pages/operations/operationAccess';
+
+/** The pending page bar appears only once a move to another page has lasted a moment. */
+const appearLater = keyframes({ to: { opacity: 1 } });
 
 const drawerWidth = 220;
 
@@ -130,6 +135,7 @@ export default function Layout() {
   });
   const applicationVisibility = useBusinessContributorApplicationVisibility();
   const { t } = useTranslation(['nav', 'settings']);
+  const pagePending = React.useContext(PagePendingContext);
   const locale = useLocale();
   const isSingleTenant = config.deploymentMode === 'single-tenant';
   const {
@@ -678,6 +684,16 @@ export default function Layout() {
         sx={{ flexGrow: 1, height: '100dvh', display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}
       >
         <Toolbar sx={{ flexShrink: 0 }} />
+        {/* Another page is loading behind this one: a thin bar under the top bar, shown only
+            when the wait lasts, so a quick move shows nothing. */}
+        {pagePending && (
+          <Box sx={{ position: 'relative', height: 0, flexShrink: 0, zIndex: 1 }}>
+            <LinearProgress
+              aria-label={t('common:status.loading')}
+              sx={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, opacity: 0, animation: `${appearLater} 0s 300ms forwards` }}
+            />
+          </Box>
+        )}
         {config.features.billing && <SubscriptionBanner />}
         <Box
           ref={pageScrollerRef}

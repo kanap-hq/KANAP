@@ -498,8 +498,8 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     const held = next.id ? patchBuffer.held(next.id) : undefined;
     setForm(held ? mergePatch(next, held) : next);
   }, [patchBuffer]);
-  // Resync the form on every refetch.
-  React.useEffect(() => {
+  // Resync the form on every refetch, before the browser paints: the line never shows with an empty form first.
+  React.useLayoutEffect(() => {
     if (!data || isCreate) return;
     syncForm(data);
   }, [data, isCreate, syncForm]);

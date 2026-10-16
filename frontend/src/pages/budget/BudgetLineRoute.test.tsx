@@ -19,13 +19,14 @@ function Probe() {
 function renderAt(path: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(<QueryClientProvider client={client}><MemoryRouter initialEntries={['/previous', path]} initialIndex={1}>
-    <Probe /><Routes>
+    <Probe /><React.Suspense fallback={<div data-testid="waiting" />}><Routes>
       <Route path="/ops/budget/new" element={<BudgetLineRoute />} />
       <Route path="/ops/budget/:ref" element={<BudgetLineRoute />} />
       <Route path="/ops/budget/:ref/:tab" element={<BudgetLineRoute />} />
-    </Routes>
+    </Routes></React.Suspense>
   </MemoryRouter></QueryClientProvider>);
 }
+const resolveCalls = () => vi.mocked(api.get).mock.calls.filter(([url]) => String(url).startsWith('/budget-lines/resolve/')).length;
 beforeEach(() => { vi.mocked(api.get).mockReset(); });
 describe('budget line route resolution', () => {
   it.each(['opex', 'capex'])('resolves UUID to BL with nature %s and replaces history, keeping tab and query', async (nature) => {
@@ -43,11 +44,24 @@ describe('budget line route resolution', () => {
     expect(await screen.findByTestId('workspace')).toHaveTextContent('capex');
     expect(screen.getByRole('button')).toHaveTextContent('/ops/budget/BL-127?year=2027');
   });
+  it('suspends while the line resolves, so the page it is opened from can stay on screen', async () => {
+    let answer: (value: unknown) => void = () => undefined;
+    vi.mocked(api.get).mockReturnValue(new Promise((resolve) => { answer = resolve; }));
+    renderAt('/ops/budget/BL-127');
+    expect(screen.getByTestId('waiting')).toBeInTheDocument();
+    answer({ data: { id: 'uuid', nature: 'opex', reference: 'BL-127' } });
+    expect(await screen.findByTestId('workspace')).toHaveTextContent('opex');
+    expect(screen.queryByTestId('waiting')).toBeNull();
+    expect(resolveCalls()).toBe(1);
+    // The workspace's line and dimensions are read during the same wait.
+    expect(api.get).toHaveBeenCalledWith('/budget-lines/BL-127', expect.anything());
+  });
   it('shows the existing load error for an unavailable line without mounting child resources', async () => {
     vi.mocked(api.get).mockRejectedValue(Object.assign(new Error('Not found'), { response: { status: 404 } }));
     renderAt('/ops/budget/BL-999');
     expect(await screen.findByRole('alert')).toHaveTextContent('opex.workspace.failedToLoad');
     expect(screen.queryByTestId('workspace')).toBeNull();
+    expect(resolveCalls()).toBe(2);
   });
   it.each([['', 'opex'], ['?nature=capex', 'capex'], ['?nature=unknown', 'opex']])('creates with %s and no resolution request', async (search, nature) => {
     renderAt(`/ops/budget/new${search}`);

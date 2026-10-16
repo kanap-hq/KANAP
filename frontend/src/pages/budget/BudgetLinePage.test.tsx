@@ -2056,9 +2056,11 @@ describe('BudgetLinePage type changed in place', () => {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider theme={createAppTheme('light')}>
           <MemoryRouter initialEntries={['/ops/budget/BL-7/overview']} useTransitions={false}>
-            <Routes>
-              <Route path="/ops/budget/:ref/:tab" element={<BudgetLineRoute />} />
-            </Routes>
+            <React.Suspense fallback={null}>
+              <Routes>
+                <Route path="/ops/budget/:ref/:tab" element={<BudgetLineRoute />} />
+              </Routes>
+            </React.Suspense>
           </MemoryRouter>
         </ThemeProvider>
       </QueryClientProvider>,

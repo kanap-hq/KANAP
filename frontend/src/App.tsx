@@ -1,5 +1,6 @@
 import React, { Suspense } from 'react';
-import { Navigate, Route, Routes, useParams, useSearchParams } from 'react-router-dom';
+import { Navigate, Route, Routes, createRoutesFromChildren, useParams, useSearchParams } from 'react-router-dom';
+import { DeferredPageLocation } from './lib/deferredPage';
 import { Box, CircularProgress } from '@mui/material';
 import { useAuth } from './auth/AuthContext';
 const DashboardPage = React.lazy(() => import('./pages/DashboardPage'));
@@ -225,15 +226,8 @@ function RouteLoadingFallback() {
 function AppRoutes() {
   const { config, isLoading: featuresLoading } = useFeatures();
   const isSingleTenant = config.deploymentMode === 'single-tenant';
-  if (featuresLoading) {
-    return <RouteLoadingFallback />;
-  }
-  return (
-    // Pages are code-split, so the public routes (which render outside Layout) need a
-    // boundary. The authenticated ones get a second, inner one around Layout's <Outlet />,
-    // so navigating between them keeps the shell on screen instead of flashing this.
-    <Suspense fallback={<RouteLoadingFallback />}>
-      <Routes>
+  const routeChildren = React.useMemo(() => (
+      <>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/login/callback" element={<LoginCallbackPage />} />
         <Route path="/forgot-password" element={config.features.email ? <ForgotPasswordPage /> : <Navigate to="/login" replace />} />
@@ -422,7 +416,21 @@ function AppRoutes() {
       {/* Unknown paths go home, where ProtectedRoute waits for the session restore of a full
           page load before it decides between the app and /login. */}
       <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      </>
+  ), [config, isSingleTenant]);
+  const routeObjects = React.useMemo(() => createRoutesFromChildren(routeChildren), [routeChildren]);
+  // One element per route set: the routes render again only when the shown location changes.
+  const routes = React.useMemo(() => <Routes>{routeChildren}</Routes>, [routeChildren]);
+  if (featuresLoading) {
+    return <RouteLoadingFallback />;
+  }
+  return (
+    // Pages are code-split, so the public routes (which render outside Layout) need a
+    // boundary. The authenticated ones get a second, inner one around Layout's <Outlet />,
+    // shown on a full page load; a move to another page keeps the current one on screen
+    // until the next is ready (DeferredPageLocation).
+    <Suspense fallback={<RouteLoadingFallback />}>
+      <DeferredPageLocation routes={routeObjects}>{routes}</DeferredPageLocation>
     </Suspense>
   );
 }

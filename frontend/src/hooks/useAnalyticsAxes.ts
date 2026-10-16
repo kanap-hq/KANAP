@@ -6,6 +6,8 @@ import { analyticsFieldKey, getAnalyticsAxes, isAnalyticsActive, type AnalyticsA
 import { usageAllowsLineType, type LineType } from '../constants/lineTypeUsage';
 
 export const ANALYTICS_AXES_QUERY_KEY = ['analytics-axes'] as const;
+/** The axes query, shared by the hook and the pages that wait for it before showing (BudgetLineRoute). */
+export const analyticsAxesQuery = { queryKey: ANALYTICS_AXES_QUERY_KEY, queryFn: getAnalyticsAxes, staleTime: 5 * 60_000 };
 
 export type AnalyticsAxes = {
   /** False until the dimensions are loaded (or while the hook is disabled). */
@@ -131,12 +133,7 @@ export function useAnalyticsAxes(options?: { enabled?: boolean; scope?: LineType
   const enabled = options?.enabled ?? true;
   const scope = options?.scope ?? null;
   const { t } = useTranslation(['master-data']);
-  const query = useQuery({
-    queryKey: ANALYTICS_AXES_QUERY_KEY,
-    queryFn: getAnalyticsAxes,
-    enabled,
-    staleTime: 5 * 60_000,
-  });
+  const query = useQuery({ ...analyticsAxesQuery, enabled });
   const list = query.data ?? EMPTY;
   const ready = enabled && (query.isSuccess || query.isError);
   const isError = enabled && query.isError;
