@@ -1,5 +1,12 @@
 import '@testing-library/jest-dom';
+import { configure } from '@testing-library/react';
 import { afterAll, vi } from 'vitest';
+
+// findBy* and waitFor give up after one second by default. A shard of the merge queue runs a third
+// of the suite on a shared runner, where the first render of a page with MUI can take longer than
+// that (a sub-location rename refusal showed after 1.3 s): wait up to five seconds. A test that
+// passes is not slowed down, only a failing one takes longer to report.
+configure({ asyncUtilTimeout: 5_000 });
 
 // Tests keep every language in memory from the first import of `src/i18n`, as before the app
 // downloaded the active language only: specs switch languages synchronously and read other bundles.
