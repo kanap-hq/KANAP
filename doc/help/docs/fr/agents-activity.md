@@ -35,7 +35,7 @@ Chaque entrée correspond à un événement, et elle contient suffisamment de co
 - Une **puce de type d'action** (lorsque l'événement porte sur un type de travail précis sur le ticket) : **Note interne**, **Réponse demandeur**, **Mise à jour classification**, **Mise à jour statut**, **Affectation** ou **Participants**.
 - Une **pastille de statut** avec un libellé en langage clair (par exemple « En attente de validation », « Terminé », « Rejeté », « Écarté », « Attention requise ») décrivant où en est cet élément.
 - Le **nom de l'agent** et le **ticket** concerné (affiché sous la forme `#N`).
-- Un **titre d'événement**, par exemple « Proposition créée » ou « Vérification des tickets — 3 nouveaux tickets ».
+- Un **titre d'événement**, par exemple « Proposition créée » ou « Vérification des tickets : 3 nouveaux tickets ».
 - Un **aperçu sur une ligne** de l'essentiel (la première ligne d'un message rédigé, une modification de champ ou le motif), de sorte que vous n'avez souvent rien à développer.
 - Un **horodatage**, ainsi que **Afficher les détails** et, lorsqu'un contrôle est à l'origine de l'événement, **Trace**.
 
@@ -59,10 +59,10 @@ Nul besoin de les mémoriser : les titres d'événements sont rédigés en langa
 
 Une entrée de vérification vous dit dans son titre ce que l'agent a trouvé, sans que vous ayez à développer quoi que ce soit :
 
-- **Vérification des tickets — aucun nouveau ticket** : il a regardé et il n'y avait rien à faire. C'est à cela que ressemble un agent sain et tranquille.
-- **Vérification des tickets — 3 nouveaux tickets** : trois tickets ont été pris en charge.
-- **Vérification des tickets — 3 nouveaux tickets, 2 déjà vus, 1 erreur** : la même chose, plus des tickets qu'il avait déjà traités et un problème rencontré.
-- **Vérification des tickets — Surveillance désactivée** / **En pause** / **Ignorée** / **Échec** : la vérification n'a pas fait son travail habituel, et le motif suit lorsqu'il y en a un.
+- **Vérification des tickets : aucun nouveau ticket** : il a regardé et il n'y avait rien à faire. C'est à cela que ressemble un agent sain et tranquille.
+- **Vérification des tickets : 3 nouveaux tickets** : trois tickets ont été pris en charge.
+- **Vérification des tickets : 3 nouveaux tickets, 2 déjà vus, 1 erreur** : la même chose, plus des tickets qu'il avait déjà traités et un problème rencontré.
+- **Vérification des tickets : Surveillance désactivée** / **En pause** / **Ignorée** / **Échec** : la vérification n'a pas fait son travail habituel, et le motif suit lorsqu'il y en a un.
 
 **Afficher les détails** décompose cette même vérification en quatre chiffres (**Vus**, **Mis en file**, **Déjà vus**, **Traités**), plus le motif et les éventuels messages d'erreur. C'est la manière honnête de répondre à « pourquoi l'agent n'a-t-il pas pris le ticket #482 ? » : si **Vus** est élevé mais que **Mis en file** est à zéro, le ticket a bien été examiné puis écarté par votre ciblage ; si **Vus** est à zéro, l'agent ne l'a jamais vu du tout.
 
