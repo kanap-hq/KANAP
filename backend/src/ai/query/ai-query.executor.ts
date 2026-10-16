@@ -989,7 +989,7 @@ export class AiQueryExecutor {
       : null;
     return toEntitySummary('locations', {
       id: row.id,
-      label: `${row.code} — ${row.name}`,
+      label: `${row.code} · ${row.name}`,
       status: null,
       summary: [row.city, row.country_iso].filter(Boolean).join(', ') || null,
       created_at: row.created_at ?? null,

@@ -930,7 +930,7 @@ export default function InterfaceMapPage() {
                                     onClick={() => navigate(`/it/applications/${selectedNode.id}/technical`)}
                                     sx={{ justifyContent: 'flex-start', textAlign: 'left', px: 0 }}
                                   >
-                                    {name}{c.role ? ` — ${c.role}` : ''}
+                                    {name}{c.role ? ` (${c.role})` : ''}
                                   </Button>
                                 );
                               })}

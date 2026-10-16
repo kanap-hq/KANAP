@@ -91,7 +91,7 @@ export default forwardRef<AccountCreateEditorHandle, Props>(function AccountCrea
         const res = await api.get('/chart-of-accounts', { params: { page: 1, limit: 1000 } });
         if (!active) return;
         const items: any[] = res.data?.items || [];
-        const mapped = items.map((c) => ({ id: c.id, label: `${c.code} — ${c.name}` }));
+        const mapped = items.map((c) => ({ id: c.id, label: `${c.code} · ${c.name}` }));
         setCoas(mapped);
         if (coaIdParam && mapped.some((c) => c.id === coaIdParam)) {
           setValue('coa_id', coaIdParam, { shouldDirty: true, shouldValidate: true });

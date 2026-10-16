@@ -1029,7 +1029,7 @@ export class AiEntityService {
               COUNT(*) OVER()::int AS total_count
        FROM (
          SELECT DISTINCT ON (l.id) l.id,
-                l.location_reference || ' — ' || l.name AS label,
+                l.location_reference || ' · ' || l.name AS label,
                 COALESCE(NULLIF(l.city, ''), l.country_iso) AS summary,
                 NULL::text AS status,
                 l.updated_at,

@@ -1183,7 +1183,7 @@ function ComplianceTab({
                 await onRefresh();
               })();
             }}
-            getOptionLabel={(option) => `${option.code} — ${option.name}`}
+            getOptionLabel={(option) => `${option.code} · ${option.name}`}
             filterOptions={filterCountryOptions}
             disabled={!canManage}
             renderInput={(params) => (
