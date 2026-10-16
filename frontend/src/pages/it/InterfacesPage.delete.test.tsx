@@ -14,6 +14,7 @@ vi.mock('react-i18next', () => {
   return { initReactI18next: { type: '3rdParty', init: () => undefined }, useTranslation: () => translation };
 });
 vi.mock('../../i18n', () => ({ default: { t: (key: string) => key, language: 'en' } }));
+vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true }) }));
 vi.mock('../../api', () => ({ default: { get: vi.fn(async () => ({ data: [] })), post } }));
 vi.mock('../../hooks/useApplicationClassificationCatalog', () => ({ default: () => ({ data: { businessCriticalityLevels: [] } }) }));

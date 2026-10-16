@@ -222,6 +222,8 @@ export default function KnowledgePage() {
   const [createLibraryOpen, setCreateLibraryOpen] = useState(false);
   const [newLibraryName, setNewLibraryName] = useState('');
   const [editingLibrary, setEditingLibrary] = useState<DocumentLibrary | null>(null);
+  // The delete window of a library, and its refusal when it is the default one, name the library.
+  const deleteLibraryTitle = editingLibrary?.name ? t('common:delete.recordTitle', { name: editingLibrary.name }) : t('dialogs.deleteLibrary.title');
   const [librarySettingsName, setLibrarySettingsName] = useState('');
   const [librarySettingsOwnerId, setLibrarySettingsOwnerId] = useState<string | null>(null);
   const [librarySettingsAccessMode, setLibrarySettingsAccessMode] = useState<'default' | 'restricted'>('default');
@@ -1447,7 +1449,10 @@ export default function KnowledgePage() {
             onClick={() => {
               // The default library cannot be deleted: say so, with nothing to confirm.
               if (editingLibraryDetail?.is_default) {
-                void dialogs.alert({ title: t('dialogs.deleteLibrary.title'), message: t('errors:knowledge_default_library') });
+                void dialogs.alert({
+                  title: deleteLibraryTitle,
+                  message: t('errors:knowledge_default_library'),
+                });
                 return;
               }
               setDeleteLibraryConfirmOpen(true);
@@ -1651,7 +1656,7 @@ export default function KnowledgePage() {
 
       <KanapDialog
         open={deleteLibraryConfirmOpen}
-        title={editingLibrary?.name ? t('common:delete.recordTitle', { name: editingLibrary.name }) : t('dialogs.deleteLibrary.title')}
+        title={deleteLibraryTitle}
         onClose={() => setDeleteLibraryConfirmOpen(false)}
         onSave={() => {
           setDeleteLibraryConfirmOpen(false);
