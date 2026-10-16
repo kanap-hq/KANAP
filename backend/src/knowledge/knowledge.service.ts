@@ -11,7 +11,6 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createHash, randomUUID } from 'crypto';
-import * as fs from 'fs';
 import * as path from 'path';
 import { DataSource, EntityManager, In, Repository } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
@@ -30,7 +29,7 @@ import { DocumentExportService, ExportImageFetchOptions } from '../common/docume
 import { BulkDeleteResult } from '../common/delete.types';
 import { withSavepoint } from '../common/savepoint.util';
 import { ImportExecutionOptions, readUploadedFileBuffer } from '../common/import-connection';
-import { fixMulterFilename } from '../common/upload';
+import { fixMulterFilename, uploadedBytes } from '../common/upload';
 import { validateUploadedFile } from '../common/upload-validation';
 import { parsePagination } from '../common/pagination';
 import { normalizeAgFilterModel, assertSetFilterModes } from '../common/ag-grid-filtering';
@@ -6087,8 +6086,7 @@ export class KnowledgeService {
       `${id}_${rand}${ext}`,
     ].join('/');
 
-    const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : null);
-    if (!buf) throw new BadRequestException('Empty upload');
+    const buf = uploadedBytes(file);
 
     const validated = validateUploadedFile(
       {

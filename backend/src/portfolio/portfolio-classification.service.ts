@@ -621,10 +621,12 @@ export class PortfolioClassificationService {
       }
     }
 
-    Object.assign(taskType, {
-      ...data,
-      updated_at: new Date(),
-    });
+    // Only the editable fields: the code stays with the type through a rename.
+    if (data.name !== undefined) taskType.name = data.name;
+    if (data.description !== undefined) taskType.description = data.description;
+    if (data.is_active !== undefined) taskType.is_active = data.is_active;
+    if (data.display_order !== undefined) taskType.display_order = data.display_order;
+    taskType.updated_at = new Date();
 
     return repo.save(taskType);
   }
@@ -665,8 +667,12 @@ export class PortfolioClassificationService {
     const repo = manager ? manager.getRepository(PortfolioTaskType) : this.taskTypeRepo;
 
     for (const def of DEFAULT_TASK_TYPES) {
+      // A renamed default keeps its code: it is still there.
       const existing = await repo.findOne({
-        where: { tenant_id: tenantId, name: def.name },
+        where: [
+          { tenant_id: tenantId, name: def.name },
+          { tenant_id: tenantId, code: def.code },
+        ],
       });
       if (!existing) {
         const taskType = repo.create({

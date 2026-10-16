@@ -365,12 +365,12 @@ export default function InterfacePropertyPanel({
               disabled={disabled}
             />
             <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
-              {data?.contains_pii ? 'Yes' : 'No'}
+              {data?.contains_pii ? t('enums.yesNo.yes') : t('enums.yesNo.no')}
             </Typography>
           </Box>
         </PropertyRow>
         {data?.contains_pii && (
-          <PropertyRow label="PII description">
+          <PropertyRow label={t('workspace.interface.pii.description')}>
             <TextField
               value={piiDescriptionDraft}
               onChange={(event) => {

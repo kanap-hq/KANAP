@@ -4,7 +4,7 @@ import { Alert, Stack, TextField, Typography } from '@mui/material';
 import { Controller, useForm } from 'react-hook-form';
 import { useQueryClient } from '@tanstack/react-query';
 import api from '../../../api';
-import StatusLifecycleField from '../../../components/fields/StatusLifecycleField';
+import { isDuplicateError } from '../../../utils/apiErrorMessage';
 import {
   STATUS_ENABLED,
   STATUS_DISABLED,
@@ -60,6 +60,8 @@ export default forwardRef<BusinessProcessOverviewEditorHandle, Props>(function B
     },
   });
   const { control, watch, reset, formState, handleSubmit } = form;
+  // The status as loaded or last saved: an unchanged status is not sent.
+  const loadedStatusRef = React.useRef<StatusValue>(STATUS_ENABLED);
 
   useEffect(() => {
     onDirtyChange?.(formState.isDirty);
@@ -74,6 +76,7 @@ export default forwardRef<BusinessProcessOverviewEditorHandle, Props>(function B
         const res = await api.get(`/business-processes/${id}`);
         if (!active) return;
         const d = res.data;
+        loadedStatusRef.current = normalizeStatus(d?.status);
         reset(
           {
             name: d?.name ?? '',
@@ -113,19 +116,26 @@ export default forwardRef<BusinessProcessOverviewEditorHandle, Props>(function B
         name: values.name.trim(),
         description: values.description.trim() ? values.description.trim() : null,
         notes: values.notes.trim() ? values.notes.trim() : null,
-        status: normalizeStatus(values.status),
-        disabled_at: normalizeStatus(values.status) === STATUS_ENABLED ? null : new Date().toISOString(),
+        // The status goes only when it changed, alone: the server keeps the end of validity
+        // otherwise, and sets it from its own clock when disabling.
+        ...(normalizeStatus(values.status) !== loadedStatusRef.current ? { status: normalizeStatus(values.status) } : {}),
         category_ids: values.category_ids || [],
         owner_user_id: values.owner_user_id || null,
         it_owner_user_id: values.it_owner_user_id || null,
       };
       await api.patch(`/business-processes/${id}`, payload);
+      loadedStatusRef.current = normalizeStatus(values.status);
       onDirtyChange?.(false);
       queryClient.invalidateQueries({ queryKey: ['business-processes'] });
       queryClient.invalidateQueries({ queryKey: ['business-processes', id] });
     } catch (e: any) {
-      const msg = e?.response?.data?.message || e?.message || t('shared.messages.failedToSave', { entity: t('businessProcesses.entity') });
-      setServerError(msg);
+      if (isDuplicateError(e)) {
+        // A name another business process has: the reason shows under the name.
+        form.setError('name', { type: 'server', message: t('businessProcesses.fields.nameTaken') });
+      } else {
+        const msg = e?.response?.data?.message || e?.message || t('shared.messages.failedToSave', { entity: t('businessProcesses.entity') });
+        setServerError(msg);
+      }
       throw e;
     } finally {
       setSaving(false);

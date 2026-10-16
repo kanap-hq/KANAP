@@ -9,11 +9,7 @@ import { ContractAttachment } from './contract-attachment.entity';
 import { AuditService } from '../audit/audit.service';
 import { parseExportPagination, parsePagination, type Sort } from '../common/pagination';
 import { textSortKey } from '../common/list-sort';
-import { format } from '@fast-csv/format';
-import { parseString } from '@fast-csv/parse';
-import { CsvDecodeError, decodeCsv } from '../common/csv-sheet/decode';
 import * as path from 'path';
-import * as fs from 'fs';
 import { deriveStatusFromDisabledAt, resolveLifecycleState } from '../common/status';
 import { applyStatusFilter, extractStatusFilterFromAgModel } from '../common/status-filter';
 import { ContractUpsertDto } from './dto/contract.dto';
@@ -26,7 +22,7 @@ import { validate as isUuid } from 'uuid';
 import { ContractContactsService } from './contract-contacts.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { validateUploadedFile } from '../common/upload-validation';
-import { fixMulterFilename } from '../common/upload';
+import { fixMulterFilename, uploadedBytes } from '../common/upload';
 import {
   buildQuickSearchConditions,
   compileAgFilterCondition,
@@ -34,7 +30,6 @@ import {
   createParamNameGenerator,
   FilterTargetConfig,
 } from '../common/ag-grid-filtering';
-import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
 import { syncSupplierContactsWithinUpdate } from '../contacts/contact-link-attach.util';
 import { contractTermFields, contractTermsSql, sqlDateLiteral, turnsOffRenewalOfRenewedContract, type ContractTermFields } from './contract-terms';
 import { readDecisionWindowDays } from './contract-settings.service';
@@ -77,7 +72,22 @@ import {
   type ComplianceSummary,
   type ContractComplianceInputs,
 } from './contract-compliance';
-import { headerMismatchError, type CsvLanguage } from '../common/csv-sheet';
+import {
+  formatCsvBoolean,
+  parseCsvBoolean,
+  cellOf,
+  fieldAmounts,
+  formatCsvAmount,
+  formatCsvDate,
+  readMasterDataFile,
+  rowProblems,
+  writeCsv,
+  type CsvDateOrder,
+  type CsvLanguage,
+  type DecimalMark,
+  type ImportReportError,
+} from '../common/csv-sheet';
+import { Decimal } from '../common/decimal';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
 
 /**
@@ -963,8 +973,7 @@ export class ContractsService {
       now.getUTCFullYear().toString(), String(now.getUTCMonth() + 1).padStart(2, '0'),
       `${id}_${rand}${ext}`,
     ].join('/');
-    const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : null);
-    if (!buf) throw new BadRequestException('Empty upload');
+    const buf = uploadedBytes(file);
     const validated = validateUploadedFile({
       originalName: decodedName,
       mimeType: file.mimetype,
@@ -1010,13 +1019,20 @@ export class ContractsService {
       'name','company_name','supplier_name','start_date','duration_months','auto_renewal','notice_period_months','yearly_amount_at_signature','currency','billing_frequency','status','owner_email','notes'
     ];
   }
-  async exportCsv(scope: 'template' | 'data' = 'data', opts?: ListReadOptions & { listQuery?: Record<string, unknown> }) {
+  /**
+   * The contracts file in the screen's language (`common/csv-sheet`): its separator, the start
+   * date written the language's way and the amount with its decimal mark.
+   */
+  async exportCsv(
+    scope: 'template' | 'data' = 'data',
+    opts?: ListReadOptions & { language?: CsvLanguage; listQuery?: Record<string, unknown> },
+  ) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(Contract);
+    const language = opts?.language ?? 'en';
     const headers = this.csvHeaders();
-    const delimiter = ';';
-    const rows: any[] = [];
-    const toIsoDate = (value: unknown): string => {
+    const rows: string[][] = [];
+    const isoDate = (value: unknown): string => {
       if (value == null || value === '') return '';
       if (value instanceof Date) return value.toISOString().slice(0, 10);
       const str = value.toString().trim();
@@ -1047,76 +1063,72 @@ export class ContractsService {
         const cMap = new Map<string, any>(cRows.map((r: any) => [r.id, r]));
         const uMap = new Map<string, any>(uRows.map((r: any) => [r.id, r]));
         for (const it of items) {
-          rows.push({
-            name: it.name,
-            company_name: cMap.get(it.company_id)?.name ?? '',
-            supplier_name: sMap.get(it.supplier_id)?.name ?? '',
-            start_date: toIsoDate(it.start_date),
-            duration_months: it.duration_months,
-            auto_renewal: it.auto_renewal ? 'yes' : 'no',
-            notice_period_months: it.notice_period_months,
-            yearly_amount_at_signature: it.yearly_amount_at_signature ?? 0,
-            currency: it.currency,
-            billing_frequency: it.billing_frequency,
+          const start = isoDate(it.start_date);
+          rows.push([
+            it.name,
+            cMap.get(it.company_id)?.name ?? '',
+            sMap.get(it.supplier_id)?.name ?? '',
+            start ? formatCsvDate(start, language) : '',
+            String(it.duration_months ?? ''),
+            formatCsvBoolean(!!it.auto_renewal, language),
+            String(it.notice_period_months ?? ''),
+            formatCsvAmount(Decimal.from(String(it.yearly_amount_at_signature ?? 0)), language),
+            it.currency,
+            it.billing_frequency,
             // Read from the end of validity: the stored status is not updated when the date passes.
-            status: deriveStatusFromDisabledAt(it.disabled_at),
-            owner_email: it.owner_user_id ? (uMap.get(it.owner_user_id)?.email ?? '') : '',
-            notes: it.notes ?? '',
-          });
+            deriveStatusFromDisabledAt(it.disabled_at),
+            it.owner_user_id ? (uMap.get(it.owner_user_id)?.email ?? '') : '',
+            it.notes ?? '',
+          ]);
         }
       }
     }
     const filename = scope === 'template' ? 'contracts_template.csv' : 'contracts.csv';
-    const chunks: string[] = [];
-    await new Promise<void>((resolve, reject) => {
-      const stream = format({ headers, delimiter, transform: neutralizeCsvRow });
-      stream.on('data', (chunk) => chunks.push(chunk.toString('utf8')));
-      stream.on('end', () => resolve());
-      stream.on('error', (err) => reject(err));
-      if (scope === 'template') {
-        chunks.push(headers.join(delimiter) + '\n');
-        stream.end();
-      } else {
-        for (const row of rows) stream.write(row);
-        stream.end();
-      }
-    });
-    const BOM = '\uFEFF';
-    return { filename, content: BOM + chunks.join('') };
+    return { filename, content: writeCsv({ language, headers, rows }) };
   }
 
-  async importCsv({ file, dryRun, userId }: { file: Express.Multer.File; dryRun: boolean; userId?: string | null }, opts?: { manager?: EntityManager }) {
+  /**
+   * Reads the contracts file through the shared layer: either separator, UTF-8 or Windows-1252,
+   * the start date in the file's own form, the amount with its decimal mark, physical line
+   * numbers. Rows are matched by name and supplier.
+   */
+  async importCsv(
+    {
+      file,
+      dryRun,
+      userId,
+      language,
+      dateOrder,
+      decimalMark,
+    }: {
+      file: Express.Multer.File;
+      dryRun: boolean;
+      userId?: string | null;
+      language?: CsvLanguage;
+      dateOrder?: CsvDateOrder;
+      decimalMark?: DecimalMark;
+    },
+    opts?: { manager?: EntityManager },
+  ) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(Contract);
-    if (!file) throw new BadRequestException('No file uploaded');
-    const buf = file.buffer || null;
-    if (!buf) throw new BadRequestException('Empty upload');
-    let text: string;
-    try {
-      text = decodeCsv(buf).text;
-    } catch (err) {
-      if (err instanceof CsvDecodeError) throw new BadRequestException({ message: err.message, code: err.code });
-      throw err;
-    }
-    const expectedHeaders = this.csvHeaders();
-    const errors: { row: number; message: string }[] = [];
-    let headerOk = false;
-    const rows = await new Promise<any[]>((resolve, reject) => {
-      const out: any[] = [];
-      parseString(text, { headers: true, delimiter: ';', ignoreEmpty: true })
-        .on('headers', (headers: string[]) => {
-          const missing = expectedHeaders.filter((h) => !headers.includes(h));
-          const extras = headers.filter((h) => !expectedHeaders.includes(h));
-          headerOk = missing.length === 0 && extras.length === 0;
-          const headerError = headerMismatchError(missing, extras);
-          if (headerError) errors.push(headerError);
-        })
-        .on('error', (e) => reject(e))
-        .on('data', (r) => out.push(denormalizeCsvRow(r)))
-        .on('end', () => resolve(out));
+    const buf = uploadedBytes(file);
+    const readLanguage = language ?? 'en';
+    const read = await readMasterDataFile({
+      file: buf as Buffer,
+      fields: this.csvHeaders(),
+      dateFields: ['start_date'],
+      language: readLanguage,
+      dateOrder,
+      decimalMark,
     });
-    if (!headerOk) return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, unchanged: 0, errors };
-    if (rows.length === 0) return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, unchanged: 0, errors: [{ row: 0, message: 'Empty CSV' }] };
+    const amounts = fieldAmounts(read.rows, 'yearly_amount_at_signature', readLanguage, decimalMark);
+    const report = { ignoredColumns: read.ignoredColumns, notices: { ...read.notices, amounts: read.notices.amounts ?? amounts.notice } };
+    const errors: ImportReportError[] = [];
+    if (read.headerError) return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, unchanged: 0, errors: [read.headerError], ...report };
+    if (amounts.error) return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, unchanged: 0, errors: [{ row: 0, message: amounts.error }], ...report };
+    const rows = read.rows;
+    if (rows.length === 0) return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, unchanged: 0, errors: [{ row: 0, message: 'Empty CSV' }], ...report };
 
     // Preload reference maps by name/email for resolution
     const allCompanies = await mg.query(`SELECT id, name FROM companies WHERE tenant_id = app_current_tenant()`);
@@ -1126,26 +1138,43 @@ export class ContractsService {
     const sByName = new Map<string, any>(allSuppliers.map((r: any) => [r.name, r]));
     const uByEmail = new Map<string, any>(allUsers.map((r: any) => [r.email.toLowerCase(), r]));
 
-    const norm: Array<ContractUpsertDto & { supplier_name: string; company_name: string; owner_email?: string | null }> = [];
-    let line = 1;
+    const norm: Array<ContractUpsertDto & { line: number; supplier_name: string; company_name: string; owner_email?: string | null }> = [];
     for (const r of rows) {
-      line += 1;
-      const name = (r['name'] ?? '').toString().trim();
-      const company_name = (r['company_name'] ?? '').toString().trim();
-      const supplier_name = (r['supplier_name'] ?? '').toString().trim();
-      const start_date = (r['start_date'] ?? '').toString().trim();
-      const duration_months = parseInt((r['duration_months'] ?? '12').toString(), 10) || 12;
-      const auto_raw = (r['auto_renewal'] ?? '').toString().trim().toLowerCase();
-      const auto_renewal = ['yes','true','1','y','t'].includes(auto_raw);
-      const notice_period_months = parseInt((r['notice_period_months'] ?? '1').toString(), 10) || 1;
-      const yearly_amount_at_signature = Number((r['yearly_amount_at_signature'] ?? '0').toString().replace(/\s/g, '').replace(',', '.')) || 0;
-      const currency = ((r['currency'] ?? 'EUR').toString().trim() || 'EUR').toUpperCase();
-      const billing_frequency = (r['billing_frequency'] ?? 'annual').toString().trim();
+      const line = r.line;
+      const problems = rowProblems(r);
+      if (problems.length > 0) {
+        errors.push(...problems.map((message) => ({ row: line, message })));
+        continue;
+      }
+      const name = cellOf(r, 'name');
+      const company_name = cellOf(r, 'company_name');
+      const supplier_name = cellOf(r, 'supplier_name');
+      // A day in the file's own form (31/12/2027, 2027-12-31); a timestamp gives its UTC day.
+      const parsedStart = r.dates['start_date'];
+      const start_date = parsedStart?.kind === 'date' ? parsedStart.isoDate : parsedStart?.kind === 'instant' ? parsedStart.iso.slice(0, 10) : '';
+      const duration_months = parseInt(cellOf(r, 'duration_months') || '12', 10) || 12;
+      // Yes or no in any language, or the true/false and 1/0 of older files; blank is no, as before.
+      const autoCell = parseCsvBoolean(cellOf(r, 'auto_renewal'));
+      if (autoCell === undefined) {
+        errors.push({ row: line, message: `auto_renewal: Invalid value '${cellOf(r, 'auto_renewal')}'. Use yes or no.` });
+        continue;
+      }
+      const auto_renewal = autoCell ?? false;
+      const notice_period_months = parseInt(cellOf(r, 'notice_period_months') || '1', 10) || 1;
+      // Blank is 0, as before; the decimal mark is the file's (`fieldAmounts`).
+      const amount = amounts.amountOf(r);
+      if (amount.kind === 'invalid' || amount.kind === 'clear') {
+        errors.push({ row: line, message: `yearly_amount_at_signature: Invalid amount '${cellOf(r, 'yearly_amount_at_signature')}'.` });
+        continue;
+      }
+      const yearly_amount_at_signature = amount.kind === 'value' ? Number(amount.decimal.toString()) : 0;
+      const currency = (cellOf(r, 'currency') || 'EUR').toUpperCase();
+      const billing_frequency = cellOf(r, 'billing_frequency') || 'annual';
       // Blank: enabled for a new contract, the current status on an update.
-      const statusRaw = (r['status'] ?? '').toString().trim().toLowerCase();
+      const statusRaw = cellOf(r, 'status').toLowerCase();
       const status = statusRaw === 'disabled' ? 'disabled' : statusRaw ? 'enabled' : null;
-      const owner_email = ((r['owner_email'] ?? '').toString().trim()) || null;
-      const notes = ((r['notes'] ?? '').toString().trim()) || null;
+      const owner_email = cellOf(r, 'owner_email') || null;
+      const notes = cellOf(r, 'notes') || null;
       if (!name) errors.push({ row: line, message: 'name is required' });
       if (!company_name) errors.push({ row: line, message: 'company_name is required' });
       else if (!cByName.has(company_name)) errors.push({ row: line, message: `company '${company_name}' not found` });
@@ -1155,9 +1184,9 @@ export class ContractsService {
       if (!start_date) errors.push({ row: line, message: 'start_date is required' });
       if (currency && currency.length !== 3) errors.push({ row: line, message: 'currency must be 3 letters' });
       if (!['monthly','quarterly','annual','other'].includes(billing_frequency)) errors.push({ row: line, message: 'billing_frequency invalid' });
-      norm.push({ name, company_name, supplier_name, start_date, duration_months, auto_renewal, notice_period_months, yearly_amount_at_signature, currency, billing_frequency, status, owner_email, notes } as any);
+      norm.push({ line, name, company_name, supplier_name, start_date, duration_months, auto_renewal, notice_period_months, yearly_amount_at_signature, currency, billing_frequency, status, owner_email, notes } as any);
     }
-    if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors };
+    if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report };
 
     // Deduplicate by composite key name+supplier_name (first wins)
     const uniqMap = new Map<string, typeof norm[number]>();
@@ -1196,11 +1225,11 @@ export class ContractsService {
       toWrite.push(item);
       // The update would be refused (`update`): said for the row, dry run included.
       if (exists && turnsOffRenewalOfRenewedContract(exists, { ...exists, start_date: item.start_date as any, duration_months: item.duration_months, auto_renewal: item.auto_renewal }, today)) {
-        errors.push({ row: norm.indexOf(item) + 2, message: `auto_renewal: ${RENEWED_CONTRACT_RENEWAL_OFF}` });
+        errors.push({ row: item.line, message: `auto_renewal: ${RENEWED_CONTRACT_RENEWAL_OFF}` });
       }
     }
-    if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors };
-    if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, errors: [] };
+    if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report };
+    if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, errors: [], ...report };
 
     // Commit
     let processed = 0;
@@ -1233,7 +1262,7 @@ export class ContractsService {
       if (exists) { await this.update(exists.id, payload, userId ?? undefined, { manager: mg }); processed += 1; }
       else { await this.create(payload, userId ?? undefined, { manager: mg }); processed += 1; }
     }
-    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, processed, errors: [] };
+    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, processed, errors: [], ...report };
   }
 
   // Symmetric linking from OPEX side

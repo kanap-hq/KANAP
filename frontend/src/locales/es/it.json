@@ -1273,6 +1273,12 @@
         "applicationsRequired": "Seleccione las aplicaciones de origen y destino.",
         "dataCategoryRequired": "Seleccione una categoría de datos.",
         "noIdentifier": "La interfaz se creó, pero no se devolvió ningún identificador."
+      },
+      "pii": {
+        "label": "PII",
+        "none": "Sin PII",
+        "contains": "Contiene PII",
+        "description": "Descripción de PII"
       }
     },
     "location": {
@@ -1471,6 +1477,12 @@
     "riskMode": {
       "manual": "Manual",
       "derived": "Derivado"
+    },
+    "legType": {
+      "extract": "Extracción",
+      "transform": "Transformación",
+      "load": "Carga",
+      "direct": "Directo"
     }
   },
   "confirmations": {
@@ -1533,6 +1545,8 @@
     "providerRequired": "El proveedor es obligatorio.",
     "codeRequired": "El código es obligatorio.",
     "nameRequired": "El nombre es obligatorio.",
+    "locationNameTaken": "Otra ubicación ya tiene este nombre.",
+    "subLocationNameTaken": "Otra sub-ubicación de esta ubicación ya tiene este nombre.",
     "hostingTypeRequired": "El tipo de alojamiento es obligatorio.",
     "saveLayersFirst": "Guarde primero la conexión, luego agregue capas.",
     "roleRequired": "El rol es obligatorio.",
@@ -1688,5 +1702,178 @@
     "classification": "Clasificación",
     "data_at_the_highest_confidentiality_level_with_the_lowest_cyber_criticality_check_the_cyber_assessment": "Datos en el nivel de confidencialidad más alto con la criticidad cibernética más baja: compruebe la evaluación cibernética.",
     "no_recovery_test_in_the_last_twelve_months_for_an_application_at_the_most_critical_level": "Ninguna prueba de recuperación en los últimos doce meses para una aplicación en el nivel más crítico."
+  },
+  "catalogDefaults": {
+    "applicationCategories": {
+      "line_of_business": "Negocio",
+      "productivity": "Productividad",
+      "security": "Seguridad",
+      "analytics": "Analítica",
+      "development": "Desarrollo",
+      "integration": "Integración",
+      "infrastructure": "Infraestructura"
+    },
+    "networkSegments": {
+      "industrial_lan": "LAN industrial",
+      "wifi": "Wi-Fi",
+      "public_cloud": "Cloud público",
+      "guest": "Invitados",
+      "management": "Administración",
+      "storage": "Almacenamiento"
+    },
+    "entities": {
+      "internal_users": "Usuarios internos",
+      "external_users": "Usuarios externos",
+      "internet": "Internet",
+      "customers": "Clientes",
+      "partner_networks": "Redes de socios"
+    },
+    "serverKinds": {
+      "physical_server": "Servidor físico",
+      "virtual_machine": "Máquina virtual",
+      "container": "Contenedor",
+      "serverless": "Serverless",
+      "appliance": "Appliance",
+      "saas": "SaaS",
+      "other": "Otro",
+      "switch": "Switch",
+      "firewall": "Cortafuegos",
+      "load_balancer": "Balanceador de carga",
+      "access_point": "Punto de acceso",
+      "san": "SAN",
+      "nas": "NAS",
+      "backup_appliance": "Appliance de copia de seguridad",
+      "tape_library": "Librería de cintas",
+      "industrial_robot": "Robot industrial",
+      "industrial_machine": "Máquina industrial",
+      "rack": "Rack"
+    },
+    "serverProviders": {
+      "other": "Otro"
+    },
+    "serverRoles": {
+      "app": "Servidor de aplicaciones",
+      "backup": "Servidor de copias de seguridad",
+      "cloud-service": "Servicio en la nube",
+      "db": "Servidor de base de datos",
+      "domain-controller": "Controlador de dominio",
+      "file": "Servidor de archivos",
+      "mail": "Correo / mensajería",
+      "monitoring": "Servidor de monitorización",
+      "other": "Otro",
+      "print": "Servidor de impresión",
+      "proxy": "Proxy / pasarela",
+      "remote-desktop": "Escritorio remoto",
+      "virtualization": "Host de virtualización",
+      "web": "Servidor web"
+    },
+    "hostingTypes": {
+      "on_prem": "Local",
+      "colocation": "Colocation",
+      "public_cloud": "Cloud público",
+      "private_cloud": "Cloud privado"
+    },
+    "interfaceProtocols": {
+      "smb": "SMB / recurso compartido de Windows",
+      "other": "Otro"
+    },
+    "interfaceDataCategories": {
+      "master_data": "Datos maestros",
+      "transactional": "Transaccionales",
+      "reporting": "Informes",
+      "control": "Control"
+    },
+    "interfaceTriggerTypes": {
+      "event_based": "Basado en eventos",
+      "scheduled": "Programado",
+      "on_demand": "Bajo demanda",
+      "real_time": "Tiempo real"
+    },
+    "interfacePatterns": {
+      "rest_api_sync": "API REST (síncrona)",
+      "rest_api_async": "API REST (asíncrona / callback)",
+      "soap_webservice": "Servicio web SOAP",
+      "file_transfer_batch": "Transferencia de archivos (lote)",
+      "message_queue": "Cola de mensajes (punto a punto)",
+      "pub_sub_topic": "Pub/Sub (tema)",
+      "etl_batch": "Proceso ETL por lotes",
+      "db_link_view": "DB link / lectura directa de BD",
+      "scheduled_job": "Script / tarea programados",
+      "manual_import_export": "Importación / exportación manual",
+      "other": "Otro"
+    },
+    "interfaceFormats": {
+      "delimited": "Texto delimitado",
+      "fixed_width": "Texto de ancho fijo",
+      "txt_plain": "Texto plano",
+      "binary_custom": "Binario (personalizado)",
+      "other": "Otro"
+    },
+    "interfaceAuthModes": {
+      "service_account": "Cuenta de servicio",
+      "api_key": "Clave de API",
+      "certificate": "Certificado",
+      "none": "Ninguna"
+    },
+    "connectionTypes": {
+      "zabbix": "Agente Zabbix",
+      "ad-repl": "Replicación AD",
+      "tcp": "TCP (personalizado)",
+      "udp": "UDP (personalizado)",
+      "other": "Otro",
+      "unknown": "Desconocido"
+    },
+    "ipAddressTypes": {
+      "host": "Host",
+      "management": "Administración"
+    },
+    "accessMethods": {
+      "local": "Aplicación instalada localmente",
+      "mobile": "Aplicación móvil",
+      "hmi": "HMI propietaria (interfaz industrial)",
+      "terminal": "Terminal / CLI",
+      "vdi": "VDI / escritorio remoto",
+      "kiosk": "Quiosco"
+    },
+    "pathHopFunctions": {
+      "vip": "IP virtual",
+      "firewall": "Cortafuegos",
+      "reverse_proxy": "Proxy inverso",
+      "load_balancer": "Balanceador de carga",
+      "api_gateway": "Pasarela de API",
+      "vpn_endpoint": "Punto de conexión VPN",
+      "bastion": "Bastión / host de salto",
+      "cdn_edge": "Nodo perimetral CDN",
+      "service_mesh": "Proxy de service mesh"
+    },
+    "incidentCategories": {
+      "infrastructure": "Infraestructura",
+      "security": "Seguridad",
+      "application": "Aplicación",
+      "data": "Datos",
+      "supplier": "Proveedor",
+      "other": "Otro"
+    },
+    "domains": {
+      "workgroup": "Grupo de trabajo",
+      "n-a": "N/D"
+    },
+    "connectionTypeCategories": {
+      "application": "Aplicación",
+      "database": "Base de datos",
+      "authentication": "Autenticación",
+      "remote_access": "Acceso remoto",
+      "file_transfer": "Transferencia de archivos",
+      "file_sharing": "Uso compartido de archivos",
+      "storage": "Almacenamiento",
+      "messaging": "Mensajería",
+      "email": "Correo electrónico",
+      "monitoring": "Monitorización",
+      "network_services": "Servicios de red",
+      "replication": "Replicación",
+      "vpn_tunnel": "VPN / túnel",
+      "backup": "Copia de seguridad",
+      "generic": "Genérico"
+    }
   }
 }

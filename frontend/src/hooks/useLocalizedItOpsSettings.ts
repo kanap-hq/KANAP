@@ -5,8 +5,9 @@ import type { ItOpsSettings } from '../services/itOpsSettings';
 import i18n from '../i18n';
 import { localizeCatalogList, toCatalogLocale, type CatalogDefaults } from '../utils/catalogLocalization';
 import { classificationDefaults } from '../utils/applicationClassification';
+import { itOpsCatalogDefaults } from '../utils/itOpsCatalogDefaults';
 
-const CATALOG_LISTS = [
+export const CATALOG_LISTS = [
   'applicationCategories', 'networkSegments', 'entities', 'serverKinds', 'serverProviders', 'serverRoles', 'hostingTypes', 'lifecycleStates',
   'interfaceProtocols', 'interfaceDataCategories', 'interfaceTriggerTypes', 'interfacePatterns', 'interfaceFormats', 'interfaceAuthModes',
   'operatingSystems', 'connectionTypes', 'domains', 'ipAddressTypes', 'accessMethods', 'pathHopFunctions', 'incidentCategories',
@@ -29,8 +30,9 @@ const LIFECYCLE_DEFAULTS: CatalogDefaults = {
   },
 };
 
-function catalogDefaults(key: (typeof CATALOG_LISTS)[number]): CatalogDefaults | undefined {
-  return key === 'lifecycleStates' ? LIFECYCLE_DEFAULTS : classificationDefaults(key);
+/** The shipped defaults of a catalog list (shared with the backend import table, see catalogShippedLabels.sync.test.ts). */
+export function catalogDefaults(key: (typeof CATALOG_LISTS)[number]): CatalogDefaults | undefined {
+  return key === 'lifecycleStates' ? LIFECYCLE_DEFAULTS : classificationDefaults(key) ?? itOpsCatalogDefaults(key);
 }
 
 /**

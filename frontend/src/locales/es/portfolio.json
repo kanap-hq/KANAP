@@ -2366,7 +2366,8 @@
       },
       "taskTypeDialog": {
         "editTitle": "Editar tipo de tarea",
-        "createTitle": "Crear tipo de tarea"
+        "createTitle": "Crear tipo de tarea",
+        "shippedNameHint": "Se muestra en el idioma de cada usuario mientras conserve este nombre."
       },
       "confirmations": {
         "deleteSource": "¿Eliminar este origen?",
