@@ -141,6 +141,7 @@
   "REQUEST_CONVERTED": "Esta solicitud se convirtió en un proyecto y sigue siendo su origen. No se puede eliminar.",
   "TASK_REQUEST_ORIGIN": "La solicitud {{reference}} se creó a partir de esta tarea. Cierre la tarea en lugar de eliminarla.",
   "KNOWLEDGE_DOCUMENT_MANAGED": "Este documento forma parte de la página de un registro y se elimina con él. No se puede eliminar desde Conocimiento.",
+  "KNOWLEDGE_DOCUMENT_MANAGED_RELATIONS": "Este documento forma parte de la página de un registro. No se puede vincular a otro registro ni desvincular del suyo.",
   "KNOWLEDGE_LIBRARY_SYSTEM": "Esta biblioteca viene con KANAP y no se puede eliminar.",
   "KNOWLEDGE_LIBRARY_LAST": "Es la última biblioteca que puede usar. Cree otra biblioteca antes de eliminarla.",
   "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS_one": "Esta carpeta todavía contiene {{usages}}. Muévala o elimínela primero.",

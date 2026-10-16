@@ -141,6 +141,7 @@
   "REQUEST_CONVERTED": "Cette demande est devenue un projet et reste son origine. Elle ne peut pas être supprimée.",
   "TASK_REQUEST_ORIGIN": "La demande {{reference}} a été créée à partir de cette tâche. Clôturez la tâche plutôt que de la supprimer.",
   "KNOWLEDGE_DOCUMENT_MANAGED": "Ce document fait partie de la page d’un objet et est supprimé avec lui. Il ne peut pas être supprimé depuis Connaissances.",
+  "KNOWLEDGE_DOCUMENT_MANAGED_RELATIONS": "Ce document fait partie de la page d’un objet. Il ne peut pas être lié à un autre objet ni retiré du sien.",
   "KNOWLEDGE_LIBRARY_SYSTEM": "Cette bibliothèque est fournie avec KANAP et ne peut pas être supprimée.",
   "KNOWLEDGE_LIBRARY_LAST": "C’est la dernière bibliothèque que vous pouvez utiliser. Créez une autre bibliothèque avant de la supprimer.",
   "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS_one": "Ce dossier contient encore {{usages}}. Déplacez-le ou supprimez-le d’abord.",

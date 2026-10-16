@@ -498,6 +498,64 @@ async function testLinkOptionsSearchesBeyondInitialPage() {
   }
 }
 
+// A managed document belongs to its record: no relation of it can be changed from Knowledge
+// (`KNOWLEDGE_DOCUMENT_MANAGED_RELATIONS`), so the picker that links documents to a record does not
+// offer it (QA lot 14: an incident offered DOC-55, an application's overview, and its own review).
+async function testLinkOptionsLeaveOutManagedDocuments() {
+  const runner = dataSource.createQueryRunner();
+  await runner.connect();
+  await runner.startTransaction();
+
+  try {
+    const tenantId = randomUUID();
+    const libraryId = randomUUID();
+    const standaloneId = randomUUID();
+    const managedId = randomUUID();
+    const service = createKnowledgeService(runner.manager);
+
+    await setCurrentTenant(runner, tenantId);
+    await runner.query(
+      `INSERT INTO tenants (id, slug, name, status, metadata, branding, created_at, updated_at)
+       VALUES ($1, $2, $3, 'active', '{}'::jsonb, '{"logo_version":0,"use_logo_in_dark":true}'::jsonb, now(), now())`,
+      [tenantId, `link-managed-spec-${tenantId.slice(0, 8)}`, 'Link Managed Spec Tenant'],
+    );
+    await runner.query(
+      `INSERT INTO document_libraries (
+         id, tenant_id, name, slug, is_system, display_order, created_at, updated_at
+       )
+       VALUES ($1, $2, 'Knowledge Link Managed Spec', 'knowledge-link-managed-spec', false, 0, now(), now())`,
+      [libraryId, tenantId],
+    );
+    for (const [id, itemNumber, title] of [
+      [standaloneId, 301, 'Managed Spec Standalone Guide'],
+      [managedId, 302, 'Managed Spec Application Overview'],
+    ] as const) {
+      await runner.query(
+        `INSERT INTO documents (
+           id, tenant_id, item_number, title, summary, content_markdown, content_plain,
+           library_id, document_type_id, status, revision, current_version_number, created_at, updated_at
+         )
+         VALUES ($1, $2, $3, $4, '', '', '', $5, null, 'published', 1, 0, now(), now())`,
+        [id, tenantId, itemNumber, title, libraryId],
+      );
+    }
+    await runner.query(
+      `INSERT INTO integrated_document_bindings (
+         tenant_id, source_entity_type, source_entity_id, slot_key, document_id, hidden_from_entity_knowledge
+       )
+       VALUES ($1, 'applications', $2, 'overview', $3, false)`,
+      [tenantId, randomUUID(), managedId],
+    );
+
+    const options = await service.listLinkOptions({ q: 'Managed Spec', page: 1, limit: 50 }, { manager: runner.manager });
+    assert.deepEqual(options.items.map((item: any) => item.id), [standaloneId]);
+    assert.equal(options.total, 1);
+  } finally {
+    await runner.rollbackTransaction();
+    await runner.release();
+  }
+}
+
 async function run() {
   await dataSource.initialize();
   try {
@@ -514,6 +572,7 @@ async function run() {
     testAnyTermQueryNormalizationDropsWeakWords();
     await testKnowledgeSearchAnyTermModeFindsStrongPartialMatch();
     await testLinkOptionsSearchesBeyondInitialPage();
+    await testLinkOptionsLeaveOutManagedDocuments();
   } finally {
     await dataSource.destroy();
   }

@@ -141,6 +141,7 @@
   "REQUEST_CONVERTED": "This request became a project and stays as its origin. It cannot be deleted.",
   "TASK_REQUEST_ORIGIN": "Request {{reference}} was created from this task. Close the task instead of deleting it.",
   "KNOWLEDGE_DOCUMENT_MANAGED": "This document belongs to a record's page and is deleted with that record. It cannot be deleted from Knowledge.",
+  "KNOWLEDGE_DOCUMENT_MANAGED_RELATIONS": "This document belongs to a record's page. It cannot be linked to another record or unlinked from its own.",
   "KNOWLEDGE_LIBRARY_SYSTEM": "This library comes with KANAP and cannot be deleted.",
   "KNOWLEDGE_LIBRARY_LAST": "This is the last library you can use. Create another library before deleting it.",
   "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS_one": "This folder still has {{usages}}. Move or delete it first.",

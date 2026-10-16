@@ -141,6 +141,7 @@
   "REQUEST_CONVERTED": "Diese Anfrage wurde zu einem Projekt und bleibt dessen Ursprung. Sie kann nicht gelöscht werden.",
   "TASK_REQUEST_ORIGIN": "Die Anfrage {{reference}} wurde aus dieser Aufgabe erstellt. Schließen Sie die Aufgabe, statt sie zu löschen.",
   "KNOWLEDGE_DOCUMENT_MANAGED": "Dieses Dokument gehört zur Seite eines Datensatzes und wird mit ihm gelöscht. Es kann nicht in Wissen gelöscht werden.",
+  "KNOWLEDGE_DOCUMENT_MANAGED_RELATIONS": "Dieses Dokument gehört zur Seite eines Datensatzes. Es kann weder mit einem anderen Datensatz verknüpft noch von seinem eigenen gelöst werden.",
   "KNOWLEDGE_LIBRARY_SYSTEM": "Diese Bibliothek ist in KANAP enthalten und kann nicht gelöscht werden.",
   "KNOWLEDGE_LIBRARY_LAST": "Dies ist die letzte Bibliothek, die Sie nutzen können. Erstellen Sie eine weitere Bibliothek, bevor Sie sie löschen.",
   "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS_one": "Dieser Ordner enthält noch {{usages}}. Verschieben oder löschen Sie ihn zuerst.",
