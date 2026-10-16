@@ -35,9 +35,13 @@ import { ApplicationsDeleteService } from '../applications-delete.service';
 // An application's managed documents (its overview and other integrated slots) are bound to it by
 // `integrated_document_bindings (source_entity_type, source_entity_id)`, a polymorphic reference no
 // foreign key can cover (common/reference-keys.inventory.ts). Deleting the application deletes
-// them, as deleting an interface or a request does; another application's documents stay.
+// them, as deleting an interface or a request does, audited under the user who deleted it; the
+// application delete right covers them, so a user with no Knowledge right deletes them too.
+// Another application's documents stay.
 
-function createServices(manager: any) {
+type AuditEntry = { table: string; recordId: string; action: string; userId: string | null };
+
+function createServices(manager: any, audited: AuditEntry[]) {
   const permissions = new PermissionsService(manager.getRepository(UserPageRole), manager.getRepository(RolePermission));
   const users: any = {
     findById: async (id: string, opts?: any) =>
@@ -67,7 +71,7 @@ function createServices(manager: any) {
     manager.getRepository(DocumentRequest),
     manager.getRepository(DocumentTask),
     new ItemNumberService() as any,
-    { log: async () => undefined } as any,
+    { log: async (entry: AuditEntry) => { audited.push(entry); } } as any,
     {} as any,
     {} as any,
     storage,
@@ -85,7 +89,7 @@ function createServices(manager: any) {
   return { integrated, storage };
 }
 
-async function inFixture(fn: (runner: QueryRunner, tenantId: string, userId: string) => Promise<void>) {
+async function inFixture(fn: (runner: QueryRunner, tenantId: string, writerId: string, deleterId: string) => Promise<void>) {
   const runner = dataSource.createQueryRunner();
   await runner.connect();
   await runner.startTransaction();
@@ -99,26 +103,33 @@ async function inFixture(fn: (runner: QueryRunner, tenantId: string, userId: str
     ]);
     await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
     await seedManagedDocsKnowledgeAssets(runner.manager as any, tenantId);
-    const roleId = randomUUID();
-    await runner.query(
-      `INSERT INTO roles (id, tenant_id, role_name, role_description, is_system, is_built_in, created_at, updated_at)
-       VALUES ($1, $2, 'Docs role', 'Docs role', false, false, now(), now())`,
-      [roleId, tenantId],
-    );
-    for (const resource of ['applications', 'knowledge']) {
+    /** A user whose role holds `resources` at the admin level. */
+    const seedUser = async (name: string, resources: string[]) => {
+      const roleId = randomUUID();
       await runner.query(
-        `INSERT INTO role_permissions (id, tenant_id, role_id, resource, level, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, 'admin', now(), now())`,
-        [randomUUID(), tenantId, roleId, resource],
+        `INSERT INTO roles (id, tenant_id, role_name, role_description, is_system, is_built_in, created_at, updated_at)
+         VALUES ($1, $2, $3, $3, false, false, now(), now())`,
+        [roleId, tenantId, `${name} role`],
       );
-    }
-    const userId = randomUUID();
-    await runner.query(
-      `INSERT INTO users (id, tenant_id, first_name, last_name, email, password_hash, role_id, mfa_enabled, status, created_at, updated_at)
-       VALUES ($1, $2, 'Docs', 'Tester', $3, null, $4, false, 'enabled', now(), now())`,
-      [userId, tenantId, `docs-${tag}@example.com`, roleId],
-    );
-    await fn(runner, tenantId, userId);
+      for (const resource of resources) {
+        await runner.query(
+          `INSERT INTO role_permissions (id, tenant_id, role_id, resource, level, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, 'admin', now(), now())`,
+          [randomUUID(), tenantId, roleId, resource],
+        );
+      }
+      const userId = randomUUID();
+      await runner.query(
+        `INSERT INTO users (id, tenant_id, first_name, last_name, email, password_hash, role_id, mfa_enabled, status, created_at, updated_at)
+         VALUES ($1, $2, $3, 'Tester', $4, null, $5, false, 'enabled', now(), now())`,
+        [userId, tenantId, name, `${name.toLowerCase()}-${tag}@example.com`, roleId],
+      );
+      return userId;
+    };
+    // The documents are opened by a Knowledge user; the application is deleted by a user with no Knowledge right.
+    const writerId = await seedUser('Writer', ['applications', 'knowledge']);
+    const deleterId = await seedUser('Deleter', ['applications']);
+    await fn(runner, tenantId, writerId, deleterId);
   } finally {
     await runner.rollbackTransaction();
     await runner.release();
@@ -133,14 +144,15 @@ async function bindings(runner: QueryRunner, applicationId: string): Promise<Arr
 }
 
 async function testDeletedApplicationTakesItsManagedDocuments() {
-  await inFixture(async (runner, tenantId, userId) => {
-    const { integrated, storage } = createServices(runner.manager);
+  await inFixture(async (runner, tenantId, writerId, deleterId) => {
+    const audited: AuditEntry[] = [];
+    const { integrated, storage } = createServices(runner.manager, audited);
     const seedApp = async (name: string) => {
       const [{ id }] = await runner.query(
         `INSERT INTO applications (tenant_id, name, description) VALUES ($1, $2, 'What it does.') RETURNING id::text AS id`,
         [tenantId, name],
       );
-      await integrated.getBySource('applications', id, 'overview', userId, { manager: runner.manager });
+      await integrated.getBySource('applications', id, 'overview', writerId, { manager: runner.manager });
       return id as string;
     };
     const goneId = await seedApp('Gone application');
@@ -155,11 +167,17 @@ async function testDeletedApplicationTakesItsManagedDocuments() {
       storage,
       integrated,
     );
-    await service.delete(goneId, { manager: runner.manager, userId });
+    await service.delete(goneId, { manager: runner.manager, userId: deleterId });
 
     assert.deepEqual(await bindings(runner, goneId), [], 'no binding names the deleted application');
     const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM documents WHERE id = $1`, [goneBinding.document_id]);
     assert.equal(n, 0, 'its managed document is deleted');
+    const deletions = audited.filter((entry) => entry.table === 'documents' && entry.action === 'delete');
+    assert.deepEqual(
+      deletions.map((entry) => [entry.recordId, entry.userId]),
+      [[goneBinding.document_id, deleterId]],
+      'the document delete is audited under the user who deleted the application',
+    );
     assert.equal((await bindings(runner, keptId)).length, 1, 'the other application keeps its document');
   });
 }

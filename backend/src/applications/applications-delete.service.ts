@@ -52,9 +52,12 @@ export class ApplicationsDeleteService extends BaseDeleteService<Application> {
     const attachments = await manager.getRepository(ApplicationAttachment).find({ where: { application_id: applicationId } as any });
 
     // Its managed documents (overview and the other integrated slots) name it without a foreign
-    // key: they go here, as an interface's or a request's do. The application delete right covers
-    // them, so the Knowledge library rights are not checked again (no user passed).
-    await this.integratedDocuments.deleteForEntity('applications', applicationId, null, { manager });
+    // key: they go here, as an interface's or a request's do, audited under the actor. The
+    // application delete right covers them: the Knowledge library rights are not checked again.
+    await this.integratedDocuments.deleteForEntity('applications', applicationId, opts?.userId ?? null, {
+      manager,
+      checkAccess: false,
+    });
 
     // Delete the base application row (child rows cascade via FKs)
     await appRepo.delete({ id: applicationId } as any);

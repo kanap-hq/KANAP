@@ -4322,10 +4322,16 @@ export class KnowledgeService {
     return mappings;
   }
 
+  /**
+   * Deletes a managed document, its attachment files and its row, audited under `userId`. The
+   * Knowledge library rights of `userId` are checked unless `checkAccess` is false: a caller whose
+   * own delete right already covers the document (the delete of its source record) records the
+   * actor without a second check that could refuse it.
+   */
   async deleteManagedDocument(
     idOrRef: string,
     userId: string | null,
-    opts?: { manager?: EntityManager },
+    opts?: { manager?: EntityManager; checkAccess?: boolean },
   ): Promise<void> {
     const manager = this.getManager(opts);
     const id = await this.resolveDocumentId(idOrRef, manager);
@@ -4336,7 +4342,7 @@ export class KnowledgeService {
       return;
     }
     const normalizedUserId = String(userId || '').trim() || null;
-    if (normalizedUserId) {
+    if (normalizedUserId && opts?.checkAccess !== false) {
       await this.assertDocumentWritable(existing.id, manager, normalizedUserId);
     }
 
