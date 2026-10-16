@@ -1,6 +1,6 @@
 # Geplante Aufgaben
 
-Die Seite Geplante Aufgaben listet jeden wiederkehrenden Hintergrundjob auf, den KANAP nach einem Cron-Zeitplan ausführt – Bereinigungen, periodische Synchronisierungen, Zusammenfassungs-E-Mails, Aufbewahrungsdurchsetzung und so weiter. Von hier aus können Sie einen Job anhalten, den Ausführungszeitpunkt ändern, ihn auf Anforderung auslösen und den Verlauf jeder kürzlichen Ausführung einsehen.
+Die Seite Geplante Aufgaben listet jeden wiederkehrenden Hintergrundjob auf, den KANAP nach einem Cron-Zeitplan ausführt: Bereinigungen, periodische Synchronisierungen, Zusammenfassungs-E-Mails, Aufbewahrungsdurchsetzung und so weiter. Von hier aus können Sie einen Job anhalten, den Ausführungszeitpunkt ändern, ihn auf Anforderung auslösen und den Verlauf jeder kürzlichen Ausführung einsehen.
 
 ## Wo Sie es finden
 
@@ -15,14 +15,14 @@ Die Seite ist eine einzelne Tabelle, die sich alle 15 Sekunden automatisch aktua
 
 **Spalten**:
 
-- **Name** – die interne Kennung der Aufgabe (zum Beispiel `purge-stale-conversations`)
-- **Beschreibung** – eine kurze, für Menschen lesbare Zusammenfassung dessen, was die Aufgabe tut
-- **Zeitplan** – der Cron-Ausdruck. Häufige Muster werden in Klartext übersetzt („Täglich um 3 Uhr", „Alle 15 Minuten", „Sonntags um 4 Uhr"); bewegen Sie den Mauszeiger über die Bezeichnung, um den Rohausdruck zu sehen. Klicken Sie auf das Stiftsymbol, um ihn inline zu bearbeiten.
-- **Aktiviert** – schalten Sie die Aufgabe ein oder aus, ohne den Zeitplan zu ändern
-- **Letzte Ausführung** – wann die Aufgabe zuletzt gestartet wurde
-- **Dauer** – wie lange die letzte Ausführung dauerte (`ms`, `s` oder `m` je nach Länge)
-- **Status** – farbiger Indikator für die letzte Ausführung: **Erfolgreich**, **Fehlgeschlagen**, **Läuft** oder **Nie ausgeführt**
-- **Aktionen** – pro Zeile verfügbare Steuerelemente (siehe unten)
+- **Name**: die interne Kennung der Aufgabe (zum Beispiel `purge-stale-conversations`)
+- **Beschreibung**: eine kurze, für Menschen lesbare Zusammenfassung dessen, was die Aufgabe tut
+- **Zeitplan**: der Cron-Ausdruck. Häufige Muster werden in Klartext übersetzt („Täglich um 3 Uhr", „Alle 15 Minuten", „Sonntags um 4 Uhr"); bewegen Sie den Mauszeiger über die Bezeichnung, um den Rohausdruck zu sehen. Klicken Sie auf das Stiftsymbol, um ihn inline zu bearbeiten.
+- **Aktiviert**: schalten Sie die Aufgabe ein oder aus, ohne den Zeitplan zu ändern
+- **Letzte Ausführung**: wann die Aufgabe zuletzt gestartet wurde
+- **Dauer**: wie lange die letzte Ausführung dauerte (`ms`, `s` oder `m` je nach Länge)
+- **Status**: farbiger Indikator für die letzte Ausführung: **Erfolgreich**, **Fehlgeschlagen**, **Läuft** oder **Nie ausgeführt**
+- **Aktionen**: pro Zeile verfügbare Steuerelemente (siehe unten)
 
 ### Einen Zeitplan bearbeiten
 
@@ -30,7 +30,7 @@ Klicken Sie auf das Stiftsymbol neben einem Zeitplan, um einen Inline-Editor zu 
 
 - Geben Sie einen Standard-Cron-Ausdruck mit 5 Feldern ein (`Minute Stunde Tag-des-Monats Monat Wochentag`).
 - Drücken Sie **Enter** zum Speichern, **Escape** zum Abbrechen.
-- Ungültige Ausdrücke werden mit einer Fehlermeldung am unteren Bildschirmrand abgelehnt – die Aufgabe behält ihren vorherigen Zeitplan.
+- Ungültige Ausdrücke werden mit einer Fehlermeldung am unteren Bildschirmrand abgelehnt. Die Aufgabe behält ihren vorherigen Zeitplan.
 
 Wenn der neue Ausdruck einem bekannten Muster entspricht, zeigt die Tabelle sofort die freundliche Bezeichnung an.
 
@@ -54,10 +54,10 @@ Die Aktion **Verlauf anzeigen** (Uhrsymbol) öffnet eine Seitenleiste mit den le
 
 Jede Ausführungszeile zeigt:
 
-- **Gestartet** – wann die Ausführung begann
-- **Status** – Erfolgreich, Fehlgeschlagen oder Läuft
-- **Dauer** – wie lange die Ausführung dauerte
-- **Details** – eine kurze strukturierte Zusammenfassung bei Erfolg oder die Fehlermeldung bei Fehler. Lange Fehlermeldungen werden in der Tabelle abgeschnitten; der vollständige Text bleibt im zugrunde liegenden Datensatz erhalten.
+- **Gestartet**: wann die Ausführung begann
+- **Status**: Erfolgreich, Fehlgeschlagen oder Läuft
+- **Dauer**: wie lange die Ausführung dauerte
+- **Details**: eine kurze strukturierte Zusammenfassung bei Erfolg oder die Fehlermeldung bei Fehler. Lange Fehlermeldungen werden in der Tabelle abgeschnitten; der vollständige Text bleibt im zugrunde liegenden Datensatz erhalten.
 
 Eine Paginierung erscheint unter der Liste, wenn es mehr als 20 Ausführungen gibt. Die Seitenleiste kann mit dem X-Symbol in ihrer Kopfzeile oder durch Klicken außerhalb geschlossen werden.
 

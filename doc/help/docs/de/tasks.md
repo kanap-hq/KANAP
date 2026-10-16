@@ -477,11 +477,11 @@ Drei Exportmodi sind verfügbar:
 
 | Option | Beschreibung |
 |--------|-------------|
-| **Vollständiger Export** | Alle exportierbaren Felder — für Berichterstellung und vollständige Datenextraktion verwenden |
-| **Datenanreicherung** | Alle importierbaren Felder — entspricht dem Importvorlagenformat, ideal für Round-Trip-Bearbeitung (Export, Änderung, erneuter Import) |
+| **Vollständiger Export** | Alle exportierbaren Felder: für Berichterstellung und vollständige Datenextraktion verwenden |
+| **Datenanreicherung** | Alle importierbaren Felder: entspricht dem Importvorlagenformat, ideal für Round-Trip-Bearbeitung (Export, Änderung, erneuter Import) |
 | **Benutzerdefinierte Auswahl** | Bestimmte Felder auswählen, die in Ihren Export aufgenommen werden sollen |
 
-**Vorlage herunterladen** (aus Import-Dialog): Lädt eine leere CSV mit allen importierbaren Feld-Spaltenköpfen herunter — verwenden Sie dies, um Importdateien mit der korrekten Struktur vorzubereiten.
+**Vorlage herunterladen** (aus Import-Dialog): Lädt eine leere CSV mit allen importierbaren Feld-Spaltenköpfen herunter. Verwenden Sie dies, um Importdateien mit der korrekten Struktur vorzubereiten.
 
 ### Import-Workflow
 
@@ -489,8 +489,8 @@ Drei Exportmodi sind verfügbar:
 
 2. **Importeinstellungen wählen**:
    - **Modus**:
-     - `Anreichern` (Standard): Leere Zellen erhalten vorhandene Werte — nur aktualisieren, was Sie angeben
-     - `Ersetzen`: Leere Zellen löschen vorhandene Werte — vollständiger Ersatz aller Felder
+     - `Anreichern` (Standard): Leere Zellen erhalten vorhandene Werte: nur aktualisieren, was Sie angeben
+     - `Ersetzen`: Leere Zellen löschen vorhandene Werte: vollständiger Ersatz aller Felder
    - **Operation**:
      - `Upsert` (Standard): Neue Aufgaben erstellen oder vorhandene aktualisieren
      - `Nur aktualisieren`: Nur vorhandene Aufgaben ändern, neue überspringen
@@ -526,7 +526,7 @@ Drei Exportmodi sind verfügbar:
 
 **Eigenständige Aufgaben**: Lassen Sie `related_object_type`, `related_object_id` und `related_object_name` leer. Sie können Klassifizierungsfelder (`source_name`, `category_name`, `stream_name`, `company_name`) für eigenständige und Projektaufgaben festlegen. Für Projektaufgaben werden ausgelassene Klassifizierungsfelder vom übergeordneten Projekt vorbelegt.
 
-**Tipp**: Verwenden Sie für neue Importe verknüpfter Aufgaben `related_object_name` anstelle von `related_object_id` — es ist viel einfacher zu handhaben. Das System löst den Namen basierend auf `related_object_type` zur korrekten ID auf. Für Round-Trip-Importe (Export, Bearbeitung, erneuter Import) sind beide Felder enthalten, sodass der Abgleich korrekt funktioniert.
+**Tipp**: Verwenden Sie für neue Importe verknüpfter Aufgaben `related_object_name` anstelle von `related_object_id`. Es ist viel einfacher zu handhaben. Das System löst den Namen basierend auf `related_object_type` zur korrekten ID auf. Für Round-Trip-Importe (Export, Bearbeitung, erneuter Import) sind beide Felder enthalten, sodass der Abgleich korrekt funktioniert.
 
 **Status und Daten**:
 
@@ -659,7 +659,7 @@ Sie können eine Aufgabe zu einer Portfolio-Anfrage befördern, wenn die Arbeit 
 1. Öffnen Sie den Aufgaben-Arbeitsbereich
 2. Klicken Sie auf **In Anfrage umwandeln** in der Kopfzeilen-Symbolleiste (neben **Link senden**)
 3. Im Dialog:
-   - **Anfragenname**: Standardmäßig der Aufgabentitel — bei Bedarf bearbeiten
+   - **Anfragenname**: Standardmäßig der Aufgabentitel. Bei Bedarf bearbeiten
    - **Zweck-Vorschau**: Zeigt die Aufgabenbeschreibung an, die zum Zweck der Anfrage wird
    - **Ursprüngliche Aufgabe nach Konvertierung schließen**: Aktivieren Sie diese Option, wenn der Aufgaben-Status automatisch auf **Erledigt** gesetzt werden soll
 4. Klicken Sie auf **In Anfrage umwandeln**
@@ -686,7 +686,7 @@ Die Anfrage wird mit dem Status **Wartet auf Überprüfung** erstellt und ist mi
 - **Einmalige Konvertierung**: Jede Aufgabe kann nur einmal konvertiert werden. Nach der Konvertierung ist die Schaltfläche **In Anfrage umwandeln** deaktiviert und zeigt die verknüpfte Anfragenreferenz an (z. B. „Bereits in REQ-42 konvertiert")
 - **Aufgabe bleibt**: Die ursprüngliche Aufgabe wird nicht gelöscht. Es sei denn, Sie aktivieren die Schließen-Option, bleibt sie in ihrem aktuellen Status und kann unabhängig weiter aktualisiert werden
 
-**Tipp**: Verwenden Sie dies, wenn eine Aufgabe eine größere Initiative offenbart, die ihren eigenen Anfrage-Lebenszyklus benötigt — Kriterienbewertung, Genehmigungs-Workflow und schließlich Konvertierung in ein Projekt.
+**Tipp**: Verwenden Sie dies, wenn eine Aufgabe eine größere Initiative offenbart, die ihren eigenen Anfrage-Lebenszyklus benötigt: Kriterienbewertung, Genehmigungs-Workflow und schließlich Konvertierung in ein Projekt.
 
 ---
 
@@ -702,7 +702,7 @@ Sie können einen Link zu jeder Aufgabe per E-Mail an Kollegen oder externe Kont
    - **Link kopieren**: Klicken Sie auf das Kopier-Symbol, um die direkte URL zu erfassen
 4. Klicken Sie auf **Senden**
 
-Empfänger erhalten eine E-Mail mit Ihrem Namen, dem Aufgabentitel, einem direkten Link und Ihrer Nachricht (falls angegeben). Dies ändert keine Berechtigungen — es benachrichtigt einfach die Empfänger.
+Empfänger erhalten eine E-Mail mit Ihrem Namen, dem Aufgabentitel, einem direkten Link und Ihrer Nachricht (falls angegeben). Dies ändert keine Berechtigungen. Es benachrichtigt einfach die Empfänger.
 
 **Tipp**: Sie können Plattformbenutzer und externe E-Mail-Adressen in derselben Übermittlung mischen.
 
@@ -726,7 +726,7 @@ Wenn der Fokus nicht auf einem Eingabefeld liegt, können Sie verwenden:
   - **Verwenden Sie Fälligkeitsdaten**: Setzen Sie realistische Fälligkeitsdaten, um Deadlines effektiv zu verfolgen.
   - **Weisen Sie Verantwortliche zu**: Jede Aufgabe sollte einen Verantwortlichen für die Rechenschaftspflicht haben.
   - **Erfassen Sie Zeit regelmäßig**: Zeiterfassung hilft bei zukünftigen Projektschätzungen.
-  - **Nach Status filtern**: Der Standardfilter zeigt nur aktive Status (`Offen`, `In Bearbeitung`, `Wartend`, `In Test`) — schließen Sie `Erledigt` und `Storniert` ein, wenn Sie historische Aufgaben überprüfen.
+  - **Nach Status filtern**: Der Standardfilter zeigt nur aktive Status (`Offen`, `In Bearbeitung`, `Wartend`, `In Test`). Schließen Sie `Erledigt` und `Storniert` ein, wenn Sie historische Aufgaben überprüfen.
   - **Aus dem Kontext erstellen**: Das Erstellen von Aufgaben aus Arbeitsbereichen heraus (Projekt, OPEX, Vertrag, CAPEX) verknüpft sie automatisch.
   - **Apps und Assets verknüpfen**: Verwenden Sie die Felder **Anwendungen** und **Assets** in der Eigenschaftsleiste, wenn eine Aufgabe operativ um eine bestimmte App oder ein Asset geht. Die Verknüpfung erscheint auch im Arbeitsbereich der verbundenen Entität.
   - **Verwenden Sie Priorität klug**: Reservieren Sie **Blocker** für tatsächlich blockierende Probleme.

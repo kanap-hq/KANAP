@@ -56,7 +56,7 @@
       "asAssignee": "Einer Aufgabe zugewiesen bin",
       "asRequestor": "Auftraggeber einer Aufgabe bin",
       "asViewer": "Beobachter einer Aufgabe bin",
-      "viewerHint": "Kann häufig sein — standardmäßig deaktiviert",
+      "viewerHint": "Kann häufig sein (standardmäßig deaktiviert)",
       "eventTypes": "Ereignistypen:",
       "statusChanges": "Statusänderungen",
       "comments": "Kommentare"

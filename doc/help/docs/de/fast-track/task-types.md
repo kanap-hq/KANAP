@@ -1,6 +1,6 @@
 ---
 title: "Aufgabentypen-Schnelleinstieg: Run, Build & Aufgaben"
-description: Verstehen Sie die verschiedenen Arbeitstypen in KANAP -- Incidents, Problems, Anfragen, Projekte, Bugs und Aufgaben -- und wie Sie im Alltag mit Aufgaben arbeiten.
+description: Verstehen Sie die verschiedenen Arbeitstypen in KANAP (Incidents, Problems, Anfragen, Projekte, Bugs und Aufgaben) und wie Sie im Alltag mit Aufgaben arbeiten.
 ---
 
 # Aufgabentypen-Schnelleinstieg: Run, Build & Aufgaben
@@ -8,7 +8,7 @@ description: Verstehen Sie die verschiedenen Arbeitstypen in KANAP -- Incidents,
 Dieser Leitfaden erklärt die verschiedenen Typen von Arbeitselementen in KANAP und wie man sie unterscheidet. Er behandelt den Run (den Betrieb am Laufen halten), den Build (Dinge verbessern) und die bereichsübergreifende Aufgabe, die beides verbindet. Die zweite Hälfte ist ein praktischer Spickzettel für die tägliche Arbeit mit Aufgaben.
 
 !!! tip "Bevorzugen Sie eine einseitige Zusammenfassung? :material-file-pdf-box:"
-    Alle wichtigen Definitionen auf einer einzigen A4-Seite -- ausdrucken, aufhängen, mit dem Team teilen.
+    Alle wichtigen Definitionen auf einer einzigen A4-Seite: ausdrucken, aufhängen, mit dem Team teilen.
 
     [:material-download: Spickzettel herunterladen (PDF)](downloads/kanap-task-types-fast-track.pdf){ .md-button .md-button--primary }
 
@@ -16,7 +16,7 @@ Dieser Leitfaden erklärt die verschiedenen Typen von Arbeitselementen in KANAP 
 
 ## Das Gesamtbild
 
-Alles, was Ihre IT-Abteilung tut, fällt in eine von zwei Kategorien -- plus eine universelle Arbeitseinheit, die beide übergreift:
+Alles, was Ihre IT-Abteilung tut, fällt in eine von zwei Kategorien, plus eine universelle Arbeitseinheit, die beide übergreift:
 
 | Kategorie | Zweck | Arbeitselemente |
 |-----------|-------|-----------------|
@@ -26,7 +26,7 @@ Alles, was Ihre IT-Abteilung tut, fällt in eine von zwei Kategorien -- plus ein
 
 ---
 
-## Run -- Den Betrieb am Laufen halten
+## Run: Den Betrieb am Laufen halten
 
 Jeder beteiligt sich am Run. Er stellt die **betriebliche Kontinuität** (MCO) und die **Sicherheitswartung** (MCS) bestehender Systeme sicher.
 
@@ -35,7 +35,7 @@ Jeder beteiligt sich am Run. Er stellt die **betriebliche Kontinuität** (MCO) u
 Eine **ungeplante Unterbrechung oder Beeinträchtigung** eines Produktionsdienstes.
 
 - Hat einen erheblichen Einfluss auf das Funktionieren des Informationssystems
-- Das Ziel ist die **Wiederherstellung des Dienstes** -- schnellstmöglich wieder funktionsfähig machen
+- Das Ziel ist die **Wiederherstellung des Dienstes**: schnellstmöglich wieder funktionsfähig machen
 - Reaktiver Natur: Etwas ist kaputtgegangen und Benutzer sind betroffen
 
 !!! example "Beispiele"
@@ -48,7 +48,7 @@ Eine **ungeplante Unterbrechung oder Beeinträchtigung** eines Produktionsdienst
 Eine **Ursachenuntersuchung**, ausgelöst durch wiederkehrende Incidents.
 
 - Typischerweise von der IT identifiziert, nachdem ein **Muster ähnlicher Incidents** erkannt wurde
-- Das Ziel ist eine **dauerhafte Lösung** -- die zugrunde liegende Ursache beheben, nicht nur die Symptome
+- Das Ziel ist eine **dauerhafte Lösung**: die zugrunde liegende Ursache beheben, nicht nur die Symptome
 - Proaktiv: Die IT eröffnet ein Problem, um zukünftige Incidents zu verhindern
 
 !!! example "Beispiele"
@@ -57,7 +57,7 @@ Eine **Ursachenuntersuchung**, ausgelöst durch wiederkehrende Incidents.
 
 ---
 
-## Build -- Die Landschaft weiterentwickeln
+## Build: Die Landschaft weiterentwickeln
 
 Der Build umfasst alle **Weiterentwicklungen und den Aufbau** des Informationssystems. Jeder beteiligt sich.
 
@@ -82,7 +82,7 @@ Eine **geplante Anforderung zur Änderung** des Informationssystems.
 
 Ein **koordinierter Satz von Aufgaben**, organisiert um ein definiertes Ziel, mit Umfang, Zeitplan, Budget und identifizierten Ergebnissen.
 
-- Gleiche Kriterien wie eine Anfrage -- entsteht normalerweise aus einer genehmigten Anfrage
+- Gleiche Kriterien wie eine Anfrage; entsteht normalerweise aus einer genehmigten Anfrage
 - **Schnellverfahren**: Einige Projekte werden ohne den Anfrageprozess aufgesetzt (Vorstandsentscheidung, dringende regulatorische Änderung...). Sie gehen direkt als Projekt ein.
 
 !!! example "Beispiele"
@@ -93,7 +93,7 @@ Ein **koordinierter Satz von Aufgaben**, organisiert um ein definiertes Ziel, mi
 
 Ein **Defekt in einem System in der Entwicklung**.
 
-- Zu komplex, um in einem einfachen Ticket behandelt zu werden -- erfordert eingehende Analyse
+- Zu komplex, um in einem einfachen Ticket behandelt zu werden; erfordert eingehende Analyse
 - Rein ein Build-Konzept: Das System ist noch nicht in Produktion (oder der Defekt betrifft eine Komponente, die noch gebaut wird)
 
 !!! example "Beispiele"
@@ -110,7 +110,7 @@ Ein **Defekt in einem System in der Entwicklung**.
 
 ---
 
-## Bereichsübergreifend -- Die Aufgabe
+## Bereichsübergreifend: Die Aufgabe
 
 Aufgaben sind die **atomare Arbeitseinheit** in KANAP. Sie übergreifen die Run/Build-Grenze.
 
@@ -121,7 +121,7 @@ Eine **klar umrissene Aktion** mit einem definierten Verantwortlichen, Status un
 - Kann **eigenständig** sein oder mit einem **Projekt**, einer **OPEX-Zeile**, einem **Vertrag** oder einer **CAPEX-Zeile** verknüpft werden
 - Trägt einen konkreten Aufwand
 - Der Einfluss auf Benutzer oder Dienste ist begrenzt und gut verstanden
-- Erfordert keine Koordination über mehrere Teams -- auch wenn es lange dauert, wird es von einer einzelnen Person getragen, ohne bereichsübergreifende Analyse zu erfordern
+- Erfordert keine Koordination über mehrere Teams. Auch wenn es lange dauert, wird es von einer einzelnen Person getragen, ohne bereichsübergreifende Analyse zu erfordern
 
 !!! example "Beispiele"
     - Neuen Domänencontroller installieren
@@ -152,7 +152,7 @@ Eine **klar umrissene Aktion** mit einem definierten Verantwortlichen, Status un
 
 ---
 
-## Mit Aufgaben arbeiten -- Spickzettel
+## Mit Aufgaben arbeiten: Spickzettel
 
 Der Rest dieses Leitfadens behandelt die praktischen Grundlagen. Für vollständige Details siehe [Aufgaben](../tasks.md).
 
@@ -174,7 +174,7 @@ Alle Aufgaben erscheinen in der zentralen **Portfolio > Aufgaben**-Liste unabhä
 |--------|-------|-----------|
 | **Offen** | Grau | Noch nicht begonnen |
 | **In Bearbeitung** | Orange | Jemand arbeitet daran |
-| **Ausstehend** | Blau | Blockiert -- wartet auf Eingabe oder Entscheidung |
+| **Ausstehend** | Blau | Blockiert: wartet auf Eingabe oder Entscheidung |
 | **Im Test** | Lila | Umsetzung erledigt, wartet auf Validierung |
 | **Erledigt** | Grün | Abgeschlossen (erfordert erfasste Zeit bei Projektaufgaben) |
 | **Abgebrochen** | Rot | Nicht mehr benötigt |
@@ -183,40 +183,40 @@ Alle Aufgaben erscheinen in der zentralen **Portfolio > Aufgaben**-Liste unabhä
 
 | Priorität | Wann verwenden |
 |-----------|---------------|
-| **Blocker** | Blockiert andere Arbeit -- sofortige Aufmerksamkeit |
+| **Blocker** | Blockiert andere Arbeit: sofortige Aufmerksamkeit |
 | **Hoch** | Wichtig und zeitkritisch |
 | **Normal** | Standardpriorität (Standard) |
 | **Niedrig** | Kann aufgeschoben werden |
 | **Optional** | Nice-to-have |
 
-### Der Aufgaben-Arbeitsbereich -- Kernbereiche
+### Der Aufgaben-Arbeitsbereich: Kernbereiche
 
 Wenn Sie eine Aufgabe öffnen, haben Sie eine Seitenleiste links und einen Hauptinhaltsbereich rechts.
 
 **Seitenleisten-Abschnitte**:
 
-- **Kontext** -- womit die Aufgabe verknüpft ist (oder Eigenständig)
-- **Aufgabendetails** -- Typ, Priorität, Status
-- **Klassifizierung** -- Quelle, Kategorie, Stream, Unternehmen (nur bei eigenständigen und Projektaufgaben; Standardwerte aus Organisationseinstellungen oder übergeordnetem Projekt)
-- **Zeit** -- Gesamtzeit und Schaltfläche Zeit erfassen (nur bei eigenständigen und Projektaufgaben)
-- **Personen** -- Antragsteller, Beauftragter, Betrachter
-- **Termine** -- Start- und Fälligkeitsdatum
-- **Wissensdatenbank** -- Wissensdatenbank-Artikel mit der Aufgabe verknüpfen
+- **Kontext**: womit die Aufgabe verknüpft ist (oder Eigenständig)
+- **Aufgabendetails**: Typ, Priorität, Status
+- **Klassifizierung**: Quelle, Kategorie, Stream, Unternehmen (nur bei eigenständigen und Projektaufgaben; Standardwerte aus Organisationseinstellungen oder übergeordnetem Projekt)
+- **Zeit**: Gesamtzeit und Schaltfläche Zeit erfassen (nur bei eigenständigen und Projektaufgaben)
+- **Personen**: Antragsteller, Beauftragter, Betrachter
+- **Termine**: Start- und Fälligkeitsdatum
+- **Wissensdatenbank**: Wissensdatenbank-Artikel mit der Aufgabe verknüpfen
 
 **Hauptinhalt**:
 
-- **Beschreibung** -- ein Markdown-Editor mit Unterstützung für Formatierung, Listen, Codeblöcke, Links und eingefügte Bilder
-- **Import / Export** -- eine `.docx`-Datei in die Beschreibung importieren, oder als PDF, DOCX oder ODT exportieren
-- **Anhänge** -- Drag-and-Drop-Dateiuploads (bis zu 20 MB pro Datei)
-- **Aktivität** -- Kommentare-, Verlauf- und Zeitprotokoll-Tabs
+- **Beschreibung**: ein Markdown-Editor mit Unterstützung für Formatierung, Listen, Codeblöcke, Links und eingefügte Bilder
+- **Import / Export**: eine `.docx`-Datei in die Beschreibung importieren, oder als PDF, DOCX oder ODT exportieren
+- **Anhänge**: Drag-and-Drop-Dateiuploads (bis zu 20 MB pro Datei)
+- **Aktivität**: Kommentare-, Verlauf- und Zeitprotokoll-Tabs
 
 ### Schnellaktionen, die Sie kennen sollten
 
 | Aktion | Wie |
 |--------|-----|
 | **Speichern** | Klicken Sie auf **Speichern** oder drücken Sie **Strg+S** (Cmd+S auf Mac) |
-| **In Anfrage konvertieren** | Header-Symbolleiste -- stuft eine Aufgabe zu einer formalen Portfolio-Anfrage auf, wenn der Umfang wächst |
-| **Link senden** | Header-Symbolleiste -- einen Link per E-Mail an Kollegen oder externe Kontakte senden |
+| **In Anfrage konvertieren** | Header-Symbolleiste: stuft eine Aufgabe zu einer formalen Portfolio-Anfrage auf, wenn der Umfang wächst |
+| **Link senden** | Header-Symbolleiste: einen Link per E-Mail an Kollegen oder externe Kontakte senden |
 | **Zeit inline erfassen** | Im Kommentare-Tab einen Kommentar + Statusänderung + Zeiteintrag in einem Schritt absenden |
 | **Referenz kopieren** | Auf den Referenz-Chip klicken (z. B. T-42), um ihn in die Zwischenablage zu kopieren |
 
@@ -234,7 +234,7 @@ Nicht jede Funktion ist in jedem Kontext verfügbar. Hier ist, was sich ändert:
 
 ### Klassifizierungs-Standardwerte
 
-Wenn Sie eine **eigenständige Aufgabe** erstellen, füllt KANAP Klassifizierungsfelder (Quelle, Kategorie, Stream, Unternehmen) aus den Standardeinstellungen Ihrer Organisation vor -- und spart Ihnen ein paar Klicks. Für **Projektaufgaben** kommen die Klassifizierungsstandards vom übergeordneten Projekt, können aber unabhängig auf jeder Aufgabe geändert werden.
+Wenn Sie eine **eigenständige Aufgabe** erstellen, füllt KANAP Klassifizierungsfelder (Quelle, Kategorie, Stream, Unternehmen) aus den Standardeinstellungen Ihrer Organisation vor, und spart Ihnen ein paar Klicks. Für **Projektaufgaben** kommen die Klassifizierungsstandards vom übergeordneten Projekt, können aber unabhängig auf jeder Aufgabe geändert werden.
 
 ---
 
@@ -254,11 +254,11 @@ Die Liste in diesem Leitfaden ist ein Ausgangspunkt. Passen Sie sie an die tats�
 
 ## Weiterführend
 
-- [Aufgaben](../tasks.md) -- vollständige Referenz für Status, CSV-Import/Export, Zeiterfassung und jede Arbeitsbereich-Funktion
+- [Aufgaben](../tasks.md): vollständige Referenz für Status, CSV-Import/Export, Zeiterfassung und jede Arbeitsbereich-Funktion
 - [Budgetzeilen](../budget-lines.md): OPEX- und CAPEX-Zeilen und ihre Aufgaben verwalten
-- [Verträge](../contracts.md) -- Verträge und ihre Aufgaben verwalten
-- [Portfolio-Projekte](../portfolio-projects.md) -- Projektumsetzung, Phasen, Aufwandsverfolgung und Projektaufgaben
-- [Erste Schritte](getting-started.md) -- wenn Sie neu bei KANAP sind
+- [Verträge](../contracts.md): Verträge und ihre Aufgaben verwalten
+- [Portfolio-Projekte](../portfolio-projects.md): Projektumsetzung, Phasen, Aufwandsverfolgung und Projektaufgaben
+- [Erste Schritte](getting-started.md): wenn Sie neu bei KANAP sind
 
 !!! success "Sie sind startklar"
     Sie verstehen jetzt, wie KANAP Arbeit kategorisiert und wie Sie Aufgaben im Alltag nutzen. Wenn Sie sich bei der Wahl des richtigen Arbeitselementtyps unsicher sind, fragen Sie sich: **Hält es den Betrieb am Laufen (Run) oder macht es Dinge besser (Build)?** Dann wählen Sie den passenden Typ. Für alles andere gibt es eine Aufgabe.

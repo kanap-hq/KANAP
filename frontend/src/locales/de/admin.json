@@ -107,7 +107,7 @@
         "totalTokens": "Tokens gesamt",
         "window": "Zeitfenster"
       },
-      "description": "Unterhaltungen, Token-Verbrauch und KI-Nachrichten dieser Organisation. Eine Nachricht ist eine Frage an Plaid oder ein von einem Agenten geprüftes Ticket — die Einheit, die das enthaltene Monatsvolumen zählt.",
+      "description": "Unterhaltungen, Token-Verbrauch und KI-Nachrichten dieser Organisation. Eine Nachricht ist eine Frage an Plaid oder ein von einem Agenten geprüftes Ticket: die Einheit, die das enthaltene Monatsvolumen zählt.",
       "metrics": {
         "activeConversations30d": "Aktive Gespräche (30T)",
         "activeConversations7d": "Aktive Gespräche (7T)",
@@ -177,8 +177,8 @@
         "loadFailed": "Die Monitoring-Integration konnte nicht geladen werden.",
         "nextStep": "Ein SRE-Monitoring-Agent kann jetzt auf der Agents-Seite erstellt werden.",
         "testFailed": "Der PRTG-Verbindungstest ist fehlgeschlagen.",
-        "testSuccess_one": "Verbunden — PRTG {{version}}, {{count}} Sensor sichtbar",
-        "testSuccess_other": "Verbunden — PRTG {{version}}, {{count}} Sensoren sichtbar"
+        "testSuccess_one": "Verbunden: PRTG {{version}}, {{count}} Sensor sichtbar",
+        "testSuccess_other": "Verbunden: PRTG {{version}}, {{count}} Sensoren sichtbar"
       },
       "placeholders": {
         "apiKeySaved": "API-Schlüssel gespeichert (leer lassen zum Beibehalten)",
@@ -191,7 +191,7 @@
         "disabled": "Deaktiviert",
         "notConfigured": "Nicht konfiguriert"
       },
-      "title": "Monitoring — PRTG"
+      "title": "Monitoring (PRTG)"
     },
     "sections": {
       "features": "Funktionen",
@@ -744,7 +744,7 @@
       }
     },
     "exportTitle": "Vorlage {{code}} {{version}} exportieren",
-    "importTitle": "Vorlagen-CSV importieren — {{code}} {{version}}",
+    "importTitle": "Vorlagen-CSV importieren: {{code}} {{version}}",
     "shared": {
       "allCountries": "Alle Länder",
       "no": "Nein",

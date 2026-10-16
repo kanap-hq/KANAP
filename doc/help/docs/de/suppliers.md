@@ -13,7 +13,7 @@ Navigieren Sie zu **Stammdaten > Lieferanten**, um das Lieferantenverzeichnis zu
 - **ERP-Lieferanten-ID**: Referenz-ID aus Ihrem ERP- oder Beschaffungssystem
 - **Notizen**: Freitext-Notizen zur Anbieterbeziehung
 
-**Tipp**: Erstellen Sie Lieferanten, bevor Sie Anwendungen oder Verträge anlegen -- Sie können sie dann bei der Erstellung verknüpfen.
+**Tipp**: Erstellen Sie Lieferanten, bevor Sie Anwendungen oder Verträge anlegen. Sie können sie dann bei der Erstellung verknüpfen.
 
 ---
 

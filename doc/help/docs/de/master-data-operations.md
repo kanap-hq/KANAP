@@ -18,7 +18,7 @@ Die Stammdaten haben keinen eigenen Administrationseintrag.
 
 ## Stammdaten einfrieren
 
-Verwenden Sie dieses Werkzeug, um Unternehmens- und Abteilungskennzahlen für ein bestimmtes Jahr zu sperren oder freizugeben. Das Einfrieren verhindert versehentliche Bearbeitungen, nachdem Daten finalisiert wurden -- nützlich beim Jahresabschluss, während Audits oder vor dem Start des nächsten Budgetzyklus.
+Verwenden Sie dieses Werkzeug, um Unternehmens- und Abteilungskennzahlen für ein bestimmtes Jahr zu sperren oder freizugeben. Das Einfrieren verhindert versehentliche Bearbeitungen, nachdem Daten finalisiert wurden: nützlich beim Jahresabschluss, während Audits oder vor dem Start des nächsten Budgetzyklus.
 
 ### Funktionsweise
 
@@ -28,8 +28,8 @@ Verwenden Sie dieses Werkzeug, um Unternehmens- und Abteilungskennzahlen für ei
 
 Die Seite zeigt eine Statuskarte für jeden Bereich:
 
-- **Eingefroren** (rot) -- Daten sind für dieses Jahr schreibgeschützt; die Karte zeigt, wer wann eingefroren hat
-- **Bearbeitbar** -- Daten können noch geändert werden
+- **Eingefroren** (rot): Daten sind für dieses Jahr schreibgeschützt; die Karte zeigt, wer wann eingefroren hat
+- **Bearbeitbar**: Daten können noch geändert werden
 
 ### Was das Einfrieren beeinflusst
 
@@ -60,7 +60,7 @@ Kopieren Sie Unternehmens- und Abteilungskennzahlen von einem Geschäftsjahr in 
 1. Wählen Sie ein **Quelljahr** (woher die Werte gelesen werden)
 2. Wählen Sie **Datenquellen**: Unternehmen, Abteilungen oder beides
 3. Wählen Sie ein **Zieljahr** (wohin die Werte geschrieben werden)
-4. Wenn Unternehmen ausgewählt ist, wählen Sie, welche **Unternehmenskennzahlen** kopiert werden sollen -- jede Kombination aus Mitarbeiterzahl, IT-Benutzer und Umsatz
+4. Wenn Unternehmen ausgewählt ist, wählen Sie, welche **Unternehmenskennzahlen** kopiert werden sollen: jede Kombination aus Mitarbeiterzahl, IT-Benutzer und Umsatz
 5. Klicken Sie auf **Testlauf**, um eine Vorschau zu erstellen
 6. Überprüfen Sie die Vorschautabelle
 7. Klicken Sie auf **Daten kopieren**, um die Änderungen anzuwenden
@@ -74,7 +74,7 @@ Kopieren Sie Unternehmens- und Abteilungskennzahlen von einem Geschäftsjahr in 
 | **Kennzahl** | Mitarbeiterzahl, IT-Benutzer oder Umsatz |
 | **Quellwert** | Der Wert aus dem Quelljahr |
 | **Aktuelles Ziel** | Der bestehende Wert im Zieljahr (falls vorhanden) |
-| **Neuer Wert** | Der Wert, der geschrieben wird -- in Fettschrift |
+| **Neuer Wert** | Der Wert, der geschrieben wird, in Fettschrift |
 | **Status** | „Bereit zum Kopieren" oder der Grund, warum die Zeile übersprungen wurde |
 
 Übersprungene Zeilen erscheinen in einer Warnfarbe. Häufige Überspringungsgründe:
@@ -87,10 +87,10 @@ Kopieren Sie Unternehmens- und Abteilungskennzahlen von einem Geschäftsjahr in 
 
 Unterhalb des Grids geben vier Zusammenfassungskarten eine schnelle Übersicht:
 
-- **Gesamtzeilen** -- alles, was die Operation ausgewertet hat
-- **Bereit zum Kopieren** -- Zeilen, die geschrieben werden
-- **Übersprungen** -- ausgeschlossene Zeilen (mit Gründen in der Tabelle sichtbar)
-- **Fehler** -- Zeilen, die beim tatsächlichen Kopieren fehlgeschlagen sind
+- **Gesamtzeilen**: alles, was die Operation ausgewertet hat
+- **Bereit zum Kopieren**: Zeilen, die geschrieben werden
+- **Übersprungen**: ausgeschlossene Zeilen (mit Gründen in der Tabelle sichtbar)
+- **Fehler**: Zeilen, die beim tatsächlichen Kopieren fehlgeschlagen sind
 
 ### Schutz eingefrorener Daten
 
@@ -186,8 +186,8 @@ Ja. Die Jahrauswahl umfasst einen Bereich vom letzten Jahr bis fünf Jahre vorau
 
 ## Tipps
 
-- **Immer zuerst einen Testlauf durchführen** -- überprüfen Sie die Vorschautabelle vor dem Festschreiben, um versehentliche Überschreibungen zu vermeiden
-- **Nach Genehmigung einfrieren** -- sperren Sie Daten, sobald Budgets unterzeichnet sind, um Abweichungen zu verhindern
-- **Vorübergehend freigeben** -- nehmen Sie Ihre Korrektur vor und frieren Sie dann sofort wieder ein
-- **Früh kopieren** -- starten Sie den nächsten Planungszyklus, indem Sie die Kennzahlen des aktuellen Jahres nach vorne kopieren und dann für erwartete Änderungen anpassen
-- **Berechtigungen prüfen** -- wenn ein Bereich ausgegraut ist, bitten Sie einen Administrator, Ihnen die richtige Zugriffsstufe zu gewähren
+- **Immer zuerst einen Testlauf durchführen**: überprüfen Sie die Vorschautabelle vor dem Festschreiben, um versehentliche Überschreibungen zu vermeiden
+- **Nach Genehmigung einfrieren**: sperren Sie Daten, sobald Budgets unterzeichnet sind, um Abweichungen zu verhindern
+- **Vorübergehend freigeben**: nehmen Sie Ihre Korrektur vor und frieren Sie dann sofort wieder ein
+- **Früh kopieren**: starten Sie den nächsten Planungszyklus, indem Sie die Kennzahlen des aktuellen Jahres nach vorne kopieren und dann für erwartete Änderungen anpassen
+- **Berechtigungen prüfen**: wenn ein Bereich ausgegraut ist, bitten Sie einen Administrator, Ihnen die richtige Zugriffsstufe zu gewähren

@@ -201,7 +201,7 @@ Vertragsarten halten fest, wie jeder Mitwirkende mit Ihnen zusammenarbeitet. Sie
 
 Vier Arten werden mit jedem Arbeitsbereich angelegt:
 
-- **Intern** -- der Standard für jeden neuen Mitwirkenden
+- **Intern**: der Standard für jeden neuen Mitwirkenden
 - **Extern**
 - **Auszubildender**
 - **Sonstige**

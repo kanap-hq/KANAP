@@ -185,11 +185,11 @@ Unter Zweck enthält der Reiter Zusammenfassung den Projektaktivitäts-Stream:
 - **Kommentare** für Diskussion, kontextbezogene Notizen und formale Entscheidungen
 - **Historie** für das Audit-Protokoll von Feld- und Statusänderungen
 
-**Historie** listet die erfassten Änderungen auf — Statuswechsel, Feldänderungen, Team- und Beziehungsänderungen, Änderungen am Dokument Zweck — und endet mit dem Erstellungseintrag: wer das Projekt erstellt hat und wann.
+**Historie** listet die erfassten Änderungen auf (Statuswechsel, Feldänderungen, Team- und Beziehungsänderungen, Änderungen am Dokument Zweck) und endet mit dem Erstellungseintrag: wer das Projekt erstellt hat und wann.
 
 Manager können Projektkommentare hinzufügen und bearbeiten. Kommentare können auch als formale Entscheidungen aufgezeichnet werden, mit einem Ergebnis und einer optionalen Statusänderung. Verwenden Sie das, wenn die Diskussion selbst den Verlauf des Projekts ändert.
 
-Bilder können in Aktivitätskommentaren enthalten sein, wenn visuelle Beweise nützlich sind — Architekturskizzen, Screenshots oder Review-Beweise.
+Bilder können in Aktivitätskommentaren enthalten sein, wenn visuelle Beweise nützlich sind: Architekturskizzen, Screenshots oder Review-Beweise.
 
 Verwenden Sie **Historie**, wenn Sie wissen müssen, was sich geändert hat. Verwenden Sie **Kommentare**, wenn Sie wissen müssen, warum.
 
@@ -227,7 +227,7 @@ Projekte können mit einer Phasenvorlage oder einem vollständig benutzerdefinie
 - jede Phasenzeile enthält ein Meilenstein-Kontrollkästchen; das Aktivieren erstellt einen Phasen-Abschluss-Meilenstein für diese Phase
 - jede Phase hat eine Verknüpfung zum Erstellen einer Aufgabe, die bereits mit dieser Phase und diesem Projekt verknüpft ist
 - **Phase hinzufügen** fügt eine neue leere Phase an
-- **Mit Vorlage ersetzen** baut die Phasenstruktur aus einer Vorlage neu auf — verwenden Sie es nur, wenn Sie wirklich „das Phasenmodell von vorne anfangen" meinen
+- **Mit Vorlage ersetzen** baut die Phasenstruktur aus einer Vorlage neu auf. Verwenden Sie es nur, wenn Sie wirklich „das Phasenmodell von vorne anfangen" meinen
 
 Das Phasenmodell beeinflusst mehr als die Zeitleiste:
 

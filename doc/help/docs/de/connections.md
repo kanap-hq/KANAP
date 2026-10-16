@@ -1,6 +1,6 @@
 # Verbindungen
 
-Verbindungen dokumentieren die Netzwerkpfade auf Infrastrukturebene zwischen Servern und Entitäten. Während Schnittstellen logische Datenflüsse zwischen Anwendungen beschreiben, beschreiben Verbindungen die physischen Netzwerkrouten -- welche Server kommunizieren, über welche Protokolle und Ports.
+Verbindungen dokumentieren die Netzwerkpfade auf Infrastrukturebene zwischen Servern und Entitäten. Während Schnittstellen logische Datenflüsse zwischen Anwendungen beschreiben, beschreiben Verbindungen die physischen Netzwerkrouten: welche Server kommunizieren, über welche Protokolle und Ports.
 
 ## Erste Schritte
 
@@ -31,7 +31,7 @@ Die Liste gibt Ihnen einen filterbaren Überblick über jede Verbindung in Ihrem
   - **Topologie**: Server zu Server oder Multi-Server
   - **Quelle** / **Ziel**: Die verbundenen Endpunkte
   - **Protokolle**: Netzwerkprotokolle als Chips angezeigt
-  - **Kritikalität**: Geschäftliche Bedeutung -- kann von verknüpften Schnittstellen abgeleitet sein
+  - **Kritikalität**: Geschäftliche Bedeutung; kann von verknüpften Schnittstellen abgeleitet sein
   - **Datenklasse**: Datensensibilitätsstufe
   - **PII**: Ob personenbezogene Daten über diese Verbindung übertragen werden
   - **Risiko**: Manuell oder Abgeleitet (zeigt die Anzahl verknüpfter Schnittstellen)
@@ -61,8 +61,8 @@ Die Liste gibt Ihnen einen filterbaren Überblick über jede Verbindung in Ihrem
 
 Eine direkte Verbindung zwischen zwei bestimmten Endpunkten. Jede Seite kann ein Server, ein Cluster oder eine benannte Entität sein:
 
-- **Quelle**: Wo der Datenverkehr seinen Ursprung hat -- wählen Sie einen Server, Cluster oder eine Entität
-- **Ziel**: Wo der Datenverkehr endet -- gleiche Optionen
+- **Quelle**: Wo der Datenverkehr seinen Ursprung hat. Wählen Sie einen Server, Cluster oder eine Entität
+- **Ziel**: Wo der Datenverkehr endet. Gleiche Optionen
 - Sie können nicht sowohl einen Server als auch eine Entität für dieselbe Seite auswählen; wählen Sie eine der beiden Optionen
 
 Wenn ein Endpunkt ein Cluster ist, erinnert eine Notiz daran, dass Mitglieds-Hosts im Server-Arbeitsbereich verwaltet werden.
@@ -89,8 +89,8 @@ Der Reiter Übersicht erfasst Identität und Topologie der Verbindung.
   - **Name**: Anzeigename
   - **Zweck**: Warum diese Verbindung existiert (Freitext)
   - **Verbindungstyp**: Server zu Server oder Multi-Server
-  - **Quelle** / **Ziel**: Für Server zu Server -- wählen Sie einen Server, Cluster oder eine Entität aus einem gruppierten Dropdown
-  - **Verbundene Server**: Für Multi-Server -- suchen und wählen Sie zwei oder mehr Server
+  - **Quelle** / **Ziel**: Für Server zu Server: wählen Sie einen Server, Cluster oder eine Entität aus einem gruppierten Dropdown
+  - **Verbundene Server**: Für Multi-Server: suchen und wählen Sie zwei oder mehr Server
   - **Protokolle**: Ein oder mehrere Netzwerkprotokolle (aus Ihren Verbindungstyp-Einstellungen)
   - **Lebenszyklus**: Aktueller Status
   - **Notizen**: Zusätzlicher Kontext
@@ -101,7 +101,7 @@ Wenn Sie Protokolle auswählen, zeigt das System deren typische Ports als Refere
 
 ### Schichten
 
-Der Reiter Schichten ermöglicht es Ihnen, einen geordneten Netzwerkpfad von bis zu drei Sprüngen zu definieren -- nützlich für die Dokumentation von Reverse Proxies, Firewalls oder zwischengeschaltetem Routing.
+Der Reiter Schichten ermöglicht es Ihnen, einen geordneten Netzwerkpfad von bis zu drei Sprüngen zu definieren, nützlich für die Dokumentation von Reverse Proxies, Firewalls oder zwischengeschaltetem Routing.
 
 **Was jede Schicht erfasst**:
   - **Reihenfolge**: Sequenznummer (1 bis 3)
@@ -123,7 +123,7 @@ Dieser Reiter steuert die Risikoklassifizierung und Datenschutzeinstellungen.
 
 **Risikomodus**:
   - **Manuell**: Sie legen Kritikalität, Datenklasse und PII direkt fest
-  - **Abgeleitet**: Werte werden aus verknüpften Schnittstellen-Bindungen aggregiert -- der Reiter zeigt die effektiven Werte und wie viele Bindungen beitragen
+  - **Abgeleitet**: Werte werden aus verknüpften Schnittstellen-Bindungen aggregiert: der Reiter zeigt die effektiven Werte und wie viele Bindungen beitragen
 
 **Felder**:
   - **Kritikalität**: Geschäftskritisch, Hoch, Mittel oder Niedrig
@@ -152,6 +152,6 @@ Dieser Reiter ist schreibgeschützt. Um eine Schnittstellen-Bindung mit einer Ve
 ## Tipps
 
   - **Beginnen Sie mit kritischen Pfaden**: Dokumentieren Sie zuerst Verbindungen für Ihre wichtigsten Anwendungen, dann arbeiten Sie sich nach außen vor.
-  - **Verwenden Sie den abgeleiteten Risikomodus**: Lassen Sie das System die Kritikalität aus den Schnittstellen berechnen, die jede Verbindung nutzen -- das spart Aufwand und bleibt aktuell, wenn sich Schnittstellen ändern.
+  - **Verwenden Sie den abgeleiteten Risikomodus**: Lassen Sie das System die Kritikalität aus den Schnittstellen berechnen, die jede Verbindung nutzen: das spart Aufwand und bleibt aktuell, wenn sich Schnittstellen ändern.
   - **Mit Schnittstellen verknüpfen**: Das Verbinden Ihrer Infrastruktur mit Schnittstellen-Bindungen gibt Ihnen durchgängige Nachverfolgbarkeit von Anwendungsdatenflüssen bis zu Netzwerkrouten.
   - **Protokolle genau dokumentieren**: Gute Protokolldaten machen Firewall-Regelprüfungen und Sicherheitsaudits erheblich einfacher.
