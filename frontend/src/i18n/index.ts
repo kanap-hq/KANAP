@@ -1,6 +1,8 @@
 import i18n, { type InitOptions, type Resource, type ResourceLanguage } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { z } from 'zod';
+import { formatCount } from './formatters';
+import { mergeAbbreviationPeriods } from '../lib/dateFormat';
 import { bundledLocales, localeLoaders, type TranslationTree } from './localeSource';
 
 export const LANGUAGE_OVERRIDE_STORAGE_KEY = 'kanap_language';
@@ -181,10 +183,19 @@ z.setErrorMap((issue) => {
  * (`i18n.services.formatter.add(...)`). Runs after every `init`.
  */
 function registerPostInit(): void {
-  // Post-init registrations go here.
+  // `{{count, count}}` in a text writes the number with the thousand separator of the language.
+  i18n.services.formatter?.add('count', (value: unknown, lng: string | undefined) =>
+    typeof value === 'number' ? formatCount(value, lng ?? 'en') : String(value ?? ''));
 }
 
-i18n.use(initReactI18next);
+i18n
+  .use(initReactI18next)
+  .use({
+    type: 'postProcessor',
+    name: 'abbreviationPeriod',
+    process: (value: string, _key: unknown, options: { lng?: string } | undefined, translator: { language?: string }) =>
+      mergeAbbreviationPeriods(value, options?.lng ?? translator?.language ?? 'en'),
+  });
 
 // A component that calls `i18n.changeLanguage` directly still gets its texts: they load after the
 // switch, then the language is applied again so `resolvedLanguage` points at them.
@@ -202,6 +213,7 @@ i18n.on('languageChanged', (lng) => {
 function i18nOptions(lng: SupportedLocale, resources: Resource): InitOptions {
   return {
     lng,
+    postProcess: ['abbreviationPeriod'],
     resources,
     fallbackLng: 'en',
     supportedLngs: [...SUPPORTED_LOCALE_CODES],

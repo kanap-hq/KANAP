@@ -280,9 +280,11 @@ function runSpec(file, { databaseUrl, tag }) {
     });
     child.stdout.on('data', (c) => chunks.push(c));
     child.stderr.on('data', (c) => chunks.push(c));
-    child.on('close', (code) => {
+    child.on('close', (code, signal) => {
       const seconds = (Date.now() - started) / 1000;
-      const status = code === 0 ? 'ok' : `FAILED (exit ${code})`;
+      // A spec stopped by a signal prints nothing of its own: the signal says who stopped it
+      // (SIGKILL with no output is usually the kernel reclaiming memory).
+      const status = code === 0 ? 'ok' : signal ? `FAILED (killed by ${signal})` : `FAILED (exit ${code})`;
       process.stdout.write(`\n── ${file} · ${seconds.toFixed(1)}s · ${status} · ${tag}\n${Buffer.concat(chunks)}`);
       resolve({ file, code, seconds, started, ended: Date.now() });
     });

@@ -257,7 +257,7 @@ export default function EffortAllocationDialog({
                     {t('portfolio:dialogs.effortAllocation.table.contributor')}
                   </TableCell>
                   <TableCell align="right" sx={{ fontWeight: 500, width: 100 }}>%</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 500, width: 80 }}>MD</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 500, width: 80 }}>{t('portfolio:dialogs.effortAllocation.table.md')}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>

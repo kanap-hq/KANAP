@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { Box, IconButton, Typography } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
@@ -32,16 +33,20 @@ const gridColumns = 'minmax(120px, 0.85fr) minmax(160px, 1.15fr) 32px';
 
 export default function RelevantWebsitesList({
   items,
-  nameHeader = 'Name',
+  nameHeader: nameHeaderProp,
   urlHeader = 'URL',
-  emptyLabel = 'No URLs linked.',
-  deleteLabel = 'Delete URL',
+  emptyLabel: emptyLabelProp,
+  deleteLabel: deleteLabelProp,
   canEdit = false,
   canDelete = false,
   onEdit,
   onDelete,
   sx,
 }: RelevantWebsitesListProps) {
+  const { t } = useTranslation('common');
+  const nameHeader = nameHeaderProp ?? t('relevantWebsites.name');
+  const emptyLabel = emptyLabelProp ?? t('relevantWebsites.empty');
+  const deleteLabel = deleteLabelProp ?? t('relevantWebsites.delete');
   return (
     <Box sx={sx}>
       <Box

@@ -12,7 +12,8 @@ vi.mock('react-i18next', () => {
   return { useTranslation: () => translation };
 });
 vi.mock('../../api', () => ({ default: { get: vi.fn() } }));
-vi.mock('./EnumAutocomplete', () => ({ default: () => null }));
+const enumProps = vi.hoisted(() => ({ current: null as null | { options: Array<{ label: string; value: string }> } }));
+vi.mock('./EnumAutocomplete', () => ({ default: (props: any) => { enumProps.current = props; return null; } }));
 const mocked = vi.mocked(api);
 beforeEach(() => mocked.get.mockReset());
 
@@ -32,5 +33,28 @@ describe.each([['spend_item', 'opex'], ['capex_item', 'capex']] as const)('task 
     fireEvent.click(await screen.findByRole('option', { name: 'BL-127 · Software' }));
     expect(onChangeId).toHaveBeenCalledWith('line-1', 'BL-127 · Software');
     expect(mocked.get.mock.calls.every(([url]) => url === '/budget-lines/summary')).toBe(true);
+  });
+});
+
+describe('related object type picker', () => {
+  it('names every type and the search field through i18n', async () => {
+    mocked.get.mockResolvedValue({ data: { items: [] } } as never);
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <RelatedObjectSelect relationType="project" relationId={null} onChangeId={() => undefined} onChangeType={() => undefined} />
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    expect(enumProps.current?.options.map((option) => option.label)).toEqual([
+      'relatedObject.types.standalone',
+      'relatedObject.types.project',
+      'relatedObject.types.spendItem',
+      'relatedObject.types.contract',
+      'relatedObject.types.capexItem',
+      'relatedObject.types.incident',
+    ]);
+    expect(screen.getByText('relatedObject.types.project')).toBeTruthy();
+    expect(screen.getByPlaceholderText('filters.search')).toBeTruthy();
   });
 });

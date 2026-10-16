@@ -21,7 +21,7 @@ La página principal tiene dos secciones. Cada tarjeta enlaza a una herramienta 
 
 | Herramienta | Propósito |
 |-------------|-----------|
-| **Congelar / Descongelar datos** | Bloquear columnas presupuestarias para prevenir cambios |
+| **Congelar / descongelar datos** | Bloquear columnas presupuestarias para prevenir cambios |
 | **Copiar columnas presupuestarias** | Copiar importes entre años y columnas, con un porcentaje opcional, y asignaciones a otro año |
 | **Restablecer columna presupuestaria** | Borrar todos los datos de una columna específica |
 | **Congelar datos maestros** | Bloquear los indicadores de empresas y departamentos para un año. Consulte [Congelar datos maestros y copiar indicadores anuales](master-data-operations.md) |
@@ -29,7 +29,7 @@ La página principal tiene dos secciones. Cada tarjeta enlaza a una herramienta 
 
 | Tarjetas | Quién las ve |
 |---|---|
-| Monedas, Columnas presupuestarias, Método de asignación por defecto, Congelar / Descongelar datos | Administración presupuestaria con nivel de administrador (`budget_ops:admin`) |
+| Monedas, Columnas presupuestarias, Método de asignación por defecto, Congelar / descongelar datos | Administración presupuestaria con nivel de administrador (`budget_ops:admin`) |
 | Copiar columnas presupuestarias, Restablecer columna presupuestaria | Presupuesto con nivel de administrador (`budget:admin`). Las pestañas **Todo**, **OPEX** y **CAPEX** se abren todas con este nivel |
 | Congelar datos maestros, Copiar indicadores anuales | Usuarios con acceso al presupuesto que son administradores de la administración presupuestaria, de empresas o de departamentos. Los administradores de empresas y departamentos actúan sobre su propio alcance |
 
@@ -41,7 +41,7 @@ Mientras una de estas operaciones esté en curso, no se pueden guardar las líne
 
 ---
 
-## Congelar / Descongelar datos
+## Congelar / descongelar datos
 
 Bloquee columnas presupuestarias para que no puedan editarse, importarse ni modificarse de ninguna manera. La congelación protege las cifras aprobadas de cambios accidentales.
 

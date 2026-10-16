@@ -169,6 +169,15 @@ function firstRecord(text: string): { record: string | null; error: string | nul
   return { record: null, error: null };
 }
 
+/**
+ * The separator of a file's text, read from its header line as `readCsv` reads it: null when
+ * the header shows none for sure (a tie), ',' for a header of one column.
+ */
+export function csvSeparatorOf(text: string): CsvSeparator | null {
+  const opened = firstRecord(normalizeNewlines(stripBom(text)));
+  return opened.record ? chooseSeparator(opened.record) : null;
+}
+
 function chooseSeparator(record: string): CsvSeparator | null {
   const counts = new Map<CsvSeparator, number>(SEPARATORS.map((separator) => [separator, 0]));
   let inQuotes = false;

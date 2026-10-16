@@ -1,3 +1,4 @@
+import type { CsvLanguage } from '../csv-sheet/types';
 /**
  * CSV Field Type Definitions
  *
@@ -244,6 +245,8 @@ export interface CsvExportContext {
   manager: any;
   /** Preloaded FK caches */
   resolverCache: Map<string, Map<string, any>>;
+  /** The file's language: its separator, days, decimal mark and yes or no. */
+  language: CsvLanguage;
 }
 
 /**

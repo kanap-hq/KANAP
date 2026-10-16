@@ -107,7 +107,7 @@ Das Grid zeigt nur Konten für den ausgewählten Kontenplan.
 - **Neues Konto** (`accounts:manager`): Öffnet ein neues Kontoformular, in dem der ausgewählte Kontenplan bereits gewählt ist.
 - **CSV importieren** (`accounts:admin`): Konten in den ausgewählten Kontenplan importieren.
 - **CSV exportieren** (`accounts:admin`): Konten aus dem ausgewählten Kontenplan exportieren.
-- **Auswahl löschen** (`accounts:admin`): Ausgewählte Kontenzeilen löschen. Zeilen über die Kontrollkästchen-Spalte auswählen (für Admins sichtbar).
+- **Auswahl löschen** (`accounts:admin`): Ausgewählte Kontenzeilen löschen. Zeilen über die Kontrollkästchen-Spalte auswählen (für Admins sichtbar). Ein Konto, das von Budgetzeilen verwendet wird, kann nicht gelöscht werden: Deaktivieren Sie es stattdessen. Vor dem Löschen nennt die Bestätigung die behaltenen Konten mit dem Grund.
 
 Alle Zeilenzellen sind anklickbare Links zum Konten-Arbeitsbereich. Sie können rechtsklicken oder Strg+Klicken, um in einem neuen Tab zu öffnen.
 
@@ -283,7 +283,7 @@ Jede Zeile hat ein Menü **⋯**, das nur die Aktionen anbietet, die für diesen
 - **Als Länderstandard festlegen** / **Nicht mehr Länderstandard** (`accounts:manager`): für Kontenpläne eines Landes.
 - **Als Standard für andere Länder festlegen** / **Nicht mehr Standard für andere Länder** (`accounts:manager`): für Kontenpläne für alle Länder. Wenn Sie ihn zum Standard machen, wird er auch Unternehmen ohne Kontenplan zugewiesen.
 - **Als Konsolidierungskontenplan festlegen** / **Nicht mehr Konsolidierungskontenplan** (`accounts:manager`): für jeden Kontenplan. Siehe [Den Konsolidierungskontenplan wechseln](#den-konsolidierungskontenplan-wechseln).
-- **Löschen** (`accounts:admin`): Löscht den Kontenplan samt seinen Konten. Enthält der Kontenplan Konten, nennt eine Bestätigung, wie viele gelöscht werden. Ist er der Konsolidierungskontenplan, weist die Bestätigung darauf hin, dass das Konzernreporting dann keinen Referenzkontenplan mehr hat. Das Löschen wird abgelehnt, solange Unternehmen den Kontenplan verwenden oder OPEX-/CAPEX-Zeilen seine Konten nutzen. Der Dialog nennt den Grund.
+- **Löschen** (`accounts:admin`): Löscht den Kontenplan samt seinen Konten. Enthält der Kontenplan Konten, nennt eine Bestätigung, wie viele gelöscht werden. Ist er der Konsolidierungskontenplan, weist die Bestätigung darauf hin, dass das Konzernreporting dann keinen Referenzkontenplan mehr hat. Das Löschen wird abgelehnt, solange Unternehmen den Kontenplan verwenden oder OPEX-/CAPEX-Zeilen seine Konten nutzen. Der Dialog nennt den Grund vor jeder Bestätigung.
 
 Die Rollen ändern sich, sobald Sie eine Aktion wählen. Die Tabelle wird sofort aktualisiert.
 

@@ -274,9 +274,8 @@ describe('AccountWorkspacePage', () => {
     renderAt('/master-data/accounts/acc-1/overview');
     await screen.findByText('Software subscriptions');
     fireEvent.click(screen.getByLabelText('statuses.enabled'));
-    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/accounts/acc-1', expect.objectContaining({
-      disabled_at: expect.any(String),
-    })));
+    // Disable now: the status alone, the server sets the end of validity from its clock.
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/accounts/acc-1', { status: 'disabled' }));
   });
 
   it('lists the consolidation chart accounts by number and sends only the number', async () => {

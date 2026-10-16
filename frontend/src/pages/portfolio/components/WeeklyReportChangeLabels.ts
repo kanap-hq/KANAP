@@ -102,7 +102,7 @@ export type WeeklyChangeKind = 'text' | 'date' | 'number' | 'boolean' | 'list' |
  * One changed value as the report cell writes it. The server sends the values ready to format:
  * a day as `YYYY-MM-DD`, a boolean as `true` / `false`, a list as its item count, a reference
  * as a name (`''` when the record is gone) and `null` for an empty value. The export writes the
- * same rules in English on the server (`formatExportChangeValue`).
+ * same rules in the screen language on the server (`formatExportChangeValue`).
  */
 export function formatChangeValue(
   kind: WeeklyChangeKind,

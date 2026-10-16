@@ -8,6 +8,7 @@ vi.mock('react-i18next', () => {
   return { useTranslation: () => translation };
 });
 vi.mock('../../i18n', () => ({ default: { t: (key: string) => key, language: 'en' } }));
+vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true }) }));
 vi.mock('../../components/PageHeader', () => ({ default: () => null }));
 vi.mock('../../components/DeleteSelectedButton', () => ({ default: () => null }));

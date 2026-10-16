@@ -39,6 +39,8 @@ import { drawerDatePickerSx, drawerMenuItemSx } from '../../theme/formSx';
 import api from '../../api';
 import { Trans, useTranslation } from 'react-i18next';
 import { useLocale } from '../../i18n/useLocale';
+import { screenLanguage } from '../../components/csv/readings';
+import { useTaskTypeLabel } from '../../hooks/useLocalizedTaskTypes';
 import { formatShortDate } from '../../lib/dateFormat';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import {
@@ -110,6 +112,8 @@ type WeeklyTaskRow = WeeklyRowCommon & {
   taskId: string;
   taskTypeId: string | null;
   taskTypeName: string | null;
+  /** The shipped type it started as, null for a tenant's own type. */
+  taskTypeCode?: string | null;
   priority: number | null;
 };
 
@@ -161,7 +165,7 @@ type FilterValuesResponse = {
   sources: Array<{ id: string; name: string }>;
   categories: Array<{ id: string; name: string }>;
   streams: Array<{ id: string; name: string; categoryId: string | null }>;
-  taskTypes: Array<{ id: string; name: string }>;
+  taskTypes: Array<{ id: string; name: string; code?: string | null }>;
 };
 
 const LIST_KEYS: WeeklyListKey[] = ['created', 'modified', 'closed'];
@@ -601,6 +605,7 @@ export default function WeeklyReport() {
   const navigate = useNavigate();
   const { t } = useTranslation(['portfolio', 'errors']);
   const locale = useLocale();
+  const typeLabel = useTaskTypeLabel();
   const theme = useTheme();
   const mode = theme.palette.mode;
   const today = useMemo(() => toIsoDate(new Date()), []);
@@ -766,7 +771,12 @@ export default function WeeklyReport() {
   const sourceBaseOptions = filterValuesData?.sources ?? [];
   const categoryBaseOptions = filterValuesData?.categories ?? [];
   const streamBaseOptions = filterValuesData?.streams ?? [];
-  const taskTypeBaseOptions = filterValuesData?.taskTypes ?? [];
+  const taskTypeBaseOptions = useMemo(() => filterValuesData?.taskTypes ?? [], [filterValuesData?.taskTypes]);
+  // A type change names the types; one still a shipped type the tenant kept is shown translated.
+  const taskTypeLabelByName = useMemo(
+    () => new Map(taskTypeBaseOptions.map((option) => [option.name, typeLabel(option.name, option.code)])),
+    [taskTypeBaseOptions, typeLabel],
+  );
 
   const requests = reportData?.requests ?? EMPTY_REQUESTS;
   const projects = reportData?.projects ?? EMPTY_PROJECTS;
@@ -797,7 +807,10 @@ export default function WeeklyReport() {
   // depend on another filter, and on the catalogue alone: a stream belongs to a category.
   const sourceOptions = sourceBaseOptions;
   const categoryOptions = categoryBaseOptions;
-  const taskTypeOptions = taskTypeBaseOptions;
+  const taskTypeOptions = useMemo(
+    () => taskTypeBaseOptions.map((option) => ({ ...option, name: typeLabel(option.name, option.code) })),
+    [taskTypeBaseOptions, typeLabel],
+  );
 
   const streamOptions = useMemo(() => {
     if (categoryAll) return streamBaseOptions;
@@ -948,13 +961,15 @@ export default function WeeklyReport() {
           ? changes.statusChain.map((status) => getStatusLabel(entity, status)).join(' → ')
           : '';
       const fields = changes.fields.map((field) => {
-        const before = formatChangeValue(field.kind, field.before, t, locale);
-        const after = formatChangeValue(field.kind, field.after, t, locale);
+        const typeName = (value: string | null) =>
+          (field.key === 'task_type_id' && value ? taskTypeLabelByName.get(value) : undefined) ?? value;
+        const before = formatChangeValue(field.kind, typeName(field.before), t, locale);
+        const after = formatChangeValue(field.kind, typeName(field.after), t, locale);
         return `${getWeeklyFieldLabel(t, entity, field.key)}${t('reports.weekly.changes.labelSeparator')}${before} → ${after}`;
       });
       return { chain, fields };
     },
-    [getStatusLabel, locale, t],
+    [getStatusLabel, locale, t, taskTypeLabelByName],
   );
 
   /** The chain and the first two fields, "+n" for the rest; the hover card lists everything. */
@@ -1134,7 +1149,7 @@ export default function WeeklyReport() {
         field: 'taskTypeName',
         headerName: t('reports.weekly.columns.taskType'),
         width: 150,
-        valueFormatter: (params) => String(params.value || ''),
+        valueFormatter: (params) => typeLabel(params.value ? String(params.value) : '', params.data?.taskTypeCode) ?? '',
       },
       priorityColumn<WeeklyTaskRow>(),
       ...classificationColumns<WeeklyTaskRow>(),
@@ -1154,6 +1169,7 @@ export default function WeeklyReport() {
     refColumn,
     statusColumn,
     t,
+    typeLabel,
   ]);
 
   const handleDownload = async (format: 'csv' | 'xlsx') => {
@@ -1177,6 +1193,8 @@ export default function WeeklyReport() {
         groupBy,
       }) as Record<string, string>;
       params.format = format;
+      // The file (CSV or XLSX) follows the screen language: words, days, decimals, CSV separator.
+      params.language = screenLanguage(locale);
 
       const res = await api.get('/portfolio/reports/weekly/export', {
         params,

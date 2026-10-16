@@ -107,7 +107,7 @@ The grid shows accounts for the selected CoA only.
 - **New account** (`accounts:manager`): Opens a new account form with the selected CoA already chosen.
 - **Import CSV** (`accounts:admin`): Import accounts into the selected CoA.
 - **Export CSV** (`accounts:admin`): Export accounts from the selected CoA.
-- **Delete selected** (`accounts:admin`): Delete selected account rows. Select rows using the checkbox column (visible to admins).
+- **Delete selected** (`accounts:admin`): Delete selected account rows. Select rows using the checkbox column (visible to admins). An account used by budget lines cannot be deleted: disable it instead. Before anything is deleted, the confirmation lists the accounts kept, with the reason.
 
 All row cells are clickable links to the account workspace. You can right-click or Ctrl+click to open in a new tab.
 
@@ -283,7 +283,7 @@ Each row has a **⋯** menu with only the actions that apply to that chart. The 
 - **Make country default** / **Stop being country default** (`accounts:manager`): for one-country charts.
 - **Make default for other countries** / **Stop being default for other countries** (`accounts:manager`): for all-countries charts. Making it the default also assigns the chart to companies that have no chart.
 - **Make consolidation chart** / **Stop being consolidation chart** (`accounts:manager`): for any chart. See [Change the consolidation chart](#change-the-consolidation-chart).
-- **Delete** (`accounts:admin`): Delete the chart together with its accounts. If the chart has accounts, a confirmation tells you how many are deleted. If it is the consolidation chart, the confirmation says that group reporting will no longer have a reference chart. Deletion is refused while companies use the chart or OPEX/CAPEX lines use its accounts, and the dialog shows the reason.
+- **Delete** (`accounts:admin`): Delete the chart together with its accounts. If the chart has accounts, a confirmation tells you how many are deleted. If it is the consolidation chart, the confirmation says that group reporting will no longer have a reference chart. Deletion is refused while companies use the chart or OPEX/CAPEX lines use its accounts. The dialog shows the reason before any confirmation.
 
 The roles change as soon as you pick an action. The table updates on the spot.
 

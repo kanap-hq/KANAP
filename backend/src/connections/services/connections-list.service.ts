@@ -48,7 +48,7 @@ const CONNECTION_FILTER_TARGETS: Record<string, FilterTargetConfig> = {
   topology: { expression: 'c.topology' },
   lifecycle: { expression: 'c.lifecycle' },
   risk_mode: { expression: 'c.risk_mode' },
-  created_at: { expression: 'c.created_at', textExpression: 'CAST(c.created_at AS TEXT)' },
+  created_at: { expression: 'c.created_at', dataType: 'date' },
   criticality: { expression: EFFECTIVE_RISK.criticality },
   data_class: { expression: EFFECTIVE_RISK.data_class },
   contains_pii: { expression: EFFECTIVE_RISK.contains_pii, dataType: 'boolean' },

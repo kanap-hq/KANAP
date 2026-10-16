@@ -49,9 +49,22 @@ import { Link as RouterLink } from 'react-router-dom';
 import api from '../../../api';
 import { KanapDialog, StatusDot } from '../../../components/design';
 import LightModeIsland from '../../../components/LightModeIsland';
+import DateEUField from '../../../components/fields/DateEUField';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { useLocale } from '../../../i18n/useLocale';
+import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { PortfolioGantt } from './PortfolioGantt';
 import { computeInactiveSegments } from './roadmap-inactive-segments';
+import {
+  buildExplanationTexts,
+  formatReasonLabel,
+  formatRoadmapConstraint,
+  formatRoadmapDate,
+  formatRoadmapDays,
+  formatRoadmapText,
+  type RoadmapText,
+} from './roadmap-text';
 import { getDotColor, PROJECT_STATUS_COLORS } from '../../../utils/statusColors';
 import { kanapPalette, modeVal } from '../../tasks/theme/taskDetailTokens';
 import { downloadXlsxWorkbook } from '../../../lib/simpleXlsx';
@@ -124,6 +137,7 @@ type UnschedulableProject = {
   schedulingMode: SchedulingMode;
   reason: string;
   details?: string;
+  detailsText?: RoadmapText;
 };
 
 type ScenarioProjectOverride = {
@@ -178,6 +192,7 @@ type ExplanationReasonEntry = {
     | 'fixed_plan'
     | 'unschedulable_blocker';
   label: string;
+  labelText: RoadmapText;
   projectId: string | null;
   scenarioProjectId: string | null;
   fromWeek: string | null;
@@ -196,6 +211,7 @@ type ExplanationContributorEntry = {
 type ProjectExplanation = {
   itemRef: RoadmapItemRef;
   summary: string;
+  summaryText: RoadmapText;
   classification: 'scheduled' | 'reservation' | 'unschedulable';
   schedulingMode: SchedulingMode;
   earliestEligibleWeek: string | null;
@@ -214,6 +230,7 @@ type ProjectExplanation = {
   blockerReasons: ExplanationReasonEntry[];
   limitingContributors: ExplanationContributorEntry[];
   finalReason: string | null;
+  finalReasonText: RoadmapText | null;
 };
 
 type ScenarioWarning = {
@@ -227,6 +244,7 @@ type ScenarioWarning = {
     | 'apply_skips_scenario_projects';
   itemRef: RoadmapItemRef | null;
   message: string;
+  messageText: RoadmapText;
 };
 
 type RoadmapImpactSummary = {
@@ -366,61 +384,8 @@ type RoadmapResponse = {
   };
 };
 
-const STATUS_OPTIONS = [
-  { value: 'waiting_list', label: 'Waiting List' },
-  { value: 'planned', label: 'Planned' },
-  { value: 'in_progress', label: 'In Progress' },
-  { value: 'in_testing', label: 'In Testing' },
-];
-
-const STATUS_LABELS = Object.fromEntries(STATUS_OPTIONS.map((s) => [s.value, s.label]));
-const SCHEDULING_MODE_OPTIONS: Array<{ value: SchedulingMode; label: string }> = [
-  { value: 'independent', label: 'Independent' },
-  { value: 'collaborative', label: 'Collaborative' },
-];
-const SCHEDULING_MODE_LABELS: Record<SchedulingMode, string> = Object.fromEntries(
-  SCHEDULING_MODE_OPTIONS.map((option) => [option.value, option.label]),
-) as Record<SchedulingMode, string>;
-
-const REASON_LABELS: Record<string, string> = {
-  zero_remaining_effort: 'No Remaining Effort',
-  no_assigned_contributors: 'No Contributors',
-  missing_blocker_date: 'Missing Blocker Date',
-  blocker_on_hold: 'Blocker On Hold',
-  blocked_unfinished_project: 'Blocked Unfinished Project',
-  expired_fixed_plan: 'Expired Fixed Plan',
-  cyclic_dependency: 'Cyclic Dependency',
-  not_ready_within_horizon: 'Blocked Beyond Horizon',
-  no_free_slot: 'No Free Slot',
-  no_effective_capacity: 'No Effective Capacity',
-  below_minimum_start_threshold: 'Below Minimum Start Threshold',
-  unfinished_within_horizon: 'Started But Not Finished',
-  insufficient_capacity: 'Insufficient Capacity',
-  missing_contributor_capacity: 'Missing Contributor Capacity',
-};
-
-const RESERVATION_REASON_LABELS: Record<ReservationReason, string> = {
-  not_recalculated: 'Not Recalculated',
-  external_blocker: 'External Blocker',
-};
-
-const START_REASON_LABELS: Record<ProjectExplanation['startReason'], string> = {
-  historical_start: 'Historical start',
-  dependency_release: 'Dependency release',
-  capacity_available: 'Capacity became available',
-  constraint_pin_start: 'Pinned start',
-  constraint_pin_window: 'Pinned window',
-  constraint_not_before: 'Not before constraint',
-  fixed_reservation: 'Fixed reservation',
-  unscheduled: 'Unscheduled',
-};
-
-const CONTRIBUTOR_REASON_LABELS: Record<ExplanationContributorEntry['reason'], string> = {
-  slot: 'Parallel slot limit',
-  capacity: 'Capacity pressure',
-  collaborative_bottleneck: 'Collaborative bottleneck',
-  reservation: 'Reservation pressure',
-};
+const STATUS_OPTIONS = ['waiting_list', 'planned', 'in_progress', 'in_testing'];
+const SCHEDULING_MODES: SchedulingMode[] = ['independent', 'collaborative'];
 
 // Bar colors derive from the centralized status palette (utils/statusColors.ts).
 // The canvas renders inside a LightModeIsland, so the light-mode hexes apply.
@@ -444,20 +409,6 @@ const getTodayYmd = (): string => {
 
 const getExplanationKey = (itemRef: RoadmapItemRef): string | null => {
   return itemRef.projectId ?? itemRef.scenarioProjectId ?? itemRef.sourceRequestId;
-};
-
-const formatConstraint = (constraint: ScheduleConstraint | null | undefined): string => {
-  if (!constraint) return 'None';
-  switch (constraint.type) {
-    case 'pin_start':
-      return `Pin start: ${constraint.startWeek}`;
-    case 'pin_window':
-      return `Pin window: ${constraint.startWeek} to ${constraint.endWeek}`;
-    case 'not_before':
-      return `Not before: ${constraint.startWeek}`;
-    default:
-      return 'None';
-  }
 };
 
 const addDaysUtcYmd = (ymd: string, days: number): string => {
@@ -606,6 +557,7 @@ const exportRoadmapGanttAsPng = async (
   monthOffset: number,
   locale: string,
   fileName: string,
+  projectHeader: string,
 ): Promise<void> => {
   const now = new Date();
   const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
@@ -683,7 +635,7 @@ const exportRoadmapGanttAsPng = async (
 
   ctx.font = '500 12px Arial, sans-serif';
   ctx.fillStyle = '#1f2937';
-  ctx.fillText('Project', 12, 24);
+  ctx.fillText(projectHeader, 12, 24);
 
   // Rows + bars.
   projects.forEach((project, index) => {
@@ -890,18 +842,28 @@ type OccupationExportData = {
   teamRows: TeamOccupationRow[];
   contributorAverages: Map<string, number | null>;
   teamAverages: Map<string, number | null>;
+  labels: {
+    team: string;
+    contributor: string;
+    contributors: string;
+    teams: string;
+    average: string;
+    avg: string;
+    week: (week: string) => string;
+    weekYear: (week: string, year: number) => string;
+  };
 };
 
 const exportOccupationAsExcel = (data: OccupationExportData): void => {
-  const { weekKeys, contributorGroups, teamRows, contributorAverages, teamAverages } = data;
+  const { weekKeys, contributorGroups, teamRows, contributorAverages, teamAverages, labels } = data;
   const weekHeaders = weekKeys.map((weekKey) => {
     const parts = getIsoWeekParts(weekKey);
-    return `W${String(parts.week).padStart(2, '0')} ${parts.year}`;
+    return labels.weekYear(String(parts.week).padStart(2, '0'), parts.year);
   });
 
   // Contributors sheet
   const contributorSheetRows: (string | number | null)[][] = [];
-  contributorSheetRows.push(['Team', 'Contributor', ...weekHeaders, 'Average']);
+  contributorSheetRows.push([labels.team, labels.contributor, ...weekHeaders, labels.average]);
   for (const group of contributorGroups) {
     for (const row of group.rows) {
       const weekValues = weekKeys.map((wk) => row.weekOccupation.get(wk) ?? null);
@@ -910,7 +872,7 @@ const exportOccupationAsExcel = (data: OccupationExportData): void => {
       contributorSheetRows.push([group.teamName, row.contributorName, ...weekValues, avg]);
     }
   }
-  const contributorAvgRow: (string | number | null)[] = ['Avg', ''];
+  const contributorAvgRow: (string | number | null)[] = [labels.avg, ''];
   for (const wk of weekKeys) contributorAvgRow.push(contributorAverages.get(wk) ?? null);
   const allContribNonNull = weekKeys.map((wk) => contributorAverages.get(wk)).filter((v): v is number => v != null);
   contributorAvgRow.push(allContribNonNull.length > 0 ? Math.round(allContribNonNull.reduce((a, b) => a + b, 0) / allContribNonNull.length) : null);
@@ -918,22 +880,22 @@ const exportOccupationAsExcel = (data: OccupationExportData): void => {
 
   // Teams sheet
   const teamSheetRows: (string | number | null)[][] = [];
-  teamSheetRows.push(['Team', ...weekHeaders, 'Average']);
+  teamSheetRows.push([labels.team, ...weekHeaders, labels.average]);
   for (const row of teamRows) {
     const weekValues = weekKeys.map((wk) => row.weekOccupation.get(wk) ?? null);
     const nonNull = weekValues.filter((v): v is number => v != null);
     const avg = nonNull.length > 0 ? Math.round(nonNull.reduce((a, b) => a + b, 0) / nonNull.length) : null;
     teamSheetRows.push([row.teamName, ...weekValues, avg]);
   }
-  const teamAvgRow: (string | number | null)[] = ['Avg'];
+  const teamAvgRow: (string | number | null)[] = [labels.avg];
   for (const wk of weekKeys) teamAvgRow.push(teamAverages.get(wk) ?? null);
   const allTeamNonNull = weekKeys.map((wk) => teamAverages.get(wk)).filter((v): v is number => v != null);
   teamAvgRow.push(allTeamNonNull.length > 0 ? Math.round(allTeamNonNull.reduce((a, b) => a + b, 0) / allTeamNonNull.length) : null);
   teamSheetRows.push(teamAvgRow);
 
   downloadXlsxWorkbook(`roadmap-occupation-${getTodayYmd()}.xlsx`, [
-    { name: 'Contributors', rows: contributorSheetRows },
-    { name: 'Teams', rows: teamSheetRows },
+    { name: labels.contributors, rows: contributorSheetRows },
+    { name: labels.teams, rows: teamSheetRows },
   ]);
 };
 
@@ -941,11 +903,11 @@ const exportOccupationAsPng = async (
   data: OccupationExportData,
   view: OccupationView,
 ): Promise<void> => {
-  const { weekKeys, contributorGroups, teamRows, contributorAverages, teamAverages } = data;
+  const { weekKeys, contributorGroups, teamRows, contributorAverages, teamAverages, labels } = data;
 
   const weekHeaders = weekKeys.map((weekKey) => {
     const parts = getIsoWeekParts(weekKey);
-    return `W${String(parts.week).padStart(2, '0')}`;
+    return labels.week(String(parts.week).padStart(2, '0'));
   });
 
   type FlatRow = { labels: string[]; values: (number | null)[] };
@@ -974,7 +936,7 @@ const exportOccupationAsPng = async (
 
   // Add average row
   rows.push({
-    labels: view === 'contributor' ? ['Avg', ''] : ['Avg'],
+    labels: view === 'contributor' ? [labels.avg, ''] : [labels.avg],
     values: weekKeys.map((wk) => averages.get(wk) ?? null),
   });
 
@@ -1004,7 +966,7 @@ const exportOccupationAsPng = async (
   ctx.font = '500 11px Arial, sans-serif';
   ctx.fillStyle = '#334155';
   let headerX = 0;
-  const headerLabels = view === 'contributor' ? ['Team', 'Contributor'] : ['Team'];
+  const headerLabels = view === 'contributor' ? [labels.team, labels.contributor] : [labels.team];
   for (let i = 0; i < headerLabels.length; i++) {
     ctx.fillText(headerLabels[i], headerX + 6, headerH - 10);
     headerX += labelColWidths[i];
@@ -1104,6 +1066,7 @@ type Props = {
 export default function RoadmapGenerator({ onApplied }: Props) {
   const mode = useTheme().palette.mode;
   const locale = useLocale();
+  const { t } = useTranslation(['portfolio', 'common']);
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<RoadmapTab>('schedule');
   const [occupationView, setOccupationView] = useState<OccupationView>('contributor');
@@ -1250,8 +1213,12 @@ export default function RoadmapGenerator({ onApplied }: Props) {
     )
     : null;
   const selectedExplanationTitle = selectedExplanation
-    ? (explanationSubjectByKey.get(getExplanationKey(selectedExplanation.itemRef) || '') ?? 'Explanation')
-    : 'Explanation';
+    ? (explanationSubjectByKey.get(getExplanationKey(selectedExplanation.itemRef) || '') ?? t('planning.roadmap.explain.overline'))
+    : t('planning.roadmap.explain.overline');
+  const selectedExplanationTexts = selectedExplanation
+    ? buildExplanationTexts(t, locale, selectedExplanation)
+    : null;
+  const formatWarning = (warning: ScenarioWarning): string => formatRoadmapText(t, locale, warning.messageText);
   const allRowsSelected = filteredProjectIds.length > 0
     && filteredProjectIds.every((projectId) => selectedProjectIds.has(projectId));
 
@@ -1428,7 +1395,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
         if ((project.days ?? 0) <= 0) continue;
         const existing = byProject.get(project.projectId) ?? {
           teamId: entry.teamId,
-          teamName: entry.teamName || 'No team',
+          teamName: entry.teamName || t('planning.roadmap.occupation.noTeam'),
           projectId: project.projectId,
           projectName: project.projectName,
           weekDetails: [],
@@ -1804,7 +1771,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
         contributorId: entry.contributorId,
         contributorName: entry.contributorName,
         teamId: entry.teamId,
-        teamName: entry.teamName || 'No team',
+        teamName: entry.teamName || t('planning.roadmap.occupation.noTeam'),
         weekOccupation: new Map<string, number | null>(),
       };
       existing.weekOccupation.set(
@@ -1819,7 +1786,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
       const teamKey = row.teamId || 'no-team';
       const existing = groupsByTeam.get(teamKey) ?? {
         teamId: row.teamId,
-        teamName: row.teamName || 'No team',
+        teamName: row.teamName || t('planning.roadmap.occupation.noTeam'),
         rows: [],
       };
       existing.rows.push(row);
@@ -1844,7 +1811,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
       const teamKey = entry.teamId || 'no-team';
       const existing = rowsByTeam.get(teamKey) ?? {
         teamId: entry.teamId,
-        teamName: entry.teamName || 'No team',
+        teamName: entry.teamName || t('planning.roadmap.occupation.noTeam'),
         weekOccupation: new Map<string, number | null>(),
       };
       existing.weekOccupation.set(
@@ -1975,7 +1942,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
         setTab('schedule');
       }
     } catch (e: any) {
-      setError(e?.response?.data?.message || 'Failed to generate roadmap');
+      setError(getApiErrorMessage(e, t, t('planning.roadmap.messages.generateFailed')));
     } finally {
       setLoading(false);
     }
@@ -2122,16 +2089,16 @@ export default function RoadmapGenerator({ onApplied }: Props) {
         projects: selectedProjects,
       });
       setConfirmOpen(false);
-      setSuccess(`Applied roadmap dates to ${selectedProjects.length} project(s).`);
+      setSuccess(t('planning.roadmap.messages.applied', { count: selectedProjects.length }));
       await queryClient.invalidateQueries({ queryKey: ['portfolio-timeline'] });
       onApplied?.();
     } catch (e: any) {
       const details = e?.response?.data?.details;
       if (Array.isArray(details) && details.length > 0) {
         const first = details[0];
-        setApplyError(`${first?.projectId || 'Project'}: ${first?.error || 'Failed to apply roadmap dates'}`);
+        setApplyError(t('planning.roadmap.messages.applyFailedFor', { project: first?.projectId || t('planning.roadmap.columns.project'), error: first?.error || t('planning.roadmap.messages.applyFailed') }));
       } else {
-        setApplyError(e?.response?.data?.message || 'Failed to apply roadmap dates');
+        setApplyError(getApiErrorMessage(e, t, t('planning.roadmap.messages.applyFailed')));
       }
     } finally {
       setApplying(false);
@@ -2159,9 +2126,9 @@ export default function RoadmapGenerator({ onApplied }: Props) {
       await queryClient.invalidateQueries({ queryKey: ['portfolio-projects'] });
       await queryClient.invalidateQueries({ queryKey: ['portfolio-timeline'] });
       await runGenerate(buildExcludedProjectIds(), { resetSelectionPool: true });
-      setSuccess(`Updated scheduling mode to ${SCHEDULING_MODE_LABELS[nextMode]}.`);
+      setSuccess(t('planning.roadmap.messages.schedulingModeUpdated', { mode: t(`planning.roadmap.schedulingModes.${nextMode}`) }));
     } catch (e: any) {
-      setError(e?.response?.data?.message || 'Failed to update scheduling mode');
+      setError(getApiErrorMessage(e, t, t('planning.roadmap.messages.schedulingModeFailed')));
     } finally {
       setSavingSchedulingModeProjectIds((prev) => {
         const next = new Set(prev);
@@ -2185,9 +2152,11 @@ export default function RoadmapGenerator({ onApplied }: Props) {
         monthOffsetForGantt,
         locale,
         `roadmap-gantt-${getTodayYmd()}`,
+        t('planning.roadmap.columns.project'),
       );
     } catch (error: any) {
-      setError(error?.message ? `Failed to export Gantt as PNG: ${error.message}` : 'Failed to export Gantt as PNG');
+      console.error(error);
+      setError(t('planning.roadmap.messages.exportGanttFailed'));
     }
   };
 
@@ -2199,15 +2168,26 @@ export default function RoadmapGenerator({ onApplied }: Props) {
       teamRows: teamOccupationRows,
       contributorAverages: contributorOccupationAverages,
       teamAverages: teamOccupationAverages,
+      labels: {
+        team: t('planning.roadmap.occupation.team'),
+        contributor: t('planning.roadmap.occupation.contributor'),
+        contributors: t('planning.roadmap.occupation.contributors'),
+        teams: t('planning.roadmap.occupation.teams'),
+        average: t('planning.roadmap.occupation.average'),
+        avg: t('planning.roadmap.occupation.avg'),
+        week: (week) => t('planning.roadmap.occupation.week', { week }),
+        weekYear: (week, year) => t('planning.roadmap.occupation.weekYear', { week, year }),
+      },
     };
-  }, [occupationWeekKeys, contributorOccupationGroups, teamOccupationRows, contributorOccupationAverages, teamOccupationAverages]);
+  }, [occupationWeekKeys, contributorOccupationGroups, teamOccupationRows, contributorOccupationAverages, teamOccupationAverages, t]);
 
   const handleExportOccupationExcel = () => {
     if (!occupationExportData) return;
     try {
       exportOccupationAsExcel(occupationExportData);
     } catch (err: any) {
-      setError(err?.message ? `Failed to export occupation as Excel: ${err.message}` : 'Failed to export occupation as Excel');
+      console.error(err);
+      setError(t('planning.roadmap.messages.exportOccupationExcelFailed'));
     }
   };
 
@@ -2216,7 +2196,8 @@ export default function RoadmapGenerator({ onApplied }: Props) {
     try {
       await exportOccupationAsPng(occupationExportData, occupationView);
     } catch (err: any) {
-      setError(err?.message ? `Failed to export occupation as PNG: ${err.message}` : 'Failed to export occupation as PNG');
+      console.error(err);
+      setError(t('planning.roadmap.messages.exportOccupationPngFailed'));
     }
   };
 
@@ -2227,74 +2208,72 @@ export default function RoadmapGenerator({ onApplied }: Props) {
       <Paper variant="outlined" sx={{ p: 2 }}>
         <Stack spacing={2}>
           <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
-            Roadmap Generator
+            {t('planning.roadmap.title')}
           </Typography>
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} flexWrap="wrap">
-            <TextField
-              label="Start Date"
-              type="date"
-              size="small"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
+            <DateEUField
+              label={t('planning.roadmap.fields.startDate')}
+              valueYmd={startDate}
+              onChangeYmd={setStartDate}
+              required
               sx={{ minWidth: 180 }}
             />
 
             <FormControl size="small" sx={{ minWidth: 220 }}>
-              <InputLabel>Statuses</InputLabel>
+              <InputLabel>{t('planning.roadmap.fields.statuses')}</InputLabel>
               <Select
                 multiple
                 value={statuses}
-                label="Statuses"
+                label={t('planning.roadmap.fields.statuses')}
                 onChange={handleStatusChange}
                 renderValue={(selected) => (
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                     {selected.map((status) => (
                       <Box key={status} component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
                         <StatusDot color={getDotColor(PROJECT_STATUS_COLORS[status] ?? 'default', mode)} />
-                        <Typography variant="body2" sx={{ color: getDotColor(PROJECT_STATUS_COLORS[status] ?? 'default', mode), fontWeight: 500, fontSize: '0.8125rem' }}>{STATUS_LABELS[status] || status}</Typography>
+                        <Typography variant="body2" sx={{ color: getDotColor(PROJECT_STATUS_COLORS[status] ?? 'default', mode), fontWeight: 500, fontSize: '0.8125rem' }}>{t(`statuses.project.${status}`, { defaultValue: status })}</Typography>
                       </Box>
                     ))}
                   </Box>
                 )}
               >
                 {STATUS_OPTIONS.map((option) => (
-                  <MenuItem key={option.value} value={option.value}>
-                    {option.label}
+                  <MenuItem key={option} value={option}>
+                    {t(`statuses.project.${option}`, { defaultValue: option })}
                   </MenuItem>
                 ))}
               </Select>
             </FormControl>
 
             <FormControl size="small" sx={{ minWidth: 180 }}>
-              <InputLabel>Capacity Mode</InputLabel>
+              <InputLabel>{t('planning.roadmap.fields.capacityMode')}</InputLabel>
               <Select
                 value={capacityMode}
-                label="Capacity Mode"
+                label={t('planning.roadmap.fields.capacityMode')}
                 onChange={(e) => setCapacityMode(e.target.value as 'theoretical' | 'historical')}
               >
-                <MenuItem value="theoretical">Theoretical</MenuItem>
-                <MenuItem value="historical">Historical</MenuItem>
+                <MenuItem value="theoretical">{t('planning.roadmap.capacityModes.theoretical')}</MenuItem>
+                <MenuItem value="historical">{t('planning.roadmap.capacityModes.historical')}</MenuItem>
               </Select>
             </FormControl>
 
             <FormControl size="small" sx={{ minWidth: 200 }}>
-              <InputLabel>Constraint Scope</InputLabel>
+              <InputLabel>{t('planning.roadmap.fields.constraintScope')}</InputLabel>
               <Select
                 value={capacityConstraintMode}
-                label="Constraint Scope"
+                label={t('planning.roadmap.fields.constraintScope')}
                 onChange={(e) => setCapacityConstraintMode(e.target.value as CapacityConstraintMode)}
               >
-                <MenuItem value="full">Full Portfolio</MenuItem>
-                <MenuItem value="it_only">IT Only</MenuItem>
+                <MenuItem value="full">{t('planning.roadmap.constraintScopes.full')}</MenuItem>
+                <MenuItem value="it_only">{t('planning.roadmap.constraintScopes.itOnly')}</MenuItem>
               </Select>
             </FormControl>
 
             <FormControl size="small" sx={{ minWidth: 180 }}>
-              <InputLabel>Parallel Limit</InputLabel>
+              <InputLabel>{t('planning.roadmap.fields.parallelLimit')}</InputLabel>
               <Select
                 value={String(parallelizationLimit)}
-                label="Parallel Limit"
+                label={t('planning.roadmap.fields.parallelLimit')}
                 onChange={(e) => setParallelizationLimit(Number(e.target.value))}
               >
                 <MenuItem value="1">1</MenuItem>
@@ -2315,8 +2294,8 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                 if (value) setOptimizationMode(value);
               }}
             >
-              <ToggleButton value="priority_focused">Priority Focused</ToggleButton>
-              <ToggleButton value="completion_focused">Completion Focused</ToggleButton>
+              <ToggleButton value="priority_focused">{t('planning.roadmap.optimization.priorityFocused')}</ToggleButton>
+              <ToggleButton value="completion_focused">{t('planning.roadmap.optimization.completionFocused')}</ToggleButton>
             </ToggleButtonGroup>
 
             <FormControlLabel
@@ -2326,21 +2305,24 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                   onChange={(e) => setIncludeAlreadyScheduled(e.target.checked)}
                 />
               }
-              label="Recalculate already scheduled projects"
+              label={t('planning.roadmap.fields.recalculateScheduled')}
             />
           </Stack>
 
           <Typography variant="caption" color="text.secondary">
-            When enabled, projects that already have planned dates are recalculated and may move.
-            {capacityConstraintMode === 'it_only'
-              ? ' IT-only hides business capacity, occupation, and pure business projects from the generated roadmap.'
-              : ''}
+            {t('planning.roadmap.help.recalculate')}
+            {capacityConstraintMode === 'it_only' && (
+              <>
+                {' '}
+                {t('planning.roadmap.help.itOnly')}
+              </>
+            )}
           </Typography>
 
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} alignItems={{ xs: 'stretch', md: 'center' }}>
             <Box sx={{ minWidth: 280 }}>
               <Typography variant="body2" sx={{ mb: 0.5 }}>
-                Context-switch penalty: {(contextSwitchPenaltyPct * 100).toFixed(0)}%
+                {t('planning.roadmap.fields.contextSwitchPenalty', { value: (contextSwitchPenaltyPct * 100).toFixed(0) })}
               </Typography>
               <Slider
                 min={0}
@@ -2354,7 +2336,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
             </Box>
 
             <TextField
-              label="Context-switch grace"
+              label={t('planning.roadmap.fields.contextSwitchGrace')}
               type="number"
               size="small"
               value={contextSwitchGrace}
@@ -2369,7 +2351,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
               onClick={handleGenerate}
               disabled={loading || statuses.length === 0 || !startDate}
             >
-              {loading ? 'Generating...' : 'Generate'}
+              {loading ? t('planning.roadmap.actions.generating') : t('planning.roadmap.actions.generate')}
             </Button>
           </Stack>
         </Stack>
@@ -2388,7 +2370,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
               sourceRequestId: null,
               isScenarioProject: false,
             }) ?? 'global'}:${index}`} severity={warning.severity}>
-              {warning.message}
+              {formatWarning(warning)}
             </Alert>
           ))}
         </Stack>
@@ -2397,7 +2379,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
       {!hasResponse && !loading && (
         <Paper variant="outlined" sx={{ p: 3 }}>
           <Typography variant="body2" color="text.secondary">
-            Generate a roadmap to preview proposed dates, bottlenecks, and contributor occupation.
+            {t('planning.roadmap.states.empty')}
           </Typography>
         </Paper>
       )}
@@ -2408,10 +2390,10 @@ export default function RoadmapGenerator({ onApplied }: Props) {
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 500 }}>
-                  Scenario Overrides
+                  {t('planning.roadmap.overrides.title')}
                 </Typography>
                 <Button size="small" color="inherit" onClick={() => { void clearAllScenarioOverrides(); }}>
-                  Reset All Overrides
+                  {t('planning.roadmap.overrides.resetAll')}
                 </Button>
               </Stack>
               <Stack spacing={1} sx={{ mt: 1.5 }}>
@@ -2424,11 +2406,11 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                           <Typography variant="body2" sx={{ fontWeight: 500 }}>
                             {explanationSubjectByKey.get(override.projectId) || scheduleRowsById.get(override.projectId)?.projectName || override.projectId}
                           </Typography>
-                          <Box component="span" sx={{ color: getDotColor('info', mode), fontSize: '0.8125rem' }}>{formatConstraint(override.constraint)}</Box>
+                          <Box component="span" sx={{ color: getDotColor('info', mode), fontSize: '0.8125rem' }}>{formatRoadmapConstraint(t, locale, override.constraint)}</Box>
                           {warningCount > 0 && (
                             <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
                               <StatusDot color={getDotColor('warning', mode)} />
-                              <Typography variant="body2" sx={{ color: getDotColor('warning', mode), fontWeight: 500, fontSize: '0.8125rem' }}>{`Conflict${warningCount > 1 ? 's' : ''}`}</Typography>
+                              <Typography variant="body2" sx={{ color: getDotColor('warning', mode), fontWeight: 500, fontSize: '0.8125rem' }}>{t('planning.roadmap.chips.conflict', { count: warningCount })}</Typography>
                             </Box>
                           )}
                         </Stack>
@@ -2442,10 +2424,10 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                               override.constraint?.type === 'pin_start' ? override.constraint.startWeek : null,
                             )}
                           >
-                            Edit Pin
+                            {t('planning.roadmap.actions.editPin')}
                           </Button>
                           <Button size="small" color="inherit" onClick={() => { void clearScenarioOverride(override.projectId); }}>
-                            Reset
+                            {t('common:buttons.reset')}
                           </Button>
                         </Stack>
                       </Stack>
@@ -2458,15 +2440,15 @@ export default function RoadmapGenerator({ onApplied }: Props) {
 
           <Paper variant="outlined" sx={{ p: 2 }}>
             <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} flexWrap="wrap" useFlexGap>
-              <Typography variant="body2" color="text.secondary">{`Scheduled: ${response.schedule.length}`}</Typography>
-              <Typography variant="body2" color="text.secondary">{`Reservations: ${response.reservations.length}`}</Typography>
-              <Typography variant="body2" color="text.secondary">{`External blockers: ${response.diagnostics.reservationByReason?.external_blocker ?? 0}`}</Typography>
-              <Typography variant="body2" color="text.secondary">{`Unschedulable: ${response.unschedulable.length}`}</Typography>
-              <Typography variant="body2" color="text.secondary">{`Roadmap end: ${response.roadmapEndDate || 'N/A'}`}</Typography>
-              <Typography variant="body2" color="text.secondary">{`Run: ${response.diagnostics.runDurationMs} ms`}</Typography>
-              <Typography variant="body2" color="text.secondary">{`Sensitivity reruns: ${response.diagnostics.sensitivityReruns}`}</Typography>
+              <Typography variant="body2" color="text.secondary">{t('planning.roadmap.summary.scheduled', { count: response.schedule.length })}</Typography>
+              <Typography variant="body2" color="text.secondary">{t('planning.roadmap.summary.reservations', { count: response.reservations.length })}</Typography>
+              <Typography variant="body2" color="text.secondary">{t('planning.roadmap.summary.externalBlockers', { count: response.diagnostics.reservationByReason?.external_blocker ?? 0 })}</Typography>
+              <Typography variant="body2" color="text.secondary">{t('planning.roadmap.summary.unschedulable', { count: response.unschedulable.length })}</Typography>
+              <Typography variant="body2" color="text.secondary">{t('planning.roadmap.summary.roadmapEnd', { date: formatRoadmapDate(t, locale, response.roadmapEndDate) })}</Typography>
+              <Typography variant="body2" color="text.secondary">{t('planning.roadmap.summary.run', { ms: response.diagnostics.runDurationMs })}</Typography>
+              <Typography variant="body2" color="text.secondary">{t('planning.roadmap.summary.sensitivityReruns', { count: response.diagnostics.sensitivityReruns })}</Typography>
               {response.diagnostics.sensitivityTruncated && (
-                <Typography variant="body2" sx={{ color: getDotColor('warning', mode) }}>Sensitivity sampled (truncated)</Typography>
+                <Typography variant="body2" sx={{ color: getDotColor('warning', mode) }}>{t('planning.roadmap.summary.sensitivityTruncated')}</Typography>
               )}
             </Stack>
           </Paper>
@@ -2496,7 +2478,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
               }}
             >
               <Typography variant="subtitle2" sx={{ fontWeight: 500 }}>
-                Schedule / Bottlenecks / Occupation
+                {t('planning.roadmap.panel.title')}
               </Typography>
               {panelExpanded
                 ? <KeyboardArrowUpIcon fontSize="small" />
@@ -2509,9 +2491,9 @@ export default function RoadmapGenerator({ onApplied }: Props) {
               variant="scrollable"
               scrollButtons="auto"
             >
-              <Tab value="schedule" label="Schedule" />
-              <Tab value="bottlenecks" label="Bottlenecks" />
-              <Tab value="occupation" label="Occupation" />
+              <Tab value="schedule" label={t('planning.roadmap.tabs.schedule')} />
+              <Tab value="bottlenecks" label={t('planning.roadmap.tabs.bottlenecks')} />
+              <Tab value="occupation" label={t('planning.roadmap.tabs.occupation')} />
             </Tabs>
 
             <Box sx={{ p: 2 }}>
@@ -2523,14 +2505,14 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                       onClick={toggleSelectAll}
                       disabled={filteredProjectIds.length === 0}
                     >
-                      {allRowsSelected ? 'Clear Visible Selection' : 'Select Visible'}
+                      {allRowsSelected ? t('planning.roadmap.selection.clearVisible') : t('planning.roadmap.selection.selectVisible')}
                     </Button>
                     <Typography variant="body2" color="text.secondary">
-                      {selectedSchedulableCount} selected in Gantt preview
+                      {t('planning.roadmap.selection.selectedInGantt', { count: selectedSchedulableCount })}
                     </Typography>
                   </Stack>
                   <Typography variant="caption" color="text.secondary">
-                    Unchecked projects are excluded from the scenario and do not consume capacity.
+                    {t('planning.roadmap.selection.excludedHelp')}
                   </Typography>
 
                   <Paper variant="outlined" sx={{ overflowX: 'auto' }}>
@@ -2538,15 +2520,15 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                       <TableHead>
                         <TableRow>
                           <TableCell padding="checkbox" />
-                          <TableCell>Project</TableCell>
-                          <TableCell>Status</TableCell>
-                          <TableCell>Scheduling</TableCell>
-                          <TableCell>Scenario</TableCell>
-                          <TableCell>Start</TableCell>
-                          <TableCell>End</TableCell>
-                          <TableCell>Weeks</TableCell>
-                          <TableCell align="right">Priority</TableCell>
-                          <TableCell align="right">Explain</TableCell>
+                          <TableCell>{t('planning.roadmap.columns.project')}</TableCell>
+                          <TableCell>{t('planning.roadmap.columns.status')}</TableCell>
+                          <TableCell>{t('planning.roadmap.columns.scheduling')}</TableCell>
+                          <TableCell>{t('planning.roadmap.columns.scenario')}</TableCell>
+                          <TableCell>{t('planning.roadmap.columns.start')}</TableCell>
+                          <TableCell>{t('planning.roadmap.columns.end')}</TableCell>
+                          <TableCell>{t('planning.roadmap.columns.weeks')}</TableCell>
+                          <TableCell align="right">{t('planning.roadmap.columns.priority')}</TableCell>
+                          <TableCell align="right">{t('planning.roadmap.columns.explain')}</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -2584,18 +2566,18 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                                   {pinStartValue && (
                                     <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
                                       <StatusDot color={getDotColor('info', mode)} />
-                                      <Typography variant="body2" sx={{ color: getDotColor('info', mode), fontWeight: 500, fontSize: '0.8125rem' }}>Pinned</Typography>
+                                      <Typography variant="body2" sx={{ color: getDotColor('info', mode), fontWeight: 500, fontSize: '0.8125rem' }}>{t('planning.roadmap.chips.pinned')}</Typography>
                                     </Box>
                                   )}
                                   {hasConstraintConflict && (
                                     <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
                                       <StatusDot color={getDotColor('warning', mode)} />
-                                      <Typography variant="body2" sx={{ color: getDotColor('warning', mode), fontWeight: 500, fontSize: '0.8125rem' }}>Conflict</Typography>
+                                      <Typography variant="body2" sx={{ color: getDotColor('warning', mode), fontWeight: 500, fontSize: '0.8125rem' }}>{t('planning.roadmap.chips.conflict', { count: 1 })}</Typography>
                                     </Box>
                                   )}
                                 </Stack>
                               </TableCell>
-                              <TableCell>{STATUS_LABELS[status] || status}</TableCell>
+                              <TableCell>{t(`statuses.project.${status}`, { defaultValue: status })}</TableCell>
                               <TableCell>
                                 <Select
                                   size="small"
@@ -2610,9 +2592,9 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                                   disabled={loading || isSavingSchedulingMode}
                                   sx={{ minWidth: 150 }}
                                 >
-                                  {SCHEDULING_MODE_OPTIONS.map((option) => (
-                                    <MenuItem key={option.value} value={option.value}>
-                                      {option.label}
+                                  {SCHEDULING_MODES.map((option) => (
+                                    <MenuItem key={option} value={option}>
+                                      {t(`planning.roadmap.schedulingModes.${option}`)}
                                     </MenuItem>
                                   ))}
                                 </Select>
@@ -2621,11 +2603,11 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                                 <Stack spacing={0.75} alignItems="flex-start">
                                   {pinStartValue ? (
                                     <Typography variant="caption" color="text.secondary">
-                                      Pin start: {pinStartValue}
+                                      {t('planning.roadmap.values.pinStart', { week: formatRoadmapDate(t, locale, pinStartValue) })}
                                     </Typography>
                                   ) : (
                                     <Typography variant="caption" color="text.secondary">
-                                      No scenario constraint
+                                      {t('planning.roadmap.values.noConstraint')}
                                     </Typography>
                                   )}
                                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={0.75} alignItems={{ xs: 'stretch', sm: 'center' }}>
@@ -2637,7 +2619,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                                         scenarioProject?.plannedStart || project.plannedStart,
                                       )}
                                     >
-                                      {pinStartValue ? 'Edit Pin' : 'Pin Start'}
+                                      {pinStartValue ? t('planning.roadmap.actions.editPin') : t('planning.roadmap.actions.pinStart')}
                                     </Button>
                                     <Button
                                       size="small"
@@ -2645,16 +2627,16 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                                       disabled={!pinStartValue}
                                       onClick={() => { void clearScenarioOverride(project.projectId); }}
                                     >
-                                      Clear
+                                      {t('common:buttons.clear')}
                                     </Button>
                                   </Stack>
                                 </Stack>
                               </TableCell>
-                              <TableCell>{scenarioProject?.plannedStart || 'Excluded'}</TableCell>
-                              <TableCell>{scenarioProject?.plannedEnd || 'Excluded'}</TableCell>
-                              <TableCell>{scenarioProject?.durationWeeks ?? 'Excluded'}</TableCell>
+                              <TableCell>{scenarioProject?.plannedStart ? formatRoadmapDate(t, locale, scenarioProject.plannedStart) : t('planning.roadmap.values.excluded')}</TableCell>
+                              <TableCell>{scenarioProject?.plannedEnd ? formatRoadmapDate(t, locale, scenarioProject.plannedEnd) : t('planning.roadmap.values.excluded')}</TableCell>
+                              <TableCell>{scenarioProject?.durationWeeks ?? t('planning.roadmap.values.excluded')}</TableCell>
                               <TableCell align="right">
-                                {priority != null ? priority.toFixed(1) : 'N/A'}
+                                {priority != null ? formatRoadmapDays(locale, priority, 1) : t('planning.roadmap.values.na')}
                               </TableCell>
                               <TableCell align="right">
                                 <Button
@@ -2662,7 +2644,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                                   onClick={() => openExplanation(project.projectId)}
                                   disabled={!explanationByKey.has(project.projectId)}
                                 >
-                                  Why?
+                                  {t('planning.roadmap.actions.why')}
                                 </Button>
                               </TableCell>
                             </TableRow>
@@ -2675,7 +2657,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                   {response.unschedulable.length > 0 && (
                     <Paper variant="outlined" sx={{ p: 2 }}>
                       <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                        Unschedulable Projects
+                        {t('planning.roadmap.unschedulable.title')}
                       </Typography>
                       <Stack spacing={0.75}>
                         {response.unschedulable.map((item) => (
@@ -2695,22 +2677,22 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                             justifyContent="space-between"
                           >
                             <Stack spacing={0.5} sx={{ flex: 1 }}>
-                              <Tooltip title={item.details || ''} placement="top-start">
+                              <Tooltip title={item.detailsText ? formatRoadmapText(t, locale, item.detailsText) : ''} placement="top-start">
                                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                                  {item.projectName} ({SCHEDULING_MODE_LABELS[item.schedulingMode]}): {REASON_LABELS[item.reason] || item.reason}
+                                  {t('planning.roadmap.unschedulable.item', { project: item.projectName, mode: t(`planning.roadmap.schedulingModes.${item.schedulingMode}`), reason: t(`planning.roadmap.reasons.${item.reason}`, { defaultValue: item.reason }) })}
                                 </Typography>
                               </Tooltip>
                               <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
                                 {pinStartValue && (
                                   <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
                                     <StatusDot color={getDotColor('info', mode)} />
-                                    <Typography variant="body2" sx={{ color: getDotColor('info', mode), fontWeight: 500, fontSize: '0.8125rem' }}>Pinned</Typography>
+                                    <Typography variant="body2" sx={{ color: getDotColor('info', mode), fontWeight: 500, fontSize: '0.8125rem' }}>{t('planning.roadmap.chips.pinned')}</Typography>
                                   </Box>
                                 )}
                                 {hasConstraintConflict && (
                                   <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
                                     <StatusDot color={getDotColor('warning', mode)} />
-                                    <Typography variant="body2" sx={{ color: getDotColor('warning', mode), fontWeight: 500, fontSize: '0.8125rem' }}>Conflict</Typography>
+                                    <Typography variant="body2" sx={{ color: getDotColor('warning', mode), fontWeight: 500, fontSize: '0.8125rem' }}>{t('planning.roadmap.chips.conflict', { count: 1 })}</Typography>
                                   </Box>
                                 )}
                               </Stack>
@@ -2724,7 +2706,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                                   pinStartValue || startDate,
                                 )}
                               >
-                                {pinStartValue ? 'Edit Pin' : 'Pin Start'}
+                                {pinStartValue ? t('planning.roadmap.actions.editPin') : t('planning.roadmap.actions.pinStart')}
                               </Button>
                               <Button
                                 size="small"
@@ -2732,14 +2714,14 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                                 disabled={!pinStartValue}
                                 onClick={() => { void clearScenarioOverride(item.projectId); }}
                               >
-                                Clear
+                                {t('common:buttons.clear')}
                               </Button>
                               <Button
                                 size="small"
                                 onClick={() => openExplanation(item.projectId)}
                                 disabled={!explanationByKey.has(item.projectId)}
                               >
-                                Why?
+                                {t('planning.roadmap.actions.why')}
                               </Button>
                             </Stack>
                           </Stack>
@@ -2753,21 +2735,21 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                   {filteredReservationProjects.length > 0 && (
                     <Paper variant="outlined" sx={{ p: 2 }}>
                       <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                        Capacity Reservations
+                        {t('planning.roadmap.reservations.title')}
                       </Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                        These projects are not recalculated but still reserve contributor capacity.
+                        {t('planning.roadmap.reservations.help')}
                       </Typography>
                       <Paper variant="outlined" sx={{ overflowX: 'auto' }}>
                         <Table size="small">
                           <TableHead>
                             <TableRow>
-                              <TableCell>Project</TableCell>
-                              <TableCell>Reason</TableCell>
-                              <TableCell>Status</TableCell>
-                              <TableCell>Scheduling</TableCell>
-                              <TableCell>Start</TableCell>
-                              <TableCell>End</TableCell>
+                              <TableCell>{t('planning.roadmap.columns.project')}</TableCell>
+                              <TableCell>{t('planning.roadmap.columns.reason')}</TableCell>
+                              <TableCell>{t('planning.roadmap.columns.status')}</TableCell>
+                              <TableCell>{t('planning.roadmap.columns.scheduling')}</TableCell>
+                              <TableCell>{t('planning.roadmap.columns.start')}</TableCell>
+                              <TableCell>{t('planning.roadmap.columns.end')}</TableCell>
                             </TableRow>
                           </TableHead>
                           <TableBody>
@@ -2785,8 +2767,8 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                                       {project.projectName}
                                     </Link>
                                   </TableCell>
-                                  <TableCell>{RESERVATION_REASON_LABELS[project.reason]}</TableCell>
-                                  <TableCell>{STATUS_LABELS[project.status] || project.status}</TableCell>
+                                  <TableCell>{t(`planning.roadmap.reservationReasons.${project.reason}`)}</TableCell>
+                                  <TableCell>{t(`statuses.project.${project.status}`, { defaultValue: project.status })}</TableCell>
                                   <TableCell>
                                     <Select
                                       size="small"
@@ -2801,15 +2783,15 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                                       disabled={loading || isSavingSchedulingMode}
                                       sx={{ minWidth: 150 }}
                                     >
-                                      {SCHEDULING_MODE_OPTIONS.map((option) => (
-                                        <MenuItem key={option.value} value={option.value}>
-                                          {option.label}
+                                      {SCHEDULING_MODES.map((option) => (
+                                        <MenuItem key={option} value={option}>
+                                          {t(`planning.roadmap.schedulingModes.${option}`)}
                                         </MenuItem>
                                       ))}
                                     </Select>
                                   </TableCell>
-                                  <TableCell>{project.plannedStart}</TableCell>
-                                  <TableCell>{project.plannedEnd}</TableCell>
+                                  <TableCell>{formatRoadmapDate(t, locale, project.plannedStart)}</TableCell>
+                                  <TableCell>{formatRoadmapDate(t, locale, project.plannedEnd)}</TableCell>
                                 </TableRow>
                               );
                             })}
@@ -2825,7 +2807,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                 <Stack spacing={1.5}>
                   {response.bottlenecks.length === 0 && (
                     <Typography variant="body2" color="text.secondary">
-                      No bottleneck data available.
+                      {t('planning.roadmap.bottlenecks.empty')}
                     </Typography>
                   )}
                   {response.bottlenecks.map((item) => {
@@ -2839,7 +2821,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                             <IconButton
                               size="small"
                               onClick={() => toggleBottleneckExpansion(item.contributorId)}
-                              aria-label={isExpanded ? 'Collapse contributor projects' : 'Expand contributor projects'}
+                              aria-label={isExpanded ? t('planning.roadmap.bottlenecks.collapse') : t('planning.roadmap.bottlenecks.expand')}
                             >
                               {isExpanded ? (
                                 <KeyboardArrowUpIcon fontSize="small" />
@@ -2852,7 +2834,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                             </Typography>
                           </Stack>
                           <Typography variant="body2" color="text.secondary">
-                            {item.impactDays} day(s)
+                            {t('planning.roadmap.bottlenecks.days', { count: item.impactDays })}
                           </Typography>
                         </Stack>
                         <LinearProgress
@@ -2865,11 +2847,11 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                             <Table size="small">
                               <TableHead>
                                 <TableRow>
-                                  <TableCell>Project name</TableCell>
-                                  <TableCell>Project start date</TableCell>
-                                  <TableCell>Project end date</TableCell>
-                                  <TableCell align="right">Total Contribution (days)</TableCell>
-                                  <TableCell align="right">Time already spent (days)</TableCell>
+                                  <TableCell>{t('planning.roadmap.bottlenecks.columns.projectName')}</TableCell>
+                                  <TableCell>{t('planning.roadmap.bottlenecks.columns.start')}</TableCell>
+                                  <TableCell>{t('planning.roadmap.bottlenecks.columns.end')}</TableCell>
+                                  <TableCell align="right">{t('planning.roadmap.bottlenecks.columns.totalContribution')}</TableCell>
+                                  <TableCell align="right">{t('planning.roadmap.bottlenecks.columns.spent')}</TableCell>
                                 </TableRow>
                               </TableHead>
                               <TableBody>
@@ -2877,7 +2859,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                                   <TableRow>
                                     <TableCell colSpan={5}>
                                       <Typography variant="body2" color="text.secondary">
-                                        No scheduled projects for this contributor in the current scenario.
+                                        {t('planning.roadmap.bottlenecks.noProjects')}
                                       </Typography>
                                     </TableCell>
                                   </TableRow>
@@ -2894,10 +2876,10 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                                         {row.projectName}
                                       </Link>
                                     </TableCell>
-                                    <TableCell>{row.plannedStart}</TableCell>
-                                    <TableCell>{row.plannedEnd}</TableCell>
-                                    <TableCell align="right">{row.totalContributionDays.toFixed(1)}</TableCell>
-                                    <TableCell align="right">{row.spentDays.toFixed(1)}</TableCell>
+                                    <TableCell>{formatRoadmapDate(t, locale, row.plannedStart)}</TableCell>
+                                    <TableCell>{formatRoadmapDate(t, locale, row.plannedEnd)}</TableCell>
+                                    <TableCell align="right">{formatRoadmapDays(locale, row.totalContributionDays, 1)}</TableCell>
+                                    <TableCell align="right">{formatRoadmapDays(locale, row.spentDays, 1)}</TableCell>
                                   </TableRow>
                                 ))}
                               </TableBody>
@@ -2921,28 +2903,28 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                         if (value) setOccupationView(value);
                       }}
                     >
-                      <ToggleButton value="contributor">Contributors</ToggleButton>
-                      <ToggleButton value="team">Teams</ToggleButton>
+                      <ToggleButton value="contributor">{t('planning.roadmap.occupation.contributors')}</ToggleButton>
+                      <ToggleButton value="team">{t('planning.roadmap.occupation.teams')}</ToggleButton>
                     </ToggleButtonGroup>
-                    <Tooltip title="Export occupation as Excel">
+                    <Tooltip title={t('planning.roadmap.occupation.exportExcel')}>
                       <span>
                         <IconButton
                           size="small"
                           onClick={handleExportOccupationExcel}
                           disabled={!occupationExportData}
-                          aria-label="Export occupation as Excel"
+                          aria-label={t('planning.roadmap.occupation.exportExcel')}
                         >
                           <FileDownloadIcon fontSize="small" />
                         </IconButton>
                       </span>
                     </Tooltip>
-                    <Tooltip title="Export occupation as PNG">
+                    <Tooltip title={t('planning.roadmap.occupation.exportPng')}>
                       <span>
                         <IconButton
                           size="small"
                           onClick={handleExportOccupationPng}
                           disabled={!occupationExportData}
-                          aria-label="Export occupation as PNG"
+                          aria-label={t('planning.roadmap.occupation.exportPng')}
                         >
                           <ImageIcon fontSize="small" />
                         </IconButton>
@@ -2954,21 +2936,21 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                     <Paper variant="outlined" sx={{ overflowX: 'auto' }}>
                       {contributorOccupationGroups.length === 0 || occupationWeekKeys.length === 0 ? (
                         <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
-                          No contributor occupation data available.
+                          {t('planning.roadmap.occupation.noContributorData')}
                         </Typography>
                       ) : (
                         <Table size="small">
                           <TableHead>
                             <TableRow>
-                              <TableCell sx={{ minWidth: 160 }}>Team</TableCell>
-                              <TableCell sx={{ minWidth: 220 }}>Contributor</TableCell>
+                              <TableCell sx={{ minWidth: 160 }}>{t('planning.roadmap.occupation.team')}</TableCell>
+                              <TableCell sx={{ minWidth: 220 }}>{t('planning.roadmap.occupation.contributor')}</TableCell>
                               {occupationWeekKeys.map((weekKey) => {
                                 const isoWeek = getIsoWeekParts(weekKey);
                                 return (
                                   <TableCell key={`contributor-week:${weekKey}`} align="center" sx={{ minWidth: 74 }}>
                                     <Stack spacing={0} alignItems="center">
                                       <Typography variant="caption" sx={{ fontWeight: 500 }}>
-                                        W{String(isoWeek.week).padStart(2, '0')}
+                                        {t('planning.roadmap.occupation.week', { week: String(isoWeek.week).padStart(2, '0') })}
                                       </Typography>
                                       <Typography variant="caption" color="text.secondary">
                                         {isoWeek.year}
@@ -3010,7 +2992,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                           </TableBody>
                           <TableFooter>
                             <TableRow sx={{ backgroundColor: 'action.hover' }}>
-                              <TableCell colSpan={2} sx={{ fontWeight: 500 }}>Avg</TableCell>
+                              <TableCell colSpan={2} sx={{ fontWeight: 500 }}>{t('planning.roadmap.occupation.avg')}</TableCell>
                               {occupationWeekKeys.map((weekKey) => {
                                 const avg = contributorOccupationAverages.get(weekKey) ?? null;
                                 return (
@@ -3037,20 +3019,20 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                     <Paper variant="outlined" sx={{ overflowX: 'auto' }}>
                       {teamOccupationRows.length === 0 || occupationWeekKeys.length === 0 ? (
                         <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
-                          No team occupation data available.
+                          {t('planning.roadmap.occupation.noTeamData')}
                         </Typography>
                       ) : (
                         <Table size="small">
                           <TableHead>
                             <TableRow>
-                              <TableCell sx={{ minWidth: 220 }}>Team</TableCell>
+                              <TableCell sx={{ minWidth: 220 }}>{t('planning.roadmap.occupation.team')}</TableCell>
                               {occupationWeekKeys.map((weekKey) => {
                                 const isoWeek = getIsoWeekParts(weekKey);
                                 return (
                                   <TableCell key={`team-week:${weekKey}`} align="center" sx={{ minWidth: 74 }}>
                                     <Stack spacing={0} alignItems="center">
                                       <Typography variant="caption" sx={{ fontWeight: 500 }}>
-                                        W{String(isoWeek.week).padStart(2, '0')}
+                                        {t('planning.roadmap.occupation.week', { week: String(isoWeek.week).padStart(2, '0') })}
                                       </Typography>
                                       <Typography variant="caption" color="text.secondary">
                                         {isoWeek.year}
@@ -3082,7 +3064,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                           </TableBody>
                           <TableFooter>
                             <TableRow sx={{ backgroundColor: 'action.hover' }}>
-                              <TableCell sx={{ fontWeight: 500 }}>Avg</TableCell>
+                              <TableCell sx={{ fontWeight: 500 }}>{t('planning.roadmap.occupation.avg')}</TableCell>
                               {occupationWeekKeys.map((weekKey) => {
                                 const avg = teamOccupationAverages.get(weekKey) ?? null;
                                 return (
@@ -3118,7 +3100,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
               sx={{ px: 1, py: 0.5 }}
             >
               <Typography variant="subtitle2" sx={{ flex: 1, fontWeight: 500 }}>
-                Read-only Gantt
+                {t('planning.roadmap.gantt.title')}
               </Typography>
               <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
                 {activeGanttFocusScope && (
@@ -3130,8 +3112,8 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                       if (value) setGanttContributionVisibility(value);
                     }}
                   >
-                    <ToggleButton value="primary_only">Primary Only</ToggleButton>
-                    <ToggleButton value="all">All</ToggleButton>
+                    <ToggleButton value="primary_only">{t('planning.roadmap.gantt.primaryOnly')}</ToggleButton>
+                    <ToggleButton value="all">{t('planning.roadmap.gantt.all')}</ToggleButton>
                   </ToggleButtonGroup>
                 )}
                 <FormControlLabel
@@ -3141,15 +3123,15 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                       onChange={(event) => setShowReservations(event.target.checked)}
                     />
                   }
-                  label="Show reservations"
+                  label={t('planning.roadmap.gantt.showReservations')}
                 />
-                <Tooltip title="Export Gantt as PNG">
+                <Tooltip title={t('planning.roadmap.gantt.exportPng')}>
                   <span>
                     <IconButton
                       size="small"
                       onClick={handleExportGanttPng}
                       disabled={ganttProjects.length === 0}
-                      aria-label="Export Gantt as PNG"
+                      aria-label={t('planning.roadmap.gantt.exportPng')}
                     >
                       <ImageIcon fontSize="small" />
                     </IconButton>
@@ -3159,24 +3141,24 @@ export default function RoadmapGenerator({ onApplied }: Props) {
             </Stack>
             {activeGanttFocusScope && (
               <Stack direction="row" spacing={1} alignItems="center" sx={{ px: 1, pb: 0.5 }} flexWrap="wrap" useFlexGap>
-                <Typography variant="body2" color="text.secondary">{activeGanttFocusScope === 'contributor' ? 'Contributor Significance View' : 'Team Significance View'}</Typography>
+                <Typography variant="body2" color="text.secondary">{activeGanttFocusScope === 'contributor' ? t('planning.roadmap.gantt.contributorView') : t('planning.roadmap.gantt.teamView')}</Typography>
                 {hiddenSupportSummary && (
                   <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
                     <StatusDot color={getDotColor('warning', mode)} />
-                    <Typography variant="body2" sx={{ color: getDotColor('warning', mode), fontWeight: 500, fontSize: '0.8125rem' }}>{`Hidden support work: ${hiddenSupportSummary.count} project(s), ${hiddenSupportSummary.totalDays.toFixed(1)}d`}</Typography>
+                    <Typography variant="body2" sx={{ color: getDotColor('warning', mode), fontWeight: 500, fontSize: '0.8125rem' }}>{t('planning.roadmap.gantt.hiddenSupport', { count: hiddenSupportSummary.count, days: formatRoadmapDays(locale, hiddenSupportSummary.totalDays, 1) })}</Typography>
                   </Box>
                 )}
               </Stack>
             )}
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }} sx={{ px: 1, py: 0.5 }} useFlexGap flexWrap="wrap">
               <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 200 } }}>
-                <InputLabel>Category</InputLabel>
+                <InputLabel>{t('planning.filters.category')}</InputLabel>
                 <Select
                   value={ganttCategoryId}
-                  label="Category"
+                  label={t('planning.filters.category')}
                   onChange={(event) => setGanttCategoryId(event.target.value)}
                 >
-                  <MenuItem value="">All Categories</MenuItem>
+                  <MenuItem value="">{t('planning.filters.allCategories')}</MenuItem>
                   {ganttCategoryOptions.map((category) => (
                     <MenuItem key={category.id} value={category.id}>
                       {category.name}
@@ -3185,13 +3167,13 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                 </Select>
               </FormControl>
               <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 200 } }}>
-                <InputLabel>Stream</InputLabel>
+                <InputLabel>{t('reports.weekly.filters.stream')}</InputLabel>
                 <Select
                   value={ganttStreamId}
-                  label="Stream"
+                  label={t('reports.weekly.filters.stream')}
                   onChange={(event) => setGanttStreamId(event.target.value)}
                 >
-                  <MenuItem value="">All Streams</MenuItem>
+                  <MenuItem value="">{t('reports.weekly.filters.allStreams')}</MenuItem>
                   {ganttStreamOptions.map((stream) => (
                     <MenuItem key={stream.id} value={stream.id}>
                       {stream.name}
@@ -3200,13 +3182,13 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                 </Select>
               </FormControl>
               <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 200 } }}>
-                <InputLabel>Contributor</InputLabel>
+                <InputLabel>{t('planning.roadmap.occupation.contributor')}</InputLabel>
                 <Select
                   value={ganttContributorId}
-                  label="Contributor"
+                  label={t('planning.roadmap.occupation.contributor')}
                   onChange={(event) => setGanttContributorId(event.target.value)}
                 >
-                  <MenuItem value="">All Contributors</MenuItem>
+                  <MenuItem value="">{t('planning.roadmap.filters.allContributors')}</MenuItem>
                   {ganttContributorOptions.map((contributor) => (
                     <MenuItem key={contributor.id} value={contributor.id}>
                       {contributor.name}
@@ -3215,13 +3197,13 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                 </Select>
               </FormControl>
               <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 180 } }}>
-                <InputLabel>Team</InputLabel>
+                <InputLabel>{t('planning.roadmap.occupation.team')}</InputLabel>
                 <Select
                   value={ganttTeamId}
-                  label="Team"
+                  label={t('planning.roadmap.occupation.team')}
                   onChange={(event) => setGanttTeamId(event.target.value)}
                 >
-                  <MenuItem value="">All Teams</MenuItem>
+                  <MenuItem value="">{t('planning.roadmap.filters.allTeams')}</MenuItem>
                   {ganttTeamOptions.map((team) => (
                     <MenuItem key={team.id} value={team.id}>
                       {team.name}
@@ -3230,13 +3212,13 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                 </Select>
               </FormControl>
               <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 180 } }}>
-                <InputLabel>Source</InputLabel>
+                <InputLabel>{t('reports.weekly.filters.source')}</InputLabel>
                 <Select
                   value={ganttSourceId}
-                  label="Source"
+                  label={t('reports.weekly.filters.source')}
                   onChange={(event) => setGanttSourceId(event.target.value)}
                 >
-                  <MenuItem value="">All Sources</MenuItem>
+                  <MenuItem value="">{t('planning.roadmap.filters.allSources')}</MenuItem>
                   {ganttSourceOptions.map((source) => (
                     <MenuItem key={source.id} value={source.id}>
                       {source.name}
@@ -3246,10 +3228,10 @@ export default function RoadmapGenerator({ onApplied }: Props) {
               </FormControl>
             </Stack>
             <Typography variant="caption" color="text.secondary" sx={{ px: 1, pb: 0.5, display: 'block' }}>
-              Solid bar shows active scheduled work. Dashed lead-in marks earlier historical start with pause before resumed work. Hatched bars are capacity reservations. Dotted overlay marks scheduling gaps; diagonal gray overlay marks on-hold periods.
+              {t('planning.roadmap.gantt.legend')}
             </Typography>
             <Typography variant="caption" color="text.secondary" sx={{ px: 1, pb: 1, display: 'block' }}>
-              Drag a project bar to create or update a scenario-only pinned start. Click a project bar to open its explanation.
+              {t('planning.roadmap.gantt.dragHelp')}
             </Typography>
             <LightModeIsland sx={{ p: 1 }}>
               <Box sx={{ height: `${ganttHeight}px` }}>
@@ -3270,7 +3252,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
           <Paper variant="outlined" sx={{ p: 2 }}>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }}>
               <Typography variant="body2" color="text.secondary">
-                Apply dates to {selectedSchedulableCount} selected visible project(s)
+                {t('planning.roadmap.apply.summary', { count: selectedSchedulableCount })}
               </Typography>
               <Button
                 variant="contained"
@@ -3279,7 +3261,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                 onClick={() => setConfirmOpen(true)}
                 startIcon={applying ? <CircularProgress size={16} /> : undefined}
               >
-                {applying ? 'Applying...' : 'Apply Dates'}
+                {applying ? t('planning.roadmap.apply.applying') : t('planning.roadmap.apply.button')}
               </Button>
             </Stack>
           </Paper>
@@ -3302,43 +3284,43 @@ export default function RoadmapGenerator({ onApplied }: Props) {
           <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
             <Box>
               <Typography variant="overline" color="text.secondary">
-                Explainability
+                {t('planning.roadmap.explain.overline')}
               </Typography>
               <Typography variant="h6">{selectedExplanationTitle}</Typography>
             </Box>
-            <Button size="small" onClick={closeExplanation}>Close</Button>
+            <Button size="small" onClick={closeExplanation}>{t('common:buttons.close')}</Button>
           </Stack>
 
           {selectedExplanation && (
             <Stack spacing={2} sx={{ mt: 2 }}>
               <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                <Typography variant="body2" color="text.secondary">{selectedExplanation.classification}</Typography>
-                <Typography variant="body2" color="text.secondary">{SCHEDULING_MODE_LABELS[selectedExplanation.schedulingMode]}</Typography>
+                <Typography variant="body2" color="text.secondary">{t(`planning.roadmap.classifications.${selectedExplanation.classification}`)}</Typography>
+                <Typography variant="body2" color="text.secondary">{t(`planning.roadmap.schedulingModes.${selectedExplanation.schedulingMode}`)}</Typography>
               </Stack>
 
               <Box>
-                <Typography variant="body2">{selectedExplanation.summary}</Typography>
+                <Typography variant="body2">{selectedExplanationTexts?.summary}</Typography>
               </Box>
 
               <Divider />
 
               <Box>
                 <Typography variant="subtitle2" sx={{ mb: 0.75 }}>
-                  Why this start week
+                  {t('planning.roadmap.explain.whyStart')}
                 </Typography>
                 <Stack spacing={0.5}>
                   <Typography variant="body2">
-                    Start reason: {START_REASON_LABELS[selectedExplanation.startReason]}
+                    {t('planning.roadmap.explain.startReason', { reason: t(`planning.roadmap.startReasons.${selectedExplanation.startReason}`) })}
                   </Typography>
                   <Typography variant="body2">
-                    Earliest eligible week: {selectedExplanation.earliestEligibleWeek || 'N/A'}
+                    {t('planning.roadmap.explain.earliestWeek', { week: formatRoadmapDate(t, locale, selectedExplanation.earliestEligibleWeek) })}
                   </Typography>
                   <Typography variant="body2">
-                    Actual start week: {selectedExplanation.actualStartWeek || 'Not scheduled'}
+                    {t('planning.roadmap.explain.actualWeek', { week: selectedExplanation.actualStartWeek ? formatRoadmapDate(t, locale, selectedExplanation.actualStartWeek) : t('planning.roadmap.explain.notScheduled') })}
                   </Typography>
-                  {selectedExplanation.finalReason && (
+                  {selectedExplanationTexts?.finalReason && (
                     <Typography variant="body2" color="text.secondary">
-                      {selectedExplanation.finalReason}
+                      {selectedExplanationTexts.finalReason}
                     </Typography>
                   )}
                 </Stack>
@@ -3348,20 +3330,20 @@ export default function RoadmapGenerator({ onApplied }: Props) {
 
               <Box>
                 <Typography variant="subtitle2" sx={{ mb: 0.75 }}>
-                  Why not earlier
+                  {t('planning.roadmap.explain.whyNotEarlier')}
                 </Typography>
                 <Stack spacing={1}>
                   {selectedExplanation.blockerReasons.length === 0 && (
                     <Typography variant="body2" color="text.secondary">
-                      No additional blocking details were recorded for this item.
+                      {t('planning.roadmap.explain.noBlockers')}
                     </Typography>
                   )}
                   {selectedExplanation.blockerReasons.map((reason, index) => (
                     <Paper key={`${reason.kind}:${reason.projectId || 'none'}:${index}`} variant="outlined" sx={{ p: 1.25 }}>
-                      <Typography variant="body2">{reason.label}</Typography>
+                      <Typography variant="body2">{formatReasonLabel(t, locale, reason)}</Typography>
                       {(reason.fromWeek || reason.toWeek) && (
                         <Typography variant="caption" color="text.secondary">
-                          {reason.fromWeek || 'Unknown'} to {reason.toWeek || 'Unknown'}
+                          {t('planning.roadmap.explain.range', { from: reason.fromWeek ? formatRoadmapDate(t, locale, reason.fromWeek) : t('planning.roadmap.explain.unknown'), to: reason.toWeek ? formatRoadmapDate(t, locale, reason.toWeek) : t('planning.roadmap.explain.unknown') })}
                         </Typography>
                       )}
                     </Paper>
@@ -3375,49 +3357,52 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                 <>
                   <Box>
                     <Typography variant="subtitle2" sx={{ mb: 0.75 }}>
-                      {activeGanttFocusScope === 'contributor' ? 'Selected Contributor Timeline' : 'Selected Team Timeline'}
+                      {activeGanttFocusScope === 'contributor' ? t('planning.roadmap.explain.contributorTimeline') : t('planning.roadmap.explain.teamTimeline')}
                     </Typography>
                     <Stack spacing={1}>
                       <Typography variant="body2">
-                        {'contributorName' in selectedFocusTimeline
-                          ? selectedFocusTimeline.contributorName
-                          : selectedFocusTimeline.teamName}
-                        : {selectedFocusTimeline.activeStart} to {selectedFocusTimeline.activeEnd}
+                        {t('planning.roadmap.explain.focusWindow', {
+                          name: 'contributorName' in selectedFocusTimeline
+                            ? selectedFocusTimeline.contributorName
+                            : selectedFocusTimeline.teamName,
+                          start: formatRoadmapDate(t, locale, selectedFocusTimeline.activeStart),
+                          end: formatRoadmapDate(t, locale, selectedFocusTimeline.activeEnd),
+                        })}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        Planned contribution: {selectedFocusTimeline.totalProjectDays.toFixed(2)}d across {selectedFocusTimeline.weekDetails.length} active week(s)
+                        {t('planning.roadmap.explain.plannedContribution', { days: formatRoadmapDays(locale, selectedFocusTimeline.totalProjectDays), count: selectedFocusTimeline.weekDetails.length })}
                       </Typography>
                       <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
                         <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
                           <StatusDot color={getDotColor(selectedFocusTimeline.significance === 'primary' ? 'success' : 'warning', mode)} />
                           <Typography variant="body2" sx={{ color: getDotColor(selectedFocusTimeline.significance === 'primary' ? 'success' : 'warning', mode), fontWeight: 500, fontSize: '0.8125rem' }}>
-                            {selectedFocusTimeline.significance === 'primary' ? 'Primary roadmap work' : 'Support work'}
+                            {selectedFocusTimeline.significance === 'primary' ? t('planning.roadmap.explain.primaryWork') : t('planning.roadmap.explain.supportWork')}
                           </Typography>
                         </Box>
                         {selectedFocusTimeline.contributionShare != null && (
-                          <Typography variant="body2" color="text.secondary">{`${Math.round(selectedFocusTimeline.contributionShare * 100)}% of project effort`}</Typography>
+                          <Typography variant="body2" color="text.secondary">{t('planning.roadmap.explain.shareOfEffort', { percent: Math.round(selectedFocusTimeline.contributionShare * 100) })}</Typography>
                         )}
-                        <Typography variant="body2" color="text.secondary">{`${selectedFocusTimeline.averageDaysPerWeek.toFixed(2)}d/week avg`}</Typography>
+                        <Typography variant="body2" color="text.secondary">{t('planning.roadmap.explain.avgPerWeek', { days: formatRoadmapDays(locale, selectedFocusTimeline.averageDaysPerWeek) })}</Typography>
                       </Stack>
                       <Typography variant="caption" color="text.secondary">
                         {selectedFocusTimeline.significance === 'primary'
-                          ? 'This project is shown in the primary roadmap view for the selected focus.'
-                          : 'This project is treated as support work and is hidden when the Gantt is set to Primary Only.'}
+                          ? t('planning.roadmap.explain.primaryHelp')
+                          : t('planning.roadmap.explain.supportHelp')}
                       </Typography>
                       {selectedFocusTimeline.weekDetails.map((detail) => (
                         <Paper key={`${selectedFocusTimeline.projectId}:${detail.week}`} variant="outlined" sx={{ p: 1.25 }}>
-                          <Typography variant="body2">Week of {detail.week}</Typography>
+                          <Typography variant="body2">{t('planning.roadmap.explain.weekOf', { week: formatRoadmapDate(t, locale, detail.week) })}</Typography>
                           <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                            Project load: {detail.projectDays.toFixed(2)}d
+                            {t('planning.roadmap.explain.projectLoad', { days: formatRoadmapDays(locale, detail.projectDays) })}
                           </Typography>
                           <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                            Weekly capacity: {detail.capacityDays != null ? `${detail.capacityDays.toFixed(2)}d` : 'N/A'}
+                            {t('planning.roadmap.explain.weeklyCapacity', { value: detail.capacityDays != null ? t('planning.roadmap.values.days', { days: formatRoadmapDays(locale, detail.capacityDays) }) : t('planning.roadmap.values.na') })}
                           </Typography>
                           <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                            Total assigned effort that week: {detail.totalWeekEffortDays.toFixed(2)}d
+                            {t('planning.roadmap.explain.totalAssigned', { days: formatRoadmapDays(locale, detail.totalWeekEffortDays) })}
                           </Typography>
                           <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                            Weekly occupation: {detail.occupationPct != null ? `${Math.round(detail.occupationPct)}%` : 'N/A'}
+                            {t('planning.roadmap.explain.weeklyOccupation', { value: detail.occupationPct != null ? t('planning.roadmap.values.percent', { value: Math.round(detail.occupationPct) }) : t('planning.roadmap.values.na') })}
                           </Typography>
                         </Paper>
                       ))}
@@ -3431,30 +3416,35 @@ export default function RoadmapGenerator({ onApplied }: Props) {
               {hasContributorLoads(selectedExplanationProject) && (
                 <Box>
                   <Typography variant="subtitle2" sx={{ mb: 0.75 }}>
-                    Project contributors
+                    {t('planning.roadmap.explain.projectContributors')}
                   </Typography>
                   <Stack spacing={1}>
                     {selectedExplanationProject.plannedStart && (
                       <Typography variant="body2" color="text.secondary">
-                        Scheduled window: {selectedExplanationProject.plannedStart} to {selectedExplanationProject.plannedEnd}
+                        {t('planning.roadmap.explain.scheduledWindow', { start: formatRoadmapDate(t, locale, selectedExplanationProject.plannedStart), end: formatRoadmapDate(t, locale, selectedExplanationProject.plannedEnd) })}
                       </Typography>
                     )}
                     {selectedExplanationProject.contributorLoads.length === 0 && (
                       <Typography variant="body2" color="text.secondary">
-                        No contributor load details are available for this item.
+                        {t('planning.roadmap.explain.noLoads')}
                       </Typography>
                     )}
                     {selectedExplanationProject.contributorLoads.map((load) => (
                       <Paper key={load.contributorId} variant="outlined" sx={{ p: 1.25 }}>
                         <Typography variant="body2">{load.contributorName}</Typography>
                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                          Planned load: {load.days.toFixed(2)}d
+                          {t('planning.roadmap.explain.plannedLoad', { days: formatRoadmapDays(locale, load.days) })}
                         </Typography>
                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                          Weekly capacity: {(
-                            selectedExplanation.limitingContributors.find((item) => item.contributorId === load.contributorId)?.weeklyCapacity
-                            ?? 0
-                          ).toFixed(2)}d
+                          {t('planning.roadmap.explain.weeklyCapacity', {
+                            value: t('planning.roadmap.values.days', {
+                              days: formatRoadmapDays(
+                                locale,
+                                selectedExplanation.limitingContributors.find((item) => item.contributorId === load.contributorId)?.weeklyCapacity
+                                ?? 0,
+                              ),
+                            }),
+                          })}
                         </Typography>
                       </Paper>
                     ))}
@@ -3466,28 +3456,28 @@ export default function RoadmapGenerator({ onApplied }: Props) {
 
               <Box>
                 <Typography variant="subtitle2" sx={{ mb: 0.75 }}>
-                  Limiting contributors
+                  {t('planning.roadmap.explain.limiting')}
                 </Typography>
                 <Stack spacing={1}>
                   {selectedExplanation.limitingContributors.length === 0 && (
                     <Typography variant="body2" color="text.secondary">
-                      No specific limiting contributors were recorded for this item.
+                      {t('planning.roadmap.explain.noLimiting')}
                     </Typography>
                   )}
                   {selectedExplanation.limitingContributors.map((contributor) => (
                     <Paper key={contributor.contributorId} variant="outlined" sx={{ p: 1.25 }}>
                       <Typography variant="body2">{contributor.contributorName}</Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                        {CONTRIBUTOR_REASON_LABELS[contributor.reason]}
+                        {t(`planning.roadmap.contributorReasons.${contributor.reason}`)}
                       </Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                        Weekly capacity: {contributor.weeklyCapacity.toFixed(2)}d
+                        {t('planning.roadmap.explain.weeklyCapacity', { value: t('planning.roadmap.values.days', { days: formatRoadmapDays(locale, contributor.weeklyCapacity) }) })}
                       </Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                        Reserved load: {contributor.reservedLoad != null ? `${contributor.reservedLoad.toFixed(2)}d` : 'N/A'}
+                        {t('planning.roadmap.explain.reservedLoad', { value: contributor.reservedLoad != null ? t('planning.roadmap.values.days', { days: formatRoadmapDays(locale, contributor.reservedLoad) }) : t('planning.roadmap.values.na') })}
                       </Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                        Active projects: {contributor.activeProjectCount != null ? contributor.activeProjectCount : 'N/A'}
+                        {t('planning.roadmap.explain.activeProjects', { value: contributor.activeProjectCount != null ? contributor.activeProjectCount : t('planning.roadmap.values.na') })}
                       </Typography>
                     </Paper>
                   ))}
@@ -3498,12 +3488,12 @@ export default function RoadmapGenerator({ onApplied }: Props) {
 
               <Box>
                 <Typography variant="subtitle2" sx={{ mb: 0.75 }}>
-                  Active scenario overrides
+                  {t('planning.roadmap.explain.activeOverrides')}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   {selectedExplanation.activeConstraint
-                    ? formatConstraint(selectedExplanation.activeConstraint)
-                    : 'No active scenario overrides for this item.'}
+                    ? formatRoadmapConstraint(t, locale, selectedExplanation.activeConstraint)
+                    : t('planning.roadmap.explain.noOverrides')}
                 </Typography>
               </Box>
 
@@ -3511,17 +3501,17 @@ export default function RoadmapGenerator({ onApplied }: Props) {
 
               <Box>
                 <Typography variant="subtitle2" sx={{ mb: 0.75 }}>
-                  Final warnings
+                  {t('planning.roadmap.explain.finalWarnings')}
                 </Typography>
                 <Stack spacing={1}>
                   {selectedExplanationWarnings.length === 0 && (
                     <Typography variant="body2" color="text.secondary">
-                      No scenario warnings were recorded for this item.
+                      {t('planning.roadmap.explain.noWarnings')}
                     </Typography>
                   )}
                   {selectedExplanationWarnings.map((warning, index) => (
                     <Alert key={`${warning.code}:${index}`} severity={warning.severity}>
-                      {warning.message}
+                      {formatWarning(warning)}
                     </Alert>
                   ))}
                 </Stack>
@@ -3532,55 +3522,51 @@ export default function RoadmapGenerator({ onApplied }: Props) {
       </Drawer>
 
       <Dialog open={!!pinDialogProjectId} onClose={() => !loading && closePinDialog()} maxWidth="xs" fullWidth>
-        <DialogTitle>Pin Start</DialogTitle>
+        <DialogTitle>{t('planning.roadmap.actions.pinStart')}</DialogTitle>
         <DialogContent>
           <Stack spacing={1.5} sx={{ pt: 0.5 }}>
             <DialogContentText>
-              Create or update a scenario-only pin-start constraint for {pinDialogProjectName || 'this project'}.
+              {t('planning.roadmap.pinDialog.description', { project: pinDialogProjectName || t('planning.roadmap.pinDialog.thisProject') })}
             </DialogContentText>
-            <TextField
-              label="Start week"
-              type="date"
-              size="small"
-              value={pinDialogWeek}
-              onChange={(event) => setPinDialogWeek(event.target.value)}
-              InputLabelProps={{ shrink: true }}
-              fullWidth
+            <DateEUField
+              label={t('planning.roadmap.pinDialog.startWeek')}
+              valueYmd={pinDialogWeek}
+              onChangeYmd={setPinDialogWeek}
+              required
             />
           </Stack>
         </DialogContent>
         <DialogActions>
           <Button variant="action" onClick={closePinDialog} disabled={loading}>
-            Cancel
+            {t('common:buttons.cancel')}
           </Button>
           <Button variant="action"
             onClick={() => { void handleClearPinDialog(); }}
             disabled={loading || !(pinDialogProjectId && projectOverrideById.get(pinDialogProjectId)?.constraint)}
           >
-            Clear
+            {t('common:buttons.clear')}
           </Button>
           <Button
             variant="action-primary"
             onClick={() => { void handleSavePinDialog(); }}
             disabled={loading || !pinDialogProjectId || !pinDialogWeek}
           >
-            Save Pin
+            {t('planning.roadmap.pinDialog.save')}
           </Button>
         </DialogActions>
       </Dialog>
 
       <KanapDialog
         open={confirmOpen}
-        title="Apply roadmap dates"
+        title={t('planning.roadmap.apply.dialogTitle')}
         onClose={() => { if (!applying) setConfirmOpen(false); }}
         onSave={handleApply}
-        saveLabel="Apply dates"
+        saveLabel={t('planning.roadmap.apply.button')}
         saveDisabled={selectedSchedulableCount === 0}
         saveLoading={applying}
       >
         <Typography sx={{ fontSize: 13.5, color: 'kanap.text.primary' }}>
-          This will update planned start/end dates for {selectedSchedulableCount} selected visible project(s). The change is transactional:
-          if one project fails validation, no dates will be applied.
+          {t('planning.roadmap.apply.confirm', { count: selectedSchedulableCount })}
         </Typography>
       </KanapDialog>
     </Stack>

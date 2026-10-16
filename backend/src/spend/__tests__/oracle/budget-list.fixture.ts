@@ -90,14 +90,16 @@ const PRODUCT_NAMES = [
   'ÆON license', 'Æon license', 'naïve', 'naive', 'Ça marche', 'ca marche', 'x', 'X', 'Z', 'a', 'A',
 ];
 const WORDS = ['Licences', 'Maintenance', 'Support', 'Hébergement', 'Réseau', 'Téléphonie', 'Sécurité', 'Cloud', 'Postes', 'Conseil'];
+// Unique per tenant, case-insensitively (the database's key): the near ties differ by an accent, so
+// they still tie under the accent- and case-insensitive sort.
 const SUPPLIER_NAMES = [
-  'Électricité de France', 'Electricite de France', 'électricité de france', 'ACME', 'acme', 'Acme', '%Percent & Co', 'Under_score SA',
+  'Électricité de France', 'Electricite de France', 'électricite de france', 'ACME', 'Acmé', 'ACME corp', '%Percent & Co', 'Under_score SA',
   'Comma, Inc', 'Back\\slash GmbH', 'Œuvre SARL', 'Straße AG', 'İnci Holding', 'ΣΟΦΟΣ ΕΠΕ', '𝒜stral Ltd', 'Zébu Tech', 'zebu tech',
   'Nova soft', 'Cyber core', 'Cybercore', 'Data link SA', 'Hébergeur', 'Hebergeur', 'Blue gate', 'Green wave', 'Opti base',
 ];
 const FIRST = ['Alice', 'Élodie', 'elodie', 'Gaëlle', 'Inès', 'Léa', 'Zoé', 'Zoe', 'İsmail', 'ΣΟΦΙΑ', 'Ångel', 'marc', 'Marc'];
 const LAST = ['Martin', 'Dubois', 'André', 'Lefèvre', 'Lefevre', 'Şahin', 'ΠΑΠΑΣ', 'Ångström', "O'Brien", 'du Pont'];
-// Unique per dimension, case-insensitively: case variants live in other names (suppliers, products).
+// Unique per dimension, case-insensitively: case variants live in other names (products, projects).
 const CATEGORY_NAMES = ['Licences', 'Licençes', 'Services', 'Sécurité', 'Securite', 'Matériel', 'Réseau', 'Énergie', 'Comma, value'];
 const PROJECT_NAMES = ['Atlas', 'atlas', 'Borealis', 'Alpha, Beta', 'Ébène', 'Zénith', 'Nebula', 'Orion', 'Ω mega', 'Ζeta'];
 const CONTRACT_NAMES = ['Accord cadre', 'accord cadre', 'Zephyr agreement', 'Contrat Électricité', 'Contrat electricite', 'Licence 2024', 'Support, maintenance'];

@@ -41,7 +41,9 @@ import {
 import { getDotColor, LIFECYCLE_COLORS } from '../../../utils/statusColors';
 
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { legTypeLabel } from '../../../utils/interfaceLegType';
 const ENVIRONMENTS = ['prod', 'pre_prod', 'qa', 'test', 'dev', 'sandbox'] as const;
 // Set to false to restore the previous per-environment tables while evaluating the matrix workflow.
 const USE_RUNTIME_MATRIX_EXPERIMENT = true;
@@ -178,11 +180,11 @@ type ManageConnectionsState = {
   binding: BindingRow;
 } | null;
 
-function getRoleLabel(role: string, sourceName?: string | null, targetName?: string | null): string {
+function getRoleLabel(t: TFunction, role: string, sourceName?: string | null, targetName?: string | null): string {
   const r = String(role || '').toLowerCase();
-  if (r === 'source') return sourceName || 'Source';
-  if (r === 'target') return targetName || 'Target';
-  if (r === 'middleware') return 'Middleware';
+  if (r === 'source') return sourceName || t('it:workspace.interface.flow.source');
+  if (r === 'target') return targetName || t('it:workspace.interface.flow.target');
+  if (r === 'middleware') return t('it:workspace.interface.flow.middleware');
   return role || '';
 }
 
@@ -191,20 +193,21 @@ function formatEnvironment(value: string | null | undefined) {
 }
 
 const DEFAULT_AUTH_OPTIONS = [
-  { code: 'service_account', label: 'Service account' },
-  { code: 'oauth2', label: 'OAuth2' },
-  { code: 'api_key', label: 'API key' },
-  { code: 'certificate', label: 'Certificate' },
-  { code: 'none', label: 'None' },
+  { code: 'service_account', labelKey: 'serviceAccount' },
+  { code: 'oauth2', labelKey: 'oauth2' },
+  { code: 'api_key', labelKey: 'apiKey' },
+  { code: 'certificate', labelKey: 'certificate' },
+  { code: 'none', labelKey: 'none' },
 ];
 
 function formatInstanceOption(
+  t: TFunction,
   instance: AppInstanceOption,
   role: string,
   sourceName?: string | null,
   targetName?: string | null,
 ) {
-  const roleLabel = getRoleLabel(role, sourceName, targetName);
+  const roleLabel = getRoleLabel(t, role, sourceName, targetName);
   const details = [instance.base_url, instance.region, instance.zone].filter(Boolean).join(' / ');
   return [roleLabel, formatEnvironment(instance.environment), details || instance.id.slice(0, 8)]
     .filter(Boolean)
@@ -261,12 +264,12 @@ export default function InterfaceBindingsMatrix({
   const { byField, labelFor } = useItOpsEnumOptions();
   const lifecycleOptions = React.useMemo(() => {
     const list = byField.lifecycleStatus || [];
-    if (list.length === 0) return [{ label: 'Active', value: 'active' }];
+    if (list.length === 0) return [{ label: t('common:statuses.active'), value: 'active' }];
     return list.map((item) => ({
       value: item.code,
-      label: item.deprecated ? `${item.label} (deprecated)` : item.label,
+      label: item.deprecated ? t('it:common.deprecatedOption', { label: item.label }) : item.label,
     }));
-  }, [byField.lifecycleStatus]);
+  }, [byField.lifecycleStatus, t]);
   const navigate = useNavigate();
   const [bindings, setBindings] = React.useState<BindingRow[]>([]);
   const [instancesByAppId, setInstancesByAppId] = React.useState<Record<string, AppInstanceOption[]>>({});
@@ -580,7 +583,7 @@ export default function InterfaceBindingsMatrix({
       seen.add(appId);
       options.push({
         id: appId,
-        label: formatInstanceOption(instance, 'middleware', sourceApplicationName, targetApplicationName),
+        label: formatInstanceOption(t, instance, 'middleware', sourceApplicationName, targetApplicationName),
       });
     }
     return options;
@@ -589,6 +592,7 @@ export default function InterfaceBindingsMatrix({
     integrationRouteType,
     middlewareApplicationIds,
     sourceApplicationName,
+    t,
     targetApplicationName,
   ]);
 
@@ -754,7 +758,7 @@ export default function InterfaceBindingsMatrix({
   const handleSaveDialog = async () => {
     if (!dialogState) return;
     if (!dialogState.source_instance_id || !dialogState.target_instance_id) {
-      setError('Select source and target instances');
+      setError(t('it:workspace.interface.bindings.selectInstances'));
       return;
     }
     const payload: any = {
@@ -877,18 +881,18 @@ export default function InterfaceBindingsMatrix({
     const current = dialogState?.authentication_mode || '';
     const source: Array<{ code: string; label: string; deprecated?: boolean }> = (byField.interfaceAuthMode || []).length > 0
       ? byField.interfaceAuthMode
-      : DEFAULT_AUTH_OPTIONS;
+      : DEFAULT_AUTH_OPTIONS.map((item) => ({ code: item.code, label: t(`it:workspace.interface.bindings.auth.${item.labelKey}`) }));
     const options = source
       .filter((item) => !item.deprecated || item.code === current)
       .map((item) => ({
         code: item.code,
-        label: item.deprecated ? `${item.label} (deprecated)` : item.label,
+        label: item.deprecated ? t('it:common.deprecatedOption', { label: item.label }) : item.label,
       }));
     if (current && !options.some((item) => item.code === current)) {
       options.push({ code: current, label: labelFor('interfaceAuthMode', current) || current });
     }
     return options;
-  }, [byField.interfaceAuthMode, dialogState?.authentication_mode, labelFor]);
+  }, [byField.interfaceAuthMode, dialogState?.authentication_mode, labelFor, t]);
 
   const dialogSourceInstanceOptions = React.useMemo(() => (
     dialogState ? instanceOptionsFor(dialogState.leg.from_role, dialogState.environment) : []
@@ -913,10 +917,10 @@ export default function InterfaceBindingsMatrix({
     if (!dialogState || dialogState.mode !== 'create') return [];
     const missing: string[] = [];
     if (dialogSourceInstanceOptions.length === 0) {
-      missing.push(getRoleLabel(dialogState.leg.from_role, sourceApplicationName, targetApplicationName));
+      missing.push(getRoleLabel(t, dialogState.leg.from_role, sourceApplicationName, targetApplicationName));
     }
     if (dialogTargetInstanceOptions.length === 0) {
-      missing.push(getRoleLabel(dialogState.leg.to_role, sourceApplicationName, targetApplicationName));
+      missing.push(getRoleLabel(t, dialogState.leg.to_role, sourceApplicationName, targetApplicationName));
     }
     return missing;
   }, [
@@ -927,6 +931,7 @@ export default function InterfaceBindingsMatrix({
     dialogState?.mode,
     dialogTargetInstanceOptions.length,
     sourceApplicationName,
+    t,
     targetApplicationName,
   ]);
   const bindingSaveDisabled = bindingSaving || !dialogState?.source_instance_id || !dialogState?.target_instance_id;
@@ -953,15 +958,16 @@ export default function InterfaceBindingsMatrix({
     if (!id) return '—';
     const inst = instancesById[id];
     if (!inst) return id;
-    let appLabel = 'Middleware';
-    if (inst.application_id === sourceApplicationId) appLabel = sourceApplicationName || 'Source';
-    else if (inst.application_id === targetApplicationId) appLabel = targetApplicationName || 'Target';
+    let appLabel = t('it:workspace.interface.flow.middleware');
+    if (inst.application_id === sourceApplicationId) appLabel = sourceApplicationName || t('it:workspace.interface.flow.source');
+    else if (inst.application_id === targetApplicationId) appLabel = targetApplicationName || t('it:workspace.interface.flow.target');
     const envLabel = formatEnvironment(inst.environment);
     return `${appLabel} · ${envLabel}`;
   }, [
     instancesById,
     sourceApplicationId,
     sourceApplicationName,
+    t,
     targetApplicationId,
     targetApplicationName,
   ]);
@@ -1001,16 +1007,16 @@ export default function InterfaceBindingsMatrix({
   const renderTechnicalTemplate = (leg: InterfaceLeg) => (
     <Stack spacing={0.25}>
       <Typography sx={{ fontSize: 12, lineHeight: 1.35, color: 'kanap.text.secondary' }}>
-        Trigger: {labelFor('interfaceTriggerType', leg.trigger_type) || leg.trigger_type || '—'}
+        {t('it:workspace.interface.bindings.triggerLine', { value: labelFor('interfaceTriggerType', leg.trigger_type) || leg.trigger_type || '—' })}
       </Typography>
       <Typography sx={{ fontSize: 12, lineHeight: 1.35, color: 'kanap.text.secondary' }}>
-        Pattern: {labelFor('interfacePattern', leg.integration_pattern) || leg.integration_pattern || '—'}
+        {t('it:workspace.interface.bindings.patternLine', { value: labelFor('interfacePattern', leg.integration_pattern) || leg.integration_pattern || '—' })}
       </Typography>
       <Typography sx={{ fontSize: 12, lineHeight: 1.35, color: 'kanap.text.secondary' }}>
-        Format: {labelFor('interfaceFormat', leg.data_format) || leg.data_format || '—'}
+        {t('it:workspace.interface.bindings.formatLine', { value: labelFor('interfaceFormat', leg.data_format) || leg.data_format || '—' })}
       </Typography>
       <Typography sx={{ fontSize: 12, lineHeight: 1.35, color: 'kanap.text.secondary' }}>
-        Job name: {leg.job_name || '—'}
+        {t('it:workspace.interface.bindings.jobNameLine', { value: leg.job_name || '—' })}
       </Typography>
     </Stack>
   );
@@ -1029,12 +1035,12 @@ export default function InterfaceBindingsMatrix({
         {error && <Alert severity="error">{error}</Alert>}
         {missingBindingInstanceRoles.length > 0 && (
           <Alert severity="warning">
-            {`No ${missingBindingInstanceRoles.join(' or ')} instance is available for ${formatEnvironment(dialogState.environment)}. Create the missing deployment before adding this binding.`}
+            {t('it:workspace.interface.bindings.missingInstance', { count: missingBindingInstanceRoles.length, roles: missingBindingInstanceRoles.join(' / '), env: formatEnvironment(dialogState.environment) })}
           </Alert>
         )}
         <Box sx={gridSx}>
           {showSourceInstanceSelect && (
-            <PropertyRow label="Source instance" required>
+            <PropertyRow label={t('it:workspace.interface.bindings.sourceInstance')} required>
               <Select
                 value={dialogState.source_instance_id || ''}
                 onChange={(event) => updateDialogField('source_instance_id', event.target.value || null)}
@@ -1043,14 +1049,14 @@ export default function InterfaceBindingsMatrix({
               >
                 {dialogSourceInstanceOptions.map((inst) => (
                   <MenuItem key={inst.id} value={inst.id} sx={drawerMenuItemSx}>
-                    {formatInstanceOption(inst, dialogState.leg.from_role, sourceApplicationName, targetApplicationName)}
+                    {formatInstanceOption(t, inst, dialogState.leg.from_role, sourceApplicationName, targetApplicationName)}
                   </MenuItem>
                 ))}
               </Select>
             </PropertyRow>
           )}
           {showTargetInstanceSelect && (
-            <PropertyRow label="Target instance" required>
+            <PropertyRow label={t('it:workspace.interface.bindings.targetInstance')} required>
               <Select
                 value={dialogState.target_instance_id || ''}
                 onChange={(event) => updateDialogField('target_instance_id', event.target.value || null)}
@@ -1059,14 +1065,14 @@ export default function InterfaceBindingsMatrix({
               >
                 {dialogTargetInstanceOptions.map((inst) => (
                   <MenuItem key={inst.id} value={inst.id} sx={drawerMenuItemSx}>
-                    {formatInstanceOption(inst, dialogState.leg.to_role, sourceApplicationName, targetApplicationName)}
+                    {formatInstanceOption(t, inst, dialogState.leg.to_role, sourceApplicationName, targetApplicationName)}
                   </MenuItem>
                 ))}
               </Select>
             </PropertyRow>
           )}
           {showIntegrationToolSelect && (
-            <PropertyRow label="Integration tool" required sx={fullWidthSx}>
+            <PropertyRow label={t('it:workspace.interface.bindings.integrationTool')} required sx={fullWidthSx}>
               <Select
                 value={dialogState.integration_tool_application_id || ''}
                 onChange={(event) => updateDialogField('integration_tool_application_id', event.target.value || null)}
@@ -1081,7 +1087,7 @@ export default function InterfaceBindingsMatrix({
               </Select>
             </PropertyRow>
           )}
-          <PropertyRow label="Status">
+          <PropertyRow label={t('it:workspace.interface.bindings.status')}>
             <Select
               value={dialogState.status}
               onChange={(event) => {
@@ -1099,7 +1105,7 @@ export default function InterfaceBindingsMatrix({
               ))}
             </Select>
           </PropertyRow>
-          <PropertyRow label="Authentication mode">
+          <PropertyRow label={t('it:workspace.interface.bindings.authMode')}>
             <Select
               value={dialogState.authentication_mode || ''}
               onChange={(event) => {
@@ -1111,12 +1117,12 @@ export default function InterfaceBindingsMatrix({
               displayEmpty
               renderValue={(value) => {
                 const code = String(value || '');
-                if (!code) return 'Not specified';
+                if (!code) return t('it:workspace.interface.bindings.notSpecified');
                 return authOptions.find((option) => option.code === code)?.label || code;
               }}
               sx={selectFieldSx}
             >
-              <MenuItem value="" sx={drawerMenuItemSx}>Not specified</MenuItem>
+              <MenuItem value="" sx={drawerMenuItemSx}>{t('it:workspace.interface.bindings.notSpecified')}</MenuItem>
               {authOptions.map((opt) => (
                 <MenuItem key={opt.code} value={opt.code} sx={drawerMenuItemSx}>
                   {opt.label}
@@ -1124,7 +1130,7 @@ export default function InterfaceBindingsMatrix({
               ))}
             </Select>
           </PropertyRow>
-          <PropertyRow label="Infra connection" sx={fullWidthSx}>
+          <PropertyRow label={t('it:workspace.interface.bindings.infraConnection')} sx={fullWidthSx}>
             <Autocomplete
               options={bindingConnectionOptions}
               loading={bindingConnectionLoading || (Boolean(dialogState.bindingId) && linksLoadingBindingId === dialogState.bindingId)}
@@ -1145,7 +1151,7 @@ export default function InterfaceBindingsMatrix({
               getOptionLabel={formatConnectionOption}
               isOptionEqualToValue={(option, value) => option.id === value.id}
               clearOnBlur={false}
-              noOptionsText={bindingConnectionSearch ? 'No connections found' : 'No connections'}
+              noOptionsText={bindingConnectionSearch ? t('it:workspace.interface.bindings.noConnectionsFound') : t('it:workspace.interface.bindings.noConnections')}
               ListboxProps={{ sx: drawerAutocompleteListboxSx }}
               renderOption={(props, option) => (
                 <Box component="li" {...props} key={option.id}>
@@ -1165,7 +1171,7 @@ export default function InterfaceBindingsMatrix({
                 <TextField
                   {...params}
                   variant="standard"
-                  placeholder="Search connections"
+                  placeholder={t('it:workspace.interface.bindings.searchConnections')}
                   InputProps={{
                     ...params.InputProps,
                     endAdornment: (
@@ -1181,14 +1187,14 @@ export default function InterfaceBindingsMatrix({
             />
             {additionalLinkedConnections.length > 0 && (
               <Typography sx={{ mt: 0.5, fontSize: 12, color: 'kanap.text.tertiary' }}>
-                {`${additionalLinkedConnections.length} additional linked connection${additionalLinkedConnections.length > 1 ? 's' : ''} kept unchanged.`}
+                {t('it:workspace.interface.bindings.additionalConnections', { count: additionalLinkedConnections.length })}
               </Typography>
             )}
           </PropertyRow>
         </Box>
 
         <Box sx={gridSx}>
-          <PropertyRow label="Source endpoint" sx={fullWidthSx}>
+          <PropertyRow label={t('it:workspace.interface.bindings.sourceEndpoint')} sx={fullWidthSx}>
             <TextField
               value={dialogState.source_endpoint}
               onChange={(event) => updateDialogField('source_endpoint', event.target.value)}
@@ -1196,10 +1202,10 @@ export default function InterfaceBindingsMatrix({
               variant="standard"
               fullWidth
               sx={textFieldSx}
-              placeholder="File path, URL, queue name"
+              placeholder={t('it:workspace.interface.bindings.endpointPlaceholder')}
             />
           </PropertyRow>
-          <PropertyRow label="Target endpoint" sx={fullWidthSx}>
+          <PropertyRow label={t('it:workspace.interface.bindings.targetEndpoint')} sx={fullWidthSx}>
             <TextField
               value={dialogState.target_endpoint}
               onChange={(event) => updateDialogField('target_endpoint', event.target.value)}
@@ -1207,10 +1213,10 @@ export default function InterfaceBindingsMatrix({
               variant="standard"
               fullWidth
               sx={textFieldSx}
-              placeholder="File path, URL, queue name"
+              placeholder={t('it:workspace.interface.bindings.endpointPlaceholder')}
             />
           </PropertyRow>
-          <PropertyRow label="Trigger details" sx={fullWidthSx}>
+          <PropertyRow label={t('it:workspace.interface.bindings.triggerDetails')} sx={fullWidthSx}>
             <TextField
               value={dialogState.trigger_details}
               onChange={(event) => updateDialogField('trigger_details', event.target.value)}
@@ -1220,10 +1226,10 @@ export default function InterfaceBindingsMatrix({
               multiline
               minRows={surface === 'panel' ? 3 : 2}
               sx={textFieldSx}
-              placeholder="Cron expression, event description, batch window"
+              placeholder={t('it:workspace.interface.bindings.triggerDetailsPlaceholder')}
             />
           </PropertyRow>
-          <PropertyRow label="Job name override">
+          <PropertyRow label={t('it:workspace.interface.bindings.jobNameOverride')}>
             <TextField
               value={dialogState.env_job_name}
               onChange={(event) => updateDialogField('env_job_name', event.target.value)}
@@ -1231,10 +1237,10 @@ export default function InterfaceBindingsMatrix({
               variant="standard"
               fullWidth
               sx={textFieldSx}
-              placeholder={dialogState.leg.job_name ? `Uses ${dialogState.leg.job_name}` : 'Uses Flow job name'}
+              placeholder={dialogState.leg.job_name ? t('it:workspace.interface.bindings.usesJobName', { name: dialogState.leg.job_name }) : t('it:workspace.interface.bindings.usesFlowJobName')}
             />
           </PropertyRow>
-          <PropertyRow label="Monitoring URL">
+          <PropertyRow label={t('it:workspace.interface.bindings.monitoringUrl')}>
             <TextField
               value={dialogState.monitoring_url}
               onChange={(event) => updateDialogField('monitoring_url', event.target.value)}
@@ -1245,7 +1251,7 @@ export default function InterfaceBindingsMatrix({
               placeholder="https://..."
             />
           </PropertyRow>
-          <PropertyRow label="Notes" sx={fullWidthSx}>
+          <PropertyRow label={t('it:workspace.interface.bindings.notes')} sx={fullWidthSx}>
             <TextField
               value={dialogState.env_notes}
               onChange={(event) => updateDialogField('env_notes', event.target.value)}
@@ -1255,7 +1261,7 @@ export default function InterfaceBindingsMatrix({
               multiline
               minRows={3}
               sx={textFieldSx}
-              placeholder="Environment-specific notes"
+              placeholder={t('it:workspace.interface.bindings.notesPlaceholder')}
             />
           </PropertyRow>
         </Box>
@@ -1300,9 +1306,9 @@ export default function InterfaceBindingsMatrix({
     const hasMissingInfra = Boolean(binding && binding.status === 'active' && links && links.length === 0);
     const statusLabel = binding
       ? hasMissingInfra
-        ? 'Missing connection'
-        : labelFor('lifecycleStatus', binding.status) || binding.status || 'Configured'
-      : 'Empty';
+        ? t('it:workspace.interface.bindings.missingConnection')
+        : labelFor('lifecycleStatus', binding.status) || binding.status || t('it:workspace.interface.bindings.configured')
+      : t('it:workspace.interface.bindings.empty');
     const statusColor = binding
       ? hasMissingInfra
         ? 'warning'
@@ -1310,8 +1316,8 @@ export default function InterfaceBindingsMatrix({
       : 'default';
     const endpointLines: string[] = binding
       ? [
-        binding.source_endpoint ? `Source: ${binding.source_endpoint}` : null,
-        binding.target_endpoint ? `Target: ${binding.target_endpoint}` : null,
+        binding.source_endpoint ? t('it:workspace.interface.bindings.sourceLine', { value: binding.source_endpoint }) : null,
+        binding.target_endpoint ? t('it:workspace.interface.bindings.targetLine', { value: binding.target_endpoint }) : null,
       ].filter((line): line is string => Boolean(line))
       : [];
     const connectionSummary = !binding
@@ -1320,7 +1326,7 @@ export default function InterfaceBindingsMatrix({
         ? null
         : links.length > 0
           ? `${links[0].connection.connection_reference} · ${links[0].connection.name}${links.length > 1 ? ` +${links.length - 1}` : ''}`
-          : 'No infra connection linked';
+          : t('it:workspace.interface.bindings.noInfraConnection');
     const emptyDetails = binding && endpointLines.length === 0 && !connectionSummary;
 
     return (
@@ -1357,15 +1363,15 @@ export default function InterfaceBindingsMatrix({
             {renderStatusDot(statusLabel, statusColor)}
             {binding && (
               <Stack direction="row" spacing={0.25} alignItems="center" sx={{ flex: '0 0 auto' }}>
-                <Tooltip title="Edit binding">
+                <Tooltip title={t('it:workspace.interface.bindings.editBinding')}>
                   <EditIcon
                     aria-hidden="true"
                     sx={{ fontSize: 15, color: 'kanap.text.tertiary' }}
                   />
                 </Tooltip>
-                <Tooltip title="Delete binding">
+                <Tooltip title={t('it:workspace.interface.bindings.deleteBinding')}>
                   <IconButton
-                    aria-label="Delete binding"
+                    aria-label={t('it:workspace.interface.bindings.deleteBinding')}
                     size="small"
                     onClick={(event) => {
                       event.stopPropagation();
@@ -1398,7 +1404,7 @@ export default function InterfaceBindingsMatrix({
                 color: 'kanap.text.secondary',
               }}
             >
-              Click to add
+              {t('it:workspace.interface.bindings.clickToAdd')}
             </Typography>
           )}
           {endpointLines.map((line) => (
@@ -1443,7 +1449,7 @@ export default function InterfaceBindingsMatrix({
                 color: 'kanap.text.tertiary',
               }}
             >
-              Click to edit
+              {t('it:workspace.interface.bindings.clickToEdit')}
             </Typography>
           )}
         </Box>
@@ -1463,14 +1469,14 @@ export default function InterfaceBindingsMatrix({
       <Table size="small" sx={{ minWidth: Math.max(520, 260 + allEnvs.length * 220) }}>
         <TableHead>
           <TableRow>
-            <TableCell sx={{ width: 260, minWidth: 260 }}>Leg and technical template</TableCell>
+            <TableCell sx={{ width: 260, minWidth: 260 }}>{t('it:workspace.interface.bindings.legAndTemplate')}</TableCell>
             {allEnvs.map((env) => (
               <TableCell key={env} sx={{ width: 220, minWidth: 220 }}>
                 <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="space-between">
                   <Typography sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.secondary' }}>
                     {formatEnvironment(env)}
                   </Typography>
-                  <Tooltip title="Delete environment">
+                  <Tooltip title={t('it:workspace.interface.bindings.deleteEnvironment')}>
                     <IconButton
                       size="small"
                       onClick={() => {
@@ -1496,7 +1502,7 @@ export default function InterfaceBindingsMatrix({
             <TableRow>
               <TableCell colSpan={Math.max(1, allEnvs.length + 1)}>
                 <Typography variant="body2" color="text.secondary">
-                  No legs defined for this interface yet.
+                  {t('it:workspace.interface.bindings.noLegs')}
                 </Typography>
               </TableCell>
             </TableRow>
@@ -1506,10 +1512,10 @@ export default function InterfaceBindingsMatrix({
               <TableCell sx={{ verticalAlign: 'top' }}>
                 <Stack spacing={0.75}>
                   <Typography sx={{ fontSize: 13, lineHeight: 1.35, fontWeight: 500, color: 'kanap.text.primary' }}>
-                    {String(leg.leg_type || '').toUpperCase()}
+                    {legTypeLabel(t, leg.leg_type)}
                   </Typography>
                   <Typography sx={{ fontSize: 12, lineHeight: 1.35, color: 'kanap.text.tertiary' }}>
-                    {`${getRoleLabel(leg.from_role, sourceApplicationName, targetApplicationName)} → ${getRoleLabel(leg.to_role, sourceApplicationName, targetApplicationName)}`}
+                    {`${getRoleLabel(t, leg.from_role, sourceApplicationName, targetApplicationName)} → ${getRoleLabel(t, leg.to_role, sourceApplicationName, targetApplicationName)}`}
                   </Typography>
                   {renderTechnicalTemplate(leg)}
                 </Stack>
@@ -1526,11 +1532,11 @@ export default function InterfaceBindingsMatrix({
     if (!bindingPanelOpen || !dialogState) return null;
     const autosaveStatusText = dialogState.mode === 'edit'
       ? autosaveStatus === 'saving'
-        ? 'Saving…'
+        ? t('common:status.saving')
         : autosaveStatus === 'saved'
-          ? 'Saved'
+          ? t('common:status.saved')
           : autosaveStatus === 'error'
-            ? 'Autosave failed'
+            ? t('it:workspace.interface.bindings.autosaveFailed')
             : null
       : null;
     return (
@@ -1562,7 +1568,7 @@ export default function InterfaceBindingsMatrix({
         >
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography sx={{ fontSize: 14, lineHeight: 1.35, fontWeight: 500, color: 'kanap.text.primary' }}>
-              {dialogState.mode === 'edit' ? 'Edit binding' : 'Add binding'}
+              {dialogState.mode === 'edit' ? t('it:workspace.interface.bindings.editBinding') : t('it:workspace.interface.bindings.addBinding')}
             </Typography>
             <Typography
               sx={{
@@ -1574,7 +1580,7 @@ export default function InterfaceBindingsMatrix({
                 textOverflow: 'ellipsis',
               }}
             >
-              {`${formatEnvironment(dialogState.environment)} · ${String(dialogState.leg.leg_type || '').toUpperCase()}`}
+              {`${formatEnvironment(dialogState.environment)} · ${legTypeLabel(t, dialogState.leg.leg_type)}`}
             </Typography>
             {autosaveStatusText && (
               <Typography
@@ -1589,7 +1595,7 @@ export default function InterfaceBindingsMatrix({
               </Typography>
             )}
           </Box>
-          <IconButton aria-label="Close binding panel" size="small" onClick={closeDialog}>
+          <IconButton aria-label={t('it:workspace.interface.bindings.closePanel')} size="small" onClick={closeDialog}>
             <CloseIcon sx={{ fontSize: 18 }} />
           </IconButton>
         </Stack>
@@ -1609,7 +1615,7 @@ export default function InterfaceBindingsMatrix({
             })}
           >
             <Button size="small" onClick={closeDialog}>
-              Cancel
+              {t('common:buttons.cancel')}
             </Button>
             <Button
               size="small"
@@ -1617,7 +1623,7 @@ export default function InterfaceBindingsMatrix({
               variant="contained"
               disabled={bindingSaveDisabled}
             >
-              {bindingSaving ? 'Saving…' : 'Add binding'}
+              {bindingSaving ? t('common:status.saving') : t('it:workspace.interface.bindings.addBinding')}
             </Button>
           </Stack>
         )}
@@ -1631,24 +1637,21 @@ export default function InterfaceBindingsMatrix({
     return (
       <TableRow key={`env-${env}-${leg.id}`}>
         <TableCell sx={{ fontWeight: 500 }}>
-          {String(leg.leg_type || '').toUpperCase()}
+          {legTypeLabel(t, leg.leg_type)}
         </TableCell>
         <TableCell>
           <Stack spacing={0.25}>
             <Typography variant="body2">
-              Trigger:{' '}
-              {labelFor('interfaceTriggerType', leg.trigger_type) || leg.trigger_type}
+              {t('it:workspace.interface.bindings.triggerLine', { value: labelFor('interfaceTriggerType', leg.trigger_type) || leg.trigger_type })}
             </Typography>
             <Typography variant="body2">
-              Pattern:{' '}
-              {labelFor('interfacePattern', leg.integration_pattern) || leg.integration_pattern}
+              {t('it:workspace.interface.bindings.patternLine', { value: labelFor('interfacePattern', leg.integration_pattern) || leg.integration_pattern })}
             </Typography>
             <Typography variant="body2">
-              Format:{' '}
-              {labelFor('interfaceFormat', leg.data_format) || leg.data_format}
+              {t('it:workspace.interface.bindings.formatLine', { value: labelFor('interfaceFormat', leg.data_format) || leg.data_format })}
             </Typography>
             <Typography variant="body2">
-              Job name: {leg.job_name || '—'}
+              {t('it:workspace.interface.bindings.jobNameLine', { value: leg.job_name || '—' })}
             </Typography>
           </Stack>
         </TableCell>
@@ -1656,46 +1659,43 @@ export default function InterfaceBindingsMatrix({
           {hasBinding ? (
             <Stack spacing={0.5}>
               <Typography variant="body2">
-                Source instance:{' '}
+                {t('it:workspace.interface.bindings.sourceInstanceLabel')}{' '}
                 <strong>{formatInstance(binding.source_instance_id)}</strong>
               </Typography>
               <Typography variant="body2">
-                Target instance:{' '}
+                {t('it:workspace.interface.bindings.targetInstanceLabel')}{' '}
                 <strong>{formatInstance(binding.target_instance_id)}</strong>
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Status:{' '}
-                {labelFor('lifecycleStatus', binding.status) || binding.status || '—'}
+                {t('it:workspace.interface.bindings.statusLine', { value: labelFor('lifecycleStatus', binding.status) || binding.status || '—' })}
                 {binding.authentication_mode
-                  ? ` · Auth: ${
-                    labelFor('interfaceAuthMode', binding.authentication_mode) || binding.authentication_mode
-                  }`
+                  ? ` · ${t('it:workspace.interface.bindings.authLine', { value: labelFor('interfaceAuthMode', binding.authentication_mode) || binding.authentication_mode })}`
                   : ''}
               </Typography>
               {binding.source_endpoint && (
                 <Typography variant="body2" color="text.secondary">
-                  Source endpoint: {binding.source_endpoint}
+                  {t('it:workspace.interface.bindings.sourceEndpointLine', { value: binding.source_endpoint })}
                 </Typography>
               )}
               {binding.target_endpoint && (
                 <Typography variant="body2" color="text.secondary">
-                  Target endpoint: {binding.target_endpoint}
+                  {t('it:workspace.interface.bindings.targetEndpointLine', { value: binding.target_endpoint })}
                 </Typography>
               )}
               {binding.monitoring_url && (
                 <Typography variant="body2" color="text.secondary">
-                  Monitoring: {binding.monitoring_url}
+                  {t('it:workspace.interface.bindings.monitoringLine', { value: binding.monitoring_url })}
                 </Typography>
               )}
               {binding.env_notes && (
                 <Typography variant="body2" color="text.secondary">
-                  Notes: {binding.env_notes}
+                  {t('it:workspace.interface.bindings.notesLine', { value: binding.env_notes })}
                 </Typography>
               )}
             </Stack>
           ) : (
             <Typography variant="body2" color="text.secondary">
-              No binding defined for this leg in {env.toUpperCase()}.
+              {t('it:workspace.interface.bindings.noBindingForLeg', { env: env.toUpperCase() })}
             </Typography>
           )}
           {binding && (
@@ -1708,7 +1708,7 @@ export default function InterfaceBindingsMatrix({
             <Box sx={{ mt: 0.5 }}>
               {linksLoadingBindingId === binding.id && (
                 <Typography variant="caption" color="text.secondary">
-                  Loading infra connections…
+                  {t('it:workspace.interface.bindings.loadingConnections')}
                 </Typography>
               )}
               {linksError && (
@@ -1730,12 +1730,12 @@ export default function InterfaceBindingsMatrix({
               )}
               {links && links.length === 0 && (
                 <Typography variant="caption" color="text.secondary">
-                  No infra connections linked
+                  {t('it:workspace.interface.bindings.noInfraConnections')}
                 </Typography>
               )}
               {links && links.length === 0 && binding.status === 'active' && (
                 <Typography variant="caption" color="warning.main" sx={{ mt: 0.5, display: 'block' }}>
-                  Active binding without infra connection
+                  {t('it:workspace.interface.bindings.activeWithoutConnection')}
                 </Typography>
               )}
             </Box>
@@ -1746,7 +1746,7 @@ export default function InterfaceBindingsMatrix({
             </Typography>
           )}
           {hasBinding && (
-            <Tooltip title="Manage infra connections">
+            <Tooltip title={t('it:workspace.interface.bindings.manageConnections')}>
               <span>
                 <Button
                   size="small"
@@ -1758,7 +1758,7 @@ export default function InterfaceBindingsMatrix({
                   }}
                   sx={{ mt: 1 }}
                 >
-                  Manage Connection
+                  {t('it:workspace.interface.bindings.manageConnectionButton')}
                 </Button>
               </span>
             </Tooltip>
@@ -1766,7 +1766,7 @@ export default function InterfaceBindingsMatrix({
         </TableCell>
         <TableCell align="right">
           <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
-            <Tooltip title={hasBinding ? 'Edit binding' : 'Add binding'}>
+            <Tooltip title={hasBinding ? t('it:workspace.interface.bindings.editBinding') : t('it:workspace.interface.bindings.addBinding')}>
               <span>
                 <IconButton
                   size="small"
@@ -1780,7 +1780,7 @@ export default function InterfaceBindingsMatrix({
               </span>
             </Tooltip>
             {hasBinding && (
-              <Tooltip title="Delete binding">
+              <Tooltip title={t('it:workspace.interface.bindings.deleteBinding')}>
                 <span>
                   <IconButton size="small" onClick={() => void handleDeleteBinding(binding!)}>
                     <DeleteIcon fontSize="small" />
@@ -1804,18 +1804,18 @@ export default function InterfaceBindingsMatrix({
         spacing={1}
       >
         <Stack>
-          <Typography variant="h6">Environments & bindings</Typography>
+          <Typography variant="h6">{t('it:workspace.interface.bindings.title')}</Typography>
           <Typography variant="body2" color="text.secondary">
-            For each environment, configure which instances are connected for each leg of the interface.
+            {t('it:workspace.interface.bindings.intro')}
           </Typography>
           {integrationRouteType === 'via_middleware' && (
             <Typography variant="body2" color="text.secondary">
-              Route type: via middleware — legs: EXTRACT, TRANSFORM, LOAD.
+              {t('it:workspace.interface.bindings.routeViaMiddleware')}
             </Typography>
           )}
           {integrationRouteType === 'direct' && (
             <Typography variant="body2" color="text.secondary">
-              Route type: direct — single DIRECT leg between source and target.
+              {t('it:workspace.interface.bindings.routeDirect')}
             </Typography>
           )}
         </Stack>
@@ -1830,7 +1830,7 @@ export default function InterfaceBindingsMatrix({
             }}
             disabled={selectableEnvs.length === 0}
           >
-            Add environment
+            {t('it:workspace.interface.bindings.addEnvironment')}
           </Button>
         </Stack>
       </Stack>
@@ -1841,13 +1841,12 @@ export default function InterfaceBindingsMatrix({
       )}
       {loading && (
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Loading bindings…
+          {t('it:workspace.interface.bindings.loadingBindings')}
         </Typography>
       )}
       {allEnvs.length === 0 && !loading && (
         <Alert severity="info">
-          No environments defined yet. Click &quot;Add environment&quot; to start documenting bindings. You will need
-          application instances for each environment in the Applications workspace to create bindings.
+          {t('it:workspace.interface.bindings.noEnvironments')}
         </Alert>
       )}
       {allEnvs.length > 0 && (
@@ -1875,7 +1874,7 @@ export default function InterfaceBindingsMatrix({
               <Box key={env} sx={{ mb: 3 }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
                   <Typography variant="subtitle1">
-                    Environment: {env.toUpperCase()}
+                    {t('it:workspace.interface.bindings.environmentLine', { env: env.toUpperCase() })}
                   </Typography>
                   <Button
                     size="small"
@@ -1889,17 +1888,17 @@ export default function InterfaceBindingsMatrix({
                       }
                     }}
                   >
-                    Delete environment
+                    {t('it:workspace.interface.bindings.deleteEnvironment')}
                   </Button>
                 </Stack>
                 <Table size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell>Leg</TableCell>
-                      <TableCell>Technical template</TableCell>
-                      <TableCell>{`Binding in ${env.toUpperCase()}`}</TableCell>
-                      <TableCell>Connections</TableCell>
-                      <TableCell align="right">Actions</TableCell>
+                      <TableCell>{t('it:workspace.interface.flow.leg')}</TableCell>
+                      <TableCell>{t('it:workspace.interface.bindings.technicalTemplate')}</TableCell>
+                      <TableCell>{t('it:workspace.interface.bindings.bindingIn', { env: env.toUpperCase() })}</TableCell>
+                      <TableCell>{t('it:workspace.interface.bindings.connections')}</TableCell>
+                      <TableCell align="right">{t('it:common.actions')}</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -1907,7 +1906,7 @@ export default function InterfaceBindingsMatrix({
                       <TableRow>
                         <TableCell colSpan={5}>
                           <Typography variant="body2" color="text.secondary">
-                            No legs defined for this interface yet.
+                            {t('it:workspace.interface.bindings.noLegs')}
                           </Typography>
                         </TableCell>
                       </TableRow>
@@ -1926,7 +1925,7 @@ export default function InterfaceBindingsMatrix({
       )}
 
       <Dialog open={!!manageConnections} onClose={() => setManageConnections(null)} maxWidth="md" fullWidth>
-        <DialogTitle>Manage infra connections</DialogTitle>
+        <DialogTitle>{t('it:workspace.interface.bindings.manageConnections')}</DialogTitle>
         <DialogContent dividers>
           {linksError && (
             <Alert severity="error" sx={{ mb: 2 }}>
@@ -1936,18 +1935,18 @@ export default function InterfaceBindingsMatrix({
           {manageConnections && (
             <Stack spacing={2}>
               <Typography variant="subtitle2" color="text.secondary">
-                Env: {manageConnections.binding.environment.toUpperCase()} · Leg: {manageConnections.binding.leg_type.toUpperCase()}
+                {t('it:workspace.interface.bindings.envLegLine', { env: manageConnections.binding.environment.toUpperCase(), leg: legTypeLabel(t, manageConnections.binding.leg_type) })}
               </Typography>
               {linksLoadingBindingId === manageConnections.binding.id && (
                 <Typography variant="body2" color="text.secondary">
-                  Loading infra connections…
+                  {t('it:workspace.interface.bindings.loadingConnections')}
                 </Typography>
               )}
               {linksByBindingId[manageConnections.binding.id] && (
                 <Stack spacing={1}>
                   {linksByBindingId[manageConnections.binding.id].length === 0 && (
                     <Typography variant="body2" color="text.secondary">
-                      No infra connections linked yet.
+                      {t('it:workspace.interface.bindings.noInfraConnectionsYet')}
                     </Typography>
                   )}
                   {linksByBindingId[manageConnections.binding.id].map((link) => (
@@ -1972,21 +1971,21 @@ export default function InterfaceBindingsMatrix({
                         </Typography>
                         <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 0.5 }}>
                           <Typography variant="body2" color="text.secondary">
-                            {link.connection.topology === 'multi_server' ? 'Multi-server' : 'Server to server'}
+                            {link.connection.topology === 'multi_server' ? t('it:enums.topology.multiServer') : t('it:enums.topology.serverToServer')}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            {`Lifecycle: ${link.connection.lifecycle}`}
+                            {t('it:workspace.interface.bindings.lifecycleLine', { value: labelFor('lifecycleStatus', link.connection.lifecycle) || link.connection.lifecycle })}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            {`Criticality: ${classificationCatalog?.businessCriticalityLevels.find((item) => item.code === link.connection.criticality)?.label || link.connection.criticality || 'Not set'}`}
+                            {t('it:workspace.interface.bindings.criticalityLine', { value: classificationCatalog?.businessCriticalityLevels.find((item) => item.code === link.connection.criticality)?.label || link.connection.criticality || t('common:selects.notSet') })}
                           </Typography>
                           <Typography variant="body2" color={link.connection.contains_pii ? 'warning.main' : 'text.secondary'}>
-                            {link.connection.contains_pii ? 'Contains PII' : 'No PII'}
+                            {link.connection.contains_pii ? t('it:workspace.connection.compliance.containsPii') : t('it:workspace.interface.bindings.noPii')}
                           </Typography>
                         </Stack>
                         {link.notes && (
                           <Typography variant="caption" color="text.secondary">
-                            Notes: {link.notes}
+                            {t('it:workspace.interface.bindings.notesLine', { value: link.notes })}
                           </Typography>
                         )}
                       </Box>
@@ -1996,7 +1995,7 @@ export default function InterfaceBindingsMatrix({
                           variant="outlined"
                           onClick={() => navigate(`/it/connections/${link.connection.connection_reference || link.connection.id}/overview`)}
                         >
-                          Open connection
+                          {t('it:workspace.interface.bindings.openConnection')}
                         </Button>
                         <Button
                           size="small"
@@ -2004,7 +2003,7 @@ export default function InterfaceBindingsMatrix({
                           onClick={() => void handleUnlinkConnection(link.id, manageConnections.binding.id)}
                           disabled={unlinkingLinkId === link.id}
                         >
-                          {unlinkingLinkId === link.id ? 'Unlinking…' : 'Unlink'}
+                          {unlinkingLinkId === link.id ? t('it:workspace.interface.bindings.unlinking') : t('it:workspace.connection.overview.unlink')}
                         </Button>
                       </Stack>
                     </Box>
@@ -2014,7 +2013,7 @@ export default function InterfaceBindingsMatrix({
 
               <Box>
                 <Typography variant="subtitle2" gutterBottom>
-                  Link existing connection
+                  {t('it:workspace.interface.bindings.linkExisting')}
                 </Typography>
                 <Stack
                   direction={{ xs: 'column', sm: 'row' }}
@@ -2033,8 +2032,8 @@ export default function InterfaceBindingsMatrix({
                     renderInput={(params) => (
                       <TextField
                         {...params}
-                        label="Search connections"
-                        placeholder="Name or ID"
+                        label={t('it:workspace.interface.bindings.searchConnections')}
+                        placeholder={t('it:workspace.interface.bindings.nameOrId')}
                         InputLabelProps={{ shrink: true }}
                         InputProps={{
                           ...params.InputProps,
@@ -2054,7 +2053,7 @@ export default function InterfaceBindingsMatrix({
                     onClick={() => void handleLinkConnection()}
                     disabled={!selectedConnection || linkSaving}
                   >
-                    {linkSaving ? 'Linking…' : 'Link'}
+                    {linkSaving ? t('it:workspace.interface.bindings.linking') : t('common:buttons.link')}
                   </Button>
                 </Stack>
               </Box>
@@ -2074,23 +2073,23 @@ export default function InterfaceBindingsMatrix({
                     navigate(`/it/connections/new/overview?${params.toString()}`);
                   }}
                 >
-                  Create connection…
+                  {t('it:workspace.interface.bindings.createConnection')}
                 </Button>
               </Stack>
             </Stack>
           )}
         </DialogContent>
         <DialogActions>
-          <Button variant="action" onClick={() => setManageConnections(null)}>Close</Button>
+          <Button variant="action" onClick={() => setManageConnections(null)}>{t('common:buttons.close')}</Button>
         </DialogActions>
       </Dialog>
 
       <KanapDialog
         open={dialogOpen}
-        title={dialogState?.mode === 'edit' ? 'Edit binding' : 'Add binding'}
+        title={dialogState?.mode === 'edit' ? t('it:workspace.interface.bindings.editBinding') : t('it:workspace.interface.bindings.addBinding')}
         onClose={closeDialog}
         onSave={handleSaveDialog}
-        saveLabel={dialogState?.mode === 'create' ? 'Add binding' : 'Save'}
+        saveLabel={dialogState?.mode === 'create' ? t('it:workspace.interface.bindings.addBinding') : t('common:buttons.save')}
         saveDisabled={bindingSaveDisabled}
         saveLoading={bindingSaving}
         sx={{ maxWidth: 680 }}
@@ -2099,7 +2098,7 @@ export default function InterfaceBindingsMatrix({
       </KanapDialog>
       <KanapDialog
         open={envDialogOpen}
-        title="Add environment"
+        title={t('it:workspace.interface.bindings.addEnvironment')}
         onClose={() => setEnvDialogOpen(false)}
         onSave={() => {
           const env = envDraft.trim();
@@ -2110,10 +2109,10 @@ export default function InterfaceBindingsMatrix({
           setManualEnvs((prev) => (prev.includes(env) ? prev : [...prev, env]));
           setEnvDialogOpen(false);
         }}
-        saveLabel="Add"
+        saveLabel={t('common:buttons.add')}
         saveDisabled={!envDraft}
       >
-        <PropertyRow label="Environment" required>
+        <PropertyRow label={t('it:common.environment')} required>
           <Select
             value={envDraft}
             onChange={(event) => setEnvDraft(event.target.value)}
@@ -2131,27 +2130,27 @@ export default function InterfaceBindingsMatrix({
 
       <KanapDialog
         open={!!pendingDeleteBinding}
-        title="Delete binding"
+        title={t('it:workspace.interface.bindings.deleteBinding')}
         onClose={() => setPendingDeleteBinding(null)}
-        saveLabel="Delete"
+        saveLabel={t('common:buttons.delete')}
         onSave={() => { void confirmDeleteBinding(); }}
       >
         <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
-          Delete this environment binding. Linked infra connections for this binding will also be removed.
+          {t('it:workspace.interface.bindings.deleteBindingMessage')}
         </Typography>
       </KanapDialog>
 
       <KanapDialog
         open={!!pendingDeleteEnvironment}
-        title="Delete environment"
+        title={t('it:workspace.interface.bindings.deleteEnvironment')}
         onClose={() => setPendingDeleteEnvironment(null)}
-        saveLabel="Delete"
+        saveLabel={t('common:buttons.delete')}
         onSave={() => { void confirmDeleteEnvironment(); }}
       >
         <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
           {pendingDeleteEnvironment
-            ? `Delete all ${bindings.filter((binding) => binding.environment === pendingDeleteEnvironment).length} bindings for ${pendingDeleteEnvironment.toUpperCase()}.`
-            : 'Delete this environment.'}
+            ? t('it:workspace.interface.bindings.deleteEnvironmentMessage', { count: bindings.filter((binding) => binding.environment === pendingDeleteEnvironment).length, env: pendingDeleteEnvironment.toUpperCase() })
+            : t('it:workspace.interface.bindings.deleteEnvironmentFallback')}
         </Typography>
       </KanapDialog>
     </Box>

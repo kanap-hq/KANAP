@@ -21,7 +21,7 @@ La page d'accueil comporte deux sections. Chaque carte renvoie à un outil dédi
 
 | Outil | Objectif |
 |-------|----------|
-| **Geler / Dégeler les données** | Verrouiller les colonnes budgétaires pour empêcher les modifications |
+| **Geler / dégeler les données** | Verrouiller les colonnes budgétaires pour empêcher les modifications |
 | **Copier les colonnes budgétaires** | Copier les montants entre années et colonnes, avec un pourcentage facultatif, et les ventilations vers une autre année |
 | **Réinitialiser une colonne budgétaire** | Effacer toutes les données d'une colonne spécifique |
 | **Geler les données de référence** | Verrouiller les indicateurs des sociétés et des départements pour une année. Voir [Geler les données de référence et copier les indicateurs annuels](master-data-operations.md) |
@@ -29,7 +29,7 @@ La page d'accueil comporte deux sections. Chaque carte renvoie à un outil dédi
 
 | Cartes | Qui les voit |
 |---|---|
-| Devises, Colonnes budgétaires, Méthode de ventilation par défaut, Geler / Dégeler les données | Administration budgétaire au niveau administrateur (`budget_ops:admin`) |
+| Devises, Colonnes budgétaires, Méthode de ventilation par défaut, Geler / dégeler les données | Administration budgétaire au niveau administrateur (`budget_ops:admin`) |
 | Copier les colonnes budgétaires, Réinitialiser une colonne budgétaire | Budget au niveau administrateur (`budget:admin`). Les onglets **Tout**, **OPEX** et **CAPEX** s'ouvrent tous avec ce niveau |
 | Geler les données de référence, Copier les indicateurs annuels | Utilisateurs ayant accès au budget qui sont administrateurs de l'administration budgétaire, des sociétés ou des départements. Les administrateurs des sociétés et des départements agissent sur leur propre périmètre |
 
@@ -41,7 +41,7 @@ Tant qu'une de ces opérations est en cours, les lignes budgétaires ne peuvent 
 
 ---
 
-## Geler / Dégeler les données
+## Geler / dégeler les données
 
 Verrouillez les colonnes budgétaires pour qu'elles ne puissent être ni modifiées, ni importées, ni altérées de quelque manière que ce soit. Le gel protège les chiffres approuvés contre les modifications accidentelles.
 
