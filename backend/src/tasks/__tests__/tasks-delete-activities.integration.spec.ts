@@ -7,10 +7,12 @@ import { AuditLog } from '../../audit/audit.entity';
 import { AuditService } from '../../audit/audit.service';
 import { Task } from '../task.entity';
 import { TasksDeleteService } from '../tasks-delete.service';
+import { deleteTaskActivities } from '../task-delete-cleanup';
 
-// Deleting a task deletes its history (`portfolio_activities.task_id` has no
-// foreign key, so nothing cascades), alone or in a bulk delete, within the
-// tenant only. The OPEX and CAPEX item deletes, which delete their tasks too,
+// Deleting a task deletes its history (the service removes it first; the
+// foreign key on `portfolio_activities.task_id`, migration 1854160000000,
+// cascades for any other path), alone or in a bulk delete. The history
+// statement names the tenant. The OPEX and CAPEX item deletes, which delete their tasks too,
 // are covered in `spend/__tests__/item-delete-cleanup.integration.spec.ts`.
 
 async function withTransaction(fn: (runner: QueryRunner) => Promise<void>) {
@@ -93,8 +95,10 @@ async function testOtherTenantUntouched() {
     const taskId = await seedTask(runner, tenantId, 1);
     await useTenant(runner, other);
     await runner.query(`INSERT INTO portfolio_activities (tenant_id, task_id, type) VALUES ($1, $2, 'change')`, [other, taskId]);
+    // A row of another tenant naming the task is not one the application writes, and the key
+    // would cascade it with the task: the history statement alone is checked here.
     await useTenant(runner, tenantId);
-    await service(runner).delete(taskId, { manager: runner.manager, userId: null });
+    await deleteTaskActivities(runner.manager, tenantId, [taskId]);
     await useTenant(runner, other);
     const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM portfolio_activities WHERE tenant_id = $1 AND task_id = $2`, [other, taskId]);
     assert.equal(n, 1, "the other tenant's row stays");

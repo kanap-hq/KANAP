@@ -64,7 +64,7 @@ export class TasksDeleteService extends BaseDeleteService<Task> {
     }
   }
 
-  /** The task's history goes with it (no foreign key cascades to it). */
+  /** The task's history goes with it, here before its foreign key would cascade (migration 1854160000000). */
   protected override async beforeDelete(task: Task, manager: EntityManager): Promise<void> {
     await deleteTaskActivities(manager, task.tenant_id, [task.id]);
   }
