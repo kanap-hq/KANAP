@@ -164,10 +164,10 @@ describe('CsvImportDialog', () => {
     post.mockResolvedValueOnce({ data: report({ notices: { dates: DATES_DAY, amounts: AMOUNTS_COMMA } }) });
     renderDialog();
     fireEvent.click(screen.getByRole('button', { name: 'csv.preflightCheck' }));
-    expect(await screen.findByText('operations.budgetFile.datesDayFirst')).toBeInTheDocument();
-    expect(screen.getByText('operations.budgetFile.amountsComma')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'operations.budgetFile.readMonthFirst' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'operations.budgetFile.readDecimalDot' })).toBeInTheDocument();
+    expect(await screen.findByText('ops:operations.budgetFile.datesDayFirst')).toBeInTheDocument();
+    expect(screen.getByText('ops:operations.budgetFile.amountsComma')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ops:operations.budgetFile.readMonthFirst' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ops:operations.budgetFile.readDecimalDot' })).toBeInTheDocument();
     expect(lastParams()).toEqual({ language: 'en', dryRun: true });
   });
 
@@ -176,19 +176,19 @@ describe('CsvImportDialog', () => {
     renderDialog();
     fireEvent.click(screen.getByRole('button', { name: 'csv.preflightCheck' }));
     expect(await screen.findByText('Dates read the way the file says.')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'operations.budgetFile.readMonthFirst' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'operations.budgetFile.readDayFirst' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'ops:operations.budgetFile.readMonthFirst' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'ops:operations.budgetFile.readDayFirst' })).not.toBeInTheDocument();
   });
 
   it('checks again with the other date order when the switch is used', async () => {
     post.mockResolvedValueOnce({ data: report({ notices: { dates: DATES_DAY, amounts: AMOUNTS_COMMA } }) });
     renderDialog();
     fireEvent.click(screen.getByRole('button', { name: 'csv.preflightCheck' }));
-    await screen.findByText('operations.budgetFile.datesDayFirst');
+    await screen.findByText('ops:operations.budgetFile.datesDayFirst');
     post.mockResolvedValueOnce({ data: report({ notices: { dates: DATES_MONTH, amounts: AMOUNTS_COMMA } }) });
-    fireEvent.click(screen.getByRole('button', { name: 'operations.budgetFile.readMonthFirst' }));
-    expect(await screen.findByText('operations.budgetFile.datesMonthFirst')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'operations.budgetFile.readDayFirst' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'ops:operations.budgetFile.readMonthFirst' }));
+    expect(await screen.findByText('ops:operations.budgetFile.datesMonthFirst')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ops:operations.budgetFile.readDayFirst' })).toBeInTheDocument();
     expect(lastCall()?.[0]).toBe('/suppliers/import');
     expect(lastParams()).toEqual({ language: 'en', dryRun: true, dateOrder: 'month-first', decimalMark: 'comma' });
   });
@@ -197,10 +197,10 @@ describe('CsvImportDialog', () => {
     post.mockResolvedValueOnce({ data: report({ notices: { dates: DATES_DAY, amounts: AMOUNTS_COMMA } }) });
     renderDialog();
     fireEvent.click(screen.getByRole('button', { name: 'csv.preflightCheck' }));
-    await screen.findByText('operations.budgetFile.amountsComma');
+    await screen.findByText('ops:operations.budgetFile.amountsComma');
     post.mockResolvedValueOnce({ data: report({ notices: { dates: DATES_DAY, amounts: AMOUNTS_DOT } }) });
-    fireEvent.click(screen.getByRole('button', { name: 'operations.budgetFile.readDecimalDot' }));
-    expect(await screen.findByText('operations.budgetFile.amountsDot')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'ops:operations.budgetFile.readDecimalDot' }));
+    expect(await screen.findByText('ops:operations.budgetFile.amountsDot')).toBeInTheDocument();
     expect(lastParams()).toEqual({ language: 'en', dryRun: true, dateOrder: 'day-first', decimalMark: 'dot' });
   });
 
@@ -208,7 +208,7 @@ describe('CsvImportDialog', () => {
     post.mockResolvedValueOnce({ data: report({ notices: { dates: DATES_DAY, amounts: AMOUNTS_COMMA } }) });
     renderDialog();
     fireEvent.click(screen.getByRole('button', { name: 'csv.preflightCheck' }));
-    await screen.findByText('operations.budgetFile.datesDayFirst');
+    await screen.findByText('ops:operations.budgetFile.datesDayFirst');
     post.mockResolvedValueOnce({ data: report({ dryRun: false, processed: 14 }) });
     fireEvent.click(screen.getByRole('button', { name: 'csv.load' }));
     expect(await screen.findByText(/^csv\.loadedSuccessfully:/)).toBeInTheDocument();
