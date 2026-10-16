@@ -646,7 +646,7 @@ The API runs the scheduled jobs below. The times below are the defaults, in UTC 
 | `send-weekly-reviews` | Hourly | Sends the weekly review digest to users who opted in, at their own day and time zone. |
 | `lifecycle-status-sync` | Hourly, and once at start | Switches master data, contracts, OPEX and CAPEX lines to disabled once their end of validity has passed. |
 | `entra-directory-sync` | Daily 03:00 | Refreshes user attributes and disables accounts removed or deactivated in the directory. Works only when Entra SSO is connected and approved. See [Microsoft Entra SSO](sso-entra.md). |
-| `attachment-orphan-cleanup` | Daily 03:00 | Removes the attachment records of inline images that no text uses any more. |
+| `attachment-orphan-cleanup` | Daily 03:00 | Removes the attachment records of inline images that no text uses any more. Moves the documents of a deleted record (an application overview, for example) to the unfiled documents of the Managed Docs library, with an entry in the audit log, so an administrator can review them. |
 | `storage-ghost-cleanup` | Sunday 04:00 | Removes stored files that have no attachment record and are older than 7 days. |
 | `list-context-purge` | Daily 03:30 | Deletes saved list filters nobody used for 90 days. |
 | `auth-event-retention` | Daily 03:40 | Deletes sign-in events older than 365 days from the audit log. |

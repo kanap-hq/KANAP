@@ -60,6 +60,14 @@ describe('ApplicationDeleteButton', () => {
     expect(del).not.toHaveBeenCalled();
   });
 
+  it('counts the managed documents that go with the application', async () => {
+    post.mockResolvedValue({ data: { refused: [], removes: [{ type: 'app_instances', total: 2 }, { type: 'documents', total: 1 }] } });
+    renderButton();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/permanently deletes Billing hub, with its 2 deployments and 1 document and its links/)).toBeInTheDocument();
+  });
+
   it('confirms without counts when the check fails, the delete still refusing what it must', async () => {
     post.mockRejectedValue(new Error('offline'));
     renderButton();

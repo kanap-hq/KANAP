@@ -186,6 +186,8 @@
     "usages": {
       "budget_lines_one": "{{count}} Budgetzeile",
       "budget_lines_other": "{{count}} Budgetzeilen",
+      "allocation_rules_one": "{{count}} Standard-Zuordnungsmethode",
+      "allocation_rules_other": "{{count}} Standard-Zuordnungsmethoden",
       "contracts_one": "{{count}} Vertrag",
       "contracts_other": "{{count}} Verträge",
       "applications_one": "{{count}} Anwendung",

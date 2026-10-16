@@ -11,8 +11,9 @@ import { UserTimeAggregateService } from '../portfolio/services/user-time-aggreg
 import { deleteTaskActivities } from '../tasks/task-delete-cleanup';
 
 // What an item delete removes besides versions, amounts and allocations. Links,
-// attachments and contract links have no foreign key to the item, so nothing
-// cascades to them; tasks are polymorphic rows. Both natures share the tables
+// attachments and contract links go here, before their foreign keys to the item
+// would cascade (migration 1854160000000); tasks are polymorphic rows, which no
+// key covers. Both natures share the tables
 // (lot Z1); a CAPEX line's tasks keep their type `capex_item`.
 
 export type ItemDeleteScope = 'opex' | 'capex';

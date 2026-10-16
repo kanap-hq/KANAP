@@ -64,7 +64,8 @@ async function count(runner: QueryRunner, tenantId: string, table: string, colum
 }
 
 function service(audit: unknown, storage: unknown) {
-  return new ApplicationsDeleteService(dataSource.getRepository(Application), audit as any, storage as any);
+  // No managed document is seeded here: their delete has its own spec (applications-delete-integrated-documents).
+  return new ApplicationsDeleteService(dataSource.getRepository(Application), audit as any, storage as any, { deleteForEntity: async () => 0 } as any);
 }
 
 async function testFailedDeleteKeepsItsFile() {

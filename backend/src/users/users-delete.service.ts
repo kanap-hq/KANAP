@@ -64,6 +64,12 @@ export class UsersDeleteService extends BaseDeleteService<User> {
     if (refusal) throw refusal;
 
     try {
+      // The task owner and viewer lists name users without a foreign key: the user leaves them here.
+      await manager.query(
+        `UPDATE tasks SET owner_ids = owner_ids - $2::text, viewer_ids = viewer_ids - $2::text
+          WHERE tenant_id = $1 AND (owner_ids @> to_jsonb($2::text) OR viewer_ids @> to_jsonb($2::text))`,
+        [user.tenant_id, id],
+      );
       await repo.delete({ id } as any);
     } catch (error: any) {
       if (error?.code === '23503' || error?.message?.includes('foreign key constraint')) {

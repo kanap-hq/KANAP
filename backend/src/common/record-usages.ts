@@ -13,6 +13,7 @@ export const USAGE_GROUP_LIMIT = 50;
 
 export type UsageType =
   | 'budget_lines'
+  | 'allocation_rules'
   | 'contracts'
   | 'applications'
   | 'assets'

@@ -186,6 +186,8 @@
     "usages": {
       "budget_lines_one": "{{count}} budget line",
       "budget_lines_other": "{{count}} budget lines",
+      "allocation_rules_one": "{{count}} default allocation method",
+      "allocation_rules_other": "{{count}} default allocation methods",
       "contracts_one": "{{count}} contract",
       "contracts_other": "{{count}} contracts",
       "applications_one": "{{count}} application",

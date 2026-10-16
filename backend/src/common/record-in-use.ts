@@ -34,6 +34,7 @@ export type RefusalParams = Record<string, string | number>;
 
 const ENGLISH: Record<RefusalKind, [string, string]> = {
   budget_lines: ['budget line', 'budget lines'],
+  allocation_rules: ['default allocation method', 'default allocation methods'],
   contracts: ['contract', 'contracts'],
   applications: ['application', 'applications'],
   assets: ['asset', 'assets'],

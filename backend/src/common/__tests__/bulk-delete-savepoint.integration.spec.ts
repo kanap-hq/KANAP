@@ -261,7 +261,7 @@ async function testApplicationsMixedBatch() {
     });
     const missing = randomUUID();
 
-    const service = new ApplicationsDeleteService(dataSource.getRepository(Application), noAudit, noStorage);
+    const service = new ApplicationsDeleteService(dataSource.getRepository(Application), noAudit, noStorage, { deleteForEntity: async () => 0 } as any);
     const result = await asRequest(tenantId, (manager) =>
       service.bulkDelete([ids.free, MALFORMED_ID, missing, ids.free2], null, { manager }),
     );
