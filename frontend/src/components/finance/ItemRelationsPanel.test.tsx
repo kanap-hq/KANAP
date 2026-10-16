@@ -10,7 +10,9 @@ vi.mock('react-i18next', () => {
   return { useTranslation: () => translation };
 });
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
-vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true }) }));
+// The infrastructure right decides whether the Technologies section shows.
+const access = vi.hoisted(() => ({ infrastructure: true }));
+vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: (resource: string) => (resource === 'infrastructure' ? access.infrastructure : true) }) }));
 vi.mock('../../components/contacts/ItemContactsSection', () => ({ default: () => null }));
 vi.mock('../../components/design', () => ({
   RelevantWebsitesList: () => null,
@@ -168,6 +170,57 @@ describe('CAPEX RelationsPanel applications', () => {
     expect(screen.queryByRole('option', { name: 'Licences' })).toBeNull();
     // One page per search: no `page` parameter, no list endpoint walked page by page.
     expect(mocked.get.mock.calls.filter((c) => c[0] === '/contracts')).toHaveLength(0);
+  });
+});
+
+describe('RelationsPanel technologies', () => {
+  beforeEach(() => {
+    access.infrastructure = true;
+    mocked.get.mockReset();
+    mocked.post.mockReset();
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === `${itemsApi()}/item-1/technologies`) return { data: { items: [{ id: 'tec-1', name: 'SQL Server', reference: 'TEC-1' }] } };
+      if (url === '/technologies/lookup') return { data: { items: [{ id: 'tec-1', name: 'SQL Server' }, { id: 'tec-2', name: 'Tomcat' }], has_more: false } };
+      if (url.endsWith('/links') || url.endsWith('/attachments')) return { data: [] };
+      return { data: { items: [] } };
+    });
+    mocked.post.mockResolvedValue({ data: {} });
+  });
+
+  it('lists the linked technologies, adds one and removes one', async () => {
+    const ref = React.createRef<RelationsPanelHandle>();
+    renderPanel(ref);
+
+    expect(screen.getByText(`${nature}.relations.technologies`)).toBeInTheDocument();
+    const chip = await screen.findByRole('button', { name: 'SQL Server' });
+    const input = screen.getByPlaceholderText(`${nature}.relations.selectTechnologies`);
+    await waitFor(() => expect(input).not.toBeDisabled());
+
+    // Add: the picker searches the technologies' lookup.
+    act(() => { input.focus(); });
+    fireEvent.mouseDown(input);
+    fireEvent.click(await screen.findByRole('option', { name: 'Tomcat' }));
+    await waitFor(() => expect(ref.current?.isDirty()).toBe(true));
+    await act(async () => { await ref.current?.save(); });
+    expect(mocked.post).toHaveBeenCalledWith(`${itemsApi()}/item-1/technologies/bulk-replace`, { technology_ids: ['tec-1', 'tec-2'] });
+
+    // Remove.
+    fireEvent.click(within(chip).getByTestId('CancelIcon'));
+    await waitFor(() => expect(ref.current?.isDirty()).toBe(true));
+    await act(async () => { await ref.current?.save(); });
+    expect(mocked.post).toHaveBeenLastCalledWith(`${itemsApi()}/item-1/technologies/bulk-replace`, { technology_ids: ['tec-2'] });
+  });
+
+  it('has no Technologies section without the right to read the infrastructure', async () => {
+    access.infrastructure = false;
+    const ref = React.createRef<RelationsPanelHandle>();
+    renderPanel(ref);
+    await screen.findByPlaceholderText(`${nature}.relations.selectApplications`);
+    await waitFor(() => expect(screen.getByPlaceholderText(`${nature}.relations.selectApplications`)).not.toBeDisabled());
+    expect(screen.queryByText(`${nature}.relations.technologies`)).toBeNull();
+    expect(mocked.get.mock.calls.map((c) => c[0])).not.toContain(`${itemsApi()}/item-1/technologies`);
+    await act(async () => { await ref.current?.save(); });
+    expect(mocked.post).not.toHaveBeenCalled();
   });
 });
 

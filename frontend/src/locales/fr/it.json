@@ -925,7 +925,9 @@
         "assets": "Actifs",
         "assetsPlaceholder": "Rechercher des actifs",
         "applications": "Applications",
-        "applicationsPlaceholder": "Rechercher des applications"
+        "applicationsPlaceholder": "Rechercher des applications",
+        "technologies": "Technologies",
+        "technologiesPlaceholder": "Rechercher des technologies"
       },
       "drawer": {
         "category": "Catégorie",

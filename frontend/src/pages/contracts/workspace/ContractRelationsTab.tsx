@@ -7,6 +7,7 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useTranslation } from 'react-i18next';
 import api from '../../../api';
+import { useAuth } from '../../../auth/AuthContext';
 import ItemContactsSection from '../../../components/contacts/ItemContactsSection';
 import { RelevantWebsitesList, useKanapDialogs } from '../../../components/design';
 import { denseTableFrameSx, denseTableSx } from '../../../components/EntityTasksSection';
@@ -16,12 +17,16 @@ import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import type { ContractAttachment } from '../contractForm';
 
 type LinkItem = { id: string; description: string | null; url: string };
-type RelationSet = 'applications' | 'assets';
+type RelationSet = 'applications' | 'assets' | 'technologies';
 
-/** Where each picker searches (the list routes, whose access rules apply) and where a chip leads. */
-const PICKERS: Record<RelationSet, { endpoint: string; href: (row: NamedRelation) => string }> = {
-  applications: { endpoint: '/applications', href: (row) => `/it/applications/${row.id}/overview` },
-  assets: { endpoint: '/assets', href: (row) => `/it/assets/${row.id}/overview` },
+/**
+ * Where each picker searches (the list or lookup routes, whose access rules apply), where a chip
+ * leads, the body key of the replacement and the placeholder.
+ */
+const PICKERS: Record<RelationSet, { endpoint: string; sorted: boolean; href: (row: NamedRelation) => string; idsKey: string; placeholder: string }> = {
+  applications: { endpoint: '/applications', sorted: true, href: (row) => `/it/applications/${row.id}/overview`, idsKey: 'application_ids', placeholder: 'selectApplications' },
+  assets: { endpoint: '/assets', sorted: true, href: (row) => `/it/assets/${row.id}/overview`, idsKey: 'asset_ids', placeholder: 'selectAssets' },
+  technologies: { endpoint: '/technologies/lookup', sorted: false, href: (row) => `/it/technologies/${row.id}/overview`, idsKey: 'technology_ids', placeholder: 'selectTechnologies' },
 };
 
 export const contractRelationKey = (contractId: string, set: string) => ['contract-relations', contractId, set] as const;
@@ -37,7 +42,7 @@ function formatSize(bytes: number | null | undefined, locale: string): string {
   return `${new Intl.NumberFormat(locale, { maximumFractionDigits: unit === 0 ? 0 : 1 }).format(value)} ${units[unit]}`;
 }
 
-/** One set of links (applications or assets), saved on each change. */
+/** One set of links (applications, assets or technologies), saved on each change. */
 function RelationSetSection({ contractId, set, readOnly, onChanged }: { contractId: string; set: RelationSet; readOnly: boolean; onChanged: () => void }) {
   const { t } = useTranslation(['ops', 'common']);
   const queryClient = useQueryClient();
@@ -60,7 +65,7 @@ function RelationSetSection({ contractId, set, readOnly, onChanged }: { contract
     pendingRef.current += 1;
     const run = async () => {
       try {
-        await api.post(`/contracts/${contractId}/${set}/bulk-replace`, { [set === 'applications' ? 'application_ids' : 'asset_ids']: next.map((row) => row.id) });
+        await api.post(`/contracts/${contractId}/${set}/bulk-replace`, { [PICKERS[set].idsKey]: next.map((row) => row.id) });
         onChanged();
       } catch (e) {
         setError(getApiErrorMessage(e, t, t('contracts.messages.saveFailed')));
@@ -79,9 +84,9 @@ function RelationSetSection({ contractId, set, readOnly, onChanged }: { contract
       {error && <Alert severity="error" onClose={() => setError(null)} sx={sectionWidthSx}>{error}</Alert>}
       <RelationLookupPicker
         endpoint={PICKERS[set].endpoint}
-        scope={{ sort: 'name:ASC' }}
+        scope={PICKERS[set].sorted ? { sort: 'name:ASC' } : undefined}
         href={PICKERS[set].href}
-        placeholder={t(`contracts.relations.${set === 'applications' ? 'selectApplications' : 'selectAssets'}`)}
+        placeholder={t(`contracts.relations.${PICKERS[set].placeholder}`)}
         ariaLabel={title}
         value={value ?? query.data ?? []}
         onChange={save}
@@ -93,8 +98,9 @@ function RelationSetSection({ contractId, set, readOnly, onChanged }: { contract
 }
 
 /**
- * The Relations tab of a contract, aligned on the other pages: applications and assets pickers,
- * contacts, relevant websites and attachments. Every change saves at once.
+ * The Relations tab of a contract, aligned on the other pages: applications, assets and
+ * technologies pickers (technologies for a reader of the infrastructure only), contacts, relevant
+ * websites and attachments. Every change saves at once.
  */
 export default function ContractRelationsTab({
   contractId,
@@ -111,6 +117,7 @@ export default function ContractRelationsTab({
   onChanged: () => void;
 }) {
   const { t, i18n } = useTranslation(['ops', 'common']);
+  const { hasLevel } = useAuth();
   const dialogs = useKanapDialogs();
   const [error, setError] = React.useState<string | null>(null);
   const [linkDialog, setLinkDialog] = React.useState<{ index: number | null; description: string; url: string } | null>(null);
@@ -181,6 +188,9 @@ export default function ContractRelationsTab({
 
         <RelationSetSection contractId={contractId} set="applications" readOnly={readOnly} onChanged={onChanged} />
         <RelationSetSection contractId={contractId} set="assets" readOnly={readOnly} onChanged={onChanged} />
+        {hasLevel('infrastructure', 'reader') && (
+          <RelationSetSection contractId={contractId} set="technologies" readOnly={readOnly} onChanged={onChanged} />
+        )}
 
         <ItemContactsSection itemType="contracts" itemId={contractId} canManage={!readOnly} syncFromSupplier onChanged={onChanged} />
 

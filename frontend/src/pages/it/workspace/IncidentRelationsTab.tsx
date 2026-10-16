@@ -4,6 +4,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../../api';
+import { useAuth } from '../../../auth/AuthContext';
 import { incidentsApi, type IncidentLinkedObject } from '../../../api/endpoints/incidents';
 import { PropertyRow } from '../../../components/design';
 import EntityTasksPanel from '../../../components/EntityTasksPanel';
@@ -11,18 +12,26 @@ import { drawerAutocompleteListboxSx, drawerFieldValueSx } from '../../../theme/
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { incidentEntriesQueryKey } from './IncidentJournalTab';
 
-type LinkKind = 'assets' | 'applications';
+type LinkKind = 'assets' | 'applications' | 'technologies';
 
 type SearchRow = {
   id: string;
   name: string;
   asset_reference?: string | null;
   sequential_id?: string | null;
+  reference?: string | null;
 };
 
-const SEARCH_ENDPOINT: Record<LinkKind, string> = {
-  assets: '/assets',
-  applications: '/applications',
+/** Where each field searches (list or lookup routes, whose access rules apply), and how it reads and replaces its links. */
+const KINDS: Record<LinkKind, {
+  endpoint: string;
+  sort?: string;
+  list: (incidentId: string) => Promise<IncidentLinkedObject[]>;
+  replace: (incidentId: string, ids: string[]) => Promise<IncidentLinkedObject[]>;
+}> = {
+  assets: { endpoint: '/assets', sort: 'name:ASC', list: (id) => incidentsApi.listAssets(id), replace: (id, ids) => incidentsApi.replaceAssets(id, ids) },
+  applications: { endpoint: '/applications', sort: 'name:ASC', list: (id) => incidentsApi.listApplications(id), replace: (id, ids) => incidentsApi.replaceApplications(id, ids) },
+  technologies: { endpoint: '/technologies/lookup', list: (id) => incidentsApi.listTechnologies(id), replace: (id, ids) => incidentsApi.replaceTechnologies(id, ids) },
 };
 
 const relationTagSx = {
@@ -67,19 +76,20 @@ function LinkedObjectsField({
   const queryKey = incidentLinksQueryKey(incidentId, kind);
   const { data: linked = [] } = useQuery({
     queryKey,
-    queryFn: () => (kind === 'assets' ? incidentsApi.listAssets(incidentId) : incidentsApi.listApplications(incidentId)),
+    queryFn: () => KINDS[kind].list(incidentId),
   });
 
   const { data: searchResults = [], isFetching } = useQuery({
     queryKey: ['incident-link-options', kind, debouncedSearch],
     queryFn: async () => {
-      const params: Record<string, string | number> = { limit: 50, sort: 'name:ASC' };
+      const params: Record<string, string | number> = { limit: 50 };
+      if (KINDS[kind].sort) params.sort = KINDS[kind].sort as string;
       if (debouncedSearch) params.q = debouncedSearch;
-      const res = await api.get<{ items: SearchRow[] }>(SEARCH_ENDPOINT[kind], { params });
+      const res = await api.get<{ items: SearchRow[] }>(KINDS[kind].endpoint, { params });
       return (res.data?.items || []).map<IncidentLinkedObject>((row) => ({
         id: row.id,
         name: row.name,
-        reference: row.asset_reference ?? row.sequential_id ?? null,
+        reference: row.asset_reference ?? row.sequential_id ?? row.reference ?? null,
       }));
     },
     enabled: !readOnly,
@@ -100,9 +110,7 @@ function LinkedObjectsField({
     setSaving(true);
     try {
       const ids = next.map((item) => item.id);
-      const saved = kind === 'assets'
-        ? await incidentsApi.replaceAssets(incidentId, ids)
-        : await incidentsApi.replaceApplications(incidentId, ids);
+      const saved = await KINDS[kind].replace(incidentId, ids);
       queryClient.setQueryData(queryKey, saved);
       void queryClient.invalidateQueries({ queryKey: incidentEntriesQueryKey(incidentId) });
       onSaved(kind, saved.length);
@@ -175,6 +183,7 @@ type Props = {
 };
 
 export default function IncidentRelationsTab({ incidentId, readOnly, onLinksChange, onTasksChange }: Props) {
+  const { hasLevel } = useAuth();
   const [error, setError] = React.useState<string | null>(null);
 
   return (
@@ -182,6 +191,9 @@ export default function IncidentRelationsTab({ incidentId, readOnly, onLinksChan
       {error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
       <LinkedObjectsField incidentId={incidentId} kind="assets" readOnly={readOnly} onSaved={onLinksChange} onError={setError} />
       <LinkedObjectsField incidentId={incidentId} kind="applications" readOnly={readOnly} onSaved={onLinksChange} onError={setError} />
+      {hasLevel('infrastructure', 'reader') && (
+        <LinkedObjectsField incidentId={incidentId} kind="technologies" readOnly={readOnly} onSaved={onLinksChange} onError={setError} />
+      )}
       <EntityTasksPanel entityType="incident" entityId={incidentId} disabled={readOnly} onTasksChange={onTasksChange} />
     </Stack>
   );
