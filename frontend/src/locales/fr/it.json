@@ -1071,8 +1071,6 @@
       },
       "relations": {
         "noChildApps": "Aucune application enfant liée pour le moment.",
-        "projects": "Projets",
-        "tasks": "Tâches",
         "searchTasks": "Rechercher des tâches",
         "relevantWebsites": "Sites web pertinents",
         "addUrl": "Ajouter une URL",

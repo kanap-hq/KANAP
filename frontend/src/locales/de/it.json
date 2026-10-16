@@ -1071,8 +1071,6 @@
       },
       "relations": {
         "noChildApps": "Noch keine untergeordneten Anwendungen verknüpft.",
-        "projects": "Projekte",
-        "tasks": "Aufgaben",
         "searchTasks": "Aufgaben suchen",
         "relevantWebsites": "Relevante Websites",
         "addUrl": "URL hinzufügen",

@@ -1071,8 +1071,6 @@
       },
       "relations": {
         "noChildApps": "Todavía no hay aplicaciones secundarias vinculadas.",
-        "projects": "Proyectos",
-        "tasks": "Tareas",
         "searchTasks": "Buscar tareas",
         "relevantWebsites": "Sitios web relevantes",
         "addUrl": "Agregar URL",

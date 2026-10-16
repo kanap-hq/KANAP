@@ -1071,8 +1071,6 @@
       },
       "relations": {
         "noChildApps": "No child applications linked yet.",
-        "projects": "Projects",
-        "tasks": "Tasks",
         "searchTasks": "Search tasks",
         "relevantWebsites": "Relevant websites",
         "addUrl": "Add URL",
