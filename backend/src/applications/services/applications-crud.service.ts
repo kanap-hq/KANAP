@@ -298,20 +298,6 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     return Object.assign(saved, classificationReadState(saved));
   }
 
-  /**
-   * Delete an application (used internally, primary deletion via ApplicationsDeleteService).
-   */
-  async delete(id: string, userId?: string | null, opts?: ServiceOpts) {
-    const mg = this.getManager(opts);
-    const repo = mg.getRepository(Application);
-    const appId = await this.resolveApplicationIdentifier(id, mg);
-    const existing = await repo.findOne({ where: { id: appId } });
-    if (!existing) return { ok: true };
-    await repo.delete({ id: appId } as any);
-    await this.audit.log({ table: 'applications', recordId: appId, action: 'delete', before: existing, after: null, userId }, { manager: mg });
-    return { ok: true };
-  }
-
   async relationCounts(appId: string, opts?: ServiceOpts) {
     const mg = this.getManager(opts);
     const resolvedAppId = await this.resolveApplicationIdentifier(appId, mg);

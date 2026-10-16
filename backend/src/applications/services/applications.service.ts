@@ -107,10 +107,6 @@ export class ApplicationsService {
     return this.crudService.shareApplication(id, body, tenantId, userId, opts);
   }
 
-  delete(id: string, userId?: string | null, opts?: ServiceOpts) {
-    return this.crudService.delete(id, userId, opts);
-  }
-
   relationCounts(id: string, opts?: ServiceOpts) {
     return this.crudService.relationCounts(id, opts);
   }
