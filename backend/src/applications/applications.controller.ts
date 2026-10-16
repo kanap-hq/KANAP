@@ -111,6 +111,7 @@ export class ApplicationsController {
   private async relationsContext(ctx: TenantRequest): Promise<RelationsContext> {
     const RANK: Record<string, number> = { reader: 1, contributor: 2, member: 3, admin: 4 };
     const reads = (resource: string) => ctx.isAdmin === true || (RANK[ctx.permissions?.[resource] ?? ''] ?? 0) >= RANK.reader;
+    const edits = (resource: string) => ctx.isAdmin === true || (RANK[ctx.permissions?.[resource] ?? ''] ?? 0) >= RANK.member;
     const [application, project, request, task] = await Promise.all([
       this.participationScope(ctx, 'applications'),
       this.readProjectScope(ctx),
@@ -124,10 +125,13 @@ export class ApplicationsController {
       access: {
         budget_lines: reads('budget'),
         contracts: reads('contracts'),
+        processes: reads('business_processes'),
         projects: reads('portfolio_projects'),
         requests: reads('portfolio_requests'),
         tasks: reads('tasks'),
+        technologies: reads('infrastructure'),
       },
+      writes: { technologies: edits('infrastructure'), processes: edits('business_processes') },
       scopes: { application, project, request, task },
     };
   }
@@ -841,7 +845,7 @@ export class ApplicationsController {
   async relationCounts(
     @Param('id') id: string,
     @Tenant() ctx: TenantRequest,
-  ): Promise<{ opex: number; capex: number; contracts: number; projects: number; links: number; attachments: number; total: number }> {
+  ): Promise<{ opex: number; capex: number; contracts: number; projects: number; technologies: number; processes: number; links: number; attachments: number; total: number }> {
     return this.svc.relationCounts(id, {
       ...(await this.readApplicationOpts(ctx)),
       projectAccessScope: await this.readProjectScope(ctx),
@@ -856,7 +860,10 @@ export class ApplicationsController {
     return this.relations.getRelations(id, await this.relationsContext(ctx));
   }
 
-  /** Link one object (`kind`: budget_lines, contracts, projects, requests, tasks); the caller must read its module. */
+  /**
+   * Link one object (`kind`: budget_lines, contracts, processes, projects, requests, tasks,
+   * technologies); the caller must read its module, and edit it for processes and technologies.
+   */
   @UseGuards(PermissionGuard)
   @RequireLevel('applications', 'member')
   @Post(':id/relations/:kind')

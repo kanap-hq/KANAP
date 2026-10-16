@@ -27,17 +27,24 @@ import { InterfacesService } from '../../interfaces/services/interfaces.service'
 import { KnowledgeService } from '../../knowledge/knowledge.service';
 import { TasksUnifiedService } from '../../tasks/tasks-unified.service';
 import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
+import { TechnologyLinksService } from '../../technologies/technology-links.service';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** At most this many suggestions per rule. */
 export const SUGGESTIONS_PER_RULE = 20;
 
 /** The kinds of objects the Relations tab links to an application. */
-export const RELATION_KINDS = ['budget_lines', 'contracts', 'projects', 'requests', 'tasks'] as const;
+export const RELATION_KINDS = ['budget_lines', 'contracts', 'processes', 'projects', 'requests', 'tasks', 'technologies'] as const;
 export type RelationKind = (typeof RELATION_KINDS)[number];
 
 /** Which modules the caller may read: a section the caller cannot read is `null`. */
 export type RelationsAccess = Record<RelationKind, boolean>;
+
+/**
+ * The kinds whose link also needs the right to edit the other module (lot T2a): a technology
+ * dependency needs `infrastructure:member`, a business process `business_processes:member`.
+ */
+export type RelationsWrites = { technologies: boolean; processes: boolean };
 
 /** The participation scopes of a Business Contributor (none for everyone else). */
 export type RelationsScopes = {
@@ -52,6 +59,8 @@ export type RelationsContext = {
   tenantId: string;
   userId: string | null;
   access: RelationsAccess;
+  /** The extra write rights of the kinds that need one (`RelationsWrites`). */
+  writes: RelationsWrites;
   scopes: RelationsScopes;
 };
 
@@ -72,6 +81,25 @@ export type RelationSuggestion = {
   name: string;
   via: { kind: 'same_supplier' | 'contract' | 'project' | 'task'; label: string | null };
 };
+/**
+ * A technology of the application, once per technology: declared (a direct dependency, removable)
+ * and/or hosted (carried by a server the application is deployed on, or by that server's host).
+ * `versions` are the known versions of every row, `version_unknown` true when a row has none;
+ * `standard_support_end` is the earliest end among those versions; `via` the servers of the hosted rows.
+ */
+export type RelatedTechnology = {
+  id: string;
+  reference: string | null;
+  name: string | null;
+  family: string | null;
+  declared: boolean;
+  hosted: boolean;
+  versions: string[];
+  version_unknown: boolean;
+  standard_support_end: string | null;
+  via: Array<{ asset_id: string; asset_name: string | null; host_name: string | null }>;
+};
+export type RelatedProcess = { id: string; name: string; status: string | null; owner_name: string | null };
 export type ApplicationRelations = {
   year: number;
   budget_column: { key: string; label: string };
@@ -80,6 +108,8 @@ export type ApplicationRelations = {
   projects: RelatedProject[] | null;
   requests: RelatedRequest[] | null;
   tasks: RelatedTask[] | null;
+  technologies: RelatedTechnology[] | null;
+  processes: RelatedProcess[] | null;
   suggestions: RelationSuggestion[];
   also: { assets: number; interfaces: number; documents: number };
 };
@@ -120,6 +150,7 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
     private readonly tasks: TasksUnifiedService,
     @Inject(forwardRef(() => PortfolioRequestsService))
     private readonly requests: PortfolioRequestsService,
+    private readonly technologyLinks: TechnologyLinksService,
   ) {
     super(appRepo);
   }
@@ -141,6 +172,14 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
     const projects = ctx.access.projects ? await this.listProjects(mg, tenantId, app.id, ctx.scopes.project) : null;
     const requests = ctx.access.requests ? await this.listRequests(mg, tenantId, app.id, ctx.scopes.request) : null;
     const tasks = ctx.access.tasks ? await this.listTasks(mg, tenantId, app.id, ctx.scopes.task) : null;
+    const linkOpts = { manager: mg, tenantId, userId: ctx.userId };
+    const technologies = ctx.access.technologies
+      ? mergeTechnologies((await this.technologyLinks.technologiesOfApplication(app.id, linkOpts)).items)
+      : null;
+    const processes = ctx.access.processes
+      ? ((await this.technologyLinks.processesOfApplication(app.id, linkOpts)).items as any[])
+        .map((row): RelatedProcess => ({ id: row.id, name: row.name, status: row.status ?? null, owner_name: row.owner_name ?? null }))
+      : null;
     const suggestions = await this.listSuggestions(mg, tenantId, app.id, app.supplier_id ?? null, ctx);
     const also = await this.countAlso(mg, tenantId, app.id, ctx);
 
@@ -152,6 +191,8 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
       projects,
       requests,
       tasks,
+      technologies,
+      processes,
       suggestions,
       also,
     };
@@ -363,6 +404,7 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
    */
   async setLink(kind: RelationKind, appId: string, targetId: string, add: boolean, ctx: RelationsContext): Promise<{ ok: true; changed: boolean }> {
     if (!ctx.access[kind]) throw new ForbiddenException('You cannot read this module.');
+    if ((kind === 'technologies' || kind === 'processes') && !ctx.writes[kind]) throw new ForbiddenException('You cannot edit this module.');
     const id = String(targetId || '').trim().toLowerCase();
     if (!UUID_RE.test(id)) throw new BadRequestException('Invalid id.');
     const mg = ctx.manager;
@@ -370,6 +412,16 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
     const tenantId = app.tenant_id;
     await mg.query(`SELECT 1 FROM applications WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`, [tenantId, app.id]);
     const userId = ctx.userId;
+
+    // The technology layer writes its own links, idempotent and audited (`TechnologyLinksService`).
+    if (kind === 'technologies') {
+      const res = await this.technologyLinks.setApplicationTechnology(app.id, id, add, {}, { manager: mg, tenantId, userId });
+      return { ok: true, changed: res.changed };
+    }
+    if (kind === 'processes') {
+      const res = await this.technologyLinks.setProcessApplication(id, app.id, add, { manager: mg, tenantId, userId }, { scope: ctx.scopes.application });
+      return { ok: true, changed: res.changed };
+    }
     const apply = (current: string[]) => {
       const has = current.includes(id);
       if (has === add) return null;
@@ -509,6 +561,46 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
     const rows: Array<{ id: string }> = await mg.query(sql, params);
     return Array.from(new Set(rows.map((row) => String(row.id).toLowerCase())));
   }
+}
+
+type ReachingRow = Awaited<ReturnType<TechnologyLinksService['technologiesOfApplication']>>['items'][number];
+
+/**
+ * One row per technology from the rows of `technologiesOfApplication` (one per declaration, and
+ * one per server, environment and version reached): a technology both declared and hosted shows
+ * once, marked both ways. Sorted by name.
+ */
+export function mergeTechnologies(rows: ReachingRow[]): RelatedTechnology[] {
+  const byId = new Map<string, RelatedTechnology & { versionSet: Set<string>; viaSet: Set<string> }>();
+  for (const row of rows) {
+    let tech = byId.get(row.technology_id);
+    if (!tech) {
+      tech = {
+        id: row.technology_id, reference: row.technology_reference ?? null, name: row.technology_name, family: row.family,
+        declared: false, hosted: false, versions: [], version_unknown: false, standard_support_end: null, via: [],
+        versionSet: new Set(), viaSet: new Set(),
+      };
+      byId.set(row.technology_id, tech);
+    }
+    if (row.kind === 'declared') tech.declared = true;
+    else tech.hosted = true;
+    if (row.version_label) tech.versionSet.add(row.version_label);
+    else tech.version_unknown = true;
+    const end = row.standard_support_end;
+    if (end && (!tech.standard_support_end || end < tech.standard_support_end)) tech.standard_support_end = end;
+    if (row.kind !== 'declared' && row.asset_id && !tech.viaSet.has(row.asset_id)) {
+      tech.viaSet.add(row.asset_id);
+      tech.via.push({ asset_id: row.asset_id, asset_name: row.asset_name, host_name: row.via_asset_name });
+    }
+  }
+  const byName = (a: string | null, b: string | null) => String(a ?? '').localeCompare(String(b ?? ''), 'en', { sensitivity: 'base' });
+  return [...byId.values()]
+    .map(({ versionSet, viaSet: _viaSet, ...tech }) => ({
+      ...tech,
+      versions: [...versionSet].sort((a, b) => a.localeCompare(b, 'en', { numeric: true })),
+      via: tech.via.sort((a, b) => byName(a.asset_name, b.asset_name)),
+    }))
+    .sort((a, b) => byName(a.name, b.name) || a.id.localeCompare(b.id));
 }
 
 export function isRelationKind(value: string): value is RelationKind {
