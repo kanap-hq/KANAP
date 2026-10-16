@@ -11,6 +11,15 @@ describe('getApiErrorMessage', () => {
       .toBe('The name typed does not match the name of the workspace.');
   });
 
+  // QA lot 14: a missing incident read "Incident not found" in English in every language.
+  it('translates a missing incident in each language', () => {
+    const missing = { response: { status: 404, data: { code: 'INCIDENT_NOT_FOUND', message: 'Incident not found' } } };
+    expect(getApiErrorMessage(missing, t, 'fallback')).toBe('This incident does not exist or you cannot see it.');
+    expect(getApiErrorMessage(missing, i18n.getFixedT('fr'), 'fallback')).toBe("Cet incident n'existe pas ou vous ne pouvez pas le voir.");
+    expect(getApiErrorMessage(missing, i18n.getFixedT('de'), 'fallback')).toBe('Dieser Vorfall existiert nicht oder Sie können ihn nicht sehen.');
+    expect(getApiErrorMessage(missing, i18n.getFixedT('es'), 'fallback')).toBe('Este incidente no existe o no puede verlo.');
+  });
+
   it('translates a rate limit, which carries no code', () => {
     expect(getApiErrorMessage(
       { response: { status: 429, data: { statusCode: 429, message: 'ThrottlerException: Too Many Requests' } } },

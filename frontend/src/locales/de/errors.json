@@ -105,6 +105,7 @@
   "SUPPLIER_IN_USE": "Dieser Lieferant wird noch verwendet: {{usages}}. Deaktivieren Sie ihn, statt ihn zu löschen.",
   "COMPANY_IN_USE": "Dieses Unternehmen wird noch verwendet: {{usages}}. Deaktivieren Sie es, statt es zu löschen.",
   "CONTRACT_HAS_COMPLIANCE_RECORDS": "Dieser Vertrag hat {{usages}}. Deaktivieren Sie ihn, statt ihn zu löschen.",
+  "INCIDENT_NOT_FOUND": "Dieser Vorfall existiert nicht oder Sie können ihn nicht sehen.",
   "INCIDENT_HAS_REGULATORY_RECORDS": "Dieser Vorfall hat {{usages}} (personenbezogene Daten, Meldung an die Behörde oder benachrichtigte Parteien). Er bleibt als Prüfnachweis erhalten: Brechen Sie ihn ab oder schließen Sie ihn, statt ihn zu löschen.",
   "not_found": "Dieses Element existiert nicht mehr. Laden Sie die Seite neu, um die aktuelle Liste zu sehen.",
   "ASSET_IN_USE_one": "Dieses Asset wird noch verwendet: {{usages}}. Entfernen Sie es dort, bevor Sie es löschen.",

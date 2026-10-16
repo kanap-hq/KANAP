@@ -1,6 +1,7 @@
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { EntityManager, Repository } from 'typeorm';
 import { Incident } from '../incident.entity';
+import { incidentNotFound } from '../../common/resolve-item-id';
 import { IncidentChangedFields, IncidentEntry, IncidentEntryKind } from '../incident-entry.entity';
 import {
   INCIDENT_LOCKED_MESSAGE,
@@ -56,7 +57,7 @@ export abstract class IncidentsBaseService {
   ): Promise<Incident> {
     const incident = await manager.getRepository(Incident).findOne({ where: { id, tenant_id: tenantId } });
     if (!incident || !incidentVisibleToViewer(incident, viewer)) {
-      throw new NotFoundException('Incident not found');
+      throw incidentNotFound();
     }
     return incident;
   }
