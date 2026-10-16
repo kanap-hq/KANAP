@@ -11,6 +11,7 @@ export const TENANT_PURGE_TABLES = [
   // Incident register: children first; before documents, assets, applications and users
   'incident_entries',
   'incident_assets',
+  'incident_technologies',
   'incident_applications',
   'document_incidents',
   'incident_attachments',
@@ -28,6 +29,7 @@ export const TENANT_PURGE_TABLES = [
   'portfolio_project_effort_allocations',
   'portfolio_project_team',
   'application_projects',
+  'technology_projects',
   'asset_projects',
   'portfolio_request_projects',
   'portfolio_request_opex',
@@ -117,6 +119,17 @@ export const TENANT_PURGE_TABLES = [
   'ai_settings',
   // After ai_settings and ai_agent_definitions: both hold FKs to the model registry.
   'ai_model_configs',
+  // Technologies: links first, then versions, then technologies; before assets, applications, contracts, budget lines and business processes
+  'technology_attachments',
+  'technology_links',
+  'technology_contracts',
+  'technology_spend_items',
+  'technology_owners',
+  'asset_technologies',
+  'application_technologies',
+  'technology_versions',
+  'technologies',
+  'application_business_processes',
   // Applications: purge attachments and links first
   'application_attachments',
   'application_links',
@@ -264,6 +277,7 @@ export const TENANT_PURGE_ATTACHMENT_TABLES = [
   'capex_attachments',
   'spend_attachments',
   'application_attachments',
+  'technology_attachments',
   'interface_attachments',
   'document_attachments',
   'asset_attachments',

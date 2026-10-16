@@ -3,6 +3,7 @@ import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
+import { Technologies1854190000000 } from '../../migrations/1854190000000-technologies';
 import { ApplicationItemLinksTenantKeys1853690000000 as Migration } from '../../migrations/1853690000000-application-item-links-tenant-keys';
 import { BudgetLinePredecessor1854000000000 } from '../../migrations/1854000000000-budget-line-predecessor';
 
@@ -98,10 +99,12 @@ async function inRolledBackTransaction(fn: (runner: QueryRunner) => Promise<void
 }
 
 /**
- * down(), after the down() of the later migration whose key needs this one's `(tenant_id, id)` key of
- * spend_items (1854000000000, a line's predecessor): migrations are undone newest first.
+ * down(), after the down() of the later migrations whose keys need this one's `(tenant_id, id)` keys of
+ * spend_items and applications (1854000000000, a line's predecessor; 1854190000000, the technology
+ * links): migrations are undone newest first.
  */
 async function downFromHere(runner: QueryRunner): Promise<void> {
+  await new Technologies1854190000000().down(runner);
   await captureLogs(() => new BudgetLinePredecessor1854000000000().down(runner));
   await migration.down(runner);
 }

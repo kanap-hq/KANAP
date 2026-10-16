@@ -40,6 +40,11 @@ const REFERENCE_LOOKUPS: Record<string, { pattern: RegExp; sql: string; value: (
     sql: 'SELECT id FROM incidents WHERE tenant_id = $1 AND item_number = $2 LIMIT 1',
     value: Number,
   },
+  technologies: {
+    pattern: /^TEC-?(\d+)$/i,
+    sql: 'SELECT id FROM technologies WHERE tenant_id = $1 AND item_number = $2 LIMIT 1',
+    value: Number,
+  },
 };
 
 export function isUuid(value: string): boolean {
@@ -52,7 +57,7 @@ export function entityNotFound(entityType: string, value: string): NotFoundExcep
 
 /**
  * Resolve an AI tool's `entity_id` to the row's uuid when it is a uuid or the family's business
- * reference (APP-1, AST-3, PRJ-12, REQ-7, T-42, INC-2), in the caller's tenant. Returns null when
+ * reference (APP-1, AST-3, PRJ-12, REQ-7, T-42, INC-2, TEC-5), in the caller's tenant. Returns null when
  * the value is neither, so the caller decides how to search; a well-formed reference that matches
  * no row throws the same "not found" as an unknown name. Access checks stay with the service that
  * loads the row.

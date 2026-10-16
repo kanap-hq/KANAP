@@ -129,6 +129,7 @@ TENANT_TABLES=(
   app_asset_assignments
   app_instances
   application_attachments
+  application_business_processes
   application_capex_items
   application_companies
   application_contracts
@@ -140,6 +141,7 @@ TENANT_TABLES=(
   application_spend_items
   application_suites
   application_support_contacts
+  application_technologies
   applications
   asset_attachments
   asset_capex_items
@@ -153,6 +155,7 @@ TENANT_TABLES=(
   asset_spend_items
   asset_support_contacts
   asset_support_info
+  asset_technologies
   assets
   audit_log
   business_process_categories
@@ -218,6 +221,7 @@ TENANT_TABLES=(
   freeze_states
   incident_applications
   incident_assets
+  incident_technologies
   incident_attachments
   incident_entries
   incidents
@@ -303,6 +307,14 @@ TENANT_TABLES=(
   task_attachments
   task_time_entries
   tasks
+  technologies
+  technology_attachments
+  technology_contracts
+  technology_links
+  technology_owners
+  technology_projects
+  technology_spend_items
+  technology_versions
   user_dashboard_config
   user_notification_preferences
   user_page_roles
@@ -334,6 +346,7 @@ ATTACHMENT_TABLES=(
   capex_attachments
   spend_attachments
   application_attachments
+  technology_attachments
   interface_attachments
   document_attachments
   asset_attachments

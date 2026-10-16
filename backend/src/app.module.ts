@@ -39,6 +39,7 @@ import { TenancyModule } from './common/tenancy';
 import { ApplicationsModule } from './applications/applications.module';
 import { AppInstancesModule } from './app-instances/app-instances.module';
 import { AssetsModule } from './assets/assets.module';
+import { TechnologiesModule } from './technologies/technologies.module';
 import { IncidentsModule } from './incidents/incidents.module';
 import { AppAssetAssignmentsModule } from './app-asset-assignments/app-asset-assignments.module';
 import { InterfacesModule } from './interfaces/interfaces.module';
@@ -141,6 +142,7 @@ import { readPoolMax } from './common/db-pool-budget';
     ApplicationsModule,
     AppInstancesModule,
     AssetsModule,
+    TechnologiesModule,
     IncidentsModule,
     AppAssetAssignmentsModule,
     InterfacesModule,

@@ -3,3 +3,10 @@ Copyright (C) 2025-2026 KANAP EURL
 
 KANAP is free software, licensed under the GNU Affero General Public License,
 version 3. The full license text is in the LICENSE file.
+
+Third-party data
+----------------
+backend/src/technologies/catalog/technologies.catalog.json holds product, version and
+end-of-support data from endoflife.date (https://endoflife.date), Copyright 2020
+endoflife.date contributors, published under the MIT license. The license text is in
+backend/src/technologies/catalog/LICENSE-endoflife-date.txt.

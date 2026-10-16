@@ -6,7 +6,7 @@ import { EntityManager } from 'typeorm';
  * identifier (a connection cited by two columns or two legs counts once), always filtered by tenant.
  */
 
-export type UsageRecordType = 'applications' | 'assets' | 'interfaces' | 'connections' | 'app_instances' | 'interface_bindings' | 'locations' | 'incidents' | 'server_assignments' | 'subnets';
+export type UsageRecordType = 'applications' | 'assets' | 'interfaces' | 'connections' | 'app_instances' | 'interface_bindings' | 'locations' | 'incidents' | 'server_assignments' | 'subnets' | 'technologies';
 
 /** A predicate on `t` (the record table) or on a table joined to it; `$1` = tenant id, `$2` = the value. */
 type UsagePredicate =
@@ -28,6 +28,7 @@ export type CatalogUsageItem = { record: UsageRecordType; count: number; listPat
 
 const applications = (column: string, field = column): UsageSource => ({ record: 'applications', table: 'applications', predicates: [{ kind: 'scalar', table: 'applications', column }], listPath: { page: '/it/applications', field, extra: '&appScope=all' } });
 const assets = (column: string, filterable = true): UsageSource => ({ record: 'assets', table: 'assets', predicates: [{ kind: 'scalar', table: 'assets', column }], ...(filterable ? { listPath: { page: '/it/assets', field: column } } : {}) });
+const technologies = (column: string): UsageSource => ({ record: 'technologies', table: 'technologies', predicates: [{ kind: 'scalar', table: 'technologies', column }] });
 const interfaces = (column: string): UsageSource => ({ record: 'interfaces', table: 'interfaces', predicates: [{ kind: 'scalar', table: 'interfaces', column }] });
 const connections = (...columns: string[]): UsageSource => ({ record: 'connections', table: 'connections', predicates: columns.map((column) => ({ kind: 'scalar', table: 'connections', column })) });
 const connectionLegs = (column: string, kind: 'scalar' | 'array' = 'scalar'): UsageSource => ({ record: 'connections', table: 'connections', predicates: [{ kind, table: 'connection_legs', column, recordId: 'connection_id' }] });
@@ -35,11 +36,11 @@ const interfaceLegs = (column: string): UsageSource => ({ record: 'interfaces', 
 
 export const CATALOG_USAGE: Record<string, UsageSource[]> = {
   applicationCategories: [applications('category')],
-  lifecycleStates: [applications('lifecycle'), assets('status'), interfaces('lifecycle'), connections('lifecycle'), { record: 'app_instances', table: 'app_instances', predicates: [{ kind: 'scalar', table: 'app_instances', column: 'lifecycle' }] }, { record: 'interface_bindings', table: 'interface_bindings', predicates: [{ kind: 'scalar', table: 'interface_bindings', column: 'status' }] }],
+  lifecycleStates: [applications('lifecycle'), assets('status'), technologies('lifecycle'), interfaces('lifecycle'), connections('lifecycle'), { record: 'app_instances', table: 'app_instances', predicates: [{ kind: 'scalar', table: 'app_instances', column: 'lifecycle' }] }, { record: 'interface_bindings', table: 'interface_bindings', predicates: [{ kind: 'scalar', table: 'interface_bindings', column: 'status' }] }],
   dataClasses: [applications('data_class'), interfaces('data_class'), connections('data_class')],
   businessCriticalityLevels: [applications('criticality'), interfaces('criticality'), connections('criticality')],
-  cyberCriticalityLevels: [applications('cyber_criticality')],
-  recoveryWaves: [applications('recovery_wave')],
+  cyberCriticalityLevels: [applications('cyber_criticality'), technologies('cyber_criticality')],
+  recoveryWaves: [applications('recovery_wave'), technologies('recovery_wave')],
   accessMethods: [{ record: 'applications', table: 'applications', predicates: [{ kind: 'array', table: 'applications', column: 'access_methods' }] }],
   serverKinds: [assets('kind')],
   serverProviders: [assets('provider'), { record: 'locations', table: 'locations', predicates: [{ kind: 'scalar', table: 'locations', column: 'provider' }] }],
@@ -59,6 +60,7 @@ export const CATALOG_USAGE: Record<string, UsageSource[]> = {
   interfaceAuthModes: [{ record: 'interface_bindings', table: 'interface_bindings', predicates: [{ kind: 'scalar', table: 'interface_bindings', column: 'authentication_mode' }] }],
   incidentCategories: [{ record: 'incidents', table: 'incidents', predicates: [{ kind: 'scalar', table: 'incidents', column: 'category' }], listPath: { page: '/it/incidents', field: 'category' } }],
   networkSegments: [{ record: 'subnets', table: 'settings', predicates: [] }],
+  technologyFamilies: [technologies('family')],
   interfaceProtocols: [],
 };
 

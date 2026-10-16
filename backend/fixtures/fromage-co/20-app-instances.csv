@@ -17,3 +17,7 @@ PagerDuty;prod;active;enabled;;;US-East;PagerDuty production
 Talend Data Integration;prod;active;enabled;;;EU-Paris;Talend production runtime
 Talend Data Integration;qa;active;enabled;;;EU-Paris;Talend QA runtime for multi-environment showcase
 Snowflake;prod;active;enabled;;;EU-Central;Snowflake production warehouse
+Fromage B2B Portal;prod;active;enabled;https://b2b.fromage-co.example;;EU-Paris;B2B portal production instance
+QualityLab LIMS;prod;active;enabled;;;EU-Paris;LIMS production instance
+La Boutique du Fromage;prod;active;enabled;https://boutique.fromage-co.example;eu-west-1;;Online shop production instance
+Sage X3;prod;active;enabled;;;EU-Gouda;Sage X3 production instance for the Dutch and Italian sites

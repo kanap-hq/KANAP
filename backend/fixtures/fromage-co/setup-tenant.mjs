@@ -1984,6 +1984,204 @@ async function runImports() {
   await importCsv('19-tasks.csv', '/tasks/import');
 }
 
+// ── Technologies (lot S) ──────────────────────────────────────────────────────
+//
+// The examples of the technology layer: two domain controllers carry Active Directory; Entra ID is
+// subscribed and declared by several applications; two ESXi hosts in a vSphere cluster contain
+// the VMs; a SQL Server cluster runs two versions; the application server carries Tomcat and a SQL
+// Server Express; the RDS database carries PostgreSQL. With the hosting of applications on these
+// servers, business processes linked to applications, an unknown version (Active Directory) and
+// versions past their end of support (PostgreSQL 13, SQL Server 2017). Every step is idempotent.
+
+const ASSET_CLUSTERS = {
+  'PAR-VSPHERE-CL01': ['PAR-ESX-01', 'PAR-ESX-02'],
+  'PAR-SQL-CL01': ['PAR-SQL-01', 'PAR-SQL-02'],
+};
+
+const ASSET_CONTAINS = {
+  'PAR-ESX-01': ['PAR-ERP-01', 'PAR-ERP-02', 'PAR-AD-01', 'PAR-SQL-01', 'PAR-VCENTER-01'],
+  'PAR-ESX-02': ['PAR-DB-01', 'PAR-APP-01', 'PAR-WEB-01', 'PAR-AD-02', 'PAR-SQL-02'],
+  'PAR-VSPHERE-CL01': ['PAR-MON-01', 'PAR-BKP-01'],
+};
+
+/** [application, environment, server, role]: the instances of 20-app-instances.csv on their servers. */
+const APP_SERVERS = [
+  ['SAP S/4HANA', 'prod', 'PAR-ERP-01', 'app'],
+  ['SAP BW/4HANA', 'prod', 'PAR-ERP-02', 'app'],
+  ['Fromage B2B Portal', 'prod', 'PAR-APP-01', 'app'],
+  ['Fromage B2B Portal', 'prod', 'PAR-DB-01', 'db'],
+  ['QualityLab LIMS', 'prod', 'PAR-APP-01', 'app'],
+  ['La Boutique du Fromage', 'prod', 'AWS-RDS-BOUTIQUE', 'db'],
+  // An instance cannot be assigned to a cluster asset (AWS-EC2-BOUTIQUE is one): the databases name both nodes.
+  ['CheeseTrack', 'prod', 'PAR-SQL-01', 'db'],
+  ['CheeseTrack', 'prod', 'PAR-SQL-02', 'db'],
+  ['Sage X3', 'prod', 'GOU-SAGE-01', 'app'],
+  ['Sage X3', 'prod', 'PRM-SAGE-01', 'app'],
+  ['Sage X3', 'prod', 'PAR-SQL-01', 'db'],
+  ['Sage X3', 'prod', 'PAR-SQL-02', 'db'],
+];
+
+/**
+ * Technologies adopted from the shipped catalog (`catalog`) or typed (`create`), where they are
+ * installed ([server, version label or null, notes]), the applications that declare them, their
+ * contracts and their owners ([email, type]).
+ */
+const TECHNOLOGIES = [
+  {
+    catalog: 'active-directory',
+    installed: [['PAR-AD-01', null, null], ['PAR-AD-02', null, null]],
+    declaredBy: ['SAP S/4HANA', 'Sage X3', 'QualityLab LIMS', 'PRTG Network Monitor'],
+    owners: [['sophie.laurent@fromage-co.example', 'it']],
+  },
+  {
+    catalog: 'entra-id',
+    declaredBy: ['Microsoft 365', 'Salesforce Sales Cloud', 'Workday HCM', 'ServiceNow ITSM', 'Jira Software', 'Confluence'],
+    contracts: ['Microsoft Enterprise Agreement'],
+    owners: [['sophie.laurent@fromage-co.example', 'it'], ['thomas.berger@fromage-co.example', 'business']],
+  },
+  {
+    catalog: 'vsphere',
+    installed: [['PAR-ESX-01', '8.0', null], ['PAR-ESX-02', '8.0', null], ['PAR-VCENTER-01', '8.0', 'vCenter Server']],
+    contracts: ['Broadcom VMware ELA'],
+    owners: [['marc.petit@fromage-co.example', 'it']],
+  },
+  {
+    catalog: 'mssqlserver',
+    installed: [
+      ['PAR-SQL-01', '2019', null],
+      ['PAR-SQL-02', '2022', 'Upgraded first; PAR-SQL-01 follows in the next window'],
+      ['PAR-APP-01', '2017', 'Express edition, embedded in QualityLab LIMS'],
+    ],
+  },
+  { catalog: 'tomcat', installed: [['PAR-APP-01', '9.0', null]] },
+  { catalog: 'postgresql', installed: [['AWS-RDS-BOUTIQUE', '16', 'Amazon RDS, Multi-AZ'], ['PAR-DB-01', '13', null]] },
+  { catalog: 'veeam-backup-and-replication', installed: [['PAR-BKP-01', '12', null]] },
+];
+
+const PROCESS_APPLICATIONS = {
+  'Order-to-Cash': ['SAP S/4HANA', 'La Boutique du Fromage', 'Salesforce Sales Cloud', 'Fromage B2B Portal'],
+  'Procure-to-Pay': ['SAP S/4HANA', 'Coupa Procurement'],
+  'Quality Control & Certification': ['QualityLab LIMS'],
+  'Cheese Aging & Maturation': ['CaveGuard IoT', 'CheeseTrack'],
+};
+
+async function ensureAssetGraph() {
+  info('Linking assets: clusters and contained VMs');
+  const assets = await getAll('/assets?limit=1000');
+  const idOf = (name) => assets.find((item) => item.name === name)?.id ?? '';
+  for (const [cluster, members] of Object.entries(ASSET_CLUSTERS)) {
+    const clusterId = idOf(cluster);
+    const memberIds = members.map(idOf).filter(Boolean);
+    if (!clusterId || memberIds.length !== members.length) {
+      warn(`Cluster '${cluster}' or one of its members is missing`);
+      continue;
+    }
+    await apiPost(`/assets/${clusterId}/members`, { asset_ids: memberIds });
+  }
+  for (const [container, contents] of Object.entries(ASSET_CONTAINS)) {
+    const containerId = idOf(container);
+    if (!containerId) {
+      warn(`Asset '${container}' not found`);
+      continue;
+    }
+    // The relations already there (`outgoing`) are kept: the route replaces the whole set.
+    const current = (await apiGet(`/assets/${containerId}/relations`))?.outgoing ?? [];
+    const relations = new Map();
+    for (const relation of current) {
+      if (relation?.related_asset_id && relation?.relation_type) relations.set(`${relation.relation_type}:${relation.related_asset_id}`, relation);
+    }
+    for (const name of contents) {
+      const id = idOf(name);
+      if (!id) {
+        warn(`Asset '${name}' not found`);
+        continue;
+      }
+      relations.set(`contains:${id}`, { related_asset_id: id, relation_type: 'contains' });
+    }
+    await apiPost(`/assets/${containerId}/relations`, {
+      relations: [...relations.values()].map((r) => ({ related_asset_id: r.related_asset_id, relation_type: r.relation_type, notes: r.notes ?? undefined })),
+    });
+  }
+  ok('Asset graph ensured');
+}
+
+async function ensureApplicationServers() {
+  info('Assigning applications to their servers');
+  const assets = await getAll('/assets?limit=1000');
+  for (const [appName, environment, server, role] of APP_SERVERS) {
+    const assetId = assets.find((item) => item.name === server)?.id;
+    const instanceId = await instanceIdByAppEnv(appName, environment);
+    if (!assetId || !instanceId) {
+      warn(`Cannot assign '${appName}' (${environment}) to '${server}'`);
+      continue;
+    }
+    const current = items(await apiGet(`/app-instances/${instanceId}/servers`));
+    if (current.some((row) => (row.asset_id ?? row.server_id) === assetId && row.role === role)) continue;
+    await apiPost(`/app-instances/${instanceId}/servers`, { asset_id: assetId, role });
+  }
+  ok('Applications assigned to servers');
+}
+
+async function ensureTechnologies() {
+  info('Ensuring technologies');
+  const assets = await getAll('/assets?limit=1000');
+  const assetId = (name) => assets.find((item) => item.name === name)?.id ?? '';
+  for (const spec of TECHNOLOGIES) {
+    const adopted = await apiPost('/technologies/adopt', { catalog_key: spec.catalog });
+    const technologyId = adopted?.technology?.id;
+    if (!technologyId) {
+      warn(`Catalog entry '${spec.catalog}' could not be adopted`);
+      continue;
+    }
+    for (const [server, version, notes] of spec.installed ?? []) {
+      const id = assetId(server);
+      if (!id) {
+        warn(`Asset '${server}' not found for '${spec.catalog}'`);
+        continue;
+      }
+      await apiPost(`/technologies/${technologyId}/assets`, { asset_id: id, version_label: version ?? undefined, notes: notes ?? undefined });
+    }
+    if (spec.declaredBy?.length) {
+      const ids = await appIdsFromNames(spec.declaredBy);
+      if (ids.length) await apiPost(`/technologies/${technologyId}/applications`, { application_ids: ids });
+    }
+    for (const contract of spec.contracts ?? []) {
+      const contractId = await contractIdByName(contract);
+      if (!contractId) {
+        warn(`Contract '${contract}' not found`);
+        continue;
+      }
+      await apiPost(`/technologies/${technologyId}/relations/contracts`, { id: contractId });
+    }
+    if (spec.owners?.length) {
+      const owners = [];
+      for (const [email, ownerType] of spec.owners) {
+        const userId = await userIdByEmail(email);
+        if (userId) owners.push({ user_id: userId, owner_type: ownerType });
+        else warn(`User '${email}' not found`);
+      }
+      await apiPost(`/technologies/${technologyId}/owners/bulk-replace`, { owners });
+    }
+  }
+  ok('Technologies ensured');
+}
+
+async function linkProcessesToApplications() {
+  info('Linking business processes to applications');
+  const processes = await getAll('/business-processes?limit=500');
+  for (const [processName, appNames] of Object.entries(PROCESS_APPLICATIONS)) {
+    const processId = processes.find((item) => item.name === processName)?.id;
+    if (!processId) {
+      warn(`Business process '${processName}' not found`);
+      continue;
+    }
+    for (const applicationId of await appIdsFromNames(appNames)) {
+      await apiPost(`/business-processes/${processId}/applications`, { application_id: applicationId });
+    }
+  }
+  ok('Business processes linked to applications');
+}
+
 async function runRelations() {
   step('application-links');
   await linkSuites();
@@ -1996,6 +2194,10 @@ async function runRelations() {
   await ensureConnectionLegs(refToId);
   await ensureInterfaceBindings();
   await ensureInterfaceConnectionLinks(refToId);
+  await ensureAssetGraph();
+  await ensureApplicationServers();
+  await ensureTechnologies();
+  await linkProcessesToApplications();
   step('budget-links');
   await linkContractsToSpend();
   await linkSpendToApps();

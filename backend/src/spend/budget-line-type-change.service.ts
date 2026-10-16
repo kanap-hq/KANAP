@@ -119,6 +119,7 @@ export type ChangeTypeCheck = {
     contracts: number;
     projects: number;
     requests: number;
+    technologies: number;
   };
   successor: LineSuccessor | null;
 };
@@ -174,6 +175,7 @@ const COPIED_LINKS: ReadonlyArray<{ table: string; key: string; owner: string; c
   },
   { table: 'application_spend_items', key: 'applications', owner: 'spend_item_id', columns: ['application_id'], target: 'applications', name: 'o.name' },
   { table: 'asset_spend_items', key: 'assets', owner: 'spend_item_id', columns: ['asset_id'], target: 'assets', name: 'o.name' },
+  { table: 'technology_spend_items', key: 'technologies', owner: 'spend_item_id', columns: ['technology_id'], target: 'technologies', name: `'TEC-' || o.item_number || ': ' || o.name` },
   { table: 'contract_spend_items', key: 'contracts', owner: 'spend_item_id', columns: ['contract_id'], target: 'contracts', name: 'o.name' },
   { table: 'portfolio_project_opex', key: 'projects', owner: 'opex_id', columns: ['project_id'], target: 'portfolio_projects', name: `'PRJ-' || o.item_number || ': ' || o.name` },
   { table: 'portfolio_request_opex', key: 'requests', owner: 'opex_id', columns: ['request_id'], target: 'portfolio_requests', name: `'REQ-' || o.item_number || ': ' || o.name` },
@@ -645,7 +647,7 @@ function copiedValue(axis: AnalyticsAxisInfo, value: CurrentValue, target: Budge
 
 /**
  * What the change carries to the line of the new type, for the dialog. In place (`fromYear`
- * null): everything. Dated: the versions from the year, the contacts and the five link families,
+ * null): everything. Dated: the versions from the year, the contacts and the six link families,
  * which are copied; the tasks, attachments and web links stay on the old line (0 carried).
  */
 async function countCarried(manager: EntityManager, nature: BudgetNature, tenantId: string, itemId: string, fromYear: number | null): Promise<ChangeTypeCheck['carried']> {
@@ -659,7 +661,8 @@ async function countCarried(manager: EntityManager, nature: BudgetNature, tenant
             (SELECT count(*) FROM asset_spend_items WHERE tenant_id = $1 AND spend_item_id = $2)::int AS assets,
             (SELECT count(*) FROM contract_spend_items WHERE tenant_id = $1 AND spend_item_id = $2)::int AS contracts,
             (SELECT count(*) FROM portfolio_project_opex WHERE tenant_id = $1 AND opex_id = $2)::int AS projects,
-            (SELECT count(*) FROM portfolio_request_opex WHERE tenant_id = $1 AND opex_id = $2)::int AS requests`,
+            (SELECT count(*) FROM portfolio_request_opex WHERE tenant_id = $1 AND opex_id = $2)::int AS requests,
+            (SELECT count(*) FROM technology_spend_items WHERE tenant_id = $1 AND spend_item_id = $2)::int AS technologies`,
     [tenantId, itemId, fromYear, TASK_TYPE[nature]],
   );
   return fromYear === null ? row : { ...row, tasks: 0, attachments: 0, links: 0 };

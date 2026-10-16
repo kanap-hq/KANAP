@@ -33,6 +33,7 @@ export type TypeChangeWorld = {
   projectId: string;
   requestId: string;
   contactId: string;
+  technologyId: string;
 };
 
 export type SeededLine = {
@@ -105,10 +106,11 @@ export async function seedTypeChangeWorld(runner: QueryRunner, tenantId: string)
   );
   const projectId = await one(runner, `INSERT INTO portfolio_projects (tenant_id, name, item_number) VALUES ($1, 'Type change project', 990301) RETURNING id`, [tenantId]);
   const requestId = await one(runner, `INSERT INTO portfolio_requests (tenant_id, name, item_number) VALUES ($1, 'Type change request', 990301) RETURNING id`, [tenantId]);
+  const technologyId = await one(runner, `INSERT INTO technologies (tenant_id, item_number, name) VALUES ($1, 990301, 'Type change technology') RETURNING id`, [tenantId]);
   const contactId = await one(runner, `INSERT INTO contacts (tenant_id, email, first_name, last_name) VALUES ($1, $2, 'Con', 'Tact') RETURNING id`, [tenantId, `contact-${randomUUID()}@example.invalid`]);
   return {
     tenantId, companyId, accounts, supplierId, costCenterId, ownerId, requiredAxis, sharedAxis, opexAxis,
-    applicationId, assetId, contractId, projectId, requestId, contactId,
+    applicationId, assetId, contractId, projectId, requestId, contactId, technologyId,
   };
 }
 
@@ -191,6 +193,7 @@ export async function seedTypeChangeLine(
     ['application_spend_items', 'application_id', w.applicationId],
     ['asset_spend_items', 'asset_id', w.assetId],
     ['contract_spend_items', 'contract_id', w.contractId],
+    ['technology_spend_items', 'technology_id', w.technologyId],
   ] as const) {
     await runner.query(`INSERT INTO ${table} (tenant_id, ${column}, spend_item_id) VALUES ($1, $2, $3)`, [w.tenantId, owner, id]);
   }

@@ -77,6 +77,7 @@ export const EXPORT_RESOURCE_KEYS: Readonly<Record<string, string>> = {
   'spend-items/budget-file': 'opexBudgetFile',
   suppliers: 'suppliers',
   tasks: 'tasks',
+  'technologies/applications': 'technologyApplications',
   users: 'users',
   'working-day-profiles': 'workingDayCalendars',
 };

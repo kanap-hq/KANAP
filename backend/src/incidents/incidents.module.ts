@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Incident } from './incident.entity';
 import { IncidentEntry } from './incident-entry.entity';
 import { IncidentAsset } from './incident-asset.entity';
+import { IncidentTechnology } from './incident-technology.entity';
 import { IncidentApplication } from './incident-application.entity';
 import { IncidentAttachment } from './incident-attachment.entity';
 import { IncidentsController } from './incidents.controller';
@@ -30,7 +31,7 @@ import { UserTimeAggregateService } from '../portfolio/services/user-time-aggreg
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Incident, IncidentEntry, IncidentAsset, IncidentApplication, IncidentAttachment]),
+    TypeOrmModule.forFeature([Incident, IncidentEntry, IncidentAsset, IncidentApplication, IncidentTechnology, IncidentAttachment]),
     CommonModule,
     CsvModule,
     AuditModule,
@@ -53,6 +54,6 @@ import { UserTimeAggregateService } from '../portfolio/services/user-time-aggreg
     IncidentsDeleteService,
     UserTimeAggregateService,
   ],
-  exports: [IncidentsService, IncidentRecordService],
+  exports: [IncidentsService, IncidentRecordService, IncidentRelationsService],
 })
 export class IncidentsModule {}

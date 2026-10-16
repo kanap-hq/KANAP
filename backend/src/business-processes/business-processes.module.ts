@@ -11,6 +11,8 @@ import { AuditModule } from '../audit/audit.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { UsersModule } from '../users/users.module';
 import { User } from '../users/user.entity';
+import { TechnologiesModule } from '../technologies/technologies.module';
+import { BusinessProcessApplicationsController } from './business-process-applications.controller';
 
 @Module({
   imports: [
@@ -18,8 +20,9 @@ import { User } from '../users/user.entity';
     AuditModule,
     PermissionsModule,
     forwardRef(() => UsersModule),
+    TechnologiesModule,
   ],
-  controllers: [BusinessProcessesController, BusinessProcessCategoriesController],
+  controllers: [BusinessProcessesController, BusinessProcessCategoriesController, BusinessProcessApplicationsController],
   providers: [BusinessProcessesService, BusinessProcessesDeleteService, BusinessProcessCategoriesService],
   exports: [BusinessProcessesService, BusinessProcessCategoriesService],
 })
