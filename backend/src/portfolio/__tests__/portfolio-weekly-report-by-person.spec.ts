@@ -202,8 +202,16 @@ async function run() {
   /* ---------------------------------------------------------------- */
 
   const exportStub = stub(rows, hours, people);
-  const csv = await svc.exportCsv(baseQuery, { manager: exportStub.manager });
+  const csv = await svc.exportCsv(baseQuery, { manager: exportStub.manager, language: 'fr' });
   assert.ok(csv.content.includes('Tasks by person'));
+  // The file follows the screen language, as every CSV of the shared layer: separator, days, decimals.
+  assert.ok(csv.content.includes(';15/09/2026'), 'French: the days are written day first');
+  assert.ok(!csv.content.includes('2026-09-15'), 'French: no ISO day is left');
+  const english = await svc.exportCsv(baseQuery, { manager: stub(rows, hours, people).manager, language: 'en' });
+  assert.ok(english.content.includes('Team,Person,List,Reference,Task name'), 'English: comma separator');
+  assert.ok(english.content.includes(',2026-09-15'), 'English: ISO days');
+  const german = await svc.exportCsv(baseQuery, { manager: stub(rows, hours, people).manager, language: 'de' });
+  assert.ok(german.content.includes(';15.09.2026'), 'German: dotted days');
   assert.ok(csv.content.includes('Team;Person;List;Reference;Task name'));
   assert.ok(csv.content.includes('Operations;Thomas Berger;Created;T-1;'));
   assert.ok(csv.content.includes('Operations;Isabelle Moreau;Modified;T-2;'));

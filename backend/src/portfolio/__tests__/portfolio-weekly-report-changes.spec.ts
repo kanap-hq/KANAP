@@ -157,7 +157,7 @@ async function run() {
     ],
     portfolio_task_types: [{ id: 'tt-bug', name: 'Bug' }],
   });
-  const csv = await svc.exportCsv(query, { manager: exportManager });
+  const csv = await svc.exportCsv(query, { manager: exportManager, language: 'fr' });
   const line = csv.content.split('\n').find((entry) => entry.startsWith('T-1;'));
   assert.ok(line, 'the modified task has its line');
   assert.ok(
@@ -202,7 +202,7 @@ async function runOriginTask() {
   assert.deepEqual(result.requests.modified[0].changes?.fields, [
     { key: 'origin_task', before: 'T-12: Tune the cellar probes', after: null, kind: 'text' },
   ]);
-  const csv = await svc.exportCsv(requestQuery, { manager: requestStub() });
+  const csv = await svc.exportCsv(requestQuery, { manager: requestStub(), language: 'fr' });
   const line = csv.content.split('\n').find((entry) => entry.startsWith('REQ-12;'));
   assert.ok(line?.includes('Origin task: T-12: Tune the cellar probes → empty'), line);
 }

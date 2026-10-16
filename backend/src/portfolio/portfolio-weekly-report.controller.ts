@@ -1,9 +1,11 @@
+import { EntityManager } from 'typeorm';
 import { BadRequestException, Controller, Get, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
 import { contentDisposition } from '../common/content-disposition';
+import { languageOf } from '../common/csv-sheet';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
 import { isCalendarDate } from '../common/report-period';
 import { resolveAppBaseUrl, resolveConfiguredAppBaseUrl, resolveTenantAppBaseUrl } from '../common/url';
@@ -65,7 +67,9 @@ export class PortfolioWeeklyReportController {
       return;
     }
 
-    const result = await this.svc.exportCsv(parsed, { manager: ctx.manager });
+    // The screen's language (the user's own when the screen sends none), as every shared-layer file.
+    const language = await languageOf(ctx.manager as EntityManager, ctx.tenantId, ctx.userId ?? null, query?.language);
+    const result = await this.svc.exportCsv(parsed, { manager: ctx.manager, language });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(result.filename));
     res.send(result.content);

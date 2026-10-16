@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import AdmZip = require('adm-zip');
 import { EntityManager } from 'typeorm';
-import { neutralizeCsvFormulaValue } from '../../common/csv/csv-export.service';
+import { CsvLanguage, csvProfile, formatCsvDate, writeCsvLine } from '../../common/csv-sheet';
 import { normalizeReportTimeZone } from '../../common/report-period';
 import {
   projectProjectTeamPredicates,
@@ -331,16 +331,18 @@ const xmlEscape = (value: unknown): string =>
     .replace(/'/g, '&apos;');
 
 /**
- * Escape a CSV field. Formula neutralisation comes first: this writer hand-rolls its CSV
- * instead of going through CsvExportService, so nothing else would protect a value that a
- * spreadsheet would otherwise evaluate (a leading =, +, - or @).
+ * One cell of the CSV in the file's language: a day column (`YYYY-MM-DD`) written the
+ * language's way, a number with its decimal mark. The words of the report, the "Changes"
+ * summary included, stay English as in the XLSX.
  */
-const csvEscape = (value: unknown): string => {
-  const raw = neutralizeCsvFormulaValue(String(value ?? ''));
-  if (!raw.includes(';') && !raw.includes('"') && !raw.includes('\n') && !raw.includes('\r')) {
-    return raw;
+const csvCell = (value: unknown, language: CsvLanguage): string => {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'number') {
+    const text = String(value);
+    return csvProfile(language).decimal === ',' ? text.replace('.', ',') : text;
   }
-  return `"${raw.replace(/"/g, '""')}"`;
+  const text = String(value);
+  return ISO_DAY.test(text) ? formatCsvDate(text, language) : text;
 };
 
 const columnNumberToName = (columnNumber: number): string => {
@@ -715,12 +717,18 @@ export class PortfolioWeeklyReportService {
     };
   }
 
-  async exportCsv(query: WeeklyReportQuery, opts?: ServiceOpts): Promise<ExportResult<string>> {
+  /**
+   * The CSV of the report through the shared layer (`csv-sheet`): the separator, the days and
+   * the decimal mark follow `language`, the screen's; the formula guard and quoting are the
+   * shared writer's.
+   */
+  async exportCsv(query: WeeklyReportQuery, opts?: ServiceOpts & { language?: CsvLanguage }): Promise<ExportResult<string>> {
     const { requests, projects, tasks, byPerson } = await this.list(query, opts);
+    const language = opts?.language ?? 'en';
 
     const lines: string[] = [];
     const addRow = (values: unknown[]) => {
-      lines.push(values.map((value) => csvEscape(value)).join(';'));
+      lines.push(writeCsvLine(language, values.map((value) => csvCell(value, language))));
     };
 
     const addBlock = (heading: string, headers: string[], rows: SheetCellValue[][]) => {

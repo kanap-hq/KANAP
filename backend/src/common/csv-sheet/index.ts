@@ -17,7 +17,7 @@ export {
 } from './master-data';
 export { csvSeparatorOf, readCsv } from './read';
 export { languageOf, parseDateOrder, parseDecimalMark } from './request-options';
-export { writeCsv, writeCsvHeader, writeCsvRows } from './write';
+export { writeCsv, writeCsvHeader, writeCsvLine, writeCsvRows } from './write';
 export {
   BUDGET_AMOUNT_COLUMNS,
   BUDGET_YEAR_MAX,
