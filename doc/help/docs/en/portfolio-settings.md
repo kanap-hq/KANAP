@@ -201,7 +201,7 @@ Contract types record how each contributor works with you. They appear as a drop
 
 Four types are created with every workspace:
 
-- **Internal** -- the default for every new contributor
+- **Internal**: the default for every new contributor
 - **External**
 - **Apprentice**
 - **Other**

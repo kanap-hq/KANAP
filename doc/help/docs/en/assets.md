@@ -1,6 +1,6 @@
 # Assets
 
-Assets document your infrastructure inventory -- physical servers, virtual machines, containers, cloud instances, and network devices. Link assets to locations, applications, connections, contracts, projects, and tasks to build a complete picture of your IT infrastructure.
+Assets document your infrastructure inventory: physical servers, virtual machines, containers, cloud instances, and network devices. Link assets to locations, applications, connections, contracts, projects, and tasks to build a complete picture of your IT infrastructure.
 
 ## Getting started
 
@@ -36,7 +36,7 @@ The asset list gives you a filterable, sortable overview of every asset in your 
 | **Name** | Asset name (click to open workspace) |
 | **Asset Type** | The asset's type (e.g., Virtual Machine, Physical Server) |
 | **Cluster** | Cluster membership, or a "Cluster" badge if this asset is itself a cluster |
-| **Environment** | Prod, Pre-prod, QA, Test, Dev, Sandbox -- with a coloured dot |
+| **Environment** | Prod, Pre-prod, QA, Test, Dev, Sandbox, with a coloured dot |
 | **Location** | Where the asset is hosted |
 | **Hosting** | Hosting type (derived from location) |
 | **OS** | Operating system |
@@ -92,7 +92,7 @@ Cluster members are managed from the **Technical** tab of the cluster's workspac
 
 ## The Assets workspace
 
-Click any row to open the workspace. The workspace has a **header** with quick metadata, a **properties drawer** on the right (the asset's identity card -- always visible), and a **content area** in the centre that switches with each tab.
+Click any row to open the workspace. The workspace has a **header** with quick metadata, a **properties drawer** on the right (the asset's identity card, always visible), and a **content area** in the centre that switches with each tab.
 
 ### Header
 
@@ -112,7 +112,7 @@ The drawer shows the asset's identity card on every tab. Edits save automaticall
 - **Asset type** (required)
 - **Location** (required)
 - **Sub-location** (when the location has sub-locations defined)
-- **Hosting type**, **Cloud provider / Operating company**, **Country**, **City** -- read-only, derived from the location
+- **Hosting type**, **Cloud provider / Operating company**, **Country**, **City**: read-only, derived from the location
 
 **Status**:
 - **Environment**: Prod, Pre-prod, QA, Test, Dev, Sandbox
@@ -132,7 +132,7 @@ The Overview tab is the asset's home page.
 
 | Column | What it shows |
 |--------|---------------|
-| **Application** | Application name (clickable -- jumps to the application's Deployments) |
+| **Application** | Application name (clickable: jumps to the application's Deployments) |
 | **Environment** | The deployment environment the assignment belongs to |
 | **Role** | Server role (Web, Database, Application, etc.) |
 | **Since** | Date the server was assigned |
@@ -142,7 +142,7 @@ Click **Add assignment** to attach this asset to an application deployment. Pick
 
 If this asset is a cluster, an inline notice replaces the assignments table and asks you to assign member hosts instead.
 
-**Connections**: A read-only view of all connections involving this asset. Each row shows the connection ID and name (clickable -- opens the Connection workspace), topology (Server to Server or Multi-server), protocols, source and destination endpoint labels, and lifecycle status. To create or edit a connection, navigate to **IT Landscape > Connections**.
+**Connections**: A read-only view of all connections involving this asset. Each row shows the connection ID and name (clickable: opens the Connection workspace), topology (Server to Server or Multi-server), protocols, source and destination endpoint labels, and lifecycle status. To create or edit a connection, navigate to **IT Landscape > Connections**.
 
 **Knowledge**: Linked knowledge articles for this asset. With `knowledge:member` you can create new articles directly from this section.
 
@@ -162,7 +162,7 @@ The Technical tab organizes cluster, network identity and IP configuration.
 - **Domain**: The Active Directory or DNS domain the asset belongs to. Choose from domains configured in **IT Landscape > Settings**. System options include "Workgroup" (standalone) and "N/A" (not applicable).
 - **FQDN**: Fully Qualified Domain Name, automatically computed from hostname and domain DNS suffix. Read-only.
 - **Aliases**: Additional DNS names or aliases for this asset. Type and press Enter to add.
-- **Operating system**: OS type and version (e.g., Windows Server 2022, Ubuntu 24.04 LTS). Disabled for clusters -- OS is defined per member. When selected, shows standard and extended support end dates underneath.
+- **Operating system**: OS type and version (e.g., Windows Server 2022, Ubuntu 24.04 LTS). Disabled for clusters: OS is defined per member. When selected, shows standard and extended support end dates underneath.
 
 **IP addresses**:
 
@@ -175,7 +175,7 @@ Assets support multiple IP addresses, each with its own network configuration:
 - **Network zone**: Automatically derived from the selected subnet (read-only)
 - **VLAN**: Automatically derived from the selected subnet (read-only)
 
-This lets you document multiple network interfaces per asset -- for example, a physical server with both a host IP and an IPMI management address on different subnets.
+This lets you document multiple network interfaces per asset, for example a physical server with both a host IP and an IPMI management address on different subnets.
 
 ---
 
@@ -225,9 +225,9 @@ The Relations tab connects this asset to other records across KANAP. The tab bad
 - **Contracts**: Link to contract records
 - **Projects**: Link to portfolio projects related to this asset
 
-**Tasks**: Tasks linked to this asset. Read-only here -- tasks gain or lose this link when you set the **Asset** field on a task in the Tasks page.
+**Tasks**: Tasks linked to this asset. Read-only here: tasks gain or lose this link when you set the **Asset** field on a task in the Tasks page.
 
-**Relevant websites**: Add URLs with optional names -- useful for vendor portals, monitoring dashboards, or documentation links. **Add URL** opens a dialog; existing entries can be edited or deleted.
+**Relevant websites**: Add URLs with optional names, useful for vendor portals, monitoring dashboards, or documentation links. **Add URL** opens a dialog; existing entries can be edited or deleted.
 
 **Attachments**: Drag and drop files or click **Select files** to upload. Click an attachment chip to download it. Delete is available to managers.
 
@@ -249,11 +249,11 @@ From the Assets list:
 
 | Option | Description |
 |--------|-------------|
-| **Full Export** | All exportable fields -- use for reporting and complete data extraction |
-| **Data Enrichment** | All importable fields -- matches the import template format, ideal for round-trip editing (export, modify, re-import) |
+| **Full Export** | All exportable fields. Use for reporting and complete data extraction |
+| **Data Enrichment** | All importable fields. Matches the import template format, ideal for round-trip editing (export, modify, re-import) |
 | **Custom Selection** | Choose specific fields to include in your export |
 
-**Template download** (from Import dialog): Downloads a blank CSV with all importable field headers -- use this to prepare import files with the correct structure.
+**Template download** (from Import dialog): Downloads a blank CSV with all importable field headers. Use this to prepare import files with the correct structure.
 
 ### Import workflow
 
@@ -261,8 +261,8 @@ From the Assets list:
 
 2. **Choose import settings**:
    - **Mode**:
-     - `Enrich` (default): Empty cells preserve existing values -- only update what you specify
-     - `Replace`: Empty cells clear existing values -- full replacement of all fields
+     - `Enrich` (default): Empty cells preserve existing values: only update what you specify
+     - `Replace`: Empty cells clear existing values: full replacement of all fields
    - **Operation**:
      - `Upsert` (default): Create new assets or update existing ones
      - `Update only`: Only modify existing assets, skip new ones

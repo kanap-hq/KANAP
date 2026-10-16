@@ -107,7 +107,7 @@
         "totalTokens": "Total tokens",
         "window": "Window"
       },
-      "description": "Conversations, token usage and AI messages for this organization. A message is one question sent to Plaid or one ticket reviewed by an agent — the unit the included monthly volume counts.",
+      "description": "Conversations, token usage and AI messages for this organization. A message is one question sent to Plaid or one ticket reviewed by an agent. It is the unit the included monthly volume counts.",
       "metrics": {
         "activeConversations30d": "Active conversations (30d)",
         "activeConversations7d": "Active conversations (7d)",
@@ -169,7 +169,7 @@
       "hints": {
         "apiKey": "Create one in PRTG under Setup → API keys. Read-only access is enough.",
         "apiKeyExisting": "An API key is already saved. Leave blank to keep it.",
-        "requestTimeout": "How long KANAP waits for PRTG to answer each request (5–120 seconds). Increase this if alert checks fail with timeouts on a large or slow PRTG server. Leave blank for the default (30).",
+        "requestTimeout": "How long KANAP waits for PRTG to answer each request (5 to 120 seconds). Increase this if alert checks fail with timeouts on a large or slow PRTG server. Leave blank for the default (30).",
         "baseUrl": "The address of your PRTG web interface, e.g. https://prtg.example.com",
         "timezone": "The time zone your PRTG server runs in, so alert timestamps are read correctly."
       },
@@ -177,8 +177,8 @@
         "loadFailed": "Could not load the monitoring integration.",
         "nextStep": "An SRE monitoring agent can now be created from the agents page.",
         "testFailed": "PRTG connection test failed.",
-        "testSuccess_one": "Connected — PRTG {{version}}, {{count}} sensor visible",
-        "testSuccess_other": "Connected — PRTG {{version}}, {{count}} sensors visible"
+        "testSuccess_one": "Connected: PRTG {{version}}, {{count}} sensor visible",
+        "testSuccess_other": "Connected: PRTG {{version}}, {{count}} sensors visible"
       },
       "placeholders": {
         "apiKeySaved": "API key saved (leave blank to keep)",
@@ -191,7 +191,7 @@
         "disabled": "Disabled",
         "notConfigured": "Not configured"
       },
-      "title": "Monitoring — PRTG"
+      "title": "Monitoring: PRTG"
     },
     "sections": {
       "features": "Features",
@@ -744,7 +744,7 @@
       }
     },
     "exportTitle": "Export template {{code}} {{version}}",
-    "importTitle": "Import template CSV — {{code}} {{version}}",
+    "importTitle": "Import template CSV: {{code}} {{version}}",
     "shared": {
       "allCountries": "All countries",
       "no": "No",

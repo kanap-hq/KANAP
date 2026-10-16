@@ -477,11 +477,11 @@ Three export modes are available:
 
 | Option | Description |
 |--------|-------------|
-| **Full Export** | All exportable fields — use for reporting and complete data extraction |
-| **Data Enrichment** | All importable fields — matches the import template format, ideal for round-trip editing (export, modify, re-import) |
+| **Full Export** | All exportable fields. Use for reporting and complete data extraction |
+| **Data Enrichment** | All importable fields. Matches the import template format, ideal for round-trip editing (export, modify, re-import) |
 | **Custom Selection** | Choose specific fields to include in your export |
 
-**Template download** (from Import dialog): Downloads a blank CSV with all importable field headers — use this to prepare import files with the correct structure.
+**Template download** (from Import dialog): Downloads a blank CSV with all importable field headers. Use this to prepare import files with the correct structure.
 
 ### Import workflow
 
@@ -489,8 +489,8 @@ Three export modes are available:
 
 2. **Choose import settings**:
    - **Mode**:
-     - `Enrich` (default): Empty cells preserve existing values — only update what you specify
-     - `Replace`: Empty cells clear existing values — full replacement of all fields
+     - `Enrich` (default): Empty cells preserve existing values: only update what you specify
+     - `Replace`: Empty cells clear existing values: full replacement of all fields
    - **Operation**:
      - `Upsert` (default): Create new tasks or update existing ones
      - `Update only`: Only modify existing tasks, skip new ones
@@ -526,7 +526,7 @@ Three export modes are available:
 
 **Standalone tasks**: Leave `related_object_type`, `related_object_id`, and `related_object_name` empty. You can set classification fields (`source_name`, `category_name`, `stream_name`, `company_name`) for standalone and project tasks. For project tasks, omitted classification fields default from the parent project.
 
-**Tip**: For new linked-task imports, use `related_object_name` instead of `related_object_id` — it is much easier to work with. The system resolves the name to the correct ID based on `related_object_type`. For round-trip imports (export, edit, re-import), both fields are included so matching works correctly.
+**Tip**: For new linked-task imports, use `related_object_name` instead of `related_object_id`. It is much easier to work with. The system resolves the name to the correct ID based on `related_object_type`. For round-trip imports (export, edit, re-import), both fields are included so matching works correctly.
 
 **Status and dates**:
 
@@ -659,7 +659,7 @@ You can promote a task into a portfolio request when the work deserves formal ev
 1. Open the task workspace
 2. Click **Convert to Request** in the header toolbar (next to **Send link**)
 3. In the dialog:
-   - **Request Name**: Defaults to the task title — edit if needed
+   - **Request Name**: Defaults to the task title. Edit if needed
    - **Purpose Preview**: Shows the task description, which becomes the request's purpose
    - **Close the original task after conversion**: Check this option if you want the task status set to **Done** automatically
 4. Click **Convert to Request**
@@ -686,7 +686,7 @@ The request is created with a status of **Pending Review** and is linked back to
 - **One-time conversion**: Each task can only be converted once. After conversion, the **Convert to Request** button is disabled and shows the linked request reference (e.g., "Already converted to REQ-42")
 - **Task remains**: The original task is not deleted. Unless you check the close option, it stays in its current status and can still be updated independently
 
-**Tip**: Use this when a task reveals a larger initiative that needs its own request lifecycle — criteria scoring, approval workflow, and eventual conversion to a project.
+**Tip**: Use this when a task reveals a larger initiative that needs its own request lifecycle: criteria scoring, approval workflow, and eventual conversion to a project.
 
 ---
 
@@ -702,7 +702,7 @@ You can email a link to any task to colleagues or external contacts.
    - **Copy link**: Click the copy icon to grab the direct URL
 4. Click **Send**
 
-Recipients receive an email with your name, the task title, a direct link, and your message (if provided). This does not change any permissions — it simply notifies the recipients.
+Recipients receive an email with your name, the task title, a direct link, and your message (if provided). This does not change any permissions. It simply notifies the recipients.
 
 **Tip**: You can mix platform users and external email addresses in the same send.
 
@@ -726,7 +726,7 @@ When the focus is not on an input field, you can use:
   - **Use due dates**: Set realistic due dates to track deadlines effectively.
   - **Assign owners**: Every task should have an assignee for accountability.
   - **Log time regularly**: Time tracking helps with future project estimation.
-  - **Filter by status**: The default filter shows active statuses only (`Open`, `In Progress`, `Pending`, `In Testing`) — include `Done` and `Cancelled` when reviewing historical tasks.
+  - **Filter by status**: The default filter shows active statuses only (`Open`, `In Progress`, `Pending`, `In Testing`). Include `Done` and `Cancelled` when reviewing historical tasks.
   - **Create from context**: Creating tasks from within workspaces (project, OPEX, contract, CAPEX) automatically links them.
   - **Link apps and assets**: Use the **Applications** and **Assets** fields in the Properties drawer when a task is operationally about a specific app or asset. The link shows up in the related entity's workspace too.
   - **Use priority wisely**: Reserve **Blocker** for genuinely blocking issues.

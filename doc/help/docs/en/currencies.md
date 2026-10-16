@@ -19,7 +19,7 @@ For background on currency concepts and conversion mechanics, see the Currency M
 The **tenant-wide currency** used for all reports, totals, and list displays. When you change this currency:
   - All OPEX and CAPEX yearly columns convert to the new reporting currency
   - Totals in reports recalculate using the new base
-  - **Your stored item data remains unchanged**—only display and conversion are affected
+  - **Your stored item data remains unchanged**: only display and conversion are affected
 
 **Example**: If you switch from EUR to USD, your OPEX list totals will show in USD, but each line's stored currency (EUR, GBP, etc.) stays the same.
 
@@ -158,7 +158,7 @@ Live spot rate from ExchangeRate-API is used (falls back to latest annual rate i
 ### Future years
 Reuse the current year's rate as a forward estimate. This provides budget planning guidance but should be reviewed as those years approach.
 
-**Fallback**: If no rate is found for a currency, the system uses **1.00** until data becomes available. This prevents errors but may produce inaccurate conversions—run Force FX sync to populate missing rates.
+**Fallback**: If no rate is found for a currency, the system uses **1.00** until data becomes available. This prevents errors but may produce inaccurate conversions. Run Force FX sync to populate missing rates.
 
 ## Tips
 
@@ -167,7 +167,7 @@ Reuse the current year's rate as a forward estimate. This provides budget planni
   - **Restrict currencies intentionally**: Only use Allowed Currencies if you have a clear reason (e.g., FX data coverage, compliance, standardization).
   - **Run Force FX sync proactively**: After adding currencies, before generating reports, or when rates seem stale.
   - **Check the FX snapshots table**: Use it to verify rates are reasonable and complete before finalizing reports.
-  - **Use consistent ISO codes**: Always use 3-letter codes (EUR, USD, GBP)—never symbols (€, $, £) or numeric codes.
+  - **Use consistent ISO codes**: Always use 3-letter codes (EUR, USD, GBP), never symbols (€, $, £) or numeric codes.
 
 ## Common scenarios
 
@@ -179,7 +179,7 @@ Your group switches from EUR-based to USD-based reporting.
   2. Change Reporting Currency from `EUR` to `USD`
   3. Click **Save** (automatically triggers FX refresh)
   4. Verify the FX Rate Snapshots table shows USD as the base (all rates should now be relative to USD)
-  5. Check OPEX and CAPEX lists—totals and yearly columns now display in USD
+  5. Check OPEX and CAPEX lists: totals and yearly columns now display in USD
 
 **Result**: All reports, dashboards, and lists show USD. Your stored line data (each line's own currency) remains unchanged.
 
@@ -213,14 +213,14 @@ It's December, and you're preparing for next year's budget planning.
   1. Go to **Budget management > Administration > Currencies**
   2. Click **Force FX sync** to refresh rates for the upcoming year
   3. Check the FX Rate Snapshots table to see the forward estimates for the next year
-  4. Note that future year rates are forward estimates (reusing current year's rate)—review them as the year approaches
+  4. Note that future year rates are forward estimates (reusing current year's rate). Review them as the year approaches
 
 **Result**: Your budget forecasts for the next year use the latest available rates. Teams can plan CAPEX and OPEX with reasonable currency assumptions.
 
 ## Frequently asked questions
 
 **Q: What happens if I change the reporting currency mid-year?**
-A: All reports and lists immediately convert to the new currency. Historical data remains intact—only the display currency changes. Plan this change carefully to avoid confusion during active reporting periods.
+A: All reports and lists immediately convert to the new currency. Historical data remains intact: only the display currency changes. Plan this change carefully to avoid confusion during active reporting periods.
 
 **Q: Can I set different reporting currencies for different companies?**
 A: No. The reporting currency is tenant-wide. All companies, reports, and totals use the same reporting currency. Individual lines store their own currency, but conversions always target the tenant's reporting currency.

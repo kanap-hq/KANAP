@@ -5,10 +5,10 @@ description: A quick onboarding guide for all users. Dashboard, profile, tasks, 
 
 # Getting Started: Your First 10 Minutes in KANAP
 
-Welcome to KANAP. This guide walks you through everything you need to feel productive on day one — regardless of your role. No admin knowledge required, no module-specific deep dives. Just the essentials to get comfortable.
+Welcome to KANAP. This guide walks you through everything you need to feel productive on day one, regardless of your role. No admin knowledge required, no module-specific deep dives. Just the essentials to get comfortable.
 
 !!! tip "Prefer a one-page summary? :material-file-pdf-box:"
-    All the key steps on a single A4 page — print it, pin it, share it with your team.
+    All the key steps on a single A4 page: print it, pin it, share it with your team.
 
     [:material-download: Download the cheat sheet (PDF)](downloads/kanap-getting-started.pdf){ .md-button .md-button--primary }
 
@@ -22,7 +22,7 @@ KANAP is organized around a simple structure. The top bar shows the sections you
 
 | Area | What it contains |
 |------|-----------------|
-| **Dashboard** | Your personal hub — click the KANAP logo or navigate to `/` |
+| **Dashboard** | Your personal hub. Click the KANAP logo or navigate to `/` |
 | **Portfolio** | Tasks, Requests, Projects, Planning, Reporting, Contributors |
 | **IT Landscape** | Applications, Interfaces, Interface Map, Assets, Connections, Connection Map, Locations |
 | **Knowledge** | Documents and templates with review workflows |
@@ -59,16 +59,16 @@ A grid of tiles, each showing a different aspect of your work. Here are the most
 
 At the top of the dashboard, you'll find shortcut buttons for common actions:
 
-- **Create Task** — open a quick dialog to create a task without leaving the dashboard
-- **Log Time** — log hours against a project in seconds
-- **New Document** — start a blank Knowledge document or create one from a template
+- **Create Task**: open a quick dialog to create a task without leaving the dashboard
+- **Log Time**: log hours against a project in seconds
+- **New Document**: start a blank Knowledge document or create one from a template
 
 ### Customize it
 
 Click the **Settings** icon (gear) to choose which tiles appear. Only tiles you have permission to view are shown. Start with the defaults for a few days, then adjust to your needs.
 
 !!! tip "Make it yours"
-    The dashboard is designed to answer "what should I focus on today?" at a glance. If a tile isn't useful to you, hide it. If you're missing something, check the gear icon — it might just be disabled.
+    The dashboard is designed to answer "what should I focus on today?" at a glance. If a tile isn't useful to you, hide it. If you're missing something, check the gear icon: it might just be disabled.
 
 ---
 
@@ -101,7 +101,7 @@ You can fine-tune notifications by workspace:
 
 ### The Weekly Review Email
 
-This is a periodic summary of your activity and upcoming items — like a personal digest.
+This is a periodic summary of your activity and upcoming items, like a personal digest.
 
 Configure it in the Notifications tab:
 
@@ -120,9 +120,9 @@ Click **Preview email** to send yourself a test and see what it looks like.
 
 Choose your preferred theme mode:
 
-- **Light** — bright interface
-- **Dark** — reduced glare for low-light environments
-- **System** — follows your operating system preference
+- **Light**: bright interface
+- **Dark**: reduced glare for low-light environments
+- **System**: follows your operating system preference
 
 You can also toggle the theme quickly from the top bar using the theme icon (sun/moon) next to the help button.
 
@@ -149,10 +149,10 @@ The scope filter **remembers your last selection** across sessions. So if you sw
 
 ### Where scope filters appear
 
-- **Portfolio → Tasks** — My Tasks / My Team's Tasks / All Tasks
-- **IT Landscape → Applications** — My Apps / My Team's Apps / All Apps
-- **Portfolio → Projects** — My Projects / My Team's Projects / All Projects
-- **Portfolio → Requests** — My Requests / My Team's Requests / All Requests
+- **Portfolio → Tasks**: My Tasks / My Team's Tasks / All Tasks
+- **IT Landscape → Applications**: My Apps / My Team's Apps / All Apps
+- **Portfolio → Projects**: My Projects / My Team's Projects / All Projects
+- **Portfolio → Requests**: My Requests / My Team's Requests / All Requests
 
 The logic is always the same: ownership and team assignment determine what you see.
 
@@ -170,8 +170,8 @@ Navigate to **Portfolio → Tasks**. The page opens on **All Tasks**. Choose **M
 
 Two ways:
 
-1. **From the Dashboard** — click **Create Task** (quick dialog, minimal fields)
-2. **From the Tasks page** — click **New** (full workspace with all options)
+1. **From the Dashboard**: click **Create Task** (quick dialog, minimal fields)
+2. **From the Tasks page**: click **New** (full workspace with all options)
 
 The minimum you need:
 
@@ -201,7 +201,7 @@ Move tasks through statuses as work advances:
 
 ### Log time
 
-For project tasks, time logging is essential — it feeds the roadmap generator and capacity planning.
+For project tasks, time logging is essential: it feeds the roadmap generator and capacity planning.
 
 1. Open the task → click **Log Time** in the sidebar
 2. Choose category: **IT** or **Business**
@@ -209,16 +209,16 @@ For project tasks, time logging is essential — it feeds the roadmap generator 
 
 ### Share a task
 
-Need to loop someone in? Click **Send Link** in the task header to email a direct link to any colleague — even people outside KANAP. Add a personal message if needed.
+Need to loop someone in? Click **Send Link** in the task header to email a direct link to any colleague, even people outside KANAP. Add a personal message if needed.
 
 !!! info "Send Link works everywhere"
-    This isn't just for tasks. You can send links to projects, requests, contracts, apps — any workspace object. It's the fastest way to point someone to the right place.
+    This isn't just for tasks. You can send links to projects, requests, contracts, apps: any workspace object. It's the fastest way to point someone to the right place.
 
 ---
 
 ## Step 5: Set Up Your Contributor Profile
 
-Your Contributor profile tells KANAP who you are in terms of project planning. It's separate from your user account — it's about **team, availability, and skills**.
+Your Contributor profile tells KANAP who you are in terms of project planning. It's separate from your user account. It's about **team, availability, and skills**.
 
 Navigate to **Portfolio → Contributors** and find your name (or ask your admin to add you).
 
@@ -227,8 +227,8 @@ Navigate to **Portfolio → Contributors** and find your name (or ask your admin
 | Setting | What it does | Example |
 |---------|-------------|---------|
 | **Team** | Your organizational team | Infrastructure, Service Desk… |
-| **Availability** | Days per month for project work (0–20) | 8 days/month |
-| **Skills** | What you know and how well | "Docker — Autonomous" |
+| **Availability** | Days per month for project work (0 to 20) | 8 days/month |
+| **Skills** | What you know and how well | "Docker: Autonomous" |
 
 ### Why this matters
 
@@ -237,7 +237,7 @@ Navigate to **Portfolio → Contributors** and find your name (or ask your admin
 - **Skills** → helps project managers find the right people for upcoming work
 
 !!! tip "Be realistic with availability"
-    Account for meetings, BAU work, and holidays. Most people have less project time than they think. Setting 20 days/month means you have zero non-project time — that's almost never true.
+    Account for meetings, BAU work, and holidays. Most people have less project time than they think. Setting 20 days/month means you have zero non-project time, and that's almost never true.
 
 ### Skills proficiency
 
@@ -249,7 +249,7 @@ Each skill has a proficiency level:
 | 1 | Basic / Theoretical |
 | 2 | Can execute with support |
 | 3 | Autonomous |
-| 4 | Expert — can mentor others |
+| 4 | Expert: can mentor others |
 
 Be honest. A realistic skills map is far more useful than one where everyone is an "expert".
 
@@ -263,7 +263,7 @@ Everything you set up in these first 10 minutes feeds into the bigger picture:
 Tiles pull from your task assignments, project roles, and time logs to give you a personalized overview every morning.
 
 ### Scope Filters
-Your ownership assignments and team membership determine what surfaces in every list — making the app feel personal, not overwhelming.
+Your ownership assignments and team membership determine what surfaces in every list, making the app feel personal, not overwhelming.
 
 ### Capacity Planning
 Your availability and time logs feed into the Portfolio module's roadmap generator and capacity heatmaps. Accurate data here means better planning for everyone.
@@ -302,4 +302,4 @@ The weekly email and real-time notifications keep you in the loop without checki
 ---
 
 !!! success "You're ready"
-    You now know how to navigate KANAP, manage your tasks, configure your profile and notifications, and set up your contributor profile. Start with your dashboard each morning, keep your tasks updated, and log time regularly — the rest will follow naturally.
+    You now know how to navigate KANAP, manage your tasks, configure your profile and notifications, and set up your contributor profile. Start with your dashboard each morning, keep your tasks updated, and log time regularly. The rest will follow naturally.

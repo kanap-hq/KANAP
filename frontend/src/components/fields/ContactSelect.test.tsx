@@ -54,11 +54,11 @@ describe('ContactSelect', () => {
   it('names the supplier on the same line when the list is not grouped', async () => {
     renderSelect({ groupByCompany: false });
     fireEvent.mouseDown(screen.getByRole('combobox'));
-    await waitFor(() => expect(optionTexts()).toEqual(['Anna Berg — Acme', 'desk@acme.test — Acme']));
+    await waitFor(() => expect(optionTexts()).toEqual(['Anna Berg (Acme)', 'desk@acme.test (Acme)']));
   });
 
   it('shows the chosen contact as its name and supplier, without its email', async () => {
     renderSelect({ value: 'c-1' });
-    await waitFor(() => expect(screen.getByRole('combobox')).toHaveValue('Anna Berg — Acme'));
+    await waitFor(() => expect(screen.getByRole('combobox')).toHaveValue('Anna Berg (Acme)'));
   });
 });

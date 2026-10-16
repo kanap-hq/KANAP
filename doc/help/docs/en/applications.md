@@ -78,7 +78,7 @@ The Applications grid provides a comprehensive view of your application portfoli
 - **My apps**: shows apps where you are listed in the properties drawer as either a **Business owner** or **IT owner**. Multi-owner entries are supported.
 - **My team's apps**: shows apps where any member of your Portfolio team is listed as Business owner or IT owner. Your own ownership is also included in this scope. Disabled if you are not assigned to a Portfolio team.
 - **All apps** (default): shows the full Applications grid with the standard default lifecycle filter behavior.
-- Your selection is remembered across sessions -- returning to the page restores your last choice.
+- Your selection is remembered across sessions: returning to the page restores your last choice.
 
 **Default columns**:
 - **Name**: Application name with category caption and an "Included in: {suite}" badge for components of a suite
@@ -124,7 +124,7 @@ The Applications grid provides a comprehensive view of your application portfoli
 
 ## The Applications workspace
 
-Click any row to open the workspace. The workspace has a **header** with quick metadata, a **properties drawer** on the right (the application's identity card -- always visible), and a **content area** in the centre that switches with each tab.
+Click any row to open the workspace. The workspace has a **header** with quick metadata, a **properties drawer** on the right (the application's identity card, always visible), and a **content area** in the centre that switches with each tab.
 
 ### Header
 
@@ -142,7 +142,7 @@ The header shows:
 
 ### Properties drawer (right panel)
 
-The drawer is the application's identity card. It is shown on every tab and edited inline -- changes save automatically.
+The drawer is the application's identity card. It is shown on every tab and edited inline. Changes save automatically.
 
 **Identity**:
 - **Category**, **Supplier**, **Publisher**
@@ -175,7 +175,7 @@ The Overview tab is the application's narrative. It contains:
 
 ### Deployments
 
-The Deployments tab documents where the application actually runs -- one block per environment, with the servers attached to each.
+The Deployments tab documents where the application actually runs: one block per environment, with the servers attached to each.
 
 **Environments**: Production, Pre-prod, QA, Test, Dev, Sandbox.
 
@@ -196,7 +196,7 @@ The Deployments tab documents where the application actually runs -- one block p
 | **Hosting** | Derived from the asset's location |
 | **Since** | Date the server was assigned to this deployment |
 
-Click **Add server** on the deployment header to attach an asset. Cluster assets are excluded -- assign cluster member hosts instead.
+Click **Add server** on the deployment header to attach an asset. Cluster assets are excluded. Assign cluster member hosts instead.
 
 **Tip**: Document servers in **IT Landscape > Assets** first, then link them here. The asset's Overview tab will show the same assignments in reverse.
 
@@ -204,13 +204,13 @@ Click **Add server** on the deployment header to attach an asset. Cluster assets
 
 ### Interfaces
 
-The Interfaces tab shows all integrations this application participates in -- as source, target, or middleware. The tab badge shows the total count.
+The Interfaces tab shows all integrations this application participates in, as source, target, or middleware. The tab badge shows the total count.
 
 Interfaces are **grouped by environment** (PROD, PRE_PROD, QA, ...). Within each environment they are split into:
 
-- **Inbound** -- this application receives data
-- **Outbound** -- this application sends data
-- **Routed** -- this application is the middleware/ETL for a flow between two other apps
+- **Inbound**: this application receives data
+- **Outbound**: this application sends data
+- **Routed**: this application is the middleware/ETL for a flow between two other apps
 
 Each row shows the interface name, the counterpart application, and a **Via middleware** indicator. Click the row to open the interface workspace; click the counterpart to open the other application.
 
@@ -287,9 +287,9 @@ The Relations tab links this application to your financial, contract, project an
 - **Budget lines**: the OPEX and CAPEX lines of this application, in one list. Search by title or reference (`BL-12`); each suggestion shows its type
 - **Contracts**: vendor contracts
 - **Projects**: portfolio projects linked to this application
-- **Tasks**: tasks linked to this application. This list is read-only here -- tasks gain or lose this link when you set the **App / Service** field on a task in the Tasks page.
+- **Tasks**: tasks linked to this application. This list is read-only here: tasks gain or lose this link when you set the **App / Service** field on a task in the Tasks page.
 
-**Relevant websites**: add URLs with optional names -- useful for vendor portals, monitoring dashboards, or documentation links. **Add URL** opens a dialog; existing entries can be edited or deleted.
+**Relevant websites**: add URLs with optional names, useful for vendor portals, monitoring dashboards, or documentation links. **Add URL** opens a dialog; existing entries can be edited or deleted.
 
 **Attachments**: Drag and drop files or click **Select files** to upload. Click an attachment chip to download it. Delete is available to managers.
 
@@ -301,16 +301,16 @@ KANAP offers **two ways to manage application versions**, depending on how your 
 
 | Approach | Best for | What happens |
 |----------|----------|--------------|
-| **Simple** | Most applications | Update the version fields in the properties drawer or in the create form -- same record, new version number |
-| **Sophisticated** | Major migrations | Use **Create new version** to create a new application record with lineage tracking -- run old and new versions side by side |
+| **Simple** | Most applications | Update the version fields in the properties drawer or in the create form: same record, new version number |
+| **Sophisticated** | Major migrations | Use **Create new version** to create a new application record with lineage tracking. Run old and new versions side by side |
 
 ### Simple version tracking (in-place updates)
 
-For most applications -- where you upgrade and the old version simply goes away -- update **Version**, **Go live**, **End of support** and **Retired date** in the create form or the properties drawer. The header version chip and the **Go live** metadata reflect what you set.
+For most applications (where you upgrade and the old version simply goes away), update **Version**, **Go live**, **End of support** and **Retired date** in the create form or the properties drawer. The header version chip and the **Go live** metadata reflect what you set.
 
 This approach keeps everything in a single record. When you upgrade, update the version fields and you're done. History is tracked in the audit log.
 
-**Use this when**: upgrades happen in place with no overlap -- one version replaces another.
+**Use this when**: upgrades happen in place with no overlap: one version replaces another.
 
 ### Creating a new version (parallel migrations)
 
@@ -318,9 +318,9 @@ For major application upgrades where you need to run old and new versions in par
 
 The wizard has three steps:
 
-1. **Version details** -- new application name, version label, **Go live** and **End of support** dates.
-2. **Copy options** -- choose what to copy from the source. Defaults shown below.
-3. **Interfaces** -- pick which interfaces to migrate to the new version.
+1. **Version details**: new application name, version label, **Go live** and **End of support** dates.
+2. **Copy options**: choose what to copy from the source. Defaults shown below.
+3. **Interfaces**: pick which interfaces to migrate to the new version.
 
 The new version is created as a separate application with:
 - A **Proposed** lifecycle (ready to configure before go-live)
@@ -365,7 +365,7 @@ There are two ways to copy an application in KANAP:
 
 ### Copy item (from the Applications grid)
 
-Use this when you want to create an independent duplicate of an application -- typically to create a similar application entry without version lineage.
+Use this when you want to create an independent duplicate of an application, typically to create a similar application entry without version lineage.
 
 1. Select an application in the grid
 2. Click **Copy item**
@@ -440,9 +440,9 @@ From the Applications list:
 | Preset | Description |
 |--------|-------------|
 | **Full Export** | All exportable fields including computed/read-only data (timestamps, data residency, user metrics) |
-| **Data Enrichment** | Only importable fields -- ideal for round-trip editing workflows |
+| **Data Enrichment** | Only importable fields, ideal for round-trip editing workflows |
 
-**Template export**: Downloads headers only -- useful for preparing import files with the correct structure. The template includes all importable fields.
+**Template export**: Downloads headers only, useful for preparing import files with the correct structure. The template includes all importable fields.
 
 **Custom selection**: Choose specific fields to include in your export.
 
@@ -452,7 +452,7 @@ From the Applications list:
 
 2. **Choose import settings**:
    - **Mode**:
-     - `Enrich` (default): Empty cells preserve existing values -- only update what you specify
+     - `Enrich` (default): Empty cells preserve existing values: only update what you specify
      - `Replace`: Supplied fields are replaced; blank classification cells preserve their values and `__CLEAR__` explicitly clears them
    - **Operation**:
      - `Upsert` (default): Create new applications or update existing ones
@@ -592,7 +592,7 @@ Custom ERP;lob;;Moderate;Active;2018-03-20;false
 - **Start with critical apps**: Document your business-critical applications first, then work down the criticality levels.
 - **Use Suites for grouping**: Enable "Can have child apps" in the Operations tab to mark an application as a Suite that groups related components (e.g., SAP modules under an SAP Suite).
 - **Link to spend early**: Connect OPEX, CAPEX and contracts in the Relations tab to see the full cost picture for each application.
-- **Keep deployments current**: The Deployments tab drives the environment chips in the list -- keep it updated for accurate visibility.
+- **Keep deployments current**: The Deployments tab drives the environment chips in the list. Keep it updated for accurate visibility.
 - **Document the audience**: Set company and department audiences in the properties drawer; the user count is then derived automatically and used in reports.
 - **Leverage category filtering**: Use the Category column filter to focus on specific application types (e.g., show only Line-of-business apps, or exclude Productivity tools).
 - **Attach knowledge early**: Link runbooks and architecture documents from the Overview tab so the team knows where to look during incidents.

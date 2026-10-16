@@ -20,7 +20,7 @@ export function isLongPreview(preview: AiMutationPreview): boolean {
 export function getPreviewLabel(preview: AiMutationPreview): string {
   const ref = preview.target?.ref?.trim();
   const title = preview.target?.title?.trim();
-  if (ref && title) return `${ref} — ${title}`;
+  if (ref && title) return `${ref} · ${title}`;
   return ref || title || preview.tool_name;
 }
 

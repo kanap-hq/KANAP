@@ -226,7 +226,7 @@
       },
       "aria": {
         "skillLevel": "{{skill}} level",
-        "levelOption": "{{level}} – {{label}}",
+        "levelOption": "{{level}}: {{label}}",
         "removeSkill": "Remove {{skill}}"
       },
       "nav": {
@@ -2632,7 +2632,7 @@
       "mandatoryBypassDescription": "When enabled, requests with the flagged mandatory item receive a priority score of 100, regardless of other criteria. Manual override is blocked.",
       "empty": "No evaluation criteria configured yet. Add criteria to enable request scoring.",
       "dragToReorder": "Drag to reorder",
-      "reorderHint": "Drag the left grip to reorder criteria — the order applies to request scoring.",
+      "reorderHint": "Drag the left grip to reorder criteria. The order applies to request scoring.",
       "chips": {
         "inverted": "Inverted",
         "weight": "Weight: {{value}}"

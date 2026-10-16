@@ -125,7 +125,7 @@ export default forwardRef<AccountOverviewEditorHandle, Props>(function AccountOv
           const coasRes = await api.get('/chart-of-accounts', { params: { page: 1, limit: 1000 } });
           if (!active) return;
           const items: any[] = coasRes.data?.items || [];
-          setCoas(items.map((c) => ({ id: c.id, label: `${c.code} — ${c.name}` })));
+          setCoas(items.map((c) => ({ id: c.id, label: `${c.code} · ${c.name}` })));
         } catch (e: any) {
           if (!active) return;
           setLoadCoasError(e?.response?.data?.message || e?.message || t('accounts.fields.loadCoAsError'));
