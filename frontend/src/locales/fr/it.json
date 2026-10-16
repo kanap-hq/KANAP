@@ -1373,12 +1373,15 @@
       "impact": {
         "title": "Si ce serveur tombe",
         "empty": "Aucun autre élément ne dépend de ce serveur.",
+        "emptyInfrastructure": "Aucune autre infrastructure ne dépend de ce serveur.",
         "loadFailed": "L'impact n'a pas pu être chargé.",
+        "more_one": "et {{count}} autre",
+        "more_other": "et {{count}} autres",
         "summary": {
           "applications_one": "{{count}} application",
           "applications_other": "{{count}} applications",
-          "assets_one": "{{count}} asset",
-          "assets_other": "{{count}} assets",
+          "assets_one": "{{count}} actif",
+          "assets_other": "{{count}} actifs",
           "clustersDown_one": "{{count}} cluster tombé",
           "clustersDown_other": "{{count}} clusters tombés",
           "clustersDegraded_one": "{{count}} cluster dégradé",
@@ -1390,7 +1393,7 @@
         },
         "sections": {
           "applications": "Applications",
-          "assets": "Assets",
+          "assets": "Actifs",
           "clusters": "Clusters",
           "technologies": "Technologies",
           "processes": "Processus métier"
@@ -1413,7 +1416,8 @@
         },
         "state": {
           "down": "Tombé",
-          "degraded": "Dégradé, {{fallen}} membres tombés sur {{members}}"
+          "degraded_one": "Dégradé, {{count}} membre tombé sur {{members}}",
+          "degraded_other": "Dégradé, {{count}} membres tombés sur {{members}}"
         }
       },
       "support": {

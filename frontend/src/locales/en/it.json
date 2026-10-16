@@ -1373,7 +1373,10 @@
       "impact": {
         "title": "If this server goes down",
         "empty": "Nothing else depends on this server.",
+        "emptyInfrastructure": "No other infrastructure depends on this server.",
         "loadFailed": "The impact could not be loaded.",
+        "more_one": "and {{count}} more",
+        "more_other": "and {{count}} more",
         "summary": {
           "applications_one": "{{count}} application",
           "applications_other": "{{count}} applications",
@@ -1413,7 +1416,8 @@
         },
         "state": {
           "down": "Down",
-          "degraded": "Degraded, {{fallen}} of {{members}} members down"
+          "degraded_one": "Degraded, {{count}} of {{members}} members down",
+          "degraded_other": "Degraded, {{count}} of {{members}} members down"
         }
       },
       "support": {
