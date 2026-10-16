@@ -6,6 +6,7 @@ import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { drawerMenuItemSx } from '../../../theme/formSx';
 import { StatusDot } from '../../../components/design';
 import { classificationText } from '../../../utils/applicationClassification';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   lifecycle: string;
@@ -46,8 +47,9 @@ export default function ConnectionMetadataBar({
   onCriticalityChange,
   onProtocolCodesChange,
 }: Props) {
+  const { t } = useTranslation(['it', 'common']);
   const { data: classificationCatalog } = useApplicationClassificationCatalog();
-  const CRITICALITIES = [{ code: '', label: 'Not set' }, ...(classificationCatalog?.businessCriticalityLevels || [])];
+  const CRITICALITIES = [{ code: '', label: classificationText('Not set') }, ...(classificationCatalog?.businessCriticalityLevels || [])];
   const { byField, labelFor, settings } = useItOpsEnumOptions();
   const lifecycleOptions = byField.lifecycleStatus || [];
   const connectionTypes = settings?.connectionTypes || [];
@@ -62,14 +64,14 @@ export default function ConnectionMetadataBar({
   const [criticalityAnchor, setCriticalityAnchor] = React.useState<HTMLElement | null>(null);
   const [protocolsAnchor, setProtocolsAnchor] = React.useState<HTMLElement | null>(null);
 
-  const lifecycleLabel = labelFor('lifecycleStatus', lifecycle) || lifecycle || 'Lifecycle missing';
-  const topologyLabel = topology === 'server_to_server' ? 'Server to server' : 'Multi-server';
+  const lifecycleLabel = labelFor('lifecycleStatus', lifecycle) || lifecycle || t('it:workspace.connection.metadata.lifecycleMissing');
+  const topologyLabel = topology === 'server_to_server' ? t('it:enums.topology.serverToServer') : t('it:enums.topology.multiServer');
   const effectiveCritLabel =
     CRITICALITIES.find((c) => c.code === effectiveCriticality)?.label
       || effectiveCriticality
-      || 'Criticality missing';
+      || t('it:workspace.connection.metadata.criticalityMissing');
   const protocolsSummary = (() => {
-    if (safeProtocolLabels.length === 0) return 'Protocols missing';
+    if (safeProtocolLabels.length === 0) return t('it:workspace.connection.metadata.protocolsMissing');
     const visible = safeProtocolLabels.slice(0, 2).join(', ');
     const extra = safeProtocolLabels.length > 2 ? ` +${safeProtocolLabels.length - 2}` : '';
     return `${visible}${extra}`;
@@ -100,7 +102,7 @@ export default function ConnectionMetadataBar({
         onClick={(e) => !disabled && setLifecycleAnchor(e.currentTarget as HTMLElement)}
         disabled={disabled}
       >
-        <Typography component="span" sx={{ fontSize: 11, color: 'kanap.text.tertiary', mr: 0.5 }}>Lifecycle</Typography>
+        <Typography component="span" sx={{ fontSize: 11, color: 'kanap.text.tertiary', mr: 0.5 }}>{t('it:common.lifecycle')}</Typography>
         <StatusDot size={8} color={lifecycleColor} sx={{ mr: 0.75 }} />
         <Typography component="span" sx={{ fontSize: 12 }}>{lifecycleLabel}</Typography>
       </PortfolioMetadataItem>
@@ -109,7 +111,7 @@ export default function ConnectionMetadataBar({
         onClick={(e) => !topologyDisabled && !disabled && setTopologyAnchor(e.currentTarget as HTMLElement)}
         disabled={disabled || topologyDisabled}
       >
-        <Typography component="span" sx={{ fontSize: 11, color: 'kanap.text.tertiary', mr: 0.5 }}>Topology</Typography>
+        <Typography component="span" sx={{ fontSize: 11, color: 'kanap.text.tertiary', mr: 0.5 }}>{t('it:workspace.asset.connections.topology')}</Typography>
         <Typography component="span" sx={{ fontSize: 12 }}>{topologyLabel}</Typography>
       </PortfolioMetadataItem>
 
@@ -117,12 +119,12 @@ export default function ConnectionMetadataBar({
         onClick={(e) => riskMode === 'manual' && !disabled && setCriticalityAnchor(e.currentTarget as HTMLElement)}
         disabled={disabled || riskMode === 'derived'}
       >
-        <Typography component="span" sx={{ fontSize: 11, color: 'kanap.text.tertiary', mr: 0.5 }}>Criticality</Typography>
+        <Typography component="span" sx={{ fontSize: 11, color: 'kanap.text.tertiary', mr: 0.5 }}>{t('it:workspace.connection.compliance.criticality')}</Typography>
         <StatusDot size={8} color={criticalityColor} sx={{ mr: 0.75 }} />
         <Typography component="span" sx={{ fontSize: 12 }}>{effectiveCritLabel}</Typography>
         {riskMode === 'derived' && (
           <Typography component="span" sx={{ fontSize: 11, color: 'kanap.text.tertiary', ml: 0.5 }}>
-            (derived from {derivedInterfaceCount})
+            {t('it:workspace.connection.metadata.derivedFrom', { count: derivedInterfaceCount })}
           </Typography>
         )}
         {classificationIncomplete && (
@@ -133,7 +135,7 @@ export default function ConnectionMetadataBar({
       </PortfolioMetadataItem>
 
       <PortfolioMetadataItem disabled>
-        <Typography component="span" sx={{ fontSize: 11, color: 'kanap.text.tertiary', mr: 0.5 }}>Endpoints</Typography>
+        <Typography component="span" sx={{ fontSize: 11, color: 'kanap.text.tertiary', mr: 0.5 }}>{t('it:workspace.connection.create.endpoints')}</Typography>
         <Typography component="span" sx={{ fontSize: 12 }}>{endpointsLabel}</Typography>
       </PortfolioMetadataItem>
 
@@ -141,7 +143,7 @@ export default function ConnectionMetadataBar({
         onClick={(e) => !disabled && setProtocolsAnchor(e.currentTarget as HTMLElement)}
         disabled={disabled}
       >
-        <Typography component="span" sx={{ fontSize: 11, color: 'kanap.text.tertiary', mr: 0.5 }}>Protocols</Typography>
+        <Typography component="span" sx={{ fontSize: 11, color: 'kanap.text.tertiary', mr: 0.5 }}>{t('it:workspace.connection.overview.protocols')}</Typography>
         <Typography component="span" sx={{ fontSize: 12 }}>{protocolsSummary}</Typography>
       </PortfolioMetadataItem>
 
@@ -185,7 +187,7 @@ export default function ConnectionMetadataBar({
               setTopologyAnchor(null);
             }}
           >
-            Server to server
+            {t('it:enums.topology.serverToServer')}
           </MenuItem>
           <MenuItem
             selected={topology === 'multi_server'}
@@ -195,7 +197,7 @@ export default function ConnectionMetadataBar({
               setTopologyAnchor(null);
             }}
           >
-            Multi-server
+            {t('it:enums.topology.multiServer')}
           </MenuItem>
         </Box>
       </Popover>

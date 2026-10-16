@@ -84,7 +84,7 @@ Le panneau de contrôle sur le côté gauche de la carte fournit ces outils :
 
 | Icône | Action | Description |
 |-------|--------|-------------|
-| Pause / Lecture | **Geler / Dégeler** | Mettre en pause la simulation à forces pour positionner manuellement les nœuds |
+| Pause / Lecture | **Geler / dégeler** | Mettre en pause la simulation à forces pour positionner manuellement les nœuds |
 | Réticule | **Centrage automatique** | Basculer le centrage automatique lors de la sélection de nœuds (mis en évidence lorsque activé) |
 | Zoom + | **Zoom avant** | Augmenter le niveau de zoom |
 | Zoom - | **Zoom arrière** | Diminuer le niveau de zoom |

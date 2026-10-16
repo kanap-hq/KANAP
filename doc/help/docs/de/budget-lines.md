@@ -19,7 +19,7 @@ Der Arbeitsbereich öffnet sich im Erstellungsmodus mit dem Titel **Neue OPEX-Ze
 - **Zahlendes Unternehmen**: Welches Unternehmen bezahlt (erforderlich für die Buchhaltung)
 - **Konto**: Das Sachkonto. Es erscheinen nur Konten aus dem Kontenplan des zahlenden Unternehmens, und zwar nur solche, die in [Kontenpläne und Kontenverwaltung](chart-of-accounts.md#opex-oder-capex-konten) zum Typ der Zeile passen: **OPEX und CAPEX**, oder **Nur OPEX** für eine OPEX-Zeile und **Nur CAPEX** für eine CAPEX-Zeile. Eine Zeile, die bereits ein Konto für den anderen Typ hat, behält es und bleibt bearbeitbar. Ein solches Konto für eine neue Zeile oder beim Ändern des Kontos zu wählen, wird abgelehnt
 - **Währung**: ISO-Code (z. B. USD, EUR). Standardmäßig Ihre Arbeitsbereich-Währung; kann pro Zeile überschrieben werden
-- **Beginn der Gültigkeit**: Wann diese Ausgabe beginnt (TT/MM/JJJJ)
+- **Beginn der Gültigkeit**: Wann diese Ausgabe beginnt (TT.MM.JJJJ)
 - **Erforderliche Dimensionen**: ein Feld pro Dimension, die für den Typ der Zeile erforderlich ist. Ein neuer Arbeitsbereich hat keine erforderliche Dimension. Siehe [Empfohlene Dimensionen](#empfohlene-dimensionen)
 
 **Optional aber nützlich**:

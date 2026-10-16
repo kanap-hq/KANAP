@@ -71,10 +71,22 @@
     "legacy": "Historique"
   },
   "scope": {
-    "my": "Mes {{entity}}",
-    "myTeam": "{{entity}} de mon équipe",
-    "all": "Tous les {{entity}}",
-    "teamUnavailable": "Vous n'êtes affecté à aucune équipe"
+    "teamUnavailable": "Vous n'êtes affecté à aucune équipe",
+    "tasks": {
+      "my": "Mes tâches",
+      "myTeam": "Tâches de mon équipe",
+      "all": "Toutes les tâches"
+    },
+    "projects": {
+      "my": "Mes projets",
+      "myTeam": "Projets de mon équipe",
+      "all": "Tous les projets"
+    },
+    "requests": {
+      "my": "Mes demandes",
+      "myTeam": "Demandes de mon équipe",
+      "all": "Toutes les demandes"
+    }
   },
   "shared": {
     "blankValue": "(Vide)",
@@ -399,7 +411,10 @@
           "estimatedEffort": "Charge estimée",
           "progressAndConsumption": "Avancement et consommation de la charge",
           "timeBreakdown": "Répartition du temps",
-          "timeLog": "Journal de temps"
+          "timeLog": "Journal de temps",
+          "allocation": "Ventilation",
+          "effortBaseline": "Référence de charge",
+          "capturedAtInProgress": "capturée au passage En cours"
         },
         "states": {
           "noTimeLogged": "Aucun temps enregistré. Cliquez sur « Saisir du temps » pour ajouter des entrées."
@@ -416,7 +431,31 @@
           "taskSourceFallback": "Tâche",
           "taskTime": "Temps sur les tâches",
           "totalLogged": "Total enregistré",
-          "workloadConsumption": "Consommation de charge : {{actual}} / {{planned}} JH"
+          "workloadConsumption": "Consommation de charge : {{actual}} / {{planned}} JH",
+          "mdUnit": "JH",
+          "actualOfEstimated": "{{actual}} / {{estimated}} JH",
+          "actualSplit": "(Projet {{project}} · Tâche {{task}})"
+        },
+        "overview": {
+          "progress": "Progression",
+          "setManually": "saisie manuelle",
+          "fromTimeLog": "calculé automatiquement depuis le journal de temps"
+        },
+        "actions": {
+          "logTime": "+ Saisir du temps"
+        },
+        "aria": {
+          "estimatedEffort": "Charge estimée {{type}} en JH"
+        },
+        "baseline": {
+          "itEffort": "Charge IT",
+          "businessEffort": "Charge métier",
+          "estimated": "Estimée",
+          "estimatedTooltip": "Charge estimée actuelle, saisie par le chef de projet",
+          "baseline": "Référence",
+          "baselineTooltip": "Instantané de la charge estimée capturé lorsque le projet est passé à En cours",
+          "variance": "Écart",
+          "varianceTooltip": "Différence entre l'estimation actuelle et la référence"
         }
       },
       "timeline": {
@@ -655,7 +694,8 @@
         "targetDeliveryDate": "Date de livraison cible"
       },
       "values": {
-        "requestorMissing": "Demandeur manquant"
+        "requestorMissing": "Demandeur manquant",
+        "itOwnerMissing": "Responsable IT manquant"
       },
       "sections": {
         "core": "Propriétés principales",
@@ -1056,6 +1096,323 @@
         "paused_other": "En pause : ~{{count}} semaines",
         "dragToPin": "Glissez pour fixer la semaine de début",
         "clickForExplanation": "Cliquez pour obtenir des explications"
+      }
+    },
+    "roadmap": {
+      "title": "Générateur de roadmap",
+      "fields": {
+        "startDate": "Date de début",
+        "statuses": "Statuts",
+        "capacityMode": "Mode de capacité",
+        "constraintScope": "Périmètre des contraintes",
+        "parallelLimit": "Limite de parallélisme",
+        "recalculateScheduled": "Recalculer les projets déjà planifiés",
+        "contextSwitchPenalty": "Pénalité de changement de contexte : {{value}} %",
+        "contextSwitchGrace": "Tolérance de changement de contexte"
+      },
+      "capacityModes": {
+        "theoretical": "Théorique",
+        "historical": "Historique"
+      },
+      "constraintScopes": {
+        "full": "Portefeuille complet",
+        "itOnly": "IT uniquement"
+      },
+      "optimization": {
+        "priorityFocused": "Priorité d'abord",
+        "completionFocused": "Achèvement d'abord"
+      },
+      "help": {
+        "recalculate": "Si cette option est activée, les projets qui ont déjà des dates planifiées sont recalculés et peuvent être déplacés.",
+        "itOnly": "Le mode IT uniquement masque la capacité métier, l'occupation métier et les projets purement métier de la roadmap générée."
+      },
+      "actions": {
+        "generate": "Générer",
+        "generating": "Génération…",
+        "editPin": "Modifier l'épingle",
+        "pinStart": "Épingler le début",
+        "why": "Pourquoi ?"
+      },
+      "states": {
+        "empty": "Générez une roadmap pour prévisualiser les dates proposées, les goulots d'étranglement et l'occupation des contributeurs."
+      },
+      "overrides": {
+        "title": "Ajustements du scénario",
+        "resetAll": "Réinitialiser tous les ajustements"
+      },
+      "chips": {
+        "conflict_one": "Conflit",
+        "conflict_other": "Conflits",
+        "pinned": "Épinglé"
+      },
+      "summary": {
+        "scheduled": "Planifiés : {{count}}",
+        "reservations": "Réservations : {{count}}",
+        "externalBlockers": "Blocages externes : {{count}}",
+        "unschedulable": "Non planifiables : {{count}}",
+        "roadmapEnd": "Fin de la roadmap : {{date}}",
+        "run": "Exécution : {{ms}} ms",
+        "sensitivityReruns": "Relances de sensibilité : {{count}}",
+        "sensitivityTruncated": "Sensibilité échantillonnée (tronquée)"
+      },
+      "values": {
+        "na": "N/D",
+        "excluded": "Exclu",
+        "pinStart": "Début épinglé : {{week}}",
+        "noConstraint": "Aucune contrainte de scénario",
+        "days": "{{days}} j",
+        "percent": "{{value}} %"
+      },
+      "panel": {
+        "title": "Planning, goulots d'étranglement et occupation"
+      },
+      "tabs": {
+        "schedule": "Planning",
+        "bottlenecks": "Goulots d'étranglement",
+        "occupation": "Occupation"
+      },
+      "selection": {
+        "clearVisible": "Désélectionner les projets visibles",
+        "selectVisible": "Sélectionner les projets visibles",
+        "selectedInGantt_one": "{{count}} sélectionné dans l'aperçu Gantt",
+        "selectedInGantt_other": "{{count}} sélectionnés dans l'aperçu Gantt",
+        "excludedHelp": "Les projets décochés sont exclus du scénario et ne consomment pas de capacité."
+      },
+      "columns": {
+        "project": "Projet",
+        "status": "Statut",
+        "scheduling": "Planification",
+        "scenario": "Scénario",
+        "start": "Début",
+        "end": "Fin",
+        "weeks": "Semaines",
+        "priority": "Priorité",
+        "explain": "Explication",
+        "reason": "Motif"
+      },
+      "unschedulable": {
+        "title": "Projets non planifiables",
+        "item": "{{project}} ({{mode}}) : {{reason}}"
+      },
+      "reservations": {
+        "title": "Réservations de capacité",
+        "help": "Ces projets ne sont pas recalculés mais réservent toujours de la capacité des contributeurs."
+      },
+      "bottlenecks": {
+        "empty": "Aucune donnée de goulot d'étranglement disponible.",
+        "collapse": "Replier les projets du contributeur",
+        "expand": "Déplier les projets du contributeur",
+        "days_one": "{{count}} jour",
+        "days_other": "{{count}} jours",
+        "columns": {
+          "projectName": "Nom du projet",
+          "start": "Date de début du projet",
+          "end": "Date de fin du projet",
+          "totalContribution": "Contribution totale (jours)",
+          "spent": "Temps déjà passé (jours)"
+        },
+        "noProjects": "Aucun projet planifié pour ce contributeur dans le scénario actuel."
+      },
+      "occupation": {
+        "contributors": "Contributeurs",
+        "teams": "Équipes",
+        "team": "Équipe",
+        "contributor": "Contributeur",
+        "average": "Moyenne",
+        "avg": "Moy.",
+        "week": "S{{week}}",
+        "weekYear": "S{{week}} {{year}}",
+        "exportExcel": "Exporter l'occupation en Excel",
+        "exportPng": "Exporter l'occupation en PNG",
+        "noContributorData": "Aucune donnée d'occupation des contributeurs disponible.",
+        "noTeamData": "Aucune donnée d'occupation des équipes disponible.",
+        "noTeam": "Aucune équipe",
+        "quarterYear": "T{{quarter}} {{year}}"
+      },
+      "gantt": {
+        "title": "Gantt en lecture seule",
+        "primaryOnly": "Principal uniquement",
+        "all": "Tout",
+        "showReservations": "Afficher les réservations",
+        "exportPng": "Exporter le Gantt en PNG",
+        "contributorView": "Vue par importance pour le contributeur",
+        "teamView": "Vue par importance pour l'équipe",
+        "hiddenSupport_one": "Travail de support masqué : {{count}} projet, {{days}} j",
+        "hiddenSupport_other": "Travail de support masqué : {{count}} projets, {{days}} j",
+        "legend": "La barre pleine montre le travail planifié actif. L'amorce en tirets marque un démarrage historique antérieur, avec une pause avant la reprise. Les barres hachurées sont des réservations de capacité. La surcouche pointillée marque les interruptions de planification ; la surcouche grise en diagonale marque les périodes en pause.",
+        "dragHelp": "Faites glisser la barre d'un projet pour créer ou modifier un début épinglé propre au scénario. Cliquez sur la barre d'un projet pour ouvrir son explication."
+      },
+      "filters": {
+        "allContributors": "Tous les contributeurs",
+        "allTeams": "Toutes les équipes",
+        "allSources": "Toutes les sources"
+      },
+      "apply": {
+        "summary_one": "Appliquer les dates à {{count}} projet visible sélectionné",
+        "summary_other": "Appliquer les dates à {{count}} projets visibles sélectionnés",
+        "button": "Appliquer les dates",
+        "applying": "Application…",
+        "dialogTitle": "Appliquer les dates de la roadmap",
+        "confirm_one": "Les dates de début et de fin planifiées de {{count}} projet visible sélectionné seront mises à jour. La modification est transactionnelle : si un projet échoue à la validation, aucune date n'est appliquée.",
+        "confirm_other": "Les dates de début et de fin planifiées des {{count}} projets visibles sélectionnés seront mises à jour. La modification est transactionnelle : si un projet échoue à la validation, aucune date n'est appliquée."
+      },
+      "messages": {
+        "applied_one": "Dates de la roadmap appliquées à {{count}} projet.",
+        "applied_other": "Dates de la roadmap appliquées à {{count}} projets.",
+        "applyFailed": "Échec de l'application des dates de la roadmap",
+        "applyFailedFor": "{{project}} : {{error}}",
+        "schedulingModeUpdated": "Mode de planification défini sur {{mode}}.",
+        "schedulingModeFailed": "Échec de la mise à jour du mode de planification",
+        "generateFailed": "Échec de la génération de la roadmap",
+        "exportGanttFailed": "Échec de l'export du Gantt en PNG",
+        "exportOccupationExcelFailed": "Échec de l'export de l'occupation en Excel",
+        "exportOccupationPngFailed": "Échec de l'export de l'occupation en PNG"
+      },
+      "schedulingModes": {
+        "independent": "Indépendant",
+        "collaborative": "Collaboratif"
+      },
+      "reasons": {
+        "zero_remaining_effort": "Aucune charge restante",
+        "no_assigned_contributors": "Aucun contributeur",
+        "missing_blocker_date": "Date du bloquant manquante",
+        "blocker_on_hold": "Bloquant en pause",
+        "blocked_unfinished_project": "Bloqué par un projet non terminé",
+        "expired_fixed_plan": "Plan fixe expiré",
+        "cyclic_dependency": "Dépendance cyclique",
+        "not_ready_within_horizon": "Bloqué au-delà de l'horizon",
+        "no_free_slot": "Aucun créneau libre",
+        "no_effective_capacity": "Aucune capacité effective",
+        "below_minimum_start_threshold": "Sous le seuil minimal de démarrage",
+        "unfinished_within_horizon": "Démarré mais non terminé",
+        "insufficient_capacity": "Capacité insuffisante",
+        "missing_contributor_capacity": "Capacité de contributeur manquante"
+      },
+      "reservationReasons": {
+        "not_recalculated": "Non recalculé",
+        "external_blocker": "Bloquant externe"
+      },
+      "startReasons": {
+        "historical_start": "Démarrage historique",
+        "dependency_release": "Levée de dépendance",
+        "capacity_available": "Capacité devenue disponible",
+        "constraint_pin_start": "Début épinglé",
+        "constraint_pin_window": "Fenêtre épinglée",
+        "constraint_not_before": "Contrainte « pas avant »",
+        "fixed_reservation": "Réservation fixe",
+        "unscheduled": "Non planifié"
+      },
+      "contributorReasons": {
+        "slot": "Limite de créneaux parallèles",
+        "capacity": "Tension sur la capacité",
+        "collaborative_bottleneck": "Goulot d'étranglement collaboratif",
+        "reservation": "Tension due aux réservations"
+      },
+      "constraints": {
+        "none": "Aucune",
+        "pinWindow": "Fenêtre épinglée : du {{start}} au {{end}}",
+        "notBefore": "Pas avant : {{week}}"
+      },
+      "explain": {
+        "overline": "Explication",
+        "whyStart": "Pourquoi cette semaine de début",
+        "startReason": "Motif du début : {{reason}}",
+        "earliestWeek": "Première semaine possible : {{week}}",
+        "actualWeek": "Semaine de début effective : {{week}}",
+        "notScheduled": "Non planifié",
+        "whyNotEarlier": "Pourquoi pas plus tôt",
+        "noBlockers": "Aucun autre détail de blocage n'a été enregistré pour cet élément.",
+        "range": "du {{from}} au {{to}}",
+        "unknown": "Inconnu",
+        "contributorTimeline": "Calendrier du contributeur sélectionné",
+        "teamTimeline": "Calendrier de l'équipe sélectionnée",
+        "focusWindow": "{{name}} : du {{start}} au {{end}}",
+        "plannedContribution_one": "Contribution prévue : {{days}} j sur {{count}} semaine active",
+        "plannedContribution_other": "Contribution prévue : {{days}} j sur {{count}} semaines actives",
+        "primaryWork": "Travail principal de la roadmap",
+        "supportWork": "Travail de support",
+        "shareOfEffort": "{{percent}} % de la charge du projet",
+        "avgPerWeek": "moy. {{days}} j/semaine",
+        "primaryHelp": "Ce projet apparaît dans la vue principale de la roadmap pour le focus sélectionné.",
+        "supportHelp": "Ce projet est traité comme du travail de support et est masqué lorsque le Gantt est réglé sur Principal uniquement.",
+        "weekOf": "Semaine du {{week}}",
+        "projectLoad": "Charge du projet : {{days}} j",
+        "weeklyCapacity": "Capacité hebdomadaire : {{value}}",
+        "totalAssigned": "Charge totale affectée cette semaine : {{days}} j",
+        "weeklyOccupation": "Occupation hebdomadaire : {{value}}",
+        "projectContributors": "Contributeurs du projet",
+        "scheduledWindow": "Fenêtre planifiée : du {{start}} au {{end}}",
+        "noLoads": "Aucun détail de charge des contributeurs n'est disponible pour cet élément.",
+        "plannedLoad": "Charge prévue : {{days}} j",
+        "limiting": "Contributeurs limitants",
+        "noLimiting": "Aucun contributeur limitant n'a été enregistré pour cet élément.",
+        "reservedLoad": "Charge réservée : {{value}}",
+        "activeProjects": "Projets actifs : {{value}}",
+        "activeOverrides": "Ajustements de scénario actifs",
+        "noOverrides": "Aucun ajustement de scénario actif pour cet élément.",
+        "finalWarnings": "Avertissements finaux",
+        "noWarnings": "Aucun avertissement de scénario n'a été enregistré pour cet élément."
+      },
+      "pinDialog": {
+        "description": "Créez ou modifiez une contrainte de début épinglé propre au scénario pour {{project}}.",
+        "thisProject": "ce projet",
+        "startWeek": "Semaine de début",
+        "save": "Enregistrer l'épingle"
+      },
+      "classifications": {
+        "scheduled": "Planifié",
+        "reservation": "Réservation",
+        "unschedulable": "Non planifiable"
+      },
+      "explainText": {
+        "summaryUnschedulable": "{{project}} n'a pas pu être planifié : {{reason}}",
+        "summaryNoStart": "{{project}} n'a pas de semaine de début.",
+        "summaryHistorical": "{{project}} poursuit un travail déjà commencé et apparaît dans la roadmap à partir de la semaine du {{week}}.",
+        "summaryConstraint": "{{project}} a démarré la semaine du {{week}} avec cette contrainte : {{constraint}}.",
+        "summaryConstraintConflict": "{{project}} a démarré la semaine du {{week}} avec cette contrainte : {{constraint}}. Conflit : {{conflict}}",
+        "summaryCapacity": "{{project}} pouvait démarrer dès la semaine du {{eligible}} et a démarré la semaine du {{week}}, quand de la capacité s'est libérée.",
+        "summaryBlockers": "{{project}} a démarré la semaine du {{week}}, une fois ses bloquants levés.",
+        "summarySchedulable": "{{project}} a démarré la semaine du {{week}}, dès qu'il a pu être planifié.",
+        "finalCapacity": "Pouvait démarrer dès la semaine du {{eligible}}, a démarré la semaine du {{week}} quand de la capacité s'est libérée.",
+        "finalBlockers": "Démarré la semaine du {{week}}, une fois les bloquants levés.",
+        "finalStarted": "Démarré la semaine du {{week}}.",
+        "conflict": {
+          "pinStartUnsatisfied": "Le début épinglé au {{week}} n'a pas pu être respecté.",
+          "pinStartNormalized": "Le début épinglé au {{week}} a été ramené à la semaine du {{normalized}}, puis a glissé à la semaine du {{actual}}.",
+          "pinStartSlipped": "Le début épinglé au {{week}} a glissé à la semaine du {{actual}}.",
+          "pinWindowUnsatisfied": "La fenêtre épinglée du {{start}} au {{end}} n'a pas pu être respectée.",
+          "pinWindowMissed": "La fenêtre épinglée du {{start}} au {{end}} n'a pas été respectée. Planning effectif : du {{actualStart}} au {{actualEnd}}.",
+          "notBeforeViolated": "Le début au {{actual}} ne respecte pas la contrainte « pas avant le {{week}} »."
+        },
+        "warningConflict": "{{project}} : {{conflict}}"
+      },
+      "text": {
+        "missingContributorCapacityFor": "Aucune capacité de contributeur configurée pour : {{names}}",
+        "blockerOnHold": "Le bloquant {{blocker}} est en pause",
+        "blockerFixedPlanExpired": "Le bloquant {{blocker}} n'est pas terminé et son plan fixe a pris fin avant le début de la roadmap",
+        "blockerCannotBeScheduled": "Le bloquant {{blocker}} n'est pas terminé et ne peut pas être planifié. Raison : {{reason}}",
+        "missingBlockerDateFor": "Aucune date pour le bloquant {{blocker}}",
+        "noFreeSlotFor": "Aucun créneau parallèle libre pour : {{contributors}}",
+        "noAllocableCapacityFor": "Aucune capacité hebdomadaire disponible pour : {{contributors}}",
+        "collaborativeBurnBelowThreshold": "La charge de démarrage collaborative prévue est de {{burn}} j, sous le seuil de {{threshold}} j",
+        "collaborativeBurnStalledFor": "Le travail collaboratif est bloqué pour : {{contributors}}",
+        "independentBurnBelowThreshold": "La charge de démarrage indépendante prévue est de {{burn}} j, sous le seuil de {{threshold}} j",
+        "noCapacityRemainedFor": "Plus aucune capacité hebdomadaire effective pour : {{contributors}}",
+        "capacityPreventedScheduling": "Les contraintes de capacité ont empêché la planification",
+        "waitingOnBlockers": "Toujours en attente des bloquants : {{blockers}}",
+        "earliestStartBeyondHorizon_one": "Le début le plus tôt possible est le {{week}}, au-delà de l'horizon de {{count}} semaine",
+        "earliestStartBeyondHorizon_other": "Le début le plus tôt possible est le {{week}}, au-delà de l'horizon de {{count}} semaines",
+        "neverReadyWithinHorizon": "Le projet n'a jamais été prêt dans l'horizon de planification",
+        "remainingAfterHorizon_one": "{{remainingDays}} j restants après {{count}} semaine. Plus grosses charges non résolues : {{loads}}",
+        "remainingAfterHorizon_other": "{{remainingDays}} j restants après {{count}} semaines. Plus grosses charges non résolues : {{loads}}",
+        "noAllocableWeek": "Aucune semaine n'a pu être allouée avec les contraintes de capacité actuelles",
+        "contributorCapacity": "{{name}} ({{weeklyCapacity}} j/semaine)",
+        "contributorRemainingLoad": "{{name}} : {{remainingDays}} j restants à {{weeklyCapacity}} j/semaine",
+        "waitingFor": "En attente de {{blocker}}",
+        "waitingForUntil": "En attente de {{blocker}} jusqu'à la semaine du {{week}}",
+        "blockerIsOnHold": "{{blocker}} est en pause",
+        "blockerHasExpiredFixedPlan": "{{blocker}} a un plan fixe expiré",
+        "blockerIsUnschedulable": "{{blocker}} ne peut pas être planifié : {{reason}}"
       }
     }
   },
@@ -1757,7 +2114,7 @@
         "changeStatus": "Changer le statut en…",
         "comment": "Ajouter un commentaire",
         "contextMeeting": "Contexte / Réunion",
-        "contextOptional": "Contexte (optionnel)",
+        "contextOptional": "Contexte (facultatif)",
         "decisionOutcome": "Issue de la décision",
         "rationaleNotes": "Justification / Notes"
       },
@@ -1993,7 +2350,8 @@
         "loading": "Chargement des ventilations…"
       },
       "table": {
-        "contributor": "Contributeur"
+        "contributor": "Contributeur",
+        "md": "JH"
       },
       "validation": {
         "pinnedTotalExceeded": "Les lignes manuelles dépassent 100 %. Réduisez une valeur manuelle avant de redistribuer.",

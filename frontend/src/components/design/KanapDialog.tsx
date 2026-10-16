@@ -63,7 +63,7 @@ export default function KanapDialog({
   footerLeft,
   secondaryActions,
   onSave,
-  saveLabel = 'Save',
+  saveLabel: saveLabelProp,
   saveVariant = 'action-primary',
   saveDisabled = false,
   saveLoading = false,
@@ -74,6 +74,7 @@ export default function KanapDialog({
   sx,
 }: KanapDialogProps) {
   const { t } = useTranslation('common');
+  const saveLabel = saveLabelProp ?? t('buttons.save');
   const resolvedCancelLabel = cancelLabel ?? t('buttons.cancel');
   const saveButtonRef = React.useRef<HTMLButtonElement>(null);
   const handleSubmit = React.useCallback((event: React.FormEvent<HTMLFormElement>) => {

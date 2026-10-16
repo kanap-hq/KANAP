@@ -548,7 +548,7 @@ export default function EntityKnowledgePanel({
     const directDisplayGroup = directGroup
       ? {
           key: 'direct' as const,
-          label: 'Linked documents',
+          label: t('knowledgePanel.linkedDocuments'),
           total: directItems.length,
           items: directItems,
         }
@@ -565,14 +565,14 @@ export default function EntityKnowledgePanel({
     const relatedDisplayGroup = relatedItems.length > 0
       ? {
           key: 'related_documents' as const,
-          label: 'Related documents',
+          label: t('knowledgePanel.relatedDocuments'),
           total: relatedItems.length,
           items: relatedItems,
         }
       : null;
 
     return [directDisplayGroup, relatedDisplayGroup].filter((group): group is DisplayKnowledgeContextGroup => !!group);
-  }, [directGroup, groups]);
+  }, [directGroup, groups, t]);
   const linkedDocIds = React.useMemo(
     () => new Set((directGroup?.items || []).map((item) => item.id)),
     [directGroup],
@@ -619,7 +619,7 @@ export default function EntityKnowledgePanel({
     mutationFn: async (params?: { templateDocumentId?: string | null; templateTitle?: string | null }) => {
       const templateTitle = String(params?.templateTitle || '').trim();
       const body = {
-        title: templateTitle || `New linked knowledge (${entityType.slice(0, -1)})`,
+        title: templateTitle || t('knowledgePanel.newLinkedTitle'),
         content_markdown: '',
         status: 'draft',
         relations: {

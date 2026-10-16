@@ -186,10 +186,10 @@
     "title": "Move documents"
   },
   "scope": {
-    "allDocs": "All",
+    "allDocs": "All docs",
     "allLibraries": "All libraries",
     "myDocs": "My docs",
-    "myTeamsDocs": "My team",
+    "myTeamsDocs": "My team's docs",
     "noTeamAssigned": "You are not assigned to a team.",
     "show": "Show:"
   },

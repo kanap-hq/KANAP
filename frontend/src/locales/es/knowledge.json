@@ -186,10 +186,10 @@
     "title": "Mover documentos"
   },
   "scope": {
-    "allDocs": "Todos",
+    "allDocs": "Todos los documentos",
     "allLibraries": "Todas las bibliotecas",
     "myDocs": "Mis documentos",
-    "myTeamsDocs": "Mi equipo",
+    "myTeamsDocs": "Documentos de mi equipo",
     "noTeamAssigned": "No está asignado a ningún equipo.",
     "show": "Mostrar:"
   },

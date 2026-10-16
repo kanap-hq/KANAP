@@ -85,23 +85,23 @@ function formatMoney(locale: string, amount?: number | null, currency?: string |
   }
 }
 
-const STATUS_META: Record<string, { label: string; color: ChipProps['color'] }> = {
-  active: { label: 'Active', color: 'success' },
-  trialing: { label: 'Trialing', color: 'info' },
-  incomplete: { label: 'Incomplete', color: 'warning' },
-  incomplete_expired: { label: 'Incomplete (expired)', color: 'default' },
-  past_due: { label: 'Past due', color: 'warning' },
-  canceled: { label: 'Canceled', color: 'default' },
-  unpaid: { label: 'Unpaid', color: 'error' },
-  paused: { label: 'Paused', color: 'warning' },
+const STATUS_META: Record<string, ChipProps['color']> = {
+  active: 'success',
+  trialing: 'info',
+  incomplete: 'warning',
+  incomplete_expired: 'default',
+  past_due: 'warning',
+  canceled: 'default',
+  unpaid: 'error',
+  paused: 'warning',
 };
 
-const INVOICE_STATUS_META: Record<string, { label: string; color: ChipProps['color'] }> = {
-  draft: { label: 'Draft', color: 'default' },
-  open: { label: 'Open', color: 'warning' },
-  paid: { label: 'Paid', color: 'success' },
-  void: { label: 'Voided', color: 'default' },
-  uncollectible: { label: 'Uncollectible', color: 'error' },
+const INVOICE_STATUS_META: Record<string, ChipProps['color']> = {
+  draft: 'default',
+  open: 'warning',
+  paid: 'success',
+  void: 'default',
+  uncollectible: 'error',
 };
 
 const ENDED_SUBSCRIPTION_STATUSES = ['canceled', 'incomplete_expired'];
@@ -117,9 +117,9 @@ function getStatusMeta(
   t: Translate,
 ): { label: string; color: ChipProps['color'] } {
   if (subscription?.status) {
-    const meta = STATUS_META[subscription.status];
-    return meta
-      ? { ...meta, label: t(`billing.statuses.${subscription.status}`, { defaultValue: meta.label }) }
+    const color = STATUS_META[subscription.status];
+    return color
+      ? { color, label: t(`billing.statuses.${subscription.status}`) }
       : { label: subscription.status.replace(/_/g, ' '), color: 'default' };
   }
   if (!subscription?.stripe_subscription_id) {
@@ -130,9 +130,9 @@ function getStatusMeta(
 
 function getInvoiceStatusMeta(status: string | null | undefined, t: Translate): { label: string; color: ChipProps['color'] } {
   if (!status) return { label: '—', color: 'default' };
-  const meta = INVOICE_STATUS_META[status];
-  return meta
-    ? { ...meta, label: t(`billing.invoiceStatuses.${status}`, { defaultValue: meta.label }) }
+  const color = INVOICE_STATUS_META[status];
+  return color
+    ? { color, label: t(`billing.invoiceStatuses.${status}`) }
     : { label: status.replace(/_/g, ' '), color: 'default' };
 }
 

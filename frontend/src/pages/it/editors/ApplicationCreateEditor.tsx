@@ -148,7 +148,7 @@ export default forwardRef<ApplicationCreateEditorHandle, Props>(function Applica
         <TextField value={description} onChange={(e) => { setDescription(e.target.value); markDirty(); }} fullWidth variant="standard" sx={drawerFieldValueSx} />
       </PropertyRow>
       <PropertyRow label={t('workspace.application.overview.supplier')}>
-        <SupplierSelect value={supplierId} onChange={(v) => { setSupplierId(v); markDirty(); }} hideLabel textFieldSx={drawerFieldValueSx} />
+        <SupplierSelect value={supplierId} onChange={(v) => { setSupplierId(v); markDirty(); }} hideLabel label={t('workspace.application.overview.supplier')} textFieldSx={drawerFieldValueSx} />
       </PropertyRow>
       <PropertyRow label={t('workspace.application.overview.category')} required>
         <EnumAutocomplete

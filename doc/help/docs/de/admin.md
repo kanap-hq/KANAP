@@ -76,7 +76,7 @@ Anmelde- und Sitzungsereignisse werden nach **365 Tagen** gelöscht. Datenänder
 
 ### Was Sie tun können
 
-- Suche über Tabellenname, Aktion und Akteur (E-Mail/Name)
+- Suche über die Tabelle (ihr angezeigter Name in Ihrer Sprache, zum Beispiel **Lieferanten**), Aktion und Akteur (E-Mail/Name)
 - Filtern nach:
   - Datum
   - Tabelle
@@ -92,7 +92,7 @@ Anmelde- und Sitzungsereignisse werden nach **365 Tagen** gelöscht. Datenänder
 
 **Standardspalten**:
 - **Datum**: Wann die Änderung oder das Ereignis stattfand
-- **Tabelle**: Welche Tabelle betroffen war. Anmelde- und Sitzungsereignisse zeigen **Anmeldung und Sitzung**, ein Export zeigt, was exportiert wurde (zum Beispiel **Lieferanten**)
+- **Tabelle**: Die Art des betroffenen Datensatzes, unter ihrem Namen in der Anwendung (zum Beispiel **Lieferanten** oder **Vertragslinks**). Filter und Details zeigen dieselben Namen. Anmelde- und Sitzungsereignisse zeigen **Anmeldung und Sitzung**, ein Export zeigt, was exportiert wurde (zum Beispiel **Lieferanten**)
 - **Aktion**: Art der Änderung oder des Ereignisses (Erstellen, Aktualisieren, Löschen, Deaktivieren, Wiederherstellen, Anmeldung, Export usw.). **Wiederherstellen** kennzeichnet eine Budgetspalte, die im Budget-Tab einer Zeile auf ihre Werte beim Öffnen zurückgesetzt wurde
 - **Quelle**: Wer oder was die Änderung ausgelöst hat (Benutzer, System, Webhook)
 - **Benutzer**: Name des Benutzers, der die Änderung vorgenommen hat, oder seine E-Mail-Adresse, wenn er keinen Namen hat. Zeigt „System" oder „Webhook" für Nicht-Benutzer-Quellen und „Unbekanntes Konto" für einen Anmeldeversuch mit unbekannter Adresse.

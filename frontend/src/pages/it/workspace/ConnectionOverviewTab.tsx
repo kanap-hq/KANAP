@@ -31,6 +31,7 @@ import ConnectionProtocolsTable, { type ConnectionProtocol } from './ConnectionP
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { legTypeLabel } from '../../../utils/interfaceLegType';
+import { classificationText } from '../../../utils/applicationClassification';
 
 const NOTES_DEBOUNCE_MS = 900;
 
@@ -130,7 +131,7 @@ export default function ConnectionOverviewTab({
   onLinkedInterfacesChanged,
 }: Props) {
   const { data: classificationCatalog } = useApplicationClassificationCatalog();
-  const CRITICALITIES = [{ code: '', label: 'Not set' }, ...(classificationCatalog?.businessCriticalityLevels || [])];
+  const CRITICALITIES = [{ code: '', label: classificationText('Not set') }, ...(classificationCatalog?.businessCriticalityLevels || [])];
   const { t } = useTranslation(['it', 'common']);
   const navigate = useNavigate();
   const { settings, labelFor } = useItOpsEnumOptions();
@@ -163,7 +164,7 @@ export default function ConnectionOverviewTab({
         await api.delete(`/interface-bindings/${row.binding_id}/connection-links/${row.id}`);
         onLinkedInterfacesChanged();
       } catch (e: any) {
-        setUnlinkError(getApiErrorMessage(e, t, 'Failed to unlink interface binding'));
+        setUnlinkError(getApiErrorMessage(e, t, t('workspace.connection.overview.unlinkFailed')));
       } finally {
         setUnlinkingLinkId(null);
       }
@@ -215,7 +216,7 @@ export default function ConnectionOverviewTab({
         }, 1500);
       } catch (e: any) {
         setStatus('error');
-        setError(getApiErrorMessage(e, t, t('messages.saveConnectionFailed') || 'Failed to save connection'));
+        setError(getApiErrorMessage(e, t, t('messages.saveConnectionFailed')));
       }
     },
     [connectionId, onDescriptionSaved, t],
@@ -273,15 +274,15 @@ export default function ConnectionOverviewTab({
         <SectionHeader
           action={
             status === 'saving' ? (
-              <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary' }}>Saving…</Typography>
+              <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary' }}>{t('common:status.saving')}</Typography>
             ) : status === 'saved' ? (
-              <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary' }}>Saved</Typography>
+              <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary' }}>{t('common:status.saved')}</Typography>
             ) : status === 'error' && error ? (
               <Typography sx={{ fontSize: 11, color: 'error.main' }}>{error}</Typography>
             ) : null
           }
         >
-          Description
+          {t('workspace.connection.create.description')}
         </SectionHeader>
         <React.Suspense
           fallback={
@@ -299,7 +300,7 @@ export default function ConnectionOverviewTab({
           <MarkdownEditor
             value={description}
             onChange={handleDescriptionChange}
-            placeholder="What this connection does, why it exists, special considerations..."
+            placeholder={t('workspace.connection.overview.descriptionPlaceholder')}
             minRows={4}
             maxRows={14}
             disabled={!canManage}
@@ -310,11 +311,11 @@ export default function ConnectionOverviewTab({
       </Box>
 
       <Box>
-        <SectionHeader>Endpoints</SectionHeader>
+        <SectionHeader>{t('workspace.connection.create.endpoints')}</SectionHeader>
         {topology === 'server_to_server' ? (
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 2.5, maxWidth: 760 }}>
             <ConnectionEndpointPicker
-              label="Source"
+              label={t('workspace.connection.layers.source')}
               value={source}
               disabled={!canManage}
               initialAssetName={source.asset_id ? assetMap[source.asset_id]?.name || null : null}
@@ -322,7 +323,7 @@ export default function ConnectionOverviewTab({
               onChange={(next) => onEndpointChange('source', next)}
             />
             <ConnectionEndpointPicker
-              label="Destination"
+              label={t('workspace.connection.layers.destination')}
               value={destination}
               disabled={!canManage}
               initialAssetName={destination.asset_id ? assetMap[destination.asset_id]?.name || null : null}
@@ -332,7 +333,7 @@ export default function ConnectionOverviewTab({
           </Box>
         ) : (
           <Box sx={{ maxWidth: 760 }}>
-            <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', mb: 0.25 }}>Servers (min 2)</Typography>
+            <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', mb: 0.25 }}>{t('workspace.connection.overview.serversMin')}</Typography>
             <Autocomplete
               size="small"
               multiple
@@ -360,14 +361,14 @@ export default function ConnectionOverviewTab({
                 <TextField
                   {...params}
                   variant="standard"
-                  placeholder="Add a server"
+                  placeholder={t('workspace.connection.overview.addServer')}
                   sx={{ '& input': { fontSize: 13, padding: '4px 0 !important' } }}
                 />
               )}
             />
             {multiServerIds.length < 2 && (
               <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary', mt: 0.5 }}>
-                A multi-server connection needs at least two servers.
+                {t('workspace.connection.overview.needTwoServers')}
               </Typography>
             )}
           </Box>
@@ -375,7 +376,7 @@ export default function ConnectionOverviewTab({
       </Box>
 
       <Box>
-        <SectionHeader>Protocols</SectionHeader>
+        <SectionHeader>{t('workspace.connection.overview.protocols')}</SectionHeader>
         <Box sx={{ maxWidth: 760 }}>
           <Autocomplete
             size="small"
@@ -396,7 +397,7 @@ export default function ConnectionOverviewTab({
               <TextField
                 {...params}
                 variant="standard"
-                placeholder="Add a protocol"
+                placeholder={t('workspace.connection.overview.addProtocol')}
                 sx={{ '& input': { fontSize: 13, padding: '4px 0 !important' } }}
               />
             )}
@@ -416,15 +417,15 @@ export default function ConnectionOverviewTab({
       {riskMode === 'derived' && derivationRows.length > 0 && (
         <Box>
           <SectionHeader>
-            Risk derivation ({derivedInterfaceCount} interfaces)
+            {t('workspace.connection.overview.riskDerivation', { count: derivedInterfaceCount })}
           </SectionHeader>
           <Table size="small">
             <TableHead>
               <TableRow>
-                <TableCell sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.tertiary' }}>Interface</TableCell>
-                <TableCell sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.tertiary' }}>Criticality</TableCell>
-                <TableCell sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.tertiary' }}>Data class</TableCell>
-                <TableCell sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.tertiary' }}>PII</TableCell>
+                <TableCell sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.tertiary' }}>{t('workspace.connection.interfaces.interface')}</TableCell>
+                <TableCell sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.tertiary' }}>{t('workspace.connection.compliance.criticality')}</TableCell>
+                <TableCell sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.tertiary' }}>{t('workspace.connection.compliance.dataClass')}</TableCell>
+                <TableCell sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.tertiary' }}>{t('workspace.connection.compliance.effectivePii')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -444,7 +445,7 @@ export default function ConnectionOverviewTab({
                   <TableCell sx={{ fontSize: 13 }}>
                     {classificationCatalog?.dataClasses.find((item) => item.code === row.interface_data_class)?.label || row.interface_data_class || '—'}
                   </TableCell>
-                  <TableCell sx={{ fontSize: 13 }}>{row.interface_contains_pii ? t('enums.yesNo.yes') : t('enums.yesNo.no')}</TableCell>
+                  <TableCell sx={{ fontSize: 13 }}>{row.interface_contains_pii ? t('it:enums.yesNo.yes') : t('it:enums.yesNo.no')}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -472,22 +473,22 @@ export default function ConnectionOverviewTab({
                 }}
               >
                 <LinkIcon sx={{ fontSize: 14 }} />
-                Link existing
+                {t('workspace.connection.overview.linkExisting')}
               </Typography>
             ) : null
           }
         >
-          Linked interfaces ({linkedInterfaces.length})
+          {t('workspace.connection.overview.linkedInterfaces', { count: linkedInterfaces.length })}
         </SectionHeader>
         {linkedInterfacesLoading && (
-          <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>Loading…</Typography>
+          <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>{t('common:status.loading')}</Typography>
         )}
         {linkedInterfacesError && (
           <Typography sx={{ fontSize: 13, color: 'error.main' }}>{linkedInterfacesError}</Typography>
         )}
         {!linkedInterfacesLoading && !linkedInterfacesError && linkedInterfaces.length === 0 && (
           <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>
-            No interface bindings link to this connection yet.{' '}
+            {t('workspace.connection.overview.noLinkedBindings')}{' '}
             {canManage && (
               <Typography
                 component="span"
@@ -499,7 +500,7 @@ export default function ConnectionOverviewTab({
                   textDecoration: 'underline',
                 }}
               >
-                Link an interface binding
+                {t('workspace.connection.overview.linkBinding')}
               </Typography>
             )}
           </Typography>
@@ -511,12 +512,12 @@ export default function ConnectionOverviewTab({
           <Table size="small">
             <TableHead>
               <TableRow>
-                <TableCell sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.tertiary' }}>Interface</TableCell>
-                <TableCell sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.tertiary' }}>Env</TableCell>
-                <TableCell sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.tertiary' }}>Leg</TableCell>
-                <TableCell sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.tertiary' }}>Pattern</TableCell>
-                <TableCell sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.tertiary' }}>Source</TableCell>
-                <TableCell sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.tertiary' }}>Target</TableCell>
+                <TableCell sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.tertiary' }}>{t('workspace.connection.interfaces.interface')}</TableCell>
+                <TableCell sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.tertiary' }}>{t('workspace.connection.interfaces.environment')}</TableCell>
+                <TableCell sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.tertiary' }}>{t('workspace.connection.overview.leg')}</TableCell>
+                <TableCell sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.tertiary' }}>{t('workspace.connection.overview.pattern')}</TableCell>
+                <TableCell sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.tertiary' }}>{t('workspace.connection.layers.source')}</TableCell>
+                <TableCell sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.tertiary' }}>{t('workspace.connection.overview.target')}</TableCell>
                 <TableCell align="right" sx={{ width: 36, p: 0 }} />
               </TableRow>
             </TableHead>
@@ -550,8 +551,8 @@ export default function ConnectionOverviewTab({
                       <IconButton
                         className="row-unlink"
                         size="small"
-                        aria-label="Unlink interface binding"
-                        title="Unlink"
+                        aria-label={t('workspace.connection.overview.unlinkBinding')}
+                        title={t('workspace.connection.overview.unlink')}
                         disabled={unlinkingLinkId === row.id}
                         onClick={(e) => {
                           e.stopPropagation();

@@ -48,6 +48,10 @@ export function useLocalizedItOpsSettings() {
     if (!query.data) return undefined;
     const next: any = { ...query.data };
     for (const key of CATALOG_LISTS) next[key] = localizeCatalogList((query.data as any)[key], locale, catalogDefaults(key));
+    // The shipped "custom" connection types store "specify" as typical port: the user gives the port.
+    next.connectionTypes = (next.connectionTypes ?? []).map((type: any) => (
+      type?.typicalPorts === 'specify' ? { ...type, typicalPorts: '' } : type
+    ));
     return next as ItOpsSettings;
   }, [query.data, locale]);
   return { ...query, data };

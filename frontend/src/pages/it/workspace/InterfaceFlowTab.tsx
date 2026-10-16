@@ -75,7 +75,7 @@ export default function InterfaceFlowTab({
   onPatch,
   onReplaceLegs,
 }: Props) {
-  const { t } = useTranslation('it');
+  const { t } = useTranslation(['it', 'common']);
   const { byField } = useItOpsEnumOptions();
   const disabled = !canManage;
   const legs = React.useMemo(() => (data?.legs || []) as InterfaceLeg[], [data?.legs]);
@@ -138,15 +138,15 @@ export default function InterfaceFlowTab({
   }, [byField.interfaceFormat, legs]);
 
   const routeOptions = React.useMemo(() => [
-    { label: 'Direct', value: 'direct' },
-    { label: 'Via middleware', value: 'via_middleware' },
-  ], []);
+    { label: t('it:enums.routeType.direct'), value: 'direct' },
+    { label: t('it:enums.routeType.viaMiddleware'), value: 'via_middleware' },
+  ], [t]);
 
   const getRoleLabel = (role: string) => {
     const normalized = String(role || '').toLowerCase();
-    if (normalized === 'source') return data?.source_application_name || 'Source';
-    if (normalized === 'target') return data?.target_application_name || 'Target';
-    if (normalized === 'middleware') return 'Middleware';
+    if (normalized === 'source') return data?.source_application_name || t('it:workspace.interface.flow.source');
+    if (normalized === 'target') return data?.target_application_name || t('it:workspace.interface.flow.target');
+    if (normalized === 'middleware') return t('it:workspace.interface.flow.middleware');
     return role || '';
   };
 
@@ -158,29 +158,31 @@ export default function InterfaceFlowTab({
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       <Box sx={{ maxWidth: 820 }}>
-        <SectionHeader>Logical flow</SectionHeader>
+        <SectionHeader>{t('it:workspace.interface.flow.logicalFlow')}</SectionHeader>
         <Stack spacing={1.25}>
-          <PropertyRow label="Source application" required valueSx={{ maxWidth: 560 }}>
+          <PropertyRow label={t('it:workspace.interface.fields.sourceApplication')} required valueSx={{ maxWidth: 560 }}>
             <ApplicationSelect
               value={data?.source_application_id || null}
               onChange={(value) => void onPatch({ source_application_id: value || '' })}
               hideLabel
+              label={t('it:workspace.interface.fields.sourceApplication')}
               textFieldSx={drawerFieldValueSx}
-              placeholder="Select source"
+              placeholder={t('it:workspace.interface.fields.selectSource')}
               disabled={disabled}
             />
           </PropertyRow>
-          <PropertyRow label="Target application" required valueSx={{ maxWidth: 560 }}>
+          <PropertyRow label={t('it:workspace.interface.fields.targetApplication')} required valueSx={{ maxWidth: 560 }}>
             <ApplicationSelect
               value={data?.target_application_id || null}
               onChange={(value) => void onPatch({ target_application_id: value || '' })}
               hideLabel
+              label={t('it:workspace.interface.fields.targetApplication')}
               textFieldSx={drawerFieldValueSx}
-              placeholder="Select target"
+              placeholder={t('it:workspace.interface.fields.selectTarget')}
               disabled={disabled}
             />
           </PropertyRow>
-          <PropertyRow label="Route type" valueSx={{ maxWidth: 280 }}>
+          <PropertyRow label={t('it:workspace.interface.fields.routeType')} valueSx={{ maxWidth: 280 }}>
             <TextField
               select
               value={data?.integration_route_type || 'direct'}
@@ -203,7 +205,7 @@ export default function InterfaceFlowTab({
             </TextField>
           </PropertyRow>
           {data?.integration_route_type === 'via_middleware' && (
-            <PropertyRow label="Middleware applications" valueSx={{ maxWidth: 560 }}>
+            <PropertyRow label={t('it:workspace.interface.fields.middlewareApplications')} valueSx={{ maxWidth: 560 }}>
               <Autocomplete
                 multiple
                 size="small"
@@ -228,7 +230,7 @@ export default function InterfaceFlowTab({
                       ),
                     }}
                     sx={[drawerFieldValueSx, compactMiddlewareAutocompleteSx]}
-                    placeholder="Add middleware"
+                    placeholder={t('it:workspace.interface.fields.addMiddleware')}
                   />
                 )}
                 isOptionEqualToValue={(option, value) => option.id === value.id}
@@ -241,21 +243,21 @@ export default function InterfaceFlowTab({
       </Box>
 
       <Box>
-        <SectionHeader>Leg template</SectionHeader>
+        <SectionHeader>{t('it:workspace.interface.flow.legTemplate')}</SectionHeader>
         {legs.length === 0 ? (
           <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>
-            No legs defined yet. Select source and target applications, then save the interface route.
+            {t('it:workspace.interface.flow.noLegs')}
           </Typography>
         ) : (
           <Table size="small" sx={{ maxWidth: 1100 }}>
             <TableHead>
               <TableRow>
-                <TableCell>Leg</TableCell>
-                <TableCell>From / to</TableCell>
-                <TableCell>Trigger type</TableCell>
-                <TableCell>Pattern</TableCell>
-                <TableCell>Format</TableCell>
-                <TableCell>Job name</TableCell>
+                <TableCell>{t('it:workspace.interface.flow.leg')}</TableCell>
+                <TableCell>{t('it:workspace.interface.flow.fromTo')}</TableCell>
+                <TableCell>{t('it:workspace.interface.flow.triggerType')}</TableCell>
+                <TableCell>{t('it:workspace.interface.flow.pattern')}</TableCell>
+                <TableCell>{t('it:workspace.interface.flow.format')}</TableCell>
+                <TableCell>{t('it:workspace.interface.flow.jobName')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -322,7 +324,7 @@ export default function InterfaceFlowTab({
                       onBlur={(event) => handleLegChange(leg.id, { job_name: event.target.value || null })}
                       variant="standard"
                       sx={drawerFieldValueSx}
-                      placeholder="Optional"
+                      placeholder={t('it:workspace.interface.flow.optional')}
                       disabled={disabled}
                     />
                   </TableCell>

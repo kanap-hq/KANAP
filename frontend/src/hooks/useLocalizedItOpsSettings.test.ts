@@ -91,4 +91,16 @@ describe('useLocalizedItOpsSettings', () => {
     const { result } = renderHook(() => useLocalizedItOpsSettings());
     expect((result.current.data as any)?.[list]).toEqual([{ code, label: french }, { code, label: 'Renamed' }]);
   });
+
+  it('shows no typical port for the connection types where the user gives the port', () => {
+    settings.data = {
+      connectionTypes: [
+        { code: 'https', label: 'HTTPS', typicalPorts: '443' },
+        { code: 'tcp', label: 'TCP (custom)', typicalPorts: 'specify' },
+      ],
+    } as any;
+    const { result } = renderHook(() => useLocalizedItOpsSettings());
+    const ports = (result.current.data?.connectionTypes as any[]).map((type) => type.typicalPorts);
+    expect(ports).toEqual(['443', '']);
+  });
 });

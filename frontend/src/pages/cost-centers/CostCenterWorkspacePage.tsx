@@ -490,6 +490,7 @@ function CostCenterCreate({
           <PropertyRow label={t('costCenters.fields.parent')} valueSx={{ maxWidth: 520 }}>
             <CostCenterSelect
               hideLabel
+              label={t('costCenters.fields.parent')}
               selectable="groups"
               value={form.parent_id}
               onChange={(parentId) => update({ parent_id: parentId })}
@@ -503,6 +504,7 @@ function CostCenterCreate({
             <PropertyRow label={t('costCenters.fields.company')} required helperText={t('costCenters.hints.company')} valueSx={{ maxWidth: 520 }}>
               <CompanySelect
                 hideLabel
+                label={t('costCenters.fields.company')}
                 value={form.company_id}
                 onChange={(companyId) => update({ company_id: companyId })}
                 error={!!errors.company_id}

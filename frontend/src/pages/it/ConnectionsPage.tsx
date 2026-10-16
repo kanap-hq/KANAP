@@ -14,6 +14,9 @@ import ForbiddenPage from '../ForbiddenPage';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
+import { useLocale } from '../../i18n/useLocale';
+import { formatShortDateTime } from '../../lib/dateFormat';
 import { classificationText } from '../../utils/applicationClassification';
 import { setListFiltersParam } from '../../lib/listContext';
 import { countValueFormatter } from '../../components/grid/countValueFormatter';
@@ -70,15 +73,16 @@ const CRIT_DOT_COLORS: Record<string, string> = {
   low: '#6B7280',
 };
 
-function topologyLabel(v: string): string {
-  if (v === 'server_to_server') return 'Server to server';
-  if (v === 'multi_server') return 'Multi-server';
+function topologyLabel(t: TFunction, v: string): string {
+  if (v === 'server_to_server') return t('it:enums.topology.serverToServer');
+  if (v === 'multi_server') return t('it:enums.topology.multiServer');
   return v || '';
 }
 
 export default function ConnectionsPage() {
   const { data: classificationCatalog } = useApplicationClassificationCatalog();
   const { t } = useTranslation(['it', 'common']);
+  const locale = useLocale();
   const navigate = useNavigate();
   const { hasLevel } = useAuth();
   const { labelFor, byField, settings } = useItOpsEnumOptions();
@@ -140,33 +144,33 @@ export default function ConnectionsPage() {
 
   const columns: EnhancedColDef<ConnectionRow>[] = [
     {
-      headerName: 'Reference',
+      headerName: t('pages.connections.columns.connectionReference'),
       field: 'connection_reference',
       width: 110,
       cellRenderer: ClickToWorkspace,
       cellStyle: MONO_STYLE,
     },
     {
-      headerName: 'Name',
+      headerName: t('pages.connections.columns.name'),
       field: 'name',
       minWidth: 220,
       cellRenderer: ClickToWorkspace,
     },
     {
-      headerName: 'Topology',
+      headerName: t('pages.connections.columns.topology'),
       field: 'topology',
       width: 140,
-      valueFormatter: (p) => topologyLabel(String(p.value || '')),
+      valueFormatter: (p) => topologyLabel(t, String(p.value || '')),
       cellRenderer: ClickToWorkspace,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        values: ['server_to_server', 'multi_server'].map((value) => ({ value, label: topologyLabel(value) })),
+        values: ['server_to_server', 'multi_server'].map((value) => ({ value, label: topologyLabel(t, value) })),
         searchable: false,
       },
     },
     {
-      headerName: 'Endpoints',
+      headerName: t('pages.connections.columns.endpoints'),
       field: 'source_label',
       minWidth: 240,
       sortable: false,
@@ -191,7 +195,7 @@ export default function ConnectionsPage() {
         return (
           <LinkCellRenderer
             {...(params as any)}
-            value={`${count} servers`}
+            value={t('pages.connections.serverCount', { count })}
             linkType="internal"
             getHref={getConnectionHref}
             onNavigate={(href: string) => navigate(href)}
@@ -200,7 +204,7 @@ export default function ConnectionsPage() {
       },
     },
     {
-      headerName: 'Protocols',
+      headerName: t('pages.connections.columns.protocols'),
       field: 'protocol_labels',
       minWidth: 200,
       sortable: false,
@@ -216,7 +220,7 @@ export default function ConnectionsPage() {
       cellStyle: { color: 'var(--kanap-text-secondary)' },
     },
     {
-      headerName: 'Criticality',
+      headerName: t('pages.connections.columns.criticality'),
       field: 'criticality',
       width: 150,
       cellRenderer: (params: ICellRendererParams<ConnectionRow>) => {
@@ -228,10 +232,10 @@ export default function ConnectionsPage() {
           <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, height: '100%' }}>
             <StatusDot color={color} />
             <Box component="span" sx={{ fontSize: 13 }}>
-              {classificationCatalog?.businessCriticalityLevels.find((item) => item.code === value)?.label || value || 'Not set'}
+              {classificationCatalog?.businessCriticalityLevels.find((item) => item.code === value)?.label || value || classificationText('Not set')}
               {isDerived && (
                 <Box component="span" sx={{ fontSize: 11, color: 'kanap.text.tertiary', ml: 0.5 }}>
-                  (derived)
+                  {t('it:workspace.connection.metadata.derived')}
                 </Box>
               )}
               {row?.classification_incomplete && (
@@ -255,14 +259,14 @@ export default function ConnectionsPage() {
       },
     },
     {
-      headerName: 'Data class',
+      headerName: t('it:pages.connections.columns.dataClass'),
       field: 'data_class',
       width: 130,
       valueFormatter: (p) => {
         const row = p.data as ConnectionRow | undefined;
         // A derived connection shows its effective value, unknown (not set) when no interface is linked.
         const value = row?.risk_mode === 'derived' ? row.effective_data_class : p.value;
-        return classificationCatalog?.dataClasses.find((item) => item.code === value)?.label || (value || 'Not set');
+        return classificationCatalog?.dataClasses.find((item) => item.code === value)?.label || (value || classificationText('Not set'));
       },
       cellRenderer: ClickToWorkspace,
       filter: CheckboxSetFilter,
@@ -276,7 +280,7 @@ export default function ConnectionsPage() {
       },
     },
     {
-      headerName: 'PII',
+      headerName: t('pages.connections.columns.pii'),
       field: 'contains_pii',
       width: 80,
       valueFormatter: (p) => {
@@ -296,7 +300,7 @@ export default function ConnectionsPage() {
       },
     },
     {
-      headerName: 'Lifecycle',
+      headerName: t('pages.connections.columns.lifecycle'),
       field: 'lifecycle',
       width: 130,
       cellRenderer: (params: ICellRendererParams<ConnectionRow>) => {
@@ -318,7 +322,7 @@ export default function ConnectionsPage() {
       },
     },
     {
-      headerName: 'Linked interfaces',
+      headerName: t('it:pages.connections.columns.linkedInterfaces'),
       field: 'linked_interface_count',
       width: 130,
       sortable: false,
@@ -328,9 +332,10 @@ export default function ConnectionsPage() {
       cellRenderer: ClickToWorkspace,
     },
     {
-      headerName: 'Created',
+      headerName: t('pages.connections.columns.created'),
       field: 'created_at',
       width: 130,
+      valueFormatter: (p) => formatShortDateTime(p.value as string | null, locale),
       cellRenderer: ClickToWorkspace,
     },
   ];

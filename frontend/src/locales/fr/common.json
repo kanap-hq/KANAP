@@ -131,6 +131,8 @@
     "recommended": "Recommandé",
     "openCalendar": "Ouvrir le calendrier",
     "datePlaceholder": "jj/mm/aaaa",
+    "time": "Heure",
+    "timePlaceholder": "hh:mm",
     "requiredTag": "(obligatoire)",
     "relatedTo": "Lié à",
     "openInNewTab": "Ouvrir dans un nouvel onglet",
@@ -654,7 +656,13 @@
     "valueUnavailable": "Valeur plus disponible",
     "budgetLines": "Lignes budgétaires",
     "searchBudgetLines": "Rechercher des lignes budgétaires",
-    "noBudgetLinesFound": "Aucune ligne budgétaire trouvée"
+    "noBudgetLinesFound": "Aucune ligne budgétaire trouvée",
+    "company": "Société",
+    "supplier": "Fournisseur",
+    "department": "Département",
+    "departments": "Départements",
+    "allDepartments": "Tous les départements",
+    "newCategoryName": "Nom de la nouvelle catégorie"
   },
   "documentEditor": {
     "expandDocument": "Agrandir le document",
@@ -701,7 +709,9 @@
     "openColumn": "Ouvrir",
     "restrictedDocuments_one": "{{count}} document autonome est disponible pour cet élément. Vous devez disposer du rôle Lecteur pour le consulter.",
     "restrictedDocuments_other": "{{count}} documents autonomes sont disponibles pour cet élément. Vous devez disposer du rôle Lecteur pour les consulter.",
-    "newDocumentOptions": "Options du nouveau document"
+    "newDocumentOptions": "Options du nouveau document",
+    "noDocuments": "Aucun document lié",
+    "newLinkedTitle": "Nouveau document lié"
   },
   "share": {
     "sendLink": "Envoyer le lien",
@@ -956,7 +966,150 @@
   },
   "markdownEditor": {
     "insertEmoji": "Insérer un emoji",
-    "blockStyle": "Style de bloc"
+    "blockStyle": "Style de bloc",
+    "placeholder": "Commencez à écrire…",
+    "mdx": {
+      "admonitions": {
+        "caution": "Prudence",
+        "changeType": "Choisir le type d'encadré",
+        "danger": "Danger",
+        "info": "Info",
+        "note": "Remarque",
+        "placeholder": "Type d'encadré",
+        "tip": "Astuce"
+      },
+      "codeblock": {
+        "delete": "Supprimer le bloc de code"
+      },
+      "codeBlock": {
+        "inlineLanguage": "Langage",
+        "language": "Langage du bloc de code",
+        "selectLanguage": "Choisir le langage du bloc de code"
+      },
+      "contentArea": {
+        "editableMarkdown": "Texte modifiable"
+      },
+      "createLink": {
+        "cancelTooltip": "Annuler la modification",
+        "saveTooltip": "Définir l'URL",
+        "text": "Texte du lien",
+        "textTooltip": "Le texte affiché pour le lien",
+        "title": "Titre du lien",
+        "titleTooltip": "Le titre du lien, affiché au survol",
+        "urlPlaceholder": "Choisissez ou collez une URL",
+        "url": "URL"
+      },
+      "dialog": {
+        "close": "Fermer la boîte de dialogue"
+      },
+      "dialogControls": {
+        "cancel": "Annuler",
+        "save": "Enregistrer"
+      },
+      "frontmatterEditor": {
+        "addEntry": "Ajouter une entrée",
+        "dialogDescription": "Ajoutez, modifiez ou supprimez les entrées clé-valeur de l'en-tête du document.",
+        "key": "Clé",
+        "title": "Modifier l'en-tête du document",
+        "value": "Valeur"
+      },
+      "imageEditor": {
+        "deleteImage": "Supprimer l'image",
+        "editImage": "Modifier l'image"
+      },
+      "linkPreview": {
+        "copied": "Copié",
+        "copyToClipboard": "Copier dans le presse-papiers",
+        "edit": "Modifier l'URL du lien",
+        "open": "Ouvrir {{url}} dans une nouvelle fenêtre",
+        "remove": "Supprimer le lien"
+      },
+      "table": {
+        "alignCenter": "Centrer",
+        "alignLeft": "Aligner à gauche",
+        "alignRight": "Aligner à droite",
+        "columnMenu": "Menu de la colonne",
+        "deleteColumn": "Supprimer cette colonne",
+        "deleteRow": "Supprimer cette ligne",
+        "deleteTable": "Supprimer le tableau",
+        "insertColumnLeft": "Insérer une colonne à gauche",
+        "insertColumnRight": "Insérer une colonne à droite",
+        "insertRowAbove": "Insérer une ligne au-dessus",
+        "insertRowBelow": "Insérer une ligne en dessous",
+        "rowMenu": "Menu de la ligne",
+        "textAlignment": "Alignement du texte"
+      },
+      "toolbar": {
+        "admonition": "Insérer un encadré",
+        "blockTypeSelect": {
+          "placeholder": "Type de bloc",
+          "selectBlockTypeTooltip": "Choisir le type de bloc"
+        },
+        "blockTypes": {
+          "heading": "Titre {{level}}",
+          "paragraph": "Paragraphe",
+          "quote": "Citation"
+        },
+        "bold": "Gras",
+        "bulletedList": "Liste à puces",
+        "checkList": "Liste de cases à cocher",
+        "codeBlock": "Insérer un bloc de code",
+        "diffMode": "Mode différences",
+        "editFrontmatter": "Modifier l'en-tête",
+        "highlight": "Surligner",
+        "image": "Insérer une image",
+        "inlineCode": "Code en ligne",
+        "insertFrontmatter": "Insérer un en-tête",
+        "italic": "Italique",
+        "link": "Créer un lien",
+        "numberedList": "Liste numérotée",
+        "redo": "Rétablir {{shortcut}}",
+        "removeBold": "Retirer le gras",
+        "removeHighlight": "Retirer le surlignage",
+        "removeInlineCode": "Retirer le format code",
+        "removeItalic": "Retirer l'italique",
+        "removeStrikethrough": "Retirer le barré",
+        "removeSubscript": "Retirer l'indice",
+        "removeSuperscript": "Retirer l'exposant",
+        "removeUnderline": "Retirer le soulignement",
+        "richText": "Texte enrichi",
+        "source": "Mode source",
+        "strikethrough": "Barré",
+        "subscript": "Indice",
+        "superscript": "Exposant",
+        "table": "Insérer un tableau",
+        "thematicBreak": "Insérer un séparateur",
+        "toggleGroup": "Groupe de boutons",
+        "underline": "Souligner",
+        "undo": "Annuler {{shortcut}}"
+      },
+      "uploadImage": {
+        "addViaUrlInstructionsNoUpload": "Ajouter une image depuis une URL :",
+        "addViaUrlInstructions": "Ou ajoutez une image depuis une URL :",
+        "alt": "Texte alternatif :",
+        "autoCompletePlaceholder": "Choisissez ou collez l'URL d'une image",
+        "dialogDescription": "Insérez une image depuis une URL ou téléversez-en une depuis votre appareil.",
+        "dialogDescriptionNoUpload": "Insérez une image depuis une URL.",
+        "dialogTitle": "Téléverser une image",
+        "height": "Hauteur :",
+        "title": "Titre :",
+        "uploadInstructions": "Téléversez une image depuis votre appareil :",
+        "width": "Largeur :"
+      }
+    },
+    "emoji": {
+      "smile": "Sourire",
+      "grin": "Grand sourire",
+      "laugh": "Rire",
+      "love": "Amour",
+      "think": "Réflexion",
+      "thumbsUp": "Pouce levé",
+      "celebrate": "Fête",
+      "fire": "Feu",
+      "done": "Terminé",
+      "launch": "Lancement"
+    },
+    "plainText": "Texte brut"
   },
   "markdownLink": {
     "url": "URL",
@@ -982,5 +1135,32 @@
       "label": "Incident",
       "description": "Interruption de service ou événement de sécurité"
     }
+  },
+  "tenant": {
+    "notFound": {
+      "title": "Tenant introuvable",
+      "message": "Ce tenant n'existe pas ou n'est plus disponible. Vous allez être redirigé vers notre site dans quelques instants.",
+      "redirecting": "Redirection vers {{url}}"
+    }
+  },
+  "relatedObject": {
+    "types": {
+      "standalone": "Autonome",
+      "project": "Projet",
+      "spendItem": "Budget (OPEX)",
+      "contract": "Contrat",
+      "capexItem": "CAPEX",
+      "incident": "Incident"
+    },
+    "item": "Élément"
+  },
+  "markdownContent": {
+    "copyCode": "Copier le code",
+    "copied": "Copié"
+  },
+  "relevantWebsites": {
+    "name": "Nom",
+    "empty": "Aucune URL liée.",
+    "delete": "Supprimer l'URL"
   }
 }

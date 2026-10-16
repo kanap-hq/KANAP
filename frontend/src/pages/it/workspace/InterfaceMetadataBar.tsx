@@ -29,7 +29,7 @@ type Props = {
 
 function humanize(value: string | null | undefined) {
   const text = String(value || '').trim();
-  if (!text) return 'Not set';
+  if (!text) return classificationText('Not set');
   return text.replace(/_/g, ' ').replace(/\b\w/g, (match) => match.toUpperCase());
 }
 
@@ -48,7 +48,7 @@ export default function InterfaceMetadataBar({
   onDataClassChange,
   onFlowClick,
 }: Props) {
-  const { t } = useTranslation('it');
+  const { t } = useTranslation(['it', 'common']);
   const { data: classificationCatalog } = useApplicationClassificationCatalog();
   const theme = useTheme();
   const { byField, labelFor } = useItOpsEnumOptions();
@@ -59,27 +59,27 @@ export default function InterfaceMetadataBar({
       .filter((item) => !item.deprecated || item.code === lifecycle)
       .map((item) => ({
         value: item.code,
-        label: item.deprecated ? `${item.label} (deprecated)` : item.label,
+        label: item.deprecated ? t('it:workspace.interface.metadata.deprecated', { label: item.label }) : item.label,
         color: getDotColor(LIFECYCLE_COLORS[item.code] || 'default', theme.palette.mode),
       }))
   ), [byField.lifecycleStatus, lifecycle, theme.palette.mode]);
 
-  const criticalityOptions = [{ value: '', label: 'Not set', color: getDotColor('default', theme.palette.mode) }, ...(classificationCatalog?.businessCriticalityLevels || []).filter((item) => !item.deprecated || item.code === criticality).map((item) => ({ value: item.code, label: item.label, color: getDotColor('default', theme.palette.mode) }))];
+  const criticalityOptions = [{ value: '', label: classificationText('Not set'), color: getDotColor('default', theme.palette.mode) }, ...(classificationCatalog?.businessCriticalityLevels || []).filter((item) => !item.deprecated || item.code === criticality).map((item) => ({ value: item.code, label: item.label, color: getDotColor('default', theme.palette.mode) }))];
 
   const dataClassOptions = React.useMemo(() => (
     (byField.dataClass || [])
       .filter((item) => !item.deprecated || item.code === dataClass)
       .map((item) => ({
         value: item.code,
-        label: item.deprecated ? `${item.label} (deprecated)` : item.label,
+        label: item.deprecated ? t('it:workspace.interface.metadata.deprecated', { label: item.label }) : item.label,
       }))
   ), [byField.dataClass, dataClass]);
 
   const flowLabel = sourceName && targetName
     ? `${sourceName} -> ${targetName}`
-    : 'Applications missing';
-  const routeLabel = routeType === 'via_middleware' ? 'Via middleware' : 'Direct';
-  const dataClassLabel = classificationCatalog?.dataClasses.find((item) => item.code === dataClass)?.label || dataClass || 'Not set';
+    : t('it:workspace.interface.metadata.applicationsMissing');
+  const routeLabel = routeType === 'via_middleware' ? t('it:enums.routeType.viaMiddleware') : t('it:enums.routeType.direct');
+  const dataClassLabel = classificationCatalog?.dataClasses.find((item) => item.code === dataClass)?.label || dataClass || classificationText('Not set');
 
   return (
     <>
@@ -93,20 +93,20 @@ export default function InterfaceMetadataBar({
       />
       <PortfolioStatusMetadata
         value={criticality || ''}
-        label={`${classificationCatalog?.businessCriticalityLevels.find((item) => item.code === criticality)?.label || criticality || 'Not set'}${classificationIncomplete ? ` (${classificationText('Incomplete inheritance')})` : ''}`}
+        label={`${classificationCatalog?.businessCriticalityLevels.find((item) => item.code === criticality)?.label || criticality || classificationText('Not set')}${classificationIncomplete ? ` (${classificationText('Incomplete inheritance')})` : ''}`}
         color={getDotColor(CRITICALITY_COLORS[criticality] || 'default', theme.palette.mode)}
         options={criticalityOptions}
         onChange={onCriticalityChange}
         disabled={disabled}
       />
-      <PortfolioMetadataItem label="Flow" onClick={onFlowClick} disabled={!onFlowClick}>
+      <PortfolioMetadataItem label={t('it:workspace.interface.metadata.flow')} onClick={onFlowClick} disabled={!onFlowClick}>
         {flowLabel}
       </PortfolioMetadataItem>
-      <PortfolioMetadataItem label="Route" onClick={onFlowClick} disabled={!onFlowClick}>
+      <PortfolioMetadataItem label={t('it:workspace.interface.metadata.route')} onClick={onFlowClick} disabled={!onFlowClick}>
         {routeLabel}
       </PortfolioMetadataItem>
       <PortfolioMetadataItem
-        label={t('classification.data')}
+        label={t('it:workspace.interface.metadata.data')}
         onClick={(event) => !disabled && setDataClassAnchor(event.currentTarget)}
         disabled={disabled}
       >
@@ -115,7 +115,7 @@ export default function InterfaceMetadataBar({
       <PortfolioMetadataItem disabled>
         <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
           <Typography component="span" sx={{ fontSize: 12 }}>
-            {containsPii ? t('workspace.interface.pii.label') : t('workspace.interface.pii.none')}
+            {containsPii ? t('it:workspace.connection.compliance.effectivePii') : t('it:workspace.interface.bindings.noPii')}
           </Typography>
         </Box>
       </PortfolioMetadataItem>

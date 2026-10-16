@@ -1,7 +1,10 @@
+import { foldText } from '../../utils/foldText';
+
 /**
- * Plain-language labels of the audit log's sign-in, session and export rows (backend
- * `audit/security-events.ts`). The codes stay as stored; the page shows these labels
- * (`admin` namespace, `auditLogs.*`), and an unknown code shows as it is.
+ * Plain-language labels of the audit log: the tables it names (`auditLogs.tableNames.<table>`)
+ * and its sign-in, session and export rows (backend `audit/security-events.ts`). The codes stay
+ * as stored; the page shows these labels (`admin` namespace, `auditLogs.*`), and an unknown code
+ * shows as it is. Every audited table has a label (auditTableNames.test.ts).
  */
 
 /** `table_name` of sign-in and session events. */
@@ -86,6 +89,32 @@ export function exportResourceKey(resource: unknown): string | null {
 
 export type Translate = (key: string, options?: Record<string, unknown>) => string;
 
+/** The search parameter carrying the table codes whose label matches the search (backend `parseSearchTables`). */
+export const SEARCH_TABLES_PARAM = 'q_tables';
+
+/**
+ * The tables whose label, in the reader's language, holds the searched text ("fournisseur" →
+ * `supplier_contacts`, `suppliers`), accents and case aside, as the server folds a search. The
+ * server matches the stored codes only: the page sends these codes with the search. Nothing for a
+ * text under two characters, which the codes already match.
+ */
+export function auditTablesMatchingSearch(q: string | null | undefined, t: Translate): string[] {
+  const text = foldText(String(q ?? '').trim());
+  if (text.length < 2) return [];
+  const labels = (t as unknown as (key: string, options: { returnObjects: true }) => unknown)('auditLogs.tableNames', { returnObjects: true });
+  if (!labels || typeof labels !== 'object') return [];
+  return Object.entries(labels as Record<string, unknown>)
+    .filter(([, label]) => typeof label === 'string' && foldText(label).includes(text))
+    .map(([code]) => code)
+    .sort();
+}
+
+/** The search parameters of a text: the codes of the matching tables, when there are some. */
+export function auditSearchParams(q: string | null | undefined, t: Translate): Record<string, string> {
+  const codes = auditTablesMatchingSearch(q, t);
+  return codes.length > 0 ? { [SEARCH_TABLES_PARAM]: codes.join(',') } : {};
+}
+
 /** The fields of an audit row the labels read. */
 export type AuditRowLike = {
   table_name?: string | null;
@@ -112,21 +141,20 @@ export function auditUserLabel(row: AuditRowLike | null | undefined, t: Translat
   return t('auditLogs.sources.system');
 }
 
-/** The table cell: sign-in and session events, what an export exported, else the stored table name. */
+/** The table cell: what an export exported, else the table's label. */
 export function auditTableLabel(row: AuditRowLike | null | undefined, t: Translate): string {
   const table = String(row?.table_name || '');
   if (table === EXPORT_EVENT_TABLE) {
     const key = exportResourceKey(row?.after_json?.resource);
-    return key ? t(`auditLogs.exportResources.${key}`) : t('auditLogs.tables.export');
+    return key ? t(`auditLogs.exportResources.${key}`) : t(`auditLogs.tableNames.${EXPORT_EVENT_TABLE}`);
   }
   return auditTableFilterLabel(table, t);
 }
 
-/** A value of the table filter. */
+/** A table in the reader's language (the table filter, the detail): its label, else the stored name. */
 export function auditTableFilterLabel(table: string | null, t: Translate): string {
   if (!table) return t('auditLogs.shared.empty');
-  if (table === AUTH_EVENT_TABLE || table === EXPORT_EVENT_TABLE) return t(`auditLogs.tables.${table}`);
-  return table;
+  return t(`auditLogs.tableNames.${table}`, { defaultValue: table });
 }
 
 /** The reason of a sign-in or session event in plain language; other rows keep their reference. */

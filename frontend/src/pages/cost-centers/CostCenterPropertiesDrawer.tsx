@@ -113,6 +113,7 @@ export default function CostCenterPropertiesDrawer({
         <PropertyRow label={t('costCenters.fields.parent')}>
           <CostCenterSelect
             hideLabel
+            label={t('costCenters.fields.parent')}
             selectable="groups"
             value={node.parent_id}
             excludeIds={excludeParentIds}
@@ -128,6 +129,7 @@ export default function CostCenterPropertiesDrawer({
           <PropertyRow label={t('costCenters.fields.company')} required helperText={t('costCenters.hints.company')}>
             <CompanySelect
               hideLabel
+              label={t('costCenters.fields.company')}
               value={node.company_id}
               onChange={onCompanyChange}
               disabled={disabled}

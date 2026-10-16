@@ -1916,7 +1916,7 @@ export default function TaskWorkspacePage() {
             <Box
               component="button"
               onClick={() => setDrawerOpen((o: boolean) => !o)}
-              aria-label={drawerOpen ? 'Close properties' : 'Open properties'}
+              aria-label={drawerOpen ? t('portfolio:workspace.closeProperties') : t('portfolio:workspace.openProperties')}
               aria-expanded={drawerOpen}
               sx={(theme) => ({
                 position: 'absolute',

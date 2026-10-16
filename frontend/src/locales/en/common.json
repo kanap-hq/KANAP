@@ -131,6 +131,8 @@
     "recommended": "Recommended",
     "openCalendar": "Open calendar",
     "datePlaceholder": "dd/mm/yyyy",
+    "time": "Time",
+    "timePlaceholder": "hh:mm",
     "requiredTag": "(required)",
     "relatedTo": "Related to",
     "openInNewTab": "Open in new tab",
@@ -654,7 +656,13 @@
     "valueUnavailable": "Value no longer available",
     "budgetLines": "Budget lines",
     "searchBudgetLines": "Search budget lines",
-    "noBudgetLinesFound": "No budget lines found"
+    "noBudgetLinesFound": "No budget lines found",
+    "company": "Company",
+    "supplier": "Supplier",
+    "department": "Department",
+    "departments": "Departments",
+    "allDepartments": "All departments",
+    "newCategoryName": "New category name"
   },
   "documentEditor": {
     "expandDocument": "Expand document",
@@ -701,7 +709,9 @@
     "openColumn": "Open",
     "restrictedDocuments_one": "{{count}} standalone knowledge document is available for this item. You need the Knowledge Reader role to view them.",
     "restrictedDocuments_other": "{{count}} standalone knowledge documents are available for this item. You need the Knowledge Reader role to view them.",
-    "newDocumentOptions": "New document options"
+    "newDocumentOptions": "New document options",
+    "noDocuments": "No documents linked",
+    "newLinkedTitle": "New linked document"
   },
   "share": {
     "sendLink": "Send link",
@@ -956,7 +966,150 @@
   },
   "markdownEditor": {
     "insertEmoji": "Insert emoji",
-    "blockStyle": "Block style"
+    "blockStyle": "Block style",
+    "placeholder": "Start typing…",
+    "mdx": {
+      "admonitions": {
+        "caution": "Caution",
+        "changeType": "Select admonition type",
+        "danger": "Danger",
+        "info": "Info",
+        "note": "Note",
+        "placeholder": "Admonition type",
+        "tip": "Tip"
+      },
+      "codeblock": {
+        "delete": "Delete code block"
+      },
+      "codeBlock": {
+        "inlineLanguage": "Language",
+        "language": "Code block language",
+        "selectLanguage": "Select code block language"
+      },
+      "contentArea": {
+        "editableMarkdown": "Editable text"
+      },
+      "createLink": {
+        "cancelTooltip": "Cancel change",
+        "saveTooltip": "Set URL",
+        "text": "Anchor text",
+        "textTooltip": "The text shown for the link",
+        "title": "Link title",
+        "titleTooltip": "The link's title, shown on hover",
+        "urlPlaceholder": "Select or paste a URL",
+        "url": "URL"
+      },
+      "dialog": {
+        "close": "Close dialog"
+      },
+      "dialogControls": {
+        "cancel": "Cancel",
+        "save": "Save"
+      },
+      "frontmatterEditor": {
+        "addEntry": "Add entry",
+        "dialogDescription": "Add, edit or remove the key-value entries of the document front matter.",
+        "key": "Key",
+        "title": "Edit document front matter",
+        "value": "Value"
+      },
+      "imageEditor": {
+        "deleteImage": "Delete image",
+        "editImage": "Edit image"
+      },
+      "linkPreview": {
+        "copied": "Copied",
+        "copyToClipboard": "Copy to clipboard",
+        "edit": "Edit link URL",
+        "open": "Open {{url}} in a new window",
+        "remove": "Remove link"
+      },
+      "table": {
+        "alignCenter": "Align center",
+        "alignLeft": "Align left",
+        "alignRight": "Align right",
+        "columnMenu": "Column menu",
+        "deleteColumn": "Delete this column",
+        "deleteRow": "Delete this row",
+        "deleteTable": "Delete table",
+        "insertColumnLeft": "Insert a column to the left",
+        "insertColumnRight": "Insert a column to the right",
+        "insertRowAbove": "Insert a row above",
+        "insertRowBelow": "Insert a row below",
+        "rowMenu": "Row menu",
+        "textAlignment": "Text alignment"
+      },
+      "toolbar": {
+        "admonition": "Insert admonition",
+        "blockTypeSelect": {
+          "placeholder": "Block type",
+          "selectBlockTypeTooltip": "Select block type"
+        },
+        "blockTypes": {
+          "heading": "Heading {{level}}",
+          "paragraph": "Paragraph",
+          "quote": "Quote"
+        },
+        "bold": "Bold",
+        "bulletedList": "Bulleted list",
+        "checkList": "Checklist",
+        "codeBlock": "Insert code block",
+        "diffMode": "Diff mode",
+        "editFrontmatter": "Edit front matter",
+        "highlight": "Highlight",
+        "image": "Insert image",
+        "inlineCode": "Inline code",
+        "insertFrontmatter": "Insert front matter",
+        "italic": "Italic",
+        "link": "Create link",
+        "numberedList": "Numbered list",
+        "redo": "Redo {{shortcut}}",
+        "removeBold": "Remove bold",
+        "removeHighlight": "Remove highlight",
+        "removeInlineCode": "Remove code format",
+        "removeItalic": "Remove italic",
+        "removeStrikethrough": "Remove strikethrough",
+        "removeSubscript": "Remove subscript",
+        "removeSuperscript": "Remove superscript",
+        "removeUnderline": "Remove underline",
+        "richText": "Rich text",
+        "source": "Source mode",
+        "strikethrough": "Strikethrough",
+        "subscript": "Subscript",
+        "superscript": "Superscript",
+        "table": "Insert table",
+        "thematicBreak": "Insert separator",
+        "toggleGroup": "Toggle group",
+        "underline": "Underline",
+        "undo": "Undo {{shortcut}}"
+      },
+      "uploadImage": {
+        "addViaUrlInstructionsNoUpload": "Add an image from a URL:",
+        "addViaUrlInstructions": "Or add an image from a URL:",
+        "alt": "Alternative text:",
+        "autoCompletePlaceholder": "Select or paste an image URL",
+        "dialogDescription": "Insert an image from a URL or upload one from your device.",
+        "dialogDescriptionNoUpload": "Insert an image from a URL.",
+        "dialogTitle": "Upload an image",
+        "height": "Height:",
+        "title": "Title:",
+        "uploadInstructions": "Upload an image from your device:",
+        "width": "Width:"
+      }
+    },
+    "emoji": {
+      "smile": "Smile",
+      "grin": "Grin",
+      "laugh": "Laugh",
+      "love": "Love",
+      "think": "Think",
+      "thumbsUp": "Thumbs up",
+      "celebrate": "Celebrate",
+      "fire": "Fire",
+      "done": "Done",
+      "launch": "Launch"
+    },
+    "plainText": "Plain text"
   },
   "markdownLink": {
     "url": "URL",
@@ -982,5 +1135,32 @@
       "label": "Incident",
       "description": "Service disruption or security event"
     }
+  },
+  "tenant": {
+    "notFound": {
+      "title": "Tenant not found",
+      "message": "This tenant does not exist or is no longer available. You will be redirected to our website shortly.",
+      "redirecting": "Redirecting to {{url}}"
+    }
+  },
+  "relatedObject": {
+    "types": {
+      "standalone": "Standalone",
+      "project": "Project",
+      "spendItem": "Budget (OPEX)",
+      "contract": "Contract",
+      "capexItem": "CAPEX",
+      "incident": "Incident"
+    },
+    "item": "Item"
+  },
+  "markdownContent": {
+    "copyCode": "Copy code",
+    "copied": "Copied"
+  },
+  "relevantWebsites": {
+    "name": "Name",
+    "empty": "No URLs linked.",
+    "delete": "Delete URL"
   }
 }

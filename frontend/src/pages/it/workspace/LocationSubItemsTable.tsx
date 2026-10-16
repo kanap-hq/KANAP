@@ -10,7 +10,7 @@ import {
 import { tableCellTextFieldSx } from '../../../theme/formSx';
 import DeleteIcon from '@mui/icons-material/Delete';
 import api from '../../../api';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import KanapDialog from '../../../components/design/KanapDialog';
 import { getApiErrorMessage, isDuplicateError } from '../../../utils/apiErrorMessage';
 
@@ -93,7 +93,7 @@ export default function LocationSubItemsTable({ locationId, canManage, onCountCh
   const handleSaveRow = async (item: SubItem, patch: Partial<{ name: string; description: string | null }>) => {
     const trimmedName = (patch.name ?? item.name).trim();
     if (!trimmedName) {
-      setError('Sub-location name is required.');
+      setError(t('it:workspace.location.subItems.nameRequired'));
       return;
     }
     setItems((prev) => sortByName(prev.map((r) => (r.id === item.id ? { ...r, ...patch } : r))));
@@ -189,7 +189,7 @@ export default function LocationSubItemsTable({ locationId, canManage, onCountCh
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', mb: 1 }}>
         <Typography sx={{ fontSize: 16, fontWeight: 500, color: 'kanap.text.primary' }}>
-          Sub-locations
+          {t('it:workspace.location.subItems.title')}
         </Typography>
         {canManage && (
           <Box
@@ -205,14 +205,14 @@ export default function LocationSubItemsTable({ locationId, canManage, onCountCh
               '&:hover': { textDecoration: 'underline' },
             })}
           >
-            + Add sub-location
+            {t('it:workspace.location.subItems.add')}
           </Box>
         )}
       </Box>
       {error && <Alert severity="error" sx={{ mb: 1 }}>{error}</Alert>}
       {!hasContent && (
         <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>
-          No sub-locations defined. Add buildings, rooms, racks, or other physical areas.
+          {t('it:workspace.location.subItems.empty')}
         </Typography>
       )}
       {hasContent && (
@@ -238,9 +238,9 @@ export default function LocationSubItemsTable({ locationId, canManage, onCountCh
         >
           <Box component="thead">
             <Box component="tr">
-              <Box component="th" sx={{ width: '36%' }}>Name</Box>
-              <Box component="th">Description</Box>
-              <Box component="th" sx={{ width: 90, textAlign: 'right' }}>Usage</Box>
+              <Box component="th" sx={{ width: '36%' }}>{t('it:common.name')}</Box>
+              <Box component="th">{t('it:workspace.location.contacts.description')}</Box>
+              <Box component="th" sx={{ width: 90, textAlign: 'right' }}>{t('it:workspace.location.subItems.usage')}</Box>
               {canManage && <Box component="th" sx={{ width: 40 }} />}
             </Box>
           </Box>
@@ -262,7 +262,7 @@ export default function LocationSubItemsTable({ locationId, canManage, onCountCh
                     value={draft.name}
                     onChange={(e) => updateDraft(draft.draftId, { name: e.target.value })}
                     onBlur={() => { void commitDraft(draft); }}
-                    placeholder="e.g., Building A — Room 1 — Rack 5"
+                    placeholder={t('it:workspace.location.subItems.namePlaceholder')}
                     error={!!nameErrors[draft.draftId]}
                     helperText={nameErrors[draft.draftId]}
                     variant="standard"
@@ -275,7 +275,7 @@ export default function LocationSubItemsTable({ locationId, canManage, onCountCh
                   <TextField
                     value={draft.description}
                     onChange={(e) => updateDraft(draft.draftId, { description: e.target.value })}
-                    placeholder="Optional description"
+                    placeholder={t('it:workspace.location.subItems.descriptionPlaceholder')}
                     variant="standard"
                     fullWidth
                     sx={inputSx}
@@ -284,7 +284,7 @@ export default function LocationSubItemsTable({ locationId, canManage, onCountCh
                 <Box component="td" sx={{ textAlign: 'right', color: 'kanap.text.tertiary' }}>—</Box>
                 {canManage && (
                   <Box component="td">
-                    <IconButton size="small" onClick={() => removeDraft(draft.draftId)} aria-label="Discard">
+                    <IconButton size="small" onClick={() => removeDraft(draft.draftId)} aria-label={t('common:buttons.discard')}>
                       <DeleteIcon fontSize="small" />
                     </IconButton>
                   </Box>
@@ -297,29 +297,26 @@ export default function LocationSubItemsTable({ locationId, canManage, onCountCh
 
       <KanapDialog
         open={!!pendingDelete}
-        title="Delete sub-location?"
+        title={t('it:workspace.location.subItems.deleteTitle')}
         onClose={() => !deleting && setPendingDelete(null)}
         onSave={async () => {
           if (pendingDelete) await performDelete(pendingDelete);
         }}
-        saveLabel="Delete anyway"
+        saveLabel={t('it:workspace.location.subItems.deleteAnyway')}
         saveDisabled={deleting}
         saveLoading={deleting}
       >
         <Stack spacing={1}>
           <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>
-            <Box component="strong" sx={{ fontWeight: 500 }}>
-              {pendingDelete?.usage_count ?? 0} asset{(pendingDelete?.usage_count ?? 0) === 1 ? ' is' : 's are'}
-            </Box>{' '}
-            currently assigned to{' '}
-            <Box component="strong" sx={{ fontWeight: 500 }}>
-              {pendingDelete?.name}
-            </Box>
-            . Deleting this sub-location will leave{' '}
-            {(pendingDelete?.usage_count ?? 0) === 1 ? 'it' : 'them'} without a sub-location assignment.
+            <Trans
+              t={t}
+              i18nKey="it:workspace.location.subItems.deleteUsage"
+              values={{ count: pendingDelete?.usage_count ?? 0, name: pendingDelete?.name ?? '' }}
+              components={{ strong: <Box component="strong" sx={{ fontWeight: 500 }} /> }}
+            />
           </Typography>
           <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>
-            The asset records themselves are kept; only their sub-location link is cleared.
+            {t('it:workspace.location.subItems.deleteKeepsAssets')}
           </Typography>
         </Stack>
       </KanapDialog>
@@ -340,6 +337,7 @@ function SubItemRow({
   onSave: (patch: Partial<{ name: string; description: string | null }>) => void;
   onDelete: () => void;
 }) {
+  const { t } = useTranslation(['it', 'common']);
   const [name, setName] = React.useState(row.name);
   const [description, setDescription] = React.useState(row.description || '');
 
@@ -392,7 +390,7 @@ function SubItemRow({
             const next = description || null;
             if (next !== (row.description || null)) onSave({ description: next });
           }}
-          placeholder="Optional description"
+          placeholder={t('it:workspace.location.subItems.descriptionPlaceholder')}
           variant="standard"
           fullWidth
           disabled={!canManage}
@@ -413,7 +411,7 @@ function SubItemRow({
       </Box>
       {canManage && (
         <Box component="td">
-          <IconButton size="small" onClick={onDelete} aria-label="Delete sub-location">
+          <IconButton size="small" onClick={onDelete} aria-label={t('it:workspace.location.subItems.deleteAria')}>
             <DeleteIcon fontSize="small" />
           </IconButton>
         </Box>

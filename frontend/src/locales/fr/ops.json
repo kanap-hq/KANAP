@@ -781,16 +781,16 @@
       "operations": "Opérations"
     },
     "cards": {
-      "freezeTitle": "Geler / Dégeler les données",
-      "freezeDesc": "Verrouiller les colonnes budgétaires ou les métriques d'effectif pour une année spécifique",
+      "freezeTitle": "Geler / dégeler les données",
+      "freezeDesc": "Verrouillez les colonnes budgétaires ou les métriques d'effectif pour une année donnée",
       "copyBudgetTitle": "Copier les colonnes budgétaires",
-      "copyBudgetDesc": "Copier les montants entre années et colonnes, avec un pourcentage facultatif, et les ventilations vers une autre année",
+      "copyBudgetDesc": "Copiez les montants entre années et colonnes, avec un pourcentage facultatif, et les ventilations vers une autre année",
       "resetColumnTitle": "Réinitialiser une colonne budgétaire",
-      "resetColumnDesc": "Effacer toutes les données d'une colonne budgétaire pour une année spécifique",
+      "resetColumnDesc": "Effacez toutes les données d'une colonne budgétaire pour une année donnée",
       "allocationDefaultTitle": "Méthode de ventilation par défaut",
-      "allocationDefaultDesc": "Choisir la méthode appliquée aux lignes OPEX et CAPEX laissées en ventilation par défaut",
+      "allocationDefaultDesc": "Choisissez la méthode appliquée aux lignes OPEX et CAPEX laissées en ventilation par défaut",
       "budgetColumnsTitle": "Colonnes budgétaires",
-      "budgetColumnsDesc": "Nommer les cinq colonnes budgétaires, choisir celles qui sont affichées et la colonne par défaut",
+      "budgetColumnsDesc": "Nommez les cinq colonnes budgétaires, choisissez celles qui sont affichées et la colonne par défaut",
       "currencyTitle": "Devises",
       "currencyDesc": "Définissez les devises de reporting et par défaut, et consultez les taux de change",
       "masterDataFreezeTitle": "Geler les données de référence",
@@ -832,7 +832,7 @@
       }
     },
     "freeze": {
-      "title": "Geler / Dégeler les données",
+      "title": "Geler / dégeler les données",
       "freezeError": "Impossible de geler les colonnes.",
       "unfreezeError": "Impossible de dégeler les colonnes.",
       "loadError": "Impossible de charger l'état de gel. Essayez de sélectionner une autre année.",
@@ -1805,7 +1805,7 @@
     },
     "frozen": {
       "title": "La colonne {{column}} {{year}} est gelée",
-      "hint": "Lecture seule. Un administrateur peut la dégeler dans Administration › Geler / Dégeler les données."
+      "hint": "Lecture seule. Un administrateur peut la dégeler dans Administration › Geler / dégeler les données."
     },
     "atADate": "À une date",
     "date": "Date",

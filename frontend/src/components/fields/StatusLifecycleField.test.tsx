@@ -37,6 +37,23 @@ describe('StatusLifecycleField', () => {
     expect(input.value).not.toBe('31/12/2027');
   });
 
+  it('edits with dots in German', async () => {
+    try {
+      await i18n.changeLanguage('de');
+      renderField({ status: STATUS_ENABLED, disabledAt: '2027-12-31T12:00:00.000Z' });
+      const input = screen.getByPlaceholderText('TT.MM.JJJJ') as HTMLInputElement;
+      fireEvent.focus(input);
+      expect(input.value).toBe('31.12.2027');
+      fireEvent.change(input, { target: { value: '30112027' } });
+      expect(input.value).toBe('30.11.2027');
+      fireEvent.blur(input);
+      fireEvent.focus(input);
+      expect(input.value).toBe('30.11.2027');
+    } finally {
+      await i18n.changeLanguage('en');
+    }
+  });
+
   it('shows the on label while enabled', () => {
     renderField({ status: STATUS_ENABLED });
     expect(screen.getByText('Enabled')).toBeInTheDocument();

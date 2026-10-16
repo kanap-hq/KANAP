@@ -152,7 +152,7 @@ La revue est elle-même un document de la base de connaissances, avec sa propre 
 
 Le journal est ce qui fait de cet outil un registre plutôt qu'un formulaire. Il liste tout ce qui est arrivé à l'incident, du plus récent au plus ancien, et **rien de ce qu'il contient ne peut être modifié ni supprimé**, par personne, à aucun moment.
 
-**Ajouter une note** : saisissez-la dans le composeur en haut et cliquez sur **Ajouter** (ou appuyez sur Ctrl+Entrée). La date et l'heure à côté du bouton définissent le moment auquel la note se rapporte. Par défaut maintenant, vous pouvez la placer dans le passé : une note ajoutée le mardi peut être enregistrée comme étant survenue à 23h40 le samedi, et elle se classera à cet endroit de la chronologie. KANAP conserve séparément le moment où la note a réellement été enregistrée, et cet horodatage n'est jamais modifiable : l'antidatage reste honnête.
+**Ajouter une note** : saisissez-la dans le composeur en haut et cliquez sur **Ajouter** (ou appuyez sur Ctrl+Entrée). La date et l'heure à côté du bouton définissent le moment auquel la note se rapporte. L'heure se saisit sur 24 heures (23:40). Par défaut maintenant, vous pouvez la placer dans le passé : une note ajoutée le mardi peut être enregistrée comme étant survenue à 23h40 le samedi, et elle se classera à cet endroit de la chronologie. KANAP conserve séparément le moment où la note a réellement été enregistrée, et cet horodatage n'est jamais modifiable : l'antidatage reste honnête.
 
 **Les entrées automatiques** apparaissent aux côtés de vos notes :
 

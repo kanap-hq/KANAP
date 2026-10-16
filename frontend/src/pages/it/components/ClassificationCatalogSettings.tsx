@@ -65,7 +65,7 @@ function LevelRows<T extends ClassificationLevel | BusinessCriticalityLevel | Re
         <IconButton size="small" aria-label={classificationText('Move down')} disabled={index === rows.length - 1} onClick={() => move(index, 1)} sx={{ p: 0.25, color: 'kanap.text.secondary' }}><KeyboardArrowDownIcon sx={{ fontSize: 18 }} /></IconButton>
       </Box>
       <Box>
-        <TextField value={row.label} onChange={(e) => patch(index, { label: e.target.value } as Partial<T>)} placeholder="e.g., Tier 1" size="small" sx={fieldSx} inputProps={{ 'aria-label': classificationText('Name') }} fullWidth />
+        <TextField value={row.label} onChange={(e) => patch(index, { label: e.target.value } as Partial<T>)} placeholder={classificationText('e.g., Tier 1')} size="small" sx={fieldSx} inputProps={{ 'aria-label': classificationText('Name') }} fullWidth />
         {issues.get(index) && <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary', mt: 0.25 }}>{t(`enumEditor.${issues.get(index)}`)}</Typography>}
         {shownAs(row) && <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary', mt: 0.25 }}>{t('enumEditor.shownAs', { value: shownAs(row) })}</Typography>}
       </Box>
