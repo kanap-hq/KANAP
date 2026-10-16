@@ -56,7 +56,7 @@
       "asAssignee": "Asignado a una tarea",
       "asRequestor": "Solicitante de una tarea",
       "asViewer": "Observador de una tarea",
-      "viewerHint": "Puede ser frecuente — desactivado por defecto",
+      "viewerHint": "Puede ser frecuente (desactivado por defecto)",
       "eventTypes": "Tipos de eventos:",
       "statusChanges": "Cambios de estado",
       "comments": "Comentarios"

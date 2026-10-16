@@ -18,9 +18,9 @@
     "restricted": { "label": "Restringido", "description": "La divulgación podría causar un daño grave; el acceso se limita estrictamente a quienes lo necesitan." }
   },
   "recoveryWaves": {
-    "foundation": { "label": "V0 — Base", "description": "Prerrequisitos compartidos y servicios base." },
-    "vital": { "label": "V1 — Actividades vitales", "description": "Restaurar las actividades vitales después de sus prerrequisitos." },
-    "priority": { "label": "V2 — Actividades prioritarias", "description": "Restaurar las actividades prioritarias." },
-    "normal": { "label": "V3 — Funcionamiento normal", "description": "Volver al funcionamiento normal." }
+    "foundation": { "label": "V0: Base", "description": "Prerrequisitos compartidos y servicios base." },
+    "vital": { "label": "V1: Actividades vitales", "description": "Restaurar las actividades vitales después de sus prerrequisitos." },
+    "priority": { "label": "V2: Actividades prioritarias", "description": "Restaurar las actividades prioritarias." },
+    "normal": { "label": "V3: Funcionamiento normal", "description": "Volver al funcionamiento normal." }
   }
 }

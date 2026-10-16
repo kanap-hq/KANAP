@@ -41,7 +41,7 @@ En la parte superior hay cinco cifras agrupadas. Describen toda la flota, no un 
 - **Acciones hoy**: cuántas propuestas se ejecutaron realmente hoy (aprobadas y aplicadas, o aplicadas automáticamente).
 - **Aceptación**: la proporción de propuestas decididas que se aprobaron en lugar de rechazarse. Muestra **Datos insuficientes** hasta que haya suficiente historial de decisiones para ser significativa.
 - **Descartadas**: la proporción de propuestas revisadas por una persona que se apartaron en lugar de aprobarse o rechazarse. Un descarte no penaliza al agente; por eso un valor persistentemente alto suele apuntar a un problema de segmentación (el agente está recogiendo tickets que no debería gestionar) más que a una mala calidad de las respuestas; corríjalo en la segmentación del agente. También muestra **Datos insuficientes** hasta que haya suficiente historial de revisión.
-- **Coste — hoy / 7 días**: lo que sus agentes cuestan realmente en gasto de IA, en EUR: el total de hoy y el de los siete días anteriores (hoy incluido). Cubre **todos** los agentes del espacio de trabajo, tanto de servicio como de supervisión, por lo que es la cifra que hay que consultar cuando quiere saber lo que le cuesta la flota, sin más. Las cifras económicas por agente (coste por ticket, topes por ejecución y diarios) están en las pestañas **Rendimiento y autonomía** y **Configuración** de cada agente.
+- **Coste: hoy / 7 días**: lo que sus agentes cuestan realmente en gasto de IA, en EUR: el total de hoy y el de los siete días anteriores (hoy incluido). Cubre **todos** los agentes del espacio de trabajo, tanto de servicio como de supervisión, por lo que es la cifra que hay que consultar cuando quiere saber lo que le cuesta la flota, sin más. Las cifras económicas por agente (coste por ticket, topes por ejecución y diarios) están en las pestañas **Rendimiento y autonomía** y **Configuración** de cada agente.
 
 Considere estas cifras como el estado de salud de la flota, no como la contabilidad por agente. Para las cifras de un solo agente, abra su espacio y use **Rendimiento y autonomía**.
 
@@ -55,8 +55,8 @@ Debajo del panel, la sección **Flota** muestra una tarjeta por agente. Cada tar
 
 | Estado | Color | Qué significa |
 | --- | --- | --- |
-| **Vigilancia — con aprobación** | Verde | Vigila por su cuenta, pero todo tipo de acción sigue dirigiéndose a usted para su aprobación. |
-| **Vigilancia — parcialmente automática** | Verde | Vigila, con al menos un tipo de acción promovido para ejecutarse sin aprobación. El resto sigue preguntando primero. |
+| **Vigilancia (con aprobación)** | Verde | Vigila por su cuenta, pero todo tipo de acción sigue dirigiéndose a usted para su aprobación. |
+| **Vigilancia (parcialmente automática)** | Verde | Vigila, con al menos un tipo de acción promovido para ejecutarse sin aprobación. El resto sigue preguntando primero. |
 | **Prueba** | Azul | Encendido, pero sin vigilar: el modo **Solo manual**. Se ejecuta cuando usted lo comprueba o lo prueba manualmente, nunca por su cuenta. |
 | **Pausado** | Rojo | Retenido por una pausa de emergencia (de todo el espacio de trabajo o solo de este agente). Las comprobaciones y las escrituras pendientes quedan congeladas hasta que se levanta la pausa. |
 | **No iniciado** | Gris | Creado pero nunca ejecutado. Aquí es donde empieza cada agente nuevo. |

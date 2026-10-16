@@ -22,7 +22,7 @@ Justo debajo del nombre del agente hay una barra estrecha de controles, alineada
 
 ### El control de modo de funcionamiento
 
-El primer control es el agente en sí. Cerrado, muestra su estado real como un punto de color y una etiqueta: **Vigilancia — con aprobación**, **Vigilancia — parcialmente automática**, **Prueba**, **Desactivado**, **Pausado**, **No iniciado** o **Archivado**. Ábralo (los administradores, en un agente que no esté ni pausado ni archivado) y le ofrece los tres modos de funcionamiento:
+El primer control es el agente en sí. Cerrado, muestra su estado real como un punto de color y una etiqueta: **Vigilancia (con aprobación)**, **Vigilancia (parcialmente automática)**, **Prueba**, **Desactivado**, **Pausado**, **No iniciado** o **Archivado**. Ábralo (los administradores, en un agente que no esté ni pausado ni archivado) y le ofrece los tres modos de funcionamiento:
 
 | Modo | Qué significa |
 | --- | --- |

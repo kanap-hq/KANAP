@@ -169,7 +169,7 @@
       "hints": {
         "apiKey": "Cree una en PRTG en Configuración → Claves API. Basta con acceso de solo lectura.",
         "apiKeyExisting": "Ya hay una clave API guardada. Déjelo en blanco para conservarla.",
-        "requestTimeout": "Cuánto tiempo espera KANAP la respuesta de PRTG en cada solicitud (5–120 segundos). Auméntelo si las comprobaciones de alertas fallan por tiempo de espera en un servidor PRTG grande o lento. Déjelo vacío para el valor predeterminado (30).",
+        "requestTimeout": "Cuánto tiempo espera KANAP la respuesta de PRTG en cada solicitud (de 5 a 120 segundos). Auméntelo si las comprobaciones de alertas fallan por tiempo de espera en un servidor PRTG grande o lento. Déjelo vacío para el valor predeterminado (30).",
         "baseUrl": "La dirección de la interfaz web de su PRTG, p. ej. https://prtg.example.com",
         "timezone": "La zona horaria en la que funciona su servidor PRTG, para leer correctamente las marcas de tiempo de las alertas."
       },
@@ -177,8 +177,8 @@
         "loadFailed": "No se pudo cargar la integración de monitorización.",
         "nextStep": "Ahora se puede crear un agente de monitorización SRE desde la página de agentes.",
         "testFailed": "La prueba de conexión con PRTG ha fallado.",
-        "testSuccess_one": "Conectado — PRTG {{version}}, {{count}} sensor visible",
-        "testSuccess_other": "Conectado — PRTG {{version}}, {{count}} sensores visibles"
+        "testSuccess_one": "Conectado: PRTG {{version}}, {{count}} sensor visible",
+        "testSuccess_other": "Conectado: PRTG {{version}}, {{count}} sensores visibles"
       },
       "placeholders": {
         "apiKeySaved": "Clave API guardada (déjelo en blanco para conservarla)",
@@ -191,7 +191,7 @@
         "disabled": "Desactivado",
         "notConfigured": "Sin configurar"
       },
-      "title": "Monitorización — PRTG"
+      "title": "Monitorización: PRTG"
     },
     "sections": {
       "features": "Funcionalidades",
@@ -580,7 +580,7 @@
       }
     },
     "exportTitle": "Exportar plantilla {{code}} {{version}}",
-    "importTitle": "Importar CSV de plantilla — {{code}} {{version}}",
+    "importTitle": "Importar CSV de plantilla: {{code}} {{version}}",
     "shared": {
       "allCountries": "Todos los países",
       "no": "No",
