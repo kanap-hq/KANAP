@@ -131,7 +131,7 @@
     "managedDoc": "Verwaltetes Dokument",
     "recommended": "Empfohlen",
     "openCalendar": "Kalender öffnen",
-    "datePlaceholder": "tt/mm/jjjj",
+    "datePlaceholder": "TT.MM.JJJJ",
     "time": "Uhrzeit",
     "timePlaceholder": "hh:mm",
     "requiredTag": "(erforderlich)",

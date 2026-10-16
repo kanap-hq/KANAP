@@ -124,7 +124,7 @@ Jede Änderung speichert sich selbst: Auswahllisten und Daten sofort, eingetippt
 **Lebenszyklus**:
 
 - Ein Wechsel auf **Deaktiviert** setzt das Ende der Gültigkeit auf jetzt: Die Deaktivierung gilt sofort. Solange ein zukünftiges Datum gesetzt ist, zeigt der Schalter **Aktiv bis** und dieses Datum. Zurück auf **Aktiviert** entfernt das Ende der Gültigkeit
-- **Ende der Gültigkeit**: Geben Sie ein Datum ein (TT/MM/JJJJ) oder nutzen Sie den Kalender. Leer lassen, damit der Vertrag aktiv bleibt
+- **Ende der Gültigkeit**: Geben Sie ein Datum ein (TT.MM.JJJJ) oder nutzen Sie den Kalender. Leer lassen, damit der Vertrag aktiv bleibt
 - **Stillschweigende Verlängerung** folgt eigenen Regeln, wenn der Vertrag bereits verlängert wurde oder auf eine Entscheidung wartet. Siehe [Stillschweigende Verlängerung beenden oder wieder aktivieren](#stillschweigende-verlangerung-beenden-oder-wieder-aktivieren)
 
 Zum Bearbeiten benötigen Sie `contracts:member`. Leser sehen dieselbe Seite mit gesperrten Feldern.
