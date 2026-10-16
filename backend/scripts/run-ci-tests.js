@@ -57,6 +57,12 @@
  *     discovered).
  * A spec can still be run alone from its source: `npx ts-node <spec>.ts`.
  *
+ * The runner never stops a spec: it sets no time limit and sends no signal. A
+ * spec that dies from a signal (SIGKILL with no output of its own) was stopped
+ * from outside, by the kernel's OOM killer (`journalctl -k`, `oom_kill` in
+ * /proc/vmstat) or by another process. The runner names the signal and repeats
+ * the spec's last lines of output in the final list of failures.
+ *
  * The race specs (`*-race.integration.spec.ts`) refuse a developer's `appdb`
  * (race-harness.ts). They run on the lane databases, which are throwaway
  * copies; on a single lane against `appdb` outside GitHub Actions they are
@@ -267,6 +273,18 @@ async function prepareLanes(count) {
   }
 }
 
+/** How a spec failed: its exit code, or the signal that stopped it (the runner sends none). */
+function failure({ code, signal }) {
+  return signal ? `killed by ${signal} from outside the spec` : `exit ${code}`;
+}
+
+/** The last lines a spec printed (colours removed), or a word saying it printed none. */
+function lastLines(output, count = 5) {
+  // eslint-disable-next-line no-control-regex
+  const lines = output.replace(/\x1b\[[0-9;]*m/g, '').split('\n').map((line) => line.trimEnd()).filter(Boolean);
+  return lines.length ? lines.slice(-count) : ['(no output)'];
+}
+
 function runSpec(file, { databaseUrl, tag }) {
   return new Promise((resolve) => {
     const started = Date.now();
@@ -282,11 +300,10 @@ function runSpec(file, { databaseUrl, tag }) {
     child.stderr.on('data', (c) => chunks.push(c));
     child.on('close', (code, signal) => {
       const seconds = (Date.now() - started) / 1000;
-      // A spec stopped by a signal prints nothing of its own: the signal says who stopped it
-      // (SIGKILL with no output is usually the kernel reclaiming memory).
-      const status = code === 0 ? 'ok' : signal ? `FAILED (killed by ${signal})` : `FAILED (exit ${code})`;
-      process.stdout.write(`\n── ${file} · ${seconds.toFixed(1)}s · ${status} · ${tag}\n${Buffer.concat(chunks)}`);
-      resolve({ file, code, seconds, started, ended: Date.now() });
+      const output = Buffer.concat(chunks).toString();
+      const status = code === 0 ? 'ok' : `FAILED (${failure({ code, signal })})`;
+      process.stdout.write(`\n── ${file} · ${seconds.toFixed(1)}s · ${status} · ${tag}\n${output}`);
+      resolve({ file, code, signal, seconds, started, ended: Date.now(), last: lastLines(output) });
     });
   });
 }
@@ -422,7 +439,10 @@ async function main() {
   }
   if (failed.length) {
     console.log('Failed:');
-    for (const r of failed) console.log(`  - ${r.file}`);
+    for (const r of failed) {
+      console.log(`  - ${r.file} (${failure(r)}, after ${r.seconds.toFixed(1)}s), last output:`);
+      for (const line of r.last) console.log(`      ${line.slice(0, 300)}`);
+    }
     process.exit(1);
   }
 }
@@ -434,4 +454,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { databaseName, racesRefused, RACE_SPEC, compiledPath, laneUrl, exclusiveReason, prepareLanes, EXCLUSIVE_PATTERNS, DB_PATTERN };
+module.exports = { failure, lastLines, databaseName, racesRefused, RACE_SPEC, compiledPath, laneUrl, exclusiveReason, prepareLanes, EXCLUSIVE_PATTERNS, DB_PATTERN };

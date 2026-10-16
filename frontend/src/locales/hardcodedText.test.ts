@@ -38,7 +38,8 @@ function branchTexts(node: ts.Expression): string[] {
 }
 
 function hardcodedTexts(file: string, source: string): string[] {
-  const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  // No parent links: `getText(sf)` reads positions only, and the walk goes down from the root.
+  const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, false, ts.ScriptKind.TSX);
   const found: string[] = [];
   const visit = (node: ts.Node) => {
     if (node.kind === ts.SyntaxKind.JsxText) {
@@ -84,7 +85,9 @@ describe('hard-coded texts in components', () => {
         : [];
     });
     expect(offenders).toEqual([]);
-  });
+    // It parses every component of the app (about 2 s alone): the default 5 s fails it when other
+    // suites share the machine.
+  }, 30_000);
 
   // A picker with a hidden label still needs its field's name: without `label` it falls back to a
   // generic one ("Company", "Cost center") that may not be the field's ("Parent group").
@@ -106,7 +109,7 @@ describe('hard-coded texts in components', () => {
       return found;
     });
     expect(offenders).toEqual([]);
-  });
+  }, 30_000);
 
   // A text that trails off ("Loading...") is written with the ellipsis character in the locale
   // files. Three dots at the end of a string in component code is a text that skipped i18n.
@@ -125,5 +128,5 @@ describe('hard-coded texts in components', () => {
       return found;
     });
     expect(offenders).toEqual([]);
-  });
+  }, 30_000);
 });
