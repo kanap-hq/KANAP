@@ -25,6 +25,8 @@ export type VulnerabilityFilters = {
 };
 
 const CVE_RE = /^CVE-\d{4}-\d{4,}$/;
+/** At most this many CVE in one exported file. */
+const EXPORT_LIMIT = 10000;
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 const SEVERITY_ORDER = `CASE c.severity WHEN 'critical' THEN 5 WHEN 'high' THEN 4 WHEN 'medium' THEN 3 WHEN 'low' THEN 2 WHEN 'none' THEN 1 ELSE 0 END`;
 
@@ -122,6 +124,17 @@ function groupByTechnology(rows: Row[]) {
   return list.sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
 }
 
+/** The rows of each CVE, in their order. */
+function rowsByCve(rows: Row[]): Map<string, Row[]> {
+  const byCve = new Map<string, Row[]>();
+  for (const r of rows) {
+    const list = byCve.get(r.cve_id);
+    if (list) list.push(r);
+    else byCve.set(r.cve_id, [r]);
+  }
+  return byCve;
+}
+
 const rowKey = (technologyId: string, versionId: string | null) => `${technologyId}|${versionId ?? ''}`;
 
 /**
@@ -160,13 +173,21 @@ export class VulnerabilitiesService {
     const technologies = commaList(filters.technology);
     if (technologies.length) {
       const ids: string[] = [];
-      for (const ref of technologies) ids.push((await readTechnology(mg, tenantId, ref)).id);
+      for (const ref of technologies) {
+        try {
+          ids.push((await readTechnology(mg, tenantId, ref)).id);
+        } catch (error) {
+          if (error instanceof NotFoundException) throw new BadRequestException(`technology ${ref} is not a technology of this workspace.`);
+          throw error;
+        }
+      }
       where.push(`tv.technology_id = ANY(${push(ids)}::uuid[])`);
     }
     for (const [key, op] of [['from', '>='], ['to', '<']] as const) {
       const value = String(filters[key] ?? '').trim();
       if (!value) continue;
-      if (!DAY_RE.test(value) || Number.isNaN(Date.parse(value))) throw new BadRequestException(`${key} must be a day (YYYY-MM-DD).`);
+      // A real day: `2026-02-31` parses in JavaScript but not in PostgreSQL.
+      if (!DAY_RE.test(value) || Number.isNaN(Date.parse(value)) || new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) !== value) throw new BadRequestException(`${key} must be a day (YYYY-MM-DD).`);
       // `to` is inclusive: before the next day.
       where.push(key === 'from' ? `c.published_at ${op} ${push(value)}::date` : `c.published_at ${op} (${push(value)}::date + 1)`);
     }
@@ -231,7 +252,9 @@ export class VulnerabilitiesService {
     const servers = new Map<string, typeof assets>();
     for (const a of assets) {
       const key = rowKey(a.technology_id, a.technology_version_id);
-      servers.set(key, [...(servers.get(key) ?? []), a]);
+      const list = servers.get(key);
+      if (list) list.push(a);
+      else servers.set(key, [a]);
     }
     if (!applications) return { servers, apps: null };
     const reached = await this.reach.applicationsOfTechnologies(mg, tenantId, techIds);
@@ -240,7 +263,9 @@ export class VulnerabilitiesService {
     for (const a of reached) {
       if (!visible.has(a.application_id)) continue;
       const key = rowKey(a.technology_id, a.technology_version_id);
-      apps.set(key, [...(apps.get(key) ?? []), a]);
+      const list = apps.get(key);
+      if (list) list.push(a);
+      else apps.set(key, [a]);
     }
     return { servers, apps };
   }
@@ -265,8 +290,12 @@ export class VulnerabilitiesService {
 
   private async listWithRows(filters: VulnerabilityFilters, opts: VulnOpts, applications: ApplicationsAccess, paging: boolean) {
     const { manager: mg, tenantId } = opts;
-    const limit = paging ? Math.min(Math.max(Number(filters.limit) || 50, 1), 200) : 10000;
-    const offset = paging ? Math.max(Number(filters.offset) || 0, 0) : 0;
+    const whole = (value: unknown, fallback: number, max: number) => {
+      const n = Math.floor(Number(value));
+      return Number.isFinite(n) ? Math.min(Math.max(n, 0), max) : fallback;
+    };
+    const limit = paging ? Math.max(whole(filters.limit, 50, 200), 1) : EXPORT_LIMIT;
+    const offset = paging ? whole(filters.offset, 0, 1_000_000_000) : 0;
     const params: unknown[] = [tenantId];
     const where = await this.filterSql(mg, tenantId, filters, params);
     const page: Array<{ cve_id: string; total: string }> = await mg.query(
@@ -278,21 +307,25 @@ export class VulnerabilitiesService {
       params,
     );
     const total = Number(page[0]?.total ?? 0);
+    if (!paging && total > EXPORT_LIMIT) {
+      throw new BadRequestException(`More than ${EXPORT_LIMIT} vulnerabilities match: narrow the filters to export them.`);
+    }
     const ids = page.map((p) => p.cve_id);
-    if (ids.length === 0) return { items: [], total, limit, offset, rows: [] as Row[], reach: null };
+    if (ids.length === 0) return { items: [], total, limit, offset, byCve: new Map<string, Row[]>(), reach: null };
     params.push(ids);
     const rows = await this.rowsOf(mg, tenantId, `${where} AND tv.cve_id = ANY($${params.length}::text[])`, params);
     const cves = await this.cves(mg, ids);
     const reach = await this.reachOf(mg, tenantId, rows, applications);
+    const byCve = rowsByCve(rows);
     const items = ids.map((id) => {
-      const cveRows = rows.filter((r) => r.cve_id === id);
+      const cveRows = byCve.get(id) ?? [];
       return {
         ...presentCve(cves.get(id)!),
         technologies: groupByTechnology(cveRows),
         ...this.counts(cveRows, reach),
       };
     });
-    return { items, total, limit, offset, rows, reach };
+    return { items, total, limit, offset, byCve, reach };
   }
 
   /** One CVE: its record, the technologies and versions it concerns, the servers and applications reached. */
@@ -410,7 +443,7 @@ export class VulnerabilitiesService {
       `SELECT id, technology_id, technology_version_id, cve_id, state, note, state_changed_by, state_changed_at
          FROM technology_vulnerabilities
         WHERE tenant_id = $1 AND technology_id = $2 AND cve_id = $3 ${versionSql}
-        ORDER BY id FOR UPDATE`,
+        ORDER BY technology_version_id NULLS LAST FOR UPDATE`, // the order of the matching: (technology, version, CVE)
       params,
     );
     if (before.length === 0) throw new NotFoundException('Vulnerability not found');
@@ -462,7 +495,7 @@ export class VulnerabilitiesService {
     const lines: string[][] = [];
     for (const item of result.items) {
       const cve = cves.get(item.cve_id);
-      const cveRows = (result.rows ?? []).filter((r) => r.cve_id === item.cve_id);
+      const cveRows = result.byCve.get(item.cve_id) ?? [];
       for (const r of cveRows) {
         const counts = this.counts([r], result.reach!);
         lines.push([

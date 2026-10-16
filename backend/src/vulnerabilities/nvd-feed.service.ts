@@ -80,6 +80,8 @@ export function parseNvdCve(cve: any): ParsedCve | null {
   if (status !== 'Rejected') {
     for (const config of Array.isArray(cve?.configurations) ? cve.configurations : []) {
       for (const node of Array.isArray(config?.nodes) ? config.nodes : []) {
+        // A negated node lists what is NOT affected: never read as a vulnerable product.
+        if (node?.negate === true) continue;
         for (const match of Array.isArray(node?.cpeMatch) ? node.cpeMatch : []) {
           const criteria = String(match?.criteria ?? '');
           const parsed = cpeProduct(criteria);
@@ -168,18 +170,27 @@ class HttpError extends Error {
 }
 
 /**
+ * A failure of the service rather than of one product: no answer, a timeout, a server error, or a
+ * refusal of the cadence (403, 429) after the retries. A 400 or a 404 is the product's own error.
+ */
+function serviceFailure(error: unknown): boolean {
+  return !(error instanceof HttpError) || [403, 408, 429].includes(error.status) || error.status >= 500;
+}
+
+/**
  * The NVD feed (lot T6a): fills the platform cache (`vulnerability_cves`,
  * `vulnerability_cve_matches`) for the CPE products the tenants follow, then matches every tenant.
  *
- * - Products: the union of the `cpe_products` of every tenant in use, read tenant by tenant under
- *   its own context; the cache and the feed's progress (`vulnerability_feed_products`) name no tenant.
- * - Per product: the CVE modified in the last 120 days at the first pass, then from the last
- *   success (an hour of overlap), in windows of at most 120 days (`lastModStartDate` /
- *   `lastModEndDate`), 2,000 per page (`startIndex`). Each window that completes moves the product's
+ * - Products: the union of the `cpe_products` of the technologies not retired of every tenant in
+ *   use, read tenant by tenant under its own context; the cache and the feed's progress (`vulnerability_feed_products`) name no tenant.
+ * - Per product: every CVE at the first pass (pages only, no date), then the CVE modified since
+ *   the last success (an hour of overlap), in windows of at most 120 days (`lastModStartDate` /
+ *   `lastModEndDate`), 2,000 per page (`startIndex`). Products tried longest ago go first. Each window that completes moves the product's
  *   `last_success_at`: a failure resumes from there at the next run.
  * - Cadence: one request per 6 s without a key, per 0.6 s with `NVD_API_KEY` (the rolling 30 s
  *   window of the NVD); a refused or failed request is tried three times (30 s, then 60 s later);
- *   after two products failed in a row, the others wait for the next run.
+ *   after two products failed in a row for a failure of the service (no answer, 5xx, 403, 429),
+ *   the others wait for the next run; a 400 or 404 stays the product's own error.
  * - A CVE without CPE configuration yet (frequent since 2024) is kept with no criterion: it matches
  *   at the run that follows its analysis, when its `lastModified` brings it back.
  * Scheduled task `vulnerability-feed` (model: `cleanup/lifecycle-status-sync.service.ts`),
@@ -220,7 +231,8 @@ export class NvdFeedService implements OnModuleInit {
     const products = new Set<string>();
     for (const tenantId of await this.tenantIds()) {
       const rows: Array<{ product: string }> = await withTenant(this.dataSource, tenantId, (mg) => mg.query(
-        `SELECT DISTINCT lower(p) AS product FROM technologies t, unnest(t.cpe_products) AS p WHERE t.tenant_id = $1`,
+        `SELECT DISTINCT lower(p) AS product FROM technologies t, unnest(t.cpe_products) AS p
+          WHERE t.tenant_id = $1 AND t.lifecycle <> 'retired'`,
         [tenantId],
       ));
       for (const row of rows) products.add(row.product);
@@ -251,13 +263,25 @@ export class NvdFeedService implements OnModuleInit {
   /** Fills the cache for every followed product; a product that fails is retried at the next run. */
   async collect(runtime: FeedRuntime = defaultRuntime()): Promise<FeedSummary> {
     const summary: FeedSummary = { products: 0, requests: 0, cves: 0, failed_products: [], errors: [], tenants_matched: 0, rows_added: 0, rows_removed: 0 };
-    const products = await this.followedProducts();
+    const followed = await this.followedProducts();
+    // The products tried longest ago first, never tried first of all: a product that fails does not
+    // keep the head of the list, and every product gets its turn when a run stops early.
+    const attempts: Array<{ product: string; last_attempt_at: Date | null }> = followed.length
+      ? await this.dataSource.query(`SELECT product, last_attempt_at FROM vulnerability_feed_products WHERE product = ANY($1::text[])`, [followed])
+      : [];
+    const lastAttempt = new Map(attempts.map((a) => [a.product, a.last_attempt_at ? new Date(a.last_attempt_at).getTime() : null]));
+    const products = [...followed].sort((a, b) => {
+      const x = lastAttempt.get(a) ?? null;
+      const y = lastAttempt.get(b) ?? null;
+      if (x !== y) return x === null ? -1 : y === null ? 1 : x - y;
+      return a.localeCompare(b);
+    });
     summary.products = products.length;
     let failedInARow = 0;
     for (const product of products) {
       if (failedInARow >= 2) {
         // The NVD (or the mirror) is down: the remaining products wait for the next run instead of
-        // spending their retries one after the other.
+        // spending their retries one after the other. Only failures of the service count here.
         summary.failed_products.push(product);
         continue;
       }
@@ -265,7 +289,7 @@ export class NvdFeedService implements OnModuleInit {
         await this.collectProduct(product, runtime, summary);
         failedInARow = 0;
       } catch (error: any) {
-        failedInARow += 1;
+        failedInARow = serviceFailure(error) ? failedInARow + 1 : 0;
         const message = String(error?.message ?? error).slice(0, 500);
         summary.failed_products.push(product);
         summary.errors.push(`${product}: ${message}`);
@@ -287,28 +311,36 @@ export class NvdFeedService implements OnModuleInit {
       [product],
     );
     const end = runtime.now();
-    let start = state?.last_success_at
-      ? Math.max(new Date(state.last_success_at).getTime() - OVERLAP_MS, end - 10 * 365 * DAY_MS)
-      : end - NVD_MAX_WINDOW_MS;
+    const markSuccess = (at: number) => this.dataSource.query(
+      `INSERT INTO vulnerability_feed_products (product, last_success_at, last_attempt_at, last_error) VALUES ($1, $2, now(), NULL)
+       ON CONFLICT (product) DO UPDATE SET last_success_at = EXCLUDED.last_success_at, last_attempt_at = now(), last_error = NULL`,
+      [product, new Date(at)],
+    );
+    if (!state?.last_success_at) {
+      // First pass of a product: all its CVE, whatever their age, by pages only.
+      await this.collectWindow(product, null, null, runtime, summary);
+      await markSuccess(end);
+      return;
+    }
+    let start = Math.max(new Date(state.last_success_at).getTime() - OVERLAP_MS, end - 10 * 365 * DAY_MS);
     while (start < end) {
       const windowEnd = Math.min(start + NVD_MAX_WINDOW_MS, end);
       await this.collectWindow(product, new Date(start), new Date(windowEnd), runtime, summary);
-      await this.dataSource.query(
-        `INSERT INTO vulnerability_feed_products (product, last_success_at, last_attempt_at, last_error) VALUES ($1, $2, now(), NULL)
-         ON CONFLICT (product) DO UPDATE SET last_success_at = EXCLUDED.last_success_at, last_attempt_at = now(), last_error = NULL`,
-        [product, new Date(windowEnd)],
-      );
+      await markSuccess(windowEnd);
       start = windowEnd;
     }
   }
 
-  private async collectWindow(product: string, from: Date, to: Date, runtime: FeedRuntime, summary: FeedSummary): Promise<void> {
+  /** The CVE of the product modified between `from` and `to`, or all of them (`null`), page by page. */
+  private async collectWindow(product: string, from: Date | null, to: Date | null, runtime: FeedRuntime, summary: FeedSummary): Promise<void> {
     let startIndex = 0;
     for (;;) {
       const url = new URL(runtime.baseUrl);
       url.searchParams.set('virtualMatchString', `cpe:2.3:${product}:*:*:*:*:*:*:*:*`);
-      url.searchParams.set('lastModStartDate', from.toISOString());
-      url.searchParams.set('lastModEndDate', to.toISOString());
+      if (from && to) {
+        url.searchParams.set('lastModStartDate', from.toISOString());
+        url.searchParams.set('lastModEndDate', to.toISOString());
+      }
       url.searchParams.set('resultsPerPage', String(PAGE_SIZE));
       url.searchParams.set('startIndex', String(startIndex));
       const page = await this.request(url, runtime, summary);
@@ -341,8 +373,7 @@ export class NvdFeedService implements OnModuleInit {
         return await response.json();
       } catch (error) {
         lastError = error;
-        const retryable = !(error instanceof HttpError) || [403, 408, 429].includes(error.status) || error.status >= 500;
-        if (!retryable || attempt === ATTEMPTS) break;
+        if (!serviceFailure(error) || attempt === ATTEMPTS) break;
         await runtime.sleep(runtime.retryDelayMs * attempt);
       }
     }

@@ -390,7 +390,7 @@ The NVD feed needs the way out to the NVD (`https://services.nvd.nist.gov`) or t
 |------|------|------|----------|
 | `config/features.ts` | 19 | `VULNERABILITY_FEED_ENABLED` | Env value when set, otherwise `!SINGLE_TENANT` |
 | `vulnerabilities/vulnerabilities.controller.ts` | 19 | `VulnerabilityFeedGuard` on `/vulnerabilities/*` and `/technologies/:id/vulnerabilities/*` | 403 `FEATURE_DISABLED` when off |
-| `vulnerabilities/nvd-feed.service.ts` | 200 | `vulnerability-feed` scheduled task (default every 6 hours, minute 20) | Registered only when on: no request leaves for the NVD otherwise |
+| `vulnerabilities/nvd-feed.service.ts` | 212 | `vulnerability-feed` scheduled task (default every 6 hours, minute 20) | Registered only when on: no request leaves for the NVD otherwise |
 | `config/config.controller.ts` | 24 | `vulnerabilityFeed` | `Features.VULNERABILITY_FEED_ENABLED` in `GET /config/public` |
 
 #### Outbound target guard (`backend/src/common/ssrf-guard.ts`)

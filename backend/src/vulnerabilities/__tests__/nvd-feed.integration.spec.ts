@@ -103,12 +103,13 @@ async function testFirstPassPagination() {
       ? { status: 200, body: { totalResults: 3, vulnerabilities: [cveItem('CVE-2098-20001', ALPHA), cveItem('CVE-2098-20002', null)] } }
       : { status: 200, body: { totalResults: 3, vulnerabilities: [cveItem('CVE-2098-20003', ALPHA)] } };
   };
+  const startedAt = clock;
   const summary = await feed().collect(runtime());
   assert.equal(summary.requests, 3, 'two pages for alpha, one for beta');
   assert.deepEqual(seen.map((s) => [s.product, s.startIndex]), [[ALPHA, 0], [ALPHA, 2], [BETA, 0]]);
   assert.equal(seen[0].perPage, '2000');
   assert.equal(seen[0].apiKey, 'spec-key', 'the key goes in the apiKey header');
-  assert.equal(seen[0].end - seen[0].start, NVD_MAX_WINDOW_MS, 'first pass: the last 120 days');
+  assert.ok(Number.isNaN(seen[0].start) && Number.isNaN(seen[0].end), 'first pass: every CVE of the product, no dates');
   assert.ok(NVD_MAX_WINDOW_MS <= 120 * DAY);
   assert.deepEqual(sleeps, [600, 600], 'one request per 0.6 s with a key');
   assert.equal(summary.cves, 3);
@@ -118,7 +119,7 @@ async function testFirstPassPagination() {
   );
   assert.deepEqual(matches.map((m: any) => [m.cve_id, m.n]), [['CVE-2098-20001', 1], ['CVE-2098-20002', 0], ['CVE-2098-20003', 1]],
     'a CVE without configuration is kept, with no criterion');
-  assert.equal(new Date((await lastSuccess(ALPHA))!.last_success_at!).getTime(), seen[0].end, 'the last success is the end of the window read');
+  assert.equal(new Date((await lastSuccess(ALPHA))!.last_success_at!).getTime(), startedAt, 'the last success is the start of the pass');
 }
 
 async function testIncremental() {
@@ -156,7 +157,7 @@ async function testErrorAndResume() {
   };
   const resumed = await feed().collect(runtime());
   assert.deepEqual(resumed.failed_products, []);
-  assert.equal(seen[0].start, new Date(before!.last_success_at!).getTime() - 60 * 60 * 1000, 'resumes from the last success');
+  assert.equal(seen.find((x) => x.product === ALPHA)!.start, new Date(before!.last_success_at!).getTime() - 60 * 60 * 1000, 'resumes from the last success');
   assert.equal((await lastSuccess(ALPHA))!.last_error, null);
 }
 
@@ -165,9 +166,30 @@ async function testNvdDown() {
   const gamma = 'a:kanapspec:gamma';
   handler = () => ({ status: 503 });
   const summary = await feed([ALPHA, BETA, gamma]).collect(runtime());
-  assert.deepEqual(seen.map((s) => s.product), [ALPHA, ALPHA, ALPHA, BETA, BETA, BETA], 'gamma is not asked');
-  assert.deepEqual(summary.failed_products, [ALPHA, BETA, gamma]);
+  assert.equal(seen[0].product, gamma, 'a product never tried goes first');
+  assert.equal(seen.length, 6, 'three attempts for each of two products');
+  assert.equal(new Set(seen.map((x) => x.product)).size, 2, 'the third product is not asked');
+  assert.deepEqual([...summary.failed_products].sort(), [ALPHA, BETA, gamma].sort());
   assert.match(summary.errors.join(' | '), /Stopped after two products failed in a row: 1 product/);
+
+  // The product left aside goes first at the next run.
+  const asked = new Set(seen.map((x) => x.product));
+  const leftAside = [ALPHA, BETA, gamma].find((p) => !asked.has(p));
+  reset();
+  handler = () => ({ status: 200, body: { totalResults: 0, vulnerabilities: [] } });
+  await feed([ALPHA, BETA, gamma]).collect(runtime());
+  assert.equal(seen[0].product, leftAside);
+}
+
+async function testProductErrorsDoNotStop() {
+  reset();
+  const [bad1, bad2, good] = ['a:kanapspec:bad1', 'a:kanapspec:bad2', 'a:kanapspec:good'];
+  handler = (x) => (x.product === good ? { status: 200, body: { totalResults: 0, vulnerabilities: [] } } : { status: 404 });
+  const summary = await feed([bad1, bad2, good]).collect(runtime());
+  assert.deepEqual(seen.map((x) => x.product), [bad1, bad2, good], 'a 404 is not retried and does not stop the run');
+  assert.deepEqual(summary.failed_products, [bad1, bad2]);
+  assert.ok((await lastSuccess(good))?.last_success_at, 'the healthy product is collected');
+  assert.match((await lastSuccess(bad1))?.last_error ?? '', /HTTP 404/);
 }
 
 async function testLongGap() {
@@ -191,7 +213,13 @@ async function testRunMatchesTenants() {
   try {
     const technologyId = await withTenant(dataSource, tenant.id, async (mg) => {
       const [tech] = await mg.query(`INSERT INTO technologies (tenant_id, item_number, name, cpe_products) VALUES ($1, 1, 'Alpha', ARRAY[$2]) RETURNING id`, [tenant.id, ALPHA]);
-      await mg.query(`INSERT INTO technology_versions (tenant_id, technology_id, label) VALUES ($1, $2, '1.4'), ($1, $2, '2.1')`, [tenant.id, tech.id]);
+      const versions = await mg.query(
+        `INSERT INTO technology_versions (tenant_id, technology_id, label) VALUES ($1, $2, '1.4'), ($1, $2, '2.1') RETURNING id`, [tenant.id, tech.id],
+      );
+      const [server] = await mg.query(`INSERT INTO assets (tenant_id, name, kind, environment) VALUES ($1, 'Alpha server', 'vm', 'prod') RETURNING id`, [tenant.id]);
+      for (const v of versions) {
+        await mg.query(`INSERT INTO asset_technologies (tenant_id, asset_id, technology_id, technology_version_id) VALUES ($1, $2, $3, $4)`, [tenant.id, server.id, tech.id, v.id]);
+      }
       return tech.id as string;
     });
     clock += DAY;
@@ -207,6 +235,7 @@ async function testRunMatchesTenants() {
   } finally {
     await withTenant(dataSource, tenant.id, async (mg) => {
       await mg.query(`DELETE FROM technologies WHERE tenant_id = $1`, [tenant.id]);
+      await mg.query(`DELETE FROM assets WHERE tenant_id = $1`, [tenant.id]);
     });
     await dataSource.query(`DELETE FROM tenants WHERE id = $1`, [tenant.id]);
   }
@@ -222,6 +251,7 @@ async function main() {
       ['incremental', testIncremental],
       ['error and resume', testErrorAndResume],
       ['NVD down: the run stops early', testNvdDown],
+      ['product errors do not stop the run', testProductErrorsDoNotStop],
       ['windows of at most 120 days', testLongGap],
       ['matching after a run', testRunMatchesTenants],
       ['clean end', cleanup],
