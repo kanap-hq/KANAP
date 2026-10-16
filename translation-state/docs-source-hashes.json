@@ -1,6 +1,6 @@
 {
   "files": {
-    "admin.md": "5c39e154ac6c73fb06ab74e7cc1925b6",
+    "admin.md": "8ecfb68fa7ca236b305b2710430f897b",
 
     "agents-activity.md": "21ee59e63955c7e47568f162a1ec4b51",
 
@@ -22,9 +22,9 @@
 
     "analytics.md": "c2f48da672634a963b4ab8d7b822e06a",
 
-    "applications.md": "100d420bc4fdef1876de419bc1e67844",
+    "applications.md": "55fa59d0042afaef4796cbfef9f57a97",
 
-    "assets.md": "78c268ed8072db9667c6dc0fc054840e",
+    "assets.md": "3bf7e989cba7788b9207a157ca1d9835",
 
     "branding.md": "89014110f2460e59fca29b2bc2064272",
 
@@ -36,9 +36,9 @@
 
     "budget-operations.md": "759813dc1d276a62c7873f51f467d799",
 
-    "business-processes.md": "004e9d1ac49ebf0a92e1ea1ddda07897",
+    "business-processes.md": "a87bc21b04f4dad431852b80e76060aa",
 
-    "chart-of-accounts.md": "88a66dd3732f886e3f87d55d17826ffb",
+    "chart-of-accounts.md": "86cc9f0e1ba460dfe721d779562cdf76",
 
     "companies.md": "fed4024270e9e2be68db90652875962a",
 
@@ -46,7 +46,7 @@
 
     "connection-map.md": "414a6eb72d51725f780134263d775afd",
 
-    "connections.md": "bef93b03b59267f4ac2e7e0555f4e1e6",
+    "connections.md": "5bc0062bd6246ca663e0a52c5e014e81",
 
     "contacts.md": "2fb322fa0779b69abe58c585a01c8d4c",
 
@@ -58,7 +58,7 @@
 
     "currencies.md": "3dbc765b6aef8df3ca30060ec510c3a6",
 
-    "departments.md": "31f3eddb13307369ecd024f9fc4d180a",
+    "departments.md": "e55075da58c5e75a66aaf123d56040eb",
 
     "fast-track/apps-and-assets.md": "4277c68b563febcb8df33c284cc80450",
 
@@ -66,7 +66,7 @@
 
     "fast-track/index.md": "6563fa6dfaa869b07b0297a32845f456",
 
-    "fast-track/task-types.md": "fe56488d2e52ffc7408c7d589bcf5c7c",
+    "fast-track/task-types.md": "10abb0bfb1dafc0fe4619b74d754363f",
 
     "incidents.md": "1112936828a123d4f9af4775898e3d5a",
 
@@ -76,11 +76,11 @@
 
     "interface-map.md": "2f5ed59f682835ff1651ef1187d3e42a",
 
-    "interfaces.md": "3599d32905093a89f205e4bb261b0eeb",
+    "interfaces.md": "8d5289ad702b8f4b7929a7b6ca69e5d9",
 
     "it-ops-settings.md": "5b49ed959f04bba9f065f8192262f5b0",
 
-    "knowledge.md": "f70bdb1df6aa9ed97f952fce78cda5a5",
+    "knowledge.md": "1b050c28addcbf5de529b62223bfeaec",
 
     "locations.md": "727e5ab2c6f3195aa0b9bedb59a324e2",
 
@@ -112,11 +112,11 @@
 
     "portfolio-reporting.md": "b0e345b535fdbc0f9b3358b4927c6043",
 
-    "portfolio-requests.md": "41e1e00d72433a6f119b5f4f3c48254b",
+    "portfolio-requests.md": "323e418feec19eda80a5d51e97d408a7",
 
-    "portfolio-settings.md": "ba0e23d93ba485d0cc6f1136da1c3775",
+    "portfolio-settings.md": "4d741ccd0508434f52ae3df385cfacd4",
 
-    "portfolio-team-members.md": "0c8858a4d2ad7eeedb9cbfac734fff67",
+    "portfolio-team-members.md": "5c09afe8ba330aa1b7871ff8b97e1694",
 
     "reports.md": "ffd24e174e9f40c9836af25854ab89da",
 
@@ -124,9 +124,9 @@
 
     "scheduled-tasks.md": "7f96af09c829079cb9ad97db9f765dbe",
 
-    "suppliers.md": "6d8eed01fde6ebe64e109859e26ca640",
+    "suppliers.md": "64cc144ac8b37f7bbcfa5c60de0abf09",
 
-    "tasks.md": "1be4a6942e29298a776b271e3b9a7165",
+    "tasks.md": "ee8e6e77bb27d9ce4c3211a6d0deda8e",
 
     "working-day-calendars.md": "2f632045f27fa9fff4c295535edb1625"
   },
