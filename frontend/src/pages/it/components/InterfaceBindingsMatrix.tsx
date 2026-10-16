@@ -43,7 +43,7 @@ import { getDotColor, LIFECYCLE_COLORS } from '../../../utils/statusColors';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
-import { legTypeLabel } from '../../../utils/interfaceLegType';
+import { interfaceRouteIntro, legTypeLabel } from '../../../utils/interfaceLegType';
 const ENVIRONMENTS = ['prod', 'pre_prod', 'qa', 'test', 'dev', 'sandbox'] as const;
 // Set to false to restore the previous per-environment tables while evaluating the matrix workflow.
 const USE_RUNTIME_MATRIX_EXPERIMENT = true;
@@ -1808,14 +1808,9 @@ export default function InterfaceBindingsMatrix({
           <Typography variant="body2" color="text.secondary">
             {t('it:workspace.interface.bindings.intro')}
           </Typography>
-          {integrationRouteType === 'via_middleware' && (
+          {interfaceRouteIntro(t, integrationRouteType) && (
             <Typography variant="body2" color="text.secondary">
-              {t('it:workspace.interface.bindings.routeViaMiddleware')}
-            </Typography>
-          )}
-          {integrationRouteType === 'direct' && (
-            <Typography variant="body2" color="text.secondary">
-              {t('it:workspace.interface.bindings.routeDirect')}
+              {interfaceRouteIntro(t, integrationRouteType)}
             </Typography>
           )}
         </Stack>

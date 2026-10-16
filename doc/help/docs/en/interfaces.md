@@ -107,7 +107,7 @@ The Technical tab defines the shared **legs** that make up the interface. Legs a
 
 For each leg you can edit:
 
-- **Leg type**: EXTRACT, TRANSFORM, LOAD, or DIRECT (set automatically based on the integration route)
+- **Leg type**: Extract, Transform, Load, or Direct (set automatically based on the integration route)
 - **From -> To**: Which role handles each step (Source app, Target app, or Middleware)
 - **Trigger type**: What initiates this leg (e.g., scheduled, event-driven, manual)
 - **Pattern**: The integration pattern (e.g., batch, real-time, pub/sub)

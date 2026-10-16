@@ -107,7 +107,7 @@ L'onglet Technique définit les **legs** partagés qui composent l'interface. Le
 
 Pour chaque leg, vous pouvez modifier :
 
-- **Type de leg** : EXTRACT, TRANSFORM, LOAD ou DIRECT (défini automatiquement en fonction de la route d'intégration)
+- **Type de tronçon** : Extraction, Transformation, Chargement ou Direct (défini automatiquement en fonction de la route d'intégration)
 - **De -> Vers** : Quel rôle gère chaque étape (App source, App cible ou Middleware)
 - **Type de déclencheur** : Ce qui initie ce leg (ex. : planifié, événementiel, manuel)
 - **Pattern** : Le pattern d'intégration (ex. : batch, temps réel, pub/sub)
