@@ -5,6 +5,8 @@ import { Navigate, useLocation, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import type { LineType } from '../../constants/lineTypeUsage';
+import { budgetLineDetailQuery } from '../../hooks/budgetItemDetailQuery';
+import { analyticsAxesQuery } from '../../hooks/useAnalyticsAxes';
 import BudgetLinePage from './BudgetLinePage';
 
 /** Resolve both natures and old references before mounting the workspace's child resources. */
@@ -25,15 +27,21 @@ export default function BudgetLineRoute() {
     staleTime: 1000,
   };
   const resolved = useQuery({ ...resolveQuery, enabled: !isCreate, throwOnError: false });
-  // Opened from another page, the route suspends until the line is resolved: the previous page stays
-  // on screen meanwhile (useShownLocation) instead of a blank frame. Once shown, a move to another
-  // line of the workspace (previous, next) waits without suspending, as before.
+  // Opened from another page, the route suspends until the line is resolved and its detail read: the
+  // previous page stays on screen meanwhile (DeferredPageLocation), and the workspace shows the line
+  // at once instead of an empty form first. Once shown, a move to another line of the workspace
+  // (previous, next) waits without suspending, as before.
   const shown = React.useRef(false);
   React.useEffect(() => { shown.current = true; }, []);
   // A failed read does not suspend again: the error shows below.
   const cached = queryClient.getQueryState(resolveQuery.queryKey);
   if (!isCreate && !shown.current && cached?.data === undefined && cached?.status !== 'error') {
-    throw queryClient.fetchQuery(resolveQuery).catch(() => undefined);
+    throw Promise.all([
+      queryClient.fetchQuery(resolveQuery),
+      // The workspace's reads of the line (same reference, shared cache entry) and of the dimensions its form shows.
+      queryClient.prefetchQuery(budgetLineDetailQuery(ref)),
+      queryClient.prefetchQuery(analyticsAxesQuery),
+    ]).catch(() => undefined);
   }
   if (isCreate) {
     const nature = new URLSearchParams(location.search).get('nature') === 'capex' ? 'capex' : 'opex';

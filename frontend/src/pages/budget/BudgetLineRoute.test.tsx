@@ -26,6 +26,7 @@ function renderAt(path: string) {
     </Routes></React.Suspense>
   </MemoryRouter></QueryClientProvider>);
 }
+const resolveCalls = () => vi.mocked(api.get).mock.calls.filter(([url]) => String(url).startsWith('/budget-lines/resolve/')).length;
 beforeEach(() => { vi.mocked(api.get).mockReset(); });
 describe('budget line route resolution', () => {
   it.each(['opex', 'capex'])('resolves UUID to BL with nature %s and replaces history, keeping tab and query', async (nature) => {
@@ -51,14 +52,16 @@ describe('budget line route resolution', () => {
     answer({ data: { id: 'uuid', nature: 'opex', reference: 'BL-127' } });
     expect(await screen.findByTestId('workspace')).toHaveTextContent('opex');
     expect(screen.queryByTestId('waiting')).toBeNull();
-    expect(api.get).toHaveBeenCalledTimes(1);
+    expect(resolveCalls()).toBe(1);
+    // The workspace's line and dimensions are read during the same wait.
+    expect(api.get).toHaveBeenCalledWith('/budget-lines/BL-127', expect.anything());
   });
   it('shows the existing load error for an unavailable line without mounting child resources', async () => {
     vi.mocked(api.get).mockRejectedValue(Object.assign(new Error('Not found'), { response: { status: 404 } }));
     renderAt('/ops/budget/BL-999');
     expect(await screen.findByRole('alert')).toHaveTextContent('opex.workspace.failedToLoad');
     expect(screen.queryByTestId('workspace')).toBeNull();
-    expect(api.get).toHaveBeenCalledTimes(2);
+    expect(resolveCalls()).toBe(2);
   });
   it.each([['', 'opex'], ['?nature=capex', 'capex'], ['?nature=unknown', 'opex']])('creates with %s and no resolution request', async (search, nature) => {
     renderAt(`/ops/budget/new${search}`);
