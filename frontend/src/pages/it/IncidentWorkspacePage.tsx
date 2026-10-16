@@ -28,6 +28,7 @@ import { drawerFieldValueSx, drawerMenuItemSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { downloadBlob } from '../../utils/downloadBlob';
 import { formatItemRef } from '../../utils/item-ref';
+import IncidentDeleteButton from './incidents/IncidentDeleteButton';
 import { getDotColor, INCIDENT_STATUS_COLORS } from '../../utils/statusColors';
 import ForbiddenPage from '../ForbiddenPage';
 import PortfolioDetailWorkspaceShell, {
@@ -639,6 +640,16 @@ export function IncidentWorkspacePage() {
         <Button variant="action-danger" size="small" onClick={() => void handleCancel()} disabled={stale}>
           {t('workspace.incident.actions.cancel')}
         </Button>
+      )}
+      {!isCreate && data && isAdmin && (
+        <IncidentDeleteButton
+          incidentId={data.id}
+          incidentName={`${formatItemRef('incident', data.item_number)} ${data.title}`}
+          disabled={stale}
+          beforeDelete={() => flushAll()}
+          onDeleted={leaveRegister}
+          onError={setError}
+        />
       )}
     </>
   );

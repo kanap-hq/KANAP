@@ -27,6 +27,38 @@
         "noCategory": "(Aucune catégorie)",
         "noOwner": "(Aucun responsable)",
         "blank": "(Vide)"
+      },
+      "delete": {
+        "title": "Supprimer {{name}} ?",
+        "removed": "Également supprimés : {{items}}.",
+        "detached": "Ces liens sont retirés : {{items}}. Les éléments liés restent.",
+        "cannotUndo": "Cette action est irréversible.",
+        "confirmAnyway": "Supprimer quand même",
+        "failed": "L'incident n'a pas pu être supprimé.",
+        "nothingLinked_one": "Cet incident n'est lié à rien et ne contient rien. Cette action est irréversible.",
+        "nothingLinked_other": "Ces incidents ne sont liés à rien et ne contiennent rien. Cette action est irréversible.",
+        "kinds": {
+          "reviewDocuments_one": "{{count}} revue d'incident",
+          "reviewDocuments_other": "{{count}} revues d'incident",
+          "tasks_one": "{{count}} tâche",
+          "tasks_other": "{{count}} tâches",
+          "entries_one": "{{count}} entrée du journal",
+          "entries_other": "{{count}} entrées du journal",
+          "attachments_one": "{{count}} pièce jointe",
+          "attachments_other": "{{count}} pièces jointes",
+          "applications_one": "{{count}} application",
+          "applications_other": "{{count}} applications",
+          "assets_one": "{{count}} actif",
+          "assets_other": "{{count}} actifs",
+          "documents_one": "{{count}} document Knowledge",
+          "documents_other": "{{count}} documents Knowledge"
+        },
+        "toDelete_one": "{{count}} incident sera supprimé :",
+        "toDelete_other": "{{count}} incidents seront supprimés :",
+        "kept_one": "{{count}} incident est conservé. Annulez-le ou clôturez-le plutôt :",
+        "kept_other": "{{count}} incidents sont conservés. Annulez-les ou clôturez-les plutôt :",
+        "deleted_one": "{{count}} incident supprimé",
+        "deleted_other": "{{count}} incidents supprimés"
       }
     },
     "applications": {

@@ -27,6 +27,38 @@
         "noCategory": "(No category)",
         "noOwner": "(No owner)",
         "blank": "(Blank)"
+      },
+      "delete": {
+        "title": "Delete {{name}}?",
+        "removed": "Also deleted: {{items}}.",
+        "detached": "These links are removed: {{items}}. The linked items stay.",
+        "cannotUndo": "This cannot be undone.",
+        "confirmAnyway": "Delete anyway",
+        "failed": "The incident could not be deleted.",
+        "nothingLinked_one": "This incident is linked to nothing and holds nothing. This cannot be undone.",
+        "nothingLinked_other": "These incidents are linked to nothing and hold nothing. This cannot be undone.",
+        "kinds": {
+          "reviewDocuments_one": "{{count}} incident review",
+          "reviewDocuments_other": "{{count}} incident reviews",
+          "tasks_one": "{{count}} task",
+          "tasks_other": "{{count}} tasks",
+          "entries_one": "{{count}} journal entry",
+          "entries_other": "{{count}} journal entries",
+          "attachments_one": "{{count}} attachment",
+          "attachments_other": "{{count}} attachments",
+          "applications_one": "{{count}} application",
+          "applications_other": "{{count}} applications",
+          "assets_one": "{{count}} asset",
+          "assets_other": "{{count}} assets",
+          "documents_one": "{{count}} Knowledge document",
+          "documents_other": "{{count}} Knowledge documents"
+        },
+        "toDelete_one": "{{count}} incident will be deleted:",
+        "toDelete_other": "{{count}} incidents will be deleted:",
+        "kept_one": "{{count}} incident is kept. Cancel or close it instead:",
+        "kept_other": "{{count}} incidents are kept. Cancel or close them instead:",
+        "deleted_one": "{{count}} incident deleted",
+        "deleted_other": "{{count}} incidents deleted"
       }
     },
     "applications": {

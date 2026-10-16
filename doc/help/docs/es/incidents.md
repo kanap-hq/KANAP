@@ -43,7 +43,7 @@ El **Declarante** es usted por defecto. Ambas fechas admiten valores pasados: un
 
 - Consulta: `incidents:reader`
 - Creación, edición, diario, enlaces, archivos adjuntos: `incidents:contributor`
-- Reabrir, cancelar y levantar una restricción: `incidents:admin`
+- Reabrir, cancelar, eliminar y levantar una restricción: `incidents:admin`
 
 Estos permisos cubren también la revisión del incidente y la exportación PDF: quien trabaja con incidentes no necesita ningún permiso sobre la base de conocimiento para redactar la revisión. Consulte [Vista general](#vista-general).
 
@@ -208,7 +208,13 @@ Cerrar bloquea el incidente. Campos, revisión del incidente, notas del diario, 
 
 **Cancelar incidente** (`incidents:admin`) es para un registro que nunca debió existir: un duplicado o un evento registrado por error. El motivo es obligatorio, el estado pasa a Cancelado y el incidente queda bloqueado como uno cerrado. No se elimina nada y el número se mantiene: `INC-13` nunca desaparece entre `INC-12` e `INC-14`. Un hueco en la numeración sería lo primero por lo que preguntaría un auditor.
 
-No existe la eliminación.
+### Eliminar un incidente
+
+**Eliminar** (`incidents:admin`) está en la página del incidente y en la lista una vez seleccionadas las filas. Retira un registro que no tiene cabida en el registro de incidentes, como una entrada de prueba. Los demás usuarios no ven ni el botón ni la selección.
+
+Antes de retirar nada, una confirmación indica lo que se va con el incidente: su revisión de incidente, sus tareas, sus entradas del diario y sus adjuntos (también los archivos). También indica los vínculos que se quitan: las aplicaciones, los activos y los documentos de Knowledge se mantienen, solo desaparece su vínculo con el incidente. La eliminación queda registrada en la pista de auditoría.
+
+Un incidente con datos de notificación regulatoria no se puede eliminar: **Datos personales afectados** o **Requiere notificación a la autoridad** marcada, **Notificado el** o **Partes informadas** completados. Ese registro es evidencia de auditoría (notificación a la autoridad según NIS2, y artículo 33(5) del RGPD, que exige documentar toda violación de datos personales). La confirmación lo indica antes de hacer nada: cancele o cierre el incidente en su lugar. En una selección, esos incidentes se conservan y los demás se eliminan.
 
 ---
 

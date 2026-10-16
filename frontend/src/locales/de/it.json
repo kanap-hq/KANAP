@@ -27,6 +27,38 @@
         "noCategory": "(Keine Kategorie)",
         "noOwner": "(Kein Verantwortlicher)",
         "blank": "(Leer)"
+      },
+      "delete": {
+        "title": "{{name}} löschen?",
+        "removed": "Ebenfalls gelöscht: {{items}}.",
+        "detached": "Diese Verknüpfungen werden entfernt: {{items}}. Die verknüpften Elemente bleiben erhalten.",
+        "cannotUndo": "Dies kann nicht rückgängig gemacht werden.",
+        "confirmAnyway": "Trotzdem löschen",
+        "failed": "Der Vorfall konnte nicht gelöscht werden.",
+        "nothingLinked_one": "Dieser Vorfall ist mit nichts verknüpft und enthält nichts. Dies kann nicht rückgängig gemacht werden.",
+        "nothingLinked_other": "Diese Vorfälle sind mit nichts verknüpft und enthalten nichts. Dies kann nicht rückgängig gemacht werden.",
+        "kinds": {
+          "reviewDocuments_one": "{{count}} Vorfallsanalyse",
+          "reviewDocuments_other": "{{count}} Vorfallsanalysen",
+          "tasks_one": "{{count}} Aufgabe",
+          "tasks_other": "{{count}} Aufgaben",
+          "entries_one": "{{count}} Journaleintrag",
+          "entries_other": "{{count}} Journaleinträge",
+          "attachments_one": "{{count}} Anhang",
+          "attachments_other": "{{count}} Anhänge",
+          "applications_one": "{{count}} Anwendung",
+          "applications_other": "{{count}} Anwendungen",
+          "assets_one": "{{count}} Asset",
+          "assets_other": "{{count}} Assets",
+          "documents_one": "{{count}} Knowledge-Dokument",
+          "documents_other": "{{count}} Knowledge-Dokumente"
+        },
+        "toDelete_one": "{{count}} Vorfall wird gelöscht:",
+        "toDelete_other": "{{count}} Vorfälle werden gelöscht:",
+        "kept_one": "{{count}} Vorfall bleibt erhalten. Brechen Sie ihn stattdessen ab oder schließen Sie ihn:",
+        "kept_other": "{{count}} Vorfälle bleiben erhalten. Brechen Sie sie stattdessen ab oder schließen Sie sie:",
+        "deleted_one": "{{count}} Vorfall gelöscht",
+        "deleted_other": "{{count}} Vorfälle gelöscht"
       }
     },
     "applications": {

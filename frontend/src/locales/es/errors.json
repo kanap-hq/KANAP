@@ -96,6 +96,7 @@
   "SUPPLIER_IN_USE": "Este proveedor se usa en {{usages}}. Desactívelo en lugar de eliminarlo.",
   "COMPANY_IN_USE": "Esta empresa se usa en {{usages}}. Desactívela en lugar de eliminarla.",
   "CONTRACT_HAS_COMPLIANCE_RECORDS": "Este contrato tiene {{usages}}. Desactívelo en lugar de eliminarlo.",
+  "INCIDENT_HAS_REGULATORY_RECORDS": "Este incidente tiene {{usages}} (datos personales, notificación a la autoridad o partes notificadas). Se conserva como evidencia de auditoría: cancélelo o ciérrelo en lugar de eliminarlo.",
   "not_found": "Este elemento ya no existe. Recargue la página para ver la lista actualizada.",
   "ASSET_IN_USE_one": "Este activo se usa en {{usages}}. Quítelo de allí antes de eliminarlo.",
   "ASSET_IN_USE_other": "Este activo se usa en {{usages}}. Quítelo de allí antes de eliminarlo.",

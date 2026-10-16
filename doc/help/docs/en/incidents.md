@@ -43,7 +43,7 @@ Navigate to **IT Landscape > Incidents** to see the register. Click **New incide
 
 - View: `incidents:reader`
 - Create, edit, journal, links, attachments: `incidents:contributor`
-- Reopen, cancel, and lift a restriction: `incidents:admin`
+- Reopen, cancel, delete, and lift a restriction: `incidents:admin`
 
 These permissions also cover the incident review and the PDF export, so someone who works on incidents does not need any Knowledge permission to write the review. See [Overview](#overview).
 
@@ -208,7 +208,13 @@ Closing locks the incident. Fields, the incident review, journal notes, links, a
 
 **Cancel** (`incidents:admin`) is for a record that should never have existed: a duplicate, or an event logged in error. A reason is required, the status becomes Cancelled, and the incident is locked like a closed one. Nothing is deleted and the number stays in place, so `INC-13` never disappears between `INC-12` and `INC-14`. A gap in the numbering would be the first thing an auditor asks about.
 
-There is no delete.
+### Deleting an incident
+
+**Delete** (`incidents:admin`) is on the incident page, and on the list once you select rows. It removes a record that has no place in the register, such as a test entry. Other users see neither the button nor the selection.
+
+Before anything is removed, a confirmation lists what goes with the incident: its incident review, its tasks, its journal entries and its attachments (the files too). It also lists the links that are removed: applications, assets and Knowledge documents stay, only their link to the incident goes. The deletion is recorded in the audit trail.
+
+An incident that holds regulatory reporting data cannot be deleted: **Personal data affected** or **Authority notification required** ticked, **Notified on** or **Parties informed** filled in. Such a record is audit evidence (NIS2 authority notification, and GDPR article 33(5), which requires every personal data breach to be documented). The confirmation says so before anything happens: cancel or close the incident instead. In a selection, those incidents are kept and the others are deleted.
 
 ---
 

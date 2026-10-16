@@ -27,6 +27,38 @@
         "noCategory": "(Sin categoría)",
         "noOwner": "(Sin responsable)",
         "blank": "(Vacío)"
+      },
+      "delete": {
+        "title": "¿Eliminar {{name}}?",
+        "removed": "También se eliminan: {{items}}.",
+        "detached": "Se quitan estos vínculos: {{items}}. Los elementos vinculados se mantienen.",
+        "cannotUndo": "Esta acción no se puede deshacer.",
+        "confirmAnyway": "Eliminar de todos modos",
+        "failed": "No se pudo eliminar el incidente.",
+        "nothingLinked_one": "Este incidente no está vinculado a nada y no contiene nada. Esta acción no se puede deshacer.",
+        "nothingLinked_other": "Estos incidentes no están vinculados a nada y no contienen nada. Esta acción no se puede deshacer.",
+        "kinds": {
+          "reviewDocuments_one": "{{count}} revisión de incidente",
+          "reviewDocuments_other": "{{count}} revisiones de incidente",
+          "tasks_one": "{{count}} tarea",
+          "tasks_other": "{{count}} tareas",
+          "entries_one": "{{count}} entrada del diario",
+          "entries_other": "{{count}} entradas del diario",
+          "attachments_one": "{{count}} adjunto",
+          "attachments_other": "{{count}} adjuntos",
+          "applications_one": "{{count}} aplicación",
+          "applications_other": "{{count}} aplicaciones",
+          "assets_one": "{{count}} activo",
+          "assets_other": "{{count}} activos",
+          "documents_one": "{{count}} documento de Knowledge",
+          "documents_other": "{{count}} documentos de Knowledge"
+        },
+        "toDelete_one": "Se eliminará {{count}} incidente:",
+        "toDelete_other": "Se eliminarán {{count}} incidentes:",
+        "kept_one": "Se conserva {{count}} incidente. Cancélelo o ciérrelo en su lugar:",
+        "kept_other": "Se conservan {{count}} incidentes. Cancélelos o ciérrelos en su lugar:",
+        "deleted_one": "{{count}} incidente eliminado",
+        "deleted_other": "{{count}} incidentes eliminados"
       }
     },
     "applications": {

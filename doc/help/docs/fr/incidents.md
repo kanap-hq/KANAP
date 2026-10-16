@@ -43,7 +43,7 @@ Le **Déclarant** est vous par défaut. Les deux dates acceptent des valeurs pas
 
 - Consultation : `incidents:reader`
 - Création, modification, journal, liens, pièces jointes : `incidents:contributor`
-- Réouverture, annulation et levée d'une restriction : `incidents:admin`
+- Réouverture, annulation, suppression et levée d'une restriction : `incidents:admin`
 
 Ces autorisations couvrent aussi la revue d'incident et l'export PDF : celui qui traite les incidents n'a besoin d'aucune autorisation sur la base de connaissances pour rédiger la revue. Voir [Vue d'ensemble](#vue-densemble).
 
@@ -208,7 +208,13 @@ La clôture verrouille l'incident. Champs, revue d'incident, notes de journal, l
 
 **Annuler l'incident** (`incidents:admin`) s'utilise pour un enregistrement qui n'aurait jamais dû exister : un doublon, ou un événement saisi par erreur. Un motif est obligatoire, le statut devient Annulé et l'incident est verrouillé comme s'il était clôturé. Rien n'est supprimé et le numéro reste en place : `INC-13` ne disparaît jamais entre `INC-12` et `INC-14`. Un trou dans la numérotation serait la première chose sur laquelle un auditeur reviendrait.
 
-Il n'y a pas de suppression.
+### Supprimer un incident
+
+**Supprimer** (`incidents:admin`) se trouve sur la fiche de l'incident, et sur la liste une fois des lignes sélectionnées. Il retire un enregistrement qui n'a pas sa place dans le registre, comme une saisie de test. Les autres utilisateurs ne voient ni le bouton ni la sélection.
+
+Avant toute suppression, une confirmation liste ce qui part avec l'incident : sa revue d'incident, ses tâches, ses entrées du journal et ses pièces jointes (fichiers compris). Elle liste aussi les liens retirés : les applications, les actifs et les documents Knowledge restent, seul leur lien avec l'incident disparaît. La suppression est inscrite dans la piste d'audit.
+
+Un incident qui porte des données de déclaration réglementaire ne peut pas être supprimé : **Données personnelles concernées** ou **Notification aux autorités requise** cochée, **Notifié le** ou **Parties informées** renseigné. Un tel enregistrement est une preuve d'audit (notification à l'autorité NIS2, et article 33(5) du RGPD, qui impose de documenter toute violation de données personnelles). La confirmation le dit avant toute action : annulez ou clôturez l'incident à la place. Dans une sélection, ces incidents sont conservés et les autres sont supprimés.
 
 ---
 

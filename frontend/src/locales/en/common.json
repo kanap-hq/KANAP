@@ -214,6 +214,8 @@
       "team_members_other": "{{count}} team members",
       "compliance_requirements_one": "{{count}} recorded compliance requirement",
       "compliance_requirements_other": "{{count}} recorded compliance requirements",
+      "regulatory_records_one": "{{count}} regulatory reporting field filled in",
+      "regulatory_records_other": "{{count}} regulatory reporting fields filled in",
       "opex_lines_one": "{{count}} OPEX line",
       "opex_lines_other": "{{count}} OPEX lines",
       "capex_lines_one": "{{count}} CAPEX line",

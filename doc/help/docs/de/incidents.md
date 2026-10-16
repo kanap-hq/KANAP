@@ -43,7 +43,7 @@ Der **Melder** sind standardmäßig Sie. Beide Daten akzeptieren Werte in der Ve
 
 - Ansicht: `incidents:reader`
 - Anlegen, bearbeiten, Journal, Verknüpfungen, Anhänge: `incidents:contributor`
-- Wieder öffnen, abbrechen und eine Einschränkung aufheben: `incidents:admin`
+- Wieder öffnen, abbrechen, löschen und eine Einschränkung aufheben: `incidents:admin`
 
 Diese Berechtigungen decken auch die Vorfallanalyse und den PDF-Export ab. Wer an Vorfällen arbeitet, braucht also keine Berechtigung für die Wissensdatenbank, um die Analyse zu schreiben. Siehe [Übersicht](#ubersicht).
 
@@ -208,7 +208,13 @@ Das Schließen sperrt den Vorfall. Felder, die Vorfallanalyse, Journalnotizen, V
 
 **Vorfall abbrechen** (`incidents:admin`) ist für einen Datensatz gedacht, den es nie hätte geben dürfen: ein Duplikat oder ein irrtümlich erfasstes Ereignis. Ein Grund ist erforderlich, der Status wird Abgebrochen, und der Vorfall wird wie ein geschlossener gesperrt. Nichts wird gelöscht und die Nummer bleibt erhalten: `INC-13` verschwindet nie zwischen `INC-12` und `INC-14`. Eine Lücke in der Nummerierung wäre das Erste, wonach ein Prüfer fragt.
 
-Löschen gibt es nicht.
+### Einen Vorfall löschen
+
+**Löschen** (`incidents:admin`) steht auf der Seite des Vorfalls und in der Liste, sobald Zeilen ausgewählt sind. Es entfernt einen Datensatz, der nicht ins Register gehört, etwa einen Testeintrag. Andere Benutzer sehen weder die Schaltfläche noch die Auswahl.
+
+Bevor etwas entfernt wird, listet eine Bestätigung auf, was mit dem Vorfall gelöscht wird: seine Vorfallsanalyse, seine Aufgaben, seine Journaleinträge und seine Anhänge (samt Dateien). Sie listet auch die entfernten Verknüpfungen auf: Anwendungen, Assets und Knowledge-Dokumente bleiben erhalten, nur ihre Verknüpfung mit dem Vorfall entfällt. Die Löschung wird im Audit-Trail festgehalten.
+
+Ein Vorfall mit Daten der behördlichen Meldung kann nicht gelöscht werden: **Personenbezogene Daten betroffen** oder **Meldung an Behörde erforderlich** angehakt, **Gemeldet am** oder **Informierte Parteien** ausgefüllt. Ein solcher Datensatz ist ein Prüfnachweis (Meldung an die Behörde nach NIS2 und Artikel 33(5) DSGVO, der die Dokumentation jeder Verletzung des Schutzes personenbezogener Daten verlangt). Die Bestätigung sagt das, bevor etwas geschieht: Brechen Sie den Vorfall stattdessen ab oder schließen Sie ihn. In einer Auswahl bleiben diese Vorfälle erhalten und die anderen werden gelöscht.
 
 ---
 
