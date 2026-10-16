@@ -22,7 +22,7 @@ Directly under the agent's name sits a slim bar of controls, right-aligned, that
 
 ### The run mode control
 
-The first control is the agent itself. Closed, it reads the agent's live state as a coloured dot and a label: **Watching — asks first**, **Watching — partly automatic**, **Testing**, **Off**, **Paused**, **Not started**, or **Archived**. Open it (administrators, on an agent that is neither paused nor archived) and it offers the three run modes:
+The first control is the agent itself. Closed, it reads the agent's live state as a coloured dot and a label: **Watching (asks first)**, **Watching (partly automatic)**, **Testing**, **Off**, **Paused**, **Not started**, or **Archived**. Open it (administrators, on an agent that is neither paused nor archived) and it offers the three run modes:
 
 | Mode | What it means |
 | --- | --- |

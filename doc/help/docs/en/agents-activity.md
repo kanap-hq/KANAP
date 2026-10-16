@@ -35,7 +35,7 @@ Each entry is one thing that happened, and it carries enough context to understa
 - An **action-type chip** (when the event is about a specific kind of ticket work): **Internal note**, **Requester reply**, **Classification update**, **Status update**, **Assignment**, or **Participants**.
 - A **status dot** with a plain-language label (for example "Waiting for approval", "Done", "Rejected", "Dismissed", "Needs attention") describing where that item stands.
 - The **agent name** and the **ticket** it concerns (shown as `#N`).
-- An **event title**, for example "Proposal created", or "Ticket check — 3 new tickets".
+- An **event title**, for example "Proposal created", or "Ticket check: 3 new tickets".
 - A **one-line preview** of the substance (the first line of a drafted message, a field change, or the reason), so you often don't need to expand anything.
 - A **timestamp**, plus **Show details** and, where a check is behind the event, **Trace**.
 
@@ -59,10 +59,10 @@ You don't need to memorise these: the event titles are written in plain language
 
 A check entry tells you what the agent found, in its title, without you having to expand anything:
 
-- **Ticket check — no new tickets**: it looked and there was nothing to do. This is what a healthy, quiet agent looks like.
-- **Ticket check — 3 new tickets**: three tickets were picked up for work.
-- **Ticket check — 3 new tickets, 2 already seen, 1 error**: the same, plus tickets it had already handled and a problem it hit.
-- **Ticket check — Not watching** / **Paused** / **Skipped** / **Failed**: the check didn't do its normal job, and the reason follows where there is one.
+- **Ticket check: no new tickets**: it looked and there was nothing to do. This is what a healthy, quiet agent looks like.
+- **Ticket check: 3 new tickets**: three tickets were picked up for work.
+- **Ticket check: 3 new tickets, 2 already seen, 1 error**: the same, plus tickets it had already handled and a problem it hit.
+- **Ticket check: Not watching** / **Paused** / **Skipped** / **Failed**: the check didn't do its normal job, and the reason follows where there is one.
 
 **Show details** breaks the same check down into four numbers (**Seen**, **Queued**, **Already seen**, **Handled**), plus the reason and any error messages. That is the honest way to answer "why didn't the agent pick up ticket #482?": if **Seen** is high but **Queued** is zero, the ticket was looked at and filtered out by your targeting; if **Seen** is zero, the agent never saw it at all.
 
