@@ -91,8 +91,9 @@ export class TechnologyCatalogService {
   /**
    * Adopt the entry `key`: the technology with its catalog key, editor, family (`other` when the
    * tenant's catalog no longer has it), mode and CPE identifiers, and its versions with their dates.
-   * Idempotent: an entry already adopted returns its technology; a technology of the same name
-   * (typed before) receives the key, the identifiers it lacks and the missing versions. Two
+   * Idempotent: an entry already adopted returns its technology and adds nothing (a version the
+   * tenant deleted stays deleted); a technology of the same name (typed before) receives the key,
+   * the identifiers it lacks and the missing versions. Two
    * adoptions of one entry at once run one after the other (transaction-level advisory lock).
    */
   async adopt(key: string, opts: Opts) {
@@ -110,7 +111,9 @@ export class TechnologyCatalogService {
     let technologyId: string;
     let created = false;
     if (existing[0]?.catalog_key === product.key) {
-      technologyId = existing[0].id;
+      // Adopted already: nothing is added, so a version the tenant deleted does not come back.
+      const tech = await readTechnology(mg, tenantId, existing[0].id);
+      return { ok: true, created: false, versions_added: 0, technology: { id: tech.id, name: tech.name, reference: technologyReference(tech.item_number) } };
     } else if (existing[0]) {
       technologyId = existing[0].id;
       const before = await readTechnology(mg, tenantId, technologyId, true);

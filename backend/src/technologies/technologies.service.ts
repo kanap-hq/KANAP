@@ -37,13 +37,13 @@ const SORTS: Record<string, string> = {
 /** Fields a create or a PATCH may carry; anything else in the body is ignored. */
 type TechnologyInput = Partial<{
   name: unknown; editor: unknown; family: unknown; mode: unknown; lifecycle: unknown; description: unknown; notes: unknown;
-  catalog_key: unknown; cpe_products: unknown; replaced_by_id: unknown; cyber_criticality: unknown; recovery_wave: unknown;
+  cpe_products: unknown; replaced_by_id: unknown; cyber_criticality: unknown; recovery_wave: unknown;
   rto_minutes: unknown; rpo_minutes: unknown;
 }>;
 
 type VersionInput = Partial<{
   label: unknown; cpe_version: unknown; build_prefixes: unknown; standard_support_end: unknown; extended_support_end: unknown;
-  notes: unknown; catalog_key: unknown;
+  notes: unknown;
 }>;
 
 const LINK_URL_MAX = 2000;
@@ -192,7 +192,7 @@ export class TechnologiesService {
     if (has('editor')) out.editor = optionalText(body.editor, 'Editor', 200);
     if (has('description')) out.description = optionalText(body.description, 'Description', 20000);
     if (has('notes')) out.notes = optionalText(body.notes, 'Notes', 20000);
-    if (has('catalog_key')) out.catalog_key = optionalText(body.catalog_key, 'Catalog key', 100);
+    // `catalog_key` is written by the adoption only: a typed technology cannot take a catalog entry's key.
     if (has('mode')) {
       const mode = String(body.mode ?? '').trim();
       if (mode !== 'installed' && mode !== 'subscribed') throw new BadRequestException('Mode must be installed or subscribed.');
@@ -215,6 +215,7 @@ export class TechnologiesService {
           throw new BadRequestException('Replacement technology not found.');
         });
         if (current && replacement.id === current.id) throw new BadRequestException('A technology cannot replace itself.');
+        if (current) await this.assertNoReplacementCycle(mg, tenantId, current.id, replacement.id);
         out.replaced_by_id = replacement.id;
       }
     }
@@ -233,6 +234,22 @@ export class TechnologiesService {
       if (has('recovery_wave')) out.recovery_wave = codeIn((settings as any).recoveryWaves, body.recovery_wave, 'recovery wave', true);
     }
     return out;
+  }
+
+  /** Refuses a replacement that leads back to the technology (A replaced by B, B by A, or longer). */
+  private async assertNoReplacementCycle(mg: EntityManager, tenantId: string, technologyId: string, replacementId: string) {
+    const rows = await mg.query(
+      `WITH RECURSIVE chain AS (
+         SELECT t.id, t.replaced_by_id, 1 AS depth FROM technologies t WHERE t.tenant_id = $1 AND t.id = $2
+         UNION ALL
+         SELECT t.id, t.replaced_by_id, c.depth + 1
+           FROM chain c JOIN technologies t ON t.tenant_id = $1 AND t.id = c.replaced_by_id
+          WHERE c.depth < 100
+       )
+       SELECT 1 FROM chain WHERE id = $3 LIMIT 1`,
+      [tenantId, replacementId, technologyId],
+    );
+    if (rows.length) throw new BadRequestException('This replacement would make a cycle.');
   }
 
   private async assertNameFree(mg: EntityManager, tenantId: string, name: string, exceptId: string | null) {
@@ -382,7 +399,6 @@ export class TechnologiesService {
     if (has('standard_support_end')) out.standard_support_end = optionalDay(body.standard_support_end, 'Standard support end');
     if (has('extended_support_end')) out.extended_support_end = optionalDay(body.extended_support_end, 'Extended support end');
     if (has('notes')) out.notes = optionalText(body.notes, 'Notes', 20000);
-    if (has('catalog_key')) out.catalog_key = optionalText(body.catalog_key, 'Catalog key', 100);
     const s = out.standard_support_end as string | null | undefined;
     const e = out.extended_support_end as string | null | undefined;
     if (s && e && e < s) throw new BadRequestException('The extended support cannot end before the standard support.');

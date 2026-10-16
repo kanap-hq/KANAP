@@ -2053,7 +2053,7 @@ const TECHNOLOGIES = [
       ['PAR-APP-01', '2017', 'Express edition, embedded in QualityLab LIMS'],
     ],
   },
-  { catalog: 'tomcat', installed: [['PAR-APP-01', '9', null]] },
+  { catalog: 'tomcat', installed: [['PAR-APP-01', '9.0', null]] },
   { catalog: 'postgresql', installed: [['AWS-RDS-BOUTIQUE', '16', 'Amazon RDS, Multi-AZ'], ['PAR-DB-01', '13', null]] },
   { catalog: 'veeam-backup-and-replication', installed: [['PAR-BKP-01', '12', null]] },
 ];

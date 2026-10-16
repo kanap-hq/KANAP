@@ -114,6 +114,21 @@ export type TechnologyCounts = {
   ended_versions: number;
 };
 
+/**
+ * The one rule of the deductions on applications (decision of the lead, 2026-10-16): an application
+ * counts while it is in service, and a hosting while its instance is in service too. Disabled
+ * applications and instances (`status`, or `disabled_at` passed) are left out, hosted and declared.
+ */
+export function inServiceSql(application: string, instance?: string): string {
+  const active = (alias: string) => `${alias}.status = 'enabled' AND (${alias}.disabled_at IS NULL OR ${alias}.disabled_at > now())`;
+  return instance ? `(${active(application)} AND ${active(instance)})` : `(${active(application)})`;
+}
+
+/** A hosting: the instance `i` and its application, both in service. */
+const HOSTING_IN_SERVICE = `JOIN applications ap ON ap.tenant_id = $1 AND ap.id = i.application_id AND ${inServiceSql('ap', 'i')}`;
+/** A declaration `d` whose application is in service. */
+const DECLARED_IN_SERVICE = `EXISTS (SELECT 1 FROM applications ap WHERE ap.tenant_id = $1 AND ap.id = d.application_id AND ${inServiceSql('ap')})`;
+
 const DAY = (expr: string) => `to_char(${expr}, 'YYYY-MM-DD')`;
 
 /** Distinct reached assets, keeping for each one the shortest path (direct links first). */
@@ -174,10 +189,11 @@ export class TechnologyReachService {
          -- the recursive estimate is far too high and its hash table alone costs more than the query).
          JOIN (SELECT DISTINCT a.app_instance_id, a.asset_id FROM app_asset_assignments a WHERE a.tenant_id = $1) x ON x.asset_id = r.asset_id
          JOIN app_instances i ON i.tenant_id = $1 AND i.id = x.app_instance_id
+         ${HOSTING_IN_SERVICE}
        UNION ALL
        SELECT d.technology_id, d.application_id, 'declared', NULL, NULL, NULL, d.technology_version_id, d.id, d.source
          FROM application_technologies d
-        WHERE d.tenant_id = $1 AND d.technology_id = ANY($2::uuid[])`,
+        WHERE d.tenant_id = $1 AND d.technology_id = ANY($2::uuid[]) AND ${DECLARED_IN_SERVICE}`,
       [tenantId, technologyIds],
     );
   }
@@ -214,6 +230,7 @@ export class TechnologyReachService {
          SELECT DISTINCT i.application_id, i.environment, x.asset_id
            FROM app_instances i
            JOIN app_asset_assignments x ON x.tenant_id = $1 AND x.app_instance_id = i.id
+           ${HOSTING_IN_SERVICE}
           WHERE i.tenant_id = $1 AND i.application_id = ANY($2::uuid[])
        ),
        up AS (
@@ -241,7 +258,7 @@ export class TechnologyReachService {
        UNION ALL
        SELECT d.application_id, d.technology_id, 'declared', d.technology_version_id, NULL, NULL, NULL, d.id, d.source
          FROM application_technologies d
-        WHERE d.tenant_id = $1 AND d.application_id = ANY($2::uuid[])`,
+        WHERE d.tenant_id = $1 AND d.application_id = ANY($2::uuid[]) AND ${DECLARED_IN_SERVICE}`,
       [tenantId, applicationIds],
     );
   }
@@ -266,9 +283,10 @@ export class TechnologyReachService {
                FROM reach r
                JOIN app_asset_assignments x ON x.tenant_id = $1 AND x.asset_id = r.asset_id
                JOIN app_instances i ON i.tenant_id = $1 AND i.id = x.app_instance_id
+               ${HOSTING_IN_SERVICE}
              UNION ALL
              SELECT d.technology_id, d.application_id FROM application_technologies d
-              WHERE d.tenant_id = $1 AND d.technology_id = ANY($2::uuid[])
+              WHERE d.tenant_id = $1 AND d.technology_id = ANY($2::uuid[]) AND ${DECLARED_IN_SERVICE}
            ) h
           GROUP BY h.technology_id
        ),
@@ -276,8 +294,8 @@ export class TechnologyReachService {
          SELECT technology_id, technology_version_id FROM asset_technologies
           WHERE tenant_id = $1 AND technology_id = ANY($2::uuid[]) AND technology_version_id IS NOT NULL
          UNION
-         SELECT technology_id, technology_version_id FROM application_technologies
-          WHERE tenant_id = $1 AND technology_id = ANY($2::uuid[]) AND technology_version_id IS NOT NULL
+         SELECT d.technology_id, d.technology_version_id FROM application_technologies d
+          WHERE d.tenant_id = $1 AND d.technology_id = ANY($2::uuid[]) AND d.technology_version_id IS NOT NULL AND ${DECLARED_IN_SERVICE}
        ),
        versions AS (
          SELECT u.technology_id,
