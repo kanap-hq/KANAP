@@ -10,6 +10,11 @@ export const IMPACT_ROW_LIMIT = 200;
 export const IMPACT_VIA_LIMIT = 20;
 /** The order of the environments of an application row. */
 const ENVIRONMENT_ORDER = ['prod', 'pre_prod', 'qa', 'test', 'dev', 'sandbox'];
+/**
+ * An asset still in service: a retired asset (`retired`, the locked lifecycle code) leaves every
+ * deduction. Same condition as `assetInServiceSql` of `technology-reach.service.ts`.
+ */
+const assetInService = (alias: string) => `${alias}.status IS DISTINCT FROM 'retired'`;
 
 /** An asset named on a path or as the place of a row. */
 export type ImpactRef = { id: string; name: string };
@@ -103,7 +108,9 @@ export type ImpactContext = {
  *
  * A cluster is not reached through the graph: it is degraded while one of its members stands, and
  * down when every member fell; the applications assigned to a cluster that is down fall with it.
- * Applications and instances out of service are left out (`inServiceSql`). Every statement is static
+ * Applications and instances out of service are left out (`inServiceSql`). A retired asset is never
+ * crossed: it does not fall, takes nothing with it, and counts for no cluster; a retired server is
+ * listed alone at depth 0. Every statement is static
  * SQL with `tenant_id` on each table besides RLS, over a batch of ids. Each list keeps its first `IMPACT_ROW_LIMIT` rows
  * (the nearest assets first); `totals` counts them all.
  */
@@ -155,18 +162,25 @@ export class AssetImpactService {
    */
   private async fallenAssets(mg: EntityManager, tenantId: string, assetId: string): Promise<ImpactAsset[]> {
     type State = { asset: string; contains: number; depends: number; path: string[] };
-    const servers: Array<{ id: string }> = await mg.query(`SELECT a.id FROM assets a WHERE a.tenant_id = $1 AND a.id = $2`, [tenantId, assetId]);
+    const servers: Array<{ id: string; in_service: boolean }> = await mg.query(
+      `SELECT a.id, ${assetInService('a')} AS in_service FROM assets a WHERE a.tenant_id = $1 AND a.id = $2`,
+      [tenantId, assetId],
+    );
     if (!servers[0]) return [];
     const first = new Map<string, { relation: ImpactAsset['relation']; path: string[] }>([[assetId, { relation: null, path: [assetId] }]]);
     const seen = new Set<string>([`${assetId}|0|0`]);
-    let frontier: State[] = [{ asset: assetId, contains: 0, depends: 0, path: [assetId] }];
+    let frontier: State[] = servers[0].in_service ? [{ asset: assetId, contains: 0, depends: 0, path: [assetId] }] : [];
     while (frontier.length > 0) {
       const edges: Array<{ cause: string; fallen: string; relation: 'contains' | 'depends_on' }> = await mg.query(
         `SELECT r.asset_id AS cause, r.related_asset_id AS fallen, r.relation_type AS relation
-           FROM asset_relations r WHERE r.tenant_id = $1 AND r.relation_type = 'contains' AND r.asset_id = ANY($2::uuid[])
+           FROM asset_relations r
+           JOIN assets f ON f.tenant_id = $1 AND f.id = r.related_asset_id AND ${assetInService('f')}
+          WHERE r.tenant_id = $1 AND r.relation_type = 'contains' AND r.asset_id = ANY($2::uuid[])
          UNION ALL
          SELECT r.related_asset_id, r.asset_id, r.relation_type
-           FROM asset_relations r WHERE r.tenant_id = $1 AND r.relation_type = 'depends_on' AND r.related_asset_id = ANY($2::uuid[])
+           FROM asset_relations r
+           JOIN assets f ON f.tenant_id = $1 AND f.id = r.asset_id AND ${assetInService('f')}
+          WHERE r.tenant_id = $1 AND r.relation_type = 'depends_on' AND r.related_asset_id = ANY($2::uuid[])
          ORDER BY 1, 2, 3`,
         [tenantId, Array.from(new Set(frontier.map((state) => state.asset)))],
       );
@@ -209,19 +223,23 @@ export class AssetImpactService {
       .sort((a, b) => a.depth - b.depth || a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
   }
 
-  /** The clusters with a fallen member and not fallen themselves: degraded, or down when no member stands. */
+  /**
+   * The clusters in service with a fallen member and not fallen themselves: degraded, or down when no
+   * member stands. A retired member neither falls nor stands.
+   */
   private async clustersOf(mg: EntityManager, tenantId: string, fallenIds: string[]): Promise<ImpactCluster[]> {
     const rows: Array<{ id: string; reference: string | null; name: string; members: number; fallen: Array<{ id: string; name: string }> }> = await mg.query(
       `SELECT c.id, c.asset_reference AS reference, c.name, count(*)::int AS members,
               COALESCE(json_agg(json_build_object('id', n.id, 'name', n.name) ORDER BY lower(n.name), n.id)
                          FILTER (WHERE m.asset_id = ANY($2::uuid[])), '[]') AS fallen
          FROM asset_cluster_members m
-         JOIN assets c ON c.tenant_id = $1 AND c.id = m.cluster_id
-         JOIN assets n ON n.tenant_id = $1 AND n.id = m.asset_id
+         JOIN assets c ON c.tenant_id = $1 AND c.id = m.cluster_id AND ${assetInService('c')}
+         JOIN assets n ON n.tenant_id = $1 AND n.id = m.asset_id AND ${assetInService('n')}
         WHERE m.tenant_id = $1
           AND NOT m.cluster_id = ANY($2::uuid[])
           AND m.cluster_id IN (SELECT x.cluster_id FROM asset_cluster_members x WHERE x.tenant_id = $1 AND x.asset_id = ANY($2::uuid[]))
         GROUP BY c.id, c.asset_reference, c.name
+       HAVING bool_or(m.asset_id = ANY($2::uuid[]))
         ORDER BY lower(c.name), c.id`,
       [tenantId, fallenIds],
     );
@@ -237,7 +255,7 @@ export class AssetImpactService {
     }));
   }
 
-  /** In-service instances on a fallen asset, one row per application with its environments. */
+  /** In-service instances on a fallen asset in service, one row per application with its environments. */
   private async applicationsOf(
     mg: EntityManager,
     tenantId: string,
@@ -251,6 +269,7 @@ export class AssetImpactService {
     const rows: Array<{ id: string; reference: string | null; name: string; criticality: string | null; environment: string; asset_id: string }> = await mg.query(
       `SELECT DISTINCT ap.id, ap.sequential_id AS reference, ap.name, ap.criticality, i.environment, x.asset_id
          FROM app_asset_assignments x
+         JOIN assets s ON s.tenant_id = $1 AND s.id = x.asset_id AND ${assetInService('s')}
          JOIN app_instances i ON i.tenant_id = $1 AND i.id = x.app_instance_id
          JOIN applications ap ON ap.tenant_id = $1 AND ap.id = i.application_id AND ${inServiceSql('ap', 'i')}
         WHERE x.tenant_id = $1 AND x.asset_id = ANY($2::uuid[]) ${scopeSql}`,
@@ -272,11 +291,12 @@ export class AssetImpactService {
     return items.sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
   }
 
-  /** Technologies installed on a fallen asset, each with its known versions and the assets it is installed on. */
+  /** Technologies installed on a fallen asset in service, each with its known versions and the assets it is installed on. */
   private async technologiesOf(mg: EntityManager, tenantId: string, fallenIds: string[], ref: (id: string) => ImpactRef): Promise<ImpactTechnology[]> {
     const rows: Array<{ id: string; item_number: number; name: string; asset_id: string; version: string | null }> = await mg.query(
       `SELECT t.id, t.item_number, t.name, at.asset_id, v.label AS version
          FROM asset_technologies at
+         JOIN assets s ON s.tenant_id = $1 AND s.id = at.asset_id AND ${assetInService('s')}
          JOIN technologies t ON t.tenant_id = $1 AND t.id = at.technology_id
          LEFT JOIN technology_versions v ON v.tenant_id = $1 AND v.id = at.technology_version_id
         WHERE at.tenant_id = $1 AND at.asset_id = ANY($2::uuid[])`,

@@ -7,7 +7,7 @@ import type { QueryRunner } from 'typeorm';
 
 // "If this server goes down" (lot T5) against a real database, in transactions rolled back at the
 // end: a host and its VMs, a dependency, a diamond, degraded and down clusters, a `contains` cycle,
-// the depth limits, the row cap, applications out of service, the read rights, and tenant isolation.
+// the depth limits, the row cap, applications out of service, retired assets, the read rights, and tenant isolation.
 
 const service = () => new AssetImpactService();
 
@@ -148,6 +148,45 @@ async function testOutOfService() {
   });
 }
 
+async function testRetiredAssets() {
+  await inRolledBackTransaction(async (runner) => {
+    const g = await seed(runner, 'impact-retired');
+    const a = (name: string, cluster = false) => asset(runner, g.tenantId, name, cluster);
+    const ids = { host: await a('R-HOST'), old: await a('OLD-VM'), live: await a('LIVE-VM'), dep: await a('OLD-DEP'), pair: await a('PAIR-CL', true) };
+    await runner.query(`UPDATE assets SET status = 'retired' WHERE tenant_id = $1 AND id = $2`, [g.tenantId, ids.old]);
+    // The host holds a retired VM and a VM in service; OLD-DEP depends on the retired VM; the pair has both VMs.
+    await contains(runner, g.tenantId, ids.host, ids.old);
+    await contains(runner, g.tenantId, ids.host, ids.live);
+    await dependsOn(runner, g.tenantId, ids.dep, ids.old);
+    await member(runner, g.tenantId, ids.pair, ids.old);
+    await member(runner, g.tenantId, ids.pair, ids.live);
+    await installed(runner, g.tenantId, ids.old, g.tech.firmware);
+    const legacy = await application(runner, g.tenantId, 'Legacy');
+    const live = await application(runner, g.tenantId, 'Live');
+    await assign(runner, g.tenantId, legacy, ids.old, 'prod');
+    await assign(runner, g.tenantId, live, ids.live, 'prod');
+    await runner.query(`INSERT INTO application_business_processes (tenant_id, application_id, business_process_id) VALUES ($1, $2, $3)`, [g.tenantId, legacy, g.processes.finance]);
+
+    const impact = await service().impactOf(ids.host, ctxOf(runner, g.tenantId));
+    assert.deepEqual(impact.assets.map((row) => row.name), ['R-HOST', 'LIVE-VM'], 'the retired VM is not crossed, nor what depends on it');
+    assert.deepEqual(
+      impact.clusters.map((row) => `${row.name}|${row.state}|${row.fallen_members}/${row.members}`),
+      ['PAIR-CL|down|1/1'],
+      'a retired member neither falls nor stands',
+    );
+    assert.deepEqual(impact.applications!.map((row) => `${row.name}|${row.via.map((v) => v.name).join(',')}`), ['Live|LIVE-VM']);
+    assert.deepEqual([impact.technologies, impact.processes], [[], []], 'nothing is read from the retired VM');
+    assert.deepEqual(impact.totals, { assets: 1, applications: 1, clusters: 1, technologies: 0, processes: 0 });
+
+    // A retired server: listed alone at depth 0, nothing falls with it.
+    const retired = await service().impactOf(ids.old, ctxOf(runner, g.tenantId));
+    assert.deepEqual(retired.assets.map((row) => `${row.name}|${row.depth}`), ['OLD-VM|0']);
+    assert.equal(retired.asset.id, ids.old);
+    assert.deepEqual([retired.clusters, retired.applications, retired.technologies, retired.processes], [[], [], [], []]);
+    assert.deepEqual(retired.totals, { assets: 0, applications: 0, clusters: 0, technologies: 0, processes: 0 });
+  });
+}
+
 async function testRights() {
   await inRolledBackTransaction(async (runner) => {
     const g = await seed(runner, 'impact-rights');
@@ -218,6 +257,7 @@ runSpecs('asset-impact.integration.spec', [
   ['degraded and down clusters', testClusters],
   ['cycle and depth', testCycleAndDepth],
   ['applications out of service', testOutOfService],
+  ['retired assets', testRetiredAssets],
   ['read rights', testRights],
   ['row cap', testRowCap],
   ['tenant isolation', testTenantIsolation],
