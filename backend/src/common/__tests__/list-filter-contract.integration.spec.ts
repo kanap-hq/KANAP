@@ -18,6 +18,7 @@ import {
 import { backendPath } from './backend-root';
 import { applyHttpMiddleware, applyTenancyAndPipeline } from '../../http-app';
 import { DemoDataService } from '../../demo-data/demo-data.service';
+import { FxRateService } from '../../currency/fx-rate.service';
 
 // The list filter contract, server side. `frontend/src/pages/listFilterContract.json` lists, per
 // list endpoint, every column its screen lets the user filter and the kind of filter model the grid
@@ -111,6 +112,17 @@ async function statementsOf(port: number, host: string, token: string, endpoint:
   }
 }
 
+/** Where two recordings of the same request part, to name what made them differ. */
+function firstDifference(first: string, second: string): string {
+  if (first === second) return '';
+  const a = first.split('\n');
+  const b = second.split('\n');
+  const at = a.findIndex((line, index) => line !== b[index]);
+  const index = at === -1 ? a.length : at;
+  const show = (line: string | undefined) => (line === undefined ? '(none)' : line.slice(0, 300));
+  return `; ${a.length} then ${b.length} statements, first difference at ${index}: ${show(a[index])} | then: ${show(b[index])}`;
+}
+
 async function testEveryOfferedFilterReachesTheDatabase() {
   const svc = buildServices();
   const { AppModule } = require('../../app.module');
@@ -119,6 +131,11 @@ async function testEveryOfferedFilterReachesTheDatabase() {
   applyTenancyAndPipeline(app, app.get(DataSource));
   await app.listen(0, '127.0.0.1');
   app.get(SchedulerRegistry).getCronJobs().forEach((job) => job.stop());
+  // A budget list read that finds no exchange rate starts a refresh of the year's rates in the
+  // background, still inside that request: its statements, and a network call of variable length,
+  // fell inside later recordings and made the same request look different (#625). The lists read
+  // rates the same way without it.
+  app.get(FxRateService).onMissingRates(null);
   const port = (app.getHttpServer().address() as AddressInfo).port;
 
   let tenant: ActivatedTenant | undefined;
@@ -182,7 +199,7 @@ async function testEveryOfferedFilterReachesTheDatabase() {
       // An unknown column is either refused (400) or ignored.
       const controlIgnored = control.status === 400 || (control.status === 200 && control.statements === baseline.statements);
       if (again.statements !== baseline.statements || !controlIgnored) {
-        fail(endpoint, `${endpoint}: the same request runs different statements, the comparison cannot tell (unknown column: ${control.status} ${control.body.slice(0, 200)})`);
+        fail(endpoint, `${endpoint}: the same request runs different statements, the comparison cannot tell (unknown column: ${control.status} ${control.body.slice(0, 200)})${firstDifference(baseline.statements, again.statements)}`);
         continue;
       }
       for (const [field, kind] of Object.entries(fields)) {
