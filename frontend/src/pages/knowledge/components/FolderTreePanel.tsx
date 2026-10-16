@@ -26,7 +26,9 @@ import { useAuth } from '../../../auth/AuthContext';
 import { useTenant } from '../../../tenant/TenantContext';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { localizeKnowledgeFolderTree } from '../../../utils/knowledgeNames';
-import { KanapDialog, PropertyRow } from '../../../components/design';
+import { recordRefusal } from '../../../utils/deleteCheck';
+import { deleteFailureReason } from '../../../utils/deleteRefusal';
+import { KanapDialog, PropertyRow, useKanapDialogs } from '../../../components/design';
 import { drawerMenuItemSx, drawerSelectSx } from '../../../theme/formSx';
 
 type FolderNode = {
@@ -367,7 +369,8 @@ const FolderTreePanel = React.memo(function FolderTreePanel({
   folderExternalDragAndDrop,
   documentDragAndDrop,
 }: FolderTreePanelProps) {
-  const { t } = useTranslation(['knowledge', 'common']);
+  const { t, i18n } = useTranslation(['knowledge', 'common']);
+  const dialogs = useKanapDialogs();
   const { profile } = useAuth();
   const { tenantSlug } = useTenant();
   const qc = useQueryClient();
@@ -490,15 +493,33 @@ const FolderTreePanel = React.memo(function FolderTreePanel({
       await qc.invalidateQueries({ queryKey: ['knowledge-folders-tree', libraryId] });
       if (selectedFolderId) onSelectFolder(null);
     },
+    // A refused delete (a folder with subfolders) says why, in the interface language.
+    onError: (error: any) => {
+      setFolderMoveSnackbar({
+        open: true,
+        message: getApiErrorMessage(error, t, t('folderTree.messages.deleteFailed')),
+        severity: 'error',
+      });
+    },
   });
 
   const handleRename = React.useCallback((id: string, name: string) => {
     renameFolderMutation.mutate({ id, name });
   }, [renameFolderMutation]);
 
-  const handleDelete = React.useCallback((id: string) => {
+  // Asked first: a folder the delete would refuse (one with subfolders) gets the refusal and why, with Close only.
+  const handleDelete = React.useCallback(async (id: string) => {
+    const refusal = await recordRefusal('/knowledge-folders', id);
+    if (refusal) {
+      const name = flatFolders.find((folder) => folder.id === id)?.name || refusal.name || '';
+      await dialogs.alert({
+        title: t('common:delete.recordTitle', { name }),
+        message: deleteFailureReason(refusal, t, i18n?.resolvedLanguage || i18n?.language || 'en'),
+      });
+      return;
+    }
     setDeleteFolderId(id);
-  }, []);
+  }, [dialogs, flatFolders, i18n, t]);
 
   const moveFolderMutation = useMutation({
     mutationFn: async ({ id, parentId }: { id: string; parentId: string | null }) => {
@@ -747,13 +768,14 @@ const FolderTreePanel = React.memo(function FolderTreePanel({
       <KanapDialog
         open={!!deleteFolderId}
         onClose={() => setDeleteFolderId(null)}
-        title={t('folderTree.dialogs.deleteFolderTitle')}
+        title={t('common:delete.recordTitle', { name: deleteFolderName })}
         onSave={() => {
           if (!deleteFolderId) return;
           deleteFolderMutation.mutate(deleteFolderId);
           setDeleteFolderId(null);
         }}
         saveLabel={t('common:buttons.delete')}
+        saveVariant="action-danger"
         saveDisabled={!deleteFolderId || deleteFolderMutation.isPending}
         saveLoading={deleteFolderMutation.isPending}
       >

@@ -264,4 +264,33 @@ describe('ManageCoAsDialog', () => {
     expect(await screen.findByText('DE-SKR was not deleted. Cannot delete: 2 companies reference this Chart of Accounts')).toBeInTheDocument();
     expect(onCoaDeleted).not.toHaveBeenCalled();
   });
+
+  it('says why a chart in use cannot go before any confirmation, in the interface words', async () => {
+    api.post.mockResolvedValueOnce({
+      data: { refused: [{ id: 'ifrs', name: 'IFRS', code: 'CHART_OF_ACCOUNTS_IN_USE', usages: [{ type: 'companies', total: 2 }, { type: 'opex_lines', total: 1 }] }] },
+    });
+    const { onCoaDeleted } = renderDialog();
+
+    fireEvent.click(within(await openMenu('IFRS')).getByRole('menuitem', { name: 'Delete' }));
+    expect(await screen.findByText(
+      'IFRS was not deleted. This chart of accounts is used by 2 companies and 1 OPEX line. Move them to another chart of accounts first.',
+    )).toBeInTheDocument();
+    expect(api.post).toHaveBeenCalledWith('/chart-of-accounts/delete-check', { ids: ['ifrs'] });
+    expect(screen.queryByText('Delete IFRS?')).not.toBeInTheDocument();
+    expect(api.delete).not.toHaveBeenCalled();
+    expect(onCoaDeleted).not.toHaveBeenCalled();
+  });
+
+  it('words a refusal of the delete itself from its code', async () => {
+    state.bulkResult = {
+      deleted: [],
+      failed: [{ id: 'de', name: 'DE-SKR', code: 'CHART_OF_ACCOUNTS_IN_USE', usages: [{ type: 'companies', total: 1 }], reason: 'Cannot delete: 1 companies reference this Chart of Accounts' }],
+    };
+    renderDialog();
+
+    fireEvent.click(within(await openMenu('DE-SKR')).getByRole('menuitem', { name: 'Delete' }));
+    expect(await screen.findByText(
+      'DE-SKR was not deleted. This chart of accounts is used by 1 company. Move it to another chart of accounts first.',
+    )).toBeInTheDocument();
+  });
 });

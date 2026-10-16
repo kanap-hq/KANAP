@@ -934,6 +934,14 @@
       "exportTitle": "Exporter les tâches",
       "importTitle": "Importer des tâches",
       "presetEnrichment": "Enrichissement des données"
+    },
+    "delete": {
+      "toDelete_one": "{{count}} tâche sera supprimée :",
+      "toDelete_other": "{{count}} tâches seront supprimées :",
+      "kept_one": "{{count}} tâche ne peut pas être supprimée et est conservée :",
+      "kept_other": "{{count}} tâches ne peuvent pas être supprimées et sont conservées :",
+      "deleted_one": "{{count}} tâche supprimée",
+      "deleted_other": "{{count}} tâches supprimées"
     }
   },
   "projects": {
@@ -2285,13 +2293,13 @@
           "high": "Haut"
         }
       },
-      "confirmDelete": "Supprimer ce critère ? Les évaluations existantes seront supprimées.",
       "messages": {
         "updateFailed": "Échec de la mise à jour du critère",
         "updateSettingsFailed": "Échec de la mise à jour des paramètres",
         "deleteFailed": "Échec de la suppression du critère",
         "reorderFailed": "Échec de la réorganisation des critères"
-      }
+      },
+      "confirmDelete": "Ses évaluations existantes sont supprimées aussi. Cette action est irréversible."
     },
     "skills": {
       "empty": "Aucune compétence configurée pour le moment. Utilisez « Initialiser les valeurs par défaut » pour charger les compétences standard, ou ajoutez des compétences manuellement.",
@@ -2303,7 +2311,6 @@
         "categoryPlaceholder": "Sélectionnez ou saisissez une nouvelle catégorie",
         "name": "Nom de la compétence"
       },
-      "confirmDelete": "Supprimer cette compétence ?",
       "messages": {
         "seedDefaultsFailed": "Échec de l'initialisation des valeurs par défaut",
         "updateFailed": "Échec de la mise à jour de la compétence",
@@ -2331,7 +2338,6 @@
           "milestoneName": "Phase {{number}} terminée"
         }
       },
-      "confirmDelete": "Supprimer ce modèle de phase ?",
       "messages": {
         "deleteFailed": "Échec de la suppression du modèle"
       }
@@ -2370,10 +2376,7 @@
         "shippedNameHint": "Affiché dans la langue de chaque utilisateur tant que ce nom est conservé."
       },
       "confirmations": {
-        "deleteSource": "Supprimer cette source ?",
-        "deleteCategory": "Supprimer cette catégorie et toutes ses filières ?",
-        "deleteStream": "Supprimer cette filière ?",
-        "deleteTaskType": "Supprimer ce type de tâche ?"
+        "deleteCategory": "Ses filières sont supprimées avec elle. Cette action est irréversible."
       },
       "messages": {
         "deleteSourceFailed": "Échec de la suppression de la source",
@@ -2395,7 +2398,6 @@
         "editTitle": "Modifier l'équipe",
         "createTitle": "Créer une équipe"
       },
-      "confirmDelete": "Supprimer cette équipe ?",
       "messages": {
         "seedDefaultsFailed": "Échec de l'initialisation des valeurs par défaut",
         "deleteFailed": "Échec de la suppression de l'équipe",

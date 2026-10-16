@@ -54,9 +54,17 @@ export interface BulkDeleteResult {
   deleted: string[];
   /**
    * `code` and `usages`: a refusal the interface translates (`errors:<code>`), with what still
-   * uses the record counted per kind (`common/record-in-use.ts`).
+   * uses the record counted per kind and the values its sentence names (`params`), as in
+   * `common/record-in-use.ts`.
    */
-  failed: Array<{ id: string; name: string; reason: string; code?: string; usages?: Array<{ type: string; total: number }> }>;
+  failed: Array<{
+    id: string;
+    name: string;
+    reason: string;
+    code?: string;
+    usages?: Array<{ type: string; total: number }>;
+    params?: Record<string, string | number>;
+  }>;
 }
 
 /**

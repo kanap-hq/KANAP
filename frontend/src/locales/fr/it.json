@@ -73,6 +73,20 @@
         "dataClass": "Classification des données",
         "containsPii": "Contient des PII",
         "dataResidency": "Résidence des données"
+      },
+      "delete": {
+        "warning_one": "Ses déploiements et ses liens vers d’autres éléments sont supprimés avec elle. Cette action est irréversible.",
+        "warning_other": "Leurs déploiements et leurs liens vers d’autres éléments sont supprimés avec elles. Cette action est irréversible.",
+        "warningCounted_one": "Ses {{deployments}} et ses liens vers d’autres éléments sont supprimés avec elle. Cette action est irréversible.",
+        "warningCounted_other": "Leurs {{deployments}} et leurs liens vers d’autres éléments sont supprimés avec elles. Cette action est irréversible.",
+        "warningLinks_one": "Ses liens vers d’autres éléments sont supprimés avec elle. Cette action est irréversible.",
+        "warningLinks_other": "Leurs liens vers d’autres éléments sont supprimés avec elles. Cette action est irréversible.",
+        "toDelete_one": "{{count}} application sera supprimée :",
+        "toDelete_other": "{{count}} applications seront supprimées :",
+        "kept_one": "{{count}} application ne peut pas être supprimée et est conservée :",
+        "kept_other": "{{count}} applications ne peuvent pas être supprimées et sont conservées :",
+        "deleted_one": "{{count}} application supprimée",
+        "deleted_other": "{{count}} applications supprimées"
       }
     },
     "assets": {
@@ -104,6 +118,14 @@
         "noLocation": "(Aucun site)",
         "noSubLocation": "(Aucun sous-site)",
         "blank": "(Vide)"
+      },
+      "delete": {
+        "toDelete_one": "{{count}} actif sera supprimé :",
+        "toDelete_other": "{{count}} actifs seront supprimés :",
+        "kept_one": "{{count}} actif ne peut pas être supprimé et est conservé :",
+        "kept_other": "{{count}} actifs ne peuvent pas être supprimés et sont conservés :",
+        "deleted_one": "{{count}} actif supprimé",
+        "deleted_other": "{{count}} actifs supprimés"
       }
     },
     "connections": {
@@ -128,14 +150,24 @@
         "derivedFromInterfaces": "Dérivé de {{count}} interfaces",
         "derivedNoInterfaces": "Dérivé (aucune interface liée)",
         "manual": "Manuel"
-      }
+      },
+      "deleteWarning_one": "Cette action est irréversible. Ses serveurs, interfaces et documents sont conservés ; seuls leurs liens avec cette connexion sont supprimés.",
+      "deleteWarning_other": "Cette action est irréversible. Leurs serveurs, interfaces et documents sont conservés ; seuls leurs liens avec ces connexions sont supprimés."
     },
     "interfaces": {
       "title": "Interfaces",
       "addInterface": "Ajouter une interface",
       "duplicateInterface": "Dupliquer l'interface",
       "alsoDeleteBindings": "Supprimer également les liaisons associées",
-      "deleteBindingsDescription": "Si cette option est décochée, les interfaces avec des liaisons ne seront pas supprimées.",
+      "deleteBindingsDescription": "Les interfaces qui ont des liaisons sont alors supprimées avec leurs liaisons. Les connexions sont conservées.",
+      "delete": {
+        "toDelete_one": "{{count}} interface sera supprimée :",
+        "toDelete_other": "{{count}} interfaces seront supprimées :",
+        "kept_one": "{{count}} interface a des liaisons et est conservée :",
+        "kept_other": "{{count}} interfaces ont des liaisons et sont conservées :",
+        "deleted_one": "{{count}} interface supprimée",
+        "deleted_other": "{{count}} interfaces supprimées"
+      },
       "duplicateDialogTitle": "Dupliquer l'interface",
       "duplicateDescription": "Créer une copie de « {{name}} ».",
       "copyEnvBindings": "Copier les liaisons d'environnement",
@@ -917,11 +949,11 @@
       "next": "Application suivante",
       "loading": "Chargement de l'application…",
       "notFound": "Application introuvable.",
-      "deleteTitle": "Supprimer l'application ?",
-      "deleteMessage": "Cette action supprime définitivement {{name}}. Elle est irréversible.",
       "meta": {
         "goLive": "Mise en service"
-      }
+      },
+      "deleteMessage": "Cette action supprime définitivement {{name}}, avec ses liens vers d’autres éléments. Elle est irréversible.",
+      "deleteMessageWithDeployments": "Cette action supprime définitivement {{name}}, avec ses {{deployments}} et ses liens vers d’autres éléments. Elle est irréversible."
     },
     "asset": {
       "title": "Serveur",

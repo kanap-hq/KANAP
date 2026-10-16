@@ -170,7 +170,7 @@ Una disposición de columnas que haya guardado conserva su propia elección de c
 - **Nueva línea**: Crear una línea (requiere `budget:member`)
 - **Importar CSV**: Carga masiva de líneas desde un archivo de presupuesto (requiere `budget:admin`)
 - **Exportar CSV**: Exportar las líneas a un archivo de presupuesto (requiere `budget:admin`)
-- **Eliminar seleccionadas**: Eliminación masiva de líneas seleccionadas (requiere `budget:admin`; seleccione filas mediante casillas de verificación). Una línea con importes en una columna congelada no se puede eliminar: las demás se eliminan, y el mensaje nombra cada línea rechazada con su motivo
+- **Eliminar seleccionadas**: Eliminación masiva de líneas seleccionadas (requiere `budget:admin`; seleccione filas mediante casillas de verificación). Una línea con importes en una columna congelada no se puede eliminar. Antes de eliminar nada, la confirmación enumera las líneas que se conservan, con la columna congelada. Las demás se eliminan
 
 **Navegación Anterior/Siguiente**:
 

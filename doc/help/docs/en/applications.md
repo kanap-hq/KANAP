@@ -118,7 +118,7 @@ The Applications grid provides a comprehensive view of your application portfoli
 - **Import CSV**: Bulk import from CSV file (`applications:admin`)
 - **Export CSV**: Export the list to CSV (`applications:admin`). Catalog-backed columns (category, lifecycle, criticality, cyber criticality, recovery wave, data class, access methods) are exported as their names; the import accepts a name or the internal code.
 - **Copy item**: Duplicate a selected application with all its core relations (`applications:manager`). See [Copying applications](#copying-applications) for what is and is not copied.
-- **Delete Selected**: Remove selected applications (`applications:admin`)
+- **Delete Selected**: Remove selected applications (`applications:admin`). An application that is the source or target of an interface cannot be deleted: disable it instead, or delete its interfaces first. Before the confirmation, the window lists those applications as kept, with their count of interfaces. The others are deleted with their deployments and their links to other records; the confirmation counts the deployments
 
 ---
 
@@ -137,7 +137,7 @@ The header shows:
 - **Go live** date
 - **Send link**: copy a shareable link to this workspace
 - **Create new version**: launch the version migration wizard (see [Version management](#version-management))
-- **Delete** (`applications:admin`)
+- **Delete** (`applications:admin`): an application with interfaces gets the refusal and why, with Close only. Otherwise the confirmation names the application and counts the deployments deleted with it, along with its links to other records
 - **Previous / Next**: walk through the filtered list without returning to the grid
 
 ### Properties drawer (right panel)
@@ -185,7 +185,7 @@ The Deployments tab documents where the application actually runs -- one block p
 - **SSO enabled** / **MFA supported**
 - **Notes**
 
-**Add deployment** opens a dialog where you set environment, lifecycle, base URL, SSO/MFA flags and notes. Each environment can only be added once. The lifecycle chip on a deployment header can also be changed inline from a popup menu.
+**Add deployment** opens a dialog where you set environment, lifecycle, base URL, SSO/MFA flags and notes. Each environment can only be added once. The lifecycle chip on a deployment header can also be changed inline from a popup menu. A deployment that still has servers or interface bindings cannot be deleted: remove them first.
 
 **Servers per deployment**: Each deployment block shows a table of assigned servers:
 

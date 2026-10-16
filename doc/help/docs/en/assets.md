@@ -73,7 +73,7 @@ Most columns support checkbox set filters for quick multi-select filtering. Filt
 **Actions**:
 - **Add asset**: Create a new asset (`infrastructure:member`)
 - **Import CSV** / **Export CSV**: Bulk operations (`infrastructure:admin`)
-- **Delete asset** (selected rows): Remove selected assets (`infrastructure:admin`)
+- **Delete asset** (selected rows): Remove selected assets (`infrastructure:admin`). An asset still assigned to applications or linked to connections cannot be deleted: remove it from them first. Before anything is deleted, the confirmation lists the assets kept, with the reason
 
 ---
 
@@ -101,7 +101,7 @@ The header shows:
 - **Asset reference** (e.g., `AST-123`): copyable identifier
 - **Lifecycle** chip (also editable from the properties drawer)
 - **Send link**: copy a shareable link to this workspace
-- **Delete** (`infrastructure:admin`)
+- **Delete** (`infrastructure:admin`). For an asset still in use, the reason shows before any confirmation
 - **Previous / Next** (e.g., "3 of 47"): navigate the filtered list without returning to it
 
 ### Properties drawer (right panel)

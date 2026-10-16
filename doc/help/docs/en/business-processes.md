@@ -47,7 +47,7 @@ The list shows all business processes for your tenant.
 - **Manage Categories** (Manager+) -- open the category management dialog.
 - **Import CSV** (Admin) -- bulk-import processes from a CSV file.
 - **Export CSV** (Admin) -- export the processes the list shows, or all processes, to CSV.
-- **Delete Selected** (Admin) -- delete one or more selected rows.
+- **Delete Selected** (Admin): delete one or more selected rows. Interfaces and requests linked to a deleted process stay, without the link.
 
 ---
 
@@ -99,7 +99,7 @@ Both open the **Manage Business Process Categories** dialog.
 
 - **Rename** -- edit the name directly in the text field.
 - **Activate / Deactivate** -- toggle whether a category appears in selectors. Inactive categories are hidden from new assignments but preserved on existing processes.
-- **Delete** -- remove a category. Deletion only works if no process is using it; otherwise, you will see an error.
+- **Delete**: remove a category. Deletion only works if no process is using it; otherwise the message counts the processes that use it. Disable it instead.
 - **New category** -- add a new row at the top of the dialog.
 
 **Save and cancel behavior**:

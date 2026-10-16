@@ -152,6 +152,8 @@ export default function ContactsPage() {
         <DeleteSelectedButton
           selectedRows={selectedRows}
           endpoint="/contacts/bulk"
+          // Nothing refuses a contact delete: its links go, the linked records stay.
+          warning={t('contacts.delete.warning', { count: selectedRows.length })}
           getItemId={(row) => row.id}
           getItemName={(row) => (row.first_name || row.last_name) ? `${row.first_name || ''} ${row.last_name || ''}`.trim() : row.email}
           gridApi={gridApiRef.current}

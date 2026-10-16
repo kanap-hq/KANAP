@@ -415,7 +415,9 @@
       "toDelete_one": "{{count}} Vertrag wird gelöscht:",
       "toDelete_other": "{{count}} Verträge werden gelöscht:",
       "kept_one": "{{count}} Vertrag bleibt erhalten. Deaktivieren Sie ihn stattdessen:",
-      "kept_other": "{{count}} Verträge bleiben erhalten. Deaktivieren Sie sie stattdessen:"
+      "kept_other": "{{count}} Verträge bleiben erhalten. Deaktivieren Sie sie stattdessen:",
+      "deleted_one": "{{count}} Vertrag gelöscht",
+      "deleted_other": "{{count}} Verträge gelöscht"
     },
     "title": "Verträge",
     "newButton": "Neu",
@@ -1852,6 +1854,14 @@
     "changeType": "Typ ändern…",
     "typeOpex": "OPEX",
     "typeCapex": "CAPEX",
-    "line": "Budgetzeile"
+    "line": "Budgetzeile",
+    "delete": {
+      "toDelete_one": "{{count}} Budgetzeile wird gelöscht:",
+      "toDelete_other": "{{count}} Budgetzeilen werden gelöscht:",
+      "kept_one": "{{count}} Budgetzeile kann nicht gelöscht werden und bleibt erhalten:",
+      "kept_other": "{{count}} Budgetzeilen können nicht gelöscht werden und bleiben erhalten:",
+      "deleted_one": "{{count}} Budgetzeile gelöscht",
+      "deleted_other": "{{count}} Budgetzeilen gelöscht"
+    }
   }
 }

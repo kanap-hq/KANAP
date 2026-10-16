@@ -87,7 +87,7 @@ Cliquez sur n'importe quelle cellule pour ouvrir l'espace de travail.
 - **Nouveau** : créer un groupe ou un centre de coûts (nécessite `cost_centers:member`)
 - **Importer CSV** : charger l'arbre depuis un fichier (nécessite `cost_centers:admin`)
 - **Exporter CSV** : télécharger les éléments que la liste affiche, ou tous les éléments (nécessite `cost_centers:admin`)
-- **Supprimer la sélection** : supprimer les éléments sélectionnés (nécessite `cost_centers:admin`). Les éléments qui ne peuvent pas être supprimés sont conservés et listés avec la raison. Le contenu est supprimé avant son groupe : sélectionner un groupe avec tout ce qu'il contient supprime l'ensemble
+- **Supprimer la sélection** : supprimer les éléments sélectionnés (nécessite `cost_centers:admin`). Avant toute suppression, la confirmation liste les éléments conservés, avec la raison. Le contenu est supprimé avant son groupe : sélectionner un groupe avec tout ce qu'il contient supprime l'ensemble
 
 ---
 
@@ -145,8 +145,8 @@ Le bouton **Supprimer** de l'en-tête supprime l'élément après une confirmati
 
 ## Les règles que vous rencontrerez
 
-- **Un centre de coûts utilisé par des lignes budgétaires ne peut ni devenir un groupe ni être supprimé.** Désactivez-le plutôt. Le message indique les lignes, par exemple « IT-300 is used by 3 OPEX lines and 1 CAPEX line. Disable it instead. »
-- **Un groupe qui contient des éléments ne peut ni être supprimé ni devenir un centre de coûts.** Déplacez ou supprimez d'abord son contenu. Le message donne le nombre, par exemple « Infrastructure still contains 4 nodes. Move or delete them first. »
+- **Un centre de coûts utilisé par des lignes budgétaires ne peut ni devenir un groupe ni être supprimé.** Désactivez-le plutôt. Le message indique les lignes, par exemple « Ce centre de coûts est utilisé par 3 lignes OPEX et 1 ligne CAPEX. Désactivez-le plutôt que de le supprimer. »
+- **Un groupe qui contient des éléments ne peut ni être supprimé ni devenir un centre de coûts.** Déplacez ou supprimez d'abord son contenu. Le message donne le nombre, par exemple « Ce groupe contient 4 éléments. Déplacez-les ou supprimez-les d’abord. »
 - **Seul un groupe peut être parent.** Un centre de coûts n'a pas d'enfants.
 - **Pas de boucle.** Un groupe ne peut pas passer sous lui-même ni sous l'un de ses propres groupes.
 - **Les éléments désactivés restent en place.** Un centre de coûts désactivé reste sur les lignes budgétaires qui l'ont déjà et continue de compter dans les rapports. Dans les listes de choix, il est marqué **Désactivé** et ne peut pas être choisi pour une nouvelle ligne. Désactiver un groupe ne change pas son contenu, et un groupe désactivé peut encore recevoir des éléments.

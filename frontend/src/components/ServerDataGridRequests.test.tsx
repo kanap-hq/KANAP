@@ -108,6 +108,24 @@ describe('ServerDataGrid block requests', () => {
     expect(get).toHaveBeenCalledTimes(2);
   }, 20_000);
 
+  it('a refresh keeps the rows on screen until the new page arrives', async () => {
+    get.mockImplementationOnce(async () => page(['Alpha', 'Beta']));
+    const view = render(<Grid refreshKey={0} />);
+    expect(await screen.findByText('Alpha')).toBeInTheDocument();
+
+    // A delete: the list asks again, and shows the rows it has meanwhile (no empty grid).
+    const next = deferred();
+    get.mockImplementationOnce(next.request);
+    view.rerender(<Grid refreshKey={1} />);
+    await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
+    expect(screen.getByText('Alpha')).toBeInTheDocument();
+    expect(screen.getByText('Beta')).toBeInTheDocument();
+
+    await act(async () => { next.resolve(page(['Beta'])); });
+    await waitFor(() => expect(screen.queryByText('Alpha')).not.toBeInTheDocument());
+    expect(screen.getByText('Beta')).toBeInTheDocument();
+  }, 20_000);
+
   it('a sort change aborts the page in flight and asks once with the new sort', async () => {
     const first = deferred();
     get.mockImplementationOnce(first.request);

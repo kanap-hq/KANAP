@@ -47,7 +47,7 @@ La liste affiche tous les processus métier de votre tenant.
 - **Gérer les catégories** (Manager+) — ouvrir le dialogue de gestion des catégories.
 - **Importer CSV** (Admin) — import en masse de processus depuis un fichier CSV.
 - **Exporter CSV** (Admin) — exporter les processus que la liste affiche, ou tous les processus, en CSV.
-- **Supprimer la sélection** (Admin) — supprimer une ou plusieurs lignes sélectionnées.
+- **Supprimer la sélection** (Admin) : supprimer une ou plusieurs lignes sélectionnées. Les interfaces et les demandes liées à un processus supprimé sont conservées, sans ce lien.
 
 ---
 
@@ -99,7 +99,7 @@ Les deux ouvrent le dialogue **Gérer les catégories de processus métier**.
 
 - **Renommer** — modifiez le nom directement dans le champ texte.
 - **Activer / Désactiver** — basculez si une catégorie apparaît dans les sélecteurs. Les catégories inactives sont masquées des nouvelles affectations mais préservées sur les processus existants.
-- **Supprimer** — supprimez une catégorie. La suppression ne fonctionne que si aucun processus ne l'utilise ; sinon, vous verrez une erreur.
+- **Supprimer** : supprimez une catégorie. La suppression ne fonctionne que si aucun processus ne l'utilise ; sinon, le message compte les processus qui l'utilisent. Désactivez-la plutôt.
 - **Nouvelle catégorie** — ajoutez une nouvelle ligne en haut du dialogue.
 
 **Comportement d'enregistrement et d'annulation** :

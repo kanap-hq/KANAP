@@ -73,7 +73,7 @@ La mayoría de columnas admiten filtros de conjunto de casillas para un filtrado
 **Acciones**:
 - **Añadir activo**: Crear un nuevo activo (`infrastructure:member`)
 - **Importar CSV** / **Exportar CSV**: Operaciones masivas (`infrastructure:admin`)
-- **Eliminar activo** (filas seleccionadas): Eliminar los activos seleccionados (`infrastructure:admin`)
+- **Eliminar activo** (filas seleccionadas): Eliminar los activos seleccionados (`infrastructure:admin`). Un activo todavía asignado a aplicaciones o vinculado a conexiones no se puede eliminar: retírelo primero de ellas. Antes de eliminar nada, la confirmación enumera los activos que se conservan, con el motivo
 
 ---
 
@@ -101,7 +101,7 @@ El encabezado muestra:
 - **Referencia del activo** (p. ej., `AST-123`): identificador copiable
 - Chip de **Ciclo de vida** (también editable desde el panel de propiedades)
 - **Enviar enlace**: copiar un enlace compartible a este espacio de trabajo
-- **Eliminar** (`infrastructure:admin`)
+- **Eliminar** (`infrastructure:admin`). Para un activo todavía en uso, el motivo aparece antes de cualquier confirmación
 - **Anterior / Siguiente** (p. ej., "3 de 47"): navegar por la lista filtrada sin volver a ella
 
 ### Panel de propiedades (panel derecho)

@@ -116,7 +116,7 @@ The Tasks grid shows all tasks across your organization.
   - **New**: Create a standalone task (requires `tasks:member`)
   - **Import CSV**: Upload a CSV file to create or update tasks (requires `tasks:admin`)
   - **Export CSV**: Download tasks to a CSV file (requires `tasks:admin`)
-  - **Delete Selected**: Remove selected tasks (requires `tasks:admin`)
+  - **Delete Selected**: Remove selected tasks (requires `tasks:admin`). A task a request was created from cannot be deleted: close it instead. Before anything is deleted, the confirmation lists the tasks kept, with the reason
 
 ---
 

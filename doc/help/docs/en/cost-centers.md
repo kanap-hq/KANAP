@@ -87,7 +87,7 @@ Click any cell to open the workspace.
 - **New**: create a group or a cost center (requires `cost_centers:member`)
 - **Import CSV**: load the tree from a file (requires `cost_centers:admin`)
 - **Export CSV**: download the nodes the list shows, or every node (requires `cost_centers:admin`)
-- **Delete selected**: delete the selected nodes (requires `cost_centers:admin`). Nodes that cannot be deleted are kept and listed with the reason. Contents are deleted before their group, so selecting a group together with everything it holds deletes all of it
+- **Delete selected**: delete the selected nodes (requires `cost_centers:admin`). Before anything is deleted, the confirmation lists the nodes kept, with the reason. Contents are deleted before their group, so selecting a group together with everything it holds deletes all of it
 
 ---
 
@@ -145,8 +145,8 @@ The **Delete** button in the header deletes the node after a confirmation (requi
 
 ## Rules you will meet
 
-- **A cost center used by budget lines cannot become a group, and cannot be deleted.** Disable it instead. The message names the lines, for example "IT-300 is used by 3 OPEX lines and 1 CAPEX line. Disable it instead."
-- **A group that contains nodes cannot be deleted, and cannot become a cost center.** Move or delete its content first. The message gives the count, for example "Infrastructure still contains 4 nodes. Move or delete them first."
+- **A cost center used by budget lines cannot become a group, and cannot be deleted.** Disable it instead. The message names the lines, for example "This cost center is used by 3 OPEX lines and 1 CAPEX line. Disable it instead of deleting it."
+- **A group that contains nodes cannot be deleted, and cannot become a cost center.** Move or delete its content first. The message gives the count, for example "This group contains 4 nodes. Move or delete them first."
 - **Only a group can be a parent.** A cost center has no children.
 - **No loops.** A group cannot move under itself or under one of its own groups.
 - **Disabled nodes stay where they are.** A disabled cost center stays on the budget lines that already have it and keeps counting in reports. In the pickers it is marked **Disabled** and cannot be chosen for a new line. Disabling a group does not change what it contains, and a disabled group can still receive nodes.

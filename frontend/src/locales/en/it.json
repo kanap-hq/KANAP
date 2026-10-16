@@ -73,6 +73,20 @@
         "dataClass": "Data class",
         "containsPii": "Contains PII",
         "dataResidency": "Data residency"
+      },
+      "delete": {
+        "warning_one": "Its deployments and its links to other records are deleted with it. This cannot be undone.",
+        "warning_other": "Their deployments and their links to other records are deleted with them. This cannot be undone.",
+        "warningCounted_one": "Its {{deployments}} and its links to other records are deleted with it. This cannot be undone.",
+        "warningCounted_other": "Their {{deployments}} and their links to other records are deleted with them. This cannot be undone.",
+        "warningLinks_one": "Its links to other records are deleted with it. This cannot be undone.",
+        "warningLinks_other": "Their links to other records are deleted with them. This cannot be undone.",
+        "toDelete_one": "{{count}} application will be deleted:",
+        "toDelete_other": "{{count}} applications will be deleted:",
+        "kept_one": "{{count}} application cannot be deleted and is kept:",
+        "kept_other": "{{count}} applications cannot be deleted and are kept:",
+        "deleted_one": "{{count}} application deleted",
+        "deleted_other": "{{count}} applications deleted"
       }
     },
     "assets": {
@@ -104,6 +118,14 @@
         "noLocation": "(No location)",
         "noSubLocation": "(No sub-location)",
         "blank": "(Blank)"
+      },
+      "delete": {
+        "toDelete_one": "{{count}} asset will be deleted:",
+        "toDelete_other": "{{count}} assets will be deleted:",
+        "kept_one": "{{count}} asset cannot be deleted and is kept:",
+        "kept_other": "{{count}} assets cannot be deleted and are kept:",
+        "deleted_one": "{{count}} asset deleted",
+        "deleted_other": "{{count}} assets deleted"
       }
     },
     "connections": {
@@ -128,14 +150,24 @@
         "derivedFromInterfaces": "Derived from {{count}} interfaces",
         "derivedNoInterfaces": "Derived (no interfaces linked)",
         "manual": "Manual"
-      }
+      },
+      "deleteWarning_one": "This cannot be undone. Its servers, interfaces and documents stay; only their links to this connection go.",
+      "deleteWarning_other": "This cannot be undone. Their servers, interfaces and documents stay; only their links to these connections go."
     },
     "interfaces": {
       "title": "Interfaces",
       "addInterface": "Add interface",
       "duplicateInterface": "Duplicate interface",
       "alsoDeleteBindings": "Also delete related bindings",
-      "deleteBindingsDescription": "If unchecked, interfaces with bindings will not be deleted.",
+      "deleteBindingsDescription": "Interfaces with bindings are then deleted with their bindings. Connections stay.",
+      "delete": {
+        "toDelete_one": "{{count}} interface will be deleted:",
+        "toDelete_other": "{{count}} interfaces will be deleted:",
+        "kept_one": "{{count}} interface has bindings and is kept:",
+        "kept_other": "{{count}} interfaces have bindings and are kept:",
+        "deleted_one": "{{count}} interface deleted",
+        "deleted_other": "{{count}} interfaces deleted"
+      },
       "duplicateDialogTitle": "Duplicate interface",
       "duplicateDescription": "Create a copy of \"{{name}}\".",
       "copyEnvBindings": "Copy environment bindings",
@@ -917,11 +949,11 @@
       "next": "Next application",
       "loading": "Loading application…",
       "notFound": "Application not found.",
-      "deleteTitle": "Delete application?",
-      "deleteMessage": "This permanently deletes {{name}}. This cannot be undone.",
       "meta": {
         "goLive": "Go live"
-      }
+      },
+      "deleteMessage": "This permanently deletes {{name}}, with its links to other records. This cannot be undone.",
+      "deleteMessageWithDeployments": "This permanently deletes {{name}}, with its {{deployments}} and its links to other records. This cannot be undone."
     },
     "asset": {
       "title": "Server",

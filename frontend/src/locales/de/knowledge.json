@@ -109,12 +109,11 @@
       "rootActions": "Ordneraktionen"
     },
     "confirmations": {
-      "deleteFolder": "\"{{name}}\" löschen? Dokumente werden nach Nicht abgelegt verschoben. Ordner mit Unterordnern können nicht gelöscht werden."
+      "deleteFolder": "Dokumente in „{{name}}“ werden nach Nicht abgelegt verschoben. Dies kann nicht rückgängig gemacht werden."
     },
     "dialogs": {
       "createFolderTitle": "Ordner erstellen",
-      "createSubfolderTitle": "Unterordner erstellen",
-      "deleteFolderTitle": "Ordner löschen"
+      "createSubfolderTitle": "Unterordner erstellen"
     },
     "fields": {
       "folderName": "Ordnername",
@@ -123,7 +122,8 @@
     "messages": {
       "folderMoved": "Ordner verschoben.",
       "moveFailed": "Ordner konnte nicht verschoben werden.",
-      "moveInProgress": "Ordner wird verschoben"
+      "moveInProgress": "Ordner wird verschoben",
+      "deleteFailed": "Der Ordner konnte nicht gelöscht werden."
     },
     "libraryRoot": "Stammverzeichnis",
     "title": "Ordner",
@@ -497,5 +497,13 @@
       "loadFailedBody": "Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
       "backToLibrary": "Zurück zur Bibliothek"
     }
+  },
+  "delete": {
+    "toDelete_one": "{{count}} Dokument wird gelöscht:",
+    "toDelete_other": "{{count}} Dokumente werden gelöscht:",
+    "kept_one": "{{count}} Dokument kann nicht gelöscht werden und bleibt erhalten:",
+    "kept_other": "{{count}} Dokumente können nicht gelöscht werden und bleiben erhalten:",
+    "deleted_one": "{{count}} Dokument gelöscht",
+    "deleted_other": "{{count}} Dokumente gelöscht"
   }
 }

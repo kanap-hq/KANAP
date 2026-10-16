@@ -31,6 +31,7 @@ import { useAuth } from '../../auth/AuthContext';
 import ForbiddenPage from '../ForbiddenPage';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
+import { recordsInUseCheck } from '../../utils/deleteCheck';
 import api from '../../api';
 
 import { useTranslation } from 'react-i18next';
@@ -365,6 +366,13 @@ export default function InterfacesPage() {
           gridApi={gridApiRef.current}
           onDeleteSuccess={() => {
             setRefreshKey((k) => k + 1);
+          }}
+          // Asked on click: interfaces with bindings are kept, unless the option deletes their bindings too.
+          checkDelete={async (ids) => ({ ...(await recordsInUseCheck('/interfaces', ids)), cascadeLifts: ['INTERFACE_HAS_BINDINGS'] })}
+          itemLabels={{
+            toDelete: (count) => t('pages.interfaces.delete.toDelete', { count }),
+            kept: (count) => t('pages.interfaces.delete.kept', { count }),
+            deleted: (count) => t('pages.interfaces.delete.deleted', { count }),
           }}
           cascadeOption={{
             label: t('pages.interfaces.alsoDeleteBindings'),

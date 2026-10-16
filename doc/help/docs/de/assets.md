@@ -73,7 +73,7 @@ Die meisten Spalten unterstützen Kontrollkästchen-Set-Filter für die schnelle
 **Aktionen**:
 - **Asset hinzufügen**: Ein neues Asset erstellen (`infrastructure:member`)
 - **CSV importieren** / **CSV exportieren**: Massenoperationen (`infrastructure:admin`)
-- **Asset löschen** (ausgewählte Zeilen): Ausgewählte Assets entfernen (`infrastructure:admin`)
+- **Asset löschen** (ausgewählte Zeilen): Ausgewählte Assets entfernen (`infrastructure:admin`). Ein Asset, das noch Anwendungen zugeordnet oder mit Verbindungen verknüpft ist, kann nicht gelöscht werden: Entfernen Sie es zuerst daraus. Vor dem Löschen nennt die Bestätigung die behaltenen Assets mit dem Grund
 
 ---
 
@@ -101,7 +101,7 @@ Die Kopfzeile zeigt:
 - **Asset-Referenz** (z. B. `AST-123`): kopierbare Kennung
 - **Lebenszyklus**-Chip (auch über die Eigenschaftsleiste bearbeitbar)
 - **Link senden**: Einen teilbaren Link zu diesem Arbeitsbereich kopieren
-- **Löschen** (`infrastructure:admin`)
+- **Löschen** (`infrastructure:admin`). Bei einem Asset, das noch verwendet wird, erscheint der Grund vor jeder Bestätigung
 - **Vorherige / Nächste** (z. B. „3 von 47"): Durch die gefilterte Liste navigieren, ohne dorthin zurückzukehren
 
 ### Eigenschaftsleiste (rechtes Panel)

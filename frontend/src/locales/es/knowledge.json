@@ -109,12 +109,11 @@
       "rootActions": "Acciones de carpeta"
     },
     "confirmations": {
-      "deleteFolder": "¿Eliminar \"{{name}}\"? Los documentos se moverán a Sin clasificar. Las carpetas con subcarpetas no se pueden eliminar."
+      "deleteFolder": "Los documentos de «{{name}}» se moverán a Sin clasificar. Esta acción no se puede deshacer."
     },
     "dialogs": {
       "createFolderTitle": "Crear carpeta",
-      "createSubfolderTitle": "Crear subcarpeta",
-      "deleteFolderTitle": "Eliminar carpeta"
+      "createSubfolderTitle": "Crear subcarpeta"
     },
     "fields": {
       "folderName": "Nombre de la carpeta",
@@ -123,7 +122,8 @@
     "messages": {
       "folderMoved": "Carpeta movida.",
       "moveFailed": "No se pudo mover la carpeta.",
-      "moveInProgress": "Movimiento de carpeta en curso"
+      "moveInProgress": "Movimiento de carpeta en curso",
+      "deleteFailed": "No se pudo eliminar la carpeta."
     },
     "libraryRoot": "Raíz",
     "title": "Carpetas",
@@ -497,5 +497,13 @@
       "loadFailedBody": "Compruebe su conexión e inténtelo de nuevo.",
       "backToLibrary": "Volver a la biblioteca"
     }
+  },
+  "delete": {
+    "toDelete_one": "Se eliminará {{count}} documento:",
+    "toDelete_other": "Se eliminarán {{count}} documentos:",
+    "kept_one": "{{count}} documento no se puede eliminar y se conserva:",
+    "kept_other": "{{count}} documentos no se pueden eliminar y se conservan:",
+    "deleted_one": "{{count}} documento eliminado",
+    "deleted_other": "{{count}} documentos eliminados"
   }
 }

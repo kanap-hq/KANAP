@@ -33,7 +33,7 @@ Consequences of the library choice:
 - In **Templates**, published documents become reusable starting points for new articles and are grouped by document type in the template picker.
 - In **Managed Docs**, articles may still be readable and editable, but some metadata is controlled by the source workspace rather than from Knowledge itself.
 
-Library administration is intentionally stricter than document editing. Creating, renaming, deleting, or reorganizing libraries is an admin responsibility because those changes affect navigation and ownership for everyone. The default library (the first one in the bar, where new documents go) cannot be deleted.
+Library administration is intentionally stricter than document editing. Creating, renaming, deleting, or reorganizing libraries is an admin responsibility because those changes affect navigation and ownership for everyone. The default library (the first one in the bar, where new documents go) cannot be deleted. A built-in library cannot be deleted either, nor the last library you can use: create another one first.
 
 ### Restricted libraries
 
@@ -60,7 +60,7 @@ Important behavior:
 - In a single-library view, documents can be dragged into folders for quick reorganization.
 - Folders can be nested to create a browsing structure.
 - Deleting a folder does not delete its documents. Documents move back to **Unfiled** instead.
-- A folder with subfolders cannot be deleted until the hierarchy is cleaned up.
+- A folder with subfolders cannot be deleted: KANAP says so before asking you to confirm. Move or delete its subfolders first.
 
 Use folders for stable subject areas, not for temporary workflow states. Status and workflow already exist for that.
 
@@ -161,7 +161,7 @@ Folder moves follow the same idea as document moves. Reorganizing a folder chang
 
 - **New** (split button): creates a blank document in the active library, or opens the template picker to create from a published template
 - **Move**: moves selected documents to a different folder or library
-- **Delete**: permanently removes selected documents (admin only; unavailable for managed documents)
+- **Delete**: permanently removes selected documents (admin only; unavailable for managed documents). Before anything is deleted, the confirmation lists the documents kept, with the reason
 - **Manage Types**: visible only inside the **Templates** library to administrators; opens the document type editor
 
 ## Creating and shaping a document

@@ -415,7 +415,9 @@
       "toDelete_one": "{{count}} contract will be deleted:",
       "toDelete_other": "{{count}} contracts will be deleted:",
       "kept_one": "{{count}} contract is kept. Disable it instead:",
-      "kept_other": "{{count}} contracts are kept. Disable them instead:"
+      "kept_other": "{{count}} contracts are kept. Disable them instead:",
+      "deleted_one": "{{count}} contract deleted",
+      "deleted_other": "{{count}} contracts deleted"
     },
     "title": "Contracts",
     "newButton": "New",
@@ -1852,6 +1854,14 @@
     "changeType": "Change type…",
     "typeOpex": "OPEX",
     "typeCapex": "CAPEX",
-    "line": "Budget line"
+    "line": "Budget line",
+    "delete": {
+      "toDelete_one": "{{count}} budget line will be deleted:",
+      "toDelete_other": "{{count}} budget lines will be deleted:",
+      "kept_one": "{{count}} budget line cannot be deleted and is kept:",
+      "kept_other": "{{count}} budget lines cannot be deleted and are kept:",
+      "deleted_one": "{{count}} budget line deleted",
+      "deleted_other": "{{count}} budget lines deleted"
+    }
   }
 }

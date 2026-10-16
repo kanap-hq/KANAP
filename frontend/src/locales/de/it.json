@@ -73,6 +73,20 @@
         "dataClass": "Datenklasse",
         "containsPii": "Enthält PII",
         "dataResidency": "Datenresidenz"
+      },
+      "delete": {
+        "warning_one": "Ihre Bereitstellungen und Verknüpfungen zu anderen Einträgen werden mit ihr gelöscht. Dies kann nicht rückgängig gemacht werden.",
+        "warning_other": "Ihre Bereitstellungen und Verknüpfungen zu anderen Einträgen werden mit ihnen gelöscht. Dies kann nicht rückgängig gemacht werden.",
+        "warningCounted_one": "Ihre {{deployments}} und Verknüpfungen zu anderen Einträgen werden mit ihr gelöscht. Dies kann nicht rückgängig gemacht werden.",
+        "warningCounted_other": "Ihre {{deployments}} und Verknüpfungen zu anderen Einträgen werden mit ihnen gelöscht. Dies kann nicht rückgängig gemacht werden.",
+        "warningLinks_one": "Ihre Verknüpfungen zu anderen Einträgen werden mit ihr gelöscht. Dies kann nicht rückgängig gemacht werden.",
+        "warningLinks_other": "Ihre Verknüpfungen zu anderen Einträgen werden mit ihnen gelöscht. Dies kann nicht rückgängig gemacht werden.",
+        "toDelete_one": "{{count}} Anwendung wird gelöscht:",
+        "toDelete_other": "{{count}} Anwendungen werden gelöscht:",
+        "kept_one": "{{count}} Anwendung kann nicht gelöscht werden und bleibt erhalten:",
+        "kept_other": "{{count}} Anwendungen können nicht gelöscht werden und bleiben erhalten:",
+        "deleted_one": "{{count}} Anwendung gelöscht",
+        "deleted_other": "{{count}} Anwendungen gelöscht"
       }
     },
     "assets": {
@@ -104,6 +118,14 @@
         "noLocation": "(Kein Standort)",
         "noSubLocation": "(Kein Unterstandort)",
         "blank": "(Leer)"
+      },
+      "delete": {
+        "toDelete_one": "{{count}} Asset wird gelöscht:",
+        "toDelete_other": "{{count}} Assets werden gelöscht:",
+        "kept_one": "{{count}} Asset kann nicht gelöscht werden und bleibt erhalten:",
+        "kept_other": "{{count}} Assets können nicht gelöscht werden und bleiben erhalten:",
+        "deleted_one": "{{count}} Asset gelöscht",
+        "deleted_other": "{{count}} Assets gelöscht"
       }
     },
     "connections": {
@@ -128,14 +150,24 @@
         "derivedFromInterfaces": "Abgeleitet von {{count}} Schnittstellen",
         "derivedNoInterfaces": "Abgeleitet (keine Schnittstellen verknüpft)",
         "manual": "Manuell"
-      }
+      },
+      "deleteWarning_one": "Dies kann nicht rückgängig gemacht werden. Ihre Server, Schnittstellen und Dokumente bleiben erhalten; nur ihre Verknüpfungen mit dieser Verbindung werden entfernt.",
+      "deleteWarning_other": "Dies kann nicht rückgängig gemacht werden. Ihre Server, Schnittstellen und Dokumente bleiben erhalten; nur ihre Verknüpfungen mit diesen Verbindungen werden entfernt."
     },
     "interfaces": {
       "title": "Schnittstellen",
       "addInterface": "Schnittstelle hinzufügen",
       "duplicateInterface": "Schnittstelle duplizieren",
       "alsoDeleteBindings": "Zugehörige Bindungen ebenfalls löschen",
-      "deleteBindingsDescription": "Wenn diese Option deaktiviert ist, werden Schnittstellen mit Bindungen nicht gelöscht.",
+      "deleteBindingsDescription": "Schnittstellen mit Bindungen werden dann mit ihren Bindungen gelöscht. Verbindungen bleiben erhalten.",
+      "delete": {
+        "toDelete_one": "{{count}} Schnittstelle wird gelöscht:",
+        "toDelete_other": "{{count}} Schnittstellen werden gelöscht:",
+        "kept_one": "{{count}} Schnittstelle hat Bindungen und bleibt erhalten:",
+        "kept_other": "{{count}} Schnittstellen haben Bindungen und bleiben erhalten:",
+        "deleted_one": "{{count}} Schnittstelle gelöscht",
+        "deleted_other": "{{count}} Schnittstellen gelöscht"
+      },
       "duplicateDialogTitle": "Schnittstelle duplizieren",
       "duplicateDescription": "Eine Kopie von \"{{name}}\" erstellen.",
       "copyEnvBindings": "Umgebungs-Bindungen kopieren",
@@ -917,11 +949,11 @@
       "next": "Nächste Anwendung",
       "loading": "Anwendung wird geladen…",
       "notFound": "Anwendung nicht gefunden.",
-      "deleteTitle": "Anwendung löschen?",
-      "deleteMessage": "{{name}} wird endgültig gelöscht. Dies kann nicht rückgängig gemacht werden.",
       "meta": {
         "goLive": "Inbetriebnahme"
-      }
+      },
+      "deleteMessage": "Damit wird {{name}} endgültig gelöscht, mit ihren Verknüpfungen zu anderen Einträgen. Dies kann nicht rückgängig gemacht werden.",
+      "deleteMessageWithDeployments": "Damit wird {{name}} endgültig gelöscht, mit ihren {{deployments}} und Verknüpfungen zu anderen Einträgen. Dies kann nicht rückgängig gemacht werden."
     },
     "asset": {
       "title": "Server",

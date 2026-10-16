@@ -118,7 +118,7 @@ La cuadrícula de Aplicaciones proporciona una vista completa de su portafolio d
 - **Importar CSV**: Importación masiva desde archivo CSV (`applications:admin`)
 - **Exportar CSV**: Exportar la lista a CSV (`applications:admin`). Las columnas respaldadas por catálogos (categoría, ciclo de vida, criticidad, criticidad cibernética, ola de recuperación, clase de datos, métodos de acceso) se exportan con sus nombres; la importación acepta un nombre o el código interno.
 - **Copiar elemento**: Duplicar una aplicación seleccionada con todas sus relaciones principales (`applications:manager`). Consulte [Copiar aplicaciones](#copiar-aplicaciones) para saber qué se copia y qué no.
-- **Eliminar seleccionadas**: Eliminar aplicaciones seleccionadas (`applications:admin`)
+- **Eliminar seleccionadas**: Eliminar aplicaciones seleccionadas (`applications:admin`). Una aplicación que es origen o destino de una interfaz no se puede eliminar: desactívela en su lugar, o elimine primero sus interfaces. Antes de la confirmación, la ventana muestra esas aplicaciones como conservadas, con su número de interfaces. Las demás se eliminan con sus despliegues y sus vínculos con otros elementos; la confirmación cuenta los despliegues
 
 ---
 
@@ -137,7 +137,7 @@ El encabezado muestra:
 - Fecha de **Puesta en marcha**
 - **Enviar enlace**: copiar un enlace compartible a este espacio de trabajo
 - **Crear nueva versión**: lanzar el asistente de migración de versión (consulte [Gestión de versiones](#gestion-de-versiones))
-- **Eliminar** (`applications:admin`)
+- **Eliminar** (`applications:admin`): una aplicación con interfaces recibe el rechazo y el motivo, solo con Cerrar. Si no, la confirmación nombra la aplicación y cuenta los despliegues eliminados con ella, junto con sus vínculos con otros elementos
 - **Anterior / Siguiente**: recorrer la lista filtrada sin volver a la cuadrícula
 
 ### Panel de propiedades (panel derecho)
@@ -185,7 +185,7 @@ La pestaña Despliegues documenta dónde se ejecuta realmente la aplicación -- 
 - **SSO habilitado** / **MFA soportado**
 - **Notas**
 
-**Añadir despliegue** abre un diálogo donde define entorno, ciclo de vida, URL base, indicadores SSO/MFA y notas. Cada entorno solo puede añadirse una vez. El chip de ciclo de vida en el encabezado de un despliegue también puede cambiarse en línea desde un menú emergente.
+**Añadir despliegue** abre un diálogo donde define entorno, ciclo de vida, URL base, indicadores SSO/MFA y notas. Cada entorno solo puede añadirse una vez. El chip de ciclo de vida en el encabezado de un despliegue también puede cambiarse en línea desde un menú emergente. Un despliegue que todavía tiene servidores o enlaces de interfaz no se puede eliminar: retírelos primero.
 
 **Servidores por despliegue**: Cada bloque de despliegue muestra una tabla de servidores asignados:
 

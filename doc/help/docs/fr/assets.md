@@ -73,7 +73,7 @@ La plupart des colonnes prennent en charge des filtres par jeu de cases à coche
 **Actions** :
 - **Ajouter un actif** : Créer un nouvel actif (`infrastructure:member`)
 - **Import CSV** / **Export CSV** : Opérations en masse (`infrastructure:admin`)
-- **Supprimer un actif** (lignes sélectionnées) : Supprimer les actifs sélectionnés (`infrastructure:admin`)
+- **Supprimer un actif** (lignes sélectionnées) : Supprimer les actifs sélectionnés (`infrastructure:admin`). Un actif encore affecté à des applications ou lié à des connexions ne peut pas être supprimé : retirez-le d'abord de ces éléments. Avant toute suppression, la confirmation liste les actifs conservés, avec la raison
 
 ---
 
@@ -101,7 +101,7 @@ L'en-tête affiche :
 - **Référence de l'actif** (ex. : `AST-123`) : identifiant copiable
 - Pastille **Cycle de vie** (également modifiable depuis le tiroir des propriétés)
 - **Envoyer le lien** : copier un lien partageable vers cet espace de travail
-- **Supprimer** (`infrastructure:admin`)
+- **Supprimer** (`infrastructure:admin`). Pour un actif encore utilisé, la raison s'affiche avant toute confirmation
 - **Précédent / Suivant** (ex. : « 3 sur 47 ») : naviguer dans la liste filtrée sans y revenir
 
 ### Tiroir des propriétés (panneau de droite)

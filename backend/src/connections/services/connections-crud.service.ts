@@ -7,6 +7,7 @@ import { ConnectionProtocol } from '../connection-protocol.entity';
 import { ConnectionLeg } from '../connection-leg.entity';
 import { Asset } from '../../assets/asset.entity';
 import { AuditService } from '../../audit/audit.service';
+import { BulkDeleteResult } from '../../common/delete.types';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import { ConnectionsBaseService, ServiceOpts, Topology } from './connections-base.service';
 
@@ -493,12 +494,13 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
   /**
    * Bulk delete connections.
    */
-  async bulkDelete(ids: string[], userId: string | null, opts?: ServiceOpts) {
-    if (!Array.isArray(ids) || ids.length === 0) return { deleted: 0 };
+  /** The list's bulk delete: the ids deleted, as every bulk delete answers (`BulkDeleteResult`). */
+  async bulkDelete(ids: string[], userId: string | null, opts?: ServiceOpts): Promise<BulkDeleteResult> {
+    if (!Array.isArray(ids) || ids.length === 0) return { deleted: [], failed: [] };
     const mg = opts?.manager ?? this.connRepo.manager;
     const repo = this.getRepo(mg);
     const existing = await repo.find({ where: { id: In(ids) } });
-    if (existing.length === 0) return { deleted: 0 };
+    if (existing.length === 0) return { deleted: [], failed: [] };
     for (const row of existing) {
       await this.deleteLegsForConnection(row.id, { manager: mg });
     }
@@ -509,7 +511,7 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
         { manager: mg },
       );
     }
-    return { deleted: existing.length };
+    return { deleted: existing.map((row) => row.id), failed: [] };
   }
 
   /**

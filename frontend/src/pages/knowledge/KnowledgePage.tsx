@@ -36,6 +36,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
+import { recordsInUseCheck } from '../../utils/deleteCheck';
 import ChipToggleBar, { ChipToggleContextLine } from '../../components/ChipToggleBar';
 import { KanapDialog, PropertyRow, StatusDot, useKanapDialogs } from '../../components/design';
 import ServerDataGrid from '../../components/ServerDataGrid';
@@ -221,6 +222,8 @@ export default function KnowledgePage() {
   const [createLibraryOpen, setCreateLibraryOpen] = useState(false);
   const [newLibraryName, setNewLibraryName] = useState('');
   const [editingLibrary, setEditingLibrary] = useState<DocumentLibrary | null>(null);
+  // The delete window of a library, and its refusal when it is the default one, name the library.
+  const deleteLibraryTitle = editingLibrary?.name ? t('common:delete.recordTitle', { name: editingLibrary.name }) : t('dialogs.deleteLibrary.title');
   const [librarySettingsName, setLibrarySettingsName] = useState('');
   const [librarySettingsOwnerId, setLibrarySettingsOwnerId] = useState<string | null>(null);
   const [librarySettingsAccessMode, setLibrarySettingsAccessMode] = useState<'default' | 'restricted'>('default');
@@ -1245,6 +1248,13 @@ export default function KnowledgePage() {
             <DeleteSelectedButton<DocumentRow>
               selectedRows={selectedRows}
               endpoint="/knowledge/bulk"
+              // Asked on click: a document managed from a record's page is kept, with why.
+              checkDelete={(ids) => recordsInUseCheck('/knowledge', ids)}
+              itemLabels={{
+                toDelete: (count) => t('delete.toDelete', { count }),
+                kept: (count) => t('delete.kept', { count }),
+                deleted: (count) => t('delete.deleted', { count }),
+              }}
               getItemId={(row) => row.id}
               getItemName={(row) => `${row.item_ref}${row.title ? ` - ${row.title}` : ''}`}
               gridApi={gridApiRef.current}
@@ -1439,7 +1449,10 @@ export default function KnowledgePage() {
             onClick={() => {
               // The default library cannot be deleted: say so, with nothing to confirm.
               if (editingLibraryDetail?.is_default) {
-                void dialogs.alert({ title: t('dialogs.deleteLibrary.title'), message: t('errors:knowledge_default_library') });
+                void dialogs.alert({
+                  title: deleteLibraryTitle,
+                  message: t('errors:knowledge_default_library'),
+                });
                 return;
               }
               setDeleteLibraryConfirmOpen(true);
@@ -1643,7 +1656,7 @@ export default function KnowledgePage() {
 
       <KanapDialog
         open={deleteLibraryConfirmOpen}
-        title={t('dialogs.deleteLibrary.title')}
+        title={deleteLibraryTitle}
         onClose={() => setDeleteLibraryConfirmOpen(false)}
         onSave={() => {
           setDeleteLibraryConfirmOpen(false);

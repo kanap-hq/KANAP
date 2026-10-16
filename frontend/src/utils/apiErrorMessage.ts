@@ -1,4 +1,5 @@
-import type { TFunction } from 'i18next';
+import i18next, { type TFunction } from 'i18next';
+import { refusalCounts, usageTotal, type DeleteFailure } from './deleteRefusal';
 
 type ApiErrorPayload = {
   message?: unknown;
@@ -6,6 +7,10 @@ type ApiErrorPayload = {
   error?: unknown;
   /** Variant of the message for this installation (`onprem`): the `errors:<code>_<variant>` key. */
   variant?: unknown;
+  /** A refused delete: what still uses the record, counted per kind (`{{usages}}` in the message). */
+  usages?: unknown;
+  /** Values the refusal's sentence names besides the counts (a frozen column and its year). */
+  params?: unknown;
 };
 
 type ApiErrorLike = {
@@ -54,7 +59,16 @@ export function getApiErrorMessage(error: unknown, t: TFunction, fallback: strin
 
   if (code) {
     const variant = stringifyErrorValue(payload?.variant);
-    const translated = t(`errors:${code}`, { defaultValue: message || fallback, ...(variant ? { context: variant } : {}) });
+    const usages = Array.isArray(payload?.usages) ? (payload.usages as DeleteFailure['usages']) : null;
+    // The language of `t` (a fixed one), else the interface's.
+    const language = (t as { lng?: string }).lng || i18next.resolvedLanguage || i18next.language || 'en';
+    const params = payload?.params && typeof payload.params === 'object' ? (payload.params as Record<string, unknown>) : {};
+    const translated = t(`errors:${code}`, {
+      ...params,
+      defaultValue: message || fallback,
+      ...(variant ? { context: variant } : {}),
+      ...(usages ? { ...usageTotal(usages), usages: refusalCounts({ usages }, t, language) } : {}),
+    });
     if (typeof translated === 'string' && translated.trim()) {
       return translated;
     }

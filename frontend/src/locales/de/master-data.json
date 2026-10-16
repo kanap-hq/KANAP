@@ -186,7 +186,9 @@
       "toDelete_one": "{{count}} Unternehmen wird gelöscht:",
       "toDelete_other": "{{count}} Unternehmen werden gelöscht:",
       "kept_one": "{{count}} Unternehmen wird noch verwendet und bleibt erhalten. Deaktivieren Sie es stattdessen:",
-      "kept_other": "{{count}} Unternehmen werden noch verwendet und bleiben erhalten. Deaktivieren Sie sie stattdessen:"
+      "kept_other": "{{count}} Unternehmen werden noch verwendet und bleiben erhalten. Deaktivieren Sie sie stattdessen:",
+      "deleted_one": "{{count}} Unternehmen gelöscht",
+      "deleted_other": "{{count}} Unternehmen gelöscht"
     }
   },
   "departments": {
@@ -225,6 +227,14 @@
       "nameTaken": "Eine andere Abteilung dieses Unternehmens hat bereits diesen Namen.",
       "companyRequired": "Wählen Sie ein Unternehmen.",
       "headcountInvalid": "Geben Sie eine ganze Zahl ein, 0 oder mehr."
+    },
+    "delete": {
+      "toDelete_one": "{{count}} Abteilung wird gelöscht:",
+      "toDelete_other": "{{count}} Abteilungen werden gelöscht:",
+      "kept_one": "{{count}} Abteilung kann nicht gelöscht werden und bleibt erhalten:",
+      "kept_other": "{{count}} Abteilungen können nicht gelöscht werden und bleiben erhalten:",
+      "deleted_one": "{{count}} Abteilung gelöscht",
+      "deleted_other": "{{count}} Abteilungen gelöscht"
     }
   },
   "costCenters": {
@@ -293,6 +303,14 @@
       "nameRequired": "Geben Sie einen Namen ein.",
       "companyRequired": "Wählen Sie ein Unternehmen.",
       "chooseCompany": "Wählen Sie das Unternehmen, um diese Gruppe in eine Kostenstelle umzuwandeln."
+    },
+    "delete": {
+      "toDelete_one": "{{count}} Kostenstelle wird gelöscht:",
+      "toDelete_other": "{{count}} Kostenstellen werden gelöscht:",
+      "kept_one": "{{count}} Kostenstelle kann nicht gelöscht werden und bleibt erhalten:",
+      "kept_other": "{{count}} Kostenstellen können nicht gelöscht werden und bleiben erhalten:",
+      "deleted_one": "{{count}} Kostenstelle gelöscht",
+      "deleted_other": "{{count}} Kostenstellen gelöscht"
     }
   },
   "workingDayCalendars": {
@@ -388,6 +406,14 @@
       "deleteFailed": "Der Kalender konnte nicht gelöscht werden.",
       "codeRequired": "Geben Sie einen Code ein.",
       "nameRequired": "Geben Sie einen Namen ein."
+    },
+    "delete": {
+      "toDelete_one": "{{count}} Kalender wird gelöscht:",
+      "toDelete_other": "{{count}} Kalender werden gelöscht:",
+      "kept_one": "{{count}} Kalender kann nicht gelöscht werden und bleibt erhalten:",
+      "kept_other": "{{count}} Kalender können nicht gelöscht werden und bleiben erhalten:",
+      "deleted_one": "{{count}} Kalender gelöscht",
+      "deleted_other": "{{count}} Kalender gelöscht"
     }
   },
   "suppliers": {
@@ -447,7 +473,9 @@
       "toDelete_one": "{{count}} Lieferant wird gelöscht:",
       "toDelete_other": "{{count}} Lieferanten werden gelöscht:",
       "kept_one": "{{count}} Lieferant wird noch verwendet und bleibt erhalten. Deaktivieren Sie ihn stattdessen:",
-      "kept_other": "{{count}} Lieferanten werden noch verwendet und bleiben erhalten. Deaktivieren Sie sie stattdessen:"
+      "kept_other": "{{count}} Lieferanten werden noch verwendet und bleiben erhalten. Deaktivieren Sie sie stattdessen:",
+      "deleted_one": "{{count}} Lieferant gelöscht",
+      "deleted_other": "{{count}} Lieferanten gelöscht"
     }
   },
   "contacts": {
@@ -516,6 +544,10 @@
       "saveFailed": "Der Kontakt konnte nicht gespeichert werden.",
       "createFailed": "Der Kontakt konnte nicht erstellt werden.",
       "loadFailed": "Der Kontakt konnte nicht geladen werden."
+    },
+    "delete": {
+      "warning_one": "Er wird aus den Lieferanten, Budgetzeilen, Verträgen, Anwendungen, Assets, Standorten, Projekten und Anfragen entfernt, die ihn nennen. Diese Einträge bleiben erhalten. Dies kann nicht rückgängig gemacht werden.",
+      "warning_other": "Sie werden aus den Lieferanten, Budgetzeilen, Verträgen, Anwendungen, Assets, Standorten, Projekten und Anfragen entfernt, die sie nennen. Diese Einträge bleiben erhalten. Dies kann nicht rückgängig gemacht werden."
     }
   },
   "coa": {
@@ -642,6 +674,14 @@
       "unmapped_one": "{{count}} Konto hat kein Konsolidierungskonto",
       "unmapped_other": "{{count}} Konten haben kein Konsolidierungskonto",
       "showAll": "Alle Konten anzeigen"
+    },
+    "delete": {
+      "toDelete_one": "{{count}} Konto wird gelöscht:",
+      "toDelete_other": "{{count}} Konten werden gelöscht:",
+      "kept_one": "{{count}} Konto kann nicht gelöscht werden und bleibt erhalten:",
+      "kept_other": "{{count}} Konten können nicht gelöscht werden und bleiben erhalten:",
+      "deleted_one": "{{count}} Konto gelöscht",
+      "deleted_other": "{{count}} Konten gelöscht"
     }
   },
   "accounts": {
@@ -924,7 +964,9 @@
       "failedToDelete": "Fehler beim Löschen der Kategorie",
       "failedToCreate": "Fehler beim Erstellen der Kategorie",
       "failedToUpdate": "Fehler beim Aktualisieren der Kategorie"
-    }
+    },
+    "deleteWarning_one": "Dies kann nicht rückgängig gemacht werden. Schnittstellen und Anfragen, die mit diesem Prozess verknüpft sind, bleiben ohne die Verknüpfung erhalten.",
+    "deleteWarning_other": "Dies kann nicht rückgängig gemacht werden. Schnittstellen und Anfragen, die mit diesen Prozessen verknüpft sind, bleiben ohne die Verknüpfung erhalten."
   },
   "admin": {
     "copy": {

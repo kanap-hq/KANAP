@@ -839,7 +839,8 @@
       "contactLocked": "Les rôles de contact sont gérés par le système pour la visibilité de l'annuaire et ne peuvent pas être modifiés.",
       "duplicated": "Rôle dupliqué.",
       "permissionsSaved": "Autorisations du rôle enregistrées.",
-      "setAccessLevels": "Définissez les niveaux d'accès par ressource pour ce rôle."
+      "setAccessLevels": "Définissez les niveaux d'accès par ressource pour ce rôle.",
+      "deleteFailed": "Le rôle n’a pas pu être supprimé."
     },
     "resources": {
       "accounts": "Comptes",
@@ -972,7 +973,9 @@
     "exportTitle": "Exporter les comptes du modèle",
     "importTitle": "Importer les comptes du modèle",
     "templateLabel": "Modèle",
-    "title": "Comptes standards (Admin plateforme)"
+    "title": "Comptes standards (Admin plateforme)",
+    "deleteWarning_one": "Cette action est irréversible. Le compte est retiré de ce modèle. Les plans comptables déjà chargés depuis ce modèle gardent leurs comptes.",
+    "deleteWarning_other": "Cette action est irréversible. Les comptes sont retirés de ce modèle. Les plans comptables déjà chargés depuis ce modèle gardent leurs comptes."
   },
   "tenants": {
     "actions": {
@@ -1175,7 +1178,7 @@
       "invitePartialFail_other": "{{count}} utilisateurs invités ; {{failed}} en échec",
       "inviteFailed": "Impossible d'inviter les utilisateurs sélectionnés",
       "disableConfirm": "{{name}} perdra l'accès et sera déconnecté immédiatement. Désactiver ce compte ?",
-      "deleteConfirm": "Supprimer {{name}} ? Cette action est irréversible. Si l'utilisateur est référencé par d'autres enregistrements, désactivez plutôt le compte.",
+      "deleteConfirm": "Supprimer {{name}} ? Cette action est irréversible.",
       "inviteSentOne": "Invitation envoyée à {{email}}",
       "resetSent": "E-mail de réinitialisation envoyé à {{email}}",
       "rolesSaveFailed": "L'utilisateur a été enregistré mais les rôles n'ont pas pu être mis à jour. Rouvrez l'utilisateur et réessayez.",
@@ -1199,6 +1202,14 @@
     },
     "lastLogin": {
       "never": "Jamais"
+    },
+    "delete": {
+      "toDelete_one": "{{count}} utilisateur sera supprimé :",
+      "toDelete_other": "{{count}} utilisateurs seront supprimés :",
+      "kept_one": "{{count}} utilisateur ne peut pas être supprimé et est conservé :",
+      "kept_other": "{{count}} utilisateurs ne peuvent pas être supprimés et sont conservés :",
+      "deleted_one": "{{count}} utilisateur supprimé",
+      "deleted_other": "{{count}} utilisateurs supprimés"
     }
   },
   "aiModels": {

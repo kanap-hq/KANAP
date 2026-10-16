@@ -33,7 +33,7 @@ Konsequenzen der Bibliothekswahl:
 - In **Vorlagen** werden veröffentlichte Dokumente zu wiederverwendbaren Ausgangspunkten für neue Artikel und werden im Vorlagen-Picker nach Dokumenttyp gruppiert.
 - In **Verwaltete Dokumente** sind Artikel möglicherweise immer noch lesbar und bearbeitbar, aber einige Metadaten werden vom Quell-Arbeitsbereich gesteuert anstatt von der Wissensdatenbank selbst.
 
-Die Bibliotheksverwaltung ist absichtlich strenger als die Dokumentbearbeitung. Das Erstellen, Umbenennen, Löschen oder Reorganisieren von Bibliotheken ist eine Admin-Verantwortung, weil diese Änderungen die Navigation und Verantwortlichkeit für alle beeinflussen. Die Standardbibliothek (die erste in der Leiste, in der neue Dokumente angelegt werden) kann nicht gelöscht werden.
+Die Bibliotheksverwaltung ist absichtlich strenger als die Dokumentbearbeitung. Das Erstellen, Umbenennen, Löschen oder Reorganisieren von Bibliotheken ist eine Admin-Verantwortung, weil diese Änderungen die Navigation und Verantwortlichkeit für alle beeinflussen. Die Standardbibliothek (die erste in der Leiste, in der neue Dokumente angelegt werden) kann nicht gelöscht werden. Ebenso wenig eine integrierte Bibliothek oder die letzte Bibliothek, die Sie verwenden können: Legen Sie zuerst eine andere an.
 
 ### Eingeschränkte Bibliotheken
 
@@ -60,7 +60,7 @@ Wichtiges Verhalten:
 - In einer Einzelbibliotheks-Ansicht können Dokumente per Drag-and-Drop in Ordner gezogen werden, um sie schnell zu reorganisieren.
 - Ordner können verschachtelt werden, um eine Browsing-Struktur zu erstellen.
 - Das Löschen eines Ordners löscht nicht seine Dokumente. Dokumente werden stattdessen zurück nach **Nicht eingeordnet** verschoben.
-- Ein Ordner mit Unterordnern kann nicht gelöscht werden, bis die Hierarchie aufgeräumt ist.
+- Ein Ordner mit Unterordnern kann nicht gelöscht werden: KANAP sagt es, bevor Sie bestätigen. Verschieben oder löschen Sie zuerst seine Unterordner.
 
 Verwenden Sie Ordner für stabile Themenbereiche, nicht für temporäre Workflow-Status. Status und Workflow existieren bereits dafür.
 
@@ -161,7 +161,7 @@ Ordnerverschiebungen folgen der gleichen Idee wie Dokumentverschiebungen. Das Re
 
 - **Neu** (Split-Schaltfläche): erstellt ein leeres Dokument in der aktiven Bibliothek oder öffnet den Vorlagen-Picker, um aus einer veröffentlichten Vorlage zu erstellen
 - **Verschieben**: verschiebt ausgewählte Dokumente in einen anderen Ordner oder eine andere Bibliothek
-- **Löschen**: entfernt ausgewählte Dokumente dauerhaft (nur Admin; nicht verfügbar für verwaltete Dokumente)
+- **Löschen**: entfernt ausgewählte Dokumente dauerhaft (nur Admin; nicht verfügbar für verwaltete Dokumente). Vor dem Löschen nennt die Bestätigung die behaltenen Dokumente mit dem Grund
 - **Typen verwalten**: nur innerhalb der Bibliothek **Vorlagen** für Administratoren sichtbar; öffnet den Dokumenttyp-Editor
 
 ## Ein Dokument erstellen und gestalten

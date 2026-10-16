@@ -47,7 +47,7 @@ La lista muestra todos los procesos de negocio de su espacio de trabajo.
 - **Gestionar categorías** (Manager+) -- abrir el diálogo de gestión de categorías.
 - **Importar CSV** (Admin) -- importación masiva de procesos desde un archivo CSV.
 - **Exportar CSV** (Admin) -- exportar los procesos que muestra la lista, o todos los procesos, a CSV.
-- **Eliminar seleccionados** (Admin) -- eliminar una o más filas seleccionadas.
+- **Eliminar seleccionados** (Admin): eliminar una o más filas seleccionadas. Las interfaces y solicitudes vinculadas a un proceso eliminado se conservan, sin el vínculo.
 
 ---
 
@@ -99,7 +99,7 @@ Ambos abren el diálogo **Gestionar categorías de procesos de negocio**.
 
 - **Renombrar** -- edite el nombre directamente en el campo de texto.
 - **Activar / Desactivar** -- controle si una categoría aparece en los selectores. Las categorías inactivas se ocultan de las nuevas asignaciones pero se conservan en los procesos existentes.
-- **Eliminar** -- eliminar una categoría. La eliminación solo funciona si ningún proceso la utiliza; de lo contrario, verá un error.
+- **Eliminar**: eliminar una categoría. La eliminación solo funciona si ningún proceso la utiliza; de lo contrario, el mensaje cuenta los procesos que la usan. Desactívela en su lugar.
 - **Nueva categoría** -- añadir una nueva fila en la parte superior del diálogo.
 
 **Comportamiento de guardar y cancelar**:

@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { Account } from './account.entity';
@@ -7,6 +7,7 @@ import { ReferenceCheckService } from '../common/reference-check.service';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
 import { withSavepoint } from '../common/savepoint.util';
+import { checkIds, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal } from '../common/record-in-use';
 
 @Injectable()
 export class AccountsDeleteService extends BaseDeleteService<Account> {
@@ -39,6 +40,19 @@ export class AccountsDeleteService extends BaseDeleteService<Account> {
     await this.referenceCheck.assertNoReferences('account', entity.id, accountName, { manager });
   }
 
+  /** The check before a delete (`POST /accounts/delete-check`): which of `ids` would be refused, and why. Nothing is written. */
+  async deleteCheck(ids: string[], opts?: { manager?: EntityManager }): Promise<{ refused: DeleteRefusal[] }> {
+    const manager = opts?.manager ?? this.repository.manager;
+    const wanted = checkIds(ids);
+    if (wanted.length === 0) return { refused: [] };
+    const rows: Account[] = await manager.query(
+      `SELECT id, account_number, account_name FROM accounts WHERE tenant_id = app_current_tenant() AND id = ANY($1::uuid[])`,
+      [wanted],
+    );
+    return refusalsFrom(wanted, rows, (row) => this.getAccountDisplayName(row), (row) =>
+      this.referenceCheck.accountRefusal(row.id, this.getAccountDisplayName(row), { manager }));
+  }
+
   /**
    * Delete a single account
    */
@@ -61,7 +75,11 @@ export class AccountsDeleteService extends BaseDeleteService<Account> {
     } catch (error: any) {
       // Catch database-level foreign key errors (e.g., from allocations)
       if (error.code === '23503' || error.message?.includes('foreign key constraint')) {
-        throw new ConflictException(
+        throw new RecordInUseException(
+          'RECORD_IN_USE',
+          'account',
+          accountName,
+          [],
           `Cannot delete account "${accountName}": it is being used in allocations for OPEX or CAPEX items. You can disable it if it shouldn't be used actively anymore.`
         );
       }
@@ -109,6 +127,7 @@ export class AccountsDeleteService extends BaseDeleteService<Account> {
           id: accountId,
           name,
           reason: error.message || 'Unknown error',
+          ...refusalDetails(error),
         });
       }
     }

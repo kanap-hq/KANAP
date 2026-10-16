@@ -47,7 +47,7 @@ Die Liste zeigt alle Geschäftsprozesse Ihres Mandanten.
 - **Kategorien verwalten** (Manager+) -- den Dialog zur Kategorieverwaltung öffnen.
 - **CSV importieren** (Admin) -- Prozesse aus einer CSV-Datei massenimportieren.
 - **CSV exportieren** (Admin) -- die Prozesse der Liste, oder alle Prozesse, als CSV exportieren.
-- **Ausgewählte löschen** (Admin) -- eine oder mehrere ausgewählte Zeilen löschen.
+- **Ausgewählte löschen** (Admin): eine oder mehrere ausgewählte Zeilen löschen. Schnittstellen und Anfragen, die mit einem gelöschten Prozess verknüpft sind, bleiben ohne die Verknüpfung erhalten.
 
 ---
 
@@ -99,7 +99,7 @@ Beide öffnen den Dialog **Geschäftsprozess-Kategorien verwalten**.
 
 - **Umbenennen** -- den Namen direkt im Textfeld bearbeiten.
 - **Aktivieren / Deaktivieren** -- umschalten, ob eine Kategorie in Auswahlfeldern erscheint. Inaktive Kategorien werden bei neuen Zuweisungen ausgeblendet, bleiben aber bei bestehenden Prozessen erhalten.
-- **Löschen** -- eine Kategorie entfernen. Das Löschen funktioniert nur, wenn kein Prozess sie verwendet; andernfalls sehen Sie eine Fehlermeldung.
+- **Löschen**: eine Kategorie entfernen. Das Löschen funktioniert nur, wenn kein Prozess sie verwendet; andernfalls zählt die Meldung die Prozesse, die sie verwenden. Deaktivieren Sie sie stattdessen.
 - **Neue Kategorie** -- eine neue Zeile oben im Dialog hinzufügen.
 
 **Speichern und Abbrechen**:

@@ -1,10 +1,12 @@
 import React from 'react';
 import PageHeader from '../../components/PageHeader';
-import { Box, Button, Card, CardContent, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, Grid, InputLabel, List, ListItemButton, ListItemText, MenuItem, Select, Snackbar, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Card, CardContent, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, Grid, InputLabel, List, ListItemButton, ListItemText, MenuItem, Select, Snackbar, Stack, TextField, Typography } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
+import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import { refusalCounts } from '../../utils/deleteRefusal';
 
 type Role = { id: string; role_name: string; role_description: string; is_system?: boolean; is_built_in?: boolean; user_count?: number };
 type PermissionLevel = 'reader'|'contributor'|'member'|'admin'|null;
@@ -85,7 +87,7 @@ function getLevelOptions(resource: string): Array<{ value: ConcretePermissionLev
 
 export default function RolesPage() {
   const { hasLevel } = useAuth();
-  const { t } = useTranslation(['admin', 'common']);
+  const { t, i18n } = useTranslation(['admin', 'common']);
   const canEdit = hasLevel('users','admin');
   const qc = useQueryClient();
   const { data: roles } = useQuery({ queryKey: ['roles'], queryFn: async () => (await api.get<{ items: Role[] }>('/roles')).data.items });
@@ -180,6 +182,7 @@ export default function RolesPage() {
 
   // Delete role
   const [confirmDelete, setConfirmDelete] = React.useState(false);
+  const [deleteError, setDeleteError] = React.useState<string | null>(null);
   const { mutateAsync: doDelete, isPending: deleting } = useMutation({
     mutationFn: async () => { if (selected) await api.delete(`/roles/${selected.id}`); },
     onSuccess: async () => {
@@ -188,6 +191,23 @@ export default function RolesPage() {
       setSelectedId(null);
     },
   });
+  const openDelete = () => { setDeleteError(null); setConfirmDelete(true); };
+  const confirmRoleDelete = async () => {
+    try {
+      await doDelete();
+    } catch (error) {
+      // A refusal in the interface language (ROLE_IN_USE, ROLE_BUILT_IN), with what to do instead.
+      setDeleteError(getApiErrorMessage(error, t, t('roles.messages.deleteFailed')));
+    }
+  };
+  // A role given to users is refused: the dialog says so, as the server would, with Close only.
+  const usersOfSelected = selected?.user_count ?? 0;
+  const deleteRefusal = usersOfSelected > 0
+    ? t('errors:ROLE_IN_USE', {
+      count: usersOfSelected,
+      usages: refusalCounts({ usages: [{ type: 'users', total: usersOfSelected }] }, t, i18n?.resolvedLanguage || i18n?.language || 'en'),
+    })
+    : deleteError;
 
   const roleKey = (selected?.role_name ?? '').toLowerCase();
   const isSystem = !!selected?.is_system && (roleKey === 'administrator' || roleKey === 'contact');
@@ -260,7 +280,7 @@ export default function RolesPage() {
                   <Stack direction="row" spacing={1} alignItems="center">
                     {typeof selected.user_count === 'number' && <Typography variant="body2" color="text.secondary">{t('roles.userCount', { count: selected.user_count })}</Typography>}
                     {canEdit && !locked && (
-                      <Button size="small" color="error" onClick={() => setConfirmDelete(true)} disabled={!!selected.user_count && selected.user_count > 0}>{t('common:buttons.delete')}</Button>
+                      <Button size="small" color="error" onClick={openDelete}>{t('common:buttons.delete')}</Button>
                     )}
                   </Stack>
                 </Stack>
@@ -349,13 +369,21 @@ export default function RolesPage() {
 
       {/* Confirm Delete */}
       <Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)}>
-        <DialogTitle>{t('roles.dialogs.deleteTitle')}</DialogTitle>
+        <DialogTitle>{selected?.role_name ? t('common:delete.recordTitle', { name: selected.role_name }) : t('roles.dialogs.deleteTitle')}</DialogTitle>
         <DialogContent>
-          <Typography variant="body2">{t('roles.dialogs.deleteMessage')}</Typography>
+          {deleteRefusal
+            ? <Alert severity="warning">{deleteRefusal}</Alert>
+            : <Typography variant="body2">{t('roles.dialogs.deleteMessage')}</Typography>}
         </DialogContent>
         <DialogActions>
-          <Button variant="action" onClick={() => setConfirmDelete(false)}>{t('common:buttons.cancel')}</Button>
-          <Button variant="action-danger" onClick={() => doDelete()} disabled={deleting}>{t('common:buttons.delete')}</Button>
+          {deleteRefusal ? (
+            <Button variant="action" onClick={() => setConfirmDelete(false)}>{t('common:buttons.close')}</Button>
+          ) : (
+            <>
+              <Button variant="action" onClick={() => setConfirmDelete(false)}>{t('common:buttons.cancel')}</Button>
+              <Button variant="action-danger" onClick={() => { void confirmRoleDelete(); }} disabled={deleting}>{t('common:buttons.delete')}</Button>
+            </>
+          )}
         </DialogActions>
       </Dialog>
 

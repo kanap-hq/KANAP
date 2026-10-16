@@ -36,6 +36,8 @@ import { useAuth } from '../../auth/AuthContext';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { keepsShippedName, localizeTaskType } from '../../utils/taskTypeLocalization';
 import { useCatalogLocale } from '../../hooks/useLocalizedTaskTypes';
+import { recordRefusal } from '../../utils/deleteCheck';
+import { deleteFailureReason } from '../../utils/deleteRefusal';
 import { useKanapDialogs } from '../../components/design';
 
 interface CriterionValue {
@@ -248,14 +250,10 @@ function SortableCriterionCard({
 
 export default function SettingsPage() {
   const { hasLevel } = useAuth();
-  const { t } = useTranslation(['portfolio', 'common']);
+  const { t, i18n } = useTranslation(['portfolio', 'common']);
+  const language = i18n?.resolvedLanguage || i18n?.language || 'en';
   const dialogs = useKanapDialogs();
   const canEdit = hasLevel('portfolio_settings', 'admin');
-  const confirmDelete = useCallback((message: string) => dialogs.confirm({
-    message,
-    confirmLabel: t('common:buttons.delete'),
-    intent: 'danger',
-  }), [dialogs, t]);
 
   const [activeTab, setActiveTab] = useState(0);
   const [criteria, setCriteria] = useState<Criterion[]>([]);
@@ -329,6 +327,42 @@ export default function SettingsPage() {
     loadData();
   }, [loadData]);
 
+  /**
+   * The delete of a settings item (`<base>/<id>`). Where the delete can be refused (`check`), it is
+   * asked first: a refused item gets the refusal and why, with Close only. Otherwise the item is
+   * confirmed by its name, then deleted.
+   */
+  const deleteItem = useCallback(async (item: {
+    id: string;
+    name: string;
+    base: string;
+    check?: boolean;
+    message?: string;
+    failed: string;
+  }) => {
+    if (!canEdit) return;
+    const title = t('common:delete.recordTitle', { name: item.name });
+    if (item.check) {
+      const refusal = await recordRefusal(item.base, item.id);
+      if (refusal) {
+        await dialogs.alert({ title, message: deleteFailureReason(refusal, t, language) });
+        return;
+      }
+    }
+    if (!await dialogs.confirm({
+      title,
+      message: item.message ?? t('common:delete.cannotUndo'),
+      confirmLabel: t('common:buttons.delete'),
+      intent: 'danger',
+    })) return;
+    try {
+      await api.delete(`${item.base}/${item.id}`);
+      loadData();
+    } catch (e: any) {
+      setError(getApiErrorMessage(e, t, item.failed));
+    }
+  }, [canEdit, dialogs, language, loadData, t]);
+
   const handleToggleEnabled = useCallback(async (criterion: Criterion) => {
     if (!canEdit) return;
     try {
@@ -363,17 +397,13 @@ export default function SettingsPage() {
     setEditDialogOpen(true);
   }, []);
 
-  const handleDeleteCriterion = useCallback(async (id: string) => {
-    if (!canEdit) return;
-    if (!await confirmDelete(t('settings.scoring.confirmDelete'))) return;
-
-    try {
-      await api.delete(`/portfolio/criteria/${id}`);
-      loadData();
-    } catch (e: any) {
-      setError(getApiErrorMessage(e, t, t('settings.scoring.messages.deleteFailed')));
-    }
-  }, [loadData, canEdit, confirmDelete, t]);
+  const handleDeleteCriterion = useCallback((id: string) => deleteItem({
+    id,
+    name: criteria.find((entry) => entry.id === id)?.name ?? '',
+    base: '/portfolio/criteria',
+    message: t('settings.scoring.confirmDelete'),
+    failed: t('settings.scoring.messages.deleteFailed'),
+  }), [criteria, deleteItem, t]);
 
   const criteriaSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -424,16 +454,12 @@ export default function SettingsPage() {
     }
   }, [canEdit, loadData, t]);
 
-  const handleDeleteSkill = useCallback(async (id: string) => {
-    if (!canEdit) return;
-    if (!await confirmDelete(t('settings.skills.confirmDelete'))) return;
-    try {
-      await api.delete(`/portfolio/skills/${id}`);
-      loadData();
-    } catch (e: any) {
-      setError(getApiErrorMessage(e, t, t('settings.skills.messages.deleteFailed')));
-    }
-  }, [canEdit, confirmDelete, loadData, t]);
+  const handleDeleteSkill = useCallback((id: string) => deleteItem({
+    id,
+    name: skills.find((entry) => entry.id === id)?.name ?? '',
+    base: '/portfolio/skills',
+    failed: t('settings.skills.messages.deleteFailed'),
+  }), [deleteItem, skills, t]);
 
   const handleEditSkill = useCallback((skill: Skill) => {
     setEditingSkill(skill);
@@ -456,16 +482,12 @@ export default function SettingsPage() {
     setTemplateDialogOpen(true);
   }, []);
 
-  const handleDeleteTemplate = useCallback(async (id: string) => {
-    if (!canEdit) return;
-    if (!await confirmDelete(t('settings.phaseTemplates.confirmDelete'))) return;
-    try {
-      await api.delete(`/portfolio/phase-templates/${id}`);
-      loadData();
-    } catch (e: any) {
-      setError(getApiErrorMessage(e, t, t('settings.phaseTemplates.messages.deleteFailed')));
-    }
-  }, [canEdit, confirmDelete, loadData, t]);
+  const handleDeleteTemplate = useCallback((id: string) => deleteItem({
+    id,
+    name: phaseTemplates.find((entry) => entry.id === id)?.name ?? '',
+    base: '/portfolio/phase-templates',
+    failed: t('settings.phaseTemplates.messages.deleteFailed'),
+  }), [deleteItem, phaseTemplates, t]);
 
   // Classification handlers
   const handleEditSource = useCallback((source: PortfolioSource) => {
@@ -478,16 +500,13 @@ export default function SettingsPage() {
     setSourceDialogOpen(true);
   }, []);
 
-  const handleDeleteSource = useCallback(async (id: string) => {
-    if (!canEdit) return;
-    if (!await confirmDelete(t('settings.classification.confirmations.deleteSource'))) return;
-    try {
-      await api.delete(`/portfolio/classification/sources/${id}`);
-      loadData();
-    } catch (e: any) {
-      setError(getApiErrorMessage(e, t, t('settings.classification.messages.deleteSourceFailed')));
-    }
-  }, [canEdit, confirmDelete, loadData, t]);
+  const handleDeleteSource = useCallback((id: string) => deleteItem({
+    id,
+    name: sources.find((entry) => entry.id === id)?.name ?? '',
+    base: '/portfolio/classification/sources',
+    check: true,
+    failed: t('settings.classification.messages.deleteSourceFailed'),
+  }), [deleteItem, sources, t]);
 
   const handleToggleSource = useCallback(async (source: PortfolioSource) => {
     if (!canEdit) return;
@@ -509,16 +528,14 @@ export default function SettingsPage() {
     setCategoryDialogOpen(true);
   }, []);
 
-  const handleDeleteCategory = useCallback(async (id: string) => {
-    if (!canEdit) return;
-    if (!await confirmDelete(t('settings.classification.confirmations.deleteCategory'))) return;
-    try {
-      await api.delete(`/portfolio/classification/categories/${id}`);
-      loadData();
-    } catch (e: any) {
-      setError(getApiErrorMessage(e, t, t('settings.classification.messages.deleteCategoryFailed')));
-    }
-  }, [canEdit, confirmDelete, loadData, t]);
+  const handleDeleteCategory = useCallback((id: string) => deleteItem({
+    id,
+    name: categories.find((entry) => entry.id === id)?.name ?? '',
+    base: '/portfolio/classification/categories',
+    check: true,
+    message: t('settings.classification.confirmations.deleteCategory'),
+    failed: t('settings.classification.messages.deleteCategoryFailed'),
+  }), [categories, deleteItem, t]);
 
   const handleToggleCategory = useCallback(async (category: PortfolioCategory) => {
     if (!canEdit) return;
@@ -542,16 +559,13 @@ export default function SettingsPage() {
     setStreamDialogOpen(true);
   }, []);
 
-  const handleDeleteStream = useCallback(async (id: string) => {
-    if (!canEdit) return;
-    if (!await confirmDelete(t('settings.classification.confirmations.deleteStream'))) return;
-    try {
-      await api.delete(`/portfolio/classification/streams/${id}`);
-      loadData();
-    } catch (e: any) {
-      setError(getApiErrorMessage(e, t, t('settings.classification.messages.deleteStreamFailed')));
-    }
-  }, [canEdit, confirmDelete, loadData, t]);
+  const handleDeleteStream = useCallback((id: string) => deleteItem({
+    id,
+    name: categories.flatMap((category) => category.streams ?? []).find((entry) => entry.id === id)?.name ?? '',
+    base: '/portfolio/classification/streams',
+    check: true,
+    failed: t('settings.classification.messages.deleteStreamFailed'),
+  }), [categories, deleteItem, t]);
 
   const handleToggleStream = useCallback(async (stream: PortfolioStream) => {
     if (!canEdit) return;
@@ -574,16 +588,13 @@ export default function SettingsPage() {
     setTaskTypeDialogOpen(true);
   }, []);
 
-  const handleDeleteTaskType = useCallback(async (id: string) => {
-    if (!canEdit) return;
-    if (!await confirmDelete(t('settings.classification.confirmations.deleteTaskType'))) return;
-    try {
-      await api.delete(`/portfolio/classification/task-types/${id}`);
-      loadData();
-    } catch (e: any) {
-      setError(getApiErrorMessage(e, t, t('settings.classification.messages.deleteTaskTypeFailed')));
-    }
-  }, [canEdit, confirmDelete, loadData, t]);
+  const handleDeleteTaskType = useCallback((id: string) => deleteItem({
+    id,
+    name: taskTypes.find((entry) => entry.id === id)?.name ?? '',
+    base: '/portfolio/classification/task-types',
+    check: true,
+    failed: t('settings.classification.messages.deleteTaskTypeFailed'),
+  }), [deleteItem, taskTypes, t]);
 
   const handleToggleTaskType = useCallback(async (taskType: PortfolioTaskType) => {
     if (!canEdit) return;
@@ -606,16 +617,13 @@ export default function SettingsPage() {
     setTeamDialogOpen(true);
   }, []);
 
-  const handleDeleteTeam = useCallback(async (id: string) => {
-    if (!canEdit) return;
-    if (!await confirmDelete(t('settings.teams.confirmDelete'))) return;
-    try {
-      await api.delete(`/portfolio/teams/${id}`);
-      loadData();
-    } catch (e: any) {
-      setError(getApiErrorMessage(e, t, t('settings.teams.messages.deleteFailed')));
-    }
-  }, [canEdit, confirmDelete, loadData, t]);
+  const handleDeleteTeam = useCallback((id: string) => deleteItem({
+    id,
+    name: teams.find((entry) => entry.id === id)?.name ?? '',
+    base: '/portfolio/teams',
+    check: true,
+    failed: t('settings.teams.messages.deleteFailed'),
+  }), [deleteItem, teams, t]);
 
   const handleToggleTeam = useCallback(async (team: PortfolioTeam) => {
     if (!canEdit) return;
@@ -650,17 +658,13 @@ export default function SettingsPage() {
     setEmploymentTypeDialogOpen(true);
   }, []);
 
-  // Delete is only offered when nothing references the type, so there is
-  // nothing to warn about and no confirmation to show.
-  const handleDeleteEmploymentType = useCallback(async (id: string) => {
-    if (!canEdit) return;
-    try {
-      await api.delete(`/portfolio/employment-types/${id}`);
-      loadData();
-    } catch (e: any) {
-      setError(getApiErrorMessage(e, t, t('settings.employmentTypes.messages.deleteFailed')));
-    }
-  }, [canEdit, loadData, t]);
+  const handleDeleteEmploymentType = useCallback((id: string) => deleteItem({
+    id,
+    name: employmentTypes.find((entry) => entry.id === id)?.name ?? '',
+    base: '/portfolio/employment-types',
+    check: true,
+    failed: t('settings.employmentTypes.messages.deleteFailed'),
+  }), [deleteItem, employmentTypes, t]);
 
   const handleToggleEmploymentType = useCallback(async (type: EmploymentType) => {
     if (!canEdit) return;
@@ -1760,7 +1764,6 @@ function ClassificationSection({
                         size="small"
                         color="error"
                         onClick={() => onDeleteSource(source.id)}
-                        disabled={source.is_system}
                       >
                         <DeleteIcon fontSize="small" />
                       </IconButton>
@@ -1846,7 +1849,6 @@ function ClassificationSection({
                             e.stopPropagation();
                             onDeleteCategory(category.id);
                           }}
-                          disabled={category.is_system}
                         >
                           <DeleteIcon fontSize="small" />
                         </IconButton>
@@ -1975,7 +1977,6 @@ function ClassificationSection({
                         size="small"
                         color="error"
                         onClick={() => onDeleteTaskType(taskType.id)}
-                        disabled={taskType.is_system}
                       >
                         <DeleteIcon fontSize="small" />
                       </IconButton>
@@ -2397,7 +2398,6 @@ function TeamsSection({
                       size="small"
                       color="error"
                       onClick={() => onDelete(team.id)}
-                      disabled={team.is_system || team.member_count > 0}
                     >
                       <DeleteIcon fontSize="small" />
                     </IconButton>
@@ -2564,7 +2564,6 @@ function EmploymentTypesSection({
                       size="small"
                       color="error"
                       onClick={() => onDelete(type.id)}
-                      disabled={type.is_system || type.usage_count > 0}
                     >
                       <DeleteIcon fontSize="small" />
                     </IconButton>

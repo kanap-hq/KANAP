@@ -508,6 +508,14 @@ export class AssetsController {
     });
   }
 
+  // What a delete of `ids` would refuse, asked before the confirmation.
+  @UseGuards(PermissionGuard)
+  @RequireLevel('infrastructure', 'admin')
+  @Post('delete-check')
+  deleteCheck(@Body() body: { ids: string[] }, @Req() req: any) {
+    return this.deleteSvc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], req?.tenant?.id ?? '', { manager: req?.queryRunner?.manager });
+  }
+
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'admin')
   @Delete('bulk')
