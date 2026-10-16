@@ -318,18 +318,24 @@ export class TechnologiesController {
 
   // ==================== APPLICATIONS ====================
 
-  /** Hosted (through the servers) and declared applications; `?format=csv` for the file. */
+  /** Hosted (through the servers) and declared applications. */
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'reader')
   @Get(':id/applications')
-  async listApplications(
+  listApplications(@Param('id') id: string, @Tenant() ctx: TenantRequest) {
+    return this.links.applicationsOfTechnology(id, this.opts(ctx));
+  }
+
+  /** The same rows as a CSV file (a path ending with /export: recorded as an export in the audit log). */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('infrastructure', 'reader')
+  @Get(':id/applications/export')
+  async exportApplications(
     @Param('id') id: string,
-    @Query('format') format: string | undefined,
     @Query('language') language: string | undefined,
     @Res({ passthrough: true }) res: Response,
     @Tenant() ctx: TenantRequest,
   ) {
-    if (format !== 'csv') return this.links.applicationsOfTechnology(id, this.opts(ctx));
     const file = await this.links.applicationsCsv(id, language, this.opts(ctx));
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(file.filename));

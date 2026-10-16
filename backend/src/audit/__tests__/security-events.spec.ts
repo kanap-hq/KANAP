@@ -190,6 +190,7 @@ const KNOWN_EXPORT_ROUTES = [
   'GET /spend-items/budget-file/export',
   'GET /suppliers/export',
   'GET /tasks/export',
+  'GET /technologies/:id/applications/export',
   'GET /users/export',
   'GET /working-day-profiles/export',
   'POST /export',
@@ -216,6 +217,7 @@ const STORED_FILE_ROUTES = [
   'GET /spend-items/attachments/:attachmentId',
   'GET /tasks/attachments/:attachmentId',
   'GET /tasks/attachments/:tenantSlug/:attachmentId/inline',
+  'GET /technologies/attachments/:attachmentId',
 ];
 
 // Routes whose name looks like an export but that send no exported data.

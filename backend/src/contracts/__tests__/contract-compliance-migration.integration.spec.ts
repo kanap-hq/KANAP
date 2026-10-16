@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { ContractComplianceItems1854040000000 as Migration } from '../../migrations/1854040000000-contract-compliance-items';
+import { Technologies1854190000000 } from '../../migrations/1854190000000-technologies';
 import { assert, inRolledBackTransaction, runSpecs, seedTenant, setTenant } from '../../spend/__tests__/round-inputs.fixtures';
 
 // Migration 1854040000000 (the contracts' compliance register), against a real database, in
@@ -78,6 +79,8 @@ async function seedContract(runner: QueryRunner, tag: string) {
 async function testDownUp(seeded: boolean) {
   await inRolledBackTransaction(async (runner) => {
     const contracts = seeded ? [await seedContract(runner, 'ccm-a'), await seedContract(runner, 'ccm-b')] : [];
+    // The technology links (1854190000000) need the contracts' key: migrations are undone newest first.
+    await new Technologies1854190000000().down(runner);
     await migration.down(runner);
     const [{ table }] = await runner.query(`SELECT to_regclass('contract_compliance_items') AS table`);
     assert.equal(table, null, 'down() drops the table');
