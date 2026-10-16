@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Box } from '@mui/material';
 import { AgChartsReact } from 'ag-charts-react';
-import { PRINT_CONTENT_WIDTH, registerPrintPreparer, useReportPrinting } from './reportPrint';
+import { PRINT_CONTENT_WIDTH, registerPrintPreparer, useReportPrinting, useReportTheme } from './reportPrint';
 
 /**
  * An ag-charts chart that survives printing. A live canvas keeps its screen pixel size
@@ -12,6 +12,9 @@ import { PRINT_CONTENT_WIDTH, registerPrintPreparer, useReportPrinting } from '.
  * chart stays mounted and laid out off-page meanwhile, so it can redraw and the instance
  * survives the round trip. A copy is never scaled up: if the redraw did not happen in
  * time, the chart prints at its screen size rather than blurred and oversized.
+ *
+ * Charts follow the screen theme (light on paper) on a transparent background, so the
+ * card behind them shows through; a page that sets its own `theme` or `background` keeps it.
  */
 const nextFrame = () => new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
 const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
@@ -30,6 +33,12 @@ export default function PrintableChart({
   printWidth?: number;
 }) {
   const printing = useReportPrinting();
+  const dark = useReportTheme().palette.mode === 'dark';
+  const themedOptions = useMemo(() => ({
+    ...options,
+    theme: options?.theme ?? (dark ? 'ag-default-dark' : 'ag-default'),
+    background: options?.background ?? { fill: 'transparent' },
+  }), [options, dark]);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const printCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [copy, setCopy] = useState<{ width: number } | null>(null);
@@ -97,7 +106,7 @@ export default function PrintableChart({
             : { height }
         }
       >
-        <AgChartsReact ref={chartRef} options={options} />
+        <AgChartsReact ref={chartRef} options={themedOptions} />
       </Box>
     </>
   );
