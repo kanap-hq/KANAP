@@ -221,6 +221,76 @@
       "serverCount_one": "{{count}} server",
       "serverCount_other": "{{count}} servers"
     },
+    "endOfSupport": {
+      "title": "End of support",
+      "subtitle": "What has reached or reaches its end of support by {{date}}, and what it touches.",
+      "subtitleGaps": "The missing data that keeps this report from answering. Open a row to complete the record.",
+      "tabs": {
+        "label": "Report view",
+        "deadlines": "Deadlines",
+        "gaps": "Missing data"
+      },
+      "filters": {
+        "type": "Type",
+        "allTypes": "All types",
+        "horizon": "Horizon",
+        "months_one": "{{count}} month",
+        "months_other": "{{count}} months"
+      },
+      "types": {
+        "technology": "Technology",
+        "operating_system": "Operating system",
+        "application": "Application",
+        "hardware": "Hardware"
+      },
+      "states": {
+        "out_of_support": "Out of support",
+        "extended_support": "Extended support",
+        "upcoming": "Ends soon"
+      },
+      "milestones": {
+        "end_of_life": "End of life",
+        "support_contract": "Support contract"
+      },
+      "columns": {
+        "type": "Type",
+        "item": "Item",
+        "version": "Version",
+        "date": "End date",
+        "state": "State",
+        "servers": "Servers",
+        "applications": "Applications",
+        "missing": "Missing data",
+        "record": "Record",
+        "linkedTo": "Linked to"
+      },
+      "detail": {
+        "servers": "Servers",
+        "applications": "Applications",
+        "noServers": "No server",
+        "noApplications": "No application",
+        "applicationsHidden": "Applications are hidden: you cannot read them.",
+        "open": {
+          "technology": "Open the technology",
+          "application": "Open the application",
+          "hardware": "Open the asset"
+        }
+      },
+      "gaps": {
+        "application_without_server": "Hosted application without a server",
+        "vm_without_host": "Virtual machine without a host",
+        "technology_not_installed": "Installed technology on no server",
+        "database_server_without_dbms": "Database server without a database technology",
+        "sso_application_without_identity": "Application with SSO without an identity technology",
+        "link_without_version": "Technology link without a version",
+        "version_without_end_date": "Version in use without an end of support date"
+      },
+      "empty": {
+        "deadlines": "Nothing reaches its end of support within this horizon.",
+        "gaps": "No missing data."
+      },
+      "exportFailed": "The export failed. Try again."
+    },
     "interfaces": {
       "title": "Interfaces",
       "addInterface": "Add interface",

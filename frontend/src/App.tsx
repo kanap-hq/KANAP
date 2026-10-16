@@ -84,6 +84,7 @@ const AssetsPage = React.lazy(() => import('./pages/it/AssetsPage'));
 const AssetWorkspacePage = React.lazy(() => import('./pages/it/AssetWorkspacePage'));
 const TechnologiesPage = React.lazy(() => import('./pages/it/TechnologiesPage'));
 const TechnologyWorkspacePage = React.lazy(() => import('./pages/it/TechnologyWorkspacePage'));
+const EndOfSupportReportPage = React.lazy(() => import('./pages/it/EndOfSupportReportPage'));
 const IncidentsPage = React.lazy(() => import('./pages/it/IncidentsPage'));
 const NetboxSyncPage = React.lazy(() => import('./pages/it/NetboxSyncPage'));
 const IncidentWorkspacePage = React.lazy(() => import('./pages/it/IncidentWorkspacePage'));
@@ -266,6 +267,7 @@ function AppRoutes() {
           <Route path="/it/technologies" element={<TechnologiesPage />} />
           <Route path="/it/technologies/:id" element={<TechnologyWorkspacePage />} />
           <Route path="/it/technologies/:id/:tab" element={<TechnologyWorkspacePage />} />
+          <Route path="/it/technologies/end-of-support" element={<EndOfSupportReportPage />} />
           <Route path="/it/incidents" element={<IncidentsPage />} />
           <Route path="/it/incidents/:id" element={<IncidentWorkspacePage />} />
           <Route path="/it/incidents/:id/:tab" element={<IncidentWorkspacePage />} />

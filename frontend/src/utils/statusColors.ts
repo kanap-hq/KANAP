@@ -229,3 +229,13 @@ export const CONTRACT_BUDGET_STATE_COLORS: Record<string, string> = {
   no_commitment: 'default',
   not_started: 'default',
 };
+
+/**
+ * End of support (`backend/src/technologies/reports/end-of-support.service.ts`): red once out of
+ * support, orange in extended support, grey while the end is still to come within the horizon.
+ */
+export const SUPPORT_STATE_COLORS: Record<string, string> = {
+  out_of_support: 'error',
+  extended_support: 'warning',
+  upcoming: 'default',
+};

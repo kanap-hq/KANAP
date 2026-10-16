@@ -221,6 +221,76 @@
       "serverCount_one": "{{count}} Server",
       "serverCount_other": "{{count}} Server"
     },
+    "endOfSupport": {
+      "title": "Supportende",
+      "subtitle": "Was sein Supportende bis zum {{date}} erreicht hat oder erreicht, und was davon betroffen ist.",
+      "subtitleGaps": "Die fehlenden Daten, die diesen Bericht unvollständig machen. Öffnen Sie eine Zeile, um den Datensatz zu ergänzen.",
+      "tabs": {
+        "label": "Berichtsansicht",
+        "deadlines": "Fristen",
+        "gaps": "Fehlende Daten"
+      },
+      "filters": {
+        "type": "Typ",
+        "allTypes": "Alle Typen",
+        "horizon": "Zeitraum",
+        "months_one": "{{count}} Monat",
+        "months_other": "{{count}} Monate"
+      },
+      "types": {
+        "technology": "Technologie",
+        "operating_system": "Betriebssystem",
+        "application": "Anwendung",
+        "hardware": "Hardware"
+      },
+      "states": {
+        "out_of_support": "Ohne Support",
+        "extended_support": "Erweiterter Support",
+        "upcoming": "Endet bald"
+      },
+      "milestones": {
+        "end_of_life": "Lebensende",
+        "support_contract": "Supportvertrag"
+      },
+      "columns": {
+        "type": "Typ",
+        "item": "Element",
+        "version": "Version",
+        "date": "Enddatum",
+        "state": "Status",
+        "servers": "Server",
+        "applications": "Anwendungen",
+        "missing": "Fehlende Daten",
+        "record": "Datensatz",
+        "linkedTo": "Verknüpft mit"
+      },
+      "detail": {
+        "servers": "Server",
+        "applications": "Anwendungen",
+        "noServers": "Kein Server",
+        "noApplications": "Keine Anwendung",
+        "applicationsHidden": "Anwendungen ausgeblendet: Sie können sie nicht lesen.",
+        "open": {
+          "technology": "Technologie öffnen",
+          "application": "Anwendung öffnen",
+          "hardware": "Asset öffnen"
+        }
+      },
+      "gaps": {
+        "application_without_server": "Gehostete Anwendung ohne Server",
+        "vm_without_host": "Virtuelle Maschine ohne Host",
+        "technology_not_installed": "Installierte Technologie auf keinem Server",
+        "database_server_without_dbms": "Datenbankserver ohne Datenbanktechnologie",
+        "sso_application_without_identity": "Anwendung mit SSO ohne Identitätstechnologie",
+        "link_without_version": "Technologieverknüpfung ohne Version",
+        "version_without_end_date": "Version im Einsatz ohne Supportende-Datum"
+      },
+      "empty": {
+        "deadlines": "In diesem Zeitraum erreicht nichts sein Supportende.",
+        "gaps": "Keine fehlenden Daten."
+      },
+      "exportFailed": "Der Export ist fehlgeschlagen. Versuchen Sie es erneut."
+    },
     "interfaces": {
       "title": "Schnittstellen",
       "addInterface": "Schnittstelle hinzufügen",
