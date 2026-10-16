@@ -101,7 +101,10 @@ const FILTER_EXPRESSIONS: Record<string, string> = {
   applies_to: 'cat.applies_to',
   axis_code: 'ax.code',
   axis_name: `COALESCE(NULLIF(BTRIM(ax.name), ''), 'Analytics dimension')`,
+  updated_at: 'cat.updated_at',
 };
+/** The filter columns that hold dates (date models, by day). */
+const DATE_FILTER_FIELDS = new Set(['updated_at']);
 const MAX_IDS = 10_000;
 
 export function categoryValuesEqual(stored: StoredAnalyticsCategory, next: AnalyticsCategoryValues): boolean {
@@ -718,7 +721,7 @@ export class AnalyticsCategoriesService {
       if (!expression || !raw || typeof raw !== 'object') continue;
       const combined = (raw.operator === 'AND' || raw.operator === 'OR') && Array.isArray(raw.conditions) && raw.conditions.length > 0;
       const parts = (combined ? raw.conditions : [raw])
-        .map((model: any) => compileAgFilterCondition(model, { expression }, nextParam))
+        .map((model: any) => compileAgFilterCondition(model, { expression, dataType: DATE_FILTER_FIELDS.has(field) ? 'date' : 'string' }, nextParam))
         .filter(Boolean) as Array<{ sql: string; params: Record<string, any> }>;
       if (parts.length === 0) continue;
       const params = Object.assign({}, ...parts.map((part) => part.params));

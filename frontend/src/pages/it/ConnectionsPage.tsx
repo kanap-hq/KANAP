@@ -334,6 +334,7 @@ export default function ConnectionsPage() {
     {
       headerName: t('pages.connections.columns.created'),
       field: 'created_at',
+      filter: 'agDateColumnFilter',
       width: 130,
       valueFormatter: (p) => formatShortDateTime(p.value as string | null, locale),
       cellRenderer: ClickToWorkspace,

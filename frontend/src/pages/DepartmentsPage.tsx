@@ -133,6 +133,7 @@ export default function DepartmentsPage() {
     },
     {
       field: 'created_at',
+      filter: 'agDateColumnFilter',
       headerName: t('shared.columns.created'),
       width: 200,
       valueFormatter: (p: any) => formatShortDateTime(p.value as string | null, locale),

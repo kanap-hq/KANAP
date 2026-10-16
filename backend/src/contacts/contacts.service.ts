@@ -5,7 +5,7 @@ import { ExternalContact } from './external-contact.entity';
 import { SupplierContactLink, SupplierContactRole } from './supplier-contact.entity';
 import { Supplier } from '../suppliers/supplier.entity';
 import { SupplierContactsContext, SupplierContactsService } from '../suppliers/supplier-contacts.service';
-import { buildWhereFromAgFilters, parseExportPagination, parsePagination } from '../common/pagination';
+import { parseExportPagination, parsePagination } from '../common/pagination';
 import { orderListQuery } from '../common/list-sort';
 
 const CONTACT_TEXT_SORTS = new Set(['last_name', 'first_name', 'email', 'country', 'supplier_name']);
@@ -23,8 +23,35 @@ import {
   writeCsv,
 } from '../common/csv-sheet';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
-import { assertSetFilterModes } from '../common/ag-grid-filtering';
+import { assertSetFilterModes, compileAgFilterCondition, createParamNameGenerator, type FilterTargetConfig } from '../common/ag-grid-filtering';
 import { uploadedBytes } from '../common/upload';
+
+/** The contact list's column filters (`c` the contact, `s` its supplier). */
+const CONTACT_FILTER_TARGETS: Record<string, FilterTargetConfig> = {
+  last_name: { expression: 'c.last_name' },
+  first_name: { expression: 'c.first_name' },
+  job_title: { expression: 'c.job_title' },
+  email: { expression: 'c.email' },
+  phone: { expression: 'c.phone' },
+  mobile: { expression: 'c.mobile' },
+  country: { expression: 'c.country' },
+  active: { expression: 'c.active', dataType: 'boolean' },
+  supplier_id: { expression: 'c.supplier_id' },
+  supplier_name: { expression: 's.name' },
+  created_at: { expression: 'c.created_at', dataType: 'date' },
+};
+
+/** The grid's column filters on a contact query (`c`, its supplier joined as `s`). */
+function applyContactFilters(qb: SelectQueryBuilder<ExternalContact>, filters: any) {
+  if (!filters || typeof filters !== 'object') return;
+  const nextParam = createParamNameGenerator('contact_filter_');
+  for (const [field, model] of Object.entries(filters)) {
+    const target = CONTACT_FILTER_TARGETS[field];
+    if (!target) continue;
+    const compiled = compileAgFilterCondition(model, target, nextParam);
+    if (compiled) qb.andWhere(`(${compiled.sql})`, compiled.params);
+  }
+}
 
 /** The request's tenant: every statement filters on it. */
 type TenantOpts = { manager?: EntityManager; tenantId: string };
@@ -141,50 +168,8 @@ export class ContactsService {
     ];
     const qb = repo.createQueryBuilder('c').leftJoinAndSelect('c.supplier', 's', 's.tenant_id = c.tenant_id');
 
-    const filterWhere = buildWhereFromAgFilters(filters, ['last_name', 'first_name', 'email', 'phone', 'mobile', 'country', 'active', 'supplier_id']);
-    if (Object.keys(filterWhere).length > 0) qb.where(filterWhere);
-    qb.andWhere('c.tenant_id = :tenantId', { tenantId: opts.tenantId });
-
-    const supplierNameFilter = filters?.supplier_name;
-    if (supplierNameFilter) {
-      let model: any = supplierNameFilter;
-      if (model && model.operator && Array.isArray(model.conditions) && model.conditions.length > 0) {
-        model = model.conditions[0];
-      }
-      const type = (model?.type ?? model?.filterType ?? 'contains') as string;
-      const valRaw = model?.filter ?? model?.value ?? (Array.isArray(model?.values) ? model.values[0] : undefined);
-      const requiresValue = !(type === 'blank' || type === 'notBlank');
-      if (!requiresValue || (valRaw != null && valRaw !== '')) {
-        const val = valRaw != null ? String(valRaw) : '';
-        switch (type) {
-          case 'equals':
-            qb.andWhere('s.name ILIKE :supplierFilterEq', { supplierFilterEq: val });
-            break;
-          case 'notEqual':
-            qb.andWhere('s.name NOT ILIKE :supplierFilterNe', { supplierFilterNe: val });
-            break;
-          case 'startsWith':
-            qb.andWhere('s.name ILIKE :supplierFilterSw', { supplierFilterSw: `${val}%` });
-            break;
-          case 'endsWith':
-            qb.andWhere('s.name ILIKE :supplierFilterEw', { supplierFilterEw: `%${val}` });
-            break;
-          case 'notContains':
-            qb.andWhere('s.name NOT ILIKE :supplierFilterNc', { supplierFilterNc: `%${val}%` });
-            break;
-          case 'blank':
-            qb.andWhere("(s.name IS NULL OR NULLIF(s.name, '') IS NULL)");
-            break;
-          case 'notBlank':
-            qb.andWhere("s.name IS NOT NULL AND NULLIF(s.name, '') IS NOT NULL");
-            break;
-          case 'contains':
-          default:
-            qb.andWhere('s.name ILIKE :supplierFilter', { supplierFilter: `%${val}%` });
-            break;
-        }
-      }
-    }
+    qb.where('c.tenant_id = :tenantId', { tenantId: opts.tenantId });
+    applyContactFilters(qb, filters);
 
     if (typeof query?.active === 'string') {
       const v = String(query.active).toLowerCase();
@@ -227,50 +212,8 @@ export class ContactsService {
     ];
     const qb = repo.createQueryBuilder('c').leftJoin('c.supplier', 's', 's.tenant_id = c.tenant_id').select('c.id', 'id');
 
-    const filterWhere = buildWhereFromAgFilters(filters, ['last_name', 'first_name', 'email', 'phone', 'mobile', 'country', 'active', 'supplier_id']);
-    if (Object.keys(filterWhere).length > 0) qb.where(filterWhere);
-    qb.andWhere('c.tenant_id = :tenantId', { tenantId: opts.tenantId });
-
-    const supplierNameFilter = filters?.supplier_name;
-    if (supplierNameFilter) {
-      let model: any = supplierNameFilter;
-      if (model && model.operator && Array.isArray(model.conditions) && model.conditions.length > 0) {
-        model = model.conditions[0];
-      }
-      const type = (model?.type ?? model?.filterType ?? 'contains') as string;
-      const valRaw = model?.filter ?? model?.value ?? (Array.isArray(model?.values) ? model.values[0] : undefined);
-      const requiresValue = !(type === 'blank' || type === 'notBlank');
-      if (!requiresValue || (valRaw != null && valRaw !== '')) {
-        const val = valRaw != null ? String(valRaw) : '';
-        switch (type) {
-          case 'equals':
-            qb.andWhere('s.name ILIKE :supplierFilterEq', { supplierFilterEq: val });
-            break;
-          case 'notEqual':
-            qb.andWhere('s.name NOT ILIKE :supplierFilterNe', { supplierFilterNe: val });
-            break;
-          case 'startsWith':
-            qb.andWhere('s.name ILIKE :supplierFilterSw', { supplierFilterSw: `${val}%` });
-            break;
-          case 'endsWith':
-            qb.andWhere('s.name ILIKE :supplierFilterEw', { supplierFilterEw: `%${val}` });
-            break;
-          case 'notContains':
-            qb.andWhere('s.name NOT ILIKE :supplierFilterNc', { supplierFilterNc: `%${val}%` });
-            break;
-          case 'blank':
-            qb.andWhere("(s.name IS NULL OR NULLIF(s.name, '') IS NULL)");
-            break;
-          case 'notBlank':
-            qb.andWhere("s.name IS NOT NULL AND NULLIF(s.name, '') IS NOT NULL");
-            break;
-          case 'contains':
-          default:
-            qb.andWhere('s.name ILIKE :supplierFilter', { supplierFilter: `%${val}%` });
-            break;
-        }
-      }
-    }
+    qb.where('c.tenant_id = :tenantId', { tenantId: opts.tenantId });
+    applyContactFilters(qb, filters);
 
     if (typeof query?.active === 'string') {
       const v = String(query.active).toLowerCase();

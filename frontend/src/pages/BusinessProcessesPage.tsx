@@ -116,6 +116,7 @@ export default function BusinessProcessesPage() {
         field: 'updated_at',
         headerName: t('shared.columns.updated'),
         width: 200,
+        filter: 'agDateColumnFilter',
         valueFormatter: (p: any) => formatShortDateTime(p.value as string | null, locale),
         cellRenderer: (params: any) => (
           <LinkCellRenderer {...params} linkType="internal" getHref={getBusinessProcessHref} onNavigate={(href) => navigate(href)} />

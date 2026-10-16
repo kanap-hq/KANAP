@@ -76,11 +76,7 @@ export class DepartmentsService {
       description: { expression: 'd.description', dataType: 'string' },
       status: { expression: 'd.status', textExpression: 'CAST(d.status AS TEXT)', dataType: 'string' },
       company_name: { expression: 'c.name', dataType: 'string' },
-      created_at: {
-        expression: 'd.created_at',
-        textExpression: 'CAST(d.created_at AS TEXT)',
-        dataType: 'string',
-      },
+      created_at: { expression: 'd.created_at', dataType: 'date' },
       updated_at: {
         expression: 'd.updated_at',
         textExpression: 'CAST(d.updated_at AS TEXT)',
@@ -360,11 +356,7 @@ export class DepartmentsService {
       description: { expression: 'd.description', dataType: 'string' },
       status: { expression: 'd.status', textExpression: 'CAST(d.status AS TEXT)', dataType: 'string' },
       company_name: { expression: 'c.name', dataType: 'string' },
-      created_at: {
-        expression: 'd.created_at',
-        textExpression: 'CAST(d.created_at AS TEXT)',
-        dataType: 'string',
-      },
+      created_at: { expression: 'd.created_at', dataType: 'date' },
       updated_at: {
         expression: 'd.updated_at',
         textExpression: 'CAST(d.updated_at AS TEXT)',

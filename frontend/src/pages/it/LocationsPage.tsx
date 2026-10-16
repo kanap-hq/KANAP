@@ -165,7 +165,7 @@ export default function LocationsPage() {
         fontVariantNumeric: 'tabular-nums',
       },
     },
-    { headerName: t('pages.locations.columns.created'), field: 'created_at', width: 160, valueFormatter: (p: any) => formatShortDateTime(p.value as string | null, locale), cellRenderer: ClickableCell },
+    { headerName: t('pages.locations.columns.created'), field: 'created_at', width: 160, filter: 'agDateColumnFilter', valueFormatter: (p: any) => formatShortDateTime(p.value as string | null, locale), cellRenderer: ClickableCell },
   ];
 
   const actions = (

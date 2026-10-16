@@ -5,7 +5,7 @@ import { Supplier } from './supplier.entity';
 import { sameStoredLifecycle, sameStoredValues } from '../common/csv-sheet/unchanged';
 import { ExternalContact } from '../contacts/external-contact.entity';
 import { SupplierContactLink, SupplierContactRole } from '../contacts/supplier-contact.entity';
-import { buildWhereFromAgFilters, parseExportPagination, parsePagination } from '../common/pagination';
+import { assertEntityFilterFields, buildWhereFromAgFilters, parseExportPagination, parsePagination } from '../common/pagination';
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { deriveStatusFromDisabledAt, resolveLifecycleState, StatusState } from '../common/status';
 import { extractStatusFilterFromAgModel } from '../common/status-filter';
@@ -59,6 +59,7 @@ export class SuppliersService {
     const filtersToApply = sanitizedFilters ?? filters;
     const where: any = {};
     if (filtersToApply && Object.keys(filtersToApply).length > 0) {
+      assertEntityFilterFields(filtersToApply, repo.metadata);
       Object.assign(where, buildWhereFromAgFilters(filtersToApply));
     }
     const includeDisabled =
@@ -123,6 +124,7 @@ export class SuppliersService {
     const filtersToApply = sanitizedFilters ?? filters;
     const where: any = {};
     if (filtersToApply && Object.keys(filtersToApply).length > 0) {
+      assertEntityFilterFields(filtersToApply, repo.metadata);
       Object.assign(where, buildWhereFromAgFilters(filtersToApply));
     }
     const includeDisabled =

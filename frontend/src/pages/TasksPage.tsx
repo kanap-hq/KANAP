@@ -479,6 +479,7 @@ export default function TasksPage() {
       headerName: t('tasks.columns.score'),
       width: 90,
       sort: 'desc',
+      filter: 'agNumberColumnFilter',
       cellRenderer: ScoreCellRenderer,
     },
     {

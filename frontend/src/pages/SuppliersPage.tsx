@@ -95,6 +95,7 @@ export default function SuppliersPage() {
       field: 'created_at',
       headerName: t('shared.columns.created'),
       width: 200,
+      filter: 'agDateColumnFilter',
       valueFormatter: (p: any) => formatShortDateTime(p.value as string | null, locale),
       defaultHidden: true,
       cellRenderer: (params: any) => (

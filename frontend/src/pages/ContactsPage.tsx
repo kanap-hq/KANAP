@@ -2,6 +2,8 @@ import React, { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import PageHeader from '../components/PageHeader';
 import ServerDataGrid, { EnhancedColDef, type ListRequest } from '../components/ServerDataGrid';
+import CheckboxSetFilter from '../components/CheckboxSetFilter';
+import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
 import { Button, Stack } from '@mui/material';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
@@ -119,6 +121,12 @@ export default function ContactsPage() {
       field: 'active',
       headerName: t('shared.columns.active'),
       width: 120,
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: {
+        values: [{ value: 'true', label: t('shared.labels.yes') }, { value: 'false', label: t('shared.labels.no') }],
+        searchable: false,
+      },
       valueFormatter: (p: any) => (p.value ? t('shared.labels.yes') : t('shared.labels.no')),
       cellRenderer: (params: any) => (
         <LinkCellRenderer {...params} linkType="internal" getHref={getContactHref} onNavigate={(href) => navigate(href)} />
@@ -128,6 +136,7 @@ export default function ContactsPage() {
       field: 'created_at',
       headerName: t('shared.columns.created'),
       width: 200,
+      filter: 'agDateColumnFilter',
       valueFormatter: (p: any) => formatShortDateTime(p.value as string | null, locale),
       defaultHidden: true,
       cellRenderer: (params: any) => (

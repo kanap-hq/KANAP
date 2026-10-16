@@ -109,6 +109,23 @@ export function catalogRankComparator(levels: Array<{ code: string; rank?: numbe
   };
 }
 
+/**
+ * The optional parts of the list rows the visible columns need (`include`). The name column is
+ * always shown and its cell shows the first suite ("Included in") when the suites column is
+ * hidden: the structure is always asked for.
+ */
+function includeFlagsFor(visible: Set<string>): string {
+  const flags: string[] = [];
+  if (visible.has('supplier_name')) flags.push('supplier');
+  if (visible.has('owners_business') || visible.has('owners_it')) flags.push('owners');
+  if (visible.has('data_residency')) flags.push('residency');
+  if (visible.has('hosting_types')) flags.push('hosting');
+  if (visible.has('spend_count') || visible.has('capex_count') || visible.has('contracts_count')) flags.push('counts');
+  flags.push('structure');
+  if (visible.has('environments')) flags.push('instances');
+  return flags.join(',');
+}
+
 export default function ApplicationsPage() {
   const { t } = useTranslation(['it', 'common']);
   const locale = useLocale();
@@ -121,7 +138,7 @@ export default function ApplicationsPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const { labelFor, byField } = useItOpsEnumOptions();
   const { data: classificationCatalog } = useApplicationClassificationCatalog();
-  const [includeFlags, setIncludeFlags] = useState<string>('');
+  const [includeFlags, setIncludeFlags] = useState<string>(() => includeFlagsFor(new Set(['name'])));
 
   // Read filters from URL to restore state when returning from workspace: inline, or the saved
   // filters its `ctx` stands for (filters too long for a URL), read before the grid mounts.
@@ -657,8 +674,8 @@ export default function ApplicationsPage() {
     { headerName: classificationText("Classification review"), field: 'classification_review_state', filter: CheckboxSetFilter, floatingFilterComponent: CheckboxSetFloatingFilter, filterParams: { getValues: getAppFilterValues('classification_review_state', { labelFormatter: (value: string) => ({ incomplete: classificationText('To complete'), stale: classificationText('Review needed'), reviewed: classificationText('Reviewed') }[value] || value) }) }, width: 170, defaultHidden: true, valueFormatter: (p: any) => ({ incomplete: classificationText("To complete"), stale: classificationText("Review needed"), reviewed: classificationText("Reviewed") }[String(p.value)] || classificationText("To complete")), cellRenderer: ClickToCompliance },
     { headerName: classificationText("Classification reviewed"), field: 'classification_reviewed_at', filter: 'agDateColumnFilter', width: 180, defaultHidden: true, valueFormatter: (p: any) => p.value ? new Date(p.value).toLocaleDateString(locale) : classificationText('Not set'), cellRenderer: ClickToCompliance },
     { headerName: t('pages.applications.columns.publisher'), field: 'editor', width: 160, cellRenderer: ClickToOverview },
-    { headerName: t('pages.applications.columns.derivedUsers'), field: 'derived_total_users', width: 170, cellRenderer: ClickToOwnership },
-    { headerName: t('pages.assets.columns.created'), field: 'created_at', width: 160, valueFormatter: (p: any) => formatShortDateTime(p.value as string | null, locale), cellRenderer: ClickToOverview },
+    { headerName: t('pages.applications.columns.derivedUsers'), field: 'derived_total_users', width: 170, filter: 'agNumberColumnFilter', cellRenderer: ClickToOwnership },
+    { headerName: t('pages.assets.columns.created'), field: 'created_at', width: 160, filter: 'agDateColumnFilter', valueFormatter: (p: any) => formatShortDateTime(p.value as string | null, locale), cellRenderer: ClickToOverview },
 
     // Additional chooser columns (hidden by default)
     { headerName: t('pages.applications.columns.supplier'), field: 'supplier_name', width: 240, defaultHidden: true, sortable: true, filter: 'agTextColumnFilter', cellRenderer: ClickToOverview },
@@ -965,22 +982,7 @@ export default function ApplicationsPage() {
             try {
               const state = (api as any).getColumnState?.() || [];
               const visible = new Set<string>(state.filter((s: any) => !s.hide).map((s: any) => String(s.colId || '')));
-              const needsSupplier = visible.has('supplier_name');
-              const needsOwners = visible.has('owners_business') || visible.has('owners_it');
-              const needsResidency = visible.has('data_residency');
-              const needsHosting = visible.has('hosting_types');
-              const needsCounts = visible.has('spend_count') || visible.has('capex_count') || visible.has('contracts_count');
-              const needsStructure = visible.has('suites_count') || visible.has('components_count');
-              const needsInstances = visible.has('environments');
-              const flags: string[] = [];
-              if (needsSupplier) flags.push('supplier');
-              if (needsOwners) flags.push('owners');
-              if (needsResidency) flags.push('residency');
-              if (needsHosting) flags.push('hosting');
-              if (needsCounts) flags.push('counts');
-              if (needsStructure) flags.push('structure');
-              if (needsInstances) flags.push('instances');
-              setIncludeFlags(flags.join(','));
+              setIncludeFlags(includeFlagsFor(visible));
               setSuitesColVisible(visible.has('suites_count'));
             } catch {}
           }}
@@ -1001,22 +1003,7 @@ export default function ApplicationsPage() {
                   .filter((s: any) => !s.hide)
                   .map((s: any) => String(s.colId || ''))
               );
-              const needsSupplier = visible.has('supplier_name');
-              const needsOwners = visible.has('owners_business') || visible.has('owners_it');
-              const needsResidency = visible.has('data_residency');
-              const needsHosting = visible.has('hosting_types');
-              const needsCounts = visible.has('spend_count') || visible.has('capex_count') || visible.has('contracts_count');
-              const needsStructure = visible.has('suites_count') || visible.has('components_count');
-              const needsInstances = visible.has('environments');
-              const flags: string[] = [];
-              if (needsSupplier) flags.push('supplier');
-              if (needsOwners) flags.push('owners');
-              if (needsResidency) flags.push('residency');
-              if (needsHosting) flags.push('hosting');
-              if (needsCounts) flags.push('counts');
-              if (needsStructure) flags.push('structure');
-              if (needsInstances) flags.push('instances');
-              const next = flags.join(',');
+              const next = includeFlagsFor(visible);
               setIncludeFlags((prev) => (prev === next ? prev : next));
               setSuitesColVisible(visible.has('suites_count'));
             } catch {}

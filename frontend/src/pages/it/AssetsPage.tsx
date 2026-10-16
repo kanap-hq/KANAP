@@ -394,6 +394,7 @@ export default function AssetsPage() {
     {
       headerName: t('pages.assets.columns.goLive'),
       field: 'go_live_date',
+      filter: 'agDateColumnFilter',
       width: 120,
       hide: true,
       valueFormatter: (p: any) => formatShortDate(p.value as string | null, locale, { year: 'always' }),
@@ -402,6 +403,7 @@ export default function AssetsPage() {
     {
       headerName: t('pages.assets.columns.endOfLife'),
       field: 'end_of_life_date',
+      filter: 'agDateColumnFilter',
       width: 120,
       hide: true,
       valueFormatter: (p: any) => formatShortDate(p.value as string | null, locale, { year: 'always' }),
@@ -416,7 +418,7 @@ export default function AssetsPage() {
       valueFormatter: (p) => countValueFormatter({ value: p.value ?? 0 }),
       cellRenderer: ClickToWorkspace,
     },
-    { headerName: t('pages.assets.columns.created'), field: 'created_at', width: 180, valueFormatter: (p: any) => formatShortDateTime(p.value as string | null, locale), cellRenderer: ClickToWorkspace },
+    { headerName: t('pages.assets.columns.created'), field: 'created_at', width: 180, filter: 'agDateColumnFilter', valueFormatter: (p: any) => formatShortDateTime(p.value as string | null, locale), cellRenderer: ClickToWorkspace },
   ], [ClickToWorkspace, ClusterCell, EnvironmentCell, envLabel, envLabelMap, getAssetFilterValues, labelFor, lifecycleLabel, t]);
 
   const actions = (

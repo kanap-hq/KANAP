@@ -85,6 +85,7 @@ import { userNameSharedSql } from '../common/lookup/reference-lookups';
 import { trailingDigits } from '../common/text-scan';
 import { checkIds, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal } from '../common/record-in-use';
 import { textSortKey } from '../common/list-sort';
+import { applyDocumentColumnFilters } from './knowledge-list-filters';
 
 /** The document list columns that sort alphabetically, and the expressions they read. */
 const KNOWLEDGE_TEXT_SORTS: Record<string, string> = {
@@ -3114,6 +3115,7 @@ export class KnowledgeService {
     }
 
     applyDocumentLinkedEntityFilters(qb, filters as Record<string, any> | undefined, nextLinkedEntityParam);
+    applyDocumentColumnFilters(qb, filters as Record<string, any> | undefined);
 
 
     const direction = sort.direction as 'ASC' | 'DESC';
