@@ -72,7 +72,7 @@ Limite le nombre de sauts à partir des applications sélectionnées à afficher
 - **Tout** : Afficher tous les nœuds connectés (pas de limite)
 - **1-5** : Afficher uniquement les nœuds dans un rayon de N sauts des applications sélectionnées
 
-Les nœuds middleware ne comptent pas comme un saut -- le compteur de profondeur ne s'incrémente que lors de la traversée d'un nœud d'application principale.
+Les nœuds middleware ne comptent pas comme un saut : le compteur de profondeur ne s'incrémente que lors de la traversée d'un nœud d'application principale.
 
 Ce filtre ne prend effet que lorsque vous avez au moins une application sélectionnée ; sans sélection, la valeur est verrouillée sur **Tout**.
 

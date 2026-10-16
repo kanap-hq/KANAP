@@ -13,7 +13,7 @@ Naviguez vers **Données de référence > Fournisseurs** pour ouvrir le réperto
 - **ID fournisseur ERP** : Identifiant de référence de votre ERP ou système d'approvisionnement
 - **Notes** : Notes libres sur la relation fournisseur
 
-**Conseil** : Créez les fournisseurs avant d'ajouter des applications ou des contrats — vous pourrez les lier lors de la création.
+**Conseil** : Créez les fournisseurs avant d'ajouter des applications ou des contrats : vous pourrez les lier lors de la création.
 
 ---
 

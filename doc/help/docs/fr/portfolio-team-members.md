@@ -12,7 +12,7 @@ Rendez-vous dans **Portefeuille > Contributeurs** pour voir les contributeurs co
 3. Cliquez sur **Ajouter** pour créer son profil
 4. Configurez son équipe, sa disponibilité, ses compétences et ses valeurs par défaut dans l'espace de travail
 
-**Conseil** : Les contributeurs sont distincts des comptes utilisateurs. Ajouter quelqu'un comme contributeur ne modifie pas ses droits d'accès -- cela permet simplement de suivre son appartenance à une équipe, ses compétences, sa disponibilité et ses valeurs de classification par défaut pour la planification de projet.
+**Conseil** : Les contributeurs sont distincts des comptes utilisateurs. Ajouter quelqu'un comme contributeur ne modifie pas ses droits d'accès : cela permet simplement de suivre son appartenance à une équipe, ses compétences, sa disponibilité et ses valeurs de classification par défaut pour la planification de projet.
 
 ---
 
@@ -61,7 +61,7 @@ Au-dessus du filtre par équipe, **Liste**, **Matrice de compétences** et **Org
 
 ## La matrice de compétences
 
-La matrice de compétences répond à deux questions sur un seul écran : ce que chacun sait faire, et quelles compétences ne sont couvertes par personne. C'est une vue en lecture seule -- les niveaux se saisissent dans l'onglet Compétences de chaque contributeur.
+La matrice de compétences répond à deux questions sur un seul écran : ce que chacun sait faire, et quelles compétences ne sont couvertes par personne. C'est une vue en lecture seule : les niveaux se saisissent dans l'onglet Compétences de chaque contributeur.
 
 **Lire la grille** :
 - Les **lignes** sont les compétences de votre catalogue, groupées par catégorie. Les compétences désactivées dans les paramètres du portefeuille n'apparaissent jamais, et celles que personne n'a déclarées sont masquées au départ
@@ -123,7 +123,7 @@ Chaque modification est enregistrée automatiquement. Une courte mention « Enre
 ### Panneau Propriétés
 
 **Intitulé de poste**
-L'intitulé de poste de la personne, le même que celui qui apparaît partout où elle figure dans KANAP -- l'organigramme, sa fiche utilisateur, son profil. Ce n'est pas une étiquette propre au portefeuille : le modifier ici le modifie partout. Saisissez-le puis cliquez ailleurs pour enregistrer.
+L'intitulé de poste de la personne, le même que celui qui apparaît partout où elle figure dans KANAP (l'organigramme, sa fiche utilisateur, son profil). Ce n'est pas une étiquette propre au portefeuille : le modifier ici le modifie partout. Saisissez-le puis cliquez ailleurs pour enregistrer.
 
 Vous pouvez toujours définir le vôtre. Définir celui d'une autre personne demande le niveau **Administrateur** sur les utilisateurs ; sans ce droit, vous voyez toujours la valeur, mais le champ est en lecture seule.
 
@@ -171,7 +171,7 @@ Résumé en lecture seule du temps saisi pour ce contributeur. Nécessite `portf
   - Les mois sans données apparaissent comme des espaces dans le graphique
 
 **Notes**
-Champ de texte libre pour toute information complémentaire sur ce contributeur -- certifications, préférences, contraintes ou autres détails pertinents. Les notes sont enregistrées peu après que vous avez cessé de taper.
+Champ de texte libre pour toute information complémentaire sur ce contributeur : certifications, préférences, contraintes ou autres détails pertinents. Les notes sont enregistrées peu après que vous avez cessé de taper.
 
 ---
 
@@ -213,7 +213,7 @@ Le tableau consolide le temps saisi provenant à la fois des entrées d'overhead
 
 **Colonnes** :
 - **Date** : Quand le temps a été saisi
-- **Source** : Où le temps a été saisi -- soit un nom de tâche soit un nom de projet
+- **Source** : Où le temps a été saisi, soit un nom de tâche soit un nom de projet
 - **Catégorie** : Si l'entrée est classée **IT** ou **Métier**, affichée sous forme de libellé coloré
 - **Temps** : Durée en heures ou jours (ex. : « 4h », « 1j 2h »)
 - **Notes** : Notes éventuelles attachées à l'entrée

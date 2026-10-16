@@ -33,7 +33,7 @@ La page comporte deux cartes : **Logo** et **Couleurs principales**. Les deux so
 ### Format de logo recommandé
 
 - Utilisez un logo large et horizontal (fond transparent de préférence).
-- Gardez le contenu important centré -- la zone d'en-tête est compacte.
+- Gardez le contenu important centré : la zone d'en-tête est compacte.
 - Pour un rendu net, utilisez au moins environ 2× la taille affichée (par exemple `280x72` ou plus).
 
 ### Comment le définir
@@ -67,7 +67,7 @@ Vous pouvez définir les couleurs pour **Couleur principale en mode clair** et *
 
 Après avoir choisi les couleurs, la page évalue la lisibilité du texte sur le fond choisi. Si le contraste descend en dessous du seuil de lisibilité pour l'un des modes, un avertissement consultatif apparaît avec le ratio de contraste.
 
-L'avertissement est informatif -- vous pouvez quand même enregistrer -- mais un faible contraste signifie généralement du texte blanc sur une couleur pâle ou du texte sombre sur une couleur saturée, ce qui devient fatigant à lire dans les interfaces réelles.
+L'avertissement est informatif (vous pouvez quand même enregistrer), mais un faible contraste signifie généralement du texte blanc sur une couleur pâle ou du texte sombre sur une couleur saturée, ce qui devient fatigant à lire dans les interfaces réelles.
 
 ## Enregistrer et réinitialiser
 
@@ -81,7 +81,7 @@ Une petite légende sous les actions affiche le compteur de **version du logo**,
 
 ## Conseils
 
-- **Testez dans les deux thèmes** : basculez entre les thèmes clair et sombre avant d'enregistrer -- la même couleur de marque fonctionne rarement dans les deux modes.
+- **Testez dans les deux thèmes** : basculez entre les thèmes clair et sombre avant d'enregistrer : la même couleur de marque fonctionne rarement dans les deux modes.
 - **Préférez un fond transparent** : les logos simples avec des fonds transparents donnent le rendu d'en-tête le plus propre, en particulier en mode sombre.
-- **Utilisez Réinitialiser délibérément** : cela supprime à la fois le logo et toutes les couleurs personnalisées en une seule étape. Utilisez-le pour repartir à zéro, pas comme « annulation » d'un seul changement -- c'est à cela que sert **Annuler**.
+- **Utilisez Réinitialiser délibérément** : cela supprime à la fois le logo et toutes les couleurs personnalisées en une seule étape. Utilisez-le pour repartir à zéro, pas comme « annulation » d'un seul changement. C'est à cela que sert **Annuler**.
 - **Les couleurs de marque sont pour les accents** : KANAP utilise la couleur principale sur les barres d'application, les boutons principaux et les liens. Choisissez quelque chose qui se lit clairement à la taille d'un bouton, pas seulement sur un site marketing.

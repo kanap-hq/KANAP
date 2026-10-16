@@ -18,9 +18,9 @@
     "restricted": { "label": "Restreint", "description": "La divulgation pourrait causer un préjudice grave ; l’accès est strictement limité au besoin d’en connaître." }
   },
   "recoveryWaves": {
-    "foundation": { "label": "V0 — Socle", "description": "Prérequis partagés et services socles." },
-    "vital": { "label": "V1 — Activités vitales", "description": "Rétablir les activités vitales après leurs prérequis." },
-    "priority": { "label": "V2 — Activités prioritaires", "description": "Rétablir les activités prioritaires." },
-    "normal": { "label": "V3 — Fonctionnement normal", "description": "Revenir au fonctionnement normal." }
+    "foundation": { "label": "V0 : Socle", "description": "Prérequis partagés et services socles." },
+    "vital": { "label": "V1 : Activités vitales", "description": "Rétablir les activités vitales après leurs prérequis." },
+    "priority": { "label": "V2 : Activités prioritaires", "description": "Rétablir les activités prioritaires." },
+    "normal": { "label": "V3 : Fonctionnement normal", "description": "Revenir au fonctionnement normal." }
   }
 }

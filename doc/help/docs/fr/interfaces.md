@@ -1,6 +1,6 @@
 # Interfaces
 
-Les Interfaces documentent les flux de données logiques entre vos applications. Chaque interface représente une intégration métier -- le « pourquoi » et le « quoi » de l'échange de données -- indépendamment de la manière dont elle est techniquement implémentée. L'espace de travail vous permet de décrire l'interface, de définir les legs qui déplacent les données dans votre paysage, de configurer les liaisons spécifiques à chaque environnement, de capturer les règles de mappage au niveau des champs et de lier interfaces, documents et pièces jointes connexes.
+Les Interfaces documentent les flux de données logiques entre vos applications. Chaque interface représente une intégration métier (le « pourquoi » et le « quoi » de l'échange de données), indépendamment de la manière dont elle est techniquement implémentée. L'espace de travail vous permet de décrire l'interface, de définir les legs qui déplacent les données dans votre paysage, de configurer les liaisons spécifiques à chaque environnement, de capturer les règles de mappage au niveau des champs et de lier interfaces, documents et pièces jointes connexes.
 
 ## Premiers pas
 
@@ -55,7 +55,7 @@ La grille Interfaces affiche votre registre d'intégration en un coup d'œil.
 **Actions** :
 
 - **Ajouter une interface** : Créer une nouvelle interface (nécessite `applications:manager`)
-- **Dupliquer l'interface** : Créer une copie d'une interface sélectionnée (nécessite `applications:manager`). Sélectionnez exactement une ligne pour activer cette action. Une boîte de dialogue vous permet de choisir si vous voulez copier les liaisons d'environnement -- voir [Copier des interfaces](#copier-des-interfaces) ci-dessous.
+- **Dupliquer l'interface** : Créer une copie d'une interface sélectionnée (nécessite `applications:manager`). Sélectionnez exactement une ligne pour activer cette action. Une boîte de dialogue vous permet de choisir si vous voulez copier les liaisons d'environnement. Voir [Copier des interfaces](#copier-des-interfaces) ci-dessous.
 - **Supprimer la sélection** : Supprimer les interfaces sélectionnées (nécessite `applications:admin`). Avant la confirmation, la fenêtre liste comme conservées les interfaces qui ont des liaisons, avec leur nombre de liaisons. Cochez **Supprimer également les liaisons associées** pour les supprimer avec leurs liaisons ; leurs connexions sont conservées. Le message nomme ensuite les interfaces supprimées et celles conservées, avec la raison.
 
 ---
@@ -95,7 +95,7 @@ Les modifications de champs dans le panneau latéral sont enregistrées automati
 
 ### Spécification
 
-L'onglet Spécification est un document texte enrichi managé où vous décrivez l'interface de bout en bout -- contexte métier, périmètre, contrat, exemples. C'est le document narratif principal de l'interface.
+L'onglet Spécification est un document texte enrichi managé où vous décrivez l'interface de bout en bout : contexte métier, périmètre, contrat, exemples. C'est le document narratif principal de l'interface.
 
 **Conseil** : Utilisez cet onglet comme votre source unique de vérité pour la prose. Les règles de mappage et les legs techniques vivent dans les onglets dédiés ci-dessous ; gardez ce document focalisé sur l'intention, le périmètre et le résumé lisible.
 
@@ -148,7 +148,7 @@ L'onglet Environnements gère les liaisons par environnement qui transforment le
 
 L'onglet Mappage est l'endroit où vous décrivez comment les champs source deviennent des champs cibles. Il est organisé autour de deux concepts :
 
-- **Les règles de mappage** décrivent une seule décision de mappage -- un ou plusieurs champs source, un ou plusieurs champs cibles, une opération (copie directe, transformation, lookup, division, fusion, filtre, valeur par défaut ou opération personnalisée), et des notes optionnelles de condition / métier / middleware.
+- **Les règles de mappage** décrivent une seule décision de mappage : un ou plusieurs champs source, un ou plusieurs champs cibles, une opération (copie directe, transformation, lookup, division, fusion, filtre, valeur par défaut ou opération personnalisée), et des notes optionnelles de condition / métier / middleware.
 - **Les groupes de mappage** sont des dossiers qui organisent les règles en sections thématiques (par exemple « En-tête », « Bloc client », « Lignes d'articles », « Pied de page »). Les règles peuvent être assignées à un groupe ou laissées non groupées. Deux groupes de base, **En-tête** et **Article**, sont toujours présents ; vous pouvez en ajouter d'autres.
 
 L'onglet fonctionne sur le **jeu de mappage par défaut** de l'interface. La barre d'en-tête affiche le nom du jeu, le numéro de révision actuel, et les nombres de règles et de groupes.
@@ -189,7 +189,7 @@ Cliquez sur **Ajouter une règle** ou cliquez sur n'importe quelle ligne de règ
 
 Le tableau de mappage résume chaque règle en listant les liaisons source, une flèche, et les liaisons cibles, plus l'opération, le groupe auquel elle appartient et la portée du leg. Cliquez sur une ligne pour la modifier, ou utilisez les icônes de la ligne pour modifier ou supprimer.
 
-**Conseil** : Gardez une règle par décision logique plutôt qu'une règle par champ. Une règle qui prend trois champs source et produit un champ cible concaténé est plus claire que trois lignes presque identiques -- et le champ opération rend l'intention explicite.
+**Conseil** : Gardez une règle par décision logique plutôt qu'une règle par champ. Une règle qui prend trois champs source et produit un champ cible concaténé est plus claire que trois lignes presque identiques, et le champ opération rend l'intention explicite.
 
 ---
 
@@ -211,12 +211,12 @@ Il existe deux façons de copier des interfaces dans KANAP.
 
 ### Dupliquer l'interface (depuis la grille Interfaces)
 
-Utilisez cela lorsque vous voulez une copie indépendante d'une interface -- typiquement pour créer une intégration similaire entre les mêmes ou différentes applications.
+Utilisez cela lorsque vous voulez une copie indépendante d'une interface, typiquement pour créer une intégration similaire entre les mêmes ou différentes applications.
 
 1. Sélectionnez une interface dans la grille
 2. Cliquez sur **Dupliquer l'interface**
 3. Choisissez si vous voulez copier les liaisons d'environnement :
-   - **Sans liaisons** : Une copie propre -- juste la définition de l'interface, les legs, responsables et métadonnées
+   - **Sans liaisons** : Une copie propre, avec juste la définition de l'interface, les legs, responsables et métadonnées
    - **Avec liaisons** : Copie également les liaisons d'environnement, mais efface les détails spécifiques à l'environnement (points de terminaison, authentification, noms de jobs) afin que vous puissiez les configurer à frais
 
 **Ce qui est copié** :
@@ -260,7 +260,7 @@ Utilisez cela lors de la mise à niveau d'une application vers une nouvelle vers
 
 - **Documentez d'abord le « pourquoi »** : Utilisez l'onglet Spécification et le champ **Objectif métier** du panneau latéral pour capturer l'intention avant de plonger dans les legs et les liaisons.
 - **Utilisez le panneau latéral depuis n'importe quel onglet** : Responsables, criticité, type de route, indicateur PII et le reste persistent immédiatement, vous pouvez donc les mettre à jour pendant que vous examinez les règles ou les liaisons.
-- **Une interface, plusieurs environnements** : Ne créez pas d'interfaces séparées pour chaque environnement -- utilisez une interface et configurez chaque environnement dans l'onglet Environnements.
+- **Une interface, plusieurs environnements** : Ne créez pas d'interfaces séparées pour chaque environnement : utilisez une interface et configurez chaque environnement dans l'onglet Environnements.
 - **Groupez vos règles de mappage** : Pour les interfaces ayant plus de quelques champs, organisez les règles en groupes de mappage (En-tête, Lignes d'articles, Pied de page, etc.). Cela rend la revue et l'analyse d'impact bien plus faciles.
 - **Gardez le middleware explicite** : Si les données passent par un middleware, définissez le type de route sur **Via middleware** et choisissez les applications middleware. La Carte des interfaces affichera alors le chemin de données réel.
 - **Dupliquez pour des interfaces similaires** : Lors de la création d'une nouvelle interface similaire à une existante, utilisez **Dupliquer l'interface** pour copier tous les paramètres, puis modifiez ce qui diffère. Incluez optionnellement les liaisons pour prendre de l'avance sur la configuration des environnements.

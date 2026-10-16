@@ -49,7 +49,7 @@ Dans une bibliothèque restreinte :
 
 Utilisez les bibliothèques restreintes pour le contenu sensible (procédures de sécurité, documents RH, matériel exécutif) où vous voulez un contrôle d'accès fin au sein de la base de connaissances plutôt que de vous appuyer uniquement sur les rôles globaux.
 
-Les bibliothèques restreintes limitent également ce qu'un agent IA peut consulter. Lorsqu'un administrateur restreint un agent à un ensemble de bibliothèques choisi dans ses paramètres **Sources de connaissances et web**, ce choix est combiné avec les bibliothèques que l'administrateur configurant peut déjà consulter -- un agent ne voit jamais plus que la personne qui l'a configuré. Une bibliothèque restreinte à laquelle l'administrateur n'a pas accès reste également invisible pour l'agent.
+Les bibliothèques restreintes limitent également ce qu'un agent IA peut consulter. Lorsqu'un administrateur restreint un agent à un ensemble de bibliothèques choisi dans ses paramètres **Sources de connaissances et web**, ce choix est combiné avec les bibliothèques que l'administrateur configurant peut déjà consulter : un agent ne voit jamais plus que la personne qui l'a configuré. Une bibliothèque restreinte à laquelle l'administrateur n'a pas accès reste également invisible pour l'agent.
 
 ### Dossiers
 
@@ -231,7 +231,7 @@ Comment ça fonctionne :
 
 Si l'import rencontre un conflit de verrou (quelqu'un d'autre a acquis le verrou) ou un verrou expiré, le mode édition se termine et un message approprié est affiché. Ré-entrez en mode édition et réessayez.
 
-Les avertissements d'import -- par exemple, un formatage non pris en charge qui a été simplifié pendant la conversion -- apparaissent brièvement comme une notification en bas de l'écran.
+Les avertissements d'import (par exemple, un formatage non pris en charge qui a été simplifié pendant la conversion) apparaissent brièvement comme une notification en bas de l'écran.
 
 Utilisez la fonctionnalité d'import lors de la migration de documents Word existants vers la base de connaissances. C'est plus rapide et plus sûr que copier-coller, et cela préserve automatiquement les images intégrées.
 
@@ -252,7 +252,7 @@ L'export ne remplace pas l'article en direct. La version dans la base de connais
 
 ## Générer des documents depuis le chat
 
-Si l'Assistant IA est activé dans votre KANAP, vous pouvez lui demander de rédiger un article de connaissances pour vous depuis le chat. L'assistant prépare un aperçu que vous examinez avant que quoi que ce soit ne soit enregistré. Confirmer l'aperçu crée un véritable document de connaissances avec le contenu, le type, la lignée de modèle et toutes les relations que vous avez spécifiées -- exactement comme si vous l'aviez écrit vous-même.
+Si l'Assistant IA est activé dans votre KANAP, vous pouvez lui demander de rédiger un article de connaissances pour vous depuis le chat. L'assistant prépare un aperçu que vous examinez avant que quoi que ce soit ne soit enregistré. Confirmer l'aperçu crée un véritable document de connaissances avec le contenu, le type, la lignée de modèle et toutes les relations que vous avez spécifiées, exactement comme si vous l'aviez écrit vous-même.
 
 Les documents générés suivent les mêmes règles de gouvernance que ceux écrits à la main : responsabilité, statut, historique des versions, verrous et workflow de revue s'appliquent tous.
 
@@ -341,4 +341,4 @@ Cette distinction est importante. Les liens directs expriment une relation inten
 - Utilisez la revue pour les documents qui guident des décisions, des contrôles ou des processus reproductibles.
 - Marquez le contenu obsolète comme archivé ou obsolète au lieu de laisser les lecteurs deviner.
 - Importez les documents Word lors de la migration de contenu existant vers la base de connaissances plutôt que de copier-coller, afin que les images intégrées soient préservées automatiquement.
-- Utilisez les bibliothèques restreintes lorsque l'accès importe au niveau de la bibliothèque -- ne vous appuyez pas sur la disposition des dossiers pour cacher du contenu sensible.
+- Utilisez les bibliothèques restreintes lorsque l'accès importe au niveau de la bibliothèque : ne vous appuyez pas sur la disposition des dossiers pour cacher du contenu sensible.

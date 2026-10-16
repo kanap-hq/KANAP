@@ -237,7 +237,7 @@ Voir [Fichiers CSV](csv-files.md) pour l'encodage, le séparateur et les deux é
 
 ### Assignation multi-rôles
 
-Les utilisateurs peuvent se voir assigner plusieurs rôles. Leurs autorisations effectives sont la combinaison de tous les rôles assignés -- si un rôle donne accès à une ressource, l'utilisateur a cet accès.
+Les utilisateurs peuvent se voir assigner plusieurs rôles. Leurs autorisations effectives sont la combinaison de tous les rôles assignés : si un rôle donne accès à une ressource, l'utilisateur a cet accès.
 
 Retirer tous les rôles ne supprime pas le compte. L'utilisateur revient au rôle système **Contact**, ne conserve aucun accès et apparaît avec le statut **Accès en attente** dans la grille. Vous ne pouvez pas retirer votre propre dernier rôle, vous ne pouvez donc pas vous bloquer l'accès.
 
@@ -363,7 +363,7 @@ Les rôles sont catégorisés par la manière dont ils peuvent être modifiés :
 | Badge | Description |
 |-------|-------------|
 | **Système** | Ne peut pas être modifié. Administrateur a un accès complet ; Contact est pour les entrées du répertoire uniquement. |
-| **Intégré** | Rôles pré-configurés fournissant des schémas d'accès standard. Ne peut pas être modifié directement -- utilisez **Dupliquer** pour créer une copie personnalisable. |
+| **Intégré** | Rôles pré-configurés fournissant des schémas d'accès standard. Ne peut pas être modifié directement : utilisez **Dupliquer** pour créer une copie personnalisable. |
 | _(pas de badge)_ | Rôles personnalisés que vous créez. Entièrement modifiables. |
 
 ### Rôles intégrés
@@ -381,8 +381,8 @@ KANAP est livré avec des rôles pré-configurés organisés par domaine fonctio
 Le rôle **Contributeur métier** est conçu pour les parties prenantes métier qui participent au processus de portefeuille sans avoir les privilèges complets de gestion de projet. Un Contributeur métier peut :
 
 - **Soumettre et gérer des demandes de portefeuille** (accès complet member aux demandes)
-- **Modifier des projets existants** -- mettre à jour les champs, ajouter des commentaires, téléverser des pièces jointes, gérer les phases, jalons, dépendances et entrées de temps
-- **Créer et travailler sur les tâches projet** -- ajouter des tâches aux projets, saisir du temps et poster des commentaires
+- **Modifier des projets existants** : mettre à jour les champs, ajouter des commentaires, téléverser des pièces jointes, gérer les phases, jalons, dépendances et entrées de temps
+- **Créer et travailler sur les tâches projet** : ajouter des tâches aux projets, saisir du temps et poster des commentaires
 - **Consulter les utilisateurs, sociétés, départements et contacts** pour les sélections dans les menus déroulants
 
 Un Contributeur métier **ne peut pas** :
@@ -612,8 +612,8 @@ Pour le contenu du jeu, ce que l'effacement supprime et conserve, et le bandeau 
 La page Paramètres vous permet de gérer votre profil personnel et vos préférences de notification. Accédez-y depuis le menu utilisateur (avatar en haut à droite) ou naviguez vers `/settings`.
 
 La page a deux onglets, accessibles via URL :
-- `/settings/profile` (par défaut) -- Onglet Profil
-- `/settings/notifications` -- Onglet Notifications
+- `/settings/profile` (par défaut) : Onglet Profil
+- `/settings/notifications` : Onglet Notifications
 
 ### Profil
 
@@ -654,7 +654,7 @@ Toutes les modifications sont enregistrées automatiquement lorsque vous bascule
 ## Conseils
 
   - **Dupliquez les rôles intégrés** : Au lieu de créer des rôles de zéro, dupliquez un rôle intégré et ajustez les autorisations. Cela fait gagner du temps et vous assure de ne pas oublier de ressources importantes.
-  - **Utilisez le multi-rôle pour la flexibilité** : Assignez aux utilisateurs plusieurs rôles pour combiner les autorisations -- par exemple, un rôle « Lecteur finance » plus un rôle « Chef de projet ».
+  - **Utilisez le multi-rôle pour la flexibilité** : Assignez aux utilisateurs plusieurs rôles pour combiner les autorisations, par exemple un rôle « Lecteur finance » plus un rôle « Chef de projet ».
   - **Utilisez le SSO** : Si vous avez Microsoft 365, connectez Entra ID pour une gestion plus facile des utilisateurs et une synchronisation automatique des profils.
   - **Désactivez, ne supprimez pas** : Lorsque quelqu'un part, désactivez son compte pour préserver l'historique d'audit.
   - **Revoyez les autorisations régulièrement** : Auditez les autorisations des rôles périodiquement pour maintenir le principe du moindre privilège.

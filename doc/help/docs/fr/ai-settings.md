@@ -18,10 +18,10 @@ Cette page pilote l'[assistant de chat Plaid](ai-assistant.md) : le modèle IA a
 
 Un unique sélecteur décide quel modèle répond aux questions du chat :
 
-- **Modèle par défaut (*nom*)** — le modèle par défaut de l'organisation défini sur la page [Modèles IA](ai-models.md), nommé pour que vous voyiez ce que vous obtenez. C'est la première option et la réponse habituelle : laissez le sélecteur ici et Plaid suivra le modèle par défaut où que vous le déplaciez.
+- **Modèle par défaut (*nom*)** : le modèle par défaut de l'organisation défini sur la page [Modèles IA](ai-models.md), nommé pour que vous voyiez ce que vous obtenez. C'est la première option et la réponse habituelle : laissez le sélecteur ici et Plaid suivra le modèle par défaut où que vous le déplaciez.
 - **Modèle inclus KANAP** : affiché à la place de l'option précédente lorsqu'aucun modèle par défaut n'est défini, sur le service hébergé. Plaid fonctionne alors sur le modèle inclus dans votre abonnement, dans la limite de son volume mensuel de messages. Un administrateur confirme d'abord le fournisseur et le lieu où il traite les données : voir [Confirmer le modèle inclus KANAP](#confirmer-le-modele-inclus-kanap).
-- **Aucun modèle configuré** — affiché lorsqu'il n'y a ni modèle par défaut *ni* modèle inclus, c'est-à-dire le cas d'une installation on-premise. Notez que cette option continue d'afficher *Aucun modèle configuré* tant qu'aucun modèle n'a été marqué d'une étoile comme modèle par défaut de l'organisation, même si vous en avez déjà enregistré plusieurs : elle décrit le repli, pas votre registre.
-- **N'importe quel modèle actif, par son nom** — épinglez Plaid à un modèle précis, indépendamment du modèle par défaut. Les modèles archivés ne sont pas proposés.
+- **Aucun modèle configuré** : affiché lorsqu'il n'y a ni modèle par défaut *ni* modèle inclus, c'est-à-dire le cas d'une installation on-premise. Notez que cette option continue d'afficher *Aucun modèle configuré* tant qu'aucun modèle n'a été marqué d'une étoile comme modèle par défaut de l'organisation, même si vous en avez déjà enregistré plusieurs : elle décrit le repli, pas votre registre.
+- **N'importe quel modèle actif, par son nom** : épinglez Plaid à un modèle précis, indépendamment du modèle par défaut. Les modèles archivés ne sont pas proposés.
 
 Il y a donc deux façons de faire fonctionner le chat : marquer un modèle par défaut d'une étoile sur la page [Modèles IA](ai-models.md) et laisser ce sélecteur sur la première option, ou choisir ici un modèle par son nom. Épingler un modèle ici fonctionne qu'un modèle par défaut existe ou non.
 
@@ -45,7 +45,7 @@ Sur une installation on-premise, il n'y a pas de modèle inclus : cette section 
 
 ### Utilisation intégrée
 
-Lorsque Plaid tourne sur le modèle inclus KANAP — aucun choix explicite, aucun modèle par défaut d'organisation —, une carte **Utilisation intégrée** apparaît avec :
+Lorsque Plaid tourne sur le modèle inclus KANAP (aucun choix explicite, aucun modèle par défaut d'organisation), une carte **Utilisation intégrée** apparaît avec :
 
 - Le nombre de **messages utilisés ce mois-ci** par rapport à la limite, avec une barre de progression qui passe à l'ambre au-delà des trois quarts et au rouge à l'approche du plafond
 - La date de **réinitialisation** du volume
@@ -57,11 +57,11 @@ Comme le dit la carte, le chat et les agents de ce tenant se partagent le volume
 
 L'en-tête de la carte Fournisseur affiche trois indicateurs consultables d'un coup d'œil :
 
-- **Chat activé / Chat désactivé** — l'interrupteur principal du chat pour les utilisateurs finaux
-- **MCP activé / MCP désactivé** — indique si les clients MCP externes peuvent se connecter
+- **Chat activé / Chat désactivé** : l'interrupteur principal du chat pour les utilisateurs finaux
+- **MCP activé / MCP désactivé** : indique si les clients MCP externes peuvent se connecter
 - **Fournisseur prêt / Fournisseur incomplet** : indique si le modèle vers lequel Plaid se résout est réellement utilisable. Tant que seule la confirmation du modèle inclus manque, ce voyant est masqué et la ligne d'état ci-dessus le remplace.
 
-Lorsqu'il manque quelque chose, **Erreurs de validation du fournisseur actuel** le liste au-dessus du formulaire — un modèle incomplet, ou aucun modèle du tout. La correction se fait normalement sur la page [Modèles IA](ai-models.md) plutôt qu'ici.
+Lorsqu'il manque quelque chose, **Erreurs de validation du fournisseur actuel** le liste au-dessus du formulaire : un modèle incomplet, ou aucun modèle du tout. La correction se fait normalement sur la page [Modèles IA](ai-models.md) plutôt qu'ici.
 
 ---
 
@@ -71,13 +71,13 @@ La section **Fonctionnalités** active ou désactive les surfaces d'IA facultati
 
 - **Activer le chat** : active ou désactive l'espace de chat intégré pour les utilisateurs finaux. Il ne peut pas être activé tant que l'en-tête affiche **Fournisseur incomplet** : l'enregistrement est refusé avec la liste des raisons, et vous les corrigez d'abord sur la page [Modèles IA](ai-models.md). Une confirmation manquante du modèle inclus fait exception : l'enregistrement ouvre alors la fenêtre de confirmation. Le même contrôle s'exécute à chaque enregistrement tant que le chat est déjà activé : un modèle devenu incomplet par la suite bloquera donc des modifications sans rapport sur cette page tant qu'il n'aura pas été réglé.
 - **Activer MCP** : active ou désactive l'API MCP pour les clients externes. Elle n'attend pas la confirmation du modèle inclus. Les requêtes MCP ne comptent pas dans le volume mensuel inclus.
-- **Recherche web** — permet à l'assistant de chat Plaid d'effectuer des recherches sur le web. Cela nécessite que la clé de recherche web au niveau de l'instance soit configurée ; sans elle, le commutateur est désactivé et une infobulle en explique la raison. Son activation lance automatiquement un test de connectivité et en signale le résultat. Ce commutateur s'applique **uniquement à l'assistant de chat** — les agents IA disposent de leur propre réglage de recherche web indépendant, dans l'onglet [Paramètres](agents-workspace.md) de chaque agent, qui repose sur la même configuration au niveau de l'instance.
+- **Recherche web** : permet à l'assistant de chat Plaid d'effectuer des recherches sur le web. Cela nécessite que la clé de recherche web au niveau de l'instance soit configurée ; sans elle, le commutateur est désactivé et une infobulle en explique la raison. Son activation lance automatiquement un test de connectivité et en signale le résultat. Ce commutateur s'applique **uniquement à l'assistant de chat**. Les agents IA disposent de leur propre réglage de recherche web indépendant, dans l'onglet [Paramètres](agents-workspace.md) de chaque agent, qui repose sur la même configuration au niveau de l'instance.
 
 ---
 
 ## Conservation
 
-- **Conservation des conversations (jours)** — les conversations de chat et leurs messages plus anciens que cette valeur deviennent éligibles à un nettoyage automatique. Laissez le champ vide pour les conserver indéfiniment.
+- **Conservation des conversations (jours)** : les conversations de chat et leurs messages plus anciens que cette valeur deviennent éligibles à un nettoyage automatique. Laissez le champ vide pour les conserver indéfiniment.
 
 Les modifications apportées à **Fournisseur**, **Fonctionnalités**, **Conservation** *et* au champ **Durée de vie maximale de la clé (jours)** situé plus bas sont toutes appliquées par l'unique bouton **Enregistrer les paramètres**, en bas de cette carte. Rien sur cette page ne s'enregistre tout seul.
 
@@ -244,9 +244,9 @@ Le serveur MCP est en lecture seule. Un client peut rechercher et lire vos donn�
 
 ## Conseils
 
-- **Laissez Plaid sur le modèle par défaut, sauf raison contraire.** Épingler le chat à un modèle précis signifie qu'il cesse de suivre le modèle par défaut de l'organisation — utile lorsque le chat et les agents ont réellement besoin de modèles différents, gênant sinon.
+- **Laissez Plaid sur le modèle par défaut, sauf raison contraire.** Épingler le chat à un modèle précis signifie qu'il cesse de suivre le modèle par défaut de l'organisation. C'est utile lorsque le chat et les agents ont réellement besoin de modèles différents, gênant sinon.
 - **Le volume de chat est facile à sous-estimer.** La page [Utilisation & coûts](ai-usage.md) valorise le chat aux tarifs du modèle assigné ; un assistant très sollicité sur un modèle coûteux s'y voit bien avant d'apparaître sur une facture.
-- **Un modèle vision est un besoin des agents, pas du chat.** Si vos agents de tri doivent lire les captures d'écran des tickets, cela relève de *leur* modèle — voir **Comprend les images** sur la page [Modèles IA](ai-models.md).
+- **Un modèle vision est un besoin des agents, pas du chat.** Si vos agents de tri doivent lire les captures d'écran des tickets, cela relève de *leur* modèle : voir **Comprend les images** sur la page [Modèles IA](ai-models.md).
 - **Préférez les connexions pour Claude.** Chaque personne se connecte avec son propre compte et lit avec ses propres accès, donc personne ne partage de clé. Gardez les clés pour les clients qui en ont besoin, renouvelez-les, et utilisez **Durée de vie maximale de la clé (jours)** pour imposer un plafond qu'aucune requête ne peut dépasser.
-- **Définissez une fenêtre de conservation.** Conserver les conversations indéfiniment est pratique jusqu'à ce que la base de données devienne volumineuse ou qu'une revue de conformité demande combien de temps le contenu du chat est conservé — 90 ou 180 jours constituent un point de départ courant.
-- **GLPI se configure ailleurs.** La connexion au système de ticketing sur laquelle travaillent vos agents se configure sous **Administration → Intégrations**, et non ici — voir [Intégrations](integrations.md).
+- **Définissez une fenêtre de conservation.** Conserver les conversations indéfiniment est pratique jusqu'à ce que la base de données devienne volumineuse ou qu'une revue de conformité demande combien de temps le contenu du chat est conservé : 90 ou 180 jours constituent un point de départ courant.
+- **GLPI se configure ailleurs.** La connexion au système de ticketing sur laquelle travaillent vos agents se configure sous **Administration → Intégrations**, et non ici. Voir [Intégrations](integrations.md).
