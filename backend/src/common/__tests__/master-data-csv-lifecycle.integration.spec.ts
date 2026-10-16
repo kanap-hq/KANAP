@@ -267,9 +267,10 @@ async function testEndOfValidityFormat(pick: number) {
       ['Unreadable', '', 'not-a-date'],
     ]);
     assert.equal(refused.ok, false, `${label}: a clear marker and an unreadable cell are refused`);
+    // Each refusal carries the shared code on its column, so the dialog words it.
     assert.deepEqual(refused.errors, [
-      { row: 2, message: message('-') },
-      { row: 3, message: message('not-a-date') },
+      { row: 2, column: 'disabled_at', code: 'CSV_DATE_INVALID', params: { value: '-' }, message: message('-') },
+      { row: 3, column: 'disabled_at', code: 'CSV_DATE_INVALID', params: { value: 'not-a-date' }, message: message('not-a-date') },
     ]);
     const [{ n }] = await runner.query(
       `SELECT count(*)::int AS n FROM ${importer.table} WHERE tenant_id = $1 AND ${importer.nameColumn} = ANY($2::text[])`,
