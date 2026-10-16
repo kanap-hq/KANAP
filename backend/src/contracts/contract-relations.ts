@@ -5,8 +5,8 @@ import { BUDGET_NATURES, naturesAnd } from '../spend/budget-nature';
 
 /**
  * What a contract is linked to, from the contract's side: its budget lines of both natures
- * (`contract_spend_items`), its applications (`application_contracts`) and its assets
- * (`asset_contracts`). Each set is listed and replaced as a whole. Every statement carries the
+ * (`contract_spend_items`), its applications (`application_contracts`), its assets
+ * (`asset_contracts`) and its technologies (`technology_contracts`). Each set is listed and replaced as a whole. Every statement carries the
  * contract's tenant besides RLS. A replacement locks the contract's row first (FOR NO KEY UPDATE):
  * a second replacement of the same set waits, then reads what the first one committed, so the
  * last one wins and its audit row matches what is stored. A link written meanwhile from the other
@@ -49,6 +49,13 @@ const SETS = {
     linkScope: '',
     exists: `SELECT id FROM assets WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
     notFound: 'One or more assets not found.',
+  },
+  technologies: {
+    links: 'technology_contracts',
+    otherFk: 'technology_id',
+    linkScope: '',
+    exists: `SELECT id FROM technologies WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+    notFound: 'One or more technologies not found.',
   },
 } as const;
 
@@ -100,9 +107,24 @@ export async function listContractAssets(manager: EntityManager, contract: Relat
   return { items };
 }
 
+export async function listContractTechnologies(
+  manager: EntityManager,
+  contract: RelationsContract,
+): Promise<{ items: Array<{ id: string; name: string; reference: string }> }> {
+  const items: Array<{ id: string; name: string; reference: string }> = await manager.query(
+    `SELECT t.id, t.name, 'TEC-' || t.item_number AS reference
+       FROM technology_contracts l
+       JOIN technologies t ON t.tenant_id = l.tenant_id AND t.id = l.technology_id
+      WHERE l.tenant_id = $1 AND l.contract_id = $2
+      ORDER BY t.name ASC, t.id ASC`,
+    [contract.tenant_id, contract.id],
+  );
+  return { items };
+}
+
 /**
  * Replace one set of the contract's links with `ids` (trimmed, deduplicated). Every id must name a
- * row of the tenant (a budget line of either nature, an application, an asset): 400 otherwise,
+ * row of the tenant (a budget line of either nature, an application, an asset, a technology): 400 otherwise,
  * and nothing is written. One audit row on the link table when the set changes: `recordId` the
  * contract, before and after the sorted ids.
  */

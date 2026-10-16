@@ -24,6 +24,8 @@ import { PortfolioProject } from '../portfolio/portfolio-project.entity';
 import { KnowledgeModule } from '../knowledge/knowledge.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { TasksModule } from '../tasks/tasks.module';
+import { TechnologiesModule } from '../technologies/technologies.module';
+import { AssetTechnologiesController } from './asset-technologies.controller';
 
 // Decomposed services
 import {
@@ -62,6 +64,7 @@ import {
     KnowledgeModule,
     NotificationsModule,
     TasksModule,
+    TechnologiesModule,
   ],
   providers: [
     // Validation service (no dependencies on other asset services)
@@ -80,7 +83,7 @@ import {
     // CSV service
     AssetsCsvService,
   ],
-  controllers: [AssetsController],
+  controllers: [AssetsController, AssetTechnologiesController],
   exports: [AssetsService, AssetsCsvService, TypeOrmModule],
 })
 export class AssetsModule {}

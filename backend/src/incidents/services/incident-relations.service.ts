@@ -4,6 +4,7 @@ import { EntityTarget, In, ObjectLiteral, Repository } from 'typeorm';
 import { Incident } from '../incident.entity';
 import { IncidentAsset } from '../incident-asset.entity';
 import { IncidentApplication } from '../incident-application.entity';
+import { IncidentTechnology } from '../incident-technology.entity';
 import { AuditService } from '../../audit/audit.service';
 import { IncidentsBaseService, ServiceOpts } from './incidents-base.service';
 
@@ -13,13 +14,13 @@ type LinkSpec = {
   /** Sentence-case label used in the journal ("Assets linked: …"). */
   label: string;
   /** Key in `changed_fields`. */
-  key: 'assets' | 'applications';
+  key: 'assets' | 'applications' | 'technologies';
   entity: EntityTarget<ObjectLiteral>;
-  linkTable: 'incident_assets' | 'incident_applications';
-  linkColumn: 'asset_id' | 'application_id';
-  targetTable: 'assets' | 'applications';
-  /** Business reference column shown next to the name. */
-  referenceColumn: 'asset_reference' | 'sequential_id';
+  linkTable: 'incident_assets' | 'incident_applications' | 'incident_technologies';
+  linkColumn: 'asset_id' | 'application_id' | 'technology_id';
+  targetTable: 'assets' | 'applications' | 'technologies';
+  /** Business reference shown next to the name, as SQL over the target table aliased `t`. */
+  reference: string;
 };
 
 const ASSET_LINK: LinkSpec = {
@@ -29,7 +30,7 @@ const ASSET_LINK: LinkSpec = {
   linkTable: 'incident_assets',
   linkColumn: 'asset_id',
   targetTable: 'assets',
-  referenceColumn: 'asset_reference',
+  reference: 't.asset_reference',
 };
 
 const APPLICATION_LINK: LinkSpec = {
@@ -39,13 +40,23 @@ const APPLICATION_LINK: LinkSpec = {
   linkTable: 'incident_applications',
   linkColumn: 'application_id',
   targetTable: 'applications',
-  referenceColumn: 'sequential_id',
+  reference: 't.sequential_id',
+};
+
+const TECHNOLOGY_LINK: LinkSpec = {
+  label: 'Technologies',
+  key: 'technologies',
+  entity: IncidentTechnology,
+  linkTable: 'incident_technologies',
+  linkColumn: 'technology_id',
+  targetTable: 'technologies',
+  reference: `'TEC-' || t.item_number`,
 };
 
 const displayRef = (item: IncidentLinkedObject): string => item.reference || item.name;
 
 /**
- * Linked assets / applications, replaced as a whole and journaled as one `link_change` entry.
+ * Linked assets / applications / technologies, replaced as a whole and journaled as one `link_change` entry.
  */
 @Injectable()
 export class IncidentRelationsService extends IncidentsBaseService {
@@ -72,12 +83,20 @@ export class IncidentRelationsService extends IncidentsBaseService {
     return this.bulkReplace(APPLICATION_LINK, incidentId, applicationIds, userId, opts);
   }
 
+  listTechnologies(incidentId: string, opts?: ServiceOpts): Promise<IncidentLinkedObject[]> {
+    return this.listLinked(TECHNOLOGY_LINK, incidentId, opts);
+  }
+
+  bulkReplaceTechnologies(incidentId: string, technologyIds: string[], userId: string | null, opts?: ServiceOpts) {
+    return this.bulkReplace(TECHNOLOGY_LINK, incidentId, technologyIds, userId, opts);
+  }
+
   private async listLinked(spec: LinkSpec, incidentId: string, opts?: ServiceOpts): Promise<IncidentLinkedObject[]> {
     const mg = this.getManager(opts);
     const tenantId = this.ensureTenantId(opts?.tenantId);
     await this.ensureIncident(incidentId, mg, tenantId, opts?.viewer);
     return mg.query(
-      `SELECT t.id, t.name, t.${spec.referenceColumn} AS reference
+      `SELECT t.id, t.name, ${spec.reference} AS reference
        FROM ${spec.linkTable} l
        JOIN ${spec.targetTable} t ON t.id = l.${spec.linkColumn} AND t.tenant_id = l.tenant_id
        WHERE l.incident_id = $1 AND l.tenant_id = $2
@@ -101,9 +120,9 @@ export class IncidentRelationsService extends IncidentsBaseService {
     const nextIds = Array.from(new Set((rawIds || []).map((id) => String(id || '').trim()).filter(Boolean)));
     const targets: IncidentLinkedObject[] = nextIds.length
       ? await mg.query(
-          `SELECT id, name, ${spec.referenceColumn} AS reference
-           FROM ${spec.targetTable}
-           WHERE id = ANY($1::uuid[]) AND tenant_id = $2`,
+          `SELECT t.id, t.name, ${spec.reference} AS reference
+           FROM ${spec.targetTable} t
+           WHERE t.id = ANY($1::uuid[]) AND t.tenant_id = $2`,
           [nextIds, tenantId],
         )
       : [];

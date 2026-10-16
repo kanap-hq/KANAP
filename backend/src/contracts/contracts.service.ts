@@ -42,6 +42,7 @@ import {
   contractRelationCounts,
   listContractApplications,
   listContractAssets,
+  listContractTechnologies,
   listContractBudgetLines,
   replaceContractRelations,
   type ContractRelationSet,
@@ -1442,6 +1443,11 @@ export class ContractsService {
   async listAssets(contractId: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     return listContractAssets(mg, await this.findContract(contractId, mg));
+  }
+
+  async listTechnologies(contractId: string, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    return listContractTechnologies(mg, await this.findContract(contractId, mg));
   }
 
   async replaceRelations(contractId: string, set: ContractRelationSet, ids: string[], userId?: string | null, opts?: { manager?: EntityManager }) {

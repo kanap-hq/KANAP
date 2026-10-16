@@ -251,6 +251,18 @@ export class ContractsController {
     return this.svc.replaceRelations(id, 'assets', body?.asset_ids ?? [], req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'reader')
+  @Get(':id/technologies')
+  listTechnologies(@Param('id') id: string, @Req() req: any) { return this.svc.listTechnologies(id, { manager: req?.queryRunner?.manager }); }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'member')
+  @Post(':id/technologies/bulk-replace')
+  bulkReplaceTechnologies(@Param('id') id: string, @Body() body: { technology_ids: string[] }, @Req() req: any) {
+    return this.svc.replaceRelations(id, 'technologies', body?.technology_ids ?? [], req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+  }
+
   // Tasks for contract
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'reader')

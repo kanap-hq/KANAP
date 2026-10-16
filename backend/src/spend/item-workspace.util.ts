@@ -132,6 +132,8 @@ function costCenterReference(raw: Record<string, any>): CostCenterReference {
 export type ItemRelationCounts = {
   contracts: number;
   applications: number;
+  /** Technologies linked to the line (lot S); not in `total` until the Relations tab lists them. */
+  technologies: number;
   projects: number;
   links: number;
   attachments: number;
@@ -156,6 +158,8 @@ export async function countItemRelations(
          WHERE l.tenant_id = $1 AND l.${t.applications.fk} = $2)::int AS applications,
        (SELECT count(*) FROM ${t.projects.table} l JOIN portfolio_projects p ON p.tenant_id = l.tenant_id AND p.id = l.project_id
          WHERE l.tenant_id = $1 AND l.${t.projects.fk} = $2)::int AS projects,
+       (SELECT count(*) FROM technology_spend_items l JOIN technologies x ON x.tenant_id = l.tenant_id AND x.id = l.technology_id
+         WHERE l.tenant_id = $1 AND l.spend_item_id = $2)::int AS technologies,
        (SELECT count(*) FROM ${t.links.table} WHERE tenant_id = $1 AND ${t.links.fk} = $2)::int AS links,
        (SELECT count(*) FROM ${t.attachments.table} WHERE tenant_id = $1 AND ${t.attachments.fk} = $2)::int AS attachments`,
     [item.tenant_id, item.id],
@@ -167,5 +171,9 @@ export async function countItemRelations(
     links: Number(row?.links) || 0,
     attachments: Number(row?.attachments) || 0,
   };
-  return { ...counts, total: counts.contracts + counts.applications + counts.projects + counts.links + counts.attachments };
+  return {
+    ...counts,
+    technologies: Number(row?.technologies) || 0,
+    total: counts.contracts + counts.applications + counts.projects + counts.links + counts.attachments,
+  };
 }

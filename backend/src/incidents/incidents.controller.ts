@@ -257,7 +257,7 @@ export class IncidentsController {
     return this.entries.createNote(id, body, ctx.userId || null, this.opts(ctx));
   }
 
-  // Linked assets / applications
+  // Linked assets / applications / technologies
 
   @UseGuards(PermissionGuard)
   @RequireLevel('incidents', 'reader')
@@ -277,6 +277,26 @@ export class IncidentsController {
   ) {
     const id = await this.visibleId(idOrRef, ctx);
     return this.relations.bulkReplaceAssets(id, body?.asset_ids ?? [], ctx.userId || null, this.opts(ctx));
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('incidents', 'reader')
+  @Get(':id/technologies')
+  async listTechnologies(@Param('id') idOrRef: string, @Tenant() ctx: TenantRequest) {
+    const id = await this.visibleId(idOrRef, ctx);
+    return this.relations.listTechnologies(id, this.opts(ctx));
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('incidents', 'contributor')
+  @Post(':id/technologies/bulk-replace')
+  async bulkReplaceTechnologies(
+    @Param('id') idOrRef: string,
+    @Body() body: { technology_ids?: string[] },
+    @Tenant() ctx: TenantRequest,
+  ) {
+    const id = await this.visibleId(idOrRef, ctx);
+    return this.relations.bulkReplaceTechnologies(id, body?.technology_ids ?? [], ctx.userId || null, this.opts(ctx));
   }
 
   @UseGuards(PermissionGuard)
