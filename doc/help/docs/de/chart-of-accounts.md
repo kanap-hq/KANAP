@@ -11,7 +11,7 @@ Ohne Kontenpläne sind alle Konten für alle Unternehmen verfügbar, was es leic
   - **Auswahl vereinfachen**: Konto-Dropdowns zeigen nur relevante Konten, nicht Ihren gesamten Katalog
   - **Vorlagen ermöglichen**: Vorkonfigurierte Kontensets aus länderspezifischen Vorlagen laden
 
-**Beispiel**: Ihre französische Tochtergesellschaft verwendet den französischen PCG (Plan Comptable General), während Ihre britische Einheit UK GAAP verwendet. Erstellen Sie zwei Kontenpläne -- einen für jeden Standard -- und weisen Sie die Unternehmen entsprechend zu. Bei der Ausgabenerfassung sehen Benutzer automatisch die korrekten Konten.
+**Beispiel**: Ihre französische Tochtergesellschaft verwendet den französischen PCG (Plan Comptable General), während Ihre britische Einheit UK GAAP verwendet. Erstellen Sie zwei Kontenpläne (einen für jeden Standard) und weisen Sie die Unternehmen entsprechend zu. Bei der Ausgabenerfassung sehen Benutzer automatisch die korrekten Konten.
 
 ## Die Beziehung: Kontenplan -> Unternehmen -> Konten
 
@@ -192,7 +192,7 @@ Vorlagen sind Standard-Kontensets, die von Plattform-Administratoren verwaltet w
   - Klicken Sie auf **Vorlage prüfen**, um zu sehen, wie viele Konten hinzugefügt und wie viele aktualisiert werden
   - Klicken Sie auf **Erstellen**, um die Konten in Ihren Kontenplan zu kopieren
 
-**Was kopiert wird**: Kontonummern, Namen, lokale Namen (Landessprache), Beschreibungen, Konsolidierungszuordnungen, **Verwendet für** und Status. Die Konten werden zu Ihren eigenen, die Sie bearbeiten können -- Änderungen an der Plattform-Vorlage wirken sich nicht auf Ihren Kontenplan aus, es sei denn, Sie laden sie explizit neu. Hat Ihr Arbeitsbereich einen Konsolidierungskontenplan, werden Name und Beschreibung des Konsolidierungskontos jedes Kontos aus diesem Kontenplan übernommen (siehe [Der Konsolidierungskontenplan](#der-konsolidierungskontenplan)).
+**Was kopiert wird**: Kontonummern, Namen, lokale Namen (Landessprache), Beschreibungen, Konsolidierungszuordnungen, **Verwendet für** und Status. Die Konten werden zu Ihren eigenen, die Sie bearbeiten können. Änderungen an der Plattform-Vorlage wirken sich nicht auf Ihren Kontenplan aus, es sei denn, Sie laden sie explizit neu. Hat Ihr Arbeitsbereich einen Konsolidierungskontenplan, werden Name und Beschreibung des Konsolidierungskontos jedes Kontos aus diesem Kontenplan übernommen (siehe [Der Konsolidierungskontenplan](#der-konsolidierungskontenplan)).
 
 **Tipp**: Nach dem Laden einer Vorlage können Sie unternehmensspezifische Konten hinzufügen, Einträge umbenennen oder ungenutzte Konten deaktivieren. Vorlagen bieten einen Ausgangspunkt, keine gesperrte Struktur.
 
@@ -200,7 +200,7 @@ Vorlagen sind Standard-Kontensets, die von Plattform-Administratoren verwaltet w
 
 KANAP wird mit **20 vorkonfigurierten Vorlagen** ausgeliefert, die 10 Buchhaltungsstandards abdecken. Jeder Standard kommt in zwei Versionen:
 
-- **v1.0 (Einfach)**: Ein fokussiertes Set von ~20 IT-relevanten Konten -- Softwarelizenzen, Cloud-Hosting, Cybersicherheit, Telekommunikation, Beratung, Personalkosten, Schulung und mehr. Am besten für Organisationen, die einen schlanken Ausgangspunkt wünschen.
+- **v1.0 (Einfach)**: Ein fokussiertes Set von ~20 IT-relevanten Konten: Softwarelizenzen, Cloud-Hosting, Cybersicherheit, Telekommunikation, Beratung, Personalkosten, Schulung und mehr. Am besten für Organisationen, die einen schlanken Ausgangspunkt wünschen.
 - **v2.0 (Detailliert)**: Alles aus v1.0 plus zusätzliche granulare Unterkonten (~30 Konten). Fügt Aufschlüsselungen wie Gekaufte vs. Intern Entwickelte Software, Netzwerkausrüstung, SaaS vs. Dauerlizenzen, Mobilfunkkommunikation, IT-Boni, IT-Versicherung und mehr hinzu. Am besten für Organisationen, die eine feinere Kostenverfolgung benötigen.
 
 Beide Versionen verwenden **echte Kontonummern aus dem offiziellen Buchhaltungsstandard jedes Landes** und enthalten lokale Namen in der Landessprache. Jedes Konto trägt außerdem seine Einstellung **Verwendet für**: Vermögenskonten sind für CAPEX, Aufwandskonten für OPEX, und Abschreibungs- und Wertminderungskonten für beides.
@@ -225,11 +225,11 @@ Beide Versionen verwenden **echte Kontonummern aus dem offiziellen Buchhaltungss
 
 ### Integrierte IFRS-Konsolidierung
 
-Alle Vorlagen -- unabhängig vom Land -- ordnen jedes Konto einem von **14 standardisierten IFRS-Konsolidierungskonten** zu. Das bedeutet, dass Konzernberichte sofort funktionieren, auch über verschiedene lokale Standards hinweg.
+Alle Vorlagen (unabhängig vom Land) ordnen jedes Konto einem von **14 standardisierten IFRS-Konsolidierungskonten** zu. Das bedeutet, dass Konzernberichte sofort funktionieren, auch über verschiedene lokale Standards hinweg.
 
 | # | Konsolidierungskonto | Was es abdeckt |
 |---|---------------------|----------------|
-| 1000 | Sachanlagen (CAPEX) | Physische IT-Ausrüstung -- Server, Arbeitsplätze, Netzwerkgeräte |
+| 1000 | Sachanlagen (CAPEX) | Physische IT-Ausrüstung: Server, Arbeitsplätze, Netzwerkgeräte |
 | 1100 | Immaterielle Vermögenswerte (CAPEX) | Aktivierte Software und Entwicklungskosten |
 | 1200 | Abschreibungen | Abschreibungen auf Hardware und Software |
 | 1300 | Wertminderungen & Abschreibungen | Anlagen-Wertminderungen und -abschreibungen |
@@ -401,7 +401,7 @@ Diese duale Sicht erfüllt sowohl lokale Compliance-Anforderungen als auch Konze
 
 **Funktionsweise**:
   - Unternehmen OHNE Kontenplan können Legacy-Konten verwenden
-  - Unternehmen MIT Kontenplan können Legacy-Konten nicht verwenden -- sie werden automatisch herausgefiltert
+  - Unternehmen MIT Kontenplan können Legacy-Konten nicht verwenden. Sie werden automatisch herausgefiltert
   - Legacy-Konten können weiterhin per CSV (`coa_code`) und Neuzuweisungs-Workflows migriert werden
 
 **Migrationspfad**:
@@ -504,7 +504,7 @@ account_number;account_name;native_name;description;consolidation_account_number
 
 ## Tipps
 
-  - **Mit Vorlagen beginnen**: KANAP wird mit Vorlagen für 9 Länder plus IFRS ausgeliefert. Laden Sie eine, anstatt von Grund auf zu bauen -- Sie erhalten korrekte Kontonummern, lokale Namen und IFRS-Konsolidierungszuordnungen direkt. Beginnen Sie mit v1.0 (Einfach), wenn Sie unsicher sind; upgraden Sie auf v2.0 (Detailliert), wenn Sie mehr Granularität benötigen.
+  - **Mit Vorlagen beginnen**: KANAP wird mit Vorlagen für 9 Länder plus IFRS ausgeliefert. Laden Sie eine, anstatt von Grund auf zu bauen: Sie erhalten korrekte Kontonummern, lokale Namen und IFRS-Konsolidierungszuordnungen direkt. Beginnen Sie mit v1.0 (Einfach), wenn Sie unsicher sind; upgraden Sie auf v2.0 (Detailliert), wenn Sie mehr Granularität benötigen.
   - **Ein Standard pro Land**: Machen Sie für jedes Land einen Kontenplan zum Standard, damit neue Unternehmen mit der richtigen Kontenstruktur starten.
   - **Lokale Namen für Compliance**: Verwenden Sie das Feld **Lokaler Name (Landessprache)**, wenn lokale Vorschriften Konten in der Landessprache erfordern. Aktivieren Sie die Spalte **Lokaler Name** im Grid, um beide Namen auf einen Blick zu sehen.
   - **Schrittweise migrieren**: Sie müssen nicht alles auf einmal umstellen. Unternehmen ohne Kontenpläne arbeiten weiterhin mit Legacy-Konten.
@@ -606,7 +606,7 @@ A: Nein, sie sind optional. Wenn Sie nur in einem Land tätig sind oder keine Ko
 A: Ja, genau das ist der Sinn! Viele lokale Konten über verschiedene Kontenpläne hinweg können dem gleichen Konsolidierungskonto zugeordnet werden. So aggregieren Sie Kosten aus verschiedenen Ländern in eine einzige konsolidierte Kategorie.
 
 **F: Was passiert, wenn ich eine Konsolidierungszuordnung ändere?**
-A: Bestehende OPEX/CAPEX-Zeilen speichern Konsolidierungsdaten nicht direkt -- sie referenzieren das Konto, das die Konsolidierungszuordnung hat. Wenn Sie eine Zuordnung ändern, werden alle historischen und zukünftigen Budgetzeilen, die dieses Konto verwenden, unter dem neuen Konsolidierungskonto berichtet. Ändern Sie Zuordnungen mit Bedacht, wenn Sie historische Berichtskategorien beibehalten müssen.
+A: Bestehende OPEX/CAPEX-Zeilen speichern Konsolidierungsdaten nicht direkt. Sie referenzieren das Konto, das die Konsolidierungszuordnung hat. Wenn Sie eine Zuordnung ändern, werden alle historischen und zukünftigen Budgetzeilen, die dieses Konto verwenden, unter dem neuen Konsolidierungskonto berichtet. Ändern Sie Zuordnungen mit Bedacht, wenn Sie historische Berichtskategorien beibehalten müssen.
 
 **F: Muss der Konsolidierungskontenplan der Standard für andere Länder sein?**
 A: Nein. Die beiden Rollen sind unabhängig. In der üblichen Einrichtung hat ein IFRS-Kontenplan beide, und Sie können sie jederzeit in **Kontenpläne verwalten** verschiedenen Kontenplänen geben.

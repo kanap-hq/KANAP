@@ -5,10 +5,10 @@ description: Ein schneller Onboarding-Leitfaden für alle Benutzer. Dashboard, P
 
 # Erste Schritte: Ihre ersten 10 Minuten in KANAP
 
-Willkommen bei KANAP. Dieser Leitfaden führt Sie durch alles, was Sie brauchen, um ab dem ersten Tag produktiv zu sein -- unabhängig von Ihrer Rolle. Keine Admin-Kenntnisse erforderlich, keine modulspezifischen Vertiefungen. Nur das Wesentliche, um sich wohlzufühlen.
+Willkommen bei KANAP. Dieser Leitfaden führt Sie durch alles, was Sie brauchen, um ab dem ersten Tag produktiv zu sein, unabhängig von Ihrer Rolle. Keine Admin-Kenntnisse erforderlich, keine modulspezifischen Vertiefungen. Nur das Wesentliche, um sich wohlzufühlen.
 
 !!! tip "Bevorzugen Sie eine einseitige Zusammenfassung? :material-file-pdf-box:"
-    Alle wichtigen Schritte auf einer einzigen A4-Seite -- ausdrucken, aufhängen, mit dem Team teilen.
+    Alle wichtigen Schritte auf einer einzigen A4-Seite: ausdrucken, aufhängen, mit dem Team teilen.
 
     [:material-download: Spickzettel herunterladen (PDF)](downloads/kanap-getting-started.pdf){ .md-button .md-button--primary }
 
@@ -22,7 +22,7 @@ KANAP ist um eine einfache Struktur herum organisiert. Die obere Leiste zeigt di
 
 | Bereich | Was er enthält |
 |---------|----------------|
-| **Dashboard** | Ihr persönlicher Hub -- klicken Sie auf das KANAP-Logo oder navigieren Sie zu `/` |
+| **Dashboard** | Ihr persönlicher Hub. Klicken Sie auf das KANAP-Logo oder navigieren Sie zu `/` |
 | **Portfolio** | Aufgaben, Anfragen, Projekte, Planung, Berichte, Mitwirkende |
 | **IT-Landschaft** | Anwendungen, Schnittstellen, Schnittstellenkarte, Assets, Verbindungen, Verbindungskarte, Standorte |
 | **Wissensdatenbank** | Dokumente und Vorlagen mit Review-Workflows |
@@ -59,16 +59,16 @@ Ein Raster aus Kacheln, die jeweils einen anderen Aspekt Ihrer Arbeit zeigen. Hi
 
 Oben im Dashboard finden Sie Verknüpfungsschaltflächen für häufige Aktionen:
 
-- **Aufgabe erstellen** -- öffnet einen Schnelldialog zum Erstellen einer Aufgabe, ohne das Dashboard zu verlassen
-- **Zeit erfassen** -- erfassen Sie Stunden für ein Projekt in Sekunden
-- **Neues Dokument** -- starten Sie ein leeres Wissensdatenbank-Dokument oder erstellen Sie eines aus einer Vorlage
+- **Aufgabe erstellen**: öffnet einen Schnelldialog zum Erstellen einer Aufgabe, ohne das Dashboard zu verlassen
+- **Zeit erfassen**: erfassen Sie Stunden für ein Projekt in Sekunden
+- **Neues Dokument**: starten Sie ein leeres Wissensdatenbank-Dokument oder erstellen Sie eines aus einer Vorlage
 
 ### Anpassen
 
 Klicken Sie auf das **Einstellungen**-Symbol (Zahnrad), um auszuwählen, welche Kacheln angezeigt werden. Nur Kacheln, für die Sie Berechtigung haben, werden angezeigt. Beginnen Sie die ersten Tage mit den Standardeinstellungen und passen Sie dann nach Bedarf an.
 
 !!! tip "Machen Sie es zu Ihrem eigenen"
-    Das Dashboard ist darauf ausgelegt, die Frage „Worauf sollte ich mich heute konzentrieren?" auf einen Blick zu beantworten. Wenn eine Kachel für Sie nicht nützlich ist, blenden Sie sie aus. Wenn Ihnen etwas fehlt, prüfen Sie das Zahnrad-Symbol -- es könnte einfach deaktiviert sein.
+    Das Dashboard ist darauf ausgelegt, die Frage „Worauf sollte ich mich heute konzentrieren?" auf einen Blick zu beantworten. Wenn eine Kachel für Sie nicht nützlich ist, blenden Sie sie aus. Wenn Ihnen etwas fehlt, prüfen Sie das Zahnrad-Symbol: es könnte einfach deaktiviert sein.
 
 ---
 
@@ -101,7 +101,7 @@ Sie können Benachrichtigungen nach Arbeitsbereich feinjustieren:
 
 ### Die wöchentliche Zusammenfassungs-E-Mail
 
-Dies ist eine regelmäßige Zusammenfassung Ihrer Aktivitäten und anstehenden Termine -- wie ein persönlicher Digest.
+Dies ist eine regelmäßige Zusammenfassung Ihrer Aktivitäten und anstehenden Termine, wie ein persönlicher Digest.
 
 Konfigurieren Sie sie im Benachrichtigungs-Tab:
 
@@ -120,9 +120,9 @@ Klicken Sie auf **E-Mail-Vorschau**, um sich eine Test-E-Mail zu senden und zu s
 
 Wählen Sie Ihren bevorzugten Designmodus:
 
-- **Hell** -- helle Oberfläche
-- **Dunkel** -- reduzierte Blendung für Umgebungen mit wenig Licht
-- **System** -- folgt der Einstellung Ihres Betriebssystems
+- **Hell**: helle Oberfläche
+- **Dunkel**: reduzierte Blendung für Umgebungen mit wenig Licht
+- **System**: folgt der Einstellung Ihres Betriebssystems
 
 Sie können das Design auch schnell über die obere Leiste mit dem Design-Symbol (Sonne/Mond) neben dem Hilfe-Button umschalten.
 
@@ -149,10 +149,10 @@ Der Bereichsfilter **merkt sich Ihre letzte Auswahl** über Sitzungen hinweg. We
 
 ### Wo Bereichsfilter erscheinen
 
-- **Portfolio > Aufgaben** -- Meine Aufgaben / Aufgaben meines Teams / Alle Aufgaben
-- **IT-Landschaft > Anwendungen** -- Meine Apps / Apps meines Teams / Alle Apps
-- **Portfolio > Projekte** -- Meine Projekte / Projekte meines Teams / Alle Projekte
-- **Portfolio > Anfragen** -- Meine Anfragen / Anfragen meines Teams / Alle Anfragen
+- **Portfolio > Aufgaben**: Meine Aufgaben / Aufgaben meines Teams / Alle Aufgaben
+- **IT-Landschaft > Anwendungen**: Meine Apps / Apps meines Teams / Alle Apps
+- **Portfolio > Projekte**: Meine Projekte / Projekte meines Teams / Alle Projekte
+- **Portfolio > Anfragen**: Meine Anfragen / Anfragen meines Teams / Alle Anfragen
 
 Die Logik ist immer gleich: Verantwortlichkeit und Teamzugehörigkeit bestimmen, was Sie sehen.
 
@@ -170,8 +170,8 @@ Navigieren Sie zu **Portfolio > Aufgaben**. Die Seite öffnet sich mit **Alle Au
 
 Zwei Wege:
 
-1. **Vom Dashboard** -- klicken Sie auf **Aufgabe erstellen** (Schnelldialog, minimale Felder)
-2. **Von der Aufgabenseite** -- klicken Sie auf **Neu** (vollständiger Arbeitsbereich mit allen Optionen)
+1. **Vom Dashboard**: klicken Sie auf **Aufgabe erstellen** (Schnelldialog, minimale Felder)
+2. **Von der Aufgabenseite**: klicken Sie auf **Neu** (vollständiger Arbeitsbereich mit allen Optionen)
 
 Das Minimum, das Sie brauchen:
 
@@ -201,7 +201,7 @@ Bewegen Sie Aufgaben durch die Status, während die Arbeit voranschreitet:
 
 ### Zeit erfassen
 
-Für Projektaufgaben ist die Zeiterfassung essenziell -- sie speist den Roadmap-Generator und die Kapazitätsplanung.
+Für Projektaufgaben ist die Zeiterfassung essenziell: sie speist den Roadmap-Generator und die Kapazitätsplanung.
 
 1. Aufgabe öffnen > **Zeit erfassen** in der Seitenleiste klicken
 2. Kategorie wählen: **IT** oder **Fachbereich**
@@ -209,16 +209,16 @@ Für Projektaufgaben ist die Zeiterfassung essenziell -- sie speist den Roadmap-
 
 ### Aufgabe teilen
 
-Müssen Sie jemanden einbeziehen? Klicken Sie auf **Link senden** im Aufgaben-Header, um einen direkten Link per E-Mail an einen Kollegen zu senden -- auch an Personen außerhalb von KANAP. Fügen Sie bei Bedarf eine persönliche Nachricht hinzu.
+Müssen Sie jemanden einbeziehen? Klicken Sie auf **Link senden** im Aufgaben-Header, um einen direkten Link per E-Mail an einen Kollegen zu senden, auch an Personen außerhalb von KANAP. Fügen Sie bei Bedarf eine persönliche Nachricht hinzu.
 
 !!! info "Link senden funktioniert überall"
-    Das ist nicht nur für Aufgaben. Sie können Links zu Projekten, Anfragen, Verträgen, Apps senden -- zu jedem Arbeitsbereich-Objekt. Es ist der schnellste Weg, jemanden auf die richtige Stelle zu verweisen.
+    Das ist nicht nur für Aufgaben. Sie können Links zu Projekten, Anfragen, Verträgen, Apps senden, zu jedem Arbeitsbereich-Objekt. Es ist der schnellste Weg, jemanden auf die richtige Stelle zu verweisen.
 
 ---
 
 ## Schritt 5: Ihr Mitwirkenden-Profil einrichten
 
-Ihr Mitwirkenden-Profil sagt KANAP, wer Sie in Bezug auf Projektplanung sind. Es ist getrennt von Ihrem Benutzerkonto -- es geht um **Team, Verfügbarkeit und Fähigkeiten**.
+Ihr Mitwirkenden-Profil sagt KANAP, wer Sie in Bezug auf Projektplanung sind. Es ist getrennt von Ihrem Benutzerkonto. Es geht um **Team, Verfügbarkeit und Fähigkeiten**.
 
 Navigieren Sie zu **Portfolio > Mitwirkende** und finden Sie Ihren Namen (oder bitten Sie Ihren Admin, Sie hinzuzufügen).
 
@@ -227,8 +227,8 @@ Navigieren Sie zu **Portfolio > Mitwirkende** und finden Sie Ihren Namen (oder b
 | Einstellung | Was sie bewirkt | Beispiel |
 |-------------|-----------------|---------|
 | **Team** | Ihr organisatorisches Team | Infrastruktur, Service Desk... |
-| **Verfügbarkeit** | Tage pro Monat für Projektarbeit (0--20) | 8 Tage/Monat |
-| **Fähigkeiten** | Was Sie können und wie gut | „Docker -- Autonom" |
+| **Verfügbarkeit** | Tage pro Monat für Projektarbeit (0 bis 20) | 8 Tage/Monat |
+| **Fähigkeiten** | Was Sie können und wie gut | „Docker: Autonom" |
 
 ### Warum das wichtig ist
 
@@ -237,7 +237,7 @@ Navigieren Sie zu **Portfolio > Mitwirkende** und finden Sie Ihren Namen (oder b
 - **Fähigkeiten** > helfen Projektmanagern, die richtigen Personen für anstehende Arbeit zu finden
 
 !!! tip "Seien Sie realistisch mit der Verfügbarkeit"
-    Berücksichtigen Sie Besprechungen, Tagesgeschäft und Urlaub. Die meisten Menschen haben weniger Projektzeit als sie denken. 20 Tage/Monat bedeutet null Nicht-Projektzeit -- das ist fast nie wahr.
+    Berücksichtigen Sie Besprechungen, Tagesgeschäft und Urlaub. Die meisten Menschen haben weniger Projektzeit als sie denken. 20 Tage/Monat bedeutet null Nicht-Projektzeit. Das ist fast nie wahr.
 
 ### Fähigkeits-Kompetenzstufen
 
@@ -249,7 +249,7 @@ Jede Fähigkeit hat eine Kompetenzstufe:
 | 1 | Grundlegend / Theoretisch |
 | 2 | Kann mit Unterstützung ausführen |
 | 3 | Autonom |
-| 4 | Experte -- kann andere anleiten |
+| 4 | Experte: kann andere anleiten |
 
 Seien Sie ehrlich. Eine realistische Fähigkeitenkarte ist weitaus nützlicher als eine, in der jeder ein „Experte" ist.
 
@@ -263,7 +263,7 @@ Alles, was Sie in diesen ersten 10 Minuten einrichten, fließt in das größere 
 Kacheln beziehen Daten aus Ihren Aufgabenzuweisungen, Projektrollen und Zeiterfassungen, um Ihnen jeden Morgen einen personalisierten Überblick zu geben.
 
 ### Bereichsfilter
-Ihre Verantwortlichkeitszuweisungen und Teammitgliedschaft bestimmen, was in jeder Liste auftaucht -- dadurch fühlt sich die App persönlich an, nicht überwältigend.
+Ihre Verantwortlichkeitszuweisungen und Teammitgliedschaft bestimmen, was in jeder Liste auftaucht. Dadurch fühlt sich die App persönlich an, nicht überwältigend.
 
 ### Kapazitätsplanung
 Ihre Verfügbarkeit und Zeiterfassungen fließen in den Roadmap-Generator und die Kapazitäts-Heatmaps des Portfolio-Moduls ein. Genaue Daten hier bedeuten bessere Planung für alle.
@@ -302,4 +302,4 @@ Die wöchentliche E-Mail und Echtzeit-Benachrichtigungen halten Sie auf dem Lauf
 ---
 
 !!! success "Sie sind startklar"
-    Sie wissen jetzt, wie Sie in KANAP navigieren, Ihre Aufgaben verwalten, Ihr Profil und Benachrichtigungen konfigurieren und Ihr Mitwirkenden-Profil einrichten. Beginnen Sie jeden Morgen mit Ihrem Dashboard, halten Sie Ihre Aufgaben aktuell und erfassen Sie regelmäßig Zeit -- der Rest ergibt sich von selbst.
+    Sie wissen jetzt, wie Sie in KANAP navigieren, Ihre Aufgaben verwalten, Ihr Profil und Benachrichtigungen konfigurieren und Ihr Mitwirkenden-Profil einrichten. Beginnen Sie jeden Morgen mit Ihrem Dashboard, halten Sie Ihre Aufgaben aktuell und erfassen Sie regelmäßig Zeit: der Rest ergibt sich von selbst.

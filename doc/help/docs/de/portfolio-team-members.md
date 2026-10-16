@@ -12,7 +12,7 @@ Navigieren Sie zu **Portfolio > Mitwirkende**, um konfigurierte Mitwirkende grup
 3. Klicken Sie auf **Hinzufügen**, um sein Profil zu erstellen
 4. Konfigurieren Sie Team, Verfügbarkeit, Fähigkeiten und Standards im Arbeitsbereich
 
-**Tipp**: Mitwirkende sind unabhängig von Benutzerkonten. Jemanden als Mitwirkenden hinzuzufügen ändert nicht seinen Login-Zugang -- es ermöglicht Ihnen lediglich, seine Teammitgliedschaft, Fähigkeiten, Verfügbarkeit und Klassifizierungsstandards für die Projektplanung zu verfolgen.
+**Tipp**: Mitwirkende sind unabhängig von Benutzerkonten. Jemanden als Mitwirkenden hinzuzufügen ändert nicht seinen Login-Zugang. Es ermöglicht Ihnen lediglich, seine Teammitgliedschaft, Fähigkeiten, Verfügbarkeit und Klassifizierungsstandards für die Projektplanung zu verfolgen.
 
 ---
 
@@ -61,7 +61,7 @@ Klicken Sie auf eine Mitwirkenden-Karte, um ihren Arbeitsbereich zu öffnen.
 
 ## Die Kompetenzmatrix
 
-Die Kompetenzmatrix beantwortet zwei Fragen auf einem Bildschirm: was jede Person kann und welche Kompetenzen niemand abdeckt. Sie ist eine reine Leseansicht -- die Niveaus werden im Reiter Kompetenzen des jeweiligen Mitwirkenden gesetzt.
+Die Kompetenzmatrix beantwortet zwei Fragen auf einem Bildschirm: was jede Person kann und welche Kompetenzen niemand abdeckt. Sie ist eine reine Leseansicht. Die Niveaus werden im Reiter Kompetenzen des jeweiligen Mitwirkenden gesetzt.
 
 **Das Raster lesen**:
 - **Zeilen** sind die Kompetenzen Ihres Katalogs, nach Kategorie gruppiert. In den Portfolio-Einstellungen deaktivierte Kompetenzen erscheinen nie, und Kompetenzen, die niemand erfasst hat, sind zunächst ausgeblendet
@@ -74,7 +74,7 @@ Die Kompetenzmatrix beantwortet zwei Fragen auf einem Bildschirm: was jede Perso
 Kataloge sind meist länger als Teams, deshalb stehen die Mitwirkenden standardmäßig in den Spalten und die Kompetenznamen bleiben entlang der Zeilen lesbar. Mit dem Steuerelement **Spalten** über dem Raster stellen Sie stattdessen die Kompetenzen in die Spalten, was zu einem kurzen Katalog oder einem großen Team passt. Alles wechselt mit: Die beiden Zusammenfassungen tauschen die Seiten, und ein Mitwirkender wird dann über seine Zeile statt über seine Spaltenkopfzeile geöffnet. Die Wahl wird in Ihrem Browser gemerkt.
 
 **Das Raster eingrenzen**:
-- Das Raster beginnt bei den Kompetenzen, die tatsächlich vorhanden sind. **Nicht genutzte Kompetenzen anzeigen** holt den Rest des Katalogs zurück -- für die Schulungsplanung statt der Bestandsaufnahme
+- Das Raster beginnt bei den Kompetenzen, die tatsächlich vorhanden sind. **Nicht genutzte Kompetenzen anzeigen** holt den Rest des Katalogs zurück: für die Schulungsplanung statt der Bestandsaufnahme
 - Jede Kompetenzkategorie hat eine Pille über dem Raster. Schalten Sie eine Kategorie aus, um sie zu entfernen
 - Der Team-Filter schränkt die Personen ein, und die Abdeckungszähler folgen: Filtern Sie auf ein Team, und Sie lesen die Abdeckung dieses Teams
 - Sowohl die Kategorie-Pillen als auch der Schalter für nicht genutzte Kompetenzen werden in Ihrem Browser gemerkt
@@ -101,7 +101,7 @@ Das Organigramm zeichnet die Berichtslinie Ihrer Mitwirkenden, aufgebaut aus dem
 - Jede Vertragsart hat eine Pille über dem Organigramm. Schalten Sie eine ab, verlassen diese Personen das Organigramm, **ihre eigenen unterstellten Personen bleiben jedoch**: Sie rücken zur nächsten noch sichtbaren Führungskraft auf. Die Externen auszublenden erhält so Ihre internen Teams als lesbaren Baum, statt ganze Zweige abzuschneiden
 
 **Das Organigramm zuschneiden**:
-- **Beginnen bei** reduziert das Organigramm auf eine Person und alles darunter — so entsteht das Organigramm einer einzelnen Abteilung
+- **Beginnen bei** reduziert das Organigramm auf eine Person und alles darunter. So entsteht das Organigramm einer einzelnen Abteilung
 - **Ebenen** begrenzt, wie weit das Organigramm nach unten reicht, zum Beispiel die obersten zwei Ebenen für eine Führungsübersicht
 - Die Zoom-Schaltflächen rechts skalieren die Zeichnung; das Organigramm scrollt innerhalb seines Rahmens in beide Richtungen
 - Jede dieser Einstellungen wird in die Adresse geschrieben, sodass das Organigramm eines Zweigs genau so als Link weitergegeben werden kann, wie Sie es zugeschnitten haben
@@ -123,7 +123,7 @@ Jede Änderung wird automatisch gespeichert. Ein kurzer Hinweis „Speichern… 
 ### Eigenschaften-Panel
 
 **Position**
-Die Position der Person, dieselbe, die überall dort erscheint, wo sie in KANAP auftaucht -- im Organigramm, in ihrem Benutzerdatensatz, in ihrem Profil. Es ist keine Bezeichnung nur für das Portfolio: Wer sie hier ändert, ändert sie überall. Tippen Sie sie ein und klicken Sie daneben, um zu speichern.
+Die Position der Person, dieselbe, die überall dort erscheint, wo sie in KANAP auftaucht: im Organigramm, in ihrem Benutzerdatensatz, in ihrem Profil. Es ist keine Bezeichnung nur für das Portfolio: Wer sie hier ändert, ändert sie überall. Tippen Sie sie ein und klicken Sie daneben, um zu speichern.
 
 Ihre eigene können Sie immer setzen. Die einer anderen Person zu setzen erfordert die Stufe **Administrator** für Benutzer; ohne dieses Recht sehen Sie den Wert weiterhin, das Feld ist aber schreibgeschützt.
 
@@ -133,7 +133,7 @@ Stammt das Konto aus Microsoft Entra, ist das Feld schreibgeschützt und zeigt d
 Weisen Sie diesen Mitwirkenden einem Team zu. Teams sind Organisationsgruppen, die in den Portfolio-Einstellungen konfiguriert sind. Diese Zuweisung bestimmt, wie Mitwirkende auf der Mitwirkenden-Seite gruppiert werden. Das Team kann auch über den Eintrag **Team** in der Kopfzeile geändert werden. Dieses Feld ist nur beim Bearbeiten des Profils eines anderen Mitwirkenden sichtbar (nicht Ihres eigenen).
 
 **Vorgesetzter**
-Die Person, an die dieser Mitwirkende berichtet. Klicken Sie auf das Feld, suchen Sie nach dem Namen und wählen Sie eine beliebige Person Ihrer Organisation aus -- der Vorgesetzte muss selbst kein Mitwirkender sein. Mit **Löschen** entfernen Sie die Verknüpfung. Ein Mitwirkender kann nicht sein eigener Vorgesetzter sein, und Sie können niemanden auswählen, der bereits an ihn berichtet, weder direkt noch über eine Kette von Vorgesetzten.
+Die Person, an die dieser Mitwirkende berichtet. Klicken Sie auf das Feld, suchen Sie nach dem Namen und wählen Sie eine beliebige Person Ihrer Organisation aus. Der Vorgesetzte muss selbst kein Mitwirkender sein. Mit **Löschen** entfernen Sie die Verknüpfung. Ein Mitwirkender kann nicht sein eigener Vorgesetzter sein, und Sie können niemanden auswählen, der bereits an ihn berichtet, weder direkt noch über eine Kette von Vorgesetzten.
 
 Stammt der Vorgesetzte aus Microsoft Entra, ist das Feld schreibgeschützt und zeigt darunter **Aus Microsoft Entra**. Ändern Sie ihn in Ihrem Verzeichnis, nicht hier; die nächtliche Synchronisierung überträgt die Änderung. Ein Vorgesetzter ohne KANAP-Konto wird übersprungen, bis er eines hat, und das Feld behält so lange seinen aktuellen Wert.
 
@@ -143,7 +143,7 @@ Einmal gesetzt, erscheint der Name des Vorgesetzten auch in der Kopfzeile des Ar
 Wie diese Person mit Ihnen zusammenarbeitet. Jeder Mitwirkende beginnt als **Intern**; wechseln Sie zu **Extern**, **Auszubildender** oder **Sonstige**, wenn das nicht zutrifft. Die Liste können Sie unter **Portfolio > Einstellungen > Vertragsarten** anpassen. Die Vertragsart wird nie aus Microsoft Entra importiert. Dieses Feld ist nur beim Bearbeiten des Profils eines anderen Mitwirkenden sichtbar (nicht Ihres eigenen).
 
 **Projektverfügbarkeit**
-Verwenden Sie den Schieberegler, um festzulegen, wie viele Tage pro Monat diese Person an Portfolio-Projekten arbeiten kann. Der Bereich ist 0 -- 20 Tage, in 0,5-Tage-Schritten. Standard ist 5 Tage. Der Wert wird gespeichert, sobald Sie den Schieberegler loslassen.
+Verwenden Sie den Schieberegler, um festzulegen, wie viele Tage pro Monat diese Person an Portfolio-Projekten arbeiten kann. Der Bereich ist 0 bis 20 Tage, in 0,5-Tage-Schritten. Standard ist 5 Tage. Der Wert wird gespeichert, sobald Sie den Schieberegler loslassen.
 
 **Klassifizierungsstandards**
 Legen Sie die Klassifizierungswerte fest, die bei neuen Aufgaben, Anfragen und Projekten vorausgefüllt werden, wenn Klassifizierungsfelder noch leer sind. Dies spart Zeit für Mitwirkende, die regelmäßig im selben Bereich arbeiten.
@@ -171,7 +171,7 @@ Schreibgeschützte Zusammenfassung der erfassten Zeit für diesen Mitwirkenden. 
   - Monate ohne Daten werden als Lücken im Diagramm angezeigt
 
 **Notizen**
-Freitextfeld für zusätzliche Informationen über diesen Mitwirkenden -- Zertifizierungen, Präferenzen, Einschränkungen oder andere relevante Details. Notizen werden kurz nachdem Sie mit dem Tippen aufhören gespeichert.
+Freitextfeld für zusätzliche Informationen über diesen Mitwirkenden: Zertifizierungen, Präferenzen, Einschränkungen oder andere relevante Details. Notizen werden kurz nachdem Sie mit dem Tippen aufhören gespeichert.
 
 ---
 
@@ -186,7 +186,7 @@ Verfolgen Sie, was dieser Mitwirkende kann und wie kompetent er ist.
 4. Klicken Sie auf **Hinzufügen**: Die Fähigkeit erscheint in ihrem Abschnitt mit dem bereits gesetzten Niveau, sodass eine lange Liste nie durchsucht werden muss, um es anzupassen
 
 **Kompetenzgrade**:
-Jede Fähigkeit hat eine Kompetenzbewertung von 1 -- 4:
+Jede Fähigkeit hat eine Kompetenzbewertung von 1 bis 4:
 
 | Stufe | Bezeichnung | Beschreibung |
 |-------|-------|-------------|
@@ -213,7 +213,7 @@ Die Tabelle konsolidiert Zeit aus Projekt-Overhead-Einträgen und Aufgaben-Zeite
 
 **Spalten**:
 - **Datum**: Wann die Zeit erfasst wurde
-- **Quelle**: Wo die Zeit erfasst wurde -- entweder ein Aufgabenname oder Projektname
+- **Quelle**: Wo die Zeit erfasst wurde: entweder ein Aufgabenname oder Projektname
 - **Kategorie**: Ob der Eintrag als **IT** oder **Business** klassifiziert ist, angezeigt als farbcodiertes Label
 - **Zeit**: Dauer in Stunden oder Tagen (z. B. „4h", „1d 2h")
 - **Notizen**: Alle dem Eintrag beigefügten Notizen

@@ -1,6 +1,6 @@
 # Standorte
 
-Standorte dokumentieren, wo Ihre IT-Infrastruktur gehostet wird -- Rechenzentren, Cloud-Regionen, Büroserverräume und Colocation-Einrichtungen. Das Zuweisen von Assets und Anwendungen zu Standorten gibt Ihnen geografische Sichtbarkeit, hilft bei der Kapazitätsplanung und hält Einrichtungskontakte griffbereit, wenn Sie sie brauchen.
+Standorte dokumentieren, wo Ihre IT-Infrastruktur gehostet wird: Rechenzentren, Cloud-Regionen, Büroserverräume und Colocation-Einrichtungen. Das Zuweisen von Assets und Anwendungen zu Standorten gibt Ihnen geografische Sichtbarkeit, hilft bei der Kapazitätsplanung und hält Einrichtungskontakte griffbereit, wenn Sie sie brauchen.
 
 ## Erste Schritte
 
@@ -9,7 +9,7 @@ Navigieren Sie zu **IT-Landschaft > Standorte**, um das Standortverzeichnis zu �
 **Pflichtfelder**:
 - **Code**: Ein eindeutiger Kurzidentifikator (z. B. `DC-EU-WEST`, `AWS-US-EAST-1`)
 - **Name**: Ein beschreibender Anzeigename
-- **Hosting-Typ**: Die Art der Einrichtung -- eigenes Rechenzentrum, Colocation, Cloud-Region usw.
+- **Hosting-Typ**: Die Art der Einrichtung: eigenes Rechenzentrum, Colocation, Cloud-Region usw.
 
 **Dringend empfohlen**:
 - **Land**: Wo sich der Standort geografisch befindet
@@ -57,7 +57,7 @@ Der Reiter Übersicht erfasst Identitäts- und geografische Informationen, aufge
 - **Name**: Anzeigename (erforderlich)
 - **Hosting-Typ**: Kategorie der Einrichtung (erforderlich). Hosting-Typen sind in **IT-Landschaft > Einstellungen** konfigurierbar.
 
-**Standortdetails** -- die hier angezeigten Felder hängen von der Hosting-Typ-Kategorie ab:
+**Standortdetails**: die hier angezeigten Felder hängen von der Hosting-Typ-Kategorie ab:
 
 Für **On-Premises**-Hosting-Typen:
 - **Betreiberunternehmen**: Das Unternehmen, das die Einrichtung betreibt. Die Auswahl eines Unternehmens füllt Land und Stadt automatisch aus, wenn diese leer sind.
@@ -75,7 +75,7 @@ Beide Kategorien zeigen außerdem:
 
 #### Unter-Standorte
 
-Unterhalb des Hauptformulars ermöglicht das Panel **Unter-Standorte**, einen Standort in kleinere physische Bereiche aufzuteilen -- Gebäude, Räume, Racks, Cages oder jede andere Unterteilung, die für Ihre Infrastruktur sinnvoll ist.
+Unterhalb des Hauptformulars ermöglicht das Panel **Unter-Standorte**, einen Standort in kleinere physische Bereiche aufzuteilen: Gebäude, Räume, Racks, Cages oder jede andere Unterteilung, die für Ihre Infrastruktur sinnvoll ist.
 
 Jeder Unter-Standort hat:
 - **Name**: Eine kurze Bezeichnung (z. B. „Gebäude A - Raum 1 - Rack 5")
@@ -103,7 +103,7 @@ Dieser Reiter organisiert die Personen und Referenzen, die mit einem Standort ve
 
 ### Verknüpfungen
 
-Der Reiter Verknüpfungen zeigt Entitäten, die mit diesem Standort verknüpft sind. Er ist schreibgeschützt -- Beziehungen werden von den verknüpften Datensätzen selbst verwaltet.
+Der Reiter Verknüpfungen zeigt Entitäten, die mit diesem Standort verknüpft sind. Er ist schreibgeschützt. Beziehungen werden von den verknüpften Datensätzen selbst verwaltet.
 
 **Assets**: Eine Tabelle der an diesem Standort gehosteten Assets mit Name, Umgebung, Typ, Anbieter, Region/Zone und Status. Wenn der Standort Unter-Standorte hat, erscheint eine zusätzliche Spalte **Unter-Standort**, die zeigt, welchem Unter-Standort jedes Asset zugewiesen ist. Klicken Sie auf einen Asset-Namen, um zu seinem Arbeitsbereich zu springen.
 
@@ -116,7 +116,7 @@ Der Reiter Verknüpfungen zeigt Entitäten, die mit diesem Standort verknüpft s
 Klicken Sie in der Arbeitsbereich-Kopfzeile auf **Löschen**, um einen Standort zu entfernen.
 
 - Erfordert die Berechtigung `locations:member`.
-- Verknüpfte Assets werden nicht gelöscht -- sie werden automatisch entkoppelt (ihre Standortreferenz wird gelöscht).
+- Verknüpfte Assets werden nicht gelöscht. Sie werden automatisch entkoppelt (ihre Standortreferenz wird gelöscht).
 - Wenn Sie ungespeicherte Änderungen im Arbeitsbereich haben, gehen diese bei der Löschung verloren.
 
 ---

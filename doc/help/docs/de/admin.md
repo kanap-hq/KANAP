@@ -237,7 +237,7 @@ Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen und die b
 
 ### Mehrfach-Rollenzuweisung
 
-Benutzern können mehrere Rollen zugewiesen werden. Ihre effektiven Berechtigungen sind die Kombination aller zugewiesenen Rollen -- wenn eine Rolle Zugriff auf eine Ressource gewährt, hat der Benutzer diesen Zugriff.
+Benutzern können mehrere Rollen zugewiesen werden. Ihre effektiven Berechtigungen sind die Kombination aller zugewiesenen Rollen: wenn eine Rolle Zugriff auf eine Ressource gewährt, hat der Benutzer diesen Zugriff.
 
 Das Entfernen aller Rollen löscht das Konto nicht. Der Benutzer fällt auf die Systemrolle **Kontakt** zurück, behält keinen Zugriff und erscheint im Grid mit dem Status **Zugriff ausstehend**. Sie können Ihre eigene letzte Rolle nicht entfernen und sperren sich damit nicht selbst aus.
 
@@ -363,7 +363,7 @@ Rollen werden nach ihrer Änderbarkeit kategorisiert:
 | Kennzeichnung | Beschreibung |
 |---------------|--------------|
 | **System** | Kann nicht geändert werden. Administrator hat Vollzugriff; Kontakt ist nur für Verzeichniseinträge. |
-| **Integriert** | Vorkonfigurierte Rollen mit Standard-Zugriffsmustern. Können nicht direkt geändert werden -- verwenden Sie **Duplizieren**, um eine anpassbare Kopie zu erstellen. |
+| **Integriert** | Vorkonfigurierte Rollen mit Standard-Zugriffsmustern. Können nicht direkt geändert werden. Verwenden Sie **Duplizieren**, um eine anpassbare Kopie zu erstellen. |
 | _(keine Kennzeichnung)_ | Benutzerdefinierte Rollen, die Sie erstellen. Vollständig bearbeitbar. |
 
 ### Integrierte Rollen
@@ -381,8 +381,8 @@ KANAP wird mit vorkonfigurierten Rollen ausgeliefert, die nach Funktionsbereiche
 Die Rolle **Fachbereichs-Mitwirkender** ist für Fachbereichs-Stakeholder konzipiert, die am Portfolio-Prozess teilnehmen, ohne vollständige Projektmanagement-Rechte zu haben. Ein Fachbereichs-Mitwirkender kann:
 
 - **Portfolio-Anfragen einreichen und verwalten** (voller Mitgliederzugriff auf Anfragen)
-- **Bestehende Projekte bearbeiten** -- Felder aktualisieren, Kommentare hinzufügen, Anhänge hochladen, Phasen, Meilensteine, Abhängigkeiten und Zeiteinträge verwalten
-- **Projektaufgaben erstellen und bearbeiten** -- Aufgaben zu Projekten hinzufügen, Zeit erfassen und Kommentare posten
+- **Bestehende Projekte bearbeiten**: Felder aktualisieren, Kommentare hinzufügen, Anhänge hochladen, Phasen, Meilensteine, Abhängigkeiten und Zeiteinträge verwalten
+- **Projektaufgaben erstellen und bearbeiten**: Aufgaben zu Projekten hinzufügen, Zeit erfassen und Kommentare posten
 - **Benutzer, Unternehmen, Abteilungen und Kontakte anzeigen** für Dropdown-Auswahlen
 
 Ein Fachbereichs-Mitwirkender **kann nicht**:
@@ -612,8 +612,8 @@ Zum Inhalt des Datensatzes, zu dem, was das Löschen entfernt und behält, und z
 Die Einstellungsseite ermöglicht die Verwaltung Ihres persönlichen Profils und Ihrer Benachrichtigungseinstellungen. Zugriff über das Benutzermenü (Avatar oben rechts) oder durch Navigation zu `/settings`.
 
 Die Seite hat zwei Tabs, erreichbar über URL:
-- `/settings/profile` (Standard) -- Profil-Tab
-- `/settings/notifications` -- Benachrichtigungs-Tab
+- `/settings/profile` (Standard): Profil-Tab
+- `/settings/notifications`: Benachrichtigungs-Tab
 
 ### Profil
 
@@ -654,7 +654,7 @@ Alle Änderungen werden automatisch gespeichert, sobald Sie Schalter umschalten 
 ## Tipps
 
   - **Integrierte Rollen duplizieren**: Anstatt Rollen von Grund auf zu erstellen, duplizieren Sie eine integrierte Rolle und passen Sie die Berechtigungen an. Das spart Zeit und stellt sicher, dass Sie keine wichtigen Ressourcen übersehen.
-  - **Mehrfach-Rollen für Flexibilität**: Weisen Sie Benutzern mehrere Rollen zu, um Berechtigungen zu kombinieren -- z. B. eine Rolle „Finanz-Leser" plus eine Rolle „Projektmanager".
+  - **Mehrfach-Rollen für Flexibilität**: Weisen Sie Benutzern mehrere Rollen zu, um Berechtigungen zu kombinieren: z. B. eine Rolle „Finanz-Leser" plus eine Rolle „Projektmanager".
   - **SSO verwenden**: Wenn Sie Microsoft 365 haben, verbinden Sie Entra ID für einfachere Benutzerverwaltung und automatische Profilsynchronisation.
   - **Deaktivieren statt löschen**: Wenn jemand das Unternehmen verlässt, deaktivieren Sie das Konto, um die Audit-Historie zu bewahren.
   - **Berechtigungen regelmäßig überprüfen**: Prüfen Sie die Rollenberechtigungen regelmäßig, um das Prinzip der minimalen Rechte einzuhalten.

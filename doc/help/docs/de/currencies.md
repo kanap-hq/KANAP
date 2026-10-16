@@ -19,14 +19,14 @@ Das Recht **Einstellungen** der IT-Landschaft gibt keinen Zugriff auf Währungen
 Die **mandantenweite Währung**, die für alle Berichte, Summen und Listenanzeigen verwendet wird. Wenn Sie diese Währung ändern:
   - Werden alle OPEX- und CAPEX-Jahresspalten in die neue Berichtswährung umgerechnet
   - Berechnen sich Summen in Berichten mit der neuen Basis neu
-  - **Ihre gespeicherten Zeilendaten bleiben unverändert** -- nur Anzeige und Umrechnung sind betroffen
+  - **Ihre gespeicherten Zeilendaten bleiben unverändert**: nur Anzeige und Umrechnung sind betroffen
 
 **Beispiel**: Wenn Sie von EUR auf USD wechseln, werden Ihre OPEX-Listensummen in USD angezeigt, aber die gespeicherte Währung jeder Budgetzeile (EUR, GBP usw.) bleibt gleich.
 
 **Tipp**: Wählen Sie eine Berichtswährung, die dem Finanzberichtsstandard Ihres Konzerns entspricht (z. B. EUR für europäische Hauptsitze, USD für US-basierte Gruppen).
 
 ### Standard-OPEX-Währung
-Die Währung, die beim Erstellen einer neuen OPEX-Zeile (Ausgabenzeile) **vorausgefüllt** wird. Dies schränkt nicht ein, welche Währungen Sie auswählen können -- es spart nur Zeit, indem ein sinnvoller Standard angeboten wird.
+Die Währung, die beim Erstellen einer neuen OPEX-Zeile (Ausgabenzeile) **vorausgefüllt** wird. Dies schränkt nicht ein, welche Währungen Sie auswählen können. Es spart nur Zeit, indem ein sinnvoller Standard angeboten wird.
 
 **Beispiel**: Wenn der Großteil Ihrer wiederkehrenden Ausgaben in EUR anfällt, setzen Sie dies auf EUR. Benutzer können weiterhin manuell GBP, USD oder jede andere zugelassene Währung auswählen.
 
@@ -116,7 +116,7 @@ Wenn Ihre Berichtswährung EUR ist:
 ## CSV-Import und -Export
 
 ### Export
-OPEX- und CAPEX-Exporte enthalten Zeilendaten und Jahresbeträge in der **eigenen Währung** jeder Budgetzeile -- nicht in der Berichtswährung. Dies bewahrt die Originaldaten für den Reimport oder externe Analysen.
+OPEX- und CAPEX-Exporte enthalten Zeilendaten und Jahresbeträge in der **eigenen Währung** jeder Budgetzeile, nicht in der Berichtswährung. Dies bewahrt die Originaldaten für den Reimport oder externe Analysen.
 
 **Beispiel-CSV-Zeile** (OPEX):
 ```
@@ -145,7 +145,7 @@ Currency "CHF" is not allowed. Allowed currencies: EUR, USD, GBP
 Wenn Sie Einstellungen ändern:
   - **Berichtswährung**: Wirkt sich sofort auf die Anzeige aus; historische Daten bleiben erhalten und werden mit den zum Eingabezeitpunkt aktiven Kursen umgerechnet
   - **Standardwährungen**: Betreffen nur neue Budgetzeilen; bestehende Budgetzeilen behalten ihre Währungen
-  - **Zugelassene Währungen**: Bestehende Budgetzeilen werden nicht rückwirkend validiert -- Einschränkungen gelten nur für neue oder bearbeitete Budgetzeilen
+  - **Zugelassene Währungen**: Bestehende Budgetzeilen werden nicht rückwirkend validiert. Einschränkungen gelten nur für neue oder bearbeitete Budgetzeilen
 
 ## Umrechnungsmechanismen (Kurzreferenz)
 
@@ -158,7 +158,7 @@ Es wird der Live-Kassakurs von ExchangeRate-API verwendet (Fallback auf den neue
 ### Zukünftige Jahre
 Der Kurs des aktuellen Jahres wird als Forward-Schätzung wiederverwendet. Dies bietet Orientierung für die Budgetplanung, sollte aber überprüft werden, wenn diese Jahre näher rücken.
 
-**Fallback**: Wird für eine Währung kein Kurs gefunden, verwendet das System **1,00**, bis Daten verfügbar sind. Dies verhindert Fehler, kann aber ungenaue Umrechnungen erzeugen -- führen Sie eine FX-Synchronisation durch, um fehlende Kurse zu befüllen.
+**Fallback**: Wird für eine Währung kein Kurs gefunden, verwendet das System **1,00**, bis Daten verfügbar sind. Dies verhindert Fehler, kann aber ungenaue Umrechnungen erzeugen. Führen Sie eine FX-Synchronisation durch, um fehlende Kurse zu befüllen.
 
 ## Tipps
 
@@ -167,7 +167,7 @@ Der Kurs des aktuellen Jahres wird als Forward-Schätzung wiederverwendet. Dies 
   - **Währungen bewusst einschränken**: Verwenden Sie zugelassene Währungen nur, wenn Sie einen klaren Grund haben (z. B. FX-Datenabdeckung, Compliance, Standardisierung).
   - **FX-Synchronisation proaktiv durchführen**: Nach dem Hinzufügen von Währungen, vor der Berichtserstellung oder wenn Kurse veraltet erscheinen.
   - **FX-Snapshot-Tabelle prüfen**: Verwenden Sie sie, um zu überprüfen, ob Kurse plausibel und vollständig sind, bevor Sie Berichte finalisieren.
-  - **Konsistente ISO-Codes verwenden**: Verwenden Sie immer 3-stellige Codes (EUR, USD, GBP) -- niemals Symbole (€, $, £) oder numerische Codes.
+  - **Konsistente ISO-Codes verwenden**: Verwenden Sie immer 3-stellige Codes (EUR, USD, GBP), niemals Symbole (€, $, £) oder numerische Codes.
 
 ## Häufige Szenarien
 
@@ -178,8 +178,8 @@ Ihr Konzern wechselt von EUR-basierter zu USD-basierter Berichterstattung.
   1. Gehen Sie zu **Budgetverwaltung > Administration > Währungen**
   2. Ändern Sie die Berichtswährung von `EUR` auf `USD`
   3. Klicken Sie auf **Speichern** (löst automatisch FX-Aktualisierung aus)
-  4. Überprüfen Sie die FX-Kurs-Snapshot-Tabelle -- alle Kurse sollten jetzt relativ zu USD sein
-  5. Prüfen Sie OPEX- und CAPEX-Listen -- Summen und Jahresspalten zeigen nun USD
+  4. Überprüfen Sie die FX-Kurs-Snapshot-Tabelle: alle Kurse sollten jetzt relativ zu USD sein
+  5. Prüfen Sie OPEX- und CAPEX-Listen: Summen und Jahresspalten zeigen nun USD
 
 **Ergebnis**: Alle Berichte, Dashboards und Listen zeigen USD. Ihre gespeicherten Zeilendaten (eigene Währung jeder Budgetzeile) bleiben unverändert.
 
@@ -213,14 +213,14 @@ Es ist Dezember, und Sie bereiten die Budgetplanung für das nächste Jahr vor.
   1. Gehen Sie zu **Budgetverwaltung > Administration > Währungen**
   2. Klicken Sie auf **FX-Kurse erzwingen**, um die Kurse für das kommende Jahr zu aktualisieren
   3. Prüfen Sie die FX-Kurs-Snapshot-Tabelle, um die Forward-Schätzungen für das nächste Jahr zu sehen
-  4. Beachten Sie, dass Kurse für zukünftige Jahre Forward-Schätzungen sind (Wiederverwendung des Kurses des aktuellen Jahres) -- überprüfen Sie sie, wenn das Jahr näher rückt
+  4. Beachten Sie, dass Kurse für zukünftige Jahre Forward-Schätzungen sind (Wiederverwendung des Kurses des aktuellen Jahres). Überprüfen Sie sie, wenn das Jahr näher rückt
 
 **Ergebnis**: Ihre Budgetprognosen für das nächste Jahr verwenden die aktuellsten verfügbaren Kurse. Teams können CAPEX und OPEX mit vernünftigen Währungsannahmen planen.
 
 ## Häufig gestellte Fragen
 
 **F: Was passiert, wenn ich die Berichtswährung mitten im Jahr ändere?**
-A: Alle Berichte und Listen werden sofort in die neue Währung umgerechnet. Historische Daten bleiben erhalten -- nur die Anzeigewährung ändert sich. Planen Sie diese Änderung sorgfältig, um Verwirrung während aktiver Berichtszeiträume zu vermeiden.
+A: Alle Berichte und Listen werden sofort in die neue Währung umgerechnet. Historische Daten bleiben erhalten: nur die Anzeigewährung ändert sich. Planen Sie diese Änderung sorgfältig, um Verwirrung während aktiver Berichtszeiträume zu vermeiden.
 
 **F: Kann ich verschiedene Berichtswährungen für verschiedene Unternehmen festlegen?**
 A: Nein. Die Berichtswährung ist mandantenweit. Alle Unternehmen, Berichte und Summen verwenden dieselbe Berichtswährung. Einzelne Budgetzeilen speichern ihre eigene Währung, aber Umrechnungen zielen immer auf die Berichtswährung des Mandanten.

@@ -33,7 +33,7 @@ Die Seite hat zwei Karten: **Logo** und **Primärfarben**. Beide sind optional. 
 ### Empfohlenes Logo-Format
 
 - Verwenden Sie ein breites, horizontales Logo (transparenter Hintergrund bevorzugt).
-- Halten Sie wichtige Inhalte zentriert – der Kopfzeilenbereich ist kompakt.
+- Halten Sie wichtige Inhalte zentriert: der Kopfzeilenbereich ist kompakt.
 - Für eine scharfe Darstellung verwenden Sie mindestens etwa die 2-fache Anzeigegröße (z. B. `280x72` oder höher).
 
 ### So legen Sie es fest
@@ -67,7 +67,7 @@ Sie können Farben für **Primär Light-Modus** und **Primär Dark-Modus** unabh
 
 Nachdem Sie Farben ausgewählt haben, bewertet die Seite, wie lesbar Text vor dem gewählten Hintergrund ist. Wenn der Kontrast für einen der Modi unter den lesbaren Schwellenwert fällt, erscheint eine beratende Warnung mit dem Kontrastverhältnis.
 
-Die Warnung ist informativ – Sie können trotzdem speichern – aber niedriger Kontrast bedeutet normalerweise weißen Text auf einer hellen Farbe oder dunklen Text auf einer gesättigten Farbe, was beides in echten Oberflächen ermüdend zu lesen wird.
+Die Warnung ist informativ (Sie können trotzdem speichern), aber niedriger Kontrast bedeutet normalerweise weißen Text auf einer hellen Farbe oder dunklen Text auf einer gesättigten Farbe, was beides in echten Oberflächen ermüdend zu lesen wird.
 
 ## Speichern und Zurücksetzen
 
@@ -81,7 +81,7 @@ Eine kleine Beschriftung unter den Aktionen zeigt den Zähler **Logo-Version** a
 
 ## Tipps
 
-- **In beiden Themes testen**: Wechseln Sie vor dem Speichern zwischen Light- und Dark-Theme – die gleiche Markenfarbe funktioniert selten in beiden Modi.
+- **In beiden Themes testen**: Wechseln Sie vor dem Speichern zwischen Light- und Dark-Theme. Die gleiche Markenfarbe funktioniert selten in beiden Modi.
 - **Transparenten Hintergrund bevorzugen**: Einfache Logos mit transparentem Hintergrund ergeben die sauberste Kopfzeilen-Darstellung, besonders im Dark-Modus.
-- **Verwenden Sie Zurücksetzen bewusst**: Es entfernt sowohl das Logo als auch alle benutzerdefinierten Farben in einem Schritt. Verwenden Sie es, wenn Sie neu beginnen, nicht als „Rückgängig" für eine einzelne Änderung – dafür ist **Verwerfen**.
+- **Verwenden Sie Zurücksetzen bewusst**: Es entfernt sowohl das Logo als auch alle benutzerdefinierten Farben in einem Schritt. Verwenden Sie es, wenn Sie neu beginnen, nicht als „Rückgängig" für eine einzelne Änderung. Dafür ist **Verwerfen**.
 - **Markenfarben sind für Akzente**: KANAP verwendet die Primärfarbe in App-Leisten, primären Schaltflächen und Links. Wählen Sie etwas, das in Schaltflächengröße sauber lesbar ist, nicht nur auf einer Marketing-Website.

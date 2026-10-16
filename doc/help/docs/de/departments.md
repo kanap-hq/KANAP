@@ -25,9 +25,9 @@ Navigieren Sie zu **Stammdaten > Abteilungen**, um Ihre Abteilungsliste zu sehen
 Das Abteilungs-Grid gibt Ihnen einen Überblick über alle Abteilungen mit ihrer Mitarbeiterzahl für ein bestimmtes Jahr.
 
 **Standardspalten**:
-- **Name**: Abteilungsname -- zum Öffnen des Arbeitsbereichs Übersichts-Tab anklicken
-- **Unternehmen**: Übergeordnetes Unternehmen -- zum Öffnen des Arbeitsbereichs Übersichts-Tab anklicken
-- **Mitarbeiterzahl (Jahr)**: Mitarbeiterzahl für das ausgewählte Jahr -- zum direkten Wechsel zum Details-Tab anklicken
+- **Name**: Abteilungsname. Zum Öffnen des Arbeitsbereichs Übersichts-Tab anklicken
+- **Unternehmen**: Übergeordnetes Unternehmen. Zum Öffnen des Arbeitsbereichs Übersichts-Tab anklicken
+- **Mitarbeiterzahl (Jahr)**: Mitarbeiterzahl für das ausgewählte Jahr. Zum direkten Wechsel zum Details-Tab anklicken
 
 **Zusätzliche Spalten** (über Spaltenauswahl):
 - **Status**: Aktiviert oder Deaktiviert
@@ -126,6 +126,6 @@ Die Spalten:
 
 - **Organisationsstruktur abgleichen**: Spiegeln Sie die Abteilungshierarchie Ihres HR-Systems für Konsistenz wider.
 - **Mitarbeiterzahl jährlich aktualisieren**: Setzen Sie sich eine Erinnerung, die Abteilungskennzahlen während der Budgetplanung zu aktualisieren.
-- **Für Zuordnungen verwenden**: Die Abteilungs-Mitarbeiterzahl treibt Kostenzuordnungsberechnungen -- halten Sie sie aktuell.
+- **Für Zuordnungen verwenden**: Die Abteilungs-Mitarbeiterzahl treibt Kostenzuordnungsberechnungen. Halten Sie sie aktuell.
 - **Deaktivieren statt löschen**: Wenn Abteilungen umstrukturiert werden, deaktivieren Sie alte statt sie zu löschen, um historische Daten zu bewahren.
 - **Deep-Links nutzen**: Klicken Sie direkt auf die Mitarbeiterzahl in der Liste, um zum Details-Tab zu springen und Kennzahlen ohne zusätzlichen Klick zu bearbeiten.

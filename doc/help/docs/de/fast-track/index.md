@@ -5,10 +5,10 @@ description: Werden Sie schnell produktiv mit KANAPs Portfolio-Modul. Ein prakti
 
 # Portfolio-Schnelleinstieg: Von der Anfrage zur Umsetzung
 
-Dieser Leitfaden führt Sie durch den Portfolio-Lebenszyklus -- vom Einreichen Ihrer ersten Anfrage bis zur Lieferung eines fertigen Projekts. Er ist darauf ausgelegt, Sie schnell produktiv zu machen, nicht jede Option abzudecken.
+Dieser Leitfaden führt Sie durch den Portfolio-Lebenszyklus: vom Einreichen Ihrer ersten Anfrage bis zur Lieferung eines fertigen Projekts. Er ist darauf ausgelegt, Sie schnell produktiv zu machen, nicht jede Option abzudecken.
 
 !!! tip "Bevorzugen Sie eine einseitige Zusammenfassung? :material-file-pdf-box:"
-    Alle wichtigen Schritte auf einer einzigen A4-Seite -- ausdrucken, aufhängen, mit dem Team teilen.
+    Alle wichtigen Schritte auf einer einzigen A4-Seite: ausdrucken, aufhängen, mit dem Team teilen.
 
     [:material-download: Spickzettel herunterladen (PDF)](downloads/kanap-portfolio-fast-track.pdf){ .md-button .md-button--primary }
 
@@ -33,7 +33,7 @@ Jede Initiative in KANAP folgt dem gleichen Ablauf:
 Diese Pipeline stellt sicher, dass jede Initiative fair bewertet, transparent priorisiert und konsistent verfolgt wird. Keine Lieblingsprojekte mehr, die die Warteschlange überspringen.
 
 !!! info "Warum das wichtig ist"
-    Der Analyse- und Bewertungsschritt macht den Unterschied zwischen einer Wunschliste und einem echten Portfolio. Er gibt der Führung eine fundierte, datengestützte Grundlage, um Ja -- oder Nein -- zu sagen.
+    Der Analyse- und Bewertungsschritt macht den Unterschied zwischen einer Wunschliste und einem echten Portfolio. Er gibt der Führung eine fundierte, datengestützte Grundlage, um Ja (oder Nein) zu sagen.
 
 ---
 
@@ -53,7 +53,7 @@ Füllen Sie die Mindestangaben zum Starten aus:
 | **Antragsteller** | Wer bittet darum? |
 | **Ziel-Lieferdatum** | Wann wird das idealerweise benötigt? |
 
-Verwenden Sie dann das **Zweck**-Dokument auf der **Zusammenfassung**, um den Geschäftsbedarf und das erwartete Ergebnis in einfacher Sprache zu erklären. Wenn Sie bereits ein Briefing in Word haben, verwenden Sie die **Importieren**-Schaltfläche im Zweck-Editor, um die `.docx`-Datei direkt einzulesen -- kein Kopieren und Einfügen nötig.
+Verwenden Sie dann das **Zweck**-Dokument auf der **Zusammenfassung**, um den Geschäftsbedarf und das erwartete Ergebnis in einfacher Sprache zu erklären. Wenn Sie bereits ein Briefing in Word haben, verwenden Sie die **Importieren**-Schaltfläche im Zweck-Editor, um die `.docx`-Datei direkt einzulesen. Kein Kopieren und Einfügen nötig.
 
 Klicken Sie auf **Erstellen**. Ihre Anfrage geht mit dem Status **Prüfung ausstehend** in die Pipeline.
 
@@ -73,10 +73,10 @@ Dies ist der Schritt, der einen Rückstand an Ideen in ein verteidigbares Portfo
 !!! warning "Nicht alleine bewerten"
     Bewertung funktioniert am besten, wenn sie von einem **Komitee** mit vielfältigen Perspektiven durchgeführt wird. Streben Sie Vertreter aus folgenden Bereichen an:
 
-    - **IT Funktional** -- versteht Geschäftsprozesse und Anwendungslandschaft
-    - **IT Technisch** -- versteht Infrastruktur, Architektur und technische Schulden
-    - **Cybersicherheit** -- bewertet Risiko, Compliance und Sicherheitsimplikationen
-    - **Fachbereich** -- validiert strategische Ausrichtung und Geschäftswert
+    - **IT Funktional**: versteht Geschäftsprozesse und Anwendungslandschaft
+    - **IT Technisch**: versteht Infrastruktur, Architektur und technische Schulden
+    - **Cybersicherheit**: bewertet Risiko, Compliance und Sicherheitsimplikationen
+    - **Fachbereich**: validiert strategische Ausrichtung und Geschäftswert
 
     Die Bewertung einer einzelnen Person ist eine Meinung. Die Bewertung eines Komitees ist ein Entscheidungsrahmen.
 
@@ -115,7 +115,7 @@ Die genauen Kriteriennamen und -gewichte können je nach Mandant variieren, da s
 
 ### Die Analyseempfehlung
 
-Nach der Prüfung von Machbarkeit und Bewertung schreiben Sie die **Analyseempfehlung**. Dies ist eine kurze narrative Zusammenfassung -- typischerweise 2--4 Sätze -- die das Urteil des Komitees festhält:
+Nach der Prüfung von Machbarkeit und Bewertung schreiben Sie die **Analyseempfehlung**. Dies ist eine kurze narrative Zusammenfassung (typischerweise 2 bis 4 Sätze), die das Urteil des Komitees festhält:
 
 !!! example "Gute Empfehlungsbeispiele"
     - *„Hoher strategischer Wert, starker Business Case. Technische Machbarkeit ist aufgrund von Legacy-Integration moderat. Genehmigung mit einer Proof-of-Concept-Phase empfohlen."*
@@ -123,7 +123,7 @@ Nach der Prüfung von Machbarkeit und Bewertung schreiben Sie die **Analyseempfe
 
 Das Einreichen der Empfehlung veröffentlicht eine formale Entscheidung in der **Aktivität**, sodass die Begründung und etwaige verknüpfte Statusänderungen an der Anfragenhistorie angehängt bleiben.
 
-Die Kombination aus **Bewertungen + Machbarkeit + Empfehlung** gibt Entscheidungsträgern alles, was sie brauchen, um zu genehmigen oder abzulehnen -- ohne sich durch eine zweistündige Präsentation sitzen zu müssen.
+Die Kombination aus **Bewertungen + Machbarkeit + Empfehlung** gibt Entscheidungsträgern alles, was sie brauchen, um zu genehmigen oder abzulehnen, ohne sich durch eine zweistündige Präsentation sitzen zu müssen.
 
 !!! info "Transparenz ist der Punkt"
     Wenn Stakeholder fragen „Warum wurde meine Anfrage abgelehnt?" oder „Warum hat dieses Projekt Priorität bekommen?", liefert der Analyse- und Bewertungsdatensatz die Antwort. Das macht die Pipeline fair.
@@ -156,9 +156,9 @@ Siehe [Anfragen-Referenz](../portfolio-requests.md) für alle Statusübergänge.
 
 Ihr neues Projekt erbt den Anfragenkontext, muss aber noch für die Umsetzung eingerichtet werden.
 
-Gehen Sie zu **Portfolio > Projekte** und öffnen Sie Ihr neu erstelltes Projekt. Der Projekt-Arbeitsbereich hat sieben Tabs -- **Zusammenfassung**, **Aktivität**, **Zeitplan**, **Fortschritt**, **Aufgaben**, **Bewertung** und **Wissensdatenbank** -- mit einer dauerhaft sichtbaren **Projekteigenschaften**-Seitenleiste für Kernfelder, Team und Verknüpfungen.
+Gehen Sie zu **Portfolio > Projekte** und öffnen Sie Ihr neu erstelltes Projekt. Der Projekt-Arbeitsbereich hat sieben Tabs (**Zusammenfassung**, **Aktivität**, **Zeitplan**, **Fortschritt**, **Aufgaben**, **Bewertung** und **Wissensdatenbank**) mit einer dauerhaft sichtbaren **Projekteigenschaften**-Seitenleiste für Kernfelder, Team und Verknüpfungen.
 
-### Seitenleiste -- Ihre Personen und Kernstruktur zuweisen
+### Seitenleiste: Ihre Personen und Kernstruktur zuweisen
 
 Verwenden Sie die **Projekteigenschaften**-Seitenleiste, um die Kernrollen einzurichten:
 
@@ -182,21 +182,21 @@ Verwenden Sie die **Projekteigenschaften**-Seitenleiste, um die Kernrollen einzu
 
 Die gleiche Seitenleiste hält auch **Kerneigenschaften** und **Verknüpfungen** sichtbar, während Sie arbeiten, sodass Sie keine separaten Team- oder Verknüpfungen-Tabs mehr benötigen.
 
-### Zusammenfassungs-Tab -- Zweck und Projekt-Cockpit
+### Zusammenfassungs-Tab: Zweck und Projekt-Cockpit
 
-**Zusammenfassung** ist das Projekt-Cockpit. Es zeigt den aktuellen Status, das Lieferfenster, den Aufwandsverbrauch, die Teamabdeckung und die neueste Aktivität in einem Durchgang. Der **Zweck**-Editor ist auch hier -- wenn Ihr Projektbrief bereits als Word-Dokument existiert, verwenden Sie die **Importieren**-Schaltfläche, um die `.docx` direkt einzulesen.
+**Zusammenfassung** ist das Projekt-Cockpit. Es zeigt den aktuellen Status, das Lieferfenster, den Aufwandsverbrauch, die Teamabdeckung und die neueste Aktivität in einem Durchgang. Der **Zweck**-Editor ist auch hier. Wenn Ihr Projektbrief bereits als Word-Dokument existiert, verwenden Sie die **Importieren**-Schaltfläche, um die `.docx` direkt einzulesen.
 
-### Fortschritt-Tab -- Aufwand und Zuordnungen validieren
+### Fortschritt-Tab: Aufwand und Zuordnungen validieren
 
 Verwenden Sie **Fortschritt**, um den Aufwand zu bestätigen, der die Lieferplanung steuert:
 
-- **IT-Aufwand (PT)** -- Gesamtpersonentage erwartet von IT-Mitwirkenden
-- **Fachbereichs-Aufwand (PT)** -- Gesamtpersonentage erwartet von Fachbereichs-Mitwirkenden
+- **IT-Aufwand (PT)**: Gesamtpersonentage erwartet von IT-Mitwirkenden
+- **Fachbereichs-Aufwand (PT)**: Gesamtpersonentage erwartet von Fachbereichs-Mitwirkenden
 
 !!! info "Diese Zahlen speisen die Roadmap"
     Der Roadmap-Generator verwendet diese Aufwandsschätzungen, kombiniert mit der Mitwirkenden-Verfügbarkeit, um Projekte automatisch auf dem Zeitstrahl zu planen. Genauere Schätzungen = bessere Roadmaps.
 
-### Zeitstrahl-Tab -- Phasenvorlage anwenden (Optional)
+### Zeitstrahl-Tab: Phasenvorlage anwenden (Optional)
 
 Wenn Ihre Organisation Phasenvorlagen definiert hat (z. B. „Standardprojekt", „Agiler Sprint-Zyklus"), können Sie hier eine anwenden, um Ihren Projektzeitstrahl sofort mit vordefinierten Phasen und Meilensteinen zu strukturieren. Der Zeitstrahl kann als Tabelle oder als Gantt-Diagramm angezeigt werden.
 
@@ -212,21 +212,21 @@ Jetzt beginnt die eigentliche Arbeit. Während das Projekt voranschreitet, halte
 
 ### Fortschritt aktualisieren
 
-Verwenden Sie den **Umsetzungsfortschritt**-Schieberegler auf dem Fortschritt-Tab, um anzuzeigen, wie weit das Projekt ist. Dies ist ein einfacher Prozentsatz (0--100 %), der in Dashboards und Berichte einfließt.
+Verwenden Sie den **Umsetzungsfortschritt**-Schieberegler auf dem Fortschritt-Tab, um anzuzeigen, wie weit das Projekt ist. Dies ist ein einfacher Prozentsatz (0 bis 100 %), der in Dashboards und Berichte einfließt.
 
 Bewegen Sie das Projekt durch die Status, während die Arbeit voranschreitet. In der Praxis bewegen sich die meisten Projekte von **Warteliste** oder **Geplant** in die aktive Umsetzung:
 
 **Warteliste / Geplant** --> **In Bearbeitung** --> **Im Test** --> **Erledigt**
 
-### Zeit erfassen -- Das ist entscheidend
+### Zeit erfassen: Das ist entscheidend
 
 !!! warning "Keine Zeiterfassung = keine automatische Planung"
-    Zeiterfassung dient nicht nur der Berichterstattung -- sie treibt direkt den Roadmap-Generator an.
+    Zeiterfassung dient nicht nur der Berichterstattung. Sie treibt direkt den Roadmap-Generator an.
 
 Es gibt zwei Stellen zur Zeiterfassung:
 
-1. **Fortschritt-Tab** -- Overhead-Zeit auf Projektebene erfassen (Besprechungen, Koordination, Management)
-2. **Aufgaben** -- Aufgabenspezifische Zeit gegen einzelne Arbeitspakete erfassen
+1. **Fortschritt-Tab**: Overhead-Zeit auf Projektebene erfassen (Besprechungen, Koordination, Management)
+2. **Aufgaben**: Aufgabenspezifische Zeit gegen einzelne Arbeitspakete erfassen
 
 Warum das wichtig ist:
 
@@ -236,7 +236,7 @@ Erfasste Zeit --> Mitwirkende-Zeitstatistiken --> Historische Kapazitätsdaten
                                                --> Genaue zukünftige Planung
 ```
 
-Der Roadmap-Generator hat einen **historischen Kapazitätsmodus**, der tatsächlich erfasste Zeit verwendet, um zu verstehen, wie viel jeder Mitwirkende pro Monat wirklich leistet (im Gegensatz zu seiner theoretischen Verfügbarkeit). Ohne Zeitdaten greift der Generator auf theoretische Schätzungen zurück -- die fast immer optimistisch sind.
+Der Roadmap-Generator hat einen **historischen Kapazitätsmodus**, der tatsächlich erfasste Zeit verwendet, um zu verstehen, wie viel jeder Mitwirkende pro Monat wirklich leistet (im Gegensatz zu seiner theoretischen Verfügbarkeit). Ohne Zeitdaten greift der Generator auf theoretische Schätzungen zurück, die fast immer optimistisch sind.
 
 !!! tip "Machen Sie es zur Gewohnheit"
     Ermutigen Sie Teammitglieder, wöchentlich Zeit zu erfassen. Selbst grobe Einträge sind weit besser als nichts. Die Daten summieren sich im Laufe der Zeit und machen jede Roadmap-Iteration genauer.
@@ -276,7 +276,7 @@ Innerhalb jeder Phase (oder auf Projektebene) erstellen Sie Aufgaben für spezif
 
 - Aufgaben an Mitwirkende zuweisen
 - Fälligkeitsdaten, Prioritäten und Aufgabentypen festlegen
-- Detaillierte Beschreibungen mit dem Markdown-Editor schreiben -- oder eine `.docx`-Datei direkt in das Beschreibungsfeld **importieren**
+- Detaillierte Beschreibungen mit dem Markdown-Editor schreiben, oder eine `.docx`-Datei direkt in das Beschreibungsfeld **importieren**
 - Zeit direkt gegen Aufgaben erfassen (IT- oder Fachbereichskategorie)
 - Aufgaben mit Phasen verknüpfen für strukturierte Verfolgung
 - **Wissensdatenbank**-Dokumente aus der Aufgaben-Seitenleiste als Referenzmaterial anhängen
@@ -288,7 +288,7 @@ Aufgaben können auch direkt von einer Zeitstrahl-Phase aus mit der **[+]**-Verk
 
 ### Meilensteine
 
-Markieren Sie wichtige Kontrollpunkte -- Go/No-Go-Entscheidungen, Lieferfristen oder externe Abhängigkeiten.
+Markieren Sie wichtige Kontrollpunkte: Go/No-Go-Entscheidungen, Lieferfristen oder externe Abhängigkeiten.
 
 Meilensteine erscheinen auf dem Projektzeitstrahl und in Berichten und geben Stakeholdern klare Sicht auf bevorstehende Entscheidungspunkte. Sie können als eigenständige Meilensteine erstellt werden oder durch Aktivierung der Meilensteinverfolgung einer Phase.
 
@@ -311,7 +311,7 @@ Siehe [Planungs-Referenz](../portfolio-planning.md).
 
 ### Kapazitäts-Heatmaps
 
-Mitwirkenden-Verfügbarkeit und Projektzuweisungen kombinieren sich, um zu zeigen, **wer überlastet ist und wer Bandbreite hat** -- über Teams und Zeiträume hinweg. Dies verhindert das klassische Problem „Jeder ist 5 Projekten zu 100 % zugewiesen".
+Mitwirkenden-Verfügbarkeit und Projektzuweisungen kombinieren sich, um zu zeigen, **wer überlastet ist und wer Bandbreite hat**, über Teams und Zeiträume hinweg. Dies verhindert das klassische Problem „Jeder ist 5 Projekten zu 100 % zugewiesen".
 
 ### Engpass-Analyse
 

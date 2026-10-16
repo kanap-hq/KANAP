@@ -78,7 +78,7 @@ Das Anwendungsraster bietet eine umfassende Ansicht Ihres Anwendungsportfolios.
 - **Meine Apps**: zeigt Apps, bei denen Sie in der Eigenschaftsleiste als **Business-Verantwortlicher** oder **IT-Verantwortlicher** gelistet sind. Mehrfach-Verantwortliche werden unterstützt.
 - **Apps meines Teams**: zeigt Apps, bei denen ein Mitglied Ihres Portfolio-Teams als Business-Verantwortlicher oder IT-Verantwortlicher gelistet ist. Ihre eigene Verantwortlichkeit ist in diesem Bereich ebenfalls enthalten. Deaktiviert, wenn Sie keinem Portfolio-Team zugewiesen sind.
 - **Alle Apps** (Standard): zeigt das vollständige Anwendungsraster mit dem standardmäßigen Lebenszyklus-Filterverhalten.
-- Ihre Auswahl wird sitzungsübergreifend gespeichert -- bei Rückkehr zur Seite wird Ihre letzte Wahl wiederhergestellt.
+- Ihre Auswahl wird sitzungsübergreifend gespeichert: bei Rückkehr zur Seite wird Ihre letzte Wahl wiederhergestellt.
 
 **Standardspalten**:
 - **Name**: Anwendungsname mit Kategorie-Beschriftung und einem Badge „Enthalten in: {Suite}" für Komponenten einer Suite
@@ -124,7 +124,7 @@ Das Anwendungsraster bietet eine umfassende Ansicht Ihres Anwendungsportfolios.
 
 ## Der Anwendungs-Arbeitsbereich
 
-Klicken Sie auf eine Zeile, um den Arbeitsbereich zu öffnen. Der Arbeitsbereich hat eine **Kopfzeile** mit schnellen Metadaten, eine **Eigenschaftsleiste** auf der rechten Seite (die Identitätskarte der Anwendung -- immer sichtbar) und einen **Inhaltsbereich** in der Mitte, der mit jedem Reiter wechselt.
+Klicken Sie auf eine Zeile, um den Arbeitsbereich zu öffnen. Der Arbeitsbereich hat eine **Kopfzeile** mit schnellen Metadaten, eine **Eigenschaftsleiste** auf der rechten Seite (die Identitätskarte der Anwendung, immer sichtbar) und einen **Inhaltsbereich** in der Mitte, der mit jedem Reiter wechselt.
 
 ### Kopfzeile
 
@@ -142,7 +142,7 @@ Die Kopfzeile zeigt:
 
 ### Eigenschaftsleiste (rechtes Panel)
 
-Die Leiste ist die Identitätskarte der Anwendung. Sie wird in jedem Reiter angezeigt und wird inline bearbeitet -- Änderungen werden automatisch gespeichert.
+Die Leiste ist die Identitätskarte der Anwendung. Sie wird in jedem Reiter angezeigt und wird inline bearbeitet: Änderungen werden automatisch gespeichert.
 
 **Identität**:
 - **Kategorie**, **Lieferant**, **Herausgeber**
@@ -175,7 +175,7 @@ Der Reiter Übersicht ist die Erzählung der Anwendung. Er enthält:
 
 ### Bereitstellungen
 
-Der Reiter Bereitstellungen dokumentiert, wo die Anwendung tatsächlich läuft -- ein Block pro Umgebung, mit den jeweils zugeordneten Servern.
+Der Reiter Bereitstellungen dokumentiert, wo die Anwendung tatsächlich läuft: ein Block pro Umgebung, mit den jeweils zugeordneten Servern.
 
 **Umgebungen**: Production, Pre-prod, QA, Test, Dev, Sandbox.
 
@@ -196,7 +196,7 @@ Der Reiter Bereitstellungen dokumentiert, wo die Anwendung tatsächlich läuft -
 | **Hosting** | Abgeleitet vom Standort des Assets |
 | **Seit** | Datum, an dem der Server dieser Bereitstellung zugewiesen wurde |
 
-Klicken Sie in der Bereitstellungs-Kopfzeile auf **Server hinzufügen**, um ein Asset anzuhängen. Cluster-Assets sind ausgeschlossen -- weisen Sie stattdessen Cluster-Member-Hosts zu.
+Klicken Sie in der Bereitstellungs-Kopfzeile auf **Server hinzufügen**, um ein Asset anzuhängen. Cluster-Assets sind ausgeschlossen. Weisen Sie stattdessen Cluster-Member-Hosts zu.
 
 **Tipp**: Dokumentieren Sie Server zuerst in **IT-Landschaft > Assets** und verknüpfen Sie sie dann hier. Der Reiter Übersicht des Assets zeigt dieselben Zuordnungen umgekehrt an.
 
@@ -204,13 +204,13 @@ Klicken Sie in der Bereitstellungs-Kopfzeile auf **Server hinzufügen**, um ein 
 
 ### Schnittstellen
 
-Der Reiter Schnittstellen zeigt alle Integrationen, an denen diese Anwendung beteiligt ist -- als Quelle, Ziel oder Middleware. Das Reiter-Badge zeigt die Gesamtzahl an.
+Der Reiter Schnittstellen zeigt alle Integrationen, an denen diese Anwendung beteiligt ist: als Quelle, Ziel oder Middleware. Das Reiter-Badge zeigt die Gesamtzahl an.
 
 Schnittstellen werden **nach Umgebung gruppiert** (PROD, PRE_PROD, QA, ...). Innerhalb jeder Umgebung werden sie aufgeteilt in:
 
-- **Eingehend** -- diese Anwendung empfängt Daten
-- **Ausgehend** -- diese Anwendung sendet Daten
-- **Geleitet** -- diese Anwendung ist die Middleware/ETL für einen Fluss zwischen zwei anderen Apps
+- **Eingehend**: diese Anwendung empfängt Daten
+- **Ausgehend**: diese Anwendung sendet Daten
+- **Geleitet**: diese Anwendung ist die Middleware/ETL für einen Fluss zwischen zwei anderen Apps
 
 Jede Zeile zeigt den Schnittstellennamen, die Gegenanwendung und einen Indikator **Via Middleware**. Klicken Sie auf die Zeile, um den Schnittstellen-Arbeitsbereich zu öffnen; klicken Sie auf die Gegenanwendung, um die andere Anwendung zu öffnen.
 
@@ -287,9 +287,9 @@ Der Reiter Verknüpfungen verbindet diese Anwendung mit Ihren Finanz-, Vertrags-
 - **Budgetzeilen**: die OPEX- und CAPEX-Zeilen dieser Anwendung in einer Liste. Suchen Sie nach Titel oder Referenz (`BL-12`); jeder Vorschlag zeigt seinen Typ
 - **Verträge**: Lieferantenverträge
 - **Projekte**: Portfolio-Projekte, die mit dieser Anwendung verknüpft sind
-- **Aufgaben**: Aufgaben, die mit dieser Anwendung verknüpft sind. Diese Liste ist hier schreibgeschützt -- Aufgaben gewinnen oder verlieren diese Verknüpfung, wenn Sie das Feld **App / Dienst** auf einer Aufgabe in der Aufgabenseite festlegen.
+- **Aufgaben**: Aufgaben, die mit dieser Anwendung verknüpft sind. Diese Liste ist hier schreibgeschützt. Aufgaben gewinnen oder verlieren diese Verknüpfung, wenn Sie das Feld **App / Dienst** auf einer Aufgabe in der Aufgabenseite festlegen.
 
-**Relevante Websites**: URLs mit optionalen Namen hinzufügen -- nützlich für Lieferantenportale, Monitoring-Dashboards oder Dokumentationslinks. **URL hinzufügen** öffnet einen Dialog; vorhandene Einträge können bearbeitet oder gelöscht werden.
+**Relevante Websites**: URLs mit optionalen Namen hinzufügen, nützlich für Lieferantenportale, Monitoring-Dashboards oder Dokumentationslinks. **URL hinzufügen** öffnet einen Dialog; vorhandene Einträge können bearbeitet oder gelöscht werden.
 
 **Anhänge**: Dateien per Drag-and-Drop ziehen oder auf **Dateien auswählen** klicken, um sie hochzuladen. Klicken Sie auf einen Anhang-Chip, um ihn herunterzuladen. Löschen ist für Manager verfügbar.
 
@@ -301,16 +301,16 @@ KANAP bietet **zwei Wege zur Verwaltung von Anwendungsversionen**, je nachdem, w
 
 | Ansatz | Am besten für | Was passiert |
 |----------|----------|--------------|
-| **Einfach** | Die meisten Anwendungen | Versionsfelder in der Eigenschaftsleiste oder im Erstellungsformular aktualisieren -- gleicher Datensatz, neue Versionsnummer |
-| **Erweitert** | Große Migrationen | **Neue Version erstellen** verwenden, um einen neuen Anwendungsdatensatz mit Versionsnachverfolgung zu erstellen -- alte und neue Versionen parallel betreiben |
+| **Einfach** | Die meisten Anwendungen | Versionsfelder in der Eigenschaftsleiste oder im Erstellungsformular aktualisieren: gleicher Datensatz, neue Versionsnummer |
+| **Erweitert** | Große Migrationen | **Neue Version erstellen** verwenden, um einen neuen Anwendungsdatensatz mit Versionsnachverfolgung zu erstellen: alte und neue Versionen parallel betreiben |
 
 ### Einfache Versionsverfolgung (In-Place-Updates)
 
-Für die meisten Anwendungen -- bei denen Sie upgraden und die alte Version einfach verschwindet -- aktualisieren Sie **Version**, **Go-Live**, **Support-Ende** und **Außerbetriebnahmedatum** im Erstellungsformular oder in der Eigenschaftsleiste. Der Versions-Chip in der Kopfzeile und die **Go-Live**-Metadaten spiegeln Ihre Einstellungen wider.
+Für die meisten Anwendungen (bei denen Sie upgraden und die alte Version einfach verschwindet) aktualisieren Sie **Version**, **Go-Live**, **Support-Ende** und **Außerbetriebnahmedatum** im Erstellungsformular oder in der Eigenschaftsleiste. Der Versions-Chip in der Kopfzeile und die **Go-Live**-Metadaten spiegeln Ihre Einstellungen wider.
 
 Dieser Ansatz hält alles in einem einzigen Datensatz. Wenn Sie ein Upgrade durchführen, aktualisieren Sie die Versionsfelder und Sie sind fertig. Die Historie wird im Audit-Protokoll verfolgt.
 
-**Verwenden Sie dies, wenn**: Upgrades vor Ort ohne Überlappung erfolgen -- eine Version ersetzt eine andere.
+**Verwenden Sie dies, wenn**: Upgrades vor Ort ohne Überlappung erfolgen: eine Version ersetzt eine andere.
 
 ### Eine neue Version erstellen (Parallelmigrationen)
 
@@ -318,9 +318,9 @@ Für größere Anwendungsupgrades, bei denen Sie alte und neue Versionen paralle
 
 Der Assistent hat drei Schritte:
 
-1. **Versionsdetails** -- Neuen Anwendungsnamen, Versionsbezeichnung, **Go-Live**- und **Support-Ende**-Daten.
-2. **Kopieroptionen** -- wählen, was von der Quelle kopiert wird. Standardwerte unten gezeigt.
-3. **Schnittstellen** -- wählen, welche Schnittstellen zur neuen Version migriert werden sollen.
+1. **Versionsdetails**: Neuen Anwendungsnamen, Versionsbezeichnung, **Go-Live**- und **Support-Ende**-Daten.
+2. **Kopieroptionen**: wählen, was von der Quelle kopiert wird. Standardwerte unten gezeigt.
+3. **Schnittstellen**: wählen, welche Schnittstellen zur neuen Version migriert werden sollen.
 
 Die neue Version wird als separate Anwendung erstellt mit:
 - Einem **Vorgeschlagen**-Lebenszyklus (bereit zur Konfiguration vor dem Go-Live)
@@ -365,7 +365,7 @@ Es gibt zwei Möglichkeiten, eine Anwendung in KANAP zu kopieren:
 
 ### Element kopieren (aus dem Anwendungsraster)
 
-Verwenden Sie dies, wenn Sie ein unabhängiges Duplikat einer Anwendung erstellen möchten -- typischerweise um einen ähnlichen Anwendungseintrag ohne Versionsverkettung zu erstellen.
+Verwenden Sie dies, wenn Sie ein unabhängiges Duplikat einer Anwendung erstellen möchten, typischerweise um einen ähnlichen Anwendungseintrag ohne Versionsverkettung zu erstellen.
 
 1. Wählen Sie eine Anwendung im Raster aus
 2. Klicken Sie auf **Element kopieren**
@@ -440,9 +440,9 @@ Aus der Anwendungsliste:
 | Voreinstellung | Beschreibung |
 |--------|-------------|
 | **Vollständiger Export** | Alle exportierbaren Felder einschließlich berechneter/schreibgeschützter Daten (Zeitstempel, Datenhaltung, Benutzermetriken) |
-| **Datenanreicherung** | Nur importierbare Felder -- ideal für Round-Trip-Bearbeitungs-Workflows |
+| **Datenanreicherung** | Nur importierbare Felder: ideal für Round-Trip-Bearbeitungs-Workflows |
 
-**Vorlagen-Export**: Lädt nur Spaltenköpfe herunter -- nützlich für die Vorbereitung von Importdateien mit der korrekten Struktur. Die Vorlage enthält alle importierbaren Felder.
+**Vorlagen-Export**: Lädt nur Spaltenköpfe herunter: nützlich für die Vorbereitung von Importdateien mit der korrekten Struktur. Die Vorlage enthält alle importierbaren Felder.
 
 **Benutzerdefinierte Auswahl**: Wählen Sie bestimmte Felder, die in Ihren Export aufgenommen werden sollen.
 
@@ -452,7 +452,7 @@ Aus der Anwendungsliste:
 
 2. **Importeinstellungen wählen**:
    - **Modus**:
-     - `Anreichern` (Standard): Leere Zellen erhalten vorhandene Werte -- nur aktualisieren, was Sie angeben
+     - `Anreichern` (Standard): Leere Zellen erhalten vorhandene Werte: nur aktualisieren, was Sie angeben
      - `Ersetzen`: Angegebene Felder werden aktualisiert; leere Klassifizierungszellen behalten den vorhandenen Wert, `__CLEAR__` löscht ihn ausdrücklich
    - **Operation**:
      - `Upsert` (Standard): Neue Anwendungen erstellen oder vorhandene aktualisieren
@@ -592,7 +592,7 @@ Custom ERP;lob;;Moderate;Active;2018-03-20;false
 - **Beginnen Sie mit kritischen Apps**: Dokumentieren Sie zuerst Ihre geschäftskritischen Anwendungen, dann arbeiten Sie die Kritikalitätsstufen ab.
 - **Suites zum Gruppieren verwenden**: Aktivieren Sie „Kann Unteranwendungen haben" im Reiter Betrieb, um eine Anwendung als Suite zu markieren, die verwandte Komponenten gruppiert (z. B. SAP-Module unter einer SAP-Suite).
 - **Frühzeitig mit Ausgaben verknüpfen**: Verbinden Sie OPEX, CAPEX und Verträge im Reiter Verknüpfungen, um das vollständige Kostenbild für jede Anwendung zu sehen.
-- **Bereitstellungen aktuell halten**: Der Reiter Bereitstellungen steuert die Umgebungs-Chips in der Liste -- halten Sie ihn für genaue Sichtbarkeit aktuell.
+- **Bereitstellungen aktuell halten**: Der Reiter Bereitstellungen steuert die Umgebungs-Chips in der Liste. Halten Sie ihn für genaue Sichtbarkeit aktuell.
 - **Dokumentieren Sie die Zielgruppe**: Legen Sie Unternehmens- und Abteilungs-Zielgruppen in der Eigenschaftsleiste fest; die Benutzeranzahl wird dann automatisch abgeleitet und in Berichten verwendet.
 - **Kategorie-Filterung nutzen**: Verwenden Sie den Kategorie-Spaltenfilter, um sich auf bestimmte Anwendungstypen zu konzentrieren (z. B. nur Line-of-business-Apps anzeigen oder Produktivitätswerkzeuge ausschließen).
 - **Wissensdatenbank frühzeitig anhängen**: Verknüpfen Sie Runbooks und Architekturdokumente im Reiter Übersicht, damit das Team weiß, wo es bei Vorfällen nachschlagen muss.

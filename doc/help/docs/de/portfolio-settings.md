@@ -200,7 +200,7 @@ Vertragsarten halten fest, wie jeder Mitwirkende mit Ihnen zusammenarbeitet. Sie
 
 Vier Arten werden mit jedem Arbeitsbereich angelegt:
 
-- **Intern** -- der Standard für jeden neuen Mitwirkenden
+- **Intern**: der Standard für jeden neuen Mitwirkenden
 - **Extern**
 - **Auszubildender**
 - **Sonstige**
@@ -216,7 +216,7 @@ Vier Arten werden mit jedem Arbeitsbereich angelegt:
 
 **Eine Art deaktivieren**: Verwenden Sie den Schalter. Eine inaktive Art verschwindet aus dem Dropdown für neue Zuordnungen, aber Mitwirkende, die sie bereits haben, behalten und zeigen sie weiterhin.
 
-**Eine Art löschen**: Klicken Sie auf das Löschen-Symbol. Es steht nur für selbst angelegte Arten zur Verfügung, die kein Mitwirkender verwendet -- die Zahl neben jeder Art zeigt, wie viele sie haben. Die vier integrierten Arten können umbenannt, aber nie gelöscht werden.
+**Eine Art löschen**: Klicken Sie auf das Löschen-Symbol. Es steht nur für selbst angelegte Arten zur Verfügung, die kein Mitwirkender verwendet. Die Zahl neben jeder Art zeigt, wie viele sie haben. Die vier integrierten Arten können umbenannt, aber nie gelöscht werden.
 
 **Standardwerte laden**: Sollte die Liste jemals leer sein, legt **Standardwerte laden** Intern, Extern, Auszubildender und Sonstige erneut an.
 

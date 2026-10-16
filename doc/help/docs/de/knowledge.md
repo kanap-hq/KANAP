@@ -49,7 +49,7 @@ In einer eingeschränkten Bibliothek:
 
 Verwenden Sie eingeschränkte Bibliotheken für sensible Inhalte (Sicherheitsverfahren, HR-Dokumente, Führungskräftematerial), bei denen Sie eine feinkörnige Zugriffskontrolle innerhalb der Wissensdatenbank wünschen, anstatt sich nur auf globale Rollen zu verlassen.
 
-Eingeschränkte Bibliotheken begrenzen auch, was ein KI-Agent lesen kann. Wenn ein Administrator einen Agenten in dessen Einstellungen **Wissens- und Webquellen** auf eine ausgewählte Gruppe von Bibliotheken beschränkt, wird diese Auswahl mit den Bibliotheken kombiniert, die der konfigurierende Administrator bereits lesen kann – ein Agent sieht nie mehr als die Person, die ihn eingerichtet hat. Eine eingeschränkte Bibliothek, auf die der Administrator keinen Zugriff hat, bleibt auch für den Agenten unsichtbar.
+Eingeschränkte Bibliotheken begrenzen auch, was ein KI-Agent lesen kann. Wenn ein Administrator einen Agenten in dessen Einstellungen **Wissens- und Webquellen** auf eine ausgewählte Gruppe von Bibliotheken beschränkt, wird diese Auswahl mit den Bibliotheken kombiniert, die der konfigurierende Administrator bereits lesen kann. Ein Agent sieht nie mehr als die Person, die ihn eingerichtet hat. Eine eingeschränkte Bibliothek, auf die der Administrator keinen Zugriff hat, bleibt auch für den Agenten unsichtbar.
 
 ### Ordner
 
@@ -231,7 +231,7 @@ So funktioniert es:
 
 Wenn der Import auf einen Sperrkonflikt (jemand anderes hat die Sperre erworben) oder eine abgelaufene Sperre stößt, endet der Bearbeitungsmodus und eine entsprechende Meldung wird angezeigt. Wechseln Sie erneut in den Bearbeitungsmodus und versuchen Sie es erneut.
 
-Importwarnungen — zum Beispiel nicht unterstützte Formatierung, die während der Konvertierung vereinfacht wurde — erscheinen kurz als Benachrichtigung am unteren Bildschirmrand.
+Importwarnungen (zum Beispiel nicht unterstützte Formatierung, die während der Konvertierung vereinfacht wurde) erscheinen kurz als Benachrichtigung am unteren Bildschirmrand.
 
 Verwenden Sie die Importfunktion bei der Migration vorhandener Word-Dokumente in die Wissensdatenbank. Es ist schneller und sicherer als Kopieren-Einfügen und bewahrt eingebettete Bilder automatisch.
 
@@ -252,7 +252,7 @@ Der Export ersetzt nicht den Live-Artikel. Die Wissensdatenbank-Version bleibt d
 
 ## Dokumente aus dem Chat generieren
 
-Wenn der AI-Assistent in Ihrem KANAP aktiviert ist, können Sie ihn bitten, einen Wissensartikel für Sie aus dem Chat zu entwerfen. Der Assistent bereitet eine Vorschau vor, die Sie überprüfen, bevor etwas gespeichert wird. Die Bestätigung der Vorschau erstellt ein echtes Wissensdokument mit dem Inhalt, dem Typ, der Vorlagenherkunft und allen von Ihnen angegebenen Beziehungen — genau so, als hätten Sie es selbst geschrieben.
+Wenn der AI-Assistent in Ihrem KANAP aktiviert ist, können Sie ihn bitten, einen Wissensartikel für Sie aus dem Chat zu entwerfen. Der Assistent bereitet eine Vorschau vor, die Sie überprüfen, bevor etwas gespeichert wird. Die Bestätigung der Vorschau erstellt ein echtes Wissensdokument mit dem Inhalt, dem Typ, der Vorlagenherkunft und allen von Ihnen angegebenen Beziehungen, genau so, als hätten Sie es selbst geschrieben.
 
 Generierte Dokumente folgen den gleichen Governance-Regeln wie handgeschriebene: Verantwortlichkeit, Status, Versionshistorie, Sperren und Review-Workflow gelten alle.
 
@@ -341,4 +341,4 @@ Diese Unterscheidung ist wichtig. Direkte Verknüpfungen drücken eine bewusste 
 - Verwenden Sie Review für Dokumente, die Entscheidungen, Kontrollen oder wiederholbare Prozesse antreiben.
 - Markieren Sie veraltete Inhalte als archiviert oder veraltet, anstatt Leser raten zu lassen.
 - Importieren Sie Word-Dokumente bei der Migration vorhandener Inhalte in die Wissensdatenbank, anstatt sie zu kopieren und einzufügen, damit eingebettete Bilder automatisch erhalten bleiben.
-- Greifen Sie zu eingeschränkten Bibliotheken, wenn der Zugriff auf Bibliotheksebene wichtig ist – verlassen Sie sich nicht auf das Ordnerlayout, um sensible Inhalte zu verbergen.
+- Greifen Sie zu eingeschränkten Bibliotheken, wenn der Zugriff auf Bibliotheksebene wichtig ist. Verlassen Sie sich nicht auf das Ordnerlayout, um sensible Inhalte zu verbergen.

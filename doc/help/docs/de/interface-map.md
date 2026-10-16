@@ -72,7 +72,7 @@ Begrenzen Sie, wie viele Hops von den ausgewählten Anwendungen angezeigt werden
 - **Alle**: Jeden verbundenen Knoten anzeigen (kein Limit)
 - **1-5**: Nur Knoten innerhalb von N Hops der ausgewählten Anwendungen anzeigen
 
-Middleware-Knoten zählen nicht als Hop -- der Tiefenzähler wird nur erhöht, wenn ein primärer Anwendungsknoten durchlaufen wird.
+Middleware-Knoten zählen nicht als Hop. Der Tiefenzähler wird nur erhöht, wenn ein primärer Anwendungsknoten durchlaufen wird.
 
 Dieser Filter wird nur wirksam, wenn Sie mindestens eine Anwendung ausgewählt haben; ohne Auswahl ist der Wert auf **Alle** gesperrt.
 
