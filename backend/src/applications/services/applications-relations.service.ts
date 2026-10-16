@@ -28,6 +28,7 @@ import { KnowledgeService } from '../../knowledge/knowledge.service';
 import { TasksUnifiedService } from '../../tasks/tasks-unified.service';
 import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
 import { TechnologyLinksService } from '../../technologies/technology-links.service';
+import { technologyReference } from '../../technologies/technology-rows';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** At most this many suggestions per rule. */
@@ -173,9 +174,7 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
     const requests = ctx.access.requests ? await this.listRequests(mg, tenantId, app.id, ctx.scopes.request) : null;
     const tasks = ctx.access.tasks ? await this.listTasks(mg, tenantId, app.id, ctx.scopes.task) : null;
     const linkOpts = { manager: mg, tenantId, userId: ctx.userId };
-    const technologies = ctx.access.technologies
-      ? mergeTechnologies((await this.technologyLinks.technologiesOfApplication(app.id, linkOpts)).items)
-      : null;
+    const technologies = ctx.access.technologies ? await this.listTechnologies(mg, tenantId, app.id, linkOpts) : null;
     const processes = ctx.access.processes
       ? ((await this.technologyLinks.processesOfApplication(app.id, linkOpts)).items as any[])
         .map((row): RelatedProcess => ({ id: row.id, name: row.name, status: row.status ?? null, owner_name: row.owner_name ?? null }))
@@ -196,6 +195,32 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
       suggestions,
       also,
     };
+  }
+
+  /**
+   * The declarations are read here, for every state of the application: the technology layer
+   * leaves out an application out of service, but its own tab must still show what it declares
+   * (and the badge counts), so that it can be withdrawn. The hosted rows come from the reach.
+   */
+  private async listTechnologies(mg: EntityManager, tenantId: string, appId: string, linkOpts: { manager: EntityManager; tenantId: string; userId: string | null }) {
+    const declared: Array<{ technology_id: string; name: string; item_number: number | null; family: string | null; version_label: string | null; standard_support_end: string | null }> = await mg.query(
+      `SELECT d.technology_id, t.name, t.item_number, t.family, v.label AS version_label,
+              to_char(v.standard_support_end, 'YYYY-MM-DD') AS standard_support_end
+         FROM application_technologies d
+         JOIN technologies t ON t.id = d.technology_id AND t.tenant_id = d.tenant_id
+         LEFT JOIN technology_versions v ON v.id = d.technology_version_id AND v.tenant_id = d.tenant_id
+        WHERE d.tenant_id = $1 AND d.application_id = $2`,
+      [tenantId, appId],
+    );
+    const hosted = (await this.technologyLinks.technologiesOfApplication(appId, linkOpts)).items.filter((row) => row.kind !== 'declared');
+    return mergeTechnologies([
+      ...declared.map((row): TechnologyMergeRow => ({
+        technology_id: row.technology_id, technology_name: row.name, technology_reference: technologyReference(row.item_number), family: row.family,
+        kind: 'declared', version_label: row.version_label, standard_support_end: row.standard_support_end,
+        asset_id: null, asset_name: null, via_asset_name: null,
+      })),
+      ...hosted,
+    ]);
   }
 
   private listBudgetLines(mg: EntityManager, tenantId: string, appId: string, year: number, measure: string): Promise<RelatedBudgetLine[]> {
@@ -564,13 +589,15 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
 }
 
 type ReachingRow = Awaited<ReturnType<TechnologyLinksService['technologiesOfApplication']>>['items'][number];
+type TechnologyMergeRow = Pick<ReachingRow,
+  'technology_id' | 'technology_name' | 'technology_reference' | 'family' | 'kind' | 'version_label' | 'standard_support_end' | 'asset_id' | 'asset_name' | 'via_asset_name'>;
 
 /**
  * One row per technology from the rows of `technologiesOfApplication` (one per declaration, and
  * one per server, environment and version reached): a technology both declared and hosted shows
  * once, marked both ways. Sorted by name.
  */
-export function mergeTechnologies(rows: ReachingRow[]): RelatedTechnology[] {
+export function mergeTechnologies(rows: TechnologyMergeRow[]): RelatedTechnology[] {
   const byId = new Map<string, RelatedTechnology & { versionSet: Set<string>; viaSet: Set<string> }>();
   for (const row of rows) {
     let tech = byId.get(row.technology_id);

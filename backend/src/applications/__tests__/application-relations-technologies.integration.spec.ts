@@ -170,6 +170,62 @@ async function testWriteRefusedWithoutTheRight() {
   });
 }
 
+/**
+ * A disabled application leaves the technology layer's views, but its own tab still shows its
+ * declarations (only them: its hostings are out of service), can withdraw them, and the badge follows.
+ */
+async function testDisabledApplicationKeepsItsDeclarations() {
+  await inRolledBackTransaction(async (runner) => {
+    const seed = await seedTechnologies(runner, 'techoff');
+    await runner.query(`UPDATE applications SET status = 'disabled' WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.appId]);
+    const svc = relationsService();
+    const ctx = context(runner.manager, seed);
+    const crud = new ApplicationsCrudService(undefined as any, undefined as any, undefined as any, undefined as any, undefined as any);
+    const shown = async () => ((await svc.getRelations(seed.appId, ctx)).technologies ?? []).map((row) => [row.name, row.declared, row.hosted]);
+
+    assert.deepEqual(await shown(), [['Java', true, false], ['Tomcat', true, false]]);
+    assert.equal((await crud.relationCounts(seed.appId, { manager: runner.manager })).technologies, 2);
+
+    assert.deepEqual(await svc.setLink('technologies', seed.appId, seed.tech.java, false, ctx), { ok: true, changed: true });
+    assert.deepEqual(await shown(), [['Tomcat', true, false]]);
+    assert.equal((await crud.relationCounts(seed.appId, { manager: runner.manager })).technologies, 1);
+
+    // A declaration with a version shows it and its end of support.
+    const v2019: string = (await runner.query(`SELECT id FROM technology_versions WHERE tenant_id = $1 AND technology_id = $2`, [seed.tenantId, seed.tech.sql]))[0].id;
+    await runner.query(
+      `INSERT INTO application_technologies (tenant_id, application_id, technology_id, technology_version_id) VALUES ($1, $2, $3, $4)`,
+      [seed.tenantId, seed.appId, seed.tech.sql, v2019],
+    );
+    const sql = ((await svc.getRelations(seed.appId, ctx)).technologies ?? []).find((row) => row.id === seed.tech.sql);
+    assert.deepEqual([sql?.reference, sql?.versions, sql?.standard_support_end, sql?.declared, sql?.hosted], ['TEC-1', ['2019'], '2020-01-14', true, false]);
+  });
+}
+
+/** A Business Contributor writes only on the applications of its participation scope. */
+async function testBusinessContributorScope() {
+  await inRolledBackTransaction(async (runner) => {
+    const seed = await seedTechnologies(runner, 'techscope');
+    const svc = relationsService();
+    const scoped = context(runner.manager, seed, { scopes: { application: { userId: seed.userId } } });
+    const isNotFound = (err: any) => err?.getStatus?.() === 404;
+    await assert.rejects(svc.setLink('technologies', seed.appId, seed.tech.sql, true, scoped), isNotFound);
+    await assert.rejects(svc.setLink('technologies', seed.appId, seed.tech.java, false, scoped), isNotFound);
+    await assert.rejects(svc.setLink('processes', seed.appId, seed.processes.free, true, scoped), isNotFound);
+    await assert.rejects(svc.setLink('processes', seed.appId, seed.processes.linked, false, scoped), isNotFound);
+    const [{ n }] = await runner.query(
+      `SELECT (SELECT count(*) FROM application_technologies WHERE tenant_id = $1 AND application_id = $2)
+            + (SELECT count(*) FROM application_business_processes WHERE tenant_id = $1 AND application_id = $2) AS n`,
+      [seed.tenantId, seed.appId],
+    );
+    assert.equal(Number(n), 3, 'nothing changed');
+
+    // Once the user takes part in the application, the same writes go through.
+    await runner.query(`INSERT INTO application_owners (tenant_id, application_id, user_id, owner_type) VALUES ($1, $2, $3, 'it')`, [seed.tenantId, seed.appId, seed.userId]);
+    assert.deepEqual(await svc.setLink('technologies', seed.appId, seed.tech.sql, true, scoped), { ok: true, changed: true });
+    assert.deepEqual(await svc.setLink('processes', seed.appId, seed.processes.free, true, scoped), { ok: true, changed: true });
+  });
+}
+
 /** The tab badge (`GET /applications/:id/relations-count`) counts declared technologies and processes. */
 async function testBadgeCountsTechnologiesAndProcesses() {
   await inRolledBackTransaction(async (runner) => {
@@ -189,6 +245,8 @@ runSpecs('application-relations-technologies.integration.spec', [
   testLinkAndUnlinkProcess,
   testWriteRefusedWithoutTheRight,
   testBadgeCountsTechnologiesAndProcesses,
+  testDisabledApplicationKeepsItsDeclarations,
+  testBusinessContributorScope,
 ]).catch((err) => {
   console.error(err);
   process.exit(1);

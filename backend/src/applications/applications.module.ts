@@ -72,7 +72,7 @@ import {
     TasksModule,
     CurrencyModule,
     forwardRef(() => PortfolioModule),
-    TechnologiesModule,
+    forwardRef(() => TechnologiesModule),
   ],
   providers: [
     // Decomposed services (order matters for DI)
