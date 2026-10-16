@@ -22,6 +22,8 @@ const runner = require(backendPath('scripts', 'run-ci-tests.js')) as {
   laneUrl: (url: string, n: number) => string;
   exclusiveReason: (file: string) => string | null;
   EXCLUSIVE_PATTERNS: RegExp[];
+  failure: (result: { code: number | null; signal: string | null }) => string;
+  lastLines: (output: string, count?: number) => string[];
 };
 
 function withEnv<T>(env: Record<string, string | undefined>, fn: () => T): T {
@@ -140,7 +142,16 @@ function testExclusiveReasonFollowsHelpers() {
   assert.equal(runner.exclusiveReason('src/admin/scheduled-tasks/__tests__/scheduled-tasks-lock.integration.spec.ts'), null);
 }
 
+// A spec stopped by a signal says so (the runner sends none), with its last lines of output.
+function testFailureReport() {
+  assert.equal(runner.failure({ code: 1, signal: null }), 'exit 1');
+  assert.equal(runner.failure({ code: null, signal: 'SIGKILL' }), 'killed by SIGKILL from outside the spec');
+  assert.deepEqual(runner.lastLines('\x1b[32mok\x1b[39m one\n\nok two\nok three\n', 2), ['ok two', 'ok three']);
+  assert.deepEqual(runner.lastLines(''), ['(no output)']);
+}
+
 testDatabaseName();
+testFailureReport();
 testRacesRefused();
 testRaceSpecPattern();
 testCompiledPath();
