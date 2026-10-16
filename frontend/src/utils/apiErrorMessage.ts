@@ -40,6 +40,12 @@ function getApiErrorCode(apiError: ApiErrorLike | null | undefined): string {
   );
 }
 
+/** A refusal for a name another record already has (409 `duplicate`): pages show it under the name field. */
+export function isDuplicateError(error: unknown): boolean {
+  const response = (error as ApiErrorLike | null | undefined)?.response;
+  return response?.status === 409 && response.data?.code === 'duplicate';
+}
+
 export function getApiErrorMessage(error: unknown, t: TFunction, fallback: string): string {
   const apiError = error as ApiErrorLike | null | undefined;
   const payload = apiError?.response?.data;

@@ -174,6 +174,7 @@
       "saveFailed": "Échec de l'enregistrement de la société.",
       "createFailed": "Échec de la création de la société.",
       "nameRequired": "Saisissez un nom.",
+      "nameTaken": "Une autre société porte déjà ce nom.",
       "countryRequired": "Choisissez un pays.",
       "currencyRequired": "Choisissez une devise de base.",
       "cityRequired": "Saisissez une ville.",
@@ -221,6 +222,7 @@
       "saveFailed": "Échec de l'enregistrement du département.",
       "createFailed": "Échec de la création du département.",
       "nameRequired": "Saisissez un nom.",
+      "nameTaken": "Un autre département de cette société porte déjà ce nom.",
       "companyRequired": "Choisissez une société.",
       "headcountInvalid": "Saisissez un nombre entier, 0 ou plus."
     }
@@ -906,7 +908,8 @@
       "itOwner": "Responsable IT",
       "itOwnerHelper": "Contact IT responsable des outils / systèmes supportant ce processus",
       "notesPlaceholder": "Notes internes, liens vers les procédures ou les cartographies de processus",
-      "nameRequired": "Le nom est requis"
+      "nameRequired": "Le nom est requis",
+      "nameTaken": "Un autre processus métier porte déjà ce nom."
     },
     "categoryManager": {
       "title": "Gérer les catégories de processus métier",

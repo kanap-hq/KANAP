@@ -300,7 +300,7 @@ Gardez votre liste de contrats synchronisée avec d'autres outils grâce au CSV 
 
 **Remarques** :
 
-- Utilisez l'**encodage UTF-8** et des **points-virgules** comme séparateurs. Un fichier enregistré par Excel en CSV simple (Windows-1252) est accepté aussi
+- Voir [Fichiers CSV](csv-files.md) pour l'encodage, le séparateur, les formes de dates et de montants, et les deux étapes d'import
 - Les dates sont calculées à partir du début, de la durée, du préavis et de la reconduction ; elles ne sont jamais importées
 
 ---

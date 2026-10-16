@@ -10,12 +10,19 @@ import { orderListQuery } from '../common/list-sort';
 
 const CONTACT_TEXT_SORTS = new Set(['last_name', 'first_name', 'email', 'country', 'supplier_name']);
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
-import { format } from '@fast-csv/format';
-import { parseString } from '@fast-csv/parse';
 import * as fs from 'fs';
-import { CsvDecodeError, decodeCsv } from '../common/csv-sheet/decode';
-import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
-import { headerMismatchError } from '../common/csv-sheet';
+import {
+  formatCsvBoolean,
+  parseCsvBoolean,
+  cellOf,
+  CsvDateOrder,
+  CsvLanguage,
+  DecimalMark,
+  ImportReportError,
+  readMasterDataFile,
+  rowProblems,
+  writeCsv,
+} from '../common/csv-sheet';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
 import { assertSetFilterModes } from '../common/ag-grid-filtering';
 
@@ -467,121 +474,107 @@ export class ContactsService {
     ];
   }
 
-  async exportCsv(scope: 'template' | 'data', opts: TenantOpts & { listQuery?: Record<string, unknown> }): Promise<{ filename: string; content: string }> {
+  /** The contacts file in the screen's language (`common/csv-sheet`): its separator, BOM and formula guard. */
+  async exportCsv(
+    scope: 'template' | 'data',
+    opts: TenantOpts & { language?: CsvLanguage; listQuery?: Record<string, unknown> },
+  ): Promise<{ filename: string; content: string }> {
     const repo = this.getRepo(opts.manager);
     const headers = this.csvHeaders();
-    const delimiter = ';';
-    const rows: any[] = [];
+    const rows: string[][] = [];
     if (scope === 'data') {
       // What the list shows (its search, filters and sort), or the whole register, newest first.
       const items: ExternalContact[] = opts.listQuery
         ? (await this.list(opts.listQuery, { ...opts, exportAll: true })).items as any
         : await repo.find({ where: { tenant_id: opts.tenantId }, order: { created_at: 'DESC' as any, id: 'ASC' as any } });
       for (const c of items) {
-        rows.push({
-          first_name: c.first_name ?? '',
-          last_name: c.last_name ?? '',
-          job_title: c.job_title ?? '',
-          email: c.email ?? '',
-          phone: c.phone ?? '',
-          mobile: c.mobile ?? '',
-          country: c.country ?? '',
-          notes: c.notes ?? '',
-          active: c.active ? 'true' : 'false',
-        });
+        rows.push([
+          c.first_name ?? '',
+          c.last_name ?? '',
+          c.job_title ?? '',
+          c.email ?? '',
+          c.phone ?? '',
+          c.mobile ?? '',
+          c.country ?? '',
+          c.notes ?? '',
+          formatCsvBoolean(!!c.active, opts.language ?? 'en'),
+        ]);
       }
     }
     const filename = scope === 'template' ? 'contacts_template.csv' : 'contacts.csv';
-    const chunks: string[] = [];
-    await new Promise<void>((resolve, reject) => {
-      const stream = format({ headers, delimiter, transform: neutralizeCsvRow });
-      stream.on('data', (chunk) => chunks.push(chunk.toString('utf8')));
-      stream.on('end', () => resolve());
-      stream.on('error', (err) => reject(err));
-      if (scope === 'template') {
-        const headerLine = headers.join(delimiter) + '\n';
-        chunks.push(headerLine);
-        stream.end();
-      } else {
-        for (const row of rows) stream.write(row);
-        stream.end();
-      }
-    });
-    const content = '\ufeff' + chunks.join('');
-    return { filename, content };
+    return { filename, content: writeCsv({ language: opts.language ?? 'en', headers, rows }) };
   }
 
+  /**
+   * Reads the contacts file through the shared layer: either separator, UTF-8 or Windows-1252,
+   * physical line numbers. Rows are matched by email; a row equal to the stored contact is
+   * unchanged and is not written.
+   */
   async importCsv(
-    { file, dryRun }: { file: Express.Multer.File; dryRun: boolean },
+    {
+      file,
+      dryRun,
+      language,
+      dateOrder,
+      decimalMark,
+    }: {
+      file: Express.Multer.File;
+      dryRun: boolean;
+      language?: CsvLanguage;
+      dateOrder?: CsvDateOrder;
+      decimalMark?: DecimalMark;
+    },
     opts: TenantOpts,
   ) {
     if (!file) throw new BadRequestException('No file uploaded');
-    const delimiter = ';';
-    const expectedHeaders = this.csvHeaders();
-    type Row = Record<string, string>;
-    const rows: Row[] = [];
-    const errors: { row: number; message: string }[] = [];
-    let headerOk = false;
-    await new Promise<void>((resolve, reject) => {
-      const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
-      if (!buf) {
-        reject(new BadRequestException('Empty upload'));
-        return;
-      }
-      let content: string;
-      try {
-        content = decodeCsv(buf as Buffer).text;
-      } catch (err) {
-        reject(err instanceof CsvDecodeError ? new BadRequestException({ message: err.message, code: err.code }) : err);
-        return;
-      }
-      parseString(content, { headers: true, delimiter, ignoreEmpty: true, trim: true })
-        .on('headers', (headers: string[]) => {
-          const missing = expectedHeaders.filter((h) => !headers.includes(h));
-          const extras = headers.filter((h) => !expectedHeaders.includes(h));
-          headerOk = missing.length === 0 && extras.length === 0;
-          const headerError = headerMismatchError(missing, extras);
-          if (headerError) errors.push(headerError);
-        })
-        .on('error', (err) => reject(err))
-        .on('data', (row: Row) => rows.push(denormalizeCsvRow(row)))
-        .on('end', () => resolve());
+    const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
+    if (!buf) throw new BadRequestException('Empty upload');
+    const read = await readMasterDataFile({
+      file: buf as Buffer,
+      fields: this.csvHeaders(),
+      language: language ?? 'en',
+      dateOrder,
+      decimalMark,
     });
-    if (!headerOk) {
-      return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, unchanged: 0, errors };
+    const report = { ignoredColumns: read.ignoredColumns, notices: read.notices };
+    if (read.headerError) {
+      return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, unchanged: 0, errors: [read.headerError], ...report };
     }
+    const errors: ImportReportError[] = [];
     const repo = this.getRepo(opts.manager);
 
     // Validate + normalize
     type Norm = Partial<ExternalContact> & { email: string };
     const normalized: Norm[] = [];
-    for (let i = 0; i < rows.length; i++) {
-      const r = rows[i];
-      const line = i + 2;
-      const email = (r['email'] ?? '').toString().trim().toLowerCase();
-      if (!email) { errors.push({ row: line, message: 'email is required' }); continue; }
-      const activeRaw = (r['active'] ?? '').toString().trim().toLowerCase();
-      let active: boolean | undefined;
-      if (activeRaw) {
-        if (['true','1','yes','y'].includes(activeRaw)) active = true;
-        else if (['false','0','no','n'].includes(activeRaw)) active = false;
-        else { errors.push({ row: line, message: 'invalid active value' }); continue; }
+    for (const row of read.rows) {
+      const line = row.line;
+      const problems = rowProblems(row);
+      if (problems.length > 0) {
+        errors.push(...problems.map((message) => ({ row: line, message })));
+        continue;
       }
-      const country = (r['country'] ?? '').toString().trim();
+      const email = cellOf(row, 'email').toLowerCase();
+      if (!email) { errors.push({ row: line, message: 'email is required' }); continue; }
+      // Yes or no in any language, or the true/false of older files; blank keeps the default.
+      const activeCell = parseCsvBoolean(cellOf(row, 'active'));
+      if (activeCell === undefined) { errors.push({ row: line, message: 'invalid active value' }); continue; }
+      const active = activeCell ?? undefined;
+      const country = cellOf(row, 'country');
       if (country && country.length !== 2) { errors.push({ row: line, message: 'country must be 2-letter ISO code' }); continue; }
       normalized.push({
         email,
-        first_name: (r['first_name'] ?? '').toString().trim() || null,
-        last_name: (r['last_name'] ?? '').toString().trim() || null,
-        job_title: (r['job_title'] ?? '').toString().trim() || null,
-        phone: (r['phone'] ?? '').toString().trim() || null,
-        mobile: (r['mobile'] ?? '').toString().trim() || null,
+        first_name: cellOf(row, 'first_name') || null,
+        last_name: cellOf(row, 'last_name') || null,
+        job_title: cellOf(row, 'job_title') || null,
+        phone: cellOf(row, 'phone') || null,
+        mobile: cellOf(row, 'mobile') || null,
         country: country || null,
-        notes: (r['notes'] ?? '').toString().trim() || null,
+        notes: cellOf(row, 'notes') || null,
         active: active ?? true,
       });
     }
-    if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors };
+    const rows = read.rows;
+    if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report };
 
     // Deduplicate by email
     const uniqueMap = new Map<string, Norm>();
@@ -604,7 +597,7 @@ export class ContactsService {
       else updated += 1;
       toWrite.push({ item, existing });
     }
-    if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, errors: [] };
+    if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, errors: [], ...report };
 
     for (const { item, existing } of toWrite) {
       if (existing) {
@@ -615,6 +608,6 @@ export class ContactsService {
         await repo.save(created);
       }
     }
-    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, errors: [] };
+    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, errors: [], ...report };
   }
 }

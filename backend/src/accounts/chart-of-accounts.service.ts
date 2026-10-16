@@ -1,3 +1,4 @@
+import { csvSeparatorOf } from '../common/csv-sheet/read';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { sortedFindQuery } from '../common/list-sort';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -470,8 +471,9 @@ export class ChartOfAccountsService {
       const file: Express.Multer.File = { fieldname: 'file', originalname: 'template.csv', encoding: '7bit', mimetype: 'text/csv', size: Buffer.byteLength(csv), buffer: Buffer.from(csv, 'utf8'), stream: undefined as any, destination: undefined as any, filename: undefined as any, path: undefined as any } as any;
       return this.accountsSvc.importCsv({ file, dryRun: true, userId: null }, { manager: mg, targetCoaId, allowCoaCodeColumn: false });
     }
-    // For new CoA scenario (no target yet), parse CSV and return totals; all rows will be inserts
-    const delimiter = ';';
+    // For new CoA scenario (no target yet), parse CSV and return totals; all rows will be inserts.
+    // The separator is read from the payload's header (a payload is saved as uploaded).
+    const delimiter = csvSeparatorOf(csv) ?? ';';
     let total = 0;
     await new Promise<void>((resolve, reject) => {
       parseString(csv, { headers: true, delimiter, ignoreEmpty: true, trim: true })

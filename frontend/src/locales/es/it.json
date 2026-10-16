@@ -1545,6 +1545,8 @@
     "providerRequired": "El proveedor es obligatorio.",
     "codeRequired": "El código es obligatorio.",
     "nameRequired": "El nombre es obligatorio.",
+    "locationNameTaken": "Otra ubicación ya tiene este nombre.",
+    "subLocationNameTaken": "Otra sub-ubicación de esta ubicación ya tiene este nombre.",
     "hostingTypeRequired": "El tipo de alojamiento es obligatorio.",
     "saveLayersFirst": "Guarde primero la conexión, luego agregue capas.",
     "roleRequired": "El rol es obligatorio.",

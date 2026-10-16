@@ -15,7 +15,7 @@ Navigate to **Master Data > Companies** to open the list.
 - **City**: city where the company is based
 - **Base currency**: ISO currency code (searchable by name or code)
 
-**Tip**: Keep names unique to avoid confusion in imports and selection lists.
+**Unique names**: each company has its own name, whatever the case (`Acme` and `acme` are the same name). A name another company already has is refused with a message under the name.
 
 ## Working with the list
 
@@ -78,7 +78,7 @@ Click any row in the list to open the company workspace. It has two tabs: **Over
 - **Status**, under the name: **Enabled** or **Disabled**. Click it to change it. Choosing **Disabled** disables the company at once: the end of validity becomes the current time
 - **Properties panel** on the right: **Country**, **Base currency**, **Chart of accounts** and **Lifecycle**. Use the panel toggle next to it to collapse the panel or open it again
 
-**Autosave**: Every change saves on its own when you leave the field. There are no Save, Reset or Close buttons. You can keep working while a change saves. When a change is refused, the reason shows under the field that caused it, except for the name, which shows its refusal at the top of the page.
+**Autosave**: Every change saves on its own when you leave the field. There are no Save, Reset or Close buttons. You can keep working while a change saves. When a change is refused, the reason shows under the field that caused it.
 
 ---
 
@@ -161,6 +161,7 @@ Use the **End of validity** to control when a company stops being active.
     - The company no longer appears in selection lists for new allocations and is excluded from reports for strictly later years.
     - Historical data remains intact; the company still appears in reports covering years when it was active.
 - **Prefer disabling over deleting.** A company that anything still uses cannot be deleted: budget lines (as paying company or in their allocations), contracts, cost centers, departments, users, the locations it operates, tasks, applications, interfaces, portfolio projects and requests, and the team members whose default company it is. The message counts what uses it, for example "This company is used by 2 departments and 14 users". Disable it instead. Its yearly metrics are deleted with it. In the list, the confirmation names the companies kept this way, with what uses them, before anything is deleted.
+- **To delete a company anyway**, first remove what uses it. Set another company on its users, budget lines and their allocations, contracts, cost centers, the locations it operates, tasks, applications, interfaces, portfolio projects and requests, and team members. Move its departments to another company, or delete them last, once nothing uses them. Then delete the company.
 
 ## Yearly metrics
 
@@ -196,7 +197,7 @@ The columns, in this order. The metric columns follow the year selected in the l
 | `reg_number`, `vat_number` | Registration and VAT numbers |
 | `base_currency` | Required. Three letters |
 | `status` | `enabled` or `disabled` |
-| `disabled_at` | The end of validity: a date (`2026-12-31`) or a full date and time |
+| `disabled_at` | The end of validity: a date (`2026-12-31`) or a full date and time. The export writes the date only. Imported again, that date keeps the stored end of validity |
 | `notes` | Free text |
 | `headcount_<year>` | Required when the row carries any metric for that year |
 | `it_users_<year>` | A whole number |
@@ -205,7 +206,7 @@ The columns, in this order. The metric columns follow the year selected in the l
 **Import**:
 
 - Start with **Preflight check**. It validates the headers, the encoding, the required fields, the duplicates and the metrics. If the check is clean, **Load** applies the inserts and the updates
-- **Matching**: by company `name`. A name that appears twice in the file is kept once, the first row winning
+- **Matching**: by company `name`, whatever the case. The stored spelling stays: a row `ACME` updates `Acme`, and the preflight check says "ACME" was matched to "Acme". A name that appears twice in the file is kept once, the first row winning
 - **Required fields**: `name`, `country_iso` and `base_currency`
 - **Status and end of validity**: the export writes the status read from the end of validity. A new company is enabled unless the row says `disabled`. On an update, a blank `status` and a blank `disabled_at` keep the stored values. `enabled` with an empty date clears the end of validity. `disabled` with an empty date keeps a date that has already passed, and otherwise ends the company today
 - A row whose status contradicts its date is refused with a row error: "Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again." or "Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed."

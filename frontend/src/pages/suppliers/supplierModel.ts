@@ -29,10 +29,7 @@ export type SupplierContactLink = {
 };
 
 /** A refusal for a name another supplier of the tenant already has (409 `duplicate`). */
-export function isDuplicateError(error: unknown): boolean {
-  const response = (error as { response?: { status?: number; data?: { code?: unknown } } } | null)?.response;
-  return response?.status === 409 && response.data?.code === 'duplicate';
-}
+export { isDuplicateError } from '../../utils/apiErrorMessage';
 
 /** The address of the contact create form, opened from a supplier with the contact type set. */
 export function newContactHref(supplierId: string, role: ContactRole): string {

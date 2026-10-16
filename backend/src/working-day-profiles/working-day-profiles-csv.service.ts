@@ -10,6 +10,7 @@ import {
   DecimalMark,
   endOfValidityCell,
   endOfValidityOf,
+  keepStoredEndOfValidity,
   MasterDataFileRead,
   readMasterDataFile,
   rowProblems,
@@ -232,7 +233,8 @@ export class WorkingDayProfilesCsvService {
       const lifecycle = resolveLifecycleState({
         currentDisabledAt: existing?.disabled_at ?? null,
         nextStatus: group.first.status,
-        nextDisabledAt: group.first.disabledAt,
+        // The stored end of validity's day keeps its time of day: the export writes the day only.
+        nextDisabledAt: keepStoredEndOfValidity(existing?.disabled_at, group.first.disabledAt),
       });
       results.set(key, {
         existing,

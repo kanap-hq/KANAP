@@ -190,7 +190,7 @@ Load or update calendars and their working days from a file.
 | `country` | Optional. The two-letter country code of a standard calendar, for example `FR`. Empty for a custom calendar |
 | `region` | Optional. The region code, for example `57` for Moselle or `BY` for Bavaria. Needs a country. Empty for the whole country |
 | `status` | `enabled` or `disabled`. Empty means `enabled` |
-| `disabled_at` | Optional column. The end of validity: a date (`2026-12-31`) or a full date and time. Empty if there is no end |
+| `disabled_at` | Optional column. The end of validity: a date (`2026-12-31`) or a full date and time. The export writes the date only. Imported again, that date keeps the stored end of validity. Empty if there is no end |
 | `year` | Four digits, from 2000 to 2100. Empty on a row that only sets the calendar's fields |
 | `jan` to `dec` | The working days of each month, with a dot as decimal separator (a comma is accepted too). Required on a row with a year |
 

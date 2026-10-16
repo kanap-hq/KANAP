@@ -9,6 +9,7 @@ import {
   DecimalMark,
   endOfValidityCell,
   endOfValidityOf,
+  keepStoredEndOfValidity,
   MasterDataFileRead,
   readMasterDataFile,
   rowProblems,
@@ -220,9 +221,10 @@ export class CostCentersCsvService {
       let disabledAt: Date | null = null;
       if (disabledAtRaw) {
         // A bare day at noon UTC, a full ISO timestamp kept; an unreadable cell is a row error.
+        // The stored end of validity's day keeps its time of day: the export writes the day only.
         const end = endOfValidityOf(raw, 'disabled_at');
         if (end.error) rowErrors.push(end.error);
-        else disabledAt = end.value;
+        else disabledAt = keepStoredEndOfValidity(existing?.disabled_at, end.value);
       }
       const lifecycleConflict = csvLifecycleConflict(status, disabledAt);
       if (lifecycleConflict) rowErrors.push(lifecycleConflict);

@@ -72,10 +72,18 @@ async function testImport() {
   assert.deepEqual(invalid.errors, [{ row: 3, message: "Invalid nature 'both'. Use 'opex', 'capex' or leave it empty." }]);
 }
 
+/** A payload saved from an English accounts export (commas) reads as one with semicolons. */
+async function testCommaPayloadReads() {
+  const { svc } = serviceWith(`\uFEFF${HEADER.replace(/;/g, ',')},nature\n1000,Tangible,,,1000,,,enabled,capex\n`);
+  const edited = await svc.updateAccount('t1', '1000', { account_name: 'Tangible assets' });
+  assert.deepEqual([edited.account_name, edited.nature], ['Tangible assets', 'capex'], 'the comma payload is read by column');
+}
+
 async function main() {
   await testRowEditKeepsNature();
   await testPayloadWithoutNature();
   await testImport();
+  await testCommaPayloadReads();
   console.log('admin-coa-templates-nature.spec: ok');
 }
 

@@ -287,6 +287,32 @@ async function testEndOfValidityFormat(pick: number) {
   });
 }
 
+/**
+ * A file name in another case than the stored one ("FINANCE" for "Finance") updates the stored row
+ * and keeps its spelling; the report says which row it matched.
+ */
+async function testNameCaseMatch(pick: number) {
+  await withTenant(`case-${pick}`, async (runner, tenantId) => {
+    const importer = importers(runner.manager, tenantId)[pick];
+    const label = importer.label;
+    assert.equal((await run(importer, [['Finance', '', '']])).ok, true);
+    const preview = (await run(importer, [['FINANCE', 'disabled', PAST]], true)) as Result & { updated?: number; inserted?: number; warnings?: any[] };
+    assert.equal(preview.ok, true, `${label}: ${JSON.stringify(preview.errors)}`);
+    assert.deepEqual([preview.inserted, preview.updated], [0, 1], `${label}: the row updates the stored one`);
+    assert.deepEqual(
+      (preview.warnings ?? []).map((w) => [w.row, w.code, w.params]),
+      [[2, 'CSV_NAME_MATCHED_CASE', { name: 'FINANCE', stored: 'Finance' }]],
+      `${label}: the preview says which row it matched`,
+    );
+    assert.equal((await run(importer, [['FINANCE', 'disabled', PAST]])).ok, true);
+    const rows = await runner.query(
+      `SELECT ${importer.nameColumn} AS name, status::text AS status FROM ${importer.table} WHERE tenant_id = $1 AND lower(${importer.nameColumn}) = 'finance'`,
+      [tenantId],
+    );
+    assert.deepEqual(rows, [{ name: 'Finance', status: 'disabled' }], `${label}: one row, stored spelling kept`);
+  });
+}
+
 async function main() {
   await dataSource.initialize();
   let failed = 0;
@@ -298,6 +324,8 @@ async function main() {
     ] as Array<[string, () => Promise<void>]>),
     ['testEndOfValidityFormat(companies)', () => testEndOfValidityFormat(0)],
     ['testEndOfValidityFormat(departments)', () => testEndOfValidityFormat(1)],
+    ['testNameCaseMatch(departments)', () => testNameCaseMatch(1)],
+    ['testNameCaseMatch(analytics values)', () => testNameCaseMatch(3)],
   ];
   try {
     for (const [name, test] of tests) {

@@ -39,6 +39,7 @@ import { drawerDatePickerSx, drawerMenuItemSx } from '../../theme/formSx';
 import api from '../../api';
 import { Trans, useTranslation } from 'react-i18next';
 import { useLocale } from '../../i18n/useLocale';
+import { screenLanguage } from '../../components/csv/readings';
 import { useTaskTypeLabel } from '../../hooks/useLocalizedTaskTypes';
 import { formatShortDate } from '../../lib/dateFormat';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
@@ -1192,6 +1193,8 @@ export default function WeeklyReport() {
         groupBy,
       }) as Record<string, string>;
       params.format = format;
+      // The file (CSV or XLSX) follows the screen language: words, days, decimals, CSV separator.
+      params.language = screenLanguage(locale);
 
       const res = await api.get('/portfolio/reports/weekly/export', {
         params,

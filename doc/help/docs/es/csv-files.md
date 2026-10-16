@@ -10,14 +10,17 @@ Cada página de datos maestros tiene **Exportar CSV** e **Importar CSV** en su b
 
 **Libros y otros archivos.** Una importación solo lee texto CSV. Un libro de Excel (`.xlsx`, `.xls`) o una hoja de cálculo OpenDocument (`.ods`) se rechaza antes de leer ninguna columna, con un mensaje que indica cómo guardarlo en CSV. En Excel: **Archivo › Guardar como › CSV UTF-8 (delimitado por comas)**. En LibreOffice Calc: **Archivo › Guardar como › Texto CSV**. Cualquier otro archivo que no sea texto se rechaza de la misma forma.
 
-**Los importes y las fechas siguen el idioma de la pantalla** en la exportación, y una importación lee ambas formas:
+**Los importes, las fechas y los sí o no siguen el idioma de la pantalla** en la exportación, y una importación lee todas las formas:
 
-| Idioma | Separador | Importes | Fechas |
-|---|---|---|---|
-| Inglés | `,` | `12280.50` | `2027-03-01` |
-| Francés, español | `;` | `12280,50` | `01/03/2027` |
-| Alemán | `;` | `12280,50` | `01.03.2027` |
+| Idioma | Separador | Importes | Fechas | Sí, no |
+|---|---|---|---|---|
+| Inglés | `,` | `12280.50` | `2027-03-01` | `yes`, `no` |
+| Francés | `;` | `12280,50` | `01/03/2027` | `oui`, `non` |
+| Español | `;` | `12280,50` | `01/03/2027` | `sí`, `no` |
+| Alemán | `;` | `12280,50` | `01.03.2027` | `ja`, `nein` |
 
 Una fecha que el archivo no puede decidir por sí solo, como `01/03/2027`, se lee en el orden del idioma en que se muestra la pantalla: día primero en francés, alemán y español, mes primero en inglés. La verificación indica cómo ha leído el archivo, con un botón para cambiar la lectura. Una fecha con un día superior a 12 decide la cuestión por sí sola, y el archivo no guarda ninguna constancia del idioma en que se exportó.
+
+Una importación lee sí o no en cualquiera de estos idiomas, y los `true`, `false`, `1` y `0` de los archivos anteriores. Los archivos de aplicaciones, activos, incidentes, proyectos, solicitudes y tareas siguen la misma tabla.
 
 **Tamaño.** Un archivo contiene hasta 20.000 filas.

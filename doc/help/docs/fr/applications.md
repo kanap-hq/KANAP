@@ -448,7 +448,7 @@ Depuis la liste des Applications :
 
 ### Processus d'import
 
-1. **Préparez votre fichier** : Utilisez l'encodage UTF-8 avec des séparateurs point-virgule (`;`). Un fichier enregistré par Excel en CSV simple (Windows-1252) est accepté aussi. Téléchargez un modèle pour vous assurer des bons en-têtes.
+1. **Préparez votre fichier** : enregistrez-le en UTF-8. Les virgules et les points-virgules conviennent tous les deux, de même qu'un fichier enregistré par Excel en CSV simple (Windows-1252). Téléchargez un modèle pour vous assurer des bons en-têtes. Le séparateur, les montants, les dates et les oui ou non de chaque langue sont dans [Fichiers CSV](csv-files.md).
 
 2. **Choisissez les paramètres d'import** :
    - **Mode** :
@@ -477,7 +477,7 @@ Depuis la liste des Applications :
 | `editor` | Éditeur du logiciel | Non | Texte libre (ex. : Microsoft, SAP) |
 | `criticality` | Criticité business | Non | Accepte un code ou un libellé depuis les Paramètres ; `__CLEAR__` l'efface |
 | `lifecycle` | Statut actuel | Non | Accepte un code ou un libellé depuis les Paramètres |
-| `is_suite` | Peut avoir des apps enfants | Non | `true` ou `false` |
+| `is_suite` | Peut avoir des apps enfants | Non | `oui` ou `non` |
 | `status` | Activé/désactivé | Non | `enabled` ou `disabled` |
 
 **Champs de version** :
@@ -494,8 +494,8 @@ Depuis la liste des Applications :
 | Colonne CSV | Description | Notes |
 |-------------|-------------|-------|
 | `access_methods` | Comment les utilisateurs accèdent | Codes ou libellés séparés par virgules depuis les Paramètres (ex. : `web,mobile,vdi`) |
-| `external_facing` | Accessible depuis Internet | `true` ou `false` |
-| `etl_enabled` | Intégration de données | `true` ou `false` |
+| `external_facing` | Accessible depuis Internet | `oui` ou `non` |
+| `etl_enabled` | Intégration de données | `oui` ou `non` |
 | `support_notes` | Informations de support | Texte libre |
 | `licensing` | Conditions de licence | Texte libre |
 | `notes` | Notes internes | Texte libre |
@@ -506,7 +506,7 @@ Depuis la liste des Applications :
 |-------------|-------------|-------|
 | `data_class` | Classification des données | Accepte un code ou un libellé depuis les Paramètres |
 | `last_dr_test` | Date du dernier test PRA | Format de date : YYYY-MM-DD |
-| `contains_pii` | Stocke des données personnelles | `true` ou `false` |
+| `contains_pii` | Stocke des données personnelles | `oui` ou `non` |
 | `data_residency` | Pays de stockage des données | Export uniquement (codes ISO) |
 
 **Champs de classification** :
@@ -573,7 +573,7 @@ Si vous incluez la colonne `id` avec un UUID valide, la correspondance utilise d
 **Erreur « Le fichier n'est pas correctement formaté »** : Cela indique généralement un problème d'encodage. Assurez-vous que votre CSV est enregistré en **UTF-8** :
 
 - **Dans LibreOffice** : Lors de l'ouverture d'un CSV, sélectionnez `UTF-8` dans le menu déroulant Jeu de caractères (pas « Japanese (Macintosh) » ni d'autres encodages). Lors de l'enregistrement, cochez « Modifier les paramètres de filtre » et choisissez UTF-8.
-- **Dans Excel** : Enregistrer sous > CSV UTF-8 (délimité par des virgules), puis ouvrez dans un éditeur de texte pour remplacer les virgules par des points-virgules.
+- **Dans Excel** : Enregistrer sous > CSV UTF-8 (délimité par des virgules).
 - **Conseil général** : Si vous voyez des caractères illisibles (`?¿`, `ï»¿`) au début de votre fichier, l'encodage est incorrect.
 
 ### Exemple CSV

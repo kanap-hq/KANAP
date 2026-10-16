@@ -16,6 +16,7 @@ import DeleteSelectedButton from '../../components/DeleteSelectedButton';
 import { useTranslation } from 'react-i18next';
 import { classificationText } from '../../utils/applicationClassification';
 import { setListFiltersParam } from '../../lib/listContext';
+import { countValueFormatter } from '../../components/grid/countValueFormatter';
 
 type ConnectionRow = {
   id: string;
@@ -323,7 +324,7 @@ export default function ConnectionsPage() {
       sortable: false,
       filter: false,
       cellStyle: { ...TABULAR_STYLE, textAlign: 'right' as const },
-      valueFormatter: (p) => String(p.value ?? 0),
+      valueFormatter: (p) => countValueFormatter({ value: p.value ?? 0 }),
       cellRenderer: ClickToWorkspace,
     },
     {
