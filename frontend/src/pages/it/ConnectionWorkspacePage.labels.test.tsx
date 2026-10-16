@@ -28,10 +28,24 @@ const CONNECTION = {
   legs: [],
 };
 
+const LINKED_INTERFACE = {
+  id: 'l-1',
+  binding_id: 'b-1',
+  interface_id: 'i-1',
+  interface_reference: 'INT-1',
+  interface_name: 'Orders feed',
+  environment: 'prod',
+  leg_type: 'load',
+  source_endpoint: null,
+  target_endpoint: null,
+  pattern: 'rest_api_sync',
+  binding_status: 'active',
+};
+
 vi.mock('../../api', () => ({
   default: {
     get: vi.fn((url: string) => Promise.resolve({
-      data: url === '/connections/c-1' ? CONNECTION : url.includes('interface-links') || url === '/assets' ? { items: [] } : [],
+      data: url === '/connections/c-1' ? CONNECTION : url.includes('interface-links') ? { items: [LINKED_INTERFACE] } : url === '/assets' ? { items: [] } : [],
     })),
     post: vi.fn(),
     patch: vi.fn(),
@@ -52,6 +66,7 @@ vi.mock('../../hooks/useItOpsSettings', () => ({
         { code: 'unknown', label: 'Unknown' },
       ],
       lifecycleStates: [{ code: 'active', label: 'Active' }],
+      interfacePatterns: [{ code: 'rest_api_sync', label: 'REST API (sync)' }],
     },
   }),
 }));
@@ -91,5 +106,25 @@ describe('ConnectionWorkspacePage endpoint and protocol names', () => {
     expect(await screen.findByText('Utilisateurs internes → PAR-DC1')).toBeInTheDocument();
     expect(screen.getByText('HTTPS, Inconnu')).toBeInTheDocument();
     expect(document.body.textContent).not.toContain('entity:');
+  });
+
+  it('shows the linked interface step and pattern by name, never their codes', async () => {
+    await i18n.changeLanguage('fr');
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <ThemeProvider theme={createAppTheme('light')}>
+        <MemoryRouter initialEntries={['/it/connections/c-1/overview']}>
+          <Routes>
+            <Route path="/it/connections/:id/:tab" element={<ConnectionWorkspacePage />} />
+          </Routes>
+        </MemoryRouter>
+      </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText('Orders feed')).toBeInTheDocument();
+    expect(screen.getByText('Chargement')).toBeInTheDocument();
+    expect(screen.getByText('API REST (synchrone)')).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain('rest_api_sync');
+    expect(document.body.textContent).not.toContain('LOAD');
   });
 });

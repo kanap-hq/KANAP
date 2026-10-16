@@ -11,6 +11,8 @@ describe('task type localization', () => {
     expect(localizeTaskType(task, 'es').name).toBe('Tarea');
     expect(localizeTaskType(task, 'en')).toBe(task);
     expect(taskTypeLabel('Incident', 'incident', 'de')).toBe('Vorfall');
+    // "Bug" is the usual word in IT departments in every language.
+    for (const locale of ['fr', 'de', 'es'] as const) expect(taskTypeLabel('Bug', 'bug', locale)).toBe('Bug');
   });
 
   it('shows a renamed shipped type, a changed description and a tenant\'s own type as they are stored', () => {

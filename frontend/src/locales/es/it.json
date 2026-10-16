@@ -1477,6 +1477,12 @@
     "riskMode": {
       "manual": "Manual",
       "derived": "Derivado"
+    },
+    "legType": {
+      "extract": "Extracción",
+      "transform": "Transformación",
+      "load": "Carga",
+      "direct": "Directo"
     }
   },
   "confirmations": {
