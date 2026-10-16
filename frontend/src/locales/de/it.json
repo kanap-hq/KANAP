@@ -186,7 +186,8 @@
         "searchLabel": "Im Katalog suchen",
         "searchPlaceholder": "z. B. SQL Server",
         "noMatch": "Kein Katalogeintrag passt.",
-        "manualLink": "Eine Technologie erfassen, die nicht im Katalog steht"
+        "manualLink": "Eine Technologie erfassen, die nicht im Katalog steht",
+        "backToCatalog": "Zurück zum Katalog"
       }
     },
     "connections": {
@@ -1462,7 +1463,9 @@
       "messages": {
         "saveFailed": "Die Technologie konnte nicht gespeichert werden.",
         "createFailed": "Die Technologie konnte nicht erstellt werden.",
-        "deleteFailed": "Die Technologie konnte nicht gelöscht werden."
+        "deleteFailed": "Die Technologie konnte nicht gelöscht werden.",
+        "duplicateName": "Eine Technologie mit diesem Namen gibt es bereits.",
+        "deleteCheckFailed": "Was beim Löschen mit entfernt würde, konnte nicht geprüft werden. Versuchen Sie es erneut."
       }
     },
     "connection": {

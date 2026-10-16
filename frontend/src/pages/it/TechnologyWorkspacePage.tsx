@@ -10,7 +10,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { useKanapDialogs } from '../../components/design';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import { useLocale } from '../../i18n/useLocale';
-import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import { getApiErrorMessage, isDuplicateError } from '../../utils/apiErrorMessage';
 import { refusalCounts } from '../../utils/deleteRefusal';
 import { getDotColor, LIFECYCLE_COLORS } from '../../utils/statusColors';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
@@ -39,8 +39,13 @@ function TechnologyDeleteButton({ technology, onDeleted, onError }: {
   const handleClick = async () => {
     const check = await api.post<{ removes: Array<{ type: string; total: number }> }>('/technologies/delete-check', { ids: [technology.id] })
       .then((res) => res.data)
-      .catch(() => null);
-    const removes = check?.removes || [];
+      .catch((err) => {
+        // Without the count of what goes with it, the delete is not offered.
+        onError(getApiErrorMessage(err, t, t('workspace.technology.messages.deleteCheckFailed')));
+        return null;
+      });
+    if (!check) return;
+    const removes = check.removes || [];
     const confirmed = await dialogs.confirm({
       title: t('common:delete.recordTitle', { name: technology.name }),
       message: removes.length
@@ -120,7 +125,9 @@ export default function TechnologyWorkspacePage() {
         setCache((prev) => ({ ...prev, ...res.data }));
         await queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === 'technologies' || query.queryKey[0] === 'grid-filter-values' });
       } catch (err) {
-        setError(getApiErrorMessage(err, t, t('workspace.technology.messages.saveFailed')));
+        setError(isDuplicateError(err)
+          ? t('workspace.technology.messages.duplicateName')
+          : getApiErrorMessage(err, t, t('workspace.technology.messages.saveFailed')));
         await technologyQuery.refetch();
       }
     });
@@ -200,6 +207,7 @@ export default function TechnologyWorkspacePage() {
             canManage={canManage}
             onPatch={patchTechnology}
             onOwnersChange={(owners) => setCache((prev) => ({ ...prev, owners }))}
+            onError={setError}
           />
         )}
       >

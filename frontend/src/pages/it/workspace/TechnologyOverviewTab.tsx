@@ -71,7 +71,8 @@ export type TechnologyPatch = Partial<Pick<TechnologyDetail,
   'name' | 'editor' | 'family' | 'mode' | 'lifecycle' | 'description' | 'notes' | 'cpe_products' | 'replaced_by_id'>>;
 
 /** `part:vendor:product`, the product part of a CPE name (`a:microsoft:sql_server`). */
-export const CPE_PRODUCT_PATTERN = /^[aoh]:[^:\s]+:[^:\s]+$/i;
+// The server's rule (`CPE_PRODUCT_RE` in backend/src/technologies/technology-rows.ts), on the lower-cased value.
+export const CPE_PRODUCT_PATTERN = /^[aoh]:[a-z0-9._\-~%!]{1,100}:[a-z0-9._\-~%!]{1,100}$/;
 export const CPE_DICTIONARY_URL = 'https://nvd.nist.gov/products/cpe/search';
 
 export type VersionStatus = 'supported' | 'extended' | 'ended' | 'unknown';
@@ -194,11 +195,12 @@ function ReplacementSelect({ technologyId, value, onChange, disabled }: {
 }
 
 /** Properties drawer of the technology: editor, family, mode, replacement and owners. */
-export function TechnologyProperties({ technology, canManage, onPatch, onOwnersChange }: {
+export function TechnologyProperties({ technology, canManage, onPatch, onOwnersChange, onError }: {
   technology: TechnologyDetail;
   canManage: boolean;
   onPatch: (patch: TechnologyPatch) => void;
   onOwnersChange: (owners: TechnologyOwner[]) => void;
+  onError: (message: string) => void;
 }) {
   const { t } = useTranslation(['it', 'common']);
   const { byField } = useItOpsEnumOptions();
@@ -224,6 +226,8 @@ export function TechnologyProperties({ technology, canManage, onPatch, onOwnersC
         owners: owners.map((owner) => ({ user_id: owner.user_id, owner_type: owner.owner_type })),
       });
       onOwnersChange(res.data || []);
+    } catch (err) {
+      onError(getApiErrorMessage(err, t, t('workspace.technology.messages.saveFailed')));
     } finally {
       setSavingOwners(false);
     }

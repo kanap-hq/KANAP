@@ -105,10 +105,11 @@ export default function TechnologiesPage() {
     .map((option) => ({ value: option.code, label: option.label }))
     .sort((a, b) => a.label.localeCompare(b.label)), [byField.technologyFamily]);
 
+  // The tenant's own editors, all of them (the catalog's are offered when typing one, not here).
   const editorValues = useCallback(async () => {
-    const res = await api.get<{ items: string[] }>('/technologies/editors');
-    return (res.data?.items || []).map((editor) => ({ value: editor, label: editor }));
-  }, []);
+    const res = await api.get<{ editor?: Array<string | null> }>('/technologies/filter-values', { params: { fields: 'editor' } });
+    return (res.data?.editor || []).map((editor) => ({ value: editor, label: editor ?? t('common:filters.blank') }));
+  }, [t]);
 
   const lifecycleValues = useCallback(async () => (byField.lifecycleStatus || [])
     .map((option) => ({ value: option.code, label: option.label })), [byField.lifecycleStatus]);

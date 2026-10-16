@@ -82,10 +82,14 @@ describe('TechnologiesPage', () => {
     renderPage();
     const families = await column('family').filterParams.getValues({});
     expect(families).toEqual([{ value: 'database', label: 'Database' }, { value: 'directory', label: 'Directory and identity' }]);
-    get.mockResolvedValueOnce({ data: { items: ['Microsoft', 'VMware'] } });
+    get.mockResolvedValueOnce({ data: { editor: ['Microsoft', 'VMware', null] } });
     const editors = await column('editor').filterParams.getValues({});
-    expect(get).toHaveBeenCalledWith('/technologies/editors');
-    expect(editors).toEqual([{ value: 'Microsoft', label: 'Microsoft' }, { value: 'VMware', label: 'VMware' }]);
+    expect(get).toHaveBeenCalledWith('/technologies/filter-values', { params: { fields: 'editor' } });
+    expect(editors).toEqual([
+      { value: 'Microsoft', label: 'Microsoft' },
+      { value: 'VMware', label: 'VMware' },
+      { value: null, label: 'common:filters.blank' },
+    ]);
   });
 
   it('opens a row on its reference', () => {

@@ -186,7 +186,8 @@
         "searchLabel": "Search the catalog",
         "searchPlaceholder": "e.g., SQL Server",
         "noMatch": "No catalog entry matches.",
-        "manualLink": "Enter a technology missing from the catalog"
+        "manualLink": "Enter a technology missing from the catalog",
+        "backToCatalog": "Back to the catalog"
       }
     },
     "connections": {
@@ -1462,7 +1463,9 @@
       "messages": {
         "saveFailed": "The technology could not be saved.",
         "createFailed": "The technology could not be created.",
-        "deleteFailed": "The technology could not be deleted."
+        "deleteFailed": "The technology could not be deleted.",
+        "duplicateName": "A technology with this name already exists.",
+        "deleteCheckFailed": "What the delete would remove could not be checked. Try again."
       }
     },
     "connection": {

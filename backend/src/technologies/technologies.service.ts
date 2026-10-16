@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 import * as path from 'path';
 import { AuditService } from '../audit/audit.service';
 import { allocateItemNumbers } from '../common/item-number.service';
+import { duplicateNameException } from '../common/duplicate-name';
 import { StorageService } from '../common/storage/storage.service';
 import { validateUploadedFile } from '../common/upload-validation';
 import { fixMulterFilename } from '../common/upload';
@@ -31,6 +32,7 @@ const SORTS: Record<string, string> = {
   editor: 'lower(t.editor)',
   family: 't.family',
   reference: 't.item_number',
+  lifecycle: 't.lifecycle',
   updated_at: 't.updated_at',
 };
 
@@ -344,10 +346,32 @@ export class TechnologiesService {
       `SELECT id FROM technologies WHERE tenant_id = $1 AND lower(name) = lower($2) AND ($3::uuid IS NULL OR id <> $3::uuid)`,
       [tenantId, name, exceptId],
     );
-    if (rows.length) throw new ConflictException('A technology with this name already exists.');
+    if (rows.length) throw duplicateNameException('A technology with this name already exists.');
   }
 
   // ==================== EDITORS ====================
+
+  /**
+   * The values of the list grid's set filters (`fields`: `editor`, `family`, `lifecycle`, comma
+   * list), the tenant's own and all of them: editors deduplicated without case (one spelling per
+   * editor, as the filter compares without case), `null` when a technology has none.
+   */
+  async filterValues(fields: unknown, opts: Opts): Promise<Record<string, Array<string | null>>> {
+    const wanted = String(fields ?? '').split(',').map((f) => f.trim())
+      .filter((f): f is (typeof GRID_SET_COLUMNS)[number] => (GRID_SET_COLUMNS as readonly string[]).includes(f));
+    const out: Record<string, Array<string | null>> = {};
+    for (const field of Array.from(new Set(wanted))) {
+      // The column comes from the fixed list above, never from the request text.
+      const key = field === 'editor' ? 'lower(editor)' : field;
+      const rows: Array<{ value: string | null }> = await opts.manager.query(
+        `SELECT DISTINCT ON (${key}) ${field} AS value FROM technologies
+          WHERE tenant_id = $1 ORDER BY ${key} NULLS LAST, ${field}`,
+        [opts.tenantId],
+      );
+      out[field] = rows.map((row) => row.value);
+    }
+    return out;
+  }
 
   /**
    * Editors to offer: the tenant's and the catalog's (`extra`), deduplicated without case (the

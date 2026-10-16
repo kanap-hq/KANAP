@@ -186,7 +186,8 @@
         "searchLabel": "Rechercher dans le catalogue",
         "searchPlaceholder": "ex. SQL Server",
         "noMatch": "Aucune entrée du catalogue ne correspond.",
-        "manualLink": "Saisir une technologie absente du catalogue"
+        "manualLink": "Saisir une technologie absente du catalogue",
+        "backToCatalog": "Revenir au catalogue"
       }
     },
     "connections": {
@@ -1462,7 +1463,9 @@
       "messages": {
         "saveFailed": "La technologie n’a pas pu être enregistrée.",
         "createFailed": "La technologie n’a pas pu être créée.",
-        "deleteFailed": "La technologie n’a pas pu être supprimée."
+        "deleteFailed": "La technologie n’a pas pu être supprimée.",
+        "duplicateName": "Une technologie porte déjà ce nom.",
+        "deleteCheckFailed": "Ce que la suppression emporterait n’a pas pu être vérifié. Réessayez."
       }
     },
     "connection": {

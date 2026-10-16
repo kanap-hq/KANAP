@@ -206,6 +206,33 @@ describe('TechnologyWorkspacePage', () => {
     expect(await screen.findByText('list page')).toBeTruthy();
   });
 
+  it('does not offer the delete when its check fails', async () => {
+    post.mockRejectedValueOnce({ response: { status: 500, data: {} } });
+    renderPage();
+    const actions = await screen.findAllByRole('button', { name: 'common:buttons.delete' });
+    fireEvent.click(actions[0]);
+    expect(await screen.findByText('workspace.technology.messages.deleteCheckFailed')).toBeTruthy();
+    expect(screen.queryByText('workspace.technology.deleteMessage')).toBeNull();
+    expect(del).not.toHaveBeenCalled();
+  });
+
+  it('says when the owners could not be saved', async () => {
+    post.mockRejectedValueOnce({ response: { status: 500, data: {} } });
+    renderPage();
+    await screen.findByRole('heading', { name: 'Microsoft SQL Server' });
+    await owners.onChange['workspace.technology.fields.itOwners'](['u-2']);
+    expect(await screen.findByText('workspace.technology.messages.saveFailed')).toBeTruthy();
+  });
+
+  it('refuses a CPE identifier the server would refuse', async () => {
+    renderPage();
+    const field = await screen.findByLabelText('workspace.technology.cpe.add');
+    fireEvent.change(field, { target: { value: 'a:vendor:prod+' } });
+    fireEvent.keyDown(field, { key: 'Enter' });
+    expect(screen.getByText('workspace.technology.cpe.invalid')).toBeTruthy();
+    expect(patch).not.toHaveBeenCalled();
+  });
+
   it('shows no writing control to a reader', async () => {
     auth.level = 'reader';
     renderPage();

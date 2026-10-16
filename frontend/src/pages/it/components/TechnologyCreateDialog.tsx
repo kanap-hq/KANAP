@@ -6,7 +6,7 @@ import api from '../../../api';
 import { KanapDialog, PropertyRow } from '../../../components/design';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { drawerAutocompleteListboxSx, drawerMenuItemSx } from '../../../theme/formSx';
-import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { getApiErrorMessage, isDuplicateError } from '../../../utils/apiErrorMessage';
 
 type CatalogEntry = {
   key: string;
@@ -77,6 +77,7 @@ export default function TechnologyCreateDialog({ open, onClose, onCreated }: Pro
   const [draft, setDraft] = React.useState({ name: '', family: '', editor: '', mode: 'installed' });
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [nameTaken, setNameTaken] = React.useState(false);
   const debouncedSearch = useDebounced(search.trim(), SEARCH_DEBOUNCE_MS);
 
   React.useEffect(() => {
@@ -85,6 +86,7 @@ export default function TechnologyCreateDialog({ open, onClose, onCreated }: Pro
     setSearch('');
     setDraft({ name: '', family: '', editor: '', mode: 'installed' });
     setError(null);
+    setNameTaken(false);
   }, [open]);
 
   const catalogQuery = useQuery({
@@ -124,11 +126,24 @@ export default function TechnologyCreateDialog({ open, onClose, onCreated }: Pro
       });
       await finish(res.data.reference);
     } catch (err) {
-      setError(getApiErrorMessage(err, t, t('workspace.technology.messages.createFailed')));
+      // A name the tenant already has is said under the name field, in the user's language.
+      if (isDuplicateError(err)) setNameTaken(true);
+      else setError(getApiErrorMessage(err, t, t('workspace.technology.messages.createFailed')));
     } finally {
       setBusy(false);
     }
   };
+
+  const linkSx = (theme: any) => ({
+    alignSelf: 'flex-start',
+    border: 0,
+    p: 0,
+    bgcolor: 'transparent',
+    color: theme.palette.kanap.teal,
+    font: 'inherit',
+    fontSize: 13,
+    cursor: 'pointer',
+  });
 
   const entries = catalogQuery.data || [];
 
@@ -225,8 +240,10 @@ export default function TechnologyCreateDialog({ open, onClose, onCreated }: Pro
               <TextField
                 variant="standard"
                 value={draft.name}
-                onChange={(event) => setDraft((prev) => ({ ...prev, name: event.target.value }))}
+                onChange={(event) => { setNameTaken(false); setDraft((prev) => ({ ...prev, name: event.target.value })); }}
                 placeholder={t('workspace.technology.placeholders.name')}
+                error={nameTaken}
+                helperText={nameTaken ? t('workspace.technology.messages.duplicateName') : undefined}
                 inputProps={{ 'aria-label': t('workspace.technology.fields.name') }}
                 fullWidth
               />
@@ -265,6 +282,9 @@ export default function TechnologyCreateDialog({ open, onClose, onCreated }: Pro
                 <MenuItem value="subscribed" sx={drawerMenuItemSx}>{t('workspace.technology.modes.subscribed')}</MenuItem>
               </Select>
             </PropertyRow>
+            <Box component="button" type="button" onClick={() => { setManual(false); setError(null); setNameTaken(false); }} sx={linkSx}>
+              {t('pages.technologies.create.backToCatalog')}
+            </Box>
           </>
         )}
       </Stack>

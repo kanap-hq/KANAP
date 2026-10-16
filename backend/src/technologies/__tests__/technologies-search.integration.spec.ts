@@ -87,6 +87,22 @@ async function testHiddenWithoutInfrastructureReader() {
   });
 }
 
+async function testOtherTenantSeesNothing() {
+  await inRolledBackTransaction(async (runner) => {
+    const a = await seed(runner);
+    const otherTenant = await seedTenant(runner, 'tech-search-other');
+    const search = entityService({ infrastructure: 'reader' });
+
+    const byName = await search.searchAll(context(runner, otherTenant) as any, { query: 'Zorglub', limit: 20 });
+    assert.ok(!byName.items.some((item: any) => item.id === a.id), "another tenant does not find the technology by name");
+    const byRef = await search.searchAll(context(runner, otherTenant) as any, { query: 'TEC-7', limit: 20 });
+    assert.ok(!byRef.items.some((item: any) => item.id === a.id), 'nor by its reference');
+    const mention = await search.searchMentionCandidates(context(runner, otherTenant) as any, { query: 'zorglub', entity_types: ['technologies'] });
+    assert.deepEqual(mention.items, [], 'nor in the @-mention picker');
+    await assert.rejects(resolveAiEntityReference(runner.manager, otherTenant, 'technologies', 'TEC-7'), /No technologies record/);
+  });
+}
+
 async function testListAcceptsGridParameters() {
   await inRolledBackTransaction(async (runner) => {
     const tenantId = await seedTenant(runner, 'tech-grid');
@@ -115,12 +131,27 @@ async function testListAcceptsGridParameters() {
     assert.deepEqual(byName.items.map((item) => item.name), ['Alpha DB', 'Beta DB'], 'the name text filter narrows');
     const byRef = await technologies.list({ filters: JSON.stringify({ reference: { filterType: 'text', type: 'equals', filter: 'tec-3' } }) }, opts);
     assert.deepEqual(byRef.items.map((item) => item.name), ['Gamma OS'], 'the reference text filter narrows');
+
+    const byLifecycle = await technologies.list({ sort: 'lifecycle:ASC' }, opts);
+    assert.equal(byLifecycle.total, 3, 'the lifecycle is a known sort');
+
+    await runner.query(`UPDATE technologies SET editor = 'VMware' WHERE tenant_id = $1 AND name = 'Alpha DB'`, [tenantId]);
+    await runner.query(`UPDATE technologies SET editor = 'vmware' WHERE tenant_id = $1 AND name = 'Beta DB'`, [tenantId]);
+    const values = await technologies.filterValues('editor,family,unknown', opts);
+    assert.deepEqual(Object.keys(values).sort(), ['editor', 'family'], 'unknown fields are ignored');
+    assert.equal(values.editor.length, 2, "the tenant's editors once each without case, and the blank one");
+    assert.equal(values.editor[0]?.toLowerCase(), 'vmware');
+    assert.equal(values.editor[1], null);
+    assert.deepEqual(values.family, ['database', 'operating_system']);
+
+    await assert.rejects(technologies.create({ name: 'alpha db' }, opts), (err: any) => err.getStatus() === 409 && err.getResponse().code === 'duplicate');
   });
 }
 
 runSpecs('technologies-search.integration.spec', [
   ['found with infrastructure reader', testFoundWithInfrastructureReader],
   ['hidden without infrastructure reader', testHiddenWithoutInfrastructureReader],
+  ['another tenant sees nothing', testOtherTenantSeesNothing],
   ['list accepts the grid parameters', testListAcceptsGridParameters],
 ]).catch((err) => {
   console.error(err);

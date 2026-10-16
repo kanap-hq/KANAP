@@ -70,4 +70,16 @@ describe('TechnologyCreateDialog', () => {
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith('TEC-5'));
     expect(post).toHaveBeenCalledWith('/technologies', { name: 'In-house broker', family: undefined, editor: undefined, mode: 'subscribed' });
   });
+
+  it('says under the name that the tenant already has it, and goes back to the catalog', async () => {
+    post.mockRejectedValueOnce({ response: { status: 409, data: { code: 'duplicate', message: 'A technology with this name already exists.' } } });
+    const onCreated = renderDialog();
+    fireEvent.click(screen.getByText('pages.technologies.create.manualLink'));
+    fireEvent.change(screen.getByLabelText('workspace.technology.fields.name'), { target: { value: 'Microsoft SQL Server' } });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    expect(await screen.findByText('workspace.technology.messages.duplicateName')).toBeTruthy();
+    expect(onCreated).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText('pages.technologies.create.backToCatalog'));
+    expect(screen.getByLabelText('pages.technologies.create.searchLabel')).toBeTruthy();
+  });
 });

@@ -186,7 +186,8 @@
         "searchLabel": "Buscar en el catálogo",
         "searchPlaceholder": "p. ej., SQL Server",
         "noMatch": "Ninguna entrada del catálogo coincide.",
-        "manualLink": "Introducir una tecnología que no está en el catálogo"
+        "manualLink": "Introducir una tecnología que no está en el catálogo",
+        "backToCatalog": "Volver al catálogo"
       }
     },
     "connections": {
@@ -1462,7 +1463,9 @@
       "messages": {
         "saveFailed": "No se pudo guardar la tecnología.",
         "createFailed": "No se pudo crear la tecnología.",
-        "deleteFailed": "No se pudo eliminar la tecnología."
+        "deleteFailed": "No se pudo eliminar la tecnología.",
+        "duplicateName": "Ya existe una tecnología con este nombre.",
+        "deleteCheckFailed": "No se pudo comprobar qué eliminaría el borrado. Inténtelo de nuevo."
       }
     },
     "connection": {
