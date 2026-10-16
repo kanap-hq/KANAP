@@ -8,6 +8,7 @@ const stableT = vi.hoisted(() => (key: string) => key);
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
   useTranslation: () => ({ t: stableT, i18n: { language: 'en', resolvedLanguage: 'en' } }),
+  Trans: ({ i18nKey }: { i18nKey?: string }) => i18nKey ?? null,
 }));
 vi.mock('../../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
 
@@ -49,8 +50,8 @@ describe('LocationSubItemsTable name refusals', () => {
     mocked.post.mockRejectedValueOnce(duplicate);
     renderTable();
     await screen.findByDisplayValue('Room A');
-    fireEvent.click(screen.getByText('+ Add sub-location'));
-    const input = screen.getByPlaceholderText('e.g., Building A — Room 1 — Rack 5');
+    fireEvent.click(screen.getByText('it:workspace.location.subItems.add'));
+    const input = screen.getByPlaceholderText('it:workspace.location.subItems.namePlaceholder');
     fireEvent.change(input, { target: { value: 'room b' } });
     fireEvent.blur(input);
     expect(await screen.findByText('messages.subLocationNameTaken')).toBeInTheDocument();

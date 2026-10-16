@@ -10,7 +10,6 @@ import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { drawerMenuItemSx } from '../../../theme/formSx';
 import { CRITICALITY_COLORS, getDotColor, LIFECYCLE_COLORS } from '../../../utils/statusColors';
 import { classificationText } from '../../../utils/applicationClassification';
-import { useTranslation } from 'react-i18next';
 
 type Props = {
   lifecycle: string;

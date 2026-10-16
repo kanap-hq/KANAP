@@ -296,7 +296,7 @@ describe('CompanyWorkspacePage', () => {
     renderAt('/master-data/companies/new/overview');
     fireEvent.change(screen.getByLabelText('companies.fields.name'), { target: { value: 'acme' } });
     await pickOption('companies.fields.country', 'Fran', 'France (FR)');
-    await pickOption('companies.fields.baseCurrency', 'Euro', 'Euro (EUR)');
+    await pickOption('companies.fields.baseCurrency', 'Euro', 'EUR · Euro');
     fireEvent.change(screen.getByLabelText('companies.fields.city'), { target: { value: 'Paris' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('companies.messages.nameTaken')).toBeInTheDocument();

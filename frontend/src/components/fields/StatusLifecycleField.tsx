@@ -107,7 +107,7 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
     setInputText(formatted);
     const iso = euDateToIsoEndOfDay(formatted);
     // The day already stored, typed again: it keeps its time of day (a switch sets one), nothing is sent.
-    if (iso && formatted !== isoToEuDate(disabledAt)) {
+    if (iso && formatted !== isoToEuDate(disabledAt, sep)) {
       onDisabledAtChange(iso);
       onStatusChange(deriveStatusFromDisabledAt(iso));
     }
@@ -144,7 +144,7 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
     const ddmmyyyy = `${d}${sep}${m}${sep}${y}`;
     setInputText(ddmmyyyy);
     // The day already stored, picked again: it keeps its time of day, nothing is sent.
-    if (ddmmyyyy === isoToEuDate(disabledAt)) return;
+    if (ddmmyyyy === isoToEuDate(disabledAt, sep)) return;
     const iso = euDateToIsoEndOfDay(ddmmyyyy);
     onDisabledAtChange(iso);
     onStatusChange(deriveStatusFromDisabledAt(iso));

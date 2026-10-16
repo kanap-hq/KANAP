@@ -1520,7 +1520,7 @@
         "itOwners": "Responsables IT",
         "impactedCompanies": "Sociétés impactées",
         "addCompanies": "Ajouter des sociétés",
-        "piiDescription": "Description des données personnelles",
+        "piiDescription": "Description des PII",
         "piiPlaceholder": "ex. : coordonnées des clients",
         "dataResidency": "Résidence des données",
         "addCountries": "Ajouter des pays"
@@ -1765,7 +1765,7 @@
         "noInfraConnectionsYet": "Aucune connexion d'infrastructure liée pour l'instant.",
         "lifecycleLine": "Cycle de vie : {{value}}",
         "criticalityLine": "Criticité : {{value}}",
-        "noPii": "Sans données personnelles",
+        "noPii": "Pas de PII",
         "openConnection": "Ouvrir la connexion",
         "unlinking": "Dissociation…",
         "linkExisting": "Lier une connexion existante",

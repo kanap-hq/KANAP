@@ -8,7 +8,6 @@ import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { formatShortDate } from '../../../lib/dateFormat';
 import { useLocale } from '../../../i18n/useLocale';
 import { classificationText } from '../../../utils/applicationClassification';
-import { useTranslation } from 'react-i18next';
 
 
 type Props = {
