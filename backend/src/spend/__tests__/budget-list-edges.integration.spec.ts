@@ -13,7 +13,7 @@ import { prng, seedListFixture, uuidFrom } from './oracle/budget-list.fixture';
 // PR C), on the differential fixture in a rolled-back transaction:
 // - the budget years one request reads are bounded (400 beyond);
 // - keys named like inherited members (`constructor`, `__proto__`…) are
-//   unknown fields, never a 500;
+//   unknown fields, never a 500: the tie-break order for a sort, a 400 for a filter;
 // - a quick search holding U+001F (the separator of the entries the engine
 //   reads as one text) matches like the rows' bag;
 // - a page far past the end is an empty page, not a 500;
@@ -78,10 +78,9 @@ async function run() {
         assert.deepEqual(sorted.ids, (await oracle.summaryIds({ ...all, sort: `${key}:${dir}` })).ids, `oracle sort on ${key}`);
       }
       const filters = `{${JSON.stringify(key)}:{"filterType":"text","type":"contains","filter":"a"}}`;
-      assert.equal((await engine.budgetListIds(scope, deps, { ...all, filters }, m)).total, 0, `text filter on ${key}: an unknown field is blank`);
-      assert.equal((await oracle.summaryIds({ ...all, filters })).total, 0, `oracle text filter on ${key}`);
+      await assert.rejects(engine.budgetListIds(scope, deps, { ...all, filters }, m), badRequest(/Unknown filter column/), `text filter on ${key}: an unknown field is refused`);
       const blank = `{${JSON.stringify(key)}:{"filterType":"set","values":[null]}}`;
-      assert.equal((await engine.budgetListIds(scope, deps, { ...all, filters: blank }, m)).total, defaultOrder.length, `blank set on ${key}`);
+      await assert.rejects(engine.budgetListIds(scope, deps, { ...all, filters: blank }, m), badRequest(/Unknown filter column/), `blank set on ${key}: refused`);
       assert.deepEqual(await engine.budgetListFilterValues(scope, deps, { ...all, fields: key }, m), {}, `filter values of ${key}`);
     }
 

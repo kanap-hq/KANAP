@@ -56,8 +56,8 @@ const NATURES = naturesAnd(null, BUDGET_NATURES);
  * What belongs to the contract goes with it: its website links, attachments and tasks. A contract
  * with recorded compliance requirements is refused (`RecordInUseException`, 409,
  * `CONTRACT_HAS_COMPLIANCE_RECORDS`, `usages: [{ type: 'compliance_requirements', total }]`): it is disabled instead. Every statement
- * names the tenant; the links are removed here rather than left to foreign keys, as most link
- * tables have none. The search entry goes with the row (trigger). Attachment files go last, once
+ * names the tenant; the links are removed here, before the foreign keys (migration 1854160000000)
+ * would cascade. The search entry goes with the row (trigger). Attachment files go last, once
  * no attachment row of the tenant uses them.
  */
 @Injectable()

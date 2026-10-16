@@ -1,6 +1,6 @@
 # Processus métier
 
-Les processus métier vous permettent de construire et maintenir un catalogue centralisé des processus de bout en bout de votre organisation — comme Order-to-Cash, Procure-to-Pay ou Hire-to-Retire. En centralisant les noms de processus, les catégories et les responsables, vous créez un point de référence unique que le reste de KANAP peut exploiter pour la responsabilité, le reporting et les audits.
+Les processus métier vous permettent de construire et maintenir un catalogue centralisé des processus de bout en bout de votre organisation, comme Order-to-Cash, Procure-to-Pay ou Hire-to-Retire. En centralisant les noms de processus, les catégories et les responsables, vous créez un point de référence unique que le reste de KANAP peut exploiter pour la responsabilité, le reporting et les audits.
 
 ## Premiers pas
 
@@ -26,14 +26,14 @@ La liste affiche tous les processus métier de votre tenant.
 
 **Colonnes par défaut** :
 
-- **Nom** — le nom du processus. Cliquez pour ouvrir l'espace de travail.
-- **Catégories** — une ou plusieurs catégories auxquelles le processus appartient (par ex. « Client & Ventes », « Finance & Contrôle de gestion »). Les catégories multiples sont affichées comme une liste séparée par des virgules.
-- **Responsable du processus** — l'utilisateur responsable du processus.
+- **Nom** : le nom du processus. Cliquez pour ouvrir l'espace de travail.
+- **Catégories** : une ou plusieurs catégories auxquelles le processus appartient (par ex. « Client & Ventes », « Finance & Contrôle de gestion »). Les catégories multiples sont affichées comme une liste séparée par des virgules.
+- **Responsable du processus** : l'utilisateur responsable du processus.
 
 **Colonnes supplémentaires** (masquées par défaut ; activez-les avec le sélecteur de colonnes) :
 
-- **Statut** — `activé` ou `désactivé`.
-- **Mis à jour** — date de dernière modification du processus.
+- **Statut** : `activé` ou `désactivé`.
+- **Mis à jour** : date de dernière modification du processus.
 
 **Filtrage et tri** :
 
@@ -43,24 +43,24 @@ La liste affiche tous les processus métier de votre tenant.
 
 **Actions** (barre d'outils en haut à droite) :
 
-- **Nouveau** (Manager+) — créer un nouveau processus métier.
-- **Gérer les catégories** (Manager+) — ouvrir le dialogue de gestion des catégories.
-- **Importer CSV** (Admin) — import en masse de processus depuis un fichier CSV.
-- **Exporter CSV** (Admin) — exporter les processus que la liste affiche, ou tous les processus, en CSV.
-- **Supprimer la sélection** (Admin) — supprimer une ou plusieurs lignes sélectionnées.
+- **Nouveau** (Manager+) : créer un nouveau processus métier.
+- **Gérer les catégories** (Manager+) : ouvrir le dialogue de gestion des catégories.
+- **Importer CSV** (Admin) : import en masse de processus depuis un fichier CSV.
+- **Exporter CSV** (Admin) : exporter les processus que la liste affiche, ou tous les processus, en CSV.
+- **Supprimer la sélection** (Admin) : supprimer une ou plusieurs lignes sélectionnées. Les interfaces et les demandes liées à un processus supprimé sont conservées, sans ce lien.
 
 ---
 
 ## L'espace de travail Processus métier
 
-Cliquez sur n'importe quelle ligne de la liste — ou le bouton **Nouveau** — pour ouvrir l'espace de travail.
+Cliquez sur n'importe quelle ligne de la liste (ou le bouton **Nouveau**) pour ouvrir l'espace de travail.
 
 L'espace de travail comporte un seul onglet **Vue d'ensemble** à gauche, et une barre d'outils en haut :
 
-- **Préc / Suiv** — naviguer entre les processus dans l'ordre de la liste actuelle.
-- **Réinitialiser** — annuler les modifications non enregistrées.
-- **Enregistrer** — persister les modifications.
-- **Fermer** (icône X) — revenir à la liste en conservant vos filtres et tri intacts.
+- **Préc / Suiv** : naviguer entre les processus dans l'ordre de la liste actuelle.
+- **Réinitialiser** : annuler les modifications non enregistrées.
+- **Enregistrer** : persister les modifications.
+- **Fermer** (icône X) : revenir à la liste en conservant vos filtres et tri intacts.
 
 Si vous quittez la page avec des modifications non enregistrées, vous serez invité à enregistrer ou annuler.
 
@@ -70,19 +70,19 @@ L'onglet Vue d'ensemble est organisé en trois sections.
 
 **Informations de base**
 
-- **Nom** (obligatoire) — utilisez un nom clair incluant le code court, par ex. « Order-to-Cash (O2C) » ou « Hire-to-Retire (H2R) ».
-- **Description** — un bref résumé de ce que couvre le processus. Une bonne description capture les points de départ et d'arrivée (par ex. « De la commande client jusqu'à la livraison, la facturation et la réception du paiement. »).
+- **Nom** (obligatoire) : utilisez un nom clair incluant le code court, par ex. « Order-to-Cash (O2C) » ou « Hire-to-Retire (H2R) ».
+- **Description** : un bref résumé de ce que couvre le processus. Une bonne description capture les points de départ et d'arrivée (par ex. « De la commande client jusqu'à la livraison, la facturation et la réception du paiement. »).
 - **Interrupteur de statut** : son libellé indique l'état actuel (**Activé** ou **Désactivé**). Les processus activés apparaissent dans les sélecteurs de l'application. Désactivez un processus pour le retirer sans le supprimer, afin que les références historiques restent intactes.
 
 **Classification**
 
-- **Catégories** (sélection multiple) — assignez une ou plusieurs catégories. Vous pouvez choisir parmi les catégories existantes, en créer une nouvelle en ligne avec **Nouvelle catégorie**, ou cliquer sur **Modifier les catégories** pour ouvrir le dialogue complet de gestion des catégories.
-- **Responsable du processus** — l'utilisateur ultimement responsable du processus. Affiché dans la grille de la liste et disponible pour les futures notifications et approbations.
-- **Responsable IT** — l'utilisateur responsable des systèmes et outils IT qui supportent ce processus.
+- **Catégories** (sélection multiple) : assignez une ou plusieurs catégories. Vous pouvez choisir parmi les catégories existantes, en créer une nouvelle en ligne avec **Nouvelle catégorie**, ou cliquer sur **Modifier les catégories** pour ouvrir le dialogue complet de gestion des catégories.
+- **Responsable du processus** : l'utilisateur ultimement responsable du processus. Affiché dans la grille de la liste et disponible pour les futures notifications et approbations.
+- **Responsable IT** : l'utilisateur responsable des systèmes et outils IT qui supportent ce processus.
 
 **Détails**
 
-- **Notes** — champ libre pour des informations internes telles que des liens vers des cartographies de processus, des procédures, des notes de périmètre ou des plans d'amélioration.
+- **Notes** : champ libre pour des informations internes telles que des liens vers des cartographies de processus, des procédures, des notes de périmètre ou des plans d'amélioration.
 
 ---
 
@@ -97,10 +97,10 @@ Les deux ouvrent le dialogue **Gérer les catégories de processus métier**.
 
 **Ce que vous pouvez faire** :
 
-- **Renommer** — modifiez le nom directement dans le champ texte.
-- **Activer / Désactiver** — basculez si une catégorie apparaît dans les sélecteurs. Les catégories inactives sont masquées des nouvelles affectations mais préservées sur les processus existants.
-- **Supprimer** — supprimez une catégorie. La suppression ne fonctionne que si aucun processus ne l'utilise ; sinon, vous verrez une erreur.
-- **Nouvelle catégorie** — ajoutez une nouvelle ligne en haut du dialogue.
+- **Renommer** : modifiez le nom directement dans le champ texte.
+- **Activer / Désactiver** : basculez si une catégorie apparaît dans les sélecteurs. Les catégories inactives sont masquées des nouvelles affectations mais préservées sur les processus existants.
+- **Supprimer** : supprimez une catégorie. La suppression ne fonctionne que si aucun processus ne l'utilise ; sinon, le message compte les processus qui l'utilisent. Désactivez-la plutôt.
+- **Nouvelle catégorie** : ajoutez une nouvelle ligne en haut du dialogue.
 
 **Comportement d'enregistrement et d'annulation** :
 
@@ -121,7 +121,7 @@ Cliquez sur **Exporter CSV** sur la page de la liste. Vous pouvez exporter :
 - Un **modèle** (ligne d'en-tête uniquement) à utiliser comme point de départ.
 - Les **données** (tous les processus du tenant actuel).
 
-Le fichier utilise des points-virgules (`;`) comme séparateurs et est encodé en UTF-8 avec BOM pour la compatibilité Excel.
+Le séparateur suit la langue de votre écran. Voir [Fichiers CSV](csv-files.md) pour l'encodage, le séparateur et les deux étapes d'import.
 
 **Colonnes** : `name`, `categories`, `description`, `notes`, `status`.
 
@@ -131,15 +131,15 @@ La colonne `categories` peut contenir plusieurs noms de catégories séparés pa
 
 Cliquez sur **Importer CSV** sur la page de la liste, puis :
 
-1. Téléchargez votre fichier CSV (doit correspondre aux en-têtes du modèle et utiliser `;` comme séparateur).
-2. Lancez le **Contrôle préalable** — cela valide les en-têtes et les données, et montre combien de lignes seront créées vs mises à jour.
+1. Téléchargez votre fichier CSV avec les titres de colonnes du modèle. Les virgules comme les points-virgules conviennent.
+2. Lancez le **Contrôle préalable** : cela valide les en-têtes et les données, et montre combien de lignes seront créées vs mises à jour.
 3. Si le contrôle réussit, cliquez sur **Charger** pour appliquer les modifications.
 
 **Règles de correspondance** :
 
-- Les lignes sont mises en correspondance par **Nom** (insensible à la casse). Un nom correspondant met à jour le processus existant ; un nouveau nom crée un nouveau processus.
+- Les lignes sont mises en correspondance par **Nom**, quelle que soit la casse. Un nom correspondant met à jour le processus existant et garde le nom enregistré (la vérification préalable indique le processus rapproché) ; un nouveau nom crée un nouveau processus.
 - Chaque catégorie dans la cellule `categories` est nettoyée et mise en correspondance par nom. Si une catégorie n'existe pas encore, elle est créée automatiquement comme catégorie active.
-- La colonne `status` définit l'état activé/désactivé. Les dates de cycle de vie ne sont pas importées — ajustez-les dans l'espace de travail si nécessaire.
+- Le fichier n'a pas de colonne de fin de validité. Lors d'une mise à jour, un `status` vide, ou égal au statut actuel du processus, garde sa fin de validité. Un statut différent s'applique : `enabled` efface la fin de validité, et `disabled` termine le processus aujourd'hui, sauf si sa fin de validité est déjà passée. Un nouveau processus est activé, sauf si la ligne indique `disabled`.
 
 **Conseil** : exportez d'abord vos données actuelles, modifiez le CSV et réimportez. Cela évite les doublons accidentels et garantit que vous travaillez à partir de l'état le plus récent.
 
@@ -147,7 +147,7 @@ Cliquez sur **Importer CSV** sur la page de la liste, puis :
 
 ## Conseils
 
-- **Convention de nommage** — adoptez le format « Nom clair (CODE) » (par ex. « Order-to-Cash (O2C) ») pour que les processus soient faciles à chercher et reconnaissables en un coup d'œil.
-- **Retirez, ne supprimez pas** — désactivez les processus que vous n'utilisez plus au lieu de les supprimer. Cela préserve les références historiques et les pistes d'audit.
-- **Catégories d'abord** — mettez en place votre structure de catégories avant d'importer des processus en masse. L'import créera automatiquement les catégories manquantes, mais planifier à l'avance garde les choses ordonnées.
-- **Responsable du processus tôt** — assigner un responsable du processus maintenant signifie que les données de responsabilité sont déjà en place lorsque de futures fonctionnalités comme les notifications et le routage de tâches seront disponibles.
+- **Convention de nommage** : adoptez le format « Nom clair (CODE) » (par ex. « Order-to-Cash (O2C) ») pour que les processus soient faciles à chercher et reconnaissables en un coup d'œil.
+- **Retirez, ne supprimez pas** : désactivez les processus que vous n'utilisez plus au lieu de les supprimer. Cela préserve les références historiques et les pistes d'audit.
+- **Catégories d'abord** : mettez en place votre structure de catégories avant d'importer des processus en masse. L'import créera automatiquement les catégories manquantes, mais planifier à l'avance garde les choses ordonnées.
+- **Responsable du processus tôt** : assigner un responsable du processus maintenant signifie que les données de responsabilité sont déjà en place lorsque de futures fonctionnalités comme les notifications et le routage de tâches seront disponibles.

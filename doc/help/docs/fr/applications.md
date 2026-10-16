@@ -75,10 +75,10 @@ Une fois enregistré, l'espace de travail déverrouille tous les onglets pour un
 La grille Applications offre une vue complète de votre portefeuille applicatif.
 
 **Filtre de périmètre en haut (Afficher)** :
-- **Mes apps** : affiche les apps où vous êtes listé dans le tiroir des propriétés comme **Responsable métier** ou **Responsable IT**. Les entrées multi-responsables sont supportées.
-- **Apps de mon équipe** : affiche les apps où tout membre de votre équipe Portefeuille est listé comme Responsable métier ou Responsable IT. Votre propre responsabilité est aussi incluse dans ce périmètre. Désactivé si vous n'êtes pas assigné à une équipe Portefeuille.
-- **Toutes les apps** (par défaut) : affiche la grille complète des Applications avec le comportement de filtre par défaut du cycle de vie.
-- Votre sélection est mémorisée entre les sessions -- revenir sur la page restaure votre dernier choix.
+- **Mes applications** : affiche les apps où vous êtes listé dans le tiroir des propriétés comme **Responsable métier** ou **Responsable IT**. Les entrées multi-responsables sont supportées.
+- **Applications de mon équipe** : affiche les apps où tout membre de votre équipe Portefeuille est listé comme Responsable métier ou Responsable IT. Votre propre responsabilité est aussi incluse dans ce périmètre. Désactivé si vous n'êtes pas assigné à une équipe Portefeuille.
+- **Toutes les applications** (par défaut) : affiche la grille complète des Applications avec le comportement de filtre par défaut du cycle de vie.
+- Votre sélection est mémorisée entre les sessions : revenir sur la page restaure votre dernier choix.
 
 **Colonnes par défaut** :
 - **Nom** : Nom de l'application avec libellé de catégorie et badge « Inclus dans : {suite} » pour les composants d'une suite
@@ -118,13 +118,13 @@ La grille Applications offre une vue complète de votre portefeuille applicatif.
 - **Import CSV** : Import en masse depuis un fichier CSV (`applications:admin`)
 - **Export CSV** : Exporter la liste en CSV (`applications:admin`). Les colonnes issues des catalogues (catégorie, cycle de vie, criticité, criticité cyber, vague de reprise, classification de données, méthodes d'accès) sont exportées avec leurs noms ; l'import accepte un nom ou le code interne.
 - **Copier l'élément** : Dupliquer une application sélectionnée avec toutes ses relations principales (`applications:manager`). Voir [Copier des applications](#copier-des-applications) pour ce qui est et n'est pas copié.
-- **Supprimer la sélection** : Supprimer les applications sélectionnées (`applications:admin`)
+- **Supprimer la sélection** : Supprimer les applications sélectionnées (`applications:admin`). Une application source ou cible d’une interface ne peut pas être supprimée : désactivez-la plutôt, ou supprimez d’abord ses interfaces. Avant la confirmation, la fenêtre liste ces applications comme conservées, avec leur nombre d’interfaces. Les autres sont supprimées avec leurs déploiements et leurs liens vers d’autres éléments ; la confirmation compte les déploiements
 
 ---
 
 ## L'espace de travail des applications
 
-Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. L'espace de travail comporte un **en-tête** avec des métadonnées rapides, un **tiroir des propriétés** sur la droite (la carte d'identité de l'application -- toujours visible) et une **zone de contenu** au centre qui change selon l'onglet.
+Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. L'espace de travail comporte un **en-tête** avec des métadonnées rapides, un **tiroir des propriétés** sur la droite (la carte d'identité de l'application, toujours visible) et une **zone de contenu** au centre qui change selon l'onglet.
 
 ### En-tête
 
@@ -137,12 +137,12 @@ L'en-tête affiche :
 - Date de **Mise en production**
 - **Envoyer le lien** : copier un lien partageable vers cet espace de travail
 - **Créer une nouvelle version** : lancer l'assistant de migration de version (voir [Gestion des versions](#gestion-des-versions))
-- **Supprimer** (`applications:admin`)
+- **Supprimer** (`applications:admin`) : une application qui a des interfaces reçoit le refus et sa raison, avec seulement Fermer. Sinon, la confirmation nomme l’application et compte les déploiements supprimés avec elle, ainsi que ses liens vers d’autres éléments
 - **Précédent / Suivant** : parcourir la liste filtrée sans revenir à la grille
 
 ### Tiroir des propriétés (panneau de droite)
 
-Le tiroir est la carte d'identité de l'application. Il est affiché sur chaque onglet et modifié en ligne -- les changements sont enregistrés automatiquement.
+Le tiroir est la carte d'identité de l'application. Il est affiché sur chaque onglet et modifié en ligne. Les changements sont enregistrés automatiquement.
 
 **Identité** :
 - **Catégorie**, **Fournisseur**, **Éditeur**
@@ -175,7 +175,7 @@ L'onglet Vue d'ensemble est le récit de l'application. Il contient :
 
 ### Déploiements
 
-L'onglet Déploiements documente où l'application s'exécute réellement -- un bloc par environnement, avec les serveurs attachés à chacun.
+L'onglet Déploiements documente où l'application s'exécute réellement : un bloc par environnement, avec les serveurs attachés à chacun.
 
 **Environnements** : Production, Pré-prod, QA, Test, Dev, Sandbox.
 
@@ -185,7 +185,7 @@ L'onglet Déploiements documente où l'application s'exécute réellement -- un 
 - **SSO activé** / **MFA supporté**
 - **Notes**
 
-**Ajouter un déploiement** ouvre une boîte de dialogue où vous définissez l'environnement, le cycle de vie, l'URL de base, les indicateurs SSO/MFA et les notes. Chaque environnement ne peut être ajouté qu'une seule fois. La pastille de cycle de vie sur l'en-tête d'un déploiement peut aussi être modifiée en ligne depuis un menu contextuel.
+**Ajouter un déploiement** ouvre une boîte de dialogue où vous définissez l'environnement, le cycle de vie, l'URL de base, les indicateurs SSO/MFA et les notes. Chaque environnement ne peut être ajouté qu'une seule fois. La pastille de cycle de vie sur l'en-tête d'un déploiement peut aussi être modifiée en ligne depuis un menu contextuel. Un déploiement qui a encore des serveurs ou des liaisons d'interface ne peut pas être supprimé : retirez-les d'abord.
 
 **Serveurs par déploiement** : Chaque bloc de déploiement affiche un tableau des serveurs assignés :
 
@@ -196,7 +196,7 @@ L'onglet Déploiements documente où l'application s'exécute réellement -- un 
 | **Hébergement** | Dérivé du site de l'actif |
 | **Depuis** | Date à laquelle le serveur a été assigné à ce déploiement |
 
-Cliquez sur **Ajouter un serveur** dans l'en-tête du déploiement pour rattacher un actif. Les actifs cluster sont exclus -- assignez plutôt les hôtes membres du cluster.
+Cliquez sur **Ajouter un serveur** dans l'en-tête du déploiement pour rattacher un actif. Les actifs cluster sont exclus : assignez plutôt les hôtes membres du cluster.
 
 **Conseil** : Documentez les serveurs dans **Cartographie SI > Actifs** d'abord, puis liez-les ici. L'onglet Vue d'ensemble de l'actif affichera les mêmes assignations dans le sens inverse.
 
@@ -204,13 +204,13 @@ Cliquez sur **Ajouter un serveur** dans l'en-tête du déploiement pour rattache
 
 ### Interfaces
 
-L'onglet Interfaces affiche toutes les intégrations auxquelles cette application participe -- en tant que source, cible ou middleware. Le badge de l'onglet affiche le total.
+L'onglet Interfaces affiche toutes les intégrations auxquelles cette application participe, en tant que source, cible ou middleware. Le badge de l'onglet affiche le total.
 
 Les interfaces sont **regroupées par environnement** (PROD, PRE_PROD, QA, ...). Au sein de chaque environnement, elles sont divisées en :
 
-- **Entrantes** -- cette application reçoit des données
-- **Sortantes** -- cette application envoie des données
-- **Routées** -- cette application est le middleware/ETL pour un flux entre deux autres apps
+- **Entrantes** : cette application reçoit des données
+- **Sortantes** : cette application envoie des données
+- **Routées** : cette application est le middleware/ETL pour un flux entre deux autres apps
 
 Chaque ligne affiche le nom de l'interface, l'application contrepartie et un indicateur **Via middleware**. Cliquez sur la ligne pour ouvrir l'espace de travail de l'interface ; cliquez sur la contrepartie pour ouvrir l'autre application.
 
@@ -287,9 +287,9 @@ L'onglet Relations lie cette application à vos enregistrements financiers, cont
 - **Lignes budgétaires** : les lignes OPEX et CAPEX de cette application, dans une seule liste. Recherchez par titre ou par référence (`BL-12`) ; chaque suggestion affiche son type
 - **Contrats** : contrats fournisseurs
 - **Projets** : projets du portefeuille liés à cette application
-- **Tâches** : tâches liées à cette application. Cette liste est en lecture seule ici -- les tâches gagnent ou perdent ce lien lorsque vous définissez le champ **App / Service** sur une tâche dans la page Tâches.
+- **Tâches** : tâches liées à cette application. Cette liste est en lecture seule ici : les tâches gagnent ou perdent ce lien lorsque vous définissez le champ **App / Service** sur une tâche dans la page Tâches.
 
-**Sites web pertinents** : ajoutez des URL avec des noms optionnels -- utile pour les portails fournisseurs, tableaux de bord de monitoring ou liens de documentation. **Ajouter une URL** ouvre une boîte de dialogue ; les entrées existantes peuvent être modifiées ou supprimées.
+**Sites web pertinents** : ajoutez des URL avec des noms optionnels, utiles pour les portails fournisseurs, tableaux de bord de monitoring ou liens de documentation. **Ajouter une URL** ouvre une boîte de dialogue ; les entrées existantes peuvent être modifiées ou supprimées.
 
 **Pièces jointes** : Glissez-déposez des fichiers ou cliquez sur **Sélectionner des fichiers** pour téléverser. Cliquez sur la pastille d'une pièce jointe pour la télécharger. La suppression est disponible pour les managers.
 
@@ -301,16 +301,16 @@ KANAP propose **deux approches pour gérer les versions d'applications**, selon 
 
 | Approche | Idéale pour | Ce qui se passe |
 |----------|-------------|-----------------|
-| **Simple** | La plupart des applications | Mettez à jour les champs de version dans le tiroir des propriétés ou le formulaire de création -- même enregistrement, nouveau numéro de version |
-| **Avancée** | Migrations majeures | Utilisez **Créer une nouvelle version** pour créer un nouvel enregistrement d'application avec suivi de lignée -- exécutez ancienne et nouvelle versions côte à côte |
+| **Simple** | La plupart des applications | Mettez à jour les champs de version dans le tiroir des propriétés ou le formulaire de création : même enregistrement, nouveau numéro de version |
+| **Avancée** | Migrations majeures | Utilisez **Créer une nouvelle version** pour créer un nouvel enregistrement d'application avec suivi de lignée : exécutez ancienne et nouvelle versions côte à côte |
 
 ### Suivi de version simple (mise à jour en place)
 
-Pour la plupart des applications -- où vous mettez à niveau et l'ancienne version disparaît simplement -- mettez à jour **Version**, **Mise en production**, **Fin de support** et **Date de retrait** dans le formulaire de création ou le tiroir des propriétés. La pastille de version dans l'en-tête et les métadonnées **Mise en production** reflètent ce que vous avez défini.
+Pour la plupart des applications (où vous mettez à niveau et l'ancienne version disparaît simplement), mettez à jour **Version**, **Mise en production**, **Fin de support** et **Date de retrait** dans le formulaire de création ou le tiroir des propriétés. La pastille de version dans l'en-tête et les métadonnées **Mise en production** reflètent ce que vous avez défini.
 
 Cette approche garde tout dans un seul enregistrement. Lors d'une mise à niveau, mettez à jour les champs de version et c'est fait. L'historique est suivi dans le journal d'audit.
 
-**À utiliser quand** : les mises à niveau se font en place sans chevauchement -- une version remplace l'autre.
+**À utiliser quand** : les mises à niveau se font en place sans chevauchement : une version remplace l'autre.
 
 ### Créer une nouvelle version (migrations parallèles)
 
@@ -318,9 +318,9 @@ Pour les mises à niveau majeures d'applications où vous devez exécuter les an
 
 L'assistant comporte trois étapes :
 
-1. **Détails de la version** -- nouveau nom d'application, libellé de version, dates de **Mise en production** et **Fin de support**.
-2. **Options de copie** -- choisissez ce qui doit être copié depuis la source. Valeurs par défaut indiquées ci-dessous.
-3. **Interfaces** -- sélectionnez les interfaces à migrer vers la nouvelle version.
+1. **Détails de la version** : nouveau nom d'application, libellé de version, dates de **Mise en production** et **Fin de support**.
+2. **Options de copie** : choisissez ce qui doit être copié depuis la source. Valeurs par défaut indiquées ci-dessous.
+3. **Interfaces** : sélectionnez les interfaces à migrer vers la nouvelle version.
 
 La nouvelle version est créée comme une application séparée avec :
 - Un cycle de vie **Proposé** (prête à être configurée avant la mise en production)
@@ -365,7 +365,7 @@ Il existe deux façons de copier une application dans KANAP :
 
 ### Copier l'élément (depuis la grille Applications)
 
-Utilisez cela lorsque vous souhaitez créer un duplicata indépendant d'une application -- typiquement pour créer une entrée d'application similaire sans lignée de version.
+Utilisez cela lorsque vous souhaitez créer un duplicata indépendant d'une application, typiquement pour créer une entrée d'application similaire sans lignée de version.
 
 1. Sélectionnez une application dans la grille
 2. Cliquez sur **Copier l'élément**
@@ -440,19 +440,19 @@ Depuis la liste des Applications :
 | Préréglage | Description |
 |------------|-------------|
 | **Export complet** | Tous les champs exportables incluant les données calculées/lecture seule (horodatages, résidence des données, métriques utilisateurs) |
-| **Enrichissement de données** | Uniquement les champs importables -- idéal pour les flux d'édition aller-retour |
+| **Enrichissement de données** | Uniquement les champs importables : idéal pour les flux d'édition aller-retour |
 
-**Export modèle** : Télécharge uniquement les en-têtes -- utile pour préparer des fichiers d'import avec la bonne structure. Le modèle inclut tous les champs importables.
+**Export modèle** : Télécharge uniquement les en-têtes, utile pour préparer des fichiers d'import avec la bonne structure. Le modèle inclut tous les champs importables.
 
 **Sélection personnalisée** : Choisissez les champs spécifiques à inclure dans votre export.
 
 ### Processus d'import
 
-1. **Préparez votre fichier** : Utilisez l'encodage UTF-8 avec des séparateurs point-virgule (`;`). Un fichier enregistré par Excel en CSV simple (Windows-1252) est accepté aussi. Téléchargez un modèle pour vous assurer des bons en-têtes.
+1. **Préparez votre fichier** : enregistrez-le en UTF-8. Les virgules et les points-virgules conviennent tous les deux, de même qu'un fichier enregistré par Excel en CSV simple (Windows-1252). Téléchargez un modèle pour vous assurer des bons en-têtes. Le séparateur, les montants, les dates et les oui ou non de chaque langue sont dans [Fichiers CSV](csv-files.md).
 
 2. **Choisissez les paramètres d'import** :
    - **Mode** :
-     - `Enrichir` (par défaut) : Les cellules vides conservent les valeurs existantes -- ne mettez à jour que ce que vous spécifiez
+     - `Enrichir` (par défaut) : Les cellules vides conservent les valeurs existantes : ne mettez à jour que ce que vous spécifiez
      - `Remplacer` : Les champs fournis sont mis à jour ; les cellules de classification vides conservent la valeur existante et `__CLEAR__` l'efface explicitement
    - **Opération** :
      - `Upsert` (par défaut) : Créer de nouvelles applications ou mettre à jour les existantes
@@ -477,7 +477,7 @@ Depuis la liste des Applications :
 | `editor` | Éditeur du logiciel | Non | Texte libre (ex. : Microsoft, SAP) |
 | `criticality` | Criticité business | Non | Accepte un code ou un libellé depuis les Paramètres ; `__CLEAR__` l'efface |
 | `lifecycle` | Statut actuel | Non | Accepte un code ou un libellé depuis les Paramètres |
-| `is_suite` | Peut avoir des apps enfants | Non | `true` ou `false` |
+| `is_suite` | Peut avoir des apps enfants | Non | `oui` ou `non` |
 | `status` | Activé/désactivé | Non | `enabled` ou `disabled` |
 
 **Champs de version** :
@@ -494,8 +494,8 @@ Depuis la liste des Applications :
 | Colonne CSV | Description | Notes |
 |-------------|-------------|-------|
 | `access_methods` | Comment les utilisateurs accèdent | Codes ou libellés séparés par virgules depuis les Paramètres (ex. : `web,mobile,vdi`) |
-| `external_facing` | Accessible depuis Internet | `true` ou `false` |
-| `etl_enabled` | Intégration de données | `true` ou `false` |
+| `external_facing` | Accessible depuis Internet | `oui` ou `non` |
+| `etl_enabled` | Intégration de données | `oui` ou `non` |
 | `support_notes` | Informations de support | Texte libre |
 | `licensing` | Conditions de licence | Texte libre |
 | `notes` | Notes internes | Texte libre |
@@ -506,7 +506,7 @@ Depuis la liste des Applications :
 |-------------|-------------|-------|
 | `data_class` | Classification des données | Accepte un code ou un libellé depuis les Paramètres |
 | `last_dr_test` | Date du dernier test PRA | Format de date : YYYY-MM-DD |
-| `contains_pii` | Stocke des données personnelles | `true` ou `false` |
+| `contains_pii` | Stocke des données personnelles | `oui` ou `non` |
 | `data_residency` | Pays de stockage des données | Export uniquement (codes ISO) |
 
 **Champs de classification** :
@@ -573,7 +573,7 @@ Si vous incluez la colonne `id` avec un UUID valide, la correspondance utilise d
 **Erreur « Le fichier n'est pas correctement formaté »** : Cela indique généralement un problème d'encodage. Assurez-vous que votre CSV est enregistré en **UTF-8** :
 
 - **Dans LibreOffice** : Lors de l'ouverture d'un CSV, sélectionnez `UTF-8` dans le menu déroulant Jeu de caractères (pas « Japanese (Macintosh) » ni d'autres encodages). Lors de l'enregistrement, cochez « Modifier les paramètres de filtre » et choisissez UTF-8.
-- **Dans Excel** : Enregistrer sous > CSV UTF-8 (délimité par des virgules), puis ouvrez dans un éditeur de texte pour remplacer les virgules par des points-virgules.
+- **Dans Excel** : Enregistrer sous > CSV UTF-8 (délimité par des virgules).
 - **Conseil général** : Si vous voyez des caractères illisibles (`?¿`, `ï»¿`) au début de votre fichier, l'encodage est incorrect.
 
 ### Exemple CSV
@@ -592,7 +592,7 @@ Custom ERP;lob;;Moderate;Active;2018-03-20;false
 - **Commencez par les apps critiques** : Documentez d'abord vos applications critiques pour le métier, puis descendez dans les niveaux de criticité.
 - **Utilisez les suites pour regrouper** : Activez « Peut avoir des apps enfants » dans l'onglet Exploitation pour marquer une application comme une Suite qui regroupe les composants liés (ex. : modules SAP sous une Suite SAP).
 - **Liez aux dépenses tôt** : Connectez les lignes OPEX, CAPEX et contrats dans l'onglet Relations pour voir l'image complète des coûts pour chaque application.
-- **Maintenez les déploiements à jour** : L'onglet Déploiements alimente les pastilles d'environnement dans la liste -- maintenez-le à jour pour une visibilité précise.
+- **Maintenez les déploiements à jour** : L'onglet Déploiements alimente les pastilles d'environnement dans la liste : maintenez-le à jour pour une visibilité précise.
 - **Documentez l'audience** : Définissez les audiences société et département dans le tiroir des propriétés ; le nombre d'utilisateurs est alors dérivé automatiquement et utilisé dans les rapports.
 - **Exploitez le filtrage par catégorie** : Utilisez le filtre de la colonne Catégorie pour vous concentrer sur des types d'applications spécifiques (ex. : afficher uniquement les apps Métier, ou exclure les outils de Productivité).
 - **Attachez les connaissances tôt** : Liez les runbooks et les documents d'architecture depuis l'onglet Vue d'ensemble pour que l'équipe sache où chercher lors des incidents.

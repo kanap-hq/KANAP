@@ -107,7 +107,7 @@ La grille affiche uniquement les comptes du CoA sélectionné.
 - **Nouveau compte** (`accounts:manager`) : Ouvre un nouveau formulaire de compte avec le CoA sélectionné déjà choisi.
 - **Importer CSV** (`accounts:admin`) : Importer des comptes dans le CoA sélectionné.
 - **Exporter CSV** (`accounts:admin`) : Exporter les comptes du CoA sélectionné.
-- **Supprimer la sélection** (`accounts:admin`) : Supprimer les lignes de comptes sélectionnées. Sélectionnez les lignes avec la colonne de cases à cocher (visible par les administrateurs).
+- **Supprimer la sélection** (`accounts:admin`) : Supprimer les lignes de comptes sélectionnées. Sélectionnez les lignes avec la colonne de cases à cocher (visible par les administrateurs). Un compte utilisé par des lignes budgétaires ne peut pas être supprimé : désactivez-le plutôt. Avant toute suppression, la confirmation liste les comptes conservés, avec la raison.
 
 Toutes les cellules sont des liens cliquables vers l'espace de travail du compte. Vous pouvez faire un clic droit ou Ctrl+clic pour ouvrir dans un nouvel onglet.
 
@@ -283,7 +283,7 @@ Chaque ligne a un menu **⋯** qui ne propose que les actions applicables à ce 
 - **Définir comme plan par défaut du pays** / **Ne plus utiliser comme plan par défaut du pays** (`accounts:manager`) : pour les plans d'un seul pays.
 - **Définir par défaut pour les autres pays** / **Ne plus utiliser par défaut pour les autres pays** (`accounts:manager`) : pour les plans de tous les pays. En le définissant par défaut, vous l'attribuez aussi aux sociétés qui n'ont pas de plan comptable.
 - **Définir comme plan de consolidation** / **Ne plus utiliser comme plan de consolidation** (`accounts:manager`) : pour n'importe quel plan. Voir [Modifier le plan de consolidation](#modifier-le-plan-de-consolidation).
-- **Supprimer** (`accounts:admin`) : Supprime le plan avec ses comptes. Si le plan contient des comptes, une confirmation indique combien sont supprimés. S'il s'agit du plan de consolidation, la confirmation précise que le reporting de groupe n'aura plus de plan de référence. La suppression est refusée tant que des sociétés utilisent le plan ou que des lignes OPEX/CAPEX utilisent ses comptes, et la fenêtre en indique la raison.
+- **Supprimer** (`accounts:admin`) : Supprime le plan avec ses comptes. Si le plan contient des comptes, une confirmation indique combien sont supprimés. S'il s'agit du plan de consolidation, la confirmation précise que le reporting de groupe n'aura plus de plan de référence. La suppression est refusée tant que des sociétés utilisent le plan ou que des lignes OPEX/CAPEX utilisent ses comptes. La fenêtre en indique la raison avant toute confirmation.
 
 Les rôles changent dès que vous choisissez une action. Le tableau se met à jour immédiatement.
 

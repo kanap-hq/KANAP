@@ -114,7 +114,7 @@ export default function ConnectionPathSection({
         onChange(hops.map((l) => (l.id === hopId ? { ...l, ...res.data } : l)));
         setError(null);
       } catch (e: any) {
-        setError(getApiErrorMessage(e, t, t('messages.saveLayerFailed') || 'Failed to save hop'));
+        setError(getApiErrorMessage(e, t, t('workspace.connection.path.saveFailed')));
       }
     },
     [connectionId, hops, onChange, t],
@@ -148,7 +148,7 @@ export default function ConnectionPathSection({
       onChange([...hops, res.data]);
       setError(null);
     } catch (e: any) {
-      setError(getApiErrorMessage(e, t, t('messages.addLayerFailed') || 'Failed to add hop'));
+      setError(getApiErrorMessage(e, t, t('workspace.connection.path.addFailed')));
     }
   };
 
@@ -159,7 +159,7 @@ export default function ConnectionPathSection({
       onChange(hops.filter((l) => l.id !== hopId));
       setError(null);
     } catch (e: any) {
-      setError(getApiErrorMessage(e, t, t('messages.removeLayerFailed') || 'Failed to remove hop'));
+      setError(getApiErrorMessage(e, t, t('workspace.connection.path.removeFailed')));
     }
   };
 
@@ -179,7 +179,7 @@ export default function ConnectionPathSection({
       );
       setError(null);
     } catch (e: any) {
-      setError(getApiErrorMessage(e, t, 'Failed to reorder hops'));
+      setError(getApiErrorMessage(e, t, t('workspace.connection.path.reorderFailed')));
     }
   };
 
@@ -253,7 +253,7 @@ export default function ConnectionPathSection({
             color: theme.palette.kanap.text.primary,
           })}
         >
-          Network path ({sortedHops.length} {sortedHops.length === 1 ? 'hop' : 'hops'})
+          {t('workspace.connection.path.title', { count: sortedHops.length })}
         </Typography>
       </Box>
       {error && (
@@ -268,7 +268,7 @@ export default function ConnectionPathSection({
           color: 'warning.dark',
         })}>
           <Typography sx={{ fontSize: 12 }}>
-            Long network path ({sortedHops.length} hops) — consider whether all intermediaries need to be documented separately.
+            {t('workspace.connection.path.longWarning', { count: sortedHops.length })}
           </Typography>
         </Box>
       )}
@@ -311,7 +311,7 @@ export default function ConnectionPathSection({
                       flexShrink: 0,
                     })}
                   >
-                    Hop {hop.order_index}
+                    {t('workspace.connection.path.hop', { index: hop.order_index })}
                   </Box>
                   <TextField
                     select
@@ -328,7 +328,7 @@ export default function ConnectionPathSection({
                     SelectProps={{ displayEmpty: true }}
                   >
                     <MenuItem value="" sx={drawerMenuItemSx}>
-                      <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>Function missing</Typography>
+                      <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>{t('workspace.connection.path.functionMissing')}</Typography>
                     </MenuItem>
                     {pathHopFunctions.map((fn: any) => (
                       <MenuItem key={fn.code} value={fn.code} sx={drawerMenuItemSx}>
@@ -342,8 +342,8 @@ export default function ConnectionPathSection({
                       size="small"
                       onClick={() => void handleSwap(hop.id, sortedHops[idx - 1].id)}
                       sx={{ opacity: 0, transition: 'opacity 120ms ease', p: 0.5 }}
-                      aria-label="Move hop up"
-                      title="Move up"
+                      aria-label={t('workspace.connection.path.moveHopUp')}
+                      title={t('workspace.connection.path.moveUp')}
                     >
                       <KeyboardArrowUpIcon sx={{ fontSize: 16 }} />
                     </IconButton>
@@ -354,8 +354,8 @@ export default function ConnectionPathSection({
                       size="small"
                       onClick={() => void handleSwap(hop.id, sortedHops[idx + 1].id)}
                       sx={{ opacity: 0, transition: 'opacity 120ms ease', p: 0.5 }}
-                      aria-label="Move hop down"
-                      title="Move down"
+                      aria-label={t('workspace.connection.path.moveHopDown')}
+                      title={t('workspace.connection.path.moveDown')}
                     >
                       <KeyboardArrowDownIcon sx={{ fontSize: 16 }} />
                     </IconButton>
@@ -366,8 +366,8 @@ export default function ConnectionPathSection({
                       size="small"
                       onClick={() => void handleDeleteHop(hop.id)}
                       sx={{ opacity: 0, transition: 'opacity 120ms ease', p: 0.5 }}
-                      aria-label="Remove hop"
-                      title="Remove"
+                      aria-label={t('workspace.connection.path.removeHop')}
+                      title={t('common:buttons.remove')}
                     >
                       <DeleteOutlineIcon sx={{ fontSize: 15, color: 'kanap.danger' }} />
                     </IconButton>
@@ -393,7 +393,7 @@ export default function ConnectionPathSection({
 
                 <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr) minmax(0, 2fr)', gap: 1.5, alignItems: 'baseline' }}>
                   <Box>
-                    <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary', mb: 0.25 }}>Protocols (override)</Typography>
+                    <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary', mb: 0.25 }}>{t('workspace.connection.path.protocolsOverride')}</Typography>
                     <Typography
                       component="button"
                       onClick={(e) => setProtocolsAnchor({ hopId: hop.id, anchor: e.currentTarget as HTMLElement })}
@@ -416,7 +416,7 @@ export default function ConnectionPathSection({
                     </Typography>
                   </Box>
                   <Box>
-                    <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary', mb: 0.25 }}>Port</Typography>
+                    <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary', mb: 0.25 }}>{t('workspace.connection.protocolsTable.port')}</Typography>
                     <TextField
                       size="small"
                       variant="standard"
@@ -432,7 +432,7 @@ export default function ConnectionPathSection({
                     />
                   </Box>
                   <Box>
-                    <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary', mb: 0.25 }}>Notes</Typography>
+                    <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary', mb: 0.25 }}>{t('common.notes')}</Typography>
                     <TextField
                       size="small"
                       variant="standard"
@@ -443,7 +443,7 @@ export default function ConnectionPathSection({
                         updateLocal(hop.id, { notes: next });
                         debouncedPatch(hop.id, { notes: next });
                       }}
-                      placeholder="e.g., handles TLS termination"
+                      placeholder={t('workspace.connection.path.notesPlaceholder')}
                       sx={{ '& input': { fontSize: 13, padding: '2px 0' } }}
                     />
                   </Box>
@@ -459,7 +459,7 @@ export default function ConnectionPathSection({
         {protocols.length > 0 && (
           <Box sx={{ mt: 1.25, pl: 1.5 }}>
             <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary', mb: 0.25 }}>
-              Destination service ports — defined in Overview
+              {t('workspace.connection.path.destinationPorts', { tab: t('workspace.connection.tabs.overview') })}
             </Typography>
             <ConnectionProtocolsTable protocols={protocols} />
           </Box>
@@ -486,7 +486,7 @@ export default function ConnectionPathSection({
               })}
             >
               <AddIcon sx={{ fontSize: 14 }} />
-              Add hop
+              {t('workspace.connection.path.addHop')}
             </Typography>
           </Box>
         )}

@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../../api';
 import { KanapDialog, PropertyRow } from '../../../components/design';
 import { drawerMenuItemSx, drawerSelectSx } from '../../../theme/formSx';
+import { knowledgeLibraryName, localizeKnowledgeFolderTree } from '../../../utils/knowledgeNames';
 
 type DocumentLibrary = {
   id: string;
@@ -28,12 +29,14 @@ type DocumentSelectionRow = {
   title: string;
   library_id: string | null;
   library_name: string | null;
+  library_slug?: string | null;
   folder_id: string | null;
 };
 
 type FolderNode = {
   id: string;
   name: string;
+  system_key?: string | null;
   children?: FolderNode[];
 };
 
@@ -99,7 +102,9 @@ export default function KnowledgeMoveDialog({
     [selectedRows],
   );
   const selectedLibraryNames = React.useMemo(
-    () => Array.from(new Set(selectedRows.map((row) => row.library_name || t('shared.unknown')))),
+    () => Array.from(new Set(selectedRows.map((row) => (
+      row.library_name ? knowledgeLibraryName(t, { slug: row.library_slug, name: row.library_name }) : t('shared.unknown')
+    )))),
     [selectedRows, t],
   );
   const selectionIsMixedLibraries = selectedLibraryIds.length > 1;
@@ -149,8 +154,8 @@ export default function KnowledgeMoveDialog({
   });
 
   const flatFolders = React.useMemo(
-    () => flattenFolders(folderTree?.items || []),
-    [folderTree?.items],
+    () => flattenFolders(localizeKnowledgeFolderTree(t, folderTree?.items)),
+    [folderTree?.items, t],
   );
 
   const libraryChangeBlocked =

@@ -72,7 +72,7 @@ Limite le nombre de sauts à partir des applications sélectionnées à afficher
 - **Tout** : Afficher tous les nœuds connectés (pas de limite)
 - **1-5** : Afficher uniquement les nœuds dans un rayon de N sauts des applications sélectionnées
 
-Les nœuds middleware ne comptent pas comme un saut -- le compteur de profondeur ne s'incrémente que lors de la traversée d'un nœud d'application principale.
+Les nœuds middleware ne comptent pas comme un saut : le compteur de profondeur ne s'incrémente que lors de la traversée d'un nœud d'application principale.
 
 Ce filtre ne prend effet que lorsque vous avez au moins une application sélectionnée ; sans sélection, la valeur est verrouillée sur **Tout**.
 
@@ -84,7 +84,7 @@ Le panneau de contrôle sur le côté gauche de la carte fournit ces outils :
 
 | Icône | Action | Description |
 |-------|--------|-------------|
-| Pause / Lecture | **Geler / Dégeler** | Mettre en pause la simulation à forces pour positionner manuellement les nœuds |
+| Pause / Lecture | **Geler / dégeler** | Mettre en pause la simulation à forces pour positionner manuellement les nœuds |
 | Réticule | **Centrage automatique** | Basculer le centrage automatique lors de la sélection de nœuds (mis en évidence lorsque activé) |
 | Zoom + | **Zoom avant** | Augmenter le niveau de zoom |
 | Zoom - | **Zoom arrière** | Diminuer le niveau de zoom |

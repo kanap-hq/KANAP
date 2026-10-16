@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../../api';
 import { KanapDialog, PropertyRow } from '../../../components/design';
 import { drawerMenuItemSx, drawerSelectSx } from '../../../theme/formSx';
+import { localizeKnowledgeFolderTree } from '../../../utils/knowledgeNames';
 
 type DocumentLibrary = {
   id: string;
@@ -25,6 +26,7 @@ type DocumentLibrary = {
 type FolderNode = {
   id: string;
   name: string;
+  system_key?: string | null;
   children?: FolderNode[];
 };
 
@@ -148,8 +150,8 @@ export default function KnowledgeFolderMoveDialog({
   }, [folder, folderTree?.items, sourceLibraryId, targetLibraryId]);
 
   const flatFolders = React.useMemo(
-    () => flattenFolders(folderTree?.items || []).filter((item) => !excludedFolderIds.has(item.id)),
-    [excludedFolderIds, folderTree?.items],
+    () => flattenFolders(localizeKnowledgeFolderTree(t, folderTree?.items)).filter((item) => !excludedFolderIds.has(item.id)),
+    [excludedFolderIds, folderTree?.items, t],
   );
 
   const disableSubmit = pending || !folder || !targetLibraryId;

@@ -147,6 +147,13 @@ export class CostCentersController {
     );
   }
 
+  // What a delete of `ids` would refuse, asked before the confirmation.
+  @RequireLevel('cost_centers', 'admin')
+  @Post('delete-check')
+  deleteCheck(@Body() body: { ids?: unknown }, @Tenant() ctx: TenantRequest) {
+    return this.deleteSvc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], context(ctx));
+  }
+
   @RequireLevel('cost_centers', 'admin')
   @Delete('bulk')
   bulkDelete(@Body() body: CostCenterBulkDeleteDto, @Tenant() ctx: TenantRequest) {

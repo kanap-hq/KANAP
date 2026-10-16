@@ -19,7 +19,7 @@ import {
   type AnalyticsAxisDetail,
   type AnalyticsAxisPatch,
 } from '../../services/analytics';
-import { deriveStatusFromDisabledAt, normalizeStatus } from '../../constants/status';
+import { STATUS_DISABLED, deriveStatusFromDisabledAt, normalizeStatus } from '../../constants/status';
 import { drawerFieldValueSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import {
@@ -237,6 +237,8 @@ export default function AnalyticsDimensionWorkspacePage() {
               if (disabledAt === data.disabled_at) return;
               void patch({ status: deriveStatusFromDisabledAt(disabledAt), disabled_at: disabledAt }, 'disabled_at');
             }}
+            // Disable now: the status alone, the server sets the end of validity from its own clock.
+            onDisableNow={() => void patch({ status: STATUS_DISABLED }, 'disabled_at')}
             onFieldError={(field, message) => setErrors((prev) => ({ ...prev, [field]: message }))}
           />
         ) : <Box />}
@@ -302,6 +304,7 @@ function DimensionProperties({
   onAppliesToChange,
   onRequiredChange,
   onDisabledAtChange,
+  onDisableNow,
   onFieldError,
 }: {
   axis: AnalyticsAxisDetail;
@@ -313,6 +316,8 @@ function DimensionProperties({
   onAppliesToChange: (appliesTo: LineType | null) => void;
   onRequiredChange: (required: boolean) => void;
   onDisabledAtChange: (disabledAt: string | null) => void;
+  /** Switched off: disable now, on the server's clock (the status alone). */
+  onDisableNow: () => void;
   /** Shows (or clears, with undefined) a refusal found before any request. */
   onFieldError: (field: AnalyticsField, message: string | undefined) => void;
 }) {
@@ -447,6 +452,7 @@ function DimensionProperties({
             onStatusChange={() => undefined}
             disabledAt={axis.disabled_at}
             onDisabledAtChange={onDisabledAtChange}
+            onDisableNow={onDisableNow}
             disabled={disabled || axis.is_default}
             disabledAtError={!!errors.disabled_at}
             disabledAtHelperText={errors.disabled_at}

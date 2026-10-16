@@ -10,7 +10,8 @@ import CostCenterSelect from '../../../components/fields/CostCenterSelect';
 import DateEUField from '../../../components/fields/DateEUField';
 import StatusLifecycleField from '../../../components/fields/StatusLifecycleField';
 import UserSelect from '../../../components/fields/UserSelect';
-import { CURRENCY_OPTIONS, CurrencyOption } from '../../../constants/isoOptions';
+import type { CurrencyOption } from '../../../constants/isoOptions';
+import { currencyLabel, useCurrencyOptions } from '../../../i18n/currencies';
 import useCurrencySettings from '../../../hooks/useCurrencySettings';
 import { STATUS_ENABLED, StatusValue } from '../../../constants/status';
 import { formatShortDate } from '../../../lib/dateFormat';
@@ -59,6 +60,8 @@ type Props = {
   onRunBuildChange: (next: RunBuild | '') => void;
   onEffectiveStartChange: (next: string) => void;
   onDisabledAtChange?: (next: string | null) => void;
+  /** Switched off: disable now, on the server's clock (the status alone). */
+  onDisableNow?: () => void;
   onOwnerItChange?: (next: string) => void;
   onOwnerBusinessChange?: (next: string) => void;
   /** Labels of the chosen supplier, company and account from the detail: the pickers show them without a request. */
@@ -105,6 +108,7 @@ export default function BudgetPropertiesDrawer({
   onRunBuildChange,
   onEffectiveStartChange,
   onDisabledAtChange,
+  onDisableNow,
   onOwnerItChange,
   onOwnerBusinessChange,
 }: Props) {
@@ -112,16 +116,17 @@ export default function BudgetPropertiesDrawer({
   const locale = useLocale();
   const config = BUDGET_NATURE_CONFIG[nature];
   const { data: currencySettings } = useCurrencySettings();
+  const allCurrencyOptions = useCurrencyOptions();
 
   const currencyOptions = React.useMemo<CurrencyOption[]>(() => {
     const allowed = currencySettings?.allowedCurrencies;
     if (allowed && allowed.length > 0) {
       const set = new Set(allowed.map((c: string) => c.toUpperCase()));
-      const filtered = CURRENCY_OPTIONS.filter((opt) => set.has(opt.code));
-      return filtered.length ? filtered : CURRENCY_OPTIONS;
+      const filtered = allCurrencyOptions.filter((opt) => set.has(opt.code));
+      return filtered.length ? filtered : allCurrencyOptions;
     }
-    return CURRENCY_OPTIONS;
-  }, [currencySettings]);
+    return allCurrencyOptions;
+  }, [allCurrencyOptions, currencySettings]);
 
   const currencyValue = React.useMemo<CurrencyOption | null>(() => {
     const code = (currency || '').toUpperCase();
@@ -202,7 +207,7 @@ export default function BudgetPropertiesDrawer({
             disableClearable
             value={currencyValue ?? undefined}
             onChange={(_e, option) => onCurrencyChange(option?.code ?? currency)}
-            getOptionLabel={(option) => `${option.code} · ${option.name}`}
+            getOptionLabel={currencyLabel}
             isOptionEqualToValue={(option, value) => option.code === value.code}
             disabled={disabled}
             renderInput={(params) => (
@@ -276,6 +281,7 @@ export default function BudgetPropertiesDrawer({
             <Box sx={hideInnerLabelSx}>
               <UserSelect
                 hideLabel
+                label={t('opex.metadata.itOwner')}
                 value={ownerItId || null}
                 onChange={(v) => onOwnerItChange?.(v ?? '')}
                 disabled={disabled}
@@ -287,6 +293,7 @@ export default function BudgetPropertiesDrawer({
             <Box sx={hideInnerLabelSx}>
               <UserSelect
                 hideLabel
+                label={t('opex.metadata.businessOwner')}
                 value={ownerBusinessId || null}
                 onChange={(v) => onOwnerBusinessChange?.(v ?? '')}
                 disabled={disabled}
@@ -297,7 +304,7 @@ export default function BudgetPropertiesDrawer({
         </PropertyGroup>
       )}
 
-      {mode === 'edit' && onDisabledAtChange && (
+      {mode === 'edit' && onDisabledAtChange && onDisableNow && (
         <PropertyGroup>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, py: '5px' }}>
             <Typography sx={{ fontSize: 12, lineHeight: 1.3, color: 'kanap.text.tertiary' }}>{t('opex.fields.lifecycle')}</Typography>
@@ -307,6 +314,7 @@ export default function BudgetPropertiesDrawer({
               onStatusChange={() => undefined}
               disabledAt={disabledAt}
               onDisabledAtChange={onDisabledAtChange}
+              onDisableNow={onDisableNow}
               disabled={disabled}
               statusLabel={t('opex.status.enabled')}
               statusOffLabel={t('opex.status.disabled')}

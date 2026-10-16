@@ -259,9 +259,11 @@ Les listes de modifications ajoutent la colonne **Modifications** à la fin.
 ### Exports
 
 - **CSV** : neuf blocs dans l'ordre de la page, chacun avec son propre titre et sa ligne d'en-tête.
-- **XLSX** : trois feuilles, Requests, Projects et Tasks. Les lignes vont des créations aux modifications puis aux clôtures, avec une colonne **Event** en tête qui indique de quelle liste vient la ligne. La cellule du nom renvoie vers l'élément.
+- **XLSX** : trois feuilles, Demandes, Projets et Tâches. Les lignes vont des créations aux modifications puis aux clôtures, avec une colonne **Événement** en tête qui indique de quelle liste vient la ligne. La cellule du nom renvoie vers l'élément.
 
 Les deux exports portent la référence, la société, l'origine d'un projet, les modifications d'une ligne modifiée et la date de l'événement. Les lignes de clôture portent aussi le jour de création.
+
+Les deux fichiers sont écrits dans la langue de l'écran : titres, noms de colonnes, statuts, modifications, oui ou non et jours. Le CSV prend aussi le séparateur et la marque décimale de cette langue, comme décrit dans [Fichiers CSV](csv-files.md).
 
 ## Temps saisi
 

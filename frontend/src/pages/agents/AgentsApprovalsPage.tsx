@@ -233,7 +233,7 @@ function FallbackNote({ label, detail }: { label: string; detail: string | null 
       {open && (
         <Box component="span" sx={(theme) => ({ display: 'block', color: theme.palette.kanap.text.tertiary, mt: 0.25 })}>
           {label}
-          {detail ? ` — ${detail}` : ''}
+          {detail ? ` (${detail})` : ''}
         </Box>
       )}
     </Typography>

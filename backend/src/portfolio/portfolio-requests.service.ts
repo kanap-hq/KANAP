@@ -39,6 +39,7 @@ import {
   buildQuickSearchConditions,
   normalizeAgFilterModel,
   assertSetFilterModes,
+  compileReferenceFilter,
 } from '../common/ag-grid-filtering';
 import { PortfolioCriteriaService } from './portfolio-criteria.service';
 import { validateUploadedFile } from '../common/upload-validation';
@@ -59,6 +60,7 @@ import {
   applyRequestParticipantScope,
   requestParticipantCondition,
 } from '../auth/business-contributor-scope';
+import { RecordInUseException } from '../common/record-in-use';
 import { orderListQuery } from '../common/list-sort';
 
 type InvolvementScope = { involvedUserId?: string; involvedTeamId?: string };
@@ -162,6 +164,8 @@ const requestDateFields = new Map<string, string>([
   // The creation day, not the instant: the grid sends plain days, and the portfolio reports
   // link to age brackets counted in whole days.
   ['created_at', 'r.created_at::date'],
+  // The day of the last change, for the same reason.
+  ['updated_at', 'r.updated_at::date'],
 ]);
 
 const compileDateFilterCondition = (
@@ -259,6 +263,72 @@ export async function convertedRequestPurpose(
     : await normalizeMarkdownRichText(taskDescription, { fieldName: 'purpose', enforceSizeLimit: false });
 }
 
+/**
+ * The request lists' column filters (the list, its ids and its filter values): one map, so the
+ * three read the same columns.
+ */
+const REQUEST_FILTER_TARGETS: Record<string, FilterTargetConfig> = {
+  name: { expression: 'r.name', dataType: 'string' },
+  status: { expression: 'r.status', dataType: 'string' },
+  source_id: { expression: 'r.source_id', dataType: 'string' },
+  category_id: { expression: 'r.category_id', dataType: 'string' },
+  stream_id: { expression: 'r.stream_id', dataType: 'string' },
+  company_id: { expression: 'r.company_id', dataType: 'string' },
+  department_id: { expression: 'r.department_id', dataType: 'string' },
+  requestor_id: { expression: 'r.requestor_id', dataType: 'string' },
+  business_sponsor_id: { expression: 'r.business_sponsor_id', dataType: 'string' },
+  it_sponsor_id: { expression: 'r.it_sponsor_id', dataType: 'string' },
+  priority_score: { expression: 'r.priority_score', dataType: 'number' },
+  target_delivery_date: { expression: 'r.target_delivery_date', textExpression: 'CAST(r.target_delivery_date AS TEXT)', dataType: 'string' },
+  created_at: { expression: 'r.created_at', textExpression: 'CAST(r.created_at AS TEXT)', dataType: 'string' },
+  // Derived filter targets for joined/computed columns
+  source_name: {
+    expression: 'r.source_id',
+    textExpression: `COALESCE((SELECT t.name FROM portfolio_sources t WHERE t.id = r.source_id), '')`,
+    dataType: 'string',
+  },
+  category_name: {
+    expression: 'r.category_id',
+    textExpression: `COALESCE((SELECT c.name FROM portfolio_categories c WHERE c.id = r.category_id), '')`,
+    dataType: 'string',
+  },
+  stream_name: {
+    expression: 'r.stream_id',
+    textExpression: `COALESCE((SELECT s.name FROM portfolio_streams s WHERE s.id = r.stream_id), '')`,
+    dataType: 'string',
+  },
+  company_name: {
+    expression: 'r.company_id',
+    textExpression: `COALESCE((SELECT c.name FROM companies c WHERE c.id = r.company_id), '')`,
+    dataType: 'string',
+  },
+  department_name: {
+    expression: 'r.department_id',
+    textExpression: `COALESCE((SELECT d.name FROM departments d WHERE d.id = r.department_id), '')`,
+    dataType: 'string',
+  },
+  requestor_name: {
+    expression: 'r.requestor_id',
+    textExpression: `COALESCE((SELECT COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), u.email) FROM users u WHERE u.id = r.requestor_id), '')`,
+    dataType: 'string',
+  },
+  business_lead_name: {
+    expression: 'r.business_lead_id',
+    textExpression: buildUserDisplayNameSql('r.business_lead_id', 'r.tenant_id'),
+    dataType: 'string',
+  },
+  it_lead_name: {
+    expression: 'r.it_lead_id',
+    textExpression: buildUserDisplayNameSql('r.it_lead_id', 'r.tenant_id'),
+    dataType: 'string',
+  },
+  contributor_name: {
+    expression: 'r.id',
+    textExpression: buildRequestContributorNamesSql('r'),
+    dataType: 'string',
+  },
+};
+
 @Injectable()
 export class PortfolioRequestsService {
   constructor(
@@ -296,69 +366,7 @@ export class PortfolioRequestsService {
     const fm = filters && typeof filters === 'object' ? filters : undefined;
     const hasStatusFilter = fm && Object.prototype.hasOwnProperty.call(fm, 'status');
 
-    // Define filter targets for AG Grid model -> SQL translation
-    type Target = FilterTargetConfig;
-    const targets: Record<string, Target> = {
-      name: { expression: 'r.name', dataType: 'string' },
-      status: { expression: 'r.status', dataType: 'string' },
-      source_id: { expression: 'r.source_id', dataType: 'string' },
-      category_id: { expression: 'r.category_id', dataType: 'string' },
-      stream_id: { expression: 'r.stream_id', dataType: 'string' },
-      company_id: { expression: 'r.company_id', dataType: 'string' },
-      department_id: { expression: 'r.department_id', dataType: 'string' },
-      requestor_id: { expression: 'r.requestor_id', dataType: 'string' },
-      business_sponsor_id: { expression: 'r.business_sponsor_id', dataType: 'string' },
-      it_sponsor_id: { expression: 'r.it_sponsor_id', dataType: 'string' },
-      priority_score: { expression: 'r.priority_score', dataType: 'number' },
-      target_delivery_date: { expression: 'r.target_delivery_date', textExpression: 'CAST(r.target_delivery_date AS TEXT)', dataType: 'string' },
-      created_at: { expression: 'r.created_at', textExpression: 'CAST(r.created_at AS TEXT)', dataType: 'string' },
-      // Derived filter targets for joined/computed columns
-      source_name: {
-        expression: 'r.source_id',
-        textExpression: `COALESCE((SELECT t.name FROM portfolio_sources t WHERE t.id = r.source_id), '')`,
-        dataType: 'string',
-      },
-      category_name: {
-        expression: 'r.category_id',
-        textExpression: `COALESCE((SELECT c.name FROM portfolio_categories c WHERE c.id = r.category_id), '')`,
-        dataType: 'string',
-      },
-      stream_name: {
-        expression: 'r.stream_id',
-        textExpression: `COALESCE((SELECT s.name FROM portfolio_streams s WHERE s.id = r.stream_id), '')`,
-        dataType: 'string',
-      },
-      company_name: {
-        expression: 'r.company_id',
-        textExpression: `COALESCE((SELECT c.name FROM companies c WHERE c.id = r.company_id), '')`,
-        dataType: 'string',
-      },
-      department_name: {
-        expression: 'r.department_id',
-        textExpression: `COALESCE((SELECT d.name FROM departments d WHERE d.id = r.department_id), '')`,
-        dataType: 'string',
-      },
-      requestor_name: {
-        expression: 'r.requestor_id',
-        textExpression: `COALESCE((SELECT COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), u.email) FROM users u WHERE u.id = r.requestor_id), '')`,
-        dataType: 'string',
-      },
-      business_lead_name: {
-        expression: 'r.business_lead_id',
-        textExpression: buildUserDisplayNameSql('r.business_lead_id', 'r.tenant_id'),
-        dataType: 'string',
-      },
-      it_lead_name: {
-        expression: 'r.it_lead_id',
-        textExpression: buildUserDisplayNameSql('r.it_lead_id', 'r.tenant_id'),
-        dataType: 'string',
-      },
-      contributor_name: {
-        expression: 'r.id',
-        textExpression: buildRequestContributorNamesSql('r'),
-        dataType: 'string',
-      },
-    };
+    const targets = REQUEST_FILTER_TARGETS;
 
     // Compile AG Grid filters
     const nextParam = createParamNameGenerator('p');
@@ -377,6 +385,12 @@ export class PortfolioRequestsService {
             compiledFilters.push(cond);
             continue;
           }
+        }
+        // The reference column shows `REQ-12` (`compileReferenceFilter`).
+        if (field === 'item_number') {
+          const cond = compileReferenceFilter(model, 'r.item_number', 'REQ', nextParam);
+          if (cond) compiledFilters.push(cond);
+          continue;
         }
         const target = targets[field];
         if (!target) continue;
@@ -477,67 +491,7 @@ export class PortfolioRequestsService {
     const fm = filters && typeof filters === 'object' ? filters : undefined;
     const hasStatusFilter = fm && Object.prototype.hasOwnProperty.call(fm, 'status');
 
-    // Define filter targets for AG Grid model -> SQL translation
-    type Target = FilterTargetConfig;
-    const targets: Record<string, Target> = {
-      name: { expression: 'r.name', dataType: 'string' },
-      status: { expression: 'r.status', dataType: 'string' },
-      source_id: { expression: 'r.source_id', dataType: 'string' },
-      category_id: { expression: 'r.category_id', dataType: 'string' },
-      stream_id: { expression: 'r.stream_id', dataType: 'string' },
-      company_id: { expression: 'r.company_id', dataType: 'string' },
-      department_id: { expression: 'r.department_id', dataType: 'string' },
-      requestor_id: { expression: 'r.requestor_id', dataType: 'string' },
-      priority_score: { expression: 'r.priority_score', dataType: 'number' },
-      target_delivery_date: { expression: 'r.target_delivery_date', textExpression: 'CAST(r.target_delivery_date AS TEXT)', dataType: 'string' },
-      created_at: { expression: 'r.created_at', textExpression: 'CAST(r.created_at AS TEXT)', dataType: 'string' },
-      // Derived filter targets for joined/computed columns (used by grid filters)
-      source_name: {
-        expression: 'r.source_id',
-        textExpression: `COALESCE((SELECT t.name FROM portfolio_sources t WHERE t.id = r.source_id), '')`,
-        dataType: 'string',
-      },
-      category_name: {
-        expression: 'r.category_id',
-        textExpression: `COALESCE((SELECT c.name FROM portfolio_categories c WHERE c.id = r.category_id), '')`,
-        dataType: 'string',
-      },
-      stream_name: {
-        expression: 'r.stream_id',
-        textExpression: `COALESCE((SELECT s.name FROM portfolio_streams s WHERE s.id = r.stream_id), '')`,
-        dataType: 'string',
-      },
-      company_name: {
-        expression: 'r.company_id',
-        textExpression: `COALESCE((SELECT c.name FROM companies c WHERE c.id = r.company_id), '')`,
-        dataType: 'string',
-      },
-      department_name: {
-        expression: 'r.department_id',
-        textExpression: `COALESCE((SELECT d.name FROM departments d WHERE d.id = r.department_id), '')`,
-        dataType: 'string',
-      },
-      requestor_name: {
-        expression: 'r.requestor_id',
-        textExpression: `COALESCE((SELECT COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), u.email) FROM users u WHERE u.id = r.requestor_id), '')`,
-        dataType: 'string',
-      },
-      business_lead_name: {
-        expression: 'r.business_lead_id',
-        textExpression: buildUserDisplayNameSql('r.business_lead_id', 'r.tenant_id'),
-        dataType: 'string',
-      },
-      it_lead_name: {
-        expression: 'r.it_lead_id',
-        textExpression: buildUserDisplayNameSql('r.it_lead_id', 'r.tenant_id'),
-        dataType: 'string',
-      },
-      contributor_name: {
-        expression: 'r.id',
-        textExpression: buildRequestContributorNamesSql('r'),
-        dataType: 'string',
-      },
-    };
+    const targets = REQUEST_FILTER_TARGETS;
 
     // Compile AG Grid filters
     const nextParam = createParamNameGenerator('p');
@@ -556,6 +510,12 @@ export class PortfolioRequestsService {
             compiledFilters.push(cond);
             continue;
           }
+        }
+        // The reference column shows `REQ-12` (`compileReferenceFilter`).
+        if (field === 'item_number') {
+          const cond = compileReferenceFilter(model, 'r.item_number', 'REQ', nextParam);
+          if (cond) compiledFilters.push(cond);
+          continue;
         }
         const target = targets[field];
         if (!target) continue;
@@ -641,67 +601,7 @@ export class PortfolioRequestsService {
 
     const results: Record<string, Array<string | null>> = {};
 
-    type Target = FilterTargetConfig;
-    const targets: Record<string, Target> = {
-      name: { expression: 'r.name', dataType: 'string' },
-      status: { expression: 'r.status', dataType: 'string' },
-      source_id: { expression: 'r.source_id', dataType: 'string' },
-      category_id: { expression: 'r.category_id', dataType: 'string' },
-      stream_id: { expression: 'r.stream_id', dataType: 'string' },
-      company_id: { expression: 'r.company_id', dataType: 'string' },
-      department_id: { expression: 'r.department_id', dataType: 'string' },
-      requestor_id: { expression: 'r.requestor_id', dataType: 'string' },
-      business_sponsor_id: { expression: 'r.business_sponsor_id', dataType: 'string' },
-      it_sponsor_id: { expression: 'r.it_sponsor_id', dataType: 'string' },
-      priority_score: { expression: 'r.priority_score', dataType: 'number' },
-      target_delivery_date: { expression: 'r.target_delivery_date', textExpression: 'CAST(r.target_delivery_date AS TEXT)', dataType: 'string' },
-      created_at: { expression: 'r.created_at', textExpression: 'CAST(r.created_at AS TEXT)', dataType: 'string' },
-      source_name: {
-        expression: 'r.source_id',
-        textExpression: `COALESCE((SELECT t.name FROM portfolio_sources t WHERE t.id = r.source_id), '')`,
-        dataType: 'string',
-      },
-      category_name: {
-        expression: 'r.category_id',
-        textExpression: `COALESCE((SELECT c.name FROM portfolio_categories c WHERE c.id = r.category_id), '')`,
-        dataType: 'string',
-      },
-      stream_name: {
-        expression: 'r.stream_id',
-        textExpression: `COALESCE((SELECT s.name FROM portfolio_streams s WHERE s.id = r.stream_id), '')`,
-        dataType: 'string',
-      },
-      company_name: {
-        expression: 'r.company_id',
-        textExpression: `COALESCE((SELECT c.name FROM companies c WHERE c.id = r.company_id), '')`,
-        dataType: 'string',
-      },
-      department_name: {
-        expression: 'r.department_id',
-        textExpression: `COALESCE((SELECT d.name FROM departments d WHERE d.id = r.department_id), '')`,
-        dataType: 'string',
-      },
-      requestor_name: {
-        expression: 'r.requestor_id',
-        textExpression: `COALESCE((SELECT COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), u.email) FROM users u WHERE u.id = r.requestor_id), '')`,
-        dataType: 'string',
-      },
-      business_lead_name: {
-        expression: 'r.business_lead_id',
-        textExpression: buildUserDisplayNameSql('r.business_lead_id', 'r.tenant_id'),
-        dataType: 'string',
-      },
-      it_lead_name: {
-        expression: 'r.it_lead_id',
-        textExpression: buildUserDisplayNameSql('r.it_lead_id', 'r.tenant_id'),
-        dataType: 'string',
-      },
-      contributor_name: {
-        expression: 'r.id',
-        textExpression: buildRequestContributorNamesSql('r'),
-        dataType: 'string',
-      },
-    };
+    const targets = REQUEST_FILTER_TARGETS;
 
     const valueExpressions: Record<string, string> = {
       status: 'r.status',
@@ -752,6 +652,12 @@ export class PortfolioRequestsService {
               compiledFilters.push(cond);
               continue;
             }
+          }
+          // The reference column shows `REQ-12` (`compileReferenceFilter`).
+          if (filterField === 'item_number') {
+            const cond = compileReferenceFilter(model, 'r.item_number', 'REQ', nextParam);
+            if (cond) compiledFilters.push(cond);
+            continue;
           }
           const target = targets[filterField];
           if (!target) continue;
@@ -2859,7 +2765,8 @@ export class PortfolioRequestsService {
     if (!request) throw new NotFoundException('Request not found');
 
     if (request.status === 'converted') {
-      throw new BadRequestException('Converted requests cannot be deleted');
+      throw new RecordInUseException('REQUEST_CONVERTED', 'request', request.name, [],
+        'Converted requests cannot be deleted: the project keeps them as its origin.');
     }
 
     await this.integratedDocuments.deleteForEntity('requests', id, userId, { manager: mg });

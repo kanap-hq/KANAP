@@ -75,9 +75,9 @@ Nach dem Speichern schaltet der Arbeitsbereich alle Reiter für die detaillierte
 Das Anwendungsraster bietet eine umfassende Ansicht Ihres Anwendungsportfolios.
 
 **Oberer Bereichsfilter (Anzeigen)**:
-- **Meine Apps**: zeigt Apps, bei denen Sie in der Eigenschaftsleiste als **Business-Verantwortlicher** oder **IT-Verantwortlicher** gelistet sind. Mehrfach-Verantwortliche werden unterstützt.
-- **Apps meines Teams**: zeigt Apps, bei denen ein Mitglied Ihres Portfolio-Teams als Business-Verantwortlicher oder IT-Verantwortlicher gelistet ist. Ihre eigene Verantwortlichkeit ist in diesem Bereich ebenfalls enthalten. Deaktiviert, wenn Sie keinem Portfolio-Team zugewiesen sind.
-- **Alle Apps** (Standard): zeigt das vollständige Anwendungsraster mit dem standardmäßigen Lebenszyklus-Filterverhalten.
+- **Meine Anwendungen**: zeigt Apps, bei denen Sie in der Eigenschaftsleiste als **Business-Verantwortlicher** oder **IT-Verantwortlicher** gelistet sind. Mehrfach-Verantwortliche werden unterstützt.
+- **Anwendungen meines Teams**: zeigt Apps, bei denen ein Mitglied Ihres Portfolio-Teams als Business-Verantwortlicher oder IT-Verantwortlicher gelistet ist. Ihre eigene Verantwortlichkeit ist in diesem Bereich ebenfalls enthalten. Deaktiviert, wenn Sie keinem Portfolio-Team zugewiesen sind.
+- **Alle Anwendungen** (Standard): zeigt das vollständige Anwendungsraster mit dem standardmäßigen Lebenszyklus-Filterverhalten.
 - Ihre Auswahl wird sitzungsübergreifend gespeichert: bei Rückkehr zur Seite wird Ihre letzte Wahl wiederhergestellt.
 
 **Standardspalten**:
@@ -118,7 +118,7 @@ Das Anwendungsraster bietet eine umfassende Ansicht Ihres Anwendungsportfolios.
 - **CSV importieren**: Massenimport aus CSV-Datei (`applications:admin`)
 - **CSV exportieren**: Liste als CSV exportieren (`applications:admin`). Katalogbasierte Spalten (Kategorie, Lebenszyklus, Kritikalität, Cyberkritikalität, Wiederherstellungswelle, Datenklasse, Zugriffsmethoden) werden mit ihren Namen exportiert; der Import akzeptiert einen Namen oder den internen Code.
 - **Element kopieren**: Eine ausgewählte Anwendung mit allen Kernbeziehungen duplizieren (`applications:manager`). Siehe [Anwendungen kopieren](#anwendungen-kopieren) für Details.
-- **Ausgewählte löschen**: Ausgewählte Anwendungen entfernen (`applications:admin`)
+- **Ausgewählte löschen**: Ausgewählte Anwendungen entfernen (`applications:admin`). Eine Anwendung, die Quelle oder Ziel einer Schnittstelle ist, kann nicht gelöscht werden: Deaktivieren Sie sie stattdessen, oder löschen Sie zuerst ihre Schnittstellen. Vor der Bestätigung führt das Fenster diese Anwendungen als behalten auf, mit der Anzahl ihrer Schnittstellen. Die anderen werden mit ihren Bereitstellungen und Verknüpfungen zu anderen Einträgen gelöscht; die Bestätigung zählt die Bereitstellungen
 
 ---
 
@@ -137,7 +137,7 @@ Die Kopfzeile zeigt:
 - **Go-Live**-Datum
 - **Link senden**: Einen teilbaren Link zu diesem Arbeitsbereich kopieren
 - **Neue Version erstellen**: Den Versionsmigrations-Assistenten starten (siehe [Versionsverwaltung](#versionsverwaltung))
-- **Löschen** (`applications:admin`)
+- **Löschen** (`applications:admin`): eine Anwendung mit Schnittstellen erhält die Ablehnung und den Grund, nur mit Schließen. Sonst nennt die Bestätigung die Anwendung und zählt die Bereitstellungen, die mit ihr gelöscht werden, zusammen mit ihren Verknüpfungen zu anderen Einträgen
 - **Vorherige / Nächste**: Durch die gefilterte Liste navigieren, ohne zum Raster zurückzukehren
 
 ### Eigenschaftsleiste (rechtes Panel)
@@ -185,7 +185,7 @@ Der Reiter Bereitstellungen dokumentiert, wo die Anwendung tatsächlich läuft: 
 - **SSO aktiviert** / **MFA unterstützt**
 - **Notizen**
 
-**Bereitstellung hinzufügen** öffnet einen Dialog, in dem Sie Umgebung, Lebenszyklus, Basis-URL, SSO/MFA-Flags und Notizen festlegen. Jede Umgebung kann nur einmal hinzugefügt werden. Der Lebenszyklus-Chip auf einer Bereitstellungs-Kopfzeile kann auch inline aus einem Popup-Menü geändert werden.
+**Bereitstellung hinzufügen** öffnet einen Dialog, in dem Sie Umgebung, Lebenszyklus, Basis-URL, SSO/MFA-Flags und Notizen festlegen. Jede Umgebung kann nur einmal hinzugefügt werden. Der Lebenszyklus-Chip auf einer Bereitstellungs-Kopfzeile kann auch inline aus einem Popup-Menü geändert werden. Eine Bereitstellung, die noch Server oder Schnittstellenbindungen hat, kann nicht gelöscht werden: Entfernen Sie diese zuerst.
 
 **Server pro Bereitstellung**: Jeder Bereitstellungsblock zeigt eine Tabelle der zugewiesenen Server:
 
@@ -448,7 +448,7 @@ Aus der Anwendungsliste:
 
 ### Import-Workflow
 
-1. **Datei vorbereiten**: Verwenden Sie UTF-8-Kodierung mit Semikolon (`;`) als Trennzeichen. Eine von Excel als einfache CSV gespeicherte Datei (Windows-1252) wird ebenfalls importiert. Laden Sie eine Vorlage herunter, um korrekte Spaltenköpfe sicherzustellen.
+1. **Datei vorbereiten**: Speichern Sie sie als UTF-8. Kommas und Semikolons funktionieren beide, ebenso eine von Excel als einfache CSV gespeicherte Datei (Windows-1252). Laden Sie eine Vorlage herunter, um korrekte Spaltenköpfe sicherzustellen. Trennzeichen, Beträge, Datumsangaben und Ja oder Nein jeder Sprache stehen unter [CSV-Dateien](csv-files.md).
 
 2. **Importeinstellungen wählen**:
    - **Modus**:
@@ -477,7 +477,7 @@ Aus der Anwendungsliste:
 | `editor` | Software-Herausgeber | Nein | Freitext (z. B. Microsoft, SAP) |
 | `criticality` | Geschäftskritikalität | Nein | Akzeptiert Code oder Bezeichnung aus den Einstellungen; `__CLEAR__` löscht den Wert |
 | `lifecycle` | Aktueller Status | Nein | Akzeptiert Code oder Bezeichnung aus den Einstellungen |
-| `is_suite` | Kann Unteranwendungen haben | Nein | `true` oder `false` |
+| `is_suite` | Kann Unteranwendungen haben | Nein | `ja` oder `nein` |
 | `status` | Aktiviert/deaktiviert | Nein | `enabled` oder `disabled` |
 
 **Versionsfelder**:
@@ -494,8 +494,8 @@ Aus der Anwendungsliste:
 | CSV-Spalte | Beschreibung | Hinweise |
 |------------|-------------|-------|
 | `access_methods` | Wie Benutzer zugreifen | Komma-getrennte Codes oder Bezeichnungen aus den Einstellungen (z. B. `web,mobile,vdi`) |
-| `external_facing` | Aus dem Internet zugänglich | `true` oder `false` |
-| `etl_enabled` | Datenintegration | `true` oder `false` |
+| `external_facing` | Aus dem Internet zugänglich | `ja` oder `nein` |
+| `etl_enabled` | Datenintegration | `ja` oder `nein` |
 | `support_notes` | Support-Informationen | Freitext |
 | `licensing` | Lizenzbedingungen | Freitext |
 | `notes` | Interne Notizen | Freitext |
@@ -506,7 +506,7 @@ Aus der Anwendungsliste:
 |------------|-------------|-------|
 | `data_class` | Datenklassifizierung | Akzeptiert Code oder Bezeichnung aus den Einstellungen |
 | `last_dr_test` | Datum des letzten DR-Tests | Datumsformat: YYYY-MM-DD |
-| `contains_pii` | Speichert personenbezogene Daten | `true` oder `false` |
+| `contains_pii` | Speichert personenbezogene Daten | `ja` oder `nein` |
 | `data_residency` | Datenspeicherländer | Nur Export (ISO-Codes) |
 
 **Klassifizierungsfelder**:
@@ -573,7 +573,7 @@ Wenn Sie die Spalte `id` mit einer gültigen UUID einschließen, verwendet der A
 **Fehler „Datei ist nicht richtig formatiert"**: Dies weist normalerweise auf ein Kodierungsproblem hin. Stellen Sie sicher, dass Ihre CSV als **UTF-8** gespeichert ist:
 
 - **In LibreOffice**: Wählen Sie beim Öffnen einer CSV `UTF-8` im Zeichensatz-Dropdown (nicht „Japanese (Macintosh)" oder andere Kodierungen). Beim Speichern aktivieren Sie „Filtereinstellungen bearbeiten" und wählen Sie UTF-8.
-- **In Excel**: Speichern unter > CSV UTF-8 (Komma-getrennt), dann in einem Texteditor öffnen, um Kommas in Semikolons zu ändern.
+- **In Excel**: Speichern unter > CSV UTF-8 (Komma-getrennt).
 - **Allgemeiner Tipp**: Wenn Sie verstümmelte Zeichen (`?¿`, `ï»¿`) am Anfang Ihrer Datei sehen, ist die Kodierung falsch.
 
 ### Beispiel-CSV

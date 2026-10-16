@@ -1,6 +1,6 @@
 # Actifs
 
-Les Actifs documentent votre inventaire d'infrastructure -- serveurs physiques, machines virtuelles, conteneurs, instances cloud et équipements réseau. Liez les actifs aux sites, applications, connexions, contrats, projets et tâches pour construire une image complète de votre infrastructure IT.
+Les Actifs documentent votre inventaire d'infrastructure : serveurs physiques, machines virtuelles, conteneurs, instances cloud et équipements réseau. Liez les actifs aux sites, applications, connexions, contrats, projets et tâches pour construire une image complète de votre infrastructure IT.
 
 ## Premiers pas
 
@@ -36,7 +36,7 @@ La liste des actifs vous donne une vue filtrable et triable de chaque actif de v
 | **Nom** | Nom de l'actif (cliquez pour ouvrir l'espace de travail) |
 | **Type d'actif** | Le type de l'actif (ex. : Machine virtuelle, Serveur physique) |
 | **Cluster** | Appartenance à un cluster, ou un badge « Cluster » si cet actif est lui-même un cluster |
-| **Environnement** | Prod, Pré-prod, QA, Test, Dev, Sandbox -- avec un point coloré |
+| **Environnement** | Prod, Pré-prod, QA, Test, Dev, Sandbox, avec un point coloré |
 | **Site** | Où l'actif est hébergé |
 | **Hébergement** | Type d'hébergement (dérivé du site) |
 | **OS** | Système d'exploitation |
@@ -73,7 +73,7 @@ La plupart des colonnes prennent en charge des filtres par jeu de cases à coche
 **Actions** :
 - **Ajouter un actif** : Créer un nouvel actif (`infrastructure:member`)
 - **Import CSV** / **Export CSV** : Opérations en masse (`infrastructure:admin`)
-- **Supprimer un actif** (lignes sélectionnées) : Supprimer les actifs sélectionnés (`infrastructure:admin`)
+- **Supprimer un actif** (lignes sélectionnées) : Supprimer les actifs sélectionnés (`infrastructure:admin`). Un actif encore affecté à des applications ou lié à des connexions ne peut pas être supprimé : retirez-le d'abord de ces éléments. Avant toute suppression, la confirmation liste les actifs conservés, avec la raison
 
 ---
 
@@ -92,7 +92,7 @@ Les membres du cluster sont gérés depuis l'onglet **Technique** de l'espace de
 
 ## L'espace de travail des Actifs
 
-Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. L'espace de travail comporte un **en-tête** avec des métadonnées rapides, un **tiroir des propriétés** sur la droite (la carte d'identité de l'actif -- toujours visible) et une **zone de contenu** au centre qui change selon l'onglet.
+Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. L'espace de travail comporte un **en-tête** avec des métadonnées rapides, un **tiroir des propriétés** sur la droite (la carte d'identité de l'actif, toujours visible) et une **zone de contenu** au centre qui change selon l'onglet.
 
 ### En-tête
 
@@ -101,7 +101,7 @@ L'en-tête affiche :
 - **Référence de l'actif** (ex. : `AST-123`) : identifiant copiable
 - Pastille **Cycle de vie** (également modifiable depuis le tiroir des propriétés)
 - **Envoyer le lien** : copier un lien partageable vers cet espace de travail
-- **Supprimer** (`infrastructure:admin`)
+- **Supprimer** (`infrastructure:admin`). Pour un actif encore utilisé, la raison s'affiche avant toute confirmation
 - **Précédent / Suivant** (ex. : « 3 sur 47 ») : naviguer dans la liste filtrée sans y revenir
 
 ### Tiroir des propriétés (panneau de droite)
@@ -112,7 +112,7 @@ Le tiroir affiche la carte d'identité de l'actif sur chaque onglet. Les modific
 - **Type d'actif** (obligatoire)
 - **Site** (obligatoire)
 - **Sous-site** (lorsque le site a des sous-sites définis)
-- **Type d'hébergement**, **Fournisseur cloud / Société exploitante**, **Pays**, **Ville** -- en lecture seule, dérivés du site
+- **Type d'hébergement**, **Fournisseur cloud / Société exploitante**, **Pays**, **Ville** : en lecture seule, dérivés du site
 
 **Statut** :
 - **Environnement** : Prod, Pré-prod, QA, Test, Dev, Sandbox
@@ -132,7 +132,7 @@ L'onglet Vue d'ensemble est la page d'accueil de l'actif.
 
 | Colonne | Ce qu'elle affiche |
 |---------|--------------------|
-| **Application** | Nom de l'application (cliquable -- saute aux Déploiements de l'application) |
+| **Application** | Nom de l'application (cliquable : saute aux Déploiements de l'application) |
 | **Environnement** | L'environnement de déploiement auquel l'assignation appartient |
 | **Rôle** | Rôle serveur (Web, Base de données, Application, etc.) |
 | **Depuis** | Date à laquelle le serveur a été assigné |
@@ -142,7 +142,7 @@ Cliquez sur **Ajouter une assignation** pour rattacher cet actif à un déploiem
 
 Si cet actif est un cluster, une notification en ligne remplace le tableau d'assignations et vous demande d'assigner les hôtes membres à la place.
 
-**Connexions** : Une vue en lecture seule de toutes les connexions impliquant cet actif. Chaque ligne affiche l'ID et le nom de la connexion (cliquable -- ouvre l'espace de travail de la Connexion), la topologie (Serveur à serveur ou Multi-serveur), les protocoles, les libellés des points de terminaison source et destination, et le statut de cycle de vie. Pour créer ou modifier une connexion, rendez-vous dans **Cartographie SI > Connexions**.
+**Connexions** : Une vue en lecture seule de toutes les connexions impliquant cet actif. Chaque ligne affiche l'ID et le nom de la connexion (cliquable : ouvre l'espace de travail de la Connexion), la topologie (Serveur à serveur ou Multi-serveur), les protocoles, les libellés des points de terminaison source et destination, et le statut de cycle de vie. Pour créer ou modifier une connexion, rendez-vous dans **Cartographie SI > Connexions**.
 
 **Connaissances** : Articles de connaissances liés pour cet actif. Avec `knowledge:member`, vous pouvez créer de nouveaux articles directement depuis cette section.
 
@@ -162,7 +162,7 @@ L'onglet Technique organise le cluster, l'identité réseau et la configuration 
 - **Domaine** : Le domaine Active Directory ou DNS auquel l'actif appartient. Choisissez parmi les domaines configurés dans **Cartographie SI > Paramètres**. Les options système incluent « Workgroup » (autonome) et « N/A » (non applicable).
 - **FQDN** : Fully Qualified Domain Name, calculé automatiquement à partir du nom d'hôte et du suffixe DNS du domaine. Lecture seule.
 - **Alias** : Noms DNS ou alias supplémentaires pour cet actif. Tapez et appuyez sur Entrée pour ajouter.
-- **Système d'exploitation** : Type et version d'OS (ex. : Windows Server 2022, Ubuntu 24.04 LTS). Désactivé pour les clusters -- l'OS est défini par membre. Lorsqu'il est sélectionné, affiche les dates de fin de support standard et étendu en dessous.
+- **Système d'exploitation** : Type et version d'OS (ex. : Windows Server 2022, Ubuntu 24.04 LTS). Désactivé pour les clusters : l'OS est défini par membre. Lorsqu'il est sélectionné, affiche les dates de fin de support standard et étendu en dessous.
 
 **Adresses IP** :
 
@@ -175,7 +175,7 @@ Les actifs prennent en charge plusieurs adresses IP, chacune avec sa propre conf
 - **Zone réseau** : Dérivée automatiquement du sous-réseau sélectionné (lecture seule)
 - **VLAN** : Dérivé automatiquement du sous-réseau sélectionné (lecture seule)
 
-Cela vous permet de documenter plusieurs interfaces réseau par actif -- par exemple, un serveur physique avec à la fois une IP hôte et une adresse de management IPMI sur des sous-réseaux différents.
+Cela vous permet de documenter plusieurs interfaces réseau par actif, par exemple un serveur physique avec à la fois une IP hôte et une adresse de management IPMI sur des sous-réseaux différents.
 
 ---
 
@@ -225,9 +225,9 @@ L'onglet Relations connecte cet actif à d'autres enregistrements dans KANAP. Le
 - **Contrats** : Lien vers des enregistrements de contrats
 - **Projets** : Lien vers des projets du portefeuille liés à cet actif
 
-**Tâches** : Tâches liées à cet actif. En lecture seule ici -- les tâches gagnent ou perdent ce lien lorsque vous définissez le champ **Actif** sur une tâche dans la page Tâches.
+**Tâches** : Tâches liées à cet actif. En lecture seule ici : les tâches gagnent ou perdent ce lien lorsque vous définissez le champ **Actif** sur une tâche dans la page Tâches.
 
-**Sites web pertinents** : Ajoutez des URL avec des noms optionnels -- utile pour les portails fournisseurs, tableaux de bord de monitoring ou liens de documentation. **Ajouter une URL** ouvre une boîte de dialogue ; les entrées existantes peuvent être modifiées ou supprimées.
+**Sites web pertinents** : Ajoutez des URL avec des noms optionnels, utiles pour les portails fournisseurs, tableaux de bord de monitoring ou liens de documentation. **Ajouter une URL** ouvre une boîte de dialogue ; les entrées existantes peuvent être modifiées ou supprimées.
 
 **Pièces jointes** : Glissez-déposez des fichiers ou cliquez sur **Sélectionner des fichiers** pour téléverser. Cliquez sur la pastille d'une pièce jointe pour la télécharger. La suppression est disponible pour les managers.
 
@@ -249,20 +249,20 @@ Depuis la liste des Actifs :
 
 | Option | Description |
 |--------|-------------|
-| **Export complet** | Tous les champs exportables -- à utiliser pour le reporting et l'extraction complète des données |
-| **Enrichissement de données** | Tous les champs importables -- correspond au format du modèle d'import, idéal pour l'édition aller-retour (export, modification, ré-import) |
+| **Export complet** | Tous les champs exportables, à utiliser pour le reporting et l'extraction complète des données |
+| **Enrichissement de données** | Tous les champs importables. Correspond au format du modèle d'import, idéal pour l'édition aller-retour (export, modification, ré-import) |
 | **Sélection personnalisée** | Choisir les champs spécifiques à inclure dans votre export |
 
-**Téléchargement du modèle** (depuis la boîte de dialogue d'import) : Télécharge un CSV vierge avec tous les en-têtes de champs importables -- utilisez-le pour préparer des fichiers d'import avec la bonne structure.
+**Téléchargement du modèle** (depuis la boîte de dialogue d'import) : Télécharge un CSV vierge avec tous les en-têtes de champs importables. Utilisez-le pour préparer des fichiers d'import avec la bonne structure.
 
 ### Processus d'import
 
-1. **Préparez votre fichier** : Utilisez l'encodage UTF-8 avec des séparateurs point-virgule (`;`). Un fichier enregistré par Excel en CSV simple (Windows-1252) est accepté aussi. Téléchargez un modèle pour vous assurer des bons en-têtes.
+1. **Préparez votre fichier** : enregistrez-le en UTF-8. Les virgules et les points-virgules conviennent tous les deux, de même qu'un fichier enregistré par Excel en CSV simple (Windows-1252). Téléchargez un modèle pour vous assurer des bons en-têtes. Le séparateur, les montants, les dates et les oui ou non de chaque langue sont dans [Fichiers CSV](csv-files.md).
 
 2. **Choisissez les paramètres d'import** :
    - **Mode** :
-     - `Enrichir` (par défaut) : Les cellules vides conservent les valeurs existantes -- ne mettez à jour que ce que vous spécifiez
-     - `Remplacer` : Les cellules vides effacent les valeurs existantes -- remplacement complet de tous les champs
+     - `Enrichir` (par défaut) : Les cellules vides conservent les valeurs existantes : ne mettez à jour que ce que vous spécifiez
+     - `Remplacer` : Les cellules vides effacent les valeurs existantes : remplacement complet de tous les champs
    - **Opération** :
      - `Upsert` (par défaut) : Créer de nouveaux actifs ou mettre à jour les existants
      - `Mise à jour uniquement` : Ne modifier que les actifs existants, ignorer les nouveaux
@@ -284,7 +284,7 @@ Depuis la liste des Actifs :
 | `kind` | Type d'actif | Oui | Accepte un code ou un libellé (ex. : `vm` ou `Virtual Machine`) |
 | `environment` | Environnement | Oui | `prod`, `pre_prod`, `qa`, `test`, `dev`, `sandbox` |
 | `status` | Statut de cycle de vie | Non | Accepte un code ou un libellé (ex. : `active` ou `Active`) |
-| `is_cluster` | Est-ce un cluster | Non | `true` ou `false` |
+| `is_cluster` | Est-ce un cluster | Non | `oui` ou `non` |
 | `hostname` | Nom d'hôte réseau | Non | |
 | `domain` | Domaine DNS | Non | Accepte un code ou un libellé depuis les Paramètres |
 | `aliases` | Alias DNS | Non | Liste séparée par virgules |
@@ -343,7 +343,7 @@ Certains champs sont calculés et ne peuvent pas être importés :
 **Erreur « Le fichier n'est pas correctement formaté »** : Cela indique généralement un problème d'encodage. Assurez-vous que votre CSV est enregistré en **UTF-8** :
 
 - **Dans LibreOffice** : Lors de l'ouverture d'un CSV, sélectionnez `UTF-8` dans le menu déroulant Jeu de caractères (pas « Japanese (Macintosh) » ni d'autres encodages). Lors de l'enregistrement, cochez « Modifier les paramètres de filtre » et choisissez UTF-8.
-- **Dans Excel** : Enregistrer sous > CSV UTF-8 (délimité par des virgules), puis ouvrez dans un éditeur de texte pour remplacer les virgules par des points-virgules.
+- **Dans Excel** : Enregistrer sous > CSV UTF-8 (délimité par des virgules).
 - **Conseil général** : Si vous voyez des caractères illisibles au début de votre fichier, l'encodage est incorrect.
 
 ### Exemple CSV

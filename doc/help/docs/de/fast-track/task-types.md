@@ -246,6 +246,8 @@ Alle Arbeitselementtypen sind unter **Portfolio > Einstellungen** **konfigurierb
 - Bestehende Typen **deaktivieren**, die Sie nicht benötigen
 - Typen **umbenennen**, um Ihrer Terminologie zu entsprechen
 
+Die vier Standardtypen (Aufgabe, Bug, Problem, Vorfall) erscheinen in der Sprache jedes Benutzers, solange Sie ihre Namen beibehalten. Ein umbenannter Typ zeigt seinen neuen Namen in allen Sprachen.
+
 Die Liste in diesem Leitfaden ist ein Ausgangspunkt. Passen Sie sie an die tatsächliche Arbeitsweise Ihrer IT-Abteilung an.
 
 ---

@@ -17,6 +17,7 @@ import {
   EXPORT_RESOURCE_KEYS,
   auditReasonLabel,
   auditTableLabel,
+  auditTablesMatchingSearch,
   auditUserLabel,
 } from './auditLogLabels';
 import AuditLogsPage from './AuditLogsPage';
@@ -150,7 +151,7 @@ describe('AuditLogsPage', () => {
     expect(user.valueGetter({ data: { table_name: 'auth', user_id: 'u-1', user_name: 'Alice Admin', user_email: 'alice@example.com' } })).toBe('Alice Admin');
     expect(column('table_name').valueFormatter({ data: { table_name: 'export', after_json: { resource: 'incidents/report' } } })).toBe('Incident report');
     expect(column('table_name').valueFormatter({ data: { table_name: 'auth' } })).toBe('Sign-in and session');
-    expect(column('table_name').valueFormatter({ data: { table_name: 'suppliers' } })).toBe('suppliers');
+    expect(column('table_name').valueFormatter({ data: { table_name: 'suppliers' } })).toBe('Suppliers');
     expect(column('table_name').filterParams.labelFormatter('export')).toBe('Export');
     expect(column('action').filterParams.labelFormatter('login_failed')).toBe('Failed sign-in');
     expect(column('source_ref').valueFormatter({ data: { table_name: 'auth', source_ref: 'bad_password' } })).toBe('Wrong password');
@@ -158,6 +159,50 @@ describe('AuditLogsPage', () => {
     expect(auditReasonLabel({ table_name: 'suppliers', source_ref: 'import-7' }, t)).toBe('import-7');
     expect(auditTableLabel({ table_name: 'export', after_json: { resource: 'something-new' } }, t)).toBe('Export');
     expect(auditUserLabel({ table_name: 'auth', user_id: null }, t)).toBe('Unknown account');
+  });
+
+  it('names the tables in the reader language in the list, the filter and the detail', async () => {
+    await i18n.changeLanguage('fr');
+    const row = {
+      id: 'a-1', tenant_id: 't-1', table_name: 'contract_links', record_id: 'r-1', action: 'create',
+      before_json: null, after_json: { id: 'r-1' }, user_id: null, user_email: null, user_name: null,
+      source: 'user', source_ref: null, created_at: '2026-10-15T08:00:00Z',
+    };
+    getMock.mockResolvedValue({ data: row } as any);
+    renderPage();
+    expect(column('table_name').valueFormatter({ data: { table_name: 'suppliers' } })).toBe('Fournisseurs');
+    expect(column('table_name').filterParams.labelFormatter('spend_items')).toBe('Lignes OPEX');
+    expect(column('table_name').filterParams.labelFormatter('some_new_table')).toBe('some_new_table');
+    act(() => {
+      grid.props?.onCellClicked({ data: row });
+    });
+    expect(await screen.findByText('Table : Liens de contrat')).toBeTruthy();
+    expect(screen.queryByText(/contract_links/)).toBeNull();
+  });
+
+  it('searches the table labels of the reader language: the list, the filter values and the export send their codes', async () => {
+    await i18n.changeLanguage('fr');
+    getMock.mockResolvedValue(csvResponse() as any);
+    renderPage();
+    // The grid adds these parameters to its request when the search box holds the text.
+    expect(grid.props?.searchParams('fournisseur')).toEqual({ q_tables: 'supplier_contacts,suppliers' });
+    expect(grid.props?.searchParams('Liens de contrat')).toEqual({ q_tables: 'contract_links' });
+    expect(grid.props?.searchParams('zzz')).toEqual({});
+    expect(grid.props?.searchParams('e')).toEqual({});
+    getMock.mockResolvedValueOnce({ data: { table_name: [] } } as any);
+    await column('table_name').filterParams.getValues({ context: { getQueryState: () => ({ q: 'Fournisseurs', filters: {} }) } });
+    expect(getMock).toHaveBeenCalledWith('/audit-logs/filter-values', { params: { fields: 'table_name', q: 'Fournisseurs', q_tables: 'suppliers' } });
+    act(() => {
+      grid.props?.onQueryStateChange({ sort: 'created_at:DESC', filterModel: {}, q: 'Fournisseurs' });
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Exporter CSV' }));
+    await waitFor(() => expect(downloadBlob).toHaveBeenCalledTimes(1));
+    expect(getMock).toHaveBeenCalledWith('/audit-logs/export', {
+      params: { sort: 'created_at:DESC', q: 'Fournisseurs', q_tables: 'suppliers' },
+      responseType: 'blob',
+    });
+    // Accents and case aside, as the server folds a search.
+    expect(auditTablesMatchingSearch('societes', i18n.getFixedT('fr', 'admin') as any)).toContain('companies');
   });
 
   it('has every audit log text in the four languages', () => {
@@ -174,7 +219,7 @@ describe('AuditLogsPage', () => {
       ...AUDIT_EVENT_ACTIONS.map((action) => `actions.${action}`),
       ...AUTH_EVENT_REASONS.map((reason) => `reasons.${reason}`),
       ...Object.values(EXPORT_RESOURCE_KEYS).map((key) => `exportResources.${key}`),
-      'values.unknownAccount', 'tables.auth', 'tables.export',
+      'values.unknownAccount', 'tableNames.auth', 'tableNames.export',
       'export.button', 'export.failed', 'export.tooMany', 'export.truncated',
       'details.reason', 'details.exported',
     ];

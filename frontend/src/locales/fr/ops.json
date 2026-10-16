@@ -109,7 +109,7 @@
       "addRow": "Ajouter une ligne",
       "autoDistributeInfo": "Le reliquat est réparti automatiquement entre les sociétés actives selon la méthode sélectionnée. Aucune sélection manuelle requise.",
       "totalAutoHint": "(<= 100 % autorisé ; reliquat réparti automatiquement)",
-      "totalManualHint": "(aperçu uniquement – les totaux enregistrés utilisent les métriques en temps réel)",
+      "totalManualHint": "(aperçu uniquement : les totaux enregistrés utilisent les métriques en temps réel)",
       "failedToLoad": "Impossible de charger les ventilations",
       "failedToSave": "Impossible d'enregistrer les ventilations",
       "failedToCompute": "Impossible de calculer les ventilations",
@@ -302,7 +302,7 @@
       "addRow": "Ajouter une ligne",
       "autoDistributeInfo": "Le reliquat est réparti automatiquement entre les sociétés actives selon la méthode sélectionnée. Aucune sélection manuelle requise.",
       "totalAutoHint": "(<= 100 % autorisé ; reliquat réparti automatiquement)",
-      "totalManualHint": "(aperçu uniquement – les totaux enregistrés utilisent les métriques en temps réel)",
+      "totalManualHint": "(aperçu uniquement : les totaux enregistrés utilisent les métriques en temps réel)",
       "failedToLoad": "Impossible de charger les ventilations",
       "failedToSave": "Impossible d'enregistrer les ventilations",
       "failedToCompute": "Impossible de calculer les ventilations",
@@ -415,7 +415,9 @@
       "toDelete_one": "{{count}} contrat sera supprimé :",
       "toDelete_other": "{{count}} contrats seront supprimés :",
       "kept_one": "{{count}} contrat est conservé. Désactivez-le plutôt :",
-      "kept_other": "{{count}} contrats sont conservés. Désactivez-les plutôt :"
+      "kept_other": "{{count}} contrats sont conservés. Désactivez-les plutôt :",
+      "deleted_one": "{{count}} contrat supprimé",
+      "deleted_other": "{{count}} contrats supprimés"
     },
     "title": "Contrats",
     "newButton": "Nouveau",
@@ -779,16 +781,16 @@
       "operations": "Opérations"
     },
     "cards": {
-      "freezeTitle": "Geler / Dégeler les données",
-      "freezeDesc": "Verrouiller les colonnes budgétaires ou les métriques d'effectif pour une année spécifique",
+      "freezeTitle": "Geler / dégeler les données",
+      "freezeDesc": "Verrouillez les colonnes budgétaires ou les métriques d'effectif pour une année donnée",
       "copyBudgetTitle": "Copier les colonnes budgétaires",
-      "copyBudgetDesc": "Copier les montants entre années et colonnes, avec un pourcentage facultatif, et les ventilations vers une autre année",
+      "copyBudgetDesc": "Copiez les montants entre années et colonnes, avec un pourcentage facultatif, et les ventilations vers une autre année",
       "resetColumnTitle": "Réinitialiser une colonne budgétaire",
-      "resetColumnDesc": "Effacer toutes les données d'une colonne budgétaire pour une année spécifique",
+      "resetColumnDesc": "Effacez toutes les données d'une colonne budgétaire pour une année donnée",
       "allocationDefaultTitle": "Méthode de ventilation par défaut",
-      "allocationDefaultDesc": "Choisir la méthode appliquée aux lignes OPEX et CAPEX laissées en ventilation par défaut",
+      "allocationDefaultDesc": "Choisissez la méthode appliquée aux lignes OPEX et CAPEX laissées en ventilation par défaut",
       "budgetColumnsTitle": "Colonnes budgétaires",
-      "budgetColumnsDesc": "Nommer les cinq colonnes budgétaires, choisir celles qui sont affichées et la colonne par défaut",
+      "budgetColumnsDesc": "Nommez les cinq colonnes budgétaires, choisissez celles qui sont affichées et la colonne par défaut",
       "currencyTitle": "Devises",
       "currencyDesc": "Définissez les devises de reporting et par défaut, et consultez les taux de change",
       "masterDataFreezeTitle": "Geler les données de référence",
@@ -816,7 +818,7 @@
       "companyColumn": "Société",
       "driverValue": "Inducteur",
       "previewError": "La sélection actuelle ne peut pas être calculée : {{reason}}",
-      "standardNote": "Méthode standard — aucune personnalisation pour cette année.",
+      "standardNote": "Méthode standard : aucune personnalisation pour cette année.",
       "overriddenNote": "Configurée pour votre organisation. Méthode standard : {{method}}.",
       "resetToStandard": "Revenir à la méthode standard",
       "scopeNote": "La méthode est résolue au moment du calcul des ventilations : soit à partir de l'effectif, des utilisateurs IT ou du chiffre d'affaires de chaque société active pour l'année, soit à partir de l'inducteur des sociétés sélectionnées pour le défaut. La modifier recalcule toutes les lignes restées en méthode par défaut ; les ventilations manuelles conservent leurs pourcentages.",
@@ -830,7 +832,7 @@
       }
     },
     "freeze": {
-      "title": "Geler / Dégeler les données",
+      "title": "Geler / dégeler les données",
       "freezeError": "Impossible de geler les colonnes.",
       "unfreezeError": "Impossible de dégeler les colonnes.",
       "loadError": "Impossible de charger l'état de gel. Essayez de sélectionner une autre année.",
@@ -1429,7 +1431,7 @@
       "detailedAllocations": "Ventilations détaillées",
       "includeKpis": "Inclure les KPI",
       "intercompanyFlows": "Flux interentreprises",
-      "chartTitle": "Refacturation globale par société — {{year}}",
+      "chartTitle": "Refacturation globale par société ({{year}})",
       "chartSubtitle": "Totaux {{metric}}",
       "chartFootnote": "{{metric}} global : {{total}}"
     },
@@ -1455,7 +1457,7 @@
       "kpisDescription": "L'effectif, les utilisateurs IT et le chiffre d'affaires proviennent des métriques de la société pour l'année sélectionnée.",
       "globalTotals": "Totaux globaux",
       "chargebackKpis": "KPI de refacturation",
-      "chartTitle": "Refacturation par département — {{name}}",
+      "chartTitle": "Refacturation par département : {{name}}",
       "chartSubtitle": "Totaux {{metric}}",
       "chartFootnote": "{{metric}} global : {{total}}"
     },
@@ -1487,10 +1489,10 @@
       "grossChanges": "Variations brutes (toutes lignes)",
       "grossIncrease": "Hausse brute (toutes lignes)",
       "grossDecrease": "Baisse brute (toutes lignes)",
-      "coverageNa": "Couverture — n/d",
-      "coveragePct": "Couverture — {{pct}} % couverts",
-      "coverageSplit": "Couverture — {{detail}}",
-      "selectionTotals": "Totaux de la sélection — Hausse : {{inc}} · Baisse : {{dec}}",
+      "coverageNa": "Couverture : n/d",
+      "coveragePct": "Couverture : {{pct}} % couverts",
+      "coverageSplit": "Couverture : {{detail}}",
+      "selectionTotals": "Totaux de la sélection (Hausse : {{inc}} · Baisse : {{dec}})",
       "totalIncrease": "Hausse totale : {{value}}",
       "totalDecrease": "Baisse totale : {{value}}",
       "topSelectionTotals": "Totaux de la sélection top {{inc}}/{{dec}}",
@@ -1803,7 +1805,7 @@
     },
     "frozen": {
       "title": "La colonne {{column}} {{year}} est gelée",
-      "hint": "Lecture seule. Un administrateur peut la dégeler dans Administration › Geler / Dégeler les données."
+      "hint": "Lecture seule. Un administrateur peut la dégeler dans Administration › Geler / dégeler les données."
     },
     "atADate": "À une date",
     "date": "Date",
@@ -1848,11 +1850,19 @@
     "importTitle": "Importer des lignes budgétaires",
     "opex": "OPEX",
     "capex": "CAPEX",
-    "totalWithCount_one": "Total ({{count}} ligne)",
-    "totalWithCount_other": "Total ({{count}} lignes)",
+    "totalWithCount_one": "Total ({{count, count}} ligne)",
+    "totalWithCount_other": "Total ({{count, count}} lignes)",
     "changeType": "Changer le type…",
     "typeOpex": "OPEX",
     "typeCapex": "CAPEX",
-    "line": "Ligne budgétaire"
+    "line": "Ligne budgétaire",
+    "delete": {
+      "toDelete_one": "{{count}} ligne budgétaire sera supprimée :",
+      "toDelete_other": "{{count}} lignes budgétaires seront supprimées :",
+      "kept_one": "{{count}} ligne budgétaire ne peut pas être supprimée et est conservée :",
+      "kept_other": "{{count}} lignes budgétaires ne peuvent pas être supprimées et sont conservées :",
+      "deleted_one": "{{count}} ligne budgétaire supprimée",
+      "deleted_other": "{{count}} lignes budgétaires supprimées"
+    }
   }
 }

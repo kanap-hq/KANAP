@@ -78,7 +78,7 @@ function DetailPreview({ detail }: { detail: AiAgentControlActivityDetail }) {
   );
 }
 
-// What the watcher found on one pass, in the row title: "Ticket check — 3 new
+// What the watcher found on one pass, in the row title: "Ticket check: 3 new
 // tickets, 1 error". The counts were already recorded, they were simply never
 // shown.
 function useCheckSummary() {
@@ -86,7 +86,7 @@ function useCheckSummary() {
   return React.useCallback((check: AiAgentControlActivityCheck, isSre: boolean): string | null => {
     if (check.status && check.status !== 'completed') {
       const label = t(`activity.checkStatus.${check.status}`, { defaultValue: humanize(check.status) });
-      return check.reason ? `${label} — ${check.reason}` : label;
+      return check.reason ? t('activity.statusWithReason', { status: label, reason: check.reason }) : label;
     }
     const parts: string[] = [];
     parts.push(check.enqueued > 0
@@ -243,7 +243,7 @@ export default function AgentsActivityPage({ agentKey, compact = false }: { agen
     const fallback = t(`activity.titles.${entry.titleKey}`, { defaultValue: humanize(entry.titleKey) });
     const base = isSre ? t(`activity.titles.${entry.titleKey}_sre`, { defaultValue: fallback }) : fallback;
     const summary = entry.detail?.check ? checkSummary(entry.detail.check, isSre) : null;
-    return summary ? `${base} — ${summary}` : base;
+    return summary ? t('activity.titleWithSummary', { title: base, summary }) : base;
   }, [agentTypeByKey, checkSummary, t]);
 
   // Keyset pagination: the query key stays stable (no offset/cursor in the URL),

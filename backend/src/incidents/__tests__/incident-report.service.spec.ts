@@ -114,7 +114,7 @@ function testNormalizeLang() {
 
 function testFilenameAndHeaderRef() {
   assert.equal(reportPdfFilename(12), 'INC-12-incident-report.pdf');
-  assert.equal(reportHeading(12, 'Mail outage | #1 *urgent*'), 'INC-12 — Mail outage | #1 *urgent*');
+  assert.equal(reportHeading(12, 'Mail outage | #1 *urgent*'), 'INC-12 · Mail outage | #1 *urgent*');
   assert.equal(reportHeading(12, ''), 'INC-12');
   const markdown = buildMarkdown(fixture(), 'en', labelsFor('en'));
   assert.equal(markdown.includes('# INC-12'), false);

@@ -61,7 +61,21 @@ export function useItOpsEnumOptions() {
     return found.deprecated ? `${found.label} (${i18n.t('common:enumEditor.retiredSuffix')})` : found.label;
   }, [byField]);
 
-  return { settings, byField, labelFor };
+  /**
+   * An entity's name on a map or a connection: its catalog label in the user's language, or the name
+   * the server stored when the catalog no longer has the code.
+   */
+  const entityName = useCallback((code?: string | null, storedName?: string | null): string => {
+    const normalized = String(code ?? '').trim().toLowerCase();
+    const known = !!normalized && byField.entity.some((option) => option.code.toLowerCase() === normalized);
+    if (known) {
+      const option = byField.entity.find((item) => item.code.toLowerCase() === normalized)!;
+      return labelFor('entity', option.code);
+    }
+    return storedName || code || '';
+  }, [byField, labelFor]);
+
+  return { settings, byField, labelFor, entityName };
 }
 
 export default useItOpsEnumOptions;

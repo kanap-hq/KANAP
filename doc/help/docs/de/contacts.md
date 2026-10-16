@@ -45,7 +45,7 @@ Das Kontakte-Grid bietet ein durchsuchbares Verzeichnis aller externen Kontakte.
 - **Neu**: Neuen Kontakt erstellen (erfordert `contacts:manager`)
 - **CSV importieren**: Massenimport von Kontakten (erfordert `contacts:admin`)
 - **CSV exportieren**: Als CSV exportieren (erfordert `contacts:admin`)
-- **Ausgewählte löschen**: Ausgewählte Kontakte entfernen (erfordert `contacts:admin`)
+- **Ausgewählte löschen**: Ausgewählte Kontakte entfernen (erfordert `contacts:admin`). Sie werden aus den Lieferanten, Budgetzeilen, Verträgen, Anwendungen, Assets, Standorten, Projekten und Anfragen entfernt, die sie nennen; diese Einträge bleiben erhalten
 
 ---
 
@@ -123,11 +123,10 @@ Verwalten Sie Kontakte in großen Mengen per CSV.
 
 **Pflichtfelder**: E-Mail
 
-**Optionale Felder**: Vorname, Nachname, Lieferantenname, Berufsbezeichnung, Telefon, Mobil, Land, Aktiv
+**Optionale Felder**: `first_name`, `last_name`, `job_title`, `phone`, `mobile`, `country`, `notes`, `active`
 
 **Hinweise**:
-- Verwenden Sie **UTF-8-Kodierung** und **Semikolons** als Trennzeichen. Eine von Excel als einfache CSV gespeicherte Datei (Windows-1252) wird ebenfalls importiert
-- Der Lieferant wird nach Name zugeordnet. Stellen Sie sicher, dass der Lieferant vor dem Import existiert
+- Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen und die beiden Importschritte
 
 ---
 

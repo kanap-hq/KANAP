@@ -86,7 +86,7 @@ L'en-tête de l'espace de travail vous donne le contexte opérationnel sans quit
 - une bande de métadonnées avec **Statut**, **Score**, **Demandeur**, **Responsable IT**, **Date de livraison cible** et (lorsque applicable) la **Tâche source** depuis laquelle la demande a été créée
 - **Envoyer le lien** pour le partage
 - **Convertir en projet** lorsque la demande est **Approuvée** ou **Convertie**
-- **Supprimer** pour les administrateurs (lorsque la demande n'est pas encore convertie)
+- **Supprimer** pour les administrateurs (lorsque la demande n'est pas encore convertie). Une demande convertie reste l'origine de son projet et ne peut pas être supprimée
 - navigation précédent/suivant basée sur le contexte exact de la liste d'où vous venez
 
 ### Tiroir des propriétés
@@ -174,7 +174,7 @@ L'historique est la vue d'audit. Utilisez-la lorsque vous devez répondre à des
 - quand les assignations d'équipe ont changé
 - si un changement d'évaluation ou d'analyse s'est produit avant ou après une décision
 
-La liste se termine par l'entrée de création — qui a créé la demande et quand — sous les changements enregistrés, qui incluent les modifications des documents Objectif et Risques.
+La liste se termine par l'entrée de création (qui a créé la demande et quand), sous les changements enregistrés, qui incluent les modifications des documents Objectif et Risques.
 
 Si vous avez besoin de récit, utilisez Commentaires. Si vous avez besoin de preuve, utilisez Historique.
 
@@ -261,7 +261,7 @@ Une demande avec des données de dépendance faibles peut sembler inoffensive ju
 
 ### Autres relations
 
-Sous les dépendances, l'onglet Relations vous permet également de maintenir d'autres liens de portefeuille -- par exemple, demandes liées, projets liés, ou autres objets métier et techniques connectés. Chaque relation est sauvegardée automatiquement.
+Sous les dépendances, l'onglet Relations vous permet également de maintenir d'autres liens de portefeuille, par exemple demandes liées, projets liés, ou autres objets métier et techniques connectés. Chaque relation est sauvegardée automatiquement.
 
 Pour les projets produits depuis cette demande après conversion, voir le groupe **Projets résultants** dans le tiroir Propriétés.
 

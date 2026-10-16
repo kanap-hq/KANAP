@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
-import { ILike, In, Not, Raw } from 'typeorm';
-import { setFilterMode } from './ag-grid-filtering';
+import { EntityMetadata, ILike, In, Not, Raw } from 'typeorm';
+import { compileAgFilterCondition, normalizeAgFilterModel, setFilterMode } from './ag-grid-filtering';
 import { StatusState } from './status';
 
 export type Sort = { field: string; direction: 'ASC' | 'DESC' };
@@ -92,6 +92,13 @@ export function buildWhereFromAgFilters(filters: any, allowedFields?: string[]):
     if (model && model.operator && Array.isArray(model.conditions) && model.conditions.length > 0) {
       model = model.conditions[0];
     }
+    // A date model (the grid's date filter): by day, as the lists compiled in SQL read it.
+    if (model?.filterType === 'date') {
+      const column = '__date_filter_column__';
+      const compiled = compileAgFilterCondition(model, { expression: column }, () => `date_filter_value_${++setFilterParamSeq}`);
+      if (compiled) where[field] = Raw((alias) => compiled.sql.split(column).join(alias), compiled.params);
+      continue;
+    }
     const type = (model?.type ?? model?.filterType ?? 'contains') as string;
     // Handle Set filter (multi-select): the ticked values only (exclude mode answers 400 rather than
     // returning the values the user unticked).
@@ -161,4 +168,38 @@ export function buildWhereFromAgFilters(filters: any, allowedFields?: string[]):
     }
   }
   return where;
+}
+
+const DATE_COLUMN_TYPES = new Set(['date', 'timestamp', 'timestamptz', 'timestamp with time zone', 'timestamp without time zone']);
+const BOOLEAN_COLUMN_TYPES = new Set(['boolean', 'bool']);
+const NUMBER_COLUMN_TYPES = new Set(['int', 'int2', 'int4', 'int8', 'integer', 'smallint', 'bigint', 'numeric', 'decimal', 'real', 'double precision', 'float', 'float4', 'float8', 'number']);
+
+/**
+ * For a list that hands its column filters to TypeORM (`buildWhereFromAgFilters`), checked before:
+ * a filter on a field the entity has no column for answers 400 (TypeORM fails the request with a
+ * 500), and so does a model the column's type cannot take: on a date, anything but a date model,
+ * a set or a blank check; on a boolean or a number, a text search (the database has no ILIKE on
+ * them; a number takes an exact value).
+ */
+export function assertEntityFilterFields(filters: unknown, metadata: EntityMetadata): void {
+  if (!filters || typeof filters !== 'object') return;
+  for (const [field, raw] of Object.entries(filters as Record<string, any>)) {
+    const column = metadata.columns.find((candidate) => candidate.propertyName === field);
+    if (!column) throw new BadRequestException(`Unknown filter column "${field}".`);
+    const type = (typeof column.type === 'function' ? column.type.name : String(column.type)).toLowerCase();
+    const model = normalizeAgFilterModel(raw);
+    if (!model || typeof model !== 'object') continue;
+    const kind = String(model.type ?? model.filterType ?? 'contains');
+    if (kind === 'set' || model.filterType === 'set' || kind === 'blank' || kind === 'notBlank') continue;
+    if (DATE_COLUMN_TYPES.has(type) && model.filterType !== 'date') {
+      throw new BadRequestException(`The filter on "${field}" takes a date: send a date model ("filterType": "date").`);
+    }
+    if (BOOLEAN_COLUMN_TYPES.has(type) && kind !== 'equals' && kind !== 'notEqual') {
+      throw new BadRequestException(`The filter on "${field}" takes yes or no: send a set of values.`);
+    }
+    const value = model.filter ?? model.value;
+    if (NUMBER_COLUMN_TYPES.has(type) && !((kind === 'equals' || kind === 'notEqual') && value != null && value !== '' && Number.isFinite(Number(value)))) {
+      throw new BadRequestException(`The filter on "${field}" takes a number: send a set of values or an exact number.`);
+    }
+  }
 }

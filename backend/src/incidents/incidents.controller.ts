@@ -1,3 +1,4 @@
+import { languageOf } from '../common/csv-sheet';
 import {
   Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, Res,
   UploadedFile, UseGuards, UseInterceptors,
@@ -141,12 +142,16 @@ export class IncidentsController {
   @RequireLevel('incidents', 'reader')
   @Get('export')
   async exportCsv(
+    @Query('language') languageRaw: string | undefined,
     @Query('scope') scope: 'template' | 'data' = 'data',
     @Query('fields') fields: string | undefined,
     @Res() res: Response,
     @Tenant() ctx: TenantRequest,
   ): Promise<void> {
+    // The screen's language (the user's own when the screen sends none), as every shared-layer file.
+    const language = await languageOf(ctx.manager as EntityManager, ctx.tenantId, ctx.userId ?? null, languageRaw);
     const result = await this.csvSvc.export({
+      language,
       manager: ctx.manager as EntityManager,
       tenantId: ctx.tenantId,
       viewer: incidentViewerFromContext(ctx),

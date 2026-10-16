@@ -18,9 +18,9 @@
     "restricted": { "label": "Restricted", "description": "Disclosure could cause severe harm; access is strictly limited to those who need it." }
   },
   "recoveryWaves": {
-    "foundation": { "label": "V0 — Foundation", "description": "Shared prerequisites and foundation services." },
-    "vital": { "label": "V1 — Vital activities", "description": "Restore vital activities after their prerequisites." },
-    "priority": { "label": "V2 — Priority activities", "description": "Restore priority activities." },
-    "normal": { "label": "V3 — Normal operation", "description": "Return to normal operation." }
+    "foundation": { "label": "V0: Foundation", "description": "Shared prerequisites and foundation services." },
+    "vital": { "label": "V1: Vital activities", "description": "Restore vital activities after their prerequisites." },
+    "priority": { "label": "V2: Priority activities", "description": "Restore priority activities." },
+    "normal": { "label": "V3: Normal operation", "description": "Return to normal operation." }
   }
 }

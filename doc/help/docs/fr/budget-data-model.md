@@ -108,7 +108,7 @@ Chaque ligne budgétaire a les mêmes cinq colonnes pour chaque année. Elles so
 
 - Un administrateur du budget peut renommer une colonne (jusqu'à 40 caractères), la masquer et choisir la colonne par défaut. Le nom dans les fichiers reste le même : un fichier continue de fonctionner après un renommage. Voir [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires).
 - Une colonne masquée garde ses montants et accepte toujours les imports.
-- Les colonnes sont gelées par année, par colonne et par type (OPEX ou CAPEX). Une colonne gelée refuse les modifications, les imports, les copies et les réinitialisations. Voir [Geler / Dégeler les données](budget-operations.md#geler-degeler-les-donnees).
+- Les colonnes sont gelées par année, par colonne et par type (OPEX ou CAPEX). Une colonne gelée refuse les modifications, les imports, les copies et les réinitialisations. Voir [Geler / dégeler les données](budget-operations.md#geler-degeler-les-donnees).
 
 Il n'y a pas de sixième colonne. Pour conserver plusieurs tours budgétaires, utilisez une colonne par tour, ou copiez une colonne vers une autre année ou une autre colonne avec [Copier les colonnes budgétaires](budget-operations.md#copier-les-colonnes-budgetaires).
 

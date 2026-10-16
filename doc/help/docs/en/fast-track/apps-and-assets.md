@@ -5,10 +5,10 @@ description: Get your application landscape documented in minutes. A practical g
 
 # IT Ops Fast Track: From Application to Server
 
-This guide walks you through documenting an application and its supporting infrastructure -- from creating the app entry to linking it to the server that hosts it. It's designed to get you productive fast, covering the essential steps without drowning you in options.
+This guide walks you through documenting an application and its supporting infrastructure, from creating the app entry to linking it to the server that hosts it. It's designed to get you productive fast, covering the essential steps without drowning you in options.
 
 !!! tip "Prefer a one-page summary? :material-file-pdf-box:"
-    All the key steps on a single A4 page -- print it, pin it, share it with your team.
+    All the key steps on a single A4 page: print it, pin it, share it with your team.
 
     [:material-download: Download the cheat sheet (PDF)](downloads/kanap-itops-fast-track.pdf){ .md-button .md-button--primary }
 
@@ -25,15 +25,15 @@ Everything in KANAP's IT Landscape module connects to paint a complete picture o
 | Object | What it represents |
 |--------|--------------------|
 | **Application** | A business app or IT service you need to document |
-| **Environment** | Where it runs -- Prod, QA, Dev, etc. (called "Deployments" in KANAP) |
-| **Server (Asset)** | The infrastructure that hosts it -- VMs, physical servers, containers |
+| **Environment** | Where it runs: Prod, QA, Dev, etc. (called "Deployments" in KANAP) |
+| **Server (Asset)** | The infrastructure that hosts it: VMs, physical servers, containers |
 
 The chain is simple: **Application → Environment → Server**. By the end of this guide, you'll have this chain fully documented.
 
 ![Application Relationship Model](images/app-relationship-model.png)
 
 !!! info "Why this matters"
-    When someone asks "where does this app run?", "who owns it?", or "is it compliant?" -- you'll have the answer in seconds instead of digging through spreadsheets.
+    When someone asks "where does this app run?", "who owns it?", or "is it compliant?", you'll have the answer in seconds instead of digging through spreadsheets.
 
 ---
 
@@ -54,7 +54,7 @@ Fill in the essentials:
 Click **Create**. Your application is now in the registry, and the full workspace opens with six tabs for detailed documentation: **Overview**, **Deployments**, **Interfaces**, **Operations**, **Compliance**, and **Relations**.
 
 !!! tip "Start with what you know"
-    Description, publisher, version, licensing -- all useful, but optional at this stage. You can enrich later. The goal is to get the app into the system.
+    Description, publisher, version, licensing: all useful, but optional at this stage. You can enrich later. The goal is to get the app into the system.
 
 ---
 
@@ -98,7 +98,7 @@ The IT team members responsible for technical operations and support. Same mecha
 Under **Audience**, pick the **Company** and **Departments** that use this application. KANAP calculates the number of users from your master data, or you can switch the calculation to manual and type the number yourself.
 
 !!! warning "Why owners matter"
-    Ownership makes it easy to **reach the right people** when it matters -- planned maintenance, service disruptions, upgrade decisions, license renewals. It also drives the **My apps** and **My team's apps** scope filters on the main list. Without owners, the app is only visible in the "All apps" view -- which means nobody feels responsible for it, and nobody gets notified.
+    Ownership makes it easy to **reach the right people** when it matters: planned maintenance, service disruptions, upgrade decisions, license renewals. It also drives the **My apps** and **My team's apps** scope filters on the main list. Without owners, the app is only visible in the "All apps" view, which means nobody feels responsible for it, and nobody gets notified.
 
 ---
 
@@ -106,13 +106,13 @@ Under **Audience**, pick the **Company** and **Departments** that use this appli
 
 Go to the **Operations** tab. Under **Access methods**, select how users reach this application:
 
-- **Web** -- browser-based access
-- **Locally installed application** -- desktop client
-- **Mobile application** -- phone/tablet app
-- **VDI / Remote Desktop** -- virtual desktop
-- **Terminal / CLI** -- command-line interface
-- **Proprietary HMI** -- industrial interface
-- **Kiosk** -- dedicated terminal
+- **Web**: browser-based access
+- **Locally installed application**: desktop client
+- **Mobile application**: phone/tablet app
+- **VDI / Remote Desktop**: virtual desktop
+- **Terminal / CLI**: command-line interface
+- **Proprietary HMI**: industrial interface
+- **Kiosk**: dedicated terminal
 
 Access methods are configurable in [IT Landscape Settings](../it-ops-settings.md#access-methods), so your list may include additional options.
 
@@ -143,7 +143,7 @@ Go to the **Relations** tab to connect your application to the rest of your IT m
 The tab also lets you link **Tasks**, and suites list their **Components** there.
 
 !!! tip "You can do this later"
-    Relations are powerful but not blocking. Create them when you have the data -- the app is fully functional without them.
+    Relations are powerful but not blocking. Create them when you have the data. The app is fully functional without them.
 
 ---
 
@@ -179,7 +179,7 @@ Fill in the core fields:
 | **Asset type** | The server type (dropdown) | `Virtual Machine` |
 | **Location** | Where it's hosted (required) | `Paris Datacenter` |
 | **Environment** | Which environment it serves | `Prod` |
-| **Description** | Any additional context | -- |
+| **Description** | Any additional context | |
 
 The **Properties** panel on the right holds the rest: **Sub-location**, **Lifecycle**, **Go live**, and **End of life**. Once a Location is selected, several **read-only fields** are automatically derived:
 
@@ -189,7 +189,7 @@ The **Properties** panel on the right holds the rest: **Sub-location**, **Lifecy
 - **City**
 
 !!! info "Location is the key"
-    The Location drives many attributes of your asset automatically. Locations are managed in **IT Landscape → Locations** -- set them up once and every asset assigned to them inherits hosting type, provider, country, and city. You don't need to fill these in manually.
+    The Location drives many attributes of your asset automatically. Locations are managed in **IT Landscape → Locations**. Set them up once and every asset assigned to them inherits hosting type, provider, country, and city. You don't need to fill these in manually.
 
 Click **Create** to unlock the full workspace. For physical asset types, additional **Hardware** and **Support** tabs become available to track serial numbers, manufacturer details, and vendor support contracts.
 
@@ -204,13 +204,13 @@ Go to the **Technical** tab to add:
 | **IP addresses** | Type, IP address, Subnet | Network zone and VLAN are derived from Subnet |
 
 !!! info "Multiple IP addresses"
-    A server can have several IP addresses -- add as many as needed (e.g., management interface, production VLAN, backup network). Each entry can have its own type and subnet, and the Network zone and VLAN are derived automatically.
+    A server can have several IP addresses. Add as many as needed (e.g., management interface, production VLAN, backup network). Each entry can have its own type and subnet, and the Network zone and VLAN are derived automatically.
 
 ---
 
 ## Step 8: Link the Server to Your Application
 
-This is the final connection -- tying your server to the application environment it supports.
+This is the final connection: tying your server to the application environment it supports.
 
 There are **two ways** to create this assignment:
 
@@ -235,7 +235,7 @@ There are **two ways** to create this assignment:
 | **Environment** | Which deployment | `PROD` |
 | **Role** | Server role for this app | `Web` |
 | **Since date** | When the assignment started | `2025-01-15` |
-| **Notes** | Any context | -- |
+| **Notes** | Any context | |
 
 !!! success "The chain is complete"
     You now have the full path documented:
@@ -251,7 +251,7 @@ Every piece of data you enter feeds into something bigger:
 
 ### Application Landscape View
 
-Your Applications list becomes a live registry showing every application with its environments, criticality, hosting type, and ownership -- filterable by any attribute.
+Your Applications list becomes a live registry showing every application with its environments, criticality, hosting type, and ownership, filterable by any attribute.
 
 ### Infrastructure Mapping
 
@@ -277,7 +277,7 @@ Once assets are documented, you can create **Connections** (Server to Server or 
 
 Take it one step further: document **Interfaces** between applications to capture data flows, integration points, and business context. Each interface has five tabs for thorough documentation: Overview, Flow, Environments, Data mapping, and Relations.
 
-Then use the [Interface Map](../interface-map.md) to visualize the full application flow. In the default Business view, you see clean source-to-target relationships. Switch to the Technical view to reveal middleware platforms as diamond-shaped nodes, showing the actual data path. Depth filtering counts only primary application nodes -- middleware is transparent, so selecting an app with depth 2 shows you two real hops regardless of how many middleware platforms sit in between.
+Then use the [Interface Map](../interface-map.md) to visualize the full application flow. In the default Business view, you see clean source-to-target relationships. Switch to the Technical view to reveal middleware platforms as diamond-shaped nodes, showing the actual data path. Depth filtering counts only primary application nodes: middleware is transparent, so selecting an app with depth 2 shows you two real hops regardless of how many middleware platforms sit in between.
 
 ---
 
@@ -303,4 +303,4 @@ Then use the [Interface Map](../interface-map.md) to visualize the full applicat
 ---
 
 !!! success "You're ready"
-    You now know how to document the full chain from application to server. Start with your most critical apps, add their production environments, link the servers -- and you'll have a living, queryable IT landscape in no time. For detailed documentation on every feature, explore the [Applications](../applications.md) and [Assets](../assets.md) reference sections.
+    You now know how to document the full chain from application to server. Start with your most critical apps, add their production environments, link the servers, and you'll have a living, queryable IT landscape in no time. For detailed documentation on every feature, explore the [Applications](../applications.md) and [Assets](../assets.md) reference sections.

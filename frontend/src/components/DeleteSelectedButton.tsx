@@ -6,6 +6,7 @@ import DeleteConfirmDialog, { DeleteConfirmKept } from './DeleteConfirmDialog';
 import api from '../api';
 import { getApiErrorMessage } from '../utils/apiErrorMessage';
 import { deleteFailureReason, refusalCounts, type DeleteFailure } from '../utils/deleteRefusal';
+import { joinNames } from '../pages/working-day-calendars/workingDayCalendarFields';
 import { KanapDialog } from './design';
 
 /**
@@ -17,6 +18,13 @@ export type DeleteCheck = {
   refused: Array<DeleteFailure & { id: string; name?: string }>;
   warning?: string;
   confirmLabel?: string;
+  /** The body key sent `true` when the delete removes the dependants the warning names ("Delete anyway"). */
+  forceKey?: string;
+  /**
+   * The refusal codes the window's `cascadeOption` lifts (an interface's bindings): those items are
+   * listed as kept, and checking the option moves them to the items deleted.
+   */
+  cascadeLifts?: string[];
 };
 
 export interface DeleteSelectedButtonProps<T> {
@@ -53,9 +61,19 @@ export interface DeleteSelectedButtonProps<T> {
    * window (the reason, Close only). A failed check falls back to the usual confirmation.
    */
   checkDelete?: (ids: string[]) => Promise<DeleteCheck>;
-  /** The item lines in the record's words: "2 contracts will be deleted:", "1 contract is kept:". */
-  itemLabels?: { toDelete: (count: number) => string; kept: (count: number) => string };
+  /**
+   * The item lines in the record's words: "2 contracts will be deleted:", "1 contract is kept:", and
+   * for the message once done, "2 contracts deleted" (else "Deleted 2 items").
+   */
+  itemLabels?: { toDelete: (count: number) => string; kept: (count: number) => string; deleted?: (count: number) => string };
 }
+
+/** The names a success message lists before "and n more". */
+const NAMED_DELETES = 3;
+
+type Item = { id: string; name: string };
+/** What the dialog shows, taken when it opens: it keeps saying it while it closes, after the selection is cleared. */
+type Opened = { items: Item[]; check: DeleteCheck | null };
 
 export default function DeleteSelectedButton<T>({
   selectedRows,
@@ -77,7 +95,9 @@ export default function DeleteSelectedButton<T>({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(false);
-  const [check, setCheck] = useState<DeleteCheck | null>(null);
+  const [opened, setOpened] = useState<Opened>({ items: [], check: null });
+  const [deleteRelated, setDeleteRelated] = useState(false);
+  const check = opened.check;
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
@@ -86,17 +106,20 @@ export default function DeleteSelectedButton<T>({
 
   const handleOpenConfirm = async () => {
     if (selectedRows.length === 0) return;
-    setCheck(null);
+    const selection = selectedRows.map((row) => ({ id: getItemId(row), name: getItemName(row) }));
+    let answered: DeleteCheck | null = null;
     if (checkDelete) {
       setChecking(true);
       try {
-        setCheck(await checkDelete(selectedRows.map(getItemId)));
+        answered = await checkDelete(selection.map((item) => item.id));
       } catch {
         // No check: the usual confirmation, and the server still refuses what it must.
       } finally {
         setChecking(false);
       }
     }
+    setOpened({ items: selection, check: answered });
+    setDeleteRelated(false);
     setConfirmOpen(true);
   };
 
@@ -108,21 +131,28 @@ export default function DeleteSelectedButton<T>({
   const handleConfirmDelete = async (options?: { deleteRelated?: boolean }) => {
     setLoading(true);
     try {
-      const ids = deletable.map((item) => item.id);
+      const ids = toDelete.map((item) => item.id);
       const data: Record<string, any> = { ids };
       if (options?.deleteRelated && cascadeOption) {
         data[cascadeOption.apiKey] = true;
       }
-      if (forceOption?.apiKey) data[forceOption.apiKey] = true;
+      // An answered check says what goes too; without one, the force option from the rows.
+      const forceKey = check ? check.forceKey : forceOption?.apiKey;
+      if (forceKey) data[forceKey] = true;
       const response = await api.delete(endpoint, { data });
 
       const { deleted = [], failed = [] } = response.data;
+      const deletedIds: string[] = Array.isArray(deleted) ? deleted.map(String) : [];
+      // What was deleted, then what the check kept, by name.
+      const done = shownKept.length > 0
+        ? t('delete.withKept', { deleted: deletedMessage(deletedIds), kept: keptMessage() })
+        : deletedMessage(deletedIds);
 
       if (failed.length === 0) {
         // All deleted successfully
         setSnackbar({
           open: true,
-          message: t('delete.successAll', { count: deleted.length }),
+          message: done,
           severity: 'success',
         });
       } else {
@@ -130,11 +160,11 @@ export default function DeleteSelectedButton<T>({
         const reasons = failed
           .map((f: any) => `${f.productName || f.name || f.description || 'Item'}: ${deleteFailureReason(f, t, language)}`)
           .join('; ');
-        setSnackbar(deleted.length === 0
+        setSnackbar(deletedIds.length === 0
           ? { open: true, message: t('delete.failedAll', { reasons }), severity: 'error' }
           : {
             open: true,
-            message: `${t('delete.partialDeleted', { count: deleted.length })} ${t('delete.partialFailed', { count: failed.length, reasons })}`,
+            message: t('delete.partialResult', { deleted: done, failed: t('delete.partialFailed', { count: failed.length, reasons }) }),
             severity: 'warning',
           });
       }
@@ -167,18 +197,45 @@ export default function DeleteSelectedButton<T>({
     setSnackbar({ ...snackbar, open: false });
   };
 
-  const items = selectedRows.map((row) => ({
-    id: getItemId(row),
-    name: getItemName(row),
-  }));
+  const items = opened.items;
+  /** "2 contracts deleted: Alpha and Beta", the names capped ("…, and 2 more"). */
+  const deletedMessage = (ids: string[]) => {
+    const what = itemLabels?.deleted?.(ids.length) ?? t('delete.successAll', { count: ids.length });
+    const nameById = new Map(items.map((item) => [item.id, item.name]));
+    return namedMessage(what, ids.map((id) => nameById.get(id)).filter((name): name is string => !!name));
+  };
+  /** "<what>: Alpha, Beta, Gamma and 2 more", or `what` alone without names. */
+  const namedMessage = (what: string, names: string[]) => {
+    if (names.length === 0) return what;
+    const shown = names.slice(0, NAMED_DELETES);
+    if (names.length > NAMED_DELETES) shown.push(t('delete.namesMore', { count: names.length - NAMED_DELETES }));
+    return t('delete.namedList', { what, names: joinNames(shown, language) });
+  };
+  /** "1 item kept: Beta", the names capped as for the deleted ones. */
+  const keptMessage = () => namedMessage(t('delete.keptDone', { count: shownKept.length }), shownKept.map((item) => item.name));
   // Refused rows stay out of the delete; each is listed as kept, with what makes it refused.
   const refusedById = new Map((check?.refused ?? []).map((refusal) => [refusal.id, refusal]));
   const deletable = items.filter((item) => !refusedById.has(item.id));
   const keptItems = items
     .filter((item) => refusedById.has(item.id))
-    .map((item) => ({ ...item, reason: refusalCounts(refusedById.get(item.id)!, t, language) }));
+    .map((item) => {
+      const refusal = refusedById.get(item.id)!;
+      // What uses it, counted; a refusal without counts (a frozen column) in its own words.
+      return { ...item, reason: refusal.usages?.length ? refusalCounts(refusal, t, language) : deleteFailureReason(refusal, t, language) };
+    });
+  // Kept items whose refusal the window's option lifts: checked, they are deleted too.
+  const lifts = new Set(cascadeOption ? check?.cascadeLifts ?? [] : []);
+  const liftable = keptItems.filter((item) => lifts.has(refusedById.get(item.id)!.code ?? ''));
+  const released = deleteRelated ? liftable : [];
+  const releasedIds = new Set(released.map((item) => item.id));
+  const toDelete = items.filter((item) => !refusedById.has(item.id) || releasedIds.has(item.id));
+  const shownKept = keptItems.filter((item) => !releasedIds.has(item.id));
   const keptLabel = (count: number) => itemLabels?.kept(count) ?? t('delete.itemsKept', { count });
-  const onlyRefused = !!check && deletable.length === 0 && keptItems.length > 0;
+  /** "Delete Acme?" for one item, "Delete the 3 selected items" for several: one item is always named. */
+  const selectionTitle = (named: Item[]) => (named.length === 1
+    ? t('delete.recordTitle', { name: named[0].name })
+    : t('delete.deleteSelectedTitle', { count: named.length }));
+  const onlyRefused = !!check && deletable.length === 0 && keptItems.length > 0 && liftable.length === 0;
 
   return (
     <>
@@ -196,9 +253,7 @@ export default function DeleteSelectedButton<T>({
         // Nothing left to delete: the refusal and why, as on a record page, with Close only.
         <KanapDialog
           open={confirmOpen}
-          title={keptItems.length === 1
-            ? t('delete.recordTitle', { name: keptItems[0].name })
-            : t('delete.deleteSelectedTitle', { count: keptItems.length })}
+          title={selectionTitle(keptItems)}
           onClose={handleCloseConfirm}
           onSave={handleCloseConfirm}
           saveLabel={t('buttons.close')}
@@ -216,15 +271,20 @@ export default function DeleteSelectedButton<T>({
           open={confirmOpen}
           onClose={handleCloseConfirm}
           onConfirm={handleConfirmDelete}
-          title={t('delete.deleteSelectedTitle', { count: deletable.length })}
-          warning={check?.warning ?? forceOption?.message ?? warning}
-          confirmLabel={check?.confirmLabel ?? forceOption?.confirmLabel}
-          itemCount={deletable.length}
-          items={deletable}
-          itemsLabel={itemLabels?.toDelete(deletable.length)}
-          kept={keptItems.length > 0 ? { label: keptLabel(keptItems.length), items: keptItems } : undefined}
+          // The item named, or the selection counted: the lists below say what goes and what is kept.
+          title={selectionTitle(items)}
+          // Once the check has answered, the refused items are listed as kept: no generic "referenced items are kept".
+          warning={check ? (check.warning ?? warning ?? t('delete.cannotUndo')) : (forceOption?.message ?? warning)}
+          confirmLabel={check ? check.confirmLabel : forceOption?.confirmLabel}
+          itemCount={toDelete.length}
+          items={toDelete}
+          itemsLabel={itemLabels?.toDelete(toDelete.length)}
+          kept={shownKept.length > 0 ? { label: keptLabel(shownKept.length), items: shownKept } : undefined}
           loading={loading}
           cascadeOption={cascadeOption ? { label: cascadeOption.label, description: cascadeOption.description } : undefined}
+          deleteRelated={deleteRelated}
+          onDeleteRelatedChange={setDeleteRelated}
+          confirmDisabled={toDelete.length === 0}
         />
       )}
 

@@ -76,7 +76,7 @@ Los eventos de acceso y de sesión se eliminan después de **365 días**. Los ca
 
 ### Qué puede hacer
 
-- Buscar por nombre de tabla, acción y actor (correo/nombre)
+- Buscar por la tabla (su nombre tal como aparece en su idioma, por ejemplo **Proveedores**), acción y actor (correo/nombre)
 - Filtrar por:
   - Fecha
   - Tabla
@@ -92,7 +92,7 @@ Los eventos de acceso y de sesión se eliminan después de **365 días**. Los ca
 
 **Columnas predeterminadas**:
 - **Fecha**: Cuándo ocurrió el cambio o el evento
-- **Tabla**: Qué tabla fue afectada. Los eventos de acceso y de sesión muestran **Acceso y sesiones**, y una exportación muestra qué se exportó (por ejemplo **Proveedores**)
+- **Tabla**: El tipo de registro afectado, con su nombre en la aplicación (por ejemplo **Proveedores** o **Enlaces de contrato**). El filtro y el detalle muestran los mismos nombres. Los eventos de acceso y de sesión muestran **Acceso y sesiones**, y una exportación muestra qué se exportó (por ejemplo **Proveedores**)
 - **Acción**: El tipo de cambio o de evento (crear, actualizar, eliminar, desactivar, restaurar, inicio de sesión, exportación, etc.). **Restaurar** marca una columna presupuestaria devuelta a sus valores de apertura desde la pestaña Presupuesto de una línea
 - **Origen**: Quién o qué desencadenó el cambio (usuario, sistema, webhook)
 - **Usuario**: Nombre del usuario que realizó el cambio, o su correo si no tiene nombre. Muestra "Sistema" o "Webhook" para orígenes no humanos, y "Cuenta desconocida" para un intento de acceso con una dirección desconocida.
@@ -186,7 +186,7 @@ Acciones de la barra de herramientas:
 | **Exportar CSV** | Exportar lista de usuarios | `users:admin` |
 | **Invitar** | Enviar invitaciones de inicio de sesión a los usuarios seleccionados | `users:admin` |
 | **Desactivar** | Desactivar los usuarios seleccionados. Se cierra su sesión de inmediato. | `users:admin` |
-| **Eliminar** | Eliminar permanentemente los usuarios seleccionados | `users:admin` |
+| **Eliminar** | Eliminar permanentemente los usuarios seleccionados. Su propia cuenta se conserva: la confirmación lo indica antes de eliminar nada. Para conservar el historial de un usuario y bloquear su acceso, desactívelo en su lugar | `users:admin` |
 
 `users:reader` basta para abrir la página y consultar la lista. Todas las acciones anteriores, y las acciones de fila siguientes, requieren `users:admin`.
 
@@ -198,7 +198,7 @@ Acciones de fila, desde el menú al final de cada fila:
 | **Activar** / **Desactivar** | Activar o desactivar la cuenta. Al desactivarla se cierra la sesión de la persona de inmediato. |
 | **Enviar invitación** | Enviar por correo una invitación de inicio de sesión. Oculta para las cuentas de Microsoft Entra. |
 | **Enviar restablecimiento de contraseña** | Enviar por correo un enlace de restablecimiento de contraseña. Se muestra solo para cuentas locales activadas. |
-| **Eliminar** | Eliminar el usuario permanentemente. Desactive la cuenta en su lugar si otros registros la referencian. |
+| **Eliminar** | Eliminar el usuario permanentemente. Los registros en los que trabajó se conservan, sin él. No puede eliminar su propia cuenta. Para bloquear el acceso de una persona y conservar la cuenta, desactívela en su lugar. |
 
 ### Archivo CSV de usuarios
 
@@ -419,7 +419,7 @@ La página de Roles tiene un diseño de dos paneles:
 **Acciones**:
 - **Nuevo rol**: Crear un rol personalizado desde cero
 - **Duplicar**: Copiar un rol existente (incluyendo roles integrados) como punto de partida. No disponible para roles de Sistema.
-- **Eliminar**: Eliminar un rol personalizado (solo si no tiene usuarios asignados)
+- **Eliminar**: Eliminar un rol personalizado. Un rol asignado a usuarios no se puede eliminar: asígneles primero otro rol. La ventana lo indica antes de cualquier confirmación.
 - **Guardar detalles**: Actualizar nombre y descripción del rol
 - **Guardar permisos**: Aplicar cambios de permisos
 

@@ -107,6 +107,14 @@ export class InterfacesController {
     return this.svc.getMap(query, ctx.tenantId, { manager: ctx.manager });
   }
 
+  // What a delete of `ids` would refuse (interfaces with bindings), asked before the confirmation.
+  @UseGuards(PermissionGuard)
+  @RequireLevel('applications', 'admin')
+  @Post('delete-check')
+  deleteCheck(@Body() body: { ids: string[] }, @Tenant() ctx: TenantRequest) {
+    return this.svc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], { manager: ctx.manager });
+  }
+
   @ShareRateLimit()
   @UseGuards(PermissionGuard)
   @RequireLevel('applications', 'reader')

@@ -22,7 +22,7 @@ import {
   type CostCenterKind,
   type CostCenterPatch,
 } from '../../services/costCenters';
-import { deriveStatusFromDisabledAt } from '../../constants/status';
+import { STATUS_DISABLED, deriveStatusFromDisabledAt } from '../../constants/status';
 import { drawerFieldValueSx, drawerMenuItemSx, drawerSelectSx, longFormSurfaceFieldSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import CostCenterPropertiesDrawer, { ErrorLine } from './CostCenterPropertiesDrawer';
@@ -282,6 +282,8 @@ export default function CostCenterWorkspacePage() {
               if (disabledAt === data.disabled_at) return;
               void patch({ status: deriveStatusFromDisabledAt(disabledAt), disabled_at: disabledAt }, 'disabled_at');
             }}
+            // Disable now: the status alone, the server sets the end of validity from its own clock.
+            onDisableNow={() => void patch({ status: STATUS_DISABLED }, 'disabled_at')}
           />
         ) : <Box />}
       >
@@ -488,6 +490,7 @@ function CostCenterCreate({
           <PropertyRow label={t('costCenters.fields.parent')} valueSx={{ maxWidth: 520 }}>
             <CostCenterSelect
               hideLabel
+              label={t('costCenters.fields.parent')}
               selectable="groups"
               value={form.parent_id}
               onChange={(parentId) => update({ parent_id: parentId })}
@@ -501,6 +504,7 @@ function CostCenterCreate({
             <PropertyRow label={t('costCenters.fields.company')} required helperText={t('costCenters.hints.company')} valueSx={{ maxWidth: 520 }}>
               <CompanySelect
                 hideLabel
+                label={t('costCenters.fields.company')}
                 value={form.company_id}
                 onChange={(companyId) => update({ company_id: companyId })}
                 error={!!errors.company_id}

@@ -1000,7 +1000,7 @@ export default function RequestWorkspacePage() {
                   ? formatMetadataUserName(form.it_lead)
                   : null
               }
-              placeholder={t('portfolio:workspace.request.values.itOwnerMissing', 'IT owner missing')}
+              placeholder={t('portfolio:workspace.request.values.itOwnerMissing')}
               searchPlaceholder={t('portfolio:workspace.request.fields.itLead', 'IT owner')}
               disabled={!canManage || form?.status === 'converted'}
               onChange={(value) => { void persistPanelPatch({ it_lead_id: value }); }}
@@ -1277,7 +1277,7 @@ export default function RequestWorkspacePage() {
 
       <KanapDialog
         open={deleteConfirmOpen}
-        title={t('portfolio:workspace.request.deleteDialog.title')}
+        title={data?.name ? t('common:delete.recordTitle', { name: data.name }) : t('portfolio:workspace.request.deleteDialog.title')}
         onClose={() => setDeleteConfirmOpen(false)}
         onSave={() => void handleDelete()}
         saveLabel={t('common:buttons.delete')}

@@ -18,7 +18,7 @@ Master data has no Administration entry of its own.
 
 ## Freeze master data
 
-Use this tool to lock or unlock company and department metrics for a specific year. Freezing prevents accidental edits after data has been finalized -- useful at year-end close, during audits, or before kicking off next year's budget cycle.
+Use this tool to lock or unlock company and department metrics for a specific year. Freezing prevents accidental edits after data has been finalized. It is useful at year-end close, during audits, or before kicking off next year's budget cycle.
 
 ### How it works
 
@@ -28,8 +28,8 @@ Use this tool to lock or unlock company and department metrics for a specific ye
 
 The page shows a status card for each scope:
 
-- **Frozen** (red) -- data is read-only for that year; the card shows who froze it and when
-- **Editable** -- data can still be modified
+- **Frozen** (red): data is read-only for that year; the card shows who froze it and when
+- **Editable**: data can still be modified
 
 ### What freezing affects
 
@@ -60,7 +60,7 @@ Copy company and department metrics from one fiscal year to another. A built-in 
 1. Select a **Source Year** (where to read values from)
 2. Select **Data Sources**: Companies, Departments, or both
 3. Select a **Destination Year** (where to write values to)
-4. If Companies is selected, pick which **Company Metrics** to copy -- any combination of Headcount, IT Users, and Turnover
+4. If Companies is selected, pick which **Company Metrics** to copy: any combination of Headcount, IT Users, and Turnover
 5. Click **Dry Run** to generate a preview
 6. Review the preview table
 7. Click **Copy Data** to apply the changes
@@ -74,7 +74,7 @@ Copy company and department metrics from one fiscal year to another. A built-in 
 | **Metric** | Headcount, IT Users, or Turnover |
 | **Source Value** | The value from the source year |
 | **Current Destination** | The existing value in the destination year (if any) |
-| **New Value** | The value that will be written -- shown in bold |
+| **New Value** | The value that will be written, shown in bold |
 | **Status** | "Ready to copy" or the reason the row was skipped |
 
 Skipped rows appear in a warning colour. Common skip reasons:
@@ -87,10 +87,10 @@ Skipped rows appear in a warning colour. Common skip reasons:
 
 Below the grid, four summary cards give you a quick count:
 
-- **Total rows** -- everything the operation evaluated
-- **Ready to copy** -- rows that will be written
-- **Skipped** -- rows excluded (with reasons visible in the table)
-- **Errors** -- rows that failed during the actual copy
+- **Total rows**: everything the operation evaluated
+- **Ready to copy**: rows that will be written
+- **Skipped**: rows excluded (with reasons visible in the table)
+- **Errors**: rows that failed during the actual copy
 
 ### Frozen data protection
 
@@ -186,8 +186,8 @@ Yes. The year picker covers a range from last year through five years ahead. Fre
 
 ## Tips
 
-- **Always dry run first** -- review the preview table before committing to avoid accidental overwrites
-- **Freeze after approval** -- lock data as soon as budgets are signed off to prevent drift
-- **Unfreeze temporarily** -- make your correction, then re-freeze right away
-- **Copy early** -- start the next planning cycle by copying current-year metrics forward, then adjust for expected changes
-- **Check your permissions** -- if a scope is greyed out, ask an admin to grant you the right access level
+- **Always dry run first**: review the preview table before committing to avoid accidental overwrites
+- **Freeze after approval**: lock data as soon as budgets are signed off to prevent drift
+- **Unfreeze temporarily**: make your correction, then re-freeze right away
+- **Copy early**: start the next planning cycle by copying current-year metrics forward, then adjust for expected changes
+- **Check your permissions**: if a scope is greyed out, ask an admin to grant you the right access level

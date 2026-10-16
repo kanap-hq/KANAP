@@ -287,6 +287,25 @@ describe('AnalyticsCategoriesPage', () => {
     await waitFor(() => expect(apiDelete).toHaveBeenCalledWith('/analytics-categories/bulk', { data: { ids: ['v-used', 'v-free'], force: true } }));
   });
 
+  it('asks the server which values lines use before the confirmation, and forces on its answer', async () => {
+    const apiDelete = (api as unknown as { delete: ReturnType<typeof vi.fn> }).delete;
+    const apiPost = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
+    apiDelete.mockReset();
+    apiDelete.mockResolvedValue({ data: { deleted: ['v-free'], failed: [] } });
+    // The row says unused (stale), the check says a line took it since.
+    apiPost.mockResolvedValueOnce({ data: { refused: [], forced: [
+      { id: 'v-free', name: 'Spare', code: 'ANALYTICS_VALUE_IN_USE', usages: [{ type: 'opex_lines', total: 1 }] },
+    ] } });
+    renderPage('/master-data/analytics?axis=ax-nature');
+    act(() => grid.props?.onSelectionChanged([{ id: 'v-free', name: 'Spare', opex_count: 0, capex_count: 0 }]));
+    fireEvent.click(screen.getByRole('button', { name: 'buttons.deleteSelected (1)' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(apiPost).toHaveBeenCalledWith('/analytics-categories/delete-check', { ids: ['v-free'] });
+    expect(within(dialog).getByText('analytics.forceDelete.valuesUsed')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'analytics.forceDelete.confirmAnyway' }));
+    await waitFor(() => expect(apiDelete).toHaveBeenCalledWith('/analytics-categories/bulk', { data: { ids: ['v-free'], force: true } }));
+  });
+
   it('keeps the plain bulk delete when no selected value is used', async () => {
     const apiDelete = (api as unknown as { delete: ReturnType<typeof vi.fn> }).delete;
     apiDelete.mockReset();

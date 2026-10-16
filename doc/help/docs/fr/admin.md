@@ -76,7 +76,7 @@ Les événements de connexion et de session sont supprimés après **365 jours**
 
 ### Ce que vous pouvez faire
 
-- Rechercher dans le nom de table, l'action et l'acteur (e-mail/nom)
+- Rechercher dans la table (son nom tel qu'affiché dans votre langue, par exemple **Fournisseurs**), l'action et l'acteur (e-mail/nom)
 - Filtrer par :
   - Date
   - Table
@@ -92,7 +92,7 @@ Les événements de connexion et de session sont supprimés après **365 jours**
 
 **Colonnes par défaut** :
 - **Date** : Quand la modification ou l'événement a eu lieu
-- **Table** : Quelle table a été affectée. Les événements de connexion et de session affichent **Connexion et session**, et un export affiche ce qui a été exporté (par exemple **Fournisseurs**)
+- **Table** : Le type d'enregistrement concerné, sous son nom dans l'application (par exemple **Fournisseurs** ou **Liens de contrat**). Le filtre et le détail affichent les mêmes noms. Les événements de connexion et de session affichent **Connexion et session**, et un export affiche ce qui a été exporté (par exemple **Fournisseurs**)
 - **Action** : Le type de modification ou d'événement (créer, mettre à jour, supprimer, désactiver, restaurer, connexion, export, etc.). **Restaurer** marque une colonne budgétaire ramenée à ses valeurs d'ouverture depuis l'onglet Budget d'une ligne
 - **Source** : Qui ou quoi a déclenché la modification (utilisateur, système, webhook)
 - **Utilisateur** : Nom de l'utilisateur qui a fait la modification, ou son adresse e-mail s'il n'a pas de nom. Affiche « Système » ou « Webhook » pour les sources non-utilisateur, et « Compte inconnu » pour une tentative de connexion sur une adresse inconnue.
@@ -186,7 +186,7 @@ Actions de la barre d'outils :
 | **Exporter CSV** | Exporter la liste des utilisateurs | `users:admin` |
 | **Inviter** | Envoyer des invitations de connexion aux utilisateurs sélectionnés | `users:admin` |
 | **Désactiver** | Désactiver les utilisateurs sélectionnés. Ils sont déconnectés immédiatement. | `users:admin` |
-| **Supprimer** | Supprimer définitivement les utilisateurs sélectionnés | `users:admin` |
+| **Supprimer** | Supprimer définitivement les utilisateurs sélectionnés. Votre propre compte est conservé : la confirmation l'indique avant toute suppression. Pour garder l'historique d'un utilisateur et bloquer son accès, désactivez-le plutôt | `users:admin` |
 
 `users:reader` suffit pour ouvrir la page et consulter la liste. Toutes les actions ci-dessus, ainsi que les actions de ligne ci-dessous, nécessitent `users:admin`.
 
@@ -198,7 +198,7 @@ Actions de ligne, depuis le menu au bout de chaque ligne :
 | **Activer** / **Désactiver** | Activer ou désactiver le compte. La désactivation déconnecte la personne immédiatement. |
 | **Envoyer une invitation** | Envoyer une invitation de connexion par e-mail. Masqué pour les comptes Microsoft Entra. |
 | **Envoyer une réinitialisation de mot de passe** | Envoyer un lien de réinitialisation de mot de passe par e-mail. Affiché uniquement pour les comptes locaux activés. |
-| **Supprimer** | Supprimer définitivement l'utilisateur. Désactivez plutôt le compte si d'autres enregistrements le référencent. |
+| **Supprimer** | Supprimer définitivement l'utilisateur. Les enregistrements sur lesquels il a travaillé restent, sans lui. Vous ne pouvez pas supprimer votre propre compte. Pour bloquer l'accès d'une personne en gardant son compte, désactivez-le plutôt. |
 
 ### Fichier CSV des utilisateurs
 
@@ -237,7 +237,7 @@ Voir [Fichiers CSV](csv-files.md) pour l'encodage, le séparateur et les deux é
 
 ### Assignation multi-rôles
 
-Les utilisateurs peuvent se voir assigner plusieurs rôles. Leurs autorisations effectives sont la combinaison de tous les rôles assignés -- si un rôle donne accès à une ressource, l'utilisateur a cet accès.
+Les utilisateurs peuvent se voir assigner plusieurs rôles. Leurs autorisations effectives sont la combinaison de tous les rôles assignés : si un rôle donne accès à une ressource, l'utilisateur a cet accès.
 
 Retirer tous les rôles ne supprime pas le compte. L'utilisateur revient au rôle système **Contact**, ne conserve aucun accès et apparaît avec le statut **Accès en attente** dans la grille. Vous ne pouvez pas retirer votre propre dernier rôle, vous ne pouvez donc pas vous bloquer l'accès.
 
@@ -363,7 +363,7 @@ Les rôles sont catégorisés par la manière dont ils peuvent être modifiés :
 | Badge | Description |
 |-------|-------------|
 | **Système** | Ne peut pas être modifié. Administrateur a un accès complet ; Contact est pour les entrées du répertoire uniquement. |
-| **Intégré** | Rôles pré-configurés fournissant des schémas d'accès standard. Ne peut pas être modifié directement -- utilisez **Dupliquer** pour créer une copie personnalisable. |
+| **Intégré** | Rôles pré-configurés fournissant des schémas d'accès standard. Ne peut pas être modifié directement : utilisez **Dupliquer** pour créer une copie personnalisable. |
 | _(pas de badge)_ | Rôles personnalisés que vous créez. Entièrement modifiables. |
 
 ### Rôles intégrés
@@ -381,8 +381,8 @@ KANAP est livré avec des rôles pré-configurés organisés par domaine fonctio
 Le rôle **Contributeur métier** est conçu pour les parties prenantes métier qui participent au processus de portefeuille sans avoir les privilèges complets de gestion de projet. Un Contributeur métier peut :
 
 - **Soumettre et gérer des demandes de portefeuille** (accès complet member aux demandes)
-- **Modifier des projets existants** -- mettre à jour les champs, ajouter des commentaires, téléverser des pièces jointes, gérer les phases, jalons, dépendances et entrées de temps
-- **Créer et travailler sur les tâches projet** -- ajouter des tâches aux projets, saisir du temps et poster des commentaires
+- **Modifier des projets existants** : mettre à jour les champs, ajouter des commentaires, téléverser des pièces jointes, gérer les phases, jalons, dépendances et entrées de temps
+- **Créer et travailler sur les tâches projet** : ajouter des tâches aux projets, saisir du temps et poster des commentaires
 - **Consulter les utilisateurs, sociétés, départements et contacts** pour les sélections dans les menus déroulants
 
 Un Contributeur métier **ne peut pas** :
@@ -419,7 +419,7 @@ La page Rôles a une disposition à deux panneaux :
 **Actions** :
 - **Nouveau rôle** : Créer un rôle personnalisé de zéro
 - **Dupliquer** : Copier un rôle existant (y compris les rôles intégrés) comme point de départ. Non disponible pour les rôles Système.
-- **Supprimer** : Supprimer un rôle personnalisé (seulement si aucun utilisateur n'est assigné)
+- **Supprimer** : Supprimer un rôle personnalisé. Un rôle attribué à des utilisateurs ne peut pas être supprimé : attribuez-leur d'abord un autre rôle. La fenêtre l'indique avant toute confirmation.
 - **Enregistrer les détails** : Mettre à jour le nom et la description du rôle
 - **Enregistrer les autorisations** : Appliquer les modifications d'autorisations
 
@@ -612,8 +612,8 @@ Pour le contenu du jeu, ce que l'effacement supprime et conserve, et le bandeau 
 La page Paramètres vous permet de gérer votre profil personnel et vos préférences de notification. Accédez-y depuis le menu utilisateur (avatar en haut à droite) ou naviguez vers `/settings`.
 
 La page a deux onglets, accessibles via URL :
-- `/settings/profile` (par défaut) -- Onglet Profil
-- `/settings/notifications` -- Onglet Notifications
+- `/settings/profile` (par défaut) : Onglet Profil
+- `/settings/notifications` : Onglet Notifications
 
 ### Profil
 
@@ -654,7 +654,7 @@ Toutes les modifications sont enregistrées automatiquement lorsque vous bascule
 ## Conseils
 
   - **Dupliquez les rôles intégrés** : Au lieu de créer des rôles de zéro, dupliquez un rôle intégré et ajustez les autorisations. Cela fait gagner du temps et vous assure de ne pas oublier de ressources importantes.
-  - **Utilisez le multi-rôle pour la flexibilité** : Assignez aux utilisateurs plusieurs rôles pour combiner les autorisations -- par exemple, un rôle « Lecteur finance » plus un rôle « Chef de projet ».
+  - **Utilisez le multi-rôle pour la flexibilité** : Assignez aux utilisateurs plusieurs rôles pour combiner les autorisations, par exemple un rôle « Lecteur finance » plus un rôle « Chef de projet ».
   - **Utilisez le SSO** : Si vous avez Microsoft 365, connectez Entra ID pour une gestion plus facile des utilisateurs et une synchronisation automatique des profils.
   - **Désactivez, ne supprimez pas** : Lorsque quelqu'un part, désactivez son compte pour préserver l'historique d'audit.
   - **Revoyez les autorisations régulièrement** : Auditez les autorisations des rôles périodiquement pour maintenir le principe du moindre privilège.

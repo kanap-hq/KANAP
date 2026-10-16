@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { BulkDeleteResult } from '../common/delete.types';
+import { checkIds, type DeleteRefusal } from '../common/record-in-use';
 import { FxRateService } from '../currency/fx-rate.service';
 import { AllocationCalculatorService } from './allocation-calculator.service';
 import { SUMMARY_SCOPES, summaryTenantId } from './spend-summary.builder';
@@ -92,6 +93,18 @@ export class BudgetLinesService {
 
   summaryAggregateRequest(body: unknown, opts: ReadOptions) {
     return budgetList.budgetListAggregateRequest(SUMMARY_SCOPES.all, this.deps(opts.access), body, opts.manager);
+  }
+
+  /**
+   * The check before a delete (`POST /budget-lines/delete-check`): the lines of either nature
+   * with amounts in a frozen budget column, in the order asked (each nature's `deleteCheck`).
+   */
+  async deleteCheck(ids: unknown[], opts: { manager: EntityManager }): Promise<{ refused: DeleteRefusal[] }> {
+    // One after the other: both read on the request's connection.
+    const opex = await this.opexDelete.deleteCheck(ids, opts);
+    const capex = await this.capexDelete.deleteCheck(ids, opts);
+    const position = new Map(checkIds(ids).map((id, index) => [id, index]));
+    return { refused: [...opex.refused, ...capex.refused].sort((a, b) => position.get(a.id)! - position.get(b.id)!) };
   }
 
   async bulkDelete(ids: string[], userId: string | null, opts: { manager: EntityManager }): Promise<BulkDeleteResult> {

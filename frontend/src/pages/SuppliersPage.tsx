@@ -95,6 +95,7 @@ export default function SuppliersPage() {
       field: 'created_at',
       headerName: t('shared.columns.created'),
       width: 200,
+      filter: 'agDateColumnFilter',
       valueFormatter: (p: any) => formatShortDateTime(p.value as string | null, locale),
       defaultHidden: true,
       cellRenderer: (params: any) => (
@@ -132,6 +133,7 @@ export default function SuppliersPage() {
           itemLabels={{
             toDelete: (count) => t('suppliers.delete.toDelete', { count }),
             kept: (count) => t('suppliers.delete.kept', { count }),
+            deleted: (count) => t('suppliers.delete.deleted', { count }),
           }}
           onDeleteSuccess={() => { setRefreshKey((k) => k + 1); }}
         />

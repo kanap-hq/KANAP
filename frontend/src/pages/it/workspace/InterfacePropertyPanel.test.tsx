@@ -7,7 +7,7 @@ import { createAppTheme } from '../../../config/ThemeContext';
 
 vi.mock('react-i18next', () => {
   const translation = { t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } };
-  return { useTranslation: () => translation };
+  return { useTranslation: () => translation, initReactI18next: { type: '3rdParty', init: () => {} } };
 });
 vi.mock('../../../api', () => ({ default: { get: vi.fn() } }));
 vi.mock('../../../auth/AuthContext', () => ({ useAuth: () => ({ profile: { id: 'me' }, hasLevel: () => true }) }));
@@ -63,18 +63,18 @@ describe('InterfacePropertyPanel owners', () => {
       <QueryClientProvider client={client}><ThemeProvider theme={createAppTheme('light')}>{ui}</ThemeProvider></QueryClientProvider>
     );
     const view = render(wrap(panel([{ user_id: 'u-1', owner_type: 'business' }])));
-    await waitFor(() => expect(screen.getByTestId('Business owners')).toHaveTextContent('Hélène Dupré'));
+    await waitFor(() => expect(screen.getByTestId('it:workspace.interface.fields.businessOwners')).toHaveTextContent('Hélène Dupré'));
 
     view.rerender(wrap(panel([{ user_id: 'u-1', owner_type: 'business' }, { user_id: 'u-2', owner_type: 'business' }])));
     // At once: the known name stays, the new one loads.
-    expect(screen.getByTestId('Business owners')).toHaveTextContent('Hélène Dupré | …');
-    await waitFor(() => expect(screen.getByTestId('Business owners')).toHaveTextContent('Hélène Dupré | Marc Zola'));
+    expect(screen.getByTestId('it:workspace.interface.fields.businessOwners')).toHaveTextContent('Hélène Dupré | …');
+    await waitFor(() => expect(screen.getByTestId('it:workspace.interface.fields.businessOwners')).toHaveTextContent('Hélène Dupré | Marc Zola'));
     const reads = apiGet.mock.calls.filter(([url]) => url === '/users/lookup').map(([, config]) => config.params.ids);
     expect(reads).toEqual(['u-1', 'u-2']);
 
     // Removing one: nothing to read, nothing flashes.
     view.rerender(wrap(panel([{ user_id: 'u-2', owner_type: 'business' }])));
-    expect(screen.getByTestId('Business owners')).toHaveTextContent('Marc Zola');
+    expect(screen.getByTestId('it:workspace.interface.fields.businessOwners')).toHaveTextContent('Marc Zola');
     expect(apiGet.mock.calls.filter(([url]) => url === '/users/lookup')).toHaveLength(2);
   });
 
@@ -85,6 +85,6 @@ describe('InterfacePropertyPanel owners', () => {
         <ThemeProvider theme={createAppTheme('light')}>{panel([{ user_id: 'u-gone', owner_type: 'it' }])}</ThemeProvider>
       </QueryClientProvider>,
     );
-    await waitFor(() => expect(screen.getByTestId('IT owners')).toHaveTextContent('common:selects.valueUnavailable'));
+    await waitFor(() => expect(screen.getByTestId('it:workspace.interface.fields.itOwners')).toHaveTextContent('common:selects.valueUnavailable'));
   });
 });

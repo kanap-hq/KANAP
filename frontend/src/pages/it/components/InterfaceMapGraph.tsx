@@ -532,7 +532,7 @@ export default function InterfaceMapGraph({
 
     node.filter((d: any) => !d.isMiddleware)
       .append('text')
-      .text((d: any) => `${d.totalInterfaces} interfaces`)
+      .text((d: any) => t('it:pages.maps.interfaceCount', { count: d.totalInterfaces }))
       .attr('text-anchor', 'middle')
       .attr('dy', '1.2em')
       .attr('font-size', '12px')
@@ -730,7 +730,7 @@ export default function InterfaceMapGraph({
       d.fx = null;
       d.fy = null;
     }
-  }, [nodes, links, dimensions]);
+  }, [nodes, links, dimensions, t]);
 
   // Selection Effect + optional auto-center
   useEffect(() => {

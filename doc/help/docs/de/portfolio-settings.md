@@ -184,6 +184,7 @@ Kategorie (z. B. „Digitale Transformation")
 **Systemelemente**:
 - Vordefinierte Kategorien und Typen mit „System"-Chip gekennzeichnet
 - Können bearbeitet oder deaktiviert, aber nicht gelöscht werden
+- Ein Element, das Anfragen oder Projekte noch verwenden, oder ein Aufgabentyp, den Aufgaben verwenden, kann nicht gelöscht werden. KANAP sagt es, bevor Sie bestätigen, und zählt, was es verwendet. Deaktivieren Sie es stattdessen
 
 ### Best Practices
 
@@ -216,7 +217,7 @@ Vier Arten werden mit jedem Arbeitsbereich angelegt:
 
 **Eine Art deaktivieren**: Verwenden Sie den Schalter. Eine inaktive Art verschwindet aus dem Dropdown für neue Zuordnungen, aber Mitwirkende, die sie bereits haben, behalten und zeigen sie weiterhin.
 
-**Eine Art löschen**: Klicken Sie auf das Löschen-Symbol. Es steht nur für selbst angelegte Arten zur Verfügung, die kein Mitwirkender verwendet. Die Zahl neben jeder Art zeigt, wie viele sie haben. Die vier integrierten Arten können umbenannt, aber nie gelöscht werden.
+**Eine Art löschen**: Klicken Sie auf das Löschen-Symbol. Eine integrierte Art oder eine Art, die Mitwirkende haben, wird vor der Bestätigung abgelehnt, mit dem Grund. Die Zahl neben jeder Art zeigt, wie viele Mitwirkende sie haben. Die vier integrierten Arten können umbenannt, aber nie gelöscht werden. Um eine Art außer Gebrauch zu nehmen, die Mitwirkende haben, schalten Sie sie mit dem Schalter aus.
 
 **Standardwerte laden**: Sollte die Liste jemals leer sein, legt **Standardwerte laden** Intern, Extern, Auszubildender und Sonstige erneut an.
 

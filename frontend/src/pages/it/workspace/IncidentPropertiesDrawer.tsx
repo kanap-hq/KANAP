@@ -244,6 +244,7 @@ export default function IncidentPropertiesDrawer({
             onChange={(next) => onChange({ reporter_user_id: next })}
             disabled={disabled}
             hideLabel
+            label={t('workspace.incident.drawer.reporter')}
             textFieldSx={drawerFieldValueSx}
           />
         </PropertyRow>
@@ -253,6 +254,7 @@ export default function IncidentPropertiesDrawer({
             onChange={(next) => onChange({ owner_user_id: next })}
             disabled={disabled}
             hideLabel
+            label={t('workspace.incident.drawer.owner')}
             textFieldSx={drawerFieldValueSx}
           />
         </PropertyRow>

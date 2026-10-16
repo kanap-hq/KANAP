@@ -5,10 +5,10 @@ description: Un guide d'intégration rapide pour tous les utilisateurs. Tableau 
 
 # Premiers pas : vos 10 premières minutes dans KANAP
 
-Bienvenue dans KANAP. Ce guide vous accompagne dans tout ce dont vous avez besoin pour être productif dès le premier jour -- quel que soit votre rôle. Aucune connaissance d'administration requise, aucune plongée spécifique dans un module. Juste l'essentiel pour vous sentir à l'aise.
+Bienvenue dans KANAP. Ce guide vous accompagne dans tout ce dont vous avez besoin pour être productif dès le premier jour, quel que soit votre rôle. Aucune connaissance d'administration requise, aucune plongée spécifique dans un module. Juste l'essentiel pour vous sentir à l'aise.
 
 !!! tip "Conseil : Vous préférez un résumé sur une page ? :material-file-pdf-box:"
-    Toutes les étapes clés sur une seule page A4 -- imprimez-la, épinglez-la, partagez-la avec votre équipe.
+    Toutes les étapes clés sur une seule page A4 : imprimez-la, épinglez-la, partagez-la avec votre équipe.
 
     [:material-download: Télécharger l'aide-mémoire (PDF)](downloads/kanap-getting-started.pdf){ .md-button .md-button--primary }
 
@@ -22,7 +22,7 @@ KANAP est organisé autour d'une structure simple. La barre supérieure affiche 
 
 | Zone | Ce qu'elle contient |
 |------|---------------------|
-| **Tableau de bord** | Votre hub personnel -- cliquez sur le logo KANAP ou naviguez vers `/` |
+| **Tableau de bord** | Votre hub personnel : cliquez sur le logo KANAP ou naviguez vers `/` |
 | **Portefeuille** | Tâches, Demandes, Projets, Planification, Rapports, Contributeurs |
 | **Cartographie SI** | Applications, Interfaces, Carte des interfaces, Actifs, Connexions, Carte des connexions, Sites |
 | **Base de connaissances** | Documents et modèles avec workflows de revue |
@@ -59,16 +59,16 @@ Une grille de tuiles, chacune montrant un aspect différent de votre travail. Vo
 
 En haut du tableau de bord, vous trouverez des boutons raccourcis pour les actions courantes :
 
-- **Créer une tâche** -- ouvrir un formulaire rapide pour créer une tâche sans quitter le tableau de bord
-- **Saisir du temps** -- saisir des heures sur un projet en quelques secondes
-- **Nouveau document** -- créer un document vierge de la base de connaissances ou en créer un à partir d'un modèle
+- **Créer une tâche** : ouvrir un formulaire rapide pour créer une tâche sans quitter le tableau de bord
+- **Saisir du temps** : saisir des heures sur un projet en quelques secondes
+- **Nouveau document** : créer un document vierge de la base de connaissances ou en créer un à partir d'un modèle
 
 ### Personnalisez-le
 
 Cliquez sur l'icône **Paramètres** (engrenage) pour choisir quelles tuiles apparaissent. Seules les tuiles que vous avez l'autorisation de voir sont affichées. Commencez avec les valeurs par défaut pendant quelques jours, puis ajustez selon vos besoins.
 
 !!! tip "Conseil : Faites-en le vôtre"
-    Le tableau de bord est conçu pour répondre à « sur quoi devrais-je me concentrer aujourd'hui ? » en un coup d'oeil. Si une tuile ne vous est pas utile, masquez-la. Si quelque chose vous manque, vérifiez l'icône engrenage -- elle est peut-être simplement désactivée.
+    Le tableau de bord est conçu pour répondre à « sur quoi devrais-je me concentrer aujourd'hui ? » en un coup d'oeil. Si une tuile ne vous est pas utile, masquez-la. Si quelque chose vous manque, vérifiez l'icône engrenage : elle est peut-être simplement désactivée.
 
 ---
 
@@ -101,7 +101,7 @@ Vous pouvez affiner les notifications par espace de travail :
 
 ### L'e-mail de revue hebdomadaire
 
-C'est un résumé périodique de votre activité et des éléments à venir -- comme un digest personnel.
+C'est un résumé périodique de votre activité et des éléments à venir, comme un digest personnel.
 
 Configurez-le dans l'onglet Notifications :
 
@@ -120,9 +120,9 @@ Cliquez sur **Aperçu de l'e-mail** pour vous envoyer un test et voir à quoi il
 
 Choisissez votre mode de thème préféré :
 
-- **Clair** -- interface lumineuse
-- **Sombre** -- éblouissement réduit pour les environnements peu éclairés
-- **Système** -- suit la préférence de votre système d'exploitation
+- **Clair** : interface lumineuse
+- **Sombre** : éblouissement réduit pour les environnements peu éclairés
+- **Système** : suit la préférence de votre système d'exploitation
 
 Vous pouvez aussi basculer le thème rapidement depuis la barre supérieure en utilisant l'icône de thème (soleil/lune) à côté du bouton d'aide.
 
@@ -149,10 +149,10 @@ Le filtre de périmètre **mémorise votre dernière sélection** entre les sess
 
 ### Où les filtres de périmètre apparaissent
 
-- **Portefeuille > Tâches** -- Mes tâches / Tâches de mon équipe / Toutes les tâches
-- **Cartographie SI > Applications** -- Mes apps / Apps de mon équipe / Toutes les apps
-- **Portefeuille > Projets** -- Mes projets / Projets de mon équipe / Tous les projets
-- **Portefeuille > Demandes** -- Mes demandes / Demandes de mon équipe / Toutes les demandes
+- **Portefeuille > Tâches** : Mes tâches / Tâches de mon équipe / Toutes les tâches
+- **Cartographie SI > Applications** : Mes apps / Apps de mon équipe / Toutes les apps
+- **Portefeuille > Projets** : Mes projets / Projets de mon équipe / Tous les projets
+- **Portefeuille > Demandes** : Mes demandes / Demandes de mon équipe / Toutes les demandes
 
 La logique est toujours la même : la propriété et l'affectation d'équipe déterminent ce que vous voyez.
 
@@ -170,8 +170,8 @@ Rendez-vous dans **Portefeuille > Tâches**. La page s'ouvre sur **Toutes les t�
 
 Deux façons :
 
-1. **Depuis le tableau de bord** -- cliquez sur **Créer une tâche** (formulaire rapide, champs minimaux)
-2. **Depuis la page Tâches** -- cliquez sur **Nouveau** (espace de travail complet avec toutes les options)
+1. **Depuis le tableau de bord** : cliquez sur **Créer une tâche** (formulaire rapide, champs minimaux)
+2. **Depuis la page Tâches** : cliquez sur **Nouveau** (espace de travail complet avec toutes les options)
 
 Le minimum nécessaire :
 
@@ -201,7 +201,7 @@ Faites évoluer les tâches à travers les statuts au fur et à mesure que le tr
 
 ### Saisissez du temps
 
-Pour les tâches projet, la saisie de temps est essentielle -- elle alimente le générateur de roadmap et la planification de capacité.
+Pour les tâches projet, la saisie de temps est essentielle : elle alimente le générateur de roadmap et la planification de capacité.
 
 1. Ouvrez la tâche > cliquez sur **Saisir du temps** dans la barre latérale
 2. Choisissez la catégorie : **IT** ou **Métier**
@@ -209,16 +209,16 @@ Pour les tâches projet, la saisie de temps est essentielle -- elle alimente le 
 
 ### Partagez une tâche
 
-Besoin d'impliquer quelqu'un ? Cliquez sur **Envoyer un lien** dans l'en-tête de la tâche pour envoyer par e-mail un lien direct à n'importe quel collègue -- même des personnes en dehors de KANAP. Ajoutez un message personnel si nécessaire.
+Besoin d'impliquer quelqu'un ? Cliquez sur **Envoyer un lien** dans l'en-tête de la tâche pour envoyer par e-mail un lien direct à n'importe quel collègue, même des personnes en dehors de KANAP. Ajoutez un message personnel si nécessaire.
 
 !!! info "Information : Envoyer un lien fonctionne partout"
-    Ce n'est pas réservé aux tâches. Vous pouvez envoyer des liens vers des projets, demandes, contrats, applications -- tout objet d'espace de travail. C'est la manière la plus rapide d'orienter quelqu'un vers le bon endroit.
+    Ce n'est pas réservé aux tâches. Vous pouvez envoyer des liens vers des projets, demandes, contrats, applications : tout objet d'espace de travail. C'est la manière la plus rapide d'orienter quelqu'un vers le bon endroit.
 
 ---
 
 ## Étape 5 : Configurez votre profil contributeur
 
-Votre profil Contributeur indique à KANAP qui vous êtes en termes de planification de projet. Il est séparé de votre compte utilisateur -- il concerne **l'équipe, la disponibilité et les compétences**.
+Votre profil Contributeur indique à KANAP qui vous êtes en termes de planification de projet. Il est séparé de votre compte utilisateur : il concerne **l'équipe, la disponibilité et les compétences**.
 
 Rendez-vous dans **Portefeuille > Contributeurs** et trouvez votre nom (ou demandez à votre admin de vous ajouter).
 
@@ -228,7 +228,7 @@ Rendez-vous dans **Portefeuille > Contributeurs** et trouvez votre nom (ou deman
 |-----------|--------------|---------|
 | **Équipe** | Votre équipe organisationnelle | Infrastructure, Service Desk... |
 | **Disponibilité** | Jours par mois pour le travail projet (0-20) | 8 jours/mois |
-| **Compétences** | Ce que vous savez et à quel niveau | « Docker -- Autonome » |
+| **Compétences** | Ce que vous savez et à quel niveau | « Docker (Autonome) » |
 
 ### Pourquoi c'est important
 
@@ -237,7 +237,7 @@ Rendez-vous dans **Portefeuille > Contributeurs** et trouvez votre nom (ou deman
 - **Compétences** > aide les chefs de projet à trouver les bonnes personnes pour le travail à venir
 
 !!! tip "Conseil : Soyez réaliste avec la disponibilité"
-    Tenez compte des réunions, du travail courant et des congés. La plupart des gens ont moins de temps projet qu'ils ne pensent. Définir 20 jours/mois signifie zéro temps hors projet -- c'est presque jamais vrai.
+    Tenez compte des réunions, du travail courant et des congés. La plupart des gens ont moins de temps projet qu'ils ne pensent. Définir 20 jours/mois signifie zéro temps hors projet, ce qui n'est presque jamais vrai.
 
 ### Maîtrise des compétences
 
@@ -249,7 +249,7 @@ Chaque compétence a un niveau de maîtrise :
 | 1 | Base / Théorique |
 | 2 | Peut exécuter avec support |
 | 3 | Autonome |
-| 4 | Expert -- peut former les autres |
+| 4 | Expert : peut former les autres |
 
 Soyez honnête. Une carte de compétences réaliste est bien plus utile qu'une carte où tout le monde est « expert ».
 
@@ -263,7 +263,7 @@ Tout ce que vous configurez dans ces 10 premières minutes alimente un ensemble 
 Les tuiles exploitent vos assignations de tâches, rôles de projet et saisies de temps pour vous donner une vue d'ensemble personnalisée chaque matin.
 
 ### Filtres de périmètre
-Vos assignations de propriété et votre appartenance à une équipe déterminent ce qui remonte dans chaque liste -- rendant l'application personnelle, pas écrasante.
+Vos assignations de propriété et votre appartenance à une équipe déterminent ce qui remonte dans chaque liste, ce qui rend l'application personnelle, pas écrasante.
 
 ### Planification de capacité
 Votre disponibilité et vos saisies de temps alimentent le générateur de roadmap et les cartes de chaleur de capacité du module Portefeuille. Des données précises ici signifient une meilleure planification pour tout le monde.
@@ -302,4 +302,4 @@ L'e-mail hebdomadaire et les notifications en temps réel vous tiennent informé
 ---
 
 !!! success "Vous êtes prêt"
-    Vous savez maintenant comment naviguer dans KANAP, gérer vos tâches, configurer votre profil et vos notifications, et paramétrer votre profil contributeur. Commencez par votre tableau de bord chaque matin, gardez vos tâches à jour et saisissez du temps régulièrement -- le reste suivra naturellement.
+    Vous savez maintenant comment naviguer dans KANAP, gérer vos tâches, configurer votre profil et vos notifications, et paramétrer votre profil contributeur. Commencez par votre tableau de bord chaque matin, gardez vos tâches à jour et saisissez du temps régulièrement : le reste suivra naturellement.

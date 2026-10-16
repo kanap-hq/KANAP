@@ -674,6 +674,57 @@ async function testAccentedWindows1252FileStillImports() {
   assert.equal(seenTitle, 'C\u0153ur d\u2019\u00e9t\u00e9 \u00e0 5 \u20ac');
 }
 
+
+/**
+ * A file written in any screen language reads back: a comma file (English export) and a
+ * semicolon file (French, German, Spanish export, and every file written before), with the
+ * day, the decimal mark and yes or no of each language. The old true/false/1/0 still load.
+ */
+async function testFilesOfEveryLanguageLoad() {
+  const service = new CsvImportService(new CsvResolverService(), new CsvJsonValidators());
+  const config: CsvEntityConfig = {
+    entityName: 'asset',
+    tableName: 'assets',
+    displayName: 'Assets',
+    upsertKey: ['name'],
+    fields: [
+      { csvColumn: 'name', entityProperty: 'name', type: CsvFieldType.STRING, required: true },
+      { csvColumn: 'end_of_support', entityProperty: 'end_of_support', type: CsvFieldType.DATE },
+      { csvColumn: 'cost', entityProperty: 'cost', type: CsvFieldType.NUMBER },
+      { csvColumn: 'is_cluster', entityProperty: 'is_cluster', type: CsvFieldType.BOOLEAN },
+    ],
+  };
+  let parsed: Array<Record<string, unknown>> = [];
+  config.afterValidate = async (rows) => {
+    parsed = rows.map((row) => ({ ...row.parsed }));
+  };
+  const files: Array<[string, string, Array<[unknown, unknown, unknown]>]> = [
+    ['en', 'name,end_of_support,cost,is_cluster\nA,2024-06-15,1234.5,yes\nB,,,no\n', [['2024-06-15', 1234.5, true], [undefined, undefined, false]]],
+    ['fr', 'name;end_of_support;cost;is_cluster\nA;15/06/2024;1234,5;oui\nB;;;non\n', [['2024-06-15', 1234.5, true], [undefined, undefined, false]]],
+    ['de', 'name;end_of_support;cost;is_cluster\nA;15.06.2024;1234,5;ja\nB;;;nein\n', [['2024-06-15', 1234.5, true], [undefined, undefined, false]]],
+    ['es', 'name;end_of_support;cost;is_cluster\nA;15/06/2024;1234,5;sí\nB;;;no\n', [['2024-06-15', 1234.5, true], [undefined, undefined, false]]],
+    ['old', 'name;end_of_support;cost;is_cluster\nA;2024-06-15;1234.5;true\nB;;;0\n', [['2024-06-15', 1234.5, true], [undefined, undefined, false]]],
+  ];
+  for (const [label, csv, expected] of files) {
+    parsed = [];
+    const result = await service.import(config, createMockFile(csv), { ...defaultParams, dryRun: true }, {
+      manager: createMockManager({ assets: [] }),
+      tenantId: 't1',
+    });
+    assert.deepEqual([result.ok, result.errors], [true, []], `${label}: ${JSON.stringify(result.errors)}`);
+    assert.deepEqual(
+      parsed.map((row) => [row.end_of_support ?? undefined, row.cost ?? undefined, row.is_cluster]),
+      expected,
+      `${label}: the cells read back`,
+    );
+  }
+  const refused = await service.import(config, createMockFile('name,is_cluster\nA,maybe\n'), { ...defaultParams, dryRun: true }, {
+    manager: createMockManager({ assets: [] }),
+    tenantId: 't1',
+  });
+  assert.equal(refused.ok, false, 'an unknown yes or no is refused');
+}
+
 // ===== Run tests =====
 
 (async () => {
@@ -701,6 +752,7 @@ async function testAccentedWindows1252FileStillImports() {
   await testUtf16FileIsRefusedWithClearMessage();
   await testNonCsvFilesAreRefusedBeforeTheHeader();
   await testAccentedWindows1252FileStillImports();
+  await testFilesOfEveryLanguageLoad();
 
   console.log('CSV import service tests passed.');
 })().catch((err) => {

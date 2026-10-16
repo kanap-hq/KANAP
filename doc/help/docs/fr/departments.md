@@ -25,9 +25,9 @@ Naviguez vers **Données de référence > Départements** pour voir votre liste 
 La grille des départements vous offre une vue d'ensemble de tous les départements avec leur effectif pour une année donnée.
 
 **Colonnes par défaut** :
-- **Nom** : Nom du département — cliquez pour ouvrir l'onglet Vue d'ensemble de l'espace de travail
-- **Société** : Société parente — cliquez pour ouvrir l'onglet Vue d'ensemble de l'espace de travail
-- **Effectif (Année)** : Nombre d'employés pour l'année sélectionnée — cliquez pour accéder directement à l'onglet Détails pour modification
+- **Nom** : Nom du département ; cliquez pour ouvrir l'onglet Vue d'ensemble de l'espace de travail
+- **Société** : Société parente ; cliquez pour ouvrir l'onglet Vue d'ensemble de l'espace de travail
+- **Effectif (Année)** : Nombre d'employés pour l'année sélectionnée ; cliquez pour accéder directement à l'onglet Détails pour modification
 
 **Colonnes supplémentaires** (via le sélecteur de colonnes) :
 - **Statut** : Activé ou Désactivé
@@ -45,7 +45,7 @@ La grille des départements vous offre une vue d'ensemble de tous les départeme
 - **Nouveau** : Créer un nouveau département (nécessite `departments:manager`)
 - **Importer CSV** : Import en masse de départements (nécessite `departments:admin`)
 - **Exporter CSV** : Exporter en CSV (nécessite `departments:admin`)
-- **Supprimer la sélection** : Supprimer les départements sélectionnés (nécessite `departments:admin`)
+- **Supprimer la sélection** : Supprimer les départements sélectionnés (nécessite `departments:admin`). Un département utilisé dans les ventilations de lignes budgétaires ne peut pas être supprimé : désactivez-le plutôt. Avant toute suppression, la confirmation liste les départements conservés, avec la raison
 
 ---
 
@@ -56,7 +56,7 @@ Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. Il comporte 
 - **En-tête** : le nom du département. Cliquez dessus pour renommer le département. **Préc** / **Suiv** parcourent les départements dans l'ordre et les filtres de la liste sans revenir à la liste, et le bouton de fermeture ramène à la liste
 - **Panneau Propriétés** à droite : **Société** et **Cycle de vie**
 
-**Enregistrement automatique** : chaque modification s'enregistre d'elle-même. Il n'y a pas de bouton Enregistrer. Le nom et la description s'enregistrent quand vous quittez le champ ; la société et le cycle de vie s'enregistrent dès que vous les changez. Vous pouvez continuer à travailler pendant l'enregistrement. Lorsqu'une modification est refusée, la raison s'affiche sous le champ concerné, sauf pour le nom, dont le refus s'affiche en haut de la page.
+**Enregistrement automatique** : chaque modification s'enregistre d'elle-même. Il n'y a pas de bouton Enregistrer. Le nom et la description s'enregistrent quand vous quittez le champ ; la société et le cycle de vie s'enregistrent dès que vous les changez. Vous pouvez continuer à travailler pendant l'enregistrement. Lorsqu'une modification est refusée, la raison s'affiche sous le champ concerné.
 
 ### Vue d'ensemble
 
@@ -103,7 +103,7 @@ Les colonnes :
 | `name` | Obligatoire. Le nom du département |
 | `description` | Texte libre |
 | `status` | `enabled` ou `disabled` |
-| `disabled_at` | La fin de validité : une date (`2026-12-31`) ou une date et une heure complètes |
+| `disabled_at` | La fin de validité : une date (`2026-12-31`) ou une date et une heure complètes. L'export écrit la date seule. Réimportée, cette date conserve la fin de validité enregistrée |
 
 **Import** :
 
@@ -126,6 +126,6 @@ Les colonnes :
 
 - **Reproduisez votre structure organisationnelle** : Reflétez la hiérarchie des départements de votre système RH pour plus de cohérence.
 - **Mettez à jour l'effectif annuellement** : Programmez un rappel pour rafraîchir les métriques des départements lors de la planification budgétaire.
-- **Utilisez pour les ventilations** : L'effectif des départements alimente les calculs de ventilation des coûts — gardez-le précis.
+- **Utilisez pour les ventilations** : L'effectif des départements alimente les calculs de ventilation des coûts : gardez-le précis.
 - **Désactivez plutôt que supprimer** : Lorsque les départements sont réorganisés, désactivez les anciens plutôt que de les supprimer pour préserver les données historiques.
 - **Exploitez les liens profonds** : Cliquez directement sur le chiffre d'effectif depuis la liste pour accéder à l'onglet Détails et modifier les métriques sans clic supplémentaire.

@@ -86,7 +86,7 @@ The workspace header gives you operational context without leaving the page:
 - a metadata strip with **Status**, **Score**, **Requestor**, **IT owner**, **Target Delivery Date**, and (when applicable) the **Source Task** the request was created from
 - **Send link** for sharing
 - **Convert to Project** when the request is **Approved** or **Converted**
-- **Delete** for administrators (when the request is not yet converted)
+- **Delete** for administrators (when the request is not yet converted). A converted request stays as the origin of its project and cannot be deleted
 - previous/next navigation based on the exact list context you came from
 
 ### Properties drawer
@@ -174,7 +174,7 @@ History is the audit view. Use it when you need to answer questions such as:
 - when team assignments changed
 - whether a scoring or analysis change happened before or after a decision
 
-The list closes with the creation entry — who created the request and when — below the recorded changes, which include edits to the Purpose and Risks documents.
+The list closes with the creation entry (who created the request and when) below the recorded changes, which include edits to the Purpose and Risks documents.
 
 If you need narrative, use Comments. If you need proof, use History.
 
@@ -261,7 +261,7 @@ A request with weak dependency data may look harmless until it collides with exi
 
 ### Other relations
 
-Below dependencies, the Relations tab also lets you maintain other portfolio links — for example, related requests, related projects, or other connected business and technical objects. Each relation is autosaved.
+Below dependencies, the Relations tab also lets you maintain other portfolio links, for example related requests, related projects, or other connected business and technical objects. Each relation is autosaved.
 
 For the projects produced from this request after conversion, see the **Resulting Projects** group in the Properties drawer.
 

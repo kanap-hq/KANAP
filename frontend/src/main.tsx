@@ -12,7 +12,7 @@ import { ThemeModeProvider, createAppTheme, useThemeMode } from './config/ThemeC
 import { TenantProvider, useTenant } from './tenant/TenantContext'
 import { KanapDialogProvider } from './components/design'
 import { AppErrorBoundary } from './components/AppErrorBoundary'
-import './i18n'
+import { i18nReady } from './i18n'
 import { useLocale } from './i18n/useLocale'
 import '@fontsource-variable/inter'
 import '@fontsource-variable/jetbrains-mono'
@@ -68,12 +68,16 @@ function AppShell() {
   )
 }
 
-createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <ThemeModeProvider>
-      <TenantProvider>
-        <AppShell />
-      </TenantProvider>
-    </ThemeModeProvider>
-  </React.StrictMode>
-)
+// The first render waits for the texts of the user's language, so no screen shows raw keys or
+// English first. A failed download falls back to English inside `i18nReady`; the app renders anyway.
+void i18nReady.catch((error: unknown) => console.error('Could not start the translations', error)).then(() => {
+  createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+      <ThemeModeProvider>
+        <TenantProvider>
+          <AppShell />
+        </TenantProvider>
+      </ThemeModeProvider>
+    </React.StrictMode>
+  )
+})

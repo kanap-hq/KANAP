@@ -1,11 +1,11 @@
 # Plaid
 
-Plaid is KANAP's built-in chat assistant. It is connected to the same data you already work with — applications, assets, incidents, projects, requests, tasks, contracts, knowledge documents, and master data — so you can ask questions in plain language instead of clicking through several screens to find an answer.
+Plaid is KANAP's built-in chat assistant. It is connected to the same data you already work with (applications, assets, incidents, projects, requests, tasks, contracts, knowledge documents, and master data), so you can ask questions in plain language instead of clicking through several screens to find an answer.
 
 Plaid does not replace the rest of the application. It is a faster way to summarise context, locate records, draft text, or prepare changes. Sensitive operations are always shown as previews you must approve before anything is written back into KANAP.
 
 !!! note "Plaid vs AI Agents"
-    Plaid is the interactive assistant **you** drive: you ask, it answers, and you approve one change at a time. **AI Agents** are different — they are autonomous helpers that watch your service desk and propose or handle ticket work on their own, within the approval limits you set. See [AI Agents — Overview](agents-overview.md).
+    Plaid is the interactive assistant **you** drive: you ask, it answers, and you approve one change at a time. **AI Agents** are different: they are autonomous helpers that watch your service desk and propose or handle ticket work on their own, within the approval limits you set. See [AI Agents: Overview](agents-overview.md).
 
 ## Where to find it
 
@@ -27,7 +27,7 @@ When you open Plaid for the first time, you land on a welcome screen with:
 - A **Try asking** section with sample prompts you can click to send
 - The composer at the bottom, ready to accept your first message
 
-Click any suggestion to either send it directly, or — for prompts that contain an `@` placeholder — drop the suggestion into the composer so you can finish it.
+Click any suggestion to either send it directly, or (for prompts that contain an `@` placeholder) drop the suggestion into the composer so you can finish it.
 
 Type a message and press **Enter** to send. **Shift+Enter** inserts a new line. The send button is disabled while there is nothing to send and morphs into a red **Stop** button while Plaid is responding.
 
@@ -43,8 +43,8 @@ The list contains:
 
 Each row shows the conversation title (or **Untitled** when none has been set yet). Hover or focus a row to reveal:
 
-- A pencil icon — **Rename** the conversation. Double-click the title to do the same thing.
-- A trash icon — **Archive** the conversation. Archived conversations disappear from the list. If you archive the conversation you currently have open, Plaid switches to a fresh empty chat.
+- A pencil icon: **Rename** the conversation. Double-click the title to do the same thing.
+- A trash icon: **Archive** the conversation. Archived conversations disappear from the list. If you archive the conversation you currently have open, Plaid switches to a fresh empty chat.
 
 Search filters the list by title as you type. Renaming and archiving are saved immediately.
 
@@ -74,9 +74,9 @@ Images are uploaded together with your message so Plaid can describe them, compa
 Typing `@` opens the **mention picker** above the composer. It lets you reference any KANAP record you have access to, with two complementary modes:
 
 - **Type-token prefix**: short codes that map to a single entity family. Examples:
-  - `@T-5` — task with the reference T-5
-  - `@DOC` — recent knowledge documents
-  - `@APP backup` — applications matching "backup"
+  - `@T-5`: task with the reference T-5
+  - `@DOC`: recent knowledge documents
+  - `@APP backup`: applications matching "backup"
   - `@BL-12`: the budget line with the reference BL-12. `@BL` alone lists budget lines of both types, and `@OPX` or `@CPX` narrows them to OPEX or CAPEX lines. The former numbers still work: `@OPX-12` or `@CPX-3` finds its line
   - `@PRJ`, `@REQ`, `@INC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@COMP`, `@CONT`, `@DEPT`, `@SUP`, `@BP`
 - **Plain text**: anything else (`@payroll`, `@server-2`) runs a cross-type search ranked by relevance. It also finds budget lines by the names of their analytics values.
@@ -89,9 +89,9 @@ When you confirm a suggestion, the composer keeps showing a readable label (`@DO
 
 Hover any of your previous messages to get message-level actions:
 
-- **Copy** — copy the message text to the clipboard
-- **Edit** — re-open the message in an inline editor; saving sends the new version and truncates everything that came after it (the conversation reruns from that point)
-- **Regenerate** (on assistant replies) — ask Plaid to produce another answer to the same prompt
+- **Copy**: copy the message text to the clipboard
+- **Edit**: re-open the message in an inline editor; saving sends the new version and truncates everything that came after it (the conversation reruns from that point)
+- **Regenerate** (on assistant replies): ask Plaid to produce another answer to the same prompt
 
 Editing is the right tool when you realise your earlier question was unclear. Regenerating is the right tool when the question was fine but the answer was not.
 
@@ -100,7 +100,7 @@ Editing is the right tool when you realise your earlier question was unclear. Re
 Plaid streams its answer character by character. While streaming:
 
 - The composer stays usable so you can prepare a follow-up
-- The send button shows a red **Stop** icon — clicking it cancels the in-flight response
+- The send button shows a red **Stop** icon. Clicking it cancels the in-flight response
 - A small "Using tools…" indicator appears when Plaid is searching KANAP, fetching a document, or running another tool call
 - The number and type of tools used are summarised under the answer once it is complete
 
@@ -131,8 +131,8 @@ The panel auto-opens when:
 
 For pending change previews, the panel offers two buttons:
 
-- **Approve** — confirms the change and lets Plaid apply it
-- **Reject** — cancels the change. Plaid acknowledges the rejection and continues the conversation.
+- **Approve**: confirms the change and lets Plaid apply it
+- **Reject**: cancels the change. Plaid acknowledges the rejection and continues the conversation.
 
 Nothing that mutates KANAP data is applied silently. The preview is the gate.
 

@@ -70,6 +70,10 @@ export class InterfacesService {
     return this.crudService.delete(id, userId, opts);
   }
 
+  deleteCheck(ids: string[], opts?: ServiceOpts) {
+    return this.crudService.deleteCheck(ids, opts);
+  }
+
   bulkDelete(ids: string[], userId: string | null, opts?: ServiceOpts & { deleteRelatedBindings?: boolean }) {
     return this.crudService.bulkDelete(ids, userId, opts);
   }

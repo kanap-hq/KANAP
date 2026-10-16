@@ -78,7 +78,7 @@ The Applications grid provides a comprehensive view of your application portfoli
 - **My apps**: shows apps where you are listed in the properties drawer as either a **Business owner** or **IT owner**. Multi-owner entries are supported.
 - **My team's apps**: shows apps where any member of your Portfolio team is listed as Business owner or IT owner. Your own ownership is also included in this scope. Disabled if you are not assigned to a Portfolio team.
 - **All apps** (default): shows the full Applications grid with the standard default lifecycle filter behavior.
-- Your selection is remembered across sessions -- returning to the page restores your last choice.
+- Your selection is remembered across sessions: returning to the page restores your last choice.
 
 **Default columns**:
 - **Name**: Application name with category caption and an "Included in: {suite}" badge for components of a suite
@@ -118,13 +118,13 @@ The Applications grid provides a comprehensive view of your application portfoli
 - **Import CSV**: Bulk import from CSV file (`applications:admin`)
 - **Export CSV**: Export the list to CSV (`applications:admin`). Catalog-backed columns (category, lifecycle, criticality, cyber criticality, recovery wave, data class, access methods) are exported as their names; the import accepts a name or the internal code.
 - **Copy item**: Duplicate a selected application with all its core relations (`applications:manager`). See [Copying applications](#copying-applications) for what is and is not copied.
-- **Delete Selected**: Remove selected applications (`applications:admin`)
+- **Delete Selected**: Remove selected applications (`applications:admin`). An application that is the source or target of an interface cannot be deleted: disable it instead, or delete its interfaces first. Before the confirmation, the window lists those applications as kept, with their count of interfaces. The others are deleted with their deployments and their links to other records; the confirmation counts the deployments
 
 ---
 
 ## The Applications workspace
 
-Click any row to open the workspace. The workspace has a **header** with quick metadata, a **properties drawer** on the right (the application's identity card -- always visible), and a **content area** in the centre that switches with each tab.
+Click any row to open the workspace. The workspace has a **header** with quick metadata, a **properties drawer** on the right (the application's identity card, always visible), and a **content area** in the centre that switches with each tab.
 
 ### Header
 
@@ -137,12 +137,12 @@ The header shows:
 - **Go live** date
 - **Send link**: copy a shareable link to this workspace
 - **Create new version**: launch the version migration wizard (see [Version management](#version-management))
-- **Delete** (`applications:admin`)
+- **Delete** (`applications:admin`): an application with interfaces gets the refusal and why, with Close only. Otherwise the confirmation names the application and counts the deployments deleted with it, along with its links to other records
 - **Previous / Next**: walk through the filtered list without returning to the grid
 
 ### Properties drawer (right panel)
 
-The drawer is the application's identity card. It is shown on every tab and edited inline -- changes save automatically.
+The drawer is the application's identity card. It is shown on every tab and edited inline. Changes save automatically.
 
 **Identity**:
 - **Category**, **Supplier**, **Publisher**
@@ -175,7 +175,7 @@ The Overview tab is the application's narrative. It contains:
 
 ### Deployments
 
-The Deployments tab documents where the application actually runs -- one block per environment, with the servers attached to each.
+The Deployments tab documents where the application actually runs: one block per environment, with the servers attached to each.
 
 **Environments**: Production, Pre-prod, QA, Test, Dev, Sandbox.
 
@@ -185,7 +185,7 @@ The Deployments tab documents where the application actually runs -- one block p
 - **SSO enabled** / **MFA supported**
 - **Notes**
 
-**Add deployment** opens a dialog where you set environment, lifecycle, base URL, SSO/MFA flags and notes. Each environment can only be added once. The lifecycle chip on a deployment header can also be changed inline from a popup menu.
+**Add deployment** opens a dialog where you set environment, lifecycle, base URL, SSO/MFA flags and notes. Each environment can only be added once. The lifecycle chip on a deployment header can also be changed inline from a popup menu. A deployment that still has servers or interface bindings cannot be deleted: remove them first.
 
 **Servers per deployment**: Each deployment block shows a table of assigned servers:
 
@@ -196,7 +196,7 @@ The Deployments tab documents where the application actually runs -- one block p
 | **Hosting** | Derived from the asset's location |
 | **Since** | Date the server was assigned to this deployment |
 
-Click **Add server** on the deployment header to attach an asset. Cluster assets are excluded -- assign cluster member hosts instead.
+Click **Add server** on the deployment header to attach an asset. Cluster assets are excluded. Assign cluster member hosts instead.
 
 **Tip**: Document servers in **IT Landscape > Assets** first, then link them here. The asset's Overview tab will show the same assignments in reverse.
 
@@ -204,13 +204,13 @@ Click **Add server** on the deployment header to attach an asset. Cluster assets
 
 ### Interfaces
 
-The Interfaces tab shows all integrations this application participates in -- as source, target, or middleware. The tab badge shows the total count.
+The Interfaces tab shows all integrations this application participates in, as source, target, or middleware. The tab badge shows the total count.
 
 Interfaces are **grouped by environment** (PROD, PRE_PROD, QA, ...). Within each environment they are split into:
 
-- **Inbound** -- this application receives data
-- **Outbound** -- this application sends data
-- **Routed** -- this application is the middleware/ETL for a flow between two other apps
+- **Inbound**: this application receives data
+- **Outbound**: this application sends data
+- **Routed**: this application is the middleware/ETL for a flow between two other apps
 
 Each row shows the interface name, the counterpart application, and a **Via middleware** indicator. Click the row to open the interface workspace; click the counterpart to open the other application.
 
@@ -287,9 +287,9 @@ The Relations tab links this application to your financial, contract, project an
 - **Budget lines**: the OPEX and CAPEX lines of this application, in one list. Search by title or reference (`BL-12`); each suggestion shows its type
 - **Contracts**: vendor contracts
 - **Projects**: portfolio projects linked to this application
-- **Tasks**: tasks linked to this application. This list is read-only here -- tasks gain or lose this link when you set the **App / Service** field on a task in the Tasks page.
+- **Tasks**: tasks linked to this application. This list is read-only here: tasks gain or lose this link when you set the **App / Service** field on a task in the Tasks page.
 
-**Relevant websites**: add URLs with optional names -- useful for vendor portals, monitoring dashboards, or documentation links. **Add URL** opens a dialog; existing entries can be edited or deleted.
+**Relevant websites**: add URLs with optional names, useful for vendor portals, monitoring dashboards, or documentation links. **Add URL** opens a dialog; existing entries can be edited or deleted.
 
 **Attachments**: Drag and drop files or click **Select files** to upload. Click an attachment chip to download it. Delete is available to managers.
 
@@ -301,16 +301,16 @@ KANAP offers **two ways to manage application versions**, depending on how your 
 
 | Approach | Best for | What happens |
 |----------|----------|--------------|
-| **Simple** | Most applications | Update the version fields in the properties drawer or in the create form -- same record, new version number |
-| **Sophisticated** | Major migrations | Use **Create new version** to create a new application record with lineage tracking -- run old and new versions side by side |
+| **Simple** | Most applications | Update the version fields in the properties drawer or in the create form: same record, new version number |
+| **Sophisticated** | Major migrations | Use **Create new version** to create a new application record with lineage tracking. Run old and new versions side by side |
 
 ### Simple version tracking (in-place updates)
 
-For most applications -- where you upgrade and the old version simply goes away -- update **Version**, **Go live**, **End of support** and **Retired date** in the create form or the properties drawer. The header version chip and the **Go live** metadata reflect what you set.
+For most applications (where you upgrade and the old version simply goes away), update **Version**, **Go live**, **End of support** and **Retired date** in the create form or the properties drawer. The header version chip and the **Go live** metadata reflect what you set.
 
 This approach keeps everything in a single record. When you upgrade, update the version fields and you're done. History is tracked in the audit log.
 
-**Use this when**: upgrades happen in place with no overlap -- one version replaces another.
+**Use this when**: upgrades happen in place with no overlap: one version replaces another.
 
 ### Creating a new version (parallel migrations)
 
@@ -318,9 +318,9 @@ For major application upgrades where you need to run old and new versions in par
 
 The wizard has three steps:
 
-1. **Version details** -- new application name, version label, **Go live** and **End of support** dates.
-2. **Copy options** -- choose what to copy from the source. Defaults shown below.
-3. **Interfaces** -- pick which interfaces to migrate to the new version.
+1. **Version details**: new application name, version label, **Go live** and **End of support** dates.
+2. **Copy options**: choose what to copy from the source. Defaults shown below.
+3. **Interfaces**: pick which interfaces to migrate to the new version.
 
 The new version is created as a separate application with:
 - A **Proposed** lifecycle (ready to configure before go-live)
@@ -365,7 +365,7 @@ There are two ways to copy an application in KANAP:
 
 ### Copy item (from the Applications grid)
 
-Use this when you want to create an independent duplicate of an application -- typically to create a similar application entry without version lineage.
+Use this when you want to create an independent duplicate of an application, typically to create a similar application entry without version lineage.
 
 1. Select an application in the grid
 2. Click **Copy item**
@@ -440,19 +440,19 @@ From the Applications list:
 | Preset | Description |
 |--------|-------------|
 | **Full Export** | All exportable fields including computed/read-only data (timestamps, data residency, user metrics) |
-| **Data Enrichment** | Only importable fields -- ideal for round-trip editing workflows |
+| **Data Enrichment** | Only importable fields, ideal for round-trip editing workflows |
 
-**Template export**: Downloads headers only -- useful for preparing import files with the correct structure. The template includes all importable fields.
+**Template export**: Downloads headers only, useful for preparing import files with the correct structure. The template includes all importable fields.
 
 **Custom selection**: Choose specific fields to include in your export.
 
 ### Import workflow
 
-1. **Prepare your file**: Use UTF-8 encoding with semicolon (`;`) separators. A file Excel saved as plain CSV (Windows-1252) imports too. Download a template to ensure correct headers.
+1. **Prepare your file**: Save it as UTF-8. Commas or semicolons both work, and so does a file Excel saved as plain CSV (Windows-1252). Download a template to ensure correct headers. The separator, amounts, dates and yes or no of each language are in [CSV files](csv-files.md).
 
 2. **Choose import settings**:
    - **Mode**:
-     - `Enrich` (default): Empty cells preserve existing values -- only update what you specify
+     - `Enrich` (default): Empty cells preserve existing values: only update what you specify
      - `Replace`: Supplied fields are replaced; blank classification cells preserve their values and `__CLEAR__` explicitly clears them
    - **Operation**:
      - `Upsert` (default): Create new applications or update existing ones
@@ -477,7 +477,7 @@ From the Applications list:
 | `editor` | Software publisher | No | Free text (e.g., Microsoft, SAP) |
 | `criticality` | Business criticality | No | Accepts code or label from Settings; `__CLEAR__` clears it |
 | `lifecycle` | Current status | No | Accepts code or label from Settings |
-| `is_suite` | Can have child apps | No | `true` or `false` |
+| `is_suite` | Can have child apps | No | `yes` or `no` |
 | `status` | Enabled/disabled | No | `enabled` or `disabled` |
 
 **Version fields**:
@@ -494,8 +494,8 @@ From the Applications list:
 | CSV Column | Description | Notes |
 |------------|-------------|-------|
 | `access_methods` | How users access | Comma-separated codes or labels from Settings (e.g., `web,mobile,vdi`) |
-| `external_facing` | Internet accessible | `true` or `false` |
-| `etl_enabled` | Data integration | `true` or `false` |
+| `external_facing` | Internet accessible | `yes` or `no` |
+| `etl_enabled` | Data integration | `yes` or `no` |
 | `support_notes` | Support information | Free text |
 | `licensing` | License terms | Free text |
 | `notes` | Internal notes | Free text |
@@ -506,7 +506,7 @@ From the Applications list:
 |------------|-------------|-------|
 | `data_class` | Data classification | Accepts code or label from Settings |
 | `last_dr_test` | Last DR test date | Date format: YYYY-MM-DD |
-| `contains_pii` | Stores personal data | `true` or `false` |
+| `contains_pii` | Stores personal data | `yes` or `no` |
 | `data_residency` | Data storage countries | Export only (ISO codes) |
 
 **Classification fields**:
@@ -573,7 +573,7 @@ If you include the `id` column with a valid UUID, matching uses ID first, then f
 **"File isn't properly formatted" error**: This usually indicates an encoding issue. Ensure your CSV is saved as **UTF-8**:
 
 - **In LibreOffice**: When opening a CSV, select `UTF-8` in the Character set dropdown (not "Japanese (Macintosh)" or other encodings). When saving, check "Edit filter settings" and choose UTF-8.
-- **In Excel**: Save As > CSV UTF-8 (Comma delimited), then open in a text editor to change commas to semicolons.
+- **In Excel**: Save As > CSV UTF-8 (Comma delimited).
 - **General tip**: If you see garbled characters (`?¿`, `ï»¿`) at the start of your file, the encoding is incorrect.
 
 ### Example CSV
@@ -592,7 +592,7 @@ Custom ERP;lob;;Moderate;Active;2018-03-20;false
 - **Start with critical apps**: Document your business-critical applications first, then work down the criticality levels.
 - **Use Suites for grouping**: Enable "Can have child apps" in the Operations tab to mark an application as a Suite that groups related components (e.g., SAP modules under an SAP Suite).
 - **Link to spend early**: Connect OPEX, CAPEX and contracts in the Relations tab to see the full cost picture for each application.
-- **Keep deployments current**: The Deployments tab drives the environment chips in the list -- keep it updated for accurate visibility.
+- **Keep deployments current**: The Deployments tab drives the environment chips in the list. Keep it updated for accurate visibility.
 - **Document the audience**: Set company and department audiences in the properties drawer; the user count is then derived automatically and used in reports.
 - **Leverage category filtering**: Use the Category column filter to focus on specific application types (e.g., show only Line-of-business apps, or exclude Productivity tools).
 - **Attach knowledge early**: Link runbooks and architecture documents from the Overview tab so the team knows where to look during incidents.

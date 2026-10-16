@@ -33,7 +33,7 @@ The page has two cards: **Logo** and **Primary colors**. Both are optional. With
 ### Recommended logo format
 
 - Use a wide, horizontal logo (transparent background preferred).
-- Keep important content centered — the header area is compact.
+- Keep important content centered: the header area is compact.
 - For sharp rendering, use at least about 2× the displayed size (for example `280x72` or higher).
 
 ### How to set it
@@ -67,7 +67,7 @@ You can set colors for **Light mode primary** and **Dark mode primary** independ
 
 After you pick colors, the page evaluates how readable text is against the chosen background. If contrast falls below the readable threshold for either mode, an advisory warning appears with the contrast ratio.
 
-The warning is informational — you can still save — but low contrast usually means white text on a pale color or dark text on a saturated color, both of which become tiring to read in real interfaces.
+The warning is informational (you can still save), but low contrast usually means white text on a pale color or dark text on a saturated color, both of which become tiring to read in real interfaces.
 
 ## Saving and resetting
 
@@ -81,7 +81,7 @@ A small caption below the actions shows the **logo version** counter, which incr
 
 ## Tips
 
-- **Test in both themes**: switch between light and dark theme before saving — the same brand color rarely works in both modes.
+- **Test in both themes**: switch between light and dark theme before saving. The same brand color rarely works in both modes.
 - **Prefer a transparent background**: simple logos with transparent backgrounds give the cleanest header rendering, especially in dark mode.
-- **Use Reset deliberately**: it removes both the logo and all custom colors in one step. Use it when starting over, not as an "undo" for a single change — that is what **Discard** is for.
+- **Use Reset deliberately**: it removes both the logo and all custom colors in one step. Use it when starting over, not as an "undo" for a single change. That is what **Discard** is for.
 - **Brand colors are for accents**: KANAP uses the primary color on app bars, primary buttons, and links. Pick something that reads cleanly at button size, not just on a marketing site.

@@ -14,6 +14,8 @@ services:
   db:
     image: postgres:15-alpine@sha256:f7d23353e1b15400d22ebe31189f4d314b87a4c129cc400c8c2d8d4ca127bf81
     restart: unless-stopped
+    # Parallel queries and many test databases need more than Docker\'s 64 MB default.
+    shm_size: 256m
     environment:
       POSTGRES_PASSWORD: postgres
       # Note: Using default 'postgres' superuser, 'app' user created via init script

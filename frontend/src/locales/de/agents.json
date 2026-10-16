@@ -311,6 +311,8 @@
       "skipped": "Übersprungen",
       "failed": "Fehlgeschlagen"
     },
+    "titleWithSummary": "{{title}}: {{summary}}",
+    "statusWithReason": "{{status}} ({{reason}})",
     "checkNarrative": "{{listed}} angesehen, {{enqueued}} gestartet, {{deduped}} bereits gesehene übersprungen.",
     "loadMore": "Mehr laden",
     "shown": "{{shown}} angezeigt",

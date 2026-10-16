@@ -175,6 +175,14 @@ export class KnowledgeController {
     return this.docs.create(body, ctx.tenantId, ctx.userId || null, { manager: ctx.manager });
   }
 
+  // What a delete of `ids` would refuse, asked before the confirmation.
+  @UseGuards(PermissionGuard)
+  @RequireLevel('knowledge', 'admin')
+  @Post('delete-check')
+  deleteCheck(@Body() body: { ids?: unknown }, @Tenant() ctx: TenantRequest) {
+    return this.docs.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], { manager: ctx.manager });
+  }
+
   @UseGuards(PermissionGuard)
   @RequireLevel('knowledge', 'admin')
   @Delete('bulk')

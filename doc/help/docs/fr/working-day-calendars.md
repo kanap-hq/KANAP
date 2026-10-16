@@ -66,7 +66,7 @@ Cliquez sur n'importe quelle cellule pour ouvrir l'espace de travail.
 - **Nouveau** : créer un calendrier (nécessite `working_day_profiles:member`)
 - **Importer CSV** : charger des calendriers et leurs jours ouvrés depuis un fichier (nécessite `working_day_profiles:admin`)
 - **Exporter CSV** : télécharger les calendriers que la liste affiche, ou tous les calendriers (nécessite `working_day_profiles:admin`)
-- **Supprimer la sélection** : supprimer les calendriers sélectionnés (nécessite `working_day_profiles:admin`). Les calendriers qui ne peuvent pas être supprimés sont conservés et listés avec la raison
+- **Supprimer la sélection** : supprimer les calendriers sélectionnés (nécessite `working_day_profiles:admin`). Avant toute suppression, la confirmation liste les calendriers conservés, avec la raison
 
 ---
 
@@ -162,7 +162,7 @@ Désactivez un calendrier lorsqu'il ne doit plus être utilisé, par exemple apr
 
 Le bouton **Supprimer** de l'en-tête supprime le calendrier après une confirmation (nécessite `working_day_profiles:admin`). Il est désactivé, avec la raison sur une ligne, tant que des lignes budgétaires utilisent le calendrier, par exemple « Utilisé par 3 lignes OPEX et 1 ligne CAPEX. Désactivez-le plutôt. »
 
-La même règle s'applique à **Supprimer la sélection** dans la liste : un calendrier utilisé par des lignes budgétaires est conservé, avec une raison comme « Personnel du siège is used by 3 OPEX lines and 1 CAPEX line. Disable it instead. »
+La même règle s'applique à **Supprimer la sélection** dans la liste : un calendrier utilisé par des lignes budgétaires est conservé, avec une raison comme « Ce calendrier est utilisé par 3 lignes OPEX et 1 ligne CAPEX. Désactivez-le plutôt que de le supprimer. »
 
 Une ligne budgétaire utilise un calendrier lorsque l'une de ses colonnes, pour n'importe quelle année, contient une ligne au prix par jour sur ce calendrier. Supprimer cette ligne dans l'onglet Budget, ou **Réinitialiser une colonne budgétaire** dans l'Administration budgétaire, retire le lien. Voir [Réinitialiser une colonne budgétaire](budget-operations.md#reinitialiser-une-colonne-budgetaire).
 
@@ -190,7 +190,7 @@ Chargez ou mettez à jour des calendriers et leurs jours ouvrés depuis un fichi
 | `country` | Facultative. Le code pays à deux lettres d'un calendrier standard, par exemple `FR`. Vide pour un calendrier personnalisé |
 | `region` | Facultative. Le code de la région, par exemple `57` pour la Moselle ou `BY` pour la Bavière. Nécessite un pays. Vide pour tout le pays |
 | `status` | `enabled` ou `disabled`. Vide signifie `enabled` |
-| `disabled_at` | Colonne facultative. La fin de validité : une date (`2026-12-31`) ou une date et une heure complètes. Vide s'il n'y a pas de fin |
+| `disabled_at` | Colonne facultative. La fin de validité : une date (`2026-12-31`) ou une date et une heure complètes. L'export écrit la date seule. Réimportée, cette date conserve la fin de validité enregistrée. Vide s'il n'y a pas de fin |
 | `year` | Quatre chiffres, de 2000 à 2100. Vide sur une ligne qui ne définit que les champs du calendrier |
 | `jan` à `dec` | Les jours ouvrés de chaque mois, avec un point comme séparateur décimal (la virgule est aussi acceptée). Obligatoires sur une ligne qui a une année |
 

@@ -40,6 +40,7 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import SearchIcon from '@mui/icons-material/Search';
 import ViewColumnIcon from '@mui/icons-material/ViewColumn';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import AgGridBox from '../../../components/AgGridBox';
 import { KanapDialog, PropertyGroup, PropertyRow, StatusDot } from '../../../components/design';
 import {
@@ -55,6 +56,7 @@ import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import type { InterfaceDetail, InterfaceLeg } from '../components/interface-workspace/types';
 import { getDotColor, LIFECYCLE_COLORS } from '../../../utils/statusColors';
 import { drawerAutocompleteListboxSx, drawerFieldValueSx, drawerMenuItemSx, drawerSelectSx, longFormSurfaceFieldSx } from '../../../theme/formSx';
+import { legTypeLabel } from '../../../utils/interfaceLegType';
 
 export type InterfaceMappingTabHandle = {
   save: () => Promise<boolean>;
@@ -155,31 +157,31 @@ const DEFAULT_ITEM_GROUP_TITLE = 'Item';
 const RESERVED_GROUP_TITLE_KEYS = new Set(['head', 'item']);
 
 const OPERATION_KIND_OPTIONS = [
-  { value: 'direct', label: 'Direct copy' },
-  { value: 'transform', label: 'Transform' },
-  { value: 'lookup', label: 'Lookup' },
-  { value: 'split', label: 'Split' },
-  { value: 'merge', label: 'Merge' },
-  { value: 'filter', label: 'Filter' },
-  { value: 'default', label: 'Default value' },
+  { value: 'direct' },
+  { value: 'transform' },
+  { value: 'lookup' },
+  { value: 'split' },
+  { value: 'merge' },
+  { value: 'filter' },
+  { value: 'default' },
 ];
 
 const MAPPING_LIFECYCLE_OPTIONS = [
-  { value: 'active', label: 'Active' },
-  { value: 'proposed', label: 'Proposed' },
-  { value: 'deprecated', label: 'Deprecated' },
-  { value: 'retired', label: 'Retired' },
+  { value: 'active' },
+  { value: 'proposed' },
+  { value: 'deprecated' },
+  { value: 'retired' },
 ];
 
-type EnvironmentOption = { value: string; label: string };
+type EnvironmentOption = { value: string; labelKey: string };
 
 const ENVIRONMENT_OPTIONS: EnvironmentOption[] = [
-  { value: 'prod', label: 'Prod' },
-  { value: 'pre_prod', label: 'Pre-prod' },
-  { value: 'qa', label: 'QA' },
-  { value: 'test', label: 'Test' },
-  { value: 'dev', label: 'Dev' },
-  { value: 'sandbox', label: 'Sandbox' },
+  { value: 'prod', labelKey: 'prod' },
+  { value: 'pre_prod', labelKey: 'preProd' },
+  { value: 'qa', labelKey: 'qa' },
+  { value: 'test', labelKey: 'test' },
+  { value: 'dev', labelKey: 'dev' },
+  { value: 'sandbox', labelKey: 'sandbox' },
 ];
 
 const BINDING_TYPE_OPTIONS = [
@@ -200,18 +202,21 @@ const BINDING_TYPE_OPTIONS = [
 
 const MAPPING_RULE_COLUMN_OPTIONS: Array<{
   id: MappingRuleColumnKey;
-  label: string;
+  labelKey: string;
   required?: boolean;
   defaultHidden?: boolean;
 }> = [
-  { id: 'group_label', label: 'Group' },
-  { id: 'mapping', label: 'Mapping', required: true },
-  { id: 'lifecycle_label', label: 'Lifecycle' },
-  { id: 'environment_scope_label', label: 'Environments' },
-  { id: 'operation_label', label: 'Operation' },
-  { id: 'leg_label', label: 'Leg scope', defaultHidden: true },
-  { id: 'actions', label: 'Actions', required: true },
+  { id: 'group_label', labelKey: 'group' },
+  { id: 'mapping', labelKey: 'mapping', required: true },
+  { id: 'lifecycle_label', labelKey: 'lifecycle' },
+  { id: 'environment_scope_label', labelKey: 'environments' },
+  { id: 'operation_label', labelKey: 'operation' },
+  { id: 'leg_label', labelKey: 'legScope', defaultHidden: true },
+  { id: 'actions', labelKey: 'actions', required: true },
 ];
+// Technical samples: identifiers and expressions read the same in every language.
+const RULE_KEY_SAMPLE = 'customer_id';
+const CONDITION_SAMPLE = 'order.amount > 0';
 const MAPPING_RULE_COLUMNS_STORAGE_KEY = 'kanap.interfaces.mappingRuleColumns.hidden';
 
 const DEFAULT_HIDDEN_RULE_COLUMNS = MAPPING_RULE_COLUMN_OPTIONS
@@ -479,7 +484,7 @@ function environmentOptionsFromBindings(bindings: InterfaceBinding[]): Environme
     }
   }
   return sortEnvironmentValues(Array.from(declared)).map((value) => (
-    ENVIRONMENT_OPTIONS.find((option) => option.value === value) || { value, label: value }
+    ENVIRONMENT_OPTIONS.find((option) => option.value === value) || { value, labelKey: value }
   ));
 }
 
@@ -490,23 +495,23 @@ function filterEnvironmentScope(value: unknown, options: EnvironmentOption[]) {
   return scope.filter((item) => allowed.has(item));
 }
 
-function formatLifecycle(value: string | null | undefined) {
-  const normalized = normalizeRuleLifecycle(value);
-  return MAPPING_LIFECYCLE_OPTIONS.find((option) => option.value === normalized)?.label || normalized;
+function formatLifecycle(t: TFunction, value: string | null | undefined) {
+  return t(`common:statuses.${normalizeRuleLifecycle(value)}`);
 }
 
-function formatEnvironment(value: string | null | undefined) {
-  return ENVIRONMENT_OPTIONS.find((option) => option.value === value)?.label || value || '';
+function formatEnvironment(t: TFunction, value: string | null | undefined) {
+  const option = ENVIRONMENT_OPTIONS.find((item) => item.value === value);
+  return option ? t(`it:enums.environment.${option.labelKey}`) : value || '';
 }
 
-function formatEnvironmentScope(value: string[] | null | undefined) {
+function formatEnvironmentScope(t: TFunction, value: string[] | null | undefined) {
   const scope = normalizeEnvironmentScope(value);
-  if (!scope) return 'All environments';
-  return scope.map((item) => formatEnvironment(item)).join(', ');
+  if (!scope) return t('it:workspace.interface.mapping.allEnvironments');
+  return scope.map((item) => formatEnvironment(t, item)).join(', ');
 }
 
-function formatRuleCount(count: number) {
-  return `${count} ${count === 1 ? 'rule' : 'rules'}`;
+function formatRuleCount(t: TFunction, count: number) {
+  return t('it:workspace.interface.mapping.ruleCount', { count });
 }
 
 function makeTempId(prefix: string) {
@@ -517,14 +522,14 @@ function isTempId(value: string | null | undefined) {
   return typeof value === 'string' && value.startsWith('tmp:');
 }
 
-function parsePositiveInteger(value: string, label: string, target: 'group' | 'rule') {
+function parsePositiveInteger(value: string, messages: { required: string; min: string }, target: 'group' | 'rule') {
   const trimmed = String(value ?? '').trim();
   if (!trimmed) {
-    throw new MappingValidationError(target, `${label} is required.`);
+    throw new MappingValidationError(target, messages.required);
   }
   const parsed = Number(trimmed);
   if (!Number.isInteger(parsed) || parsed < 1) {
-    throw new MappingValidationError(target, `${label} must be 1 or greater.`);
+    throw new MappingValidationError(target, messages.min);
   }
   return parsed;
 }
@@ -716,13 +721,13 @@ function bindingsPayloadFromForm(rows: BindingFormState[]) {
     .filter((row): row is Record<string, unknown> => !!row);
 }
 
-function bindingsSummary(bindings: Array<Record<string, unknown>> | null | undefined) {
+function bindingsSummary(t: TFunction, bindings: Array<Record<string, unknown>> | null | undefined) {
   const lines = Array.isArray(bindings)
     ? bindings
       .map((item) => bindingTextFromItem(item))
       .filter(Boolean)
     : [];
-  if (lines.length === 0) return 'Not set';
+  if (lines.length === 0) return t('common:selects.notSet');
   if (lines.length === 1) return lines[0];
   return `${lines[0]} (+${lines.length - 1})`;
 }
@@ -736,10 +741,11 @@ function resolveOperationKindChoice(value: string | null | undefined) {
   };
 }
 
-function formatOperationKind(value: string | null | undefined) {
+function formatOperationKind(t: TFunction, value: string | null | undefined) {
   const normalized = String(value || '').trim();
   const option = OPERATION_KIND_OPTIONS.find((item) => item.value === normalized);
-  return option?.label || normalized || 'Direct copy';
+  if (option) return t(`it:workspace.interface.mapping.operations.${option.value}`);
+  return normalized || t('it:workspace.interface.mapping.operations.direct');
 }
 
 function groupFormFromEntity(group: InterfaceMappingGroup): GroupFormState {
@@ -904,14 +910,14 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
 
   const getRoleLabel = React.useCallback((role: string) => {
     const normalized = String(role || '').toLowerCase();
-    if (normalized === 'source') return data?.source_application_name || 'Source';
-    if (normalized === 'target') return data?.target_application_name || 'Target';
-    if (normalized === 'middleware') return 'Middleware';
+    if (normalized === 'source') return data?.source_application_name || t('it:workspace.interface.flow.source');
+    if (normalized === 'target') return data?.target_application_name || t('it:workspace.interface.flow.target');
+    if (normalized === 'middleware') return t('it:workspace.interface.flow.middleware');
     return role || '';
-  }, [data?.source_application_name, data?.target_application_name]);
+  }, [data?.source_application_name, data?.target_application_name, t]);
 
   const legLabel = React.useCallback((leg: InterfaceLeg) => (
-    `${String(leg.leg_type || '').toUpperCase()} • ${getRoleLabel(leg.from_role)} -> ${getRoleLabel(leg.to_role)}`
+    `${legTypeLabel(t, leg.leg_type)} • ${getRoleLabel(leg.from_role)} -> ${getRoleLabel(leg.to_role)}`
   ), [getRoleLabel]);
 
   const load = React.useCallback(async () => {
@@ -961,7 +967,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
         return nextGroups.some((group) => group.id === current) ? current : ALL_GROUPS_KEY;
       });
     } catch (loadError: any) {
-      setError(getApiErrorMessage(loadError, t, 'Failed to load interface mappings.'));
+      setError(getApiErrorMessage(loadError, t, t('it:workspace.interface.mapping.errors.loadFailed')));
       setMappingSet(null);
       setEnvironmentOptions([]);
       setBaselineGroups([]);
@@ -1013,11 +1019,11 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
 
   const normalizeGroupFromForm = React.useCallback((form: GroupFormState, existing?: InterfaceMappingGroup | null) => {
     if (!mappingSet) {
-      throw new MappingValidationError('group', 'Default mapping set is not available for this interface.');
+      throw new MappingValidationError('group', t('it:workspace.interface.mapping.errors.noDefaultSet'));
     }
     const title = String(form.title || '').trim();
     if (!title) {
-      throw new MappingValidationError('group', 'Group title is required.');
+      throw new MappingValidationError('group', t('it:workspace.interface.mapping.errors.groupTitleRequired'));
     }
     const now = new Date().toISOString();
     return {
@@ -1027,11 +1033,14 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
       mapping_set_id: existing?.mapping_set_id || mappingSet.id,
       title,
       description: normalizeOptionalText(form.description),
-      order_index: parsePositiveInteger(form.order_index, 'Group order', 'group'),
+      order_index: parsePositiveInteger(form.order_index, {
+        required: t('it:workspace.interface.mapping.errors.groupOrderRequired'),
+        min: t('it:workspace.interface.mapping.errors.groupOrderMin'),
+      }, 'group'),
       created_at: existing?.created_at || now,
       updated_at: now,
     } satisfies InterfaceMappingGroup;
-  }, [interfaceId, mappingSet]);
+  }, [interfaceId, mappingSet, t]);
 
   const normalizeRuleFromForm = React.useCallback((
     form: RuleFormState,
@@ -1039,23 +1048,23 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
     existing?: InterfaceMappingRule | null,
   ) => {
     if (!mappingSet) {
-      throw new MappingValidationError('rule', 'Default mapping set is not available for this interface.');
+      throw new MappingValidationError('rule', t('it:workspace.interface.mapping.errors.noDefaultSet'));
     }
     const title = String(form.title || '').trim();
     if (!title) {
-      throw new MappingValidationError('rule', 'Rule title is required.');
+      throw new MappingValidationError('rule', t('it:workspace.interface.mapping.errors.ruleTitleRequired'));
     }
 
     const groupId = normalizeOptionalId(form.group_id);
     if (groupId && !groups.some((group) => group.id === groupId)) {
-      throw new MappingValidationError('rule', 'Select a valid group for this rule.');
+      throw new MappingValidationError('rule', t('it:workspace.interface.mapping.errors.invalidGroup'));
     }
 
     const operationKind = form.operation_kind_choice === OTHER_OPERATION_KIND
       ? normalizeOptionalText(form.operation_kind_other)
       : normalizeOptionalText(form.operation_kind_choice);
     if (!operationKind) {
-      throw new MappingValidationError('rule', 'Select an operation.');
+      throw new MappingValidationError('rule', t('it:workspace.interface.mapping.errors.operationRequired'));
     }
 
     const now = new Date().toISOString();
@@ -1067,7 +1076,10 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
       group_id: groupId,
       rule_key: normalizeOptionalText(form.rule_key),
       title,
-      order_index: existing?.order_index || parsePositiveInteger(form.order_index, 'Rule order', 'rule'),
+      order_index: existing?.order_index || parsePositiveInteger(form.order_index, {
+        required: t('it:workspace.interface.mapping.errors.ruleOrderRequired'),
+        min: t('it:workspace.interface.mapping.errors.ruleOrderMin'),
+      }, 'rule'),
       applies_to_leg_id: normalizeOptionalId(form.applies_to_leg_id),
       operation_kind: operationKind,
       lifecycle: normalizeRuleLifecycle(form.lifecycle),
@@ -1085,7 +1097,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
       created_at: existing?.created_at || now,
       updated_at: now,
     } satisfies InterfaceMappingRule;
-  }, [environmentOptions, interfaceId, mappingSet]);
+  }, [environmentOptions, interfaceId, mappingSet, t]);
 
   const buildCommittedSnapshot = React.useCallback(() => {
     let nextGroups = draftGroups;
@@ -1146,7 +1158,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
   ) => {
     if (!mappingSet) return { ok: true, message: null as string | null };
     if (!canManage) {
-      const message = 'You do not have permission to edit mappings.';
+      const message = t('it:workspace.interface.mapping.errors.noPermission');
       setError(message);
       return { ok: false, message };
     }
@@ -1220,7 +1232,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
       await load();
       return { ok: true, message: null as string | null };
     } catch (saveError: any) {
-      const message = getApiErrorMessage(saveError, t, 'Failed to save interface mappings.');
+      const message = getApiErrorMessage(saveError, t, t('it:workspace.interface.mapping.errors.saveFailed'));
       setError(message);
       if (wroteToServer) {
         setGroupManagerOpen(false);
@@ -1405,30 +1417,30 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
       return {
         id: rule.id,
         rule,
-        title: rule.title || 'Untitled mapping',
-        mapping_text: `${bindingsSummary(rule.source_bindings)} ${bindingsSummary(rule.target_bindings)}`,
-        source_text: bindingsSummary(rule.source_bindings),
-        target_text: bindingsSummary(rule.target_bindings),
+        title: rule.title || t('it:workspace.interface.mapping.untitled'),
+        mapping_text: `${bindingsSummary(t, rule.source_bindings)} ${bindingsSummary(t, rule.target_bindings)}`,
+        source_text: bindingsSummary(t, rule.source_bindings),
+        target_text: bindingsSummary(t, rule.target_bindings),
         condition_text: normalizeOptionalText(rule.condition_text),
         lifecycle: normalizeRuleLifecycle(rule.lifecycle),
-        lifecycle_label: formatLifecycle(rule.lifecycle),
-        environment_scope_label: formatEnvironmentScope(rule.environment_scope),
-        operation_label: formatOperationKind(rule.operation_kind),
-        group_label: ruleGroup?.title || 'Ungrouped',
-        leg_label: ruleLeg ? legLabel(ruleLeg) : 'All legs',
+        lifecycle_label: formatLifecycle(t, rule.lifecycle),
+        environment_scope_label: formatEnvironmentScope(t, rule.environment_scope),
+        operation_label: formatOperationKind(t, rule.operation_kind),
+        group_label: ruleGroup?.title || t('it:workspace.interface.mapping.ungrouped'),
+        leg_label: ruleLeg ? legLabel(ruleLeg) : t('it:workspace.interface.mapping.allLegs'),
       };
     })
-  ), [draftGroups, legLabel, legs, visibleRules]);
+  ), [draftGroups, legLabel, legs, t, visibleRules]);
 
   const mappingRulesSummary = React.useMemo(() => {
     if (selectedGroupId === ALL_GROUPS_KEY) {
-      return formatRuleCount(draftRules.length);
+      return formatRuleCount(t, draftRules.length);
     }
     if (selectedGroupId === UNGROUPED_GROUP_KEY) {
-      return `${formatRuleCount(visibleRules.length)} in ungrouped`;
+      return t('it:workspace.interface.mapping.summaryUngrouped', { count: visibleRules.length });
     }
-    return `${formatRuleCount(visibleRules.length)} in ${selectedGroup?.title || 'selected group'}`;
-  }, [draftRules.length, selectedGroup?.title, selectedGroupId, visibleRules.length]);
+    return t('it:workspace.interface.mapping.summaryInGroup', { count: visibleRules.length, group: selectedGroup?.title || t('it:workspace.interface.mapping.selectedGroup') });
+  }, [draftRules.length, selectedGroup?.title, selectedGroupId, t, visibleRules.length]);
 
   const mappingRulesGridHeight = React.useMemo(() => {
     const rowCount = Math.max(mappingRuleRows.length, 1);
@@ -1514,7 +1526,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
     const copiedRule: InterfaceMappingRule = {
       ...cloneValue(rule),
       id: makeTempId('rule'),
-      title: `${rule.title || 'Mapping'} (copy)`,
+      title: t('it:workspace.interface.mapping.copyTitle', { title: rule.title || t('it:workspace.interface.mapping.copyFallback') }),
       rule_key: null,
       lifecycle: normalizeRuleLifecycle(rule.lifecycle),
       environment_scope: filterEnvironmentScope(rule.environment_scope, environmentOptions),
@@ -1522,7 +1534,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
       updated_at: now,
     };
     setDraftRules((current) => sortRules([...current, copiedRule], draftGroups));
-  }, [draftGroups, environmentOptions]);
+  }, [draftGroups, environmentOptions, t]);
 
   const deleteGroup = React.useCallback((group: InterfaceMappingGroup) => {
     if (isReservedGroup(group)) {
@@ -1600,14 +1612,14 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
     const columns: ColDef<MappingRuleGridRow>[] = [
       {
         field: 'group_label',
-        headerName: 'Group',
+        headerName: t('it:workspace.interface.mapping.columns.group'),
         width: 122,
         minWidth: 105,
         hide: !isRuleColumnVisible('group_label'),
       },
       {
         colId: 'mapping',
-        headerName: 'Mapping',
+        headerName: t('it:workspace.interface.mapping.columns.mapping'),
         width: 240,
         minWidth: 180,
         maxWidth: 420,
@@ -1645,7 +1657,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                   color: 'kanap.text.secondary',
                 }}
               >
-                Source: {row.source_text}
+                {t('it:workspace.interface.mapping.sourceLine', { value: row.source_text })}
               </Typography>
               <Typography
                 title={row.target_text}
@@ -1657,7 +1669,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                   color: 'kanap.text.secondary',
                 }}
               >
-                Destination: {row.target_text}
+                {t('it:workspace.interface.mapping.targetLine', { value: row.target_text })}
               </Typography>
             </Box>
           );
@@ -1665,7 +1677,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
       },
       {
         field: 'lifecycle_label',
-        headerName: 'Lifecycle',
+        headerName: t('it:workspace.interface.mapping.columns.lifecycle'),
         width: 130,
         // Client-side grid: the checkbox set filter only drives server-side lists.
         filter: 'agTextColumnFilter',
@@ -1685,7 +1697,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
       },
       {
         field: 'environment_scope_label',
-        headerName: 'Environments',
+        headerName: t('it:workspace.interface.mapping.columns.environments'),
         width: 148,
         minWidth: 128,
         hide: !isRuleColumnVisible('environment_scope_label'),
@@ -1693,14 +1705,14 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
       },
       {
         field: 'operation_label',
-        headerName: 'Operation',
+        headerName: t('it:workspace.interface.mapping.columns.operation'),
         width: 135,
         minWidth: 115,
         hide: !isRuleColumnVisible('operation_label'),
       },
       {
         field: 'leg_label',
-        headerName: 'Leg scope',
+        headerName: t('it:workspace.interface.mapping.columns.legScope'),
         width: 230,
         minWidth: 190,
         hide: !isRuleColumnVisible('leg_label'),
@@ -1708,7 +1720,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
       },
       {
         colId: 'actions',
-        headerName: 'Actions',
+        headerName: t('it:workspace.interface.mapping.columns.actions'),
         width: 88,
         maxWidth: 96,
         sortable: false,
@@ -1722,7 +1734,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
             <Stack direction="row" spacing={0.15} justifyContent="flex-end" sx={{ width: '100%' }}>
               <IconButton
                 size="small"
-                aria-label={`Copy ${row.title}`}
+                aria-label={t('it:workspace.interface.mapping.copyRuleAria', { title: row.title })}
                 onClick={(event) => {
                   event.stopPropagation();
                   copyRule(row.rule);
@@ -1734,7 +1746,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
               </IconButton>
               <IconButton
                 size="small"
-                aria-label={`Edit ${row.title}`}
+                aria-label={t('it:workspace.interface.mapping.editRuleAria', { title: row.title })}
                 onClick={(event) => {
                   event.stopPropagation();
                   openEditRule(row.rule);
@@ -1746,7 +1758,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
               </IconButton>
               <IconButton
                 size="small"
-                aria-label={`Delete ${row.title}`}
+                aria-label={t('it:workspace.interface.mapping.deleteRuleAria', { title: row.title })}
                 onClick={(event) => {
                   event.stopPropagation();
                   deleteRule(row.rule);
@@ -1762,7 +1774,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
       },
     ];
     return columns;
-  }, [copyRule, deleteRule, isRuleColumnVisible, openEditRule, ruleActionsDisabled, theme.palette.mode]);
+  }, [copyRule, deleteRule, isRuleColumnVisible, openEditRule, ruleActionsDisabled, t, theme.palette.mode]);
 
   const mappingRuleDefaultColDef = React.useMemo<ColDef<MappingRuleGridRow>>(() => ({
     sortable: true,
@@ -1777,7 +1789,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
 
       {!mappingSet && !loading ? (
         <Alert severity="warning">
-          No default mapping set is available for this interface yet.
+          {t('it:workspace.interface.mapping.noDefaultSet')}
         </Alert>
       ) : null}
 
@@ -1786,7 +1798,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
           <Stack spacing={1.25}>
             <Box sx={mappingRulesHeaderSx}>
               <Box sx={{ minWidth: 0 }}>
-                <Typography variant="subtitle2">Mapping rules</Typography>
+                <Typography variant="subtitle2">{t('it:workspace.interface.mapping.rulesTitle')}</Typography>
                 <Typography sx={{ mt: 0.25, fontSize: 12, color: 'kanap.text.tertiary' }}>
                   {mappingRulesSummary}
                 </Typography>
@@ -1800,7 +1812,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                       onClick={() => { void reset(); }}
                       disabled={saving}
                     >
-                      Reset
+                      {t('common:buttons.reset')}
                     </Button>
                     <Button
                       size="small"
@@ -1808,7 +1820,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                       onClick={() => { void save(); }}
                       disabled={saving || !canManage}
                     >
-                      Save changes
+                      {t('common:buttons.saveChanges')}
                     </Button>
                   </>
                 )}
@@ -1818,7 +1830,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                   onClick={openCreateRule}
                   disabled={ruleActionsDisabled || !mappingSet}
                 >
-                  Add rule
+                  {t('it:workspace.interface.mapping.addRule')}
                 </Button>
               </Stack>
             </Box>
@@ -1827,7 +1839,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
               <Box sx={mappingRulesFilterSx}>
                 <TextField
                   size="small"
-                  placeholder="Search rules"
+                  placeholder={t('it:workspace.interface.mapping.searchRules')}
                   value={ruleSearch}
                   onChange={(event) => setRuleSearch(event.target.value)}
                   sx={mappingRulesSearchSx}
@@ -1840,7 +1852,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                     endAdornment: ruleSearch ? (
                       <IconButton
                         size="small"
-                        aria-label="Clear rule search"
+                        aria-label={t('it:workspace.interface.mapping.clearSearch')}
                         onClick={() => setRuleSearch('')}
                         sx={{ width: 22, height: 22, color: 'kanap.text.tertiary' }}
                       >
@@ -1855,17 +1867,17 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                   variant="standard"
                   sx={mappingRulesSelectSx}
                   renderValue={(value) => {
-                    if (value === ALL_GROUPS_KEY) return 'All rules';
-                    if (value === UNGROUPED_GROUP_KEY) return `Ungrouped (${ruleCounts.ungrouped})`;
+                    if (value === ALL_GROUPS_KEY) return t('it:workspace.interface.mapping.allRules');
+                    if (value === UNGROUPED_GROUP_KEY) return t('it:workspace.interface.mapping.groupWithCount', { group: t('it:workspace.interface.mapping.ungrouped'), count: ruleCounts.ungrouped });
                     const group = draftGroups.find((item) => item.id === value);
-                    return group ? `${group.title} (${ruleCounts.counts.get(group.id) || 0})` : 'All rules';
+                    return group ? t('it:workspace.interface.mapping.groupWithCount', { group: group.title, count: ruleCounts.counts.get(group.id) || 0 }) : t('it:workspace.interface.mapping.allRules');
                   }}
                 >
-                  <MenuItem value={ALL_GROUPS_KEY}>All rules</MenuItem>
-                  <MenuItem value={UNGROUPED_GROUP_KEY}>Ungrouped ({ruleCounts.ungrouped})</MenuItem>
+                  <MenuItem value={ALL_GROUPS_KEY}>{t('it:workspace.interface.mapping.allRules')}</MenuItem>
+                  <MenuItem value={UNGROUPED_GROUP_KEY}>{t('it:workspace.interface.mapping.groupWithCount', { group: t('it:workspace.interface.mapping.ungrouped'), count: ruleCounts.ungrouped })}</MenuItem>
                   {sortGroups(draftGroups).map((group) => (
                     <MenuItem key={group.id} value={group.id}>
-                      {group.title} ({ruleCounts.counts.get(group.id) || 0})
+                      {t('it:workspace.interface.mapping.groupWithCount', { group: group.title, count: ruleCounts.counts.get(group.id) || 0 })}
                     </MenuItem>
                   ))}
                 </Select>
@@ -1874,7 +1886,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                   startIcon={<ViewColumnIcon sx={{ fontSize: '14px !important' }} />}
                   onClick={(event) => setColumnChooserAnchor(event.currentTarget)}
                 >
-                  Columns
+                  {t('it:workspace.interface.mapping.columnsButton')}
                 </Button>
                 <Button
                   variant="action"
@@ -1882,7 +1894,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                   onClick={() => setGroupManagerOpen(true)}
                   disabled={groupActionsDisabled}
                 >
-                  Manage groups
+                  {t('it:workspace.interface.mapping.manageGroups')}
                 </Button>
               </Box>
             </Box>
@@ -1908,7 +1920,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                   openEditRule(event.data.rule);
                 }
               }}
-              overlayNoRowsTemplate="<span>No mapping rules in this view yet.</span>"
+              overlayNoRowsTemplate={`<span>${t('it:workspace.interface.mapping.noRules')}</span>`}
             />
           </Box>
         </Stack>
@@ -1923,7 +1935,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
       >
         <Box sx={{ p: 1.5, minWidth: 240, maxWidth: 320, bgcolor: 'kanap.bg.drawer' }}>
           <Typography sx={{ mb: 1, fontSize: 13, fontWeight: 500, color: 'kanap.text.primary' }}>
-            Choose columns
+            {t('common:buttons.chooseColumns')}
           </Typography>
           <Stack spacing={0.25} sx={{ maxHeight: 300, overflowY: 'auto' }}>
             {MAPPING_RULE_COLUMN_OPTIONS.map((column) => {
@@ -1941,10 +1953,10 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                   )}
                   label={(
                     <Typography sx={{ fontSize: 13, color: column.required ? 'kanap.text.tertiary' : 'kanap.text.primary' }}>
-                      {column.label}
+                      {t(`it:workspace.interface.mapping.columns.${column.labelKey}`)}
                       {column.required ? (
                         <Box component="span" sx={{ ml: 0.75, color: 'kanap.text.tertiary' }}>
-                          required
+                          {t('it:workspace.interface.mapping.requiredColumn')}
                         </Box>
                       ) : null}
                     </Typography>
@@ -1961,10 +1973,10 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
           </Stack>
           <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ mt: 1.25 }}>
             <Button size="small" onClick={resetRuleColumns}>
-              Reset
+              {t('common:buttons.reset')}
             </Button>
             <Button size="small" variant="contained" onClick={() => setColumnChooserAnchor(null)}>
-              Done
+              {t('common:buttons.done')}
             </Button>
           </Stack>
         </Box>
@@ -1976,7 +1988,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Manage mapping groups</DialogTitle>
+        <DialogTitle>{t('it:workspace.interface.mapping.manageGroupsTitle')}</DialogTitle>
         <DialogContent>
           <Stack spacing={1.5} sx={{ pt: 1 }}>
             <Stack direction="row" justifyContent="flex-end" alignItems="center">
@@ -1986,7 +1998,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                 onClick={openCreateGroup}
                 disabled={groupActionsDisabled}
               >
-                Add group
+                {t('it:workspace.interface.mapping.addGroup')}
               </Button>
             </Stack>
             <Paper variant="outlined">
@@ -2000,8 +2012,8 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                     }}
                   >
                     <ListItemText
-                      primary="Ungrouped"
-                      secondary={`${ruleCounts.ungrouped} rules`}
+                      primary={t('it:workspace.interface.mapping.ungrouped')}
+                      secondary={formatRuleCount(t, ruleCounts.ungrouped)}
                     />
                   </ListItemButton>
                 </ListItem>
@@ -2010,7 +2022,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                     key={group.id}
                     disablePadding
                     secondaryAction={isReservedGroup(group) ? (
-                      <Typography variant="body2" color="text.secondary">Default</Typography>
+                      <Typography variant="body2" color="text.secondary">{t('it:workspace.interface.mapping.defaultGroup')}</Typography>
                     ) : canManage ? (
                       <Stack direction="row" spacing={0.5}>
                         <IconButton
@@ -2045,7 +2057,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                     >
                       <ListItemText
                         primary={group.title}
-                        secondary={group.description || `${ruleCounts.counts.get(group.id) || 0} rules`}
+                        secondary={group.description || formatRuleCount(t, ruleCounts.counts.get(group.id) || 0)}
                       />
                     </ListItemButton>
                   </ListItem>
@@ -2055,7 +2067,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button variant="action" onClick={() => setGroupManagerOpen(false)}>Close</Button>
+          <Button variant="action" onClick={() => setGroupManagerOpen(false)}>{t('common:buttons.close')}</Button>
         </DialogActions>
       </Dialog>
 
@@ -2066,12 +2078,12 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
         fullWidth
       >
         <DialogTitle>
-          {groupEditor.mode === 'create' ? 'Create mapping group' : 'Edit mapping group'}
+          {groupEditor.mode === 'create' ? t('it:workspace.interface.mapping.createGroup') : t('it:workspace.interface.mapping.editGroup')}
         </DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
             {groupEditor.error ? <Alert severity="error">{groupEditor.error}</Alert> : null}
-            <PropertyRow label="Group title" required>
+            <PropertyRow label={t('it:workspace.interface.mapping.groupTitle')} required>
               <TextField
                 value={groupEditor.form.title}
                 onChange={(event) => setGroupEditor((current) => ({
@@ -2079,13 +2091,13 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                   error: null,
                   form: { ...current.form, title: event.target.value },
                 }))}
-                placeholder="Business document"
+                placeholder={t('it:workspace.interface.mapping.groupTitlePlaceholder')}
                 variant="standard"
                 sx={drawerFieldValueSx}
                 fullWidth
               />
             </PropertyRow>
-            <PropertyRow label="Description">
+            <PropertyRow label={t('it:workspace.interface.mapping.description')}>
               <TextField
                 value={groupEditor.form.description}
                 onChange={(event) => setGroupEditor((current) => ({
@@ -2093,7 +2105,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                   error: null,
                   form: { ...current.form, description: event.target.value },
                 }))}
-                placeholder="Optional context"
+                placeholder={t('it:workspace.interface.mapping.descriptionPlaceholder')}
                 variant="standard"
                 multiline
                 minRows={3}
@@ -2105,14 +2117,14 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
         </DialogContent>
         <DialogActions>
           <Button variant="action" onClick={() => setGroupEditor(createClosedGroupEditor())}>
-            Cancel
+            {t('common:buttons.cancel')}
           </Button>
           <Button
             variant="action-primary"
             onClick={commitGroupEditor}
             disabled={!canManage}
           >
-            Apply
+            {t('it:workspace.interface.mapping.apply')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -2127,11 +2139,11 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
           <Stack direction="row" alignItems="center" justifyContent="space-between" sx={ruleEditorHeaderSx}>
             <Box sx={{ minWidth: 0 }}>
               <Typography sx={{ fontSize: 16, fontWeight: 500, lineHeight: 1.3, color: 'kanap.text.primary' }}>
-                {ruleEditor.mode === 'create' ? 'Create mapping rule' : 'Edit mapping rule'}
+                {ruleEditor.mode === 'create' ? t('it:workspace.interface.mapping.createRule') : t('it:workspace.interface.mapping.editRule')}
               </Typography>
             </Box>
             <IconButton
-              aria-label="Close mapping rule editor"
+              aria-label={t('it:workspace.interface.mapping.closeRuleEditor')}
               onClick={() => setRuleEditor(createClosedRuleEditor())}
               sx={compactIconButtonSx}
             >
@@ -2147,7 +2159,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
             ) : null}
 
             <PropertyGroup>
-              <PropertyRow label="Rule title" required>
+              <PropertyRow label={t('it:workspace.interface.mapping.ruleTitle')} required>
                 <TextField
                   value={ruleEditor.form.title}
                   onChange={(event) => setRuleEditor((current) => ({
@@ -2155,7 +2167,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                     error: null,
                     form: { ...current.form, title: event.target.value },
                   }))}
-                  placeholder="Customer identifier"
+                  placeholder={t('it:workspace.interface.mapping.ruleTitlePlaceholder')}
                   variant="standard"
                   sx={drawerFieldValueSx}
                   disabled={!canManage || saving}
@@ -2166,8 +2178,8 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                 <PropertyRow
                   label={(
                     <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-                      Rule key
-                      <Tooltip title="Optional stable technical identifier if another system or export process needs a fixed key.">
+                      {t('it:workspace.interface.mapping.ruleKey')}
+                      <Tooltip title={t('it:workspace.interface.mapping.ruleKeyHint')}>
                         <InfoOutlinedIcon sx={{ fontSize: 14, color: 'kanap.text.tertiary' }} />
                       </Tooltip>
                     </Box>
@@ -2180,14 +2192,14 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                       error: null,
                       form: { ...current.form, rule_key: event.target.value },
                     }))}
-                    placeholder="customer_id"
+                    placeholder={RULE_KEY_SAMPLE}
                     variant="standard"
                     sx={drawerFieldValueSx}
                     disabled={!canManage || saving}
                     fullWidth
                   />
                 </PropertyRow>
-                <PropertyRow label="Group">
+                <PropertyRow label={t('it:workspace.interface.mapping.columns.group')}>
                   <Select
                     value={ruleEditor.form.group_id}
                     onChange={(event) => setRuleEditor((current) => ({
@@ -2198,16 +2210,16 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                     displayEmpty
                     renderValue={(selected) => {
                       const selectedGroupId = String(selected || '');
-                      if (!selectedGroupId) return 'Ungrouped';
+                      if (!selectedGroupId) return t('it:workspace.interface.mapping.ungrouped');
                       const selectedGroup = draftGroups.find((group) => group.id === selectedGroupId);
-                      return selectedGroup?.title || 'Ungrouped';
+                      return selectedGroup?.title || t('it:workspace.interface.mapping.ungrouped');
                     }}
                     variant="standard"
                     sx={drawerSelectSx}
                     disabled={!canManage || saving}
                     fullWidth
                   >
-                    <MenuItem value="" sx={drawerMenuItemSx}>Ungrouped</MenuItem>
+                    <MenuItem value="" sx={drawerMenuItemSx}>{t('it:workspace.interface.mapping.ungrouped')}</MenuItem>
                     {sortGroups(draftGroups).map((group) => (
                       <MenuItem key={group.id} value={group.id} sx={drawerMenuItemSx}>
                         {group.title}
@@ -2215,7 +2227,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                     ))}
                   </Select>
                 </PropertyRow>
-                <PropertyRow label="Lifecycle">
+                <PropertyRow label={t('it:common.lifecycle')}>
                   <Select
                     value={ruleEditor.form.lifecycle}
                     onChange={(event) => setRuleEditor((current) => ({
@@ -2230,12 +2242,12 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                   >
                     {MAPPING_LIFECYCLE_OPTIONS.map((option) => (
                       <MenuItem key={option.value} value={option.value} sx={drawerMenuItemSx}>
-                        {option.label}
+                        {formatLifecycle(t, option.value)}
                       </MenuItem>
                     ))}
                   </Select>
                 </PropertyRow>
-                <PropertyRow label="Operation">
+                <PropertyRow label={t('it:workspace.interface.mapping.columns.operation')}>
                   <Select
                     value={ruleEditor.form.operation_kind_choice}
                     onChange={(event) => setRuleEditor((current) => ({
@@ -2250,13 +2262,13 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                   >
                     {OPERATION_KIND_OPTIONS.map((option) => (
                       <MenuItem key={option.value} value={option.value} sx={drawerMenuItemSx}>
-                        {option.label}
+                        {formatOperationKind(t, option.value)}
                       </MenuItem>
                     ))}
-                    <MenuItem value={OTHER_OPERATION_KIND} sx={drawerMenuItemSx}>Other</MenuItem>
+                    <MenuItem value={OTHER_OPERATION_KIND} sx={drawerMenuItemSx}>{t('it:workspace.interface.mapping.operations.other')}</MenuItem>
                   </Select>
                 </PropertyRow>
-                <PropertyRow label="Applies to leg">
+                <PropertyRow label={t('it:workspace.interface.mapping.appliesToLeg')}>
                   <Select
                     value={ruleEditor.form.applies_to_leg_id}
                     onChange={(event) => setRuleEditor((current) => ({
@@ -2267,16 +2279,16 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                     displayEmpty
                     renderValue={(selected) => {
                       const selectedLegId = String(selected || '');
-                      if (!selectedLegId) return 'All legs';
+                      if (!selectedLegId) return t('it:workspace.interface.mapping.allLegs');
                       const selectedLeg = legs.find((leg) => leg.id === selectedLegId);
-                      return selectedLeg ? legLabel(selectedLeg) : 'All legs';
+                      return selectedLeg ? legLabel(selectedLeg) : t('it:workspace.interface.mapping.allLegs');
                     }}
                     variant="standard"
                     sx={drawerSelectSx}
                     disabled={!canManage || saving}
                     fullWidth
                   >
-                    <MenuItem value="" sx={drawerMenuItemSx}>All legs</MenuItem>
+                    <MenuItem value="" sx={drawerMenuItemSx}>{t('it:workspace.interface.mapping.allLegs')}</MenuItem>
                     {legs.map((leg) => (
                       <MenuItem key={leg.id} value={leg.id} sx={drawerMenuItemSx}>
                         {legLabel(leg)}
@@ -2284,7 +2296,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                     ))}
                   </Select>
                 </PropertyRow>
-                <PropertyRow label="Environments">
+                <PropertyRow label={t('it:workspace.interface.mapping.columns.environments')}>
                   <Select
                     multiple
                     displayEmpty
@@ -2301,12 +2313,12 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                     renderValue={(selected) => {
                       const values = selected as string[];
                       if (environmentOptions.length === 0) {
-                        return <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>No environments declared</Box>;
+                        return <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>{t('it:workspace.interface.mapping.noEnvironments')}</Box>;
                       }
                       if (values.length === 0) {
-                        return 'All declared environments';
+                        return t('it:workspace.interface.mapping.allDeclaredEnvironments');
                       }
-                      return values.map((value) => formatEnvironment(value)).join(', ');
+                      return values.map((value) => formatEnvironment(t, value)).join(', ');
                     }}
                     variant="standard"
                     sx={drawerSelectSx}
@@ -2320,13 +2332,13 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                           checked={ruleEditor.form.environment_scope.includes(option.value)}
                           sx={{ p: 0, mr: 1 }}
                         />
-                        {option.label}
+                        {formatEnvironment(t, option.value)}
                       </MenuItem>
                     ))}
                   </Select>
                 </PropertyRow>
                 {ruleEditor.form.operation_kind_choice === OTHER_OPERATION_KIND ? (
-                  <PropertyRow label="Other operation">
+                  <PropertyRow label={t('it:workspace.interface.mapping.otherOperation')}>
                     <TextField
                       value={ruleEditor.form.operation_kind_other}
                       onChange={(event) => setRuleEditor((current) => ({
@@ -2334,7 +2346,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                         error: null,
                         form: { ...current.form, operation_kind_other: event.target.value },
                       }))}
-                      placeholder="Custom operation"
+                      placeholder={t('it:workspace.interface.mapping.otherOperationPlaceholder')}
                       variant="standard"
                       sx={drawerFieldValueSx}
                       disabled={!canManage || saving}
@@ -2350,7 +2362,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                 <Stack spacing={1.25}>
                 <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
                   <Typography sx={{ fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary' }}>
-                    Source fields
+                    {t('it:workspace.interface.mapping.sourceFields')}
                   </Typography>
                   <Button
                     size="small"
@@ -2359,7 +2371,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                     onClick={() => addRuleBindingRow('source_bindings')}
                     disabled={!canManage || saving}
                   >
-                    Add source
+                    {t('it:workspace.interface.mapping.addSource')}
                   </Button>
                 </Stack>
                 <Box sx={bindingSurfaceSx}>
@@ -2369,9 +2381,9 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                         <TextField
                           value={binding.path}
                           onChange={(event) => updateRuleBindingRow('source_bindings', binding.id, { path: event.target.value })}
-                          placeholder={index === 0 ? 'origin.customerId' : 'Source path'}
+                          placeholder={index === 0 ? 'origin.customerId' : t('it:workspace.interface.mapping.sourcePath')}
                           variant="standard"
-                          inputProps={{ 'aria-label': `Source ${index + 1}` }}
+                          inputProps={{ 'aria-label': t('it:workspace.interface.mapping.sourceAria', { index: index + 1 }) }}
                           sx={[drawerFieldValueSx, { gridColumn: { xs: '1 / -1', sm: 'auto' } }]}
                           disabled={!canManage || saving}
                           fullWidth
@@ -2388,14 +2400,14 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                           renderInput={(params) => (
                             <TextField
                               {...params}
-                              placeholder="Type"
+                              placeholder={t('it:workspace.interface.mapping.dataType')}
                               variant="standard"
                               sx={drawerFieldValueSx}
                             />
                           )}
                         />
                         <IconButton
-                          aria-label={`Remove source ${index + 1}`}
+                          aria-label={t('it:workspace.interface.mapping.removeSource', { index: index + 1 })}
                           onClick={() => removeRuleBindingRow('source_bindings', binding.id)}
                           disabled={!canManage || saving}
                           sx={compactIconButtonSx}
@@ -2411,7 +2423,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
               <Stack spacing={1.25}>
                 <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
                   <Typography sx={{ fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary' }}>
-                    Target fields
+                    {t('it:workspace.interface.mapping.targetFields')}
                   </Typography>
                   <Button
                     size="small"
@@ -2420,7 +2432,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                     onClick={() => addRuleBindingRow('target_bindings')}
                     disabled={!canManage || saving}
                   >
-                    Add target
+                    {t('it:workspace.interface.mapping.addTarget')}
                   </Button>
                 </Stack>
                 <Box sx={bindingSurfaceSx}>
@@ -2430,9 +2442,9 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                         <TextField
                           value={binding.path}
                           onChange={(event) => updateRuleBindingRow('target_bindings', binding.id, { path: event.target.value })}
-                          placeholder={index === 0 ? 'destination.customerId' : 'Target path'}
+                          placeholder={index === 0 ? 'destination.customerId' : t('it:workspace.interface.mapping.targetPath')}
                           variant="standard"
-                          inputProps={{ 'aria-label': `Target ${index + 1}` }}
+                          inputProps={{ 'aria-label': t('it:workspace.interface.mapping.targetAria', { index: index + 1 }) }}
                           sx={[drawerFieldValueSx, { gridColumn: { xs: '1 / -1', sm: 'auto' } }]}
                           disabled={!canManage || saving}
                           fullWidth
@@ -2449,14 +2461,14 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                           renderInput={(params) => (
                             <TextField
                               {...params}
-                              placeholder="Type"
+                              placeholder={t('it:workspace.interface.mapping.dataType')}
                               variant="standard"
                               sx={drawerFieldValueSx}
                             />
                           )}
                         />
                         <IconButton
-                          aria-label={`Remove target ${index + 1}`}
+                          aria-label={t('it:workspace.interface.mapping.removeTarget', { index: index + 1 })}
                           onClick={() => removeRuleBindingRow('target_bindings', binding.id)}
                           disabled={!canManage || saving}
                           sx={compactIconButtonSx}
@@ -2472,7 +2484,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
             </PropertyGroup>
 
             <PropertyGroup>
-              <PropertyRow label="Condition" valueSx={{ minHeight: 0 }}>
+              <PropertyRow label={t('it:workspace.interface.mapping.condition')} valueSx={{ minHeight: 0 }}>
                 <TextField
                   value={ruleEditor.form.condition_text}
                   onChange={(event) => setRuleEditor((current) => ({
@@ -2480,7 +2492,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                     error: null,
                     form: { ...current.form, condition_text: event.target.value },
                   }))}
-                  placeholder="order.amount > 0"
+                  placeholder={CONDITION_SAMPLE}
                   variant="standard"
                   multiline
                   minRows={2}
@@ -2489,7 +2501,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                   fullWidth
                 />
               </PropertyRow>
-              <PropertyRow label="Business rule" valueSx={{ minHeight: 0 }}>
+              <PropertyRow label={t('it:workspace.interface.mapping.businessRule')} valueSx={{ minHeight: 0 }}>
                 <TextField
                   value={ruleEditor.form.business_rule_text}
                   onChange={(event) => setRuleEditor((current) => ({
@@ -2497,7 +2509,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                     error: null,
                     form: { ...current.form, business_rule_text: event.target.value },
                   }))}
-                  placeholder="Business validation or transformation rule"
+                  placeholder={t('it:workspace.interface.mapping.businessRulePlaceholder')}
                   variant="standard"
                   multiline
                   minRows={2}
@@ -2506,7 +2518,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                   fullWidth
                 />
               </PropertyRow>
-              <PropertyRow label="Remarks" valueSx={{ minHeight: 0 }}>
+              <PropertyRow label={t('it:workspace.interface.mapping.remarks')} valueSx={{ minHeight: 0 }}>
                 <TextField
                   value={ruleEditor.form.remarks}
                   onChange={(event) => setRuleEditor((current) => ({
@@ -2514,7 +2526,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                     error: null,
                     form: { ...current.form, remarks: event.target.value },
                   }))}
-                  placeholder="Additional notes"
+                  placeholder={t('it:workspace.interface.mapping.remarksPlaceholder')}
                   variant="standard"
                   multiline
                   minRows={2}
@@ -2528,14 +2540,14 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
 
           <Stack direction="row" spacing={1} justifyContent="flex-end" sx={ruleEditorFooterSx}>
             <Button onClick={() => setRuleEditor(createClosedRuleEditor())}>
-              Cancel
+              {t('common:buttons.cancel')}
             </Button>
             <Button
               variant="contained"
               onClick={() => { void saveRuleEditor(); }}
               disabled={!canManage || saving}
             >
-              Save rule
+              {t('it:workspace.interface.mapping.saveRule')}
             </Button>
           </Stack>
         </Box>
@@ -2543,25 +2555,25 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
 
       <KanapDialog
         open={!!pendingDeleteGroup}
-        title="Delete mapping group"
+        title={t('it:workspace.interface.mapping.deleteGroupTitle')}
         onClose={() => setPendingDeleteGroup(null)}
-        saveLabel="Delete"
+        saveLabel={t('common:buttons.delete')}
         onSave={confirmDeleteGroup}
       >
         <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
-          Rules assigned to this group will move to ungrouped.
+          {t('it:workspace.interface.mapping.deleteGroupMessage')}
         </Typography>
       </KanapDialog>
 
       <KanapDialog
         open={!!pendingDeleteRule}
-        title="Delete mapping rule"
+        title={t('it:workspace.interface.mapping.deleteRuleTitle')}
         onClose={() => setPendingDeleteRule(null)}
-        saveLabel="Delete"
+        saveLabel={t('common:buttons.delete')}
         onSave={confirmDeleteRule}
       >
         <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
-          {pendingDeleteRule ? `Delete "${pendingDeleteRule.title}" from this mapping set.` : 'Delete this mapping rule.'}
+          {pendingDeleteRule ? t('it:workspace.interface.mapping.deleteRuleMessage', { title: pendingDeleteRule.title }) : t('it:workspace.interface.mapping.deleteRuleFallback')}
         </Typography>
       </KanapDialog>
     </Stack>

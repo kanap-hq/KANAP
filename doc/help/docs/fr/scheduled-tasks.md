@@ -1,6 +1,6 @@
 # Tâches planifiées
 
-La page Tâches planifiées liste tous les jobs récurrents en arrière-plan que KANAP exécute selon une planification cron -- nettoyages, synchronisations périodiques, e-mails de synthèse, application de la rétention, etc. Depuis cette page, vous pouvez mettre en pause un job, modifier sa planification, le déclencher à la demande et inspecter l'historique de chaque exécution récente.
+La page Tâches planifiées liste tous les jobs récurrents en arrière-plan que KANAP exécute selon une planification cron : nettoyages, synchronisations périodiques, e-mails de synthèse, application de la rétention, etc. Depuis cette page, vous pouvez mettre en pause un job, modifier sa planification, le déclencher à la demande et inspecter l'historique de chaque exécution récente.
 
 ## Où la trouver
 
@@ -15,14 +15,14 @@ La page est un tableau unique qui se rafraîchit automatiquement toutes les 15 s
 
 **Colonnes** :
 
-- **Nom** -- l'identifiant interne de la tâche (par exemple `purge-stale-conversations`)
-- **Description** -- un court résumé lisible de ce que fait la tâche
-- **Planification** -- l'expression cron. Les motifs courants sont traduits en langage naturel (« Tous les jours à 3h », « Toutes les 15 minutes », « Dimanches à 4h ») ; survolez le libellé pour voir l'expression brute. Cliquez sur l'icône crayon pour la modifier en ligne.
-- **Activée** -- bascule la tâche sans modifier la planification
-- **Dernière exécution** -- quand la tâche a démarré pour la dernière fois
-- **Durée** -- combien de temps a duré la dernière exécution (`ms`, `s` ou `m` selon la longueur)
-- **Statut** -- indicateur coloré pour la dernière exécution : **Réussie**, **Échouée**, **En cours** ou **Jamais exécutée**
-- **Actions** -- contrôles par ligne (voir ci-dessous)
+- **Nom** : l'identifiant interne de la tâche (par exemple `purge-stale-conversations`)
+- **Description** : un court résumé lisible de ce que fait la tâche
+- **Planification** : l'expression cron. Les motifs courants sont traduits en langage naturel (« Tous les jours à 3h », « Toutes les 15 minutes », « Dimanches à 4h ») ; survolez le libellé pour voir l'expression brute. Cliquez sur l'icône crayon pour la modifier en ligne.
+- **Activée** : bascule la tâche sans modifier la planification
+- **Dernière exécution** : quand la tâche a démarré pour la dernière fois
+- **Durée** : combien de temps a duré la dernière exécution (`ms`, `s` ou `m` selon la longueur)
+- **Statut** : indicateur coloré pour la dernière exécution : **Réussie**, **Échouée**, **En cours** ou **Jamais exécutée**
+- **Actions** : contrôles par ligne (voir ci-dessous)
 
 ### Modifier une planification
 
@@ -30,7 +30,7 @@ Cliquez sur l'icône crayon à côté d'une planification pour ouvrir un éditeu
 
 - Tapez une expression cron standard à 5 champs (`minute heure jour-du-mois mois jour-de-la-semaine`).
 - Appuyez sur **Entrée** pour enregistrer, **Échap** pour annuler.
-- Les expressions invalides sont rejetées avec une notification d'erreur en bas de l'écran -- la tâche conserve sa planification précédente.
+- Les expressions invalides sont rejetées avec une notification d'erreur en bas de l'écran. La tâche conserve sa planification précédente.
 
 Lorsque la nouvelle expression correspond à un motif connu, le tableau affiche immédiatement le libellé en langage naturel.
 
@@ -54,10 +54,10 @@ L'action **Voir l'historique** (icône horloge) ouvre un tiroir latéral avec le
 
 Chaque ligne d'exécution affiche :
 
-- **Démarrée** -- quand l'exécution a commencé
-- **Statut** -- Réussie, Échouée ou En cours
-- **Durée** -- combien de temps a duré l'exécution
-- **Détails** -- un court résumé structuré en cas de succès, ou le message d'erreur en cas d'échec. Les longs messages d'erreur sont tronqués dans le tableau ; le texte complet est conservé dans l'enregistrement sous-jacent.
+- **Démarrée** : quand l'exécution a commencé
+- **Statut** : Réussie, Échouée ou En cours
+- **Durée** : combien de temps a duré l'exécution
+- **Détails** : un court résumé structuré en cas de succès, ou le message d'erreur en cas d'échec. Les longs messages d'erreur sont tronqués dans le tableau ; le texte complet est conservé dans l'enregistrement sous-jacent.
 
 La pagination apparaît sous la liste lorsqu'il y a plus de 20 exécutions. Le tiroir peut être fermé avec l'icône X dans son en-tête ou en cliquant à l'extérieur.
 

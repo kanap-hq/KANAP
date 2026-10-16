@@ -1245,6 +1245,28 @@ async function testExportLanguageHint(runner: { query: Function; manager: Entity
   assert.deepEqual(withoutHint.changedSinceExport, []);
 }
 
+/**
+ * An end of validity with a time of day (the switch disables at the server's clock) exports as
+ * its day. That day read back keeps the stored instant: the line is unchanged.
+ */
+async function testPreciseEndOfValidity(runner: { query: Function; manager: EntityManager }, kind: Kind) {
+  const tenantId = await seedTenant(runner as any, `csv-precise-${kind}`);
+  const itemId = await seedItem(runner as any, kind, tenantId, 1, 'Precise end');
+  const { companyId } = await seedCompany(runner as any, tenantId, 'Precise company');
+  await runner.query(`UPDATE spend_items SET paying_company_id = $2 WHERE tenant_id = $1 AND id = $3`, [tenantId, companyId, itemId]);
+  await setItemDates(runner as any, kind, itemId, { effectiveStart: '2027-03-01', disabledAt: '2027-11-05T14:37:12.000Z' });
+  const service = budgetFileService();
+  const caller = { manager: runner.manager, tenantId, userId: null };
+  const exported = await service.exportFile(kind, [itemId], caller, {
+    language: 'fr', amountYears: '2027', columns: 'budget', detail: 'yearly',
+  });
+  assert.ok(exported.content.includes(';05/11/2027;'), `${kind}: the export writes the day`);
+  assert.ok(!exported.content.includes('14:37'), `${kind}: the export writes no time of day`);
+  const report = await service.preflight(kind, Buffer.from(exported.content), caller, BUDGET_FILE_OPTIONS);
+  assert.deepEqual([report.ok, report.errors], [true, []], JSON.stringify(report.errors));
+  assert.deepEqual([report.changes.unchanged, report.changes.updated], [1, 0], `${kind}: the stored instant's day is unchanged`);
+}
+
 /** English Excel can add comma grouping to an export that recorded German conventions. */
 async function testExportAmountSwitch(runner: { query: Function; manager: EntityManager }, kind: Kind) {
   const tenantId = await seedTenant(runner as any, `csv-p1b-${kind}`);
@@ -1434,6 +1456,7 @@ async function main() {
     await testFrozenAndHiddenColumns(runner);
     for (const kind of ['opex', 'capex'] as Kind[]) {
       await testExportLanguageHint(runner, kind);
+      await testPreciseEndOfValidity(runner, kind);
       await testExportAmountSwitch(runner, kind);
       await testCostCenterCells(runner, kind);
       await testDimensionCells(runner, kind);

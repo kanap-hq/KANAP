@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import '../../i18n';
+import i18n from '../../i18n';
 import { ThemeModeProvider, createAppTheme } from '../../config/ThemeContext';
 import UpcomingReport, { horizonStorageKey, type UpcomingReportData } from './UpcomingReport';
 
@@ -151,6 +151,31 @@ describe('UpcomingReport', () => {
     const taskHeaders = within(section('tasks')).getAllByRole('columnheader').map((node) => node.textContent?.trim());
     expect(taskHeaders.indexOf('Status')).toBe(taskHeaders.indexOf('Priority') + 1);
     expect(within(section('tasks')).getAllByText('Open').length).toBeGreaterThan(0);
+  });
+
+  it('shows a shipped task type in the reader\'s language until the tenant renames it', async () => {
+    mockApi(report({
+      tasks: {
+        horizonDays: 14,
+        until: '2026-10-06',
+        overdueCount: 0,
+        rows: [
+          { ...task('T-4', '2026-09-24'), taskTypeName: 'Incident', taskTypeCode: 'incident' },
+          { ...task('T-5', '2026-09-25'), taskTypeName: 'Ticket', taskTypeCode: 'task' },
+          { ...task('T-6', '2026-09-26'), taskTypeName: 'Bug', taskTypeCode: null },
+        ],
+      } as any,
+    }));
+    await i18n.changeLanguage('de');
+    try {
+      renderReport();
+      await waitFor(() => expect(within(section('tasks')).getByText('Vorfall')).toBeTruthy());
+      expect(within(section('tasks')).getByText('Ticket')).toBeTruthy();
+      expect(within(section('tasks')).queryByText('Incident')).toBeNull();
+      expect(within(section('tasks')).getByText('Bug')).toBeTruthy();
+    } finally {
+      await i18n.changeLanguage('en');
+    }
   });
 
   it('sends the default horizons and the viewer zone', async () => {

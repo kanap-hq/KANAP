@@ -185,11 +185,11 @@ Sous Objectif, l'onglet Synthèse inclut le flux d'activité du projet :
 - **Commentaires** pour la discussion, les notes contextuelles et les décisions formelles
 - **Historique** pour le journal d'audit des changements de champs et de statut
 
-**Historique** liste les changements enregistrés — changements de statut, modifications de champs, changements d'équipe et de relations, modifications du document Objectif — et se termine par l'entrée de création : qui a créé le projet et quand.
+**Historique** liste les changements enregistrés (changements de statut, modifications de champs, changements d'équipe et de relations, modifications du document Objectif) et se termine par l'entrée de création : qui a créé le projet et quand.
 
 Les managers peuvent ajouter et modifier les commentaires de projet. Les commentaires peuvent également être enregistrés comme décisions formelles, avec un résultat et un changement de statut optionnel. Utilisez cela lorsque la discussion elle-même change le cours du projet.
 
-Des images peuvent être incluses dans les commentaires d'activité lorsque l'évidence visuelle est utile -- esquisses d'architecture, captures d'écran ou preuves de revue.
+Des images peuvent être incluses dans les commentaires d'activité lorsque l'évidence visuelle est utile : esquisses d'architecture, captures d'écran ou preuves de revue.
 
 Utilisez **Historique** quand vous avez besoin de savoir ce qui a changé. Utilisez **Commentaires** quand vous avez besoin de savoir pourquoi.
 
@@ -227,7 +227,7 @@ Les projets peuvent démarrer avec un modèle de phases ou un plan de phases ent
 - chaque ligne de phase inclut une case à cocher de jalon ; la cocher crée un jalon de complétion de phase pour cette phase
 - chaque phase a un raccourci pour créer une tâche déjà liée à cette phase et au projet
 - **Ajouter une phase** ajoute une nouvelle phase vide
-- **Remplacer par un modèle** reconstruit la structure de phases à partir d'un modèle -- utilisez-le seulement quand vous voulez vraiment dire « repartir de zéro sur le modèle de phases »
+- **Remplacer par un modèle** reconstruit la structure de phases à partir d'un modèle. Utilisez-le seulement quand vous voulez vraiment dire « repartir de zéro sur le modèle de phases »
 
 Le modèle de phases affecte plus que le planning :
 

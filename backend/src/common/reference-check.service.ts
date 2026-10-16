@@ -1,11 +1,15 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { SpendItem } from '../spend/spend-item.entity';
+import { lineUsages, RecordInUseException } from './record-in-use';
 
 export interface ReferenceCheckResult {
   hasReferences: boolean;
   referenceDetails: string[];
   totalCount: number;
+  /** The referencing budget lines of each nature. */
+  opex: number;
+  capex: number;
 }
 
 @Injectable()
@@ -43,34 +47,41 @@ export class ReferenceCheckService {
       hasReferences: spendCount + capexCount > 0,
       referenceDetails,
       totalCount: spendCount + capexCount,
+      opex: spendCount,
+      capex: capexCount,
     };
   }
 
   /**
-   * Assert that an entity has no references, throw ConflictException if it does. Suppliers and
-   * companies are checked by their delete services against their usages (`common/record-in-use.ts`).
+   * The refusal of an account's delete (`ACCOUNT_IN_USE`, the budget lines of each nature
+   * counted: disable it instead), or null. Suppliers and companies are checked by their delete
+   * services against their usages (`common/record-in-use.ts`).
    */
+  async accountRefusal(
+    accountId: string,
+    accountName: string,
+    opts?: { manager?: EntityManager }
+  ): Promise<RecordInUseException | null> {
+    const result = await this.checkAccountReferences(accountId, opts);
+    if (!result.hasReferences) return null;
+    return new RecordInUseException(
+      'ACCOUNT_IN_USE',
+      'account',
+      accountName,
+      lineUsages(result),
+      `Cannot delete account "${accountName}": ${result.referenceDetails.join('; ')}. Please disable instead or remove references first.`,
+    );
+  }
+
+  /** Throws the refusal of an entity's delete, if any (`accountRefusal`). */
   async assertNoReferences(
     entityType: 'account',
     entityId: string,
     entityName: string,
     opts?: { manager?: EntityManager }
   ): Promise<void> {
-    let result: ReferenceCheckResult;
-
-    switch (entityType) {
-      case 'account':
-        result = await this.checkAccountReferences(entityId, opts);
-        break;
-      default:
-        throw new Error(`Unknown entity type: ${entityType}`);
-    }
-
-    if (result.hasReferences) {
-      const details = result.referenceDetails.join('; ');
-      throw new ConflictException(
-        `Cannot delete ${entityType} "${entityName}": ${details}. Please disable instead or remove references first.`
-      );
-    }
+    if (entityType !== 'account') throw new Error(`Unknown entity type: ${entityType}`);
+    const refusal = await this.accountRefusal(entityId, entityName, opts);
+    if (refusal) throw refusal;
   }
 }

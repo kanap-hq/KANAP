@@ -355,7 +355,7 @@ export function reportPdfFilename(itemNumber: number | string): string {
 export function reportHeading(itemNumber: number | string, title: string): string {
   const cleaned = String(title || '').replace(/\s+/g, ' ').trim();
   const ref = incidentRef(Number(itemNumber));
-  return cleaned ? `${ref} — ${cleaned}` : ref;
+  return cleaned ? `${ref} · ${cleaned}` : ref;
 }
 
 export function escapeMd(value: unknown, forTable = false): string {

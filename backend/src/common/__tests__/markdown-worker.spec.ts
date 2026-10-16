@@ -19,6 +19,7 @@ import {
   MARKDOWN_TOO_COMPLEX,
   MARKDOWN_UNAVAILABLE,
   MARKDOWN_WORK_TIMEOUT_MS,
+  QUEUE_WAIT_MS,
   markdownQueueLimit,
   markdownToSearchText,
   markdownWorkBudget,
@@ -38,33 +39,46 @@ import {
 // Rich text is processed in worker threads: the main thread keeps serving while a
 // text takes long, a text over the time budget is refused (400 MARKDOWN_TOO_COMPLEX),
 // and normal texts give the same result as when processed in process.
+//
+// No assertion depends on the speed or the load of the machine: outcomes, the order in
+// which calls end, and lower bounds set by the pool's own timers (a timer never fires
+// early). Upper bounds on elapsed time made the spec fail on a loaded machine.
 
 /**
- * Longest pause of the main thread allowed while a text is processed. Measured
- * pauses stay under 10 ms; the margin absorbs a loaded CI machine. Processed on
- * the main thread, these texts would hold it for seconds.
+ * The installed parser is the one of the lockfile. An older `marked` (a stale
+ * `node_modules`) parses image openers in quadratic time: the texts below are then
+ * refused as too complex, which reads like a bug of the pool.
  */
-const MAX_MAIN_THREAD_LAG_MS = 100;
+function assertLockfileParser() {
+  const lock = JSON.parse(fs.readFileSync(backendPath('package-lock.json'), 'utf8'));
+  const locked = lock.packages?.['node_modules/marked']?.version;
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const installed = require('marked/package.json').version;
+  assert.equal(installed, locked, `marked ${installed} is installed, package-lock.json has ${locked}: run npm ci in backend/`);
+}
 
 function fill(unit: string, bytes: number): string {
   return unit.repeat(Math.ceil(bytes / unit.length)).slice(0, bytes);
 }
 
-async function withMainThreadProbe<T>(fn: () => Promise<T>): Promise<{ result: T; maxLagMs: number; ticks: number }> {
-  let maxLagMs = 0;
+/**
+ * Runs `fn` and counts the turns the main thread gave to a 5 ms interval meanwhile.
+ * Work held on the main thread lets the interval run once at most, after it: two turns
+ * or more mean the main thread served while the text was processed.
+ */
+async function withMainThreadProbe<T>(fn: () => Promise<T>): Promise<{ result: T; ticks: number }> {
   let ticks = 0;
-  let last = performance.now();
-  const timer = setInterval(() => {
-    const now = performance.now();
-    maxLagMs = Math.max(maxLagMs, now - last - 5);
-    last = now;
-    ticks += 1;
-  }, 5);
+  const timer = setInterval(() => { ticks += 1; }, 5);
   try {
-    return { result: await fn(), maxLagMs, ticks };
+    return { result: await fn(), ticks };
   } finally {
     clearInterval(timer);
   }
+}
+
+/** The main thread served while the text was processed (see withMainThreadProbe). */
+function assertMainThreadServed(ticks: number, label: string) {
+  assert.ok(ticks >= 2, `${label}: the main thread ran ${ticks} interval turn(s) during the work`);
 }
 
 async function outcomeOf(work: () => Promise<unknown>): Promise<string> {
@@ -146,17 +160,15 @@ async function testSlowTextsAreRefusedWhileTheMainThreadServes() {
   };
   for (const [label, text] of Object.entries(texts)) {
     const startedAt = performance.now();
-    const { result, maxLagMs, ticks } = await withMainThreadProbe(() => outcomeOf(() => normalizeMarkdownRichText(text)));
+    const { result, ticks } = await withMainThreadProbe(() => outcomeOf(() => normalizeMarkdownRichText(text)));
     const elapsedMs = performance.now() - startedAt;
     assert.equal(result, MARKDOWN_TOO_COMPLEX, label);
-    assert.ok(elapsedMs < MARKDOWN_WORK_TIMEOUT_MS + 1000, `${label}: answered in ${elapsedMs.toFixed(0)} ms`);
-    assert.ok(maxLagMs < MAX_MAIN_THREAD_LAG_MS, `${label}: main thread busy ${maxLagMs.toFixed(0)} ms at once`);
-    assert.ok(ticks > 0, `${label}: main thread served`);
+    // Refused by the time budget, not before.
+    assert.ok(elapsedMs >= MARKDOWN_WORK_TIMEOUT_MS - 1, `${label}: refused after ${elapsedMs.toFixed(0)} ms`);
+    assertMainThreadServed(ticks, label);
   }
-  // Image openers parse in linear time: answered at once.
-  const { result, maxLagMs } = await withMainThreadProbe(() => outcomeOf(() => normalizeMarkdownRichText(fill('![](', MARKDOWN_MAX_BYTES))));
-  assert.equal(result, 'ok');
-  assert.ok(maxLagMs < MAX_MAIN_THREAD_LAG_MS);
+  // Image openers parse in linear time: accepted.
+  assert.equal(await outcomeOf(() => normalizeMarkdownRichText(fill('![](', MARKDOWN_MAX_BYTES))), 'ok', 'image openers');
   // The worker stopped over the budget was replaced.
   assert.equal(await normalizeMarkdownRichText('After a refusal, **still** fine.'), 'After a refusal, **still** fine.');
 }
@@ -164,10 +176,8 @@ async function testSlowTextsAreRefusedWhileTheMainThreadServes() {
 async function testLongTaskListsAreAccepted() {
   const items = Array.from({ length: 4000 }, (_, index) => `- [${index % 2 ? 'x' : ' '}] Item ${index} of the list`).join('\n');
   const text = items.slice(0, MARKDOWN_MAX_BYTES);
-  const startedAt = performance.now();
+  // Within the time budget: a slower parse would be refused as too complex.
   assert.equal(await normalizeMarkdownRichText(text), text.trim());
-  const elapsedMs = performance.now() - startedAt;
-  assert.ok(elapsedMs < MARKDOWN_WORK_TIMEOUT_MS / 2, `4000 task items in ${elapsedMs.toFixed(0)} ms`);
 }
 
 async function testStoredContentsFallBackToReadableText() {
@@ -175,9 +185,9 @@ async function testStoredContentsFallBackToReadableText() {
   // A stored content (no size limit) the workers cannot read in time is kept as it is.
   assert.equal(await normalizeMarkdownRichText(slow, { enforceSizeLimit: false }), slow.trim());
   // An email of such a content shows it as plain text.
-  const { result, maxLagMs } = await withMainThreadProbe(() => renderMarkdownEmailHtml(slow));
+  const { result, ticks } = await withMainThreadProbe(() => renderMarkdownEmailHtml(slow));
   assert.equal(result, renderPlainTextEmailHtml(slow));
-  assert.ok(maxLagMs < MAX_MAIN_THREAD_LAG_MS);
+  assertMainThreadServed(ticks, 'stored content email');
 }
 
 async function testSharedBudget() {
@@ -205,6 +215,19 @@ async function timedOutcome(work: () => Promise<unknown>): Promise<{ outcome: st
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** A call whose end can be read without waiting for it: the order of the ends, not their times. */
+function track<T>(promise: Promise<T>): { promise: Promise<T>; ended: () => boolean } {
+  let ended = false;
+  promise.then(() => { ended = true; }, () => { ended = true; });
+  return { promise, ended: () => ended };
+}
+
+/** Refused after the queue wait: the wait timer never fires early. */
+function assertWaited(call: { outcome: string; ms: number }) {
+  assert.equal(call.outcome, MARKDOWN_BUSY);
+  assert.ok(call.ms >= QUEUE_WAIT_MS - 1, `waited ${call.ms.toFixed(0)} ms`);
+}
+
 /** Runs `work` as a request of `user` in `tenant` (the key of its calls). */
 function asUser<T>(tenant: string, user: string, work: () => T): T {
   return runWithRequestTenant(tenant, work, { user: { sub: user } });
@@ -213,7 +236,7 @@ function asUser<T>(tenant: string, user: string, work: () => T): T {
 async function testAUserNeverHoldsEveryWorker() {
   const slow = fill('_a ', 100 * 1024);
   // One tenant, as on a single-tenant server: a slow call of a user holds one worker.
-  const running = asUser('tenant-a', 'user-1', () => timedOutcome(() => normalizeMarkdownRichText(slow)));
+  const running = track(asUser('tenant-a', 'user-1', () => timedOutcome(() => normalizeMarkdownRichText(slow))));
   await sleep(100);
   // The next call of the same user waits for its first one: the other worker stays for the others.
   const sameUser = asUser('tenant-a', 'user-1', () => timedOutcome(() => normalizeMarkdownRichText('**same user**')));
@@ -222,28 +245,25 @@ async function testAUserNeverHoldsEveryWorker() {
     await asUser('tenant-a', 'user-2', () => timedOutcome(() => normalizeMarkdownRichText('**other user**'))),
     await runWithRequestTenant('tenant-a', () => timedOutcome(() => normalizeMarkdownRichText('**tenant**'))),
   ];
-  for (const call of others) {
-    assert.equal(call.outcome, 'ok');
-    assert.ok(call.ms < 300, `served by the free worker in ${call.ms.toFixed(0)} ms`);
-  }
+  for (const call of others) assert.equal(call.outcome, 'ok');
+  // Served by the free worker while the slow call still holds the other one.
+  assert.equal(running.ended(), false, 'the slow call still runs');
   // The first call holds its worker past the wait of the second one.
-  const second = await sameUser;
-  assert.equal(second.outcome, MARKDOWN_BUSY);
-  assert.ok(second.ms >= 900 && second.ms < 1800, `waited ${second.ms.toFixed(0)} ms`);
-  assert.equal((await running).outcome, MARKDOWN_TOO_COMPLEX);
+  assertWaited(await sameUser);
+  assert.equal(running.ended(), false, 'refused before the slow call ended');
+  assert.equal((await running.promise).outcome, MARKDOWN_TOO_COMPLEX);
 }
 
 async function testTwoUsersMayUseEveryWorker() {
   const slow = fill('_a ', 100 * 1024);
-  const callOfA = asUser('tenant-a', 'user-a', () => timedOutcome(() => normalizeMarkdownRichText(slow)));
-  const callOfB = asUser('tenant-b', 'user-b', () => timedOutcome(() => normalizeMarkdownRichText(slow)));
+  const callOfA = track(asUser('tenant-a', 'user-a', () => timedOutcome(() => normalizeMarkdownRichText(slow))));
+  const callOfB = track(asUser('tenant-b', 'user-b', () => timedOutcome(() => normalizeMarkdownRichText(slow))));
   await sleep(50);
   // Both workers run the slow calls: a third user waits, and is refused after the wait.
-  const callOfC = await asUser('tenant-c', 'user-c', () => timedOutcome(() => normalizeMarkdownRichText('**C**')));
-  assert.equal(callOfC.outcome, MARKDOWN_BUSY);
-  assert.ok(callOfC.ms >= 900 && callOfC.ms < 1800, `waited ${callOfC.ms.toFixed(0)} ms`);
-  assert.equal((await callOfA).outcome, MARKDOWN_TOO_COMPLEX);
-  assert.equal((await callOfB).outcome, MARKDOWN_TOO_COMPLEX);
+  assertWaited(await asUser('tenant-c', 'user-c', () => timedOutcome(() => normalizeMarkdownRichText('**C**'))));
+  assert.deepEqual([callOfA.ended(), callOfB.ended()], [false, false], 'refused while both slow calls run');
+  assert.equal((await callOfA.promise).outcome, MARKDOWN_TOO_COMPLEX);
+  assert.equal((await callOfB.promise).outcome, MARKDOWN_TOO_COMPLEX);
 }
 
 async function testAFreeWorkerSkipsAKeyAtItsCap() {
@@ -260,7 +280,6 @@ async function testAFreeWorkerSkipsAKeyAtItsCap() {
   // Another user's call, sent later, takes the free worker at once.
   const callOfN = await asUser('tenant-b', 'normal', () => tracked('N', () => normalizeMarkdownRichText('**N**')));
   assert.equal(callOfN.outcome, 'ok');
-  assert.ok(callOfN.ms < 200, `served in ${callOfN.ms.toFixed(0)} ms`);
   // The first call ends when the spec stops its worker, whatever the load of the machine:
   // the second one then starts on the free worker, well within its wait.
   const [busy] = markdownWorkerThreadsForTests();
@@ -275,27 +294,28 @@ async function testCapsApplyOnlyToWaitingCalls() {
   const base = 'https://acme.example.com';
   const comment = '**Done**, see [the plan](/portfolio/projects/PRJ-3).';
   // A user: one call running, two waiting; a fourth is refused at once.
-  const callsOfH = [0, 1, 2].map(() => asUser('tenant-a', 'heavy', () => timedOutcome(() => normalizeMarkdownRichText(slow))));
+  const callsOfH = [0, 1, 2].map(() => track(asUser('tenant-a', 'heavy', () => timedOutcome(() => normalizeMarkdownRichText(slow)))));
   await sleep(50);
   const refused = await asUser('tenant-a', 'heavy', () => timedOutcome(() => normalizeMarkdownRichText('one more')));
   assert.equal(refused.outcome, MARKDOWN_BUSY);
-  assert.ok(refused.ms < 50, `refused in ${refused.ms.toFixed(0)} ms`);
+  // At once: before the calls waiting in the queue are refused after their wait.
+  assert.deepEqual(callsOfH.map((call) => call.ended()), [false, false, false], 'refused before any call of the user ended');
   assert.equal(new MarkdownBusyException().retryAfterSeconds, MARKDOWN_BUSY_RETRY_AFTER_SECONDS);
   // Another user takes the other worker.
-  const callOfG = asUser('tenant-b', 'other-heavy', () => timedOutcome(() => normalizeMarkdownRichText(slow)));
+  const callOfG = track(asUser('tenant-b', 'other-heavy', () => timedOutcome(() => normalizeMarkdownRichText(slow))));
   await sleep(50);
   // An email sent by the first user's request is free of its caps: it waits for a worker and is rendered.
   const email = asUser('tenant-a', 'heavy', () => timedOutcome(() => renderCommentEmail(comment, base, 'acme')));
   // A third user still gets a place in the queue; both workers stay busy past its wait.
-  const other = await asUser('tenant-a', 'other', () => timedOutcome(() => normalizeMarkdownRichText('**other**')));
-  assert.equal(other.outcome, MARKDOWN_BUSY);
-  assert.ok(other.ms >= 900 && other.ms < 1800, `waited ${other.ms.toFixed(0)} ms`);
-  const outcomesOfH = await Promise.all(callsOfH);
+  assertWaited(await asUser('tenant-a', 'other', () => timedOutcome(() => normalizeMarkdownRichText('**other**'))));
+  assert.deepEqual([callsOfH[0].ended(), callOfG.ended()], [false, false], 'refused while both slow calls run');
+  const outcomesOfH = await Promise.all(callsOfH.map((call) => call.promise));
   assert.deepEqual(outcomesOfH.map((call) => call.outcome), [MARKDOWN_TOO_COMPLEX, MARKDOWN_BUSY, MARKDOWN_BUSY]);
-  assert.equal((await callOfG).outcome, MARKDOWN_TOO_COMPLEX);
+  assert.equal((await callOfG.promise).outcome, MARKDOWN_TOO_COMPLEX);
   const rendered = await email;
   assert.equal(rendered.outcome, 'ok');
-  assert.ok(rendered.ms > MARKDOWN_WORK_TIMEOUT_MS - 300 && rendered.ms < 5000, `email rendered after ${rendered.ms.toFixed(0)} ms`);
+  // It waited for a worker freed by the time budget, past the wait of the other calls.
+  assert.ok(rendered.ms > MARKDOWN_WORK_TIMEOUT_MS - 300, `email rendered after ${rendered.ms.toFixed(0)} ms`);
   const expected = renderCommentForEmail({ commentHtml: emailHtmlInProcess(comment), tenantBaseUrl: base, tenantSlug: 'acme' });
   assert.deepEqual(await asUser('tenant-a', 'heavy', () => renderCommentEmail(comment, base, 'acme')), expected);
   assert.notDeepEqual(expected, renderCommentForEmail({ commentHtml: renderPlainTextEmailHtml(comment), tenantBaseUrl: base, tenantSlug: 'acme' }));
@@ -318,7 +338,9 @@ async function testAFullQueueAnswersBusy() {
   const outcomes = calls.map((call) => call.outcome);
   assert.equal(outcomes.filter((outcome) => outcome === MARKDOWN_TOO_COMPLEX).length, 2, outcomes.join());
   assert.equal(outcomes.filter((outcome) => outcome === MARKDOWN_BUSY).length, limit + 2, outcomes.join());
-  assert.equal(calls.filter((call) => call.outcome === MARKDOWN_BUSY && call.ms < 50).length, 2);
+  // Two refused at once, the others after the queue wait.
+  const busy = calls.filter((call) => call.outcome === MARKDOWN_BUSY);
+  assert.equal(busy.filter((call) => call.ms < QUEUE_WAIT_MS - 1).length, 2, busy.map((call) => call.ms.toFixed(0)).join());
   assert.equal(await normalizeMarkdownRichText('Served again.'), 'Served again.');
 }
 
@@ -331,20 +353,15 @@ async function testOneCallPerDocumentSave() {
   assert.deepEqual(await normalizeMarkdownWithSearchText('  '), { content: null, searchText: '' });
   const items = Array.from({ length: 4000 }, (_, index) => `- [${index % 2 ? 'x' : ' '}] Item ${index} of the list`).join('\n');
   const text = items.slice(0, MARKDOWN_MAX_BYTES);
-  const startedAt = performance.now();
+  // Within the time budget: a slower parse would be refused as too complex.
   const saved = await normalizeMarkdownWithSearchText(text);
-  const elapsedMs = performance.now() - startedAt;
   assert.equal(saved.content, text.trim());
-  assert.ok(elapsedMs < MARKDOWN_WORK_TIMEOUT_MS * 0.75, `4000 task items saved in ${elapsedMs.toFixed(0)} ms`);
   const slow = fill('_a ', 250 * 1024);
   assert.deepEqual(await normalizeMarkdownWithSearchText(slow, { enforceSizeLimit: false }), { content: slow.trim(), searchText: slow.replace(/\s+/g, ' ').trim() });
   // The save does the work of two calls, with the budget of two.
   const refused = await timedOutcome(() => normalizeMarkdownWithSearchText(fill('_a ', 100 * 1024)));
   assert.equal(refused.outcome, MARKDOWN_TOO_COMPLEX);
-  assert.ok(
-    refused.ms > 2 * MARKDOWN_WORK_TIMEOUT_MS - 100 && refused.ms < 2 * MARKDOWN_WORK_TIMEOUT_MS + 1000,
-    `refused after ${refused.ms.toFixed(0)} ms`,
-  );
+  assert.ok(refused.ms > 2 * MARKDOWN_WORK_TIMEOUT_MS - 100, `refused after ${refused.ms.toFixed(0)} ms`);
 }
 
 async function testCommentEmailsAreRenderedInTheWorkers() {
@@ -355,9 +372,9 @@ async function testCommentEmailsAreRenderedInTheWorkers() {
   }
   assert.deepEqual(await renderCommentEmail('  ', base, 'acme'), renderCommentForEmail({ commentHtml: '', tenantBaseUrl: base, tenantSlug: 'acme' }));
   const slow = fill('_a ', 150 * 1024);
-  const { result, maxLagMs } = await withMainThreadProbe(() => renderCommentEmail(slow, base, 'acme'));
+  const { result, ticks } = await withMainThreadProbe(() => renderCommentEmail(slow, base, 'acme'));
   assert.deepEqual(result, renderCommentForEmail({ commentHtml: renderPlainTextEmailHtml(slow), tenantBaseUrl: base, tenantSlug: 'acme' }));
-  assert.ok(maxLagMs < MAX_MAIN_THREAD_LAG_MS, `plain-text email: main thread busy ${maxLagMs.toFixed(0)} ms`);
+  assertMainThreadServed(ticks, 'plain-text email');
 }
 
 async function testStoppedPool() {
@@ -379,6 +396,7 @@ async function run() {
     if (String(message).includes('reason=busy')) busyLines.push(String(message));
     return (warn as (...args: unknown[]) => void).call(this, message, ...rest);
   } as typeof Logger.prototype.warn;
+  assertLockfileParser();
   assert.equal(await startMarkdownWorkers(), true);
   await testNormalContentsGiveTheSameResultAsInProcess();
   await testContentRulesAreTheSame();

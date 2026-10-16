@@ -39,9 +39,9 @@ function contactName(c: Contact): string {
   return [c.first_name, c.last_name].filter(Boolean).join(' ').trim() || c.email;
 }
 
-/** "Name — supplier", the one line a contact takes in the field and in the list. */
+/** "Name (supplier)", the one line a contact takes in the field and in the list. */
 function formatLabel(c: Contact): string {
-  return c.supplier_name ? `${contactName(c)} — ${c.supplier_name}` : contactName(c);
+  return c.supplier_name ? `${contactName(c)} (${c.supplier_name})` : contactName(c);
 }
 
 const optionLineSx = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 } as const;

@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { randomUUID } from 'node:crypto';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
@@ -158,7 +159,18 @@ async function testRecording() {
     const audit = captureAudit();
     const svc = service(runner, audit);
     const opts = { manager: runner.manager };
-    const userId = '00000000-0000-4000-8000-000000000001';
+    // A real user: `updated_by` has a foreign key into users (migration 1854160000000).
+    const roleId = randomUUID();
+    await runner.query(
+      `INSERT INTO roles (id, tenant_id, role_name, role_description, is_system, is_built_in, created_at, updated_at)
+       VALUES ($1, $2, 'Compliance role', 'Compliance role', false, false, now(), now())`,
+      [roleId, s.tenantId],
+    );
+    const [{ id: userId }] = await runner.query(
+      `INSERT INTO users (tenant_id, first_name, last_name, email, password_hash, role_id, mfa_enabled, status)
+       VALUES ($1, 'Compliance', 'Recorder', $2, null, $3, false, 'enabled') RETURNING id`,
+      [s.tenantId, `recorder-${s.tenantId.slice(0, 8)}@compliance.test`, roleId],
+    );
 
     let view = await svc.updateCompliance(s.full, 'gdpr_dpa', { state: 'absent' }, userId, opts);
     assert.deepEqual(view.summary, { expected: 5, missing: 1, to_check: 4, state: 'missing' });

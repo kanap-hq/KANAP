@@ -174,6 +174,7 @@
       "saveFailed": "Error al guardar la empresa.",
       "createFailed": "Error al crear la empresa.",
       "nameRequired": "Introduzca un nombre.",
+      "nameTaken": "Otra empresa ya tiene este nombre.",
       "countryRequired": "Elija un país.",
       "currencyRequired": "Elija una moneda base.",
       "cityRequired": "Introduzca una ciudad.",
@@ -185,7 +186,9 @@
       "toDelete_one": "Se eliminará {{count}} empresa:",
       "toDelete_other": "Se eliminarán {{count}} empresas:",
       "kept_one": "{{count}} empresa sigue en uso y se conserva. Desactívela en su lugar:",
-      "kept_other": "{{count}} empresas siguen en uso y se conservan. Desactívelas en su lugar:"
+      "kept_other": "{{count}} empresas siguen en uso y se conservan. Desactívelas en su lugar:",
+      "deleted_one": "{{count}} empresa eliminada",
+      "deleted_other": "{{count}} empresas eliminadas"
     }
   },
   "departments": {
@@ -221,8 +224,17 @@
       "saveFailed": "Error al guardar el departamento.",
       "createFailed": "Error al crear el departamento.",
       "nameRequired": "Introduzca un nombre.",
+      "nameTaken": "Otro departamento de esta empresa ya tiene este nombre.",
       "companyRequired": "Elija una empresa.",
       "headcountInvalid": "Introduzca un número entero, 0 o más."
+    },
+    "delete": {
+      "toDelete_one": "Se eliminará {{count}} departamento:",
+      "toDelete_other": "Se eliminarán {{count}} departamentos:",
+      "kept_one": "{{count}} departamento no se puede eliminar y se conserva:",
+      "kept_other": "{{count}} departamentos no se pueden eliminar y se conservan:",
+      "deleted_one": "{{count}} departamento eliminado",
+      "deleted_other": "{{count}} departamentos eliminados"
     }
   },
   "costCenters": {
@@ -291,6 +303,14 @@
       "nameRequired": "Introduzca un nombre.",
       "companyRequired": "Elija una empresa.",
       "chooseCompany": "Elija la empresa para convertir este grupo en un centro de coste."
+    },
+    "delete": {
+      "toDelete_one": "Se eliminará {{count}} centro de coste:",
+      "toDelete_other": "Se eliminarán {{count}} centros de coste:",
+      "kept_one": "{{count}} centro de coste no se puede eliminar y se conserva:",
+      "kept_other": "{{count}} centros de coste no se pueden eliminar y se conservan:",
+      "deleted_one": "{{count}} centro de coste eliminado",
+      "deleted_other": "{{count}} centros de coste eliminados"
     }
   },
   "workingDayCalendars": {
@@ -386,6 +406,14 @@
       "deleteFailed": "Error al eliminar el calendario.",
       "codeRequired": "Introduzca un código.",
       "nameRequired": "Introduzca un nombre."
+    },
+    "delete": {
+      "toDelete_one": "Se eliminará {{count}} calendario:",
+      "toDelete_other": "Se eliminarán {{count}} calendarios:",
+      "kept_one": "{{count}} calendario no se puede eliminar y se conserva:",
+      "kept_other": "{{count}} calendarios no se pueden eliminar y se conservan:",
+      "deleted_one": "{{count}} calendario eliminado",
+      "deleted_other": "{{count}} calendarios eliminados"
     }
   },
   "suppliers": {
@@ -445,7 +473,9 @@
       "toDelete_one": "Se eliminará {{count}} proveedor:",
       "toDelete_other": "Se eliminarán {{count}} proveedores:",
       "kept_one": "{{count}} proveedor sigue en uso y se conserva. Desactívelo en su lugar:",
-      "kept_other": "{{count}} proveedores siguen en uso y se conservan. Desactívelos en su lugar:"
+      "kept_other": "{{count}} proveedores siguen en uso y se conservan. Desactívelos en su lugar:",
+      "deleted_one": "{{count}} proveedor eliminado",
+      "deleted_other": "{{count}} proveedores eliminados"
     }
   },
   "contacts": {
@@ -514,6 +544,10 @@
       "saveFailed": "No se pudo guardar el contacto.",
       "createFailed": "No se pudo crear el contacto.",
       "loadFailed": "No se pudo cargar el contacto."
+    },
+    "delete": {
+      "warning_one": "Se quita de los proveedores, líneas presupuestarias, contratos, aplicaciones, activos, ubicaciones, proyectos y solicitudes que lo mencionan. Esos elementos se conservan. Esta acción no se puede deshacer.",
+      "warning_other": "Se quitan de los proveedores, líneas presupuestarias, contratos, aplicaciones, activos, ubicaciones, proyectos y solicitudes que los mencionan. Esos elementos se conservan. Esta acción no se puede deshacer."
     }
   },
   "coa": {
@@ -640,6 +674,14 @@
       "unmapped_one": "{{count}} cuenta no tiene cuenta de consolidación",
       "unmapped_other": "{{count}} cuentas no tienen cuenta de consolidación",
       "showAll": "Mostrar todas las cuentas"
+    },
+    "delete": {
+      "toDelete_one": "Se eliminará {{count}} cuenta:",
+      "toDelete_other": "Se eliminarán {{count}} cuentas:",
+      "kept_one": "{{count}} cuenta no se puede eliminar y se conserva:",
+      "kept_other": "{{count}} cuentas no se pueden eliminar y se conservan:",
+      "deleted_one": "{{count}} cuenta eliminada",
+      "deleted_other": "{{count}} cuentas eliminadas"
     }
   },
   "accounts": {
@@ -906,7 +948,8 @@
       "itOwner": "Responsable IT",
       "itOwnerHelper": "Contacto IT responsable de las herramientas / sistemas que soportan este proceso",
       "notesPlaceholder": "Notas internas, enlaces a SOPs o mapas de procesos",
-      "nameRequired": "El nombre es obligatorio"
+      "nameRequired": "El nombre es obligatorio",
+      "nameTaken": "Otro proceso de negocio ya tiene este nombre."
     },
     "categoryManager": {
       "title": "Gestionar categorías de procesos de negocio",
@@ -921,7 +964,9 @@
       "failedToDelete": "Error al eliminar la categoría",
       "failedToCreate": "Error al crear la categoría",
       "failedToUpdate": "Error al actualizar la categoría"
-    }
+    },
+    "deleteWarning_one": "Esta acción no se puede deshacer. Las interfaces y solicitudes vinculadas a este proceso se conservan, sin el vínculo.",
+    "deleteWarning_other": "Esta acción no se puede deshacer. Las interfaces y solicitudes vinculadas a estos procesos se conservan, sin el vínculo."
   },
   "admin": {
     "copy": {
