@@ -1,10 +1,10 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
-import { resolveBusinessContributorScopeForUser } from '../auth/business-contributor-scope';
+import { resolveBusinessContributorScopeForUser, type ParticipationAccessScope } from '../auth/business-contributor-scope';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
 import { contentDisposition } from '../common/content-disposition';
 import { parseLookupRequest, runLookup, type LookupSpec } from '../common/lookup/reference-lookup';
@@ -15,7 +15,7 @@ import { TechnologiesService, type Opts } from './technologies.service';
 import { TechnologiesDeleteService } from './technologies-delete.service';
 import { TechnologiesRelationsService, technologyRelationKindOrThrow, type TechnologyRelationsContext } from './technologies-relations.service';
 import { TechnologyCatalogService } from './catalog/technology-catalog.service';
-import { TechnologyLinksService, type LinkInput } from './technology-links.service';
+import { TechnologyLinksService, type ApplicationsReach, type LinkInput } from './technology-links.service';
 import { requireManager } from './technology-rows';
 
 /** The picker of technologies (`useLookupPicker`): name first, the editor and reference searched too; retired ones not offered. */
@@ -28,6 +28,11 @@ export const TECHNOLOGY_LOOKUP: LookupSpec = {
 };
 
 const RANK: Record<string, number> = { reader: 1, contributor: 2, member: 3, admin: 4 };
+
+/** The caller holds `level` or more on `resource` (an administrator holds everything). */
+export function hasLevel(ctx: TenantRequest, resource: string, level: keyof typeof RANK): boolean {
+  return ctx.isAdmin === true || (RANK[ctx.permissions?.[resource] ?? ''] ?? 0) >= RANK[level];
+}
 
 /**
  * The technologies (lot S), under the `infrastructure` permission as the assets: read `reader`,
@@ -49,15 +54,33 @@ export class TechnologiesController {
     return { manager: requireManager(ctx.manager), tenantId: ctx.tenantId, userId: ctx.userId || null };
   }
 
+  /**
+   * The applications the caller may see in the technology's rows: none without the `applications`
+   * read right, a Business Contributor's own only (as `GET /assets/:assetId/assignments`).
+   */
+  private async applicationsReach(ctx: TenantRequest): Promise<ApplicationsReach> {
+    if (!hasLevel(ctx, 'applications', 'reader')) return null;
+    const scope = await resolveBusinessContributorScopeForUser({ manager: requireManager(ctx.manager), userId: ctx.userId, tenantId: ctx.tenantId, isAdmin: ctx.isAdmin }, 'applications', 'reader');
+    return { scope };
+  }
+
+  /** As `applicationsReach`, for a route that cannot answer without it: 403. */
+  private async requireApplications(ctx: TenantRequest): Promise<{ scope?: ParticipationAccessScope }> {
+    const reach = await this.applicationsReach(ctx);
+    if (!reach) throw new ForbiddenException('You cannot read applications.');
+    return reach;
+  }
+
   private async relationsContext(ctx: TenantRequest): Promise<TechnologyRelationsContext> {
-    const reads = (resource: string) => ctx.isAdmin === true || (RANK[ctx.permissions?.[resource] ?? ''] ?? 0) >= RANK.reader;
+    const reads = (resource: string) => hasLevel(ctx, resource, 'reader');
     const manager = requireManager(ctx.manager);
-    const projectScope = await resolveBusinessContributorScopeForUser({ manager, userId: ctx.userId, tenantId: ctx.tenantId }, 'portfolio_projects', 'reader');
+    const projectScope = await resolveBusinessContributorScopeForUser({ manager, userId: ctx.userId, tenantId: ctx.tenantId, isAdmin: ctx.isAdmin }, 'portfolio_projects', 'reader');
     return {
       manager,
       tenantId: ctx.tenantId,
       userId: ctx.userId || null,
       access: { budget_lines: reads('budget'), contracts: reads('contracts'), projects: reads('portfolio_projects'), incidents: reads('incidents') },
+      writeIncidents: hasLevel(ctx, 'incidents', 'contributor'),
       projectScope,
       incidentViewer: incidentViewerFromContext(ctx),
     };
@@ -322,8 +345,8 @@ export class TechnologiesController {
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'reader')
   @Get(':id/applications')
-  listApplications(@Param('id') id: string, @Tenant() ctx: TenantRequest) {
-    return this.links.applicationsOfTechnology(id, this.opts(ctx));
+  async listApplications(@Param('id') id: string, @Tenant() ctx: TenantRequest) {
+    return this.links.applicationsOfTechnology(id, this.opts(ctx), await this.applicationsReach(ctx));
   }
 
   /** The same rows as a CSV file (a path ending with /export: recorded as an export in the audit log). */
@@ -336,7 +359,7 @@ export class TechnologiesController {
     @Res({ passthrough: true }) res: Response,
     @Tenant() ctx: TenantRequest,
   ) {
-    const file = await this.links.applicationsCsv(id, language, this.opts(ctx));
+    const file = await this.links.applicationsCsv(id, language, this.opts(ctx), await this.requireApplications(ctx));
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(file.filename));
     return file.content;
@@ -346,21 +369,22 @@ export class TechnologiesController {
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'member')
   @Post(':id/applications')
-  addApplications(@Param('id') id: string, @Body() body: { application_ids?: string[] }, @Tenant() ctx: TenantRequest) {
-    return this.links.addApplications(id, body?.application_ids ?? [], this.opts(ctx));
+  async addApplications(@Param('id') id: string, @Body() body: { application_ids?: string[] }, @Tenant() ctx: TenantRequest) {
+    return this.links.addApplications(id, body?.application_ids ?? [], this.opts(ctx), await this.requireApplications(ctx));
   }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'member')
   @Patch(':id/application-links/:linkId')
-  updateApplicationLink(@Param('id') id: string, @Param('linkId') linkId: string, @Body() body: Record<string, unknown>, @Tenant() ctx: TenantRequest) {
+  async updateApplicationLink(@Param('id') id: string, @Param('linkId') linkId: string, @Body() body: LinkInput, @Tenant() ctx: TenantRequest) {
+    await this.requireApplications(ctx);
     return this.links.updateApplicationLink(id, linkId, body ?? {}, this.opts(ctx));
   }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'member')
   @Delete(':id/applications/:appId')
-  removeApplication(@Param('id') id: string, @Param('appId') appId: string, @Tenant() ctx: TenantRequest) {
-    return this.links.removeApplication(id, appId, this.opts(ctx));
+  async removeApplication(@Param('id') id: string, @Param('appId') appId: string, @Tenant() ctx: TenantRequest) {
+    return this.links.removeApplication(id, appId, this.opts(ctx), await this.requireApplications(ctx));
   }
 }

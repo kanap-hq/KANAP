@@ -31,6 +31,11 @@ export type TechnologyRelationsContext = {
   tenantId: string;
   userId: string | null;
   access: TechnologyRelationsAccess;
+  /**
+   * Linking an incident writes in the incident (its journal): it needs the level that edits an
+   * incident (`incidents:contributor`), not only the read of its section.
+   */
+  writeIncidents: boolean;
   /** A Business Contributor's project scope, when the caller is one. */
   projectScope?: ParticipationAccessScope;
   /** Confidential incidents show only to their reporter, owner and the registry admins. */
@@ -147,18 +152,11 @@ export class TechnologiesRelationsService {
     const tenantId = tech.tenant_id;
 
     if (kind === 'incidents') {
-      // The incident's own service: visibility, the open state, the journal entry and the audit.
-      const current: Array<{ id: string }> = await mg.query(
-        `SELECT technology_id AS id FROM incident_technologies WHERE tenant_id = $1 AND incident_id = $2`,
-        [tenantId, id],
-      );
-      const exists = await mg.query(`SELECT 1 FROM incidents WHERE tenant_id = $1 AND id = $2`, [tenantId, id]);
-      if (exists.length === 0) throw new BadRequestException('Incident not found.');
-      const ids = current.map((row) => row.id);
-      if (ids.includes(tech.id) === add) return { ok: true, changed: false };
-      const next = add ? [...ids, tech.id] : ids.filter((value) => value !== tech.id);
-      await this.incidents.bulkReplaceTechnologies(id, next, ctx.userId, { manager: mg, tenantId, viewer: ctx.incidentViewer });
-      return { ok: true, changed: true };
+      // The incident's own service: visibility first, the open state, the incident row lock, the
+      // journal entry and the audit; the set is read under that lock.
+      if (!ctx.writeIncidents) throw new ForbiddenException('You cannot edit incidents.');
+      const res = await this.incidents.setTechnologyLink(id, tech.id, add, ctx.userId, { manager: mg, tenantId, viewer: ctx.incidentViewer });
+      return { ok: true, changed: res.changed };
     }
 
     const t = OWNED[kind];
@@ -183,13 +181,16 @@ export class TechnologiesRelationsService {
     );
     const before = Array.from(new Set(current.map((row) => String(row.id).toLowerCase()))).sort();
     if (before.includes(id) === add) return { ok: true, changed: false };
-    const rows = add
-      ? await mg.query(
-        `INSERT INTO ${t.links} (tenant_id, technology_id, ${t.column}) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING RETURNING 1`,
-        [tenantId, tech.id, id],
-      )
-      : await mg.query(`DELETE FROM ${t.links} WHERE tenant_id = $1 AND technology_id = $2 AND ${t.column} = $3 RETURNING 1`, [tenantId, tech.id, id]);
-    if (rows.length === 0) return { ok: true, changed: false };
+    // A DELETE through the query runner returns [rows, count]: both writes are counted through a CTE.
+    const [{ n }]: Array<{ n: number }> = await mg.query(
+      add
+        ? `WITH c AS (INSERT INTO ${t.links} (tenant_id, technology_id, ${t.column}) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING RETURNING 1)
+           SELECT count(*)::int AS n FROM c`
+        : `WITH c AS (DELETE FROM ${t.links} WHERE tenant_id = $1 AND technology_id = $2 AND ${t.column} = $3 RETURNING 1)
+           SELECT count(*)::int AS n FROM c`,
+      [tenantId, tech.id, id],
+    );
+    if (Number(n) === 0) return { ok: true, changed: false };
     const after = (add ? [...before, id] : before.filter((value) => value !== id)).sort();
     await this.audit.log(
       { table: t.links, recordId: tech.id, action: 'update', before, after, userId: ctx.userId },

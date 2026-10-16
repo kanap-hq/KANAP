@@ -91,6 +91,29 @@ export class IncidentRelationsService extends IncidentsBaseService {
     return this.bulkReplace(TECHNOLOGY_LINK, incidentId, technologyIds, userId, opts);
   }
 
+  /**
+   * Link (`add`) or unlink one technology, from the technology's side. The incident must be visible
+   * to the viewer (404 otherwise, the same answer whether it exists or not) and open; its row is
+   * locked (FOR NO KEY UPDATE) before the set is read, so two links made at once from two
+   * technologies both stay. Linking what is linked, or unlinking what is not, changes nothing.
+   */
+  async setTechnologyLink(incidentId: string, technologyId: string, add: boolean, userId: string | null, opts?: ServiceOpts): Promise<{ changed: boolean }> {
+    const mg = this.getManager(opts);
+    const tenantId = this.ensureTenantId(opts?.tenantId);
+    const incident = await this.ensureIncident(incidentId, mg, tenantId, opts?.viewer);
+    this.assertEditable(incident);
+    await mg.query(`SELECT 1 FROM incidents WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`, [tenantId, incident.id]);
+    const current: Array<{ id: string }> = await mg.query(
+      `SELECT technology_id::text AS id FROM incident_technologies WHERE tenant_id = $1 AND incident_id = $2`,
+      [tenantId, incident.id],
+    );
+    const ids = current.map((row) => row.id);
+    if (ids.includes(technologyId) === add) return { changed: false };
+    const next = add ? [...ids, technologyId] : ids.filter((value) => value !== technologyId);
+    await this.bulkReplace(TECHNOLOGY_LINK, incident.id, next, userId, opts);
+    return { changed: true };
+  }
+
   private async listLinked(spec: LinkSpec, incidentId: string, opts?: ServiceOpts): Promise<IncidentLinkedObject[]> {
     const mg = this.getManager(opts);
     const tenantId = this.ensureTenantId(opts?.tenantId);
@@ -116,6 +139,8 @@ export class IncidentRelationsService extends IncidentsBaseService {
     const tenantId = this.ensureTenantId(opts?.tenantId);
     const incident = await this.ensureIncident(incidentId, mg, tenantId, opts?.viewer);
     this.assertEditable(incident);
+    // The incident row first: a concurrent replacement of its links waits, then reads what this one wrote.
+    await mg.query(`SELECT 1 FROM incidents WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`, [tenantId, incident.id]);
 
     const nextIds = Array.from(new Set((rawIds || []).map((id) => String(id || '').trim()).filter(Boolean)));
     const targets: IncidentLinkedObject[] = nextIds.length
