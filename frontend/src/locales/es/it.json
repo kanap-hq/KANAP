@@ -1121,6 +1121,8 @@
           "projects": "Proyectos",
           "requests": "Solicitudes",
           "tasks": "Tareas",
+          "technologies": "Tecnologías",
+          "processes": "Procesos de negocio",
           "related": "Relacionados"
         },
         "empty": {
@@ -1128,7 +1130,9 @@
           "contracts": "Ningún contrato vinculado.",
           "projects": "Ningún proyecto vinculado.",
           "requests": "Ninguna solicitud vinculada.",
-          "tasks": "Ninguna tarea vinculada."
+          "tasks": "Ninguna tarea vinculada.",
+          "technologies": "Ninguna tecnología vinculada.",
+          "processes": "Ningún proceso de negocio vinculado."
         },
         "columns": {
           "ref": "Ref.",
@@ -1146,7 +1150,12 @@
           "due": "Vencimiento",
           "type": "Tipo",
           "object": "Elemento",
-          "via": "Vía"
+          "via": "Vía",
+          "family": "Familia",
+          "version": "Versión",
+          "link": "Vínculo",
+          "supportEnd": "Fin de soporte",
+          "businessOwner": "Responsable de negocio"
         },
         "renewal": {
           "tacit": "Tácita",
@@ -1155,7 +1164,9 @@
         "search": {
           "contracts": "Buscar contratos",
           "projects": "Buscar proyectos",
-          "requests": "Buscar solicitudes"
+          "requests": "Buscar solicitudes",
+          "technologies": "Buscar tecnologías",
+          "processes": "Buscar procesos de negocio"
         },
         "types": {
           "budget_line": "Línea presupuestaria",
@@ -1168,6 +1179,13 @@
           "project": "vía el proyecto {{label}}",
           "task": "contiene la tarea {{label}}"
         },
+        "viaHost": "{{server}} (en {{host}})",
+        "technologyLink": {
+          "declared": "Declarada",
+          "hosted": "Alojada",
+          "both": "Declarada y alojada"
+        },
+        "versionUnknown": "Versión desconocida",
         "also": {
           "prefix": "También relacionado:",
           "assets_one": "{{count}} activo (despliegues)",

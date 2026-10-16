@@ -10,6 +10,7 @@ import { useBusinessProcessNav } from '../../hooks/useBusinessProcessNav';
 import BusinessProcessOverviewEditor, { BusinessProcessOverviewEditorHandle } from './editors/BusinessProcessOverviewEditor';
 import BusinessProcessCreateEditor, { BusinessProcessCreateEditorHandle } from './editors/BusinessProcessCreateEditor';
 import BusinessProcessCategoryManagerDialog from './BusinessProcessCategoryManagerDialog';
+import BusinessProcessApplicationsSection from './BusinessProcessApplicationsSection';
 import { useKanapDialogs } from '../../components/design';
 
 type TabKey = 'overview';
@@ -197,13 +198,16 @@ export default function BusinessProcessWorkspacePage() {
                 onManageCategoriesClick={() => setCategoryManagerOpen(true)}
               />
             ) : (
-              <BusinessProcessOverviewEditor
-                ref={overviewRef}
-                id={id}
-                onDirtyChange={updateDirty}
-                readOnly={!canManage}
-                onManageCategoriesClick={() => setCategoryManagerOpen(true)}
-              />
+              <Stack spacing={4}>
+                <BusinessProcessOverviewEditor
+                  ref={overviewRef}
+                  id={id}
+                  onDirtyChange={updateDirty}
+                  readOnly={!canManage}
+                  onManageCategoriesClick={() => setCategoryManagerOpen(true)}
+                />
+                <BusinessProcessApplicationsSection id={id} />
+              </Stack>
             )
           )}
         </Box>

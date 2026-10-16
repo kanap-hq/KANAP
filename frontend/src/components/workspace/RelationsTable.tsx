@@ -25,6 +25,8 @@ type TableProps<T> = {
   /** Hover-revealed unlink action, saved at once (no dialog: the row affects nothing else). */
   onRemove?: (row: T) => void;
   removeLabel?: (row: T) => string;
+  /** Rows that can be unlinked (all by default); the others keep an empty trailing cell. */
+  canRemove?: (row: T) => boolean;
   /** A trailing action column (for example "Link" on a suggestion). */
   action?: { width: number; render: (row: T) => React.ReactNode };
   /** Total lines under the rows: a label in the first column, then cells by column key. */
@@ -46,7 +48,7 @@ export function RelationRef({ children }: { children: React.ReactNode }) {
  * headers, 13px cells, horizontal borders only, row hover, the whole row opens the object, and an
  * unlink icon revealed on hover. Shared by every object that shows its relations.
  */
-export function RelationsTable<T>({ columns, rows, rowKey, rowHref, rowMuted, onRemove, removeLabel, action, totals, ariaLabel }: TableProps<T>) {
+export function RelationsTable<T>({ columns, rows, rowKey, rowHref, rowMuted, onRemove, removeLabel, canRemove, action, totals, ariaLabel }: TableProps<T>) {
   const theme = useTheme();
   const navigate = useNavigate();
   const open = (row: T) => {
@@ -120,7 +122,9 @@ export function RelationsTable<T>({ columns, rows, rowKey, rowHref, rowMuted, on
                   {column.render(row)}
                 </Box>
               ))}
-              {onRemove ? (
+              {onRemove && canRemove && !canRemove(row) ? (
+                <td />
+              ) : onRemove ? (
                 <td className="r" onClick={(event) => event.stopPropagation()}>
                   <IconButton
                     className="relations-remove"

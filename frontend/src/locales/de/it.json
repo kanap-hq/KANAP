@@ -1121,6 +1121,8 @@
           "projects": "Projekte",
           "requests": "Anfragen",
           "tasks": "Aufgaben",
+          "technologies": "Technologien",
+          "processes": "Geschäftsprozesse",
           "related": "Verwandt"
         },
         "empty": {
@@ -1128,7 +1130,9 @@
           "contracts": "Kein Vertrag verknüpft.",
           "projects": "Kein Projekt verknüpft.",
           "requests": "Keine Anfrage verknüpft.",
-          "tasks": "Keine Aufgabe verknüpft."
+          "tasks": "Keine Aufgabe verknüpft.",
+          "technologies": "Keine Technologie verknüpft.",
+          "processes": "Kein Geschäftsprozess verknüpft."
         },
         "columns": {
           "ref": "Ref.",
@@ -1146,7 +1150,12 @@
           "due": "Fällig",
           "type": "Typ",
           "object": "Objekt",
-          "via": "Über"
+          "via": "Über",
+          "family": "Familie",
+          "version": "Version",
+          "link": "Verknüpfung",
+          "supportEnd": "Supportende",
+          "businessOwner": "Fachverantwortlicher"
         },
         "renewal": {
           "tacit": "Stillschweigend",
@@ -1155,7 +1164,9 @@
         "search": {
           "contracts": "Verträge suchen",
           "projects": "Projekte suchen",
-          "requests": "Anfragen suchen"
+          "requests": "Anfragen suchen",
+          "technologies": "Technologien suchen",
+          "processes": "Geschäftsprozesse suchen"
         },
         "types": {
           "budget_line": "Budgetzeile",
@@ -1168,6 +1179,13 @@
           "project": "über das Projekt {{label}}",
           "task": "enthält die Aufgabe {{label}}"
         },
+        "viaHost": "{{server}} (auf {{host}})",
+        "technologyLink": {
+          "declared": "Deklariert",
+          "hosted": "Gehostet",
+          "both": "Deklariert und gehostet"
+        },
+        "versionUnknown": "Version unbekannt",
         "also": {
           "prefix": "Ebenfalls verknüpft:",
           "assets_one": "{{count}} Asset (Bereitstellungen)",

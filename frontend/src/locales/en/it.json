@@ -1121,6 +1121,8 @@
           "projects": "Projects",
           "requests": "Requests",
           "tasks": "Tasks",
+          "technologies": "Technologies",
+          "processes": "Business processes",
           "related": "Related"
         },
         "empty": {
@@ -1128,7 +1130,9 @@
           "contracts": "No contract linked.",
           "projects": "No project linked.",
           "requests": "No request linked.",
-          "tasks": "No task linked."
+          "tasks": "No task linked.",
+          "technologies": "No technology linked.",
+          "processes": "No business process linked."
         },
         "columns": {
           "ref": "Ref",
@@ -1146,7 +1150,12 @@
           "due": "Due",
           "type": "Type",
           "object": "Item",
-          "via": "Via"
+          "via": "Via",
+          "family": "Family",
+          "version": "Version",
+          "link": "Link",
+          "supportEnd": "End of support",
+          "businessOwner": "Business owner"
         },
         "renewal": {
           "tacit": "Tacit",
@@ -1155,7 +1164,9 @@
         "search": {
           "contracts": "Search contracts",
           "projects": "Search projects",
-          "requests": "Search requests"
+          "requests": "Search requests",
+          "technologies": "Search technologies",
+          "processes": "Search business processes"
         },
         "types": {
           "budget_line": "Budget line",
@@ -1168,6 +1179,13 @@
           "project": "via the project {{label}}",
           "task": "carries the task {{label}}"
         },
+        "viaHost": "{{server}} (on {{host}})",
+        "technologyLink": {
+          "declared": "Declared",
+          "hosted": "Hosted",
+          "both": "Declared and hosted"
+        },
+        "versionUnknown": "Unknown version",
         "also": {
           "prefix": "Also related:",
           "assets_one": "{{count}} asset (deployments)",
