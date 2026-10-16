@@ -127,12 +127,30 @@ const REACHED_ASSETS_SELECT = `
     FROM reach r
    ORDER BY r.technology_id, r.asset_id, r.technology_version_id, r.installed_on, r.depth`;
 
+/**
+ * Runs a deduction with JIT compilation off for this statement. The planner cannot estimate a
+ * recursive CTE: it expects millions of rows where there are thousands, the cost passes
+ * `jit_above_cost`, and compiling the plan then takes about 300 ms for a query that runs in 50
+ * (measured on a tenant of 16 000 assets). The setting is transaction-local and restored as found.
+ */
+async function withoutJit<T>(mg: Pick<EntityManager, 'query'>, sql: string, params: unknown[]): Promise<T[]> {
+  const [{ jit }]: Array<{ jit: string }> = await mg.query(`SELECT current_setting('jit') AS jit`);
+  if (jit === 'off') return mg.query(sql, params);
+  await mg.query(`SELECT set_config('jit', 'off', true)`);
+  try {
+    return await mg.query(sql, params);
+  } finally {
+    // After a failed statement the transaction refuses this; its rollback restores the setting.
+    await mg.query(`SELECT set_config('jit', $1, true)`, [jit]).catch(() => undefined);
+  }
+}
+
 @Injectable()
 export class TechnologyReachService {
   /** The assets that carry each technology of `technologyIds`, directly or through the graph. */
   async assetsOfTechnologies(mg: EntityManager, tenantId: string, technologyIds: string[]): Promise<ReachedAsset[]> {
     if (technologyIds.length === 0) return [];
-    const rows: ReachedAsset[] = await mg.query(
+    const rows: ReachedAsset[] = await withoutJit(mg, 
       `WITH RECURSIVE ${REACH_FROM_TECHNOLOGIES}
        ${REACHED_ASSETS_SELECT}`,
       [tenantId, technologyIds],
@@ -146,13 +164,15 @@ export class TechnologyReachService {
    */
   async applicationsOfTechnologies(mg: EntityManager, tenantId: string, technologyIds: string[]): Promise<ReachedApplication[]> {
     if (technologyIds.length === 0) return [];
-    return mg.query(
+    return withoutJit(mg, 
       `WITH RECURSIVE ${REACH_FROM_TECHNOLOGIES},
        reached AS (${REACHED_ASSETS_SELECT})
-       SELECT DISTINCT r.technology_id, i.application_id, 'hosted' AS kind, i.environment, r.asset_id, r.via_asset_id,
+       SELECT r.technology_id, i.application_id, 'hosted' AS kind, i.environment, r.asset_id, r.via_asset_id,
               r.technology_version_id, NULL::uuid AS link_id, r.source
          FROM reached r
-         JOIN app_asset_assignments x ON x.tenant_id = $1 AND x.asset_id = r.asset_id
+         -- One row per instance and server, whatever the roles (no DISTINCT over the whole result:
+         -- the recursive estimate is far too high and its hash table alone costs more than the query).
+         JOIN (SELECT DISTINCT a.app_instance_id, a.asset_id FROM app_asset_assignments a WHERE a.tenant_id = $1) x ON x.asset_id = r.asset_id
          JOIN app_instances i ON i.tenant_id = $1 AND i.id = x.app_instance_id
        UNION ALL
        SELECT d.technology_id, d.application_id, 'declared', NULL, NULL, NULL, d.technology_version_id, d.id, d.source
@@ -168,7 +188,7 @@ export class TechnologyReachService {
    */
   async technologiesOfAssets(mg: EntityManager, tenantId: string, assetIds: string[]): Promise<ReachingTechnology[]> {
     if (assetIds.length === 0) return [];
-    return mg.query(
+    return withoutJit(mg, 
       `WITH RECURSIVE ${CARRIERS_OF_ASSETS}
        SELECT DISTINCT ON (u.asset_id, at.id)
               u.asset_id AS subject_id, at.technology_id,
@@ -189,7 +209,7 @@ export class TechnologyReachService {
    */
   async technologiesOfApplications(mg: EntityManager, tenantId: string, applicationIds: string[]): Promise<ReachingTechnology[]> {
     if (applicationIds.length === 0) return [];
-    return mg.query(
+    return withoutJit(mg, 
       `WITH RECURSIVE servers AS (
          SELECT DISTINCT i.application_id, i.environment, x.asset_id
            FROM app_instances i
@@ -234,16 +254,23 @@ export class TechnologyReachService {
   async countsOfTechnologies(mg: EntityManager, tenantId: string, technologyIds: string[]): Promise<Map<string, TechnologyCounts>> {
     const out = new Map<string, TechnologyCounts>();
     if (technologyIds.length === 0) return out;
-    const rows: Array<Record<string, any>> = await mg.query(
+    const rows: Array<Record<string, any>> = await withoutJit(mg, 
       `WITH RECURSIVE ${REACH_FROM_TECHNOLOGIES},
+       servers AS (
+         SELECT r.technology_id, count(DISTINCT r.asset_id)::int AS servers FROM reach r GROUP BY r.technology_id
+       ),
        apps AS (
-         SELECT r.technology_id, i.application_id
-           FROM reach r
-           JOIN app_asset_assignments x ON x.tenant_id = $1 AND x.asset_id = r.asset_id
-           JOIN app_instances i ON i.tenant_id = $1 AND i.id = x.app_instance_id
-         UNION
-         SELECT d.technology_id, d.application_id FROM application_technologies d
-          WHERE d.tenant_id = $1 AND d.technology_id = ANY($2::uuid[])
+         SELECT h.technology_id, count(DISTINCT h.application_id)::int AS applications
+           FROM (
+             SELECT r.technology_id, i.application_id
+               FROM reach r
+               JOIN app_asset_assignments x ON x.tenant_id = $1 AND x.asset_id = r.asset_id
+               JOIN app_instances i ON i.tenant_id = $1 AND i.id = x.app_instance_id
+             UNION ALL
+             SELECT d.technology_id, d.application_id FROM application_technologies d
+              WHERE d.tenant_id = $1 AND d.technology_id = ANY($2::uuid[])
+           ) h
+          GROUP BY h.technology_id
        ),
        used AS (
          SELECT technology_id, technology_version_id FROM asset_technologies
@@ -262,12 +289,14 @@ export class TechnologyReachService {
           GROUP BY u.technology_id
        )
        SELECT t.id AS technology_id,
-              (SELECT count(DISTINCT r.asset_id)::int FROM reach r WHERE r.technology_id = t.id) AS servers,
-              (SELECT count(DISTINCT a.application_id)::int FROM apps a WHERE a.technology_id = t.id) AS applications,
+              COALESCE(s.servers, 0) AS servers,
+              COALESCE(a.applications, 0) AS applications,
               COALESCE(v.versions_in_use, 0) AS versions_in_use,
               ${DAY('v.next_end')} AS next_support_end,
               COALESCE(v.ended, 0) AS ended_versions
          FROM technologies t
+         LEFT JOIN servers s ON s.technology_id = t.id
+         LEFT JOIN apps a ON a.technology_id = t.id
          LEFT JOIN versions v ON v.technology_id = t.id
         WHERE t.tenant_id = $1 AND t.id = ANY($2::uuid[])`,
       [tenantId, technologyIds],
