@@ -22,7 +22,7 @@ const tiered = { ...base, graph_tier: (row: any) => row.graph_tier };
 const LIST_FIELDS: Record<string, Record<string, FieldReader>> = {
   applicationCategories: base, networkSegments: base, serverProviders: base, lifecycleStates: base,
   interfaceProtocols: base, interfaceDataCategories: base, interfaceTriggerTypes: base, interfacePatterns: base,
-  interfaceFormats: base, interfaceAuthModes: base, ipAddressTypes: base, accessMethods: base, pathHopFunctions: base, incidentCategories: base,
+  interfaceFormats: base, interfaceAuthModes: base, ipAddressTypes: base, accessMethods: base, pathHopFunctions: base, incidentCategories: base, technologyFamilies: base,
   entities: tiered, serverRoles: tiered,
   serverKinds: { ...base, is_physical: (row) => row.is_physical === undefined ? undefined : !!row.is_physical },
   hostingTypes: { ...base, category: (row) => row.category === 'on_prem' || row.category === 'cloud' ? row.category : undefined },

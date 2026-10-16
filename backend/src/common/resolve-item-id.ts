@@ -1,7 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 
-export type EntityType = 'task' | 'request' | 'project' | 'document' | 'spend' | 'capex' | 'incident' | 'contributor';
+export type EntityType = 'task' | 'request' | 'project' | 'document' | 'spend' | 'capex' | 'incident' | 'contributor' | 'technology';
 
 /** The prefix a reference of each type carries, the one the "expected" message names. */
 const EXPECTED_PREFIX: Record<EntityType, string> = {
@@ -13,6 +13,7 @@ const EXPECTED_PREFIX: Record<EntityType, string> = {
   capex: 'CPX',
   incident: 'INC',
   contributor: 'CTR',
+  technology: 'TEC',
 };
 
 /**
@@ -25,7 +26,7 @@ const ALSO_ACCEPTED_PREFIXES: Partial<Record<EntityType, readonly string[]>> = {
 };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const ITEM_REF_RE = /^(T|PRJ|REQ|DOC|OPX|CPX|INC|CTR)-(\d+)$/i;
+const ITEM_REF_RE = /^(T|PRJ|REQ|DOC|OPX|CPX|INC|CTR|TEC)-(\d+)$/i;
 /** A reference with a prefix only some types accept (`BL-n`): another type reads it as malformed. */
 const OTHER_REF_RE = /^([A-Z]+)-(\d+)$/i;
 
@@ -135,6 +136,7 @@ export async function resolveToUuid(
     capex: CAPEX_BY_NUMBER,
     incident: 'SELECT id FROM incidents WHERE tenant_id = app_current_tenant() AND item_number = $1 LIMIT 1',
     contributor: 'SELECT id FROM portfolio_team_member_configs WHERE tenant_id = app_current_tenant() AND item_number = $1 LIMIT 1',
+    technology: 'SELECT id FROM technologies WHERE tenant_id = app_current_tenant() AND item_number = $1 LIMIT 1',
   };
 
   // `spend`: the legacy number is tried for an OPX reference only (BL-n and plain numbers are item numbers).

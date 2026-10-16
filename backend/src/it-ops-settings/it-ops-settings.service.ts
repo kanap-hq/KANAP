@@ -29,6 +29,30 @@ export const DEFAULT_INCIDENT_CATEGORIES: ItOpsEnumOption[] = [
 ];
 
 /**
+ * Technology families served to tenants that never customised the list (plan
+ * planning/cartographie-technologies.md): what a technology is, read by the lists, the reports and
+ * the gaps (a database server without a database technology).
+ */
+export const DEFAULT_TECHNOLOGY_FAMILIES: ItOpsEnumOption[] = [
+  { code: 'operating_system', label: 'Operating system' },
+  { code: 'database', label: 'Database' },
+  { code: 'application_server', label: 'Application server' },
+  { code: 'web_server', label: 'Web server' },
+  { code: 'hypervisor', label: 'Hypervisor' },
+  { code: 'container', label: 'Containers' },
+  { code: 'directory', label: 'Directory and identity' },
+  { code: 'messaging', label: 'Messaging' },
+  { code: 'integration', label: 'Integration' },
+  { code: 'backup', label: 'Backup' },
+  { code: 'monitoring', label: 'Monitoring' },
+  { code: 'runtime', label: 'Runtime and framework' },
+  { code: 'storage', label: 'Storage' },
+  { code: 'network_security', label: 'Network and security' },
+  { code: 'administration', label: 'Administration' },
+  { code: 'other', label: 'Other' },
+];
+
+/**
  * Hosting types served to tenants that never customised the list. Each one is on premises or in the
  * cloud (`category`); the contract compliance register reads that category too.
  */
@@ -104,6 +128,7 @@ export type ItOpsSettings = ClassificationCatalog & {
   accessMethods: ItOpsEnumOption[];
   pathHopFunctions: ItOpsEnumOption[];
   incidentCategories: ItOpsEnumOption[];
+  technologyFamilies: ItOpsEnumOption[];
   /** Server-managed rows the editor must not edit nor remove. */
   lockedCodes?: Record<string, string[]>;
   /** Default rows the server re-adds after removal: editable and retirable, never removable. */
@@ -134,6 +159,7 @@ type ItOpsMetadataShape = {
   access_methods?: ItOpsEnumOption[];
   path_hop_functions?: ItOpsEnumOption[];
   incident_categories?: ItOpsEnumOption[];
+  technology_families?: ItOpsEnumOption[];
 };
 
 @Injectable()
@@ -430,6 +456,7 @@ export class ItOpsSettingsService {
   ];
 
   private readonly defaultIncidentCategories: ItOpsEnumOption[] = DEFAULT_INCIDENT_CATEGORIES;
+  private readonly defaultTechnologyFamilies: ItOpsEnumOption[] = DEFAULT_TECHNOLOGY_FAMILIES;
 
   private readonly lockedDomainCodes = new Set(['workgroup', 'n-a']);
 
@@ -935,6 +962,7 @@ export class ItOpsSettingsService {
       this.defaultPathHopFunctions,
     );
     const incidentCategories = this.normalizeList(raw.incident_categories, this.defaultIncidentCategories);
+    const technologyFamilies = this.normalizeList(raw.technology_families, this.defaultTechnologyFamilies);
     return {
       lockedCodes: { lifecycleStates: [...this.lockedLifecycleCodes], domains: [...this.lockedDomainCodes] },
       protectedCodes: { networkSegments: this.defaultNetworkSegments.map((item) => item.code), serverKinds: this.defaultServerKinds.map((item) => item.code) },
@@ -962,6 +990,7 @@ export class ItOpsSettingsService {
       accessMethods,
       pathHopFunctions,
       incidentCategories,
+      technologyFamilies,
     };
   }
 
@@ -1180,6 +1209,9 @@ export class ItOpsSettingsService {
     if (patch.incidentCategories) {
       next.incidentCategories = this.normalizeList(patch.incidentCategories, this.defaultIncidentCategories);
     }
+    if (patch.technologyFamilies) {
+      next.technologyFamilies = this.normalizeList(patch.technologyFamilies, this.defaultTechnologyFamilies);
+    }
 
     const catalogChanged = CLASSIFICATION_CATALOG_KEYS.some((key) => patch[key] !== undefined);
     if (catalogChanged) {
@@ -1214,6 +1246,7 @@ export class ItOpsSettingsService {
       access_methods: next.accessMethods,
       path_hop_functions: next.pathHopFunctions,
       incident_categories: next.incidentCategories,
+      technology_families: next.technologyFamilies,
     };
     for (const key of OBSOLETE_CATALOG_METADATA_KEYS) delete itOps[key];
     meta.it_ops = itOps;
@@ -1259,7 +1292,7 @@ export class ItOpsSettingsService {
     operatingSystems: { name: 'Operating systems' }, connectionTypes: { name: 'Connection types' }, subnets: { name: 'Subnets', subnets: true }, domains: { name: 'Domains' },
     ipAddressTypes: { name: 'IP address types' }, accessMethods: { name: 'Access methods', commaSeparatedInCsv: true }, pathHopFunctions: { name: 'Path hop functions' },
     incidentCategories: { name: 'Incident categories' }, businessCriticalityLevels: { name: 'Business criticality' }, cyberCriticalityLevels: { name: 'Cyber criticality' },
-    dataClasses: { name: 'Data confidentiality' }, recoveryWaves: { name: 'Recovery waves' },
+    dataClasses: { name: 'Data confidentiality' }, recoveryWaves: { name: 'Recovery waves' }, technologyFamilies: { name: 'Technology families' },
   };
 
   /** Write-time rules for the lists a PATCH carries: codes generated from names, aliases unique. Reads stay tolerant. */
