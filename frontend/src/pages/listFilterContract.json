@@ -662,9 +662,9 @@
       "document_type_name": "set",
       "current_version_number": "number",
       "primary_owner_name": "set",
-      "folder_name": "set",
+      "folder_key": "set",
       "template_name": "set",
-      "library_name": "set",
+      "library_key": "set",
       "updated_at": "date"
     },
     "fields": [
@@ -674,9 +674,9 @@
       "document_type_name",
       "current_version_number",
       "primary_owner_name",
-      "folder_name",
+      "folder_key",
       "template_name",
-      "library_name",
+      "library_key",
       "updated_at"
     ]
   },
