@@ -279,15 +279,36 @@ Pueden aparecer dos indicaciones discretas: datos en el nivel de confidencialida
 
 ### Relaciones
 
-La pestaña Relaciones vincula esta aplicación a sus registros financieros, de contratos, de proyectos y de tareas. La insignia de la pestaña cuenta todos los elementos vinculados. Los cambios se guardan automáticamente.
+La pestaña Relaciones muestra con qué está vinculada esta aplicación: sus líneas presupuestarias, contratos, proyectos, solicitudes, tareas e incidentes, cada uno en su propia tabla. Haga clic en una fila para abrir el registro. La insignia de la pestaña cuenta las líneas presupuestarias, contratos, proyectos, incidentes, sitios web y adjuntos vinculados.
 
 **Componentes** (solo cuando está activado "Puede tener apps hijas"): una tabla que lista las aplicaciones hijas de esta Suite, con su ciclo de vida y criticidad. Haga clic en una fila para abrir el espacio de trabajo del hijo.
 
-**Relaciones**:
-- **Líneas presupuestarias**: las líneas OPEX y CAPEX de esta aplicación, en una sola lista. Busque por título o por referencia (`BL-12`); cada sugerencia muestra su tipo
-- **Contratos**: contratos con proveedores
-- **Proyectos**: proyectos del portafolio vinculados a esta aplicación
-- **Tareas**: tareas vinculadas a esta aplicación. Esta lista es de solo lectura aquí: las tareas ganan o pierden este vínculo cuando establece el campo **App / Servicio** en una tarea desde la página de Tareas.
+**Registros vinculados**, una tabla cada uno:
+
+| Sección | Columnas |
+|---|---|
+| **Líneas presupuestarias** | Referencia (`BL-12`), nombre, tipo (OPEX o CAPEX), proveedor y el importe del año en curso en su columna presupuestaria por defecto, en la moneda de reporte. Un guion significa que la línea no tiene presupuesto para el año |
+| **Contratos** | Nombre, proveedor, fin del periodo en curso, importe anual en la moneda del contrato, renovación (tácita o manual) |
+| **Proyectos** | Referencia (`PRJ-7`), nombre, estado, fin previsto |
+| **Solicitudes** | Referencia (`REQ-23`), nombre, estado, entrega deseada |
+| **Tareas** | Referencia (`T-118`), título, estado, asignado, vencimiento. Solo aparecen las tareas vinculadas a esta aplicación, no las tareas de sus proyectos |
+| **Incidentes** | Referencia (`INC-14`), título, severidad, estado, fecha de detección |
+
+Las fechas en naranja requieren atención: un contrato cuya decisión de renovación cae dentro de su ventana de decisión de contratos, o una tarea abierta con el vencimiento pasado. Una línea presupuestaria o un contrato desactivado sigue en la lista con el nombre atenuado. Solo ve las secciones de los módulos que puede leer.
+
+A partir de dos filas, las líneas presupuestarias y los contratos terminan con una fila de total. El total de las líneas presupuestarias está en la moneda de reporte. Los contratos tienen un total por moneda, sin los contratos desactivados.
+
+**Añadir y quitar vínculos** (`applications:manager`): **Añadir**, a la derecha de una sección, abre una búsqueda. Escriba un nombre o una referencia y elija un resultado: el vínculo se guarda al instante. Para quitar un vínculo, pase el cursor sobre la fila y haga clic en la cruz al final. Quitar un vínculo no elimina nada más. Los incidentes se vinculan desde el propio incidente.
+
+**Relacionados**: sugerencias de registros que podría vincular, cada una con el motivo de la sugerencia:
+
+- contratos y líneas presupuestarias del proveedor de la aplicación;
+- líneas presupuestarias de un contrato vinculado o de un proyecto vinculado;
+- proyectos que contienen una tarea vinculada a la aplicación.
+
+Haga clic en **Vincular** para añadir la sugerencia a su sección. La sección no aparece cuando no hay nada que sugerir.
+
+**También relacionado**: una línea bajo las sugerencias cuenta los activos de los despliegues de la aplicación, sus interfaces y sus documentos de conocimiento. Cada número abre la pestaña o la sección correspondiente.
 
 **Sitios web relevantes**: añada URLs con nombres opcionales. Es útil para portales de proveedores, paneles de monitoreo o enlaces a documentación. **Añadir URL** abre un diálogo; las entradas existentes pueden editarse o eliminarse.
 

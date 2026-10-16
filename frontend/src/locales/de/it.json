@@ -1071,10 +1071,6 @@
       },
       "relations": {
         "noChildApps": "Noch keine untergeordneten Anwendungen verknüpft.",
-        "projects": "Projekte",
-        "tasks": "Aufgaben",
-        "selectContracts": "Verträge auswählen",
-        "selectProjects": "Projekte auswählen",
         "searchTasks": "Aufgaben suchen",
         "relevantWebsites": "Relevante Websites",
         "addUrl": "URL hinzufügen",
@@ -1087,7 +1083,76 @@
         "selectFiles": "Dateien auswählen",
         "uploadingFiles_one": "{{count}} Datei wird hochgeladen…",
         "uploadingFiles_other": "{{count}} Dateien werden hochgeladen…",
-        "deleteAttachment": "Anhang „{{name}}“ löschen?"
+        "deleteAttachment": "Anhang „{{name}}“ löschen?",
+        "sections": {
+          "budgetLines": "Budgetzeilen",
+          "contracts": "Verträge",
+          "projects": "Projekte",
+          "requests": "Anfragen",
+          "tasks": "Aufgaben",
+          "related": "Verwandt"
+        },
+        "empty": {
+          "budgetLines": "Keine Budgetzeile verknüpft.",
+          "contracts": "Kein Vertrag verknüpft.",
+          "projects": "Kein Projekt verknüpft.",
+          "requests": "Keine Anfrage verknüpft.",
+          "tasks": "Keine Aufgabe verknüpft."
+        },
+        "columns": {
+          "ref": "Ref.",
+          "name": "Name",
+          "title": "Titel",
+          "nature": "Typ",
+          "supplier": "Lieferant",
+          "end": "Ende",
+          "yearlyAmount": "Jahresbetrag",
+          "renewal": "Verlängerung",
+          "status": "Status",
+          "plannedEnd": "Geplantes Ende",
+          "targetDelivery": "Gewünschte Lieferung",
+          "assignee": "Zugewiesen",
+          "due": "Fällig",
+          "type": "Typ",
+          "object": "Objekt",
+          "via": "Über"
+        },
+        "renewal": {
+          "tacit": "Stillschweigend",
+          "manual": "Manuell"
+        },
+        "search": {
+          "contracts": "Verträge suchen",
+          "projects": "Projekte suchen",
+          "requests": "Anfragen suchen"
+        },
+        "types": {
+          "budget_line": "Budgetzeile",
+          "contract": "Vertrag",
+          "project": "Projekt"
+        },
+        "via": {
+          "same_supplier": "gleicher Lieferant",
+          "contract": "über den Vertrag {{label}}",
+          "project": "über das Projekt {{label}}",
+          "task": "enthält die Aufgabe {{label}}"
+        },
+        "also": {
+          "prefix": "Ebenfalls verknüpft:",
+          "assets_one": "{{count}} Asset (Bereitstellungen)",
+          "assets_other": "{{count}} Assets (Bereitstellungen)",
+          "interfaces_one": "{{count}} Schnittstelle",
+          "interfaces_other": "{{count}} Schnittstellen",
+          "documents_one": "{{count}} Dokument",
+          "documents_other": "{{count}} Dokumente"
+        },
+        "add": "Hinzufügen",
+        "link": "Verknüpfen",
+        "linkNamed": "{{name}} verknüpfen",
+        "remove": "Verknüpfung mit {{name}} lösen",
+        "suggestions_one": "{{count}} Vorschlag",
+        "suggestions_other": "{{count}} Vorschläge",
+        "total": "Gesamt"
       },
       "untitled": "Unbenannte Anwendung",
       "previous": "Vorherige Anwendung",

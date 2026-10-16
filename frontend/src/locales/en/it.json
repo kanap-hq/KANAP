@@ -1071,10 +1071,6 @@
       },
       "relations": {
         "noChildApps": "No child applications linked yet.",
-        "projects": "Projects",
-        "tasks": "Tasks",
-        "selectContracts": "Select contracts",
-        "selectProjects": "Select projects",
         "searchTasks": "Search tasks",
         "relevantWebsites": "Relevant websites",
         "addUrl": "Add URL",
@@ -1087,7 +1083,76 @@
         "selectFiles": "Select files",
         "uploadingFiles_one": "Uploading {{count}} file…",
         "uploadingFiles_other": "Uploading {{count}} files…",
-        "deleteAttachment": "Delete attachment \"{{name}}\"?"
+        "deleteAttachment": "Delete attachment \"{{name}}\"?",
+        "sections": {
+          "budgetLines": "Budget lines",
+          "contracts": "Contracts",
+          "projects": "Projects",
+          "requests": "Requests",
+          "tasks": "Tasks",
+          "related": "Related"
+        },
+        "empty": {
+          "budgetLines": "No budget line linked.",
+          "contracts": "No contract linked.",
+          "projects": "No project linked.",
+          "requests": "No request linked.",
+          "tasks": "No task linked."
+        },
+        "columns": {
+          "ref": "Ref",
+          "name": "Name",
+          "title": "Title",
+          "nature": "Type",
+          "supplier": "Supplier",
+          "end": "End",
+          "yearlyAmount": "Yearly amount",
+          "renewal": "Renewal",
+          "status": "Status",
+          "plannedEnd": "Planned end",
+          "targetDelivery": "Desired delivery",
+          "assignee": "Assignee",
+          "due": "Due",
+          "type": "Type",
+          "object": "Item",
+          "via": "Via"
+        },
+        "renewal": {
+          "tacit": "Tacit",
+          "manual": "Manual"
+        },
+        "search": {
+          "contracts": "Search contracts",
+          "projects": "Search projects",
+          "requests": "Search requests"
+        },
+        "types": {
+          "budget_line": "Budget line",
+          "contract": "Contract",
+          "project": "Project"
+        },
+        "via": {
+          "same_supplier": "same supplier",
+          "contract": "via the contract {{label}}",
+          "project": "via the project {{label}}",
+          "task": "carries the task {{label}}"
+        },
+        "also": {
+          "prefix": "Also related:",
+          "assets_one": "{{count}} asset (deployments)",
+          "assets_other": "{{count}} assets (deployments)",
+          "interfaces_one": "{{count}} interface",
+          "interfaces_other": "{{count}} interfaces",
+          "documents_one": "{{count}} document",
+          "documents_other": "{{count}} documents"
+        },
+        "add": "Add",
+        "link": "Link",
+        "linkNamed": "Link {{name}}",
+        "remove": "Unlink {{name}}",
+        "suggestions_one": "{{count}} suggestion",
+        "suggestions_other": "{{count}} suggestions",
+        "total": "Total"
       },
       "untitled": "Untitled application",
       "previous": "Previous application",
