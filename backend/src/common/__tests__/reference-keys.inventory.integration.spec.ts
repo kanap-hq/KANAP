@@ -3,6 +3,7 @@ import * as assert from 'node:assert/strict';
 import dataSource from '../../data-source';
 import {
   KEYED_BY_PENDING_MIGRATION,
+  UNINDEXED_DELETING_KEY_TABLES,
   UNKEYED_COLUMN_NAMES,
   UNKEYED_REFERENCE_COLUMNS,
 } from '../reference-keys.inventory';
@@ -11,6 +12,9 @@ import {
 // `id`) has a foreign key or an entry with its reason in common/reference-keys.inventory.ts. A
 // column with neither fails here, so a new link table or reference cannot ship without a key by
 // oversight; an entry whose column is gone or has gained a key fails too, so the list stays true.
+// Every key that deletes or clears rows (ON DELETE CASCADE or SET NULL) has an index leading with
+// its columns, unless its table is listed as tiny: otherwise deleting the parent row reads the
+// whole child table.
 
 type Column = { name: string; keyed: boolean };
 
@@ -56,11 +60,49 @@ async function testEveryReferenceColumnHasAKeyOrAReason() {
   assert.deepEqual(failures, [], `\n  ${failures.join('\n  ')}`);
 }
 
+async function testEveryDeletingKeyHasALeadingIndex() {
+  const keys: Array<{ table_name: string; conname: string; columns: string[]; indexed: boolean }> = await dataSource.query(
+    `SELECT c.conrelid::regclass::text AS table_name, c.conname,
+            (SELECT array_agg(a.attname::text ORDER BY k.ord)
+               FROM unnest(c.conkey) WITH ORDINALITY AS k(attnum, ord)
+               JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum) AS columns,
+            EXISTS (
+              SELECT 1 FROM pg_index i
+                JOIN pg_class ic ON ic.oid = i.indexrelid
+                JOIN pg_am am ON am.oid = ic.relam
+               WHERE i.indrelid = c.conrelid AND i.indisvalid AND i.indpred IS NULL AND am.amname = 'btree'
+                 AND (i.indkey::int2[])[0:cardinality(c.conkey) - 1] @> c.conkey
+                 AND (i.indkey::int2[])[0:cardinality(c.conkey) - 1] <@ c.conkey) AS indexed
+       FROM pg_constraint c
+      WHERE c.contype = 'f' AND c.connamespace = 'public'::regnamespace AND c.confdeltype IN ('c', 'n')
+      ORDER BY 1, 2`,
+  );
+  assert.ok(keys.some((key) => key.conname === 'fk_tasks_assignee_user_id'), 'the catalog query finds the deleting keys');
+  const failures: string[] = [];
+  const unindexedTables = new Set<string>();
+  for (const key of keys) {
+    if (key.indexed) continue;
+    unindexedTables.add(key.table_name);
+    if (UNINDEXED_DELETING_KEY_TABLES[key.table_name]) continue;
+    failures.push(
+      `${key.table_name}.${key.conname} (${key.columns.join(', ')}) deletes or clears rows but no index leads with its columns: ` +
+        `add one in the migration, or list the table with its reason in UNINDEXED_DELETING_KEY_TABLES`,
+    );
+  }
+  for (const [table, reason] of Object.entries(UNINDEXED_DELETING_KEY_TABLES)) {
+    if (!String(reason).trim()) failures.push(`${table} is listed without a reason`);
+    if (!unindexedTables.has(table)) failures.push(`${table} is listed in UNINDEXED_DELETING_KEY_TABLES but has no unindexed key: remove the entry`);
+  }
+  assert.deepEqual(failures, [], `\n  ${failures.join('\n  ')}`);
+}
+
 async function main() {
   await dataSource.initialize();
   try {
-    await testEveryReferenceColumnHasAKeyOrAReason();
-    console.log('  ok testEveryReferenceColumnHasAKeyOrAReason');
+    for (const test of [testEveryReferenceColumnHasAKeyOrAReason, testEveryDeletingKeyHasALeadingIndex]) {
+      await test();
+      console.log(`  ok ${test.name}`);
+    }
   } finally {
     await dataSource.destroy();
   }

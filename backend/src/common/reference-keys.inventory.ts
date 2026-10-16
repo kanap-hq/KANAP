@@ -4,7 +4,8 @@
  * of them has a foreign key (`common/migration-reference-keys.ts`, migrations 1854070000000,
  * 1854080000000, 1854090000000, 1854160000000 and earlier) or is listed here with the reason it
  * has none. `__tests__/reference-keys.inventory.integration.spec.ts` reads the database and fails
- * on a reference column that has neither, and on an entry here whose column is gone or keyed.
+ * on a reference column that has neither, and on an entry here whose column is gone or keyed. It
+ * also fails on a key that deletes or clears rows without an index leading with its columns.
  *
  * A new reference column gets a key in its migration: ON DELETE CASCADE for a row that means
  * nothing without the row it names, SET NULL for a nullable reference, RESTRICT when the delete
@@ -68,14 +69,15 @@ export const UNKEYED_REFERENCE_COLUMNS: Readonly<Record<string, string>> = {
     '(spend/item-delete-cleanup.ts, deleteItemTasks); projects and incidents are never deleted.',
   'integrated_document_bindings.source_entity_id':
     'Polymorphic (source_entity_type). Deleting an application, an interface or a request deletes its managed ' +
-    'documents (IntegratedDocumentsService.deleteForEntity); projects and incidents are never deleted.',
+    'documents (IntegratedDocumentsService.deleteForEntity); projects and incidents are never deleted. A document ' +
+    'whose source is gone anyway is released by the daily cleanup (knowledge/integrated-document-orphans.ts).',
   'tasks.owner_ids': 'List of users (jsonb). Deleting a user removes it from the lists (UsersDeleteService).',
   'tasks.viewer_ids': 'List of users (jsonb). Deleting a user removes it from the lists (UsersDeleteService).',
   'asset_external_links.candidate_asset_ids':
     'Match candidates (uuid[]) recomputed at every Netbox sync; the reader drops the ids of assets that are gone.',
   'allocation_rules.company_ids':
-    'List of companies (uuid[]). Known gap: the company delete check does not read it yet, and a manual default ' +
-    'allocation naming a deleted company can no longer be computed.',
+    'List of companies (uuid[]). A company named here cannot be deleted: the company delete check counts the ' +
+    'default allocation methods that spread over it (companies/company-usages.ts).',
 
   // Identifiers of other systems.
   'ai_api_keys.oauth_client_id': EXTERNAL,
@@ -116,6 +118,14 @@ export const UNKEYED_REFERENCE_COLUMNS: Readonly<Record<string, string>> = {
   'contract_capex_items.capex_item_id': DORMANT_CAPEX,
   'contract_capex_items.contract_id': DORMANT_CAPEX,
 };
+
+/**
+ * Tables whose foreign keys that delete or clear rows (ON DELETE CASCADE or SET NULL) may go
+ * without an index leading with the key's columns, each with the reason: a table that stays tiny
+ * whatever the tenant does. Every other such key has one (migration 1854170000000), so deleting the
+ * parent row does not read the whole child table.
+ */
+export const UNINDEXED_DELETING_KEY_TABLES: Readonly<Record<string, string>> = {};
 
 /**
  * Columns whose key comes with a migration of another change (1854150000000, portfolio contact
