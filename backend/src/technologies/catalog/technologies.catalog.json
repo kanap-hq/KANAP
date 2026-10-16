@@ -2424,6 +2424,7 @@
       "family": "database",
       "mode": "installed",
       "cpe_products": [
+        "a:oracle:database",
         "a:oracle:database_server"
       ],
       "source_url": "https://endoflife.date/oracle-database",

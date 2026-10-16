@@ -11,7 +11,8 @@
 //
 // Usage: node scripts/technologies/build-catalog.mjs [--out <file>] [--today YYYY-MM-DD]
 //        node scripts/technologies/build-catalog.mjs --refresh-cpe-versions [--out <file>]
-//        (recomputes `cpe_version` in the existing file with `cpeVersionOf`, without the network)
+//        (recomputes `cpe_version` in the existing file with `cpeVersionOf` and adds the `cpe`
+//        identifiers of PRODUCTS to `cpe_products`, without the network)
 // Reproducible: the same answers from the API give the same file (sorted keys, no timestamp
 // besides `source.retrieved_on`, the day passed with --today or the current day).
 
@@ -37,7 +38,7 @@ const ENDED_YEARS_KEPT = 4;
 const PRODUCTS = [
   // Databases
   { key: 'mssqlserver', slug: 'mssqlserver', name: 'Microsoft SQL Server', editor: 'Microsoft', family: 'database' },
-  { key: 'oracle-database', slug: 'oracle-database', name: 'Oracle Database', editor: 'Oracle', family: 'database', cpe: ['a:oracle:database_server'], cpeVersion: 'label' },
+  { key: 'oracle-database', slug: 'oracle-database', name: 'Oracle Database', editor: 'Oracle', family: 'database', cpe: ['a:oracle:database', 'a:oracle:database_server'], cpeVersion: 'label' },
   { key: 'postgresql', slug: 'postgresql', name: 'PostgreSQL', editor: 'PostgreSQL Global Development Group', family: 'database' },
   { key: 'mysql', slug: 'mysql', name: 'MySQL', editor: 'Oracle', family: 'database' },
   { key: 'mariadb', slug: 'mariadb', name: 'MariaDB', editor: 'MariaDB Foundation', family: 'database' },
@@ -224,12 +225,21 @@ async function fetchProduct(slug) {
   return (await response.json()).result;
 }
 
-/** `--refresh-cpe-versions`: the existing file with `cpe_version` recomputed, nothing fetched. */
+/**
+ * `--refresh-cpe-versions`: the existing file with `cpe_version` recomputed and the `cpe` of
+ * PRODUCTS added to `cpe_products` (the endoflife.date identifiers already in the file are kept),
+ * nothing fetched.
+ */
 function refreshCpeVersions(out) {
   const catalog = JSON.parse(readFileSync(out, 'utf8'));
   let changed = 0;
+  let added = 0;
   for (const product of catalog.products) {
     const entry = PRODUCTS.find((p) => p.key === product.key);
+    const cpe = new Set(product.cpe_products);
+    for (const extra of entry?.cpe ?? []) cpe.add(extra.toLowerCase());
+    added += cpe.size - product.cpe_products.length;
+    product.cpe_products = [...cpe].sort();
     for (const version of product.versions) {
       const next = cpeVersionOf(version.label, entry);
       if (next !== version.cpe_version) changed += 1;
@@ -237,7 +247,7 @@ function refreshCpeVersions(out) {
     }
   }
   writeFileSync(out, `${JSON.stringify(catalog, null, 2)}\n`);
-  process.stderr.write(`${changed} CPE versions changed in ${out}\n`);
+  process.stderr.write(`${changed} CPE versions changed, ${added} CPE products added in ${out}\n`);
 }
 
 async function main() {
