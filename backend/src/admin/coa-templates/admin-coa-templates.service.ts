@@ -10,6 +10,7 @@ import { denormalizeCsvRow } from '../../common/csv/csv-export.service';
 import { headerMismatchError } from '../../common/csv-sheet';
 import { CsvDecodeError, decodeCsv } from '../../common/csv-sheet/decode';
 import { ACCOUNT_NUMBER_MAX_DIGITS, ACCOUNT_NUMBER_RULE, parseAccountNumber, readAccountNumber } from '../../accounts/account-number';
+import { uploadedBytes } from '../../common/upload';
 
 /** The OPEX/CAPEX nature of a template account (`nature` column, optional, empty = both). */
 const NATURES = ['opex', 'capex'] as const;
@@ -306,9 +307,7 @@ export class AdminCoaTemplatesService {
   }
 
   async importCsv(id: string, file: Express.Multer.File, dryRun = true, userId?: string | null, opts?: { manager?: EntityManager }) {
-    if (!file) throw new BadRequestException('No file uploaded');
-    const buf = file.buffer ?? ((file as any).path ? require('fs').readFileSync((file as any).path) : undefined);
-    if (!buf) throw new BadRequestException('Empty upload');
+    const buf = uploadedBytes(file);
     let content: string;
     try {
       content = decodeCsv(buf).text;

@@ -24,6 +24,7 @@ import { CsvResolverService } from './csv-resolver.service';
 import { denormalizeCsvFormulaValue } from './csv-export.service';
 import { CsvJsonValidators } from './csv-json-validators';
 import { markdownWorkBudget } from '../markdown-worker';
+import { uploadedBytes } from '../upload';
 
 /**
  * Import options
@@ -244,16 +245,11 @@ export class CsvImportService {
     headerErrors: CsvImportError[];
     headerWarnings: CsvImportWarning[];
   }> {
-    const buf = file.buffer ?? (file as any).path;
-    if (!buf) {
-      throw new BadRequestException('No file uploaded');
-    }
+    const buf = uploadedBytes(file);
 
     let content: string;
     try {
-      content = decodeCsv(
-        typeof buf === 'string' ? require('fs').readFileSync(buf) : buf,
-      ).text;
+      content = decodeCsv(buf).text;
     } catch (err) {
       if (err instanceof CsvDecodeError) {
         throw new BadRequestException({ message: err.message, code: err.code });

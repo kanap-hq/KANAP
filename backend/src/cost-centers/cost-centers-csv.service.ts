@@ -1,5 +1,4 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import * as fs from 'fs';
 import { randomUUID } from 'node:crypto';
 import { isActiveAt, resolveLifecycleState, StatusState } from '../common/status';
 import {
@@ -30,6 +29,7 @@ import {
   StoredCostCenter,
   validateCostCenterGraph,
 } from './cost-centers.service';
+import { uploadedBytes } from '../common/upload';
 
 export const COST_CENTER_CSV_HEADERS = [
   'code', 'kind', 'name', 'parent_code', 'company_name', 'owner_email', 'description', 'status', 'disabled_at',
@@ -321,9 +321,7 @@ export class CostCentersCsvService {
     dateOrder?: CsvDateOrder,
     decimalMark?: DecimalMark,
   ): Promise<MasterDataFileRead> {
-    if (!file) throw new BadRequestException('No file uploaded');
-    const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
-    if (!buf) throw new BadRequestException('Empty upload');
+    const buf = uploadedBytes(file);
     return readMasterDataFile({
       file: buf as Buffer,
       fields: COST_CENTER_CSV_HEADERS,

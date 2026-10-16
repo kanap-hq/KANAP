@@ -10,7 +10,6 @@ import { AuditService } from '../audit/audit.service';
 import { parseExportPagination, parsePagination, type Sort } from '../common/pagination';
 import { textSortKey } from '../common/list-sort';
 import * as path from 'path';
-import * as fs from 'fs';
 import { deriveStatusFromDisabledAt, resolveLifecycleState } from '../common/status';
 import { applyStatusFilter, extractStatusFilterFromAgModel } from '../common/status-filter';
 import { ContractUpsertDto } from './dto/contract.dto';
@@ -23,7 +22,7 @@ import { validate as isUuid } from 'uuid';
 import { ContractContactsService } from './contract-contacts.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { validateUploadedFile } from '../common/upload-validation';
-import { fixMulterFilename } from '../common/upload';
+import { fixMulterFilename, uploadedBytes } from '../common/upload';
 import {
   buildQuickSearchConditions,
   compileAgFilterCondition,
@@ -974,8 +973,7 @@ export class ContractsService {
       now.getUTCFullYear().toString(), String(now.getUTCMonth() + 1).padStart(2, '0'),
       `${id}_${rand}${ext}`,
     ].join('/');
-    const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : null);
-    if (!buf) throw new BadRequestException('Empty upload');
+    const buf = uploadedBytes(file);
     const validated = validateUploadedFile({
       originalName: decodedName,
       mimeType: file.mimetype,
@@ -1114,9 +1112,7 @@ export class ContractsService {
   ) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(Contract);
-    if (!file) throw new BadRequestException('No file uploaded');
-    const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
-    if (!buf) throw new BadRequestException('Empty upload');
+    const buf = uploadedBytes(file);
     const readLanguage = language ?? 'en';
     const read = await readMasterDataFile({
       file: buf as Buffer,

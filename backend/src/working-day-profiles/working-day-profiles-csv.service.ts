@@ -1,6 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { compareText } from '../common/list-sort';
-import * as fs from 'fs';
 import { resolveLifecycleState, StatusState } from '../common/status';
 import {
   cellOf,
@@ -35,6 +34,7 @@ import {
   WorkingDayProfilesService,
   WorkingDayProfileValues,
 } from './working-day-profiles.service';
+import { uploadedBytes } from '../common/upload';
 
 export const CALENDAR_MONTH_HEADERS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'] as const;
 export const WORKING_DAY_PROFILE_CSV_HEADERS = [
@@ -380,9 +380,7 @@ export class WorkingDayProfilesCsvService {
     dateOrder?: CsvDateOrder,
     decimalMark?: DecimalMark,
   ): Promise<MasterDataFileRead> {
-    if (!file) throw new BadRequestException('No file uploaded');
-    const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
-    if (!buf) throw new BadRequestException('Empty upload');
+    const buf = uploadedBytes(file);
     return readMasterDataFile({
       file: buf as Buffer,
       fields: WORKING_DAY_PROFILE_CSV_HEADERS,
