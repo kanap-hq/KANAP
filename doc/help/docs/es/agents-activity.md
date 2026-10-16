@@ -35,7 +35,7 @@ Cada entrada es una cosa que ocurrió y lleva suficiente contexto para entenderl
 - Un **chip de tipo de acción** (cuando el evento trata de un tipo concreto de trabajo sobre el ticket): **Nota interna**, **Respuesta al solicitante**, **Actualización de clasificación**, **Actualización de estado**, **Asignación** o **Participantes**.
 - Un **punto de estado** con una etiqueta en lenguaje claro (por ejemplo «Esperando aprobación», «Hecho», «Rechazado», «Descartado», «Requiere atención») que describe en qué situación se encuentra ese elemento.
 - El **nombre del agente** y el **ticket** al que se refiere (mostrado como `#N`).
-- Un **título de evento**: por ejemplo, «Propuesta creada» o «Comprobación de tickets — 3 tickets nuevos».
+- Un **título de evento**: por ejemplo, «Propuesta creada» o «Comprobación de tickets: 3 tickets nuevos».
 - Una **vista previa de una línea** del contenido (la primera línea de un mensaje redactado, un cambio de campo o el motivo), de modo que a menudo no necesita expandir nada.
 - Una **marca de tiempo**, además de **Mostrar detalles** y, cuando hay una comprobación detrás del evento, **Traza**.
 
@@ -59,10 +59,10 @@ No necesita memorizarlos: los títulos de los eventos están escritos en lenguaj
 
 Una entrada de comprobación le dice qué encontró el agente, en su propio título, sin que tenga que expandir nada:
 
-- **Comprobación de tickets — sin tickets nuevos**: miró y no había nada que hacer. Así se ve un agente sano y tranquilo.
-- **Comprobación de tickets — 3 tickets nuevos**: se recogieron tres tickets para trabajar en ellos.
-- **Comprobación de tickets — 3 tickets nuevos, 2 ya vistos, 1 error**: lo mismo, más tickets que ya había gestionado y un problema con el que se topó.
-- **Comprobación de tickets — Sin vigilancia** / **En pausa** / **Omitida** / **Fallida**: la comprobación no hizo su trabajo habitual, y el motivo sigue a continuación cuando lo hay.
+- **Comprobación de tickets: sin tickets nuevos**: miró y no había nada que hacer. Así se ve un agente sano y tranquilo.
+- **Comprobación de tickets: 3 tickets nuevos**: se recogieron tres tickets para trabajar en ellos.
+- **Comprobación de tickets: 3 tickets nuevos, 2 ya vistos, 1 error**: lo mismo, más tickets que ya había gestionado y un problema con el que se topó.
+- **Comprobación de tickets: Sin vigilancia** / **En pausa** / **Omitida** / **Fallida**: la comprobación no hizo su trabajo habitual, y el motivo sigue a continuación cuando lo hay.
 
 **Mostrar detalles** desglosa esa misma comprobación en cuatro cifras (**Vistos**, **En cola**, **Ya vistos**, **Procesados**) más el motivo y cualquier mensaje de error. Esa es la forma honesta de responder a «¿por qué el agente no recogió el ticket #482?»: si **Vistos** es alto pero **En cola** es cero, el ticket se miró y su segmentación lo descartó; si **Vistos** es cero, el agente nunca llegó a verlo.
 
