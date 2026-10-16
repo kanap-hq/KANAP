@@ -49,6 +49,7 @@ import { Link as RouterLink } from 'react-router-dom';
 import api from '../../../api';
 import { KanapDialog, StatusDot } from '../../../components/design';
 import LightModeIsland from '../../../components/LightModeIsland';
+import DateEUField from '../../../components/fields/DateEUField';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { useLocale } from '../../../i18n/useLocale';
@@ -2210,13 +2211,11 @@ export default function RoadmapGenerator({ onApplied }: Props) {
             {t('planning.roadmap.title')}
           </Typography>
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} flexWrap="wrap">
-            <TextField
+            <DateEUField
               label={t('planning.roadmap.fields.startDate')}
-              type="date"
-              size="small"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
+              valueYmd={startDate}
+              onChangeYmd={setStartDate}
+              required
               sx={{ minWidth: 180 }}
             />
 
@@ -3529,14 +3528,11 @@ export default function RoadmapGenerator({ onApplied }: Props) {
             <DialogContentText>
               {t('planning.roadmap.pinDialog.description', { project: pinDialogProjectName || t('planning.roadmap.pinDialog.thisProject') })}
             </DialogContentText>
-            <TextField
+            <DateEUField
               label={t('planning.roadmap.pinDialog.startWeek')}
-              type="date"
-              size="small"
-              value={pinDialogWeek}
-              onChange={(event) => setPinDialogWeek(event.target.value)}
-              InputLabelProps={{ shrink: true }}
-              fullWidth
+              valueYmd={pinDialogWeek}
+              onChangeYmd={setPinDialogWeek}
+              required
             />
           </Stack>
         </DialogContent>
