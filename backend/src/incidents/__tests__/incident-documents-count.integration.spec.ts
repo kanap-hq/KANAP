@@ -2,6 +2,9 @@ import 'dotenv/config';
 // @database-spec: the database comes through round-inputs.fixtures (data-source).
 import { QueryRunner } from 'typeorm';
 import { Incident } from '../incident.entity';
+import { ForbiddenException } from '@nestjs/common';
+import { IncidentsController } from '../incidents.controller';
+import { IncidentRelationsService } from '../services/incident-relations.service';
 import { IncidentsService } from '../services/incidents.service';
 import { assert, inRolledBackTransaction, runSpecs, seedTenant, setTenant } from '../../spend/__tests__/round-inputs.fixtures';
 
@@ -57,22 +60,43 @@ async function testReviewIsNotCounted() {
   });
 }
 
-// The Relations tab badge takes the incident's technologies (`counts.technologies`, lot T2b).
-async function testTechnologiesCounted() {
+// The incident's technologies (lot T2b) belong to the infrastructure: a caller who cannot read it
+// gets `counts.technologies` null, a 403 on their list and on their replacement, and no link is
+// removed. A reader of the infrastructure gets the count and the list.
+async function testTechnologiesNeedTheInfrastructure() {
   await inRolledBackTransaction(async (runner) => {
     const s = await seed(runner, 'incdoc-tech');
-    const opts = { manager: runner.manager, tenantId: s.tenantId };
-    assert.equal((await service(runner).get(s.incidentId, opts)).counts.technologies, 0);
     const [{ id: techId }] = await runner.query(
       `INSERT INTO technologies (tenant_id, item_number, name, family) VALUES ($1, 1, 'SQL Server', 'database') RETURNING id`,
       [s.tenantId],
     );
     await runner.query(`INSERT INTO incident_technologies (tenant_id, incident_id, technology_id) VALUES ($1, $2, $3)`, [s.tenantId, s.incidentId, techId]);
-    assert.equal((await service(runner).get(s.incidentId, opts)).counts.technologies, 1);
+    const relations = new IncidentRelationsService(undefined as any, { log: async () => undefined } as any);
+    const args: any[] = Array.from({ length: 12 }, () => undefined);
+    args[0] = service(runner);
+    args[2] = relations;
+    const controller = new (IncidentsController as any)(...args) as IncidentsController;
+    const ctx = (permissions: Record<string, string>): any => ({ manager: runner.manager, tenantId: s.tenantId, userId: null, isAdmin: false, permissions });
+
+    const incidentsOnly = ctx({ incidents: 'contributor' });
+    assert.equal(((await controller.get(s.incidentId, incidentsOnly)) as any).counts.technologies, null);
+    for (const call of [
+      () => controller.listTechnologies(s.incidentId, incidentsOnly),
+      () => controller.bulkReplaceTechnologies(s.incidentId, { technology_ids: [] }, incidentsOnly),
+    ]) {
+      const refused = await call().then(() => null, (err) => err);
+      assert.ok(refused instanceof ForbiddenException);
+    }
+    const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM incident_technologies WHERE tenant_id = $1 AND incident_id = $2`, [s.tenantId, s.incidentId]);
+    assert.equal(n, 1, 'no link removed');
+
+    const reader = ctx({ incidents: 'contributor', infrastructure: 'reader' });
+    assert.equal(((await controller.get(s.incidentId, reader)) as any).counts.technologies, 1);
+    assert.deepEqual((await controller.listTechnologies(s.incidentId, reader)).map((row) => row.reference), ['TEC-1']);
   });
 }
 
 void runSpecs('incident-documents-count', [
   ['the review is not counted among the incident documents', testReviewIsNotCounted],
-  ['the technologies are counted for the Relations tab', testTechnologiesCounted],
+  ['the technologies need the right to read the infrastructure', testTechnologiesNeedTheInfrastructure],
 ]);

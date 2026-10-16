@@ -1,6 +1,6 @@
 import { languageOf, timeZoneOf } from '../common/csv-sheet';
 import {
-  Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, Res,
+  Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, Req, Res,
   UploadedFile, UseGuards, UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -23,6 +23,7 @@ import { RATE_LIMITS } from '../common/rate-limit';
 import { RateLimitGuard } from '../common/rate-limit.guard';
 import { StorageService } from '../common/storage/storage.service';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
+import { canReadResource } from '../common/record-usages';
 import { resolveToUuid } from '../common/resolve-item-id';
 import { IntegratedDocumentsService } from '../knowledge/integrated-documents.service';
 import { KnowledgeService } from '../knowledge/knowledge.service';
@@ -72,7 +73,7 @@ export class IncidentsController {
   }
 
   private opts(ctx: TenantRequest) {
-    return { manager: ctx.manager, tenantId: ctx.tenantId, viewer: incidentViewerFromContext(ctx) };
+    return { manager: ctx.manager, tenantId: ctx.tenantId, viewer: incidentViewerFromContext(ctx), technologies: canReadResource(ctx, 'infrastructure') };
   }
 
   private async visibleId(idOrRef: string, ctx: TenantRequest): Promise<string> {
@@ -283,6 +284,8 @@ export class IncidentsController {
   @RequireLevel('incidents', 'reader')
   @Get(':id/technologies')
   async listTechnologies(@Param('id') idOrRef: string, @Tenant() ctx: TenantRequest) {
+    // The technologies are the infrastructure's: neither listed nor replaced without the right to read it.
+    if (!canReadResource(ctx, 'infrastructure')) throw new ForbiddenException('You cannot read technologies.');
     const id = await this.visibleId(idOrRef, ctx);
     return this.relations.listTechnologies(id, this.opts(ctx));
   }
@@ -295,6 +298,8 @@ export class IncidentsController {
     @Body() body: { technology_ids?: string[] },
     @Tenant() ctx: TenantRequest,
   ) {
+    // A set the caller cannot read is never replaced (an empty list would remove every link).
+    if (!canReadResource(ctx, 'infrastructure')) throw new ForbiddenException('You cannot read technologies.');
     const id = await this.visibleId(idOrRef, ctx);
     return this.relations.bulkReplaceTechnologies(id, body?.technology_ids ?? [], ctx.userId || null, this.opts(ctx));
   }

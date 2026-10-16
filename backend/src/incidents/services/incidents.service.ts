@@ -438,8 +438,8 @@ export class IncidentsService extends IncidentsBaseService {
         entries: entry_count,
         assets: incident.asset_count,
         applications: incident.application_count,
-        // The Relations tab shows them to a reader of the infrastructure only (the client adds them).
-        technologies: technology_count,
+        // Counted for a reader of the infrastructure only, as the Relations tab shows them to that reader.
+        technologies: opts?.technologies ? technology_count : null,
         tasks: incident.task_count,
         documents: document_count,
         attachments: attachment_count,
@@ -509,7 +509,7 @@ export class IncidentsService extends IncidentsBaseService {
       { table: 'incidents', recordId: saved.id, action: 'create', before: null, after: saved, userId },
       { manager: mg },
     );
-    return this.get(saved.id, { manager: mg, tenantId, viewer: { userId, isAdmin: true } });
+    return this.get(saved.id, { manager: mg, tenantId, viewer: { userId, isAdmin: true }, technologies: opts?.technologies });
   }
 
   /**
@@ -595,7 +595,7 @@ export class IncidentsService extends IncidentsBaseService {
       { table: 'incidents', recordId: saved.id, action: 'update', before, after: saved, userId },
       { manager: mg },
     );
-    return this.get(saved.id, { manager: mg, tenantId, viewer: { userId, isAdmin: true } });
+    return this.get(saved.id, { manager: mg, tenantId, viewer: { userId, isAdmin: true }, technologies: opts?.technologies });
   }
 
   /**
@@ -626,7 +626,7 @@ export class IncidentsService extends IncidentsBaseService {
       { table: 'incidents', recordId: saved.id, action: 'update', before, after: saved, userId },
       { manager: mg },
     );
-    return this.get(saved.id, { manager: mg, tenantId, viewer: opts?.viewer ?? { userId, isAdmin: true } });
+    return this.get(saved.id, { manager: mg, tenantId, viewer: opts?.viewer ?? { userId, isAdmin: true }, technologies: opts?.technologies });
   }
 
   /**
@@ -658,7 +658,7 @@ export class IncidentsService extends IncidentsBaseService {
       { table: 'incidents', recordId: saved.id, action: 'update', before, after: saved, userId },
       { manager: mg },
     );
-    return this.get(saved.id, { manager: mg, tenantId, viewer: opts?.viewer ?? { userId, isAdmin: true } });
+    return this.get(saved.id, { manager: mg, tenantId, viewer: opts?.viewer ?? { userId, isAdmin: true }, technologies: opts?.technologies });
   }
 
   /**
@@ -676,7 +676,7 @@ export class IncidentsService extends IncidentsBaseService {
     // with the review mutations under the incident row lock (§3.3).
     const incident = await this.lockVisibleIncident(mg, id, tenantId, opts?.viewer);
     if (incident.confidential === confidential) {
-      return this.get(incident.id, { manager: mg, tenantId, viewer: opts?.viewer ?? { userId, isAdmin: true } });
+      return this.get(incident.id, { manager: mg, tenantId, viewer: opts?.viewer ?? { userId, isAdmin: true }, technologies: opts?.technologies });
     }
     if (incident.confidential && !confidential && !opts?.viewer?.isAdmin) {
       throw new ForbiddenException(CONFIDENTIAL_LIFT_MESSAGE);
@@ -700,7 +700,7 @@ export class IncidentsService extends IncidentsBaseService {
       { manager: mg },
     );
     await this.refreshLinkedTaskSearchIndex(mg, tenantId, saved.id);
-    return this.get(saved.id, { manager: mg, tenantId, viewer: opts?.viewer ?? { userId, isAdmin: true } });
+    return this.get(saved.id, { manager: mg, tenantId, viewer: opts?.viewer ?? { userId, isAdmin: true }, technologies: opts?.technologies });
   }
 
   // =========================================================================
