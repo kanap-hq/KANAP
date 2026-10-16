@@ -448,7 +448,7 @@ Aus der Anwendungsliste:
 
 ### Import-Workflow
 
-1. **Datei vorbereiten**: Verwenden Sie UTF-8-Kodierung mit Semikolon (`;`) als Trennzeichen. Eine von Excel als einfache CSV gespeicherte Datei (Windows-1252) wird ebenfalls importiert. Laden Sie eine Vorlage herunter, um korrekte Spaltenköpfe sicherzustellen.
+1. **Datei vorbereiten**: Speichern Sie sie als UTF-8. Kommas und Semikolons funktionieren beide, ebenso eine von Excel als einfache CSV gespeicherte Datei (Windows-1252). Laden Sie eine Vorlage herunter, um korrekte Spaltenköpfe sicherzustellen. Trennzeichen, Beträge, Datumsangaben und Ja oder Nein jeder Sprache stehen unter [CSV-Dateien](csv-files.md).
 
 2. **Importeinstellungen wählen**:
    - **Modus**:
@@ -477,7 +477,7 @@ Aus der Anwendungsliste:
 | `editor` | Software-Herausgeber | Nein | Freitext (z. B. Microsoft, SAP) |
 | `criticality` | Geschäftskritikalität | Nein | Akzeptiert Code oder Bezeichnung aus den Einstellungen; `__CLEAR__` löscht den Wert |
 | `lifecycle` | Aktueller Status | Nein | Akzeptiert Code oder Bezeichnung aus den Einstellungen |
-| `is_suite` | Kann Unteranwendungen haben | Nein | `true` oder `false` |
+| `is_suite` | Kann Unteranwendungen haben | Nein | `ja` oder `nein` |
 | `status` | Aktiviert/deaktiviert | Nein | `enabled` oder `disabled` |
 
 **Versionsfelder**:
@@ -494,8 +494,8 @@ Aus der Anwendungsliste:
 | CSV-Spalte | Beschreibung | Hinweise |
 |------------|-------------|-------|
 | `access_methods` | Wie Benutzer zugreifen | Komma-getrennte Codes oder Bezeichnungen aus den Einstellungen (z. B. `web,mobile,vdi`) |
-| `external_facing` | Aus dem Internet zugänglich | `true` oder `false` |
-| `etl_enabled` | Datenintegration | `true` oder `false` |
+| `external_facing` | Aus dem Internet zugänglich | `ja` oder `nein` |
+| `etl_enabled` | Datenintegration | `ja` oder `nein` |
 | `support_notes` | Support-Informationen | Freitext |
 | `licensing` | Lizenzbedingungen | Freitext |
 | `notes` | Interne Notizen | Freitext |
@@ -506,7 +506,7 @@ Aus der Anwendungsliste:
 |------------|-------------|-------|
 | `data_class` | Datenklassifizierung | Akzeptiert Code oder Bezeichnung aus den Einstellungen |
 | `last_dr_test` | Datum des letzten DR-Tests | Datumsformat: YYYY-MM-DD |
-| `contains_pii` | Speichert personenbezogene Daten | `true` oder `false` |
+| `contains_pii` | Speichert personenbezogene Daten | `ja` oder `nein` |
 | `data_residency` | Datenspeicherländer | Nur Export (ISO-Codes) |
 
 **Klassifizierungsfelder**:
@@ -573,7 +573,7 @@ Wenn Sie die Spalte `id` mit einer gültigen UUID einschließen, verwendet der A
 **Fehler „Datei ist nicht richtig formatiert"**: Dies weist normalerweise auf ein Kodierungsproblem hin. Stellen Sie sicher, dass Ihre CSV als **UTF-8** gespeichert ist:
 
 - **In LibreOffice**: Wählen Sie beim Öffnen einer CSV `UTF-8` im Zeichensatz-Dropdown (nicht „Japanese (Macintosh)" oder andere Kodierungen). Beim Speichern aktivieren Sie „Filtereinstellungen bearbeiten" und wählen Sie UTF-8.
-- **In Excel**: Speichern unter > CSV UTF-8 (Komma-getrennt), dann in einem Texteditor öffnen, um Kommas in Semikolons zu ändern.
+- **In Excel**: Speichern unter > CSV UTF-8 (Komma-getrennt).
 - **Allgemeiner Tipp**: Wenn Sie verstümmelte Zeichen (`?¿`, `ï»¿`) am Anfang Ihrer Datei sehen, ist die Kodierung falsch.
 
 ### Beispiel-CSV

@@ -1,3 +1,4 @@
+import type { CsvLanguage } from '../../common/csv-sheet';
 import { ApplicationsCsvService } from '../applications-csv.service';
 import { linkedLineOf } from '../../spend/budget-nature';
 import { copyClassification } from './application-classification';
@@ -462,9 +463,9 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
   }
 
   // CSV Export/Import
-  async exportCsv(scope: 'template' | 'data' = 'data', opts?: ServiceOpts) {
+  async exportCsv(scope: 'template' | 'data' = 'data', opts?: ServiceOpts & { language?: CsvLanguage }) {
     const manager = this.getManager(opts);
-    const result = await this.csvService.export({ manager, tenantId: await this.getCurrentTenantId(manager), scope });
+    const result = await this.csvService.export({ manager, tenantId: await this.getCurrentTenantId(manager), scope, language: opts?.language ?? 'en' });
     return result.content;
   }
 

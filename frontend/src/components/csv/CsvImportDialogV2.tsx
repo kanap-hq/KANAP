@@ -17,6 +17,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import DownloadIcon from '@mui/icons-material/Download';
 import { useTranslation } from 'react-i18next';
+import { screenLanguage } from './readings';
 import api from '../../api';
 import { useCsvImport } from './useCsvImport';
 import { csvRequestErrorMessage } from './csvRequestError';
@@ -42,7 +43,7 @@ export default function CsvImportDialogV2({
   onImported,
   params,
 }: CsvImportDialogV2Props) {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
   const {
     file,
     phase,
@@ -126,7 +127,8 @@ export default function CsvImportDialogV2({
   const downloadTemplate = async () => {
     setError(null);
     try {
-      const queryParams = { ...(params ?? {}), scope: 'template' };
+      // The template follows the screen, as the export does.
+      const queryParams = { ...(params ?? {}), scope: 'template', language: screenLanguage(i18n.resolvedLanguage || i18n.language) };
       const res = await api.get(`${endpoint}/export`, { params: queryParams, responseType: 'blob' });
       const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8' });
       const url = window.URL.createObjectURL(blob);
@@ -156,7 +158,7 @@ export default function CsvImportDialogV2({
         {phase === 'upload' && (
           <>
             <Typography variant="body2" sx={{ mb: 2 }}>
-              {t('csv.uploadDescriptionShort')}
+              {t('csv.uploadDescriptionFlexible')}
             </Typography>
 
             <Button

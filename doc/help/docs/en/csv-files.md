@@ -10,14 +10,17 @@ Every master data page has **Export CSV** and **Import CSV** in its toolbar, and
 
 **Workbooks and other files.** An import reads CSV text only. An Excel workbook (`.xlsx`, `.xls`) or an OpenDocument spreadsheet (`.ods`) is refused before any column is read, with a message that says how to save it as CSV. In Excel: **File › Save As › CSV UTF-8 (Comma delimited)**. In LibreOffice Calc: **File › Save As › Text CSV**. Any other file that is not text is refused the same way.
 
-**Amounts and dates follow the screen language** on export, and an import reads both forms:
+**Amounts, dates and yes or no follow the screen language** on export, and an import reads every form:
 
-| Language | Separator | Amounts | Dates |
-|---|---|---|---|
-| English | `,` | `12280.50` | `2027-03-01` |
-| French, Spanish | `;` | `12280,50` | `01/03/2027` |
-| German | `;` | `12280,50` | `01.03.2027` |
+| Language | Separator | Amounts | Dates | Yes, no |
+|---|---|---|---|---|
+| English | `,` | `12280.50` | `2027-03-01` | `yes`, `no` |
+| French | `;` | `12280,50` | `01/03/2027` | `oui`, `non` |
+| Spanish | `;` | `12280,50` | `01/03/2027` | `sí`, `no` |
+| German | `;` | `12280,50` | `01.03.2027` | `ja`, `nein` |
 
 A date the file cannot settle on its own, such as `01/03/2027`, is read in the order of the language the screen is shown in: day first in French, German and Spanish, month first in English. The check says how it read the file, with a button to change the reading. A date with a day above 12 settles the question on its own, and the file carries no record of the language it was exported in.
+
+An import reads yes or no in any of these languages, and the `true`, `false`, `1` and `0` of older files. The files of applications, assets, incidents, projects, requests and tasks follow the same table.
 
 **Size.** A file holds up to 20,000 rows.
