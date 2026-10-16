@@ -25,9 +25,9 @@ Naviguez vers **Données de référence > Départements** pour voir votre liste 
 La grille des départements vous offre une vue d'ensemble de tous les départements avec leur effectif pour une année donnée.
 
 **Colonnes par défaut** :
-- **Nom** : Nom du département — cliquez pour ouvrir l'onglet Vue d'ensemble de l'espace de travail
-- **Société** : Société parente — cliquez pour ouvrir l'onglet Vue d'ensemble de l'espace de travail
-- **Effectif (Année)** : Nombre d'employés pour l'année sélectionnée — cliquez pour accéder directement à l'onglet Détails pour modification
+- **Nom** : Nom du département ; cliquez pour ouvrir l'onglet Vue d'ensemble de l'espace de travail
+- **Société** : Société parente ; cliquez pour ouvrir l'onglet Vue d'ensemble de l'espace de travail
+- **Effectif (Année)** : Nombre d'employés pour l'année sélectionnée ; cliquez pour accéder directement à l'onglet Détails pour modification
 
 **Colonnes supplémentaires** (via le sélecteur de colonnes) :
 - **Statut** : Activé ou Désactivé
@@ -126,6 +126,6 @@ Les colonnes :
 
 - **Reproduisez votre structure organisationnelle** : Reflétez la hiérarchie des départements de votre système RH pour plus de cohérence.
 - **Mettez à jour l'effectif annuellement** : Programmez un rappel pour rafraîchir les métriques des départements lors de la planification budgétaire.
-- **Utilisez pour les ventilations** : L'effectif des départements alimente les calculs de ventilation des coûts — gardez-le précis.
+- **Utilisez pour les ventilations** : L'effectif des départements alimente les calculs de ventilation des coûts : gardez-le précis.
 - **Désactivez plutôt que supprimer** : Lorsque les départements sont réorganisés, désactivez les anciens plutôt que de les supprimer pour préserver les données historiques.
 - **Exploitez les liens profonds** : Cliquez directement sur le chiffre d'effectif depuis la liste pour accéder à l'onglet Détails et modifier les métriques sans clic supplémentaire.

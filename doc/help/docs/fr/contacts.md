@@ -1,6 +1,6 @@
 # Contacts
 
-Les contacts documentent les personnes avec lesquelles vous travaillez — responsables de compte fournisseur, ingénieurs support, consultants et autres parties prenantes externes. Liez les contacts aux fournisseurs pour constituer un répertoire de contacts fournisseurs, et référencez-les depuis les applications et les sites pour les informations de support.
+Les contacts documentent les personnes avec lesquelles vous travaillez : responsables de compte fournisseur, ingénieurs support, consultants et autres parties prenantes externes. Liez les contacts aux fournisseurs pour constituer un répertoire de contacts fournisseurs, et référencez-les depuis les applications et les sites pour les informations de support.
 
 ## Premiers pas
 
@@ -127,7 +127,7 @@ Gérez les contacts en masse via CSV.
 
 **Notes** :
 - Utilisez l'**encodage UTF-8** et les **points-virgules** comme séparateurs. Un fichier enregistré par Excel en CSV simple (Windows-1252) est accepté aussi
-- Le fournisseur est mis en correspondance par nom — assurez-vous que le fournisseur existe avant d'importer
+- Le fournisseur est mis en correspondance par nom : assurez-vous que le fournisseur existe avant d'importer
 
 ---
 
@@ -136,5 +136,5 @@ Gérez les contacts en masse via CSV.
 - **Définissez toujours un fournisseur** : Lier les contacts aux fournisseurs les rend plus faciles à trouver et à gérer.
 - **Définissez le type de contact** : Une fois qu'un fournisseur est lié, choisissez si le contact est Commercial, Technique, Support ou Autre. Cela aide lors de la navigation des contacts depuis l'espace de travail du fournisseur.
 - **Utilisez des noms cohérents** : Saisissez les noms dans un format cohérent (par ex., toujours « Prénom Nom »).
-- **Marquez les contacts inactifs** : Lorsqu'une personne quitte un vendeur, marquez-la comme inactive plutôt que de la supprimer — cela préserve la piste d'audit.
+- **Marquez les contacts inactifs** : Lorsqu'une personne quitte un vendeur, marquez-la comme inactive plutôt que de la supprimer : cela préserve la piste d'audit.
 - **Incluez les intitulés de poste** : Les intitulés de poste aident à identifier le bon contact selon les besoins (vente vs. support vs. gestion de compte).

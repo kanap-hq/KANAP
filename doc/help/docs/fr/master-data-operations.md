@@ -18,7 +18,7 @@ Les données de référence n'ont pas d'entrée Administration propre.
 
 ## Geler les données de référence
 
-Utilisez cet outil pour verrouiller ou déverrouiller les métriques des sociétés et départements pour une année spécifique. Le gel empêche les modifications accidentelles après que les données ont été finalisées — utile lors de la clôture de fin d'année, pendant les audits, ou avant de lancer le cycle budgétaire de l'année suivante.
+Utilisez cet outil pour verrouiller ou déverrouiller les métriques des sociétés et départements pour une année spécifique. Le gel empêche les modifications accidentelles après que les données ont été finalisées. C'est utile lors de la clôture de fin d'année, pendant les audits, ou avant de lancer le cycle budgétaire de l'année suivante.
 
 ### Comment ça fonctionne
 
@@ -28,8 +28,8 @@ Utilisez cet outil pour verrouiller ou déverrouiller les métriques des sociét
 
 La page affiche une carte de statut pour chaque périmètre :
 
-- **Gelé** (rouge) — les données sont en lecture seule pour cette année ; la carte indique qui a gelé et quand
-- **Modifiable** — les données peuvent encore être modifiées
+- **Gelé** (rouge) : les données sont en lecture seule pour cette année ; la carte indique qui a gelé et quand
+- **Modifiable** : les données peuvent encore être modifiées
 
 ### Ce que le gel affecte
 
@@ -60,7 +60,7 @@ Copiez les métriques des sociétés et départements d'un exercice fiscal à un
 1. Sélectionnez une **Année source** (d'où lire les valeurs)
 2. Sélectionnez les **Sources de données** : Sociétés, Départements, ou les deux
 3. Sélectionnez une **Année de destination** (où écrire les valeurs)
-4. Si Sociétés est sélectionné, choisissez quelles **Métriques de société** copier — toute combinaison d'Effectif, Utilisateurs IT et Chiffre d'affaires
+4. Si Sociétés est sélectionné, choisissez quelles **Métriques de société** copier : toute combinaison d'Effectif, Utilisateurs IT et Chiffre d'affaires
 5. Cliquez sur **Essai à blanc** pour générer un aperçu
 6. Examinez le tableau d'aperçu
 7. Cliquez sur **Copier les données** pour appliquer les modifications
@@ -74,7 +74,7 @@ Copiez les métriques des sociétés et départements d'un exercice fiscal à un
 | **Métrique** | Effectif, Utilisateurs IT ou Chiffre d'affaires |
 | **Valeur source** | La valeur de l'année source |
 | **Destination actuelle** | La valeur existante dans l'année de destination (le cas échéant) |
-| **Nouvelle valeur** | La valeur qui sera écrite — affichée en gras |
+| **Nouvelle valeur** | La valeur qui sera écrite, affichée en gras |
 | **Statut** | « Prêt à copier » ou la raison du saut |
 
 Les lignes sautées apparaissent dans une couleur d'avertissement. Raisons de saut courantes :
@@ -87,10 +87,10 @@ Les lignes sautées apparaissent dans une couleur d'avertissement. Raisons de sa
 
 Sous la grille, quatre cartes récapitulatives vous donnent un comptage rapide :
 
-- **Total des lignes** — tout ce que l'opération a évalué
-- **Prêtes à copier** — lignes qui seront écrites
-- **Sautées** — lignes exclues (avec raisons visibles dans le tableau)
-- **Erreurs** — lignes qui ont échoué pendant la copie effective
+- **Total des lignes** : tout ce que l'opération a évalué
+- **Prêtes à copier** : lignes qui seront écrites
+- **Sautées** : lignes exclues (avec raisons visibles dans le tableau)
+- **Erreurs** : lignes qui ont échoué pendant la copie effective
 
 ### Protection des données gelées
 
@@ -186,8 +186,8 @@ Oui. Le sélecteur d'année couvre une plage de l'année dernière à cinq ans �
 
 ## Conseils
 
-- **Toujours faire un essai à blanc d'abord** — examinez le tableau d'aperçu avant de valider pour éviter les écrasements accidentels
-- **Gelez après approbation** — verrouillez les données dès que les budgets sont signés pour éviter la dérive
-- **Dégelez temporairement** — faites votre correction, puis regelez immédiatement
-- **Copiez tôt** — commencez le prochain cycle de planification en copiant les métriques de l'année en cours vers l'avant, puis ajustez pour les changements attendus
-- **Vérifiez vos autorisations** — si un périmètre est grisé, demandez à un administrateur de vous accorder le bon niveau d'accès
+- **Toujours faire un essai à blanc d'abord** : examinez le tableau d'aperçu avant de valider pour éviter les écrasements accidentels
+- **Gelez après approbation** : verrouillez les données dès que les budgets sont signés pour éviter la dérive
+- **Dégelez temporairement** : faites votre correction, puis regelez immédiatement
+- **Copiez tôt** : commencez le prochain cycle de planification en copiant les métriques de l'année en cours vers l'avant, puis ajustez pour les changements attendus
+- **Vérifiez vos autorisations** : si un périmètre est grisé, demandez à un administrateur de vous accorder le bon niveau d'accès

@@ -477,11 +477,11 @@ Trois modes d'export sont disponibles :
 
 | Option | Description |
 |--------|-------------|
-| **Export complet** | Tous les champs exportables -- à utiliser pour le reporting et l'extraction complète de données |
-| **Enrichissement de données** | Tous les champs importables -- correspond au format du modèle d'import, idéal pour l'édition aller-retour (export, modification, ré-import) |
+| **Export complet** | Tous les champs exportables, à utiliser pour le reporting et l'extraction complète de données |
+| **Enrichissement de données** | Tous les champs importables. Correspond au format du modèle d'import, idéal pour l'édition aller-retour (export, modification, ré-import) |
 | **Sélection personnalisée** | Choisir les champs spécifiques à inclure dans votre export |
 
-**Téléchargement du modèle** (depuis la boîte de dialogue d'import) : Télécharge un CSV vierge avec tous les en-têtes de champs importables -- utilisez-le pour préparer des fichiers d'import avec la bonne structure.
+**Téléchargement du modèle** (depuis la boîte de dialogue d'import) : Télécharge un CSV vierge avec tous les en-têtes de champs importables. Utilisez-le pour préparer des fichiers d'import avec la bonne structure.
 
 ### Processus d'import
 
@@ -489,8 +489,8 @@ Trois modes d'export sont disponibles :
 
 2. **Choisissez les paramètres d'import** :
    - **Mode** :
-     - `Enrichir` (par défaut) : Les cellules vides conservent les valeurs existantes -- ne mettez à jour que ce que vous spécifiez
-     - `Remplacer` : Les cellules vides effacent les valeurs existantes -- remplacement complet de tous les champs
+     - `Enrichir` (par défaut) : Les cellules vides conservent les valeurs existantes : ne mettez à jour que ce que vous spécifiez
+     - `Remplacer` : Les cellules vides effacent les valeurs existantes : remplacement complet de tous les champs
    - **Opération** :
      - `Upsert` (par défaut) : Créer de nouvelles tâches ou mettre à jour les existantes
      - `Mise à jour uniquement` : Ne modifier que les tâches existantes, ignorer les nouvelles
@@ -526,7 +526,7 @@ Trois modes d'export sont disponibles :
 
 **Tâches autonomes** : Laissez `related_object_type`, `related_object_id` et `related_object_name` vides. Vous pouvez définir les champs de classification (`source_name`, `category_name`, `stream_name`, `company_name`) pour les tâches autonomes et de projet. Pour les tâches de projet, les champs de classification omis viennent par défaut du projet parent.
 
-**Conseil** : Pour les imports de nouvelles tâches liées, utilisez `related_object_name` au lieu de `related_object_id` -- c'est beaucoup plus facile à utiliser. Le système résout le nom vers l'ID correct en fonction de `related_object_type`. Pour les imports aller-retour (export, modification, ré-import), les deux champs sont inclus afin que la correspondance fonctionne correctement.
+**Conseil** : Pour les imports de nouvelles tâches liées, utilisez `related_object_name` au lieu de `related_object_id` : c'est beaucoup plus facile à utiliser. Le système résout le nom vers l'ID correct en fonction de `related_object_type`. Pour les imports aller-retour (export, modification, ré-import), les deux champs sont inclus afin que la correspondance fonctionne correctement.
 
 **Statut et dates** :
 
@@ -659,7 +659,7 @@ Vous pouvez promouvoir une tâche en demande de portefeuille lorsque le travail 
 1. Ouvrez l'espace de travail de la tâche
 2. Cliquez sur **Convertir en demande** dans la barre d'outils de l'en-tête (à côté de **Envoyer le lien**)
 3. Dans la boîte de dialogue :
-   - **Nom de la demande** : Par défaut sur le titre de la tâche -- modifier si nécessaire
+   - **Nom de la demande** : Par défaut sur le titre de la tâche ; modifiez-le si nécessaire
    - **Aperçu de l'objectif** : Affiche la description de la tâche, qui devient l'objectif de la demande
    - **Fermer la tâche d'origine après conversion** : Cochez cette option si vous voulez que le statut de la tâche soit défini sur **Terminée** automatiquement
 4. Cliquez sur **Convertir en demande**
@@ -686,7 +686,7 @@ La demande est créée avec un statut de **En attente de revue** et est liée en
 - **Conversion unique** : Chaque tâche ne peut être convertie qu'une seule fois. Après conversion, le bouton **Convertir en demande** est désactivé et affiche la référence de la demande liée (ex. : « Déjà convertie en REQ-42 »)
 - **La tâche reste** : La tâche d'origine n'est pas supprimée. Sauf si vous cochez l'option de fermeture, elle reste dans son statut courant et peut toujours être mise à jour indépendamment
 
-**Conseil** : Utilisez cela lorsqu'une tâche révèle une initiative plus grande qui a besoin de son propre cycle de vie de demande -- évaluation par critères, workflow d'approbation et conversion éventuelle en projet.
+**Conseil** : Utilisez cela lorsqu'une tâche révèle une initiative plus grande qui a besoin de son propre cycle de vie de demande : évaluation par critères, workflow d'approbation et conversion éventuelle en projet.
 
 ---
 
@@ -702,7 +702,7 @@ Vous pouvez envoyer par e-mail un lien vers n'importe quelle tâche à des coll�
    - **Copier le lien** : Cliquez sur l'icône de copie pour récupérer l'URL directe
 4. Cliquez sur **Envoyer**
 
-Les destinataires reçoivent un e-mail avec votre nom, le titre de la tâche, un lien direct et votre message (le cas échéant). Cela ne change aucune autorisation -- cela notifie simplement les destinataires.
+Les destinataires reçoivent un e-mail avec votre nom, le titre de la tâche, un lien direct et votre message (le cas échéant). Cela ne change aucune autorisation : il notifie simplement les destinataires.
 
 **Conseil** : Vous pouvez mélanger des utilisateurs de la plateforme et des adresses e-mail externes dans le même envoi.
 
@@ -726,7 +726,7 @@ Lorsque le focus n'est pas sur un champ de saisie, vous pouvez utiliser :
   - **Utilisez les dates d'échéance** : Définissez des dates d'échéance réalistes pour suivre les délais efficacement.
   - **Assignez des responsables** : Chaque tâche devrait avoir un assigné pour la responsabilité.
   - **Enregistrez le temps régulièrement** : Le suivi du temps aide pour l'estimation future des projets.
-  - **Filtrez par statut** : Le filtre par défaut affiche uniquement les statuts actifs (`Ouverte`, `En cours`, `En attente`, `En test`) -- incluez `Terminée` et `Annulée` lors de la revue des tâches historiques.
+  - **Filtrez par statut** : Le filtre par défaut affiche uniquement les statuts actifs (`Ouverte`, `En cours`, `En attente`, `En test`). Incluez `Terminée` et `Annulée` lors de la revue des tâches historiques.
   - **Créez depuis le contexte** : Créer des tâches depuis d'autres espaces de travail (projet, OPEX, contrat, CAPEX) les lie automatiquement.
   - **Liez apps et actifs** : Utilisez les champs **Applications** et **Actifs** dans le tiroir Propriétés lorsqu'une tâche concerne opérationnellement une app ou un actif spécifique. Le lien apparaît également dans l'espace de travail de l'entité liée.
   - **Utilisez la priorité judicieusement** : Réservez **Bloquant** aux problèmes véritablement bloquants.

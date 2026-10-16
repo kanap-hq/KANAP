@@ -5,10 +5,10 @@ description: Documentez votre paysage applicatif en quelques minutes. Un guide p
 
 # Fast Track Cartographie SI : de l'application au serveur
 
-Ce guide vous accompagne dans la documentation d'une application et de son infrastructure de support -- de la création de l'entrée applicative à la liaison avec le serveur qui l'héberge. Il est conçu pour vous rendre productif rapidement, couvrant les étapes essentielles sans vous noyer dans les options.
+Ce guide vous accompagne dans la documentation d'une application et de son infrastructure de support, de la création de l'entrée applicative à la liaison avec le serveur qui l'héberge. Il est conçu pour vous rendre productif rapidement, couvrant les étapes essentielles sans vous noyer dans les options.
 
 !!! tip "Conseil : Vous préférez un résumé sur une page ? :material-file-pdf-box:"
-    Toutes les étapes clés sur une seule page A4 -- imprimez-la, épinglez-la, partagez-la avec votre équipe.
+    Toutes les étapes clés sur une seule page A4 : imprimez-la, épinglez-la, partagez-la avec votre équipe.
 
     [:material-download: Télécharger l'aide-mémoire (PDF)](downloads/kanap-itops-fast-track.pdf){ .md-button .md-button--primary }
 
@@ -25,15 +25,15 @@ Tout dans le module Cartographie SI de KANAP se connecte pour dresser un tableau
 | Objet | Ce qu'il représente |
 |-------|---------------------|
 | **Application** | Une app métier ou un service IT que vous devez documenter |
-| **Environnement** | Où elle fonctionne -- Prod, QA, Dev, etc. (appelé « Déploiements » dans KANAP) |
-| **Serveur (Actif)** | L'infrastructure qui l'héberge -- VMs, serveurs physiques, conteneurs |
+| **Environnement** | Où elle fonctionne : Prod, QA, Dev, etc. (appelé « Déploiements » dans KANAP) |
+| **Serveur (Actif)** | L'infrastructure qui l'héberge : VMs, serveurs physiques, conteneurs |
 
 La chaîne est simple : **Application > Environnement > Serveur**. À la fin de ce guide, vous aurez cette chaîne entièrement documentée.
 
 ![Modèle de relations des applications](images/app-relationship-model.png)
 
 !!! info "Information : Pourquoi c'est important"
-    Quand quelqu'un demande « où tourne cette app ? », « qui en est responsable ? » ou « est-elle conforme ? » -- vous aurez la réponse en quelques secondes au lieu de fouiller dans des tableurs.
+    Quand quelqu'un demande « où tourne cette app ? », « qui en est responsable ? » ou « est-elle conforme ? », vous aurez la réponse en quelques secondes au lieu de fouiller dans des tableurs.
 
 ---
 
@@ -54,7 +54,7 @@ Remplissez l'essentiel :
 Cliquez sur **Créer**. Votre application est maintenant dans le registre, et l'espace de travail complet s'ouvre avec six onglets pour une documentation détaillée : **Vue d'ensemble**, **Déploiements**, **Interfaces**, **Exploitation**, **Conformité** et **Relations**.
 
 !!! tip "Conseil : Commencez avec ce que vous savez"
-    Description, éditeur, version, licences -- tout est utile, mais optionnel à ce stade. Vous pourrez enrichir plus tard. L'objectif est d'enregistrer l'app dans le système.
+    Description, éditeur, version, licences : tout est utile, mais optionnel à ce stade. Vous pourrez enrichir plus tard. L'objectif est d'enregistrer l'app dans le système.
 
 ---
 
@@ -98,7 +98,7 @@ Les membres de l'équipe IT responsables de l'exploitation technique et du suppo
 Sous **Audience**, choisissez la **Société** et les **Départements** qui utilisent cette application. KANAP calcule le nombre d'utilisateurs à partir de vos données de référence, ou vous pouvez passer le calcul en manuel et saisir le nombre vous-même.
 
 !!! warning "Pourquoi les responsables comptent"
-    La responsabilité permet de **joindre les bonnes personnes** quand c'est important -- maintenance planifiée, interruptions de service, décisions de mise à niveau, renouvellements de licences. Elle alimente aussi les filtres de périmètre **Mes apps** et **Apps de mon équipe** de la liste principale. Sans responsables, l'app n'est visible que dans la vue « Toutes les apps » -- ce qui signifie que personne ne s'en sent responsable et que personne n'est notifié.
+    La responsabilité permet de **joindre les bonnes personnes** quand c'est important : maintenance planifiée, interruptions de service, décisions de mise à niveau, renouvellements de licences. Elle alimente aussi les filtres de périmètre **Mes apps** et **Apps de mon équipe** de la liste principale. Sans responsables, l'app n'est visible que dans la vue « Toutes les apps », ce qui signifie que personne ne s'en sent responsable et que personne n'est notifié.
 
 ---
 
@@ -106,13 +106,13 @@ Sous **Audience**, choisissez la **Société** et les **Départements** qui util
 
 Allez dans l'onglet **Exploitation**. Sous **Méthodes d'accès**, sélectionnez comment les utilisateurs accèdent à cette application :
 
-- **Web** -- accès par navigateur
-- **Application installée localement** -- client lourd
-- **Application mobile** -- app téléphone/tablette
-- **VDI / Bureau à distance** -- bureau virtuel
-- **Terminal / CLI** -- interface en ligne de commande
-- **IHM propriétaire** -- interface industrielle
-- **Kiosque** -- terminal dédié
+- **Web** : accès par navigateur
+- **Application installée localement** : client lourd
+- **Application mobile** : app téléphone/tablette
+- **VDI / Bureau à distance** : bureau virtuel
+- **Terminal / CLI** : interface en ligne de commande
+- **IHM propriétaire** : interface industrielle
+- **Kiosque** : terminal dédié
 
 Les méthodes d'accès sont configurables dans les [paramètres de la Cartographie SI](../it-ops-settings.md#methodes-dacces), votre liste peut donc inclure d'autres options.
 
@@ -143,7 +143,7 @@ Allez dans l'onglet **Relations** pour relier votre application au reste de vos 
 L'onglet permet aussi de lier des **Tâches**, et les suites y listent leurs **Composants**.
 
 !!! tip "Vous pouvez le faire plus tard"
-    Les relations sont utiles mais pas bloquantes. Créez-les quand vous avez les données -- l'app est pleinement fonctionnelle sans elles.
+    Les relations sont utiles mais pas bloquantes. Créez-les quand vous avez les données : l'app est pleinement fonctionnelle sans elles.
 
 ---
 
@@ -189,7 +189,7 @@ Le panneau **Propriétés** à droite contient le reste : **Sous-site**, **Cycle
 - **Ville**
 
 !!! info "Le site est la clé"
-    Le site détermine automatiquement de nombreux attributs de votre actif. Les sites se gèrent dans **Cartographie SI > Sites** -- configurez-les une fois et chaque actif qui leur est rattaché hérite du type d'hébergement, du fournisseur, du pays et de la ville. Vous n'avez pas à les saisir manuellement.
+    Le site détermine automatiquement de nombreux attributs de votre actif. Les sites se gèrent dans **Cartographie SI > Sites** : configurez-les une fois et chaque actif qui leur est rattaché hérite du type d'hébergement, du fournisseur, du pays et de la ville. Vous n'avez pas à les saisir manuellement.
 
 Cliquez sur **Créer** pour déverrouiller l'espace de travail complet. Pour les types d'actifs physiques, des onglets supplémentaires **Matériel** et **Support** deviennent disponibles pour suivre les numéros de série, les détails du fabricant et les contrats de support fournisseur.
 
@@ -204,13 +204,13 @@ Allez dans l'onglet **Technique** pour ajouter :
 | **Adresses IP** | Type, Adresse IP, Sous-réseau | La zone réseau et le VLAN sont dérivés du sous-réseau |
 
 !!! info "Plusieurs adresses IP"
-    Un serveur peut avoir plusieurs adresses IP -- ajoutez-en autant que nécessaire (ex. : interface de management, VLAN de production, réseau de sauvegarde). Chaque entrée peut avoir son propre type et sous-réseau, et la zone réseau et le VLAN sont dérivés automatiquement.
+    Un serveur peut avoir plusieurs adresses IP : ajoutez-en autant que nécessaire (ex. : interface de management, VLAN de production, réseau de sauvegarde). Chaque entrée peut avoir son propre type et sous-réseau, et la zone réseau et le VLAN sont dérivés automatiquement.
 
 ---
 
 ## Étape 8 : Liez le serveur à votre application
 
-C'est la dernière connexion -- relier votre serveur à l'environnement applicatif qu'il supporte.
+C'est la dernière connexion : relier votre serveur à l'environnement applicatif qu'il supporte.
 
 Il y a **deux façons** de créer cette affectation :
 
@@ -251,7 +251,7 @@ Chaque donnée que vous saisissez alimente quelque chose de plus grand :
 
 ### Vue du paysage applicatif
 
-Votre liste Applications devient un registre vivant montrant chaque application avec ses environnements, sa criticité, son type d'hébergement et sa responsabilité -- filtrable par n'importe quel attribut.
+Votre liste Applications devient un registre vivant montrant chaque application avec ses environnements, sa criticité, son type d'hébergement et sa responsabilité, filtrable par n'importe quel attribut.
 
 ### Cartographie d'infrastructure
 
@@ -277,7 +277,7 @@ Une fois les actifs documentés, vous pouvez créer des **Connexions** (Serveur 
 
 Allez encore plus loin : documentez les **Interfaces** entre applications pour capturer les flux de données, les points d'intégration et le contexte métier. Chaque interface a cinq onglets pour une documentation complète : Vue d'ensemble, Flux, Environnements, Mapping des données et Relations.
 
-Puis utilisez la [Carte des interfaces](../interface-map.md) pour visualiser le flux applicatif complet. Dans la vue Métier par défaut, vous voyez des relations source-cible épurées. Basculez en vue Technique pour révéler les plateformes middleware sous forme de noeuds en losange, montrant le chemin réel des données. Le filtrage de profondeur ne compte que les noeuds d'application principaux -- le middleware est transparent, donc sélectionner une app avec une profondeur de 2 vous montre deux sauts réels quel que soit le nombre de plateformes middleware entre les deux.
+Puis utilisez la [Carte des interfaces](../interface-map.md) pour visualiser le flux applicatif complet. Dans la vue Métier par défaut, vous voyez des relations source-cible épurées. Basculez en vue Technique pour révéler les plateformes middleware sous forme de noeuds en losange, montrant le chemin réel des données. Le filtrage de profondeur ne compte que les noeuds d'application principaux : le middleware est transparent, donc sélectionner une app avec une profondeur de 2 vous montre deux sauts réels quel que soit le nombre de plateformes middleware entre les deux.
 
 ---
 
@@ -303,4 +303,4 @@ Puis utilisez la [Carte des interfaces](../interface-map.md) pour visualiser le 
 ---
 
 !!! success "Vous êtes prêt"
-    Vous savez maintenant comment documenter la chaîne complète de l'application au serveur. Commencez par vos applications les plus critiques, ajoutez leurs environnements de production, liez les serveurs -- et vous aurez une cartographie IT vivante et interrogeable en un rien de temps. Pour la documentation détaillée de chaque fonctionnalité, explorez les sections de référence [Applications](../applications.md) et [Actifs](../assets.md).
+    Vous savez maintenant comment documenter la chaîne complète de l'application au serveur. Commencez par vos applications les plus critiques, ajoutez leurs environnements de production, liez les serveurs, et vous aurez une cartographie IT vivante et interrogeable en un rien de temps. Pour la documentation détaillée de chaque fonctionnalité, explorez les sections de référence [Applications](../applications.md) et [Actifs](../assets.md).

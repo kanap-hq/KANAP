@@ -19,14 +19,14 @@ Le droit **Paramètres** de la cartographie SI ne donne pas accès aux devises. 
 La **devise au niveau du tenant** utilisée pour tous les rapports, totaux et affichages de listes. Lorsque vous changez cette devise :
   - Toutes les colonnes annuelles OPEX et CAPEX sont converties vers la nouvelle devise de reporting
   - Les totaux dans les rapports sont recalculés avec la nouvelle base
-  - **Vos données stockées restent inchangées** -- seuls l'affichage et la conversion sont affectés
+  - **Vos données stockées restent inchangées** : seuls l'affichage et la conversion sont affectés
 
 **Exemple** : Si vous passez de EUR à USD, les totaux de votre liste OPEX s'afficheront en USD, mais la devise stockée de chaque ligne (EUR, GBP, etc.) reste la même.
 
 **Conseil** : Choisissez une devise de reporting qui correspond à la norme de reporting financier de votre groupe (ex. : EUR pour un siège européen, USD pour un groupe basé aux États-Unis).
 
 ### Devise OPEX par défaut
-La devise qui **est pré-remplie** lorsque vous créez une nouvelle ligne OPEX (dépense). Cela ne restreint pas les devises sélectionnables -- cela fait simplement gagner du temps en proposant une valeur par défaut judicieuse.
+La devise qui **est pré-remplie** lorsque vous créez une nouvelle ligne OPEX (dépense). Cela ne restreint pas les devises sélectionnables : cela fait simplement gagner du temps en proposant une valeur par défaut judicieuse.
 
 **Exemple** : Si la majeure partie de vos dépenses récurrentes est en EUR, définissez EUR. Les utilisateurs peuvent toujours sélectionner manuellement GBP, USD ou toute autre devise autorisée.
 
@@ -116,7 +116,7 @@ Si votre devise de reporting est EUR :
 ## Import et export CSV
 
 ### Export
-Les exports OPEX et CAPEX incluent les données des lignes et les montants annuels dans la **propre devise de chaque ligne** -- pas la devise de reporting. Cela préserve les données originales pour la réimportation ou l'analyse externe.
+Les exports OPEX et CAPEX incluent les données des lignes et les montants annuels dans la **propre devise de chaque ligne**, pas la devise de reporting. Cela préserve les données originales pour la réimportation ou l'analyse externe.
 
 **Exemple de ligne CSV** (OPEX) :
 ```
@@ -145,7 +145,7 @@ Currency "CHF" is not allowed. Allowed currencies: EUR, USD, GBP
 Lorsque vous changez les paramètres :
   - **Devise de reporting** : Affecte l'affichage immédiatement ; les données historiques restent intactes et sont converties en utilisant les taux qui étaient actifs lors de la saisie des données
   - **Devises par défaut** : N'affectent que les nouvelles lignes ; les lignes existantes conservent leurs devises
-  - **Devises autorisées** : Les lignes existantes ne sont pas validées rétroactivement -- les restrictions s'appliquent uniquement aux lignes nouvelles ou modifiées
+  - **Devises autorisées** : Les lignes existantes ne sont pas validées rétroactivement : les restrictions s'appliquent uniquement aux lignes nouvelles ou modifiées
 
 ## Mécanismes de conversion (référence rapide)
 
@@ -158,7 +158,7 @@ Le taux spot en temps réel d'ExchangeRate-API est utilisé (repli sur le dernie
 ### Années futures
 Réutilise le taux de l'année en cours comme estimation prospective. Cela fournit des indications pour la planification budgétaire mais devrait être revu à mesure que ces années approchent.
 
-**Repli** : Si aucun taux n'est trouvé pour une devise, le système utilise **1,00** jusqu'à ce que des données deviennent disponibles. Cela prévient les erreurs mais peut produire des conversions inexactes -- lancez la synchronisation des taux pour remplir les taux manquants.
+**Repli** : Si aucun taux n'est trouvé pour une devise, le système utilise **1,00** jusqu'à ce que des données deviennent disponibles. Cela prévient les erreurs mais peut produire des conversions inexactes : lancez la synchronisation des taux pour remplir les taux manquants.
 
 ## Conseils
 
@@ -167,7 +167,7 @@ Réutilise le taux de l'année en cours comme estimation prospective. Cela fourn
   - **Restreignez les devises intentionnellement** : N'utilisez les devises autorisées que si vous avez une raison claire (ex. : couverture des données de change, conformité, standardisation).
   - **Lancez la synchronisation des taux proactivement** : Après avoir ajouté des devises, avant de générer des rapports ou lorsque les taux semblent périmés.
   - **Vérifiez le tableau des instantanés de taux** : Utilisez-le pour vérifier que les taux sont raisonnables et complets avant de finaliser les rapports.
-  - **Utilisez des codes ISO cohérents** : Utilisez toujours des codes à 3 lettres (EUR, USD, GBP) -- jamais de symboles (€, $, £) ni de codes numériques.
+  - **Utilisez des codes ISO cohérents** : Utilisez toujours des codes à 3 lettres (EUR, USD, GBP), jamais de symboles (€, $, £) ni de codes numériques.
 
 ## Scénarios courants
 
@@ -179,7 +179,7 @@ Votre groupe passe d'un reporting basé EUR à un reporting basé USD.
   2. Changez la devise de reporting de `EUR` à `USD`
   3. Cliquez sur **Enregistrer** (déclenche automatiquement un rafraîchissement des taux)
   4. Vérifiez que le tableau des instantanés de taux affiche USD comme base (tous les taux devraient maintenant être relatifs à USD)
-  5. Vérifiez les listes OPEX et CAPEX -- les totaux et colonnes annuelles s'affichent maintenant en USD
+  5. Vérifiez les listes OPEX et CAPEX : les totaux et colonnes annuelles s'affichent maintenant en USD
 
 **Résultat** : Tous les rapports, tableaux de bord et listes affichent USD. Vos données stockées (la propre devise de chaque ligne) restent inchangées.
 
@@ -213,14 +213,14 @@ Nous sommes en décembre, et vous préparez la planification budgétaire de l'an
   1. Allez dans **Gestion budgétaire > Administration > Devises**
   2. Cliquez sur **Forcer la synchronisation des taux** pour rafraîchir les taux pour l'année à venir
   3. Vérifiez le tableau des instantanés de taux pour voir les estimations prospectives pour l'année prochaine
-  4. Notez que les taux des années futures sont des estimations prospectives (réutilisant le taux de l'année en cours) -- revoyez-les à mesure que l'année approche
+  4. Notez que les taux des années futures sont des estimations prospectives (réutilisant le taux de l'année en cours) ; revoyez-les à mesure que l'année approche
 
 **Résultat** : Vos prévisions budgétaires pour l'année prochaine utilisent les derniers taux disponibles. Les équipes peuvent planifier les CAPEX et OPEX avec des hypothèses de change raisonnables.
 
 ## Questions fréquentes
 
 **Q : Que se passe-t-il si je change la devise de reporting en cours d'année ?**
-R : Tous les rapports et listes sont immédiatement convertis vers la nouvelle devise. Les données historiques restent intactes -- seule la devise d'affichage change. Planifiez ce changement avec soin pour éviter la confusion pendant les périodes de reporting actives.
+R : Tous les rapports et listes sont immédiatement convertis vers la nouvelle devise. Les données historiques restent intactes : seule la devise d'affichage change. Planifiez ce changement avec soin pour éviter la confusion pendant les périodes de reporting actives.
 
 **Q : Puis-je définir des devises de reporting différentes pour différentes sociétés ?**
 R : Non. La devise de reporting est au niveau du tenant. Toutes les sociétés, rapports et totaux utilisent la même devise de reporting. Les lignes individuelles stockent leur propre devise, mais les conversions ciblent toujours la devise de reporting du tenant.
