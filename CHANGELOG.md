@@ -17,6 +17,32 @@ version brings, followed by three lists:
 To upgrade across several versions, read every entry between your version and the target: the
 actions add up. The release process is described in `doc/releasing.md`.
 
+## 26.10.4 (2026-10-16)
+
+A quality release: safer deletes, lists that filter, sort and export as shown, the interface in the user's language, and one common CSV format.
+
+### Changes
+- Deleting a record that is still in use is refused before the confirmation, with what uses it and what to do instead (for example disable it). This covers suppliers, companies, applications with interfaces, contracts with compliance requirements, incidents with regulatory records, and the other referential records. A list's delete names the records it keeps and deletes only the others. Deleting from a record page always asks for confirmation. (#598, #601, #605, #614, #629)
+- Contracts can be deleted. Incident administrators can delete incidents. (#605, #629)
+- Lists show a message when nothing matches, sort names ignoring case and accents, open the item from anywhere in the name cell, and export what they show (search, filters, sort) or the whole register on request. Every column filter a list offers now narrows it on the server. (#598, #606, #616)
+- The interface, the user manual, the shipped catalogs and task types, dates, numbers, currencies and the audit log follow the user's language. Only the texts of the language in use are downloaded, which makes the first page load lighter. (#607, #610, #612, #613, #615, #617, #620, #622, #623, #625, #628)
+- Supplier and company names are unique regardless of case; a name already in use is reported under the name field. An import that names an item in another case updates it and keeps its stored spelling. (#599, #608)
+- CSV exports and imports share one format: yes/no, dates and decimals follow the file's language, the end of validity is exported as a date, and an unchanged file re-imports without changes. Incident date-times are written in the user's local time, with the zone in the header. (#600, #608, #630)
+- Switching an item off disables it at once; a future end of validity shows "Active until". (#598, #608)
+
+### Fixes
+- The infrastructure connections on an interface map no longer fail with an error. (#609)
+- Deleting a company no longer deletes its departments or clears it on users, sites and tasks. Deleting a supplier, a contact or a user no longer leaves links behind. (#601, #614, #618)
+- Two forms no longer erase a future end of validity when "Active" is selected again. (#608)
+- A website or sub-location description typed right after creating the row is saved. (#624, #629)
+- Moving the highlight in a report's exclusion picker is faster on long lists. (#619)
+
+### On-premise
+- Action required: none
+- Migrations: run automatically at start (1854070000000-contracts-reference-keys, 1854080000000-supplier-contacts-supplier-key, 1854090000000-company-reference-keys, 1854100000000-suppliers-unique-name-ci, 1854110000000-companies-unique-name-ci, 1854130000000-task-type-codes, 1854150000000-portfolio-contact-link-keys, 1854160000000-link-and-reference-keys, 1854170000000-location-search-label-separator, 1854180000000-foreign-key-indexes). They never stop on imperfect data: supplier or company names that differ only by case are renamed with a number ("SAP (2)"), links left behind by earlier deletes are removed or cleared, and every change is logged. The index migration creates 267 indexes and may take a few seconds on a large database.
+- Managed documents whose record no longer exists are moved each night to the unfiled documents of the Managed Docs library, with an audit entry; nothing is deleted.
+- Recommended: none
+
 ## 26.10.3 (2026-10-15)
 
 CSV imports that handle real files, longer account numbers, and the launch article in its final form.
