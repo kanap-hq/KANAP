@@ -19,11 +19,11 @@ function Probe() {
 function renderAt(path: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(<QueryClientProvider client={client}><MemoryRouter initialEntries={['/previous', path]} initialIndex={1}>
-    <Probe /><Routes>
+    <Probe /><React.Suspense fallback={<div data-testid="waiting" />}><Routes>
       <Route path="/ops/budget/new" element={<BudgetLineRoute />} />
       <Route path="/ops/budget/:ref" element={<BudgetLineRoute />} />
       <Route path="/ops/budget/:ref/:tab" element={<BudgetLineRoute />} />
-    </Routes>
+    </Routes></React.Suspense>
   </MemoryRouter></QueryClientProvider>);
 }
 beforeEach(() => { vi.mocked(api.get).mockReset(); });
@@ -43,11 +43,22 @@ describe('budget line route resolution', () => {
     expect(await screen.findByTestId('workspace')).toHaveTextContent('capex');
     expect(screen.getByRole('button')).toHaveTextContent('/ops/budget/BL-127?year=2027');
   });
+  it('suspends while the line resolves, so the page it is opened from can stay on screen', async () => {
+    let answer: (value: unknown) => void = () => undefined;
+    vi.mocked(api.get).mockReturnValue(new Promise((resolve) => { answer = resolve; }));
+    renderAt('/ops/budget/BL-127');
+    expect(screen.getByTestId('waiting')).toBeInTheDocument();
+    answer({ data: { id: 'uuid', nature: 'opex', reference: 'BL-127' } });
+    expect(await screen.findByTestId('workspace')).toHaveTextContent('opex');
+    expect(screen.queryByTestId('waiting')).toBeNull();
+    expect(api.get).toHaveBeenCalledTimes(1);
+  });
   it('shows the existing load error for an unavailable line without mounting child resources', async () => {
     vi.mocked(api.get).mockRejectedValue(Object.assign(new Error('Not found'), { response: { status: 404 } }));
     renderAt('/ops/budget/BL-999');
     expect(await screen.findByRole('alert')).toHaveTextContent('opex.workspace.failedToLoad');
     expect(screen.queryByTestId('workspace')).toBeNull();
+    expect(api.get).toHaveBeenCalledTimes(2);
   });
   it.each([['', 'opex'], ['?nature=capex', 'capex'], ['?nature=unknown', 'opex']])('creates with %s and no resolution request', async (search, nature) => {
     renderAt(`/ops/budget/new${search}`);
