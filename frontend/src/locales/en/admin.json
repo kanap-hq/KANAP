@@ -334,6 +334,8 @@
       "empty": "-"
     },
     "sources": {
+      "ai_chat": "AI chat",
+      "budget_file": "Budget file import",
       "system": "System",
       "user": "User",
       "webhook": "Webhook"

@@ -123,7 +123,7 @@ Cet onglet contrôle la classification des risques et les paramètres de protect
 
 **Mode de risque** :
   - **Manuel** : Vous définissez directement la criticité, la classe de données et le PII
-  - **Dérivé** : Les valeurs sont agrégées depuis les bindings d'interfaces liées : l'onglet affiche les valeurs effectives et combien de bindings contribuent
+  - **Dérivé** : Les valeurs sont agrégées depuis les bindings d'interfaces liées : l'onglet affiche les valeurs effectives et liste une fois chaque interface qui contribue, avec les environnements où elle est liée
 
 **Champs** :
   - **Criticité** : Critique métier, Haute, Moyenne ou Basse

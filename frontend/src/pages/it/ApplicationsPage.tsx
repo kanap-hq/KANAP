@@ -502,9 +502,10 @@ export default function ApplicationsPage() {
       const suitesCount = data?.suites_count || 0;
       const firstSuite = data?.first_suite_name || null;
       const extra = suitesCount > 1 ? ` +${suitesCount - 1}` : '';
+      const includedIn = `${t('pages.applications.includedIn')} ${firstSuite}${extra}`;
       return (
-        <Stack component="span" direction="row" spacing={1} alignItems="center">
-          <Box component="span">
+        <Stack component="span" direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+          <Box component="span" sx={{ flexShrink: 0 }}>
             <Link
               href={buildAppHref(data as AppRow, 'overview')}
               onClick={(event) => handleInternalNavigate(event, buildAppHref(data as AppRow, 'overview'))}
@@ -522,13 +523,29 @@ export default function ApplicationsPage() {
             <Box
               component="a"
               href={buildSuiteHref(data)}
-              sx={{ px: 0.75, py: 0.25, borderRadius: 1, bgcolor: 'action.hover', color: 'text.secondary', cursor: 'pointer', fontSize: '0.75rem', ...aboveCellLinkSx }}
+              // One line, cut with an ellipsis in a narrow column: the full text is on hover.
+              title={includedIn}
+              sx={{
+                px: 0.75,
+                py: 0.25,
+                borderRadius: 1,
+                bgcolor: 'action.hover',
+                color: 'text.secondary',
+                cursor: 'pointer',
+                fontSize: '0.75rem',
+                lineHeight: 1.5,
+                minWidth: 0,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                ...aboveCellLinkSx,
+              }}
               onClick={(e) => {
                 e.stopPropagation();
                 handleInternalNavigate(e, buildSuiteHref(data));
               }}
             >
-              {t('pages.applications.includedIn')} {firstSuite}{extra}
+              {includedIn}
             </Box>
           )}
         </Stack>
@@ -548,9 +565,11 @@ export default function ApplicationsPage() {
       }).filter(Boolean) as Array<{ env: typeof ENV_SUMMARY[number]; match: AppInstanceSummary }>;
       if (activeEnvs.length === 0) {
         return (
-          <Typography variant="body2" color="text.secondary">
-            {t('pages.applications.noActiveEnvironments')}
-          </Typography>
+          <Box component="span" sx={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+            <Typography component="span" variant="body2" color="text.secondary">
+              {t('pages.applications.noActiveEnvironments')}
+            </Typography>
+          </Box>
         );
       }
       return (

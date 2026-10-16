@@ -123,7 +123,7 @@ Esta pestaña controla la clasificación de riesgo y la configuración de protec
 
 **Modo de riesgo**:
   - **Manual**: Usted establece la criticidad, clase de datos y PII directamente
-  - **Derivado**: Los valores se agregan desde los enlaces de interfaz vinculados: la pestaña muestra los valores efectivos y cuántos enlaces contribuyen
+  - **Derivado**: Los valores se agregan desde los enlaces de interfaz vinculados: la pestaña muestra los valores efectivos y enumera una vez cada interfaz que contribuye, con los entornos en los que está enlazada
 
 **Campos**:
   - **Criticidad**: Crítica para el negocio, Alta, Media o Baja

@@ -266,7 +266,17 @@ export default function ConnectionOverviewTab({
     onProtocolsChange(codes.map((code) => ({ code, port_override: existing.get(code) ?? null })));
   };
 
-  const derivationRows = riskMode === 'derived' ? linkedInterfaces : [];
+  // One line per interface (its risk fields are the interface's), with the environments it is bound in.
+  const derivationRows = React.useMemo(() => {
+    if (riskMode !== 'derived') return [];
+    const byInterface = new Map<string, LinkedInterfaceRow & { environments: string[] }>();
+    for (const row of linkedInterfaces) {
+      const existing = byInterface.get(row.interface_id);
+      if (!existing) byInterface.set(row.interface_id, { ...row, environments: [row.environment] });
+      else if (!existing.environments.includes(row.environment)) existing.environments.push(row.environment);
+    }
+    return Array.from(byInterface.values());
+  }, [riskMode, linkedInterfaces]);
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -430,13 +440,16 @@ export default function ConnectionOverviewTab({
             </TableHead>
             <TableBody>
               {derivationRows.map((row) => (
-                <TableRow key={row.id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate(`/it/interfaces/${row.interface_reference || row.interface_id}/overview`)}>
+                <TableRow key={row.interface_id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate(`/it/interfaces/${row.interface_reference || row.interface_id}/overview`)}>
                   <TableCell sx={{ fontSize: 13 }}>
                     <Stack direction="row" spacing={1} alignItems="center">
                       <Typography component="span" sx={{ fontSize: 12, fontFamily: "'JetBrains Mono Variable', monospace", color: 'kanap.text.secondary' }}>
                         {row.interface_reference || row.interface_code}
                       </Typography>
                       <Typography component="span" sx={{ fontSize: 13 }}>{row.interface_name}</Typography>
+                      <Typography component="span" sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>
+                        {row.environments.map((env) => env.toUpperCase()).join(', ')}
+                      </Typography>
                     </Stack>
                   </TableCell>
                   <TableCell sx={{ fontSize: 13 }}>
