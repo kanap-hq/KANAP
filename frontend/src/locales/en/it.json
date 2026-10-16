@@ -1860,7 +1860,7 @@
         "add": "+ Add sub-location",
         "empty": "No sub-locations defined. Add buildings, rooms, racks or other physical areas.",
         "usage": "Usage",
-        "namePlaceholder": "e.g., Building A — Room 1 — Rack 5",
+        "namePlaceholder": "e.g., Building A, Room 1, Rack 5",
         "descriptionPlaceholder": "Optional description",
         "nameRequired": "Sub-location name is required.",
         "deleteTitle": "Delete sub-location?",

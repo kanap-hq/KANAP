@@ -17,7 +17,7 @@
 #     spec);
 #   - infra/, any Dockerfile: backend full (container-images and admin-password-policy specs);
 #   - doc/help/docs/: backend docs (markdown-size, markdown-worker and admin-password-policy
-#     read the manual);
+#     read the manual) and frontend (the noDashes locale test reads it), without the builds;
 #   - anything else (doc/, marketing/, scripts/, translation-state/, root files): no suite; the
 #     script checks of `build (onprem)` always run.
 # The images rule is the former `image files` job, unchanged. When the files cannot be listed
@@ -36,7 +36,7 @@ all() {
 git cat-file -e "$BASE^{commit}" 2>/dev/null || git fetch --no-tags --quiet --depth=1 origin "$BASE" 2>/dev/null || all
 files=$(git diff --name-only --no-renames "$BASE" "$HEAD" 2>/dev/null) || all
 
-backend=none frontend=false images=false
+backend=none frontend=false images=false manual=false
 need_backend() {
   case "$1" in
     full) backend=full ;;
@@ -62,7 +62,7 @@ while IFS= read -r f; do
     infra/* | Dockerfile | Dockerfile.* | */Dockerfile | */Dockerfile.*)
       need_backend full ;;
     doc/help/docs/*)
-      need_backend docs ;;
+      need_backend docs; manual=true ;;
   esac
   case "$f" in
     Dockerfile | Dockerfile.* | */Dockerfile | */Dockerfile.* | .dockerignore | */.dockerignore | \
@@ -75,6 +75,7 @@ done <<<"$files"
 
 builds=false
 { [ "$backend" = full ] || [ "$frontend" = true ]; } && builds=true
+[ "$manual" = true ] && frontend=true
 
 echo "Files changed: $(grep -c . <<<"$files" || true). backend=$backend frontend=$frontend builds=$builds images=$images" >&2
 printf 'backend=%s\nfrontend=%s\nbuilds=%s\nimages=%s\n' "$backend" "$frontend" "$builds" "$images"

@@ -1860,7 +1860,7 @@
         "add": "+ Unterstandort hinzufügen",
         "empty": "Keine Unterstandorte definiert. Fügen Sie Gebäude, Räume, Racks oder andere physische Bereiche hinzu.",
         "usage": "Nutzung",
-        "namePlaceholder": "z. B. Gebäude A — Raum 1 — Rack 5",
+        "namePlaceholder": "z. B. Gebäude A, Raum 1, Rack 5",
         "descriptionPlaceholder": "Optionale Beschreibung",
         "nameRequired": "Der Name des Unterstandorts ist erforderlich.",
         "deleteTitle": "Unterstandort löschen?",

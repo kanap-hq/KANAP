@@ -1860,7 +1860,7 @@
         "add": "+ Añadir sub-ubicación",
         "empty": "No hay sububicaciones definidas. Añada edificios, salas, racks u otras áreas físicas.",
         "usage": "Uso",
-        "namePlaceholder": "p. ej., Edificio A — Sala 1 — Rack 5",
+        "namePlaceholder": "p. ej., Edificio A, Sala 1, Rack 5",
         "descriptionPlaceholder": "Descripción opcional",
         "nameRequired": "El nombre de la sub-ubicación es obligatorio.",
         "deleteTitle": "¿Eliminar la sub-ubicación?",
