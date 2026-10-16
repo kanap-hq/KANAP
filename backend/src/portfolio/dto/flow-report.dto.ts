@@ -31,6 +31,8 @@ export type AgeRow = {
   taskTypeId: string | null;
   /** Null on the row that gathers the tasks with no type. */
   taskTypeName: string | null;
+  /** The shipped type it started as, for display in the reader's language; null for a tenant's own type. */
+  taskTypeCode: string | null;
   buckets: Record<AgeBucket, number>;
   total: number;
 };
@@ -123,7 +125,7 @@ export type LeadTime = {
   medianDays: number | null;
 };
 
-export type LeadTimeByType = { taskTypeId: string | null; taskTypeName: string | null } & LeadTime;
+export type LeadTimeByType = { taskTypeId: string | null; taskTypeName: string | null; taskTypeCode: string | null } & LeadTime;
 
 /** Closings of finished projects, with how far off the planned end they landed. */
 export type ProjectDoneLeadTime = LeadTime & {

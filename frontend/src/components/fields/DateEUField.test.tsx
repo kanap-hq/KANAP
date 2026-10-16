@@ -1,8 +1,8 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
-import { describe, expect, it, vi } from 'vitest';
-import '../../i18n';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import i18n from '../../i18n';
 import { createAppTheme } from '../../config/ThemeContext';
 import DateEUField from './DateEUField';
 
@@ -61,5 +61,41 @@ describe('DateEUField calendar', () => {
     expect(screen.getByRole('button', { name: 'Open calendar' })).toBeDisabled();
     fireEvent.keyDown(screen.getByRole('textbox'), { key: 'ArrowDown', altKey: true });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+});
+
+describe('DateEUField typing follows the language', () => {
+  afterEach(async () => {
+    await i18n.changeLanguage('en');
+  });
+
+  it.each([
+    ['en', 'dd/mm/yyyy', '15/10/2026'],
+    ['fr', 'jj/mm/aaaa', '15/10/2026'],
+    ['es', 'dd/mm/aaaa', '15/10/2026'],
+    ['de', 'TT.MM.JJJJ', '15.10.2026'],
+  ])('%s: placeholder %s, the date edits as %s and digits get the same separator', async (language, placeholder, typed) => {
+    await i18n.changeLanguage(language);
+    const { onChangeYmd } = renderField({ valueYmd: '2026-10-15' });
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    expect(input.placeholder).toBe(placeholder);
+    fireEvent.focus(input);
+    expect(input.value).toBe(typed);
+    fireEvent.change(input, { target: { value: '2010' } });
+    expect(input.value).toBe(typed.slice(0, 5).replace('15', '20'));
+    fireEvent.change(input, { target: { value: '20102026' } });
+    expect(input.value).toBe(typed.replace('15', '20'));
+    expect(onChangeYmd).toHaveBeenLastCalledWith('2026-10-20');
+  });
+
+  it.each(['en', 'fr', 'es', 'de'])('%s: accepts slashes, dots and dashes', async (language) => {
+    await i18n.changeLanguage(language);
+    const { onChangeYmd } = renderField({ valueYmd: '' });
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    fireEvent.focus(input);
+    for (const [text, ymd] of [['01/02/2026', '2026-02-01'], ['03.04.2026', '2026-04-03'], ['05-06-2026', '2026-06-05']]) {
+      fireEvent.change(input, { target: { value: text } });
+      expect(onChangeYmd).toHaveBeenLastCalledWith(ymd);
+    }
   });
 });

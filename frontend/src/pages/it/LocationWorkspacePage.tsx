@@ -27,7 +27,7 @@ import LocationRelationsTab from './workspace/LocationRelationsTab';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import { useLocationItemNav } from '../../hooks/useModuleItemNav';
 import { drawerSelectSx, drawerMenuItemSx, drawerFieldValueSx } from '../../theme/formSx';
-import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import { getApiErrorMessage, isDuplicateError } from '../../utils/apiErrorMessage';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { carryListFilters } from '../../lib/listContext';
 
@@ -71,6 +71,8 @@ export default function LocationWorkspacePage() {
   const [data, setData] = React.useState<LocationRecord | null>(null);
   const [loading, setLoading] = React.useState(!isCreate);
   const [error, setError] = React.useState<string | null>(null);
+  // A refused name shows under the title.
+  const [nameError, setNameError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [operatingCompanyName, setOperatingCompanyName] = React.useState<string | null>(null);
   const [subLocationsCount, setSubLocationsCount] = React.useState(0);
@@ -83,6 +85,7 @@ export default function LocationWorkspacePage() {
   const [createHostingType, setCreateHostingType] = React.useState<string>('');
   const [createSubmitting, setCreateSubmitting] = React.useState(false);
   const [createError, setCreateError] = React.useState<string | null>(null);
+  const [createNameError, setCreateNameError] = React.useState<string | null>(null);
 
   const subItemsAnchorRef = React.useRef<HTMLDivElement>(null);
   const locationId = React.useMemo(() => {
@@ -144,6 +147,7 @@ export default function LocationWorkspacePage() {
   }, [isCreate, routeId, t]);
 
   React.useEffect(() => { void load(); }, [load]);
+  React.useEffect(() => { setNameError(null); }, [routeId]);
 
   React.useEffect(() => {
     if (isCreate || !data?.location_reference) return;
@@ -169,13 +173,15 @@ export default function LocationWorkspacePage() {
     async (patch: Partial<LocationRecord>) => {
       if (!locationId) return;
       setSaving(true);
+      if ('name' in patch) setNameError(null);
       setData((prev) => (prev ? { ...prev, ...patch } as LocationRecord : prev));
       try {
         const res = await api.patch(`/locations/${locationId}`, patch);
         setData(res.data as LocationRecord);
         setError(null);
       } catch (e: any) {
-        setError(getApiErrorMessage(e, t, t('messages.saveLocationFailed')));
+        if ('name' in patch && isDuplicateError(e)) setNameError(t('messages.locationNameTaken'));
+        else setError(getApiErrorMessage(e, t, t('messages.saveLocationFailed')));
         await load();
       } finally {
         setSaving(false);
@@ -301,8 +307,9 @@ export default function LocationWorkspacePage() {
   const handleCreate = async () => {
     if (!canManage) return;
     const name = createName.trim();
+    setCreateNameError(null);
     if (!name) {
-      setCreateError(t('messages.nameRequired'));
+      setCreateNameError(t('messages.nameRequired'));
       return;
     }
     if (!createHostingType) {
@@ -319,7 +326,8 @@ export default function LocationWorkspacePage() {
       const saved = res.data as LocationRecord;
       navigate(`/it/locations/${saved.location_reference || saved.id}/overview`, { replace: true });
     } catch (e: any) {
-      setCreateError(getApiErrorMessage(e, t, t('messages.saveLocationFailed')));
+      if (isDuplicateError(e)) setCreateNameError(t('messages.locationNameTaken'));
+      else setCreateError(getApiErrorMessage(e, t, t('messages.saveLocationFailed')));
     } finally {
       setCreateSubmitting(false);
     }
@@ -483,6 +491,7 @@ export default function LocationWorkspacePage() {
         titleFallback={isCreate ? t('workspace.location.newTitle') : t('workspace.location.untitled')}
         canEditTitle={canManage && !isCreate}
         onTitleSave={handleTitleSave}
+        titleError={nameError}
         isCreate={isCreate}
         nav={!isCreate && total > 0 ? {
           currentIndex: index + 1,
@@ -505,6 +514,8 @@ export default function LocationWorkspacePage() {
                 value={createName}
                 onChange={(e) => setCreateName(e.target.value)}
                 placeholder={t('workspace.location.namePlaceholder')}
+                error={!!createNameError}
+                helperText={createNameError}
                 required
                 size="small"
                 variant="standard"
@@ -552,7 +563,7 @@ export default function LocationWorkspacePage() {
 
       <KanapDialog
         open={deleteDialogOpen}
-        title={t('workspace.location.deleteTitle')}
+        title={data?.name ? t('common:delete.recordTitle', { name: data.name }) : t('workspace.location.deleteTitle')}
         onClose={() => !deleting && setDeleteDialogOpen(false)}
         onSave={handleDelete}
         saveLabel={t('common:buttons.delete')}

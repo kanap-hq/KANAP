@@ -61,6 +61,7 @@ import {
   shouldHandleRichClipboardImport,
 } from '../lib/richClipboardMarkdown';
 import MarkdownLinkDialog from './MarkdownLinkDialog';
+import { markdownEditorTranslation } from './markdownEditorTranslation';
 
 interface MarkdownEditorProps {
   value: string;
@@ -92,33 +93,34 @@ interface MarkdownEditorProps {
   onModSave?: () => void;
 }
 
+// Each emoji with the key of its name in `common:markdownEditor.emoji`.
 const EMOJI_OPTIONS = [
-  { value: '🙂', label: 'Smile' },
-  { value: '😀', label: 'Grin' },
-  { value: '😂', label: 'Laugh' },
-  { value: '😍', label: 'Love' },
-  { value: '🤔', label: 'Think' },
-  { value: '👍', label: 'Thumbs up' },
-  { value: '🎉', label: 'Celebrate' },
-  { value: '🔥', label: 'Fire' },
-  { value: '✅', label: 'Done' },
-  { value: '🚀', label: 'Launch' },
+  { value: '🙂', name: 'smile' },
+  { value: '😀', name: 'grin' },
+  { value: '😂', name: 'laugh' },
+  { value: '😍', name: 'love' },
+  { value: '🤔', name: 'think' },
+  { value: '👍', name: 'thumbsUp' },
+  { value: '🎉', name: 'celebrate' },
+  { value: '🔥', name: 'fire' },
+  { value: '✅', name: 'done' },
+  { value: '🚀', name: 'launch' },
 ] as const;
 
 function EmojiPickerButton() {
   const { t } = useTranslation('common');
   const insertMarkdown = usePublisher(insertMarkdown$);
   const items = React.useMemo(
-    () => EMOJI_OPTIONS.map(({ value, label }) => ({
+    () => EMOJI_OPTIONS.map(({ value, name }) => ({
       value,
       label: (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
           <span aria-hidden="true">{value}</span>
-          <span>{label}</span>
+          <span>{t(`markdownEditor.emoji.${name}`)}</span>
         </span>
       ),
     })),
-    [],
+    [t],
   );
 
   return (
@@ -152,25 +154,25 @@ function KanapBlockStyleSelect({
   const buttonRef = React.useRef<HTMLButtonElement | null>(null);
 
   const items = React.useMemo(() => {
-    const next = [{ label: 'Paragraph', value: 'paragraph' }];
+    const next = [{ label: t('markdownEditor.mdx.toolbar.blockTypes.paragraph'), value: 'paragraph' }];
     if (hasQuote) {
-      next.push({ label: 'Quote', value: 'quote' });
+      next.push({ label: t('markdownEditor.mdx.toolbar.blockTypes.quote'), value: 'quote' });
     }
     if (hasHeadings) {
       next.push(...allowedHeadingLevels.map((level) => ({
-        label: `Heading ${level}`,
+        label: t('markdownEditor.mdx.toolbar.blockTypes.heading', { level }),
         value: `h${level}`,
       })));
     }
     return next;
-  }, [allowedHeadingLevels, hasHeadings, hasQuote]);
+  }, [allowedHeadingLevels, hasHeadings, hasQuote, t]);
 
   if (!hasQuote && !hasHeadings) return null;
 
   const value = items.some((item) => item.value === currentBlockType)
     ? currentBlockType
     : 'paragraph';
-  const selectedLabel = items.find((item) => item.value === value)?.label || 'Paragraph';
+  const selectedLabel = items.find((item) => item.value === value)?.label || items[0].label;
   const open = Boolean(anchorEl);
 
   const applyBlockType = React.useCallback((blockType: string) => {
@@ -321,7 +323,7 @@ const captureRootEditorPlugin = realmPlugin<{ editorRef: React.MutableRefObject<
 const MarkdownEditor = React.memo(function MarkdownEditor({
   value,
   onChange,
-  placeholder = 'Start typing...',
+  placeholder,
   minRows = 10,
   maxRows = 18,
   collapsedRows,
@@ -338,6 +340,7 @@ const MarkdownEditor = React.memo(function MarkdownEditor({
   onModEnter,
   onModSave,
 }: MarkdownEditorProps) {
+  const { t } = useTranslation('common');
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
   const minHeight = minRows * 24;
@@ -430,8 +433,8 @@ const MarkdownEditor = React.memo(function MarkdownEditor({
       // shown in the toolbar dropdown.
       new Proxy(
         {
-          '': 'Plain text',
-          txt: 'Plain text',
+          '': t('markdownEditor.plainText'),
+          txt: t('markdownEditor.plainText'),
           md: 'Markdown',
           abap: 'ABAP (plain)',
           powershell: 'PowerShell',
@@ -467,8 +470,9 @@ const MarkdownEditor = React.memo(function MarkdownEditor({
           },
         },
       ),
-    [],
+    [t],
   );
+  const translation = React.useMemo(() => markdownEditorTranslation(t), [t]);
 
   const handleChange = React.useCallback(
     (markdown: string, initialMarkdownNormalize: boolean) => {
@@ -967,12 +971,13 @@ const MarkdownEditor = React.memo(function MarkdownEditor({
           ref={mdxRef}
           markdown={currentMarkdownRef.current}
           readOnly={disabled}
-          placeholder={placeholder}
+          placeholder={placeholder ?? t('markdownEditor.placeholder')}
           className={mdxRootClassName}
           contentEditableClassName="kanap-mdx-content"
           onChange={handleChange}
           onError={handleError}
           plugins={plugins}
+          translation={translation}
         />
       </Box>
     </>

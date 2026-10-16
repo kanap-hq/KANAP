@@ -71,10 +71,22 @@
     "legacy": "Histórico"
   },
   "scope": {
-    "my": "Mis {{entity}}",
-    "myTeam": "{{entity}} de mi equipo",
-    "all": "Todos los {{entity}}",
-    "teamUnavailable": "No está asignado a ningún equipo"
+    "teamUnavailable": "No está asignado a ningún equipo",
+    "tasks": {
+      "my": "Mis tareas",
+      "myTeam": "Tareas de mi equipo",
+      "all": "Todas las tareas"
+    },
+    "projects": {
+      "my": "Mis proyectos",
+      "myTeam": "Proyectos de mi equipo",
+      "all": "Todos los proyectos"
+    },
+    "requests": {
+      "my": "Mis solicitudes",
+      "myTeam": "Solicitudes de mi equipo",
+      "all": "Todas las solicitudes"
+    }
   },
   "shared": {
     "blankValue": "(Vacío)",
@@ -399,7 +411,10 @@
           "estimatedEffort": "Esfuerzo estimado",
           "progressAndConsumption": "Avance y consumo de esfuerzo",
           "timeBreakdown": "Desglose de tiempo",
-          "timeLog": "Registro de tiempo"
+          "timeLog": "Registro de tiempo",
+          "allocation": "Asignación",
+          "effortBaseline": "Línea base de esfuerzo",
+          "capturedAtInProgress": "capturada al pasar a En curso"
         },
         "states": {
           "noTimeLogged": "Aún no se ha registrado tiempo. Haga clic en «Registrar tiempo» para agregar entradas."
@@ -416,7 +431,31 @@
           "taskSourceFallback": "Tarea",
           "taskTime": "Tiempo en tareas",
           "totalLogged": "Total registrado",
-          "workloadConsumption": "Consumo de esfuerzo: {{actual}} / {{planned}} DP"
+          "workloadConsumption": "Consumo de esfuerzo: {{actual}} / {{planned}} DP",
+          "mdUnit": "DP",
+          "actualOfEstimated": "{{actual}} / {{estimated}} DP",
+          "actualSplit": "(Proyecto {{project}} · Tarea {{task}})"
+        },
+        "overview": {
+          "progress": "Progreso",
+          "setManually": "fijado manualmente",
+          "fromTimeLog": "calculado automáticamente a partir del registro de tiempo"
+        },
+        "actions": {
+          "logTime": "+ Registrar tiempo"
+        },
+        "aria": {
+          "estimatedEffort": "Esfuerzo estimado {{type}} en DP"
+        },
+        "baseline": {
+          "itEffort": "Esfuerzo IT",
+          "businessEffort": "Esfuerzo de negocio",
+          "estimated": "Estimado",
+          "estimatedTooltip": "Esfuerzo estimado actual, fijado por el jefe de proyecto",
+          "baseline": "Línea base",
+          "baselineTooltip": "Instantánea del esfuerzo estimado capturada cuando el proyecto pasó a En curso",
+          "variance": "Desviación",
+          "varianceTooltip": "Diferencia entre la estimación actual y la línea base"
         }
       },
       "timeline": {
@@ -655,7 +694,8 @@
         "targetDeliveryDate": "Fecha de entrega objetivo"
       },
       "values": {
-        "requestorMissing": "Falta solicitante"
+        "requestorMissing": "Falta solicitante",
+        "itOwnerMissing": "Falta responsable de TI"
       },
       "sections": {
         "core": "Propiedades principales",
@@ -934,6 +974,14 @@
       "exportTitle": "Exportar tareas",
       "importTitle": "Importar tareas",
       "presetEnrichment": "Enriquecimiento de datos"
+    },
+    "delete": {
+      "toDelete_one": "Se eliminará {{count}} tarea:",
+      "toDelete_other": "Se eliminarán {{count}} tareas:",
+      "kept_one": "{{count}} tarea no se puede eliminar y se conserva:",
+      "kept_other": "{{count}} tareas no se pueden eliminar y se conservan:",
+      "deleted_one": "{{count}} tarea eliminada",
+      "deleted_other": "{{count}} tareas eliminadas"
     }
   },
   "projects": {
@@ -1048,6 +1096,323 @@
         "paused_other": "En pausa: ~{{count}} semanas",
         "dragToPin": "Arrastre para fijar la semana de inicio",
         "clickForExplanation": "Haga clic para obtener explicación"
+      }
+    },
+    "roadmap": {
+      "title": "Generador de hoja de ruta",
+      "fields": {
+        "startDate": "Fecha de inicio",
+        "statuses": "Estados",
+        "capacityMode": "Modo de capacidad",
+        "constraintScope": "Alcance de las restricciones",
+        "parallelLimit": "Límite de paralelismo",
+        "recalculateScheduled": "Recalcular los proyectos ya planificados",
+        "contextSwitchPenalty": "Penalización por cambio de contexto: {{value}} %",
+        "contextSwitchGrace": "Tolerancia de cambio de contexto"
+      },
+      "capacityModes": {
+        "theoretical": "Teórica",
+        "historical": "Histórica"
+      },
+      "constraintScopes": {
+        "full": "Cartera completa",
+        "itOnly": "Solo IT"
+      },
+      "optimization": {
+        "priorityFocused": "Prioridad primero",
+        "completionFocused": "Finalización primero"
+      },
+      "help": {
+        "recalculate": "Si está activado, los proyectos que ya tienen fechas planificadas se recalculan y pueden moverse.",
+        "itOnly": "El modo Solo IT oculta la capacidad de negocio, la ocupación y los proyectos puramente de negocio de la hoja de ruta generada."
+      },
+      "actions": {
+        "generate": "Generar",
+        "generating": "Generando…",
+        "editPin": "Editar fijación",
+        "pinStart": "Fijar inicio",
+        "why": "¿Por qué?"
+      },
+      "states": {
+        "empty": "Genere una hoja de ruta para previsualizar las fechas propuestas, los cuellos de botella y la ocupación de los colaboradores."
+      },
+      "overrides": {
+        "title": "Ajustes del escenario",
+        "resetAll": "Restablecer todos los ajustes"
+      },
+      "chips": {
+        "conflict_one": "Conflicto",
+        "conflict_other": "Conflictos",
+        "pinned": "Fijado"
+      },
+      "summary": {
+        "scheduled": "Planificados: {{count}}",
+        "reservations": "Reservas: {{count}}",
+        "externalBlockers": "Bloqueos externos: {{count}}",
+        "unschedulable": "No planificables: {{count}}",
+        "roadmapEnd": "Fin de la hoja de ruta: {{date}}",
+        "run": "Ejecución: {{ms}} ms",
+        "sensitivityReruns": "Reejecuciones de sensibilidad: {{count}}",
+        "sensitivityTruncated": "Sensibilidad muestreada (truncada)"
+      },
+      "values": {
+        "na": "N/D",
+        "excluded": "Excluido",
+        "pinStart": "Inicio fijado: {{week}}",
+        "noConstraint": "Sin restricción de escenario",
+        "days": "{{days}} d",
+        "percent": "{{value}} %"
+      },
+      "panel": {
+        "title": "Planificación, cuellos de botella y ocupación"
+      },
+      "tabs": {
+        "schedule": "Planificación",
+        "bottlenecks": "Cuellos de botella",
+        "occupation": "Ocupación"
+      },
+      "selection": {
+        "clearVisible": "Quitar la selección visible",
+        "selectVisible": "Seleccionar visibles",
+        "selectedInGantt_one": "{{count}} seleccionado en la vista previa de Gantt",
+        "selectedInGantt_other": "{{count}} seleccionados en la vista previa de Gantt",
+        "excludedHelp": "Los proyectos no marcados se excluyen del escenario y no consumen capacidad."
+      },
+      "columns": {
+        "project": "Proyecto",
+        "status": "Estado",
+        "scheduling": "Planificación",
+        "scenario": "Escenario",
+        "start": "Inicio",
+        "end": "Fin",
+        "weeks": "Semanas",
+        "priority": "Prioridad",
+        "explain": "Explicación",
+        "reason": "Motivo"
+      },
+      "unschedulable": {
+        "title": "Proyectos no planificables",
+        "item": "{{project}} ({{mode}}): {{reason}}"
+      },
+      "reservations": {
+        "title": "Reservas de capacidad",
+        "help": "Estos proyectos no se recalculan, pero siguen reservando capacidad de los colaboradores."
+      },
+      "bottlenecks": {
+        "empty": "No hay datos de cuellos de botella disponibles.",
+        "collapse": "Contraer los proyectos del colaborador",
+        "expand": "Expandir los proyectos del colaborador",
+        "days_one": "{{count}} día",
+        "days_other": "{{count}} días",
+        "columns": {
+          "projectName": "Nombre del proyecto",
+          "start": "Fecha de inicio del proyecto",
+          "end": "Fecha de fin del proyecto",
+          "totalContribution": "Contribución total (días)",
+          "spent": "Tiempo ya dedicado (días)"
+        },
+        "noProjects": "No hay proyectos planificados para este colaborador en el escenario actual."
+      },
+      "occupation": {
+        "contributors": "Colaboradores",
+        "teams": "Equipos",
+        "team": "Equipo",
+        "contributor": "Colaborador",
+        "average": "Promedio",
+        "avg": "Prom.",
+        "week": "S{{week}}",
+        "weekYear": "S{{week}} {{year}}",
+        "exportExcel": "Exportar la ocupación a Excel",
+        "exportPng": "Exportar la ocupación a PNG",
+        "noContributorData": "No hay datos de ocupación de colaboradores disponibles.",
+        "noTeamData": "No hay datos de ocupación de equipos disponibles.",
+        "noTeam": "Sin equipo",
+        "quarterYear": "T{{quarter}} {{year}}"
+      },
+      "gantt": {
+        "title": "Gantt de solo lectura",
+        "primaryOnly": "Solo principal",
+        "all": "Todo",
+        "showReservations": "Mostrar reservas",
+        "exportPng": "Exportar el Gantt a PNG",
+        "contributorView": "Vista de relevancia por colaborador",
+        "teamView": "Vista de relevancia por equipo",
+        "hiddenSupport_one": "Trabajo de soporte oculto: {{count}} proyecto, {{days}} d",
+        "hiddenSupport_other": "Trabajo de soporte oculto: {{count}} proyectos, {{days}} d",
+        "legend": "La barra sólida muestra el trabajo planificado activo. El tramo discontinuo inicial marca un inicio histórico anterior con una pausa antes de reanudar el trabajo. Las barras rayadas son reservas de capacidad. La superposición punteada marca huecos de planificación; la superposición gris diagonal marca los periodos en pausa.",
+        "dragHelp": "Arrastre la barra de un proyecto para crear o actualizar un inicio fijado solo para el escenario. Haga clic en la barra de un proyecto para abrir su explicación."
+      },
+      "filters": {
+        "allContributors": "Todos los colaboradores",
+        "allTeams": "Todos los equipos",
+        "allSources": "Todas las fuentes"
+      },
+      "apply": {
+        "summary_one": "Aplicar las fechas a {{count}} proyecto visible seleccionado",
+        "summary_other": "Aplicar las fechas a {{count}} proyectos visibles seleccionados",
+        "button": "Aplicar fechas",
+        "applying": "Aplicando…",
+        "dialogTitle": "Aplicar las fechas de la hoja de ruta",
+        "confirm_one": "Se actualizarán las fechas de inicio y fin planificadas de {{count}} proyecto visible seleccionado. El cambio es transaccional: si un proyecto no supera la validación, no se aplica ninguna fecha.",
+        "confirm_other": "Se actualizarán las fechas de inicio y fin planificadas de {{count}} proyectos visibles seleccionados. El cambio es transaccional: si un proyecto no supera la validación, no se aplica ninguna fecha."
+      },
+      "messages": {
+        "applied_one": "Fechas de la hoja de ruta aplicadas a {{count}} proyecto.",
+        "applied_other": "Fechas de la hoja de ruta aplicadas a {{count}} proyectos.",
+        "applyFailed": "No se pudieron aplicar las fechas de la hoja de ruta",
+        "applyFailedFor": "{{project}}: {{error}}",
+        "schedulingModeUpdated": "Modo de planificación establecido en {{mode}}.",
+        "schedulingModeFailed": "No se pudo actualizar el modo de planificación",
+        "generateFailed": "No se pudo generar la hoja de ruta",
+        "exportGanttFailed": "No se pudo exportar el Gantt a PNG",
+        "exportOccupationExcelFailed": "No se pudo exportar la ocupación a Excel",
+        "exportOccupationPngFailed": "No se pudo exportar la ocupación a PNG"
+      },
+      "schedulingModes": {
+        "independent": "Independiente",
+        "collaborative": "Colaborativo"
+      },
+      "reasons": {
+        "zero_remaining_effort": "Sin esfuerzo restante",
+        "no_assigned_contributors": "Sin colaboradores",
+        "missing_blocker_date": "Falta la fecha del bloqueo",
+        "blocker_on_hold": "Bloqueo en pausa",
+        "blocked_unfinished_project": "Bloqueado por un proyecto sin terminar",
+        "expired_fixed_plan": "Plan fijo vencido",
+        "cyclic_dependency": "Dependencia cíclica",
+        "not_ready_within_horizon": "Bloqueado más allá del horizonte",
+        "no_free_slot": "Sin hueco libre",
+        "no_effective_capacity": "Sin capacidad efectiva",
+        "below_minimum_start_threshold": "Por debajo del umbral mínimo de inicio",
+        "unfinished_within_horizon": "Iniciado pero no terminado",
+        "insufficient_capacity": "Capacidad insuficiente",
+        "missing_contributor_capacity": "Falta capacidad de colaboradores"
+      },
+      "reservationReasons": {
+        "not_recalculated": "No recalculado",
+        "external_blocker": "Bloqueo externo"
+      },
+      "startReasons": {
+        "historical_start": "Inicio histórico",
+        "dependency_release": "Liberación de dependencia",
+        "capacity_available": "Capacidad disponible",
+        "constraint_pin_start": "Inicio fijado",
+        "constraint_pin_window": "Ventana fijada",
+        "constraint_not_before": "Restricción «no antes de»",
+        "fixed_reservation": "Reserva fija",
+        "unscheduled": "Sin planificar"
+      },
+      "contributorReasons": {
+        "slot": "Límite de huecos paralelos",
+        "capacity": "Presión sobre la capacidad",
+        "collaborative_bottleneck": "Cuello de botella colaborativo",
+        "reservation": "Presión por reservas"
+      },
+      "constraints": {
+        "none": "Ninguna",
+        "pinWindow": "Ventana fijada: del {{start}} al {{end}}",
+        "notBefore": "No antes de: {{week}}"
+      },
+      "explain": {
+        "overline": "Explicación",
+        "whyStart": "Por qué esta semana de inicio",
+        "startReason": "Motivo del inicio: {{reason}}",
+        "earliestWeek": "Primera semana posible: {{week}}",
+        "actualWeek": "Semana de inicio real: {{week}}",
+        "notScheduled": "Sin planificar",
+        "whyNotEarlier": "Por qué no antes",
+        "noBlockers": "No se registraron otros detalles de bloqueo para este elemento.",
+        "range": "del {{from}} al {{to}}",
+        "unknown": "Desconocido",
+        "contributorTimeline": "Cronología del colaborador seleccionado",
+        "teamTimeline": "Cronología del equipo seleccionado",
+        "focusWindow": "{{name}}: del {{start}} al {{end}}",
+        "plannedContribution_one": "Contribución prevista: {{days}} d en {{count}} semana activa",
+        "plannedContribution_other": "Contribución prevista: {{days}} d en {{count}} semanas activas",
+        "primaryWork": "Trabajo principal de la hoja de ruta",
+        "supportWork": "Trabajo de soporte",
+        "shareOfEffort": "{{percent}} % del esfuerzo del proyecto",
+        "avgPerWeek": "prom. {{days}} d/semana",
+        "primaryHelp": "Este proyecto se muestra en la vista principal de la hoja de ruta para el foco seleccionado.",
+        "supportHelp": "Este proyecto se trata como trabajo de soporte y se oculta cuando el Gantt está en Solo principal.",
+        "weekOf": "Semana del {{week}}",
+        "projectLoad": "Carga del proyecto: {{days}} d",
+        "weeklyCapacity": "Capacidad semanal: {{value}}",
+        "totalAssigned": "Esfuerzo total asignado esa semana: {{days}} d",
+        "weeklyOccupation": "Ocupación semanal: {{value}}",
+        "projectContributors": "Colaboradores del proyecto",
+        "scheduledWindow": "Ventana planificada: del {{start}} al {{end}}",
+        "noLoads": "No hay detalles de carga de colaboradores para este elemento.",
+        "plannedLoad": "Carga prevista: {{days}} d",
+        "limiting": "Colaboradores limitantes",
+        "noLimiting": "No se registraron colaboradores limitantes para este elemento.",
+        "reservedLoad": "Carga reservada: {{value}}",
+        "activeProjects": "Proyectos activos: {{value}}",
+        "activeOverrides": "Ajustes de escenario activos",
+        "noOverrides": "No hay ajustes de escenario activos para este elemento.",
+        "finalWarnings": "Advertencias finales",
+        "noWarnings": "No se registraron advertencias de escenario para este elemento."
+      },
+      "pinDialog": {
+        "description": "Cree o actualice una restricción de inicio fijado solo para el escenario para {{project}}.",
+        "thisProject": "este proyecto",
+        "startWeek": "Semana de inicio",
+        "save": "Guardar fijación"
+      },
+      "classifications": {
+        "scheduled": "Planificado",
+        "reservation": "Reserva",
+        "unschedulable": "No planificable"
+      },
+      "explainText": {
+        "summaryUnschedulable": "{{project}} no se pudo planificar: {{reason}}",
+        "summaryNoStart": "{{project}} no tiene semana de inicio.",
+        "summaryHistorical": "{{project}} continúa un trabajo ya iniciado y aparece en la hoja de ruta a partir de la semana del {{week}}.",
+        "summaryConstraint": "{{project}} empezó la semana del {{week}} con esta restricción: {{constraint}}.",
+        "summaryConstraintConflict": "{{project}} empezó la semana del {{week}} con esta restricción: {{constraint}}. Conflicto: {{conflict}}",
+        "summaryCapacity": "{{project}} podía empezar desde la semana del {{eligible}} y empezó la semana del {{week}}, cuando hubo capacidad disponible.",
+        "summaryBlockers": "{{project}} empezó la semana del {{week}}, una vez levantados sus bloqueos.",
+        "summarySchedulable": "{{project}} empezó la semana del {{week}}, en cuanto se pudo planificar.",
+        "finalCapacity": "Podía empezar desde la semana del {{eligible}}, empezó la semana del {{week}} cuando hubo capacidad disponible.",
+        "finalBlockers": "Iniciado la semana del {{week}}, una vez levantados los bloqueos.",
+        "finalStarted": "Iniciado la semana del {{week}}.",
+        "conflict": {
+          "pinStartUnsatisfied": "No se pudo respetar el inicio fijado el {{week}}.",
+          "pinStartNormalized": "El inicio fijado el {{week}} se movió a la semana del {{normalized}} y luego se retrasó a la semana del {{actual}}.",
+          "pinStartSlipped": "El inicio fijado el {{week}} se retrasó a la semana del {{actual}}.",
+          "pinWindowUnsatisfied": "No se pudo respetar la ventana fijada del {{start}} al {{end}}.",
+          "pinWindowMissed": "No se respetó la ventana fijada del {{start}} al {{end}}. Planificación real: del {{actualStart}} al {{actualEnd}}.",
+          "notBeforeViolated": "El inicio el {{actual}} no respeta la restricción «no antes del {{week}}»."
+        },
+        "warningConflict": "{{project}}: {{conflict}}"
+      },
+      "text": {
+        "missingContributorCapacityFor": "No hay capacidad de colaborador configurada para: {{names}}",
+        "blockerOnHold": "El bloqueo {{blocker}} está en pausa",
+        "blockerFixedPlanExpired": "El bloqueo {{blocker}} no está terminado y su plan fijo terminó antes del inicio de la hoja de ruta",
+        "blockerCannotBeScheduled": "El bloqueo {{blocker}} no está terminado y no se puede planificar. Motivo: {{reason}}",
+        "missingBlockerDateFor": "Sin fecha para el bloqueo {{blocker}}",
+        "noFreeSlotFor": "Sin hueco paralelo libre para: {{contributors}}",
+        "noAllocableCapacityFor": "Sin capacidad semanal disponible para: {{contributors}}",
+        "collaborativeBurnBelowThreshold": "El esfuerzo colaborativo previsto al inicio es de {{burn}} d, por debajo del umbral de {{threshold}} d",
+        "collaborativeBurnStalledFor": "El trabajo colaborativo está detenido para: {{contributors}}",
+        "independentBurnBelowThreshold": "El esfuerzo independiente previsto al inicio es de {{burn}} d, por debajo del umbral de {{threshold}} d",
+        "noCapacityRemainedFor": "Ya no queda capacidad semanal efectiva para: {{contributors}}",
+        "capacityPreventedScheduling": "Las restricciones de capacidad impidieron la planificación",
+        "waitingOnBlockers": "Todavía a la espera de los bloqueos: {{blockers}}",
+        "earliestStartBeyondHorizon_one": "El inicio más temprano posible es el {{week}}, más allá del horizonte de {{count}} semana",
+        "earliestStartBeyondHorizon_other": "El inicio más temprano posible es el {{week}}, más allá del horizonte de {{count}} semanas",
+        "neverReadyWithinHorizon": "El proyecto nunca estuvo listo dentro del horizonte de planificación",
+        "remainingAfterHorizon_one": "Quedan {{remainingDays}} d después de {{count}} semana. Mayores cargas sin resolver: {{loads}}",
+        "remainingAfterHorizon_other": "Quedan {{remainingDays}} d después de {{count}} semanas. Mayores cargas sin resolver: {{loads}}",
+        "noAllocableWeek": "No se pudo asignar ninguna semana con las restricciones de capacidad actuales",
+        "contributorCapacity": "{{name}} ({{weeklyCapacity}} d/semana)",
+        "contributorRemainingLoad": "{{name}}: quedan {{remainingDays}} d a {{weeklyCapacity}} d/semana",
+        "waitingFor": "A la espera de {{blocker}}",
+        "waitingForUntil": "A la espera de {{blocker}} hasta la semana del {{week}}",
+        "blockerIsOnHold": "{{blocker}} está en pausa",
+        "blockerHasExpiredFixedPlan": "{{blocker}} tiene un plan fijo vencido",
+        "blockerIsUnschedulable": "{{blocker}} no se puede planificar: {{reason}}"
       }
     }
   },
@@ -1985,7 +2350,8 @@
         "loading": "Cargando asignaciones…"
       },
       "table": {
-        "contributor": "Colaborador"
+        "contributor": "Colaborador",
+        "md": "DP"
       },
       "validation": {
         "pinnedTotalExceeded": "Las filas manuales superan el 100 %. Reduzca primero un valor manual.",
@@ -2285,13 +2651,13 @@
           "high": "Alto"
         }
       },
-      "confirmDelete": "¿Eliminar este criterio? Las evaluaciones existentes serán eliminadas.",
       "messages": {
         "updateFailed": "Error al actualizar el criterio",
         "updateSettingsFailed": "Error al actualizar la configuración",
         "deleteFailed": "Error al eliminar el criterio",
         "reorderFailed": "Error al reordenar los criterios"
-      }
+      },
+      "confirmDelete": "Sus evaluaciones existentes también se eliminan. Esta acción no se puede deshacer."
     },
     "skills": {
       "empty": "Aún no hay competencias configuradas. Use «Cargar valores predeterminados» para cargar competencias estándar, o agregue competencias manualmente.",
@@ -2303,7 +2669,6 @@
         "categoryPlaceholder": "Seleccione o escriba una nueva categoría",
         "name": "Nombre de la competencia"
       },
-      "confirmDelete": "¿Eliminar esta competencia?",
       "messages": {
         "seedDefaultsFailed": "Error al cargar los valores predeterminados",
         "updateFailed": "Error al actualizar la competencia",
@@ -2331,7 +2696,6 @@
           "milestoneName": "Fase {{number}} completada"
         }
       },
-      "confirmDelete": "¿Eliminar esta plantilla de fase?",
       "messages": {
         "deleteFailed": "Error al eliminar la plantilla"
       }
@@ -2366,13 +2730,11 @@
       },
       "taskTypeDialog": {
         "editTitle": "Editar tipo de tarea",
-        "createTitle": "Crear tipo de tarea"
+        "createTitle": "Crear tipo de tarea",
+        "shippedNameHint": "Se muestra en el idioma de cada usuario mientras conserve este nombre."
       },
       "confirmations": {
-        "deleteSource": "¿Eliminar este origen?",
-        "deleteCategory": "¿Eliminar esta categoría y todas sus líneas?",
-        "deleteStream": "¿Eliminar esta línea?",
-        "deleteTaskType": "¿Eliminar este tipo de tarea?"
+        "deleteCategory": "Sus líneas se eliminan con ella. Esta acción no se puede deshacer."
       },
       "messages": {
         "deleteSourceFailed": "Error al eliminar el origen",
@@ -2394,7 +2756,6 @@
         "editTitle": "Editar equipo",
         "createTitle": "Crear equipo"
       },
-      "confirmDelete": "¿Eliminar este equipo?",
       "messages": {
         "seedDefaultsFailed": "Error al cargar los valores predeterminados",
         "deleteFailed": "Error al eliminar el equipo",

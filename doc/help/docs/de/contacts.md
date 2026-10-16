@@ -1,6 +1,6 @@
 # Kontakte
 
-Kontakte dokumentieren die Personen, mit denen Sie zusammenarbeiten -- Key Account Manager, Support-Ingenieure, Berater und andere externe Stakeholder. Verknüpfen Sie Kontakte mit Lieferanten, um ein Lieferanten-Kontaktverzeichnis aufzubauen, und referenzieren Sie sie von Anwendungen und Standorten für Support-Informationen.
+Kontakte dokumentieren die Personen, mit denen Sie zusammenarbeiten: Key Account Manager, Support-Ingenieure, Berater und andere externe Stakeholder. Verknüpfen Sie Kontakte mit Lieferanten, um ein Lieferanten-Kontaktverzeichnis aufzubauen, und referenzieren Sie sie von Anwendungen und Standorten für Support-Informationen.
 
 ## Erste Schritte
 
@@ -45,7 +45,7 @@ Das Kontakte-Grid bietet ein durchsuchbares Verzeichnis aller externen Kontakte.
 - **Neu**: Neuen Kontakt erstellen (erfordert `contacts:manager`)
 - **CSV importieren**: Massenimport von Kontakten (erfordert `contacts:admin`)
 - **CSV exportieren**: Als CSV exportieren (erfordert `contacts:admin`)
-- **Ausgewählte löschen**: Ausgewählte Kontakte entfernen (erfordert `contacts:admin`)
+- **Ausgewählte löschen**: Ausgewählte Kontakte entfernen (erfordert `contacts:admin`). Sie werden aus den Lieferanten, Budgetzeilen, Verträgen, Anwendungen, Assets, Standorten, Projekten und Anfragen entfernt, die sie nennen; diese Einträge bleiben erhalten
 
 ---
 
@@ -123,11 +123,10 @@ Verwalten Sie Kontakte in großen Mengen per CSV.
 
 **Pflichtfelder**: E-Mail
 
-**Optionale Felder**: Vorname, Nachname, Lieferantenname, Berufsbezeichnung, Telefon, Mobil, Land, Aktiv
+**Optionale Felder**: `first_name`, `last_name`, `job_title`, `phone`, `mobile`, `country`, `notes`, `active`
 
 **Hinweise**:
-- Verwenden Sie **UTF-8-Kodierung** und **Semikolons** als Trennzeichen. Eine von Excel als einfache CSV gespeicherte Datei (Windows-1252) wird ebenfalls importiert
-- Der Lieferant wird nach Name zugeordnet -- stellen Sie sicher, dass der Lieferant vor dem Import existiert
+- Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen und die beiden Importschritte
 
 ---
 
@@ -136,5 +135,5 @@ Verwalten Sie Kontakte in großen Mengen per CSV.
 - **Immer einen Lieferanten zuweisen**: Das Verknüpfen von Kontakten mit Lieferanten erleichtert das Finden und Verwalten.
 - **Kontakttyp festlegen**: Sobald ein Lieferant verknüpft ist, wählen Sie, ob der Kontakt Kommerziell, Technisch, Support oder Sonstige ist. Das hilft beim Durchsuchen der Kontakte aus dem Lieferanten-Arbeitsbereich.
 - **Konsistente Benennung**: Geben Sie Namen in einheitlichem Format ein (z. B. immer „Vorname Nachname").
-- **Inaktive Kontakte markieren**: Wenn jemand einen Anbieter verlässt, markieren Sie ihn als inaktiv statt zu löschen -- dies bewahrt den Audit-Trail.
+- **Inaktive Kontakte markieren**: Wenn jemand einen Anbieter verlässt, markieren Sie ihn als inaktiv statt zu löschen. Dies bewahrt den Audit-Trail.
 - **Berufsbezeichnungen eintragen**: Berufsbezeichnungen helfen, den richtigen Kontakt für verschiedene Bedürfnisse zu identifizieren (Vertrieb vs. Support vs. Account Management).

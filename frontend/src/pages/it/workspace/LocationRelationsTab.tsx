@@ -82,11 +82,11 @@ export default function LocationRelationsTab({ locationId }: Props) {
 
       <Box>
         <Typography sx={{ fontSize: 16, fontWeight: 500, color: 'kanap.text.primary', mb: 1 }}>
-          Assets at this location
+          {t('it:workspace.location.relations.assetsTitle')}
         </Typography>
         {assets.length === 0 ? (
           <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>
-            No assets linked to this location.
+            {t('it:workspace.location.relations.noAssets')}
           </Typography>
         ) : (
           <Box
@@ -113,13 +113,13 @@ export default function LocationRelationsTab({ locationId }: Props) {
           >
             <Box component="thead">
               <Box component="tr">
-                <Box component="th">Name</Box>
-                {hasSubLocations && <Box component="th">Sub-location</Box>}
-                <Box component="th">Environment</Box>
-                <Box component="th">Type</Box>
-                <Box component="th">Provider</Box>
-                <Box component="th">Region / zone</Box>
-                <Box component="th">Status</Box>
+                <Box component="th">{t('it:common.name')}</Box>
+                {hasSubLocations && <Box component="th">{t('it:workspace.location.relations.subLocation')}</Box>}
+                <Box component="th">{t('it:common.environment')}</Box>
+                <Box component="th">{t('it:workspace.location.relations.type')}</Box>
+                <Box component="th">{t('it:workspace.location.relations.provider')}</Box>
+                <Box component="th">{t('it:workspace.location.relations.regionZone')}</Box>
+                <Box component="th">{t('it:workspace.location.relations.status')}</Box>
               </Box>
             </Box>
             <Box component="tbody">
@@ -149,11 +149,11 @@ export default function LocationRelationsTab({ locationId }: Props) {
 
       <Box>
         <Typography sx={{ fontSize: 16, fontWeight: 500, color: 'kanap.text.primary', mb: 1 }}>
-          Applications at this location
+          {t('it:workspace.location.relations.applicationsTitle')}
         </Typography>
         {applications.length === 0 ? (
           <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>
-            No applications detected for this location.
+            {t('it:workspace.location.relations.noApplications')}
           </Typography>
         ) : (
           <Box
@@ -176,8 +176,8 @@ export default function LocationRelationsTab({ locationId }: Props) {
           >
             <Box component="thead">
               <Box component="tr">
-                <Box component="th">Name</Box>
-                <Box component="th">Environments</Box>
+                <Box component="th">{t('it:common.name')}</Box>
+                <Box component="th">{t('it:workspace.location.relations.environments')}</Box>
               </Box>
             </Box>
             <Box component="tbody">

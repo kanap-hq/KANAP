@@ -33,7 +33,7 @@ Consecuencias de la elección de la biblioteca:
 - En **Plantillas**, los documentos publicados se convierten en puntos de partida reutilizables para nuevos artículos y se agrupan por tipo de documento en el selector de plantillas.
 - En **Documentos gestionados**, los artículos pueden seguir siendo legibles y editables, pero algunos metadatos están controlados por el espacio de trabajo de origen en lugar de desde la propia Base de conocimiento.
 
-La administración de bibliotecas es intencionadamente más estricta que la edición de documentos. Crear, renombrar, eliminar o reorganizar bibliotecas es responsabilidad del administrador porque esos cambios afectan a la navegación y la propiedad para todos.
+La administración de bibliotecas es intencionadamente más estricta que la edición de documentos. Crear, renombrar, eliminar o reorganizar bibliotecas es responsabilidad del administrador porque esos cambios afectan a la navegación y la propiedad para todos. La biblioteca predeterminada (la primera de la barra, donde se crean los documentos nuevos) no se puede eliminar. Tampoco una biblioteca integrada, ni la última biblioteca que usted puede usar: cree antes otra.
 
 ### Bibliotecas restringidas
 
@@ -60,7 +60,7 @@ Comportamiento importante:
 - En una vista de biblioteca única, los documentos pueden arrastrarse a carpetas para una reorganización rápida.
 - Las carpetas pueden anidarse para crear una estructura de navegación.
 - Eliminar una carpeta no elimina sus documentos. En su lugar, los documentos vuelven a **Sin archivar**.
-- Una carpeta con subcarpetas no puede eliminarse hasta que se limpie la jerarquía.
+- Una carpeta con subcarpetas no se puede eliminar: KANAP lo indica antes de pedirle confirmación. Mueva o elimine primero sus subcarpetas.
 
 Use carpetas para áreas temáticas estables, no para estados de flujo de trabajo temporales. El estado y el flujo de trabajo ya existen para eso.
 
@@ -161,7 +161,7 @@ Los movimientos de carpetas siguen la misma idea que los movimientos de document
 
 - **Nuevo** (botón dividido): crea un documento en blanco en la biblioteca activa, o abre el selector de plantillas para crear desde una plantilla publicada
 - **Mover**: mueve los documentos seleccionados a una carpeta o biblioteca diferente
-- **Eliminar**: elimina permanentemente los documentos seleccionados (solo administradores; no disponible para documentos gestionados)
+- **Eliminar**: elimina permanentemente los documentos seleccionados (solo administradores; no disponible para documentos gestionados). Antes de eliminar nada, la confirmación enumera los documentos que se conservan, con el motivo
 - **Gestionar tipos**: visible solo dentro de la biblioteca **Plantillas** para administradores; abre el editor de tipos de documento
 
 ## Crear y dar forma a un documento

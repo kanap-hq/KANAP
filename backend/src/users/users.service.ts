@@ -26,7 +26,6 @@ import { BillingService } from '../billing/billing.service';
 // import { PermissionsService, PermissionLevel } from '../permissions/permissions.service';
 import { Company } from '../companies/company.entity';
 import { Department } from '../departments/department.entity';
-import * as fs from 'fs';
 import { EmailService } from '../email/email.service';
 import { createPasswordResetToken as buildPasswordResetToken, getPasswordResetExpirationMinutes } from '../auth/password-reset.util';
 import { PasswordResetToken } from '../auth/password-reset-token.entity';
@@ -46,6 +45,7 @@ import {
   writeCsv,
 } from '../common/csv-sheet';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
+import { uploadedBytes } from '../common/upload';
 
 const SUPPORTED_USER_LOCALES = ['en', 'fr', 'de', 'es'] as const;
 const SELF_SERVICE_FIELDS = ['first_name', 'last_name', 'job_title', 'business_phone', 'mobile_phone', 'locale'] as const;
@@ -737,8 +737,7 @@ export class UsersService {
     if (!file) throw new BadRequestException('No file uploaded');
     const readLanguage = language ?? 'en';
     const expectedHeaders = this.csvHeaders();
-    const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
-    if (!buf) throw new BadRequestException('Empty upload');
+    const buf = uploadedBytes(file);
     const read = await readMasterDataFile({
       file: buf as Buffer,
       fields: expectedHeaders,

@@ -174,6 +174,7 @@
       "saveFailed": "Failed to save the company.",
       "createFailed": "Failed to create the company.",
       "nameRequired": "Enter a name.",
+      "nameTaken": "Another company already has this name.",
       "countryRequired": "Choose a country.",
       "currencyRequired": "Choose a base currency.",
       "cityRequired": "Enter a city.",
@@ -185,7 +186,9 @@
       "toDelete_one": "{{count}} company will be deleted:",
       "toDelete_other": "{{count}} companies will be deleted:",
       "kept_one": "{{count}} company is still in use and is kept. Disable it instead:",
-      "kept_other": "{{count}} companies are still in use and are kept. Disable them instead:"
+      "kept_other": "{{count}} companies are still in use and are kept. Disable them instead:",
+      "deleted_one": "{{count}} company deleted",
+      "deleted_other": "{{count}} companies deleted"
     }
   },
   "departments": {
@@ -221,8 +224,17 @@
       "saveFailed": "Failed to save the department.",
       "createFailed": "Failed to create the department.",
       "nameRequired": "Enter a name.",
+      "nameTaken": "Another department of this company already has this name.",
       "companyRequired": "Choose a company.",
       "headcountInvalid": "Enter a whole number, 0 or more."
+    },
+    "delete": {
+      "toDelete_one": "{{count}} department will be deleted:",
+      "toDelete_other": "{{count}} departments will be deleted:",
+      "kept_one": "{{count}} department cannot be deleted and is kept:",
+      "kept_other": "{{count}} departments cannot be deleted and are kept:",
+      "deleted_one": "{{count}} department deleted",
+      "deleted_other": "{{count}} departments deleted"
     }
   },
   "costCenters": {
@@ -291,6 +303,14 @@
       "nameRequired": "Enter a name.",
       "companyRequired": "Choose a company.",
       "chooseCompany": "Choose the company to make this group a cost center."
+    },
+    "delete": {
+      "toDelete_one": "{{count}} cost center will be deleted:",
+      "toDelete_other": "{{count}} cost centers will be deleted:",
+      "kept_one": "{{count}} cost center cannot be deleted and is kept:",
+      "kept_other": "{{count}} cost centers cannot be deleted and are kept:",
+      "deleted_one": "{{count}} cost center deleted",
+      "deleted_other": "{{count}} cost centers deleted"
     }
   },
   "workingDayCalendars": {
@@ -386,6 +406,14 @@
       "deleteFailed": "Failed to delete the calendar.",
       "codeRequired": "Enter a code.",
       "nameRequired": "Enter a name."
+    },
+    "delete": {
+      "toDelete_one": "{{count}} calendar will be deleted:",
+      "toDelete_other": "{{count}} calendars will be deleted:",
+      "kept_one": "{{count}} calendar cannot be deleted and is kept:",
+      "kept_other": "{{count}} calendars cannot be deleted and are kept:",
+      "deleted_one": "{{count}} calendar deleted",
+      "deleted_other": "{{count}} calendars deleted"
     }
   },
   "suppliers": {
@@ -445,7 +473,9 @@
       "toDelete_one": "{{count}} supplier will be deleted:",
       "toDelete_other": "{{count}} suppliers will be deleted:",
       "kept_one": "{{count}} supplier is still in use and is kept. Disable it instead:",
-      "kept_other": "{{count}} suppliers are still in use and are kept. Disable them instead:"
+      "kept_other": "{{count}} suppliers are still in use and are kept. Disable them instead:",
+      "deleted_one": "{{count}} supplier deleted",
+      "deleted_other": "{{count}} suppliers deleted"
     }
   },
   "contacts": {
@@ -514,6 +544,10 @@
       "saveFailed": "Failed to save the contact.",
       "createFailed": "Failed to create the contact.",
       "loadFailed": "Failed to load the contact."
+    },
+    "delete": {
+      "warning_one": "It is removed from the suppliers, budget lines, contracts, applications, assets, locations, projects and requests that name it. These records stay. This cannot be undone.",
+      "warning_other": "They are removed from the suppliers, budget lines, contracts, applications, assets, locations, projects and requests that name them. These records stay. This cannot be undone."
     }
   },
   "coa": {
@@ -640,6 +674,14 @@
       "unmapped_one": "{{count}} account has no consolidation account",
       "unmapped_other": "{{count}} accounts have no consolidation account",
       "showAll": "Show all accounts"
+    },
+    "delete": {
+      "toDelete_one": "{{count}} account will be deleted:",
+      "toDelete_other": "{{count}} accounts will be deleted:",
+      "kept_one": "{{count}} account cannot be deleted and is kept:",
+      "kept_other": "{{count}} accounts cannot be deleted and are kept:",
+      "deleted_one": "{{count}} account deleted",
+      "deleted_other": "{{count}} accounts deleted"
     }
   },
   "accounts": {
@@ -906,7 +948,8 @@
       "itOwner": "IT owner",
       "itOwnerHelper": "IT contact responsible for tools / systems supporting this process",
       "notesPlaceholder": "Internal notes, links to SOPs or process maps",
-      "nameRequired": "Name is required"
+      "nameRequired": "Name is required",
+      "nameTaken": "Another business process already has this name."
     },
     "categoryManager": {
       "title": "Manage business process categories",
@@ -921,7 +964,9 @@
       "failedToDelete": "Failed to delete category",
       "failedToCreate": "Failed to create category",
       "failedToUpdate": "Failed to update category"
-    }
+    },
+    "deleteWarning_one": "This cannot be undone. Interfaces and requests linked to this process stay, without the link.",
+    "deleteWarning_other": "This cannot be undone. Interfaces and requests linked to these processes stay, without the link."
   },
   "admin": {
     "copy": {

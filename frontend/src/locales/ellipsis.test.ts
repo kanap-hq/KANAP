@@ -14,10 +14,6 @@ const PENDING: ReadonlySet<string> = new Set([
   'grid.json loadingOoo',
   'grid.json searchOoo',
   'grid.json filterOoo',
-  'common.json csv.andMoreErrors2_one',
-  'common.json csv.andMoreErrors2_other',
-  'common.json csv.andMoreWarnings_one',
-  'common.json csv.andMoreWarnings_other',
 ]);
 
 describe('locale ellipses', () => {

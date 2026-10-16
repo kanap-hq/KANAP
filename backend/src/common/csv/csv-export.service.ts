@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
-import { format } from '@fast-csv/format';
+import { formatCsvBoolean } from '../csv-sheet/boolean';
+import { formatCsvDate } from '../csv-sheet/date';
+import { csvProfile } from '../csv-sheet/language';
+import { CsvLanguage } from '../csv-sheet/types';
+import { writeCsvHeader, writeCsvRows } from '../csv-sheet/write';
 import {
   ArrayStrategy,
   CsvEntityConfig,
@@ -96,6 +100,11 @@ export interface CsvExportOptions {
   fields?: string[];
   /** Export preset name to use */
   preset?: string;
+  /**
+   * The screen language, as for every file of the shared layer: the separator, the days, the
+   * decimal mark and yes or no follow it. The headers are the same in every language.
+   */
+  language: CsvLanguage;
 }
 
 /**
@@ -105,15 +114,11 @@ export interface CsvExportOptions {
  * - Declarative field configuration
  * - FK resolution (user emails, entity names)
  * - Array expansion to numbered columns
- * - UTF-8 BOM for Excel compatibility
+ * - UTF-8 BOM, separator, days, decimal mark and yes or no of the shared layer (`csv-sheet`)
  * - Template export (headers only)
  */
 @Injectable()
 export class CsvExportService {
-  /** UTF-8 BOM character */
-  private readonly BOM = '\uFEFF';
-  /** CSV delimiter */
-  private readonly DELIMITER = ';';
   /** Default max items for array fields */
   private readonly DEFAULT_MAX_ITEMS = 4;
 
@@ -144,7 +149,7 @@ export class CsvExportService {
     if (opts.scope === 'template') {
       return {
         filename: `${config.entityName}_template.csv`,
-        content: this.BOM + headers.join(this.DELIMITER) + '\n',
+        content: writeCsvHeader(opts.language, headers),
         rowCount: 0,
         warnings: [],
       };
@@ -165,6 +170,7 @@ export class CsvExportService {
       tenantId: opts.tenantId,
       manager: opts.manager,
       resolverCache,
+      language: opts.language,
     };
 
     // Process relation handlers if any
@@ -180,32 +186,15 @@ export class CsvExportService {
       }
     }
 
-    // Generate CSV content
-    const chunks: string[] = [];
-    await new Promise<void>((resolve, reject) => {
-      const stream = format({ headers, delimiter: this.DELIMITER });
-      stream.on('data', (chunk) => chunks.push(chunk.toString('utf8')));
-      stream.on('end', () => resolve());
-      stream.on('error', (err) => reject(err));
-
-      for (const entity of entities) {
-        const row = this.buildRow(
-          entity,
-          exportFields,
-          reverseLookups,
-          relationData,
-          context,
-          warnings,
-        );
-        stream.write(row);
-      }
-
-      stream.end();
+    // Generate CSV content: the shared layer quotes, guards formulas and picks the separator.
+    const rows = entities.map((entity) => {
+      const row = this.buildRow(entity, exportFields, reverseLookups, relationData, context, warnings);
+      return headers.map((header) => row[header] ?? '');
     });
 
     return {
       filename: `${config.entityName}_export.csv`,
-      content: this.BOM + chunks.join(''),
+      content: writeCsvHeader(opts.language, headers) + writeCsvRows({ language: opts.language, headers, rows }),
       rowCount: entities.length,
       warnings,
     };
@@ -458,23 +447,25 @@ export class CsvExportService {
       return JSON.stringify(rawValue);
     }
 
-    // Handle dates
+    // Handle dates: the day, written the language's way
     if (field.type === CsvFieldType.DATE) {
-      if (rawValue instanceof Date) {
-        return rawValue.toISOString().split('T')[0];
+      const day = rawValue instanceof Date ? rawValue.toISOString().split('T')[0] : String(rawValue).split('T')[0];
+      try {
+        return formatCsvDate(day, context.language);
+      } catch {
+        return day;
       }
-      // Already a string date
-      return String(rawValue).split('T')[0];
     }
 
-    // Handle numbers
+    // Handle numbers: the language's decimal mark, no thousands separator
     if (field.type === CsvFieldType.NUMBER) {
-      return String(rawValue);
+      const text = String(rawValue);
+      return csvProfile(context.language).decimal === ',' && /^-?\d+\.\d+$/.test(text) ? text.replace('.', ',') : text;
     }
 
-    // Handle booleans
+    // Handle booleans: yes or no in the language
     if (field.type === CsvFieldType.BOOLEAN) {
-      return rawValue ? 'true' : 'false';
+      return formatCsvBoolean(!!rawValue, context.language);
     }
 
     // Default: string conversion

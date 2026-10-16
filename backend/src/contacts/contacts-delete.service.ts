@@ -6,6 +6,7 @@ import { SupplierContactLink } from './supplier-contact.entity';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { AuditService } from '../audit/audit.service';
 import { BulkDeleteResult } from '../common/delete.types';
+import { refusalDetails } from '../common/record-in-use';
 import { withSavepoint } from '../common/savepoint.util';
 
 @Injectable()
@@ -25,6 +26,8 @@ export class ContactsDeleteService extends BaseDeleteService<ExternalContact> {
           foreignKey: 'contact_id',
           deleteStrategy: 'cascade',
         },
+        // The other links (budget lines, contracts, applications, assets, locations, projects and
+        // requests) cascade in the database (projects and requests since 1854150000000).
       ],
     });
   }
@@ -52,11 +55,11 @@ export class ContactsDeleteService extends BaseDeleteService<ExternalContact> {
         let name = 'Unknown';
         try {
           const c = await withSavepoint(manager, () => repo.findOne({ where: { id } }));
-          if (c) name = c.email;
+          if (c) name = [c.first_name, c.last_name].map((v) => v?.trim()).filter(Boolean).join(' ') || c.email;
         } catch (err: any) {
           this.logger.warn(`Failed to fetch contact name for error reporting: ${err?.message || 'Unknown error'}`);
         }
-        result.failed.push({ id, name, reason: e?.message || 'Unknown error' });
+        result.failed.push({ id, name, reason: e?.message || 'Unknown error', ...refusalDetails(e) });
       }
     }
     return result;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -8,6 +8,8 @@ import { createAppTheme } from '../config/ThemeContext';
 
 const treeState = vi.hoisted(() => ({ ready: true, nodes: [] as unknown[], isError: false }));
 const grid = vi.hoisted(() => ({ props: null as null | Record<string, any> }));
+const deleteButton = vi.hoisted(() => ({ props: null as null | Record<string, any> }));
+const deleteCheckPost = vi.hoisted(() => vi.fn());
 const levels = vi.hoisted(() => ({ value: 'admin' as 'reader' | 'member' | 'admin' | null }));
 
 vi.mock('react-i18next', () => ({
@@ -22,7 +24,14 @@ vi.mock('../auth/AuthContext', () => ({
     },
   }),
 }));
-vi.mock('../api', () => ({ default: { get: vi.fn(async () => ({ data: { items: [] } })) } }));
+vi.mock('../api', () => ({ default: { get: vi.fn(async () => ({ data: { items: [] } })), post: deleteCheckPost } }));
+vi.mock('../components/DeleteSelectedButton', () => ({
+  default: (props: Record<string, any>) => {
+    deleteButton.props = props;
+    return null;
+  },
+}));
+
 vi.mock('../hooks/useCostCenterTree', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../hooks/useCostCenterTree')>();
   return {
@@ -110,5 +119,20 @@ describe('CostCentersPage', () => {
     treeState.isError = true;
     renderPage();
     expect(screen.queryByTestId('cost-centers-empty')).toBeNull();
+  });
+});
+
+describe('CostCentersPage delete', () => {
+  it('asks the delete check before its confirmation, and names the records in its words', async () => {
+    renderPage();
+    const props = await waitFor(() => {
+      expect(deleteButton.props).not.toBeNull();
+      return deleteButton.props!;
+    });
+    deleteCheckPost.mockResolvedValueOnce({ data: { refused: [{ id: 'a', name: 'A', code: 'X', usages: [] }] } });
+    expect(await props.checkDelete(['a', 'b'])).toEqual({ refused: [{ id: 'a', name: 'A', code: 'X', usages: [] }] });
+    expect(deleteCheckPost).toHaveBeenCalledWith('/cost-centers/delete-check', { ids: ['a', 'b'] });
+    expect(String(props.itemLabels.toDelete(2))).toContain('costCenters.delete.toDelete');
+    expect(String(props.itemLabels.kept(1))).toContain('costCenters.delete.kept');
   });
 });

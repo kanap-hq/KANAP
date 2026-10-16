@@ -78,7 +78,6 @@
     "valueCount": "{{formatted}} valeurs",
     "valueCount_one": "{{formatted}} valeur",
     "clearFilter": "Effacer le filtre",
-    "columnPlaceholder": "Filtrer…",
     "filterColumn": "Filtrer {{column}}",
     "linkFiltersLost": "Les filtres de ce lien ne sont plus disponibles.",
     "date": {
@@ -95,8 +94,8 @@
     "noResults": "Aucun résultat",
     "noResultsFiltered": "Aucun résultat ne correspond à la recherche ou aux filtres.",
     "clearAll": "Effacer la recherche et les filtres",
-    "resultCount_one": "{{count}} résultat",
-    "resultCount_other": "{{count}} résultats"
+    "resultCount_one": "{{count, count}} résultat",
+    "resultCount_other": "{{count, count}} résultats"
   },
   "columnChooser": {
     "searchPlaceholder": "Rechercher une colonne",
@@ -111,7 +110,7 @@
     "disabled": "Désactivés",
     "invited": "Invités",
     "email": "E-mail",
-    "totalWithCount": "Total ({{count}})",
+    "totalWithCount": "Total ({{count, count}})",
     "noData": "Aucune donnée",
     "none": "Aucun",
     "year": "Année",
@@ -128,10 +127,12 @@
     "role": "Rôle",
     "unknown": "Inconnu",
     "readOnly": "Lecture seule",
-    "managedDoc": "Document géré",
+    "managedDoc": "Document managé",
     "recommended": "Recommandé",
     "openCalendar": "Ouvrir le calendrier",
     "datePlaceholder": "jj/mm/aaaa",
+    "time": "Heure",
+    "timePlaceholder": "hh:mm",
     "requiredTag": "(obligatoire)",
     "relatedTo": "Lié à",
     "openInNewTab": "Ouvrir dans un nouvel onglet",
@@ -171,9 +172,14 @@
     "cannotUndo": "Cette action est irréversible.",
     "successAll_one": "{{count}} élément supprimé",
     "successAll_other": "{{count}} éléments supprimés",
+    "keptDone_one": "{{count}} élément conservé",
+    "keptDone_other": "{{count}} éléments conservés",
+    "withKept": "{{deleted}}. {{kept}}",
+    "namedList": "{{what}} : {{names}}",
+    "namesMore_one": "{{count}} autre",
+    "namesMore_other": "{{count}} autres",
+    "partialResult": "{{deleted}}. {{failed}}",
     "failedAll": "Échec de la suppression : {{reasons}}",
-    "partialDeleted_one": "{{count}} élément supprimé.",
-    "partialDeleted_other": "{{count}} éléments supprimés.",
     "partialFailed_one": "Échec pour {{count}} élément : {{reasons}}",
     "partialFailed_other": "Échec pour {{count}} éléments : {{reasons}}",
     "failedGeneric": "Échec de la suppression des éléments",
@@ -207,7 +213,41 @@
       "team_members_one": "{{count}} membre d'équipe",
       "team_members_other": "{{count}} membres d'équipe",
       "compliance_requirements_one": "{{count}} exigence de conformité renseignée",
-      "compliance_requirements_other": "{{count}} exigences de conformité renseignées"
+      "compliance_requirements_other": "{{count}} exigences de conformité renseignées",
+      "opex_lines_one": "{{count}} ligne OPEX",
+      "opex_lines_other": "{{count}} lignes OPEX",
+      "capex_lines_one": "{{count}} ligne CAPEX",
+      "capex_lines_other": "{{count}} lignes CAPEX",
+      "app_assignments_one": "{{count}} affectation à une application",
+      "app_assignments_other": "{{count}} affectations à des applications",
+      "connections_one": "{{count}} connexion",
+      "connections_other": "{{count}} connexions",
+      "nodes_one": "{{count}} élément",
+      "nodes_other": "{{count}} éléments",
+      "companies_one": "{{count}} société",
+      "companies_other": "{{count}} sociétés",
+      "values_one": "{{count}} valeur",
+      "values_other": "{{count}} valeurs",
+      "sub_teams_one": "{{count}} sous-équipe",
+      "sub_teams_other": "{{count}} sous-équipes",
+      "contributors_one": "{{count}} contributeur",
+      "contributors_other": "{{count}} contributeurs",
+      "interface_bindings_one": "{{count}} liaison d'interface",
+      "interface_bindings_other": "{{count}} liaisons d'interface",
+      "server_assignments_one": "{{count}} affectation de serveur",
+      "server_assignments_other": "{{count}} affectations de serveur",
+      "business_processes_one": "{{count}} processus métier",
+      "business_processes_other": "{{count}} processus métier",
+      "documents_one": "{{count}} document",
+      "documents_other": "{{count}} documents",
+      "sub_folders_one": "{{count}} sous-dossier",
+      "sub_folders_other": "{{count}} sous-dossiers",
+      "app_instances_one": "{{count}} déploiement",
+      "app_instances_other": "{{count}} déploiements",
+      "incidents_one": "{{count}} incident",
+      "incidents_other": "{{count}} incidents",
+      "subnets_one": "{{count}} sous-réseau",
+      "subnets_other": "{{count}} sous-réseaux"
     }
   },
   "messages": {
@@ -450,7 +490,6 @@
     "exportTitle": "Exporter en CSV",
     "importTitle": "Importer un CSV",
     "exportDescription": "Exporter les données au format CSV. Les fichiers utilisent le séparateur point-virgule.",
-    "exportDescriptionExcel": "Exporter les données au format CSV. Les fichiers utilisent le séparateur point-virgule pour la compatibilité Excel.",
     "exportDescriptionFlexible": "Exporter les données au format CSV. Le séparateur, le séparateur décimal et les dates suivent la langue de l'écran.",
     "exportData": "Exporter les données",
     "exportPreset": "Préréglage d'export",
@@ -459,7 +498,6 @@
     "fieldsSelected": "{{selected}} sur {{total}} champs sélectionnés",
     "downloadTemplate": "Télécharger le modèle",
     "uploadDescription": "Téléversez un CSV avec des séparateurs point-virgule et les titres de colonnes exactement identiques au modèle.",
-    "uploadDescriptionShort": "Téléversez un CSV avec des séparateurs point-virgule.",
     "uploadDescriptionFlexible": "Téléversez un fichier CSV avec les titres de colonnes du modèle. Les virgules et les points-virgules conviennent, et un fichier enregistré par Excel aussi.",
     "dragDropOrClick": "Glissez-déposez un CSV ici, ou cliquez pour sélectionner",
     "preflightCheck": "Vérification préalable",
@@ -499,10 +537,10 @@
     "skipped_other": "{{count}} ignorées",
     "errors": "Erreurs ({{count}})",
     "warnings": "Avertissements ({{count}})",
-    "andMoreErrors2_one": "...et {{count}} erreur supplémentaire",
-    "andMoreErrors2_other": "...et {{count}} erreurs supplémentaires",
-    "andMoreWarnings_one": "...et {{count}} avertissement supplémentaire",
-    "andMoreWarnings_other": "...et {{count}} avertissements supplémentaires",
+    "andMoreErrors2_one": "…et {{count}} erreur supplémentaire",
+    "andMoreErrors2_other": "…et {{count}} erreurs supplémentaires",
+    "andMoreWarnings_one": "…et {{count}} avertissement supplémentaire",
+    "andMoreWarnings_other": "…et {{count}} avertissements supplémentaires",
     "rowPrefix": "Ligne {{row}} :",
     "rowsUnchanged_one": "{{count}} ligne inchangée.",
     "rowsUnchanged_other": "{{count}} lignes inchangées.",
@@ -620,7 +658,13 @@
     "valueUnavailable": "Valeur plus disponible",
     "budgetLines": "Lignes budgétaires",
     "searchBudgetLines": "Rechercher des lignes budgétaires",
-    "noBudgetLinesFound": "Aucune ligne budgétaire trouvée"
+    "noBudgetLinesFound": "Aucune ligne budgétaire trouvée",
+    "company": "Société",
+    "supplier": "Fournisseur",
+    "department": "Département",
+    "departments": "Départements",
+    "allDepartments": "Tous les départements",
+    "newCategoryName": "Nom de la nouvelle catégorie"
   },
   "documentEditor": {
     "expandDocument": "Agrandir le document",
@@ -629,11 +673,11 @@
     "retryLock": "Réessayer le verrouillage",
     "lockExpired": "Le verrouillage d'édition a expiré. Repassez en mode édition pour continuer.",
     "failedToSave": "Échec de l'enregistrement du document",
-    "failedToLoad": "Échec du chargement du document géré",
-    "contentUnavailable": "Le contenu du document géré est indisponible jusqu'à la résolution de l'erreur de chargement.",
-    "lockedBy": "Ce document géré est verrouillé par {{name}}",
-    "lockedByUntil": "Ce document géré est verrouillé par {{name}} jusqu'au {{expires}}. Vous pouvez le lire tant que le verrou est actif.",
-    "lockedByReadOnly": "Ce document géré est verrouillé par {{name}}. Vous pouvez le lire tant que le verrou est actif.",
+    "failedToLoad": "Échec du chargement du document managé",
+    "contentUnavailable": "Le contenu du document managé est indisponible jusqu'à la résolution de l'erreur de chargement.",
+    "lockedBy": "Ce document managé est verrouillé par {{name}}",
+    "lockedByUntil": "Ce document managé est verrouillé par {{name}} jusqu'au {{expires}}. Vous pouvez le lire tant que le verrou est actif.",
+    "lockedByReadOnly": "Ce document managé est verrouillé par {{name}}. Vous pouvez le lire tant que le verrou est actif.",
     "importFailed": "Échec de l'importation du document"
   },
   "knowledgePanel": {
@@ -667,7 +711,9 @@
     "openColumn": "Ouvrir",
     "restrictedDocuments_one": "{{count}} document autonome est disponible pour cet élément. Vous devez disposer du rôle Lecteur pour le consulter.",
     "restrictedDocuments_other": "{{count}} documents autonomes sont disponibles pour cet élément. Vous devez disposer du rôle Lecteur pour les consulter.",
-    "newDocumentOptions": "Options du nouveau document"
+    "newDocumentOptions": "Options du nouveau document",
+    "noDocuments": "Aucun document lié",
+    "newLinkedTitle": "Nouveau document lié"
   },
   "share": {
     "sendLink": "Envoyer le lien",
@@ -922,7 +968,150 @@
   },
   "markdownEditor": {
     "insertEmoji": "Insérer un emoji",
-    "blockStyle": "Style de bloc"
+    "blockStyle": "Style de bloc",
+    "placeholder": "Commencez à écrire…",
+    "mdx": {
+      "admonitions": {
+        "caution": "Prudence",
+        "changeType": "Choisir le type d'encadré",
+        "danger": "Danger",
+        "info": "Info",
+        "note": "Remarque",
+        "placeholder": "Type d'encadré",
+        "tip": "Astuce"
+      },
+      "codeblock": {
+        "delete": "Supprimer le bloc de code"
+      },
+      "codeBlock": {
+        "inlineLanguage": "Langage",
+        "language": "Langage du bloc de code",
+        "selectLanguage": "Choisir le langage du bloc de code"
+      },
+      "contentArea": {
+        "editableMarkdown": "Texte modifiable"
+      },
+      "createLink": {
+        "cancelTooltip": "Annuler la modification",
+        "saveTooltip": "Définir l'URL",
+        "text": "Texte du lien",
+        "textTooltip": "Le texte affiché pour le lien",
+        "title": "Titre du lien",
+        "titleTooltip": "Le titre du lien, affiché au survol",
+        "urlPlaceholder": "Choisissez ou collez une URL",
+        "url": "URL"
+      },
+      "dialog": {
+        "close": "Fermer la boîte de dialogue"
+      },
+      "dialogControls": {
+        "cancel": "Annuler",
+        "save": "Enregistrer"
+      },
+      "frontmatterEditor": {
+        "addEntry": "Ajouter une entrée",
+        "dialogDescription": "Ajoutez, modifiez ou supprimez les entrées clé-valeur de l'en-tête du document.",
+        "key": "Clé",
+        "title": "Modifier l'en-tête du document",
+        "value": "Valeur"
+      },
+      "imageEditor": {
+        "deleteImage": "Supprimer l'image",
+        "editImage": "Modifier l'image"
+      },
+      "linkPreview": {
+        "copied": "Copié",
+        "copyToClipboard": "Copier dans le presse-papiers",
+        "edit": "Modifier l'URL du lien",
+        "open": "Ouvrir {{url}} dans une nouvelle fenêtre",
+        "remove": "Supprimer le lien"
+      },
+      "table": {
+        "alignCenter": "Centrer",
+        "alignLeft": "Aligner à gauche",
+        "alignRight": "Aligner à droite",
+        "columnMenu": "Menu de la colonne",
+        "deleteColumn": "Supprimer cette colonne",
+        "deleteRow": "Supprimer cette ligne",
+        "deleteTable": "Supprimer le tableau",
+        "insertColumnLeft": "Insérer une colonne à gauche",
+        "insertColumnRight": "Insérer une colonne à droite",
+        "insertRowAbove": "Insérer une ligne au-dessus",
+        "insertRowBelow": "Insérer une ligne en dessous",
+        "rowMenu": "Menu de la ligne",
+        "textAlignment": "Alignement du texte"
+      },
+      "toolbar": {
+        "admonition": "Insérer un encadré",
+        "blockTypeSelect": {
+          "placeholder": "Type de bloc",
+          "selectBlockTypeTooltip": "Choisir le type de bloc"
+        },
+        "blockTypes": {
+          "heading": "Titre {{level}}",
+          "paragraph": "Paragraphe",
+          "quote": "Citation"
+        },
+        "bold": "Gras",
+        "bulletedList": "Liste à puces",
+        "checkList": "Liste de cases à cocher",
+        "codeBlock": "Insérer un bloc de code",
+        "diffMode": "Mode différences",
+        "editFrontmatter": "Modifier l'en-tête",
+        "highlight": "Surligner",
+        "image": "Insérer une image",
+        "inlineCode": "Code en ligne",
+        "insertFrontmatter": "Insérer un en-tête",
+        "italic": "Italique",
+        "link": "Créer un lien",
+        "numberedList": "Liste numérotée",
+        "redo": "Rétablir {{shortcut}}",
+        "removeBold": "Retirer le gras",
+        "removeHighlight": "Retirer le surlignage",
+        "removeInlineCode": "Retirer le format code",
+        "removeItalic": "Retirer l'italique",
+        "removeStrikethrough": "Retirer le barré",
+        "removeSubscript": "Retirer l'indice",
+        "removeSuperscript": "Retirer l'exposant",
+        "removeUnderline": "Retirer le soulignement",
+        "richText": "Texte enrichi",
+        "source": "Mode source",
+        "strikethrough": "Barré",
+        "subscript": "Indice",
+        "superscript": "Exposant",
+        "table": "Insérer un tableau",
+        "thematicBreak": "Insérer un séparateur",
+        "toggleGroup": "Groupe de boutons",
+        "underline": "Souligner",
+        "undo": "Annuler {{shortcut}}"
+      },
+      "uploadImage": {
+        "addViaUrlInstructionsNoUpload": "Ajouter une image depuis une URL :",
+        "addViaUrlInstructions": "Ou ajoutez une image depuis une URL :",
+        "alt": "Texte alternatif :",
+        "autoCompletePlaceholder": "Choisissez ou collez l'URL d'une image",
+        "dialogDescription": "Insérez une image depuis une URL ou téléversez-en une depuis votre appareil.",
+        "dialogDescriptionNoUpload": "Insérez une image depuis une URL.",
+        "dialogTitle": "Téléverser une image",
+        "height": "Hauteur :",
+        "title": "Titre :",
+        "uploadInstructions": "Téléversez une image depuis votre appareil :",
+        "width": "Largeur :"
+      }
+    },
+    "emoji": {
+      "smile": "Sourire",
+      "grin": "Grand sourire",
+      "laugh": "Rire",
+      "love": "Amour",
+      "think": "Réflexion",
+      "thumbsUp": "Pouce levé",
+      "celebrate": "Fête",
+      "fire": "Feu",
+      "done": "Terminé",
+      "launch": "Lancement"
+    },
+    "plainText": "Texte brut"
   },
   "markdownLink": {
     "url": "URL",
@@ -930,5 +1119,50 @@
     "editLink": "Modifier le lien",
     "copyUrl": "Copier l'URL",
     "removeLink": "Supprimer le lien"
+  },
+  "taskTypes": {
+    "task": {
+      "label": "Tâche",
+      "description": "Tâche ou élément de travail standard"
+    },
+    "bug": {
+      "label": "Bug",
+      "description": "Défaut ou erreur logicielle"
+    },
+    "problem": {
+      "label": "Problème",
+      "description": "Problème opérationnel nécessitant une analyse"
+    },
+    "incident": {
+      "label": "Incident",
+      "description": "Interruption de service ou événement de sécurité"
+    }
+  },
+  "tenant": {
+    "notFound": {
+      "title": "Tenant introuvable",
+      "message": "Ce tenant n'existe pas ou n'est plus disponible. Vous allez être redirigé vers notre site dans quelques instants.",
+      "redirecting": "Redirection vers {{url}}"
+    }
+  },
+  "relatedObject": {
+    "types": {
+      "standalone": "Autonome",
+      "project": "Projet",
+      "spendItem": "Budget (OPEX)",
+      "contract": "Contrat",
+      "capexItem": "CAPEX",
+      "incident": "Incident"
+    },
+    "item": "Élément"
+  },
+  "markdownContent": {
+    "copyCode": "Copier le code",
+    "copied": "Copié"
+  },
+  "relevantWebsites": {
+    "name": "Nom",
+    "empty": "Aucune URL liée.",
+    "delete": "Supprimer l'URL"
   }
 }

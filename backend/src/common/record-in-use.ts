@@ -1,13 +1,36 @@
-import { ConflictException, HttpStatus } from '@nestjs/common';
+import { ConflictException, HttpStatus, NotFoundException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
+import { mapDatabaseError } from './filters/database-error.mapping';
 import { readUsages, type UsageQuery, type UsageType } from './record-usages';
 
 /**
  * What still uses or holds a record, counted per kind: the groups of its usages, or what a record
- * holds that forbids its delete (a contract's recorded compliance requirements).
+ * holds that forbids its delete (a contract's recorded compliance requirements, a group's nodes).
+ * The interface words each kind (`common:delete.usages.<kind>`).
  */
-export type RefusalKind = UsageType | 'compliance_requirements';
+export type RefusalKind =
+  | UsageType
+  | 'compliance_requirements'
+  | 'opex_lines'
+  | 'capex_lines'
+  | 'app_assignments'
+  | 'connections'
+  | 'nodes'
+  | 'companies'
+  | 'values'
+  | 'sub_teams'
+  | 'contributors'
+  | 'interface_bindings'
+  | 'server_assignments'
+  | 'business_processes'
+  | 'documents'
+  | 'sub_folders'
+  | 'app_instances'
+  | 'incidents'
+  | 'subnets';
 export type UsageCount = { type: RefusalKind; total: number };
+/** Values a refusal's sentence names besides the counts (`errors:<code>` interpolates them): a column, a year. */
+export type RefusalParams = Record<string, string | number>;
 
 const ENGLISH: Record<RefusalKind, [string, string]> = {
   budget_lines: ['budget line', 'budget lines'],
@@ -26,7 +49,32 @@ const ENGLISH: Record<RefusalKind, [string, string]> = {
   team_members: ['team member', 'team members'],
   suppliers: ['supplier', 'suppliers'],
   compliance_requirements: ['recorded compliance requirement', 'recorded compliance requirements'],
+  opex_lines: ['OPEX line', 'OPEX lines'],
+  capex_lines: ['CAPEX line', 'CAPEX lines'],
+  app_assignments: ['application assignment', 'application assignments'],
+  connections: ['connection', 'connections'],
+  nodes: ['node', 'nodes'],
+  companies: ['company', 'companies'],
+  values: ['value', 'values'],
+  sub_teams: ['sub-team', 'sub-teams'],
+  contributors: ['contributor', 'contributors'],
+  interface_bindings: ['interface binding', 'interface bindings'],
+  server_assignments: ['server assignment', 'server assignments'],
+  business_processes: ['business process', 'business processes'],
+  documents: ['document', 'documents'],
+  sub_folders: ['subfolder', 'subfolders'],
+  app_instances: ['deployment', 'deployments'],
+  incidents: ['incident', 'incidents'],
+  subnets: ['subnet', 'subnets'],
 };
+
+/** The OPEX and CAPEX line counts of a refusal, each kind only when not zero. */
+export function lineUsages(usage: { opex: number; capex: number } | undefined): UsageCount[] {
+  const usages: UsageCount[] = [];
+  if (usage && usage.opex > 0) usages.push({ type: 'opex_lines', total: usage.opex });
+  if (usage && usage.capex > 0) usages.push({ type: 'capex_lines', total: usage.capex });
+  return usages;
+}
 
 export function englishList(usages: readonly UsageCount[]): string {
   const parts = usages.map(({ type, total }) => `${total} ${ENGLISH[type][total === 1 ? 0 : 1]}`);
@@ -45,6 +93,7 @@ export class RecordInUseException extends ConflictException {
     name: string,
     readonly usages: UsageCount[],
     message = `Cannot delete ${entity} "${name}": it is used by ${englishList(usages)}. Disable it instead.`,
+    readonly params?: RefusalParams,
   ) {
     super({
       statusCode: HttpStatus.CONFLICT,
@@ -52,6 +101,7 @@ export class RecordInUseException extends ConflictException {
       code,
       message,
       usages,
+      ...(params ? { params } : {}),
     });
   }
 }
@@ -78,9 +128,39 @@ export async function assertNotInUse(
 }
 
 /** A record a delete would refuse, as a check before the delete lists it (`refusalsOf`). */
-export type DeleteRefusal = { id: string; name: string; code: string; usages: UsageCount[] };
+export type DeleteRefusal = { id: string; name: string; code: string; usages: UsageCount[]; params?: RefusalParams };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** The ids a check reads: each well-formed uuid once, lower case, in the order asked. */
+export function checkIds(ids: readonly unknown[] | null | undefined): string[] {
+  return Array.from(new Set((Array.isArray(ids) ? ids : []).map((id) => String(id || '').trim().toLowerCase()).filter((id) => UUID_RE.test(id))));
+}
+
+/**
+ * The check before a delete whose refusal is not a usages list alone: `rows` are the asked records
+ * of the tenant (read by the caller), and `refusalOf` answers for each the refusal its delete
+ * would throw, or null. The same function guards the delete, so the check and the delete agree.
+ * In the order of `ids`; unknown ids are left out. Nothing is written.
+ */
+export async function refusalsFrom<R extends { id: string }>(
+  ids: readonly string[],
+  rows: readonly R[],
+  nameOf: (row: R) => string,
+  refusalOf: (row: R) => Promise<RecordInUseException | null>,
+): Promise<{ refused: DeleteRefusal[] }> {
+  const byId = new Map(rows.map((row) => [String(row.id).toLowerCase(), row]));
+  const refused: DeleteRefusal[] = [];
+  for (const id of ids) {
+    const row = byId.get(id);
+    if (!row) continue;
+    const refusal = await refusalOf(row);
+    if (refusal) {
+      refused.push({ id: row.id, name: nameOf(row), code: refusal.code, usages: refusal.usages, ...(refusal.params ? { params: refusal.params } : {}) });
+    }
+  }
+  return { refused };
+}
 
 /**
  * The check before a delete: of the asked records of the tenant (`table`, with a `name`), those
@@ -94,7 +174,7 @@ export async function refusalsOf(
   queries: readonly UsageQuery[],
   code: string,
 ): Promise<{ refused: DeleteRefusal[] }> {
-  const wanted = Array.from(new Set((ids || []).map((id) => String(id || '').trim().toLowerCase()).filter((id) => UUID_RE.test(id))));
+  const wanted = checkIds(ids);
   if (wanted.length === 0) return { refused: [] };
   const rows: Array<{ id: string; name: string; tenant_id: string }> = await manager.query(
     `SELECT id, name, tenant_id FROM ${table} WHERE tenant_id = app_current_tenant() AND id = ANY($1::uuid[])`,
@@ -111,7 +191,18 @@ export async function refusalsOf(
   return { refused };
 }
 
-/** The translatable part of a refusal, for a bulk delete's failed item. */
-export function refusalDetails(error: unknown): { code?: string; usages?: UsageCount[] } {
-  return error instanceof RecordInUseException ? { code: error.code, usages: error.usages } : {};
+/**
+ * The translatable part of a bulk delete's failed item: a refusal's code, counts and params; a
+ * record gone meanwhile (`not_found`); a database refusal's mapped code (`in_use`, `retry`, ...)
+ * with its English sentence as `reason`, in place of the driver's. Spread after `reason`.
+ */
+export function refusalDetails(error: unknown): { code?: string; usages?: UsageCount[]; params?: RefusalParams; reason?: string } {
+  if (error instanceof RecordInUseException) {
+    return { code: error.code, usages: error.usages, ...(error.params ? { params: error.params } : {}) };
+  }
+  if (error instanceof NotFoundException) return { code: 'not_found' };
+  const mapped = mapDatabaseError(error);
+  if (!mapped) return {};
+  const message = (mapped.exception.getResponse() as { message?: unknown }).message;
+  return { code: mapped.code, ...(typeof message === 'string' ? { reason: message } : {}) };
 }

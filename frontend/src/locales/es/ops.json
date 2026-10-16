@@ -415,7 +415,9 @@
       "toDelete_one": "Se eliminará {{count}} contrato:",
       "toDelete_other": "Se eliminarán {{count}} contratos:",
       "kept_one": "Se conserva {{count}} contrato. Desactívelo en su lugar:",
-      "kept_other": "Se conservan {{count}} contratos. Desactívelos en su lugar:"
+      "kept_other": "Se conservan {{count}} contratos. Desactívelos en su lugar:",
+      "deleted_one": "{{count}} contrato eliminado",
+      "deleted_other": "{{count}} contratos eliminados"
     },
     "title": "Contratos",
     "newButton": "Nuevo",
@@ -779,16 +781,16 @@
       "operations": "Operaciones"
     },
     "cards": {
-      "freezeTitle": "Congelar / Descongelar datos",
-      "freezeDesc": "Bloquear columnas presupuestarias o métricas de plantilla para un año específico",
+      "freezeTitle": "Congelar / descongelar datos",
+      "freezeDesc": "Bloquee columnas presupuestarias o métricas de plantilla para un año determinado",
       "copyBudgetTitle": "Copiar columnas presupuestarias",
-      "copyBudgetDesc": "Copiar importes entre años y columnas, con un porcentaje opcional, y asignaciones a otro año",
+      "copyBudgetDesc": "Copie importes entre años y columnas, con un porcentaje opcional, y asignaciones a otro año",
       "resetColumnTitle": "Restablecer columna presupuestaria",
-      "resetColumnDesc": "Borrar todos los datos de una columna presupuestaria para un año específico",
+      "resetColumnDesc": "Borre todos los datos de una columna presupuestaria para un año determinado",
       "allocationDefaultTitle": "Método de asignación por defecto",
-      "allocationDefaultDesc": "Elegir el método aplicado a las líneas de OPEX y CAPEX que siguen con la asignación por defecto",
+      "allocationDefaultDesc": "Elija el método aplicado a las líneas de OPEX y CAPEX que siguen con la asignación por defecto",
       "budgetColumnsTitle": "Columnas presupuestarias",
-      "budgetColumnsDesc": "Nombrar las cinco columnas presupuestarias, elegir cuáles se muestran y cuál es la columna por defecto",
+      "budgetColumnsDesc": "Asigne un nombre a las cinco columnas presupuestarias y elija cuáles se muestran y cuál es la columna por defecto",
       "currencyTitle": "Monedas",
       "currencyDesc": "Defina las monedas de reporting y predeterminadas, y consulte los tipos de cambio",
       "masterDataFreezeTitle": "Congelar datos maestros",
@@ -830,7 +832,7 @@
       }
     },
     "freeze": {
-      "title": "Congelar / Descongelar datos",
+      "title": "Congelar / descongelar datos",
       "freezeError": "No se pudieron congelar las columnas.",
       "unfreezeError": "No se pudieron descongelar las columnas.",
       "loadError": "No se pudo cargar el estado de congelación. Intente seleccionar otro año.",
@@ -1802,7 +1804,7 @@
     },
     "frozen": {
       "title": "La columna {{column}} {{year}} está congelada",
-      "hint": "Solo lectura. Un administrador puede descongelarla en Administración › Congelar / Descongelar datos."
+      "hint": "Solo lectura. Un administrador puede descongelarla en Administración › Congelar / descongelar datos."
     },
     "atADate": "En una fecha",
     "date": "Fecha",
@@ -1847,11 +1849,19 @@
     "importTitle": "Importar líneas presupuestarias",
     "opex": "OPEX",
     "capex": "CAPEX",
-    "totalWithCount_one": "Total ({{count}} línea)",
-    "totalWithCount_other": "Total ({{count}} líneas)",
+    "totalWithCount_one": "Total ({{count, count}} línea)",
+    "totalWithCount_other": "Total ({{count, count}} líneas)",
     "changeType": "Cambiar el tipo…",
     "typeOpex": "OPEX",
     "typeCapex": "CAPEX",
-    "line": "Línea presupuestaria"
+    "line": "Línea presupuestaria",
+    "delete": {
+      "toDelete_one": "Se eliminará {{count}} línea presupuestaria:",
+      "toDelete_other": "Se eliminarán {{count}} líneas presupuestarias:",
+      "kept_one": "{{count}} línea presupuestaria no se puede eliminar y se conserva:",
+      "kept_other": "{{count}} líneas presupuestarias no se pueden eliminar y se conservan:",
+      "deleted_one": "{{count}} línea presupuestaria eliminada",
+      "deleted_other": "{{count}} líneas presupuestarias eliminadas"
+    }
   }
 }

@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { Company } from './company.entity';
@@ -6,7 +6,7 @@ import { AuditService } from '../audit/audit.service';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
 import { withSavepoint } from '../common/savepoint.util';
-import { assertNotInUse, refusalDetails, refusalsOf, type DeleteRefusal } from '../common/record-in-use';
+import { assertNotInUse, RecordInUseException, refusalDetails, refusalsOf, type DeleteRefusal } from '../common/record-in-use';
 import { COMPANY_USAGE_QUERIES } from './company-usages';
 
 /** Tables whose foreign key can block a company delete, in plain words. */
@@ -71,7 +71,7 @@ export class CompaniesDeleteService extends BaseDeleteService<Company> {
       throw new NotFoundException('Company not found');
     }
 
-    // Check for references - will throw ConflictException if found
+    // Check for references - throws a RecordInUseException (409) if found
     await this.beforeDelete(company, manager);
 
     try {
@@ -81,7 +81,7 @@ export class CompaniesDeleteService extends BaseDeleteService<Company> {
       // A foreign key the reference check did not cover (or a row added since): say which records, when known.
       if (error.code === '23503' || error.message?.includes('foreign key constraint')) {
         const users = COMPANY_REFERENCING_TABLES[String(error.table ?? '')] ?? 'other records';
-        throw new ConflictException(`Cannot delete company "${company.name}": ${users} still use it. You can disable it instead.`);
+        throw new RecordInUseException('RECORD_IN_USE', 'company', company.name, [], `Cannot delete company "${company.name}": ${users} still use it. You can disable it instead.`);
       }
       throw error;
     }

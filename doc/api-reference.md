@@ -518,7 +518,8 @@ Validation/behavior:
   - Body: `{ name, supplier_id?, description?, editor?, retired_date?, version?, go_live_date?, end_of_support_date?, lifecycle, criticality, data_class, external_facing?, is_suite?, last_dr_test?, etl_enabled?, contains_pii?, licensing?, notes?, users_mode?, users_year?, users_override? }`
   - Legacy fields (`environment`, `hosting_model`, `sso_enabled`, `mfa_supported`) are accepted but discouraged; the UI writes App Instances instead.
 - PATCH `/applications/:id` → partial update of the fields above.
-- DELETE `/applications/:id` → cascade deletes owners/audience/links/attachments/data_residency (App Instances must be removed first via the dedicated endpoints).
+- DELETE `/applications/:id` → 409 `APPLICATION_HAS_INTERFACES` (with `usages`) while the application is the source or target of an interface, and DELETE `/applications/bulk` lists it as a failed item with the same code; otherwise deletes it with its deployments and its links (owners, audience, links, attachments, data residency).
+- POST `/applications/delete-check` with `{ ids: string[] }` [Requires: applications:admin] → `{ refused: Array<{ id, name, code, usages }>, removes: Array<{ type, total }> }`: the applications that are the source or target of an interface (`APPLICATION_HAS_INTERFACES`, `usages: [{ type: 'interfaces', total }]`), which both deletes refuse, and the deployments the others take with them (`removes: [{ type: 'app_instances', total }]`). Nothing is written.
 
 Version Management
 - POST `/applications/:id/create-version`
@@ -582,6 +583,7 @@ Notes
   - `POST /interfaces` → `{ interface_id, name, business_purpose, business_process_id?, source_application_id, target_application_id, data_category, integration_route_type('direct'|'via_middleware'), lifecycle?, overview_notes?, criticality?, impact_of_failure?, business_objects?, main_use_cases?, functional_rules?, core_transformations_summary?, error_handling_summary?, data_class, contains_pii?, pii_description?, typical_data?, audit_logging?, security_controls_summary?, middleware_application_ids?: string[] }`
   - `PATCH /interfaces/:id` → accepts the same fields as `POST /interfaces` (all optional) and updates the interface; changing `integration_route_type` recreates legs (bindings cascade).
   - `DELETE /interfaces/:id`
+  - `POST /interfaces/delete-check` with `{ ids: string[] }` [Requires: applications:admin] → `{ refused: Array<{ id, name, code, usages }> }`: the interfaces with bindings (`INTERFACE_HAS_BINDINGS`, `usages: [{ type: 'interface_bindings', total }]`), which `DELETE /interfaces/bulk` refuses unless `deleteRelatedBindings: true`. Nothing is written.
   - `GET /interfaces/:id?include=relations,legs` → detail plus related owners/companies/dependencies/key identifiers/data residency/links/attachments and leg templates when requested.
   - `GET /interfaces/:id/legs` → `{ items: InterfaceLeg[] }` for the given interface.
   - `PATCH /interfaces/:id/legs` → `{ items: InterfaceLeg[] }` updates leg template fields for the given interface. Body: `{ items: Array<{ id: string; trigger_type?: string; integration_pattern?: string; data_format?: string; job_name?: string | null }> }`. Enum fields are validated against IT Ops settings.
@@ -1261,7 +1263,7 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
 
 - GET `/tasks?status=open|in_progress|pending|in_testing|done|cancelled&page=1&limit=50&sort=created_at:DESC&q&filters` — list all tasks (aggregated) **[Requires: tasks:reader]**
   - Response: `{ items: TaskRow[], total, page, limit }`
-  - TaskRow: `{ id, tenant_id, title, description, status, due_date, created_at, assignee_user_id, assignee_name, related_object_type, related_object_id, related_object_name, priority_level, priority_score, task_type_id, task_type_name, source_id, source_name, category_id, category_name, stream_id, stream_name, company_id, company_name }`
+  - TaskRow: `{ id, tenant_id, title, description, status, due_date, created_at, assignee_user_id, assignee_name, related_object_type, related_object_id, related_object_name, priority_level, priority_score, task_type_id, task_type_name, task_type_code, source_id, source_name, category_id, category_name, stream_id, stream_name, company_id, company_name }`
   - Filtering: supports AG Grid filter model via `filters` JSON and `q` quick search; default sort `created_at:DESC`
     - Text filters: `{ filterType: 'text', type: 'contains' | 'equals' | ... , filter: string }`
     - Set filters: `{ filterType: 'set', values: string[] }` (empty array = match nothing)
@@ -1549,6 +1551,7 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
 - POST `/suppliers/:id/contacts` — attach `{ contactId, role: 'commercial'|'technical'|'support'|'other', isPrimary? }`. [Requires: suppliers:manager]
 - DELETE `/suppliers/:id/contacts/:linkId` — detach. [Requires: suppliers:manager]
 - POST `/suppliers/delete-check` and POST `/companies/delete-check` with `{ ids: string[] }` [Requires: suppliers:admin / companies:admin] → `{ refused: Array<{ id, name, code, usages }> }`: the records of the tenant a delete would refuse (`SUPPLIER_IN_USE`, `COMPANY_IN_USE`, with the counts per kind), asked before the list's confirmation. Nothing is written (`common/record-in-use.ts`, `refusalsOf`).
+- The same check, same body and answer, for the portfolio settings lists and knowledge folders: POST `/portfolio/classification/{sources,categories,streams,task-types}/delete-check`, `/portfolio/teams/delete-check`, `/portfolio/employment-types/delete-check` [Requires: portfolio_settings:admin] (`BUILT_IN_RECORD`, `RECORD_USED_BY`, `TEAM_NOT_EMPTY`), and `/knowledge-folders/delete-check` [Requires: knowledge:member] (`KNOWLEDGE_FOLDER_HAS_SUBFOLDERS`). Each delete asks the same refusal function (`refusalsFrom`).
 
 ### Suppliers CSV (contacts columns)
 - GET `/suppliers/export?scope=template|data&language=…` and POST `/suppliers/import?dryRun=true|false&language=…&dateOrder=…&decimalMark=…` (multipart `file`). Same shared master-data contract as `/companies/import`.
@@ -1673,12 +1676,12 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
 
 ## Audit Logs (Admin)
 - Permission: `users:admin`
-- GET `/audit-logs?page=1&limit=100&sort=created_at:DESC&q=...&from=YYYY-MM-DD&to=YYYY-MM-DD&table_name=...&action=...&source=...&user_id=...&filters=<agGridFilterModel>`
+- GET `/audit-logs?page=1&limit=100&sort=created_at:DESC&q=...&q_tables=...&from=YYYY-MM-DD&to=YYYY-MM-DD&table_name=...&action=...&source=...&user_id=...&filters=<agGridFilterModel>`
   - Returns paginated audit entries for the current tenant:
     - `{ items, total, page, limit }`
   - Item shape:
     - `{ id, tenant_id, table_name, record_id, action, before_json, after_json, user_id, user_email, user_name, source, source_ref, created_at }`
-  - Supports quick search (`q`) across `table_name`, `action`, and actor name/email.
+  - Supports quick search (`q`) across `table_name`, `action`, and actor name/email. With a search, `q_tables=<code>,<code>` (optional) also matches those tables: the web app sends the codes whose label, in the reader's language, holds the text ("Fournisseurs" → `suppliers`). Values other than table codes (`[a-z][a-z0-9_]*`) are ignored; at most 300. The export and `filter-values` take it too.
   - Supports date range filtering:
     - `from` is inclusive (`>=`)
     - `to` is exclusive (`<`) when a full datetime is provided; for `YYYY-MM-DD`, API treats it as end-of-day inclusive by shifting to the next day internally.

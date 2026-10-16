@@ -11,9 +11,9 @@ import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetai
 import { PropertyGroup, PropertyRow } from '../../components/design';
 import CompanySelect from '../../components/fields/CompanySelect';
 import StatusLifecycleField from '../../components/fields/StatusLifecycleField';
-import { deriveStatusFromDisabledAt, normalizeStatus } from '../../constants/status';
+import { STATUS_DISABLED, deriveStatusFromDisabledAt, normalizeStatus } from '../../constants/status';
 import { drawerFieldValueSx, longFormSurfaceFieldSx } from '../../theme/formSx';
-import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import { getApiErrorMessage, isDuplicateError } from '../../utils/apiErrorMessage';
 import DepartmentHeadcountTab from './DepartmentHeadcountTab';
 
 type TabKey = 'overview' | 'details';
@@ -78,7 +78,6 @@ export default function DepartmentWorkspacePage() {
   });
 
   const [errors, setErrors] = React.useState<FieldErrors>({});
-  const [pageError, setPageError] = React.useState<string | null>(null);
   // Autosave never blocks the fields: writes queue one after the other, so a response never
   // overwrites a newer one, and results for a record the user has left are dropped.
   const chainRef = React.useRef<Promise<unknown>>(Promise.resolve());
@@ -87,7 +86,6 @@ export default function DepartmentWorkspacePage() {
 
   React.useEffect(() => {
     setErrors({});
-    setPageError(null);
   }, [id]);
 
   const listContext = React.useMemo(() => {
@@ -117,10 +115,12 @@ export default function DepartmentWorkspacePage() {
           void queryClient.invalidateQueries({ queryKey: ['departments'], predicate: (q) => q.queryKey[1] !== recordId });
         } catch (e) {
           if (currentIdRef.current !== recordId) return;
-          const message = getApiErrorMessage(e, t, t('departments.messages.saveFailed'));
           const target = departmentRefusalField(e) ?? field;
-          if (target === 'name') setPageError(message);
-          else setErrors((prev) => ({ ...prev, [target]: message }));
+          // A name another department of the company has shows under the field saved (the name or the company).
+          const message = isDuplicateError(e)
+            ? t('departments.messages.nameTaken')
+            : getApiErrorMessage(e, t, t('departments.messages.saveFailed'));
+          setErrors((prev) => ({ ...prev, [target]: message }));
         }
       };
       const result = chainRef.current.then(run, run);
@@ -157,6 +157,7 @@ export default function DepartmentWorkspacePage() {
       <PropertyRow label={t('departments.fields.company')} required>
         <CompanySelect
           hideLabel
+          label={t('departments.fields.company')}
           value={data.company_id}
           onChange={(companyId) => {
             if (companyId && companyId !== data.company_id) void patch({ company_id: companyId }, 'company_id');
@@ -181,6 +182,8 @@ export default function DepartmentWorkspacePage() {
             if (disabledAt === data.disabled_at) return;
             void patch({ status: deriveStatusFromDisabledAt(disabledAt), disabled_at: disabledAt }, 'disabled_at');
           }}
+          // Disable now: the status alone, the server sets the end of validity from its own clock.
+          onDisableNow={() => void patch({ status: STATUS_DISABLED }, 'disabled_at')}
           disabled={disabled}
           disabledAtError={!!errors.disabled_at}
           disabledAtHelperText={errors.disabled_at}
@@ -191,9 +194,9 @@ export default function DepartmentWorkspacePage() {
 
   return (
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      {(pageError || loadError) && (
-        <Alert severity="error" sx={{ mx: 2, mt: 1 }} onClose={pageError ? () => setPageError(null) : undefined}>
-          {pageError ?? t('departments.loadError')}
+      {loadError && (
+        <Alert severity="error" sx={{ mx: 2, mt: 1 }}>
+          {t('departments.loadError')}
         </Alert>
       )}
       <PortfolioDetailWorkspaceShell
@@ -205,6 +208,7 @@ export default function DepartmentWorkspacePage() {
         onBack={handleClose}
         title={data?.name ?? ''}
         titleFallback={t('departments.departmentFallback')}
+        titleError={errors.name}
         canEditTitle={canEdit && !!data}
         onTitleSave={(next) => {
           if (data && next !== data.name) void patch({ name: next }, 'name');
@@ -323,7 +327,8 @@ function DepartmentCreate({
     } catch (e) {
       const message = getApiErrorMessage(e, t, t('departments.messages.createFailed'));
       const field = departmentRefusalField(e);
-      if (field === 'name' || field === 'company_id' || field === 'description') setErrors({ [field]: message });
+      if (isDuplicateError(e)) setErrors({ name: t('departments.messages.nameTaken') });
+      else if (field === 'name' || field === 'company_id' || field === 'description') setErrors({ [field]: message });
       else setServerError(message);
     } finally {
       setSubmitting(false);
@@ -368,6 +373,7 @@ function DepartmentCreate({
           <PropertyRow label={t('departments.fields.company')} required valueSx={{ maxWidth: 520 }}>
             <CompanySelect
               hideLabel
+              label={t('departments.fields.company')}
               value={companyId}
               onChange={setCompanyId}
               error={!!errors.company_id}

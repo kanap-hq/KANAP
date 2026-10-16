@@ -1,9 +1,11 @@
+import { EntityManager } from 'typeorm';
 import { BadRequestException, Controller, Get, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
 import { contentDisposition } from '../common/content-disposition';
+import { languageOf } from '../common/csv-sheet';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
 import { isCalendarDate } from '../common/report-period';
 import { resolveAppBaseUrl, resolveConfiguredAppBaseUrl, resolveTenantAppBaseUrl } from '../common/url';
@@ -52,10 +54,13 @@ export class PortfolioWeeklyReportController {
     const parsed = this.parseQuery(query, ctx);
     const format = String(query?.format || 'csv').toLowerCase();
     const tenantSlug = String(req?.tenant?.slug || '').trim().toLowerCase() || null;
+    // The screen's language (the user's own when the screen sends none): the words, days and
+    // decimals of both files, and the CSV's separator.
+    const language = await languageOf(ctx.manager as EntityManager, ctx.tenantId, ctx.userId ?? null, query?.language);
 
     if (format === 'xlsx') {
       const appBaseUrl = this.resolveExportBaseUrl(req, tenantSlug);
-      const result = await this.svc.exportXlsx(parsed, appBaseUrl, { manager: ctx.manager });
+      const result = await this.svc.exportXlsx(parsed, appBaseUrl, { manager: ctx.manager, language });
       res.setHeader(
         'Content-Type',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -65,7 +70,7 @@ export class PortfolioWeeklyReportController {
       return;
     }
 
-    const result = await this.svc.exportCsv(parsed, { manager: ctx.manager });
+    const result = await this.svc.exportCsv(parsed, { manager: ctx.manager, language });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(result.filename));
     res.send(result.content);

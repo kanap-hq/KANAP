@@ -1,4 +1,5 @@
 import * as assert from 'node:assert/strict';
+import AdmZip = require('adm-zip');
 import { PortfolioWeeklyReportService } from '../services/portfolio-weekly-report.service';
 
 /**
@@ -202,15 +203,40 @@ async function run() {
   /* ---------------------------------------------------------------- */
 
   const exportStub = stub(rows, hours, people);
-  const csv = await svc.exportCsv(baseQuery, { manager: exportStub.manager });
+  const csv = await svc.exportCsv(baseQuery, { manager: exportStub.manager, language: 'en' });
   assert.ok(csv.content.includes('Tasks by person'));
-  assert.ok(csv.content.includes('Team;Person;List;Reference;Task name'));
-  assert.ok(csv.content.includes('Operations;Thomas Berger;Created;T-1;'));
-  assert.ok(csv.content.includes('Operations;Isabelle Moreau;Modified;T-2;'));
-  assert.ok(csv.content.includes('Operations;Isabelle Moreau;Closed;T-3;'));
-  assert.ok(csv.content.includes(';Unassigned;Closed;T-4;'));
+  assert.ok(csv.content.includes('Team,Person,List,Reference,Task name'));
+  assert.ok(csv.content.includes('Operations,Thomas Berger,Created,T-1,'));
+  assert.ok(csv.content.includes('Operations,Isabelle Moreau,Modified,T-2,'));
+  assert.ok(csv.content.includes('Operations,Isabelle Moreau,Closed,T-3,'));
+  assert.ok(csv.content.includes(',Unassigned,Closed,T-4,'));
+  assert.ok(csv.content.includes(',2026-09-15'), 'English: ISO days');
   assert.ok(!csv.content.includes('Tasks created'), 'the three task blocks give way to the person block');
   assert.ok(csv.content.includes('Requests created'), 'requests and projects are untouched');
+
+  // The words, the days and the separator follow the screen language.
+  const french = (await svc.exportCsv(baseQuery, { manager: stub(rows, hours, people).manager, language: 'fr' })).content;
+  assert.ok(french.includes('Tâches par personne'), 'French: the block title');
+  assert.ok(french.includes('Équipe;Personne;Liste;Référence;Nom de la tâche'), 'French: the headers');
+  assert.ok(french.includes('Operations;Thomas Berger;Créations;T-1;'), 'French: the list');
+  assert.ok(french.includes(';Non affectées;Clôtures;T-4;'), 'French: unassigned');
+  assert.ok(french.includes(';15/09/2026') && !french.includes('2026-09-15'), 'French: the days');
+  assert.ok(french.includes('Demandes créées'), 'French: the request block');
+  const german = (await svc.exportCsv(baseQuery, { manager: stub(rows, hours, people).manager, language: 'de' })).content;
+  assert.ok(german.includes('Team;Person;Liste;Referenz;Aufgabenname') && german.includes(';15.09.2026'), 'German');
+  const spanish = (await svc.exportCsv(baseQuery, { manager: stub(rows, hours, people).manager, language: 'es' })).content;
+  assert.ok(spanish.includes('Equipo;Persona;Lista;Referencia;Nombre de la tarea') && spanish.includes('Tareas por persona'), 'Spanish');
+
+  // The XLSX follows it too: sheet names, headers, list words and days.
+  const xlsx = await svc.exportXlsx(baseQuery, null, { manager: stub(rows, hours, people).manager, language: 'fr' });
+  const zip = new AdmZip(xlsx.content);
+  const workbook = zip.readAsText('xl/workbook.xml');
+  assert.ok(workbook.includes('name="Tâches"') && workbook.includes('name="Demandes"'), 'French sheet names');
+  const sheets = zip.getEntries().filter((entry) => /^xl\/worksheets\/sheet\d+\.xml$/.test(entry.entryName)).map((entry) => entry.getData().toString('utf8')).join('');
+  for (const text of ['Équipe', 'Personne', 'Créations', 'Non affectées', '15/09/2026', 'Événement']) {
+    assert.ok(sheets.includes(text), `French XLSX writes ${text}`);
+  }
+  assert.ok(!sheets.includes('2026-09-15'), 'French XLSX: no ISO day');
 
   const typeExport = stub(rows, hours, people);
   const typeCsv = await svc.exportCsv({ ...baseQuery, groupBy: 'type' }, { manager: typeExport.manager });

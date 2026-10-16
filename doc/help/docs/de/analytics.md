@@ -379,7 +379,7 @@ Um Werte auf Budgetzeilen aus einer Datei zu setzen, verwenden Sie die Budgetdat
 | `name` | Pflicht. Der Name des Werts |
 | `description` | Freitext |
 | `status` | `enabled` oder `disabled`. Leer bedeutet `enabled` für einen neuen Wert und behält bei einer Aktualisierung den gespeicherten Status |
-| `disabled_at` | Das Ende der Gültigkeit: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Leer, wenn es kein Ende gibt. Bei einer Aktualisierung behalten ein leerer `status` und ein leeres `disabled_at` die gespeicherten Werte. `enabled` mit leerem Datum löscht das Ende der Gültigkeit. `disabled` mit leerem Datum behält ein bereits vergangenes Datum und beendet den Wert sonst heute |
+| `disabled_at` | Das Ende der Gültigkeit: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Der Export schreibt nur das Datum. Erneut importiert, behält dieses Datum das gespeicherte Gültigkeitsende. Leer, wenn es kein Ende gibt. Bei einer Aktualisierung behalten ein leerer `status` und ein leeres `disabled_at` die gespeicherten Werte. `enabled` mit leerem Datum löscht das Ende der Gültigkeit. `disabled` mit leerem Datum behält ein bereits vergangenes Datum und beendet den Wert sonst heute |
 | `applies_to` | Die Einstellung **Verwendet für**, immer die letzte Spalte. `opex`, `capex` oder leer für **OPEX und CAPEX**. Eine Datei ohne diese Spalte lässt die Einstellungen unverändert. Eine leere Zelle setzt **OPEX und CAPEX** |
 
 Nur `name` ist eine Pflichtspalte. Fehlt die Spalte `description`, `status`, `disabled_at` oder `applies_to`, behalten bestehende Werte, was dafür gespeichert ist, und neue Werte sind aktiviert und ohne Beschreibung. Eine Datei ohne `axis_code` legt jede Zeile in die Standarddimension.

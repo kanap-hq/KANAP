@@ -36,6 +36,8 @@ import { useCatalogTranslations } from '../../components/settings/CatalogTransla
 import TranslateIcon from '@mui/icons-material/Translate';
 import { catalogListIssues } from '../../components/settings/catalogValidation';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import { connectionTypeCategoryLabel } from '../../utils/itOpsCatalogDefaults';
+import { useCatalogLocale } from '../../hooks/useLocalizedTaskTypes';
 import api from '../../api';
 import {
   ConnectionTypeOption,
@@ -384,6 +386,8 @@ const ConnectionTypesEditor = React.memo(function ConnectionTypesEditor({
   );
 
   const { t } = useTranslation(['it', 'common']);
+  // A shipped category is shown in the user's language until it is retyped; typing replaces the stored text.
+  const catalogLocale = useCatalogLocale();
   const removal = useCatalogRemoval('connectionTypes');
   const translations = useCatalogTranslations();
   const issues = React.useMemo(() => catalogListIssues(localItems), [localItems]);
@@ -420,7 +424,7 @@ const ConnectionTypesEditor = React.memo(function ConnectionTypesEditor({
             )}
             {visibleItems.map((item: any) => (
               <TableRow key={item.localId}>
-                <TableCell><TextField value={item.category || ''} onChange={(e) => handleUpdate(item.localId, { category: e.target.value })} size="small" fullWidth placeholder={t('common:enumEditor.category')} /></TableCell>
+                <TableCell><TextField value={connectionTypeCategoryLabel(item.category || '', catalogLocale)} onChange={(e) => handleUpdate(item.localId, { category: e.target.value })} size="small" fullWidth placeholder={t('common:enumEditor.category')} /></TableCell>
                 <TableCell sx={{ verticalAlign: 'top' }}><TextField value={item.label} onChange={(e) => handleUpdate(item.localId, { label: e.target.value })} size="small" fullWidth placeholder={t('pages.settings.placeholders.connectionName')} inputProps={{ 'aria-label': t('common:enumEditor.name') }} /><IssueText issue={issues.get(localItems.indexOf(item))} /></TableCell>
                 <TableCell><TextField value={item.typicalPorts || ''} onChange={(e) => handleUpdate(item.localId, { typicalPorts: e.target.value })} size="small" fullWidth placeholder={t('pages.settings.placeholders.typicalPorts')} /></TableCell>
                 <TableCell><Checkbox size="small" checked={!!item.deprecated} onChange={(e) => handleUpdate(item.localId, { deprecated: e.target.checked })} inputProps={{ 'aria-label': `${t('common:enumEditor.noLongerOffered')} ${item.label}` }} /></TableCell>

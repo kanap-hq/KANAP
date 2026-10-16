@@ -95,8 +95,38 @@ async function testIdenticalRowsUnchanged() {
   });
 }
 
+/**
+ * The file has no end of validity: re-importing an export keeps a future end of validity (the
+ * row's status is the one the process has), and a row that names the process in another case
+ * updates it under its stored name, saying so.
+ */
+async function testFutureEndOfValidityAndCase() {
+  await inRolledBackTransaction(async (runner) => {
+    await seedTenant(runner, 'bp-csv-future');
+    const future = '2099-06-30T15:45:00.000Z';
+    const id = await seedProcess(runner, { name: 'Order to cash', description: 'Kept', disabled_at: future });
+    const svc = service();
+    const opts = { manager: runner.manager };
+    const exported = await svc.exportCsv('data', { ...opts, language: 'fr' });
+    for (const dryRun of [true, false]) {
+      const result = await svc.importCsv({ file: { buffer: Buffer.from(exported.content, 'utf8') } as Express.Multer.File, dryRun, language: 'fr' }, opts);
+      assert.deepStrictEqual([result.ok, result.errors, result.updated, (result as any).unchanged], [true, [], 0, 1], JSON.stringify(result));
+    }
+    const renamed = await svc.importCsv({ file: file([HEADER, 'ORDER TO CASH;;Changed;;enabled']), dryRun: false, language: 'en' }, opts);
+    assert.deepStrictEqual([renamed.ok, renamed.inserted, renamed.updated], [true, 0, 1], JSON.stringify(renamed.errors));
+    assert.deepStrictEqual((renamed as any).warnings.map((w: any) => [w.code, w.row]), [['CSV_NAME_MATCHED_CASE', 2]]);
+    const [row] = await runner.query(`SELECT name, description, disabled_at FROM business_processes WHERE id = $1`, [id]);
+    assert.deepStrictEqual(
+      [row.name, row.description, new Date(row.disabled_at).toISOString()],
+      ['Order to cash', 'Changed', future],
+      'the stored name and the future end of validity stay',
+    );
+  });
+}
+
 void runSpecs('business-process-csv-import.integration.spec', [
   ['testIdenticalRowsUnchanged', testIdenticalRowsUnchanged],
+  ['testFutureEndOfValidityAndCase', testFutureEndOfValidityAndCase],
 ]);
 
 // `dataSource` is imported so the CI runner schedules this spec on the database lane.

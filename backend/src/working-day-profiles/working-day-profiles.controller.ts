@@ -161,6 +161,13 @@ export class WorkingDayProfilesController {
     );
   }
 
+  // What a delete of `ids` would refuse, asked before the confirmation.
+  @RequireLevel('working_day_profiles', 'admin')
+  @Post('delete-check')
+  deleteCheck(@Body() body: { ids?: unknown }, @Tenant() ctx: TenantRequest) {
+    return this.deleteSvc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], context(ctx));
+  }
+
   @RequireLevel('working_day_profiles', 'admin')
   @Delete('bulk')
   bulkDelete(@Body() body: WorkingDayProfileBulkDeleteDto, @Tenant() ctx: TenantRequest) {

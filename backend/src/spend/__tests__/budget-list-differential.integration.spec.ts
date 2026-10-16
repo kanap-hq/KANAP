@@ -186,9 +186,14 @@ function buildCases(r: ReturnType<typeof prng>, sample: Map<string, any[]>, axis
 
   if (MATRIX) {
     // Text-like fields: set (include and exclude), blank, the text operators, wrong-kind models.
-    for (const field of [...fields.text, ...fields.uuid, ...fields.multi, ...fields.unknown]) {
+    // A filter on a key the rows do not hold (in CAPEX, the OPEX-only columns too) is refused by the
+    // engine (400, `budget-list-edges`); an unknown dimension is a dimension without values, filtered
+    // like the others.
+    const unknownAxis = fields.unknown.filter((field) => field.startsWith('analytics_'));
+    const refused = new Set(fields.unknown.filter((field) => !unknownAxis.includes(field)));
+    for (const field of [...fields.text, ...fields.uuid, ...fields.multi, ...unknownAxis].filter((key) => !refused.has(key))) {
       const values = textValues(field);
-      if (!values.length && !fields.unknown.includes(field)) {
+      if (!values.length && !unknownAxis.includes(field)) {
         for (const [i, model] of [{ filterType: 'set', values: [null] }, { filterType: 'set', mode: 'exclude', values: [null] }, { filterType: 'text', type: 'notContains', filter: 'a' }].entries()) {
           add(`${field}/empty${i}`, { ...all, filters: f({ [field]: model }) }, ['ids', 'fv'], [field]);
         }
@@ -298,7 +303,7 @@ function buildCases(r: ReturnType<typeof prng>, sample: Map<string, any[]>, axis
     }
     // Combined models: every condition applies.
     for (let k = 0; k < 12; k++) {
-      const field = r.pick([...fields.text, ...fields.money, ...fields.date]);
+      const field = r.pick([...fields.text, ...fields.money, ...fields.date].filter((key) => !fields.unknown.includes(key)));
       const isMoney = fields.money.includes(field);
       const isDate = fields.date.includes(field);
       const values = textValues(field);
@@ -344,7 +349,8 @@ function buildCases(r: ReturnType<typeof prng>, sample: Map<string, any[]>, axis
   }
 
   // Seeded combined states: 1 to 3 filters, maybe a quick search, a sort, a scope, maybe years and FTE keys.
-  const filterable = [...fields.text, ...fields.uuid, ...fields.multi, ...fields.int, ...fields.money, ...fields.fte, ...fields.date];
+  const filterable = [...fields.text, ...fields.uuid, ...fields.multi, ...fields.int, ...fields.money, ...fields.fte, ...fields.date]
+    .filter((key) => !fields.unknown.includes(key));
   const sortable = [...filterable, 'status', 'disabled_at'];
   const filterableWithData = filterable.filter(hasData);
   const qPool = [...textValues(scope.nameField), ...textValues('supplier_name'), ...textValues('cost_center_path'), ...textValues('project_name'),

@@ -191,7 +191,7 @@ Katalog der für Server verfügbaren Betriebssysteme mit Enddaten für Standard-
 **Verwendung**:
 - Assets-Arbeitsbereich → Reiter Technik → Auswahl **Betriebssystem** (der Hilfetext zeigt die Support-Daten)
 
-Daten werden als `YYYY-MM-DD` gespeichert, aber als `DD/MM/YYYY` angezeigt und bearbeitet.
+Daten werden als `YYYY-MM-DD` gespeichert, aber als `TT.MM.JJJJ` bearbeitet.
 
 Die Standardeinträge umfassen Windows-Server-Versionen, Ubuntu LTS, RHEL, Debian und SLES mit den passenden Support-Daten.
 
