@@ -179,7 +179,7 @@ Füllen Sie die Kernfelder aus:
 | **Asset-Typ** | Der Servertyp (Auswahlliste) | `Virtuelle Maschine` |
 | **Standort** | Wo er gehostet wird (Pflichtfeld) | `Rechenzentrum Paris` |
 | **Umgebung** | Welche Umgebung er bedient | `Prod` |
-| **Beschreibung** | Zusätzlicher Kontext | -- |
+| **Beschreibung** | Zusätzlicher Kontext |  |
 
 Der Bereich **Eigenschaften** rechts enthält den Rest: **Unter-Standort**, **Lebenszyklus**, **Go-live** und **End of Life**. Sobald ein Standort ausgewählt ist, werden mehrere **schreibgeschützte Felder** automatisch abgeleitet:
 
@@ -235,7 +235,7 @@ Es gibt **zwei Wege**, diese Zuordnung zu erstellen:
 | **Umgebung** | Welche Bereitstellung | `PROD` |
 | **Rolle** | Serverrolle für diese App | `Web` |
 | **Seit** | Wann die Zuordnung begann | `2025-01-15` |
-| **Notizen** | Kontext | -- |
+| **Notizen** | Kontext |  |
 
 !!! success "Die Kette ist vollständig"
     Sie haben jetzt den vollständigen Pfad dokumentiert:
