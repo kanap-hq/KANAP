@@ -118,7 +118,7 @@ La grille Applications offre une vue complète de votre portefeuille applicatif.
 - **Import CSV** : Import en masse depuis un fichier CSV (`applications:admin`)
 - **Export CSV** : Exporter la liste en CSV (`applications:admin`). Les colonnes issues des catalogues (catégorie, cycle de vie, criticité, criticité cyber, vague de reprise, classification de données, méthodes d'accès) sont exportées avec leurs noms ; l'import accepte un nom ou le code interne.
 - **Copier l'élément** : Dupliquer une application sélectionnée avec toutes ses relations principales (`applications:manager`). Voir [Copier des applications](#copier-des-applications) pour ce qui est et n'est pas copié.
-- **Supprimer la sélection** : Supprimer les applications sélectionnées (`applications:admin`). Leurs déploiements, interfaces et liens vers d’autres éléments sont supprimés avec elles ; la confirmation l’indique
+- **Supprimer la sélection** : Supprimer les applications sélectionnées (`applications:admin`). Une application source ou cible d’une interface ne peut pas être supprimée : désactivez-la plutôt, ou supprimez d’abord ses interfaces. Avant la confirmation, la fenêtre liste ces applications comme conservées, avec leur nombre d’interfaces. Les autres sont supprimées avec leurs déploiements et leurs liens vers d’autres éléments ; la confirmation compte les déploiements
 
 ---
 
@@ -137,7 +137,7 @@ L'en-tête affiche :
 - Date de **Mise en production**
 - **Envoyer le lien** : copier un lien partageable vers cet espace de travail
 - **Créer une nouvelle version** : lancer l'assistant de migration de version (voir [Gestion des versions](#gestion-des-versions))
-- **Supprimer** (`applications:admin`) : demande confirmation en nommant l’application, puis la supprime avec ses déploiements, interfaces et liens vers d’autres éléments
+- **Supprimer** (`applications:admin`) : une application qui a des interfaces reçoit le refus et sa raison, avec seulement Fermer. Sinon, la confirmation nomme l’application et compte les déploiements supprimés avec elle, ainsi que ses liens vers d’autres éléments
 - **Précédent / Suivant** : parcourir la liste filtrée sans revenir à la grille
 
 ### Tiroir des propriétés (panneau de droite)

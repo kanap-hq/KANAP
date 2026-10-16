@@ -118,7 +118,7 @@ Das Anwendungsraster bietet eine umfassende Ansicht Ihres Anwendungsportfolios.
 - **CSV importieren**: Massenimport aus CSV-Datei (`applications:admin`)
 - **CSV exportieren**: Liste als CSV exportieren (`applications:admin`). Katalogbasierte Spalten (Kategorie, Lebenszyklus, Kritikalität, Cyberkritikalität, Wiederherstellungswelle, Datenklasse, Zugriffsmethoden) werden mit ihren Namen exportiert; der Import akzeptiert einen Namen oder den internen Code.
 - **Element kopieren**: Eine ausgewählte Anwendung mit allen Kernbeziehungen duplizieren (`applications:manager`). Siehe [Anwendungen kopieren](#anwendungen-kopieren) für Details.
-- **Ausgewählte löschen**: Ausgewählte Anwendungen entfernen (`applications:admin`). Ihre Bereitstellungen, Schnittstellen und Verknüpfungen zu anderen Einträgen werden mit ihnen gelöscht; die Bestätigung sagt es
+- **Ausgewählte löschen**: Ausgewählte Anwendungen entfernen (`applications:admin`). Eine Anwendung, die Quelle oder Ziel einer Schnittstelle ist, kann nicht gelöscht werden: Deaktivieren Sie sie stattdessen, oder löschen Sie zuerst ihre Schnittstellen. Vor der Bestätigung führt das Fenster diese Anwendungen als behalten auf, mit der Anzahl ihrer Schnittstellen. Die anderen werden mit ihren Bereitstellungen und Verknüpfungen zu anderen Einträgen gelöscht; die Bestätigung zählt die Bereitstellungen
 
 ---
 
@@ -137,7 +137,7 @@ Die Kopfzeile zeigt:
 - **Go-Live**-Datum
 - **Link senden**: Einen teilbaren Link zu diesem Arbeitsbereich kopieren
 - **Neue Version erstellen**: Den Versionsmigrations-Assistenten starten (siehe [Versionsverwaltung](#versionsverwaltung))
-- **Löschen** (`applications:admin`): fragt zuerst nach und nennt die Anwendung, dann löscht es sie mit ihren Bereitstellungen, Schnittstellen und Verknüpfungen zu anderen Einträgen
+- **Löschen** (`applications:admin`): eine Anwendung mit Schnittstellen erhält die Ablehnung und den Grund, nur mit Schließen. Sonst nennt die Bestätigung die Anwendung und zählt die Bereitstellungen, die mit ihr gelöscht werden, zusammen mit ihren Verknüpfungen zu anderen Einträgen
 - **Vorherige / Nächste**: Durch die gefilterte Liste navigieren, ohne zum Raster zurückzukehren
 
 ### Eigenschaftsleiste (rechtes Panel)

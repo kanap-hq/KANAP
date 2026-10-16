@@ -518,7 +518,8 @@ Validation/behavior:
   - Body: `{ name, supplier_id?, description?, editor?, retired_date?, version?, go_live_date?, end_of_support_date?, lifecycle, criticality, data_class, external_facing?, is_suite?, last_dr_test?, etl_enabled?, contains_pii?, licensing?, notes?, users_mode?, users_year?, users_override? }`
   - Legacy fields (`environment`, `hosting_model`, `sso_enabled`, `mfa_supported`) are accepted but discouraged; the UI writes App Instances instead.
 - PATCH `/applications/:id` → partial update of the fields above.
-- DELETE `/applications/:id` → cascade deletes owners/audience/links/attachments/data_residency (App Instances must be removed first via the dedicated endpoints).
+- DELETE `/applications/:id` → 409 `APPLICATION_HAS_INTERFACES` (with `usages`) while the application is the source or target of an interface, and DELETE `/applications/bulk` lists it as a failed item with the same code; otherwise deletes it with its deployments and its links (owners, audience, links, attachments, data residency).
+- POST `/applications/delete-check` with `{ ids: string[] }` [Requires: applications:admin] → `{ refused: Array<{ id, name, code, usages }>, removes: Array<{ type, total }> }`: the applications that are the source or target of an interface (`APPLICATION_HAS_INTERFACES`, `usages: [{ type: 'interfaces', total }]`), which both deletes refuse, and the deployments the others take with them (`removes: [{ type: 'app_instances', total }]`). Nothing is written.
 
 Version Management
 - POST `/applications/:id/create-version`
