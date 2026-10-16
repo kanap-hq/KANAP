@@ -44,8 +44,8 @@ function foreignKeyIndexName(table: string, columns: readonly string[]): string 
 
 const PREFIX = '[Migration] ForeignKeyIndexes:';
 
-export class ForeignKeyIndexes1854170000000 implements MigrationInterface {
-  name = 'ForeignKeyIndexes1854170000000';
+export class ForeignKeyIndexes1854180000000 implements MigrationInterface {
+  name = 'ForeignKeyIndexes1854180000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     const keys: Array<{ table_name: string; conname: string; columns: string[] }> = await queryRunner.query(UNINDEXED_DELETING_KEYS);

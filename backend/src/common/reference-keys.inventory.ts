@@ -122,7 +122,7 @@ export const UNKEYED_REFERENCE_COLUMNS: Readonly<Record<string, string>> = {
 /**
  * Tables whose foreign keys that delete or clear rows (ON DELETE CASCADE or SET NULL) may go
  * without an index leading with the key's columns, each with the reason: a table that stays tiny
- * whatever the tenant does. Every other such key has one (migration 1854170000000), so deleting the
+ * whatever the tenant does. Every other such key has one (migration 1854180000000), so deleting the
  * parent row does not read the whole child table.
  */
 export const UNINDEXED_DELETING_KEY_TABLES: Readonly<Record<string, string>> = {};
