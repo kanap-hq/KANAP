@@ -36,6 +36,8 @@ export type ReportLabels = {
   kindHeader: string;
   content: string;
   systemAuthor: string;
+  /** The fixed sentences of system entries, stored in English, by stored text. */
+  systemEntries: Record<string, string>;
   unknownAuthor: string;
   linkedObjects: string;
   assets: string;
@@ -151,6 +153,12 @@ const LABELS: Record<ReportLang, ReportLabels> = {
     kindHeader: 'Kind',
     content: 'Content',
     systemAuthor: 'System',
+    systemEntries: {
+      'Incident logged': 'Incident logged',
+      'Imported from CSV': 'Imported from CSV',
+      'Incident review imported from CSV': 'Incident review imported from CSV',
+      'Incident review imported': 'Incident review imported',
+    },
     unknownAuthor: 'Unknown',
     linkedObjects: 'Linked objects',
     assets: 'Assets',
@@ -204,6 +212,12 @@ const LABELS: Record<ReportLang, ReportLabels> = {
     kindHeader: 'Type',
     content: 'Contenu',
     systemAuthor: 'Système',
+    systemEntries: {
+      'Incident logged': 'Incident enregistré',
+      'Imported from CSV': 'Importé depuis un fichier CSV',
+      'Incident review imported from CSV': 'Revue d’incident importée depuis un fichier CSV',
+      'Incident review imported': 'Revue d’incident importée',
+    },
     unknownAuthor: 'Inconnu',
     linkedObjects: 'Objets liés',
     assets: 'Actifs',
@@ -257,6 +271,12 @@ const LABELS: Record<ReportLang, ReportLabels> = {
     kindHeader: 'Art',
     content: 'Inhalt',
     systemAuthor: 'System',
+    systemEntries: {
+      'Incident logged': 'Vorfall erfasst',
+      'Imported from CSV': 'Aus CSV importiert',
+      'Incident review imported from CSV': 'Vorfallanalyse aus CSV importiert',
+      'Incident review imported': 'Vorfallanalyse importiert',
+    },
     unknownAuthor: 'Unbekannt',
     linkedObjects: 'Verknüpfte Objekte',
     assets: 'Assets',
@@ -310,6 +330,12 @@ const LABELS: Record<ReportLang, ReportLabels> = {
     kindHeader: 'Tipo',
     content: 'Contenido',
     systemAuthor: 'Sistema',
+    systemEntries: {
+      'Incident logged': 'Incidente registrado',
+      'Imported from CSV': 'Importado desde CSV',
+      'Incident review imported from CSV': 'Revisión del incidente importada desde CSV',
+      'Incident review imported': 'Revisión del incidente importada',
+    },
     unknownAuthor: 'Desconocido',
     linkedObjects: 'Objetos vinculados',
     assets: 'Activos',
@@ -497,8 +523,15 @@ function journalContent(
       parts.push(describeChange(field, change, labels));
     }
   }
-  if (hasText(entry.content)) parts.push(String(entry.content));
+  if (hasText(entry.content)) parts.push(entryContent(entry, labels));
   return parts.join('\n');
+}
+
+/** A system entry's fixed sentence in the report's language; anything else as written. */
+function entryContent(entry: IncidentReportEntry, labels: ReportLabels): string {
+  const content = String(entry.content);
+  if (entry.kind !== 'system') return content;
+  return Object.prototype.hasOwnProperty.call(labels.systemEntries, content) ? labels.systemEntries[content] : content;
 }
 
 function authorName(entry: IncidentReportEntry, labels: ReportLabels): string {

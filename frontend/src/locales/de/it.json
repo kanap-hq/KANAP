@@ -882,7 +882,13 @@
         },
         "restricted": "Eingeschränkt",
         "unrestricted": "Für das Register sichtbar",
-        "reviewVersion": "Vorfallanalyse, Version {{version}}"
+        "reviewVersion": "Vorfallanalyse, Version {{version}}",
+        "systemEntries": {
+          "logged": "Vorfall erfasst",
+          "importedFromCsv": "Aus CSV importiert",
+          "reviewImportedFromCsv": "Vorfallanalyse aus CSV importiert",
+          "reviewImported": "Vorfallanalyse importiert"
+        }
       },
       "relations": {
         "assets": "Assets",

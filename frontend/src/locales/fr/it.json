@@ -882,7 +882,13 @@
         },
         "restricted": "Restreint",
         "unrestricted": "Ouvert au registre",
-        "reviewVersion": "Version {{version}} de la revue d'incident"
+        "reviewVersion": "Version {{version}} de la revue d'incident",
+        "systemEntries": {
+          "logged": "Incident enregistré",
+          "importedFromCsv": "Importé depuis un fichier CSV",
+          "reviewImportedFromCsv": "Revue d’incident importée depuis un fichier CSV",
+          "reviewImported": "Revue d’incident importée"
+        }
       },
       "relations": {
         "assets": "Actifs",

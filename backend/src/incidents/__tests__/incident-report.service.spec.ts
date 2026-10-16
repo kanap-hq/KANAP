@@ -260,6 +260,20 @@ function testFrenchChangeLabels() {
   assert.ok(markdown.includes('T-28 · Restore mail flow · Ouvert'));
 }
 
+// QA lot 14: the creation entry is stored as "Incident logged"; a report in another language shows
+// it in that language. A note with the same words is someone's text and stays as written.
+function testSystemEntriesInReportLanguage() {
+  const markdown = buildMarkdown(fixture(), 'fr', labelsFor('fr'));
+  assert.ok(markdown.includes('Incident enregistré'));
+  assert.ok(!markdown.includes('Incident logged'));
+  assert.ok(buildMarkdown(fixture(), 'de', labelsFor('de')).includes('Vorfall erfasst'));
+  assert.ok(buildMarkdown(fixture(), 'es', labelsFor('es')).includes('Incidente registrado'));
+  assert.ok(buildMarkdown(fixture(), 'en', labelsFor('en')).includes('Incident logged'));
+  const withNote = fixture();
+  withNote.entries = [{ ...fixture().entries![0], kind: 'note' }];
+  assert.ok(buildMarkdown(withNote, 'fr', labelsFor('fr')).includes('Incident logged'));
+}
+
 function testLinkChangeUsesContentOnly() {
   const markdown = buildMarkdown(
     fixture({
@@ -431,6 +445,7 @@ async function run() {
   testReportTimestampsUseTimezone();
   testRestrictedDocumentsOmitted();
   testFrenchChangeLabels();
+  testSystemEntriesInReportLanguage();
   testLinkChangeUsesContentOnly();
   testReviewMarkdownIsNotEscaped();
   testReviewOmissionIsConservative();
