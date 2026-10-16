@@ -19,6 +19,7 @@ import { formatItemRef } from '../../utils/item-ref';
 import { getDotColor, INCIDENT_SEVERITY_COLORS, INCIDENT_STATUS_COLORS } from '../../utils/statusColors';
 import { INCIDENT_SEVERITIES, INCIDENT_STATUSES, type IncidentRow } from '../../api/endpoints/incidents';
 import { setListFiltersParam, getWithListContext } from '../../lib/listContext';
+import { countValueFormatter } from '../../components/grid/countValueFormatter';
 
 const DEFAULT_SORT = 'detected_at:DESC';
 
@@ -294,7 +295,7 @@ export default function IncidentsPage() {
       width: 100,
       sortable: false,
       filter: false,
-      valueFormatter: (p) => p.value ?? 0,
+      valueFormatter: (p) => countValueFormatter({ value: p.value ?? 0 }),
       cellRenderer: ClickToWorkspace,
     },
     {
@@ -304,7 +305,7 @@ export default function IncidentsPage() {
       hide: true,
       sortable: false,
       filter: false,
-      valueFormatter: (p) => p.value ?? 0,
+      valueFormatter: (p) => countValueFormatter({ value: p.value ?? 0 }),
       cellRenderer: ClickToWorkspace,
     },
     {
@@ -313,7 +314,7 @@ export default function IncidentsPage() {
       width: 100,
       sortable: false,
       filter: false,
-      valueFormatter: (p) => p.value ?? 0,
+      valueFormatter: (p) => countValueFormatter({ value: p.value ?? 0 }),
       cellRenderer: ClickToWorkspace,
     },
     {

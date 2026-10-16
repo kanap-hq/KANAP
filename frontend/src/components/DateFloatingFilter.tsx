@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react';
 import { Button, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import FilterListIcon from '@mui/icons-material/FilterList';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import type { IFloatingFilter, IFloatingFilterParams } from 'ag-grid-community';
@@ -105,11 +106,12 @@ const DateFloatingFilter = React.forwardRef<IFloatingFilter, FloatingFilterProps
           whiteSpace: 'nowrap',
           textOverflow: 'ellipsis',
           display: 'block',
-          textAlign: 'left',
+          textAlign: text ? 'left' : 'right',
           color: text ? undefined : 'kanap.text.tertiary',
         }}
       >
-        {text || t('filters.columnPlaceholder')}
+        {/* No filter: the icon the text filters show, at the same place. */}
+        {text || <FilterListIcon aria-hidden sx={{ fontSize: 18, verticalAlign: 'middle' }} />}
       </Button>
       {model && (
         <IconButton

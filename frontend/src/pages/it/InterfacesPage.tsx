@@ -37,6 +37,7 @@ import { useTranslation } from 'react-i18next';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { classificationText } from '../../utils/applicationClassification';
 import { setListFiltersParam } from '../../lib/listContext';
+import { countValueFormatter } from '../../components/grid/countValueFormatter';
 type InterfaceRow = {
   id: string;
   interface_reference: string;
@@ -322,7 +323,7 @@ export default function InterfacesPage() {
       width: 140,
       sortable: false,
       filter: false,
-      valueFormatter: (p) => p.value ?? 0,
+      valueFormatter: (p) => countValueFormatter({ value: p.value ?? 0 }),
       cellRenderer: ClickToWorkspace,
       defaultHidden: true,
     },
@@ -332,7 +333,7 @@ export default function InterfacesPage() {
       width: 120,
       sortable: false,
       filter: false,
-      valueFormatter: (p) => p.value ?? 0,
+      valueFormatter: (p) => countValueFormatter({ value: p.value ?? 0 }),
       cellRenderer: ClickToWorkspace,
       defaultHidden: true,
     },

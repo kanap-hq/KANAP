@@ -14,6 +14,7 @@ import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 
 import { useTranslation } from 'react-i18next';
 import { setListFiltersParam } from '../../lib/listContext';
+import { countValueFormatter } from '../../components/grid/countValueFormatter';
 type LocationRow = {
   id: string;
   location_reference: string;
@@ -142,7 +143,7 @@ export default function LocationsPage() {
       filter: false,
       sortable: false,
       valueGetter: (params) => (params.data?.sub_locations || []).length,
-      valueFormatter: (p) => (p.value == null ? '0' : String(p.value)),
+      valueFormatter: (p) => countValueFormatter({ value: p.value ?? 0 }),
       cellRenderer: ClickableCell,
       cellStyle: {
         color: 'var(--kanap-text-secondary)',
@@ -154,7 +155,7 @@ export default function LocationsPage() {
       field: 'servers_count',
       width: 110,
       filter: false,
-      valueFormatter: (p) => (p.value == null ? '0' : String(p.value)),
+      valueFormatter: (p) => countValueFormatter({ value: p.value ?? 0 }),
       cellRenderer: ClickableCell,
       cellStyle: {
         color: 'var(--kanap-text-secondary)',
