@@ -26,6 +26,7 @@ import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { KanapDialog, PropertyRow, RelevantWebsitesList, useKanapDialogs } from '../../../components/design';
 import { drawerAutocompleteListboxSx, drawerFieldValueSx } from '../../../theme/formSx';
 import IncidentRelationsSection from './IncidentRelationsSection';
+import AssetImpactSection from './AssetImpactSection';
 import BudgetLinesRelationField, { budgetLineIdsOf, mergeLinkedBudgetLines, sameBudgetLineIds, type LinkedBudgetLine } from '../../../components/finance/BudgetLinesRelationField';
 export type AssetRelationsPanelHandle = {
   save: () => Promise<void>;
@@ -115,6 +116,8 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
 
   const [loading, setLoading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
+  // Bumped once the asset relations are saved: the impact section reads them again.
+  const [impactVersion, setImpactVersion] = React.useState(0);
   const [error, setError] = React.useState<string | null>(null);
 
   // Asset relations (contains/depends_on)
@@ -499,6 +502,7 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
       await api.post(`/assets/${assetId}/relations`, { relations });
       setBaselineContains(containsAssets);
       setBaselineDependsOn(dependsOnAssets);
+      setImpactVersion((value) => value + 1);
 
       // Save budget lines: each route replaces the links of its own nature only
       await api.post(`/assets/${assetId}/spend-items`, { spend_item_ids: budgetLineIdsOf(linkedLines, 'opex') });
@@ -592,6 +596,8 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
     <>
     <Stack spacing={2}>
       {error && <Alert severity="error">{error}</Alert>}
+
+      <AssetImpactSection assetId={assetId} version={impactVersion} />
 
       <SectionTitle>{t('workspace.asset.relations.assetRelations')}</SectionTitle>
       <Box sx={relationGridSx}>

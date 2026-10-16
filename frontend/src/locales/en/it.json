@@ -1370,6 +1370,52 @@
         "rackUnitPlaceholder": "e.g., U12",
         "notesPlaceholder": "e.g., Power supply replaced under warranty"
       },
+      "impact": {
+        "title": "If this server goes down",
+        "empty": "Nothing else depends on this server.",
+        "loadFailed": "The impact could not be loaded.",
+        "summary": {
+          "applications_one": "{{count}} application",
+          "applications_other": "{{count}} applications",
+          "assets_one": "{{count}} asset",
+          "assets_other": "{{count}} assets",
+          "clustersDown_one": "{{count}} cluster down",
+          "clustersDown_other": "{{count}} clusters down",
+          "clustersDegraded_one": "{{count}} cluster degraded",
+          "clustersDegraded_other": "{{count}} clusters degraded",
+          "technologies_one": "{{count}} technology",
+          "technologies_other": "{{count}} technologies",
+          "processes_one": "{{count}} business process",
+          "processes_other": "{{count}} business processes"
+        },
+        "sections": {
+          "applications": "Applications",
+          "assets": "Assets",
+          "clusters": "Clusters",
+          "technologies": "Technologies",
+          "processes": "Business processes"
+        },
+        "columns": {
+          "reference": "Ref.",
+          "name": "Name",
+          "environment": "Environment",
+          "criticality": "Criticality",
+          "type": "Type",
+          "state": "State",
+          "versions": "Versions",
+          "via": "Via"
+        },
+        "via": {
+          "contains": "In {{name}}",
+          "dependsOn": "Depends on {{name}}",
+          "on": "On {{name}}",
+          "thisServer": "This server"
+        },
+        "state": {
+          "down": "Down",
+          "degraded": "Degraded, {{fallen}} of {{members}} members down"
+        }
+      },
       "support": {
         "vendor": "Vendor",
         "searchVendors": "Search vendors",

@@ -1370,6 +1370,52 @@
         "rackUnitPlaceholder": "ex. : U12",
         "notesPlaceholder": "ex. : alimentation remplacée sous garantie"
       },
+      "impact": {
+        "title": "Si ce serveur tombe",
+        "empty": "Aucun autre élément ne dépend de ce serveur.",
+        "loadFailed": "L'impact n'a pas pu être chargé.",
+        "summary": {
+          "applications_one": "{{count}} application",
+          "applications_other": "{{count}} applications",
+          "assets_one": "{{count}} asset",
+          "assets_other": "{{count}} assets",
+          "clustersDown_one": "{{count}} cluster tombé",
+          "clustersDown_other": "{{count}} clusters tombés",
+          "clustersDegraded_one": "{{count}} cluster dégradé",
+          "clustersDegraded_other": "{{count}} clusters dégradés",
+          "technologies_one": "{{count}} technologie",
+          "technologies_other": "{{count}} technologies",
+          "processes_one": "{{count}} processus métier",
+          "processes_other": "{{count}} processus métier"
+        },
+        "sections": {
+          "applications": "Applications",
+          "assets": "Assets",
+          "clusters": "Clusters",
+          "technologies": "Technologies",
+          "processes": "Processus métier"
+        },
+        "columns": {
+          "reference": "Réf.",
+          "name": "Nom",
+          "environment": "Environnement",
+          "criticality": "Criticité",
+          "type": "Type",
+          "state": "État",
+          "versions": "Versions",
+          "via": "Via"
+        },
+        "via": {
+          "contains": "Dans {{name}}",
+          "dependsOn": "Dépend de {{name}}",
+          "on": "Sur {{name}}",
+          "thisServer": "Ce serveur"
+        },
+        "state": {
+          "down": "Tombé",
+          "degraded": "Dégradé, {{fallen}} membres tombés sur {{members}}"
+        }
+      },
       "support": {
         "vendor": "Fournisseur",
         "searchVendors": "Rechercher un fournisseur",

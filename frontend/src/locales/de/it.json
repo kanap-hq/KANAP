@@ -1370,6 +1370,52 @@
         "rackUnitPlaceholder": "z. B. U12",
         "notesPlaceholder": "z. B. Netzteil im Rahmen der Garantie ersetzt"
       },
+      "impact": {
+        "title": "Wenn dieser Server ausfällt",
+        "empty": "Nichts anderes hängt von diesem Server ab.",
+        "loadFailed": "Die Auswirkungen konnten nicht geladen werden.",
+        "summary": {
+          "applications_one": "{{count}} Anwendung",
+          "applications_other": "{{count}} Anwendungen",
+          "assets_one": "{{count}} Asset",
+          "assets_other": "{{count}} Assets",
+          "clustersDown_one": "{{count}} Cluster ausgefallen",
+          "clustersDown_other": "{{count}} Cluster ausgefallen",
+          "clustersDegraded_one": "{{count}} Cluster beeinträchtigt",
+          "clustersDegraded_other": "{{count}} Cluster beeinträchtigt",
+          "technologies_one": "{{count}} Technologie",
+          "technologies_other": "{{count}} Technologien",
+          "processes_one": "{{count}} Geschäftsprozess",
+          "processes_other": "{{count}} Geschäftsprozesse"
+        },
+        "sections": {
+          "applications": "Anwendungen",
+          "assets": "Assets",
+          "clusters": "Cluster",
+          "technologies": "Technologien",
+          "processes": "Geschäftsprozesse"
+        },
+        "columns": {
+          "reference": "Ref.",
+          "name": "Name",
+          "environment": "Umgebung",
+          "criticality": "Kritikalität",
+          "type": "Typ",
+          "state": "Zustand",
+          "versions": "Versionen",
+          "via": "Über"
+        },
+        "via": {
+          "contains": "In {{name}}",
+          "dependsOn": "Hängt ab von {{name}}",
+          "on": "Auf {{name}}",
+          "thisServer": "Dieser Server"
+        },
+        "state": {
+          "down": "Ausgefallen",
+          "degraded": "Beeinträchtigt, {{fallen}} von {{members}} Mitgliedern ausgefallen"
+        }
+      },
       "support": {
         "vendor": "Lieferant",
         "searchVendors": "Lieferanten suchen",
