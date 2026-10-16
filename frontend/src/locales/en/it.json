@@ -75,10 +75,16 @@
         "dataResidency": "Data residency"
       },
       "delete": {
-        "warning_one": "Its deployments, interfaces and links to other records are deleted with it. This cannot be undone.",
-        "warning_other": "Their deployments, interfaces and links to other records are deleted with them. This cannot be undone.",
+        "warning_one": "Its deployments and its links to other records are deleted with it. This cannot be undone.",
+        "warning_other": "Their deployments and their links to other records are deleted with them. This cannot be undone.",
+        "warningCounted_one": "Its {{deployments}} and its links to other records are deleted with it. This cannot be undone.",
+        "warningCounted_other": "Their {{deployments}} and their links to other records are deleted with them. This cannot be undone.",
+        "warningLinks_one": "Its links to other records are deleted with it. This cannot be undone.",
+        "warningLinks_other": "Their links to other records are deleted with them. This cannot be undone.",
         "toDelete_one": "{{count}} application will be deleted:",
         "toDelete_other": "{{count}} applications will be deleted:",
+        "kept_one": "{{count}} application cannot be deleted and is kept:",
+        "kept_other": "{{count}} applications cannot be deleted and are kept:",
         "deleted_one": "{{count}} application deleted",
         "deleted_other": "{{count}} applications deleted"
       }
@@ -946,7 +952,8 @@
       "meta": {
         "goLive": "Go live"
       },
-      "deleteMessage": "This permanently deletes {{name}}, with its deployments, interfaces and links to other records. This cannot be undone."
+      "deleteMessage": "This permanently deletes {{name}}, with its links to other records. This cannot be undone.",
+      "deleteMessageWithDeployments": "This permanently deletes {{name}}, with its {{deployments}} and its links to other records. This cannot be undone."
     },
     "asset": {
       "title": "Server",

@@ -97,6 +97,8 @@
   "CONTRACT_HAS_COMPLIANCE_RECORDS": "This contract has {{usages}}. Disable it instead of deleting it.",
   "ASSET_IN_USE_one": "This asset is used by {{usages}}. Remove it from there before deleting it.",
   "ASSET_IN_USE_other": "This asset is used by {{usages}}. Remove it from them before deleting it.",
+  "APPLICATION_HAS_INTERFACES_one": "This application is the source or target of {{usages}}. Disable it instead, or delete that interface first.",
+  "APPLICATION_HAS_INTERFACES_other": "This application is the source or target of {{usages}}. Disable it instead, or delete those interfaces first.",
   "COST_CENTER_IN_USE": "This cost center is used by {{usages}}. Disable it instead of deleting it.",
   "COST_CENTER_HAS_NODES_one": "This group contains {{usages}}. Move or delete it first.",
   "COST_CENTER_HAS_NODES_other": "This group contains {{usages}}. Move or delete them first.",

@@ -75,10 +75,16 @@
         "dataResidency": "Résidence des données"
       },
       "delete": {
-        "warning_one": "Ses déploiements, interfaces et liens vers d’autres éléments sont supprimés avec elle. Cette action est irréversible.",
-        "warning_other": "Leurs déploiements, interfaces et liens vers d’autres éléments sont supprimés avec elles. Cette action est irréversible.",
+        "warning_one": "Ses déploiements et ses liens vers d’autres éléments sont supprimés avec elle. Cette action est irréversible.",
+        "warning_other": "Leurs déploiements et leurs liens vers d’autres éléments sont supprimés avec elles. Cette action est irréversible.",
+        "warningCounted_one": "Ses {{deployments}} et ses liens vers d’autres éléments sont supprimés avec elle. Cette action est irréversible.",
+        "warningCounted_other": "Leurs {{deployments}} et leurs liens vers d’autres éléments sont supprimés avec elles. Cette action est irréversible.",
+        "warningLinks_one": "Ses liens vers d’autres éléments sont supprimés avec elle. Cette action est irréversible.",
+        "warningLinks_other": "Leurs liens vers d’autres éléments sont supprimés avec elles. Cette action est irréversible.",
         "toDelete_one": "{{count}} application sera supprimée :",
         "toDelete_other": "{{count}} applications seront supprimées :",
+        "kept_one": "{{count}} application ne peut pas être supprimée et est conservée :",
+        "kept_other": "{{count}} applications ne peuvent pas être supprimées et sont conservées :",
         "deleted_one": "{{count}} application supprimée",
         "deleted_other": "{{count}} applications supprimées"
       }
@@ -946,7 +952,8 @@
       "meta": {
         "goLive": "Mise en service"
       },
-      "deleteMessage": "Cette action supprime définitivement {{name}}, avec ses déploiements, ses interfaces et ses liens vers d’autres éléments. Elle est irréversible."
+      "deleteMessage": "Cette action supprime définitivement {{name}}, avec ses liens vers d’autres éléments. Elle est irréversible.",
+      "deleteMessageWithDeployments": "Cette action supprime définitivement {{name}}, avec ses {{deployments}} et ses liens vers d’autres éléments. Elle est irréversible."
     },
     "asset": {
       "title": "Serveur",

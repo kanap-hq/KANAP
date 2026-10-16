@@ -9,7 +9,8 @@ import { KanapDialogProvider } from '../../../components/design';
 import ApplicationDeleteButton from './ApplicationDeleteButton';
 
 const del = vi.fn();
-vi.mock('../../../api', () => ({ default: { delete: (...args: any[]) => del(...args) } }));
+const post = vi.fn();
+vi.mock('../../../api', () => ({ default: { delete: (...args: any[]) => del(...args), post: (...args: any[]) => post(...args) } }));
 
 function renderButton() {
   const onDeleted = vi.fn();
@@ -32,14 +33,39 @@ async function openConfirm() {
   fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
   const dialog = await screen.findByRole('dialog');
   expect(within(dialog).getByText('Delete Billing hub?')).toBeInTheDocument();
-  expect(dialog).toHaveTextContent(/deployments/);
-  expect(within(dialog).getByText(/permanently deletes Billing hub/)).toBeInTheDocument();
+  expect(within(dialog).getByText(/permanently deletes Billing hub, with its 2 deployments and its links/)).toBeInTheDocument();
   return dialog;
 }
 
 describe('ApplicationDeleteButton', () => {
   beforeEach(() => {
     del.mockReset();
+    post.mockReset();
+    post.mockResolvedValue({ data: { refused: [], removes: [{ type: 'app_instances', total: 2 }] } });
+  });
+
+  it('asks the check first: with interfaces, the refusal and why with Close only, and no delete', async () => {
+    post.mockResolvedValue({
+      data: { refused: [{ id: 'app-1', name: 'Billing hub', code: 'APPLICATION_HAS_INTERFACES', usages: [{ type: 'interfaces', total: 2 }] }], removes: [] },
+    });
+    renderButton();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(post).toHaveBeenCalledWith('/applications/delete-check', { ids: ['app-1'] });
+    expect(within(dialog).getByText('Delete Billing hub?')).toBeInTheDocument();
+    expect(dialog).toHaveTextContent('source or target of 2 interfaces');
+    expect(within(dialog).getAllByRole('button').map((button) => button.textContent).filter(Boolean)).toEqual(['Close']);
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(del).not.toHaveBeenCalled();
+  });
+
+  it('confirms without counts when the check fails, the delete still refusing what it must', async () => {
+    post.mockRejectedValue(new Error('offline'));
+    renderButton();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/permanently deletes Billing hub, with its links/)).toBeInTheDocument();
   });
 
   it('deletes the application after confirmation, refreshes the list and hands back', async () => {

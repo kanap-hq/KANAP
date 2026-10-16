@@ -97,6 +97,8 @@
   "CONTRACT_HAS_COMPLIANCE_RECORDS": "Ce contrat a {{usages}}. Désactivez-le plutôt que de le supprimer.",
   "ASSET_IN_USE_one": "Cet actif est utilisé par {{usages}}. Retirez-le de cet élément avant de le supprimer.",
   "ASSET_IN_USE_other": "Cet actif est utilisé par {{usages}}. Retirez-le de ces éléments avant de le supprimer.",
+  "APPLICATION_HAS_INTERFACES_one": "Cette application est la source ou la cible de {{usages}}. Désactivez-la plutôt, ou supprimez d’abord cette interface.",
+  "APPLICATION_HAS_INTERFACES_other": "Cette application est la source ou la cible de {{usages}}. Désactivez-la plutôt, ou supprimez d’abord ces interfaces.",
   "COST_CENTER_IN_USE": "Ce centre de coûts est utilisé par {{usages}}. Désactivez-le plutôt que de le supprimer.",
   "COST_CENTER_HAS_NODES_one": "Ce groupe contient {{usages}}. Déplacez-le ou supprimez-le d’abord.",
   "COST_CENTER_HAS_NODES_other": "Ce groupe contient {{usages}}. Déplacez-les ou supprimez-les d’abord.",

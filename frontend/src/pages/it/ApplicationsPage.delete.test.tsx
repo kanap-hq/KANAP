@@ -8,16 +8,18 @@ import { createAppTheme } from '../../config/ThemeContext';
 import ApplicationsPage from './ApplicationsPage';
 
 const deleteButton = vi.hoisted(() => ({ props: null as null | Record<string, any> }));
+const post = vi.hoisted(() => vi.fn());
 
 vi.mock('react-i18next', () => {
-  const t = (key: string, options?: Record<string, unknown>) => (options && 'count' in options ? `${key}:${options.count}` : key);
+  const t = (key: string, options?: Record<string, unknown>) =>
+    (options && 'count' in options ? `${key}:${options.count}${options.deployments ? `|${options.deployments}` : ''}` : key);
   return {
     initReactI18next: { type: '3rdParty', init: () => undefined },
     useTranslation: () => ({ t, i18n: { language: 'en', resolvedLanguage: 'en' } }),
   };
 });
 vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true, profile: { id: 'me' } }) }));
-vi.mock('../../api', () => ({ default: { get: vi.fn(async () => ({ data: { items: [] } })), post: vi.fn() } }));
+vi.mock('../../api', () => ({ default: { get: vi.fn(async () => ({ data: { items: [] } })), post } }));
 vi.mock('../../hooks/useItOpsEnumOptions', () => ({ default: () => ({ settings: null, byField: {}, labelFor: (_field: string, code: string) => code }) }));
 vi.mock('../../tenant/TenantContext', () => ({ useTenant: () => ({ tenantSlug: 'acme' }) }));
 vi.mock('../../hooks/useApplicationClassificationCatalog', () => ({ default: () => ({ data: null }) }));
@@ -31,7 +33,7 @@ vi.mock('../../components/DeleteSelectedButton', () => ({
 }));
 
 describe('ApplicationsPage delete', () => {
-  it('says what goes with the applications, with no promise of a refusal the delete cannot make', () => {
+  it('asks the check first: applications with interfaces are kept, the warning counts the deployments that go', async () => {
     render(
       <QueryClientProvider client={new QueryClient()}>
         <ThemeProvider theme={createAppTheme('light')}>
@@ -43,6 +45,16 @@ describe('ApplicationsPage delete', () => {
     expect(props).not.toBeNull();
     expect(props.endpoint).toBe('/applications/bulk');
     expect(props.warning).toBe('pages.applications.delete.warning:0');
+    const refused = [{ id: 'b', name: 'ERP', code: 'APPLICATION_HAS_INTERFACES', usages: [{ type: 'interfaces', total: 2 }] }];
+    post.mockResolvedValueOnce({ data: { refused, removes: [{ type: 'app_instances', total: 3 }] } });
+    expect(await props.checkDelete(['a', 'b', 'c'])).toEqual({
+      refused,
+      warning: 'pages.applications.delete.warningCounted:2|common:delete.usages.app_instances:3',
+    });
+    expect(post).toHaveBeenCalledWith('/applications/delete-check', { ids: ['a', 'b', 'c'] });
+    post.mockResolvedValueOnce({ data: { refused: [], removes: [] } });
+    expect(await props.checkDelete(['a'])).toEqual({ refused: [], warning: 'pages.applications.delete.warningLinks:1' });
+    expect(props.itemLabels.kept(1)).toBe('pages.applications.delete.kept:1');
     expect(props.itemLabels.toDelete(2)).toBe('pages.applications.delete.toDelete:2');
     expect(props.itemLabels.deleted(2)).toBe('pages.applications.delete.deleted:2');
   });
@@ -50,7 +62,13 @@ describe('ApplicationsPage delete', () => {
   it('words what goes in each language, and nothing about references', async () => {
     for (const lang of ['en', 'fr', 'de', 'es']) {
       const it = (await import(`../../locales/${lang}/it.json`)).default as any;
-      for (const text of [it.pages.applications.delete.warning_one, it.pages.applications.delete.warning_other, it.workspace.application.deleteMessage]) {
+      const errors = (await import(`../../locales/${lang}/errors.json`)).default as any;
+      expect(errors.APPLICATION_HAS_INTERFACES_one, lang).toContain('{{usages}}');
+      expect(errors.APPLICATION_HAS_INTERFACES_other, lang).toContain('{{usages}}');
+      const words = it.pages.applications.delete;
+      for (const key of ['warningCounted_one', 'warningCounted_other']) expect(words[key], `${lang} ${key}`).toContain('{{deployments}}');
+      expect(it.workspace.application.deleteMessageWithDeployments, lang).toContain('{{deployments}}');
+      for (const text of [words.warning_one, words.warning_other, words.kept_one, words.kept_other, it.workspace.application.deleteMessage]) {
         expect(text, lang).toBeTruthy();
         expect(text, lang).not.toMatch(/referen|bloqu|blockiert|bloque/i);
       }
