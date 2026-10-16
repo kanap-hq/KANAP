@@ -167,6 +167,8 @@ async function testDeletedApplicationTakesItsManagedDocuments() {
       storage,
       integrated,
     );
+    const check = await service.deleteCheck([goneId], { manager: runner.manager });
+    assert.deepEqual(check.removes, [{ type: 'documents', total: 1 }], 'the check before the delete counts the managed document that goes');
     await service.delete(goneId, { manager: runner.manager, userId: deleterId });
 
     assert.deepEqual(await bindings(runner, goneId), [], 'no binding names the deleted application');

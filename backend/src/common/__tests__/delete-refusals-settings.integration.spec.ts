@@ -311,7 +311,7 @@ async function testInterfaces() {
 async function testApplications() {
   await withRollback(async (runner, t) => {
     const m = runner.manager;
-    const svc = new ApplicationsDeleteService(m.getRepository(Application), noAudit, null as any);
+    const svc = new ApplicationsDeleteService(m.getRepository(Application), noAudit, null as any, { deleteForEntity: async () => 0 } as any);
     const app = (name: string) => one(runner, `INSERT INTO applications (tenant_id, name) VALUES ($1, $2) RETURNING id`, [t, name]);
     const crm = await app('CRM');
     const erp = await app('ERP');

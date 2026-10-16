@@ -43,12 +43,14 @@ export class ApplicationsDeleteService extends BaseDeleteService<Application> {
   }
 
   /** The asked applications of the tenant, with their interface and deployment counts. */
-  private async readCounts(ids: string[], manager: EntityManager): Promise<Array<{ id: string; name: string; interfaces: number; deployments: number }>> {
+  private async readCounts(ids: string[], manager: EntityManager): Promise<Array<{ id: string; name: string; interfaces: number; deployments: number; documents: number }>> {
     return manager.query(
       `SELECT a.id, a.name,
               (SELECT count(*)::int FROM interfaces i
                 WHERE i.tenant_id = a.tenant_id AND (i.source_application_id = a.id OR i.target_application_id = a.id)) AS interfaces,
-              (SELECT count(*)::int FROM app_instances d WHERE d.tenant_id = a.tenant_id AND d.application_id = a.id) AS deployments
+              (SELECT count(*)::int FROM app_instances d WHERE d.tenant_id = a.tenant_id AND d.application_id = a.id) AS deployments,
+              (SELECT count(*)::int FROM integrated_document_bindings b
+                WHERE b.tenant_id = a.tenant_id AND b.source_entity_type = 'applications' AND b.source_entity_id = a.id) AS documents
          FROM applications a
         WHERE a.tenant_id = app_current_tenant() AND a.id = ANY($1::uuid[])`,
       [ids],
@@ -58,7 +60,7 @@ export class ApplicationsDeleteService extends BaseDeleteService<Application> {
   /**
    * The check before a delete (`POST /applications/delete-check`): the applications of `ids` with
    * interfaces, which the delete refuses, and what the others take with them (`removes`, their
-   * deployments counted). Nothing is written.
+   * deployments and managed documents counted). Nothing is written.
    */
   async deleteCheck(ids: string[], opts?: { manager?: EntityManager }): Promise<{ refused: DeleteRefusal[]; removes: UsageCount[] }> {
     const manager = opts?.manager ?? this.repository.manager;
@@ -66,8 +68,13 @@ export class ApplicationsDeleteService extends BaseDeleteService<Application> {
     if (wanted.length === 0) return { refused: [], removes: [] };
     const rows = await this.readCounts(wanted, manager);
     const { refused } = await refusalsFrom(wanted, rows, (row) => row.name, async (row) => this.refusalOf(row));
-    const deployments = rows.filter((row) => row.interfaces === 0).reduce((total, row) => total + row.deployments, 0);
-    return { refused, removes: deployments > 0 ? [{ type: 'app_instances', total: deployments }] : [] };
+    const deleted = rows.filter((row) => row.interfaces === 0);
+    const deployments = deleted.reduce((total, row) => total + row.deployments, 0);
+    const documents = deleted.reduce((total, row) => total + row.documents, 0);
+    const removes: UsageCount[] = [];
+    if (deployments > 0) removes.push({ type: 'app_instances', total: deployments });
+    if (documents > 0) removes.push({ type: 'documents', total: documents });
+    return { refused, removes };
   }
 
   /**

@@ -128,10 +128,7 @@ export const UNKEYED_REFERENCE_COLUMNS: Readonly<Record<string, string>> = {
 export const UNINDEXED_DELETING_KEY_TABLES: Readonly<Record<string, string>> = {};
 
 /**
- * Columns whose key comes with a migration of another change (1854150000000, portfolio contact
- * links): accepted with or without a key until it lands, then removed from here.
+ * Columns whose key comes with a migration of another change: accepted with or without a key
+ * until it lands, then removed from here.
  */
-export const KEYED_BY_PENDING_MIGRATION: readonly string[] = [
-  'portfolio_project_contacts.contact_id',
-  'portfolio_request_contacts.contact_id',
-];
+export const KEYED_BY_PENDING_MIGRATION: readonly string[] = [];

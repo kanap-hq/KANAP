@@ -62,7 +62,7 @@ async function testBulkFailuresCarryNotFound() {
     const m = runner.manager;
     const gone = randomUUID();
     const services: Array<[string, () => Promise<{ failed: Array<{ id: string; code?: string }> }>]> = [
-      ['applications', () => new ApplicationsDeleteService(m.getRepository(Application), noAudit, null as any).bulkDelete([gone], null, { manager: m })],
+      ['applications', () => new ApplicationsDeleteService(m.getRepository(Application), noAudit, null as any, { deleteForEntity: async () => 0 } as any).bulkDelete([gone], null, { manager: m })],
       ['contacts', () => new ContactsDeleteService(m.getRepository(ExternalContact), m.getRepository(SupplierContactLink), noAudit).bulkDelete([gone], { manager: m })],
       ['business processes', () => new BusinessProcessesDeleteService(m.getRepository(BusinessProcess), noAudit).bulkDelete([gone], null, { manager: m })],
     ];
