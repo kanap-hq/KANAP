@@ -76,8 +76,8 @@ export default function CsvImportDialog({
   /**
    * The master-data files: the separator, the amount convention and the dates
    * follow the screen language, and an Excel-saved file imports as it is. The
-   * files that keep the semicolon (contacts, contracts, business processes, CoA
-   * templates) leave this off.
+   * files that keep the semicolon (CoA templates, the IT and portfolio
+   * registers) leave this off.
    */
   flexibleFormat?: boolean;
   /** The values the file's columns accept, when the template's titles do not say it, under the description. */

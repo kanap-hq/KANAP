@@ -5,10 +5,10 @@ description: Dokumentieren Sie Ihre Anwendungslandschaft in Minuten. Ein praktis
 
 # IT Ops Schnelleinstieg: Von der Anwendung zum Server
 
-Dieser Leitfaden führt Sie durch die Dokumentation einer Anwendung und ihrer unterstützenden Infrastruktur -- von der Erstellung des App-Eintrags bis zur Verknüpfung mit dem Server, auf dem sie gehostet wird. Er ist darauf ausgelegt, Sie schnell produktiv zu machen und deckt die wesentlichen Schritte ab, ohne Sie in Optionen zu ertränken.
+Dieser Leitfaden führt Sie durch die Dokumentation einer Anwendung und ihrer unterstützenden Infrastruktur: von der Erstellung des App-Eintrags bis zur Verknüpfung mit dem Server, auf dem sie gehostet wird. Er ist darauf ausgelegt, Sie schnell produktiv zu machen und deckt die wesentlichen Schritte ab, ohne Sie in Optionen zu ertränken.
 
 !!! tip "Bevorzugen Sie eine einseitige Zusammenfassung? :material-file-pdf-box:"
-    Alle wichtigen Schritte auf einer einzigen A4-Seite -- ausdrucken, aufhängen, mit dem Team teilen.
+    Alle wichtigen Schritte auf einer einzigen A4-Seite: ausdrucken, aufhängen, mit dem Team teilen.
 
     [:material-download: Spickzettel herunterladen (PDF)](downloads/kanap-itops-fast-track.pdf){ .md-button .md-button--primary }
 
@@ -25,15 +25,15 @@ Alles in KANAPs IT-Landschaft-Modul ist verbunden, um ein vollständiges Bild Ih
 | Objekt | Was es repräsentiert |
 |--------|---------------------|
 | **Anwendung** | Eine Geschäftsanwendung oder ein IT-Dienst, den Sie dokumentieren möchten |
-| **Umgebung** | Wo sie läuft -- Prod, QA, Dev usw. (in KANAP „Bereitstellungen" genannt) |
-| **Server (Asset)** | Die Infrastruktur, die sie hostet -- VMs, physische Server, Container |
+| **Umgebung** | Wo sie läuft: Prod, QA, Dev usw. (in KANAP „Bereitstellungen" genannt) |
+| **Server (Asset)** | Die Infrastruktur, die sie hostet: VMs, physische Server, Container |
 
 Die Kette ist einfach: **Anwendung → Umgebung → Server**. Am Ende dieses Leitfadens haben Sie diese Kette vollständig dokumentiert.
 
 ![Anwendungs-Beziehungsmodell](images/app-relationship-model.png)
 
 !!! info "Warum das wichtig ist"
-    Wenn jemand fragt „Wo läuft diese App?", „Wer ist verantwortlich?" oder „Ist sie compliant?" -- haben Sie die Antwort in Sekunden, anstatt Tabellenkalkulationen zu durchsuchen.
+    Wenn jemand fragt „Wo läuft diese App?", „Wer ist verantwortlich?" oder „Ist sie compliant?", haben Sie die Antwort in Sekunden, anstatt Tabellenkalkulationen zu durchsuchen.
 
 ---
 
@@ -54,7 +54,7 @@ Füllen Sie das Wesentliche aus:
 Klicken Sie auf **Erstellen**. Ihre Anwendung ist jetzt im Register, und der vollständige Arbeitsbereich öffnet sich mit sechs Tabs für die detaillierte Dokumentation: **Übersicht**, **Bereitstellungen**, **Schnittstellen**, **Betrieb**, **Compliance** und **Beziehungen**.
 
 !!! tip "Beginnen Sie mit dem, was Sie wissen"
-    Beschreibung, Herausgeber, Version, Lizenzierung -- alles nützlich, aber in diesem Stadium optional. Sie können später anreichern. Das Ziel ist, die App ins System zu bekommen.
+    Beschreibung, Herausgeber, Version, Lizenzierung: alles nützlich, aber in diesem Stadium optional. Sie können später anreichern. Das Ziel ist, die App ins System zu bekommen.
 
 ---
 
@@ -98,7 +98,7 @@ Die Mitglieder des IT-Teams, die für den technischen Betrieb und den Support zu
 Wählen Sie unter **Zielgruppe** das **Unternehmen** und die **Abteilungen**, die diese Anwendung nutzen. KANAP berechnet die Anzahl der Benutzer aus Ihren Stammdaten, oder Sie stellen die Berechnung auf manuell um und geben die Zahl selbst ein.
 
 !!! warning "Warum Verantwortliche wichtig sind"
-    Verantwortlichkeit macht es einfach, **die richtigen Personen zu erreichen**, wenn es darauf ankommt -- geplante Wartung, Serviceunterbrechungen, Upgrade-Entscheidungen, Lizenzverlängerungen. Sie steuert auch die Filter **Meine Apps** und **Apps meines Teams** in der Hauptliste. Ohne Verantwortliche ist die App nur in der Ansicht „Alle Apps" sichtbar -- das heißt, niemand fühlt sich zuständig und niemand wird benachrichtigt.
+    Verantwortlichkeit macht es einfach, **die richtigen Personen zu erreichen**, wenn es darauf ankommt: geplante Wartung, Serviceunterbrechungen, Upgrade-Entscheidungen, Lizenzverlängerungen. Sie steuert auch die Filter **Meine Apps** und **Apps meines Teams** in der Hauptliste. Ohne Verantwortliche ist die App nur in der Ansicht „Alle Apps" sichtbar. Das heißt, niemand fühlt sich zuständig und niemand wird benachrichtigt.
 
 ---
 
@@ -106,13 +106,13 @@ Wählen Sie unter **Zielgruppe** das **Unternehmen** und die **Abteilungen**, di
 
 Gehen Sie zum Tab **Betrieb**. Wählen Sie unter **Zugriffsmethoden**, wie Benutzer diese Anwendung erreichen:
 
-- **Web** -- Zugriff über den Browser
-- **Lokal installierte Anwendung** -- Desktop-Client
-- **Mobile Anwendung** -- App für Telefon/Tablet
-- **VDI / Remote Desktop** -- virtueller Desktop
-- **Terminal / CLI** -- Befehlszeilenschnittstelle
-- **Proprietäre HMI** -- industrielle Schnittstelle
-- **Kiosk** -- dediziertes Terminal
+- **Web**: Zugriff über den Browser
+- **Lokal installierte Anwendung**: Desktop-Client
+- **Mobile Anwendung**: App für Telefon/Tablet
+- **VDI / Remote Desktop**: virtueller Desktop
+- **Terminal / CLI**: Befehlszeilenschnittstelle
+- **Proprietäre HMI**: industrielle Schnittstelle
+- **Kiosk**: dediziertes Terminal
 
 Zugriffsmethoden sind in den [IT-Landschaft-Einstellungen](../it-ops-settings.md#zugriffsmethoden) konfigurierbar, Ihre Liste kann also weitere Optionen enthalten.
 
@@ -143,7 +143,7 @@ Gehen Sie zum Tab **Beziehungen**, um Ihre Anwendung mit Ihren übrigen IT-Manag
 Der Tab verknüpft auch **Aufgaben**, und Suiten listen dort ihre **Komponenten**.
 
 !!! tip "Das geht auch später"
-    Verknüpfungen sind nützlich, aber nicht blockierend. Legen Sie sie an, wenn Sie die Daten haben -- die App funktioniert auch ohne sie vollständig.
+    Verknüpfungen sind nützlich, aber nicht blockierend. Legen Sie sie an, wenn Sie die Daten haben. Die App funktioniert auch ohne sie vollständig.
 
 ---
 
@@ -179,7 +179,7 @@ Füllen Sie die Kernfelder aus:
 | **Asset-Typ** | Der Servertyp (Auswahlliste) | `Virtuelle Maschine` |
 | **Standort** | Wo er gehostet wird (Pflichtfeld) | `Rechenzentrum Paris` |
 | **Umgebung** | Welche Umgebung er bedient | `Prod` |
-| **Beschreibung** | Zusätzlicher Kontext | -- |
+| **Beschreibung** | Zusätzlicher Kontext |  |
 
 Der Bereich **Eigenschaften** rechts enthält den Rest: **Unter-Standort**, **Lebenszyklus**, **Go-live** und **End of Life**. Sobald ein Standort ausgewählt ist, werden mehrere **schreibgeschützte Felder** automatisch abgeleitet:
 
@@ -189,7 +189,7 @@ Der Bereich **Eigenschaften** rechts enthält den Rest: **Unter-Standort**, **Le
 - **Stadt**
 
 !!! info "Der Standort ist der Schlüssel"
-    Der Standort bestimmt viele Attribute Ihres Assets automatisch. Standorte werden unter **IT-Landschaft > Standorte** verwaltet -- richten Sie sie einmal ein, und jedes zugeordnete Asset erbt Hosting-Typ, Anbieter, Land und Stadt. Sie müssen diese nicht manuell ausfüllen.
+    Der Standort bestimmt viele Attribute Ihres Assets automatisch. Standorte werden unter **IT-Landschaft > Standorte** verwaltet. Richten Sie sie einmal ein, und jedes zugeordnete Asset erbt Hosting-Typ, Anbieter, Land und Stadt. Sie müssen diese nicht manuell ausfüllen.
 
 Klicken Sie auf **Erstellen**, um den vollständigen Arbeitsbereich freizuschalten. Für physische Asset-Typen werden zusätzliche **Hardware**- und **Support**-Tabs verfügbar, um Seriennummern, Herstellerdetails und Lieferanten-Supportverträge zu erfassen.
 
@@ -204,13 +204,13 @@ Gehen Sie zum Tab **Technik**, um Folgendes hinzuzufügen:
 | **IP-Adressen** | Typ, IP-Adresse, Subnetz | Netzwerkzone und VLAN werden aus dem Subnetz abgeleitet |
 
 !!! info "Mehrere IP-Adressen"
-    Ein Server kann mehrere IP-Adressen haben -- fügen Sie so viele wie nötig hinzu (z. B. Management-Schnittstelle, Produktions-VLAN, Backup-Netz). Jeder Eintrag kann seinen eigenen Typ und sein eigenes Subnetz haben, Netzwerkzone und VLAN werden automatisch abgeleitet.
+    Ein Server kann mehrere IP-Adressen haben. Fügen Sie so viele wie nötig hinzu (z. B. Management-Schnittstelle, Produktions-VLAN, Backup-Netz). Jeder Eintrag kann seinen eigenen Typ und sein eigenes Subnetz haben, Netzwerkzone und VLAN werden automatisch abgeleitet.
 
 ---
 
 ## Schritt 8: Den Server mit Ihrer Anwendung verknüpfen
 
-Das ist die letzte Verbindung -- Ihr Server wird mit der Anwendungsumgebung verknüpft, die er unterstützt.
+Das ist die letzte Verbindung: Ihr Server wird mit der Anwendungsumgebung verknüpft, die er unterstützt.
 
 Es gibt **zwei Wege**, diese Zuordnung zu erstellen:
 
@@ -235,7 +235,7 @@ Es gibt **zwei Wege**, diese Zuordnung zu erstellen:
 | **Umgebung** | Welche Bereitstellung | `PROD` |
 | **Rolle** | Serverrolle für diese App | `Web` |
 | **Seit** | Wann die Zuordnung begann | `2025-01-15` |
-| **Notizen** | Kontext | -- |
+| **Notizen** | Kontext |  |
 
 !!! success "Die Kette ist vollständig"
     Sie haben jetzt den vollständigen Pfad dokumentiert:
@@ -251,7 +251,7 @@ Jede Information, die Sie eingeben, fließt in etwas Größeres ein:
 
 ### Anwendungslandschaft-Ansicht
 
-Ihre Anwendungsliste wird zu einem Live-Register, das jede Anwendung mit ihren Umgebungen, Kritikalität, Hosting-Typ und Verantwortlichkeit zeigt -- filterbar nach jedem Attribut.
+Ihre Anwendungsliste wird zu einem Live-Register, das jede Anwendung mit ihren Umgebungen, Kritikalität, Hosting-Typ und Verantwortlichkeit zeigt, filterbar nach jedem Attribut.
 
 ### Infrastruktur-Mapping
 
@@ -277,7 +277,7 @@ Sobald Assets dokumentiert sind, können Sie **Verbindungen** (Server-zu-Server 
 
 Gehen Sie einen Schritt weiter: Dokumentieren Sie **Schnittstellen** zwischen Anwendungen, um Datenflüsse, Integrationspunkte und Geschäftskontext zu erfassen. Jede Schnittstelle hat fünf Tabs für gründliche Dokumentation: Übersicht, Fluss, Umgebungen, Datenmapping und Beziehungen.
 
-Verwenden Sie dann die [Schnittstellenkarte](../interface-map.md), um den vollständigen Anwendungsfluss zu visualisieren. In der Standard-Geschäftsansicht sehen Sie saubere Quelle-zu-Ziel-Beziehungen. Wechseln Sie zur technischen Ansicht, um Middleware-Plattformen als rautenförmige Knoten anzuzeigen, die den tatsächlichen Datenpfad zeigen. Der Tiefenfilter zählt nur primäre Anwendungsknoten -- Middleware ist transparent, sodass die Auswahl einer App mit Tiefe 2 Ihnen zwei echte Sprünge zeigt, unabhängig davon, wie viele Middleware-Plattformen dazwischenliegen.
+Verwenden Sie dann die [Schnittstellenkarte](../interface-map.md), um den vollständigen Anwendungsfluss zu visualisieren. In der Standard-Geschäftsansicht sehen Sie saubere Quelle-zu-Ziel-Beziehungen. Wechseln Sie zur technischen Ansicht, um Middleware-Plattformen als rautenförmige Knoten anzuzeigen, die den tatsächlichen Datenpfad zeigen. Der Tiefenfilter zählt nur primäre Anwendungsknoten: Middleware ist transparent, sodass die Auswahl einer App mit Tiefe 2 Ihnen zwei echte Sprünge zeigt, unabhängig davon, wie viele Middleware-Plattformen dazwischenliegen.
 
 ---
 
@@ -303,4 +303,4 @@ Verwenden Sie dann die [Schnittstellenkarte](../interface-map.md), um den vollst
 ---
 
 !!! success "Sie sind startklar"
-    Sie wissen jetzt, wie Sie die vollständige Kette von der Anwendung zum Server dokumentieren. Beginnen Sie mit Ihren kritischsten Apps, fügen Sie deren Produktionsumgebungen hinzu, verknüpfen Sie die Server -- und Sie haben in kürzester Zeit eine lebende, abfragbare IT-Landschaft. Für detaillierte Dokumentation zu jeder Funktion erkunden Sie die Referenzbereiche [Anwendungen](../applications.md) und [Assets](../assets.md).
+    Sie wissen jetzt, wie Sie die vollständige Kette von der Anwendung zum Server dokumentieren. Beginnen Sie mit Ihren kritischsten Apps, fügen Sie deren Produktionsumgebungen hinzu, verknüpfen Sie die Server, und Sie haben in kürzester Zeit eine lebende, abfragbare IT-Landschaft. Für detaillierte Dokumentation zu jeder Funktion erkunden Sie die Referenzbereiche [Anwendungen](../applications.md) und [Assets](../assets.md).

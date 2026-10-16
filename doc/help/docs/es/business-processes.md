@@ -47,7 +47,7 @@ La lista muestra todos los procesos de negocio de su espacio de trabajo.
 - **Gestionar categorías** (Manager+): abrir el diálogo de gestión de categorías.
 - **Importar CSV** (Admin): importación masiva de procesos desde un archivo CSV.
 - **Exportar CSV** (Admin): exportar los procesos que muestra la lista, o todos los procesos, a CSV.
-- **Eliminar seleccionados** (Admin): eliminar una o más filas seleccionadas.
+- **Eliminar seleccionados** (Admin): eliminar una o más filas seleccionadas. Las interfaces y solicitudes vinculadas a un proceso eliminado se conservan, sin el vínculo.
 
 ---
 
@@ -99,7 +99,7 @@ Ambos abren el diálogo **Gestionar categorías de procesos de negocio**.
 
 - **Renombrar**: edite el nombre directamente en el campo de texto.
 - **Activar / Desactivar**: controle si una categoría aparece en los selectores. Las categorías inactivas se ocultan de las nuevas asignaciones pero se conservan en los procesos existentes.
-- **Eliminar**: eliminar una categoría. La eliminación solo funciona si ningún proceso la utiliza; de lo contrario, verá un error.
+- **Eliminar**: eliminar una categoría. La eliminación solo funciona si ningún proceso la utiliza; de lo contrario, el mensaje cuenta los procesos que la usan. Desactívela en su lugar.
 - **Nueva categoría**: añadir una nueva fila en la parte superior del diálogo.
 
 **Comportamiento de guardar y cancelar**:
@@ -121,7 +121,7 @@ Haga clic en **Exportar CSV** en la página de la lista. Puede exportar:
 - Una **plantilla** (solo fila de encabezados) para usar como punto de partida.
 - **Datos** (todos los procesos del espacio de trabajo actual).
 
-El archivo utiliza puntos y coma (`;`) como separadores y está codificado como UTF-8 con BOM para compatibilidad con Excel.
+El separador sigue el idioma de su pantalla. Consulte [Archivos CSV](csv-files.md) para la codificación, el separador y los dos pasos de importación.
 
 **Columnas**: `name`, `categories`, `description`, `notes`, `status`.
 
@@ -131,15 +131,15 @@ La columna `categories` puede contener múltiples nombres de categorías separad
 
 Haga clic en **Importar CSV** en la página de la lista, luego:
 
-1. Suba su archivo CSV (debe coincidir con los encabezados de la plantilla y usar `;` como separador).
+1. Suba su archivo CSV con los títulos de columna de la plantilla. Funcionan tanto las comas como los puntos y coma.
 2. Ejecute la **Verificación previa**: valida encabezados y datos, y muestra cuántas filas se crearán vs. actualizarán.
 3. Si la verificación previa es correcta, haga clic en **Cargar** para aplicar los cambios.
 
 **Reglas de coincidencia**:
 
-- Las filas se emparejan por **Nombre** (sin distinguir mayúsculas). Un nombre coincidente actualiza el proceso existente; un nuevo nombre crea un nuevo proceso.
+- Las filas se emparejan por **Nombre**, sin distinguir mayúsculas y minúsculas. Un nombre coincidente actualiza el proceso existente y conserva la grafía guardada (la verificación previa indica con qué proceso se asoció la fila); un nombre nuevo crea un proceso nuevo.
 - Cada categoría en la celda `categories` se recorta y empareja por nombre. Si una categoría no existe aún, se crea automáticamente como categoría activa.
-- La columna `status` establece el estado habilitado/deshabilitado. Las fechas del ciclo de vida no se importan. Ajústelas en el espacio de trabajo si es necesario.
+- El archivo no tiene columna de fin de validez. En una actualización, un `status` vacío, o igual al estado actual del proceso, conserva su fin de validez. Un estado distinto se aplica: `enabled` borra el fin de validez, y `disabled` termina el proceso hoy, salvo que su fin de validez ya haya pasado. Un proceso nuevo está habilitado salvo que la fila indique `disabled`.
 
 **Consejo**: exporte sus datos actuales primero, modifique el CSV y vuelva a importar. Esto evita duplicados accidentales y garantiza que esté trabajando desde el estado más reciente.
 

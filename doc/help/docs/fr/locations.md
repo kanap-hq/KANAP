@@ -1,6 +1,6 @@
 # Sites
 
-Les sites documentent l'emplacement de votre infrastructure IT — centres de données, régions cloud, salles serveur de bureaux et installations de colocation. Assigner des actifs et des applications à des sites vous donne une visibilité géographique, aide à la planification de capacité et garde les contacts des installations à portée de main lorsque vous en avez besoin.
+Les sites documentent l'emplacement de votre infrastructure IT : centres de données, régions cloud, salles serveur de bureaux et installations de colocation. Assigner des actifs et des applications à des sites vous donne une visibilité géographique, aide à la planification de capacité et garde les contacts des installations à portée de main lorsque vous en avez besoin.
 
 ## Premiers pas
 
@@ -9,7 +9,7 @@ Naviguez vers **Cartographie SI > Sites** pour ouvrir le registre des sites. Cli
 **Champs obligatoires** :
 - **Code** : Un identifiant court unique (par ex., `DC-EU-WEST`, `AWS-US-EAST-1`)
 - **Nom** : Un nom d'affichage descriptif
-- **Type d'hébergement** : Le type d'installation — centre de données on-premise, colocation, région cloud, etc.
+- **Type d'hébergement** : Le type d'installation (centre de données on-premise, colocation, région cloud, etc.)
 
 **Fortement recommandé** :
 - **Pays** : Où le site se trouve géographiquement
@@ -57,7 +57,7 @@ L'onglet Vue d'ensemble capture les informations d'identité et de géographie, 
 - **Nom** : Nom d'affichage (obligatoire)
 - **Type d'hébergement** : Catégorie d'installation (obligatoire). Les types d'hébergement sont configurables dans **Cartographie SI > Paramètres**.
 
-**Détails du site** — les champs affichés ici dépendent de la catégorie de type d'hébergement :
+**Détails du site** : les champs affichés ici dépendent de la catégorie de type d'hébergement :
 
 Pour les types d'hébergement **on-premise** :
 - **Société exploitante** : La société qui gère l'installation. La sélection d'une société remplit automatiquement Pays et Ville s'ils sont vides.
@@ -75,7 +75,7 @@ Les deux catégories affichent aussi :
 
 #### Sous-sites
 
-Sous le formulaire principal, le panneau **Sous-sites** vous permet de décomposer un site en zones physiques plus petites — bâtiments, salles, racks, cages, ou toute autre subdivision qui a du sens pour votre infrastructure.
+Sous le formulaire principal, le panneau **Sous-sites** vous permet de décomposer un site en zones physiques plus petites : bâtiments, salles, racks, cages, ou toute autre subdivision qui a du sens pour votre infrastructure.
 
 Chaque sous-site possède :
 - **Nom** : Un libellé court (par ex., « Bâtiment A - Salle 1 - Rack 5 »)
@@ -103,7 +103,7 @@ Les modifications s'enregistrent automatiquement. L'ajout d'un contact ou d'un l
 
 ### Relations
 
-L'onglet Relations affiche les entités liées à ce site. Il est en lecture seule — les relations sont gérées depuis les enregistrements liés eux-mêmes.
+L'onglet Relations affiche les entités liées à ce site. Il est en lecture seule : les relations sont gérées depuis les enregistrements liés eux-mêmes.
 
 **Actifs** : Un tableau des actifs hébergés sur ce site, affichant Nom, Environnement, Type, Fournisseur, Région/Zone et Statut. Lorsque le site a des sous-sites, une colonne **Sous-site** supplémentaire apparaît montrant à quel sous-site chaque actif est assigné. Cliquez sur un nom d'actif pour accéder à son espace de travail.
 
@@ -116,7 +116,7 @@ L'onglet Relations affiche les entités liées à ce site. Il est en lecture seu
 Depuis l'en-tête de l'espace de travail, cliquez sur **Supprimer** pour retirer un site.
 
 - Nécessite l'autorisation `locations:member`.
-- Les actifs liés ne sont pas supprimés — ils sont automatiquement désassignés (leur référence de site est effacée).
+- Les actifs liés ne sont pas supprimés : ils sont automatiquement désassignés (leur référence de site est effacée).
 - Si vous avez des modifications non enregistrées dans l'espace de travail, ces modifications sont perdues lors de la suppression.
 
 ---

@@ -273,7 +273,7 @@ Los colaboradores pueden asignarse a equipos organizacionales para una mejor org
 - Vaya a **Portafolio > Configuración** y haga clic en la pestaña **Equipos**
 - Añadir, editar o deshabilitar equipos
 - Use **Establecer valores predeterminados** para llenar con equipos estándar
-- Los equipos con miembros asignados no pueden eliminarse
+- Un equipo con miembros o subequipos no se puede eliminar: muévalos primero a otro equipo, o desactive el equipo. Los equipos integrados no se pueden eliminar
 
 ---
 

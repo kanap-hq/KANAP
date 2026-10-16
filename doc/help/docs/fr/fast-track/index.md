@@ -5,10 +5,10 @@ description: Devenez productif avec le module Portefeuille de KANAP en quelques 
 
 # Fast Track Portefeuille : de la demande à la livraison
 
-Ce guide vous accompagne tout au long du cycle de vie du portefeuille -- de la soumission de votre première demande à la livraison d'un projet terminé. Il est conçu pour vous rendre productif rapidement, pas pour couvrir chaque option.
+Ce guide vous accompagne tout au long du cycle de vie du portefeuille, de la soumission de votre première demande à la livraison d'un projet terminé. Il est conçu pour vous rendre productif rapidement, pas pour couvrir chaque option.
 
 !!! tip "Conseil : Vous préférez un résumé sur une page ? :material-file-pdf-box:"
-    Toutes les étapes clés sur une seule page A4 -- imprimez-la, épinglez-la, partagez-la avec votre équipe.
+    Toutes les étapes clés sur une seule page A4 : imprimez-la, épinglez-la, partagez-la avec votre équipe.
 
     [:material-download: Télécharger l'aide-mémoire (PDF)](downloads/kanap-portfolio-fast-track.pdf){ .md-button .md-button--primary }
 
@@ -33,7 +33,7 @@ Chaque initiative dans KANAP suit le même flux :
 Ce pipeline garantit que chaque initiative est évaluée équitablement, priorisée de manière transparente et suivie de manière cohérente. Plus de projets favoris qui passent devant la file d'attente.
 
 !!! info "Information : Pourquoi c'est important"
-    L'étape d'analyse et d'évaluation est ce qui fait la différence entre une liste de souhaits et un vrai portefeuille. Elle donne à la direction une base défendable et fondée sur les données pour dire oui -- ou non.
+    L'étape d'analyse et d'évaluation est ce qui fait la différence entre une liste de souhaits et un vrai portefeuille. Elle donne à la direction une base défendable et fondée sur les données pour dire oui, ou non.
 
 ---
 
@@ -55,7 +55,7 @@ Remplissez les détails minimaux pour commencer :
 | **Demandeur** | Qui fait la demande ? |
 | **Date de livraison cible** | Quand est-ce idéalement nécessaire ? |
 
-Puis utilisez le document **Objet** dans le **Résumé** pour expliquer le besoin métier et le résultat attendu en langage courant. Si vous avez déjà un brief dans Word, utilisez le bouton **Import** sur l'éditeur d'Objet pour importer le fichier `.docx` directement -- sans copier-coller.
+Puis utilisez le document **Objet** dans le **Résumé** pour expliquer le besoin métier et le résultat attendu en langage courant. Si vous avez déjà un brief dans Word, utilisez le bouton **Import** sur l'éditeur d'Objet pour importer le fichier `.docx` directement, sans copier-coller.
 
 Cliquez sur **Créer**. Votre demande entre dans le pipeline avec le statut **En attente de revue**.
 
@@ -75,10 +75,10 @@ C'est l'étape qui transforme un backlog d'idées en un portefeuille défendable
 !!! warning "Avertissement : N'évaluez pas seul"
     L'évaluation fonctionne mieux lorsqu'elle est faite par un **comité** avec des perspectives diverses. Visez à inclure des représentants de :
 
-    - **IT Fonctionnel** -- comprend les processus métier et le paysage applicatif
-    - **IT Technique** -- comprend l'infrastructure, l'architecture et la dette technique
-    - **Cybersécurité** -- évalue les risques, la conformité et les implications de sécurité
-    - **Métier** -- valide l'alignement stratégique et la valeur métier
+    - **IT Fonctionnel** : comprend les processus métier et le paysage applicatif
+    - **IT Technique** : comprend l'infrastructure, l'architecture et la dette technique
+    - **Cybersécurité** : évalue les risques, la conformité et les implications de sécurité
+    - **Métier** : valide l'alignement stratégique et la valeur métier
 
     Le score d'une seule personne est une opinion. Le score d'un comité est un cadre de décision.
 
@@ -92,7 +92,7 @@ L'analyse combine quatre éléments :
 
 - Les **processus métier impactés** pour que les relecteurs voient quels domaines opérationnels la demande touche
 - La **revue de faisabilité** sur sept dimensions
-- Les **Risques et mesures d'atténuation** en tant que document géré (avec import et export DOCX)
+- Les **Risques et mesures d'atténuation** en tant que document managé (avec import et export DOCX)
 - La **Recommandation d'analyse** comme verdict formel du comité
 
 ### Analyse de faisabilité (7 dimensions)
@@ -123,7 +123,7 @@ Les noms exacts des critères et les pondérations peuvent varier selon le tenan
 
 ### La recommandation d'analyse
 
-Après avoir examiné la faisabilité et l'évaluation, rédigez la **Recommandation d'analyse**. C'est un résumé narratif court -- typiquement 2 à 4 phrases -- qui capture le verdict du comité :
+Après avoir examiné la faisabilité et l'évaluation, rédigez la **Recommandation d'analyse**. C'est un résumé narratif court (typiquement 2 à 4 phrases) qui capture le verdict du comité :
 
 <!-- screenshot: Champ texte Recommandation d'analyse -->
 
@@ -133,7 +133,7 @@ Après avoir examiné la faisabilité et l'évaluation, rédigez la **Recommanda
 
 Soumettre la recommandation publie une décision formelle dans l'**Activité**, de sorte que la justification et tout changement de statut lié restent attachés à l'historique de la demande.
 
-La combinaison **scores + faisabilité + recommandation** donne aux décideurs tout ce dont ils ont besoin pour approuver ou rejeter -- sans avoir à assister à une présentation de deux heures.
+La combinaison **scores + faisabilité + recommandation** donne aux décideurs tout ce dont ils ont besoin pour approuver ou rejeter, sans avoir à assister à une présentation de deux heures.
 
 !!! info "Information : La transparence est l'objectif"
     Lorsque les parties prenantes demandent « pourquoi ma demande a-t-elle été rejetée ? » ou « pourquoi ce projet a-t-il eu la priorité ? », l'enregistrement d'analyse et d'évaluation fournit la réponse. C'est ce qui rend le pipeline équitable.
@@ -168,9 +168,9 @@ Consultez la [référence Demandes](../portfolio-requests.md) pour toutes les tr
 
 Votre nouveau projet hérite du contexte de la demande, mais il a encore besoin d'une configuration d'exécution.
 
-Allez dans **Portefeuille > Projets** et ouvrez votre projet nouvellement créé. L'espace de travail du projet comporte sept onglets -- **Résumé**, **Activité**, **Chronologie**, **Avancement**, **Tâches**, **Évaluation** et **Base de connaissances** -- avec une barre latérale persistante **Propriétés du projet** pour les champs principaux, l'équipe et les relations.
+Allez dans **Portefeuille > Projets** et ouvrez votre projet nouvellement créé. L'espace de travail du projet comporte sept onglets (**Résumé**, **Activité**, **Chronologie**, **Avancement**, **Tâches**, **Évaluation** et **Base de connaissances**), avec une barre latérale persistante **Propriétés du projet** pour les champs principaux, l'équipe et les relations.
 
-### Barre latérale -- Assignez vos personnes et la structure principale
+### Barre latérale : Assignez vos personnes et la structure principale
 
 <!-- screenshot: Espace de travail du projet avec section Équipe développée dans la barre latérale -->
 
@@ -196,23 +196,23 @@ Utilisez la barre latérale **Propriétés du projet** pour configurer les rôle
 
 La même barre latérale garde aussi les **Propriétés principales** et les **Relations** visibles pendant que vous travaillez, vous n'avez donc plus besoin d'onglets séparés Équipe ou Relations.
 
-### Onglet Résumé -- Objet et tableau de bord du projet
+### Onglet Résumé : Objet et tableau de bord du projet
 
-Le **Résumé** est le tableau de bord du projet. Il affiche le statut actuel, la fenêtre de livraison, la consommation de charge, la couverture de l'équipe et la dernière activité en une seule passe. L'éditeur d'**Objet** est ici aussi -- si votre brief projet existe déjà en tant que document Word, utilisez le bouton **Import** pour importer le `.docx` directement.
+Le **Résumé** est le tableau de bord du projet. Il affiche le statut actuel, la fenêtre de livraison, la consommation de charge, la couverture de l'équipe et la dernière activité en une seule passe. L'éditeur d'**Objet** est ici aussi : si votre brief projet existe déjà en tant que document Word, utilisez le bouton **Import** pour importer le `.docx` directement.
 
-### Onglet Avancement -- Validez la charge et les ventilations
+### Onglet Avancement : Validez la charge et les ventilations
 
 <!-- screenshot: Onglet Avancement montrant les champs Charge IT et Charge Métier -->
 
 Utilisez l'**Avancement** pour confirmer la charge qui pilotera la planification de livraison :
 
-- **Charge IT (JH)** -- Total de jours-homme attendus des contributeurs IT
-- **Charge Métier (JH)** -- Total de jours-homme attendus des contributeurs métier
+- **Charge IT (JH)** : Total de jours-homme attendus des contributeurs IT
+- **Charge Métier (JH)** : Total de jours-homme attendus des contributeurs métier
 
 !!! info "Information : Ces chiffres alimentent la roadmap"
     Le générateur de roadmap utilise ces estimations de charge, combinées à la disponibilité des contributeurs, pour planifier automatiquement les projets sur la chronologie. Des estimations plus précises = de meilleures roadmaps.
 
-### Onglet Chronologie -- Appliquez un modèle de phases (optionnel)
+### Onglet Chronologie : Appliquez un modèle de phases (optionnel)
 
 <!-- screenshot: Onglet Chronologie avec sélecteur de modèle -->
 
@@ -238,15 +238,15 @@ Faites évoluer le projet à travers les statuts au fur et à mesure que le trav
 
 **Liste d'attente / Planifié** --> **En cours** --> **En test** --> **Terminé**
 
-### Saisissez du temps -- C'est critique
+### Saisissez du temps : C'est critique
 
 !!! warning "Avertissement : Pas de saisie de temps = pas de planification automatique"
-    La saisie de temps n'est pas que pour le reporting -- elle alimente directement le générateur de roadmap.
+    La saisie de temps n'est pas que pour le reporting : elle alimente directement le générateur de roadmap.
 
 Il y a deux endroits pour saisir du temps :
 
-1. **Onglet Avancement** -- Saisissez le temps d'overhead projet (réunions, coordination, management)
-2. **Tâches** -- Saisissez le temps spécifique aux tâches contre des éléments de travail individuels
+1. **Onglet Avancement** : Saisissez le temps d'overhead projet (réunions, coordination, management)
+2. **Tâches** : Saisissez le temps spécifique aux tâches contre des éléments de travail individuels
 
 <!-- screenshot: Boîte de dialogue de saisie de temps -->
 
@@ -258,7 +258,7 @@ Temps saisi --> Statistiques de temps du contributeur --> Données de capacité 
                                                      --> Planification future précise
 ```
 
-Le générateur de roadmap a un **mode de capacité historique** qui utilise le temps réellement saisi pour comprendre combien chaque contributeur livre réellement par mois (par opposition à sa disponibilité théorique). Sans données de temps, le générateur se rabat sur des estimations théoriques -- qui sont presque toujours optimistes.
+Le générateur de roadmap a un **mode de capacité historique** qui utilise le temps réellement saisi pour comprendre combien chaque contributeur livre réellement par mois (par opposition à sa disponibilité théorique). Sans données de temps, le générateur se rabat sur des estimations théoriques, qui sont presque toujours optimistes.
 
 !!! tip "Conseil : Faites-en une habitude"
     Encouragez les membres de l'équipe à saisir du temps chaque semaine. Même des entrées approximatives sont bien meilleures que rien. Les données se composent au fil du temps et rendent chaque itération de roadmap plus précise.
@@ -302,7 +302,7 @@ Au sein de chaque phase (ou au niveau projet), créez des tâches pour des élé
 
 - Assignez les tâches aux contributeurs
 - Définissez les dates d'échéance, priorités et types de tâches
-- Rédigez des descriptions détaillées avec l'éditeur markdown -- ou **importez un fichier `.docx`** directement dans le champ Description
+- Rédigez des descriptions détaillées avec l'éditeur markdown, ou **importez un fichier `.docx`** directement dans le champ Description
 - Saisissez du temps directement contre les tâches (catégorie IT ou Métier)
 - Liez les tâches aux phases pour un suivi structuré
 - Attachez des documents de la **base de connaissances** depuis la barre latérale de la tâche pour le matériel de référence
@@ -314,7 +314,7 @@ Les tâches peuvent aussi être créées directement depuis une phase de la chro
 
 ### Jalons
 
-Marquez les points de contrôle clés -- décisions go/no-go, échéances de livrables ou dépendances externes.
+Marquez les points de contrôle clés : décisions go/no-go, échéances de livrables ou dépendances externes.
 
 <!-- screenshot: Jalon sur la chronologie -->
 
@@ -339,7 +339,7 @@ Voir la [référence Planification](../portfolio-planning.md).
 
 ### Planning de capacité
 
-La disponibilité des contributeurs et les affectations de projets se combinent pour vous montrer **qui est surchargé et qui a de la bande passante** -- à travers les équipes et les périodes. Cela prévient le classique « tout le monde est assigné à 5 projets à 100 % ».
+La disponibilité des contributeurs et les affectations de projets se combinent pour vous montrer **qui est surchargé et qui a de la bande passante**, à travers les équipes et les périodes. Cela prévient le classique « tout le monde est assigné à 5 projets à 100 % ».
 
 ### Analyse des goulots d'étranglement
 

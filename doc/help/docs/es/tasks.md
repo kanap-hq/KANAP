@@ -116,7 +116,7 @@ La cuadrícula de Tareas muestra todas las tareas de su organización.
   - **Nuevo**: Crear una tarea independiente (requiere `tasks:member`)
   - **Importar CSV**: Subir un archivo CSV para crear o actualizar tareas (requiere `tasks:admin`)
   - **Exportar CSV**: Descargar tareas a un archivo CSV (requiere `tasks:admin`)
-  - **Eliminar seleccionados**: Eliminar las tareas seleccionadas (requiere `tasks:admin`)
+  - **Eliminar seleccionados**: Eliminar las tareas seleccionadas (requiere `tasks:admin`). Una tarea a partir de la cual se creó una solicitud no se puede eliminar: ciérrela en su lugar. Antes de eliminar nada, la confirmación enumera las tareas que se conservan, con el motivo
 
 ---
 
@@ -485,7 +485,7 @@ Hay tres modos de exportación disponibles:
 
 ### Flujo de trabajo de importación
 
-1. **Prepare su archivo**: Use codificación UTF-8 con separadores de punto y coma (`;`). Un archivo que Excel guardó como CSV simple (Windows-1252) también se importa. Descargue una plantilla para asegurar los encabezados correctos.
+1. **Prepare su archivo**: guárdelo en UTF-8. Las comas y los puntos y coma funcionan, y también un archivo que Excel guardó como CSV simple (Windows-1252). Descargue una plantilla para asegurar los encabezados correctos. El separador, los importes, las fechas y los sí o no de cada idioma están en [Archivos CSV](csv-files.md).
 
 2. **Elija la configuración de importación**:
    - **Modo**:
@@ -622,7 +622,7 @@ Estos campos se incluyen en la **Exportación completa** para fines de informes 
 **Error "El archivo no tiene el formato correcto"**: Esto generalmente indica un problema de codificación. Asegúrese de que su CSV está guardado como **UTF-8**:
 
   - **En LibreOffice**: Al abrir un CSV, seleccione `UTF-8` en el desplegable de conjunto de caracteres (no "Japanese (Macintosh)" u otras codificaciones). Al guardar, marque "Editar configuración de filtro" y elija UTF-8.
-  - **En Excel**: Guardar como > CSV UTF-8 (delimitado por comas), luego abra en un editor de texto para cambiar comas por puntos y coma.
+  - **En Excel**: Guardar como > CSV UTF-8 (delimitado por comas).
   - **Consejo general**: Si ve caracteres ilegibles al inicio de su archivo, la codificación es incorrecta.
 
 ### Ejemplo de CSV

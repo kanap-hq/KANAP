@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Alert, Box, Button, Tooltip } from '@mui/material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -8,7 +9,7 @@ import PageHeader from '../components/PageHeader';
 import ServerDataGrid, { EnhancedColDef, StatusScope, type ListRequest } from '../components/ServerDataGrid';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
-import DeleteSelectedButton from '../components/DeleteSelectedButton';
+import DeleteSelectedButton, { type DeleteCheck } from '../components/DeleteSelectedButton';
 import { ChipToggleContextLine } from '../components/ChipToggleBar';
 import { useAuth } from '../auth/AuthContext';
 import { LinkCellRenderer } from '../components/grid/renderers';
@@ -26,6 +27,25 @@ import { lineTypeUsageColumnProps } from '../components/grid/lineTypeUsageColumn
 // The dimension's own order (position, then name), as pickers and filters offer the values.
 const DEFAULT_SORT = ANALYTICS_VALUE_ORDER_SORT;
 const DEFAULT_SORT_SPEC = { field: 'sort_order', direction: 'ASC' } as const;
+
+
+/**
+ * The check before a values delete (`POST /analytics-categories/delete-check`): nothing is refused,
+ * and the values budget lines use (`forced`, counted per nature) make the delete a forced one.
+ */
+async function valuesDeleteCheck(t: TFunction, ids: string[]): Promise<DeleteCheck> {
+  type Forced = { usages?: Array<{ type: string; total: number }> };
+  const res = await api.post<{ refused?: DeleteCheck['refused']; forced?: Forced[] }>(`${ANALYTICS_VALUES_ENDPOINT}/delete-check`, { ids });
+  const total = (value: Forced, type: string) => value.usages?.find((usage) => usage.type === type)?.total ?? 0;
+  const message = valuesInUseMessage(t, (res.data?.forced ?? []).map((value) => ({
+    opex_count: total(value, 'opex_lines'),
+    capex_count: total(value, 'capex_lines'),
+  })));
+  return {
+    refused: res.data?.refused ?? [],
+    ...(message ? { warning: message, confirmLabel: t('analytics.forceDelete.confirmAnyway'), forceKey: 'force' } : {}),
+  };
+}
 
 export default function AnalyticsCategoriesPage() {
   const { hasLevel } = useAuth();
@@ -177,6 +197,7 @@ function AnalyticsValuesList() {
         field: 'updated_at',
         headerName: t('shared.columns.updated'),
         width: 200,
+        filter: 'agDateColumnFilter',
         valueFormatter: (p: any) => formatShortDateTime(p.value as string | null, locale),
         cellRenderer: link,
       },
@@ -221,7 +242,9 @@ function AnalyticsValuesList() {
           getItemName={(row) => row.name}
           gridApi={gridApiRef.current}
           onDeleteSuccess={refresh}
-          // Values used by budget lines go too once confirmed: the lines lose them (the list gives the counts).
+          // Asked on click: the values lines use go too once confirmed, the lines lose them.
+          checkDelete={(ids) => valuesDeleteCheck(t, ids)}
+          // Without an answer from the check: the counts the list rows carry.
           forceOption={forceDeleteMessage ? {
             message: forceDeleteMessage,
             confirmLabel: t('analytics.forceDelete.confirmAnyway'),

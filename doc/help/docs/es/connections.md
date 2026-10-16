@@ -51,7 +51,7 @@ La lista proporciona una visión filtrable de todas las conexiones en su registr
 
 **Acciones**:
   - **Añadir conexión**: Crear una nueva conexión (requiere `infrastructure:member`)
-  - **Eliminar conexión**: Eliminar conexiones seleccionadas (requiere `infrastructure:admin`)
+  - **Eliminar conexión**: Eliminar conexiones seleccionadas (requiere `infrastructure:admin`). Sus servidores, interfaces y documentos se conservan; solo se eliminan sus vínculos con la conexión.
 
 ---
 

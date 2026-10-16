@@ -311,6 +311,8 @@
       "skipped": "Omitida",
       "failed": "Fallida"
     },
+    "titleWithSummary": "{{title}}: {{summary}}",
+    "statusWithReason": "{{status}} ({{reason}})",
     "checkNarrative": "Revisados {{listed}}, iniciados {{enqueued}}, {{deduped}} ya vistos omitidos.",
     "loadMore": "Cargar más",
     "shown": "{{shown}} mostradas",

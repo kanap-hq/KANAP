@@ -10,7 +10,8 @@ import { StatusDot } from '../../design';
  */
 export interface StatusConfig {
   value: string;
-  label: string;
+  /** Shown when `common:statuses.<value>` has no name. */
+  label?: string;
   color: ChipProps['color'];
 }
 
@@ -37,25 +38,25 @@ export function getEnvDotColor(env: string, mode: 'light' | 'dark'): string {
  * Default status configurations for common statuses
  */
 export const DEFAULT_STATUS_CONFIGS: StatusConfig[] = [
-  { value: 'enabled', label: 'Enabled', color: 'success' },
-  { value: 'disabled', label: 'Disabled', color: 'default' },
-  { value: 'active', label: 'Active', color: 'success' },
-  { value: 'inactive', label: 'Inactive', color: 'default' },
-  { value: 'proposed', label: 'Proposed', color: 'info' },
-  { value: 'deprecated', label: 'Deprecated', color: 'warning' },
-  { value: 'retired', label: 'Retired', color: 'default' },
-  { value: 'draft', label: 'Draft', color: 'default' },
-  { value: 'submitted', label: 'Submitted', color: 'info' },
-  { value: 'under_review', label: 'Under review', color: 'warning' },
-  { value: 'approved', label: 'Approved', color: 'success' },
-  { value: 'rejected', label: 'Rejected', color: 'error' },
-  { value: 'in_progress', label: 'In progress', color: 'info' },
-  { value: 'on_hold', label: 'On hold', color: 'warning' },
-  { value: 'completed', label: 'Completed', color: 'success' },
-  { value: 'cancelled', label: 'Cancelled', color: 'error' },
-  { value: 'pending', label: 'Pending', color: 'warning' },
-  { value: 'open', label: 'Open', color: 'default' },
-  { value: 'closed', label: 'Closed', color: 'default' },
+  { value: 'enabled', color: 'success' },
+  { value: 'disabled', color: 'default' },
+  { value: 'active', color: 'success' },
+  { value: 'inactive', color: 'default' },
+  { value: 'proposed', color: 'info' },
+  { value: 'deprecated', color: 'warning' },
+  { value: 'retired', color: 'default' },
+  { value: 'draft', color: 'default' },
+  { value: 'submitted', color: 'info' },
+  { value: 'under_review', color: 'warning' },
+  { value: 'approved', color: 'success' },
+  { value: 'rejected', color: 'error' },
+  { value: 'in_progress', color: 'info' },
+  { value: 'on_hold', color: 'warning' },
+  { value: 'completed', color: 'success' },
+  { value: 'cancelled', color: 'error' },
+  { value: 'pending', color: 'warning' },
+  { value: 'open', color: 'default' },
+  { value: 'closed', color: 'default' },
 ];
 
 /**
@@ -173,8 +174,8 @@ export function createStatusCellRenderer<T = unknown>(
  */
 export const EnabledDisabledRenderer = createStatusCellRenderer({
   statusConfigs: [
-    { value: 'enabled', label: 'Enabled', color: 'success' },
-    { value: 'disabled', label: 'Disabled', color: 'default' },
+    { value: 'enabled', color: 'success' },
+    { value: 'disabled', color: 'default' },
   ],
 });
 
@@ -183,10 +184,10 @@ export const EnabledDisabledRenderer = createStatusCellRenderer({
  */
 export const LifecycleStatusRenderer = createStatusCellRenderer({
   statusConfigs: [
-    { value: 'proposed', label: 'Proposed', color: 'info' },
-    { value: 'active', label: 'Active', color: 'success' },
-    { value: 'deprecated', label: 'Deprecated', color: 'warning' },
-    { value: 'retired', label: 'Retired', color: 'default' },
+    { value: 'proposed', color: 'info' },
+    { value: 'active', color: 'success' },
+    { value: 'deprecated', color: 'warning' },
+    { value: 'retired', color: 'default' },
   ],
 });
 
@@ -195,13 +196,13 @@ export const LifecycleStatusRenderer = createStatusCellRenderer({
  */
 export const ProjectStatusRenderer = createStatusCellRenderer({
   statusConfigs: [
-    { value: 'draft', label: 'Draft', color: 'default' },
-    { value: 'proposed', label: 'Proposed', color: 'info' },
-    { value: 'approved', label: 'Approved', color: 'success' },
-    { value: 'in_progress', label: 'In progress', color: 'info' },
-    { value: 'on_hold', label: 'On hold', color: 'warning' },
-    { value: 'completed', label: 'Completed', color: 'success' },
-    { value: 'cancelled', label: 'Cancelled', color: 'error' },
+    { value: 'draft', color: 'default' },
+    { value: 'proposed', color: 'info' },
+    { value: 'approved', color: 'success' },
+    { value: 'in_progress', color: 'info' },
+    { value: 'on_hold', color: 'warning' },
+    { value: 'completed', color: 'success' },
+    { value: 'cancelled', color: 'error' },
   ],
 });
 

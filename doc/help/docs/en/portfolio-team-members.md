@@ -12,7 +12,7 @@ Navigate to **Portfolio > Contributors** to see configured contributors grouped 
 3. Click **Add** to create their profile
 4. Configure their team, availability, skills, and defaults in the workspace
 
-**Tip**: Contributors are separate from user accounts. Adding someone as a contributor doesn't change their login access -- it just lets you track their team membership, skills, availability, and classification defaults for project planning.
+**Tip**: Contributors are separate from user accounts. Adding someone as a contributor doesn't change their login access. It just lets you track their team membership, skills, availability, and classification defaults for project planning.
 
 ---
 
@@ -61,7 +61,7 @@ Above the team filter, **List**, **Skills matrix** and **Org chart** switch betw
 
 ## The skills matrix
 
-The skills matrix answers two questions on one screen: what each person can do, and which skills nobody can cover. It is a read-only view -- levels are set in each contributor's Skills tab.
+The skills matrix answers two questions on one screen: what each person can do, and which skills nobody can cover. It is a read-only view: levels are set in each contributor's Skills tab.
 
 **Reading the grid**:
 - **Rows** are the skills of your catalog, grouped by category. Skills you have disabled in Portfolio Settings never appear, and skills nobody has declared start hidden
@@ -123,7 +123,7 @@ Every change saves automatically. A short "Saving… / Saved" note appears next 
 ### Properties panel
 
 **Job title**
-The person's job title, the same one that appears wherever they show up in KANAP -- the org chart, their user record, their profile. It is not a label local to the portfolio, so changing it here changes it everywhere. Type it and click away to save.
+The person's job title, the same one that appears wherever they show up in KANAP: the org chart, their user record, their profile. It is not a label local to the portfolio, so changing it here changes it everywhere. Type it and click away to save.
 
 You can always set your own. Setting someone else's needs the **Administrator** level on users; without it you still see the value, but the field is read-only.
 
@@ -133,7 +133,7 @@ When the account comes from Microsoft Entra, the field is read-only and shows **
 Assign this contributor to a team. Teams are organizational groups configured in Portfolio Settings. This assignment determines how contributors are grouped on the Contributors page. The team can also be changed from the **Team** item in the header. This field is only visible when editing another contributor's profile (not your own).
 
 **Manager**
-The person this contributor reports to. Click the field, search by name, and pick anyone in your organization -- the manager does not have to be a contributor themselves. Use **Clear** to remove the link. A contributor cannot be their own manager, and you cannot pick someone who already reports to them, directly or through a chain of managers.
+The person this contributor reports to. Click the field, search by name, and pick anyone in your organization. The manager does not have to be a contributor themselves. Use **Clear** to remove the link. A contributor cannot be their own manager, and you cannot pick someone who already reports to them, directly or through a chain of managers.
 
 When the manager comes from Microsoft Entra, the field is read-only and shows **From Microsoft Entra** underneath. Change it in your directory, not here, and the nightly sync brings the change over. A manager who has no KANAP account yet is skipped until they have one, and the field keeps its current value in the meantime.
 
@@ -143,7 +143,7 @@ Once set, the manager's name also appears in the workspace header, and clicking 
 How this person works with you. Every contributor starts as **Internal**; switch to **External**, **Apprentice** or **Other** when that is not the case. The list is yours to adapt in **Portfolio > Settings > Contract types**. Contract type is never imported from Microsoft Entra. This field is only visible when editing another contributor's profile (not your own).
 
 **Project availability**
-Use the slider to set how many days per month this person can work on portfolio projects. Range is 0 -- 20 days, with 0.5-day increments. Default is 5 days. The value is saved when you release the slider.
+Use the slider to set how many days per month this person can work on portfolio projects. Range is 0 to 20 days, with 0.5-day increments. Default is 5 days. The value is saved when you release the slider.
 
 **Classification defaults**
 Set the classification values that pre-fill new tasks, requests, and projects when classification fields are still empty. This saves time for contributors who consistently work in the same area.
@@ -171,7 +171,7 @@ Read-only summary of logged time for this contributor. Requires `portfolio_setti
   - Months with no data display as gaps in the chart
 
 **Notes**
-Free-text field for any additional information about this contributor -- certifications, preferences, constraints, or other relevant details. Notes are saved shortly after you stop typing.
+Free-text field for any additional information about this contributor: certifications, preferences, constraints, or other relevant details. Notes are saved shortly after you stop typing.
 
 ---
 
@@ -186,7 +186,7 @@ Track what this contributor knows and how proficient they are.
 4. Click **Add**: the skill lands in its section with that level already set, so a long list never needs to be scrolled to adjust it
 
 **Proficiency levels**:
-Each skill has a proficiency rating from 1 -- 4:
+Each skill has a proficiency rating from 1 to 4:
 
 | Level | Label | Description |
 |-------|-------|-------------|
@@ -213,7 +213,7 @@ The table consolidates time logged from both project overhead entries and task t
 
 **Columns**:
 - **Date**: When the time was logged
-- **Source**: Where the time was logged -- either a task name or project name
+- **Source**: Where the time was logged: either a task name or project name
 - **Category**: Whether the entry is classified as **IT** or **Business**, shown as a color-coded label
 - **Time**: Duration in hours or days (e.g. "4h", "1d 2h")
 - **Notes**: Any notes attached to the entry
@@ -273,7 +273,7 @@ Contributors can be assigned to organizational teams for better organization. Te
 - Go to **Portfolio > Settings** and click the **Teams** tab
 - Add, edit, or disable teams
 - Use **Seed Defaults** to populate with standard teams
-- Teams with members assigned cannot be deleted
+- A team with members or sub-teams cannot be deleted: move them to another team first, or disable the team. Built-in teams cannot be deleted
 
 ---
 

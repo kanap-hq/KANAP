@@ -66,7 +66,7 @@ Klicken Sie auf eine beliebige Zelle, um den Arbeitsbereich zu öffnen.
 - **Neu**: einen Kalender erstellen (erfordert `working_day_profiles:member`)
 - **CSV importieren**: Kalender und ihre Arbeitstage aus einer Datei laden (erfordert `working_day_profiles:admin`)
 - **CSV exportieren**: die Kalender der Liste herunterladen, oder alle Kalender (erfordert `working_day_profiles:admin`)
-- **Auswahl löschen**: die ausgewählten Kalender löschen (erfordert `working_day_profiles:admin`). Kalender, die nicht gelöscht werden können, bleiben erhalten und werden mit dem Grund aufgeführt
+- **Auswahl löschen**: die ausgewählten Kalender löschen (erfordert `working_day_profiles:admin`). Vor dem Löschen nennt die Bestätigung die behaltenen Kalender mit dem Grund
 
 ---
 
@@ -162,7 +162,7 @@ Deaktivieren Sie einen Kalender, wenn er nicht mehr verwendet werden soll, zum B
 
 Die Schaltfläche **Löschen** in der Kopfzeile löscht den Kalender nach einer Bestätigung (erfordert `working_day_profiles:admin`). Sie ist deaktiviert, mit dem Grund in einer Zeile, solange Budgetzeilen den Kalender verwenden, zum Beispiel „Verwendet von 3 OPEX-Zeilen und 1 CAPEX-Zeile. Deaktivieren Sie ihn stattdessen.“
 
-Dieselbe Regel gilt für **Auswahl löschen** in der Liste: Ein Kalender, den Budgetzeilen verwenden, bleibt erhalten, mit einem Grund wie „Mitarbeitende am Hauptsitz is used by 3 OPEX lines and 1 CAPEX line. Disable it instead.“
+Dieselbe Regel gilt für **Auswahl löschen** in der Liste: Ein Kalender, den Budgetzeilen verwenden, bleibt erhalten, mit einem Grund wie „Dieser Kalender wird noch verwendet: 3 OPEX-Zeilen und 1 CAPEX-Zeile. Deaktivieren Sie ihn, statt ihn zu löschen.“
 
 Eine Budgetzeile verwendet einen Kalender, wenn eine ihrer Spalten, in einem beliebigen Jahr, eine Zeile mit Preis pro Tag auf diesem Kalender hat. Das Entfernen dieser Zeile im Budget-Tab oder **Budgetspalte zurücksetzen** in der Budgetadministration hebt die Verknüpfung auf. Siehe [Budgetspalte zurücksetzen](budget-operations.md#budgetspalte-zurucksetzen).
 
@@ -190,7 +190,7 @@ Laden oder aktualisieren Sie Kalender und ihre Arbeitstage aus einer Datei.
 | `country` | Optional. Der zweistellige Ländercode eines Standardkalenders, zum Beispiel `FR`. Leer bei einem individuellen Kalender |
 | `region` | Optional. Der Regionscode, zum Beispiel `57` für Moselle oder `BY` für Bayern. Erfordert ein Land. Leer für das ganze Land |
 | `status` | `enabled` oder `disabled`. Leer bedeutet `enabled` |
-| `disabled_at` | Optionale Spalte. Das Ende der Gültigkeit: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Leer, wenn es kein Ende gibt |
+| `disabled_at` | Optionale Spalte. Das Ende der Gültigkeit: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Der Export schreibt nur das Datum. Erneut importiert, behält dieses Datum das gespeicherte Gültigkeitsende. Leer, wenn es kein Ende gibt |
 | `year` | Vier Ziffern, von 2000 bis 2100. Leer bei einer Zeile, die nur die Felder des Kalenders setzt |
 | `jan` bis `dec` | Die Arbeitstage jedes Monats, mit einem Punkt als Dezimaltrennzeichen (ein Komma wird auch akzeptiert). Pflicht bei einer Zeile mit Jahr |
 

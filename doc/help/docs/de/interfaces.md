@@ -1,6 +1,6 @@
 # Schnittstellen
 
-Schnittstellen dokumentieren die logischen Datenflüsse zwischen Ihren Anwendungen. Jede Schnittstelle repräsentiert eine Geschäftsintegration -- das „Warum" und „Was" des Datenaustauschs -- unabhängig davon, wie sie technisch implementiert ist. Der Arbeitsbereich ermöglicht es Ihnen, die Schnittstelle zu beschreiben, die Legs zu definieren, die Daten durch Ihre Landschaft bewegen, umgebungsspezifische Bindungen zu konfigurieren, die feldgenauen Mapping-Regeln zu erfassen und verwandte Schnittstellen, Dokumente und Anhänge zu verknüpfen.
+Schnittstellen dokumentieren die logischen Datenflüsse zwischen Ihren Anwendungen. Jede Schnittstelle repräsentiert eine Geschäftsintegration (das „Warum" und „Was" des Datenaustauschs), unabhängig davon, wie sie technisch implementiert ist. Der Arbeitsbereich ermöglicht es Ihnen, die Schnittstelle zu beschreiben, die Legs zu definieren, die Daten durch Ihre Landschaft bewegen, umgebungsspezifische Bindungen zu konfigurieren, die feldgenauen Mapping-Regeln zu erfassen und verwandte Schnittstellen, Dokumente und Anhänge zu verknüpfen.
 
 ## Erste Schritte
 
@@ -55,8 +55,8 @@ Das Schnittstellenraster zeigt Ihr Integrationsverzeichnis auf einen Blick.
 **Aktionen**:
 
 - **Schnittstelle hinzufügen**: Eine neue Schnittstelle erstellen (erfordert `applications:manager`)
-- **Schnittstelle duplizieren**: Eine Kopie einer ausgewählten Schnittstelle erstellen (erfordert `applications:manager`). Wählen Sie genau eine Zeile aus, um diese Aktion zu aktivieren. Ein Dialog ermöglicht es Ihnen zu wählen, ob Umgebungs-Bindungen kopiert werden sollen -- siehe [Schnittstellen kopieren](#schnittstellen-kopieren) unten.
-- **Ausgewählte löschen**: Ausgewählte Schnittstellen entfernen (erfordert `applications:admin`). Eine Kontrollkästchen-Option ermöglicht es Ihnen auch, verwandte Bindungen zu löschen; wenn nicht aktiviert, werden Schnittstellen mit Bindungen nicht gelöscht.
+- **Schnittstelle duplizieren**: Eine Kopie einer ausgewählten Schnittstelle erstellen (erfordert `applications:manager`). Wählen Sie genau eine Zeile aus, um diese Aktion zu aktivieren. Ein Dialog ermöglicht es Ihnen zu wählen, ob Umgebungs-Bindungen kopiert werden sollen. Siehe [Schnittstellen kopieren](#schnittstellen-kopieren) unten.
+- **Ausgewählte löschen**: Ausgewählte Schnittstellen entfernen (erfordert `applications:admin`). Vor der Bestätigung führt das Fenster die Schnittstellen mit Bindungen als behalten auf, mit der Anzahl ihrer Bindungen. Aktivieren Sie **Zugehörige Bindungen ebenfalls löschen**, um sie mit ihren Bindungen zu löschen; ihre Verbindungen bleiben erhalten. Die Meldung nennt danach die gelöschten und die behaltenen Schnittstellen mit dem Grund.
 
 ---
 
@@ -95,7 +95,7 @@ Feldänderungen im Seitenpanel werden automatisch gespeichert, wenn Sie das Feld
 
 ### Spezifikation
 
-Der Reiter Spezifikation ist ein verwaltetes Rich-Text-Dokument, in dem Sie die Schnittstelle End-to-End beschreiben -- geschäftlicher Kontext, Umfang, Vertrag, Beispiele. Es ist das primäre narrative Dokument für die Schnittstelle.
+Der Reiter Spezifikation ist ein verwaltetes Rich-Text-Dokument, in dem Sie die Schnittstelle End-to-End beschreiben: geschäftlicher Kontext, Umfang, Vertrag, Beispiele. Es ist das primäre narrative Dokument für die Schnittstelle.
 
 **Tipp**: Verwenden Sie diesen Reiter als Ihre einzige Quelle der Wahrheit für Prosa. Mapping-Regeln und technische Legs leben in den dedizierten Reitern unten; halten Sie dieses Dokument auf Absicht, Umfang und die für Menschen lesbare Zusammenfassung fokussiert.
 
@@ -148,7 +148,7 @@ Der Reiter Umgebungen verwaltet die umgebungsspezifischen Bindungen, die die Leg
 
 Der Reiter Mapping ist der Ort, an dem Sie beschreiben, wie Quellfelder zu Zielfeldern werden. Er ist um zwei Konzepte herum organisiert:
 
-- **Mapping-Regeln** beschreiben eine einzelne Mapping-Entscheidung -- ein oder mehrere Quellfelder, ein oder mehrere Zielfelder, eine Operation (direktes Kopieren, Transformieren, Lookup, Aufteilen, Zusammenführen, Filtern, Standardwert oder eine benutzerdefinierte Operation) und optionale Bedingungs- / Geschäfts- / Middleware-Notizen.
+- **Mapping-Regeln** beschreiben eine einzelne Mapping-Entscheidung: ein oder mehrere Quellfelder, ein oder mehrere Zielfelder, eine Operation (direktes Kopieren, Transformieren, Lookup, Aufteilen, Zusammenführen, Filtern, Standardwert oder eine benutzerdefinierte Operation) und optionale Bedingungs- / Geschäfts- / Middleware-Notizen.
 - **Mapping-Gruppen** sind Ordner, die die Regeln in thematische Bereiche organisieren (zum Beispiel „Header", „Kundenblock", „Positionen", „Footer"). Regeln können einer Gruppe zugewiesen oder ungruppiert gelassen werden. Zwei Basisgruppen, **Head** und **Item**, sind immer vorhanden; Sie können weitere hinzufügen.
 
 Der Reiter arbeitet mit dem **Standard-Mapping-Set** der Schnittstelle. Die Kopfzeilenleiste zeigt den Namen des Sets, die aktuelle Revisionsnummer sowie die Regel- und Gruppenanzahl.
@@ -189,7 +189,7 @@ Klicken Sie auf **Regel hinzufügen** oder klicken Sie auf eine beliebige Regelz
 
 Die Mapping-Tabelle fasst jede Regel zusammen, indem sie die Quellbindungen, einen Pfeil und die Zielbindungen sowie die Operation, die Gruppe, zu der sie gehört, und den Leg-Bereich auflistet. Klicken Sie auf eine Zeile, um sie zu bearbeiten, oder verwenden Sie die Symbole der Zeile, um sie zu bearbeiten oder zu löschen.
 
-**Tipp**: Behalten Sie eine Regel pro logischer Entscheidung anstatt einer Regel pro Feld. Eine Regel, die drei Quellfelder nimmt und ein verkettetes Zielfeld erzeugt, ist klarer als drei nahezu identische Zeilen -- und das Operationsfeld macht die Absicht explizit.
+**Tipp**: Behalten Sie eine Regel pro logischer Entscheidung anstatt einer Regel pro Feld. Eine Regel, die drei Quellfelder nimmt und ein verkettetes Zielfeld erzeugt, ist klarer als drei nahezu identische Zeilen, und das Operationsfeld macht die Absicht explizit.
 
 ---
 
@@ -211,12 +211,12 @@ Es gibt zwei Möglichkeiten, Schnittstellen in KANAP zu kopieren.
 
 ### Schnittstelle duplizieren (aus dem Schnittstellenraster)
 
-Verwenden Sie dies, wenn Sie eine unabhängige Kopie einer Schnittstelle wünschen -- typischerweise um eine ähnliche Integration zwischen denselben oder anderen Anwendungen zu erstellen.
+Verwenden Sie dies, wenn Sie eine unabhängige Kopie einer Schnittstelle wünschen, typischerweise um eine ähnliche Integration zwischen denselben oder anderen Anwendungen zu erstellen.
 
 1. Wählen Sie eine Schnittstelle im Raster aus
 2. Klicken Sie auf **Schnittstelle duplizieren**
 3. Wählen Sie, ob Umgebungs-Bindungen kopiert werden sollen:
-   - **Ohne Bindungen**: Eine saubere Kopie -- nur die Schnittstellendefinition, Legs, Verantwortliche und Metadaten
+   - **Ohne Bindungen**: Eine saubere Kopie: nur die Schnittstellendefinition, Legs, Verantwortliche und Metadaten
    - **Mit Bindungen**: Kopiert auch Umgebungs-Bindungen, löscht aber umgebungsspezifische Details (Endpunkte, Authentifizierung, Job-Namen), sodass Sie sie neu konfigurieren können
 
 **Was kopiert wird**:
@@ -260,7 +260,7 @@ Verwenden Sie dies beim Upgrade einer Anwendung auf eine neue Version, wenn Sie 
 
 - **Dokumentieren Sie das „Warum" zuerst**: Verwenden Sie den Reiter Spezifikation und das Feld **Geschäftlicher Zweck** im Seitenpanel, um die Absicht zu erfassen, bevor Sie sich in Legs und Bindungen vertiefen.
 - **Verwenden Sie das Seitenpanel von jedem Reiter aus**: Verantwortliche, Kritikalität, Routentyp, PII-Flag und der Rest werden sofort gespeichert, sodass Sie sie aktualisieren können, während Sie Regeln oder Bindungen überprüfen.
-- **Eine Schnittstelle, viele Umgebungen**: Erstellen Sie keine separaten Schnittstellen für jede Umgebung -- verwenden Sie eine Schnittstelle und konfigurieren Sie jede Umgebung im Reiter Umgebungen.
+- **Eine Schnittstelle, viele Umgebungen**: Erstellen Sie keine separaten Schnittstellen für jede Umgebung. Verwenden Sie eine Schnittstelle und konfigurieren Sie jede Umgebung im Reiter Umgebungen.
 - **Gruppieren Sie Ihre Mapping-Regeln**: Bei Schnittstellen mit mehr als einer Handvoll Felder organisieren Sie die Regeln in Mapping-Gruppen (Header, Positionen, Footer usw.). Es macht Überprüfung und Auswirkungsanalyse weitaus einfacher.
 - **Halten Sie Middleware explizit**: Wenn Daten durch Middleware fließen, setzen Sie den Routentyp auf **Via Middleware** und wählen Sie die Middleware-Anwendungen aus. Die Schnittstellenkarte rendert dann den echten Datenpfad.
 - **Duplizieren Sie für ähnliche Schnittstellen**: Wenn Sie eine neue Schnittstelle erstellen, die einer vorhandenen ähnlich ist, verwenden Sie **Schnittstelle duplizieren**, um alle Einstellungen zu kopieren, und ändern Sie dann das, was anders ist. Schließen Sie optional Bindungen ein, um einen Vorsprung bei der Umgebungskonfiguration zu erhalten.

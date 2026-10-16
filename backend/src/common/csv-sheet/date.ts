@@ -141,19 +141,40 @@ export function formatCsvDate(value: string, language: CsvLanguage): string {
 }
 
 /**
- * A stored end of validity written for a file: a noon-UTC instant is the
- * calendar day the user picked, written the language's way. Any other instant
- * has a real time and stays ISO, as it does in the budget file.
+ * A stored end of validity written for a file: its calendar day (UTC), the
+ * language's way. The time of day is left out so a spreadsheet reads the cell
+ * as a date. A day picked by a user is stored at noon UTC, so it writes the
+ * day picked; an instant set by the switch writes its day, and that day read
+ * back keeps the instant (`keepStoredEndOfValidity`).
  */
 export function formatCsvEndOfValidity(iso: string | null, language: CsvLanguage): string {
   if (!iso) return '';
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '';
-  const noon = date.getUTCHours() === 12
-    && date.getUTCMinutes() === 0
-    && date.getUTCSeconds() === 0
-    && date.getUTCMilliseconds() === 0;
-  return formatCsvDate(noon ? date.toISOString().slice(0, 10) : date.toISOString(), language);
+  return formatCsvDate(date.toISOString().slice(0, 10), language);
+}
+
+/**
+ * The end of validity an import writes, against the stored one. A day read
+ * from a file is noon UTC (`endOfValidityFromDate`). When it is the stored
+ * instant's day, the file says what the export wrote: the stored instant comes
+ * back, time of day included, so the row stays unchanged. Anything else is
+ * returned as given, in the form given (a Date or an ISO text).
+ */
+export function keepStoredEndOfValidity<T extends Date | string | null | undefined>(
+  stored: Date | string | null | undefined,
+  next: T,
+): T {
+  if (next == null || next === '' || stored == null || stored === '') return next;
+  const day = next instanceof Date ? next : new Date(next);
+  const kept = stored instanceof Date ? stored : new Date(stored);
+  if (Number.isNaN(day.getTime()) || Number.isNaN(kept.getTime())) return next;
+  const noon = day.getUTCHours() === 12
+    && day.getUTCMinutes() === 0
+    && day.getUTCSeconds() === 0
+    && day.getUTCMilliseconds() === 0;
+  if (!noon || kept.toISOString().slice(0, 10) !== day.toISOString().slice(0, 10)) return next;
+  return (next instanceof Date ? new Date(kept.getTime()) : kept.toISOString()) as T;
 }
 
 function parseInstant(text: string): CsvParsedDate | null {

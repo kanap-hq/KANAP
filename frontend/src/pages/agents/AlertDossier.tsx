@@ -159,7 +159,7 @@ function AlertRow({
             {checkName}
             {deviceName && (
               <Typography component="span" sx={(theme) => ({ fontSize: 13, fontWeight: 400, color: theme.palette.kanap.text.secondary })}>
-                {` — ${deviceName}`}
+                {` · ${deviceName}`}
               </Typography>
             )}
           </Typography>
@@ -485,7 +485,7 @@ export function AlertDossierBody({
               key={entry.observation_id}
               sx={(theme) => ({ fontSize: 12, color: theme.palette.kanap.text.secondary, mt: 0.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}
             >
-              {`${formatDateTime(entry.observed_at, i18n.language)} — ${entry.brief.summary ?? entry.summary ?? ''}`}
+              {`${formatDateTime(entry.observed_at, i18n.language)} · ${entry.brief.summary ?? entry.summary ?? ''}`}
             </Typography>
           ))}
         </Box>
@@ -501,7 +501,7 @@ function RejectedSourceRow({ source }: { source: AiAgentControlDiagnosticSource 
         {source.ref ?? source.kind}
       </Typography>
       {source.title}
-      {source.reason ? ` — ${source.reason}` : ''}
+      {source.reason ? ` (${source.reason})` : ''}
     </Typography>
   );
 }

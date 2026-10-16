@@ -86,13 +86,13 @@ export default function LocationOverviewTab({
       <Box>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', mb: 1 }}>
           <Typography sx={{ fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary' }}>
-            Notes
+            {t('it:common.notes')}
           </Typography>
           {status === 'saving' && (
-            <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary' }}>Saving…</Typography>
+            <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary' }}>{t('common:status.saving')}</Typography>
           )}
           {status === 'saved' && (
-            <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary' }}>Saved</Typography>
+            <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary' }}>{t('common:status.saved')}</Typography>
           )}
           {status === 'error' && error && (
             <Typography sx={{ fontSize: 11, color: 'error.main' }}>{error}</Typography>
@@ -114,7 +114,7 @@ export default function LocationOverviewTab({
           <MarkdownEditor
             value={notes}
             onChange={handleNotesChange}
-            placeholder="Notes about this location (operational details, access procedures, etc.)"
+            placeholder={t('it:workspace.location.overview.notesPlaceholder')}
             minRows={4}
             maxRows={14}
             disabled={!canManage}

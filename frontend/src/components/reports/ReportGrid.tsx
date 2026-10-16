@@ -6,6 +6,7 @@ import { useAgGridLocaleText } from '../grid/useAgGridLocaleText';
 import type { AgGridReactProps } from 'ag-grid-react';
 import type { ColDef, ColGroupDef } from 'ag-grid-community';
 import AgGridBox from '../AgGridBox';
+import { GRID_DATE_COMPONENTS } from '../GridDateField';
 import { useReportPrinting } from './reportPrint';
 
 type ReportGridProps<TData> = AgGridReactProps<TData> & {
@@ -169,7 +170,8 @@ export default function ReportGrid<TData = any>({ wrapperSx, wrapperClassName, w
   }
   return (
     <Box component={AgGridBox} ref={wrapperRef} className={wrapperClassName} sx={wrapperSx}>
-      <AgGridReact<TData> localeText={localeText} {...gridProps} />
+      {/* Date filters type and pick dates in the app's language, not the browser's. */}
+      <AgGridReact<TData> localeText={localeText} {...gridProps} components={{ ...GRID_DATE_COMPONENTS, ...gridProps.components }} />
     </Box>
   );
 }

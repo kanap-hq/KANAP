@@ -20,7 +20,7 @@
     "dismissedMany": "{{count}} proposals dismissed.",
     "dismissManyFailed": "{{count}} dismissed, {{failed}} failed.",
     "pollComplete": "Check complete: {{status}}. {{processed}} processed, {{enqueued}} queued.",
-    "pollCompleteWithReason": "Check complete: {{status}}. {{processed}} processed, {{enqueued}} queued — {{reason}}",
+    "pollCompleteWithReason": "Check complete: {{status}}. {{processed}} processed, {{enqueued}} queued ({{reason}})",
     "pollFailed": "Could not check for tickets.",
     "monitoringPollFailed": "Could not check for alerts.",
     "settingsSaved": "Settings saved.",
@@ -29,7 +29,7 @@
     "agentCreateFailed": "Could not create the agent.",
     "agentSaved": "Agent saved.",
     "agentSaveFailed": "Could not save the agent.",
-    "sectionSaveFailed": "\"{{section}}\" was not saved. Your change is still on screen — edit it again to try once more.",
+    "sectionSaveFailed": "\"{{section}}\" was not saved. Your change is still on screen. Edit it again to try once more.",
     "agentDeleted": "Agent deleted.",
     "agentDeleteFailed": "Could not delete the agent.",
     "autonomySaved": "Autonomy updated.",
@@ -58,8 +58,8 @@
     "off": "Off",
     "archived": "Archived",
     "testing": "Testing",
-    "watchingAutomatic": "Watching — partly automatic",
-    "watchingAskFirst": "Watching — asks first"
+    "watchingAutomatic": "Watching (partly automatic)",
+    "watchingAskFirst": "Watching (asks first)"
   },
   "status": {
     "queued": "Waiting to start",
@@ -153,7 +153,7 @@
     },
     "newAgentSreDefaultName": "Infrastructure monitoring agent",
     "newAgentSreDescription": "Draft monitoring agent that reads alerts, correlates them with your KANAP data, and prepares diagnosis notes for review.",
-    "cost": "Cost — today / 7 days",
+    "cost": "Cost: today / 7 days",
     "includedModelPaused": "Agents that use the KANAP included model are paused until an administrator confirms it in Admin > Plaid.",
     "includedModelOpenSettings": "Open Plaid settings"
   },
@@ -311,6 +311,8 @@
       "skipped": "Skipped",
       "failed": "Failed"
     },
+    "titleWithSummary": "{{title}}: {{summary}}",
+    "statusWithReason": "{{status}} ({{reason}})",
     "checkNarrative": "Looked at {{listed}}, started {{enqueued}}, skipped {{deduped}} already seen.",
     "loadMore": "Load more",
     "shown": "{{shown}} shown",
@@ -440,7 +442,7 @@
       "manual": "Runs only when you ask (Check now, tests).",
       "watching": "Checks on its own, plus everything Manual does."
     },
-    "archivedNoteViewer": "Archived — an administrator can restore it."
+    "archivedNoteViewer": "Archived. An administrator can restore it."
   },
   "performance": {
     "acceptance": "Acceptance",
@@ -552,7 +554,7 @@
       "replace": "Replace",
       "includesSubcategories": "Subcategories are included",
       "includesSubentities": "Sub-entities are included",
-      "entityHint": "Open the ticket in your ticketing tool — this is the organization or site in the ticket header.",
+      "entityHint": "Open the ticket in your ticketing tool: this is the organization or site in the ticket header.",
       "inactivityCloses": "The agent may propose closing tickets that have been quiet this long.",
       "newTicketsHours_one": "Only tickets opened in the last {{count}} hour.",
       "newTicketsHours_other": "Only tickets opened in the last {{count}} hours.",
@@ -747,7 +749,7 @@
     },
     "maxAlerts": "Alerts handled per check",
     "maxMonitoringRequests": "Requests to the monitoring tool per check",
-    "monitoringNotConnected": "No monitoring tool connected — this agent cannot run.",
+    "monitoringNotConnected": "No monitoring tool connected. This agent cannot run.",
     "kanapDataEnabled": "Search KANAP data",
     "kanapDataHint": "Let the agent look up your own IT inventory to add business context to a diagnosis.",
     "kanapDataDomains": {
@@ -769,7 +771,7 @@
     "checkIntervalInfo": "How often the agent looks for new tickets while it is watching. Between 5 minutes and 24 hours. \"Check now\" always runs straight away, whatever this says.",
     "checkIntervalAlertsInfo": "How often the agent looks for new alerts while it is watching. Between 5 minutes and 24 hours. \"Check for new alerts\" always runs straight away, whatever this says.",
     "purposeInfo": "What this agent is here to do, in one line. It reads this on every run.",
-    "instructionsInfo": "House rules the agent follows — write them freely, as lines or paragraphs. They cannot widen what the agent is allowed to do.",
+    "instructionsInfo": "House rules the agent follows. Write them freely, as lines or paragraphs. They cannot widen what the agent is allowed to do.",
     "replyLanguageInfo": "The language the agent writes in. \"Ticket language\" makes it answer in whatever language the requester used.",
     "capabilitiesInfo": "What this agent may prepare. Everything switched off here is never proposed, whatever the instructions say.",
     "reference": {

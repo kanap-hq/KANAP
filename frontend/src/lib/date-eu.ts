@@ -1,15 +1,23 @@
-// Utilities for EU-style date inputs (dd/mm/yyyy)
+// Utilities for typed day-first dates: dd/mm/yyyy, or dd.mm.yyyy in German (dateInputSeparator).
+// Parsing accepts '/', '.' and '-' in every language.
 
 function pad2(n: number): string { return String(n).padStart(2, '0'); }
 
-export function isoToEuDate(iso?: string | null): string {
+export type DateInputSeparator = '/' | '.';
+
+/** The separator of a typed date in a language: German writes 15.10.2026, the others 15/10/2026. */
+export function dateInputSeparator(locale?: string | null): DateInputSeparator {
+  return String(locale || 'en').split('-')[0].toLowerCase() === 'de' ? '.' : '/';
+}
+
+export function isoToEuDate(iso?: string | null, sep: DateInputSeparator = '/'): string {
   if (!iso) return '';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
   const dd = pad2(d.getDate());
   const mm = pad2(d.getMonth() + 1);
   const yyyy = d.getFullYear();
-  return `${dd}/${mm}/${yyyy}`;
+  return `${dd}${sep}${mm}${sep}${yyyy}`;
 }
 
 /**
@@ -58,8 +66,8 @@ export function euToYmd(value?: string | null): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-/** Convert YYYY-MM-DD to dd/mm/yyyy; returns '' when invalid/empty. */
-export function ymdToEu(value?: string | null): string {
+/** Convert YYYY-MM-DD to dd/mm/yyyy (or with `sep`); returns '' when invalid/empty. */
+export function ymdToEu(value?: string | null, sep: DateInputSeparator = '/'): string {
   if (!value) return '';
   const parts = String(value).split('-');
   if (parts.length !== 3) return '';
@@ -70,16 +78,16 @@ export function ymdToEu(value?: string | null): string {
   if (Number.isNaN(dt.getTime())) return '';
   const dd2 = String(dd).padStart(2, '0');
   const mm2 = String(mm).padStart(2, '0');
-  return `${dd2}/${mm2}/${yyyy}`;
+  return `${dd2}${sep}${mm2}${sep}${yyyy}`;
 }
 
-/** Best-effort partial formatter that auto-inserts slashes for dd/mm/yyyy as digits are typed. */
-export function formatEuPartial(raw: string): string {
+/** Best-effort partial formatter that inserts the separator (slashes by default) as digits are typed. */
+export function formatEuPartial(raw: string, sep: DateInputSeparator = '/'): string {
   const digits = String(raw).replace(/[^0-9]/g, '').slice(0, 8);
   const dd = digits.slice(0, 2);
   const mm = digits.slice(2, 4);
   const yyyy = digits.slice(4, 8);
   if (digits.length <= 2) return dd;
-  if (digits.length <= 4) return `${dd}/${mm}`;
-  return `${dd}/${mm}/${yyyy}`;
+  if (digits.length <= 4) return `${dd}${sep}${mm}`;
+  return `${dd}${sep}${mm}${sep}${yyyy}`;
 }

@@ -25,6 +25,7 @@ import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { useKanapDialogs } from '../../../components/design';
 import { getDotColor, MILESTONE_STATUS_COLORS, PHASE_STATUS_COLORS } from '../../../utils/statusColors';
 import { useLocale } from '../../../i18n/useLocale';
+import { formatQuarterLabel, formatWeekLabel } from '../../../lib/isoWeek';
 import { exportProjectTimelineGanttAsPng } from './project-timeline-png';
 
 interface ProjectPhase {
@@ -102,18 +103,7 @@ const formatMonthYear = (date: Date, locale: string): string =>
 const formatMonthShort = (date: Date, locale: string): string =>
   date.toLocaleDateString(locale, { month: 'short' });
 
-const formatQuarterYear = (date: Date): string =>
-  `Q${Math.floor(date.getMonth() / 3) + 1} ${date.getFullYear()}`;
-
 const formatYearOnly = (date: Date): string => String(date.getFullYear());
-
-const formatWeekNumber = (date: Date): string => {
-  const startOfYear = new Date(date.getFullYear(), 0, 1);
-  const diff = date.getTime() - startOfYear.getTime();
-  const oneWeek = 7 * 24 * 60 * 60 * 1000;
-  const weekNum = Math.ceil(diff / oneWeek + 1);
-  return `W${weekNum}`;
-};
 
 const formatDayNumber = (date: Date): string => String(date.getDate());
 
@@ -201,7 +191,7 @@ export function ProjectTimeline({ projectId, phases, milestones = [], onUpdate, 
       case 'day':
         return {
           scales: [
-            { unit: 'week', step: 1, format: formatWeekNumber },
+            { unit: 'week', step: 1, format: (date: Date) => formatWeekLabel(t, date) },
             { unit: 'day', step: 1, format: formatDayNumber },
           ],
           cellWidth: 30,
@@ -210,14 +200,14 @@ export function ProjectTimeline({ projectId, phases, milestones = [], onUpdate, 
         return {
           scales: [
             { unit: 'month', step: 1, format: (date: Date) => formatMonthYear(date, locale) },
-            { unit: 'week', step: 1, format: formatWeekNumber },
+            { unit: 'week', step: 1, format: (date: Date) => formatWeekLabel(t, date) },
           ],
           cellWidth: 40,
         };
       case 'month':
         return {
           scales: [
-            { unit: 'quarter', step: 1, format: formatQuarterYear },
+            { unit: 'quarter', step: 1, format: (date: Date) => formatQuarterLabel(t, date) },
             { unit: 'month', step: 1, format: (date: Date) => formatMonthShort(date, locale) },
           ],
           cellWidth: 84,
@@ -232,7 +222,7 @@ export function ProjectTimeline({ projectId, phases, milestones = [], onUpdate, 
           cellWidth: 56,
         };
     }
-  }, [zoom, locale]);
+  }, [zoom, locale, t]);
 
   // Derive the visible range from phase + milestone dates, always folding in "today"
   // so the today marker is in range even for fully past/future-dated projects.

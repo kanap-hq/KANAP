@@ -25,7 +25,9 @@ import {
   parseRoadmapApply,
   parseRoadmapGenerate,
   BottleneckEntry,
+  RoadmapText,
 } from '../dto/roadmap.dto';
+import { renderRoadmapText, roadmapText } from './roadmap-text';
 import { Allocation, computeAutoAllocations } from '../utils/allocation-utils';
 
 type ServiceOpts = { manager?: EntityManager };
@@ -189,7 +191,7 @@ type CandidateRuntimeState = {
   contributorsWithHistory: Set<string>;
   everReady: boolean;
   blockageCounts: Map<RuntimeCapacityReason, number>;
-  blockageDetails: Map<RuntimeCapacityReason, string>;
+  blockageDetails: Map<RuntimeCapacityReason, RoadmapText>;
   constraintConflict: string | null;
 };
 
@@ -860,15 +862,16 @@ export class PortfolioRoadmapService {
       if (missingCapacityUsers.length > 0) {
         const names = missingCapacityUsers
           .map((userId) => contributors.get(userId)?.name ?? userId)
-          .sort((a, b) => a.localeCompare(b))
-          .join(', ');
+          .sort((a, b) => a.localeCompare(b));
+        const detailsText = roadmapText('missing_contributor_capacity_for', { names });
         preUnschedulable.set(projectId, {
           projectId: project.id,
           projectName: project.name,
           status: project.status,
           schedulingMode: project.schedulingMode,
           reason: 'missing_contributor_capacity',
-          details: `No contributor capacity configured for: ${names}`,
+          details: renderRoadmapText(detailsText),
+          detailsText,
         });
         continue;
       }
@@ -1036,7 +1039,7 @@ export class PortfolioRoadmapService {
     const setUnschedulable = (
       projectId: string,
       reason: UnschedulableProject['reason'],
-      details?: string,
+      detailsText?: RoadmapText,
     ): void => {
       const project = prepared.candidates.get(projectId);
       if (!project) return;
@@ -1047,42 +1050,8 @@ export class PortfolioRoadmapService {
         status: project.status,
         schedulingMode: project.schedulingMode,
         reason,
-        details,
+        ...(detailsText ? { details: renderRoadmapText(detailsText), detailsText } : {}),
       });
-    };
-
-    const describeBlockedReason = (reason: UnschedulableProject['reason']): string => {
-      switch (reason) {
-        case 'missing_contributor_capacity':
-          return 'missing contributor capacity';
-        case 'no_assigned_contributors':
-          return 'no assigned contributors';
-        case 'zero_remaining_effort':
-          return 'no remaining effort';
-        case 'missing_blocker_date':
-          return 'missing blocker date';
-        case 'blocker_on_hold':
-          return 'blocker on hold';
-        case 'blocked_unfinished_project':
-          return 'blocked unfinished project';
-        case 'expired_fixed_plan':
-          return 'expired fixed plan';
-        case 'cyclic_dependency':
-          return 'cyclic dependency';
-        case 'not_ready_within_horizon':
-          return 'not ready within horizon';
-        case 'no_free_slot':
-          return 'no free slot';
-        case 'no_effective_capacity':
-          return 'no effective capacity';
-        case 'below_minimum_start_threshold':
-          return 'below minimum start threshold';
-        case 'unfinished_within_horizon':
-          return 'unfinished within horizon';
-        case 'insufficient_capacity':
-        default:
-          return 'insufficient capacity';
-      }
     };
 
     const pruneBlockedProjects = (): void => {
@@ -1092,7 +1061,7 @@ export class PortfolioRoadmapService {
         for (const projectId of Array.from(candidateIds).sort((a, b) => a.localeCompare(b))) {
           const blockers = prepared.blockersByProject.get(projectId) ?? [];
           let reason: UnschedulableProject['reason'] | null = null;
-          let details: string | undefined;
+          let details: RoadmapText | undefined;
           for (const blockerId of blockers) {
             if (candidateIds.has(blockerId)) continue;
             const blockerRow = prepared.projectRowsById.get(blockerId);
@@ -1100,22 +1069,22 @@ export class PortfolioRoadmapService {
             const blockerUnschedulable = unschedulableMap.get(blockerId);
             if (blockerRow?.status === 'on_hold') {
               reason = 'blocker_on_hold';
-              details = `Blocker ${blockerName} is on hold`;
+              details = roadmapText('blocker_on_hold', { blocker: blockerName });
               break;
             }
             if (prepared.expiredFixedPlanProjectIds.has(blockerId)) {
               reason = 'expired_fixed_plan';
-              details = `Blocker ${blockerName} is not finished and its fixed plan ended before the roadmap start`;
+              details = roadmapText('blocker_fixed_plan_expired', { blocker: blockerName });
               break;
             }
             if (blockerUnschedulable && blockerRow?.status !== 'done') {
               reason = 'blocked_unfinished_project';
-              details = `Blocker ${blockerName} is not finished and cannot be scheduled (${describeBlockedReason(blockerUnschedulable.reason)})`;
+              details = roadmapText('blocker_cannot_be_scheduled', { blocker: blockerName, reason: blockerUnschedulable.reason });
               break;
             }
             if (!knownEndByProject.has(blockerId)) {
               reason = 'missing_blocker_date';
-              details = `Missing blocker date for ${blockerName}`;
+              details = roadmapText('missing_blocker_date_for', { blocker: blockerName });
               break;
             }
           }
@@ -1282,7 +1251,7 @@ export class PortfolioRoadmapService {
         contributorsWithHistory,
         everReady: false,
         blockageCounts: new Map<RuntimeCapacityReason, number>(),
-        blockageDetails: new Map<RuntimeCapacityReason, string>(),
+        blockageDetails: new Map<RuntimeCapacityReason, RoadmapText>(),
         constraintConflict: null,
       });
 
@@ -1446,36 +1415,33 @@ export class PortfolioRoadmapService {
     const recordBlockage = (
       state: CandidateRuntimeState,
       reason: RuntimeCapacityReason,
-      details: string,
+      details: RoadmapText,
     ): void => {
       state.blockageCounts.set(reason, (state.blockageCounts.get(reason) ?? 0) + 1);
       state.blockageDetails.set(reason, details);
     };
 
-    const describeContributors = (contributorIds: string[]): string => contributorIds
-      .map((contributorId) => {
-        const contributor = prepared.contributors.get(contributorId);
-        const weeklyCapacity = round2(weeklyCapacityByUser.get(contributorId) ?? 0);
-        return `${contributor?.name ?? contributorId} (${weeklyCapacity}d/week)`;
-      })
-      .join(', ');
+    const describeContributors = (contributorIds: string[]): RoadmapText[] => contributorIds
+      .map((contributorId) => roadmapText('contributor_capacity', {
+        name: prepared.contributors.get(contributorId)?.name ?? contributorId,
+        weeklyCapacity: round2(weeklyCapacityByUser.get(contributorId) ?? 0),
+      }));
 
-    const describeLargestRemainingLoads = (state: CandidateRuntimeState): string => {
-      const parts = Array.from(state.remainingByContributor.entries())
+    const describeLargestRemainingLoads = (state: CandidateRuntimeState): RoadmapText[] => {
+      return Array.from(state.remainingByContributor.entries())
         .filter(([, days]) => days > EPSILON)
         .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
         .slice(0, 3)
-        .map(([contributorId, days]) => {
-          const contributor = prepared.contributors.get(contributorId);
-          const weeklyCapacity = round2(weeklyCapacityByUser.get(contributorId) ?? 0);
-          return `${contributor?.name ?? contributorId} ${round2(days)}d remaining at ${weeklyCapacity}d/week`;
-        });
-      return parts.join(', ');
+        .map(([contributorId, days]) => roadmapText('contributor_remaining_load', {
+          name: prepared.contributors.get(contributorId)?.name ?? contributorId,
+          remainingDays: round2(days),
+          weeklyCapacity: round2(weeklyCapacityByUser.get(contributorId) ?? 0),
+        }));
     };
 
     const chooseDominantBlockage = (
       state: CandidateRuntimeState,
-    ): { reason: RuntimeCapacityReason; details: string } | null => {
+    ): { reason: RuntimeCapacityReason; details: RoadmapText } | null => {
       const priority: RuntimeCapacityReason[] = [
         'no_free_slot',
         'no_effective_capacity',
@@ -1494,7 +1460,7 @@ export class PortfolioRoadmapService {
       if (!bestReason || bestCount <= 0) return null;
       return {
         reason: bestReason,
-        details: state.blockageDetails.get(bestReason) ?? 'Capacity constraints prevented scheduling',
+        details: state.blockageDetails.get(bestReason) ?? roadmapText('capacity_prevented_scheduling'),
       };
     };
 
@@ -1504,43 +1470,6 @@ export class PortfolioRoadmapService {
       sourceRequestId: null,
       isScenarioProject: false,
     });
-
-    const mapUnschedulableReasonLabel = (
-      reason: UnschedulableProject['reason'] | RuntimeCapacityReason,
-    ): string => {
-      switch (reason) {
-        case 'zero_remaining_effort':
-          return 'No remaining effort';
-        case 'no_assigned_contributors':
-          return 'No assigned contributors';
-        case 'missing_blocker_date':
-          return 'Missing blocker date';
-        case 'blocker_on_hold':
-          return 'Blocker on hold';
-        case 'blocked_unfinished_project':
-          return 'Blocked by unfinished project';
-        case 'expired_fixed_plan':
-          return 'Expired fixed plan';
-        case 'cyclic_dependency':
-          return 'Cyclic dependency';
-        case 'not_ready_within_horizon':
-          return 'Not ready within horizon';
-        case 'no_free_slot':
-          return 'No free slot';
-        case 'no_effective_capacity':
-          return 'No effective capacity';
-        case 'below_minimum_start_threshold':
-          return 'Below minimum start threshold';
-        case 'unfinished_within_horizon':
-          return 'Unfinished within horizon';
-        case 'insufficient_capacity':
-          return 'Insufficient capacity';
-        case 'missing_contributor_capacity':
-          return 'Missing contributor capacity';
-        default:
-          return reason;
-      }
-    };
 
     const mapRuntimeReasonToExplanationKind = (
       reason: RuntimeCapacityReason,
@@ -1595,30 +1524,31 @@ export class PortfolioRoadmapService {
           const blockerRow = prepared.projectRowsById.get(blockerId);
           const blockerUnschedulable = unschedulableMap.get(blockerId);
           let kind: ExplanationReasonEntry['kind'] = 'dependency';
-          let label = `Waiting for ${blockerName}`;
+          let labelText = roadmapText('waiting_for', { blocker: blockerName });
           let toWeek: string | null = null;
 
           if (blockerRow?.status === 'on_hold') {
             kind = 'unschedulable_blocker';
-            label = `${blockerName} is on hold`;
+            labelText = roadmapText('blocker_is_on_hold', { blocker: blockerName });
           } else if (prepared.expiredFixedPlanProjectIds.has(blockerId)) {
             kind = 'fixed_plan';
-            label = `${blockerName} has an expired fixed plan`;
+            labelText = roadmapText('blocker_has_expired_fixed_plan', { blocker: blockerName });
           } else if (blockerUnschedulable && blockerRow?.status !== 'done') {
             kind = 'unschedulable_blocker';
-            label = `${blockerName} is unschedulable (${mapUnschedulableReasonLabel(blockerUnschedulable.reason)})`;
+            labelText = roadmapText('blocker_is_unschedulable', { blocker: blockerName, reason: blockerUnschedulable.reason });
           } else {
             const blockerEnd = scheduledEndByProject.get(blockerId) ?? knownEndByProject.get(blockerId) ?? null;
             if (blockerEnd) {
               const releaseWeek = ceilToMondayUtc(addDaysUtc(blockerEnd, 1));
               toWeek = toYmdUtc(releaseWeek);
-              label = `Waiting for ${blockerName} until ${toWeek}`;
+              labelText = roadmapText('waiting_for_until', { blocker: blockerName, week: toWeek });
             }
           }
 
           return {
             kind,
-            label,
+            label: renderRoadmapText(labelText),
+            labelText,
             projectId: blockerId,
             scenarioProjectId: null,
             fromWeek: toYmdUtc(firstWeekToPlan),
@@ -1637,14 +1567,18 @@ export class PortfolioRoadmapService {
           b[1] - a[1]
           || a[0].localeCompare(b[0]))
         .slice(0, 3)
-        .map(([reason]) => ({
-          kind: mapRuntimeReasonToExplanationKind(reason),
-          label: state.blockageDetails.get(reason) ?? mapUnschedulableReasonLabel(reason),
-          projectId: null,
-          scenarioProjectId: null,
-          fromWeek: state.firstReadyWeek ? toYmdUtc(state.firstReadyWeek) : null,
-          toWeek: state.lastReadyWeek ? toYmdUtc(state.lastReadyWeek) : null,
-        }));
+        .map(([reason]) => {
+          const labelText = state.blockageDetails.get(reason) ?? roadmapText('reason', { reason });
+          return {
+            kind: mapRuntimeReasonToExplanationKind(reason),
+            label: renderRoadmapText(labelText),
+            labelText,
+            projectId: null,
+            scenarioProjectId: null,
+            fromWeek: state.firstReadyWeek ? toYmdUtc(state.firstReadyWeek) : null,
+            toWeek: state.lastReadyWeek ? toYmdUtc(state.lastReadyWeek) : null,
+          };
+        });
     };
 
     const buildLimitingContributors = (
@@ -1695,7 +1629,7 @@ export class PortfolioRoadmapService {
       constraint: ScheduleConstraint | null | undefined,
       actualStartWeek: string | null,
       actualEndWeek: string | null,
-    ): string | null => {
+    ): RoadmapText | null => {
       if (!constraint) return null;
       const effectiveConstraintStartWeek = getEffectiveConstraintStartWeek(constraint);
       const effectiveConstraintStartWeekYmd = effectiveConstraintStartWeek
@@ -1704,47 +1638,43 @@ export class PortfolioRoadmapService {
       switch (constraint.type) {
         case 'pin_start':
           if (!actualStartWeek) {
-            return `Pinned start ${constraint.startWeek} could not be satisfied.`;
+            return roadmapText('conflict_pin_start_unsatisfied', { week: constraint.startWeek });
           }
           if (effectiveConstraintStartWeekYmd && actualStartWeek !== effectiveConstraintStartWeekYmd) {
             if (effectiveConstraintStartWeekYmd !== constraint.startWeek) {
-              return `Pinned start ${constraint.startWeek} was normalized to ${effectiveConstraintStartWeekYmd} and slipped to ${actualStartWeek}.`;
+              return roadmapText('conflict_pin_start_normalized', {
+                week: constraint.startWeek,
+                normalized: effectiveConstraintStartWeekYmd,
+                actual: actualStartWeek,
+              });
             }
-            return `Pinned start ${constraint.startWeek} slipped to ${actualStartWeek}.`;
+            return roadmapText('conflict_pin_start_slipped', { week: constraint.startWeek, actual: actualStartWeek });
           }
           return null;
         case 'pin_window':
           if (!actualStartWeek) {
-            return `Pinned window ${constraint.startWeek} to ${constraint.endWeek} could not be satisfied.`;
+            return roadmapText('conflict_pin_window_unsatisfied', { start: constraint.startWeek, end: constraint.endWeek });
           }
           if (
             (effectiveConstraintStartWeekYmd != null && actualStartWeek < effectiveConstraintStartWeekYmd)
             || actualStartWeek > constraint.endWeek
             || (actualEndWeek != null && actualEndWeek > constraint.endWeek)
           ) {
-            return `Pinned window ${constraint.startWeek} to ${constraint.endWeek} was missed; actual schedule is ${actualStartWeek} to ${actualEndWeek ?? actualStartWeek}.`;
+            return roadmapText('conflict_pin_window_missed', {
+              start: constraint.startWeek,
+              end: constraint.endWeek,
+              actualStart: actualStartWeek,
+              actualEnd: actualEndWeek ?? actualStartWeek,
+            });
           }
           return null;
         case 'not_before':
           if (effectiveConstraintStartWeekYmd && actualStartWeek && actualStartWeek < effectiveConstraintStartWeekYmd) {
-            return `Not-before constraint ${constraint.startWeek} was violated by start ${actualStartWeek}.`;
+            return roadmapText('conflict_not_before_violated', { week: constraint.startWeek, actual: actualStartWeek });
           }
           return null;
         default:
           return null;
-      }
-    };
-
-    const getConstraintSummaryLabel = (constraint: ScheduleConstraint): string => {
-      switch (constraint.type) {
-        case 'pin_start':
-          return `pin start ${constraint.startWeek}`;
-        case 'pin_window':
-          return `pin window ${constraint.startWeek} to ${constraint.endWeek}`;
-        case 'not_before':
-          return `not-before ${constraint.startWeek}`;
-        default:
-          return 'scenario constraint';
       }
     };
 
@@ -1786,7 +1716,8 @@ export class PortfolioRoadmapService {
         const effectiveConstraintStartWeek = getEffectiveConstraintStartWeek(activeConstraint);
         blockerReasons.unshift({
           kind: 'constraint_conflict',
-          label: constraintConflictMessage,
+          label: renderRoadmapText(constraintConflictMessage),
+          labelText: constraintConflictMessage,
           projectId: projectId,
           scenarioProjectId: null,
           fromWeek: effectiveConstraintStartWeek ? toYmdUtc(effectiveConstraintStartWeek) : null,
@@ -1820,32 +1751,43 @@ export class PortfolioRoadmapService {
         }
       }
 
-      const finalReason = classification === 'unschedulable'
-        ? (constraintConflictMessage
-          ?? unschedulable?.details
-          ?? mapUnschedulableReasonLabel(unschedulable?.reason ?? 'insufficient_capacity'))
+      const unschedulableReasonText = unschedulable?.detailsText
+        ?? roadmapText('reason', { reason: unschedulable?.reason ?? 'insufficient_capacity' });
+      const finalReasonText: RoadmapText | null = classification === 'unschedulable'
+        ? (constraintConflictMessage ?? unschedulableReasonText)
         : (
           constraintConflictMessage
             ? constraintConflictMessage
             : (delayedByCapacity && earliestEligibleWeek && actualStartWeek
-            ? `Eligible from ${earliestEligibleWeek} and started in ${actualStartWeek} when capacity opened up`
+            ? roadmapText('final_capacity', { eligible: earliestEligibleWeek, week: actualStartWeek })
             : (dependencyReasons.length > 0 && actualStartWeek
-              ? `Started in ${actualStartWeek} once blockers released it`
-              : (actualStartWeek ? `Started in ${actualStartWeek}` : null)))
+              ? roadmapText('final_blockers', { week: actualStartWeek })
+              : (actualStartWeek ? roadmapText('final_started', { week: actualStartWeek }) : null)))
         );
 
-      const summary = classification === 'unschedulable'
-        ? `${project?.name ?? unschedulable?.projectName ?? projectId} could not be scheduled: ${finalReason}`
+      const projectName = project?.name ?? projectId;
+      const summaryText = classification === 'unschedulable'
+        ? roadmapText('summary_unschedulable', {
+          project: project?.name ?? unschedulable?.projectName ?? projectId,
+          reason: finalReasonText ?? unschedulableReasonText,
+        })
         : (
           startReason === 'historical_start'
-            ? `${project?.name ?? projectId} continued from historical work and appears in the roadmap from ${actualStartWeek ?? 'n/a'}.`
+            ? roadmapText('summary_historical', { project: projectName, week: actualStartWeek })
             : (activeConstraint && actualStartWeek
-              ? `${project?.name ?? projectId} started in ${actualStartWeek} under ${getConstraintSummaryLabel(activeConstraint)}${constraintConflictMessage ? `, with a conflict: ${constraintConflictMessage}` : '.'}`
+              ? (constraintConflictMessage
+                ? roadmapText('summary_constraint_conflict', {
+                  project: projectName,
+                  week: actualStartWeek,
+                  constraint: activeConstraint,
+                  conflict: constraintConflictMessage,
+                })
+                : roadmapText('summary_constraint', { project: projectName, week: actualStartWeek, constraint: activeConstraint }))
               : (delayedByCapacity && earliestEligibleWeek && actualStartWeek
-                ? `${project?.name ?? projectId} was eligible from ${earliestEligibleWeek} and started in ${actualStartWeek} when capacity became available.`
+                ? roadmapText('summary_capacity', { project: projectName, eligible: earliestEligibleWeek, week: actualStartWeek })
                 : (dependencyReasons.length > 0 && actualStartWeek
-                  ? `${project?.name ?? projectId} started in ${actualStartWeek} after its blockers released it.`
-                  : `${project?.name ?? projectId} started in ${actualStartWeek ?? 'n/a'} when it became schedulable.`)))
+                  ? roadmapText('summary_blockers', { project: projectName, week: actualStartWeek })
+                  : roadmapText('summary_schedulable', { project: projectName, week: actualStartWeek }))))
         );
 
       const reasons = blockerReasons.length > 0
@@ -1853,7 +1795,8 @@ export class PortfolioRoadmapService {
         : (classification === 'unschedulable' && unschedulable
           ? [{
             kind: mapUnschedulableReasonToExplanationKind(unschedulable.reason),
-            label: unschedulable.details ?? mapUnschedulableReasonLabel(unschedulable.reason),
+            label: renderRoadmapText(unschedulableReasonText),
+            labelText: unschedulableReasonText,
             projectId: null,
             scenarioProjectId: null,
             fromWeek: state?.firstReadyWeek ? toYmdUtc(state.firstReadyWeek) : null,
@@ -1863,7 +1806,8 @@ export class PortfolioRoadmapService {
 
       return {
         itemRef: buildItemRef(projectId),
-        summary,
+        summary: renderRoadmapText(summaryText),
+        summaryText,
         classification,
         schedulingMode,
         earliestEligibleWeek,
@@ -1873,7 +1817,8 @@ export class PortfolioRoadmapService {
         startReason,
         blockerReasons: reasons,
         limitingContributors,
-        finalReason,
+        finalReason: finalReasonText ? renderRoadmapText(finalReasonText) : null,
+        finalReasonText,
       };
     };
 
@@ -2364,7 +2309,7 @@ export class PortfolioRoadmapService {
 
         const classifyUnallocatedReadyProject = (
           projectId: string,
-        ): { reason: RuntimeCapacityReason; details: string } => {
+        ): { reason: RuntimeCapacityReason; details: RoadmapText } => {
           const state = runtimeByProject.get(projectId)!;
           const demandedContributors = getRequiredContributors(state);
           const slotBlockedContributors = demandedContributors.filter((contributorId) => {
@@ -2379,7 +2324,7 @@ export class PortfolioRoadmapService {
             if (!selectedCollaborativeProjects.has(projectId) && slotBlockedContributors.length > 0) {
               return {
                 reason: 'no_free_slot',
-                details: `No free parallel slot for: ${describeContributors(slotBlockedContributors)}`,
+                details: roadmapText('no_free_slot_for', { contributors: describeContributors(slotBlockedContributors) }),
               };
             }
 
@@ -2387,18 +2332,21 @@ export class PortfolioRoadmapService {
             if (expectedBurn <= EPSILON) {
               return {
                 reason: 'no_effective_capacity',
-                details: `No allocable weekly capacity for: ${describeContributors(demandedContributors)}`,
+                details: roadmapText('no_allocable_capacity_for', { contributors: describeContributors(demandedContributors) }),
               };
             }
             if (!selectedCollaborativeProjects.has(projectId) && expectedBurn < SLOT_OCCUPANCY_THRESHOLD_DAYS) {
               return {
                 reason: 'below_minimum_start_threshold',
-                details: `Projected collaborative start burn is ${round2(expectedBurn)}d, below the ${SLOT_OCCUPANCY_THRESHOLD_DAYS}d threshold`,
+                details: roadmapText('collaborative_burn_below_threshold', {
+                  burn: round2(expectedBurn),
+                  threshold: SLOT_OCCUPANCY_THRESHOLD_DAYS,
+                }),
               };
             }
             return {
               reason: 'no_effective_capacity',
-              details: `Collaborative burn stalled for: ${describeContributors(demandedContributors)}`,
+              details: roadmapText('collaborative_burn_stalled_for', { contributors: describeContributors(demandedContributors) }),
             };
           }
 
@@ -2407,26 +2355,29 @@ export class PortfolioRoadmapService {
             if (slotBlockedContributors.length === demandedContributors.length && demandedContributors.length > 0) {
               return {
                 reason: 'no_free_slot',
-                details: `No free parallel slot for: ${describeContributors(slotBlockedContributors)}`,
+                details: roadmapText('no_free_slot_for', { contributors: describeContributors(slotBlockedContributors) }),
               };
             }
             if (contributors.length === 0 || expectedBurn <= EPSILON) {
               return {
                 reason: 'no_effective_capacity',
-                details: `No allocable weekly capacity for: ${describeContributors(demandedContributors)}`,
+                details: roadmapText('no_allocable_capacity_for', { contributors: describeContributors(demandedContributors) }),
               };
             }
             if (expectedBurn < SLOT_OCCUPANCY_THRESHOLD_DAYS) {
               return {
                 reason: 'below_minimum_start_threshold',
-                details: `Projected independent start burn is ${round2(expectedBurn)}d, below the ${SLOT_OCCUPANCY_THRESHOLD_DAYS}d threshold`,
+                details: roadmapText('independent_burn_below_threshold', {
+                  burn: round2(expectedBurn),
+                  threshold: SLOT_OCCUPANCY_THRESHOLD_DAYS,
+                }),
               };
             }
           }
 
           return {
             reason: 'no_effective_capacity',
-            details: `No effective weekly capacity remained for: ${describeContributors(demandedContributors)}`,
+            details: roadmapText('no_capacity_remained_for', { contributors: describeContributors(demandedContributors) }),
           };
         };
 
@@ -2469,7 +2420,7 @@ export class PortfolioRoadmapService {
 
       if (state.remainingTotal > EPSILON || !state.firstAllocatedWeek || !state.lastAllocatedWeek) {
         let reason: RuntimeCapacityReason = 'insufficient_capacity';
-        let details = 'Capacity constraints prevented scheduling';
+        let details = roadmapText('capacity_prevented_scheduling');
 
         if (!state.everReady) {
           const unresolvedInternalBlockers = (internalBlockersByProject.get(projectId) ?? [])
@@ -2480,17 +2431,20 @@ export class PortfolioRoadmapService {
             .map((blockerId) => prepared.projectNameById.get(blockerId) || blockerId);
 
           if (unresolvedInternalBlockers.length > 0) {
-            details = `Still waiting on blockers: ${unresolvedInternalBlockers.join(', ')}`;
+            details = roadmapText('waiting_on_blockers', { blockers: unresolvedInternalBlockers });
           } else {
             const earliestWeek = externalEarliestWeekByProject.get(projectId);
             details = earliestWeek && earliestWeek.getTime() > lastWeekWithinHorizon.getTime()
-              ? `Earliest possible start is ${toYmdUtc(earliestWeek)}, beyond the ${horizonWeeks}-week horizon`
-              : 'Project never became ready within the scheduling horizon';
+              ? roadmapText('earliest_start_beyond_horizon', { week: toYmdUtc(earliestWeek), horizonWeeks })
+              : roadmapText('never_ready_within_horizon');
           }
           reason = 'not_ready_within_horizon';
         } else if (state.firstAllocatedWeek || state.historicalStart) {
-          const remainingSummary = describeLargestRemainingLoads(state);
-          details = `Remaining ${round2(state.remainingTotal)}d after ${horizonWeeks} weeks. Biggest unresolved loads: ${remainingSummary || 'n/a'}`;
+          details = roadmapText('remaining_after_horizon', {
+            remainingDays: round2(state.remainingTotal),
+            horizonWeeks,
+            loads: describeLargestRemainingLoads(state),
+          });
           reason = 'unfinished_within_horizon';
         } else {
           const dominantBlockage = chooseDominantBlockage(state);
@@ -2498,7 +2452,7 @@ export class PortfolioRoadmapService {
             reason = dominantBlockage.reason;
             details = dominantBlockage.details;
           } else {
-            details = 'No allocable week found under current capacity constraints';
+            details = roadmapText('no_allocable_week');
           }
         }
 
@@ -2508,7 +2462,8 @@ export class PortfolioRoadmapService {
           status: project.status,
           schedulingMode: project.schedulingMode,
           reason,
-          details,
+          details: renderRoadmapText(details),
+          detailsText: details,
         });
         continue;
       }
@@ -2643,11 +2598,13 @@ export class PortfolioRoadmapService {
           scheduledItem?.plannedEnd ?? null,
         );
         if (!conflictMessage) return null;
+        const messageText = roadmapText('warning_constraint_conflict', { project: project.name, conflict: conflictMessage });
         return {
           severity: scheduledItem ? 'warning' : 'error',
           code: 'constraint_infeasible',
           itemRef: buildItemRef(projectId),
-          message: `${project.name}: ${conflictMessage}`,
+          message: renderRoadmapText(messageText),
+          messageText,
         } as ScenarioWarning;
       })
       .filter((warning) => !!warning)

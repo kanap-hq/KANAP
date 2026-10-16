@@ -56,7 +56,7 @@ La cuadrícula de Interfaces muestra su registro de integraciones de un vistazo.
 
 - **Añadir interfaz**: Crear una nueva interfaz (requiere `applications:manager`)
 - **Duplicar interfaz**: Crear una copia de una interfaz seleccionada (requiere `applications:manager`). Seleccione exactamente una fila para activar esta acción. Un diálogo le permite elegir si copiar los enlaces de entorno; consulte [Copiar interfaces](#copiar-interfaces) más abajo.
-- **Eliminar seleccionadas**: Eliminar interfaces seleccionadas (requiere `applications:admin`). Una opción de casilla permite también eliminar los enlaces relacionados; si no está marcada, las interfaces con enlaces no se eliminarán.
+- **Eliminar seleccionadas**: Eliminar interfaces seleccionadas (requiere `applications:admin`). Antes de la confirmación, la ventana muestra como conservadas las interfaces que tienen enlaces, con su número de enlaces. Marque **Eliminar también los enlaces relacionados** para eliminarlas con sus enlaces; sus conexiones se conservan. El mensaje nombra después las interfaces eliminadas y las conservadas, con el motivo.
 
 ---
 

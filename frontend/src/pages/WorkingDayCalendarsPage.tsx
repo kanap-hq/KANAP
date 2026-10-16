@@ -9,6 +9,7 @@ import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
 import { useAuth } from '../auth/AuthContext';
 import DeleteSelectedButton from '../components/DeleteSelectedButton';
+import { recordsInUseCheck } from '../utils/deleteCheck';
 import { LinkCellRenderer } from '../components/grid/renderers';
 import { useLocale } from '../i18n/useLocale';
 import { formatShortDateTime } from '../lib/dateFormat';
@@ -196,6 +197,13 @@ function WorkingDayCalendarsList() {
         <DeleteSelectedButton
           selectedRows={selectedRows}
           endpoint={`${WORKING_DAY_PROFILES_ENDPOINT}/bulk`}
+          // Asked on click: those that cannot go are kept, with why.
+          checkDelete={(ids) => recordsInUseCheck(WORKING_DAY_PROFILES_ENDPOINT, ids)}
+          itemLabels={{
+            toDelete: (count) => t('workingDayCalendars.delete.toDelete', { count }),
+            kept: (count) => t('workingDayCalendars.delete.kept', { count }),
+            deleted: (count) => t('workingDayCalendars.delete.deleted', { count }),
+          }}
           getItemId={(row) => row.id}
           getItemName={(row) => row.name}
           gridApi={gridApiRef.current}

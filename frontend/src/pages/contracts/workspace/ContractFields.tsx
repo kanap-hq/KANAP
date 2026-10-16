@@ -1,7 +1,8 @@
 import React from 'react';
 import { Autocomplete, MenuItem, TextField } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import { CURRENCY_OPTIONS, type CurrencyOption } from '../../../constants/isoOptions';
+import type { CurrencyOption } from '../../../constants/isoOptions';
+import { currencyLabel, useCurrencyOptions } from '../../../i18n/currencies';
 import useCurrencySettings from '../../../hooks/useCurrencySettings';
 import { useFieldDraft } from '../../../hooks/useFieldDraft';
 import { useLocale } from '../../../i18n/useLocale';
@@ -11,20 +12,21 @@ import { BILLING_FREQUENCIES, type BillingFrequency, formatAmount, parseAmount, 
 /** The tenant's currencies (Currency settings), all of them when none is set; the contract's own always listed. */
 export function useContractCurrencyOptions(current: string): CurrencyOption[] {
   const { data } = useCurrencySettings();
+  const currencyOptions = useCurrencyOptions();
   return React.useMemo(() => {
     const allowed = data?.allowedCurrencies;
-    let options = CURRENCY_OPTIONS;
+    let options = currencyOptions;
     if (allowed && allowed.length > 0) {
       const set = new Set(allowed.map((code) => code.toUpperCase()));
-      const filtered = CURRENCY_OPTIONS.filter((option) => set.has(option.code));
+      const filtered = currencyOptions.filter((option) => set.has(option.code));
       if (filtered.length) options = filtered;
     }
     const code = (current || '').toUpperCase();
     if (code && !options.some((option) => option.code === code)) {
-      options = [...options, CURRENCY_OPTIONS.find((option) => option.code === code) ?? ({ code, name: code } as CurrencyOption)];
+      options = [...options, currencyOptions.find((option) => option.code === code) ?? ({ code, name: code } as CurrencyOption)];
     }
     return options;
-  }, [current, data?.allowedCurrencies]);
+  }, [currencyOptions, current, data?.allowedCurrencies]);
 }
 
 /** The tenant's default currency for new contracts. */
@@ -45,10 +47,10 @@ export function CurrencyField({ value, onChange, disabled, ariaLabel }: { value:
       disableClearable
       value={selected ?? undefined}
       onChange={(_event, option) => { if (option?.code) onChange(option.code); }}
-      getOptionLabel={(option) => option.code}
+      getOptionLabel={currencyLabel}
       renderOption={(props, option) => {
         const { key, ...rest } = props as React.HTMLAttributes<HTMLLIElement> & { key: string };
-        return <li key={key} {...rest}>{`${option.code} · ${option.name}`}</li>;
+        return <li key={key} {...rest}>{currencyLabel(option)}</li>;
       }}
       isOptionEqualToValue={(option, current) => option.code === current.code}
       disabled={disabled}

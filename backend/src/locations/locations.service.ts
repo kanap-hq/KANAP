@@ -18,6 +18,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { shareRecipientsOf } from '../notifications/share-recipients';
 import { sortedFindQuery } from '../common/list-sort';
+import { duplicateNameException } from '../common/duplicate-name';
 
 type HostingCategory = 'on_prem' | 'cloud';
 
@@ -32,15 +33,14 @@ export type SubItemOpts = {
 };
 
 /**
- * The Created column's filter, compiled as the connections list compiles it: a text filter
- * reads the timestamp as text. buildWhereFromAgFilters cannot take this column (ILIKE does
- * not apply to a timestamp).
+ * The Created column's filter: a date model, by day (a text model answers 400).
+ * buildWhereFromAgFilters cannot take this column (ILIKE does not apply to a timestamp).
  */
 function createdAtFilter(filters: any): FindOperator<Date> | undefined {
   const model = filters && typeof filters === 'object' ? filters.created_at : undefined;
   if (!model) return undefined;
   const column = '__created_at__';
-  const condition = compileAgFilterCondition(model, { expression: column, textExpression: `CAST(${column} AS TEXT)` }, createParamNameGenerator('locCreated'));
+  const condition = compileAgFilterCondition(model, { expression: column, dataType: 'date' }, createParamNameGenerator('locCreated'));
   if (!condition) return undefined;
   return Raw((alias) => condition.sql.split(column).join(alias), condition.params);
 }
@@ -130,9 +130,7 @@ export class LocationsService {
       `SELECT id FROM locations WHERE tenant_id = $3 AND lower(name) = lower($1) AND ($2::uuid IS NULL OR id <> $2) LIMIT 1`,
       [value, excludeId, tenantId],
     );
-    if (rows && rows.length > 0) {
-      throw new BadRequestException(`Name already exists`);
-    }
+    if (rows && rows.length > 0) throw duplicateNameException('Another location already has this name.');
   }
 
   private async resolveHostingType(
@@ -1008,9 +1006,7 @@ export class LocationsService {
       .andWhere('si.tenant_id = :tenantId', { tenantId })
       .andWhere('lower(si.name) = lower(:name)', { name })
       .getOne();
-    if (duplicate) {
-      throw new BadRequestException(`Sub-location "${name}" already exists at this location`);
-    }
+    if (duplicate) throw duplicateNameException(`Sub-location "${name}" already exists at this location`);
 
     // Assign display_order = MAX + 1
     const maxResult = await repo
@@ -1075,9 +1071,7 @@ export class LocationsService {
         .andWhere('lower(si.name) = lower(:name)', { name })
         .andWhere('si.id != :id', { id: subItemId })
         .getOne();
-      if (duplicate) {
-        throw new BadRequestException(`Sub-location "${name}" already exists at this location`);
-      }
+      if (duplicate) throw duplicateNameException(`Sub-location "${name}" already exists at this location`);
       existing.name = name;
     }
 

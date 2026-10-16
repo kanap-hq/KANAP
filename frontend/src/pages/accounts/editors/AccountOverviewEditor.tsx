@@ -9,7 +9,7 @@ import StatusLifecycleField from '../../../components/fields/StatusLifecycleFiel
 import { accountFormSchema, AccountFormValues } from '../../forms/AccountForm';
 import { z } from 'zod';
 import { ACCOUNT_NATURES, accountNatureLabel, parseAccountNature } from '../../../constants/accountNature';
-import { STATUS_ENABLED, deriveStatusFromDisabledAt, normalizeDisabledAtInput } from '../../../constants/status';
+import { STATUS_DISABLED, STATUS_ENABLED, deriveStatusFromDisabledAt, lifecyclePayload, normalizeDisabledAtInput, sameLifecycle } from '../../../constants/status';
 
 export type AccountOverviewEditorHandle = {
   isDirty: () => boolean;
@@ -73,14 +73,12 @@ function normalizeEmptyToNull<T extends Record<string, any>>(obj: T): T {
   return out;
 }
 
-const toPayload = (values: AccountUpdateFormValues) => {
-  const disabled_at = values.disabled_at ?? null;
-  const base = {
-    ...values,
-    status: deriveStatusFromDisabledAt(disabled_at),
-    disabled_at,
-  };
-  return normalizeEmptyToNull(base);
+const toPayload = (values: AccountUpdateFormValues, loaded: AccountUpdateFormValues) => {
+  const { status, disabled_at, ...rest } = values;
+  // The lifecycle goes only when it changed: a save of other fields never rewrites it (a future
+  // end of validity stays). Switched off with no end of validity: the status alone, the server dates it.
+  const lifecycle = sameLifecycle(values, loaded) ? {} : lifecyclePayload(status, disabled_at);
+  return normalizeEmptyToNull({ ...rest, ...lifecycle });
 };
 
 const accountUpdateFormSchema = accountFormSchema.extend({
@@ -127,7 +125,7 @@ export default forwardRef<AccountOverviewEditorHandle, Props>(function AccountOv
           const coasRes = await api.get('/chart-of-accounts', { params: { page: 1, limit: 1000 } });
           if (!active) return;
           const items: any[] = coasRes.data?.items || [];
-          setCoas(items.map((c) => ({ id: c.id, label: `${c.code} — ${c.name}` })));
+          setCoas(items.map((c) => ({ id: c.id, label: `${c.code} · ${c.name}` })));
         } catch (e: any) {
           if (!active) return;
           setLoadCoasError(e?.response?.data?.message || e?.message || t('accounts.fields.loadCoAsError'));
@@ -160,7 +158,7 @@ export default forwardRef<AccountOverviewEditorHandle, Props>(function AccountOv
     setSaving(true);
     setServerError(null);
     try {
-      await api.patch(`${basePath}/${id}`, toPayload(values));
+      await api.patch(`${basePath}/${id}`, toPayload(values, baselineRef.current));
       baselineRef.current = { ...values };
       onDirtyChange?.(false);
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
@@ -309,6 +307,10 @@ export default forwardRef<AccountOverviewEditorHandle, Props>(function AccountOv
               shouldDirty: true,
               shouldValidate: true,
             })}
+            onDisableNow={() => {
+              setValue('disabled_at', null, { shouldDirty: true, shouldValidate: true });
+              field.onChange(STATUS_DISABLED);
+            }}
             statusName={field.name}
             statusError={!!err.status}
             statusHelperText={err.status?.message as string}

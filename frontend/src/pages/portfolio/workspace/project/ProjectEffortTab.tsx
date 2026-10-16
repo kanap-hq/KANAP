@@ -385,9 +385,9 @@ function AllocationBlock({
                 inputRef.current?.blur();
               }
             }}
-            aria-label={`${label} estimated effort in MD`}
+            aria-label={t('portfolio:workspace.project.effort.aria.estimatedEffort', { type: label })}
           />
-          <Box component="span">MD</Box>
+          <Box component="span">{t('portfolio:workspace.project.effort.values.mdUnit')}</Box>
         </Box>
         <Box component="span" className="kanap-alloc-tag">
           {mode === 'auto'
@@ -431,7 +431,7 @@ function AllocationBlock({
           <tr>
             <th>{t('portfolio:dialogs.effortAllocation.table.contributor')}</th>
             <th className="r">%</th>
-            <th className="r">MD</th>
+            <th className="r">{t('portfolio:dialogs.effortAllocation.table.md')}</th>
           </tr>
         </thead>
         <tbody>
@@ -615,7 +615,7 @@ export default function ProjectEffortTab({
           <Box className="kanap-effort-overview">
             <Box className="kanap-ov-group">
               <Box className="kanap-ov-main">
-                <Box component="span" className="kanap-ov-label">Progress</Box>
+                <Box component="span" className="kanap-ov-label">{t('workspace.project.effort.overview.progress')}</Box>
                 <Slider
                   value={progress}
                   onChange={(_, value) => setProgress(value as number)}
@@ -628,28 +628,28 @@ export default function ProjectEffortTab({
                 />
                 <Box component="span" className="kanap-ov-val">{progress}%</Box>
               </Box>
-              <Box component="span" className="kanap-ov-source">set manually</Box>
+              <Box component="span" className="kanap-ov-source">{t('workspace.project.effort.overview.setManually')}</Box>
             </Box>
             <Box className="kanap-ov-group">
               <Box className="kanap-ov-main">
-                <Box component="span" className="kanap-ov-label">Actual effort</Box>
+                <Box component="span" className="kanap-ov-label">{t('workspace.project.effort.sections.actualEffort')}</Box>
                 <Box className="kanap-ov-meter" aria-hidden="true">
                   <Box className="kanap-ov-meter-fill" style={{ width: `${actualEffortPct}%` }} />
                 </Box>
                 <Box component="span" className="kanap-ov-val">
-                  {formatMd(totalActual)} / {formatMd(totalEstimated)} MD
+                  {t('workspace.project.effort.values.actualOfEstimated', { actual: formatMd(totalActual), estimated: formatMd(totalEstimated) })}
                 </Box>
                 <Box component="span" className="kanap-ov-sub">
-                  (Project {formatMd(projectTimeMd)} · Task {formatMd(taskTimeMd)})
+                  {t('workspace.project.effort.values.actualSplit', { project: formatMd(projectTimeMd), task: formatMd(taskTimeMd) })}
                 </Box>
               </Box>
-              <Box component="span" className="kanap-ov-source">auto-calculated from time log</Box>
+              <Box component="span" className="kanap-ov-source">{t('workspace.project.effort.overview.fromTimeLog')}</Box>
             </Box>
           </Box>
 
           <Box className="kanap-section">
             <Box className="kanap-section-head">
-              <Typography component="h2" className="kanap-section-title">Allocation</Typography>
+              <Typography component="h2" className="kanap-section-title">{t('workspace.project.effort.sections.allocation')}</Typography>
             </Box>
             <Box className="kanap-alloc-grid">
               <AllocationBlock
@@ -657,7 +657,7 @@ export default function ProjectEffortTab({
                 data={itAllocationData ?? null}
                 estimatedEffort={estIt}
                 estimatedEffortValue={estItInputValue}
-                label="IT"
+                label={t('dialogs.effortAllocation.effortTypes.it')}
                 onEdit={() => setItAllocationDialogOpen(true)}
                 onCommitEstimatedEffort={(value) => {
                   if (value === '') {
@@ -685,7 +685,7 @@ export default function ProjectEffortTab({
                 data={businessAllocationData ?? null}
                 estimatedEffort={estBusiness}
                 estimatedEffortValue={estBusinessInputValue}
-                label="Business"
+                label={t('dialogs.effortAllocation.effortTypes.business')}
                 onEdit={() => setBusinessAllocationDialogOpen(true)}
                 onCommitEstimatedEffort={(value) => {
                   if (value === '') {
@@ -713,7 +713,7 @@ export default function ProjectEffortTab({
 
           <Box className="kanap-section">
             <Box className="kanap-section-head">
-              <Typography component="h2" className="kanap-section-title">Actual effort</Typography>
+              <Typography component="h2" className="kanap-section-title">{t('workspace.project.effort.sections.actualEffort')}</Typography>
               <button
                 type="button"
                 className="kanap-link-teal"
@@ -723,7 +723,7 @@ export default function ProjectEffortTab({
                 }}
                 disabled={!canContributeToProject}
               >
-                + Log time
+                {t('workspace.project.effort.actions.logTime')}
               </button>
             </Box>
 
@@ -743,7 +743,7 @@ export default function ProjectEffortTab({
                 <tbody>
                   {allEntries.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="kanap-text-tertiary">No time logged yet.</td>
+                      <td colSpan={7} className="kanap-text-tertiary">{t('workspace.project.effort.states.noTimeLogged')}</td>
                     </tr>
                   ) : (
                     allEntries.map((entry: any) => {
@@ -837,41 +837,41 @@ export default function ProjectEffortTab({
             <Box className="kanap-section">
               <Box className="kanap-section-head">
                 <Typography component="h2" className="kanap-section-title">
-                  Effort baseline
-                  <Box component="span" className="kanap-section-subtitle">captured at In Progress</Box>
+                  {t('workspace.project.effort.sections.effortBaseline')}
+                  <Box component="span" className="kanap-section-subtitle">{t('workspace.project.effort.sections.capturedAtInProgress')}</Box>
                 </Typography>
               </Box>
               <table className="kanap-bl-table">
                 <thead>
                   <tr>
                     <th />
-                    <th>IT effort</th>
-                    <th>Business effort</th>
+                    <th>{t('workspace.project.effort.baseline.itEffort')}</th>
+                    <th>{t('workspace.project.effort.baseline.businessEffort')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
                     <td>
-                      <Tooltip title="Current estimated effort set by the project manager">
-                        <Box component="span" className="kanap-bl-label">Estimated</Box>
+                      <Tooltip title={t('workspace.project.effort.baseline.estimatedTooltip')}>
+                        <Box component="span" className="kanap-bl-label">{t('workspace.project.effort.baseline.estimated')}</Box>
                       </Tooltip>
                     </td>
-                    <td>{formatMd(estIt)} MD</td>
-                    <td>{formatMd(estBusiness)} MD</td>
+                    <td>{t('workspace.project.effort.values.mdValue', { value: formatMd(estIt) })}</td>
+                    <td>{t('workspace.project.effort.values.mdValue', { value: formatMd(estBusiness) })}</td>
                   </tr>
                   <tr>
                     <td>
-                      <Tooltip title="Snapshot of estimated effort captured when the project entered In Progress">
-                        <Box component="span" className="kanap-bl-label">Baseline</Box>
+                      <Tooltip title={t('workspace.project.effort.baseline.baselineTooltip')}>
+                        <Box component="span" className="kanap-bl-label">{t('workspace.project.effort.baseline.baseline')}</Box>
                       </Tooltip>
                     </td>
-                    <td>{form?.baseline_effort_it != null ? `${formatMd(Number(form.baseline_effort_it))} MD` : '-'}</td>
-                    <td>{form?.baseline_effort_business != null ? `${formatMd(Number(form.baseline_effort_business))} MD` : '-'}</td>
+                    <td>{form?.baseline_effort_it != null ? t('workspace.project.effort.values.mdValue', { value: formatMd(Number(form.baseline_effort_it)) }) : '-'}</td>
+                    <td>{form?.baseline_effort_business != null ? t('workspace.project.effort.values.mdValue', { value: formatMd(Number(form.baseline_effort_business)) }) : '-'}</td>
                   </tr>
                   <tr>
                     <td>
-                      <Tooltip title="Difference between current estimate and baseline">
-                        <Box component="span" className="kanap-bl-label">Variance</Box>
+                      <Tooltip title={t('workspace.project.effort.baseline.varianceTooltip')}>
+                        <Box component="span" className="kanap-bl-label">{t('workspace.project.effort.baseline.variance')}</Box>
                       </Tooltip>
                     </td>
                     <td>

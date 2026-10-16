@@ -327,6 +327,7 @@ export default function ContributorPropertiesDrawer({
             onChange={(value) => onChange({ default_company_id: value })}
             disabled={!canEdit}
             hideLabel
+            label={t('portfolio:workspace.contributor.fields.company')}
             textFieldSx={drawerFieldValueSx}
           />
         </PropertyRow>

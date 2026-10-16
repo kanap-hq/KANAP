@@ -1,3 +1,4 @@
+import { languageOf } from '../common/csv-sheet';
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
@@ -60,6 +61,7 @@ export class AssetsController {
   @RequireLevel('infrastructure', 'admin')
   @Get('export')
   async exportCsv(
+    @Query('language') languageRaw: string | undefined,
     @Query('scope') scope: 'template' | 'data' = 'data',
     @Query('fields') fields: string | undefined,
     @Query('preset') preset: string | undefined,
@@ -70,7 +72,10 @@ export class AssetsController {
     @Res() res: Response,
   ) {
     const tenantId = req?.tenant?.id ?? '';
+    // The screen's language (the user's own when the screen sends none), as every shared-layer file.
+    const language = await languageOf(req?.queryRunner?.manager, tenantId, req.user?.sub ?? null, languageRaw);
     const result = await this.csvSvc.export({
+      language,
       manager: req?.queryRunner?.manager,
       tenantId,
       scope,
@@ -501,6 +506,14 @@ export class AssetsController {
       manager: req?.queryRunner?.manager,
       tenantId,
     });
+  }
+
+  // What a delete of `ids` would refuse, asked before the confirmation.
+  @UseGuards(PermissionGuard)
+  @RequireLevel('infrastructure', 'admin')
+  @Post('delete-check')
+  deleteCheck(@Body() body: { ids: string[] }, @Req() req: any) {
+    return this.deleteSvc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], req?.tenant?.id ?? '', { manager: req?.queryRunner?.manager });
   }
 
   @UseGuards(PermissionGuard)

@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { coversItsCell, staysAboveCellLink } from '../../components/grid/renderers/wholeCellLink.testUtils';
-import { formatShortDateTime } from '../../lib/dateFormat';
+import { formatShortDate, formatShortDateTime } from '../../lib/dateFormat';
 
 // Every custom link cell of the IT lists covers its whole grid cell, as LinkCellRenderer does: a
 // click in the empty part of the cell opens the row. A second link in the same cell (the suite
@@ -37,6 +37,8 @@ import ApplicationsPage from './ApplicationsPage';
 import AssetsPage from './AssetsPage';
 import IncidentsPage from './IncidentsPage';
 import InterfacesPage from './InterfacesPage';
+import LocationsPage from './LocationsPage';
+import ConnectionsPage from './ConnectionsPage';
 
 type Col = { field?: string; colId?: string; cellRenderer?: unknown; cellStyle?: unknown; valueFormatter?: (p: { value: unknown }) => string };
 
@@ -153,11 +155,17 @@ describe('IT list link cells', () => {
     expect(chip.getAttribute('href')).toMatch(/^\/it\/applications\/APP-1\/overview/);
   });
 
-  it('applications: the created column shows a formatted date, not the raw timestamp', () => {
+  it.each([
+    ['applications', ApplicationsPage],
+    ['assets', AssetsPage],
+    ['interfaces', InterfacesPage],
+    ['locations', LocationsPage],
+    ['connections', ConnectionsPage],
+  ] as const)('%s: the created column shows a formatted date, not the raw timestamp', (_name, Page) => {
     grid.mockClear();
     render(
       <QueryClientProvider client={new QueryClient()}>
-        <MemoryRouter><ApplicationsPage /></MemoryRouter>
+        <MemoryRouter><Page /></MemoryRouter>
       </QueryClientProvider>,
     );
     const columns = (grid.mock.calls[grid.mock.calls.length - 1][0] as { columns: Col[] }).columns;
@@ -165,6 +173,21 @@ describe('IT list link cells', () => {
     const col = columns.find((c) => c.field === 'created_at') as Col;
     const iso = '2026-10-15T08:30:00.000Z';
     expect(col.valueFormatter?.({ value: iso })).toBe(formatShortDateTime(iso, 'en'));
+  });
+
+  it('assets: go-live and end-of-life dates are formatted', () => {
+    grid.mockClear();
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter><AssetsPage /></MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const columns = (grid.mock.calls[grid.mock.calls.length - 1][0] as { columns: Col[] }).columns;
+    cleanup();
+    for (const field of ['go_live_date', 'end_of_life_date']) {
+      const col = columns.find((c) => c.field === field) as Col;
+      expect(col.valueFormatter?.({ value: '2027-03-31' })).toBe(formatShortDate('2027-03-31', 'en', { year: 'always' }));
+    }
   });
 
   it('assets, incidents and interfaces: every link cell covers its cell', () => {

@@ -75,9 +75,9 @@ Una vez que guarde, el espacio de trabajo desbloquea todas las pestañas para do
 La cuadrícula de Aplicaciones proporciona una vista completa de su portafolio de aplicaciones.
 
 **Filtro de alcance superior (Mostrar)**:
-- **Mis apps**: muestra apps donde usted está listado en el panel de propiedades como **Responsable de negocio** o **Responsable IT**. Se admiten entradas con múltiples responsables.
-- **Apps de mi equipo**: muestra apps donde cualquier miembro de su equipo de Portafolio está listado como Responsable de negocio o Responsable IT. Su propia propiedad también se incluye en este alcance. Deshabilitado si no está asignado a un equipo de Portafolio.
-- **Todas las apps** (predeterminado): muestra la cuadrícula completa de Aplicaciones con el comportamiento predeterminado del filtro de ciclo de vida.
+- **Mis aplicaciones**: muestra apps donde usted está listado en el panel de propiedades como **Responsable de negocio** o **Responsable IT**. Se admiten entradas con múltiples responsables.
+- **Aplicaciones de mi equipo**: muestra apps donde cualquier miembro de su equipo de Portafolio está listado como Responsable de negocio o Responsable IT. Su propia propiedad también se incluye en este alcance. Deshabilitado si no está asignado a un equipo de Portafolio.
+- **Todas las aplicaciones** (predeterminado): muestra la cuadrícula completa de Aplicaciones con el comportamiento predeterminado del filtro de ciclo de vida.
 - Su selección se recuerda entre sesiones: al volver a la página se restaura su última elección.
 
 **Columnas predeterminadas**:
@@ -118,7 +118,7 @@ La cuadrícula de Aplicaciones proporciona una vista completa de su portafolio d
 - **Importar CSV**: Importación masiva desde archivo CSV (`applications:admin`)
 - **Exportar CSV**: Exportar la lista a CSV (`applications:admin`). Las columnas respaldadas por catálogos (categoría, ciclo de vida, criticidad, criticidad cibernética, ola de recuperación, clase de datos, métodos de acceso) se exportan con sus nombres; la importación acepta un nombre o el código interno.
 - **Copiar elemento**: Duplicar una aplicación seleccionada con todas sus relaciones principales (`applications:manager`). Consulte [Copiar aplicaciones](#copiar-aplicaciones) para saber qué se copia y qué no.
-- **Eliminar seleccionadas**: Eliminar aplicaciones seleccionadas (`applications:admin`)
+- **Eliminar seleccionadas**: Eliminar aplicaciones seleccionadas (`applications:admin`). Una aplicación que es origen o destino de una interfaz no se puede eliminar: desactívela en su lugar, o elimine primero sus interfaces. Antes de la confirmación, la ventana muestra esas aplicaciones como conservadas, con su número de interfaces. Las demás se eliminan con sus despliegues y sus vínculos con otros elementos; la confirmación cuenta los despliegues
 
 ---
 
@@ -137,7 +137,7 @@ El encabezado muestra:
 - Fecha de **Puesta en marcha**
 - **Enviar enlace**: copiar un enlace compartible a este espacio de trabajo
 - **Crear nueva versión**: lanzar el asistente de migración de versión (consulte [Gestión de versiones](#gestion-de-versiones))
-- **Eliminar** (`applications:admin`)
+- **Eliminar** (`applications:admin`): una aplicación con interfaces recibe el rechazo y el motivo, solo con Cerrar. Si no, la confirmación nombra la aplicación y cuenta los despliegues eliminados con ella, junto con sus vínculos con otros elementos
 - **Anterior / Siguiente**: recorrer la lista filtrada sin volver a la cuadrícula
 
 ### Panel de propiedades (panel derecho)
@@ -185,7 +185,7 @@ La pestaña Despliegues documenta dónde se ejecuta realmente la aplicación: un
 - **SSO habilitado** / **MFA soportado**
 - **Notas**
 
-**Añadir despliegue** abre un diálogo donde define entorno, ciclo de vida, URL base, indicadores SSO/MFA y notas. Cada entorno solo puede añadirse una vez. El chip de ciclo de vida en el encabezado de un despliegue también puede cambiarse en línea desde un menú emergente.
+**Añadir despliegue** abre un diálogo donde define entorno, ciclo de vida, URL base, indicadores SSO/MFA y notas. Cada entorno solo puede añadirse una vez. El chip de ciclo de vida en el encabezado de un despliegue también puede cambiarse en línea desde un menú emergente. Un despliegue que todavía tiene servidores o enlaces de interfaz no se puede eliminar: retírelos primero.
 
 **Servidores por despliegue**: Cada bloque de despliegue muestra una tabla de servidores asignados:
 
@@ -448,7 +448,7 @@ Desde la lista de Aplicaciones:
 
 ### Flujo de trabajo de importación
 
-1. **Prepare su archivo**: Use codificación UTF-8 con separadores de punto y coma (`;`). Un archivo que Excel guardó como CSV simple (Windows-1252) también se importa. Descargue una plantilla para asegurar encabezados correctos.
+1. **Prepare su archivo**: guárdelo en UTF-8. Las comas y los puntos y coma funcionan, y también un archivo que Excel guardó como CSV simple (Windows-1252). Descargue una plantilla para asegurar los encabezados correctos. El separador, los importes, las fechas y los sí o no de cada idioma están en [Archivos CSV](csv-files.md).
 
 2. **Elija la configuración de importación**:
    - **Modo**:
@@ -477,7 +477,7 @@ Desde la lista de Aplicaciones:
 | `editor` | Editor del software | No | Texto libre (p. ej., Microsoft, SAP) |
 | `criticality` | Criticidad de negocio | No | Acepta código o etiqueta de Configuración; `__CLEAR__` lo borra |
 | `lifecycle` | Estado actual | No | Acepta código o etiqueta de Configuración |
-| `is_suite` | Puede tener apps hijas | No | `true` o `false` |
+| `is_suite` | Puede tener apps hijas | No | `sí` o `no` |
 | `status` | Habilitado/deshabilitado | No | `enabled` o `disabled` |
 
 **Campos de versión**:
@@ -494,8 +494,8 @@ Desde la lista de Aplicaciones:
 | Columna CSV | Descripción | Notas |
 |-------------|-------------|-------|
 | `access_methods` | Cómo acceden los usuarios | Códigos o etiquetas separados por comas de Configuración (p. ej., `web,mobile,vdi`) |
-| `external_facing` | Accesible desde internet | `true` o `false` |
-| `etl_enabled` | Integración de datos | `true` o `false` |
+| `external_facing` | Accesible desde internet | `sí` o `no` |
+| `etl_enabled` | Integración de datos | `sí` o `no` |
 | `support_notes` | Información de soporte | Texto libre |
 | `licensing` | Términos de licencia | Texto libre |
 | `notes` | Notas internas | Texto libre |
@@ -506,7 +506,7 @@ Desde la lista de Aplicaciones:
 |-------------|-------------|-------|
 | `data_class` | Clasificación de datos | Acepta código o etiqueta de Configuración |
 | `last_dr_test` | Fecha de última prueba DR | Formato de fecha: AAAA-MM-DD |
-| `contains_pii` | Almacena datos personales | `true` o `false` |
+| `contains_pii` | Almacena datos personales | `sí` o `no` |
 | `data_residency` | Países de almacenamiento de datos | Solo exportación (códigos ISO) |
 
 **Campos de clasificación**:
@@ -573,7 +573,7 @@ Si incluye la columna `id` con un UUID válido, la coincidencia usa primero el I
 **Error "El archivo no tiene el formato correcto"**: Esto generalmente indica un problema de codificación. Asegúrese de que su CSV esté guardado como **UTF-8**:
 
 - **En LibreOffice**: Al abrir un CSV, seleccione `UTF-8` en el desplegable de Juego de caracteres (no "Japanese (Macintosh)" u otras codificaciones). Al guardar, marque "Editar configuración de filtro" y elija UTF-8.
-- **En Excel**: Guardar como > CSV UTF-8 (delimitado por comas), luego abra en un editor de texto para cambiar comas por puntos y coma.
+- **En Excel**: Guardar como > CSV UTF-8 (delimitado por comas).
 - **Consejo general**: Si ve caracteres ilegibles (`?¿`, `ï»¿`) al inicio de su archivo, la codificación es incorrecta.
 
 ### Ejemplo CSV

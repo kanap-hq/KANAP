@@ -243,6 +243,7 @@ export default function ProjectPropertyPanel({
         <PropertyRow label={t('workspace.project.fields.company')}>
           <CompanySelect
             hideLabel
+            label={t('workspace.project.fields.company')}
             value={form?.company_id || null}
             onChange={onCompanyChange}
             disabled={coreFieldsDisabled}
@@ -253,6 +254,7 @@ export default function ProjectPropertyPanel({
         <PropertyRow label={t('workspace.project.fields.department')}>
           <DepartmentSelect
             hideLabel
+            label={t('workspace.project.fields.department')}
             companyId={form?.company_id || undefined}
             value={form?.department_id || null}
             onChange={(value) => onUpdate({ department_id: value })}
@@ -287,6 +289,7 @@ export default function ProjectPropertyPanel({
           <PropertyRow label={t('workspace.project.fields.businessSponsor')}>
             <UserSelect
               hideLabel
+              label={t('workspace.project.fields.businessSponsor')}
               value={form?.business_sponsor_id || null}
               onChange={(value) => handleImmediateSave(
                 () => api.patch(`/portfolio/projects/${form.id}`, { business_sponsor_id: value }),
@@ -300,6 +303,7 @@ export default function ProjectPropertyPanel({
           <PropertyRow label={t('workspace.project.fields.businessLead')}>
             <UserSelect
               hideLabel
+              label={t('workspace.project.fields.businessLead')}
               value={form?.business_lead_id || null}
               onChange={(value) => handleImmediateSave(
                 async () => {
@@ -316,6 +320,7 @@ export default function ProjectPropertyPanel({
           <PropertyRow label={t('workspace.project.fields.itSponsor')}>
             <UserSelect
               hideLabel
+              label={t('workspace.project.fields.itSponsor')}
               value={form?.it_sponsor_id || null}
               onChange={(value) => handleImmediateSave(
                 () => api.patch(`/portfolio/projects/${form.id}`, { it_sponsor_id: value }),
@@ -329,6 +334,7 @@ export default function ProjectPropertyPanel({
           <PropertyRow label={t('workspace.project.fields.itLead')}>
             <UserSelect
               hideLabel
+              label={t('workspace.project.fields.itLead')}
               value={form?.it_lead_id || null}
               onChange={(value) => handleImmediateSave(
                 async () => {

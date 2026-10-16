@@ -84,7 +84,7 @@ El panel de control en el lado izquierdo del mapa proporciona estas herramientas
 
 | Icono | Acción | Descripción |
 |-------|--------|-------------|
-| Pausa / Reproducir | **Congelar / Descongelar** | Pausar la simulación de fuerzas para posicionar nodos manualmente |
+| Pausa / Reproducir | **Congelar / descongelar** | Pausar la simulación de fuerzas para posicionar nodos manualmente |
 | Cruz | **Auto-centrar** | Alternar el centrado automático al seleccionar nodos (resaltado cuando está activado) |
 | Zoom + | **Acercar** | Aumentar el nivel de zoom |
 | Zoom - | **Alejar** | Disminuir el nivel de zoom |

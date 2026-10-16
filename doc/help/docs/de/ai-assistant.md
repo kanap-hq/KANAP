@@ -1,11 +1,11 @@
 # Plaid
 
-Plaid ist der integrierte Chat-Assistent von KANAP. Er ist mit denselben Daten verbunden, mit denen Sie ohnehin arbeiten — Anwendungen, Assets, Vorfälle, Projekte, Anfragen, Aufgaben, Verträge, Wissensdokumente und Stammdaten —, sodass Sie Fragen in natürlicher Sprache stellen können, anstatt sich durch mehrere Bildschirme zu klicken, um eine Antwort zu finden.
+Plaid ist der integrierte Chat-Assistent von KANAP. Er ist mit denselben Daten verbunden, mit denen Sie ohnehin arbeiten (Anwendungen, Assets, Vorfälle, Projekte, Anfragen, Aufgaben, Verträge, Wissensdokumente und Stammdaten), sodass Sie Fragen in natürlicher Sprache stellen können, anstatt sich durch mehrere Bildschirme zu klicken, um eine Antwort zu finden.
 
 Plaid ersetzt nicht den Rest der Anwendung. Es ist ein schnellerer Weg, um Kontext zusammenzufassen, Datensätze zu finden, Text zu entwerfen oder Änderungen vorzubereiten. Sensible Vorgänge werden immer als Vorschauen angezeigt, die Sie genehmigen müssen, bevor etwas in KANAP zurückgeschrieben wird.
 
 !!! note "Plaid vs. KI-Agenten"
-    Plaid ist der interaktive Assistent, den **Sie** steuern: Sie fragen, er antwortet, und Sie genehmigen eine Änderung nach der anderen. **KI-Agenten** sind etwas anderes — sie sind autonome Helfer, die Ihren Service-Desk überwachen und Ticket-Arbeit eigenständig vorschlagen oder erledigen, innerhalb der von Ihnen festgelegten Freigabegrenzen. Siehe [KI-Agenten – Übersicht](agents-overview.md).
+    Plaid ist der interaktive Assistent, den **Sie** steuern: Sie fragen, er antwortet, und Sie genehmigen eine Änderung nach der anderen. **KI-Agenten** sind etwas anderes: sie sind autonome Helfer, die Ihren Service-Desk überwachen und Ticket-Arbeit eigenständig vorschlagen oder erledigen, innerhalb der von Ihnen festgelegten Freigabegrenzen. Siehe [KI-Agenten: Übersicht](agents-overview.md).
 
 ## Wo Sie es finden
 
@@ -27,7 +27,7 @@ Wenn Sie Plaid zum ersten Mal öffnen, gelangen Sie auf einen Begrüßungsbildsc
 - Einem Abschnitt **Versuchen Sie** mit Beispiel-Prompts, die Sie zum Senden anklicken können
 - Dem Eingabefeld am unteren Rand, bereit für Ihre erste Nachricht
 
-Klicken Sie auf einen beliebigen Vorschlag, um ihn entweder direkt zu senden oder — bei Prompts, die einen `@`-Platzhalter enthalten — den Vorschlag in das Eingabefeld einzufügen, damit Sie ihn vervollständigen können.
+Klicken Sie auf einen beliebigen Vorschlag, um ihn entweder direkt zu senden oder (bei Prompts, die einen `@`-Platzhalter enthalten) den Vorschlag in das Eingabefeld einzufügen, damit Sie ihn vervollständigen können.
 
 Geben Sie eine Nachricht ein und drücken Sie **Eingabe** zum Senden. **Umschalt+Eingabe** fügt eine neue Zeile ein. Die Sende-Schaltfläche ist deaktiviert, solange nichts zu senden ist, und verwandelt sich in eine rote **Stopp**-Schaltfläche, während Plaid antwortet.
 
@@ -43,8 +43,8 @@ Die Liste enthält:
 
 Jede Zeile zeigt den Konversationstitel (oder **Ohne Titel**, wenn noch keiner festgelegt wurde). Fahren Sie mit der Maus über eine Zeile oder fokussieren Sie sie, um Folgendes einzublenden:
 
-- Ein Stiftsymbol — die Konversation **Umbenennen**. Ein Doppelklick auf den Titel bewirkt dasselbe.
-- Ein Papierkorbsymbol — die Konversation **Archivieren**. Archivierte Konversationen verschwinden aus der Liste. Wenn Sie die aktuell geöffnete Konversation archivieren, wechselt Plaid zu einem neuen, leeren Chat.
+- Ein Stiftsymbol: die Konversation **Umbenennen**. Ein Doppelklick auf den Titel bewirkt dasselbe.
+- Ein Papierkorbsymbol: die Konversation **Archivieren**. Archivierte Konversationen verschwinden aus der Liste. Wenn Sie die aktuell geöffnete Konversation archivieren, wechselt Plaid zu einem neuen, leeren Chat.
 
 Die Suche filtert die Liste während der Eingabe nach Titel. Umbenennen und Archivieren werden sofort gespeichert.
 
@@ -71,12 +71,12 @@ Bilder werden zusammen mit Ihrer Nachricht hochgeladen, damit Plaid sie beschrei
 
 ### Datensätze mit `@` erwähnen
 
-Die Eingabe von `@` öffnet die **Erwähnungsauswahl** über dem Eingabefeld. Damit können Sie auf jeden KANAP-Datensatz verweisen, auf den Sie Zugriff haben — mit zwei sich ergänzenden Modi:
+Die Eingabe von `@` öffnet die **Erwähnungsauswahl** über dem Eingabefeld. Damit können Sie auf jeden KANAP-Datensatz verweisen, auf den Sie Zugriff haben: mit zwei sich ergänzenden Modi:
 
 - **Typ-Token-Präfix**: Kurzcodes, die einer einzelnen Entitätsfamilie zugeordnet sind. Beispiele:
-  - `@T-5` — Aufgabe mit der Referenz T-5
-  - `@DOC` — aktuelle Wissensdokumente
-  - `@APP backup` — Anwendungen, die zu „backup“ passen
+  - `@T-5`: Aufgabe mit der Referenz T-5
+  - `@DOC`: aktuelle Wissensdokumente
+  - `@APP backup`: Anwendungen, die zu „backup“ passen
   - `@BL-12`: die Budgetzeile mit der Referenz BL-12. `@BL` allein listet Budgetzeilen beider Typen auf, `@OPX` oder `@CPX` grenzt sie auf OPEX- oder CAPEX-Zeilen ein. Die früheren Nummern funktionieren weiterhin: `@OPX-12` oder `@CPX-3` findet seine Zeile
   - `@PRJ`, `@REQ`, `@INC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@COMP`, `@CONT`, `@DEPT`, `@SUP`, `@BP`
 - **Klartext**: alles andere (`@payroll`, `@server-2`) startet eine typübergreifende Suche, sortiert nach Relevanz. Sie findet auch Budgetzeilen über die Namen ihrer Analysewerte.
@@ -89,9 +89,9 @@ Wenn Sie einen Vorschlag bestätigen, zeigt das Eingabefeld weiterhin eine lesba
 
 Fahren Sie mit der Maus über eine Ihrer vorherigen Nachrichten, um Aktionen auf Nachrichtenebene zu erhalten:
 
-- **Kopieren** — den Nachrichtentext in die Zwischenablage kopieren
-- **Bearbeiten** — die Nachricht in einem Inline-Editor erneut öffnen; beim Speichern wird die neue Version gesendet und alles danach abgeschnitten (die Konversation läuft ab diesem Punkt neu)
-- **Neu generieren** (bei Assistentenantworten) — Plaid bitten, eine weitere Antwort auf denselben Prompt zu erzeugen
+- **Kopieren**: den Nachrichtentext in die Zwischenablage kopieren
+- **Bearbeiten**: die Nachricht in einem Inline-Editor erneut öffnen; beim Speichern wird die neue Version gesendet und alles danach abgeschnitten (die Konversation läuft ab diesem Punkt neu)
+- **Neu generieren** (bei Assistentenantworten): Plaid bitten, eine weitere Antwort auf denselben Prompt zu erzeugen
 
 Bearbeiten ist die richtige Wahl, wenn Sie feststellen, dass Ihre frühere Frage unklar war. Neu generieren ist die richtige Wahl, wenn die Frage in Ordnung war, die Antwort aber nicht.
 
@@ -100,7 +100,7 @@ Bearbeiten ist die richtige Wahl, wenn Sie feststellen, dass Ihre frühere Frage
 Plaid streamt seine Antwort Zeichen für Zeichen. Während des Streamings:
 
 - Das Eingabefeld bleibt nutzbar, sodass Sie eine Anschlussfrage vorbereiten können
-- Die Sende-Schaltfläche zeigt ein rotes **Stopp**-Symbol — ein Klick darauf bricht die laufende Antwort ab
+- Die Sende-Schaltfläche zeigt ein rotes **Stopp**-Symbol: ein Klick darauf bricht die laufende Antwort ab
 - Ein kleiner Indikator „Tools werden verwendet…“ erscheint, wenn Plaid KANAP durchsucht, ein Dokument abruft oder einen anderen Tool-Aufruf ausführt
 - Anzahl und Art der verwendeten Tools werden unter der Antwort zusammengefasst, sobald sie fertig ist
 
@@ -131,8 +131,8 @@ Das Panel öffnet sich automatisch, wenn:
 
 Bei ausstehenden Änderungsvorschauen bietet das Panel zwei Schaltflächen:
 
-- **Genehmigen** — bestätigt die Änderung und lässt Plaid sie anwenden
-- **Ablehnen** — verwirft die Änderung. Plaid bestätigt die Ablehnung und setzt die Konversation fort.
+- **Genehmigen**: bestätigt die Änderung und lässt Plaid sie anwenden
+- **Ablehnen**: verwirft die Änderung. Plaid bestätigt die Ablehnung und setzt die Konversation fort.
 
 Nichts, was KANAP-Daten verändert, wird stillschweigend angewendet. Die Vorschau ist die Kontrollinstanz.
 

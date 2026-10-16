@@ -1,3 +1,4 @@
+import type { CsvLanguage } from '../common/csv-sheet';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager } from 'typeorm';
@@ -153,6 +154,8 @@ export class PortfolioRequestsCsvService {
   async export(opts: {
     manager: EntityManager;
     tenantId: string;
+    /** The screen language: separator, days, decimal mark and yes or no (`csv-sheet`). */
+    language: CsvLanguage;
     scope?: 'template' | 'data';
     fields?: string[];
     preset?: string;
@@ -185,6 +188,7 @@ export class PortfolioRequestsCsvService {
       scope,
       fields,
       preset,
+      language: opts.language,
     });
   }
 

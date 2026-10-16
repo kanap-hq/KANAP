@@ -224,6 +224,74 @@ export interface ScheduledProject {
 
 export type RoadmapReservationReason = 'not_recalculated' | 'external_blocker';
 
+/**
+ * Every sentence the roadmap writes, as a code. The response carries each English text (kept for
+ * API and AI readers) next to its code and parameters, so a client writes it in the reader's
+ * language. Dates are `YYYY-MM-DD`, day amounts are numbers rounded to two decimals.
+ */
+export type RoadmapTextCode =
+  // Details of an unschedulable project.
+  | 'missing_contributor_capacity_for'
+  | 'blocker_on_hold'
+  | 'blocker_fixed_plan_expired'
+  | 'blocker_cannot_be_scheduled'
+  | 'missing_blocker_date_for'
+  | 'no_free_slot_for'
+  | 'no_allocable_capacity_for'
+  | 'collaborative_burn_below_threshold'
+  | 'collaborative_burn_stalled_for'
+  | 'independent_burn_below_threshold'
+  | 'no_capacity_remained_for'
+  | 'capacity_prevented_scheduling'
+  | 'waiting_on_blockers'
+  | 'earliest_start_beyond_horizon'
+  | 'never_ready_within_horizon'
+  | 'remaining_after_horizon'
+  | 'no_allocable_week'
+  | 'reason'
+  // Parts of a list.
+  | 'contributor_capacity'
+  | 'contributor_remaining_load'
+  // Why a project did not start earlier.
+  | 'waiting_for'
+  | 'waiting_for_until'
+  | 'blocker_is_on_hold'
+  | 'blocker_has_expired_fixed_plan'
+  | 'blocker_is_unschedulable'
+  // A constraint the schedule could not honour.
+  | 'conflict_pin_start_unsatisfied'
+  | 'conflict_pin_start_normalized'
+  | 'conflict_pin_start_slipped'
+  | 'conflict_pin_window_unsatisfied'
+  | 'conflict_pin_window_missed'
+  | 'conflict_not_before_violated'
+  // Final reason and summary of an explanation, scenario warning.
+  | 'final_capacity'
+  | 'final_blockers'
+  | 'final_started'
+  | 'summary_unschedulable'
+  | 'summary_historical'
+  | 'summary_constraint'
+  | 'summary_constraint_conflict'
+  | 'summary_capacity'
+  | 'summary_blockers'
+  | 'summary_schedulable'
+  | 'warning_constraint_conflict';
+
+export type RoadmapTextParam =
+  | string
+  | number
+  | null
+  | string[]
+  | ScheduleConstraint
+  | RoadmapText
+  | RoadmapText[];
+
+export interface RoadmapText {
+  code: RoadmapTextCode;
+  params: { [name: string]: RoadmapTextParam };
+}
+
 export interface RoadmapReservation {
   projectId: string;
   projectName: string;
@@ -260,6 +328,7 @@ export interface UnschedulableProject {
     | 'insufficient_capacity'
     | 'missing_contributor_capacity';
   details?: string;
+  detailsText?: RoadmapText;
 }
 
 export type ScheduleConstraint =
@@ -333,6 +402,7 @@ export interface ExplanationReasonEntry {
     | 'unfinished_within_horizon'
     | 'insufficient_capacity';
   label: string;
+  labelText: RoadmapText;
   projectId: string | null;
   scenarioProjectId: string | null;
   fromWeek: string | null;
@@ -351,6 +421,7 @@ export interface ExplanationContributorEntry {
 export interface ProjectExplanation {
   itemRef: RoadmapItemRef;
   summary: string;
+  summaryText: RoadmapText;
   classification: 'scheduled' | 'reservation' | 'unschedulable';
   schedulingMode: ProjectSchedulingMode;
   earliestEligibleWeek: string | null;
@@ -369,6 +440,7 @@ export interface ProjectExplanation {
   blockerReasons: ExplanationReasonEntry[];
   limitingContributors: ExplanationContributorEntry[];
   finalReason: string | null;
+  finalReasonText: RoadmapText | null;
 }
 
 export interface ScenarioWarning {
@@ -382,6 +454,7 @@ export interface ScenarioWarning {
     | 'apply_skips_scenario_projects';
   itemRef: RoadmapItemRef | null;
   message: string;
+  messageText: RoadmapText;
 }
 
 export interface RoadmapImpactSummary {

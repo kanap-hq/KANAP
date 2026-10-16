@@ -25,9 +25,9 @@ Navigieren Sie zu **Stammdaten > Abteilungen**, um Ihre Abteilungsliste zu sehen
 Das Abteilungs-Grid gibt Ihnen einen Überblick über alle Abteilungen mit ihrer Mitarbeiterzahl für ein bestimmtes Jahr.
 
 **Standardspalten**:
-- **Name**: Abteilungsname -- zum Öffnen des Arbeitsbereichs Übersichts-Tab anklicken
-- **Unternehmen**: Übergeordnetes Unternehmen -- zum Öffnen des Arbeitsbereichs Übersichts-Tab anklicken
-- **Mitarbeiterzahl (Jahr)**: Mitarbeiterzahl für das ausgewählte Jahr -- zum direkten Wechsel zum Details-Tab anklicken
+- **Name**: Abteilungsname. Zum Öffnen des Arbeitsbereichs Übersichts-Tab anklicken
+- **Unternehmen**: Übergeordnetes Unternehmen. Zum Öffnen des Arbeitsbereichs Übersichts-Tab anklicken
+- **Mitarbeiterzahl (Jahr)**: Mitarbeiterzahl für das ausgewählte Jahr. Zum direkten Wechsel zum Details-Tab anklicken
 
 **Zusätzliche Spalten** (über Spaltenauswahl):
 - **Status**: Aktiviert oder Deaktiviert
@@ -45,7 +45,7 @@ Das Abteilungs-Grid gibt Ihnen einen Überblick über alle Abteilungen mit ihrer
 - **Neu**: Neue Abteilung erstellen (erfordert `departments:manager`)
 - **CSV importieren**: Massenimport von Abteilungen (erfordert `departments:admin`)
 - **CSV exportieren**: Als CSV exportieren (erfordert `departments:admin`)
-- **Ausgewählte löschen**: Ausgewählte Abteilungen entfernen (erfordert `departments:admin`)
+- **Ausgewählte löschen**: Ausgewählte Abteilungen entfernen (erfordert `departments:admin`). Eine Abteilung, die in den Zuordnungen von Budgetzeilen verwendet wird, kann nicht gelöscht werden: Deaktivieren Sie sie stattdessen. Vor dem Löschen nennt die Bestätigung die behaltenen Abteilungen mit dem Grund
 
 ---
 
@@ -56,7 +56,7 @@ Klicken Sie auf eine beliebige Zeile, um den Arbeitsbereich zu öffnen. Er hat z
 - **Kopfzeile**: der Name der Abteilung. Klicken Sie darauf, um die Abteilung umzubenennen. **Zurück** / **Weiter** wechseln zwischen Abteilungen in der Reihenfolge und mit den Filtern der Liste, ohne zur Liste zurückzukehren, und die Schließen-Schaltfläche führt zur Liste zurück
 - **Bereich Eigenschaften** rechts: **Unternehmen** und **Lebenszyklus**
 
-**Automatisches Speichern**: Jede Änderung wird von selbst gespeichert. Es gibt keine Schaltfläche zum Speichern. Name und Beschreibung werden gespeichert, wenn Sie das Feld verlassen; Unternehmen und Lebenszyklus werden gespeichert, sobald Sie sie ändern. Sie können weiterarbeiten, während eine Änderung gespeichert wird. Wird eine Änderung abgelehnt, erscheint der Grund unter dem Feld, das sie verursacht hat, außer beim Namen, dessen Ablehnung oben auf der Seite angezeigt wird.
+**Automatisches Speichern**: Jede Änderung wird von selbst gespeichert. Es gibt keine Schaltfläche zum Speichern. Name und Beschreibung werden gespeichert, wenn Sie das Feld verlassen; Unternehmen und Lebenszyklus werden gespeichert, sobald Sie sie ändern. Sie können weiterarbeiten, während eine Änderung gespeichert wird. Wird eine Änderung abgelehnt, erscheint der Grund unter dem Feld, das sie verursacht hat.
 
 ### Übersicht
 
@@ -103,7 +103,7 @@ Die Spalten:
 | `name` | Pflicht. Der Name der Abteilung |
 | `description` | Freier Text |
 | `status` | `enabled` oder `disabled` |
-| `disabled_at` | Das Ende der Gültigkeit: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit |
+| `disabled_at` | Das Ende der Gültigkeit: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Der Export schreibt nur das Datum. Erneut importiert, behält dieses Datum das gespeicherte Gültigkeitsende |
 
 **Import**:
 
@@ -126,6 +126,6 @@ Die Spalten:
 
 - **Organisationsstruktur abgleichen**: Spiegeln Sie die Abteilungshierarchie Ihres HR-Systems für Konsistenz wider.
 - **Mitarbeiterzahl jährlich aktualisieren**: Setzen Sie sich eine Erinnerung, die Abteilungskennzahlen während der Budgetplanung zu aktualisieren.
-- **Für Zuordnungen verwenden**: Die Abteilungs-Mitarbeiterzahl treibt Kostenzuordnungsberechnungen -- halten Sie sie aktuell.
+- **Für Zuordnungen verwenden**: Die Abteilungs-Mitarbeiterzahl treibt Kostenzuordnungsberechnungen. Halten Sie sie aktuell.
 - **Deaktivieren statt löschen**: Wenn Abteilungen umstrukturiert werden, deaktivieren Sie alte statt sie zu löschen, um historische Daten zu bewahren.
 - **Deep-Links nutzen**: Klicken Sie direkt auf die Mitarbeiterzahl in der Liste, um zum Details-Tab zu springen und Kennzahlen ohne zusätzlichen Klick zu bearbeiten.

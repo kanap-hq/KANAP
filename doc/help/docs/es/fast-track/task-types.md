@@ -246,6 +246,8 @@ Todos los tipos de elementos de trabajo son **configurables** en **Portafolio > 
 - **Deshabilitar** tipos existentes que no necesite
 - **Renombrar** tipos para ajustarse a su terminología
 
+Los cuatro tipos predeterminados (Tarea, Bug, Problema, Incidente) se muestran en el idioma de cada usuario mientras conserve sus nombres. Un tipo renombrado muestra su nuevo nombre en todos los idiomas.
+
 La lista de esta guía es un punto de partida. Adáptela a cómo funciona realmente su departamento IT.
 
 ---

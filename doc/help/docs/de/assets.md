@@ -1,6 +1,6 @@
 # Assets
 
-Assets dokumentieren Ihr Infrastrukturinventar -- physische Server, virtuelle Maschinen, Container, Cloud-Instanzen und Netzwerkgeräte. Verknüpfen Sie Assets mit Standorten, Anwendungen, Verbindungen, Verträgen, Projekten und Aufgaben, um ein vollständiges Bild Ihrer IT-Infrastruktur aufzubauen.
+Assets dokumentieren Ihr Infrastrukturinventar: physische Server, virtuelle Maschinen, Container, Cloud-Instanzen und Netzwerkgeräte. Verknüpfen Sie Assets mit Standorten, Anwendungen, Verbindungen, Verträgen, Projekten und Aufgaben, um ein vollständiges Bild Ihrer IT-Infrastruktur aufzubauen.
 
 ## Erste Schritte
 
@@ -36,7 +36,7 @@ Die Asset-Liste bietet Ihnen eine filter- und sortierbare Übersicht über jedes
 | **Name** | Asset-Name (klicken, um den Arbeitsbereich zu öffnen) |
 | **Asset-Typ** | Der Typ des Assets (z. B. Virtuelle Maschine, Physischer Server) |
 | **Cluster** | Cluster-Mitgliedschaft oder ein „Cluster"-Badge, wenn dieses Asset selbst ein Cluster ist |
-| **Umgebung** | Prod, Pre-prod, QA, Test, Dev, Sandbox -- mit einem farbigen Punkt |
+| **Umgebung** | Prod, Pre-prod, QA, Test, Dev, Sandbox, mit einem farbigen Punkt |
 | **Standort** | Wo das Asset gehostet wird |
 | **Hosting** | Hosting-Typ (vom Standort abgeleitet) |
 | **OS** | Betriebssystem |
@@ -73,7 +73,7 @@ Die meisten Spalten unterstützen Kontrollkästchen-Set-Filter für die schnelle
 **Aktionen**:
 - **Asset hinzufügen**: Ein neues Asset erstellen (`infrastructure:member`)
 - **CSV importieren** / **CSV exportieren**: Massenoperationen (`infrastructure:admin`)
-- **Asset löschen** (ausgewählte Zeilen): Ausgewählte Assets entfernen (`infrastructure:admin`)
+- **Asset löschen** (ausgewählte Zeilen): Ausgewählte Assets entfernen (`infrastructure:admin`). Ein Asset, das noch Anwendungen zugeordnet oder mit Verbindungen verknüpft ist, kann nicht gelöscht werden: Entfernen Sie es zuerst daraus. Vor dem Löschen nennt die Bestätigung die behaltenen Assets mit dem Grund
 
 ---
 
@@ -92,7 +92,7 @@ Cluster-Mitglieder werden im Reiter **Technisch** des Cluster-Arbeitsbereichs ü
 
 ## Der Assets-Arbeitsbereich
 
-Klicken Sie auf eine Zeile, um den Arbeitsbereich zu öffnen. Der Arbeitsbereich hat eine **Kopfzeile** mit schnellen Metadaten, eine **Eigenschaftsleiste** auf der rechten Seite (die Identitätskarte des Assets -- immer sichtbar) und einen **Inhaltsbereich** in der Mitte, der mit jedem Reiter wechselt.
+Klicken Sie auf eine Zeile, um den Arbeitsbereich zu öffnen. Der Arbeitsbereich hat eine **Kopfzeile** mit schnellen Metadaten, eine **Eigenschaftsleiste** auf der rechten Seite (die Identitätskarte des Assets, immer sichtbar) und einen **Inhaltsbereich** in der Mitte, der mit jedem Reiter wechselt.
 
 ### Kopfzeile
 
@@ -101,7 +101,7 @@ Die Kopfzeile zeigt:
 - **Asset-Referenz** (z. B. `AST-123`): kopierbare Kennung
 - **Lebenszyklus**-Chip (auch über die Eigenschaftsleiste bearbeitbar)
 - **Link senden**: Einen teilbaren Link zu diesem Arbeitsbereich kopieren
-- **Löschen** (`infrastructure:admin`)
+- **Löschen** (`infrastructure:admin`). Bei einem Asset, das noch verwendet wird, erscheint der Grund vor jeder Bestätigung
 - **Vorherige / Nächste** (z. B. „3 von 47"): Durch die gefilterte Liste navigieren, ohne dorthin zurückzukehren
 
 ### Eigenschaftsleiste (rechtes Panel)
@@ -112,7 +112,7 @@ Die Leiste zeigt die Identitätskarte des Assets in jedem Reiter. Bearbeitungen 
 - **Asset-Typ** (erforderlich)
 - **Standort** (erforderlich)
 - **Unter-Standort** (wenn der Standort definierte Unter-Standorte hat)
-- **Hosting-Typ**, **Cloud-Anbieter / Betreiber-Unternehmen**, **Land**, **Stadt** -- schreibgeschützt, vom Standort abgeleitet
+- **Hosting-Typ**, **Cloud-Anbieter / Betreiber-Unternehmen**, **Land**, **Stadt**: schreibgeschützt, vom Standort abgeleitet
 
 **Status**:
 - **Umgebung**: Prod, Pre-prod, QA, Test, Dev, Sandbox
@@ -132,7 +132,7 @@ Der Reiter Übersicht ist die Startseite des Assets.
 
 | Spalte | Was sie zeigt |
 |--------|---------------|
-| **Anwendung** | Anwendungsname (anklickbar -- springt zu den Bereitstellungen der Anwendung) |
+| **Anwendung** | Anwendungsname (anklickbar: springt zu den Bereitstellungen der Anwendung) |
 | **Umgebung** | Die Bereitstellungsumgebung, zu der die Zuweisung gehört |
 | **Rolle** | Server-Rolle (Web, Datenbank, Anwendung usw.) |
 | **Seit** | Datum, an dem der Server zugewiesen wurde |
@@ -142,7 +142,7 @@ Klicken Sie auf **Zuweisung hinzufügen**, um dieses Asset einer Anwendungs-Bere
 
 Wenn dieses Asset ein Cluster ist, ersetzt ein Inline-Hinweis die Zuweisungstabelle und fordert Sie auf, stattdessen Member-Hosts zuzuweisen.
 
-**Verbindungen**: Eine schreibgeschützte Ansicht aller Verbindungen, die dieses Asset betreffen. Jede Zeile zeigt die Verbindungs-ID und den Namen (anklickbar -- öffnet den Verbindungs-Arbeitsbereich), die Topologie (Server zu Server oder Multi-Server), Protokolle, Quell- und Zielendpunkt-Bezeichnungen sowie den Lebenszyklus-Status. Um eine Verbindung zu erstellen oder zu bearbeiten, navigieren Sie zu **IT-Landschaft > Verbindungen**.
+**Verbindungen**: Eine schreibgeschützte Ansicht aller Verbindungen, die dieses Asset betreffen. Jede Zeile zeigt die Verbindungs-ID und den Namen (anklickbar: öffnet den Verbindungs-Arbeitsbereich), die Topologie (Server zu Server oder Multi-Server), Protokolle, Quell- und Zielendpunkt-Bezeichnungen sowie den Lebenszyklus-Status. Um eine Verbindung zu erstellen oder zu bearbeiten, navigieren Sie zu **IT-Landschaft > Verbindungen**.
 
 **Wissensdatenbank**: Verknüpfte Wissensartikel für dieses Asset. Mit `knowledge:member` können Sie neue Artikel direkt aus diesem Bereich erstellen.
 
@@ -162,7 +162,7 @@ Der Reiter Technisch organisiert Cluster, Netzwerkidentität und IP-Konfiguratio
 - **Domäne**: Die Active Directory- oder DNS-Domäne, zu der das Asset gehört. Wählen Sie aus den in **IT-Landschaft > Einstellungen** konfigurierten Domänen. Systemoptionen umfassen „Workgroup" (eigenständig) und „N/A" (nicht zutreffend).
 - **FQDN**: Fully Qualified Domain Name, automatisch aus Hostname und DNS-Suffix der Domäne berechnet. Schreibgeschützt.
 - **Aliase**: Zusätzliche DNS-Namen oder Aliase für dieses Asset. Tippen und Enter drücken zum Hinzufügen.
-- **Betriebssystem**: OS-Typ und -Version (z. B. Windows Server 2022, Ubuntu 24.04 LTS). Für Cluster deaktiviert -- OS wird pro Mitglied definiert. Bei Auswahl werden Standard- und erweiterte Support-Endtermine darunter angezeigt.
+- **Betriebssystem**: OS-Typ und -Version (z. B. Windows Server 2022, Ubuntu 24.04 LTS). Für Cluster deaktiviert: OS wird pro Mitglied definiert. Bei Auswahl werden Standard- und erweiterte Support-Endtermine darunter angezeigt.
 
 **IP-Adressen**:
 
@@ -175,7 +175,7 @@ Assets unterstützen mehrere IP-Adressen, jede mit ihrer eigenen Netzwerkkonfigu
 - **Netzwerkzone**: Automatisch aus dem ausgewählten Subnetz abgeleitet (schreibgeschützt)
 - **VLAN**: Automatisch aus dem ausgewählten Subnetz abgeleitet (schreibgeschützt)
 
-So können Sie mehrere Netzwerkschnittstellen pro Asset dokumentieren -- zum Beispiel einen physischen Server mit sowohl einer Host-IP als auch einer IPMI-Management-Adresse in verschiedenen Subnetzen.
+So können Sie mehrere Netzwerkschnittstellen pro Asset dokumentieren, zum Beispiel einen physischen Server mit sowohl einer Host-IP als auch einer IPMI-Management-Adresse in verschiedenen Subnetzen.
 
 ---
 
@@ -225,9 +225,9 @@ Der Reiter Verknüpfungen verbindet dieses Asset mit anderen Datensätzen in KAN
 - **Verträge**: Verknüpfung mit Vertragsdatensätzen
 - **Projekte**: Verknüpfung mit Portfolio-Projekten, die mit diesem Asset zusammenhängen
 
-**Aufgaben**: Aufgaben, die mit diesem Asset verknüpft sind. Hier schreibgeschützt -- Aufgaben gewinnen oder verlieren diese Verknüpfung, wenn Sie das Feld **Asset** auf einer Aufgabe in der Aufgabenseite festlegen.
+**Aufgaben**: Aufgaben, die mit diesem Asset verknüpft sind. Hier schreibgeschützt. Aufgaben gewinnen oder verlieren diese Verknüpfung, wenn Sie das Feld **Asset** auf einer Aufgabe in der Aufgabenseite festlegen.
 
-**Relevante Websites**: URLs mit optionalen Namen hinzufügen -- nützlich für Lieferantenportale, Monitoring-Dashboards oder Dokumentationslinks. **URL hinzufügen** öffnet einen Dialog; vorhandene Einträge können bearbeitet oder gelöscht werden.
+**Relevante Websites**: URLs mit optionalen Namen hinzufügen, nützlich für Lieferantenportale, Monitoring-Dashboards oder Dokumentationslinks. **URL hinzufügen** öffnet einen Dialog; vorhandene Einträge können bearbeitet oder gelöscht werden.
 
 **Anhänge**: Dateien per Drag-and-Drop ziehen oder auf **Dateien auswählen** klicken, um sie hochzuladen. Klicken Sie auf einen Anhang-Chip, um ihn herunterzuladen. Löschen ist für Manager verfügbar.
 
@@ -249,20 +249,20 @@ Aus der Asset-Liste:
 
 | Option | Beschreibung |
 |--------|-------------|
-| **Vollständiger Export** | Alle exportierbaren Felder -- für Berichterstellung und vollständige Datenextraktion verwenden |
-| **Datenanreicherung** | Alle importierbaren Felder -- entspricht dem Importvorlagenformat, ideal für Round-Trip-Bearbeitung (Export, Änderung, erneuter Import) |
+| **Vollständiger Export** | Alle exportierbaren Felder: für Berichterstellung und vollständige Datenextraktion verwenden |
+| **Datenanreicherung** | Alle importierbaren Felder: entspricht dem Importvorlagenformat, ideal für Round-Trip-Bearbeitung (Export, Änderung, erneuter Import) |
 | **Benutzerdefinierte Auswahl** | Bestimmte Felder auswählen, die in Ihren Export aufgenommen werden sollen |
 
-**Vorlage herunterladen** (aus Import-Dialog): Lädt eine leere CSV mit allen importierbaren Feld-Spaltenköpfen herunter -- verwenden Sie dies, um Importdateien mit der korrekten Struktur vorzubereiten.
+**Vorlage herunterladen** (aus Import-Dialog): Lädt eine leere CSV mit allen importierbaren Feld-Spaltenköpfen herunter. Verwenden Sie dies, um Importdateien mit der korrekten Struktur vorzubereiten.
 
 ### Import-Workflow
 
-1. **Datei vorbereiten**: Verwenden Sie UTF-8-Kodierung mit Semikolon (`;`) als Trennzeichen. Eine von Excel als einfache CSV gespeicherte Datei (Windows-1252) wird ebenfalls importiert. Laden Sie eine Vorlage herunter, um korrekte Spaltenköpfe sicherzustellen.
+1. **Datei vorbereiten**: Speichern Sie sie als UTF-8. Kommas und Semikolons funktionieren beide, ebenso eine von Excel als einfache CSV gespeicherte Datei (Windows-1252). Laden Sie eine Vorlage herunter, um korrekte Spaltenköpfe sicherzustellen. Trennzeichen, Beträge, Datumsangaben und Ja oder Nein jeder Sprache stehen unter [CSV-Dateien](csv-files.md).
 
 2. **Importeinstellungen wählen**:
    - **Modus**:
-     - `Anreichern` (Standard): Leere Zellen erhalten vorhandene Werte -- nur aktualisieren, was Sie angeben
-     - `Ersetzen`: Leere Zellen löschen vorhandene Werte -- vollständiger Ersatz aller Felder
+     - `Anreichern` (Standard): Leere Zellen erhalten vorhandene Werte: nur aktualisieren, was Sie angeben
+     - `Ersetzen`: Leere Zellen löschen vorhandene Werte: vollständiger Ersatz aller Felder
    - **Operation**:
      - `Upsert` (Standard): Neue Assets erstellen oder vorhandene aktualisieren
      - `Nur aktualisieren`: Nur vorhandene Assets ändern, neue überspringen
@@ -284,7 +284,7 @@ Aus der Asset-Liste:
 | `kind` | Asset-Typ | Ja | Akzeptiert Code oder Bezeichnung (z. B. `vm` oder `Virtual Machine`) |
 | `environment` | Umgebung | Ja | `prod`, `pre_prod`, `qa`, `test`, `dev`, `sandbox` |
 | `status` | Lebenszyklus-Status | Nein | Akzeptiert Code oder Bezeichnung (z. B. `active` oder `Active`) |
-| `is_cluster` | Ist dies ein Cluster | Nein | `true` oder `false` |
+| `is_cluster` | Ist dies ein Cluster | Nein | `ja` oder `nein` |
 | `hostname` | Netzwerk-Hostname | Nein | |
 | `domain` | DNS-Domäne | Nein | Akzeptiert Code oder Bezeichnung aus den Einstellungen |
 | `aliases` | DNS-Aliase | Nein | Komma-getrennte Liste |
@@ -343,7 +343,7 @@ Einige Felder werden berechnet und können nicht importiert werden:
 **Fehler „Datei ist nicht richtig formatiert"**: Dies weist normalerweise auf ein Kodierungsproblem hin. Stellen Sie sicher, dass Ihre CSV als **UTF-8** gespeichert ist:
 
 - **In LibreOffice**: Wählen Sie beim Öffnen einer CSV `UTF-8` im Zeichensatz-Dropdown (nicht „Japanese (Macintosh)" oder andere Kodierungen). Beim Speichern aktivieren Sie „Filtereinstellungen bearbeiten" und wählen Sie UTF-8.
-- **In Excel**: Speichern unter > CSV UTF-8 (Komma-getrennt), dann in einem Texteditor öffnen, um Kommas in Semikolons zu ändern.
+- **In Excel**: Speichern unter > CSV UTF-8 (Komma-getrennt).
 - **Allgemeiner Tipp**: Wenn Sie verstümmelte Zeichen am Anfang Ihrer Datei sehen, ist die Kodierung falsch.
 
 ### Beispiel-CSV

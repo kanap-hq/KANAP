@@ -73,7 +73,7 @@ La mayoría de columnas admiten filtros de conjunto de casillas para un filtrado
 **Acciones**:
 - **Añadir activo**: Crear un nuevo activo (`infrastructure:member`)
 - **Importar CSV** / **Exportar CSV**: Operaciones masivas (`infrastructure:admin`)
-- **Eliminar activo** (filas seleccionadas): Eliminar los activos seleccionados (`infrastructure:admin`)
+- **Eliminar activo** (filas seleccionadas): Eliminar los activos seleccionados (`infrastructure:admin`). Un activo todavía asignado a aplicaciones o vinculado a conexiones no se puede eliminar: retírelo primero de ellas. Antes de eliminar nada, la confirmación enumera los activos que se conservan, con el motivo
 
 ---
 
@@ -101,7 +101,7 @@ El encabezado muestra:
 - **Referencia del activo** (p. ej., `AST-123`): identificador copiable
 - Chip de **Ciclo de vida** (también editable desde el panel de propiedades)
 - **Enviar enlace**: copiar un enlace compartible a este espacio de trabajo
-- **Eliminar** (`infrastructure:admin`)
+- **Eliminar** (`infrastructure:admin`). Para un activo todavía en uso, el motivo aparece antes de cualquier confirmación
 - **Anterior / Siguiente** (p. ej., "3 de 47"): navegar por la lista filtrada sin volver a ella
 
 ### Panel de propiedades (panel derecho)
@@ -257,7 +257,7 @@ Desde la lista de Activos:
 
 ### Flujo de trabajo de importación
 
-1. **Prepare su archivo**: Use codificación UTF-8 con separadores de punto y coma (`;`). Un archivo que Excel guardó como CSV simple (Windows-1252) también se importa. Descargue una plantilla para asegurar encabezados correctos.
+1. **Prepare su archivo**: guárdelo en UTF-8. Las comas y los puntos y coma funcionan, y también un archivo que Excel guardó como CSV simple (Windows-1252). Descargue una plantilla para asegurar los encabezados correctos. El separador, los importes, las fechas y los sí o no de cada idioma están en [Archivos CSV](csv-files.md).
 
 2. **Elija la configuración de importación**:
    - **Modo**:
@@ -284,7 +284,7 @@ Desde la lista de Activos:
 | `kind` | Tipo de activo | Sí | Acepta código o etiqueta (p. ej., `vm` o `Virtual Machine`) |
 | `environment` | Entorno | Sí | `prod`, `pre_prod`, `qa`, `test`, `dev`, `sandbox` |
 | `status` | Estado del ciclo de vida | No | Acepta código o etiqueta (p. ej., `active` o `Active`) |
-| `is_cluster` | Si es un clúster | No | `true` o `false` |
+| `is_cluster` | Si es un clúster | No | `sí` o `no` |
 | `hostname` | Nombre de host de red | No | |
 | `domain` | Dominio DNS | No | Acepta código o etiqueta de Configuración |
 | `aliases` | Alias DNS | No | Lista separada por comas |
@@ -343,7 +343,7 @@ Algunos campos se calculan y no pueden importarse:
 **Error "El archivo no tiene el formato correcto"**: Esto generalmente indica un problema de codificación. Asegúrese de que su CSV esté guardado como **UTF-8**:
 
 - **En LibreOffice**: Al abrir un CSV, seleccione `UTF-8` en el desplegable de Juego de caracteres (no "Japanese (Macintosh)" u otras codificaciones). Al guardar, marque "Editar configuración de filtro" y elija UTF-8.
-- **En Excel**: Guardar como > CSV UTF-8 (delimitado por comas), luego abra en un editor de texto para cambiar comas por puntos y coma.
+- **En Excel**: Guardar como > CSV UTF-8 (delimitado por comas).
 - **Consejo general**: Si ve caracteres ilegibles al inicio de su archivo, la codificación es incorrecta.
 
 ### Ejemplo CSV

@@ -1,6 +1,6 @@
 # My Dashboard
 
-The Dashboard is your personal landing page in KANAP. It gives you a quick overview of your tasks, projects, time logged, and recent activity — all in one place. You can customize which tiles appear, and the dashboard hides any tile you do not have permission to see.
+The Dashboard is your personal landing page in KANAP. It gives you a quick overview of your tasks, projects, time logged, and recent activity, all in one place. You can customize which tiles appear, and the dashboard hides any tile you do not have permission to see.
 
 ## Where to find it
 
@@ -12,19 +12,19 @@ The Dashboard is your personal landing page in KANAP. It gives you a quick overv
 
 The header strip at the top of the dashboard provides shortcut buttons for common everyday work. Each button is shown only if you have the corresponding permission.
 
-- **Create Task** — opens the standalone task creation flow. Requires `tasks:member` or higher.
-- **Log Time** — opens the **Quick Log Time** dialog (see below). Requires `portfolio_projects:member` or `tasks:member`.
-- **New Request** — opens the request creation flow. Requires `portfolio_requests:member` or higher.
-- **New Application** — opens the application creation flow. Requires `applications:member` or higher.
-- **New Asset** — opens the asset creation flow. Requires `infrastructure:member` or higher.
-- **New Document** (split button) — creates a blank Knowledge document, or opens the template picker to start from a published template. Requires `knowledge:member` or higher.
-- **Settings** (gear icon) — opens the dashboard settings dialog to choose which tiles to show.
+- **Create Task**: opens the standalone task creation flow. Requires `tasks:member` or higher.
+- **Log Time**: opens the **Quick Log Time** dialog (see below). Requires `portfolio_projects:member` or `tasks:member`.
+- **New Request**: opens the request creation flow. Requires `portfolio_requests:member` or higher.
+- **New Application**: opens the application creation flow. Requires `applications:member` or higher.
+- **New Asset**: opens the asset creation flow. Requires `infrastructure:member` or higher.
+- **New Document** (split button): creates a blank Knowledge document, or opens the template picker to start from a published template. Requires `knowledge:member` or higher.
+- **Settings** (gear icon): opens the dashboard settings dialog to choose which tiles to show.
 
 ### Quick Log Time
 
 The **Log Time** action opens a focused dialog so you can record hours without leaving the dashboard.
 
-- Choose the target — **Project** or **Task**.
+- Choose the target: **Project** or **Task**.
   - Project entries log time directly against a portfolio project.
   - Task entries log time against one of your active tasks (project tasks or standalone tasks). OPEX, CAPEX, and contract tasks are intentionally excluded from the picker.
 - Pick the project or task from the dropdown.
@@ -46,9 +46,9 @@ The dashboard displays a grid of tiles, each showing a different aspect of your 
 
 Shows your active tasks grouped by urgency:
 
-- **Overdue** — tasks past their due date (highlighted in red)
-- **Due This Week** — tasks due within the next 7 days
-- **Later** — everything else
+- **Overdue**: tasks past their due date (highlighted in red)
+- **Due This Week**: tasks due within the next 7 days
+- **Later**: everything else
 
 Each task shows its title, the linked project (if any), the due date, and a priority badge when the priority is above normal. Click a task to open its workspace.
 
@@ -109,10 +109,10 @@ Displays up to 5 items.
 Displays a summary of time you have logged over a recent period:
 
 - **Total hours** logged (prominently displayed)
-- **Breakdown by category** — IT, Business, and Other Tasks (non-project)
-- **Top projects** — a small bar chart of the projects you spent the most time on
+- **Breakdown by category**: IT, Business, and Other Tasks (non-project)
+- **Top projects**: a small bar chart of the projects you spent the most time on
 
-**Settings**: time period in days (7–30).
+**Settings**: time period in days (7 to 30).
 
 **Requires**: `portfolio_projects:reader`
 
@@ -136,8 +136,8 @@ Displays up to 5 items.
 
 Shows two Knowledge-focused sections in the same tile:
 
-- **To Review** — documents where you are the active reviewer or approver, including how long ago the review was requested and by whom. The badge color indicates whether you are at the review or approval stage.
-- **Last 5 Accessed** — the last five Knowledge documents you opened in this browser for the current tenant.
+- **To Review**: documents where you are the active reviewer or approver, including how long ago the review was requested and by whom. The badge color indicates whether you are at the review or approval stage.
+- **Last 5 Accessed**: the last five Knowledge documents you opened in this browser for the current tenant.
 
 Restricted libraries respect their access rules: you only see review items and recent documents from libraries you can read. If you have lost access to a previously viewed document, it stops appearing here.
 
@@ -149,8 +149,8 @@ Restricted libraries respect their access rules: you only see review items and r
 
 Shows where the classification campaign stands for the applications you can see (retired applications excluded):
 
-- **Progress** — a bar and three counters: reviewed, to review (the classification changed since the last review or was never reviewed), and to complete (a classification field is still empty). Each counter opens the applications list filtered on that state.
-- **Attention points** — applications at the most critical business level without a recovery test in the last twelve months, applications at the most critical level without a recovery wave, and applications holding the most confidential data with the lowest cyber criticality. Only points with at least one application are listed; each one opens the matching filtered list. When nothing needs action, the tile says so.
+- **Progress**: a bar and three counters for reviewed, to review (the classification changed since the last review or was never reviewed), and to complete (a classification field is still empty). Each counter opens the applications list filtered on that state.
+- **Attention points**: applications at the most critical business level without a recovery test in the last twelve months, applications at the most critical level without a recovery wave, and applications holding the most confidential data with the lowest cyber criticality. Only points with at least one application are listed; each one opens the matching filtered list. When nothing needs action, the tile says so.
 
 The levels are the ones defined in the IT landscape settings; a deprecated level is never counted as the highest or lowest.
 
@@ -172,7 +172,7 @@ Shows recent project activity on projects where you are involved (changes, comme
 
 Shows recent project status transitions (from → to) across projects, so you can see which initiatives moved forward, paused, or closed during the last few days.
 
-**Settings**: days to look back (1–14).
+**Settings**: days to look back (1 to 14).
 
 **Requires**: `portfolio_projects:reader`
 
@@ -182,7 +182,7 @@ Shows recent project status transitions (from → to) across projects, so you ca
 
 Shows tasks that have not been updated for a long time. Each item shows the days-stale pill (warning, then error past twice the threshold) and the linked object, if any.
 
-**Settings**: scope (`my`, `team`, `all`) and threshold in days (30–365).
+**Settings**: scope (`my`, `team`, `all`) and threshold in days (30 to 365).
 
 **Requires**: `tasks:reader`
 
@@ -192,8 +192,8 @@ Click the **Settings** icon (gear) in the dashboard header to open the dashboard
 
 From here you can:
 
-- **Enable or disable tiles** — check or uncheck each tile to control what appears on your dashboard.
-- **Reset to Defaults** — restore the original tile selection.
+- **Enable or disable tiles**: check or uncheck each tile to control what appears on your dashboard.
+- **Reset to Defaults**: restore the original tile selection.
 
 Only tiles you have permission to view appear in the settings list. Changes are saved to your account and persist across sessions and devices.
 
@@ -202,6 +202,6 @@ If all tiles are disabled, the dashboard shows a message prompting you to enable
 ## Tips
 
 - **Start with the defaults**: the dashboard ships with a useful set of tiles already enabled. Try it for a few days before customizing.
-- **Use the quick actions**: creating a task, request, or document — or logging time — straight from the dashboard saves you navigating around.
+- **Use the quick actions**: creating a task, request, or document (or logging time) straight from the dashboard saves you navigating around.
 - **Check overdue tasks daily**: the My Tasks tile highlights overdue items in red so nothing slips through the cracks.
 - **Use Stale Tasks at team scope**: with `tasks:admin`, switch the Stale Tasks tile to `team` or `all` scope to find work nobody is updating across the organization.

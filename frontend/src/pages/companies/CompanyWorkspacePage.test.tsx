@@ -141,14 +141,27 @@ describe('CompanyWorkspacePage', () => {
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/companies/co-1', { name: 'Acme France SAS' }));
   });
 
-  it('shows a refused name above the page', async () => {
+  it('shows a refused name under the name', async () => {
     mocked.patch.mockRejectedValueOnce({ response: { data: { message: 'Name refused.' } } });
     renderAt('/master-data/companies/co-1/overview');
     fireEvent.click(await screen.findByText('Acme France'));
     const input = screen.getByDisplayValue('Acme France');
     fireEvent.change(input, { target: { value: 'Other' } });
     fireEvent.blur(input);
-    expect(await screen.findByRole('alert')).toHaveTextContent('Name refused.');
+    expect(await screen.findByText('Name refused.')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('says another company has the name, under the name, on a 409 duplicate', async () => {
+    mocked.patch.mockRejectedValueOnce({ response: { status: 409, data: { code: 'duplicate', message: 'Another company already has this name.' } } });
+    renderAt('/master-data/companies/co-1/overview');
+    fireEvent.click(await screen.findByText('Acme France'));
+    const input = screen.getByDisplayValue('Acme France');
+    fireEvent.change(input, { target: { value: 'acme germany' } });
+    fireEvent.blur(input);
+    expect(await screen.findByText('companies.messages.nameTaken')).toBeInTheDocument();
+    // The stored name stays.
+    expect(screen.getByText('Acme France')).toBeInTheDocument();
   });
 
   it('saves an address field on blur, and nothing when it is unchanged', async () => {
@@ -210,7 +223,7 @@ describe('CompanyWorkspacePage', () => {
   it('saves a currency change on change', async () => {
     renderAt('/master-data/companies/co-1/overview');
     await screen.findByText('Acme France');
-    await pickOption('companies.fields.baseCurrency', 'United States', 'United States Dollar (USD)');
+    await pickOption('companies.fields.baseCurrency', 'US Dollar', 'USD · US Dollar');
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/companies/co-1', { base_currency: 'USD' }));
   });
 
@@ -255,7 +268,7 @@ describe('CompanyWorkspacePage', () => {
     fireEvent.change(screen.getByLabelText('companies.fields.name'), { target: { value: 'Acme Germany' } });
     await pickOption('companies.fields.country', 'Germ', 'Germany (DE)');
     await waitFor(() => expect(screen.getByLabelText('companies.fields.chartOfAccounts')).toHaveValue('COA-DE · German chart'));
-    await pickOption('companies.fields.baseCurrency', 'Euro', 'Euro (EUR)');
+    await pickOption('companies.fields.baseCurrency', 'Euro', 'EUR · Euro');
     fireEvent.change(screen.getByLabelText('companies.fields.city'), { target: { value: 'Berlin' } });
     fireEvent.change(screen.getByLabelText('companies.fields.vatNumber'), { target: { value: 'DE123' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
@@ -278,12 +291,25 @@ describe('CompanyWorkspacePage', () => {
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/companies/co-new/overview?year=2026'));
   });
 
+  it('says another company has the name, under the name field, when a create is refused as a duplicate', async () => {
+    mocked.post.mockRejectedValueOnce({ response: { status: 409, data: { code: 'duplicate', message: 'Another company already has this name.' } } });
+    renderAt('/master-data/companies/new/overview');
+    fireEvent.change(screen.getByLabelText('companies.fields.name'), { target: { value: 'acme' } });
+    await pickOption('companies.fields.country', 'Fran', 'France (FR)');
+    await pickOption('companies.fields.baseCurrency', 'Euro', 'EUR · Euro');
+    fireEvent.change(screen.getByLabelText('companies.fields.city'), { target: { value: 'Paris' } });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    expect(await screen.findByText('companies.messages.nameTaken')).toBeInTheDocument();
+    expect(screen.getByLabelText('companies.fields.name')).toHaveAttribute('aria-invalid', 'true');
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
+
   it('shows a create refusal under the field the body names', async () => {
     mocked.post.mockRejectedValueOnce({ response: { data: { message: 'Name already used.', field: 'name' } } });
     renderAt('/master-data/companies/new/overview');
     fireEvent.change(screen.getByLabelText('companies.fields.name'), { target: { value: 'Acme' } });
     await pickOption('companies.fields.country', 'Fran', 'France (FR)');
-    await pickOption('companies.fields.baseCurrency', 'Euro', 'Euro (EUR)');
+    await pickOption('companies.fields.baseCurrency', 'Euro', 'EUR · Euro');
     fireEvent.change(screen.getByLabelText('companies.fields.city'), { target: { value: 'Paris' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('Name already used.')).toBeInTheDocument();

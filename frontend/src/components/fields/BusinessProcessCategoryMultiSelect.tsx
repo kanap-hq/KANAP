@@ -70,7 +70,7 @@ export default function BusinessProcessCategoryMultiSelect({
 
   const handleCreateCategory = async () => {
     const name = await dialogs.prompt({
-      title: 'New category name',
+      title: t('selects.newCategoryName'),
       required: true,
     });
     const trimmed = (name ?? '').trim();

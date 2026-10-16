@@ -116,7 +116,7 @@ describe('KanapDialog footer buttons', () => {
   it('renders Cancel and the main action as pills of one size', () => {
     renderDialog();
     expect(screen.getByRole('button', { name: 'buttons.cancel' })).toHaveClass('MuiButton-action');
-    expect(screen.getByRole('button', { name: 'Save' })).toHaveClass('MuiButton-action-primary');
+    expect(screen.getByRole('button', { name: 'buttons.save' })).toHaveClass('MuiButton-action-primary');
   });
 
   it('renders a destructive main action as the danger pill', () => {

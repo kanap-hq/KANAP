@@ -8,6 +8,7 @@ import { SpendAllocation } from './spend-allocation.entity';
 import { AuditService } from '../audit/audit.service';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
+import { checkIds, refusalDetails, refusalsFrom, type DeleteRefusal } from '../common/record-in-use';
 import { StorageService } from '../common/storage/storage.service';
 import { UserTimeAggregateService } from '../portfolio/services/user-time-aggregate.service';
 import {
@@ -16,6 +17,7 @@ import {
   currentTenantId,
   deleteBlobs,
   deleteItemDependents,
+  frozenAmountsRefusal,
   underItemSavepoint,
   unreferencedPaths,
 } from './item-delete-cleanup';
@@ -109,6 +111,22 @@ export class SpendItemsDeleteService extends BaseDeleteService<SpendItem> {
   }
 
   /**
+   * The check before a delete (`POST /spend-items/delete-check`): which of `ids` (lines of this
+   * nature) have amounts in a frozen budget column, the column and year named. Nothing is written.
+   */
+  async deleteCheck(ids: unknown[], opts?: { manager?: EntityManager }): Promise<{ refused: DeleteRefusal[] }> {
+    const manager = opts?.manager ?? this.repository.manager;
+    const tenantId = await currentTenantId(manager);
+    const wanted = checkIds(ids);
+    if (wanted.length === 0) return { refused: [] };
+    const rows: Array<{ id: string; product_name: string }> = await manager.query(
+      `SELECT id::text AS id, product_name FROM spend_items WHERE tenant_id = $1 AND nature = $2 AND id = ANY($3::uuid[])`,
+      [tenantId, this.nature, wanted],
+    );
+    return refusalsFrom(wanted, rows, (row) => row.product_name, (row) => frozenAmountsRefusal(manager, this.nature, tenantId, row.id));
+  }
+
+  /**
    * Bulk delete multiple items
    * Each item runs under its own savepoint: a failing item is undone and
    * reported, the others are deleted. Files go once an item's savepoint is
@@ -142,6 +160,7 @@ export class SpendItemsDeleteService extends BaseDeleteService<SpendItem> {
           id: itemId,
           name,
           reason: bulkDeleteFailureReason(error, this.logger, itemId),
+          ...refusalDetails(error),
         });
         continue;
       }

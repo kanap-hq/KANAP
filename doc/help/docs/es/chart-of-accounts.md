@@ -107,7 +107,7 @@ La cuadrícula muestra cuentas solo del CoA seleccionado.
 - **Nueva cuenta** (`accounts:manager`): Abre un nuevo formulario de cuenta con el CoA seleccionado ya elegido.
 - **Importar CSV** (`accounts:admin`): Importar cuentas al CoA seleccionado.
 - **Exportar CSV** (`accounts:admin`): Exportar cuentas del CoA seleccionado.
-- **Eliminar selección** (`accounts:admin`): Eliminar filas de cuentas seleccionadas. Seleccione filas usando la columna de casilla de verificación (visible para administradores).
+- **Eliminar selección** (`accounts:admin`): Eliminar filas de cuentas seleccionadas. Seleccione filas usando la columna de casilla de verificación (visible para administradores). Una cuenta usada por líneas presupuestarias no se puede eliminar: desactívela en su lugar. Antes de eliminar nada, la confirmación enumera las cuentas que se conservan, con el motivo.
 
 Todas las celdas de fila son enlaces clicables al espacio de trabajo de la cuenta. Puede hacer clic derecho o Ctrl+clic para abrir en una nueva pestaña.
 
@@ -283,7 +283,7 @@ Cada fila tiene un menú **⋯** que solo ofrece las acciones aplicables a ese p
 - **Hacer plan predeterminado del país** / **Dejar de ser plan predeterminado del país** (`accounts:manager`): para planes de un solo país.
 - **Hacer predeterminado para otros países** / **Dejar de ser predeterminado para otros países** (`accounts:manager`): para planes de todos los países. Al hacerlo predeterminado, también se asigna a las empresas que no tienen plan de cuentas.
 - **Hacer plan de consolidación** / **Dejar de ser plan de consolidación** (`accounts:manager`): para cualquier plan. Consulte [Cambiar el plan de consolidación](#cambiar-el-plan-de-consolidacion).
-- **Eliminar** (`accounts:admin`): Elimina el plan junto con sus cuentas. Si el plan tiene cuentas, una confirmación indica cuántas se eliminan. Si es el plan de consolidación, la confirmación advierte de que el reporting de grupo ya no tendrá un plan de referencia. La eliminación se rechaza mientras haya empresas que usen el plan o líneas OPEX/CAPEX que usen sus cuentas, y el cuadro muestra el motivo.
+- **Eliminar** (`accounts:admin`): Elimina el plan junto con sus cuentas. Si el plan tiene cuentas, una confirmación indica cuántas se eliminan. Si es el plan de consolidación, la confirmación advierte de que el reporting de grupo ya no tendrá un plan de referencia. La eliminación se rechaza mientras haya empresas que usen el plan o líneas OPEX/CAPEX que usen sus cuentas. El cuadro muestra el motivo antes de cualquier confirmación.
 
 Los roles cambian en cuanto elige una acción. La tabla se actualiza al instante.
 

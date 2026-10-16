@@ -291,7 +291,7 @@ export default function UnifiedActivityForm({
                 component="span"
                 sx={(theme) => ({ ...taskDetailTypography.composerCtrl, color: theme.palette.kanap.text.tertiary, flexShrink: 0, whiteSpace: 'nowrap' })}
               >
-                {t('portfolio:workspace.task.activity.actions.time', 'Time')}
+                {t('portfolio:workspace.task.sidebar.sections.time')}
               </Typography>
               <Slider
                 min={0}

@@ -13,7 +13,7 @@ Navigieren Sie zu **Stammdaten > Lieferanten**, um das Lieferantenverzeichnis zu
 - **ERP-Lieferanten-ID**: Referenz-ID aus Ihrem ERP- oder Beschaffungssystem
 - **Notizen**: Freitext-Notizen zur Anbieterbeziehung
 
-**Tipp**: Erstellen Sie Lieferanten, bevor Sie Anwendungen oder Verträge anlegen -- Sie können sie dann bei der Erstellung verknüpfen.
+**Tipp**: Erstellen Sie Lieferanten, bevor Sie Anwendungen oder Verträge anlegen. Sie können sie dann bei der Erstellung verknüpfen.
 
 ---
 
@@ -101,7 +101,7 @@ Der Abschnitt **Verwendet in**, unter den Notizen im Reiter **Übersicht**, list
 
 Klicken Sie auf eine Zeile, um die zugehörige Seite zu öffnen. Deaktivierte Einträge tragen den Hinweis **Deaktiviert** und stehen nach den anderen. Eine Liste zeigt bis zu 50 Einträge und nennt ihre Gesamtzahl. Bei mehr als 50 haben Budgetzeilen, Verträge und Anwendungen einen Link wie **Alle 57 anzeigen**, der ihre Liste gefiltert auf diesen Lieferanten öffnet. Sie sehen nur die Listen, die Sie lesen dürfen: Ein Benutzer ohne Zugriff auf Verträge sieht keine Vertragsliste. Ein Lieferant, den nichts verwendet, zeigt eine Zeile, die das sagt.
 
-Prüfen Sie diesen Abschnitt, bevor Sie einen Lieferanten deaktivieren oder löschen. Ein Lieferant, den noch Budgetzeilen, Verträge, Anwendungen oder Assets verwenden, kann nicht gelöscht werden. Die Meldung zählt auf, was ihn verwendet, zum Beispiel „Dieser Lieferant wird noch verwendet: 2 Verträge und 1 Anwendung“. Deaktivieren Sie ihn stattdessen. In der Liste nennt die Bestätigung die so erhaltenen Lieferanten mit dem, was sie verwendet, bevor etwas gelöscht wird.
+Prüfen Sie diesen Abschnitt, bevor Sie einen Lieferanten deaktivieren oder löschen. Ein Lieferant, den noch Budgetzeilen, Verträge, Anwendungen oder Assets verwenden, kann nicht gelöscht werden. Die Meldung zählt auf, was ihn verwendet, zum Beispiel „Dieser Lieferant wird noch verwendet: 2 Verträge und 1 Anwendung“. Deaktivieren Sie ihn stattdessen. In der Liste nennt die Bestätigung die so erhaltenen Lieferanten mit dem, was sie verwendet, bevor etwas gelöscht wird. Um ihn dennoch zu löschen, tragen Sie zuerst bei diesen Budgetzeilen, Verträgen, Anwendungen und Assets einen anderen Lieferanten ein oder entfernen ihn dort, wo er optional ist (ein Vertrag braucht immer einen). Löschen Sie ihn dann.
 
 ### Einen Lieferanten erstellen
 
@@ -124,12 +124,12 @@ Die Spalten:
 | `support_contact` | Die E-Mail-Adresse eines Kontakts, wie oben |
 | `notes` | Freier Text |
 | `status` | `enabled` oder `disabled` |
-| `disabled_at` | Das Gültigkeitsende: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Leer, wenn der Lieferant keines hat |
+| `disabled_at` | Das Gültigkeitsende: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Der Export schreibt nur das Datum. Erneut importiert, behält dieses Datum das gespeicherte Gültigkeitsende. Leer, wenn der Lieferant keines hat |
 
 **Import**:
 
 - Verwenden Sie die **Vorabprüfung**, um die Datei vor dem Anwenden zu prüfen, und dann **Laden**
-- Zeilen werden über `name` zugeordnet, unabhängig von Groß- und Kleinschreibung: Eine Zeile aktualisiert den Lieferanten, den sie nennt, jede andere Zeile legt einen an
+- Zeilen werden über `name` zugeordnet, unabhängig von Groß- und Kleinschreibung: Eine Zeile aktualisiert den Lieferanten, den sie nennt, jede andere Zeile legt einen an. Die gespeicherte Schreibweise bleibt: Eine Zeile `sap` aktualisiert `SAP`, und die Vorabprüfung meldet „sap“ wurde „SAP“ zugeordnet
 - `name` ist Pflicht. Jede andere Zelle ist optional
 - Jeder Lieferant belegt eine Zeile. Zwei Zeilen mit demselben Namen, auch in anderer Groß- und Kleinschreibung, werden bei der Vorabprüfung abgelehnt, mit beiden Zeilennummern
 - Die E-Mail-Adresse eines Kontakts muss zu einem Kontakt gehören, der unter **Kontakte** bereits existiert. Sonst wird die Zeile bei der Vorabprüfung abgelehnt: Legen Sie den Kontakt zuerst an

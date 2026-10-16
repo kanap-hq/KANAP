@@ -11,6 +11,7 @@ import { getDotColor, MILESTONE_STATUS_COLORS, PROJECT_STATUS_COLORS } from '../
 import { computeInactiveSegments, formatInactiveTooltip } from './roadmap-inactive-segments';
 import type { InactiveSegment } from './roadmap-inactive-segments';
 import { useLocale } from '../../../i18n/useLocale';
+import { formatQuarterLabel, formatWeekLabel } from '../../../lib/isoWeek';
 import { useKanapDialogs } from '../../../components/design';
 
 interface GanttProject {
@@ -78,21 +79,8 @@ const formatMonthShort = (date: Date, locale: string): string => {
   return date.toLocaleDateString(locale, { month: 'short' });
 };
 
-const formatQuarterYear = (date: Date): string => {
-  const quarter = Math.floor(date.getMonth() / 3) + 1;
-  return `Q${quarter} ${date.getFullYear()}`;
-};
-
 const formatYearOnly = (date: Date): string => {
   return String(date.getFullYear());
-};
-
-const formatWeekNumber = (date: Date): string => {
-  const startOfYear = new Date(date.getFullYear(), 0, 1);
-  const diff = date.getTime() - startOfYear.getTime();
-  const oneWeek = 7 * 24 * 60 * 60 * 1000;
-  const weekNum = Math.ceil((diff / oneWeek) + 1);
-  return `W${weekNum}`;
 };
 
 const formatDayNumber = (date: Date): string => {
@@ -293,7 +281,7 @@ export function PortfolioGantt({
   const scales = useMemo(() => {
     if (months <= 1) {
       return [
-        { unit: 'week', step: 1, format: formatWeekNumber },
+        { unit: 'week', step: 1, format: (date: Date) => formatWeekLabel(t, date) },
         { unit: 'day', step: 1, format: formatDayNumber, css: dayStyle },
       ];
     }
@@ -301,13 +289,13 @@ export function PortfolioGantt({
     if (months <= 3) {
       return [
         { unit: 'month', step: 1, format: (date: Date) => formatMonthYear(date, locale) },
-        { unit: 'week', step: 1, format: formatWeekNumber },
+        { unit: 'week', step: 1, format: (date: Date) => formatWeekLabel(t, date) },
       ];
     }
 
     if (months <= 6) {
       return [
-        { unit: 'quarter', step: 1, format: formatQuarterYear },
+        { unit: 'quarter', step: 1, format: (date: Date) => formatQuarterLabel(t, date) },
         { unit: 'month', step: 1, format: (date: Date) => formatMonthShort(date, locale) },
       ];
     }
@@ -316,7 +304,7 @@ export function PortfolioGantt({
       { unit: 'year', step: 1, format: formatYearOnly },
       { unit: 'month', step: 1, format: (date: Date) => formatMonthShort(date, locale) },
     ];
-  }, [locale, months]);
+  }, [locale, months, t]);
 
   // Use wider month cells at 6 months and denser month cells at 12 months.
   const cellWidth = useMemo(() => {

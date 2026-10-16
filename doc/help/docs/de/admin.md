@@ -76,7 +76,7 @@ Anmelde- und Sitzungsereignisse werden nach **365 Tagen** gelöscht. Datenänder
 
 ### Was Sie tun können
 
-- Suche über Tabellenname, Aktion und Akteur (E-Mail/Name)
+- Suche über die Tabelle (ihr angezeigter Name in Ihrer Sprache, zum Beispiel **Lieferanten**), Aktion und Akteur (E-Mail/Name)
 - Filtern nach:
   - Datum
   - Tabelle
@@ -92,7 +92,7 @@ Anmelde- und Sitzungsereignisse werden nach **365 Tagen** gelöscht. Datenänder
 
 **Standardspalten**:
 - **Datum**: Wann die Änderung oder das Ereignis stattfand
-- **Tabelle**: Welche Tabelle betroffen war. Anmelde- und Sitzungsereignisse zeigen **Anmeldung und Sitzung**, ein Export zeigt, was exportiert wurde (zum Beispiel **Lieferanten**)
+- **Tabelle**: Die Art des betroffenen Datensatzes, unter ihrem Namen in der Anwendung (zum Beispiel **Lieferanten** oder **Vertragslinks**). Filter und Details zeigen dieselben Namen. Anmelde- und Sitzungsereignisse zeigen **Anmeldung und Sitzung**, ein Export zeigt, was exportiert wurde (zum Beispiel **Lieferanten**)
 - **Aktion**: Art der Änderung oder des Ereignisses (Erstellen, Aktualisieren, Löschen, Deaktivieren, Wiederherstellen, Anmeldung, Export usw.). **Wiederherstellen** kennzeichnet eine Budgetspalte, die im Budget-Tab einer Zeile auf ihre Werte beim Öffnen zurückgesetzt wurde
 - **Quelle**: Wer oder was die Änderung ausgelöst hat (Benutzer, System, Webhook)
 - **Benutzer**: Name des Benutzers, der die Änderung vorgenommen hat, oder seine E-Mail-Adresse, wenn er keinen Namen hat. Zeigt „System" oder „Webhook" für Nicht-Benutzer-Quellen und „Unbekanntes Konto" für einen Anmeldeversuch mit unbekannter Adresse.
@@ -186,7 +186,7 @@ Aktionen in der Symbolleiste:
 | **CSV exportieren** | Benutzerliste exportieren | `users:admin` |
 | **Einladen** | Anmeldeeinladungen an ausgewählte Benutzer senden | `users:admin` |
 | **Deaktivieren** | Die ausgewählten Benutzer deaktivieren. Sie werden sofort abgemeldet. | `users:admin` |
-| **Löschen** | Ausgewählte Benutzer dauerhaft entfernen | `users:admin` |
+| **Löschen** | Ausgewählte Benutzer dauerhaft entfernen. Ihr eigenes Konto bleibt erhalten: Die Bestätigung nennt es vor dem Löschen. Um den Verlauf eines Benutzers zu behalten und seinen Zugang zu sperren, deaktivieren Sie ihn stattdessen | `users:admin` |
 
 `users:reader` genügt, um die Seite zu öffnen und die Liste zu lesen. Alle Aktionen oben und die folgenden Zeilenaktionen erfordern `users:admin`.
 
@@ -198,7 +198,7 @@ Zeilenaktionen über das Menü am Ende jeder Zeile:
 | **Aktivieren** / **Deaktivieren** | Schaltet das Konto ein oder aus. Beim Deaktivieren wird die Person sofort abgemeldet. |
 | **Einladung senden** | Sendet eine Anmeldeeinladung per E-Mail. Für Microsoft Entra-Konten ausgeblendet. |
 | **Passwort-Zurücksetzung senden** | Sendet einen Link zum Zurücksetzen des Passworts per E-Mail. Nur für aktive lokale Konten sichtbar. |
-| **Löschen** | Entfernt den Benutzer dauerhaft. Deaktivieren Sie das Konto stattdessen, wenn andere Datensätze darauf verweisen. |
+| **Löschen** | Entfernt den Benutzer dauerhaft. Die Datensätze, an denen er gearbeitet hat, bleiben ohne ihn erhalten. Ihr eigenes Konto können Sie nicht löschen. Um den Zugang einer Person zu sperren und das Konto zu behalten, deaktivieren Sie es stattdessen. |
 
 ### CSV-Datei der Benutzer
 
@@ -237,7 +237,7 @@ Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen und die b
 
 ### Mehrfach-Rollenzuweisung
 
-Benutzern können mehrere Rollen zugewiesen werden. Ihre effektiven Berechtigungen sind die Kombination aller zugewiesenen Rollen -- wenn eine Rolle Zugriff auf eine Ressource gewährt, hat der Benutzer diesen Zugriff.
+Benutzern können mehrere Rollen zugewiesen werden. Ihre effektiven Berechtigungen sind die Kombination aller zugewiesenen Rollen: wenn eine Rolle Zugriff auf eine Ressource gewährt, hat der Benutzer diesen Zugriff.
 
 Das Entfernen aller Rollen löscht das Konto nicht. Der Benutzer fällt auf die Systemrolle **Kontakt** zurück, behält keinen Zugriff und erscheint im Grid mit dem Status **Zugriff ausstehend**. Sie können Ihre eigene letzte Rolle nicht entfernen und sperren sich damit nicht selbst aus.
 
@@ -363,7 +363,7 @@ Rollen werden nach ihrer Änderbarkeit kategorisiert:
 | Kennzeichnung | Beschreibung |
 |---------------|--------------|
 | **System** | Kann nicht geändert werden. Administrator hat Vollzugriff; Kontakt ist nur für Verzeichniseinträge. |
-| **Integriert** | Vorkonfigurierte Rollen mit Standard-Zugriffsmustern. Können nicht direkt geändert werden -- verwenden Sie **Duplizieren**, um eine anpassbare Kopie zu erstellen. |
+| **Integriert** | Vorkonfigurierte Rollen mit Standard-Zugriffsmustern. Können nicht direkt geändert werden. Verwenden Sie **Duplizieren**, um eine anpassbare Kopie zu erstellen. |
 | _(keine Kennzeichnung)_ | Benutzerdefinierte Rollen, die Sie erstellen. Vollständig bearbeitbar. |
 
 ### Integrierte Rollen
@@ -381,8 +381,8 @@ KANAP wird mit vorkonfigurierten Rollen ausgeliefert, die nach Funktionsbereiche
 Die Rolle **Fachbereichs-Mitwirkender** ist für Fachbereichs-Stakeholder konzipiert, die am Portfolio-Prozess teilnehmen, ohne vollständige Projektmanagement-Rechte zu haben. Ein Fachbereichs-Mitwirkender kann:
 
 - **Portfolio-Anfragen einreichen und verwalten** (voller Mitgliederzugriff auf Anfragen)
-- **Bestehende Projekte bearbeiten** -- Felder aktualisieren, Kommentare hinzufügen, Anhänge hochladen, Phasen, Meilensteine, Abhängigkeiten und Zeiteinträge verwalten
-- **Projektaufgaben erstellen und bearbeiten** -- Aufgaben zu Projekten hinzufügen, Zeit erfassen und Kommentare posten
+- **Bestehende Projekte bearbeiten**: Felder aktualisieren, Kommentare hinzufügen, Anhänge hochladen, Phasen, Meilensteine, Abhängigkeiten und Zeiteinträge verwalten
+- **Projektaufgaben erstellen und bearbeiten**: Aufgaben zu Projekten hinzufügen, Zeit erfassen und Kommentare posten
 - **Benutzer, Unternehmen, Abteilungen und Kontakte anzeigen** für Dropdown-Auswahlen
 
 Ein Fachbereichs-Mitwirkender **kann nicht**:
@@ -419,7 +419,7 @@ Die Rollenseite hat ein zweispaltiges Layout:
 **Aktionen**:
 - **Neue Rolle**: Benutzerdefinierte Rolle von Grund auf erstellen
 - **Duplizieren**: Bestehende Rolle (einschließlich integrierter Rollen) als Ausgangspunkt kopieren. Nicht verfügbar für Systemrollen.
-- **Löschen**: Benutzerdefinierte Rolle entfernen (nur wenn keine Benutzer zugewiesen sind)
+- **Löschen**: Benutzerdefinierte Rolle entfernen. Eine Rolle, die Benutzern zugewiesen ist, kann nicht gelöscht werden: Weisen Sie ihnen zuerst eine andere Rolle zu. Das Fenster weist vor jeder Bestätigung darauf hin.
 - **Details speichern**: Rollenname und -beschreibung aktualisieren
 - **Berechtigungen speichern**: Berechtigungsänderungen anwenden
 
@@ -612,8 +612,8 @@ Zum Inhalt des Datensatzes, zu dem, was das Löschen entfernt und behält, und z
 Die Einstellungsseite ermöglicht die Verwaltung Ihres persönlichen Profils und Ihrer Benachrichtigungseinstellungen. Zugriff über das Benutzermenü (Avatar oben rechts) oder durch Navigation zu `/settings`.
 
 Die Seite hat zwei Tabs, erreichbar über URL:
-- `/settings/profile` (Standard) -- Profil-Tab
-- `/settings/notifications` -- Benachrichtigungs-Tab
+- `/settings/profile` (Standard): Profil-Tab
+- `/settings/notifications`: Benachrichtigungs-Tab
 
 ### Profil
 
@@ -654,7 +654,7 @@ Alle Änderungen werden automatisch gespeichert, sobald Sie Schalter umschalten 
 ## Tipps
 
   - **Integrierte Rollen duplizieren**: Anstatt Rollen von Grund auf zu erstellen, duplizieren Sie eine integrierte Rolle und passen Sie die Berechtigungen an. Das spart Zeit und stellt sicher, dass Sie keine wichtigen Ressourcen übersehen.
-  - **Mehrfach-Rollen für Flexibilität**: Weisen Sie Benutzern mehrere Rollen zu, um Berechtigungen zu kombinieren -- z. B. eine Rolle „Finanz-Leser" plus eine Rolle „Projektmanager".
+  - **Mehrfach-Rollen für Flexibilität**: Weisen Sie Benutzern mehrere Rollen zu, um Berechtigungen zu kombinieren: z. B. eine Rolle „Finanz-Leser" plus eine Rolle „Projektmanager".
   - **SSO verwenden**: Wenn Sie Microsoft 365 haben, verbinden Sie Entra ID für einfachere Benutzerverwaltung und automatische Profilsynchronisation.
   - **Deaktivieren statt löschen**: Wenn jemand das Unternehmen verlässt, deaktivieren Sie das Konto, um die Audit-Historie zu bewahren.
   - **Berechtigungen regelmäßig überprüfen**: Prüfen Sie die Rollenberechtigungen regelmäßig, um das Prinzip der minimalen Rechte einzuhalten.

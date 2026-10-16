@@ -18,9 +18,9 @@
     "restricted": { "label": "Eingeschränkt", "description": "Eine Offenlegung könnte schweren Schaden verursachen; der Zugriff ist strikt auf den erforderlichen Personenkreis beschränkt." }
   },
   "recoveryWaves": {
-    "foundation": { "label": "V0 — Grundlage", "description": "Gemeinsame Voraussetzungen und grundlegende Dienste." },
-    "vital": { "label": "V1 — Lebenswichtige Aktivitäten", "description": "Lebenswichtige Aktivitäten nach ihren Voraussetzungen wiederherstellen." },
-    "priority": { "label": "V2 — Prioritäre Aktivitäten", "description": "Prioritäre Aktivitäten wiederherstellen." },
-    "normal": { "label": "V3 — Normalbetrieb", "description": "Zum Normalbetrieb zurückkehren." }
+    "foundation": { "label": "V0: Grundlage", "description": "Gemeinsame Voraussetzungen und grundlegende Dienste." },
+    "vital": { "label": "V1: Lebenswichtige Aktivitäten", "description": "Lebenswichtige Aktivitäten nach ihren Voraussetzungen wiederherstellen." },
+    "priority": { "label": "V2: Prioritäre Aktivitäten", "description": "Prioritäre Aktivitäten wiederherstellen." },
+    "normal": { "label": "V3: Normalbetrieb", "description": "Zum Normalbetrieb zurückkehren." }
   }
 }

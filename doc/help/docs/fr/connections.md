@@ -1,6 +1,6 @@
 # Connexions
 
-Les connexions documentent les chemins réseau de niveau infrastructure entre les serveurs et les entités. Alors que les interfaces décrivent les flux de données logiques entre les applications, les connexions décrivent les routes réseau physiques — quels serveurs communiquent, sur quels protocoles et ports.
+Les connexions documentent les chemins réseau de niveau infrastructure entre les serveurs et les entités. Alors que les interfaces décrivent les flux de données logiques entre les applications, les connexions décrivent les routes réseau physiques : quels serveurs communiquent, sur quels protocoles et ports.
 
 ## Premiers pas
 
@@ -31,7 +31,7 @@ La liste vous offre une vue filtrable de chaque connexion de votre registre.
   - **Topologie** : Serveur à serveur ou Multi-serveurs
   - **Source** / **Destination** : Les points de terminaison connectés
   - **Protocoles** : Protocoles réseau affichés sous forme de pastilles
-  - **Criticité** : Importance métier — peut être dérivée des interfaces liées
+  - **Criticité** : Importance métier ; peut être dérivée des interfaces liées
   - **Classe de données** : Niveau de sensibilité des données
   - **PII** : Si des données personnelles transitent par cette connexion
   - **Risque** : Manuel ou Dérivé (affiche le nombre d'interfaces liées)
@@ -51,7 +51,7 @@ La liste vous offre une vue filtrable de chaque connexion de votre registre.
 
 **Actions** :
   - **Ajouter une connexion** : Créer une nouvelle connexion (nécessite `infrastructure:member`)
-  - **Supprimer la connexion** : Supprimer les connexions sélectionnées (nécessite `infrastructure:admin`)
+  - **Supprimer la connexion** : Supprimer les connexions sélectionnées (nécessite `infrastructure:admin`). Leurs serveurs, interfaces et documents sont conservés ; seuls leurs liens avec la connexion sont supprimés.
 
 ---
 
@@ -61,8 +61,8 @@ La liste vous offre une vue filtrable de chaque connexion de votre registre.
 
 Une connexion directe entre deux points de terminaison spécifiques. Chaque côté peut être un serveur, un cluster ou une entité nommée :
 
-- **Source** : Où le trafic prend son origine — choisissez un serveur, cluster ou entité
-- **Destination** : Où le trafic se termine — mêmes options
+- **Source** : Où le trafic prend son origine. Choisissez un serveur, cluster ou entité
+- **Destination** : Où le trafic se termine ; mêmes options
 - Vous ne pouvez pas sélectionner à la fois un serveur et une entité pour le même côté ; choisissez l'un ou l'autre
 
 Si un point de terminaison est un cluster, une note vous rappellera que les hôtes membres sont gérés dans l'espace de travail Serveurs.
@@ -89,8 +89,8 @@ L'onglet Vue d'ensemble capture l'identité et la topologie de la connexion.
   - **Nom** : Nom d'affichage
   - **Objectif** : Pourquoi cette connexion existe (texte libre)
   - **Type de connexion** : Serveur à serveur ou Multi-serveurs
-  - **Source** / **Destination** : Pour Serveur à serveur — choisissez un serveur, cluster ou entité dans une liste déroulante groupée
-  - **Serveurs connectés** : Pour Multi-serveurs — recherchez et sélectionnez deux serveurs ou plus
+  - **Source** / **Destination** : Pour Serveur à serveur, choisissez un serveur, cluster ou entité dans une liste déroulante groupée
+  - **Serveurs connectés** : Pour Multi-serveurs, recherchez et sélectionnez deux serveurs ou plus
   - **Protocoles** : Un ou plusieurs protocoles réseau (tirés de vos paramètres de types de connexion)
   - **Cycle de vie** : Statut actuel
   - **Notes** : Contexte supplémentaire
@@ -101,7 +101,7 @@ Lorsque vous sélectionnez des protocoles, le système affiche leurs ports typiq
 
 ### Couches
 
-L'onglet Couches vous permet de définir un chemin réseau ordonné de trois sauts maximum — utile pour documenter les reverse proxies, pare-feu ou routage intermédiaire.
+L'onglet Couches vous permet de définir un chemin réseau ordonné de trois sauts maximum, utile pour documenter les reverse proxies, pare-feu ou routage intermédiaire.
 
 **Ce que chaque couche capture** :
   - **Ordre** : Numéro de séquence (1 à 3)
@@ -123,7 +123,7 @@ Cet onglet contrôle la classification des risques et les paramètres de protect
 
 **Mode de risque** :
   - **Manuel** : Vous définissez directement la criticité, la classe de données et le PII
-  - **Dérivé** : Les valeurs sont agrégées depuis les bindings d'interfaces liées — l'onglet affiche les valeurs effectives et combien de bindings contribuent
+  - **Dérivé** : Les valeurs sont agrégées depuis les bindings d'interfaces liées : l'onglet affiche les valeurs effectives et combien de bindings contribuent
 
 **Champs** :
   - **Criticité** : Critique métier, Haute, Moyenne ou Basse
@@ -152,6 +152,6 @@ Cet onglet est en lecture seule. Pour lier un binding d'interface à une connexi
 ## Conseils
 
   - **Commencez par les chemins critiques** : Documentez d'abord les connexions de vos applications les plus importantes, puis élargissez.
-  - **Utilisez le mode de risque Dérivé** : Laissez le système calculer la criticité à partir des interfaces qui utilisent chaque connexion — cela économise de l'effort et reste à jour lorsque les interfaces changent.
+  - **Utilisez le mode de risque Dérivé** : Laissez le système calculer la criticité à partir des interfaces qui utilisent chaque connexion : cela économise de l'effort et reste à jour lorsque les interfaces changent.
   - **Liez aux interfaces** : Connecter votre infrastructure aux bindings d'interfaces vous donne une traçabilité de bout en bout des flux de données applicatifs jusqu'aux routes réseau.
   - **Documentez les protocoles avec précision** : De bonnes données de protocoles rendent les revues de règles de pare-feu et les audits de sécurité nettement plus faciles.

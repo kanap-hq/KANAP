@@ -86,7 +86,7 @@ Die Arbeitsbereichs-Kopfzeile gibt Ihnen operativen Kontext, ohne die Seite zu v
 - eine Metadatenleiste mit **Status**, **Bewertung**, **Anforderer**, **IT-Verantwortlicher**, **Ziel-Lieferdatum** und (falls zutreffend) der **Quell-Aufgabe**, aus der die Anfrage erstellt wurde
 - **Link senden** zum Teilen
 - **In Projekt umwandeln**, wenn die Anfrage **Genehmigt** oder **Konvertiert** ist
-- **Löschen** für Administratoren (wenn die Anfrage noch nicht konvertiert ist)
+- **Löschen** für Administratoren (wenn die Anfrage noch nicht konvertiert ist). Eine konvertierte Anfrage bleibt der Ursprung ihres Projekts und kann nicht gelöscht werden
 - Vorherige/Nächste-Navigation basierend auf dem genauen Listenkontext, aus dem Sie kamen
 
 ### Eigenschaftsleiste
@@ -174,7 +174,7 @@ Die Historie ist die Audit-Ansicht. Verwenden Sie sie, wenn Sie Fragen beantwort
 - wann sich Teamzuweisungen geändert haben
 - ob eine Bewertungs- oder Analyseänderung vor oder nach einer Entscheidung stattgefunden hat
 
-Die Liste endet mit dem Erstellungseintrag — wer die Anfrage erstellt hat und wann — unterhalb der erfassten Änderungen, einschließlich Änderungen an den Dokumenten Zweck und Risiken.
+Die Liste endet mit dem Erstellungseintrag (wer die Anfrage erstellt hat und wann) unterhalb der erfassten Änderungen, einschließlich Änderungen an den Dokumenten Zweck und Risiken.
 
 Wenn Sie Erzählung benötigen, verwenden Sie Kommentare. Wenn Sie Beweise benötigen, verwenden Sie die Historie.
 
@@ -261,7 +261,7 @@ Eine Anfrage mit schwachen Abhängigkeitsdaten kann harmlos aussehen, bis sie mi
 
 ### Andere Beziehungen
 
-Unter Abhängigkeiten ermöglicht der Reiter Verknüpfungen Ihnen auch, andere Portfolio-Verknüpfungen zu pflegen — zum Beispiel verwandte Anfragen, verwandte Projekte oder andere verbundene geschäftliche und technische Objekte. Jede Beziehung wird automatisch gespeichert.
+Unter Abhängigkeiten ermöglicht der Reiter Verknüpfungen Ihnen auch, andere Portfolio-Verknüpfungen zu pflegen, zum Beispiel verwandte Anfragen, verwandte Projekte oder andere verbundene geschäftliche und technische Objekte. Jede Beziehung wird automatisch gespeichert.
 
 Für die Projekte, die nach der Konvertierung aus dieser Anfrage erstellt wurden, siehe die Gruppe **Resultierende Projekte** in der Eigenschaftsleiste.
 

@@ -3,6 +3,7 @@ import { ClassificationCatalog, ClassificationLevel, CLASSIFICATION_CATALOG_KEYS
 import { CatalogTranslations, normalizeTranslations, prepareCatalogListForWrite } from './catalog-codes';
 import { CATALOG_USAGE, CatalogUsageItem, UsageKey, countCatalogUsage } from './catalog-usage';
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { englishList, RecordInUseException } from '../common/record-in-use';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, In, Repository } from 'typeorm';
 import { Tenant } from '../tenants/tenant.entity';
@@ -1282,7 +1283,11 @@ export class ItOpsSettingsService {
     return { total: usage.reduce((sum, item) => sum + item.count, 0), usage };
   }
 
-  /** A value removed from a list must not be referenced any more; "no longer offered" is the alternative. */
+  /**
+   * A value removed from a list must not be referenced any more; "no longer offered" is the alternative.
+   * The settings page checks each removal first (`settings/usage`); this guard answers a save that
+   * removes a value used meanwhile, or sent by another client.
+   */
   private async assertCatalogUsage(tenantId: string, current: ItOpsSettings, next: ItOpsSettings, patch: Partial<ItOpsSettings>, manager: EntityManager): Promise<void> {
     for (const [key, meta] of Object.entries(ItOpsSettingsService.LIST_META)) {
       if ((patch as Record<string, unknown>)[key] === undefined || !(key in CATALOG_USAGE)) continue;
@@ -1296,8 +1301,7 @@ export class ItOpsSettingsService {
         const { total, usage } = await this.getCatalogUsage(tenantId, key, usageKey, { manager: manager });
         if (!total) continue;
         const label = meta.subnets ? row.cidr : row.label || row.code;
-        const summary = usage.map((item) => `${item.count} ${item.record.replace(/_/g, ' ')}`).join(', ');
-        throw new BadRequestException({ statusCode: 400, message: `${meta.name}: "${label}" is still used by ${summary}; mark it as no longer offered instead of removing it`, list: key, code: row.code ?? null, label, usage });
+        throw new CatalogValueInUseException(key, row.code ?? null, String(label), usage);
       }
     }
   }
@@ -1324,5 +1328,27 @@ export class ItOpsSettingsService {
     const normalized = this.normalizeList(list, defaults);
     const extras = normalized.filter((item) => !this.lockedLifecycleCodes.has(item.code));
     return [...this.lockedLifecycleStates, ...extras];
+  }
+}
+
+/**
+ * A settings save refused because it removes a list value that records still use: a 409 like a
+ * refused delete (the save conflicts with the records, its content is valid), translated through
+ * `errors:CATALOG_VALUE_IN_USE` with the value and the counts per kind. `list`, `value_code`,
+ * `label` and `usage` (with the links to the records) stay for API callers.
+ */
+export class CatalogValueInUseException extends RecordInUseException {
+  constructor(list: string, valueCode: string | null, label: string, usage: CatalogUsageItem[]) {
+    const usages = usage.map((item) => ({ type: item.record, total: item.count }));
+    super(
+      'CATALOG_VALUE_IN_USE',
+      'value',
+      label,
+      usages,
+      `"${label}" is still used by ${englishList(usages)}. Mark it as no longer offered instead of removing it.`,
+      { value: label },
+    );
+    const body = this.getResponse() as Record<string, unknown>;
+    Object.assign(body, { list, value_code: valueCode, label, usage });
   }
 }
