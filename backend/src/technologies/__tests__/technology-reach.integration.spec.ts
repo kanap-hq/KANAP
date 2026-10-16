@@ -76,10 +76,24 @@ async function testApplications() {
     ].sort());
 
     // The tab of the technology names the server, the environment and the version, unknown included.
-    const tab = await links.applicationsOfTechnology(g.tech.sql, { manager: runner.manager, tenantId: g.tenantId });
-    assert.equal(tab.items.length, 3);
-    assert.ok(tab.items.some((item) => item.kind === 'declared' && item.version_label === null));
-    assert.ok(tab.items.filter((item) => item.kind === 'hosted').every((item) => item.environment === 'prod' && item.asset_id === g.ids.sqlCluster));
+    const tab = await links.applicationsOfTechnology(g.tech.sql, { manager: runner.manager, tenantId: g.tenantId }, {});
+    const items = tab.items!;
+    assert.equal(items.length, 3);
+    assert.ok(items.some((item) => item.kind === 'declared' && item.version_label === null));
+    assert.ok(items.filter((item) => item.kind === 'hosted').every((item) => item.environment === 'prod' && item.asset_id === g.ids.sqlCluster));
+    // Without the applications read right, no row; a Business Contributor sees its applications only.
+    assert.equal((await links.applicationsOfTechnology(g.tech.sql, { manager: runner.manager, tenantId: g.tenantId }, null)).items, null);
+    const outsider = await runner.query(`SELECT id FROM users WHERE tenant_id = $1 LIMIT 1`, [g.tenantId]);
+    const scoped = await links.applicationsOfTechnology(g.tech.sql, { manager: runner.manager, tenantId: g.tenantId }, { scope: { userId: outsider[0]?.id ?? '00000000-0000-4000-8000-000000000000' } as any });
+    assert.deepEqual(scoped.items, [], 'a user who takes part in no application sees none');
+
+    // A disabled application, or a disabled instance, is left out of the deductions.
+    await runner.query(`UPDATE applications SET status = 'disabled', disabled_at = now() - interval '1 day' WHERE id = $1`, [g.apps.portal]);
+    const withoutPortal = await reach.applicationsOfTechnologies(runner.manager, g.tenantId, [g.tech.sql]);
+    assert.ok(withoutPortal.every((row) => row.application_id !== g.apps.portal), 'a disabled application declares nothing');
+    await runner.query(`UPDATE app_instances SET status = 'disabled', disabled_at = now() - interval '1 day' WHERE application_id = $1`, [g.apps.erp]);
+    assert.deepEqual(await reach.applicationsOfTechnologies(runner.manager, g.tenantId, [g.tech.sql]), [], 'a disabled instance hosts nothing');
+    assert.equal((await reach.countsOfTechnologies(runner.manager, g.tenantId, [g.tech.sql])).get(g.tech.sql)?.applications, 0);
   });
 }
 

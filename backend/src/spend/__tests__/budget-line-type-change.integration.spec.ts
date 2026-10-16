@@ -187,7 +187,7 @@ async function testRoundTrip() {
       'the required CAPEX dimension and the OPEX-only value are asked, neither is required in place',
     );
     assert.deepEqual(check.carried, {
-      versions: 3, tasks: 1, attachments: 1, links: 1, contacts: 1, applications: 1, assets: 1, contracts: 1, projects: 1, requests: 1, technologies: 0,
+      versions: 3, tasks: 1, attachments: 1, links: 1, contacts: 1, applications: 1, assets: 1, contracts: 1, projects: 1, requests: 1, technologies: 1,
     }, 'everything stays with the line');
     assert.equal(check.successor, null);
 

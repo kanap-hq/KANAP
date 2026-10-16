@@ -97,7 +97,7 @@ async function testFromYear() {
       'the new line needs the required CAPEX dimension; the OPEX-only value stays behind',
     );
     assert.deepEqual(check.carried, {
-      versions: 2, tasks: 0, attachments: 0, links: 0, contacts: 1, applications: 1, assets: 1, contracts: 1, projects: 1, requests: 1, technologies: 0,
+      versions: 2, tasks: 0, attachments: 0, links: 0, contacts: 1, applications: 1, assets: 1, contracts: 1, projects: 1, requests: 1, technologies: 1,
     }, 'two versions move; tasks, attachments and web links stay; contacts and links are copied');
     assert.equal(check.account.carried, false, 'the OPEX account is not copied');
 
@@ -165,7 +165,7 @@ async function testFromYear() {
       contracts: { count: 1, items: [{ id: w.contractId, name: 'Type change contract' }] },
       projects: { count: 1, items: [{ id: w.projectId, name: 'PRJ-990301: Type change project' }] },
       requests: { count: 1, items: [{ id: w.requestId, name: 'REQ-990301: Type change request' }] },
-      technologies: { count: 0, items: [] },
+      technologies: { count: 1, items: [{ id: w.technologyId, name: 'TEC-990301: Type change technology' }] },
     });
     assert.equal((await readBudgetLineMeta(runner.manager, 'opex', tenantId, line.id))?.changed_by?.id, member);
     assert.equal((await readBudgetLineMeta(runner.manager, 'capex', tenantId, newId))?.changed_by?.id, member);

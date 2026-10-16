@@ -1,5 +1,6 @@
 import type { EntityManager, QueryRunner } from 'typeorm';
 import { DEFAULT_TECHNOLOGY_FAMILIES } from '../../it-ops-settings/it-ops-settings.service';
+import { IncidentRelationsService } from '../../incidents/services/incident-relations.service';
 import { TechnologyCatalogService } from '../catalog/technology-catalog.service';
 import { TechnologiesRelationsService } from '../technologies-relations.service';
 import { TechnologiesService } from '../technologies.service';
@@ -27,12 +28,13 @@ export function services(audit: AuditEntry[] = []) {
   const storage = { putObject: async () => undefined, deleteObject: async () => undefined };
   const reach = new TechnologyReachService();
   const fxRates = { resolveRates: async () => ({ map: new Map(), settings: { reportingCurrency: 'EUR' } }), convertValue: (a: number, r: number) => a * r };
-  const incidents = { bulkReplaceTechnologies: async () => [] };
+  // The incident side is the real service: its row lock, visibility and journal are under test.
+  const incidents = new IncidentRelationsService(undefined as any, auditLog as any);
   return {
     reach,
     technologies: new TechnologiesService(auditLog as any, itOps as any, reach, storage as any),
     links: new TechnologyLinksService(auditLog as any, reach, itOps as any),
-    relations: new TechnologiesRelationsService(auditLog as any, fxRates as any, incidents as any),
+    relations: new TechnologiesRelationsService(auditLog as any, fxRates as any, incidents),
     catalog: new TechnologyCatalogService(auditLog as any, itOps as any),
   };
 }
