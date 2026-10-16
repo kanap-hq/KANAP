@@ -25,10 +25,10 @@
       "restricted": {"source": "Restricted", "en": "Restricted", "fr": "Restreint", "de": "Eingeschränkt", "es": "Restringido"}
     },
     "recoveryWaves": {
-      "foundation": {"source": "V0 — Foundation", "en": "V0: Foundation", "fr": "V0 : Socle", "de": "V0: Grundlage", "es": "V0 — Base"},
-      "vital": {"source": "V1 — Vital activities", "en": "V1: Vital activities", "fr": "V1 : Activités vitales", "de": "V1: Lebenswichtige Aktivitäten", "es": "V1 — Actividades vitales"},
-      "priority": {"source": "V2 — Priority activities", "en": "V2: Priority activities", "fr": "V2 : Activités prioritaires", "de": "V2: Prioritäre Aktivitäten", "es": "V2 — Actividades prioritarias"},
-      "normal": {"source": "V3 — Normal operation", "en": "V3: Normal operation", "fr": "V3 : Fonctionnement normal", "de": "V3: Normalbetrieb", "es": "V3 — Funcionamiento normal"}
+      "foundation": {"source": "V0 — Foundation", "en": "V0: Foundation", "fr": "V0 : Socle", "de": "V0: Grundlage", "es": "V0: Base"},
+      "vital": {"source": "V1 — Vital activities", "en": "V1: Vital activities", "fr": "V1 : Activités vitales", "de": "V1: Lebenswichtige Aktivitäten", "es": "V1: Actividades vitales"},
+      "priority": {"source": "V2 — Priority activities", "en": "V2: Priority activities", "fr": "V2 : Activités prioritaires", "de": "V2: Prioritäre Aktivitäten", "es": "V2: Actividades prioritarias"},
+      "normal": {"source": "V3 — Normal operation", "en": "V3: Normal operation", "fr": "V3 : Fonctionnement normal", "de": "V3: Normalbetrieb", "es": "V3: Funcionamiento normal"}
     },
     "applicationCategories": {
       "line_of_business": {"source": "Line-of-business", "en": "Line of business", "fr": "Métier", "de": "Fachanwendung", "es": "Negocio"},
