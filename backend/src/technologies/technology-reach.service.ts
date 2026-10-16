@@ -17,18 +17,41 @@ import type { LinkSource } from '../common/link-provenance';
  * and the version of that link (null when unknown). The applications of a technology are those
  * assigned to a reached asset (hosted), plus those that declare it (`application_technologies`).
  *
+ * Retired assets (`assetInServiceSql`) take no part: their links count for nothing, and no edge
+ * leads to or from them, so the traversal stops there.
+ *
  * Over-approximation is assumed and shown: an application on a server carrying SQL Server 2016 and
  * 2019 is listed with both. Each statement is static SQL, carries `tenant_id` on every table and
  * join besides RLS, and works on a batch of ids (`= ANY($n)`), never a query per row.
  */
 export const MAX_DEPTH = 3;
 
-/** The "carries" edges of the tenant `$1`: `carrier` carries `carried`. */
+/**
+ * An asset in service: not retired (`retired` is a locked code of the lifecycle catalog, as in
+ * `app-asset-assignments.service.ts`). A retired asset carries nothing, is reached by nothing and
+ * cuts the traversal through it.
+ */
+export function assetInServiceSql(alias: string): string {
+  return `${alias}.status IS DISTINCT FROM 'retired'`;
+}
+
+/** Joins the asset `alias` = `idExpr` of the tenant `$1`, in service. */
+const ASSET_IN_SERVICE_JOIN = (alias: string, idExpr: string) =>
+  `JOIN assets ${alias} ON ${alias}.tenant_id = $1 AND ${alias}.id = ${idExpr} AND ${assetInServiceSql(alias)}`;
+
+/** The "carries" edges of the tenant `$1` between assets in service: `carrier` carries `carried`. */
 const EDGES = `(
   SELECT r.asset_id AS carrier, r.related_asset_id AS carried
-    FROM asset_relations r WHERE r.tenant_id = $1 AND r.relation_type = 'contains'
+    FROM asset_relations r
+    ${ASSET_IN_SERVICE_JOIN('ec', 'r.asset_id')}
+    ${ASSET_IN_SERVICE_JOIN('ed', 'r.related_asset_id')}
+   WHERE r.tenant_id = $1 AND r.relation_type = 'contains'
   UNION ALL
-  SELECT m.asset_id, m.cluster_id FROM asset_cluster_members m WHERE m.tenant_id = $1
+  SELECT m.asset_id, m.cluster_id
+    FROM asset_cluster_members m
+    ${ASSET_IN_SERVICE_JOIN('ec', 'm.asset_id')}
+    ${ASSET_IN_SERVICE_JOIN('ed', 'm.cluster_id')}
+   WHERE m.tenant_id = $1
 )`;
 
 /** Down the edges from the installed links of the technologies `$2`: one row per reached asset and link. */
@@ -37,6 +60,7 @@ const REACH_FROM_TECHNOLOGIES = `
     SELECT at.technology_id, at.id AS link_id, at.asset_id, at.asset_id AS installed_on, at.technology_version_id,
            at.source, 0 AS depth, ARRAY[at.asset_id] AS path
       FROM asset_technologies at
+      ${ASSET_IN_SERVICE_JOIN('a0', 'at.asset_id')}
      WHERE at.tenant_id = $1 AND at.technology_id = ANY($2::uuid[])
     UNION ALL
     SELECT r.technology_id, r.link_id, e.carried, r.installed_on, r.technology_version_id, r.source, r.depth + 1, r.path || e.carried
@@ -49,7 +73,7 @@ const REACH_FROM_TECHNOLOGIES = `
 const CARRIERS_OF_ASSETS = `
   up AS (
     SELECT a.id AS asset_id, a.id AS carrier_id, 0 AS depth, ARRAY[a.id] AS path
-      FROM assets a WHERE a.tenant_id = $1 AND a.id = ANY($2::uuid[])
+      FROM assets a WHERE a.tenant_id = $1 AND a.id = ANY($2::uuid[]) AND ${assetInServiceSql('a')}
     UNION ALL
     SELECT u.asset_id, e.carrier, u.depth + 1, u.path || e.carrier
       FROM up u
@@ -230,6 +254,7 @@ export class TechnologyReachService {
          SELECT DISTINCT i.application_id, i.environment, x.asset_id
            FROM app_instances i
            JOIN app_asset_assignments x ON x.tenant_id = $1 AND x.app_instance_id = i.id
+           ${ASSET_IN_SERVICE_JOIN('sa', 'x.asset_id')}
            ${HOSTING_IN_SERVICE}
           WHERE i.tenant_id = $1 AND i.application_id = ANY($2::uuid[])
        ),
@@ -291,8 +316,9 @@ export class TechnologyReachService {
           GROUP BY h.technology_id
        ),
        used AS (
-         SELECT technology_id, technology_version_id FROM asset_technologies
-          WHERE tenant_id = $1 AND technology_id = ANY($2::uuid[]) AND technology_version_id IS NOT NULL
+         SELECT at.technology_id, at.technology_version_id FROM asset_technologies at
+           ${ASSET_IN_SERVICE_JOIN('ua', 'at.asset_id')}
+          WHERE at.tenant_id = $1 AND at.technology_id = ANY($2::uuid[]) AND at.technology_version_id IS NOT NULL
          UNION
          SELECT d.technology_id, d.technology_version_id FROM application_technologies d
           WHERE d.tenant_id = $1 AND d.technology_id = ANY($2::uuid[]) AND d.technology_version_id IS NOT NULL AND ${DECLARED_IN_SERVICE}
