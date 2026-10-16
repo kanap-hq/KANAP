@@ -132,6 +132,8 @@
     "recommended": "Empfohlen",
     "openCalendar": "Kalender öffnen",
     "datePlaceholder": "tt/mm/jjjj",
+    "time": "Uhrzeit",
+    "timePlaceholder": "hh:mm",
     "requiredTag": "(erforderlich)",
     "relatedTo": "Bezogen auf",
     "openInNewTab": "In neuem Tab öffnen",

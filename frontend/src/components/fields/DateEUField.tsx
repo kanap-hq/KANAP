@@ -23,6 +23,7 @@ type Props = {
   textFieldSx?: SxProps<Theme>;
   /** A class on the calendar popover root (see DateCalendarPopover). */
   popoverClassName?: string;
+  autoFocus?: boolean;
 };
 
 // Extract just the date portion (YYYY-MM-DD) from a value that might be ISO datetime
@@ -35,7 +36,7 @@ function toYmdOnly(value: string): string {
   return value;
 }
 
-export default function DateEUField({ label, valueYmd = '', onChangeYmd, disabled, required, name, error, helperText, size, sx, hideLabel = false, textFieldSx, popoverClassName }: Props) {
+export default function DateEUField({ label, valueYmd = '', onChangeYmd, disabled, required, name, error, helperText, size, sx, hideLabel = false, textFieldSx, popoverClassName, autoFocus }: Props) {
   const [text, setText] = React.useState<string>('');
   const [focused, setFocused] = React.useState(false);
   const rootRef = React.useRef<HTMLDivElement | null>(null);
@@ -110,6 +111,7 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
         onBlur={onBlur}
         onKeyDown={onInputKeyDown}
         disabled={disabled}
+        autoFocus={autoFocus}
         required={required}
         variant="standard"
         name={name}
