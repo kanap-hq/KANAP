@@ -179,7 +179,7 @@ Remplissez les champs principaux :
 | **Type d'actif** | Le type de serveur (liste déroulante) | `Machine virtuelle` |
 | **Site** | Où il est hébergé (obligatoire) | `Datacenter Paris` |
 | **Environnement** | L'environnement qu'il sert | `Prod` |
-| **Description** | Tout contexte supplémentaire | -- |
+| **Description** | Tout contexte supplémentaire |  |
 
 Le panneau **Propriétés** à droite contient le reste : **Sous-site**, **Cycle de vie**, **Mise en service** et **Fin de vie**. Une fois un site sélectionné, plusieurs **champs en lecture seule** sont dérivés automatiquement :
 
@@ -235,7 +235,7 @@ Il y a **deux façons** de créer cette affectation :
 | **Environnement** | Quel déploiement | `PROD` |
 | **Rôle** | Rôle du serveur pour cette app | `Web` |
 | **Date de début** | Quand l'affectation a commencé | `2025-01-15` |
-| **Notes** | Tout contexte | -- |
+| **Notes** | Tout contexte |  |
 
 !!! success "La chaîne est complète"
     Vous avez maintenant le chemin complet documenté :
