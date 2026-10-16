@@ -66,6 +66,14 @@ describe('ContractRelationsTab technologies', () => {
     await waitFor(() => expect(mocked.post).toHaveBeenLastCalledWith('/contracts/c-1/technologies/bulk-replace', { technology_ids: ['tec-2'] }));
   });
 
+  it('hides the section when the server refuses the set (items null)', async () => {
+    mocked.get.mockImplementation(async (url: string) => (url === '/contracts/c-1/technologies' ? { data: { items: null } } : { data: { items: [] } }));
+    renderTab();
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/contracts/c-1/technologies', expect.anything()));
+    await waitFor(() => expect(screen.queryByText('contracts.relations.technologies')).toBeNull());
+    expect(screen.getByText('contracts.relations.applications')).toBeInTheDocument();
+  });
+
   it('has no Technologies section without the right to read the infrastructure', async () => {
     access.infrastructure = false;
     renderTab();

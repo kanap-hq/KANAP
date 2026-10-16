@@ -211,6 +211,21 @@ describe('RelationsPanel technologies', () => {
     expect(mocked.post).toHaveBeenLastCalledWith(`${itemsApi()}/item-1/technologies/bulk-replace`, { technology_ids: ['tec-2'] });
   });
 
+  it('hides the section, with no error, when the server refuses the set (items null)', async () => {
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === `${itemsApi()}/item-1/technologies`) return { data: { items: null } };
+      if (url.endsWith('/links') || url.endsWith('/attachments')) return { data: [] };
+      return { data: { items: [] } };
+    });
+    const ref = React.createRef<RelationsPanelHandle>();
+    renderPanel(ref);
+    await waitFor(() => expect(screen.getByPlaceholderText(`${nature}.relations.selectApplications`)).not.toBeDisabled());
+    expect(screen.queryByText(`${nature}.relations.technologies`)).toBeNull();
+    expect(screen.queryByText(`${nature}.relations.failedToLoad`)).toBeNull();
+    await act(async () => { await ref.current?.save(); });
+    expect(mocked.post).not.toHaveBeenCalled();
+  });
+
   it('has no Technologies section without the right to read the infrastructure', async () => {
     access.infrastructure = false;
     const ref = React.createRef<RelationsPanelHandle>();

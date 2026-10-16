@@ -48,7 +48,8 @@ function RelationSetSection({ contractId, set, readOnly, onChanged }: { contract
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: contractRelationKey(contractId, set),
-    queryFn: async ({ signal }) => (await api.get<{ items: NamedRelation[] }>(`/contracts/${contractId}/${set}`, { signal })).data.items,
+    // `items: null`: the caller cannot read the set (technologies without the infrastructure right).
+    queryFn: async ({ signal }) => (await api.get<{ items: NamedRelation[] | null }>(`/contracts/${contractId}/${set}`, { signal })).data.items,
     staleTime: 0,
   });
   const [value, setValue] = React.useState<NamedRelation[] | null>(null);
@@ -78,6 +79,8 @@ function RelationSetSection({ contractId, set, readOnly, onChanged }: { contract
   };
 
   const title = t(`contracts.relations.${set}`);
+  // A set the server refuses to show is not shown, and never saved.
+  if (query.data === null) return null;
   return (
     <Stack spacing={1.25}>
       <RelationsSectionTitle>{title}</RelationsSectionTitle>

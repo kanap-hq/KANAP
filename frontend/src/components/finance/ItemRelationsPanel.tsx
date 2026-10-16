@@ -52,6 +52,8 @@ type RelationsData = {
   applications: Named[] | null;
   /** Empty, never read, for a caller who cannot read the infrastructure (the section is hidden). */
   technologies: Named[] | null;
+  /** The server answered `items: null` (no right to read the infrastructure): the section is hidden, the set never posted. */
+  technologiesDenied: boolean;
   contracts: Named[] | null;
   links: LinkItem[];
   attachments: Attachment[];
@@ -95,10 +97,12 @@ async function fetchRelations(itemsApi: string, id: string, withTechnologies: bo
     api.get(`${itemsApi}/${id}/links`, { signal }),
     api.get(`${itemsApi}/${id}/attachments`, { signal }),
   ]);
+  const technologiesDenied = tRes.status === 'fulfilled' && tRes.value.data?.items === null;
   return {
     projects: named(pRes),
     applications: named(aRes),
-    technologies: named(tRes),
+    technologies: technologiesDenied ? null : named(tRes),
+    technologiesDenied,
     contracts: named(cRes),
     links: lRes.status === 'fulfilled' ? (lRes.value.data || []).map((x: any) => ({ id: x.id, description: x.description, url: x.url })) : [],
     attachments: atRes.status === 'fulfilled' ? (atRes.value.data || []) : [],
@@ -136,16 +140,18 @@ export default forwardRef<RelationsPanelHandle, Props>(function ItemRelationsPan
   const dialogs = useKanapDialogs();
   const queryClient = useQueryClient();
   const readOnly = !hasLevel(resource, 'manager');
-  const showTechnologies = hasLevel('infrastructure', 'reader');
+  const canReadTechnologies = hasLevel('infrastructure', 'reader');
 
   // Shown at once from the cache, and always read again when the tab opens: the links may have
   // changed elsewhere (a contract's page links its lines).
   const relationsQuery = useQuery({
     queryKey: itemRelationsKey(kind, id),
-    queryFn: ({ signal }) => fetchRelations(itemsApi, id, showTechnologies, signal),
+    queryFn: ({ signal }) => fetchRelations(itemsApi, id, canReadTechnologies, signal),
     staleTime: 0,
   });
   const data = relationsQuery.data;
+  // A refusal of the server hides the section like the missing right (its set stays out of the save).
+  const showTechnologies = canReadTechnologies && !data?.technologiesDenied;
   // Fields stay disabled until the line's relations are read for this visit: a set shown from the
   // cache may be old, and a save replaces the whole set (`bulk-replace`). Only this first read
   // counts: the reload after a save never disables a field the user is typing in.
@@ -203,8 +209,9 @@ export default forwardRef<RelationsPanelHandle, Props>(function ItemRelationsPan
     if (!keepEdits) { setProjects(p); setApps(a); setTechnologies(tech); setContracts(c); setLinks(data.links); }
   }, [data]);
   React.useEffect(() => {
-    if (failedSets.size > 0) setError(t(`${i18n}.relations.failedToLoad`));
-  }, [failedSets, i18n, t]);
+    const failed = [...failedSets].filter((set) => !(set === 'technologies' && data?.technologiesDenied));
+    if (failed.length > 0) setError(t(`${i18n}.relations.failedToLoad`));
+  }, [failedSets, data, i18n, t]);
 
   const reload = React.useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: itemRelationsKey(kind, id) });
