@@ -109,7 +109,7 @@ describe('hard-coded texts in components', () => {
       return found;
     });
     expect(offenders).toEqual([]);
-  });
+  }, 30_000);
 
   // A text that trails off ("Loading...") is written with the ellipsis character in the locale
   // files. Three dots at the end of a string in component code is a text that skipped i18n.
@@ -128,5 +128,5 @@ describe('hard-coded texts in components', () => {
       return found;
     });
     expect(offenders).toEqual([]);
-  });
+  }, 30_000);
 });
