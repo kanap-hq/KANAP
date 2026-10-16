@@ -1,16 +1,15 @@
 // @database-spec
 import 'dotenv/config';
 import { assert, inRolledBackTransaction, runSpecs, seedTenant, setTenant } from '../../spend/__tests__/round-inputs.fixtures';
-import { TechnologyReachService } from '../../technologies/technology-reach.service';
 import { application, asset, assign, contains, installed, member, one, technology, version } from '../../technologies/__tests__/technologies.fixtures';
-import { AssetImpactService, type ImpactContext } from '../services/asset-impact.service';
+import { AssetImpactService, IMPACT_ROW_LIMIT, IMPACT_VIA_LIMIT, type ImpactContext } from '../services/asset-impact.service';
 import type { QueryRunner } from 'typeorm';
 
 // "If this server goes down" (lot T5) against a real database, in transactions rolled back at the
-// end: a host and its VMs, a dependency, degraded and down clusters, a `contains` cycle, the depth
-// limit, applications out of service, the read rights, and tenant isolation.
+// end: a host and its VMs, a dependency, a diamond, degraded and down clusters, a `contains` cycle,
+// the depth limits, the row cap, applications out of service, the read rights, and tenant isolation.
 
-const service = () => new AssetImpactService(new TechnologyReachService());
+const service = () => new AssetImpactService();
 
 async function dependsOn(runner: QueryRunner, tenantId: string, dependant: string, dependedOn: string) {
   await runner.query(`INSERT INTO asset_relations (tenant_id, asset_id, related_asset_id, relation_type) VALUES ($1, $2, $3, 'depends_on')`, [tenantId, dependant, dependedOn]);
@@ -23,7 +22,12 @@ async function seed(runner: QueryRunner, tag: string) {
     host: await a('ESX-01'), host2: await a('ESX-02'), vm1: await a('VM-01'), vm2: await a('VM-02'), web: await a('WEB-01'),
     webVm: await a('WEB-VM'), rack: await a('RACK-01'), vsphereCl: await a('VSPHERE-CL', true), solo: await a('SOLO-CL', true),
     d1: await a('D1'), d2: await a('D2'), d3: await a('D3'), d4: await a('D4'), d5: await a('D5'), c1: await a('C1'), c2: await a('C2'),
+    e0: await a('E0'), e1: await a('E1'), e2: await a('E2'), e3: await a('E3'), e4: await a('E4'),
   };
+  // E1 depends on E0, E2 on E1, and so on: four `depends_on` edges from E0 to E4.
+  for (const [dependant, dependedOn] of [[ids.e1, ids.e0], [ids.e2, ids.e1], [ids.e3, ids.e2], [ids.e4, ids.e3]]) {
+    await dependsOn(runner, tenantId, dependant, dependedOn);
+  }
   // The rack holds the host; the host holds two VMs; WEB-01 depends on VM-01 and holds WEB-VM.
   await contains(runner, tenantId, ids.rack, ids.host);
   await contains(runner, tenantId, ids.host, ids.vm1);
@@ -82,16 +86,23 @@ async function testHostVmsAndDependency() {
     );
     assert.ok(impact.assets.every((row) => row.reference?.startsWith('AST-')), 'assets carry their reference');
     assert.deepEqual(
-      impact.applications!.map((row) => `${row.name}|${row.environment}|${row.via.map((v) => v.name).join(',')}`),
+      impact.applications!.map((row) => `${row.name}|${row.environments.join(',')}|${row.via.map((v) => v.name).join(',')}`),
       ['Backup|prod|SOLO-CL', 'CRM|dev|VM-02', 'ERP|prod|VM-01,VM-02', 'Portal|prod|WEB-VM'],
-      'one row per application and environment; the application of a degraded cluster stands',
+      'one row per application; the application of a degraded cluster stands',
     );
+    assert.deepEqual(impact.totals, { assets: 4, applications: 4, clusters: 2, technologies: 2, processes: 1 });
     assert.deepEqual(
       impact.technologies.map((row) => `${row.reference}|${row.name}|${row.versions.join(',')}|${row.via.map((v) => v.name).join(',')}`),
       ['TEC-2|SQL Server||VM-01', 'TEC-1|vSphere|8.0|ESX-01'],
       'installed on a fallen asset only: the rack firmware stands',
     );
     assert.deepEqual(impact.processes!.map((row) => `${row.name}|${row.via.map((v) => v.name).join(',')}`), ['Finance|ERP,Portal'], 'a disabled process is left out');
+    // A diamond: WEB-01 depends on both VMs of the host, two paths of the same length; listed once.
+    await dependsOn(runner, g.tenantId, g.ids.web, g.ids.vm2);
+    const diamond = await service().impactOf(g.ids.host, ctxOf(runner, g.tenantId));
+    assert.equal(diamond.assets.filter((row) => row.id === g.ids.web).length, 1);
+    assert.equal(diamond.totals.assets, 4);
+    assert.equal(diamond.applications!.filter((row) => row.name === 'Portal').length, 1);
   });
 }
 
@@ -121,6 +132,8 @@ async function testCycleAndDepth() {
     const deep = await service().impactOf(g.ids.d1, ctxOf(runner, g.tenantId));
     assert.deepEqual(deep.assets.map((row) => row.name), ['D1', 'D2', 'D3', 'D4'], 'D5 is four edges away');
     assert.deepEqual([deep.clusters, deep.applications, deep.technologies, deep.processes], [[], [], [], []], 'nothing else falls');
+    const chain = await service().impactOf(g.ids.e0, ctxOf(runner, g.tenantId));
+    assert.deepEqual(chain.assets.map((row) => `${row.name}|${row.relation ?? '-'}`), ['E0|-', 'E1|depends_on', 'E2|depends_on', 'E3|depends_on'], 'E4 is four dependencies away');
   });
 }
 
@@ -150,6 +163,40 @@ async function testRights() {
     const scoped = await service().impactOf(g.ids.host, ctxOf(runner, g.tenantId, { applications: { scope: { userId: outsider } } }));
     assert.deepEqual(scoped.applications, []);
     assert.deepEqual(scoped.processes, []);
+    // An owner of the ERP sees the ERP and its process only.
+    const role = await one(runner, `INSERT INTO roles (tenant_id, role_name, role_description, is_system, is_built_in, created_at, updated_at)
+      VALUES ($1, 'Business contributor', '', false, false, now(), now()) RETURNING id`, [g.tenantId]);
+    const owner = await one(runner, `INSERT INTO users (tenant_id, first_name, last_name, email, role_id, mfa_enabled, status, created_at, updated_at)
+      VALUES ($1, 'Bea', 'Owner', $2, $3, false, 'enabled', now(), now()) RETURNING id`, [g.tenantId, `bea-${g.tenantId.slice(0, 8)}@example.com`, role]);
+    await runner.query(`INSERT INTO application_owners (tenant_id, application_id, user_id, owner_type) VALUES ($1, $2, $3, 'business')`, [g.tenantId, g.apps.erp, owner]);
+    const own = await service().impactOf(g.ids.host, ctxOf(runner, g.tenantId, { applications: { scope: { userId: owner } } }));
+    assert.deepEqual(own.applications!.map((row) => row.name), ['ERP']);
+    assert.deepEqual(own.processes!.map((row) => `${row.name}|${row.via.map((v) => v.name).join(',')}`), ['Finance|ERP']);
+    assert.deepEqual([own.totals.applications, own.totals.processes], [1, 1]);
+  });
+}
+
+async function testRowCap() {
+  await inRolledBackTransaction(async (runner) => {
+    const g = await seed(runner, 'impact-cap');
+    await runner.query(
+      `WITH vm AS (
+         INSERT INTO assets (tenant_id, name, kind, environment) SELECT $1, 'BULK-' || lpad(n::text, 3, '0'), 'vm', 'prod' FROM generate_series(1, $3::int) n RETURNING id
+       )
+       INSERT INTO asset_relations (tenant_id, asset_id, related_asset_id, relation_type) SELECT $1, $2, vm.id, 'contains' FROM vm`,
+      [g.tenantId, g.ids.d5, IMPACT_ROW_LIMIT + 5],
+    );
+    await runner.query(
+      `INSERT INTO asset_technologies (tenant_id, asset_id, technology_id)
+       SELECT $1, r.related_asset_id, $3 FROM asset_relations r WHERE r.tenant_id = $1 AND r.asset_id = $2`,
+      [g.tenantId, g.ids.d5, g.tech.firmware],
+    );
+    const impact = await service().impactOf(g.ids.d5, ctxOf(runner, g.tenantId));
+    assert.equal(impact.totals.assets, IMPACT_ROW_LIMIT + 5);
+    assert.deepEqual([impact.technologies[0].via.length, impact.technologies[0].via_total], [IMPACT_VIA_LIMIT, IMPACT_ROW_LIMIT + 5], 'a long via is cut and counted');
+    assert.equal(impact.assets.length, IMPACT_ROW_LIMIT + 1, 'the server, then the first rows');
+    assert.equal(impact.assets[0].id, g.ids.d5);
+    assert.equal(impact.assets[IMPACT_ROW_LIMIT].name, `BULK-${String(IMPACT_ROW_LIMIT).padStart(3, '0')}`, 'nearest first, then by name');
   });
 }
 
@@ -172,5 +219,6 @@ runSpecs('asset-impact.integration.spec', [
   ['cycle and depth', testCycleAndDepth],
   ['applications out of service', testOutOfService],
   ['read rights', testRights],
+  ['row cap', testRowCap],
   ['tenant isolation', testTenantIsolation],
 ]);

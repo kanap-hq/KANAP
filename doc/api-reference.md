@@ -657,13 +657,14 @@ Notes
   - `GET /servers/:id/clusters` (host only) → clusters that include the server.
   - `GET /servers/:id`, `PATCH /servers/:id`
 - Impact ("if this server goes down")
-  - `GET /assets/:id/impact` (`infrastructure:reader`) → `{ asset, assets, clusters, applications, technologies, processes }`, read in one request.
-  - A failure spreads from a container to what it contains (`contains`) and from an asset to the assets that depend on it (`depends_on`). Each kind of edge is followed at most 3 times on a path, never twice through the same asset.
-  - `assets`: `{ id, reference, name, kind, depth, relation, via: [{ id, name }] }`, the asset itself first (`depth` 0, `relation` null), then each fallen asset once with its shortest path (`via` = the fallen assets from the server to its parent; `relation` = the last edge).
-  - `clusters`: clusters with a fallen member, `{ id, reference, name, state: 'degraded' | 'down', members, fallen_members, via }`; `down` when no member stands. The applications of a cluster that is down fall with it; a cluster is not followed further.
-  - `applications`: `{ id, reference, name, criticality, environment, via }`, one row per application and environment with an in-service instance on a fallen asset; `null` without `applications:reader`, a Business Contributor's own applications only.
-  - `technologies`: technologies installed on a fallen asset, `{ id, reference, name, versions, via }`.
-  - `processes`: in-service business processes of the listed applications, `{ id, name, via }` (`via` = applications); `null` without `business_processes:reader` or without the applications.
+  - `GET /assets/:id/impact` (`infrastructure:reader`) → `{ asset, assets, clusters, applications, technologies, processes, totals }`, read in one request.
+  - A failure spreads from a container to what it contains (`contains`) and from an asset to the assets that depend on it (`depends_on`). Each kind of edge is followed at most 3 times on a path, never twice through the same asset. The walk goes level by level, one statement per level for the whole frontier.
+  - `assets`: `{ id, reference, name, kind, depth, relation, via: [{ id, name }] }`, the asset itself first (`depth` 0, `relation` null), then each fallen asset once with its shortest path (`via` = the fallen assets from the server to its parent; `relation` = the last edge), nearest first, then by name.
+  - `clusters`: clusters with a fallen member, `{ id, reference, name, state: 'degraded' | 'down', members, fallen_members, via, via_total }`; `down` when no member stands. The applications of a cluster that is down fall with it; a cluster is not followed further.
+  - `applications`: `{ id, reference, name, criticality, environments, via, via_total }`, one row per application with an in-service instance on a fallen asset (`environments` of those instances, production first); `null` without `applications:reader`, a Business Contributor's own applications only.
+  - `technologies`: technologies installed on a fallen asset, `{ id, reference, name, versions, via, via_total }`.
+  - `processes`: in-service business processes of the affected applications, `{ id, name, via, via_total }` (`via` = applications); `null` without `business_processes:reader` or without the applications.
+  - Caps: each list keeps its first 200 rows (`assets`: the server plus 200), each `via` of a cluster, application, technology or process its first 20 names (`via_total` counts them all). `totals: { assets, applications, clusters, technologies, processes }` gives the full counts (`assets` without the server, 0 for a list the caller cannot read).
   - `404` for an unknown asset or one of another tenant.
 - Delete
   - `DELETE /servers/:id` (admin) — blocked with `409 Conflict` if the server has any app assignments or is referenced by any connection (including multi-server and leg participants); the message lists sample related items.
