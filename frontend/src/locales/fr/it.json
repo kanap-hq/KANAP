@@ -1304,7 +1304,9 @@
           "integration_tool": "Outil d’intégration de liaisons d’interface : {{count}}",
           "suite_components": "Suite avec des composants : {{count}}",
           "interface_bindings": "Liaisons d’interface sur ses déploiements : {{count}}",
-          "name_taken": "Une technologie porte déjà ce nom"
+          "name_taken": "Une technologie porte déjà ce nom",
+          "invalid_fields": "Valeurs qu’une technologie ne peut pas reprendre : {{fields}}",
+          "missing_files": "Fichiers absents du stockage : {{files}}"
         },
         "moved": {
           "owners": "Responsables",
@@ -1318,20 +1320,38 @@
         },
         "lost": {
           "instances": "Déploiements et environnements",
+          "disabled_instance_servers": "Serveurs des déploiements désactivés",
           "suites": "Appartenance à une suite",
           "predecessor": "Prédécesseur",
           "successors": "Lien vers ses successeurs",
           "data_residency": "Résidence des données",
           "support_contacts": "Contacts de support",
+          "audience": "Sociétés et départements utilisateurs",
+          "links_without_url": "Liens web sans adresse",
           "knowledge_links": "Liens de base de connaissance",
-          "managed_documents": "Documents gérés",
           "tasks": "Tâches liées",
           "requests": "Demandes liées",
           "business_processes": "Processus métier",
           "technologies": "Technologies dont elle dépend"
         },
         "confirm": "Convertir",
-        "failed": "La conversion a échoué."
+        "failed": "La conversion a échoué.",
+        "fieldNames": {
+          "name": "nom (200 caractères au plus)",
+          "editor": "éditeur (200 caractères au plus)",
+          "description": "description (20 000 caractères au plus)",
+          "notes": "notes (20 000 caractères au plus)",
+          "lifecycle": "cycle de vie",
+          "cyber_criticality": "criticité cyber",
+          "recovery_wave": "vague de reprise",
+          "rto_minutes": "RTO",
+          "rpo_minutes": "RPO"
+        },
+        "unlinkedTitle": "Conservé, sans son lien avec l’application",
+        "unlinked": {
+          "managed_documents": "Documents gérés, déplacés vers les documents non classés"
+        },
+        "hiddenMoves": "D’autres liens que vous ne voyez pas partent aussi."
       }
     },
     "asset": {

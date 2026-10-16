@@ -110,6 +110,8 @@
   "not_found": "Este elemento ya no existe. Recargue la página para ver la lista actualizada.",
   "ASSET_IN_USE_one": "Este activo se usa en {{usages}}. Quítelo de allí antes de eliminarlo.",
   "ASSET_IN_USE_other": "Este activo se usa en {{usages}}. Quítelo de allí antes de eliminarlo.",
+  "APPLICATION_CONVERSION_MISSING_FILE": "El archivo {{file}} falta en el almacenamiento. Quítelo de la aplicación y vuelva a convertir.",
+  "APPLICATION_CONVERSION_REFUSED": "Esta aplicación no se puede convertir en tecnología.",
   "APPLICATION_HAS_INTERFACES_one": "Esta aplicación es el origen o el destino de {{usages}}. Desactívela en su lugar, o elimine primero esa interfaz.",
   "APPLICATION_HAS_INTERFACES_other": "Esta aplicación es el origen o el destino de {{usages}}. Desactívela en su lugar, o elimine primero esas interfaces.",
   "COST_CENTER_IN_USE": "Este centro de coste se usa en {{usages}}. Desactívelo en lugar de eliminarlo.",

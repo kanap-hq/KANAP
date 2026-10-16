@@ -1304,7 +1304,9 @@
           "integration_tool": "Integrationswerkzeug von Schnittstellenbindungen: {{count}}",
           "suite_components": "Suite mit Komponenten: {{count}}",
           "interface_bindings": "Schnittstellenbindungen auf ihren Bereitstellungen: {{count}}",
-          "name_taken": "Eine Technologie mit diesem Namen existiert bereits"
+          "name_taken": "Eine Technologie mit diesem Namen existiert bereits",
+          "invalid_fields": "Werte, die eine Technologie nicht übernehmen kann: {{fields}}",
+          "missing_files": "Im Speicher fehlende Dateien: {{files}}"
         },
         "moved": {
           "owners": "Verantwortliche",
@@ -1318,20 +1320,38 @@
         },
         "lost": {
           "instances": "Bereitstellungen und Umgebungen",
+          "disabled_instance_servers": "Server deaktivierter Bereitstellungen",
           "suites": "Zugehörigkeit zu einer Suite",
           "predecessor": "Vorgänger",
           "successors": "Verknüpfung zu ihren Nachfolgern",
           "data_residency": "Datenresidenz",
           "support_contacts": "Supportkontakte",
+          "audience": "Nutzende Gesellschaften und Abteilungen",
+          "links_without_url": "Weblinks ohne Adresse",
           "knowledge_links": "Wissensverknüpfungen",
-          "managed_documents": "Verwaltete Dokumente",
           "tasks": "Verknüpfte Aufgaben",
           "requests": "Verknüpfte Anfragen",
           "business_processes": "Geschäftsprozesse",
           "technologies": "Technologien, von denen sie abhängt"
         },
         "confirm": "Umwandeln",
-        "failed": "Die Umwandlung ist fehlgeschlagen."
+        "failed": "Die Umwandlung ist fehlgeschlagen.",
+        "fieldNames": {
+          "name": "Name (höchstens 200 Zeichen)",
+          "editor": "Hersteller (höchstens 200 Zeichen)",
+          "description": "Beschreibung (höchstens 20.000 Zeichen)",
+          "notes": "Notizen (höchstens 20.000 Zeichen)",
+          "lifecycle": "Lebenszyklus",
+          "cyber_criticality": "Cyber-Kritikalität",
+          "recovery_wave": "Wiederherstellungswelle",
+          "rto_minutes": "RTO",
+          "rpo_minutes": "RPO"
+        },
+        "unlinkedTitle": "Bleibt erhalten, ohne Verknüpfung zur Anwendung",
+        "unlinked": {
+          "managed_documents": "Verwaltete Dokumente, verschoben zu den nicht abgelegten Dokumenten"
+        },
+        "hiddenMoves": "Weitere Verknüpfungen, die Sie nicht sehen, gehen ebenfalls über."
       }
     },
     "asset": {
