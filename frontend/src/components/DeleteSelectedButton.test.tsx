@@ -135,7 +135,7 @@ describe('DeleteSelectedButton', () => {
     expect(message).not.toHaveTextContent(/Cannot delete supplier "Acme": it is used by 2 contracts\. Disable it instead\.;/);
   });
 
-  it('counts the selection in the title and shows the warning it is given', async () => {
+  it('names a single selected item in the title and shows the warning it is given', async () => {
     render(
       <ThemeProvider theme={createAppTheme('light')}>
         <DeleteSelectedButton<Row>
@@ -150,7 +150,9 @@ describe('DeleteSelectedButton', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: /buttons.deleteSelected/ }));
     const dialog = await screen.findByRole('dialog');
-    expect(dialog).toHaveTextContent('delete.deleteSelectedTitle {"count":1}');
+    // One item: "Delete First?", never the generic "Delete the selected item".
+    expect(dialog).toHaveTextContent('delete.recordTitle {"name":"First"}');
+    expect(dialog).not.toHaveTextContent('deleteSelectedTitle');
     expect(dialog).toHaveTextContent('delete.itemsToDelete {"count":1}');
     expect(dialog).toHaveTextContent('This contract is linked to nothing.');
     expect(dialog).not.toHaveTextContent('delete.warningMessage');

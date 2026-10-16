@@ -44,15 +44,16 @@ describe('DeleteSelectedButton in each language', () => {
   afterEach(async () => { await i18n.changeLanguage('en'); });
 
   it.each([
-    ['fr', 1, "Supprimer l'élément sélectionné"],
+    ['fr', 1, 'Supprimer Alpha ?'],
     ['fr', 2, 'Supprimer les 2 éléments sélectionnés'],
-    ['en', 1, 'Delete the selected item'],
+    ['en', 1, 'Delete Alpha?'],
     ['en', 3, 'Delete the 3 selected items'],
     ['de', 2, '2 ausgewählte Elemente löschen'],
     ['es', 2, 'Eliminar los 2 elementos seleccionados'],
-  ])('titles the window in %s for %i items with the right plural', async (lng, count, title) => {
+  ])('titles the window in %s for %i items: the item named, or the selection counted', async (lng, count, title) => {
     const { dialog } = await openIn(lng, rowsOf(count));
     expect(dialog).toHaveTextContent(title);
+    expect(dialog.textContent ?? '').not.toMatch(/élément sélectionné|selected item\b/);
     expect(dialog.textContent ?? '').not.toMatch(/delete\.|\{\{/);
   });
 

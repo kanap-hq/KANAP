@@ -552,7 +552,7 @@ export default function LocationWorkspacePage() {
 
       <KanapDialog
         open={deleteDialogOpen}
-        title={t('workspace.location.deleteTitle')}
+        title={data?.name ? t('common:delete.recordTitle', { name: data.name }) : t('workspace.location.deleteTitle')}
         onClose={() => !deleting && setDeleteDialogOpen(false)}
         onSave={handleDelete}
         saveLabel={t('common:buttons.delete')}

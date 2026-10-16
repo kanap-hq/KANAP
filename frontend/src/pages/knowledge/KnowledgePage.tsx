@@ -1604,7 +1604,7 @@ export default function KnowledgePage() {
 
       <KanapDialog
         open={deleteLibraryConfirmOpen}
-        title={t('dialogs.deleteLibrary.title')}
+        title={editingLibrary?.name ? t('common:delete.recordTitle', { name: editingLibrary.name }) : t('dialogs.deleteLibrary.title')}
         onClose={() => setDeleteLibraryConfirmOpen(false)}
         onSave={() => {
           setDeleteLibraryConfirmOpen(false);

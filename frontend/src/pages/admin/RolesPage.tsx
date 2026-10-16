@@ -369,7 +369,7 @@ export default function RolesPage() {
 
       {/* Confirm Delete */}
       <Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)}>
-        <DialogTitle>{t('roles.dialogs.deleteTitle')}</DialogTitle>
+        <DialogTitle>{selected?.role_name ? t('common:delete.recordTitle', { name: selected.role_name }) : t('roles.dialogs.deleteTitle')}</DialogTitle>
         <DialogContent>
           {deleteRefusal
             ? <Alert severity="warning">{deleteRefusal}</Alert>

@@ -231,6 +231,10 @@ export default function DeleteSelectedButton<T>({
   const toDelete = items.filter((item) => !refusedById.has(item.id) || releasedIds.has(item.id));
   const shownKept = keptItems.filter((item) => !releasedIds.has(item.id));
   const keptLabel = (count: number) => itemLabels?.kept(count) ?? t('delete.itemsKept', { count });
+  /** "Delete Acme?" for one item, "Delete the 3 selected items" for several: one item is always named. */
+  const selectionTitle = (named: Item[]) => (named.length === 1
+    ? t('delete.recordTitle', { name: named[0].name })
+    : t('delete.deleteSelectedTitle', { count: named.length }));
   const onlyRefused = !!check && deletable.length === 0 && keptItems.length > 0 && liftable.length === 0;
 
   return (
@@ -249,9 +253,7 @@ export default function DeleteSelectedButton<T>({
         // Nothing left to delete: the refusal and why, as on a record page, with Close only.
         <KanapDialog
           open={confirmOpen}
-          title={keptItems.length === 1
-            ? t('delete.recordTitle', { name: keptItems[0].name })
-            : t('delete.deleteSelectedTitle', { count: keptItems.length })}
+          title={selectionTitle(keptItems)}
           onClose={handleCloseConfirm}
           onSave={handleCloseConfirm}
           saveLabel={t('buttons.close')}
@@ -269,8 +271,8 @@ export default function DeleteSelectedButton<T>({
           open={confirmOpen}
           onClose={handleCloseConfirm}
           onConfirm={handleConfirmDelete}
-          // The selection, counted: the lists below say what goes and what is kept.
-          title={t('delete.deleteSelectedTitle', { count: items.length })}
+          // The item named, or the selection counted: the lists below say what goes and what is kept.
+          title={selectionTitle(items)}
           // Once the check has answered, the refused items are listed as kept: no generic "referenced items are kept".
           warning={check ? (check.warning ?? warning ?? t('delete.cannotUndo')) : (forceOption?.message ?? warning)}
           confirmLabel={check ? check.confirmLabel : forceOption?.confirmLabel}
