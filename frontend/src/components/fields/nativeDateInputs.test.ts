@@ -15,6 +15,13 @@ describe('date inputs', () => {
     expect(offenders).toEqual([]);
   });
 
+  it('numeric dates (ymdToEu, isoToEuDate) only inside the date fields; read-only dates use formatShortDate', () => {
+    const offenders = Object.entries(sources)
+      .filter(([file, source]) => !file.startsWith('./') && /\b(ymdToEu|isoToEuDate)\b/.test(source))
+      .map(([file]) => file);
+    expect(offenders).toEqual([]);
+  });
+
   it('the roadmap start date and pin dates use the app date field', () => {
     const roadmap = sources['../../pages/portfolio/components/RoadmapGenerator.tsx'];
     expect(roadmap).toBeTruthy();

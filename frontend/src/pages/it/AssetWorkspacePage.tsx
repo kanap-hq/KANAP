@@ -32,7 +32,6 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LocationSelect from '../../components/fields/LocationSelect';
 import { useCountryName } from '../../i18n/countries';
-import { ymdToEu } from '../../lib/date-eu';
 import AddIcon from '@mui/icons-material/Add';
 import ApplicationSelect from '../../components/fields/ApplicationSelect';
 import OptionWithHint from '../../components/fields/OptionWithHint';
@@ -1722,7 +1721,7 @@ export default function AssetWorkspacePage() {
                             </TableCell>
                             <TableCell>{environmentLabel(assignment.environment)}</TableCell>
                             <TableCell>{labelFor('serverRole', assignment.role) || assignment.role}</TableCell>
-                            <TableCell>{assignment.since_date ? ymdToEu(assignment.since_date) : '-'}</TableCell>
+                            <TableCell>{assignment.since_date ? formatShortDate(assignment.since_date, locale, { year: 'always' }) : '-'}</TableCell>
                             <TableCell>{assignment.notes || '-'}</TableCell>
                             <TableCell align="right">
                               <Tooltip title={t('workspace.asset.assignments.editAssignment')}>
@@ -2063,8 +2062,8 @@ export default function AssetWorkspacePage() {
                         if (isCluster) return t('workspace.asset.technical.osClusterHint');
                         const sel = operatingSystemOptions.find((opt) => opt.value === operatingSystem);
                         if (!sel) return t('workspace.asset.technical.osChooseHint');
-                        const ss = sel.standardSupportEnd ? t('workspace.asset.technical.standardSupportEnds', { date: ymdToEu(sel.standardSupportEnd) }) : '';
-                        const es = sel.extendedSupportEnd ? t('workspace.asset.technical.extendedSupportEnds', { date: ymdToEu(sel.extendedSupportEnd) }) : '';
+                        const ss = sel.standardSupportEnd ? t('workspace.asset.technical.standardSupportEnds', { date: formatShortDate(sel.standardSupportEnd, locale, { year: 'always' }) }) : '';
+                        const es = sel.extendedSupportEnd ? t('workspace.asset.technical.extendedSupportEnds', { date: formatShortDate(sel.extendedSupportEnd, locale, { year: 'always' }) }) : '';
                         return [ss, es].filter(Boolean).join(' / ');
                       })()}
                       size="small"
