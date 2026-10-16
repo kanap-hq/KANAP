@@ -179,7 +179,7 @@ Complete los campos principales:
 | **Tipo de activo** | El tipo de servidor (desplegable) | `Máquina virtual` |
 | **Ubicación** | Dónde está alojado (obligatorio) | `Centro de datos París` |
 | **Entorno** | A qué entorno sirve | `Prod` |
-| **Descripción** | Cualquier contexto adicional | -- |
+| **Descripción** | Cualquier contexto adicional |  |
 
 El panel **Propiedades** a la derecha contiene el resto: **Sub-ubicación**, **Ciclo de vida**, **Puesta en producción** y **Fin de vida**. Una vez seleccionada una ubicación, varios **campos de solo lectura** se derivan automáticamente:
 
@@ -235,7 +235,7 @@ Hay **dos formas** de crear esta asignación:
 | **Entorno** | Qué despliegue | `PROD` |
 | **Rol** | Rol del servidor para esta app | `Web` |
 | **Fecha desde** | Cuándo empezó la asignación | `2025-01-15` |
-| **Notas** | Cualquier contexto | -- |
+| **Notas** | Cualquier contexto |  |
 
 !!! success "La cadena está completa"
     Ahora tiene la ruta completa documentada:
