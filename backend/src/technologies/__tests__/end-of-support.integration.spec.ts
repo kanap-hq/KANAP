@@ -39,7 +39,15 @@ async function seed(runner: QueryRunner, tag: string) {
   await runner.query(`UPDATE assets SET kind = 'virtual_machine' WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, [tenantId, [vmOrphan, vmHosted]]);
   await contains(runner, tenantId, s1, vmHosted);
   await runner.query(`UPDATE assets SET operating_system = 'old_os' WHERE tenant_id = $1 AND id = $2`, [tenantId, s3]);
-  await runner.query(`UPDATE assets SET end_of_life_date = $3 WHERE tenant_id = $1 AND id = $2`, [tenantId, s4, soon]);
+  await runner.query(`UPDATE assets SET kind = 'physical_server', end_of_life_date = $3 WHERE tenant_id = $1 AND id = $2`, [tenantId, s4, soon]);
+  // A VM at its end of life is no hardware.
+  const vmEol = await a('VM-EOL');
+  await runner.query(`UPDATE assets SET end_of_life_date = $3 WHERE tenant_id = $1 AND id = $2`, [tenantId, vmEol, soon]);
+  // What the host carries is touched too: a VM on the old OS server and one on the hardware.
+  const vmOnOs = await a('VM-ON-OS');
+  const vmOnHw = await a('VM-ON-HW');
+  await contains(runner, tenantId, s3, vmOnOs);
+  await contains(runner, tenantId, s4, vmOnHw);
   await runner.query(`INSERT INTO asset_support_info (tenant_id, asset_id, support_expiry) VALUES ($1, $2, $3)`, [tenantId, s4, lastMonth]);
   // A retired asset at its end of life is not in service: left out.
   const retired = await a('SRV-RETIRED');
@@ -61,6 +69,9 @@ async function seed(runner: QueryRunner, tag: string) {
   const tomcat9 = await version(runner, tenantId, tomcat, '9');
   await installed(runner, tenantId, s2, tomcat, tomcat9);
   const unused = await technology(runner, tenantId, 3, 'Unused', 'other');
+  // An installed technology entered without any version: its link without version is a gap.
+  const free = await technology(runner, tenantId, 5, 'Free', 'other');
+  await installed(runner, tenantId, s2, free, null);
   const entra = await technology(runner, tenantId, 4, 'Entra ID', 'directory');
   await runner.query(`UPDATE technologies SET mode = 'subscribed' WHERE id = $1`, [entra]);
 
@@ -68,6 +79,10 @@ async function seed(runner: QueryRunner, tag: string) {
   await assign(runner, tenantId, erp, s1);
   const portal = await application(runner, tenantId, `Portal ${tag}`);
   await assign(runner, tenantId, portal, s3);
+  const osVmApp = await application(runner, tenantId, `OS VM app ${tag}`);
+  await assign(runner, tenantId, osVmApp, vmOnOs);
+  const hwVmApp = await application(runner, tenantId, `HW VM app ${tag}`);
+  await assign(runner, tenantId, hwVmApp, vmOnHw);
   const crm = await application(runner, tenantId, `Legacy CRM ${tag}`);
   await runner.query(`UPDATE applications SET end_of_support_date = $2, hosting_model = 'on_premise' WHERE id = $1`, [crm, soon]);
   // A SaaS application without servers is no gap.
@@ -78,6 +93,12 @@ async function seed(runner: QueryRunner, tag: string) {
   const dbApp = await application(runner, tenantId, `Warehouse ${tag}`);
   const dbInstance = await one(runner, `INSERT INTO app_instances (tenant_id, application_id, environment) VALUES ($1, $2, 'prod') RETURNING id`, [tenantId, dbApp]);
   await runner.query(`INSERT INTO app_asset_assignments (tenant_id, app_instance_id, asset_id, role) VALUES ($1, $2, $3, 'db'), ($1, $2, $4, 'db')`, [tenantId, dbInstance, dbEmpty, s1]);
+  // A database role of a disabled application is no gap.
+  const dbDisabled = await a('DB-DISABLED');
+  const oldDbApp = await application(runner, tenantId, `Old warehouse ${tag}`);
+  await runner.query(`UPDATE applications SET status = 'disabled' WHERE id = $1`, [oldDbApp]);
+  const oldDbInstance = await one(runner, `INSERT INTO app_instances (tenant_id, application_id, environment) VALUES ($1, $2, 'prod') RETURNING id`, [tenantId, oldDbApp]);
+  await runner.query(`INSERT INTO app_asset_assignments (tenant_id, app_instance_id, asset_id, role) VALUES ($1, $2, $3, 'db')`, [tenantId, oldDbInstance, dbDisabled]);
 
   // SSO: one application without an identity technology, one that declares Entra ID (no version, no gap).
   const ssoBare = await application(runner, tenantId, `SSO bare ${tag}`);
@@ -90,10 +111,10 @@ async function seed(runner: QueryRunner, tag: string) {
 
   return {
     tenantId, today, soon, lastMonth, later, far,
-    assets: { s1, s2, s3, s4, s5, dbEmpty, vmOrphan, vmHosted, retired },
-    tech: { sql, tomcat, unused, entra },
+    assets: { s1, s2, s3, s4, s5, dbEmpty, dbDisabled, vmOrphan, vmHosted, retired, vmEol, vmOnOs, vmOnHw },
+    tech: { sql, tomcat, unused, entra, free },
     versions: { sql2016, sql2019, sql2022, tomcat9 },
-    apps: { erp, portal, crm, saas, dbApp, ssoBare, ssoOk },
+    apps: { erp, portal, osVmApp, hwVmApp, crm, saas, dbApp, ssoBare, ssoOk },
   };
 }
 
@@ -104,6 +125,7 @@ function service() {
         { code: 'old_os', label: 'Old OS', standardSupportEnd: '2015-01-01', extendedSupportEnd: '2020-01-01' },
         { code: 'new_os', label: 'New OS', standardSupportEnd: '2099-01-01' },
       ],
+      serverKinds: [{ code: 'physical_server', is_physical: true }, { code: 'vm', is_physical: false }, { code: 'virtual_machine', is_physical: false }],
     }),
   };
   return new EndOfSupportService(new TechnologyReachService(), itOps as any);
@@ -155,8 +177,8 @@ async function testDeadlines() {
     const os = byKey.get('operating_system:old_os')!;
     assert.equal(os.state, 'out_of_support');
     assert.equal(os.item_name, 'Old OS');
-    assert.deepEqual(os.servers.map((s) => s.id), [g.assets.s3]);
-    assert.deepEqual(os.applications!.map((a) => a.id), [g.apps.portal]);
+    assert.deepEqual(os.servers.map((s) => s.id).sort(), [g.assets.s3, g.assets.vmOnOs].sort(), 'the server and the VM it contains');
+    assert.deepEqual(os.applications!.map((a) => a.id).sort(), [g.apps.portal, g.apps.osVmApp].sort());
 
     const crm = byKey.get(`application:${g.apps.crm}`)!;
     assert.equal(crm.state, 'upcoming');
@@ -165,7 +187,10 @@ async function testDeadlines() {
 
     assert.equal(byKey.get(`hardware:end_of_life:${g.assets.s4}`)!.state, 'upcoming');
     assert.equal(byKey.get(`hardware:support_contract:${g.assets.s4}`)!.state, 'out_of_support');
-    assert.deepEqual(byKey.get(`hardware:end_of_life:${g.assets.s4}`)!.servers.map((s) => s.id), [g.assets.s4]);
+    const hardware = byKey.get(`hardware:end_of_life:${g.assets.s4}`)!;
+    assert.deepEqual(hardware.servers.map((s) => s.id).sort(), [g.assets.s4, g.assets.vmOnHw].sort());
+    assert.deepEqual(hardware.applications!.map((a) => a.id), [g.apps.hwVmApp]);
+    assert.equal(hardware.item_name, `SRV-HW eos-deadlines`);
 
     // Sorted by date: the oldest end first.
     const dates = report.items.map((r) => r.date);
@@ -203,9 +228,10 @@ async function testGaps() {
       `database_server_without_dbms|${g.assets.dbEmpty}|-`,
       `sso_application_without_identity|${g.apps.ssoBare}|-`,
       `link_without_version|${g.tech.sql}|${g.assets.s5}`,
+      `link_without_version|${g.tech.free}|${g.assets.s2}`,
       `version_without_end_date|${g.tech.tomcat}|9`,
     ].sort());
-    const link = items.find((r) => r.gap === 'link_without_version')!;
+    const link = items.find((r) => r.gap === 'link_without_version' && r.subject_id === g.tech.sql)!;
     assert.equal(link.subject_type, 'technology');
     assert.equal(link.subject_reference, 'TEC-1');
     assert.equal(link.related_type, 'asset');
@@ -237,6 +263,32 @@ async function testWithoutApplications() {
   });
 }
 
+async function testBusinessContributorScope() {
+  await inRolledBackTransaction(async (runner) => {
+    const g: Ctx = await seed(runner, 'eos-scope');
+    const role = await one(runner, `INSERT INTO roles (tenant_id, role_name) VALUES ($1, 'Contributor eos-scope') RETURNING id`, [g.tenantId]);
+    const user = await one(
+      runner,
+      `INSERT INTO users (tenant_id, role_id, first_name, last_name, email, status) VALUES ($1, $2, 'Bea', 'Contributor', 'bea.eos-scope@example.invalid', 'enabled') RETURNING id`,
+      [g.tenantId, role],
+    );
+    // The contributor takes part in the portal only.
+    await runner.query(`INSERT INTO application_owners (tenant_id, application_id, user_id, owner_type) VALUES ($1, $2, $3, 'business')`, [g.tenantId, g.apps.portal, user]);
+    const opts = { manager: runner.manager, tenantId: g.tenantId };
+    const scope = { scope: { userId: user } };
+    const report = await service().deadlines({}, opts, scope);
+    assert.ok(!report.items.some((r) => r.type === 'application'), 'the CRM is outside the scope: no row');
+    const byKey = new Map(report.items.map((r) => [r.key, r]));
+    assert.deepEqual(byKey.get('operating_system:old_os')!.applications!.map((a) => a.id), [g.apps.portal], 'only its own application in the columns');
+    assert.deepEqual(byKey.get(`technology:${g.versions.sql2016}`)!.applications, []);
+    assert.equal(byKey.get(`technology:${g.versions.sql2016}`)!.application_count, 0);
+    assert.equal(byKey.get(`technology:${g.versions.sql2016}`)!.server_count, 2, 'servers stay');
+    const gaps = await service().gaps(opts, scope);
+    assert.ok(!gaps.items.some((r) => r.subject_type === 'application'), 'no gap on an application outside the scope');
+    assert.ok(gaps.items.some((r) => r.gap === 'vm_without_host'));
+  });
+}
+
 async function testTenantIsolation() {
   await inRolledBackTransaction(async (runner) => {
     const a: Ctx = await seed(runner, 'eos-iso-a');
@@ -257,6 +309,7 @@ runSpecs('end-of-support.integration.spec', [
   ['horizon and type', testHorizonAndType],
   ['gaps', testGaps],
   ['without the applications right', testWithoutApplications],
+  ['Business Contributor scope', testBusinessContributorScope],
   ['tenant isolation', testTenantIsolation],
 ]).catch((err) => {
   console.error(err);

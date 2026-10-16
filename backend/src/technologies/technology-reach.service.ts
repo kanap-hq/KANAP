@@ -198,6 +198,31 @@ export class TechnologyReachService {
   }
 
   /**
+   * What each asset of `assetIds` carries down the graph (the VMs a host contains, the cluster a
+   * member carries and what that cluster contains), at most `MAX_DEPTH` edges away, the asset itself
+   * excluded. Retired assets carry nothing and are not carried.
+   */
+  async assetsCarriedBy(mg: EntityManager, tenantId: string, assetIds: string[]): Promise<Array<{ asset_id: string; carried_id: string; depth: number }>> {
+    if (assetIds.length === 0) return [];
+    const rows: Array<{ asset_id: string; carried_id: string; depth: number }> = await withoutJit(mg,
+      `WITH RECURSIVE down AS (
+         SELECT a.id AS asset_id, a.id AS carried_id, 0 AS depth, ARRAY[a.id] AS path
+           FROM assets a WHERE a.tenant_id = $1 AND a.id = ANY($2::uuid[]) AND ${assetInServiceSql('a')}
+         UNION ALL
+         SELECT d.asset_id, e.carried, d.depth + 1, d.path || e.carried
+           FROM down d
+           JOIN ${EDGES} e ON e.carrier = d.carried_id
+          WHERE d.depth < ${MAX_DEPTH} AND NOT e.carried = ANY(d.path)
+       )
+       SELECT DISTINCT ON (asset_id, carried_id) asset_id, carried_id, depth
+         FROM down WHERE depth > 0
+        ORDER BY asset_id, carried_id, depth`,
+      [tenantId, Array.from(new Set(assetIds))],
+    );
+    return rows.map((row) => ({ ...row, depth: Number(row.depth) }));
+  }
+
+  /**
    * The applications of each technology of `technologyIds`: hosted (an instance assigned to a
    * reached asset, per environment, server and version) and declared.
    */

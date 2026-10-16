@@ -4,15 +4,16 @@ import { applicationParticipantCondition } from '../../auth/business-contributor
 import { languageOf, writeCsv } from '../../common/csv-sheet';
 import { ItOpsSettingsService, type OperatingSystemOption } from '../../it-ops-settings/it-ops-settings.service';
 import type { ApplicationsReach } from '../technology-links.service';
-import { inServiceSql, TechnologyReachService } from '../technology-reach.service';
+import { assetInServiceSql, inServiceSql, TechnologyReachService } from '../technology-reach.service';
 import { technologyReference } from '../technology-rows';
 
 /**
  * The "End of support" report (lot T4 of planning/cartographie-technologies): what reaches or has
  * reached its end of support within a horizon, what it touches, and the missing data that keeps the
  * report from answering. Servers and applications touched by a technology version come from the
- * deductions of `TechnologyReachService`; an operating system, a piece of hardware or an
- * application touches the servers it names and the applications assigned to them, no further.
+ * deductions of `TechnologyReachService`; an operating system or a piece of hardware touches its
+ * assets and what they carry (`assetsCarriedBy`), then the applications assigned to them; an
+ * application touches the servers it is assigned to. Retired assets take no part.
  *
  * Every statement is static SQL, carries `tenant_id` on every table and join besides RLS, and
  * reads a batch (`= ANY($n)`), never a query per row. Applications show only to a caller who reads
@@ -88,15 +89,15 @@ type Candidate = Omit<DeadlineRow, 'server_count' | 'servers' | 'application_cou
 export type ReportWindow = { today: string; until: string };
 
 const DAY = (expr: string) => `to_char(${expr}, 'YYYY-MM-DD')`;
-const ASSET_IN_SERVICE = (alias: string) => `${alias}.status IS DISTINCT FROM 'retired'`;
 
 /**
- * The versions in use: named by a link to an asset, or declared by an application in service (the
- * rule of `countsOfTechnologies`).
+ * The versions in use: named by a link to an asset in service, or declared by an application in
+ * service (the rule of `countsOfTechnologies`).
  */
 const USED_VERSIONS = `
   used AS (
     SELECT at.technology_version_id AS version_id FROM asset_technologies at
+      JOIN assets a ON a.tenant_id = $1 AND a.id = at.asset_id AND ${assetInServiceSql('a')}
      WHERE at.tenant_id = $1 AND at.technology_version_id IS NOT NULL
     UNION
     SELECT d.technology_version_id FROM application_technologies d
@@ -158,7 +159,7 @@ export async function operatingSystemDeadlines(
   const rows: Array<{ code: string; ids: string[] }> = await mg.query(
     `SELECT a.operating_system AS code, array_agg(a.id::text ORDER BY a.name) AS ids
        FROM assets a
-      WHERE a.tenant_id = $1 AND a.operating_system = ANY($2::text[]) AND ${ASSET_IN_SERVICE('a')}
+      WHERE a.tenant_id = $1 AND a.operating_system = ANY($2::text[]) AND ${assetInServiceSql('a')}
       GROUP BY a.operating_system`,
     [tenantId, Array.from(ending.keys())],
   );
@@ -207,19 +208,29 @@ export class EndOfSupportService {
     const wants = (t: DeadlineType) => !type || type === t;
 
     const candidates: Candidate[] = [];
+    const settings = wants('operating_system') || wants('hardware') ? await this.itOps.getSettings(tenantId, { manager: mg }) : null;
     if (wants('technology')) candidates.push(...await this.technologyDeadlines(mg, tenantId, window));
-    if (wants('operating_system')) {
-      const settings = await this.itOps.getSettings(tenantId, { manager: mg });
-      candidates.push(...await operatingSystemDeadlines(mg, tenantId, settings.operatingSystems ?? [], window));
-    }
+    if (settings && wants('operating_system')) candidates.push(...await operatingSystemDeadlines(mg, tenantId, settings.operatingSystems ?? [], window));
     if (wants('application') && applications) candidates.push(...await this.applicationDeadlines(mg, tenantId, window, applications));
-    if (wants('hardware')) candidates.push(...await this.hardwareDeadlines(mg, tenantId, window));
+    if (settings && wants('hardware')) {
+      const physical = (settings.serverKinds ?? []).filter((kind) => kind.is_physical === true).map((kind) => kind.code);
+      candidates.push(...await this.hardwareDeadlines(mg, tenantId, window, physical));
+    }
 
-    // The applications assigned to the servers of the rows that name servers only.
+    // An operating system or a piece of hardware touches its assets and what they carry (the VMs of
+    // a host), then the applications assigned to all of them.
     const named = candidates.filter((c) => c.type === 'operating_system' || c.type === 'hardware');
-    if (applications && named.length) {
-      const hosted = await this.applicationsOnAssets(mg, tenantId, named.flatMap((c) => c.serverIds));
-      for (const c of named) c.applicationIds = Array.from(new Set(c.serverIds.flatMap((id) => hosted.get(id) ?? [])));
+    if (named.length) {
+      const carried = new Map<string, string[]>();
+      for (const row of await this.reach.assetsCarriedBy(mg, tenantId, named.flatMap((c) => c.serverIds))) {
+        if (!carried.has(row.asset_id)) carried.set(row.asset_id, []);
+        carried.get(row.asset_id)!.push(row.carried_id);
+      }
+      for (const c of named) c.serverIds = Array.from(new Set([...c.serverIds, ...c.serverIds.flatMap((id) => carried.get(id) ?? [])]));
+      if (applications) {
+        const hosted = await this.applicationsOnAssets(mg, tenantId, named.flatMap((c) => c.serverIds));
+        for (const c of named) c.applicationIds = Array.from(new Set(c.serverIds.flatMap((id) => hosted.get(id) ?? [])));
+      }
     }
 
     const servers = await this.assetNames(mg, tenantId, candidates.flatMap((c) => c.serverIds));
@@ -273,7 +284,7 @@ export class EndOfSupportService {
 
     const vms: Array<{ id: string; name: string }> = await mg.query(
       `SELECT a.id, a.name FROM assets a
-        WHERE a.tenant_id = $1 AND a.kind = 'virtual_machine' AND ${ASSET_IN_SERVICE('a')}
+        WHERE a.tenant_id = $1 AND a.kind = 'virtual_machine' AND ${assetInServiceSql('a')}
           AND NOT EXISTS (
             SELECT 1 FROM asset_relations r
              WHERE r.tenant_id = $1 AND r.relation_type = 'contains' AND r.related_asset_id = a.id
@@ -293,8 +304,13 @@ export class EndOfSupportService {
     // Servers with a database role: a technology of the database family installed on them or carried to them.
     const dbServers: Array<{ id: string; name: string }> = await mg.query(
       `SELECT a.id, a.name FROM assets a
-        WHERE a.tenant_id = $1 AND ${ASSET_IN_SERVICE('a')}
-          AND EXISTS (SELECT 1 FROM app_asset_assignments x WHERE x.tenant_id = $1 AND x.asset_id = a.id AND x.role = 'db')`,
+        WHERE a.tenant_id = $1 AND ${assetInServiceSql('a')}
+          AND EXISTS (
+            SELECT 1 FROM app_asset_assignments x
+              JOIN app_instances i ON i.tenant_id = $1 AND i.id = x.app_instance_id
+              JOIN applications ap ON ap.tenant_id = $1 AND ap.id = i.application_id AND ${inServiceSql('ap', 'i')}
+             WHERE x.tenant_id = $1 AND x.asset_id = a.id AND x.role = 'db'
+          )`,
       [tenantId],
     );
     if (dbServers.length) {
@@ -324,8 +340,8 @@ export class EndOfSupportService {
       }
     }
 
-    // Links without a version, on technologies that have versions (a subscribed service without
-    // versions is complete without one).
+    // Links without a version, on installed technologies and on those that have versions (a
+    // subscribed service without versions is complete without one).
     {
       const params: unknown[] = [tenantId];
       const appLinks = applications
@@ -335,15 +351,15 @@ export class EndOfSupportService {
              JOIN technologies t ON t.tenant_id = $1 AND t.id = d.technology_id
              JOIN applications ap ON ap.tenant_id = $1 AND ap.id = d.application_id AND ${inServiceSql('ap')} ${this.scopeSql('ap', params, applications)}
             WHERE d.tenant_id = $1 AND d.technology_version_id IS NULL
-              AND EXISTS (SELECT 1 FROM technology_versions v WHERE v.tenant_id = $1 AND v.technology_id = t.id)`
+              AND (t.mode = 'installed' OR EXISTS (SELECT 1 FROM technology_versions v WHERE v.tenant_id = $1 AND v.technology_id = t.id))`
         : '';
       const rows: Array<{ side: 'asset' | 'application'; id: string; name: string; item_number: number; related_id: string; related_name: string }> = await mg.query(
         `SELECT 'asset' AS side, t.id, t.name, t.item_number, a.id AS related_id, a.name AS related_name
            FROM asset_technologies at
            JOIN technologies t ON t.tenant_id = $1 AND t.id = at.technology_id
-           JOIN assets a ON a.tenant_id = $1 AND a.id = at.asset_id
+           JOIN assets a ON a.tenant_id = $1 AND a.id = at.asset_id AND ${assetInServiceSql('a')}
           WHERE at.tenant_id = $1 AND at.technology_version_id IS NULL
-            AND EXISTS (SELECT 1 FROM technology_versions v WHERE v.tenant_id = $1 AND v.technology_id = t.id)
+            AND (t.mode = 'installed' OR EXISTS (SELECT 1 FROM technology_versions v WHERE v.tenant_id = $1 AND v.technology_id = t.id))
          ${appLinks}`,
         params,
       );
@@ -376,7 +392,7 @@ export class EndOfSupportService {
     if (list === 'gaps') {
       const { items } = await this.gaps(opts, applications);
       const headers = ['Missing data', 'Record type', 'Reference', 'Record', 'Linked to', 'Version'];
-      const rows = items.map((r) => [GAP_LABELS[r.gap], r.subject_type, r.subject_reference ?? '', r.subject_name, r.related_name ?? '', r.version ?? '']);
+      const rows = items.map((r) => [GAP_LABELS[r.gap], RECORD_LABELS[r.subject_type], r.subject_reference ?? '', r.subject_name, r.related_name ?? '', r.version ?? '']);
       return { filename: 'end-of-support-gaps.csv', content: writeCsv({ language, headers, rows }) };
     }
     if (list !== 'deadlines') throw new BadRequestException('list must be deadlines or gaps.');
@@ -482,18 +498,24 @@ export class EndOfSupportService {
     }));
   }
 
-  /** Assets in service at their end of life, or at the end of their support contract, within the window. */
-  private async hardwareDeadlines(mg: EntityManager, tenantId: string, window: ReportWindow): Promise<Candidate[]> {
+  /**
+   * Physical assets in service (a kind marked physical in the IT Ops catalog `serverKinds`, not a
+   * cluster) at their end of life, or at the end of their support contract, within the window.
+   */
+  private async hardwareDeadlines(mg: EntityManager, tenantId: string, window: ReportWindow, physicalKinds: string[]): Promise<Candidate[]> {
+    if (physicalKinds.length === 0) return [];
     const rows: Array<{ id: string; name: string; milestone: 'end_of_life' | 'support_contract'; day: string }> = await mg.query(
       `SELECT a.id, a.name, 'end_of_life' AS milestone, ${DAY('a.end_of_life_date')} AS day
          FROM assets a
-        WHERE a.tenant_id = $1 AND ${ASSET_IN_SERVICE('a')} AND a.end_of_life_date <= $2::date
+        WHERE a.tenant_id = $1 AND ${assetInServiceSql('a')} AND a.end_of_life_date <= $2::date
+          AND a.kind = ANY($3::text[]) AND a.is_cluster IS NOT TRUE
        UNION ALL
        SELECT a.id, a.name, 'support_contract', ${DAY('s.support_expiry')}
          FROM asset_support_info s
-         JOIN assets a ON a.tenant_id = $1 AND a.id = s.asset_id AND ${ASSET_IN_SERVICE('a')}
+         JOIN assets a ON a.tenant_id = $1 AND a.id = s.asset_id AND ${assetInServiceSql('a')}
+                      AND a.kind = ANY($3::text[]) AND a.is_cluster IS NOT TRUE
         WHERE s.tenant_id = $1 AND s.support_expiry <= $2::date`,
-      [tenantId, window.until],
+      [tenantId, window.until, physicalKinds],
     );
     return rows.map((row) => ({
       key: `hardware:${row.milestone}:${row.id}`,
@@ -579,6 +601,12 @@ const TYPE_LABELS: Record<DeadlineType, string> = {
   operating_system: 'Operating system',
   application: 'Application',
   hardware: 'Hardware',
+};
+
+const RECORD_LABELS: Record<GapRow['subject_type'], string> = {
+  application: 'Application',
+  asset: 'Asset',
+  technology: 'Technology',
 };
 
 const STATE_LABELS: Record<DeadlineState, string> = {
