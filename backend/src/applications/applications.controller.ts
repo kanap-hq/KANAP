@@ -3,7 +3,8 @@ import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, 
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
-import { ApplicationsService } from './services';
+import { ApplicationsService, ApplicationsRelationsService } from './services';
+import { relationKindOrThrow, type RelationsContext } from './services/applications-relations.service';
 import { ApplicationsDeleteService } from './applications-delete.service';
 import { ApplicationsCsvService } from './applications-csv.service';
 import { Response } from 'express';
@@ -59,6 +60,7 @@ export class ApplicationsController {
     private readonly integratedDocuments: IntegratedDocumentsService,
     private readonly dataSource: DataSource,
     private readonly tasks: TasksUnifiedService,
+    private readonly relations: ApplicationsRelationsService,
   ) {}
 
   /**
@@ -100,6 +102,34 @@ export class ApplicationsController {
 
   private async readTaskScope(ctx: TenantRequest) {
     return this.participationScope(ctx, 'tasks');
+  }
+
+  /**
+   * What the Relations tab may show and change: a section per module the caller reads (by
+   * permission level), each under the caller's participation scope when it is a Business Contributor.
+   */
+  private async relationsContext(ctx: TenantRequest): Promise<RelationsContext> {
+    const RANK: Record<string, number> = { reader: 1, contributor: 2, member: 3, admin: 4 };
+    const reads = (resource: string) => ctx.isAdmin === true || (RANK[ctx.permissions?.[resource] ?? ''] ?? 0) >= RANK.reader;
+    const [application, project, request, task] = await Promise.all([
+      this.participationScope(ctx, 'applications'),
+      this.readProjectScope(ctx),
+      this.participationScope(ctx, 'portfolio_requests'),
+      this.readTaskScope(ctx),
+    ]);
+    return {
+      manager: this.requireManager(ctx),
+      tenantId: ctx.tenantId,
+      userId: ctx.userId || null,
+      access: {
+        budget_lines: reads('budget'),
+        contracts: reads('contracts'),
+        projects: reads('portfolio_projects'),
+        requests: reads('portfolio_requests'),
+        tasks: reads('tasks'),
+      },
+      scopes: { application, project, request, task },
+    };
   }
 
   @UseGuards(PermissionGuard)
@@ -816,6 +846,51 @@ export class ApplicationsController {
       ...(await this.readApplicationOpts(ctx)),
       projectAccessScope: await this.readProjectScope(ctx),
     });
+  }
+
+  /** The Relations tab in one round trip: linked objects, suggestions and other related counts. */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('applications', 'reader')
+  @Get(':id/relations')
+  async getRelations(@Param('id') id: string, @Tenant() ctx: TenantRequest) {
+    return this.relations.getRelations(id, await this.relationsContext(ctx));
+  }
+
+  /** Link one object (`kind`: budget_lines, contracts, projects, requests, tasks); the caller must read its module. */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('applications', 'member')
+  @Post(':id/relations/:kind')
+  async linkRelation(
+    @Param('id') id: string,
+    @Param('kind') kind: string,
+    @Body() body: { id?: string },
+    @Tenant() ctx: TenantRequest,
+  ) {
+    return this.relations.setLink(relationKindOrThrow(kind), id, String(body?.id ?? ''), true, await this.relationsContext(ctx));
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('applications', 'member')
+  @Delete(':id/relations/:kind/:targetId')
+  async unlinkRelation(
+    @Param('id') id: string,
+    @Param('kind') kind: string,
+    @Param('targetId') targetId: string,
+    @Tenant() ctx: TenantRequest,
+  ) {
+    return this.relations.setLink(relationKindOrThrow(kind), id, targetId, false, await this.relationsContext(ctx));
+  }
+
+  // Relations — Requests
+  @UseGuards(PermissionGuard)
+  @RequireLevel('applications', 'member')
+  @Post(':id/requests/bulk-replace')
+  async bulkReplaceRequests(
+    @Param('id') id: string,
+    @Body() body: { request_ids?: string[] },
+    @Tenant() ctx: TenantRequest,
+  ) {
+    return this.relations.bulkReplaceRequests(id, body?.request_ids ?? [], await this.relationsContext(ctx));
   }
 
   // Relations — OPEX (spend items)

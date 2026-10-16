@@ -1,0 +1,604 @@
+import { BadRequestException, ForbiddenException, forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { EntityManager, Repository } from 'typeorm';
+import { Application } from '../application.entity';
+import { ApplicationsBaseService } from './applications-base.service';
+import { ApplicationsInstancesService } from './applications-instances.service';
+import {
+  ParticipationAccessScope,
+  projectParticipantCondition,
+  requestParticipantCondition,
+  taskParticipantCondition,
+} from '../../auth/business-contributor-scope';
+import { BUDGET_NATURES, linkedLineOf, naturesAnd, type BudgetNature } from '../../spend/budget-nature';
+import { loadVersionTotals, SUMMARY_COLUMNS, SUMMARY_SCOPES } from '../../spend/spend-summary.builder';
+import { budgetColumnName, readBudgetColumns } from '../../budget-columns/budget-columns.util';
+import { contractTermsSql, SQL_TODAY_UTC } from '../../contracts/contract-terms';
+import { renewalDecisionSql } from '../../contracts/contract-renewal';
+import { readDecisionWindowDays } from '../../contracts/contract-settings.service';
+import { FxRateService } from '../../currency/fx-rate.service';
+import { InterfacesService } from '../../interfaces/services/interfaces.service';
+import { KnowledgeService } from '../../knowledge/knowledge.service';
+import { TasksUnifiedService } from '../../tasks/tasks-unified.service';
+import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** At most this many suggestions per rule. */
+export const SUGGESTIONS_PER_RULE = 20;
+
+/** The kinds of objects the Relations tab links to an application. */
+export const RELATION_KINDS = ['budget_lines', 'contracts', 'projects', 'requests', 'tasks'] as const;
+export type RelationKind = (typeof RELATION_KINDS)[number];
+
+/** Which modules the caller may read: a section the caller cannot read is `null`. */
+export type RelationsAccess = Record<RelationKind, boolean>;
+
+/** The participation scopes of a Business Contributor (none for everyone else). */
+export type RelationsScopes = {
+  application?: ParticipationAccessScope;
+  project?: ParticipationAccessScope;
+  request?: ParticipationAccessScope;
+  task?: ParticipationAccessScope;
+};
+
+export type RelationsContext = {
+  manager: EntityManager;
+  tenantId: string;
+  userId: string | null;
+  access: RelationsAccess;
+  scopes: RelationsScopes;
+};
+
+export type RelatedBudgetLine = {
+  id: string;
+  item_number: number | null;
+  nature: BudgetNature;
+  product_name: string;
+  supplier_name: string | null;
+  amount: number | null;
+  currency: string;
+  status: string;
+};
+export type RelatedContract = {
+  id: string;
+  name: string;
+  supplier_name: string | null;
+  end_date: string | null;
+  yearly_amount: number | null;
+  currency: string | null;
+  auto_renewal: boolean;
+  in_renewal_window: boolean;
+  status: string;
+};
+export type RelatedProject = { id: string; item_number: number | null; name: string; status: string | null; planned_end: string | null };
+export type RelatedRequest = { id: string; item_number: number | null; name: string; status: string | null; target_delivery_date: string | null };
+export type RelatedTask = {
+  id: string;
+  item_number: number | null;
+  title: string;
+  status: string | null;
+  assignee_name: string | null;
+  due_date: string | null;
+};
+export type RelationSuggestion = {
+  type: 'budget_line' | 'contract' | 'project';
+  id: string;
+  item_number: number | null;
+  name: string;
+  via: { kind: 'same_supplier' | 'contract' | 'project' | 'task'; label: string | null };
+};
+export type ApplicationRelations = {
+  year: number;
+  budget_column: { key: string; label: string };
+  budget_lines: RelatedBudgetLine[] | null;
+  contracts: RelatedContract[] | null;
+  projects: RelatedProject[] | null;
+  requests: RelatedRequest[] | null;
+  tasks: RelatedTask[] | null;
+  suggestions: RelationSuggestion[];
+  also: { assets: number; interfaces: number; documents: number };
+};
+
+/** `$n` placeholders over a growing parameter list. */
+function binder(params: unknown[]) {
+  return (value: unknown) => {
+    params.push(value);
+    return `$${params.length}`;
+  };
+}
+
+const dateText = (expr: string) => `to_char(${expr}, 'YYYY-MM-DD')`;
+const ACTIVE_LINE = `i.status = 'enabled' AND (i.disabled_at IS NULL OR i.disabled_at > now())`;
+const ACTIVE_CONTRACT = `c.status = 'enabled' AND (c.disabled_at IS NULL OR c.disabled_at > now())`;
+const ACTIVE_PROJECT = `COALESCE(p.status, '') NOT IN ('done', 'cancelled')`;
+/** The project a task belongs to: its related project, else the project of its phase. */
+const TASK_PROJECT = `COALESCE(
+  CASE WHEN t.related_object_type = 'project' THEN t.related_object_id END,
+  (SELECT ph.project_id FROM portfolio_project_phases ph WHERE ph.id = t.phase_id AND ph.tenant_id = t.tenant_id)
+)`;
+
+/**
+ * The Relations tab of an application in one round trip (lot R1): the budget lines with their
+ * amount on the tenant's default column for the current year, the contracts with their current
+ * end, the projects, requests and tasks linked directly, suggestions by four static rules, and the
+ * counts of what is related elsewhere. Every statement carries `tenant_id` on each table and join
+ * besides RLS; each section is one query over the application's ids, never a query per row.
+ *
+ * The links are written through the services that own them (`ApplicationsInstancesService`,
+ * `TasksUnifiedService`, `PortfolioRequestsService`), so their validation and audit apply. A single
+ * link or unlink reads the stored set under the application's row lock and replaces it with that
+ * set plus or minus one id: a link another user made meanwhile is kept.
+ */
+@Injectable()
+export class ApplicationsRelationsService extends ApplicationsBaseService {
+  constructor(
+    @InjectRepository(Application) appRepo: Repository<Application>,
+    private readonly instances: ApplicationsInstancesService,
+    private readonly fxRates: FxRateService,
+    private readonly interfaces: InterfacesService,
+    private readonly knowledge: KnowledgeService,
+    private readonly tasks: TasksUnifiedService,
+    @Inject(forwardRef(() => PortfolioRequestsService))
+    private readonly requests: PortfolioRequestsService,
+  ) {
+    super(appRepo);
+  }
+
+  // ==================== READ ====================
+
+  async getRelations(appId: string, ctx: RelationsContext): Promise<ApplicationRelations> {
+    const mg = ctx.manager;
+    const app = await this.ensureApp(appId, mg, ctx.scopes.application);
+    const tenantId = app.tenant_id;
+    const year = new Date().getUTCFullYear();
+    const columns = await readBudgetColumns(mg, tenantId);
+    const measure = columns.default_column;
+
+    // One after the other: the request's single connection runs its queries in turn anyway, and
+    // pg refuses a query sent while another one runs (deprecated since pg 8, an error in pg 9).
+    const budgetLines = ctx.access.budget_lines ? await this.listBudgetLines(mg, tenantId, app.id, year, measure) : null;
+    const contracts = ctx.access.contracts ? await this.listContracts(mg, tenantId, app.id) : null;
+    const projects = ctx.access.projects ? await this.listProjects(mg, tenantId, app.id, ctx.scopes.project) : null;
+    const requests = ctx.access.requests ? await this.listRequests(mg, tenantId, app.id, ctx.scopes.request) : null;
+    const tasks = ctx.access.tasks ? await this.listTasks(mg, tenantId, app.id, ctx.scopes.task) : null;
+    const suggestions = await this.listSuggestions(mg, tenantId, app.id, app.supplier_id ?? null, ctx);
+    const also = await this.countAlso(mg, tenantId, app.id, ctx);
+
+    return {
+      year,
+      budget_column: { key: measure, label: budgetColumnName(columns, measure) },
+      budget_lines: budgetLines,
+      contracts,
+      projects,
+      requests,
+      tasks,
+      suggestions,
+      also,
+    };
+  }
+
+  private async listBudgetLines(mg: EntityManager, tenantId: string, appId: string, year: number, measure: string): Promise<RelatedBudgetLine[]> {
+    const rows: Array<Omit<RelatedBudgetLine, 'amount'> & { currency: string | null }> = await mg.query(
+      `SELECT i.id, i.item_number, i.nature, i.product_name, s.name AS supplier_name, i.currency, i.status::text AS status
+       FROM application_spend_items l
+       JOIN spend_items i ON i.id = l.spend_item_id AND i.tenant_id = l.tenant_id${naturesAnd('i', BUDGET_NATURES)}
+       LEFT JOIN suppliers s ON s.id = i.supplier_id AND s.tenant_id = i.tenant_id
+       WHERE l.tenant_id = $1 AND l.application_id = $2
+       ORDER BY lower(i.product_name), i.id`,
+      [tenantId, appId],
+    );
+    if (rows.length === 0) return [];
+    // The newest version of each line for the year and its totals, converted to the reporting
+    // currency, as the budget list reads them.
+    const totals = await loadVersionTotals(SUMMARY_SCOPES.all, { fxRates: this.fxRates }, mg, tenantId, rows, [year], { reporting: true });
+    const key = SUMMARY_COLUMNS.find((column) => column.measure === measure)!.key;
+    return rows.map((row) => {
+      const version = totals.versionsByItemYear.get(row.id)?.get(year);
+      const reporting = version ? totals.reporting.get(version.id) : undefined;
+      const amount = !version ? null : reporting ? Number(reporting.cents[key]) / 100 : 0;
+      return {
+        id: row.id,
+        item_number: row.item_number ?? null,
+        nature: row.nature,
+        product_name: row.product_name,
+        supplier_name: row.supplier_name ?? null,
+        amount,
+        currency: reporting?.reporting_currency ?? totals.reportingCurrency,
+        status: row.status,
+      };
+    });
+  }
+
+  private async listContracts(mg: EntityManager, tenantId: string, appId: string): Promise<RelatedContract[]> {
+    const windowDays = await readDecisionWindowDays(mg, tenantId);
+    const terms = contractTermsSql('c', SQL_TODAY_UTC, { decisionWindowDays: windowDays, renewalDecision: renewalDecisionSql('c') });
+    const rows: Array<Record<string, any>> = await mg.query(
+      `SELECT c.id, c.name, s.name AS supplier_name, c.status::text AS status, COALESCE(c.auto_renewal, false) AS auto_renewal,
+              c.yearly_amount_at_signature AS yearly_amount, NULLIF(trim(c.currency), '') AS currency,
+              ${dateText('ct.current_term_end')} AS end_date, (ct.term_state = 'to_decide') AS in_renewal_window
+       FROM application_contracts l
+       JOIN contracts c ON c.id = l.contract_id AND c.tenant_id = l.tenant_id
+       LEFT JOIN suppliers s ON s.id = c.supplier_id AND s.tenant_id = c.tenant_id
+       LEFT JOIN LATERAL (${terms.row}) ct ON c.start_date IS NOT NULL
+       WHERE l.tenant_id = $1 AND l.application_id = $2
+       ORDER BY lower(c.name), c.id`,
+      [tenantId, appId],
+    );
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      supplier_name: row.supplier_name ?? null,
+      end_date: row.end_date ?? null,
+      yearly_amount: row.yearly_amount == null ? null : Number(row.yearly_amount),
+      currency: row.currency ?? null,
+      auto_renewal: !!row.auto_renewal,
+      in_renewal_window: !!row.in_renewal_window,
+      status: row.status,
+    }));
+  }
+
+  private async listProjects(mg: EntityManager, tenantId: string, appId: string, scope?: ParticipationAccessScope): Promise<RelatedProject[]> {
+    const params: unknown[] = [tenantId, appId];
+    const bind = binder(params);
+    const scopeSql = scope ? `AND ${projectParticipantCondition('p', bind(scope.userId))}` : '';
+    return mg.query(
+      `SELECT p.id, p.item_number, p.name, p.status, ${dateText('p.planned_end')} AS planned_end
+       FROM application_projects l
+       JOIN portfolio_projects p ON p.id = l.project_id AND p.tenant_id = l.tenant_id
+       WHERE l.tenant_id = $1 AND l.application_id = $2 ${scopeSql}
+       ORDER BY p.planned_end ASC NULLS LAST, lower(p.name), p.id`,
+      params,
+    );
+  }
+
+  private async listRequests(mg: EntityManager, tenantId: string, appId: string, scope?: ParticipationAccessScope): Promise<RelatedRequest[]> {
+    const params: unknown[] = [tenantId, appId];
+    const bind = binder(params);
+    const scopeSql = scope ? `AND ${requestParticipantCondition('r', bind(scope.userId))}` : '';
+    return mg.query(
+      `SELECT r.id, r.item_number, r.name, r.status, ${dateText('r.target_delivery_date')} AS target_delivery_date
+       FROM portfolio_request_applications l
+       JOIN portfolio_requests r ON r.id = l.request_id AND r.tenant_id = l.tenant_id
+       WHERE l.tenant_id = $1 AND l.application_id = $2 ${scopeSql}
+       ORDER BY r.target_delivery_date ASC NULLS LAST, lower(r.name), r.id`,
+      params,
+    );
+  }
+
+  /** Tasks linked to the application itself, never through a linked project (fried, 2026-10-16). */
+  private async listTasks(mg: EntityManager, tenantId: string, appId: string, scope?: ParticipationAccessScope): Promise<RelatedTask[]> {
+    const params: unknown[] = [tenantId, appId];
+    const bind = binder(params);
+    const scopeSql = scope ? `AND ${taskParticipantCondition('t', bind(scope.userId))}` : '';
+    return mg.query(
+      `SELECT t.id, t.item_number, t.title, t.status,
+              NULLIF(TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))), '') AS assignee_name,
+              ${dateText('t.due_date')} AS due_date
+       FROM task_applications l
+       JOIN tasks t ON t.id = l.task_id AND t.tenant_id = l.tenant_id
+       LEFT JOIN users u ON u.id = t.assignee_user_id AND u.tenant_id = t.tenant_id
+       WHERE l.tenant_id = $1 AND l.application_id = $2 ${scopeSql}
+       ORDER BY (COALESCE(t.status, '') IN ('done', 'cancelled')) ASC, t.due_date ASC NULLS LAST, t.item_number ASC NULLS LAST, t.id`,
+      params,
+    );
+  }
+
+  /**
+   * Four static rules, at most `SUGGESTIONS_PER_RULE` rows each, over active objects not linked yet
+   * and readable by the caller: A1 contracts and A2 lines of the application's supplier, A3 lines
+   * of a linked contract or project, A4 projects that carry a task linked to the application. A
+   * line found by A3 and A2 is suggested once, with the more specific A3.
+   */
+  private async listSuggestions(
+    mg: EntityManager,
+    tenantId: string,
+    appId: string,
+    supplierId: string | null,
+    ctx: RelationsContext,
+  ): Promise<RelationSuggestion[]> {
+    const { access, scopes } = ctx;
+    const notLinkedLine = `NOT EXISTS (SELECT 1 FROM application_spend_items al WHERE al.tenant_id = i.tenant_id AND al.application_id = $2 AND al.spend_item_id = i.id)`;
+    const rules: Array<() => Promise<RelationSuggestion[]>> = [];
+
+    // A1: contracts of the application's supplier.
+    if (access.contracts && supplierId) {
+      rules.push(() => mg.query(
+        `SELECT c.id, c.name
+         FROM contracts c
+         WHERE c.tenant_id = $1 AND c.supplier_id = $3 AND ${ACTIVE_CONTRACT}
+           AND NOT EXISTS (SELECT 1 FROM application_contracts al WHERE al.tenant_id = c.tenant_id AND al.application_id = $2 AND al.contract_id = c.id)
+         ORDER BY lower(c.name), c.id
+         LIMIT ${SUGGESTIONS_PER_RULE}`,
+        [tenantId, appId, supplierId],
+      ).then((rows: Array<{ id: string; name: string }>) => rows.map((row) => ({
+        type: 'contract' as const, id: row.id, item_number: null, name: row.name, via: { kind: 'same_supplier' as const, label: null },
+      }))));
+    }
+
+    if (access.budget_lines) {
+      // A3: lines of a linked contract (contract read needed for its name) or of a linked project.
+      const via: string[] = [];
+      const params: unknown[] = [tenantId, appId];
+      const bind = binder(params);
+      if (access.contracts) {
+        via.push(`SELECT cl.spend_item_id AS line_id, 'contract' AS kind, c.name AS label, lower(c.name) AS sort
+          FROM application_contracts ac
+          JOIN contracts c ON c.id = ac.contract_id AND c.tenant_id = ac.tenant_id
+          JOIN contract_spend_items cl ON cl.contract_id = c.id AND cl.tenant_id = c.tenant_id
+          WHERE ac.tenant_id = $1 AND ac.application_id = $2
+          UNION ALL
+          SELECT li.id, 'contract', c.name, lower(c.name)
+          FROM application_contracts ac
+          JOIN contracts c ON c.id = ac.contract_id AND c.tenant_id = ac.tenant_id
+          JOIN spend_items li ON li.contract_id = c.id AND li.tenant_id = c.tenant_id${naturesAnd('li', BUDGET_NATURES)}
+          WHERE ac.tenant_id = $1 AND ac.application_id = $2`);
+      }
+      if (access.projects) {
+        const scopeSql = scopes.project ? `AND ${projectParticipantCondition('p', bind(scopes.project.userId))}` : '';
+        via.push(`SELECT po.opex_id, 'project', 'PRJ-' || p.item_number, lpad(p.item_number::text, 12, '0')
+          FROM application_projects ap
+          JOIN portfolio_projects p ON p.id = ap.project_id AND p.tenant_id = ap.tenant_id
+          JOIN portfolio_project_opex po ON po.project_id = p.id AND po.tenant_id = p.tenant_id
+          WHERE ap.tenant_id = $1 AND ap.application_id = $2 ${scopeSql}
+          UNION ALL
+          SELECT li.id, 'project', 'PRJ-' || p.item_number, lpad(p.item_number::text, 12, '0')
+          FROM application_projects ap
+          JOIN portfolio_projects p ON p.id = ap.project_id AND p.tenant_id = ap.tenant_id
+          JOIN spend_items li ON li.project_id = p.id AND li.tenant_id = p.tenant_id${naturesAnd('li', BUDGET_NATURES)}
+          WHERE ap.tenant_id = $1 AND ap.application_id = $2 ${scopeSql}`);
+      }
+      const viaRules = () => via.length
+        ? mg.query(
+          `SELECT DISTINCT ON (i.id) i.id, i.item_number, i.product_name, v.kind, v.label
+           FROM (${via.join(' UNION ALL ')}) v
+           JOIN spend_items i ON i.id = v.line_id AND i.tenant_id = $1${naturesAnd('i', BUDGET_NATURES)}
+           WHERE ${ACTIVE_LINE} AND ${notLinkedLine}
+           ORDER BY i.id, v.kind, v.sort`,
+          params,
+        ).then((rows: Array<{ id: string; item_number: number | null; product_name: string; kind: 'contract' | 'project'; label: string }>) => rows
+          .sort((a, b) => a.product_name.localeCompare(b.product_name) || a.id.localeCompare(b.id))
+          .slice(0, SUGGESTIONS_PER_RULE))
+        : Promise.resolve([]);
+      // A2: lines of the application's supplier.
+      const sameSupplier = () => supplierId
+        ? mg.query(
+          `SELECT i.id, i.item_number, i.product_name
+           FROM spend_items i
+           WHERE i.tenant_id = $1 AND i.supplier_id = $3${naturesAnd('i', BUDGET_NATURES)} AND ${ACTIVE_LINE} AND ${notLinkedLine}
+           ORDER BY lower(i.product_name), i.id
+           LIMIT ${SUGGESTIONS_PER_RULE}`,
+          [tenantId, appId, supplierId],
+        )
+        : Promise.resolve([]);
+      rules.push(async () => {
+        const byLink = await viaRules();
+        const bySupplier = await sameSupplier();
+        const seen = new Set(byLink.map((row) => row.id));
+        return [
+          ...byLink.map((row) => ({
+            type: 'budget_line' as const, id: row.id, item_number: row.item_number ?? null, name: row.product_name,
+            via: { kind: row.kind, label: row.label },
+          })),
+          ...(bySupplier as Array<{ id: string; item_number: number | null; product_name: string }>)
+            .filter((row) => !seen.has(row.id))
+            .map((row) => ({
+              type: 'budget_line' as const, id: row.id, item_number: row.item_number ?? null, name: row.product_name,
+              via: { kind: 'same_supplier' as const, label: null },
+            })),
+        ];
+      });
+    }
+
+    // A4: projects that carry a task linked to the application.
+    if (access.projects && access.tasks) {
+      const params: unknown[] = [tenantId, appId];
+      const bind = binder(params);
+      const taskScope = scopes.task ? `AND ${taskParticipantCondition('t', bind(scopes.task.userId))}` : '';
+      const projectScope = scopes.project ? `AND ${projectParticipantCondition('p', bind(scopes.project.userId))}` : '';
+      rules.push(() => mg.query(
+        `SELECT p.id, p.item_number, p.name, min(t.item_number) AS task_number
+         FROM task_applications ta
+         JOIN tasks t ON t.id = ta.task_id AND t.tenant_id = ta.tenant_id
+         JOIN portfolio_projects p ON p.id = ${TASK_PROJECT} AND p.tenant_id = t.tenant_id
+         WHERE ta.tenant_id = $1 AND ta.application_id = $2 AND ${ACTIVE_PROJECT} ${taskScope} ${projectScope}
+           AND NOT EXISTS (SELECT 1 FROM application_projects al WHERE al.tenant_id = p.tenant_id AND al.application_id = $2 AND al.project_id = p.id)
+         GROUP BY p.id, p.item_number, p.name
+         ORDER BY lower(p.name), p.id
+         LIMIT ${SUGGESTIONS_PER_RULE}`,
+        params,
+      ).then((rows: Array<{ id: string; item_number: number | null; name: string; task_number: number | null }>) => rows.map((row) => ({
+        type: 'project' as const, id: row.id, item_number: row.item_number ?? null, name: row.name,
+        via: { kind: 'task' as const, label: row.task_number == null ? null : `T-${row.task_number}` },
+      }))));
+    }
+
+    const out: RelationSuggestion[] = [];
+    for (const rule of rules) out.push(...(await rule()));
+    return out;
+  }
+
+  /** Assets through the deployments, interfaces as the Interfaces tab lists them, documents the caller can read. */
+  private async countAlso(mg: EntityManager, tenantId: string, appId: string, ctx: RelationsContext) {
+    const assetRows: Array<{ n: number }> = await mg.query(
+        `SELECT count(DISTINCT aa.asset_id)::int AS n
+         FROM app_instances ai
+         JOIN app_asset_assignments aa ON aa.app_instance_id = ai.id AND aa.tenant_id = ai.tenant_id
+         WHERE ai.tenant_id = $1 AND ai.application_id = $2`,
+        [tenantId, appId],
+    );
+    // Interfaces are closed to a Business Contributor (`InterfacesController`).
+    const interfaces = ctx.scopes.application
+      ? 0
+      : await this.interfaces.listByApplication(appId, tenantId, { manager: mg }).then((res: any) => (Array.isArray(res?.items) ? res.items.length : 0));
+    const documents = await this.knowledge.listDocumentsForEntity('applications', appId, { manager: mg, userId: ctx.userId })
+      .then((res) => Number(res?.total || 0));
+    return { assets: Number(assetRows[0]?.n || 0), interfaces, documents };
+  }
+
+  // ==================== WRITE ====================
+
+  /**
+   * Link (`add`) or unlink one object. The application's row is locked first (the lock the
+   * replacements take), the stored set is read, and the owning service replaces it with that set
+   * plus or minus `targetId`: same validation, same audit, and a link made meanwhile by someone
+   * else stays. Linking what is linked, or unlinking what is not, changes nothing.
+   */
+  async setLink(kind: RelationKind, appId: string, targetId: string, add: boolean, ctx: RelationsContext): Promise<{ ok: true; changed: boolean }> {
+    if (!ctx.access[kind]) throw new ForbiddenException('You cannot read this module.');
+    const id = String(targetId || '').trim().toLowerCase();
+    if (!UUID_RE.test(id)) throw new BadRequestException('Invalid id.');
+    const mg = ctx.manager;
+    const app = await this.ensureApp(appId, mg, ctx.scopes.application);
+    const tenantId = app.tenant_id;
+    await mg.query(`SELECT 1 FROM applications WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`, [tenantId, app.id]);
+    const userId = ctx.userId;
+    const apply = (current: string[]) => {
+      const has = current.includes(id);
+      if (has === add) return null;
+      return add ? [...current, id] : current.filter((value) => value !== id);
+    };
+
+    if (kind === 'budget_lines') {
+      const lines: Array<{ nature: BudgetNature }> = await mg.query(
+        `SELECT nature FROM spend_items WHERE tenant_id = $1 AND id = $2${naturesAnd(null, BUDGET_NATURES)}`,
+        [tenantId, id],
+      );
+      if (!lines[0]) throw new BadRequestException('Budget line not found.');
+      const nature = lines[0].nature;
+      const current = await this.idsOf(mg,
+        `SELECT l.spend_item_id AS id FROM application_spend_items l WHERE l.tenant_id = $1 AND l.application_id = $2${linkedLineOf('l.tenant_id', 'l.spend_item_id', nature)}`,
+        [tenantId, app.id]);
+      const next = apply(current);
+      if (!next) return { ok: true, changed: false };
+      if (nature === 'opex') await this.instances.bulkReplaceLinkedSpendItems(app.id, next, userId, { manager: mg });
+      else await this.instances.bulkReplaceLinkedCapexItems(app.id, next, userId, { manager: mg });
+      return { ok: true, changed: true };
+    }
+
+    if (kind === 'contracts') {
+      const current = await this.idsOf(mg, `SELECT contract_id AS id FROM application_contracts WHERE tenant_id = $1 AND application_id = $2`, [tenantId, app.id]);
+      const next = apply(current);
+      if (!next) return { ok: true, changed: false };
+      await this.instances.bulkReplaceLinkedContracts(app.id, next, userId, { manager: mg });
+      return { ok: true, changed: true };
+    }
+
+    if (kind === 'projects') {
+      await this.assertProjectVisible(mg, tenantId, id, ctx.scopes.project);
+      const current = await this.idsOf(mg, `SELECT project_id AS id FROM application_projects WHERE tenant_id = $1 AND application_id = $2`, [tenantId, app.id]);
+      const next = apply(current);
+      if (!next) return { ok: true, changed: false };
+      await this.instances.bulkReplaceProjects(app.id, next, userId, { manager: mg });
+      return { ok: true, changed: true };
+    }
+
+    if (kind === 'requests') {
+      const result = await this.replaceRequestLinks(mg, tenantId, app.id, [id], add ? [id] : [], userId, ctx.scopes.request);
+      return { ok: true, changed: result.added + result.removed > 0 };
+    }
+
+    // Tasks: the replacement only reads and writes the tasks the caller can read.
+    const params: unknown[] = [tenantId, app.id];
+    const bind = binder(params);
+    const scopeSql = ctx.scopes.task ? `AND ${taskParticipantCondition('t', bind(ctx.scopes.task.userId))}` : '';
+    const current = await this.idsOf(mg,
+      `SELECT l.task_id::text AS id FROM task_applications l JOIN tasks t ON t.id = l.task_id AND t.tenant_id = l.tenant_id
+       WHERE l.tenant_id = $1 AND l.application_id = $2 ${scopeSql}`,
+      params);
+    const next = apply(current);
+    if (!next) return { ok: true, changed: false };
+    await this.tasks.bulkReplaceTasksForApplication(app.id, next, { manager: mg, tenantId, userId, accessScope: ctx.scopes.task });
+    return { ok: true, changed: true };
+  }
+
+  /**
+   * Replace the requests linked to the application with `requestIds`. Only the requests the caller
+   * can read are compared and touched (a Business Contributor's scope); each request that gains or
+   * loses the application has its own list replaced by `PortfolioRequestsService`, which checks
+   * the ids and records the change in the request's activity.
+   */
+  async bulkReplaceRequests(appId: string, requestIds: string[], ctx: RelationsContext): Promise<{ ok: true; added: number; removed: number }> {
+    if (!ctx.access.requests) throw new ForbiddenException('You cannot read requests.');
+    const mg = ctx.manager;
+    const app = await this.ensureApp(appId, mg, ctx.scopes.application);
+    await mg.query(`SELECT 1 FROM applications WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`, [app.tenant_id, app.id]);
+    const ids = Array.from(new Set((requestIds || []).map((id) => String(id || '').trim().toLowerCase()).filter(Boolean)));
+    if (ids.some((id) => !UUID_RE.test(id))) throw new BadRequestException('One or more requests were not found.');
+    const params: unknown[] = [app.tenant_id, app.id];
+    const bind = binder(params);
+    const scopeSql = ctx.scopes.request ? `AND ${requestParticipantCondition('r', bind(ctx.scopes.request.userId))}` : '';
+    const current = await this.idsOf(mg,
+      `SELECT l.request_id::text AS id FROM portfolio_request_applications l
+       JOIN portfolio_requests r ON r.id = l.request_id AND r.tenant_id = l.tenant_id
+       WHERE l.tenant_id = $1 AND l.application_id = $2 ${scopeSql}`,
+      params);
+    const affected = Array.from(new Set([...current, ...ids]));
+    const counts = await this.replaceRequestLinks(mg, app.tenant_id, app.id, affected, ids, ctx.userId, ctx.scopes.request);
+    return { ok: true, ...counts };
+  }
+
+  /**
+   * For each request of `affected`, link the application when the request is in `linked`, unlink it
+   * otherwise. Every affected id must name a request the caller can read (400 otherwise).
+   */
+  private async replaceRequestLinks(
+    mg: EntityManager,
+    tenantId: string,
+    appId: string,
+    affected: string[],
+    linked: string[],
+    userId: string | null,
+    scope?: ParticipationAccessScope,
+  ): Promise<{ added: number; removed: number }> {
+    if (affected.length === 0) return { added: 0, removed: 0 };
+    const params: unknown[] = [tenantId, affected];
+    const bind = binder(params);
+    const scopeSql = scope ? `AND ${requestParticipantCondition('r', bind(scope.userId))}` : '';
+    const rows: Array<{ id: string; application_ids: string[] }> = await mg.query(
+      `SELECT r.id::text AS id,
+              ARRAY(SELECT l.application_id::text FROM portfolio_request_applications l
+                    WHERE l.tenant_id = r.tenant_id AND l.request_id = r.id ORDER BY l.application_id) AS application_ids
+       FROM portfolio_requests r
+       WHERE r.tenant_id = $1 AND r.id = ANY($2::uuid[]) ${scopeSql}
+       ORDER BY r.id`,
+      params,
+    );
+    if (rows.length !== affected.length) throw new BadRequestException('One or more requests were not found.');
+    const linkedSet = new Set(linked);
+    let added = 0;
+    let removed = 0;
+    for (const row of rows) {
+      const has = row.application_ids.includes(appId);
+      const wants = linkedSet.has(row.id);
+      if (has === wants) continue;
+      const next = wants ? [...row.application_ids, appId] : row.application_ids.filter((value) => value !== appId);
+      await this.requests.bulkReplaceApplications(row.id, next, { manager: mg, userId });
+      if (wants) added += 1;
+      else removed += 1;
+    }
+    return { added, removed };
+  }
+
+  private async assertProjectVisible(mg: EntityManager, tenantId: string, projectId: string, scope?: ParticipationAccessScope) {
+    const params: unknown[] = [tenantId, projectId];
+    const bind = binder(params);
+    const scopeSql = scope ? `AND ${projectParticipantCondition('p', bind(scope.userId))}` : '';
+    const rows = await mg.query(`SELECT 1 FROM portfolio_projects p WHERE p.tenant_id = $1 AND p.id = $2 ${scopeSql}`, params);
+    if (rows.length === 0) throw new BadRequestException('One or more projects were not found.');
+  }
+
+  private async idsOf(mg: EntityManager, sql: string, params: unknown[]): Promise<string[]> {
+    const rows: Array<{ id: string }> = await mg.query(sql, params);
+    return Array.from(new Set(rows.map((row) => String(row.id).toLowerCase())));
+  }
+}
+
+export function isRelationKind(value: string): value is RelationKind {
+  return (RELATION_KINDS as readonly string[]).includes(value);
+}
+
+/** 404 for an unknown kind in the route. */
+export function relationKindOrThrow(value: string): RelationKind {
+  if (!isRelationKind(value)) throw new NotFoundException('Unknown relation type.');
+  return value;
+}

@@ -26,6 +26,8 @@ import { KnowledgeModule } from '../knowledge/knowledge.module';
 import { InterfacesModule } from '../interfaces/interfaces.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { TasksModule } from '../tasks/tasks.module';
+import { CurrencyModule } from '../currency/currency.module';
+import { PortfolioModule } from '../portfolio/portfolio.module';
 
 // Decomposed services
 import {
@@ -37,6 +39,7 @@ import {
   ApplicationsResidencyService,
   ApplicationsStructureService,
   ApplicationsLifecycleService,
+  ApplicationsRelationsService,
 } from './services';
 
 @Module({
@@ -66,6 +69,8 @@ import {
     InterfacesModule,
     NotificationsModule,
     TasksModule,
+    CurrencyModule,
+    forwardRef(() => PortfolioModule),
   ],
   providers: [
     // Decomposed services (order matters for DI)
@@ -76,6 +81,8 @@ import {
     ApplicationsResidencyService,
     ApplicationsStructureService,
     ApplicationsLifecycleService,
+    // Relations tab (lot R1)
+    ApplicationsRelationsService,
     // Main facade service
     ApplicationsService,
     // Delete service (unchanged)
