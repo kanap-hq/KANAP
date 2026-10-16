@@ -171,6 +171,7 @@ function buildRef(type: AiSearchEntityType | AiContextEntityType, itemNumber?: n
   if (type === 'tasks') return `T-${itemNumber}`;
   if (type === 'documents') return `DOC-${itemNumber}`;
   if (type === 'incidents') return `INC-${itemNumber}`;
+  if (type === 'technologies') return `TEC-${itemNumber}`;
   if (type === 'spend_items' || type === 'capex_items') return budgetLineReference(itemNumber);
   return null;
 }
@@ -387,7 +388,7 @@ function aiSearchIndexEnabled(): boolean {
 }
 
 // BL numbers are native; OPX/CPX (and the former SI alias) name persisted legacy references.
-const INDEXED_REF_QUERY_RE = /^(PRJ|REQ|T|DOC|APP|AST|CONN|INT|LOC|CTR|BL|CPX|SI|OPX|COMP|CONT|DEPT|SUP|BP|INC)-?(\d+)$/i;
+const INDEXED_REF_QUERY_RE = /^(PRJ|REQ|T|DOC|APP|AST|CONN|INT|LOC|CTR|BL|CPX|SI|OPX|COMP|CONT|DEPT|SUP|BP|INC|TEC)-?(\d+)$/i;
 
 const QUERY_PREFIX_TO_INDEX_REF_PREFIX: Record<string, string> = {
   SI: 'OPX',
@@ -418,6 +419,7 @@ const SEARCH_INDEX_METADATA_KEYS: Partial<Record<AiSearchEntityType, string[]>> 
   contacts: ['supplier'],
   contracts: ['company', 'supplier'],
   departments: ['company'],
+  technologies: ['family', 'editor', 'mode'],
   incidents: ['severity', 'category'],
   interfaces: ['source_application', 'target_application', 'business_process'],
   projects: ['business_lead', 'it_lead', 'contributors'],
@@ -2570,7 +2572,8 @@ export class AiEntityService {
     // Indexed path: single-type query over search_index. Documents keep the
     // KnowledgeService path below so per-type callers (the @-mention picker)
     // retain ts_headline snippets and item-ref prefix ordering.
-    if (aiSearchIndexEnabled() && type !== 'documents') {
+    // Technologies have no legacy search: they are found through the index only.
+    if ((aiSearchIndexEnabled() || type === 'technologies') && type !== 'documents') {
       const { rows, total } = await this.runSearchIndexQuery(
         context,
         [type as AiSearchEntityType],

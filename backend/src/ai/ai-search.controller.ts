@@ -31,6 +31,7 @@ const PICKER_ENTITY_TYPES: AiSearchEntityType[] = [
   'spend_items',
   'suppliers',
   'tasks',
+  'technologies',
 ];
 const KNOWN_ENTITY_TYPES: ReadonlySet<string> = new Set<string>(AI_SEARCH_ENTITY_TYPES);
 

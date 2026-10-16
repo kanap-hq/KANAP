@@ -48,6 +48,63 @@ type VersionInput = Partial<{
 
 const LINK_URL_MAX = 2000;
 
+/** Columns the list grid filters with a set filter. */
+const GRID_SET_COLUMNS = ['family', 'editor', 'lifecycle'] as const;
+
+/** Columns the list grid filters with a text filter, and what they compare. */
+const GRID_TEXT_COLUMNS: Record<string, string> = { name: 't.name', reference: `('TEC-' || t.item_number)` };
+
+function gridTextModel(raw: unknown, column: string): { type?: string; filter?: unknown } | null {
+  if (typeof raw !== 'string' || !raw.trim()) return null;
+  try {
+    const model = JSON.parse(raw)?.[column];
+    return model && model.filterType === 'text' ? model : null;
+  } catch {
+    return null;
+  }
+}
+
+/** A grid text filter (contains, equals, starts or ends with, blank) on `expr`, without case. */
+function gridTextClause(expr: string, model: { type?: string; filter?: unknown } | null, bind: (value: unknown) => string): string | null {
+  if (!model) return null;
+  const type = model.type || 'contains';
+  if (type === 'blank') return `(${expr} IS NULL OR ${expr} = '')`;
+  if (type === 'notBlank') return `(${expr} IS NOT NULL AND ${expr} <> '')`;
+  const text = String(model.filter ?? '');
+  if (!text) return null;
+  const escaped = text.replace(/[\\%_]/g, (c) => `\\${c}`);
+  if (type === 'equals') return `lower(${expr}) = lower(${bind(text)})`;
+  if (type === 'notEqual') return `lower(${expr}) <> lower(${bind(text)})`;
+  if (type === 'startsWith') return `${expr} ILIKE ${bind(`${escaped}%`)}`;
+  if (type === 'endsWith') return `${expr} ILIKE ${bind(`%${escaped}`)}`;
+  if (type === 'notContains') return `${expr} NOT ILIKE ${bind(`%${escaped}%`)}`;
+  return `${expr} ILIKE ${bind(`%${escaped}%`)}`;
+}
+
+type GridSetFilter = { values: string[]; blank: boolean };
+
+/**
+ * The list grid's set filters (`{ family: { filterType: 'set', values: [...] } }`), by column: the
+ * ticked values and whether "blank" (`null`) is ticked; a column without a filter is absent. Any
+ * other column or an unreadable model is ignored.
+ */
+function gridFilters(raw: unknown): Partial<Record<(typeof GRID_SET_COLUMNS)[number], GridSetFilter>> {
+  const out: Partial<Record<(typeof GRID_SET_COLUMNS)[number], GridSetFilter>> = {};
+  if (typeof raw !== 'string' || !raw.trim()) return out;
+  let model: Record<string, { values?: unknown }>;
+  try { model = JSON.parse(raw); } catch { return out; }
+  if (!model || typeof model !== 'object') return out;
+  for (const column of GRID_SET_COLUMNS) {
+    const values = model[column]?.values;
+    if (!Array.isArray(values)) continue;
+    out[column] = {
+      values: values.filter((v): v is string => typeof v === 'string' && v.trim() !== '').map((v) => v.trim()),
+      blank: values.some((v) => v === null || v === ''),
+    };
+  }
+  return out;
+}
+
 /**
  * The technologies of a tenant (lot S): list with its counters, record, versions, owners, web links
  * and attachments. Every statement carries the tenant besides RLS. Writes are audited on the table
@@ -76,6 +133,23 @@ export class TechnologiesService {
     const where = ['t.tenant_id = $1'];
     const list = (value: unknown) => (Array.isArray(value) ? value : String(value ?? '').split(','))
       .map((v) => String(v).trim()).filter(Boolean);
+    // The list grid's set filters (`filters`, JSON) narrow the same columns as the plain parameters.
+    const grid = gridFilters(query.filters);
+    for (const column of GRID_SET_COLUMNS) {
+      const filter = grid[column];
+      if (!filter) continue;
+      const expr = column === 'editor' ? 'lower(t.editor)' : `t.${column}`;
+      const values = column === 'editor' ? filter.values.map((v) => v.toLowerCase()) : filter.values;
+      const parts = [
+        ...(values.length ? [`${expr} = ANY(${bind(values)}::text[])`] : []),
+        ...(filter.blank ? [`t.${column} IS NULL`] : []),
+      ];
+      where.push(parts.length ? `(${parts.join(' OR ')})` : 'false');
+    }
+    for (const [column, expr] of Object.entries(GRID_TEXT_COLUMNS)) {
+      const clause = gridTextClause(expr, gridTextModel(query.filters, column), bind);
+      if (clause) where.push(clause);
+    }
     const families = list(query.family);
     if (families.length) where.push(`t.family = ANY(${bind(families)}::text[])`);
     const editors = list(query.editor).map((v) => v.toLowerCase());
@@ -87,18 +161,29 @@ export class TechnologiesService {
       const needle = bind(`%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
       where.push(`(t.name ILIKE ${needle} OR t.editor ILIKE ${needle} OR ('TEC-' || t.item_number) ILIKE ${needle})`);
     }
-    const sort = SORTS[String(query.sort ?? 'name')] ?? SORTS.name;
-    const direction = String(query.direction ?? 'asc').toLowerCase() === 'desc' ? 'DESC' : 'ASC';
+    // `sort` takes a field (`name`) with `direction`, or the grid's `field:DIR` (`name:DESC`).
+    const [sortField, sortDirection] = String(query.sort ?? 'name').split(':');
+    const sort = SORTS[sortField] ?? SORTS.name;
+    const direction = String(sortDirection ?? query.direction ?? 'asc').toLowerCase() === 'desc' ? 'DESC' : 'ASC';
     const limit = Math.min(Math.max(Number(query.limit) || 100, 1), 500);
-    const offset = Math.max(Number(query.offset) || 0, 0);
-    const rows: Array<TechnologyRow & { total: string; owner_names: string[] | null }> = await mg.query(
+    // `offset`, or the grid's `page` (from 1).
+    const offset = query.offset !== undefined
+      ? Math.max(Number(query.offset) || 0, 0)
+      : Math.max((Number(query.page) || 1) - 1, 0) * limit;
+    const rows: Array<TechnologyRow & { total: string; owner_names: string[] | null; it_owner_names: string[] | null }> = await mg.query(
       `SELECT ${TECHNOLOGY_COLUMNS}, count(*) OVER () AS total,
               ARRAY(
                 SELECT NULLIF(btrim(concat_ws(' ', u.first_name, u.last_name)), '')
                   FROM technology_owners o JOIN users u ON u.id = o.user_id AND u.tenant_id = o.tenant_id
                  WHERE o.tenant_id = t.tenant_id AND o.technology_id = t.id
                  ORDER BY o.owner_type DESC, lower(u.last_name), lower(u.first_name), u.id
-              ) AS owner_names
+              ) AS owner_names,
+              ARRAY(
+                SELECT NULLIF(btrim(concat_ws(' ', u.first_name, u.last_name)), '')
+                  FROM technology_owners o JOIN users u ON u.id = o.user_id AND u.tenant_id = o.tenant_id
+                 WHERE o.tenant_id = t.tenant_id AND o.technology_id = t.id AND o.owner_type = 'it'
+                 ORDER BY lower(u.last_name), lower(u.first_name), u.id
+              ) AS it_owner_names
          FROM technologies t
         WHERE ${where.join(' AND ')}
         ORDER BY ${sort} ${direction} NULLS LAST, t.id
@@ -107,9 +192,10 @@ export class TechnologiesService {
     );
     const counts = await this.reach.countsOfTechnologies(mg, tenantId, rows.map((row) => row.id));
     return {
-      items: rows.map(({ total: _total, owner_names, ...row }) => ({
+      items: rows.map(({ total: _total, owner_names, it_owner_names, ...row }) => ({
         ...this.present(row),
         owner_names: (owner_names ?? []).filter(Boolean),
+        it_owner_names: (it_owner_names ?? []).filter(Boolean),
         servers: counts.get(row.id)?.servers ?? 0,
         applications: counts.get(row.id)?.applications ?? 0,
         versions_in_use: counts.get(row.id)?.versions_in_use ?? 0,
@@ -119,6 +205,7 @@ export class TechnologiesService {
       total: Number(rows[0]?.total ?? 0),
       limit,
       offset,
+      page: Math.floor(offset / limit) + 1,
     };
   }
 

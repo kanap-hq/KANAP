@@ -64,6 +64,7 @@ const ENTITY_RESOURCE: Record<AiSearchEntityType | AiContextEntityType, string> 
   spend_items: 'budget',
   suppliers: 'suppliers',
   tasks: 'tasks',
+  technologies: 'infrastructure',
   users: 'users',
   documents: 'knowledge',
 };
