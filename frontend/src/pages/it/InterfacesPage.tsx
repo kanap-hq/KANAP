@@ -286,7 +286,7 @@ export default function InterfacesPage() {
       ]),
       cellRenderer: ClickToWorkspace,
     },
-    { headerName: t('pages.assets.columns.created'), field: 'created_at', width: 180, cellRenderer: ClickToWorkspace },
+    { headerName: t('pages.assets.columns.created'), field: 'created_at', width: 180, filter: 'agDateColumnFilter', cellRenderer: ClickToWorkspace },
     {
       headerName: t('pages.interfaces.columns.businessProcess'),
       field: 'business_process_id',

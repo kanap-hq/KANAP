@@ -321,6 +321,7 @@ export default function ConnectionsPage() {
     {
       headerName: 'Created',
       field: 'created_at',
+      filter: 'agDateColumnFilter',
       width: 130,
       cellRenderer: ClickToWorkspace,
     },

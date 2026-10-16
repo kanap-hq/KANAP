@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { BadRequestException } from '@nestjs/common';
 import { FindOperator } from 'typeorm';
-import { assertSetFilterModes, buildQuickSearchConditions, compileAgFilterCondition, compileReferenceFilter, createParamNameGenerator, escapeLikePattern, isExcludeSetModel, setFilterMode } from '../ag-grid-filtering';
+import { assertSetFilterModes, bindPositional, buildQuickSearchConditions, compileAgFilterCondition, compileReferenceFilter, createParamNameGenerator, escapeLikePattern, isExcludeSetModel, setFilterMode } from '../ag-grid-filtering';
 import { assertEntityFilterFields, buildWhereFromAgFilters } from '../pagination';
 
 // The shared grid filter compiler of the 24 SQL lists. Include mode must stay
@@ -263,6 +263,15 @@ function testTypeOrmListFilters() {
   assertEntityFilterFields({ created_at: { filterType: 'text', type: 'blank' }, active: { type: 'equals', filter: 'true' }, headcount: { type: 'equals', filter: '12' } }, metadata);
 }
 
+/** A compiled condition in a statement with positional parameters: the values follow the ones already bound; casts stay. */
+function testBindPositional() {
+  const params: unknown[] = ['tenant'];
+  const sql = bindPositional({ sql: '(x.n)::text ILIKE :p0 OR x.id IN (:...p1) OR x.k = :other', params: { p0: '%1%', p1: ['a', 'b'] } }, params);
+  assert.equal(sql, '(x.n)::text ILIKE $2 OR x.id IN ($3, $4) OR x.k = :other');
+  assert.deepEqual(params, ['tenant', '%1%', 'a', 'b']);
+}
+
+testBindPositional();
 testDateTargets();
 testReferenceFilter();
 testTypeOrmListFilters();

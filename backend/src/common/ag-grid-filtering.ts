@@ -297,6 +297,19 @@ export function compileAgFilterCondition(
 }
 
 /**
+ * A compiled condition (`:name`, `:...name` parameters) for a statement with positional
+ * parameters: each value is appended to `params` and named by its `$n`.
+ */
+export function bindPositional(compiled: CompiledCondition, params: unknown[]): string {
+  return compiled.sql.replace(/:(\.\.\.)?([A-Za-z_][A-Za-z0-9_]*)/g, (match, spread: string | undefined, name: string) => {
+    if (!Object.prototype.hasOwnProperty.call(compiled.params, name)) return match;
+    const value = compiled.params[name];
+    const bind = (entry: unknown) => { params.push(entry); return `$${params.length}`; };
+    return spread && Array.isArray(value) ? value.map(bind).join(', ') : bind(value);
+  });
+}
+
+/**
  * A filter on a business reference column (`REQ-12`): the database holds the number
  * (`expression`), the grid shows it after its prefix. A text model matches the number's digits,
  * the prefix the user may type taken off first ("REQ-12" and "12" both find REQ-12); a number

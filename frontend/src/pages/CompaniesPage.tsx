@@ -316,6 +316,7 @@ export default function CompaniesPage() {
     },
     {
       field: 'created_at',
+      filter: 'agDateColumnFilter',
       headerName: t('shared.columns.created'),
       width: 200,
       defaultHidden: true,

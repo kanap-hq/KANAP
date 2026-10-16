@@ -5,7 +5,7 @@ import { ParticipationAccessScope, taskParticipantCondition } from '../auth/busi
 import { incidentRelatedLabelSql } from '../incidents/incident-visibility';
 import { textSortKey } from '../common/list-sort';
 import { resolveRecordCreators } from '../audit/record-creator.util';
-import { assertSetFilterModes, compileAgFilterCondition, compileReferenceFilter, createParamNameGenerator, type CompiledCondition } from '../common/ag-grid-filtering';
+import { assertSetFilterModes, bindPositional, compileAgFilterCondition, compileReferenceFilter, createParamNameGenerator, type CompiledCondition } from '../common/ag-grid-filtering';
 
 export interface TaskListItem {
   id: string;
@@ -120,14 +120,7 @@ function buildWhereConditions(
   // A condition of the shared compiler (`:name` parameters), appended with positional ones.
   const namedParam = createParamNameGenerator('task_filter_');
   const applyCompiled = (compiled: CompiledCondition | null) => {
-    if (!compiled) return;
-    const sql = compiled.sql.replace(/:(\.\.\.)?([A-Za-z_][A-Za-z0-9_]*)/g, (match, spread: string | undefined, name: string) => {
-      if (!Object.prototype.hasOwnProperty.call(compiled.params, name)) return match;
-      const value = compiled.params[name];
-      const bind = (entry: unknown) => { params.push(entry); return `$${params.length}`; };
-      return spread && Array.isArray(value) ? value.map(bind).join(', ') : bind(value);
-    });
-    whereConditions += ` AND (${sql})`;
+    if (compiled) whereConditions += ` AND (${bindPositional(compiled, params)})`;
   };
 
   const applySetFilter = (model: any, expression: string) => {

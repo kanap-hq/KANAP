@@ -390,7 +390,7 @@ export class ApplicationsListService extends ApplicationsBaseService {
       users_override: { expression: 'a.users_override', numericExpression: 'a.users_override', dataType: 'number' },
       status: { expression: 'a.status', textExpression: 'CAST(a.status AS TEXT)', dataType: 'string' },
       disabled_at: { expression: 'a.disabled_at', textExpression: 'CAST(a.disabled_at AS TEXT)', dataType: 'string' },
-      created_at: { expression: 'a.created_at', textExpression: 'CAST(a.created_at AS TEXT)', dataType: 'string' },
+      created_at: { expression: 'a.created_at', dataType: 'date' },
       updated_at: { expression: 'a.updated_at', textExpression: 'CAST(a.updated_at AS TEXT)', dataType: 'string' },
     };
 
@@ -818,7 +818,7 @@ export class ApplicationsListService extends ApplicationsBaseService {
       users_mode: { expression: 'a.users_mode', dataType: 'string' },
       status: { expression: 'a.status', textExpression: 'CAST(a.status AS TEXT)', dataType: 'string' },
       disabled_at: { expression: 'a.disabled_at', textExpression: 'CAST(a.disabled_at AS TEXT)', dataType: 'string' },
-      created_at: { expression: 'a.created_at', textExpression: 'CAST(a.created_at AS TEXT)', dataType: 'string' },
+      created_at: { expression: 'a.created_at', dataType: 'date' },
       updated_at: { expression: 'a.updated_at', textExpression: 'CAST(a.updated_at AS TEXT)', dataType: 'string' },
       supplier_name: { expression: 's.name', dataType: 'string' },
       owners_business: {

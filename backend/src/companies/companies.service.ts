@@ -102,11 +102,7 @@ export class CompaniesService {
       vat_number: { expression: 'c.vat_number', dataType: 'string' },
       base_currency: { expression: 'c.base_currency', dataType: 'string' },
       status: { expression: 'c.status', textExpression: 'CAST(c.status AS TEXT)', dataType: 'string' },
-      created_at: {
-        expression: 'c.created_at',
-        textExpression: 'CAST(c.created_at AS TEXT)',
-        dataType: 'string',
-      },
+      created_at: { expression: 'c.created_at', dataType: 'date' },
       updated_at: {
         expression: 'c.updated_at',
         textExpression: 'CAST(c.updated_at AS TEXT)',
@@ -317,11 +313,7 @@ export class CompaniesService {
       vat_number: { expression: 'c.vat_number', dataType: 'string' },
       base_currency: { expression: 'c.base_currency', dataType: 'string' },
       status: { expression: 'c.status', textExpression: 'CAST(c.status AS TEXT)', dataType: 'string' },
-      created_at: {
-        expression: 'c.created_at',
-        textExpression: 'CAST(c.created_at AS TEXT)',
-        dataType: 'string',
-      },
+      created_at: { expression: 'c.created_at', dataType: 'date' },
       updated_at: {
         expression: 'c.updated_at',
         textExpression: 'CAST(c.updated_at AS TEXT)',
@@ -520,7 +512,7 @@ export class CompaniesService {
       vat_number: { expression: 'c.vat_number', dataType: 'string' },
       base_currency: { expression: 'c.base_currency', dataType: 'string' },
       status: { expression: 'c.status', textExpression: 'CAST(c.status AS TEXT)', dataType: 'string' },
-      created_at: { expression: 'c.created_at', textExpression: 'CAST(c.created_at AS TEXT)', dataType: 'string' },
+      created_at: { expression: 'c.created_at', dataType: 'date' },
       updated_at: { expression: 'c.updated_at', textExpression: 'CAST(c.updated_at AS TEXT)', dataType: 'string' },
       headcount_year: {
         expression: 'm.headcount',

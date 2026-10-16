@@ -129,7 +129,7 @@
       "it_users_year": "number",
       "turnover_year": "number",
       "status": "set",
-      "created_at": "text"
+      "created_at": "date"
     },
     "fields": [
       "name",
@@ -275,7 +275,7 @@
       "classification_reviewed_at": "date",
       "editor": "text",
       "derived_total_users": "number",
-      "created_at": "text",
+      "created_at": "date",
       "supplier_name": "text",
       "owners_business": "text",
       "owners_it": "text",
@@ -364,7 +364,7 @@
       "target_application_name": "text",
       "lifecycle": "set",
       "criticality": "set",
-      "created_at": "text",
+      "created_at": "date",
       "business_process_id": "set",
       "data_category": "set",
       "contains_pii": "set"
@@ -395,7 +395,7 @@
       "provider": "text",
       "country_iso": "text",
       "city": "text",
-      "created_at": "text"
+      "created_at": "date"
     },
     "fields": [
       "location_reference",
@@ -417,7 +417,7 @@
       "data_class": "set",
       "contains_pii": "set",
       "lifecycle": "set",
-      "created_at": "text"
+      "created_at": "date"
     },
     "fields": [
       "connection_reference",
@@ -488,7 +488,7 @@
       "company_name": "text",
       "headcount_year": "number",
       "status": "set",
-      "created_at": "text"
+      "created_at": "date"
     },
     "fields": [
       "name",
@@ -512,9 +512,9 @@
       "operating_system": "set",
       "network_segment": "set",
       "status": "set",
-      "go_live_date": "text",
-      "end_of_life_date": "text",
-      "created_at": "text"
+      "go_live_date": "date",
+      "end_of_life_date": "date",
+      "created_at": "date"
     },
     "fields": [
       "name",

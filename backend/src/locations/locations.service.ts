@@ -32,15 +32,14 @@ export type SubItemOpts = {
 };
 
 /**
- * The Created column's filter, compiled as the connections list compiles it: a text filter
- * reads the timestamp as text. buildWhereFromAgFilters cannot take this column (ILIKE does
- * not apply to a timestamp).
+ * The Created column's filter: a date model, by day (a text model answers 400).
+ * buildWhereFromAgFilters cannot take this column (ILIKE does not apply to a timestamp).
  */
 function createdAtFilter(filters: any): FindOperator<Date> | undefined {
   const model = filters && typeof filters === 'object' ? filters.created_at : undefined;
   if (!model) return undefined;
   const column = '__created_at__';
-  const condition = compileAgFilterCondition(model, { expression: column, textExpression: `CAST(${column} AS TEXT)` }, createParamNameGenerator('locCreated'));
+  const condition = compileAgFilterCondition(model, { expression: column, dataType: 'date' }, createParamNameGenerator('locCreated'));
   if (!condition) return undefined;
   return Raw((alias) => condition.sql.split(column).join(alias), condition.params);
 }

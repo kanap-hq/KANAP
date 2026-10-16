@@ -161,7 +161,7 @@ export default function LocationsPage() {
         fontVariantNumeric: 'tabular-nums',
       },
     },
-    { headerName: t('pages.assets.columns.created'), field: 'created_at', width: 160, cellRenderer: ClickableCell },
+    { headerName: t('pages.assets.columns.created'), field: 'created_at', width: 160, filter: 'agDateColumnFilter', cellRenderer: ClickableCell },
   ];
 
   const actions = (
