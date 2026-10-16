@@ -3265,11 +3265,12 @@ export class IntegratedDocumentsService {
     );
   }
 
+  /** Deletes the managed documents of a source record (`checkAccess`: see KnowledgeService.deleteManagedDocument). */
   async deleteForEntity(
     sourceEntityType: SourceScopedEntityType,
     sourceEntityId: string,
     userId: string | null | undefined,
-    opts?: { manager?: EntityManager },
+    opts?: { manager?: EntityManager; checkAccess?: boolean },
   ): Promise<number> {
     const manager = this.getManager(opts);
     const bindings = await manager.getRepository(IntegratedDocumentBinding).find({
@@ -3281,7 +3282,7 @@ export class IntegratedDocumentsService {
     });
 
     for (const binding of bindings) {
-      await this.knowledge.deleteManagedDocument(binding.document_id, userId || null, { manager });
+      await this.knowledge.deleteManagedDocument(binding.document_id, userId || null, { manager, checkAccess: opts?.checkAccess });
     }
 
     return bindings.length;

@@ -646,7 +646,7 @@ La API ejecuta los trabajos programados siguientes. Las horas siguientes son los
 | `send-weekly-reviews` | Cada hora | Envía el resumen de la revisión semanal a los usuarios que lo activaron, en su propio día y zona horaria. |
 | `lifecycle-status-sync` | Cada hora, y una vez al arrancar | Pasa a desactivados los datos maestros, contratos y líneas OPEX y CAPEX cuyo fin de validez ha pasado. |
 | `entra-directory-sync` | Diario 03:00 | Actualiza los atributos de los usuarios y desactiva las cuentas eliminadas o desactivadas en el directorio. Solo funciona cuando el SSO con Entra está conectado y aprobado. Consulte [SSO con Microsoft Entra](sso-entra.md). |
-| `attachment-orphan-cleanup` | Diario 03:00 | Elimina los registros de adjuntos de imágenes insertadas que ya no usa ningún texto. |
+| `attachment-orphan-cleanup` | Diario 03:00 | Elimina los registros de adjuntos de imágenes insertadas que ya no usa ningún texto. Mueve los documentos de un registro eliminado (la vista general de una aplicación, por ejemplo) a los documentos sin clasificar de la biblioteca Managed Docs, con una entrada en el registro de auditoría, para que un administrador los revise. |
 | `storage-ghost-cleanup` | Domingo 04:00 | Elimina los archivos almacenados que no tienen registro de adjunto y tienen más de 7 días. |
 | `list-context-purge` | Diario 03:30 | Elimina los filtros de lista guardados que nadie ha usado en 90 días. |
 | `auth-event-retention` | Diario 03:40 | Elimina del registro de auditoría los eventos de inicio de sesión de más de 365 días. |

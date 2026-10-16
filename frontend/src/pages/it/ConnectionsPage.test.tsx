@@ -50,8 +50,8 @@ describe('ConnectionsPage filters', () => {
       expect(column(field).floatingFilterComponent).toBe(CheckboxSetFloatingFilter);
     }
     expect(column('topology').filterParams?.values).toEqual([
-      { value: 'server_to_server', label: 'Server to server' },
-      { value: 'multi_server', label: 'Multi-server' },
+      { value: 'server_to_server', label: 'it:enums.topology.serverToServer' },
+      { value: 'multi_server', label: 'it:enums.topology.multiServer' },
     ]);
     expect(column('lifecycle').filterParams?.values).toEqual([{ value: 'active', label: 'Active' }, { value: 'retired', label: 'Retired' }]);
   });

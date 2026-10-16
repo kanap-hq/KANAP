@@ -304,6 +304,13 @@ async function main() {
     assert.deepEqual(failedOnly.map((row) => row.source_ref), ['unknown_user'], 'action parameter');
     const searched = rowsOf(await get({ q: 'Dash' }, a.admin));
     assert.deepEqual(searched.map((row) => row.action), ['update'], 'search on the person');
+    // The page searches the table labels of the reader's language ("Fournisseurs") and sends the codes
+    // they name (`q_tables`): the search finds those rows too. Anything but a table code is dropped.
+    const byLabel = rowsOf(await get({ q: 'Fournisseurs', q_tables: 'suppliers' }, a.admin));
+    assert.deepEqual(byLabel.map((row) => row.action), ['create', 'update'], 'search on a table label');
+    assert.equal(rowsOf(await get({ q: 'Fournisseurs' }, a.admin)).length, 0, 'a label without its codes matches nothing');
+    const forged = rowsOf(await get({ q: 'Connexion', q_tables: "suppliers') OR (1=1,auth,AUTH,%" }, a.admin));
+    assert.deepEqual(forged.map((row) => row.action), ['login', 'login_failed'], 'only table codes are kept');
     const ascending = rowsOf(await get({ sort: 'created_at:ASC', filters: JSON.stringify({ table_name: { filterType: 'set', values: ['suppliers'] } }) }, a.admin));
     assert.deepEqual(ascending.map((row) => row.action), ['update', 'create'], 'sort');
     console.log('ok - the filters, search and sort of the list apply');
@@ -346,7 +353,7 @@ async function main() {
 
     // 6. Each export is recorded in the audit log of its tenant.
     const recordedA = await exportRows(tenantA);
-    assert.equal(recordedA.length, 10, 'one row per export made in tenant A (ten answered 200)');
+    assert.equal(recordedA.length, 13, 'one row per export made in tenant A (thirteen answered 200)');
     for (const row of recordedA) {
       assert.deepEqual(row.after_json, { resource: 'audit-logs', path: '/audit-logs/export', ip: '127.0.0.1', user_agent: 'Export probe' });
     }

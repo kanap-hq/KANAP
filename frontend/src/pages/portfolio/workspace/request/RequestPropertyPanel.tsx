@@ -211,6 +211,7 @@ export default function RequestPropertyPanel({
         <PropertyRow label={t('workspace.request.fields.requestor')}>
           <UserSelect
             hideLabel
+            label={t('workspace.request.fields.requestor')}
             value={form?.requestor_id || null}
             onChange={onRequestorChange}
             disabled={coreFieldsDisabled}
@@ -221,6 +222,7 @@ export default function RequestPropertyPanel({
         <PropertyRow label={t('workspace.request.fields.company')}>
           <CompanySelect
             hideLabel
+            label={t('workspace.request.fields.company')}
             value={form?.company_id || null}
             onChange={onCompanyChange}
             disabled={coreFieldsDisabled}
@@ -231,6 +233,7 @@ export default function RequestPropertyPanel({
         <PropertyRow label={t('workspace.request.fields.department')}>
           <DepartmentSelect
             hideLabel
+            label={t('workspace.request.fields.department')}
             companyId={form?.company_id || undefined}
             value={form?.department_id || null}
             onChange={(value) => onUpdate({ department_id: value })}
@@ -255,6 +258,7 @@ export default function RequestPropertyPanel({
           <PropertyRow label={t('workspace.request.fields.businessSponsor')}>
             <UserSelect
               hideLabel
+              label={t('workspace.request.fields.businessSponsor')}
               value={form?.business_sponsor_id || null}
               onChange={(value) => handleImmediateSave(
                 () => api.patch(`/portfolio/requests/${form.id}`, { business_sponsor_id: value }),
@@ -268,6 +272,7 @@ export default function RequestPropertyPanel({
           <PropertyRow label={t('workspace.request.fields.businessLead')}>
             <UserSelect
               hideLabel
+              label={t('workspace.request.fields.businessLead')}
               value={form?.business_lead_id || null}
               onChange={(value) => handleImmediateSave(
                 () => api.patch(`/portfolio/requests/${form.id}`, { business_lead_id: value }),
@@ -281,6 +286,7 @@ export default function RequestPropertyPanel({
           <PropertyRow label={t('workspace.request.fields.itSponsor')}>
             <UserSelect
               hideLabel
+              label={t('workspace.request.fields.itSponsor')}
               value={form?.it_sponsor_id || null}
               onChange={(value) => handleImmediateSave(
                 () => api.patch(`/portfolio/requests/${form.id}`, { it_sponsor_id: value }),
@@ -294,6 +300,7 @@ export default function RequestPropertyPanel({
           <PropertyRow label={t('workspace.request.fields.itLead')}>
             <UserSelect
               hideLabel
+              label={t('workspace.request.fields.itLead')}
               value={form?.it_lead_id || null}
               onChange={(value) => handleImmediateSave(
                 () => api.patch(`/portfolio/requests/${form.id}`, { it_lead_id: value }),

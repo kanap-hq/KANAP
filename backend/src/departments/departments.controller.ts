@@ -112,6 +112,14 @@ export class DepartmentsController {
     );
   }
 
+  // What a delete of `ids` would refuse, asked before the confirmation.
+  @UseGuards(PermissionGuard)
+  @RequireLevel('departments', 'admin')
+  @Post('delete-check')
+  deleteCheck(@Body() body: { ids?: unknown }, @Tenant() ctx: TenantRequest) {
+    return this.deleteSvc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], { manager: ctx.manager });
+  }
+
   @UseGuards(PermissionGuard)
   @RequireLevel('departments', 'admin')
   @Delete('bulk')

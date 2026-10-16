@@ -73,7 +73,7 @@ Most columns support checkbox set filters for quick multi-select filtering. Filt
 **Actions**:
 - **Add asset**: Create a new asset (`infrastructure:member`)
 - **Import CSV** / **Export CSV**: Bulk operations (`infrastructure:admin`)
-- **Delete asset** (selected rows): Remove selected assets (`infrastructure:admin`)
+- **Delete asset** (selected rows): Remove selected assets (`infrastructure:admin`). An asset still assigned to applications or linked to connections cannot be deleted: remove it from them first. Before anything is deleted, the confirmation lists the assets kept, with the reason
 
 ---
 
@@ -101,7 +101,7 @@ The header shows:
 - **Asset reference** (e.g., `AST-123`): copyable identifier
 - **Lifecycle** chip (also editable from the properties drawer)
 - **Send link**: copy a shareable link to this workspace
-- **Delete** (`infrastructure:admin`)
+- **Delete** (`infrastructure:admin`). For an asset still in use, the reason shows before any confirmation
 - **Previous / Next** (e.g., "3 of 47"): navigate the filtered list without returning to it
 
 ### Properties drawer (right panel)
@@ -257,7 +257,7 @@ From the Assets list:
 
 ### Import workflow
 
-1. **Prepare your file**: Use UTF-8 encoding with semicolon (`;`) separators. A file Excel saved as plain CSV (Windows-1252) imports too. Download a template to ensure correct headers.
+1. **Prepare your file**: Save it as UTF-8. Commas or semicolons both work, and so does a file Excel saved as plain CSV (Windows-1252). Download a template to ensure correct headers. The separator, amounts, dates and yes or no of each language are in [CSV files](csv-files.md).
 
 2. **Choose import settings**:
    - **Mode**:
@@ -284,7 +284,7 @@ From the Assets list:
 | `kind` | Asset type | Yes | Accepts code or label (e.g., `vm` or `Virtual Machine`) |
 | `environment` | Environment | Yes | `prod`, `pre_prod`, `qa`, `test`, `dev`, `sandbox` |
 | `status` | Lifecycle status | No | Accepts code or label (e.g., `active` or `Active`) |
-| `is_cluster` | Is this a cluster | No | `true` or `false` |
+| `is_cluster` | Is this a cluster | No | `yes` or `no` |
 | `hostname` | Network hostname | No | |
 | `domain` | DNS domain | No | Accepts code or label from Settings |
 | `aliases` | DNS aliases | No | Comma-separated list |
@@ -343,7 +343,7 @@ Some fields are computed and cannot be imported:
 **"File isn't properly formatted" error**: This usually indicates an encoding issue. Ensure your CSV is saved as **UTF-8**:
 
 - **In LibreOffice**: When opening a CSV, select `UTF-8` in the Character set dropdown (not "Japanese (Macintosh)" or other encodings). When saving, check "Edit filter settings" and choose UTF-8.
-- **In Excel**: Save As > CSV UTF-8 (Comma delimited), then open in a text editor to change commas to semicolons.
+- **In Excel**: Save As > CSV UTF-8 (Comma delimited).
 - **General tip**: If you see garbled characters at the start of your file, the encoding is incorrect.
 
 ### Example CSV

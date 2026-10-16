@@ -8,6 +8,7 @@ import { createAppTheme } from '../config/ThemeContext';
 
 const calendarsState = vi.hoisted(() => ({ ready: true, profiles: [] as unknown[], isError: false }));
 const grid = vi.hoisted(() => ({ props: null as null | Record<string, any> }));
+const deleteButton = vi.hoisted(() => ({ props: null as null | Record<string, any> }));
 const levels = vi.hoisted(() => ({ value: 'admin' as 'reader' | 'member' | 'admin' | null, resources: [] as string[] }));
 const api = vi.hoisted(() => ({
   suggestions: [] as unknown[],
@@ -46,6 +47,12 @@ vi.mock('../hooks/useWorkingDayProfiles', async (importOriginal) => {
       actual.buildWorkingDayProfiles(calendarsState.profiles as any, calendarsState.ready, calendarsState.isError),
   };
 });
+vi.mock('../components/DeleteSelectedButton', () => ({
+  default: (props: Record<string, any>) => {
+    deleteButton.props = props;
+    return null;
+  },
+}));
 vi.mock('../components/ServerDataGrid', () => ({
   default: (props: Record<string, any>) => {
     grid.props = props;
@@ -221,5 +228,20 @@ describe('WorkingDayCalendarsPage', () => {
     levels.value = null;
     renderPage();
     expect(screen.queryByTestId('grid')).toBeNull();
+  });
+});
+
+describe('WorkingDayCalendarsPage delete', () => {
+  it('asks the delete check before its confirmation, and names the records in its words', async () => {
+    renderPage();
+    const props = await waitFor(() => {
+      expect(deleteButton.props).not.toBeNull();
+      return deleteButton.props!;
+    });
+    api.post.mockResolvedValueOnce({ data: { refused: [{ id: 'a', name: 'A', code: 'X', usages: [] }] } });
+    expect(await props.checkDelete(['a', 'b'])).toEqual({ refused: [{ id: 'a', name: 'A', code: 'X', usages: [] }] });
+    expect(api.post).toHaveBeenCalledWith('/working-day-profiles/delete-check', { ids: ['a', 'b'] });
+    expect(String(props.itemLabels.toDelete(2))).toContain('workingDayCalendars.delete.toDelete');
+    expect(String(props.itemLabels.kept(1))).toContain('workingDayCalendars.delete.kept');
   });
 });

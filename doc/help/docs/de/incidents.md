@@ -152,7 +152,7 @@ Die Analyse ist selbst ein Dokument der Wissensdatenbank, mit eigener Referenz `
 
 Das Journal macht daraus ein Register statt eines Formulars. Es listet alles auf, was mit dem Vorfall geschehen ist, das Neueste zuerst, und **nichts darin lässt sich bearbeiten oder löschen**, von niemandem, zu keinem Zeitpunkt.
 
-**Eine Notiz hinzufügen**: Schreiben Sie sie in das Eingabefeld oben und klicken Sie auf **Hinzufügen** (oder drücken Sie Strg+Eingabe). Datum und Uhrzeit neben der Schaltfläche legen den Zeitpunkt fest, auf den sich die Notiz bezieht. Voreingestellt ist jetzt, und Sie können ihn in die Vergangenheit legen: Eine am Dienstag hinzugefügte Notiz kann als am Samstag um 23:40 Uhr geschehen erfasst werden und wird an dieser Stelle der Chronologie einsortiert. KANAP speichert getrennt davon den Moment, in dem die Notiz tatsächlich gesichert wurde, und dieser Zeitstempel ist niemals änderbar: Rückdatierung bleibt damit ehrlich.
+**Eine Notiz hinzufügen**: Schreiben Sie sie in das Eingabefeld oben und klicken Sie auf **Hinzufügen** (oder drücken Sie Strg+Eingabe). Datum und Uhrzeit neben der Schaltfläche legen den Zeitpunkt fest, auf den sich die Notiz bezieht. Die Uhrzeit wird im 24-Stunden-Format eingegeben (23:40). Voreingestellt ist jetzt, und Sie können ihn in die Vergangenheit legen: Eine am Dienstag hinzugefügte Notiz kann als am Samstag um 23:40 Uhr geschehen erfasst werden und wird an dieser Stelle der Chronologie einsortiert. KANAP speichert getrennt davon den Moment, in dem die Notiz tatsächlich gesichert wurde, und dieser Zeitstempel ist niemals änderbar: Rückdatierung bleibt damit ehrlich.
 
 **Automatische Einträge** erscheinen neben Ihren Notizen:
 

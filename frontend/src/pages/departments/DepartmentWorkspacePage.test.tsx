@@ -102,6 +102,28 @@ describe('DepartmentWorkspacePage', () => {
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/departments/dep-1', { name: 'Finance and control' }));
   });
 
+  it('says another department has the name, under the name, on a 409 duplicate', async () => {
+    mocked.patch.mockRejectedValueOnce({ response: { status: 409, data: { code: 'duplicate', message: 'Taken.' } } });
+    renderAt('/master-data/departments/dep-1/overview');
+    fireEvent.click(await screen.findByText('Finance'));
+    const input = screen.getByDisplayValue('Finance');
+    fireEvent.change(input, { target: { value: 'legal' } });
+    fireEvent.blur(input);
+    expect(await screen.findByText('departments.messages.nameTaken')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('says another department has the name, under the name field, when a create is refused as a duplicate', async () => {
+    mocked.post.mockRejectedValueOnce({ response: { status: 409, data: { code: 'duplicate', message: 'Taken.' } } });
+    renderAt('/master-data/departments/new/overview');
+    fireEvent.change(screen.getByLabelText('departments.fields.name'), { target: { value: 'legal' } });
+    fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    expect(await screen.findByText('departments.messages.nameTaken')).toBeInTheDocument();
+    expect(screen.getByLabelText('departments.fields.name')).toHaveAttribute('aria-invalid', 'true');
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
+
   it('saves the description on blur', async () => {
     renderAt('/master-data/departments/dep-1/overview');
     const description = await screen.findByLabelText('departments.fields.description');

@@ -12,6 +12,7 @@ import {
   buildQuickSearchConditions,
   normalizeAgFilterModel,
   assertSetFilterModes,
+  compileReferenceFilter,
 } from '../../common/ag-grid-filtering';
 import { PortfolioProjectsBaseService, ServiceOpts } from './portfolio-projects-base.service';
 import { projectInvolvesUsersSql } from './portfolio-report-filters';
@@ -106,6 +107,8 @@ const projectDateFields = new Map<string, string>([
   // The creation day, not the instant: the grid sends plain days, and the portfolio reports
   // link to age brackets counted in whole days.
   ['created_at', 'p.created_at::date'],
+  // The day of the last change, for the same reason.
+  ['updated_at', 'p.updated_at::date'],
 ]);
 
 const compileDateFilterCondition = (
@@ -189,6 +192,67 @@ const applyExplicitTenantConstraint = (
 };
 
 /**
+ * The project lists' column filters (the list, its ids and its filter values): one map, so the
+ * three read the same columns.
+ */
+const PROJECT_FILTER_TARGETS: Record<string, FilterTargetConfig> = {
+  name: { expression: 'p.name', dataType: 'string' },
+  status: { expression: 'p.status', dataType: 'string' },
+  origin: { expression: 'p.origin', dataType: 'string' },
+  source_id: { expression: 'p.source_id', dataType: 'string' },
+  category_id: { expression: 'p.category_id', dataType: 'string' },
+  stream_id: { expression: 'p.stream_id', dataType: 'string' },
+  company_id: { expression: 'p.company_id', dataType: 'string' },
+  department_id: { expression: 'p.department_id', dataType: 'string' },
+  priority_score: { expression: 'p.priority_score', dataType: 'number' },
+  execution_progress: { expression: 'p.execution_progress', dataType: 'number' },
+  planned_start: { expression: 'p.planned_start', textExpression: 'CAST(p.planned_start AS TEXT)', dataType: 'string' },
+  planned_end: { expression: 'p.planned_end', textExpression: 'CAST(p.planned_end AS TEXT)', dataType: 'string' },
+  created_at: { expression: 'p.created_at', textExpression: 'CAST(p.created_at AS TEXT)', dataType: 'string' },
+  // Derived filter targets for joined/computed columns
+  source_name: {
+    expression: 'p.source_id',
+    textExpression: `COALESCE((SELECT t.name FROM portfolio_sources t WHERE t.id = p.source_id), '')`,
+    dataType: 'string',
+  },
+  category_name: {
+    expression: 'p.category_id',
+    textExpression: `COALESCE((SELECT cat.name FROM portfolio_categories cat WHERE cat.id = p.category_id), '')`,
+    dataType: 'string',
+  },
+  stream_name: {
+    expression: 'p.stream_id',
+    textExpression: `COALESCE((SELECT s.name FROM portfolio_streams s WHERE s.id = p.stream_id), '')`,
+    dataType: 'string',
+  },
+  company_name: {
+    expression: 'p.company_id',
+    textExpression: `COALESCE((SELECT c.name FROM companies c WHERE c.id = p.company_id), '')`,
+    dataType: 'string',
+  },
+  department_name: {
+    expression: 'p.department_id',
+    textExpression: `COALESCE((SELECT d.name FROM departments d WHERE d.id = p.department_id), '')`,
+    dataType: 'string',
+  },
+  business_lead_name: {
+    expression: 'p.business_lead_id',
+    textExpression: buildUserDisplayNameSql('p.business_lead_id', 'p.tenant_id'),
+    dataType: 'string',
+  },
+  it_lead_name: {
+    expression: 'p.it_lead_id',
+    textExpression: buildUserDisplayNameSql('p.it_lead_id', 'p.tenant_id'),
+    dataType: 'string',
+  },
+  contributor_name: {
+    expression: 'p.id',
+    textExpression: buildProjectContributorNamesSql('p'),
+    dataType: 'string',
+  },
+};
+
+/**
  * Service for listing and filtering portfolio projects.
  */
 @Injectable()
@@ -221,64 +285,7 @@ export class PortfolioProjectsListService extends PortfolioProjectsBaseService {
     const fm = filters && typeof filters === 'object' ? filters : undefined;
     const hasStatusFilter = fm && Object.prototype.hasOwnProperty.call(fm, 'status');
 
-    // Define filter targets for AG Grid model -> SQL translation
-    type Target = FilterTargetConfig;
-    const targets: Record<string, Target> = {
-      name: { expression: 'p.name', dataType: 'string' },
-      status: { expression: 'p.status', dataType: 'string' },
-      origin: { expression: 'p.origin', dataType: 'string' },
-      source_id: { expression: 'p.source_id', dataType: 'string' },
-      category_id: { expression: 'p.category_id', dataType: 'string' },
-      stream_id: { expression: 'p.stream_id', dataType: 'string' },
-      company_id: { expression: 'p.company_id', dataType: 'string' },
-      department_id: { expression: 'p.department_id', dataType: 'string' },
-      priority_score: { expression: 'p.priority_score', dataType: 'number' },
-      execution_progress: { expression: 'p.execution_progress', dataType: 'number' },
-      planned_start: { expression: 'p.planned_start', textExpression: 'CAST(p.planned_start AS TEXT)', dataType: 'string' },
-      planned_end: { expression: 'p.planned_end', textExpression: 'CAST(p.planned_end AS TEXT)', dataType: 'string' },
-      created_at: { expression: 'p.created_at', textExpression: 'CAST(p.created_at AS TEXT)', dataType: 'string' },
-      // Derived filter targets for joined/computed columns
-      source_name: {
-        expression: 'p.source_id',
-        textExpression: `COALESCE((SELECT t.name FROM portfolio_sources t WHERE t.id = p.source_id), '')`,
-        dataType: 'string',
-      },
-      category_name: {
-        expression: 'p.category_id',
-        textExpression: `COALESCE((SELECT cat.name FROM portfolio_categories cat WHERE cat.id = p.category_id), '')`,
-        dataType: 'string',
-      },
-      stream_name: {
-        expression: 'p.stream_id',
-        textExpression: `COALESCE((SELECT s.name FROM portfolio_streams s WHERE s.id = p.stream_id), '')`,
-        dataType: 'string',
-      },
-      company_name: {
-        expression: 'p.company_id',
-        textExpression: `COALESCE((SELECT c.name FROM companies c WHERE c.id = p.company_id), '')`,
-        dataType: 'string',
-      },
-      department_name: {
-        expression: 'p.department_id',
-        textExpression: `COALESCE((SELECT d.name FROM departments d WHERE d.id = p.department_id), '')`,
-        dataType: 'string',
-      },
-      business_lead_name: {
-        expression: 'p.business_lead_id',
-        textExpression: buildUserDisplayNameSql('p.business_lead_id', 'p.tenant_id'),
-        dataType: 'string',
-      },
-      it_lead_name: {
-        expression: 'p.it_lead_id',
-        textExpression: buildUserDisplayNameSql('p.it_lead_id', 'p.tenant_id'),
-        dataType: 'string',
-      },
-      contributor_name: {
-        expression: 'p.id',
-        textExpression: buildProjectContributorNamesSql('p'),
-        dataType: 'string',
-      },
-    };
+    const targets = PROJECT_FILTER_TARGETS;
 
     // Compile AG Grid filters
     const nextParam = createParamNameGenerator('p');
@@ -297,6 +304,12 @@ export class PortfolioProjectsListService extends PortfolioProjectsBaseService {
             compiledFilters.push(cond);
             continue;
           }
+        }
+        // The reference column shows `PRJ-12` (`compileReferenceFilter`).
+        if (field === 'item_number') {
+          const cond = compileReferenceFilter(model, 'p.item_number', 'PRJ', nextParam);
+          if (cond) compiledFilters.push(cond);
+          continue;
         }
         const target = targets[field];
         if (!target) continue;
@@ -539,64 +552,7 @@ export class PortfolioProjectsListService extends PortfolioProjectsBaseService {
     const fm = filters && typeof filters === 'object' ? filters : undefined;
     const hasStatusFilter = fm && Object.prototype.hasOwnProperty.call(fm, 'status');
 
-    // Define filter targets for AG Grid model -> SQL translation
-    type Target = FilterTargetConfig;
-    const targets: Record<string, Target> = {
-      name: { expression: 'p.name', dataType: 'string' },
-      status: { expression: 'p.status', dataType: 'string' },
-      origin: { expression: 'p.origin', dataType: 'string' },
-      source_id: { expression: 'p.source_id', dataType: 'string' },
-      category_id: { expression: 'p.category_id', dataType: 'string' },
-      stream_id: { expression: 'p.stream_id', dataType: 'string' },
-      company_id: { expression: 'p.company_id', dataType: 'string' },
-      department_id: { expression: 'p.department_id', dataType: 'string' },
-      priority_score: { expression: 'p.priority_score', dataType: 'number' },
-      execution_progress: { expression: 'p.execution_progress', dataType: 'number' },
-      planned_start: { expression: 'p.planned_start', textExpression: 'CAST(p.planned_start AS TEXT)', dataType: 'string' },
-      planned_end: { expression: 'p.planned_end', textExpression: 'CAST(p.planned_end AS TEXT)', dataType: 'string' },
-      created_at: { expression: 'p.created_at', textExpression: 'CAST(p.created_at AS TEXT)', dataType: 'string' },
-      // Derived filter targets for joined/computed columns (used by grid filters)
-      source_name: {
-        expression: 'p.source_id',
-        textExpression: `COALESCE((SELECT t.name FROM portfolio_sources t WHERE t.id = p.source_id), '')`,
-        dataType: 'string',
-      },
-      category_name: {
-        expression: 'p.category_id',
-        textExpression: `COALESCE((SELECT cat.name FROM portfolio_categories cat WHERE cat.id = p.category_id), '')`,
-        dataType: 'string',
-      },
-      stream_name: {
-        expression: 'p.stream_id',
-        textExpression: `COALESCE((SELECT s.name FROM portfolio_streams s WHERE s.id = p.stream_id), '')`,
-        dataType: 'string',
-      },
-      company_name: {
-        expression: 'p.company_id',
-        textExpression: `COALESCE((SELECT c.name FROM companies c WHERE c.id = p.company_id), '')`,
-        dataType: 'string',
-      },
-      department_name: {
-        expression: 'p.department_id',
-        textExpression: `COALESCE((SELECT d.name FROM departments d WHERE d.id = p.department_id), '')`,
-        dataType: 'string',
-      },
-      business_lead_name: {
-        expression: 'p.business_lead_id',
-        textExpression: buildUserDisplayNameSql('p.business_lead_id', 'p.tenant_id'),
-        dataType: 'string',
-      },
-      it_lead_name: {
-        expression: 'p.it_lead_id',
-        textExpression: buildUserDisplayNameSql('p.it_lead_id', 'p.tenant_id'),
-        dataType: 'string',
-      },
-      contributor_name: {
-        expression: 'p.id',
-        textExpression: buildProjectContributorNamesSql('p'),
-        dataType: 'string',
-      },
-    };
+    const targets = PROJECT_FILTER_TARGETS;
 
     // Compile AG Grid filters
     const nextParam = createParamNameGenerator('p');
@@ -615,6 +571,12 @@ export class PortfolioProjectsListService extends PortfolioProjectsBaseService {
             compiledFilters.push(cond);
             continue;
           }
+        }
+        // The reference column shows `PRJ-12` (`compileReferenceFilter`).
+        if (field === 'item_number') {
+          const cond = compileReferenceFilter(model, 'p.item_number', 'PRJ', nextParam);
+          if (cond) compiledFilters.push(cond);
+          continue;
         }
         const target = targets[field];
         if (!target) continue;
@@ -703,62 +665,7 @@ export class PortfolioProjectsListService extends PortfolioProjectsBaseService {
 
     const results: Record<string, Array<string | null>> = {};
 
-    type Target = FilterTargetConfig;
-    const targets: Record<string, Target> = {
-      name: { expression: 'p.name', dataType: 'string' },
-      status: { expression: 'p.status', dataType: 'string' },
-      origin: { expression: 'p.origin', dataType: 'string' },
-      source_id: { expression: 'p.source_id', dataType: 'string' },
-      category_id: { expression: 'p.category_id', dataType: 'string' },
-      stream_id: { expression: 'p.stream_id', dataType: 'string' },
-      company_id: { expression: 'p.company_id', dataType: 'string' },
-      department_id: { expression: 'p.department_id', dataType: 'string' },
-      priority_score: { expression: 'p.priority_score', dataType: 'number' },
-      execution_progress: { expression: 'p.execution_progress', dataType: 'number' },
-      planned_start: { expression: 'p.planned_start', textExpression: 'CAST(p.planned_start AS TEXT)', dataType: 'string' },
-      planned_end: { expression: 'p.planned_end', textExpression: 'CAST(p.planned_end AS TEXT)', dataType: 'string' },
-      created_at: { expression: 'p.created_at', textExpression: 'CAST(p.created_at AS TEXT)', dataType: 'string' },
-      source_name: {
-        expression: 'p.source_id',
-        textExpression: `COALESCE((SELECT t.name FROM portfolio_sources t WHERE t.id = p.source_id), '')`,
-        dataType: 'string',
-      },
-      category_name: {
-        expression: 'p.category_id',
-        textExpression: `COALESCE((SELECT cat.name FROM portfolio_categories cat WHERE cat.id = p.category_id), '')`,
-        dataType: 'string',
-      },
-      stream_name: {
-        expression: 'p.stream_id',
-        textExpression: `COALESCE((SELECT s.name FROM portfolio_streams s WHERE s.id = p.stream_id), '')`,
-        dataType: 'string',
-      },
-      company_name: {
-        expression: 'p.company_id',
-        textExpression: `COALESCE((SELECT c.name FROM companies c WHERE c.id = p.company_id), '')`,
-        dataType: 'string',
-      },
-      department_name: {
-        expression: 'p.department_id',
-        textExpression: `COALESCE((SELECT d.name FROM departments d WHERE d.id = p.department_id), '')`,
-        dataType: 'string',
-      },
-      business_lead_name: {
-        expression: 'p.business_lead_id',
-        textExpression: buildUserDisplayNameSql('p.business_lead_id', 'p.tenant_id'),
-        dataType: 'string',
-      },
-      it_lead_name: {
-        expression: 'p.it_lead_id',
-        textExpression: buildUserDisplayNameSql('p.it_lead_id', 'p.tenant_id'),
-        dataType: 'string',
-      },
-      contributor_name: {
-        expression: 'p.id',
-        textExpression: buildProjectContributorNamesSql('p'),
-        dataType: 'string',
-      },
-    };
+    const targets = PROJECT_FILTER_TARGETS;
 
     const valueExpressions: Record<string, string> = {
       status: 'p.status',
@@ -800,6 +707,20 @@ export class PortfolioProjectsListService extends PortfolioProjectsBaseService {
           const linkCond = compileProjectLinkFilter(filterField, model, nextParam);
           if (linkCond !== undefined) {
             if (linkCond) compiledFilters.push(linkCond);
+            continue;
+          }
+          const dateField = projectDateFields.get(filterField);
+          if (dateField) {
+            const cond = compileDateFilterCondition(model, dateField, nextParam);
+            if (cond) {
+              compiledFilters.push(cond);
+              continue;
+            }
+          }
+          // The reference column shows `PRJ-12` (`compileReferenceFilter`).
+          if (filterField === 'item_number') {
+            const cond = compileReferenceFilter(model, 'p.item_number', 'PRJ', nextParam);
+            if (cond) compiledFilters.push(cond);
             continue;
           }
           const target = targets[filterField];

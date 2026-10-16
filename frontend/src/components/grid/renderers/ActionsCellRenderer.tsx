@@ -278,40 +278,4 @@ export const ActionIcons = {
   More: MoreVertIcon,
 };
 
-/**
- * Helper to create common actions
- */
-export const createCommonActions = {
-  view: <T extends { id: string }>(onClick: (data: T) => void): ActionDefinition<T> => ({
-    key: 'view',
-    label: 'View',
-    icon: <VisibilityIcon fontSize="small" />,
-    tooltip: 'View details',
-    onClick,
-  }),
-  edit: <T extends { id: string }>(onClick: (data: T) => void): ActionDefinition<T> => ({
-    key: 'edit',
-    label: 'Edit',
-    icon: <EditIcon fontSize="small" />,
-    tooltip: 'Edit',
-    onClick,
-  }),
-  delete: <T extends { id: string }>(onClick: (data: T) => void): ActionDefinition<T> => ({
-    key: 'delete',
-    label: 'Delete',
-    icon: <DeleteIcon fontSize="small" />,
-    tooltip: 'Delete',
-    destructive: true,
-    dividerBefore: true,
-    onClick,
-  }),
-  copy: <T extends { id: string }>(onClick: (data: T) => void): ActionDefinition<T> => ({
-    key: 'copy',
-    label: 'Duplicate',
-    icon: <ContentCopyIcon fontSize="small" />,
-    tooltip: 'Create a copy',
-    onClick,
-  }),
-};
-
 export default ActionsCellRenderer;

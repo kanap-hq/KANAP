@@ -33,8 +33,13 @@ vi.mock('../services/budgetColumns', async (importOriginal) => {
 vi.mock('../components/PageHeader', () => ({ default: ({ actions }: { actions?: React.ReactNode }) => <div>{actions}</div> }));
 const download = vi.hoisted(() => ({ blob: vi.fn() }));
 vi.mock('../utils/downloadBlob', () => ({ downloadBlob: download.blob, extractFilenameFromDisposition: () => null }));
-vi.mock('../components/csv/CsvExportDialog', () => ({ default: () => null }));
-vi.mock('../components/csv/CsvImportDialog', () => ({ default: () => null }));
+const csvDialogs = vi.hoisted(() => ({ export: null as null | Record<string, any>, import: null as null | Record<string, any> }));
+vi.mock('../components/csv/CsvExportDialog', () => ({
+  default: (props: Record<string, any>) => { csvDialogs.export = props; return null; },
+}));
+vi.mock('../components/csv/CsvImportDialog', () => ({
+  default: (props: Record<string, any>) => { csvDialogs.import = props; return null; },
+}));
 vi.mock('../api', () => ({ default: { get: api.get, post: api.post, delete: api.delete } }));
 vi.mock('../lib/listContext', () => ({
   getWithListContext: (endpoint: string, params: Record<string, unknown>) => api.get(endpoint, params),
@@ -370,6 +375,12 @@ describe('ContractsPage', () => {
     expect(screen.getByText('contracts.compliance.summary.none')).toBeInTheDocument();
   });
 
+  it('reads and writes the contracts file in the screen language, as the other master-data files', () => {
+    renderPage();
+    expect(csvDialogs.export).toMatchObject({ endpoint: '/contracts', flexibleFormat: true });
+    expect(csvDialogs.import).toMatchObject({ endpoint: '/contracts', flexibleFormat: true });
+  });
+
   it('exports the register of the contracts the list shows, in the screen language', async () => {
     renderPage();
     const filters = { compliance_state: { filterType: 'set', values: ['missing'] } };
@@ -426,7 +437,7 @@ describe('ContractsPage', () => {
     act(() => { grid.props?.onSelectionChanged([{ id: 'c-1', name: 'SAP' }, { id: 'c-3', name: 'Audited' }]); });
     fireEvent.click(screen.getByRole('button', { name: /buttons\.deleteSelected/ }));
     const dialog = await screen.findByRole('dialog');
-    expect(dialog).toHaveTextContent('delete.deleteSelectedTitle {"count":1}');
+    expect(dialog).toHaveTextContent('delete.deleteSelectedTitle {"count":2}');
     expect(dialog).toHaveTextContent('contracts.delete.toDelete {"count":1}');
     expect(dialog).toHaveTextContent('contracts.delete.kept {"count":1}');
     expect(within(screen.getByTestId('delete-kept')).getByText('Audited')).toBeInTheDocument();

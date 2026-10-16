@@ -4,6 +4,7 @@ import { ScheduledTasksService } from '../admin/scheduled-tasks/scheduled-tasks.
 import { StorageService } from '../common/storage/storage.service';
 import { extractInlineImageUrls } from '../common/content-image-urls';
 import { isStoragePathReferencedInAnyTable, ATTACHMENT_TABLES } from '../common/storage-path-refs';
+import { releaseOrphanedManagedDocuments } from '../knowledge/integrated-document-orphans';
 
 const DRY_RUN = (process.env.ATTACHMENT_CLEANUP_DRY_RUN || '').toLowerCase() === 'true';
 
@@ -83,7 +84,8 @@ export class OrphanedAttachmentCleanupService implements OnModuleInit {
   onModuleInit() {
     this.scheduledTasks.register({
       name: 'attachment-orphan-cleanup',
-      description: 'Removes DB attachment rows whose inline images are no longer referenced in any content field',
+      description:
+        'Removes DB attachment rows whose inline images are no longer referenced in any content field, and moves the managed documents of deleted records to the unfiled documents of their library',
       defaultCron: '0 3 * * *',
       handler: () => this.cleanOrphanedAttachments(),
     });
@@ -106,6 +108,7 @@ export class OrphanedAttachmentCleanupService implements OnModuleInit {
       candidatesFound: 0,
       deleted: 0,
       skippedReferenced: 0,
+      managedDocumentsReleased: 0,
       errors: [] as string[],
     };
 
@@ -174,16 +177,54 @@ export class OrphanedAttachmentCleanupService implements OnModuleInit {
       }
     }
 
+    summary.managedDocumentsReleased = await this.releaseOrphanedManagedDocuments(tenants, summary.errors);
+
     if (summary.errors.length > 0 && summary.tenantsProcessed === 0) {
       throw new Error(`All tenants failed: ${summary.errors[0]}`);
     }
 
     this.logger.log(
-      `[attachment-orphan-cleanup] Done: ${summary.tenantsProcessed} tenants, ${summary.candidatesFound} candidates, ${summary.deleted} deleted, ${summary.skippedReferenced} skipped (referenced)` +
+      `[attachment-orphan-cleanup] Done: ${summary.tenantsProcessed} tenants, ${summary.candidatesFound} candidates, ${summary.deleted} deleted, ${summary.skippedReferenced} skipped (referenced), ${summary.managedDocumentsReleased} managed documents released` +
       (DRY_RUN ? ' [DRY RUN]' : ''),
     );
 
     return summary;
+  }
+
+  /**
+   * Managed documents of deleted records: unbound and moved to the unfiled documents of their
+   * library, kept with their files, one audit entry each (`releaseOrphanedManagedDocuments`). One
+   * transaction per tenant, apart from the attachment step. Returns how many were released.
+   */
+  private async releaseOrphanedManagedDocuments(tenants: Array<{ id: string; slug: string }>, errors: string[]): Promise<number> {
+    let released = 0;
+    for (const tenant of tenants) {
+      const runner = this.dataSource.createQueryRunner();
+      await runner.connect();
+      await runner.startTransaction();
+      try {
+        await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenant.id]);
+        const documents = await releaseOrphanedManagedDocuments(runner.manager, tenant.id, {
+          dryRun: DRY_RUN,
+          sourceRef: 'attachment-orphan-cleanup',
+        });
+        await runner.commitTransaction();
+        for (const doc of documents) {
+          this.logger.log(
+            `[attachment-orphan-cleanup] ${DRY_RUN ? '[DRY RUN] would release' : 'Released'} managed document DOC-${doc.item_number} ` +
+              `(${doc.document_id}) of tenant ${tenant.slug}: its ${doc.source_entity_type} record ${doc.source_entity_id} ` +
+              `(slot ${doc.slot_key}) is gone; unbound and moved to the unfiled documents of its library`,
+          );
+        }
+        released += documents.length;
+      } catch (err: any) {
+        await runner.rollbackTransaction().catch(() => {});
+        errors.push(`Tenant ${tenant.slug} (managed documents): ${err.message}`);
+      } finally {
+        await runner.release();
+      }
+    }
+    return released;
   }
 
   // ========================================================

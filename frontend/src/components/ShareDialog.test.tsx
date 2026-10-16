@@ -167,7 +167,9 @@ describe('ShareDialog limits', () => {
     expect(apiPost.mock.calls[0][1].recipient_emails).toHaveLength(20);
     // A rate limit reads as a sentence, not as the server's exception name.
     expect(await screen.findByText('errors:SHARE_RATE_LIMITED')).toBeInTheDocument();
-  });
+    // 21 recipients typed one by one redraw the dialog and its chips about 40 times (near 2 s
+    // alone): the default 5 s fails it when other suites share the machine.
+  }, 15_000);
 
   it('names the hourly link limit when the server refuses with a rate limit', async () => {
     const apiPost = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;

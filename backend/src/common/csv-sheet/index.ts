@@ -1,20 +1,23 @@
 export { parseCsvAmount, formatCsvAmount, resolveAmountConvention, amountConventionNotice } from './amount';
+export { formatCsvBoolean, parseCsvBoolean } from './boolean';
 export { matchCode } from './codes';
-export { parseCsvDateCell, formatCsvDate, formatCsvEndOfValidity, resolveDateOrder } from './date';
+export { parseCsvDateCell, formatCsvDate, formatCsvEndOfValidity, keepStoredEndOfValidity, resolveDateOrder } from './date';
 export { decodeCsv } from './decode';
 export { csvLanguage, csvProfile, dateOrderNotice } from './language';
 export {
   cellOf,
   endOfValidityCell,
   endOfValidityOf,
+  fieldAmounts,
   headerMismatchError,
   invalidEndOfValidity,
+  nameMatchedWarning,
   readMasterDataFile,
   rowProblems,
 } from './master-data';
-export { readCsv } from './read';
+export { csvSeparatorOf, readCsv } from './read';
 export { languageOf, parseDateOrder, parseDecimalMark } from './request-options';
-export { writeCsv, writeCsvHeader, writeCsvRows } from './write';
+export { writeCsv, writeCsvHeader, writeCsvLine, writeCsvRows } from './write';
 export {
   BUDGET_AMOUNT_COLUMNS,
   BUDGET_YEAR_MAX,

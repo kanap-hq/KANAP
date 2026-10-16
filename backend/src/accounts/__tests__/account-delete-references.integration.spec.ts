@@ -65,7 +65,7 @@ async function testCapexLinesBlockTheDelete() {
 
     assert.deepEqual(
       await references.checkAccountReferences(accountId, { manager: runner.manager }),
-      { hasReferences: true, referenceDetails: ['1 CAPEX item(s) reference this account'], totalCount: 1 },
+      { hasReferences: true, referenceDetails: ['1 CAPEX item(s) reference this account'], totalCount: 1, opex: 0, capex: 1 },
       'a CAPEX line is a reference of its account',
     );
     const error = await refusal(runner, () => deleteService(runner).delete(accountId, { manager: runner.manager }));

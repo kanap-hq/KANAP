@@ -49,7 +49,7 @@ Chaque ligne a un type, affiché dans la colonne **Type** de la liste et dans la
 - **Les comptes** : un compte peut être réglé sur **OPEX et CAPEX**, **OPEX uniquement** ou **CAPEX uniquement**. Voir [Comptes OPEX ou CAPEX](chart-of-accounts.md#comptes-opex-ou-capex)
 - **Les dimensions et les valeurs** : une dimension ou une valeur peut être réservée à un seul type, et une dimension peut être obligatoire pour un type. Le panneau **Propriétés** n'affiche que les dimensions utilisées pour le type de la ligne. Voir [Dimensions OPEX ou CAPEX](analytics.md#dimensions-opex-ou-capex)
 - **La refacturation** : les rapports de refacturation s'ouvrent sur les lignes OPEX, et proposent les lignes CAPEX ou les deux. Voir [Rapports](reports.md)
-- **Les gels** : une colonne budgétaire est gelée par année et par type. Voir [Geler / Dégeler les données](budget-operations.md#geler-degeler-les-donnees)
+- **Les gels** : une colonne budgétaire est gelée par année et par type. Voir [Geler / dégeler les données](budget-operations.md#geler-degeler-les-donnees)
 
 Le type d'une ligne se change avec **Changer le type...**. Voir [Changer le type](#changer-le-type).
 
@@ -151,7 +151,7 @@ Une disposition de colonnes que vous avez enregistrée garde son propre choix de
 **Ligne de totaux** :
 
 - Une seule ligne **Total** est épinglée sous la liste. Elle affiche **Total (12 lignes)**, avec le nombre de lignes que contient la liste, et le total de chaque colonne de montant
-- Un cadenas devant un total signifie que la colonne est gelée pour cette année. Il suit le gel de chaque type que contient la liste. Si la liste est filtrée sur un type, le cadenas s'affiche quand ce type est gelé. Si elle contient les deux types, il s'affiche quand la colonne est gelée pour les deux. Survolez-le pour lire **Gelé**. Voir [Geler / Dégeler les données](budget-operations.md#geler-degeler-les-donnees)
+- Un cadenas devant un total signifie que la colonne est gelée pour cette année. Il suit le gel de chaque type que contient la liste. Si la liste est filtrée sur un type, le cadenas s'affiche quand ce type est gelé. Si elle contient les deux types, il s'affiche quand la colonne est gelée pour les deux. Survolez-le pour lire **Gelé**. Voir [Geler / dégeler les données](budget-operations.md#geler-degeler-les-donnees)
 - Chaque colonne ETP affichée montre la somme des ETP des lignes. Lorsque certaines lignes n'ont pas d'ETP, leur nombre suit le total, par exemple « 3.50 · 12 inconnues ». Survolez-le pour lire la phrase complète : « Inconnu pour 12 lignes ». Lorsqu'aucune ligne n'a d'ETP, le total est vide et seul le nombre s'affiche
 - Les totaux respectent vos filtres et votre recherche actuels
 
@@ -170,7 +170,7 @@ Une disposition de colonnes que vous avez enregistrée garde son propre choix de
 - **Nouvelle ligne** : Créer une ligne (nécessite `budget:member`)
 - **Importer CSV** : Charger des lignes en masse depuis un fichier budgétaire (nécessite `budget:admin`)
 - **Exporter CSV** : Exporter les lignes dans un fichier budgétaire (nécessite `budget:admin`)
-- **Supprimer la sélection** : Suppression en masse des lignes sélectionnées (nécessite `budget:admin` ; sélectionnez-les via les cases à cocher). Une ligne qui a des montants dans une colonne gelée ne peut pas être supprimée : les autres sont supprimées, et le message nomme chaque ligne refusée avec sa raison
+- **Supprimer la sélection** : Suppression en masse des lignes sélectionnées (nécessite `budget:admin` ; sélectionnez-les via les cases à cocher). Une ligne qui a des montants dans une colonne gelée ne peut pas être supprimée. Avant toute suppression, la confirmation liste les lignes conservées, avec la colonne gelée. Les autres sont supprimées
 
 **Navigation Préc./Suiv.** :
 
@@ -364,7 +364,7 @@ Sur une colonne vide, un clic sur un onglet bascule aussitôt. Sur une colonne q
 **Comportement du gel** :
 
 - Si les colonnes budgétaires d'une année sont gelées pour le type de la ligne (via l'Administration budgétaire), la carte de chaque colonne gelée affiche un cadenas, de même que son en-tête dans le tableau
-- Une colonne gelée est en lecture seule. Son éditeur indique, par exemple, « La colonne Budget 2026 est gelée » et « Lecture seule. Un administrateur peut la dégeler dans Administration › Geler / Dégeler les données. », avec son total et l'origine de ses montants
+- Une colonne gelée est en lecture seule. Son éditeur indique, par exemple, « La colonne Budget 2026 est gelée » et « Lecture seule. Un administrateur peut la dégeler dans Administration › Geler / dégeler les données. », avec son total et l'origine de ses montants
 - Lorsque des colonnes sont gelées, une ligne sous le graphique indique « Certaines colonnes sont gelées et en lecture seule. »
 - Chaque colonne peut être gelée indépendamment
 

@@ -263,6 +263,8 @@ Modified lists add the **Changes** column at the end.
 
 Both exports carry the reference, the company, the origin of a project, the changes of a modified row and the event date. The closed rows also carry the creation day.
 
+Both files are written in the language of the screen: titles, column names, statuses, the changes, yes or no and the days. The CSV also takes that language's separator and decimal mark, as described in [CSV files](csv-files.md).
+
 ## Time logged
 
 Days logged month after month, on projects or on other work, team by team and person by person. It shows how the workload is spread, not who logs the most: teams keep their configured order and people are listed alphabetically.

@@ -101,7 +101,7 @@ The **Used by** section, under the notes on the **Overview** tab, lists what ref
 
 Click a row to open that page. Disabled items show **Disabled** and come after the others. A list shows up to 50 items and says how many there are in all. Past 50, budget lines, contracts and applications get a link such as **Show all 57** that opens their list filtered on this supplier. You only see the lists you are allowed to read: a user without access to contracts sees no contract list. A supplier that nothing uses shows one line that says so.
 
-Check this section before you disable or delete a supplier. A supplier still used by budget lines, contracts, applications or assets cannot be deleted. The message counts what uses it, for example "This supplier is used by 2 contracts and 1 application". Disable it instead. In the list, the confirmation names the suppliers kept this way, with what uses them, before anything is deleted.
+Check this section before you disable or delete a supplier. A supplier still used by budget lines, contracts, applications or assets cannot be deleted. The message counts what uses it, for example "This supplier is used by 2 contracts and 1 application". Disable it instead. In the list, the confirmation names the suppliers kept this way, with what uses them, before anything is deleted. To delete it anyway, first set another supplier on those budget lines, contracts, applications and assets, or clear it where it is optional (a contract always needs one). Then delete it.
 
 ### Creating a supplier
 
@@ -124,12 +124,12 @@ The columns:
 | `support_contact` | The email of a contact, as above |
 | `notes` | Free text |
 | `status` | `enabled` or `disabled` |
-| `disabled_at` | The end of validity: a date (`2026-12-31`) or a full date and time. Empty when the supplier has none |
+| `disabled_at` | The end of validity: a date (`2026-12-31`) or a full date and time. The export writes the date only. Imported again, that date keeps the stored end of validity. Empty when the supplier has none |
 
 **Import**:
 
 - Use **Preflight check** to validate the file before applying it, then **Load**
-- Rows are matched by `name`, whatever the case: a row updates the supplier it names, any other row creates one
+- Rows are matched by `name`, whatever the case: a row updates the supplier it names, any other row creates one. The stored spelling stays: a row `sap` updates `SAP`, and the preflight check says "sap" was matched to "SAP"
 - `name` is required. Every other cell is optional
 - Each supplier takes one row. Two rows with the same name, even in a different case, are refused at the preflight check, with both row numbers
 - A contact email must belong to a contact that already exists in **Contacts**. Otherwise the row is refused at the preflight check: create the contact first

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { Box, CircularProgress, Paper, Typography } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import api from '../api';
 
 const DEFAULT_MARKETING_URL = 'https://www.kanap.net';
@@ -60,6 +61,7 @@ type State =
   | { status: 'missing'; marketingUrl: string };
 
 export function TenantProvider({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation('common');
   const [state, setState] = useState<State>({ status: 'loading' });
   const marketingUrl = (import.meta.env.VITE_MARKETING_URL as string | undefined)?.replace(/\/$/, '')
     || DEFAULT_MARKETING_URL;
@@ -185,13 +187,13 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh" px={2}>
         <Paper elevation={3} sx={{ p: 4, maxWidth: 420, textAlign: 'center' }}>
           <Typography variant="h6" gutterBottom>
-            Tenant Not Found
+            {t('tenant.notFound.title')}
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            This tenant doesn&apos;t exist or is no longer available. You&apos;ll be redirected to our marketing site shortly.
+            {t('tenant.notFound.message')}
           </Typography>
           <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 2 }}>
-            Redirecting to {state.marketingUrl}
+            {t('tenant.notFound.redirecting', { url: state.marketingUrl })}
           </Typography>
         </Paper>
       </Box>

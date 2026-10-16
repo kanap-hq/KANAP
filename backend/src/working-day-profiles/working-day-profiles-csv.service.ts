@@ -1,6 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { compareText } from '../common/list-sort';
-import * as fs from 'fs';
 import { resolveLifecycleState, StatusState } from '../common/status';
 import {
   cellOf,
@@ -10,6 +9,7 @@ import {
   DecimalMark,
   endOfValidityCell,
   endOfValidityOf,
+  keepStoredEndOfValidity,
   MasterDataFileRead,
   readMasterDataFile,
   rowProblems,
@@ -34,6 +34,7 @@ import {
   WorkingDayProfilesService,
   WorkingDayProfileValues,
 } from './working-day-profiles.service';
+import { uploadedBytes } from '../common/upload';
 
 export const CALENDAR_MONTH_HEADERS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'] as const;
 export const WORKING_DAY_PROFILE_CSV_HEADERS = [
@@ -232,7 +233,8 @@ export class WorkingDayProfilesCsvService {
       const lifecycle = resolveLifecycleState({
         currentDisabledAt: existing?.disabled_at ?? null,
         nextStatus: group.first.status,
-        nextDisabledAt: group.first.disabledAt,
+        // The stored end of validity's day keeps its time of day: the export writes the day only.
+        nextDisabledAt: keepStoredEndOfValidity(existing?.disabled_at, group.first.disabledAt),
       });
       results.set(key, {
         existing,
@@ -378,9 +380,7 @@ export class WorkingDayProfilesCsvService {
     dateOrder?: CsvDateOrder,
     decimalMark?: DecimalMark,
   ): Promise<MasterDataFileRead> {
-    if (!file) throw new BadRequestException('No file uploaded');
-    const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
-    if (!buf) throw new BadRequestException('Empty upload');
+    const buf = uploadedBytes(file);
     return readMasterDataFile({
       file: buf as Buffer,
       fields: WORKING_DAY_PROFILE_CSV_HEADERS,

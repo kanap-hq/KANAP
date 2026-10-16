@@ -194,6 +194,7 @@ export default function TaskLogTimeDialog({
         <PropertyRow label={t('portfolio:dialogs.logTime.fields.person')} required>
           <UserSelect
             hideLabel
+            label={t('portfolio:dialogs.logTime.fields.person')}
             value={userId}
             onChange={setUserId}
             placeholder={t('portfolio:dialogs.logTime.placeholders.searchUsers')}

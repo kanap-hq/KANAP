@@ -118,7 +118,7 @@ The Applications grid provides a comprehensive view of your application portfoli
 - **Import CSV**: Bulk import from CSV file (`applications:admin`)
 - **Export CSV**: Export the list to CSV (`applications:admin`). Catalog-backed columns (category, lifecycle, criticality, cyber criticality, recovery wave, data class, access methods) are exported as their names; the import accepts a name or the internal code.
 - **Copy item**: Duplicate a selected application with all its core relations (`applications:manager`). See [Copying applications](#copying-applications) for what is and is not copied.
-- **Delete Selected**: Remove selected applications (`applications:admin`)
+- **Delete Selected**: Remove selected applications (`applications:admin`). An application that is the source or target of an interface cannot be deleted: disable it instead, or delete its interfaces first. Before the confirmation, the window lists those applications as kept, with their count of interfaces. The others are deleted with their deployments and their links to other records; the confirmation counts the deployments
 
 ---
 
@@ -137,7 +137,7 @@ The header shows:
 - **Go live** date
 - **Send link**: copy a shareable link to this workspace
 - **Create new version**: launch the version migration wizard (see [Version management](#version-management))
-- **Delete** (`applications:admin`)
+- **Delete** (`applications:admin`): an application with interfaces gets the refusal and why, with Close only. Otherwise the confirmation names the application and counts the deployments deleted with it, along with its links to other records
 - **Previous / Next**: walk through the filtered list without returning to the grid
 
 ### Properties drawer (right panel)
@@ -185,7 +185,7 @@ The Deployments tab documents where the application actually runs: one block per
 - **SSO enabled** / **MFA supported**
 - **Notes**
 
-**Add deployment** opens a dialog where you set environment, lifecycle, base URL, SSO/MFA flags and notes. Each environment can only be added once. The lifecycle chip on a deployment header can also be changed inline from a popup menu.
+**Add deployment** opens a dialog where you set environment, lifecycle, base URL, SSO/MFA flags and notes. Each environment can only be added once. The lifecycle chip on a deployment header can also be changed inline from a popup menu. A deployment that still has servers or interface bindings cannot be deleted: remove them first.
 
 **Servers per deployment**: Each deployment block shows a table of assigned servers:
 
@@ -448,7 +448,7 @@ From the Applications list:
 
 ### Import workflow
 
-1. **Prepare your file**: Use UTF-8 encoding with semicolon (`;`) separators. A file Excel saved as plain CSV (Windows-1252) imports too. Download a template to ensure correct headers.
+1. **Prepare your file**: Save it as UTF-8. Commas or semicolons both work, and so does a file Excel saved as plain CSV (Windows-1252). Download a template to ensure correct headers. The separator, amounts, dates and yes or no of each language are in [CSV files](csv-files.md).
 
 2. **Choose import settings**:
    - **Mode**:
@@ -477,7 +477,7 @@ From the Applications list:
 | `editor` | Software publisher | No | Free text (e.g., Microsoft, SAP) |
 | `criticality` | Business criticality | No | Accepts code or label from Settings; `__CLEAR__` clears it |
 | `lifecycle` | Current status | No | Accepts code or label from Settings |
-| `is_suite` | Can have child apps | No | `true` or `false` |
+| `is_suite` | Can have child apps | No | `yes` or `no` |
 | `status` | Enabled/disabled | No | `enabled` or `disabled` |
 
 **Version fields**:
@@ -494,8 +494,8 @@ From the Applications list:
 | CSV Column | Description | Notes |
 |------------|-------------|-------|
 | `access_methods` | How users access | Comma-separated codes or labels from Settings (e.g., `web,mobile,vdi`) |
-| `external_facing` | Internet accessible | `true` or `false` |
-| `etl_enabled` | Data integration | `true` or `false` |
+| `external_facing` | Internet accessible | `yes` or `no` |
+| `etl_enabled` | Data integration | `yes` or `no` |
 | `support_notes` | Support information | Free text |
 | `licensing` | License terms | Free text |
 | `notes` | Internal notes | Free text |
@@ -506,7 +506,7 @@ From the Applications list:
 |------------|-------------|-------|
 | `data_class` | Data classification | Accepts code or label from Settings |
 | `last_dr_test` | Last DR test date | Date format: YYYY-MM-DD |
-| `contains_pii` | Stores personal data | `true` or `false` |
+| `contains_pii` | Stores personal data | `yes` or `no` |
 | `data_residency` | Data storage countries | Export only (ISO codes) |
 
 **Classification fields**:
@@ -573,7 +573,7 @@ If you include the `id` column with a valid UUID, matching uses ID first, then f
 **"File isn't properly formatted" error**: This usually indicates an encoding issue. Ensure your CSV is saved as **UTF-8**:
 
 - **In LibreOffice**: When opening a CSV, select `UTF-8` in the Character set dropdown (not "Japanese (Macintosh)" or other encodings). When saving, check "Edit filter settings" and choose UTF-8.
-- **In Excel**: Save As > CSV UTF-8 (Comma delimited), then open in a text editor to change commas to semicolons.
+- **In Excel**: Save As > CSV UTF-8 (Comma delimited).
 - **General tip**: If you see garbled characters (`?¿`, `ï»¿`) at the start of your file, the encoding is incorrect.
 
 ### Example CSV

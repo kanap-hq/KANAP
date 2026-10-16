@@ -1,8 +1,9 @@
-import { ForbiddenException, HttpException, Logger } from '@nestjs/common';
+import { HttpException, Logger } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { budgetColumnName, readBudgetColumns } from '../budget-columns/budget-columns.util';
 import { AmountMeasure, AMOUNT_MEASURES, MEASURE_FREEZE_COLUMN } from './amounts-write.util';
+import { RecordInUseException } from '../common/record-in-use';
 import { withSavepoint } from '../common/savepoint.util';
 import { ATTACHMENT_TABLES } from '../common/storage-path-refs';
 import { StorageService } from '../common/storage/storage.service';
@@ -10,8 +11,9 @@ import { UserTimeAggregateService } from '../portfolio/services/user-time-aggreg
 import { deleteTaskActivities } from '../tasks/task-delete-cleanup';
 
 // What an item delete removes besides versions, amounts and allocations. Links,
-// attachments and contract links have no foreign key to the item, so nothing
-// cascades to them; tasks are polymorphic rows. Both natures share the tables
+// attachments and contract links go here, before their foreign keys to the item
+// would cascade (migration 1854160000000); tasks are polymorphic rows, which no
+// key covers. Both natures share the tables
 // (lot Z1); a CAPEX line's tasks keep their type `capex_item`.
 
 export type ItemDeleteScope = 'opex' | 'capex';
@@ -85,11 +87,30 @@ export async function assertNoFrozenAmounts(
   tenantId: string,
   itemId: string,
 ): Promise<void> {
+  const refusal = await frozenAmountsRefusal(manager, scope, tenantId, itemId);
+  if (refusal) throw refusal;
+}
+
+/**
+ * The refusal `assertNoFrozenAmounts` throws, or null: `BUDGET_LINE_FROZEN`, a 409 naming the
+ * column (the tenant's label) and the year (`params`). The check before a delete asks it too.
+ */
+export async function frozenAmountsRefusal(
+  manager: EntityManager,
+  scope: ItemDeleteScope,
+  tenantId: string,
+  itemId: string,
+): Promise<RecordInUseException | null> {
   const [frozen] = await findFrozenAmounts(manager, tenantId, itemId, { scopes: [scope], limit: 1 });
-  if (!frozen) return;
+  if (!frozen) return null;
   const label = budgetColumnName(await readBudgetColumns(manager, tenantId), frozen.measure);
-  throw new ForbiddenException(
+  return new RecordInUseException(
+    'BUDGET_LINE_FROZEN',
+    'budget line',
+    '',
+    [],
     `This line has amounts in ${label} ${frozen.budget_year}, a frozen budget column. Unfreeze the column first, or set an end of validity date instead of deleting the line.`,
+    { column: label, year: Number(frozen.budget_year) },
   );
 }
 

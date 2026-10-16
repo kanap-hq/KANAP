@@ -5,7 +5,7 @@ import { Repository } from 'typeorm';
 import { Asset } from '../asset.entity';
 import { parsePagination } from '../../common/pagination';
 import { AssetsBaseService, ServiceOpts } from './assets-base.service';
-import { assertSetFilterModes } from '../../common/ag-grid-filtering';
+import { assertSetFilterModes, bindPositional, compileAgFilterCondition, createParamNameGenerator } from '../../common/ag-grid-filtering';
 
 /** The asset list columns that sort alphabetically. */
 const ASSET_TEXT_SORTS = new Set(['name', 'asset_reference', 'provider', 'region', 'zone', 'hostname', 'fqdn', 'operating_system', 'location_name', 'sub_location_name', 'cluster']);
@@ -118,6 +118,7 @@ export class AssetsListService extends AssetsBaseService {
         a.region, a.zone, a.hostname, a.domain, a.fqdn, a.aliases,
         a.ip_addresses, a.cluster, a.is_cluster, a.operating_system,
         a.location_id, a.sub_location_id, a.status, a.notes, a.created_at, a.updated_at,
+        a.go_live_date::text AS go_live_date, a.end_of_life_date::text AS end_of_life_date,
         l.name AS location_name,
         l.hosting_type AS hosting_type,
         sl.name AS sub_location_name,
@@ -346,6 +347,7 @@ export class AssetsListService extends AssetsBaseService {
 
     // Map frontend field names to SQL expressions
     const fieldExpressions: Record<string, string> = {
+      name: 'a.name',
       kind: 'a.kind',
       asset_reference: 'a.asset_reference',
       environment: 'a.environment',
@@ -362,9 +364,15 @@ export class AssetsListService extends AssetsBaseService {
       sub_location_name: 'sl.name',
       network_segment: "a.ip_addresses->0->>'network_segment'",
       cluster: 'cluster_asset.name',
-      // The Created column's text filter reads the timestamp as text, as connections and applications do.
-      created_at: 'CAST(a.created_at AS TEXT)',
     };
+
+    // Date filters (date models by day, blank checks; a text model answers 400): the shared compiler.
+    const dateExpressions: Record<string, string> = {
+      created_at: 'a.created_at',
+      go_live_date: 'a.go_live_date',
+      end_of_life_date: 'a.end_of_life_date',
+    };
+    const nextDateParam = createParamNameGenerator('asset_date_');
 
     // Number filters: the assignment count the list shows (`enrichListItems`).
     const numberExpressions: Record<string, string> = {
@@ -388,6 +396,12 @@ export class AssetsListService extends AssetsBaseService {
           params.push(value);
           whereConditions += ` AND ${numberExpression} ${numberOperators[model.type ?? 'equals']} $${params.length}`;
         }
+        continue;
+      }
+      const dateExpression = dateExpressions[field];
+      if (dateExpression) {
+        const compiled = compileAgFilterCondition(model, { expression: dateExpression, dataType: 'date' }, nextDateParam);
+        if (compiled) whereConditions += ` AND (${bindPositional(compiled, params)})`;
         continue;
       }
       const expression = fieldExpressions[field];

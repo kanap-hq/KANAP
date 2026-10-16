@@ -71,10 +71,22 @@
     "legacy": "Legacy"
   },
   "scope": {
-    "my": "My {{entity}}",
-    "myTeam": "My team's {{entity}}",
-    "all": "All {{entity}}",
-    "teamUnavailable": "You are not assigned to a team"
+    "teamUnavailable": "You are not assigned to a team",
+    "tasks": {
+      "my": "My tasks",
+      "myTeam": "My team's tasks",
+      "all": "All tasks"
+    },
+    "projects": {
+      "my": "My projects",
+      "myTeam": "My team's projects",
+      "all": "All projects"
+    },
+    "requests": {
+      "my": "My requests",
+      "myTeam": "My team's requests",
+      "all": "All requests"
+    }
   },
   "shared": {
     "blankValue": "(Blank)",
@@ -399,7 +411,10 @@
           "estimatedEffort": "Estimated effort",
           "progressAndConsumption": "Progress & effort consumption",
           "timeBreakdown": "Time breakdown",
-          "timeLog": "Time log"
+          "timeLog": "Time log",
+          "allocation": "Allocation",
+          "effortBaseline": "Effort baseline",
+          "capturedAtInProgress": "captured at In progress"
         },
         "states": {
           "noTimeLogged": "No time logged yet. Click \"Log time\" to add entries."
@@ -416,7 +431,31 @@
           "taskSourceFallback": "Task",
           "taskTime": "Task time",
           "totalLogged": "Total logged",
-          "workloadConsumption": "Workload consumption: {{actual}} / {{planned}} MD"
+          "workloadConsumption": "Workload consumption: {{actual}} / {{planned}} MD",
+          "mdUnit": "MD",
+          "actualOfEstimated": "{{actual}} / {{estimated}} MD",
+          "actualSplit": "(Project {{project}} · Task {{task}})"
+        },
+        "overview": {
+          "progress": "Progress",
+          "setManually": "set manually",
+          "fromTimeLog": "auto-calculated from time log"
+        },
+        "actions": {
+          "logTime": "+ Log time"
+        },
+        "aria": {
+          "estimatedEffort": "{{type}} estimated effort in MD"
+        },
+        "baseline": {
+          "itEffort": "IT effort",
+          "businessEffort": "Business effort",
+          "estimated": "Estimated",
+          "estimatedTooltip": "Current estimated effort set by the project manager",
+          "baseline": "Baseline",
+          "baselineTooltip": "Snapshot of estimated effort captured when the project entered In progress",
+          "variance": "Variance",
+          "varianceTooltip": "Difference between current estimate and baseline"
         }
       },
       "timeline": {
@@ -655,7 +694,8 @@
         "targetDeliveryDate": "Target delivery date"
       },
       "values": {
-        "requestorMissing": "Requestor missing"
+        "requestorMissing": "Requestor missing",
+        "itOwnerMissing": "IT owner missing"
       },
       "sections": {
         "core": "Core properties",
@@ -934,6 +974,14 @@
       "exportTitle": "Export tasks",
       "importTitle": "Import tasks",
       "presetEnrichment": "Data enrichment"
+    },
+    "delete": {
+      "toDelete_one": "{{count}} task will be deleted:",
+      "toDelete_other": "{{count}} tasks will be deleted:",
+      "kept_one": "{{count}} task cannot be deleted and is kept:",
+      "kept_other": "{{count}} tasks cannot be deleted and are kept:",
+      "deleted_one": "{{count}} task deleted",
+      "deleted_other": "{{count}} tasks deleted"
     }
   },
   "projects": {
@@ -1048,6 +1096,323 @@
         "paused_other": "Paused: ~{{count}} weeks",
         "dragToPin": "Drag to pin start week",
         "clickForExplanation": "Click for explanation"
+      }
+    },
+    "roadmap": {
+      "title": "Roadmap generator",
+      "fields": {
+        "startDate": "Start date",
+        "statuses": "Statuses",
+        "capacityMode": "Capacity mode",
+        "constraintScope": "Constraint scope",
+        "parallelLimit": "Parallel limit",
+        "recalculateScheduled": "Recalculate already scheduled projects",
+        "contextSwitchPenalty": "Context-switch penalty: {{value}}%",
+        "contextSwitchGrace": "Context-switch grace"
+      },
+      "capacityModes": {
+        "theoretical": "Theoretical",
+        "historical": "Historical"
+      },
+      "constraintScopes": {
+        "full": "Full portfolio",
+        "itOnly": "IT only"
+      },
+      "optimization": {
+        "priorityFocused": "Priority focused",
+        "completionFocused": "Completion focused"
+      },
+      "help": {
+        "recalculate": "When enabled, projects that already have planned dates are recalculated and may move.",
+        "itOnly": "IT only hides business capacity, occupation and pure business projects from the generated roadmap."
+      },
+      "actions": {
+        "generate": "Generate",
+        "generating": "Generating…",
+        "editPin": "Edit pin",
+        "pinStart": "Pin start",
+        "why": "Why?"
+      },
+      "states": {
+        "empty": "Generate a roadmap to preview proposed dates, bottlenecks and contributor occupation."
+      },
+      "overrides": {
+        "title": "Scenario overrides",
+        "resetAll": "Reset all overrides"
+      },
+      "chips": {
+        "conflict_one": "Conflict",
+        "conflict_other": "Conflicts",
+        "pinned": "Pinned"
+      },
+      "summary": {
+        "scheduled": "Scheduled: {{count}}",
+        "reservations": "Reservations: {{count}}",
+        "externalBlockers": "External blockers: {{count}}",
+        "unschedulable": "Unschedulable: {{count}}",
+        "roadmapEnd": "Roadmap end: {{date}}",
+        "run": "Run: {{ms}} ms",
+        "sensitivityReruns": "Sensitivity reruns: {{count}}",
+        "sensitivityTruncated": "Sensitivity sampled (truncated)"
+      },
+      "values": {
+        "na": "N/A",
+        "excluded": "Excluded",
+        "pinStart": "Pin start: {{week}}",
+        "noConstraint": "No scenario constraint",
+        "days": "{{days}} d",
+        "percent": "{{value}}%"
+      },
+      "panel": {
+        "title": "Schedule, bottlenecks and occupation"
+      },
+      "tabs": {
+        "schedule": "Schedule",
+        "bottlenecks": "Bottlenecks",
+        "occupation": "Occupation"
+      },
+      "selection": {
+        "clearVisible": "Clear visible selection",
+        "selectVisible": "Select visible",
+        "selectedInGantt_one": "{{count}} selected in Gantt preview",
+        "selectedInGantt_other": "{{count}} selected in Gantt preview",
+        "excludedHelp": "Unchecked projects are excluded from the scenario and do not consume capacity."
+      },
+      "columns": {
+        "project": "Project",
+        "status": "Status",
+        "scheduling": "Scheduling",
+        "scenario": "Scenario",
+        "start": "Start",
+        "end": "End",
+        "weeks": "Weeks",
+        "priority": "Priority",
+        "explain": "Explain",
+        "reason": "Reason"
+      },
+      "unschedulable": {
+        "title": "Unschedulable projects",
+        "item": "{{project}} ({{mode}}): {{reason}}"
+      },
+      "reservations": {
+        "title": "Capacity reservations",
+        "help": "These projects are not recalculated but still reserve contributor capacity."
+      },
+      "bottlenecks": {
+        "empty": "No bottleneck data available.",
+        "collapse": "Collapse contributor projects",
+        "expand": "Expand contributor projects",
+        "days_one": "{{count}} day",
+        "days_other": "{{count}} days",
+        "columns": {
+          "projectName": "Project name",
+          "start": "Project start date",
+          "end": "Project end date",
+          "totalContribution": "Total contribution (days)",
+          "spent": "Time already spent (days)"
+        },
+        "noProjects": "No scheduled projects for this contributor in the current scenario."
+      },
+      "occupation": {
+        "contributors": "Contributors",
+        "teams": "Teams",
+        "team": "Team",
+        "contributor": "Contributor",
+        "average": "Average",
+        "avg": "Avg",
+        "week": "W{{week}}",
+        "weekYear": "W{{week}} {{year}}",
+        "exportExcel": "Export occupation as Excel",
+        "exportPng": "Export occupation as PNG",
+        "noContributorData": "No contributor occupation data available.",
+        "noTeamData": "No team occupation data available.",
+        "noTeam": "No team",
+        "quarterYear": "Q{{quarter}} {{year}}"
+      },
+      "gantt": {
+        "title": "Read-only Gantt",
+        "primaryOnly": "Primary only",
+        "all": "All",
+        "showReservations": "Show reservations",
+        "exportPng": "Export Gantt as PNG",
+        "contributorView": "Contributor significance view",
+        "teamView": "Team significance view",
+        "hiddenSupport_one": "Hidden support work: {{count}} project, {{days}} d",
+        "hiddenSupport_other": "Hidden support work: {{count}} projects, {{days}} d",
+        "legend": "Solid bar shows active scheduled work. Dashed lead-in marks earlier historical start with pause before resumed work. Hatched bars are capacity reservations. Dotted overlay marks scheduling gaps; diagonal gray overlay marks on-hold periods.",
+        "dragHelp": "Drag a project bar to create or update a scenario-only pinned start. Click a project bar to open its explanation."
+      },
+      "filters": {
+        "allContributors": "All contributors",
+        "allTeams": "All teams",
+        "allSources": "All sources"
+      },
+      "apply": {
+        "summary_one": "Apply dates to {{count}} selected visible project",
+        "summary_other": "Apply dates to {{count}} selected visible projects",
+        "button": "Apply dates",
+        "applying": "Applying…",
+        "dialogTitle": "Apply roadmap dates",
+        "confirm_one": "This will update planned start and end dates for {{count}} selected visible project. The change is transactional: if one project fails validation, no dates will be applied.",
+        "confirm_other": "This will update planned start and end dates for {{count}} selected visible projects. The change is transactional: if one project fails validation, no dates will be applied."
+      },
+      "messages": {
+        "applied_one": "Applied roadmap dates to {{count}} project.",
+        "applied_other": "Applied roadmap dates to {{count}} projects.",
+        "applyFailed": "Failed to apply roadmap dates",
+        "applyFailedFor": "{{project}}: {{error}}",
+        "schedulingModeUpdated": "Scheduling mode set to {{mode}}.",
+        "schedulingModeFailed": "Failed to update scheduling mode",
+        "generateFailed": "Failed to generate roadmap",
+        "exportGanttFailed": "Failed to export the Gantt as PNG",
+        "exportOccupationExcelFailed": "Failed to export occupation as Excel",
+        "exportOccupationPngFailed": "Failed to export occupation as PNG"
+      },
+      "schedulingModes": {
+        "independent": "Independent",
+        "collaborative": "Collaborative"
+      },
+      "reasons": {
+        "zero_remaining_effort": "No remaining effort",
+        "no_assigned_contributors": "No contributors",
+        "missing_blocker_date": "Missing blocker date",
+        "blocker_on_hold": "Blocker on hold",
+        "blocked_unfinished_project": "Blocked by an unfinished project",
+        "expired_fixed_plan": "Expired fixed plan",
+        "cyclic_dependency": "Cyclic dependency",
+        "not_ready_within_horizon": "Blocked beyond horizon",
+        "no_free_slot": "No free slot",
+        "no_effective_capacity": "No effective capacity",
+        "below_minimum_start_threshold": "Below minimum start threshold",
+        "unfinished_within_horizon": "Started but not finished",
+        "insufficient_capacity": "Insufficient capacity",
+        "missing_contributor_capacity": "Missing contributor capacity"
+      },
+      "reservationReasons": {
+        "not_recalculated": "Not recalculated",
+        "external_blocker": "External blocker"
+      },
+      "startReasons": {
+        "historical_start": "Historical start",
+        "dependency_release": "Dependency release",
+        "capacity_available": "Capacity became available",
+        "constraint_pin_start": "Pinned start",
+        "constraint_pin_window": "Pinned window",
+        "constraint_not_before": "Not before constraint",
+        "fixed_reservation": "Fixed reservation",
+        "unscheduled": "Unscheduled"
+      },
+      "contributorReasons": {
+        "slot": "Parallel slot limit",
+        "capacity": "Capacity pressure",
+        "collaborative_bottleneck": "Collaborative bottleneck",
+        "reservation": "Reservation pressure"
+      },
+      "constraints": {
+        "none": "None",
+        "pinWindow": "Pin window: {{start}} to {{end}}",
+        "notBefore": "Not before: {{week}}"
+      },
+      "explain": {
+        "overline": "Explainability",
+        "whyStart": "Why this start week",
+        "startReason": "Start reason: {{reason}}",
+        "earliestWeek": "Earliest eligible week: {{week}}",
+        "actualWeek": "Actual start week: {{week}}",
+        "notScheduled": "Not scheduled",
+        "whyNotEarlier": "Why not earlier",
+        "noBlockers": "No additional blocking details were recorded for this item.",
+        "range": "{{from}} to {{to}}",
+        "unknown": "Unknown",
+        "contributorTimeline": "Selected contributor timeline",
+        "teamTimeline": "Selected team timeline",
+        "focusWindow": "{{name}}: {{start}} to {{end}}",
+        "plannedContribution_one": "Planned contribution: {{days}} d across {{count}} active week",
+        "plannedContribution_other": "Planned contribution: {{days}} d across {{count}} active weeks",
+        "primaryWork": "Primary roadmap work",
+        "supportWork": "Support work",
+        "shareOfEffort": "{{percent}}% of project effort",
+        "avgPerWeek": "{{days}} d/week avg",
+        "primaryHelp": "This project is shown in the primary roadmap view for the selected focus.",
+        "supportHelp": "This project is treated as support work and is hidden when the Gantt is set to Primary only.",
+        "weekOf": "Week of {{week}}",
+        "projectLoad": "Project load: {{days}} d",
+        "weeklyCapacity": "Weekly capacity: {{value}}",
+        "totalAssigned": "Total assigned effort that week: {{days}} d",
+        "weeklyOccupation": "Weekly occupation: {{value}}",
+        "projectContributors": "Project contributors",
+        "scheduledWindow": "Scheduled window: {{start}} to {{end}}",
+        "noLoads": "No contributor load details are available for this item.",
+        "plannedLoad": "Planned load: {{days}} d",
+        "limiting": "Limiting contributors",
+        "noLimiting": "No specific limiting contributors were recorded for this item.",
+        "reservedLoad": "Reserved load: {{value}}",
+        "activeProjects": "Active projects: {{value}}",
+        "activeOverrides": "Active scenario overrides",
+        "noOverrides": "No active scenario overrides for this item.",
+        "finalWarnings": "Final warnings",
+        "noWarnings": "No scenario warnings were recorded for this item."
+      },
+      "pinDialog": {
+        "description": "Create or update a scenario-only pin-start constraint for {{project}}.",
+        "thisProject": "this project",
+        "startWeek": "Start week",
+        "save": "Save pin"
+      },
+      "classifications": {
+        "scheduled": "Scheduled",
+        "reservation": "Reservation",
+        "unschedulable": "Unschedulable"
+      },
+      "explainText": {
+        "summaryUnschedulable": "{{project}} could not be scheduled: {{reason}}",
+        "summaryNoStart": "{{project}} has no start week.",
+        "summaryHistorical": "{{project}} continues work already started and appears in the roadmap from the week of {{week}}.",
+        "summaryConstraint": "{{project}} started the week of {{week}} under this constraint: {{constraint}}.",
+        "summaryConstraintConflict": "{{project}} started the week of {{week}} under this constraint: {{constraint}}. Conflict: {{conflict}}",
+        "summaryCapacity": "{{project}} could start from the week of {{eligible}} and started the week of {{week}}, when capacity became available.",
+        "summaryBlockers": "{{project}} started the week of {{week}}, once its blockers were released.",
+        "summarySchedulable": "{{project}} started the week of {{week}}, as soon as it could be scheduled.",
+        "finalCapacity": "Could start from the week of {{eligible}}, started the week of {{week}} when capacity became available.",
+        "finalBlockers": "Started the week of {{week}}, once its blockers were released.",
+        "finalStarted": "Started the week of {{week}}.",
+        "conflict": {
+          "pinStartUnsatisfied": "The pinned start on {{week}} could not be met.",
+          "pinStartNormalized": "The pinned start on {{week}} moved to the week of {{normalized}}, then slipped to the week of {{actual}}.",
+          "pinStartSlipped": "The pinned start on {{week}} slipped to the week of {{actual}}.",
+          "pinWindowUnsatisfied": "The pinned window from {{start}} to {{end}} could not be met.",
+          "pinWindowMissed": "The pinned window from {{start}} to {{end}} was missed. Actual schedule: {{actualStart}} to {{actualEnd}}.",
+          "notBeforeViolated": "The start on {{actual}} breaks the \"not before {{week}}\" constraint."
+        },
+        "warningConflict": "{{project}}: {{conflict}}"
+      },
+      "text": {
+        "missingContributorCapacityFor": "No contributor capacity configured for: {{names}}",
+        "blockerOnHold": "The blocker {{blocker}} is on hold",
+        "blockerFixedPlanExpired": "The blocker {{blocker}} is not finished and its fixed plan ended before the roadmap start",
+        "blockerCannotBeScheduled": "The blocker {{blocker}} is not finished and cannot be scheduled. Reason: {{reason}}",
+        "missingBlockerDateFor": "No date for the blocker {{blocker}}",
+        "noFreeSlotFor": "No free parallel slot for: {{contributors}}",
+        "noAllocableCapacityFor": "No weekly capacity available for: {{contributors}}",
+        "collaborativeBurnBelowThreshold": "The projected collaborative start effort is {{burn}} d, below the {{threshold}} d threshold",
+        "collaborativeBurnStalledFor": "Collaborative work stalled for: {{contributors}}",
+        "independentBurnBelowThreshold": "The projected independent start effort is {{burn}} d, below the {{threshold}} d threshold",
+        "noCapacityRemainedFor": "No effective weekly capacity left for: {{contributors}}",
+        "capacityPreventedScheduling": "Capacity constraints prevented scheduling",
+        "waitingOnBlockers": "Still waiting for the blockers: {{blockers}}",
+        "earliestStartBeyondHorizon_one": "The earliest possible start is {{week}}, beyond the {{count}}-week horizon",
+        "earliestStartBeyondHorizon_other": "The earliest possible start is {{week}}, beyond the {{count}}-week horizon",
+        "neverReadyWithinHorizon": "The project never became ready within the scheduling horizon",
+        "remainingAfterHorizon_one": "{{remainingDays}} d remaining after {{count}} week. Biggest unresolved loads: {{loads}}",
+        "remainingAfterHorizon_other": "{{remainingDays}} d remaining after {{count}} weeks. Biggest unresolved loads: {{loads}}",
+        "noAllocableWeek": "No week could be allocated under the current capacity constraints",
+        "contributorCapacity": "{{name}} ({{weeklyCapacity}} d/week)",
+        "contributorRemainingLoad": "{{name}}: {{remainingDays}} d remaining at {{weeklyCapacity}} d/week",
+        "waitingFor": "Waiting for {{blocker}}",
+        "waitingForUntil": "Waiting for {{blocker}} until the week of {{week}}",
+        "blockerIsOnHold": "{{blocker}} is on hold",
+        "blockerHasExpiredFixedPlan": "{{blocker}} has an expired fixed plan",
+        "blockerIsUnschedulable": "{{blocker}} cannot be scheduled: {{reason}}"
       }
     }
   },
@@ -1985,7 +2350,8 @@
         "loading": "Loading allocations…"
       },
       "table": {
-        "contributor": "Contributor"
+        "contributor": "Contributor",
+        "md": "MD"
       },
       "validation": {
         "pinnedTotalExceeded": "Manual rows exceed 100%. Lower one manual value before redistributing.",
@@ -2285,13 +2651,13 @@
           "high": "High"
         }
       },
-      "confirmDelete": "Delete this criterion? Existing evaluations will be removed.",
       "messages": {
         "updateFailed": "Failed to update criterion",
         "updateSettingsFailed": "Failed to update settings",
         "deleteFailed": "Failed to delete criterion",
         "reorderFailed": "Failed to reorder criteria"
-      }
+      },
+      "confirmDelete": "Its existing evaluations are removed too. This cannot be undone."
     },
     "skills": {
       "empty": "No skills configured yet. Use Seed defaults to populate with standard skills, or add skills manually.",
@@ -2303,7 +2669,6 @@
         "categoryPlaceholder": "Select or type a new category",
         "name": "Skill name"
       },
-      "confirmDelete": "Delete this skill?",
       "messages": {
         "seedDefaultsFailed": "Failed to seed defaults",
         "updateFailed": "Failed to update skill",
@@ -2331,7 +2696,6 @@
           "milestoneName": "Phase {{number}} complete"
         }
       },
-      "confirmDelete": "Delete this phase template?",
       "messages": {
         "deleteFailed": "Failed to delete template"
       }
@@ -2366,13 +2730,11 @@
       },
       "taskTypeDialog": {
         "editTitle": "Edit task type",
-        "createTitle": "Create task type"
+        "createTitle": "Create task type",
+        "shippedNameHint": "Shown in each user's language while it keeps this name."
       },
       "confirmations": {
-        "deleteSource": "Delete this source?",
-        "deleteCategory": "Delete this category and all its streams?",
-        "deleteStream": "Delete this stream?",
-        "deleteTaskType": "Delete this task type?"
+        "deleteCategory": "Its streams are deleted with it. This cannot be undone."
       },
       "messages": {
         "deleteSourceFailed": "Failed to delete source",
@@ -2394,7 +2756,6 @@
         "editTitle": "Edit team",
         "createTitle": "Create team"
       },
-      "confirmDelete": "Delete this team?",
       "messages": {
         "seedDefaultsFailed": "Failed to seed defaults",
         "deleteFailed": "Failed to delete team",

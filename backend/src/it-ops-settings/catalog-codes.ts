@@ -38,6 +38,17 @@ export function catalogAliases(row: { code?: unknown; label?: unknown; translati
   return [...new Set(aliases.filter(Boolean))];
 }
 
+/**
+ * The entries `key` (normalized) designates: by code, name or tenant translation first; when none
+ * does, by a label the app shows for a shipped value (`shippedLabels`, added for imports by
+ * `withShippedLabels`). A tenant's own names therefore always win over the shipped translations.
+ */
+export function matchCatalogAliases<T extends { code?: unknown; label?: unknown; translations?: CatalogTranslations; shippedLabels?: string[] }>(options: T[], key: string): T[] {
+  const direct = options.filter((option) => catalogAliases(option).includes(key));
+  if (direct.length) return direct;
+  return options.filter((option) => (option.shippedLabels ?? []).some((label) => normalizeAlias(label) === key));
+}
+
 export function normalizeAlias(value: unknown): string {
   return String(value ?? '').trim().toLowerCase();
 }

@@ -107,10 +107,6 @@ export class ApplicationsService {
     return this.crudService.shareApplication(id, body, tenantId, userId, opts);
   }
 
-  delete(id: string, userId?: string | null, opts?: ServiceOpts) {
-    return this.crudService.delete(id, userId, opts);
-  }
-
   relationCounts(id: string, opts?: ServiceOpts) {
     return this.crudService.relationCounts(id, opts);
   }
@@ -147,18 +143,6 @@ export class ApplicationsService {
 
   deleteAttachment(attachmentId: string, userId?: string | null, opts?: ServiceOpts) {
     return this.crudService.deleteAttachment(attachmentId, userId, opts);
-  }
-
-  // CSV operations
-  exportCsv(scope: 'template' | 'data', opts?: ServiceOpts) {
-    return this.crudService.exportCsv(scope, opts);
-  }
-
-  importCsv(
-    params: { file: Express.Multer.File; dryRun: boolean; userId?: string | null },
-    opts?: ServiceOpts,
-  ) {
-    return this.crudService.importCsv(params, opts);
   }
 
   // Derived users

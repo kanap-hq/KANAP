@@ -1,7 +1,7 @@
 import React from 'react';
 import { TextField, InputAdornment, IconButton, SxProps, Theme, Box } from '@mui/material';
 import EventIcon from '@mui/icons-material/Event';
-import { euToYmd, ymdToEu, formatEuPartial } from '../../lib/date-eu';
+import { dateInputSeparator, euToYmd, ymdToEu, formatEuPartial } from '../../lib/date-eu';
 import { formatShortDate } from '../../lib/dateFormat';
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '../../i18n/useLocale';
@@ -21,6 +21,9 @@ type Props = {
   sx?: SxProps<Theme>;
   hideLabel?: boolean;
   textFieldSx?: SxProps<Theme>;
+  /** A class on the calendar popover root (see DateCalendarPopover). */
+  popoverClassName?: string;
+  autoFocus?: boolean;
 };
 
 // Extract just the date portion (YYYY-MM-DD) from a value that might be ISO datetime
@@ -33,12 +36,14 @@ function toYmdOnly(value: string): string {
   return value;
 }
 
-export default function DateEUField({ label, valueYmd = '', onChangeYmd, disabled, required, name, error, helperText, size, sx, hideLabel = false, textFieldSx }: Props) {
+export default function DateEUField({ label, valueYmd = '', onChangeYmd, disabled, required, name, error, helperText, size, sx, hideLabel = false, textFieldSx, popoverClassName, autoFocus }: Props) {
   const [text, setText] = React.useState<string>('');
   const [focused, setFocused] = React.useState(false);
   const rootRef = React.useRef<HTMLDivElement | null>(null);
   const [calendarAnchor, setCalendarAnchor] = React.useState<HTMLElement | null>(null);
   const locale = useLocale();
+  // Typed dates follow the language: 15/10/2026, or 15.10.2026 in German.
+  const sep = dateInputSeparator(locale);
   const { t } = useTranslation('common');
 
   // Normalize the input value to YYYY-MM-DD format
@@ -46,22 +51,22 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
 
   // sync from value (skip while the user is editing)
   React.useEffect(() => {
-    if (!focused) setText(ymdToEu(normalizedYmd));
-  }, [normalizedYmd, focused]);
+    if (!focused) setText(ymdToEu(normalizedYmd, sep));
+  }, [normalizedYmd, focused, sep]);
 
-  // At rest the field shows the charter display format; numeric dd/mm/yyyy only while editing.
+  // At rest the field shows the charter display format; numeric dd/mm/yyyy (dd.mm.yyyy) only while editing.
   const restText = normalizedYmd ? formatShortDate(normalizedYmd, locale, { year: 'always' }) : '';
 
   const onTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value;
-    const formatted = formatEuPartial(raw);
+    const formatted = formatEuPartial(raw, sep);
     setText(formatted);
     const ymd = euToYmd(formatted);
     if (ymd) onChangeYmd(ymd);
   };
 
   const onFocus = () => {
-    setText(ymdToEu(normalizedYmd));
+    setText(ymdToEu(normalizedYmd, sep));
     setFocused(true);
   };
 
@@ -73,7 +78,7 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
       setText('');
       return;
     }
-    if (ymd) setText(ymdToEu(ymd));
+    if (ymd) setText(ymdToEu(ymd, sep));
   };
 
   // The calendar hangs from the input box (not the button), so it lines up with the field.
@@ -84,7 +89,7 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
 
   const onCalendarSelect = (ymd: string) => {
     onChangeYmd(ymd);
-    setText(ymdToEu(ymd));
+    setText(ymdToEu(ymd, sep));
   };
 
   // Alt+Down opens the calendar from the keyboard: the button itself stays out of the tab order.
@@ -108,6 +113,7 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
         onBlur={onBlur}
         onKeyDown={onInputKeyDown}
         disabled={disabled}
+        autoFocus={autoFocus}
         required={required}
         variant="standard"
         name={name}
@@ -135,6 +141,7 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
         onSelect={onCalendarSelect}
         onClose={() => setCalendarAnchor(null)}
         allowClear={!required}
+        className={popoverClassName}
       />
     </Box>
   );

@@ -1,6 +1,11 @@
 import { BadRequestException } from '@nestjs/common';
 
-export type FilterDataType = 'string' | 'number' | 'boolean';
+/**
+ * The type of the value a filter target reads. `date`: a date or a timestamp, filtered with date
+ * models (by day), set models and blank checks; any other model on it answers 400, since a text
+ * comparison on a date fails in the database.
+ */
+export type FilterDataType = 'string' | 'number' | 'boolean' | 'date';
 
 export type FilterTargetConfig = {
   expression: string;
@@ -202,8 +207,12 @@ export function compileAgFilterCondition(
     }
   }
 
+  if (dataType === 'date' && type !== 'blank' && type !== 'notBlank') {
+    throw new BadRequestException('A date column takes a date filter: send a date model ("filterType": "date").');
+  }
+
   if (type === 'blank') {
-    if (dataType === 'number' || dataType === 'boolean') {
+    if (dataType === 'number' || dataType === 'boolean' || dataType === 'date') {
       return { sql: `${baseExpr} IS NULL`, params: {} };
     }
     // Cast to text to avoid invalid input errors for UUID and other non-text types.
@@ -211,7 +220,7 @@ export function compileAgFilterCondition(
   }
 
   if (type === 'notBlank') {
-    if (dataType === 'number' || dataType === 'boolean') {
+    if (dataType === 'number' || dataType === 'boolean' || dataType === 'date') {
       return { sql: `${baseExpr} IS NOT NULL`, params: {} };
     }
     return { sql: `NULLIF((${baseExpr})::text, '') IS NOT NULL`, params: {} };
@@ -285,6 +294,42 @@ export function compileAgFilterCondition(
     default:
       return { sql: `${textExpr} ILIKE :${param}`, params: { [param]: `%${literal}%` } };
   }
+}
+
+/**
+ * A compiled condition (`:name`, `:...name` parameters) for a statement with positional
+ * parameters: each value is appended to `params` and named by its `$n`.
+ */
+export function bindPositional(compiled: CompiledCondition, params: unknown[]): string {
+  return compiled.sql.replace(/:(\.\.\.)?([A-Za-z_][A-Za-z0-9_]*)/g, (match, spread: string | undefined, name: string) => {
+    if (!Object.prototype.hasOwnProperty.call(compiled.params, name)) return match;
+    const value = compiled.params[name];
+    const bind = (entry: unknown) => { params.push(entry); return `$${params.length}`; };
+    return spread && Array.isArray(value) ? value.map(bind).join(', ') : bind(value);
+  });
+}
+
+/**
+ * A filter on a business reference column (`REQ-12`): the database holds the number
+ * (`expression`), the grid shows it after its prefix. A text model matches the number's digits,
+ * the prefix the user may type taken off first ("REQ-12" and "12" both find REQ-12); a number
+ * model compares the number.
+ */
+export function compileReferenceFilter(
+  rawModel: any,
+  expression: string,
+  prefix: string,
+  nextParam: ParamNameFactory,
+): CompiledCondition | null {
+  const typed = new RegExp(`^\\s*${prefix}\\s*-?\\s*`, 'i');
+  const strip = (model: any) => (model && typeof model === 'object' && typeof model.filter === 'string'
+    ? { ...model, filter: model.filter.replace(typed, '').trim() }
+    : model);
+  const model = rawModel && typeof rawModel === 'object' && Array.isArray(rawModel.conditions)
+    ? { ...rawModel, conditions: rawModel.conditions.map(strip) }
+    : strip(rawModel);
+  const numeric = normalizeAgFilterModel(model)?.filterType === 'number';
+  return compileAgFilterCondition(model, { expression, textExpression: `(${expression})::text`, dataType: numeric ? 'number' : 'string' }, nextParam);
 }
 
 /**

@@ -42,7 +42,7 @@ function assignRef<T>(target: React.Ref<T | null> | undefined, value: T | null) 
 
 const SupplierSelect = React.forwardRef<HTMLInputElement, SupplierSelectProps>(function SupplierSelect(
   {
-    label = 'Supplier',
+    label: labelProp,
     value,
     onChange,
     disabled,
@@ -57,6 +57,7 @@ const SupplierSelect = React.forwardRef<HTMLInputElement, SupplierSelectProps>(f
   ref,
 ) {
   const { t } = useTranslation(['master-data', 'common']);
+  const label = labelProp ?? t('common:selects.supplier');
   const naked = hideLabel || label === '';
   // A hidden label still names the field for assistive technology; the placeholder must not.
   const ariaLabel = naked && label ? label : undefined;

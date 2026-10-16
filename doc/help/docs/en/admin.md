@@ -76,7 +76,7 @@ Sign-in and session events are deleted after **365 days**. Data changes, role ch
 
 ### What You Can Do
 
-- Search across table name, action, and actor (email/name)
+- Search across the table (its name as shown in your language, for example **Suppliers**), action, and actor (email/name)
 - Filter by:
   - Date
   - Table
@@ -92,7 +92,7 @@ Sign-in and session events are deleted after **365 days**. Data changes, role ch
 
 **Default columns**:
 - **Date**: When the change or event occurred
-- **Table**: Which table was affected. Sign-in and session events show **Sign-in and session**, and an export shows what was exported (for example **Suppliers**)
+- **Table**: Which kind of record was affected, by its name in the app (for example **Suppliers** or **Contract links**). The same names appear in the filter and in the details. Sign-in and session events show **Sign-in and session**, and an export shows what was exported (for example **Suppliers**)
 - **Action**: The type of change or event (create, update, delete, disable, restore, sign-in, export and so on). **Restore** marks a budget column put back to its opening values from the Budget tab of a line
 - **Source**: Who or what triggered the change (user, system, webhook)
 - **User**: Name of the user who made the change, or their email address when they have no name. Shows "System" or "Webhook" for non-user sources, and "Unknown account" for a sign-in attempt on an unknown address.
@@ -186,7 +186,7 @@ Toolbar actions:
 | **Export CSV** | Export user list | `users:admin` |
 | **Invite** | Send login invitations to selected users | `users:admin` |
 | **Disable** | Disable the selected users. They are signed out immediately. | `users:admin` |
-| **Delete** | Remove selected users permanently | `users:admin` |
+| **Delete** | Remove selected users permanently. Your own account is kept: the confirmation says so before anything is deleted. To keep a user's history and block their access, disable them instead | `users:admin` |
 
 `users:reader` is enough to open the page and read the list. Every action above, and the row actions below, require `users:admin`.
 
@@ -198,7 +198,7 @@ Row actions, from the menu at the end of each row:
 | **Enable** / **Disable** | Switch the account on or off. Disabling signs the person out immediately. |
 | **Send invite** | Email a sign-in invitation. Hidden for Microsoft Entra accounts. |
 | **Send password reset** | Email a password reset link. Shown for enabled local accounts only. |
-| **Delete** | Remove the user permanently. Disable the account instead if other records reference it. |
+| **Delete** | Remove the user permanently. The records the user worked on stay, without the user. You cannot delete your own account. To block a person's access and keep the account, disable it instead. |
 
 ### Users CSV
 
@@ -419,7 +419,7 @@ The Roles page has a two-panel layout:
 **Actions**:
 - **New Role**: Create a custom role from scratch
 - **Duplicate**: Copy an existing role (including built-in roles) as a starting point. Not available for System roles.
-- **Delete**: Remove a custom role (only if no users are assigned)
+- **Delete**: Remove a custom role. A role given to users cannot be deleted: give them another role first. The window says so before any confirmation.
 - **Save Details**: Update the role name and description
 - **Save Permissions**: Apply permission changes
 

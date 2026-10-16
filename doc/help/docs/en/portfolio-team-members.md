@@ -273,7 +273,7 @@ Contributors can be assigned to organizational teams for better organization. Te
 - Go to **Portfolio > Settings** and click the **Teams** tab
 - Add, edit, or disable teams
 - Use **Seed Defaults** to populate with standard teams
-- Teams with members assigned cannot be deleted
+- A team with members or sub-teams cannot be deleted: move them to another team first, or disable the team. Built-in teams cannot be deleted
 
 ---
 

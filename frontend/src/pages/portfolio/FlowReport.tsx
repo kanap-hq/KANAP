@@ -18,6 +18,7 @@ import ReportLayout, {
 import { drawerMenuItemSx } from '../../theme/formSx';
 import { formatShortDate } from '../../lib/dateFormat';
 import { useLocale } from '../../i18n/useLocale';
+import { useTaskTypeLabel } from '../../hooks/useLocalizedTaskTypes';
 import {
   idsFromParams,
   idsParam,
@@ -45,6 +46,7 @@ type AgeBucket = 'upTo7' | 'from8To30' | 'from31To90' | 'over90';
 type AgeRow = {
   taskTypeId: string | null;
   taskTypeName: string | null;
+  taskTypeCode?: string | null;
   buckets: Record<AgeBucket, number>;
   total: number;
 };
@@ -71,7 +73,7 @@ type ByStatusTable = {
   items: StuckItem[];
 };
 type LeadTime = { closedCount: number; measuredCount: number; medianDays: number | null };
-type LeadTimeByType = { taskTypeId: string | null; taskTypeName: string | null } & LeadTime;
+type LeadTimeByType = { taskTypeId: string | null; taskTypeName: string | null; taskTypeCode?: string | null } & LeadTime;
 type ProjectDoneLeadTime = LeadTime & { withPlannedEnd: number; medianOverrunDays: number | null };
 
 type FlowReportResponse = {
@@ -324,6 +326,7 @@ type StuckPanel = { entity: EntityKey; status: string | null };
 export default function FlowReport() {
   const { t } = useTranslation('portfolio');
   const locale = useLocale();
+  const typeLabel = useTaskTypeLabel();
   const theme = useReportTheme();
   const printing = useReportPrinting();
   const navigate = useNavigate();
@@ -783,7 +786,7 @@ export default function FlowReport() {
         valueGetter: (params) => {
           if (!params.data) return '';
           if (params.data.isTotal) return t('reports.flow.rows.total');
-          return params.data.taskTypeName ?? t('reports.flow.rows.noType');
+          return typeLabel(params.data.taskTypeName, params.data.taskTypeCode) ?? t('reports.flow.rows.noType');
         },
         cellStyle: (params) => (params.data?.isTotal ? { fontWeight: 500 } : null),
       },
@@ -807,7 +810,7 @@ export default function FlowReport() {
         cellRenderer: cell(null),
       },
     ];
-  }, [data, listLink, t]);
+  }, [data, listLink, t, typeLabel]);
 
   /* ---------------------------------------------------------------- */
   /*  Age of the open requests and projects                           */
@@ -1061,7 +1064,7 @@ export default function FlowReport() {
         headerName: t('reports.flow.columns.taskType'),
         flex: 1.4,
         minWidth: 100,
-        valueGetter: (params) => params.data?.taskTypeName ?? t('reports.flow.rows.noType'),
+        valueGetter: (params) => typeLabel(params.data?.taskTypeName, params.data?.taskTypeCode) ?? t('reports.flow.rows.noType'),
       },
       {
         headerName: t('reports.flow.columns.closedCount'),
@@ -1078,7 +1081,7 @@ export default function FlowReport() {
         valueGetter: (params) => medianText(params.data?.medianDays ?? null),
       },
     ],
-    [medianText, t],
+    [medianText, t, typeLabel],
   );
 
   type OutcomeRow = LeadTime & { outcome: 'converted' | 'rejected' };

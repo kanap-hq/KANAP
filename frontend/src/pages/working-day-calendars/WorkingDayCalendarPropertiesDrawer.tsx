@@ -14,6 +14,8 @@ type Props = {
   errors: Partial<Record<WorkingDayCalendarField, string>>;
   onCodeCommit: (code: string) => void;
   onDisabledAtChange: (disabledAt: string | null) => void;
+  /** Switched off: disable now, on the server's clock (the status alone). */
+  onDisableNow: () => void;
 };
 
 export default function WorkingDayCalendarPropertiesDrawer({
@@ -22,6 +24,7 @@ export default function WorkingDayCalendarPropertiesDrawer({
   errors,
   onCodeCommit,
   onDisabledAtChange,
+  onDisableNow,
 }: Props) {
   const { t } = useTranslation(['master-data', 'common']);
   const source = calendarSourceLabel(calendar);
@@ -82,6 +85,7 @@ export default function WorkingDayCalendarPropertiesDrawer({
             onStatusChange={() => undefined}
             disabledAt={calendar.disabled_at}
             onDisabledAtChange={onDisabledAtChange}
+            onDisableNow={onDisableNow}
             disabled={disabled}
             disabledAtError={!!errors.disabled_at}
             disabledAtHelperText={errors.disabled_at}

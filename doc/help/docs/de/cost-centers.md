@@ -87,7 +87,7 @@ Klicken Sie auf eine beliebige Zelle, um den Arbeitsbereich zu öffnen.
 - **Neu**: eine Gruppe oder eine Kostenstelle erstellen (erfordert `cost_centers:member`)
 - **CSV importieren**: den Baum aus einer Datei laden (erfordert `cost_centers:admin`)
 - **CSV exportieren**: die Elemente der Liste herunterladen, oder alle Elemente (erfordert `cost_centers:admin`)
-- **Auswahl löschen**: die ausgewählten Elemente löschen (erfordert `cost_centers:admin`). Elemente, die nicht gelöscht werden können, bleiben erhalten und werden mit dem Grund aufgeführt. Inhalte werden vor ihrer Gruppe gelöscht, sodass die Auswahl einer Gruppe zusammen mit ihrem gesamten Inhalt alles löscht
+- **Auswahl löschen**: die ausgewählten Elemente löschen (erfordert `cost_centers:admin`). Vor dem Löschen nennt die Bestätigung die behaltenen Elemente mit dem Grund. Inhalte werden vor ihrer Gruppe gelöscht, sodass die Auswahl einer Gruppe zusammen mit ihrem gesamten Inhalt alles löscht
 
 ---
 
@@ -145,8 +145,8 @@ Die Schaltfläche **Löschen** in der Kopfzeile löscht das Element nach einer B
 
 ## Regeln, auf die Sie stoßen werden
 
-- **Eine Kostenstelle, die von Budgetzeilen verwendet wird, kann weder eine Gruppe werden noch gelöscht werden.** Deaktivieren Sie sie stattdessen. Die Meldung nennt die Zeilen, zum Beispiel „IT-300 is used by 3 OPEX lines and 1 CAPEX line. Disable it instead.“
-- **Eine Gruppe, die Elemente enthält, kann weder gelöscht werden noch eine Kostenstelle werden.** Verschieben oder löschen Sie zuerst ihren Inhalt. Die Meldung nennt die Anzahl, zum Beispiel „Infrastructure still contains 4 nodes. Move or delete them first.“
+- **Eine Kostenstelle, die von Budgetzeilen verwendet wird, kann weder eine Gruppe werden noch gelöscht werden.** Deaktivieren Sie sie stattdessen. Die Meldung nennt die Zeilen, zum Beispiel „Diese Kostenstelle wird noch verwendet: 3 OPEX-Zeilen und 1 CAPEX-Zeile. Deaktivieren Sie sie, statt sie zu löschen.“
+- **Eine Gruppe, die Elemente enthält, kann weder gelöscht werden noch eine Kostenstelle werden.** Verschieben oder löschen Sie zuerst ihren Inhalt. Die Meldung nennt die Anzahl, zum Beispiel „Diese Gruppe enthält 4 Elemente. Verschieben oder löschen Sie diese zuerst.“
 - **Nur eine Gruppe kann übergeordnet sein.** Eine Kostenstelle hat keine untergeordneten Elemente.
 - **Keine Schleifen.** Eine Gruppe kann nicht unter sich selbst oder unter eine ihrer eigenen Gruppen verschoben werden.
 - **Deaktivierte Elemente bleiben, wo sie sind.** Eine deaktivierte Kostenstelle bleibt auf den Budgetzeilen, die sie bereits haben, und zählt weiterhin in den Berichten. In den Auswahllisten ist sie als **Deaktiviert** markiert und kann nicht für eine neue Zeile gewählt werden. Das Deaktivieren einer Gruppe ändert ihren Inhalt nicht, und eine deaktivierte Gruppe kann weiterhin Elemente aufnehmen.
@@ -186,7 +186,7 @@ Laden oder aktualisieren Sie den gesamten Baum aus einer Datei.
 | `owner_email` | Die E-Mail-Adresse des Budgetverantwortlichen, eines aktiven Benutzers. Leer für keinen Budgetverantwortlichen |
 | `description` | Freitext |
 | `status` | `enabled` oder `disabled`. Leer bedeutet `enabled` für einen neuen Knoten und behält bei einer Aktualisierung den gespeicherten Status |
-| `disabled_at` | Optionale Spalte. Das Ende der Gültigkeit: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Leer, wenn es kein Ende gibt. Bei einer Aktualisierung behalten ein leerer `status` und ein leeres `disabled_at` die gespeicherten Werte. `enabled` mit leerem Datum löscht das Ende der Gültigkeit. `disabled` mit leerem Datum behält ein bereits vergangenes Datum und beendet den Knoten sonst heute |
+| `disabled_at` | Optionale Spalte. Das Ende der Gültigkeit: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Der Export schreibt nur das Datum. Erneut importiert, behält dieses Datum das gespeicherte Gültigkeitsende. Leer, wenn es kein Ende gibt. Bei einer Aktualisierung behalten ein leerer `status` und ein leeres `disabled_at` die gespeicherten Werte. `enabled` mit leerem Datum löscht das Ende der Gültigkeit. `disabled` mit leerem Datum behält ein bereits vergangenes Datum und beendet den Knoten sonst heute |
 
 **Import**:
 

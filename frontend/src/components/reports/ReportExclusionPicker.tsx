@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useContext, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Autocomplete, Checkbox, ListItemText, TextField, Typography } from '@mui/material';
 import { useForkRef } from '@mui/material/utils';
 import { useTranslation } from 'react-i18next';
@@ -15,8 +15,36 @@ const OVERSCAN = 12;
 /** Visible height assumed before the list is measured (the list box is at most 40% of the viewport). */
 const VIEWPORT = 800;
 
-/** The index (in the listed options) of the option the keyboard or the pointer highlights. */
-const HighlightContext = createContext<number | null>(null);
+/**
+ * The index (in the listed options) of the option the keyboard or the pointer highlights. Only the
+ * list reads it: a move of the highlight redraws the drawn rows, not the picker and its thousands
+ * of options (a state of the picker cost a full render of every option on each arrow key).
+ */
+type HighlightStore = {
+  get: () => number | null;
+  set: (index: number | null) => void;
+  subscribe: (listener: () => void) => () => void;
+};
+
+function createHighlightStore(): HighlightStore {
+  let current: number | null = null;
+  const listeners = new Set<() => void>();
+  return {
+    get: () => current,
+    set: (index) => {
+      if (index === current) return;
+      current = index;
+      listeners.forEach((listener) => listener());
+    },
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
+}
+
+const noHighlight: HighlightStore = createHighlightStore();
+const HighlightContext = createContext<HighlightStore>(noHighlight);
 
 /**
  * The option list of an exclusion picker. With thousands of lines, drawing every option made the
@@ -28,10 +56,12 @@ const HighlightContext = createContext<number | null>(null);
  */
 const WindowedListbox = React.forwardRef<HTMLUListElement, React.HTMLAttributes<HTMLElement>>(function WindowedListbox(props, ref) {
   const { children, onScroll, ...other } = props;
-  const items = React.Children.toArray(children);
+  // The same rows while only the highlight or the scroll moves: React then skips the rows already drawn.
+  const items = useMemo(() => React.Children.toArray(children), [children]);
   const listRef = useRef<HTMLUListElement | null>(null);
   const handleRef = useForkRef(ref, listRef);
-  const highlighted = useContext(HighlightContext);
+  const store = useContext(HighlightContext);
+  const highlighted = useSyncExternalStore(store.subscribe, store.get, store.get);
   const [scrollTop, setScrollTop] = useState(0);
   const [viewport, setViewport] = useState(VIEWPORT);
   const count = items.length;
@@ -124,7 +154,7 @@ export default function ReportExclusionPicker({
   const [opened, setOpened] = useState(false);
   // The listed index of each option, read while the options are drawn, and the highlighted one.
   const indexById = useRef(new Map<string, number>());
-  const [highlighted, setHighlighted] = useState<number | null>(null);
+  const [highlight] = useState(createHighlightStore);
   const list = options ?? [];
   const selected = useMemo(() => {
     if (value.length === 0) return [];
@@ -134,7 +164,7 @@ export default function ReportExclusionPicker({
   const fontSx = inFilter ? { fontSize: 13 } : undefined;
 
   return (
-    <HighlightContext.Provider value={highlighted}>
+    <HighlightContext.Provider value={highlight}>
     <Autocomplete
       multiple
       size="small"
@@ -150,7 +180,7 @@ export default function ReportExclusionPicker({
         }
       }}
       onChange={(_, next) => onChange(next.map((option) => option.id))}
-      onHighlightChange={(_, option) => setHighlighted(option ? indexById.current.get(option.id) ?? null : null)}
+      onHighlightChange={(_, option) => highlight.set(option ? indexById.current.get(option.id) ?? null : null)}
       getOptionLabel={(option) => option.label}
       isOptionEqualToValue={(option, other) => option.id === other.id}
       ListboxComponent={WindowedListbox}

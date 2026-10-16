@@ -91,6 +91,7 @@ vi.mock('./workspace/BudgetPropertiesDrawer', async () => {
       <button type="button" onClick={() => props.onSupplierChange('supplier-gone')}>pick deleted supplier</button>
       <button type="button" onClick={() => props.onAnalyticsValueChange('axis-default', 'value-disabled')}>pick disabled value</button>
       <button type="button" onClick={() => props.onDisabledAtChange?.('2026-12-31T10:00:00.000Z')}>end on 31 December</button>
+      <button type="button" onClick={() => props.onDisabledAtChange?.(null)}>clear end of validity</button>
       <button type="button" onClick={() => props.onCostCenterChange('cc-2', { id: 'cc-2', company_id: 'company-2' })}>pick cost center</button>
       <button type="button" onClick={() => props.onCostCenterChange('cc-3', { id: 'cc-3', company_id: 'company-3' })}>pick third cost center</button>
       <button type="button" onClick={() => props.onCostCenterChange('', null)}>clear cost center</button>
@@ -112,7 +113,12 @@ vi.mock('./workspace/BudgetMetadataBar', async () => {
     }) => {
       // The budget holder's read, as the bar makes it.
       useCostCenterNode(costCenterId ?? null, (costCenter ?? null) as never);
-      return <button type="button" onClick={() => onStatusChange('disabled')}>disable line</button>;
+      return (
+        <>
+          <button type="button" onClick={() => onStatusChange('disabled')}>disable line</button>
+          <button type="button" onClick={() => onStatusChange('enabled')}>enable line</button>
+        </>
+      );
     },
   };
 });
@@ -1224,6 +1230,26 @@ describe('BudgetLinePage edit conflicts (lot 3C)', () => {
     expect(mocked.patch.mock.calls[0][1]).toEqual({ status: 'disabled' });
     await settleSaves();
     expect(screen.queryByTestId('edit-conflict-disabled_at')).toBeNull();
+  });
+
+  it('choosing the status shown sends nothing and keeps a future end of validity; disabling sends the status alone', async () => {
+    stored[LINE_A].disabled_at = '2031-10-16T14:37:12.000Z';
+    renderLines(`/ops/budget/${LINE_A}/overview`);
+    await screen.findByDisplayValue('Line A notes');
+    fireEvent.click(screen.getByRole('button', { name: 'enable line' }));
+    await settleSaves();
+    expect(mocked.patch).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'disable line' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1));
+    expect(mocked.patch.mock.calls[0][1]).toEqual({ status: 'disabled' });
+  });
+
+  it('an end of validity set to what the line already has sends nothing', async () => {
+    renderLines(`/ops/budget/${LINE_A}/overview`);
+    await screen.findByDisplayValue('Line A notes');
+    fireEvent.click(screen.getByRole('button', { name: 'clear end of validity' }));
+    await settleSaves();
+    expect(mocked.patch).not.toHaveBeenCalled();
   });
 
   it('two ends of validity on the same day show their time', async () => {

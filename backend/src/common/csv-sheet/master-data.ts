@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { endOfValidityFromDate } from '../status';
-import { DecimalMark } from './amount';
+import { DecimalMark, ParsedAmount, parseCsvAmount, resolveAmountConvention } from './amount';
 import { formatCsvDate, formatCsvEndOfValidity } from './date';
 import { csvDecodeErrorCode } from './decode';
 import { CSV_FILE_EMPTY_MESSAGE, readCsv } from './read';
@@ -150,9 +150,9 @@ export function invalidEndOfValidity(field: string, raw: string): string {
 }
 
 /**
- * An end-of-validity cell for an export. A bare `YYYY-MM-DD` is the calendar
- * day it spells. A timestamp at noon UTC is the day the user picked, written
- * the language's way. Any other instant has a real time and stays ISO.
+ * An end-of-validity cell for an export: the calendar day, the language's
+ * way. A bare `YYYY-MM-DD` is the day it spells; an instant writes its UTC day
+ * (`formatCsvEndOfValidity`).
  */
 export function endOfValidityCell(value: Date | string | null | undefined, language: CsvLanguage): string {
   if (value == null) return '';
@@ -160,4 +160,40 @@ export function endOfValidityCell(value: Date | string | null | undefined, langu
   if (text === '') return '';
   if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return formatCsvDate(text, language);
   return formatCsvEndOfValidity(text, language);
+}
+
+/**
+ * The warning of a row whose name matched a stored record written in another case ("sap" when
+ * "SAP" exists): the row updates that record and the stored spelling stays. Null when the
+ * spellings are the same.
+ */
+export function nameMatchedWarning(row: number, column: string, fileName: string, storedName: string): ImportReportError | null {
+  if (fileName === storedName) return null;
+  return {
+    row,
+    column,
+    message: `'${fileName}' was matched to '${storedName}'.`,
+    code: 'CSV_NAME_MATCHED_CASE',
+    params: { name: fileName, stored: storedName },
+  };
+}
+
+/**
+ * A decimal column without a year (a contract's amount at signature), read the way the amount
+ * columns are: the file's cells settle the decimal mark, then the switch, then the language. Two
+ * conventions in one column are a file error; a mark the cells could not settle comes with the
+ * same notice as the amount columns.
+ */
+export function fieldAmounts(
+  rows: readonly CsvDataRow[],
+  field: string,
+  language: CsvLanguage,
+  decimalMark?: DecimalMark,
+): { error: string | null; notice: string | null; amountOf(row: CsvDataRow): ParsedAmount } {
+  const decision = resolveAmountConvention(rows.map((row) => cellOf(row, field)), language, decimalMark);
+  return {
+    error: decision.error,
+    notice: decision.notice,
+    amountOf: (row) => parseCsvAmount(cellOf(row, field), decision.decimal ?? undefined),
+  };
 }

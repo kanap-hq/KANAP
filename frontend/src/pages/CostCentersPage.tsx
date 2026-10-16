@@ -9,6 +9,7 @@ import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
 import { useAuth } from '../auth/AuthContext';
 import DeleteSelectedButton from '../components/DeleteSelectedButton';
+import { recordsInUseCheck } from '../utils/deleteCheck';
 import { LinkCellRenderer } from '../components/grid/renderers';
 import CheckboxSetFilter, { type CheckboxSetFilterOption } from '../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
@@ -195,6 +196,13 @@ function CostCentersList() {
         <DeleteSelectedButton
           selectedRows={selectedRows}
           endpoint={`${COST_CENTERS_ENDPOINT}/bulk`}
+          // Asked on click: those that cannot go are kept, with why.
+          checkDelete={(ids) => recordsInUseCheck(COST_CENTERS_ENDPOINT, ids)}
+          itemLabels={{
+            toDelete: (count) => t('costCenters.delete.toDelete', { count }),
+            kept: (count) => t('costCenters.delete.kept', { count }),
+            deleted: (count) => t('costCenters.delete.deleted', { count }),
+          }}
           getItemId={(row) => row.id}
           getItemName={(row) => row.code}
           gridApi={gridApiRef.current}

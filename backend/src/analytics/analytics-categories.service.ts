@@ -1,10 +1,11 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { isUUID } from 'class-validator';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { compileAgFilterCondition, createParamNameGenerator } from '../common/ag-grid-filtering';
 import { BulkDeleteResult } from '../common/delete.types';
+import { checkIds, lineUsages, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal } from '../common/record-in-use';
 import { parseExportPagination, parsePagination } from '../common/pagination';
 import { textSortKey, type TextSortKey } from '../common/list-sort';
 import { withSavepoint } from '../common/savepoint.util';
@@ -100,7 +101,10 @@ const FILTER_EXPRESSIONS: Record<string, string> = {
   applies_to: 'cat.applies_to',
   axis_code: 'ax.code',
   axis_name: `COALESCE(NULLIF(BTRIM(ax.name), ''), 'Analytics dimension')`,
+  updated_at: 'cat.updated_at',
 };
+/** The filter columns that hold dates (date models, by day). */
+const DATE_FILTER_FIELDS = new Set(['updated_at']);
 const MAX_IDS = 10_000;
 
 export function categoryValuesEqual(stored: StoredAnalyticsCategory, next: AnalyticsCategoryValues): boolean {
@@ -173,6 +177,16 @@ function withAppliesToBlanks<T>(filters: T): T {
 
 export function duplicateValueMessage(name: string, axis: { name: string | null }): string {
   return `A value named ${name} already exists in ${analyticsAxisInSentence(axis)}.`;
+}
+
+/**
+ * The refusal of a value's delete without `force` (`ANALYTICS_VALUE_IN_USE`: the budget lines
+ * counted, disable it instead), or null.
+ */
+export function valueDeleteRefusal(name: string, lines: { opex: number; capex: number } | undefined): RecordInUseException | null {
+  if (!lines || lines.opex + lines.capex === 0) return null;
+  return new RecordInUseException('ANALYTICS_VALUE_IN_USE', 'value', name, lineUsages(lines),
+    `${name} is used by ${lineUsageText(lines.opex, lines.capex)}. Disable it instead.`);
 }
 
 @Injectable()
@@ -306,15 +320,14 @@ export class AnalyticsCategoriesService {
     // committed first (and is counted) or waits for this delete and then fails its key.
     const [existing] = await this.lockValues(ctx, [id]);
     if (!existing) throw new NotFoundException('Analytics value not found.');
-    const usage = await this.countUsage(ctx, [id]);
-    const lines = usage.get(id) ?? { opex: 0, capex: 0 };
-    if (lines.opex + lines.capex > 0) {
-      throw new ConflictException(`${existing.name} is used by ${lineUsageText(lines.opex, lines.capex)}. Disable it instead.`);
-    }
+    const refusal = valueDeleteRefusal(existing.name, (await this.countUsage(ctx, [id])).get(id));
+    if (refusal) throw refusal;
     try {
       await ctx.manager.query(`DELETE FROM analytics_categories WHERE tenant_id = $1 AND id = $2`, [ctx.tenantId, id]);
     } catch (err: any) {
-      if (err?.code === '23503') throw new ConflictException(`${existing.name} is still used. Disable it instead.`);
+      if (err?.code === '23503') {
+        throw new RecordInUseException('RECORD_IN_USE', 'value', existing.name, [], `${existing.name} is still used. Disable it instead.`);
+      }
       throw err;
     }
     await this.audit.log(
@@ -344,6 +357,25 @@ export class AnalyticsCategoriesService {
       category_id: existing.id,
       category_name: existing.name,
     });
+  }
+
+  /**
+   * The check before a delete (`POST /analytics-categories/delete-check`): no value is refused
+   * when forced, so `refused` stays empty; `forced` lists the values budget lines use, with the
+   * lines a forced delete takes the value from (the refusal an ordinary delete would give).
+   * In the order asked; unknown ids are left out. Nothing is written.
+   */
+  async deleteCheck(ids: string[], opts?: AnalyticsCallOptions): Promise<{ refused: DeleteRefusal[]; forced: DeleteRefusal[] }> {
+    const ctx = await this.context(opts);
+    const wanted = checkIds(ids);
+    if (wanted.length === 0) return { refused: [], forced: [] };
+    const rows: Array<{ id: string; name: string }> = await ctx.manager.query(
+      `SELECT id::text AS id, name FROM analytics_categories WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+      [ctx.tenantId, wanted],
+    );
+    const usage = await this.countUsage(ctx, wanted);
+    const { refused: forced } = await refusalsFrom(wanted, rows, (row) => row.name, async (row) => valueDeleteRefusal(row.name, usage.get(row.id)));
+    return { refused: [], forced };
   }
 
   /**
@@ -379,7 +411,7 @@ export class AnalyticsCategoriesService {
           `SELECT name FROM analytics_categories WHERE tenant_id = $1 AND id = $2`,
           [ctx.tenantId, id],
         );
-        outcomes.set(id, { id, name: row?.name ?? 'Unknown', reason: err?.message || 'Unknown error' });
+        outcomes.set(id, { id, name: row?.name ?? 'Unknown', reason: err?.message || 'Unknown error', ...refusalDetails(err) });
       }
     }
     const result: BulkDeleteResult = { deleted: [], failed: [] };
@@ -689,7 +721,7 @@ export class AnalyticsCategoriesService {
       if (!expression || !raw || typeof raw !== 'object') continue;
       const combined = (raw.operator === 'AND' || raw.operator === 'OR') && Array.isArray(raw.conditions) && raw.conditions.length > 0;
       const parts = (combined ? raw.conditions : [raw])
-        .map((model: any) => compileAgFilterCondition(model, { expression }, nextParam))
+        .map((model: any) => compileAgFilterCondition(model, { expression, dataType: DATE_FILTER_FIELDS.has(field) ? 'date' : 'string' }, nextParam))
         .filter(Boolean) as Array<{ sql: string; params: Record<string, any> }>;
       if (parts.length === 0) continue;
       const params = Object.assign({}, ...parts.map((part) => part.params));

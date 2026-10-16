@@ -73,7 +73,7 @@ export const MARKDOWN_UNAVAILABLE = 'MARKDOWN_UNAVAILABLE';
 /** Workers per API process. */
 const WORKER_COUNT = 2;
 /** How long a call of a request may wait for a free worker while the workers are running. */
-const QUEUE_WAIT_MS = 1000;
+export const QUEUE_WAIT_MS = 1000;
 /** How long an email or a background task may wait for a free worker. */
 const SYSTEM_WAIT_MS = 5000;
 /** Calls of one key (a user, else a tenant) running at most: one worker always stays for the other keys. */

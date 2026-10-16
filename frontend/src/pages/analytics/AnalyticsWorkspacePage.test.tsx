@@ -155,8 +155,8 @@ describe('AnalyticsWorkspacePage', () => {
     fireEvent.click(within(screen.getByRole('complementary')).getByRole('checkbox', { name: 'statuses.enabled' }));
     await waitFor(() => expect(mocked.updateAnalyticsValue).toHaveBeenCalledTimes(2));
     const [, body] = mocked.updateAnalyticsValue.mock.calls[1];
-    expect(body.disabled_at).toEqual(expect.any(String));
-    expect(Object.keys(body).sort()).toEqual(['disabled_at', 'status']);
+    // Disable now: the status alone, the server sets the end of validity from its clock.
+    expect(body).toEqual({ status: 'disabled' });
   });
 
   it('shows the dimension read only', async () => {
