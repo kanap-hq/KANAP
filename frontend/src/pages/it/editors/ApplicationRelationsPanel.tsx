@@ -2,7 +2,7 @@ import useApplicationClassificationCatalog from '../../../hooks/useApplicationCl
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { classificationText } from '../../../utils/applicationClassification';
 import React, { forwardRef, useImperativeHandle } from 'react';
-import { Alert, Autocomplete, Box, Button, Chip, CircularProgress, LinearProgress, Stack, TextField, Typography, Table, TableBody, TableCell, TableHead, TableRow, TableContainer, Paper } from '@mui/material';
+import { Alert, Box, Button, Chip, LinearProgress, Stack, TextField, Typography, Table, TableBody, TableCell, TableHead, TableRow, TableContainer, Paper } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import api from '../../../api';
 import { useAuth } from '../../../auth/AuthContext';
@@ -10,16 +10,14 @@ import { useAuth } from '../../../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { KanapDialog, PropertyRow, RelevantWebsitesList, useKanapDialogs } from '../../../components/design';
-import { drawerAutocompleteListboxSx, drawerFieldValueSx } from '../../../theme/formSx';
-import IncidentRelationsSection from './IncidentRelationsSection';
-import BudgetLinesRelationField, { budgetLineIdsOf, mergeLinkedBudgetLines, sameBudgetLineIds, type LinkedBudgetLine } from '../../../components/finance/BudgetLinesRelationField';
+import { drawerFieldValueSx } from '../../../theme/formSx';
+import ApplicationRelationsTab from '../workspace/ApplicationRelationsTab';
 export type ApplicationRelationsPanelHandle = {
   save: () => Promise<void>;
   reset: () => void;
 };
 
-type Props = { id: string; isSuite?: boolean; onDirtyChange?: (dirty: boolean) => void; onRelationsChange?: () => void };
-type RelatedTaskOption = { id: string; item_number: number | null; title: string | null };
+type Props = { id: string; isSuite?: boolean; onDirtyChange?: (dirty: boolean) => void; onRelationsChange?: () => void; onOpenKnowledge?: () => void };
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
@@ -38,7 +36,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default forwardRef<ApplicationRelationsPanelHandle, Props>(function ApplicationRelationsPanel({ id, isSuite = false, onDirtyChange, onRelationsChange }, ref) {
+export default forwardRef<ApplicationRelationsPanelHandle, Props>(function ApplicationRelationsPanel({ id, isSuite = false, onDirtyChange, onRelationsChange, onOpenKnowledge }, ref) {
   const { data: classificationCatalog } = useApplicationClassificationCatalog();
   const businessLabel = (code?: string | null) => classificationCatalog?.businessCriticalityLevels.find((item) => item.code === code)?.label || code || classificationText('Not set');
   const { labelFor } = useItOpsEnumOptions();
@@ -50,21 +48,6 @@ export default forwardRef<ApplicationRelationsPanelHandle, Props>(function Appli
   const [loading, setLoading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-
-  const [linkedLines, setLinkedLines] = React.useState<LinkedBudgetLine[]>([]);
-  const [baselineLines, setBaselineLines] = React.useState<LinkedBudgetLine[]>([]);
-
-  const [linkedContracts, setLinkedContracts] = React.useState<Array<{ id: string; name: string }>>([]);
-  const [baselineContracts, setBaselineContracts] = React.useState<Array<{ id: string; name: string }>>([]);
-  const [contractOptions, setContractOptions] = React.useState<Array<{ id: string; name: string }>>([]);
-
-  const [linkedProjects, setLinkedProjects] = React.useState<Array<{ id: string; name: string }>>([]);
-  const [baselineProjects, setBaselineProjects] = React.useState<Array<{ id: string; name: string }>>([]);
-  const [projectOptions, setProjectOptions] = React.useState<Array<{ id: string; name: string }>>([]);
-  const [linkedTasks, setLinkedTasks] = React.useState<RelatedTaskOption[]>([]);
-  const [taskOptions, setTaskOptions] = React.useState<RelatedTaskOption[]>([]);
-  const [taskOptionsLoading, setTaskOptionsLoading] = React.useState(false);
-  const [taskSearch, setTaskSearch] = React.useState('');
 
   const [urls, setUrls] = React.useState<Array<{ id?: string; description?: string; url: string }>>([]);
   const [baselineUrls, setBaselineUrls] = React.useState<Array<{ id?: string; description?: string; url: string }>>([]);
@@ -82,13 +65,8 @@ export default forwardRef<ApplicationRelationsPanelHandle, Props>(function Appli
   // Structure: reverse components when this app is a suite
   const [components, setComponents] = React.useState<Array<{ id: string; name: string; lifecycle: string; criticality: string }>>([]);
 
-  const dirty = React.useMemo(() => {
-    const a = !sameBudgetLineIds(linkedLines, baselineLines);
-    const c = JSON.stringify(linkedContracts.map(x => x.id)) !== JSON.stringify(baselineContracts.map(x => x.id));
-    const d = JSON.stringify(linkedProjects.map(x => x.id)) !== JSON.stringify(baselineProjects.map(x => x.id));
-    const e = JSON.stringify(urls) !== JSON.stringify(baselineUrls);
-    return a || c || d || e;
-  }, [linkedLines, baselineLines, linkedContracts, baselineContracts, linkedProjects, baselineProjects, urls, baselineUrls]);
+  // The linked sections save each change at once (ApplicationRelationsTab); only the websites can differ from what is stored.
+  const dirty = React.useMemo(() => JSON.stringify(urls) !== JSON.stringify(baselineUrls), [urls, baselineUrls]);
   React.useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
 
   React.useEffect(() => {
@@ -106,44 +84,6 @@ export default forwardRef<ApplicationRelationsPanelHandle, Props>(function Appli
   const load = React.useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      // Linked relations
-      try {
-        const [opexRes, capexRes] = await Promise.all([
-          api.get(`/applications/${id}/spend-items`),
-          api.get(`/applications/${id}/capex-items`),
-        ]);
-        const lines = mergeLinkedBudgetLines(opexRes.data?.items, capexRes.data?.items);
-        setLinkedLines(lines); setBaselineLines(lines);
-      } catch { setLinkedLines([]); setBaselineLines([]); }
-      try {
-        const res = await api.get(`/applications/${id}/contracts`);
-        const items = (res.data?.items || []) as Array<{ id: string; name: string }>;
-        setLinkedContracts(items); setBaselineContracts(items);
-      } catch { setLinkedContracts([]); setBaselineContracts([]); }
-
-      // Projects
-      try {
-        const res = await api.get(`/applications/${id}/projects`);
-        const items = (res.data?.items || []) as Array<{ id: string; name: string }>;
-        setLinkedProjects(items); setBaselineProjects(items);
-      } catch { setLinkedProjects([]); setBaselineProjects([]); }
-
-      try {
-        const items: RelatedTaskOption[] = [];
-        let page = 1;
-        const limit = 100;
-        let total = Infinity;
-        while ((page - 1) * limit < total) {
-          const res = await api.get(`/applications/${id}/related-tasks`, { params: { page, limit, sort: 'updated_at:DESC' } });
-          const pageItems = (res.data?.items || []) as RelatedTaskOption[];
-          total = Number(res.data?.total || pageItems.length);
-          items.push(...pageItems);
-          if (pageItems.length < limit) break;
-          page += 1;
-        }
-        setLinkedTasks(items);
-      } catch { setLinkedTasks([]); }
-
       // URLs
       try {
         const resUrls = await api.get(`/applications/${id}/links`);
@@ -173,92 +113,10 @@ export default forwardRef<ApplicationRelationsPanelHandle, Props>(function Appli
   }, [id, isSuite]);
   React.useEffect(() => { void load(); }, [load]);
 
-  // Preload all selectable options (paged, alphabetical)
-  React.useEffect(() => {
-    let alive = true;
-    const fetchAllPaged = async (endpoint: string, sortField: string) => {
-      const all: any[] = [];
-      let page = 1; const limit = 100; let total = Infinity;
-      while ((page - 1) * limit < total) {
-        const res = await api.get(endpoint, { params: { page, limit, sort: `${sortField}:ASC` } });
-        const items = (res.data?.items || []) as any[];
-        total = Number(res.data?.total || items.length);
-        all.push(...items);
-        if (items.length < limit) break;
-        page += 1;
-      }
-      return all;
-    };
-    (async () => {
-      try {
-        const [allContracts, allProjects] = await Promise.all([
-          fetchAllPaged('/contracts', 'name'),
-          fetchAllPaged('/portfolio/projects', 'name'),
-        ]);
-        if (!alive) return;
-        const dedupById = <T extends { id: string }>(arr: T[]) => Array.from(new Map(arr.map(i => [i.id, i])).values());
-        const contracts = dedupById(allContracts.map((x: any) => ({ id: x.id, name: x.name })));
-        const projects = dedupById(allProjects.map((x: any) => ({ id: x.id, name: x.name })));
-        setContractOptions(contracts.sort((a, b) => a.name.localeCompare(b.name)));
-        setProjectOptions(projects.sort((a, b) => a.name.localeCompare(b.name)));
-      } catch {
-        if (!alive) return;
-        setContractOptions([]); setProjectOptions([]);
-      }
-    })();
-    return () => { alive = false; };
-  }, [isSuite, id]);
-
-  React.useEffect(() => {
-    if (readOnly) {
-      setTaskOptions([]);
-      setTaskOptionsLoading(false);
-      return undefined;
-    }
-
-    let alive = true;
-    const timer = window.setTimeout(async () => {
-      const query = taskSearch.trim();
-      setTaskOptionsLoading(true);
-      try {
-        const params: Record<string, string | number> = { page: 1, limit: 50, sort: 'updated_at:DESC' };
-        if (query) params.q = query;
-        const res = await api.get('/tasks', { params });
-        if (!alive) return;
-        const items = (res.data?.items || []).map((task: any) => ({
-          id: task.id,
-          item_number: task.item_number ?? null,
-          title: task.title ?? null,
-        })) as RelatedTaskOption[];
-        setTaskOptions(items);
-      } catch {
-        if (!alive) return;
-        setTaskOptions([]);
-      } finally {
-        if (alive) setTaskOptionsLoading(false);
-      }
-    }, 250);
-    return () => { alive = false; window.clearTimeout(timer); };
-  }, [readOnly, taskSearch]);
-
-  // One picker for both natures; each route replaces the links of its own nature only.
-  const saveBudgetLines = React.useCallback(async (lines: LinkedBudgetLine[]) => {
-    await api.post(`/applications/${id}/spend-items/bulk-replace`, { spend_item_ids: budgetLineIdsOf(lines, 'opex') });
-    await api.post(`/applications/${id}/capex-items/bulk-replace`, { capex_item_ids: budgetLineIdsOf(lines, 'capex') });
-  }, [id]);
-
   const save = async () => {
     if (readOnly) return;
     setSaving(true); setError(null);
     try {
-      await saveBudgetLines(linkedLines);
-      setBaselineLines(linkedLines);
-      await api.post(`/applications/${id}/contracts/bulk-replace`, { contract_ids: linkedContracts.map(x => x.id) });
-      setBaselineContracts(linkedContracts);
-      // Save projects
-      await api.post(`/applications/${id}/projects/bulk-replace`, { project_ids: linkedProjects.map(x => x.id) });
-      setBaselineProjects(linkedProjects);
-      // URLs sync
       const existing = baselineUrls;
       const existingIds = new Set(existing.filter(x => x.id).map(x => x.id as string));
       const currentIds = new Set(urls.filter(x => x.id).map(x => x.id as string));
@@ -273,93 +131,7 @@ export default forwardRef<ApplicationRelationsPanelHandle, Props>(function Appli
 
   useImperativeHandle(ref, () => ({ save, reset: () => { urlsEditedRef.current = false; void load(); } }), [save, load]);
 
-  const relationTagSx = {
-    height: 22,
-    borderRadius: '4px',
-    fontSize: 12,
-    '& .MuiChip-label': { px: '7px' },
-  } as const;
-  const relationControlSx = { maxWidth: 420 } as const;
   const relationWideControlSx = { maxWidth: 640 } as const;
-  const relationAutocompleteSx = [drawerFieldValueSx, { width: '100%' }] as const;
-  const allTaskOptions = React.useMemo(() => {
-    const byId = new Map(taskOptions.map((option) => [option.id, option]));
-    for (const task of linkedTasks) {
-      if (!byId.has(task.id)) byId.set(task.id, task);
-    }
-    return Array.from(byId.values());
-  }, [linkedTasks, taskOptions]);
-  const taskLabel = React.useCallback((task: RelatedTaskOption) => {
-    const prefix = task.item_number ? `#${task.item_number}` : '';
-    const title = String(task.title || '').trim();
-    return [prefix, title].filter(Boolean).join(' ') || task.id;
-  }, []);
-
-  const replaceBudgetLineRelations = React.useCallback(async (next: LinkedBudgetLine[]) => {
-    setLinkedLines(next);
-    if (readOnly) return;
-    setSaving(true);
-    setError(null);
-    try {
-      await saveBudgetLines(next);
-      setBaselineLines(next);
-      onRelationsChange?.();
-    } catch (e: any) {
-      setError(getApiErrorMessage(e, t, t('messages.saveRelationsFailed')));
-    } finally {
-      setSaving(false);
-    }
-  }, [id, onRelationsChange, readOnly, saveBudgetLines, t]);
-
-  const replaceContractRelations = React.useCallback(async (next: Array<{ id: string; name: string }>) => {
-    setLinkedContracts(next);
-    if (readOnly) return;
-    setSaving(true);
-    setError(null);
-    try {
-      await api.post(`/applications/${id}/contracts/bulk-replace`, { contract_ids: next.map((item) => item.id) });
-      setBaselineContracts(next);
-      onRelationsChange?.();
-    } catch (e: any) {
-      setError(getApiErrorMessage(e, t, t('messages.saveRelationsFailed')));
-    } finally {
-      setSaving(false);
-    }
-  }, [id, onRelationsChange, readOnly, t]);
-
-  const replaceProjectRelations = React.useCallback(async (next: Array<{ id: string; name: string }>) => {
-    setLinkedProjects(next);
-    if (readOnly) return;
-    setSaving(true);
-    setError(null);
-    try {
-      await api.post(`/applications/${id}/projects/bulk-replace`, { project_ids: next.map((item) => item.id) });
-      setBaselineProjects(next);
-      onRelationsChange?.();
-    } catch (e: any) {
-      setError(getApiErrorMessage(e, t, t('messages.saveRelationsFailed')));
-    } finally {
-      setSaving(false);
-    }
-  }, [id, onRelationsChange, readOnly, t]);
-
-  const replaceTaskRelations = React.useCallback(async (next: RelatedTaskOption[]) => {
-    const previous = linkedTasks;
-    setLinkedTasks(next);
-    if (readOnly) return;
-    setSaving(true);
-    setError(null);
-    try {
-      await api.post(`/applications/${id}/related-tasks/bulk-replace`, { task_ids: next.map((task) => task.id) });
-      onRelationsChange?.();
-    } catch (e: any) {
-      setLinkedTasks(previous);
-      setError(getApiErrorMessage(e, t, t('messages.saveRelationsFailed')));
-    } finally {
-      setSaving(false);
-    }
-  }, [id, linkedTasks, onRelationsChange, readOnly, t]);
-
   const syncUrls = React.useCallback(async (nextUrls: Array<{ id?: string; description?: string; url: string }>) => {
     setUrls(nextUrls);
     if (readOnly) return;
@@ -464,124 +236,7 @@ export default forwardRef<ApplicationRelationsPanelHandle, Props>(function Appli
         </>
       )}
 
-      <SectionTitle>{t('workspace.application.tabs.relations')}</SectionTitle>
-
-      <PropertyRow label={t('common:selects.budgetLines')} valueSx={relationControlSx}>
-        <BudgetLinesRelationField
-          value={linkedLines}
-          onChange={(next) => { void replaceBudgetLineRelations(next); }}
-          disabled={readOnly}
-          sx={relationAutocompleteSx}
-        />
-      </PropertyRow>
-
-      <PropertyRow label={t('pages.applications.columns.contracts')} valueSx={relationControlSx}>
-        <Autocomplete
-          multiple
-          options={contractOptions}
-          value={linkedContracts}
-          getOptionLabel={(o) => o.name}
-          onChange={(_, v) => { void replaceContractRelations(v); }}
-          renderOption={(props, option) => (
-            <li {...props} key={option.id}>{option.name}</li>
-          )}
-          renderTags={(value, getTagProps) =>
-            value.map((option, index) => (
-              <Chip {...getTagProps({ index })} key={option.id} label={option.name} sx={relationTagSx} />
-            ))
-          }
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              placeholder={t('workspace.application.relations.selectContracts')}
-              variant="standard"
-              sx={drawerFieldValueSx}
-            />
-          )}
-          ListboxProps={{ sx: drawerAutocompleteListboxSx }}
-          isOptionEqualToValue={(opt, val) => opt.id === val.id}
-          filterSelectedOptions
-          disabled={readOnly}
-          fullWidth
-          sx={relationAutocompleteSx}
-        />
-      </PropertyRow>
-
-      <PropertyRow label={t('workspace.application.relations.projects')} valueSx={relationControlSx}>
-        <Autocomplete
-          multiple
-          options={projectOptions}
-          value={linkedProjects}
-          getOptionLabel={(o) => o.name}
-          onChange={(_, v) => { void replaceProjectRelations(v); }}
-          renderOption={(props, option) => (
-            <li {...props} key={option.id}>{option.name}</li>
-          )}
-          renderTags={(value, getTagProps) =>
-            value.map((option, index) => (
-              <Chip {...getTagProps({ index })} key={option.id} label={option.name} sx={relationTagSx} />
-            ))
-          }
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              placeholder={t('workspace.application.relations.selectProjects')}
-              variant="standard"
-              sx={drawerFieldValueSx}
-            />
-          )}
-          ListboxProps={{ sx: drawerAutocompleteListboxSx }}
-          isOptionEqualToValue={(opt, val) => opt.id === val.id}
-          filterSelectedOptions
-          disabled={readOnly}
-          fullWidth
-          sx={relationAutocompleteSx}
-        />
-      </PropertyRow>
-
-      <PropertyRow label={t('workspace.application.relations.tasks')} valueSx={relationControlSx}>
-        <Autocomplete
-          multiple
-          options={allTaskOptions}
-          value={linkedTasks}
-          getOptionLabel={taskLabel}
-          onChange={(_, v) => { void replaceTaskRelations(v as RelatedTaskOption[]); }}
-          inputValue={taskSearch}
-          onInputChange={(_, v) => setTaskSearch(v)}
-          loading={taskOptionsLoading}
-          renderOption={(props, option) => (
-            <li {...props} key={option.id}>{taskLabel(option)}</li>
-          )}
-          renderTags={(value, getTagProps) =>
-            value.map((option, index) => (
-              <Chip {...getTagProps({ index })} key={option.id} label={taskLabel(option)} sx={relationTagSx} />
-            ))
-          }
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              placeholder={t('workspace.application.relations.searchTasks')}
-              variant="standard"
-              InputProps={{
-                ...params.InputProps,
-                endAdornment: (
-                  <>
-                    {taskOptionsLoading ? <CircularProgress color="inherit" size={16} /> : null}
-                    {params.InputProps.endAdornment}
-                  </>
-                ),
-              }}
-              sx={drawerFieldValueSx}
-            />
-          )}
-          ListboxProps={{ sx: drawerAutocompleteListboxSx }}
-          isOptionEqualToValue={(opt, val) => opt.id === val.id}
-          filterSelectedOptions
-          disabled={readOnly}
-          fullWidth
-          sx={relationAutocompleteSx}
-        />
-      </PropertyRow>
+      <ApplicationRelationsTab id={id} onRelationsChange={onRelationsChange} onOpenKnowledge={onOpenKnowledge} />
 
         <Stack direction="row" alignItems="center" spacing={1} sx={relationWideControlSx}>
           <SectionTitle>{t('workspace.application.relations.relevantWebsites')}</SectionTitle>
@@ -687,7 +342,6 @@ export default forwardRef<ApplicationRelationsPanelHandle, Props>(function Appli
         </Stack>
       </Stack>
 
-      <IncidentRelationsSection applicationId={id} />
       </Stack>
 
       <KanapDialog

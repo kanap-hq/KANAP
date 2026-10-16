@@ -1391,6 +1391,15 @@ export default function ApplicationWorkspacePage() {
   const interfaceCount = interfacesQuery.data?.length || 0;
   const relationCount = (relationsCountQuery.data?.total ?? ((app?.links?.length || 0) + (app?.attachments?.length || 0)))
     + (incidentsCountQuery.data || 0);
+  // The knowledge documents live in the Overview tab: open it and bring the section into view.
+  const openKnowledge = () => {
+    handleTabChange('overview');
+    requestAnimationFrame(() => {
+      const section = document.getElementById('application-knowledge');
+      section?.scrollIntoView({ block: 'start' });
+      section?.focus({ preventScroll: true });
+    });
+  };
   const tabs = [
     { key: 'overview', label: t('workspace.application.tabs.overview') },
     { key: 'deployments', label: t('workspace.application.tabs.deployments'), badge: deploymentCount, disabled: isCreate },
@@ -1535,14 +1544,7 @@ export default function ApplicationWorkspacePage() {
           <ComplianceTab
             app={app}
             canManage={canManage}
-            onOpenKnowledge={() => {
-              handleTabChange('overview');
-              requestAnimationFrame(() => {
-                const section = document.getElementById('application-knowledge');
-                section?.scrollIntoView({ block: 'start' });
-                section?.focus({ preventScroll: true });
-              });
-            }}
+            onOpenKnowledge={openKnowledge}
             saving={classificationSaving}
             error={error}
             onReview={async () => {
@@ -1568,6 +1570,7 @@ export default function ApplicationWorkspacePage() {
             onRelationsChange={() => {
               void relationsCountQuery.refetch();
             }}
+            onOpenKnowledge={openKnowledge}
           />
         )}
       </PortfolioDetailWorkspaceShell>

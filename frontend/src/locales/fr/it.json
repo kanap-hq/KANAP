@@ -1073,8 +1073,6 @@
         "noChildApps": "Aucune application enfant liée pour le moment.",
         "projects": "Projets",
         "tasks": "Tâches",
-        "selectContracts": "Sélectionnez des contrats",
-        "selectProjects": "Sélectionnez des projets",
         "searchTasks": "Rechercher des tâches",
         "relevantWebsites": "Sites web pertinents",
         "addUrl": "Ajouter une URL",
@@ -1087,7 +1085,75 @@
         "selectFiles": "Sélectionner des fichiers",
         "uploadingFiles_one": "Téléversement de {{count}} fichier…",
         "uploadingFiles_other": "Téléversement de {{count}} fichiers…",
-        "deleteAttachment": "Supprimer la pièce jointe « {{name}} » ?"
+        "deleteAttachment": "Supprimer la pièce jointe « {{name}} » ?",
+        "sections": {
+          "budgetLines": "Lignes budgétaires",
+          "contracts": "Contrats",
+          "projects": "Projets",
+          "requests": "Demandes",
+          "tasks": "Tâches",
+          "related": "Apparentés"
+        },
+        "empty": {
+          "budgetLines": "Aucune ligne budgétaire liée.",
+          "contracts": "Aucun contrat lié.",
+          "projects": "Aucun projet lié.",
+          "requests": "Aucune demande liée.",
+          "tasks": "Aucune tâche liée."
+        },
+        "columns": {
+          "ref": "Réf.",
+          "name": "Nom",
+          "title": "Titre",
+          "nature": "Type",
+          "supplier": "Fournisseur",
+          "end": "Fin",
+          "yearlyAmount": "Montant annuel",
+          "renewal": "Renouvellement",
+          "status": "Statut",
+          "plannedEnd": "Fin prévue",
+          "targetDelivery": "Livraison souhaitée",
+          "assignee": "Assigné",
+          "due": "Échéance",
+          "type": "Type",
+          "object": "Objet",
+          "via": "Via"
+        },
+        "renewal": {
+          "tacit": "Tacite",
+          "manual": "Manuel"
+        },
+        "search": {
+          "contracts": "Rechercher des contrats",
+          "projects": "Rechercher des projets",
+          "requests": "Rechercher des demandes"
+        },
+        "types": {
+          "budget_line": "Ligne budgétaire",
+          "contract": "Contrat",
+          "project": "Projet"
+        },
+        "via": {
+          "same_supplier": "même fournisseur",
+          "contract": "via le contrat {{label}}",
+          "project": "via le projet {{label}}",
+          "task": "porte la tâche {{label}}"
+        },
+        "also": {
+          "prefix": "Aussi relié :",
+          "assets_one": "{{count}} actif (déploiements)",
+          "assets_other": "{{count}} actifs (déploiements)",
+          "interfaces_one": "{{count}} interface",
+          "interfaces_other": "{{count}} interfaces",
+          "documents_one": "{{count}} document",
+          "documents_other": "{{count}} documents"
+        },
+        "add": "Ajouter",
+        "link": "Lier",
+        "linkNamed": "Lier {{name}}",
+        "remove": "Délier {{name}}",
+        "suggestions_one": "{{count}} suggestion",
+        "suggestions_other": "{{count}} suggestions"
       },
       "untitled": "Application sans nom",
       "previous": "Application précédente",

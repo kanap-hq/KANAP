@@ -1073,8 +1073,6 @@
         "noChildApps": "Todavía no hay aplicaciones secundarias vinculadas.",
         "projects": "Proyectos",
         "tasks": "Tareas",
-        "selectContracts": "Seleccione contratos",
-        "selectProjects": "Seleccione proyectos",
         "searchTasks": "Buscar tareas",
         "relevantWebsites": "Sitios web relevantes",
         "addUrl": "Agregar URL",
@@ -1087,7 +1085,75 @@
         "selectFiles": "Seleccionar archivos",
         "uploadingFiles_one": "Subiendo {{count}} archivo…",
         "uploadingFiles_other": "Subiendo {{count}} archivos…",
-        "deleteAttachment": "¿Eliminar el adjunto «{{name}}»?"
+        "deleteAttachment": "¿Eliminar el adjunto «{{name}}»?",
+        "sections": {
+          "budgetLines": "Líneas presupuestarias",
+          "contracts": "Contratos",
+          "projects": "Proyectos",
+          "requests": "Solicitudes",
+          "tasks": "Tareas",
+          "related": "Relacionados"
+        },
+        "empty": {
+          "budgetLines": "Ninguna línea presupuestaria vinculada.",
+          "contracts": "Ningún contrato vinculado.",
+          "projects": "Ningún proyecto vinculado.",
+          "requests": "Ninguna solicitud vinculada.",
+          "tasks": "Ninguna tarea vinculada."
+        },
+        "columns": {
+          "ref": "Ref.",
+          "name": "Nombre",
+          "title": "Título",
+          "nature": "Tipo",
+          "supplier": "Proveedor",
+          "end": "Fin",
+          "yearlyAmount": "Importe anual",
+          "renewal": "Renovación",
+          "status": "Estado",
+          "plannedEnd": "Fin previsto",
+          "targetDelivery": "Entrega deseada",
+          "assignee": "Asignado",
+          "due": "Vencimiento",
+          "type": "Tipo",
+          "object": "Elemento",
+          "via": "Vía"
+        },
+        "renewal": {
+          "tacit": "Tácita",
+          "manual": "Manual"
+        },
+        "search": {
+          "contracts": "Buscar contratos",
+          "projects": "Buscar proyectos",
+          "requests": "Buscar solicitudes"
+        },
+        "types": {
+          "budget_line": "Línea presupuestaria",
+          "contract": "Contrato",
+          "project": "Proyecto"
+        },
+        "via": {
+          "same_supplier": "mismo proveedor",
+          "contract": "vía el contrato {{label}}",
+          "project": "vía el proyecto {{label}}",
+          "task": "contiene la tarea {{label}}"
+        },
+        "also": {
+          "prefix": "También relacionado:",
+          "assets_one": "{{count}} activo (despliegues)",
+          "assets_other": "{{count}} activos (despliegues)",
+          "interfaces_one": "{{count}} interfaz",
+          "interfaces_other": "{{count}} interfaces",
+          "documents_one": "{{count}} documento",
+          "documents_other": "{{count}} documentos"
+        },
+        "add": "Añadir",
+        "link": "Vincular",
+        "linkNamed": "Vincular {{name}}",
+        "remove": "Desvincular {{name}}",
+        "suggestions_one": "{{count}} sugerencia",
+        "suggestions_other": "{{count}} sugerencias"
       },
       "untitled": "Aplicación sin nombre",
       "previous": "Aplicación anterior",
