@@ -273,7 +273,7 @@ Les contributeurs peuvent être assignés à des équipes organisationnelles pou
 - Rendez-vous dans **Portefeuille > Paramètres** et cliquez sur l'onglet **Équipes**
 - Ajoutez, modifiez ou désactivez des équipes
 - Utilisez **Initialiser les valeurs par défaut** pour remplir avec les équipes standard
-- Les équipes avec des membres assignés ne peuvent pas être supprimées
+- Une équipe qui a des membres ou des sous-équipes ne peut pas être supprimée : déplacez-les d'abord vers une autre équipe, ou désactivez l'équipe. Les équipes intégrées ne peuvent pas être supprimées
 
 ---
 

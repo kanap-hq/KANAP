@@ -1,6 +1,6 @@
 # Contactos
 
-Los Contactos documentan las personas con las que trabaja -- gestores de cuenta de proveedores, ingenieros de soporte, consultores y otras partes interesadas externas. Vincule contactos a proveedores para crear un directorio de contactos de proveedores, y referencíelos desde aplicaciones y ubicaciones para información de soporte.
+Los Contactos documentan las personas con las que trabaja: gestores de cuenta de proveedores, ingenieros de soporte, consultores y otras partes interesadas externas. Vincule contactos a proveedores para crear un directorio de contactos de proveedores, y referencíelos desde aplicaciones y ubicaciones para información de soporte.
 
 ## Primeros pasos
 
@@ -45,7 +45,7 @@ La cuadrícula de Contactos proporciona un directorio buscable de todos los cont
 - **Nuevo**: Crear un nuevo contacto (requiere `contacts:manager`)
 - **Importar CSV**: Importación masiva de contactos (requiere `contacts:admin`)
 - **Exportar CSV**: Exportar a CSV (requiere `contacts:admin`)
-- **Eliminar seleccionados**: Eliminar los contactos seleccionados (requiere `contacts:admin`)
+- **Eliminar seleccionados**: Eliminar los contactos seleccionados (requiere `contacts:admin`). Se quitan de los proveedores, líneas presupuestarias, contratos, aplicaciones, activos, ubicaciones, proyectos y solicitudes que los mencionan; esos elementos se conservan
 
 ---
 
@@ -123,11 +123,10 @@ Gestione contactos de forma masiva usando CSV.
 
 **Campos obligatorios**: Correo electrónico
 
-**Campos opcionales**: Nombre, Apellido, Nombre del proveedor, Puesto de trabajo, Teléfono, Móvil, País, Activo
+**Campos opcionales**: `first_name`, `last_name`, `job_title`, `phone`, `mobile`, `country`, `notes`, `active`
 
 **Notas**:
-- Utilice codificación **UTF-8** y **puntos y coma** como separadores. Un archivo que Excel guardó como CSV simple (Windows-1252) también se importa
-- El proveedor se busca por nombre -- asegúrese de que el proveedor exista antes de importar
+- Consulte [Archivos CSV](csv-files.md) para la codificación, el separador y los dos pasos de importación
 
 ---
 
@@ -136,5 +135,5 @@ Gestione contactos de forma masiva usando CSV.
 - **Siempre establezca un proveedor**: Vincular contactos a proveedores los hace más fáciles de encontrar y gestionar.
 - **Establezca el tipo de contacto**: Una vez vinculado un proveedor, elija si el contacto es Comercial, Técnico, Soporte u Otro. Esto ayuda al consultar contactos desde el espacio de trabajo del proveedor.
 - **Use nomenclatura consistente**: Introduzca nombres en un formato consistente (p. ej., siempre "Nombre Apellido").
-- **Marque contactos inactivos**: Cuando alguien deja un proveedor, márquelo como inactivo en lugar de eliminarlo -- esto preserva el registro de auditoría.
+- **Marque contactos inactivos**: Cuando alguien deja un proveedor, márquelo como inactivo en lugar de eliminarlo. Esto preserva el registro de auditoría.
 - **Incluya puestos de trabajo**: Los puestos de trabajo ayudan a identificar el contacto adecuado para diferentes necesidades (ventas vs. soporte vs. gestión de cuenta).

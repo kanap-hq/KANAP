@@ -449,6 +449,7 @@ export default function ContractsPage() {
       width: 140,
       type: 'rightAligned',
       sortable: false,
+      filter: 'agNumberColumnFilter',
       valueGetter: (p) => (isPinned(p) ? '' : p.data?.linked_lines_count ?? 0),
       cellRenderer: linkCell,
     },
@@ -459,12 +460,20 @@ export default function ContractsPage() {
       ...statusColumnProps(t),
       cellRenderer: linkCell,
     },
-    { field: 'start_date', headerName: t('contracts.columns.start'), width: 120, defaultHidden: true, valueFormatter: (p) => formatShortDate(p.value, locale) },
+    { field: 'start_date', headerName: t('contracts.columns.start'), width: 120, defaultHidden: true, ...DATE_COLUMN_FILTER, valueFormatter: (p) => formatShortDate(p.value, locale) },
     { field: 'duration_months', headerName: t('contracts.columns.durationMonths'), width: 130, type: 'rightAligned', defaultHidden: true },
-    { field: 'auto_renewal', headerName: t('contracts.columns.autoRenewal'), width: 130, defaultHidden: true, valueFormatter: (p) => (isPinned(p) ? '' : p.value ? t('shared.yes') : t('shared.no')) },
+    {
+      field: 'auto_renewal',
+      headerName: t('contracts.columns.autoRenewal'),
+      width: 130,
+      defaultHidden: true,
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: { values: [{ value: 'true', label: t('shared.yes') }, { value: 'false', label: t('shared.no') }], searchable: false },
+      valueFormatter: (p) => (isPinned(p) ? '' : p.value ? t('shared.yes') : t('shared.no')) },
     { field: 'notice_period_months', headerName: t('contracts.columns.noticeMonths'), width: 120, type: 'rightAligned', defaultHidden: true },
-    { field: 'end_date', headerName: t('contracts.columns.end'), width: 120, defaultHidden: true, valueFormatter: (p) => formatShortDate(p.value, locale) },
-    { field: 'cancellation_deadline', headerName: t('contracts.columns.cancelBy'), width: 140, defaultHidden: true, valueFormatter: (p) => formatShortDate(p.value, locale) },
+    { field: 'end_date', headerName: t('contracts.columns.end'), width: 120, defaultHidden: true, ...DATE_COLUMN_FILTER, valueFormatter: (p) => formatShortDate(p.value, locale) },
+    { field: 'cancellation_deadline', headerName: t('contracts.columns.cancelBy'), width: 140, defaultHidden: true, ...DATE_COLUMN_FILTER, valueFormatter: (p) => formatShortDate(p.value, locale) },
     { field: 'billing_frequency', headerName: t('contracts.columns.billing'), width: 120, defaultHidden: true },
     { colId: 'latest_task_text', headerName: t('contracts.columns.task'), flex: 1, minWidth: 200, defaultHidden: true, valueGetter: (p) => {
       const t = p.data?.latest_task; if (!t) return ''; const s = t.status || ''; const d = (t.description || '').toString(); const short = d.length > 40 ? `${d.slice(0,40)}…` : d; return s ? `${s}: ${short}` : short;
@@ -555,6 +564,7 @@ export default function ContractsPage() {
           itemLabels={{
             toDelete: (count) => t('contracts.delete.toDelete', { count }),
             kept: (count) => t('contracts.delete.kept', { count }),
+            deleted: (count) => t('contracts.delete.deleted', { count }),
           }}
         />
       )}
@@ -638,9 +648,9 @@ export default function ContractsPage() {
         }}
       />
 
-      <CsvExportDialog listRequest={listRequest} entity="contracts" open={exportOpen} onClose={() => setExportOpen(false)} endpoint="/contracts" title={t("contracts.exportTitle")} />
+      <CsvExportDialog listRequest={listRequest} entity="contracts" open={exportOpen} onClose={() => setExportOpen(false)} endpoint="/contracts" title={t("contracts.exportTitle")} flexibleFormat />
       <ContractSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} onSaved={() => setRefreshKey(k => k + 1)} />
-      <CsvImportDialog open={importOpen} onClose={() => setImportOpen(false)} endpoint="/contracts" title={t("contracts.importTitle")} onImported={() => setRefreshKey(k => k + 1)} />
+      <CsvImportDialog open={importOpen} onClose={() => setImportOpen(false)} endpoint="/contracts" title={t("contracts.importTitle")} onImported={() => setRefreshKey(k => k + 1)} flexibleFormat />
     </>
   );
 }

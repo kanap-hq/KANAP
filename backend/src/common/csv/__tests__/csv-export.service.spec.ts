@@ -75,6 +75,7 @@ async function testTemplateExportReturnsHeadersOnly() {
   const result = await service.export(config, [], {
     manager: createMockManager({}),
     tenantId: 't1',
+    language: 'fr',
     scope: 'template',
   });
 
@@ -97,6 +98,7 @@ async function testDataExportIncludesRows() {
   const result = await service.export(config, entities, {
     manager: createMockManager({}),
     tenantId: 't1',
+    language: 'fr',
     scope: 'data',
   });
 
@@ -120,6 +122,7 @@ async function testDateFormatting() {
   const result = await service.export(config, entities, {
     manager: createMockManager({}),
     tenantId: 't1',
+    language: 'en',
   });
 
   assert.ok(result.content.includes('2024-06-15'));
@@ -138,6 +141,7 @@ async function testArrayExpansionToNumberedColumns() {
   const result = await service.export(config, entities, {
     manager: createMockManager({}),
     tenantId: 't1',
+    language: 'fr',
   });
 
   // Check headers include numbered columns
@@ -158,6 +162,7 @@ async function testArrayTruncationWarning() {
   const result = await service.export(config, entities, {
     manager: createMockManager({}),
     tenantId: 't1',
+    language: 'fr',
   });
 
   assert.equal(result.warnings.length, 1);
@@ -176,6 +181,7 @@ async function testCommaSeparatedArrays() {
   const result = await service.export(config, entities, {
     manager: createMockManager({}),
     tenantId: 't1',
+    language: 'fr',
   });
 
   assert.ok(result.content.includes('bug, urgent, backend'));
@@ -193,6 +199,7 @@ async function testFieldSelection() {
   const result = await service.export(config, entities, {
     manager: createMockManager({}),
     tenantId: 't1',
+    language: 'fr',
     fields: ['id', 'title'],
   });
 
@@ -216,6 +223,7 @@ async function testNullValuesExportAsEmpty() {
   const result = await service.export(config, entities, {
     manager: createMockManager({}),
     tenantId: 't1',
+    language: 'fr',
   });
 
   // Parse the CSV to check empty values
@@ -236,6 +244,7 @@ async function testBOMIsPresent() {
   const result = await service.export(config, [], {
     manager: createMockManager({}),
     tenantId: 't1',
+    language: 'fr',
     scope: 'template',
   });
 
@@ -253,6 +262,7 @@ async function testFormulaLikeValuesAreNeutralized() {
   ], {
     manager: createMockManager({}),
     tenantId: 't1',
+    language: 'fr',
   });
 
   assert.ok(result.content.includes('\'=HYPERLINK'));
@@ -268,10 +278,55 @@ function testDenormalizeReversesNeutralize() {
   assert.equal(denormalizeCsvFormulaValue("'quoted"), "'quoted");
 }
 
+
+/**
+ * The file follows the screen language, as every file of the shared layer: the separator, the
+ * day, the decimal mark and yes or no. The headers stay the same in every language.
+ */
+async function testExportFollowsTheLanguage() {
+  const service = new CsvExportService(new CsvResolverService());
+  const config: CsvEntityConfig = {
+    entityName: 'asset',
+    tableName: 'assets',
+    displayName: 'Assets',
+    upsertKey: ['name'],
+    fields: [
+      { csvColumn: 'name', entityProperty: 'name', type: CsvFieldType.STRING },
+      { csvColumn: 'end_of_support', entityProperty: 'end_of_support', type: CsvFieldType.DATE },
+      { csvColumn: 'cost', entityProperty: 'cost', type: CsvFieldType.NUMBER },
+      { csvColumn: 'is_cluster', entityProperty: 'is_cluster', type: CsvFieldType.BOOLEAN },
+      { csvColumn: 'tags', entityProperty: 'tags', type: CsvFieldType.ARRAY },
+    ],
+  };
+  const rows = [
+    { id: 'a1', name: 'srv-01', end_of_support: '2024-06-15', cost: 1234.5, is_cluster: true, tags: ['db', 'prod'] },
+    { id: 'a2', name: 'srv-02', end_of_support: null, cost: null, is_cluster: false, tags: [] },
+  ];
+  const file = async (language: 'en' | 'fr' | 'de' | 'es', scope: 'data' | 'template' = 'data') =>
+    (await service.export(config, rows, { manager: createMockManager({}), tenantId: 't1', scope, language })).content
+      .replace(/^\uFEFF/, '').split('\n');
+
+  const fr = await file('fr');
+  assert.equal(fr[0], 'name;end_of_support;cost;is_cluster;tags');
+  assert.equal(fr[1], 'srv-01;15/06/2024;1234,5;oui;db, prod');
+  assert.equal(fr[2], 'srv-02;;;non;');
+  const de = await file('de');
+  assert.equal(de[1], 'srv-01;15.06.2024;1234,5;ja;db, prod');
+  const es = await file('es');
+  assert.equal(es[1], 'srv-01;15/06/2024;1234,5;sí;db, prod');
+  const en = await file('en');
+  assert.equal(en[0], 'name,end_of_support,cost,is_cluster,tags');
+  assert.equal(en[1], 'srv-01,2024-06-15,1234.5,yes,"db, prod"');
+  assert.equal(en[2], 'srv-02,,,no,');
+  assert.equal((await file('en', 'template'))[0], 'name,end_of_support,cost,is_cluster,tags');
+  assert.equal((await file('fr', 'template'))[0], 'name;end_of_support;cost;is_cluster;tags');
+}
+
 // ===== Run tests =====
 
 (async () => {
   await testTemplateExportReturnsHeadersOnly();
+  await testExportFollowsTheLanguage();
   await testDataExportIncludesRows();
   await testDateFormatting();
   await testArrayExpansionToNumberedColumns();

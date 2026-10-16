@@ -284,18 +284,18 @@ export default function LocationContactsTab({ locationId, canManage }: Props) {
       {error && <Alert severity="error">{error}</Alert>}
 
       <Section
-        title="Internal contacts"
-        addLabel="+ Add internal contact"
+        title={t('it:workspace.location.contacts.internalTitle')}
+        addLabel={t('it:workspace.location.contacts.addInternal')}
         canManage={canManage}
         onAdd={addInternalSlot}
-        empty={internal.length === 0 ? 'No internal contacts yet.' : null}
+        empty={internal.length === 0 ? t('it:workspace.location.contacts.noInternal') : null}
       >
         {internal.length > 0 && (
           <Box component="table" sx={tableSx}>
             <Box component="thead">
               <Box component="tr">
-                <Box component="th" sx={{ width: '40%' }}>User</Box>
-                <Box component="th">Role</Box>
+                <Box component="th" sx={{ width: '40%' }}>{t('it:common.user')}</Box>
+                <Box component="th">{t('it:common.role')}</Box>
                 {canManage && <Box component="th" sx={{ width: 40 }} />}
               </Box>
             </Box>
@@ -316,7 +316,7 @@ export default function LocationContactsTab({ locationId, canManage }: Props) {
           <Box sx={{ mt: 1 }}>
             <MetadataUserPicker
               value={null}
-              placeholder="Pick an internal user"
+              placeholder={t('it:workspace.location.contacts.pickUser')}
               onChange={(userId) => {
                 setInternalAdding(false);
                 void handleAddInternal(userId);
@@ -327,18 +327,18 @@ export default function LocationContactsTab({ locationId, canManage }: Props) {
       </Section>
 
       <Section
-        title="External contacts"
-        addLabel="+ Add external contact"
+        title={t('it:workspace.location.contacts.externalTitle')}
+        addLabel={t('it:workspace.location.contacts.addExternal')}
         canManage={canManage}
         onAdd={addExternalSlot}
-        empty={external.length === 0 ? 'No external contacts yet.' : null}
+        empty={external.length === 0 ? t('it:workspace.location.contacts.noExternal') : null}
       >
         {external.length > 0 && (
           <Box component="table" sx={tableSx}>
             <Box component="thead">
               <Box component="tr">
-                <Box component="th" sx={{ width: '40%' }}>Contact</Box>
-                <Box component="th">Role</Box>
+                <Box component="th" sx={{ width: '40%' }}>{t('it:workspace.location.contacts.contact')}</Box>
+                <Box component="th">{t('it:common.role')}</Box>
                 {canManage && <Box component="th" sx={{ width: 40 }} />}
               </Box>
             </Box>
@@ -369,17 +369,17 @@ export default function LocationContactsTab({ locationId, canManage }: Props) {
       </Section>
 
       <Section
-        title="Relevant websites"
-        addLabel="+ Add website"
+        title={t('it:workspace.location.contacts.websitesTitle')}
+        addLabel={t('it:workspace.location.contacts.addWebsite')}
         canManage={canManage}
         onAdd={addLinkDraft}
-        empty={links.length === 0 && linkDrafts.length === 0 ? 'No websites linked yet.' : null}
+        empty={links.length === 0 && linkDrafts.length === 0 ? t('it:workspace.location.contacts.noWebsites') : null}
       >
         {(links.length > 0 || linkDrafts.length > 0) && (
           <Box component="table" sx={tableSx}>
             <Box component="thead">
               <Box component="tr">
-                <Box component="th" sx={{ width: '35%' }}>Description</Box>
+                <Box component="th" sx={{ width: '35%' }}>{t('it:workspace.location.contacts.description')}</Box>
                 <Box component="th">URL</Box>
                 <Box component="th" sx={{ width: 72 }} />
               </Box>
@@ -400,7 +400,7 @@ export default function LocationContactsTab({ locationId, canManage }: Props) {
                     <TextField
                       value={draft.description}
                       onChange={(e) => updateLinkDraft(draft.draftId, { description: e.target.value })}
-                      placeholder="Description"
+                      placeholder={t('it:workspace.location.contacts.description')}
                       variant="standard"
                       fullWidth
                       sx={inputSx}
@@ -419,7 +419,7 @@ export default function LocationContactsTab({ locationId, canManage }: Props) {
                     />
                   </Box>
                   <Box component="td">
-                    <IconButton size="small" onClick={() => removeLinkDraft(draft.draftId)} aria-label="Discard">
+                    <IconButton size="small" onClick={() => removeLinkDraft(draft.draftId)} aria-label={t('common:buttons.discard')}>
                       <DeleteIcon fontSize="small" />
                     </IconButton>
                   </Box>
@@ -491,6 +491,7 @@ function InternalRow({
   onRoleChange: (next: string) => void;
   onRemove: () => void;
 }) {
+  const { t } = useTranslation(['it', 'common']);
   const [role, setRole] = React.useState(row.role || '');
   React.useEffect(() => { setRole(row.role || ''); }, [row.role]);
 
@@ -502,7 +503,7 @@ function InternalRow({
           value={role}
           onChange={(e) => setRole(e.target.value)}
           onBlur={() => onRoleChange(role)}
-          placeholder="e.g., Ops lead"
+          placeholder={t('it:workspace.location.contacts.internalRolePlaceholder')}
           variant="standard"
           fullWidth
           disabled={!canManage}
@@ -511,7 +512,7 @@ function InternalRow({
       </Box>
       {canManage && (
         <Box component="td">
-          <IconButton size="small" onClick={onRemove} aria-label="Remove contact">
+          <IconButton size="small" onClick={onRemove} aria-label={t('common:contacts.removeContact')}>
             <DeleteIcon fontSize="small" />
           </IconButton>
         </Box>
@@ -531,6 +532,7 @@ function ExternalRow({
   onRoleChange: (next: string) => void;
   onRemove: () => void;
 }) {
+  const { t } = useTranslation(['it', 'common']);
   const [role, setRole] = React.useState(row.role || '');
   React.useEffect(() => { setRole(row.role || ''); }, [row.role]);
 
@@ -542,7 +544,7 @@ function ExternalRow({
           value={role}
           onChange={(e) => setRole(e.target.value)}
           onBlur={() => onRoleChange(role)}
-          placeholder="e.g., Account manager"
+          placeholder={t('it:workspace.location.contacts.externalRolePlaceholder')}
           variant="standard"
           fullWidth
           disabled={!canManage}
@@ -551,7 +553,7 @@ function ExternalRow({
       </Box>
       {canManage && (
         <Box component="td">
-          <IconButton size="small" onClick={onRemove} aria-label="Remove contact">
+          <IconButton size="small" onClick={onRemove} aria-label={t('common:contacts.removeContact')}>
             <DeleteIcon fontSize="small" />
           </IconButton>
         </Box>
@@ -571,6 +573,7 @@ function LinkRowComponent({
   onSave: (patch: Partial<{ description: string | null; url: string }>) => void;
   onRemove: () => void;
 }) {
+  const { t } = useTranslation(['it', 'common']);
   const [description, setDescription] = React.useState(row.description || '');
   const [url, setUrl] = React.useState(row.url);
   React.useEffect(() => { setDescription(row.description || ''); }, [row.description]);
@@ -586,7 +589,7 @@ function LinkRowComponent({
             const next = description || null;
             if (next !== (row.description || null)) onSave({ description: next });
           }}
-          placeholder="Description"
+          placeholder={t('it:workspace.location.contacts.description')}
           variant="standard"
           fullWidth
           disabled={!canManage}
@@ -613,12 +616,12 @@ function LinkRowComponent({
             size="small"
             disabled={!row.url}
             onClick={() => row.url && window.open(row.url, '_blank', 'noopener,noreferrer')}
-            aria-label="Open link"
+            aria-label={t('it:workspace.location.contacts.openLink')}
           >
             <OpenInNewIcon fontSize="small" />
           </IconButton>
           {canManage && (
-            <IconButton size="small" onClick={onRemove} aria-label="Remove link">
+            <IconButton size="small" onClick={onRemove} aria-label={t('common:markdownLink.removeLink')}>
               <DeleteIcon fontSize="small" />
             </IconButton>
           )}

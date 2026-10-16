@@ -32,7 +32,6 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LocationSelect from '../../components/fields/LocationSelect';
 import { useCountryName } from '../../i18n/countries';
-import { ymdToEu } from '../../lib/date-eu';
 import AddIcon from '@mui/icons-material/Add';
 import ApplicationSelect from '../../components/fields/ApplicationSelect';
 import OptionWithHint from '../../components/fields/OptionWithHint';
@@ -50,6 +49,8 @@ import { useLocale } from '../../i18n/useLocale';
 
 import { useTranslation } from 'react-i18next';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import { recordRefusal } from '../../utils/deleteCheck';
+import { deleteFailureReason } from '../../utils/deleteRefusal';
 import { isValidHostname, sanitizeHostname } from '../../utils/hostname';
 import { KanapDialog, PropertyGroup, PropertyRow, useKanapDialogs } from '../../components/design';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
@@ -1248,12 +1249,26 @@ export default function AssetWorkspacePage() {
           size="small"
           onClick={async () => {
             if (!id) return;
+            // Asked first: an asset still in use gets the refusal and why, with Close only.
+            const refusal = await recordRefusal('/assets', id);
+            if (refusal) {
+              await dialogs.alert({
+                title: t('common:delete.recordTitle', { name: data?.name || name }),
+                message: deleteFailureReason(refusal, t, locale),
+              });
+              return;
+            }
             if (!(await dialogs.confirm({
               message: t('workspace.asset.deleteConfirm', { name: data?.name || name }),
               confirmLabel: t('common:buttons.delete'),
               intent: 'danger',
             }))) return;
-            await api.delete(`/assets/${id}`);
+            try {
+              await api.delete(`/assets/${id}`);
+            } catch (e) {
+              setError(getApiErrorMessage(e, t, t('common:delete.failedGeneric')));
+              return;
+            }
             await handleClose();
           }}
         >
@@ -1722,7 +1737,7 @@ export default function AssetWorkspacePage() {
                             </TableCell>
                             <TableCell>{environmentLabel(assignment.environment)}</TableCell>
                             <TableCell>{labelFor('serverRole', assignment.role) || assignment.role}</TableCell>
-                            <TableCell>{assignment.since_date ? ymdToEu(assignment.since_date) : '-'}</TableCell>
+                            <TableCell>{assignment.since_date ? formatShortDate(assignment.since_date, locale, { year: 'always' }) : '-'}</TableCell>
                             <TableCell>{assignment.notes || '-'}</TableCell>
                             <TableCell align="right">
                               <Tooltip title={t('workspace.asset.assignments.editAssignment')}>
@@ -2063,8 +2078,8 @@ export default function AssetWorkspacePage() {
                         if (isCluster) return t('workspace.asset.technical.osClusterHint');
                         const sel = operatingSystemOptions.find((opt) => opt.value === operatingSystem);
                         if (!sel) return t('workspace.asset.technical.osChooseHint');
-                        const ss = sel.standardSupportEnd ? t('workspace.asset.technical.standardSupportEnds', { date: ymdToEu(sel.standardSupportEnd) }) : '';
-                        const es = sel.extendedSupportEnd ? t('workspace.asset.technical.extendedSupportEnds', { date: ymdToEu(sel.extendedSupportEnd) }) : '';
+                        const ss = sel.standardSupportEnd ? t('workspace.asset.technical.standardSupportEnds', { date: formatShortDate(sel.standardSupportEnd, locale, { year: 'always' }) }) : '';
+                        const es = sel.extendedSupportEnd ? t('workspace.asset.technical.extendedSupportEnds', { date: formatShortDate(sel.extendedSupportEnd, locale, { year: 'always' }) }) : '';
                         return [ss, es].filter(Boolean).join(' / ');
                       })()}
                       size="small"

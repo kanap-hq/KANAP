@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { Box, IconButton, Tooltip } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
+import { useTranslation } from 'react-i18next';
 import ContentCopyIcon from '@mui/icons-material/ContentCopyOutlined';
 import CheckIcon from '@mui/icons-material/Check';
 import ReactMarkdown from 'react-markdown';
@@ -57,6 +58,7 @@ function extractTextFromNode(node: React.ReactNode): string {
 }
 
 function CodeBlock({ children, ...rest }: { children?: React.ReactNode } & React.HTMLAttributes<HTMLPreElement>) {
+  const { t } = useTranslation('common');
   const [copied, setCopied] = useState(false);
   const text = extractTextFromNode(children);
 
@@ -83,12 +85,12 @@ function CodeBlock({ children, ...rest }: { children?: React.ReactNode } & React
         {children}
       </Box>
       {text && (
-        <Tooltip title={copied ? 'Copied' : 'Copy code'} placement="left">
+        <Tooltip title={copied ? t('markdownContent.copied') : t('markdownContent.copyCode')} placement="left">
           <IconButton
             className="kanap-code-copy"
             size="small"
             onClick={handleCopy}
-            aria-label={copied ? 'Copied' : 'Copy code'}
+            aria-label={copied ? t('markdownContent.copied') : t('markdownContent.copyCode')}
             sx={(theme) => ({
               position: 'absolute',
               top: 6,

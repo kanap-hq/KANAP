@@ -202,14 +202,14 @@ export default function RequestsPage() {
         <FormControlLabel
           value="my"
           control={<Radio size="small" />}
-          label={t('scope.my', { entity: t('requests.entityName') })}
+          label={t('scope.requests.my')}
         />
         <Tooltip title={hasTeam ? '' : t('scope.teamUnavailable')}>
           <span>
             <FormControlLabel
               value="team"
               control={<Radio size="small" />}
-              label={t('scope.myTeam', { entity: t('requests.entityName') })}
+              label={t('scope.requests.myTeam')}
               disabled={!hasTeam}
             />
           </span>
@@ -217,7 +217,7 @@ export default function RequestsPage() {
         <FormControlLabel
           value="all"
           control={<Radio size="small" />}
-          label={t('scope.all', { entity: t('requests.entityName') })}
+          label={t('scope.requests.all')}
         />
       </RadioGroup>
     </Stack>

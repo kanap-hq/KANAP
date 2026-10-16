@@ -63,7 +63,6 @@ function applicationsService(existing: Record<string, unknown>) {
     null as any,
     settings as any,
     null as any,
-    null as any,
   );
   return { service, manager };
 }

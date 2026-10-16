@@ -20,7 +20,7 @@ import {
   normalizeStatus,
 } from '../../constants/status';
 import { drawerFieldValueSx, longFormSurfaceFieldSx } from '../../theme/formSx';
-import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import { getApiErrorMessage, isDuplicateError } from '../../utils/apiErrorMessage';
 import { getDotColor } from '../../utils/statusColors';
 import { useCoaList } from '../coa/useCoaList';
 import { CoaField, CountryField, CurrencyField, defaultCoaFor } from './CompanyFields';
@@ -130,7 +130,6 @@ export default function CompanyWorkspacePage() {
   });
 
   const [errors, setErrors] = React.useState<FieldErrors>({});
-  const [pageError, setPageError] = React.useState<string | null>(null);
   // Autosave never blocks the fields: writes queue one after the other, so a response never
   // overwrites a newer one, and results for a record the user has left are dropped.
   const chainRef = React.useRef<Promise<unknown>>(Promise.resolve());
@@ -139,7 +138,6 @@ export default function CompanyWorkspacePage() {
 
   React.useEffect(() => {
     setErrors({});
-    setPageError(null);
   }, [id]);
 
   const listContext = React.useMemo(() => {
@@ -169,10 +167,11 @@ export default function CompanyWorkspacePage() {
           void queryClient.invalidateQueries({ queryKey: ['companies'], predicate: (q) => q.queryKey[1] !== recordId });
         } catch (e) {
           if (currentIdRef.current !== recordId) return;
-          const message = getApiErrorMessage(e, t, t('companies.messages.saveFailed'));
           const target = companyRefusalField(e) ?? field;
-          if (target === 'name') setPageError(message);
-          else setErrors((prev) => ({ ...prev, [target]: message }));
+          const message = target === 'name' && isDuplicateError(e)
+            ? t('companies.messages.nameTaken')
+            : getApiErrorMessage(e, t, t('companies.messages.saveFailed'));
+          setErrors((prev) => ({ ...prev, [target]: message }));
         }
       };
       const result = chainRef.current.then(run, run);
@@ -308,6 +307,8 @@ export default function CompanyWorkspacePage() {
             if (disabledAt === data.disabled_at) return;
             void patch({ status: deriveStatusFromDisabledAt(disabledAt), disabled_at: disabledAt }, 'disabled_at');
           }}
+          // Disable now: the status alone, the server sets the end of validity from its own clock.
+          onDisableNow={() => void patch({ status: STATUS_DISABLED }, 'disabled_at')}
           disabled={disabled}
           disabledAtError={!!errors.disabled_at}
           disabledAtHelperText={errors.disabled_at}
@@ -331,9 +332,9 @@ export default function CompanyWorkspacePage() {
 
   return (
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      {(pageError || loadError) && (
-        <Alert severity="error" sx={{ mx: 2, mt: 1 }} onClose={pageError ? () => setPageError(null) : undefined}>
-          {pageError ?? t('companies.loadError')}
+      {loadError && (
+        <Alert severity="error" sx={{ mx: 2, mt: 1 }}>
+          {t('companies.loadError')}
         </Alert>
       )}
       <PortfolioDetailWorkspaceShell
@@ -345,6 +346,7 @@ export default function CompanyWorkspacePage() {
         onBack={handleClose}
         title={data?.name ?? ''}
         titleFallback={t('companies.companyFallback')}
+        titleError={errors.name}
         canEditTitle={canEdit && !!data}
         onTitleSave={(next) => {
           if (data && next !== data.name) void patch({ name: next }, 'name');
@@ -566,8 +568,9 @@ function CompanyCreate({
       onCreated(res.data.id);
     } catch (e) {
       const message = getApiErrorMessage(e, t, t('companies.messages.createFailed'));
-      const field = companyRefusalField(e);
-      if (field && field !== 'disabled_at') setErrors({ [field]: message });
+      const field = isDuplicateError(e) ? 'name' : companyRefusalField(e);
+      if (field === 'name' && isDuplicateError(e)) setErrors({ name: t('companies.messages.nameTaken') });
+      else if (field && field !== 'disabled_at') setErrors({ [field]: message });
       else setServerError(message);
     } finally {
       setSubmitting(false);

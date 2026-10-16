@@ -311,6 +311,8 @@
       "skipped": "Ignorée",
       "failed": "Échec"
     },
+    "titleWithSummary": "{{title}} : {{summary}}",
+    "statusWithReason": "{{status}} ({{reason}})",
     "checkNarrative": "Examiné {{listed}}, démarré {{enqueued}}, {{deduped}} déjà vus ignorés.",
     "loadMore": "Afficher plus",
     "shown": "{{shown}} affichées",

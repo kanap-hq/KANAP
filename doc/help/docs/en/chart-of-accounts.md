@@ -11,7 +11,7 @@ Without CoAs, all accounts are available to all companies, making it easy to acc
   - **Simplifying selection**: Account dropdowns show only relevant accounts, not your entire catalog
   - **Enabling templates**: Load pre-configured account sets from country-specific templates
 
-**Example**: Your French subsidiary uses the French PCG (Plan Comptable General), while your UK entity uses UK GAAP. Create two CoAs — one for each standard — and assign companies accordingly. When recording spend, users automatically see the correct accounts.
+**Example**: Your French subsidiary uses the French PCG (Plan Comptable General), while your UK entity uses UK GAAP. Create two CoAs (one for each standard) and assign companies accordingly. When recording spend, users automatically see the correct accounts.
 
 ## The relationship: CoA -> Company -> Accounts
 
@@ -107,7 +107,7 @@ The grid shows accounts for the selected CoA only.
 - **New account** (`accounts:manager`): Opens a new account form with the selected CoA already chosen.
 - **Import CSV** (`accounts:admin`): Import accounts into the selected CoA.
 - **Export CSV** (`accounts:admin`): Export accounts from the selected CoA.
-- **Delete selected** (`accounts:admin`): Delete selected account rows. Select rows using the checkbox column (visible to admins).
+- **Delete selected** (`accounts:admin`): Delete selected account rows. Select rows using the checkbox column (visible to admins). An account used by budget lines cannot be deleted: disable it instead. Before anything is deleted, the confirmation lists the accounts kept, with the reason.
 
 All row cells are clickable links to the account workspace. You can right-click or Ctrl+click to open in a new tab.
 
@@ -200,7 +200,7 @@ Templates are standard account sets managed by platform administrators. They can
 
 KANAP ships with **20 pre-configured templates** covering 10 accounting standards. Each standard comes in two versions:
 
-- **v1.0 (Simple)**: A focused set of ~20 IT-relevant accounts — software licenses, cloud hosting, cybersecurity, telecom, consulting, staff costs, training, and more. Best for organizations that want a lean starting point.
+- **v1.0 (Simple)**: A focused set of ~20 IT-relevant accounts: software licenses, cloud hosting, cybersecurity, telecom, consulting, staff costs, training, and more. Best for organizations that want a lean starting point.
 - **v2.0 (Detailed)**: Everything in v1.0 plus additional granular sub-accounts (~30 accounts). Adds breakdowns like Purchased vs. Internally Developed Software, Network Equipment, SaaS vs. Perpetual Licenses, Mobile Communications, IT Bonuses, IT Insurance, and more. Best for organizations that need finer cost tracking.
 
 Both versions use **real account numbers from each country's official accounting standard** and include native names in the local language. Every account also carries its **Used for** setting: asset accounts are for CAPEX, expense accounts are for OPEX, and depreciation and impairment accounts are for both.
@@ -225,11 +225,11 @@ Both versions use **real account numbers from each country's official accounting
 
 ### IFRS consolidation built in
 
-All templates — regardless of country — map every account to one of **14 standardized IFRS consolidation accounts**. This means group-level reporting works out of the box, even across different local standards.
+All templates, regardless of country, map every account to one of **14 standardized IFRS consolidation accounts**. This means group-level reporting works out of the box, even across different local standards.
 
 | # | Consolidation Account | What it covers |
 |---|-----------------------|----------------|
-| 1000 | Tangible Assets (CAPEX) | Physical IT equipment — servers, workstations, network gear |
+| 1000 | Tangible Assets (CAPEX) | Physical IT equipment: servers, workstations, network gear |
 | 1100 | Intangible Assets (CAPEX) | Capitalized software and development costs |
 | 1200 | Depreciation & Amortization | Depreciation of hardware and software |
 | 1300 | Impairments & Write-offs | Asset impairments and write-downs |
@@ -283,7 +283,7 @@ Each row has a **⋯** menu with only the actions that apply to that chart. The 
 - **Make country default** / **Stop being country default** (`accounts:manager`): for one-country charts.
 - **Make default for other countries** / **Stop being default for other countries** (`accounts:manager`): for all-countries charts. Making it the default also assigns the chart to companies that have no chart.
 - **Make consolidation chart** / **Stop being consolidation chart** (`accounts:manager`): for any chart. See [Change the consolidation chart](#change-the-consolidation-chart).
-- **Delete** (`accounts:admin`): Delete the chart together with its accounts. If the chart has accounts, a confirmation tells you how many are deleted. If it is the consolidation chart, the confirmation says that group reporting will no longer have a reference chart. Deletion is refused while companies use the chart or OPEX/CAPEX lines use its accounts, and the dialog shows the reason.
+- **Delete** (`accounts:admin`): Delete the chart together with its accounts. If the chart has accounts, a confirmation tells you how many are deleted. If it is the consolidation chart, the confirmation says that group reporting will no longer have a reference chart. Deletion is refused while companies use the chart or OPEX/CAPEX lines use its accounts. The dialog shows the reason before any confirmation.
 
 The roles change as soon as you pick an action. The table updates on the spot.
 
@@ -401,7 +401,7 @@ This dual view lets you satisfy both local compliance requirements and group rep
 
 **How they work**:
   - Companies WITHOUT a CoA can use legacy accounts
-  - Companies WITH a CoA cannot use legacy accounts — they're filtered out automatically
+  - Companies WITH a CoA cannot use legacy accounts. They're filtered out automatically
   - Legacy accounts can still be migrated via CSV (`coa_code`) and reassignment workflows
 
 **Migration path**:
@@ -504,7 +504,7 @@ account_number;account_name;native_name;description;consolidation_account_number
 
 ## Tips
 
-  - **Start with templates**: KANAP ships with templates for 9 countries plus IFRS. Load one instead of building from scratch — you get proper account numbers, native names, and IFRS consolidation mappings out of the box. Start with v1.0 (Simple) if unsure; upgrade to v2.0 (Detailed) if you need more granularity.
+  - **Start with templates**: KANAP ships with templates for 9 countries plus IFRS. Load one instead of building from scratch: you get proper account numbers, native names, and IFRS consolidation mappings out of the box. Start with v1.0 (Simple) if unsure; upgrade to v2.0 (Detailed) if you need more granularity.
   - **One default per country**: Make one CoA the default for each country, so new companies start with the right account structure.
   - **Native names for compliance**: Use the **Native name (local language)** field if local regulations require accounts in the local language. Enable the **Native name** column in the grid to see both names at a glance.
   - **Migrate gradually**: You don't have to convert everything at once. Companies without CoAs continue to work with legacy accounts.
@@ -526,7 +526,7 @@ You have subsidiaries in France, UK, and Germany, each following local accountin
   2. Make each one the default for its country (**Manage charts**, then **Make country default**)
   3. Assign companies to their respective CoAs
   4. New companies automatically get the right CoA; account selection is filtered accordingly
-  5. Consolidation mappings are already in place — group reports work immediately
+  5. Consolidation mappings are already in place: group reports work immediately
 
 ### Scenario 2: Migrating from legacy to CoA
 
@@ -557,9 +557,9 @@ Your group has subsidiaries in France, UK, and Germany. Each country uses its lo
 
 **Setup**:
   1. Load country templates with built-in IFRS consolidation:
-      - **FR-PCG v1.0** — French Plan Comptable General (20 accounts)
-      - **GB-UKGAAP v1.0** — UK GAAP (20 accounts)
-      - **DE-SKR03 v1.0** — Standardkontenrahmen 03 (20 accounts)
+      - **FR-PCG v1.0**: French Plan Comptable General (20 accounts)
+      - **GB-UKGAAP v1.0**: UK GAAP (20 accounts)
+      - **DE-SKR03 v1.0**: Standardkontenrahmen 03 (20 accounts)
 
   2. Every account in these templates already maps to one of the 14 IFRS consolidation accounts. For example:
       - FR-PCG `205000` (Logiciels informatiques) -> IFRS `1100` (Intangible Assets)
@@ -573,7 +573,7 @@ Your group has subsidiaries in France, UK, and Germany. Each country uses its lo
   - UK users work with UK GAAP accounts
   - German users work with SKR03 accounts and German native names
   - Group finance runs reports by consolidation account to see total spend in IFRS categories
-  - No manual mapping work needed — the templates handle it all
+  - No manual mapping work needed: the templates handle it all
   - Both local statutory reporting and group IFRS reporting work seamlessly from the same data
 
 ## Frequently asked questions

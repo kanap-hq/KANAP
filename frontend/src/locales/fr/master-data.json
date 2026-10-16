@@ -174,6 +174,7 @@
       "saveFailed": "Échec de l'enregistrement de la société.",
       "createFailed": "Échec de la création de la société.",
       "nameRequired": "Saisissez un nom.",
+      "nameTaken": "Une autre société porte déjà ce nom.",
       "countryRequired": "Choisissez un pays.",
       "currencyRequired": "Choisissez une devise de base.",
       "cityRequired": "Saisissez une ville.",
@@ -185,7 +186,9 @@
       "toDelete_one": "{{count}} société sera supprimée :",
       "toDelete_other": "{{count}} sociétés seront supprimées :",
       "kept_one": "{{count}} société est encore utilisée et est conservée. Désactivez-la plutôt :",
-      "kept_other": "{{count}} sociétés sont encore utilisées et sont conservées. Désactivez-les plutôt :"
+      "kept_other": "{{count}} sociétés sont encore utilisées et sont conservées. Désactivez-les plutôt :",
+      "deleted_one": "{{count}} société supprimée",
+      "deleted_other": "{{count}} sociétés supprimées"
     }
   },
   "departments": {
@@ -221,8 +224,17 @@
       "saveFailed": "Échec de l'enregistrement du département.",
       "createFailed": "Échec de la création du département.",
       "nameRequired": "Saisissez un nom.",
+      "nameTaken": "Un autre département de cette société porte déjà ce nom.",
       "companyRequired": "Choisissez une société.",
       "headcountInvalid": "Saisissez un nombre entier, 0 ou plus."
+    },
+    "delete": {
+      "toDelete_one": "{{count}} département sera supprimé :",
+      "toDelete_other": "{{count}} départements seront supprimés :",
+      "kept_one": "{{count}} département ne peut pas être supprimé et est conservé :",
+      "kept_other": "{{count}} départements ne peuvent pas être supprimés et sont conservés :",
+      "deleted_one": "{{count}} département supprimé",
+      "deleted_other": "{{count}} départements supprimés"
     }
   },
   "costCenters": {
@@ -291,6 +303,14 @@
       "nameRequired": "Saisissez un nom.",
       "companyRequired": "Choisissez une société.",
       "chooseCompany": "Choisissez la société pour faire de ce groupe un centre de coûts."
+    },
+    "delete": {
+      "toDelete_one": "{{count}} centre de coûts sera supprimé :",
+      "toDelete_other": "{{count}} centres de coûts seront supprimés :",
+      "kept_one": "{{count}} centre de coûts ne peut pas être supprimé et est conservé :",
+      "kept_other": "{{count}} centres de coûts ne peuvent pas être supprimés et sont conservés :",
+      "deleted_one": "{{count}} centre de coûts supprimé",
+      "deleted_other": "{{count}} centres de coûts supprimés"
     }
   },
   "workingDayCalendars": {
@@ -386,6 +406,14 @@
       "deleteFailed": "Échec de la suppression du calendrier.",
       "codeRequired": "Saisissez un code.",
       "nameRequired": "Saisissez un nom."
+    },
+    "delete": {
+      "toDelete_one": "{{count}} calendrier sera supprimé :",
+      "toDelete_other": "{{count}} calendriers seront supprimés :",
+      "kept_one": "{{count}} calendrier ne peut pas être supprimé et est conservé :",
+      "kept_other": "{{count}} calendriers ne peuvent pas être supprimés et sont conservés :",
+      "deleted_one": "{{count}} calendrier supprimé",
+      "deleted_other": "{{count}} calendriers supprimés"
     }
   },
   "suppliers": {
@@ -445,7 +473,9 @@
       "toDelete_one": "{{count}} fournisseur sera supprimé :",
       "toDelete_other": "{{count}} fournisseurs seront supprimés :",
       "kept_one": "{{count}} fournisseur est encore utilisé et est conservé. Désactivez-le plutôt :",
-      "kept_other": "{{count}} fournisseurs sont encore utilisés et sont conservés. Désactivez-les plutôt :"
+      "kept_other": "{{count}} fournisseurs sont encore utilisés et sont conservés. Désactivez-les plutôt :",
+      "deleted_one": "{{count}} fournisseur supprimé",
+      "deleted_other": "{{count}} fournisseurs supprimés"
     }
   },
   "contacts": {
@@ -514,6 +544,10 @@
       "saveFailed": "Échec de l'enregistrement du contact.",
       "createFailed": "Échec de la création du contact.",
       "loadFailed": "Échec du chargement du contact."
+    },
+    "delete": {
+      "warning_one": "Il est retiré des fournisseurs, lignes budgétaires, contrats, applications, actifs, sites, projets et demandes qui le citent. Ces éléments restent. Cette action est irréversible.",
+      "warning_other": "Ils sont retirés des fournisseurs, lignes budgétaires, contrats, applications, actifs, sites, projets et demandes qui les citent. Ces éléments restent. Cette action est irréversible."
     }
   },
   "coa": {
@@ -640,6 +674,14 @@
       "unmapped_one": "{{count}} compte n'a pas de compte de consolidation",
       "unmapped_other": "{{count}} comptes n'ont pas de compte de consolidation",
       "showAll": "Afficher tous les comptes"
+    },
+    "delete": {
+      "toDelete_one": "{{count}} compte sera supprimé :",
+      "toDelete_other": "{{count}} comptes seront supprimés :",
+      "kept_one": "{{count}} compte ne peut pas être supprimé et est conservé :",
+      "kept_other": "{{count}} comptes ne peuvent pas être supprimés et sont conservés :",
+      "deleted_one": "{{count}} compte supprimé",
+      "deleted_other": "{{count}} comptes supprimés"
     }
   },
   "accounts": {
@@ -906,7 +948,8 @@
       "itOwner": "Responsable IT",
       "itOwnerHelper": "Contact IT responsable des outils / systèmes supportant ce processus",
       "notesPlaceholder": "Notes internes, liens vers les procédures ou les cartographies de processus",
-      "nameRequired": "Le nom est requis"
+      "nameRequired": "Le nom est requis",
+      "nameTaken": "Un autre processus métier porte déjà ce nom."
     },
     "categoryManager": {
       "title": "Gérer les catégories de processus métier",
@@ -921,7 +964,9 @@
       "failedToDelete": "Échec de la suppression de la catégorie",
       "failedToCreate": "Échec de la création de la catégorie",
       "failedToUpdate": "Échec de la mise à jour de la catégorie"
-    }
+    },
+    "deleteWarning_one": "Cette action est irréversible. Les interfaces et les demandes liées à ce processus sont conservées, sans ce lien.",
+    "deleteWarning_other": "Cette action est irréversible. Les interfaces et les demandes liées à ces processus sont conservées, sans ce lien."
   },
   "admin": {
     "copy": {

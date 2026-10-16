@@ -50,10 +50,10 @@ const content: FeatureContent = {
     },
     {
       title: 'Documentation connectée',
-      body: "Liez les documents aux applications, actifs, projets, demandes et tâches. Accès aux documents gérés depuis d'autres workspaces. Distinction lié / apparenté pour une traçabilité fine. La base de connaissances est aussi ce que citent vos agents : la source dont un agent se sert, et ce vers quoi il pointe lorsqu'il répond.",
+      body: "Liez les documents aux applications, actifs, projets, demandes et tâches. Accès aux documents managés depuis d'autres workspaces. Distinction lié / apparenté pour une traçabilité fine. La base de connaissances est aussi ce que citent vos agents : la source dont un agent se sert, et ce vers quoi il pointe lorsqu'il répond.",
       bullets: [
         'Relations avec applications, actifs, projets, demandes, tâches',
-        'Documents gérés accessibles depuis d\'autres workspaces',
+        'Documents managés accessibles depuis d\'autres workspaces',
         'Distinction lié / apparenté',
         'Navigation bidirectionnelle entre documents et entités',
         "Journal d'audit complet des changements de relations",

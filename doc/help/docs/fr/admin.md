@@ -76,7 +76,7 @@ Les événements de connexion et de session sont supprimés après **365 jours**
 
 ### Ce que vous pouvez faire
 
-- Rechercher dans le nom de table, l'action et l'acteur (e-mail/nom)
+- Rechercher dans la table (son nom tel qu'affiché dans votre langue, par exemple **Fournisseurs**), l'action et l'acteur (e-mail/nom)
 - Filtrer par :
   - Date
   - Table
@@ -92,7 +92,7 @@ Les événements de connexion et de session sont supprimés après **365 jours**
 
 **Colonnes par défaut** :
 - **Date** : Quand la modification ou l'événement a eu lieu
-- **Table** : Quelle table a été affectée. Les événements de connexion et de session affichent **Connexion et session**, et un export affiche ce qui a été exporté (par exemple **Fournisseurs**)
+- **Table** : Le type d'enregistrement concerné, sous son nom dans l'application (par exemple **Fournisseurs** ou **Liens de contrat**). Le filtre et le détail affichent les mêmes noms. Les événements de connexion et de session affichent **Connexion et session**, et un export affiche ce qui a été exporté (par exemple **Fournisseurs**)
 - **Action** : Le type de modification ou d'événement (créer, mettre à jour, supprimer, désactiver, restaurer, connexion, export, etc.). **Restaurer** marque une colonne budgétaire ramenée à ses valeurs d'ouverture depuis l'onglet Budget d'une ligne
 - **Source** : Qui ou quoi a déclenché la modification (utilisateur, système, webhook)
 - **Utilisateur** : Nom de l'utilisateur qui a fait la modification, ou son adresse e-mail s'il n'a pas de nom. Affiche « Système » ou « Webhook » pour les sources non-utilisateur, et « Compte inconnu » pour une tentative de connexion sur une adresse inconnue.
@@ -186,7 +186,7 @@ Actions de la barre d'outils :
 | **Exporter CSV** | Exporter la liste des utilisateurs | `users:admin` |
 | **Inviter** | Envoyer des invitations de connexion aux utilisateurs sélectionnés | `users:admin` |
 | **Désactiver** | Désactiver les utilisateurs sélectionnés. Ils sont déconnectés immédiatement. | `users:admin` |
-| **Supprimer** | Supprimer définitivement les utilisateurs sélectionnés | `users:admin` |
+| **Supprimer** | Supprimer définitivement les utilisateurs sélectionnés. Votre propre compte est conservé : la confirmation l'indique avant toute suppression. Pour garder l'historique d'un utilisateur et bloquer son accès, désactivez-le plutôt | `users:admin` |
 
 `users:reader` suffit pour ouvrir la page et consulter la liste. Toutes les actions ci-dessus, ainsi que les actions de ligne ci-dessous, nécessitent `users:admin`.
 
@@ -198,7 +198,7 @@ Actions de ligne, depuis le menu au bout de chaque ligne :
 | **Activer** / **Désactiver** | Activer ou désactiver le compte. La désactivation déconnecte la personne immédiatement. |
 | **Envoyer une invitation** | Envoyer une invitation de connexion par e-mail. Masqué pour les comptes Microsoft Entra. |
 | **Envoyer une réinitialisation de mot de passe** | Envoyer un lien de réinitialisation de mot de passe par e-mail. Affiché uniquement pour les comptes locaux activés. |
-| **Supprimer** | Supprimer définitivement l'utilisateur. Désactivez plutôt le compte si d'autres enregistrements le référencent. |
+| **Supprimer** | Supprimer définitivement l'utilisateur. Les enregistrements sur lesquels il a travaillé restent, sans lui. Vous ne pouvez pas supprimer votre propre compte. Pour bloquer l'accès d'une personne en gardant son compte, désactivez-le plutôt. |
 
 ### Fichier CSV des utilisateurs
 
@@ -419,7 +419,7 @@ La page Rôles a une disposition à deux panneaux :
 **Actions** :
 - **Nouveau rôle** : Créer un rôle personnalisé de zéro
 - **Dupliquer** : Copier un rôle existant (y compris les rôles intégrés) comme point de départ. Non disponible pour les rôles Système.
-- **Supprimer** : Supprimer un rôle personnalisé (seulement si aucun utilisateur n'est assigné)
+- **Supprimer** : Supprimer un rôle personnalisé. Un rôle attribué à des utilisateurs ne peut pas être supprimé : attribuez-leur d'abord un autre rôle. La fenêtre l'indique avant toute confirmation.
 - **Enregistrer les détails** : Mettre à jour le nom et la description du rôle
 - **Enregistrer les autorisations** : Appliquer les modifications d'autorisations
 

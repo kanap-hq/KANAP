@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import '../../i18n';
+import i18n from '../../i18n';
 import { ThemeModeProvider, createAppTheme } from '../../config/ThemeContext';
 import FlowReport from './FlowReport';
 
@@ -914,5 +914,35 @@ describe('FlowReport', { timeout: 20_000 }, () => {
     fireEvent.mouseDown(screen.getByText('All teams'));
     fireEvent.click(await screen.findByRole('option', { name: 'Cheese makers' }));
     await waitFor(() => expect(reportCalls()[reportCalls().length - 1].teamIds).toBe('team-1'));
+  });
+
+  it('shows a shipped task type in the reader\'s language until the tenant renames it, and links on the stored name', async () => {
+    const base: any = report();
+    const ageRow = (taskTypeId: string, taskTypeName: string, taskTypeCode: string | null) => ({
+      taskTypeId, taskTypeName, taskTypeCode, buckets: { upTo7: 0, from8To30: 0, from31To90: 2, over90: 0 }, total: 2,
+    });
+    base.age.tasks.rows = [
+      ageRow('type-task', 'Task', 'task'),
+      ageRow('type-incident', 'Major incident', 'incident'),
+      ageRow('type-change', 'Problem', null),
+    ];
+    base.leadTime.tasksByType = [
+      { taskTypeId: 'type-problem', taskTypeName: 'Problem', taskTypeCode: 'problem', closedCount: 6, measuredCount: 6, medianDays: 12.4 },
+    ];
+    mockApi(base);
+    await i18n.changeLanguage('fr');
+    try {
+      renderReport();
+      await waitFor(() => expect(screen.getByText('Tâche')).toBeTruthy());
+      expect(screen.getByText('Problème')).toBeTruthy();
+      expect(screen.getByText('Major incident')).toBeTruthy();
+      // A type the tenant added keeps its text, even when it reads like a shipped one.
+      expect(screen.getByText('Problem')).toBeTruthy();
+      expect(screen.queryByText('Task')).toBeNull();
+      // The list link filters on the stored name.
+      expect(linkHref('2', (href) => href.includes('"values":["Task"]') && href.includes('inRange'))).toContain('/portfolio/tasks?');
+    } finally {
+      await i18n.changeLanguage('en');
+    }
   });
 });

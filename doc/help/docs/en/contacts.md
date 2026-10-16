@@ -1,6 +1,6 @@
 # Contacts
 
-Contacts document the people you work with -- vendor account managers, support engineers, consultants, and other external stakeholders. Link contacts to suppliers to build a vendor contact directory, and reference them from applications and locations for support information.
+Contacts document the people you work with: vendor account managers, support engineers, consultants and other external stakeholders. Link contacts to suppliers to build a vendor contact directory, and reference them from applications and locations for support information.
 
 ## Getting started
 
@@ -45,7 +45,7 @@ The Contacts grid provides a searchable directory of all external contacts. Ever
 - **New**: Create a new contact (requires `contacts:manager`)
 - **Import CSV**: Bulk import contacts (requires `contacts:admin`)
 - **Export CSV**: Export to CSV (requires `contacts:admin`)
-- **Delete Selected**: Remove selected contacts (requires `contacts:admin`)
+- **Delete Selected**: Remove selected contacts (requires `contacts:admin`). They are removed from the suppliers, budget lines, contracts, applications, assets, locations, projects and requests that name them; these records stay
 
 ---
 
@@ -123,11 +123,10 @@ Manage contacts in bulk using CSV.
 
 **Required fields**: Email
 
-**Optional fields**: First Name, Last Name, Supplier Name, Job Title, Phone, Mobile, Country, Active
+**Optional fields**: `first_name`, `last_name`, `job_title`, `phone`, `mobile`, `country`, `notes`, `active`
 
 **Notes**:
-- Use **UTF-8 encoding** and **semicolons** as separators. A file Excel saved as plain CSV (Windows-1252) imports too
-- Supplier is matched by name -- ensure the supplier exists before importing
+- See [CSV files](csv-files.md) for the encoding, the separator and the two import steps
 
 ---
 
@@ -136,5 +135,5 @@ Manage contacts in bulk using CSV.
 - **Always set a supplier**: Linking contacts to suppliers makes them easier to find and manage.
 - **Set the contact type**: Once a supplier is linked, choose whether the contact is Commercial, Technical, Support, or Other. This helps when browsing contacts from the supplier workspace.
 - **Use consistent naming**: Enter names in a consistent format (e.g., always "FirstName LastName").
-- **Mark inactive contacts**: When someone leaves a vendor, mark them as inactive rather than deleting -- this preserves the audit trail.
+- **Mark inactive contacts**: When someone leaves a vendor, mark them as inactive rather than deleting them. This preserves the audit trail.
 - **Include job titles**: Job titles help identify the right contact for different needs (sales vs. support vs. account management).

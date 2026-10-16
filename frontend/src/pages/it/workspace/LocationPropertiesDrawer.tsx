@@ -78,6 +78,7 @@ export default function LocationPropertiesDrawer({
               onChange={onOperatingCompanyChange}
               disabled={disabled}
               hideLabel
+              label={t('workspace.asset.overview.operatingCompany')}
               textFieldSx={drawerFieldValueSx}
             />
           </PropertyRow>

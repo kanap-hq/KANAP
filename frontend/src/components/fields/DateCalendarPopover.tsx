@@ -25,6 +25,8 @@ export type DateCalendarPopoverProps = {
   onClose: () => void;
   /** Shows the Clear button when the field has a value. */
   allowClear?: boolean;
+  /** A class on the popover root (a grid filter keeps its menu open on clicks inside `ag-custom-component-popup`). */
+  className?: string;
 };
 
 export type CalendarPlacement = 'below' | 'above';
@@ -139,6 +141,7 @@ export default function DateCalendarPopover({
   onSelect,
   onClose,
   allowClear = false,
+  className,
 }: DateCalendarPopoverProps) {
   const { t } = useTranslation('common');
   const isOpen = open && !!anchorEl;
@@ -155,6 +158,7 @@ export default function DateCalendarPopover({
       open={isOpen}
       anchorEl={anchorEl}
       onClose={onClose}
+      className={className}
       // The theme turns focus restore off for popovers; a date field wants its focus back.
       disableRestoreFocus={false}
       anchorOrigin={{ vertical: above ? 'top' : 'bottom', horizontal: 'left' }}

@@ -1,0 +1,194 @@
+{
+  "catalog": {
+    "lifecycleStates": {
+      "proposed": {"source": "Proposed", "en": "Proposed", "fr": "Proposé", "de": "Vorgeschlagen", "es": "Propuesto"},
+      "active": {"source": "Active", "en": "Active", "fr": "Actif", "de": "Aktiv", "es": "Activo"},
+      "deprecated": {"source": "Deprecated", "en": "Deprecated", "fr": "Obsolète", "de": "Veraltet", "es": "Obsoleto"},
+      "retired": {"source": "Retired", "en": "Retired", "fr": "Retiré", "de": "Außer Betrieb", "es": "Retirado"}
+    },
+    "businessCriticalityLevels": {
+      "business_critical": {"source": "Critical", "en": "Critical", "fr": "Critique", "de": "Kritisch", "es": "Crítica"},
+      "high": {"source": "High", "en": "High", "fr": "Élevée", "de": "Hoch", "es": "Alta"},
+      "medium": {"source": "Moderate", "en": "Moderate", "fr": "Modérée", "de": "Mittel", "es": "Moderada"},
+      "low": {"source": "Low", "en": "Low", "fr": "Faible", "de": "Niedrig", "es": "Baja"}
+    },
+    "cyberCriticalityLevels": {
+      "low": {"source": "Low", "en": "Low", "fr": "Faible", "de": "Niedrig", "es": "Baja"},
+      "moderate": {"source": "Moderate", "en": "Moderate", "fr": "Modérée", "de": "Mittel", "es": "Moderada"},
+      "high": {"source": "High", "en": "High", "fr": "Élevée", "de": "Hoch", "es": "Alta"},
+      "critical": {"source": "Critical", "en": "Critical", "fr": "Critique", "de": "Kritisch", "es": "Crítica"}
+    },
+    "dataClasses": {
+      "public": {"source": "Public", "en": "Public", "fr": "Public", "de": "Öffentlich", "es": "Público"},
+      "internal": {"source": "Internal", "en": "Internal", "fr": "Interne", "de": "Intern", "es": "Interno"},
+      "confidential": {"source": "Confidential", "en": "Confidential", "fr": "Confidentiel", "de": "Vertraulich", "es": "Confidencial"},
+      "restricted": {"source": "Restricted", "en": "Restricted", "fr": "Restreint", "de": "Eingeschränkt", "es": "Restringido"}
+    },
+    "recoveryWaves": {
+      "foundation": {"source": "V0 — Foundation", "en": "V0: Foundation", "fr": "V0 — Socle", "de": "V0 — Grundlage", "es": "V0 — Base"},
+      "vital": {"source": "V1 — Vital activities", "en": "V1: Vital activities", "fr": "V1 — Activités vitales", "de": "V1 — Lebenswichtige Aktivitäten", "es": "V1 — Actividades vitales"},
+      "priority": {"source": "V2 — Priority activities", "en": "V2: Priority activities", "fr": "V2 — Activités prioritaires", "de": "V2 — Prioritäre Aktivitäten", "es": "V2 — Actividades prioritarias"},
+      "normal": {"source": "V3 — Normal operation", "en": "V3: Normal operation", "fr": "V3 — Fonctionnement normal", "de": "V3 — Normalbetrieb", "es": "V3 — Funcionamiento normal"}
+    },
+    "applicationCategories": {
+      "line_of_business": {"source": "Line-of-business", "en": "Line of business", "fr": "Métier", "de": "Fachanwendung", "es": "Negocio"},
+      "productivity": {"source": "Productivity", "en": "Productivity", "fr": "Productivité", "de": "Produktivität", "es": "Productividad"},
+      "security": {"source": "Security", "en": "Security", "fr": "Sécurité", "de": "Sicherheit", "es": "Seguridad"},
+      "analytics": {"source": "Analytics", "en": "Analytics", "fr": "Analytique", "de": "Analytik", "es": "Analítica"},
+      "development": {"source": "Development", "en": "Development", "fr": "Développement", "de": "Entwicklung", "es": "Desarrollo"},
+      "integration": {"source": "Integration", "en": "Integration", "fr": "Intégration", "de": "Integration", "es": "Integración"},
+      "infrastructure": {"source": "Infrastructure", "en": "Infrastructure", "fr": "Infrastructure", "de": "Infrastruktur", "es": "Infraestructura"}
+    },
+    "networkSegments": {
+      "industrial_lan": {"source": "Industrial LAN", "en": "Industrial LAN", "fr": "LAN industriel", "de": "Industrie-LAN", "es": "LAN industrial"},
+      "wifi": {"source": "WiFi", "en": "WiFi", "fr": "Wi-Fi", "de": "WLAN", "es": "Wi-Fi"},
+      "public_cloud": {"source": "Public Cloud", "en": "Public cloud", "fr": "Cloud public", "de": "Public Cloud", "es": "Cloud público"},
+      "guest": {"source": "Guest", "en": "Guest", "fr": "Invités", "de": "Gäste", "es": "Invitados"},
+      "management": {"source": "Management", "en": "Management", "fr": "Administration", "de": "Management", "es": "Administración"},
+      "storage": {"source": "Storage", "en": "Storage", "fr": "Stockage", "de": "Speicher", "es": "Almacenamiento"}
+    },
+    "entities": {
+      "internal_users": {"source": "Internal Users", "en": "Internal users", "fr": "Utilisateurs internes", "de": "Interne Benutzer", "es": "Usuarios internos"},
+      "external_users": {"source": "External Users", "en": "External users", "fr": "Utilisateurs externes", "de": "Externe Benutzer", "es": "Usuarios externos"},
+      "internet": {"source": "Internet", "en": "Internet", "fr": "Internet", "de": "Internet", "es": "Internet"},
+      "customers": {"source": "Customers", "en": "Customers", "fr": "Clients", "de": "Kunden", "es": "Clientes"},
+      "partner_networks": {"source": "Partner Networks", "en": "Partner networks", "fr": "Réseaux partenaires", "de": "Partnernetzwerke", "es": "Redes de socios"}
+    },
+    "serverKinds": {
+      "physical_server": {"source": "Physical Server", "en": "Physical server", "fr": "Serveur physique", "de": "Physischer Server", "es": "Servidor físico"},
+      "virtual_machine": {"source": "Virtual Machine", "en": "Virtual machine", "fr": "Machine virtuelle", "de": "Virtuelle Maschine", "es": "Máquina virtual"},
+      "container": {"source": "Container", "en": "Container", "fr": "Conteneur", "de": "Container", "es": "Contenedor"},
+      "serverless": {"source": "Serverless", "en": "Serverless", "fr": "Serverless", "de": "Serverless", "es": "Serverless"},
+      "appliance": {"source": "Appliance", "en": "Appliance", "fr": "Appliance", "de": "Appliance", "es": "Appliance"},
+      "saas": {"source": "SaaS", "en": "SaaS", "fr": "SaaS", "de": "SaaS", "es": "SaaS"},
+      "other": {"source": "Other", "en": "Other", "fr": "Autre", "de": "Sonstiges", "es": "Otro"},
+      "switch": {"source": "Switch", "en": "Switch", "fr": "Switch", "de": "Switch", "es": "Switch"},
+      "firewall": {"source": "Firewall", "en": "Firewall", "fr": "Pare-feu", "de": "Firewall", "es": "Cortafuegos"},
+      "load_balancer": {"source": "Load Balancer", "en": "Load balancer", "fr": "Répartiteur de charge", "de": "Load Balancer", "es": "Balanceador de carga"},
+      "access_point": {"source": "Access Point", "en": "Access point", "fr": "Point d'accès", "de": "Access Point", "es": "Punto de acceso"},
+      "san": {"source": "SAN", "en": "SAN", "fr": "SAN", "de": "SAN", "es": "SAN"},
+      "nas": {"source": "NAS", "en": "NAS", "fr": "NAS", "de": "NAS", "es": "NAS"},
+      "backup_appliance": {"source": "Backup Appliance", "en": "Backup appliance", "fr": "Appliance de sauvegarde", "de": "Backup-Appliance", "es": "Appliance de copia de seguridad"},
+      "tape_library": {"source": "Tape Library", "en": "Tape library", "fr": "Librairie de bandes", "de": "Bandbibliothek", "es": "Librería de cintas"},
+      "industrial_robot": {"source": "Industrial Robot", "en": "Industrial robot", "fr": "Robot industriel", "de": "Industrieroboter", "es": "Robot industrial"},
+      "industrial_machine": {"source": "Industrial Machine", "en": "Industrial machine", "fr": "Machine industrielle", "de": "Industriemaschine", "es": "Máquina industrial"},
+      "rack": {"source": "Rack", "en": "Rack", "fr": "Baie", "de": "Rack", "es": "Rack"}
+    },
+    "serverProviders": {
+      "other": {"source": "Other", "en": "Other", "fr": "Autre", "de": "Sonstiges", "es": "Otro"}
+    },
+    "serverRoles": {
+      "app": {"source": "Application server", "en": "Application server", "fr": "Serveur d'applications", "de": "Applikationsserver", "es": "Servidor de aplicaciones"},
+      "backup": {"source": "Backup server", "en": "Backup server", "fr": "Serveur de sauvegarde", "de": "Backup-Server", "es": "Servidor de copias de seguridad"},
+      "cloud-service": {"source": "Cloud service", "en": "Cloud service", "fr": "Service cloud", "de": "Cloud-Dienst", "es": "Servicio en la nube"},
+      "db": {"source": "Database server", "en": "Database server", "fr": "Serveur de bases de données", "de": "Datenbankserver", "es": "Servidor de base de datos"},
+      "domain-controller": {"source": "Domain controller", "en": "Domain controller", "fr": "Contrôleur de domaine", "de": "Domänencontroller", "es": "Controlador de dominio"},
+      "file": {"source": "File server", "en": "File server", "fr": "Serveur de fichiers", "de": "Dateiserver", "es": "Servidor de archivos"},
+      "mail": {"source": "Mail / messaging", "en": "Mail / messaging", "fr": "Messagerie", "de": "Mail / Messaging", "es": "Correo / mensajería"},
+      "monitoring": {"source": "Monitoring server", "en": "Monitoring server", "fr": "Serveur de supervision", "de": "Monitoring-Server", "es": "Servidor de monitorización"},
+      "other": {"source": "Other", "en": "Other", "fr": "Autre", "de": "Sonstiges", "es": "Otro"},
+      "print": {"source": "Print server", "en": "Print server", "fr": "Serveur d'impression", "de": "Druckserver", "es": "Servidor de impresión"},
+      "proxy": {"source": "Proxy / gateway", "en": "Proxy / gateway", "fr": "Proxy / passerelle", "de": "Proxy / Gateway", "es": "Proxy / pasarela"},
+      "remote-desktop": {"source": "Remote desktop", "en": "Remote desktop", "fr": "Bureau à distance", "de": "Remote Desktop", "es": "Escritorio remoto"},
+      "virtualization": {"source": "Virtualization host", "en": "Virtualization host", "fr": "Hôte de virtualisation", "de": "Virtualisierungshost", "es": "Host de virtualización"},
+      "web": {"source": "Web server", "en": "Web server", "fr": "Serveur web", "de": "Webserver", "es": "Servidor web"}
+    },
+    "hostingTypes": {
+      "on_prem": {"source": "On-prem", "en": "On-prem", "fr": "Sur site", "de": "On-Premise", "es": "Local"},
+      "colocation": {"source": "Colocation", "en": "Colocation", "fr": "Colocation", "de": "Colocation", "es": "Colocation"},
+      "public_cloud": {"source": "Public Cloud", "en": "Public cloud", "fr": "Cloud public", "de": "Public Cloud", "es": "Cloud público"},
+      "private_cloud": {"source": "Private Cloud", "en": "Private cloud", "fr": "Cloud privé", "de": "Private Cloud", "es": "Cloud privado"}
+    },
+    "interfaceProtocols": {
+      "smb": {"source": "SMB / Windows share", "en": "SMB / Windows share", "fr": "SMB / partage Windows", "de": "SMB / Windows-Freigabe", "es": "SMB / recurso compartido de Windows"},
+      "other": {"source": "Other", "en": "Other", "fr": "Autre", "de": "Sonstiges", "es": "Otro"}
+    },
+    "interfaceDataCategories": {
+      "master_data": {"source": "Master Data", "en": "Master data", "fr": "Données de référence", "de": "Stammdaten", "es": "Datos maestros"},
+      "transactional": {"source": "Transactional", "en": "Transactional", "fr": "Transactionnelles", "de": "Transaktionsdaten", "es": "Transaccionales"},
+      "reporting": {"source": "Reporting", "en": "Reporting", "fr": "Reporting", "de": "Reporting", "es": "Informes"},
+      "control": {"source": "Control", "en": "Control", "fr": "Contrôle", "de": "Steuerung", "es": "Control"}
+    },
+    "interfaceTriggerTypes": {
+      "event_based": {"source": "Event-based", "en": "Event-based", "fr": "Événementiel", "de": "Ereignisbasiert", "es": "Basado en eventos"},
+      "scheduled": {"source": "Scheduled", "en": "Scheduled", "fr": "Planifié", "de": "Geplant", "es": "Programado"},
+      "on_demand": {"source": "On-demand", "en": "On-demand", "fr": "À la demande", "de": "Auf Anforderung", "es": "Bajo demanda"},
+      "real_time": {"source": "Real-time", "en": "Real-time", "fr": "Temps réel", "de": "Echtzeit", "es": "Tiempo real"}
+    },
+    "interfacePatterns": {
+      "rest_api_sync": {"source": "REST API (sync)", "en": "REST API (sync)", "fr": "API REST (synchrone)", "de": "REST-API (synchron)", "es": "API REST (síncrona)"},
+      "rest_api_async": {"source": "REST API (async / callback)", "en": "REST API (async / callback)", "fr": "API REST (asynchrone / callback)", "de": "REST-API (asynchron / Callback)", "es": "API REST (asíncrona / callback)"},
+      "soap_webservice": {"source": "SOAP web service", "en": "SOAP web service", "fr": "Service web SOAP", "de": "SOAP-Webservice", "es": "Servicio web SOAP"},
+      "file_transfer_batch": {"source": "File transfer (batch)", "en": "File transfer (batch)", "fr": "Transfert de fichiers (batch)", "de": "Dateiübertragung (Batch)", "es": "Transferencia de archivos (lote)"},
+      "message_queue": {"source": "Message queue (point-to-point)", "en": "Message queue (point-to-point)", "fr": "File de messages (point à point)", "de": "Message Queue (Punkt-zu-Punkt)", "es": "Cola de mensajes (punto a punto)"},
+      "pub_sub_topic": {"source": "Pub/Sub (topic)", "en": "Pub/Sub (topic)", "fr": "Pub/Sub (topic)", "de": "Pub/Sub (Topic)", "es": "Pub/Sub (tema)"},
+      "etl_batch": {"source": "ETL batch job", "en": "ETL batch job", "fr": "Traitement ETL par lots", "de": "ETL-Batch-Job", "es": "Proceso ETL por lotes"},
+      "db_link_view": {"source": "DB link / direct DB read", "en": "DB link / direct DB read", "fr": "Lien BD / lecture directe en base", "de": "DB-Link / direkter DB-Zugriff", "es": "DB link / lectura directa de BD"},
+      "scheduled_job": {"source": "Scheduled script / job", "en": "Scheduled script / job", "fr": "Script / tâche planifiés", "de": "Geplantes Skript / Job", "es": "Script / tarea programados"},
+      "manual_import_export": {"source": "Manual import / export", "en": "Manual import / export", "fr": "Import / export manuel", "de": "Manueller Import / Export", "es": "Importación / exportación manual"},
+      "other": {"source": "Other", "en": "Other", "fr": "Autre", "de": "Sonstiges", "es": "Otro"}
+    },
+    "interfaceFormats": {
+      "delimited": {"source": "Delimited text", "en": "Delimited text", "fr": "Texte délimité", "de": "Text mit Trennzeichen", "es": "Texto delimitado"},
+      "fixed_width": {"source": "Fixed-width text", "en": "Fixed-width text", "fr": "Texte à largeur fixe", "de": "Text mit fester Breite", "es": "Texto de ancho fijo"},
+      "txt_plain": {"source": "Plain text", "en": "Plain text", "fr": "Texte brut", "de": "Klartext", "es": "Texto plano"},
+      "binary_custom": {"source": "Binary (custom)", "en": "Binary (custom)", "fr": "Binaire (personnalisé)", "de": "Binär (benutzerdefiniert)", "es": "Binario (personalizado)"},
+      "other": {"source": "Other", "en": "Other", "fr": "Autre", "de": "Sonstiges", "es": "Otro"}
+    },
+    "interfaceAuthModes": {
+      "service_account": {"source": "Service account", "en": "Service account", "fr": "Compte de service", "de": "Dienstkonto", "es": "Cuenta de servicio"},
+      "api_key": {"source": "API key", "en": "API key", "fr": "Clé API", "de": "API-Schlüssel", "es": "Clave de API"},
+      "certificate": {"source": "Certificate", "en": "Certificate", "fr": "Certificat", "de": "Zertifikat", "es": "Certificado"},
+      "none": {"source": "None", "en": "None", "fr": "Aucune", "de": "Keine", "es": "Ninguna"}
+    },
+    "connectionTypes": {
+      "zabbix": {"source": "Zabbix Agent", "en": "Zabbix agent", "fr": "Agent Zabbix", "de": "Zabbix-Agent", "es": "Agente Zabbix"},
+      "ad-repl": {"source": "AD Replication", "en": "AD replication", "fr": "Réplication AD", "de": "AD-Replikation", "es": "Replicación AD"},
+      "tcp": {"source": "TCP (custom)", "en": "TCP (custom)", "fr": "TCP (personnalisé)", "de": "TCP (benutzerdefiniert)", "es": "TCP (personalizado)"},
+      "udp": {"source": "UDP (custom)", "en": "UDP (custom)", "fr": "UDP (personnalisé)", "de": "UDP (benutzerdefiniert)", "es": "UDP (personalizado)"},
+      "other": {"source": "Other", "en": "Other", "fr": "Autre", "de": "Sonstiges", "es": "Otro"},
+      "unknown": {"source": "Unknown", "en": "Unknown", "fr": "Inconnu", "de": "Unbekannt", "es": "Desconocido"}
+    },
+    "ipAddressTypes": {
+      "host": {"source": "Host", "en": "Host", "fr": "Hôte", "de": "Host", "es": "Host"},
+      "management": {"source": "Management", "en": "Management", "fr": "Administration", "de": "Management", "es": "Administración"}
+    },
+    "accessMethods": {
+      "local": {"source": "Locally installed application", "en": "Locally installed application", "fr": "Application installée localement", "de": "Lokal installierte Anwendung", "es": "Aplicación instalada localmente"},
+      "mobile": {"source": "Mobile application", "en": "Mobile application", "fr": "Application mobile", "de": "Mobile Anwendung", "es": "Aplicación móvil"},
+      "hmi": {"source": "Proprietary HMI (industrial interface)", "en": "Proprietary HMI (industrial interface)", "fr": "IHM propriétaire (interface industrielle)", "de": "Proprietäre HMI (Industrieschnittstelle)", "es": "HMI propietaria (interfaz industrial)"},
+      "terminal": {"source": "Terminal / CLI", "en": "Terminal / CLI", "fr": "Terminal / ligne de commande", "de": "Terminal / CLI", "es": "Terminal / CLI"},
+      "vdi": {"source": "VDI / Remote Desktop", "en": "VDI / remote desktop", "fr": "VDI / bureau à distance", "de": "VDI / Remote Desktop", "es": "VDI / escritorio remoto"},
+      "kiosk": {"source": "Kiosk", "en": "Kiosk", "fr": "Borne", "de": "Kiosk", "es": "Quiosco"}
+    },
+    "pathHopFunctions": {
+      "vip": {"source": "Virtual IP", "en": "Virtual IP", "fr": "IP virtuelle", "de": "Virtuelle IP", "es": "IP virtual"},
+      "firewall": {"source": "Firewall", "en": "Firewall", "fr": "Pare-feu", "de": "Firewall", "es": "Cortafuegos"},
+      "reverse_proxy": {"source": "Reverse proxy", "en": "Reverse proxy", "fr": "Proxy inverse", "de": "Reverse Proxy", "es": "Proxy inverso"},
+      "load_balancer": {"source": "Load balancer", "en": "Load balancer", "fr": "Répartiteur de charge", "de": "Load Balancer", "es": "Balanceador de carga"},
+      "api_gateway": {"source": "API gateway", "en": "API gateway", "fr": "Passerelle API", "de": "API-Gateway", "es": "Pasarela de API"},
+      "vpn_endpoint": {"source": "VPN endpoint", "en": "VPN endpoint", "fr": "Point de terminaison VPN", "de": "VPN-Endpunkt", "es": "Punto de conexión VPN"},
+      "bastion": {"source": "Bastion / jump host", "en": "Bastion / jump host", "fr": "Bastion / hôte de rebond", "de": "Bastion / Jump Host", "es": "Bastión / host de salto"},
+      "cdn_edge": {"source": "CDN edge", "en": "CDN edge", "fr": "Nœud CDN", "de": "CDN-Edge", "es": "Nodo perimetral CDN"},
+      "service_mesh": {"source": "Service mesh proxy", "en": "Service mesh proxy", "fr": "Proxy de service mesh", "de": "Service-Mesh-Proxy", "es": "Proxy de service mesh"}
+    },
+    "incidentCategories": {
+      "infrastructure": {"source": "Infrastructure", "en": "Infrastructure", "fr": "Infrastructure", "de": "Infrastruktur", "es": "Infraestructura"},
+      "security": {"source": "Security", "en": "Security", "fr": "Sécurité", "de": "Sicherheit", "es": "Seguridad"},
+      "application": {"source": "Application", "en": "Application", "fr": "Application", "de": "Anwendung", "es": "Aplicación"},
+      "data": {"source": "Data", "en": "Data", "fr": "Données", "de": "Daten", "es": "Datos"},
+      "supplier": {"source": "Supplier", "en": "Supplier", "fr": "Fournisseur", "de": "Lieferant", "es": "Proveedor"},
+      "other": {"source": "Other", "en": "Other", "fr": "Autre", "de": "Sonstiges", "es": "Otro"}
+    },
+    "domains": {
+      "workgroup": {"source": "Workgroup", "en": "Workgroup", "fr": "Groupe de travail", "de": "Arbeitsgruppe", "es": "Grupo de trabajo"},
+      "n-a": {"source": "N/A", "en": "N/A", "fr": "N/A", "de": "k. A.", "es": "N/D"}
+    }
+  },
+  "taskTypes": {
+    "task": {"source": "Task", "en": "Task", "fr": "Tâche", "de": "Aufgabe", "es": "Tarea"},
+    "bug": {"source": "Bug", "en": "Bug", "fr": "Bug", "de": "Bug", "es": "Bug"},
+    "problem": {"source": "Problem", "en": "Problem", "fr": "Problème", "de": "Problem", "es": "Problema"},
+    "incident": {"source": "Incident", "en": "Incident", "fr": "Incident", "de": "Vorfall", "es": "Incidente"}
+  }
+}

@@ -1,3 +1,4 @@
+import { csvSeparatorOf } from '../../common/csv-sheet/read';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, ILike, Repository } from 'typeorm';
@@ -9,6 +10,7 @@ import { denormalizeCsvRow } from '../../common/csv/csv-export.service';
 import { headerMismatchError } from '../../common/csv-sheet';
 import { CsvDecodeError, decodeCsv } from '../../common/csv-sheet/decode';
 import { ACCOUNT_NUMBER_MAX_DIGITS, ACCOUNT_NUMBER_RULE, parseAccountNumber, readAccountNumber } from '../../accounts/account-number';
+import { uploadedBytes } from '../../common/upload';
 
 /** The OPEX/CAPEX nature of a template account (`nature` column, optional, empty = both). */
 const NATURES = ['opex', 'capex'] as const;
@@ -58,7 +60,8 @@ export class AdminCoaTemplatesService {
   }
 
   private async parseTemplateRows(csv: string): Promise<Array<Record<string, any>>> {
-    const delimiter = ';';
+    // A payload saved as uploaded may come from any export: its separator is read from the header.
+    const delimiter = csvSeparatorOf(csv) ?? ';';
     const rows: Record<string, any>[] = [];
     await new Promise<void>((resolve, reject) => {
       parseString(csv, { headers: true, delimiter, ignoreEmpty: true, trim: true })
@@ -304,9 +307,7 @@ export class AdminCoaTemplatesService {
   }
 
   async importCsv(id: string, file: Express.Multer.File, dryRun = true, userId?: string | null, opts?: { manager?: EntityManager }) {
-    if (!file) throw new BadRequestException('No file uploaded');
-    const buf = file.buffer ?? ((file as any).path ? require('fs').readFileSync((file as any).path) : undefined);
-    if (!buf) throw new BadRequestException('Empty upload');
+    const buf = uploadedBytes(file);
     let content: string;
     try {
       content = decodeCsv(buf).text;
@@ -491,7 +492,7 @@ export class AdminCoaTemplatesService {
     const rows = await this.parseTemplateRows(csv);
     const toDelete = new Set(ids.map((x) => Number(x)));
     const deleted: string[] = [];
-    const failed: Array<{ id: string; reason: string }> = [];
+    const failed: Array<{ id: string; reason: string; code?: string }> = [];
     const next: typeof rows = [];
     const removedRows: typeof rows = [];
     for (const r of rows) {
@@ -505,7 +506,7 @@ export class AdminCoaTemplatesService {
     }
     // Mark missing ones as failed
     for (const idNum of toDelete) {
-      if (!deleted.includes(String(idNum))) failed.push({ id: String(idNum), reason: 'Not found' });
+      if (!deleted.includes(String(idNum))) failed.push({ id: String(idNum), reason: 'Not found', code: 'not_found' });
     }
     const encoded = await this.encodeTemplateRows(next);
     await this.update(id, { csv_payload: encoded }, userId, { manager: opts?.manager, skipAudit: true });

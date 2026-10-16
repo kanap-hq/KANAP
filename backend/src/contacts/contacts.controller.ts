@@ -7,6 +7,7 @@ import { ContactsService } from './contacts.service';
 import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { csvImportMulterOptions } from '../common/upload';
+import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
 import { contentDisposition } from '../common/content-disposition';
 import { ContactUpsertDto } from './dto/contact.dto';
 import { ContactsDeleteService } from './contacts-delete.service';
@@ -29,8 +30,15 @@ export class ContactsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('contacts', 'admin')
   @Get('export')
-  async export(@Query('scope') scope: 'template' | 'data' = 'data', @Query() query: any, @Res() res: Response, @Req() req: any) {
-    const { filename, content } = await this.svc.exportCsv(scope, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id, listQuery: exportListQuery(query) });
+  async export(
+    @Query('scope') scope: 'template' | 'data' = 'data',
+    @Query('language') languageRaw: string | undefined,
+    @Query() query: any,
+    @Res() res: Response,
+    @Req() req: any,
+  ) {
+    const language = await languageOf(req?.queryRunner?.manager, req.tenant.id, req.user?.sub ?? null, languageRaw);
+    const { filename, content } = await this.svc.exportCsv(scope, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id, language, listQuery: exportListQuery(query) });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(filename));
     res.send(content);
@@ -82,8 +90,19 @@ export class ContactsController {
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
-  async import(@UploadedFile() file: Express.Multer.File, @Query('dryRun') dryRunRaw: string, @Req() req: any) {
+  async import(
+    @UploadedFile() file: Express.Multer.File,
+    @Query('dryRun') dryRunRaw: string,
+    @Query('language') languageRaw: string | undefined,
+    @Query('dateOrder') dateOrderRaw: string | undefined,
+    @Query('decimalMark') decimalMarkRaw: string | undefined,
+    @Req() req: any,
+  ) {
     const dryRun = String(dryRunRaw ?? 'true').toLowerCase() !== 'false';
-    return this.svc.importCsv({ file, dryRun }, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id });
+    const language = await languageOf(req?.queryRunner?.manager, req.tenant.id, req.user?.sub ?? null, languageRaw);
+    return this.svc.importCsv(
+      { file, dryRun, language, dateOrder: parseDateOrder(dateOrderRaw), decimalMark: parseDecimalMark(decimalMarkRaw) },
+      { manager: req?.queryRunner?.manager, tenantId: req.tenant.id },
+    );
   }
 }

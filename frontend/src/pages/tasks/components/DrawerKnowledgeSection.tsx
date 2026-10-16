@@ -146,7 +146,7 @@ export default function DrawerKnowledgeSection({ taskId, canCreate }: DrawerKnow
   const createBlankMutation = useMutation({
     mutationFn: async () => {
       const res = await api.post('/knowledge', {
-        title: 'New linked knowledge (task)',
+        title: t('common:knowledgePanel.newLinkedTitle'),
         content_markdown: '',
         status: 'draft',
         relations: { tasks: [taskId] },
@@ -238,7 +238,7 @@ export default function DrawerKnowledgeSection({ taskId, canCreate }: DrawerKnow
 
       {directDocs.length === 0 && (
         <Typography sx={(theme) => ({ fontSize: 13, color: theme.palette.kanap.text.tertiary, mb: '6px' })}>
-          {t('portfolio:knowledgePanel.noDocuments', 'No documents linked')}
+          {t('common:knowledgePanel.noDocuments')}
         </Typography>
       )}
 

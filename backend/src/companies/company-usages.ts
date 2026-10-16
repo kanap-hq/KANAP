@@ -4,9 +4,9 @@ import { activeSql, type UsageQuery } from '../common/record-usages';
 /**
  * The objects that keep a company from being deleted, read like a supplier's usages
  * (`suppliers/supplier-usages.ts`): budget lines of both natures that it pays or that allocate to
- * it, contracts, cost centers, departments, users, locations it operates, tasks, applications,
- * interfaces, portfolio projects and requests, and the team members it is the default company
- * of. Every key into companies is ON DELETE RESTRICT (migration 1854090000000) except its own
+ * it, the default allocation methods of the years that spread over it, contracts, cost centers,
+ * departments, users, locations it operates, tasks, applications, interfaces, portfolio projects
+ * and requests, and the team members it is the default company of. Every key into companies is ON DELETE RESTRICT (migration 1854090000000) except its own
  * yearly metrics, which go with it. There is no "Used by" panel for a company yet; these are the
  * delete check's groups.
  */
@@ -23,6 +23,16 @@ export const COMPANY_USAGE_QUERIES: readonly UsageQuery[] = [
                                JOIN spend_allocations a ON a.tenant_id = $1 AND a.version_id = v.id
                               WHERE v.tenant_id = $1 AND v.spend_item_id = si.id AND a.company_id = $2))
            ORDER BY active DESC, si.item_number
+           LIMIT $3`,
+  },
+  {
+    // A year's default allocation method spread over chosen companies: an array, which no foreign key covers.
+    type: 'allocation_rules',
+    resource: 'budget_ops',
+    sql: `SELECT r.id, NULL::text AS reference, r.fiscal_year::text AS name, r.status, true AS active, count(*) OVER () AS total
+            FROM allocation_rules r
+           WHERE r.tenant_id = $1 AND $2 = ANY (r.company_ids)
+           ORDER BY r.fiscal_year, r.id
            LIMIT $3`,
   },
   {

@@ -78,7 +78,6 @@
     "valueCount": "{{formatted}} values",
     "valueCount_one": "{{formatted}} value",
     "clearFilter": "Clear filter",
-    "columnPlaceholder": "Filter…",
     "filterColumn": "Filter {{column}}",
     "linkFiltersLost": "The filters of this link are no longer available.",
     "date": {
@@ -95,8 +94,8 @@
     "noResults": "No results",
     "noResultsFiltered": "No results match the search or the filters.",
     "clearAll": "Clear search and filters",
-    "resultCount_one": "{{count}} result",
-    "resultCount_other": "{{count}} results"
+    "resultCount_one": "{{count, count}} result",
+    "resultCount_other": "{{count, count}} results"
   },
   "columnChooser": {
     "searchPlaceholder": "Search columns",
@@ -111,7 +110,7 @@
     "disabled": "Disabled",
     "invited": "Invited",
     "email": "Email",
-    "totalWithCount": "Total ({{count}})",
+    "totalWithCount": "Total ({{count, count}})",
     "noData": "No data",
     "none": "None",
     "year": "Year",
@@ -132,6 +131,8 @@
     "recommended": "Recommended",
     "openCalendar": "Open calendar",
     "datePlaceholder": "dd/mm/yyyy",
+    "time": "Time",
+    "timePlaceholder": "hh:mm",
     "requiredTag": "(required)",
     "relatedTo": "Related to",
     "openInNewTab": "Open in new tab",
@@ -171,15 +172,22 @@
     "cannotUndo": "This cannot be undone.",
     "successAll_one": "Deleted {{count}} item",
     "successAll_other": "Deleted {{count}} items",
+    "keptDone_one": "{{count}} item kept",
+    "keptDone_other": "{{count}} items kept",
+    "withKept": "{{deleted}}. {{kept}}",
+    "namedList": "{{what}}: {{names}}",
+    "namesMore_one": "{{count}} more",
+    "namesMore_other": "{{count}} more",
+    "partialResult": "{{deleted}}. {{failed}}",
     "failedAll": "Failed to delete items: {{reasons}}",
-    "partialDeleted_one": "Deleted {{count}} item.",
-    "partialDeleted_other": "Deleted {{count}} items.",
     "partialFailed_one": "{{count}} item could not be deleted: {{reasons}}",
     "partialFailed_other": "{{count}} items could not be deleted: {{reasons}}",
     "failedGeneric": "Failed to delete items",
     "usages": {
       "budget_lines_one": "{{count}} budget line",
       "budget_lines_other": "{{count}} budget lines",
+      "allocation_rules_one": "{{count}} default allocation method",
+      "allocation_rules_other": "{{count}} default allocation methods",
       "contracts_one": "{{count}} contract",
       "contracts_other": "{{count}} contracts",
       "applications_one": "{{count}} application",
@@ -205,7 +213,41 @@
       "team_members_one": "{{count}} team member",
       "team_members_other": "{{count}} team members",
       "compliance_requirements_one": "{{count}} recorded compliance requirement",
-      "compliance_requirements_other": "{{count}} recorded compliance requirements"
+      "compliance_requirements_other": "{{count}} recorded compliance requirements",
+      "opex_lines_one": "{{count}} OPEX line",
+      "opex_lines_other": "{{count}} OPEX lines",
+      "capex_lines_one": "{{count}} CAPEX line",
+      "capex_lines_other": "{{count}} CAPEX lines",
+      "app_assignments_one": "{{count}} application assignment",
+      "app_assignments_other": "{{count}} application assignments",
+      "connections_one": "{{count}} connection",
+      "connections_other": "{{count}} connections",
+      "nodes_one": "{{count}} node",
+      "nodes_other": "{{count}} nodes",
+      "companies_one": "{{count}} company",
+      "companies_other": "{{count}} companies",
+      "values_one": "{{count}} value",
+      "values_other": "{{count}} values",
+      "sub_teams_one": "{{count}} sub-team",
+      "sub_teams_other": "{{count}} sub-teams",
+      "contributors_one": "{{count}} contributor",
+      "contributors_other": "{{count}} contributors",
+      "interface_bindings_one": "{{count}} interface binding",
+      "interface_bindings_other": "{{count}} interface bindings",
+      "server_assignments_one": "{{count}} server assignment",
+      "server_assignments_other": "{{count}} server assignments",
+      "business_processes_one": "{{count}} business process",
+      "business_processes_other": "{{count}} business processes",
+      "documents_one": "{{count}} document",
+      "documents_other": "{{count}} documents",
+      "sub_folders_one": "{{count}} subfolder",
+      "sub_folders_other": "{{count}} subfolders",
+      "app_instances_one": "{{count}} deployment",
+      "app_instances_other": "{{count}} deployments",
+      "incidents_one": "{{count}} incident",
+      "incidents_other": "{{count}} incidents",
+      "subnets_one": "{{count}} subnet",
+      "subnets_other": "{{count}} subnets"
     }
   },
   "messages": {
@@ -448,7 +490,6 @@
     "exportTitle": "Export CSV",
     "importTitle": "Import CSV",
     "exportDescription": "Export data as CSV. Files use semicolon separators.",
-    "exportDescriptionExcel": "Export data as CSV. Files use semicolon separators for Excel compatibility.",
     "exportDescriptionFlexible": "Export data as CSV. The separator, the decimal mark and the dates follow the language of the screen.",
     "exportData": "Export data",
     "exportPreset": "Export preset",
@@ -457,7 +498,6 @@
     "fieldsSelected": "{{selected}} of {{total}} fields selected",
     "downloadTemplate": "Download template",
     "uploadDescription": "Upload a CSV with semicolon separators and exact column titles from the template.",
-    "uploadDescriptionShort": "Upload a CSV with semicolon separators.",
     "uploadDescriptionFlexible": "Upload a CSV file with the column titles of the template. Commas or semicolons both work, and so does a file saved by Excel.",
     "dragDropOrClick": "Drag & drop CSV here, or click to select",
     "preflightCheck": "Preflight check",
@@ -497,10 +537,10 @@
     "skipped_other": "{{count}} skipped",
     "errors": "Errors ({{count}})",
     "warnings": "Warnings ({{count}})",
-    "andMoreErrors2_one": "...and {{count}} more error",
-    "andMoreErrors2_other": "...and {{count}} more errors",
-    "andMoreWarnings_one": "...and {{count}} more warning",
-    "andMoreWarnings_other": "...and {{count}} more warnings",
+    "andMoreErrors2_one": "…and {{count}} more error",
+    "andMoreErrors2_other": "…and {{count}} more errors",
+    "andMoreWarnings_one": "…and {{count}} more warning",
+    "andMoreWarnings_other": "…and {{count}} more warnings",
     "rowPrefix": "Row {{row}}:",
     "rowsUnchanged_one": "{{count}} row unchanged.",
     "rowsUnchanged_other": "{{count}} rows unchanged.",
@@ -618,7 +658,13 @@
     "valueUnavailable": "Value no longer available",
     "budgetLines": "Budget lines",
     "searchBudgetLines": "Search budget lines",
-    "noBudgetLinesFound": "No budget lines found"
+    "noBudgetLinesFound": "No budget lines found",
+    "company": "Company",
+    "supplier": "Supplier",
+    "department": "Department",
+    "departments": "Departments",
+    "allDepartments": "All departments",
+    "newCategoryName": "New category name"
   },
   "documentEditor": {
     "expandDocument": "Expand document",
@@ -665,7 +711,9 @@
     "openColumn": "Open",
     "restrictedDocuments_one": "{{count}} standalone knowledge document is available for this item. You need the Knowledge Reader role to view them.",
     "restrictedDocuments_other": "{{count}} standalone knowledge documents are available for this item. You need the Knowledge Reader role to view them.",
-    "newDocumentOptions": "New document options"
+    "newDocumentOptions": "New document options",
+    "noDocuments": "No documents linked",
+    "newLinkedTitle": "New linked document"
   },
   "share": {
     "sendLink": "Send link",
@@ -920,7 +968,150 @@
   },
   "markdownEditor": {
     "insertEmoji": "Insert emoji",
-    "blockStyle": "Block style"
+    "blockStyle": "Block style",
+    "placeholder": "Start typing…",
+    "mdx": {
+      "admonitions": {
+        "caution": "Caution",
+        "changeType": "Select admonition type",
+        "danger": "Danger",
+        "info": "Info",
+        "note": "Note",
+        "placeholder": "Admonition type",
+        "tip": "Tip"
+      },
+      "codeblock": {
+        "delete": "Delete code block"
+      },
+      "codeBlock": {
+        "inlineLanguage": "Language",
+        "language": "Code block language",
+        "selectLanguage": "Select code block language"
+      },
+      "contentArea": {
+        "editableMarkdown": "Editable text"
+      },
+      "createLink": {
+        "cancelTooltip": "Cancel change",
+        "saveTooltip": "Set URL",
+        "text": "Anchor text",
+        "textTooltip": "The text shown for the link",
+        "title": "Link title",
+        "titleTooltip": "The link's title, shown on hover",
+        "urlPlaceholder": "Select or paste a URL",
+        "url": "URL"
+      },
+      "dialog": {
+        "close": "Close dialog"
+      },
+      "dialogControls": {
+        "cancel": "Cancel",
+        "save": "Save"
+      },
+      "frontmatterEditor": {
+        "addEntry": "Add entry",
+        "dialogDescription": "Add, edit or remove the key-value entries of the document front matter.",
+        "key": "Key",
+        "title": "Edit document front matter",
+        "value": "Value"
+      },
+      "imageEditor": {
+        "deleteImage": "Delete image",
+        "editImage": "Edit image"
+      },
+      "linkPreview": {
+        "copied": "Copied",
+        "copyToClipboard": "Copy to clipboard",
+        "edit": "Edit link URL",
+        "open": "Open {{url}} in a new window",
+        "remove": "Remove link"
+      },
+      "table": {
+        "alignCenter": "Align center",
+        "alignLeft": "Align left",
+        "alignRight": "Align right",
+        "columnMenu": "Column menu",
+        "deleteColumn": "Delete this column",
+        "deleteRow": "Delete this row",
+        "deleteTable": "Delete table",
+        "insertColumnLeft": "Insert a column to the left",
+        "insertColumnRight": "Insert a column to the right",
+        "insertRowAbove": "Insert a row above",
+        "insertRowBelow": "Insert a row below",
+        "rowMenu": "Row menu",
+        "textAlignment": "Text alignment"
+      },
+      "toolbar": {
+        "admonition": "Insert admonition",
+        "blockTypeSelect": {
+          "placeholder": "Block type",
+          "selectBlockTypeTooltip": "Select block type"
+        },
+        "blockTypes": {
+          "heading": "Heading {{level}}",
+          "paragraph": "Paragraph",
+          "quote": "Quote"
+        },
+        "bold": "Bold",
+        "bulletedList": "Bulleted list",
+        "checkList": "Checklist",
+        "codeBlock": "Insert code block",
+        "diffMode": "Diff mode",
+        "editFrontmatter": "Edit front matter",
+        "highlight": "Highlight",
+        "image": "Insert image",
+        "inlineCode": "Inline code",
+        "insertFrontmatter": "Insert front matter",
+        "italic": "Italic",
+        "link": "Create link",
+        "numberedList": "Numbered list",
+        "redo": "Redo {{shortcut}}",
+        "removeBold": "Remove bold",
+        "removeHighlight": "Remove highlight",
+        "removeInlineCode": "Remove code format",
+        "removeItalic": "Remove italic",
+        "removeStrikethrough": "Remove strikethrough",
+        "removeSubscript": "Remove subscript",
+        "removeSuperscript": "Remove superscript",
+        "removeUnderline": "Remove underline",
+        "richText": "Rich text",
+        "source": "Source mode",
+        "strikethrough": "Strikethrough",
+        "subscript": "Subscript",
+        "superscript": "Superscript",
+        "table": "Insert table",
+        "thematicBreak": "Insert separator",
+        "toggleGroup": "Toggle group",
+        "underline": "Underline",
+        "undo": "Undo {{shortcut}}"
+      },
+      "uploadImage": {
+        "addViaUrlInstructionsNoUpload": "Add an image from a URL:",
+        "addViaUrlInstructions": "Or add an image from a URL:",
+        "alt": "Alternative text:",
+        "autoCompletePlaceholder": "Select or paste an image URL",
+        "dialogDescription": "Insert an image from a URL or upload one from your device.",
+        "dialogDescriptionNoUpload": "Insert an image from a URL.",
+        "dialogTitle": "Upload an image",
+        "height": "Height:",
+        "title": "Title:",
+        "uploadInstructions": "Upload an image from your device:",
+        "width": "Width:"
+      }
+    },
+    "emoji": {
+      "smile": "Smile",
+      "grin": "Grin",
+      "laugh": "Laugh",
+      "love": "Love",
+      "think": "Think",
+      "thumbsUp": "Thumbs up",
+      "celebrate": "Celebrate",
+      "fire": "Fire",
+      "done": "Done",
+      "launch": "Launch"
+    },
+    "plainText": "Plain text"
   },
   "markdownLink": {
     "url": "URL",
@@ -928,5 +1119,50 @@
     "editLink": "Edit link",
     "copyUrl": "Copy URL",
     "removeLink": "Remove link"
+  },
+  "taskTypes": {
+    "task": {
+      "label": "Task",
+      "description": "Standard task or work item"
+    },
+    "bug": {
+      "label": "Bug",
+      "description": "Software defect or error"
+    },
+    "problem": {
+      "label": "Problem",
+      "description": "Operational issue requiring investigation"
+    },
+    "incident": {
+      "label": "Incident",
+      "description": "Service disruption or security event"
+    }
+  },
+  "tenant": {
+    "notFound": {
+      "title": "Tenant not found",
+      "message": "This tenant does not exist or is no longer available. You will be redirected to our website shortly.",
+      "redirecting": "Redirecting to {{url}}"
+    }
+  },
+  "relatedObject": {
+    "types": {
+      "standalone": "Standalone",
+      "project": "Project",
+      "spendItem": "Budget (OPEX)",
+      "contract": "Contract",
+      "capexItem": "CAPEX",
+      "incident": "Incident"
+    },
+    "item": "Item"
+  },
+  "markdownContent": {
+    "copyCode": "Copy code",
+    "copied": "Copied"
+  },
+  "relevantWebsites": {
+    "name": "Name",
+    "empty": "No URLs linked.",
+    "delete": "Delete URL"
   }
 }

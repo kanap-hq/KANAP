@@ -86,7 +86,7 @@ L'en-tête de l'espace de travail vous donne le contexte opérationnel sans quit
 - une bande de métadonnées avec **Statut**, **Score**, **Demandeur**, **Responsable IT**, **Date de livraison cible** et (lorsque applicable) la **Tâche source** depuis laquelle la demande a été créée
 - **Envoyer le lien** pour le partage
 - **Convertir en projet** lorsque la demande est **Approuvée** ou **Convertie**
-- **Supprimer** pour les administrateurs (lorsque la demande n'est pas encore convertie)
+- **Supprimer** pour les administrateurs (lorsque la demande n'est pas encore convertie). Une demande convertie reste l'origine de son projet et ne peut pas être supprimée
 - navigation précédent/suivant basée sur le contexte exact de la liste d'où vous venez
 
 ### Tiroir des propriétés

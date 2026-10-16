@@ -82,7 +82,7 @@ async function main() {
     );
     const crud = new ApplicationsCrudService(
       writer.manager.getRepository(Application), { log: async () => undefined } as any,
-      null as any, writerSettings, null as any, null as any,
+      null as any, writerSettings, null as any,
     );
     let concurrentFinished = false;
     const concurrentUpdate = crud.update(applicationId, { criticality: 'Moderate' } as any, null, { manager: writer.manager }).finally(() => { concurrentFinished = true; });

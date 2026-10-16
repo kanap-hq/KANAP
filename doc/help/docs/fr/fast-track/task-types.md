@@ -246,6 +246,8 @@ Tous les types d'éléments de travail sont **configurables** dans **Portefeuill
 - **Désactiver** des types existants dont vous n'avez pas besoin
 - **Renommer** des types pour s'adapter à votre terminologie
 
+Les quatre types par défaut (Tâche, Bug, Problème, Incident) s'affichent dans la langue de chaque utilisateur tant que vous gardez leur nom. Un type renommé affiche son nouveau nom dans toutes les langues.
+
 La liste de ce guide est un point de départ. Adaptez-la à la façon dont votre département IT fonctionne réellement.
 
 ---

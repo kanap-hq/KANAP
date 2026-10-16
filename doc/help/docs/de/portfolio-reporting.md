@@ -259,9 +259,11 @@ Die Geändert-Listen ergänzen am Ende die Spalte **Änderungen**.
 ### Exporte
 
 - **CSV**: neun Blöcke in der Reihenfolge der Seite, jeder mit eigener Überschrift und Kopfzeile.
-- **XLSX**: drei Blätter, Requests, Projects und Tasks. Die Zeilen laufen von den Erstellungen über die Änderungen zu den Abschlüssen, mit einer führenden Spalte **Event**, die angibt, aus welcher Liste eine Zeile stammt. Die Namenszelle verweist zurück auf das Element.
+- **XLSX**: drei Blätter, Anfragen, Projekte und Aufgaben. Die Zeilen laufen von den Erstellungen über die Änderungen zu den Abschlüssen, mit einer führenden Spalte **Ereignis**, die angibt, aus welcher Liste eine Zeile stammt. Die Namenszelle verweist zurück auf das Element.
 
 Beide Exporte enthalten die Referenz, das Unternehmen, die Herkunft eines Projekts, die Änderungen einer geänderten Zeile und das Datum des Ereignisses. Die geschlossenen Zeilen tragen zusätzlich den Erstellungstag.
+
+Beide Dateien sind in der Sprache der Oberfläche geschrieben: Titel, Spaltennamen, Status, Änderungen, Ja oder Nein und Tage. Die CSV übernimmt außerdem das Trennzeichen und das Dezimalzeichen dieser Sprache, wie unter [CSV-Dateien](csv-files.md) beschrieben.
 
 ## Erfasste Zeit
 

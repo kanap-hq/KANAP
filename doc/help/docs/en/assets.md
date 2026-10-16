@@ -1,6 +1,6 @@
 # Assets
 
-Assets document your infrastructure inventory -- physical servers, virtual machines, containers, cloud instances, and network devices. Link assets to locations, applications, connections, contracts, projects, and tasks to build a complete picture of your IT infrastructure.
+Assets document your infrastructure inventory: physical servers, virtual machines, containers, cloud instances, and network devices. Link assets to locations, applications, connections, contracts, projects, and tasks to build a complete picture of your IT infrastructure.
 
 ## Getting started
 
@@ -36,7 +36,7 @@ The asset list gives you a filterable, sortable overview of every asset in your 
 | **Name** | Asset name (click to open workspace) |
 | **Asset Type** | The asset's type (e.g., Virtual Machine, Physical Server) |
 | **Cluster** | Cluster membership, or a "Cluster" badge if this asset is itself a cluster |
-| **Environment** | Prod, Pre-prod, QA, Test, Dev, Sandbox -- with a coloured dot |
+| **Environment** | Prod, Pre-prod, QA, Test, Dev, Sandbox, with a coloured dot |
 | **Location** | Where the asset is hosted |
 | **Hosting** | Hosting type (derived from location) |
 | **OS** | Operating system |
@@ -73,7 +73,7 @@ Most columns support checkbox set filters for quick multi-select filtering. Filt
 **Actions**:
 - **Add asset**: Create a new asset (`infrastructure:member`)
 - **Import CSV** / **Export CSV**: Bulk operations (`infrastructure:admin`)
-- **Delete asset** (selected rows): Remove selected assets (`infrastructure:admin`)
+- **Delete asset** (selected rows): Remove selected assets (`infrastructure:admin`). An asset still assigned to applications or linked to connections cannot be deleted: remove it from them first. Before anything is deleted, the confirmation lists the assets kept, with the reason
 
 ---
 
@@ -92,7 +92,7 @@ Cluster members are managed from the **Technical** tab of the cluster's workspac
 
 ## The Assets workspace
 
-Click any row to open the workspace. The workspace has a **header** with quick metadata, a **properties drawer** on the right (the asset's identity card -- always visible), and a **content area** in the centre that switches with each tab.
+Click any row to open the workspace. The workspace has a **header** with quick metadata, a **properties drawer** on the right (the asset's identity card, always visible), and a **content area** in the centre that switches with each tab.
 
 ### Header
 
@@ -101,7 +101,7 @@ The header shows:
 - **Asset reference** (e.g., `AST-123`): copyable identifier
 - **Lifecycle** chip (also editable from the properties drawer)
 - **Send link**: copy a shareable link to this workspace
-- **Delete** (`infrastructure:admin`)
+- **Delete** (`infrastructure:admin`). For an asset still in use, the reason shows before any confirmation
 - **Previous / Next** (e.g., "3 of 47"): navigate the filtered list without returning to it
 
 ### Properties drawer (right panel)
@@ -112,7 +112,7 @@ The drawer shows the asset's identity card on every tab. Edits save automaticall
 - **Asset type** (required)
 - **Location** (required)
 - **Sub-location** (when the location has sub-locations defined)
-- **Hosting type**, **Cloud provider / Operating company**, **Country**, **City** -- read-only, derived from the location
+- **Hosting type**, **Cloud provider / Operating company**, **Country**, **City**: read-only, derived from the location
 
 **Status**:
 - **Environment**: Prod, Pre-prod, QA, Test, Dev, Sandbox
@@ -132,7 +132,7 @@ The Overview tab is the asset's home page.
 
 | Column | What it shows |
 |--------|---------------|
-| **Application** | Application name (clickable -- jumps to the application's Deployments) |
+| **Application** | Application name (clickable: jumps to the application's Deployments) |
 | **Environment** | The deployment environment the assignment belongs to |
 | **Role** | Server role (Web, Database, Application, etc.) |
 | **Since** | Date the server was assigned |
@@ -142,7 +142,7 @@ Click **Add assignment** to attach this asset to an application deployment. Pick
 
 If this asset is a cluster, an inline notice replaces the assignments table and asks you to assign member hosts instead.
 
-**Connections**: A read-only view of all connections involving this asset. Each row shows the connection ID and name (clickable -- opens the Connection workspace), topology (Server to Server or Multi-server), protocols, source and destination endpoint labels, and lifecycle status. To create or edit a connection, navigate to **IT Landscape > Connections**.
+**Connections**: A read-only view of all connections involving this asset. Each row shows the connection ID and name (clickable: opens the Connection workspace), topology (Server to Server or Multi-server), protocols, source and destination endpoint labels, and lifecycle status. To create or edit a connection, navigate to **IT Landscape > Connections**.
 
 **Knowledge**: Linked knowledge articles for this asset. With `knowledge:member` you can create new articles directly from this section.
 
@@ -162,7 +162,7 @@ The Technical tab organizes cluster, network identity and IP configuration.
 - **Domain**: The Active Directory or DNS domain the asset belongs to. Choose from domains configured in **IT Landscape > Settings**. System options include "Workgroup" (standalone) and "N/A" (not applicable).
 - **FQDN**: Fully Qualified Domain Name, automatically computed from hostname and domain DNS suffix. Read-only.
 - **Aliases**: Additional DNS names or aliases for this asset. Type and press Enter to add.
-- **Operating system**: OS type and version (e.g., Windows Server 2022, Ubuntu 24.04 LTS). Disabled for clusters -- OS is defined per member. When selected, shows standard and extended support end dates underneath.
+- **Operating system**: OS type and version (e.g., Windows Server 2022, Ubuntu 24.04 LTS). Disabled for clusters: OS is defined per member. When selected, shows standard and extended support end dates underneath.
 
 **IP addresses**:
 
@@ -175,7 +175,7 @@ Assets support multiple IP addresses, each with its own network configuration:
 - **Network zone**: Automatically derived from the selected subnet (read-only)
 - **VLAN**: Automatically derived from the selected subnet (read-only)
 
-This lets you document multiple network interfaces per asset -- for example, a physical server with both a host IP and an IPMI management address on different subnets.
+This lets you document multiple network interfaces per asset, for example a physical server with both a host IP and an IPMI management address on different subnets.
 
 ---
 
@@ -225,9 +225,9 @@ The Relations tab connects this asset to other records across KANAP. The tab bad
 - **Contracts**: Link to contract records
 - **Projects**: Link to portfolio projects related to this asset
 
-**Tasks**: Tasks linked to this asset. Read-only here -- tasks gain or lose this link when you set the **Asset** field on a task in the Tasks page.
+**Tasks**: Tasks linked to this asset. Read-only here: tasks gain or lose this link when you set the **Asset** field on a task in the Tasks page.
 
-**Relevant websites**: Add URLs with optional names -- useful for vendor portals, monitoring dashboards, or documentation links. **Add URL** opens a dialog; existing entries can be edited or deleted.
+**Relevant websites**: Add URLs with optional names, useful for vendor portals, monitoring dashboards, or documentation links. **Add URL** opens a dialog; existing entries can be edited or deleted.
 
 **Attachments**: Drag and drop files or click **Select files** to upload. Click an attachment chip to download it. Delete is available to managers.
 
@@ -249,20 +249,20 @@ From the Assets list:
 
 | Option | Description |
 |--------|-------------|
-| **Full Export** | All exportable fields -- use for reporting and complete data extraction |
-| **Data Enrichment** | All importable fields -- matches the import template format, ideal for round-trip editing (export, modify, re-import) |
+| **Full Export** | All exportable fields. Use for reporting and complete data extraction |
+| **Data Enrichment** | All importable fields. Matches the import template format, ideal for round-trip editing (export, modify, re-import) |
 | **Custom Selection** | Choose specific fields to include in your export |
 
-**Template download** (from Import dialog): Downloads a blank CSV with all importable field headers -- use this to prepare import files with the correct structure.
+**Template download** (from Import dialog): Downloads a blank CSV with all importable field headers. Use this to prepare import files with the correct structure.
 
 ### Import workflow
 
-1. **Prepare your file**: Use UTF-8 encoding with semicolon (`;`) separators. A file Excel saved as plain CSV (Windows-1252) imports too. Download a template to ensure correct headers.
+1. **Prepare your file**: Save it as UTF-8. Commas or semicolons both work, and so does a file Excel saved as plain CSV (Windows-1252). Download a template to ensure correct headers. The separator, amounts, dates and yes or no of each language are in [CSV files](csv-files.md).
 
 2. **Choose import settings**:
    - **Mode**:
-     - `Enrich` (default): Empty cells preserve existing values -- only update what you specify
-     - `Replace`: Empty cells clear existing values -- full replacement of all fields
+     - `Enrich` (default): Empty cells preserve existing values: only update what you specify
+     - `Replace`: Empty cells clear existing values: full replacement of all fields
    - **Operation**:
      - `Upsert` (default): Create new assets or update existing ones
      - `Update only`: Only modify existing assets, skip new ones
@@ -284,7 +284,7 @@ From the Assets list:
 | `kind` | Asset type | Yes | Accepts code or label (e.g., `vm` or `Virtual Machine`) |
 | `environment` | Environment | Yes | `prod`, `pre_prod`, `qa`, `test`, `dev`, `sandbox` |
 | `status` | Lifecycle status | No | Accepts code or label (e.g., `active` or `Active`) |
-| `is_cluster` | Is this a cluster | No | `true` or `false` |
+| `is_cluster` | Is this a cluster | No | `yes` or `no` |
 | `hostname` | Network hostname | No | |
 | `domain` | DNS domain | No | Accepts code or label from Settings |
 | `aliases` | DNS aliases | No | Comma-separated list |
@@ -343,7 +343,7 @@ Some fields are computed and cannot be imported:
 **"File isn't properly formatted" error**: This usually indicates an encoding issue. Ensure your CSV is saved as **UTF-8**:
 
 - **In LibreOffice**: When opening a CSV, select `UTF-8` in the Character set dropdown (not "Japanese (Macintosh)" or other encodings). When saving, check "Edit filter settings" and choose UTF-8.
-- **In Excel**: Save As > CSV UTF-8 (Comma delimited), then open in a text editor to change commas to semicolons.
+- **In Excel**: Save As > CSV UTF-8 (Comma delimited).
 - **General tip**: If you see garbled characters at the start of your file, the encoding is incorrect.
 
 ### Example CSV

@@ -1,5 +1,5 @@
 import { CsvReadResult } from '../../common/csv-sheet';
-import { matchCode } from '../../common/csv-sheet';
+import { keepStoredEndOfValidity, matchCode } from '../../common/csv-sheet';
 import { normalizeAnalyticsName } from '../../analytics/analytics-context';
 import { notApplicableDimensionMessage, requiredDimensionMessage } from '../item-analytics.util';
 import { AmountMeasure, MEASURE_FREEZE_COLUMN } from '../amounts-write.util';
@@ -914,7 +914,10 @@ function resolveDates(
   }
   const parsed = row.dates.end_of_validity;
   if (!parsed || parsed.kind === 'clear') return;
-  const instant = parsed.kind === 'instant' ? parsed.iso : endOfValidityFromDate(parsed.isoDate).toISOString();
+  // A day is noon UTC; the stored instant's own day keeps its time of day (the export writes the day only).
+  const instant = parsed.kind === 'instant'
+    ? parsed.iso
+    : keepStoredEndOfValidity(live?.endOfValidity ?? null, endOfValidityFromDate(parsed.isoDate).toISOString());
   const stored = live?.endOfValidity ? new Date(live.endOfValidity).toISOString() : null;
   const changed = stored !== instant;
   if (changed) changes.push('end_of_validity');

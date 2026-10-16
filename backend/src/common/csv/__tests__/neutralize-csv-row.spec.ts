@@ -219,14 +219,11 @@ function testEveryCsvWriterNeutralizesFormulas() {
     `CSV writers must pass \`transform: neutralizeCsvRow\`:\n${offenders.join('\n')}`,
   );
 
-  // The one writer that hand-rolls its CSV must neutralise inside its own escaper.
+  // The weekly report writes its blocks line by line through the shared writer, which neutralises.
   const weekly = fs.readFileSync(
     path.join(srcRoot, 'portfolio', 'services', 'portfolio-weekly-report.service.ts'),
     'utf8',
   );
-  const escaper = weekly.slice(weekly.indexOf('const csvEscape'), weekly.indexOf('const columnNumberToName'));
-  assert.ok(
-    escaper.includes('neutralizeCsvFormulaValue'),
-    'portfolio-weekly-report.service.ts hand-rolls its CSV and must neutralise in csvEscape',
-  );
+  assert.ok(weekly.includes('writeCsvLine('), 'portfolio-weekly-report.service.ts writes its CSV through writeCsvLine');
+  assert.ok(!weekly.includes("join(';')"), 'portfolio-weekly-report.service.ts hand-rolls no CSV line');
 }

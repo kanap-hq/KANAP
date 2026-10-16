@@ -10,6 +10,7 @@ import api from '../../../api';
 import { contentToPlainText } from '../../../utils/contentToPlainText';
 import { useLocale } from '../../../i18n/useLocale';
 import { formatShortDate, formatShortDateTime } from '../../../lib/dateFormat';
+import { useLocalizedTaskTypes } from '../../../hooks/useLocalizedTaskTypes';
 import { getPriorityLabel, getTaskStatusLabel } from '../../../utils/portfolioI18n';
 import { formatUserName } from '../../../utils/userDisplay';
 import { buildCreatedEntry, isCreatedEntry } from '../../../utils/activityFeed';
@@ -74,6 +75,8 @@ const toCommentPreview = (value: string, maxLen = 150): string => {
 export default function TaskHistory({ taskId, projectId, createdAt, createdByName }: TaskHistoryProps) {
   const { t } = useTranslation('portfolio');
   const locale = useLocale();
+  // The history records type names; one still naming a shipped type the tenant kept is shown translated.
+  const { labelByName: taskTypeLabels } = useLocalizedTaskTypes();
   const { data: activities = [], isLoading } = useQuery({
     queryKey: ['task-activities', taskId],
     queryFn: async () => {
@@ -103,6 +106,7 @@ export default function TaskHistory({ taskId, projectId, createdAt, createdByNam
     if (value === null || value === undefined) return t('workspace.task.history.values.empty');
     if (field === 'status') return getTaskStatusLabel(t, String(value));
     if (field === 'priority_level') return getPriorityLabel(t, String(value));
+    if (field === 'task_type_id') return taskTypeLabels[String(value)] ?? String(value);
     if (Array.isArray(value)) {
       if (value.length === 0) return t('workspace.task.history.values.empty');
       return value.map((entry) => String(entry)).join(', ');

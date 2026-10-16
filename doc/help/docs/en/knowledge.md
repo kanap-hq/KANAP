@@ -33,7 +33,7 @@ Consequences of the library choice:
 - In **Templates**, published documents become reusable starting points for new articles and are grouped by document type in the template picker.
 - In **Managed Docs**, articles may still be readable and editable, but some metadata is controlled by the source workspace rather than from Knowledge itself.
 
-Library administration is intentionally stricter than document editing. Creating, renaming, deleting, or reorganizing libraries is an admin responsibility because those changes affect navigation and ownership for everyone.
+Library administration is intentionally stricter than document editing. Creating, renaming, deleting, or reorganizing libraries is an admin responsibility because those changes affect navigation and ownership for everyone. The default library (the first one in the bar, where new documents go) cannot be deleted. A built-in library cannot be deleted either, nor the last library you can use: create another one first.
 
 ### Restricted libraries
 
@@ -49,7 +49,7 @@ In a restricted library:
 
 Use restricted libraries for sensitive content (security procedures, HR documents, executive material) where you want fine-grained access control inside Knowledge instead of relying only on global roles.
 
-Restricted libraries also bound what an AI agent can read. When an administrator scopes an agent to a chosen set of libraries in its **Knowledge and web sources** settings, that choice is combined with the libraries the configuring administrator can already read — an agent never sees more than the person who set it up. A restricted library the administrator cannot access stays invisible to the agent as well.
+Restricted libraries also bound what an AI agent can read. When an administrator scopes an agent to a chosen set of libraries in its **Knowledge and web sources** settings, that choice is combined with the libraries the configuring administrator can already read: an agent never sees more than the person who set it up. A restricted library the administrator cannot access stays invisible to the agent as well.
 
 ### Folders
 
@@ -60,7 +60,7 @@ Important behavior:
 - In a single-library view, documents can be dragged into folders for quick reorganization.
 - Folders can be nested to create a browsing structure.
 - Deleting a folder does not delete its documents. Documents move back to **Unfiled** instead.
-- A folder with subfolders cannot be deleted until the hierarchy is cleaned up.
+- A folder with subfolders cannot be deleted: KANAP says so before asking you to confirm. Move or delete its subfolders first.
 
 Use folders for stable subject areas, not for temporary workflow states. Status and workflow already exist for that.
 
@@ -161,7 +161,7 @@ Folder moves follow the same idea as document moves. Reorganizing a folder chang
 
 - **New** (split button): creates a blank document in the active library, or opens the template picker to create from a published template
 - **Move**: moves selected documents to a different folder or library
-- **Delete**: permanently removes selected documents (admin only; unavailable for managed documents)
+- **Delete**: permanently removes selected documents (admin only; unavailable for managed documents). Before anything is deleted, the confirmation lists the documents kept, with the reason
 - **Manage Types**: visible only inside the **Templates** library to administrators; opens the document type editor
 
 ## Creating and shaping a document
@@ -231,7 +231,7 @@ How it works:
 
 If the import encounters a lock conflict (someone else acquired the lock) or an expired lock, editing mode ends and an appropriate message is shown. Re-enter edit mode and try again.
 
-Import warnings — for example, unsupported formatting that was simplified during conversion — appear briefly as a notification at the bottom of the screen.
+Import warnings (for example, unsupported formatting that was simplified during conversion) appear briefly as a notification at the bottom of the screen.
 
 Use the import feature when migrating existing Word documents into Knowledge. It is faster and safer than copy-paste, and it preserves embedded images automatically.
 
@@ -252,7 +252,7 @@ Export does not replace the live article. The Knowledge version remains the gove
 
 ## Generating documents from chat
 
-If the AI Assistant is enabled in your KANAP, you can ask it to draft a Knowledge article for you from chat. The assistant prepares a preview that you review before anything is saved. Confirming the preview creates a real Knowledge document with the content, type, template lineage, and any relations you specified — exactly as if you had written it yourself.
+If the AI Assistant is enabled in your KANAP, you can ask it to draft a Knowledge article for you from chat. The assistant prepares a preview that you review before anything is saved. Confirming the preview creates a real Knowledge document with the content, type, template lineage, and any relations you specified, exactly as if you had written it yourself.
 
 Generated documents follow the same governance rules as hand-written ones: ownership, status, version history, locks, and review workflow all apply.
 
@@ -341,4 +341,4 @@ That distinction matters. Direct links express an intentional relationship. Rela
 - Use review for documents that drive decisions, controls, or repeatable processes.
 - Mark outdated content as archived or obsolete instead of leaving readers to guess.
 - Import Word documents when migrating existing content into Knowledge rather than copying and pasting, so that embedded images are preserved automatically.
-- Reach for restricted libraries when access matters at the library level — do not rely on folder layout to hide sensitive content.
+- Reach for restricted libraries when access matters at the library level. Do not rely on folder layout to hide sensitive content.

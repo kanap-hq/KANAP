@@ -43,6 +43,8 @@ type GridProps = {
   /** Adds a column kept out of the chooser, the way a list carries a link filter. */
   withSuppressedColumn?: boolean;
   showFilteredColumns?: boolean;
+  /** Adds a date column with the grid's date filter. */
+  withDateColumn?: boolean;
 };
 
 type Row = { id: string; name: string; other: string; status: string; secret?: string };
@@ -74,13 +76,15 @@ function SearchSpy({ onChange }: { onChange: (search: string) => void }) {
   return null;
 }
 
-function Grid({ queryClient, getValues, withSuppressedColumn, onSearchChange, ...props }: GridProps) {
+const DATE_COLUMN = { field: 'due', headerName: 'Due', filter: 'agDateColumnFilter' } as any;
+
+function Grid({ queryClient, getValues, withSuppressedColumn, withDateColumn, onSearchChange, ...props }: GridProps) {
   return (
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
         {onSearchChange && <SearchSpy onChange={onSearchChange} />}
         <ServerDataGrid<Row>
-          columns={columns(!!withSuppressedColumn, getValues)}
+          columns={[...columns(!!withSuppressedColumn, getValues), ...(withDateColumn ? [DATE_COLUMN] : [])]}
           endpoint="/things"
           queryKey="things"
           defaultSort={{ field: 'name', direction: 'ASC' }}
@@ -426,6 +430,21 @@ describe('ServerDataGrid column filters follow the grid model', () => {
     await quiet();
     expect(grid.api().getColumn('secret').isVisible()).toBe(false);
     expect(grid.api().getFilterModel()).toHaveProperty('secret');
+  }, 30_000);
+
+  it("date filter: the app's date field in place of the browser picker, and the server gets an ISO date", async () => {
+    layoutPopups();
+    const grid = await mount({ withDateColumn: true });
+    act(() => { grid.api().showColumnFilter('due'); });
+    await waitFor(() => expect(document.querySelector('.ag-popup input[inputmode="numeric"]')).not.toBeNull());
+    expect(document.querySelector('.ag-root-wrapper input[type="date"], .ag-popup input[type="date"]')).toBeNull();
+    const input = document.querySelector('.ag-popup input[inputmode="numeric"]') as HTMLInputElement;
+    expect(input.placeholder).toBe('labels.datePlaceholder');
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '15102026' } });
+    await quiet();
+    expect(grid.api().getFilterModel().due).toMatchObject({ filterType: 'date', type: 'equals', dateFrom: '2026-10-15 00:00:00' });
+    expect(JSON.parse(String(lastRequestFilters())).due).toMatchObject({ dateFrom: '2026-10-15 00:00:00' });
   }, 30_000);
 
   it('a column kept out of the chooser keeps its filter when a saved layout and a reset hide it', async () => {

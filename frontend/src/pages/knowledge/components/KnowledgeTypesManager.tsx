@@ -286,7 +286,7 @@ export default function KnowledgeTypesManager() {
 
       <KanapDialog
         open={!!deleteTypeCandidate}
-        title={t('typesManager.dialogs.delete.title')}
+        title={deleteTypeCandidate?.name ? t('common:delete.recordTitle', { name: deleteTypeCandidate.name }) : t('typesManager.dialogs.delete.title')}
         onClose={() => setDeleteTypeCandidate(null)}
         onSave={() => {
           if (!deleteTypeCandidate) return;

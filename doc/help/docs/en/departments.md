@@ -25,9 +25,9 @@ Navigate to **Master Data > Departments** to see your department list. Click **N
 The Departments grid gives you an overview of all departments with their headcount for a given year.
 
 **Default columns**:
-- **Name**: Department name -- click to open the workspace Overview tab
-- **Company**: Parent company -- click to open the workspace Overview tab
-- **Headcount (Year)**: Employee count for the selected year -- click to jump straight to the Details tab for editing
+- **Name**: Department name. Click to open the workspace Overview tab
+- **Company**: Parent company. Click to open the workspace Overview tab
+- **Headcount (Year)**: Employee count for the selected year. Click to jump straight to the Details tab for editing
 
 **Additional columns** (via column chooser):
 - **Status**: Enabled or Disabled
@@ -45,7 +45,7 @@ The Departments grid gives you an overview of all departments with their headcou
 - **New**: Create a new department (requires `departments:manager`)
 - **Import CSV**: Bulk import departments (requires `departments:admin`)
 - **Export CSV**: Export to CSV (requires `departments:admin`)
-- **Delete Selected**: Remove selected departments (requires `departments:admin`)
+- **Delete Selected**: Remove selected departments (requires `departments:admin`). A department used in the allocations of budget lines cannot be deleted: disable it instead. Before anything is deleted, the confirmation lists the departments kept, with the reason
 
 ---
 
@@ -56,7 +56,7 @@ Click any row to open the workspace. It has two tabs: **Overview** and **Details
 - **Header**: the department name. Click it to rename the department. **Prev** / **Next** move between departments in the list's order and filters without returning to the list, and the close button returns to the list
 - **Properties panel** on the right: **Company** and **Lifecycle**
 
-**Autosave**: Every change saves on its own. There is no Save button. The name and the description save when you leave the field; the company and the lifecycle save as soon as you change them. You can keep working while a change saves. When a change is refused, the reason shows under the field that caused it, except for the name, which shows its refusal at the top of the page.
+**Autosave**: Every change saves on its own. There is no Save button. The name and the description save when you leave the field; the company and the lifecycle save as soon as you change them. You can keep working while a change saves. When a change is refused, the reason shows under the field that caused it.
 
 ### Overview
 
@@ -103,7 +103,7 @@ The columns:
 | `name` | Required. The department name |
 | `description` | Free text |
 | `status` | `enabled` or `disabled` |
-| `disabled_at` | The end of validity: a date (`2026-12-31`) or a full date and time |
+| `disabled_at` | The end of validity: a date (`2026-12-31`) or a full date and time. The export writes the date only. Imported again, that date keeps the stored end of validity |
 
 **Import**:
 
@@ -128,6 +128,6 @@ The columns:
 
 - **Match your org structure**: Mirror your HR system's department hierarchy for consistency.
 - **Update headcount annually**: Set a reminder to refresh department metrics during budget planning.
-- **Use for allocations**: Department headcount drives cost allocation calculations -- keep it accurate.
+- **Use for allocations**: Department headcount drives cost allocation calculations. Keep it accurate.
 - **Disable, don't delete**: When departments are reorganized, disable old ones rather than deleting to preserve historical data.
 - **Leverage deep-links**: Click the headcount number directly from the list to jump to the Details tab and edit metrics without an extra click.

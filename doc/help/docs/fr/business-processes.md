@@ -47,7 +47,7 @@ La liste affiche tous les processus métier de votre tenant.
 - **Gérer les catégories** (Manager+) : ouvrir le dialogue de gestion des catégories.
 - **Importer CSV** (Admin) : import en masse de processus depuis un fichier CSV.
 - **Exporter CSV** (Admin) : exporter les processus que la liste affiche, ou tous les processus, en CSV.
-- **Supprimer la sélection** (Admin) : supprimer une ou plusieurs lignes sélectionnées.
+- **Supprimer la sélection** (Admin) : supprimer une ou plusieurs lignes sélectionnées. Les interfaces et les demandes liées à un processus supprimé sont conservées, sans ce lien.
 
 ---
 
@@ -99,7 +99,7 @@ Les deux ouvrent le dialogue **Gérer les catégories de processus métier**.
 
 - **Renommer** : modifiez le nom directement dans le champ texte.
 - **Activer / Désactiver** : basculez si une catégorie apparaît dans les sélecteurs. Les catégories inactives sont masquées des nouvelles affectations mais préservées sur les processus existants.
-- **Supprimer** : supprimez une catégorie. La suppression ne fonctionne que si aucun processus ne l'utilise ; sinon, vous verrez une erreur.
+- **Supprimer** : supprimez une catégorie. La suppression ne fonctionne que si aucun processus ne l'utilise ; sinon, le message compte les processus qui l'utilisent. Désactivez-la plutôt.
 - **Nouvelle catégorie** : ajoutez une nouvelle ligne en haut du dialogue.
 
 **Comportement d'enregistrement et d'annulation** :
@@ -121,7 +121,7 @@ Cliquez sur **Exporter CSV** sur la page de la liste. Vous pouvez exporter :
 - Un **modèle** (ligne d'en-tête uniquement) à utiliser comme point de départ.
 - Les **données** (tous les processus du tenant actuel).
 
-Le fichier utilise des points-virgules (`;`) comme séparateurs et est encodé en UTF-8 avec BOM pour la compatibilité Excel.
+Le séparateur suit la langue de votre écran. Voir [Fichiers CSV](csv-files.md) pour l'encodage, le séparateur et les deux étapes d'import.
 
 **Colonnes** : `name`, `categories`, `description`, `notes`, `status`.
 
@@ -131,15 +131,15 @@ La colonne `categories` peut contenir plusieurs noms de catégories séparés pa
 
 Cliquez sur **Importer CSV** sur la page de la liste, puis :
 
-1. Téléchargez votre fichier CSV (doit correspondre aux en-têtes du modèle et utiliser `;` comme séparateur).
-2. Lancez le **Contrôle préalable** : il valide les en-têtes et les données, et montre combien de lignes seront créées vs mises à jour.
+1. Téléchargez votre fichier CSV avec les titres de colonnes du modèle. Les virgules comme les points-virgules conviennent.
+2. Lancez le **Contrôle préalable** : cela valide les en-têtes et les données, et montre combien de lignes seront créées vs mises à jour.
 3. Si le contrôle réussit, cliquez sur **Charger** pour appliquer les modifications.
 
 **Règles de correspondance** :
 
-- Les lignes sont mises en correspondance par **Nom** (insensible à la casse). Un nom correspondant met à jour le processus existant ; un nouveau nom crée un nouveau processus.
+- Les lignes sont mises en correspondance par **Nom**, quelle que soit la casse. Un nom correspondant met à jour le processus existant et garde le nom enregistré (la vérification préalable indique le processus rapproché) ; un nouveau nom crée un nouveau processus.
 - Chaque catégorie dans la cellule `categories` est nettoyée et mise en correspondance par nom. Si une catégorie n'existe pas encore, elle est créée automatiquement comme catégorie active.
-- La colonne `status` définit l'état activé/désactivé. Les dates de cycle de vie ne sont pas importées : ajustez-les dans l'espace de travail si nécessaire.
+- Le fichier n'a pas de colonne de fin de validité. Lors d'une mise à jour, un `status` vide, ou égal au statut actuel du processus, garde sa fin de validité. Un statut différent s'applique : `enabled` efface la fin de validité, et `disabled` termine le processus aujourd'hui, sauf si sa fin de validité est déjà passée. Un nouveau processus est activé, sauf si la ligne indique `disabled`.
 
 **Conseil** : exportez d'abord vos données actuelles, modifiez le CSV et réimportez. Cela évite les doublons accidentels et garantit que vous travaillez à partir de l'état le plus récent.
 

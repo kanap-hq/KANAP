@@ -185,11 +185,11 @@ Below Purpose, the Summary tab includes the project activity stream:
 - **Comments** for discussion, contextual notes, and formal decisions
 - **History** for the audit trail of field and status changes
 
-**History** lists the recorded changes — status moves, field edits, team and relation changes, edits to the Purpose document — and closes with the creation entry: who created the project and when.
+**History** lists the recorded changes (status moves, field edits, team and relation changes, edits to the Purpose document) and closes with the creation entry: who created the project and when.
 
 Managers can add and edit project comments. Comments can also be recorded as formal decisions, with an outcome and an optional status change. Use that when the discussion itself changes the project's course.
 
-Images can be included in activity comments when visual evidence is useful — architecture sketches, screenshots, or review evidence.
+Images can be included in activity comments when visual evidence is useful: architecture sketches, screenshots, or review evidence.
 
 Use **History** when you need to know what changed. Use **Comments** when you need to know why.
 
@@ -227,7 +227,7 @@ Projects can start with a phase template or a fully custom phase plan.
 - each phase row includes a milestone checkbox; ticking it creates a phase-completion milestone for that phase
 - each phase has a shortcut to create a task already linked to that phase and project
 - **Add Phase** appends a new empty phase
-- **Replace with Template** rebuilds the phase structure from a template — use it only when you really mean "start the phase model over"
+- **Replace with Template** rebuilds the phase structure from a template. Use it only when you really mean "start the phase model over"
 
 The phase model affects more than the timeline:
 

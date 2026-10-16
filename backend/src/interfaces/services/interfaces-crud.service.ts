@@ -27,6 +27,8 @@ import {
   ServiceOpts,
 } from './interfaces-base.service';
 import { assertMarkdownSize } from '../../common/markdown-limits';
+import { checkIds, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal } from '../../common/record-in-use';
+import type { BulkDeleteResult } from '../../common/delete.types';
 
 /**
  * Texts the specification document of an interface is built from
@@ -432,9 +434,7 @@ export class InterfacesCrudService extends InterfacesBaseService {
     const bindings = await bindingRepo.find({ where: { interface_id: interfaceDbId } as any });
 
     if (bindings.length > 0) {
-      if (!opts?.deleteRelatedBindings) {
-        throw new BadRequestException('Cannot delete interface with bindings');
-      }
+      if (!opts?.deleteRelatedBindings) throw bindingsRefusal(existing.name, bindings.length);
       // Delete connection links first (they reference bindings)
       const bindingIds = bindings.map(b => b.id);
       if (bindingIds.length > 0) {
@@ -454,16 +454,32 @@ export class InterfacesCrudService extends InterfacesBaseService {
   }
 
   /**
+   * The check before a delete (`POST /interfaces/delete-check`): the interfaces of `ids` with
+   * bindings, which the delete refuses unless it deletes their bindings too. Nothing is written.
+   */
+  async deleteCheck(ids: string[], opts?: ServiceOpts): Promise<{ refused: DeleteRefusal[] }> {
+    const mg = opts?.manager ?? this.repo.manager;
+    const wanted = checkIds(ids);
+    if (wanted.length === 0) return { refused: [] };
+    const rows: Array<{ id: string; name: string; bindings: number }> = await mg.query(
+      `SELECT i.id, i.name, (SELECT count(*)::int FROM interface_bindings b WHERE b.tenant_id = i.tenant_id AND b.interface_id = i.id) AS bindings
+       FROM interfaces i WHERE i.tenant_id = app_current_tenant() AND i.id = ANY($1::uuid[])`,
+      [wanted],
+    );
+    return refusalsFrom(wanted, rows, (row) => row.name, async (row) => (row.bindings > 0 ? bindingsRefusal(row.name, row.bindings) : null));
+  }
+
+  /**
    * Bulk delete interfaces.
    */
   async bulkDelete(ids: string[], userId: string | null, opts?: ServiceOpts & { deleteRelatedBindings?: boolean }): Promise<{
     deleted: string[];
-    failed: Array<{ id: string; name: string; reason: string }>;
+    failed: BulkDeleteResult['failed'];
   }> {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = this.getRepo(mg);
 
-    const result: { deleted: string[]; failed: Array<{ id: string; name: string; reason: string }> } = {
+    const result: BulkDeleteResult = {
       deleted: [],
       failed: [],
     };
@@ -482,6 +498,7 @@ export class InterfacesCrudService extends InterfacesBaseService {
           id,
           name,
           reason: error?.message || 'Unknown error',
+          ...refusalDetails(error),
         });
       }
     }
@@ -726,4 +743,11 @@ export class InterfacesCrudService extends InterfacesBaseService {
 
     return savedInterface;
   }
+}
+
+/** The refusal of an interface's delete while it has bindings: the window offers to delete them with it. */
+function bindingsRefusal(name: string, total: number): RecordInUseException {
+  return new RecordInUseException('INTERFACE_HAS_BINDINGS', 'interface', name,
+    [{ type: 'interface_bindings', total }],
+    'Cannot delete interface with bindings. Delete its bindings with it, or remove them first.');
 }

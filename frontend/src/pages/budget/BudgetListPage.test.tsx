@@ -875,6 +875,17 @@ describe('BudgetListPage', () => {
     expect(localStorage.getItem('grid-columns:test:u-1:opex-summary')).toBe('[{"colId":"notes","hide":false}]');
   });
 
+  it('asks which selected lines a frozen column keeps before the delete confirmation', async () => {
+    await renderPage();
+    act(() => lastProps().onSelectionChanged([{ id: 'line-1', product_name: 'Servers' }]));
+    const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
+    post.mockResolvedValueOnce({ data: { refused: [{ id: 'line-1', name: 'Servers', code: 'BUDGET_LINE_FROZEN', usages: [] }] } });
+    expect(await dialogs.bulk.checkDelete(['line-1'])).toEqual({ refused: [{ id: 'line-1', name: 'Servers', code: 'BUDGET_LINE_FROZEN', usages: [] }] });
+    expect(post).toHaveBeenCalledWith('/budget-lines/delete-check', { ids: ['line-1'] });
+    expect(String(dialogs.bulk.itemLabels.toDelete(2))).toContain('budget.delete.toDelete');
+    expect(String(dialogs.bulk.itemLabels.kept(1))).toContain('budget.delete.kept');
+  });
+
   it('opens export and import with the unified filters and the CAPEX fallback, and bulk deletes on the neutral route', async () => {
     await renderPage();
     act(() => lastProps().onQueryStateChange({ sort: 'yBudget:DESC', q: '', statusScope: 'enabled', filterModel: { nature: { filterType: 'set', values: ['capex'] } } }));

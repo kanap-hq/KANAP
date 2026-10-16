@@ -72,7 +72,7 @@ Limit how many hops from the selected applications to display:
 - **All**: Show every connected node (no limit)
 - **1-5**: Show only nodes within N hops of the selected applications
 
-Middleware nodes do not count as a hop -- the depth counter only increments when traversing through a primary application node.
+Middleware nodes do not count as a hop: the depth counter only increments when traversing through a primary application node.
 
 This filter only takes effect when you have at least one application selected; with no selection the value is locked to **All**.
 

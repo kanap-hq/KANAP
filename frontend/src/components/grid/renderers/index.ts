@@ -67,6 +67,5 @@ export {
   ActionsCellRenderer,
   createActionsCellRenderer,
   ActionIcons,
-  createCommonActions,
 } from './ActionsCellRenderer';
 export type { ActionsCellRendererProps, ActionDefinition } from './ActionsCellRenderer';

@@ -416,6 +416,7 @@ function ApplicationProperties({
             onChange={(value) => onPatch({ supplier_id: value })}
             disabled={!canManage}
             hideLabel
+            label={t('workspace.application.overview.supplier')}
             textFieldSx={drawerFieldValueSx}
           />
         </PropertyRow>
@@ -1108,6 +1109,7 @@ function OperationsTab({
               })}
               groupByCompany={false}
               hideLabel
+              label={t('workspace.application.technical.contact')}
               textFieldSx={drawerFieldValueSx}
             />
           </PropertyRow>
@@ -1183,7 +1185,7 @@ function ComplianceTab({
                 await onRefresh();
               })();
             }}
-            getOptionLabel={(option) => `${option.code} — ${option.name}`}
+            getOptionLabel={(option) => `${option.code} · ${option.name}`}
             filterOptions={filterCountryOptions}
             disabled={!canManage}
             renderInput={(params) => (

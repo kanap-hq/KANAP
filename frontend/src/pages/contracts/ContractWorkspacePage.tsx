@@ -20,7 +20,7 @@ import { PropertyRow } from '../../components/design';
 import SupplierSelect from '../../components/fields/SupplierSelect';
 import CompanySelect from '../../components/fields/CompanySelect';
 import DateEUField from '../../components/fields/DateEUField';
-import { STATUS_DISABLED, STATUS_ENABLED, deriveStatusFromDisabledAt, type StatusValue } from '../../constants/status';
+import { STATUS_DISABLED, STATUS_ENABLED, deriveStatusFromDisabledAt, statusChoicePatch, type StatusValue } from '../../constants/status';
 import { drawerFieldValueSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { getDotColor } from '../../utils/statusColors';
@@ -225,13 +225,10 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
 
   const handleStatusChange = (next: StatusValue) => {
     if (!form) return;
-    // Disabled with no end of validity: the server sets it to now.
-    if (next === STATUS_DISABLED && !form.disabled_at) {
-      void patchNow({ status: STATUS_DISABLED });
-      return;
-    }
-    const disabled_at = next === STATUS_DISABLED ? form.disabled_at : null;
-    void patchNow({ status: deriveStatusFromDisabledAt(disabled_at), disabled_at });
+    // The status shown sends nothing (a future end of validity stays). Disabled goes alone: the
+    // server sets the end of validity to now, or keeps one already passed.
+    const patch = statusChoicePatch(next, form);
+    if (patch) void patchNow(patch);
   };
 
   const [drawerOpenRequest, setDrawerOpenRequest] = React.useState(0);

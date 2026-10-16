@@ -25,12 +25,16 @@ import api from '../../../api';
 import { useAuth } from '../../../auth/AuthContext';
 import { useTenant } from '../../../tenant/TenantContext';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
-import { KanapDialog, PropertyRow } from '../../../components/design';
+import { localizeKnowledgeFolderTree } from '../../../utils/knowledgeNames';
+import { recordRefusal } from '../../../utils/deleteCheck';
+import { deleteFailureReason } from '../../../utils/deleteRefusal';
+import { KanapDialog, PropertyRow, useKanapDialogs } from '../../../components/design';
 import { drawerMenuItemSx, drawerSelectSx } from '../../../theme/formSx';
 
 type FolderNode = {
   id: string;
   name: string;
+  system_key?: string | null;
   children?: FolderNode[];
 };
 
@@ -365,7 +369,8 @@ const FolderTreePanel = React.memo(function FolderTreePanel({
   folderExternalDragAndDrop,
   documentDragAndDrop,
 }: FolderTreePanelProps) {
-  const { t } = useTranslation(['knowledge', 'common']);
+  const { t, i18n } = useTranslation(['knowledge', 'common']);
+  const dialogs = useKanapDialogs();
   const { profile } = useAuth();
   const { tenantSlug } = useTenant();
   const qc = useQueryClient();
@@ -395,13 +400,18 @@ const FolderTreePanel = React.memo(function FolderTreePanel({
     enabled: !!libraryId,
   });
 
+  // The Managed Docs folders in the reader's language.
+  const folderItems = React.useMemo(
+    () => localizeKnowledgeFolderTree(t, folderTree?.items),
+    [folderTree?.items, t],
+  );
   const flatFolders = React.useMemo(
-    () => flattenFolders(folderTree?.items || []),
-    [folderTree?.items],
+    () => flattenFolders(folderItems),
+    [folderItems],
   );
   const folderMetadata = React.useMemo(
-    () => collectFolderMetadata(folderTree?.items || []),
-    [folderTree?.items],
+    () => collectFolderMetadata(folderItems),
+    [folderItems],
   );
   const selectedFolderAncestorIds = React.useMemo(() => {
     if (!selectedFolderId) return [] as string[];
@@ -483,15 +493,33 @@ const FolderTreePanel = React.memo(function FolderTreePanel({
       await qc.invalidateQueries({ queryKey: ['knowledge-folders-tree', libraryId] });
       if (selectedFolderId) onSelectFolder(null);
     },
+    // A refused delete (a folder with subfolders) says why, in the interface language.
+    onError: (error: any) => {
+      setFolderMoveSnackbar({
+        open: true,
+        message: getApiErrorMessage(error, t, t('folderTree.messages.deleteFailed')),
+        severity: 'error',
+      });
+    },
   });
 
   const handleRename = React.useCallback((id: string, name: string) => {
     renameFolderMutation.mutate({ id, name });
   }, [renameFolderMutation]);
 
-  const handleDelete = React.useCallback((id: string) => {
+  // Asked first: a folder the delete would refuse (one with subfolders) gets the refusal and why, with Close only.
+  const handleDelete = React.useCallback(async (id: string) => {
+    const refusal = await recordRefusal('/knowledge-folders', id);
+    if (refusal) {
+      const name = flatFolders.find((folder) => folder.id === id)?.name || refusal.name || '';
+      await dialogs.alert({
+        title: t('common:delete.recordTitle', { name }),
+        message: deleteFailureReason(refusal, t, i18n?.resolvedLanguage || i18n?.language || 'en'),
+      });
+      return;
+    }
     setDeleteFolderId(id);
-  }, []);
+  }, [dialogs, flatFolders, i18n, t]);
 
   const moveFolderMutation = useMutation({
     mutationFn: async ({ id, parentId }: { id: string; parentId: string | null }) => {
@@ -667,7 +695,7 @@ const FolderTreePanel = React.memo(function FolderTreePanel({
           )}
         </Box>
 
-        {(folderTree?.items || []).map((node) => (
+        {folderItems.map((node) => (
           <FolderTreeNode
             key={node.id}
             node={node}
@@ -740,13 +768,14 @@ const FolderTreePanel = React.memo(function FolderTreePanel({
       <KanapDialog
         open={!!deleteFolderId}
         onClose={() => setDeleteFolderId(null)}
-        title={t('folderTree.dialogs.deleteFolderTitle')}
+        title={t('common:delete.recordTitle', { name: deleteFolderName })}
         onSave={() => {
           if (!deleteFolderId) return;
           deleteFolderMutation.mutate(deleteFolderId);
           setDeleteFolderId(null);
         }}
         saveLabel={t('common:buttons.delete')}
+        saveVariant="action-danger"
         saveDisabled={!deleteFolderId || deleteFolderMutation.isPending}
         saveLoading={deleteFolderMutation.isPending}
       >

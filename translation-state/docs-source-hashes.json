@@ -1,44 +1,44 @@
 {
   "files": {
-    "admin.md": "d40e86ee2b3de48bd0b2c7588de7ca97",
+    "admin.md": "8ecfb68fa7ca236b305b2710430f897b",
 
-    "agents-activity.md": "b34017d2899defb00d1a4b0e4455d75d",
+    "agents-activity.md": "21ee59e63955c7e47568f162a1ec4b51",
 
-    "agents-approvals.md": "425e35673c172a25dd171a49a91a167c",
+    "agents-approvals.md": "96c9fe53715661d5ea488aef4a34e494",
 
-    "agents-overview.md": "5b1de4021396217fe5deacb9cb8b468a",
+    "agents-overview.md": "1d0116570799192d7ba46eadbbe18382",
 
-    "agents-shared-context.md": "f4effb39dcd83dd00c1013d696f85b5d",
+    "agents-shared-context.md": "1ee33015c1a9ab8056ab07f0c299e29b",
 
-    "agents-workspace.md": "01f0b93495177a5611878beb87816b10",
+    "agents-workspace.md": "3e9bf4decb68e99cfec0941526739007",
 
-    "ai-assistant.md": "aaa362615dc79d8ade0ce52f911d30fe",
+    "ai-assistant.md": "30b7bebbcb4ae4cda043385e99975c5f",
 
-    "ai-models.md": "1f1a3baf2d13433b03f7752cfe16dddd",
+    "ai-models.md": "dd41b5b504573ad8a51d75cedcdc1c92",
 
-    "ai-settings.md": "d2fc1ca3b004de771aca12e7ae7415dd",
+    "ai-settings.md": "cd47eb963984592a193241c3ee42cb45",
 
-    "ai-usage.md": "a73bb84e9d985f0af725a7c2630604b9",
+    "ai-usage.md": "c5ef4c260ba0162a443ac7741a09d47f",
 
     "analytics.md": "c2f48da672634a963b4ab8d7b822e06a",
 
-    "applications.md": "920e911b7a49d1abe7076d88ccf02b31",
+    "applications.md": "55fa59d0042afaef4796cbfef9f57a97",
 
-    "assets.md": "b007e7fe7602aa5a71d06bbcd9513a70",
+    "assets.md": "3bf7e989cba7788b9207a157ca1d9835",
 
-    "branding.md": "cf408195e3f5ee413f3c86bc9cccbc0e",
+    "branding.md": "89014110f2460e59fca29b2bc2064272",
 
     "budget-data-model.md": "83c9322f9b5d5d699497614542bd8c02",
 
     "budget-file.md": "f6b2fc9645d564f88e21a384193c068f",
 
-    "budget-lines.md": "393a5e6bd6b00d1fa45f399d5438564c",
+    "budget-lines.md": "8aab86b23a7ea0aa05cd3e3c64fb01f5",
 
     "budget-operations.md": "759813dc1d276a62c7873f51f467d799",
 
-    "business-processes.md": "be7e044a2ca0df17956eca704d4afdab",
+    "business-processes.md": "a87bc21b04f4dad431852b80e76060aa",
 
-    "chart-of-accounts.md": "e2b798e660102dbb442b0832f14a9eb8",
+    "chart-of-accounts.md": "86cc9f0e1ba460dfe721d779562cdf76",
 
     "companies.md": "fed4024270e9e2be68db90652875962a",
 
@@ -46,51 +46,51 @@
 
     "connection-map.md": "414a6eb72d51725f780134263d775afd",
 
-    "connections.md": "271a7e8863242568fc30d523039ab92c",
+    "connections.md": "5bc0062bd6246ca663e0a52c5e014e81",
 
-    "contacts.md": "11aeb2d3e574639fe0356d1665265ec9",
+    "contacts.md": "2fb322fa0779b69abe58c585a01c8d4c",
 
     "contracts.md": "2aafe363babaa6227327f39e228bf921",
 
-    "cost-centers.md": "20c315e20339e06e9e6b999804782b4a",
+    "cost-centers.md": "77f2f560658cccc9ad1a6e1ffa08050e",
 
     "csv-files.md": "be8b41729600d32efd4b3787902f4ef0",
 
-    "currencies.md": "a50320623ed9b6b22d8ca13482f130e9",
+    "currencies.md": "3dbc765b6aef8df3ca30060ec510c3a6",
 
-    "departments.md": "e8821aa16e703eed7f937c2ef7200a8d",
+    "departments.md": "e55075da58c5e75a66aaf123d56040eb",
 
-    "fast-track/apps-and-assets.md": "91e5f4f69877ad0e4d7ba079fe37ef9e",
+    "fast-track/apps-and-assets.md": "4277c68b563febcb8df33c284cc80450",
 
-    "fast-track/getting-started.md": "338533b1f34adb73658ca2c97060f95d",
+    "fast-track/getting-started.md": "50884fde6a70970cf76fdc8586c2b628",
 
-    "fast-track/index.md": "fffb386bc0e49a991c10444e214fa264",
+    "fast-track/index.md": "6563fa6dfaa869b07b0297a32845f456",
 
-    "fast-track/task-types.md": "1cbd37109211d368bcfc48c892edf51a",
+    "fast-track/task-types.md": "10abb0bfb1dafc0fe4619b74d754363f",
 
-    "incidents.md": "f24bc0d1e519918ff814802b24176fd9",
+    "incidents.md": "1112936828a123d4f9af4775898e3d5a",
 
     "index.md": "2bcb0df884dd2050892dfb5f82af8060",
 
-    "integrations.md": "d3eae2fff1055b55dc86d3272b7d28ac",
+    "integrations.md": "08e93abcf4c16c9e2245db72783d7fb1",
 
-    "interface-map.md": "6caaf67bd4de7106e22bc4ab1f7e0278",
+    "interface-map.md": "2f5ed59f682835ff1651ef1187d3e42a",
 
-    "interfaces.md": "7965e98945ca6b0024886b409e365e0d",
+    "interfaces.md": "8d5289ad702b8f4b7929a7b6ca69e5d9",
 
     "it-ops-settings.md": "5b49ed959f04bba9f065f8192262f5b0",
 
-    "knowledge.md": "4bd1bd4cf4e2159a98936031e2d5af47",
+    "knowledge.md": "1b050c28addcbf5de529b62223bfeaec",
 
-    "locations.md": "1b95c3cb2e1b5b4f39a2f164e2f4c544",
+    "locations.md": "727e5ab2c6f3195aa0b9bedb59a324e2",
 
-    "master-data-operations.md": "14f746131dabbc879583b7ff3003ae23",
+    "master-data-operations.md": "17112494d82cc28ae30e4be472055955",
 
-    "my-dashboard.md": "c972811c1018424a55a060a4e727d808",
+    "my-dashboard.md": "5ac1fb3266c8a1a473f95f500c1946bc",
 
     "netbox.md": "02e742911ee43ecf4b1282cfa5307aa1",
 
-    "on-premise/configuration.md": "92f9d74be8fb3efbc7a6adf10ab7a663",
+    "on-premise/configuration.md": "8f20620a094252491bad1b8d208c875e",
 
     "on-premise/index.md": "255fe852e65613cfdad8c7909d7d4216",
 
@@ -108,27 +108,27 @@
 
     "portfolio-planning.md": "90a8528b994c5c562148b8f069a0701e",
 
-    "portfolio-projects.md": "90eb0796d399cfdcee2e62a772ee286e",
+    "portfolio-projects.md": "725756712f80c0fc6bfdec957883f358",
 
     "portfolio-reporting.md": "b0e345b535fdbc0f9b3358b4927c6043",
 
-    "portfolio-requests.md": "efef9c1d30ca3e367056d0b451076ca1",
+    "portfolio-requests.md": "323e418feec19eda80a5d51e97d408a7",
 
-    "portfolio-settings.md": "30fbf99ccda5b64c2af576e077b876e1",
+    "portfolio-settings.md": "4d741ccd0508434f52ae3df385cfacd4",
 
-    "portfolio-team-members.md": "a7ce15358dac433c3e25e266cd7c79d5",
+    "portfolio-team-members.md": "5c09afe8ba330aa1b7871ff8b97e1694",
 
     "reports.md": "ffd24e174e9f40c9836af25854ab89da",
 
     "sample-data.md": "680d0dcb02bda54a2f82d64acf3eb3ba",
 
-    "scheduled-tasks.md": "e72da539219d2c403fa7af6b2af003f7",
+    "scheduled-tasks.md": "7f96af09c829079cb9ad97db9f765dbe",
 
-    "suppliers.md": "6d8eed01fde6ebe64e109859e26ca640",
+    "suppliers.md": "64cc144ac8b37f7bbcfa5c60de0abf09",
 
-    "tasks.md": "c9101a5e2703db2ae0ed4c5b64a22f35",
+    "tasks.md": "ee8e6e77bb27d9ce4c3211a6d0deda8e",
 
-    "working-day-calendars.md": "f5aa071eb3d743c3c7b51c5c97c9a147"
+    "working-day-calendars.md": "2f632045f27fa9fff4c295535edb1625"
   },
 
   "glossary_hash": "9f44e04a31257e1141582ae5b9c01324",

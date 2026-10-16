@@ -247,7 +247,7 @@ async function testUsersMixedBatch() {
     assert.deepEqual(sorted(result.deleted), sorted([ids.free, ids.free2]));
     assert.equal(failureOf(result, MALFORMED_ID).name, 'Unknown');
     const failure = failureOf(result, ids.actor);
-    assert.equal(failure.name, `actor-${tag}@bulk-delete.test`);
+    assert.equal(failure.name, 'Bulk Tester');
     assert.match(failure.reason, /You cannot delete your own account/);
     assert.deepEqual(await remaining(tenantId, 'users', [ids.free, ids.actor, ids.free2]), [ids.actor]);
   });
@@ -261,7 +261,7 @@ async function testApplicationsMixedBatch() {
     });
     const missing = randomUUID();
 
-    const service = new ApplicationsDeleteService(dataSource.getRepository(Application), noAudit, noStorage);
+    const service = new ApplicationsDeleteService(dataSource.getRepository(Application), noAudit, noStorage, { deleteForEntity: async () => 0 } as any);
     const result = await asRequest(tenantId, (manager) =>
       service.bulkDelete([ids.free, MALFORMED_ID, missing, ids.free2], null, { manager }),
     );

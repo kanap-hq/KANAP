@@ -1,6 +1,6 @@
 # Interfaces
 
-Interfaces document the logical data flows between your applications. Each interface represents a business integration -- the "why" and "what" of data exchange -- independent of how it is technically implemented. The workspace lets you describe the interface, define the legs that move data through your landscape, configure environment-specific bindings, capture the field-level mapping rules, and link related interfaces, documents, and attachments.
+Interfaces document the logical data flows between your applications. Each interface represents a business integration (the "why" and "what" of data exchange), independent of how it is technically implemented. The workspace lets you describe the interface, define the legs that move data through your landscape, configure environment-specific bindings, capture the field-level mapping rules, and link related interfaces, documents, and attachments.
 
 ## Getting started
 
@@ -55,8 +55,8 @@ The Interfaces grid shows your integration registry at a glance.
 **Actions**:
 
 - **Add interface**: Create a new interface (requires `applications:manager`)
-- **Duplicate interface**: Create a copy of a selected interface (requires `applications:manager`). Select exactly one row to enable this action. A dialog lets you choose whether to copy environment bindings -- see [Copying interfaces](#copying-interfaces) below.
-- **Delete selected**: Remove selected interfaces (requires `applications:admin`). A checkbox option lets you also delete related bindings; if unchecked, interfaces with bindings will not be deleted.
+- **Duplicate interface**: Create a copy of a selected interface (requires `applications:manager`). Select exactly one row to enable this action. A dialog lets you choose whether to copy environment bindings (see [Copying interfaces](#copying-interfaces) below).
+- **Delete selected**: Remove selected interfaces (requires `applications:admin`). Before the confirmation, the window lists the interfaces that have bindings as kept, with their count of bindings. Check **Also delete related bindings** to delete them with their bindings; their connections stay. The message then names the interfaces deleted and those kept, with the reason.
 
 ---
 
@@ -95,7 +95,7 @@ Field changes in the side panel are saved automatically when you leave the field
 
 ### Specification
 
-The Specification tab is a managed rich-text document where you describe the interface end to end -- business context, scope, contract, examples. It is the primary narrative document for the interface.
+The Specification tab is a managed rich-text document where you describe the interface end to end: business context, scope, contract, examples. It is the primary narrative document for the interface.
 
 **Tip**: Use this tab as your single source of truth for prose. Mapping rules and technical legs live in the dedicated tabs below; keep this document focused on intent, scope, and the human-readable summary.
 
@@ -148,7 +148,7 @@ The Environments tab manages the per-environment bindings that turn the leg temp
 
 The Mapping tab is where you describe how source fields turn into target fields. It is organised around two concepts:
 
-- **Mapping rules** describe a single mapping decision -- one or more source fields, one or more target fields, an operation (direct copy, transform, lookup, split, merge, filter, default value, or a custom operation), and optional condition / business / middleware notes.
+- **Mapping rules** describe a single mapping decision: one or more source fields, one or more target fields, an operation (direct copy, transform, lookup, split, merge, filter, default value, or a custom operation), and optional condition / business / middleware notes.
 - **Mapping groups** are folders that organise the rules into themed sections (for example "Header", "Customer block", "Line items", "Footer"). Rules can be assigned to a group or left ungrouped. Two baseline groups, **Head** and **Item**, are always present; you can add more.
 
 The tab works on the interface's **default mapping set**. The header bar shows the set name, the current revision number, the rule and group counts.
@@ -189,7 +189,7 @@ Click **Add rule** or click any rule row to open the rule drawer on the right. R
 
 The mapping table summarises each rule by listing the source bindings, an arrow, and the target bindings, plus the operation, the group it belongs to, and the leg scope. Click a row to edit it, or use the row's icons to edit or delete.
 
-**Tip**: Keep one rule per logical decision rather than one rule per field. A rule that takes three source fields and produces one concatenated target field is clearer than three near-identical rows -- and the operation field makes the intent explicit.
+**Tip**: Keep one rule per logical decision rather than one rule per field. A rule that takes three source fields and produces one concatenated target field is clearer than three near-identical rows, and the operation field makes the intent explicit.
 
 ---
 
@@ -211,12 +211,12 @@ There are two ways to copy interfaces in KANAP.
 
 ### Duplicate Interface (from the Interfaces grid)
 
-Use this when you want an independent copy of an interface -- typically to create a similar integration between the same or different applications.
+Use this when you want an independent copy of an interface, typically to create a similar integration between the same or different applications.
 
 1. Select an interface in the grid
 2. Click **Duplicate interface**
 3. Choose whether to copy environment bindings:
-   - **Without bindings**: A clean copy -- just the interface definition, legs, owners, and metadata
+   - **Without bindings**: A clean copy: just the interface definition, legs, owners, and metadata
    - **With bindings**: Also copies environment bindings, but clears environment-specific details (endpoints, authentication, job names) so you can configure them fresh
 
 **What gets copied**:
@@ -260,7 +260,7 @@ Use this when upgrading an application to a new version and you need to migrate 
 
 - **Document the "why" first**: Use the Specification tab and the side-panel **Business purpose** field to capture intent before diving into legs and bindings.
 - **Use the side panel from any tab**: Owners, criticality, route type, PII flag and the rest persist immediately, so you can update them while reviewing rules or bindings.
-- **One interface, many environments**: Don't create separate interfaces for each environment -- use one interface and configure each environment in the Environments tab.
+- **One interface, many environments**: Don't create separate interfaces for each environment. Use one interface and configure each environment in the Environments tab.
 - **Group your mapping rules**: For interfaces with more than a handful of fields, organise rules into mapping groups (Header, Item lines, Footer, etc.). It makes review and impact analysis far easier.
 - **Keep middleware explicit**: If data flows through middleware, set route type to **Via middleware** and pick the middleware applications. The Interface Map will then render the real data path.
 - **Duplicate for similar interfaces**: When creating a new interface that's similar to an existing one, use **Duplicate interface** to copy all settings, then modify what's different. Optionally include bindings to get a head start on environment configuration.

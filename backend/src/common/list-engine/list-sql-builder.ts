@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import type { FieldSql, ListConfig, ListState } from './list-engine.types';
 import type { SqlStatement } from './sql-statement';
 import { compileFieldFilter } from './list-filter-compiler';
@@ -42,6 +43,8 @@ export function buildCore(stmt: SqlStatement, config: ListConfig, state: ListSta
   for (const [key, model] of Object.entries(state.filters)) {
     if (config.scopeFields.includes(key) || key === options.omitFilter) continue;
     const field = fieldOf(stmt, config, key);
+    // A filter on a key the rows do not hold is a request error, not a filter on a blank value.
+    if (field.kind === 'unknown') throw new BadRequestException(`Unknown filter column "${key}".`);
     const predicate = compileFieldFilter(stmt, field, model);
     if (predicate === 'TRUE') continue;
     field.joins.forEach((join) => joinKeys.add(join));

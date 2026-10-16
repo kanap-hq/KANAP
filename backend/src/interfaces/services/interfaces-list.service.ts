@@ -33,7 +33,7 @@ const INTERFACE_FILTER_TARGETS: Record<string, FilterTargetConfig> = {
   data_class: { expression: 'i.data_class' },
   integration_route_type: { expression: 'i.integration_route_type' },
   contains_pii: { expression: 'i.contains_pii', dataType: 'boolean' },
-  created_at: { expression: 'i.created_at', textExpression: 'CAST(i.created_at AS TEXT)' },
+  created_at: { expression: 'i.created_at', dataType: 'date' },
 };
 
 /** Columns filtering on the environments of the interface's bindings. */

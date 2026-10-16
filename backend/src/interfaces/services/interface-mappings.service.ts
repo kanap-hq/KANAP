@@ -8,6 +8,7 @@ import { InterfaceMappingGroup } from '../interface-mapping-group.entity';
 import { InterfaceMappingRule } from '../interface-mapping-rule.entity';
 import { InterfaceMappingSet } from '../interface-mapping-set.entity';
 import { ENVIRONMENTS, EnvironmentValue } from './interfaces-base.service';
+import { RecordInUseException } from '../../common/record-in-use';
 
 export interface InterfaceMappingsServiceOpts {
   manager?: EntityManager;
@@ -516,7 +517,8 @@ export class InterfaceMappingsService {
     const repo = this.getSetRepo(mg);
     const existing = await this.ensureMappingSet(mappingSetId, mg);
     if (existing.is_default) {
-      throw new BadRequestException('Default mapping set cannot be deleted');
+      throw new RecordInUseException('MAPPING_SET_DEFAULT', 'mapping set', existing.name, [],
+        'Default mapping set cannot be deleted. Make another set the default first.');
     }
     await repo.delete({ id: mappingSetId } as any);
     await this.audit.log(
@@ -633,7 +635,8 @@ export class InterfaceMappingsService {
     const repo = this.getGroupRepo(mg);
     const existing = await this.ensureMappingGroup(groupId, mg);
     if (this.isReservedGroupTitle(existing.title)) {
-      throw new BadRequestException('Default mapping groups cannot be deleted');
+      throw new RecordInUseException('MAPPING_GROUP_DEFAULT', 'mapping group', existing.title, [],
+        'Default mapping groups cannot be deleted. Leave the group empty if you do not need it.');
     }
     await repo.delete({ id: groupId } as any);
     await this.bumpRevision(existing.mapping_set_id, mg);

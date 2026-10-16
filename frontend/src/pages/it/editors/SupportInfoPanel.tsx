@@ -421,6 +421,7 @@ export default forwardRef<SupportInfoPanelHandle, Props>(function SupportInfoPan
                     value={row.contact_id}
                     onChange={(v) => void setContactRowContact(idx, v)}
                     hideLabel
+                    label={t('common:selects.contact')}
                     textFieldSx={drawerFieldValueSx}
                     disabled={readOnly || saving}
                   />

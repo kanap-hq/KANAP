@@ -92,7 +92,7 @@ L'analyse combine quatre éléments :
 
 - Les **processus métier impactés** pour que les relecteurs voient quels domaines opérationnels la demande touche
 - La **revue de faisabilité** sur sept dimensions
-- Les **Risques et mesures d'atténuation** en tant que document géré (avec import et export DOCX)
+- Les **Risques et mesures d'atténuation** en tant que document managé (avec import et export DOCX)
 - La **Recommandation d'analyse** comme verdict formel du comité
 
 ### Analyse de faisabilité (7 dimensions)

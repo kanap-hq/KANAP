@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import dataSource from '../../data-source';
 import { Tenant } from '../../tenants/tenant.entity';
 import { Location } from '../../locations/location.entity';
@@ -60,10 +60,15 @@ async function main() {
     const current = await settings.getSettings(tenantId, { manager: publisher.manager });
     const withoutAnalytics = current.applicationCategories.filter((item) => item.code !== 'analytics');
     await assert.rejects(() => settings.updateSettings(tenantId, { applicationCategories: withoutAnalytics }, { manager: publisher.manager }), (error: any) => {
-      assert.ok(error instanceof BadRequestException);
+      // A 409 the interface translates: `errors:CATALOG_VALUE_IN_USE` with the value and the counts per kind.
+      assert.ok(error instanceof ConflictException);
       const body: any = error.getResponse();
-      assert.match(body.message, /Application categories: "Analytics" is still used by 1 applications/);
-      assert.deepEqual([body.list, body.code, body.usage[0].count], ['applicationCategories', 'analytics', 1]);
+      assert.equal(body.statusCode, 409);
+      assert.equal(body.code, 'CATALOG_VALUE_IN_USE');
+      assert.deepEqual(body.params, { value: 'Analytics' });
+      assert.deepEqual(body.usages, [{ type: 'applications', total: 1 }]);
+      assert.match(body.message, /"Analytics" is still used by 1 application\. Mark it as no longer offered/);
+      assert.deepEqual([body.list, body.value_code, body.usage[0].count], ['applicationCategories', 'analytics', 1]);
       return true;
     });
     const retired = current.applicationCategories.map((item) => item.code === 'analytics' ? { ...item, deprecated: true } : item);
@@ -75,7 +80,12 @@ async function main() {
     assert.ok(withZone.networkSegments.some((item) => item.code === 'lab_zone'));
     const zoned = await settings.updateSettings(tenantId, { subnets: [{ location_id: ids.locationA, cidr: '10.0.0.0/24', network_zone: 'lab_zone' }] as any }, { manager: publisher.manager });
     assert.equal(zoned.subnets.length, 1);
-    await assert.rejects(() => settings.updateSettings(tenantId, { networkSegments: zoned.networkSegments.filter((item) => item.code !== 'lab_zone') }, { manager: publisher.manager }), /Network zones: "Lab zone" is still used by 1 subnets/);
+    await assert.rejects(() => settings.updateSettings(tenantId, { networkSegments: zoned.networkSegments.filter((item) => item.code !== 'lab_zone') }, { manager: publisher.manager }), (error: any) => {
+      assert.equal(error.getResponse().code, 'CATALOG_VALUE_IN_USE');
+      assert.deepEqual(error.getResponse().usages, [{ type: 'subnets', total: 1 }]);
+      assert.match(error.message, /"Lab zone" is still used by 1 subnet\./);
+      return true;
+    });
 
     // Generated codes: names only in, stable slugs out, order preserved, aliases unique across code and name.
     const generated = await settings.updateSettings(tenantId, { serverProviders: [{ label: 'Scaleway Élite' }, { code: 'aws', label: 'AWS' }, { label: 'AWS Gov' }] as any }, { manager: publisher.manager });
@@ -110,7 +120,7 @@ async function main() {
     await writer.query(`INSERT INTO applications(tenant_id, name, category) VALUES ($1, 'Late app', 'productivity')`, [tenantId]);
     await writer.commitTransaction();
     const outcome = await removal;
-    assert.ok(outcome instanceof BadRequestException, 'after the writer commits, the removal counts the new reference');
+    assert.ok(outcome instanceof ConflictException, 'after the writer commits, the removal counts the new reference');
 
     // Order 2: a removal in progress blocks the writer's read; the writer then sees the catalog without the value.
     const gate = deferred(); const reached = deferred();
