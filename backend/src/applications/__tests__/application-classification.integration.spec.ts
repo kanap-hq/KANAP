@@ -29,7 +29,7 @@ async function main() {
   const manager = runner.manager;
   const audit = new AuditService(manager.getRepository(AuditLog));
   const settings = new ItOpsSettingsService(manager.getRepository(Tenant), manager.getRepository(Location), audit);
-  const crud = new ApplicationsCrudService(manager.getRepository(Application), audit, null as any, settings, null as any, null as any);
+  const crud = new ApplicationsCrudService(manager.getRepository(Application), audit, null as any, settings, null as any);
   const list = new ApplicationsListService(manager.getRepository(Application));
   const tenantA = randomUUID(), tenantB = randomUUID(), userId = randomUUID();
   try {
