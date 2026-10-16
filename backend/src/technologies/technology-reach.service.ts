@@ -148,7 +148,7 @@ const REACHED_ASSETS_SELECT = `
  * `jit_above_cost`, and compiling the plan then takes about 300 ms for a query that runs in 50
  * (measured on a tenant of 16 000 assets). The setting is transaction-local and restored as found.
  */
-async function withoutJit<T>(mg: Pick<EntityManager, 'query'>, sql: string, params: unknown[]): Promise<T[]> {
+export async function withoutJit<T>(mg: Pick<EntityManager, 'query'>, sql: string, params: unknown[]): Promise<T[]> {
   const [{ jit }]: Array<{ jit: string }> = await mg.query(`SELECT current_setting('jit') AS jit`);
   if (jit === 'off') return mg.query(sql, params);
   await mg.query(`SELECT set_config('jit', 'off', true)`);

@@ -16,6 +16,11 @@ import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { ShareRateLimit } from '../notifications/share-rate-limit';
 import { TasksUnifiedService } from '../tasks/tasks-unified.service';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
+import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
+import { resolveBusinessContributorScopeForUser } from '../auth/business-contributor-scope';
+import { hasLevel } from '../technologies/technologies.controller';
+import { requireManager } from '../technologies/technology-rows';
+import { AssetImpactService } from './services/asset-impact.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('assets')
@@ -27,6 +32,7 @@ export class AssetsController {
     private readonly storage: StorageService,
     private readonly knowledge: KnowledgeService,
     private readonly tasks: TasksUnifiedService,
+    private readonly impact: AssetImpactService,
   ) {}
 
   // Attachment download/delete (static routes before :id param routes)
@@ -311,6 +317,22 @@ export class AssetsController {
   @Get(':id/relations')
   listRelations(@Param('id') id: string, @Req() req: any) {
     return this.svc.listRelations(id, { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id });
+  }
+
+  /**
+   * What falls with the asset: contained and dependent assets, degraded clusters, technologies, and
+   * the applications (`null` without the applications read right, a Business Contributor's own
+   * only) and their business processes (`null` without that read right).
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('infrastructure', 'reader')
+  @Get(':id/impact')
+  async getImpact(@Param('id') id: string, @Tenant() ctx: TenantRequest) {
+    const manager = requireManager(ctx.manager);
+    const applications = hasLevel(ctx, 'applications', 'reader')
+      ? { scope: await resolveBusinessContributorScopeForUser({ manager, userId: ctx.userId, tenantId: ctx.tenantId, isAdmin: ctx.isAdmin }, 'applications', 'reader') }
+      : null;
+    return this.impact.impactOf(id, { manager, tenantId: ctx.tenantId, applications, processes: hasLevel(ctx, 'business_processes', 'reader') });
   }
 
   @UseGuards(PermissionGuard)
