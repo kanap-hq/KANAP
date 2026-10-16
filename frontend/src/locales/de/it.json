@@ -160,6 +160,35 @@
         "deleted_other": "{{count}} Assets gelöscht"
       }
     },
+    "technologies": {
+      "title": "Technologien",
+      "newTechnology": "Neue Technologie",
+      "columns": {
+        "reference": "Referenz",
+        "family": "Familie",
+        "editor": "Hersteller",
+        "lifecycle": "Lebenszyklus",
+        "versionsInUse": "Versionen im Einsatz",
+        "servers": "Server",
+        "applications": "Anwendungen",
+        "itOwner": "IT-Verantwortlicher",
+        "nextSupportEnd": "Nächstes Supportende"
+      },
+      "delete": {
+        "warning_one": "Diese Technologie und ihre Verknüpfungen mit Servern und Anwendungen werden gelöscht.",
+        "warning_other": "Diese {{count}} Technologien und ihre Verknüpfungen mit Servern und Anwendungen werden gelöscht.",
+        "warningCounted_one": "Diese Technologie wird mit {{usages}} gelöscht.",
+        "warningCounted_other": "Diese {{count}} Technologien werden mit {{usages}} gelöscht."
+      },
+      "create": {
+        "title": "Neue Technologie",
+        "catalog": "Katalog",
+        "searchLabel": "Im Katalog suchen",
+        "searchPlaceholder": "z. B. SQL Server",
+        "noMatch": "Kein Katalogeintrag passt.",
+        "manualLink": "Eine Technologie erfassen, die nicht im Katalog steht"
+      }
+    },
     "connections": {
       "title": "Verbindungen",
       "addConnection": "Verbindung hinzufügen",
@@ -1364,6 +1393,78 @@
         "url": "URL"
       }
     },
+    "technology": {
+      "loading": "Technologie wird geladen…",
+      "notFound": "Technologie nicht gefunden.",
+      "untitled": "Technologie ohne Namen",
+      "deleteMessage": "{{name}} wird gelöscht. Dies kann nicht rückgängig gemacht werden.",
+      "deleteMessageWithUsages": "{{name}} wird mit {{usages}} gelöscht. Dies kann nicht rückgängig gemacht werden.",
+      "deleteAnyway": "Trotzdem löschen",
+      "tabs": {
+        "overview": "Übersicht",
+        "servers": "Server",
+        "applications": "Anwendungen",
+        "operations": "Betrieb",
+        "compliance": "Compliance",
+        "relations": "Beziehungen"
+      },
+      "fields": {
+        "name": "Name",
+        "editor": "Hersteller",
+        "family": "Familie",
+        "mode": "Modus",
+        "description": "Beschreibung",
+        "notes": "Notizen",
+        "replacedBy": "Ersetzt durch",
+        "businessOwners": "Fachverantwortliche",
+        "itOwners": "IT-Verantwortliche"
+      },
+      "placeholders": {
+        "name": "z. B. SQL Server",
+        "editor": "z. B. Microsoft",
+        "description": "Wofür diese Technologie verwendet wird",
+        "notes": "z. B. Lizenz pro Kern, Verlängerung im März",
+        "cpe": "z. B. a:microsoft:sql_server"
+      },
+      "modes": {
+        "installed": "Installiert",
+        "subscribed": "Abonniert"
+      },
+      "cpe": {
+        "title": "CPE-Produktkennungen",
+        "empty": "Noch keine Kennung.",
+        "add": "CPE-Produktkennung hinzufügen",
+        "remove": "{{value}} entfernen",
+        "invalid": "Verwenden Sie die Form Teil:Hersteller:Produkt, z. B. a:microsoft:sql_server.",
+        "hint": "Wo Sie diesen Wert finden: Suchen Sie das Produkt im CPE-Wörterbuch des NIST und übernehmen Sie Teil, Hersteller und Produkt.",
+        "dictionary": "CPE-Wörterbuch des NIST"
+      },
+      "versions": {
+        "title": "Versionen",
+        "add": "Version hinzufügen",
+        "empty": "Noch keine Version.",
+        "label": "Version",
+        "standardEnd": "Ende des Standardsupports",
+        "extendedEnd": "Ende des erweiterten Supports",
+        "statusHeader": "Status",
+        "edit": "Version {{label}} bearbeiten",
+        "remove": "Version {{label}} löschen",
+        "deleteTitle": "Version {{label}} löschen?",
+        "deleteMessage_one": "{{count}} Server oder Anwendung nennt diese Version: Dort steht dann „Version unbekannt“.",
+        "deleteMessage_other": "{{count}} Server oder Anwendungen nennen diese Version: Dort steht dann „Version unbekannt“.",
+        "status": {
+          "supported": "Unterstützt",
+          "extended": "Erweiterter Support",
+          "ended": "Kein Support",
+          "unknown": "Datum unbekannt"
+        }
+      },
+      "messages": {
+        "saveFailed": "Die Technologie konnte nicht gespeichert werden.",
+        "createFailed": "Die Technologie konnte nicht erstellt werden.",
+        "deleteFailed": "Die Technologie konnte nicht gelöscht werden."
+      }
+    },
     "connection": {
       "title": "Verbindung",
       "newTitle": "Neue Verbindung",
@@ -2504,6 +2605,24 @@
       "application": "Anwendung",
       "data": "Daten",
       "supplier": "Lieferant",
+      "other": "Sonstiges"
+    },
+    "technologyFamilies": {
+      "operating_system": "Betriebssystem",
+      "database": "Datenbank",
+      "application_server": "Anwendungsserver",
+      "web_server": "Webserver",
+      "hypervisor": "Hypervisor",
+      "container": "Container",
+      "directory": "Verzeichnis und Identität",
+      "messaging": "Messaging",
+      "integration": "Integration",
+      "backup": "Datensicherung",
+      "monitoring": "Überwachung",
+      "runtime": "Laufzeitumgebung und Framework",
+      "storage": "Speicher",
+      "network_security": "Netzwerk und Sicherheit",
+      "administration": "Administration",
       "other": "Sonstiges"
     },
     "domains": {

@@ -29,6 +29,7 @@ const ENTITY_TYPE_FROM_URL_PREFIX: Array<{ prefix: string; entityType: string }>
   { prefix: '/portfolio/requests/', entityType: 'requests' },
   { prefix: '/it/applications/', entityType: 'applications' },
   { prefix: '/it/assets/', entityType: 'assets' },
+  { prefix: '/it/technologies/', entityType: 'technologies' },
   { prefix: '/it/connections/', entityType: 'connections' },
   { prefix: '/it/interfaces/', entityType: 'interfaces' },
   { prefix: '/it/locations/', entityType: 'locations' },

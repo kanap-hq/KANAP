@@ -17,6 +17,7 @@ const ENTITY_URL_BUILDERS: Record<string, (id: string) => string> = {
   requests: (id) => `/portfolio/requests/${id}`,
   applications: (id) => `/it/applications/${id}`,
   assets: (id) => `/it/assets/${id}`,
+  technologies: (id) => `/it/technologies/${id}`,
   incidents: (id) => `/it/incidents/${id}`,
   connections: (id) => `/it/connections/${id}`,
   interfaces: (id) => `/it/interfaces/${id}`,
@@ -62,6 +63,7 @@ const TYPE_PREFIX_TO_ENTITY_TYPE: Record<string, string> = {
   PRJ: 'projects',
   REQ: 'requests',
   INC: 'incidents',
+  TEC: 'technologies',
   OPX: 'spend_items',
   CPX: 'capex_items',
   // Type tokens for entities without a built-in ref

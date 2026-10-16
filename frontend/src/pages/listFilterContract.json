@@ -533,6 +533,28 @@
       "created_at"
     ]
   },
+  "/technologies": {
+    "params": {},
+    "filters": {
+      "reference": "text",
+      "name": "text",
+      "family": "set",
+      "editor": "set",
+      "lifecycle": "set"
+    },
+    "fields": [
+      "reference",
+      "name",
+      "family",
+      "editor",
+      "lifecycle",
+      "versions_in_use",
+      "servers",
+      "applications",
+      "it_owner_names",
+      "next_support_end"
+    ]
+  },
   "/budget-lines/summary": {
     "params": {
       "shape": "grid",

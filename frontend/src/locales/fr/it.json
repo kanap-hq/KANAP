@@ -160,6 +160,35 @@
         "deleted_other": "{{count}} actifs supprimés"
       }
     },
+    "technologies": {
+      "title": "Technologies",
+      "newTechnology": "Nouvelle technologie",
+      "columns": {
+        "reference": "Référence",
+        "family": "Famille",
+        "editor": "Éditeur",
+        "lifecycle": "Cycle de vie",
+        "versionsInUse": "Versions en service",
+        "servers": "Serveurs",
+        "applications": "Applications",
+        "itOwner": "Responsable IT",
+        "nextSupportEnd": "Prochaine fin de support"
+      },
+      "delete": {
+        "warning_one": "Cette technologie et ses liens aux serveurs et applications seront supprimés.",
+        "warning_other": "Ces {{count}} technologies et leurs liens aux serveurs et applications seront supprimés.",
+        "warningCounted_one": "Cette technologie sera supprimée avec {{usages}}.",
+        "warningCounted_other": "Ces {{count}} technologies seront supprimées avec {{usages}}."
+      },
+      "create": {
+        "title": "Nouvelle technologie",
+        "catalog": "Catalogue",
+        "searchLabel": "Rechercher dans le catalogue",
+        "searchPlaceholder": "ex. SQL Server",
+        "noMatch": "Aucune entrée du catalogue ne correspond.",
+        "manualLink": "Saisir une technologie absente du catalogue"
+      }
+    },
     "connections": {
       "title": "Connexions",
       "addConnection": "Ajouter une connexion",
@@ -1364,6 +1393,78 @@
         "url": "URL"
       }
     },
+    "technology": {
+      "loading": "Chargement de la technologie…",
+      "notFound": "Technologie introuvable.",
+      "untitled": "Technologie sans nom",
+      "deleteMessage": "{{name}} sera supprimée. Cette action est définitive.",
+      "deleteMessageWithUsages": "{{name}} sera supprimée avec {{usages}}. Cette action est définitive.",
+      "deleteAnyway": "Supprimer quand même",
+      "tabs": {
+        "overview": "Aperçu",
+        "servers": "Serveurs",
+        "applications": "Applications",
+        "operations": "Exploitation",
+        "compliance": "Conformité",
+        "relations": "Relations"
+      },
+      "fields": {
+        "name": "Nom",
+        "editor": "Éditeur",
+        "family": "Famille",
+        "mode": "Mode",
+        "description": "Description",
+        "notes": "Notes",
+        "replacedBy": "Remplacée par",
+        "businessOwners": "Responsables métier",
+        "itOwners": "Responsables IT"
+      },
+      "placeholders": {
+        "name": "ex. SQL Server",
+        "editor": "ex. Microsoft",
+        "description": "À quoi sert cette technologie",
+        "notes": "ex. Licence par cœur, renouvellement en mars",
+        "cpe": "ex. a:microsoft:sql_server"
+      },
+      "modes": {
+        "installed": "Installée",
+        "subscribed": "Souscrite"
+      },
+      "cpe": {
+        "title": "Identifiants CPE produit",
+        "empty": "Aucun identifiant pour l’instant.",
+        "add": "Ajouter un identifiant CPE produit",
+        "remove": "Retirer {{value}}",
+        "invalid": "Utilisez la forme partie:éditeur:produit, ex. a:microsoft:sql_server.",
+        "hint": "Où trouver cette valeur : cherchez le produit dans le dictionnaire CPE du NIST et gardez sa partie, son éditeur et son produit.",
+        "dictionary": "Dictionnaire CPE du NIST"
+      },
+      "versions": {
+        "title": "Versions",
+        "add": "Ajouter une version",
+        "empty": "Aucune version pour l’instant.",
+        "label": "Version",
+        "standardEnd": "Fin du support standard",
+        "extendedEnd": "Fin du support étendu",
+        "statusHeader": "Statut",
+        "edit": "Modifier la version {{label}}",
+        "remove": "Supprimer la version {{label}}",
+        "deleteTitle": "Supprimer la version {{label}} ?",
+        "deleteMessage_one": "{{count}} serveur ou application nomme cette version : il affichera « version inconnue ».",
+        "deleteMessage_other": "{{count}} serveurs ou applications nomment cette version : ils afficheront « version inconnue ».",
+        "status": {
+          "supported": "Supportée",
+          "extended": "Support étendu",
+          "ended": "Hors support",
+          "unknown": "Date inconnue"
+        }
+      },
+      "messages": {
+        "saveFailed": "La technologie n’a pas pu être enregistrée.",
+        "createFailed": "La technologie n’a pas pu être créée.",
+        "deleteFailed": "La technologie n’a pas pu être supprimée."
+      }
+    },
     "connection": {
       "title": "Connexion",
       "newTitle": "Nouvelle connexion",
@@ -2504,6 +2605,24 @@
       "application": "Application",
       "data": "Données",
       "supplier": "Fournisseur",
+      "other": "Autre"
+    },
+    "technologyFamilies": {
+      "operating_system": "Système d’exploitation",
+      "database": "Base de données",
+      "application_server": "Serveur d’applications",
+      "web_server": "Serveur web",
+      "hypervisor": "Hyperviseur",
+      "container": "Conteneurs",
+      "directory": "Annuaire et identité",
+      "messaging": "Messagerie",
+      "integration": "Intégration",
+      "backup": "Sauvegarde",
+      "monitoring": "Supervision",
+      "runtime": "Environnement d’exécution et framework",
+      "storage": "Stockage",
+      "network_security": "Réseau et sécurité",
+      "administration": "Administration",
       "other": "Autre"
     },
     "domains": {

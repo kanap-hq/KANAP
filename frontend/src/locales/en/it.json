@@ -160,6 +160,35 @@
         "deleted_other": "{{count}} assets deleted"
       }
     },
+    "technologies": {
+      "title": "Technologies",
+      "newTechnology": "New technology",
+      "columns": {
+        "reference": "Reference",
+        "family": "Family",
+        "editor": "Publisher",
+        "lifecycle": "Lifecycle",
+        "versionsInUse": "Versions in use",
+        "servers": "Servers",
+        "applications": "Applications",
+        "itOwner": "IT owner",
+        "nextSupportEnd": "Next end of support"
+      },
+      "delete": {
+        "warning_one": "This technology and its links to servers and applications will be deleted.",
+        "warning_other": "These {{count}} technologies and their links to servers and applications will be deleted.",
+        "warningCounted_one": "This technology will be deleted with {{usages}}.",
+        "warningCounted_other": "These {{count}} technologies will be deleted with {{usages}}."
+      },
+      "create": {
+        "title": "New technology",
+        "catalog": "Catalog",
+        "searchLabel": "Search the catalog",
+        "searchPlaceholder": "e.g., SQL Server",
+        "noMatch": "No catalog entry matches.",
+        "manualLink": "Enter a technology missing from the catalog"
+      }
+    },
     "connections": {
       "title": "Connections",
       "addConnection": "Add connection",
@@ -1364,6 +1393,78 @@
         "url": "URL"
       }
     },
+    "technology": {
+      "loading": "Loading technology…",
+      "notFound": "Technology not found.",
+      "untitled": "Untitled technology",
+      "deleteMessage": "{{name}} will be deleted. This cannot be undone.",
+      "deleteMessageWithUsages": "{{name}} will be deleted with {{usages}}. This cannot be undone.",
+      "deleteAnyway": "Delete anyway",
+      "tabs": {
+        "overview": "Overview",
+        "servers": "Servers",
+        "applications": "Applications",
+        "operations": "Operations",
+        "compliance": "Compliance",
+        "relations": "Relations"
+      },
+      "fields": {
+        "name": "Name",
+        "editor": "Publisher",
+        "family": "Family",
+        "mode": "Mode",
+        "description": "Description",
+        "notes": "Notes",
+        "replacedBy": "Replaced by",
+        "businessOwners": "Business owners",
+        "itOwners": "IT owners"
+      },
+      "placeholders": {
+        "name": "e.g., SQL Server",
+        "editor": "e.g., Microsoft",
+        "description": "What this technology is used for",
+        "notes": "e.g., Licensed per core, renewal in March",
+        "cpe": "e.g., a:microsoft:sql_server"
+      },
+      "modes": {
+        "installed": "Installed",
+        "subscribed": "Subscribed"
+      },
+      "cpe": {
+        "title": "CPE product identifiers",
+        "empty": "No identifier yet.",
+        "add": "Add a CPE product identifier",
+        "remove": "Remove {{value}}",
+        "invalid": "Use the form part:vendor:product, e.g., a:microsoft:sql_server.",
+        "hint": "Where to find this value: search the product in the NIST CPE dictionary and keep its part, vendor and product.",
+        "dictionary": "NIST CPE dictionary"
+      },
+      "versions": {
+        "title": "Versions",
+        "add": "Add version",
+        "empty": "No version yet.",
+        "label": "Version",
+        "standardEnd": "End of standard support",
+        "extendedEnd": "End of extended support",
+        "statusHeader": "Status",
+        "edit": "Edit version {{label}}",
+        "remove": "Delete version {{label}}",
+        "deleteTitle": "Delete version {{label}}?",
+        "deleteMessage_one": "{{count}} server or application names this version: it will show \"version unknown\".",
+        "deleteMessage_other": "{{count}} servers or applications name this version: they will show \"version unknown\".",
+        "status": {
+          "supported": "Supported",
+          "extended": "Extended support",
+          "ended": "Out of support",
+          "unknown": "Date unknown"
+        }
+      },
+      "messages": {
+        "saveFailed": "The technology could not be saved.",
+        "createFailed": "The technology could not be created.",
+        "deleteFailed": "The technology could not be deleted."
+      }
+    },
     "connection": {
       "title": "Connection",
       "newTitle": "New connection",
@@ -2504,6 +2605,24 @@
       "application": "Application",
       "data": "Data",
       "supplier": "Supplier",
+      "other": "Other"
+    },
+    "technologyFamilies": {
+      "operating_system": "Operating system",
+      "database": "Database",
+      "application_server": "Application server",
+      "web_server": "Web server",
+      "hypervisor": "Hypervisor",
+      "container": "Containers",
+      "directory": "Directory and identity",
+      "messaging": "Messaging",
+      "integration": "Integration",
+      "backup": "Backup",
+      "monitoring": "Monitoring",
+      "runtime": "Runtime and framework",
+      "storage": "Storage",
+      "network_security": "Network and security",
+      "administration": "Administration",
       "other": "Other"
     },
     "domains": {

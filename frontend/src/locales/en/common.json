@@ -773,7 +773,9 @@
       "server_assignments_one": "{{count}} server assignment",
       "server_assignments_other": "{{count}} server assignments",
       "subnets_one": "{{count}} subnet",
-      "subnets_other": "{{count}} subnets"
+      "subnets_other": "{{count}} subnets",
+      "technologies_one": "{{count}} technology",
+      "technologies_other": "{{count}} technologies"
     },
     "retiredSuffix": "no longer offered",
     "translate": "Translate",

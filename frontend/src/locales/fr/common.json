@@ -773,7 +773,9 @@
       "server_assignments_one": "{{count}} affectation de serveur",
       "server_assignments_other": "{{count}} affectations de serveur",
       "subnets_one": "{{count}} sous-réseau",
-      "subnets_other": "{{count}} sous-réseaux"
+      "subnets_other": "{{count}} sous-réseaux",
+      "technologies_one": "{{count}} technologie",
+      "technologies_other": "{{count}} technologies"
     },
     "retiredSuffix": "plus proposé",
     "translate": "Traduire",

@@ -102,6 +102,7 @@ export type ItOpsSettings = {
   ipAddressTypes: ItOpsEnumOption[];
   accessMethods: ItOpsEnumOption[];
   incidentCategories: ItOpsEnumOption[];
+  technologyFamilies: ItOpsEnumOption[];
   businessCriticalityLevels: BusinessCriticalityLevel[];
   cyberCriticalityLevels: ClassificationLevel[];
   recoveryWaves: RecoveryWave[];
@@ -128,7 +129,7 @@ export async function fetchApplicationClassificationCatalog(): Promise<Applicati
   return res.data as ApplicationClassificationCatalog;
 }
 
-export type CatalogUsageRecord = 'applications' | 'assets' | 'interfaces' | 'connections' | 'app_instances' | 'interface_bindings' | 'locations' | 'incidents' | 'server_assignments' | 'subnets';
+export type CatalogUsageRecord = 'applications' | 'assets' | 'interfaces' | 'connections' | 'app_instances' | 'interface_bindings' | 'locations' | 'incidents' | 'server_assignments' | 'subnets' | 'technologies';
 export type CatalogUsage = { total: number; usage: Array<{ record: CatalogUsageRecord; count: number; listPath?: string }> };
 export type CatalogUsageKey = { code: string } | { location_id: string; cidr: string };
 

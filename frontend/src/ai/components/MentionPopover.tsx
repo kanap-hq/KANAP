@@ -33,6 +33,7 @@ const ENTITY_TYPE_LABEL_KEYS: Record<string, string> = {
   requests: 'mention.entityTypes.requests',
   applications: 'mention.entityTypes.applications',
   assets: 'mention.entityTypes.assets',
+  technologies: 'mention.entityTypes.technologies',
   connections: 'mention.entityTypes.connections',
   interfaces: 'mention.entityTypes.interfaces',
   locations: 'mention.entityTypes.locations',
