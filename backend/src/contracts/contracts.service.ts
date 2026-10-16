@@ -1168,7 +1168,9 @@ export class ContractsService {
       // Yes or no in any language, or the true/false and 1/0 of older files; blank is no, as before.
       const autoCell = parseCsvBoolean(cellOf(r, 'auto_renewal'));
       if (autoCell === undefined) {
-        errors.push({ row: line, message: `auto_renewal: Invalid value '${cellOf(r, 'auto_renewal')}'. Use yes or no.` });
+        // The shared coded error (`errors:CSV_BOOLEAN_INVALID`): the dialog words it in the interface language.
+        const value = cellOf(r, 'auto_renewal');
+        errors.push({ row: line, column: 'auto_renewal', code: 'CSV_BOOLEAN_INVALID', params: { value }, message: `Invalid value '${value}'. Use yes or no.` });
         continue;
       }
       const auto_renewal = autoCell ?? false;
@@ -1176,7 +1178,8 @@ export class ContractsService {
       // Blank is 0, as before; the decimal mark is the file's (`fieldAmounts`).
       const amount = amounts.amountOf(r);
       if (amount.kind === 'invalid' || amount.kind === 'clear') {
-        errors.push({ row: line, message: `yearly_amount_at_signature: Invalid amount '${cellOf(r, 'yearly_amount_at_signature')}'.` });
+        const value = cellOf(r, 'yearly_amount_at_signature');
+        errors.push({ row: line, column: 'yearly_amount_at_signature', code: 'CSV_NUMBER_INVALID', params: { value }, message: `Invalid amount '${value}'.` });
         continue;
       }
       const yearly_amount_at_signature = amount.kind === 'value' ? Number(amount.decimal.toString()) : 0;

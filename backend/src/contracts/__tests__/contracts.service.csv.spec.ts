@@ -126,6 +126,22 @@ async function testImportReportsUnresolvedReferences() {
   assert.ok(/user 'ghost@nowhere.io' not found/.test(messages), messages);
 }
 
+// A yes/no cell that is neither: the shared coded error, worded by the interface, on its column.
+async function testImportCodesAnInvalidYesNo() {
+  const svc = createService();
+  const row = 'New Deal;Fromage Co;Dell;2024-01-01;12;maybe;1;0;EUR;annual;enabled;;';
+  const result = await svc.importCsv(
+    { file: { buffer: Buffer.from(`${HEADER}\n${row}\n`, 'utf8') } as any, dryRun: true },
+    { manager: createMockManager() },
+  );
+  assert.equal(result.ok, false);
+  const error: any = result.errors.find((e: any) => e.row === 2);
+  assert.ok(error, JSON.stringify(result.errors));
+  assert.equal(error.code, 'CSV_BOOLEAN_INVALID', JSON.stringify(error));
+  assert.equal(error.column, 'auto_renewal');
+  assert.deepEqual(error.params, { value: 'maybe' });
+}
+
 async function testImportReadsWindows1252() {
   const svc = createService();
   // Excel "CSV (semicolon)" on Windows writes Windows-1252: latin1 matches it for "é".
@@ -153,6 +169,7 @@ async function testImportRefusesUtf16WithBadRequest() {
   await testExportRoundTripsThroughImport();
   await testImportRejectsWrongHeaders();
   await testImportReportsUnresolvedReferences();
+  await testImportCodesAnInvalidYesNo();
   await testImportReadsWindows1252();
   await testImportRefusesUtf16WithBadRequest();
 
