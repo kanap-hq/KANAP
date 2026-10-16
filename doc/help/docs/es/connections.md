@@ -1,6 +1,6 @@
 # Conexiones
 
-Las Conexiones documentan las rutas de red a nivel de infraestructura entre servidores y entidades. Mientras que las Interfaces describen los flujos lógicos de datos entre aplicaciones, las Conexiones describen las rutas de red físicas -- qué servidores se comunican, a través de qué protocolos y puertos.
+Las Conexiones documentan las rutas de red a nivel de infraestructura entre servidores y entidades. Mientras que las Interfaces describen los flujos lógicos de datos entre aplicaciones, las Conexiones describen las rutas de red físicas: qué servidores se comunican, a través de qué protocolos y puertos.
 
 ## Primeros pasos
 
@@ -31,7 +31,7 @@ La lista proporciona una visión filtrable de todas las conexiones en su registr
   - **Topología**: Servidor a servidor o Multi-servidor
   - **Origen** / **Destino**: Los puntos de conexión
   - **Protocolos**: Protocolos de red mostrados como chips
-  - **Criticidad**: Importancia para el negocio -- puede derivarse de interfaces vinculadas
+  - **Criticidad**: Importancia para el negocio. Puede derivarse de interfaces vinculadas
   - **Clase de datos**: Nivel de sensibilidad de los datos
   - **PII**: Si datos personales atraviesan esta conexión
   - **Riesgo**: Manual o Derivado (muestra el número de interfaces vinculadas)
@@ -61,8 +61,8 @@ La lista proporciona una visión filtrable de todas las conexiones en su registr
 
 Una conexión directa entre dos puntos de conexión específicos. Cada lado puede ser un servidor, un clúster o una entidad con nombre:
 
-- **Origen**: Donde se origina el tráfico -- seleccione un servidor, clúster o entidad
-- **Destino**: Donde termina el tráfico -- mismas opciones
+- **Origen**: Donde se origina el tráfico: seleccione un servidor, clúster o entidad
+- **Destino**: Donde termina el tráfico: mismas opciones
 - No puede seleccionar tanto un servidor como una entidad para el mismo lado; elija uno u otro
 
 Si un punto de conexión es un clúster, una nota le recordará que los hosts miembros se gestionan en el espacio de trabajo de Servidores.
@@ -89,8 +89,8 @@ La pestaña Visión general captura la identidad y topología de la conexión.
   - **Nombre**: Nombre visible
   - **Propósito**: Por qué existe esta conexión (texto libre)
   - **Tipo de conexión**: Servidor a servidor o Multi-servidor
-  - **Origen** / **Destino**: Para Servidor a servidor -- seleccione un servidor, clúster o entidad desde un desplegable agrupado
-  - **Servidores conectados**: Para Multi-servidor -- busque y seleccione dos o más servidores
+  - **Origen** / **Destino**: Para Servidor a servidor, seleccione un servidor, clúster o entidad desde un desplegable agrupado
+  - **Servidores conectados**: Para Multi-servidor, busque y seleccione dos o más servidores
   - **Protocolos**: Uno o más protocolos de red (tomados de su configuración de Tipos de conexión)
   - **Ciclo de vida**: Estado actual
   - **Notas**: Contexto adicional
@@ -101,7 +101,7 @@ Cuando selecciona protocolos, el sistema muestra sus puertos típicos como refer
 
 ### Capas
 
-La pestaña Capas le permite definir una ruta de red ordenada de hasta tres saltos -- útil para documentar proxies inversos, firewalls o enrutamiento intermedio.
+La pestaña Capas le permite definir una ruta de red ordenada de hasta tres saltos. Es útil para documentar proxies inversos, firewalls o enrutamiento intermedio.
 
 **Qué captura cada capa**:
   - **Orden**: Número de secuencia (1 a 3)
@@ -123,7 +123,7 @@ Esta pestaña controla la clasificación de riesgo y la configuración de protec
 
 **Modo de riesgo**:
   - **Manual**: Usted establece la criticidad, clase de datos y PII directamente
-  - **Derivado**: Los valores se agregan desde los enlaces de interfaz vinculados -- la pestaña muestra los valores efectivos y cuántos enlaces contribuyen
+  - **Derivado**: Los valores se agregan desde los enlaces de interfaz vinculados: la pestaña muestra los valores efectivos y cuántos enlaces contribuyen
 
 **Campos**:
   - **Criticidad**: Crítica para el negocio, Alta, Media o Baja
@@ -152,6 +152,6 @@ Esta pestaña es de solo lectura. Para vincular un enlace de interfaz a una cone
 ## Consejos
 
   - **Empiece por las rutas críticas**: Documente las conexiones de sus aplicaciones más importantes primero, luego trabaje hacia afuera.
-  - **Use el modo de riesgo Derivado**: Deje que el sistema calcule la criticidad desde las interfaces que usan cada conexión -- ahorra esfuerzo y se mantiene actualizado a medida que las interfaces cambian.
+  - **Use el modo de riesgo Derivado**: Deje que el sistema calcule la criticidad desde las interfaces que usan cada conexión. Ahorra esfuerzo y se mantiene actualizado a medida que las interfaces cambian.
   - **Vincule a interfaces**: Conectar su infraestructura a los enlaces de interfaz le da trazabilidad de extremo a extremo desde flujos de datos de aplicaciones hasta rutas de red.
   - **Documente protocolos con precisión**: Datos de protocolos precisos facilitan significativamente las revisiones de reglas de firewall y las auditorías de seguridad.

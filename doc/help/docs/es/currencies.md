@@ -19,14 +19,14 @@ El permiso **Configuración** del panorama IT no da acceso a las monedas. Solo c
 La **moneda de todo el espacio de trabajo** utilizada para todos los informes, totales y visualizaciones de listas. Cuando cambia esta moneda:
   - Todas las columnas anuales de OPEX y CAPEX se convierten a la nueva moneda de reporte
   - Los totales en informes se recalculan usando la nueva base
-  - **Sus datos almacenados no cambian** -- solo se ven afectadas la visualización y la conversión
+  - **Sus datos almacenados no cambian**: solo se ven afectadas la visualización y la conversión
 
 **Ejemplo**: Si cambia de EUR a USD, los totales de su lista OPEX se mostrarán en USD, pero la moneda almacenada de cada elemento (EUR, GBP, etc.) permanece igual.
 
 **Consejo**: Elija una moneda de reporte que coincida con el estándar de reporte financiero de su grupo (p. ej., EUR para sede europea, USD para grupos con sede en EE. UU.).
 
 ### Moneda OPEX predeterminada
-La moneda que se **prerellena** cuando crea una nueva línea OPEX (gasto). Esto no restringe qué monedas puede seleccionar -- solo ahorra tiempo ofreciendo un valor predeterminado sensato.
+La moneda que se **prerellena** cuando crea una nueva línea OPEX (gasto). Esto no restringe qué monedas puede seleccionar: solo ahorra tiempo ofreciendo un valor predeterminado sensato.
 
 **Ejemplo**: Si la mayoría de su gasto recurrente es en EUR, establézcala como EUR. Los usuarios aún pueden seleccionar manualmente GBP, USD o cualquier otra moneda permitida.
 
@@ -145,7 +145,7 @@ Currency "CHF" is not allowed. Allowed currencies: EUR, USD, GBP
 Cuando cambia la configuración:
   - **Moneda de reporte**: Afecta la visualización inmediatamente; los datos históricos permanecen intactos y se convierten usando las tasas que estaban activas cuando se introdujeron los datos
   - **Monedas predeterminadas**: Solo afectan nuevos elementos; los elementos existentes conservan sus monedas
-  - **Monedas permitidas**: Los elementos existentes no se validan retroactivamente -- las restricciones solo se aplican a elementos nuevos o editados
+  - **Monedas permitidas**: Los elementos existentes no se validan retroactivamente: las restricciones solo se aplican a elementos nuevos o editados
 
 ## Mecánicas de conversión (referencia rápida)
 
@@ -158,7 +158,7 @@ Se utiliza la tasa al contado de ExchangeRate-API (con respaldo a la última tas
 ### Años futuros
 Se reutiliza la tasa del año actual como estimación futura. Esto proporciona orientación para la planificación presupuestaria pero debe revisarse a medida que esos años se acerquen.
 
-**Respaldo**: Si no se encuentra tasa para una moneda, el sistema usa **1,00** hasta que los datos estén disponibles. Esto previene errores pero puede producir conversiones imprecisas -- ejecute Forzar sincronización FX para rellenar las tasas faltantes.
+**Respaldo**: Si no se encuentra tasa para una moneda, el sistema usa **1,00** hasta que los datos estén disponibles. Esto previene errores pero puede producir conversiones imprecisas. Ejecute Forzar sincronización FX para rellenar las tasas faltantes.
 
 ## Consejos
 
@@ -167,7 +167,7 @@ Se reutiliza la tasa del año actual como estimación futura. Esto proporciona o
   - **Restrinja monedas intencionalmente**: Solo use Monedas permitidas si tiene una razón clara (p. ej., cobertura de datos FX, conformidad, estandarización).
   - **Ejecute Forzar sincronización FX proactivamente**: Después de añadir monedas, antes de generar informes o cuando las tasas parezcan desactualizadas.
   - **Verifique la tabla de instantáneas FX**: Utilícela para verificar que las tasas sean razonables y completas antes de finalizar informes.
-  - **Use códigos ISO consistentes**: Siempre use códigos de 3 letras (EUR, USD, GBP) -- nunca símbolos (€, $, £) ni códigos numéricos.
+  - **Use códigos ISO consistentes**: Siempre use códigos de 3 letras (EUR, USD, GBP), nunca símbolos (€, $, £) ni códigos numéricos.
 
 ## Escenarios comunes
 
@@ -179,7 +179,7 @@ Su grupo cambia de reporte basado en EUR a basado en USD.
   2. Cambie la Moneda de reporte de `EUR` a `USD`
   3. Haga clic en **Guardar** (desencadena automáticamente la actualización FX)
   4. Verifique que la tabla de Instantáneas de tasas FX muestre USD como base (todas las tasas ahora deben ser relativas a USD)
-  5. Compruebe las listas OPEX y CAPEX -- los totales y columnas anuales ahora se muestran en USD
+  5. Compruebe las listas OPEX y CAPEX: los totales y columnas anuales ahora se muestran en USD
 
 **Resultado**: Todos los informes, paneles de control y listas muestran USD. Sus datos almacenados (la moneda propia de cada elemento) permanecen sin cambios.
 
@@ -213,14 +213,14 @@ Es diciembre y está preparando la planificación presupuestaria del próximo a�
   1. Vaya a **Gestión presupuestaria > Administración > Monedas**
   2. Haga clic en **Forzar sincronización FX** para actualizar las tasas del próximo año
   3. Verifique la tabla de Instantáneas de tasas FX para ver las estimaciones futuras del próximo año
-  4. Tenga en cuenta que las tasas de años futuros son estimaciones futuras (reutilizando la tasa del año actual) -- revíselas a medida que el año se acerque
+  4. Tenga en cuenta que las tasas de años futuros son estimaciones futuras (reutilizando la tasa del año actual). Revíselas a medida que el año se acerque
 
 **Resultado**: Sus previsiones presupuestarias para el próximo año utilizan las tasas más recientes disponibles. Los equipos pueden planificar CAPEX y OPEX con suposiciones de moneda razonables.
 
 ## Preguntas frecuentes
 
 **P: ¿Qué pasa si cambio la moneda de reporte a mitad de año?**
-R: Todos los informes y listas se convierten inmediatamente a la nueva moneda. Los datos históricos permanecen intactos -- solo cambia la moneda de visualización. Planifique este cambio cuidadosamente para evitar confusión durante períodos de reporte activos.
+R: Todos los informes y listas se convierten inmediatamente a la nueva moneda. Los datos históricos permanecen intactos: solo cambia la moneda de visualización. Planifique este cambio cuidadosamente para evitar confusión durante períodos de reporte activos.
 
 **P: ¿Puedo establecer diferentes monedas de reporte para diferentes empresas?**
 R: No. La moneda de reporte es de todo el espacio de trabajo. Todas las empresas, informes y totales usan la misma moneda de reporte. Los elementos individuales almacenan su propia moneda, pero las conversiones siempre apuntan a la moneda de reporte del espacio de trabajo.

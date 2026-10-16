@@ -8,7 +8,7 @@ description: Una guía rápida de incorporación para todos los usuarios. Panel 
 Bienvenido a KANAP. Esta guía le lleva por todo lo que necesita para sentirse productivo desde el primer día, independientemente de su rol. No se requiere conocimiento de administración, ni profundizaciones en módulos específicos. Solo lo esencial para sentirse cómodo.
 
 !!! tip "Consejo"
-    Todos los pasos clave en una sola página A4 -- imprímala, cuélguela, compártala con su equipo.
+    Todos los pasos clave en una sola página A4: imprímala, cuélguela, compártala con su equipo.
 
     [:material-download: Descargar la hoja de referencia (PDF)](downloads/kanap-getting-started.pdf){ .md-button .md-button--primary }
 
@@ -22,7 +22,7 @@ KANAP está organizado en torno a una estructura simple. La barra superior muest
 
 | Área | Qué contiene |
 |------|-------------|
-| **Panel de control** | Su centro personal -- haga clic en el logotipo de KANAP o navegue a `/` |
+| **Panel de control** | Su centro personal. Haga clic en el logotipo de KANAP o navegue a `/` |
 | **Portafolio** | Tareas, Solicitudes, Proyectos, Planificación, Informes, Colaboradores |
 | **Panorama IT** | Aplicaciones, Interfaces, Mapa de interfaces, Activos, Conexiones, Mapa de conexiones, Ubicaciones |
 | **Base de conocimiento** | Documentos y plantillas con flujos de trabajo de revisión |
@@ -59,16 +59,16 @@ Una cuadrícula de mosaicos, cada uno mostrando un aspecto diferente de su traba
 
 En la parte superior del panel de control, encontrará botones de acceso directo para acciones comunes:
 
-- **Crear tarea** -- abrir un diálogo rápido para crear una tarea sin salir del panel de control
-- **Registrar tiempo** -- registrar horas en un proyecto en segundos
-- **Nuevo documento** -- iniciar un documento de Base de conocimiento en blanco o crear uno desde una plantilla
+- **Crear tarea**: abrir un diálogo rápido para crear una tarea sin salir del panel de control
+- **Registrar tiempo**: registrar horas en un proyecto en segundos
+- **Nuevo documento**: iniciar un documento de Base de conocimiento en blanco o crear uno desde una plantilla
 
 ### Personalícelo
 
 Haga clic en el icono de **Configuración** (engranaje) para elegir qué mosaicos aparecen. Solo se muestran los mosaicos que tiene permiso para ver. Comience con los predeterminados durante unos días, luego ajuste a sus necesidades.
 
 !!! tip "Consejo"
-    El panel de control está diseñado para responder "¿en qué debería enfocarme hoy?" de un vistazo. Si un mosaico no le es útil, ocúltelo. Si le falta algo, revise el icono de engranaje -- puede estar simplemente deshabilitado.
+    El panel de control está diseñado para responder "¿en qué debería enfocarme hoy?" de un vistazo. Si un mosaico no le es útil, ocúltelo. Si le falta algo, revise el icono de engranaje: puede estar simplemente deshabilitado.
 
 ---
 
@@ -101,7 +101,7 @@ Puede ajustar las notificaciones por espacio de trabajo:
 
 ### El correo de revisión semanal
 
-Este es un resumen periódico de su actividad y próximos elementos -- como un compendio personal.
+Este es un resumen periódico de su actividad y próximos elementos, como un compendio personal.
 
 Configúrelo en la pestaña Notificaciones:
 
@@ -120,9 +120,9 @@ Haga clic en **Vista previa del correo** para enviarse una prueba y ver cómo se
 
 Elija su modo de tema preferido:
 
-- **Claro** -- interfaz brillante
-- **Oscuro** -- menos brillo para entornos con poca luz
-- **Sistema** -- sigue la preferencia de su sistema operativo
+- **Claro**: interfaz brillante
+- **Oscuro**: menos brillo para entornos con poca luz
+- **Sistema**: sigue la preferencia de su sistema operativo
 
 También puede alternar el tema rápidamente desde la barra superior usando el icono de tema (sol/luna) junto al botón de ayuda.
 
@@ -149,10 +149,10 @@ El filtro de alcance **recuerda su última selección** entre sesiones. Así que
 
 ### Dónde aparecen los filtros de alcance
 
-- **Portafolio > Tareas** -- Mis tareas / Tareas de mi equipo / Todas las tareas
-- **Panorama IT > Aplicaciones** -- Mis aplicaciones / Aplicaciones de mi equipo / Todas las aplicaciones
-- **Portafolio > Proyectos** -- Mis proyectos / Proyectos de mi equipo / Todos los proyectos
-- **Portafolio > Solicitudes** -- Mis solicitudes / Solicitudes de mi equipo / Todas las solicitudes
+- **Portafolio > Tareas**: Mis tareas / Tareas de mi equipo / Todas las tareas
+- **Panorama IT > Aplicaciones**: Mis aplicaciones / Aplicaciones de mi equipo / Todas las aplicaciones
+- **Portafolio > Proyectos**: Mis proyectos / Proyectos de mi equipo / Todos los proyectos
+- **Portafolio > Solicitudes**: Mis solicitudes / Solicitudes de mi equipo / Todas las solicitudes
 
 La lógica siempre es la misma: la propiedad y la asignación de equipo determinan lo que ve.
 
@@ -170,8 +170,8 @@ Navegue a **Portafolio > Tareas**. La página se abre en **Todas las tareas**. E
 
 Dos formas:
 
-1. **Desde el panel de control** -- haga clic en **Crear tarea** (diálogo rápido, campos mínimos)
-2. **Desde la página de Tareas** -- haga clic en **Nuevo** (espacio de trabajo completo con todas las opciones)
+1. **Desde el panel de control**: haga clic en **Crear tarea** (diálogo rápido, campos mínimos)
+2. **Desde la página de Tareas**: haga clic en **Nuevo** (espacio de trabajo completo con todas las opciones)
 
 Lo mínimo que necesita:
 
@@ -201,7 +201,7 @@ Mueva las tareas a través de los estados a medida que avanza el trabajo:
 
 ### Registre tiempo
 
-Para tareas de proyecto, el registro de tiempo es esencial -- alimenta el generador de hoja de ruta y la planificación de capacidad.
+Para tareas de proyecto, el registro de tiempo es esencial: alimenta el generador de hoja de ruta y la planificación de capacidad.
 
 1. Abra la tarea > haga clic en **Registrar tiempo** en la barra lateral
 2. Elija categoría: **IT** o **Negocio**
@@ -209,16 +209,16 @@ Para tareas de proyecto, el registro de tiempo es esencial -- alimenta el genera
 
 ### Comparta una tarea
 
-¿Necesita incluir a alguien? Haga clic en **Enviar enlace** en el encabezado de la tarea para enviar un enlace directo por correo a cualquier colega -- incluso personas fuera de KANAP. Añada un mensaje personal si lo necesita.
+¿Necesita incluir a alguien? Haga clic en **Enviar enlace** en el encabezado de la tarea para enviar un enlace directo por correo a cualquier colega, incluso personas fuera de KANAP. Añada un mensaje personal si lo necesita.
 
 !!! info "Información"
-    Enviar enlace funciona en todas partes. Esto no es solo para tareas. Puede enviar enlaces a proyectos, solicitudes, contratos, aplicaciones -- cualquier objeto del espacio de trabajo. Es la forma más rápida de dirigir a alguien al lugar correcto.
+    Enviar enlace funciona en todas partes. Esto no es solo para tareas. Puede enviar enlaces a proyectos, solicitudes, contratos, aplicaciones: cualquier objeto del espacio de trabajo. Es la forma más rápida de dirigir a alguien al lugar correcto.
 
 ---
 
 ## Paso 5: Configure su perfil de colaborador
 
-Su perfil de Colaborador le dice a KANAP quién es usted en términos de planificación de proyectos. Es separado de su cuenta de usuario -- se trata de **equipo, disponibilidad y competencias**.
+Su perfil de Colaborador le dice a KANAP quién es usted en términos de planificación de proyectos. Es separado de su cuenta de usuario: se trata de **equipo, disponibilidad y competencias**.
 
 Navegue a **Portafolio > Colaboradores** y encuentre su nombre (o pida a su administrador que le añada).
 
@@ -228,7 +228,7 @@ Navegue a **Portafolio > Colaboradores** y encuentre su nombre (o pida a su admi
 |---------------|----------|---------|
 | **Equipo** | Su equipo organizacional | Infraestructura, Mesa de servicio... |
 | **Disponibilidad** | Días por mes para trabajo de proyecto (0-20) | 8 días/mes |
-| **Competencias** | Qué sabe y con qué nivel | "Docker -- Autónomo" |
+| **Competencias** | Qué sabe y con qué nivel | "Docker: Autónomo" |
 
 ### Por qué esto importa
 
@@ -237,7 +237,7 @@ Navegue a **Portafolio > Colaboradores** y encuentre su nombre (o pida a su admi
 - **Competencias** > ayuda a los jefes de proyecto a encontrar las personas adecuadas para el trabajo futuro
 
 !!! tip "Consejo"
-    Sea realista con la disponibilidad. Tenga en cuenta reuniones, trabajo operativo y vacaciones. La mayoría de las personas tienen menos tiempo de proyecto del que piensan. Establecer 20 días/mes significa que no tiene tiempo fuera de proyecto -- eso casi nunca es cierto.
+    Sea realista con la disponibilidad. Tenga en cuenta reuniones, trabajo operativo y vacaciones. La mayoría de las personas tienen menos tiempo de proyecto del que piensan. Establecer 20 días/mes significa que no tiene tiempo fuera de proyecto, y eso casi nunca es cierto.
 
 ### Nivel de dominio de competencias
 
@@ -249,7 +249,7 @@ Cada competencia tiene un nivel de dominio:
 | 1 | Básico / Teórico |
 | 2 | Puede ejecutar con apoyo |
 | 3 | Autónomo |
-| 4 | Experto -- puede formar a otros |
+| 4 | Experto: puede formar a otros |
 
 Sea honesto. Un mapa de competencias realista es mucho más útil que uno donde todos son "expertos".
 
@@ -263,7 +263,7 @@ Todo lo que configura en estos primeros 10 minutos alimenta el panorama general:
 Los mosaicos extraen información de sus asignaciones de tareas, roles en proyectos y registros de tiempo para darle una vista general personalizada cada mañana.
 
 ### Filtros de alcance
-Sus asignaciones de propiedad y pertenencia a equipo determinan lo que aparece en cada lista -- haciendo que la aplicación se sienta personal, no abrumadora.
+Sus asignaciones de propiedad y pertenencia a equipo determinan lo que aparece en cada lista, haciendo que la aplicación se sienta personal, no abrumadora.
 
 ### Planificación de capacidad
 Su disponibilidad y registros de tiempo alimentan el generador de hoja de ruta y los mapas de calor de capacidad del módulo de Portafolio. Datos precisos aquí significan mejor planificación para todos.
@@ -302,4 +302,4 @@ El correo semanal y las notificaciones en tiempo real le mantienen informado sin
 ---
 
 !!! success "Está listo"
-    Ahora sabe cómo navegar KANAP, gestionar sus tareas, configurar su perfil y notificaciones, y configurar su perfil de colaborador. Comience con su panel de control cada mañana, mantenga sus tareas actualizadas y registre tiempo regularmente -- el resto seguirá naturalmente.
+    Ahora sabe cómo navegar KANAP, gestionar sus tareas, configurar su perfil y notificaciones, y configurar su perfil de colaborador. Comience con su panel de control cada mañana, mantenga sus tareas actualizadas y registre tiempo regularmente: el resto seguirá naturalmente.

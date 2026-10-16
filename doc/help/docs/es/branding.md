@@ -33,7 +33,7 @@ La página tiene dos tarjetas: **Logotipo** y **Colores principales**. Ambas son
 ### Formato de logotipo recomendado
 
 - Use un logotipo ancho y horizontal (preferiblemente con fondo transparente).
-- Mantenga el contenido importante centrado — el área del encabezado es compacta.
+- Mantenga el contenido importante centrado: el área del encabezado es compacta.
 - Para una representación nítida, use al menos unas 2× el tamaño mostrado (por ejemplo, `280x72` o superior).
 
 ### Cómo configurarlo
@@ -67,7 +67,7 @@ Puede establecer colores para **Principal del modo claro** y **Principal del mod
 
 Después de elegir los colores, la página evalúa qué tan legible es el texto sobre el fondo elegido. Si el contraste cae por debajo del umbral legible para cualquiera de los modos, aparece una advertencia informativa con la relación de contraste.
 
-La advertencia es informativa — aún puede guardar — pero el contraste bajo suele significar texto blanco sobre un color pálido o texto oscuro sobre un color saturado, ambos cansan la vista en interfaces reales.
+La advertencia es informativa (aún puede guardar), pero el contraste bajo suele significar texto blanco sobre un color pálido o texto oscuro sobre un color saturado, ambos cansan la vista en interfaces reales.
 
 ## Guardar y restablecer
 
@@ -81,7 +81,7 @@ Una pequeña leyenda debajo de las acciones muestra el contador de **versión de
 
 ## Consejos
 
-- **Pruebe en ambos temas**: cambie entre tema claro y oscuro antes de guardar — el mismo color de marca rara vez funciona en ambos modos.
+- **Pruebe en ambos temas**: cambie entre tema claro y oscuro antes de guardar: el mismo color de marca rara vez funciona en ambos modos.
 - **Prefiera un fondo transparente**: los logotipos simples con fondo transparente proporcionan la representación más limpia del encabezado, especialmente en modo oscuro.
-- **Use Restablecer de forma deliberada**: elimina tanto el logotipo como todos los colores personalizados de una sola vez. Úselo cuando empiece de nuevo, no como un "deshacer" para un único cambio — para eso está **Descartar**.
+- **Use Restablecer de forma deliberada**: elimina tanto el logotipo como todos los colores personalizados de una sola vez. Úselo cuando empiece de nuevo, no como un "deshacer" para un único cambio. Para eso está **Descartar**.
 - **Los colores de marca son para acentos**: KANAP utiliza el color principal en barras de la app, botones principales y enlaces. Elija algo que se lea limpiamente en tamaño de botón, no solo en un sitio de marketing.

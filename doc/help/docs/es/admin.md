@@ -612,8 +612,8 @@ Para el contenido del conjunto, lo que el borrado elimina y conserva, y el banne
 La página de Configuración le permite gestionar su perfil personal y sus preferencias de notificación. Acceda a ella desde el menú de usuario (avatar superior derecho) o navegue a `/settings`.
 
 La página tiene dos pestañas, accesibles por URL:
-- `/settings/profile` (predeterminada) -- Pestaña de Perfil
-- `/settings/notifications` -- Pestaña de Notificaciones
+- `/settings/profile` (predeterminada): Pestaña de Perfil
+- `/settings/notifications`: Pestaña de Notificaciones
 
 ### Perfil
 

@@ -1,11 +1,11 @@
 # Plaid
 
-Plaid es el asistente de chat integrado de KANAP. Está conectado a los mismos datos con los que ya trabaja — aplicaciones, activos, incidentes, proyectos, solicitudes, tareas, contratos, documentos de la base de conocimiento y datos maestros — para que pueda hacer preguntas en lenguaje sencillo en lugar de hacer clic por varias pantallas para encontrar una respuesta.
+Plaid es el asistente de chat integrado de KANAP. Está conectado a los mismos datos con los que ya trabaja (aplicaciones, activos, incidentes, proyectos, solicitudes, tareas, contratos, documentos de la base de conocimiento y datos maestros), para que pueda hacer preguntas en lenguaje sencillo en lugar de hacer clic por varias pantallas para encontrar una respuesta.
 
 Plaid no reemplaza al resto de la aplicación. Es una forma más rápida de resumir contexto, localizar registros, redactar texto o preparar cambios. Las operaciones sensibles siempre se muestran como vistas previas que debe aprobar antes de que se escriba nada de vuelta en KANAP.
 
 !!! note "Plaid frente a Agentes IA"
-    Plaid es el asistente interactivo que **usted** dirige: usted pregunta, él responde y usted aprueba los cambios de uno en uno. Los **Agentes IA** son distintos: son ayudantes autónomos que vigilan su centro de servicios y proponen o gestionan el trabajo con tickets por su cuenta, dentro de los límites de aprobación que usted defina. Consulte [Agentes IA — Vista general](agents-overview.md).
+    Plaid es el asistente interactivo que **usted** dirige: usted pregunta, él responde y usted aprueba los cambios de uno en uno. Los **Agentes IA** son distintos: son ayudantes autónomos que vigilan su centro de servicios y proponen o gestionan el trabajo con tickets por su cuenta, dentro de los límites de aprobación que usted defina. Consulte [Agentes IA: vista general](agents-overview.md).
 
 ## Dónde encontrarlo
 
@@ -27,7 +27,7 @@ Cuando abre Plaid por primera vez, llega a una pantalla de bienvenida con:
 - Una sección **Para comenzar** con ejemplos de preguntas en los que puede hacer clic para enviarlos
 - El cuadro de redacción en la parte inferior, listo para aceptar su primer mensaje
 
-Haga clic en cualquier sugerencia para enviarla directamente o — en el caso de las preguntas que contienen un marcador `@` — colocar la sugerencia en el cuadro de redacción para que pueda terminarla.
+Haga clic en cualquier sugerencia para enviarla directamente o, en el caso de las preguntas que contienen un marcador `@`, colocar la sugerencia en el cuadro de redacción para que pueda terminarla.
 
 Escriba un mensaje y pulse **Intro** para enviarlo. **Mayús+Intro** inserta un salto de línea. El botón de enviar se desactiva cuando no hay nada que enviar y se transforma en un botón rojo **Detener** mientras Plaid responde.
 
@@ -43,8 +43,8 @@ La lista contiene:
 
 Cada fila muestra el título de la conversación (o **Sin título** cuando aún no se ha definido ninguno). Pase el cursor por encima de una fila o sitúe el foco en ella para mostrar:
 
-- Un icono de lápiz — **Renombrar** la conversación. Haga doble clic en el título para hacer lo mismo.
-- Un icono de papelera — **Archivar** la conversación. Las conversaciones archivadas desaparecen de la lista. Si archiva la conversación que tiene abierta en ese momento, Plaid cambia a un chat vacío nuevo.
+- Un icono de lápiz: **Renombrar** la conversación. Haga doble clic en el título para hacer lo mismo.
+- Un icono de papelera: **Archivar** la conversación. Las conversaciones archivadas desaparecen de la lista. Si archiva la conversación que tiene abierta en ese momento, Plaid cambia a un chat vacío nuevo.
 
 La búsqueda filtra la lista por título a medida que escribe. El cambio de nombre y el archivado se guardan de inmediato.
 
@@ -74,9 +74,9 @@ Las imágenes se cargan junto con su mensaje para que Plaid pueda describirlas, 
 Escribir `@` abre el **selector de menciones** encima del cuadro de redacción. Le permite hacer referencia a cualquier registro de KANAP al que tenga acceso, con dos modos complementarios:
 
 - **Prefijo de tipo**: códigos cortos que corresponden a una única familia de entidades. Ejemplos:
-  - `@T-5` — tarea con la referencia T-5
-  - `@DOC` — documentos de la base de conocimiento recientes
-  - `@APP backup` — aplicaciones que coinciden con "backup"
+  - `@T-5`: tarea con la referencia T-5
+  - `@DOC`: documentos de la base de conocimiento recientes
+  - `@APP backup`: aplicaciones que coinciden con "backup"
   - `@BL-12`: la línea presupuestaria con la referencia BL-12. `@BL` solo lista líneas presupuestarias de ambos tipos, y `@OPX` o `@CPX` las limita a las líneas OPEX o CAPEX. Los antiguos números siguen funcionando: `@OPX-12` o `@CPX-3` encuentra su línea
   - `@PRJ`, `@REQ`, `@INC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@COMP`, `@CONT`, `@DEPT`, `@SUP`, `@BP`
 - **Texto simple**: cualquier otra cosa (`@payroll`, `@server-2`) ejecuta una búsqueda entre tipos ordenada por relevancia. También encuentra las líneas presupuestarias por el nombre de sus valores analíticos.
@@ -89,9 +89,9 @@ Cuando confirma una sugerencia, el cuadro de redacción sigue mostrando una etiq
 
 Pase el cursor sobre cualquiera de sus mensajes anteriores para obtener acciones a nivel de mensaje:
 
-- **Copiar** — copia el texto del mensaje al portapapeles
-- **Editar** — vuelve a abrir el mensaje en un editor en línea; al guardar se envía la nueva versión y se trunca todo lo que vino después (la conversación se vuelve a ejecutar desde ese punto)
-- **Regenerar** (en las respuestas del asistente) — pide a Plaid que produzca otra respuesta a la misma pregunta
+- **Copiar**: copia el texto del mensaje al portapapeles
+- **Editar**: vuelve a abrir el mensaje en un editor en línea; al guardar se envía la nueva versión y se trunca todo lo que vino después (la conversación se vuelve a ejecutar desde ese punto)
+- **Regenerar** (en las respuestas del asistente): pide a Plaid que produzca otra respuesta a la misma pregunta
 
 Editar es la herramienta adecuada cuando se da cuenta de que su pregunta anterior no era clara. Regenerar es la herramienta adecuada cuando la pregunta estaba bien pero la respuesta no.
 
@@ -100,7 +100,7 @@ Editar es la herramienta adecuada cuando se da cuenta de que su pregunta anterio
 Plaid va mostrando su respuesta carácter a carácter. Mientras la genera:
 
 - El cuadro de redacción sigue disponible para que pueda preparar una pregunta de seguimiento
-- El botón de enviar muestra un icono rojo **Detener** — al hacer clic se cancela la respuesta en curso
+- El botón de enviar muestra un icono rojo **Detener**. Al hacer clic se cancela la respuesta en curso
 - Aparece un pequeño indicador "Usando herramientas…" cuando Plaid busca en KANAP, obtiene un documento o ejecuta otra llamada a herramienta
 - El número y el tipo de herramientas utilizadas se resumen debajo de la respuesta una vez completada
 
@@ -131,8 +131,8 @@ El panel se abre automáticamente cuando:
 
 Para las vistas previas de cambios pendientes, el panel ofrece dos botones:
 
-- **Aprobar** — confirma el cambio y permite que Plaid lo aplique
-- **Rechazar** — cancela el cambio. Plaid confirma el rechazo y continúa la conversación.
+- **Aprobar**: confirma el cambio y permite que Plaid lo aplique
+- **Rechazar**: cancela el cambio. Plaid confirma el rechazo y continúa la conversación.
 
 Nada que modifique los datos de KANAP se aplica de forma silenciosa. La vista previa es la barrera de control.
 

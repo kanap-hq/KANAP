@@ -1,6 +1,6 @@
 # Activos
 
-Los activos documentan el inventario de su infraestructura -- servidores físicos, máquinas virtuales, contenedores, instancias de nube y dispositivos de red. Vincule activos a ubicaciones, aplicaciones, conexiones, contratos, proyectos y tareas para construir una imagen completa de su infraestructura IT.
+Los activos documentan el inventario de su infraestructura: servidores físicos, máquinas virtuales, contenedores, instancias de nube y dispositivos de red. Vincule activos a ubicaciones, aplicaciones, conexiones, contratos, proyectos y tareas para construir una imagen completa de su infraestructura IT.
 
 ## Primeros pasos
 
@@ -36,7 +36,7 @@ La lista de activos le ofrece una visión filtrable y ordenable de cada activo d
 | **Nombre** | Nombre del activo (haga clic para abrir el espacio de trabajo) |
 | **Tipo de activo** | El tipo del activo (p. ej., Máquina Virtual, Servidor Físico) |
 | **Clúster** | Pertenencia a clúster, o una insignia "Clúster" si este activo es un clúster |
-| **Entorno** | Prod, Pre-prod, QA, Test, Dev, Sandbox -- con un punto de color |
+| **Entorno** | Prod, Pre-prod, QA, Test, Dev, Sandbox, con un punto de color |
 | **Ubicación** | Dónde se aloja el activo |
 | **Alojamiento** | Tipo de alojamiento (derivado de la ubicación) |
 | **OS** | Sistema operativo |
@@ -92,7 +92,7 @@ Los miembros del clúster se gestionan desde la pestaña **Técnico** del espaci
 
 ## El espacio de trabajo de Activos
 
-Haga clic en cualquier fila para abrir el espacio de trabajo. El espacio de trabajo tiene un **encabezado** con metadatos rápidos, un **panel de propiedades** a la derecha (la tarjeta de identidad del activo -- siempre visible) y un **área de contenido** en el centro que cambia con cada pestaña.
+Haga clic en cualquier fila para abrir el espacio de trabajo. El espacio de trabajo tiene un **encabezado** con metadatos rápidos, un **panel de propiedades** a la derecha (la tarjeta de identidad del activo, siempre visible) y un **área de contenido** en el centro que cambia con cada pestaña.
 
 ### Encabezado
 
@@ -112,7 +112,7 @@ El panel muestra la tarjeta de identidad del activo en cada pestaña. Las edicio
 - **Tipo de activo** (obligatorio)
 - **Ubicación** (obligatorio)
 - **Sublocalización** (cuando la ubicación tiene sublocalizaciones definidas)
-- **Tipo de alojamiento**, **Proveedor de nube / Empresa operadora**, **País**, **Ciudad** -- de solo lectura, derivados de la ubicación
+- **Tipo de alojamiento**, **Proveedor de nube / Empresa operadora**, **País**, **Ciudad**: de solo lectura, derivados de la ubicación
 
 **Estado**:
 - **Entorno**: Prod, Pre-prod, QA, Test, Dev, Sandbox
@@ -132,7 +132,7 @@ La pestaña Visión general es la página de inicio del activo.
 
 | Columna | Qué muestra |
 |---------|-------------|
-| **Aplicación** | Nombre de la aplicación (clicable -- salta a los Despliegues de la aplicación) |
+| **Aplicación** | Nombre de la aplicación (clicable: salta a los Despliegues de la aplicación) |
 | **Entorno** | El entorno de despliegue al que pertenece la asignación |
 | **Rol** | Rol del servidor (Web, Base de datos, Aplicación, etc.) |
 | **Desde** | Fecha en que se asignó el servidor |
@@ -142,7 +142,7 @@ Haga clic en **Añadir asignación** para vincular este activo a un despliegue d
 
 Si este activo es un clúster, un aviso en línea reemplaza la tabla de asignaciones y le pide que asigne en su lugar los hosts miembros.
 
-**Conexiones**: Una vista de solo lectura de todas las conexiones que involucran a este activo. Cada fila muestra el ID y nombre de la conexión (clicable -- abre el espacio de trabajo de Conexión), topología (Servidor a Servidor o Multi-servidor), protocolos, etiquetas de los puntos finales de origen y destino, y estado del ciclo de vida. Para crear o editar una conexión, navegue a **Panorama IT > Conexiones**.
+**Conexiones**: Una vista de solo lectura de todas las conexiones que involucran a este activo. Cada fila muestra el ID y nombre de la conexión (clicable: abre el espacio de trabajo de Conexión), topología (Servidor a Servidor o Multi-servidor), protocolos, etiquetas de los puntos finales de origen y destino, y estado del ciclo de vida. Para crear o editar una conexión, navegue a **Panorama IT > Conexiones**.
 
 **Conocimiento**: Artículos de conocimiento vinculados a este activo. Con `knowledge:member` puede crear nuevos artículos directamente desde esta sección.
 
@@ -162,7 +162,7 @@ La pestaña Técnico organiza el clúster, la identidad de red y la configuraci�
 - **Dominio**: El dominio Active Directory o DNS al que pertenece el activo. Elija entre los dominios configurados en **Panorama IT > Configuración**. Las opciones del sistema incluyen "Workgroup" (independiente) y "N/A" (no aplicable).
 - **FQDN**: Nombre de Dominio Completamente Cualificado, calculado automáticamente desde el nombre de host y el sufijo DNS del dominio. Solo lectura.
 - **Alias**: Nombres DNS o alias adicionales para este activo. Escriba y pulse Enter para añadir.
-- **Sistema operativo**: Tipo y versión del SO (p. ej., Windows Server 2022, Ubuntu 24.04 LTS). Deshabilitado para clústeres -- el SO se define por miembro. Cuando se selecciona, muestra debajo las fechas de fin de soporte estándar y extendido.
+- **Sistema operativo**: Tipo y versión del SO (p. ej., Windows Server 2022, Ubuntu 24.04 LTS). Deshabilitado para clústeres: el SO se define por miembro. Cuando se selecciona, muestra debajo las fechas de fin de soporte estándar y extendido.
 
 **Direcciones IP**:
 
@@ -175,7 +175,7 @@ Los activos admiten múltiples direcciones IP, cada una con su propia configurac
 - **Zona de red**: Derivada automáticamente de la subred seleccionada (solo lectura)
 - **VLAN**: Derivada automáticamente de la subred seleccionada (solo lectura)
 
-Esto le permite documentar múltiples interfaces de red por activo -- por ejemplo, un servidor físico con tanto una IP de host como una dirección de gestión IPMI en subredes diferentes.
+Esto le permite documentar múltiples interfaces de red por activo, por ejemplo, un servidor físico con tanto una IP de host como una dirección de gestión IPMI en subredes diferentes.
 
 ---
 
@@ -225,9 +225,9 @@ La pestaña Relaciones conecta este activo a otros registros en KANAP. La insign
 - **Contratos**: Vincular a registros de contratos
 - **Proyectos**: Vincular a proyectos del portafolio relacionados con este activo
 
-**Tareas**: Tareas vinculadas a este activo. Solo lectura aquí -- las tareas ganan o pierden este vínculo cuando establece el campo **Activo** en una tarea desde la página de Tareas.
+**Tareas**: Tareas vinculadas a este activo. Solo lectura aquí: las tareas ganan o pierden este vínculo cuando establece el campo **Activo** en una tarea desde la página de Tareas.
 
-**Sitios web relevantes**: Añada URLs con nombres opcionales -- útil para portales de proveedores, paneles de monitoreo o enlaces a documentación. **Añadir URL** abre un diálogo; las entradas existentes pueden editarse o eliminarse.
+**Sitios web relevantes**: Añada URLs con nombres opcionales. Es útil para portales de proveedores, paneles de monitoreo o enlaces a documentación. **Añadir URL** abre un diálogo; las entradas existentes pueden editarse o eliminarse.
 
 **Adjuntos**: Arrastre y suelte archivos o haga clic en **Seleccionar archivos** para subirlos. Haga clic en un chip de adjunto para descargarlo. La eliminación está disponible para los gestores.
 
@@ -249,11 +249,11 @@ Desde la lista de Activos:
 
 | Opción | Descripción |
 |--------|-------------|
-| **Exportación completa** | Todos los campos exportables -- usar para informes y extracción completa de datos |
-| **Enriquecimiento de datos** | Todos los campos importables -- coincide con el formato de la plantilla de importación, ideal para edición de ida y vuelta (exportar, modificar, reimportar) |
+| **Exportación completa** | Todos los campos exportables. Usar para informes y extracción completa de datos |
+| **Enriquecimiento de datos** | Todos los campos importables. Coincide con el formato de la plantilla de importación, ideal para edición de ida y vuelta (exportar, modificar, reimportar) |
 | **Selección personalizada** | Elegir campos específicos para incluir en su exportación |
 
-**Descarga de plantilla** (desde el diálogo de Importación): Descarga un CSV en blanco con todos los encabezados de campos importables -- úselo para preparar archivos de importación con la estructura correcta.
+**Descarga de plantilla** (desde el diálogo de Importación): Descarga un CSV en blanco con todos los encabezados de campos importables. Úselo para preparar archivos de importación con la estructura correcta.
 
 ### Flujo de trabajo de importación
 
@@ -261,8 +261,8 @@ Desde la lista de Activos:
 
 2. **Elija la configuración de importación**:
    - **Modo**:
-     - `Enriquecer` (predeterminado): Las celdas vacías preservan los valores existentes -- solo actualiza lo que especifique
-     - `Reemplazar`: Las celdas vacías borran los valores existentes -- reemplazo completo de todos los campos
+     - `Enriquecer` (predeterminado): Las celdas vacías preservan los valores existentes: solo actualiza lo que especifique
+     - `Reemplazar`: Las celdas vacías borran los valores existentes (reemplazo completo de todos los campos)
    - **Operación**:
      - `Upsert` (predeterminado): Crear nuevos activos o actualizar existentes
      - `Solo actualizar`: Solo modificar activos existentes, omitir nuevos

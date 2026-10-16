@@ -1,6 +1,6 @@
 # Uso y costes
 
-Esta página responde a dos preguntas que un administrador se hace con frecuencia: *¿cuánta IA estamos usando?* y *¿cuánto nos está costando?* Cubre toda la organización —el [asistente de chat Plaid](ai-assistant.md) y todos los [agentes IA](agents-overview.md) juntos— con costes valorados a partir de los precios reales que registró en la página [Modelos IA](ai-models.md). Las cifras de conversaciones y tokens estaban antes al final de la página de configuración de Plaid; ahora viven aquí, junto al dinero.
+Esta página responde a dos preguntas que un administrador se hace con frecuencia: *¿cuánta IA estamos usando?* y *¿cuánto nos está costando?* Cubre toda la organización (el [asistente de chat Plaid](ai-assistant.md) y todos los [agentes IA](agents-overview.md) juntos), con costes valorados a partir de los precios reales que registró en la página [Modelos IA](ai-models.md). Las cifras de conversaciones y tokens estaban antes al final de la página de configuración de Plaid; ahora viven aquí, junto al dinero.
 
 ## Dónde encontrarlo
 
@@ -17,9 +17,9 @@ Todo lo de esta página es de solo lectura: es un informe, no un conjunto de con
 
 Tres tarjetas en la parte superior:
 
-- **Total este mes** — los agentes más Plaid, con la cifra de los últimos 30 días debajo. Como las dos mitades se calculan de forma distinta —véase más abajo—, el total mezcla una cifra medida con una estimada.
-- **Agentes este mes** — lo que costó realmente la flota de agentes, con la cifra de los últimos 30 días debajo.
-- **Plaid este mes** — lo que costó el asistente de chat. Esta tarjeta usa su pie para la advertencia sobre la estimación que se explica más abajo, en lugar de para una cifra a 30 días.
+- **Total este mes**: los agentes más Plaid, con la cifra de los últimos 30 días debajo. Como las dos mitades se calculan de forma distinta (véase más abajo), el total mezcla una cifra medida con una estimada.
+- **Agentes este mes**: lo que costó realmente la flota de agentes, con la cifra de los últimos 30 días debajo.
+- **Plaid este mes**: lo que costó el asistente de chat. Esta tarjeta usa su pie para la advertencia sobre la estimación que se explica más abajo, en lugar de para una cifra a 30 días.
 
 Los costes se muestran en euros al céntimo, y con cuatro decimales cuando el importe es inferior a un céntimo: al principio, o con un modelo barato, un total real puede ser perfectamente `0,0034 €`.
 
@@ -33,8 +33,8 @@ El **Modelo incluido de KANAP** cuesta 0 € por diseño: forma parte de su susc
 
 Debajo aparecen dos tablas en cuanto hay actividad de agentes de la que informar, cada una con una columna **Mes actual** y otra **Últimos 30 días**.
 
-- **Coste por agente** — una fila por agente, para que vea cuál sale caro. Combínela con el tope **Coste por ejecución** del propio agente, en su [pestaña Configuración](agents-workspace.md), si alguna cifra le parece rara.
-- **Coste por modelo** — el mismo gasto troceado por modelo, ordenado con el más caro de los últimos 30 días primero. Las filas son los identificadores de proveedor y modelo a los que se llamó realmente (`anthropic:claude-sonnet-5`, `ollama:mistral`), no los nombres amigables que usted les dio en la página [Modelos IA](ai-models.md). Una fila etiquetada como **Modelo desconocido** corresponde a actividad antigua, registrada antes de que existiera la atribución de modelo por llamada.
+- **Coste por agente**: una fila por agente, para que vea cuál sale caro. Combínela con el tope **Coste por ejecución** del propio agente, en su [pestaña Configuración](agents-workspace.md), si alguna cifra le parece rara.
+- **Coste por modelo**: el mismo gasto troceado por modelo, ordenado con el más caro de los últimos 30 días primero. Las filas son los identificadores de proveedor y modelo a los que se llamó realmente (`anthropic:claude-sonnet-5`, `ollama:mistral`), no los nombres amigables que usted les dio en la página [Modelos IA](ai-models.md). Una fila etiquetada como **Modelo desconocido** corresponde a actividad antigua, registrada antes de que existiera la atribución de modelo por llamada.
 
 Ambas tablas cubren las **ejecuciones de los agentes**. La estimación de Plaid no se desglosa aquí: aparece únicamente en la tarjeta **Plaid este mes**.
 
@@ -44,15 +44,15 @@ Ambas tablas cubren las **ejecuciones de los agentes**. La estimación de Plaid 
 
 Entre las tablas de costes y la tabla de tokens hay cuatro tarjetas sin título, todas ellas sobre el asistente de chat:
 
-- **Todas las conversaciones** — todas las conversaciones almacenadas actualmente. Si define un periodo de **Retención de conversaciones (días)** en la página de [configuración de Plaid](ai-settings.md), las conversaciones acaban purgándose y dejan de contar aquí.
-- **Conversaciones activas (7d)** y **Conversaciones activas (30d)** — conversaciones actualizadas en los últimos 7 o 30 días.
-- **Usuarios activos (30d)** — cuántas personas distintas usaron realmente el chat en los últimos 30 días. La cifra de adopción más honesta de la página.
+- **Todas las conversaciones**: todas las conversaciones almacenadas actualmente. Si define un periodo de **Retención de conversaciones (días)** en la página de [configuración de Plaid](ai-settings.md), las conversaciones acaban purgándose y dejan de contar aquí.
+- **Conversaciones activas (7d)** y **Conversaciones activas (30d)**: conversaciones actualizadas en los últimos 7 o 30 días.
+- **Usuarios activos (30d)**: cuántas personas distintas usaron realmente el chat en los últimos 30 días. La cifra de adopción más honesta de la página.
 
 ---
 
 ## Uso de tokens
 
-Una tabla, dos filas —**Mes actual** y **Últimos 30 días**— con **Tokens de entrada**, **Tokens de salida**, **Tokens totales** y **Mensajes de usuario** (el número de preguntas hechas en esa ventana).
+Una tabla, dos filas (**Mes actual** y **Últimos 30 días**) con **Tokens de entrada**, **Tokens de salida**, **Tokens totales** y **Mensajes de usuario** (el número de preguntas hechas en esa ventana).
 
 **Esta tabla trata del chat, no de los agentes.** Son los tokens del asistente Plaid, y son exactamente las cifras a partir de las cuales se valora la estimación de **Plaid este mes**. El consumo de los agentes no se cuenta aquí: aparece en **Coste por agente** y en **Mensajes de los agentes**, más abajo. Conviene recordarlo cuando funciona con el modelo incluido o con uno local, donde el coste siempre es cero pero el consumo sigue sin serlo.
 

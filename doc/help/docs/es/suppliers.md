@@ -13,7 +13,7 @@ Navegue a **Datos maestros > Proveedores** para abrir el directorio de proveedor
 - **ID de proveedor ERP**: ID de referencia de su sistema ERP o de compras
 - **Notas**: Notas de texto libre sobre la relación con el proveedor
 
-**Consejo**: Cree proveedores antes de añadir aplicaciones o contratos -- podrá vincularlos durante la creación.
+**Consejo**: Cree proveedores antes de añadir aplicaciones o contratos. Así podrá vincularlos durante la creación.
 
 ---
 

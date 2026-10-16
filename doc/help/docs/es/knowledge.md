@@ -231,7 +231,7 @@ Cómo funciona:
 
 Si la importación encuentra un conflicto de bloqueo (alguien más adquirió el bloqueo) o un bloqueo expirado, el modo de edición termina y se muestra un mensaje apropiado. Vuelva a entrar en modo de edición e inténtelo de nuevo.
 
-Las advertencias de importación — por ejemplo, formato no soportado que se simplificó durante la conversión — aparecen brevemente como una notificación en la parte inferior de la pantalla.
+Las advertencias de importación (por ejemplo, un formato no soportado que se simplificó durante la conversión) aparecen brevemente como una notificación en la parte inferior de la pantalla.
 
 Use la función de importación al migrar documentos Word existentes a la Base de conocimiento. Es más rápida y segura que copiar y pegar, y preserva las imágenes incrustadas automáticamente.
 
@@ -252,7 +252,7 @@ La exportación no reemplaza el artículo en vivo. La versión de la Base de con
 
 ## Generar documentos desde el chat
 
-Si el Asistente IA está habilitado en su KANAP, puede pedirle que redacte un artículo de la Base de conocimiento por usted desde el chat. El asistente prepara una vista previa que usted revisa antes de que se guarde nada. Confirmar la vista previa crea un documento real de la Base de conocimiento con el contenido, el tipo, el linaje de plantilla y cualquier relación que haya especificado — exactamente como si lo hubiera escrito usted mismo.
+Si el Asistente IA está habilitado en su KANAP, puede pedirle que redacte un artículo de la Base de conocimiento por usted desde el chat. El asistente prepara una vista previa que usted revisa antes de que se guarde nada. Confirmar la vista previa crea un documento real de la Base de conocimiento con el contenido, el tipo, el linaje de plantilla y cualquier relación que haya especificado, exactamente como si lo hubiera escrito usted mismo.
 
 Los documentos generados siguen las mismas reglas de gobernanza que los escritos a mano: propiedad, estado, historial de versiones, bloqueos y flujo de trabajo de revisión, todo se aplica.
 
@@ -341,4 +341,4 @@ Esa distinción importa. Los enlaces directos expresan una relación intencional
 - Use revisión para documentos que impulsan decisiones, controles o procesos repetibles.
 - Marque el contenido desactualizado como archivado u obsoleto en lugar de dejar que los lectores adivinen.
 - Importe documentos Word al migrar contenido existente a la Base de conocimiento en lugar de copiar y pegar, de modo que las imágenes incrustadas se preserven automáticamente.
-- Recurra a las bibliotecas restringidas cuando el acceso importe a nivel de biblioteca — no confíe en el diseño de carpetas para ocultar contenido sensible.
+- Recurra a las bibliotecas restringidas cuando el acceso importe a nivel de biblioteca. No confíe en el diseño de carpetas para ocultar contenido sensible.

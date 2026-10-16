@@ -477,11 +477,11 @@ Hay tres modos de exportación disponibles:
 
 | Opción | Descripción |
 |--------|-------------|
-| **Exportación completa** | Todos los campos exportables — usar para informes y extracción completa de datos |
-| **Enriquecimiento de datos** | Todos los campos importables — coincide con el formato de la plantilla de importación, ideal para edición de ida y vuelta (exportar, modificar, reimportar) |
+| **Exportación completa** | Todos los campos exportables. Usar para informes y extracción completa de datos |
+| **Enriquecimiento de datos** | Todos los campos importables. Coincide con el formato de la plantilla de importación, ideal para edición de ida y vuelta (exportar, modificar, reimportar) |
 | **Selección personalizada** | Elegir campos específicos para incluir en su exportación |
 
-**Descarga de plantilla** (desde el diálogo de Importación): Descarga un CSV en blanco con todos los encabezados de campos importables — úselo para preparar archivos de importación con la estructura correcta.
+**Descarga de plantilla** (desde el diálogo de Importación): Descarga un CSV en blanco con todos los encabezados de campos importables. Úselo para preparar archivos de importación con la estructura correcta.
 
 ### Flujo de trabajo de importación
 
@@ -489,8 +489,8 @@ Hay tres modos de exportación disponibles:
 
 2. **Elija la configuración de importación**:
    - **Modo**:
-     - `Enriquecer` (predeterminado): Las celdas vacías preservan los valores existentes — solo actualiza lo que especifique
-     - `Reemplazar`: Las celdas vacías borran los valores existentes — reemplazo completo de todos los campos
+     - `Enriquecer` (predeterminado): Las celdas vacías preservan los valores existentes: solo actualiza lo que especifique
+     - `Reemplazar`: Las celdas vacías borran los valores existentes (reemplazo completo de todos los campos)
    - **Operación**:
      - `Upsert` (predeterminado): Crear nuevas tareas o actualizar existentes
      - `Solo actualizar`: Solo modificar tareas existentes, omitir nuevas
@@ -526,7 +526,7 @@ Hay tres modos de exportación disponibles:
 
 **Tareas independientes**: Deje `related_object_type`, `related_object_id` y `related_object_name` vacíos. Puede establecer campos de clasificación (`source_name`, `category_name`, `stream_name`, `company_name`) para tareas independientes y de proyecto. Para tareas de proyecto, los campos de clasificación omitidos se heredan del proyecto padre.
 
-**Consejo**: Para nuevas importaciones de tareas vinculadas, use `related_object_name` en lugar de `related_object_id` — es mucho más fácil de usar. El sistema resuelve el nombre al ID correcto basándose en `related_object_type`. Para importaciones de ida y vuelta (exportar, editar, reimportar), ambos campos se incluyen para que la coincidencia funcione correctamente.
+**Consejo**: Para nuevas importaciones de tareas vinculadas, use `related_object_name` en lugar de `related_object_id`: es mucho más fácil de usar. El sistema resuelve el nombre al ID correcto basándose en `related_object_type`. Para importaciones de ida y vuelta (exportar, editar, reimportar), ambos campos se incluyen para que la coincidencia funcione correctamente.
 
 **Estado y fechas**:
 
@@ -659,7 +659,7 @@ Puede promover una tarea a una solicitud del portafolio cuando el trabajo merece
 1. Abra el espacio de trabajo de la tarea
 2. Haga clic en **Convertir en solicitud** en la barra de herramientas del encabezado (junto a **Enviar enlace**)
 3. En el diálogo:
-   - **Nombre de la solicitud**: Por defecto es el título de la tarea — edítelo si es necesario
+   - **Nombre de la solicitud**: Por defecto es el título de la tarea. Edítelo si es necesario
    - **Vista previa del propósito**: Muestra la descripción de la tarea, que se convierte en el propósito de la solicitud
    - **Cerrar la tarea original después de la conversión**: Marque esta opción si desea que el estado de la tarea se establezca automáticamente a **Completado**
 4. Haga clic en **Convertir en solicitud**
@@ -686,7 +686,7 @@ La solicitud se crea con estado **Pendiente de revisión** y queda vinculada a l
 - **Conversión única**: Cada tarea solo puede convertirse una vez. Después de la conversión, el botón **Convertir en solicitud** se deshabilita y muestra la referencia de la solicitud vinculada (p. ej., "Ya convertida a REQ-42")
 - **La tarea permanece**: La tarea original no se elimina. A menos que marque la opción de cerrar, permanece en su estado actual y puede seguir actualizándose de forma independiente
 
-**Consejo**: Esta funcionalidad es útil cuando una tarea revela una iniciativa más grande que necesita su propio ciclo de vida de solicitud — evaluación por criterios, flujo de trabajo de aprobación y eventual conversión a proyecto.
+**Consejo**: Esta funcionalidad es útil cuando una tarea revela una iniciativa más grande que necesita su propio ciclo de vida de solicitud: evaluación por criterios, flujo de trabajo de aprobación y eventual conversión a proyecto.
 
 ---
 
@@ -702,7 +702,7 @@ Puede enviar por correo electrónico un enlace a cualquier tarea a colegas o con
    - **Copiar enlace**: Haga clic en el icono de copiar para obtener la URL directa
 4. Haga clic en **Enviar**
 
-Los destinatarios reciben un correo con su nombre, el título de la tarea, un enlace directo y su mensaje (si lo proporcionó). Esto no cambia ningún permiso — simplemente notifica a los destinatarios.
+Los destinatarios reciben un correo con su nombre, el título de la tarea, un enlace directo y su mensaje (si lo proporcionó). Esto no cambia ningún permiso. Simplemente notifica a los destinatarios.
 
 **Consejo**: Puede mezclar usuarios de la plataforma y direcciones de correo externas en el mismo envío.
 
@@ -726,7 +726,7 @@ Cuando el foco no está en un campo de entrada, puede usar:
   - **Use fechas de vencimiento**: Establezca fechas de vencimiento realistas para rastrear plazos de forma efectiva.
   - **Asigne responsables**: Cada tarea debe tener un asignado para la rendición de cuentas.
   - **Registre tiempo regularmente**: El seguimiento de tiempo ayuda con la estimación de futuros proyectos.
-  - **Filtre por estado**: El filtro predeterminado muestra solo estados activos (`Abierto`, `En progreso`, `Pendiente`, `En pruebas`) — incluya `Completado` y `Cancelado` al revisar tareas históricas.
+  - **Filtre por estado**: El filtro predeterminado muestra solo estados activos (`Abierto`, `En progreso`, `Pendiente`, `En pruebas`). Incluya `Completado` y `Cancelado` al revisar tareas históricas.
   - **Cree desde el contexto**: Crear tareas desde dentro de los espacios de trabajo (proyecto, OPEX, contrato, CAPEX) las vincula automáticamente.
   - **Vincule apps y activos**: Use los campos **Aplicaciones** y **Activos** del panel de Propiedades cuando una tarea trate operativamente de una app o activo específico. El enlace aparece también en el espacio de trabajo de la entidad relacionada.
   - **Use la prioridad con criterio**: Reserve **Bloqueante** para problemas que genuinamente bloquean.

@@ -1,6 +1,6 @@
 # Tareas programadas
 
-La página Tareas programadas lista cada trabajo recurrente en segundo plano que KANAP ejecuta en una programación cron — limpiezas, sincronizaciones periódicas, correos de resumen, aplicación de retención, etc. Desde aquí puede pausar un trabajo, cambiar cuándo se ejecuta, dispararlo bajo demanda e inspeccionar el historial de cada ejecución reciente.
+La página Tareas programadas lista cada trabajo recurrente en segundo plano que KANAP ejecuta en una programación cron: limpiezas, sincronizaciones periódicas, correos de resumen, aplicación de retención, etc. Desde aquí puede pausar un trabajo, cambiar cuándo se ejecuta, dispararlo bajo demanda e inspeccionar el historial de cada ejecución reciente.
 
 ## Dónde encontrarlo
 
@@ -15,14 +15,14 @@ La página es una única tabla que se actualiza automáticamente cada 15 segundo
 
 **Columnas**:
 
-- **Nombre** — el identificador interno de la tarea (por ejemplo `purge-stale-conversations`)
-- **Descripción** — un breve resumen legible de lo que hace la tarea
-- **Programación** — la expresión cron. Los patrones comunes se traducen a lenguaje claro ("Diariamente a las 3 AM", "Cada 15 minutos", "Domingos a las 4 AM"); pase el ratón sobre la etiqueta para ver la expresión sin procesar. Haga clic en el icono de lápiz para editarla en línea.
-- **Habilitada** — alternar la tarea encendido o apagado sin cambiar la programación
-- **Última ejecución** — cuándo se inició la tarea por última vez
-- **Duración** — cuánto duró la última ejecución (`ms`, `s` o `m` según la duración)
-- **Estado** — indicador de color para la última ejecución: **Éxito**, **Fallida**, **En ejecución** o **Nunca ejecutada**
-- **Acciones** — controles por fila (vea más abajo)
+- **Nombre**: el identificador interno de la tarea (por ejemplo `purge-stale-conversations`)
+- **Descripción**: un breve resumen legible de lo que hace la tarea
+- **Programación**: la expresión cron. Los patrones comunes se traducen a lenguaje claro ("Diariamente a las 3 AM", "Cada 15 minutos", "Domingos a las 4 AM"); pase el ratón sobre la etiqueta para ver la expresión sin procesar. Haga clic en el icono de lápiz para editarla en línea.
+- **Habilitada**: alternar la tarea encendido o apagado sin cambiar la programación
+- **Última ejecución**: cuándo se inició la tarea por última vez
+- **Duración**: cuánto duró la última ejecución (`ms`, `s` o `m` según la duración)
+- **Estado**: indicador de color para la última ejecución: **Éxito**, **Fallida**, **En ejecución** o **Nunca ejecutada**
+- **Acciones**: controles por fila (vea más abajo)
 
 ### Editar una programación
 
@@ -30,7 +30,7 @@ Haga clic en el icono de lápiz junto a cualquier programación para abrir un ed
 
 - Escriba una expresión cron estándar de 5 campos (`minuto hora día-del-mes mes día-de-la-semana`).
 - Pulse **Enter** para guardar, **Escape** para cancelar.
-- Las expresiones inválidas se rechazan con una notificación de error en la parte inferior de la pantalla — la tarea conserva su programación anterior.
+- Las expresiones inválidas se rechazan con una notificación de error en la parte inferior de la pantalla. La tarea conserva su programación anterior.
 
 Cuando la nueva expresión coincide con un patrón conocido, la tabla muestra inmediatamente la etiqueta amistosa.
 
@@ -54,10 +54,10 @@ La acción **Ver historial** (icono de reloj) abre un panel lateral con las ejec
 
 Cada fila de ejecución muestra:
 
-- **Iniciado** — cuándo comenzó la ejecución
-- **Estado** — Éxito, Fallida o En ejecución
-- **Duración** — cuánto duró la ejecución
-- **Detalles** — un breve resumen estructurado en caso de éxito, o el mensaje de error en caso de fallo. Los mensajes de error largos se truncan en la tabla; el texto completo se preserva en el registro subyacente.
+- **Iniciado**: cuándo comenzó la ejecución
+- **Estado**: Éxito, Fallida o En ejecución
+- **Duración**: cuánto duró la ejecución
+- **Detalles**: un breve resumen estructurado en caso de éxito, o el mensaje de error en caso de fallo. Los mensajes de error largos se truncan en la tabla; el texto completo se preserva en el registro subyacente.
 
 Aparece paginación bajo la lista cuando hay más de 20 ejecuciones. El panel puede cerrarse con el icono X de su encabezado o haciendo clic fuera de él.
 

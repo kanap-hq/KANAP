@@ -5,10 +5,10 @@ description: Documente su panorama de aplicaciones en minutos. Una guía prácti
 
 # Guía rápida IT Ops: De la aplicación al servidor
 
-Esta guía le acompaña en la documentación de una aplicación y su infraestructura de soporte -- desde la creación de la entrada de la app hasta vincularla al servidor que la aloja. Está diseñada para hacerle productivo rápidamente, cubriendo los pasos esenciales sin abrumarle con opciones.
+Esta guía le acompaña en la documentación de una aplicación y su infraestructura de soporte, desde la creación de la entrada de la app hasta vincularla al servidor que la aloja. Está diseñada para hacerle productivo rápidamente, cubriendo los pasos esenciales sin abrumarle con opciones.
 
 !!! tip "¿Prefiere un resumen en una página? :material-file-pdf-box:"
-    Todos los pasos clave en una sola página A4 -- imprímala, cuélguela, compártala con su equipo.
+    Todos los pasos clave en una sola página A4: imprímala, cuélguela, compártala con su equipo.
 
     [:material-download: Descargar la hoja de referencia (PDF)](downloads/kanap-itops-fast-track.pdf){ .md-button .md-button--primary }
 
@@ -25,15 +25,15 @@ Todo en el módulo Panorama IT de KANAP se conecta para crear una imagen complet
 | Objeto | Qué representa |
 |--------|----------------|
 | **Aplicación** | Una app de negocio o servicio IT que necesita documentar |
-| **Entorno** | Dónde se ejecuta -- Prod, QA, Dev, etc. (llamados "Despliegues" en KANAP) |
-| **Servidor (Activo)** | La infraestructura que la aloja -- VMs, servidores físicos, contenedores |
+| **Entorno** | Dónde se ejecuta: Prod, QA, Dev, etc. (llamados "Despliegues" en KANAP) |
+| **Servidor (Activo)** | La infraestructura que la aloja: VMs, servidores físicos, contenedores |
 
 La cadena es simple: **Aplicación → Entorno → Servidor**. Al final de esta guía, tendrá esta cadena completamente documentada.
 
 ![Modelo de relaciones de la aplicación](images/app-relationship-model.png)
 
 !!! info "Por qué es importante"
-    Cuando alguien pregunta "¿dónde se ejecuta esta app?", "¿quién es el responsable?" o "¿es conforme?" -- tendrá la respuesta en segundos en lugar de buscar en hojas de cálculo.
+    Cuando alguien pregunta "¿dónde se ejecuta esta app?", "¿quién es el responsable?" o "¿es conforme?", tendrá la respuesta en segundos en lugar de buscar en hojas de cálculo.
 
 ---
 
@@ -54,7 +54,7 @@ Complete lo esencial:
 Haga clic en **Crear**. Su aplicación está ahora en el registro, y el espacio de trabajo completo se abre con seis pestañas para documentación detallada: **Vista general**, **Despliegues**, **Interfaces**, **Operaciones**, **Conformidad** y **Relaciones**.
 
 !!! tip "Empiece con lo que sabe"
-    Descripción, editor, versión, licencia -- todo útil, pero opcional en esta etapa. Puede enriquecer más tarde. El objetivo es tener la app en el sistema.
+    Descripción, editor, versión, licencia: todo útil, pero opcional en esta etapa. Puede enriquecer más tarde. El objetivo es tener la app en el sistema.
 
 ---
 
@@ -98,7 +98,7 @@ Los miembros del equipo IT responsables de la operación técnica y el soporte. 
 En **Audiencia**, elija la **Empresa** y los **Departamentos** que usan esta aplicación. KANAP calcula el número de usuarios a partir de sus datos maestros, o puede pasar el cálculo a manual y escribir el número usted mismo.
 
 !!! warning "Por qué importan los responsables"
-    La responsabilidad facilita **contactar a las personas adecuadas** cuando importa -- mantenimiento planificado, interrupciones del servicio, decisiones de actualización, renovaciones de licencias. También alimenta los filtros de alcance **Mis apps** y **Apps de mi equipo** de la lista principal. Sin responsables, la app solo es visible en la vista "Todas las apps" -- lo que significa que nadie se siente responsable de ella y nadie recibe avisos.
+    La responsabilidad facilita **contactar a las personas adecuadas** cuando importa: mantenimiento planificado, interrupciones del servicio, decisiones de actualización, renovaciones de licencias. También alimenta los filtros de alcance **Mis apps** y **Apps de mi equipo** de la lista principal. Sin responsables, la app solo es visible en la vista "Todas las apps", lo que significa que nadie se siente responsable de ella y nadie recibe avisos.
 
 ---
 
@@ -106,13 +106,13 @@ En **Audiencia**, elija la **Empresa** y los **Departamentos** que usan esta apl
 
 Vaya a la pestaña **Operaciones**. En **Métodos de acceso**, seleccione cómo acceden los usuarios a esta aplicación:
 
-- **Web** -- acceso por navegador
-- **Aplicación instalada localmente** -- cliente de escritorio
-- **Aplicación móvil** -- app para teléfono/tableta
-- **VDI / Escritorio remoto** -- escritorio virtual
-- **Terminal / CLI** -- interfaz de línea de comandos
-- **HMI propietaria** -- interfaz industrial
-- **Quiosco** -- terminal dedicado
+- **Web**: acceso por navegador
+- **Aplicación instalada localmente**: cliente de escritorio
+- **Aplicación móvil**: app para teléfono/tableta
+- **VDI / Escritorio remoto**: escritorio virtual
+- **Terminal / CLI**: interfaz de línea de comandos
+- **HMI propietaria**: interfaz industrial
+- **Quiosco**: terminal dedicado
 
 Los métodos de acceso se configuran en la [configuración del Panorama IT](../it-ops-settings.md#metodos-de-acceso), por lo que su lista puede incluir otras opciones.
 
@@ -143,7 +143,7 @@ Vaya a la pestaña **Relaciones** para conectar su aplicación con el resto de s
 La pestaña también permite vincular **Tareas**, y las suites listan allí sus **Componentes**.
 
 !!! tip "Puede hacerlo más tarde"
-    Las relaciones son útiles pero no bloquean nada. Créelas cuando tenga los datos -- la app funciona plenamente sin ellas.
+    Las relaciones son útiles pero no bloquean nada. Créelas cuando tenga los datos: la app funciona plenamente sin ellas.
 
 ---
 
@@ -189,7 +189,7 @@ El panel **Propiedades** a la derecha contiene el resto: **Sub-ubicación**, **C
 - **Ciudad**
 
 !!! info "La ubicación es la clave"
-    La ubicación determina automáticamente muchos atributos de su activo. Las ubicaciones se gestionan en **Panorama IT > Ubicaciones** -- configúrelas una vez y cada activo asignado a ellas hereda el tipo de alojamiento, el proveedor, el país y la ciudad. No tiene que rellenarlos manualmente.
+    La ubicación determina automáticamente muchos atributos de su activo. Las ubicaciones se gestionan en **Panorama IT > Ubicaciones**. Configúrelas una vez y cada activo asignado a ellas hereda el tipo de alojamiento, el proveedor, el país y la ciudad. No tiene que rellenarlos manualmente.
 
 Haga clic en **Crear** para desbloquear el espacio de trabajo completo. Para tipos de activos físicos, pestañas adicionales de **Hardware** y **Soporte** se hacen disponibles para hacer seguimiento de números de serie, detalles del fabricante y contratos de soporte del proveedor.
 
@@ -204,7 +204,7 @@ Vaya a la pestaña **Técnico** para añadir:
 | **Direcciones IP** | Tipo, Dirección IP, Subred | La zona de red y la VLAN se derivan de la subred |
 
 !!! info "Varias direcciones IP"
-    Un servidor puede tener varias direcciones IP -- añada tantas como necesite (p. ej., interfaz de gestión, VLAN de producción, red de copias de seguridad). Cada entrada puede tener su propio tipo y subred, y la zona de red y la VLAN se derivan automáticamente.
+    Un servidor puede tener varias direcciones IP: añada tantas como necesite (p. ej., interfaz de gestión, VLAN de producción, red de copias de seguridad). Cada entrada puede tener su propio tipo y subred, y la zona de red y la VLAN se derivan automáticamente.
 
 ---
 
@@ -251,7 +251,7 @@ Cada dato que introduce alimenta algo más grande:
 
 ### Vista del panorama de aplicaciones
 
-Su lista de Aplicaciones se convierte en un registro vivo que muestra cada aplicación con sus entornos, criticidad, tipo de alojamiento y propiedad -- filtrable por cualquier atributo.
+Su lista de Aplicaciones se convierte en un registro vivo que muestra cada aplicación con sus entornos, criticidad, tipo de alojamiento y propiedad, filtrable por cualquier atributo.
 
 ### Mapeo de infraestructura
 
@@ -277,7 +277,7 @@ Una vez documentados los activos, puede crear **Conexiones** (Servidor a servido
 
 Vaya un paso más allá: documente **Interfaces** entre aplicaciones para capturar flujos de datos, puntos de integración y contexto de negocio. Cada interfaz tiene cinco pestañas para una documentación completa: Vista general, Flujo, Entornos, Mapeo de datos y Relaciones.
 
-Luego utilice el [Mapa de interfaces](../interface-map.md) para visualizar el flujo completo de aplicaciones. En la vista de Negocio predeterminada, verá relaciones limpias origen-destino. Cambie a la vista Técnica para revelar plataformas middleware como nodos en forma de diamante, mostrando la ruta real de datos. El filtrado por profundidad cuenta solo los nodos de aplicación principales -- el middleware es transparente, por lo que seleccionar una app con profundidad 2 le muestra dos saltos reales independientemente de cuántas plataformas middleware haya en medio.
+Luego utilice el [Mapa de interfaces](../interface-map.md) para visualizar el flujo completo de aplicaciones. En la vista de Negocio predeterminada, verá relaciones limpias origen-destino. Cambie a la vista Técnica para revelar plataformas middleware como nodos en forma de diamante, mostrando la ruta real de datos. El filtrado por profundidad cuenta solo los nodos de aplicación principales: el middleware es transparente, por lo que seleccionar una app con profundidad 2 le muestra dos saltos reales independientemente de cuántas plataformas middleware haya en medio.
 
 ---
 
@@ -303,4 +303,4 @@ Luego utilice el [Mapa de interfaces](../interface-map.md) para visualizar el fl
 ---
 
 !!! success "Está listo"
-    Ahora sabe cómo documentar la cadena completa de la aplicación al servidor. Comience con sus apps más críticas, añada sus entornos de producción, vincule los servidores -- y tendrá un panorama IT vivo y consultable en poco tiempo. Para documentación detallada de cada funcionalidad, explore las secciones de referencia de [Aplicaciones](../applications.md) y [Activos](../assets.md).
+    Ahora sabe cómo documentar la cadena completa de la aplicación al servidor. Comience con sus apps más críticas, añada sus entornos de producción, vincule los servidores y tendrá un panorama IT vivo y consultable en poco tiempo. Para documentación detallada de cada funcionalidad, explore las secciones de referencia de [Aplicaciones](../applications.md) y [Activos](../assets.md).

@@ -5,10 +5,10 @@ description: Comience a ser productivo con el módulo de Portafolio de KANAP en 
 
 # Portafolio - Inicio Rápido: De la solicitud a la entrega
 
-Esta guía le lleva por el ciclo de vida del portafolio -- desde enviar su primera solicitud hasta entregar un proyecto terminado. Está diseñada para hacerle productivo rápidamente, no para cubrir cada opción.
+Esta guía le lleva por el ciclo de vida del portafolio, desde enviar su primera solicitud hasta entregar un proyecto terminado. Está diseñada para hacerle productivo rápidamente, no para cubrir cada opción.
 
 !!! tip "Consejo"
-    Todos los pasos clave en una sola página A4 -- imprímala, cuélguela, compártala con su equipo.
+    Todos los pasos clave en una sola página A4: imprímala, cuélguela, compártala con su equipo.
 
     [:material-download: Descargar la hoja de referencia (PDF)](downloads/kanap-portfolio-fast-track.pdf){ .md-button .md-button--primary }
 
@@ -33,7 +33,7 @@ Cada iniciativa en KANAP sigue el mismo flujo:
 Este flujo asegura que cada iniciativa sea evaluada de forma justa, priorizada con transparencia y rastreada de manera consistente. No más proyectos favoritos saltándose la cola.
 
 !!! info "Información"
-    El paso de análisis y evaluación es lo que marca la diferencia entre una lista de deseos y un portafolio real. Da a la dirección una base defendible y basada en datos para decir sí -- o no.
+    El paso de análisis y evaluación es lo que marca la diferencia entre una lista de deseos y un portafolio real. Da a la dirección una base defendible y basada en datos para decir sí (o no).
 
 ---
 
@@ -53,7 +53,7 @@ Complete los detalles mínimos para empezar:
 | **Solicitante** | ¿Quién lo pide? |
 | **Fecha de entrega objetivo** | ¿Cuándo se necesita idealmente? |
 
-Luego use el documento de **Propósito** en **Resumen** para explicar la necesidad de negocio y el resultado esperado en lenguaje llano. Si ya tiene un resumen en Word, use el botón **Importar** en el editor de Propósito para incorporar el archivo `.docx` directamente -- sin necesidad de copiar y pegar.
+Luego use el documento de **Propósito** en **Resumen** para explicar la necesidad de negocio y el resultado esperado en lenguaje llano. Si ya tiene un resumen en Word, use el botón **Importar** en el editor de Propósito para incorporar el archivo `.docx` directamente, sin necesidad de copiar y pegar.
 
 Haga clic en **Crear**. Su solicitud entra en el flujo con estado **Pendiente de revisión**.
 
@@ -73,10 +73,10 @@ Este es el paso que transforma una acumulación de ideas en un portafolio defend
 !!! warning "Advertencia"
     La evaluación funciona mejor cuando la realiza un **comité** con perspectivas diversas. Intente incluir representantes de:
 
-    - **IT Funcional** -- comprende los procesos de negocio y el panorama de aplicaciones
-    - **IT Técnico** -- comprende la infraestructura, arquitectura y deuda técnica
-    - **Ciberseguridad** -- evalúa riesgos, conformidad e implicaciones de seguridad
-    - **Negocio** -- valida la alineación estratégica y el valor de negocio
+    - **IT Funcional**: comprende los procesos de negocio y el panorama de aplicaciones
+    - **IT Técnico**: comprende la infraestructura, arquitectura y deuda técnica
+    - **Ciberseguridad**: evalúa riesgos, conformidad e implicaciones de seguridad
+    - **Negocio**: valida la alineación estratégica y el valor de negocio
 
     La puntuación de una sola persona es una opinión. La puntuación de un comité es un marco de decisión.
 
@@ -115,7 +115,7 @@ Los nombres y pesos exactos de los criterios pueden variar por espacio de trabaj
 
 ### La recomendación de análisis
 
-Después de revisar la viabilidad y la evaluación, escriba la **Recomendación de análisis**. Es un breve resumen narrativo -- típicamente 2-4 frases -- que captura el veredicto del comité:
+Después de revisar la viabilidad y la evaluación, escriba la **Recomendación de análisis**. Es un breve resumen narrativo (típicamente 2-4 frases) que captura el veredicto del comité:
 
 !!! example "Buenos ejemplos de recomendación"
     - *"Alto valor estratégico, caso de negocio sólido. La viabilidad técnica es moderada debido a la integración con sistemas heredados. Se recomienda aprobación con una fase de prueba de concepto."*
@@ -123,7 +123,7 @@ Después de revisar la viabilidad y la evaluación, escriba la **Recomendación 
 
 Enviar la recomendación publica una decisión formal en **Actividad**, para que la justificación y cualquier cambio de estado vinculado permanezcan adjuntos al historial de la solicitud.
 
-La combinación de **puntuaciones + viabilidad + recomendación** da a los decisores todo lo que necesitan para aprobar o rechazar -- sin tener que asistir a una presentación de dos horas.
+La combinación de **puntuaciones + viabilidad + recomendación** da a los decisores todo lo que necesitan para aprobar o rechazar, sin tener que asistir a una presentación de dos horas.
 
 !!! info "Información"
     La transparencia es el objetivo. Cuando los interesados preguntan "¿por qué fue rechazada mi solicitud?" o "¿por qué ese proyecto obtuvo prioridad?", el registro de análisis y evaluación proporciona la respuesta. Esto es lo que hace justo el flujo.
@@ -156,9 +156,9 @@ Consulte la [referencia de Solicitudes](../portfolio-requests.md) para todas las
 
 Su nuevo proyecto hereda el contexto de la solicitud, pero aún necesita la configuración de ejecución.
 
-Vaya a **Portafolio > Proyectos** y abra su proyecto recién creado. El espacio de trabajo del proyecto tiene siete pestañas -- **Resumen**, **Actividad**, **Cronograma**, **Progreso**, **Tareas**, **Evaluación** y **Base de conocimiento** -- con una barra lateral persistente de **Propiedades del proyecto** para campos principales, equipo y relaciones.
+Vaya a **Portafolio > Proyectos** y abra su proyecto recién creado. El espacio de trabajo del proyecto tiene siete pestañas (**Resumen**, **Actividad**, **Cronograma**, **Progreso**, **Tareas**, **Evaluación** y **Base de conocimiento**), con una barra lateral persistente de **Propiedades del proyecto** para campos principales, equipo y relaciones.
 
-### Barra lateral -- Asigne sus personas y estructura central
+### Barra lateral: asigne sus personas y estructura central
 
 Use la barra lateral de **Propiedades del proyecto** para configurar los roles principales:
 
@@ -182,21 +182,21 @@ Use la barra lateral de **Propiedades del proyecto** para configurar los roles p
 
 La misma barra lateral también mantiene las **Propiedades principales** y **Relaciones** visibles mientras trabaja, así que ya no necesita pestañas separadas de Equipo o Relaciones.
 
-### Pestaña Resumen -- Propósito y cabina de mando del proyecto
+### Pestaña Resumen: propósito y cabina de mando del proyecto
 
-**Resumen** es la cabina de mando del proyecto. Muestra el estado actual, ventana de entrega, consumo de esfuerzo, cobertura de equipo y última actividad en una sola pasada. El editor de **Propósito** también está aquí -- si el resumen del proyecto ya existe como documento Word, use el botón **Importar** para incorporar el `.docx` directamente.
+**Resumen** es la cabina de mando del proyecto. Muestra el estado actual, ventana de entrega, consumo de esfuerzo, cobertura de equipo y última actividad en una sola pasada. El editor de **Propósito** también está aquí: si el resumen del proyecto ya existe como documento Word, use el botón **Importar** para incorporar el `.docx` directamente.
 
-### Pestaña Progreso -- Valide el esfuerzo y las asignaciones
+### Pestaña Progreso: valide el esfuerzo y las asignaciones
 
 Use **Progreso** para confirmar el esfuerzo que impulsará la planificación de entrega:
 
-- **Esfuerzo IT (MD)** -- Total de días-persona esperados de los colaboradores IT
-- **Esfuerzo de negocio (MD)** -- Total de días-persona esperados de los colaboradores de negocio
+- **Esfuerzo IT (MD)**: Total de días-persona esperados de los colaboradores IT
+- **Esfuerzo de negocio (MD)**: Total de días-persona esperados de los colaboradores de negocio
 
 !!! info "Información"
     Estos números alimentan la hoja de ruta. El generador de hoja de ruta usa estas estimaciones de esfuerzo, combinadas con la disponibilidad de los colaboradores, para programar automáticamente los proyectos en el cronograma. Estimaciones más precisas = mejores hojas de ruta.
 
-### Pestaña Cronograma -- Aplicar una plantilla de fases (opcional)
+### Pestaña Cronograma: aplicar una plantilla de fases (opcional)
 
 Si su organización ha definido plantillas de fases (p. ej., "Proyecto estándar", "Ciclo de sprint ágil"), puede aplicar una aquí para crear instantáneamente la estructura del cronograma de su proyecto con fases e hitos predefinidos. El cronograma puede verse como tabla o diagrama Gantt.
 
@@ -218,15 +218,15 @@ Mueva el proyecto a través de los estados a medida que avanza el trabajo. En la
 
 **Lista de espera / Planificado** --> **En progreso** --> **En pruebas** --> **Completado**
 
-### Registre tiempo -- esto es fundamental
+### Registre tiempo: es fundamental
 
 !!! warning "Advertencia"
-    Sin registro de tiempo no hay programación automática. El registro de tiempo no es solo para informes -- impulsa directamente el generador de hoja de ruta.
+    Sin registro de tiempo no hay programación automática. El registro de tiempo no es solo para informes: impulsa directamente el generador de hoja de ruta.
 
 Hay dos lugares para registrar tiempo:
 
-1. **Pestaña Progreso** -- Registrar tiempo de gastos generales a nivel de proyecto (reuniones, coordinación, gestión)
-2. **Tareas** -- Registrar tiempo específico de tarea contra elementos de trabajo individuales
+1. **Pestaña Progreso**: Registrar tiempo de gastos generales a nivel de proyecto (reuniones, coordinación, gestión)
+2. **Tareas**: Registrar tiempo específico de tarea contra elementos de trabajo individuales
 
 He aquí por qué esto importa:
 
@@ -236,7 +236,7 @@ Tiempo registrado --> Estadísticas de tiempo del colaborador --> Datos de capac
                                                               --> Programación futura precisa
 ```
 
-El generador de hoja de ruta tiene un **modo de capacidad histórica** que usa el tiempo real registrado para entender cuánto entrega realmente cada colaborador por mes (a diferencia de su disponibilidad teórica). Sin datos de tiempo, el generador recurre a estimaciones teóricas -- que casi siempre son optimistas.
+El generador de hoja de ruta tiene un **modo de capacidad histórica** que usa el tiempo real registrado para entender cuánto entrega realmente cada colaborador por mes (a diferencia de su disponibilidad teórica). Sin datos de tiempo, el generador recurre a estimaciones teóricas, que casi siempre son optimistas.
 
 !!! tip "Consejo"
     Anime a los miembros del equipo a registrar tiempo semanalmente. Incluso entradas aproximadas son mucho mejores que nada. Los datos se acumulan con el tiempo y hacen cada iteración de la hoja de ruta más precisa.
@@ -276,7 +276,7 @@ Dentro de cada fase (o a nivel de proyecto), cree tareas para elementos de traba
 
 - Asigne tareas a colaboradores
 - Establezca fechas de vencimiento, prioridades y tipos de tarea
-- Escriba descripciones detalladas usando el editor markdown -- o **importe un archivo `.docx`** directamente en el campo Descripción
+- Escriba descripciones detalladas usando el editor markdown, o **importe un archivo `.docx`** directamente en el campo Descripción
 - Registre tiempo directamente contra las tareas (categoría IT o Negocio)
 - Vincule tareas a fases para seguimiento estructurado
 - Adjunte documentos de **Base de conocimiento** desde la barra lateral de la tarea como material de referencia
@@ -288,7 +288,7 @@ Las tareas también pueden crearse directamente desde una fase del cronograma us
 
 ### Hitos
 
-Marque puntos de control clave -- decisiones de continuar/no continuar, plazos de entregables o dependencias externas.
+Marque puntos de control clave: decisiones de continuar/no continuar, plazos de entregables o dependencias externas.
 
 Los hitos aparecen en el cronograma del proyecto y en los informes, dando a los interesados visibilidad clara sobre los próximos puntos de decisión. Pueden crearse como hitos independientes o habilitando el seguimiento de hitos en una fase.
 
@@ -311,7 +311,7 @@ Consulte la [referencia de Planificación](../portfolio-planning.md).
 
 ### Mapas de calor de capacidad
 
-La disponibilidad de colaboradores y las asignaciones de proyectos se combinan para mostrarle **quién está sobrecargado y quién tiene ancho de banda** -- a través de equipos y períodos de tiempo. Esto previene el clásico problema de "todos están asignados a 5 proyectos al 100%".
+La disponibilidad de colaboradores y las asignaciones de proyectos se combinan para mostrarle **quién está sobrecargado y quién tiene ancho de banda**, a través de equipos y períodos de tiempo. Esto previene el clásico problema de "todos están asignados a 5 proyectos al 100%".
 
 ### Análisis de cuellos de botella
 

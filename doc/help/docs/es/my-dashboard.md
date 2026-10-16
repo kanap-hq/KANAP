@@ -12,19 +12,19 @@ El Panel de control es su página de inicio personal en KANAP. Le ofrece una vis
 
 La franja del encabezado en la parte superior del panel proporciona botones de atajo para el trabajo cotidiano común. Cada botón solo se muestra si tiene el permiso correspondiente.
 
-- **Crear tarea** — abre el flujo de creación de tarea independiente. Requiere `tasks:member` o superior.
-- **Registrar tiempo** — abre el diálogo **Registro rápido de tiempo** (vea más abajo). Requiere `portfolio_projects:member` o `tasks:member`.
-- **Nueva solicitud** — abre el flujo de creación de solicitud. Requiere `portfolio_requests:member` o superior.
-- **Nueva aplicación** — abre el flujo de creación de aplicación. Requiere `applications:member` o superior.
-- **Nuevo activo** — abre el flujo de creación de activo. Requiere `infrastructure:member` o superior.
-- **Nuevo documento** (botón dividido) — crea un documento de Base de conocimiento en blanco, o abre el selector de plantillas para empezar desde una plantilla publicada. Requiere `knowledge:member` o superior.
-- **Configuración** (icono de engranaje) — abre el diálogo de configuración del panel para elegir qué mosaicos mostrar.
+- **Crear tarea**: abre el flujo de creación de tarea independiente. Requiere `tasks:member` o superior.
+- **Registrar tiempo**: abre el diálogo **Registro rápido de tiempo** (vea más abajo). Requiere `portfolio_projects:member` o `tasks:member`.
+- **Nueva solicitud**: abre el flujo de creación de solicitud. Requiere `portfolio_requests:member` o superior.
+- **Nueva aplicación**: abre el flujo de creación de aplicación. Requiere `applications:member` o superior.
+- **Nuevo activo**: abre el flujo de creación de activo. Requiere `infrastructure:member` o superior.
+- **Nuevo documento** (botón dividido): crea un documento de Base de conocimiento en blanco, o abre el selector de plantillas para empezar desde una plantilla publicada. Requiere `knowledge:member` o superior.
+- **Configuración** (icono de engranaje): abre el diálogo de configuración del panel para elegir qué mosaicos mostrar.
 
 ### Registro rápido de tiempo
 
 La acción **Registrar tiempo** abre un diálogo enfocado para que pueda registrar horas sin salir del panel.
 
-- Elija el destino — **Proyecto** o **Tarea**.
+- Elija el destino: **Proyecto** o **Tarea**.
   - Las entradas de proyecto registran tiempo directamente contra un proyecto del portafolio.
   - Las entradas de tarea registran tiempo contra una de sus tareas activas (tareas de proyecto o tareas independientes). Las tareas OPEX, CAPEX y de contrato están intencionalmente excluidas del selector.
 - Elija el proyecto o tarea del desplegable.
@@ -46,9 +46,9 @@ El panel muestra una cuadrícula de mosaicos, cada uno mostrando un aspecto dife
 
 Muestra sus tareas activas agrupadas por urgencia:
 
-- **Vencidas** — tareas pasadas su fecha de vencimiento (resaltadas en rojo)
-- **Vencen esta semana** — tareas que vencen en los próximos 7 días
-- **Más adelante** — todo lo demás
+- **Vencidas**: tareas pasadas su fecha de vencimiento (resaltadas en rojo)
+- **Vencen esta semana**: tareas que vencen en los próximos 7 días
+- **Más adelante**: todo lo demás
 
 Cada tarea muestra su título, el proyecto vinculado (si lo hay), la fecha de vencimiento y una insignia de prioridad cuando la prioridad está por encima de lo normal. Haga clic en una tarea para abrir su espacio de trabajo.
 
@@ -109,8 +109,8 @@ Muestra hasta 5 elementos.
 Muestra un resumen del tiempo que ha registrado durante un periodo reciente:
 
 - **Total de horas** registradas (mostrado de forma destacada)
-- **Desglose por categoría** — IT, Negocio y Otras tareas (no de proyecto)
-- **Principales proyectos** — un pequeño gráfico de barras de los proyectos en los que pasó más tiempo
+- **Desglose por categoría**: IT, Negocio y Otras tareas (no de proyecto)
+- **Principales proyectos**: un pequeño gráfico de barras de los proyectos en los que pasó más tiempo
 
 **Configuración**: periodo de tiempo en días (7-30).
 
@@ -136,8 +136,8 @@ Muestra hasta 5 elementos.
 
 Muestra dos secciones centradas en Base de conocimiento en el mismo mosaico:
 
-- **Por revisar** — documentos donde es el revisor o aprobador activo, incluyendo hace cuánto tiempo se solicitó la revisión y por quién. El color de la insignia indica si está en la etapa de revisión o de aprobación.
-- **Últimos 5 accedidos** — los últimos cinco documentos de Base de conocimiento que abrió en este navegador para el espacio de trabajo actual.
+- **Por revisar**: documentos donde es el revisor o aprobador activo, incluyendo hace cuánto tiempo se solicitó la revisión y por quién. El color de la insignia indica si está en la etapa de revisión o de aprobación.
+- **Últimos 5 accedidos**: los últimos cinco documentos de Base de conocimiento que abrió en este navegador para el espacio de trabajo actual.
 
 Las bibliotecas restringidas respetan sus reglas de acceso: solo ve elementos de revisión y documentos recientes de las bibliotecas que puede leer. Si ha perdido el acceso a un documento previamente visto, deja de aparecer aquí.
 
@@ -149,8 +149,8 @@ Las bibliotecas restringidas respetan sus reglas de acceso: solo ve elementos de
 
 Muestra en qué punto está la campaña de clasificación para las aplicaciones que puede ver (aplicaciones retiradas excluidas):
 
-- **Progreso** — una barra y tres contadores: revisadas, por revisar (la clasificación cambió desde la última revisión o nunca se revisó) y por completar (un campo de clasificación sigue vacío). Cada contador abre la lista de aplicaciones filtrada por ese estado.
-- **Puntos de atención** — aplicaciones del nivel de criticidad de negocio más alto sin prueba de recuperación en los últimos doce meses, aplicaciones del nivel más crítico sin ola de recuperación y aplicaciones con los datos más confidenciales y la criticidad cibernética más baja. Solo se listan los puntos con al menos una aplicación; cada uno abre la lista filtrada correspondiente. Cuando nada requiere acción, el mosaico lo indica.
+- **Progreso**: una barra y tres contadores: revisadas, por revisar (la clasificación cambió desde la última revisión o nunca se revisó) y por completar (un campo de clasificación sigue vacío). Cada contador abre la lista de aplicaciones filtrada por ese estado.
+- **Puntos de atención**: aplicaciones del nivel de criticidad de negocio más alto sin prueba de recuperación en los últimos doce meses, aplicaciones del nivel más crítico sin ola de recuperación y aplicaciones con los datos más confidenciales y la criticidad cibernética más baja. Solo se listan los puntos con al menos una aplicación; cada uno abre la lista filtrada correspondiente. Cuando nada requiere acción, el mosaico lo indica.
 
 Los niveles son los definidos en la configuración del mapa de TI; un nivel que ya no se ofrece nunca cuenta como el más alto ni el más bajo.
 
@@ -192,8 +192,8 @@ Haga clic en el icono de **Configuración** (engranaje) en el encabezado del pan
 
 Desde aquí puede:
 
-- **Activar o desactivar mosaicos** — marque o desmarque cada mosaico para controlar qué aparece en su panel.
-- **Restablecer a valores predeterminados** — restaurar la selección original de mosaicos.
+- **Activar o desactivar mosaicos**: marque o desmarque cada mosaico para controlar qué aparece en su panel.
+- **Restablecer a valores predeterminados**: restaurar la selección original de mosaicos.
 
 Solo aparecen en la lista de configuración los mosaicos para los que tiene permiso de visualización. Los cambios se guardan en su cuenta y persisten entre sesiones y dispositivos.
 
@@ -202,6 +202,6 @@ Si todos los mosaicos están desactivados, el panel muestra un mensaje invitánd
 ## Consejos
 
 - **Empiece con los valores predeterminados**: el panel viene con un conjunto útil de mosaicos ya activados. Pruébelo durante unos días antes de personalizarlo.
-- **Use las acciones rápidas**: crear una tarea, solicitud o documento — o registrar tiempo — directamente desde el panel le ahorra tener que navegar.
+- **Use las acciones rápidas**: crear una tarea, solicitud o documento (o registrar tiempo) directamente desde el panel le ahorra tener que navegar.
 - **Revise las tareas vencidas a diario**: el mosaico Mis tareas resalta los elementos vencidos en rojo para que nada se le escape.
 - **Use Tareas obsoletas con alcance de equipo**: con `tasks:admin`, cambie el mosaico Tareas obsoletas a alcance `equipo` o `todas` para encontrar trabajo que nadie está actualizando en toda la organización.

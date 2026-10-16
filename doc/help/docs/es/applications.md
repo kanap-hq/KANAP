@@ -78,7 +78,7 @@ La cuadrícula de Aplicaciones proporciona una vista completa de su portafolio d
 - **Mis apps**: muestra apps donde usted está listado en el panel de propiedades como **Responsable de negocio** o **Responsable IT**. Se admiten entradas con múltiples responsables.
 - **Apps de mi equipo**: muestra apps donde cualquier miembro de su equipo de Portafolio está listado como Responsable de negocio o Responsable IT. Su propia propiedad también se incluye en este alcance. Deshabilitado si no está asignado a un equipo de Portafolio.
 - **Todas las apps** (predeterminado): muestra la cuadrícula completa de Aplicaciones con el comportamiento predeterminado del filtro de ciclo de vida.
-- Su selección se recuerda entre sesiones -- al volver a la página se restaura su última elección.
+- Su selección se recuerda entre sesiones: al volver a la página se restaura su última elección.
 
 **Columnas predeterminadas**:
 - **Nombre**: Nombre de la aplicación con la categoría como subtítulo y una insignia "Incluido en: {suite}" para los componentes de una suite
@@ -124,7 +124,7 @@ La cuadrícula de Aplicaciones proporciona una vista completa de su portafolio d
 
 ## El espacio de trabajo de Aplicaciones
 
-Haga clic en cualquier fila para abrir el espacio de trabajo. El espacio de trabajo tiene un **encabezado** con metadatos rápidos, un **panel de propiedades** a la derecha (la tarjeta de identidad de la aplicación -- siempre visible) y un **área de contenido** en el centro que cambia con cada pestaña.
+Haga clic en cualquier fila para abrir el espacio de trabajo. El espacio de trabajo tiene un **encabezado** con metadatos rápidos, un **panel de propiedades** a la derecha (la tarjeta de identidad de la aplicación, siempre visible) y un **área de contenido** en el centro que cambia con cada pestaña.
 
 ### Encabezado
 
@@ -142,7 +142,7 @@ El encabezado muestra:
 
 ### Panel de propiedades (panel derecho)
 
-El panel es la tarjeta de identidad de la aplicación. Se muestra en cada pestaña y se edita en línea -- los cambios se guardan automáticamente.
+El panel es la tarjeta de identidad de la aplicación. Se muestra en cada pestaña y se edita en línea: los cambios se guardan automáticamente.
 
 **Identidad**:
 - **Categoría**, **Proveedor**, **Editor**
@@ -175,7 +175,7 @@ La pestaña Visión general es la narrativa de la aplicación. Contiene:
 
 ### Despliegues
 
-La pestaña Despliegues documenta dónde se ejecuta realmente la aplicación -- un bloque por entorno, con los servidores asignados a cada uno.
+La pestaña Despliegues documenta dónde se ejecuta realmente la aplicación: un bloque por entorno, con los servidores asignados a cada uno.
 
 **Entornos**: Producción, Pre-producción, QA, Test, Desarrollo, Sandbox.
 
@@ -196,7 +196,7 @@ La pestaña Despliegues documenta dónde se ejecuta realmente la aplicación -- 
 | **Alojamiento** | Derivado de la ubicación del activo |
 | **Desde** | Fecha en que se asignó el servidor a este despliegue |
 
-Haga clic en **Añadir servidor** en el encabezado del despliegue para vincular un activo. Los activos de tipo clúster están excluidos -- asigne en su lugar los hosts miembros del clúster.
+Haga clic en **Añadir servidor** en el encabezado del despliegue para vincular un activo. Los activos de tipo clúster están excluidos. Asigne en su lugar los hosts miembros del clúster.
 
 **Consejo**: Documente primero los servidores en **Panorama IT > Activos**, luego vincúlelos aquí. La pestaña Visión general del activo mostrará las mismas asignaciones de forma inversa.
 
@@ -204,13 +204,13 @@ Haga clic en **Añadir servidor** en el encabezado del despliegue para vincular 
 
 ### Interfaces
 
-La pestaña Interfaces muestra todas las integraciones en las que participa esta aplicación -- como origen, destino o middleware. La insignia de la pestaña muestra el conteo total.
+La pestaña Interfaces muestra todas las integraciones en las que participa esta aplicación: como origen, destino o middleware. La insignia de la pestaña muestra el conteo total.
 
 Las interfaces se **agrupan por entorno** (PROD, PRE_PROD, QA, ...). Dentro de cada entorno se dividen en:
 
-- **Entrantes** -- esta aplicación recibe datos
-- **Salientes** -- esta aplicación envía datos
-- **Enrutadas** -- esta aplicación es el middleware/ETL para un flujo entre otras dos apps
+- **Entrantes**: esta aplicación recibe datos
+- **Salientes**: esta aplicación envía datos
+- **Enrutadas**: esta aplicación es el middleware/ETL para un flujo entre otras dos apps
 
 Cada fila muestra el nombre de la interfaz, la aplicación contraparte y un indicador **Vía middleware**. Haga clic en la fila para abrir el espacio de trabajo de la interfaz; haga clic en la contraparte para abrir la otra aplicación.
 
@@ -287,9 +287,9 @@ La pestaña Relaciones vincula esta aplicación a sus registros financieros, de 
 - **Líneas presupuestarias**: las líneas OPEX y CAPEX de esta aplicación, en una sola lista. Busque por título o por referencia (`BL-12`); cada sugerencia muestra su tipo
 - **Contratos**: contratos con proveedores
 - **Proyectos**: proyectos del portafolio vinculados a esta aplicación
-- **Tareas**: tareas vinculadas a esta aplicación. Esta lista es de solo lectura aquí -- las tareas ganan o pierden este vínculo cuando establece el campo **App / Servicio** en una tarea desde la página de Tareas.
+- **Tareas**: tareas vinculadas a esta aplicación. Esta lista es de solo lectura aquí: las tareas ganan o pierden este vínculo cuando establece el campo **App / Servicio** en una tarea desde la página de Tareas.
 
-**Sitios web relevantes**: añada URLs con nombres opcionales -- útil para portales de proveedores, paneles de monitoreo o enlaces a documentación. **Añadir URL** abre un diálogo; las entradas existentes pueden editarse o eliminarse.
+**Sitios web relevantes**: añada URLs con nombres opcionales. Es útil para portales de proveedores, paneles de monitoreo o enlaces a documentación. **Añadir URL** abre un diálogo; las entradas existentes pueden editarse o eliminarse.
 
 **Adjuntos**: Arrastre y suelte archivos o haga clic en **Seleccionar archivos** para subirlos. Haga clic en un chip de adjunto para descargarlo. La eliminación está disponible para los gestores.
 
@@ -301,16 +301,16 @@ KANAP ofrece **dos formas de gestionar versiones de aplicaciones**, dependiendo 
 
 | Enfoque | Ideal para | Qué sucede |
 |---------|------------|------------|
-| **Simple** | La mayoría de aplicaciones | Actualice los campos de versión en el panel de propiedades o en el formulario de creación -- mismo registro, nuevo número de versión |
-| **Sofisticado** | Migraciones mayores | Use **Crear nueva versión** para crear un nuevo registro de aplicación con seguimiento de linaje -- ejecute las versiones antigua y nueva en paralelo |
+| **Simple** | La mayoría de aplicaciones | Actualice los campos de versión en el panel de propiedades o en el formulario de creación: mismo registro, nuevo número de versión |
+| **Sofisticado** | Migraciones mayores | Use **Crear nueva versión** para crear un nuevo registro de aplicación con seguimiento de linaje. Ejecute las versiones antigua y nueva en paralelo |
 
 ### Seguimiento simple de versiones (actualizaciones in situ)
 
-Para la mayoría de aplicaciones -- donde actualiza y la versión anterior simplemente desaparece -- actualice los campos **Versión**, **Puesta en marcha**, **Fin de soporte** y **Fecha de retiro** en el formulario de creación o en el panel de propiedades. El chip de versión del encabezado y los metadatos de **Puesta en marcha** reflejan lo que defina.
+Para la mayoría de aplicaciones (donde actualiza y la versión anterior simplemente desaparece), actualice los campos **Versión**, **Puesta en marcha**, **Fin de soporte** y **Fecha de retiro** en el formulario de creación o en el panel de propiedades. El chip de versión del encabezado y los metadatos de **Puesta en marcha** reflejan lo que defina.
 
 Este enfoque mantiene todo en un solo registro. Cuando actualiza, modifique los campos de versión y listo. El historial se rastrea en el registro de auditoría.
 
-**Use esto cuando**: las actualizaciones ocurren in situ sin solapamiento -- una versión reemplaza a otra.
+**Use esto cuando**: las actualizaciones ocurren in situ sin solapamiento: una versión reemplaza a otra.
 
 ### Crear una nueva versión (migraciones en paralelo)
 
@@ -318,9 +318,9 @@ Para actualizaciones mayores de aplicaciones donde necesita ejecutar las version
 
 El asistente tiene tres pasos:
 
-1. **Detalles de la versión** -- nuevo nombre de la aplicación, etiqueta de versión, fechas de **Puesta en marcha** y **Fin de soporte**.
-2. **Opciones de copia** -- elija qué copiar del origen. Los valores predeterminados se muestran a continuación.
-3. **Interfaces** -- seleccione qué interfaces migrar a la nueva versión.
+1. **Detalles de la versión**: nuevo nombre de la aplicación, etiqueta de versión, fechas de **Puesta en marcha** y **Fin de soporte**.
+2. **Opciones de copia**: elija qué copiar del origen. Los valores predeterminados se muestran a continuación.
+3. **Interfaces**: seleccione qué interfaces migrar a la nueva versión.
 
 La nueva versión se crea como una aplicación separada con:
 - Un ciclo de vida **Propuesto** (listo para configurar antes de la puesta en marcha)
@@ -365,7 +365,7 @@ Hay dos formas de copiar una aplicación en KANAP:
 
 ### Copiar elemento (desde la cuadrícula de Aplicaciones)
 
-Utilice esto cuando desee crear un duplicado independiente de una aplicación -- típicamente para crear una entrada de aplicación similar sin linaje de versiones.
+Utilice esto cuando desee crear un duplicado independiente de una aplicación, típicamente para crear una entrada de aplicación similar sin linaje de versiones.
 
 1. Seleccione una aplicación en la cuadrícula
 2. Haga clic en **Copiar elemento**
@@ -440,9 +440,9 @@ Desde la lista de Aplicaciones:
 | Preset | Descripción |
 |--------|-------------|
 | **Exportación completa** | Todos los campos exportables incluidos datos calculados/solo lectura (marcas de tiempo, residencia de datos, métricas de usuarios) |
-| **Enriquecimiento de datos** | Solo campos importables -- ideal para flujos de trabajo de edición de ida y vuelta |
+| **Enriquecimiento de datos** | Solo campos importables. Ideal para flujos de trabajo de edición de ida y vuelta |
 
-**Exportación de plantilla**: Descarga solo encabezados -- útil para preparar archivos de importación con la estructura correcta. La plantilla incluye todos los campos importables.
+**Exportación de plantilla**: Descarga solo encabezados. Es útil para preparar archivos de importación con la estructura correcta. La plantilla incluye todos los campos importables.
 
 **Selección personalizada**: Elija campos específicos para incluir en su exportación.
 
@@ -452,7 +452,7 @@ Desde la lista de Aplicaciones:
 
 2. **Elija la configuración de importación**:
    - **Modo**:
-     - `Enriquecer` (predeterminado): Las celdas vacías preservan los valores existentes -- solo actualiza lo que especifique
+     - `Enriquecer` (predeterminado): Las celdas vacías preservan los valores existentes: solo actualiza lo que especifique
      - `Reemplazar`: Se actualizan los campos proporcionados; las celdas de clasificación vacías conservan el valor existente y `__CLEAR__` lo borra explícitamente
    - **Operación**:
      - `Upsert` (predeterminado): Crear nuevas aplicaciones o actualizar las existentes
@@ -592,7 +592,7 @@ Custom ERP;lob;;Moderate;Active;2018-03-20;false
 - **Empiece por las apps críticas**: Documente primero sus aplicaciones críticas para el negocio, luego avance en los niveles de criticidad.
 - **Use Suites para agrupar**: Active "Puede tener apps hijas" en la pestaña Operaciones para marcar una aplicación como Suite que agrupa componentes relacionados (p. ej., módulos SAP bajo una Suite SAP).
 - **Vincule al gasto temprano**: Conecte líneas OPEX, CAPEX y contratos en la pestaña Relaciones para ver el panorama completo de costes de cada aplicación.
-- **Mantenga los despliegues actualizados**: La pestaña Despliegues alimenta los chips de entorno en la lista -- manténgala actualizada para una visibilidad precisa.
+- **Mantenga los despliegues actualizados**: La pestaña Despliegues alimenta los chips de entorno en la lista: manténgala actualizada para una visibilidad precisa.
 - **Documente la audiencia**: Defina la audiencia de empresas y departamentos en el panel de propiedades; el conteo de usuarios se deriva entonces automáticamente y se utiliza en los informes.
 - **Aproveche el filtrado por categoría**: Utilice el filtro de columna Categoría para centrarse en tipos específicos de aplicaciones (p. ej., mostrar solo apps de Línea de negocio, o excluir herramientas de Productividad).
 - **Adjunte conocimiento temprano**: Vincule runbooks y documentos de arquitectura desde la pestaña Visión general para que el equipo sepa dónde buscar durante los incidentes.

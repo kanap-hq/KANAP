@@ -25,9 +25,9 @@ Navegue a **Datos maestros > Departamentos** para ver su lista de departamentos.
 La cuadrícula de Departamentos proporciona una visión general de todos los departamentos con su plantilla para un año determinado.
 
 **Columnas predeterminadas**:
-- **Nombre**: Nombre del departamento -- haga clic para abrir la pestaña Visión general del espacio de trabajo
-- **Empresa**: Empresa matriz -- haga clic para abrir la pestaña Visión general del espacio de trabajo
-- **Plantilla (Año)**: Conteo de empleados para el año seleccionado -- haga clic para ir directamente a la pestaña Detalles para editar
+- **Nombre**: Nombre del departamento. Haga clic para abrir la pestaña Visión general del espacio de trabajo
+- **Empresa**: Empresa matriz. Haga clic para abrir la pestaña Visión general del espacio de trabajo
+- **Plantilla (Año)**: Conteo de empleados para el año seleccionado. Haga clic para ir directamente a la pestaña Detalles para editar
 
 **Columnas adicionales** (mediante el selector de columnas):
 - **Estado**: Habilitado o Deshabilitado
@@ -126,6 +126,6 @@ Las columnas:
 
 - **Refleje su estructura organizativa**: Replique la jerarquía de departamentos de su sistema de RRHH para mantener la consistencia.
 - **Actualice la plantilla anualmente**: Establezca un recordatorio para actualizar las métricas de departamentos durante la planificación presupuestaria.
-- **Use para asignaciones**: La plantilla de departamentos impulsa los cálculos de asignación de costes -- manténgala precisa.
+- **Use para asignaciones**: La plantilla de departamentos impulsa los cálculos de asignación de costes: manténgala precisa.
 - **Desactive, no elimine**: Cuando los departamentos se reorganizan, desactive los antiguos en lugar de eliminarlos para preservar los datos históricos.
 - **Aproveche los enlaces directos**: Haga clic en el número de plantilla directamente desde la lista para ir a la pestaña Detalles y editar métricas sin un clic adicional.

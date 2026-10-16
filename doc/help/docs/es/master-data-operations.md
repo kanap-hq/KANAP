@@ -18,7 +18,7 @@ Los datos maestros no tienen una entrada de Administración propia.
 
 ## Congelar datos maestros
 
-Utilice esta herramienta para bloquear o desbloquear métricas de empresas y departamentos para un año específico. La congelación previene ediciones accidentales después de que los datos hayan sido finalizados -- útil al cierre de año, durante auditorías o antes de iniciar el ciclo presupuestario del próximo año.
+Utilice esta herramienta para bloquear o desbloquear métricas de empresas y departamentos para un año específico. La congelación previene ediciones accidentales después de que los datos hayan sido finalizados. Es útil al cierre de año, durante auditorías o antes de iniciar el ciclo presupuestario del próximo año.
 
 ### Cómo funciona
 
@@ -28,8 +28,8 @@ Utilice esta herramienta para bloquear o desbloquear métricas de empresas y dep
 
 La página muestra una tarjeta de estado para cada alcance:
 
-- **Congelado** (rojo) -- los datos son de solo lectura para ese año; la tarjeta muestra quién congeló y cuándo
-- **Editable** -- los datos aún pueden modificarse
+- **Congelado** (rojo): los datos son de solo lectura para ese año; la tarjeta muestra quién congeló y cuándo
+- **Editable**: los datos aún pueden modificarse
 
 ### Qué afecta la congelación
 
@@ -60,7 +60,7 @@ Copie métricas de empresas y departamentos de un ejercicio fiscal a otro. Una s
 1. Seleccione un **Año de origen** (de dónde leer los valores)
 2. Seleccione **Fuentes de datos**: Empresas, Departamentos o ambos
 3. Seleccione un **Año de destino** (dónde escribir los valores)
-4. Si se selecciona Empresas, elija qué **Métricas de empresa** copiar -- cualquier combinación de Plantilla, Usuarios IT y Facturación
+4. Si se selecciona Empresas, elija qué **Métricas de empresa** copiar: cualquier combinación de Plantilla, Usuarios IT y Facturación
 5. Haga clic en **Simulación** para generar una vista previa
 6. Revise la tabla de vista previa
 7. Haga clic en **Copiar datos** para aplicar los cambios
@@ -74,7 +74,7 @@ Copie métricas de empresas y departamentos de un ejercicio fiscal a otro. Una s
 | **Métrica** | Plantilla, Usuarios IT o Facturación |
 | **Valor de origen** | El valor del año de origen |
 | **Destino actual** | El valor existente en el año de destino (si existe) |
-| **Nuevo valor** | El valor que se escribirá -- mostrado en negrita |
+| **Nuevo valor** | El valor que se escribirá, mostrado en negrita |
 | **Estado** | "Listo para copiar" o la razón por la que se omitió la fila |
 
 Las filas omitidas aparecen en color de advertencia. Razones comunes de omisión:
@@ -87,10 +87,10 @@ Las filas omitidas aparecen en color de advertencia. Razones comunes de omisión
 
 Debajo de la cuadrícula, cuatro tarjetas de resumen ofrecen un conteo rápido:
 
-- **Total de filas** -- todo lo que la operación evaluó
-- **Listas para copiar** -- filas que se escribirán
-- **Omitidas** -- filas excluidas (con razones visibles en la tabla)
-- **Errores** -- filas que fallaron durante la copia real
+- **Total de filas**: todo lo que la operación evaluó
+- **Listas para copiar**: filas que se escribirán
+- **Omitidas**: filas excluidas (con razones visibles en la tabla)
+- **Errores**: filas que fallaron durante la copia real
 
 ### Protección de datos congelados
 
@@ -186,8 +186,8 @@ Sí. El selector de año cubre un rango desde el año pasado hasta cinco años a
 
 ## Consejos
 
-- **Siempre haga una simulación primero** -- revise la tabla de vista previa antes de confirmar para evitar sobrescrituras accidentales
-- **Congele después de la aprobación** -- bloquee los datos tan pronto como los presupuestos se firmen para prevenir desviaciones
-- **Descongele temporalmente** -- haga su corrección, luego vuelva a congelar inmediatamente
-- **Copie temprano** -- inicie el próximo ciclo de planificación copiando las métricas del año actual hacia adelante, luego ajuste para los cambios esperados
-- **Verifique sus permisos** -- si un alcance está en gris, solicite a un administrador que le otorgue el nivel de acceso adecuado
+- **Siempre haga una simulación primero**: revise la tabla de vista previa antes de confirmar para evitar sobrescrituras accidentales
+- **Congele después de la aprobación**: bloquee los datos tan pronto como los presupuestos se firmen para prevenir desviaciones
+- **Descongele temporalmente**: haga su corrección, luego vuelva a congelar inmediatamente
+- **Copie temprano**: inicie el próximo ciclo de planificación copiando las métricas del año actual hacia adelante, luego ajuste para los cambios esperados
+- **Verifique sus permisos**: si un alcance está en gris, solicite a un administrador que le otorgue el nivel de acceso adecuado

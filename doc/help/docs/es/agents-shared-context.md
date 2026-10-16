@@ -1,4 +1,4 @@
-# Agentes IA — Contexto compartido
+# Agentes IA: contexto compartido
 
 El contexto compartido es una pequeña biblioteca de guía de fondo reutilizable que usted escribe una vez y entrega a sus agentes. Un perfil es un conjunto con nombre de unas pocas líneas en lenguaje sencillo sobre su entorno de TI: cómo se gestiona su parque, qué deben y qué no deben decir sus agentes, las convenciones que sigue su centro de servicios. El mismo perfil puede adjuntarse a cualquier agente, donde moldea cómo ese agente interpreta los tickets entrantes y cómo redacta sus respuestas.
 
@@ -75,7 +75,7 @@ Los perfiles archivados permanecen en la lista, atenuados y con la etiqueta **Ar
 
 Los perfiles residen aquí, pero se activan por agente desde la pestaña **Configuración** de ese agente, en la sección **Objetivo** (consulte [Espacio del agente](agents-workspace.md)). Hasta que active **Usar contexto compartido**, eso es lo único que ve allí: el interruptor y una descripción de una línea. Al activarlo aparecen el selector de perfil, un acceso directo **+ Nuevo perfil** para crear uno al momento y una vista previa de las líneas del perfil seleccionado. Elija un perfil y el agente funciona con él; déjelo en **Ningún perfil seleccionado** y el agente funciona sin ningún contexto compartido.
 
-Como el vínculo es una referencia, un mismo perfil puede respaldar muchos agentes a la vez, y actualizar el perfil los actualiza todos. Desvincular un agente —o archivar su perfil— simplemente elimina la guía para ese agente; no cambia nada respecto a los demás usuarios del perfil.
+Como el vínculo es una referencia, un mismo perfil puede respaldar muchos agentes a la vez, y actualizar el perfil los actualiza todos. Desvincular un agente (o archivar su perfil) simplemente elimina la guía para ese agente; no cambia nada respecto a los demás usuarios del perfil.
 
 ---
 
@@ -86,7 +86,7 @@ Tanto el contexto compartido como las [bibliotecas de conocimiento](knowledge.md
 - El **contexto compartido** moldea *cómo* se comporta un agente: su tono, sus suposiciones sobre su entorno, sus reglas tajantes de «nunca hagas esto». Sus líneas **nunca se citan** en una respuesta y no conceden al agente **ningún acceso nuevo a datos**. Orientan, no son evidencia.
 - Las **bibliotecas de conocimiento** son *lo que* un agente puede citar. Sus resultados SÍ se citan en la respuesta redactada, de modo que el solicitante puede ver la fuente que respalda una respuesta.
 
-La regla práctica: si quiere que el agente afirme un hecho y lo respalde —una política, un procedimiento, una configuración concreta—, ponga ese hecho en una biblioteca de conocimiento para que pueda citarse. Reserve el contexto compartido para la guía permanente y las salvaguardas que no deberían aparecer como fuente citada. Y como una línea de contexto no es un permiso, escribir «el agente puede cerrar tickets de facturación» en un perfil no concede nada: los permisos reales y la automatización se rigen por tipo de acción en la propia configuración del agente y por el flujo de aprobación.
+La regla práctica: si quiere que el agente afirme un hecho y lo respalde (una política, un procedimiento, una configuración concreta), ponga ese hecho en una biblioteca de conocimiento para que pueda citarse. Reserve el contexto compartido para la guía permanente y las salvaguardas que no deberían aparecer como fuente citada. Y como una línea de contexto no es un permiso, escribir «el agente puede cerrar tickets de facturación» en un perfil no concede nada: los permisos reales y la automatización se rigen por tipo de acción en la propia configuración del agente y por el flujo de aprobación.
 
 ---
 

@@ -12,7 +12,7 @@ Navegue a **Portafolio > Colaboradores** para ver los colaboradores configurados
 3. Haga clic en **Añadir** para crear su perfil
 4. Configure su equipo, disponibilidad, competencias y valores predeterminados en el espacio de trabajo
 
-**Consejo**: Los colaboradores son diferentes de las cuentas de usuario. Añadir a alguien como colaborador no cambia su acceso de inicio de sesión -- solo le permite rastrear su pertenencia a equipo, competencias, disponibilidad y valores predeterminados de clasificación para la planificación de proyectos.
+**Consejo**: Los colaboradores son diferentes de las cuentas de usuario. Añadir a alguien como colaborador no cambia su acceso de inicio de sesión: solo le permite rastrear su pertenencia a equipo, competencias, disponibilidad y valores predeterminados de clasificación para la planificación de proyectos.
 
 ---
 
@@ -123,7 +123,7 @@ Cada cambio se guarda automáticamente. Una breve nota «Guardando… / Guardado
 ### Panel Propiedades
 
 **Puesto**
-El puesto de la persona, el mismo que aparece en todos los lugares donde figura en KANAP -- el organigrama, su ficha de usuario, su perfil. No es una etiqueta propia de la cartera: cambiarlo aquí lo cambia en todas partes. Escríbalo y haga clic fuera para guardar.
+El puesto de la persona, el mismo que aparece en todos los lugares donde figura en KANAP: el organigrama, su ficha de usuario, su perfil. No es una etiqueta propia de la cartera: cambiarlo aquí lo cambia en todas partes. Escríbalo y haga clic fuera para guardar.
 
 Siempre puede definir el suyo. Definir el de otra persona requiere el nivel **Administrador** sobre los usuarios; sin ese permiso sigue viendo el valor, pero el campo es de solo lectura.
 
@@ -143,7 +143,7 @@ Una vez definido, el nombre del responsable también aparece en el encabezado de
 Cómo trabaja esta persona con usted. Cada colaborador empieza como **Interno**; cambie a **Externo**, **Aprendiz** u **Otro** cuando no sea el caso. La lista es suya y se adapta en **Portafolio > Configuración > Tipos de contrato**. El tipo de contrato nunca se importa desde Microsoft Entra. Este campo solo es visible al editar el perfil de otro colaborador (no el suyo propio).
 
 **Disponibilidad para proyectos**
-Use el deslizador para establecer cuántos días por mes esta persona puede trabajar en proyectos del portafolio. El rango es 0 -- 20 días, con incrementos de 0.5 días. El valor predeterminado es 5 días. El valor se guarda al soltar el deslizador.
+Use el deslizador para establecer cuántos días por mes esta persona puede trabajar en proyectos del portafolio. El rango es de 0 a 20 días, con incrementos de 0.5 días. El valor predeterminado es 5 días. El valor se guarda al soltar el deslizador.
 
 **Valores predeterminados de clasificación**
 Establezca los valores de clasificación que se rellenan automáticamente en nuevas tareas, solicitudes y proyectos cuando los campos de clasificación están aún vacíos. Esto ahorra tiempo para colaboradores que trabajan consistentemente en la misma área.
@@ -171,7 +171,7 @@ Resumen de solo lectura del tiempo registrado para este colaborador. Requiere `p
   - Los meses sin datos se muestran como vacíos en el gráfico
 
 **Notas**
-Campo de texto libre para cualquier información adicional sobre este colaborador -- certificaciones, preferencias, restricciones u otros detalles relevantes. Las notas se guardan poco después de que deje de escribir.
+Campo de texto libre para cualquier información adicional sobre este colaborador: certificaciones, preferencias, restricciones u otros detalles relevantes. Las notas se guardan poco después de que deje de escribir.
 
 ---
 
@@ -213,7 +213,7 @@ La tabla consolida el tiempo registrado tanto de entradas de gastos generales de
 
 **Columnas**:
 - **Fecha**: Cuándo se registró el tiempo
-- **Fuente**: Dónde se registró el tiempo -- ya sea un nombre de tarea o nombre de proyecto
+- **Fuente**: Dónde se registró el tiempo: ya sea un nombre de tarea o nombre de proyecto
 - **Categoría**: Si la entrada se clasifica como **IT** o **Negocio**, mostrada como etiqueta con color
 - **Tiempo**: Duración en horas o días (p. ej., "4h", "1d 2h")
 - **Notas**: Cualquier nota adjunta a la entrada
