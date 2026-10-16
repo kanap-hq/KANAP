@@ -192,6 +192,7 @@ const KNOWN_EXPORT_ROUTES = [
   'GET /tasks/export',
   'GET /technologies/:id/applications/export',
   'GET /users/export',
+  'GET /vulnerabilities/export',
   'GET /working-day-profiles/export',
   'POST /export',
   'POST /knowledge/:idOrRef/export',

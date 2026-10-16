@@ -1,4 +1,5 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
+import { ensureReferenceKey } from '../common/migration-reference-keys';
 
 const LOG_PREFIX = '[Migration] Vulnerabilities:';
 
@@ -83,6 +84,7 @@ const TENANT_TABLE = 'technology_vulnerabilities';
  * canonical policy `<table>_tenant_isolation` (USING and WITH CHECK); unique NULLS NOT DISTINCT on
  * (tenant, technology, version, CVE); the version is a composite key ON DELETE CASCADE (a version
  * deleted takes its rows with it: setting it to NULL could collide with the unknown-version row).
+ * `state_changed_by` names a user ON DELETE SET NULL (`common/migration-reference-keys.ts`).
  *
  * The tables are new and hold nothing: no backfill, row level security never disabled. Every step
  * uses IF NOT EXISTS or drops before creating: a second run changes nothing.
@@ -123,6 +125,22 @@ export class Vulnerabilities1854260000000 implements MigrationInterface {
           REFERENCES technology_versions (tenant_id, technology_id, id) ON DELETE CASCADE
       )`);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_${TENANT_TABLE}_cve ON ${TENANT_TABLE} (tenant_id, cve_id)`);
+    // Who last set the state: cleared when that user is deleted, as every other `*_by` column.
+    await ensureReferenceKey(
+      queryRunner,
+      {
+        table: TENANT_TABLE,
+        column: 'state_changed_by',
+        refTable: 'users',
+        name: `fk_${TENANT_TABLE}_state_changed_by`,
+        onDelete: 'SET NULL',
+        orphans: 'clear',
+      },
+      (line) => console.log(`${LOG_PREFIX} ${line}`),
+    );
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS idx_${TENANT_TABLE}_state_changed_by ON ${TENANT_TABLE} (state_changed_by)`,
+    );
     await queryRunner.query(`ALTER TABLE ${TENANT_TABLE} ENABLE ROW LEVEL SECURITY`);
     await queryRunner.query(`ALTER TABLE ${TENANT_TABLE} FORCE ROW LEVEL SECURITY`);
     await queryRunner.query(`DROP POLICY IF EXISTS ${TENANT_TABLE}_tenant_isolation ON ${TENANT_TABLE}`);

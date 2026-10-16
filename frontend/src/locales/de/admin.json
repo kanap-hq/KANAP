@@ -307,6 +307,7 @@
       "tasks": "Aufgaben",
       "technologyApplications": "Anwendungen einer Technologie",
       "users": "Benutzer",
+      "vulnerabilities": "Schwachstellen",
       "weeklyReport": "Wochenbericht",
       "workingDayCalendars": "Arbeitstagekalender"
     },
@@ -514,6 +515,7 @@
       "technology_projects": "Projekte der Technologie",
       "technology_spend_items": "Budgetzeilen der Technologie",
       "technology_versions": "Technologieversionen",
+      "technology_vulnerabilities": "Schwachstellen der Technologie",
       "tenants": "Arbeitsbereiche",
       "tenants_admin": "Verwaltung der Arbeitsbereiche",
       "tenants_plan": "Tarife der Arbeitsbereiche",
