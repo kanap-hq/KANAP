@@ -12,6 +12,8 @@ const CONTACT_TEXT_SORTS = new Set(['last_name', 'first_name', 'email', 'country
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import * as fs from 'fs';
 import {
+  formatCsvBoolean,
+  parseCsvBoolean,
   cellOf,
   CsvDateOrder,
   CsvLanguage,
@@ -495,7 +497,7 @@ export class ContactsService {
           c.mobile ?? '',
           c.country ?? '',
           c.notes ?? '',
-          c.active ? 'true' : 'false',
+          formatCsvBoolean(!!c.active, opts.language ?? 'en'),
         ]);
       }
     }
@@ -553,13 +555,10 @@ export class ContactsService {
       }
       const email = cellOf(row, 'email').toLowerCase();
       if (!email) { errors.push({ row: line, message: 'email is required' }); continue; }
-      const activeRaw = cellOf(row, 'active').toLowerCase();
-      let active: boolean | undefined;
-      if (activeRaw) {
-        if (['true','1','yes','y'].includes(activeRaw)) active = true;
-        else if (['false','0','no','n'].includes(activeRaw)) active = false;
-        else { errors.push({ row: line, message: 'invalid active value' }); continue; }
-      }
+      // Yes or no in any language, or the true/false of older files; blank keeps the default.
+      const activeCell = parseCsvBoolean(cellOf(row, 'active'));
+      if (activeCell === undefined) { errors.push({ row: line, message: 'invalid active value' }); continue; }
+      const active = activeCell ?? undefined;
       const country = cellOf(row, 'country');
       if (country && country.length !== 2) { errors.push({ row: line, message: 'country must be 2-letter ISO code' }); continue; }
       normalized.push({

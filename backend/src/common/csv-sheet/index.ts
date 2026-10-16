@@ -1,4 +1,5 @@
 export { parseCsvAmount, formatCsvAmount, resolveAmountConvention, amountConventionNotice } from './amount';
+export { formatCsvBoolean, parseCsvBoolean } from './boolean';
 export { matchCode } from './codes';
 export { parseCsvDateCell, formatCsvDate, formatCsvEndOfValidity, keepStoredEndOfValidity, resolveDateOrder } from './date';
 export { decodeCsv } from './decode';
@@ -14,7 +15,7 @@ export {
   readMasterDataFile,
   rowProblems,
 } from './master-data';
-export { readCsv } from './read';
+export { csvSeparatorOf, readCsv } from './read';
 export { languageOf, parseDateOrder, parseDecimalMark } from './request-options';
 export { writeCsv, writeCsvHeader, writeCsvRows } from './write';
 export {

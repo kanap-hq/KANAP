@@ -74,6 +74,8 @@ import {
   type ContractComplianceInputs,
 } from './contract-compliance';
 import {
+  formatCsvBoolean,
+  parseCsvBoolean,
   cellOf,
   fieldAmounts,
   formatCsvAmount,
@@ -1070,7 +1072,7 @@ export class ContractsService {
             sMap.get(it.supplier_id)?.name ?? '',
             start ? formatCsvDate(start, language) : '',
             String(it.duration_months ?? ''),
-            it.auto_renewal ? 'yes' : 'no',
+            formatCsvBoolean(!!it.auto_renewal, language),
             String(it.notice_period_months ?? ''),
             formatCsvAmount(Decimal.from(String(it.yearly_amount_at_signature ?? 0)), language),
             it.currency,
@@ -1155,8 +1157,13 @@ export class ContractsService {
       const parsedStart = r.dates['start_date'];
       const start_date = parsedStart?.kind === 'date' ? parsedStart.isoDate : parsedStart?.kind === 'instant' ? parsedStart.iso.slice(0, 10) : '';
       const duration_months = parseInt(cellOf(r, 'duration_months') || '12', 10) || 12;
-      const auto_raw = cellOf(r, 'auto_renewal').toLowerCase();
-      const auto_renewal = ['yes','true','1','y','t'].includes(auto_raw);
+      // Yes or no in any language, or the true/false and 1/0 of older files; blank is no, as before.
+      const autoCell = parseCsvBoolean(cellOf(r, 'auto_renewal'));
+      if (autoCell === undefined) {
+        errors.push({ row: line, message: `auto_renewal: Invalid value '${cellOf(r, 'auto_renewal')}'. Use yes or no.` });
+        continue;
+      }
+      const auto_renewal = autoCell ?? false;
       const notice_period_months = parseInt(cellOf(r, 'notice_period_months') || '1', 10) || 1;
       // Blank is 0, as before; the decimal mark is the file's (`fieldAmounts`).
       const amount = amounts.amountOf(r);

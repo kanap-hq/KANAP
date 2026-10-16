@@ -975,6 +975,43 @@ async function testPreciseEndOfValidityRoundTrip() {
   });
 }
 
+
+/**
+ * Yes and no follow the language, as in every other file: the contacts' `active` and the
+ * contracts' `auto_renewal`. A file of another language, or an older one with true or false,
+ * reads back unchanged.
+ */
+async function testYesNoFollowTheLanguage() {
+  await withTenant('yes-no', async (runner, tenantId, seeds) => {
+    const cases: Array<[string, string]> = [['contacts', 'active'], ['contracts', 'auto_renewal']];
+    for (const [label, column] of cases) {
+      const [importer] = importers(runner.manager, tenantId, seeds).filter((entry) => entry.label === label);
+      const key = importer.key(`${label} yes no`);
+      const seeded = await importer.importCsv(await fileFor(importer, [{ ...importer.base(key), [column]: 'yes' }], { language: 'en' }), { language: 'en' });
+      assert.deepEqual([seeded.ok, seeded.errors], [true, []], `${label} seed: ${JSON.stringify(seeded.errors)}`);
+      const cellIn = (content: string, language: CsvLanguage) => {
+        const lines = content.replace(/^﻿/, '').split('\n');
+        const index = lines[0].split(separatorOf(language)).indexOf(column);
+        const line = lines.find((entry) => entry.includes(key)) ?? '';
+        return line.split(separatorOf(language))[index];
+      };
+      const expected: Array<[CsvLanguage, string]> = [['en', 'yes'], ['fr', 'oui'], ['de', 'ja'], ['es', 'sí']];
+      for (const [language, word] of expected) {
+        assert.equal(cellIn(await importer.exportCsv(language), language), word, `${label} ${language}: yes is written ${word}`);
+      }
+      const german = await importer.exportCsv('de');
+      const again = await importer.importCsv(german, { language: 'fr', dryRun: true });
+      assert.deepEqual([again.ok, again.errors, again.updated], [true, [], 0], `${label}: a German file reads back unchanged`);
+      const old = await importer.importCsv(german.replace(/;ja(;|\r?\n)/, ';true$1'), { language: 'fr', dryRun: true });
+      assert.deepEqual([old.ok, old.errors, old.updated], [true, [], 0], `${label}: true still reads as yes`);
+      const off = await importer.importCsv(german.replace(/;ja(;|\r?\n)/, ';nein$1'), { language: 'de', dryRun: true });
+      assert.deepEqual([off.ok, off.errors, off.updated], [true, [], 1], `${label}: nein is no`);
+      const unknown = await importer.importCsv(german.replace(/;ja(;|\r?\n)/, ';maybe$1'), { language: 'de', dryRun: true });
+      assert.equal(unknown.ok, false, `${label}: a cell that is neither yes nor no is refused`);
+    }
+  });
+}
+
 /** A non-empty cell past the header's last column is a row error, not a silently dropped value. */
 async function testMoreCellsThanTheHeader() {
   await each('extra-cell', async (importer) => {
@@ -1090,6 +1127,7 @@ async function main() {
     ['testUnreadableFileIsRefused', testUnreadableFileIsRefused],
     ['testAccountNatureColumn', testAccountNatureColumn],
     ['testContractDatesAndAmounts', testContractDatesAndAmounts],
+    ['testYesNoFollowTheLanguage', testYesNoFollowTheLanguage],
   ];
   try {
     for (const [name, test] of tests) {

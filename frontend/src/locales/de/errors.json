@@ -74,7 +74,7 @@
   "CSV_VALUE_ONE_REQUIRED": "Füllen Sie mindestens eine Spalte {{column}} aus.",
   "CSV_NUMBER_INVALID": "„{{value}}“ ist keine Zahl.",
   "CSV_DATE_INVALID": "„{{value}}“ ist kein Datum. Verwenden Sie 2026-09-02 oder 02.09.2026.",
-  "CSV_BOOLEAN_INVALID": "„{{value}}“ ist ungültig. Verwenden Sie true oder false, yes oder no, 1 oder 0.",
+  "CSV_BOOLEAN_INVALID": "„{{value}}“ ist ungültig. Verwenden Sie ja oder nein.",
   "CSV_ENUM_INVALID": "„{{value}}“ ist ungültig. Mögliche Werte: {{allowed}}.",
   "CSV_REFERENCE_NOT_FOUND": "„{{value}}“ wurde nicht gefunden.",
   "CSV_REFERENCE_NOT_FOUND_SKIPPED": "„{{value}}“ wurde nicht gefunden und wird nicht importiert.",
