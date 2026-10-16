@@ -165,9 +165,10 @@ Tool-specific or private notes live in each tool's local files, never here.
   the stack order warning runs. A failing spec drops the PR from the queue.
 - Each queue run checks only what the queued changes reach (`changed files` job,
   `.github/scripts/ci-changes.sh`): the backend suite for `backend/`, `infra/`, a Dockerfile or
-  the frontend modules the backend specs import; only the three specs that read the user manual
-  for `doc/help/docs/`; the frontend build and tests for `frontend/` and `backend/fixtures/`; the
-  on-premise builds when either suite runs. A change under `.github/` runs everything. A required
+  the frontend modules the backend specs import; only the three specs that read the user manual,
+  plus the frontend build and tests (the locale dash test reads it), for `doc/help/docs/`; the
+  frontend build and tests for `frontend/` and `backend/fixtures/`; the on-premise builds when
+  either suite runs, except for the manual alone. A change under `.github/` runs everything. A required
   job that is not needed is skipped, which counts as passed. The script checks of
   `build (onprem)` (licenses, lockfiles, release, queue scripts, docs manifest) always run. A new
   spec that reads files outside its own tree must be added to the rules of `ci-changes.sh`.

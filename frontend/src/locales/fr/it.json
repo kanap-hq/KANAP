@@ -1860,7 +1860,7 @@
         "add": "+ Ajouter un sous-site",
         "empty": "Aucun sous-site défini. Ajoutez des bâtiments, des salles, des baies ou d'autres zones physiques.",
         "usage": "Utilisation",
-        "namePlaceholder": "ex. : Bâtiment A — Salle 1 — Baie 5",
+        "namePlaceholder": "ex. : Bâtiment A, Salle 1, Baie 5",
         "descriptionPlaceholder": "Description facultative",
         "nameRequired": "Le nom du sous-site est obligatoire.",
         "deleteTitle": "Supprimer le sous-site ?",
