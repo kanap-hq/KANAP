@@ -120,6 +120,7 @@ export const TENANT_PURGE_TABLES = [
   // After ai_settings and ai_agent_definitions: both hold FKs to the model registry.
   'ai_model_configs',
   // Technologies: links first, then versions, then technologies; before assets, applications, contracts, budget lines and business processes
+  'technology_vulnerabilities',
   'technology_attachments',
   'technology_links',
   'technology_contracts',
