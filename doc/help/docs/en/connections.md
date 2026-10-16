@@ -1,6 +1,6 @@
 # Connections
 
-Connections document the infrastructure-level network paths between servers and entities. While Interfaces describe logical data flows between applications, Connections describe the physical network routes -- which servers communicate, over which protocols and ports.
+Connections document the infrastructure-level network paths between servers and entities. While Interfaces describe logical data flows between applications, Connections describe the physical network routes: which servers communicate, over which protocols and ports.
 
 ## Getting started
 
@@ -31,7 +31,7 @@ The list gives you a filterable overview of every connection in your registry.
   - **Topology**: Server to Server or Multi-server
   - **Source** / **Destination**: The connected endpoints
   - **Protocols**: Network protocols shown as chips
-  - **Criticality**: Business importance -- may be derived from linked interfaces
+  - **Criticality**: Business importance, which may be derived from linked interfaces
   - **Data class**: Data sensitivity level
   - **PII**: Whether personal data traverses this connection
   - **Risk**: Manual or Derived (shows the number of linked interfaces)
@@ -61,8 +61,8 @@ The list gives you a filterable overview of every connection in your registry.
 
 A direct connection between two specific endpoints. Each side can be a server, a cluster, or a named entity:
 
-- **Source**: Where traffic originates -- pick a server, cluster, or entity
-- **Destination**: Where traffic terminates -- same options
+- **Source**: Where traffic originates: pick a server, cluster, or entity
+- **Destination**: Where traffic terminates: same options
 - You cannot select both a server and an entity for the same side; choose one or the other
 
 If an endpoint is a cluster, a note will remind you that member hosts are managed in the Servers workspace.
@@ -89,8 +89,8 @@ The Overview tab captures the connection's identity and topology.
   - **Name**: Display name
   - **Purpose**: Why this connection exists (free text)
   - **Connection type**: Server to Server or Multi-server
-  - **Source** / **Destination**: For Server to Server -- pick a server, cluster, or entity from a grouped dropdown
-  - **Connected servers**: For Multi-server -- search and select two or more servers
+  - **Source** / **Destination**: For Server to Server, pick a server, cluster, or entity from a grouped dropdown
+  - **Connected servers**: For Multi-server, search and select two or more servers
   - **Protocols**: One or more network protocols (drawn from your Connection Types settings)
   - **Lifecycle**: Current status
   - **Notes**: Additional context
@@ -101,7 +101,7 @@ When you select protocols, the system shows their typical ports for reference.
 
 ### Layers
 
-The Layers tab lets you define an ordered network path of up to three hops -- useful for documenting reverse proxies, firewalls, or intermediate routing.
+The Layers tab lets you define an ordered network path of up to three hops, useful for documenting reverse proxies, firewalls, or intermediate routing.
 
 **What each layer captures**:
   - **Order**: Sequence number (1 to 3)
@@ -123,7 +123,7 @@ This tab controls risk classification and data protection settings.
 
 **Risk mode**:
   - **Manual**: You set criticality, data class, and PII directly
-  - **Derived**: Values are aggregated from linked interface bindings -- the tab shows the effective values and how many bindings contribute
+  - **Derived**: Values are aggregated from linked interface bindings. The tab shows the effective values and how many bindings contribute
 
 **Fields**:
   - **Criticality**: Business critical, High, Medium, or Low
@@ -152,6 +152,6 @@ This tab is read-only. To link an interface binding to a connection, use the Int
 ## Tips
 
   - **Start with critical paths**: Document connections for your most important applications first, then work outward.
-  - **Use Derived risk mode**: Let the system calculate criticality from the interfaces that use each connection -- it saves effort and stays current as interfaces change.
+  - **Use Derived risk mode**: Let the system calculate criticality from the interfaces that use each connection. It saves effort and stays current as interfaces change.
   - **Link to interfaces**: Connecting your infrastructure to interface bindings gives you end-to-end traceability from application data flows down to network routes.
   - **Document protocols accurately**: Good protocol data makes firewall rule reviews and security audits significantly easier.

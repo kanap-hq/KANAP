@@ -1,6 +1,6 @@
 ---
 title: "Task Types Fast Track: Run, Build & Tasks"
-description: Understand the different work item types in KANAP — incidents, problems, requests, projects, bugs, and tasks — and how to work with tasks day-to-day.
+description: Understand the different work item types in KANAP (incidents, problems, requests, projects, bugs, and tasks) and how to work with tasks day-to-day.
 ---
 
 # Task Types Fast Track: Run, Build & Tasks
@@ -8,7 +8,7 @@ description: Understand the different work item types in KANAP — incidents, pr
 This guide explains the different types of work items tracked in KANAP and how to tell them apart. It covers the Run (keeping things running), the Build (making things better), and the transversal Task that bridges both. The second half is a practical cheat sheet for working with tasks every day.
 
 !!! tip "Prefer a one-page summary? :material-file-pdf-box:"
-    All the key definitions on a single A4 page — print it, pin it, share it with your team.
+    All the key definitions on a single A4 page: print it, pin it, share it with your team.
 
     [:material-download: Download the cheat sheet (PDF)](downloads/kanap-task-types-fast-track.pdf){ .md-button .md-button--primary }
 
@@ -16,7 +16,7 @@ This guide explains the different types of work items tracked in KANAP and how t
 
 ## The Big Picture
 
-Everything your IT department does falls into one of two categories — plus a universal work unit that crosses both:
+Everything your IT department does falls into one of two categories, plus a universal work unit that crosses both:
 
 | Category | Purpose | Work Items |
 |----------|---------|------------|
@@ -26,7 +26,7 @@ Everything your IT department does falls into one of two categories — plus a u
 
 ---
 
-## Run — Keeping the Lights On
+## Run: Keeping the Lights On
 
 Everyone participates in the Run. It ensures **operational continuity** (MCO) and **security maintenance** (MCS) of existing systems.
 
@@ -35,7 +35,7 @@ Everyone participates in the Run. It ensures **operational continuity** (MCO) an
 An **unplanned interruption or degradation** of a production service.
 
 - Has a significant impact on the functioning of the information system
-- The objective is **service restoration** — get things working again, fast
+- The objective is **service restoration**: get things working again, fast
 - Reactive by nature: something broke, and users are affected
 
 !!! example "Examples"
@@ -48,7 +48,7 @@ An **unplanned interruption or degradation** of a production service.
 A **root cause investigation** triggered by recurring incidents.
 
 - Typically identified by IT after detecting a **pattern of similar incidents**
-- The objective is a **permanent resolution** — fix the underlying cause, not just the symptoms
+- The objective is a **permanent resolution**: fix the underlying cause, not just the symptoms
 - Proactive: IT opens a Problem to prevent future incidents
 
 !!! example "Examples"
@@ -57,7 +57,7 @@ A **root cause investigation** triggered by recurring incidents.
 
 ---
 
-## Build — Evolving the Landscape
+## Build: Evolving the Landscape
 
 The Build covers all **evolutions and construction** of the information system. Everyone participates.
 
@@ -82,7 +82,7 @@ A **planned solicitation to modify** the information system.
 
 A **coordinated set of tasks** organized around a defined objective, with a scope, timeline, budget, and identified deliverables.
 
-- Same criteria as a Request — normally originates from an approved Request
+- Same criteria as a Request. Normally originates from an approved Request
 - **Fast-track**: some projects are imposed without going through the Request stage (executive decision, urgent regulatory change...). They enter directly as a Project.
 
 !!! example "Examples"
@@ -93,7 +93,7 @@ A **coordinated set of tasks** organized around a defined objective, with a scop
 
 A **defect found in a system under development**.
 
-- Too complex to be handled within a simple ticket — requires in-depth analysis
+- Too complex to be handled within a simple ticket: requires in-depth analysis
 - Strictly a Build concept: the system is not yet in production (or the defect is in a component still being built)
 
 !!! example "Examples"
@@ -110,7 +110,7 @@ A **defect found in a system under development**.
 
 ---
 
-## Transversal — The Task
+## Transversal: The Task
 
 Tasks are the **atomic unit of work** in KANAP. They cross the Run/Build boundary.
 
@@ -121,7 +121,7 @@ A **clearly scoped action** with a defined responsible person, status, and deadl
 - Can be **standalone** or linked to a **Project**, **OPEX line**, **Contract**, or **CAPEX line**
 - Carries a concrete effort
 - Impact on users or services is contained and well-understood
-- Does not require coordination across multiple teams — even if it takes a long time, it remains carried by a single person without requiring cross-functional analysis
+- Does not require coordination across multiple teams. Even if it takes a long time, it remains carried by a single person without requiring cross-functional analysis
 
 !!! example "Examples"
     - Install a new domain controller
@@ -152,7 +152,7 @@ A **clearly scoped action** with a defined responsible person, status, and deadl
 
 ---
 
-## Working with Tasks — Cheat Sheet
+## Working with Tasks: Cheat Sheet
 
 The rest of this guide covers the practical essentials. For full detail, see [Tasks](../tasks.md).
 
@@ -174,7 +174,7 @@ All tasks appear in the central **Portfolio > Tasks** list regardless of context
 |--------|-------|---------|
 | **Open** | Gray | Not started yet |
 | **In Progress** | Orange | Someone is working on it |
-| **Pending** | Blue | Blocked — waiting on input or a decision |
+| **Pending** | Blue | Blocked: waiting on input or a decision |
 | **In Testing** | Purple | Implementation done, awaiting validation |
 | **Done** | Green | Completed (requires logged time for project tasks) |
 | **Cancelled** | Red | No longer needed |
@@ -183,40 +183,40 @@ All tasks appear in the central **Portfolio > Tasks** list regardless of context
 
 | Priority | When to use |
 |----------|-------------|
-| **Blocker** | Blocking other work — immediate attention |
+| **Blocker** | Blocking other work: immediate attention |
 | **High** | Important and time-sensitive |
 | **Normal** | Standard priority (default) |
 | **Low** | Can be deferred |
 | **Optional** | Nice-to-have |
 
-### The task workspace — key areas
+### The task workspace: key areas
 
 When you open a task, you get a sidebar on the left and a main content area on the right.
 
 **Sidebar sections**:
 
-- **Context** — what the task is linked to (or Standalone)
-- **Task Details** — type, priority, status
-- **Classification** — Source, Category, Stream, Company (standalone and project tasks only; defaults from organization settings or parent project)
-- **Time** — total time spent and Log Time button (standalone and project tasks only)
-- **People** — requestor, assignee, viewers
-- **Dates** — start and due dates
-- **Knowledge** — link knowledge articles to the task
+- **Context**: what the task is linked to (or Standalone)
+- **Task Details**: type, priority, status
+- **Classification**: Source, Category, Stream, Company (standalone and project tasks only; defaults from organization settings or parent project)
+- **Time**: total time spent and Log Time button (standalone and project tasks only)
+- **People**: requestor, assignee, viewers
+- **Dates**: start and due dates
+- **Knowledge**: link knowledge articles to the task
 
 **Main content**:
 
-- **Description** — a markdown editor with support for formatting, lists, code blocks, links, and pasted images
-- **Import / Export** — import a `.docx` file into the description, or export it as PDF, DOCX, or ODT
-- **Attachments** — drag-and-drop file uploads (up to 20 MB per file)
-- **Activity** — Comments, History, and Time Log tabs
+- **Description**: a markdown editor with support for formatting, lists, code blocks, links, and pasted images
+- **Import / Export**: import a `.docx` file into the description, or export it as PDF, DOCX, or ODT
+- **Attachments**: drag-and-drop file uploads (up to 20 MB per file)
+- **Activity**: Comments, History, and Time Log tabs
 
 ### Quick actions worth knowing
 
 | Action | How |
 |--------|-----|
 | **Save** | Click **Save** or press **Ctrl+S** (Cmd+S on Mac) |
-| **Convert to Request** | Header toolbar — promotes a task into a formal portfolio request when the scope grows |
-| **Send link** | Header toolbar — email a link to colleagues or external contacts |
+| **Convert to Request** | Header toolbar. Promotes a task into a formal portfolio request when the scope grows |
+| **Send link** | Header toolbar. Email a link to colleagues or external contacts |
 | **Log time inline** | In the Comments tab, combine a comment + status change + time entry in one submit |
 | **Copy reference** | Click the reference chip (e.g., T-42) to copy it to your clipboard |
 
@@ -234,7 +234,7 @@ Not every feature is available in every context. Here is what changes:
 
 ### Classification defaults
 
-When you create a **standalone task**, KANAP pre-fills classification fields (Source, Category, Stream, Company) from your organization's default settings — saving you a few clicks. For **project tasks**, classification defaults come from the parent project but can be changed independently on each task.
+When you create a **standalone task**, KANAP pre-fills classification fields (Source, Category, Stream, Company) from your organization's default settings, saving you a few clicks. For **project tasks**, classification defaults come from the parent project but can be changed independently on each task.
 
 ---
 
@@ -252,11 +252,11 @@ The list in this guide is a starting point. Adapt it to how your IT department a
 
 ## Where to Go Next
 
-- [Tasks](../tasks.md) — full reference for statuses, CSV import/export, time tracking, and every workspace feature
+- [Tasks](../tasks.md): full reference for statuses, CSV import/export, time tracking, and every workspace feature
 - [Budget lines](../budget-lines.md): managing OPEX and CAPEX lines and their tasks
-- [Contracts](../contracts.md) — managing contracts and their tasks
-- [Portfolio Projects](../portfolio-projects.md) — project delivery, phases, effort tracking, and project-level tasks
-- [Getting Started](getting-started.md) — if you're new to KANAP
+- [Contracts](../contracts.md): managing contracts and their tasks
+- [Portfolio Projects](../portfolio-projects.md): project delivery, phases, effort tracking, and project-level tasks
+- [Getting Started](getting-started.md): if you're new to KANAP
 
 !!! success "You're ready"
     You now understand how KANAP categorizes work and how to use tasks day-to-day. When in doubt about the right work item type, ask yourself: **is it keeping things running (Run), or making things better (Build)?** Then pick the matching type. For everything else, there's a Task.

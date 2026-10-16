@@ -49,7 +49,7 @@ In a restricted library:
 
 Use restricted libraries for sensitive content (security procedures, HR documents, executive material) where you want fine-grained access control inside Knowledge instead of relying only on global roles.
 
-Restricted libraries also bound what an AI agent can read. When an administrator scopes an agent to a chosen set of libraries in its **Knowledge and web sources** settings, that choice is combined with the libraries the configuring administrator can already read — an agent never sees more than the person who set it up. A restricted library the administrator cannot access stays invisible to the agent as well.
+Restricted libraries also bound what an AI agent can read. When an administrator scopes an agent to a chosen set of libraries in its **Knowledge and web sources** settings, that choice is combined with the libraries the configuring administrator can already read: an agent never sees more than the person who set it up. A restricted library the administrator cannot access stays invisible to the agent as well.
 
 ### Folders
 
@@ -231,7 +231,7 @@ How it works:
 
 If the import encounters a lock conflict (someone else acquired the lock) or an expired lock, editing mode ends and an appropriate message is shown. Re-enter edit mode and try again.
 
-Import warnings — for example, unsupported formatting that was simplified during conversion — appear briefly as a notification at the bottom of the screen.
+Import warnings (for example, unsupported formatting that was simplified during conversion) appear briefly as a notification at the bottom of the screen.
 
 Use the import feature when migrating existing Word documents into Knowledge. It is faster and safer than copy-paste, and it preserves embedded images automatically.
 
@@ -252,7 +252,7 @@ Export does not replace the live article. The Knowledge version remains the gove
 
 ## Generating documents from chat
 
-If the AI Assistant is enabled in your KANAP, you can ask it to draft a Knowledge article for you from chat. The assistant prepares a preview that you review before anything is saved. Confirming the preview creates a real Knowledge document with the content, type, template lineage, and any relations you specified — exactly as if you had written it yourself.
+If the AI Assistant is enabled in your KANAP, you can ask it to draft a Knowledge article for you from chat. The assistant prepares a preview that you review before anything is saved. Confirming the preview creates a real Knowledge document with the content, type, template lineage, and any relations you specified, exactly as if you had written it yourself.
 
 Generated documents follow the same governance rules as hand-written ones: ownership, status, version history, locks, and review workflow all apply.
 
@@ -341,4 +341,4 @@ That distinction matters. Direct links express an intentional relationship. Rela
 - Use review for documents that drive decisions, controls, or repeatable processes.
 - Mark outdated content as archived or obsolete instead of leaving readers to guess.
 - Import Word documents when migrating existing content into Knowledge rather than copying and pasting, so that embedded images are preserved automatically.
-- Reach for restricted libraries when access matters at the library level — do not rely on folder layout to hide sensitive content.
+- Reach for restricted libraries when access matters at the library level. Do not rely on folder layout to hide sensitive content.

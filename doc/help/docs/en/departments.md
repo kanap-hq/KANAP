@@ -25,9 +25,9 @@ Navigate to **Master Data > Departments** to see your department list. Click **N
 The Departments grid gives you an overview of all departments with their headcount for a given year.
 
 **Default columns**:
-- **Name**: Department name -- click to open the workspace Overview tab
-- **Company**: Parent company -- click to open the workspace Overview tab
-- **Headcount (Year)**: Employee count for the selected year -- click to jump straight to the Details tab for editing
+- **Name**: Department name. Click to open the workspace Overview tab
+- **Company**: Parent company. Click to open the workspace Overview tab
+- **Headcount (Year)**: Employee count for the selected year. Click to jump straight to the Details tab for editing
 
 **Additional columns** (via column chooser):
 - **Status**: Enabled or Disabled
@@ -128,6 +128,6 @@ The columns:
 
 - **Match your org structure**: Mirror your HR system's department hierarchy for consistency.
 - **Update headcount annually**: Set a reminder to refresh department metrics during budget planning.
-- **Use for allocations**: Department headcount drives cost allocation calculations -- keep it accurate.
+- **Use for allocations**: Department headcount drives cost allocation calculations. Keep it accurate.
 - **Disable, don't delete**: When departments are reorganized, disable old ones rather than deleting to preserve historical data.
 - **Leverage deep-links**: Click the headcount number directly from the list to jump to the Details tab and edit metrics without an extra click.

@@ -174,7 +174,7 @@ History is the audit view. Use it when you need to answer questions such as:
 - when team assignments changed
 - whether a scoring or analysis change happened before or after a decision
 
-The list closes with the creation entry — who created the request and when — below the recorded changes, which include edits to the Purpose and Risks documents.
+The list closes with the creation entry (who created the request and when) below the recorded changes, which include edits to the Purpose and Risks documents.
 
 If you need narrative, use Comments. If you need proof, use History.
 
@@ -261,7 +261,7 @@ A request with weak dependency data may look harmless until it collides with exi
 
 ### Other relations
 
-Below dependencies, the Relations tab also lets you maintain other portfolio links — for example, related requests, related projects, or other connected business and technical objects. Each relation is autosaved.
+Below dependencies, the Relations tab also lets you maintain other portfolio links, for example related requests, related projects, or other connected business and technical objects. Each relation is autosaved.
 
 For the projects produced from this request after conversion, see the **Resulting Projects** group in the Properties drawer.
 

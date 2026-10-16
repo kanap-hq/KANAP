@@ -200,7 +200,7 @@ Contract types record how each contributor works with you. They appear as a drop
 
 Four types are created with every workspace:
 
-- **Internal** -- the default for every new contributor
+- **Internal**: the default for every new contributor
 - **External**
 - **Apprentice**
 - **Other**
@@ -216,7 +216,7 @@ Four types are created with every workspace:
 
 **To switch a type off**: Use the toggle. An inactive type disappears from the dropdown for new assignments, but contributors already on it keep it and still show it.
 
-**To delete a type**: Click the delete icon. It is only available for types you created yourself and that no contributor uses -- the count beside each type tells you how many are on it. The four built-in types can be renamed but never deleted.
+**To delete a type**: Click the delete icon. It is only available for types you created yourself and that no contributor uses. The count beside each type tells you how many are on it. The four built-in types can be renamed but never deleted.
 
 **Seed defaults**: If the list is ever empty, **Seed defaults** recreates Internal, External, Apprentice and Other.
 

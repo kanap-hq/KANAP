@@ -1,6 +1,6 @@
 # Locations
 
-Locations document where your IT infrastructure is hosted -- data centers, cloud regions, office server rooms, and colocation facilities. Assigning assets and applications to locations gives you geographic visibility, helps with capacity planning, and keeps facility contacts within reach when you need them.
+Locations document where your IT infrastructure is hosted: data centers, cloud regions, office server rooms, and colocation facilities. Assigning assets and applications to locations gives you geographic visibility, helps with capacity planning, and keeps facility contacts within reach when you need them.
 
 ## Getting started
 
@@ -9,7 +9,7 @@ Navigate to **IT Landscape -> Locations** to open the location registry. Click *
 **Required fields**:
 - **Code**: A unique short identifier (e.g., `DC-EU-WEST`, `AWS-US-EAST-1`)
 - **Name**: A descriptive display name
-- **Hosting Type**: The kind of facility -- on-premises data center, colocation, cloud region, etc.
+- **Hosting Type**: The kind of facility: on-premises data center, colocation, cloud region, etc.
 
 **Strongly recommended**:
 - **Country**: Where the location sits geographically
@@ -57,7 +57,7 @@ The Overview tab captures identity and geographic information, split into two se
 - **Name**: Display name (required)
 - **Hosting Type**: Category of facility (required). Hosting types are configurable in **IT Landscape -> Settings**.
 
-**Location details** -- the fields shown here depend on the hosting type category:
+**Location details**: the fields shown here depend on the hosting type category:
 
 For **on-premises** hosting types:
 - **Operating Company**: The company that runs the facility. Selecting a company auto-fills Country and City if they are blank.
@@ -75,7 +75,7 @@ Both categories also show:
 
 #### Sub-locations
 
-Below the main form, the **Sub-locations** panel lets you break a location into smaller physical areas -- buildings, rooms, racks, cages, or any other subdivision that makes sense for your infrastructure.
+Below the main form, the **Sub-locations** panel lets you break a location into smaller physical areas: buildings, rooms, racks, cages, or any other subdivision that makes sense for your infrastructure.
 
 Each sub-location has:
 - **Name**: A short label (e.g., "Building A - Room 1 - Rack 5")
@@ -103,7 +103,7 @@ Changes save automatically. Adding a contact or a link saves it at once, and a r
 
 ### Relations
 
-The Relations tab shows entities that are linked to this location. It is read-only -- relationships are managed from the related records themselves.
+The Relations tab shows entities that are linked to this location. It is read-only. Relationships are managed from the related records themselves.
 
 **Assets**: A table of assets hosted at this location, showing Name, Environment, Type, Provider, Region/Zone, and Status. When the location has sub-locations, an additional **Sub-location** column appears showing which sub-location each asset is assigned to. Click an asset name to jump to its workspace.
 
@@ -116,7 +116,7 @@ The Relations tab shows entities that are linked to this location. It is read-on
 From the workspace header, click **Delete** to remove a location.
 
 - Requires `locations:member` permission.
-- Linked assets are not deleted -- they are automatically unassigned (their location reference is cleared).
+- Linked assets are not deleted. They are automatically unassigned (their location reference is cleared).
 - If you have unsaved changes in the workspace, those changes are lost on deletion.
 
 ---
