@@ -8,6 +8,7 @@ import { StorageService } from '../common/storage/storage.service';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
 import { withSavepoint } from '../common/savepoint.util';
+import { IntegratedDocumentsService } from '../knowledge/integrated-documents.service';
 
 @Injectable()
 export class ApplicationsDeleteService extends BaseDeleteService<Application> {
@@ -17,6 +18,7 @@ export class ApplicationsDeleteService extends BaseDeleteService<Application> {
     @InjectRepository(Application) repository: Repository<Application>,
     audit: AuditService,
     storage: StorageService,
+    private readonly integratedDocuments: IntegratedDocumentsService,
   ) {
     super(repository, storage, audit, {
       entityName: 'Application',
@@ -48,6 +50,11 @@ export class ApplicationsDeleteService extends BaseDeleteService<Application> {
     // Attachment paths are read before the DB cascade removes their rows; the
     // files go only once the delete has gone through, so a failed delete keeps them.
     const attachments = await manager.getRepository(ApplicationAttachment).find({ where: { application_id: applicationId } as any });
+
+    // Its managed documents (overview and the other integrated slots) name it without a foreign
+    // key: they go here, as an interface's or a request's do. The application delete right covers
+    // them, so the Knowledge library rights are not checked again (no user passed).
+    await this.integratedDocuments.deleteForEntity('applications', applicationId, null, { manager });
 
     // Delete the base application row (child rows cascade via FKs)
     await appRepo.delete({ id: applicationId } as any);
