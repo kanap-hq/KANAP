@@ -21,7 +21,8 @@ import {
   ImportReportError,
   nameMatchedWarning,
   readMasterDataFile,
-  rowProblems,
+  rowError,
+  rowProblemErrors,
   writeCsv,
 } from '../common/csv-sheet';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
@@ -525,16 +526,16 @@ export class BusinessProcessesService {
 
     for (const row of rows) {
       const line = row.line;
-      const problems = rowProblems(row);
+      const problems = rowProblemErrors(row);
       if (problems.length > 0) {
-        errors.push(...problems.map((message) => ({ row: line, message })));
+        errors.push(...problems);
         continue;
       }
       const name = cellOf(row, 'name');
       const rawStatus = cellOf(row, 'status').toLowerCase();
-      if (!name) errors.push({ row: line, message: 'Name is required' });
+      if (!name) errors.push(rowError(line, 'name', 'CSV_VALUE_REQUIRED', 'Name is required'));
       if (rawStatus && rawStatus !== 'enabled' && rawStatus !== 'disabled') {
-        errors.push({ row: line, message: `Invalid status '${rawStatus}'. Use 'enabled' or 'disabled'.` });
+        errors.push(rowError(line, 'status', 'CSV_ENUM_INVALID', `Invalid status '${rawStatus}'. Use 'enabled' or 'disabled'.`, { value: rawStatus, allowed: 'enabled, disabled' }));
       }
       const body: BusinessProcessUpsertDto = {
         name,

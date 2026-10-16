@@ -322,7 +322,7 @@ function buildRow(
   const dates: CsvDataRow['dates'] = {};
   const errors: CsvDataRow['errors'] = [];
   if (hasExtra(row.cells, slots.length)) {
-    errors.push({ column: null, message: 'This row has more cells than the header.' });
+    errors.push({ column: null, message: 'This row has more cells than the header.', code: 'CSV_ROW_TOO_MANY_CELLS' });
   }
   slots.forEach((slot, index) => {
     if (!slot) return;
@@ -332,7 +332,7 @@ function buildRow(
       const parsed = parseCsvAmount(value, amountConvention ?? undefined);
       amounts[slot.id] = parsed;
       if (parsed.kind === 'invalid' && !amountsBlocked) {
-        errors.push({ column: slot.id, message: `Invalid amount '${value}'.` });
+        errors.push({ column: slot.id, message: `Invalid amount '${value}'.`, code: 'CSV_NUMBER_INVALID', params: { value } });
       }
       return;
     }
@@ -341,7 +341,7 @@ function buildRow(
       if (parsed.ok) dates[slot.id] = parsed.value;
       else if ('clear' in parsed && parsed.clear) dates[slot.id] = { kind: 'clear' };
       else if (!parsed.blank && !datesBlocked) {
-        errors.push({ column: slot.id, message: `Invalid date '${value}'.` });
+        errors.push({ column: slot.id, message: `Invalid date '${value}'.`, code: 'CSV_DATE_INVALID', params: { value } });
       }
     }
   });

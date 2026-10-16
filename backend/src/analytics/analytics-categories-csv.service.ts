@@ -12,7 +12,8 @@ import {
   MasterDataFileRead,
   nameMatchedWarning,
   readMasterDataFile,
-  rowProblems,
+  rowError,
+  rowProblemErrors,
   writeCsv,
 } from '../common/csv-sheet';
 import { csvItemLifecycle, csvLifecycleConflict } from '../spend/item-write.util';
@@ -172,12 +173,12 @@ export class AnalyticsCategoriesCsvService {
     rows.forEach((raw) => {
       // The physical line Excel shows, blank lines included.
       const line = raw.line;
-      const rowErrors: string[] = rowProblems(raw, ['disabled_at']);
+      const rowErrors: ImportReportError[] = rowProblemErrors(raw, ['disabled_at']);
       const attempt = <T>(fn: () => T): T | undefined => {
         try {
           return fn();
         } catch (err) {
-          rowErrors.push((err as Error).message);
+          rowErrors.push({ row: line, message: (err as Error).message });
           return undefined;
         }
       };
@@ -190,7 +191,7 @@ export class AnalyticsCategoriesCsvService {
       let disabledAxis: { name: string | null } | null = null;
       if (code) {
         const axis = axisByCode.get(code.toLowerCase());
-        if (!axis) rowErrors.push(`Unknown dimension '${code}'.`);
+        if (!axis) rowErrors.push(rowError(line, 'axis_code', 'CSV_REFERENCE_NOT_FOUND', `Unknown dimension '${code}'.`, { value: code }));
         else {
           axisId = axis.id;
           axisName = axis.name;
@@ -209,14 +210,14 @@ export class AnalyticsCategoriesCsvService {
       if (name && (axisId !== null || !code)) {
         const fileKey = `${axisId ?? '(default)'}|${name.toLowerCase()}`;
         const firstLine = lineByKey.get(fileKey);
-        if (firstLine) rowErrors.push(`${name} is already on row ${firstLine}.`);
+        if (firstLine) rowErrors.push(rowError(line, 'name', 'CSV_DUPLICATE_KEY', `${name} is already on row ${firstLine}.`, { columns: 'axis_code, name', firstRow: firstLine }));
         else lineByKey.set(fileKey, line);
       }
       const existing = key ? storedByKey.get(key) ?? null : null;
 
       const statusRaw = has('status') ? cellOf(raw, 'status').toLowerCase() : '';
       if (statusRaw && statusRaw !== StatusState.ENABLED && statusRaw !== StatusState.DISABLED) {
-        rowErrors.push(`Invalid status '${cellOf(raw, 'status')}'. Use 'enabled' or 'disabled'.`);
+        rowErrors.push(rowError(line, 'status', 'CSV_ENUM_INVALID', `Invalid status '${cellOf(raw, 'status')}'. Use 'enabled' or 'disabled'.`, { value: cellOf(raw, 'status'), allowed: 'enabled, disabled' }));
       }
       const status = statusRaw === StatusState.ENABLED || statusRaw === StatusState.DISABLED ? statusRaw : null;
       const disabledAtRaw = has('disabled_at') ? cellOf(raw, 'disabled_at') : '';
@@ -225,23 +226,23 @@ export class AnalyticsCategoriesCsvService {
         // A bare day at noon UTC, a full ISO timestamp kept; an unreadable cell is a row error.
         // The stored end of validity's day keeps its time of day: the export writes the day only.
         const end = endOfValidityOf(raw, 'disabled_at');
-        if (end.error) rowErrors.push(end.error);
+        if (end.error) rowErrors.push(rowError(line, 'disabled_at', 'CSV_DATE_INVALID', end.error, { value: disabledAtRaw }));
         else disabledAt = keepStoredEndOfValidity(existing?.disabled_at, end.value);
       }
       const lifecycleConflict = csvLifecycleConflict(status, disabledAt);
-      if (lifecycleConflict) rowErrors.push(lifecycleConflict);
+      if (lifecycleConflict) rowErrors.push(rowError(line, 'status', status === StatusState.ENABLED ? 'CSV_STATUS_DATE_PASSED' : 'CSV_STATUS_DATE_FUTURE', lifecycleConflict));
       // An absent column keeps what is stored (null for a new value); a blank cell clears it.
       const appliesToRaw = has('applies_to') ? cellOf(raw, 'applies_to') : '';
       const appliesTo = has('applies_to') ? csvAppliesTo(appliesToRaw) : existing?.applies_to ?? null;
       if (appliesTo === undefined) {
-        rowErrors.push(`Invalid applies_to '${appliesToRaw}'. Use 'opex', 'capex' or leave it empty.`);
+        rowErrors.push(rowError(line, 'applies_to', 'CSV_ENUM_INVALID', `Invalid applies_to '${appliesToRaw}'. Use 'opex', 'capex' or leave it empty.`, { value: appliesToRaw, allowed: 'opex, capex' }));
       } else {
         const conflict = valueAppliesToConflict({ name: axisName, applies_to: axisAppliesTo }, appliesTo);
-        if (conflict) rowErrors.push(conflict);
+        if (conflict) rowErrors.push({ row: line, message: conflict });
       }
 
       if (rowErrors.length > 0 || !name) {
-        for (const message of rowErrors) errors.push({ row: line, message });
+        errors.push(...rowErrors);
         return;
       }
       // A blank or absent status or date: enabled for a new value, the stored one on an update (`csvItemLifecycle`).

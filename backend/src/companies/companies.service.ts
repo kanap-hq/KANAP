@@ -44,7 +44,8 @@ import {
   ImportReportError,
   nameMatchedWarning,
   readMasterDataFile,
-  rowProblems,
+  rowError,
+  rowProblemErrors,
   writeCsv,
 } from '../common/csv-sheet';
 import { uploadedBytes } from '../common/upload';
@@ -886,9 +887,9 @@ export class CompaniesService {
     const normalized: { line: number; company: CompanyUpsertDto; metrics: Map<number, { headcount: number; it_users: number | null; turnover: string | null }>; lifecycle: CsvLifecycle }[] = [];
     read.rows.forEach((row) => {
       const line = row.line;
-      const problems = rowProblems(row, ['disabled_at']);
+      const problems = rowProblemErrors(row, ['disabled_at']);
       if (problems.length > 0) {
-        errors.push(...problems.map((message) => ({ row: line, message })));
+        errors.push(...problems);
         return;
       }
       const name = cellOf(row, 'name');
@@ -905,25 +906,27 @@ export class CompaniesService {
         : null;
       const disabledAtRaw = cellOf(row, 'disabled_at');
       let disabled_at_iso: string | null = null;
-      if (!name) errors.push({ row: line, message: 'name is required' });
-      if (!country_iso || country_iso.length !== 2) errors.push({ row: line, message: 'country_iso is required and must be 2 letters' });
+      if (!name) errors.push(rowError(line, 'name', 'CSV_VALUE_REQUIRED', 'name is required'));
+      if (!country_iso) errors.push(rowError(line, 'country_iso', 'CSV_VALUE_REQUIRED', 'country_iso is required and must be 2 letters'));
+      else if (country_iso.length !== 2) errors.push(rowError(line, 'country_iso', 'CSV_COUNTRY_INVALID', 'country_iso is required and must be 2 letters', { value: country_iso }));
       const base_currency = cellOf(row, 'base_currency');
-      if (!base_currency || base_currency.length !== 3) errors.push({ row: line, message: 'base_currency is required and must be 3 letters' });
+      if (!base_currency) errors.push(rowError(line, 'base_currency', 'CSV_VALUE_REQUIRED', 'base_currency is required and must be 3 letters'));
+      else if (base_currency.length !== 3) errors.push(rowError(line, 'base_currency', 'CSV_CURRENCY_INVALID', 'base_currency is required and must be 3 letters', { value: base_currency }));
       if (statusRaw && !statusValue) {
-        errors.push({ row: line, message: `Invalid status '${statusRaw}'. Use 'enabled' or 'disabled'.` });
+        errors.push(rowError(line, 'status', 'CSV_ENUM_INVALID', `Invalid status '${statusRaw}'. Use 'enabled' or 'disabled'.`, { value: statusRaw, allowed: 'enabled, disabled' }));
         return;
       }
       if (disabledAtRaw) {
         const end = endOfValidityOf(row, 'disabled_at');
         if (end.error) {
-          errors.push({ row: line, message: end.error });
+          errors.push(rowError(line, 'disabled_at', 'CSV_DATE_INVALID', end.error, { value: disabledAtRaw }));
           return;
         }
         disabled_at_iso = end.value ? end.value.toISOString() : null;
       }
       const lifecycleConflict = csvLifecycleConflict(statusValue, disabled_at_iso);
       if (lifecycleConflict) {
-        errors.push({ row: line, message: lifecycleConflict });
+        errors.push(rowError(line, 'status', statusValue === StatusState.ENABLED ? 'CSV_STATUS_DATE_PASSED' : 'CSV_STATUS_DATE_FUTURE', lifecycleConflict));
         return;
       }
       const metrics = new Map<number, { headcount: number; it_users: number | null; turnover: string | null }>();
@@ -937,19 +940,19 @@ export class CompaniesService {
         const hasAny = headcountRaw !== '' || itUsersRaw !== '' || turnoverRaw !== '';
         if (!hasAny) continue;
         if (headcountRaw === '') {
-          errors.push({ row: line, message: `${headcountKey} is required when providing metrics` });
+          errors.push(rowError(line, headcountKey, 'CSV_VALUE_REQUIRED', `${headcountKey} is required when providing metrics`));
           continue;
         }
         const headcountVal = Number(headcountRaw);
         if (!Number.isInteger(headcountVal) || headcountVal < 0) {
-          errors.push({ row: line, message: `${headcountKey} must be a non-negative integer` });
+          errors.push(rowError(line, headcountKey, 'CSV_WHOLE_NUMBER_INVALID', `${headcountKey} must be a non-negative integer`, { value: headcountRaw }));
           continue;
         }
         let itUsersVal: number | null = null;
         if (itUsersRaw !== '') {
           const parsed = Number(itUsersRaw);
           if (!Number.isInteger(parsed) || parsed < 0) {
-            errors.push({ row: line, message: `${itUsersKey} must be a non-negative integer` });
+            errors.push(rowError(line, itUsersKey, 'CSV_WHOLE_NUMBER_INVALID', `${itUsersKey} must be a non-negative integer`, { value: itUsersRaw }));
           } else {
             itUsersVal = parsed;
           }
@@ -960,12 +963,12 @@ export class CompaniesService {
           const parsed = row.amounts[turnoverKey];
           const value = parsed?.kind === 'value' ? parsed.decimal : null;
           if (!value || value.cmp(0) < 0) {
-            errors.push({ row: line, message: `${turnoverKey} must be a non-negative number` });
+            errors.push(rowError(line, turnoverKey, 'CSV_NUMBER_NEGATIVE_INVALID', `${turnoverKey} must be a non-negative number`, { value: turnoverRaw }));
           } else {
             const written = value.toString();
             const decimals = (written.split('.')[1] ?? '').length;
             if (decimals > 3) {
-              errors.push({ row: line, message: `${turnoverKey} allows up to 3 decimals` });
+              errors.push(rowError(line, turnoverKey, 'CSV_DECIMALS_TOO_MANY', `${turnoverKey} allows up to 3 decimals`, { value: turnoverRaw, max: 3 }));
             } else {
               turnoverVal = written;
             }

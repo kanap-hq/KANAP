@@ -13,6 +13,8 @@ export {
   invalidEndOfValidity,
   nameMatchedWarning,
   readMasterDataFile,
+  rowError,
+  rowProblemErrors,
   rowProblems,
 } from './master-data';
 export { csvSeparatorOf, readCsv } from './read';

@@ -131,6 +131,37 @@ export function rowProblems(row: CsvDataRow, dateFields: readonly string[] = [])
 }
 
 /**
+ * `rowProblems` as report entries: each keeps the shared reader's code and column, so the import
+ * dialog words it in the interface language. The English text stays for API clients.
+ */
+export function rowProblemErrors(row: CsvDataRow, dateFields: readonly string[] = []): ImportReportError[] {
+  return row.errors
+    .filter((error) => !(error.column !== null && dateFields.includes(error.column)))
+    .map((error) => ({
+      row: row.line,
+      message: error.column === null ? error.message : `${error.column}: ${error.message}`,
+      ...(error.column !== null ? { column: error.column } : {}),
+      ...(error.code ? { code: error.code } : {}),
+      ...(error.params ? { params: error.params } : {}),
+    }));
+}
+
+/**
+ * One coded row error on a column (`errors:CSV_*`, such as CSV_VALUE_REQUIRED or
+ * CSV_REFERENCE_NOT_FOUND): the dialog words it in the interface language; `message` stays the
+ * English text API clients have always read.
+ */
+export function rowError(
+  row: number,
+  column: string,
+  code: string,
+  message: string,
+  params?: Record<string, string | number>,
+): ImportReportError {
+  return { row, column, code, message, ...(params ? { params } : {}) };
+}
+
+/**
  * An end-of-validity cell as this column stores it: a bare day at noon UTC, a
  * full timestamp kept as given, an empty cell meaning no end. `-` and
  * anything the shared layer could not read are refused, as they were before.

@@ -33,7 +33,8 @@ import {
   ImportReportError,
   nameMatchedWarning,
   readMasterDataFile,
-  rowProblems,
+  rowError,
+  rowProblemErrors,
   writeCsv,
 } from '../common/csv-sheet';
 import { uploadedBytes } from '../common/upload';
@@ -589,9 +590,9 @@ export class DepartmentsService {
     const lineOf = new Map<object, number>();
     for (const row of read.rows) {
       const line = row.line;
-      const problems = rowProblems(row, ['disabled_at']);
+      const problems = rowProblemErrors(row, ['disabled_at']);
       if (problems.length > 0) {
-        errors.push(...problems.map((message) => ({ row: line, message })));
+        errors.push(...problems);
         continue;
       }
       const company_name = cellOf(row, 'company_name');
@@ -603,28 +604,28 @@ export class DepartmentsService {
         : null;
       const disabledAtRaw = cellOf(row, 'disabled_at');
       let disabled_at_iso: string | null = null;
-      if (!company_name) errors.push({ row: line, message: 'company_name is required' });
-      if (!name) errors.push({ row: line, message: 'name is required' });
+      if (!company_name) errors.push(rowError(line, 'company_name', 'CSV_VALUE_REQUIRED', 'company_name is required'));
+      if (!name) errors.push(rowError(line, 'name', 'CSV_VALUE_REQUIRED', 'name is required'));
       if (statusRaw && !statusValue) {
-        errors.push({ row: line, message: `Invalid status '${statusRaw}'. Use 'enabled' or 'disabled'.` });
+        errors.push(rowError(line, 'status', 'CSV_ENUM_INVALID', `Invalid status '${statusRaw}'. Use 'enabled' or 'disabled'.`, { value: statusRaw, allowed: 'enabled, disabled' }));
         continue;
       }
       if (disabledAtRaw) {
         const end = endOfValidityOf(row, 'disabled_at');
         if (end.error) {
-          errors.push({ row: line, message: end.error });
+          errors.push(rowError(line, 'disabled_at', 'CSV_DATE_INVALID', end.error, { value: disabledAtRaw }));
           continue;
         }
         disabled_at_iso = end.value ? end.value.toISOString() : null;
       }
       const lifecycleConflict = csvLifecycleConflict(statusValue, disabled_at_iso);
       if (lifecycleConflict) {
-        errors.push({ row: line, message: lifecycleConflict });
+        errors.push(rowError(line, 'status', statusValue === StatusState.ENABLED ? 'CSV_STATUS_DATE_PASSED' : 'CSV_STATUS_DATE_FUTURE', lifecycleConflict));
         continue;
       }
       if (company_name) {
         const comp = await findCompanyByName(company_name);
-        if (!comp) errors.push({ row: line, message: `Unknown company '${company_name}'` });
+        if (!comp) errors.push(rowError(line, 'company_name', 'CSV_REFERENCE_NOT_FOUND', `Unknown company '${company_name}'`, { value: company_name }));
         else {
           const item = {
             company_id: comp.id,

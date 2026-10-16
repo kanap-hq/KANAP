@@ -11,7 +11,9 @@ import {
   keepStoredEndOfValidity,
   MasterDataFileRead,
   readMasterDataFile,
-  rowProblems,
+  ImportReportError,
+  rowError,
+  rowProblemErrors,
   writeCsv,
 } from '../common/csv-sheet';
 import { csvItemLifecycle, csvLifecycleConflict } from '../spend/item-write.util';
@@ -168,13 +170,13 @@ export class CostCentersCsvService {
     rows.forEach((raw) => {
       // The physical line Excel shows, blank lines included.
       const line = raw.line;
-      const rowErrors: string[] = rowProblems(raw, ['disabled_at']);
+      const rowErrors: ImportReportError[] = rowProblemErrors(raw, ['disabled_at']);
       parentCodes.push({ line, parentCode: cellOf(raw, 'parent_code') });
       const attempt = <T>(fn: () => T): T | undefined => {
         try {
           return fn();
         } catch (err) {
-          rowErrors.push((err as Error).message);
+          rowErrors.push({ row: line, message: (err as Error).message });
           return undefined;
         }
       };
@@ -184,7 +186,7 @@ export class CostCentersCsvService {
       const existing = code ? storedByCode.get(code.toLowerCase()) ?? null : null;
       if (code) {
         const firstLine = lineByCode.get(code.toLowerCase());
-        if (firstLine) rowErrors.push(`Code ${code} is already used on row ${firstLine}.`);
+        if (firstLine) rowErrors.push(rowError(line, 'code', 'CSV_DUPLICATE_KEY', `Code ${code} is already used on row ${firstLine}.`, { columns: 'code', firstRow: firstLine }));
         else lineByCode.set(code.toLowerCase(), line);
       }
 
@@ -194,9 +196,11 @@ export class CostCentersCsvService {
         const matches = companiesByName.get(companyName.toLowerCase()) ?? [];
         const company = matches.find((entry) => entry.name.trim() === companyName) ?? (matches.length === 1 ? matches[0] : undefined);
         if (!company) {
-          rowErrors.push(matches.length > 1 ? `Company name '${companyName}' matches several companies.` : `Unknown company '${companyName}'.`);
+          rowErrors.push(matches.length > 1
+            ? { row: line, message: `Company name '${companyName}' matches several companies.` }
+            : rowError(line, 'company_name', 'CSV_REFERENCE_NOT_FOUND', `Unknown company '${companyName}'.`, { value: companyName }));
         } else if (company.id !== existing?.company_id && !isActiveAt(company.disabled_at)) {
-          rowErrors.push(`Company '${companyName}' is disabled.`);
+          rowErrors.push({ row: line, message: `Company '${companyName}' is disabled.` });
         } else {
           companyId = company.id;
         }
@@ -206,15 +210,15 @@ export class CostCentersCsvService {
       const ownerEmail = cellOf(raw, 'owner_email');
       if (ownerEmail) {
         const user = usersByEmail.get(ownerEmail.toLowerCase());
-        if (!user) rowErrors.push(`Unknown budget holder email '${ownerEmail}'.`);
+        if (!user) rowErrors.push(rowError(line, 'owner_email', 'CSV_REFERENCE_NOT_FOUND', `Unknown budget holder email '${ownerEmail}'.`, { value: ownerEmail }));
         else if (user.id !== existing?.owner_user_id && user.status !== 'enabled') {
-          rowErrors.push(`Budget holder '${ownerEmail}' is not an active user.`);
+          rowErrors.push({ row: line, message: `Budget holder '${ownerEmail}' is not an active user.` });
         } else ownerId = user.id;
       }
 
       const statusRaw = cellOf(raw, 'status').toLowerCase();
       if (statusRaw && statusRaw !== StatusState.ENABLED && statusRaw !== StatusState.DISABLED) {
-        rowErrors.push(`Invalid status '${cellOf(raw, 'status')}'. Use 'enabled' or 'disabled'.`);
+        rowErrors.push(rowError(line, 'status', 'CSV_ENUM_INVALID', `Invalid status '${cellOf(raw, 'status')}'. Use 'enabled' or 'disabled'.`, { value: cellOf(raw, 'status'), allowed: 'enabled, disabled' }));
       }
       const status = statusRaw === StatusState.ENABLED || statusRaw === StatusState.DISABLED ? statusRaw : null;
       const disabledAtRaw = hasDisabledAt ? cellOf(raw, 'disabled_at') : '';
@@ -223,14 +227,14 @@ export class CostCentersCsvService {
         // A bare day at noon UTC, a full ISO timestamp kept; an unreadable cell is a row error.
         // The stored end of validity's day keeps its time of day: the export writes the day only.
         const end = endOfValidityOf(raw, 'disabled_at');
-        if (end.error) rowErrors.push(end.error);
+        if (end.error) rowErrors.push(rowError(line, 'disabled_at', 'CSV_DATE_INVALID', end.error, { value: disabledAtRaw }));
         else disabledAt = keepStoredEndOfValidity(existing?.disabled_at, end.value);
       }
       const lifecycleConflict = csvLifecycleConflict(status, disabledAt);
-      if (lifecycleConflict) rowErrors.push(lifecycleConflict);
+      if (lifecycleConflict) rowErrors.push(rowError(line, 'status', status === StatusState.ENABLED ? 'CSV_STATUS_DATE_PASSED' : 'CSV_STATUS_DATE_FUTURE', lifecycleConflict));
 
       if (rowErrors.length > 0 || !code || !kind || !name) {
-        for (const message of rowErrors) errors.push({ row: line, message });
+        errors.push(...rowErrors);
         return;
       }
       // Blank status or date: enabled for a new node, the stored value on an update (`csvItemLifecycle`).
