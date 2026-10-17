@@ -345,8 +345,11 @@ export class NvdFeedService implements OnModuleInit {
           [txids],
         );
         const status = new Map(rows.map((r) => [r.txid, r.status]));
-        const ready = this.afterCommit.filter((item) => status.get(item.txid) === 'committed');
-        this.afterCommit = this.afterCommit.filter((item) => status.get(item.txid) === 'in progress' && Date.now() - item.queuedAt < 10 * 60_000);
+        // Only the items whose status was read: one queued during the read waits for the next turn.
+        const asked = new Set(txids);
+        const ready = this.afterCommit.filter((item) => asked.has(item.txid) && status.get(item.txid) === 'committed');
+        this.afterCommit = this.afterCommit.filter((item) => !asked.has(item.txid)
+          || (status.get(item.txid) === 'in progress' && Date.now() - item.queuedAt < 10 * 60_000));
         for (const item of ready) {
           try {
             await withTenant(this.dataSource, item.tenantId, (mg) => this.matcher.matchTenant(mg, item.tenantId, item.technologyId));
