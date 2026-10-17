@@ -7,6 +7,7 @@ import { withTenant } from '../../common/tenant-runner';
 import { assert, runSpecs } from '../../spend/__tests__/round-inputs.fixtures';
 import { NVD_MAX_WINDOW_MS, NvdFeedService, type FeedRuntime } from '../nvd-feed.service';
 import { VulnerabilityMatchService } from '../vulnerability-match.service';
+import { Features } from '../../config/features';
 
 // The NVD feed (lot T6a) against a fake NVD served on 127.0.0.1, never the real one: pagination,
 // first pass then incremental windows, a failure retried then resumed at the next run, the cadence
@@ -241,6 +242,38 @@ async function testRunMatchesTenants() {
   }
 }
 
+/**
+ * Collection on demand (lot T6b): a product new to the feed is collected once, right away, even
+ * asked twice at the same time; a collected product is not asked again; nothing while the feed is off.
+ */
+async function testOnDemand() {
+  reset();
+  const GAMMA = 'a:kanapspec:ondemand1';
+  const DELTA = 'a:kanapspec:ondemand2';
+  handler = (s) => ({ status: 200, body: { totalResults: 1, vulnerabilities: [cveItem(s.product === GAMMA ? 'CVE-2098-60001' : 'CVE-2098-60002', s.product)] } });
+  const saved = Features.VULNERABILITY_FEED_ENABLED;
+  const tenantId = '00000000-0000-4000-8000-00000000d06e';
+  try {
+    (Features as any).VULNERABILITY_FEED_ENABLED = false;
+    await feed([]).collectNew(tenantId, [GAMMA], runtime());
+    assert.equal(seen.length, 0, 'feed off: nothing is asked');
+    (Features as any).VULNERABILITY_FEED_ENABLED = true;
+    const service = feed([]);
+    assert.deepEqual(await service.neverCollected([GAMMA.toUpperCase(), DELTA]), [GAMMA, DELTA], 'never collected yet');
+    await service.collectNew(tenantId, [GAMMA], runtime());
+    assert.deepEqual(seen.map((s) => s.product), [GAMMA], 'the new product, once, at once');
+    assert.ok((await lastSuccess(GAMMA))?.last_success_at, 'collected');
+    await service.collectNew(tenantId, [GAMMA], runtime());
+    assert.equal(seen.length, 1, 'a collected product is not asked again');
+    // Two requests at once, from two services of the process or one: one collection.
+    await Promise.all([service.collectNew(tenantId, [DELTA], runtime()), service.collectNew(tenantId, [DELTA], runtime()), feed([]).collectNew(tenantId, [DELTA], runtime())]);
+    assert.deepEqual(seen.map((s) => s.product), [GAMMA, DELTA], 'one collection for simultaneous requests');
+    assert.deepEqual(await service.neverCollected([GAMMA, DELTA]), []);
+  } finally {
+    (Features as any).VULNERABILITY_FEED_ENABLED = saved;
+  }
+}
+
 async function main() {
   const fake = await serve();
   baseUrl = fake.baseUrl;
@@ -254,6 +287,7 @@ async function main() {
       ['product errors do not stop the run', testProductErrorsDoNotStop],
       ['windows of at most 120 days', testLongGap],
       ['matching after a run', testRunMatchesTenants],
+      ['collection on demand', testOnDemand],
       ['clean end', cleanup],
     ]);
   } finally {

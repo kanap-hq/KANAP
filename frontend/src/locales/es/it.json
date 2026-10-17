@@ -367,6 +367,7 @@
       "section": {
         "title": "Vulnerabilidades",
         "empty": "Ninguna vulnerabilidad conocida afecta a esta tecnología.",
+        "searching": "Búsqueda de vulnerabilidades en curso…",
         "loadFailed": "No se pudieron cargar las vulnerabilidades.",
         "rematch": "Volver a cotejar",
         "rematched": "Cotejo rehecho: {{added}} nuevas, {{removed}} retiradas.",

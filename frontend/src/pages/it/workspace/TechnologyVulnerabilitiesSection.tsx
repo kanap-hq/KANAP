@@ -44,11 +44,16 @@ export default function TechnologyVulnerabilitiesSection({ technologyId, canEdit
   const [busy, setBusy] = useState(false);
   const query = useQuery({
     queryKey: ['vulnerabilities', 'technology', technologyId],
-    queryFn: async () => (await api.get<{ technology: { id: string; reference: string | null }; items: TechnologyVulnerabilityRow[] }>(
-      `/technologies/${technologyId}/vulnerabilities`,
-    )).data,
+    queryFn: async () => (await api.get<{
+      technology: { id: string; reference: string | null };
+      products?: Array<{ product: string; status: 'collected' | 'pending' | 'failed' }>;
+      items: TechnologyVulnerabilityRow[];
+    }>(`/technologies/${technologyId}/vulnerabilities`)).data,
     enabled,
+    // While the feed collects a new product of the technology, read again every 10 seconds.
+    refetchInterval: (q) => ((q.state.data?.products ?? []).some((p) => p.status === 'pending') ? 10_000 : false),
   });
+  const searching = (query.data?.products ?? []).some((p) => p.status === 'pending');
   const rows = query.data?.items ?? [];
   const cveCount = new Set(rows.map((row) => row.cve_id)).size;
   // The page's technology filter takes the reference: a raw id would show in it.
@@ -87,7 +92,8 @@ export default function TechnologyVulnerabilitiesSection({ technologyId, canEdit
           </Button>
         </Box>
       )}
-      {query.data && rows.length === 0 && <RelationsEmpty>{t('pages.vulnerabilities.section.empty')}</RelationsEmpty>}
+      {searching && <RelationsEmpty>{t('pages.vulnerabilities.section.searching')}</RelationsEmpty>}
+      {query.data && rows.length === 0 && !searching && <RelationsEmpty>{t('pages.vulnerabilities.section.empty')}</RelationsEmpty>}
       {query.isError && <RelationsEmpty>{t('pages.vulnerabilities.section.loadFailed')}</RelationsEmpty>}
       {rows.length > 0 && (
         <RelationsTable

@@ -367,6 +367,7 @@
       "section": {
         "title": "Vulnerabilities",
         "empty": "No known vulnerability concerns this technology.",
+        "searching": "Searching for vulnerabilities…",
         "loadFailed": "The vulnerabilities could not be loaded.",
         "rematch": "Match again",
         "rematched": "Matched again: {{added}} new, {{removed}} removed.",

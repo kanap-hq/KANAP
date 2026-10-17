@@ -367,6 +367,7 @@
       "section": {
         "title": "Schwachstellen",
         "empty": "Keine bekannte Schwachstelle betrifft diese Technologie.",
+        "searching": "Suche nach Schwachstellen läuft…",
         "loadFailed": "Die Schwachstellen konnten nicht geladen werden.",
         "rematch": "Erneut abgleichen",
         "rematched": "Erneut abgeglichen: {{added}} neu, {{removed}} entfernt.",

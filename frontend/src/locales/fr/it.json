@@ -367,6 +367,7 @@
       "section": {
         "title": "Vulnérabilités",
         "empty": "Aucune vulnérabilité connue ne concerne cette technologie.",
+        "searching": "Recherche des vulnérabilités en cours…",
         "loadFailed": "Les vulnérabilités n'ont pas pu être chargées.",
         "rematch": "Rapprocher à nouveau",
         "rematched": "Rapprochement refait : {{added}} nouvelles, {{removed}} retirées.",

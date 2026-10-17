@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { NvdFeedService } from './nvd-feed.service';
 import type { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { applicationParticipantCondition, type ParticipationAccessScope } from '../auth/business-contributor-scope';
@@ -208,6 +209,7 @@ export class VulnerabilitiesService {
     private readonly reach: TechnologyReachService,
     private readonly matcher: VulnerabilityMatchService,
     private readonly audit: AuditService,
+    @Optional() private readonly feed?: NvdFeedService,
   ) {}
 
   /** The WHERE clause of the filters, on `tv` (rows), `t` (technologies) and `c` (cache). */
@@ -525,7 +527,31 @@ export class VulnerabilitiesService {
       .sort((a, b) => (rank[b.severity ?? ''] ?? 0) - (rank[a.severity ?? ''] ?? 0)
         || (b.cvss_score ?? -1) - (a.cvss_score ?? -1)
         || b.cve_id.localeCompare(a.cve_id));
-    return { technology: { id: tech.id, name: tech.name, reference: technologyReference(tech.item_number) }, items };
+    return {
+      technology: { id: tech.id, name: tech.name, reference: technologyReference(tech.item_number) },
+      products: await this.productStates(mg, tech.cpe_products),
+      items,
+    };
+  }
+
+  /**
+   * Where the feed stands on each CPE product of a technology (lot T6b): `collected` (its CVE are in
+   * the cache), `failed` (never collected, the last attempt failed), `pending` (never collected yet:
+   * the section says the search is under way).
+   */
+  private async productStates(mg: EntityManager, cpeProducts: unknown) {
+    const products = Array.from(new Set((Array.isArray(cpeProducts) ? cpeProducts : []).map((p) => String(p).toLowerCase())));
+    if (products.length === 0) return [];
+    const rows: Array<{ product: string; last_success_at: Date | null; last_error: string | null }> = await mg.query(
+      `SELECT product, last_success_at, last_error FROM vulnerability_feed_products WHERE product = ANY($1::text[])`,
+      [products],
+    );
+    const byProduct = new Map(rows.map((r) => [r.product, r]));
+    return products.map((product) => {
+      const row = byProduct.get(product);
+      const status = row?.last_success_at ? 'collected' : row?.last_error ? 'failed' : 'pending';
+      return { product, status };
+    });
   }
 
   /**
@@ -685,7 +711,10 @@ export class VulnerabilitiesService {
     const { manager: mg, tenantId } = opts;
     const tech = await readTechnology(mg, tenantId, idOrRef, true);
     const result = await this.matcher.matchTenant(mg, tenantId, tech.id);
-    return { ok: true, added: result.added, updated: result.updated, removed: result.removed, unmatched: result.unmatched };
+    // Its products the feed never collected are collected now, in the background (then matched).
+    const fresh = this.feed ? await this.feed.neverCollected((tech.cpe_products ?? []) as string[]) : [];
+    if (fresh.length > 0) void this.feed!.collectNew(tenantId, fresh);
+    return { ok: true, added: result.added, updated: result.updated, removed: result.removed, unmatched: result.unmatched, collecting: fresh };
   }
 
   /** The list as a CSV file, one line per technology version and CVE, with the same filters. */

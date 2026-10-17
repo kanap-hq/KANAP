@@ -84,6 +84,15 @@ describe('TechnologyVulnerabilitiesSection', () => {
     expect(getMock).not.toHaveBeenCalled();
   });
 
+  it('says in one line that the search is under way while a product is being collected', async () => {
+    getMock.mockResolvedValue({
+      data: { technology: { id: 'tech-1', reference: 'TEC-7' }, products: [{ product: 'a:apache:tomcat', status: 'pending' }], items: [] },
+    } as any);
+    renderSection(true);
+    expect(await screen.findByText('Searching for vulnerabilities…')).toBeTruthy();
+    expect(screen.queryByText('No known vulnerability concerns this technology.')).toBeNull();
+  });
+
   it('says in one line that nothing concerns the technology', async () => {
     getMock.mockResolvedValue({ data: { technology: { id: 'tech-1', reference: 'TEC-7' }, items: [] } } as any);
     renderSection(true);

@@ -1,4 +1,6 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, Optional } from '@nestjs/common';
+import { NeverRejects } from '../common/never-rejects';
+import { TechnologyCpeEvents, type CpeProductsAdded } from '../technologies/technology-cpe-events';
 import { DataSource, EntityManager } from 'typeorm';
 import { ScheduledTasksService } from '../admin/scheduled-tasks/scheduled-tasks.service';
 import { withTenant } from '../common/tenant-runner';
@@ -205,15 +207,19 @@ export class NvdFeedService implements OnModuleInit {
   private lastRequestAt = 0;
   /** The CVE of the current run whose severity rose to critical or high (`store`), for the notifications. */
   private raisedCves = new Set<string>();
+  /** The collections on demand of this process, one after the other. */
+  private onDemand: Promise<void> = Promise.resolve();
 
   constructor(
     private readonly dataSource: DataSource,
     private readonly scheduledTasks: ScheduledTasksService,
     private readonly matcher: VulnerabilityMatchService,
     private readonly notifier: VulnerabilityNotificationsService,
+    @Optional() private readonly cpeEvents?: TechnologyCpeEvents,
   ) {}
 
   onModuleInit() {
+    this.cpeEvents?.subscribe((event) => this.onCpeProductsAdded(event));
     if (!Features.VULNERABILITY_FEED_ENABLED) return;
     this.scheduledTasks.register({
       name: NVD_FEED_TASK_NAME,
@@ -293,6 +299,83 @@ export class NvdFeedService implements OnModuleInit {
     return summary;
   }
 
+  /**
+   * A technology received CPE products (creation, edition, adoption): it is matched at once with
+   * the cache, in the caller's transaction, and the products the feed never collected are collected
+   * in the background, then the tenant is matched again (lot T6b). Nothing while the feed is off.
+   * These first matches send no email: the next runs find their rows already there.
+   */
+  async onCpeProductsAdded(event: CpeProductsAdded): Promise<void> {
+    if (!Features.VULNERABILITY_FEED_ENABLED) return;
+    await this.matcher.matchTenant(event.manager, event.tenantId, event.technologyId);
+    const fresh = await this.neverCollected(event.products);
+    if (fresh.length > 0) void this.collectNew(event.tenantId, fresh);
+  }
+
+  /** Of `products`, those the feed never collected (no success yet), in lower case. */
+  async neverCollected(products: string[]): Promise<string[]> {
+    const wanted = Array.from(new Set(products.map((p) => String(p).trim().toLowerCase()).filter(Boolean)));
+    if (wanted.length === 0) return [];
+    const done: Array<{ product: string }> = await this.dataSource.query(
+      `SELECT product FROM vulnerability_feed_products WHERE product = ANY($1::text[]) AND last_success_at IS NOT NULL`,
+      [wanted],
+    );
+    const collected = new Set(done.map((r) => r.product));
+    return wanted.filter((p) => !collected.has(p));
+  }
+
+  /**
+   * Collects products never collected, now, in the background, then matches the tenant: the same
+   * collection as the scheduled run (cadence, retries, first pass by pages), one at a time in this
+   * process and under the scheduled task's lock across processes (it waits for a run in progress;
+   * a run that starts meanwhile is skipped by the scheduler). Never rejects.
+   */
+  @NeverRejects()
+  async collectNew(tenantId: string, products: string[], runtime: FeedRuntime = defaultRuntime()): Promise<void> {
+    if (!Features.VULNERABILITY_FEED_ENABLED) return;
+    const next = this.onDemand.then(() => this.collectNewNow(tenantId, products, runtime));
+    this.onDemand = next.catch(() => undefined);
+    await next;
+  }
+
+  private async collectNewNow(tenantId: string, products: string[], runtime: FeedRuntime): Promise<void> {
+    if ((await this.neverCollected(products)).length === 0) return;
+    const runner = this.dataSource.createQueryRunner();
+    await runner.connect();
+    try {
+      await runner.query(`SELECT pg_advisory_lock(hashtext($1))`, [NVD_FEED_TASK_NAME]);
+      try {
+        // Collected by a run or by another process while this one waited: nothing left to do.
+        const fresh = await this.neverCollected(products);
+        if (fresh.length === 0) return;
+        const summary: FeedSummary = { products: fresh.length, requests: 0, cves: 0, failed_products: [], errors: [], tenants_matched: 0, rows_added: 0, rows_removed: 0 };
+        for (const product of fresh) {
+          try {
+            await this.collectProduct(product, runtime, summary);
+          } catch (error: any) {
+            await this.recordFailure(product, error);
+            this.logger.warn(`[${NVD_FEED_TASK_NAME}] ${product} on demand: ${String(error?.message ?? error).slice(0, 300)}`);
+          }
+        }
+      } finally {
+        await runner.query(`SELECT pg_advisory_unlock(hashtext($1))`, [NVD_FEED_TASK_NAME]).catch(() => undefined);
+      }
+    } finally {
+      await runner.release();
+    }
+    await withTenant(this.dataSource, tenantId, (mg) => this.matcher.matchTenant(mg, tenantId));
+  }
+
+  /** A product's failure, kept for the next run and for the technology's section. */
+  private async recordFailure(product: string, error: any): Promise<void> {
+    const message = String(error?.message ?? error).slice(0, 500);
+    await this.dataSource.query(
+      `INSERT INTO vulnerability_feed_products (product, last_attempt_at, last_error) VALUES ($1, now(), $2)
+       ON CONFLICT (product) DO UPDATE SET last_attempt_at = now(), last_error = EXCLUDED.last_error`,
+      [product, message],
+    ).catch(() => undefined);
+  }
+
   /** Fills the cache for every followed product; a product that fails is retried at the next run. */
   async collect(runtime: FeedRuntime = defaultRuntime()): Promise<FeedSummary> {
     const summary: FeedSummary = { products: 0, requests: 0, cves: 0, failed_products: [], errors: [], tenants_matched: 0, rows_added: 0, rows_removed: 0 };
@@ -326,11 +409,7 @@ export class NvdFeedService implements OnModuleInit {
         const message = String(error?.message ?? error).slice(0, 500);
         summary.failed_products.push(product);
         summary.errors.push(`${product}: ${message}`);
-        await this.dataSource.query(
-          `INSERT INTO vulnerability_feed_products (product, last_attempt_at, last_error) VALUES ($1, now(), $2)
-           ON CONFLICT (product) DO UPDATE SET last_attempt_at = now(), last_error = EXCLUDED.last_error`,
-          [product, message],
-        ).catch(() => undefined);
+        await this.recordFailure(product, error);
       }
     }
     const skipped = summary.failed_products.length - summary.errors.length;

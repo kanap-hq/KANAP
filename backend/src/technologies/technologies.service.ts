@@ -1,4 +1,5 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { addedCpeProducts, TechnologyCpeEvents } from './technology-cpe-events';
 import type { EntityManager } from 'typeorm';
 import { randomUUID } from 'crypto';
 import * as path from 'path';
@@ -122,6 +123,7 @@ export class TechnologiesService {
     private readonly itOps: ItOpsSettingsService,
     private readonly reach: TechnologyReachService,
     private readonly storage: StorageService,
+    @Optional() private readonly cpeEvents?: TechnologyCpeEvents,
   ) {}
 
   // ==================== LIST AND RECORD ====================
@@ -266,6 +268,7 @@ export class TechnologiesService {
     );
     const row = await readTechnology(mg, tenantId, created.id);
     await this.audit.log({ table: 'technologies', recordId: row.id, action: 'create', before: null, after: row, userId: opts.userId ?? null }, { manager: mg });
+    await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId: row.id, products: addedCpeProducts([], row.cpe_products) });
     return this.get(row.id, opts);
   }
 
@@ -286,6 +289,7 @@ export class TechnologiesService {
       );
       const after = await readTechnology(mg, tenantId, before.id);
       await this.audit.log({ table: 'technologies', recordId: before.id, action: 'update', before, after, userId: opts.userId ?? null }, { manager: mg });
+      await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId: before.id, products: addedCpeProducts(before.cpe_products, after.cpe_products) });
     }
     return this.get(before.id, opts);
   }
