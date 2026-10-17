@@ -273,6 +273,8 @@ export class NvdFeedService implements OnModuleInit {
   /** The scheduled run: collect, then match every tenant and tell the owners what is new. */
   async run(runtime: FeedRuntime = defaultRuntime()): Promise<FeedSummary> {
     this.raisedCves = new Set();
+    // The rows detected from now on, whatever writes them, are this run's news (notifications).
+    const [{ started }]: Array<{ started: Date }> = await this.dataSource.query(`SELECT clock_timestamp() AS started`);
     const summary = await this.collect(runtime);
     const raised = Array.from(this.raisedCves);
     const notified = await this.notifiedTenantIds();
@@ -287,11 +289,11 @@ export class NvdFeedService implements OnModuleInit {
         summary.errors.push(`Matching of tenant ${tenantId}: ${error?.message ?? error}`);
         continue;
       }
-      if (!notified.has(tenantId) || (result.addedIds.length === 0 && raised.length === 0)) continue;
+      if (!notified.has(tenantId)) continue;
       try {
         // Claimed once the matching has committed, in its own transaction; sent without awaiting.
         // What is not claimed now is never announced later (vulnerability-notifications.service.ts).
-        const digests = await withTenant(this.dataSource, tenantId, (mg) => this.notifier.claim(mg, tenantId, result.addedIds, raised));
+        const digests = await withTenant(this.dataSource, tenantId, (mg) => this.notifier.claim(mg, tenantId, started, raised));
         void this.notifier.send(tenantId, digests);
       } catch (error: any) {
         summary.errors.push(`Notifications of tenant ${tenantId}: ${error?.message ?? error}`);
