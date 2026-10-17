@@ -159,6 +159,8 @@ describe('VulnerabilitiesPage', () => {
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'State of 9.0.80' }));
     fireEvent.click(await screen.findByRole('option', { name: 'Handled' }));
     await waitFor(() => expect(patchMock).toHaveBeenCalledWith(`/technologies/tech-1/vulnerabilities/${CVE}`, { state: 'handled', technology_version_id: 'v-980' }));
+    await waitFor(() => expect(grid.props!.refreshKey).toBe(1));
+    expect(screen.getByTestId('vulnerability-detail')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     await waitFor(() => expect(screen.queryByTestId('vulnerability-detail')).toBeNull());
   });

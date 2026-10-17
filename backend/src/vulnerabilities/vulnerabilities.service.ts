@@ -424,7 +424,13 @@ export class VulnerabilitiesService {
         LIMIT ${limit} OFFSET ${offset}`,
       params,
     );
-    const total = Number(page[0]?.total ?? 0);
+    let total = Number(page[0]?.total ?? 0);
+    if (page.length === 0 && offset > 0) {
+      // A page past the end (the grid refreshing a block emptied by a change in bulk): the real
+      // total, never 0, or the grid would empty itself.
+      const [{ n }] = await mg.query(`SELECT count(DISTINCT tv.cve_id)::int AS n ${this.rowsFrom} WHERE tv.tenant_id = $1 ${where}`, params);
+      total = Number(n ?? 0);
+    }
     if (!paging && total > EXPORT_LIMIT) {
       throw new BadRequestException(`More than ${EXPORT_LIMIT} vulnerabilities match: narrow the filters to export them.`);
     }

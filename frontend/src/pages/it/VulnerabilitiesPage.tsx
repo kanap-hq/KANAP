@@ -168,7 +168,7 @@ function VersionStateRow({ technologyId, cveId, version, canEdit, onSaved }: {
 }
 
 /** One CVE in the side panel: what it says, what it touches, and its state per technology version. */
-function VulnerabilityDetailPanel({ cveId, canEdit }: { cveId: string; canEdit: boolean }) {
+function VulnerabilityDetailPanel({ cveId, canEdit, onChanged }: { cveId: string; canEdit: boolean; onChanged?: () => void }) {
   const { t } = useTranslation('it');
   const queryClient = useQueryClient();
   const detail = useQuery({
@@ -179,7 +179,11 @@ function VulnerabilityDetailPanel({ cveId, canEdit }: { cveId: string; canEdit: 
     return <ReportDataStatus loading={detail.isLoading} error={detail.isError} onRetry={() => void detail.refetch()} />;
   }
   const d = detail.data;
-  const onSaved = () => { void queryClient.invalidateQueries({ queryKey: ['vulnerabilities'] }); };
+  // The panel stays open; the grid, which does not read react-query, is refreshed by its caller.
+  const onSaved = () => {
+    void queryClient.invalidateQueries({ queryKey: ['vulnerabilities'] });
+    onChanged?.();
+  };
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }} data-testid="vulnerability-detail">
       <Box>
@@ -541,7 +545,7 @@ export default function VulnerabilitiesPage() {
               <Typography component="h2" sx={{ fontFamily: MONO_FONT_FAMILY, fontSize: 15, fontWeight: 500 }}>{openCve}</Typography>
               <IconButton size="small" aria-label={t('pages.vulnerabilities.panel.close')} onClick={() => setOpenCve(null)}><CloseIcon fontSize="small" /></IconButton>
             </Stack>
-            <VulnerabilityDetailPanel cveId={openCve} canEdit={canEdit} />
+            <VulnerabilityDetailPanel cveId={openCve} canEdit={canEdit} onChanged={() => setRefreshKey((k) => k + 1)} />
           </Box>
         )}
       </Drawer>
