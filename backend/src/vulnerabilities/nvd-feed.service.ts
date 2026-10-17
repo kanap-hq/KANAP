@@ -395,9 +395,9 @@ export class NvdFeedService implements OnModuleInit {
     try {
       await runner.query(`SELECT pg_advisory_lock(hashtext($1))`, [NVD_FEED_TASK_NAME]);
       try {
-        // Collected by a run or by another process while this one waited: nothing left to do.
+        // Collected by a run or by another request while this one waited: nothing to collect, but the
+        // tenant is still matched below (it asked for these products).
         const fresh = await this.neverCollected(products);
-        if (fresh.length === 0) return;
         const summary: FeedSummary = { products: fresh.length, requests: 0, cves: 0, failed_products: [], errors: [], tenants_matched: 0, rows_added: 0, rows_removed: 0 };
         for (const product of fresh) {
           try {

@@ -274,6 +274,27 @@ async function testOnDemand() {
   }
 }
 
+/** The review's P8: a second tenant that asks for the same new product, collected by the first request, is matched too. */
+async function testSecondTenantMatched() {
+  reset();
+  const EPSILON = 'a:kanapspec:ondemand3';
+  handler = (s) => ({ status: 200, body: { totalResults: 1, vulnerabilities: [cveItem('CVE-2098-60003', s.product)] } });
+  const saved = Features.VULNERABILITY_FEED_ENABLED;
+  const matched: string[] = [];
+  const matcher = { matchTenant: async (_mg: unknown, tenantId: string) => { matched.push(tenantId); return { addedIds: [] }; } };
+  const instance = () => new SpecFeed(dataSource, { register: () => false } as any, matcher as any, { claim: async () => [], send: async () => undefined } as any);
+  try {
+    (Features as any).VULNERABILITY_FEED_ENABLED = true;
+    const A = '00000000-0000-4000-8000-0000000000a1';
+    const B = '00000000-0000-4000-8000-0000000000b2';
+    await Promise.all([instance().collectNew(A, [EPSILON], runtime()), instance().collectNew(B, [EPSILON], runtime())]);
+    assert.equal(seen.filter((s) => s.product === EPSILON).length, 1, 'collected once');
+    assert.deepEqual(matched.sort(), [A, B], 'both tenants matched');
+  } finally {
+    (Features as any).VULNERABILITY_FEED_ENABLED = saved;
+  }
+}
+
 async function main() {
   const fake = await serve();
   baseUrl = fake.baseUrl;
@@ -288,6 +309,7 @@ async function main() {
       ['windows of at most 120 days', testLongGap],
       ['matching after a run', testRunMatchesTenants],
       ['collection on demand', testOnDemand],
+      ['a second tenant asking for the same product is matched', testSecondTenantMatched],
       ['clean end', cleanup],
     ]);
   } finally {
