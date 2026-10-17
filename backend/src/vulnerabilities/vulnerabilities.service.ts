@@ -53,9 +53,14 @@ function overallState(rows: Array<{ state: string }>): VulnerabilityState {
 /** A grid date filter (`equals`, `greaterThan`, `lessThan`, `inRange`) on a day column. */
 function gridDateClause(expr: string, model: any, push: (value: unknown) => string): string | null {
   if (!model || model.filterType !== 'date') return null;
+  // A real day or nothing: `2026-02-31` parses in JavaScript but not in PostgreSQL (a 400, never a 500).
   const day = (value: unknown) => {
-    const text = String(value ?? '').slice(0, 10);
-    return DAY_RE.test(text) && !Number.isNaN(Date.parse(text)) ? text : null;
+    if (value === null || value === undefined || value === '') return null;
+    const text = String(value).slice(0, 10);
+    if (!DAY_RE.test(text) || Number.isNaN(Date.parse(text)) || new Date(`${text}T00:00:00Z`).toISOString().slice(0, 10) !== text) {
+      throw new BadRequestException('The publication date filter must be a day (YYYY-MM-DD).');
+    }
+    return text;
   };
   const from = day(model.dateFrom);
   const to = day(model.dateTo);
@@ -409,7 +414,11 @@ export class VulnerabilitiesService {
         : Math.max(whole(filters.page, 1, 10_000_000) - 1, 0) * limit;
     // The grid's `field:DIR`; most severe first by default.
     const [sortField, sortDir] = String(filters.sort ?? '').split(':');
-    const sortExpr = GRID_SORTS[sortField];
+    // Own keys only (`constructor` or `__proto__` would read the prototype); another column is a 400.
+    if (sortField && !Object.prototype.hasOwnProperty.call(GRID_SORTS, sortField)) {
+      throw new BadRequestException('sort must be severity, cvss_score, published_at or cve_id.');
+    }
+    const sortExpr = sortField ? GRID_SORTS[sortField] : undefined;
     const direction = String(sortDir ?? '').toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
     const order = sortExpr && sortField !== 'severity'
       ? `${sortExpr} ${direction} NULLS LAST, c.cve_id DESC`
