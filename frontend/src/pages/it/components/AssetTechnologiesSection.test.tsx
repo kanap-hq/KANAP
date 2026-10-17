@@ -85,6 +85,18 @@ describe('AssetTechnologiesSection', () => {
     expect(screen.getByTestId('location').textContent).toBe('/it/technologies/TEC-3');
   });
 
+  it('shows the Via column, explained on hover, only when a technology is carried', async () => {
+    renderSection();
+    const table = await screen.findByRole('table', { name: `${K}.title` });
+    expect(within(table).getByText(`${K}.columns.via`).getAttribute('title')).toBe(`${K}.columns.viaHint`);
+  });
+
+  it('leaves the Via column out when every technology is installed', async () => {
+    renderSection([ROWS[0]]);
+    const table = await screen.findByRole('table', { name: `${K}.title` });
+    expect(within(table).queryByText(`${K}.columns.via`)).toBeNull();
+  });
+
   it('removes an installed technology and never a carried one', async () => {
     renderSection();
     await screen.findByRole('table', { name: `${K}.title` });

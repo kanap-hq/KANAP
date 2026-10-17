@@ -210,6 +210,18 @@ describe('TechnologyServersTab', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
+  it('shows the Via column, explained on hover, only when a row is deduced', async () => {
+    renderTab();
+    const table = await screen.findByRole('table', { name: `${S}.title` });
+    expect(within(table).getByText(`${S}.columns.via`).getAttribute('title')).toBe(`${S}.columns.viaHint`);
+  });
+
+  it('leaves the Via column out when every link is direct', async () => {
+    renderTab(ROWS.filter((item) => item.kind === 'installed'));
+    const table = await screen.findByRole('table', { name: `${S}.title` });
+    expect(within(table).queryByText(`${S}.columns.via`)).toBeNull();
+  });
+
   it('shows no writing control to a reader', async () => {
     renderTab(ROWS, false);
     await screen.findByRole('table', { name: `${S}.title` });

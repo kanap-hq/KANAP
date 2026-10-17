@@ -189,7 +189,7 @@ export default function TechnologyServersTab({ technologyId, versions, canManage
       ) : muted(row, versionText(row))),
     },
     {
-      key: 'via', header: t('workspace.technology.servers.columns.via'), width: 140,
+      key: 'via', header: <span title={t('workspace.technology.servers.columns.viaHint')}>{t('workspace.technology.servers.columns.via')}</span>, width: 140,
       render: (row) => (row.via_asset_name ? <span title={row.via_asset_name}>{row.via_asset_name}</span> : null),
     },
     {
@@ -265,7 +265,8 @@ export default function TechnologyServersTab({ technologyId, versions, canManage
         ) : rows.length > 0 ? (
           <RelationsTable
             ariaLabel={title}
-            columns={columns}
+            // "Via" only when a row is deduced: a direct link has nothing there.
+            columns={rows.some((row) => row.kind === 'carried') ? columns : columns.filter((column) => column.key !== 'via')}
             rows={rows}
             rowKey={(row) => `${row.kind}:${row.link_id ?? ''}:${row.asset_id}:${row.via_asset_id ?? ''}:${row.technology_version_id ?? ''}`}
             rowHref={(row) => `/it/assets/${row.asset_reference ?? row.asset_id}/overview`}

@@ -1450,7 +1450,8 @@
           "name": "Name",
           "family": "Family",
           "version": "Version",
-          "via": "Installed on"
+          "via": "Via",
+          "viaHint": "Server the technology is installed on, for a deduced row"
         }
       },
       "assignments": {
@@ -1710,7 +1711,8 @@
           "environment": "Environment",
           "operatingSystem": "Operating system",
           "version": "Version",
-          "via": "Installed on",
+          "via": "Via",
+          "viaHint": "Server the technology is installed on, for a deduced row",
           "notes": "Notes"
         }
       },

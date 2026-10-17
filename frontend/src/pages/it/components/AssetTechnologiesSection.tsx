@@ -117,7 +117,7 @@ export default function AssetTechnologiesSection({ assetId, canManage, heading }
         : <Box component="span" title={t('workspace.technology.versionPicker.unknown')} sx={{ color: 'kanap.text.tertiary' }}>{dash}</Box>),
     },
     {
-      key: 'via', header: t('workspace.asset.technologies.columns.via'), width: 140,
+      key: 'via', header: <span title={t('workspace.asset.technologies.columns.viaHint')}>{t('workspace.asset.technologies.columns.via')}</span>, width: 140,
       render: (row) => (row.via_asset_name ? <span title={row.via_asset_name}>{row.via_asset_name}</span> : null),
     },
   ];
@@ -160,7 +160,8 @@ export default function AssetTechnologiesSection({ assetId, canManage, heading }
         ) : rows.length > 0 ? (
           <RelationsTable
             ariaLabel={title}
-            columns={columns}
+            // "Via" only when a row is deduced: a direct link has nothing there.
+            columns={rows.some((row) => row.kind === 'carried') ? columns : columns.filter((column) => column.key !== 'via')}
             rows={rows}
             rowKey={(row) => `${row.kind}:${row.link_id ?? ''}:${row.technology_id}:${row.via_asset_id ?? ''}:${row.technology_version_id ?? ''}`}
             rowHref={(row) => `/it/technologies/${row.technology_reference ?? row.technology_id}`}

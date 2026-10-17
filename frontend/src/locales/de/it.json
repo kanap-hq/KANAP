@@ -1450,7 +1450,8 @@
           "name": "Name",
           "family": "Familie",
           "version": "Version",
-          "via": "Installiert auf"
+          "via": "Über",
+          "viaHint": "Server, auf dem die Technologie installiert ist, bei einer abgeleiteten Zeile"
         }
       },
       "assignments": {
@@ -1710,7 +1711,8 @@
           "environment": "Umgebung",
           "operatingSystem": "Betriebssystem",
           "version": "Version",
-          "via": "Installiert auf",
+          "via": "Über",
+          "viaHint": "Server, auf dem die Technologie installiert ist, bei einer abgeleiteten Zeile",
           "notes": "Notizen"
         }
       },

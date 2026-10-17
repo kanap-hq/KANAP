@@ -1450,7 +1450,8 @@
           "name": "Nom",
           "family": "Famille",
           "version": "Version",
-          "via": "Installée sur"
+          "via": "Via",
+          "viaHint": "Serveur sur lequel la technologie est installée, pour une ligne déduite"
         }
       },
       "assignments": {
@@ -1710,7 +1711,8 @@
           "environment": "Environnement",
           "operatingSystem": "Système d'exploitation",
           "version": "Version",
-          "via": "Installée sur",
+          "via": "Via",
+          "viaHint": "Serveur sur lequel la technologie est installée, pour une ligne déduite",
           "notes": "Notes"
         }
       },
