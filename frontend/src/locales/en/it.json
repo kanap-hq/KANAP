@@ -598,6 +598,11 @@
           "description": "Define network subnets with VLAN assignments. Each subnet belongs to a network zone.",
           "usage": "Assets / Network information"
         },
+        "technologyFamilies": {
+          "title": "Technology families",
+          "description": "What kind of technology each one is: database, hypervisor, directory and identity, and so on. The lists and reports group technologies by family, and the administration view finds the directory services through it.",
+          "usage": "Technologies / Family"
+        },
         "domains": {
           "title": "Domains",
           "description": "Active Directory or DNS domains of your assets. The forest and the trusts are shown in Active Directory Domains and Trusts; the numbers of accounts and machines in Active Directory Users and Computers. Built-in entries cannot be modified.",

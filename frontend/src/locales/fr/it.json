@@ -598,6 +598,11 @@
           "description": "Définissez les sous-réseaux avec leur VLAN. Chaque sous-réseau appartient à une zone réseau.",
           "usage": "Actifs / Informations réseau"
         },
+        "technologyFamilies": {
+          "title": "Familles de technologies",
+          "description": "Le type de chaque technologie : base de données, hyperviseur, annuaire et identité, etc. Les listes et les rapports regroupent les technologies par famille, et la vue de l'administration y trouve les services d'annuaire.",
+          "usage": "Technologies / Famille"
+        },
         "domains": {
           "title": "Domaines",
           "description": "Domaines Active Directory ou DNS de vos assets. La forêt et les relations d'approbation figurent dans la console Domaines et approbations Active Directory ; les nombres de comptes et de machines dans Utilisateurs et ordinateurs Active Directory. Les entrées intégrées ne sont pas modifiables.",

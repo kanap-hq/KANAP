@@ -598,6 +598,11 @@
           "description": "Defina las subredes con su VLAN. Cada subred pertenece a una zona de red.",
           "usage": "Activos / Información de red"
         },
+        "technologyFamilies": {
+          "title": "Familias de tecnologías",
+          "description": "El tipo de cada tecnología: base de datos, hipervisor, directorio e identidad, etc. Las listas y los informes agrupan las tecnologías por familia, y la vista de la administración encuentra así los servicios de directorio.",
+          "usage": "Tecnologías / Familia"
+        },
         "domains": {
           "title": "Dominios",
           "description": "Dominios de Active Directory o DNS de sus activos. El bosque y las relaciones de confianza aparecen en Dominios y confianzas de Active Directory; el número de cuentas y de equipos en Usuarios y equipos de Active Directory. Las entradas integradas no se pueden modificar.",

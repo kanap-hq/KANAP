@@ -156,7 +156,8 @@ type EnumListId =
   | 'interfaceAuthModes'
   | 'ipAddressTypes'
   | 'accessMethods'
-  | 'incidentCategories';
+  | 'incidentCategories'
+  | 'technologyFamilies';
 
 type ListId = EnumListId | 'operatingSystems' | 'connectionTypes' | 'subnets' | 'domains';
 type GroupId = 'locations' | 'serversConnections' | 'appsInterfaces' | 'incidents';
@@ -169,7 +170,7 @@ const enumListIds: EnumListId[] = [
   'adminZones', 'applicationCategories', 'dataClasses', 'networkSegments', 'entities', 'serverKinds',
   'serverProviders', 'serverRoles', 'hostingTypes', 'lifecycleStates', 'interfaceProtocols',
   'interfaceDataCategories', 'interfaceTriggerTypes', 'interfacePatterns', 'interfaceFormats',
-  'interfaceAuthModes', 'ipAddressTypes', 'accessMethods', 'incidentCategories',
+  'interfaceAuthModes', 'ipAddressTypes', 'accessMethods', 'incidentCategories', 'technologyFamilies',
 ];
 
 const listGroupIds: GroupId[] = ['locations', 'serversConnections', 'appsInterfaces', 'incidents'];
@@ -191,6 +192,7 @@ const enumSections: EnumSectionConfig[] = [
   { id: 'ipAddressTypes', group: 'serversConnections' },
   { id: 'serverKinds', group: 'serversConnections', kind: 'serverKind' },
   { id: 'serverRoles', group: 'serversConnections', kind: 'serverRole' },
+  { id: 'technologyFamilies', group: 'serversConnections' },
   { id: 'hostingTypes', group: 'locations', kind: 'hosting' },
   { id: 'serverProviders', group: 'locations' },
   { id: 'lifecycleStates', group: 'appsInterfaces', lockedCodes: ['proposed', 'active', 'deprecated', 'retired'] },

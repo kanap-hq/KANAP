@@ -598,6 +598,11 @@
           "description": "Definieren Sie Subnetze mit VLAN-Zuordnung. Jedes Subnetz gehört zu einer Netzwerkzone.",
           "usage": "Assets / Netzwerkinformationen"
         },
+        "technologyFamilies": {
+          "title": "Technologiefamilien",
+          "description": "Welche Art von Technologie es jeweils ist: Datenbank, Hypervisor, Verzeichnis und Identität usw. Listen und Berichte gruppieren die Technologien nach Familie, und die Administrationssicht erkennt daran die Verzeichnisdienste.",
+          "usage": "Technologien / Familie"
+        },
         "domains": {
           "title": "Domänen",
           "description": "Active-Directory- oder DNS-Domänen Ihrer Assets. Gesamtstruktur und Vertrauensstellungen finden Sie in „Active Directory-Domänen und -Vertrauensstellungen“, die Anzahl der Konten und Computer in „Active Directory-Benutzer und -Computer“. Integrierte Einträge können nicht geändert werden.",
