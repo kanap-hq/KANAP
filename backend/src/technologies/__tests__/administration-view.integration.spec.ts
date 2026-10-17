@@ -16,7 +16,8 @@ import { application, asset, contains, installed, one, technology } from './tech
 //   left out; a retired zone without technologies is hidden;
 // - the technologies without a zone form the last group (`code: null`), counted as data to complete;
 // - the domains carry forest, trusts (with the trusted domain's name), typed counts, and the domain
-//   controllers deduced from the server role `domain-controller` on an assignment;
+//   controllers deduced from the server role `domain-controller` on an instance in service, or
+//   from an installed directory technology, each server once;
 // - another tenant's technologies, servers and controllers never appear;
 // - both routes require `infrastructure:reader`, the export path ends with /export, and the CSV
 //   files carry the same rows.
@@ -59,6 +60,20 @@ async function seed(runner: QueryRunner) {
   const dc1 = await controller(runner, a, 'dc1', 'corp', 'domain-controller');
   const dcRetired = await controller(runner, a, 'dc-old', 'corp', 'domain-controller', 'retired');
   const app1 = await controller(runner, a, 'app1', 'corp', 'app');
+  // The role on a disabled application and instance does not count; nor does an installed
+  // technology of another family.
+  const dcDisabled = await controller(runner, a, 'dc-disabled', 'corp', 'domain-controller');
+  await runner.query(`UPDATE app_instances SET status = 'disabled', disabled_at = now() - interval '1 day' WHERE tenant_id = $1 AND id IN (SELECT app_instance_id FROM app_asset_assignments WHERE tenant_id = $1 AND asset_id = $2)`, [a, dcDisabled]);
+  await runner.query(`UPDATE applications SET status = 'disabled', disabled_at = now() - interval '1 day' WHERE tenant_id = $1 AND name = 'App dc-disabled'`, [a]);
+  await installed(runner, a, dcDisabled, sql);
+  // A server carrying Active Directory without any role is a controller; dc1 has both, counted once.
+  const dcByTechnology = await asset(runner, a, 'dc2');
+  await runner.query(`UPDATE assets SET domain = 'corp' WHERE tenant_id = $1 AND id = $2`, [a, dcByTechnology]);
+  await installed(runner, a, dcByTechnology, ad);
+  // A retired directory technology does not make a controller.
+  const labDc = await asset(runner, a, 'lab-old');
+  await runner.query(`UPDATE assets SET domain = 'lab' WHERE tenant_id = $1 AND id = $2`, [a, labDc]);
+  await installed(runner, a, labDc, gone);
   const host = await asset(runner, a, 'host1');
   const vm = await asset(runner, a, 'vm1');
   const retiredVm = await asset(runner, a, 'vm-retired');
@@ -97,11 +112,11 @@ async function testView() {
       { group: 'Domain admins', level: 'Tier 0', secrets: 'Vault A', description: 'Identity core' },
     );
     assert.deepEqual(tier0.technologies.map((t) => [t.reference, t.name, t.servers.map((server) => server.name)]), [
-      ['TEC-1', 'Active Directory', ['dc1']],
-      ['TEC-2', 'SQL Server', ['app1']],
+      ['TEC-1', 'Active Directory', ['dc1', 'dc2']],
+      ['TEC-2', 'SQL Server', ['app1', 'dc-disabled']],
     ], 'retired technology and retired server left out');
     assert.deepEqual(tier0.directory_services.map((t) => t.name), ['Active Directory']);
-    assert.equal(tier0.server_count, 2);
+    assert.equal(tier0.server_count, 4);
     assert.deepEqual(tier1.technologies, []);
     assert.equal(tier1.secrets_location, null);
 
@@ -114,8 +129,8 @@ async function testView() {
     const [corp, lab] = view.domains;
     assert.deepEqual(
       { forest: corp.forest, trusts: corp.trusts, accounts: corp.account_count, machines: corp.machine_count, dcs: corp.domain_controllers.map((dc) => dc.name) },
-      { forest: 'corp.example.com', trusts: [{ domain: 'lab', label: 'Lab', direction: 'two_way' }], accounts: 1200, machines: 300, dcs: ['dc1'] },
-      'controllers deduced from the role, retired server and other tenant left out',
+      { forest: 'corp.example.com', trusts: [{ domain: 'lab', label: 'Lab', direction: 'two_way' }], accounts: 1200, machines: 300, dcs: ['dc1', 'dc2'] },
+      'role on an instance in service or directory technology, each server once; disabled instance, retired server and other tenant left out',
     );
     assert.deepEqual({ forest: lab.forest, accounts: lab.account_count, dcs: lab.domain_controllers }, { forest: null, accounts: null, dcs: [] });
 
@@ -152,12 +167,12 @@ async function testCsv() {
     assert.equal(zones.filename, 'administration_view_zones.csv');
     const zoneLines = zones.content.replace(/^﻿/, '').trim().split(/\r?\n/);
     assert.equal(zoneLines[0], 'Zone,Administrator group,Privilege level,Secrets location,Technology reference,Technology,Family,Directory service,Servers');
-    assert.ok(zoneLines.includes('Tier 0,Domain admins,Tier 0,Vault A,TEC-1,Active Directory,Directory and identity,Yes,dc1'), zones.content);
+    assert.ok(zoneLines.includes('Tier 0,Domain admins,Tier 0,Vault A,TEC-1,Active Directory,Directory and identity,Yes,"dc1, dc2"'), zones.content);
     assert.ok(zoneLines.includes('Tier 1,Server admins,Tier 1,,,,,,'), 'a zone without technologies has its own row');
     assert.ok(zoneLines.includes('No zone (to complete),,,,TEC-3,vSphere,Hypervisor,No,"host1, vm1"'), zones.content);
     const domains = await svc.csv({ list: 'domains', language: 'en' }, opts);
     const domainLines = domains.content.replace(/^﻿/, '').trim().split(/\r?\n/);
-    assert.equal(domainLines[1], 'Corp,corp.example.com,corp.example.com,Lab (two-way),1200,300,1,dc1');
+    assert.equal(domainLines[1], 'Corp,corp.example.com,corp.example.com,Lab (two-way),1200,300,2,"dc1, dc2"');
     assert.equal(domainLines[2], 'Lab,lab.example.com,,,,,0,');
   });
 }

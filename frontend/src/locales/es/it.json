@@ -427,7 +427,7 @@
       "noServer": "Ningún servidor",
       "via": "a través de {{name}}",
       "domains": "Dominios",
-      "domainsHint": "Los controladores de dominio son los servidores del dominio asignados con el rol de servidor «Controlador de dominio».",
+      "domainsHint": "Los controladores de dominio son los servidores del dominio que llevan una tecnología de directorio, o que están asignados con el rol de servidor «Controlador de dominio» en una aplicación en servicio.",
       "noDomains": "No hay dominios definidos.",
       "noController": "Ninguno encontrado",
       "notSet": "Sin indicar",

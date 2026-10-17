@@ -3,7 +3,7 @@ import type { EntityManager } from 'typeorm';
 import { languageOf, writeCsv } from '../../common/csv-sheet';
 import { ItOpsSettingsService, type AdminZoneOption, type DomainTrustDirection } from '../../it-ops-settings/it-ops-settings.service';
 import { technologyReference } from '../technology-rows';
-import { TechnologyReachService } from '../technology-reach.service';
+import { TechnologyReachService, inServiceSql } from '../technology-reach.service';
 
 /**
  * The administration view (lot A1a): the view 4 of the ANSSI mapping guide ("vue de
@@ -13,9 +13,11 @@ import { TechnologyReachService } from '../technology-reach.service';
  * The technologies without a zone form a last group, `code: null`, flagged as data to complete.
  * Then the domains of the catalog with their forest, trusts, typed counts and domain controllers.
  *
- * A domain controller is an asset of the domain (`assets.domain`) assigned with the server role
- * `domain-controller` (`app_asset_assignments.role`, the shipped code of that role). Retired
- * technologies and retired assets are left out. Every statement carries `tenant_id` besides RLS
+ * A domain controller is an asset of the domain (`assets.domain`), not retired, that is assigned with
+ * the server role `domain-controller` (`app_asset_assignments.role`, the shipped code of that role)
+ * on an instance in service (the rule of the deductions, `inServiceSql`), or that carries an installed
+ * technology of the `directory` family that is not retired (lead decision, 2026-10-17). Each server
+ * counts once. Retired technologies and retired assets are left out of the zones too. Every statement carries `tenant_id` besides RLS
  * and works on the whole tenant in one pass, never a query per row.
  */
 
@@ -165,9 +167,21 @@ export class AdministrationViewService {
       `SELECT a.domain, a.id, a.name, a.asset_reference
          FROM assets a
         WHERE a.tenant_id = $1 AND a.domain = ANY($2::text[]) AND a.status <> 'retired'
-          AND EXISTS (SELECT 1 FROM app_asset_assignments aa WHERE aa.tenant_id = $1 AND aa.asset_id = a.id AND aa.role = $3)
+          AND (
+            EXISTS (
+              SELECT 1 FROM app_asset_assignments aa
+                JOIN app_instances i ON i.tenant_id = $1 AND i.id = aa.app_instance_id
+                JOIN applications ap ON ap.tenant_id = $1 AND ap.id = i.application_id AND ${inServiceSql('ap', 'i')}
+               WHERE aa.tenant_id = $1 AND aa.asset_id = a.id AND aa.role = $3
+            )
+            OR EXISTS (
+              SELECT 1 FROM asset_technologies at
+                JOIN technologies t ON t.tenant_id = $1 AND t.id = at.technology_id AND t.family = $4 AND t.lifecycle <> 'retired'
+               WHERE at.tenant_id = $1 AND at.asset_id = a.id
+            )
+          )
         ORDER BY lower(a.name), a.id`,
-      [tenantId, listed.map((option) => option.code), DOMAIN_CONTROLLER_ROLE],
+      [tenantId, listed.map((option) => option.code), DOMAIN_CONTROLLER_ROLE, DIRECTORY_FAMILY],
     );
     const labelOf = new Map(catalog.map((option) => [option.code, option.label]));
     return listed

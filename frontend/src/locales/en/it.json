@@ -427,7 +427,7 @@
       "noServer": "No server",
       "via": "via {{name}}",
       "domains": "Domains",
-      "domainsHint": "Domain controllers are the servers of the domain assigned with the \"Domain controller\" server role.",
+      "domainsHint": "Domain controllers are the servers of the domain that carry a directory technology, or that are assigned with the \"Domain controller\" server role on an application in service.",
       "noDomains": "No domains defined.",
       "noController": "None found",
       "notSet": "Not set",

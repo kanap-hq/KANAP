@@ -427,7 +427,7 @@
       "noServer": "Kein Server",
       "via": "über {{name}}",
       "domains": "Domänen",
-      "domainsHint": "Domänencontroller sind die Server der Domäne, die mit der Serverrolle „Domänencontroller“ zugeordnet sind.",
+      "domainsHint": "Domänencontroller sind die Server der Domäne, die eine Verzeichnistechnologie tragen oder einer aktiven Anwendung mit der Serverrolle „Domänencontroller“ zugeordnet sind.",
       "noDomains": "Keine Domänen definiert.",
       "noController": "Keiner gefunden",
       "notSet": "Nicht festgelegt",

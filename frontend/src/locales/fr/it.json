@@ -427,7 +427,7 @@
       "noServer": "Aucun serveur",
       "via": "via {{name}}",
       "domains": "Domaines",
-      "domainsHint": "Les contrôleurs de domaine sont les serveurs du domaine affectés avec le rôle « Contrôleur de domaine ».",
+      "domainsHint": "Les contrôleurs de domaine sont les serveurs du domaine qui portent une technologie d'annuaire, ou qui sont affectés avec le rôle « Contrôleur de domaine » sur une application en service.",
       "noDomains": "Aucun domaine défini.",
       "noController": "Aucun trouvé",
       "notSet": "Non renseigné",
