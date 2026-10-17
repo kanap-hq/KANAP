@@ -26,7 +26,8 @@ const itemSx = { minHeight: 32, py: 0.75, fontSize: 13, color: 'kanap.text.prima
 /**
  * The version of a technology link, chosen in one step under the control that opens it: "version
  * unknown", one of the existing versions (filtered as the user types), or the label typed, which
- * the server creates. Enter takes the version whose label matches, else creates the label typed.
+ * the server creates. Enter takes the version whose label is the text typed (without case), else
+ * the first one that contains it; it creates the label typed only when no version matches.
  */
 export default function TechnologyVersionPicker({ anchorEl, versions, current, onPick, onClose }: Props) {
   const { t } = useTranslation('it');
@@ -38,8 +39,10 @@ export default function TechnologyVersionPicker({ anchorEl, versions, current, o
   const exact = (versions ?? []).find((version) => version.label.toLowerCase() === needle);
   const label = t('workspace.technology.versionPicker.search');
 
+  // Enter never creates a version while one matches: a partial label picks its first match.
   const submit = () => {
-    if (exact) onPick({ technology_version_id: exact.id });
+    const match = exact ?? (needle ? matches[0] : undefined);
+    if (match) onPick({ technology_version_id: match.id });
     else if (typed) onPick({ version_label: typed });
   };
 

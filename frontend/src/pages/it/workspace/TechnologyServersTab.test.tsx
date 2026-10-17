@@ -146,6 +146,19 @@ describe('TechnologyServersTab', () => {
     await waitFor(() => expect(mocked.post).toHaveBeenLastCalledWith('/technologies/tech-1/assets', { asset_id: 'db9', technology_version_id: null }));
   });
 
+  it('takes the first matching version on Enter and creates nothing while one matches', async () => {
+    renderTab();
+    await screen.findByRole('table', { name: `${S}.title` });
+    const field = await pickAsset();
+    fireEvent.change(field, { target: { value: '201' } });
+    // Typing filters; "Add version" stays offered for an explicit click.
+    expect(picker().queryByText('2022')).toBeNull();
+    expect(picker().getByText('workspace.technology.versionPicker.create(label=201)')).toBeTruthy();
+    fireEvent.keyDown(field, { key: 'Enter' });
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/technologies/tech-1/assets', { asset_id: 'db9', technology_version_id: 'v19' }));
+    expect(mocked.post).toHaveBeenCalledTimes(1);
+  });
+
   it('changes the version and the notes of a direct link in place', async () => {
     renderTab();
     await screen.findByRole('table', { name: `${S}.title` });
