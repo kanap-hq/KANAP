@@ -76,15 +76,17 @@ export default function TechnologyApplicationsTab({ technologyId, technologyRefe
 
   const failed = (e: unknown) => setError(getApiErrorMessage(e, t, t('workspace.technology.applications.saveFailed')));
 
-  const addMany = async (options: RelationOption[]) => {
-    setAnchor(null);
+  // The picker stays open until the server answers: on a refusal it shows why, the rows still ticked.
+  const addMany = async (options: RelationOption[]): Promise<string | null> => {
     setError(null);
     try {
       await api.post(`/technologies/${technologyId}/applications`, { application_ids: options.map((option) => option.id) });
     } catch (e) {
-      failed(e);
+      return getApiErrorMessage(e, t, t('workspace.technology.applications.saveFailed'));
     }
+    setAnchor(null);
     await refresh();
+    return null;
   };
 
   const changeVersion = async (row: TechnologyApplicationRow, choice: object) => {
@@ -230,7 +232,7 @@ export default function TechnologyApplicationsTab({ technologyId, technologyRefe
             onClose={() => setAnchor(null)}
             multiple={{
               label: (count) => t('workspace.technology.applications.addCount', { count }),
-              onConfirm: (options) => { void addMany(options); },
+              onConfirm: addMany,
             }}
           />
         )}

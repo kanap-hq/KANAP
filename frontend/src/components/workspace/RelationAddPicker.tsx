@@ -24,8 +24,11 @@ type Props = {
   /**
    * Several rows at once: a choice ticks the row instead of linking it, and a footer button links
    * the ticked rows (kept across searches). `label` words that button for the count ticked.
+   * `onConfirm` saves them and resolves to an error message, or null once saved (the caller then
+   * closes the picker): until it answers the picker stays open, and on an error it says so and
+   * keeps the rows ticked.
    */
-  multiple?: { label: (count: number) => string; onConfirm: (options: RelationOption[]) => void };
+  multiple?: { label: (count: number) => string; onConfirm: (options: RelationOption[]) => Promise<string | null> };
 };
 
 const itemSx = { minHeight: 32, py: 0.75, fontSize: 13, color: 'kanap.text.primary' } as const;
@@ -41,6 +44,16 @@ export default function RelationAddPicker({ anchorEl, searchKey, search, exclude
   const { t } = useTranslation('common');
   const [text, setText] = React.useState('');
   const [ticked, setTicked] = React.useState<Map<string, RelationOption>>(() => new Map());
+  const [saving, setSaving] = React.useState(false);
+  const [saveError, setSaveError] = React.useState<string | null>(null);
+  const confirm = async () => {
+    if (!multiple) return;
+    setSaving(true);
+    setSaveError(null);
+    const message = await multiple.onConfirm([...ticked.values()]);
+    setSaving(false);
+    if (message) setSaveError(message);
+  };
   const choose = (option: RelationOption) => {
     if (!multiple) { onPick(option); return; }
     setTicked((prev) => {
@@ -122,13 +135,17 @@ export default function RelationAddPicker({ anchorEl, searchKey, search, exclude
           </MenuList>
         )}
       </Box>
+      {multiple && saveError && (
+        <Typography role="alert" sx={{ px: 1, pt: 0.75, fontSize: 12, color: 'kanap.danger' }}>{saveError}</Typography>
+      )}
       {multiple && (
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', pt: 0.75 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 1, pt: 0.75 }}>
+          {saving && <CircularProgress size={14} />}
           <Button
             variant="action-primary"
             size="small"
-            disabled={ticked.size === 0}
-            onClick={() => multiple.onConfirm([...ticked.values()])}
+            disabled={ticked.size === 0 || saving}
+            onClick={() => { void confirm(); }}
           >
             {multiple.label(ticked.size)}
           </Button>

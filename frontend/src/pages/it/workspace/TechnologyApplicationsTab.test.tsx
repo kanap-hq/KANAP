@@ -161,6 +161,25 @@ describe('TechnologyApplicationsTab', () => {
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/technologies/tech-1/applications', { application_ids: ['web', 'hr'] }));
   });
 
+  it('keeps the picker open with its ticks until the server answers, and says why it refused', async () => {
+    let refuse: (reason: unknown) => void = () => undefined;
+    mocked.post.mockReturnValueOnce(new Promise((_, reject) => { refuse = reject; }) as never);
+    renderTab();
+    await screen.findByRole('table', { name: `${A}.title` });
+    fireEvent.click(screen.getByText(`${A}.add`));
+    await waitFor(() => picker().getByText('HR'));
+    fireEvent.click(picker().getByText('HR'));
+    fireEvent.click(picker().getByRole('button', { name: `${A}.addCount(count=1)` }));
+    expect((picker().getByRole('button', { name: `${A}.addCount(count=1)` }) as HTMLButtonElement).disabled).toBe(true);
+    refuse({ response: { status: 400, data: { message: 'One or more applications not found.' } } });
+    await waitFor(() => expect(picker().getByRole('alert').textContent).toBeTruthy());
+    // Still open, still ticked: a second try sends the same rows.
+    expect((picker().getByRole('button', { name: `${A}.addCount(count=1)` }) as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(picker().getByRole('button', { name: `${A}.addCount(count=1)` }));
+    await waitFor(() => expect(document.querySelector('.MuiPopover-paper')).toBeNull());
+    expect(mocked.post).toHaveBeenLastCalledWith('/technologies/tech-1/applications', { application_ids: ['hr'] });
+  });
+
   it('changes the version of a declaration in place, and of no hosted row', async () => {
     renderTab();
     await screen.findByRole('table', { name: `${A}.title` });
