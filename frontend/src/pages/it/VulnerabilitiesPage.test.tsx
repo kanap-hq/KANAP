@@ -201,6 +201,30 @@ describe('VulnerabilitiesPage', () => {
     expect((within(dialog).getByRole('button', { name: 'Change state' }) as HTMLButtonElement).disabled).toBe(true);
   });
 
+  it('says a count failed apart from the cap, and starts afresh at each opening', async () => {
+    postMock.mockRejectedValueOnce(Object.assign(new Error('503'), { response: { status: 503 } }));
+    postMock.mockResolvedValue({ data: { rows: 3, cves: 2, changes: 3, as_of: '2026-10-17T10:00:00.000Z' } } as any);
+    renderPage();
+    act(() => grid.props!.onListRequestChange({ params: { page: 1, limit: 50 }, total: 40 }));
+    fireEvent.click(screen.getByRole('button', { name: 'Change state' }));
+    let dialog = await screen.findByRole('dialog');
+    await waitFor(() => expect(within(dialog).getByRole('status').textContent).toBe('The rows could not be counted. Try again.'));
+    fireEvent.change(within(dialog).getByRole('textbox', { name: 'Common note' }), { target: { value: 'Old note' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    fireEvent.click(screen.getByRole('button', { name: 'Change state' }));
+    dialog = await screen.findByRole('dialog');
+    expect((within(dialog).getByRole('textbox', { name: 'Common note' }) as HTMLInputElement).value).toBe('');
+  });
+
+  it('exports the current filters through the list context', async () => {
+    getMock.mockResolvedValue({ data: new Blob(['x']), headers: {} } as any);
+    renderPage();
+    act(() => grid.props!.onListRequestChange({ params: { page: 1, limit: 50, filters: FILTERS }, total: 40 }));
+    fireEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
+    await waitFor(() => expect(getMock).toHaveBeenCalledWith('/vulnerabilities/export', expect.objectContaining({ params: { filters: FILTERS }, responseType: 'blob' })));
+  });
+
   it('gives a reader neither selection nor change of state', () => {
     auth.level = 'reader';
     renderPage();

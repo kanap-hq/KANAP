@@ -311,6 +311,7 @@
         "count_other": "Dies ändert {{count}} von {{rows}} Zeilen, bei {{cves}} Schwachstellen.",
         "counting": "Zeilen werden gezählt…",
         "tooMany": "Mehr als 5.000 Zeilen: Grenzen Sie die Filter ein oder wählen Sie weniger Schwachstellen aus.",
+        "countFailed": "Die Zeilen konnten nicht gezählt werden. Versuchen Sie es erneut.",
         "failed": "Die Änderung konnte nicht gespeichert werden. Versuchen Sie es erneut.",
         "save": "Status ändern",
         "noteKept": "Ohne Notiz behält jede Zeile ihre eigene."

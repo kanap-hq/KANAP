@@ -21,6 +21,7 @@ import { useFeatures } from '../../config/FeaturesContext';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import { useLocale } from '../../i18n/useLocale';
 import { formatShortDate } from '../../lib/dateFormat';
+import { getWithListContext } from '../../lib/listContext';
 import { drawerMenuItemSx, drawerSelectSx, inlineControlSx } from '../../theme/formSx';
 import { downloadBlob, extractFilenameFromDisposition } from '../../utils/downloadBlob';
 import ForbiddenPage from '../ForbiddenPage';
@@ -293,8 +294,11 @@ function BulkStateDialog({ open, onClose, selected, request, onDone }: {
   const [all, setAll] = useState(selected.length === 0);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // Each opening starts afresh: a note of the previous change never goes on the next rows.
   useEffect(() => {
     if (!open) return;
+    setState('handled');
+    setNote('');
     setAll(selected.length === 0);
     setError(null);
   }, [open, selected.length]);
@@ -310,7 +314,8 @@ function BulkStateDialog({ open, onClose, selected, request, onDone }: {
     enabled: open,
     retry: false,
   });
-  const tooMany = count.isError;
+  // A 400 is the cap; anything else (busy, network) is a failed count.
+  const tooMany = count.isError && (count.error as any)?.response?.status === 400;
   const save = async () => {
     setSaving(true);
     setError(null);
@@ -331,7 +336,7 @@ function BulkStateDialog({ open, onClose, selected, request, onDone }: {
       onClose={onClose}
       onSave={save}
       saveLabel={t('pages.vulnerabilities.bulk.save')}
-      saveDisabled={!count.data || count.data.changes === 0 || tooMany}
+      saveDisabled={!count.data || count.data.changes === 0 || count.isError}
       saveLoading={saving}
     >
       <Stack spacing={1.5}>
@@ -370,7 +375,9 @@ function BulkStateDialog({ open, onClose, selected, request, onDone }: {
         <Typography role="status" sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
           {tooMany
             ? t('pages.vulnerabilities.bulk.tooMany')
-            : count.data
+            : count.isError
+              ? t('pages.vulnerabilities.bulk.countFailed')
+              : count.data
               ? t('pages.vulnerabilities.bulk.count', { count: count.data.changes, rows: count.data.rows, cves: count.data.cves })
               : t('pages.vulnerabilities.bulk.counting')}
         </Typography>
@@ -480,7 +487,8 @@ export default function VulnerabilitiesPage() {
   const exportCsv = async () => {
     setExportError(false);
     try {
-      const res = await api.get<Blob>(`${ENDPOINT}/export`, { params: scopeParams(requestRef.current), responseType: 'blob' });
+      // Long filters go as a saved list context, as the other list exports.
+      const res = await getWithListContext<Blob>(`${ENDPOINT}/export`, scopeParams(requestRef.current), { responseType: 'blob' });
       const headers = (res.headers ?? {}) as Record<string, unknown>;
       const disposition = (headers['content-disposition'] ?? headers['Content-Disposition']) as string | undefined;
       downloadBlob(new Blob([res.data], { type: 'text/csv;charset=utf-8' }), extractFilenameFromDisposition(disposition) || 'vulnerabilities.csv');

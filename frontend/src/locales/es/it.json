@@ -311,6 +311,7 @@
         "count_other": "Esto cambia {{count}} filas de {{rows}}, en {{cves}} vulnerabilidades.",
         "counting": "Contando las filas…",
         "tooMany": "Más de 5000 filas: acote los filtros o seleccione menos vulnerabilidades.",
+        "countFailed": "No se pudieron contar las filas. Inténtelo de nuevo.",
         "failed": "No se pudo guardar el cambio. Inténtelo de nuevo.",
         "save": "Cambiar el estado",
         "noteKept": "Sin nota, cada fila conserva la suya."

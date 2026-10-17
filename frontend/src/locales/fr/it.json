@@ -311,6 +311,7 @@
         "count_other": "Cela change {{count}} lignes sur {{rows}}, sur {{cves}} vulnérabilités.",
         "counting": "Comptage des lignes…",
         "tooMany": "Plus de 5 000 lignes : resserrez les filtres ou sélectionnez moins de vulnérabilités.",
+        "countFailed": "Les lignes n'ont pas pu être comptées. Réessayez.",
         "failed": "La modification n'a pas pu être enregistrée. Réessayez.",
         "save": "Changer l'état",
         "noteKept": "Sans note, chaque ligne garde la sienne."
