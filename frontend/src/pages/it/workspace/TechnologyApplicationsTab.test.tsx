@@ -111,6 +111,16 @@ describe('TechnologyApplicationsTab', () => {
     expect(screen.getByTestId('location').textContent).toBe('/it/applications/erp/overview');
   });
 
+  it('keeps apart two hosted rows that differ only by the server the technology comes through', async () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const crm = { application_id: 'crm', application_name: 'CRM', environment: 'prod', asset_id: 'vm1', asset_name: 'PAR-VM-01', technology_version_id: 'v6', version_label: '6.0' };
+    renderTab([row(crm), row({ ...crm, via_asset_id: 'h1', via_asset_name: 'ESX-01' })]);
+    const table = await screen.findByRole('table', { name: `${A}.title` });
+    expect(table.querySelectorAll('tbody tr')).toHaveLength(2);
+    expect(errors.mock.calls.some((call) => String(call[0]).includes('same key'))).toBe(false);
+    errors.mockRestore();
+  });
+
   it('withdraws a declared application and refuses to remove a hosted one', async () => {
     // The row leaves at once, before the server answers.
     mocked.delete.mockReturnValue(new Promise(() => undefined) as never);
