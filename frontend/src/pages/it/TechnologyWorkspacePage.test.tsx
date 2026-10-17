@@ -238,6 +238,16 @@ describe('TechnologyWorkspacePage', () => {
     expect(patch).not.toHaveBeenCalled();
   });
 
+  it('accepts the punctuation the NVD escapes in its names', async () => {
+    renderPage();
+    const field = await screen.findByLabelText('workspace.technology.cpe.add');
+    fireEvent.change(field, { target: { value: 'a:veeam:veeam_backup_\\&_replication' } });
+    fireEvent.keyDown(field, { key: 'Enter' });
+    await waitFor(() => expect(patch).toHaveBeenCalledWith('/technologies/tech-1', {
+      cpe_products: ['a:microsoft:sql_server', 'a:veeam:veeam_backup_\\&_replication'],
+    }));
+  });
+
   it('shows no writing control to a reader', async () => {
     auth.level = 'reader';
     renderPage();

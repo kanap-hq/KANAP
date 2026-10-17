@@ -114,8 +114,11 @@ export function textList(value: unknown, field: string, pattern: RegExp, max = 5
   return out;
 }
 
-/** A CPE product prefix `part:vendor:product` (part a, o or h), as NVD names it. */
-export const CPE_PRODUCT_RE = /^[aoh]:[a-z0-9._\-~%!]{1,100}:[a-z0-9._\-~%!]{1,100}$/;
+/**
+ * A CPE product prefix `part:vendor:product` (part a, o or h), as NVD names it, punctuation
+ * escaped with a backslash as in its CPE names (`a:veeam:veeam_backup_\&_replication`).
+ */
+export const CPE_PRODUCT_RE = /^[aoh]:(?:[a-z0-9._\-~%!]|\\[^a-z0-9\s]){1,100}:(?:[a-z0-9._\-~%!]|\\[^a-z0-9\s]){1,100}$/;
 /** A build prefix (`15.0`) an agent's raw version starts with. */
 export const BUILD_PREFIX_RE = /^[0-9a-z][0-9a-z._\-]{0,49}$/;
 

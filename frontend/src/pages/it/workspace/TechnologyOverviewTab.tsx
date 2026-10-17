@@ -73,7 +73,7 @@ export type TechnologyPatch = Partial<Pick<TechnologyDetail,
 
 /** `part:vendor:product`, the product part of a CPE name (`a:microsoft:sql_server`). */
 // The server's rule (`CPE_PRODUCT_RE` in backend/src/technologies/technology-rows.ts), on the lower-cased value.
-export const CPE_PRODUCT_PATTERN = /^[aoh]:[a-z0-9._\-~%!]{1,100}:[a-z0-9._\-~%!]{1,100}$/;
+export const CPE_PRODUCT_PATTERN = /^[aoh]:(?:[a-z0-9._\-~%!]|\\[^a-z0-9\s]){1,100}:(?:[a-z0-9._\-~%!]|\\[^a-z0-9\s]){1,100}$/;
 export const CPE_DICTIONARY_URL = 'https://nvd.nist.gov/products/cpe/search';
 
 function SectionLabel({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {

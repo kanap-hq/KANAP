@@ -36,6 +36,10 @@ async function testCreateAndValidate() {
     await assert.rejects(technologies.create({ name: 'sql server' }, opts), /already exists/);
     await assert.rejects(technologies.create({ name: 'X', family: 'nope' }, opts), BadRequestException);
     await assert.rejects(technologies.create({ name: 'Y', cpe_products: ['microsoft sql'] }, opts), BadRequestException);
+    // The NVD escapes punctuation in its names: `veeam_backup_\&_replication` is kept as written.
+    const escaped = await technologies.create({ name: 'Veeam', cpe_products: ['a:veeam:veeam_backup_\\&_replication'] }, opts);
+    assert.deepEqual(escaped.cpe_products, ['a:veeam:veeam_backup_\\&_replication']);
+    await assert.rejects(technologies.create({ name: 'Z', cpe_products: ['a:veeam:backup_&_replication'] }, opts), BadRequestException);
     const byRef = await technologies.get('TEC-1', opts);
     assert.equal(byRef.id, created.id);
     await assert.rejects(technologies.update(created.id, { replaced_by_id: created.id }, opts), /cannot replace itself/);
