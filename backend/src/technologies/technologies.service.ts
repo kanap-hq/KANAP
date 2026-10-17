@@ -40,7 +40,7 @@ const SORTS: Record<string, string> = {
 /** Fields a create or a PATCH may carry; anything else in the body is ignored. */
 type TechnologyInput = Partial<{
   name: unknown; editor: unknown; family: unknown; mode: unknown; lifecycle: unknown; description: unknown; notes: unknown;
-  cpe_products: unknown; replaced_by_id: unknown; cyber_criticality: unknown; recovery_wave: unknown;
+  support_notes: unknown; cpe_products: unknown; replaced_by_id: unknown; cyber_criticality: unknown; recovery_wave: unknown;
   rto_minutes: unknown; rpo_minutes: unknown;
 }>;
 
@@ -282,6 +282,7 @@ export class TechnologiesService {
     if (has('editor')) out.editor = optionalText(body.editor, 'Editor', 200);
     if (has('description')) out.description = optionalText(body.description, 'Description', 20000);
     if (has('notes')) out.notes = optionalText(body.notes, 'Notes', 20000);
+    if (has('support_notes')) out.support_notes = optionalText(body.support_notes, 'Support notes', 20000);
     // `catalog_key` is written by the adoption only: a typed technology cannot take a catalog entry's key.
     if (has('mode')) {
       const mode = String(body.mode ?? '').trim();
@@ -588,6 +589,76 @@ export class TechnologiesService {
       await this.audit.log({ table: 'technology_owners', recordId: tech.id, action: 'update', before, after, userId: opts.userId ?? null }, { manager: mg });
     }
     return this.listOwnersOf(mg, tenantId, tech.id);
+  }
+
+  // ==================== SUPPORT CONTACTS ====================
+
+  async listSupportContacts(idOrRef: string, opts: Opts) {
+    const tech = await readTechnology(opts.manager, opts.tenantId, idOrRef);
+    return this.listSupportContactsOf(opts.manager, opts.tenantId, tech.id);
+  }
+
+  /** The support contacts in the order they were added, with what the Operations tab shows of the contact. */
+  private async listSupportContactsOf(mg: EntityManager, tenantId: string, technologyId: string) {
+    const rows: Array<{ id: string; contact_id: string; role: string | null; first_name: string | null; last_name: string | null; email: string | null; phone: string | null; mobile: string | null }> = await mg.query(
+      `SELECT sc.id, sc.contact_id, sc.role, c.first_name, c.last_name, c.email, c.phone, c.mobile
+         FROM technology_support_contacts sc
+         JOIN contacts c ON c.tenant_id = sc.tenant_id AND c.id = sc.contact_id
+        WHERE sc.tenant_id = $1 AND sc.technology_id = $2
+        ORDER BY sc.created_at ASC, sc.id ASC`,
+      [tenantId, technologyId],
+    );
+    return rows.map((r) => ({
+      id: r.id,
+      contact_id: r.contact_id,
+      role: r.role,
+      contact: { id: r.contact_id, first_name: r.first_name, last_name: r.last_name, email: r.email, phone: r.phone, mobile: r.mobile },
+    }));
+  }
+
+  /**
+   * Replace the support contacts (as the applications' `support-contacts/bulk-replace`): one row per
+   * contact (the first role given wins), every contact of the tenant (400 otherwise), the order of
+   * the list kept, one audit row when the set changes. The technology's row is locked first, so a
+   * concurrent replacement waits and the last one wins.
+   */
+  async bulkReplaceSupportContacts(idOrRef: string, contacts: Array<{ contact_id?: unknown; role?: unknown }>, opts: Opts) {
+    const { manager: mg, tenantId } = opts;
+    const tech = await readTechnology(mg, tenantId, idOrRef, true);
+    const wanted: Array<{ contact_id: string; role: string | null }> = [];
+    const seen = new Set<string>();
+    for (const item of Array.isArray(contacts) ? contacts : []) {
+      const contactId = String(item?.contact_id ?? '').trim().toLowerCase();
+      if (!contactId) continue;
+      if (!UUID_RE.test(contactId)) throw new BadRequestException('One or more contacts not found');
+      if (seen.has(contactId)) continue;
+      seen.add(contactId);
+      wanted.push({ contact_id: contactId, role: optionalText(item?.role, 'Role', 200) });
+    }
+    if (wanted.length) {
+      const found = await mg.query(`SELECT id FROM contacts WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, [tenantId, wanted.map((c) => c.contact_id)]);
+      if (found.length !== wanted.length) throw new BadRequestException('One or more contacts not found');
+    }
+    const existing: Array<{ contact_id: string; role: string | null }> = await mg.query(
+      `SELECT contact_id, role FROM technology_support_contacts WHERE tenant_id = $1 AND technology_id = $2 ORDER BY created_at ASC, id ASC`,
+      [tenantId, tech.id],
+    );
+    const before = existing.map((c) => `${c.contact_id}:${c.role ?? ''}`);
+    const after = wanted.map((c) => `${c.contact_id}:${c.role ?? ''}`);
+    if (JSON.stringify(before) !== JSON.stringify(after)) {
+      await mg.query(`DELETE FROM technology_support_contacts WHERE tenant_id = $1 AND technology_id = $2`, [tenantId, tech.id]);
+      if (wanted.length) {
+        // created_at follows the list order, which is the display order.
+        await mg.query(
+          `INSERT INTO technology_support_contacts (tenant_id, technology_id, contact_id, role, created_at)
+           SELECT $1, $2, w.contact_id, w.role, now() + (w.ord * interval '1 microsecond')
+             FROM unnest($3::uuid[], $4::text[]) WITH ORDINALITY AS w(contact_id, role, ord)`,
+          [tenantId, tech.id, wanted.map((c) => c.contact_id), wanted.map((c) => c.role)],
+        );
+      }
+      await this.audit.log({ table: 'technology_support_contacts', recordId: tech.id, action: 'update', before, after, userId: opts.userId ?? null }, { manager: mg });
+    }
+    return this.listSupportContactsOf(mg, tenantId, tech.id);
   }
 
   // ==================== WEB LINKS ====================
