@@ -41,6 +41,7 @@ import { ServerOption } from '../../components/fields/ServerSelect';
 import HardwareInfoPanel, { HardwareInfoPanelHandle } from './editors/HardwareInfoPanel';
 import SupportInfoPanel, { SupportInfoPanelHandle } from './editors/SupportInfoPanel';
 import AssetRelationsPanel, { AssetRelationsPanelHandle } from './editors/AssetRelationsPanel';
+import AssetTechnologiesSection from './components/AssetTechnologiesSection';
 import { useAssetNav } from '../../hooks/useAssetNav';
 import EntityKnowledgePanel from '../../components/EntityKnowledgePanel';
 import { useAuth } from '../../auth/AuthContext';
@@ -2094,6 +2095,9 @@ export default function AssetWorkspacePage() {
                   </PropertyRow>
                 </Stack>
               </Box>
+
+              {/* What the server carries, under its operating system (lot T1b). */}
+              {!isCreate && id && <AssetTechnologiesSection assetId={id} canManage={canManage} />}
 
               {/* NETWORK INFORMATION SECTION */}
               <Box>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, CircularProgress, MenuItem, MenuList, Popover, TextField, Typography } from '@mui/material';
+import { Box, Button, Checkbox, CircularProgress, MenuItem, MenuList, Popover, TextField, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import useDebouncedValue from '../../hooks/useDebouncedValue';
@@ -21,6 +21,11 @@ type Props = {
   ariaLabel: string;
   onPick: (option: RelationOption) => void;
   onClose: () => void;
+  /**
+   * Several rows at once: a choice ticks the row instead of linking it, and a footer button links
+   * the ticked rows (kept across searches). `label` words that button for the count ticked.
+   */
+  multiple?: { label: (count: number) => string; onConfirm: (options: RelationOption[]) => void };
 };
 
 const itemSx = { minHeight: 32, py: 0.75, fontSize: 13, color: 'kanap.text.primary' } as const;
@@ -28,12 +33,23 @@ const itemSx = { minHeight: 32, py: 0.75, fontSize: 13, color: 'kanap.text.prima
 /**
  * The "Add" picker of a Relations section, anchored to the button that opens it (the pattern of
  * `MetadataUserPicker`): a search field, then a flat list of matches read on the server as the user
- * types. One choice links the row and closes the picker. Arrow down moves into the list, Enter in
- * the field takes the first match, Escape closes.
+ * types. One choice links the row and closes the picker (with `multiple`, choices tick rows and a
+ * footer button links them). Arrow down moves into the list, Enter in the field takes the first
+ * match, Escape closes.
  */
-export default function RelationAddPicker({ anchorEl, searchKey, search, excludeIds, placeholder, ariaLabel, onPick, onClose }: Props) {
+export default function RelationAddPicker({ anchorEl, searchKey, search, excludeIds, placeholder, ariaLabel, onPick, onClose, multiple }: Props) {
   const { t } = useTranslation('common');
   const [text, setText] = React.useState('');
+  const [ticked, setTicked] = React.useState<Map<string, RelationOption>>(() => new Map());
+  const choose = (option: RelationOption) => {
+    if (!multiple) { onPick(option); return; }
+    setTicked((prev) => {
+      const next = new Map(prev);
+      if (next.has(option.id)) next.delete(option.id);
+      else next.set(option.id, option);
+      return next;
+    });
+  };
   const listRef = React.useRef<HTMLUListElement | null>(null);
   const q = useDebouncedValue(text.trim(), LOOKUP_DEBOUNCE_MS);
   const { data, isFetching } = useQuery({
@@ -69,7 +85,7 @@ export default function RelationAddPicker({ anchorEl, searchKey, search, exclude
         onChange={(event) => setText(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === 'ArrowDown') { event.preventDefault(); focusFirst(); }
-          if (event.key === 'Enter' && options[0]) { event.preventDefault(); onPick(options[0]); }
+          if (event.key === 'Enter' && options[0]) { event.preventDefault(); choose(options[0]); }
         }}
         inputProps={{ 'aria-label': ariaLabel, role: 'combobox', 'aria-expanded': true }}
         InputProps={{ endAdornment: isFetching ? <CircularProgress color="inherit" size={14} /> : null }}
@@ -90,8 +106,11 @@ export default function RelationAddPicker({ anchorEl, searchKey, search, exclude
         ) : (
           <MenuList ref={listRef} role="listbox" aria-label={ariaLabel} dense disablePadding sx={{ py: 0.25 }}>
             {options.map((option) => (
-              <MenuItem key={option.id} role="option" aria-selected={false} onClick={() => onPick(option)} sx={itemSx}>
+              <MenuItem key={option.id} role="option" aria-selected={multiple ? ticked.has(option.id) : false} onClick={() => choose(option)} sx={itemSx}>
                 <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, width: '100%', minWidth: 0 }}>
+                  {multiple && (
+                    <Checkbox size="small" checked={ticked.has(option.id)} tabIndex={-1} disableRipple sx={{ p: 0, alignSelf: 'center' }} inputProps={{ 'aria-hidden': true }} />
+                  )}
                   {option.ref && (
                     <Box component="span" sx={{ fontSize: 12, color: 'kanap.text.tertiary', flexShrink: 0 }}>{option.ref}</Box>
                   )}
@@ -103,6 +122,18 @@ export default function RelationAddPicker({ anchorEl, searchKey, search, exclude
           </MenuList>
         )}
       </Box>
+      {multiple && (
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', pt: 0.75 }}>
+          <Button
+            variant="action-primary"
+            size="small"
+            disabled={ticked.size === 0}
+            onClick={() => multiple.onConfirm([...ticked.values()])}
+          >
+            {multiple.label(ticked.size)}
+          </Button>
+        </Box>
+      )}
     </Popover>
   );
 }

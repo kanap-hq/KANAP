@@ -1438,6 +1438,21 @@
         "ipAddressPlaceholder": "p. ej., 10.12.34.56",
         "removeIpAddress": "Eliminar dirección IP"
       },
+      "technologies": {
+        "title": "Tecnologías",
+        "add": "Añadir",
+        "search": "Buscar tecnologías",
+        "empty": "Ninguna tecnología en este servidor.",
+        "remove": "Quitar {{name}}",
+        "saveFailed": "No se pudieron guardar las tecnologías.",
+        "columns": {
+          "ref": "Ref.",
+          "name": "Nombre",
+          "family": "Familia",
+          "version": "Versión",
+          "via": "Instalada en"
+        }
+      },
       "assignments": {
         "title": "Asignaciones",
         "addAssignment": "Agregar asignación",
@@ -1673,6 +1688,64 @@
           "ended": "Sin soporte",
           "unknown": "Fecha desconocida"
         }
+      },
+      "servers": {
+        "title": "Servidores",
+        "add": "Añadir",
+        "search": "Buscar servidores",
+        "empty": "Ningún servidor lleva esta tecnología.",
+        "total": "Total",
+        "serverCount_one": "{{count}} servidor",
+        "serverCount_other": "{{count}} servidores",
+        "retired": "Servidor retirado: no cuenta en ninguna parte",
+        "retiredShort": "retirado",
+        "changeVersion": "Cambiar la versión en {{name}}",
+        "notesOf": "Notas sobre {{name}}",
+        "notesPlaceholder": "p. ej., nodo del clúster",
+        "remove": "Quitar {{name}}",
+        "saveFailed": "No se pudieron guardar los servidores.",
+        "columns": {
+          "ref": "Ref.",
+          "server": "Servidor",
+          "environment": "Entorno",
+          "operatingSystem": "Sistema operativo",
+          "version": "Versión",
+          "via": "Instalada en",
+          "notes": "Notas"
+        }
+      },
+      "applications": {
+        "title": "Aplicaciones",
+        "add": "Añadir",
+        "addCount_one": "Añadir {{count}} aplicación",
+        "addCount_other": "Añadir {{count}} aplicaciones",
+        "search": "Buscar aplicaciones",
+        "empty": "Ninguna aplicación usa esta tecnología.",
+        "noAccess": "No puede ver las aplicaciones.",
+        "declared": "Declarada",
+        "viaHost": "{{server}} (en {{host}})",
+        "yes": "Sí",
+        "changeVersion": "Cambiar la versión para {{name}}",
+        "remove": "Quitar {{name}}",
+        "saveFailed": "No se pudieron guardar las aplicaciones.",
+        "exportCsv": "Exportar CSV",
+        "exportFailed": "La exportación falló.",
+        "columns": {
+          "ref": "Ref.",
+          "application": "Aplicación",
+          "environment": "Entorno",
+          "criticality": "Criticidad",
+          "externalFacing": "Externa",
+          "server": "Servidor",
+          "version": "Versión",
+          "itOwner": "Responsable de TI"
+        }
+      },
+      "versionPicker": {
+        "search": "Elegir una versión",
+        "placeholder": "p. ej., 2022",
+        "unknown": "Versión desconocida",
+        "create": "Añadir la versión «{{label}}»"
       },
       "messages": {
         "saveFailed": "No se pudo guardar la tecnología.",
