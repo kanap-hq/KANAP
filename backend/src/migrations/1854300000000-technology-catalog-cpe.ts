@@ -26,7 +26,6 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 export const ADDED_CPE: Record<string, string[]> = {
   'amazon-corretto': ['a:oracle:jdk', 'a:oracle:openjdk'],
   'apache-artemis': ['a:apache:artemis'],
-  'azure-kubernetes-service': ['a:microsoft:azure_kubernetes_service'],
   'bind-9': ['a:isc:bind'],
   caddy: ['a:caddy_project:caddy'],
   centreon: ['a:centreon:centreon_web', 'a:merethis:centreon'],
@@ -39,8 +38,6 @@ export const ADDED_CPE: Record<string, string[]> = {
   dovecot: ['a:open-xchange:dovecot'],
   'eclipse-jetty': ['a:mortbay:jetty'],
   'eclipse-temurin': ['a:oracle:jdk', 'a:oracle:openjdk'],
-  'entra-id': ['a:microsoft:azure_active_directory', 'a:microsoft:entra_id'],
-  'google-kubernetes-engine': ['a:google:kubernetes_engine'],
   'ibm-mq': ['a:ibm:websphere_mq'],
   jenkins: ['a:cloudbees:jenkins'],
   'microsoft-build-of-openjdk': ['a:oracle:jdk', 'a:oracle:openjdk'],

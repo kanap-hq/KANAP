@@ -61,7 +61,7 @@ const OPENJDK_CPE = ['a:oracle:jdk', 'a:oracle:openjdk'];
  * `cpeVersion: 'label'`: the label is the NVD version as it stands; `cpeVersions`: `[pattern,
  * version]` for labels without a usable number (see `cpeVersionOf`).
  * `cpeExclude`: identifiers published by endoflife.date that the NVD does not use for this product.
- * `noCpe`: why an entry has no identifier (checked by --check-cpe). Every identifier kept was
+ * `noCpe`: why an entry has no identifier (checked by --check-cpe); it drops any published one. Every identifier kept was
  * checked against the NVD with --check-cpe --nvd (lot C3, 2026-10-17): it exists in the CPE
  * dictionary and CVE name it.
  */
@@ -113,11 +113,11 @@ const PRODUCTS = [
   { key: 'rancher', slug: 'rancher', name: 'Rancher', editor: 'SUSE', family: 'container', cpe: ['a:rancher:rancher'] },
   { key: 'harbor', slug: 'harbor', name: 'Harbor', editor: 'Cloud Native Computing Foundation', family: 'container' },
   { key: 'amazon-eks', slug: 'amazon-eks', name: 'Amazon EKS', editor: 'Amazon Web Services', family: 'container', mode: 'subscribed', noCpe: 'The NVD names no CVE under an Amazon EKS product.' },
-  { key: 'azure-kubernetes-service', slug: 'azure-kubernetes-service', name: 'Azure Kubernetes Service', editor: 'Microsoft', family: 'container', mode: 'subscribed', cpe: ['a:microsoft:azure_kubernetes_service'] },
-  { key: 'google-kubernetes-engine', slug: 'google-kubernetes-engine', name: 'Google Kubernetes Engine', editor: 'Google', family: 'container', mode: 'subscribed', cpe: ['a:google:kubernetes_engine'] },
+  { key: 'azure-kubernetes-service', slug: 'azure-kubernetes-service', name: 'Azure Kubernetes Service', editor: 'Microsoft', family: 'container', mode: 'subscribed', noCpe: 'An online service its provider patches: its CVE call for no action from the customer.' },
+  { key: 'google-kubernetes-engine', slug: 'google-kubernetes-engine', name: 'Google Kubernetes Engine', editor: 'Google', family: 'container', mode: 'subscribed', noCpe: 'An online service its provider patches: its CVE call for no action from the customer.' },
   // Directory and identity
   { key: 'active-directory', slug: null, name: 'Active Directory', editor: 'Microsoft', family: 'directory', noCpe: 'Its CVE are filed under Windows Server, an operating system (lot T3); a:microsoft:active_directory holds three CVE, the last of 2022.' },
-  { key: 'entra-id', slug: null, name: 'Microsoft Entra ID', editor: 'Microsoft', family: 'directory', mode: 'subscribed', cpe: ['a:microsoft:azure_active_directory', 'a:microsoft:entra_id'] },
+  { key: 'entra-id', slug: null, name: 'Microsoft Entra ID', editor: 'Microsoft', family: 'directory', mode: 'subscribed', noCpe: 'An online service its provider patches: its CVE call for no action from the customer.' },
   { key: 'keycloak', slug: 'keycloak', name: 'Keycloak', editor: 'Red Hat', family: 'directory' },
   { key: 'samba', slug: 'samba', name: 'Samba', editor: 'Samba Team', family: 'directory', cpe: ['a:samba:samba'] },
   { key: 'authentik', slug: 'authentik', name: 'authentik', editor: 'Authentik Security', family: 'directory' },
@@ -191,9 +191,10 @@ function cpeProduct(id) {
 
 /**
  * The CPE identifiers of an entry: the ones endoflife.date publishes (`published`), plus the `cpe`
- * of PRODUCTS, minus its `cpeExclude`, in lower case and sorted.
+ * of PRODUCTS, minus its `cpeExclude`, in lower case and sorted; none for an entry with `noCpe`.
  */
 function cpeProductsOf(entry, published) {
+  if (entry?.noCpe) return [];
   const exclude = new Set((entry?.cpeExclude ?? []).map((id) => id.toLowerCase()));
   const cpe = new Set();
   for (const id of [...published, ...(entry?.cpe ?? [])]) {

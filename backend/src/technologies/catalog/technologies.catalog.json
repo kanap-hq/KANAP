@@ -767,9 +767,7 @@
       "editor": "Microsoft",
       "family": "container",
       "mode": "subscribed",
-      "cpe_products": [
-        "a:microsoft:azure_kubernetes_service"
-      ],
+      "cpe_products": [],
       "source_url": "https://endoflife.date/azure-kubernetes-service",
       "versions": [
         {
@@ -1024,9 +1022,7 @@
       "editor": "Google",
       "family": "container",
       "mode": "subscribed",
-      "cpe_products": [
-        "a:google:kubernetes_engine"
-      ],
+      "cpe_products": [],
       "source_url": "https://endoflife.date/google-kubernetes-engine",
       "versions": [
         {
@@ -2906,10 +2902,7 @@
       "editor": "Microsoft",
       "family": "directory",
       "mode": "subscribed",
-      "cpe_products": [
-        "a:microsoft:azure_active_directory",
-        "a:microsoft:entra_id"
-      ],
+      "cpe_products": [],
       "source_url": null,
       "versions": []
     },
