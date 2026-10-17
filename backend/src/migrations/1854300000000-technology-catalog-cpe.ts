@@ -6,13 +6,14 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * receive them otherwise.
  *
  * For each technology of a tenant whose `catalog_key` names an entry below:
- * 1. the identifiers of `ADDED_CPE` it lacks are added to `cpe_products` (none is removed, so an
- *    identifier the tenant removed by hand comes back only if it is one of these);
- * 2. each version of `CPE_VERSIONS` receives that `cpe_version` when it has none; a version is
+ * 1. the identifiers of `ADDED_CPE` it lacks are added to `cpe_products` (an identifier the tenant
+ *    removed by hand comes back only if it is one of these);
+ * 2. the identifiers of `REMOVED_CPE`, which the catalog set and the NVD does not know, are removed;
+ * 3. each version of `CPE_VERSIONS` receives that `cpe_version` when it has none; a version is
  *    recognised by its `catalog_key` (`msexchange:subscription`, kept when the tenant renames it),
- *    failing a key by its label without case: Exchange Subscription Edition, compared on its build line. A
- *    value set by the tenant is kept. SQL Server keeps its years: the matching applies its per-release products to
- *    the release named by the label.
+ *    failing a key by its label without case: Exchange Subscription Edition, compared on its build
+ *    line. A value set by the tenant is kept. SQL Server keeps its years: the matching applies its
+ *    per-release products to the release named by the label.
  *
  * The lists are frozen here, from the catalog shipped with this migration: a later update of
  * `technologies.catalog.json` does not change what this migration does. Tenant by tenant with
@@ -20,7 +21,8 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * logged. A rerun finds nothing to add. The vulnerabilities of the technologies touched follow at
  * the next scheduled run of the feed, which collects every CVE of a product it did not follow yet.
  *
- * down() changes nothing: the identifiers added cannot be told apart from those set by hand.
+ * down() changes nothing: the identifiers added cannot be told apart from those set by hand, and an
+ * identifier removed named no CVE.
  */
 
 /** Catalog key → identifiers added by lot C3 (2026-10-17). */
@@ -67,12 +69,20 @@ export const ADDED_CPE: Record<string, string[]> = {
   zabbix: ['a:zabbix:zabbix_server'],
 };
 
+/**
+ * Catalog key → identifiers the catalog set before lot C3 and dropped: `mongodb-org-server` is in
+ * neither the CPE dictionary nor a CVE, and the feed asked the NVD for it at every run.
+ */
+export const REMOVED_CPE: Record<string, string[]> = {
+  mongodb: ['a:mongodb-org-server:mongodb-org-server'],
+};
+
 /** Catalog key, version key, version label, `cpe_version` set by lot C3 (the catalog gave none before). */
 export const CPE_VERSIONS: Array<[string, string, string, string]> = [
   ['msexchange', 'subscription', 'Subscription Edition SU11', '15.2'],
 ];
 
-type Counts = { tenant_id: string; slug: string | null; identifiers: number; versions: number };
+type Counts = { tenant_id: string; slug: string | null; identifiers: number; removed: number; versions: number };
 
 export class TechnologyCatalogCpe1854300000000 implements MigrationInterface {
   name = 'TechnologyCatalogCpe1854300000000';
@@ -81,6 +91,7 @@ export class TechnologyCatalogCpe1854300000000 implements MigrationInterface {
     const pairs = Object.entries(ADDED_CPE).flatMap(([key, ids]) => ids.map((id) => [key, id] as const));
     const cpeKeys = pairs.map(([key]) => key);
     const cpeIds = pairs.map(([, id]) => id);
+    const removedPairs = Object.entries(REMOVED_CPE).flatMap(([key, ids]) => ids.map((id) => [key, id] as const));
     const tenants: Array<{ id: string; slug: string | null }> = await queryRunner.query(
       `SELECT id::text AS id, slug FROM tenants ORDER BY created_at ASC, id ASC`,
     );
@@ -102,6 +113,20 @@ export class TechnologyCatalogCpe1854300000000 implements MigrationInterface {
            SELECT count(*)::int AS n FROM changed`,
           [tenant.id, cpeKeys, cpeIds],
         );
+        const [removed]: Array<{ n: number }> = await queryRunner.query(
+          `WITH dropped AS (
+             SELECT key, array_agg(id) AS ids FROM unnest($2::text[], $3::text[]) AS d(key, id) GROUP BY key
+           ), changed AS (
+             UPDATE technologies t
+                SET cpe_products = ARRAY(SELECT p FROM unnest(t.cpe_products) AS p WHERE NOT (p = ANY(d.ids)) ORDER BY 1),
+                    updated_at = now()
+               FROM dropped d
+              WHERE t.tenant_id = $1 AND t.catalog_key = d.key AND t.cpe_products && d.ids
+             RETURNING 1
+           )
+           SELECT count(*)::int AS n FROM changed`,
+          [tenant.id, removedPairs.map(([key]) => key), removedPairs.map(([, id]) => id)],
+        );
         const [versions]: Array<{ n: number }> = await queryRunner.query(
           `WITH changed AS (
              UPDATE technology_versions v
@@ -116,7 +141,9 @@ export class TechnologyCatalogCpe1854300000000 implements MigrationInterface {
            SELECT count(*)::int AS n FROM changed`,
           [tenant.id, CPE_VERSIONS.map(([key]) => key), CPE_VERSIONS.map(([, versionKey]) => versionKey), CPE_VERSIONS.map(([, , label]) => label), CPE_VERSIONS.map(([, , , version]) => version)],
         );
-        if (identifiers.n || versions.n) counts.push({ tenant_id: tenant.id, slug: tenant.slug, identifiers: identifiers.n, versions: versions.n });
+        if (identifiers.n || removed.n || versions.n) {
+          counts.push({ tenant_id: tenant.id, slug: tenant.slug, identifiers: identifiers.n, removed: removed.n, versions: versions.n });
+        }
       }
     } finally {
       await queryRunner.query(`SELECT set_config('app.current_tenant', '', true)`);
@@ -132,9 +159,8 @@ export class TechnologyCatalogCpe1854300000000 implements MigrationInterface {
 function logCounts(counts: Counts[], tenants: number) {
   const prefix = '[Migration] TechnologyCatalogCpe:';
   for (const row of counts) {
-    console.log(`${prefix} tenant ${row.slug ?? '(unknown)'} (${row.tenant_id}): ${row.identifiers} technologies completed, ${row.versions} CPE versions set`);
+    console.log(`${prefix} tenant ${row.slug ?? '(unknown)'} (${row.tenant_id}): ${row.identifiers} technologies completed, ${row.removed} cleared of a dropped identifier, ${row.versions} CPE versions set`);
   }
-  const technologies = counts.reduce((n, row) => n + row.identifiers, 0);
-  const versions = counts.reduce((n, row) => n + row.versions, 0);
-  console.log(`${prefix} ${tenants} tenants read, ${technologies} technologies completed, ${versions} CPE versions set`);
+  const sum = (field: 'identifiers' | 'removed' | 'versions') => counts.reduce((n, row) => n + row[field], 0);
+  console.log(`${prefix} ${tenants} tenants read, ${sum('identifiers')} technologies completed, ${sum('removed')} cleared of a dropped identifier, ${sum('versions')} CPE versions set`);
 }

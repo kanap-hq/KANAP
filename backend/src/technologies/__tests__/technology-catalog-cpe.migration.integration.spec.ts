@@ -2,7 +2,7 @@
 import 'dotenv/config';
 import type { QueryRunner } from 'typeorm';
 import { assert, inRolledBackTransaction, runSpecs, seedTenant, setTenant } from '../../spend/__tests__/round-inputs.fixtures';
-import { ADDED_CPE, CPE_VERSIONS, TechnologyCatalogCpe1854300000000 } from '../../migrations/1854300000000-technology-catalog-cpe';
+import { ADDED_CPE, CPE_VERSIONS, REMOVED_CPE, TechnologyCatalogCpe1854300000000 } from '../../migrations/1854300000000-technology-catalog-cpe';
 import { CPE_PRODUCT_RE } from '../technology-rows';
 import { one } from './technologies.fixtures';
 
@@ -75,8 +75,10 @@ async function testCompletesAdoptedTechnologies() {
     const seTyped = await version(runner, a, exchangeA, 'subscription edition su11', '15.2.2562.17');
     // Docker Engine whose `a:docker:engine` the tenant removed by hand: it is not an added identifier.
     const docker = await adopted(runner, a, 2, 'Docker Engine', 'docker-engine', ['a:example:custom']);
-    // MongoDB whose identifier the tenant removed: lot C3 added nothing to it.
-    const mongo = await adopted(runner, a, 3, 'MongoDB', 'mongodb', []);
+    // MongoDB with the identifier the catalog set and dropped since.
+    const mongo = await adopted(runner, a, 3, 'MongoDB', 'mongodb', ['a:mongodb-org-server:mongodb-org-server', 'a:mongodb:mongodb']);
+    // A technology without catalog key keeps the same identifier.
+    const typedMongo = await adopted(runner, a, 7, 'MongoDB (lab)', null, ['a:mongodb-org-server:mongodb-org-server']);
     // Samba already holding the added identifier, in a list of its own.
     const samba = await adopted(runner, a, 4, 'Samba', 'samba', ['a:samba:samba', 'a:example:samba']);
     // A technology typed by hand, without catalog key.
@@ -101,7 +103,8 @@ async function testCompletesAdoptedTechnologies() {
     assert.equal(await cpeVersionOf(runner, a, v2016), '2016');
     assert.equal(await cpeVersionOf(runner, a, seTyped), '15.2.2562.17', 'a CPE version set by the tenant is kept');
     assert.deepEqual(await cpeOf(runner, a, docker), ['a:docker:docker', 'a:example:custom', 'a:mobyproject:moby'], 'a:docker:engine stays removed');
-    assert.deepEqual(await cpeOf(runner, a, mongo), [], 'nothing comes back to an entry lot C3 did not complete');
+    assert.deepEqual(await cpeOf(runner, a, mongo), ['a:mongodb:mongodb'], 'the dropped identifier is removed');
+    assert.deepEqual(await cpeOf(runner, a, typedMongo), ['a:mongodb-org-server:mongodb-org-server']);
     assert.deepEqual(await cpeOf(runner, a, samba), ['a:samba:samba', 'a:example:samba'], 'a technology holding every added identifier is untouched');
     assert.deepEqual(await cpeOf(runner, a, typed), ['a:microsoft:sql_server'], 'a technology without catalog key is untouched');
     assert.equal(await cpeVersionOf(runner, a, typedVersion), null);
@@ -110,8 +113,8 @@ async function testCompletesAdoptedTechnologies() {
     assert.equal(await cpeVersionOf(runner, b, renamed), '15.2', 'a renamed version is found by its catalog key');
     assert.equal(await cpeVersionOf(runner, b, otherKey), null);
 
-    assert.match(log, new RegExp(`tenant ${await slugOf(runner, a)} \\(${a}\\): 3 technologies completed, 0 CPE versions set`));
-    assert.match(log, new RegExp(`tenant ${await slugOf(runner, b)} \\(${b}\\): 1 technologies completed, 2 CPE versions set`));
+    assert.match(log, new RegExp(`tenant ${await slugOf(runner, a)} \\(${a}\\): 3 technologies completed, 1 cleared of a dropped identifier, 0 CPE versions set`));
+    assert.match(log, new RegExp(`tenant ${await slugOf(runner, b)} \\(${b}\\): 1 technologies completed, 0 cleared of a dropped identifier, 2 CPE versions set`));
 
     // A rerun adds nothing.
     const again = await logged(() => migration.up(runner));
@@ -122,7 +125,7 @@ async function testCompletesAdoptedTechnologies() {
 
 /** The frozen lists stay in the form the technologies store. */
 async function testFrozenLists() {
-  for (const [key, ids] of Object.entries(ADDED_CPE)) {
+  for (const [key, ids] of [...Object.entries(ADDED_CPE), ...Object.entries(REMOVED_CPE)]) {
     for (const id of ids) assert.ok(CPE_PRODUCT_RE.test(id), `${key}: ${id}`);
   }
   assert.ok(CPE_VERSIONS.every(([key]) => ADDED_CPE[key]), 'a version list names an entry the migration completes');
