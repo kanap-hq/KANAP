@@ -102,17 +102,22 @@ export default function AssetTechnologiesSection({ assetId, canManage, heading }
   const rows = data?.items ?? [];
   const dash = '—';
   const columns: Array<RelationsColumn<AssetTechnologyRow>> = [
-    { key: 'ref', header: t('workspace.asset.technologies.columns.ref'), width: 72, render: (row) => <RelationRef>{row.technology_reference ?? dash}</RelationRef> },
+    { key: 'ref', header: t('workspace.asset.technologies.columns.ref'), width: 64, render: (row) => <RelationRef>{row.technology_reference ?? dash}</RelationRef> },
     { key: 'name', header: t('workspace.asset.technologies.columns.name'), render: (row) => <span title={row.technology_name ?? undefined}>{row.technology_name ?? dash}</span> },
-    { key: 'family', header: t('workspace.asset.technologies.columns.family'), width: 120, render: (row) => (row.family ? labelFor('technologyFamily', row.family) || row.family : dash) },
+    { key: 'family', header: t('workspace.asset.technologies.columns.family'), width: 180,
+      render: (row) => {
+        const family = row.family ? labelFor('technologyFamily', row.family) || row.family : dash;
+        return <span title={family}>{family}</span>;
+      },
+    },
     {
-      key: 'version', header: t('workspace.asset.technologies.columns.version'), width: 90,
+      key: 'version', header: t('workspace.asset.technologies.columns.version'), width: 72,
       render: (row) => (row.version_label
         ? <span title={row.version_label}>{row.version_label}</span>
         : <Box component="span" title={t('workspace.technology.versionPicker.unknown')} sx={{ color: 'kanap.text.tertiary' }}>{dash}</Box>),
     },
     {
-      key: 'via', header: t('workspace.asset.technologies.columns.via'), width: 160,
+      key: 'via', header: t('workspace.asset.technologies.columns.via'), width: 140,
       render: (row) => (row.via_asset_name ? <span title={row.via_asset_name}>{row.via_asset_name}</span> : null),
     },
   ];

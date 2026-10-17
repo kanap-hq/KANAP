@@ -165,20 +165,20 @@ export default function TechnologyApplicationsTab({ technologyId, technologyRefe
   });
 
   const columns: Array<RelationsColumn<TechnologyApplicationRow>> = [
-    { key: 'ref', header: t('workspace.technology.applications.columns.ref'), width: 72, render: (row) => <RelationRef>{row.application_reference ?? dash}</RelationRef> },
+    { key: 'ref', header: t('workspace.technology.applications.columns.ref'), width: 64, render: (row) => <RelationRef>{row.application_reference ?? dash}</RelationRef> },
     { key: 'name', header: t('workspace.technology.applications.columns.application'), render: (row) => <span title={row.application_name ?? undefined}>{row.application_name ?? dash}</span> },
     {
-      key: 'environment', header: t('workspace.technology.applications.columns.environment'), width: 90,
+      key: 'environment', header: t('workspace.technology.applications.columns.environment'), width: 110,
       render: (row) => (row.environment ? t(`enums.environment.${camel(row.environment)}`, { defaultValue: row.environment }) : dash),
     },
-    { key: 'criticality', header: t('workspace.technology.applications.columns.criticality'), width: 110, render: (row) => criticality(row.criticality) },
+    { key: 'criticality', header: t('workspace.technology.applications.columns.criticality'), width: 100, render: (row) => criticality(row.criticality) },
     {
-      key: 'external', header: t('workspace.technology.applications.columns.externalFacing'), width: 90,
+      key: 'external', header: t('workspace.technology.applications.columns.externalFacing'), width: 64,
       render: (row) => (row.external_facing ? t('workspace.technology.applications.yes') : tertiary(dash)),
     },
-    { key: 'server', header: t('workspace.technology.applications.columns.server'), width: 150, render: (row) => <span title={server(row)}>{server(row)}</span> },
+    { key: 'server', header: t('workspace.technology.applications.columns.server'), width: 120, render: (row) => <span title={server(row)}>{server(row)}</span> },
     {
-      key: 'version', header: t('workspace.technology.applications.columns.version'), width: 80,
+      key: 'version', header: t('workspace.technology.applications.columns.version'), width: 64,
       render: (row) => (editable(row) ? (
         <Box
           component="button"
