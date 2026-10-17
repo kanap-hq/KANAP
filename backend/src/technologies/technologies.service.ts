@@ -10,6 +10,7 @@ import { validateUploadedFile } from '../common/upload-validation';
 import { fixMulterFilename } from '../common/upload';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
 import { TechnologyReachService } from './technology-reach.service';
+import { sortVersions } from './version-order';
 import {
   BUILD_PREFIX_RE,
   CPE_PRODUCT_RE,
@@ -404,7 +405,7 @@ export class TechnologiesService {
     return { items: await this.listVersionsOf(opts.manager, opts.tenantId, row.id) };
   }
 
-  /** The versions with how many servers and applications name each one directly. */
+  /** The versions, newest first (`version-order.ts`), with how many servers and applications name each one directly. */
   private async listVersionsOf(mg: EntityManager, tenantId: string, technologyId: string) {
     const rows: Array<TechnologyVersionRow & { servers: number; applications: number }> = await mg.query(
       `SELECT ${VERSION_COLUMNS},
@@ -412,10 +413,11 @@ export class TechnologiesService {
               (SELECT count(*)::int FROM application_technologies a WHERE a.tenant_id = v.tenant_id AND a.technology_version_id = v.id AND a.technology_id = v.technology_id) AS applications
          FROM technology_versions v
         WHERE v.tenant_id = $1 AND v.technology_id = $2
-        ORDER BY v.standard_support_end DESC NULLS LAST, lower(v.label) DESC, v.id`,
+        ORDER BY v.id`,
       [tenantId, technologyId],
     );
-    return rows;
+    // Newest number first, labels without a number last: one technology has few versions.
+    return sortVersions(rows);
   }
 
   async createVersion(idOrRef: string, body: VersionInput, opts: Opts) {
