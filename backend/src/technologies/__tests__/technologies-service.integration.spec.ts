@@ -56,6 +56,22 @@ async function testVersionLabels() {
   });
 }
 
+/** The record and the version list give the versions newest number first, labels without a number last. */
+async function testVersionOrder() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'tec-order');
+    const { technologies } = services([]);
+    const opts = { manager: runner.manager, tenantId };
+    const tomcat = await technology(runner, tenantId, 1, 'Tomcat', 'middleware');
+    for (const label of ['9.0', 'LTS', '10.1', '8.5', '11.0', '10.0', 'beta']) {
+      await technologies.createVersion(tomcat, { label, standard_support_end: label === '8.5' ? '2030-01-01' : null }, opts);
+    }
+    const expected = ['11.0', '10.1', '10.0', '9.0', '8.5', 'beta', 'LTS'];
+    assert.deepEqual((await technologies.get(tomcat, opts)).versions.map((v) => v.label), expected);
+    assert.deepEqual((await technologies.listVersions(tomcat, opts)).items.map((v) => v.label), expected);
+  });
+}
+
 async function testLinksAndVersionDelete() {
   await inRolledBackTransaction(async (runner) => {
     const tenantId = await seedTenant(runner, 'tec-links');
@@ -450,6 +466,7 @@ async function cleanupTenant(setup: any, others: any[], tenantId: string, tables
 runSpecs('technologies-service.integration.spec', [
   ['create and validate', testCreateAndValidate],
   ['version labels', testVersionLabels],
+  ['version order', testVersionOrder],
   ['links and version delete', testLinksAndVersionDelete],
   ['catalog adoption', testAdoption],
   ['single links', testSingleLinks],

@@ -4,11 +4,13 @@ import { randomUUID } from 'crypto';
 import * as path from 'path';
 import { AuditService } from '../audit/audit.service';
 import { allocateItemNumbers } from '../common/item-number.service';
+import { duplicateNameException } from '../common/duplicate-name';
 import { StorageService } from '../common/storage/storage.service';
 import { validateUploadedFile } from '../common/upload-validation';
 import { fixMulterFilename } from '../common/upload';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
 import { TechnologyReachService } from './technology-reach.service';
+import { sortVersions } from './version-order';
 import {
   BUILD_PREFIX_RE,
   CPE_PRODUCT_RE,
@@ -31,6 +33,7 @@ const SORTS: Record<string, string> = {
   editor: 'lower(t.editor)',
   family: 't.family',
   reference: 't.item_number',
+  lifecycle: 't.lifecycle',
   updated_at: 't.updated_at',
 };
 
@@ -47,6 +50,63 @@ type VersionInput = Partial<{
 }>;
 
 const LINK_URL_MAX = 2000;
+
+/** Columns the list grid filters with a set filter. */
+const GRID_SET_COLUMNS = ['family', 'editor', 'lifecycle'] as const;
+
+/** Columns the list grid filters with a text filter, and what they compare. */
+const GRID_TEXT_COLUMNS: Record<string, string> = { name: 't.name', reference: `('TEC-' || t.item_number)` };
+
+function gridTextModel(raw: unknown, column: string): { type?: string; filter?: unknown } | null {
+  if (typeof raw !== 'string' || !raw.trim()) return null;
+  try {
+    const model = JSON.parse(raw)?.[column];
+    return model && model.filterType === 'text' ? model : null;
+  } catch {
+    return null;
+  }
+}
+
+/** A grid text filter (contains, equals, starts or ends with, blank) on `expr`, without case. */
+function gridTextClause(expr: string, model: { type?: string; filter?: unknown } | null, bind: (value: unknown) => string): string | null {
+  if (!model) return null;
+  const type = model.type || 'contains';
+  if (type === 'blank') return `(${expr} IS NULL OR ${expr} = '')`;
+  if (type === 'notBlank') return `(${expr} IS NOT NULL AND ${expr} <> '')`;
+  const text = String(model.filter ?? '');
+  if (!text) return null;
+  const escaped = text.replace(/[\\%_]/g, (c) => `\\${c}`);
+  if (type === 'equals') return `lower(${expr}) = lower(${bind(text)})`;
+  if (type === 'notEqual') return `lower(${expr}) <> lower(${bind(text)})`;
+  if (type === 'startsWith') return `${expr} ILIKE ${bind(`${escaped}%`)}`;
+  if (type === 'endsWith') return `${expr} ILIKE ${bind(`%${escaped}`)}`;
+  if (type === 'notContains') return `${expr} NOT ILIKE ${bind(`%${escaped}%`)}`;
+  return `${expr} ILIKE ${bind(`%${escaped}%`)}`;
+}
+
+type GridSetFilter = { values: string[]; blank: boolean };
+
+/**
+ * The list grid's set filters (`{ family: { filterType: 'set', values: [...] } }`), by column: the
+ * ticked values and whether "blank" (`null`) is ticked; a column without a filter is absent. Any
+ * other column or an unreadable model is ignored.
+ */
+function gridFilters(raw: unknown): Partial<Record<(typeof GRID_SET_COLUMNS)[number], GridSetFilter>> {
+  const out: Partial<Record<(typeof GRID_SET_COLUMNS)[number], GridSetFilter>> = {};
+  if (typeof raw !== 'string' || !raw.trim()) return out;
+  let model: Record<string, { values?: unknown }>;
+  try { model = JSON.parse(raw); } catch { return out; }
+  if (!model || typeof model !== 'object') return out;
+  for (const column of GRID_SET_COLUMNS) {
+    const values = model[column]?.values;
+    if (!Array.isArray(values)) continue;
+    out[column] = {
+      values: values.filter((v): v is string => typeof v === 'string' && v.trim() !== '').map((v) => v.trim()),
+      blank: values.some((v) => v === null || v === ''),
+    };
+  }
+  return out;
+}
 
 /**
  * The technologies of a tenant (lot S): list with its counters, record, versions, owners, web links
@@ -76,6 +136,23 @@ export class TechnologiesService {
     const where = ['t.tenant_id = $1'];
     const list = (value: unknown) => (Array.isArray(value) ? value : String(value ?? '').split(','))
       .map((v) => String(v).trim()).filter(Boolean);
+    // The list grid's set filters (`filters`, JSON) narrow the same columns as the plain parameters.
+    const grid = gridFilters(query.filters);
+    for (const column of GRID_SET_COLUMNS) {
+      const filter = grid[column];
+      if (!filter) continue;
+      const expr = column === 'editor' ? 'lower(t.editor)' : `t.${column}`;
+      const values = column === 'editor' ? filter.values.map((v) => v.toLowerCase()) : filter.values;
+      const parts = [
+        ...(values.length ? [`${expr} = ANY(${bind(values)}::text[])`] : []),
+        ...(filter.blank ? [`t.${column} IS NULL`] : []),
+      ];
+      where.push(parts.length ? `(${parts.join(' OR ')})` : 'false');
+    }
+    for (const [column, expr] of Object.entries(GRID_TEXT_COLUMNS)) {
+      const clause = gridTextClause(expr, gridTextModel(query.filters, column), bind);
+      if (clause) where.push(clause);
+    }
     const families = list(query.family);
     if (families.length) where.push(`t.family = ANY(${bind(families)}::text[])`);
     const editors = list(query.editor).map((v) => v.toLowerCase());
@@ -87,18 +164,29 @@ export class TechnologiesService {
       const needle = bind(`%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
       where.push(`(t.name ILIKE ${needle} OR t.editor ILIKE ${needle} OR ('TEC-' || t.item_number) ILIKE ${needle})`);
     }
-    const sort = SORTS[String(query.sort ?? 'name')] ?? SORTS.name;
-    const direction = String(query.direction ?? 'asc').toLowerCase() === 'desc' ? 'DESC' : 'ASC';
+    // `sort` takes a field (`name`) with `direction`, or the grid's `field:DIR` (`name:DESC`).
+    const [sortField, sortDirection] = String(query.sort ?? 'name').split(':');
+    const sort = SORTS[sortField] ?? SORTS.name;
+    const direction = String(sortDirection ?? query.direction ?? 'asc').toLowerCase() === 'desc' ? 'DESC' : 'ASC';
     const limit = Math.min(Math.max(Number(query.limit) || 100, 1), 500);
-    const offset = Math.max(Number(query.offset) || 0, 0);
-    const rows: Array<TechnologyRow & { total: string; owner_names: string[] | null }> = await mg.query(
+    // `offset`, or the grid's `page` (from 1).
+    const offset = query.offset !== undefined
+      ? Math.max(Number(query.offset) || 0, 0)
+      : Math.max((Number(query.page) || 1) - 1, 0) * limit;
+    const rows: Array<TechnologyRow & { total: string; owner_names: string[] | null; it_owner_names: string[] | null }> = await mg.query(
       `SELECT ${TECHNOLOGY_COLUMNS}, count(*) OVER () AS total,
               ARRAY(
                 SELECT NULLIF(btrim(concat_ws(' ', u.first_name, u.last_name)), '')
                   FROM technology_owners o JOIN users u ON u.id = o.user_id AND u.tenant_id = o.tenant_id
                  WHERE o.tenant_id = t.tenant_id AND o.technology_id = t.id
                  ORDER BY o.owner_type DESC, lower(u.last_name), lower(u.first_name), u.id
-              ) AS owner_names
+              ) AS owner_names,
+              ARRAY(
+                SELECT NULLIF(btrim(concat_ws(' ', u.first_name, u.last_name)), '')
+                  FROM technology_owners o JOIN users u ON u.id = o.user_id AND u.tenant_id = o.tenant_id
+                 WHERE o.tenant_id = t.tenant_id AND o.technology_id = t.id AND o.owner_type = 'it'
+                 ORDER BY lower(u.last_name), lower(u.first_name), u.id
+              ) AS it_owner_names
          FROM technologies t
         WHERE ${where.join(' AND ')}
         ORDER BY ${sort} ${direction} NULLS LAST, t.id
@@ -107,9 +195,10 @@ export class TechnologiesService {
     );
     const counts = await this.reach.countsOfTechnologies(mg, tenantId, rows.map((row) => row.id));
     return {
-      items: rows.map(({ total: _total, owner_names, ...row }) => ({
+      items: rows.map(({ total: _total, owner_names, it_owner_names, ...row }) => ({
         ...this.present(row),
         owner_names: (owner_names ?? []).filter(Boolean),
+        it_owner_names: (it_owner_names ?? []).filter(Boolean),
         servers: counts.get(row.id)?.servers ?? 0,
         applications: counts.get(row.id)?.applications ?? 0,
         versions_in_use: counts.get(row.id)?.versions_in_use ?? 0,
@@ -119,6 +208,7 @@ export class TechnologiesService {
       total: Number(rows[0]?.total ?? 0),
       limit,
       offset,
+      page: Math.floor(offset / limit) + 1,
     };
   }
 
@@ -257,10 +347,32 @@ export class TechnologiesService {
       `SELECT id FROM technologies WHERE tenant_id = $1 AND lower(name) = lower($2) AND ($3::uuid IS NULL OR id <> $3::uuid)`,
       [tenantId, name, exceptId],
     );
-    if (rows.length) throw new ConflictException('A technology with this name already exists.');
+    if (rows.length) throw duplicateNameException('A technology with this name already exists.');
   }
 
   // ==================== EDITORS ====================
+
+  /**
+   * The values of the list grid's set filters (`fields`: `editor`, `family`, `lifecycle`, comma
+   * list), the tenant's own and all of them: editors deduplicated without case (one spelling per
+   * editor, as the filter compares without case), `null` when a technology has none.
+   */
+  async filterValues(fields: unknown, opts: Opts): Promise<Record<string, Array<string | null>>> {
+    const wanted = String(fields ?? '').split(',').map((f) => f.trim())
+      .filter((f): f is (typeof GRID_SET_COLUMNS)[number] => (GRID_SET_COLUMNS as readonly string[]).includes(f));
+    const out: Record<string, Array<string | null>> = {};
+    for (const field of Array.from(new Set(wanted))) {
+      // The column comes from the fixed list above, never from the request text.
+      const key = field === 'editor' ? 'lower(editor)' : field;
+      const rows: Array<{ value: string | null }> = await opts.manager.query(
+        `SELECT DISTINCT ON (${key}) ${field} AS value FROM technologies
+          WHERE tenant_id = $1 ORDER BY ${key} NULLS LAST, ${field}`,
+        [opts.tenantId],
+      );
+      out[field] = rows.map((row) => row.value);
+    }
+    return out;
+  }
 
   /**
    * Editors to offer: the tenant's and the catalog's (`extra`), deduplicated without case (the
@@ -293,7 +405,7 @@ export class TechnologiesService {
     return { items: await this.listVersionsOf(opts.manager, opts.tenantId, row.id) };
   }
 
-  /** The versions with how many servers and applications name each one directly. */
+  /** The versions, newest first (`version-order.ts`), with how many servers and applications name each one directly. */
   private async listVersionsOf(mg: EntityManager, tenantId: string, technologyId: string) {
     const rows: Array<TechnologyVersionRow & { servers: number; applications: number }> = await mg.query(
       `SELECT ${VERSION_COLUMNS},
@@ -301,10 +413,11 @@ export class TechnologiesService {
               (SELECT count(*)::int FROM application_technologies a WHERE a.tenant_id = v.tenant_id AND a.technology_version_id = v.id AND a.technology_id = v.technology_id) AS applications
          FROM technology_versions v
         WHERE v.tenant_id = $1 AND v.technology_id = $2
-        ORDER BY v.standard_support_end DESC NULLS LAST, lower(v.label) DESC, v.id`,
+        ORDER BY v.id`,
       [tenantId, technologyId],
     );
-    return rows;
+    // Newest number first, labels without a number last: one technology has few versions.
+    return sortVersions(rows);
   }
 
   async createVersion(idOrRef: string, body: VersionInput, opts: Opts) {

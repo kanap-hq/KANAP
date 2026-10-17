@@ -82,6 +82,8 @@ const LocationsPage = React.lazy(() => import('./pages/it/LocationsPage'));
 const LocationWorkspacePage = React.lazy(() => import('./pages/it/LocationWorkspacePage'));
 const AssetsPage = React.lazy(() => import('./pages/it/AssetsPage'));
 const AssetWorkspacePage = React.lazy(() => import('./pages/it/AssetWorkspacePage'));
+const TechnologiesPage = React.lazy(() => import('./pages/it/TechnologiesPage'));
+const TechnologyWorkspacePage = React.lazy(() => import('./pages/it/TechnologyWorkspacePage'));
 const IncidentsPage = React.lazy(() => import('./pages/it/IncidentsPage'));
 const NetboxSyncPage = React.lazy(() => import('./pages/it/NetboxSyncPage'));
 const IncidentWorkspacePage = React.lazy(() => import('./pages/it/IncidentWorkspacePage'));
@@ -261,6 +263,9 @@ function AppRoutes() {
           <Route path="/it/assets" element={<AssetsPage />} />
           <Route path="/it/assets/:id" element={<AssetWorkspacePage />} />
           <Route path="/it/assets/:id/:tab" element={<AssetWorkspacePage />} />
+          <Route path="/it/technologies" element={<TechnologiesPage />} />
+          <Route path="/it/technologies/:id" element={<TechnologyWorkspacePage />} />
+          <Route path="/it/technologies/:id/:tab" element={<TechnologyWorkspacePage />} />
           <Route path="/it/incidents" element={<IncidentsPage />} />
           <Route path="/it/incidents/:id" element={<IncidentWorkspacePage />} />
           <Route path="/it/incidents/:id/:tab" element={<IncidentWorkspacePage />} />

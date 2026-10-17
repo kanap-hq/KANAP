@@ -30,7 +30,7 @@ type Row = { id: string; name: string; status: string };
 const page = (names: string[]) => ({ data: { items: names.map((name) => ({ id: name, name, status: 'enabled' })), total: names.length, page: 1, limit: 50 } });
 const t = ((key: string) => key) as any;
 
-function Grid(props: { onGridApiReady?: (api: any) => void; withScope?: boolean }) {
+function Grid(props: { onGridApiReady?: (api: any) => void; withScope?: boolean; emptyState?: React.ReactNode }) {
   return (
     <MemoryRouter>
       <ServerDataGrid<Row>
@@ -44,6 +44,7 @@ function Grid(props: { onGridApiReady?: (api: any) => void; withScope?: boolean 
         defaultSort={{ field: 'name', direction: 'ASC' }}
         statusScopeConfig={props.withScope ? { defaultScope: 'enabled' } : undefined}
         onGridApiReady={props.onGridApiReady}
+        emptyState={props.emptyState}
       />
     </MemoryRouter>
   );
@@ -79,6 +80,19 @@ describe('ServerDataGrid', () => {
       expect(await screen.findByText('common:filters.noResults')).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'common:filters.clearAll' })).not.toBeInTheDocument();
       expect(screen.getByText('common:filters.resultCount:0')).toBeInTheDocument();
+      view.unmount();
+    }, 20_000);
+
+    it('says the empty line of the page when nothing narrows the list, the generic one when a filter does', async () => {
+      get.mockImplementation(async () => page([]));
+      let gridApi: any = null;
+      const view = render(<Grid emptyState={<button type="button">Create the first thing</button>} onGridApiReady={(a) => { gridApi = a; }} />);
+      expect(await screen.findByRole('button', { name: 'Create the first thing' })).toBeInTheDocument();
+      expect(screen.queryByText('common:filters.noResults')).not.toBeInTheDocument();
+
+      await act(async () => { gridApi.setFilterModel({ name: { filterType: 'text', type: 'contains', filter: 'zz' } }); });
+      expect(await screen.findByText('common:filters.noResultsFiltered')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Create the first thing' })).not.toBeInTheDocument();
       view.unmount();
     }, 20_000);
 

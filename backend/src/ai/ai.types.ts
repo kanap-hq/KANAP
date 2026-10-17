@@ -70,7 +70,7 @@ export const AI_QUERY_ENTITY_TYPES = [
  * surface in search_all and the entity picker, and are not listable or
  * aggregatable from the chat.
  */
-export const AI_SEARCH_ONLY_ENTITY_TYPES = [] as const;
+export const AI_SEARCH_ONLY_ENTITY_TYPES = ['technologies'] as const;
 
 export const AI_SEARCH_ENTITY_TYPES = [
   ...AI_QUERY_ENTITY_TYPES,

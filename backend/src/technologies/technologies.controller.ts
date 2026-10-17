@@ -103,6 +103,14 @@ export class TechnologiesController {
     return runLookup(requireManager(ctx.manager), ctx.tenantId, TECHNOLOGY_LOOKUP, parseLookupRequest(query));
   }
 
+  /** The values the list grid's set filters offer: the tenant's own, every one of them. */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('infrastructure', 'reader')
+  @Get('filter-values')
+  filterValues(@Query('fields') fields: string, @Tenant() ctx: TenantRequest) {
+    return this.svc.filterValues(fields, this.opts(ctx));
+  }
+
   /** Editors to offer: the tenant's and the catalog's, deduplicated without case. */
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'reader')

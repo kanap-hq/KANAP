@@ -87,6 +87,7 @@ const PAGES: Page[] = [
   { name: 'SuppliersPage', load: () => import('./SuppliersPage') },
   { name: 'DepartmentsPage', load: () => import('./DepartmentsPage') },
   { name: 'AssetsPage', load: () => import('./it/AssetsPage') },
+  { name: 'TechnologiesPage', load: () => import('./it/TechnologiesPage') },
   { name: 'BudgetListPage', load: () => import('./budget/BudgetListPage') },
   { name: 'AuditLogsPage', load: () => import('./admin/AuditLogsPage') },
   { name: 'KnowledgePage', load: () => import('./knowledge/KnowledgePage') },

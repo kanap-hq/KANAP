@@ -180,6 +180,24 @@
       "supplier": {"source": "Supplier", "en": "Supplier", "fr": "Fournisseur", "de": "Lieferant", "es": "Proveedor"},
       "other": {"source": "Other", "en": "Other", "fr": "Autre", "de": "Sonstiges", "es": "Otro"}
     },
+    "technologyFamilies": {
+      "operating_system": {"source": "Operating system", "en": "Operating system", "fr": "Système d’exploitation", "de": "Betriebssystem", "es": "Sistema operativo"},
+      "database": {"source": "Database", "en": "Database", "fr": "Base de données", "de": "Datenbank", "es": "Base de datos"},
+      "application_server": {"source": "Application server", "en": "Application server", "fr": "Serveur d’applications", "de": "Anwendungsserver", "es": "Servidor de aplicaciones"},
+      "web_server": {"source": "Web server", "en": "Web server", "fr": "Serveur web", "de": "Webserver", "es": "Servidor web"},
+      "hypervisor": {"source": "Hypervisor", "en": "Hypervisor", "fr": "Hyperviseur", "de": "Hypervisor", "es": "Hipervisor"},
+      "container": {"source": "Containers", "en": "Containers", "fr": "Conteneurs", "de": "Container", "es": "Contenedores"},
+      "directory": {"source": "Directory and identity", "en": "Directory and identity", "fr": "Annuaire et identité", "de": "Verzeichnis und Identität", "es": "Directorio e identidad"},
+      "messaging": {"source": "Messaging", "en": "Messaging", "fr": "Messagerie", "de": "Messaging", "es": "Mensajería"},
+      "integration": {"source": "Integration", "en": "Integration", "fr": "Intégration", "de": "Integration", "es": "Integración"},
+      "backup": {"source": "Backup", "en": "Backup", "fr": "Sauvegarde", "de": "Datensicherung", "es": "Copia de seguridad"},
+      "monitoring": {"source": "Monitoring", "en": "Monitoring", "fr": "Supervision", "de": "Überwachung", "es": "Monitorización"},
+      "runtime": {"source": "Runtime and framework", "en": "Runtime and framework", "fr": "Environnement d’exécution et framework", "de": "Laufzeitumgebung und Framework", "es": "Entorno de ejecución y framework"},
+      "storage": {"source": "Storage", "en": "Storage", "fr": "Stockage", "de": "Speicher", "es": "Almacenamiento"},
+      "network_security": {"source": "Network and security", "en": "Network and security", "fr": "Réseau et sécurité", "de": "Netzwerk und Sicherheit", "es": "Red y seguridad"},
+      "administration": {"source": "Administration", "en": "Administration", "fr": "Administration", "de": "Administration", "es": "Administración"},
+      "other": {"source": "Other", "en": "Other", "fr": "Autre", "de": "Sonstiges", "es": "Otro"}
+    },
     "domains": {
       "workgroup": {"source": "Workgroup", "en": "Workgroup", "fr": "Groupe de travail", "de": "Arbeitsgruppe", "es": "Grupo de trabajo"},
       "n-a": {"source": "N/A", "en": "N/A", "fr": "N/A", "de": "k. A.", "es": "N/D"}

@@ -9,6 +9,7 @@ import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import WorkOutlineIcon from '@mui/icons-material/WorkOutline';
 import HubIcon from '@mui/icons-material/Hub';
 import DnsIcon from '@mui/icons-material/Dns';
+import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined';
 import BusinessIcon from '@mui/icons-material/Business';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import SchemaIcon from '@mui/icons-material/Schema';
@@ -172,6 +173,7 @@ export default function Layout() {
     { divider: t('nav:sidebar.it.sections.infrastructure') },
     { to: '/it/locations', label: t('nav:sidebar.it.locations'), icon: <LocationCityIcon />, resource: 'locations' },
     { to: '/it/assets', label: t('nav:sidebar.it.assets'), icon: <DnsIcon />, resource: 'infrastructure' },
+    { to: '/it/technologies', label: t('nav:sidebar.it.technologies'), icon: <LayersOutlinedIcon />, resource: 'infrastructure' },
     { to: '/it/connections', label: t('nav:sidebar.it.connections'), icon: <LanIcon />, resource: 'infrastructure' },
     { to: '/it/connection-map', label: t('nav:sidebar.it.connectionMap'), icon: <LanIcon />, resource: 'infrastructure' },
     { to: '/it/netbox', label: t('nav:sidebar.it.netbox'), icon: <SyncIcon />, resource: 'infrastructure', level: 'admin' as const },
