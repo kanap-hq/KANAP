@@ -520,6 +520,80 @@ const PAGES = {
       await sleep(1500);
     },
   },
+  // FTE article (2026-10-18): Revision 2026 of BL-83 built from three lines (local demo data), Properties closed.
+  'fte-quantity-price-2026-10-18': {
+    path: '/ops/budget/BL-83/budget?year=2026',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForSelector('button[aria-pressed]', { timeout: 30000 });
+      const close = 'button[aria-label="Close properties"]';
+      if (await page.$(close)) { await page.click(close); await sleep(800); }
+      await (await page.$$('xpath/.//button[@aria-pressed and starts-with(normalize-space(.), "Revision")]'))[0].click();
+      await sleep(800);
+      await clickText(page, '[role="tab"]', 'Quantity and price');
+      await page.waitForFunction(() => document.querySelector('main')?.innerText.includes('FTE over the period'), { timeout: 30000 });
+      await sleep(1000);
+    },
+  },
+  // FTE article (2026-10-18): working-day calendars list (standards, "218 working days", "No leave").
+  'fte-calendars-2026-10-18': {
+    path: '/master-data/working-day-calendars',
+    waitFor: 'main',
+    prepare: (page) => page.waitForFunction(() => /218 working days/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 }),
+  },
+  // FTE article (2026-10-18): Staffing by month report, Budget 2026, grouped by supplier.
+  'fte-staffing-by-month-2026-10-18': {
+    path: '/ops/reports/staffing?scope=all',
+    waitFor: 'main',
+    async prepare(page) {
+      await waitForReport(page);
+      await pickSelect(page, 'Group by', 'Supplier');
+      await hideControls(page, HIDDEN_DIMENSIONS);
+      await sleep(1500);
+    },
+  },
+  // FTE article (2026-10-18): Cost per FTE report, all lines, grouped by supplier, 2026 Budget and Expected landing.
+  'fte-cost-per-fte-2026-10-18': {
+    path: '/ops/reports/cost-per-fte?scope=all',
+    waitFor: 'main',
+    async prepare(page) {
+      await waitForReport(page);
+      await pickSelect(page, 'Group by', 'Supplier');
+      await pickSelect(page, 'Columns', '2026', 1);
+      await pickSelect(page, 'Columns', 'Expected landing', 4);
+      await hideControls(page, HIDDEN_DIMENSIONS);
+      await page.waitForFunction(() => document.querySelector('main')?.innerText.includes('Expected landing 2026'), { timeout: 30000 });
+      await sleep(1500);
+    },
+  },
+  // FTE article (2026-10-18): budget lines with FTE declared, Budget and Expected landing 2026 amounts and FTE side by side.
+  // Quick column choice and filter stay in this browser only; nothing is saved server side.
+  'fte-budget-lines-2026-10-18': {
+    path: '/ops/budget',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 60000 });
+      await clickText(page, 'button', 'Choose columns');
+      await page.waitForSelector('.MuiPopover-paper', { timeout: 10000 });
+      for (const label of ['Paying company', 'Contract', 'Allocation', 'Account', 'Task', 'Budget FTE (2026)', 'Expected landing FTE (2026)', 'FTE declared']) await clickText(page, '.MuiPopover-paper label', label);
+      await page.keyboard.press('Escape');
+      await sleep(800);
+      // FTE declared set filter: Yes only.
+      const col = await page.$eval('.ag-header-cell[col-id="has_fte"]', (h) => h.getAttribute('aria-colindex'));
+      await page.click(`.ag-floating-filter[aria-colindex="${col}"] button`);
+      await page.waitForFunction(() => document.querySelectorAll('.ag-popup label').length > 1, { timeout: 20000 });
+      await clickText(page, '.ag-popup button', 'Clear');
+      await sleep(500);
+      await clickText(page, '.ag-popup label', 'Yes');
+      await page.waitForFunction(
+        () => document.querySelector('.ag-floating-filter')?.closest('.ag-header')?.textContent?.includes('selected'),
+        { timeout: 30000 },
+      ).catch(() => console.warn('FTE declared filter not applied'));
+      await page.keyboard.press('Escape');
+      await page.waitForFunction(() => /Total \(\d+ lines\)/.test(document.querySelector('.ag-floating-bottom')?.textContent || ''), { timeout: 30000 });
+      await sleep(1500);
+    },
+  },
 };
 PAGES['chargeback-company-2026-10-13'] = PAGES['chargeback-company'];
 
