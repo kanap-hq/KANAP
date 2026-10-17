@@ -464,6 +464,62 @@ const PAGES = {
       await sleep(1500);
     },
   },
+  // OPEX/CAPEX article (2026-10-17): the S/4HANA program lines, OPEX and CAPEX together, Type and Program columns.
+  // Quick filter and column choice stay in this browser only; nothing is saved server side.
+  'opex-capex-list-2026-10-17': {
+    path: '/ops/budget',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 60000 });
+      await clickText(page, 'button', 'Choose columns');
+      await page.waitForSelector('.MuiPopover-paper', { timeout: 10000 });
+      for (const label of ['Paying company', 'Contract', 'Allocation', 'Expected landing Y (2026)', 'Task', 'Program']) await clickText(page, '.MuiPopover-paper label', label);
+      await page.keyboard.press('Escape');
+      await sleep(800);
+      await page.type('input[placeholder="Quick filter"]', 'REF-SAP-S4', { delay: 20 });
+      await page.waitForFunction(() => /Total \(\d+ lines\)/.test(document.querySelector('.ag-floating-bottom')?.textContent || '') && document.querySelectorAll('.ag-center-cols-container .ag-row').length < 30, { timeout: 30000 });
+      await sleep(1500);
+    },
+  },
+  // OPEX/CAPEX article (2026-10-17): CAPEX line of the S/4HANA program, Properties panel open.
+  'opex-capex-line-properties-2026-10-17': {
+    path: '/ops/budget/BL-119',
+    waitFor: 'main',
+    async prepare(page) {
+      await openProperties(page);
+      await page.waitForFunction(() => /Program/.test(document.querySelector('aside')?.innerText || ''), { timeout: 30000 });
+      await sleep(1500);
+      await hideControls(page, HIDDEN_DIMENSIONS);
+      await sleep(1000);
+    },
+  },
+  // OPEX/CAPEX article (2026-10-17): Analytics dimensions report, CAPEX tab, Purpose, 2026.
+  'opex-capex-report-purpose-2026-10-17': {
+    path: '/ops/reports/analytics?scope=capex',
+    waitFor: 'main',
+    async prepare(page) {
+      await waitForReport(page);
+      await page.waitForFunction(() => document.querySelector('main')?.innerText.includes('Group CAPEX totals by Cost pool'), { timeout: 30000 }).catch(() => console.warn('CAPEX tab not applied'));
+      await pickSelect(page, 'Dimension', 'Purpose');
+      await hideControls(page, HIDDEN_DIMENSIONS);
+      await page.waitForFunction(() => /Total Budget/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
+      await sleep(1500);
+    },
+  },
+  // OPEX/CAPEX article (2026-10-17): "Change type..." window open on a CAPEX line; shot taken before Cancel, nothing is saved.
+  'opex-capex-change-type-2026-10-17': {
+    path: '/ops/budget/BL-119',
+    waitFor: 'main',
+    async prepare(page) {
+      await openProperties(page);
+      await page.waitForFunction(() => [...document.querySelectorAll('aside button, aside a, aside [role="button"]')].some((b) => /^Change type/.test(b.textContent?.trim())), { timeout: 30000 });
+      await hideControls(page, HIDDEN_DIMENSIONS);
+      await (await page.$$('xpath/.//aside//*[(self::button or self::a or @role="button") and starts-with(normalize-space(.), "Change type")]'))[0].click();
+      await page.waitForSelector('.MuiDialog-paper', { timeout: 15000 });
+      await hideControls(page, HIDDEN_DIMENSIONS);
+      await sleep(1500);
+    },
+  },
 };
 PAGES['chargeback-company-2026-10-13'] = PAGES['chargeback-company'];
 
