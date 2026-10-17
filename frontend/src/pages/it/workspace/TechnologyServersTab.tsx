@@ -84,19 +84,50 @@ export default function TechnologyServersTab({ technologyId, versions, canManage
   }, [refresh, t]);
 
   const add = (asset: RelationOption, choice: VersionChoice) => run(() => api.post(`/technologies/${technologyId}/assets`, { asset_id: asset.id, ...choice }));
-  const changeLink = (row: TechnologyServerRow, body: VersionChoice | { notes: string | null }) => run(() => api.patch(`/technologies/${technologyId}/assets/${row.link_id}`, body));
-  const remove = async (row: TechnologyServerRow) => {
+  // The writes of one link run one after the other (a note saved on blur, then a version chosen):
+  // each reads the link as the previous one left it. A write queued after its link was removed is
+  // dropped, and a link removed elsewhere meanwhile (404) is no error.
+  const queues = React.useRef(new Map<string, Promise<void>>());
+  const removedLinks = React.useRef(new Set<string>());
+  const enqueue = (linkId: string, task: () => Promise<void>) => {
+    const next = (queues.current.get(linkId) ?? Promise.resolve()).then(task);
+    queues.current.set(linkId, next);
+    return next;
+  };
+  const isGone = (e: unknown) => (e as { response?: { status?: number } } | null)?.response?.status === 404;
+
+  const changeLink = (row: TechnologyServerRow, body: VersionChoice | { notes: string | null }) => {
+    const linkId = row.link_id as string;
+    return enqueue(linkId, async () => {
+      if (removedLinks.current.has(linkId)) return;
+      setError(null);
+      try {
+        await api.patch(`/technologies/${technologyId}/assets/${linkId}`, body);
+      } catch (e) {
+        if (!isGone(e)) setError(getApiErrorMessage(e, t, t('workspace.technology.servers.saveFailed')));
+      }
+      await refresh();
+    });
+  };
+  const remove = (row: TechnologyServerRow) => {
+    const linkId = row.link_id as string;
     const previous = queryClient.getQueryData<{ items: TechnologyServerRow[] }>(key);
-    queryClient.setQueryData<{ items: TechnologyServerRow[] }>(key, (prev) => (prev ? { items: prev.items.filter((item) => item.link_id !== row.link_id) } : prev));
+    queryClient.setQueryData<{ items: TechnologyServerRow[] }>(key, (prev) => (prev ? { items: prev.items.filter((item) => item.link_id !== linkId) } : prev));
+    removedLinks.current.add(linkId);
     setError(null);
-    try {
-      await api.delete(`/technologies/${technologyId}/assets/${row.link_id}`);
-    } catch (e) {
-      if (previous) queryClient.setQueryData(key, previous);
-      setError(getApiErrorMessage(e, t, t('workspace.technology.servers.saveFailed')));
-      return;
-    }
-    await refresh();
+    return enqueue(linkId, async () => {
+      try {
+        await api.delete(`/technologies/${technologyId}/assets/${linkId}`);
+      } catch (e) {
+        if (!isGone(e)) {
+          removedLinks.current.delete(linkId);
+          if (previous) queryClient.setQueryData(key, previous);
+          setError(getApiErrorMessage(e, t, t('workspace.technology.servers.saveFailed')));
+          return;
+        }
+      }
+      await refresh();
+    });
   };
 
   const search = React.useCallback(async (q: string, signal?: AbortSignal): Promise<RelationOption[]> => {

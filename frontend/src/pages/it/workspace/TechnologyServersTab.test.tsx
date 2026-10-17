@@ -115,7 +115,7 @@ describe('TechnologyServersTab', () => {
     await screen.findByRole('table', { name: `${S}.title` });
     expect(screen.queryByRole('button', { name: `${S}.remove(name=PAR-VM-01)` })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: `${S}.remove(name=PAR-DB-02)` }));
-    expect(mocked.delete).toHaveBeenCalledWith('/technologies/tech-1/assets/l-2');
+    await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith('/technologies/tech-1/assets/l-2'));
     // A deduced row has no version to change either.
     expect(screen.queryByRole('button', { name: `${S}.changeVersion(name=PAR-VM-01)` })).toBeNull();
   });
@@ -173,6 +173,41 @@ describe('TechnologyServersTab', () => {
     fireEvent.change(notes, { target: { value: 'Failover node' } });
     fireEvent.blur(notes);
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/technologies/tech-1/assets/l-2', { notes: 'Failover node' }));
+  });
+
+  it('saves a note and then a version of the same link one after the other', async () => {
+    let answer: () => void = () => undefined;
+    mocked.patch.mockReturnValueOnce(new Promise((resolve) => { answer = () => resolve({ data: { ok: true } }); }) as never);
+    renderTab();
+    await screen.findByRole('table', { name: `${S}.title` });
+    const notes = screen.getByLabelText(`${S}.notesOf(name=PAR-DB-01)`);
+    fireEvent.change(notes, { target: { value: 'Primary' } });
+    fireEvent.blur(notes);
+    fireEvent.click(screen.getByRole('button', { name: `${S}.changeVersion(name=PAR-DB-01)` }));
+    fireEvent.click(picker().getByText('2022'));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1));
+    expect(mocked.patch).toHaveBeenCalledWith('/technologies/tech-1/assets/l-1', { notes: 'Primary' });
+    answer();
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(2));
+    expect(mocked.patch).toHaveBeenLastCalledWith('/technologies/tech-1/assets/l-1', { technology_version_id: 'v22' });
+  });
+
+  it('removes a link after its pending note, and says nothing when the link is already gone', async () => {
+    let answer: () => void = () => undefined;
+    mocked.patch.mockReturnValueOnce(new Promise((_, reject) => { answer = () => reject({ response: { status: 404, data: { message: 'Link not found' } } }); }) as never);
+    renderTab();
+    await screen.findByRole('table', { name: `${S}.title` });
+    const notes = screen.getByLabelText(`${S}.notesOf(name=PAR-DB-02)`);
+    fireEvent.change(notes, { target: { value: 'Old node' } });
+    fireEvent.blur(notes);
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: `${S}.remove(name=PAR-DB-02)` }));
+    // The row leaves at once; the delete waits for the note.
+    await waitFor(() => expect(screen.queryByText('PAR-DB-02')).toBeNull());
+    expect(mocked.delete).not.toHaveBeenCalled();
+    answer();
+    await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith('/technologies/tech-1/assets/l-2'));
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('shows no writing control to a reader', async () => {
