@@ -485,7 +485,7 @@ export class VulnerabilitiesService {
   async exportCsv(filters: VulnerabilityFilters, language: unknown, opts: VulnOpts, applications: ApplicationsAccess) {
     const result = await this.listWithRows(filters, opts, applications, false);
     const cves = await this.cves(opts.manager, result.items.map((i) => i.cve_id));
-    const headers = ['CVE', 'Severity', 'Score', 'Published', 'Technology reference', 'Technology', 'Editor', 'Version', 'Match', 'State', 'Note', 'Servers', 'Applications'];
+    const headers = ['CVE', 'Severity', 'Score', 'Published', 'Technology reference', 'Technology', 'Publisher', 'Version', 'Match', 'State', 'Note', 'Servers', 'Applications'];
     const basisLabel: Record<MatchBasis, string> = {
       version_in_range: 'Version in range',
       version_not_comparable: 'Version not comparable',
