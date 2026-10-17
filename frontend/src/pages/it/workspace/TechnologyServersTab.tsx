@@ -7,6 +7,7 @@ import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { tableCellTextFieldSx } from '../../../theme/formSx';
 import { RelationRef, RelationsEmpty, RelationsSection, RelationsTable, type RelationsColumn } from '../../../components/workspace/RelationsTable';
 import RelationAddPicker, { type RelationOption } from '../../../components/workspace/RelationAddPicker';
+import { invalidateTechnologyLinks } from '../components/technologyLinkQueries';
 import TechnologyVersionPicker, { type VersionChoice, type VersionOption } from '../components/TechnologyVersionPicker';
 
 /** One row of `GET /technologies/:id/assets` (doc/api-reference.md, "Servers"). */
@@ -69,7 +70,7 @@ export default function TechnologyServersTab({ technologyId, versions, canManage
 
   // The applications deduced through the servers and the versions' counters follow the links.
   const refresh = React.useCallback(async () => {
-    await queryClient.invalidateQueries({ predicate: (query) => String(query.queryKey[0]).startsWith('technolog') });
+    await invalidateTechnologyLinks(queryClient);
   }, [queryClient]);
 
   const run = React.useCallback(async (call: () => Promise<unknown>) => {

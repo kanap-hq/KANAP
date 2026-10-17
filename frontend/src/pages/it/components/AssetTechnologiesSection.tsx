@@ -7,6 +7,7 @@ import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { RelationRef, RelationsEmpty, RelationsSection, RelationsTable, type RelationsColumn } from '../../../components/workspace/RelationsTable';
 import RelationAddPicker, { type RelationOption } from '../../../components/workspace/RelationAddPicker';
+import { invalidateTechnologyLinks } from './technologyLinkQueries';
 import TechnologyVersionPicker, { type VersionChoice, type VersionOption } from './TechnologyVersionPicker';
 
 /** One row of `GET /assets/:id/technologies` (doc/api-reference.md, "From the asset's side"). */
@@ -56,12 +57,8 @@ export default function AssetTechnologiesSection({ assetId, canManage }: Props) 
   });
 
   const refresh = React.useCallback(async () => {
-    await queryClient.invalidateQueries({ queryKey: key });
-    await queryClient.invalidateQueries({ predicate: (query) => {
-      const head = String(query.queryKey[0]);
-      return head === 'asset-impact' || head.startsWith('technolog');
-    } });
-  }, [key, queryClient]);
+    await invalidateTechnologyLinks(queryClient);
+  }, [queryClient]);
 
   const failed = (e: unknown) => setError(getApiErrorMessage(e, t, t('workspace.asset.technologies.saveFailed')));
 

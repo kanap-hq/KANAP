@@ -9,6 +9,7 @@ import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { downloadBlob, extractFilenameFromDisposition } from '../../../utils/downloadBlob';
 import { RelationRef, RelationsEmpty, RelationsSection, RelationsTable, type RelationsColumn } from '../../../components/workspace/RelationsTable';
 import RelationAddPicker, { type RelationOption } from '../../../components/workspace/RelationAddPicker';
+import { invalidateTechnologyLinks } from '../components/technologyLinkQueries';
 import TechnologyVersionPicker, { type VersionOption } from '../components/TechnologyVersionPicker';
 
 /** One row of `GET /technologies/:id/applications` (doc/api-reference.md, "Applications"). */
@@ -70,7 +71,7 @@ export default function TechnologyApplicationsTab({ technologyId, technologyRefe
   });
 
   const refresh = React.useCallback(async () => {
-    await queryClient.invalidateQueries({ predicate: (query) => String(query.queryKey[0]).startsWith('technolog') });
+    await invalidateTechnologyLinks(queryClient);
   }, [queryClient]);
 
   const failed = (e: unknown) => setError(getApiErrorMessage(e, t, t('workspace.technology.applications.saveFailed')));
