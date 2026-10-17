@@ -66,7 +66,7 @@ export class TechnologySupport1854270000000 implements MigrationInterface {
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`DROP TABLE IF EXISTS technology_support_contacts`);
-    await queryRunner.query(`ALTER TABLE technologies DROP COLUMN IF EXISTS support_notes`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS technologies DROP COLUMN IF EXISTS support_notes`);
     // Only the key this migration added: an equivalent key found in place is left as it was.
     const marked = await queryRunner.query(
       `SELECT 1 FROM pg_constraint c
