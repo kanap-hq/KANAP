@@ -113,10 +113,12 @@ describe('VulnerabilitiesPage', () => {
       'cve_id', 'severity', 'cvss_score', 'summary', 'technologies', 'editor', 'servers', 'applications', 'state', 'published_at',
     ]);
     expect(column('published_at').filter).toBe('agDateColumnFilter');
-    // The default set fits a 1,440 px window, as the technologies list: the summary takes the rest.
+    // The default set fits a 1,440 px window, the selection column (50 px) included: the summary takes the rest.
     const shown = (grid.props!.columns as any[]).filter((col) => !col.defaultHidden);
     expect(shown.map((col) => col.field)).toEqual(['cve_id', 'severity', 'summary', 'technologies', 'servers', 'applications', 'state', 'published_at']);
-    expect(shown.reduce((sum, col) => sum + (col.width ?? col.minWidth), 0)).toBeLessThanOrEqual(1100);
+    const SELECTION = grid.props!.enableRowSelection ? 50 : 0;
+    expect(SELECTION).toBe(50);
+    expect(SELECTION + shown.reduce((sum, col) => sum + (col.width ?? col.minWidth), 0)).toBeLessThanOrEqual(1100);
     expect(column('summary').flex).toBe(1);
     expect(column('servers').filter).toBe(false);
     expect(await column('technologies').filterParams.getValues({})).toEqual([{ value: 'TEC-1', label: 'TEC-1 Tomcat' }]);

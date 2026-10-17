@@ -429,22 +429,22 @@ export default function VulnerabilitiesPage() {
   }, []);
 
   const columns: EnhancedColDef<VulnerabilityRow>[] = useMemo(() => [
-    { headerName: t('pages.vulnerabilities.columns.cve'), field: 'cve_id', width: 150, cellStyle: { fontFamily: MONO_FONT_FAMILY, fontSize: '12px' } },
+    { headerName: t('pages.vulnerabilities.columns.cve'), field: 'cve_id', width: 130, cellStyle: { fontFamily: MONO_FONT_FAMILY, fontSize: '12px' } },
     {
       headerName: t('pages.vulnerabilities.columns.severity'),
       field: 'severity',
-      width: 130,
+      width: 110,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: { getValues: severityValues, searchable: false },
       cellRenderer: (p: ICellRendererParams<VulnerabilityRow>) => (p.data ? <SeverityCell severity={p.data.severity} score={p.data.cvss_score} /> : null),
     },
     { headerName: t('pages.vulnerabilities.columns.score'), field: 'cvss_score', width: 90, type: 'rightAligned', defaultHidden: true, filter: 'agNumberColumnFilter' },
-    { headerName: t('pages.vulnerabilities.columns.summary'), field: 'summary', minWidth: 200, flex: 1, sortable: false, tooltipField: 'summary' },
+    { headerName: t('pages.vulnerabilities.columns.summary'), field: 'summary', minWidth: 160, flex: 1, sortable: false, tooltipField: 'summary' },
     {
       headerName: t('pages.vulnerabilities.columns.technologies'),
       field: 'technologies',
-      width: 200,
+      width: 180,
       sortable: false,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
