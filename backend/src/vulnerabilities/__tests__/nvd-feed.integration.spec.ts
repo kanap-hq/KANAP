@@ -20,7 +20,7 @@ const BETA = 'a:kanapspec:beta';
 const DAY = 24 * 60 * 60 * 1000;
 
 type Seen = { product: string; start: number; end: number; startIndex: number; perPage: string | null; apiKey: string | undefined };
-type Handler = (seen: Seen) => { status: number; body?: unknown };
+type Handler = (seen: Seen) => { status: number; body?: unknown; delayMs?: number };
 
 let handler: Handler = () => ({ status: 200, body: { totalResults: 0, vulnerabilities: [] } });
 const seen: Seen[] = [];
@@ -56,8 +56,10 @@ async function serve() {
     };
     seen.push(entry);
     const answer = handler(entry);
-    res.writeHead(answer.status, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(answer.body ?? { message: 'unavailable' }));
+    setTimeout(() => {
+      res.writeHead(answer.status, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(answer.body ?? { message: 'unavailable' }));
+    }, answer.delayMs ?? 0);
   });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   return { server, baseUrl: `http://127.0.0.1:${(server.address() as AddressInfo).port}/rest/json/cves/2.0` };
@@ -295,6 +297,59 @@ async function testSecondTenantMatched() {
   }
 }
 
+/**
+ * The review's P6: a collection on demand never holds the scheduled task's lock (a run is never
+ * skipped), stops at the first failure of the service, and a tenant's quota leaves the rest to the run.
+ */
+async function testOnDemandLimits() {
+  reset();
+  const SLOW = 'a:kanapspec:ondemand4';
+  const DOWN = 'a:kanapspec:ondemand5';
+  const AFTER = 'a:kanapspec:ondemand6';
+  const Q = ['a:kanapspec:ondemand7', 'a:kanapspec:ondemand8', 'a:kanapspec:ondemand9'];
+  handler = (s) => (s.product === DOWN
+    ? { status: 503 }
+    : { status: 200, body: { totalResults: 0, vulnerabilities: [] }, delayMs: s.product === SLOW ? 400 : 0 });
+  const saved = Features.VULNERABILITY_FEED_ENABLED;
+  const tenantId = '00000000-0000-4000-8000-00000000d07e';
+  try {
+    (Features as any).VULNERABILITY_FEED_ENABLED = true;
+    const service = feed([]);
+    const pending = service.collectNew(tenantId, [SLOW], runtime());
+    await new Promise((r) => setTimeout(r, 150));
+    const probe = dataSource.createQueryRunner();
+    await probe.connect();
+    let locked = false;
+    try {
+      [{ locked }] = await probe.query(`SELECT pg_try_advisory_lock(hashtext('vulnerability-feed')) AS locked`);
+      if (locked) await probe.query(`SELECT pg_advisory_unlock(hashtext('vulnerability-feed'))`);
+    } finally {
+      await probe.release();
+    }
+    assert.equal(locked, true, 'the scheduled task\'s lock stays free during a collection on demand');
+    await pending;
+    assert.ok((await lastSuccess(SLOW))?.last_success_at);
+
+    reset();
+    await service.collectNew(tenantId, [DOWN, AFTER], runtime());
+    assert.deepEqual(seen.map((s) => s.product), [DOWN], 'one try, then the service is down: the rest waits for the run');
+    assert.match(String((await lastSuccess(DOWN))?.last_error), /503/);
+    assert.deepEqual(await service.neverCollected([AFTER]), [AFTER]);
+
+    reset();
+    const quota = feed([]);
+    quota.onDemandPerHour = 2;
+    await quota.collectNew(tenantId, Q, runtime());
+    assert.deepEqual(seen.map((s) => s.product), Q.slice(0, 2), 'two products an hour for this tenant');
+    await quota.collectNew(tenantId, [Q[2]], runtime());
+    assert.equal(seen.length, 2, 'the quota is spent: the run collects the third');
+    await quota.collectNew('00000000-0000-4000-8000-00000000d07f', [Q[2]], runtime());
+    assert.equal(seen.length, 3, 'another tenant has its own quota');
+  } finally {
+    (Features as any).VULNERABILITY_FEED_ENABLED = saved;
+  }
+}
+
 async function main() {
   const fake = await serve();
   baseUrl = fake.baseUrl;
@@ -310,6 +365,7 @@ async function main() {
       ['matching after a run', testRunMatchesTenants],
       ['collection on demand', testOnDemand],
       ['a second tenant asking for the same product is matched', testSecondTenantMatched],
+      ['collection on demand: lock, circuit and quota', testOnDemandLimits],
       ['clean end', cleanup],
     ]);
   } finally {

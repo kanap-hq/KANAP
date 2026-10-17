@@ -141,6 +141,8 @@ export type FeedRuntime = {
   /** Minimum time between two requests, from the rolling window (6 s without a key, 0.6 s with one). */
   spacingMs: number;
   retryDelayMs: number;
+  /** Tries per request: three for the scheduled run, one on demand. */
+  attempts?: number;
 };
 
 export type FeedSummary = {
@@ -375,43 +377,79 @@ export class NvdFeedService implements OnModuleInit {
   }
 
   /**
-   * Collects products never collected, now, in the background, then matches the tenant: the same
-   * collection as the scheduled run (cadence, retries, first pass by pages), one at a time in this
-   * process and under the scheduled task's lock across processes (it waits for a run in progress;
-   * a run that starts meanwhile is skipped by the scheduler). Never rejects.
+   * Collects products never collected, now, in the background, then matches the tenant (lot T6b):
+   * the same collection as the scheduled run (cadence, first pass by pages), one request at a time in
+   * this process. It never takes the scheduled task's lock: each product is collected under its own
+   * lock (`vulnerability-feed:product:<product>`, which the run takes too), so a run is never skipped
+   * and two requests for one product collect it once. A request is tried once, and the first failure
+   * of the service stops the collection (the products left wait for the run); a tenant collects
+   * `onDemandPerHour` new products an hour at most in this process, the run takes the others.
+   * Never rejects.
    */
   @NeverRejects()
   async collectNew(tenantId: string, products: string[], runtime: FeedRuntime = defaultRuntime()): Promise<void> {
     if (!Features.VULNERABILITY_FEED_ENABLED) return;
-    const next = this.onDemand.then(() => this.collectNewNow(tenantId, products, runtime));
+    const next = this.onDemand.then(() => this.collectNewNow(tenantId, products, { ...runtime, attempts: runtime.attempts ?? 1 }));
     this.onDemand = next.catch(() => undefined);
     await next;
   }
 
-  private async collectNewNow(tenantId: string, products: string[], runtime: FeedRuntime): Promise<void> {
-    if ((await this.neverCollected(products)).length === 0) return;
+  /** New products a tenant may have collected on demand per hour, in this process. */
+  onDemandPerHour = 20;
+  private readonly onDemandUse = new Map<string, number[]>();
+
+  /** How many of `wanted` new products the tenant may still collect this hour (and counts them). */
+  private takeOnDemandQuota(tenantId: string, wanted: number): number {
+    const hourAgo = Date.now() - 60 * 60_000;
+    const used = (this.onDemandUse.get(tenantId) ?? []).filter((at) => at > hourAgo);
+    const allowed = Math.max(Math.min(wanted, this.onDemandPerHour - used.length), 0);
+    for (let i = 0; i < allowed; i += 1) used.push(Date.now());
+    this.onDemandUse.set(tenantId, used);
+    return allowed;
+  }
+
+  /** Runs `fn` under the product's own lock; `wait` false gives up (returns false) when another holds it. */
+  private async withProductLock(product: string, wait: boolean, fn: () => Promise<void>): Promise<boolean> {
+    const key = `${NVD_FEED_TASK_NAME}:product:${product}`;
     const runner = this.dataSource.createQueryRunner();
     await runner.connect();
     try {
-      await runner.query(`SELECT pg_advisory_lock(hashtext($1))`, [NVD_FEED_TASK_NAME]);
-      try {
-        // Collected by a run or by another request while this one waited: nothing to collect, but the
-        // tenant is still matched below (it asked for these products).
-        const fresh = await this.neverCollected(products);
-        const summary: FeedSummary = { products: fresh.length, requests: 0, cves: 0, failed_products: [], errors: [], tenants_matched: 0, rows_added: 0, rows_removed: 0 };
-        for (const product of fresh) {
-          try {
-            await this.collectProduct(product, runtime, summary);
-          } catch (error: any) {
-            await this.recordFailure(product, error);
-            this.logger.warn(`[${NVD_FEED_TASK_NAME}] ${product} on demand: ${String(error?.message ?? error).slice(0, 300)}`);
-          }
-        }
-      } finally {
-        await runner.query(`SELECT pg_advisory_unlock(hashtext($1))`, [NVD_FEED_TASK_NAME]).catch(() => undefined);
+      if (wait) await runner.query(`SELECT pg_advisory_lock(hashtext($1))`, [key]);
+      else {
+        const [{ locked }] = await runner.query(`SELECT pg_try_advisory_lock(hashtext($1)) AS locked`, [key]);
+        if (!locked) return false;
       }
+      try {
+        await fn();
+      } finally {
+        await runner.query(`SELECT pg_advisory_unlock(hashtext($1))`, [key]).catch(() => undefined);
+      }
+      return true;
     } finally {
       await runner.release();
+    }
+  }
+
+  private async collectNewNow(tenantId: string, products: string[], runtime: FeedRuntime): Promise<void> {
+    const wanted = await this.neverCollected(products);
+    if (wanted.length === 0) return;
+    const allowed = wanted.slice(0, this.takeOnDemandQuota(tenantId, wanted.length));
+    const summary: FeedSummary = { products: allowed.length, requests: 0, cves: 0, failed_products: [], errors: [], tenants_matched: 0, rows_added: 0, rows_removed: 0 };
+    for (const product of allowed) {
+      let serviceDown = false;
+      await this.withProductLock(product, true, async () => {
+        // Collected by a run or by another request while this one waited: nothing to collect, but
+        // the tenant is still matched below (it asked for these products).
+        if ((await this.neverCollected([product])).length === 0) return;
+        try {
+          await this.collectProduct(product, runtime, summary);
+        } catch (error: any) {
+          await this.recordFailure(product, error);
+          serviceDown = serviceFailure(error);
+          this.logger.warn(`[${NVD_FEED_TASK_NAME}] ${product} on demand: ${String(error?.message ?? error).slice(0, 300)}`);
+        }
+      });
+      if (serviceDown) break;
     }
     await withTenant(this.dataSource, tenantId, (mg) => this.matcher.matchTenant(mg, tenantId));
   }
@@ -452,7 +490,9 @@ export class NvdFeedService implements OnModuleInit {
         continue;
       }
       try {
-        await this.collectProduct(product, runtime, summary);
+        // Under the product's lock: a collection on demand of the same product is not run twice.
+        const done = await this.withProductLock(product, false, () => this.collectProduct(product, runtime, summary));
+        if (!done) continue; // being collected on demand right now
         failedInARow = 0;
       } catch (error: any) {
         failedInARow = serviceFailure(error) ? failedInARow + 1 : 0;
@@ -522,7 +562,8 @@ export class NvdFeedService implements OnModuleInit {
   /** One request, at the cadence, tried `ATTEMPTS` times on a network error, a refusal (403, 429) or a server error. */
   private async request(url: URL, runtime: FeedRuntime, summary: FeedSummary): Promise<any> {
     let lastError: unknown = null;
-    for (let attempt = 1; attempt <= ATTEMPTS; attempt += 1) {
+    const attempts = runtime.attempts ?? ATTEMPTS;
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
       const wait = this.lastRequestAt + runtime.spacingMs - runtime.now();
       if (wait > 0) await runtime.sleep(wait);
       this.lastRequestAt = runtime.now();
@@ -536,7 +577,7 @@ export class NvdFeedService implements OnModuleInit {
         return await response.json();
       } catch (error) {
         lastError = error;
-        if (!serviceFailure(error) || attempt === ATTEMPTS) break;
+        if (!serviceFailure(error) || attempt === attempts) break;
         await runtime.sleep(runtime.retryDelayMs * attempt);
       }
     }
