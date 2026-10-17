@@ -388,6 +388,51 @@
         "server": "Serveurs"
       }
     },
+    "administrationView": {
+      "title": "Vue de l'administration",
+      "intro": "Qui administre quoi : les zones d'administration avec leurs technologies et leurs serveurs, puis les domaines avec leur forêt, leurs approbations et leurs contrôleurs de domaine.",
+      "loading": "Chargement…",
+      "loadFailed": "La vue de l'administration n'a pas pu être chargée.",
+      "exportZones": "Exporter les zones",
+      "exportDomains": "Exporter les domaines",
+      "exportFailed": "L'export a échoué.",
+      "unplaced_one": "{{count}} technologie n'a pas de zone d'administration. Renseignez-la sur sa fiche.",
+      "unplaced_other": "{{count}} technologies n'ont pas de zone d'administration. Renseignez-la sur leurs fiches.",
+      "zones": "Zones d'administration",
+      "noZones": "Aucune zone d'administration définie pour l'instant.",
+      "openSettings": "Les définir dans les réglages IT",
+      "noZone": "Sans zone",
+      "noZoneHint": "Technologies à placer dans une zone.",
+      "unknownZone": "Zone inconnue ({{code}})",
+      "emptyZone": "Aucune technologie dans cette zone.",
+      "attributes": {
+        "adminGroup": "Groupe d'administrateurs",
+        "privilegeLevel": "Niveau de privilèges",
+        "secretsLocation": "Secrets",
+        "directoryServices": "Services d'annuaire"
+      },
+      "columns": {
+        "reference": "Réf.",
+        "technology": "Technologie",
+        "family": "Famille",
+        "servers": "Serveurs",
+        "domain": "Domaine",
+        "dnsSuffix": "Suffixe DNS",
+        "forest": "Forêt",
+        "trusts": "Approbations",
+        "accounts": "Comptes",
+        "machines": "Machines",
+        "domainControllers": "Contrôleurs de domaine"
+      },
+      "noServer": "Aucun serveur",
+      "via": "via {{name}}",
+      "domains": "Domaines",
+      "domainsHint": "Les contrôleurs de domaine sont les serveurs du domaine affectés avec le rôle « Contrôleur de domaine ».",
+      "noDomains": "Aucun domaine défini.",
+      "noController": "Aucun trouvé",
+      "notSet": "Non renseigné",
+      "none": "Aucune"
+    },
     "interfaceMap": {
       "title": "Carte des interfaces",
       "infraServices": "Services d'infrastructure",
@@ -451,6 +496,11 @@
         }
       },
       "lists": {
+        "adminZones": {
+          "title": "Zones d'administration",
+          "description": "Les zones de votre modèle d'administration, par exemple le tier 0 pour l'annuaire et ses contrôleurs. Chaque zone indique qui l'administre, à quel niveau de privilèges, et où sont conservés ses secrets. Ces informations figurent dans votre politique d'administration ou votre modèle d'accès à privilèges.",
+          "usage": "Technologies / Aperçu, vue de l'administration"
+        },
         "accessMethods": {
           "title": "Méthodes d'accès",
           "description": "Modes d'accès des utilisateurs aux applications (ex. : Web, mobile, VDI).",
@@ -549,7 +599,7 @@
         },
         "domains": {
           "title": "Domaines",
-          "description": "Définissez les domaines Active Directory ou DNS des actifs. Les entrées intégrées ne peuvent pas être modifiées.",
+          "description": "Domaines Active Directory ou DNS de vos assets. La forêt et les relations d'approbation figurent dans la console Domaines et approbations Active Directory ; les nombres de comptes et de machines dans Utilisateurs et ordinateurs Active Directory. Les entrées intégrées ne sont pas modifiables.",
           "usage": "Actifs / Section identité"
         }
       },
@@ -562,7 +612,14 @@
         "vlan": "VLAN",
         "networkZone": "Zone réseau",
         "description": "Description",
-        "dnsSuffix": "Suffixe DNS"
+        "dnsSuffix": "Suffixe DNS",
+        "forest": "Forêt",
+        "accounts": "Comptes",
+        "machines": "Machines",
+        "trusts": "Approbations",
+        "adminGroup": "Groupe d'administrateurs",
+        "privilegeLevel": "Niveau de privilèges",
+        "secretsLocation": "Emplacement des secrets"
       },
       "placeholders": {
         "osName": "ex. : Windows Server 2025",
@@ -571,13 +628,36 @@
         "cidr": "ex. : 192.168.1.0/24",
         "domainName": "ex. : AD de l'entreprise",
         "dnsSuffix": "ex. : corp.example.com",
+        "forest": "ex. : corp.example.com",
+        "adminZoneName": "ex. : Tier 0",
+        "adminGroup": "ex. : Admins du domaine",
+        "privilegeLevel": "ex. : Tier 0",
+        "secretsLocation": "ex. : Coffre de mots de passe, coffre A",
+        "adminZoneDescription": "ex. : Services d'annuaire et d'identité",
         "select": "Sélectionner…"
       },
       "empty": {
+        "adminZones": "Aucune zone d'administration définie.",
         "operatingSystems": "Aucun système d'exploitation configuré pour le moment.",
         "connectionTypes": "Aucun type de connexion défini.",
         "subnets": "Aucun sous-réseau défini.",
         "domains": "Aucun domaine défini."
+      },
+      "trusts": {
+        "title": "Approbations de {{name}}",
+        "hint": "Les domaines avec lesquels celui-ci a une relation d'approbation, tels que listés dans Domaines et approbations Active Directory.",
+        "empty": "Aucune approbation.",
+        "direction": "Sens",
+        "directions": {
+          "two_way": "bidirectionnelle",
+          "outgoing": "sortante",
+          "incoming": "entrante"
+        },
+        "add": "Ajouter un domaine approuvé",
+        "noOtherDomain": "Ajoutez d'abord un autre domaine à la liste.",
+        "count_one": "{{count}} approbation",
+        "count_other": "{{count}} approbations",
+        "none": "Aucune"
       }
     },
     "netbox": {
@@ -1627,6 +1707,7 @@
         "name": "Nom",
         "editor": "Éditeur",
         "family": "Famille",
+        "adminZone": "Zone d'administration",
         "mode": "Mode",
         "description": "Description",
         "notes": "Notes",
@@ -1638,7 +1719,8 @@
         "editor": "ex. Microsoft",
         "description": "À quoi sert cette technologie",
         "notes": "ex. Licence par cœur, renouvellement en mars",
-        "cpe": "ex. a:microsoft:sql_server"
+        "cpe": "ex. a:microsoft:sql_server",
+        "noAdminZone": "Aucune zone"
       },
       "modes": {
         "installed": "Installée",

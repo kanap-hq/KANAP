@@ -24,7 +24,8 @@ type FieldKey =
   | 'ipAddressType'
   | 'accessMethod'
   | 'incidentCategories'
-  | 'technologyFamily';
+  | 'technologyFamily'
+  | 'adminZone';
 
 export function useItOpsEnumOptions() {
   // Display projection: names and descriptions localized for the user; editors use the raw settings hook.
@@ -53,6 +54,7 @@ export function useItOpsEnumOptions() {
     accessMethod: settings?.accessMethods ?? [],
     incidentCategories: settings?.incidentCategories ?? [],
     technologyFamily: settings?.technologyFamilies ?? [],
+    adminZone: settings?.adminZones ?? [],
   }), [settings]);
 
   const labelFor = useCallback((field: FieldKey, code?: string | null): string => {

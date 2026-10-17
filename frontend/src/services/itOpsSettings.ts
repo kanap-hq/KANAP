@@ -58,14 +58,31 @@ export type EntityOption = ItOpsEnumOption & {
   graph_tier?: GraphTier;
 };
 
+/** A trust between two domains, seen from the domain that carries it (Active Directory wording). */
+export type DomainTrustDirection = 'two_way' | 'outgoing' | 'incoming';
+export type DomainTrust = { domain: string; direction: DomainTrustDirection };
+
 export type DomainOption = {
   code: string;
   label: string;
   dns_suffix: string;
   deprecated?: boolean;
   system?: boolean;
+  translations?: CatalogTranslations;
+  forest?: string;
+  trusts?: DomainTrust[];
+  account_count?: number;
+  machine_count?: number;
   // UI-only helper for stable row keys; ignored by backend
   localId?: string;
+};
+
+/** An administration zone: who administers it, at which privilege level, where its secrets are kept. */
+export type AdminZoneOption = ItOpsEnumOption & {
+  admin_group?: string;
+  privilege_level?: string;
+  secrets_location?: string;
+  description?: string;
 };
 
 export type SubnetOption = {
@@ -103,6 +120,7 @@ export type ItOpsSettings = {
   accessMethods: ItOpsEnumOption[];
   incidentCategories: ItOpsEnumOption[];
   technologyFamilies: ItOpsEnumOption[];
+  adminZones: AdminZoneOption[];
   businessCriticalityLevels: BusinessCriticalityLevel[];
   cyberCriticalityLevels: ClassificationLevel[];
   recoveryWaves: RecoveryWave[];

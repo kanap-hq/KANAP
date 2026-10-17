@@ -388,6 +388,51 @@
         "server": "Servers"
       }
     },
+    "administrationView": {
+      "title": "Administration view",
+      "intro": "Who administers what: the administration zones with their technologies and servers, then the domains with their forest, trusts and domain controllers.",
+      "loading": "Loading…",
+      "loadFailed": "The administration view could not be loaded.",
+      "exportZones": "Export zones",
+      "exportDomains": "Export domains",
+      "exportFailed": "The export failed.",
+      "unplaced_one": "{{count}} technology has no administration zone. Set it on the technology record.",
+      "unplaced_other": "{{count}} technologies have no administration zone. Set it on their records.",
+      "zones": "Administration zones",
+      "noZones": "No administration zones defined yet.",
+      "openSettings": "Define them in the IT settings",
+      "noZone": "No zone",
+      "noZoneHint": "Technologies to place in a zone.",
+      "unknownZone": "Unknown zone ({{code}})",
+      "emptyZone": "No technology in this zone.",
+      "attributes": {
+        "adminGroup": "Administrator group",
+        "privilegeLevel": "Privilege level",
+        "secretsLocation": "Secrets",
+        "directoryServices": "Directory services"
+      },
+      "columns": {
+        "reference": "Ref",
+        "technology": "Technology",
+        "family": "Family",
+        "servers": "Servers",
+        "domain": "Domain",
+        "dnsSuffix": "DNS suffix",
+        "forest": "Forest",
+        "trusts": "Trusts",
+        "accounts": "Accounts",
+        "machines": "Machines",
+        "domainControllers": "Domain controllers"
+      },
+      "noServer": "No server",
+      "via": "via {{name}}",
+      "domains": "Domains",
+      "domainsHint": "Domain controllers are the servers of the domain assigned with the \"Domain controller\" server role.",
+      "noDomains": "No domains defined.",
+      "noController": "None found",
+      "notSet": "Not set",
+      "none": "None"
+    },
     "interfaceMap": {
       "title": "Interface map",
       "infraServices": "Infrastructure services",
@@ -451,6 +496,11 @@
         }
       },
       "lists": {
+        "adminZones": {
+          "title": "Administration zones",
+          "description": "Zones of your administration model, for example Tier 0 for the directory and its controllers. Each zone names who administers it, at which privilege level, and where its secrets are kept. Find these in your administration policy or your privileged access model.",
+          "usage": "Technologies / Overview, administration view"
+        },
         "accessMethods": {
           "title": "Access methods",
           "description": "Methods by which users access applications (e.g., Web, Mobile, VDI).",
@@ -549,7 +599,7 @@
         },
         "domains": {
           "title": "Domains",
-          "description": "Define Active Directory or DNS domains for assets. Built-in entries cannot be modified.",
+          "description": "Active Directory or DNS domains of your assets. The forest and the trusts are shown in Active Directory Domains and Trusts; the numbers of accounts and machines in Active Directory Users and Computers. Built-in entries cannot be modified.",
           "usage": "Assets / Identity section"
         }
       },
@@ -562,7 +612,14 @@
         "vlan": "VLAN",
         "networkZone": "Network zone",
         "description": "Description",
-        "dnsSuffix": "DNS suffix"
+        "dnsSuffix": "DNS suffix",
+        "forest": "Forest",
+        "accounts": "Accounts",
+        "machines": "Machines",
+        "trusts": "Trusts",
+        "adminGroup": "Administrator group",
+        "privilegeLevel": "Privilege level",
+        "secretsLocation": "Secrets location"
       },
       "placeholders": {
         "osName": "e.g., Windows Server 2025",
@@ -571,13 +628,36 @@
         "cidr": "e.g., 192.168.1.0/24",
         "domainName": "e.g., Corporate AD",
         "dnsSuffix": "e.g., corp.example.com",
+        "forest": "e.g., corp.example.com",
+        "adminZoneName": "e.g., Tier 0",
+        "adminGroup": "e.g., Domain admins",
+        "privilegeLevel": "e.g., Tier 0",
+        "secretsLocation": "e.g., Password vault, safe A",
+        "adminZoneDescription": "e.g., Directory and identity services",
         "select": "Select…"
       },
       "empty": {
+        "adminZones": "No administration zones defined.",
         "operatingSystems": "No operating systems configured yet.",
         "connectionTypes": "No connection types defined.",
         "subnets": "No subnets defined.",
         "domains": "No domains defined."
+      },
+      "trusts": {
+        "title": "Trusts of {{name}}",
+        "hint": "The domains this one has a trust with, as listed in Active Directory Domains and Trusts.",
+        "empty": "No trust.",
+        "direction": "Direction",
+        "directions": {
+          "two_way": "two-way",
+          "outgoing": "outgoing",
+          "incoming": "incoming"
+        },
+        "add": "Add a trusted domain",
+        "noOtherDomain": "Add another domain to the list first.",
+        "count_one": "{{count}} trust",
+        "count_other": "{{count}} trusts",
+        "none": "None"
       }
     },
     "netbox": {
@@ -1627,6 +1707,7 @@
         "name": "Name",
         "editor": "Publisher",
         "family": "Family",
+        "adminZone": "Administration zone",
         "mode": "Mode",
         "description": "Description",
         "notes": "Notes",
@@ -1638,7 +1719,8 @@
         "editor": "e.g., Microsoft",
         "description": "What this technology is used for",
         "notes": "e.g., Licensed per core, renewal in March",
-        "cpe": "e.g., a:microsoft:sql_server"
+        "cpe": "e.g., a:microsoft:sql_server",
+        "noAdminZone": "No zone"
       },
       "modes": {
         "installed": "Installed",

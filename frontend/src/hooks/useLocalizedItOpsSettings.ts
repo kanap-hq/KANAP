@@ -10,7 +10,7 @@ import { itOpsCatalogDefaults } from '../utils/itOpsCatalogDefaults';
 export const CATALOG_LISTS = [
   'applicationCategories', 'networkSegments', 'entities', 'serverKinds', 'serverProviders', 'serverRoles', 'hostingTypes', 'lifecycleStates',
   'interfaceProtocols', 'interfaceDataCategories', 'interfaceTriggerTypes', 'interfacePatterns', 'interfaceFormats', 'interfaceAuthModes',
-  'operatingSystems', 'connectionTypes', 'domains', 'ipAddressTypes', 'accessMethods', 'pathHopFunctions', 'incidentCategories', 'technologyFamilies',
+  'operatingSystems', 'connectionTypes', 'domains', 'ipAddressTypes', 'accessMethods', 'pathHopFunctions', 'incidentCategories', 'technologyFamilies', 'adminZones',
   'businessCriticalityLevels', 'cyberCriticalityLevels', 'dataClasses', 'recoveryWaves',
 ] as const;
 
