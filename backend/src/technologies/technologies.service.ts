@@ -176,19 +176,18 @@ export class TechnologiesService {
       : Math.max((Number(query.page) || 1) - 1, 0) * limit;
     // The CVE still to review of each technology, and those critical or high (lot T6b), while the
     // vulnerability feed is on; null otherwise.
+    // One scalar subquery, run for the rows of the page only (after the LIMIT): [to review, critical or high].
+    // The join keeps the CVE the page lists (a row whose CVE is missing from the cache is not shown there).
     const vulnerabilityCounts = Features.VULNERABILITY_FEED_ENABLED
-      ? `(SELECT count(DISTINCT tv.cve_id) FROM technology_vulnerabilities tv JOIN vulnerability_cves c ON c.cve_id = tv.cve_id
-           WHERE tv.tenant_id = t.tenant_id AND tv.technology_id = t.id AND tv.state = 'to_review')::int AS vulnerabilities_to_review,
-         (SELECT count(DISTINCT tv.cve_id) FROM technology_vulnerabilities tv JOIN vulnerability_cves c ON c.cve_id = tv.cve_id
-           WHERE tv.tenant_id = t.tenant_id AND tv.technology_id = t.id AND tv.state = 'to_review'
-             AND c.severity IN ('critical', 'high'))::int AS vulnerabilities_severe`
-      : 'NULL::int AS vulnerabilities_to_review, NULL::int AS vulnerabilities_severe';
+      ? `(SELECT ARRAY[count(DISTINCT tv.cve_id), count(DISTINCT tv.cve_id) FILTER (WHERE c.severity IN ('critical', 'high'))]::int[]
+            FROM technology_vulnerabilities tv JOIN vulnerability_cves c ON c.cve_id = tv.cve_id
+           WHERE tv.tenant_id = t.tenant_id AND tv.technology_id = t.id AND tv.state = 'to_review') AS vulnerability_counts`
+      : 'NULL::int[] AS vulnerability_counts';
     const rows: Array<TechnologyRow & {
       total: string;
       owner_names: string[] | null;
       it_owner_names: string[] | null;
-      vulnerabilities_to_review: number | null;
-      vulnerabilities_severe: number | null;
+      vulnerability_counts: number[] | null;
     }> = await mg.query(
       `SELECT ${TECHNOLOGY_COLUMNS}, count(*) OVER () AS total, ${vulnerabilityCounts},
               ARRAY(
@@ -211,8 +210,10 @@ export class TechnologiesService {
     );
     const counts = await this.reach.countsOfTechnologies(mg, tenantId, rows.map((row) => row.id));
     return {
-      items: rows.map(({ total: _total, owner_names, it_owner_names, ...row }) => ({
+      items: rows.map(({ total: _total, owner_names, it_owner_names, vulnerability_counts, ...row }) => ({
         ...this.present(row),
+        vulnerabilities_to_review: vulnerability_counts ? Number(vulnerability_counts[0]) : null,
+        vulnerabilities_severe: vulnerability_counts ? Number(vulnerability_counts[1]) : null,
         owner_names: (owner_names ?? []).filter(Boolean),
         it_owner_names: (it_owner_names ?? []).filter(Boolean),
         servers: counts.get(row.id)?.servers ?? 0,
