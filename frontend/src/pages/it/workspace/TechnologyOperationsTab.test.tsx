@@ -44,9 +44,9 @@ const BRUNO: SupportContactRow = {
   contact: { id: 'c-2', first_name: 'Bruno', last_name: 'Petit', email: null, phone: null, mobile: '+33 6 00 00 00 02' },
 };
 
-function renderTab(canManage = true, contacts: SupportContactRow[] = [ANNA]) {
+function renderTab(canManage = true, contacts: SupportContactRow[] = [ANNA], read?: () => Promise<unknown>) {
   mocked.get.mockImplementation(async (url: string) => {
-    if (url === '/technologies/tech-1/support-contacts') return { data: contacts } as never;
+    if (url === '/technologies/tech-1/support-contacts') return (read ? read() : { data: contacts }) as never;
     throw new Error(`unexpected GET ${url}`);
   });
   const onPatch = vi.fn();
@@ -97,6 +97,37 @@ describe('TechnologyOperationsTab', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'workspace.application.technical.removeContact(name=Anna Martin)' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/technologies/tech-1/support-contacts/bulk-replace', { contacts: [] }));
     await waitFor(() => expect(onError).toHaveBeenCalled());
+  });
+
+  it('offers no change to the contacts when their list could not be read', async () => {
+    renderTab(true, [], () => Promise.reject({ response: { status: 500 } }));
+    expect(await screen.findByText('workspace.technology.operations.contactsLoadFailed')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'workspace.application.technical.addContact' })).toBeNull();
+    expect(mocked.post).not.toHaveBeenCalled();
+  });
+
+  it('offers no change to the contacts while their list is being read', async () => {
+    renderTab(true, [], () => new Promise(() => undefined));
+    await waitFor(() => expect(mocked.get).toHaveBeenCalled());
+    expect(screen.queryByRole('button', { name: 'workspace.application.technical.addContact' })).toBeNull();
+    expect(screen.getByRole('textbox', { name: 'workspace.application.technical.supportNotes' })).not.toBeDisabled();
+  });
+
+  it('runs two quick removals one after the other, the second from the answer to the first', async () => {
+    let answer: (value: unknown) => void = () => undefined;
+    mocked.post
+      .mockReturnValueOnce(new Promise((resolve) => { answer = resolve; }) as never)
+      .mockResolvedValueOnce({ data: [] } as never);
+    renderTab(true, [ANNA, BRUNO]);
+    fireEvent.click(await screen.findByRole('button', { name: 'workspace.application.technical.removeContact(name=Anna Martin)' }));
+    await waitFor(() => expect(screen.queryByText('Anna Martin')).toBeNull());
+    fireEvent.click(screen.getByRole('button', { name: 'workspace.application.technical.removeContact(name=Bruno Petit)' }));
+    expect(mocked.post).toHaveBeenCalledTimes(1);
+    expect(mocked.post).toHaveBeenLastCalledWith('/technologies/tech-1/support-contacts/bulk-replace', { contacts: [{ contact_id: 'c-2', role: 'Database administrator' }] });
+    answer({ data: [BRUNO] });
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(2));
+    expect(mocked.post).toHaveBeenLastCalledWith('/technologies/tech-1/support-contacts/bulk-replace', { contacts: [] });
+    await waitFor(() => expect(screen.queryByText('Bruno Petit')).toBeNull());
   });
 
   it('saves the support notes when the field loses focus', async () => {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Button, IconButton, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, IconButton, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -65,25 +65,38 @@ export default function TechnologyOperationsTab({ technology, canManage, onPatch
     queryFn: async () => (await api.get<SupportContactRow[]>(`/technologies/${technology.id}/support-contacts`)).data || [],
   });
   const contacts = contactsQuery.data || [];
+  // The list is replaced as a whole: it can change only once it has been read.
+  const canEdit = canManage && contactsQuery.isSuccess;
 
-  const replaceContacts = React.useCallback(async (next: SupportContactRow[]) => {
-    try {
-      const res = await api.post<SupportContactRow[]>(`/technologies/${technology.id}/support-contacts/bulk-replace`, {
-        contacts: next.filter((item) => item.contact_id).map((item) => ({ contact_id: item.contact_id, role: item.role || null })),
-      });
-      queryClient.setQueryData(key, res.data || []);
-      return true;
-    } catch (err) {
-      onError(getApiErrorMessage(err, t, t('workspace.technology.messages.saveFailed')));
-      await queryClient.invalidateQueries({ queryKey: key });
-      return false;
-    }
-  }, [key, onError, queryClient, t, technology.id]);
+  // Replacements run one after the other, each from the last list known (the server's answer to
+  // the previous one), so two quick changes never undo each other.
+  const queue = React.useRef<Promise<unknown>>(Promise.resolve());
+  const replaceContacts = React.useCallback((change: (current: SupportContactRow[]) => SupportContactRow[], optimistic = false) => {
+    const queryKey = technologySupportContactsKey(technology.id);
+    const run = queue.current.then(async () => {
+      const next = change(queryClient.getQueryData<SupportContactRow[]>(queryKey) ?? []);
+      if (optimistic) queryClient.setQueryData(queryKey, next);
+      try {
+        const res = await api.post<SupportContactRow[]>(`/technologies/${technology.id}/support-contacts/bulk-replace`, {
+          contacts: next.filter((item) => item.contact_id).map((item) => ({ contact_id: item.contact_id, role: item.role || null })),
+        });
+        queryClient.setQueryData(queryKey, res.data || []);
+        return true;
+      } catch (err) {
+        onError(getApiErrorMessage(err, t, t('workspace.technology.messages.saveFailed')));
+        await queryClient.invalidateQueries({ queryKey });
+        return false;
+      }
+    });
+    queue.current = run;
+    return run;
+  }, [onError, queryClient, t, technology.id]);
 
   const addContact = async () => {
-    if (!draft.contact_id) return;
+    const contactId = draft.contact_id;
+    if (!contactId) return;
     setSaving(true);
-    const ok = await replaceContacts([...contacts, { contact_id: draft.contact_id, role: draft.role || null }]);
+    const ok = await replaceContacts((current) => [...current, { contact_id: contactId, role: draft.role || null }]);
     setSaving(false);
     if (!ok) return;
     setDialogOpen(false);
@@ -92,11 +105,12 @@ export default function TechnologyOperationsTab({ technology, canManage, onPatch
 
   return (
     <Stack spacing={3.75}>
+      {contactsQuery.isError && <Alert severity="error">{t('workspace.technology.operations.contactsLoadFailed')}</Alert>}
       <Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
           <SectionLabel>{t('workspace.application.technical.support')}</SectionLabel>
           <Box sx={{ flex: 1 }} />
-          {canManage && (
+          {canEdit && (
             <Button variant="action" size="small" onClick={() => setDialogOpen(true)}>
               {t('workspace.application.technical.addContact')}
             </Button>
@@ -115,13 +129,13 @@ export default function TechnologyOperationsTab({ technology, canManage, onPatch
               <TableCell sx={{ width: 180 }}>{t('workspace.application.technical.email')}</TableCell>
               <TableCell sx={{ width: 130 }}>{t('workspace.application.technical.phone')}</TableCell>
               <TableCell>{t('workspace.application.technical.role')}</TableCell>
-              {canManage && <TableCell align="right" sx={{ width: 52 }} />}
+              {canEdit && <TableCell align="right" sx={{ width: 52 }} />}
             </TableRow>
           </TableHead>
           <TableBody>
             {contactsQuery.isSuccess && contacts.length === 0 && (
               <TableRow>
-                <TableCell colSpan={canManage ? 5 : 4} sx={(theme) => ({ color: `${theme.palette.kanap.text.tertiary} !important` })}>
+                <TableCell colSpan={canEdit ? 5 : 4} sx={(theme) => ({ color: `${theme.palette.kanap.text.tertiary} !important` })}>
                   {t('workspace.application.technical.noSupportContacts')}
                 </TableCell>
               </TableRow>
@@ -132,13 +146,13 @@ export default function TechnologyOperationsTab({ technology, canManage, onPatch
                 <TableCell>{row.contact?.email || '—'}</TableCell>
                 <TableCell sx={{ fontFamily: MONO_FONT_FAMILY, fontSize: '12px !important' }}>{row.contact?.phone || row.contact?.mobile || '—'}</TableCell>
                 <TableCell sx={!row.role ? (theme) => ({ color: `${theme.palette.kanap.text.tertiary} !important` }) : undefined}>{row.role || '—'}</TableCell>
-                {canManage && (
+                {canEdit && (
                   <TableCell align="right">
                     <Box className="hover-actions">
                       <IconButton
                         aria-label={t('workspace.application.technical.removeContact', { name: contactName(row, unnamedContact) })}
                         size="small"
-                        onClick={() => { void replaceContacts(contacts.filter((item) => item !== row)); }}
+                        onClick={() => { void replaceContacts((current) => current.filter((item) => item.contact_id !== row.contact_id), true); }}
                       >
                         <DeleteIcon sx={{ fontSize: 16 }} />
                       </IconButton>

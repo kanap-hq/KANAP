@@ -1674,6 +1674,9 @@
           "unknown": "Datum unbekannt"
         }
       },
+      "operations": {
+        "contactsLoadFailed": "Die Support-Kontakte konnten nicht geladen werden."
+      },
       "relations": {
         "sections": {
           "documents": "Dokumente",

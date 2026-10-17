@@ -1674,6 +1674,9 @@
           "unknown": "Fecha desconocida"
         }
       },
+      "operations": {
+        "contactsLoadFailed": "No se pudieron cargar los contactos de soporte."
+      },
       "relations": {
         "sections": {
           "documents": "Documentos",
