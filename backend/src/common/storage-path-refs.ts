@@ -2,17 +2,20 @@ import { EntityManager } from 'typeorm';
 
 // `capex_attachments` is dormant since lot Z1 (its rows are in `spend_attachments`, same paths):
 // it no longer says whether a file is in use.
+// Every other table of TENANT_PURGE_ATTACHMENT_TABLES belongs here (storage-path-refs.spec.ts).
 const ATTACHMENT_TABLES = [
   'portfolio_project_attachments',
   'portfolio_request_attachments',
   'task_attachments',
   'document_attachments',
   'application_attachments',
+  'technology_attachments',
   'interface_attachments',
   'contract_attachments',
   'spend_attachments',
   'asset_attachments',
   'incident_attachments',
+  'ai_message_attachments',
 ] as const;
 
 export { ATTACHMENT_TABLES };
