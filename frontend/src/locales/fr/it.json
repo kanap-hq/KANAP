@@ -221,6 +221,74 @@
       "serverCount_one": "{{count}} serveur",
       "serverCount_other": "{{count}} serveurs"
     },
+    "endOfSupport": {
+      "title": "Fins de support",
+      "subtitle": "Ce qui est arrivé ou arrive en fin de support d'ici le {{date}}, et ce que cela touche.",
+      "subtitleGaps": "Les données manquantes qui empêchent ce rapport de répondre. Ouvrez une ligne pour compléter la fiche.",
+      "tabs": {
+        "label": "Vue du rapport",
+        "deadlines": "Échéances",
+        "gaps": "Données manquantes"
+      },
+      "filters": {
+        "type": "Type",
+        "allTypes": "Tous les types",
+        "horizon": "Horizon",
+        "months_one": "{{count}} mois",
+        "months_other": "{{count}} mois"
+      },
+      "types": {
+        "technology": "Technologie",
+        "operating_system": "Système d'exploitation",
+        "application": "Application",
+        "hardware": "Matériel"
+      },
+      "typesShort": {
+        "technology": "Technologie",
+        "operating_system": "OS",
+        "application": "Application",
+        "hardware": "Matériel"
+      },
+      "states": {
+        "out_of_support": "Hors support",
+        "extended_support": "Support étendu",
+        "upcoming": "Fin proche"
+      },
+      "milestones": {
+        "end_of_life": "Fin de vie",
+        "support_contract": "Contrat de support"
+      },
+      "columns": {
+        "type": "Type",
+        "item": "Élément",
+        "version": "Version",
+        "date": "Date de fin",
+        "state": "État",
+        "servers": "Serveurs",
+        "applications": "Applications",
+        "missing": "Donnée manquante",
+        "record": "Fiche",
+        "linkedTo": "Lié à"
+      },
+      "detail": {
+        "servers": "Serveurs",
+        "applications": "Applications"
+      },
+      "gaps": {
+        "application_without_server": "Application hébergée sans serveur",
+        "vm_without_host": "Machine virtuelle sans hôte",
+        "technology_not_installed": "Technologie installée sur aucun serveur",
+        "database_server_without_dbms": "Serveur de base de données sans technologie de base de données",
+        "sso_application_without_identity": "Application avec SSO sans technologie d'identité",
+        "link_without_version": "Lien de technologie sans version",
+        "version_without_end_date": "Version en service sans date de fin de support"
+      },
+      "empty": {
+        "deadlines": "Rien n'arrive en fin de support dans cet horizon.",
+        "gaps": "Aucune donnée manquante."
+      },
+      "exportFailed": "L'export a échoué. Réessayez."
+    },
     "interfaces": {
       "title": "Interfaces",
       "addInterface": "Ajouter une interface",

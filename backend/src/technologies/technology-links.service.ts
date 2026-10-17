@@ -6,7 +6,7 @@ import { languageOf, writeCsv } from '../common/csv-sheet';
 import { MANUAL_PROVENANCE, provenanceParams, type LinkProvenance } from '../common/link-provenance';
 import { withSavepoint } from '../common/savepoint.util';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
-import { TechnologyReachService, type ReachingTechnology } from './technology-reach.service';
+import { assetInServiceSql, TechnologyReachService, type ReachedAsset, type ReachingTechnology } from './technology-reach.service';
 import { readTechnology, technologyReference, UUID_RE, versionOfInput } from './technology-rows';
 
 export type LinkOpts = { manager: EntityManager; tenantId: string; userId?: string | null };
@@ -62,11 +62,22 @@ export class TechnologyLinksService {
 
   // ==================== ASSETS ====================
 
-  /** The servers of a technology: installed (with the link) and carried through the graph (with `via`). */
+  /**
+   * The servers of a technology: installed (with the link) and carried through the graph (with
+   * `via`). A link to a retired asset stays listed, to be seen and removed, with `asset_status`; it
+   * takes no part in the deductions.
+   */
   async assetsOfTechnology(idOrRef: string, opts: LinkOpts) {
     const { manager: mg, tenantId } = opts;
     const tech = await readTechnology(mg, tenantId, idOrRef);
-    const reached = await this.reach.assetsOfTechnologies(mg, tenantId, [tech.id]);
+    const retired: ReachedAsset[] = await mg.query(
+      `SELECT at.technology_id, at.asset_id, NULL::uuid AS via_asset_id, at.technology_version_id, at.id AS link_id, at.source, 0 AS depth
+         FROM asset_technologies at
+         JOIN assets a ON a.tenant_id = $1 AND a.id = at.asset_id AND NOT (${assetInServiceSql('a')})
+        WHERE at.tenant_id = $1 AND at.technology_id = $2`,
+      [tenantId, tech.id],
+    );
+    const reached = [...await this.reach.assetsOfTechnologies(mg, tenantId, [tech.id]), ...retired.map((r) => ({ ...r, depth: 0 }))];
     const assets = await this.assetLabels(mg, tenantId, reached.flatMap((r) => [r.asset_id, r.via_asset_id]));
     const versions = await this.versionLabels(mg, tenantId, reached.map((r) => r.technology_version_id));
     const notes = await this.linkNotes(mg, tenantId, 'asset', reached.map((r) => r.link_id));
@@ -80,6 +91,7 @@ export class TechnologyLinksService {
         asset_name: asset?.name ?? null,
         asset_reference: asset?.asset_reference ?? null,
         asset_kind: asset?.kind ?? null,
+        asset_status: asset?.status ?? null,
         is_cluster: asset?.is_cluster ?? false,
         environment: asset?.environment ?? null,
         operating_system: asset?.operating_system ?? null,
@@ -99,11 +111,22 @@ export class TechnologyLinksService {
     return { items };
   }
 
-  /** The technologies of an asset: installed on it (removable) and carried to it (with `via`). */
+  /**
+   * The technologies of an asset: installed on it (removable) and carried to it (with `via`). A
+   * retired asset carries nothing: it lists its own links only, to be seen and removed.
+   */
   async technologiesOfAsset(assetId: string, opts: LinkOpts) {
     const { manager: mg, tenantId } = opts;
     const asset = await this.readAsset(mg, tenantId, assetId);
-    const rows = await this.reach.technologiesOfAssets(mg, tenantId, [asset.id]);
+    const retired: ReachingTechnology[] = await mg.query(
+      `SELECT at.asset_id AS subject_id, at.technology_id, 'installed' AS kind, at.technology_version_id,
+              NULL::text AS environment, NULL::uuid AS asset_id, NULL::uuid AS via_asset_id, at.id AS link_id, at.source
+         FROM asset_technologies at
+         JOIN assets a ON a.tenant_id = $1 AND a.id = at.asset_id AND NOT (${assetInServiceSql('a')})
+        WHERE at.tenant_id = $1 AND at.asset_id = $2`,
+      [tenantId, asset.id],
+    );
+    const rows = [...await this.reach.technologiesOfAssets(mg, tenantId, [asset.id]), ...retired];
     return { items: await this.presentReaching(mg, tenantId, rows, 'asset') };
   }
 
@@ -583,9 +606,9 @@ export class TechnologyLinksService {
 
   private async assetLabels(mg: EntityManager, tenantId: string, ids: Array<string | null>) {
     const wanted = Array.from(new Set(ids.filter((id): id is string => !!id)));
-    const rows: Array<{ id: string; name: string; asset_reference: string | null; kind: string; environment: string | null; operating_system: string | null; is_cluster: boolean }> = wanted.length
+    const rows: Array<{ id: string; name: string; asset_reference: string | null; kind: string; status: string | null; environment: string | null; operating_system: string | null; is_cluster: boolean }> = wanted.length
       ? await mg.query(
-        `SELECT id, name, asset_reference, kind, environment, operating_system, COALESCE(is_cluster, false) AS is_cluster
+        `SELECT id, name, asset_reference, kind, status, environment, operating_system, COALESCE(is_cluster, false) AS is_cluster
            FROM assets WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
         [tenantId, wanted],
       )

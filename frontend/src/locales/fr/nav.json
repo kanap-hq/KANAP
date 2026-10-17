@@ -60,6 +60,7 @@
       "locations": "Sites",
       "assets": "Actifs",
       "technologies": "Technologies",
+      "endOfSupport": "Fins de support",
       "connections": "Connexions",
       "connectionMap": "Carte des connexions",
       "applications": "Applications",

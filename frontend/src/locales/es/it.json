@@ -221,6 +221,74 @@
       "serverCount_one": "{{count}} servidor",
       "serverCount_other": "{{count}} servidores"
     },
+    "endOfSupport": {
+      "title": "Fin de soporte",
+      "subtitle": "Lo que ha llegado o llega al fin de soporte antes del {{date}}, y lo que afecta.",
+      "subtitleGaps": "Los datos que faltan para que este informe responda. Abra una fila para completar la ficha.",
+      "tabs": {
+        "label": "Vista del informe",
+        "deadlines": "Vencimientos",
+        "gaps": "Datos que faltan"
+      },
+      "filters": {
+        "type": "Tipo",
+        "allTypes": "Todos los tipos",
+        "horizon": "Horizonte",
+        "months_one": "{{count}} mes",
+        "months_other": "{{count}} meses"
+      },
+      "types": {
+        "technology": "Tecnología",
+        "operating_system": "Sistema operativo",
+        "application": "Aplicación",
+        "hardware": "Hardware"
+      },
+      "typesShort": {
+        "technology": "Tecnología",
+        "operating_system": "Sistema operativo",
+        "application": "Aplicación",
+        "hardware": "Hardware"
+      },
+      "states": {
+        "out_of_support": "Sin soporte",
+        "extended_support": "Soporte extendido",
+        "upcoming": "Termina pronto"
+      },
+      "milestones": {
+        "end_of_life": "Fin de vida",
+        "support_contract": "Contrato de soporte"
+      },
+      "columns": {
+        "type": "Tipo",
+        "item": "Elemento",
+        "version": "Versión",
+        "date": "Fecha de fin",
+        "state": "Estado",
+        "servers": "Servidores",
+        "applications": "Aplicaciones",
+        "missing": "Dato que falta",
+        "record": "Ficha",
+        "linkedTo": "Vinculado a"
+      },
+      "detail": {
+        "servers": "Servidores",
+        "applications": "Aplicaciones"
+      },
+      "gaps": {
+        "application_without_server": "Aplicación alojada sin servidor",
+        "vm_without_host": "Máquina virtual sin host",
+        "technology_not_installed": "Tecnología instalada en ningún servidor",
+        "database_server_without_dbms": "Servidor de base de datos sin tecnología de base de datos",
+        "sso_application_without_identity": "Aplicación con SSO sin tecnología de identidad",
+        "link_without_version": "Vínculo de tecnología sin versión",
+        "version_without_end_date": "Versión en uso sin fecha de fin de soporte"
+      },
+      "empty": {
+        "deadlines": "Nada llega al fin de soporte en este horizonte.",
+        "gaps": "No faltan datos."
+      },
+      "exportFailed": "La exportación ha fallado. Inténtelo de nuevo."
+    },
     "interfaces": {
       "title": "Interfaces",
       "addInterface": "Agregar interfaz",

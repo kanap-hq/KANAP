@@ -2,7 +2,7 @@
 import 'dotenv/config';
 import { assert, inRolledBackTransaction, runSpecs, setTenant } from '../../spend/__tests__/round-inputs.fixtures';
 import { MAX_DEPTH } from '../technology-reach.service';
-import { seedGraph, services } from './technologies.fixtures';
+import { application, asset, assign, contains, installed, seedGraph, services, version } from './technologies.fixtures';
 
 // The deductions of the technology layer (lot S) against a real database, in transactions rolled
 // back at the end: host -> VM, member -> cluster, the depth limit, a `contains` cycle, the
@@ -113,6 +113,57 @@ async function testCounts() {
   });
 }
 
+async function testRetiredAsset() {
+  await inRolledBackTransaction(async (runner) => {
+    const g = await seedGraph(runner, 'reach-retired');
+    const { reach, links } = services();
+    const opts = { manager: runner.manager, tenantId: g.tenantId };
+    // A server carrying SQL Server 2012 (ended), containing a VM, each hosting an application.
+    const old = await asset(runner, g.tenantId, 'OLD-SQL reach-retired');
+    const oldVm = await asset(runner, g.tenantId, 'OLD-VM reach-retired');
+    await contains(runner, g.tenantId, old, oldVm);
+    const sql2012 = await version(runner, g.tenantId, g.tech.sql, '2012', '2017-07-11');
+    const oldLink = await installed(runner, g.tenantId, old, g.tech.sql, sql2012);
+    const onServer = await application(runner, g.tenantId, 'On old server reach-retired');
+    const onVm = await application(runner, g.tenantId, 'On old VM reach-retired');
+    await assign(runner, g.tenantId, onServer, old);
+    await assign(runner, g.tenantId, onVm, oldVm);
+
+    const before = (await reach.countsOfTechnologies(runner.manager, g.tenantId, [g.tech.sql])).get(g.tech.sql)!;
+    assert.equal(before.servers, 5, 'in service: the server and its VM are reached');
+    assert.equal(before.ended_versions, 3);
+
+    await runner.query(`UPDATE assets SET status = 'retired' WHERE tenant_id = $1 AND id = $2`, [g.tenantId, old]);
+    const assets = await reach.assetsOfTechnologies(runner.manager, g.tenantId, [g.tech.sql]);
+    assert.ok(!assets.some((row) => row.asset_id === old), 'the retired server carries nothing');
+    assert.ok(!assets.some((row) => row.asset_id === oldVm), 'and the traversal stops there');
+    const after = (await reach.countsOfTechnologies(runner.manager, g.tenantId, [g.tech.sql])).get(g.tech.sql)!;
+    assert.equal(after.servers, 3);
+    assert.equal(after.versions_in_use, 2, 'a version named on a retired server only is not in use');
+    assert.equal(after.ended_versions, 2);
+    assert.equal(after.applications, 2);
+    const apps = await reach.applicationsOfTechnologies(runner.manager, g.tenantId, [g.tech.sql]);
+    assert.ok(!apps.some((row) => row.application_id === onServer || row.application_id === onVm), 'no hosted application through it');
+    assert.deepEqual(await reach.technologiesOfApplications(runner.manager, g.tenantId, [onServer, onVm]), []);
+    assert.deepEqual(await reach.technologiesOfAssets(runner.manager, g.tenantId, [oldVm]), [], 'its VM no longer carries SQL Server');
+
+    // The management views still show its direct link, with the asset's status, to be removed.
+    const ofTechnology = (await links.assetsOfTechnology(g.tech.sql, opts)).items;
+    const row = ofTechnology.find((item) => item.asset_id === old);
+    assert.equal(row?.link_id, oldLink);
+    assert.equal(row?.kind, 'installed');
+    assert.equal(row?.asset_status, 'retired');
+    assert.ok(!ofTechnology.some((item) => item.asset_id === oldVm), 'nothing carried through it');
+    assert.equal(ofTechnology.find((item) => item.asset_id === g.ids.sqlNode1)?.asset_status, 'active');
+    const ofAsset = (await links.technologiesOfAsset(old, opts)).items;
+    assert.deepEqual(ofAsset.map((item) => [item.technology_id, item.removable, item.link_id]), [[g.tech.sql, true, oldLink]]);
+    assert.deepEqual((await links.technologiesOfAsset(oldVm, opts)).items, []);
+    assert.equal((await links.removeAssetLinkOfAsset(old, oldLink, opts)).changed, true, 'and removable');
+    assert.deepEqual((await links.technologiesOfAsset(old, opts)).items, []);
+    assert.deepEqual((await reach.countsOfTechnologies(runner.manager, g.tenantId, [g.tech.sql])).get(g.tech.sql), after, 'the counters never counted it');
+  });
+}
+
 async function testTenantIsolation() {
   await inRolledBackTransaction(async (runner) => {
     const a = await seedGraph(runner, 'reach-iso-a');
@@ -142,6 +193,7 @@ runSpecs('technology-reach.integration.spec', [
   ['depth and cycle', testDepthAndCycle],
   ['applications both ways', testApplications],
   ['list counters', testCounts],
+  ['retired asset', testRetiredAsset],
   ['tenant isolation', testTenantIsolation],
 ]).catch((err) => {
   console.error(err);
