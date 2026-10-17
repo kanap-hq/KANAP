@@ -6,7 +6,7 @@ import { Link as RouterLink } from 'react-router-dom';
 import api from '../../../api';
 import { useAuth } from '../../../auth/AuthContext';
 import useBudgetColumns from '../../../hooks/useBudgetColumns';
-import useLocalizedItOpsSettings from '../../../hooks/useLocalizedItOpsSettings';
+import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { formatAmount } from '../../../i18n/formatters';
 import { formatShortDate } from '../../../lib/dateFormat';
 import { buildItemPath, formatItemRef } from '../../../utils/item-ref';
@@ -121,9 +121,8 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
   const { t, i18n } = useTranslation(['it', 'common', 'portfolio', 'ops']);
   const { hasLevel } = useAuth();
   const canEdit = hasLevel('applications', 'manager');
-  // Families in the user's language once the catalog localizes them; the raw code otherwise.
-  const { data: itOpsSettings } = useLocalizedItOpsSettings();
-  const technologyFamilies = (itOpsSettings as { technologyFamilies?: Array<{ code: string; label: string }> } | undefined)?.technologyFamilies;
+  // Families in the user's language; the raw code when the catalog does not know it.
+  const { labelFor } = useItOpsEnumOptions();
   const queryClient = useQueryClient();
   const budgetColumns = useBudgetColumns();
   const [adding, setAdding] = React.useState<{ kind: RelationKind; anchor: HTMLElement } | null>(null);
@@ -346,7 +345,7 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
     },
   ];
 
-  const familyLabel = (code: string | null) => (code ? technologyFamilies?.find((family) => family.code === code)?.label ?? code : dash);
+  const familyLabel = (code: string | null) => (code ? labelFor('technologyFamily', code) || code : dash);
   const serverLabel = (via: TechnologyRow['via'][number]) => (via.host_name
     ? t('workspace.application.relations.viaHost', { server: via.asset_name ?? dash, host: via.host_name })
     : via.asset_name ?? dash);

@@ -19,9 +19,11 @@ vi.mock('react-i18next', () => ({ useTranslation: () => translation }));
 vi.mock('../../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), delete: vi.fn() } }));
 const auth = { manager: true, readOnly: [] as string[] };
 vi.mock('../../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: (resource: string) => auth.manager && !auth.readOnly.includes(resource) }) }));
-// The localized projection of the catalogs: the families read in the user's language (B1).
-const itOpsSettings = { data: { technologyFamilies: [{ code: 'database', label: 'Base de données' }] } };
-vi.mock('../../../hooks/useLocalizedItOpsSettings', () => ({ default: () => itOpsSettings }));
+// The localized catalogs: the families read in the user's language (B1), the code when unknown.
+const families: Record<string, string> = { database: 'Base de données' };
+vi.mock('../../../hooks/useItOpsEnumOptions', () => ({
+  default: () => ({ labelFor: (field: string, code: string) => (field === 'technologyFamily' ? families[code] ?? code : code) }),
+}));
 vi.mock('../../../hooks/useBudgetColumns', () => ({ default: () => ({ label: (key: string) => `column:${key}` }) }));
 vi.mock('../editors/IncidentRelationsSection', () => ({ default: () => <div data-testid="incidents" /> }));
 
