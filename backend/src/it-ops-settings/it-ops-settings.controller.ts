@@ -28,7 +28,12 @@ const LIST_FIELDS: Record<string, Record<string, FieldReader>> = {
   hostingTypes: { ...base, category: (row) => row.category === 'on_prem' || row.category === 'cloud' ? row.category : undefined },
   operatingSystems: { ...base, standardSupportEnd: text('standardSupportEnd', 'standard_support_end'), extendedSupportEnd: text('extendedSupportEnd', 'extended_support_end') },
   connectionTypes: { ...base, category: text('category'), typicalPorts: text('typicalPorts', 'typical_ports') },
-  domains: { ...base, dns_suffix: (row) => String(row.dns_suffix ?? '').trim().toLowerCase(), system: (row) => !!row.system },
+  domains: {
+    ...base, dns_suffix: (row) => String(row.dns_suffix ?? '').trim().toLowerCase(), system: (row) => !!row.system,
+    forest: text('forest'), account_count: (row) => row.account_count, machine_count: (row) => row.machine_count,
+    trusts: (row) => Array.isArray(row.trusts) ? row.trusts.map((trust: any) => ({ domain: trust?.domain, direction: trust?.direction })) : row.trusts,
+  },
+  adminZones: { ...base, admin_group: text('admin_group'), privilege_level: text('privilege_level'), secrets_location: text('secrets_location'), description: text('description') },
   subnets: {
     location_id: (row) => String(row.location_id ?? '').trim(), cidr: (row) => String(row.cidr ?? '').trim(), vlan_number: (row) => row.vlan_number,
     network_zone: (row) => String(row.network_zone ?? '').trim().toLowerCase(), description: (row) => row.description, deprecated,

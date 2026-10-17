@@ -87,12 +87,34 @@ export type EntityOption = ItOpsEnumOption & {
   graph_tier?: GraphTier;
 };
 
+/** A trust between two domains, seen from the domain that carries it (Active Directory wording). */
+export type DomainTrustDirection = 'two_way' | 'outgoing' | 'incoming';
+export const DOMAIN_TRUST_DIRECTIONS: DomainTrustDirection[] = ['two_way', 'outgoing', 'incoming'];
+export type DomainTrust = { domain: string; direction: DomainTrustDirection };
+
 export type DomainOption = {
   code: string;
   label: string;
   dns_suffix: string;
   deprecated?: boolean;
   system?: boolean;
+  translations?: CatalogTranslations;
+  /** Administration view (lot A1a): the forest, the trusts to other domains of the list, and typed counts. */
+  forest?: string;
+  trusts?: DomainTrust[];
+  account_count?: number;
+  machine_count?: number;
+};
+
+/**
+ * An administration zone (ANSSI mapping guide, administration view): who administers it, at which
+ * privilege level, and where its secrets are kept. No zone is shipped: each organisation has its own.
+ */
+export type AdminZoneOption = ItOpsEnumOption & {
+  admin_group?: string;
+  privilege_level?: string;
+  secrets_location?: string;
+  description?: string;
 };
 
 export type SubnetOption = {
@@ -129,6 +151,7 @@ export type ItOpsSettings = ClassificationCatalog & {
   pathHopFunctions: ItOpsEnumOption[];
   incidentCategories: ItOpsEnumOption[];
   technologyFamilies: ItOpsEnumOption[];
+  adminZones: AdminZoneOption[];
   /** Server-managed rows the editor must not edit nor remove. */
   lockedCodes?: Record<string, string[]>;
   /** Default rows the server re-adds after removal: editable and retirable, never removable. */
@@ -160,6 +183,7 @@ type ItOpsMetadataShape = {
   path_hop_functions?: ItOpsEnumOption[];
   incident_categories?: ItOpsEnumOption[];
   technology_families?: ItOpsEnumOption[];
+  admin_zones?: AdminZoneOption[];
 };
 
 @Injectable()
@@ -868,8 +892,11 @@ export class ItOpsSettingsService {
   private normalizeDomains(
     list: unknown,
     defaults: DomainOption[],
+    opts?: { strict?: boolean },
   ): DomainOption[] {
+    const strict = opts?.strict ?? false;
     const byCode = new Map<string, DomainOption>();
+    const rawTrusts = new Map<string, unknown>();
 
     // Ensure locked system entries are always present first
     for (const def of defaults.filter((d) => d.system)) {
@@ -887,7 +914,17 @@ export class ItOpsSettingsService {
         const dns_suffix = String(raw?.dns_suffix ?? label ?? '').trim().toLowerCase();
         const deprecated = !!raw?.deprecated;
         const translations = normalizeTranslations(raw?.translations);
-        byCode.set(code, { code, label, dns_suffix, deprecated, system: false, ...(translations ? { translations } : {}) });
+        const forest = this.optionalText(raw?.forest, 'Forest', 200, strict);
+        const account_count = this.optionalCount(raw?.account_count, 'Number of accounts', strict);
+        const machine_count = this.optionalCount(raw?.machine_count, 'Number of machines', strict);
+        byCode.set(code, {
+          code, label, dns_suffix, deprecated, system: false,
+          ...(translations ? { translations } : {}),
+          ...(forest ? { forest } : {}),
+          ...(account_count !== undefined ? { account_count } : {}),
+          ...(machine_count !== undefined ? { machine_count } : {}),
+        });
+        if (raw?.trusts !== undefined && raw?.trusts !== null) rawTrusts.set(code, raw.trusts);
       }
     }
 
@@ -898,6 +935,68 @@ export class ItOpsSettingsService {
       }
     }
 
+    // Trusts name other domains of the list: a trust to a domain no longer listed, a system entry or
+    // itself is dropped; one trust per domain pair (the first one wins).
+    for (const [code, trusts] of rawTrusts) {
+      if (!Array.isArray(trusts)) {
+        if (strict) throw new BadRequestException('Domains: trusts must be a list');
+        continue;
+      }
+      const kept = new Map<string, DomainTrust>();
+      for (const trust of trusts) {
+        const domain = String((trust as any)?.domain ?? '').trim().toLowerCase();
+        const rawDirection = String((trust as any)?.direction ?? '').trim().toLowerCase();
+        const direction = (DOMAIN_TRUST_DIRECTIONS as string[]).includes(rawDirection) ? rawDirection as DomainTrustDirection : null;
+        if (!direction && strict) throw new BadRequestException(`Domains: "${rawDirection}" is not a trust direction (two_way, outgoing or incoming)`);
+        if (!domain || domain === code || this.lockedDomainCodes.has(domain) || !byCode.has(domain) || kept.has(domain)) continue;
+        kept.set(domain, { domain, direction: direction ?? 'two_way' });
+      }
+      if (kept.size) byCode.get(code)!.trusts = [...kept.values()];
+    }
+
+    return Array.from(byCode.values());
+  }
+
+  /** A short text, trimmed; empty is absent. Too long: refused on a write, cut on a read. */
+  private optionalText(value: unknown, field: string, max: number, strict: boolean): string | undefined {
+    const text = String(value ?? '').trim();
+    if (!text) return undefined;
+    if (text.length > max) {
+      if (strict) throw new BadRequestException(`${field} is too long (${max} characters maximum)`);
+      return text.slice(0, max);
+    }
+    return text;
+  }
+
+  /** A typed count (accounts, machines): a whole number from 0; empty is absent. Invalid: refused on a write, dropped on a read. */
+  private optionalCount(value: unknown, field: string, strict: boolean): number | undefined {
+    if (value === undefined || value === null || String(value).trim() === '') return undefined;
+    const n = Number(value);
+    if (Number.isInteger(n) && n >= 0 && n <= 100_000_000) return n;
+    if (strict) throw new BadRequestException(`${field} must be a whole number from 0`);
+    return undefined;
+  }
+
+  private normalizeAdminZones(list: unknown, opts?: { strict?: boolean }): AdminZoneOption[] {
+    const strict = opts?.strict ?? false;
+    const byCode = new Map<string, AdminZoneOption>();
+    for (const raw of Array.isArray(list) ? list : []) {
+      const code = this.normalizeCode(raw?.code ?? raw?.value);
+      const label = this.normalizeLabel(raw?.label, code);
+      const translations = normalizeTranslations(raw?.translations);
+      const admin_group = this.optionalText(raw?.admin_group, 'Administrator group', 200, strict);
+      const privilege_level = this.optionalText(raw?.privilege_level, 'Privilege level', 100, strict);
+      const secrets_location = this.optionalText(raw?.secrets_location, 'Secrets location', 200, strict);
+      const description = this.optionalText(raw?.description, 'Description', 2000, strict);
+      byCode.set(code, {
+        code, label, deprecated: !!raw?.deprecated,
+        ...(admin_group ? { admin_group } : {}),
+        ...(privilege_level ? { privilege_level } : {}),
+        ...(secrets_location ? { secrets_location } : {}),
+        ...(description ? { description } : {}),
+        ...(translations ? { translations } : {}),
+      });
+    }
     return Array.from(byCode.values());
   }
 
@@ -963,6 +1062,7 @@ export class ItOpsSettingsService {
     );
     const incidentCategories = this.normalizeList(raw.incident_categories, this.defaultIncidentCategories);
     const technologyFamilies = this.normalizeList(raw.technology_families, this.defaultTechnologyFamilies);
+    const adminZones = this.normalizeAdminZones(raw.admin_zones);
     return {
       lockedCodes: { lifecycleStates: [...this.lockedLifecycleCodes], domains: [...this.lockedDomainCodes] },
       protectedCodes: { networkSegments: this.defaultNetworkSegments.map((item) => item.code), serverKinds: this.defaultServerKinds.map((item) => item.code) },
@@ -991,6 +1091,7 @@ export class ItOpsSettingsService {
       pathHopFunctions,
       incidentCategories,
       technologyFamilies,
+      adminZones,
     };
   }
 
@@ -1195,7 +1296,7 @@ export class ItOpsSettingsService {
       );
     }
     if (patch.domains) {
-      next.domains = this.normalizeDomains(patch.domains, this.defaultDomains);
+      next.domains = this.normalizeDomains(patch.domains, this.defaultDomains, { strict: true });
     }
     if (patch.ipAddressTypes) {
       next.ipAddressTypes = this.normalizeList(patch.ipAddressTypes, this.defaultIpAddressTypes);
@@ -1211,6 +1312,9 @@ export class ItOpsSettingsService {
     }
     if (patch.technologyFamilies) {
       next.technologyFamilies = this.normalizeList(patch.technologyFamilies, this.defaultTechnologyFamilies);
+    }
+    if (patch.adminZones) {
+      next.adminZones = this.normalizeAdminZones(patch.adminZones, { strict: true });
     }
 
     const catalogChanged = CLASSIFICATION_CATALOG_KEYS.some((key) => patch[key] !== undefined);
@@ -1247,6 +1351,7 @@ export class ItOpsSettingsService {
       path_hop_functions: next.pathHopFunctions,
       incident_categories: next.incidentCategories,
       technology_families: next.technologyFamilies,
+      admin_zones: next.adminZones,
     };
     for (const key of OBSOLETE_CATALOG_METADATA_KEYS) delete itOps[key];
     meta.it_ops = itOps;
@@ -1293,6 +1398,7 @@ export class ItOpsSettingsService {
     ipAddressTypes: { name: 'IP address types' }, accessMethods: { name: 'Access methods', commaSeparatedInCsv: true }, pathHopFunctions: { name: 'Path hop functions' },
     incidentCategories: { name: 'Incident categories' }, businessCriticalityLevels: { name: 'Business criticality' }, cyberCriticalityLevels: { name: 'Cyber criticality' },
     dataClasses: { name: 'Data confidentiality' }, recoveryWaves: { name: 'Recovery waves' }, technologyFamilies: { name: 'Technology families' },
+    adminZones: { name: 'Administration zones' },
   };
 
   /** Write-time rules for the lists a PATCH carries: codes generated from names, aliases unique. Reads stay tolerant. */
