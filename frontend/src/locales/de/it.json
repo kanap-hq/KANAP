@@ -629,6 +629,8 @@
         "domainName": "z. B. Unternehmens-AD",
         "dnsSuffix": "z. B. corp.example.com",
         "forest": "z. B. corp.example.com",
+        "accountCount": "z. B. 1200",
+        "machineCount": "z. B. 300",
         "adminZoneName": "z. B. Tier 0",
         "adminGroup": "z. B. Domänen-Admins",
         "privilegeLevel": "z. B. Tier 0",
@@ -646,6 +648,7 @@
       "trusts": {
         "title": "Vertrauensstellungen von {{name}}",
         "hint": "Die Domänen, mit denen diese eine Vertrauensstellung hat, wie in „Active Directory-Domänen und -Vertrauensstellungen“ aufgeführt.",
+        "directionsHint": "Ausgehend: Diese Domäne vertraut der anderen, deren Konten auf ihre Ressourcen zugreifen können. Eingehend: Die andere Domäne vertraut dieser. Bidirektional: beides.",
         "empty": "Keine Vertrauensstellung.",
         "direction": "Richtung",
         "directions": {

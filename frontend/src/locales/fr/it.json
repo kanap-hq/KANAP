@@ -629,6 +629,8 @@
         "domainName": "ex. : AD de l'entreprise",
         "dnsSuffix": "ex. : corp.example.com",
         "forest": "ex. : corp.example.com",
+        "accountCount": "ex. : 1200",
+        "machineCount": "ex. : 300",
         "adminZoneName": "ex. : Tier 0",
         "adminGroup": "ex. : Admins du domaine",
         "privilegeLevel": "ex. : Tier 0",
@@ -646,6 +648,7 @@
       "trusts": {
         "title": "Approbations de {{name}}",
         "hint": "Les domaines avec lesquels celui-ci a une relation d'approbation, tels que listés dans Domaines et approbations Active Directory.",
+        "directionsHint": "Sortante : ce domaine approuve l'autre, dont les comptes peuvent accéder à ses ressources. Entrante : l'autre domaine approuve celui-ci. Bidirectionnelle : les deux.",
         "empty": "Aucune approbation.",
         "direction": "Sens",
         "directions": {

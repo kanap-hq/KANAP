@@ -38,6 +38,7 @@ export default function DomainTrustsDialog({ domain, domains, onClose, onSave }:
       saveLabel={t('common:buttons.save')}
     >
       <Stack spacing={1}>
+        <Typography sx={(theme) => ({ fontSize: 12, color: theme.palette.kanap.text.secondary })}>{t('pages.settings.trusts.directionsHint')}</Typography>
         {draft.length === 0 && (
           <Typography sx={(theme) => ({ fontSize: 13, color: theme.palette.kanap.text.tertiary })}>{t('pages.settings.trusts.empty')}</Typography>
         )}

@@ -629,6 +629,8 @@
         "domainName": "p. ej., AD corporativo",
         "dnsSuffix": "p. ej., corp.example.com",
         "forest": "p. ej., corp.example.com",
+        "accountCount": "p. ej., 1200",
+        "machineCount": "p. ej., 300",
         "adminZoneName": "p. ej., Tier 0",
         "adminGroup": "p. ej., Admins. del dominio",
         "privilegeLevel": "p. ej., Tier 0",
@@ -646,6 +648,7 @@
       "trusts": {
         "title": "Confianzas de {{name}}",
         "hint": "Los dominios con los que este tiene una relación de confianza, tal como aparecen en Dominios y confianzas de Active Directory.",
+        "directionsHint": "Saliente: este dominio confía en el otro, cuyas cuentas pueden acceder a sus recursos. Entrante: el otro dominio confía en este. Bidireccional: ambos.",
         "empty": "Ninguna confianza.",
         "direction": "Dirección",
         "directions": {

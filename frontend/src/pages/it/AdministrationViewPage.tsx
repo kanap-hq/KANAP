@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router-dom';
 import api from '../../api';
+import { useAuth } from '../../auth/AuthContext';
 import PageHeader from '../../components/PageHeader';
 import { RelationRef, RelationsEmpty, RelationsSection, RelationsTable, type RelationsColumn } from '../../components/workspace/RelationsTable';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
@@ -111,7 +112,7 @@ function ZoneAttributes({ zone }: { zone: AdministrationZone }) {
 }
 
 function ZoneSection({ zone }: { zone: AdministrationZone }) {
-  const { t } = useTranslation('it');
+  const { t } = useTranslation(['it', 'common']);
   const { labelFor } = useItOpsEnumOptions();
   const nameOf = useCatalogName();
   const columns: Array<RelationsColumn<Technology>> = [
@@ -122,7 +123,8 @@ function ZoneSection({ zone }: { zone: AdministrationZone }) {
   ];
   const title = zone.code === null
     ? t('pages.administrationView.noZone')
-    : zone.unknown ? t('pages.administrationView.unknownZone', { code: zone.code }) : nameOf('adminZone', zone.code, zone.label ?? zone.code);
+    : zone.unknown ? t('pages.administrationView.unknownZone', { code: zone.code })
+      : `${nameOf('adminZone', zone.code, zone.label ?? zone.code)}${zone.deprecated ? ` (${t('common:enumEditor.retiredSuffix')})` : ''}`;
   return (
     <Box>
       <RelationsSection title={title} count={zone.technologies.length}>
@@ -138,11 +140,11 @@ function ZoneSection({ zone }: { zone: AdministrationZone }) {
 }
 
 function DomainsSection({ domains }: { domains: AdministrationDomain[] }) {
-  const { t } = useTranslation('it');
+  const { t } = useTranslation(['it', 'common']);
   const nameOf = useCatalogName();
   const count = (value: number | null) => (value == null ? <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>{t('pages.administrationView.notSet')}</Box> : value.toLocaleString());
   const columns: Array<RelationsColumn<AdministrationDomain>> = [
-    { key: 'name', header: t('pages.administrationView.columns.domain'), width: 180, render: (row) => nameOf('domain', row.code, row.label) },
+    { key: 'name', header: t('pages.administrationView.columns.domain'), width: 180, render: (row) => `${nameOf('domain', row.code, row.label)}${row.deprecated ? ` (${t('common:enumEditor.retiredSuffix')})` : ''}` },
     { key: 'dns', header: t('pages.administrationView.columns.dnsSuffix'), width: 180, render: (row) => row.dns_suffix },
     { key: 'forest', header: t('pages.administrationView.columns.forest'), width: 180, render: (row) => row.forest ?? <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>{t('pages.administrationView.notSet')}</Box> },
     {
@@ -180,6 +182,7 @@ function DomainsSection({ domains }: { domains: AdministrationDomain[] }) {
  */
 export default function AdministrationViewPage() {
   const { t, i18n } = useTranslation(['it', 'common']);
+  const { hasLevel } = useAuth();
   const [exportError, setExportError] = React.useState<string | null>(null);
   const [exporting, setExporting] = React.useState<'zones' | 'domains' | null>(null);
   const { data, isLoading, error } = useQuery({
@@ -228,8 +231,8 @@ export default function AdministrationViewPage() {
             <Typography component="h2" sx={{ m: 0, mb: 1, fontSize: 16, fontWeight: 500 }}>{t('pages.administrationView.zones')}</Typography>
             {catalogEmpty && (
               <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary', mb: 1 }}>
-                {t('pages.administrationView.noZones')}{' '}
-                <RecordLink to="/it/settings">{t('pages.administrationView.openSettings')}</RecordLink>
+                {t('pages.administrationView.noZones')}
+                {hasLevel('settings', 'reader') && <>{' '}<RecordLink to="/it/settings">{t('pages.administrationView.openSettings')}</RecordLink></>}
               </Typography>
             )}
             <Stack spacing={2.5}>

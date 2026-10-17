@@ -90,6 +90,7 @@ describe('Domain trusts dialog', () => {
     const onSave = vi.fn();
     wrap(<DomainTrustsDialog domain={domains[1]} domains={domains} onClose={vi.fn()} onSave={onSave} />);
     expect(screen.getByText('Lab')).toBeInTheDocument();
+    expect(screen.getByText('pages.settings.trusts.directionsHint')).toBeInTheDocument();
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'pages.settings.trusts.direction Lab' }));
     fireEvent.click(screen.getByRole('option', { name: 'pages.settings.trusts.directions.outgoing' }));
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'pages.settings.trusts.add' }));

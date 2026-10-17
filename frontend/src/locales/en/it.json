@@ -629,6 +629,8 @@
         "domainName": "e.g., Corporate AD",
         "dnsSuffix": "e.g., corp.example.com",
         "forest": "e.g., corp.example.com",
+        "accountCount": "e.g., 1200",
+        "machineCount": "e.g., 300",
         "adminZoneName": "e.g., Tier 0",
         "adminGroup": "e.g., Domain admins",
         "privilegeLevel": "e.g., Tier 0",
@@ -646,6 +648,7 @@
       "trusts": {
         "title": "Trusts of {{name}}",
         "hint": "The domains this one has a trust with, as listed in Active Directory Domains and Trusts.",
+        "directionsHint": "Outgoing: this domain trusts the other one, whose accounts can reach its resources. Incoming: the other domain trusts this one. Two-way: both.",
         "empty": "No trust.",
         "direction": "Direction",
         "directions": {
