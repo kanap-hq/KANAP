@@ -4,6 +4,8 @@ import { ScheduledTasksService } from '../admin/scheduled-tasks/scheduled-tasks.
 import { withTenant } from '../common/tenant-runner';
 import { Features } from '../config/features';
 import { VulnerabilityMatchService } from './vulnerability-match.service';
+import { VulnerabilityNotificationsService } from './vulnerability-notifications.service';
+import { resolveConfiguredAppBaseUrl } from '../common/url';
 import { cpeProduct } from './vulnerability-rules';
 
 export const NVD_FEED_TASK_NAME = 'vulnerability-feed';
@@ -206,6 +208,7 @@ export class NvdFeedService implements OnModuleInit {
     private readonly dataSource: DataSource,
     private readonly scheduledTasks: ScheduledTasksService,
     private readonly matcher: VulnerabilityMatchService,
+    private readonly notifier: VulnerabilityNotificationsService,
   ) {}
 
   onModuleInit() {
@@ -240,15 +243,34 @@ export class NvdFeedService implements OnModuleInit {
     return Array.from(products).sort();
   }
 
-  /** The scheduled run: collect, then match every tenant. */
+  /**
+   * The tenants whose IT owners are told of new vulnerabilities (lot T6b): active ones only, as the
+   * other scheduled notifications (a frozen workspace is matched, not mailed), and none while the
+   * application address is not configured (the emails link to it).
+   */
+  private async notifiedTenantIds(): Promise<Set<string>> {
+    if (resolveConfiguredAppBaseUrl(null) === null) return new Set();
+    const rows: Array<{ id: string }> = await this.dataSource.query(
+      `SELECT id FROM tenants WHERE status = 'active' AND deleted_at IS NULL`,
+    );
+    return new Set(rows.map((r) => r.id));
+  }
+
+  /** The scheduled run: collect, then match every tenant and tell the owners what is new. */
   async run(runtime: FeedRuntime = defaultRuntime()): Promise<FeedSummary> {
     const summary = await this.collect(runtime);
+    const notified = await this.notifiedTenantIds();
     for (const tenantId of await this.tenantIds()) {
       try {
         const result = await withTenant(this.dataSource, tenantId, (mg) => this.matcher.matchTenant(mg, tenantId));
         summary.tenants_matched += 1;
         summary.rows_added += result.added;
         summary.rows_removed += result.removed;
+        if (notified.has(tenantId) && result.addedIds.length > 0) {
+          // Claimed once the matching has committed, in its own transaction; sent without awaiting.
+          const digests = await withTenant(this.dataSource, tenantId, (mg) => this.notifier.claim(mg, tenantId, result.addedIds));
+          void this.notifier.send(tenantId, digests);
+        }
       } catch (error: any) {
         summary.errors.push(`Matching of tenant ${tenantId}: ${error?.message ?? error}`);
       }

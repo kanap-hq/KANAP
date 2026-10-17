@@ -68,7 +68,7 @@ class SpecFeed extends NvdFeedService {
 }
 
 function feed(products = [ALPHA, BETA]) {
-  const service = new SpecFeed(dataSource, { register: () => false } as any, new VulnerabilityMatchService());
+  const service = new SpecFeed(dataSource, { register: () => false } as any, new VulnerabilityMatchService(), { claim: async () => [], send: async () => undefined } as any);
   service.products = products;
   return service;
 }

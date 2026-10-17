@@ -110,6 +110,18 @@ export const es: EmailStrings = {
       bodyHtml: 'El elemento <strong>{{itemName}}</strong> ({{itemTypeLower}}) tiene {{warningLabel}} el <strong>{{expirationDate}}</strong> (quedan {{daysRemaining}} días).',
       text: '{{itemType}} "{{itemName}}": {{warningLabel}} el {{expirationDate}} ({{daysRemaining}} días).',
     },
+    vulnerabilities: {
+      subject: 'Nuevas vulnerabilidades en sus tecnologías ({{count}})',
+      heading: 'Nuevas vulnerabilidades en sus tecnologías',
+      intro: 'KANAP encontró vulnerabilidades críticas o altas en tecnologías de las que usted es responsable de TI ({{count}}). Revíselas e indique su estado.',
+      severities: {
+        critical: 'Crítica',
+        high: 'Alta',
+      },
+      versions: 'Versiones: {{versions}}',
+      unknownVersion: 'versión no registrada (potencialmente afectada)',
+      view: 'Abrir vulnerabilidades',
+    },
     weeklyReview: {
       subject: 'Su revisión semanal de KANAP — Semana del {{weekLabel}}',
       introHtml: 'Hola {{userName}}, aquí tiene su resumen de la semana del <strong>{{weekLabel}}</strong>.',

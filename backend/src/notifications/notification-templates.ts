@@ -1017,6 +1017,74 @@ export function buildExpirationWarningEmail(params: {
   return { subject, html: wrapper.html, text, attachments: wrapper.attachments };
 }
 
+/** One CVE found on one technology, for the vulnerability notification (lot T6b). */
+export type VulnerabilityDigestItem = {
+  cveId: string;
+  severity: 'critical' | 'high';
+  score: number | null;
+  summary: string | null;
+  technologyName: string;
+  technologyReference: string;
+  /** The concerned versions; null is a link that names no version (potentially concerned). */
+  versions: Array<string | null>;
+};
+
+/**
+ * The critical or high vulnerabilities newly found on the technologies a user owns for IT: one
+ * email per recipient and per run of the feed, every CVE listed once per technology.
+ */
+export function buildVulnerabilityDigestEmail(params: {
+  items: VulnerabilityDigestItem[];
+  pageUrl: string;
+  branding?: EmailBranding;
+  locale?: string;
+}): EmailContent {
+  const strings = getEmailStrings(params.locale);
+  const s = strings.notifications.vulnerabilities;
+  const pc = getPrimaryColor(params.branding);
+  const count = params.items.length;
+  const preferencesUrl = getBaseUrl(params.pageUrl) + '/settings/notifications';
+  const versionsOf = (item: VulnerabilityDigestItem) =>
+    interpolate(s.versions, { versions: item.versions.map((v) => v ?? s.unknownVersion).join(', ') });
+  const severityOf = (item: VulnerabilityDigestItem) =>
+    `${s.severities[item.severity]}${item.score != null ? ` ${item.score.toFixed(1)}` : ''}`;
+  const shortSummary = (summary: string | null) => {
+    const text = (summary ?? '').trim();
+    return text.length > 220 ? `${text.slice(0, 219)}…` : text;
+  };
+
+  const rows = params.items.map((item) => buildItemRow(
+    `<span style="font-family:${EMAIL_MONO_FONT};">${escapeHtml(item.cveId)}</span> · ${escapeHtml(item.technologyReference)} ${escapeHtml(item.technologyName)}`,
+    [escapeHtml(severityOf(item)), escapeHtml(versionsOf(item)), shortSummary(item.summary) ? escapeHtml(shortSummary(item.summary)) : null]
+      .filter(Boolean)
+      .join('<br>'),
+  )).join('');
+
+  const body = `
+    ${buildEmailIntro({
+      title: s.heading,
+      badgeHtml: buildToneBadge(String(count), 'warning'),
+      summaryHtml: `<p style="margin:0;">${escapeHtml(interpolate(s.intro, { count }))}</p>`,
+    })}
+    ${rows}
+    ${buildActionButtons([{ label: s.view, url: params.pageUrl }], pc)}
+  `;
+  const wrapper = emailWrapper(body, { preferencesUrl, branding: params.branding, locale: params.locale });
+
+  const text = joinTextBlocks([
+    interpolate(s.intro, { count }),
+    ...params.items.map((item) => [
+      `${item.cveId} · ${item.technologyReference} ${item.technologyName}`,
+      severityOf(item),
+      versionsOf(item),
+    ].join(' · ')),
+    `${s.view}: ${params.pageUrl}`,
+    buildManagePreferencesText(params.locale, preferencesUrl),
+  ]);
+
+  return { subject: interpolate(s.subject, { count }), html: wrapper.html, text, attachments: wrapper.attachments };
+}
+
 // ============================================
 // Weekly Review — helper functions
 // ============================================

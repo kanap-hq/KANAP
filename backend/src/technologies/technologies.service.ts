@@ -9,6 +9,7 @@ import { StorageService } from '../common/storage/storage.service';
 import { validateUploadedFile } from '../common/upload-validation';
 import { fixMulterFilename } from '../common/upload';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
+import { Features } from '../config/features';
 import { TechnologyReachService } from './technology-reach.service';
 import { sortVersions } from './version-order';
 import {
@@ -173,8 +174,23 @@ export class TechnologiesService {
     const offset = query.offset !== undefined
       ? Math.max(Number(query.offset) || 0, 0)
       : Math.max((Number(query.page) || 1) - 1, 0) * limit;
-    const rows: Array<TechnologyRow & { total: string; owner_names: string[] | null; it_owner_names: string[] | null }> = await mg.query(
-      `SELECT ${TECHNOLOGY_COLUMNS}, count(*) OVER () AS total,
+    // The CVE still to review of each technology, and those critical or high (lot T6b), while the
+    // vulnerability feed is on; null otherwise.
+    const vulnerabilityCounts = Features.VULNERABILITY_FEED_ENABLED
+      ? `(SELECT count(DISTINCT tv.cve_id) FROM technology_vulnerabilities tv JOIN vulnerability_cves c ON c.cve_id = tv.cve_id
+           WHERE tv.tenant_id = t.tenant_id AND tv.technology_id = t.id AND tv.state = 'to_review')::int AS vulnerabilities_to_review,
+         (SELECT count(DISTINCT tv.cve_id) FROM technology_vulnerabilities tv JOIN vulnerability_cves c ON c.cve_id = tv.cve_id
+           WHERE tv.tenant_id = t.tenant_id AND tv.technology_id = t.id AND tv.state = 'to_review'
+             AND c.severity IN ('critical', 'high'))::int AS vulnerabilities_severe`
+      : 'NULL::int AS vulnerabilities_to_review, NULL::int AS vulnerabilities_severe';
+    const rows: Array<TechnologyRow & {
+      total: string;
+      owner_names: string[] | null;
+      it_owner_names: string[] | null;
+      vulnerabilities_to_review: number | null;
+      vulnerabilities_severe: number | null;
+    }> = await mg.query(
+      `SELECT ${TECHNOLOGY_COLUMNS}, count(*) OVER () AS total, ${vulnerabilityCounts},
               ARRAY(
                 SELECT NULLIF(btrim(concat_ws(' ', u.first_name, u.last_name)), '')
                   FROM technology_owners o JOIN users u ON u.id = o.user_id AND u.tenant_id = o.tenant_id
