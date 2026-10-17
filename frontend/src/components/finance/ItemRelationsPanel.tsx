@@ -17,8 +17,9 @@ import type { LookupScope } from '../../hooks/useLookupPicker';
 import RelationLookupPicker from '../workspace/RelationLookupPicker';
 
 /**
- * The Relations tab of an OPEX or CAPEX line: projects, applications and
- * contracts it is linked to, contacts, websites and attachments. The line's
+ * The Relations tab of an OPEX or CAPEX line: projects, applications,
+ * technologies (for a reader of the infrastructure only) and contracts it is
+ * linked to, contacts, websites and attachments. The line's
  * relations live in the React Query cache (`itemRelationsKey`), so coming back
  * to the tab shows them at once, read again before they can be edited; each
  * picker searches on the server as the user types (useLookupPicker) instead of
@@ -41,7 +42,7 @@ type Props = {
   onRelationsChange?: () => void;
 };
 type Named = { id: string; name: string };
-type RelationSet = 'projects' | 'applications' | 'contracts';
+type RelationSet = 'projects' | 'applications' | 'technologies' | 'contracts';
 type LinkItem = { id?: string; description?: string; url: string };
 type Attachment = { id: string; original_filename: string };
 
@@ -49,6 +50,10 @@ type Attachment = { id: string; original_filename: string };
 type RelationsData = {
   projects: Named[] | null;
   applications: Named[] | null;
+  /** Empty, never read, for a caller who cannot read the infrastructure (the section is hidden). */
+  technologies: Named[] | null;
+  /** The server answered `items: null` (no right to read the infrastructure): the section is hidden, the set never posted. */
+  technologiesDenied: boolean;
   contracts: Named[] | null;
   links: LinkItem[];
   attachments: Attachment[];
@@ -59,10 +64,11 @@ const KINDS = {
   capex: { itemsApi: '/capex-items', resource: 'budget', i18n: 'capex', contactsItemType: 'capex-items' },
 } as const;
 
-/** The picker searches: projects and applications through their lists (their access rules apply), contracts through their lookup. */
+/** The picker searches: projects and applications through their lists (their access rules apply), technologies and contracts through their lookups. */
 const PICKERS: Record<RelationSet, { endpoint: string; scope?: LookupScope; href: (o: Named) => string }> = {
   projects: { endpoint: '/portfolio/projects', scope: { sort: 'name:ASC' }, href: (o) => `/portfolio/projects/${o.id}` },
   applications: { endpoint: '/applications', scope: { sort: 'name:ASC' }, href: (o) => `/it/applications/${o.id}/overview` },
+  technologies: { endpoint: '/technologies/lookup', href: (o) => `/it/technologies/${o.id}/overview` },
   contracts: { endpoint: '/contracts/lookup', href: (o) => `/ops/contracts/${o.id}/overview` },
 };
 
@@ -82,17 +88,21 @@ const named = (r: PromiseSettledResult<any>): Named[] | null => (
   r.status === 'fulfilled' ? (r.value.data?.items || []).map((x: any) => ({ id: x.id, name: x.name })) : null
 );
 
-async function fetchRelations(itemsApi: string, id: string, signal?: AbortSignal): Promise<RelationsData> {
-  const [pRes, aRes, cRes, lRes, atRes] = await Promise.allSettled([
+async function fetchRelations(itemsApi: string, id: string, withTechnologies: boolean, signal?: AbortSignal): Promise<RelationsData> {
+  const [pRes, aRes, tRes, cRes, lRes, atRes] = await Promise.allSettled([
     api.get(`${itemsApi}/${id}/projects`, { signal }),
     api.get(`${itemsApi}/${id}/applications`, { signal }),
+    withTechnologies ? api.get(`${itemsApi}/${id}/technologies`, { signal }) : Promise.resolve({ data: { items: [] } }),
     api.get(`${itemsApi}/${id}/contracts`, { signal }),
     api.get(`${itemsApi}/${id}/links`, { signal }),
     api.get(`${itemsApi}/${id}/attachments`, { signal }),
   ]);
+  const technologiesDenied = tRes.status === 'fulfilled' && tRes.value.data?.items === null;
   return {
     projects: named(pRes),
     applications: named(aRes),
+    technologies: technologiesDenied ? null : named(tRes),
+    technologiesDenied,
     contracts: named(cRes),
     links: lRes.status === 'fulfilled' ? (lRes.value.data || []).map((x: any) => ({ id: x.id, description: x.description, url: x.url })) : [],
     attachments: atRes.status === 'fulfilled' ? (atRes.value.data || []) : [],
@@ -130,15 +140,18 @@ export default forwardRef<RelationsPanelHandle, Props>(function ItemRelationsPan
   const dialogs = useKanapDialogs();
   const queryClient = useQueryClient();
   const readOnly = !hasLevel(resource, 'manager');
+  const canReadTechnologies = hasLevel('infrastructure', 'reader');
 
   // Shown at once from the cache, and always read again when the tab opens: the links may have
   // changed elsewhere (a contract's page links its lines).
   const relationsQuery = useQuery({
     queryKey: itemRelationsKey(kind, id),
-    queryFn: ({ signal }) => fetchRelations(itemsApi, id, signal),
+    queryFn: ({ signal }) => fetchRelations(itemsApi, id, canReadTechnologies, signal),
     staleTime: 0,
   });
   const data = relationsQuery.data;
+  // A refusal of the server hides the section like the missing right (its set stays out of the save).
+  const showTechnologies = canReadTechnologies && !data?.technologiesDenied;
   // Fields stay disabled until the line's relations are read for this visit: a set shown from the
   // cache may be old, and a save replaces the whole set (`bulk-replace`). Only this first read
   // counts: the reload after a save never disables a field the user is typing in.
@@ -151,6 +164,8 @@ export default forwardRef<RelationsPanelHandle, Props>(function ItemRelationsPan
   const [baselineProjects, setBaselineProjects] = React.useState<Named[]>([]);
   const [apps, setApps] = React.useState<Named[]>([]);
   const [baselineApps, setBaselineApps] = React.useState<Named[]>([]);
+  const [technologies, setTechnologies] = React.useState<Named[]>([]);
+  const [baselineTechnologies, setBaselineTechnologies] = React.useState<Named[]>([]);
   const [contracts, setContracts] = React.useState<Named[]>([]);
   const [baselineContracts, setBaselineContracts] = React.useState<Named[]>([]);
   const [links, setLinks] = React.useState<LinkItem[]>([]);
@@ -168,6 +183,7 @@ export default forwardRef<RelationsPanelHandle, Props>(function ItemRelationsPan
     const failed = new Set<RelationSet>();
     if (data && !data.projects) failed.add('projects');
     if (data && !data.applications) failed.add('applications');
+    if (data && !data.technologies) failed.add('technologies');
     if (data && !data.contracts) failed.add('contracts');
     return failed;
   }, [data]);
@@ -175,9 +191,10 @@ export default forwardRef<RelationsPanelHandle, Props>(function ItemRelationsPan
   const dirty = React.useMemo(() => (
     !sameIds(projects, baselineProjects)
     || !sameIds(apps, baselineApps)
+    || !sameIds(technologies, baselineTechnologies)
     || !sameIds(contracts, baselineContracts)
     || JSON.stringify(links) !== JSON.stringify(baselineLinks)
-  ), [projects, baselineProjects, apps, baselineApps, contracts, baselineContracts, links, baselineLinks]);
+  ), [projects, baselineProjects, apps, baselineApps, technologies, baselineTechnologies, contracts, baselineContracts, links, baselineLinks]);
   const dirtyRef = React.useRef(dirty);
   dirtyRef.current = dirty;
   React.useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
@@ -186,14 +203,15 @@ export default forwardRef<RelationsPanelHandle, Props>(function ItemRelationsPan
   // Before paint: cached relations show on the first frame.
   React.useLayoutEffect(() => {
     if (!data) return;
-    const p = data.projects ?? []; const a = data.applications ?? []; const c = data.contracts ?? [];
+    const p = data.projects ?? []; const a = data.applications ?? []; const tech = data.technologies ?? []; const c = data.contracts ?? [];
     const keepEdits = dirtyRef.current;
-    setBaselineProjects(p); setBaselineApps(a); setBaselineContracts(c); setBaselineLinks(data.links);
-    if (!keepEdits) { setProjects(p); setApps(a); setContracts(c); setLinks(data.links); }
+    setBaselineProjects(p); setBaselineApps(a); setBaselineTechnologies(tech); setBaselineContracts(c); setBaselineLinks(data.links);
+    if (!keepEdits) { setProjects(p); setApps(a); setTechnologies(tech); setContracts(c); setLinks(data.links); }
   }, [data]);
   React.useEffect(() => {
-    if (failedSets.size > 0) setError(t(`${i18n}.relations.failedToLoad`));
-  }, [failedSets, i18n, t]);
+    const failed = [...failedSets].filter((set) => !(set === 'technologies' && data?.technologiesDenied));
+    if (failed.length > 0) setError(t(`${i18n}.relations.failedToLoad`));
+  }, [failedSets, data, i18n, t]);
 
   const reload = React.useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: itemRelationsKey(kind, id) });
@@ -211,6 +229,9 @@ export default forwardRef<RelationsPanelHandle, Props>(function ItemRelationsPan
       if (!failedSets.has('applications') && !sameIds(apps, baselineApps)) {
         await api.post(`${itemsApi}/${id}/applications/bulk-replace`, { application_ids: apps.map((x) => x.id) });
       }
+      if (showTechnologies && !failedSets.has('technologies') && !sameIds(technologies, baselineTechnologies)) {
+        await api.post(`${itemsApi}/${id}/technologies/bulk-replace`, { technology_ids: technologies.map((x) => x.id) });
+      }
       if (!failedSets.has('contracts') && !sameIds(contracts, baselineContracts)) {
         await api.post(`${itemsApi}/${id}/contracts/bulk-replace`, { contract_ids: contracts.map((x) => x.id) });
       }
@@ -222,7 +243,7 @@ export default forwardRef<RelationsPanelHandle, Props>(function ItemRelationsPan
         else await api.post(`${itemsApi}/${id}/links`, { description: u.description ?? null, url: u.url });
       }
       // What was saved is the new baseline at once; the reload brings the stored rows (new link ids).
-      setBaselineProjects(projects); setBaselineApps(apps); setBaselineContracts(contracts); setBaselineLinks(links);
+      setBaselineProjects(projects); setBaselineApps(apps); setBaselineTechnologies(technologies); setBaselineContracts(contracts); setBaselineLinks(links);
       dirtyRef.current = false;
       await reload();
       onRelationsChange?.();
@@ -232,7 +253,7 @@ export default forwardRef<RelationsPanelHandle, Props>(function ItemRelationsPan
     } finally {
       setSaving(false);
     }
-  }, [readOnly, dirty, itemsApi, id, failedSets, projects, baselineProjects, apps, baselineApps, contracts, baselineContracts, links, baselineLinks, reload, onRelationsChange, i18n, t]);
+  }, [readOnly, dirty, itemsApi, id, failedSets, projects, baselineProjects, apps, baselineApps, showTechnologies, technologies, baselineTechnologies, contracts, baselineContracts, links, baselineLinks, reload, onRelationsChange, i18n, t]);
 
   // Debounced autosave on change.
   React.useEffect(() => {
@@ -244,7 +265,7 @@ export default forwardRef<RelationsPanelHandle, Props>(function ItemRelationsPan
   const reset = React.useCallback(() => {
     dirtyRef.current = false;
     if (data) {
-      setProjects(data.projects ?? []); setApps(data.applications ?? []); setContracts(data.contracts ?? []); setLinks(data.links);
+      setProjects(data.projects ?? []); setApps(data.applications ?? []); setTechnologies(data.technologies ?? []); setContracts(data.contracts ?? []); setLinks(data.links);
     }
     void reload();
   }, [data, reload]);
@@ -285,6 +306,9 @@ export default forwardRef<RelationsPanelHandle, Props>(function ItemRelationsPan
   const sets: Array<{ set: RelationSet; title: string; placeholder: string; value: Named[]; setValue: (v: Named[]) => void }> = [
     { set: 'projects', title: t(`${i18n}.relations.projects`), placeholder: t(`${i18n}.relations.selectProjects`), value: projects, setValue: setProjects },
     { set: 'applications', title: t(`${i18n}.relations.applications`), placeholder: t(`${i18n}.relations.selectApplications`), value: apps, setValue: setApps },
+    ...(showTechnologies
+      ? [{ set: 'technologies' as const, title: t(`${i18n}.relations.technologies`), placeholder: t(`${i18n}.relations.selectTechnologies`), value: technologies, setValue: setTechnologies }]
+      : []),
     { set: 'contracts', title: t(`${i18n}.relations.contracts`), placeholder: t(`${i18n}.relations.selectContracts`), value: contracts, setValue: setContracts },
   ];
 

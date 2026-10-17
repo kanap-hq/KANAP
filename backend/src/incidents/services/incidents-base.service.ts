@@ -17,6 +17,8 @@ export interface ServiceOpts {
   manager?: EntityManager;
   tenantId?: string;
   viewer?: IncidentViewer;
+  /** The caller reads the infrastructure: the incident's technologies are counted for it only (`counts.technologies`). */
+  technologies?: boolean;
 }
 
 /** Re-exported for the existing import sites; the text lives in `incident-visibility.ts`. */

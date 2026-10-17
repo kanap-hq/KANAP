@@ -181,24 +181,31 @@ export async function replaceContractRelations(
   return { ok: true, added: added.length, removed: removed.length };
 }
 
-/** The tab badges of a contract's page: its budget lines, and what its Relations tab shows. */
-export async function contractRelationCounts(manager: EntityManager, contract: RelationsContract) {
+/**
+ * The tab badges of a contract's page: its budget lines, and what its Relations tab shows. The
+ * technologies are counted, and enter `relations`, only for a caller who reads the infrastructure
+ * (`technologies`): the tab shows their section to that caller only; `null` otherwise.
+ */
+export async function contractRelationCounts(manager: EntityManager, contract: RelationsContract, opts: { technologies: boolean } = { technologies: false }) {
   const [row]: Array<Record<string, string | number>> = await manager.query(
     `SELECT
        (SELECT count(*) FROM contract_spend_items l WHERE l.tenant_id = $1 AND l.contract_id = $2${SETS.budget_lines.linkScope}) AS budget_lines,
        (SELECT count(*) FROM application_contracts l WHERE l.tenant_id = $1 AND l.contract_id = $2) AS applications,
        (SELECT count(*) FROM asset_contracts l WHERE l.tenant_id = $1 AND l.contract_id = $2) AS assets,
+       (SELECT count(*) FROM technology_contracts l WHERE l.tenant_id = $1 AND l.contract_id = $2) AS technologies,
        (SELECT count(*) FROM contract_contacts l WHERE l.tenant_id = $1 AND l.contract_id = $2) AS contacts,
        (SELECT count(*) FROM contract_links l WHERE l.tenant_id = $1 AND l.contract_id = $2) AS links,
        (SELECT count(*) FROM contract_attachments l WHERE l.tenant_id = $1 AND l.contract_id = $2) AS attachments`,
     [contract.tenant_id, contract.id],
   );
   const n = (key: string) => Number(row?.[key] ?? 0);
-  const relations = n('applications') + n('assets') + n('contacts') + n('links') + n('attachments');
+  const technologies = opts.technologies ? n('technologies') : null;
+  const relations = n('applications') + n('assets') + (technologies ?? 0) + n('contacts') + n('links') + n('attachments');
   return {
     budget_lines: n('budget_lines'),
     applications: n('applications'),
     assets: n('assets'),
+    technologies,
     contacts: n('contacts'),
     links: n('links'),
     attachments: n('attachments'),

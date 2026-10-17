@@ -52,6 +52,8 @@ export interface Incident extends IncidentRow {
     entries: number;
     assets: number;
     applications: number;
+    /** Null for a caller who cannot read the infrastructure. */
+    technologies?: number | null;
     tasks: number;
     documents: number;
     attachments: number;
@@ -124,7 +126,7 @@ export interface IncidentEntry {
 }
 
 /**
- * Linked asset or application (GET /incidents/:id/assets | /applications)
+ * Linked asset, application or technology (GET /incidents/:id/assets | /applications | /technologies)
  */
 export interface IncidentLinkedObject {
   id: string;
@@ -186,6 +188,12 @@ export const incidentsApi = {
 
   replaceApplications: (idOrRef: string, applicationIds: string[]): Promise<IncidentLinkedObject[]> =>
     api.post<IncidentLinkedObject[]>(`/incidents/${idOrRef}/applications/bulk-replace`, { application_ids: applicationIds }),
+
+  listTechnologies: (idOrRef: string): Promise<IncidentLinkedObject[]> =>
+    api.get<IncidentLinkedObject[]>(`/incidents/${idOrRef}/technologies`),
+
+  replaceTechnologies: (idOrRef: string, technologyIds: string[]): Promise<IncidentLinkedObject[]> =>
+    api.post<IncidentLinkedObject[]>(`/incidents/${idOrRef}/technologies/bulk-replace`, { technology_ids: technologyIds }),
 
   listAttachments: (idOrRef: string): Promise<IncidentAttachment[]> =>
     api.get<IncidentAttachment[]>(`/incidents/${idOrRef}/attachments`),

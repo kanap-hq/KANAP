@@ -414,6 +414,7 @@ export class IncidentsService extends IncidentsBaseService {
          ${REPORTER_NAME} AS reporter_name,
          ${COUNT_COLUMNS},
          (SELECT COUNT(*) FROM incident_entries e WHERE e.incident_id = i.id AND e.tenant_id = i.tenant_id)::int AS entry_count,
+         (SELECT COUNT(*) FROM incident_technologies it WHERE it.incident_id = i.id AND it.tenant_id = i.tenant_id)::int AS technology_count,
          -- What the Documents tab lists: the incident's own review is hidden from it.
          (SELECT COUNT(*) FROM document_incidents di
            WHERE di.incident_id = i.id AND di.tenant_id = i.tenant_id
@@ -430,13 +431,15 @@ export class IncidentsService extends IncidentsBaseService {
        WHERE i.id = $1 AND i.tenant_id = $2`,
       [id, tenantId],
     );
-    const { entry_count, document_count, attachment_count, ...incident } = row;
+    const { entry_count, technology_count, document_count, attachment_count, ...incident } = row;
     return {
       ...incident,
       counts: {
         entries: entry_count,
         assets: incident.asset_count,
         applications: incident.application_count,
+        // Counted for a reader of the infrastructure only, as the Relations tab shows them to that reader.
+        technologies: opts?.technologies ? technology_count : null,
         tasks: incident.task_count,
         documents: document_count,
         attachments: attachment_count,
@@ -506,7 +509,7 @@ export class IncidentsService extends IncidentsBaseService {
       { table: 'incidents', recordId: saved.id, action: 'create', before: null, after: saved, userId },
       { manager: mg },
     );
-    return this.get(saved.id, { manager: mg, tenantId, viewer: { userId, isAdmin: true } });
+    return this.get(saved.id, { manager: mg, tenantId, viewer: { userId, isAdmin: true }, technologies: opts?.technologies });
   }
 
   /**
@@ -592,7 +595,7 @@ export class IncidentsService extends IncidentsBaseService {
       { table: 'incidents', recordId: saved.id, action: 'update', before, after: saved, userId },
       { manager: mg },
     );
-    return this.get(saved.id, { manager: mg, tenantId, viewer: { userId, isAdmin: true } });
+    return this.get(saved.id, { manager: mg, tenantId, viewer: { userId, isAdmin: true }, technologies: opts?.technologies });
   }
 
   /**
@@ -623,7 +626,7 @@ export class IncidentsService extends IncidentsBaseService {
       { table: 'incidents', recordId: saved.id, action: 'update', before, after: saved, userId },
       { manager: mg },
     );
-    return this.get(saved.id, { manager: mg, tenantId, viewer: opts?.viewer ?? { userId, isAdmin: true } });
+    return this.get(saved.id, { manager: mg, tenantId, viewer: opts?.viewer ?? { userId, isAdmin: true }, technologies: opts?.technologies });
   }
 
   /**
@@ -655,7 +658,7 @@ export class IncidentsService extends IncidentsBaseService {
       { table: 'incidents', recordId: saved.id, action: 'update', before, after: saved, userId },
       { manager: mg },
     );
-    return this.get(saved.id, { manager: mg, tenantId, viewer: opts?.viewer ?? { userId, isAdmin: true } });
+    return this.get(saved.id, { manager: mg, tenantId, viewer: opts?.viewer ?? { userId, isAdmin: true }, technologies: opts?.technologies });
   }
 
   /**
@@ -673,7 +676,7 @@ export class IncidentsService extends IncidentsBaseService {
     // with the review mutations under the incident row lock (§3.3).
     const incident = await this.lockVisibleIncident(mg, id, tenantId, opts?.viewer);
     if (incident.confidential === confidential) {
-      return this.get(incident.id, { manager: mg, tenantId, viewer: opts?.viewer ?? { userId, isAdmin: true } });
+      return this.get(incident.id, { manager: mg, tenantId, viewer: opts?.viewer ?? { userId, isAdmin: true }, technologies: opts?.technologies });
     }
     if (incident.confidential && !confidential && !opts?.viewer?.isAdmin) {
       throw new ForbiddenException(CONFIDENTIAL_LIFT_MESSAGE);
@@ -697,7 +700,7 @@ export class IncidentsService extends IncidentsBaseService {
       { manager: mg },
     );
     await this.refreshLinkedTaskSearchIndex(mg, tenantId, saved.id);
-    return this.get(saved.id, { manager: mg, tenantId, viewer: opts?.viewer ?? { userId, isAdmin: true } });
+    return this.get(saved.id, { manager: mg, tenantId, viewer: opts?.viewer ?? { userId, isAdmin: true }, technologies: opts?.technologies });
   }
 
   // =========================================================================

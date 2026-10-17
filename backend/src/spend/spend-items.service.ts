@@ -28,6 +28,7 @@ import { Application } from '../applications/application.entity';
 import { ApplicationSpendItemLink } from '../applications/application-spend-item.entity';
 import { CapexItemContactsService, SpendItemContactsService } from './spend-item-contacts.service';
 import { listItemApplications, replaceItemApplications } from './item-applications';
+import { listItemTechnologies, replaceItemTechnologies } from './item-technologies';
 import { PortfolioProjectOpex } from '../portfolio/portfolio-project-opex.entity';
 import { PortfolioProject } from '../portfolio/portfolio-project.entity';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -316,10 +317,13 @@ export class SpendItemsService {
     return meta;
   }
 
-  /** The Relations tab badge: one statement instead of one request per relation. */
-  async relationCounts(id: string, opts?: { manager?: EntityManager }) {
+  /**
+   * The Relations tab badge: one statement instead of one request per relation. `technologies`: the
+   * caller reads the infrastructure (the technologies are counted for it only).
+   */
+  async relationCounts(id: string, opts?: { manager?: EntityManager; technologies?: boolean }) {
     const mg = opts?.manager ?? this.repo.manager;
-    return countItemRelations(mg, this.nature, await this.findItem(id, mg));
+    return countItemRelations(mg, this.nature, await this.findItem(id, mg), { technologies: opts?.technologies === true });
   }
 
   /** Per-year totals of the five columns for one item (multi-year trend chart). */
@@ -413,6 +417,19 @@ export class SpendItemsService {
     const mg = opts?.manager ?? this.repo.manager;
     const line = await this.findItem(itemId, mg);
     return replaceItemApplications({ manager: mg, audit: this.audit }, this.nature, line, applicationIds, userId ?? null);
+  }
+
+  /** Technologies linked to the line; see `item-technologies.ts`. */
+  async listTechnologies(itemId: string, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    return listItemTechnologies(mg, await this.findItem(itemId, mg));
+  }
+
+  /** Replace the line's technologies (audited when the set changes); see `item-technologies.ts`. */
+  async bulkReplaceTechnologies(itemId: string, technologyIds: string[], userId?: string | null, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    const line = await this.findItem(itemId, mg);
+    return replaceItemTechnologies({ manager: mg, audit: this.audit }, this.nature, line, technologyIds, userId ?? null);
   }
 
   /**

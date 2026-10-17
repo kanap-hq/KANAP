@@ -1,4 +1,5 @@
-import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, HttpCode, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { canReadResource } from '../common/record-usages';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CapexItemsService, SpendItemsService } from './spend-items.service';
 import { SpendItemsDeleteService } from './spend-items-delete.service';
@@ -258,7 +259,7 @@ export class SpendItemsController {
     @Tenant() ctx: TenantRequest,
   ) {
     const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
-    return this.svc.relationCounts(id, { manager: ctx.manager });
+    return this.svc.relationCounts(id, { manager: ctx.manager, technologies: canReadResource(ctx, 'infrastructure') });
   }
 
   @UseGuards(PermissionGuard)
@@ -341,6 +342,33 @@ export class SpendItemsController {
   ) {
     const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
     return this.svc.bulkReplaceApplications(id, body?.application_ids ?? [], ctx.userId || null, { manager: ctx.manager });
+  }
+
+  // Technologies: their section is null without the right to read the infrastructure, and a set the
+  // caller cannot read is never replaced (an empty list would remove every link).
+  @UseGuards(PermissionGuard)
+  @RequireLevel('budget', 'reader')
+  @Get(':id/technologies')
+  async listTechnologies(
+    @Param('id') idOrRef: string,
+    @Tenant() ctx: TenantRequest,
+  ) {
+    const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
+    const list = await this.svc.listTechnologies(id, { manager: ctx.manager });
+    return canReadResource(ctx, 'infrastructure') ? list : { items: null };
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('budget', 'member')
+  @Post(':id/technologies/bulk-replace')
+  async bulkReplaceTechnologies(
+    @Param('id') idOrRef: string,
+    @Body() body: { technology_ids: string[] },
+    @Tenant() ctx: TenantRequest,
+  ) {
+    if (!canReadResource(ctx, 'infrastructure')) throw new ForbiddenException('You cannot read technologies.');
+    const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
+    return this.svc.bulkReplaceTechnologies(id, body?.technology_ids ?? [], ctx.userId || null, { manager: ctx.manager });
   }
 
   // Links (OPEX)

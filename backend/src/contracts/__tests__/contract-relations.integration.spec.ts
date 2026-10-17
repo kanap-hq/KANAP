@@ -1,7 +1,8 @@
 import 'dotenv/config';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
+import { ContractsController } from '../contracts.controller';
 import { ContractsService } from '../contracts.service';
 import { assert, captureAudit, CAPEX_NUMBER_OFFSET, inRolledBackTransaction, runSpecs, seedTenant, setTenant } from '../../spend/__tests__/round-inputs.fixtures';
 
@@ -11,7 +12,9 @@ import { assert, captureAudit, CAPEX_NUMBER_OFFSET, inRolledBackTransaction, run
 // - applications and assets, listed and replaced as a whole;
 // - an id of another tenant (a line, an application, an asset) or a malformed id is a 400 and
 //   nothing is written; a contract of another tenant is a 404 on every route;
-// - one audit row per changed set, none when nothing changes; the tab counts follow.
+// - one audit row per changed set, none when nothing changes; the tab counts follow;
+// - technologies, listed with their reference and counted for a reader of the infrastructure only:
+//   without that right the list is null, a replacement is a 403 and the count is null.
 
 type Seed = {
   tenantId: string;
@@ -21,6 +24,7 @@ type Seed = {
   appId: string;
   app2Id: string;
   assetId: string;
+  techId: string;
 };
 
 async function seed(runner: QueryRunner, tag: string): Promise<Seed> {
@@ -52,7 +56,8 @@ async function seed(runner: QueryRunner, tag: string): Promise<Seed> {
      VALUES ($1, $2, 'physical_server', 'on_premise', 'prod', 'active', now(), now()) RETURNING id`,
     [tenantId, `relations-srv-${tag}`],
   );
-  return { tenantId, contractId, opexId, capexId, appId: await app(`B relations app ${tag}`), app2Id: await app(`A relations app ${tag}`), assetId };
+  const techId = await one(`INSERT INTO technologies (tenant_id, item_number, name, family) VALUES ($1, 3, $2, 'database') RETURNING id`, [tenantId, `Relations tech ${tag}`]);
+  return { tenantId, contractId, opexId, capexId, appId: await app(`B relations app ${tag}`), app2Id: await app(`A relations app ${tag}`), assetId, techId };
 }
 
 function contracts(audit = captureAudit()): ContractsService {
@@ -124,6 +129,35 @@ async function testApplicationsAndAssets() {
   });
 }
 
+async function testTechnologies() {
+  await inRolledBackTransaction(async (runner) => {
+    const a = await seed(runner, 'ctrel-tech');
+    const audit = captureAudit();
+    const svc = contracts(audit);
+    const controller = new ContractsController(svc, undefined as any, undefined as any, undefined as any);
+    const req = (permissions: Record<string, string>) => ({ queryRunner: { manager: runner.manager }, user: { sub: null }, isAdmin: false, permissions });
+    const reader = req({ contracts: 'member', infrastructure: 'reader' });
+    const contractsOnly = req({ contracts: 'admin' });
+
+    await controller.bulkReplaceTechnologies(a.contractId, { technology_ids: [a.techId] }, reader);
+    assert.deepEqual(await controller.listTechnologies(a.contractId, reader), { items: [{ id: a.techId, name: 'Relations tech ctrel-tech', reference: 'TEC-3' }] });
+    assert.deepEqual(audit.entries.map((entry) => entry.table), ['technology_contracts']);
+    await svc.replaceRelations(a.contractId, 'applications', [a.appId], 'user', { manager: runner.manager });
+
+    const counts = await controller.relationCounts(a.contractId, reader);
+    assert.equal(counts.technologies, 1);
+    assert.equal(counts.relations, 2, 'applications and technologies');
+
+    // Without the right to read the infrastructure: null list, no count, no replacement.
+    assert.deepEqual(await controller.listTechnologies(a.contractId, contractsOnly), { items: null });
+    const hidden = await controller.relationCounts(a.contractId, contractsOnly);
+    assert.equal(hidden.technologies, null);
+    assert.equal(hidden.relations, 1);
+    assert.ok((await rejection(() => Promise.resolve().then(() => controller.bulkReplaceTechnologies(a.contractId, { technology_ids: [] }, contractsOnly)))) instanceof ForbiddenException);
+    assert.equal((await svc.listTechnologies(a.contractId, { manager: runner.manager })).items.length, 1, 'nothing removed');
+  });
+}
+
 async function testOtherTenantRefused() {
   await inRolledBackTransaction(async (runner) => {
     const a = await seed(runner, 'ctrel-a');
@@ -141,6 +175,8 @@ async function testOtherTenantRefused() {
       () => svc.replaceRelations(a.contractId, 'budget_lines', [], 'user', opts),
       () => svc.replaceRelations(a.contractId, 'applications', [b.appId], 'user', opts),
       () => svc.replaceRelations(a.contractId, 'assets', [], 'user', opts),
+      () => svc.listTechnologies(a.contractId, opts),
+      () => svc.replaceRelations(a.contractId, 'technologies', [], 'user', opts),
     ]) {
       assert.ok((await rejection(call)) instanceof NotFoundException);
     }
@@ -152,19 +188,21 @@ async function testOtherTenantRefused() {
       ['budget_lines', ['not-a-uuid'], 'One or more budget lines not found.'],
       ['applications', [a.appId], 'One or more applications not found.'],
       ['assets', [a.assetId], 'One or more assets not found.'],
+      ['technologies', [a.techId], 'One or more technologies not found.'],
     ] as const) {
       const err = await rejection(() => svc.replaceRelations(b.contractId, set, [...ids], 'user', opts));
       assert.ok(err instanceof BadRequestException, `${set} refused`);
       assert.equal(err.message, message);
     }
-    const counts = await svc.relationCounts(b.contractId, opts);
-    assert.deepEqual([counts.budget_lines, counts.applications, counts.assets], [0, 0, 0], 'nothing written');
+    const counts = await svc.relationCounts(b.contractId, { ...opts, technologies: true });
+    assert.deepEqual([counts.budget_lines, counts.applications, counts.assets, counts.technologies], [0, 0, 0, 0], 'nothing written');
   });
 }
 
 void runSpecs('contract-relations.integration.spec', [
   ['testBudgetLinesOfBothNatures', testBudgetLinesOfBothNatures],
   ['testApplicationsAndAssets', testApplicationsAndAssets],
+  ['testTechnologies', testTechnologies],
   ['testOtherTenantRefused', testOtherTenantRefused],
 ]);
 

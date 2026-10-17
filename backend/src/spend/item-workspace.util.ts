@@ -132,8 +132,8 @@ function costCenterReference(raw: Record<string, any>): CostCenterReference {
 export type ItemRelationCounts = {
   contracts: number;
   applications: number;
-  /** Technologies linked to the line (lot S); not in `total` until the Relations tab lists them. */
-  technologies: number;
+  /** Technologies linked to the line: counted, and in `total`, for a caller who reads the infrastructure only (null otherwise). */
+  technologies: number | null;
   projects: number;
   links: number;
   attachments: number;
@@ -142,12 +142,14 @@ export type ItemRelationCounts = {
 
 /**
  * The counts the Relations tab lists: links to rows that exist (the lists join
- * their target), the line's websites and attachments.
+ * their target), the line's websites and attachments. `technologies`: the caller
+ * reads the infrastructure, so the tab shows its Technologies section.
  */
 export async function countItemRelations(
   manager: EntityManager,
   scope: AmountScope,
   item: { id: string; tenant_id: string },
+  opts: { technologies: boolean } = { technologies: false },
 ): Promise<ItemRelationCounts> {
   const t = SCOPES[scope];
   const [row] = await manager.query(
@@ -171,9 +173,10 @@ export async function countItemRelations(
     links: Number(row?.links) || 0,
     attachments: Number(row?.attachments) || 0,
   };
+  const technologies = opts.technologies ? Number(row?.technologies) || 0 : null;
   return {
     ...counts,
-    technologies: Number(row?.technologies) || 0,
-    total: counts.contracts + counts.applications + counts.projects + counts.links + counts.attachments,
+    technologies,
+    total: counts.contracts + counts.applications + (technologies ?? 0) + counts.projects + counts.links + counts.attachments,
   };
 }
