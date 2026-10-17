@@ -17,7 +17,8 @@ vi.mock('react-i18next', () => ({
 vi.mock('../../api', () => ({ default: { get } }));
 vi.mock('../../utils/downloadBlob', () => ({ downloadBlob: download, extractFilenameFromDisposition: () => 'administration_view_zones.csv' }));
 vi.mock('../../hooks/useItOpsEnumOptions', () => ({
-  default: () => ({ settings: null, byField: {}, labelFor: (_field: string, code: string) => ({ directory: 'Directory and identity', hypervisor: 'Hypervisor' } as Record<string, string>)[code] ?? code }),
+  // The tenant translated a zone and a domain: the page shows the translated names.
+  default: () => ({ settings: null, byField: { adminZone: [{ code: 'tier_0', label: 'Niveau 0' }], domain: [{ code: 'lab', label: 'Labo' }] }, labelFor: (_field: string, code: string) => ({ directory: 'Directory and identity', hypervisor: 'Hypervisor' } as Record<string, string>)[code] ?? code }),
 }));
 
 const VIEW: AdministrationView = {
@@ -61,11 +62,11 @@ describe('AdministrationViewPage', () => {
 
   it('lists each zone with its attributes, technologies, servers and directory services', async () => {
     renderPage();
-    const tier0 = await screen.findByRole('region', { name: 'Tier 0' });
+    const tier0 = await screen.findByRole('region', { name: 'Niveau 0' });
     expect(within(tier0).getByText('Domain admins')).toBeInTheDocument();
     expect(within(tier0).getByText('Vault A')).toBeInTheDocument();
     expect(within(tier0).getByText('Identity core')).toBeInTheDocument();
-    const table = within(tier0).getByRole('table', { name: 'Tier 0' });
+    const table = within(tier0).getByRole('table', { name: 'Niveau 0' });
     expect(within(table).getByText('TEC-1')).toBeInTheDocument();
     expect(within(table).getByText('Directory and identity')).toBeInTheDocument();
     expect(within(table).getByRole('link', { name: 'dc1' })).toHaveAttribute('href', '/it/assets/asset-dc1');
@@ -87,16 +88,17 @@ describe('AdministrationViewPage', () => {
     const domains = await screen.findByRole('table', { name: 'pages.administrationView.domains' });
     const rows = within(domains).getAllByRole('row');
     expect(rows[1]).toHaveTextContent('Corp');
-    expect(rows[1]).toHaveTextContent('Lab (pages.settings.trusts.directions.two_way)');
+    expect(rows[1]).toHaveTextContent('Labo (pages.settings.trusts.directions.two_way)');
     expect(rows[1]).toHaveTextContent('1,200');
     expect(within(rows[1]).getByRole('link', { name: 'dc1' })).toBeInTheDocument();
+    expect(rows[2]).toHaveTextContent('Labo');
     expect(rows[2]).toHaveTextContent('pages.administrationView.noController');
     expect(rows[2]).toHaveTextContent('pages.administrationView.notSet');
   });
 
   it('exports the zones as a CSV file in the user language', async () => {
     renderPage();
-    await screen.findByRole('region', { name: 'Tier 0' });
+    await screen.findByRole('region', { name: 'Niveau 0' });
     fireEvent.click(screen.getByRole('button', { name: 'pages.administrationView.exportZones' }));
     await waitFor(() => expect(download).toHaveBeenCalledWith(expect.any(Blob), 'administration_view_zones.csv'));
     expect(get).toHaveBeenCalledWith('/technologies/reports/administration/export', { params: { list: 'zones', language: 'fr' }, responseType: 'blob' });

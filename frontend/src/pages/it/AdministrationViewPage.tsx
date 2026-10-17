@@ -41,6 +41,14 @@ export type AdministrationView = { zones: AdministrationZone[]; domains: Adminis
 
 const ENDPOINT = '/technologies/reports/administration';
 
+/** A catalog value's name in the user's language (tenant translation, then the stored name). */
+function useCatalogName() {
+  const { byField } = useItOpsEnumOptions();
+  return React.useCallback((field: 'adminZone' | 'domain', code: string, fallback: string) => (
+    (byField[field] || []).find((option) => option.code === code)?.label || fallback
+  ), [byField]);
+}
+
 /** A neutral link inside a row that opens something else: it opens its own record only. */
 function RecordLink({ to, children }: { to: string; children: React.ReactNode }) {
   return (
@@ -105,6 +113,7 @@ function ZoneAttributes({ zone }: { zone: AdministrationZone }) {
 function ZoneSection({ zone }: { zone: AdministrationZone }) {
   const { t } = useTranslation('it');
   const { labelFor } = useItOpsEnumOptions();
+  const nameOf = useCatalogName();
   const columns: Array<RelationsColumn<Technology>> = [
     { key: 'reference', header: t('pages.administrationView.columns.reference'), width: 80, render: (row) => <RelationRef>{row.reference}</RelationRef> },
     { key: 'name', header: t('pages.administrationView.columns.technology'), width: 220, render: (row) => row.name },
@@ -113,7 +122,7 @@ function ZoneSection({ zone }: { zone: AdministrationZone }) {
   ];
   const title = zone.code === null
     ? t('pages.administrationView.noZone')
-    : zone.unknown ? t('pages.administrationView.unknownZone', { code: zone.code }) : zone.label ?? zone.code;
+    : zone.unknown ? t('pages.administrationView.unknownZone', { code: zone.code }) : nameOf('adminZone', zone.code, zone.label ?? zone.code);
   return (
     <Box>
       <RelationsSection title={title} count={zone.technologies.length}>
@@ -130,9 +139,10 @@ function ZoneSection({ zone }: { zone: AdministrationZone }) {
 
 function DomainsSection({ domains }: { domains: AdministrationDomain[] }) {
   const { t } = useTranslation('it');
+  const nameOf = useCatalogName();
   const count = (value: number | null) => (value == null ? <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>{t('pages.administrationView.notSet')}</Box> : value.toLocaleString());
   const columns: Array<RelationsColumn<AdministrationDomain>> = [
-    { key: 'name', header: t('pages.administrationView.columns.domain'), width: 180, render: (row) => row.label },
+    { key: 'name', header: t('pages.administrationView.columns.domain'), width: 180, render: (row) => nameOf('domain', row.code, row.label) },
     { key: 'dns', header: t('pages.administrationView.columns.dnsSuffix'), width: 180, render: (row) => row.dns_suffix },
     { key: 'forest', header: t('pages.administrationView.columns.forest'), width: 180, render: (row) => row.forest ?? <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>{t('pages.administrationView.notSet')}</Box> },
     {
@@ -140,7 +150,7 @@ function DomainsSection({ domains }: { domains: AdministrationDomain[] }) {
       header: t('pages.administrationView.columns.trusts'),
       width: 220,
       render: (row) => (row.trusts.length
-        ? row.trusts.map((trust) => `${trust.label} (${t(`pages.settings.trusts.directions.${trust.direction}`)})`).join(', ')
+        ? row.trusts.map((trust) => `${nameOf('domain', trust.domain, trust.label)} (${t(`pages.settings.trusts.directions.${trust.direction}`)})`).join(', ')
         : <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>{t('pages.administrationView.none')}</Box>),
     },
     { key: 'accounts', header: t('pages.administrationView.columns.accounts'), width: 90, align: 'right', render: (row) => count(row.account_count) },
