@@ -243,6 +243,12 @@
         "application": "Aplicación",
         "hardware": "Hardware"
       },
+      "typesShort": {
+        "technology": "Tecnología",
+        "operating_system": "Sistema operativo",
+        "application": "Aplicación",
+        "hardware": "Hardware"
+      },
       "states": {
         "out_of_support": "Sin soporte",
         "extended_support": "Soporte extendido",
@@ -266,15 +272,7 @@
       },
       "detail": {
         "servers": "Servidores",
-        "applications": "Aplicaciones",
-        "noServers": "Ningún servidor",
-        "noApplications": "Ninguna aplicación",
-        "applicationsHidden": "Aplicaciones ocultas: no puede leerlas.",
-        "open": {
-          "technology": "Abrir la tecnología",
-          "application": "Abrir la aplicación",
-          "hardware": "Abrir el activo"
-        }
+        "applications": "Aplicaciones"
       },
       "gaps": {
         "application_without_server": "Aplicación alojada sin servidor",

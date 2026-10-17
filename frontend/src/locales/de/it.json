@@ -243,6 +243,12 @@
         "application": "Anwendung",
         "hardware": "Hardware"
       },
+      "typesShort": {
+        "technology": "Technologie",
+        "operating_system": "Betriebssystem",
+        "application": "Anwendung",
+        "hardware": "Hardware"
+      },
       "states": {
         "out_of_support": "Ohne Support",
         "extended_support": "Erweiterter Support",
@@ -266,15 +272,7 @@
       },
       "detail": {
         "servers": "Server",
-        "applications": "Anwendungen",
-        "noServers": "Kein Server",
-        "noApplications": "Keine Anwendung",
-        "applicationsHidden": "Anwendungen ausgeblendet: Sie können sie nicht lesen.",
-        "open": {
-          "technology": "Technologie öffnen",
-          "application": "Anwendung öffnen",
-          "hardware": "Asset öffnen"
-        }
+        "applications": "Anwendungen"
       },
       "gaps": {
         "application_without_server": "Gehostete Anwendung ohne Server",

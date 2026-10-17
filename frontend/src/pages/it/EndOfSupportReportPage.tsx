@@ -15,7 +15,7 @@ import { useLocale } from '../../i18n/useLocale';
 import { formatShortDate } from '../../lib/dateFormat';
 import { drawerMenuItemSx, textTabSx, textTabsSx } from '../../theme/formSx';
 import { downloadBlob, extractFilenameFromDisposition } from '../../utils/downloadBlob';
-import { getDotColor, SUPPORT_STATE_COLORS } from '../../utils/statusColors';
+import { type SupportState, supportStateColor } from '../../utils/supportState';
 import ForbiddenPage from '../ForbiddenPage';
 
 export const HORIZONS = [6, 12, 24, 36] as const;
@@ -103,10 +103,17 @@ function useTableSx() {
   } as const;
 }
 
+/** The report's states in the shared table of support states (`utils/supportState.ts`). */
+const SUPPORT_STATE_OF: Record<DeadlineRow['state'], SupportState> = {
+  out_of_support: 'ended',
+  extended_support: 'extended',
+  upcoming: 'ending_soon',
+};
+
 function StateCell({ state }: { state: DeadlineRow['state'] }) {
   const { t } = useTranslation('it');
   const theme = useTheme();
-  const color = getDotColor(SUPPORT_STATE_COLORS[state], theme.palette.mode);
+  const color = supportStateColor(SUPPORT_STATE_OF[state], theme);
   return (
     <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 500, color }}>
       <StatusDot color={color} />
@@ -115,54 +122,62 @@ function StateCell({ state }: { state: DeadlineRow['state'] }) {
   );
 }
 
-/** A neutral link inside the detail: underline and teal on hover only. */
-function DetailLink({ to, children }: { to: string; children: React.ReactNode }) {
+/** A neutral link (an item, a server, an application): underline and teal on hover only. */
+function RecordLink({ to, children }: { to: string; children: React.ReactNode }) {
   return (
-    <MLink component={RouterLink} to={to} underline="hover" sx={{ color: 'kanap.text.primary', fontSize: 13, '&:hover': { color: 'primary.main' } }}>
+    <MLink
+      component={RouterLink}
+      to={to}
+      underline="hover"
+      onClick={(event: React.MouseEvent) => event.stopPropagation()}
+      sx={{ color: 'kanap.text.primary', fontSize: 13, '&:hover': { color: 'primary.main' } }}
+    >
       {children}
     </MLink>
   );
 }
 
-function DetailList({ title, empty, children }: { title: string; empty: string; children: React.ReactNode[] }) {
+function DetailList({ title, children }: { title: string; children: React.ReactNode[] }) {
   return (
     <Box sx={{ minWidth: 0 }}>
       <Typography sx={{ fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary', mb: 0.5 }}>{title}</Typography>
-      {children.length === 0 ? (
-        <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>{empty}</Typography>
-      ) : (
-        <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
-          {children.map((child, index) => <li key={index}>{child}</li>)}
-        </Box>
-      )}
+      <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        {children.map((child, index) => <li key={index}>{child}</li>)}
+      </Box>
     </Box>
   );
 }
 
-function DeadlineDetail({ row }: { row: DeadlineRow }) {
+/**
+ * What a row touches, without the item itself: an application shows its servers, a piece of
+ * hardware the servers it carries and the applications they host, an operating system its servers
+ * and their applications, a technology its servers and applications.
+ */
+function touchedBy(row: DeadlineRow): { servers: ServerRef[]; applications: ApplicationRef[] } {
+  return {
+    servers: row.servers.filter((server) => server.id !== row.item_id),
+    applications: (row.applications ?? []).filter((app) => app.id !== row.item_id),
+  };
+}
+
+function DeadlineDetail({ servers, applications }: ReturnType<typeof touchedBy>) {
   const { t } = useTranslation('it');
-  const own = recordPath(row.type, row.item_id);
   return (
     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
-      <DetailList title={t('pages.endOfSupport.detail.servers')} empty={t('pages.endOfSupport.detail.noServers')}>
-        {row.servers.map((server) => <DetailLink key={server.id} to={`/it/assets/${server.id}`}>{server.name}</DetailLink>)}
-      </DetailList>
-      {row.applications ? (
-        <DetailList title={t('pages.endOfSupport.detail.applications')} empty={t('pages.endOfSupport.detail.noApplications')}>
-          {row.applications.map((app) => (
-            <DetailLink key={app.id} to={`/it/applications/${app.id}`}>
+      {servers.length > 0 && (
+        <DetailList title={t('pages.endOfSupport.detail.servers')}>
+          {servers.map((server) => <RecordLink key={server.id} to={`/it/assets/${server.id}`}>{server.name}</RecordLink>)}
+        </DetailList>
+      )}
+      {applications.length > 0 && (
+        <DetailList title={t('pages.endOfSupport.detail.applications')}>
+          {applications.map((app) => (
+            <RecordLink key={app.id} to={`/it/applications/${app.id}`}>
               {app.reference && <><RelationRef>{app.reference}</RelationRef>{' '}</>}
               {app.name}
-            </DetailLink>
+            </RecordLink>
           ))}
         </DetailList>
-      ) : (
-        <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>{t('pages.endOfSupport.detail.applicationsHidden')}</Typography>
-      )}
-      {own && (
-        <Box sx={{ gridColumn: '1 / -1' }}>
-          <DetailLink to={own}>{t(`pages.endOfSupport.detail.open.${row.type}`)}</DetailLink>
-        </Box>
       )}
     </Box>
   );
@@ -205,26 +220,32 @@ function DeadlinesTable({ rows, applicationsVisible }: { rows: DeadlineRow[]; ap
       </thead>
       <tbody>
         {rows.map((row) => {
-          const expanded = open.has(row.key);
+          const touched = touchedBy(row);
+          const expandable = touched.servers.length > 0 || touched.applications.length > 0;
+          const expanded = expandable && open.has(row.key);
+          const own = recordPath(row.type, row.item_id);
+          const item = <>{row.item_reference && <><RelationRef>{row.item_reference}</RelationRef>{' '}</>}{row.item_name}</>;
           return (
             <React.Fragment key={row.key}>
               <tr
-                className="row"
-                tabIndex={0}
-                aria-expanded={expanded}
-                onClick={() => toggle(row.key)}
-                onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggle(row.key); } }}
+                className={expandable ? 'row' : undefined}
+                {...(expandable ? {
+                  tabIndex: 0,
+                  'aria-expanded': expanded,
+                  onClick: () => toggle(row.key),
+                  onKeyDown: (event: React.KeyboardEvent<HTMLTableRowElement>) => {
+                    if (event.target !== event.currentTarget) return;
+                    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggle(row.key); }
+                  },
+                } : {})}
               >
                 <td>
-                  {expanded
+                  {expandable && (expanded
                     ? <KeyboardArrowDownIcon sx={{ fontSize: 16, color: 'kanap.text.tertiary', verticalAlign: 'middle' }} />
-                    : <KeyboardArrowRightIcon sx={{ fontSize: 16, color: 'kanap.text.tertiary', verticalAlign: 'middle' }} />}
+                    : <KeyboardArrowRightIcon sx={{ fontSize: 16, color: 'kanap.text.tertiary', verticalAlign: 'middle' }} />)}
                 </td>
-                <td>{t(`pages.endOfSupport.types.${row.type}`)}</td>
-                <td>
-                  {row.item_reference && <><RelationRef>{row.item_reference}</RelationRef>{' '}</>}
-                  {row.item_name}
-                </td>
+                <td title={t(`pages.endOfSupport.types.${row.type}`)}>{t(`pages.endOfSupport.typesShort.${row.type}`)}</td>
+                <td>{own ? <RecordLink to={own}>{item}</RecordLink> : item}</td>
                 <td>{row.version ?? (row.milestone ? t(`pages.endOfSupport.milestones.${row.milestone}`) : '')}</td>
                 <td>{formatShortDate(row.date, locale, { year: 'always' })}</td>
                 <td><StateCell state={row.state} /></td>
@@ -233,7 +254,7 @@ function DeadlinesTable({ rows, applicationsVisible }: { rows: DeadlineRow[]; ap
               </tr>
               {expanded && (
                 <tr className="detail">
-                  <td colSpan={columns}><DeadlineDetail row={row} /></td>
+                  <td colSpan={columns}><DeadlineDetail {...touched} /></td>
                 </tr>
               )}
             </React.Fragment>

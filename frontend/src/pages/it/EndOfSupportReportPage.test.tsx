@@ -49,8 +49,38 @@ const HARDWARE: DeadlineRow = {
   milestone: 'end_of_life',
   date: '2027-01-31',
   state: 'upcoming',
+  server_count: 2,
+  servers: [{ id: 'asset-9', name: 'ESX-09' }, { id: 'asset-10', name: 'VM-APP-10' }],
+  application_count: 1,
+  applications: [{ id: 'app-2', name: 'CRM', reference: 'APP-5' }],
+};
+const APPLICATION: DeadlineRow = {
+  key: 'application:app-7',
+  type: 'application',
+  item_id: 'app-7',
+  item_name: 'Legacy HR',
+  item_reference: 'APP-7',
+  version: null,
+  milestone: null,
+  date: '2027-03-31',
+  state: 'upcoming',
+  server_count: 0,
+  servers: [],
+  application_count: 1,
+  applications: [{ id: 'app-7', name: 'Legacy HR', reference: 'APP-7' }],
+};
+const OS: DeadlineRow = {
+  key: 'operating_system:win2012',
+  type: 'operating_system',
+  item_id: null,
+  item_name: 'Windows Server 2012',
+  item_reference: null,
+  version: null,
+  milestone: null,
+  date: '2023-10-10',
+  state: 'extended_support',
   server_count: 1,
-  servers: [{ id: 'asset-9', name: 'ESX-09' }],
+  servers: [{ id: 'asset-1', name: 'SRV-SQL-01' }],
   application_count: 0,
   applications: [],
 };
@@ -71,7 +101,9 @@ function respond({ applicationsVisible = true } = {}) {
   getMock.mockImplementation(async (url: string, config?: any) => {
     if (url.endsWith('/export')) return { data: new Blob(['a;b']), headers: { 'content-disposition': 'attachment; filename="eos.csv"' } } as any;
     if (url.endsWith('/gaps')) return { data: { applications_visible: applicationsVisible, items: [GAP] } } as any;
-    const rows = applicationsVisible ? [SQL, HARDWARE] : [{ ...SQL, application_count: null, applications: null }, { ...HARDWARE, application_count: null, applications: null }];
+    const rows = applicationsVisible
+      ? [SQL, HARDWARE, APPLICATION, OS]
+      : [SQL, HARDWARE, OS].map((row) => ({ ...row, application_count: null, applications: null }));
     return { data: { horizon_months: config?.params?.horizon_months ?? 12, today: '2026-10-16', until: '2027-10-16', applications_visible: applicationsVisible, items: rows } } as any;
   });
 }
@@ -85,6 +117,7 @@ function renderPage(path = '/it/technologies/end-of-support') {
           <Routes>
             <Route path="/it/technologies/end-of-support" element={<EndOfSupportReportPage />} />
             <Route path="/it/assets/:id" element={<div>Asset page</div>} />
+            <Route path="/it/technologies/:id" element={<div>Technology page</div>} />
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>
@@ -105,7 +138,8 @@ describe('EndOfSupportReportPage', () => {
     expect(await screen.findByText('SQL Server')).toBeTruthy();
     expect(getMock).toHaveBeenCalledWith('/technologies/reports/end-of-support', { params: { horizon_months: 12 } });
     expect(screen.getByText('Out of support')).toBeTruthy();
-    expect(screen.getByText('Ends soon')).toBeTruthy();
+    expect(screen.getAllByText('Ends soon')).toHaveLength(2);
+    expect(screen.getByText('Extended support')).toBeTruthy();
     expect(screen.getByText('End of life')).toBeTruthy();
     expect(screen.getByRole('columnheader', { name: 'Applications' })).toBeTruthy();
 
@@ -124,28 +158,63 @@ describe('EndOfSupportReportPage', () => {
     await waitFor(() => expect(getMock).toHaveBeenCalledWith('/technologies/reports/end-of-support', { params: { horizon_months: 24 } }));
   });
 
-  it('opens a row on what it touches, with links', async () => {
+  it('links each item to its record and opens a row on what it touches', async () => {
     respond();
     renderPage();
-    const row = (await screen.findByText('SQL Server')).closest('tr')!;
+    const item = await screen.findByRole('link', { name: /SQL Server/ });
+    expect(item.getAttribute('href')).toBe('/it/technologies/tech-1');
+    expect(screen.getByRole('link', { name: /Legacy HR/ }).getAttribute('href')).toBe('/it/applications/app-7');
+    expect(screen.getByRole('link', { name: 'ESX-09' }).getAttribute('href')).toBe('/it/assets/asset-9');
+    expect(screen.queryByRole('link', { name: 'Windows Server 2012' })).toBeNull();
+    expect(screen.queryByText(/^Open the/)).toBeNull();
+
+    const row = item.closest('tr')!;
     expect(row.getAttribute('aria-expanded')).toBe('false');
     fireEvent.click(row);
     expect(row.getAttribute('aria-expanded')).toBe('true');
-    const server = screen.getByRole('link', { name: 'SRV-SQL-01' });
-    expect(server.getAttribute('href')).toBe('/it/assets/asset-1');
+    expect(screen.getByRole('link', { name: 'SRV-SQL-01' }).getAttribute('href')).toBe('/it/assets/asset-1');
     expect(screen.getByRole('link', { name: /ERP/ }).getAttribute('href')).toBe('/it/applications/app-1');
-    expect(screen.getByRole('link', { name: 'Open the technology' }).getAttribute('href')).toBe('/it/technologies/tech-1');
     fireEvent.click(row);
     expect(screen.queryByRole('link', { name: 'SRV-SQL-01' })).toBeNull();
+
+    fireEvent.click(item);
+    expect(await screen.findByText('Technology page')).toBeTruthy();
   });
 
-  it('hides the application column without the applications right', async () => {
+  it('never shows the item itself in its detail, and opens nothing empty', async () => {
+    respond();
+    renderPage();
+    const hardware = (await screen.findByRole('link', { name: 'ESX-09' })).closest('tr')!;
+    fireEvent.click(hardware);
+    const detail = hardware.nextElementSibling as HTMLElement;
+    expect(within(detail).getByRole('link', { name: 'VM-APP-10' })).toBeTruthy();
+    expect(within(detail).getByRole('link', { name: /CRM/ })).toBeTruthy();
+    expect(within(detail).queryByRole('link', { name: 'ESX-09' })).toBeNull();
+
+    const application = screen.getByRole('link', { name: /Legacy HR/ }).closest('tr')!;
+    expect(application.hasAttribute('aria-expanded')).toBe(false);
+    expect(application.getAttribute('tabindex')).toBeNull();
+    expect(application.querySelector('svg')).toBeNull();
+    fireEvent.click(application);
+    expect(document.querySelectorAll('tr.detail')).toHaveLength(1);
+  });
+
+  it('shows the short type label, the full one on hover', async () => {
+    respond();
+    renderPage();
+    const cell = await screen.findByText('OS');
+    expect(cell.getAttribute('title')).toBe('Operating system');
+  });
+
+  it('hides the application column and lists without the applications right', async () => {
     respond({ applicationsVisible: false });
     renderPage();
-    const row = (await screen.findByText('SQL Server')).closest('tr')!;
+    const row = (await screen.findByRole('link', { name: /SQL Server/ })).closest('tr')!;
     expect(screen.queryByRole('columnheader', { name: 'Applications' })).toBeNull();
     fireEvent.click(row);
-    expect(screen.getByText('Applications are hidden: you cannot read them.')).toBeTruthy();
+    const detail = row.nextElementSibling as HTMLElement;
+    expect(within(detail).getByText('Servers')).toBeTruthy();
+    expect(within(detail).queryByText('Applications')).toBeNull();
   });
 
   it('lists the missing data and opens the record to complete', async () => {
