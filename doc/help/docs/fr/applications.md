@@ -137,6 +137,7 @@ L'en-tête affiche :
 - Date de **Mise en production**
 - **Envoyer le lien** : copier un lien partageable vers cet espace de travail
 - **Créer une nouvelle version** : lancer l'assistant de migration de version (voir [Gestion des versions](#gestion-des-versions))
+- **Convertir en technologie** (`applications:admin` et `infrastructure:member`) : voir [Convertir une application en technologie](#convertir-une-application-en-technologie)
 - **Supprimer** (`applications:admin`) : une application qui a des interfaces reçoit le refus et sa raison, avec seulement Fermer. Sinon, la confirmation nomme l’application et compte les déploiements supprimés avec elle, ainsi que ses liens vers d’autres éléments
 - **Précédent / Suivant** : parcourir la liste filtrée sans revenir à la grille
 
@@ -279,7 +280,7 @@ Deux indications discrètes peuvent apparaître : des données au niveau de conf
 
 ### Relations
 
-L'onglet Relations montre ce à quoi cette application est liée : ses lignes budgétaires, contrats, projets, demandes, tâches et incidents, chacun dans son propre tableau. Cliquez sur une ligne pour ouvrir l'enregistrement. Le badge de l'onglet compte les lignes budgétaires, contrats, projets, incidents, sites web et pièces jointes liés.
+L'onglet Relations montre ce à quoi cette application est liée : ses lignes budgétaires, contrats, projets, demandes, tâches, incidents, technologies et processus métier, chacun dans son propre tableau. Cliquez sur une ligne pour ouvrir l'enregistrement. Le badge de l'onglet compte les lignes budgétaires, contrats, projets, incidents, sites web et pièces jointes liés.
 
 **Composants** (uniquement lorsque « Peut avoir des apps enfants » est activé) : un tableau listant les applications enfants de cette Suite, avec leur cycle de vie et criticité. Cliquez sur une ligne pour ouvrir l'espace de travail enfant.
 
@@ -293,6 +294,17 @@ L'onglet Relations montre ce à quoi cette application est liée : ses lignes bu
 | **Demandes** | Référence (`REQ-23`), nom, statut, livraison souhaitée |
 | **Tâches** | Référence (`T-118`), titre, statut, assigné, échéance. Seules les tâches liées à cette application elle-même apparaissent, pas les tâches de ses projets |
 | **Incidents** | Référence (`INC-14`), titre, sévérité, statut, date de détection |
+| **Technologies** | Référence (`TEC-4`), nom, famille, versions, lien, serveurs par lesquels elle arrive (**Via**), fin du support standard |
+| **Processus métier** | Nom, responsable métier |
+
+**Technologies** liste ce dont l'application dépend, selon deux sources indiquées dans la colonne **Lien** :
+
+- **Déclarée** : quelqu'un a lié la technologie à l'application, par exemple Entra ID pour une application qui connecte ses utilisateurs par ce service.
+- **Hébergée** : un serveur de l'un de ses déploiements porte la technologie. **Via** nomme le serveur, et l'hôte quand la technologie tourne sur l'hôte d'une machine virtuelle. Les déploiements désactivés ne comptent pas.
+
+Une technologie peut être les deux. Un tiret dans la colonne des versions signifie que la version n'est pas connue. La fin du support standard passe en orange une fois dépassée. La section demande `infrastructure:reader`. Pour ajouter ou retirer une technologie déclarée, il faut aussi `infrastructure:member`. Une technologie hébergée n'a pas de croix : retirez-la du serveur.
+
+**Processus métier** liste les processus que l'application soutient. Le processus affiche le même lien dans sa propre section **Applications**. Un processus désactivé reste affiché, grisé. Le lien demande aussi `business_processes:member`.
 
 Les dates en orange demandent votre attention : un contrat dont la décision de renouvellement tombe dans votre fenêtre de décision des contrats, ou une tâche ouverte dont l'échéance est passée. Une ligne budgétaire ou un contrat désactivé reste affiché, son nom grisé. Vous ne voyez que les sections des modules que vous pouvez lire.
 
@@ -313,6 +325,24 @@ Cliquez sur **Lier** pour ajouter la suggestion à sa section. La section est ab
 **Sites web pertinents** : ajoutez des URL avec des noms optionnels, utiles pour les portails fournisseurs, tableaux de bord de monitoring ou liens de documentation. **Ajouter une URL** ouvre une boîte de dialogue ; les entrées existantes peuvent être modifiées ou supprimées.
 
 **Pièces jointes** : Glissez-déposez des fichiers ou cliquez sur **Sélectionner des fichiers** pour téléverser. Cliquez sur la pastille d'une pièce jointe pour la télécharger. La suppression est disponible pour les managers.
+
+---
+
+## Convertir une application en technologie
+
+Certaines fiches ont été créées comme applications alors que ce sont des technologies : un moteur de base de données, un annuaire, un serveur d'applications. **Convertir en technologie**, dans l'en-tête, transforme une telle fiche en [technologie](technologies.md). Convertissez quand une autre application peut tomber ou devenir vulnérable à cause d'elle.
+
+Il faut `applications:admin` et `infrastructure:member`.
+
+La fenêtre vérifie d'abord ce que la conversion change. Choisissez une **Famille**, puis lisez les trois listes :
+
+- **Passe à la technologie** : responsables, contrats, lignes budgétaires, projets, liens web, documents, incidents, et les serveurs de ses déploiements actifs. Chaque serveur devient un serveur qui porte la technologie, avec une version inconnue. Les liens des modules que vous ne pouvez pas lire passent aussi.
+- **Conservé, sans son lien avec l’application** : les documents gérés restent dans leur bibliothèque, parmi les documents non classés.
+- **Perdu avec l’application** : déploiements et environnements, appartenance à une suite, prédécesseur et successeurs, résidence des données, contacts de support, sociétés et départements utilisateurs, liens de connaissance, tâches et demandes liées, processus métier, technologies dont elle dépend, et les champs propres aux applications (utilisateurs, modes d'accès, SSO, MFA, données personnelles). Sa référence `APP` disparaît aussi.
+
+La technologie est installée quand l'application avait des serveurs, souscrite sinon. **Convertir** crée la technologie, supprime l'application et ouvre la nouvelle fiche. Le journal d'audit garde l'ancienne référence.
+
+**En cas de refus** : la fenêtre liste les raisons et **Convertir** reste indisponible. Une application ne peut pas être convertie tant qu'elle est source, cible ou middleware d'interfaces, outil d'intégration de liaisons d'interface, suite avec des composants, ou qu'elle porte des liaisons d'interface sur ses déploiements. Une technologie du même nom, des valeurs qu'une technologie ne peut pas prendre ou des fichiers absents du stockage la bloquent aussi. Retirez d'abord ces liens, ou gardez la fiche comme application.
 
 ---
 

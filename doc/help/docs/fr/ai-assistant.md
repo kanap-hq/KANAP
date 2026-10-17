@@ -78,7 +78,7 @@ La saisie de `@` ouvre le **sélecteur de mentions** au-dessus du composeur. Il 
   - `@DOC` : les documents récents de la base de connaissances
   - `@APP backup` : les applications correspondant à « backup »
   - `@BL-12` : la ligne budgétaire portant la référence BL-12. `@BL` seul liste les lignes budgétaires des deux types, et `@OPX` ou `@CPX` les limite aux lignes OPEX ou CAPEX. Les anciens numéros fonctionnent toujours : `@OPX-12` ou `@CPX-3` trouve sa ligne
-  - `@PRJ`, `@REQ`, `@INC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@COMP`, `@CONT`, `@DEPT`, `@SUP`, `@BP`
+  - `@PRJ`, `@REQ`, `@INC`, `@TEC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@COMP`, `@CONT`, `@DEPT`, `@SUP`, `@BP`
 - **Texte libre** : tout le reste (`@payroll`, `@server-2`) lance une recherche multi-types classée par pertinence. Elle trouve aussi les lignes budgétaires par le nom de leurs valeurs analytiques.
 
 Utilisez les touches fléchées pour parcourir les suggestions, **Entrée** ou **Tab** pour confirmer, **Échap** pour fermer le sélecteur. Les résultats sont regroupés par type d'entité (Base de connaissances, Tâches, Projets, Applications, Actifs, Contrats, etc.) afin que vous sachiez d'un coup d'œil quel type d'enregistrement vous vous apprêtez à insérer.
@@ -147,7 +147,7 @@ La barre d'utilisation des tokens n'apparaît qu'une fois que la conversation co
 
 ## Conseils
 
-- **Utilisez les préfixes pour plus de précision** : `@T-`, `@DOC-`, `@PRJ-`, `@REQ-`, `@INC-` correspondent directement aux références natives de KANAP. C'est le moyen le plus rapide de diriger Plaid vers un enregistrement précis et ils résistent au copier-coller car ils sont identiques à ce que vous voyez ailleurs dans l'application.
+- **Utilisez les préfixes pour plus de précision** : `@T-`, `@DOC-`, `@PRJ-`, `@REQ-`, `@INC-`, `@TEC-` correspondent directement aux références natives de KANAP. C'est le moyen le plus rapide de diriger Plaid vers un enregistrement précis et ils résistent au copier-coller car ils sont identiques à ce que vous voyez ailleurs dans l'application.
 - **Démarrez une nouvelle conversation par sujet** : garder des questions sans rapport dans des conversations distinctes réduit la fenêtre de contexte, accélère les réponses et allège la facture de tokens. La liste des conversations est regroupée par date, ce qui vous permet de les retrouver facilement.
 - **Approuvez et rejetez en connaissance de cause** : les aperçus sont la seule barrière entre Plaid et vos données en production. Prenez la seconde nécessaire pour lire la comparaison avant de cliquer sur **Approuver**.
 - **Arrêtez plutôt que d'attendre** : si Plaid s'engage sur une mauvaise voie en cours de diffusion, cliquez sur le bouton **Arrêter** plutôt que d'attendre la fin. Vous économiserez des tokens et votre message suivant pourra corriger le tir.

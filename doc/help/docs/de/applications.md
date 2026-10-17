@@ -137,6 +137,7 @@ Die Kopfzeile zeigt:
 - **Go-Live**-Datum
 - **Link senden**: Einen teilbaren Link zu diesem Arbeitsbereich kopieren
 - **Neue Version erstellen**: Den Versionsmigrations-Assistenten starten (siehe [Versionsverwaltung](#versionsverwaltung))
+- **In Technologie umwandeln** (`applications:admin` und `infrastructure:member`): siehe [Eine Anwendung in eine Technologie umwandeln](#eine-anwendung-in-eine-technologie-umwandeln)
 - **Löschen** (`applications:admin`): eine Anwendung mit Schnittstellen erhält die Ablehnung und den Grund, nur mit Schließen. Sonst nennt die Bestätigung die Anwendung und zählt die Bereitstellungen, die mit ihr gelöscht werden, zusammen mit ihren Verknüpfungen zu anderen Einträgen
 - **Vorherige / Nächste**: Durch die gefilterte Liste navigieren, ohne zum Raster zurückzukehren
 
@@ -279,7 +280,7 @@ Zwei dezente Hinweise können erscheinen: Daten auf der höchsten Vertraulichkei
 
 ### Verknüpfungen
 
-Der Reiter Verknüpfungen zeigt, womit diese Anwendung verknüpft ist: ihre Budgetzeilen, Verträge, Projekte, Anfragen, Aufgaben und Vorfälle, jeweils in einer eigenen Tabelle. Klicken Sie auf eine Zeile, um den Datensatz zu öffnen. Das Reiter-Badge zählt die verknüpften Budgetzeilen, Verträge, Projekte, Vorfälle, Websites und Anhänge.
+Der Reiter Verknüpfungen zeigt, womit diese Anwendung verknüpft ist: ihre Budgetzeilen, Verträge, Projekte, Anfragen, Aufgaben, Vorfälle, Technologien und Geschäftsprozesse, jeweils in einer eigenen Tabelle. Klicken Sie auf eine Zeile, um den Datensatz zu öffnen. Das Reiter-Badge zählt die verknüpften Budgetzeilen, Verträge, Projekte, Vorfälle, Websites und Anhänge.
 
 **Komponenten** (nur wenn „Kann Unteranwendungen haben" aktiviert ist): eine Tabelle, die die Unteranwendungen dieser Suite mit ihrem Lebenszyklus und ihrer Kritikalität auflistet. Klicken Sie auf eine Zeile, um den Arbeitsbereich der Unteranwendung zu öffnen.
 
@@ -293,6 +294,17 @@ Der Reiter Verknüpfungen zeigt, womit diese Anwendung verknüpft ist: ihre Budg
 | **Anfragen** | Referenz (`REQ-23`), Name, Status, gewünschte Lieferung |
 | **Aufgaben** | Referenz (`T-118`), Titel, Status, zugewiesene Person, Fälligkeit. Es erscheinen nur die Aufgaben, die mit dieser Anwendung selbst verknüpft sind, nicht die Aufgaben ihrer Projekte |
 | **Vorfälle** | Referenz (`INC-14`), Titel, Schweregrad, Status, Erkennungsdatum |
+| **Technologien** | Referenz (`TEC-4`), Name, Familie, Versionen, Verknüpfung, Server, über die sie kommt (**Über**), Ende des Standardsupports |
+| **Geschäftsprozesse** | Name, Fachverantwortlicher |
+
+**Technologien** listet, wovon die Anwendung abhängt, aus zwei Quellen, die die Spalte **Verknüpfung** angibt:
+
+- **Deklariert**: Jemand hat die Technologie mit der Anwendung verknüpft, zum Beispiel Entra ID für eine Anwendung, deren Benutzer sich darüber anmelden.
+- **Gehostet**: Ein Server einer ihrer Bereitstellungen trägt die Technologie. **Über** nennt den Server und den Host, wenn die Technologie auf dem Host einer virtuellen Maschine läuft. Deaktivierte Bereitstellungen zählen nicht.
+
+Eine Technologie kann beides sein. Ein Strich in der Versionsspalte bedeutet, dass die Version unbekannt ist. Das Ende des Standardsupports wird orange, sobald es überschritten ist. Der Abschnitt erfordert `infrastructure:reader`. Um eine deklarierte Technologie hinzuzufügen oder zu entfernen, brauchen Sie zusätzlich `infrastructure:member`. Eine gehostete Technologie hat kein Kreuz: Entfernen Sie sie am Server.
+
+**Geschäftsprozesse** listet die Prozesse, die die Anwendung unterstützt. Der Prozess zeigt dieselbe Verknüpfung in seinem eigenen Abschnitt **Anwendungen**. Ein deaktivierter Prozess bleibt ausgegraut aufgeführt. Das Verknüpfen erfordert zusätzlich `business_processes:member`.
 
 Orange Daten verlangen Aufmerksamkeit: ein Vertrag, dessen Verlängerungsentscheidung in Ihr Entscheidungsfenster für Verträge fällt, oder eine offene Aufgabe nach ihrer Fälligkeit. Eine deaktivierte Budgetzeile oder ein deaktivierter Vertrag bleibt mit ausgegrautem Namen aufgeführt. Sie sehen nur die Abschnitte der Module, die Sie lesen dürfen.
 
@@ -313,6 +325,24 @@ Klicken Sie auf **Verknüpfen**, um den Vorschlag seinem Abschnitt hinzuzufügen
 **Relevante Websites**: URLs mit optionalen Namen hinzufügen, nützlich für Lieferantenportale, Monitoring-Dashboards oder Dokumentationslinks. **URL hinzufügen** öffnet einen Dialog; vorhandene Einträge können bearbeitet oder gelöscht werden.
 
 **Anhänge**: Dateien per Drag-and-Drop ziehen oder auf **Dateien auswählen** klicken, um sie hochzuladen. Klicken Sie auf einen Anhang-Chip, um ihn herunterzuladen. Löschen ist für Manager verfügbar.
+
+---
+
+## Eine Anwendung in eine Technologie umwandeln
+
+Manche Einträge wurden als Anwendungen angelegt, obwohl sie Technologien sind: eine Datenbank-Engine, ein Verzeichnisdienst, ein Anwendungsserver. **In Technologie umwandeln** in der Kopfzeile macht aus einem solchen Eintrag eine [Technologie](technologies.md). Wandeln Sie um, wenn eine andere Anwendung ihretwegen ausfallen oder verwundbar werden kann.
+
+Sie benötigen `applications:admin` und `infrastructure:member`.
+
+Das Fenster prüft zuerst, was die Umwandlung ändert. Wählen Sie eine **Familie** und lesen Sie dann die drei Listen:
+
+- **Geht an die Technologie**: Verantwortliche, Verträge, Budgetzeilen, Projekte, Weblinks, Dokumente, Vorfälle und die Server ihrer aktiven Bereitstellungen. Jeder Server wird zu einem Server, der die Technologie trägt, mit unbekannter Version. Verknüpfungen in Modulen, die Sie nicht lesen dürfen, gehen ebenfalls mit.
+- **Bleibt erhalten, ohne Verknüpfung zur Anwendung**: Verwaltete Dokumente bleiben in ihrer Bibliothek, bei den nicht abgelegten Dokumenten.
+- **Geht mit der Anwendung verloren**: Bereitstellungen und Umgebungen, Suite-Zugehörigkeit, Vorgänger und Nachfolger, Datenresidenz, Supportkontakte, die nutzenden Unternehmen und Abteilungen, Wissensverknüpfungen, verknüpfte Aufgaben und Anfragen, Geschäftsprozesse, die Technologien, von denen sie abhängt, und die Felder, die nur Anwendungen haben (Benutzer, Zugriffsarten, SSO, MFA, personenbezogene Daten). Auch ihre `APP`-Referenz entfällt.
+
+Die Technologie ist installiert, wenn die Anwendung Server hatte, sonst abonniert. **Umwandeln** legt die Technologie an, löscht die Anwendung und öffnet den neuen Eintrag. Das Audit-Log behält die alte Referenz.
+
+**Bei Ablehnung**: Das Fenster listet die Gründe, und **Umwandeln** bleibt gesperrt. Eine Anwendung lässt sich nicht umwandeln, solange sie Quelle, Ziel oder Middleware von Schnittstellen ist, Integrationswerkzeug von Schnittstellenbindungen, eine Suite mit Komponenten, oder Schnittstellenbindungen auf ihren Bereitstellungen trägt. Eine Technologie gleichen Namens, Werte, die eine Technologie nicht annehmen kann, oder im Speicher fehlende Dateien verhindern sie ebenfalls. Entfernen Sie zuerst diese Verknüpfungen, oder behalten Sie den Eintrag als Anwendung.
 
 ---
 

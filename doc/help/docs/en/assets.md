@@ -215,6 +215,16 @@ Tracks vendor support and contact information.
 
 The Relations tab connects this asset to other records across KANAP. The tab badge counts all linked items. Most fields save automatically.
 
+**If this server goes down**: the tab opens on what stops with this asset. A summary line counts the applications, assets, clusters, technologies and business processes affected, then one table per kind:
+
+- **Applications**: those with a deployment in service on a fallen asset, with their environments, criticality and the assets they run on (**Via**).
+- **Assets**: the assets it contains, down to three levels, and the assets that depend on it. **Via** shows the path.
+- **Clusters**: clusters with a fallen member. **Down** when no member stands, otherwise **Degraded** with the number of members down. The applications of a cluster that is down fall with it.
+- **Technologies**: those installed on a fallen asset, with their versions.
+- **Business processes**: the processes of the affected applications.
+
+Retired assets stop the chain: nothing falls through them. Each table shows its first 50 rows and counts the rest. The applications and the processes need the right to read them. The section updates once you save the asset relations below.
+
 **Asset relations**:
 - **Depends on**: Other assets this one depends on (e.g., a database server)
 - **Contains**: Assets contained within this one (e.g., servers in a rack)

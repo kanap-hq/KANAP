@@ -1,6 +1,6 @@
 # User Manual Documentation Inventory
 
-_Generated: 2026-10-14_
+_Generated: 2026-10-17_
 
 This document tracks documentation coverage for the KANAP user manual.
 
@@ -10,7 +10,7 @@ This document tracks documentation coverage for the KANAP user manual.
 |----------|-------------|------------|-----|
 | Home | 1 | 1 | 0 |
 | Budget Management | 8 | 8 | 0 |
-| IT Landscape | 9 | 9 | 0 |
+| IT Landscape | 11 | 11 | 0 |
 | Knowledge | 1 | 1 | 0 |
 | Master Data | 8 | 8 | 0 |
 | Admin & Settings | 17 | 17 | 0 |
@@ -28,6 +28,7 @@ _Note: Supplemental Fast Track guides are excluded from these route-based counts
 
 | Date | Doc File | Changes |
 |------|----------|---------|
+| 2026-10-17 | _Technologies, first release (en/fr/de/es)_ | New `technologies.md` (what a technology is next to applications and assets, with examples; the list, its columns and filters; creation from the catalog or by hand; the workspace header, properties drawer and **Overview** with versions, support states and CPE product identifiers) and `end-of-support.md` (**Deadlines** with **Type** and **Horizon**, states, unfolding rows, **Missing data**, CSV export). `applications.md`: **Technologies** and **Business processes** sections of the Relations tab, new section **Converting an application to a technology**. `assets.md`: **If this server goes down**. `business-processes.md`: **Applications** section. `contracts.md`, `budget-lines.md`, `incidents.md`: the **Technologies** field. `ai-assistant.md`: `@TEC`. mkdocs nav with fr/de/es labels, `docUrls.ts`, `doc-update-map.tsv`, `index.md`. |
 | 2026-10-14 | _MCP connections for Claude (en/fr/de/es)_ | New `connected-apps.md` (`/settings/connected-apps`: the user's connected applications with **Disconnect**, then their own API keys, read only). `ai-settings`: section renamed **MCP keys and connections** (the **Type** column, **API key** or **Connection** with the application and its return host, revoking a connection, who can connect), **Connecting an MCP client** now leads with Claude and Claude Desktop (custom connector, KANAP sign-in, the consent screen), then Claude Team and Enterprise, Claude Code without a key, **Remember this application**, then API keys for Cursor and scripts; the `mcp-remote` bridge example is gone. `on-premise/configuration`: what connecting Claude needs (HTTPS, inbound from Anthropic's addresses, outbound to the application's description). mkdocs nav **Connected apps** with fr/de/es labels, `docUrls.ts`, `doc-update-map.tsv`. |
 | 2026-10-13 | `contracts.md` (en/fr/de/es) | Contracts revamp. Page rewritten for the current screens: how terms, cancellation deadlines and the end of validity are computed (tacit renewal, month ends); the list (default and optional columns, **Next due date**, **State** with its five values, quick filters **To decide within n days**, **No budget line**, **Under-budgeted**, budget year and column selector, **Committed** / **Budget** / **Gap**, totals row in the reporting currency with currencies without a rate named, **Compliance** column, **Export the register**, **Settings**); the contract page (header, **Properties** panel and autosave, **Send link**, tabs **Overview**, **Budget** with commitment and the six coverage states, **Compliance** with requirements, reasons and states, **Relations**); renewal decisions (decision window, daily task and its two titles, **Renew**, **Renegotiate**, **Terminate** with the proposed end and the warning, **Let it end**, **Undo the decision**, turning the tacit renewal off and back on); CSV import refusal for a renewed contract. Also `operations-dashboard.md` (Next renewals), `admin.md` (expiration warnings), `on-premise/configuration.md` (`contract-renewal-tasks`, job count removed), `tasks.md` (From Contracts), `applications.md` (one line on compliance). `doc-update-map.tsv` now maps `frontend/src/pages/contracts/**/*.ts`. |
 | 2026-10-13 | _Budget tab redesign and budget finishing (en/fr/de/es)_ | `budget-lines.md`: Budget tab rewritten (column cards, **Amount** / **Quantity and price** / **By month**, **When** with **At a date**, **Start from**, **Use for other columns too…**, **Monthly result** with **Difference with** and the folded table, **Back to the opening values**), **Recommended dimensions** replaces CAPEX dimensions, chargeback for both types. `budget-operations.md`: one **Copy budget columns** operation (amounts and allocations, one **Overwrite existing data**, **All** / **OPEX** / **CAPEX**, **Preview**, statuses per part, links to the lines), **Reset budget column** on **All**, the **Follows the spread and the lines** setting now ticks the columns of **Use for other columns too…**. `analytics.md`: recommended dimensions and their dialog, wrapping band, "Used by N lines" links, forced delete of a dimension or a value. `reports.md`: chargeback on **All** / **OPEX** / **CAPEX**. `budget-data-model.md`, `budget-file.md`, `sample-data.md`, `admin.md` (audit action **Restore**). `doc-update-map.tsv` maps `CopyBudgetPage.tsx`. |
@@ -152,6 +153,7 @@ _Note: `/ops/opex`, `/ops/capex` and their line addresses (`/ops/opex/:id`, `/op
 |-------|-----------|--------|----------|
 | `/it/locations` | LocationsPage + LocationWorkspacePage | **DOCUMENTED** | `locations.md` |
 | `/it/assets` | AssetsPage + AssetWorkspacePage | **DOCUMENTED** | `assets.md` |
+| `/it/technologies` | TechnologiesPage + TechnologyWorkspacePage | **DOCUMENTED** | `technologies.md` |
 | `/it/connections` | ConnectionsPage + ConnectionWorkspacePage | **DOCUMENTED** | `connections.md` |
 | `/it/connection-map` | ConnectionMapPage | **DOCUMENTED** | `connection-map.md` |
 | `/it/netbox` | NetboxSyncPage | **DOCUMENTED** | `netbox.md` |
@@ -163,6 +165,12 @@ _Note: `/ops/opex`, `/ops/capex` and their line addresses (`/ops/opex/:id`, `/op
 | `/it/applications` | ApplicationsPage + ApplicationWorkspacePage | **DOCUMENTED** | `applications.md` |
 | `/it/interfaces` | InterfacesPage + InterfaceWorkspacePage | **DOCUMENTED** | `interfaces.md` |
 | `/it/interface-map` | InterfaceMapPage | **DOCUMENTED** | `interface-map.md` |
+
+**Operations**
+
+| Route | Component | Status | Doc File |
+|-------|-----------|--------|----------|
+| `/it/technologies/end-of-support` | EndOfSupportReportPage | **DOCUMENTED** | `end-of-support.md` |
 
 **Settings**
 

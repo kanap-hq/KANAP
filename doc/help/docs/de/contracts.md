@@ -210,6 +210,7 @@ Das Verknüpfen oder Entfernen einer Anwendung oder eines Assets unter **Verknü
 ### Verknüpfungen
 
 - **Anwendungen** und **Assets**: Verknüpfen Sie die Anwendungen und Assets, die dieser Vertrag abdeckt. Die Auswahlfelder durchsuchen die Anwendungen und Assets, die Sie sehen dürfen. Diese Verknüpfungen speisen den Reiter [Konformität](#konformitat). Ein Asset, dessen Supportvertrag auf der Asset-Seite auf diesen Vertrag gesetzt ist, erscheint hier nicht. Für die Konformität zählt es trotzdem
+- **Technologien**: Verknüpfen Sie die Technologien, die dieser Vertrag bezahlt, etwa ein Microsoft-365-Abonnement für Entra ID. Nur sichtbar, wenn Sie die Infrastruktur lesen dürfen. Ausgemusterte Technologien werden nicht angeboten
 - **Kontakte**: Personen zu diesem Vertrag, jede mit einer Rolle (Vertrieb, Technik, Support oder Sonstige). **Kontakte des Lieferanten übernehmen** übernimmt die Kontakte des Lieferanten mit einem Klick
 - **Relevante Websites**: Links zu externen Dokumenten wie dem unterschriebenen PDF oder dem Lieferantenportal
 - **Anhänge**: eine Liste von Dateien. Nutzen Sie **Dateien hinzufügen** oder ziehen Sie Dateien auf den Abschnitt. Klicken Sie auf eine Datei, um sie herunterzuladen

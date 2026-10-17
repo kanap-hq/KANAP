@@ -215,6 +215,16 @@ Verfolgt Lieferantensupport und Kontaktinformationen.
 
 Der Reiter Verknüpfungen verbindet dieses Asset mit anderen Datensätzen in KANAP. Das Reiter-Badge zählt alle verknüpften Elemente. Die meisten Felder werden automatisch gespeichert.
 
+**Wenn dieser Server ausfällt**: Der Reiter beginnt mit dem, was mit diesem Asset ausfällt. Eine Übersichtszeile zählt die betroffenen Anwendungen, Assets, Cluster, Technologien und Geschäftsprozesse, danach folgt eine Tabelle pro Art:
+
+- **Anwendungen**: solche mit einer Bereitstellung in Betrieb auf einem ausgefallenen Asset, mit ihren Umgebungen, ihrer Kritikalität und den Assets, auf denen sie laufen (**Über**).
+- **Assets**: die Assets, die es enthält, bis zu drei Ebenen tief, und die Assets, die von ihm abhängen. **Über** zeigt den Pfad.
+- **Cluster**: Cluster mit einem ausgefallenen Mitglied. **Ausgefallen**, wenn kein Mitglied mehr steht, sonst **Beeinträchtigt** mit der Zahl der ausgefallenen Mitglieder. Die Anwendungen eines ausgefallenen Clusters fallen mit ihm aus.
+- **Technologien**: die auf einem ausgefallenen Asset installierten, mit ihren Versionen.
+- **Geschäftsprozesse**: die Prozesse der betroffenen Anwendungen.
+
+Ausgemusterte Assets unterbrechen die Kette: Durch sie fällt nichts aus. Jede Tabelle zeigt ihre ersten 50 Zeilen und zählt den Rest. Anwendungen und Prozesse erfordern das Recht, sie zu lesen. Der Abschnitt aktualisiert sich, sobald Sie die Asset-Beziehungen weiter unten speichern.
+
 **Asset-Beziehungen**:
 - **Hängt ab von**: Andere Assets, von denen dieses abhängt (z. B. ein Datenbankserver)
 - **Enthält**: Assets, die in diesem enthalten sind (z. B. Server in einem Rack)

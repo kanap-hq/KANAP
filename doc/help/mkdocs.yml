@@ -110,12 +110,14 @@ plugins:
             Infrastructure: Infrastructure
             Locations: Sites
             Assets: Actifs
+            Technologies: Technologies
             Connections: Connexions
             Connection Map: Carte des connexions
             Applications: Applications
             Interfaces: Interfaces
             Interface Map: Carte des interfaces
             Incidents: Incidents
+            End of support: Fins de support
             "Netbox synchronisation": "Synchronisation Netbox"
             Settings: Paramètres
             Knowledge: Base de connaissances
@@ -191,12 +193,14 @@ plugins:
             Infrastructure: Infrastruktur
             Locations: Standorte
             Assets: Assets
+            Technologies: Technologien
             Connections: Verbindungen
             Connection Map: Verbindungskarte
             Applications: Anwendungen
             Interfaces: Schnittstellen
             Interface Map: Schnittstellenkarte
             Incidents: Vorfälle
+            End of support: Supportende
             "Netbox synchronisation": "Netbox-Synchronisierung"
             Settings: Einstellungen
             Knowledge: Wissensdatenbank
@@ -272,12 +276,14 @@ plugins:
             Infrastructure: Infraestructura
             Locations: Ubicaciones
             Assets: Activos
+            Technologies: Tecnologías
             Connections: Conexiones
             Connection Map: Mapa de conexiones
             Applications: Aplicaciones
             Interfaces: Interfaces
             Interface Map: Mapa de interfaces
             Incidents: Incidentes
+            End of support: Fin de soporte
             "Netbox synchronisation": "Sincronización con Netbox"
             Settings: Configuración
             Knowledge: Base de conocimiento
@@ -355,6 +361,7 @@ nav:
     - Infrastructure:
       - Locations: locations.md
       - Assets: assets.md
+      - Technologies: technologies.md
       - Connections: connections.md
       - Connection Map: connection-map.md
       - "Netbox synchronisation": netbox.md
@@ -363,6 +370,7 @@ nav:
       - Interfaces: interfaces.md
       - Interface Map: interface-map.md
     - Incidents: incidents.md
+    - End of support: end-of-support.md
     - Settings: it-ops-settings.md
 
   - Knowledge:
