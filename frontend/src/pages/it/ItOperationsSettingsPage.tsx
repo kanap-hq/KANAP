@@ -650,7 +650,7 @@ const DomainsEditor = React.memo(function DomainsEditor({ items, onChange }: Dom
   const removal = useCatalogRemoval('domains');
   const translations = useCatalogTranslations();
   const [trustsOf, setTrustsOf] = React.useState<(DomainOption & { localId: string }) | null>(null);
-  const countValue = (value: string) => (value.trim() === '' ? undefined : Math.max(0, parseInt(value, 10) || 0));
+  const countValue = (value: string) => (value.trim() === '' ? undefined : Math.min(MAX_COUNT, Math.max(0, parseInt(value, 10) || 0)));
   const issues = React.useMemo(() => catalogListIssues(localItems, { skipCodes: new Set(localItems.filter((row: any) => row.system).map((row: any) => String(row.code).toLowerCase())) }), [localItems]);
 
   return (
@@ -692,9 +692,9 @@ const DomainsEditor = React.memo(function DomainsEditor({ items, onChange }: Dom
                 <TableRow key={item.localId}>
                   <TableCell sx={{ verticalAlign: 'top' }}><TextField value={item.label || ''} onChange={(e) => handleLabelChange(item.localId, e.target.value, item.dns_suffix || '', item.label || '')} size="small" fullWidth placeholder={t('pages.settings.placeholders.domainName')} disabled={isSystem} InputProps={{ readOnly: isSystem }} inputProps={{ 'aria-label': t('common:enumEditor.name') }} /><IssueText issue={issues.get(localItems.indexOf(item))} /></TableCell>
                   <TableCell><TextField value={item.dns_suffix || ''} onChange={(e) => handleUpdate(item.localId, { dns_suffix: e.target.value.toLowerCase() })} size="small" fullWidth placeholder={t('pages.settings.placeholders.dnsSuffix')} disabled={isSystem} InputProps={{ readOnly: isSystem }} /></TableCell>
-                  <TableCell>{!isSystem && <TextField value={item.forest || ''} onChange={(e) => handleUpdate(item.localId, { forest: e.target.value || undefined })} size="small" fullWidth placeholder={t('pages.settings.placeholders.forest')} inputProps={{ 'aria-label': `${t('pages.settings.columns.forest')} ${item.label}` }} />}</TableCell>
-                  <TableCell>{!isSystem && <TextField value={item.account_count ?? ''} onChange={(e) => handleUpdate(item.localId, { account_count: countValue(e.target.value) })} size="small" fullWidth type="number" placeholder="e.g., 1200" inputProps={{ min: 0, 'aria-label': `${t('pages.settings.columns.accounts')} ${item.label}` }} />}</TableCell>
-                  <TableCell>{!isSystem && <TextField value={item.machine_count ?? ''} onChange={(e) => handleUpdate(item.localId, { machine_count: countValue(e.target.value) })} size="small" fullWidth type="number" placeholder="e.g., 300" inputProps={{ min: 0, 'aria-label': `${t('pages.settings.columns.machines')} ${item.label}` }} />}</TableCell>
+                  <TableCell>{!isSystem && <TextField value={item.forest || ''} onChange={(e) => handleUpdate(item.localId, { forest: e.target.value || undefined })} size="small" fullWidth placeholder={t('pages.settings.placeholders.forest')} inputProps={{ maxLength: 200, 'aria-label': `${t('pages.settings.columns.forest')} ${item.label}` }} />}</TableCell>
+                  <TableCell>{!isSystem && <TextField value={item.account_count ?? ''} onChange={(e) => handleUpdate(item.localId, { account_count: countValue(e.target.value) })} size="small" fullWidth type="number" placeholder="e.g., 1200" inputProps={{ min: 0, max: MAX_COUNT, 'aria-label': `${t('pages.settings.columns.accounts')} ${item.label}` }} />}</TableCell>
+                  <TableCell>{!isSystem && <TextField value={item.machine_count ?? ''} onChange={(e) => handleUpdate(item.localId, { machine_count: countValue(e.target.value) })} size="small" fullWidth type="number" placeholder="e.g., 300" inputProps={{ min: 0, max: MAX_COUNT, 'aria-label': `${t('pages.settings.columns.machines')} ${item.label}` }} />}</TableCell>
                   <TableCell>{!isSystem && item.code && <Button size="small" onClick={() => setTrustsOf(item)} aria-label={`${t('pages.settings.columns.trusts')} ${item.label}`}>{(item.trusts ?? []).length ? t('pages.settings.trusts.count', { count: item.trusts.length }) : t('pages.settings.trusts.none')}</Button>}</TableCell>
                   <TableCell><Checkbox size="small" checked={!!item.deprecated} onChange={(e) => handleUpdate(item.localId, { deprecated: e.target.checked })} disabled={isSystem} inputProps={{ 'aria-label': `${t('common:enumEditor.noLongerOffered')} ${item.label}` }} /></TableCell>
                   <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
@@ -720,6 +720,10 @@ const DomainsEditor = React.memo(function DomainsEditor({ items, onChange }: Dom
     </Paper>
   );
 });
+
+/** The server's limits (`it-ops-settings.service.ts`): a longer value would be refused. */
+const ADMIN_ZONE_LIMITS = { admin_group: 200, privilege_level: 100, secrets_location: 200, description: 2000 } as const;
+const MAX_COUNT = 100_000_000;
 
 interface AdminZonesEditorProps {
   items: AdminZoneOption[];
@@ -767,7 +771,7 @@ export const AdminZonesEditor = React.memo(function AdminZonesEditor({ items, on
   const translations = useCatalogTranslations();
   const issues = React.useMemo(() => catalogListIssues(localItems), [localItems]);
   const text = (item: any, key: 'admin_group' | 'privilege_level' | 'secrets_location' | 'description', placeholder: string) => (
-    <TextField value={item[key] || ''} onChange={(e) => handleUpdate(item.localId, { [key]: e.target.value || undefined })} size="small" fullWidth placeholder={placeholder} inputProps={{ 'aria-label': `${t(`pages.settings.columns.${key === 'admin_group' ? 'adminGroup' : key === 'privilege_level' ? 'privilegeLevel' : key === 'secrets_location' ? 'secretsLocation' : 'description'}`)} ${item.label}` }} />
+    <TextField value={item[key] || ''} onChange={(e) => handleUpdate(item.localId, { [key]: e.target.value || undefined })} size="small" fullWidth placeholder={placeholder} inputProps={{ maxLength: ADMIN_ZONE_LIMITS[key], 'aria-label': `${t(`pages.settings.columns.${key === 'admin_group' ? 'adminGroup' : key === 'privilege_level' ? 'privilegeLevel' : key === 'secrets_location' ? 'secretsLocation' : 'description'}`)} ${item.label}` }} />
   );
 
   return (
@@ -800,7 +804,7 @@ export const AdminZonesEditor = React.memo(function AdminZonesEditor({ items, on
             {localItems.map((item: any) => (
               <TableRow key={item.localId}>
                 <TableCell sx={{ verticalAlign: 'top' }}>
-                  <TextField value={item.label} onChange={(e) => handleUpdate(item.localId, { label: e.target.value })} size="small" fullWidth placeholder={t('pages.settings.placeholders.adminZoneName')} inputProps={{ 'aria-label': t('common:enumEditor.name') }} />
+                  <TextField value={item.label} onChange={(e) => handleUpdate(item.localId, { label: e.target.value })} size="small" fullWidth placeholder={t('pages.settings.placeholders.adminZoneName')} inputProps={{ maxLength: 200, 'aria-label': t('common:enumEditor.name') }} />
                   <IssueText issue={issues.get(localItems.indexOf(item))} />
                 </TableCell>
                 <TableCell>{text(item, 'admin_group', t('pages.settings.placeholders.adminGroup'))}</TableCell>
@@ -838,6 +842,8 @@ type SettingsState = {
   baseline: ItOpsSettings | null;
   dirty: Partial<Record<ListId, boolean>>;
   pending: ListId | null;
+  /** Per list, the rows the server refused (4xx): autosave waits for the next edit instead of resending them. */
+  rejected: Partial<Record<ListId, string>>;
   successMessage: string;
   errorMessage: string | null;
 };
@@ -851,6 +857,7 @@ export const initialState: SettingsState = {
   baseline: null,
   dirty: {},
   pending: null,
+  rejected: {},
   successMessage: '',
   errorMessage: null,
 };
@@ -868,6 +875,7 @@ type Action =
   | { type: 'resetSubnets' }
   | { type: 'resetDomains' }
   | { type: 'setPending'; id: ListId | null }
+  | { type: 'rejected'; id: ListId; sent: any[] }
   | { type: 'saved'; id: ListId; sent: any[]; saved: ItOpsSettings }
   | { type: 'setSuccess'; message: string }
   | { type: 'setError'; message: string | null };
@@ -892,7 +900,7 @@ export function reducer(state: SettingsState, action: Action): SettingsState {
   switch (action.type) {
     case 'hydrate': {
       const next = hydrateFromSettings(action.payload);
-      return { ...state, ...next, dirty: {}, pending: null, errorMessage: null };
+      return { ...state, ...next, dirty: {}, pending: null, rejected: {}, errorMessage: null };
     }
     case 'setEnum': {
       const enums = { ...state.enums, [action.id]: action.items };
@@ -957,10 +965,13 @@ export function reducer(state: SettingsState, action: Action): SettingsState {
         ? currentList.map((row: any, index: number) => ({ ...(matchSaved(row, index) ?? row), localId: row.localId }))
         : currentList.map((row: any, index: number) => (!row.code && action.sent[index] && !action.sent[index].code && savedList[index]?.code ? { ...row, code: savedList[index].code } : row));
       const listState = action.id === 'operatingSystems' ? { operatingSystems: nextList } : action.id === 'connectionTypes' ? { connectionTypes: nextList } : action.id === 'subnets' ? { subnets: nextList } : action.id === 'domains' ? { domains: nextList } : { enums: { ...state.enums, [action.id]: nextList } };
-      return { ...state, ...listState, baseline, dirty: { ...state.dirty, [action.id]: !untouched }, pending: null, errorMessage: null };
+      const { [action.id]: _accepted, ...rejected } = state.rejected;
+      return { ...state, ...listState, baseline, rejected, dirty: { ...state.dirty, [action.id]: !untouched }, pending: null, errorMessage: null };
     }
     case 'setPending':
       return { ...state, pending: action.id || null };
+    case 'rejected':
+      return { ...state, rejected: { ...state.rejected, [action.id]: JSON.stringify(action.sent) } };
     case 'setSuccess':
       return { ...state, successMessage: action.message, errorMessage: null };
     case 'setError':
@@ -968,6 +979,20 @@ export function reducer(state: SettingsState, action: Action): SettingsState {
     default:
       return state;
   }
+}
+
+function listRows(state: SettingsState, id: ListId): any[] {
+  if (id === 'operatingSystems') return state.operatingSystems;
+  if (id === 'connectionTypes') return state.connectionTypes;
+  if (id === 'subnets') return state.subnets;
+  if (id === 'domains') return state.domains;
+  return state.enums[id as EnumListId] || [];
+}
+
+/** The list still holds exactly the rows the server refused: saving them again would be refused again. */
+export function autosaveBlocked(state: SettingsState, id: ListId): boolean {
+  const refused = state.rejected[id];
+  return refused !== undefined && refused === JSON.stringify(stripLocalIds(listRows(state, id)));
 }
 
 // ============================================================================
@@ -997,7 +1022,9 @@ export default function ItOperationsSettingsPage() {
       dispatch({ type: 'saved', id: variables.id, sent: variables.rows, saved: next });
       dispatch({ type: 'setSuccess', message: t('pages.settings.updateSuccess') });
     },
-    onError: (error) => {
+    onError: (error, variables) => {
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      if (status && status >= 400 && status < 500) dispatch({ type: 'rejected', id: variables.id, sent: variables.rows });
       dispatch({ type: 'setError', message: getApiErrorMessage(error, t, t('pages.settings.updateFailed')) });
     },
     onSettled: () => dispatch({ type: 'setPending', id: null }),
@@ -1056,7 +1083,7 @@ export default function ItOperationsSettingsPage() {
   React.useEffect(() => {
     if (submitting) return undefined;
     const dirtyIds = (Object.keys(state.dirty) as ListId[]).filter(
-      (id) => state.dirty[id] && listReadyToSave(id),
+      (id) => state.dirty[id] && listReadyToSave(id) && !autosaveBlocked(state, id),
     );
     if (dirtyIds.length === 0) return undefined;
     const timer = setTimeout(() => {

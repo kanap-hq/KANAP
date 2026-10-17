@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../../components/design';
-import { AdminZonesEditor, initialState, reducer } from './ItOperationsSettingsPage';
+import { AdminZonesEditor, autosaveBlocked, initialState, reducer } from './ItOperationsSettingsPage';
 import DomainTrustsDialog from './components/DomainTrustsDialog';
 import type { DomainOption, ItOpsSettings } from '../../services/itOpsSettings';
 
@@ -39,6 +39,29 @@ describe('Administration zones settings', () => {
     expect(state.dirty.adminZones).toBe(true);
     state = reducer(state, { type: 'setEnum', id: 'adminZones', items: state.enums.adminZones.map(({ secrets_location: _s, ...row }: any) => row) });
     expect(state.dirty.adminZones).toBe(false);
+  });
+
+  it('does not resend rows the server refused until they are edited again', () => {
+    let state = reducer(initialState, { type: 'hydrate', payload: settings });
+    const tooLong = state.enums.adminZones.map((row) => ({ ...row, description: 'x'.repeat(2001) }));
+    state = reducer(state, { type: 'setEnum', id: 'adminZones', items: tooLong });
+    expect(autosaveBlocked(state, 'adminZones')).toBe(false);
+    state = reducer(state, { type: 'rejected', id: 'adminZones', sent: tooLong.map(({ localId: _l, ...row }) => row) });
+    expect(state.dirty.adminZones).toBe(true);
+    expect(autosaveBlocked(state, 'adminZones')).toBe(true);
+    expect(autosaveBlocked(state, 'domains')).toBe(false);
+    const fixed = state.enums.adminZones.map((row) => ({ ...row, description: 'Identity core' }));
+    state = reducer(state, { type: 'setEnum', id: 'adminZones', items: fixed });
+    expect(autosaveBlocked(state, 'adminZones')).toBe(false);
+  });
+
+  it('limits each field to what the server accepts', () => {
+    wrap(<AdminZonesEditor items={settings.adminZones} onChange={vi.fn()} />);
+    const limit = (name: string) => screen.getByRole('textbox', { name }).getAttribute('maxlength');
+    expect(limit('pages.settings.columns.adminGroup Tier 0')).toBe('200');
+    expect(limit('pages.settings.columns.privilegeLevel Tier 0')).toBe('100');
+    expect(limit('pages.settings.columns.secretsLocation Tier 0')).toBe('200');
+    expect(limit('pages.settings.columns.description Tier 0')).toBe('2000');
   });
 
   it('edits a zone in place and says when the list is empty', async () => {
