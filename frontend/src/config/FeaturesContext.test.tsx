@@ -40,3 +40,37 @@ describe('FeaturesProvider: sample data flag', () => {
     expect(await readProbe(Promise.reject(new Error('offline')))).toBe('multi-tenant:false');
   });
 });
+
+describe('FeaturesProvider: an effect torn down before its read answers', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('never reports the defaults as loaded (development double run)', async () => {
+    // The first read is aborted by the cleanup; the second answers later with the flag on.
+    let calls = 0;
+    vi.stubGlobal('fetch', vi.fn((_url: string, init: { signal: AbortSignal }) => {
+      calls += 1;
+      if (calls === 1) {
+        return new Promise((_resolve, reject) => {
+          init.signal.addEventListener('abort', () => reject(Object.assign(new Error('aborted'), { name: 'AbortError' })));
+        });
+      }
+      return new Promise((resolve) => setTimeout(() => resolve({
+        ok: true,
+        json: async () => ({ deploymentMode: 'multi-tenant', features: { vulnerabilityFeed: true }, version: '1' }),
+      }), 20));
+    }));
+    const seen: string[] = [];
+    function FlagProbe() {
+      const { config, isLoading } = useFeatures();
+      const state = isLoading ? 'loading' : `loaded:${String(config.features.vulnerabilityFeed)}`;
+      seen.push(state);
+      return <div data-testid="flag">{state}</div>;
+    }
+    render(<React.StrictMode><FeaturesProvider><FlagProbe /></FeaturesProvider></React.StrictMode>);
+    await waitFor(() => expect(screen.getByTestId('flag')).toHaveTextContent('loaded:true'));
+    expect(seen).not.toContain('loaded:false');
+  });
+});

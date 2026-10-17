@@ -64,6 +64,9 @@ export function FeaturesProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // An effect torn down before its read answers (unmount, or the development double run) leaves
+    // the state to the next one: marking it loaded here would show the routes with the defaults.
+    let cancelled = false;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
 
@@ -76,7 +79,7 @@ export function FeaturesProvider({ children }: { children: React.ReactNode }) {
         return res.json();
       })
       .then((data: FeaturesConfigResponse) => {
-        setConfig(normalizeFeaturesConfig(data));
+        if (!cancelled) setConfig(normalizeFeaturesConfig(data));
       })
       .catch((err) => {
         if (err.name !== 'AbortError') {
@@ -86,10 +89,11 @@ export function FeaturesProvider({ children }: { children: React.ReactNode }) {
       })
       .finally(() => {
         clearTimeout(timeout);
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       });
 
     return () => {
+      cancelled = true;
       clearTimeout(timeout);
       controller.abort();
     };
