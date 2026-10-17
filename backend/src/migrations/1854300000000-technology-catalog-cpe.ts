@@ -9,9 +9,9 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * 1. the identifiers of `ADDED_CPE` it lacks are added to `cpe_products` (none is removed, so an
  *    identifier the tenant removed by hand comes back only if it is one of these);
  * 2. each version whose label equals (without case) one of `CPE_VERSIONS` receives that
- *    `cpe_version` when it has none, or when it holds exactly the value the catalog gave that label
- *    before (`2016` for SQL Server 2016 SP3): SQL Server 2016 to 2025 compared on their build line,
- *    Exchange Subscription Edition. Any other value set by the tenant is kept.
+ *    `cpe_version` when it has none: Exchange Subscription Edition, compared on its build line. A
+ *    value set by the tenant is kept. SQL Server keeps its years: the matching applies its per-release products to
+ *    the release named by the label.
  *
  * The lists are frozen here, from the catalog shipped with this migration: a later update of
  * `technologies.catalog.json` does not change what this migration does. Tenant by tenant with
@@ -69,15 +69,9 @@ export const ADDED_CPE: Record<string, string[]> = {
   zabbix: ['a:zabbix:zabbix_server'],
 };
 
-/** Catalog key, version label, `cpe_version` set by lot C3, the value the catalog gave before (or null). */
-export const CPE_VERSIONS: Array<[string, string, string, string | null]> = [
-  ['msexchange', 'Subscription Edition SU11', '15.2', null],
-  ['mssqlserver', '2025', '17.0', null],
-  ['mssqlserver', '2022', '16.0', null],
-  ['mssqlserver', '2019', '15.0', null],
-  ['mssqlserver', '2017', '14.0', null],
-  ['mssqlserver', '2016 SP3', '13.0', '2016'],
-  ['mssqlserver', '2016 SP3 Azure Connect Pack', '13.0', '2016'],
+/** Catalog key, version label, `cpe_version` set by lot C3 (the catalog gave none before). */
+export const CPE_VERSIONS: Array<[string, string, string]> = [
+  ['msexchange', 'Subscription Edition SU11', '15.2'],
 ];
 
 type Counts = { tenant_id: string; slug: string | null; identifiers: number; versions: number };
@@ -114,14 +108,14 @@ export class TechnologyCatalogCpe1854300000000 implements MigrationInterface {
           `WITH changed AS (
              UPDATE technology_versions v
                 SET cpe_version = c.cpe_version, updated_at = now()
-               FROM technologies t, unnest($2::text[], $3::text[], $4::text[], $5::text[]) AS c(key, label, cpe_version, previous)
+               FROM technologies t, unnest($2::text[], $3::text[], $4::text[]) AS c(key, label, cpe_version)
               WHERE v.tenant_id = $1 AND t.tenant_id = $1 AND t.id = v.technology_id
                 AND t.catalog_key = c.key AND lower(v.label) = lower(c.label)
-                AND (v.cpe_version IS NULL OR v.cpe_version = c.previous)
+                AND v.cpe_version IS NULL
              RETURNING 1
            )
            SELECT count(*)::int AS n FROM changed`,
-          [tenant.id, CPE_VERSIONS.map(([key]) => key), CPE_VERSIONS.map(([, label]) => label), CPE_VERSIONS.map(([, , version]) => version), CPE_VERSIONS.map(([, , , previous]) => previous)],
+          [tenant.id, CPE_VERSIONS.map(([key]) => key), CPE_VERSIONS.map(([, label]) => label), CPE_VERSIONS.map(([, , version]) => version)],
         );
         if (identifiers.n || versions.n) counts.push({ tenant_id: tenant.id, slug: tenant.slug, identifiers: identifiers.n, versions: versions.n });
       }

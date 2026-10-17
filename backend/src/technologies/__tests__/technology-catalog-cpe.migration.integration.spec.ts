@@ -66,15 +66,13 @@ async function testCompletesAdoptedTechnologies() {
   await inRolledBackTransaction(async (runner) => {
     const a = await seedTenant(runner, 'c3-cpe-a');
     const b = await seedTenant(runner, 'c3-cpe-b');
-    // Tenant A: SQL Server adopted before lot C3, a CPE version set by hand on 2019.
+    // Tenant A: SQL Server adopted before lot C3; its versions keep their years.
     const sql = await adopted(runner, a, 1, 'Microsoft SQL Server', 'mssqlserver', ['a:microsoft:sql_server']);
     const v2022 = await version(runner, a, sql, '2022');
-    const v2016 = await version(runner, a, sql, '2016 sp3');
-    // Adopted from the catalog before lot C3, which gave this label `2016`.
-    const vConnect = await version(runner, a, sql, '2016 SP3 Azure Connect Pack', '2016');
-    const v2017 = await version(runner, a, sql, '2017', '14.0.3000');
-    const v2019 = await version(runner, a, sql, '2019', '15.0.4000');
-    const v2014 = await version(runner, a, sql, '2014 SP3');
+    const v2016 = await version(runner, a, sql, '2016 SP3', '2016');
+    // Exchange whose Subscription Edition has a CPE version set by the tenant.
+    const exchangeA = await adopted(runner, a, 6, 'Microsoft Exchange Server', 'msexchange', ['a:microsoft:exchange_server']);
+    const seTyped = await version(runner, a, exchangeA, 'subscription edition su11', '15.2.2562.17');
     // Docker Engine whose `a:docker:engine` the tenant removed by hand: it is not an added identifier.
     const docker = await adopted(runner, a, 2, 'Docker Engine', 'docker-engine', ['a:example:custom']);
     // MongoDB whose identifier the tenant removed: lot C3 added nothing to it.
@@ -95,12 +93,9 @@ async function testCompletesAdoptedTechnologies() {
     const log = await logged(() => migration.up(runner));
 
     assert.deepEqual(await cpeOf(runner, a, sql), ['a:microsoft:sql_server', ...SQL_SERVER_ADDED].sort());
-    assert.equal(await cpeVersionOf(runner, a, v2022), '16.0');
-    assert.equal(await cpeVersionOf(runner, a, v2016), '13.0', 'the label is compared without case');
-    assert.equal(await cpeVersionOf(runner, a, vConnect), '13.0', 'the former catalog value is replaced');
-    assert.equal(await cpeVersionOf(runner, a, v2017), '14.0.3000', 'another value set by the tenant is kept');
-    assert.equal(await cpeVersionOf(runner, a, v2019), '15.0.4000', 'a CPE version set by the tenant is kept');
-    assert.equal(await cpeVersionOf(runner, a, v2014), null, 'a label without CPE version in the list is left alone');
+    assert.equal(await cpeVersionOf(runner, a, v2022), null, 'SQL Server keeps its years');
+    assert.equal(await cpeVersionOf(runner, a, v2016), '2016');
+    assert.equal(await cpeVersionOf(runner, a, seTyped), '15.2.2562.17', 'a CPE version set by the tenant is kept');
     assert.deepEqual(await cpeOf(runner, a, docker), ['a:docker:docker', 'a:example:custom', 'a:mobyproject:moby'], 'a:docker:engine stays removed');
     assert.deepEqual(await cpeOf(runner, a, mongo), [], 'nothing comes back to an entry lot C3 did not complete');
     assert.deepEqual(await cpeOf(runner, a, samba), ['a:samba:samba', 'a:example:samba'], 'a technology holding every added identifier is untouched');
@@ -109,7 +104,7 @@ async function testCompletesAdoptedTechnologies() {
     assert.deepEqual(await cpeOf(runner, b, exchange), ['a:microsoft:exchange_server', 'a:microsoft:exchange_server_subscription_edition']);
     assert.equal(await cpeVersionOf(runner, b, se), '15.2');
 
-    assert.match(log, new RegExp(`tenant ${await slugOf(runner, a)} \\(${a}\\): 2 technologies completed, 3 CPE versions set`));
+    assert.match(log, new RegExp(`tenant ${await slugOf(runner, a)} \\(${a}\\): 3 technologies completed, 0 CPE versions set`));
     assert.match(log, new RegExp(`tenant ${await slugOf(runner, b)} \\(${b}\\): 1 technologies completed, 1 CPE versions set`));
 
     // A rerun adds nothing.

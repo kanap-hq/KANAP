@@ -2068,7 +2068,7 @@
         {
           "key": "17.0",
           "label": "2025",
-          "cpe_version": "17.0",
+          "cpe_version": null,
           "build_prefixes": [
             "17.0"
           ],
@@ -2079,7 +2079,7 @@
         {
           "key": "16.0",
           "label": "2022",
-          "cpe_version": "16.0",
+          "cpe_version": null,
           "build_prefixes": [
             "16.0"
           ],
@@ -2090,7 +2090,7 @@
         {
           "key": "13.0-sp3-acp",
           "label": "2016 SP3 Azure Connect Pack",
-          "cpe_version": "13.0",
+          "cpe_version": "2016",
           "build_prefixes": [],
           "release_date": "2022-05-19",
           "standard_support_end": "2026-07-14",
@@ -2099,7 +2099,7 @@
         {
           "key": "13.0-sp3",
           "label": "2016 SP3",
-          "cpe_version": "13.0",
+          "cpe_version": "2016",
           "build_prefixes": [],
           "release_date": "2021-09-15",
           "standard_support_end": "2026-07-14",
@@ -2108,7 +2108,7 @@
         {
           "key": "15.0",
           "label": "2019",
-          "cpe_version": "15.0",
+          "cpe_version": null,
           "build_prefixes": [
             "15.0"
           ],
@@ -2137,7 +2137,7 @@
         {
           "key": "14.0",
           "label": "2017",
-          "cpe_version": "14.0",
+          "cpe_version": null,
           "build_prefixes": [
             "14.0"
           ],

@@ -43,11 +43,10 @@ const ENDED_YEARS_KEPT = 4;
 
 /**
  * SQL Server since 2024: the NVD files each release under a product of its own
- * (`sql_server_2022`) and bounds it in build numbers (`16.0.1000.6` to `16.0.1140.6`), where the
- * CVE before named `sql_server:2022`. A release from 2016 on is compared on its build line; 2014 and
- * 2012 keep their year, the only name the NVD gives them.
+ * (`sql_server_2022`, bounded in build numbers), where the CVE before named `sql_server:2022`. The
+ * versions keep their year: the matching applies a product named for a release to the versions
+ * whose label starts with that year (`productRelease` in backend/src/vulnerabilities/vulnerability-rules.ts).
  */
-const SQL_SERVER_BUILDS = [[/^2025\b/, '17.0'], [/^2022\b/, '16.0'], [/^2019\b/, '15.0'], [/^2017\b/, '14.0'], [/^2016\b/, '13.0']];
 /**
  * The OpenJDK builds (Temurin, Corretto, Microsoft): the NVD files the Java SE CVE, fixed in every
  * OpenJDK build of the same quarterly update, under Oracle's products (`oracle:jdk`, with `jre`
@@ -68,7 +67,7 @@ const OPENJDK_CPE = ['a:oracle:jdk', 'a:oracle:openjdk'];
  */
 const PRODUCTS = [
   // Databases
-  { key: 'mssqlserver', slug: 'mssqlserver', name: 'Microsoft SQL Server', editor: 'Microsoft', family: 'database', cpe: ['a:microsoft:sql_server_2016', 'a:microsoft:sql_server_2017', 'a:microsoft:sql_server_2019', 'a:microsoft:sql_server_2022', 'a:microsoft:sql_server_2025'], cpeVersions: SQL_SERVER_BUILDS },
+  { key: 'mssqlserver', slug: 'mssqlserver', name: 'Microsoft SQL Server', editor: 'Microsoft', family: 'database', cpe: ['a:microsoft:sql_server_2016', 'a:microsoft:sql_server_2017', 'a:microsoft:sql_server_2019', 'a:microsoft:sql_server_2022', 'a:microsoft:sql_server_2025'] },
   { key: 'oracle-database', slug: 'oracle-database', name: 'Oracle Database', editor: 'Oracle', family: 'database', cpe: ['a:oracle:database', 'a:oracle:database_server'], cpeVersion: 'label' },
   { key: 'postgresql', slug: 'postgresql', name: 'PostgreSQL', editor: 'PostgreSQL Global Development Group', family: 'database' },
   { key: 'mysql', slug: 'mysql', name: 'MySQL', editor: 'Oracle', family: 'database', cpe: ['a:mysql:mysql'] },
