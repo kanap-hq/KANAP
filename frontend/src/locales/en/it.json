@@ -1438,6 +1438,61 @@
         "rackUnitPlaceholder": "e.g., U12",
         "notesPlaceholder": "e.g., Power supply replaced under warranty"
       },
+      "impact": {
+        "title": "If this server goes down",
+        "empty": "Nothing else depends on this server.",
+        "emptyInfrastructure": "No other infrastructure depends on this server.",
+        "loadFailed": "The impact could not be loaded.",
+        "more_one": "and {{count}} more",
+        "more_other": "and {{count}} more",
+        "summary": {
+          "applications_one": "{{count}} application",
+          "applications_other": "{{count}} applications",
+          "assets_one": "{{count}} asset",
+          "assets_other": "{{count}} assets",
+          "clustersDown_one": "{{count}} cluster down",
+          "clustersDown_other": "{{count}} clusters down",
+          "clustersDegraded_one": "{{count}} cluster degraded",
+          "clustersDegraded_other": "{{count}} clusters degraded",
+          "technologies_one": "{{count}} technology",
+          "technologies_other": "{{count}} technologies",
+          "processes_one": "{{count}} business process",
+          "processes_other": "{{count}} business processes"
+        },
+        "sections": {
+          "applications": "Applications",
+          "assets": "Assets",
+          "clusters": "Clusters",
+          "technologies": "Technologies",
+          "processes": "Business processes"
+        },
+        "columns": {
+          "reference": "Ref.",
+          "name": "Name",
+          "environment": "Environment",
+          "criticality": "Criticality",
+          "type": "Type",
+          "state": "State",
+          "versions": "Versions",
+          "via": "Via"
+        },
+        "via": {
+          "contains": "In {{name}}",
+          "containsThisServer": "In this server",
+          "dependsOn": "Depends on {{name}}",
+          "dependsOnThisServer": "Depends on this server",
+          "on": "On {{name}}",
+          "onThisServer": "On this server",
+          "onThisServerAnd": "On this server, {{name}}",
+          "thisServer": "This server",
+          "thisServerAnd": "This server, {{name}}"
+        },
+        "state": {
+          "down": "Down",
+          "degraded_one": "Degraded, {{count}} of {{members}} members down",
+          "degraded_other": "Degraded, {{count}} of {{members}} members down"
+        }
+      },
       "support": {
         "vendor": "Vendor",
         "searchVendors": "Search vendors",

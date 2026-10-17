@@ -26,6 +26,7 @@ import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { KanapDialog, PropertyRow, RelevantWebsitesList, useKanapDialogs } from '../../../components/design';
 import { drawerAutocompleteListboxSx, drawerFieldValueSx } from '../../../theme/formSx';
 import IncidentRelationsSection from './IncidentRelationsSection';
+import AssetImpactSection from './AssetImpactSection';
 import BudgetLinesRelationField, { budgetLineIdsOf, mergeLinkedBudgetLines, sameBudgetLineIds, type LinkedBudgetLine } from '../../../components/finance/BudgetLinesRelationField';
 export type AssetRelationsPanelHandle = {
   save: () => Promise<void>;
@@ -113,8 +114,13 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
     return [prefix, title].filter(Boolean).join(' ') || task.id;
   }, []);
 
+  // A reference route (`/it/assets/AST-n/...`) mounts the panel before the asset id is resolved:
+  // no read starts until it is.
+  const hasAssetId = !!assetId;
   const [loading, setLoading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
+  // Bumped once the asset relations are saved: the impact section reads them again.
+  const [impactVersion, setImpactVersion] = React.useState(0);
   const [error, setError] = React.useState<string | null>(null);
 
   // Asset relations (contains/depends_on)
@@ -218,7 +224,7 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
   }, [linkedTasks, taskOptions]);
 
   // Load data
-  const load = React.useCallback(async () => {
+  const readRelations = React.useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -314,12 +320,26 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
     }
   }, [assetId]);
 
+  // One read per asset at a time: a second call while it runs (an effect run twice) shares it.
+  const loadInFlightRef = React.useRef<{ assetId: string; promise: Promise<void> } | null>(null);
+  const load = React.useCallback(() => {
+    if (!assetId) return Promise.resolve();
+    const current = loadInFlightRef.current;
+    if (current && current.assetId === assetId) return current.promise;
+    const promise = readRelations().finally(() => {
+      if (loadInFlightRef.current?.promise === promise) loadInFlightRef.current = null;
+    });
+    loadInFlightRef.current = { assetId, promise };
+    return promise;
+  }, [assetId, readRelations]);
+
   React.useEffect(() => {
     void load();
   }, [load]);
 
-  // Load dropdown options
+  // Load dropdown options: they do not depend on the asset, so they are read once.
   React.useEffect(() => {
+    if (!hasAssetId) return undefined;
     let alive = true;
     const fetchAllPaged = async (endpoint: string, sortField: string) => {
       const all: any[] = [];
@@ -356,10 +376,11 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
       }
     })();
     return () => { alive = false; };
-  }, [assetId]);
+  }, [hasAssetId]);
 
   // Asset search for contains/depends_on
   React.useEffect(() => {
+    if (!assetId) return undefined;
     let alive = true;
     const timer = window.setTimeout(async () => {
       const query = assetSearch.trim();
@@ -389,6 +410,7 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
       setTaskOptionsLoading(false);
       return undefined;
     }
+    if (!hasAssetId) return undefined;
 
     let alive = true;
     const timer = window.setTimeout(async () => {
@@ -413,7 +435,7 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
       }
     }, 250);
     return () => { alive = false; window.clearTimeout(timer); };
-  }, [readOnly, taskSearch]);
+  }, [hasAssetId, readOnly, taskSearch]);
 
   const saveSignature = React.useMemo(() => JSON.stringify({
     contains: containsAssets.map((item) => item.id).sort(),
@@ -499,6 +521,7 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
       await api.post(`/assets/${assetId}/relations`, { relations });
       setBaselineContains(containsAssets);
       setBaselineDependsOn(dependsOnAssets);
+      setImpactVersion((value) => value + 1);
 
       // Save budget lines: each route replaces the links of its own nature only
       await api.post(`/assets/${assetId}/spend-items`, { spend_item_ids: budgetLineIdsOf(linkedLines, 'opex') });
@@ -592,6 +615,8 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
     <>
     <Stack spacing={2}>
       {error && <Alert severity="error">{error}</Alert>}
+
+      <AssetImpactSection assetId={assetId} version={impactVersion} />
 
       <SectionTitle>{t('workspace.asset.relations.assetRelations')}</SectionTitle>
       <Box sx={relationGridSx}>

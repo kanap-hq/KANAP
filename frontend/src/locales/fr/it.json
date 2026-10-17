@@ -1438,6 +1438,61 @@
         "rackUnitPlaceholder": "ex. : U12",
         "notesPlaceholder": "ex. : alimentation remplacée sous garantie"
       },
+      "impact": {
+        "title": "Si ce serveur tombe",
+        "empty": "Aucun autre élément ne dépend de ce serveur.",
+        "emptyInfrastructure": "Aucune autre infrastructure ne dépend de ce serveur.",
+        "loadFailed": "L'impact n'a pas pu être chargé.",
+        "more_one": "et {{count}} autre",
+        "more_other": "et {{count}} autres",
+        "summary": {
+          "applications_one": "{{count}} application",
+          "applications_other": "{{count}} applications",
+          "assets_one": "{{count}} actif",
+          "assets_other": "{{count}} actifs",
+          "clustersDown_one": "{{count}} cluster tombé",
+          "clustersDown_other": "{{count}} clusters tombés",
+          "clustersDegraded_one": "{{count}} cluster dégradé",
+          "clustersDegraded_other": "{{count}} clusters dégradés",
+          "technologies_one": "{{count}} technologie",
+          "technologies_other": "{{count}} technologies",
+          "processes_one": "{{count}} processus métier",
+          "processes_other": "{{count}} processus métier"
+        },
+        "sections": {
+          "applications": "Applications",
+          "assets": "Actifs",
+          "clusters": "Clusters",
+          "technologies": "Technologies",
+          "processes": "Processus métier"
+        },
+        "columns": {
+          "reference": "Réf.",
+          "name": "Nom",
+          "environment": "Environnement",
+          "criticality": "Criticité",
+          "type": "Type",
+          "state": "État",
+          "versions": "Versions",
+          "via": "Via"
+        },
+        "via": {
+          "contains": "Dans {{name}}",
+          "containsThisServer": "Dans ce serveur",
+          "dependsOn": "Dépend de {{name}}",
+          "dependsOnThisServer": "Dépend de ce serveur",
+          "on": "Sur {{name}}",
+          "onThisServer": "Sur ce serveur",
+          "onThisServerAnd": "Sur ce serveur, {{name}}",
+          "thisServer": "Ce serveur",
+          "thisServerAnd": "Ce serveur, {{name}}"
+        },
+        "state": {
+          "down": "Tombé",
+          "degraded_one": "Dégradé, {{count}} membre tombé sur {{members}}",
+          "degraded_other": "Dégradé, {{count}} membres tombés sur {{members}}"
+        }
+      },
       "support": {
         "vendor": "Fournisseur",
         "searchVendors": "Rechercher un fournisseur",

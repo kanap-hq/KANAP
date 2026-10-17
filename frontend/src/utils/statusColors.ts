@@ -150,6 +150,12 @@ export const CRITICALITY_COLORS: Record<string, string> = {
   business_critical: 'warning',
 };
 
+/** A cluster with a fallen member, in the impact of a server: down or degraded */
+export const ASSET_IMPACT_CLUSTER_COLORS: Record<string, string> = {
+  down: 'error',
+  degraded: 'warning',
+};
+
 /** Incident severity (IT incident register) */
 export const INCIDENT_SEVERITY_COLORS: Record<string, string> = {
   critical: 'error',

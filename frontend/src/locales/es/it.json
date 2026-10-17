@@ -1438,6 +1438,61 @@
         "rackUnitPlaceholder": "p. ej., U12",
         "notesPlaceholder": "p. ej., fuente de alimentación sustituida en garantía"
       },
+      "impact": {
+        "title": "Si este servidor cae",
+        "empty": "Ningún otro elemento depende de este servidor.",
+        "emptyInfrastructure": "Ninguna otra infraestructura depende de este servidor.",
+        "loadFailed": "No se pudo cargar el impacto.",
+        "more_one": "y {{count}} más",
+        "more_other": "y {{count}} más",
+        "summary": {
+          "applications_one": "{{count}} aplicación",
+          "applications_other": "{{count}} aplicaciones",
+          "assets_one": "{{count}} activo",
+          "assets_other": "{{count}} activos",
+          "clustersDown_one": "{{count}} clúster caído",
+          "clustersDown_other": "{{count}} clústeres caídos",
+          "clustersDegraded_one": "{{count}} clúster degradado",
+          "clustersDegraded_other": "{{count}} clústeres degradados",
+          "technologies_one": "{{count}} tecnología",
+          "technologies_other": "{{count}} tecnologías",
+          "processes_one": "{{count}} proceso de negocio",
+          "processes_other": "{{count}} procesos de negocio"
+        },
+        "sections": {
+          "applications": "Aplicaciones",
+          "assets": "Activos",
+          "clusters": "Clústeres",
+          "technologies": "Tecnologías",
+          "processes": "Procesos de negocio"
+        },
+        "columns": {
+          "reference": "Ref.",
+          "name": "Nombre",
+          "environment": "Entorno",
+          "criticality": "Criticidad",
+          "type": "Tipo",
+          "state": "Estado",
+          "versions": "Versiones",
+          "via": "Vía"
+        },
+        "via": {
+          "contains": "En {{name}}",
+          "containsThisServer": "En este servidor",
+          "dependsOn": "Depende de {{name}}",
+          "dependsOnThisServer": "Depende de este servidor",
+          "on": "En {{name}}",
+          "onThisServer": "En este servidor",
+          "onThisServerAnd": "En este servidor, {{name}}",
+          "thisServer": "Este servidor",
+          "thisServerAnd": "Este servidor, {{name}}"
+        },
+        "state": {
+          "down": "Caído",
+          "degraded_one": "Degradado, {{count}} miembro caído de {{members}}",
+          "degraded_other": "Degradado, {{count}} miembros caídos de {{members}}"
+        }
+      },
       "support": {
         "vendor": "Proveedor",
         "searchVendors": "Buscar proveedores",

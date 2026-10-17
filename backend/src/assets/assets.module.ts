@@ -26,6 +26,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { TasksModule } from '../tasks/tasks.module';
 import { TechnologiesModule } from '../technologies/technologies.module';
 import { AssetTechnologiesController } from './asset-technologies.controller';
+import { AssetImpactService } from './services/asset-impact.service';
 
 // Decomposed services
 import {
@@ -76,6 +77,7 @@ import {
     AssetsSupportService,
     AssetsRelationsService,
     AssetsAttachmentsService,
+    AssetImpactService,
     // Main facade service
     AssetsService,
     // Delete service (unchanged)
