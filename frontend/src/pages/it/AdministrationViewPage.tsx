@@ -144,11 +144,13 @@ function ZoneSection({ zone }: { zone: AdministrationZone }) {
 function DomainsSection({ domains }: { domains: AdministrationDomain[] }) {
   const { t } = useTranslation(['it', 'common']);
   const nameOf = useCatalogName();
-  const count = (value: number | null) => (value == null ? <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>{t('pages.administrationView.notSet')}</Box> : value.toLocaleString());
+  // An absent value: a grey dash, "Not set" on hover (the convention of an unknown version in the Relations tab).
+  const notSet = <Box component="span" title={t('pages.administrationView.notSet')} sx={{ color: 'kanap.text.tertiary' }}>—</Box>;
+  const count = (value: number | null) => (value == null ? notSet : value.toLocaleString());
   const columns: Array<RelationsColumn<AdministrationDomain>> = [
     { key: 'name', header: t('pages.administrationView.columns.domain'), width: 180, render: (row) => `${nameOf('domain', row.code, row.label)}${row.deprecated ? ` (${t('common:enumEditor.retiredSuffix')})` : ''}` },
     { key: 'dns', header: t('pages.administrationView.columns.dnsSuffix'), width: 180, render: (row) => row.dns_suffix },
-    { key: 'forest', header: t('pages.administrationView.columns.forest'), width: 180, render: (row) => row.forest ?? <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>{t('pages.administrationView.notSet')}</Box> },
+    { key: 'forest', header: t('pages.administrationView.columns.forest'), width: 180, render: (row) => row.forest ?? notSet },
     {
       key: 'trusts',
       header: t('pages.administrationView.columns.trusts'),
@@ -167,8 +169,8 @@ function DomainsSection({ domains }: { domains: AdministrationDomain[] }) {
         )
         : <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>{t('pages.administrationView.none')}</Box>),
     },
-    { key: 'accounts', header: t('pages.administrationView.columns.accounts'), width: 90, align: 'right', render: (row) => count(row.account_count) },
-    { key: 'machines', header: t('pages.administrationView.columns.machines'), width: 90, align: 'right', render: (row) => count(row.machine_count) },
+    { key: 'accounts', header: t('pages.administrationView.columns.accounts'), width: 80, align: 'right', render: (row) => count(row.account_count) },
+    { key: 'machines', header: t('pages.administrationView.columns.machines'), width: 80, align: 'right', render: (row) => count(row.machine_count) },
     {
       key: 'controllers',
       header: t('pages.administrationView.columns.domainControllers'),

@@ -99,7 +99,11 @@ describe('AdministrationViewPage', () => {
     // The trust declared on Corp shows on Lab, read only.
     expect(rows[2]).toHaveTextContent('pages.administrationView.declaredTrust:{"name":"Corp","direction":"pages.settings.trusts.directions.two_way"}');
     expect(rows[2]).toHaveTextContent('pages.administrationView.noController');
-    expect(rows[2]).toHaveTextContent('pages.administrationView.notSet');
+    // Absent forest and counts: a dash each, "Not set" on hover.
+    const dashes = within(rows[2]).getAllByTitle('pages.administrationView.notSet');
+    expect(dashes).toHaveLength(3);
+    for (const dash of dashes) expect(dash).toHaveTextContent('—');
+    expect(rows[2]).not.toHaveTextContent('pages.administrationView.notSet');
   });
 
   it('exports the zones as a CSV file in the user language', async () => {
