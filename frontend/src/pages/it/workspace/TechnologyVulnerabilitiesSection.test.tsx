@@ -10,6 +10,8 @@ import TechnologyVulnerabilitiesSection, { type TechnologyVulnerabilityRow } fro
 
 vi.mock('../../../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
 const navigate = vi.hoisted(() => vi.fn());
+const features = vi.hoisted(() => ({ vulnerabilityFeed: true }));
+vi.mock('../../../config/FeaturesContext', () => ({ useFeatures: () => ({ config: { features } }) }));
 vi.mock('react-router-dom', async (importOriginal) => ({ ...(await importOriginal<any>()), useNavigate: () => navigate }));
 
 const getMock = vi.mocked(api.get);
@@ -37,10 +39,13 @@ describe('TechnologyVulnerabilitiesSection', () => {
     getMock.mockReset();
     postMock.mockReset();
     navigate.mockReset();
+    features.vulnerabilityFeed = true;
     getMock.mockResolvedValue({
       data: {
+        technology: { id: 'tech-1', name: 'Tomcat', reference: 'TEC-7' },
         items: [
           row({}),
+          row({ id: 'row-3', technology_version_id: 'v-2', version_label: '10.1.5' }),
           row({ id: 'row-2', cve_id: 'CVE-2026-1002', severity: 'medium', cvss_score: 5.3, technology_version_id: null, version_label: null, potential: true, state: 'handled' }),
         ],
       },
@@ -52,12 +57,13 @@ describe('TechnologyVulnerabilitiesSection', () => {
     const table = await screen.findByRole('table', { name: 'Vulnerabilities' });
     expect(getMock).toHaveBeenCalledWith('/technologies/tech-1/vulnerabilities');
     const rows = within(table).getAllByRole('row').slice(1);
+    expect(screen.getByRole('region', { name: 'Vulnerabilities' }).textContent).toMatch(/^Vulnerabilities2/);
     expect(rows[0].textContent).toBe('CVE-2026-1001Critical9.89.0.80To review');
-    expect(rows[1].textContent).toBe('CVE-2026-1002Medium5.3Version not recorded (potentially concerned)Handled');
+    expect(rows[2].textContent).toBe('CVE-2026-1002Medium5.3Version not recorded (potentially concerned)Handled');
     // Critical in orange (dark mode), medium neutral.
     expect(getComputedStyle(rows[0].querySelector('[data-severity="critical"]') as HTMLElement).color).toBe('rgb(240, 168, 48)');
     fireEvent.click(rows[0]);
-    expect(navigate).toHaveBeenCalledWith('/it/vulnerabilities?technology=tech-1&state=all&q=CVE-2026-1001');
+    expect(navigate).toHaveBeenCalledWith('/it/vulnerabilities?technology=TEC-7&state=all&q=CVE-2026-1001');
     expect(screen.queryByRole('button', { name: 'Match again' })).toBeNull();
   });
 
@@ -71,8 +77,15 @@ describe('TechnologyVulnerabilitiesSection', () => {
     await waitFor(() => expect(getMock).toHaveBeenCalledTimes(2));
   });
 
+  it('renders nothing and reads nothing while the feed is off', () => {
+    features.vulnerabilityFeed = false;
+    const { container } = renderSection(true);
+    expect(container.textContent).toBe('');
+    expect(getMock).not.toHaveBeenCalled();
+  });
+
   it('says in one line that nothing concerns the technology', async () => {
-    getMock.mockResolvedValue({ data: { items: [] } } as any);
+    getMock.mockResolvedValue({ data: { technology: { id: 'tech-1', reference: 'TEC-7' }, items: [] } } as any);
     renderSection(true);
     expect(await screen.findByText('No known vulnerability concerns this technology.')).toBeTruthy();
   });

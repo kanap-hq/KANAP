@@ -3,6 +3,7 @@ import { Box, Button, Typography } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../../api';
+import { useFeatures } from '../../../config/FeaturesContext';
 import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
 import { RelationsEmpty, RelationsSection, RelationsTable, type RelationsColumn } from '../../../components/workspace/RelationsTable';
 import {
@@ -29,20 +30,29 @@ type Props = {
 
 /**
  * The vulnerabilities of a technology (lot T6b), for its Relations tab: one line per version and CVE,
- * most severe first, each opening the Vulnerabilities page on that CVE. A member can match the
- * technology again after a change of its CPE identifiers, its versions or its links. Shown only
- * while the vulnerability feed is on: the caller checks `features.vulnerabilityFeed`.
+ * most severe first, each opening the Vulnerabilities page on that CVE (filtered by the `TEC-n`
+ * reference). The count is of distinct CVE. A member can match the technology again after a change
+ * of its CPE identifiers, its versions or its links. Renders nothing while the vulnerability feed
+ * is off (`features.vulnerabilityFeed`).
  */
 export default function TechnologyVulnerabilitiesSection({ technologyId, canEdit }: Props) {
   const { t } = useTranslation('it');
+  const { config } = useFeatures();
+  const enabled = config.features.vulnerabilityFeed === true;
   const queryClient = useQueryClient();
   const [result, setResult] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const query = useQuery({
     queryKey: ['vulnerabilities', 'technology', technologyId],
-    queryFn: async () => (await api.get<{ items: TechnologyVulnerabilityRow[] }>(`/technologies/${technologyId}/vulnerabilities`)).data,
+    queryFn: async () => (await api.get<{ technology: { id: string; reference: string | null }; items: TechnologyVulnerabilityRow[] }>(
+      `/technologies/${technologyId}/vulnerabilities`,
+    )).data,
+    enabled,
   });
   const rows = query.data?.items ?? [];
+  const cveCount = new Set(rows.map((row) => row.cve_id)).size;
+  // The page's technology filter takes the reference: a raw id would show in it.
+  const technologyRef = query.data?.technology?.reference ?? query.data?.technology?.id ?? technologyId;
 
   const rematch = async () => {
     setBusy(true);
@@ -65,8 +75,10 @@ export default function TechnologyVulnerabilitiesSection({ technologyId, canEdit
     { key: 'state', header: t('pages.vulnerabilities.columns.state'), width: 130, render: (row) => <VulnerabilityStateCell state={row.state} /> },
   ];
 
+  if (!enabled) return null;
+
   return (
-    <RelationsSection title={t('pages.vulnerabilities.section.title')} count={query.data ? rows.length : undefined}>
+    <RelationsSection title={t('pages.vulnerabilities.section.title')} count={query.data ? cveCount : undefined}>
       {canEdit && (
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1, mb: 0.5 }}>
           {result && <Typography role="status" sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>{result}</Typography>}
@@ -82,7 +94,7 @@ export default function TechnologyVulnerabilitiesSection({ technologyId, canEdit
           columns={columns}
           rows={rows}
           rowKey={(row) => row.id}
-          rowHref={(row) => `/it/vulnerabilities?technology=${encodeURIComponent(technologyId)}&state=all&q=${encodeURIComponent(row.cve_id)}`}
+          rowHref={(row) => `/it/vulnerabilities?technology=${encodeURIComponent(technologyRef)}&state=all&q=${encodeURIComponent(row.cve_id)}`}
           rowMuted={(row) => !row.matching}
           ariaLabel={t('pages.vulnerabilities.section.title')}
         />
