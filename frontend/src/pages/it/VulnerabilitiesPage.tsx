@@ -357,6 +357,7 @@ function BulkStateDialog({ open, onClose, selected, request, onDone }: {
         <PropertyRow label={t('pages.vulnerabilities.bulk.note')}>
           <TextField
             variant="standard"
+            fullWidth
             value={note}
             placeholder={t('pages.vulnerabilities.detail.notePlaceholder')}
             inputProps={{ 'aria-label': t('pages.vulnerabilities.bulk.note'), maxLength: 4000 }}
@@ -439,11 +440,11 @@ export default function VulnerabilitiesPage() {
       cellRenderer: (p: ICellRendererParams<VulnerabilityRow>) => (p.data ? <SeverityCell severity={p.data.severity} score={p.data.cvss_score} /> : null),
     },
     { headerName: t('pages.vulnerabilities.columns.score'), field: 'cvss_score', width: 90, type: 'rightAligned', defaultHidden: true, filter: 'agNumberColumnFilter' },
-    { headerName: t('pages.vulnerabilities.columns.summary'), field: 'summary', minWidth: 220, flex: 1, sortable: false, tooltipField: 'summary' },
+    { headerName: t('pages.vulnerabilities.columns.summary'), field: 'summary', minWidth: 200, flex: 1, sortable: false, tooltipField: 'summary' },
     {
       headerName: t('pages.vulnerabilities.columns.technologies'),
       field: 'technologies',
-      width: 220,
+      width: 200,
       sortable: false,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
@@ -454,6 +455,8 @@ export default function VulnerabilitiesPage() {
       headerName: t('pages.vulnerabilities.columns.editor'),
       field: 'editor',
       width: 130,
+      // Hidden by default: the default set fits a 1,440 px window (the column chooser shows it).
+      defaultHidden: true,
       sortable: false,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
