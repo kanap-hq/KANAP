@@ -93,6 +93,6 @@ import {
     ApplicationsCsvService,
   ],
   controllers: [ApplicationsController],
-  exports: [ApplicationsService, ApplicationsCsvService, TypeOrmModule],
+  exports: [ApplicationsService, ApplicationsCsvService, ApplicationsDeleteService, TypeOrmModule],
 })
 export class ApplicationsModule {}

@@ -1282,7 +1282,77 @@
         "goLive": "Go live"
       },
       "deleteMessage": "This permanently deletes {{name}}, with its links to other records. This cannot be undone.",
-      "deleteMessageWithDeployments": "This permanently deletes {{name}}, with its {{deployments}} and its links to other records. This cannot be undone."
+      "deleteMessageWithDeployments": "This permanently deletes {{name}}, with its {{deployments}} and its links to other records. This cannot be undone.",
+      "convert": {
+        "action": "Convert to technology",
+        "title": "Convert {{name}} to a technology",
+        "test": "Convert when another application can fail or become vulnerable because of it.",
+        "loading": "Checking what the conversion changes…",
+        "family": "Family",
+        "familyPlaceholder": "Choose a family",
+        "modeInstalled": "It becomes a technology installed on its servers.",
+        "modeSubscribed": "It has no servers: it becomes a subscribed technology.",
+        "movesTitle": "Moves to the technology",
+        "lossesTitle": "Lost with the application",
+        "nothing": "Nothing",
+        "lostAlways": "Also lost: the fields specific to applications (users, access methods, SSO, MFA, personal data) and the reference {{reference}}.",
+        "refused": "This application cannot be converted:",
+        "refusedHint": "Remove these links first, or keep it as an application.",
+        "refusals": {
+          "interfaces": "Source or target of interfaces: {{count}}",
+          "middleware": "Middleware of interfaces: {{count}}",
+          "integration_tool": "Integration tool of interface bindings: {{count}}",
+          "suite_components": "Suite with components: {{count}}",
+          "interface_bindings": "Interface bindings on its deployments: {{count}}",
+          "name_taken": "A technology with this name already exists",
+          "invalid_fields": "Values a technology cannot take: {{fields}}",
+          "missing_files": "Files missing from storage: {{files}}"
+        },
+        "moved": {
+          "owners": "Owners",
+          "contracts": "Contracts",
+          "budget_lines": "Budget lines",
+          "projects": "Projects",
+          "links": "Web links",
+          "attachments": "Documents",
+          "incidents": "Incidents",
+          "servers": "Servers"
+        },
+        "lost": {
+          "instances": "Deployments and environments",
+          "disabled_instance_servers": "Servers of disabled deployments",
+          "suites": "Suite membership",
+          "predecessor": "Predecessor",
+          "successors": "Link to its successors",
+          "data_residency": "Data residency",
+          "support_contacts": "Support contacts",
+          "audience": "Companies and departments using it",
+          "links_without_url": "Web links without an address",
+          "knowledge_links": "Knowledge links",
+          "tasks": "Linked tasks",
+          "requests": "Linked requests",
+          "business_processes": "Business processes",
+          "technologies": "Technologies it depends on"
+        },
+        "confirm": "Convert",
+        "failed": "The conversion failed.",
+        "fieldNames": {
+          "name": "name (200 characters at most)",
+          "editor": "editor (200 characters at most)",
+          "description": "description (20,000 characters at most)",
+          "notes": "notes (20,000 characters at most)",
+          "lifecycle": "lifecycle",
+          "cyber_criticality": "cyber criticality",
+          "recovery_wave": "recovery wave",
+          "rto_minutes": "RTO",
+          "rpo_minutes": "RPO"
+        },
+        "unlinkedTitle": "Kept, without its link to the application",
+        "unlinked": {
+          "managed_documents": "Managed documents, moved to the unfiled documents"
+        },
+        "hiddenMoves": "Other links you cannot see also move."
+      }
     },
     "asset": {
       "title": "Server",

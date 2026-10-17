@@ -50,6 +50,7 @@ import DeploymentsEditor from './components/DeploymentsEditor';
 import ApplicationRelationsPanel from './editors/ApplicationRelationsPanel';
 import ApplicationCreateEditor, { type ApplicationCreateEditorHandle } from './editors/ApplicationCreateEditor';
 import CreateVersionDialog from './components/CreateVersionDialog';
+import ApplicationConvertButton from './components/ApplicationConvertButton';
 import ApplicationDeleteButton from './components/ApplicationDeleteButton';
 import { formatShortDate } from '../../lib/dateFormat';
 import { fetchApplicationIncidentsCount } from '../../utils/workspaceTabCounts';
@@ -1229,6 +1230,7 @@ export default function ApplicationWorkspacePage() {
   }, [params.tab]);
   const canManage = hasLevel('applications', 'member');
   const canDelete = hasLevel('applications', 'admin');
+  const canConvert = canDelete && hasLevel('infrastructure', 'member');
   const canCreateKnowledge = hasLevel('knowledge', 'member');
   const overviewEditorRef = React.useRef<IntegratedDocumentEditorHandle>(null);
   const createRef = React.useRef<ApplicationCreateEditorHandle>(null);
@@ -1480,6 +1482,13 @@ export default function ApplicationWorkspacePage() {
               <Button variant="contained" onClick={() => void handleCreate()} disabled={!createDirty || savingCreate} size="small">
                 {t('common:buttons.create')}
               </Button>
+            )}
+            {!isCreate && canConvert && app && (
+              <ApplicationConvertButton
+                applicationId={app.id}
+                applicationName={app.name || t('workspace.application.untitled')}
+                onConverted={(technologyId) => navigate(`/it/technologies/${technologyId}`)}
+              />
             )}
             {!isCreate && canDelete && app && (
               <ApplicationDeleteButton

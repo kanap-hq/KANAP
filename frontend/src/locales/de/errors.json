@@ -110,6 +110,8 @@
   "not_found": "Dieses Element existiert nicht mehr. Laden Sie die Seite neu, um die aktuelle Liste zu sehen.",
   "ASSET_IN_USE_one": "Dieses Asset wird noch verwendet: {{usages}}. Entfernen Sie es dort, bevor Sie es löschen.",
   "ASSET_IN_USE_other": "Dieses Asset wird noch verwendet: {{usages}}. Entfernen Sie es dort, bevor Sie es löschen.",
+  "APPLICATION_CONVERSION_MISSING_FILE": "Die Datei {{file}} fehlt im Speicher. Entfernen Sie sie aus der Anwendung und wandeln Sie dann erneut um.",
+  "APPLICATION_CONVERSION_REFUSED": "Diese Anwendung kann nicht in eine Technologie umgewandelt werden.",
   "APPLICATION_HAS_INTERFACES_one": "Diese Anwendung ist Quelle oder Ziel von {{usages}}. Deaktivieren Sie sie stattdessen, oder löschen Sie zuerst diese Schnittstelle.",
   "APPLICATION_HAS_INTERFACES_other": "Diese Anwendung ist Quelle oder Ziel von {{usages}}. Deaktivieren Sie sie stattdessen, oder löschen Sie zuerst diese Schnittstellen.",
   "COST_CENTER_IN_USE": "Diese Kostenstelle wird noch verwendet: {{usages}}. Deaktivieren Sie sie, statt sie zu löschen.",
