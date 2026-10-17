@@ -44,9 +44,9 @@ Pas besoin de partir de zéro ! Un nouvel espace KANAP démarre avec quatre dime
 
 **« À quoi sert cet investissement ? »** La dimension **Motif** : remplacement, capacité, productivité, sécurité, conformité, croissance. Réservée aux lignes CAPEX et rendue obligatoire, elle garantit que chaque nouvel investissement arrive classé, qu'il soit créé à l'écran, chargé par fichier, préparé par Plaid ou envoyé par l'API. Plus de relance pour compléter une colonne oubliée.
 
-**« Qu'est-ce qui est incompressible ? »** La dimension **Priorité** : obligatoire, haute, moyenne, basse. C'est elle qui structure l'arbitrage en comité. Chez Fromage & Co, notre société d'exemple, les investissements obligatoires pèsent 1,13 M€ sur 2,35 M€ en 2026 : la migration S/4HANA, le renouvellement du data center et la segmentation réseau des usines.
+**« Qu'est-ce qui est incompressible ? »** La dimension **Priorité** : obligatoire, haute, moyenne, basse. C'est elle qui structure l'arbitrage en comité. Chez Fromage & Co, notre société d'exemple, les investissements obligatoires pèsent 1,13 M€ sur 2,34 M€ en 2026 : la migration S/4HANA, le renouvellement du data center et la segmentation réseau des usines.
 
-**« Que coûte ce programme, tout compris ? »** Une dimension **Programme**, créée en quelques secondes, utilisée par l'OPEX comme par le CAPEX, avec une valeur par programme. Le programme S/4HANA de Fromage & Co réunit ainsi 704 k€ de prestataires et de support en fonctionnement et 757 k€ d'investissement (intégration, développement capitalisé, serveurs HANA) : 1,46 M€ sur l'année, dans un seul rapport. En fin de programme, la valeur se désactive : elle reste sur les lignes et dans les rapports passés, et ne se propose plus.
+**« Que coûte ce programme, tout compris ? »** Une dimension **Programme**, créée en quelques secondes, utilisée par l'OPEX comme par le CAPEX, avec une valeur par programme. Le programme S/4HANA de Fromage & Co réunit ainsi 984 k€ de maintenance, de prestataires et de support en fonctionnement et 757 k€ d'investissement (intégration, développement capitalisé, serveurs HANA) : 1,74 M€ sur l'année, dans un seul rapport. En fin de programme, la valeur se désactive : elle reste sur les lignes et dans les rapports passés, et ne se propose plus.
 
 **« De quelle nature est la dépense ? »** La **Nature de coût** et le **Domaine IT**, issues du modèle TBM (Technology Business Management), communes aux deux natures. Une valeur peut être réservée à une nature : la main-d'œuvre interne, par exemple, à l'OPEX seulement.
 
@@ -64,7 +64,7 @@ Les filtres se combinent : centre de coûts, run ou build, et une valeur par dim
 
 ![Le rapport Dimensions analytiques sur le CAPEX 2026 de Fromage & Co, regroupé par Motif](/screenshots/blog/opex-capex-report-purpose-2026-10-17.png)
 
-Sur l'exemple, le remplacement représente 59 % de l'investissement 2026, la croissance 36 % et la sécurité 5 %. C'est le genre de chiffre qui apporte une vraie visibilité, d'autant plus quand il peut être comparé d'une année sur l'autre. Et nous l'avons ici sous la main en un clic.
+Sur l'exemple, le remplacement représente 59 % de l'investissement 2026, la croissance 35 % et la sécurité 5 %. C'est le genre de chiffre qui apporte une vraie visibilité, d'autant plus quand il peut être comparé d'une année sur l'autre. Et nous l'avons ici sous la main en un clic.
 
 L'adresse de la page contient la nature et les filtres choisis. Le lien envoyé au contrôleur de gestion ouvre exactement la même vue ; l'export PDF présente le même contenu. Les rapports de refacturation proposent aussi l'OPEX, le CAPEX ou les deux ; le CAPEX y compte pour son montant de l'année.
 
@@ -77,9 +77,9 @@ Une prestation s'avère capitalisable, un investissement redevient du fonctionne
 - **À partir de la première année de la ligne**, la ligne elle-même change de nature. Elle garde sa référence, ses budgets, ses ventilations et ses liens.
 - **À partir d'une année ultérieure**, la ligne s'arrête au 31 décembre de l'année précédente et garde son historique. Une nouvelle ligne de l'autre nature prend la suite, avec les liens vers les applications, contrats et projets. Les deux lignes restent reliées : « Remplacée par » d'un côté, « Succède à » de l'autre.
 
-![La fenêtre Changer le type d'une ligne budgétaire : année de départ, compte, dimensions et motif](/screenshots/blog/opex-capex-change-type-2026-10-17.png)
+![La fenêtre Changer le type d'une ligne budgétaire : année de départ, compte et motif](/screenshots/blog/opex-capex-change-type-2026-10-17.png)
 
-La fenêtre demande un compte adapté à la nouvelle nature et les dimensions obligatoires qui s'y appliquent. Le motif du changement va au journal d'audit. Un budget gelé reste intact : le changement est refusé tant qu'une colonne gelée porte des montants sur les années concernées.
+La fenêtre propose un compte adapté à la nouvelle nature, et demande les dimensions obligatoires de cette nature quand il y en a. Le motif du changement va au journal d'audit. Un budget gelé reste intact : le changement est refusé tant qu'une colonne gelée porte des montants sur les années concernées.
 
 ## Ce que KANAP ne fait pas
 

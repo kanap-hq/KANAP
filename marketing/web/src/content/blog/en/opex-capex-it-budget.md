@@ -44,9 +44,9 @@ No need to start from scratch! A new KANAP workspace starts with four recommende
 
 **"What is this investment for?"** The **Purpose** dimension: replacement, capacity, productivity, security, compliance, growth. Kept for CAPEX lines and made required, it ensures every new investment arrives classified, whether it is created on screen, loaded from a file, prepared by Plaid or sent through the API. No more chasing a forgotten column.
 
-**"What can't we cut?"** The **Priority** dimension: mandatory, high, medium, low. It is what structures the trade-offs in committee. At Fromage & Co, our sample company, mandatory investments weigh €1.13M out of €2.35M in 2026: the S/4HANA migration, the data center refresh and the plant network segmentation.
+**"What can't we cut?"** The **Priority** dimension: mandatory, high, medium, low. It is what structures the trade-offs in committee. At Fromage & Co, our sample company, mandatory investments weigh €1.13M out of €2.34M in 2026: the S/4HANA migration, the data center refresh and the plant network segmentation.
 
-**"What does this program cost, all in?"** A **Program** dimension, created in seconds, used by OPEX and CAPEX alike, with one value per program. The Fromage & Co S/4HANA program brings together €704k of contractors and support in operating spending and €757k of investment (integration, capitalized development, HANA servers): €1.46M for the year, in a single report. When the program ends, the value is disabled: it stays on the lines and in past reports, and is no longer offered.
+**"What does this program cost, all in?"** A **Program** dimension, created in seconds, used by OPEX and CAPEX alike, with one value per program. The Fromage & Co S/4HANA program brings together €984k of maintenance, contractors and support in operating spending and €757k of investment (integration, capitalized development, HANA servers): €1.74M for the year, in a single report. When the program ends, the value is disabled: it stays on the lines and in past reports, and is no longer offered.
 
 **"What kind of spending is it?"** **Cost pool** and **IT tower**, from the TBM model (Technology Business Management), shared by both types. A value can be kept for one type: internal labor, for example, for OPEX only.
 
@@ -64,7 +64,7 @@ Filters combine: cost center, run or build, and one value per dimension. The 202
 
 ![The Analytics dimensions report on the 2026 CAPEX of Fromage & Co, grouped by Purpose](/screenshots/blog/opex-capex-report-purpose-2026-10-17.png)
 
-In the example, replacement accounts for 59% of the 2026 investment, growth for 36% and security for 5%. It is the kind of figure that gives real visibility, all the more when it can be compared from one year to the next. And here it is, one click away.
+In the example, replacement accounts for 59% of the 2026 investment, growth for 35% and security for 5%. It is the kind of figure that gives real visibility, all the more when it can be compared from one year to the next. And here it is, one click away.
 
 The page address holds the type and the filters. The link sent to the financial controller opens exactly the same view; the PDF export shows the same content. The chargeback reports also offer OPEX, CAPEX or both; CAPEX counts there for its amount of the year.
 
@@ -77,9 +77,9 @@ A service turns out to be capitalizable, an investment turns back into operating
 - **From the line's first year**, the line itself changes type. It keeps its reference, budgets, allocations and links.
 - **From a later year**, the line ends on December 31 of the previous year and keeps its history. A new line of the other type takes over, with the links to applications, contracts and projects. The two lines stay connected: "Replaced by" on one side, "Follows" on the other.
 
-![The Change type window of a budget line: starting year, account, dimensions and reason](/screenshots/blog/opex-capex-change-type-2026-10-17.png)
+![The Change type window of a budget line: starting year, account and reason](/screenshots/blog/opex-capex-change-type-2026-10-17.png)
 
-The window asks for an account that suits the new type and for the required dimensions that apply to it. The reason for the change goes to the audit log. A frozen budget stays intact: the change is refused while a frozen column holds amounts on the years concerned.
+The window offers an account that suits the new type, and asks for that type's required dimensions when there are any. The reason for the change goes to the audit log. A frozen budget stays intact: the change is refused while a frozen column holds amounts on the years concerned.
 
 ## What KANAP does not do
 
