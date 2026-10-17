@@ -100,19 +100,21 @@ describe('AssetImpactSection', () => {
     expect(within(appRows[0]).getByText('APP-4')).toBeInTheDocument();
     expect(within(appRows[0]).getByText('Business critical')).toBeInTheDocument();
     expect(within(appRows[0]).getByText('enums.environment.prod, enums.environment.preProd')).toBeInTheDocument();
-    expect(within(appRows[0]).getByText(`${P}.via.on(name=VM-01, ${P}.via.thisServer)`)).toBeInTheDocument();
+    expect(within(appRows[0]).getByText(`${P}.via.onThisServerAnd(name=VM-01)`)).toBeInTheDocument();
 
     // The server itself is not listed; each asset says how it falls, the full path on hover.
     const assets = screen.getByRole('table', { name: `${P}.sections.assets` });
     const assetRows = within(assets).getAllByRole('row').slice(1);
     expect(assetRows.map((row) => within(row).getAllByRole('cell')[1].textContent)).toEqual(['VM-01', 'WEB-01']);
-    expect(within(assetRows[0]).getByText(`${P}.via.contains(name=${P}.via.thisServer)`)).toBeInTheDocument();
+    expect(within(assetRows[0]).getByText(`${P}.via.containsThisServer`)).toBeInTheDocument();
     expect(within(assetRows[1]).getByText(`${P}.via.dependsOn(name=VM-01)`)).toHaveAttribute('title', 'ESX-01 › VM-01 › WEB-01');
     expect(within(assetRows[1]).getByText('kind:vm')).toBeInTheDocument();
 
     const clusters = screen.getByRole('table', { name: `${P}.sections.clusters` });
     expect(within(clusters).getByText(`${P}.state.degraded(count=1,members=2)`)).toBeInTheDocument();
     expect(within(clusters).getByText(`${P}.state.down`)).toBeInTheDocument();
+    // The server's own name reads through a whole-sentence key in every language.
+    expect(within(clusters).getAllByText(`${P}.via.thisServer`)).toHaveLength(2);
     expect(within(screen.getByRole('table', { name: `${P}.sections.technologies` })).getByText('TEC-1')).toBeInTheDocument();
     expect(within(screen.getByRole('table', { name: `${P}.sections.processes` })).getByText('Finance')).toBeInTheDocument();
 
@@ -131,7 +133,7 @@ describe('AssetImpactSection', () => {
     expect(within(assets).getAllByRole('row')).toHaveLength(IMPACT_ROWS_SHOWN + 1);
     expect(screen.getByText(`${P}.more(count=${640 - IMPACT_ROWS_SHOWN})`)).toBeInTheDocument();
     const technologies = screen.getByRole('table', { name: `${P}.sections.technologies` });
-    expect(within(technologies).getByText(`${P}.via.on(name=${P}.via.thisServer, ${P}.more(count=24))`)).toBeInTheDocument();
+    expect(within(technologies).getByText(`${P}.via.onThisServerAnd(name=${P}.more(count=24))`)).toBeInTheDocument();
   });
 
   it('keeps the section on screen while it is read again', async () => {

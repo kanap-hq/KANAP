@@ -1410,9 +1410,14 @@
         },
         "via": {
           "contains": "Dans {{name}}",
+          "containsThisServer": "Dans ce serveur",
           "dependsOn": "Dépend de {{name}}",
+          "dependsOnThisServer": "Dépend de ce serveur",
           "on": "Sur {{name}}",
-          "thisServer": "Ce serveur"
+          "onThisServer": "Sur ce serveur",
+          "onThisServerAnd": "Sur ce serveur, {{name}}",
+          "thisServer": "Ce serveur",
+          "thisServerAnd": "Ce serveur, {{name}}"
         },
         "state": {
           "down": "Tombé",

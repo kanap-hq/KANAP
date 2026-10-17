@@ -57,10 +57,21 @@ export default function AssetImpactSection({ assetId, version = 0 }: Props) {
   });
 
   const k = (key: string) => `workspace.asset.impact.${key}`;
-  const names = (refs: Ref[]) => refs.map((ref) => (ref.id === assetId ? t(k('via.thisServer')) : ref.name)).join(', ');
-  /** The names of a capped `via`, then how many the server left out. */
-  const viaNames = (row: { via: Ref[]; via_total: number }) =>
-    [names(row.via), row.via_total > row.via.length ? t(k('more'), { count: row.via_total - row.via.length }) : ''].filter(Boolean).join(', ');
+  /**
+   * The names of a capped `via`, then how many the server left out. When the server itself is in
+   * the list, it comes first through a whole-sentence key, so each language words it right.
+   * `prefix` adds "On": the sentence then reads "On this server, VM-01".
+   */
+  const viaNames = (row: { via: Ref[]; via_total: number }, prefix?: 'on') => {
+    const self = row.via.some((ref) => ref.id === assetId);
+    const others = [
+      ...row.via.filter((ref) => ref.id !== assetId).map((ref) => ref.name),
+      row.via_total > row.via.length ? t(k('more'), { count: row.via_total - row.via.length }) : '',
+    ].filter(Boolean).join(', ');
+    if (!self) return prefix ? t(k('via.on'), { name: others }) : others;
+    if (prefix) return others ? t(k('via.onThisServerAnd'), { name: others }) : t(k('via.onThisServer'));
+    return others ? t(k('via.thisServerAnd'), { name: others }) : t(k('via.thisServer'));
+  };
   const environment = (value: string) => t(`enums.environment.${camel(value)}`, { defaultValue: value });
   const criticality = (value: string | null) =>
     value ? classification?.businessCriticalityLevels.find((item) => item.code === value)?.label ?? t(`enums.criticality.${camel(value)}`, { defaultValue: value }) : '';
@@ -96,8 +107,8 @@ export default function AssetImpactSection({ assetId, version = 0 }: Props) {
   const assetVia = (row: ImpactAsset) => {
     const parent = row.via[row.via.length - 1];
     if (!parent) return '';
-    const name = parent.id === assetId ? t(k('via.thisServer')) : parent.name;
-    return t(k(row.relation === 'depends_on' ? 'via.dependsOn' : 'via.contains'), { name });
+    if (parent.id === assetId) return t(k(row.relation === 'depends_on' ? 'via.dependsOnThisServer' : 'via.containsThisServer'));
+    return t(k(row.relation === 'depends_on' ? 'via.dependsOn' : 'via.contains'), { name: parent.name });
   };
   const path = (row: ImpactAsset) => [...row.via.map((ref) => ref.name), row.name].join(' › ');
 
@@ -106,7 +117,7 @@ export default function AssetImpactSection({ assetId, version = 0 }: Props) {
     { key: 'name', header: t(k('columns.name')), render: (row) => row.name },
     { key: 'environment', header: t(k('columns.environment')), width: 130, render: (row) => row.environments.map(environment).join(', ') },
     { key: 'criticality', header: t(k('columns.criticality')), width: 130, render: (row) => criticality(row.criticality) },
-    { key: 'via', header: t(k('columns.via')), width: 200, render: (row) => <span title={viaNames(row)}>{t(k('via.on'), { name: viaNames(row) })}</span> },
+    { key: 'via', header: t(k('columns.via')), width: 200, render: (row) => <span title={viaNames(row)}>{viaNames(row, 'on')}</span> },
   ];
   const assetColumns: Array<RelationsColumn<ImpactAsset>> = [
     { key: 'ref', header: t(k('columns.reference')), width: 72, render: (row) => <RelationRef>{row.reference}</RelationRef> },
@@ -132,7 +143,7 @@ export default function AssetImpactSection({ assetId, version = 0 }: Props) {
     { key: 'ref', header: t(k('columns.reference')), width: 72, render: (row) => <RelationRef>{row.reference}</RelationRef> },
     { key: 'name', header: t(k('columns.name')), render: (row) => row.name },
     { key: 'versions', header: t(k('columns.versions')), width: 130, render: (row) => row.versions.join(', ') },
-    { key: 'via', header: t(k('columns.via')), width: 200, render: (row) => <span title={viaNames(row)}>{t(k('via.on'), { name: viaNames(row) })}</span> },
+    { key: 'via', header: t(k('columns.via')), width: 200, render: (row) => <span title={viaNames(row)}>{viaNames(row, 'on')}</span> },
   ];
   const processColumns: Array<RelationsColumn<ImpactProcess>> = [
     { key: 'name', header: t(k('columns.name')), render: (row) => row.name },
