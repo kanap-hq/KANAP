@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
-import { addedCpeProducts, TechnologyCpeEvents } from './technology-cpe-events';
+import { addedCpeProducts, lockTechnologyMatching, TechnologyCpeEvents } from './technology-cpe-events';
 import type { EntityManager } from 'typeorm';
 import { randomUUID } from 'crypto';
 import * as path from 'path';
@@ -495,6 +495,8 @@ export class TechnologiesService {
     const { manager: mg, tenantId } = opts;
     const tech = await readTechnology(mg, tenantId, idOrRef, true);
     const before = await this.readVersion(mg, tenantId, tech.id, versionId);
+    // Not while a matching writes rows that name this version (they would wait on each other).
+    await lockTechnologyMatching(mg, tenantId, tech.id);
     let merged = 0;
     for (const side of ['asset', 'application'] as const) {
       const [{ n }] = await mg.query(

@@ -34,3 +34,23 @@ export function addedCpeProducts(before: unknown, after: unknown): string[] {
   const had = new Set(list(before));
   return Array.from(new Set(list(after).filter((p) => !had.has(p))));
 }
+
+const MATCH_TENANT_LOCK = 0x564d5431; // 'VMT1'
+const MATCH_TECHNOLOGY_LOCK = 0x564d5432; // 'VMT2'
+
+/**
+ * Serialises the matchings of a technology with the vulnerabilities (lot T6b), for the rest of the
+ * transaction: a tenant-wide advisory lock, shared by the matching of one technology and by the
+ * deletion of a version, exclusive for the matching of the whole tenant; then the technology's own
+ * lock. Always taken in this order, before any row: two matchings of one technology never overlap
+ * (an older one cannot delete a row a newer one wrote), and a version is never deleted while a
+ * matching writes rows that name it.
+ */
+export async function lockTechnologyMatching(mg: EntityManager, tenantId: string, technologyId?: string | null): Promise<void> {
+  if (!technologyId) {
+    await mg.query(`SELECT pg_advisory_xact_lock($1::int, hashtext($2))`, [MATCH_TENANT_LOCK, tenantId]);
+    return;
+  }
+  await mg.query(`SELECT pg_advisory_xact_lock_shared($1::int, hashtext($2))`, [MATCH_TENANT_LOCK, tenantId]);
+  await mg.query(`SELECT pg_advisory_xact_lock($1::int, hashtext($2))`, [MATCH_TECHNOLOGY_LOCK, technologyId]);
+}
