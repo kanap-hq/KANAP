@@ -178,9 +178,20 @@ describe('TechnologiesPage', () => {
     expect(screen.getByTestId('vulnerabilities-to-review').textContent).toBe('3');
   });
 
-  it('has no vulnerability column while the feed is off', () => {
+  it('has no vulnerability column while the feed is off, and the editor opens the technology', () => {
     renderPage();
     expect(column('vulnerabilities_to_review')).toBeUndefined();
+    const Cell = column('editor').cellRenderer;
+    render(<MemoryRouter><Cell value="Oracle" data={{ id: 'u1', reference: 'TEC-3', editor: 'Oracle' }} /></MemoryRouter>);
+    expect(screen.getByRole('link', { name: 'Oracle' }).getAttribute('href')).toMatch(/^\/it\/technologies\/TEC-3\/overview/);
+  });
+
+  it('leads from an editor to the vulnerabilities of that editor while the feed is on', () => {
+    features.vulnerabilityFeed = true;
+    renderPage();
+    const Cell = column('editor').cellRenderer;
+    render(<MemoryRouter><Cell value="Oracle & Co" data={{ id: 'u1', reference: 'TEC-3', editor: 'Oracle & Co' }} /></MemoryRouter>);
+    expect(screen.getByTestId('editor-vulnerabilities').getAttribute('href')).toBe('/it/vulnerabilities?editor=Oracle%20%26%20Co');
   });
 
   it('opens the creation dialog', async () => {

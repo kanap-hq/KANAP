@@ -71,6 +71,23 @@ function VulnerabilitiesCell({ data }: ICellRendererParams<TechnologyRow, any>) 
   );
 }
 
+/** While the vulnerability feed is on, an editor leads to the Vulnerabilities page filtered on it. */
+function EditorVulnerabilitiesCell({ value }: ICellRendererParams<TechnologyRow, any>) {
+  if (!value) return null;
+  return (
+    <MLink
+      component={RouterLink}
+      to={`/it/vulnerabilities?editor=${encodeURIComponent(String(value))}`}
+      underline="hover"
+      data-testid="editor-vulnerabilities"
+      onClick={(event: React.MouseEvent) => event.stopPropagation()}
+      sx={{ fontSize: 13, color: 'kanap.text.primary', '&:hover': { color: 'primary.main' } }}
+    >
+      {String(value)}
+    </MLink>
+  );
+}
+
 export default function TechnologiesPage() {
   const { t } = useTranslation(['it', 'common']);
   const locale = useLocale();
@@ -168,7 +185,7 @@ export default function TechnologiesPage() {
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: { getValues: editorValues },
-      cellRenderer: LinkCell,
+      cellRenderer: vulnerabilityFeed ? EditorVulnerabilitiesCell : LinkCell,
     },
     {
       headerName: t('pages.technologies.columns.lifecycle'),
