@@ -67,6 +67,10 @@
       "statusChanges": "Statusänderungen",
       "comments": "Kommentare"
     },
+    "technologies": {
+      "title": "Technologie-Benachrichtigungen",
+      "vulnerabilities": "Kritische oder hohe Schwachstellen in Technologien, für die ich IT-verantwortlich bin"
+    },
     "weeklyReview": {
       "title": "Wöchentliche Übersichts-E-Mail",
       "description": "Eine Zusammenfassung Ihrer Aktivitäten und anstehenden Elemente erhalten",

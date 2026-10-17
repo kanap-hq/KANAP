@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Box, Button, Stack, Typography } from '@mui/material';
+import { Box, Button, Link as MLink, Stack, Typography, useTheme } from '@mui/material';
 import { ICellRendererParams } from 'ag-grid-community';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import PageHeader from '../../components/PageHeader';
 import ServerDataGrid, { EnhancedColDef } from '../../components/ServerDataGrid';
@@ -10,6 +10,7 @@ import CheckboxSetFilter from '../../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
 import { useAuth } from '../../auth/AuthContext';
+import { useFeatures } from '../../config/FeaturesContext';
 import api from '../../api';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import { useUrlFilterModel } from '../../hooks/useListContextSearch';
@@ -19,6 +20,7 @@ import { useLocale } from '../../i18n/useLocale';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import { refusalCounts } from '../../utils/deleteRefusal';
 import { supportStateColor, supportStateNeedsAttention, supportStateOf } from '../../utils/supportState';
+import { getDotColor } from '../../utils/statusColors';
 import ForbiddenPage from '../ForbiddenPage';
 import TechnologyCreateDialog from './components/TechnologyCreateDialog';
 
@@ -35,7 +37,39 @@ export type TechnologyRow = {
   applications: number;
   it_owner_names?: string[];
   next_support_end: string | null;
+  /** CVE still to review, and those critical or high (null while the vulnerability feed is off). */
+  vulnerabilities_to_review?: number | null;
+  vulnerabilities_severe?: number | null;
 };
+
+/**
+ * The CVE still to review of a technology, the critical or high ones in orange: a link to the
+ * Vulnerabilities page filtered on the technology.
+ */
+function VulnerabilitiesCell({ data }: ICellRendererParams<TechnologyRow, any>) {
+  const { t } = useTranslation('it');
+  const theme = useTheme();
+  const count = data?.vulnerabilities_to_review ?? 0;
+  if (!data || count === 0) return null;
+  const severe = data.vulnerabilities_severe ?? 0;
+  return (
+    <MLink
+      component={RouterLink}
+      to={`/it/vulnerabilities?technology=${encodeURIComponent(data.reference || data.id)}`}
+      underline="hover"
+      data-testid="vulnerabilities-to-review"
+      onClick={(event: React.MouseEvent) => event.stopPropagation()}
+      sx={{
+        fontSize: 13,
+        color: severe > 0 ? getDotColor('warning', theme.palette.mode) : 'kanap.text.primary',
+        fontWeight: severe > 0 ? 500 : 400,
+        '&:hover': { color: 'primary.main' },
+      }}
+    >
+      {severe > 0 ? t('pages.technologies.vulnerabilityCount', { count, severe }) : count}
+    </MLink>
+  );
+}
 
 export default function TechnologiesPage() {
   const { t } = useTranslation(['it', 'common']);
@@ -43,6 +77,8 @@ export default function TechnologiesPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { hasLevel } = useAuth();
+  const { config } = useFeatures();
+  const vulnerabilityFeed = config.features.vulnerabilityFeed === true;
   const { byField, labelFor } = useItOpsEnumOptions();
   const gridApiRef = useRef<any>(null);
   const [selectedRows, setSelectedRows] = useState<TechnologyRow[]>([]);
@@ -163,7 +199,10 @@ export default function TechnologiesPage() {
       cellRenderer: LinkCell,
     },
     { headerName: t('pages.technologies.columns.nextSupportEnd'), field: 'next_support_end', width: 170, sortable: false, filter: false, cellRenderer: SupportEndCell },
-  ], [LinkCell, SupportEndCell, editorValues, familyValues, labelFor, lifecycleValues, t]);
+    ...(vulnerabilityFeed
+      ? [{ headerName: t('pages.technologies.columns.vulnerabilities'), field: 'vulnerabilities_to_review' as const, width: 190, sortable: false, filter: false, cellRenderer: VulnerabilitiesCell }]
+      : []),
+  ], [LinkCell, SupportEndCell, editorValues, familyValues, labelFor, lifecycleValues, t, vulnerabilityFeed]);
 
   if (!hasLevel('infrastructure', 'reader')) {
     return <ForbiddenPage />;

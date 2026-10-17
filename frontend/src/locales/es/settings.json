@@ -67,6 +67,10 @@
       "statusChanges": "Cambios de estado",
       "comments": "Comentarios"
     },
+    "technologies": {
+      "title": "Notificaciones de tecnologías",
+      "vulnerabilities": "Vulnerabilidades críticas o altas encontradas en las tecnologías de las que soy responsable de TI"
+    },
     "weeklyReview": {
       "title": "Correo de revisión semanal",
       "description": "Recibir un resumen de su actividad y próximos elementos",

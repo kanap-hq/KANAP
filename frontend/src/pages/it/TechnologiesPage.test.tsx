@@ -12,6 +12,7 @@ const auth = vi.hoisted(() => ({ levels: { infrastructure: 'admin' } as Record<s
 const get = vi.hoisted(() => vi.fn());
 const post = vi.hoisted(() => vi.fn());
 const navigate = vi.hoisted(() => vi.fn());
+const features = vi.hoisted(() => ({ vulnerabilityFeed: false }));
 
 const stableT = (key: string) => key;
 vi.mock('react-i18next', () => ({
@@ -24,6 +25,7 @@ vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({ hasLevel: (resource: string, level: string) => (RANK[auth.levels[resource]] ?? 0) >= RANK[level] }),
 }));
 vi.mock('../../api', () => ({ default: { get, post } }));
+vi.mock('../../config/FeaturesContext', () => ({ useFeatures: () => ({ config: { features } }) }));
 vi.mock('../../hooks/useListContextSearch', () => ({ useUrlFilterModel: () => ({ ready: true, model: null }) }));
 vi.mock('../../hooks/useItOpsEnumOptions', () => ({
   default: () => ({
@@ -64,6 +66,7 @@ describe('TechnologiesPage', () => {
     grid.props = null;
     deleteButton.props = null;
     auth.levels = { infrastructure: 'admin' };
+    features.vulnerabilityFeed = false;
     get.mockReset();
     post.mockReset();
   });
@@ -152,6 +155,32 @@ describe('TechnologiesPage', () => {
     expect(screen.queryByRole('button', { name: 'pages.technologies.newTechnology' })).toBeNull();
     expect(deleteButton.props).toBeNull();
     expect(grid.props!.enableRowSelection).toBe(false);
+  });
+
+  it('counts the vulnerabilities to review while the feed is on, and links them to the filtered page', () => {
+    features.vulnerabilityFeed = true;
+    renderPage();
+    const fields = (grid.props!.columns as any[]).map((col) => col.field);
+    expect(fields[fields.length - 1]).toBe('vulnerabilities_to_review');
+    const Cell = column('vulnerabilities_to_review').cellRenderer;
+    const theme = createAppTheme('light');
+    const { unmount } = render(
+      <ThemeProvider theme={theme}><MemoryRouter>
+        <Cell data={{ id: 'u1', reference: 'TEC-3', vulnerabilities_to_review: 5, vulnerabilities_severe: 2 }} />
+      </MemoryRouter></ThemeProvider>,
+    );
+    const link = screen.getByTestId('vulnerabilities-to-review');
+    expect(link.getAttribute('href')).toBe('/it/vulnerabilities?technology=TEC-3');
+    expect(link.textContent).toBe('pages.technologies.vulnerabilityCount');
+    expect(getComputedStyle(link).color).toBe('rgb(180, 83, 9)'); // attention orange, light
+    unmount();
+    render(<ThemeProvider theme={theme}><MemoryRouter><Cell data={{ id: 'u2', reference: 'TEC-4', vulnerabilities_to_review: 3, vulnerabilities_severe: 0 }} /></MemoryRouter></ThemeProvider>);
+    expect(screen.getByTestId('vulnerabilities-to-review').textContent).toBe('3');
+  });
+
+  it('has no vulnerability column while the feed is off', () => {
+    renderPage();
+    expect(column('vulnerabilities_to_review')).toBeUndefined();
   });
 
   it('opens the creation dialog', async () => {

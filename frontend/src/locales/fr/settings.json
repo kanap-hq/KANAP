@@ -67,6 +67,10 @@
       "statusChanges": "Changements de statut",
       "comments": "Commentaires"
     },
+    "technologies": {
+      "title": "Notifications des technologies",
+      "vulnerabilities": "Vulnérabilités critiques ou élevées trouvées sur les technologies dont je suis responsable IT"
+    },
     "weeklyReview": {
       "title": "E-mail de revue hebdomadaire",
       "description": "Recevoir un résumé de votre activité et de vos prochaines échéances",

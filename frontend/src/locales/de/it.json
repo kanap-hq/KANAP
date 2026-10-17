@@ -173,8 +173,10 @@
         "servers": "Server",
         "applications": "Anwendungen",
         "itOwner": "IT-Verantwortlicher",
-        "nextSupportEnd": "Nächstes Supportende"
+        "nextSupportEnd": "Nächstes Supportende",
+        "vulnerabilities": "Zu prüfende Schwachstellen"
       },
+      "vulnerabilityCount": "{{count}} · {{severe}} kritisch oder hoch",
       "delete": {
         "warning_one": "Diese Technologie und ihre Verknüpfungen mit Servern und Anwendungen werden gelöscht.",
         "warning_other": "Diese {{count}} Technologien und ihre Verknüpfungen mit Servern und Anwendungen werden gelöscht.",
@@ -288,6 +290,81 @@
         "gaps": "Keine fehlenden Daten."
       },
       "exportFailed": "Der Export ist fehlgeschlagen. Versuchen Sie es erneut."
+    },
+    "vulnerabilities": {
+      "title": "Schwachstellen",
+      "subtitle": "Veröffentlichte Schwachstellen (NVD), die die eingesetzten Technologien betreffen, und die Server und Anwendungen, die sie erreichen.",
+      "count_one": "{{count}} Schwachstelle",
+      "count_other": "{{count}} Schwachstellen",
+      "showMore": "Mehr anzeigen",
+      "exportFailed": "Der Export ist fehlgeschlagen. Versuchen Sie es erneut.",
+      "saveFailed": "Die Änderung konnte nicht gespeichert werden. Versuchen Sie es erneut.",
+      "unknownVersion": "Version nicht erfasst (möglicherweise betroffen)",
+      "empty": {
+        "none": "Keine Schwachstelle zu prüfen. Schwachstellen erscheinen für Technologien mit CPE-Kennungen: Tragen Sie diese bei einer Technologie ein oder übernehmen Sie die Technologie aus dem Katalog.",
+        "filtered": "Keine Schwachstelle entspricht diesen Filtern."
+      },
+      "filters": {
+        "severity": "Schweregrad",
+        "allSeverities": "Alle",
+        "state": "Status",
+        "allStates": "Alle",
+        "editor": "Hersteller",
+        "allEditors": "Alle",
+        "technology": "Technologie",
+        "allTechnologies": "Alle",
+        "period": "Veröffentlicht",
+        "anyTime": "Jederzeit",
+        "lastDays_one": "Letzter Tag",
+        "lastDays_other": "Letzte {{count}} Tage",
+        "search": "Suche",
+        "searchPlaceholder": "z. B. CVE-2024-1234"
+      },
+      "columns": {
+        "cve": "CVE",
+        "severity": "Schweregrad",
+        "summary": "Zusammenfassung",
+        "technologies": "Technologien",
+        "servers": "Server",
+        "applications": "Anwendungen",
+        "state": "Status",
+        "published": "Veröffentlicht",
+        "version": "Version"
+      },
+      "severities": {
+        "critical": "Kritisch",
+        "high": "Hoch",
+        "medium": "Mittel",
+        "low": "Niedrig",
+        "none": "Keine",
+        "unknown": "Nicht bewertet"
+      },
+      "states": {
+        "to_review": "Zu prüfen",
+        "handled": "Behandelt",
+        "not_affected": "Nicht betroffen"
+      },
+      "detail": {
+        "vector": "CVSS-Vektor",
+        "versions": "Technologien und Versionen",
+        "servers": "Server",
+        "applications": "Anwendungen",
+        "noServers": "Kein Server trägt eine betroffene Version.",
+        "noApplications": "Keine Anwendung nutzt eine betroffene Version.",
+        "applicationsHidden": "Die Anwendungen sind ausgeblendet: Dafür ist Zugriff auf die Anwendungen nötig.",
+        "via": "über {{name}}",
+        "stateOf": "Status von {{version}}",
+        "noteOf": "Notiz zu {{version}}",
+        "notePlaceholder": "z. B. am 12. März gepatcht, Change CHG-123"
+      },
+      "section": {
+        "title": "Schwachstellen",
+        "empty": "Keine bekannte Schwachstelle betrifft diese Technologie.",
+        "loadFailed": "Die Schwachstellen konnten nicht geladen werden.",
+        "rematch": "Erneut abgleichen",
+        "rematched": "Erneut abgeglichen: {{added}} neu, {{removed}} entfernt.",
+        "rematchFailed": "Der Abgleich konnte nicht ausgeführt werden. Versuchen Sie es erneut."
+      }
     },
     "interfaces": {
       "title": "Schnittstellen",

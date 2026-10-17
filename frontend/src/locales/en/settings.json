@@ -67,6 +67,10 @@
       "statusChanges": "Status changes",
       "comments": "Comments"
     },
+    "technologies": {
+      "title": "Technology notifications",
+      "vulnerabilities": "Critical or high vulnerabilities found on technologies I own for IT"
+    },
     "weeklyReview": {
       "title": "Weekly review email",
       "description": "Receive a summary of your activity and upcoming items",

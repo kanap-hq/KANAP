@@ -173,8 +173,10 @@
         "servers": "Serveurs",
         "applications": "Applications",
         "itOwner": "Responsable IT",
-        "nextSupportEnd": "Prochaine fin de support"
+        "nextSupportEnd": "Prochaine fin de support",
+        "vulnerabilities": "Vulnérabilités à traiter"
       },
+      "vulnerabilityCount": "{{count}} · {{severe}} critiques ou élevées",
       "delete": {
         "warning_one": "Cette technologie et ses liens aux serveurs et applications seront supprimés.",
         "warning_other": "Ces {{count}} technologies et leurs liens aux serveurs et applications seront supprimés.",
@@ -288,6 +290,81 @@
         "gaps": "Aucune donnée manquante."
       },
       "exportFailed": "L'export a échoué. Réessayez."
+    },
+    "vulnerabilities": {
+      "title": "Vulnérabilités",
+      "subtitle": "Vulnérabilités publiées (NVD) qui concernent les technologies en service, et les serveurs et applications qu'elles touchent.",
+      "count_one": "{{count}} vulnérabilité",
+      "count_other": "{{count}} vulnérabilités",
+      "showMore": "Afficher plus",
+      "exportFailed": "L'export a échoué. Réessayez.",
+      "saveFailed": "La modification n'a pas pu être enregistrée. Réessayez.",
+      "unknownVersion": "Version non renseignée (potentiellement concernée)",
+      "empty": {
+        "none": "Aucune vulnérabilité à traiter. Les vulnérabilités s'affichent pour les technologies qui indiquent leurs identifiants CPE : renseignez-les sur une technologie, ou adoptez-la depuis le catalogue.",
+        "filtered": "Aucune vulnérabilité ne correspond à ces filtres."
+      },
+      "filters": {
+        "severity": "Sévérité",
+        "allSeverities": "Toutes",
+        "state": "État",
+        "allStates": "Tous",
+        "editor": "Éditeur",
+        "allEditors": "Tous",
+        "technology": "Technologie",
+        "allTechnologies": "Toutes",
+        "period": "Publication",
+        "anyTime": "Toute date",
+        "lastDays_one": "Dernier jour",
+        "lastDays_other": "{{count}} derniers jours",
+        "search": "Recherche",
+        "searchPlaceholder": "ex. CVE-2024-1234"
+      },
+      "columns": {
+        "cve": "CVE",
+        "severity": "Sévérité",
+        "summary": "Résumé",
+        "technologies": "Technologies",
+        "servers": "Serveurs",
+        "applications": "Applications",
+        "state": "État",
+        "published": "Publication",
+        "version": "Version"
+      },
+      "severities": {
+        "critical": "Critique",
+        "high": "Élevée",
+        "medium": "Moyenne",
+        "low": "Faible",
+        "none": "Aucune",
+        "unknown": "Non évaluée"
+      },
+      "states": {
+        "to_review": "À traiter",
+        "handled": "Traitée",
+        "not_affected": "Non concernée"
+      },
+      "detail": {
+        "vector": "Vecteur CVSS",
+        "versions": "Technologies et versions",
+        "servers": "Serveurs",
+        "applications": "Applications",
+        "noServers": "Aucun serveur ne porte une version concernée.",
+        "noApplications": "Aucune application n'utilise une version concernée.",
+        "applicationsHidden": "Les applications sont masquées : les lire demande l'accès aux applications.",
+        "via": "via {{name}}",
+        "stateOf": "État de {{version}}",
+        "noteOf": "Note sur {{version}}",
+        "notePlaceholder": "ex. corrigé le 12 mars, changement CHG-123"
+      },
+      "section": {
+        "title": "Vulnérabilités",
+        "empty": "Aucune vulnérabilité connue ne concerne cette technologie.",
+        "loadFailed": "Les vulnérabilités n'ont pas pu être chargées.",
+        "rematch": "Rapprocher à nouveau",
+        "rematched": "Rapprochement refait : {{added}} nouvelles, {{removed}} retirées.",
+        "rematchFailed": "Le rapprochement n'a pas pu se faire. Réessayez."
+      }
     },
     "interfaces": {
       "title": "Interfaces",

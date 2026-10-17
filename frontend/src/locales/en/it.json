@@ -173,8 +173,10 @@
         "servers": "Servers",
         "applications": "Applications",
         "itOwner": "IT owner",
-        "nextSupportEnd": "Next end of support"
+        "nextSupportEnd": "Next end of support",
+        "vulnerabilities": "Vulnerabilities to review"
       },
+      "vulnerabilityCount": "{{count}} · {{severe}} critical or high",
       "delete": {
         "warning_one": "This technology and its links to servers and applications will be deleted.",
         "warning_other": "These {{count}} technologies and their links to servers and applications will be deleted.",
@@ -288,6 +290,81 @@
         "gaps": "No missing data."
       },
       "exportFailed": "The export failed. Try again."
+    },
+    "vulnerabilities": {
+      "title": "Vulnerabilities",
+      "subtitle": "Published vulnerabilities (NVD) that concern the technologies in use, and the servers and applications they reach.",
+      "count_one": "{{count}} vulnerability",
+      "count_other": "{{count}} vulnerabilities",
+      "showMore": "Show more",
+      "exportFailed": "The export failed. Try again.",
+      "saveFailed": "The change could not be saved. Try again.",
+      "unknownVersion": "Version not recorded (potentially concerned)",
+      "empty": {
+        "none": "No vulnerability to review. Vulnerabilities show for the technologies that name their CPE identifiers: fill them in on a technology, or adopt it from the catalog.",
+        "filtered": "No vulnerability matches these filters."
+      },
+      "filters": {
+        "severity": "Severity",
+        "allSeverities": "All",
+        "state": "State",
+        "allStates": "All",
+        "editor": "Editor",
+        "allEditors": "All",
+        "technology": "Technology",
+        "allTechnologies": "All",
+        "period": "Published",
+        "anyTime": "Any time",
+        "lastDays_one": "Last day",
+        "lastDays_other": "Last {{count}} days",
+        "search": "Search",
+        "searchPlaceholder": "e.g., CVE-2024-1234"
+      },
+      "columns": {
+        "cve": "CVE",
+        "severity": "Severity",
+        "summary": "Summary",
+        "technologies": "Technologies",
+        "servers": "Servers",
+        "applications": "Applications",
+        "state": "State",
+        "published": "Published",
+        "version": "Version"
+      },
+      "severities": {
+        "critical": "Critical",
+        "high": "High",
+        "medium": "Medium",
+        "low": "Low",
+        "none": "None",
+        "unknown": "Not rated"
+      },
+      "states": {
+        "to_review": "To review",
+        "handled": "Handled",
+        "not_affected": "Not affected"
+      },
+      "detail": {
+        "vector": "CVSS vector",
+        "versions": "Technologies and versions",
+        "servers": "Servers",
+        "applications": "Applications",
+        "noServers": "No server carries a concerned version.",
+        "noApplications": "No application uses a concerned version.",
+        "applicationsHidden": "The applications are hidden: reading them needs access to the applications.",
+        "via": "through {{name}}",
+        "stateOf": "State of {{version}}",
+        "noteOf": "Note on {{version}}",
+        "notePlaceholder": "e.g., patched on 12 March, change CHG-123"
+      },
+      "section": {
+        "title": "Vulnerabilities",
+        "empty": "No known vulnerability concerns this technology.",
+        "loadFailed": "The vulnerabilities could not be loaded.",
+        "rematch": "Match again",
+        "rematched": "Matched again: {{added}} new, {{removed}} removed.",
+        "rematchFailed": "The match could not run. Try again."
+      }
     },
     "interfaces": {
       "title": "Interfaces",

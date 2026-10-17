@@ -164,6 +164,25 @@ export const INCIDENT_SEVERITY_COLORS: Record<string, string> = {
   low: 'default',
 };
 
+/**
+ * Vulnerability severities (CVSS, lot T6b): orange calls for attention on critical and high only,
+ * the others stay neutral.
+ */
+export const VULNERABILITY_SEVERITY_COLORS: Record<string, string> = {
+  critical: 'warning',
+  high: 'warning',
+  medium: 'default',
+  low: 'default',
+  none: 'default',
+};
+
+/** States of a vulnerability on a technology version (lot T6b). */
+export const VULNERABILITY_STATE_COLORS: Record<string, string> = {
+  to_review: 'warning',
+  handled: 'success',
+  not_affected: 'default',
+};
+
 /** Incident statuses (IT incident register) */
 export const INCIDENT_STATUS_COLORS: Record<string, string> = {
   open: 'warning',

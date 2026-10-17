@@ -13,6 +13,8 @@ export type FeaturesConfig = {
     builtinAiProvider: boolean;
     /** Administration › Sample data and the home banner (cloud workspaces). */
     sampleData: boolean;
+    /** IT › Vulnerabilities, its list column and sections (VULNERABILITY_FEED_ENABLED). */
+    vulnerabilityFeed: boolean;
   };
   version: string;
   tenantSlug?: string;
@@ -35,6 +37,8 @@ const CLOUD_DEFAULTS: FeaturesConfig = {
     builtinAiProvider: false,
     // Off until the server says otherwise: a failed /config/public never shows it on-premise.
     sampleData: false,
+    // Off until the server says otherwise, as the sample data.
+    vulnerabilityFeed: false,
   },
   version: 'unknown',
 };

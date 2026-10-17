@@ -20,6 +20,7 @@ import {
 import SendIcon from '@mui/icons-material/Send';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
+import { useFeatures } from '../../config/FeaturesContext';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 
 interface WorkspaceSettings {
@@ -43,6 +44,10 @@ interface WorkspaceSettings {
     expiration_warnings: boolean;
     status_changes: boolean;
     comments: boolean;
+  };
+  technologies?: {
+    enabled: boolean;
+    vulnerabilities: boolean;
   };
 }
 
@@ -86,6 +91,7 @@ const COMMON_TIMEZONES = [
 export default function NotificationsTab() {
   const queryClient = useQueryClient();
   const { t } = useTranslation(['settings', 'common', 'errors']);
+  const { config } = useFeatures();
   const [prefs, setPrefs] = useState<NotificationPreferencesData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState('');
@@ -208,6 +214,8 @@ export default function NotificationsTab() {
   }
 
   const emailsEnabled = prefs.emails_enabled;
+  // On by default (the server's defaults): an owner hears of a critical flaw unless he turns it off.
+  const technologies = prefs.workspace_settings.technologies ?? { enabled: true, vulnerabilities: true };
 
   return (
     <Stack spacing={3}>
@@ -495,6 +503,45 @@ export default function NotificationsTab() {
               </Collapse>
             </CardContent>
           </Card>
+
+          {/* Technologies Section: shown while the vulnerability feed is on */}
+          {config.features.vulnerabilityFeed && (
+            <Card>
+              <CardContent>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={technologies.enabled}
+                      onChange={(e) =>
+                        updateWorkspaceSettings('technologies', 'enabled', e.target.checked)
+                      }
+                    />
+                  }
+                  label={
+                    <Typography variant="subtitle1">{t('settings:notifications.technologies.title')}</Typography>
+                  }
+                />
+                <Collapse in={technologies.enabled}>
+                  <Stack spacing={1} sx={{ ml: 4, mt: 1 }}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={technologies.vulnerabilities}
+                          onChange={(e) =>
+                            updateWorkspaceSettings('technologies', 'vulnerabilities', e.target.checked)
+                          }
+                          size="small"
+                        />
+                      }
+                      label={
+                        <Typography variant="body2">{t('settings:notifications.technologies.vulnerabilities')}</Typography>
+                      }
+                    />
+                  </Stack>
+                </Collapse>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Weekly Review Section */}
           <Card>
