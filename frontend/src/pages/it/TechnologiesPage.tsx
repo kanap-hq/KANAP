@@ -52,21 +52,28 @@ function VulnerabilitiesCell({ data }: ICellRendererParams<TechnologyRow, any>) 
   const count = data?.vulnerabilities_to_review ?? 0;
   if (!data || count === 0) return null;
   const severe = data.vulnerabilities_severe ?? 0;
+  // Compact: the count, then the critical or high ones in the attention colour (full text on hover).
+  const label = t('pages.technologies.vulnerabilityCount', { count, severe });
   return (
     <MLink
       component={RouterLink}
       to={`/it/vulnerabilities?technology=${encodeURIComponent(data.reference || data.id)}`}
       underline="hover"
+      title={label}
+      aria-label={label}
       data-testid="vulnerabilities-to-review"
       onClick={(event: React.MouseEvent) => event.stopPropagation()}
-      sx={{
-        fontSize: 13,
-        color: severe > 0 ? getDotColor('warning', theme.palette.mode) : 'kanap.text.primary',
-        fontWeight: severe > 0 ? 500 : 400,
-        '&:hover': { color: 'primary.main' },
-      }}
+      sx={{ fontSize: 13, color: 'kanap.text.primary', fontVariantNumeric: 'tabular-nums', '&:hover': { color: 'primary.main' } }}
     >
-      {severe > 0 ? t('pages.technologies.vulnerabilityCount', { count, severe }) : count}
+      {count}
+      {severe > 0 && (
+        <>
+          {' · '}
+          <Box component="span" data-testid="vulnerabilities-severe" sx={{ color: getDotColor('warning', theme.palette.mode), fontWeight: 500 }}>
+            {severe}
+          </Box>
+        </>
+      )}
     </MLink>
   );
 }
@@ -201,7 +208,8 @@ export default function TechnologiesPage() {
     // Secondary columns start hidden: the default set fits a 1,440 px window without scrolling.
     { headerName: t('pages.technologies.columns.versionsInUse'), field: 'versions_in_use', width: 140, defaultHidden: true, sortable: false, filter: false, cellRenderer: LinkCell },
     { headerName: t('pages.technologies.columns.servers'), field: 'servers', width: 110, sortable: false, filter: false, cellRenderer: LinkCell },
-    { headerName: t('pages.technologies.columns.applications'), field: 'applications', width: 130, sortable: false, filter: false, cellRenderer: LinkCell },
+    // With the vulnerabilities column, the applications start hidden: the default set still fits 1,440 px.
+    { headerName: t('pages.technologies.columns.applications'), field: 'applications', width: 130, defaultHidden: vulnerabilityFeed, sortable: false, filter: false, cellRenderer: LinkCell },
     {
       headerName: t('pages.technologies.columns.itOwner'),
       field: 'it_owner_names',
@@ -217,7 +225,7 @@ export default function TechnologiesPage() {
     },
     { headerName: t('pages.technologies.columns.nextSupportEnd'), field: 'next_support_end', width: 170, sortable: false, filter: false, cellRenderer: SupportEndCell },
     ...(vulnerabilityFeed
-      ? [{ headerName: t('pages.technologies.columns.vulnerabilities'), field: 'vulnerabilities_to_review' as const, width: 190, sortable: false, filter: false, cellRenderer: VulnerabilitiesCell }]
+      ? [{ headerName: t('pages.technologies.columns.vulnerabilities'), field: 'vulnerabilities_to_review' as const, width: 110, sortable: false, filter: false, cellRenderer: VulnerabilitiesCell }]
       : []),
   ], [LinkCell, SupportEndCell, editorValues, familyValues, labelFor, lifecycleValues, t, vulnerabilityFeed]);
 

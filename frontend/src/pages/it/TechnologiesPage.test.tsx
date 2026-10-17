@@ -162,6 +162,10 @@ describe('TechnologiesPage', () => {
     renderPage();
     const fields = (grid.props!.columns as any[]).map((col) => col.field);
     expect(fields[fields.length - 1]).toBe('vulnerabilities_to_review');
+    // The default set still fits a 1,440 px window: the applications give way.
+    const shown = (grid.props!.columns as any[]).filter((col) => !col.defaultHidden);
+    expect(shown.map((col) => col.field)).not.toContain('applications');
+    expect(shown.reduce((sum, col) => sum + (col.width ?? col.minWidth), 0)).toBeLessThanOrEqual(1100);
     const Cell = column('vulnerabilities_to_review').cellRenderer;
     const theme = createAppTheme('light');
     const { unmount } = render(
@@ -171,11 +175,13 @@ describe('TechnologiesPage', () => {
     );
     const link = screen.getByTestId('vulnerabilities-to-review');
     expect(link.getAttribute('href')).toBe('/it/vulnerabilities?technology=TEC-3');
-    expect(link.textContent).toBe('pages.technologies.vulnerabilityCount');
-    expect(getComputedStyle(link).color).toBe('rgb(180, 83, 9)'); // attention orange, light
+    expect(link.textContent).toBe('5 · 2');
+    expect(link.getAttribute('title')).toBe('pages.technologies.vulnerabilityCount');
+    expect(getComputedStyle(screen.getByTestId('vulnerabilities-severe')).color).toBe('rgb(180, 83, 9)'); // attention orange, light
     unmount();
     render(<ThemeProvider theme={theme}><MemoryRouter><Cell data={{ id: 'u2', reference: 'TEC-4', vulnerabilities_to_review: 3, vulnerabilities_severe: 0 }} /></MemoryRouter></ThemeProvider>);
     expect(screen.getByTestId('vulnerabilities-to-review').textContent).toBe('3');
+    expect(screen.queryByTestId('vulnerabilities-severe')).toBeNull();
   });
 
   it('has no vulnerability column while the feed is off, and the editor opens the technology', () => {
