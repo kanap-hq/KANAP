@@ -437,6 +437,7 @@
       "document_tasks": "Tareas de documento",
       "document_versions": "Versiones de documento",
       "documents": "Documentos",
+      "expiry_reminders": "Recordatorios de vencimiento enviados",
       "export": "Exportación",
       "incident_attachments": "Adjuntos de incidente",
       "incident_technologies": "Tecnologías de incidentes",
@@ -522,6 +523,7 @@
       "tenants_plan": "Planes de espacios de trabajo",
       "user_roles": "Roles de usuarios",
       "users": "Usuarios",
+      "vulnerability_notifications": "Correos de vulnerabilidades enviados",
       "working_day_profiles": "Calendarios laborales"
     },
     "title": "Registro de auditoría",
