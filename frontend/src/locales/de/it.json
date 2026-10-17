@@ -1693,6 +1693,8 @@
           "url": "Adresse"
         },
         "newLink": "Neuer Weblink",
+        "editLink": "{{name}} bearbeiten",
+        "editLinkTitle": "Weblink bearbeiten",
         "placeholders": {
           "linkName": "z. B. Versionshinweise",
           "url": "z. B. https://learn.microsoft.com/sql"

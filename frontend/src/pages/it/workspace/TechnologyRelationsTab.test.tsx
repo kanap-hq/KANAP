@@ -17,7 +17,7 @@ const translation = {
   i18n: { language: 'en', resolvedLanguage: 'en' },
 };
 vi.mock('react-i18next', () => ({ useTranslation: () => translation }));
-vi.mock('../../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), delete: vi.fn() } }));
+vi.mock('../../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
 const RANK: Record<string, number> = { reader: 1, contributor: 2, member: 3, admin: 4 };
 // The caller's level per module; `infrastructure` member by default.
 const auth = { levels: {} as Record<string, string> };
@@ -84,6 +84,7 @@ function renderTab(data: TechnologyRelationsData) {
 beforeEach(() => {
   mocked.get.mockReset();
   mocked.post.mockReset();
+  mocked.patch.mockReset();
   mocked.delete.mockReset();
   auth.levels = {};
 });
@@ -168,6 +169,7 @@ describe('TechnologyRelationsTab', () => {
     await screen.findByText('Migration SQL 2022');
     expect(screen.queryByText('workspace.application.relations.add')).toBeNull();
     expect(screen.queryByRole('button', { name: /relations\.remove/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /relations\.editLink/ })).toBeNull();
   });
 
   it('adds a web link from its dialog and removes one at once', async () => {
@@ -185,6 +187,19 @@ describe('TechnologyRelationsTab', () => {
 
     fireEvent.click(within(section).getByRole('button', { name: 'workspace.application.relations.remove(name=Lifecycle policy)' }));
     await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith('/technologies/tec-1/links/lnk-1'));
+  });
+
+  it('edits a web link in the same dialog, filled with the link', async () => {
+    mocked.patch.mockResolvedValue({ data: { id: 'lnk-1' } } as never);
+    renderTab(relations());
+    fireEvent.click(await screen.findByRole('button', { name: 'workspace.technology.relations.editLink(name=Lifecycle policy)' }));
+    expect(await screen.findByText('workspace.technology.relations.editLinkTitle')).toBeTruthy();
+    const name = screen.getByLabelText('workspace.application.relations.columns.name');
+    expect(name).toHaveProperty('value', 'Lifecycle policy');
+    fireEvent.change(name, { target: { value: 'Support policy' } });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.save' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/technologies/tec-1/links/lnk-1', { url: 'https://learn.microsoft.com/lifecycle', description: 'Support policy' }));
+    expect(mocked.post).not.toHaveBeenCalled();
   });
 
   it('deletes a document after a confirmation', async () => {

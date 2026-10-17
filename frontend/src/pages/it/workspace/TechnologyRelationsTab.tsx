@@ -1,5 +1,6 @@
 import React from 'react';
-import { Alert, Box, Link, Stack, TextField, useTheme } from '@mui/material';
+import { Alert, Box, IconButton, Link, Stack, TextField, useTheme } from '@mui/material';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../../api';
@@ -108,6 +109,8 @@ export default function TechnologyRelationsTab({ id }: { id: string }) {
   const [error, setError] = React.useState<string | null>(null);
   const [linkDialogOpen, setLinkDialogOpen] = React.useState(false);
   const [linkDraft, setLinkDraft] = React.useState({ description: '', url: '' });
+  /** The link the dialog edits; null when it adds one. */
+  const [editingLink, setEditingLink] = React.useState<WebLinkRow | null>(null);
   const [savingLink, setSavingLink] = React.useState(false);
   const [uploading, setUploading] = React.useState(0);
   const fileInput = React.useRef<HTMLInputElement | null>(null);
@@ -347,14 +350,23 @@ export default function TechnologyRelationsTab({ id }: { id: string }) {
     await refresh();
   };
 
+  const openLinkDialog = (row: WebLinkRow | null) => {
+    setEditingLink(row);
+    setLinkDraft({ description: row?.description ?? '', url: row?.url ?? '' });
+    setLinkDialogOpen(true);
+  };
+
   const saveLink = async () => {
     const url = linkDraft.url.trim();
     if (!url) return;
     setSavingLink(true);
     setError(null);
+    const body = { url, description: linkDraft.description.trim() || null };
     try {
-      await api.post(`/technologies/${id}/links`, { url, description: linkDraft.description.trim() || null });
+      if (editingLink) await api.patch(`/technologies/${id}/links/${editingLink.id}`, body);
+      else await api.post(`/technologies/${id}/links`, body);
       setLinkDialogOpen(false);
+      setEditingLink(null);
       setLinkDraft({ description: '', url: '' });
     } catch (e) {
       failed(e);
@@ -398,6 +410,21 @@ export default function TechnologyRelationsTab({ id }: { id: string }) {
       ),
     },
     { key: 'url', header: t('workspace.technology.relations.columns.url'), render: (row) => <Box component="span" title={row.url} sx={{ color: 'kanap.text.secondary' }}>{row.url}</Box> },
+    // Shown on row hover, as the remove action of the table.
+    ...(canEdit ? [{
+      key: 'edit', header: '', width: 32,
+      render: (row: WebLinkRow) => (
+        <IconButton
+          className="relations-remove"
+          size="small"
+          aria-label={t('workspace.technology.relations.editLink', { name: row.description || row.url })}
+          onClick={() => openLinkDialog(row)}
+          sx={{ p: '2px', color: 'kanap.text.tertiary' }}
+        >
+          <EditOutlinedIcon sx={{ fontSize: 16 }} />
+        </IconButton>
+      ),
+    }] : []),
   ];
 
   const linkedSections = sections.filter((section) => section.rows !== null).map((section) => {
@@ -481,7 +508,7 @@ export default function TechnologyRelationsTab({ id }: { id: string }) {
       <RelationsSection
         title={t('workspace.technology.relations.sections.links')}
         count={data ? webLinks.length : undefined}
-        onAdd={canEdit && data ? () => setLinkDialogOpen(true) : undefined}
+        onAdd={canEdit && data ? () => openLinkDialog(null) : undefined}
         addLabel={t('workspace.application.relations.add')}
       >
         {webLinks.length === 0 ? (
@@ -500,10 +527,10 @@ export default function TechnologyRelationsTab({ id }: { id: string }) {
 
       <KanapDialog
         open={linkDialogOpen}
-        title={t('workspace.technology.relations.newLink')}
+        title={editingLink ? t('workspace.technology.relations.editLinkTitle') : t('workspace.technology.relations.newLink')}
         onClose={() => setLinkDialogOpen(false)}
         onSave={saveLink}
-        saveLabel={t('common:buttons.add')}
+        saveLabel={editingLink ? t('common:buttons.save') : t('common:buttons.add')}
         saveDisabled={!linkDraft.url.trim()}
         saveLoading={savingLink}
       >

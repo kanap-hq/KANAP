@@ -1693,6 +1693,8 @@
           "url": "Dirección"
         },
         "newLink": "Nuevo enlace web",
+        "editLink": "Editar {{name}}",
+        "editLinkTitle": "Editar enlace web",
         "placeholders": {
           "linkName": "p. ej., Notas de la versión",
           "url": "p. ej., https://learn.microsoft.com/sql"
