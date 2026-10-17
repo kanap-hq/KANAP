@@ -384,14 +384,22 @@ Optional in both modes: true when `ENTRA_CLIENT_ID` is configured. Per-tenant ac
 
 #### Vulnerabilities (`Features.VULNERABILITY_FEED_ENABLED`)
 
-The NVD feed needs the way out to the NVD (`https://services.nvd.nist.gov`) or to a mirror (`NVD_API_BASE_URL`). `VULNERABILITY_FEED_ENABLED` is true by default in the cloud and false by default on-premise; set either way, it wins. `NVD_API_KEY` is optional (more requests per 30 seconds). The page and its navigation entry come with lot T6b.
+The NVD feed needs the way out to the NVD (`https://services.nvd.nist.gov`) or to a mirror (`NVD_API_BASE_URL`). `VULNERABILITY_FEED_ENABLED` is true by default in the cloud and false by default on-premise; set either way, it wins. `NVD_API_KEY` is optional (more requests per 30 seconds). Off, the frontend shows none of it: no IT › Vulnerabilities page or navigation entry, no "Vulnerabilities to review" column in the technologies list, no Technologies group in the notification preferences, and no email to the IT owners.
 
 | File | Line | What | Behavior |
 |------|------|------|----------|
 | `config/features.ts` | 19 | `VULNERABILITY_FEED_ENABLED` | Env value when set, otherwise `!SINGLE_TENANT` |
 | `vulnerabilities/vulnerabilities.controller.ts` | 19 | `VulnerabilityFeedGuard` on `/vulnerabilities/*` and `/technologies/:id/vulnerabilities/*` | 403 `FEATURE_DISABLED` when off |
-| `vulnerabilities/nvd-feed.service.ts` | 212 | `vulnerability-feed` scheduled task (default every 6 hours, minute 20) | Registered only when on: no request leaves for the NVD otherwise |
+| `vulnerabilities/nvd-feed.service.ts` | 215 | `vulnerability-feed` scheduled task (default every 6 hours, minute 20), and the notifications of each run | Registered only when on: no request leaves for the NVD and no vulnerability email goes out otherwise |
+| `technologies/technologies.service.ts` | 179 | `vulnerabilities_to_review`, `vulnerabilities_severe` in `GET /technologies` | `null` when off |
 | `config/config.controller.ts` | 24 | `vulnerabilityFeed` | `Features.VULNERABILITY_FEED_ENABLED` in `GET /config/public` |
+| `frontend/src/config/FeaturesContext.tsx` | 41 | `features.vulnerabilityFeed` | False until `GET /config/public` says otherwise |
+| `frontend/src/App.tsx` | 272 | Route `/it/vulnerabilities` | Not registered when off |
+| `frontend/src/components/Layout.tsx` | 189 | IT › Operations › Vulnerabilities navigation entry | Hidden when off |
+| `frontend/src/pages/it/VulnerabilitiesPage.tsx` | 369 | The page itself | Renders nothing when off |
+| `frontend/src/pages/it/TechnologiesPage.tsx` | 202 | "Vulnerabilities to review" column | Hidden when off |
+| `frontend/src/pages/settings/NotificationsTab.tsx` | 508 | Technologies group of the notification preferences | Hidden when off |
+| `frontend/src/pages/it/workspace/TechnologyVulnerabilitiesSection.tsx` | n/a | Vulnerabilities section of the technology record | The caller shows it only when on |
 
 #### Outbound target guard (`backend/src/common/ssrf-guard.ts`)
 
