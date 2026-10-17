@@ -1726,7 +1726,7 @@
         "viaHost": "{{server}} (on {{host}})",
         "yes": "Yes",
         "changeVersion": "Change the version for {{name}}",
-        "remove": "Remove {{name}}",
+        "remove": "Remove {{name}}, every declared version",
         "saveFailed": "The applications could not be saved.",
         "exportCsv": "Export CSV",
         "exportFailed": "The export failed.",

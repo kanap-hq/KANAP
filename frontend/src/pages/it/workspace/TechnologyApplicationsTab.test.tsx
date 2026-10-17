@@ -132,6 +132,18 @@ describe('TechnologyApplicationsTab', () => {
     await waitFor(() => expect(screen.queryByText('APP-7')).toBeNull());
   });
 
+  it('offers one withdrawal per declared application, on its first declared row', async () => {
+    renderTab([
+      ...ROWS,
+      row({ kind: 'declared', link_id: 'd-2', application_id: 'crm', application_name: 'CRM', application_reference: 'APP-7', technology_version_id: 'v19', version_label: '2019' }),
+    ]);
+    const table = await screen.findByRole('table', { name: `${A}.title` });
+    const crmRows = [...table.querySelectorAll('tbody tr')].filter((tr) => tr.textContent?.includes('APP-7')) as HTMLElement[];
+    expect(crmRows).toHaveLength(2);
+    expect(within(crmRows[0]).getByRole('button', { name: `${A}.remove(name=CRM)` })).toBeTruthy();
+    expect(within(crmRows[1]).queryByRole('button', { name: `${A}.remove(name=CRM)` })).toBeNull();
+  });
+
   it('declares the technology on several applications at once, never offering a declared one', async () => {
     renderTab();
     await screen.findByRole('table', { name: `${A}.title` });

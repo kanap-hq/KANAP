@@ -155,6 +155,12 @@ export default function TechnologyApplicationsTab({ technologyId, technologyRefe
     : tertiary(dash, t('workspace.technology.versionPicker.unknown')));
   const editable = (row: TechnologyApplicationRow) => canManage && row.kind === 'declared' && !!row.link_id;
   const declaredApps = new Set(rows.filter((row) => row.kind === 'declared').map((row) => row.application_id));
+  // The withdrawal takes every declared version of the application: one control, on its first declared row.
+  const withdrawRows = new Set<TechnologyApplicationRow>();
+  declaredApps.forEach((appId) => {
+    const first = rows.find((row) => row.kind === 'declared' && row.application_id === appId);
+    if (first) withdrawRows.add(first);
+  });
 
   const columns: Array<RelationsColumn<TechnologyApplicationRow>> = [
     { key: 'ref', header: t('workspace.technology.applications.columns.ref'), width: 72, render: (row) => <RelationRef>{row.application_reference ?? dash}</RelationRef> },
@@ -247,7 +253,7 @@ export default function TechnologyApplicationsTab({ technologyId, technologyRefe
             rowKey={(row) => `${row.kind}:${row.link_id ?? ''}:${row.application_id}:${row.environment ?? ''}:${row.asset_id ?? ''}:${row.via_asset_id ?? ''}:${row.technology_version_id ?? ''}`}
             rowHref={(row) => `/it/applications/${row.application_id}/overview`}
             onRemove={canManage ? (row) => { void remove(row); } : undefined}
-            canRemove={(row) => row.kind === 'declared'}
+            canRemove={(row) => withdrawRows.has(row)}
             removeLabel={(row) => t('workspace.technology.applications.remove', { name: row.application_name ?? '' })}
           />
         ) : null}
