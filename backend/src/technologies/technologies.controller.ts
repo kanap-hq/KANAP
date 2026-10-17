@@ -123,16 +123,16 @@ export class TechnologiesController {
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'reader')
   @Get('catalog')
-  catalogEntries(@Query('q') q: string, @Query('family') family: string, @Tenant() ctx: TenantRequest) {
-    return this.catalog.notAdopted({ q, family }, this.opts(ctx));
+  catalogEntries(@Query('q') q: string, @Query('family') family: string, @Query('language') language: string, @Tenant() ctx: TenantRequest) {
+    return this.catalog.notAdopted({ q, family, language }, this.opts(ctx));
   }
 
   /** Adopt a catalog entry: the technology, its versions and its CPE identifiers. Idempotent. */
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'member')
   @Post('adopt')
-  adopt(@Body() body: { catalog_key?: string }, @Tenant() ctx: TenantRequest) {
-    return this.catalog.adopt(String(body?.catalog_key ?? ''), this.opts(ctx));
+  adopt(@Body() body: { catalog_key?: string; language?: string }, @Tenant() ctx: TenantRequest) {
+    return this.catalog.adopt(String(body?.catalog_key ?? ''), { ...this.opts(ctx), language: body?.language });
   }
 
   @UseGuards(PermissionGuard)

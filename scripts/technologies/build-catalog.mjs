@@ -16,7 +16,8 @@
 //        node scripts/technologies/build-catalog.mjs --check-cpe [--nvd [--only k1,k2] [--latest]
 //                                                     [--report <file>]]
 //        (checks the CPE identifiers of the file against PRODUCTS: syntax, and an entry without
-//        any must say why in `noCpe`; offline by default. With --nvd, asks the CPE dictionary of
+//        any must say why in `noCpe`; and that each entry has its four descriptions in
+//        technologies.descriptions.json; offline by default. With --nvd, asks the CPE dictionary of
 //        the NVD whether each `part:vendor:product` exists and how many CVE name it, --latest
 //        adds the newest CVE; one request every 6.5 s, the rate allowed without an API key)
 //        node scripts/technologies/build-catalog.mjs --nvd-count <a:vendor:product,...> [--latest]
@@ -34,6 +35,11 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const DEFAULT_OUT = resolve(ROOT, 'backend/src/technologies/catalog/technologies.catalog.json');
+/**
+ * The short descriptions of the entries in en, fr, de and es, written by hand: a file of their own
+ * that this script reads (--check-cpe) and never writes, so a rebuild keeps them.
+ */
+const DESCRIPTIONS = resolve(ROOT, 'backend/src/technologies/catalog/technologies.descriptions.json');
 const API = 'https://endoflife.date/api/v1/products';
 
 /** Versions kept per product: the newest released ones, at most this many. */
@@ -362,6 +368,10 @@ async function checkCpe(out) {
   const latest = process.argv.includes('--latest');
   const findings = [];
   const report = [];
+  const descriptions = JSON.parse(readFileSync(DESCRIPTIONS, 'utf8')).descriptions;
+  for (const key of Object.keys(descriptions)) {
+    if (!catalog.products.some((product) => product.key === key)) findings.push(`${key}: description of an entry the catalog does not have`);
+  }
   for (const product of catalog.products) {
     if (only && !only.includes(product.key)) continue;
     const entry = PRODUCTS.find((p) => p.key === product.key);
@@ -375,6 +385,9 @@ async function checkCpe(out) {
     }
     if (!product.cpe_products.length && !entry?.noCpe) findings.push(`${product.key}: no CPE identifier and no noCpe reason`);
     if (product.cpe_products.length && entry?.noCpe) findings.push(`${product.key}: noCpe set but identifiers present`);
+    for (const language of ['en', 'fr', 'de', 'es']) {
+      if (!descriptions[product.key]?.[language]?.trim()) findings.push(`${product.key}: no ${language} description in ${DESCRIPTIONS}`);
+    }
     if (!nvd) continue;
     let cves = 0;
     for (const id of product.cpe_products) {

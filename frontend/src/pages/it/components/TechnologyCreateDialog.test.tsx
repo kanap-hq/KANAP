@@ -41,7 +41,7 @@ describe('TechnologyCreateDialog', () => {
     post.mockReset();
     get.mockImplementation(async (url: string) => {
       if (url === '/technologies/catalog') {
-        return { data: { items: [{ key: 'mssqlserver', name: 'Microsoft SQL Server', editor: 'Microsoft', family: 'database', mode: 'installed', versions: 9, latest_version: '2022' }] } };
+        return { data: { items: [{ key: 'mssqlserver', name: 'Microsoft SQL Server', editor: 'Microsoft', family: 'database', mode: 'installed', versions: 9, latest_version: '2022', description: 'Microsoft relational database.' }] } };
       }
       if (url === '/technologies/editors') return { data: { items: ['Microsoft'] } };
       return { data: { items: [] } };
@@ -52,10 +52,11 @@ describe('TechnologyCreateDialog', () => {
     post.mockResolvedValueOnce({ data: { ok: true, created: true, technology: { id: 'u1', name: 'Microsoft SQL Server', reference: 'TEC-4' } } });
     const onCreated = renderDialog();
     fireEvent.change(screen.getByLabelText('pages.technologies.create.searchLabel'), { target: { value: 'sql' } });
-    await waitFor(() => expect(get).toHaveBeenCalledWith('/technologies/catalog', { params: { q: 'sql' } }));
+    await waitFor(() => expect(get).toHaveBeenCalledWith('/technologies/catalog', { params: { q: 'sql', language: 'en' } }));
+    expect(await screen.findByText('Microsoft relational database.')).toBeTruthy();
     fireEvent.click(await screen.findByText('Microsoft SQL Server'));
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith('TEC-4'));
-    expect(post).toHaveBeenCalledWith('/technologies/adopt', { catalog_key: 'mssqlserver' });
+    expect(post).toHaveBeenCalledWith('/technologies/adopt', { catalog_key: 'mssqlserver', language: 'en' });
     expect(screen.getByText('Microsoft · Database')).toBeTruthy();
   });
 
