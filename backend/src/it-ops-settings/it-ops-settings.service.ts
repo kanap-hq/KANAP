@@ -968,12 +968,16 @@ export class ItOpsSettingsService {
     return text;
   }
 
-  /** A typed count (accounts, machines): a whole number from 0; empty is absent. Invalid: refused on a write, dropped on a read. */
+  /**
+   * A typed count (accounts, machines): a whole number from 0 to 100,000,000, given as a number or
+   * its text; empty is absent. Anything else (a boolean, a list, a fraction): refused on a write,
+   * dropped on a read.
+   */
   private optionalCount(value: unknown, field: string, strict: boolean): number | undefined {
-    if (value === undefined || value === null || String(value).trim() === '') return undefined;
-    const n = Number(value);
+    if (value === undefined || value === null || (typeof value === 'string' && value.trim() === '')) return undefined;
+    const n = typeof value === 'number' ? value : typeof value === 'string' && /^\s*\d+\s*$/.test(value) ? Number(value) : NaN;
     if (Number.isInteger(n) && n >= 0 && n <= 100_000_000) return n;
-    if (strict) throw new BadRequestException(`${field} must be a whole number from 0`);
+    if (strict) throw new BadRequestException(`${field} must be a whole number from 0 to 100,000,000`);
     return undefined;
   }
 

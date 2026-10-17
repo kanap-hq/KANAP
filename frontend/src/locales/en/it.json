@@ -431,7 +431,8 @@
       "noDomains": "No domains defined.",
       "noController": "None found",
       "notSet": "Not set",
-      "none": "None"
+      "none": "None",
+      "declaredTrust": "{{name}} ({{direction}}, declared on that domain)"
     },
     "interfaceMap": {
       "title": "Interface map",
@@ -657,6 +658,7 @@
           "incoming": "incoming"
         },
         "add": "Add a trusted domain",
+        "declaredElsewhere": "Declared on other domains (read only)",
         "noOtherDomain": "Add another domain to the list first.",
         "count_one": "{{count}} trust",
         "count_other": "{{count}} trusts",

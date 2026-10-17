@@ -38,6 +38,7 @@ const DOMAINS = [
   { code: 'workgroup', label: 'Workgroup', dns_suffix: '', system: true },
   { code: 'corp', label: 'Corp', dns_suffix: 'corp.example.com', forest: 'corp.example.com', trusts: [{ domain: 'lab', direction: 'two_way' }], account_count: 1200, machine_count: 300 },
   { code: 'lab', label: 'Lab', dns_suffix: 'lab.example.com' },
+  { code: 'partner', label: 'Partner', dns_suffix: 'partner.example.com', trusts: [{ domain: 'lab', direction: 'outgoing' }] },
 ];
 
 async function controller(runner: QueryRunner, tenantId: string, name: string, domain: string, role: string, status = 'active') {
@@ -125,14 +126,18 @@ async function testView() {
     assert.deepEqual(none.technologies[0].servers.map((server) => [server.name, server.via_name]), [['host1', null], ['vm1', 'host1']], 'carried servers keep the carrier');
     assert.equal(view.unplaced_count, 1);
 
-    assert.deepEqual(view.domains.map((domain) => domain.code), ['corp', 'lab'], 'system entries are not domains of the view');
+    assert.deepEqual(view.domains.map((domain) => domain.code), ['corp', 'lab', 'partner'], 'system entries are not domains of the view');
     const [corp, lab] = view.domains;
     assert.deepEqual(
-      { forest: corp.forest, trusts: corp.trusts, accounts: corp.account_count, machines: corp.machine_count, dcs: corp.domain_controllers.map((dc) => dc.name) },
-      { forest: 'corp.example.com', trusts: [{ domain: 'lab', label: 'Lab', direction: 'two_way' }], accounts: 1200, machines: 300, dcs: ['dc1', 'dc2'] },
+      { forest: corp.forest, trusts: corp.trusts, declared: corp.declared_by, accounts: corp.account_count, machines: corp.machine_count, dcs: corp.domain_controllers.map((dc) => dc.name) },
+      { forest: 'corp.example.com', trusts: [{ domain: 'lab', label: 'Lab', direction: 'two_way' }], declared: [], accounts: 1200, machines: 300, dcs: ['dc1', 'dc2'] },
       'role on an instance in service or directory technology, each server once; disabled instance, retired server and other tenant left out',
     );
     assert.deepEqual({ forest: lab.forest, accounts: lab.account_count, dcs: lab.domain_controllers }, { forest: null, accounts: null, dcs: [] });
+    assert.deepEqual(lab.declared_by, [
+      { domain: 'corp', label: 'Corp', direction: 'two_way' },
+      { domain: 'partner', label: 'Partner', direction: 'incoming' },
+    ], 'trusts declared on Corp and Partner show on Lab, read only, seen from Lab (Partner trusts Lab: incoming)');
 
     const ids = JSON.stringify(view);
     assert.ok(!ids.includes(s.otherDc) && !ids.includes('Other AD'), 'nothing of the other tenant');
@@ -172,8 +177,9 @@ async function testCsv() {
     assert.ok(zoneLines.includes('No zone (to complete),,,,TEC-3,vSphere,Hypervisor,No,"host1, vm1"'), zones.content);
     const domains = await svc.csv({ list: 'domains', language: 'en' }, opts);
     const domainLines = domains.content.replace(/^﻿/, '').trim().split(/\r?\n/);
-    assert.equal(domainLines[1], 'Corp,corp.example.com,corp.example.com,Lab (two-way),1200,300,2,"dc1, dc2"');
-    assert.equal(domainLines[2], 'Lab,lab.example.com,,,,,0,');
+    assert.equal(domainLines[0], 'Domain,DNS suffix,Forest,Trusts,Trusts declared by other domains,Accounts,Machines,Domain controllers,Domain controller servers');
+    assert.equal(domainLines[1], 'Corp,corp.example.com,corp.example.com,Lab (two-way),,1200,300,2,"dc1, dc2"');
+    assert.equal(domainLines[2], 'Lab,lab.example.com,,,"Corp (two-way), Partner (incoming)",,,0,');
   });
 }
 

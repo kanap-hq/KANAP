@@ -39,8 +39,8 @@ const VIEW: AdministrationView = {
     },
   ],
   domains: [
-    { code: 'corp', label: 'Corp', dns_suffix: 'corp.example.com', forest: 'corp.example.com', trusts: [{ domain: 'lab', label: 'Lab', direction: 'two_way' }], account_count: 1200, machine_count: 300, domain_controllers: [{ id: 'asset-dc1', name: 'dc1', reference: null }], deprecated: false },
-    { code: 'lab', label: 'Lab', dns_suffix: 'lab.example.com', forest: null, trusts: [], account_count: null, machine_count: null, domain_controllers: [], deprecated: false },
+    { code: 'corp', label: 'Corp', dns_suffix: 'corp.example.com', forest: 'corp.example.com', trusts: [{ domain: 'lab', label: 'Lab', direction: 'two_way' }], declared_by: [], account_count: 1200, machine_count: 300, domain_controllers: [{ id: 'asset-dc1', name: 'dc1', reference: null }], deprecated: false },
+    { code: 'lab', label: 'Lab', dns_suffix: 'lab.example.com', forest: null, trusts: [], declared_by: [{ domain: 'corp', label: 'Corp', direction: 'two_way' }], account_count: null, machine_count: null, domain_controllers: [], deprecated: false },
   ],
   unplaced_count: 1,
 };
@@ -96,6 +96,8 @@ describe('AdministrationViewPage', () => {
     expect(rows[1]).toHaveTextContent('1,200');
     expect(within(rows[1]).getByRole('link', { name: 'dc1' })).toBeInTheDocument();
     expect(rows[2]).toHaveTextContent('Labo');
+    // The trust declared on Corp shows on Lab, read only.
+    expect(rows[2]).toHaveTextContent('pages.administrationView.declaredTrust:{"name":"Corp","direction":"pages.settings.trusts.directions.two_way"}');
     expect(rows[2]).toHaveTextContent('pages.administrationView.noController');
     expect(rows[2]).toHaveTextContent('pages.administrationView.notSet');
   });

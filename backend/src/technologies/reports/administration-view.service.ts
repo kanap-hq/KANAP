@@ -59,6 +59,11 @@ export type AdministrationDomain = {
   dns_suffix: string;
   forest: string | null;
   trusts: Array<{ domain: string; label: string; direction: DomainTrustDirection }>;
+  /**
+   * Trusts declared on other domains toward this one, read only, with the direction seen from this
+   * domain (an outgoing trust of A toward B is an incoming trust of B).
+   */
+  declared_by: Array<{ domain: string; label: string; direction: DomainTrustDirection }>;
   account_count: number | null;
   machine_count: number | null;
   domain_controllers: Array<{ id: string; name: string; reference: string | null }>;
@@ -184,6 +189,15 @@ export class AdministrationViewService {
       [tenantId, listed.map((option) => option.code), DOMAIN_CONTROLLER_ROLE, DIRECTORY_FAMILY],
     );
     const labelOf = new Map(catalog.map((option) => [option.code, option.label]));
+    const seenFromTarget: Record<DomainTrustDirection, DomainTrustDirection> = { two_way: 'two_way', outgoing: 'incoming', incoming: 'outgoing' };
+    const declaredBy = new Map<string, AdministrationDomain['declared_by']>();
+    for (const option of listed) {
+      for (const trust of option.trusts ?? []) {
+        const list = declaredBy.get(trust.domain) ?? [];
+        list.push({ domain: option.code, label: option.label, direction: seenFromTarget[trust.direction] });
+        declaredBy.set(trust.domain, list);
+      }
+    }
     return listed
       .map((option) => ({
         code: option.code,
@@ -191,6 +205,7 @@ export class AdministrationViewService {
         dns_suffix: option.dns_suffix,
         forest: option.forest ?? null,
         trusts: (option.trusts ?? []).map((trust) => ({ domain: trust.domain, label: labelOf.get(trust.domain) ?? trust.domain, direction: trust.direction })),
+        declared_by: (declaredBy.get(option.code) ?? []).sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' })),
         account_count: option.account_count ?? null,
         machine_count: option.machine_count ?? null,
         domain_controllers: controllers.filter((row) => row.domain === option.code).map((row) => ({ id: row.id, name: row.name, reference: row.asset_reference })),
@@ -204,13 +219,14 @@ export class AdministrationViewService {
     const view = await this.view(opts);
     const language = await languageOf(opts.manager, opts.tenantId, opts.userId ?? null, query.language);
     if (query.list === 'domains') {
-      const headers = ['Domain', 'DNS suffix', 'Forest', 'Trusts', 'Accounts', 'Machines', 'Domain controllers', 'Domain controller servers'];
+      const headers = ['Domain', 'DNS suffix', 'Forest', 'Trusts', 'Trusts declared by other domains', 'Accounts', 'Machines', 'Domain controllers', 'Domain controller servers'];
       const direction: Record<DomainTrustDirection, string> = { two_way: 'two-way', outgoing: 'outgoing', incoming: 'incoming' };
       const rows = view.domains.map((domain) => [
         domain.label,
         domain.dns_suffix,
         domain.forest ?? '',
         domain.trusts.map((trust) => `${trust.label} (${direction[trust.direction]})`).join(', '),
+        domain.declared_by.map((trust) => `${trust.label} (${direction[trust.direction]})`).join(', '),
         domain.account_count == null ? '' : String(domain.account_count),
         domain.machine_count == null ? '' : String(domain.machine_count),
         String(domain.domain_controllers.length),

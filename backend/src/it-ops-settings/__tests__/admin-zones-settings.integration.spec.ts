@@ -77,6 +77,9 @@ async function testDomains() {
     const withCorp = (patch: Record<string, unknown>) => saved.domains.map((d) => d.code === 'corp' ? { ...d, ...patch } : d) as any;
     await assert.rejects(() => settings.updateSettings(tenantId, { domains: withCorp({ account_count: -1 }) }, opts), /whole number/);
     await assert.rejects(() => settings.updateSettings(tenantId, { domains: withCorp({ machine_count: 2.5 }) }, opts), /whole number/);
+    for (const invalid of [true, false, '12.5', '1e3', [5], 100_000_001]) {
+      await assert.rejects(() => settings.updateSettings(tenantId, { domains: withCorp({ account_count: invalid }) }, opts), /whole number from 0 to 100,000,000/, JSON.stringify(invalid));
+    }
     await assert.rejects(() => settings.updateSettings(tenantId, { domains: withCorp({ trusts: [{ domain: 'lab', direction: 'sideways' }] }) }, opts), /trust direction/);
     // Removing the trusted domain drops the trust.
     const dropped = await settings.updateSettings(tenantId, { domains: saved.domains.filter((d) => d.code !== 'partner') }, opts);

@@ -431,7 +431,8 @@
       "noDomains": "Keine Domänen definiert.",
       "noController": "Keiner gefunden",
       "notSet": "Nicht festgelegt",
-      "none": "Keine"
+      "none": "Keine",
+      "declaredTrust": "{{name}} ({{direction}}, in jener Domäne erfasst)"
     },
     "interfaceMap": {
       "title": "Schnittstellenkarte",
@@ -657,6 +658,7 @@
           "incoming": "eingehend"
         },
         "add": "Vertrauenswürdige Domäne hinzufügen",
+        "declaredElsewhere": "In anderen Domänen erfasst (nur lesen)",
         "noOtherDomain": "Fügen Sie zuerst eine weitere Domäne zur Liste hinzu.",
         "count_one": "{{count}} Vertrauensstellung",
         "count_other": "{{count}} Vertrauensstellungen",

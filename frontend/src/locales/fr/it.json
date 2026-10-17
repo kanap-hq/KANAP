@@ -431,7 +431,8 @@
       "noDomains": "Aucun domaine défini.",
       "noController": "Aucun trouvé",
       "notSet": "Non renseigné",
-      "none": "Aucune"
+      "none": "Aucune",
+      "declaredTrust": "{{name}} ({{direction}}, déclarée sur ce domaine)"
     },
     "interfaceMap": {
       "title": "Carte des interfaces",
@@ -657,6 +658,7 @@
           "incoming": "entrante"
         },
         "add": "Ajouter un domaine approuvé",
+        "declaredElsewhere": "Déclarées sur d'autres domaines (lecture seule)",
         "noOtherDomain": "Ajoutez d'abord un autre domaine à la liste.",
         "count_one": "{{count}} approbation",
         "count_other": "{{count}} approbations",

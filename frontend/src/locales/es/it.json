@@ -431,7 +431,8 @@
       "noDomains": "No hay dominios definidos.",
       "noController": "Ninguno encontrado",
       "notSet": "Sin indicar",
-      "none": "Ninguna"
+      "none": "Ninguna",
+      "declaredTrust": "{{name}} ({{direction}}, declarada en ese dominio)"
     },
     "interfaceMap": {
       "title": "Mapa de interfaces",
@@ -657,6 +658,7 @@
           "incoming": "entrante"
         },
         "add": "Añadir un dominio de confianza",
+        "declaredElsewhere": "Declaradas en otros dominios (solo lectura)",
         "noOtherDomain": "Añada primero otro dominio a la lista.",
         "count_one": "{{count}} confianza",
         "count_other": "{{count}} confianzas",

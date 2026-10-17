@@ -26,6 +26,11 @@ export default function DomainTrustsDialog({ domain, domains, onClose, onSave }:
   const candidates = domains.filter((item) => item.code && !item.system && item.code !== domain?.code);
   const labelOf = (code: string) => candidates.find((item) => item.code === code)?.label ?? code;
   const free = candidates.filter((item) => !draft.some((trust) => trust.domain === item.code));
+  // Trusts other domains declare toward this one: shown read only, seen from this domain.
+  const seenFromHere: Record<DomainTrustDirection, DomainTrustDirection> = { two_way: 'two_way', outgoing: 'incoming', incoming: 'outgoing' };
+  const declaredElsewhere = domains.flatMap((item) => (item.code && item.code !== domain?.code
+    ? (item.trusts ?? []).filter((trust) => trust.domain === domain?.code).map((trust) => ({ label: item.label, direction: seenFromHere[trust.direction] }))
+    : []));
   const update = (index: number, patch: Partial<DomainTrust>) => setDraft((prev) => prev.map((trust, i) => (i === index ? { ...trust, ...patch } : trust)));
 
   return (
@@ -76,6 +81,16 @@ export default function DomainTrustsDialog({ domain, domains, onClose, onSave }:
         )}
         {free.length === 0 && draft.length === 0 && (
           <Typography sx={(theme) => ({ fontSize: 13, color: theme.palette.kanap.text.tertiary })}>{t('pages.settings.trusts.noOtherDomain')}</Typography>
+        )}
+        {declaredElsewhere.length > 0 && (
+          <Box sx={{ pt: 1 }}>
+            <Typography sx={(theme) => ({ fontSize: 12, color: theme.palette.kanap.text.tertiary, mb: 0.5 })}>{t('pages.settings.trusts.declaredElsewhere')}</Typography>
+            {declaredElsewhere.map((trust) => (
+              <Typography key={trust.label} sx={(theme) => ({ fontSize: 13, color: theme.palette.kanap.text.secondary })}>
+                {trust.label} ({t(`pages.settings.trusts.directions.${trust.direction}`)})
+              </Typography>
+            ))}
+          </Box>
         )}
       </Stack>
     </KanapDialog>

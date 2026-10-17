@@ -33,6 +33,8 @@ export type AdministrationDomain = {
   dns_suffix: string;
   forest: string | null;
   trusts: Array<{ domain: string; label: string; direction: DomainTrustDirection }>;
+  /** Trusts declared on other domains toward this one, read only, seen from this domain. */
+  declared_by: Array<{ domain: string; label: string; direction: DomainTrustDirection }>;
   account_count: number | null;
   machine_count: number | null;
   domain_controllers: Array<{ id: string; name: string; reference: string | null }>;
@@ -151,8 +153,18 @@ function DomainsSection({ domains }: { domains: AdministrationDomain[] }) {
       key: 'trusts',
       header: t('pages.administrationView.columns.trusts'),
       width: 220,
-      render: (row) => (row.trusts.length
-        ? row.trusts.map((trust) => `${nameOf('domain', trust.domain, trust.label)} (${t(`pages.settings.trusts.directions.${trust.direction}`)})`).join(', ')
+      render: (row) => (row.trusts.length || row.declared_by.length
+        ? (
+          <>
+            {row.trusts.map((trust) => `${nameOf('domain', trust.domain, trust.label)} (${t(`pages.settings.trusts.directions.${trust.direction}`)})`).join(', ')}
+            {row.declared_by.length > 0 && (
+              <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>
+                {row.trusts.length > 0 && ', '}
+                {row.declared_by.map((trust) => t('pages.administrationView.declaredTrust', { name: nameOf('domain', trust.domain, trust.label), direction: t(`pages.settings.trusts.directions.${trust.direction}`) })).join(', ')}
+              </Box>
+            )}
+          </>
+        )
         : <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>{t('pages.administrationView.none')}</Box>),
     },
     { key: 'accounts', header: t('pages.administrationView.columns.accounts'), width: 90, align: 'right', render: (row) => count(row.account_count) },

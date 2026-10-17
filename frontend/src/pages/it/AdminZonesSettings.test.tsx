@@ -82,7 +82,7 @@ describe('Domain trusts dialog', () => {
     { code: 'workgroup', label: 'Workgroup', dns_suffix: '', system: true },
     { code: 'corp', label: 'Corp', dns_suffix: 'corp.example.com', trusts: [{ domain: 'lab', direction: 'two_way' }] },
     { code: 'lab', label: 'Lab', dns_suffix: 'lab.example.com' },
-    { code: 'partner', label: 'Partner', dns_suffix: 'partner.example.com' },
+    { code: 'partner', label: 'Partner', dns_suffix: 'partner.example.com', trusts: [{ domain: 'corp', direction: 'outgoing' }] },
     { code: '', label: 'Unsaved', dns_suffix: '' },
   ];
 
@@ -91,6 +91,9 @@ describe('Domain trusts dialog', () => {
     wrap(<DomainTrustsDialog domain={domains[1]} domains={domains} onClose={vi.fn()} onSave={onSave} />);
     expect(screen.getByText('Lab')).toBeInTheDocument();
     expect(screen.getByText('pages.settings.trusts.directionsHint')).toBeInTheDocument();
+    // Partner trusts Corp: shown read only on Corp as an incoming trust.
+    expect(screen.getByText('pages.settings.trusts.declaredElsewhere')).toBeInTheDocument();
+    expect(screen.getByText('Partner (pages.settings.trusts.directions.incoming)')).toBeInTheDocument();
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'pages.settings.trusts.direction Lab' }));
     fireEvent.click(screen.getByRole('option', { name: 'pages.settings.trusts.directions.outgoing' }));
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'pages.settings.trusts.add' }));
