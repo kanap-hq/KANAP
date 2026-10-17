@@ -4,6 +4,7 @@ import { AuditService } from '../audit/audit.service';
 import { applicationParticipantCondition, type ParticipationAccessScope } from '../auth/business-contributor-scope';
 import { languageOf, writeCsv } from '../common/csv-sheet';
 import { readTechnology, technologyReference, UUID_RE } from '../technologies/technology-rows';
+import { gridTextClause, gridTextModel } from '../technologies/technologies.service';
 import { TechnologyReachService } from '../technologies/technology-reach.service';
 import { VulnerabilityMatchService } from './vulnerability-match.service';
 import { severityOf, VULNERABILITY_STATES, type MatchBasis, type VulnerabilityState } from './vulnerability-rules';
@@ -22,7 +23,65 @@ export type VulnerabilityFilters = {
   q?: unknown;
   limit?: unknown;
   offset?: unknown;
+  /** The list grid (lot T6b): its JSON filter model, `field:DIR` sort and page from 1. */
+  filters?: unknown;
+  sort?: unknown;
+  page?: unknown;
 };
+
+/** At most this many rows (technology version and CVE) in one change of state in bulk. */
+export const BULK_MAX_ROWS = 5000;
+/** Rows written by one statement of a bulk change. */
+const BULK_BATCH = 500;
+
+/** The grid's sortable columns. */
+const GRID_SORTS: Record<string, string> = {
+  severity: 'severity', // SEVERITY_ORDER, then the score
+  cvss_score: 'c.cvss_score',
+  published_at: 'c.published_at',
+  cve_id: 'c.cve_id',
+};
+
+/** The state of a CVE across its rows: to review while one is, not affected when all are, handled otherwise. */
+function overallState(rows: Array<{ state: string }>): VulnerabilityState {
+  if (rows.some((r) => r.state === 'to_review')) return 'to_review';
+  if (rows.length > 0 && rows.every((r) => r.state === 'not_affected')) return 'not_affected';
+  return 'handled';
+}
+
+/** A grid date filter (`equals`, `greaterThan`, `lessThan`, `inRange`) on a day column. */
+function gridDateClause(expr: string, model: any, push: (value: unknown) => string): string | null {
+  if (!model || model.filterType !== 'date') return null;
+  const day = (value: unknown) => {
+    const text = String(value ?? '').slice(0, 10);
+    return DAY_RE.test(text) && !Number.isNaN(Date.parse(text)) ? text : null;
+  };
+  const from = day(model.dateFrom);
+  const to = day(model.dateTo);
+  switch (model.type) {
+    case 'blank': return `${expr} IS NULL`;
+    case 'notBlank': return `${expr} IS NOT NULL`;
+    case 'greaterThan': return from ? `${expr} >= (${push(from)}::date + 1)` : null;
+    case 'lessThan': return from ? `${expr} < ${push(from)}::date` : null;
+    case 'inRange': return from && to ? `${expr} >= ${push(from)}::date AND ${expr} < (${push(to)}::date + 1)` : null;
+    default: return from ? `${expr} >= ${push(from)}::date AND ${expr} < (${push(from)}::date + 1)` : null;
+  }
+}
+
+/** A grid number filter on `expr`. */
+function gridNumberClause(expr: string, model: any, push: (value: unknown) => string): string | null {
+  if (!model || model.filterType !== 'number') return null;
+  const n = Number(model.filter);
+  const ok = model.filter !== null && model.filter !== '' && Number.isFinite(n);
+  const ops: Record<string, string> = { equals: '=', notEqual: '<>', lessThan: '<', lessThanOrEqual: '<=', greaterThan: '>', greaterThanOrEqual: '>=' };
+  if (model.type === 'blank') return `${expr} IS NULL`;
+  if (model.type === 'notBlank') return `${expr} IS NOT NULL`;
+  if (model.type === 'inRange') {
+    const to = Number(model.filterTo);
+    return ok && Number.isFinite(to) ? `${expr} BETWEEN ${push(n)}::numeric AND ${push(to)}::numeric` : null;
+  }
+  return ok && ops[model.type ?? 'equals'] ? `${expr} ${ops[model.type ?? 'equals']} ${push(n)}::numeric` : null;
+}
 
 const CVE_RE = /^CVE-\d{4}-\d{4,}$/;
 /** At most this many CVE in one exported file. */
@@ -196,7 +255,54 @@ export class VulnerabilitiesService {
       const like = push(`%${q.replace(/[\\%_]/g, (m) => `\\${m}`)}%`);
       where.push(`(tv.cve_id ILIKE ${like} OR t.name ILIKE ${like} OR c.summary ILIKE ${like})`);
     }
+    where.push(...this.gridClauses(filters.filters, push));
     return where.length ? `AND ${where.join(' AND ')}` : '';
+  }
+
+  /**
+   * The list grid's filter model (lot T6b), on rows: set filters on `severity`, `state`, `editor`
+   * (without case) and `technologies` (id or `TEC-n`; an unknown one matches nothing), text filters
+   * on `cve_id` and `summary`, a number filter on `cvss_score`, a date filter on `published_at`.
+   * An unreadable model or another column is ignored.
+   */
+  private gridClauses(raw: unknown, push: (value: unknown) => string): string[] {
+    let model: Record<string, any>;
+    try {
+      model = typeof raw === 'string' ? JSON.parse(raw) : (raw as Record<string, any>);
+    } catch {
+      return [];
+    }
+    if (!model || typeof model !== 'object') return [];
+    const out: string[] = [];
+    const setValues = (column: string): string[] | null => {
+      const m = model[column];
+      if (!m || m.filterType !== 'set' || !Array.isArray(m.values)) return null;
+      return m.values.filter((v: unknown): v is string => typeof v === 'string' && v.trim() !== '').map((v: string) => v.trim());
+    };
+    for (const [column, expr] of [['severity', 'c.severity'], ['state', 'tv.state']] as const) {
+      const values = setValues(column);
+      if (values) out.push(values.length ? `${expr} = ANY(${push(values)}::text[])` : 'false');
+    }
+    const editors = setValues('editor');
+    if (editors) out.push(editors.length ? `lower(t.editor) = ANY(${push(editors.map((e) => e.toLowerCase()))}::text[])` : 'false');
+    const technologies = setValues('technologies');
+    if (technologies) {
+      if (technologies.length === 0) out.push('false');
+      else {
+        const p = push(technologies.map((v) => v.toUpperCase()));
+        out.push(`(upper(t.id::text) = ANY(${p}::text[]) OR ('TEC-' || t.item_number) = ANY(${p}::text[]))`);
+      }
+    }
+    const json = typeof raw === 'string' ? raw : JSON.stringify(model);
+    for (const [column, expr] of [['cve_id', 'tv.cve_id'], ['summary', 'c.summary']] as const) {
+      const clause = gridTextClause(expr, gridTextModel(json, column), push);
+      if (clause) out.push(clause);
+    }
+    const score = gridNumberClause('c.cvss_score', model.cvss_score, push);
+    if (score) out.push(score);
+    const published = gridDateClause('c.published_at', model.published_at, push);
+    if (published) out.push(`(${published})`);
+    return out;
   }
 
   private readonly rowsFrom = `
@@ -295,14 +401,24 @@ export class VulnerabilitiesService {
       return Number.isFinite(n) ? Math.min(Math.max(n, 0), max) : fallback;
     };
     const limit = paging ? Math.max(whole(filters.limit, 50, 200), 1) : EXPORT_LIMIT;
-    const offset = paging ? whole(filters.offset, 0, 1_000_000_000) : 0;
+    // `offset`, or the grid's `page` (from 1).
+    const offset = !paging ? 0
+      : filters.offset !== undefined ? whole(filters.offset, 0, 1_000_000_000)
+        : Math.max(whole(filters.page, 1, 10_000_000) - 1, 0) * limit;
+    // The grid's `field:DIR`; most severe first by default.
+    const [sortField, sortDir] = String(filters.sort ?? '').split(':');
+    const sortExpr = GRID_SORTS[sortField];
+    const direction = String(sortDir ?? '').toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+    const order = sortExpr && sortField !== 'severity'
+      ? `${sortExpr} ${direction} NULLS LAST, c.cve_id DESC`
+      : `${SEVERITY_ORDER} ${sortExpr ? direction : 'DESC'}, c.cvss_score ${sortExpr ? direction : 'DESC'} NULLS LAST, c.published_at DESC NULLS LAST, c.cve_id DESC`;
     const params: unknown[] = [tenantId];
     const where = await this.filterSql(mg, tenantId, filters, params);
     const page: Array<{ cve_id: string; total: string }> = await mg.query(
       `SELECT c.cve_id, count(*) OVER () AS total
          FROM (SELECT DISTINCT tv.cve_id ${this.rowsFrom} WHERE tv.tenant_id = $1 ${where}) x
          JOIN vulnerability_cves c ON c.cve_id = x.cve_id
-        ORDER BY ${SEVERITY_ORDER} DESC, c.cvss_score DESC NULLS LAST, c.published_at DESC NULLS LAST, c.cve_id DESC
+        ORDER BY ${order}
         LIMIT ${limit} OFFSET ${offset}`,
       params,
     );
@@ -322,6 +438,9 @@ export class VulnerabilitiesService {
       return {
         ...presentCve(cves.get(id)!),
         technologies: groupByTechnology(cveRows),
+        // For the grid's columns: the publishers concerned, and the state across the rows.
+        editor: Array.from(new Set(cveRows.map((r) => r.editor).filter((e): e is string => !!e))).sort().join(', ') || null,
+        state: overallState(cveRows),
         ...this.counts(cveRows, reach),
       };
     });
@@ -471,6 +590,94 @@ export class VulnerabilitiesService {
       changed += 1;
     }
     return { ok: true, changed, ...(await this.ofTechnology(tech.id, opts)) };
+  }
+
+  /**
+   * Changes in bulk (lot T6b) the state, and the note when one is sent, of the rows (technology
+   * version and CVE) of the chosen CVE (`cve_ids`, 1,000 at most), or of every CVE the list's
+   * filters reach (`all: true`); `filters` (the list's parameters, grid model included) narrows the
+   * rows in both cases. The rows are locked in the matching's order (technology, version, CVE),
+   * written in batches of 500, and each changed row is audited on `technology_vulnerabilities`.
+   * `dry_run` counts without writing. More than `BULK_MAX_ROWS` rows is a 400.
+   */
+  async bulkState(body: Record<string, unknown>, opts: VulnOpts) {
+    const { manager: mg, tenantId } = opts;
+    const state = String(body.state ?? '');
+    if (!(VULNERABILITY_STATES as readonly string[]).includes(state)) {
+      throw new BadRequestException('state must be to_review, handled or not_affected.');
+    }
+    let note: string | null | undefined;
+    if (body.note !== undefined) {
+      if (body.note !== null && typeof body.note !== 'string') throw new BadRequestException('note must be text.');
+      const text = typeof body.note === 'string' ? body.note.trim() : '';
+      if (text.length > 4000) throw new BadRequestException('note must be at most 4000 characters.');
+      note = text || null;
+    }
+    const all = body.all === true;
+    if (body.cve_ids !== undefined && !Array.isArray(body.cve_ids)) throw new BadRequestException('cve_ids must be a list.');
+    const cveIds = Array.from(new Set(((body.cve_ids as unknown[]) ?? []).map((v) => String(v ?? '').trim().toUpperCase())));
+    if (cveIds.some((id) => !CVE_RE.test(id))) throw new BadRequestException('cve_ids must be CVE ids (CVE-YYYY-NNNN).');
+    if (!all && cveIds.length === 0) throw new BadRequestException('Choose the vulnerabilities (cve_ids), or every one of the filter (all: true).');
+    if (cveIds.length > 1000) throw new BadRequestException('At most 1000 vulnerabilities at once: use every one of the filter instead.');
+    const filters = (body.filters && typeof body.filters === 'object' ? body.filters : {}) as VulnerabilityFilters;
+
+    const params: unknown[] = [tenantId];
+    let where = await this.filterSql(mg, tenantId, { ...filters, limit: undefined, offset: undefined, page: undefined, sort: undefined }, params);
+    if (!all) {
+      params.push(cveIds);
+      where += ` AND tv.cve_id = ANY($${params.length}::text[])`;
+    }
+    const scopeParams = [...params];
+    const noteChanges = note !== undefined;
+    params.push(state, note ?? null);
+    const changeSql = `tv.state <> $${params.length - 1}::text${noteChanges ? ` OR tv.note IS DISTINCT FROM $${params.length}::text` : ` OR $${params.length}::text IS NOT NULL`}`;
+    const [count] = await mg.query(
+      `SELECT count(*)::int AS rows, count(DISTINCT tv.cve_id)::int AS cves, count(*) FILTER (WHERE ${changeSql})::int AS changes
+         ${this.rowsFrom} WHERE tv.tenant_id = $1 ${where}`,
+      params,
+    );
+    const rows = Number(count?.rows ?? 0);
+    if (rows > BULK_MAX_ROWS) {
+      throw new BadRequestException(`These filters reach ${rows} rows, more than ${BULK_MAX_ROWS} at once: narrow them.`);
+    }
+    const summary = { rows, cves: Number(count?.cves ?? 0) };
+    if (body.dry_run === true) return { ok: true, dry_run: true, ...summary, changes: Number(count?.changes ?? 0) };
+
+    const before: Array<Record<string, unknown>> = await mg.query(
+      `SELECT tv.id, tv.technology_id, tv.technology_version_id, tv.cve_id, tv.state, tv.note, tv.state_changed_by, tv.state_changed_at
+         ${this.rowsFrom} WHERE tv.tenant_id = $1 ${where}
+        ORDER BY tv.technology_id, tv.technology_version_id NULLS LAST, tv.cve_id
+        FOR UPDATE OF tv`,
+      scopeParams,
+    );
+    const toChange = before.filter((row) => row.state !== state || (noteChanges && row.note !== note));
+    let changed = 0;
+    for (let i = 0; i < toChange.length; i += BULK_BATCH) {
+      const batch = toChange.slice(i, i + BULK_BATCH);
+      // An UPDATE answers [rows, rowCount], RETURNING included.
+      const [afterRows] = await mg.query(
+        `UPDATE technology_vulnerabilities
+            SET state = $3,
+                note = CASE WHEN $4::boolean THEN $5 ELSE note END,
+                state_changed_by = CASE WHEN state <> $3 THEN $6::uuid ELSE state_changed_by END,
+                state_changed_at = CASE WHEN state <> $3 THEN now() ELSE state_changed_at END,
+                updated_at = now()
+          WHERE tenant_id = $1 AND id = ANY($2::uuid[])
+          RETURNING id, technology_id, technology_version_id, cve_id, state, note, state_changed_by, state_changed_at`,
+        [tenantId, batch.map((row) => row.id), state, noteChanges, note ?? null, opts.userId ?? null],
+      );
+      const afterById = new Map((afterRows as Array<Record<string, unknown>>).map((row) => [String(row.id), row]));
+      for (const row of batch) {
+        const after = afterById.get(String(row.id));
+        if (!after) continue;
+        await this.audit.log(
+          { table: 'technology_vulnerabilities', recordId: String(row.id), action: 'update', before: row, after, userId: opts.userId ?? null },
+          { manager: mg },
+        );
+        changed += 1;
+      }
+    }
+    return { ok: true, ...summary, changed };
   }
 
   /** Matches the technology again with the cache, under a lock of its row. */

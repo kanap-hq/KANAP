@@ -58,7 +58,7 @@ const GRID_SET_COLUMNS = ['family', 'editor', 'lifecycle'] as const;
 /** Columns the list grid filters with a text filter, and what they compare. */
 const GRID_TEXT_COLUMNS: Record<string, string> = { name: 't.name', reference: `('TEC-' || t.item_number)` };
 
-function gridTextModel(raw: unknown, column: string): { type?: string; filter?: unknown } | null {
+export function gridTextModel(raw: unknown, column: string): { type?: string; filter?: unknown } | null {
   if (typeof raw !== 'string' || !raw.trim()) return null;
   try {
     const model = JSON.parse(raw)?.[column];
@@ -69,7 +69,7 @@ function gridTextModel(raw: unknown, column: string): { type?: string; filter?: 
 }
 
 /** A grid text filter (contains, equals, starts or ends with, blank) on `expr`, without case. */
-function gridTextClause(expr: string, model: { type?: string; filter?: unknown } | null, bind: (value: unknown) => string): string | null {
+export function gridTextClause(expr: string, model: { type?: string; filter?: unknown } | null, bind: (value: unknown) => string): string | null {
   if (!model) return null;
   const type = model.type || 'contains';
   if (type === 'blank') return `(${expr} IS NULL OR ${expr} = '')`;

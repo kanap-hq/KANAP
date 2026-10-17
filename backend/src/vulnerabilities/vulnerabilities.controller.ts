@@ -62,6 +62,13 @@ export class VulnerabilitiesController {
     return file.content;
   }
 
+  /** The state (and a common note) of many vulnerabilities at once: chosen ones, or all of the filter. */
+  @RequireLevel('infrastructure', 'member')
+  @Post('bulk-state')
+  async bulkState(@Body() body: Record<string, unknown>, @Tenant() ctx: TenantRequest) {
+    return this.svc.bulkState(body ?? {}, opts(ctx));
+  }
+
   @RequireLevel('infrastructure', 'reader')
   @Get(':cveId')
   async detail(@Param('cveId') cveId: string, @Tenant() ctx: TenantRequest) {
