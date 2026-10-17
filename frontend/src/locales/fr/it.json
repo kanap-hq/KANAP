@@ -294,31 +294,36 @@
     "vulnerabilities": {
       "title": "Vulnérabilités",
       "subtitle": "Vulnérabilités publiées (NVD) qui concernent les technologies en service, et les serveurs et applications qu'elles touchent.",
-      "count_one": "{{count}} vulnérabilité",
-      "count_other": "{{count}} vulnérabilités",
-      "showMore": "Afficher plus",
+      "actions": {
+        "changeState": "Changer l'état",
+        "changeStateSelected_one": "Changer l'état ({{count}})",
+        "changeStateSelected_other": "Changer l'état ({{count}})",
+        "export": "Exporter en CSV"
+      },
+      "bulk": {
+        "title": "Changer l'état",
+        "state": "État",
+        "note": "Note commune",
+        "scopeAll": "Toutes les vulnérabilités du filtre en cours",
+        "scopeSelected_one": "La vulnérabilité sélectionnée.",
+        "scopeSelected_other": "Les {{count}} vulnérabilités sélectionnées.",
+        "count_one": "Cela change {{count}} ligne sur {{rows}}, sur {{cves}} vulnérabilités.",
+        "count_other": "Cela change {{count}} lignes sur {{rows}}, sur {{cves}} vulnérabilités.",
+        "counting": "Comptage des lignes…",
+        "tooMany": "Plus de 5 000 lignes : resserrez les filtres ou sélectionnez moins de vulnérabilités.",
+        "failed": "La modification n'a pas pu être enregistrée. Réessayez.",
+        "save": "Changer l'état",
+        "noteKept": "Sans note, chaque ligne garde la sienne."
+      },
+      "panel": {
+        "close": "Fermer"
+      },
       "exportFailed": "L'export a échoué. Réessayez.",
       "saveFailed": "La modification n'a pas pu être enregistrée. Réessayez.",
       "unknownVersion": "Version non renseignée (potentiellement concernée)",
       "empty": {
         "none": "Aucune vulnérabilité à traiter. Les vulnérabilités s'affichent pour les technologies qui indiquent leurs identifiants CPE : renseignez-les sur une technologie, ou adoptez-la depuis le catalogue.",
         "filtered": "Aucune vulnérabilité ne correspond à ces filtres."
-      },
-      "filters": {
-        "severity": "Sévérité",
-        "allSeverities": "Toutes",
-        "state": "État",
-        "allStates": "Tous",
-        "editor": "Éditeur",
-        "allEditors": "Tous",
-        "technology": "Technologie",
-        "allTechnologies": "Toutes",
-        "period": "Publication",
-        "anyTime": "Toute date",
-        "lastDays_one": "Dernier jour",
-        "lastDays_other": "{{count}} derniers jours",
-        "search": "Recherche",
-        "searchPlaceholder": "ex. CVE-2024-1234"
       },
       "columns": {
         "cve": "CVE",
@@ -329,7 +334,9 @@
         "applications": "Applications",
         "state": "État",
         "published": "Publication",
-        "version": "Version"
+        "version": "Version",
+        "score": "Score",
+        "editor": "Éditeur"
       },
       "severities": {
         "critical": "Critique",

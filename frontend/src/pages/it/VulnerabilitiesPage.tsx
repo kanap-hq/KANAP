@@ -1,24 +1,30 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Box, Button, Link as MLink, MenuItem, TextField, Typography, useTheme } from '@mui/material';
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Box, Button, Checkbox, Drawer, FormControlLabel, IconButton, Link as MLink, MenuItem, Stack, TextField, Typography,
+} from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
+import { ICellRendererParams } from 'ag-grid-community';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Link as RouterLink, useSearchParams } from 'react-router-dom';
+import { Link as RouterLink, useLocation } from 'react-router-dom';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
+import CheckboxSetFilter from '../../components/CheckboxSetFilter';
+import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
+import PageHeader from '../../components/PageHeader';
 import ReportDataStatus from '../../components/reports/ReportDataStatus';
-import ReportLayout, { ReportFilter, reportFilterMenuProps, reportFilterSelectSx } from '../../components/reports/ReportLayout';
+import { reportFilterMenuProps } from '../../components/reports/ReportLayout';
+import ServerDataGrid, { EnhancedColDef, type ListRequest } from '../../components/ServerDataGrid';
+import { KanapDialog, PropertyRow } from '../../components/design';
 import { RelationRef } from '../../components/workspace/RelationsTable';
 import { useFeatures } from '../../config/FeaturesContext';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import { useLocale } from '../../i18n/useLocale';
 import { formatShortDate } from '../../lib/dateFormat';
-import { drawerMenuItemSx, inlineControlSx } from '../../theme/formSx';
+import { drawerMenuItemSx, drawerSelectSx, inlineControlSx } from '../../theme/formSx';
 import { downloadBlob, extractFilenameFromDisposition } from '../../utils/downloadBlob';
 import ForbiddenPage from '../ForbiddenPage';
 import {
-  overallState,
   SEVERITIES,
   SeverityCell,
   technologiesText,
@@ -32,50 +38,36 @@ import {
 } from './vulnerabilities/vulnerabilityTypes';
 
 const ENDPOINT = '/vulnerabilities';
-const PAGE = 100;
-/** Publication periods, in days. */
-export const PERIODS = [30, 90, 365] as const;
 
-type ListResponse = { items: VulnerabilityItem[]; total: number; limit: number; offset: number };
+/** A list row: the CVE, with its publishers and its state across its rows (`GET /vulnerabilities`). */
+export type VulnerabilityRow = VulnerabilityItem & { id?: string; editor: string | null; state: VulnerabilityState };
 
-/** `YYYY-MM-DD`, `days` ago. */
-function daysAgo(days: number): string {
-  const date = new Date();
-  date.setUTCDate(date.getUTCDate() - days);
-  return date.toISOString().slice(0, 10);
+/**
+ * The grid's filter model from the address: "to review" unless `state` says otherwise (`all`: every
+ * state); `editor`, `technology` (`TEC-n`) and `severity` as set filters; `q` on the CVE id. These
+ * are the entries from the technologies list, the technology record and the emails.
+ */
+export function filterModelFromSearch(search: string): Record<string, unknown> {
+  const params = new URLSearchParams(search);
+  const model: Record<string, unknown> = {};
+  const set = (values: string[]) => ({ filterType: 'set', values });
+  const state = params.get('state');
+  if (state !== 'all') model.state = set([(VULNERABILITY_STATES as readonly string[]).includes(state ?? '') ? state! : 'to_review']);
+  const editor = params.get('editor');
+  if (editor) model.editor = set([editor]);
+  const technology = params.get('technology');
+  if (technology) model.technologies = set([technology]);
+  const severity = params.get('severity');
+  if (severity && (SEVERITIES as readonly string[]).includes(severity)) model.severity = set([severity]);
+  const q = params.get('q');
+  if (q) model.cve_id = { filterType: 'text', type: 'contains', filter: q };
+  return model;
 }
 
-/** Dense table chrome, as `RelationsTable`: 12/500 tertiary headers, 13px cells, horizontal borders only. */
-function useTableSx() {
-  const theme = useTheme();
-  return {
-    width: '100%',
-    borderCollapse: 'collapse',
-    tableLayout: 'fixed',
-    '& th': {
-      fontSize: 12,
-      fontWeight: 500,
-      color: 'kanap.text.tertiary',
-      textAlign: 'left',
-      p: '0 8px 6px 0',
-      borderBottom: `1px solid ${theme.palette.kanap.border.default}`,
-    },
-    '& td': {
-      fontSize: 13,
-      color: 'kanap.text.primary',
-      p: '7px 8px 7px 0',
-      borderBottom: `1px solid ${theme.palette.kanap.border.soft}`,
-      whiteSpace: 'nowrap',
-      overflow: 'hidden',
-      textOverflow: 'ellipsis',
-      verticalAlign: 'top',
-    },
-    '& .r': { textAlign: 'right', fontVariantNumeric: 'tabular-nums' },
-    '& tbody tr.row:hover td': { backgroundColor: theme.palette.kanap.bg.hover },
-    '& tbody tr.row': { cursor: 'pointer' },
-    '& tbody tr.row:focus-visible': { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: -2 },
-    '& tbody tr.detail td': { whiteSpace: 'normal', backgroundColor: theme.palette.kanap.bg.drawer, p: '12px 12px 14px 28px' },
-  } as const;
+/** The list's parameters, without its paging, for the export and the change in bulk. */
+function scopeParams(request: ListRequest | null): Record<string, unknown> {
+  const { page: _page, limit: _limit, ...rest } = (request?.params ?? {}) as Record<string, unknown>;
+  return rest;
 }
 
 /** A neutral link (a server, an application, a technology): underline and teal on hover only. */
@@ -175,7 +167,7 @@ function VersionStateRow({ technologyId, cveId, version, canEdit, onSaved }: {
   );
 }
 
-/** One CVE opened under its row: what it says, what it touches, and its state per technology version. */
+/** One CVE in the side panel: what it says, what it touches, and its state per technology version. */
 function VulnerabilityDetailPanel({ cveId, canEdit }: { cveId: string; canEdit: boolean }) {
   const { t } = useTranslation('it');
   const queryClient = useQueryClient();
@@ -279,165 +271,211 @@ function VulnerabilityDetailPanel({ cveId, canEdit }: { cveId: string; canEdit: 
   );
 }
 
-function VulnerabilitiesTable({ items, canEdit }: { items: VulnerabilityItem[]; canEdit: boolean }) {
+
+/**
+ * The change of state in bulk: a state and a common note for the selected CVE, or for every CVE of
+ * the current filter; the count comes from a dry run before the change.
+ */
+function BulkStateDialog({ open, onClose, selected, request, onDone }: {
+  open: boolean;
+  onClose: () => void;
+  selected: string[];
+  request: ListRequest | null;
+  onDone: () => void;
+}) {
   const { t } = useTranslation('it');
-  const locale = useLocale();
-  const sx = useTableSx();
-  const [open, setOpen] = useState<string | null>(null);
-  const applicationsVisible = items.some((item) => item.applications !== null);
-  const columns = applicationsVisible ? 9 : 8;
+  const [state, setState] = useState<VulnerabilityState>('handled');
+  const [note, setNote] = useState('');
+  const [all, setAll] = useState(selected.length === 0);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    setAll(selected.length === 0);
+    setError(null);
+  }, [open, selected.length]);
+  const body = useMemo(() => ({
+    state,
+    ...(note.trim() ? { note: note.trim() } : {}),
+    ...(all ? { all: true } : { cve_ids: selected }),
+    filters: scopeParams(request),
+  }), [all, note, request, selected, state]);
+  const count = useQuery({
+    queryKey: ['vulnerabilities', 'bulk-count', body],
+    queryFn: async () => (await api.post<{ rows: number; cves: number; changes: number }>(`${ENDPOINT}/bulk-state`, { ...body, dry_run: true })).data,
+    enabled: open,
+    retry: false,
+  });
+  const tooMany = count.isError;
+  const save = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      await api.post(`${ENDPOINT}/bulk-state`, body);
+      onDone();
+    } catch {
+      setError(t('pages.vulnerabilities.bulk.failed'));
+    } finally {
+      setSaving(false);
+    }
+  };
   return (
-    <Box component="table" sx={sx} aria-label={t('pages.vulnerabilities.title')}>
-      <colgroup>
-        <col style={{ width: 24 }} />
-        <col style={{ width: 150 }} />
-        <col style={{ width: 120 }} />
-        <col />
-        <col style={{ width: '26%' }} />
-        <col style={{ width: 70 }} />
-        {applicationsVisible && <col style={{ width: 96 }} />}
-        <col style={{ width: 120 }} />
-        <col style={{ width: 100 }} />
-      </colgroup>
-      <thead>
-        <tr>
-          <th aria-hidden />
-          <th>{t('pages.vulnerabilities.columns.cve')}</th>
-          <th>{t('pages.vulnerabilities.columns.severity')}</th>
-          <th>{t('pages.vulnerabilities.columns.summary')}</th>
-          <th>{t('pages.vulnerabilities.columns.technologies')}</th>
-          <th className="r">{t('pages.vulnerabilities.columns.servers')}</th>
-          {applicationsVisible && <th className="r">{t('pages.vulnerabilities.columns.applications')}</th>}
-          <th>{t('pages.vulnerabilities.columns.state')}</th>
-          <th>{t('pages.vulnerabilities.columns.published')}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {items.map((item) => {
-          const expanded = open === item.cve_id;
-          const toggle = () => setOpen(expanded ? null : item.cve_id);
-          const technologies = technologiesText(item.technologies, t);
-          return (
-            <React.Fragment key={item.cve_id}>
-              <tr
-                className="row"
-                tabIndex={0}
-                aria-expanded={expanded}
-                onClick={toggle}
-                onKeyDown={(event) => {
-                  if (event.target !== event.currentTarget) return;
-                  if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggle(); }
-                }}
-              >
-                <td>
-                  {expanded
-                    ? <KeyboardArrowDownIcon sx={{ fontSize: 16, color: 'kanap.text.tertiary', verticalAlign: 'middle' }} />
-                    : <KeyboardArrowRightIcon sx={{ fontSize: 16, color: 'kanap.text.tertiary', verticalAlign: 'middle' }} />}
-                </td>
-                <td style={{ fontFamily: MONO_FONT_FAMILY, fontSize: 12 }}>{item.cve_id}</td>
-                <td><SeverityCell severity={item.severity} score={item.cvss_score} /></td>
-                <td title={item.summary ?? ''}>{item.summary ?? ''}</td>
-                <td title={technologies}>{technologies}</td>
-                <td className="r">{item.servers}</td>
-                {applicationsVisible && <td className="r">{item.applications ?? ''}</td>}
-                <td><VulnerabilityStateCell state={overallState(item.technologies.flatMap((tech) => tech.versions))} /></td>
-                <td>{item.published_at ? formatShortDate(item.published_at, locale, { year: 'always' }) : ''}</td>
-              </tr>
-              {expanded && (
-                <tr className="detail">
-                  <td colSpan={columns}><VulnerabilityDetailPanel cveId={item.cve_id} canEdit={canEdit} /></td>
-                </tr>
-              )}
-            </React.Fragment>
-          );
-        })}
-      </tbody>
-    </Box>
+    <KanapDialog
+      open={open}
+      title={t('pages.vulnerabilities.bulk.title')}
+      onClose={onClose}
+      onSave={save}
+      saveLabel={t('pages.vulnerabilities.bulk.save')}
+      saveDisabled={!count.data || count.data.changes === 0 || tooMany}
+      saveLoading={saving}
+    >
+      <Stack spacing={1.5}>
+        <PropertyRow label={t('pages.vulnerabilities.bulk.state')}>
+          <TextField
+            select
+            variant="standard"
+            value={state}
+            onChange={(event) => setState(event.target.value as VulnerabilityState)}
+            SelectProps={{ MenuProps: reportFilterMenuProps, inputProps: { 'aria-label': t('pages.vulnerabilities.bulk.state') } }}
+            sx={drawerSelectSx}
+          >
+            {VULNERABILITY_STATES.map((option) => (
+              <MenuItem key={option} value={option} sx={drawerMenuItemSx}><VulnerabilityStateCell state={option} /></MenuItem>
+            ))}
+          </TextField>
+        </PropertyRow>
+        <PropertyRow label={t('pages.vulnerabilities.bulk.note')}>
+          <TextField
+            variant="standard"
+            value={note}
+            placeholder={t('pages.vulnerabilities.detail.notePlaceholder')}
+            inputProps={{ 'aria-label': t('pages.vulnerabilities.bulk.note'), maxLength: 4000 }}
+            onChange={(event) => setNote(event.target.value)}
+          />
+        </PropertyRow>
+        <FormControlLabel
+          control={<Checkbox size="small" checked={all} disabled={selected.length === 0} onChange={(event) => setAll(event.target.checked)} />}
+          label={<Typography sx={{ fontSize: 13 }}>{t('pages.vulnerabilities.bulk.scopeAll')}</Typography>}
+        />
+        {!all && (
+          <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
+            {t('pages.vulnerabilities.bulk.scopeSelected', { count: selected.length })}
+          </Typography>
+        )}
+        <Typography role="status" sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
+          {tooMany
+            ? t('pages.vulnerabilities.bulk.tooMany')
+            : count.data
+              ? t('pages.vulnerabilities.bulk.count', { count: count.data.changes, rows: count.data.rows, cves: count.data.cves })
+              : t('pages.vulnerabilities.bulk.counting')}
+        </Typography>
+        {note.trim() === '' && (
+          <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>{t('pages.vulnerabilities.bulk.noteKept')}</Typography>
+        )}
+        {error && <Typography role="alert" sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{error}</Typography>}
+      </Stack>
+    </KanapDialog>
   );
 }
 
 /**
  * IT › Vulnerabilities (lot T6b): the published CVE (NVD) matched with the technologies of the
- * workspace, most severe first, "to review" by default, with the servers and applications each
- * reaches. Built on `ReportLayout`, as the end of support report. Shown only while the vulnerability
- * feed is on (`features.vulnerabilityFeed`).
+ * workspace, on the list grid of the repository (filters per column, columns chosen and kept, sort,
+ * total, export), "to review" by default and most severe first. Several CVE, or every one of the
+ * filter, change state at once; a row opens the CVE in a side panel. Shown only while the
+ * vulnerability feed is on (`features.vulnerabilityFeed`).
  */
 export default function VulnerabilitiesPage() {
   const { t } = useTranslation(['it', 'common']);
+  const locale = useLocale();
+  const location = useLocation();
+  const queryClient = useQueryClient();
   const { hasLevel } = useAuth();
   const { config } = useFeatures();
   const enabled = config.features.vulnerabilityFeed === true;
   const allowed = hasLevel('infrastructure', 'reader');
   const canEdit = hasLevel('infrastructure', 'member');
-  const [params, setParams] = useSearchParams();
-  const [limit, setLimit] = useState(PAGE);
+  const initialModel = useMemo(() => filterModelFromSearch(location.search), [location.search]);
+  const [selected, setSelected] = useState<VulnerabilityRow[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [openCve, setOpenCve] = useState<string | null>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
   const [exportError, setExportError] = useState(false);
+  const requestRef = useRef<ListRequest | null>(null);
+  const [request, setRequest] = useState<ListRequest | null>(null);
 
-  const severity = (SEVERITIES as readonly string[]).includes(params.get('severity') ?? '') ? params.get('severity')! : '';
-  const stateParam = params.get('state');
-  // "To review" unless the URL says otherwise ("all": every state).
-  const state = stateParam === 'all' ? '' : (VULNERABILITY_STATES as readonly string[]).includes(stateParam ?? '') ? stateParam! : 'to_review';
-  const editor = params.get('editor') ?? '';
-  const technology = params.get('technology') ?? '';
-  const periodParam = Number(params.get('period'));
-  const period = (PERIODS as readonly number[]).includes(periodParam) ? periodParam : 0;
-  const q = params.get('q') ?? '';
-  const [search, setSearch] = useState(q);
+  const severityValues = useCallback(async () => SEVERITIES.map((s) => ({ value: s, label: t(`pages.vulnerabilities.severities.${s}`) })), [t]);
+  const stateValues = useCallback(async () => VULNERABILITY_STATES.map((s) => ({ value: s, label: t(`pages.vulnerabilities.states.${s}`) })), [t]);
+  const editorValues = useCallback(async () => {
+    const res = await api.get<{ editor?: Array<string | null> }>('/technologies/filter-values', { params: { fields: 'editor' } });
+    return (res.data?.editor || []).filter((e): e is string => !!e).map((e) => ({ value: e, label: e }));
+  }, []);
+  const technologyValues = useCallback(async () => {
+    const res = await api.get<{ items: Array<{ reference: string; name: string }> }>('/technologies', { params: { limit: 500, sort: 'name:ASC' } });
+    return (res.data?.items || []).map((tech) => ({ value: tech.reference, label: `${tech.reference} ${tech.name}` }));
+  }, []);
 
-  const setParam = (key: string, value: string | null) => {
-    setLimit(PAGE);
-    setParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (value) next.set(key, value); else next.delete(key);
-      return next;
-    }, { replace: true });
-  };
+  const columns: EnhancedColDef<VulnerabilityRow>[] = useMemo(() => [
+    { headerName: t('pages.vulnerabilities.columns.cve'), field: 'cve_id', width: 150, cellStyle: { fontFamily: MONO_FONT_FAMILY, fontSize: '12px' } },
+    {
+      headerName: t('pages.vulnerabilities.columns.severity'),
+      field: 'severity',
+      width: 130,
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: { getValues: severityValues, searchable: false },
+      cellRenderer: (p: ICellRendererParams<VulnerabilityRow>) => (p.data ? <SeverityCell severity={p.data.severity} score={p.data.cvss_score} /> : null),
+    },
+    { headerName: t('pages.vulnerabilities.columns.score'), field: 'cvss_score', width: 90, type: 'rightAligned', defaultHidden: true, filter: 'agNumberColumnFilter' },
+    { headerName: t('pages.vulnerabilities.columns.summary'), field: 'summary', minWidth: 220, flex: 1, sortable: false, tooltipField: 'summary' },
+    {
+      headerName: t('pages.vulnerabilities.columns.technologies'),
+      field: 'technologies',
+      width: 220,
+      sortable: false,
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: { getValues: technologyValues },
+      valueFormatter: (p: any) => technologiesText((p.value as VulnerabilityRow['technologies']) || [], t),
+    },
+    {
+      headerName: t('pages.vulnerabilities.columns.editor'),
+      field: 'editor',
+      width: 130,
+      sortable: false,
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: { getValues: editorValues },
+      tooltipField: 'editor',
+    },
+    { headerName: t('pages.vulnerabilities.columns.servers'), field: 'servers', width: 80, type: 'rightAligned', sortable: false, filter: false },
+    { headerName: t('pages.vulnerabilities.columns.applications'), field: 'applications', width: 100, type: 'rightAligned', sortable: false, filter: false },
+    {
+      headerName: t('pages.vulnerabilities.columns.state'),
+      field: 'state',
+      width: 120,
+      sortable: false,
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: { getValues: stateValues, searchable: false },
+      cellRenderer: (p: ICellRendererParams<VulnerabilityRow>) => (p.data ? <VulnerabilityStateCell state={p.data.state} /> : null),
+    },
+    {
+      headerName: t('pages.vulnerabilities.columns.published'),
+      field: 'published_at',
+      width: 110,
+      filter: 'agDateColumnFilter',
+      valueFormatter: (p: any) => (p.value ? formatShortDate(p.value as string, locale, { year: 'always' }) : ''),
+    },
+  ], [editorValues, locale, severityValues, stateValues, t, technologyValues]);
 
-  // The search applies 300 ms after the last key.
-  useEffect(() => {
-    if (search.trim() === q) return undefined;
-    const timer = setTimeout(() => setParam('q', search.trim() || null), 300);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search]);
-
-  const filters = useMemo(() => ({
-    ...(severity ? { severity } : {}),
-    ...(state ? { state } : {}),
-    ...(editor ? { editor } : {}),
-    ...(technology ? { technology } : {}),
-    ...(period ? { from: daysAgo(period) } : {}),
-    ...(q ? { q } : {}),
-  }), [severity, state, editor, technology, period, q]);
-
-  const list = useQuery({
-    queryKey: ['vulnerabilities', 'list', filters, limit],
-    queryFn: async () => (await api.get<ListResponse>(ENDPOINT, { params: { ...filters, limit } })).data,
-    enabled: enabled && allowed,
-    placeholderData: (previous) => previous,
-  });
-  const editors = useQuery({
-    queryKey: ['technologies', 'filter-values', 'editor'],
-    queryFn: async () => (await api.get<{ editor?: Array<string | null> }>('/technologies/filter-values', { params: { fields: 'editor' } })).data,
-    enabled: enabled && allowed,
-  });
-  const technologies = useQuery({
-    queryKey: ['technologies', 'options'],
-    queryFn: async () => (await api.get<{ items: Array<{ id: string; reference: string; name: string }> }>('/technologies', { params: { limit: 500, sort: 'name:ASC' } })).data,
-    enabled: enabled && allowed,
-  });
-
-  // Feed off: the page does not exist (its route and its navigation entry are gone too).
   if (!enabled) return null;
   if (!allowed) return <ForbiddenPage />;
-
-  const editorOptions = Array.from(new Set([...(editors.data?.editor ?? []).filter((e): e is string => !!e), ...(editor ? [editor] : [])]));
-  const technologyOptions = technologies.data?.items ?? [];
 
   const exportCsv = async () => {
     setExportError(false);
     try {
-      const res = await api.get<Blob>(`${ENDPOINT}/export`, { params: filters, responseType: 'blob' });
+      const res = await api.get<Blob>(`${ENDPOINT}/export`, { params: scopeParams(requestRef.current), responseType: 'blob' });
       const headers = (res.headers ?? {}) as Record<string, unknown>;
       const disposition = (headers['content-disposition'] ?? headers['Content-Disposition']) as string | undefined;
       downloadBlob(new Blob([res.data], { type: 'text/csv;charset=utf-8' }), extractFilenameFromDisposition(disposition) || 'vulnerabilities.csv');
@@ -446,84 +484,79 @@ export default function VulnerabilitiesPage() {
     }
   };
 
-  const select = (label: string, width: number, value: string, onChange: (value: string) => void, allLabel: string, options: Array<{ value: string; label: string }>) => (
-    <ReportFilter label={label} width={width}>
-      <TextField
-        select
-        size="small"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        SelectProps={{ displayEmpty: true, MenuProps: reportFilterMenuProps, inputProps: { 'aria-label': label } }}
-        sx={reportFilterSelectSx}
-      >
-        <MenuItem value="" sx={drawerMenuItemSx}>{allLabel}</MenuItem>
-        {options.map((option) => <MenuItem key={option.value} value={option.value} sx={drawerMenuItemSx}>{option.label}</MenuItem>)}
-      </TextField>
-    </ReportFilter>
+  const actions = (
+    <Stack direction="row" spacing={1}>
+      {canEdit && (
+        <Button variant="action" onClick={() => setBulkOpen(true)} disabled={(request?.total ?? 0) === 0}>
+          {selected.length > 0
+            ? t('pages.vulnerabilities.actions.changeStateSelected', { count: selected.length })
+            : t('pages.vulnerabilities.actions.changeState')}
+        </Button>
+      )}
+      <Button variant="action" onClick={() => void exportCsv()}>{t('pages.vulnerabilities.actions.export')}</Button>
+    </Stack>
   );
 
-  const items = list.data?.items ?? [];
-  const filtered = Object.keys(filters).some((key) => key !== 'state') || state !== 'to_review';
-
   return (
-    <ReportLayout
-      title={t('pages.vulnerabilities.title')}
-      subtitle={t('pages.vulnerabilities.subtitle')}
-      busy={list.isFetching}
-      onExportTableCsv={() => void exportCsv()}
-      filters={(
-        <>
-          {select(t('pages.vulnerabilities.filters.severity'), 130, severity, (v) => setParam('severity', v || null), t('pages.vulnerabilities.filters.allSeverities'),
-            SEVERITIES.map((s) => ({ value: s, label: t(`pages.vulnerabilities.severities.${s}`) })))}
-          {select(t('pages.vulnerabilities.filters.state'), 140, stateParam === 'all' ? '' : state, (v) => setParam('state', v === 'to_review' ? null : (v || 'all')), t('pages.vulnerabilities.filters.allStates'),
-            VULNERABILITY_STATES.map((s) => ({ value: s, label: t(`pages.vulnerabilities.states.${s}`) })))}
-          {select(t('pages.vulnerabilities.filters.editor'), 150, editor, (v) => setParam('editor', v || null), t('pages.vulnerabilities.filters.allEditors'),
-            editorOptions.map((e) => ({ value: e, label: e })))}
-          {select(t('pages.vulnerabilities.filters.technology'), 180, technology, (v) => setParam('technology', v || null), t('pages.vulnerabilities.filters.allTechnologies'),
-            [
-              ...technologyOptions.map((tech) => ({ value: tech.reference, label: `${tech.reference} ${tech.name}` })),
-              ...(technology && !technologyOptions.some((tech) => tech.reference === technology) ? [{ value: technology, label: technology }] : []),
-            ])}
-          {select(t('pages.vulnerabilities.filters.period'), 150, period ? String(period) : '', (v) => setParam('period', v || null), t('pages.vulnerabilities.filters.anyTime'),
-            PERIODS.map((days) => ({ value: String(days), label: t('pages.vulnerabilities.filters.lastDays', { count: days }) })))}
-          <ReportFilter label={t('pages.vulnerabilities.filters.search')} width={200}>
-            <TextField
-              size="small"
-              value={search}
-              placeholder={t('pages.vulnerabilities.filters.searchPlaceholder')}
-              onChange={(event) => setSearch(event.target.value)}
-              inputProps={{ 'aria-label': t('pages.vulnerabilities.filters.search') }}
-              sx={reportFilterSelectSx}
-            />
-          </ReportFilter>
-        </>
-      )}
-    >
+    <>
+      <PageHeader title={t('pages.vulnerabilities.title')} actions={actions} />
       {exportError && (
         <Typography role="alert" sx={{ fontSize: 13, color: 'kanap.text.secondary', mb: 1 }}>{t('pages.vulnerabilities.exportFailed')}</Typography>
       )}
-      {list.data && (
-        items.length === 0 ? (
+      <ServerDataGrid<VulnerabilityRow>
+        columns={columns}
+        endpoint={ENDPOINT}
+        queryKey="vulnerabilities"
+        getRowId={(row) => row.cve_id}
+        showRowCount
+        defaultSort={{ field: 'severity', direction: 'DESC' }}
+        initialState={{ filter: { filterModel: initialModel } }}
+        requiredColumns={['cve_id']}
+        enableColumnChooser
+        columnPreferencesKey="it-vulnerabilities"
+        refreshKey={refreshKey}
+        enableSearch
+        enableRowSelection={canEdit}
+        onSelectionChanged={setSelected}
+        onCellClicked={(event: any) => {
+          if (event?.data?.cve_id && event.column?.getColId?.() !== 'ag-Grid-SelectionColumn') setOpenCve(event.data.cve_id);
+        }}
+        onListRequestChange={(next) => { requestRef.current = next; setRequest(next); }}
+        emptyState={(
           <Typography sx={quietSx} data-testid="vulnerabilities-empty">
-            {filtered ? t('pages.vulnerabilities.empty.filtered') : t('pages.vulnerabilities.empty.none')}
+            {request?.params?.filters || request?.params?.q ? t('pages.vulnerabilities.empty.filtered') : t('pages.vulnerabilities.empty.none')}
           </Typography>
-        ) : (
-          <>
-            <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', mb: 1 }}>
-              {t('pages.vulnerabilities.count', { count: list.data.total })}
-            </Typography>
-            <VulnerabilitiesTable items={items} canEdit={canEdit} />
-            {list.data.total > items.length && (
-              <Button variant="action" sx={{ mt: 1.5 }} onClick={() => setLimit((current) => current + PAGE)}>
-                {t('pages.vulnerabilities.showMore')}
-              </Button>
-            )}
-          </>
-        )
+        )}
+      />
+      <Drawer
+        anchor="right"
+        open={!!openCve}
+        onClose={() => setOpenCve(null)}
+        PaperProps={{ sx: { width: 600, maxWidth: '90vw', bgcolor: 'kanap.bg.drawer' } }}
+      >
+        {openCve && (
+          <Box sx={{ p: 2 }} role="region" aria-label={openCve}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+              <Typography component="h2" sx={{ fontFamily: MONO_FONT_FAMILY, fontSize: 15, fontWeight: 500 }}>{openCve}</Typography>
+              <IconButton size="small" aria-label={t('pages.vulnerabilities.panel.close')} onClick={() => setOpenCve(null)}><CloseIcon fontSize="small" /></IconButton>
+            </Stack>
+            <VulnerabilityDetailPanel cveId={openCve} canEdit={canEdit} />
+          </Box>
+        )}
+      </Drawer>
+      {canEdit && (
+        <BulkStateDialog
+          open={bulkOpen}
+          onClose={() => setBulkOpen(false)}
+          selected={selected.map((row) => row.cve_id)}
+          request={request}
+          onDone={() => {
+            setBulkOpen(false);
+            setRefreshKey((k) => k + 1);
+            void queryClient.invalidateQueries({ queryKey: ['vulnerabilities'] });
+          }}
+        />
       )}
-      {(!list.data || list.isError) && (
-        <ReportDataStatus loading={list.isLoading} error={list.isError} onRetry={() => void list.refetch()} />
-      )}
-    </ReportLayout>
+    </>
   );
 }

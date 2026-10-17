@@ -294,31 +294,36 @@
     "vulnerabilities": {
       "title": "Vulnerabilidades",
       "subtitle": "Vulnerabilidades publicadas (NVD) que afectan a las tecnologías en uso, y los servidores y aplicaciones a los que llegan.",
-      "count_one": "{{count}} vulnerabilidad",
-      "count_other": "{{count}} vulnerabilidades",
-      "showMore": "Mostrar más",
+      "actions": {
+        "changeState": "Cambiar el estado",
+        "changeStateSelected_one": "Cambiar el estado ({{count}})",
+        "changeStateSelected_other": "Cambiar el estado ({{count}})",
+        "export": "Exportar CSV"
+      },
+      "bulk": {
+        "title": "Cambiar el estado",
+        "state": "Estado",
+        "note": "Nota común",
+        "scopeAll": "Todas las vulnerabilidades del filtro actual",
+        "scopeSelected_one": "La vulnerabilidad seleccionada.",
+        "scopeSelected_other": "Las {{count}} vulnerabilidades seleccionadas.",
+        "count_one": "Esto cambia {{count}} fila de {{rows}}, en {{cves}} vulnerabilidades.",
+        "count_other": "Esto cambia {{count}} filas de {{rows}}, en {{cves}} vulnerabilidades.",
+        "counting": "Contando las filas…",
+        "tooMany": "Más de 5000 filas: acote los filtros o seleccione menos vulnerabilidades.",
+        "failed": "No se pudo guardar el cambio. Inténtelo de nuevo.",
+        "save": "Cambiar el estado",
+        "noteKept": "Sin nota, cada fila conserva la suya."
+      },
+      "panel": {
+        "close": "Cerrar"
+      },
       "exportFailed": "La exportación falló. Inténtelo de nuevo.",
       "saveFailed": "No se pudo guardar el cambio. Inténtelo de nuevo.",
       "unknownVersion": "Versión no registrada (potencialmente afectada)",
       "empty": {
         "none": "Ninguna vulnerabilidad por revisar. Las vulnerabilidades aparecen para las tecnologías que indican sus identificadores CPE: complételos en una tecnología o adóptela desde el catálogo.",
         "filtered": "Ninguna vulnerabilidad coincide con estos filtros."
-      },
-      "filters": {
-        "severity": "Gravedad",
-        "allSeverities": "Todas",
-        "state": "Estado",
-        "allStates": "Todos",
-        "editor": "Editor",
-        "allEditors": "Todos",
-        "technology": "Tecnología",
-        "allTechnologies": "Todas",
-        "period": "Publicación",
-        "anyTime": "Cualquier fecha",
-        "lastDays_one": "Último día",
-        "lastDays_other": "Últimos {{count}} días",
-        "search": "Buscar",
-        "searchPlaceholder": "p. ej., CVE-2024-1234"
       },
       "columns": {
         "cve": "CVE",
@@ -329,7 +334,9 @@
         "applications": "Aplicaciones",
         "state": "Estado",
         "published": "Publicación",
-        "version": "Versión"
+        "version": "Versión",
+        "score": "Puntuación",
+        "editor": "Editor"
       },
       "severities": {
         "critical": "Crítica",

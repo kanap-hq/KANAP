@@ -396,10 +396,10 @@ The NVD feed needs the way out to the NVD (`https://services.nvd.nist.gov`) or t
 | `frontend/src/config/FeaturesContext.tsx` | 41 | `features.vulnerabilityFeed` | False until `GET /config/public` says otherwise |
 | `frontend/src/App.tsx` | 272 | Route `/it/vulnerabilities` | Not registered when off |
 | `frontend/src/components/Layout.tsx` | 189 | IT › Operations › Vulnerabilities navigation entry | Hidden when off |
-| `frontend/src/pages/it/VulnerabilitiesPage.tsx` | 369 | The page itself | Renders nothing when off |
-| `frontend/src/pages/it/TechnologiesPage.tsx` | 202 | "Vulnerabilities to review" column | Hidden when off |
+| `frontend/src/pages/it/VulnerabilitiesPage.tsx` | 472 | The page itself (list grid, change of state in bulk, side panel) | Renders nothing when off |
+| `frontend/src/pages/it/TechnologiesPage.tsx` | 230 | "Vulnerabilities to review" column, and the publisher's link to the page | Hidden when off (the publisher opens the technology) |
 | `frontend/src/pages/settings/NotificationsTab.tsx` | 508 | Technologies group of the notification preferences | Hidden when off |
-| `frontend/src/pages/it/workspace/TechnologyVulnerabilitiesSection.tsx` | n/a | Vulnerabilities section of the technology record | The caller shows it only when on |
+| `frontend/src/pages/it/workspace/TechnologyVulnerabilitiesSection.tsx` | 41 | Vulnerabilities section of the technology record | Renders nothing and reads nothing when off |
 
 #### Outbound target guard (`backend/src/common/ssrf-guard.ts`)
 

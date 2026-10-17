@@ -294,31 +294,36 @@
     "vulnerabilities": {
       "title": "Schwachstellen",
       "subtitle": "Veröffentlichte Schwachstellen (NVD), die die eingesetzten Technologien betreffen, und die Server und Anwendungen, die sie erreichen.",
-      "count_one": "{{count}} Schwachstelle",
-      "count_other": "{{count}} Schwachstellen",
-      "showMore": "Mehr anzeigen",
+      "actions": {
+        "changeState": "Status ändern",
+        "changeStateSelected_one": "Status ändern ({{count}})",
+        "changeStateSelected_other": "Status ändern ({{count}})",
+        "export": "CSV exportieren"
+      },
+      "bulk": {
+        "title": "Status ändern",
+        "state": "Status",
+        "note": "Gemeinsame Notiz",
+        "scopeAll": "Alle Schwachstellen des aktuellen Filters",
+        "scopeSelected_one": "Die ausgewählte Schwachstelle.",
+        "scopeSelected_other": "Die {{count}} ausgewählten Schwachstellen.",
+        "count_one": "Dies ändert {{count}} von {{rows}} Zeilen, bei {{cves}} Schwachstellen.",
+        "count_other": "Dies ändert {{count}} von {{rows}} Zeilen, bei {{cves}} Schwachstellen.",
+        "counting": "Zeilen werden gezählt…",
+        "tooMany": "Mehr als 5.000 Zeilen: Grenzen Sie die Filter ein oder wählen Sie weniger Schwachstellen aus.",
+        "failed": "Die Änderung konnte nicht gespeichert werden. Versuchen Sie es erneut.",
+        "save": "Status ändern",
+        "noteKept": "Ohne Notiz behält jede Zeile ihre eigene."
+      },
+      "panel": {
+        "close": "Schließen"
+      },
       "exportFailed": "Der Export ist fehlgeschlagen. Versuchen Sie es erneut.",
       "saveFailed": "Die Änderung konnte nicht gespeichert werden. Versuchen Sie es erneut.",
       "unknownVersion": "Version nicht erfasst (möglicherweise betroffen)",
       "empty": {
         "none": "Keine Schwachstelle zu prüfen. Schwachstellen erscheinen für Technologien mit CPE-Kennungen: Tragen Sie diese bei einer Technologie ein oder übernehmen Sie die Technologie aus dem Katalog.",
         "filtered": "Keine Schwachstelle entspricht diesen Filtern."
-      },
-      "filters": {
-        "severity": "Schweregrad",
-        "allSeverities": "Alle",
-        "state": "Status",
-        "allStates": "Alle",
-        "editor": "Hersteller",
-        "allEditors": "Alle",
-        "technology": "Technologie",
-        "allTechnologies": "Alle",
-        "period": "Veröffentlicht",
-        "anyTime": "Jederzeit",
-        "lastDays_one": "Letzter Tag",
-        "lastDays_other": "Letzte {{count}} Tage",
-        "search": "Suche",
-        "searchPlaceholder": "z. B. CVE-2024-1234"
       },
       "columns": {
         "cve": "CVE",
@@ -329,7 +334,9 @@
         "applications": "Anwendungen",
         "state": "Status",
         "published": "Veröffentlicht",
-        "version": "Version"
+        "version": "Version",
+        "score": "Score",
+        "editor": "Hersteller"
       },
       "severities": {
         "critical": "Kritisch",

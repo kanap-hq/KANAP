@@ -294,31 +294,36 @@
     "vulnerabilities": {
       "title": "Vulnerabilities",
       "subtitle": "Published vulnerabilities (NVD) that concern the technologies in use, and the servers and applications they reach.",
-      "count_one": "{{count}} vulnerability",
-      "count_other": "{{count}} vulnerabilities",
-      "showMore": "Show more",
+      "actions": {
+        "changeState": "Change state",
+        "changeStateSelected_one": "Change state ({{count}})",
+        "changeStateSelected_other": "Change state ({{count}})",
+        "export": "Export CSV"
+      },
+      "bulk": {
+        "title": "Change the state",
+        "state": "State",
+        "note": "Common note",
+        "scopeAll": "Every vulnerability of the current filter",
+        "scopeSelected_one": "The selected vulnerability.",
+        "scopeSelected_other": "The {{count}} selected vulnerabilities.",
+        "count_one": "This changes {{count}} row of {{rows}}, on {{cves}} vulnerabilities.",
+        "count_other": "This changes {{count}} rows of {{rows}}, on {{cves}} vulnerabilities.",
+        "counting": "Counting the rows…",
+        "tooMany": "More than 5,000 rows: narrow the filters, or select fewer vulnerabilities.",
+        "failed": "The change could not be saved. Try again.",
+        "save": "Change state",
+        "noteKept": "Without a note, each row keeps its own."
+      },
+      "panel": {
+        "close": "Close"
+      },
       "exportFailed": "The export failed. Try again.",
       "saveFailed": "The change could not be saved. Try again.",
       "unknownVersion": "Version not recorded (potentially concerned)",
       "empty": {
         "none": "No vulnerability to review. Vulnerabilities show for the technologies that name their CPE identifiers: fill them in on a technology, or adopt it from the catalog.",
         "filtered": "No vulnerability matches these filters."
-      },
-      "filters": {
-        "severity": "Severity",
-        "allSeverities": "All",
-        "state": "State",
-        "allStates": "All",
-        "editor": "Publisher",
-        "allEditors": "All",
-        "technology": "Technology",
-        "allTechnologies": "All",
-        "period": "Published",
-        "anyTime": "Any time",
-        "lastDays_one": "Last day",
-        "lastDays_other": "Last {{count}} days",
-        "search": "Search",
-        "searchPlaceholder": "e.g., CVE-2024-1234"
       },
       "columns": {
         "cve": "CVE",
@@ -329,7 +334,9 @@
         "applications": "Applications",
         "state": "State",
         "published": "Published",
-        "version": "Version"
+        "version": "Version",
+        "score": "Score",
+        "editor": "Publisher"
       },
       "severities": {
         "critical": "Critical",

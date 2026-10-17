@@ -552,7 +552,33 @@
       "servers",
       "applications",
       "it_owner_names",
-      "next_support_end"
+      "next_support_end",
+      "vulnerabilities_to_review"
+    ]
+  },
+  "/vulnerabilities": {
+    "params": {},
+    "filters": {
+      "cve_id": "text",
+      "severity": "set",
+      "cvss_score": "number",
+      "summary": "text",
+      "technologies": "set",
+      "editor": "set",
+      "state": "set",
+      "published_at": "date"
+    },
+    "fields": [
+      "cve_id",
+      "severity",
+      "cvss_score",
+      "summary",
+      "technologies",
+      "editor",
+      "servers",
+      "applications",
+      "state",
+      "published_at"
     ]
   },
   "/budget-lines/summary": {
