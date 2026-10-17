@@ -19,8 +19,9 @@ vi.mock('react-i18next', () => ({ useTranslation: () => translation }));
 vi.mock('../../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), delete: vi.fn() } }));
 const auth = { manager: true, readOnly: [] as string[] };
 vi.mock('../../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: (resource: string) => auth.manager && !auth.readOnly.includes(resource) }) }));
-const itOpsSettings = { data: { technologyFamilies: [{ code: 'database', label: 'Database' }] } };
-vi.mock('../../../hooks/useItOpsSettings', () => ({ default: () => itOpsSettings }));
+// The localized projection of the catalogs: the families read in the user's language (B1).
+const itOpsSettings = { data: { technologyFamilies: [{ code: 'database', label: 'Base de données' }] } };
+vi.mock('../../../hooks/useLocalizedItOpsSettings', () => ({ default: () => itOpsSettings }));
 vi.mock('../../../hooks/useBudgetColumns', () => ({ default: () => ({ label: (key: string) => `column:${key}` }) }));
 vi.mock('../editors/IncidentRelationsSection', () => ({ default: () => <div data-testid="incidents" /> }));
 
@@ -260,7 +261,7 @@ describe('ApplicationRelationsTab', () => {
     expect(rows.map((row) => row.querySelector('td')?.textContent)).toEqual(['TEC-4', 'TEC-1', 'TEC-3', 'TEC-2']);
 
     const sql = within(rows[1] as HTMLElement);
-    expect(sql.getByText('Database')).toBeTruthy();
+    expect(sql.getByText('Base de données')).toBeTruthy();
     expect(sql.getByText('2019')).toBeTruthy();
     expect(sql.getByText('workspace.application.relations.technologyLink.hosted')).toBeTruthy();
     expect(sql.getByText('srv-etl-1')).toBeTruthy();
@@ -268,13 +269,26 @@ describe('ApplicationRelationsTab', () => {
     expect(getComputedStyle(sql.getByText(/2020/)).color).not.toBe(getComputedStyle(within(rows[3] as HTMLElement).getByText(/2099/)).color);
 
     const java = within(rows[0] as HTMLElement);
-    expect(java.getByText('workspace.application.relations.versionUnknown')).toBeTruthy();
+    // A family without a label shows its code.
+    expect(java.getByText('runtime')).toBeTruthy();
+    expect(java.getByTitle('workspace.application.relations.versionUnknown').textContent).toBe('—');
     expect(java.getByText('workspace.application.relations.technologyLink.declared')).toBeTruthy();
     expect(within(rows[2] as HTMLElement).getByText('workspace.application.relations.technologyLink.both')).toBeTruthy();
     expect(within(rows[3] as HTMLElement).getByText('workspace.application.relations.viaHost(server=srv-etl-2,host=esx-01)')).toBeTruthy();
 
     fireEvent.click(java.getByText('Java'));
     expect(screen.getByTestId('location').textContent).toBe('/it/technologies/TEC-4');
+  });
+
+  it('leaves the free width to the technology name (B6)', async () => {
+    renderTab(relations());
+    const table = await screen.findByRole('table', { name: 'workspace.application.relations.sections.technologies' });
+    const widths = [...table.querySelectorAll('col')].map((col) => (col as HTMLElement).style.width);
+    // Ref, name, family, version, link, servers, end of support, then the remove button.
+    expect(widths[1]).toBe('');
+    const fixed = widths.filter(Boolean).reduce((sum, width) => sum + parseInt(width, 10), 0);
+    expect(fixed).toBeLessThanOrEqual(660);
+    expect(within(table).getByTitle('Tomcat').textContent).toBe('Tomcat');
   });
 
   it('removes a declared technology only, and keeps it as hosted when a server carries it', async () => {

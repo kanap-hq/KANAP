@@ -6,7 +6,7 @@ import { Link as RouterLink } from 'react-router-dom';
 import api from '../../../api';
 import { useAuth } from '../../../auth/AuthContext';
 import useBudgetColumns from '../../../hooks/useBudgetColumns';
-import useItOpsSettings from '../../../hooks/useItOpsSettings';
+import useLocalizedItOpsSettings from '../../../hooks/useLocalizedItOpsSettings';
 import { formatAmount } from '../../../i18n/formatters';
 import { formatShortDate } from '../../../lib/dateFormat';
 import { buildItemPath, formatItemRef } from '../../../utils/item-ref';
@@ -121,7 +121,8 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
   const { t, i18n } = useTranslation(['it', 'common', 'portfolio', 'ops']);
   const { hasLevel } = useAuth();
   const canEdit = hasLevel('applications', 'manager');
-  const { data: itOpsSettings } = useItOpsSettings();
+  // Families in the user's language once the catalog localizes them; the raw code otherwise.
+  const { data: itOpsSettings } = useLocalizedItOpsSettings();
   const technologyFamilies = (itOpsSettings as { technologyFamilies?: Array<{ code: string; label: string }> } | undefined)?.technologyFamilies;
   const queryClient = useQueryClient();
   const budgetColumns = useBudgetColumns();
@@ -366,21 +367,31 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
       linkedIds: (rows: TechnologyRow[]) => new Set(rows.filter((row) => row.declared).map((row) => row.id)),
       columns: [
         { key: 'ref', header: t('workspace.application.relations.columns.ref'), width: 72, render: (row: TechnologyRow) => <RelationRef>{row.reference ?? dash}</RelationRef> },
-        { key: 'name', header: t('workspace.application.relations.columns.name'), render: (row: TechnologyRow) => row.name ?? dash },
-        { key: 'family', header: t('workspace.application.relations.columns.family'), width: 130, render: (row: TechnologyRow) => familyLabel(row.family) },
+        // The name takes the free width; the short columns stay narrow, a cut value shows in full on hover.
+        { key: 'name', header: t('workspace.application.relations.columns.name'), render: (row: TechnologyRow) => <span title={row.name ?? undefined}>{row.name ?? dash}</span> },
+        { key: 'family', header: t('workspace.application.relations.columns.family'), width: 110, render: (row: TechnologyRow) => familyLabel(row.family) },
         {
-          key: 'version', header: t('workspace.application.relations.columns.version'), width: 110,
+          key: 'version', header: t('workspace.application.relations.columns.version'), width: 72,
           render: (row: TechnologyRow) => (row.versions.length > 0
-            ? row.versions.join(', ')
-            : <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>{t('workspace.application.relations.versionUnknown')}</Box>),
+            ? <span title={row.versions.join(', ')}>{row.versions.join(', ')}</span>
+            : <Box component="span" title={t('workspace.application.relations.versionUnknown')} sx={{ color: 'kanap.text.tertiary' }}>{dash}</Box>),
         },
         {
-          key: 'link', header: t('workspace.application.relations.columns.link'), width: 140,
-          render: (row: TechnologyRow) => t(`workspace.application.relations.technologyLink.${technologyLink(row)}`),
+          key: 'link', header: t('workspace.application.relations.columns.link'), width: 120,
+          render: (row: TechnologyRow) => {
+            const label = t(`workspace.application.relations.technologyLink.${technologyLink(row)}`);
+            return <span title={label}>{label}</span>;
+          },
         },
-        { key: 'via', header: t('workspace.application.relations.columns.via'), width: 160, render: (row: TechnologyRow) => row.via.map(serverLabel).join(', ') },
         {
-          key: 'supportEnd', header: t('workspace.application.relations.columns.supportEnd'), width: 120,
+          key: 'via', header: t('workspace.application.relations.columns.via'), width: 140,
+          render: (row: TechnologyRow) => {
+            const servers = row.via.map(serverLabel).join(', ');
+            return <span title={servers || undefined}>{servers}</span>;
+          },
+        },
+        {
+          key: 'supportEnd', header: t('workspace.application.relations.columns.supportEnd'), width: 100,
           render: (row: TechnologyRow) => {
             const ended = !!row.standard_support_end && row.standard_support_end < today;
             return (
