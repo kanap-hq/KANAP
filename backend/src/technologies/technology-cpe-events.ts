@@ -26,6 +26,21 @@ export class TechnologyCpeEvents {
   async emit(event: CpeProductsAdded) {
     for (const listener of this.listeners) await listener(event);
   }
+
+  /**
+   * For every technology linked to these servers or applications: before they are deleted (the
+   * links go with them), or after a change of their status (a server retired or back in service, an
+   * application entering or leaving service). The links are read in the caller's transaction.
+   */
+  async emitForSubjects(mg: EntityManager, tenantId: string, side: 'asset' | 'application', ids: string[]) {
+    if (ids.length === 0 || this.listeners.length === 0) return;
+    const table = side === 'asset' ? 'asset_technologies' : 'application_technologies';
+    const rows: Array<{ technology_id: string }> = await mg.query(
+      `SELECT DISTINCT technology_id FROM ${table} WHERE tenant_id = $1 AND ${side}_id = ANY($2::uuid[]) ORDER BY technology_id`,
+      [tenantId, ids],
+    );
+    for (const row of rows) await this.emit({ manager: mg, tenantId, technologyId: row.technology_id, products: [] });
+  }
 }
 
 /** The products of `after` that `before` did not have, in lower case. */

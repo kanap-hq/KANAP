@@ -1,7 +1,8 @@
+import { TechnologyCpeEvents } from '../../technologies/technology-cpe-events';
 import { linkedLineOf } from '../../spend/budget-nature';
 import { copyClassification } from './application-classification';
 import { classificationPatch, classificationReadState } from './application-classification';
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { assertMarkdownSize } from '../../common/markdown-limits';
@@ -44,6 +45,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     private readonly storage: StorageService,
     private readonly itOpsSettings: ItOpsSettingsService,
     private readonly notifications: NotificationsService,
+    @Optional() private readonly cpeEvents?: TechnologyCpeEvents,
   ) {
     super(appRepo);
   }
@@ -291,6 +293,11 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     Object.assign(existing, patch, { updated_at: new Date() });
     const saved = (await repo.save(existing as any)) as Application;
     await this.audit.log({ table: 'applications', recordId: saved.id, action: 'update', before, after: saved, userId }, { manager: mg });
+    // Entering or leaving service: its declared technologies are matched again with the vulnerabilities.
+    const instant = (value: unknown) => (value ? new Date(value as string).getTime() : null);
+    if ((before as any).status !== saved.status || instant((before as any).disabled_at) !== instant(saved.disabled_at)) {
+      await this.cpeEvents?.emitForSubjects(mg, tenantId, 'application', [saved.id]);
+    }
     return Object.assign(saved, classificationReadState(saved));
   }
 
