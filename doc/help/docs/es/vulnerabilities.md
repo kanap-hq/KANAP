@@ -6,7 +6,7 @@ La página Vulnerabilidades lista las vulnerabilidades publicadas (CVE) que afec
 
 ## Disponibilidad
 
-Las vulnerabilidades se siguen por defecto en la nube. En una instalación local están desactivadas hasta que su administrador las activa, y el servidor debe entonces alcanzar la NVD (la base de datos nacional de vulnerabilidades de Estados Unidos) o una réplica de ella. Mientras están desactivadas, KANAP no muestra nada de ello: ni página, ni columna en la lista de tecnologías, ni sección en una tecnología, ni ajuste de notificación, ni correo.
+Las vulnerabilidades se siguen por defecto en la nube. En una instalación local están desactivadas hasta que su administrador [las activa](on-premise/configuration.md#optional-vulnerabilities), y el servidor debe entonces alcanzar la NVD (la base de datos nacional de vulnerabilidades de Estados Unidos) o una réplica de ella. Mientras están desactivadas, KANAP no muestra nada de ello: ni página, ni columna en la lista de tecnologías, ni sección en una tecnología, ni ajuste de notificación, ni correo.
 
 ## Cómo las encuentra KANAP
 

@@ -6,7 +6,7 @@ Open it from **IT Landscape > Vulnerabilities**, in the **Operations** group. Yo
 
 ## Availability
 
-Vulnerabilities are followed by default in the cloud. On an on-premise installation they are off until your administrator turns them on, and the server must then reach the NVD (the US National Vulnerability Database) or a mirror of it. While they are off, KANAP shows none of it: no page, no column in the technologies list, no section on a technology, no notification setting and no email.
+Vulnerabilities are followed by default in the cloud. On an on-premise installation they are off until your administrator [turns them on](on-premise/configuration.md#optional-vulnerabilities), and the server must then reach the NVD (the US National Vulnerability Database) or a mirror of it. While they are off, KANAP shows none of it: no page, no column in the technologies list, no section on a technology, no notification setting and no email.
 
 ## How KANAP finds them
 
@@ -27,7 +27,7 @@ One row per vulnerability, most severe first. The page opens on the vulnerabilit
 
 **Filters**:
 
-- **Severity**, **State**, **Editor** and **Technology**: one value, or **All**.
+- **Severity**, **State**, **Publisher** and **Technology**: one value, or **All**.
 - **Published**: **Any time**, or the last 30, 90 or 365 days.
 - **Search**: the CVE identifier, the summary or the technology name.
 

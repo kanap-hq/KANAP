@@ -6,7 +6,7 @@ Die Seite Schwachstellen listet die veröffentlichten Schwachstellen (CVE), die 
 
 ## Verfügbarkeit
 
-In der Cloud werden Schwachstellen standardmäßig verfolgt. Bei einer On-Premise-Installation sind sie aus, bis Ihr Administrator sie einschaltet; der Server muss dann die NVD (die US-amerikanische National Vulnerability Database) oder einen Spiegel davon erreichen. Solange sie aus sind, zeigt KANAP nichts davon: keine Seite, keine Spalte in der Technologieliste, keinen Abschnitt bei einer Technologie, keine Benachrichtigungseinstellung und keine E-Mail.
+In der Cloud werden Schwachstellen standardmäßig verfolgt. Bei einer On-Premise-Installation sind sie aus, bis Ihr Administrator [sie einschaltet](on-premise/configuration.md#optional-vulnerabilities); der Server muss dann die NVD (die US-amerikanische National Vulnerability Database) oder einen Spiegel davon erreichen. Solange sie aus sind, zeigt KANAP nichts davon: keine Seite, keine Spalte in der Technologieliste, keinen Abschnitt bei einer Technologie, keine Benachrichtigungseinstellung und keine E-Mail.
 
 ## Wie KANAP sie findet
 

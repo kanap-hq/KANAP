@@ -6,7 +6,7 @@ Ouvrez-la depuis **Cartographie SI > Vulnérabilités**, dans le groupe **Exploi
 
 ## Disponibilité
 
-Les vulnérabilités sont suivies par défaut dans le cloud. Sur une installation sur site, elles restent désactivées tant que votre administrateur ne les active pas, et le serveur doit alors joindre la NVD (la base nationale des vulnérabilités des États-Unis) ou un miroir de celle-ci. Tant qu'elles sont désactivées, KANAP n'en montre rien : ni page, ni colonne dans la liste des technologies, ni section sur une technologie, ni réglage de notification, ni e-mail.
+Les vulnérabilités sont suivies par défaut dans le cloud. Sur une installation sur site, elles restent désactivées tant que votre administrateur ne [les active](on-premise/configuration.md#optional-vulnerabilities) pas, et le serveur doit alors joindre la NVD (la base nationale des vulnérabilités des États-Unis) ou un miroir de celle-ci. Tant qu'elles sont désactivées, KANAP n'en montre rien : ni page, ni colonne dans la liste des technologies, ni section sur une technologie, ni réglage de notification, ni e-mail.
 
 ## Comment KANAP les trouve
 
