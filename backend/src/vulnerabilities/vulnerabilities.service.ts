@@ -671,6 +671,10 @@ export class VulnerabilitiesService {
       params.push(cveIds);
       where += ` AND tv.cve_id = ANY($${params.length}::text[])`;
     }
+    // Every one of the filter: only what the user confirmed, so the count's instant is required.
+    if (all && body.dry_run !== true && (body.as_of === undefined || body.as_of === null)) {
+      throw new BadRequestException('as_of is required with all: send the instant the dry run returned.');
+    }
     if (body.as_of !== undefined && body.as_of !== null) {
       const asOf = new Date(String(body.as_of));
       if (Number.isNaN(asOf.getTime())) throw new BadRequestException('as_of must be the instant a dry run returned.');
