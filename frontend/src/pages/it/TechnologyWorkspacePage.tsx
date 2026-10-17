@@ -20,7 +20,7 @@ import TechnologyOverviewTab, {
   type TechnologyDetail,
   type TechnologyPatch,
 } from './workspace/TechnologyOverviewTab';
-import TechnologyServersTab, { countServerLinks, technologyServersKey, type TechnologyServerRow } from './workspace/TechnologyServersTab';
+import TechnologyServersTab, { countServers, technologyServersKey, type TechnologyServerRow } from './workspace/TechnologyServersTab';
 import TechnologyApplicationsTab, { countApplications, technologyApplicationsKey, type TechnologyApplicationsData } from './workspace/TechnologyApplicationsTab';
 
 type TabKey = 'overview' | 'servers' | 'applications' | 'operations' | 'compliance' | 'relations';
@@ -117,7 +117,7 @@ export default function TechnologyWorkspacePage() {
     enabled: !!technologyId,
   });
   const badges: Partial<Record<TabKey, number>> = {
-    servers: serversQuery.data ? countServerLinks(serversQuery.data.items) : undefined,
+    servers: serversQuery.data ? countServers(serversQuery.data.items) : undefined,
     applications: applicationsQuery.data?.items ? countApplications(applicationsQuery.data.items) : undefined,
   };
 

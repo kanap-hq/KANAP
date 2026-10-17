@@ -129,7 +129,7 @@ describe('TechnologyWorkspacePage', () => {
     expect(screen.queryByText(/Grace Hopper/)).toBeNull();
   });
 
-  it('counts the direct links to servers in service and the distinct applications in the tab badges', async () => {
+  it('counts the distinct servers in service and the distinct applications in the tab badges', async () => {
     get.mockImplementation(async (url: string) => {
       if (url === '/technologies/TEC-3') return { data: DETAIL };
       if (url === '/technologies/tech-1/assets') {
@@ -138,6 +138,7 @@ describe('TechnologyWorkspacePage', () => {
           { kind: 'installed', link_id: 'l-2', asset_id: 'a1', asset_status: 'active' },
           { kind: 'installed', link_id: 'l-3', asset_id: 'a2', asset_status: 'retired' },
           { kind: 'carried', link_id: null, asset_id: 'a3', asset_status: 'active' },
+          { kind: 'carried', link_id: null, asset_id: 'a1', asset_status: 'active' },
         ] } };
       }
       if (url === '/technologies/tech-1/applications') {

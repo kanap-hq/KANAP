@@ -6,7 +6,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../../config/ThemeContext';
 import api from '../../../api';
-import TechnologyServersTab, { countServerLinks, type TechnologyServerRow } from './TechnologyServersTab';
+import TechnologyServersTab, { countServers, type TechnologyServerRow } from './TechnologyServersTab';
 
 const translation = {
   t: (key: string, opts?: Record<string, unknown>) => {
@@ -106,7 +106,8 @@ describe('TechnologyServersTab', () => {
     expect(within(retired).getByRole('button', { name: `${S}.remove(name=PAR-DB-OLD)` })).toBeTruthy();
     // Three servers in service: the two installed and the one carried.
     expect(table.querySelector('tfoot')?.textContent).toContain(`${S}.serverCount(count=3)`);
-    expect(countServerLinks(ROWS)).toBe(2);
+    // The badge says the same number.
+    expect(countServers(ROWS)).toBe(3);
   });
 
   it('removes a direct link and refuses to remove a deduced one', async () => {

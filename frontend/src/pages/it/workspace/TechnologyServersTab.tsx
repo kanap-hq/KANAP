@@ -31,8 +31,8 @@ export const technologyServersKey = (id: string) => ['technology-servers', id] a
 /** A link to a retired server stays listed, to be removed; it counts nowhere. */
 export const isRetiredServer = (row: Pick<TechnologyServerRow, 'asset_status'>) => row.asset_status === 'retired';
 
-/** The tab badge: direct links to servers in service. */
-export const countServerLinks = (rows: TechnologyServerRow[]) => rows.filter((row) => row.kind === 'installed' && !isRetiredServer(row)).length;
+/** The tab badge and the total: distinct servers in service, directly or through another server. */
+export const countServers = (rows: TechnologyServerRow[]) => new Set(rows.filter((row) => !isRetiredServer(row)).map((row) => row.asset_id)).size;
 
 /** Totals appear from this many rows on, as in the Relations tabs. */
 const TOTALS_FROM = 2;
@@ -184,9 +184,8 @@ export default function TechnologyServersTab({ technologyId, versions, canManage
     },
   ];
 
-  const inService = new Set(rows.filter((row) => !isRetiredServer(row)).map((row) => row.asset_id));
   const totals = rows.length >= TOTALS_FROM
-    ? [{ key: 'total', label: t('workspace.technology.servers.total'), cells: { name: t('workspace.technology.servers.serverCount', { count: inService.size }) } }]
+    ? [{ key: 'total', label: t('workspace.technology.servers.total'), cells: { name: t('workspace.technology.servers.serverCount', { count: countServers(rows) }) } }]
     : undefined;
   const title = t('workspace.technology.servers.title');
   const searchLabel = t('workspace.technology.servers.search');
