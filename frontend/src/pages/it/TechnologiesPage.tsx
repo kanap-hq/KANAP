@@ -86,6 +86,7 @@ function EditorVulnerabilitiesCell({ value }: ICellRendererParams<TechnologyRow,
       component={RouterLink}
       to={`/it/vulnerabilities?editor=${encodeURIComponent(String(value))}`}
       underline="hover"
+      title={String(value)}
       data-testid="editor-vulnerabilities"
       onClick={(event: React.MouseEvent) => event.stopPropagation()}
       sx={{ fontSize: 13, color: 'kanap.text.primary', '&:hover': { color: 'primary.main' } }}
@@ -170,7 +171,7 @@ export default function TechnologiesPage() {
     {
       headerName: t('pages.technologies.columns.reference'),
       field: 'reference',
-      width: 110,
+      width: 90,
       cellRenderer: LinkCell,
       cellStyle: { fontFamily: MONO_FONT_FAMILY, fontSize: '12px' },
     },
@@ -188,7 +189,9 @@ export default function TechnologiesPage() {
     {
       headerName: t('pages.technologies.columns.editor'),
       field: 'editor',
-      width: 160,
+      width: 140,
+      // The full name on hover: the column is narrow.
+      cellRendererParams: { tooltip: (row: TechnologyRow) => row.editor ?? '' },
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: { getValues: editorValues },
@@ -207,9 +210,9 @@ export default function TechnologiesPage() {
     },
     // Secondary columns start hidden: the default set fits a 1,440 px window without scrolling.
     { headerName: t('pages.technologies.columns.versionsInUse'), field: 'versions_in_use', width: 140, defaultHidden: true, sortable: false, filter: false, cellRenderer: LinkCell },
-    { headerName: t('pages.technologies.columns.servers'), field: 'servers', width: 110, sortable: false, filter: false, cellRenderer: LinkCell },
-    // With the vulnerabilities column, the applications start hidden: the default set still fits 1,440 px.
-    { headerName: t('pages.technologies.columns.applications'), field: 'applications', width: 130, defaultHidden: vulnerabilityFeed, sortable: false, filter: false, cellRenderer: LinkCell },
+    // Counters: narrow and right-aligned, so that the default set fits a 1,440 px window.
+    { headerName: t('pages.technologies.columns.servers'), field: 'servers', width: 80, type: 'rightAligned', sortable: false, filter: false, cellRenderer: LinkCell },
+    { headerName: t('pages.technologies.columns.applications'), field: 'applications', width: 100, type: 'rightAligned', sortable: false, filter: false, cellRenderer: LinkCell },
     {
       headerName: t('pages.technologies.columns.itOwner'),
       field: 'it_owner_names',
@@ -223,9 +226,9 @@ export default function TechnologiesPage() {
       },
       cellRenderer: LinkCell,
     },
-    { headerName: t('pages.technologies.columns.nextSupportEnd'), field: 'next_support_end', width: 170, sortable: false, filter: false, cellRenderer: SupportEndCell },
+    { headerName: t('pages.technologies.columns.nextSupportEnd'), field: 'next_support_end', width: 130, headerTooltip: t('pages.technologies.columns.nextSupportEnd'), sortable: false, filter: false, cellRenderer: SupportEndCell },
     ...(vulnerabilityFeed
-      ? [{ headerName: t('pages.technologies.columns.vulnerabilities'), field: 'vulnerabilities_to_review' as const, width: 110, sortable: false, filter: false, cellRenderer: VulnerabilitiesCell }]
+      ? [{ headerName: t('pages.technologies.columns.vulnerabilities'), field: 'vulnerabilities_to_review' as const, width: 110, headerTooltip: t('pages.technologies.columns.vulnerabilities'), sortable: false, filter: false, cellRenderer: VulnerabilitiesCell }]
       : []),
   ], [LinkCell, SupportEndCell, editorValues, familyValues, labelFor, lifecycleValues, t, vulnerabilityFeed]);
 

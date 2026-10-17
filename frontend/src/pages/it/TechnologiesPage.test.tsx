@@ -162,9 +162,10 @@ describe('TechnologiesPage', () => {
     renderPage();
     const fields = (grid.props!.columns as any[]).map((col) => col.field);
     expect(fields[fields.length - 1]).toBe('vulnerabilities_to_review');
-    // The default set still fits a 1,440 px window: the applications give way.
+    // The default set still fits a 1,440 px window, applications included.
     const shown = (grid.props!.columns as any[]).filter((col) => !col.defaultHidden);
-    expect(shown.map((col) => col.field)).not.toContain('applications');
+    expect(shown.map((col) => col.field)).toEqual(['reference', 'name', 'family', 'editor', 'servers', 'applications', 'next_support_end', 'vulnerabilities_to_review']);
+    expect(column('servers').type).toBe('rightAligned');
     expect(shown.reduce((sum, col) => sum + (col.width ?? col.minWidth), 0)).toBeLessThanOrEqual(1100);
     const Cell = column('vulnerabilities_to_review').cellRenderer;
     const theme = createAppTheme('light');
