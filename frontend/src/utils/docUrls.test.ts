@@ -13,6 +13,11 @@ describe('getDocUrl', () => {
     expect(getDocUrl('/it/technologies/end-of-support')).toBe('https://doc.kanap.net/end-of-support/');
   });
 
+  it('opens the incident register manual from the list and an incident', () => {
+    expect(getDocUrl('/it/incidents')).toBe('https://doc.kanap.net/incidents/');
+    expect(getDocUrl('/it/incidents/INC-14/journal', 'es')).toBe('https://doc.kanap.net/es/incidents/');
+  });
+
   it('keeps the overview and falls back to the docs home', () => {
     expect(getDocUrl('/ops')).toBe('https://doc.kanap.net/operations-dashboard/');
     expect(getDocUrl('/ops/budgets')).toBe('https://doc.kanap.net/');

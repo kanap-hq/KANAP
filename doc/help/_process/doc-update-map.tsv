@@ -55,6 +55,10 @@ technologies.md	frontend/src/pages/it/TechnologyWorkspacePage.tsx
 technologies.md	frontend/src/pages/it/workspace/TechnologyOverviewTab.tsx
 technologies.md	frontend/src/pages/it/components/TechnologyCreateDialog.tsx
 end-of-support.md	frontend/src/pages/it/EndOfSupportReportPage.tsx
+incidents.md	frontend/src/pages/it/IncidentsPage.tsx
+incidents.md	frontend/src/pages/it/IncidentWorkspacePage.tsx
+incidents.md	frontend/src/pages/it/incidents/**/*.tsx
+incidents.md	frontend/src/pages/it/workspace/IncidentRelationsTab.tsx
 locations.md	frontend/src/pages/it/LocationsPage.tsx
 locations.md	frontend/src/pages/it/LocationWorkspacePage.tsx
 it-ops-settings.md	frontend/src/pages/it/ItOperationsSettingsPage.tsx
