@@ -209,6 +209,11 @@ export class NvdFeedService implements OnModuleInit {
   private raisedCves = new Set<string>();
   /** The collections on demand of this process, one after the other. */
   private onDemand: Promise<void> = Promise.resolve();
+  /** Technologies to match once the transaction that changed them has committed (`txid`). */
+  private afterCommit: Array<{ tenantId: string; technologyId: string; products: string[]; txid: string; queuedAt: number }> = [];
+  private draining = false;
+  /** How long the queue waits between two reads of the transactions' status. */
+  drainDelayMs = 200;
 
   constructor(
     private readonly dataSource: DataSource,
@@ -300,16 +305,59 @@ export class NvdFeedService implements OnModuleInit {
   }
 
   /**
-   * A technology received CPE products (creation, edition, adoption): it is matched at once with
-   * the cache, in the caller's transaction, and the products the feed never collected are collected
-   * in the background, then the tenant is matched again (lot T6b). Nothing while the feed is off.
-   * These first matches send no email: the next runs find their rows already there.
+   * A technology changed (CPE products received, a version or a link written: `TechnologyCpeEvents`,
+   * lot T6b). The work waits for the commit of the caller's transaction: the event queues the
+   * technology with the transaction's id (`txid_current()`), and a queue outside any request
+   * transaction reads that transaction's status (`txid_status`): once `committed`, the technology is
+   * matched with the cache from the committed state, then the products the feed never collected are
+   * collected in the background (and the tenant matched again); `aborted`, nothing happens. These
+   * matches send no email: the next runs find their rows already there. Nothing while the feed is off.
    */
   async onCpeProductsAdded(event: CpeProductsAdded): Promise<void> {
     if (!Features.VULNERABILITY_FEED_ENABLED) return;
-    await this.matcher.matchTenant(event.manager, event.tenantId, event.technologyId);
-    const fresh = await this.neverCollected(event.products);
-    if (fresh.length > 0) void this.collectNew(event.tenantId, fresh);
+    const [row]: Array<{ txid: string }> = await event.manager.query(`SELECT txid_current()::text AS txid`);
+    const same = this.afterCommit.find((item) => item.txid === row.txid && item.tenantId === event.tenantId && item.technologyId === event.technologyId);
+    if (same) same.products = Array.from(new Set([...same.products, ...event.products]));
+    else this.afterCommit.push({ tenantId: event.tenantId, technologyId: event.technologyId, products: [...event.products], txid: row.txid, queuedAt: Date.now() });
+    void this.drain();
+  }
+
+  /** Resolves once the after-commit queue is empty (for the specs). */
+  async whenIdle(timeoutMs = 15_000): Promise<void> {
+    const until = Date.now() + timeoutMs;
+    while ((this.draining || this.afterCommit.length > 0) && Date.now() < until) await new Promise((r) => setTimeout(r, 25));
+  }
+
+  /** Works through the after-commit queue; an item waits while its transaction is in progress (10 minutes at most). */
+  @NeverRejects()
+  async drain(): Promise<void> {
+    if (this.draining) return;
+    this.draining = true;
+    try {
+      while (this.afterCommit.length > 0) {
+        const txids = Array.from(new Set(this.afterCommit.map((item) => item.txid)));
+        const rows: Array<{ txid: string; status: string | null }> = await this.dataSource.query(
+          `SELECT t AS txid, txid_status(t::bigint) AS status FROM unnest($1::text[]) AS t`,
+          [txids],
+        );
+        const status = new Map(rows.map((r) => [r.txid, r.status]));
+        const ready = this.afterCommit.filter((item) => status.get(item.txid) === 'committed');
+        this.afterCommit = this.afterCommit.filter((item) => status.get(item.txid) === 'in progress' && Date.now() - item.queuedAt < 10 * 60_000);
+        for (const item of ready) {
+          try {
+            await withTenant(this.dataSource, item.tenantId, (mg) => this.matcher.matchTenant(mg, item.tenantId, item.technologyId));
+            const fresh = await this.neverCollected(item.products);
+            if (fresh.length > 0) void this.collectNew(item.tenantId, fresh);
+          } catch (error: any) {
+            this.logger.warn(`[${NVD_FEED_TASK_NAME}] matching of technology ${item.technologyId} after a change: ${String(error?.message ?? error).slice(0, 300)}`);
+          }
+        }
+        if (this.afterCommit.length > 0 && ready.length === 0) await new Promise((r) => setTimeout(r, this.drainDelayMs));
+      }
+    } finally {
+      this.draining = false;
+    }
+    if (this.afterCommit.length > 0) void this.drain();
   }
 
   /** Of `products`, those the feed never collected (no success yet), in lower case. */

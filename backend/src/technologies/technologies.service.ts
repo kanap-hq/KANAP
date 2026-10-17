@@ -454,6 +454,7 @@ export class TechnologiesService {
     );
     const version = await this.readVersion(mg, tenantId, tech.id, created.id);
     await this.audit.log({ table: 'technology_versions', recordId: tech.id, action: 'create', before: null, after: version, userId: opts.userId ?? null }, { manager: mg });
+    await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId: tech.id, products: [] });
     return version;
   }
 
@@ -479,6 +480,7 @@ export class TechnologiesService {
       );
       const after = await this.readVersion(mg, tenantId, tech.id, before.id);
       await this.audit.log({ table: 'technology_versions', recordId: tech.id, action: 'update', before, after, userId: opts.userId ?? null }, { manager: mg });
+      await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId: tech.id, products: [] });
       return after;
     }
     return before;
@@ -510,6 +512,7 @@ export class TechnologiesService {
     }
     await mg.query(`DELETE FROM technology_versions WHERE tenant_id = $1 AND technology_id = $2 AND id = $3`, [tenantId, tech.id, before.id]);
     await this.audit.log({ table: 'technology_versions', recordId: tech.id, action: 'delete', before, after: null, userId: opts.userId ?? null }, { manager: mg });
+    await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId: tech.id, products: [] });
     return { ok: true, merged_links: merged };
   }
 

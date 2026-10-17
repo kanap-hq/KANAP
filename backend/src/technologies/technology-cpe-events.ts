@@ -1,14 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 
-/** CPE products a technology has just received (lot T6b), in the caller's transaction. */
+/**
+ * A technology changed in a way that matters to its vulnerabilities (lot T6b), in the caller's
+ * transaction: CPE products received (`products`), a version created, renamed or deleted, a link to
+ * a server or an application added, removed or moved to another version (`products` empty).
+ */
 export type CpeProductsAdded = { manager: EntityManager; tenantId: string; technologyId: string; products: string[] };
 
 /**
  * The bridge from the technologies to the vulnerability feed, which imports this module (so the
  * technologies cannot import it back): the feed subscribes at start, the technologies emit when a
- * technology receives CPE products (creation, edition, adoption from the catalog). A listener runs
- * in the caller's transaction and is awaited.
+ * technology receives CPE products (creation, edition, adoption from the catalog), when its
+ * versions change and when its links change. A listener is awaited in the caller's transaction; the
+ * feed only queues the work there, done once the transaction has committed.
  */
 @Injectable()
 export class TechnologyCpeEvents {
@@ -19,7 +24,6 @@ export class TechnologyCpeEvents {
   }
 
   async emit(event: CpeProductsAdded) {
-    if (event.products.length === 0) return;
     for (const listener of this.listeners) await listener(event);
   }
 }

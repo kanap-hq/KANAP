@@ -711,9 +711,10 @@ export class VulnerabilitiesService {
     const { manager: mg, tenantId } = opts;
     const tech = await readTechnology(mg, tenantId, idOrRef, true);
     const result = await this.matcher.matchTenant(mg, tenantId, tech.id);
-    // Its products the feed never collected are collected now, in the background (then matched).
+    // Its products the feed never collected are collected once this transaction has committed, in
+    // the background (then matched).
     const fresh = this.feed ? await this.feed.neverCollected((tech.cpe_products ?? []) as string[]) : [];
-    if (fresh.length > 0) void this.feed!.collectNew(tenantId, fresh);
+    if (fresh.length > 0) await this.feed!.onCpeProductsAdded({ manager: mg, tenantId, technologyId: tech.id, products: fresh });
     return { ok: true, added: result.added, updated: result.updated, removed: result.removed, unmatched: result.unmatched, collecting: fresh };
   }
 
