@@ -312,6 +312,8 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
       capex_count: string | number;
       contracts_count: string | number;
       projects_count: string | number;
+      technologies_count: string | number;
+      processes_count: string | number;
       links_count: string | number;
       attachments_count: string | number;
     }> = await mg.query(
@@ -320,6 +322,8 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
          (SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()${linkedLineOf('l.tenant_id', 'l.spend_item_id', 'capex')}) AS capex_count,
          (SELECT COUNT(*) FROM application_contracts l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()) AS contracts_count,
          (${projectCountSql}) AS projects_count,
+         (SELECT COUNT(DISTINCT l.technology_id) FROM application_technologies l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()) AS technologies_count,
+         (SELECT COUNT(*) FROM application_business_processes l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()) AS processes_count,
          (SELECT COUNT(*) FROM application_links l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()) AS links_count,
          (SELECT COUNT(*) FROM application_attachments l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()) AS attachments_count`,
       params,
@@ -329,6 +333,8 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
       capex_count: string | number;
       contracts_count: string | number;
       projects_count: string | number;
+      technologies_count: string | number;
+      processes_count: string | number;
       links_count: string | number;
       attachments_count: string | number;
     }> = rows[0] || {};
@@ -337,12 +343,14 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
       capex: Number(row.capex_count || 0),
       contracts: Number(row.contracts_count || 0),
       projects: Number(row.projects_count || 0),
+      technologies: Number(row.technologies_count || 0),
+      processes: Number(row.processes_count || 0),
       links: Number(row.links_count || 0),
       attachments: Number(row.attachments_count || 0),
     };
     return {
       ...counts,
-      total: counts.opex + counts.capex + counts.contracts + counts.projects + counts.links + counts.attachments,
+      total: counts.opex + counts.capex + counts.contracts + counts.projects + counts.technologies + counts.processes + counts.links + counts.attachments,
     };
   }
 

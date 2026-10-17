@@ -937,6 +937,20 @@
       "classification": "Classification",
       "details": "Details"
     },
+    "applications": {
+      "title": "Applications",
+      "empty": "No application linked.",
+      "add": "Add",
+      "search": "Search applications",
+      "remove": "Unlink {{name}}",
+      "saveFailed": "The change could not be saved.",
+      "columns": {
+        "ref": "Ref",
+        "name": "Name",
+        "criticality": "Criticality",
+        "itOwner": "IT owner"
+      }
+    },
     "fields": {
       "nameHelper": "Use a clear name including the code, e.g. Order-to-Cash (O2C)",
       "descriptionPlaceholder": "Short description of the process",

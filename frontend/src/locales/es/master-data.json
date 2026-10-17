@@ -937,6 +937,20 @@
       "classification": "Clasificación",
       "details": "Detalles"
     },
+    "applications": {
+      "title": "Aplicaciones",
+      "empty": "Ninguna aplicación vinculada.",
+      "add": "Añadir",
+      "search": "Buscar aplicaciones",
+      "remove": "Desvincular {{name}}",
+      "saveFailed": "No se pudo guardar el cambio.",
+      "columns": {
+        "ref": "Ref.",
+        "name": "Nombre",
+        "criticality": "Criticidad",
+        "itOwner": "Responsable de TI"
+      }
+    },
     "fields": {
       "nameHelper": "Utilice un nombre claro incluyendo el código, ej. Order-to-Cash (O2C)",
       "descriptionPlaceholder": "Descripción breve del proceso",

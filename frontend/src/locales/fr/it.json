@@ -1121,6 +1121,8 @@
           "projects": "Projets",
           "requests": "Demandes",
           "tasks": "Tâches",
+          "technologies": "Technologies",
+          "processes": "Processus métier",
           "related": "Apparentés"
         },
         "empty": {
@@ -1128,7 +1130,9 @@
           "contracts": "Aucun contrat lié.",
           "projects": "Aucun projet lié.",
           "requests": "Aucune demande liée.",
-          "tasks": "Aucune tâche liée."
+          "tasks": "Aucune tâche liée.",
+          "technologies": "Aucune technologie liée.",
+          "processes": "Aucun processus métier lié."
         },
         "columns": {
           "ref": "Réf.",
@@ -1146,7 +1150,12 @@
           "due": "Échéance",
           "type": "Type",
           "object": "Objet",
-          "via": "Via"
+          "via": "Via",
+          "family": "Famille",
+          "version": "Version",
+          "link": "Lien",
+          "supportEnd": "Fin de support",
+          "businessOwner": "Responsable métier"
         },
         "renewal": {
           "tacit": "Tacite",
@@ -1155,7 +1164,9 @@
         "search": {
           "contracts": "Rechercher des contrats",
           "projects": "Rechercher des projets",
-          "requests": "Rechercher des demandes"
+          "requests": "Rechercher des demandes",
+          "technologies": "Rechercher des technologies",
+          "processes": "Rechercher des processus métier"
         },
         "types": {
           "budget_line": "Ligne budgétaire",
@@ -1168,6 +1179,13 @@
           "project": "via le projet {{label}}",
           "task": "porte la tâche {{label}}"
         },
+        "viaHost": "{{server}} (sur {{host}})",
+        "technologyLink": {
+          "declared": "Déclarée",
+          "hosted": "Hébergée",
+          "both": "Déclarée et hébergée"
+        },
+        "versionUnknown": "Version inconnue",
         "also": {
           "prefix": "Aussi relié :",
           "assets_one": "{{count}} actif (déploiements)",

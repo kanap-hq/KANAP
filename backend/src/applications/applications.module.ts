@@ -28,6 +28,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { TasksModule } from '../tasks/tasks.module';
 import { CurrencyModule } from '../currency/currency.module';
 import { PortfolioModule } from '../portfolio/portfolio.module';
+import { TechnologiesModule } from '../technologies/technologies.module';
 
 // Decomposed services
 import {
@@ -71,6 +72,7 @@ import {
     TasksModule,
     CurrencyModule,
     forwardRef(() => PortfolioModule),
+    forwardRef(() => TechnologiesModule),
   ],
   providers: [
     // Decomposed services (order matters for DI)

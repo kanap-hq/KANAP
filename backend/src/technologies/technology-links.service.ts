@@ -315,14 +315,16 @@ export class TechnologyLinksService {
 
   // ==================== BUSINESS PROCESSES ====================
 
-  /** The business processes of an application (lot T2: its Relations tab). */
+  /** The business processes of an application, with their business owner (lot T2: its Relations tab). */
   async processesOfApplication(applicationId: string, opts: LinkOpts) {
     const { manager: mg, tenantId } = opts;
     const appId = await this.readApplicationId(mg, tenantId, applicationId);
     const items = await mg.query(
-      `SELECT p.id, p.name, p.status::text AS status, l.created_at
+      `SELECT p.id, p.name, p.status::text AS status,
+              NULLIF(btrim(concat_ws(' ', u.first_name, u.last_name)), '') AS owner_name, l.created_at
          FROM application_business_processes l
          JOIN business_processes p ON p.id = l.business_process_id AND p.tenant_id = l.tenant_id
+         LEFT JOIN users u ON u.id = p.owner_user_id AND u.tenant_id = p.tenant_id
         WHERE l.tenant_id = $1 AND l.application_id = $2
         ORDER BY lower(p.name), p.id`,
       [tenantId, appId],
@@ -330,14 +332,14 @@ export class TechnologyLinksService {
     return { items };
   }
 
-  /** The applications of a business process the caller reads; `items` null without the right. */
+  /** The applications of a business process the caller reads, with their IT owners; `items` null without the right. */
   async applicationsOfProcess(processId: string, opts: LinkOpts, applications: ApplicationsReach) {
     const { manager: mg, tenantId } = opts;
     const process = await this.readProcessId(mg, tenantId, processId, false);
     if (!applications) return { items: null };
     const params: unknown[] = [tenantId, process];
     const scopeSql = applications.scope ? (params.push(applications.scope.userId), `AND ${applicationParticipantCondition('a', `$${params.length}`)}`) : '';
-    const items = await mg.query(
+    const rows: Array<{ id: string }> = await mg.query(
       `SELECT a.id, a.name, a.sequential_id AS reference, a.criticality, a.lifecycle, l.created_at
          FROM application_business_processes l
          JOIN applications a ON a.id = l.application_id AND a.tenant_id = l.tenant_id
@@ -345,7 +347,8 @@ export class TechnologyLinksService {
         ORDER BY lower(a.name), a.id`,
       params,
     );
-    return { items };
+    const labels = await this.applicationLabels(mg, tenantId, rows.map((row) => row.id));
+    return { items: rows.map((row) => ({ ...row, it_owner_names: labels.get(row.id)?.it_owner_names ?? [] })) };
   }
 
   /**
