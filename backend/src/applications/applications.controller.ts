@@ -2,7 +2,7 @@ import { languageOf } from '../common/csv-sheet';
 import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
-import { RequireLevel } from '../auth/require-level.decorator';
+import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
 import { ApplicationsService, ApplicationsRelationsService } from './services';
 import { relationKindOrThrow, type RelationsContext } from './services/applications-relations.service';
 import { ApplicationsDeleteService } from './applications-delete.service';
@@ -279,8 +279,9 @@ export class ApplicationsController {
     return this.csvSvc.getFieldInfo();
   }
 
+  /** The levels and waves of the classification, read by the applications' and the technologies' Compliance tabs. */
   @UseGuards(PermissionGuard)
-  @RequireLevel('applications', 'reader')
+  @RequireAnyLevel([{ resource: 'applications', level: 'reader' }, { resource: 'infrastructure', level: 'reader' }])
   @Get('classification-catalog')
   classificationCatalog(@Tenant() ctx: TenantRequest) {
     return this.svc.getClassificationCatalog({ manager: ctx.manager });

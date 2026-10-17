@@ -3,7 +3,8 @@ import 'dotenv/config';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { QueryRunner } from 'typeorm';
 import { TechnologySupport1854270000000 as Migration } from '../../migrations/1854270000000-technology-support';
-import { REQUIRE_LEVEL_KEY } from '../../auth/require-level.decorator';
+import { REQUIRE_ANY_LEVEL_KEY, REQUIRE_LEVEL_KEY } from '../../auth/require-level.decorator';
+import { ApplicationsController } from '../../applications/applications.controller';
 import { assert, inRolledBackTransaction, runSpecs, seedTenant, setTenant } from '../../spend/__tests__/round-inputs.fixtures';
 import { TechnologiesController } from '../technologies.controller';
 import { one, services, technology, type AuditEntry } from './technologies.fixtures';
@@ -174,6 +175,13 @@ function testRoutes() {
   assert.deepEqual(level('listSupportContacts'), { resource: 'infrastructure', level: 'reader' });
   assert.deepEqual(level('replaceSupportContacts'), { resource: 'infrastructure', level: 'member' });
   assert.deepEqual(level('update'), { resource: 'infrastructure', level: 'member' });
+  // The classification catalog of the Compliance tab: the applications' or the infrastructure's readers, nothing else.
+  const catalog = ApplicationsController.prototype.classificationCatalog;
+  assert.equal(Reflect.getMetadata(REQUIRE_LEVEL_KEY, catalog), undefined);
+  assert.deepEqual(Reflect.getMetadata(REQUIRE_ANY_LEVEL_KEY, catalog), [
+    { resource: 'applications', level: 'reader' },
+    { resource: 'infrastructure', level: 'reader' },
+  ]);
 }
 
 runSpecs('technology-support.integration.spec', [
