@@ -7,10 +7,13 @@ import { backendPath } from '../../common/__tests__/backend-root';
 import { AdministrationViewController } from '../reports/administration-view.controller';
 import { AdministrationViewModule } from '../reports/administration-view.module';
 import { TechnologiesController } from '../technologies.controller';
+import { EndOfSupportController } from '../reports/end-of-support.controller';
+import { TechnologyVulnerabilitiesController, VulnerabilitiesController } from '../../vulnerabilities/vulnerabilities.controller';
 
 // The administration view (lot A1a) lives in its own module under `technologies/reports/administration`,
 // registered after `TechnologiesModule`: no route of `TechnologiesController` (`technologies/:id`,
-// `technologies/:id/...`) may capture its paths, whatever the order. A new `technologies/:id/:x`
+// `technologies/:id/...`), of the end of support report or of the vulnerabilities (which has
+// `technologies/:id/vulnerabilities`) may capture its paths, whatever the order. A new `technologies/:id/:x`
 // route would fail here instead of silently answering for the view.
 
 type Route = { method: RequestMethod; path: string };
@@ -35,9 +38,11 @@ function testNotCaptured() {
     'GET /technologies/reports/administration',
     'GET /technologies/reports/administration/export',
   ]);
-  const technologyRoutes = routesOf(TechnologiesController);
+  const technologyRoutes = [TechnologiesController, EndOfSupportController, VulnerabilitiesController, TechnologyVulnerabilitiesController].flatMap(routesOf);
   assert.ok(technologyRoutes.some((r) => r.path === '/technologies/:id'), 'the record route is seen');
   assert.ok(technologyRoutes.some((r) => r.path === '/technologies/:id/relations'), 'the sub-routes are seen');
+  assert.ok(technologyRoutes.some((r) => r.path === '/technologies/reports/end-of-support/gaps'), 'the end of support report is seen');
+  assert.ok(technologyRoutes.some((r) => r.path.startsWith('/technologies/:id/vulnerabilities')), 'the vulnerabilities of a technology are seen');
   for (const route of view) {
     const captors = technologyRoutes.filter((r) => r.method === route.method && matches(r.path, route.path));
     assert.deepEqual(captors, [], `${route.path} is captured by ${captors.map((c) => c.path).join(', ')}`);
