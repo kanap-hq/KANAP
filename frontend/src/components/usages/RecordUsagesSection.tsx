@@ -11,7 +11,7 @@ import { useItOpsSettings } from '../../hooks/useItOpsSettings';
 import { usageListLink, type UsageListLink } from './usageListLinks';
 
 /** What `GET /suppliers/:id/usages` and `GET /contacts/:id/usages` answer (backend `common/record-usages.ts`). */
-export type UsageType = 'suppliers' | 'budget_lines' | 'contracts' | 'applications' | 'assets' | 'locations' | 'projects' | 'requests';
+export type UsageType = 'suppliers' | 'budget_lines' | 'contracts' | 'applications' | 'assets' | 'technologies' | 'locations' | 'projects' | 'requests';
 export type UsageItem = {
   id: string;
   reference: string | null;
@@ -37,7 +37,7 @@ export function useRecordUsages(owner: UsageOwner, id: string) {
   });
 }
 
-/** The page of an object, in the same tab. A budget line opens by its reference (`BL-n`). */
+/** The page of an object, in the same tab. A budget line (`BL-n`) and a technology (`TEC-n`) open by their reference. */
 export function usageHref(type: UsageType, item: UsageItem): string {
   switch (type) {
     case 'suppliers': return `/master-data/suppliers/${item.id}/overview`;
@@ -45,6 +45,7 @@ export function usageHref(type: UsageType, item: UsageItem): string {
     case 'contracts': return `/ops/contracts/${item.id}`;
     case 'applications': return `/it/applications/${item.id}`;
     case 'assets': return `/it/assets/${item.id}`;
+    case 'technologies': return `/it/technologies/${item.reference ?? item.id}`;
     case 'locations': return `/it/locations/${item.id}`;
     case 'projects': return `/portfolio/projects/${item.id}`;
     case 'requests': return `/portfolio/requests/${item.id}`;

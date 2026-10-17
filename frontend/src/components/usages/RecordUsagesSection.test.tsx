@@ -93,6 +93,19 @@ describe('RecordUsagesSection', () => {
     expect(screen.getByRole('link', { name: /Microsoft/ })).toHaveTextContent('contacts.roles.technical');
   });
 
+  it('lists the technologies a contact supports, opened by their reference, with the free-text role', async () => {
+    mocked.get.mockResolvedValue({ data: {
+      total: 1,
+      groups: [{ type: 'technologies', total: 1, items: [{ id: 't-1', reference: 'TEC-4', name: 'SQL Server', status: 'active', active: true, roles: ['Database support'] }] }],
+    } });
+    renderTab('contacts');
+    const group = await screen.findByRole('region', { name: 'shared.usages.groups.technologies' });
+    const row = within(group).getByRole('link', { name: /SQL Server/ });
+    expect(row).toHaveAttribute('href', '/it/technologies/TEC-4');
+    expect(within(row).getByText('TEC-4')).toBeInTheDocument();
+    expect(row).toHaveTextContent('Database support');
+  });
+
   it('says when a group shows part of its objects', async () => {
     renderTab();
     expect(await screen.findByText('shared.usages.partial:2/52')).toBeInTheDocument();

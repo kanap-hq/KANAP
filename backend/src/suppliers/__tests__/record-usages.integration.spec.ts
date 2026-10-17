@@ -24,7 +24,7 @@ const BYPASS_TABLES = [
   'suppliers', 'contacts', 'supplier_contacts', 'spend_items', 'spend_item_contacts', 'contracts', 'contract_contacts',
   'applications', 'application_support_contacts', 'assets', 'asset_support_info', 'asset_support_contacts',
   'locations', 'location_contacts', 'portfolio_projects', 'portfolio_project_contacts', 'portfolio_requests',
-  'portfolio_request_contacts',
+  'portfolio_request_contacts', 'technologies', 'technology_support_contacts',
 ];
 
 const ADMIN: UsageCaller = { isAdmin: true };
@@ -38,7 +38,11 @@ type World = {
   ids: Record<string, string>;
 };
 
-async function seedObjects(runner: QueryRunner, tenantId: string, supplier: string, contact: string, tag: string, start: number) {
+/**
+ * `ownContact` is a contact of `tenantId` for the technology's support: its composite key refuses
+ * a contact of another tenant, where the other link tables only name the contact's id.
+ */
+async function seedObjects(runner: QueryRunner, tenantId: string, supplier: string, contact: string, tag: string, start: number, ownContact: string) {
   const { companyId } = await seedCompany(runner, tenantId, `Company ${tag}`);
   const opex = await seedItem(runner, 'opex', tenantId, start, `OPEX ${tag}`);
   const capex = await seedItem(runner, 'capex', tenantId, start, `CAPEX ${tag}`);
@@ -97,6 +101,14 @@ async function seedObjects(runner: QueryRunner, tenantId: string, supplier: stri
   );
   await runner.query(`INSERT INTO portfolio_project_contacts (tenant_id, project_id, contact_id) VALUES ($1, $2, $3)`, [tenantId, project.id, contact]);
   await runner.query(`INSERT INTO portfolio_request_contacts (tenant_id, request_id, contact_id) VALUES ($1, $2, $3)`, [tenantId, request.id, contact]);
+  const [technology] = await runner.query(
+    `INSERT INTO technologies (tenant_id, item_number, name, family) VALUES ($1, $2, $3, 'database') RETURNING id`,
+    [tenantId, start, `Technology ${tag}`],
+  );
+  await runner.query(
+    `INSERT INTO technology_support_contacts (tenant_id, technology_id, contact_id, role) VALUES ($1, $2, $3, ' Database support ')`,
+    [tenantId, technology.id, ownContact],
+  );
   return { opex, capex, contract: contract.id, application: application.id, asset: asset.id, location: location.id, project: project.id, request: request.id };
 }
 
@@ -110,11 +122,15 @@ async function withWorld(fn: (runner: QueryRunner, world: World) => Promise<void
       `INSERT INTO contacts (tenant_id, email, first_name, last_name) VALUES ($1, $2, 'Robert', 'Chen') RETURNING id`,
       [tenantA, `robert-${tenantA.slice(0, 8)}@example.com`],
     );
-    const ids = await seedObjects(runner, tenantA, supplier.id, contact.id, 'A', 1);
+    const ids = await seedObjects(runner, tenantA, supplier.id, contact.id, 'A', 1, contact.id);
 
     // Tenant B: the same kinds of objects, pointing at tenant A's supplier and contact.
     await setTenant(runner, tenantB);
-    await seedObjects(runner, tenantB, supplier.id, contact.id, 'B', 1);
+    const [contactB] = await runner.query(
+      `INSERT INTO contacts (tenant_id, email, first_name, last_name) VALUES ($1, $2, 'Robert', 'Chen') RETURNING id`,
+      [tenantB, `robert-${tenantB.slice(0, 8)}@example.com`],
+    );
+    await seedObjects(runner, tenantB, supplier.id, contact.id, 'B', 1, contactB.id);
 
     await setTenant(runner, tenantA);
     const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM contracts WHERE supplier_id = $1`, [supplier.id]);
@@ -160,11 +176,14 @@ async function testContactUsages() {
       contracts: ['-|Contract A|-|active|commercial'],
       applications: ['-|Application A|-|active|Account manager'],
       assets: ['-|Asset A|-|active|Hardware support'],
+      technologies: ['TEC-1|Technology A|-|active|Database support'],
       locations: ['-|Location A|-|active|'],
       projects: ['PRJ-1|Project A|-|active|'],
       requests: ['REQ-1|Request A|-|active|'],
     }, 'one item per object, the contact\'s roles on it (types in their order, text trimmed, blanks dropped)');
-    assert.equal(usages.total, 9);
+    assert.equal(usages.total, 10);
+    const technology = usages.groups.find((group) => group.type === 'technologies')!.items[0];
+    assert.equal(technology.status, 'active', 'a technology carries its lifecycle');
     const project = usages.groups.find((group) => group.type === 'projects')!.items[0];
     assert.equal(project.status, 'planned', 'a project carries its status');
   });
@@ -202,6 +221,9 @@ async function testPermissions() {
 
     const none = await readContactUsages(runner.manager, w.tenantA, w.contact, { permissions: { contacts: 'reader' } });
     assert.deepEqual(none, { total: 0, groups: [] }, 'no group without the right to read it');
+
+    const infrastructure = await readContactUsages(runner.manager, w.tenantA, w.contact, { permissions: { contacts: 'reader', infrastructure: 'reader' } });
+    assert.deepEqual(infrastructure.groups.map((group) => group.type), ['assets', 'technologies'], 'the technologies under the infrastructure read right');
   });
 }
 
