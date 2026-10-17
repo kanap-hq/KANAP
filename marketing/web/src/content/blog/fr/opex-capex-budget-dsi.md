@@ -1,6 +1,6 @@
 ---
-title: "OPEX et CAPEX : un seul budget DSI, lisible par le contrôle de gestion"
-description: "Fonctionnement et investissement dans une seule liste, classés avec les dimensions du contrôle de gestion : motif, priorité, programme. Les rapports suivent."
+title: "OPEX et CAPEX : le budget de la DSI, prêt pour le contrôle de gestion"
+description: "Fonctionnement et investissement au même endroit : la DSI construit son budget simplement, et arrive en revue avec le contrôle de gestion sur des chiffres classés et justifiés."
 date: 2026-10-17
 topic: cost
 author: Friedrich
@@ -13,9 +13,9 @@ series:
   title: "Construire le budget de la DSI"
 ---
 
-Le budget de fonctionnement d'un côté, le plan d'investissement de l'autre. Deux fichiers, deux calendriers, deux personnes qui les tiennent. Et un contrôle de gestion qui pose chaque année les mêmes questions : combien de fonctionnement, combien d'investissement, pour quoi faire, et que coûte vraiment ce programme, tout compris ?
+Le budget de la DSI tient en deux enveloppes : le fonctionnement et l'investissement. Souvent, chacune vit dans son fichier, avec son calendrier et la personne qui la tient. Puis vient la revue avec le contrôle de gestion, et ses questions de chaque année : combien de fonctionnement, combien d'investissement, pour quoi faire, et que coûte vraiment ce programme, tout compris ?
 
-Chaque réponse passe par une consolidation à la main. KANAP part d'un principe simple : un seul budget, deux natures de dépense, et un classement que la DSI et le contrôle de gestion partagent.
+Chaque réponse demande alors une consolidation à la main. KANAP est l'endroit où la DSI prépare son budget, OPEX et CAPEX ensemble, simplement. Et parce que chaque ligne y est classée au fil de l'eau, la DSI arrive en revue avec des chiffres propres, cohérents et faciles à justifier.
 
 ## OPEX ou CAPEX, la règle en clair
 
@@ -34,27 +34,27 @@ Le type règle ce qui doit l'être, et seulement cela :
 - **Les comptes** : chaque compte du plan comptable sert à l'OPEX, au CAPEX ou aux deux. Une ligne CAPEX ne propose que les comptes d'investissement.
 - **Les dimensions analytiques** : une dimension ou une valeur peut être réservée à une nature (voir plus bas).
 - **La refacturation** : les rapports de refacturation proposent l'OPEX, le CAPEX ou les deux.
-- **Les gels** : une colonne budgétaire se gèle par année et par nature. Le budget d'investissement voté peut être figé pendant que le fonctionnement se prépare encore.
-
-Un seul fichier budgétaire fait entrer et sortir les deux natures, avec une colonne `nature`. Le budget préparé dans un tableur se charge en une fois.
+- **Les gels** : une colonne budgétaire se gèle par année et par nature. Le budget d'investissement validé peut être figé pendant que le fonctionnement se prépare encore.
 
 ## Les dimensions, le langage commun de la DSI et du contrôle de gestion
 
-Les dimensions analytiques classent les lignes pour le reporting, à côté de la structure comptable (le détail est dans [Axe analytique du budget IT : ce que coûte la cyber](/fr/blog/la-dimension-analytique-du-budget-it)). Chaque dimension répond à une question. Voici celles que le contrôle de gestion pose sur l'investissement, et le réglage qui y répond.
+Les dimensions analytiques classent les lignes pour le reporting, à côté de la structure comptable (le détail est dans [Axe analytique du budget IT : ce que coûte la cyber](/fr/blog/la-dimension-analytique-du-budget-it)). Chaque dimension répond à une question. Le bon jeu de dimensions dépend de chaque organisation ; voici un exemple tiré des bonnes pratiques, dont chacun peut s'inspirer.
 
-**« À quoi sert cet investissement ? »** Une dimension **Motif** : remplacement, capacité, productivité, sécurité, conformité, croissance. Réservez-la aux lignes CAPEX et rendez-la obligatoire : chaque nouvel investissement arrive classé, qu'il soit créé à l'écran, chargé par fichier, préparé par Plaid ou envoyé par l'API. Plus de relance pour compléter une colonne oubliée.
+Pas besoin de partir de zéro : un nouvel espace KANAP démarre avec quatre dimensions recommandées et leurs valeurs (Nature de coût, Domaine IT, Motif et Priorité), et un espace existant les ajoute en un clic avec **Dimensions recommandées**. Chacune se renomme, se complète et se règle ensuite comme vous l'entendez.
 
-**« Qu'est-ce qui est incompressible ? »** Une dimension **Priorité** : obligatoire, haute, moyenne, basse. C'est elle qui structure l'arbitrage en comité. Chez Fromage & Co, notre société d'exemple, les investissements obligatoires pèsent 1,13 M€ sur 2,35 M€ en 2026 : la migration S/4HANA, le renouvellement du data center et la segmentation réseau des usines.
+**« À quoi sert cet investissement ? »** La dimension **Motif** : remplacement, capacité, productivité, sécurité, conformité, croissance. Réservée aux lignes CAPEX et rendue obligatoire, elle garantit que chaque nouvel investissement arrive classé, qu'il soit créé à l'écran, chargé par fichier, préparé par Plaid ou envoyé par l'API. Plus de relance pour compléter une colonne oubliée.
 
-**« Que coûte ce programme, tout compris ? »** Une dimension **Référence budgétaire**, utilisée par l'OPEX comme par le CAPEX, avec une valeur par programme. Le programme S/4HANA de Fromage & Co réunit ainsi 704 k€ de prestataires et de support en fonctionnement et 757 k€ d'investissement (intégration, développement capitalisé, serveurs HANA) : 1,46 M€ sur l'année, dans un seul rapport. En fin de programme, la valeur se désactive : elle reste sur les lignes et dans les rapports passés, et ne se propose plus.
+**« Qu'est-ce qui est incompressible ? »** La dimension **Priorité** : obligatoire, haute, moyenne, basse. C'est elle qui structure l'arbitrage en comité. Chez Fromage & Co, notre société d'exemple, les investissements obligatoires pèsent 1,13 M€ sur 2,35 M€ en 2026 : la migration S/4HANA, le renouvellement du data center et la segmentation réseau des usines.
 
-**« De quelle nature est la dépense ? »** La **Nature de coût** et le **Domaine IT**, deux dimensions recommandées issues du modèle TBM (Technology Business Management), communes aux deux natures. Une valeur peut être réservée à une nature : la main-d'œuvre interne, par exemple, à l'OPEX seulement.
+**« Que coûte ce programme, tout compris ? »** Une dimension **Programme**, créée en quelques secondes, utilisée par l'OPEX comme par le CAPEX, avec une valeur par programme. Le programme S/4HANA de Fromage & Co réunit ainsi 704 k€ de prestataires et de support en fonctionnement et 757 k€ d'investissement (intégration, développement capitalisé, serveurs HANA) : 1,46 M€ sur l'année, dans un seul rapport. En fin de programme, la valeur se désactive : elle reste sur les lignes et dans les rapports passés, et ne se propose plus.
 
-![Le panneau Propriétés d'une ligne CAPEX : compte d'investissement, Motif, Priorité et Référence budgétaire renseignés](/screenshots/blog/opex-capex-line-properties-2026-10-17.png)
+**« De quelle nature est la dépense ? »** La **Nature de coût** et le **Domaine IT**, issues du modèle TBM (Technology Business Management), communes aux deux natures. Une valeur peut être réservée à une nature : la main-d'œuvre interne, par exemple, à l'OPEX seulement.
+
+![Le panneau Propriétés d'une ligne CAPEX : compte d'investissement, Motif, Priorité et Programme renseignés](/screenshots/blog/opex-capex-line-properties-2026-10-17.png)
 
 Le lien avec la comptabilité passe par les comptes, réglés par nature, et par les comptes de consolidation du groupe. Les dimensions restent un outil de lecture : elles ne touchent ni aux comptes ni aux ventilations.
 
-Le contrôle de gestion y gagne des règles qui s'appliquent d'elles-mêmes. Une dimension se renomme, se réordonne ou s'arrête à une date de fin de validité sans perdre l'historique, et le journal d'audit garde la trace des changements.
+La DSI y gagne un classement qui se fait en même temps que la saisie, et le contrôle de gestion des règles qui s'appliquent d'elles-mêmes. Une dimension se renomme, se réordonne ou s'arrête à une date de fin de validité sans perdre l'historique, et le journal d'audit garde la trace des changements.
 
 ## Les rapports : Tous, OPEX ou CAPEX
 
@@ -64,7 +64,7 @@ Les filtres se combinent : centre de coûts, run ou build, et une valeur par dim
 
 ![Le rapport Dimensions analytiques sur le CAPEX 2026 de Fromage & Co, regroupé par Motif](/screenshots/blog/opex-capex-report-purpose-2026-10-17.png)
 
-Sur l'exemple, le remplacement représente 59 % de l'investissement 2026, la croissance 36 % et la sécurité 5 %. C'est le genre de chiffre qu'un comité de direction demande, et qu'il obtient ici sans retraitement.
+Sur l'exemple, le remplacement représente 59 % de l'investissement 2026, la croissance 36 % et la sécurité 5 %. C'est le genre de chiffre qu'un comité de direction demande, et que la DSI a ici sous la main, sans retraitement.
 
 L'adresse de la page garde la nature et les filtres choisis. Le lien envoyé au contrôleur de gestion ouvre exactement la même vue, et l'export PDF se présente tel quel. Les rapports de refacturation proposent aussi l'OPEX, le CAPEX ou les deux ; le CAPEX y compte pour son montant de l'année.
 
@@ -85,9 +85,9 @@ KANAP ne calcule pas les amortissements et ne tient pas le registre des immobili
 
 ## Par où commencer
 
-1. Listez avec le contrôle de gestion les questions auxquelles le budget doit répondre.
-2. Réglez les comptes par nature, puis les dimensions : lesquelles pour le CAPEX, lesquelles pour les deux, lesquelles obligatoires.
-3. Chargez le budget existant par le fichier budgétaire, OPEX et CAPEX dans le même fichier.
-4. Gardez en favori les vues utiles des rapports et partagez leurs liens.
+1. **Partez des questions du contrôle de gestion** : celles qui reviennent à chaque revue budgétaire. Chacune deviendra une dimension, ou un filtre d'un rapport existant.
+2. **Ajustez les dimensions recommandées** : renommez ce qui doit l'être, ajoutez celles qui vous manquent (un Programme, par exemple), réservez au CAPEX ce qui ne concerne que l'investissement, et rendez obligatoires les dimensions indispensables.
+3. **Faites une passe sur les lignes existantes** pour renseigner les dimensions encore vides. Sous chaque dimension obligatoire, KANAP compte les lignes sans valeur et ouvre leur liste en un clic.
+4. **Vérifiez le résultat dans les rapports** avant la revue : ce qui reste en « Non affecté » montre ce qu'il faut encore classer.
 
-Les données d'exemple d'un essai, le groupe fictif Fromage & Co, contiennent un budget OPEX et CAPEX déjà classé sur ces dimensions : de quoi voir tout cela avant de charger le vôtre. KANAP s'installe aussi gratuitement sur vos propres serveurs ([voir l'offre](/fr/offer)).
+Pour voir tout cela sur un budget déjà classé, un essai gratuit de 14 jours donne accès aux données d'exemple du groupe fictif Fromage & Co, chargées en une minute. KANAP est entièrement open source : il s'installe aussi gratuitement sur vos propres serveurs.
