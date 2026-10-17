@@ -459,6 +459,22 @@ Remarques :
 - Les notifications par e-mail demandent aussi que l'envoi d'e-mails soit configuré (Resend ou SMTP).
 - Redémarrez l'API après avoir changé ces valeurs.
 
+## Facultatif : catalogue des technologies { #optional-technology-catalog }
+
+Les technologies adoptées depuis le catalogue suivent ses nouvelles versions, ses dates de fin de support et ses identifiants CPE (voir [Versions issues du catalogue](../technologies.md#versions-issues-du-catalogue)). Par défaut sur site, chaque version de KANAP apporte son propre catalogue : les technologies adoptées reçoivent ce qu'il ajoute au premier démarrage de cette version. Activez la consultation quotidienne pour suivre les éditeurs entre deux versions de KANAP.
+
+| Variable | Description | Défaut |
+|----------|-------------|---------|
+| `TECHNOLOGY_CATALOG_SYNC_ENABLED` | Lit chaque jour sur endoflife.date les versions et les dates de fin de support des produits du catalogue dont viennent vos technologies. | `false` sur site |
+| `ENDOFLIFE_API_BASE_URL` | Adresse d'un miroir de l'API v1 d'endoflife.date, quand le serveur ne peut pas joindre endoflife.date. | `https://endoflife.date/api/v1` |
+
+Remarques :
+
+- L'API a besoin d'un accès HTTPS sortant vers `endoflife.date`, ou vers votre miroir (voir [Règles de pare-feu](#regles-de-pare-feu)).
+- Les deux modes passent par la tâche planifiée **technology-catalog** (chaque jour et au démarrage). Tant que cette tâche est désactivée dans les tâches planifiées, rien n'est mis à jour.
+- Une valeur changée dans KANAP, ou une version qui y a été supprimée, n'est jamais écrasée ni recréée.
+- Redémarrez l'API après avoir changé ces valeurs.
+
 ## Facultatif : avancé
 
 | Variable | Description | Défaut |
@@ -580,6 +596,10 @@ S3_FORCE_PATH_STYLE=false
 # NVD_API_KEY=
 # NVD_API_BASE_URL=
 
+# CATALOGUE DES TECHNOLOGIES (facultatif - désactivé par défaut)
+# TECHNOLOGY_CATALOG_SYNC_ENABLED=false
+# ENDOFLIFE_API_BASE_URL=
+
 # AVANCÉ (facultatif - les valeurs par défaut conviennent)
 # JWT_ACCESS_TOKEN_TTL=15m
 # JWT_REFRESH_TOKEN_TTL=4h
@@ -595,7 +615,7 @@ S3_FORCE_PATH_STYLE=false
 
 ## Règles de pare-feu
 
-Après le build initial, KANAP peut fonctionner de manière entièrement isolée (air-gapped) si l'e-mail, le SSO, l'IA, les taux de change et les vulnérabilités sont tous désactivés.
+Après le build initial, KANAP peut fonctionner de manière entièrement isolée (air-gapped) si l'e-mail, le SSO, l'IA, les taux de change, les vulnérabilités et le catalogue des technologies sont tous désactivés.
 
 ### Entrant
 
@@ -640,6 +660,7 @@ Nécessaire uniquement si la fonction correspondante est activée.
 | `claude.ai` | 443 | Lit la description de Claude, Claude Desktop ou Claude Code quand un utilisateur le connecte via MCP sans clé | Si `AI_MCP_ENABLED=true` et que des utilisateurs se connectent via OAuth (inutile pour les clés API) |
 | `chatgpt.com`, `grok.com` | 443 | Lit la description de ChatGPT ou de Grok quand un utilisateur le connecte via MCP sans clé | Comme pour `claude.ai` |
 | `services.nvd.nist.gov`, ou votre miroir | 443 | Vulnérabilités publiées (NVD) | Si `VULNERABILITY_FEED_ENABLED=true` |
+| `endoflife.date`, ou votre miroir | 443 | Versions et dates de fin de support du catalogue des technologies | Si `TECHNOLOGY_CATALOG_SYNC_ENABLED=true` |
 | `api.worldbank.org` | 443 | Taux de change annuels | Facultatif |
 | `open.er-api.com` | 443 | Taux de change au comptant | Facultatif |
 

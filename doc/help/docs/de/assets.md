@@ -164,10 +164,10 @@ Der Reiter Technisch organisiert Cluster, Netzwerkidentität, die vom Server get
 - **Aliase**: Zusätzliche DNS-Namen oder Aliase für dieses Asset. Tippen und Enter drücken zum Hinzufügen.
 - **Betriebssystem**: OS-Typ und -Version (z. B. Windows Server 2022, Ubuntu 24.04 LTS). Für Cluster deaktiviert: OS wird pro Mitglied definiert. Bei Auswahl werden Standard- und erweiterte Support-Endtermine darunter angezeigt.
 
-**Technologien**: was der Server trägt, zum Beispiel SQL Server, vSphere oder Active Directory. Spalten: **Ref.**, **Name**, **Familie**, **Version** und **Installiert auf**.
+**Technologien**: was der Server trägt, zum Beispiel SQL Server, vSphere oder Active Directory. Spalten: **Ref.**, **Name**, **Familie**, **Version** und, wenn der Server eine Technologie über einen anderen trägt, **Über**.
 
 - Eine auf diesem Server installierte Technologie entfernen Sie mit dem Kreuz am Ende ihrer Zeile.
-- Eine Technologie, die auf dem Server oder Cluster installiert ist, in dem dieser läuft, nennt jenen Server unter **Installiert auf**. Sie folgt der Installation und wird dort entfernt.
+- Eine Technologie, die auf dem Server oder Cluster installiert ist, in dem dieser läuft, nennt jenen Server unter **Über**. Sie folgt der Installation und wird dort entfernt.
 - **Hinzufügen** (`infrastructure:member`) öffnet eine Technologiesuche, dann die Versionsauswahl: Wählen Sie eine Version, **Version unbekannt**, oder geben Sie eine neue Bezeichnung ein und wählen Sie **Version „…“ hinzufügen**, um sie anzulegen. Jede Änderung wird sofort gespeichert.
 
 Version und Notizen einer Installation ändern Sie im Reiter **Server** der Technologie. Siehe [Technologien](technologies.md#eine-technologie-mit-einem-server-verknupfen).

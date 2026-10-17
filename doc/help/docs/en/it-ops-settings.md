@@ -12,7 +12,7 @@ For map readability, **Entities** and **Server roles** also include a **Graph ti
   - You need at least `settings:reader` to view the page.
   - You need `settings:admin` to change values.
 
-If you don't see the **Settings** entry in the IT Landscape drawer, ask your administrator to grant you the appropriate permissions.
+If you don't see the **Settings** entry in the IT Landscape drawer, ask your administrator to grant you the appropriate permissions. Other screens call this page the IT settings.
 
 ## How the page is organized
 
@@ -22,6 +22,8 @@ The **Classifications and continuity** editor sits at the top of the page. Below
 2. **Servers & connections** - Lists used for servers, connections, and related risk/endpoint data.
 3. **Apps, services & interfaces** - Lists used across applications, app instances, interfaces, and bindings.
 4. **Incidents** - Lists used by the incident register.
+
+The lists of the technologies are in two sections: **Technology families** and **Administration zones** under **Servers & connections**, **Hosting types** under **Locations**.
 
 Within a section, lists are sorted by name. Each list appears as an expandable panel with a short hint that says where its values are used (for example, *Applications / Category selector*). Click a panel header to expand it and see the values. Only one section loads its content when you first expand it, which keeps the page fast even when you have many lists.
 
@@ -74,12 +76,15 @@ Cloud providers used by servers and locations (e.g., AWS, Azure, GCP).
 
 ### Hosting types
 
-Location hosting models available when creating locations (e.g., on-prem, colocation, public cloud, SaaS).
+Where locations and technologies are hosted. Defaults: On-prem, Colocation, Public cloud, Private cloud, SaaS.
 
 **Columns**: Name, Category (**On-prem / colocation** or **Cloud / SaaS**), No longer offered
 
 **Where used**:
 - Locations workspace → Overview tab → **Hosting Type** field
+- Technologies workspace → properties drawer → **Hosting type**, and the new technology window. See [Technologies](technologies.md#hosting-type).
+
+A type a technology uses cannot be removed: mark it **No longer offered** instead.
 
 The category determines which fields appear when editing a Location:
 - **On-prem / colocation** shows Operating Company and Datacenter fields
@@ -104,6 +109,15 @@ The zones of your administration model, for example Tier 0 for the directory and
 - **IT Landscape > Administration view**, which lists each zone with its technologies and servers. See [Administration view](administration-view.md).
 
 A zone marked **No longer offered** stays on the technologies already placed in it.
+
+### Technology families
+
+What kind of technology each one is: database, hypervisor, directory and identity, and so on. The technologies list and the reports group technologies by family, and the [Administration view](administration-view.md) finds the directory services through the **Directory and identity** family.
+
+**Columns**: Name, No longer offered
+
+**Where used**:
+- Technologies workspace → header and properties drawer → **Family**, and the new technology window
 
 ### Connection types
 
@@ -401,7 +415,7 @@ This approach lets you evolve your taxonomy over time without breaking existing 
 | **Connection types** | Connections (Connection Type) |
 | **Domains** | Assets (Technical tab → Domain, FQDN), Administration view |
 | **Entities** | Connections (Source/Target Entity), Connection Map (graph tier placement) |
-| **Hosting types** | Locations (Overview) |
+| **Hosting types** | Locations (Overview), Technologies (Hosting type) |
 | **Integration patterns** | Interface legs (Pattern) |
 | **Interface authentication modes** | Interface bindings (Auth Mode) |
 | **Interface data categories** | Interfaces (Data Category) |
@@ -416,6 +430,7 @@ This approach lets you evolve your taxonomy over time without breaking existing 
 | **Subnets** | Assets (Technical tab → IP Addresses → Subnet selector) |
 | **Server roles** | Applications → Servers tab (role when linking asset to app), Connection Map (graph tier placement) |
 | **Asset types** | Assets (Overview → Type) |
+| **Technology families** | Technologies (Family), Administration view (directory services) |
 
 ---
 

@@ -23,6 +23,8 @@ El editor **Clasificaciones y continuidad** está en la parte superior de la pá
 3. **Aplicaciones, servicios e interfaces** - Listas utilizadas en aplicaciones, instancias de aplicación, interfaces y enlaces.
 4. **Incidentes** - Listas utilizadas por el registro de incidentes.
 
+Las listas de las tecnologías están en dos secciones: **Familias de tecnologías** y **Zonas de administración** en **Servidores y conexiones**, **Tipos de alojamiento** en **Ubicaciones**. Otras pantallas llaman a esta página los ajustes de TI.
+
 Dentro de una sección, las listas se ordenan por nombre. Cada lista aparece como un panel expandible con una breve indicación de dónde se usan sus valores (por ejemplo, *Aplicaciones / Selector de categoría*). Haga clic en el encabezado de un panel para expandirlo y ver los valores. Solo una sección carga su contenido cuando la expande por primera vez, lo que mantiene la página rápida incluso cuando tiene muchas listas.
 
 ### Controles del editor
@@ -74,12 +76,15 @@ Proveedores cloud utilizados por los servidores y las ubicaciones (p. ej., AWS, 
 
 ### Tipos de alojamiento
 
-Modelos de alojamiento disponibles al crear ubicaciones (p. ej., on-premise, colocation, nube pública, SaaS).
+Dónde se alojan las ubicaciones y las tecnologías. Valores por defecto: Local, Colocation, Cloud público, Cloud privado, SaaS.
 
 **Columnas**: Nombre, Categoría (**Local / colocación** o **Nube / SaaS**), Dejar de proponer
 
 **Dónde se usa**:
 - Espacio de trabajo de Ubicaciones → pestaña Visión general → campo **Tipo de alojamiento**
+- Espacio de trabajo de Tecnologías → panel de propiedades → **Tipo de alojamiento**, y la ventana de nueva tecnología. Consulte [Tecnologías](technologies.md#tipo-de-alojamiento).
+
+Un tipo que usa una tecnología no se puede eliminar: márquelo con **Dejar de proponer**.
 
 La categoría determina qué campos aparecen al editar una Ubicación:
 - **Local / colocación** muestra campos de Empresa operadora y Centro de datos
@@ -104,6 +109,15 @@ Las zonas de su modelo de administración, por ejemplo el tier 0 para el directo
 - **Panorama IT > Vista de la administración**, que lista cada zona con sus tecnologías y sus servidores. Consulte [Vista de la administración](administration-view.md).
 
 Una zona marcada con **Dejar de proponer** se mantiene en las tecnologías ya situadas en ella.
+
+### Familias de tecnologías
+
+El tipo de cada tecnología: base de datos, hipervisor, directorio e identidad, etc. La lista de tecnologías y los informes agrupan las tecnologías por familia, y la [Vista de la administración](administration-view.md) encuentra los servicios de directorio por la familia **Directorio e identidad**.
+
+**Columnas**: Nombre, Dejar de proponer
+
+**Dónde se usa**:
+- Espacio de trabajo de Tecnologías → cabecera y panel de propiedades → **Familia**, y la ventana de nueva tecnología
 
 ### Tipos de conexión
 
@@ -401,7 +415,7 @@ Este enfoque le permite evolucionar su taxonomía con el tiempo sin romper los r
 | **Tipos de conexión** | Conexiones (Tipo de conexión) |
 | **Dominios** | Activos (pestaña Técnico → Dominio, FQDN), Vista de la administración |
 | **Entidades** | Conexiones (Entidad de origen/destino), Mapa de conexiones (ubicación por nivel del grafo) |
-| **Tipos de alojamiento** | Ubicaciones (Visión general) |
+| **Tipos de alojamiento** | Ubicaciones (Visión general), Tecnologías (Tipo de alojamiento) |
 | **Patrones de integración** | Segmentos de interfaz (Patrón) |
 | **Modos de autenticación de interfaz** | Enlaces de interfaz (Modo de autenticación) |
 | **Categorías de datos de interfaz** | Interfaces (Categoría de datos) |
@@ -416,6 +430,7 @@ Este enfoque le permite evolucionar su taxonomía con el tiempo sin romper los r
 | **Subredes** | Activos (pestaña Técnico → Direcciones IP → Selector de subred) |
 | **Roles de servidor** | Aplicaciones → pestaña Servidores (rol al vincular activo a app), Mapa de conexiones (ubicación por nivel del grafo) |
 | **Tipos de activo** | Activos (Visión general → Tipo) |
+| **Familias de tecnologías** | Tecnologías (Familia), Vista de la administración (servicios de directorio) |
 
 ---
 

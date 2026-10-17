@@ -18,9 +18,9 @@ Legen Sie eine Technologie an, wenn niemand im Produkt selbst arbeitet, andere A
 
 Einige Beispiele:
 
-- **Entra ID**: eine abonnierte Technologie der Familie **Verzeichnis und Identität**, Hersteller Microsoft. Sie läuft auf keinem Ihrer Server. Die Anwendungen, deren Benutzer sich darüber anmelden, deklarieren sie.
-- **Active Directory**: eine installierte Technologie derselben Familie, getragen von Ihren Domänencontrollern. Die Anwendungen, die sie nutzen, deklarieren sie.
-- **vSphere**: eine installierte Technologie, getragen von der vCenter-VM und von den Hosts.
+- **Entra ID**: eine **SaaS**-Technologie der Familie **Verzeichnis und Identität**, Hersteller Microsoft. Sie läuft auf keinem Ihrer Server. Die Anwendungen, deren Benutzer sich darüber anmelden, deklarieren sie.
+- **Active Directory**: eine **On-Premise**-Technologie derselben Familie, getragen von Ihren Domänencontrollern. Die Anwendungen, die sie nutzen, deklarieren sie.
+- **vSphere**: eine **On-Premise**-Technologie, getragen von der vCenter-VM und von den Hosts.
 - **SQL Server**: eine Technologie mit einer Zeile pro Version im Einsatz (2016, 2019, 2022). Jeder Server trägt seine eigene Version, sodass der Supportende-Bericht die Server nennen kann, die noch auf einer alten laufen.
 - **Eine SaaS-Anwendung**: keine Technologie zu erfassen. Der Anbieter pflegt, worauf sie läuft.
 
@@ -30,14 +30,16 @@ Eine Technologie umfasst ein Produkt als Ganzes. „SQL Server" steht für alle 
 
 Navigieren Sie zu **IT-Landschaft > Technologien** und klicken Sie auf **Neue Technologie**.
 
-Das Fenster öffnet sich auf dem **Katalog**: einer Liste gängiger Produkte mit Hersteller, Familie und Versionen. Suchen Sie nach dem Namen und klicken Sie auf einen Eintrag. KANAP legt die Technologie sofort mit Hersteller, Familie, Modus, CPE-Produktkennungen und ihren Versionen samt Supportende-Daten an und öffnet sie. Der Katalog bietet nur Produkte an, die Sie noch nicht hinzugefügt haben.
+Das Fenster öffnet sich auf dem **Katalog**: einer Liste gängiger Produkte mit einer kurzen Beschreibung, Hersteller, Familie und Hosting-Typ. Suchen Sie nach dem Namen und klicken Sie auf einen Eintrag. KANAP legt die Technologie sofort mit Hersteller, Familie, Hosting-Typ, CPE-Produktkennungen, ihren Versionen samt Supportende-Daten und der kurzen Beschreibung in Ihrer Sprache an und öffnet sie. Der Katalog bietet nur Produkte an, die Sie noch nicht hinzugefügt haben.
+
+Eine aus dem Katalog übernommene Technologie bleibt aktuell: Wenn der Hersteller eine neue Version veröffentlicht oder ein Datum ändert, fügt KANAP die Version hinzu und verschiebt das Datum (siehe [Versionen aus dem Katalog](#versionen-aus-dem-katalog)).
 
 Für ein Produkt, das der Katalog nicht kennt, klicken Sie auf **Eine Technologie erfassen, die nicht im Katalog steht**. Füllen Sie aus:
 
 - **Name** (Pflichtfeld): eindeutig unter Ihren Technologien.
 - **Familie**: die Art der Technologie (Datenbank, Hypervisor, Verzeichnis und Identität usw.).
 - **Hersteller**: Die Vorschläge stammen aus Ihren anderen Technologien und aus dem Katalog, sodass derselbe Hersteller eine einzige Schreibweise behält.
-- **Modus**: **Installiert**, wenn sie auf Ihren Servern läuft, **Abonniert** für einen bei einem Anbieter gekauften Dienst.
+- **Hosting-Typ**: wo die Technologie läuft. Standardmäßig **On-Premise**. Siehe [Hosting-Typ](#hosting-typ).
 
 **Berechtigungen**:
 
@@ -91,12 +93,21 @@ Der Arbeitsbereich hat eine Kopfzeile, ein Eigenschaftenfeld rechts und sechs Re
 
 ### Eigenschaftenfeld
 
-- **Hersteller**, **Familie** und **Modus**.
+- **Hersteller**, **Familie** und **Hosting-Typ**.
 - **Administrationszone**: die Zone Ihres Administrationsmodells, zu der die Technologie gehört, zum Beispiel Tier 0 für den Verzeichnisdienst. Die Zonen stammen aus **IT-Landschaft > Einstellungen**. Eine Technologie ohne Zone erscheint als zu ergänzende Angabe in der [Administrationssicht](administration-view.md).
 - **Ersetzt durch**: die Technologie, die diese ablöst, zum Beispiel ein neueres Produkt, zu dem Ihre Teams wechseln.
 - **IT-Verantwortliche**: die für die Technologie zuständigen Personen.
 
 Änderungen werden sofort gespeichert.
+
+#### Hosting-Typ
+
+Der Hosting-Typ sagt, wo die Technologie läuft. Die Liste ist die der **Hosting-Typen** unter **IT-Landschaft > Einstellungen**, gemeinsam mit den Standorten: standardmäßig **On-Premise**, **Colocation**, **Public Cloud**, **Private Cloud** und **SaaS**. Jeder Typ ist entweder vor Ort oder in der Cloud:
+
+- **Vor Ort** (On-Premise, Colocation): Die Technologie wird auf Ihren Servern erwartet. Eine, die auf keinem Server läuft, erscheint in den **Fehlenden Daten** des Berichts [Supportende](end-of-support.md#fehlende-daten).
+- **In der Cloud** (Public Cloud, Private Cloud, SaaS): Der Anbieter betreibt sie, zum Beispiel Entra ID oder ein verwalteter Kubernetes-Dienst. Deklarieren Sie sie bei den Anwendungen, die sie nutzen.
+
+Ein als **Nicht mehr anbieten** markierter Typ bleibt bei den Technologien, die ihn haben. Ein aus den Einstellungen entfernter Typ, oder eine Liste ohne Typ in Verwendung, lässt die Technologie ebenfalls in den **Fehlenden Daten** erscheinen.
 
 ### Übersicht
 
@@ -114,7 +125,13 @@ Der Arbeitsbereich hat eine Kopfzeile, ein Eigenschaftenfeld rechts und sechs Re
 
 Der Support läuft an seinem Enddatum noch. Bei nur einem Datum ist dieses Datum das Ende. **Version hinzufügen** fügt eine Zeile hinzu; fahren Sie über eine Zeile, um sie zu bearbeiten oder zu löschen. Das Löschen einer Version, die Server oder Anwendungen nutzen, fragt zuerst nach: Diese Verknüpfungen zeigen dann eine unbekannte Version.
 
-**CPE-Produktkennungen**: die Namen, die Sicherheitsdatenbanken diesem Produkt geben, in der Form `part:vendor:product` (zum Beispiel `a:microsoft:sql_server`). KANAP gleicht sie mit den veröffentlichten Schwachstellen ab: Eine Technologie ohne Kennung erhält keine Schwachstelle. Ein Produkt kann mehrere haben (vSphere umfasst vCenter und ESXi). Wo Sie diesen Wert finden: Suchen Sie das Produkt im [CPE-Wörterbuch des NIST](https://nvd.nist.gov/products/cpe/search) und übernehmen Sie Teil, Hersteller und Produkt. Katalogeinträge bringen ihre Kennungen mit.
+#### Versionen aus dem Katalog
+
+Eine Version aus dem Katalog zeigt **Katalog** neben ihrer Bezeichnung, und eine aus dem Katalog übernommene Technologie zeigt unter ihren Versionen „Versionen und Daten werden aus dem Katalog aktuell gehalten“. In der Cloud prüft KANAP den Katalog täglich. Bei einer On-Premise-Installation bringt jede KANAP-Version ihren Katalog beim Start mit, sofern Ihr Administrator nicht [die tägliche Prüfung einschaltet](on-premise/configuration.md#optional-technology-catalog).
+
+Die Prüfung fügt die neuen Versionen und CPE-Produktkennungen des Produkts hinzu und aktualisiert die Supportende-Daten und Kennungen, die der Katalog geändert hat. Sie überschreibt nie einen Wert, den Sie geändert haben, und stellt nie eine Version oder Kennung wieder her, die Sie gelöscht haben. Eine Version, die Sie erfasst haben, bevor der Katalog sie kannte, wird ihm bei gleicher Bezeichnung zugeordnet, und ihre leeren Daten werden ergänzt.
+
+**CPE-Produktkennungen**: die Namen, die Sicherheitsdatenbanken diesem Produkt geben, in der Form `part:vendor:product` (zum Beispiel `a:microsoft:sql_server`). KANAP gleicht sie mit den veröffentlichten Schwachstellen ab: Eine Technologie ohne Kennung erhält keine Schwachstelle. Ein Produkt kann mehrere haben (vSphere umfasst vCenter und ESXi). Wo Sie diesen Wert finden: Suchen Sie das Produkt im [CPE-Wörterbuch des NIST](https://nvd.nist.gov/products/cpe/search) und übernehmen Sie Teil, Hersteller und Produkt. Übernehmen Sie sie so, wie die NVD sie schreibt, mit dem Backslash vor einem Zeichen: `a:veeam:veeam_backup_\&_replication`. Katalogeinträge bringen ihre Kennungen mit.
 
 **Notizen**: Freitext, etwa Lizenzbedingungen oder Verlängerungstermine.
 
@@ -127,13 +144,13 @@ Die Server, die die Technologie tragen, eine Zeile pro Server und Version:
 | **Ref.**, **Server** | Der Server. Ein Klick auf die Zeile öffnet ihn |
 | **Umgebung**, **Betriebssystem** | Vom Server übernommen |
 | **Version** | Die installierte Version. Ein Strich bedeutet, dass die Version unbekannt ist |
-| **Installiert auf** | Bei einem Server, der die Technologie über einen anderen trägt: der Server oder Cluster, auf dem sie installiert ist |
+| **Über** | Bei einem Server, der die Technologie über einen anderen trägt: der Server oder Cluster, auf dem sie installiert ist. Die Spalte erscheint nur, wenn der Reiter eine solche Zeile hat |
 | **Notizen** | Freitext zu dieser Installation, zum Beispiel „Clusterknoten“ |
 
 Eine Technologie erreicht einen Server auf zwei Wegen:
 
 - **Installiert**: Jemand hat die Technologie mit diesem Server verknüpft. Sie können Version und Notizen direkt ändern oder die Zeile entfernen.
-- **Über einen anderen Server**: Die Technologie ist auf dem Server oder Cluster installiert, in dem dieser läuft, zum Beispiel SQL Server auf einem Cluster, angezeigt auf jedem seiner Mitglieder. Die Zeile nennt diesen Server unter **Installiert auf**. Sie folgt der Installation: Ändern oder entfernen Sie sie auf jenem Server.
+- **Über einen anderen Server**: Die Technologie ist auf dem Server oder Cluster installiert, in dem dieser läuft, zum Beispiel SQL Server auf einem Cluster, angezeigt auf jedem seiner Mitglieder. Die Zeile nennt diesen Server unter **Über**. Sie folgt der Installation: Ändern oder entfernen Sie sie auf jenem Server.
 
 **Hinzufügen** (`infrastructure:member`) öffnet eine Serversuche, dann die Versionsauswahl: Wählen Sie eine Version, **Version unbekannt**, oder geben Sie eine neue Bezeichnung ein und wählen Sie **Version „…“ hinzufügen**, um sie anzulegen. Jede Änderung wird sofort gespeichert.
 
@@ -198,7 +215,7 @@ Ein Abschnitt erscheint nur, wenn Sie sein Modul lesen dürfen. **Hinzufügen** 
 
 Eine Zeile pro Version und Schwachstelle, die schwerste zuerst, mit **CVE**, **Schweregrad**, **Version** und **Status**. Die Zahl neben dem Titel ist die Anzahl verschiedener Schwachstellen. Ein Klick auf eine Zeile öffnet sie auf der Seite [Schwachstellen](vulnerabilities.md), wo Sie sie prüfen.
 
-**Erneut abgleichen** (`infrastructure:member`) vergleicht die Technologie sofort mit den bekannten Schwachstellen. Nutzen Sie es nach einer Änderung der CPE-Produktkennungen, der Versionen oder der Server und Anwendungen, die sie nutzen. Andernfalls berücksichtigt die nächste geplante Prüfung die Änderung.
+KANAP gleicht die Technologie erneut ab, sobald sich ihre Kennungen, Versionen, Server oder Anwendungen ändern. Nach einer neuen CPE-Produktkennung zeigt der Abschnitt „Suche nach Schwachstellen läuft…“, während KANAP dieses Produkt aus der NVD liest. **Erneut abgleichen** (`infrastructure:member`) startet den Vergleich von Hand.
 
 ---
 
@@ -209,7 +226,7 @@ Dass ein Server eine Technologie trägt, erfassen Sie von beiden Seiten:
 - Von der Technologie aus: Reiter **Server**, **Hinzufügen**, dann Server und Version wählen.
 - Vom Server aus: Reiter **Technisch** des Assets, Abschnitt **Technologien**, **Hinzufügen**, dann Technologie und Version wählen. Siehe [Assets](assets.md#technisch).
 
-Erfassen Sie die Technologie auf dem Server, auf dem sie installiert ist: dem Host für einen Hypervisor, jedem Domänencontroller für Active Directory, dem Datenbankserver für SQL Server. Die Server, die darin laufen, oder die Mitglieder seines Clusters zeigen sie dann ohne weitere Eingabe. Eine abonnierte Technologie wie Entra ID läuft auf keinem Ihrer Server: Deklarieren Sie sie stattdessen bei den Anwendungen.
+Erfassen Sie die Technologie auf dem Server, auf dem sie installiert ist: dem Host für einen Hypervisor, jedem Domänencontroller für Active Directory, dem Datenbankserver für SQL Server. Die Server, die darin laufen, oder die Mitglieder seines Clusters zeigen sie dann ohne weitere Eingabe. Eine Cloud-Technologie wie Entra ID läuft auf keinem Ihrer Server: Deklarieren Sie sie stattdessen bei den Anwendungen.
 
 ---
 

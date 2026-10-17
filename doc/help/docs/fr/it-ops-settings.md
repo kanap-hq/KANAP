@@ -23,6 +23,8 @@ L'éditeur **Classifications et continuité** se trouve en haut de la page. En d
 3. **Applications, services et interfaces** - Listes utilisées pour les applications, les instances d'application, les interfaces et les liaisons.
 4. **Incidents** - Listes utilisées par le registre des incidents.
 
+Les listes des technologies sont dans deux sections : **Familles de technologies** et **Zones d'administration** sous **Serveurs et connexions**, **Types d'hébergement** sous **Sites**. Les autres écrans appellent cette page les réglages IT.
+
 Dans une section, les listes sont triées par nom. Chaque liste apparaît comme un panneau extensible, avec une courte indication de l'endroit où ses valeurs sont utilisées (par exemple, *Applications / Choix de la catégorie*). Cliquez sur un en-tête de panneau pour le développer et voir les valeurs. Le contenu de chaque section ne se charge que lorsque vous la développez pour la première fois, ce qui maintient la rapidité de la page même avec de nombreuses listes.
 
 ### Contrôles de l'éditeur
@@ -74,12 +76,15 @@ Fournisseurs cloud utilisés par les serveurs et les sites (ex. : AWS, Azure, GC
 
 ### Types d'hébergement
 
-Modèles d'hébergement proposés à la création d'un site (ex. : sur site, colocation, cloud public, SaaS).
+Où sont hébergés les sites et les technologies. Valeurs par défaut : Sur site, Colocation, Cloud public, Cloud privé, SaaS.
 
 **Colonnes** : Nom, Catégorie (**Sur site / colocation** ou **Cloud / SaaS**), Ne plus proposer
 
 **Où c'est utilisé** :
 - Espace de travail Sites > Onglet Vue d'ensemble > Champ **Type d'hébergement**
+- Espace de travail Technologies > panneau de propriétés > **Type d'hébergement**, et la fenêtre de nouvelle technologie. Voir [Technologies](technologies.md#type-dhebergement).
+
+Un type utilisé par une technologie ne peut pas être supprimé : marquez-le plutôt **Ne plus proposer**.
 
 La catégorie détermine quels champs apparaissent lors de la modification d'un Site :
 - **Sur site / colocation** affiche Société d'exploitation et champs Datacenter
@@ -104,6 +109,15 @@ Les zones de votre modèle d'administration, par exemple le tier 0 pour l'annuai
 - **Cartographie SI > Vue de l'administration**, qui liste chaque zone avec ses technologies et ses serveurs. Voir [Vue de l'administration](administration-view.md).
 
 Une zone marquée **Ne plus proposer** reste sur les technologies déjà placées dedans.
+
+### Familles de technologies
+
+Le genre de chaque technologie : base de données, hyperviseur, annuaire et identité, etc. La liste des technologies et les rapports regroupent les technologies par famille, et la [Vue de l'administration](administration-view.md) trouve les services d'annuaire par la famille **Annuaire et identité**.
+
+**Colonnes** : Nom, Ne plus proposer
+
+**Où c'est utilisé** :
+- Espace de travail Technologies > en-tête et panneau de propriétés > **Famille**, et la fenêtre de nouvelle technologie
 
 ### Types de connexion
 
@@ -401,7 +415,7 @@ Cette approche vous permet de faire évoluer votre taxonomie au fil du temps san
 | **Types de connexion** | Connexions (Type de connexion) |
 | **Domaines** | Actifs (Onglet Technique > Domaine, FQDN), Vue de l'administration |
 | **Entités** | Connexions (Entité source/cible), Carte des connexions (placement par niveau du graphe) |
-| **Types d'hébergement** | Sites (Vue d'ensemble) |
+| **Types d'hébergement** | Sites (Vue d'ensemble), Technologies (Type d'hébergement) |
 | **Modèles d'intégration** | Segments d'interface (Modèle) |
 | **Modes d'authentification d'interface** | Liaisons d'interfaces (Mode d'auth.) |
 | **Catégories de données d'interface** | Interfaces (Catégorie de données) |
@@ -416,6 +430,7 @@ Cette approche vous permet de faire évoluer votre taxonomie au fil du temps san
 | **Sous-réseaux** | Actifs (Onglet Technique > Adresses IP > Sélecteur de sous-réseau) |
 | **Rôles de serveur** | Applications > Onglet Serveurs (rôle lors de la liaison actif-app), Carte des connexions (placement par niveau du graphe) |
 | **Types d'actif** | Actifs (Vue d'ensemble > Type) |
+| **Familles de technologies** | Technologies (Famille), Vue de l'administration (services d'annuaire) |
 
 ---
 

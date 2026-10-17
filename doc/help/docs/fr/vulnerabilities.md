@@ -19,36 +19,46 @@ KANAP lit les vulnérabilités publiées par la NVD toutes les 6 heures et les c
 
 Certaines vulnérabilités ne s'appliquent que lorsque deux produits tournent ensemble, par exemple Tomcat sur Windows. KANAP les montre pour le seul produit vulnérable : l'une d'elles peut donc apparaître pour une installation qu'elle ne touche pas. Marquez-la **Non concernée**.
 
-Une vulnérabilité que la NVD n'a pas encore analysée apparaît une fois analysée. Un changement des identifiants, des versions, des serveurs ou des applications d'une technologie est pris en compte à la vérification suivante, ou tout de suite avec **Rapprocher à nouveau** sur la technologie.
+Une vulnérabilité que la NVD n'a pas encore analysée apparaît une fois analysée.
+
+Les changements comptent tout de suite. Quand vous ajoutez une technologie ou un identifiant CPE produit, KANAP cherche aussitôt ce produit dans la NVD ; la section **Vulnérabilités** de la technologie indique « Recherche des vulnérabilités en cours… » jusqu'à la fin de la recherche. Quand une version, un serveur ou une application d'une technologie change, KANAP rapproche à nouveau la technologie dès que le changement est enregistré. **Rapprocher à nouveau** sur la technologie fait la même chose à la main.
 
 ## La liste
 
-Une ligne par vulnérabilité, la plus sévère en premier. La page s'ouvre sur les vulnérabilités **À traiter**.
-
-**Filtres** :
-
-- **Sévérité**, **État**, **Éditeur** et **Technologie** : une valeur, ou toutes.
-- **Publication** : **Toute date**, ou les 30, 90 ou 365 derniers jours.
-- **Recherche** : l'identifiant CVE, le résumé ou le nom de la technologie.
+La liste utilise la grille standard : une ligne par vulnérabilité, la plus sévère en premier. Elle s'ouvre sur les vulnérabilités **À traiter** : videz le filtre de la colonne **État** pour voir les autres.
 
 **Colonnes** :
 
 | Colonne | Ce qu'elle montre |
 |---|---|
 | **CVE** | L'identifiant de la vulnérabilité, par exemple `CVE-2024-1234` |
-| **Sévérité** | **Critique**, **Élevée**, **Moyenne**, **Faible**, **Aucune** ou **Non évaluée**, avec le score CVSS |
+| **Sévérité** | **Critique**, **Élevée**, **Moyenne**, **Faible**, **Aucune** ou **Non évaluée** |
+| **Score** | Le score CVSS. Masquée par défaut |
 | **Résumé** | La description de la NVD |
 | **Technologies** | Les technologies et versions concernées |
+| **Éditeur** | Les éditeurs de ces technologies |
 | **Serveurs** | Le nombre de serveurs qui portent une version concernée, directement ou par le serveur dans lequel ils tournent |
 | **Applications** | Le nombre d'applications qui utilisent une version concernée, hébergées ou déclarées |
 | **État** | **À traiter** tant qu'une version reste à traiter, **Non concernée** quand toutes le sont, **Traitée** sinon |
 | **Publication** | La date de publication |
 
-**Afficher plus** charge les lignes suivantes.
+**Filtres** : chaque colonne a son propre filtre sous son en-tête. **Sévérité**, **Technologies**, **Éditeur** et **État** proposent des cases à cocher, **Score** un nombre, **Publication** une date, **CVE** et **Résumé** un texte. La zone de recherche au-dessus de la grille porte sur l'identifiant CVE, le résumé et le nom de la technologie.
+
+**Tri** par **Sévérité**, **Score**, **Publication** ou **CVE**. Le sélecteur de colonnes affiche ou masque des colonnes, et la grille retient votre choix.
+
+## Changer l'état de plusieurs vulnérabilités
+
+Avec `infrastructure:member`, cochez les vulnérabilités à changer, puis cliquez sur **Changer l'état (n)**. Sans sélection, **Changer l'état** porte sur toutes les vulnérabilités du filtre en cours. La fenêtre demande :
+
+- L'**État** à donner.
+- Une **Note commune**, facultative. Sans note, chaque ligne garde la sienne.
+- Avec une sélection, vous pouvez cocher **Toutes les vulnérabilités du filtre en cours** pour l'élargir.
+
+Avant que vous confirmiez, la fenêtre indique combien de lignes (versions de technologie) le changement touche, sur combien de vulnérabilités. Une vulnérabilité arrivée après ce comptage reste telle quelle. Au-delà de 5 000 lignes, resserrez les filtres ou sélectionnez moins de vulnérabilités.
 
 ## Traiter une vulnérabilité
 
-Cliquez sur une ligne pour l'ouvrir. Vous voyez :
+Cliquez sur une ligne pour ouvrir la vulnérabilité dans un panneau latéral. Vous voyez :
 
 - Le résumé, le vecteur CVSS et les liens de référence (avis de l'éditeur, correctifs).
 - **Technologies et versions** : chaque version concernée, avec son **État** et une note.
@@ -69,7 +79,7 @@ KANAP ne change jamais un état que vous avez choisi. Quand une version ne corre
 
 ## Export
 
-**Exporter le tableau en CSV** télécharge les vulnérabilités qui répondent aux filtres, une ligne par version de technologie et par vulnérabilité, dans la langue de votre écran. Au-delà de 10 000 vulnérabilités, resserrez d'abord les filtres.
+**Exporter en CSV** télécharge les vulnérabilités qui répondent aux filtres, une ligne par version de technologie et par vulnérabilité, dans la langue de votre écran. Au-delà de 10 000 vulnérabilités, resserrez d'abord les filtres.
 
 ## Notifications par e-mail
 

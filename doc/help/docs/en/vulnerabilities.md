@@ -19,36 +19,46 @@ KANAP reads the vulnerabilities published by the NVD every 6 hours and compares 
 
 Some vulnerabilities only apply when two products run together, for example Tomcat on Windows. KANAP shows them for the vulnerable product alone, so one may appear for an installation it does not affect. Mark it **Not affected**.
 
-A vulnerability the NVD has not analysed yet appears once it is. A change to a technology's identifiers, versions, servers or applications is taken into account at the next check, or at once with **Match again** on the technology.
+A vulnerability the NVD has not analysed yet appears once it is.
+
+Changes count at once. When you add a technology or a CPE product identifier, KANAP searches the NVD for that product right away; the technology's **Vulnerabilities** section says "Searching for vulnerabilities…" until the search ends. When a version, a server or an application of a technology changes, KANAP matches the technology again as soon as the change is saved. **Match again** on the technology does the same by hand.
 
 ## The list
 
-One row per vulnerability, most severe first. The page opens on the vulnerabilities **To review**.
-
-**Filters**:
-
-- **Severity**, **State**, **Publisher** and **Technology**: one value, or **All**.
-- **Published**: **Any time**, or the last 30, 90 or 365 days.
-- **Search**: the CVE identifier, the summary or the technology name.
+The list uses the standard grid: one row per vulnerability, most severe first. It opens on the vulnerabilities **To review**: clear the filter of the **State** column to see the others.
 
 **Columns**:
 
 | Column | What it shows |
 |---|---|
 | **CVE** | The vulnerability's identifier, for example `CVE-2024-1234` |
-| **Severity** | **Critical**, **High**, **Medium**, **Low**, **None** or **Not rated**, with the CVSS score |
+| **Severity** | **Critical**, **High**, **Medium**, **Low**, **None** or **Not rated** |
+| **Score** | The CVSS score. Hidden by default |
 | **Summary** | The NVD description |
 | **Technologies** | The concerned technologies and versions |
+| **Publisher** | The publishers of these technologies |
 | **Servers** | How many servers carry a concerned version, directly or through the server they run in |
 | **Applications** | How many applications use a concerned version, hosted or declared |
 | **State** | **To review** while one version is still to review, **Not affected** when every version is, **Handled** otherwise |
 | **Published** | The publication date |
 
-**Show more** loads the next rows.
+**Filters**: each column has its own filter under its header. **Severity**, **Technologies**, **Publisher** and **State** offer checkboxes, **Score** a number, **Published** a date, **CVE** and **Summary** a text. The search box above the grid matches the CVE identifier, the summary and the technology name.
+
+**Sort** by **Severity**, **Score**, **Published** or **CVE**. The column chooser shows or hides columns, and the grid remembers your choice.
+
+## Changing the state of several vulnerabilities
+
+With `infrastructure:member`, tick the vulnerabilities to change, then click **Change state (n)**. Without a selection, **Change state** works on every vulnerability of the current filter. The window asks for:
+
+- The **State** to set.
+- A **Common note**, optional. Without a note, each row keeps its own.
+- With a selection, you can tick **Every vulnerability of the current filter** to widen it.
+
+Before you confirm, the window says how many rows (technology versions) the change touches, on how many vulnerabilities. A vulnerability that arrives after this count is left as it is. Above 5,000 rows, narrow the filters or select fewer vulnerabilities.
 
 ## Reviewing a vulnerability
 
-Click a row to open it. You see:
+Click a row to open the vulnerability in a side panel. You see:
 
 - The summary, the CVSS vector and the reference links (publisher advisories, patches).
 - **Technologies and versions**: each concerned version, with its **State** and a note.
@@ -69,7 +79,7 @@ KANAP never changes a state you chose. When a version no longer matches (you upg
 
 ## Export
 
-**Export table as CSV** downloads the vulnerabilities that match the filters, one line per technology version and vulnerability, in the language of your screen. Above 10,000 vulnerabilities, narrow the filters first.
+**Export CSV** downloads the vulnerabilities that match the filters, one line per technology version and vulnerability, in the language of your screen. Above 10,000 vulnerabilities, narrow the filters first.
 
 ## Email notifications
 

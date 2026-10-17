@@ -18,9 +18,9 @@ Create a technology when people do not work in the product itself, yet other app
 
 A few examples:
 
-- **Entra ID**: a subscribed technology of the **Directory and identity** family, published by Microsoft. It runs on none of your servers. The applications that sign users in through it declare it.
-- **Active Directory**: an installed technology of the same family, carried by your domain controllers. The applications that use it declare it.
-- **vSphere**: an installed technology carried by the vCenter virtual machine and by the hosts.
+- **Entra ID**: a **SaaS** technology of the **Directory and identity** family, published by Microsoft. It runs on none of your servers. The applications that sign users in through it declare it.
+- **Active Directory**: an **On-prem** technology of the same family, carried by your domain controllers. The applications that use it declare it.
+- **vSphere**: an **On-prem** technology carried by the vCenter virtual machine and by the hosts.
 - **SQL Server**: one technology with one line per version in use (2016, 2019, 2022). Each server carries its own version, so the end of support report can name the servers still on an old one.
 - **A SaaS application**: no technology to record. The publisher maintains what it runs on.
 
@@ -30,14 +30,16 @@ One technology covers a product as a whole. "SQL Server" stands for every SQL Se
 
 Navigate to **IT Landscape > Technologies** and click **New technology**.
 
-The window opens on the **Catalog**: a list of common products with their publisher, family and versions. Search it by name, then click an entry. KANAP creates the technology at once with its publisher, family, mode, CPE product identifiers and its versions with their end of support dates, then opens it. The catalog only offers products you have not added yet.
+The window opens on the **Catalog**: a list of common products with a short description, their publisher, family and hosting type. Search it by name, then click an entry. KANAP creates the technology at once with its publisher, family, hosting type, CPE product identifiers, its versions with their end of support dates, and the short description in your language, then opens it. The catalog only offers products you have not added yet.
+
+A technology adopted from the catalog stays up to date: when the publisher releases a new version or changes a date, KANAP adds the version and moves the date (see [Versions from the catalog](#versions-from-the-catalog)).
 
 For a product the catalog does not know, click **Enter a technology missing from the catalog**. Fill in:
 
 - **Name** (required): unique among your technologies.
 - **Family**: what kind of technology it is (database, hypervisor, directory and identity, and so on).
 - **Publisher**: suggestions come from your other technologies and from the catalog, so the same publisher keeps one spelling.
-- **Mode**: **Installed** when it runs on your servers, **Subscribed** for a service you buy from a provider.
+- **Hosting type**: where the technology runs. **On-prem** by default. See [Hosting type](#hosting-type).
 
 **Permissions**:
 
@@ -91,12 +93,21 @@ The workspace has a header, a properties drawer on the right, and six tabs: **Ov
 
 ### Properties drawer
 
-- **Publisher**, **Family** and **Mode**.
+- **Publisher**, **Family** and **Hosting type**.
 - **Administration zone**: the zone of your administration model the technology belongs to, for example Tier 0 for the directory. The zones come from **IT Landscape > Settings**. A technology without a zone is listed as data to complete in the [Administration view](administration-view.md).
 - **Replaced by**: the technology that takes over from this one, for example a newer product your teams are moving to.
 - **IT owners**: the people responsible for the technology.
 
 Changes save as you make them.
+
+#### Hosting type
+
+The hosting type says where the technology runs. The list is the **Hosting types** list of **IT Landscape > Settings**, shared with the locations: **On-prem**, **Colocation**, **Public cloud**, **Private cloud** and **SaaS** by default. Each type is either on premises or in the cloud:
+
+- **On premises** (On-prem, Colocation): the technology is expected on your servers. One that runs on no server shows in the **Missing data** of the [End of support](end-of-support.md#missing-data) report.
+- **In the cloud** (Public cloud, Private cloud, SaaS): the provider runs it, for example Entra ID or a managed Kubernetes service. Declare it on the applications that use it.
+
+A type marked **No longer offered** stays on the technologies that have it. A type removed from the settings, or a list left without any type in use, shows the technology in the **Missing data** too.
 
 ### Overview
 
@@ -114,7 +125,13 @@ Changes save as you make them.
 
 Support still runs on its end date. With a single date, that date is the end. **Add version** adds a line; hover a line to edit or delete it. Deleting a version used by servers or applications asks first: those links then show an unknown version.
 
-**CPE product identifiers**: the names security databases use for this product, in the form `part:vendor:product` (for example `a:microsoft:sql_server`). KANAP matches them with the published vulnerabilities, so a technology without one gets no vulnerability. A product can have several (vSphere covers vCenter and ESXi). Where to find this value: search the product in the [NIST CPE dictionary](https://nvd.nist.gov/products/cpe/search) and keep its part, vendor and product. Catalog entries come with their identifiers.
+#### Versions from the catalog
+
+A version that comes from the catalog shows **Catalog** next to its label, and a technology adopted from the catalog says "Versions and dates kept up to date from the catalog" under its versions. KANAP checks the catalog every day in the cloud. On an on-premise installation, each KANAP version brings its catalog at start, unless your administrator [turns on the daily check](on-premise/configuration.md#optional-technology-catalog).
+
+The check adds the new versions and CPE product identifiers of the product, and updates the end of support dates and identifiers the catalog changed. It never overwrites a value you changed, and never brings back a version or an identifier you deleted. A version you typed before the catalog knew it is attached to the catalog when the labels match, and its empty dates are filled.
+
+**CPE product identifiers**: the names security databases use for this product, in the form `part:vendor:product` (for example `a:microsoft:sql_server`). KANAP matches them with the published vulnerabilities, so a technology without one gets no vulnerability. A product can have several (vSphere covers vCenter and ESXi). Where to find this value: search the product in the [NIST CPE dictionary](https://nvd.nist.gov/products/cpe/search) and keep its part, vendor and product. Copy them as the NVD writes them, with the backslash before a sign: `a:veeam:veeam_backup_\&_replication`. Catalog entries come with their identifiers.
 
 **Notes**: free text, such as licensing terms or renewal dates.
 
@@ -127,13 +144,13 @@ The servers that carry the technology, one row per server and version:
 | **Ref**, **Server** | The server. Click the row to open it |
 | **Environment**, **Operating system** | Taken from the server |
 | **Version** | The version installed. A dash means the version is unknown |
-| **Installed on** | For a server that carries the technology through another one: the server or cluster it is installed on |
+| **Via** | For a server that carries the technology through another one: the server or cluster it is installed on. The column shows only when the tab has such a row |
 | **Notes** | Free text about this installation, for example "cluster node" |
 
 A technology reaches a server in two ways:
 
 - **Installed**: someone linked the technology to this server. You can change the version and the notes in place, or remove the row.
-- **Through another server**: the technology is installed on the server or cluster this one runs in, for example SQL Server installed on a cluster and shown on each of its members. The row names that server under **Installed on**. It follows the installation: change or remove it on that server.
+- **Through another server**: the technology is installed on the server or cluster this one runs in, for example SQL Server installed on a cluster and shown on each of its members. The row names that server under **Via**. It follows the installation: change or remove it on that server.
 
 **Add** (`infrastructure:member`) opens a search for a server, then the version picker: choose a version, **Version unknown**, or type a new label and pick **Add version "…"** to create it. Each change saves at once.
 
@@ -198,7 +215,7 @@ A section appears only if you can read its module. **Add** (`infrastructure:memb
 
 One row per version and vulnerability, most severe first, with its **CVE**, **Severity**, **Version** and **State**. The count next to the title is the number of distinct vulnerabilities. Click a row to open it on the [Vulnerabilities](vulnerabilities.md) page, where you review it.
 
-**Match again** (`infrastructure:member`) compares the technology with the known vulnerabilities right away. Use it after changing the CPE product identifiers, the versions or the servers and applications that use them. Otherwise the next scheduled check takes the change into account.
+KANAP matches the technology again as soon as its identifiers, versions, servers or applications change. After a new CPE product identifier, the section says "Searching for vulnerabilities…" while KANAP reads that product from the NVD. **Match again** (`infrastructure:member`) runs the comparison by hand.
 
 ---
 
@@ -209,7 +226,7 @@ You can record that a server carries a technology from either side:
 - From the technology: **Servers** tab, **Add**, then choose the server and the version.
 - From the server: **Technical** tab of the asset, **Technologies** section, **Add**, then choose the technology and the version. See [Assets](assets.md#technical).
 
-Record the technology on the server where it is installed: the host for a hypervisor, each domain controller for Active Directory, the database server for SQL Server. The servers that run inside it, or the members of its cluster, then show it without further work. A subscribed technology, such as Entra ID, runs on none of your servers: declare it on the applications instead.
+Record the technology on the server where it is installed: the host for a hypervisor, each domain controller for Active Directory, the database server for SQL Server. The servers that run inside it, or the members of its cluster, then show it without further work. A cloud technology, such as Entra ID, runs on none of your servers: declare it on the applications instead.
 
 ---
 

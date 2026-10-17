@@ -46,7 +46,8 @@ Die Ansicht **Fehlende Daten** listet die Datensätze, die zu ergänzen sind, da
 |---|---|
 | **Gehostete Anwendung ohne Server** | Eine On-Premises oder in einer Private Cloud gehostete Anwendung hat keinen Server auf einer Bereitstellung in Betrieb |
 | **Virtuelle Maschine ohne Host** | Kein Asset enthält diese virtuelle Maschine |
-| **Installierte Technologie auf keinem Server** | Eine Technologie im Modus **Installiert** läuft auf keinem Server |
+| **On-Premises-Technologie auf keinem Server** | Eine Technologie mit einem Hosting-Typ vor Ort (On-Premise, Colocation) läuft auf keinem Server |
+| **Technologie ohne Hosting-Typ der IT-Einstellungen** | Der Hosting-Typ der Technologie steht nicht mehr in der Liste **Hosting-Typen** der Einstellungen. Wählen Sie bei der Technologie einen anderen |
 | **Datenbankserver ohne Datenbanktechnologie** | Ein Server hat eine Datenbankrolle für eine Anwendung, trägt aber keine Technologie der Familie **Datenbank** |
 | **Anwendung mit SSO ohne Identitätstechnologie** | Eine Anwendung nutzt SSO und hat keine Technologie der Familie **Verzeichnis und Identität** |
 | **Technologieverknüpfung ohne Version** | Ein Server oder eine Anwendung nutzt eine Technologie, ohne die Version anzugeben |

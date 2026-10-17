@@ -23,6 +23,8 @@ Der Editor **Einstufungen und Kontinuität** steht oben auf der Seite. Darunter 
 3. **Anwendungen, Services und Schnittstellen** - Listen für Anwendungen, Anwendungsinstanzen, Schnittstellen und Bindungen.
 4. **Vorfälle** - Listen für das Vorfallsregister.
 
+Die Listen der Technologien stehen in zwei Abschnitten: **Technologiefamilien** und **Administrationszonen** unter **Server und Verbindungen**, **Hosting-Typen** unter **Standorte**. Andere Seiten nennen diese Seite die IT-Einstellungen.
+
 Innerhalb eines Abschnitts sind die Listen nach Namen sortiert. Jede Liste erscheint als aufklappbares Panel mit einem kurzen Hinweis, wo ihre Werte verwendet werden (zum Beispiel *Anwendungen / Kategorieauswahl*). Klicken Sie auf die Kopfzeile eines Panels, um es aufzuklappen und die Werte zu sehen. Ein Abschnitt lädt seinen Inhalt erst beim ersten Aufklappen. So bleibt die Seite auch bei vielen Listen schnell.
 
 ### Editor-Steuerungen
@@ -74,12 +76,15 @@ Cloud-Anbieter, die von Servern und Standorten verwendet werden (z. B. AWS, Azur
 
 ### Hosting-Typen
 
-Hosting-Modelle, die beim Anlegen von Standorten verfügbar sind (z. B. On-Premises, Colocation, Public Cloud, SaaS).
+Wo Standorte und Technologien gehostet werden. Standardwerte: On-Premise, Colocation, Public Cloud, Private Cloud, SaaS.
 
 **Spalten**: Name, Kategorie (**Vor Ort / Colocation** oder **Cloud / SaaS**), Nicht mehr anbieten
 
 **Verwendung**:
 - Standorte-Arbeitsbereich → Reiter Übersicht → Feld **Hosting-Typ**
+- Technologie-Arbeitsbereich → Eigenschaftenfeld → **Hosting-Typ**, und das Fenster für neue Technologien. Siehe [Technologien](technologies.md#hosting-typ).
+
+Ein Typ, den eine Technologie nutzt, kann nicht entfernt werden: Markieren Sie ihn stattdessen als **Nicht mehr anbieten**.
 
 Die Kategorie bestimmt, welche Felder beim Bearbeiten eines Standorts erscheinen:
 - **Vor Ort / Colocation** zeigt die Felder Betreiberunternehmen und Rechenzentrum
@@ -104,6 +109,15 @@ Die Zonen Ihres Administrationsmodells, zum Beispiel Tier 0 für den Verzeichnis
 - **IT-Landschaft > Administrationssicht**, die jede Zone mit ihren Technologien und Servern listet. Siehe [Administrationssicht](administration-view.md).
 
 Eine als **Nicht mehr anbieten** markierte Zone bleibt bei den Technologien, die ihr bereits zugeordnet sind.
+
+### Technologiefamilien
+
+Die Art jeder Technologie: Datenbank, Hypervisor, Verzeichnis und Identität usw. Die Technologieliste und die Berichte gruppieren Technologien nach Familie, und die [Administrationssicht](administration-view.md) findet die Verzeichnisdienste über die Familie **Verzeichnis und Identität**.
+
+**Spalten**: Name, Nicht mehr anbieten
+
+**Verwendung**:
+- Technologie-Arbeitsbereich → Kopfzeile und Eigenschaftenfeld → **Familie**, und das Fenster für neue Technologien
 
 ### Verbindungstypen
 
@@ -401,7 +415,7 @@ So können Sie Ihre Taxonomie im Laufe der Zeit weiterentwickeln, ohne bestehend
 | **Verbindungstypen** | Verbindungen (Verbindungstyp) |
 | **Domänen** | Assets (Reiter Technik → Domäne, FQDN), Administrationssicht |
 | **Entitäten** | Verbindungen (Quell-/Zielentität), Verbindungskarte (Platzierung nach Graph-Ebene) |
-| **Hosting-Typen** | Standorte (Übersicht) |
+| **Hosting-Typen** | Standorte (Übersicht), Technologien (Hosting-Typ) |
 | **Integrationsmuster** | Schnittstellenabschnitte (Muster) |
 | **Authentifizierungsmodi für Schnittstellen** | Schnittstellenbindungen (Authentifizierungsmodus) |
 | **Datenkategorien für Schnittstellen** | Schnittstellen (Datenkategorie) |
@@ -416,6 +430,7 @@ So können Sie Ihre Taxonomie im Laufe der Zeit weiterentwickeln, ohne bestehend
 | **Subnetze** | Assets (Reiter Technik → IP-Adressen → Subnetzauswahl) |
 | **Serverrollen** | Anwendungen → Reiter Server (Rolle beim Verknüpfen eines Assets mit der Anwendung), Verbindungskarte (Platzierung nach Graph-Ebene) |
 | **Asset-Typen** | Assets (Übersicht → Typ) |
+| **Technologiefamilien** | Technologien (Familie), Administrationssicht (Verzeichnisdienste) |
 
 ---
 

@@ -46,7 +46,8 @@ The **Missing data** view lists the records to complete so that the deadlines ar
 |---|---|
 | **Hosted application without a server** | An application hosted on premises or in a private cloud has no server on a deployment in service |
 | **Virtual machine without a host** | No asset contains this virtual machine |
-| **Installed technology on no server** | A technology in **Installed** mode runs on no server |
+| **On-premises technology on no server** | A technology whose hosting type is on premises (On-prem, Colocation) runs on no server |
+| **Technology without a hosting type of the IT settings** | The technology's hosting type is no longer in the **Hosting types** list of the IT settings. Choose another one on the technology |
 | **Database server without a database technology** | A server holds a database role for an application, yet carries no technology of the **Database** family |
 | **Application with SSO without an identity technology** | An application uses SSO and has no technology of the **Directory and identity** family |
 | **Technology link without a version** | A server or an application uses a technology without saying which version |

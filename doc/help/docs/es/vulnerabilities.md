@@ -19,36 +19,46 @@ KANAP lee cada 6 horas las vulnerabilidades publicadas por la NVD y las compara 
 
 Algunas vulnerabilidades solo se aplican cuando dos productos funcionan juntos, por ejemplo Tomcat en Windows. KANAP las muestra para el producto vulnerable solo, de modo que una puede aparecer para una instalación a la que no afecta. Márquela como **No afectada**.
 
-Una vulnerabilidad que la NVD aún no ha analizado aparece en cuanto se analiza. Un cambio en los identificadores, las versiones, los servidores o las aplicaciones de una tecnología se tiene en cuenta en la siguiente comprobación, o de inmediato con **Volver a cotejar** en la tecnología.
+Una vulnerabilidad que la NVD aún no ha analizado aparece en cuanto se analiza.
+
+Los cambios cuentan de inmediato. Cuando añade una tecnología o un identificador de producto CPE, KANAP busca enseguida ese producto en la NVD; la sección **Vulnerabilidades** de la tecnología indica «Búsqueda de vulnerabilidades en curso…» hasta que termina la búsqueda. Cuando cambia una versión, un servidor o una aplicación de una tecnología, KANAP vuelve a cotejar la tecnología en cuanto se guarda el cambio. **Volver a cotejar** en la tecnología hace lo mismo a mano.
 
 ## La lista
 
-Una fila por vulnerabilidad, la más grave primero. La página se abre en las vulnerabilidades **Por revisar**.
-
-**Filtros**:
-
-- **Gravedad**, **Estado**, **Editor** y **Tecnología**: un valor, o todos.
-- **Publicación**: **Cualquier fecha**, o los últimos 30, 90 o 365 días.
-- **Buscar**: el identificador CVE, el resumen o el nombre de la tecnología.
+La lista usa la cuadrícula estándar: una fila por vulnerabilidad, la más grave primero. Se abre en las vulnerabilidades **Por revisar**: vacíe el filtro de la columna **Estado** para ver las demás.
 
 **Columnas**:
 
 | Columna | Qué muestra |
 |---|---|
 | **CVE** | El identificador de la vulnerabilidad, por ejemplo `CVE-2024-1234` |
-| **Gravedad** | **Crítica**, **Alta**, **Media**, **Baja**, **Ninguna** o **Sin evaluar**, con la puntuación CVSS |
+| **Gravedad** | **Crítica**, **Alta**, **Media**, **Baja**, **Ninguna** o **Sin evaluar** |
+| **Puntuación** | La puntuación CVSS. Oculta por defecto |
 | **Resumen** | La descripción de la NVD |
 | **Tecnologías** | Las tecnologías y versiones afectadas |
+| **Editor** | Los editores de esas tecnologías |
 | **Servidores** | Cuántos servidores llevan una versión afectada, directamente o a través del servidor en el que se ejecutan |
 | **Aplicaciones** | Cuántas aplicaciones usan una versión afectada, alojadas o declaradas |
 | **Estado** | **Por revisar** mientras quede una versión por revisar, **No afectada** cuando todas lo están, **Tratada** en los demás casos |
 | **Publicación** | La fecha de publicación |
 
-**Mostrar más** carga las filas siguientes.
+**Filtros**: cada columna tiene su propio filtro bajo su encabezado. **Gravedad**, **Tecnologías**, **Editor** y **Estado** ofrecen casillas, **Puntuación** un número, **Publicación** una fecha, **CVE** y **Resumen** un texto. El cuadro de búsqueda sobre la cuadrícula busca en el identificador CVE, el resumen y el nombre de la tecnología.
+
+**Orden** por **Gravedad**, **Puntuación**, **Publicación** o **CVE**. El selector de columnas muestra u oculta columnas, y la cuadrícula recuerda su elección.
+
+## Cambiar el estado de varias vulnerabilidades
+
+Con `infrastructure:member`, marque las vulnerabilidades que quiere cambiar y haga clic en **Cambiar el estado (n)**. Sin selección, **Cambiar el estado** actúa sobre todas las vulnerabilidades del filtro actual. La ventana pide:
+
+- El **Estado** que se va a establecer.
+- Una **Nota común**, opcional. Sin nota, cada fila conserva la suya.
+- Con una selección, puede marcar **Todas las vulnerabilidades del filtro actual** para ampliarla.
+
+Antes de que confirme, la ventana indica cuántas filas (versiones de tecnología) toca el cambio, en cuántas vulnerabilidades. Una vulnerabilidad que llega después de este recuento queda como estaba. Por encima de 5000 filas, acote los filtros o seleccione menos vulnerabilidades.
 
 ## Revisar una vulnerabilidad
 
-Haga clic en una fila para abrirla. Verá:
+Haga clic en una fila para abrir la vulnerabilidad en un panel lateral. Verá:
 
 - El resumen, el vector CVSS y los enlaces de referencia (avisos del editor, parches).
 - **Tecnologías y versiones**: cada versión afectada, con su **Estado** y una nota.
@@ -69,7 +79,7 @@ KANAP nunca cambia un estado que usted eligió. Cuando una versión deja de coin
 
 ## Exportación
 
-**Exportar la tabla en CSV** descarga las vulnerabilidades que cumplen los filtros, una fila por versión de tecnología y vulnerabilidad, en el idioma de su pantalla. Por encima de 10 000 vulnerabilidades, acote primero los filtros.
+**Exportar CSV** descarga las vulnerabilidades que cumplen los filtros, una fila por versión de tecnología y vulnerabilidad, en el idioma de su pantalla. Por encima de 10 000 vulnerabilidades, acote primero los filtros.
 
 ## Notificaciones por correo electrónico
 

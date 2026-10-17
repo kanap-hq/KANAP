@@ -164,10 +164,10 @@ The Technical tab organizes cluster, network identity, the technologies the serv
 - **Aliases**: Additional DNS names or aliases for this asset. Type and press Enter to add.
 - **Operating system**: OS type and version (e.g., Windows Server 2022, Ubuntu 24.04 LTS). Disabled for clusters: OS is defined per member. When selected, shows standard and extended support end dates underneath.
 
-**Technologies**: what the server carries, for example SQL Server, vSphere or Active Directory. Columns: **Ref**, **Name**, **Family**, **Version** and **Installed on**.
+**Technologies**: what the server carries, for example SQL Server, vSphere or Active Directory. Columns: **Ref**, **Name**, **Family**, **Version** and, when the server carries a technology through another one, **Via**.
 
 - A technology installed on this server can be removed with the cross at the end of its row.
-- A technology installed on the server or cluster this one runs in shows that server under **Installed on**. It follows the installation and is removed there.
+- A technology installed on the server or cluster this one runs in shows that server under **Via**. It follows the installation and is removed there.
 - **Add** (`infrastructure:member`) opens a search for a technology, then the version picker: choose a version, **Version unknown**, or type a new label and pick **Add version "…"** to create it. Each change saves at once.
 
 The version and the notes of an installation are changed from the technology's **Servers** tab. See [Technologies](technologies.md#linking-a-technology-to-a-server).

@@ -19,36 +19,46 @@ KANAP liest alle 6 Stunden die von der NVD veröffentlichten Schwachstellen und 
 
 Manche Schwachstellen gelten nur, wenn zwei Produkte zusammen laufen, zum Beispiel Tomcat unter Windows. KANAP zeigt sie für das verwundbare Produkt allein, sodass eine Schwachstelle bei einer Installation erscheinen kann, die sie nicht betrifft. Markieren Sie sie als **Nicht betroffen**.
 
-Eine Schwachstelle, die die NVD noch nicht analysiert hat, erscheint, sobald sie analysiert ist. Eine Änderung an Kennungen, Versionen, Servern oder Anwendungen einer Technologie wird bei der nächsten Prüfung berücksichtigt, oder sofort mit **Erneut abgleichen** bei der Technologie.
+Eine Schwachstelle, die die NVD noch nicht analysiert hat, erscheint, sobald sie analysiert ist.
+
+Änderungen zählen sofort. Wenn Sie eine Technologie oder eine CPE-Produktkennung hinzufügen, sucht KANAP dieses Produkt sofort in der NVD; der Abschnitt **Schwachstellen** der Technologie zeigt „Suche nach Schwachstellen läuft…“, bis die Suche endet. Wenn sich eine Version, ein Server oder eine Anwendung einer Technologie ändert, gleicht KANAP die Technologie erneut ab, sobald die Änderung gespeichert ist. **Erneut abgleichen** bei der Technologie tut dasselbe von Hand.
 
 ## Die Liste
 
-Eine Zeile pro Schwachstelle, die schwerste zuerst. Die Seite öffnet sich mit den Schwachstellen **Zu prüfen**.
-
-**Filter**:
-
-- **Schweregrad**, **Status**, **Hersteller** und **Technologie**: ein Wert oder **Alle**.
-- **Veröffentlicht**: **Jederzeit** oder die letzten 30, 90 oder 365 Tage.
-- **Suche**: die CVE-Kennung, die Zusammenfassung oder der Technologiename.
+Die Liste nutzt das Standardraster: eine Zeile pro Schwachstelle, die schwerste zuerst. Sie öffnet sich mit den Schwachstellen **Zu prüfen**: Leeren Sie den Filter der Spalte **Status**, um die anderen zu sehen.
 
 **Spalten**:
 
 | Spalte | Was sie zeigt |
 |---|---|
 | **CVE** | Die Kennung der Schwachstelle, zum Beispiel `CVE-2024-1234` |
-| **Schweregrad** | **Kritisch**, **Hoch**, **Mittel**, **Niedrig**, **Keine** oder **Nicht bewertet**, mit dem CVSS-Wert |
+| **Schweregrad** | **Kritisch**, **Hoch**, **Mittel**, **Niedrig**, **Keine** oder **Nicht bewertet** |
+| **Score** | Der CVSS-Wert. Standardmäßig ausgeblendet |
 | **Zusammenfassung** | Die Beschreibung der NVD |
 | **Technologien** | Die betroffenen Technologien und Versionen |
+| **Hersteller** | Die Hersteller dieser Technologien |
 | **Server** | Wie viele Server eine betroffene Version tragen, direkt oder über den Server, in dem sie laufen |
 | **Anwendungen** | Wie viele Anwendungen eine betroffene Version nutzen, gehostet oder deklariert |
 | **Status** | **Zu prüfen**, solange eine Version noch zu prüfen ist, **Nicht betroffen**, wenn alle es sind, sonst **Behandelt** |
 | **Veröffentlicht** | Das Veröffentlichungsdatum |
 
-**Mehr anzeigen** lädt die nächsten Zeilen.
+**Filter**: Jede Spalte hat ihren eigenen Filter unter ihrer Überschrift. **Schweregrad**, **Technologien**, **Hersteller** und **Status** bieten Kontrollkästchen, **Score** eine Zahl, **Veröffentlicht** ein Datum, **CVE** und **Zusammenfassung** einen Text. Das Suchfeld über dem Raster durchsucht die CVE-Kennung, die Zusammenfassung und den Technologienamen.
+
+**Sortieren** nach **Schweregrad**, **Score**, **Veröffentlicht** oder **CVE**. Die Spaltenauswahl blendet Spalten ein oder aus, und das Raster merkt sich Ihre Wahl.
+
+## Den Status mehrerer Schwachstellen ändern
+
+Mit `infrastructure:member` kreuzen Sie die zu ändernden Schwachstellen an und klicken auf **Status ändern (n)**. Ohne Auswahl wirkt **Status ändern** auf alle Schwachstellen des aktuellen Filters. Das Fenster fragt nach:
+
+- Dem zu setzenden **Status**.
+- Einer **Gemeinsamen Notiz**, optional. Ohne Notiz behält jede Zeile ihre eigene.
+- Bei einer Auswahl können Sie **Alle Schwachstellen des aktuellen Filters** ankreuzen, um sie zu erweitern.
+
+Bevor Sie bestätigen, sagt das Fenster, wie viele Zeilen (Technologieversionen) die Änderung betrifft, bei wie vielen Schwachstellen. Eine Schwachstelle, die nach dieser Zählung hinzukommt, bleibt unverändert. Über 5.000 Zeilen grenzen Sie die Filter ein oder wählen weniger Schwachstellen aus.
 
 ## Eine Schwachstelle prüfen
 
-Ein Klick auf eine Zeile öffnet sie. Sie sehen:
+Ein Klick auf eine Zeile öffnet die Schwachstelle in einem Seitenbereich. Sie sehen:
 
 - Die Zusammenfassung, den CVSS-Vektor und die Referenzlinks (Herstellerhinweise, Patches).
 - **Technologien und Versionen**: jede betroffene Version mit ihrem **Status** und einer Notiz.
@@ -69,7 +79,7 @@ KANAP ändert nie einen Status, den Sie gewählt haben. Wenn eine Version nicht 
 
 ## Export
 
-**Tabelle als CSV exportieren** lädt die Schwachstellen herunter, die den Filtern entsprechen, eine Zeile pro Technologieversion und Schwachstelle, in der Sprache Ihres Bildschirms. Ab 10.000 Schwachstellen grenzen Sie die Filter zuerst ein.
+**CSV exportieren** lädt die Schwachstellen herunter, die den Filtern entsprechen, eine Zeile pro Technologieversion und Schwachstelle, in der Sprache Ihres Bildschirms. Ab 10.000 Schwachstellen grenzen Sie die Filter zuerst ein.
 
 ## E-Mail-Benachrichtigungen
 
