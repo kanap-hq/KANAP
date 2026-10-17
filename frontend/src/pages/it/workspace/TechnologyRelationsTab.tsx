@@ -18,6 +18,7 @@ import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { buildItemPath, formatItemRef } from '../../../utils/item-ref';
 import { getDotColor, INCIDENT_SEVERITY_COLORS } from '../../../utils/statusColors';
 import { isIncidentLocked } from './incidentWorkspace';
+import TechnologyVulnerabilitiesSection from './TechnologyVulnerabilitiesSection';
 
 export type TechnologyRelationKind = 'budget_lines' | 'contracts' | 'projects' | 'incidents';
 
@@ -525,6 +526,8 @@ export default function TechnologyRelationsTab({ id }: { id: string }) {
           />
         )}
       </RelationsSection>
+
+      <TechnologyVulnerabilitiesSection technologyId={id} canEdit={canEdit} />
 
       <KanapDialog
         open={linkDialogOpen}
