@@ -1675,7 +1675,8 @@
         }
       },
       "operations": {
-        "contactsLoadFailed": "No se pudieron cargar los contactos de soporte."
+        "contactsLoadFailed": "No se pudieron cargar los contactos de soporte.",
+        "alreadyListed": "Este contacto ya figura en la lista. Su rol no cambia."
       },
       "relations": {
         "sections": {

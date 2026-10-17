@@ -67,6 +67,7 @@ export default function TechnologyOperationsTab({ technology, canManage, onPatch
   const contacts = contactsQuery.data || [];
   // The list is replaced as a whole: it can change only once it has been read.
   const canEdit = canManage && contactsQuery.isSuccess;
+  const alreadyListed = !!draft.contact_id && contacts.some((item) => item.contact_id === draft.contact_id);
 
   // Replacements run one after the other, each from the last list known (the server's answer to
   // the previous one), so two quick changes never undo each other.
@@ -94,7 +95,7 @@ export default function TechnologyOperationsTab({ technology, canManage, onPatch
 
   const addContact = async () => {
     const contactId = draft.contact_id;
-    if (!contactId) return;
+    if (!contactId || alreadyListed) return;
     setSaving(true);
     const ok = await replaceContacts((current) => [...current, { contact_id: contactId, role: draft.role || null }]);
     setSaving(false);
@@ -184,7 +185,7 @@ export default function TechnologyOperationsTab({ technology, canManage, onPatch
         onClose={() => setDialogOpen(false)}
         onSave={addContact}
         saveLabel={t('common:buttons.save')}
-        saveDisabled={!draft.contact_id}
+        saveDisabled={!draft.contact_id || alreadyListed}
         saveLoading={saving}
       >
         <Stack spacing={1.25}>
@@ -198,6 +199,11 @@ export default function TechnologyOperationsTab({ technology, canManage, onPatch
               label={t('workspace.application.technical.contact')}
               textFieldSx={drawerFieldValueSx}
             />
+            {alreadyListed && (
+              <Typography role="status" sx={{ mt: 0.5, fontSize: 12, color: 'kanap.text.secondary' }}>
+                {t('workspace.technology.operations.alreadyListed')}
+              </Typography>
+            )}
           </PropertyRow>
           <PropertyRow label={t('workspace.application.technical.role')}>
             <TextField

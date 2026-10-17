@@ -1675,7 +1675,8 @@
         }
       },
       "operations": {
-        "contactsLoadFailed": "Die Support-Kontakte konnten nicht geladen werden."
+        "contactsLoadFailed": "Die Support-Kontakte konnten nicht geladen werden.",
+        "alreadyListed": "Dieser Kontakt ist bereits aufgeführt. Seine Rolle bleibt unverändert."
       },
       "relations": {
         "sections": {

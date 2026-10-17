@@ -130,6 +130,16 @@ describe('TechnologyOperationsTab', () => {
     await waitFor(() => expect(screen.queryByText('Bruno Petit')).toBeNull());
   });
 
+  it('says a contact already listed keeps its role, and does not save it twice', async () => {
+    renderTab(true, [ANNA, BRUNO]);
+    await screen.findByText('Bruno Petit');
+    fireEvent.click(screen.getByRole('button', { name: 'workspace.application.technical.addContact' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'pick contact' }));
+    expect(screen.getByRole('status').textContent).toBe('workspace.technology.operations.alreadyListed');
+    expect(screen.getByRole('button', { name: 'common:buttons.save' })).toBeDisabled();
+    expect(mocked.post).not.toHaveBeenCalled();
+  });
+
   it('saves the support notes when the field loses focus', async () => {
     const { onPatch } = renderTab();
     const notes = screen.getByRole('textbox', { name: 'workspace.application.technical.supportNotes' });
