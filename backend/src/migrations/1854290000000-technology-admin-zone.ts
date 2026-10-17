@@ -39,6 +39,6 @@ export class TechnologyAdminZone1854290000000 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`ALTER TABLE technologies DROP COLUMN IF EXISTS admin_zone`);
+    await queryRunner.query(`ALTER TABLE IF EXISTS technologies DROP COLUMN IF EXISTS admin_zone`);
   }
 }
