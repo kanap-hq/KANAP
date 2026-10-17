@@ -131,7 +131,12 @@ async function testAdoption() {
     const again = await catalog.adopt('mssqlserver', opts);
     assert.deepEqual({ created: again.created, added: again.versions_added, id: again.technology.id }, { created: false, added: 0, id: first.technology.id });
     const [row] = await runner.query(`SELECT catalog_key, cpe_products, family FROM technologies WHERE id = $1`, [first.technology.id]);
-    assert.deepEqual(row, { catalog_key: 'mssqlserver', cpe_products: ['a:microsoft:sql_server'], family: 'database' });
+    assert.deepEqual(row, {
+      catalog_key: 'mssqlserver',
+      // The NVD names SQL Server once for all releases (until 2024), then once per release.
+      cpe_products: ['a:microsoft:sql_server', 'a:microsoft:sql_server_2016', 'a:microsoft:sql_server_2017', 'a:microsoft:sql_server_2019', 'a:microsoft:sql_server_2022', 'a:microsoft:sql_server_2025'],
+      family: 'database',
+    });
     const after = await catalog.notAdopted({ q: 'sql server' }, opts);
     assert.ok(!after.items.some((item) => item.key === 'mssqlserver'), 'an adopted entry is no longer offered');
     // A technology typed before under the same name receives the key instead of a duplicate.

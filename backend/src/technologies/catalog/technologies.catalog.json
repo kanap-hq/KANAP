@@ -15,6 +15,7 @@
       "family": "administration",
       "mode": "installed",
       "cpe_products": [
+        "a:cloudbees:jenkins",
         "a:jenkins:jenkins"
       ],
       "source_url": "https://endoflife.date/jenkins",
@@ -100,7 +101,8 @@
       "family": "administration",
       "mode": "installed",
       "cpe_products": [
-        "a:puppet:puppet"
+        "a:puppet:puppet",
+        "a:puppetlabs:puppet"
       ],
       "source_url": "https://endoflife.date/puppet",
       "versions": [
@@ -188,7 +190,9 @@
       "editor": "Red Hat",
       "family": "administration",
       "mode": "installed",
-      "cpe_products": [],
+      "cpe_products": [
+        "a:redhat:satellite"
+      ],
       "source_url": "https://endoflife.date/redhat-satellite",
       "versions": [
         {
@@ -330,7 +334,8 @@
       "family": "application_server",
       "mode": "installed",
       "cpe_products": [
-        "a:eclipse:jetty"
+        "a:eclipse:jetty",
+        "a:mortbay:jetty"
       ],
       "source_url": "https://endoflife.date/eclipse-jetty",
       "versions": [
@@ -387,7 +392,9 @@
       "editor": "Red Hat",
       "family": "application_server",
       "mode": "installed",
-      "cpe_products": [],
+      "cpe_products": [
+        "a:redhat:jboss_enterprise_application_platform"
+      ],
       "source_url": "https://endoflife.date/redhat-jboss-eap",
       "versions": [
         {
@@ -496,7 +503,9 @@
       "editor": "Proxmox",
       "family": "backup",
       "mode": "installed",
-      "cpe_products": [],
+      "cpe_products": [
+        "a:proxmox:backup_server"
+      ],
       "source_url": "https://endoflife.date/proxmox-backup-server",
       "versions": [
         {
@@ -534,7 +543,9 @@
       "editor": "Veeam",
       "family": "backup",
       "mode": "installed",
-      "cpe_products": [],
+      "cpe_products": [
+        "a:veeam:veeam_backup_\\&_replication"
+      ],
       "source_url": "https://endoflife.date/veeam-backup-and-replication",
       "versions": [
         {
@@ -756,7 +767,9 @@
       "editor": "Microsoft",
       "family": "container",
       "mode": "subscribed",
-      "cpe_products": [],
+      "cpe_products": [
+        "a:microsoft:azure_kubernetes_service"
+      ],
       "source_url": "https://endoflife.date/azure-kubernetes-service",
       "versions": [
         {
@@ -925,7 +938,9 @@
       "family": "container",
       "mode": "installed",
       "cpe_products": [
-        "a:docker:engine"
+        "a:docker:docker",
+        "a:docker:engine",
+        "a:mobyproject:moby"
       ],
       "source_url": "https://endoflife.date/docker-engine",
       "versions": [
@@ -1009,7 +1024,9 @@
       "editor": "Google",
       "family": "container",
       "mode": "subscribed",
-      "cpe_products": [],
+      "cpe_products": [
+        "a:google:kubernetes_engine"
+      ],
       "source_url": "https://endoflife.date/google-kubernetes-engine",
       "versions": [
         {
@@ -1348,6 +1365,7 @@
       "family": "container",
       "mode": "installed",
       "cpe_products": [
+        "a:rancher:rancher",
         "a:suse:rancher"
       ],
       "source_url": "https://endoflife.date/rancher",
@@ -1433,7 +1451,8 @@
       "family": "container",
       "mode": "installed",
       "cpe_products": [
-        "a:redhat:openshift"
+        "a:redhat:openshift",
+        "a:redhat:openshift_container_platform"
       ],
       "source_url": "https://endoflife.date/red-hat-openshift",
       "versions": [
@@ -1575,7 +1594,9 @@
       "editor": "ClickHouse",
       "family": "database",
       "mode": "installed",
-      "cpe_products": [],
+      "cpe_products": [
+        "a:clickhouse:clickhouse"
+      ],
       "source_url": "https://endoflife.date/clickhouse",
       "versions": [
         {
@@ -2035,14 +2056,19 @@
       "family": "database",
       "mode": "installed",
       "cpe_products": [
-        "a:microsoft:sql_server"
+        "a:microsoft:sql_server",
+        "a:microsoft:sql_server_2016",
+        "a:microsoft:sql_server_2017",
+        "a:microsoft:sql_server_2019",
+        "a:microsoft:sql_server_2022",
+        "a:microsoft:sql_server_2025"
       ],
       "source_url": "https://endoflife.date/mssqlserver",
       "versions": [
         {
           "key": "17.0",
           "label": "2025",
-          "cpe_version": null,
+          "cpe_version": "17.0",
           "build_prefixes": [
             "17.0"
           ],
@@ -2053,7 +2079,7 @@
         {
           "key": "16.0",
           "label": "2022",
-          "cpe_version": null,
+          "cpe_version": "16.0",
           "build_prefixes": [
             "16.0"
           ],
@@ -2064,7 +2090,7 @@
         {
           "key": "13.0-sp3-acp",
           "label": "2016 SP3 Azure Connect Pack",
-          "cpe_version": "2016",
+          "cpe_version": "13.0",
           "build_prefixes": [],
           "release_date": "2022-05-19",
           "standard_support_end": "2026-07-14",
@@ -2073,7 +2099,7 @@
         {
           "key": "13.0-sp3",
           "label": "2016 SP3",
-          "cpe_version": "2016",
+          "cpe_version": "13.0",
           "build_prefixes": [],
           "release_date": "2021-09-15",
           "standard_support_end": "2026-07-14",
@@ -2082,7 +2108,7 @@
         {
           "key": "15.0",
           "label": "2019",
-          "cpe_version": null,
+          "cpe_version": "15.0",
           "build_prefixes": [
             "15.0"
           ],
@@ -2111,7 +2137,7 @@
         {
           "key": "14.0",
           "label": "2017",
-          "cpe_version": null,
+          "cpe_version": "14.0",
           "build_prefixes": [
             "14.0"
           ],
@@ -2128,7 +2154,6 @@
       "family": "database",
       "mode": "installed",
       "cpe_products": [
-        "a:mongodb-org-server:mongodb-org-server",
         "a:mongodb:mongodb"
       ],
       "source_url": "https://endoflife.date/mongodb",
@@ -2214,6 +2239,7 @@
       "family": "database",
       "mode": "installed",
       "cpe_products": [
+        "a:mysql:mysql",
         "a:oracle:mysql"
       ],
       "source_url": "https://endoflife.date/mysql",
@@ -2384,7 +2410,8 @@
       "family": "database",
       "mode": "installed",
       "cpe_products": [
-        "a:amazon:opensearch"
+        "a:amazon:opensearch",
+        "a:amazon:opensearch_security"
       ],
       "source_url": "https://endoflife.date/opensearch",
       "versions": [
@@ -2556,7 +2583,8 @@
       "family": "database",
       "mode": "installed",
       "cpe_products": [
-        "a:redis:redis"
+        "a:redis:redis",
+        "a:redislabs:redis"
       ],
       "source_url": "https://endoflife.date/redis",
       "versions": [
@@ -2878,7 +2906,10 @@
       "editor": "Microsoft",
       "family": "directory",
       "mode": "subscribed",
-      "cpe_products": [],
+      "cpe_products": [
+        "a:microsoft:azure_active_directory",
+        "a:microsoft:entra_id"
+      ],
       "source_url": null,
       "versions": []
     },
@@ -2888,7 +2919,9 @@
       "editor": "Samba Team",
       "family": "directory",
       "mode": "installed",
-      "cpe_products": [],
+      "cpe_products": [
+        "a:samba:samba"
+      ],
       "source_url": "https://endoflife.date/samba",
       "versions": [
         {
@@ -2971,7 +3004,9 @@
       "editor": "Citrix",
       "family": "hypervisor",
       "mode": "installed",
-      "cpe_products": [],
+      "cpe_products": [
+        "a:citrix:virtual_apps_and_desktops"
+      ],
       "source_url": "https://endoflife.date/citrix-vad",
       "versions": [
         {
@@ -3137,7 +3172,11 @@
       "editor": "oVirt",
       "family": "hypervisor",
       "mode": "installed",
-      "cpe_products": [],
+      "cpe_products": [
+        "a:ovirt:ovirt",
+        "a:ovirt:ovirt-engine",
+        "a:redhat:ovirt-engine"
+      ],
       "source_url": "https://endoflife.date/ovirt",
       "versions": [
         {
@@ -3462,7 +3501,10 @@
       "editor": "Salesforce",
       "family": "integration",
       "mode": "installed",
-      "cpe_products": [],
+      "cpe_products": [
+        "a:mulesoft:mule_runtime",
+        "a:salesforce:mule"
+      ],
       "source_url": "https://endoflife.date/mulesoft-runtime",
       "versions": [
         {
@@ -3642,7 +3684,9 @@
       "editor": "Apache Software Foundation",
       "family": "messaging",
       "mode": "installed",
-      "cpe_products": [],
+      "cpe_products": [
+        "a:apache:artemis"
+      ],
       "source_url": "https://endoflife.date/apache-artemis",
       "versions": [
         {
@@ -3811,7 +3855,8 @@
       "family": "messaging",
       "mode": "installed",
       "cpe_products": [
-        "a:dovecot:dovecot"
+        "a:dovecot:dovecot",
+        "a:open-xchange:dovecot"
       ],
       "source_url": "https://endoflife.date/dovecot",
       "versions": [
@@ -3851,7 +3896,8 @@
       "family": "messaging",
       "mode": "installed",
       "cpe_products": [
-        "a:ibm:mq"
+        "a:ibm:mq",
+        "a:ibm:websphere_mq"
       ],
       "source_url": "https://endoflife.date/ibm-mq",
       "versions": [
@@ -3941,14 +3987,15 @@
       "family": "messaging",
       "mode": "installed",
       "cpe_products": [
-        "a:microsoft:exchange_server"
+        "a:microsoft:exchange_server",
+        "a:microsoft:exchange_server_subscription_edition"
       ],
       "source_url": "https://endoflife.date/msexchange",
       "versions": [
         {
           "key": "subscription",
           "label": "Subscription Edition SU11",
-          "cpe_version": null,
+          "cpe_version": "15.2",
           "build_prefixes": [],
           "release_date": "2025-07-01",
           "standard_support_end": null,
@@ -4092,6 +4139,7 @@
       "family": "messaging",
       "mode": "installed",
       "cpe_products": [
+        "a:broadcom:rabbitmq_server",
         "a:pivotal_software:rabbitmq",
         "a:vmware:rabbitmq"
       ],
@@ -4178,7 +4226,9 @@
       "family": "monitoring",
       "mode": "installed",
       "cpe_products": [
-        "a:centreon:centreon"
+        "a:centreon:centreon",
+        "a:centreon:centreon_web",
+        "a:merethis:centreon"
       ],
       "source_url": "https://endoflife.date/centreon",
       "versions": [
@@ -4262,7 +4312,10 @@
       "editor": "Checkmk",
       "family": "monitoring",
       "mode": "installed",
-      "cpe_products": [],
+      "cpe_products": [
+        "a:checkmk:checkmk",
+        "a:tribe29:checkmk"
+      ],
       "source_url": "https://endoflife.date/checkmk",
       "versions": [
         {
@@ -4725,7 +4778,9 @@
       "editor": "Veeam",
       "family": "monitoring",
       "mode": "installed",
-      "cpe_products": [],
+      "cpe_products": [
+        "a:veeam:one"
+      ],
       "source_url": "https://endoflife.date/veeam-one",
       "versions": [
         {
@@ -4809,7 +4864,8 @@
       "family": "monitoring",
       "mode": "installed",
       "cpe_products": [
-        "a:zabbix:zabbix"
+        "a:zabbix:zabbix",
+        "a:zabbix:zabbix_server"
       ],
       "source_url": "https://endoflife.date/zabbix",
       "versions": [
@@ -4893,7 +4949,9 @@
       "editor": "ISC",
       "family": "network_security",
       "mode": "installed",
-      "cpe_products": [],
+      "cpe_products": [
+        "a:isc:bind"
+      ],
       "source_url": "https://endoflife.date/bind-9",
       "versions": [
         {
@@ -5111,7 +5169,8 @@
       "family": "runtime",
       "mode": "installed",
       "cpe_products": [
-        "a:microsoft:.net"
+        "a:microsoft:.net",
+        "a:microsoft:.net_core"
       ],
       "source_url": "https://endoflife.date/dotnet",
       "versions": [
@@ -5256,7 +5315,9 @@
       "family": "runtime",
       "mode": "installed",
       "cpe_products": [
-        "a:amazon:corretto"
+        "a:amazon:corretto",
+        "a:oracle:jdk",
+        "a:oracle:openjdk"
       ],
       "source_url": "https://endoflife.date/amazon-corretto",
       "versions": [
@@ -5341,7 +5402,9 @@
       "family": "runtime",
       "mode": "installed",
       "cpe_products": [
-        "a:eclipse:temurin"
+        "a:eclipse:temurin",
+        "a:oracle:jdk",
+        "a:oracle:openjdk"
       ],
       "source_url": "https://endoflife.date/eclipse-temurin",
       "versions": [
@@ -5510,7 +5573,10 @@
       "editor": "Microsoft",
       "family": "runtime",
       "mode": "installed",
-      "cpe_products": [],
+      "cpe_products": [
+        "a:oracle:jdk",
+        "a:oracle:openjdk"
+      ],
       "source_url": "https://endoflife.date/microsoft-build-of-openjdk",
       "versions": [
         {
@@ -5806,7 +5872,8 @@
       "family": "runtime",
       "mode": "installed",
       "cpe_products": [
-        "a:microsoft:powershell"
+        "a:microsoft:powershell",
+        "a:microsoft:powershell_core"
       ],
       "source_url": "https://endoflife.date/powershell",
       "versions": [
@@ -6033,7 +6100,11 @@
       "editor": "Ceph Foundation",
       "family": "storage",
       "mode": "installed",
-      "cpe_products": [],
+      "cpe_products": [
+        "a:ceph:ceph",
+        "a:linuxfoundation:ceph",
+        "a:redhat:ceph"
+      ],
       "source_url": "https://endoflife.date/ceph",
       "versions": [
         {
@@ -6195,6 +6266,7 @@
       "family": "web_server",
       "mode": "installed",
       "cpe_products": [
+        "a:caddy_project:caddy",
         "a:caddyserver:caddy"
       ],
       "source_url": "https://endoflife.date/caddy",
@@ -6427,6 +6499,7 @@
       "family": "web_server",
       "mode": "installed",
       "cpe_products": [
+        "a:containous:traefik",
         "a:traefik:traefik"
       ],
       "source_url": "https://endoflife.date/traefik",
