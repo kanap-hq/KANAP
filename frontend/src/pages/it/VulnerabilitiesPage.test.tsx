@@ -165,7 +165,7 @@ describe('VulnerabilitiesPage', () => {
 
   it('changes the state of the selection, or of the whole filter, with the count first', async () => {
     postMock.mockImplementation(async (_url: string, body: any) => ({
-      data: body.dry_run ? (body.all ? { rows: 120, cves: 40, changes: 118 } : { rows: 3, cves: 2, changes: 3 }) : { ok: true, changed: 3 },
+      data: body.dry_run ? (body.all ? { rows: 120, cves: 40, changes: 118, as_of: '2026-10-17T10:00:01.000Z' } : { rows: 3, cves: 2, changes: 3, as_of: '2026-10-17T10:00:00.000Z' }) : { ok: true, changed: 3 },
     }) as any);
     renderPage();
     expect(grid.props!.enableRowSelection).toBe(true);
@@ -184,7 +184,7 @@ describe('VulnerabilitiesPage', () => {
     await waitFor(() => expect(within(dialog).getByRole('status').textContent).toBe('This changes 118 rows of 120, on 40 vulnerabilities.'));
     fireEvent.click(within(dialog).getByRole('button', { name: 'Change state' }));
     await waitFor(() => expect(postMock).toHaveBeenLastCalledWith('/vulnerabilities/bulk-state', {
-      state: 'handled', note: 'Patched in March', all: true, filters: { sort: 'severity:DESC', filters: FILTERS },
+      state: 'handled', note: 'Patched in March', all: true, filters: { sort: 'severity:DESC', filters: FILTERS }, as_of: '2026-10-17T10:00:01.000Z',
     }));
     await waitFor(() => expect(grid.props!.refreshKey).toBe(1));
   });

@@ -624,7 +624,10 @@ export class VulnerabilitiesService {
    * filters reach (`all: true`); `filters` (the list's parameters, grid model included) narrows the
    * rows in both cases. The rows are locked in the matching's order (technology, version, CVE),
    * written in batches of 500, and each changed row is audited on `technology_vulnerabilities`.
-   * `dry_run` counts without writing. More than `BULK_MAX_ROWS` rows is a 400.
+   * `dry_run` counts without writing and returns `as_of`, the instant of the count: the write that
+   * sends it back changes only the rows detected by then, so a row found after the count (a new CVE
+   * matched while the user confirms) stays to review; `changed` says how many really changed.
+   * More than `BULK_MAX_ROWS` rows is a 400.
    */
   async bulkState(body: Record<string, unknown>, opts: VulnOpts) {
     const { manager: mg, tenantId } = opts;
@@ -653,6 +656,12 @@ export class VulnerabilitiesService {
       params.push(cveIds);
       where += ` AND tv.cve_id = ANY($${params.length}::text[])`;
     }
+    if (body.as_of !== undefined && body.as_of !== null) {
+      const asOf = new Date(String(body.as_of));
+      if (Number.isNaN(asOf.getTime())) throw new BadRequestException('as_of must be the instant a dry run returned.');
+      params.push(asOf.toISOString());
+      where += ` AND tv.detected_at <= $${params.length}::timestamptz`;
+    }
     const scopeParams = [...params];
     const noteChanges = note !== undefined;
     params.push(state, note ?? null);
@@ -667,7 +676,10 @@ export class VulnerabilitiesService {
       throw new BadRequestException(`These filters reach ${rows} rows, more than ${BULK_MAX_ROWS} at once: narrow them.`);
     }
     const summary = { rows, cves: Number(count?.cves ?? 0) };
-    if (body.dry_run === true) return { ok: true, dry_run: true, ...summary, changes: Number(count?.changes ?? 0) };
+    if (body.dry_run === true) {
+      const [{ as_of: asOf }] = await mg.query(`SELECT clock_timestamp() AS as_of`);
+      return { ok: true, dry_run: true, ...summary, changes: Number(count?.changes ?? 0), as_of: new Date(asOf).toISOString() };
+    }
 
     const before: Array<Record<string, unknown>> = await mg.query(
       `SELECT tv.id, tv.technology_id, tv.technology_version_id, tv.cve_id, tv.state, tv.note, tv.state_changed_by, tv.state_changed_at

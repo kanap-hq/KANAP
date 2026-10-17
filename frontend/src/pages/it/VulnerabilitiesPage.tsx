@@ -302,7 +302,7 @@ function BulkStateDialog({ open, onClose, selected, request, onDone }: {
   }), [all, note, request, selected, state]);
   const count = useQuery({
     queryKey: ['vulnerabilities', 'bulk-count', body],
-    queryFn: async () => (await api.post<{ rows: number; cves: number; changes: number }>(`${ENDPOINT}/bulk-state`, { ...body, dry_run: true })).data,
+    queryFn: async () => (await api.post<{ rows: number; cves: number; changes: number; as_of: string }>(`${ENDPOINT}/bulk-state`, { ...body, dry_run: true })).data,
     enabled: open,
     retry: false,
   });
@@ -311,7 +311,8 @@ function BulkStateDialog({ open, onClose, selected, request, onDone }: {
     setSaving(true);
     setError(null);
     try {
-      await api.post(`${ENDPOINT}/bulk-state`, body);
+      // Only the rows of the count: a CVE found after it stays to review.
+      await api.post(`${ENDPOINT}/bulk-state`, { ...body, as_of: count.data?.as_of });
       onDone();
     } catch {
       setError(t('pages.vulnerabilities.bulk.failed'));
