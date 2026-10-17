@@ -171,6 +171,25 @@ async function testService() {
   });
 }
 
+/** A web link takes an http or https address, or one without a scheme; any other scheme is a 400. */
+async function testWebLinks() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'tsc-links');
+    const { technologies } = services([]);
+    const opts = { manager: runner.manager, tenantId, userId: null };
+    const sql = await technology(runner, tenantId, 1, 'SQL Server', 'database');
+    for (const url of ['https://learn.microsoft.com/sql', 'HTTP://intranet/sql', 'www.vmware.com/support', 'intranet:8080/wiki']) {
+      assert.equal((await technologies.createLink(sql, { url: ` ${url} ` }, opts)).url, url, url);
+    }
+    for (const url of ['javascript:alert(document.domain)', 'JavaScript:void(0)', 'data:text/html,<b>x</b>', 'ftp://files.example.test', 'vbscript:msgbox']) {
+      await assert.rejects(technologies.createLink(sql, { url }, opts), BadRequestException, url);
+    }
+    const link = await technologies.createLink(sql, { url: 'https://example.test', description: 'Docs' }, opts);
+    await assert.rejects(technologies.updateLink(sql, link.id, { url: 'javascript:alert(1)' }, opts), BadRequestException);
+    assert.equal((await technologies.updateLink(sql, link.id, { description: 'Kept' }, opts)).url, 'https://example.test', 'an update without url keeps it');
+  });
+}
+
 function testRoutes() {
   const level = (method: keyof TechnologiesController) => Reflect.getMetadata(REQUIRE_LEVEL_KEY, TechnologiesController.prototype[method]);
   assert.deepEqual(level('listSupportContacts'), { resource: 'infrastructure', level: 'reader' });
@@ -189,6 +208,7 @@ runSpecs('technology-support.integration.spec', [
   ['migration', testMigration],
   ['keys and policy', testKeysAndPolicy],
   ['service', testService],
+  ['web links', testWebLinks],
   ['routes', async () => testRoutes()],
 ]).catch((err) => {
   console.error(err);

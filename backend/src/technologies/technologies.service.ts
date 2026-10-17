@@ -51,6 +51,21 @@ type VersionInput = Partial<{
 
 const LINK_URL_MAX = 2000;
 
+/** A scheme before the address (`javascript:`, `ftp:`), not a port after a host (`intranet:8080`). */
+const URL_SCHEME_RE = /^([a-z][a-z0-9+.-]*):(?!\d)/i;
+
+/**
+ * The address of a web link: trimmed, required, and http or https when it names a scheme (400
+ * otherwise). An address without one (`www.vmware.com/support`) opens as https, as the screens do.
+ */
+export function webLinkUrl(value: unknown): string {
+  const url = optionalText(value, 'URL', LINK_URL_MAX);
+  if (!url) throw new BadRequestException('url is required');
+  const scheme = URL_SCHEME_RE.exec(url)?.[1]?.toLowerCase();
+  if (scheme && scheme !== 'http' && scheme !== 'https') throw new BadRequestException('A web link must be an http or https address.');
+  return url;
+}
+
 /** Columns the list grid filters with a set filter. */
 const GRID_SET_COLUMNS = ['family', 'editor', 'lifecycle'] as const;
 
@@ -675,8 +690,7 @@ export class TechnologiesService {
   async createLink(idOrRef: string, body: { url?: unknown; description?: unknown }, opts: Opts) {
     const { manager: mg, tenantId } = opts;
     const tech = await readTechnology(mg, tenantId, idOrRef);
-    const url = optionalText(body?.url, 'URL', LINK_URL_MAX);
-    if (!url) throw new BadRequestException('url is required');
+    const url = webLinkUrl(body?.url);
     const [saved] = await mg.query(
       `INSERT INTO technology_links (tenant_id, technology_id, description, url) VALUES ($1, $2, $3, $4)
        RETURNING id, technology_id, description, url, created_at`,
@@ -690,12 +704,14 @@ export class TechnologiesService {
     const { manager: mg, tenantId } = opts;
     const tech = await readTechnology(mg, tenantId, idOrRef);
     const before = await this.readLink(mg, tenantId, tech.id, linkId);
-    const url = body?.url !== undefined ? optionalText(body.url, 'URL', LINK_URL_MAX) : before.url;
-    if (!url) throw new BadRequestException('url is required');
+    const url = body?.url !== undefined ? webLinkUrl(body.url) : before.url;
     const description = body?.description !== undefined ? optionalText(body.description, 'Description', 2000) : before.description;
+    // Through a CTE: an UPDATE through the query runner answers [rows, count], not the rows.
     const [saved] = await mg.query(
-      `UPDATE technology_links SET url = $4, description = $5 WHERE tenant_id = $1 AND technology_id = $2 AND id = $3
-       RETURNING id, technology_id, description, url, created_at`,
+      `WITH u AS (
+         UPDATE technology_links SET url = $4, description = $5 WHERE tenant_id = $1 AND technology_id = $2 AND id = $3
+         RETURNING id, technology_id, description, url, created_at)
+       SELECT * FROM u`,
       [tenantId, tech.id, before.id, url, description],
     );
     await this.audit.log({ table: 'technology_links', recordId: before.id, action: 'update', before, after: saved, userId: opts.userId ?? null }, { manager: mg });

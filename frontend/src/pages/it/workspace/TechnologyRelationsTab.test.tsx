@@ -202,6 +202,15 @@ describe('TechnologyRelationsTab', () => {
     expect(mocked.post).not.toHaveBeenCalled();
   });
 
+  it('opens a web link at an absolute http or https address, as the other lists of websites', async () => {
+    renderTab(relations({ links: [
+      { id: 'lnk-1', description: 'VMware support', url: 'www.vmware.com/support', created_at: '2026-10-01T10:00:00Z' },
+      { id: 'lnk-2', description: 'Script', url: 'javascript:alert(document.domain)', created_at: '2026-10-01T10:00:00Z' },
+    ] }));
+    expect((await screen.findByRole('link', { name: 'VMware support' })).getAttribute('href')).toBe('https://www.vmware.com/support');
+    expect(screen.getByRole('link', { name: 'Script' }).getAttribute('href')).toBe('https://javascript:alert(document.domain)');
+  });
+
   it('deletes a document after a confirmation', async () => {
     mocked.delete.mockResolvedValue({ data: { ok: true } } as never);
     renderTab(relations());

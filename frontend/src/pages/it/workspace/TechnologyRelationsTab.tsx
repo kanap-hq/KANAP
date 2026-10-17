@@ -7,6 +7,7 @@ import api from '../../../api';
 import type { IncidentRow } from '../../../api/endpoints/incidents';
 import { useAuth } from '../../../auth/AuthContext';
 import { KanapDialog, PropertyRow, StatusDot, useKanapDialogs } from '../../../components/design';
+import { normalizeWebsiteUrl } from '../../../components/design/RelevantWebsitesList';
 import { RelationRef, RelationsEmpty, RelationsSection, RelationsTable, type RelationsColumn } from '../../../components/workspace/RelationsTable';
 import RelationAddPicker, { type RelationOption } from '../../../components/workspace/RelationAddPicker';
 import useBudgetColumns from '../../../hooks/useBudgetColumns';
@@ -404,7 +405,7 @@ export default function TechnologyRelationsTab({ id }: { id: string }) {
     {
       key: 'name', header: columnsT('name'), width: 220,
       render: (row) => (
-        <Link href={row.url} target="_blank" rel="noopener noreferrer" underline="hover" color="inherit">
+        <Link href={normalizeWebsiteUrl(row.url)} target="_blank" rel="noopener noreferrer" underline="hover" color="inherit">
           {row.description || row.url}
         </Link>
       ),
