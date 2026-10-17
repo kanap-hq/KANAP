@@ -2097,7 +2097,9 @@ export default function AssetWorkspacePage() {
               </Box>
 
               {/* What the server carries, under its operating system (lot T1b). */}
-              {!isCreate && id && <AssetTechnologiesSection assetId={id} canManage={canManage} />}
+              {!isCreate && id && (
+                <AssetTechnologiesSection assetId={id} canManage={canManage} heading={(title) => <SectionLabel>{title}</SectionLabel>} />
+              )}
 
               {/* NETWORK INFORMATION SECTION */}
               <Box>

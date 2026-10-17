@@ -114,6 +114,22 @@ describe('AssetTechnologiesSection', () => {
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets/asset-1/technologies', { technology_id: 'tomcat', version_label: '11.0' }));
   });
 
+  it('takes the section title of the page around it', async () => {
+    mocked.get.mockImplementation(async () => ({ data: { items: ROWS } }) as never);
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <MemoryRouter>
+            <AssetTechnologiesSection assetId="asset-1" canManage heading={(title) => <span data-testid="page-title">{title}</span>} />
+          </MemoryRouter>
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    expect((await screen.findByTestId('page-title')).textContent).toBe(`${K}.title`);
+    expect(screen.getByRole('region', { name: `${K}.title` })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: `${K}.title` })).toBeNull();
+  });
+
   it('is one line when the server carries nothing, with no add for a reader', async () => {
     renderSection([], false);
     expect(await screen.findByText(`${K}.empty`)).toBeTruthy();

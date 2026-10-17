@@ -29,14 +29,19 @@ export const assetTechnologiesKey = (assetId: string) => ['asset-technologies', 
 
 const PAGE = 30;
 
-type Props = { assetId: string; canManage: boolean };
+type Props = {
+  assetId: string;
+  canManage: boolean;
+  /** The section title of the page around it (the asset's Technical tab), so it reads like its neighbours. */
+  heading?: (title: string) => React.ReactNode;
+};
 
 /**
  * What a server carries (lot T1b): technologies installed on it (removable) and carried to it
  * through the server it runs on or its cluster (with that server, not removable). Managers add a
  * technology then its version; each change is saved at once. One line when empty.
  */
-export default function AssetTechnologiesSection({ assetId, canManage }: Props) {
+export default function AssetTechnologiesSection({ assetId, canManage, heading }: Props) {
   const { t } = useTranslation(['it', 'common']);
   const { labelFor } = useItOpsEnumOptions();
   const queryClient = useQueryClient();
@@ -119,6 +124,7 @@ export default function AssetTechnologiesSection({ assetId, canManage }: Props) 
       {!!error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
       <RelationsSection
         title={title}
+        heading={heading?.(title)}
         count={data && rows.length > 0 ? rows.length : undefined}
         onAdd={canManage && data ? (anchor) => setAdding({ anchor, technology: null }) : undefined}
         adding={!!adding}
