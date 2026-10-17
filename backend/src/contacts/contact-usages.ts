@@ -79,13 +79,14 @@ export const CONTACT_USAGE_QUERIES: readonly UsageQuery[] = [
   {
     type: 'technologies',
     resource: 'infrastructure',
-    sql: `SELECT t.id, 'TEC-' || t.item_number::text AS reference, t.name, t.lifecycle AS status, true AS active,
+    // A retired technology is inactive: listed after the others, marked as such.
+    sql: `SELECT t.id, 'TEC-' || t.item_number::text AS reference, t.name, t.lifecycle AS status, t.lifecycle <> 'retired' AS active,
                  ${textRoles('l')} AS roles, count(*) OVER () AS total
             FROM technology_support_contacts l
             JOIN technologies t ON t.tenant_id = l.tenant_id AND t.id = l.technology_id
            WHERE l.tenant_id = $1 AND l.contact_id = $2
            GROUP BY t.id
-           ORDER BY lower(t.name), t.id
+           ORDER BY active DESC, lower(t.name), t.id
            LIMIT $3`,
   },
   {

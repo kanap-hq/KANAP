@@ -184,6 +184,9 @@ async function testContactUsages() {
     assert.equal(usages.total, 10);
     const technology = usages.groups.find((group) => group.type === 'technologies')!.items[0];
     assert.equal(technology.status, 'active', 'a technology carries its lifecycle');
+    await runner.query(`UPDATE technologies SET lifecycle = 'retired' WHERE tenant_id = $1 AND name = 'Technology A'`, [w.tenantA]);
+    const retired = await readContactUsages(runner.manager, w.tenantA, w.contact, ADMIN);
+    assert.deepEqual(shape(retired).technologies, ['TEC-1|Technology A|-|inactive|Database support'], 'a retired technology is inactive');
     const project = usages.groups.find((group) => group.type === 'projects')!.items[0];
     assert.equal(project.status, 'planned', 'a project carries its status');
   });
