@@ -11,7 +11,7 @@ vi.mock('../../../api', () => ({ default: { get: vi.fn(async () => ({ data: { it
 
 const VERSION = { cpe_version: null, build_prefixes: [], extended_support_end: null, notes: null };
 const TECHNOLOGY = {
-  id: 'tech-1', reference: 'TEC-1', name: 'PostgreSQL', editor: 'PostgreSQL Global Development Group', family: 'database', mode: 'installed',
+  id: 'tech-1', reference: 'TEC-1', name: 'PostgreSQL', editor: 'PostgreSQL Global Development Group', family: 'database', hosting_type: 'on_prem',
   lifecycle: 'active', description: null, notes: null, cpe_products: ['a:postgresql:postgresql'], replaced_by_id: null, replaced_by: null, owners: [],
   catalog_key: 'postgresql',
   versions: [
