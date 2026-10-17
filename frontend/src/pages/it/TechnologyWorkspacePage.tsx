@@ -20,11 +20,14 @@ import TechnologyOverviewTab, {
   type TechnologyDetail,
   type TechnologyPatch,
 } from './workspace/TechnologyOverviewTab';
+import TechnologyComplianceTab from './workspace/TechnologyComplianceTab';
+import TechnologyOperationsTab from './workspace/TechnologyOperationsTab';
+import TechnologyRelationsTab, { fetchTechnologyRelations, technologyRelationsCount, technologyRelationsKey } from './workspace/TechnologyRelationsTab';
 
 type TabKey = 'overview' | 'servers' | 'applications' | 'operations' | 'compliance' | 'relations';
 const TAB_KEYS: TabKey[] = ['overview', 'servers', 'applications', 'operations', 'compliance', 'relations'];
-// The tabs other than the Overview arrive with the next lots of the technology layer.
-const READY_TABS = new Set<TabKey>(['overview']);
+// The tabs not listed here arrive with the next lots of the technology layer.
+const READY_TABS = new Set<TabKey>(['overview', 'operations', 'compliance', 'relations']);
 
 function TechnologyDeleteButton({ technology, onDeleted, onError }: {
   technology: TechnologyDetail;
@@ -102,6 +105,12 @@ export default function TechnologyWorkspacePage() {
     placeholderData: (previous) => previous,
   });
   const technology = technologyQuery.data || null;
+  // The Relations badge counts the rows of the sections the caller sees; the tab reads the same cache.
+  const relationsQuery = useQuery({
+    queryKey: technologyRelationsKey(technology?.id ?? ''),
+    queryFn: () => fetchTechnologyRelations(technology!.id),
+    enabled: !!technology?.id,
+  });
 
   const listSearch = searchParams.toString();
   const closeWorkspace = React.useCallback(() => {
@@ -160,6 +169,7 @@ export default function TechnologyWorkspacePage() {
     key,
     label: t(`workspace.technology.tabs.${key}`),
     disabled: !READY_TABS.has(key),
+    ...(key === 'relations' ? { badge: technologyRelationsCount(relationsQuery.data) } : {}),
   }));
 
   return (
@@ -220,6 +230,13 @@ export default function TechnologyWorkspacePage() {
             onError={setError}
           />
         )}
+        {routeTab === 'operations' && (
+          <TechnologyOperationsTab technology={technology} canManage={canManage} onPatch={patchTechnology} onError={setError} />
+        )}
+        {routeTab === 'compliance' && (
+          <TechnologyComplianceTab technology={technology} canManage={canManage} onPatch={patchTechnology} />
+        )}
+        {routeTab === 'relations' && <TechnologyRelationsTab id={technology.id} />}
       </PortfolioDetailWorkspaceShell>
     </Box>
   );

@@ -1674,6 +1674,30 @@
           "unknown": "Fecha desconocida"
         }
       },
+      "relations": {
+        "sections": {
+          "documents": "Documentos",
+          "links": "Enlaces web"
+        },
+        "empty": {
+          "documents": "Ningún documento.",
+          "links": "Ningún enlace web.",
+          "incidents": "Ningún incidente vinculado."
+        },
+        "search": {
+          "incidents": "Buscar incidentes"
+        },
+        "columns": {
+          "size": "Tamaño",
+          "added": "Añadido",
+          "url": "Dirección"
+        },
+        "newLink": "Nuevo enlace web",
+        "placeholders": {
+          "linkName": "p. ej., Notas de la versión",
+          "url": "p. ej., https://learn.microsoft.com/sql"
+        }
+      },
       "messages": {
         "saveFailed": "No se pudo guardar la tecnología.",
         "createFailed": "No se pudo crear la tecnología.",

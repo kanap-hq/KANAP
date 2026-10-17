@@ -1674,6 +1674,30 @@
           "unknown": "Date unknown"
         }
       },
+      "relations": {
+        "sections": {
+          "documents": "Documents",
+          "links": "Web links"
+        },
+        "empty": {
+          "documents": "No document.",
+          "links": "No web link.",
+          "incidents": "No incident linked."
+        },
+        "search": {
+          "incidents": "Search incidents"
+        },
+        "columns": {
+          "size": "Size",
+          "added": "Added",
+          "url": "Address"
+        },
+        "newLink": "New web link",
+        "placeholders": {
+          "linkName": "e.g., Release notes",
+          "url": "e.g., https://learn.microsoft.com/sql"
+        }
+      },
       "messages": {
         "saveFailed": "The technology could not be saved.",
         "createFailed": "The technology could not be created.",
