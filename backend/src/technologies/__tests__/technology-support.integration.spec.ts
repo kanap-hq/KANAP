@@ -75,6 +75,7 @@ async function testMigration() {
     const down = await shape(runner);
     assert.deepEqual(down.table, []);
     assert.deepEqual(down.column, []);
+    assert.equal(down.contactsKey, 0, 'down() removes the key it added to contacts');
     await migration.up(runner);
     assert.deepEqual(await shape(runner), before, 'down() then up() gives the same shape');
   });

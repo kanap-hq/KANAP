@@ -21,6 +21,7 @@ const LINKS: Array<[link: string, record: string, column: string]> = [
   ['contract_contacts', 'contracts', 'contract_id'],
   ['application_support_contacts', 'applications', 'application_id'],
   ['asset_support_contacts', 'assets', 'asset_id'],
+  ['technology_support_contacts', 'technologies', 'technology_id'],
   ['location_contacts', 'locations', 'location_id'],
   ['portfolio_project_contacts', 'portfolio_projects', 'project_id'],
   ['portfolio_request_contacts', 'portfolio_requests', 'request_id'],
@@ -64,6 +65,7 @@ async function run() {
          VALUES ($1, 'srv-1', 'physical_server', 'on_premise', 'prod', 'active', now(), now()) RETURNING id`, [t]),
       locations: await one(runner,
         `INSERT INTO locations (tenant_id, name, location_reference, hosting_type) VALUES ($1, 'DC1', 'DC1', 'on_premise') RETURNING id`, [t]),
+      technologies: await one(runner, `INSERT INTO technologies (tenant_id, item_number, name) VALUES ($1, 900004, 'SQL Server') RETURNING id`, [t]),
       portfolio_projects: await one(runner, `INSERT INTO portfolio_projects (tenant_id, name, item_number) VALUES ($1, 'Move', 900002) RETURNING id`, [t]),
       portfolio_requests: await one(runner, `INSERT INTO portfolio_requests (tenant_id, name, item_number) VALUES ($1, 'Ask', 900003) RETURNING id`, [t]),
     };
