@@ -3,7 +3,7 @@ import { DataSource, EntityManager } from 'typeorm';
 import { ScheduledTasksService } from '../admin/scheduled-tasks/scheduled-tasks.service';
 import { withTenant } from '../common/tenant-runner';
 import { Features } from '../config/features';
-import { VulnerabilityMatchService } from './vulnerability-match.service';
+import { VulnerabilityMatchService, type MatchResult } from './vulnerability-match.service';
 import { VulnerabilityNotificationsService } from './vulnerability-notifications.service';
 import { resolveConfiguredAppBaseUrl } from '../common/url';
 import { cpeProduct } from './vulnerability-rules';
@@ -203,6 +203,8 @@ function serviceFailure(error: unknown): boolean {
 export class NvdFeedService implements OnModuleInit {
   private readonly logger = new Logger(NvdFeedService.name);
   private lastRequestAt = 0;
+  /** The CVE of the current run whose severity rose to critical or high (`store`), for the notifications. */
+  private raisedCves = new Set<string>();
 
   constructor(
     private readonly dataSource: DataSource,
@@ -249,7 +251,8 @@ export class NvdFeedService implements OnModuleInit {
    * application address is not configured (the emails link to it).
    */
   private async notifiedTenantIds(): Promise<Set<string>> {
-    if (resolveConfiguredAppBaseUrl(null) === null) return new Set();
+    // Email off (no SMTP): nothing is claimed, so nothing is lost for a later announcement either.
+    if (!Features.EMAIL_ENABLED || resolveConfiguredAppBaseUrl(null) === null) return new Set();
     const rows: Array<{ id: string }> = await this.dataSource.query(
       `SELECT id FROM tenants WHERE status = 'active' AND deleted_at IS NULL`,
     );
@@ -258,21 +261,29 @@ export class NvdFeedService implements OnModuleInit {
 
   /** The scheduled run: collect, then match every tenant and tell the owners what is new. */
   async run(runtime: FeedRuntime = defaultRuntime()): Promise<FeedSummary> {
+    this.raisedCves = new Set();
     const summary = await this.collect(runtime);
+    const raised = Array.from(this.raisedCves);
     const notified = await this.notifiedTenantIds();
     for (const tenantId of await this.tenantIds()) {
+      let result: MatchResult;
       try {
-        const result = await withTenant(this.dataSource, tenantId, (mg) => this.matcher.matchTenant(mg, tenantId));
+        result = await withTenant(this.dataSource, tenantId, (mg) => this.matcher.matchTenant(mg, tenantId));
         summary.tenants_matched += 1;
         summary.rows_added += result.added;
         summary.rows_removed += result.removed;
-        if (notified.has(tenantId) && result.addedIds.length > 0) {
-          // Claimed once the matching has committed, in its own transaction; sent without awaiting.
-          const digests = await withTenant(this.dataSource, tenantId, (mg) => this.notifier.claim(mg, tenantId, result.addedIds));
-          void this.notifier.send(tenantId, digests);
-        }
       } catch (error: any) {
         summary.errors.push(`Matching of tenant ${tenantId}: ${error?.message ?? error}`);
+        continue;
+      }
+      if (!notified.has(tenantId) || (result.addedIds.length === 0 && raised.length === 0)) continue;
+      try {
+        // Claimed once the matching has committed, in its own transaction; sent without awaiting.
+        // What is not claimed now is never announced later (vulnerability-notifications.service.ts).
+        const digests = await withTenant(this.dataSource, tenantId, (mg) => this.notifier.claim(mg, tenantId, result.addedIds, raised));
+        void this.notifier.send(tenantId, digests);
+      } catch (error: any) {
+        summary.errors.push(`Notifications of tenant ${tenantId}: ${error?.message ?? error}`);
       }
     }
     if (summary.errors.length > 0) this.logger.warn(`[${NVD_FEED_TASK_NAME}] ${summary.errors.length} failure(s): ${summary.errors.join(' | ')}`);
@@ -369,7 +380,8 @@ export class NvdFeedService implements OnModuleInit {
       const items: any[] = Array.isArray(page?.vulnerabilities) ? page.vulnerabilities : [];
       const parsed = items.map((item) => parseNvdCve(item?.cve)).filter((c): c is ParsedCve => !!c);
       if (parsed.length > 0) {
-        await this.dataSource.transaction((mg) => this.store(mg, parsed));
+        const raised = await this.dataSource.transaction((mg) => this.store(mg, parsed));
+        for (const cveId of raised) this.raisedCves.add(cveId);
         summary.cves += parsed.length;
       }
       const total = Number(page?.totalResults ?? 0);
@@ -402,11 +414,19 @@ export class NvdFeedService implements OnModuleInit {
     throw lastError instanceof Error ? lastError : new Error(String(lastError));
   }
 
-  /** Upserts the CVE of one page and replaces their criteria, in one transaction. */
-  async store(mg: EntityManager, cves: ParsedCve[]): Promise<void> {
+  /**
+   * Upserts the CVE of one page and replaces their criteria, in one transaction. Returns the CVE
+   * already in the cache whose severity rose to critical or high (lot T6b: announced once).
+   */
+  async store(mg: EntityManager, cves: ParsedCve[]): Promise<string[]> {
     const unique = Array.from(new Map(cves.map((c) => [c.cve_id, c])).values());
-    await mg.query(
-      `INSERT INTO vulnerability_cves AS c (cve_id, summary, cvss_score, severity, cvss_version, cvss_vector, published_at, last_modified_at, nvd_status, reference_urls, fetched_at)
+    // Every step of the statement reads the same snapshot: `old` holds the severities before the upsert.
+    const raised: Array<{ cve_id: string }> = await mg.query(
+      `WITH old AS (
+         SELECT cve_id, severity FROM vulnerability_cves
+          WHERE cve_id IN (SELECT i.cve_id FROM jsonb_to_recordset($1::jsonb) AS i(cve_id text))
+       ), up AS (
+       INSERT INTO vulnerability_cves AS c (cve_id, summary, cvss_score, severity, cvss_version, cvss_vector, published_at, last_modified_at, nvd_status, reference_urls, fetched_at)
        SELECT i.cve_id, i.summary, i.cvss_score, i.severity, i.cvss_version, i.cvss_vector, i.published_at, i.last_modified_at, i.nvd_status,
               COALESCE(ARRAY(SELECT jsonb_array_elements_text(i.reference_urls)), '{}'), now()
          FROM jsonb_to_recordset($1::jsonb) AS i(
@@ -416,7 +436,11 @@ export class NvdFeedService implements OnModuleInit {
          summary = EXCLUDED.summary, cvss_score = EXCLUDED.cvss_score, severity = EXCLUDED.severity,
          cvss_version = EXCLUDED.cvss_version, cvss_vector = EXCLUDED.cvss_vector, published_at = EXCLUDED.published_at,
          last_modified_at = EXCLUDED.last_modified_at, nvd_status = EXCLUDED.nvd_status,
-         reference_urls = EXCLUDED.reference_urls, fetched_at = now()`,
+         reference_urls = EXCLUDED.reference_urls, fetched_at = now()
+       RETURNING c.cve_id, c.severity
+       )
+       SELECT up.cve_id FROM up JOIN old ON old.cve_id = up.cve_id
+        WHERE up.severity IN ('critical', 'high') AND (old.severity IS NULL OR old.severity NOT IN ('critical', 'high'))`,
       [JSON.stringify(unique.map(({ matches: _matches, ...cve }) => ({
         ...cve,
         published_at: utc(cve.published_at),
@@ -435,5 +459,6 @@ export class NvdFeedService implements OnModuleInit {
         [JSON.stringify(matches)],
       );
     }
+    return raised.map((r) => r.cve_id);
   }
 }

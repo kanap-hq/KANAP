@@ -119,6 +119,7 @@ export const en = {
       versions: 'Versions: {{versions}}',
       unknownVersion: 'version not recorded (potentially concerned)',
       view: 'Open vulnerabilities',
+      more: 'And {{count}} more: open the page to see them all.',
     },
     weeklyReview: {
       subject: 'Your KANAP Weekly Review - Week of {{weekLabel}}',

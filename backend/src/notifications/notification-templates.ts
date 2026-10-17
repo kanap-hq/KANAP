@@ -1029,9 +1029,13 @@ export type VulnerabilityDigestItem = {
   versions: Array<string | null>;
 };
 
+/** The lines of a vulnerability email; the others are counted and left to the page. */
+export const VULNERABILITY_DIGEST_MAX_ITEMS = 25;
+
 /**
  * The critical or high vulnerabilities newly found on the technologies a user owns for IT: one
- * email per recipient and per run of the feed, every CVE listed once per technology.
+ * email per recipient and per run of the feed, every CVE listed once per technology, at most
+ * `VULNERABILITY_DIGEST_MAX_ITEMS` lines then "and N more" (the button comes before the list).
  */
 export function buildVulnerabilityDigestEmail(params: {
   items: VulnerabilityDigestItem[];
@@ -1053,7 +1057,10 @@ export function buildVulnerabilityDigestEmail(params: {
     return text.length > 220 ? `${text.slice(0, 219)}…` : text;
   };
 
-  const rows = params.items.map((item) => buildItemRow(
+  const shown = params.items.slice(0, VULNERABILITY_DIGEST_MAX_ITEMS);
+  const more = count - shown.length;
+  const moreText = more > 0 ? interpolate(s.more, { count: more }) : null;
+  const rows = shown.map((item) => buildItemRow(
     `<span style="font-family:${EMAIL_MONO_FONT};">${escapeHtml(item.cveId)}</span> · ${escapeHtml(item.technologyReference)} ${escapeHtml(item.technologyName)}`,
     [escapeHtml(severityOf(item)), escapeHtml(versionsOf(item)), shortSummary(item.summary) ? escapeHtml(shortSummary(item.summary)) : null]
       .filter(Boolean)
@@ -1066,18 +1073,20 @@ export function buildVulnerabilityDigestEmail(params: {
       badgeHtml: buildToneBadge(String(count), 'warning'),
       summaryHtml: `<p style="margin:0;">${escapeHtml(interpolate(s.intro, { count }))}</p>`,
     })}
-    ${rows}
     ${buildActionButtons([{ label: s.view, url: params.pageUrl }], pc)}
+    ${rows}
+    ${moreText ? `<p style="margin:8px 0 0 0;font-size:13px;line-height:20px;color:${EMAIL_TOKENS.textSecondary};">${escapeHtml(moreText)}</p>` : ''}
   `;
   const wrapper = emailWrapper(body, { preferencesUrl, branding: params.branding, locale: params.locale });
 
   const text = joinTextBlocks([
     interpolate(s.intro, { count }),
-    ...params.items.map((item) => [
+    ...shown.map((item) => [
       `${item.cveId} · ${item.technologyReference} ${item.technologyName}`,
       severityOf(item),
       versionsOf(item),
     ].join(' · ')),
+    moreText,
     `${s.view}: ${params.pageUrl}`,
     buildManagePreferencesText(params.locale, preferencesUrl),
   ]);

@@ -121,6 +121,7 @@ export const fr: EmailStrings = {
       versions: 'Versions : {{versions}}',
       unknownVersion: 'version non renseignée (potentiellement concernée)',
       view: 'Ouvrir les vulnérabilités',
+      more: 'Et {{count}} autres : ouvrez la page pour toutes les voir.',
     },
     weeklyReview: {
       subject: 'Votre revue hebdomadaire KANAP — Semaine du {{weekLabel}}',

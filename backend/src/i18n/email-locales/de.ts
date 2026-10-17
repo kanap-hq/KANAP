@@ -121,6 +121,7 @@ export const de: EmailStrings = {
       versions: 'Versionen: {{versions}}',
       unknownVersion: 'Version nicht erfasst (möglicherweise betroffen)',
       view: 'Schwachstellen öffnen',
+      more: 'Und {{count}} weitere: Öffnen Sie die Seite, um alle zu sehen.',
     },
     weeklyReview: {
       subject: 'Ihr wöchentlicher KANAP-Rückblick — Woche vom {{weekLabel}}',

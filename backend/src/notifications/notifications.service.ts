@@ -1414,8 +1414,13 @@ export class NotificationsService {
           AND record_id = ANY($2::uuid[]) AND after_json->>'key' = ANY($3::text[])`,
       [tenantId, Array.from(new Set(optedIn.map((c) => c.technologyId))), keys],
     );
-    const already = new Set(sent.map((row) => row.key));
-    const fresh = optedIn.filter((c, index) => !already.has(keys[index]) && keys.indexOf(keys[index]) === index);
+    // Already sent, or twice in this run: kept once (a Set, linear in the number of candidates).
+    const seen = new Set(sent.map((row) => row.key));
+    const fresh = optedIn.filter((_c, index) => {
+      if (seen.has(keys[index])) return false;
+      seen.add(keys[index]);
+      return true;
+    });
     if (fresh.length === 0) return [];
     await manager.query(
       `INSERT INTO audit_log (tenant_id, table_name, record_id, action, after_json, source, source_ref)
@@ -1440,7 +1445,8 @@ export class NotificationsService {
   async sendVulnerabilityDigests(tenantId: string, digests: VulnerabilityDigest[]): Promise<void> {
     if (digests.length === 0) return;
     const slug = await this.getTenantSlug(tenantId);
-    const pageUrl = `${resolveNotificationBaseUrl(slug)}/it/vulnerabilities`;
+    // The page on what such an email announces: to review (its default), published within 30 days.
+    const pageUrl = `${resolveNotificationBaseUrl(slug)}/it/vulnerabilities?period=30`;
     const branding = await this.resolveBranding(tenantId);
     for (const digest of digests) {
       const content = buildVulnerabilityDigestEmail({
