@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Box, Button, Stack } from '@mui/material';
+import { Box, Button, Stack, Typography } from '@mui/material';
 import { ICellRendererParams } from 'ag-grid-community';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -18,6 +18,7 @@ import { formatShortDate } from '../../lib/dateFormat';
 import { useLocale } from '../../i18n/useLocale';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import { refusalCounts } from '../../utils/deleteRefusal';
+import { supportStateColor, supportStateNeedsAttention, supportStateOf } from '../../utils/supportState';
 import ForbiddenPage from '../ForbiddenPage';
 import TechnologyCreateDialog from './components/TechnologyCreateDialog';
 
@@ -33,19 +34,8 @@ export type TechnologyRow = {
   servers: number;
   applications: number;
   it_owner_names?: string[];
-  owner_names?: string[];
   next_support_end: string | null;
 };
-
-/** True when an end of support is past or within the next twelve months. */
-export function supportEndNear(value: string | null | undefined, now = new Date()): boolean {
-  if (!value) return false;
-  const end = new Date(`${String(value).slice(0, 10)}T00:00:00`);
-  if (Number.isNaN(end.getTime())) return false;
-  const limit = new Date(now);
-  limit.setFullYear(limit.getFullYear() + 1);
-  return end.getTime() <= limit.getTime();
-}
 
 export default function TechnologiesPage() {
   const { t } = useTranslation(['it', 'common']);
@@ -87,12 +77,14 @@ export default function TechnologiesPage() {
     const Cell: React.FC<ICellRendererParams<TechnologyRow, any>> = (params) => {
       const value = params.value as string | null;
       if (!value) return null;
+      // The next end of support of the versions in use: coloured when it calls for attention.
+      const state = supportStateOf(value, null);
       return (
         <Box
           component="span"
           data-testid="support-end"
-          data-near={supportEndNear(value) ? 'true' : 'false'}
-          sx={(theme) => ({ color: supportEndNear(value) ? theme.palette.kanap.orange : 'inherit' })}
+          data-state={state}
+          sx={(theme) => ({ color: supportStateNeedsAttention(state) ? supportStateColor(state, theme) : 'inherit' })}
         >
           {formatShortDate(value, locale)}
         </Box>
@@ -126,7 +118,7 @@ export default function TechnologiesPage() {
     {
       headerName: t('pages.technologies.columns.family'),
       field: 'family',
-      width: 190,
+      width: 170,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: { getValues: familyValues, searchable: false },
@@ -136,7 +128,7 @@ export default function TechnologiesPage() {
     {
       headerName: t('pages.technologies.columns.editor'),
       field: 'editor',
-      width: 170,
+      width: 160,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: { getValues: editorValues },
@@ -153,13 +145,15 @@ export default function TechnologiesPage() {
       valueFormatter: (p: any) => labelFor('lifecycleStatus', p.value),
       cellRenderer: LinkCell,
     },
-    { headerName: t('pages.technologies.columns.versionsInUse'), field: 'versions_in_use', width: 140, sortable: false, filter: false, cellRenderer: LinkCell },
+    // Secondary columns start hidden: the default set fits a 1,440 px window without scrolling.
+    { headerName: t('pages.technologies.columns.versionsInUse'), field: 'versions_in_use', width: 140, defaultHidden: true, sortable: false, filter: false, cellRenderer: LinkCell },
     { headerName: t('pages.technologies.columns.servers'), field: 'servers', width: 110, sortable: false, filter: false, cellRenderer: LinkCell },
     { headerName: t('pages.technologies.columns.applications'), field: 'applications', width: 130, sortable: false, filter: false, cellRenderer: LinkCell },
     {
       headerName: t('pages.technologies.columns.itOwner'),
       field: 'it_owner_names',
       width: 170,
+      defaultHidden: true,
       sortable: false,
       filter: false,
       valueFormatter: (p: any) => {
@@ -225,6 +219,16 @@ export default function TechnologiesPage() {
           enableRowSelection={canAdmin}
           onSelectionChanged={setSelectedRows}
           onGridApiReady={(gridApi) => { gridApiRef.current = gridApi; }}
+          emptyState={(
+            <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" data-testid="technologies-empty">
+              <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('pages.technologies.empty')}</Typography>
+              {canCreate && (
+                <Button variant="contained" size="small" onClick={() => setCreateOpen(true)}>
+                  {t('pages.technologies.newTechnology')}
+                </Button>
+              )}
+            </Stack>
+          )}
           onQueryStateChange={(state) => {
             lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {} };
           }}

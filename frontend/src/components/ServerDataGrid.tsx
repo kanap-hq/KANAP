@@ -152,6 +152,12 @@ export type ServerDataGridProps<T> = {
    * values answers 400 to it.
    */
   setFilterExcludeMode?: boolean;
+  /**
+   * What an empty list says when no search or filter narrows it (one line, with the page's create
+   * action when the user may create). Default: "No results". A narrowed empty list keeps its own
+   * message and its way out.
+   */
+  emptyState?: React.ReactNode;
 };
 
 function parseSortParam(sortModel: SortModelItem[] | undefined, fallback: { field: string; direction: 'ASC' | 'DESC' }) {
@@ -440,6 +446,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   showRowCount,
   pageParams,
   setFilterExcludeMode = false,
+  emptyState,
 }: ServerDataGridProps<T>) {
   const { t } = useTranslation(['common', 'grid']);
   const { profile } = useAuth();
@@ -1581,9 +1588,13 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
               zIndex: 1,
             }}
           >
-            <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
-              {t(emptyResult === 'filtered' ? 'common:filters.noResultsFiltered' : 'common:filters.noResults')}
-            </Typography>
+            {emptyResult === 'empty' && emptyState ? (
+              <Box sx={{ pointerEvents: 'auto' }}>{emptyState}</Box>
+            ) : (
+              <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
+                {t(emptyResult === 'filtered' ? 'common:filters.noResultsFiltered' : 'common:filters.noResults')}
+              </Typography>
+            )}
             {emptyResult === 'filtered' && (
               <Button size="small" onClick={clearSearchAndFilters} sx={{ pointerEvents: 'auto' }}>
                 {t('common:filters.clearAll')}

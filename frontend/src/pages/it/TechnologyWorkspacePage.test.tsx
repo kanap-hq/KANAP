@@ -7,7 +7,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../../components/design';
 import TechnologyWorkspacePage from './TechnologyWorkspacePage';
-import { versionStatus } from './workspace/TechnologyOverviewTab';
 
 const get = vi.hoisted(() => vi.fn());
 const post = vi.hoisted(() => vi.fn());
@@ -70,10 +69,14 @@ const DETAIL = {
   replaced_by_id: null,
   replaced_by: null,
   versions: [
-    { id: 'v1', label: '2012', cpe_version: null, build_prefixes: [], standard_support_end: '2017-07-11', extended_support_end: '2022-07-12', notes: null, servers: 2, applications: 0 },
     { id: 'v2', label: '2022', cpe_version: null, build_prefixes: [], standard_support_end: '2099-01-11', extended_support_end: null, notes: null, servers: 0, applications: 0 },
+    { id: 'v3', label: '2019', cpe_version: null, build_prefixes: [], standard_support_end: '2020-01-01', extended_support_end: '2099-01-01', notes: null, servers: 0, applications: 0 },
+    { id: 'v1', label: '2012', cpe_version: null, build_prefixes: [], standard_support_end: '2017-07-11', extended_support_end: '2022-07-12', notes: null, servers: 2, applications: 0 },
   ],
-  owners: [{ user_id: 'u-1', owner_type: 'it', full_name: 'Ada Lovelace' }],
+  owners: [
+    { user_id: 'u-1', owner_type: 'it', full_name: 'Ada Lovelace' },
+    { user_id: 'u-9', owner_type: 'business', full_name: 'Grace Hopper' },
+  ],
 };
 
 function renderPage() {
@@ -122,18 +125,17 @@ describe('TechnologyWorkspacePage', () => {
       ['workspace.technology.tabs.relations', true],
     ]);
     expect(screen.getByTestId('owners-workspace.technology.fields.itOwners').textContent).toBe('Ada Lovelace');
+    expect(screen.queryByTestId('owners-workspace.technology.fields.businessOwners')).toBeNull();
+    expect(screen.queryByText(/Grace Hopper/)).toBeNull();
   });
 
-  it('computes the status of each version', async () => {
-    const today = new Date('2026-10-16T12:00:00');
-    expect(versionStatus({ standard_support_end: '2027-01-01', extended_support_end: null }, today)).toBe('supported');
-    expect(versionStatus({ standard_support_end: '2025-01-01', extended_support_end: '2028-01-01' }, today)).toBe('extended');
-    expect(versionStatus({ standard_support_end: '2017-07-11', extended_support_end: '2022-07-12' }, today)).toBe('ended');
-    expect(versionStatus({ standard_support_end: null, extended_support_end: null }, today)).toBe('unknown');
+  it('lists the versions in the order of the API with their shared support state', async () => {
     renderPage();
     const table = await screen.findByRole('table', { name: 'workspace.technology.versions.title' });
+    const rows = within(table).getAllByRole('row').slice(1);
+    expect(rows.map((row) => row.querySelector('td')?.textContent)).toEqual(['2022', '2019', '2012']);
+    expect(Array.from(table.querySelectorAll('[data-status]')).map((el) => el.getAttribute('data-status'))).toEqual(['supported', 'extended', 'ended']);
     expect(within(table).getByText('workspace.technology.versions.status.ended')).toBeTruthy();
-    expect(within(table).getByText('workspace.technology.versions.status.supported')).toBeTruthy();
   });
 
   it('saves the description when the field loses focus', async () => {
@@ -166,7 +168,7 @@ describe('TechnologyWorkspacePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.save' }));
     await waitFor(() => expect(post).toHaveBeenCalledWith('/technologies/tech-1/versions', { label: '2025', standard_support_end: null, extended_support_end: null }));
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'workspace.technology.versions.edit' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'workspace.technology.versions.edit' })[2]);
     patch.mockResolvedValueOnce({ data: {} });
     fireEvent.change(screen.getByLabelText('workspace.technology.versions.label'), { target: { value: '2012 SP4' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.save' }));
@@ -177,9 +179,9 @@ describe('TechnologyWorkspacePage', () => {
     // A version that servers name asks first; the one nobody names goes at once.
     del.mockResolvedValue({ data: {} });
     const removeButtons = screen.getAllByRole('button', { name: 'workspace.technology.versions.remove' });
-    fireEvent.click(removeButtons[1]);
-    await waitFor(() => expect(del).toHaveBeenCalledWith('/technologies/tech-1/versions/v2'));
     fireEvent.click(removeButtons[0]);
+    await waitFor(() => expect(del).toHaveBeenCalledWith('/technologies/tech-1/versions/v2'));
+    fireEvent.click(removeButtons[2]);
     fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.delete' }));
     await waitFor(() => expect(del).toHaveBeenCalledWith('/technologies/tech-1/versions/v1'));
   });
@@ -189,7 +191,10 @@ describe('TechnologyWorkspacePage', () => {
     renderPage();
     await screen.findByRole('heading', { name: 'Microsoft SQL Server' });
     await owners.onChange['workspace.technology.fields.itOwners'](['u-2']);
-    expect(post).toHaveBeenCalledWith('/technologies/tech-1/owners/bulk-replace', { owners: [{ user_id: 'u-2', owner_type: 'it' }] });
+    // The business owners the API holds are kept: the screen writes the IT owners only.
+    expect(post).toHaveBeenCalledWith('/technologies/tech-1/owners/bulk-replace', {
+      owners: [{ user_id: 'u-9', owner_type: 'business' }, { user_id: 'u-2', owner_type: 'it' }],
+    });
     await waitFor(() => expect(screen.getByTestId('owners-workspace.technology.fields.itOwners').textContent).toBe('Alan Turing'));
   });
 

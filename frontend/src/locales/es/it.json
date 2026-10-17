@@ -163,6 +163,7 @@
     "technologies": {
       "title": "Tecnologías",
       "newTechnology": "Nueva tecnología",
+      "empty": "Todavía no hay tecnologías.",
       "columns": {
         "reference": "Referencia",
         "family": "Familia",
@@ -1417,7 +1418,6 @@
         "description": "Descripción",
         "notes": "Notas",
         "replacedBy": "Reemplazada por",
-        "businessOwners": "Responsables de negocio",
         "itOwners": "Responsables de TI"
       },
       "placeholders": {
@@ -1455,6 +1455,7 @@
         "deleteMessage_other": "{{count}} servidores o aplicaciones nombran esta versión: mostrarán «versión desconocida».",
         "status": {
           "supported": "Con soporte",
+          "ending_soon": "Finaliza pronto",
           "extended": "Soporte extendido",
           "ended": "Sin soporte",
           "unknown": "Fecha desconocida"

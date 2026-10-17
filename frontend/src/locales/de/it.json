@@ -163,6 +163,7 @@
     "technologies": {
       "title": "Technologien",
       "newTechnology": "Neue Technologie",
+      "empty": "Noch keine Technologien.",
       "columns": {
         "reference": "Referenz",
         "family": "Familie",
@@ -1417,7 +1418,6 @@
         "description": "Beschreibung",
         "notes": "Notizen",
         "replacedBy": "Ersetzt durch",
-        "businessOwners": "Fachverantwortliche",
         "itOwners": "IT-Verantwortliche"
       },
       "placeholders": {
@@ -1455,6 +1455,7 @@
         "deleteMessage_other": "{{count}} Server oder Anwendungen nennen diese Version: Dort steht dann „Version unbekannt“.",
         "status": {
           "supported": "Unterstützt",
+          "ending_soon": "Endet bald",
           "extended": "Erweiterter Support",
           "ended": "Kein Support",
           "unknown": "Datum unbekannt"

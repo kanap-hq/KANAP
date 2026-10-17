@@ -34,6 +34,7 @@ import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
 import { useLocale } from '../../../i18n/useLocale';
 import { drawerAutocompleteListboxSx, drawerFieldValueSx, drawerMenuItemSx, drawerSelectSx } from '../../../theme/formSx';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { supportStateColor, supportStateOf, type SupportState } from '../../../utils/supportState';
 import { EditorField } from '../components/TechnologyCreateDialog';
 
 export type TechnologyVersion = {
@@ -74,19 +75,6 @@ export type TechnologyPatch = Partial<Pick<TechnologyDetail,
 // The server's rule (`CPE_PRODUCT_RE` in backend/src/technologies/technology-rows.ts), on the lower-cased value.
 export const CPE_PRODUCT_PATTERN = /^[aoh]:[a-z0-9._\-~%!]{1,100}:[a-z0-9._\-~%!]{1,100}$/;
 export const CPE_DICTIONARY_URL = 'https://nvd.nist.gov/products/cpe/search';
-
-export type VersionStatus = 'supported' | 'extended' | 'ended' | 'unknown';
-
-/** Where a version stands today from its end dates (YYYY-MM-DD, inclusive). */
-export function versionStatus(version: Pick<TechnologyVersion, 'standard_support_end' | 'extended_support_end'>, today = new Date()): VersionStatus {
-  const day = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-  const standard = version.standard_support_end?.slice(0, 10) || null;
-  const extended = version.extended_support_end?.slice(0, 10) || null;
-  if (standard && day <= standard) return 'supported';
-  if (extended && day <= extended) return 'extended';
-  if (standard || extended) return 'ended';
-  return 'unknown';
-}
 
 function SectionLabel({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
   return (
@@ -194,7 +182,10 @@ function ReplacementSelect({ technologyId, value, onChange, disabled }: {
   );
 }
 
-/** Properties drawer of the technology: editor, family, mode, replacement and owners. */
+/**
+ * Properties drawer of the technology: editor, family, mode, replacement and IT owners. The screen
+ * shows and writes the IT owners only; business owners the API may hold are kept on each save.
+ */
 export function TechnologyProperties({ technology, canManage, onPatch, onOwnersChange, onError }: {
   technology: TechnologyDetail;
   canManage: boolean;
@@ -217,9 +208,9 @@ export function TechnologyProperties({ technology, canManage, onPatch, onOwnersC
     if (next !== (technology.editor ?? null)) onPatch({ editor: next });
   };
 
-  const replaceOwnersByType = async (ownerType: 'business' | 'it', userIds: string[]) => {
-    const keep = technology.owners.filter((owner) => owner.owner_type !== ownerType);
-    const owners = [...keep, ...Array.from(new Set(userIds)).map((user_id) => ({ user_id, owner_type: ownerType }))];
+  const replaceItOwners = async (userIds: string[]) => {
+    const keep = technology.owners.filter((owner) => owner.owner_type !== 'it');
+    const owners = [...keep, ...Array.from(new Set(userIds)).map((user_id) => ({ user_id, owner_type: 'it' as const }))];
     setSavingOwners(true);
     try {
       const res = await api.post<TechnologyOwner[]>(`/technologies/${technology.id}/owners/bulk-replace`, {
@@ -233,8 +224,8 @@ export function TechnologyProperties({ technology, canManage, onPatch, onOwnersC
     }
   };
 
-  const ownerValue = (type: 'business' | 'it') => technology.owners
-    .filter((owner) => owner.owner_type === type)
+  const itOwners = technology.owners
+    .filter((owner) => owner.owner_type === 'it')
     .map((owner) => ({ user_id: owner.user_id, user_display_name: owner.full_name || owner.user_id }));
 
   return (
@@ -281,21 +272,11 @@ export function TechnologyProperties({ technology, canManage, onPatch, onOwnersC
         </PropertyRow>
       </PropertyGroup>
       <PropertyGroup>
-        <PropertyRow label={t('workspace.technology.fields.businessOwners')}>
-          <TeamMemberMultiSelect
-            label={t('workspace.technology.fields.businessOwners')}
-            value={ownerValue('business')}
-            onChange={(userIds) => replaceOwnersByType('business', userIds)}
-            disabled={!canManage || savingOwners}
-            hideLabel
-            textFieldSx={drawerFieldValueSx}
-          />
-        </PropertyRow>
         <PropertyRow label={t('workspace.technology.fields.itOwners')}>
           <TeamMemberMultiSelect
             label={t('workspace.technology.fields.itOwners')}
-            value={ownerValue('it')}
-            onChange={(userIds) => replaceOwnersByType('it', userIds)}
+            value={itOwners}
+            onChange={(userIds) => replaceItOwners(userIds)}
             disabled={!canManage || savingOwners}
             hideLabel
             textFieldSx={drawerFieldValueSx}
@@ -362,7 +343,7 @@ function CpeProducts({ values, canManage, onChange }: { values: string[]; canMan
 
 type VersionDraft = { label: string; standard_support_end: string; extended_support_end: string };
 
-function statusLabel(status: VersionStatus, t: TFunction) {
+function statusLabel(status: SupportState, t: TFunction) {
   return t(`workspace.technology.versions.status.${status}`);
 }
 
@@ -379,12 +360,6 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
   const [editing, setEditing] = React.useState<string | null>(null);
   const [draft, setDraft] = React.useState<VersionDraft>({ label: '', standard_support_end: '', extended_support_end: '' });
   const [saving, setSaving] = React.useState(false);
-  const statusColor: Record<VersionStatus, string> = {
-    supported: theme.palette.kanap.text.tertiary,
-    extended: theme.palette.kanap.orange,
-    ended: theme.palette.kanap.orange,
-    unknown: theme.palette.kanap.text.tertiary,
-  };
 
   const startEdit = (version: TechnologyVersion | null) => {
     setEditing(version?.id ?? 'new');
@@ -504,7 +479,7 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
           )}
           {technology.versions.map((version) => {
             if (editing === version.id) return editRow(version.id);
-            const status = versionStatus(version);
+            const status = supportStateOf(version.standard_support_end, version.extended_support_end);
             return (
               <TableRow key={version.id}>
                 <TableCell sx={{ fontFamily: MONO_FONT_FAMILY }}>{version.label}</TableCell>
@@ -512,7 +487,7 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
                 <TableCell>{formatShortDate(version.extended_support_end, locale, { empty: '—' })}</TableCell>
                 <TableCell>
                   <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }} data-status={status}>
-                    <StatusDot color={statusColor[status]} />
+                    <StatusDot color={supportStateColor(status, theme)} />
                     {statusLabel(status, t)}
                   </Box>
                 </TableCell>

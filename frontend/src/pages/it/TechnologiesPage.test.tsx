@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
-import TechnologiesPage, { supportEndNear } from './TechnologiesPage';
+import TechnologiesPage from './TechnologiesPage';
 
 const grid = vi.hoisted(() => ({ props: null as null | Record<string, any> }));
 const deleteButton = vi.hoisted(() => ({ props: null as null | Record<string, any> }));
@@ -74,6 +74,12 @@ describe('TechnologiesPage', () => {
     expect((grid.props!.columns as any[]).map((col) => col.field)).toEqual([
       'reference', 'name', 'family', 'editor', 'lifecycle', 'versions_in_use', 'servers', 'applications', 'it_owner_names', 'next_support_end',
     ]);
+    // The secondary columns start hidden: the default set fits a 1,440 px window.
+    expect((grid.props!.columns as any[]).filter((col) => col.defaultHidden).map((col) => col.field)).toEqual([
+      'lifecycle', 'versions_in_use', 'it_owner_names',
+    ]);
+    const shown = (grid.props!.columns as any[]).filter((col) => !col.defaultHidden);
+    expect(shown.reduce((sum, col) => sum + (col.width ?? col.minWidth), 0)).toBeLessThanOrEqual(1100);
     expect(column('family').valueFormatter({ value: 'database' })).toBe('Database');
     expect(column('it_owner_names').valueFormatter({ value: ['Ada Lovelace', 'Alan Turing'] })).toBe('Ada Lovelace +1');
   });
@@ -100,16 +106,36 @@ describe('TechnologiesPage', () => {
     expect(link.getAttribute('href')).toMatch(/^\/it\/technologies\/TEC-3\/overview\?sort=name%3AASC/);
   });
 
-  it('marks an end of support past or within twelve months', () => {
-    const now = new Date('2026-10-16T12:00:00');
-    expect(supportEndNear('2026-01-01', now)).toBe(true);
-    expect(supportEndNear('2027-06-30', now)).toBe(true);
-    expect(supportEndNear('2028-01-01', now)).toBe(false);
-    expect(supportEndNear(null, now)).toBe(false);
+  it('colours the next end of support from the shared support states', () => {
     renderPage();
     const Cell = column('next_support_end').cellRenderer;
-    render(<ThemeProvider theme={createAppTheme('light')}><Cell value="2020-01-14" data={{}} /></ThemeProvider>);
-    expect(screen.getByTestId('support-end').getAttribute('data-near')).toBe('true');
+    const theme = createAppTheme('dark');
+    const soon = new Date();
+    soon.setMonth(soon.getMonth() + 2);
+    const day = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const { unmount } = render(<ThemeProvider theme={theme}><Cell value={day(soon)} data={{}} /></ThemeProvider>);
+    expect(screen.getByTestId('support-end').getAttribute('data-state')).toBe('ending_soon');
+    expect(getComputedStyle(screen.getByTestId('support-end')).color).toBe('rgb(240, 168, 48)'); // kanap.orange, dark
+    unmount();
+    render(<ThemeProvider theme={theme}><Cell value="2099-01-01" data={{}} /></ThemeProvider>);
+    expect(screen.getByTestId('support-end').getAttribute('data-state')).toBe('supported');
+  });
+
+  it('says in one line that the list is empty, with the creation for a manager', async () => {
+    renderPage();
+    render(<ThemeProvider theme={createAppTheme('light')}>{grid.props!.emptyState}</ThemeProvider>);
+    expect(screen.getByTestId('technologies-empty').textContent).toContain('pages.technologies.empty');
+    const buttons = screen.getAllByRole('button', { name: 'pages.technologies.newTechnology' });
+    fireEvent.click(buttons[buttons.length - 1]);
+    expect(await screen.findByText('create dialog')).toBeTruthy();
+  });
+
+  it('leaves the creation out of the empty list for a reader', () => {
+    auth.levels = { infrastructure: 'reader' };
+    renderPage();
+    render(<ThemeProvider theme={createAppTheme('light')}>{grid.props!.emptyState}</ThemeProvider>);
+    expect(screen.getByTestId('technologies-empty').textContent).toBe('pages.technologies.empty');
+    expect(screen.queryByRole('button', { name: 'pages.technologies.newTechnology' })).toBeNull();
   });
 
   it('counts what a bulk delete takes with it', async () => {
