@@ -1649,7 +1649,7 @@
         "empty": "Aucun identifiant pour l’instant.",
         "add": "Ajouter un identifiant CPE produit",
         "remove": "Retirer {{value}}",
-        "invalid": "Utilisez la forme partie:éditeur:produit, ex. a:microsoft:sql_server.",
+        "invalid": "Utilisez la forme partie:éditeur:produit, ex. a:microsoft:sql_server. Recopiez l’identifiant tel que la NVD l’écrit, barre oblique inverse comprise devant un signe : veeam_backup_\\&_replication.",
         "hint": "Où trouver cette valeur : cherchez le produit dans le dictionnaire CPE du NIST et gardez sa partie, son éditeur et son produit.",
         "dictionary": "Dictionnaire CPE du NIST"
       },

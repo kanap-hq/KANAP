@@ -1649,7 +1649,7 @@
         "empty": "No identifier yet.",
         "add": "Add a CPE product identifier",
         "remove": "Remove {{value}}",
-        "invalid": "Use the form part:vendor:product, e.g., a:microsoft:sql_server.",
+        "invalid": "Use the form part:vendor:product, e.g., a:microsoft:sql_server. Copy the identifier as the NVD writes it, backslash included before a sign: veeam_backup_\\&_replication.",
         "hint": "Where to find this value: search the product in the NIST CPE dictionary and keep its part, vendor and product.",
         "dictionary": "NIST CPE dictionary"
       },
