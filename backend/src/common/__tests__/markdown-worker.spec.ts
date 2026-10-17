@@ -41,8 +41,8 @@ import {
 // and normal texts give the same result as when processed in process.
 //
 // No assertion depends on the speed or the load of the machine: outcomes, the order in
-// which calls end, and lower bounds set by the pool's own timers (a timer never fires
-// early). Upper bounds on elapsed time made the spec fail on a loaded machine.
+// which calls end, and lower bounds set by the pool's own timers, read with a timer of the
+// same delay (see timerMark). Upper bounds on elapsed time made the spec fail on a loaded machine.
 
 /**
  * The installed parser is the one of the lockfile. An older `marked` (a stale
@@ -55,6 +55,19 @@ function assertLockfileParser() {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const installed = require('marked/package.json').version;
   assert.equal(installed, locked, `marked ${installed} is installed, package-lock.json has ${locked}: run npm ci in backend/`);
+}
+
+/**
+ * Tells whether a timer of `ms` armed now has fired. A pool timer of the same delay armed
+ * later fires after it: Node keeps the timers of one delay in a list, in the order they were
+ * armed. Elapsed times read with performance.now() cannot tell it: Node arms and fires timers
+ * on the event loop's clock (a coarse clock in whole milliseconds), so a timer may fire up to
+ * about 2 ms before its delay as performance.now() sees it (a 1000 ms wait read 998.x ms in CI).
+ */
+function timerMark(ms: number): { fired: () => boolean; clear: () => void } {
+  let fired = false;
+  const timer = setTimeout(() => { fired = true; }, ms);
+  return { fired: () => fired, clear: () => clearTimeout(timer) };
 }
 
 function fill(unit: string, bytes: number): string {
@@ -160,11 +173,13 @@ async function testSlowTextsAreRefusedWhileTheMainThreadServes() {
   };
   for (const [label, text] of Object.entries(texts)) {
     const startedAt = performance.now();
+    const budgetSpent = timerMark(MARKDOWN_WORK_TIMEOUT_MS);
     const { result, ticks } = await withMainThreadProbe(() => outcomeOf(() => normalizeMarkdownRichText(text)));
     const elapsedMs = performance.now() - startedAt;
+    budgetSpent.clear();
     assert.equal(result, MARKDOWN_TOO_COMPLEX, label);
     // Refused by the time budget, not before.
-    assert.ok(elapsedMs >= MARKDOWN_WORK_TIMEOUT_MS - 1, `${label}: refused after ${elapsedMs.toFixed(0)} ms`);
+    assert.ok(budgetSpent.fired(), `${label}: refused after ${elapsedMs.toFixed(0)} ms, before the time budget`);
     assertMainThreadServed(ticks, label);
   }
   // Image openers parse in linear time: accepted.
@@ -207,10 +222,16 @@ async function testAStoppedWorkerIsRefusedAndReplaced() {
   assert.equal(await normalizeMarkdownRichText('Replaced.'), 'Replaced.');
 }
 
-async function timedOutcome(work: () => Promise<unknown>): Promise<{ outcome: string; ms: number }> {
+/** `waited`: the call ended once the queue wait had passed (see timerMark). */
+async function timedOutcome(work: () => Promise<unknown>): Promise<{ outcome: string; ms: number; waited: boolean }> {
   const startedAt = performance.now();
-  const outcome = await outcomeOf(work);
-  return { outcome, ms: performance.now() - startedAt };
+  const queueWait = timerMark(QUEUE_WAIT_MS);
+  try {
+    const outcome = await outcomeOf(work);
+    return { outcome, ms: performance.now() - startedAt, waited: queueWait.fired() };
+  } finally {
+    queueWait.clear();
+  }
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -222,10 +243,10 @@ function track<T>(promise: Promise<T>): { promise: Promise<T>; ended: () => bool
   return { promise, ended: () => ended };
 }
 
-/** Refused after the queue wait: the wait timer never fires early. */
-function assertWaited(call: { outcome: string; ms: number }) {
+/** Refused after the queue wait, not at once. */
+function assertWaited(call: { outcome: string; ms: number; waited: boolean }) {
   assert.equal(call.outcome, MARKDOWN_BUSY);
-  assert.ok(call.ms >= QUEUE_WAIT_MS - 1, `waited ${call.ms.toFixed(0)} ms`);
+  assert.ok(call.waited, `refused after ${call.ms.toFixed(0)} ms, before the queue wait`);
 }
 
 /** Runs `work` as a request of `user` in `tenant` (the key of its calls). */
@@ -340,7 +361,7 @@ async function testAFullQueueAnswersBusy() {
   assert.equal(outcomes.filter((outcome) => outcome === MARKDOWN_BUSY).length, limit + 2, outcomes.join());
   // Two refused at once, the others after the queue wait.
   const busy = calls.filter((call) => call.outcome === MARKDOWN_BUSY);
-  assert.equal(busy.filter((call) => call.ms < QUEUE_WAIT_MS - 1).length, 2, busy.map((call) => call.ms.toFixed(0)).join());
+  assert.equal(busy.filter((call) => !call.waited).length, 2, busy.map((call) => call.ms.toFixed(0)).join());
   assert.equal(await normalizeMarkdownRichText('Served again.'), 'Served again.');
 }
 
