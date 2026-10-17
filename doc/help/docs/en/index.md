@@ -40,12 +40,19 @@ If you want the shortest path to productivity, start with the Fast Track guides 
 - [Technologies](technologies.md) - Track the products your applications run on, their versions and their end of support
 - [Connections](connections.md) - Track network and system connections
 - [Connection Map](connection-map.md) - Visualize connection topology
+- [Administration view](administration-view.md) - See who administers what: zones, domains and domain controllers
 
 **Applications**
 
 - [Applications](applications.md) - Document your application landscape
 - [Interfaces](interfaces.md) - Map data flows between applications
 - [Interface Map](interface-map.md) - Visualize interface relationships
+
+**Operations**
+
+- [Incidents](incidents.md) - Record incidents and what they affect
+- [End of support](end-of-support.md) - See what reaches its end of support and what it touches
+- [Vulnerabilities](vulnerabilities.md) - Review the published vulnerabilities of the technologies in use
 
 **Settings**
 

@@ -13,6 +13,12 @@ describe('getDocUrl', () => {
     expect(getDocUrl('/it/technologies/end-of-support')).toBe('https://doc.kanap.net/end-of-support/');
   });
 
+  it('opens the vulnerabilities and administration view manuals', () => {
+    expect(getDocUrl('/it/vulnerabilities')).toBe('https://doc.kanap.net/vulnerabilities/');
+    expect(getDocUrl('/it/vulnerabilities', 'fr')).toBe('https://doc.kanap.net/fr/vulnerabilities/');
+    expect(getDocUrl('/it/administration-view')).toBe('https://doc.kanap.net/administration-view/');
+  });
+
   it('opens the incident register manual from the list and an incident', () => {
     expect(getDocUrl('/it/incidents')).toBe('https://doc.kanap.net/incidents/');
     expect(getDocUrl('/it/incidents/INC-14/journal', 'es')).toBe('https://doc.kanap.net/es/incidents/');

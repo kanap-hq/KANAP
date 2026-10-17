@@ -89,6 +89,22 @@ La catégorie détermine quels champs apparaissent lors de la modification d'un 
 
 ## Serveurs et connexions
 
+### Zones d'administration
+
+Les zones de votre modèle d'administration, par exemple le tier 0 pour l'annuaire et ses contrôleurs, le tier 1 pour les serveurs, le tier 2 pour les postes de travail. Elles figurent dans votre politique d'administration ou votre modèle d'accès à privilèges.
+
+**Colonnes** : Nom, Groupe d'administrateurs, Niveau de privilèges, Emplacement des secrets, Description, Ne plus proposer
+
+- **Groupe d'administrateurs** : qui administre la zone, par exemple « Admins du domaine ».
+- **Niveau de privilèges** : le niveau de la zone dans votre modèle, par exemple « Tier 0 ».
+- **Emplacement des secrets** : où sont conservés les secrets d'administration de la zone, par exemple un coffre de mots de passe.
+
+**Où c'est utilisé** :
+- Espace de travail Technologies > panneau de propriétés > **Zone d'administration**
+- **Cartographie SI > Vue de l'administration**, qui liste chaque zone avec ses technologies et ses serveurs. Voir [Vue de l'administration](administration-view.md).
+
+Une zone marquée **Ne plus proposer** reste sur les technologies déjà placées dedans.
+
 ### Types de connexion
 
 Catalogue à deux niveaux (catégorie et entrée) des protocoles de connexion, avec les ports courants.
@@ -106,11 +122,16 @@ Les catégories par défaut incluent : Application, Authentification, Sauvegarde
 
 Domaines Active Directory ou DNS des actifs. Les entrées intégrées ne peuvent pas être modifiées. Le suffixe DNS sert à calculer le nom de domaine complet (FQDN) de chaque actif.
 
-**Colonnes** : Nom, Suffixe DNS, Ne plus proposer
+**Colonnes** : Nom, Suffixe DNS, Forêt, Comptes, Machines, Approbations, Ne plus proposer
+
+- **Forêt** : la forêt Active Directory du domaine, telle qu'affichée dans Domaines et approbations Active Directory.
+- **Comptes** et **Machines** : le nombre de comptes utilisateurs et d'ordinateurs du domaine, tels que comptés dans Utilisateurs et ordinateurs Active Directory. Nombres entiers uniquement.
+- **Approbations** : le bouton indique combien d'approbations a le domaine. Cliquez dessus pour lister les autres domaines avec lesquels il a une relation d'approbation, tels qu'affichés dans Domaines et approbations Active Directory. **Ajouter un domaine approuvé** en ajoute un ; choisissez son **Sens** : **sortante** (ce domaine approuve l'autre, dont les comptes peuvent accéder à ses ressources), **entrante** (l'autre domaine approuve celui-ci) ou **bidirectionnelle** (les deux). La boîte de dialogue montre aussi, en lecture seule, les approbations déclarées sur d'autres domaines envers celui-ci. Le bouton apparaît une fois le domaine enregistré, et demande au moins un autre domaine dans la liste.
 
 **Où c'est utilisé** :
 - Espace de travail Actifs > Onglet Technique > Sélecteur **Domaine**
 - Espace de travail Actifs > Onglet Technique > **FQDN** (auto-calculé depuis hostname + suffixe DNS)
+- **Cartographie SI > Vue de l'administration** : forêt, approbations, comptages et contrôleurs de domaine. Voir [Vue de l'administration](administration-view.md#domaines).
 
 **Entrées système** (ne peuvent pas être modifiées ni supprimées) :
 - **Workgroup** - Pour les actifs autonomes non joints à un domaine
@@ -252,7 +273,7 @@ Catégories qui décrivent la finalité principale de chaque application ou serv
 
 ### Classifications et continuité
 
-Cet éditeur configure les niveaux utilisés pour classifier les applications. Il est disponible aux utilisateurs `settings:admin` en haut de la page et s'ouvre dans une seule boîte de dialogue, avec une liste par catalogue :
+Cet éditeur configure les niveaux utilisés pour classifier les applications, et les technologies dans leur onglet Conformité. Il est disponible aux utilisateurs `settings:admin` en haut de la page et s'ouvre dans une seule boîte de dialogue, avec une liste par catalogue :
 
 - **Criticité business** : les niveaux qu'une application peut recevoir. Chaque niveau a un nom, une description affichée sous le nom au moment du choix, une **durée maximale tolérable d'interruption (DMIA)** facultative en minutes et un indicateur **Ne plus proposer**. La DMIA documente le niveau et déclenche un avertissement sur une application dont le RTO l'atteint ; c'est un attribut du niveau, pas une valeur saisie sur les applications.
 - **Criticité cyber** : niveaux de conséquences indépendants.
@@ -375,9 +396,10 @@ Cette approche vous permet de faire évoluer votre taxonomie au fil du temps san
 |-------|------------------|
 | **Méthodes d'accès** | Applications (Onglet Technique et support > Méthodes d'accès) |
 | **Catégories d'application** | Applications (Catégorie) |
+| **Zones d'administration** | Technologies (panneau de propriétés > Zone d'administration), Vue de l'administration |
 | **Fournisseurs cloud** | Actifs (Fournisseur), Sites (Fournisseur cloud) |
 | **Types de connexion** | Connexions (Type de connexion) |
-| **Domaines** | Actifs (Onglet Technique > Domaine, FQDN) |
+| **Domaines** | Actifs (Onglet Technique > Domaine, FQDN), Vue de l'administration |
 | **Entités** | Connexions (Entité source/cible), Carte des connexions (placement par niveau du graphe) |
 | **Types d'hébergement** | Sites (Vue d'ensemble) |
 | **Modèles d'intégration** | Segments d'interface (Modèle) |

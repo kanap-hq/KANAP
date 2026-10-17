@@ -637,8 +637,11 @@ Control which email notifications you receive.
 | **Portfolio** | Status changes, when added to a team, team changes on items you lead, comments |
 | **Tasks** | Assignment (as assignee, requestor, or viewer), status changes, comments |
 | **Budget** | Expiration warnings, status changes, comments |
+| **Technologies** | Critical or high vulnerabilities found on technologies you own for IT. Shown when vulnerabilities are followed |
 
 **Expiration warnings** email the owners of a contract, an OPEX line or a CAPEX line 30, 14, 7 and 1 day(s) before its dates: a contract's next cancellation deadline, a contract's end when it will not renew (the end of its term, or its end of validity when that comes first), an OPEX or CAPEX line's end of validity. A contract that renews tacitly is not warned about the end of each term. Only owners who switched on Budget notifications and **Expiration warnings** receive them. The check runs every day at 08:00 UTC. Each reminder is sent once per day to each recipient, even if the check runs again that day, for example after a restart.
+
+**Technology notifications** email the IT owners of a technology about its new critical or high vulnerabilities, after the check that finds them. See [Vulnerabilities](vulnerabilities.md#email-notifications) for what is announced.
 
 **Weekly Review Email**: Receive a periodic summary of your activity and upcoming items. Configure:
 - **Day of the week** (e.g., Monday)

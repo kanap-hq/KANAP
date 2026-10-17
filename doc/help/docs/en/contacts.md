@@ -104,6 +104,10 @@ Each supplier has a **Contacts** tab showing all contacts linked to that vendor.
 
 In the Applications workspace, the **Technical & Support** tab references contacts for support escalation.
 
+### Technology support
+
+In the Technologies workspace, the **Operations** tab lists the support contacts of a technology. See [Technologies](technologies.md#operations). In the contact's **Used by** section, a retired technology comes last, marked **Disabled**.
+
 ### Location contacts
 
 Locations can have support contacts (facility managers, NOC contacts, etc.).

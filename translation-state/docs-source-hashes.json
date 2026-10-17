@@ -1,6 +1,8 @@
 {
   "files": {
-    "admin.md": "8ecfb68fa7ca236b305b2710430f897b",
+    "admin.md": "b291845378a7559bfcfffeadf7bfd116",
+
+    "administration-view.md": "eb1547c0125bd7429f52c8bcee20530a",
 
     "agents-activity.md": "21ee59e63955c7e47568f162a1ec4b51",
 
@@ -22,9 +24,9 @@
 
     "analytics.md": "18af5db6bf7cf142fd4a482388b3b8e2",
 
-    "applications.md": "a4f8043dc48882c82beb8d550e18834c",
+    "applications.md": "b5a532a4bf4278711d642f80425f6457",
 
-    "assets.md": "caee1d91378fc450797203fc06f2e76c",
+    "assets.md": "cd8621f96f34692aae302cf1b9b02491",
 
     "branding.md": "89014110f2460e59fca29b2bc2064272",
 
@@ -48,7 +50,7 @@
 
     "connections.md": "5cba67af94dd114670d2d848b6d0f9cc",
 
-    "contacts.md": "2fb322fa0779b69abe58c585a01c8d4c",
+    "contacts.md": "0e161f9ce73f2022f70c088a0cd29b7d",
 
     "contracts.md": "5f4a401e6fe17b9c6a8db24faf8e69b5",
 
@@ -72,7 +74,7 @@
 
     "incidents.md": "ef59929d4231ef3336b2f467d7183eec",
 
-    "index.md": "bae902435036eb928a11d9e28d8b87d9",
+    "index.md": "0e06864f24741ce8c8b90c5dee229a74",
 
     "integrations.md": "08e93abcf4c16c9e2245db72783d7fb1",
 
@@ -80,7 +82,7 @@
 
     "interfaces.md": "0244c88fdb86c07061f9376f15affbe6",
 
-    "it-ops-settings.md": "5b49ed959f04bba9f065f8192262f5b0",
+    "it-ops-settings.md": "14cd36200db47335279ca67bfdb772ee",
 
     "knowledge.md": "1b050c28addcbf5de529b62223bfeaec",
 
@@ -130,7 +132,9 @@
 
     "tasks.md": "ee8e6e77bb27d9ce4c3211a6d0deda8e",
 
-    "technologies.md": "1779d87a5cdd96291842ecc5e28f235b",
+    "technologies.md": "d78c43d76a5cbb0017b8a59a5769d57f",
+
+    "vulnerabilities.md": "6b265ec7fc7240eaabe59adf1c49a3c3",
 
     "working-day-calendars.md": "140c26bb4fc51fe411ad29fc6f773024"
   },

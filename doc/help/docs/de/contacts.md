@@ -104,6 +104,10 @@ Jeder Lieferant hat einen **Kontakte**-Tab, der alle mit diesem Anbieter verknü
 
 Im Anwendungs-Arbeitsbereich referenziert der Tab **Technik & Support** Kontakte für die Support-Eskalation.
 
+### Technologie-Support
+
+Im Technologie-Arbeitsbereich listet der Reiter **Betrieb** die Support-Kontakte einer Technologie. Siehe [Technologien](technologies.md#betrieb). Im Abschnitt **Verwendet in** des Kontakts steht eine außer Betrieb genommene Technologie am Ende, markiert als **Deaktiviert**.
+
 ### Standort-Kontakte
 
 Standorte können Support-Kontakte haben (Facility Manager, NOC-Kontakte usw.).

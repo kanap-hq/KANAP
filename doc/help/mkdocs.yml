@@ -118,6 +118,8 @@ plugins:
             Interface Map: Carte des interfaces
             Incidents: Incidents
             End of support: Fins de support
+            Vulnerabilities: Vulnérabilités
+            Administration view: "Vue de l'administration"
             "Netbox synchronisation": "Synchronisation Netbox"
             Settings: Paramètres
             Knowledge: Base de connaissances
@@ -201,6 +203,8 @@ plugins:
             Interface Map: Schnittstellenkarte
             Incidents: Vorfälle
             End of support: Supportende
+            Vulnerabilities: Schwachstellen
+            Administration view: "Administrationssicht"
             "Netbox synchronisation": "Netbox-Synchronisierung"
             Settings: Einstellungen
             Knowledge: Wissensdatenbank
@@ -284,6 +288,8 @@ plugins:
             Interface Map: Mapa de interfaces
             Incidents: Incidentes
             End of support: Fin de soporte
+            Vulnerabilities: Vulnerabilidades
+            Administration view: "Vista de la administración"
             "Netbox synchronisation": "Sincronización con Netbox"
             Settings: Configuración
             Knowledge: Base de conocimiento
@@ -364,6 +370,7 @@ nav:
       - Technologies: technologies.md
       - Connections: connections.md
       - Connection Map: connection-map.md
+      - Administration view: administration-view.md
       - "Netbox synchronisation": netbox.md
     - Applications:
       - Applications: applications.md
@@ -371,6 +378,7 @@ nav:
       - Interface Map: interface-map.md
     - Incidents: incidents.md
     - End of support: end-of-support.md
+    - Vulnerabilities: vulnerabilities.md
     - Settings: it-ops-settings.md
 
   - Knowledge:

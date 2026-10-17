@@ -637,8 +637,11 @@ Steuern Sie, welche E-Mail-Benachrichtigungen Sie erhalten.
 | **Portfolio** | Statusänderungen, Hinzufügung zu einem Team, Teamänderungen bei Elementen die Sie leiten, Kommentare |
 | **Aufgaben** | Zuweisung (als Beauftragter, Antragsteller oder Betrachter), Statusänderungen, Kommentare |
 | **Budget** | Ablaufwarnungen, Statusänderungen, Kommentare |
+| **Technologien** | Kritische oder hohe Schwachstellen in Technologien, für die Sie IT-verantwortlich sind. Angezeigt, wenn Schwachstellen verfolgt werden |
 
 **Ablaufwarnungen** senden den Verantwortlichen eines Vertrags, einer OPEX-Zeile oder einer CAPEX-Zeile 30, 14, 7 und 1 Tag(e) vor deren Terminen eine E-Mail: der nächste Kündigungstermin eines Vertrags, das Ende eines Vertrags, der sich nicht verlängert (das Ende seiner Periode, oder sein Ende der Gültigkeit, wenn es früher liegt), das Ende der Gültigkeit einer OPEX- oder CAPEX-Zeile. Ein Vertrag mit stillschweigender Verlängerung wird nicht vor dem Ende jeder Periode gewarnt. Nur Verantwortliche, die die Budget-Benachrichtigungen und die **Ablaufwarnungen** eingeschaltet haben, erhalten sie. Die Prüfung läuft jeden Tag um 08:00 UTC. Jede Erinnerung geht pro Tag nur einmal an jeden Empfänger, auch wenn die Prüfung an diesem Tag erneut läuft, etwa nach einem Neustart.
+
+**Technologie-Benachrichtigungen** informieren die IT-Verantwortlichen einer Technologie per E-Mail über ihre neuen kritischen oder hohen Schwachstellen, nach der Prüfung, die sie findet. Was gemeldet wird, steht unter [Schwachstellen](vulnerabilities.md#e-mail-benachrichtigungen).
 
 **Wöchentliche Zusammenfassungs-E-Mail**: Erhalten Sie eine regelmäßige Zusammenfassung Ihrer Aktivitäten und anstehenden Termine. Konfigurieren Sie:
 - **Wochentag** (z. B. Montag)

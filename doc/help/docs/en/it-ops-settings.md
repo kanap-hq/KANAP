@@ -89,6 +89,22 @@ The category determines which fields appear when editing a Location:
 
 ## Servers & connections
 
+### Administration zones
+
+The zones of your administration model, for example Tier 0 for the directory and its controllers, Tier 1 for the servers, Tier 2 for the workstations. Find them in your administration policy or your privileged access model.
+
+**Columns**: Name, Administrator group, Privilege level, Secrets location, Description, No longer offered
+
+- **Administrator group**: who administers the zone, for example "Domain admins".
+- **Privilege level**: the level of the zone in your model, for example "Tier 0".
+- **Secrets location**: where the zone's administrator secrets are kept, for example a password vault.
+
+**Where used**:
+- Technologies workspace → properties drawer → **Administration zone**
+- **IT Landscape > Administration view**, which lists each zone with its technologies and servers. See [Administration view](administration-view.md).
+
+A zone marked **No longer offered** stays on the technologies already placed in it.
+
 ### Connection types
 
 A two-level catalog (category and entry) of connection protocols, with typical ports.
@@ -106,11 +122,16 @@ Default categories include: Application, Authentication, Backup, Database, Email
 
 Active Directory or DNS domains for assets. Built-in entries cannot be modified. The DNS suffix is used to compute the fully qualified domain name (FQDN) for each asset.
 
-**Columns**: Name, DNS suffix, No longer offered
+**Columns**: Name, DNS suffix, Forest, Accounts, Machines, Trusts, No longer offered
+
+- **Forest**: the Active Directory forest of the domain, as shown in Active Directory Domains and Trusts.
+- **Accounts** and **Machines**: the numbers of user accounts and computers in the domain, as counted in Active Directory Users and Computers. Whole numbers only.
+- **Trusts**: the button shows how many trusts the domain has. Click it to list the other domains it has a trust with, as shown in Active Directory Domains and Trusts. **Add a trusted domain** adds one; choose its **Direction**: **outgoing** (this domain trusts the other one, whose accounts can reach its resources), **incoming** (the other domain trusts this one) or **two-way** (both). The dialog also shows, read only, the trusts declared on other domains toward this one. The button appears once the domain is saved, and needs at least one other domain in the list.
 
 **Where used**:
 - Assets workspace → Technical tab → **Domain** selector
 - Assets workspace → Technical tab → **FQDN** (auto-computed from hostname + DNS suffix)
+- **IT Landscape > Administration view**: forest, trusts, counts and domain controllers. See [Administration view](administration-view.md#domains).
 
 **System entries** (cannot be modified or deleted):
 - **Workgroup** - For standalone assets not joined to a domain
@@ -252,7 +273,7 @@ Categories that describe the primary purpose of each application or service.
 
 ### Classifications and continuity
 
-This editor configures the levels used to classify applications. It is available to `settings:admin` users at the top of the page and opens as a single dialog with one list per catalog:
+This editor configures the levels used to classify applications, and technologies in their Compliance tab. It is available to `settings:admin` users at the top of the page and opens as a single dialog with one list per catalog:
 
 - **Business criticality**: the levels an application can be assigned. Each level has a name, a description shown under the name when choosing a level, an optional **maximum tolerable downtime** in minutes, and a **No longer offered** flag. The downtime documents the level and triggers a warning on an application whose RTO reaches it; it is an attribute of the level, not a value entered on applications.
 - **Cyber criticality**: independent consequence levels.
@@ -375,9 +396,10 @@ This approach lets you evolve your taxonomy over time without breaking existing 
 |------|-----------------|
 | **Access methods** | Applications (Technical & Support tab → Access Methods) |
 | **Application categories** | Applications (Category) |
+| **Administration zones** | Technologies (properties drawer → Administration zone), Administration view |
 | **Cloud providers** | Assets (Provider), Locations (Cloud provider) |
 | **Connection types** | Connections (Connection Type) |
-| **Domains** | Assets (Technical tab → Domain, FQDN) |
+| **Domains** | Assets (Technical tab → Domain, FQDN), Administration view |
 | **Entities** | Connections (Source/Target Entity), Connection Map (graph tier placement) |
 | **Hosting types** | Locations (Overview) |
 | **Integration patterns** | Interface legs (Pattern) |
