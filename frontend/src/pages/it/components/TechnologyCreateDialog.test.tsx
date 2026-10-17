@@ -53,7 +53,13 @@ describe('TechnologyCreateDialog', () => {
     const onCreated = renderDialog();
     fireEvent.change(screen.getByLabelText('pages.technologies.create.searchLabel'), { target: { value: 'sql' } });
     await waitFor(() => expect(get).toHaveBeenCalledWith('/technologies/catalog', { params: { q: 'sql', language: 'en' } }));
-    expect(await screen.findByText('Microsoft relational database.')).toBeTruthy();
+    const description = await screen.findByText('Microsoft relational database.');
+    expect(description.getAttribute('title')).toBe('Microsoft relational database.');
+    // Two levels: the name and its facts on top, the description below across the row.
+    const row = description.closest('[role="listitem"]')!;
+    const top = row.firstElementChild!;
+    expect(top.textContent).toBe('Microsoft SQL ServerMicrosoft · Database');
+    expect(row.lastElementChild).toBe(description);
     fireEvent.click(await screen.findByText('Microsoft SQL Server'));
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith('TEC-4'));
     expect(post).toHaveBeenCalledWith('/technologies/adopt', { catalog_key: 'mssqlserver', language: 'en' });

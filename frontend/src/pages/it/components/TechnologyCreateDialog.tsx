@@ -195,10 +195,8 @@ export default function TechnologyCreateDialog({ open, onClose, onCreated }: Pro
                   disabled={busy}
                   onClick={() => { void adopt(entry); }}
                   sx={(theme) => ({
-                    display: 'flex',
+                    display: 'block',
                     width: '100%',
-                    alignItems: 'baseline',
-                    gap: 1,
                     border: 0,
                     borderBottom: `1px solid ${theme.palette.kanap.border.soft}`,
                     bgcolor: 'transparent',
@@ -212,28 +210,35 @@ export default function TechnologyCreateDialog({ open, onClose, onCreated }: Pro
                     '&:hover': { bgcolor: theme.palette.kanap.bg.hover },
                   })}
                 >
-                  <Box component="span" sx={{ flex: 1, minWidth: 0 }}>
-                    <Box component="span" sx={{ display: 'block' }}>{entry.name}</Box>
-                    {entry.description && (
-                      <Box
-                        component="span"
-                        title={entry.description}
-                        sx={(theme) => ({
-                          display: 'block',
-                          fontSize: 12,
-                          color: theme.palette.kanap.text.tertiary,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        })}
-                      >
-                        {entry.description}
-                      </Box>
-                    )}
+                  {/* Top: the name at its full width, then the secondary facts on the right. */}
+                  <Box component="span" sx={{ display: 'flex', alignItems: 'baseline', gap: 1.5 }}>
+                    <Box component="span" sx={{ flex: '1 0 auto' }}>{entry.name}</Box>
+                    <Box
+                      component="span"
+                      sx={(theme) => ({ flex: '0 1 auto', minWidth: 0, textAlign: 'right', fontSize: 12, color: theme.palette.kanap.text.tertiary })}
+                    >
+                      {/* The hosting type (lot H1) joins this list, after the family. */}
+                      {[entry.editor, labelFor('technologyFamily', entry.family)].filter(Boolean).join(' · ')}
+                    </Box>
                   </Box>
-                  <Box component="span" sx={(theme) => ({ fontSize: 12, color: theme.palette.kanap.text.tertiary })}>
-                    {[entry.editor, labelFor('technologyFamily', entry.family)].filter(Boolean).join(' · ')}
-                  </Box>
+                  {/* Below: the description across the row, cut at its end, whole on hover. */}
+                  {entry.description && (
+                    <Box
+                      component="span"
+                      title={entry.description}
+                      sx={(theme) => ({
+                        display: 'block',
+                        mt: 0.25,
+                        fontSize: 12,
+                        color: theme.palette.kanap.text.tertiary,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      })}
+                    >
+                      {entry.description}
+                    </Box>
+                  )}
                 </Box>
               ))}
             </Box>
