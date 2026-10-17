@@ -22,12 +22,12 @@ async function adopted(runner: QueryRunner, tenantId: string, number: number, na
   );
 }
 
-async function version(runner: QueryRunner, tenantId: string, technologyId: string, label: string, cpeVersion: string | null = null) {
+async function version(runner: QueryRunner, tenantId: string, technologyId: string, label: string, cpeVersion: string | null = null, catalogKey: string | null = null) {
   await setTenant(runner, tenantId);
   return one(
     runner,
-    `INSERT INTO technology_versions (tenant_id, technology_id, label, cpe_version) VALUES ($1, $2, $3, $4) RETURNING id`,
-    [tenantId, technologyId, label, cpeVersion],
+    `INSERT INTO technology_versions (tenant_id, technology_id, label, cpe_version, catalog_key) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+    [tenantId, technologyId, label, cpeVersion, catalogKey],
   );
 }
 
@@ -85,6 +85,10 @@ async function testCompletesAdoptedTechnologies() {
     // Tenant B: Exchange adopted, its Subscription Edition without CPE version.
     const exchange = await adopted(runner, b, 1, 'Microsoft Exchange Server', 'msexchange', ['a:microsoft:exchange_server']);
     const se = await version(runner, b, exchange, 'Subscription Edition SU11');
+    // Adopted, then renamed by the tenant: recognised by its catalog key.
+    const renamed = await version(runner, b, exchange, 'Exchange SE', null, 'msexchange:subscription');
+    // The label of the release, but adopted as another one: its key decides, it is left alone.
+    const otherKey = await version(runner, b, exchange, 'subscription edition su11 (old)', null, 'msexchange:2019');
     await runner.query(`SELECT set_config('app.current_tenant', '', true)`);
 
     // Under FORCE RLS, the search index trigger on `technologies` writes only with the tenant set:
@@ -103,9 +107,11 @@ async function testCompletesAdoptedTechnologies() {
     assert.equal(await cpeVersionOf(runner, a, typedVersion), null);
     assert.deepEqual(await cpeOf(runner, b, exchange), ['a:microsoft:exchange_server', 'a:microsoft:exchange_server_subscription_edition']);
     assert.equal(await cpeVersionOf(runner, b, se), '15.2');
+    assert.equal(await cpeVersionOf(runner, b, renamed), '15.2', 'a renamed version is found by its catalog key');
+    assert.equal(await cpeVersionOf(runner, b, otherKey), null);
 
     assert.match(log, new RegExp(`tenant ${await slugOf(runner, a)} \\(${a}\\): 3 technologies completed, 0 CPE versions set`));
-    assert.match(log, new RegExp(`tenant ${await slugOf(runner, b)} \\(${b}\\): 1 technologies completed, 1 CPE versions set`));
+    assert.match(log, new RegExp(`tenant ${await slugOf(runner, b)} \\(${b}\\): 1 technologies completed, 2 CPE versions set`));
 
     // A rerun adds nothing.
     const again = await logged(() => migration.up(runner));

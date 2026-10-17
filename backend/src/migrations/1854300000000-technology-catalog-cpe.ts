@@ -8,8 +8,9 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * For each technology of a tenant whose `catalog_key` names an entry below:
  * 1. the identifiers of `ADDED_CPE` it lacks are added to `cpe_products` (none is removed, so an
  *    identifier the tenant removed by hand comes back only if it is one of these);
- * 2. each version whose label equals (without case) one of `CPE_VERSIONS` receives that
- *    `cpe_version` when it has none: Exchange Subscription Edition, compared on its build line. A
+ * 2. each version of `CPE_VERSIONS` receives that `cpe_version` when it has none; a version is
+ *    recognised by its `catalog_key` (`msexchange:subscription`, kept when the tenant renames it),
+ *    failing a key by its label without case: Exchange Subscription Edition, compared on its build line. A
  *    value set by the tenant is kept. SQL Server keeps its years: the matching applies its per-release products to
  *    the release named by the label.
  *
@@ -66,9 +67,9 @@ export const ADDED_CPE: Record<string, string[]> = {
   zabbix: ['a:zabbix:zabbix_server'],
 };
 
-/** Catalog key, version label, `cpe_version` set by lot C3 (the catalog gave none before). */
-export const CPE_VERSIONS: Array<[string, string, string]> = [
-  ['msexchange', 'Subscription Edition SU11', '15.2'],
+/** Catalog key, version key, version label, `cpe_version` set by lot C3 (the catalog gave none before). */
+export const CPE_VERSIONS: Array<[string, string, string, string]> = [
+  ['msexchange', 'subscription', 'Subscription Edition SU11', '15.2'],
 ];
 
 type Counts = { tenant_id: string; slug: string | null; identifiers: number; versions: number };
@@ -105,14 +106,15 @@ export class TechnologyCatalogCpe1854300000000 implements MigrationInterface {
           `WITH changed AS (
              UPDATE technology_versions v
                 SET cpe_version = c.cpe_version, updated_at = now()
-               FROM technologies t, unnest($2::text[], $3::text[], $4::text[]) AS c(key, label, cpe_version)
+               FROM technologies t, unnest($2::text[], $3::text[], $4::text[], $5::text[]) AS c(key, version_key, label, cpe_version)
               WHERE v.tenant_id = $1 AND t.tenant_id = $1 AND t.id = v.technology_id
-                AND t.catalog_key = c.key AND lower(v.label) = lower(c.label)
+                AND t.catalog_key = c.key
+                AND (v.catalog_key = c.key || ':' || c.version_key OR (v.catalog_key IS NULL AND lower(v.label) = lower(c.label)))
                 AND v.cpe_version IS NULL
              RETURNING 1
            )
            SELECT count(*)::int AS n FROM changed`,
-          [tenant.id, CPE_VERSIONS.map(([key]) => key), CPE_VERSIONS.map(([, label]) => label), CPE_VERSIONS.map(([, , version]) => version)],
+          [tenant.id, CPE_VERSIONS.map(([key]) => key), CPE_VERSIONS.map(([, versionKey]) => versionKey), CPE_VERSIONS.map(([, , label]) => label), CPE_VERSIONS.map(([, , , version]) => version)],
         );
         if (identifiers.n || versions.n) counts.push({ tenant_id: tenant.id, slug: tenant.slug, identifiers: identifiers.n, versions: versions.n });
       }
