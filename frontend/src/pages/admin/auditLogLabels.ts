@@ -80,6 +80,7 @@ export const EXPORT_RESOURCE_KEYS: Readonly<Record<string, string>> = {
   'technologies/applications': 'technologyApplications',
   'technologies/reports/end-of-support': 'endOfSupportReport',
   users: 'users',
+  vulnerabilities: 'vulnerabilities',
   'working-day-profiles': 'workingDayCalendars',
 };
 

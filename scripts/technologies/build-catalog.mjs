@@ -10,10 +10,13 @@
 // Operating systems are not in this catalog: they come with lot T3.
 //
 // Usage: node scripts/technologies/build-catalog.mjs [--out <file>] [--today YYYY-MM-DD]
+//        node scripts/technologies/build-catalog.mjs --refresh-cpe-versions [--out <file>]
+//        (recomputes `cpe_version` in the existing file with `cpeVersionOf` and adds the `cpe`
+//        identifiers of PRODUCTS to `cpe_products`, without the network)
 // Reproducible: the same answers from the API give the same file (sorted keys, no timestamp
 // besides `source.retrieved_on`, the day passed with --today or the current day).
 
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -30,11 +33,12 @@ const ENDED_YEARS_KEPT = 4;
  * The products kept, by family (codes of `DEFAULT_TECHNOLOGY_FAMILIES`). `key`: the catalog key
  * stored on an adopted technology (`technologies.catalog_key`). `cpe`: identifiers added to the
  * ones endoflife.date publishes (`part:vendor:product`). `mode`: `subscribed` for a service.
+ * `cpeVersion: 'label'`: the label is the NVD version as it stands (see `cpeVersionOf`).
  */
 const PRODUCTS = [
   // Databases
   { key: 'mssqlserver', slug: 'mssqlserver', name: 'Microsoft SQL Server', editor: 'Microsoft', family: 'database' },
-  { key: 'oracle-database', slug: 'oracle-database', name: 'Oracle Database', editor: 'Oracle', family: 'database', cpe: ['a:oracle:database_server'] },
+  { key: 'oracle-database', slug: 'oracle-database', name: 'Oracle Database', editor: 'Oracle', family: 'database', cpe: ['a:oracle:database', 'a:oracle:database_server'], cpeVersion: 'label' },
   { key: 'postgresql', slug: 'postgresql', name: 'PostgreSQL', editor: 'PostgreSQL Global Development Group', family: 'database' },
   { key: 'mysql', slug: 'mysql', name: 'MySQL', editor: 'Oracle', family: 'database' },
   { key: 'mariadb', slug: 'mariadb', name: 'MariaDB', editor: 'MariaDB Foundation', family: 'database' },
@@ -157,9 +161,30 @@ function cleanLabel(label, name) {
   return text || String(name);
 }
 
+/**
+ * The NVD version of a release (`cpe_version`), read by the vulnerability matching (lot T6a) in
+ * place of the label, which compares on its numeric prefix:
+ * - a label that is a version (`9.0`, `2019`) or starts with one glued to letters (`21c`, `2024E`)
+ *   needs none: null;
+ * - a label whose number is not in front, or followed by words, gives that number:
+ *   `IBM MQ 9.4 LTS` → `9.4`, `Core 3.1` → `3.1`, `2016 SP3` → `2016`, `2019 CU15 SU5` → `2019`
+ *   (the NVD writes `sql_server:2016` and `exchange_server:2019`, the service pack or cumulative
+ *   update in the `update` component); a label without such a number stays null (`Subscription
+ *   Edition SU11`: the label stands for it, counted as concerned);
+ * - Oracle Database (`cpeVersion: 'label'`): the NVD names the releases `database_server:19c`,
+ *   `21c` in its exact criteria and ranges them in numbers (`19.3` to `19.22`); the label in lower
+ *   case matches both, `19c` being 19 with a qualifier.
+ */
+function cpeVersionOf(label, entry) {
+  const text = String(label ?? '').trim();
+  if (entry?.cpeVersion === 'label') return text.toLowerCase() || null;
+  if (/^v?\d+(\.\d+)*[a-z]*$/i.test(text)) return null;
+  return text.split(/\s+/).find((token) => /^\d+(\.\d+)*$/.test(token)) ?? null;
+}
+
 const day = (value) => (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null);
 
-function versionsOf(releases, today) {
+function versionsOf(releases, today, entry) {
   const cutoff = `${Number(today.slice(0, 4)) - ENDED_YEARS_KEPT}${today.slice(4)}`;
   const out = [];
   const seen = new Set();
@@ -183,8 +208,7 @@ function versionsOf(releases, today) {
     out.push({
       key: name,
       label,
-      // The NVD version is not published here: left empty, the label stands for it (lot T6 refines).
-      cpe_version: null,
+      cpe_version: cpeVersionOf(label, entry),
       build_prefixes: name !== label && /^\d+(\.\d+)*$/.test(name) ? [name] : [],
       release_date: day(release.releaseDate),
       standard_support_end: standard,
@@ -201,8 +225,34 @@ async function fetchProduct(slug) {
   return (await response.json()).result;
 }
 
+/**
+ * `--refresh-cpe-versions`: the existing file with `cpe_version` recomputed and the `cpe` of
+ * PRODUCTS added to `cpe_products` (the endoflife.date identifiers already in the file are kept),
+ * nothing fetched.
+ */
+function refreshCpeVersions(out) {
+  const catalog = JSON.parse(readFileSync(out, 'utf8'));
+  let changed = 0;
+  let added = 0;
+  for (const product of catalog.products) {
+    const entry = PRODUCTS.find((p) => p.key === product.key);
+    const cpe = new Set(product.cpe_products);
+    for (const extra of entry?.cpe ?? []) cpe.add(extra.toLowerCase());
+    added += cpe.size - product.cpe_products.length;
+    product.cpe_products = [...cpe].sort();
+    for (const version of product.versions) {
+      const next = cpeVersionOf(version.label, entry);
+      if (next !== version.cpe_version) changed += 1;
+      version.cpe_version = next;
+    }
+  }
+  writeFileSync(out, `${JSON.stringify(catalog, null, 2)}\n`);
+  process.stderr.write(`${changed} CPE versions changed, ${added} CPE products added in ${out}\n`);
+}
+
 async function main() {
   const out = resolve(argValue('--out') ?? DEFAULT_OUT);
+  if (process.argv.includes('--refresh-cpe-versions')) return refreshCpeVersions(out);
   const today = argValue('--today') ?? new Date().toISOString().slice(0, 10);
   const products = [];
   for (const entry of PRODUCTS) {
@@ -222,7 +272,7 @@ async function main() {
       mode: entry.mode ?? 'installed',
       cpe_products: [...cpe].sort(),
       source_url: entry.slug ? `https://endoflife.date/${entry.slug}` : null,
-      versions: remote ? versionsOf(remote.releases ?? [], today) : [],
+      versions: remote ? versionsOf(remote.releases ?? [], today, entry) : [],
     });
     process.stderr.write(`${entry.key}: ${products.at(-1).versions.length} versions, ${cpe.size} CPE\n`);
   }

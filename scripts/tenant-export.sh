@@ -315,6 +315,7 @@ TENANT_TABLES=(
   technology_projects
   technology_spend_items
   technology_versions
+  technology_vulnerabilities
   user_dashboard_config
   user_notification_preferences
   user_page_roles

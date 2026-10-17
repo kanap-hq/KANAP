@@ -79,6 +79,13 @@ export const UNKEYED_REFERENCE_COLUMNS: Readonly<Record<string, string>> = {
     'List of companies (uuid[]). A company named here cannot be deleted: the company delete check counts the ' +
     'default allocation methods that spread over it (companies/company-usages.ts).',
 
+  // Vulnerabilities (NVD feed).
+  'technology_vulnerabilities.cve_id':
+    'Names a CVE of the platform cache (vulnerability_cves) without a key, so that the tenant export and the tenant ' +
+    'purge stay within the tenant\'s tables. The feed never deletes a CVE that a tenant row names.',
+  'vulnerability_cves.cve_id':
+    'Not a reference: the CVE number published by the NVD, primary key of the platform cache.',
+
   // Identifiers of other systems.
   'ai_api_keys.oauth_client_id': EXTERNAL,
   'asset_external_links.external_id': EXTERNAL,

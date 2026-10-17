@@ -20,6 +20,8 @@ export class ConfigController {
         builtinAiProvider: !Features.SINGLE_TENANT,
         // Sample data (Administration > Sample data, home banner): cloud workspaces only.
         sampleData: !Features.SINGLE_TENANT,
+        // Vulnerabilities (NVD feed): on by default in the cloud, off by default on-premise.
+        vulnerabilityFeed: Features.VULNERABILITY_FEED_ENABLED,
       },
       version: APP_VERSION,
       supportedLocales: [...SUPPORTED_LOCALES],

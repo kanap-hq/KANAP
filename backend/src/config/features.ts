@@ -14,4 +14,9 @@ export const Features = {
   AI_MCP_ENABLED: parseBoolean(process.env.AI_MCP_ENABLED),
   AI_SETTINGS_ENABLED: parseBoolean(process.env.AI_SETTINGS_ENABLED),
   AI_WEB_SEARCH_READY: !!process.env.BRAVE_SEARCH_API_KEY,
+  // The NVD feed needs the way out to the NVD or a mirror (NVD_API_BASE_URL): on by default in the
+  // cloud, off by default on-premise. VULNERABILITY_FEED_ENABLED set either way wins.
+  VULNERABILITY_FEED_ENABLED: (process.env.VULNERABILITY_FEED_ENABLED ?? '').trim()
+    ? parseBoolean(process.env.VULNERABILITY_FEED_ENABLED)
+    : !isSingleTenant,
 };

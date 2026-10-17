@@ -2064,7 +2064,7 @@
         {
           "key": "13.0-sp3-acp",
           "label": "2016 SP3 Azure Connect Pack",
-          "cpe_version": null,
+          "cpe_version": "2016",
           "build_prefixes": [],
           "release_date": "2022-05-19",
           "standard_support_end": "2026-07-14",
@@ -2073,7 +2073,7 @@
         {
           "key": "13.0-sp3",
           "label": "2016 SP3",
-          "cpe_version": null,
+          "cpe_version": "2016",
           "build_prefixes": [],
           "release_date": "2021-09-15",
           "standard_support_end": "2026-07-14",
@@ -2093,7 +2093,7 @@
         {
           "key": "12.0-sp3",
           "label": "2014 SP3",
-          "cpe_version": null,
+          "cpe_version": "2014",
           "build_prefixes": [],
           "release_date": "2018-10-30",
           "standard_support_end": "2019-07-09",
@@ -2102,7 +2102,7 @@
         {
           "key": "11.0-sp4",
           "label": "2012 SP4",
-          "cpe_version": null,
+          "cpe_version": "2012",
           "build_prefixes": [],
           "release_date": "2017-10-05",
           "standard_support_end": "2022-07-12",
@@ -2424,6 +2424,7 @@
       "family": "database",
       "mode": "installed",
       "cpe_products": [
+        "a:oracle:database",
         "a:oracle:database_server"
       ],
       "source_url": "https://endoflife.date/oracle-database",
@@ -2431,7 +2432,7 @@
         {
           "key": "23",
           "label": "26ai",
-          "cpe_version": null,
+          "cpe_version": "26ai",
           "build_prefixes": [
             "23"
           ],
@@ -2442,7 +2443,7 @@
         {
           "key": "21",
           "label": "21c",
-          "cpe_version": null,
+          "cpe_version": "21c",
           "build_prefixes": [
             "21"
           ],
@@ -2453,7 +2454,7 @@
         {
           "key": "19",
           "label": "19c",
-          "cpe_version": null,
+          "cpe_version": "19c",
           "build_prefixes": [
             "19"
           ],
@@ -3467,7 +3468,7 @@
         {
           "key": "4.12",
           "label": "4.12 Edge",
-          "cpe_version": null,
+          "cpe_version": "4.12",
           "build_prefixes": [
             "4.12"
           ],
@@ -3478,7 +3479,7 @@
         {
           "key": "4.11",
           "label": "4.11 Edge",
-          "cpe_version": null,
+          "cpe_version": "4.11",
           "build_prefixes": [
             "4.11"
           ],
@@ -3489,7 +3490,7 @@
         {
           "key": "4.10",
           "label": "4.10 Edge",
-          "cpe_version": null,
+          "cpe_version": "4.10",
           "build_prefixes": [
             "4.10"
           ],
@@ -3500,7 +3501,7 @@
         {
           "key": "4.9-lts",
           "label": "4.9 LTS",
-          "cpe_version": null,
+          "cpe_version": "4.9",
           "build_prefixes": [],
           "release_date": "2025-02-28",
           "standard_support_end": "2027-08-31",
@@ -3509,7 +3510,7 @@
         {
           "key": "4.9",
           "label": "4.9 Edge",
-          "cpe_version": null,
+          "cpe_version": "4.9",
           "build_prefixes": [
             "4.9"
           ],
@@ -3520,7 +3521,7 @@
         {
           "key": "4.8",
           "label": "4.8 Edge",
-          "cpe_version": null,
+          "cpe_version": "4.8",
           "build_prefixes": [
             "4.8"
           ],
@@ -3531,7 +3532,7 @@
         {
           "key": "4.7",
           "label": "4.7 Edge",
-          "cpe_version": null,
+          "cpe_version": "4.7",
           "build_prefixes": [
             "4.7"
           ],
@@ -3542,7 +3543,7 @@
         {
           "key": "4.6-lts",
           "label": "4.6 LTS",
-          "cpe_version": null,
+          "cpe_version": "4.6",
           "build_prefixes": [],
           "release_date": "2024-02-29",
           "standard_support_end": "2026-08-31",
@@ -3857,7 +3858,7 @@
         {
           "key": "10.0",
           "label": "IBM MQ 10.0 LTS",
-          "cpe_version": null,
+          "cpe_version": "10.0",
           "build_prefixes": [
             "10.0"
           ],
@@ -3868,7 +3869,7 @@
         {
           "key": "9.4",
           "label": "IBM MQ 9.4 LTS",
-          "cpe_version": null,
+          "cpe_version": "9.4",
           "build_prefixes": [
             "9.4"
           ],
@@ -3879,7 +3880,7 @@
         {
           "key": "9.3",
           "label": "IBM MQ 9.3 LTS",
-          "cpe_version": null,
+          "cpe_version": "9.3",
           "build_prefixes": [
             "9.3"
           ],
@@ -3890,7 +3891,7 @@
         {
           "key": "9.2",
           "label": "IBM MQ 9.2 LTS",
-          "cpe_version": null,
+          "cpe_version": "9.2",
           "build_prefixes": [
             "9.2"
           ],
@@ -3901,7 +3902,7 @@
         {
           "key": "9.1",
           "label": "IBM MQ 9.1 LTS",
-          "cpe_version": null,
+          "cpe_version": "9.1",
           "build_prefixes": [
             "9.1"
           ],
@@ -3912,7 +3913,7 @@
         {
           "key": "9.0",
           "label": "IBM MQ 9.0 LTS",
-          "cpe_version": null,
+          "cpe_version": "9.0",
           "build_prefixes": [
             "9.0"
           ],
@@ -3923,7 +3924,7 @@
         {
           "key": "8.0",
           "label": "IBM MQ 8.0",
-          "cpe_version": null,
+          "cpe_version": "8.0",
           "build_prefixes": [
             "8.0"
           ],
@@ -3956,7 +3957,7 @@
         {
           "key": "2019",
           "label": "2019 CU15 SU5",
-          "cpe_version": null,
+          "cpe_version": "2019",
           "build_prefixes": [
             "2019"
           ],
@@ -3967,7 +3968,7 @@
         {
           "key": "2016",
           "label": "2016 CU23 SU19",
-          "cpe_version": null,
+          "cpe_version": "2016",
           "build_prefixes": [
             "2016"
           ],
@@ -3978,7 +3979,7 @@
         {
           "key": "2013",
           "label": "2013 CU23 SU21",
-          "cpe_version": null,
+          "cpe_version": "2013",
           "build_prefixes": [
             "2013"
           ],
@@ -3989,7 +3990,7 @@
         {
           "key": "4.0",
           "label": "4.0 SP5",
-          "cpe_version": null,
+          "cpe_version": "4.0",
           "build_prefixes": [
             "4.0"
           ],
@@ -5162,7 +5163,7 @@
         {
           "key": "3.1",
           "label": "Core 3.1",
-          "cpe_version": null,
+          "cpe_version": "3.1",
           "build_prefixes": [
             "3.1"
           ],
@@ -5240,7 +5241,7 @@
         {
           "key": "3.5-sp1",
           "label": "3.5 SP1",
-          "cpe_version": null,
+          "cpe_version": "3.5",
           "build_prefixes": [],
           "release_date": "2007-11-19",
           "standard_support_end": "2029-01-09",

@@ -382,6 +382,17 @@ Optional in both modes: true when `ENTRA_CLIENT_ID` is configured. Per-tenant ac
 | `frontend/src/pages/ai/AiWorkspacePage.tsx` | 1 | Plaid workspace route | Hides native AI chat UI when `aiChat` is false |
 | `frontend/src/pages/admin/AdminAiPage.tsx` | 1 | Admin AI settings page | Hides AI settings and web search controls when the corresponding flags are false |
 
+#### Vulnerabilities (`Features.VULNERABILITY_FEED_ENABLED`)
+
+The NVD feed needs the way out to the NVD (`https://services.nvd.nist.gov`) or to a mirror (`NVD_API_BASE_URL`). `VULNERABILITY_FEED_ENABLED` is true by default in the cloud and false by default on-premise; set either way, it wins. `NVD_API_KEY` is optional (more requests per 30 seconds). The page and its navigation entry come with lot T6b.
+
+| File | Line | What | Behavior |
+|------|------|------|----------|
+| `config/features.ts` | 19 | `VULNERABILITY_FEED_ENABLED` | Env value when set, otherwise `!SINGLE_TENANT` |
+| `vulnerabilities/vulnerabilities.controller.ts` | 19 | `VulnerabilityFeedGuard` on `/vulnerabilities/*` and `/technologies/:id/vulnerabilities/*` | 403 `FEATURE_DISABLED` when off |
+| `vulnerabilities/nvd-feed.service.ts` | 212 | `vulnerability-feed` scheduled task (default every 6 hours, minute 20) | Registered only when on: no request leaves for the NVD otherwise |
+| `config/config.controller.ts` | 24 | `vulnerabilityFeed` | `Features.VULNERABILITY_FEED_ENABLED` in `GET /config/public` |
+
 #### Outbound target guard (`backend/src/common/ssrf-guard.ts`)
 
 Shared by every tenant-supplied outbound URL: Netbox, PRTG and GLPI. Not a `Features` flag of its own, but mode-dependent.

@@ -308,6 +308,7 @@
       "tasks": "Tasks",
       "technologyApplications": "Applications of a technology",
       "users": "Users",
+      "vulnerabilities": "Vulnerabilities",
       "weeklyReport": "Weekly report",
       "workingDayCalendars": "Working-day calendars"
     },
@@ -515,6 +516,7 @@
       "technology_projects": "Technology projects",
       "technology_spend_items": "Technology budget lines",
       "technology_versions": "Technology versions",
+      "technology_vulnerabilities": "Technology vulnerabilities",
       "tenants": "Workspaces",
       "tenants_admin": "Workspace administration",
       "tenants_plan": "Workspace plans",
