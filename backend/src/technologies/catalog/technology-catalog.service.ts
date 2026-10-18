@@ -2,11 +2,13 @@ import { BadRequestException, Injectable, NotFoundException, Optional } from '@n
 import { addedCpeProducts, TechnologyCpeEvents } from '../technology-cpe-events';
 import type { EntityManager } from 'typeorm';
 import { AuditService } from '../../audit/audit.service';
+import { Features } from '../../config/features';
 import { languageOf } from '../../common/csv-sheet/request-options';
 import { allocateItemNumbers } from '../../common/item-number.service';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import { hostingTypeOfMode, resolveHostingType } from '../hosting-type';
 import { readTechnology, technologyReference } from '../technology-rows';
+import { mergeProduct, offeredState, validCatalogVersion } from './catalog-releases';
 // The JSON file has its own name: under ts-node, Node resolves `./x` to `x.json` before `x.ts`.
 import * as shipped from './technologies.catalog.json';
 // Written for KANAP and kept apart from the catalog, which the script rebuilds from endoflife.date.
@@ -38,6 +40,9 @@ export type CatalogProduct = {
 
 type Opts = { manager: EntityManager; tenantId: string; userId?: string | null };
 
+/** A cached product read longer ago than this (a product that keeps failing) gives way to the shipped file. */
+export const CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
 /** The languages of the catalog descriptions. */
 export type CatalogLanguage = 'en' | 'fr' | 'de' | 'es';
 type Descriptions = Record<string, Partial<Record<CatalogLanguage, string>>>;
@@ -46,14 +51,19 @@ type Descriptions = Record<string, Partial<Record<CatalogLanguage, string>>>;
  * The starting catalog of technologies KANAP ships (`technologies.catalog.json`, built from
  * endoflife.date by `scripts/technologies/build-catalog.mjs`, MIT license). It is offered, never
  * imposed: nothing is written until a tenant adopts an entry, which creates the technology, its
- * versions and its CPE identifiers. A later KANAP version can offer new dates to adopted rows
- * (`technologies.catalog_key`, `technology_versions.catalog_key`).
+ * versions and its CPE identifiers. The catalog is living (lot C4): the versions endoflife.date
+ * published since the shipped file was built come from the platform cache
+ * `technology_catalog_products` (`effectiveProducts`), and the scheduled task `technology-catalog`
+ * (`technology-catalog-sync.service.ts`) keeps the adopted technologies up to date
+ * (`technologies.catalog_key`, `technologies.catalog_state`, `technology_versions.catalog_key`).
  */
 @Injectable()
 export class TechnologyCatalogService {
   private readonly products: CatalogProduct[] = (shipped as unknown as { products: CatalogProduct[] }).products;
   private readonly byKey = new Map(this.products.map((product) => [product.key, product]));
   private readonly descriptions = (shippedDescriptions as unknown as { descriptions: Descriptions }).descriptions;
+  /** The end of the day the shipped file was read from endoflife.date (`source.retrieved_on`). */
+  private readonly shippedAt = Date.parse(`${(shipped as unknown as { source?: { retrieved_on?: string } }).source?.retrieved_on ?? '1970-01-01'}T23:59:59.999Z`);
 
   constructor(
     private readonly audit: AuditService,
@@ -66,9 +76,39 @@ export class TechnologyCatalogService {
     return product.hosting_type?.trim().toLowerCase() || hostingTypeOfMode(product.mode);
   }
 
-  /** Every product of the catalog. */
+  /** Every product of the shipped catalog. */
   all(): readonly CatalogProduct[] {
     return this.products;
+  }
+
+  /** The shipped entry `key`. */
+  shippedProduct(key: string): CatalogProduct | undefined {
+    return this.byKey.get(key);
+  }
+
+  /**
+   * The entries of the living catalog by key: the shipped ones, with the versions and dates of the
+   * platform cache (`mergeProduct`) when it holds them. `keys` limits the read to those entries.
+   * The cache names no tenant: any manager reads it.
+   *
+   * The shipped file stays the base: a cached product counts only while the gate
+   * `TECHNOLOGY_CATALOG_SYNC_ENABLED` is on, when it was read after the day the shipped file was
+   * built (a newer KANAP version brings newer data), and when it was read less than
+   * `CACHE_MAX_AGE_MS` before `now` (a product that keeps failing falls back to the shipped file).
+   */
+  async effectiveProducts(manager: EntityManager, keys?: readonly string[], opts: { now?: number } = {}): Promise<Map<string, CatalogProduct>> {
+    const wanted = keys ? keys.filter((key) => this.byKey.has(key)) : this.products.map((p) => p.key);
+    const since = Math.max(this.shippedAt, (opts.now ?? Date.now()) - CACHE_MAX_AGE_MS);
+    const rows: Array<{ catalog_key: string; versions: CatalogVersion[] }> = wanted.length && Features.TECHNOLOGY_CATALOG_SYNC_ENABLED
+      ? await manager.query(
+        `SELECT catalog_key, versions FROM technology_catalog_products
+          WHERE catalog_key = ANY($1::text[]) AND last_success_at > $2`,
+        [wanted, new Date(since)],
+      )
+      : [];
+    // Only versions that can be written as they stand: an adoption or a sync never fails on the cache.
+    const live = new Map(rows.map((row) => [row.catalog_key, Array.isArray(row.versions) ? row.versions.filter(validCatalogVersion) : null]));
+    return new Map(wanted.map((key) => [key, mergeProduct(this.byKey.get(key)!, live.get(key) ?? null)]));
   }
 
   /** The short description of an entry in `language`, in English when that one is missing. */
@@ -97,7 +137,8 @@ export class TechnologyCatalogService {
     const needle = String(filters.q ?? '').trim().toLowerCase();
     const family = String(filters.family ?? '').trim();
     const { hostingTypes } = await this.itOps.getSettings(opts.tenantId, { manager: opts.manager });
-    const items = this.products
+    const living = await this.effectiveProducts(opts.manager);
+    const items = Array.from(living.values())
       .filter((product) => !keys.has(product.key) && !names.has(product.name.toLowerCase()))
       .filter((product) => !family || product.family === family)
       .filter((product) => !needle || product.name.toLowerCase().includes(needle) || product.editor.toLowerCase().includes(needle))
@@ -117,10 +158,11 @@ export class TechnologyCatalogService {
   }
 
   /**
-   * Adopt the entry `key`: the technology with its catalog key, editor, family (`other` when the
-   * tenant's catalog no longer has it), hosting type (the entry's, else the one its mode stands for,
-   * resolved against the tenant's hosting types), CPE identifiers and short description, and its
-   * versions with their dates. The description is in `opts.language`, failing that the user's
+   * Adopt the entry `key` of the living catalog: the technology with its catalog key, editor,
+   * family (`other` when the tenant's catalog no longer has it), hosting type (the entry's, else the
+   * one its mode stands for, resolved against the tenant's hosting types), CPE identifiers and short
+   * description, and its versions with their dates; `catalog_state` records what was offered, for
+   * the sync that follows (`technology-catalog-sync.service.ts`). The description is in `opts.language`, failing that the user's
    * stored language, failing that English. Idempotent: an entry already adopted returns its
    * technology and adds nothing (a version the tenant deleted stays deleted); a technology of the
    * same name (typed before) receives the key, the identifiers it lacks, the missing versions, and
@@ -129,9 +171,11 @@ export class TechnologyCatalogService {
    */
   async adopt(key: string, opts: Opts & { language?: unknown }) {
     const { manager: mg, tenantId } = opts;
-    const product = this.byKey.get(String(key || '').trim());
-    if (!product) throw new NotFoundException('Catalog entry not found');
+    const shippedEntry = this.byKey.get(String(key || '').trim());
+    if (!shippedEntry) throw new NotFoundException('Catalog entry not found');
+    const product = (await this.effectiveProducts(mg, [shippedEntry.key])).get(shippedEntry.key)!;
     const description = this.description(product.key, await languageOf(mg, tenantId, opts.userId ?? null, opts.language));
+    const state = JSON.stringify({ ...offeredState(product), description });
     await mg.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`technology-adopt:${tenantId}:${product.key}`]);
 
     const existing: Array<{ id: string; catalog_key: string | null }> = await mg.query(
@@ -157,9 +201,9 @@ export class TechnologyCatalogService {
             SET catalog_key = $3,
                 cpe_products = ARRAY(SELECT DISTINCT unnest(cpe_products || $4::text[]) ORDER BY 1),
                 editor = COALESCE(editor, $5),
-                description = COALESCE(NULLIF(btrim(description), ''), $6), updated_at = now()
+                description = COALESCE(NULLIF(btrim(description), ''), $6), catalog_state = $7::jsonb, updated_at = now()
           WHERE tenant_id = $1 AND id = $2`,
-        [tenantId, technologyId, product.key, product.cpe_products, product.editor, description],
+        [tenantId, technologyId, product.key, product.cpe_products, product.editor, description, state],
       );
       const after = await readTechnology(mg, tenantId, technologyId);
       await this.audit.log({ table: 'technologies', recordId: technologyId, action: 'update', before, after, userId: opts.userId ?? null }, { manager: mg });
@@ -170,9 +214,9 @@ export class TechnologyCatalogService {
       const hostingType = resolveHostingType(settings.hostingTypes, this.hostingTypeOf(product));
       const itemNumber = await allocateItemNumbers('technology', tenantId, 1, mg);
       const [row]: Array<{ id: string }> = await mg.query(
-        `INSERT INTO technologies (tenant_id, item_number, name, editor, family, hosting_type, catalog_key, cpe_products, description)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
-        [tenantId, itemNumber, product.name, product.editor, family, hostingType, product.key, product.cpe_products, description],
+        `INSERT INTO technologies (tenant_id, item_number, name, editor, family, hosting_type, catalog_key, cpe_products, description, catalog_state)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb) RETURNING id`,
+        [tenantId, itemNumber, product.name, product.editor, family, hostingType, product.key, product.cpe_products, description, state],
       );
       technologyId = row.id;
       created = true;

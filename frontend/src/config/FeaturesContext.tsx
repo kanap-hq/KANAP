@@ -13,6 +13,8 @@ export type FeaturesConfig = {
     builtinAiProvider: boolean;
     /** Administration › Sample data and the home banner (cloud workspaces). */
     sampleData: boolean;
+    /** The catalog of technologies is read from endoflife.date between two versions (TECHNOLOGY_CATALOG_SYNC_ENABLED). */
+    technologyCatalogSync: boolean;
     /** IT › Vulnerabilities, its list column and sections (VULNERABILITY_FEED_ENABLED). */
     vulnerabilityFeed: boolean;
   };
@@ -38,6 +40,7 @@ const CLOUD_DEFAULTS: FeaturesConfig = {
     // Off until the server says otherwise: a failed /config/public never shows it on-premise.
     sampleData: false,
     // Off until the server says otherwise, as the sample data.
+    technologyCatalogSync: false,
     vulnerabilityFeed: false,
   },
   version: 'unknown',

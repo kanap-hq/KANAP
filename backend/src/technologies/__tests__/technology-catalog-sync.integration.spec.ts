@@ -1,0 +1,616 @@
+// @database-spec
+import 'dotenv/config';
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import type { AddressInfo } from 'node:net';
+import type { QueryRunner } from 'typeorm';
+import dataSource from '../../data-source';
+import { withTenant } from '../../common/tenant-runner';
+import { Features } from '../../config/features';
+import { assert, runSpecs, seedTenant, setTenant } from '../../spend/__tests__/round-inputs.fixtures';
+import { TechnologyCatalogSyncService, type CatalogRuntime, type TenantSyncResult } from '../catalog/technology-catalog-sync.service';
+import { mergeProduct, versionsOfReleases } from '../catalog/catalog-releases';
+import type { CatalogProduct, CatalogVersion } from '../catalog/technology-catalog.service';
+import { services, type AuditEntry } from './technologies.fixtures';
+
+// The living catalog (lot C4): the sync of a tenant's adopted technologies (new version added, a
+// date that follows the catalog, a value the tenant typed kept, a version the tenant deleted not
+// created again, CPE identifiers, a technology adopted before the living catalog, the other
+// tenant untouched), then the scheduled run against a fake endoflife.date served on 127.0.0.1
+// (cache, cadence, retries, a product read less than 20 hours ago skipped) and with the gate off.
+// The cache rows of the run are committed: `postgresql` and `nginx`, deleted before and after.
+
+const KEYS = ['postgresql', 'nginx'];
+const HOUR = 60 * 60 * 1000;
+
+function syncService(audit: AuditEntry[] = []) {
+  const { catalog } = services(audit);
+  const auditLog = { log: async (entry: AuditEntry) => void audit.push(entry) };
+  return { catalog, sync: new TechnologyCatalogSyncService(dataSource, { register: () => undefined } as any, catalog, auditLog as any) };
+}
+
+function counts(result: TenantSyncResult) {
+  const { dates_kept: _kept, malformed_states: _malformed, ...rest } = result;
+  return rest;
+}
+
+async function inRolledBackTransaction(fn: (runner: QueryRunner) => Promise<void>) {
+  const runner = dataSource.createQueryRunner();
+  await runner.connect();
+  await runner.startTransaction();
+  try {
+    await fn(runner);
+  } finally {
+    await runner.rollbackTransaction();
+    await runner.release();
+  }
+}
+
+type Row = { label: string; standard_support_end: string | null; extended_support_end: string | null; catalog_key: string | null };
+async function versionsOf(runner: QueryRunner, technologyId: string): Promise<Map<string, Row>> {
+  const rows: Row[] = await runner.query(
+    `SELECT label, to_char(standard_support_end, 'YYYY-MM-DD') AS standard_support_end,
+            to_char(extended_support_end, 'YYYY-MM-DD') AS extended_support_end, catalog_key
+       FROM technology_versions WHERE technology_id = $1`,
+    [technologyId],
+  );
+  return new Map(rows.map((r) => [r.label, r]));
+}
+
+/** The shipped PostgreSQL entry one year later: every standard end moved, and a version 99 published. */
+function livingPostgres(shipped: CatalogProduct, extraCpe: string[] = []): CatalogProduct {
+  const moved = (date: string | null) => (date ? `${Number(date.slice(0, 4)) + 1}${date.slice(4)}` : null);
+  const versions: CatalogVersion[] = [
+    { key: '99', label: '99', cpe_version: null, build_prefixes: [], release_date: '2026-10-01', standard_support_end: '2031-11-13', extended_support_end: null },
+    ...shipped.versions.map((v) => ({ ...v, standard_support_end: moved(v.standard_support_end) })),
+  ];
+  return { ...shipped, cpe_products: [...shipped.cpe_products, ...extraCpe], versions };
+}
+
+async function testSyncOfATenant() {
+  await inRolledBackTransaction(async (runner) => {
+    const audit: AuditEntry[] = [];
+    const { catalog, sync } = syncService(audit);
+    const tenantId = await seedTenant(runner, 'cat-sync');
+    const other = await seedTenant(runner, 'cat-sync-other');
+    await setTenant(runner, other);
+    const otherTech = (await catalog.adopt('postgresql', { manager: runner.manager, tenantId: other })).technology.id;
+    const otherBefore = await versionsOf(runner, otherTech);
+
+    await setTenant(runner, tenantId);
+    const opts = { manager: runner.manager, tenantId };
+    const { technology } = await catalog.adopt('postgresql', opts);
+    const [{ catalog_state: state }] = await runner.query(`SELECT catalog_state FROM technologies WHERE id = $1`, [technology.id]);
+    assert.deepEqual(state.cpe_products, ['a:postgresql:postgresql'], 'the adoption records what it offered');
+    assert.equal(state.versions['17'].standard_support_end, '2029-11-08');
+
+    // The tenant's own changes: a date typed on 17, version 13 deleted, the identifier removed.
+    await runner.query(`UPDATE technology_versions SET standard_support_end = '2029-12-31' WHERE technology_id = $1 AND label = '17'`, [technology.id]);
+    await runner.query(`DELETE FROM technology_versions WHERE technology_id = $1 AND label = '13'`, [technology.id]);
+    await runner.query(`UPDATE technologies SET cpe_products = '{}' WHERE id = $1`, [technology.id]);
+
+    const shipped = catalog.shippedProduct('postgresql')!;
+    const products = new Map([['postgresql', livingPostgres(shipped, ['a:kanapspec:postgres'])]]);
+    const result = await sync.syncTenant(runner.manager, tenantId, products);
+    assert.deepEqual(counts(result), { technologies: 1, versions_added: 1, versions_updated: 6, cpe_added: 1, versions_attached: 0, errors: [] });
+
+    const after = await versionsOf(runner, technology.id);
+    assert.deepEqual(after.get('99'), { label: '99', standard_support_end: '2031-11-13', extended_support_end: null, catalog_key: 'postgresql:99' },
+      'the new version comes with its dates and its catalog provenance');
+    assert.equal(after.get('18')!.standard_support_end, '2031-11-14', 'a date the catalog wrote follows it');
+    assert.equal(after.get('17')!.standard_support_end, '2029-12-31', 'a date the tenant typed stays');
+    assert.ok(!after.has('13'), 'a version the tenant deleted is not created again');
+    const [tech] = await runner.query(`SELECT cpe_products FROM technologies WHERE id = $1`, [technology.id]);
+    assert.deepEqual(tech.cpe_products, ['a:kanapspec:postgres'], 'a new identifier is added, the one the tenant removed is not');
+    assert.equal(audit.filter((a) => a.recordId === technology.id && (a.after as any)?.catalog_sync).length, 1, 'one audit row per technology changed');
+
+    const statements: string[] = [];
+    const watched = { query: (sql: string, params?: unknown[]) => { statements.push(sql); return runner.manager.query(sql, params); } };
+    assert.deepEqual(counts(await sync.syncTenant(watched as any, tenantId, products)), { technologies: 0, versions_added: 0, versions_updated: 0, cpe_added: 0, versions_attached: 0, errors: [] },
+      'a second sync changes nothing');
+    assert.ok(!statements.some((sql) => /UPDATE technologies|INSERT INTO technology_versions|UPDATE technology_versions/.test(sql)),
+      'nor writes anything: the state read back in another key order is the same');
+
+    // The catalog moves again: 18 follows, 17 keeps the tenant's date even when the catalog goes back to its own.
+    const again = livingPostgres(shipped);
+    again.versions = again.versions.map((v) => (v.key === '18' ? { ...v, standard_support_end: '2033-01-01' } : v.key === '17' ? { ...v, standard_support_end: '2029-11-08' } : v));
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', again]]));
+    const third = await versionsOf(runner, technology.id);
+    assert.equal(third.get('18')!.standard_support_end, '2033-01-01');
+    assert.equal(third.get('17')!.standard_support_end, '2029-12-31');
+
+    // Contradictory dates: the tenant's extended end would fall before the catalog's new standard end.
+    await runner.query(`UPDATE technology_versions SET extended_support_end = '2030-01-01' WHERE technology_id = $1 AND label = '16'`, [technology.id]);
+    const later = livingPostgres(shipped);
+    later.versions = later.versions.map((v) => (v.key === '16' ? { ...v, standard_support_end: '2030-06-30' } : v));
+    const contradicted = await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', later]]));
+    assert.deepEqual(contradicted.dates_kept, ['postgresql 16'], 'the date not applied is logged');
+    const fourth = await versionsOf(runner, technology.id);
+    assert.deepEqual([fourth.get('16')!.standard_support_end, fourth.get('16')!.extended_support_end], ['2029-11-09', '2030-01-01'],
+      'a version whose dates would contradict each other is left as it is');
+
+    await setTenant(runner, other);
+    assert.deepEqual(await versionsOf(runner, otherTech), otherBefore, 'the other tenant is untouched by this sync');
+  });
+}
+
+/** A technology adopted before the living catalog starts from the shipped catalog. */
+async function testTechnologyAdoptedBefore() {
+  await inRolledBackTransaction(async (runner) => {
+    const { catalog, sync } = syncService();
+    const tenantId = await seedTenant(runner, 'cat-sync-old');
+    const { technology } = await catalog.adopt('postgresql', { manager: runner.manager, tenantId });
+    await runner.query(`UPDATE technologies SET catalog_state = NULL WHERE id = $1`, [technology.id]);
+    await runner.query(`DELETE FROM technology_versions WHERE technology_id = $1 AND label = '12'`, [technology.id]);
+    await runner.query(`UPDATE technology_versions SET standard_support_end = '2030-01-31' WHERE technology_id = $1 AND label = '18'`, [technology.id]);
+    const shipped = catalog.shippedProduct('postgresql')!;
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', livingPostgres(shipped)]]));
+    const after = await versionsOf(runner, technology.id);
+    assert.ok(after.has('99'), 'a version published since is added');
+    assert.ok(!after.has('12'), 'a shipped version it lacks counts as deleted by the tenant');
+    assert.equal(after.get('18')!.standard_support_end, '2030-01-31', 'a value that differs from the shipped one is the tenant\'s');
+    assert.equal(after.get('16')!.standard_support_end, '2029-11-09', 'a value equal to the shipped one follows');
+    const [{ catalog_state: state }] = await runner.query(`SELECT catalog_state FROM technologies WHERE id = $1`, [technology.id]);
+    assert.ok(state && state.versions['99'] && state.versions['12'], 'the state is written');
+  });
+}
+
+/** C4 review S3: an unreadable state brings nothing back that the tenant deleted. */
+async function testMalformedState() {
+  for (const raw of ['[]', '{"versions":"x"}', '{}', '{"cpe_products":["a"],"versions":{"17":"x"}}']) {
+    await inRolledBackTransaction(async (runner) => {
+      const { catalog, sync } = syncService();
+      const tenantId = await seedTenant(runner, 'cat-sync-bad');
+      const { technology } = await catalog.adopt('postgresql', { manager: runner.manager, tenantId });
+      await runner.query(`DELETE FROM technology_versions WHERE technology_id = $1 AND label = '13'`, [technology.id]);
+      await runner.query(`UPDATE technologies SET cpe_products = '{}', catalog_state = $2::jsonb WHERE id = $1`, [technology.id, raw]);
+      const result = await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', livingPostgres(catalog.shippedProduct('postgresql')!)]]));
+      assert.deepEqual(result.malformed_states, ['postgresql'], raw);
+      const after = await versionsOf(runner, technology.id);
+      assert.ok(!after.has('13') && after.has('99'), `${raw}: the deleted version stays deleted, a new one comes`);
+      const [tech] = await runner.query(`SELECT cpe_products, catalog_state FROM technologies WHERE id = $1`, [technology.id]);
+      assert.deepEqual(tech.cpe_products, [], `${raw}: the identifier the tenant removed is not added back`);
+      assert.ok(Array.isArray(tech.catalog_state.cpe_products), 'the state is rewritten in shape');
+    });
+  }
+}
+
+/** C4 review S4 and finding 4: an empty cpe_version on a version of the catalog is completed. */
+async function testEmptyCpeVersion() {
+  await inRolledBackTransaction(async (runner) => {
+    const { catalog, sync } = syncService();
+    const tenantId = await seedTenant(runner, 'cat-sync-cpe');
+    const { technology } = await catalog.adopt('ibm-mq', { manager: runner.manager, tenantId });
+    const shipped = catalog.shippedProduct('ibm-mq')!;
+    const expected = new Map(shipped.versions.map((v) => [v.label, v.cpe_version]));
+    assert.ok([...expected.values()].some((v) => v !== null));
+    // Adopted before C4 and before the catalog had these values: no state, every cpe_version empty.
+    await runner.query(`UPDATE technology_versions SET cpe_version = NULL WHERE technology_id = $1`, [technology.id]);
+    await runner.query(`UPDATE technologies SET catalog_state = NULL WHERE id = $1`, [technology.id]);
+    await sync.syncTenant(runner.manager, tenantId, new Map([['ibm-mq', shipped]]));
+    const read = async () => new Map((await runner.query(`SELECT label, cpe_version FROM technology_versions WHERE technology_id = $1`, [technology.id]))
+      .map((r: any) => [r.label, r.cpe_version]));
+    assert.deepEqual(await read(), expected, 'every empty cpe_version is completed');
+    // With a state: emptied by hand, it is completed again.
+    const label = shipped.versions.find((v) => v.cpe_version)!.label;
+    await runner.query(`UPDATE technology_versions SET cpe_version = NULL WHERE technology_id = $1 AND label = $2`, [technology.id, label]);
+    await sync.syncTenant(runner.manager, tenantId, new Map([['ibm-mq', shipped]]));
+    assert.equal((await read()).get(label), expected.get(label));
+  });
+}
+
+/** C4 review S5 and S6: a withdrawn date never erases one; a contradicting date alone is left. */
+async function testWithdrawnAndContradictingDates() {
+  await inRolledBackTransaction(async (runner) => {
+    const { catalog, sync } = syncService();
+    const tenantId = await seedTenant(runner, 'cat-sync-dates');
+    const { technology } = await catalog.adopt('postgresql', { manager: runner.manager, tenantId });
+    const shipped = catalog.shippedProduct('postgresql')!;
+    const withVersion = (key: string, change: Partial<CatalogVersion>) => ({ ...shipped, versions: shipped.versions.map((v) => (v.key === key ? { ...v, ...change } : v)) });
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', withVersion('17', { standard_support_end: null })]]));
+    assert.equal((await versionsOf(runner, technology.id)).get('17')!.standard_support_end, '2029-11-08', 'a date withdrawn upstream stays');
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', withVersion('17', { standard_support_end: '2030-01-15' })]]));
+    assert.equal((await versionsOf(runner, technology.id)).get('17')!.standard_support_end, '2030-01-15', 'and follows the catalog when a date comes back');
+
+    await runner.query(`UPDATE technology_versions SET extended_support_end = '2030-02-01' WHERE technology_id = $1 AND label = '17'`, [technology.id]);
+    const result = await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', withVersion('17', { standard_support_end: '2030-06-01', cpe_version: '17.0' })]]));
+    assert.deepEqual(result.dates_kept, ['postgresql 17']);
+    const [row] = await runner.query(
+      `SELECT to_char(standard_support_end, 'YYYY-MM-DD') AS s, to_char(extended_support_end, 'YYYY-MM-DD') AS e, cpe_version FROM technology_versions WHERE technology_id = $1 AND label = '17'`,
+      [technology.id],
+    );
+    assert.deepEqual(row, { s: '2030-01-15', e: '2030-02-01', cpe_version: '17.0' }, 'only the date in cause is left, the rest follows');
+  });
+}
+
+/** C4 review S7 and finding 2: a version typed before the catalog had it is attached and completed. */
+async function testTypedVersionIsAttached() {
+  await inRolledBackTransaction(async (runner) => {
+    const audit: AuditEntry[] = [];
+    const { catalog, sync } = syncService(audit);
+    const tenantId = await seedTenant(runner, 'cat-sync-typed');
+    const { technology } = await catalog.adopt('postgresql', { manager: runner.manager, tenantId });
+    // As a server import or a link typing a version creates it (`resolveVersionLabel`): a label, nothing else.
+    await runner.query(`INSERT INTO technology_versions (tenant_id, technology_id, label) VALUES ($1, $2, '99')`, [tenantId, technology.id]);
+    await runner.query(`INSERT INTO technology_versions (tenant_id, technology_id, label, extended_support_end) VALUES ($1, $2, 'V20', '2034-01-01')`, [tenantId, technology.id]);
+    const shipped = catalog.shippedProduct('postgresql')!;
+    const living = livingPostgres(shipped);
+    living.versions.unshift({ key: 'v20', label: 'v20', cpe_version: '20', build_prefixes: ['20.0'], release_date: '2026-10-10', standard_support_end: '2032-01-01', extended_support_end: '2035-01-01' });
+    const result = await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', living]]));
+    assert.equal(result.versions_attached, 2);
+    assert.equal(result.versions_added, 0);
+    const after = await versionsOf(runner, technology.id);
+    assert.deepEqual(after.get('99'), { label: '99', standard_support_end: '2031-11-13', extended_support_end: null, catalog_key: 'postgresql:99' });
+    assert.deepEqual(after.get('V20'), { label: 'V20', standard_support_end: '2032-01-01', extended_support_end: '2034-01-01', catalog_key: 'postgresql:v20' },
+      'attached without case; the date the tenant gave stays');
+    const [prefixes] = await runner.query(`SELECT build_prefixes, cpe_version FROM technology_versions WHERE technology_id = $1 AND label = 'V20'`, [technology.id]);
+    assert.deepEqual(prefixes, { build_prefixes: ['20.0'], cpe_version: '20' });
+    assert.ok(audit.some((a) => (a.after as any)?.catalog_sync?.versions_attached?.length === 2));
+    // Attached, the empty fields now follow the catalog; the tenant's date stays.
+    living.versions[0] = { ...living.versions[0], standard_support_end: '2032-06-01', extended_support_end: '2036-01-01' };
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', living]]));
+    const later = (await versionsOf(runner, technology.id)).get('V20')!;
+    assert.deepEqual([later.standard_support_end, later.extended_support_end], ['2032-06-01', '2034-01-01']);
+  });
+}
+
+/** C4 review, finding 9: a SQL Server release added by the living catalog brings its CPE product. */
+async function testReleaseProduct() {
+  await inRolledBackTransaction(async (runner) => {
+    const { catalog, sync } = syncService();
+    const tenantId = await seedTenant(runner, 'cat-sync-sql');
+    const { technology } = await catalog.adopt('mssqlserver', { manager: runner.manager, tenantId });
+    const live = versionsOfReleases([{ name: '18.0', label: '2028', releaseDate: '2026-10-01', eolFrom: '2034-01-01' }], '2026-10-17', 'mssqlserver');
+    const result = await sync.syncTenant(runner.manager, tenantId, new Map([['mssqlserver', mergeProduct(catalog.shippedProduct('mssqlserver')!, live)]]));
+    assert.deepEqual([result.versions_added, result.cpe_added], [1, 1]);
+    const [tech] = await runner.query(`SELECT cpe_products FROM technologies WHERE id = $1`, [technology.id]);
+    assert.ok(tech.cpe_products.includes('a:microsoft:sql_server_2028'));
+    assert.equal((await versionsOf(runner, technology.id)).get('2028')!.catalog_key, 'mssqlserver:18.0');
+  });
+}
+
+/** An empty description the catalog never filled receives the catalog's, in the tenant's language, once. */
+async function testDescriptionFilled() {
+  await inRolledBackTransaction(async (runner) => {
+    const audit: AuditEntry[] = [];
+    const { catalog, sync } = syncService(audit);
+    const tenantId = await seedTenant(runner, 'cat-sync-desc');
+    await runner.query(`UPDATE tenants SET metadata = '{"language":"fr"}'::jsonb WHERE id = $1`, [tenantId]);
+    const { technology } = await catalog.adopt('postgresql', { manager: runner.manager, tenantId, language: 'en' });
+    const shipped = catalog.shippedProduct('postgresql')!;
+    const french = catalog.description('postgresql', 'fr')!;
+    assert.ok(french && french !== catalog.description('postgresql', 'en'));
+    const read = async () => (await runner.query(`SELECT description FROM technologies WHERE id = $1`, [technology.id]))[0].description;
+
+    assert.notEqual(await read(), french, 'adopted with a description: the sync leaves it');
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
+    assert.equal(await read(), catalog.description('postgresql', 'en'));
+
+    // Adopted before the catalog had descriptions: empty, no state.
+    await runner.query(`UPDATE technologies SET description = '  ', catalog_state = NULL WHERE id = $1`, [technology.id]);
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
+    assert.equal(await read(), french, 'filled in the tenant language');
+    assert.ok(audit.some((a) => (a.after as any)?.catalog_sync?.description_filled === true));
+    const [{ catalog_state: state }] = await runner.query(`SELECT catalog_state FROM technologies WHERE id = $1`, [technology.id]);
+    assert.equal(state.description, french, 'remembered');
+
+    await runner.query(`UPDATE technologies SET description = 'Our main database' WHERE id = $1`, [technology.id]);
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
+    assert.equal(await read(), 'Our main database', 'a description changed since stays');
+    await runner.query(`UPDATE technologies SET description = NULL WHERE id = $1`, [technology.id]);
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
+    assert.equal(await read(), null, 'a description the tenant emptied stays empty');
+  });
+}
+
+/** A tenant without a language of its own: the language most of its enabled users chose. */
+async function testDescriptionInUsersLanguage() {
+  await inRolledBackTransaction(async (runner) => {
+    const { catalog, sync } = syncService();
+    const tenantId = await seedTenant(runner, 'cat-sync-users');
+    const role = (await runner.query(`INSERT INTO roles (tenant_id, role_name) VALUES ($1, 'Catalog sync users') RETURNING id`, [tenantId]))[0].id;
+    const users: Array<[string, string]> = [['fr', 'enabled'], ['fr', 'enabled'], ['en', 'enabled'], ['de', 'disabled'], ['de', 'disabled'], ['de', 'disabled']];
+    for (const [index, [locale, status]] of users.entries()) {
+      await runner.query(
+        `INSERT INTO users (tenant_id, role_id, email, locale, status) VALUES ($1, $2, $3, $4, $5)`,
+        [tenantId, role, `u${index}-${tenantId.slice(0, 8)}@example.invalid`, locale, status],
+      );
+    }
+    const { technology } = await catalog.adopt('postgresql', { manager: runner.manager, tenantId, language: 'en' });
+    await runner.query(`UPDATE technologies SET description = NULL, catalog_state = NULL WHERE id = $1`, [technology.id]);
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', catalog.shippedProduct('postgresql')!]]));
+    const [{ description }] = await runner.query(`SELECT description FROM technologies WHERE id = $1`, [technology.id]);
+    assert.equal(description, catalog.description('postgresql', 'fr'), 'French, as most enabled users (disabled ones do not count)');
+  });
+}
+
+// --- The scheduled run against a fake endoflife.date -------------------------------------------
+
+type Answer = { status: number; body?: unknown };
+let answer: (slug: string) => Answer = () => ({ status: 404 });
+const requests: string[] = [];
+let baseUrl = '';
+let clock = Date.parse('2026-10-17T04:40:00.000Z');
+const sleeps: number[] = [];
+
+async function serve() {
+  const server = createServer((req: IncomingMessage, res: ServerResponse) => {
+    const match = /^\/api\/v1\/products\/([a-z0-9._-]+)$/.exec(req.url ?? '');
+    const slug = match?.[1] ?? '';
+    requests.push(slug);
+    const a = answer(slug);
+    res.writeHead(a.status, { 'Content-Type': a.status === 200 ? 'application/json' : 'text/html' });
+    res.end(a.status === 200 ? JSON.stringify(a.body) : '<html>error</html>');
+  });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  return { server, baseUrl: `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/v1` };
+}
+
+function runtime(): CatalogRuntime {
+  return {
+    baseUrl, fetch: (input, init) => fetch(input, init),
+    sleep: async (ms) => { sleeps.push(ms); clock += ms; },
+    now: () => clock, spacingMs: 1000, retryDelayMs: 30_000,
+  };
+}
+
+class SpecSync extends TechnologyCatalogSyncService {
+  tenants: string[] = [];
+  protected async tenantIds() { return this.tenants; }
+}
+
+function postgresReleases() {
+  return {
+    schema_version: '1.2.0',
+    result: {
+      name: 'postgresql',
+      releases: [
+        { name: '19', label: '19', releaseDate: '2026-09-30', eolFrom: '2031-11-13' },
+        { name: '18', label: '18', releaseDate: '2025-09-25', eolFrom: '2031-01-31' },
+        { name: '17', label: '17', releaseDate: '2024-09-26', eolFrom: '2029-11-08' },
+      ],
+    },
+  };
+}
+
+async function cleanCache() {
+  await dataSource.query(`DELETE FROM technology_catalog_products WHERE catalog_key = ANY($1::text[])`, [KEYS]);
+}
+
+async function withCommittedTenant(fn: (tenantId: string, technologyIds: Record<string, string>) => Promise<void>) {
+  const [tenant] = await dataSource.query(
+    `INSERT INTO tenants (slug, name, status, metadata, branding, created_at, updated_at)
+     VALUES ('catalog-sync-spec-' || substr(md5(random()::text), 1, 8), 'Catalog sync spec', 'active', '{}'::jsonb, '{"logo_version":0,"use_logo_in_dark":true}'::jsonb, now(), now())
+     RETURNING id`,
+  );
+  try {
+    const { catalog } = syncService();
+    const ids: Record<string, string> = {};
+    await withTenant(dataSource, tenant.id, async (mg) => {
+      for (const key of KEYS) ids[key] = (await catalog.adopt(key, { manager: mg, tenantId: tenant.id })).technology.id;
+    });
+    await fn(tenant.id, ids);
+  } finally {
+    await withTenant(dataSource, tenant.id, (mg) => mg.query(`DELETE FROM technologies WHERE tenant_id = $1`, [tenant.id]));
+    await dataSource.query(`DELETE FROM tenants WHERE id = $1`, [tenant.id]);
+  }
+}
+
+async function testRunRefreshesThenSyncs() {
+  const enabled = Features.TECHNOLOGY_CATALOG_SYNC_ENABLED;
+  (Features as any).TECHNOLOGY_CATALOG_SYNC_ENABLED = true;
+  try {
+    await withCommittedTenant(async (tenantId, ids) => {
+      const { catalog } = syncService();
+      const sync = new SpecSync(dataSource, { register: () => undefined } as any, catalog, { log: async () => undefined } as any);
+      sync.tenants = [tenantId];
+      requests.length = 0;
+      sleeps.length = 0;
+      answer = (slug) => (slug === 'postgresql' ? { status: 200, body: postgresReleases() } : { status: 503 });
+      await assert.rejects(sync.run(runtime()), /Partial failure, 1 error\(s\): nginx: endoflife.date answered HTTP 503/,
+        'a product that failed makes the run a visible partial failure, once everything else is done');
+      assert.deepEqual(requests, ['nginx', 'nginx', 'nginx', 'postgresql'], 'a failure of the service is tried three times, then the next product');
+      assert.deepEqual(sleeps, [30_000, 60_000, 1000], 'retries wait 30 s then 60 s, then one request a second');
+      const cache = await dataSource.query(
+        `SELECT catalog_key, jsonb_array_length(versions) AS n, last_success_at IS NOT NULL AS ok, last_error FROM technology_catalog_products
+          WHERE catalog_key = ANY($1::text[]) ORDER BY catalog_key`,
+        [KEYS],
+      );
+      assert.deepEqual(cache.map((c: any) => [c.catalog_key, c.n, c.ok, !!c.last_error]), [['nginx', 0, false, true], ['postgresql', 3, true, false]]);
+      const versions = await withTenant(dataSource, tenantId, (mg) => mg.query(
+        `SELECT label, to_char(standard_support_end, 'YYYY-MM-DD') AS d, catalog_key FROM technology_versions WHERE technology_id = $1 AND label IN ('19', '18')`,
+        [ids.postgresql],
+      ));
+      assert.deepEqual(versions.sort((a: any, b: any) => a.label.localeCompare(b.label)), [
+        { label: '18', d: '2031-01-31', catalog_key: 'postgresql:18' },
+        { label: '19', d: '2031-11-13', catalog_key: 'postgresql:19' },
+      ], 'the version published since is added and the new date followed, right after the refresh');
+
+      // The next run, two hours later: PostgreSQL is fresh, nginx is tried again first.
+      requests.length = 0;
+      clock += 2 * HOUR;
+      answer = () => ({ status: 404 });
+      await assert.rejects(sync.run(runtime()), /No product could be read/, 'a run where every product read failed is recorded as failed');
+      assert.deepEqual(requests, ['nginx'], 'a product read less than 20 hours ago is not read again; a 404 is not retried');
+      requests.length = 0;
+      answer = () => ({ status: 404 });
+      clock += 21 * HOUR;
+      await assert.rejects(sync.run(runtime()), /No product could be read/, 'a run where every product failed is recorded as failed');
+      assert.deepEqual(requests.sort(), ['nginx', 'postgresql']);
+      const [kept] = await dataSource.query(`SELECT jsonb_array_length(versions) AS n FROM technology_catalog_products WHERE catalog_key = 'postgresql'`);
+      assert.equal(kept.n, 3, 'a failed read keeps the last versions');
+    });
+  } finally {
+    (Features as any).TECHNOLOGY_CATALOG_SYNC_ENABLED = enabled;
+  }
+}
+
+async function testGateOff() {
+  const enabled = Features.TECHNOLOGY_CATALOG_SYNC_ENABLED;
+  (Features as any).TECHNOLOGY_CATALOG_SYNC_ENABLED = false;
+  try {
+    await cleanCache();
+    await withCommittedTenant(async (tenantId, ids) => {
+      const { catalog } = syncService();
+      const sync = new SpecSync(dataSource, { register: () => undefined } as any, catalog, { log: async () => undefined } as any);
+      sync.tenants = [tenantId];
+      requests.length = 0;
+      await withTenant(dataSource, tenantId, (mg) => mg.query(`UPDATE technologies SET catalog_state = NULL WHERE tenant_id = $1`, [tenantId]));
+      const summary = await sync.run({ ...runtime(), fetch: async () => { throw new Error('no request leaves with the gate off'); } });
+      assert.deepEqual([requests.length, summary.requests, summary.refresh_enabled, summary.tenants_synced], [0, 0, false, 1]);
+      const [row] = await withTenant(dataSource, tenantId, (mg) => mg.query(`SELECT catalog_state FROM technologies WHERE id = $1`, [ids.postgresql]));
+      assert.ok(row.catalog_state?.versions?.['18'], 'the shipped catalog is still synced');
+    });
+  } finally {
+    (Features as any).TECHNOLOGY_CATALOG_SYNC_ENABLED = enabled;
+  }
+}
+
+/** C4 review, finding 1 (S1, S2) and 5: unusable values never reach the cache, nor block anything. */
+async function testUnusableAnswers() {
+  const enabled = Features.TECHNOLOGY_CATALOG_SYNC_ENABLED;
+  (Features as any).TECHNOLOGY_CATALOG_SYNC_ENABLED = true;
+  try {
+    await cleanCache();
+    await withCommittedTenant(async (tenantId, ids) => {
+      const { catalog } = syncService();
+      const sync = new SpecSync(dataSource, { register: () => undefined } as any, catalog, { log: async () => undefined } as any);
+      sync.tenants = [tenantId];
+      clock += 48 * HOUR;
+      answer = (slug) => ({
+        status: 200,
+        body: slug === 'postgresql'
+          ? { result: { releases: [
+            { name: '99', label: '99', releaseDate: '2026-10-01', eolFrom: '2031-11-13' },
+            { name: '98', label: '98', releaseDate: '2026-09-01', eolFrom: '2031-02-30' },
+            { name: ' ', releaseDate: '2026-08-01', eolFrom: '2031-01-01' },
+          ] } }
+          : { result: { releases: [{ name: '1.99', label: '1.99', releaseDate: '2026-10-01', eolFrom: '2028-01-01' }] } },
+      });
+      const summary = await sync.run(runtime());
+      assert.deepEqual([summary.refreshed, summary.rejected_releases, summary.errors], [2, 2, []]);
+      const [cached] = await dataSource.query(`SELECT versions FROM technology_catalog_products WHERE catalog_key = 'postgresql'`);
+      assert.deepEqual(cached.versions.map((x: any) => x.key), ['99'], 'an impossible date or a blank name never reaches the cache');
+      const labels = await withTenant(dataSource, tenantId, (mg) => mg.query(
+        `SELECT technology_id, label FROM technology_versions WHERE technology_id = ANY($1::uuid[]) AND label IN ('99', '98', '1.99')`,
+        [[ids.postgresql, ids.nginx]],
+      ));
+      assert.deepEqual(labels.map((r: any) => r.label).sort(), ['1.99', '99'], 'both products are synced');
+
+      // A cache row written by hand (or an older KANAP) with a value the database refuses.
+      await dataSource.query(
+        `UPDATE technology_catalog_products SET versions = versions || $1::jsonb WHERE catalog_key = 'postgresql'`,
+        [JSON.stringify([{ key: '97', label: '97', cpe_version: null, build_prefixes: [], release_date: '2026-01-01', standard_support_end: '2031-02-30', extended_support_end: null }])],
+      );
+      const [other] = await dataSource.query(
+        `INSERT INTO tenants (slug, name, status, metadata, branding, created_at, updated_at)
+         VALUES ('catalog-sync-spec-' || substr(md5(random()::text), 1, 8), 'Catalog sync spec', 'active', '{}'::jsonb, '{"logo_version":0,"use_logo_in_dark":true}'::jsonb, now(), now())
+         RETURNING id`,
+      );
+      try {
+        const adopted = await withTenant(dataSource, other.id, (mg) => catalog.adopt('postgresql', { manager: mg, tenantId: other.id }));
+        assert.equal(adopted.created, true, 'the adoption never fails because of the cache');
+        const keys = await withTenant(dataSource, other.id, (mg) => mg.query(`SELECT label FROM technology_versions WHERE technology_id = $1 AND label IN ('99', '97')`, [adopted.technology.id]));
+        assert.deepEqual(keys.map((r: any) => r.label), ['99']);
+      } finally {
+        await withTenant(dataSource, other.id, (mg) => mg.query(`DELETE FROM technologies WHERE tenant_id = $1`, [other.id]));
+        await dataSource.query(`DELETE FROM tenants WHERE id = $1`, [other.id]);
+      }
+
+      // An answer over 1 MB is refused, not retried, and the run says so.
+      requests.length = 0;
+      clock += 48 * HOUR;
+      answer = (slug) => (slug === 'nginx'
+        ? { status: 200, body: { result: { releases: [], padding: 'x'.repeat(1_100_000) } } }
+        : { status: 200, body: postgresReleases() });
+      await assert.rejects(sync.run(runtime()), /nginx: endoflife.date answered more than 1048576 bytes/);
+      assert.deepEqual(requests.sort(), ['nginx', 'postgresql']);
+    });
+  } finally {
+    (Features as any).TECHNOLOGY_CATALOG_SYNC_ENABLED = enabled;
+    await cleanCache();
+  }
+}
+
+/** A product whose values the database refuses holds back its own technology only. */
+async function testOneProductFails() {
+  await inRolledBackTransaction(async (runner) => {
+    const { catalog, sync } = syncService();
+    const tenantId = await seedTenant(runner, 'cat-sync-fail');
+    const pg = (await catalog.adopt('postgresql', { manager: runner.manager, tenantId })).technology.id;
+    const ngx = (await catalog.adopt('nginx', { manager: runner.manager, tenantId })).technology.id;
+    const postgres = catalog.shippedProduct('postgresql')!;
+    const nginx = catalog.shippedProduct('nginx')!;
+    const bad: CatalogVersion = { key: '99', label: 'x'.repeat(150), cpe_version: null, build_prefixes: [], release_date: '2026-10-01', standard_support_end: null, extended_support_end: null };
+    const good: CatalogVersion = { key: '1.99', label: '1.99', cpe_version: null, build_prefixes: [], release_date: '2026-10-01', standard_support_end: '2028-01-01', extended_support_end: null };
+    const result = await sync.syncTenant(runner.manager, tenantId, new Map([
+      ['postgresql', { ...postgres, versions: [bad, ...postgres.versions] }],
+      ['nginx', { ...nginx, versions: [good, ...nginx.versions] }],
+    ]));
+    assert.equal(result.versions_added, 1);
+    assert.equal(result.errors.length, 1);
+    assert.match(result.errors[0], /^postgresql: /);
+    assert.ok((await versionsOf(runner, ngx)).has('1.99'), 'the other product is synced');
+    assert.equal((await versionsOf(runner, pg)).size, postgres.versions.length, 'the failing one is left as it was');
+  });
+}
+
+/** C4 review, finding 3 (scenario C): the shipped file wins over a stale cache, and with the gate off. */
+async function testStaleCache() {
+  const enabled = Features.TECHNOLOGY_CATALOG_SYNC_ENABLED;
+  try {
+    await inRolledBackTransaction(async (runner) => {
+      const { catalog } = syncService();
+      const shipped = catalog.shippedProduct('postgresql')!;
+      const cached = [
+        { key: '99', label: '99', cpe_version: null, build_prefixes: [], release_date: '2026-10-01', standard_support_end: '2031-11-13', extended_support_end: null },
+        { ...shipped.versions.find((x) => x.key === '17')!, standard_support_end: '2027-01-01' },
+      ];
+      const at = async (lastSuccess: string, now: string, gate = true) => {
+        (Features as any).TECHNOLOGY_CATALOG_SYNC_ENABLED = gate;
+        await runner.query(
+          `INSERT INTO technology_catalog_products (catalog_key, versions, last_success_at, last_attempt_at) VALUES ('postgresql', $1::jsonb, $2, $2)
+           ON CONFLICT (catalog_key) DO UPDATE SET versions = EXCLUDED.versions, last_success_at = EXCLUDED.last_success_at`,
+          [JSON.stringify(cached), lastSuccess],
+        );
+        const product = (await catalog.effectiveProducts(runner.manager, ['postgresql'], { now: Date.parse(now) })).get('postgresql')!;
+        return [product.versions.some((x) => x.key === '99'), product.versions.find((x) => x.key === '17')!.standard_support_end];
+      };
+      const own = shipped.versions.find((x) => x.key === '17')!.standard_support_end;
+      assert.deepEqual(await at('2026-10-17T10:00:00Z', '2026-10-18T00:00:00Z'), [true, '2027-01-01'], 'a cache read after the shipped file counts');
+      assert.deepEqual(await at('2026-10-15T10:00:00Z', '2026-10-16T00:00:00Z'), [false, own], 'a shipped file built after the last read wins');
+      assert.deepEqual(await at('2026-10-17T10:00:00Z', '2026-10-30T00:00:00Z'), [false, own], 'a product not read for a week falls back to the shipped file');
+      assert.deepEqual(await at('2026-10-17T10:00:00Z', '2026-10-18T00:00:00Z', false), [false, own], 'gate off: the shipped file only');
+    });
+  } finally {
+    (Features as any).TECHNOLOGY_CATALOG_SYNC_ENABLED = enabled;
+  }
+}
+
+async function main() {
+  const fake = await serve();
+  baseUrl = fake.baseUrl;
+  try {
+    await runSpecs('technology catalog sync', [
+      ['clean start', cleanCache],
+      ['sync of a tenant', testSyncOfATenant],
+      ['technology adopted before the living catalog', testTechnologyAdoptedBefore],
+      ['unreadable catalog state', testMalformedState],
+      ['empty cpe_version completed', testEmptyCpeVersion],
+      ['withdrawn and contradicting dates', testWithdrawnAndContradictingDates],
+      ['version typed before the catalog had it', testTypedVersionIsAttached],
+      ['a SQL Server release brings its CPE product', testReleaseProduct],
+      ['empty description filled once', testDescriptionFilled],
+      ['description in the users\' language', testDescriptionInUsersLanguage],
+      ['scheduled run: refresh then sync', testRunRefreshesThenSyncs],
+      ['gate off: no request, shipped catalog synced', testGateOff],
+      ['unusable answers of endoflife.date', testUnusableAnswers],
+      ['one product fails, the others are synced', testOneProductFails],
+      ['stale cache', testStaleCache],
+      ['clean end', cleanCache],
+    ]);
+  } finally {
+    fake.server.close();
+  }
+}
+
+void main();

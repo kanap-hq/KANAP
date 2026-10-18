@@ -1,4 +1,5 @@
 import { Module, forwardRef } from '@nestjs/common';
+import { ScheduledTasksModule } from '../admin/scheduled-tasks/scheduled-tasks.module';
 import { ApplicationsModule } from '../applications/applications.module';
 import { AuditModule } from '../audit/audit.module';
 import { StorageModule } from '../common/storage/storage.module';
@@ -10,6 +11,7 @@ import { UsersModule } from '../users/users.module';
 import { ApplicationConversionController } from './application-conversion.controller';
 import { ApplicationConversionService } from './application-conversion.service';
 import { TechnologyCatalogService } from './catalog/technology-catalog.service';
+import { TechnologyCatalogSyncService } from './catalog/technology-catalog-sync.service';
 import { TechnologiesController } from './technologies.controller';
 import { TechnologiesDeleteService } from './technologies-delete.service';
 import { TechnologiesRelationsService } from './technologies-relations.service';
@@ -26,9 +28,10 @@ import { EndOfSupportService } from './reports/end-of-support.service';
  * `TechnologyLinksService` and `TechnologyReachService` are exported for the assets, the
  * applications and the business processes, which read and write the links from their side.
  * `ApplicationConversionController` turns an application into a technology (lot C1).
+ * `TechnologyCatalogSyncService` keeps the adopted technologies up to date with the living catalog (lot C4).
  */
 @Module({
-  imports: [AuditModule, PermissionsModule, forwardRef(() => UsersModule), StorageModule, ItOpsSettingsModule, CurrencyModule, IncidentsModule, forwardRef(() => ApplicationsModule)],
+  imports: [AuditModule, PermissionsModule, forwardRef(() => UsersModule), StorageModule, ItOpsSettingsModule, CurrencyModule, IncidentsModule, forwardRef(() => ApplicationsModule), ScheduledTasksModule],
   // The report's controller first: its static paths are registered before `technologies/:id`.
   controllers: [EndOfSupportController, TechnologiesController, ApplicationConversionController],
   providers: [
@@ -39,6 +42,7 @@ import { EndOfSupportService } from './reports/end-of-support.service';
     TechnologiesDeleteService,
     TechnologyCatalogService,
     TechnologyCpeEvents,
+    TechnologyCatalogSyncService,
     EndOfSupportService,
     ApplicationConversionService,
   ],

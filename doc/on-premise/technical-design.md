@@ -382,18 +382,29 @@ Optional in both modes: true when `ENTRA_CLIENT_ID` is configured. Per-tenant ac
 | `frontend/src/pages/ai/AiWorkspacePage.tsx` | 1 | Plaid workspace route | Hides native AI chat UI when `aiChat` is false |
 | `frontend/src/pages/admin/AdminAiPage.tsx` | 1 | Admin AI settings page | Hides AI settings and web search controls when the corresponding flags are false |
 
+#### Living catalog of technologies (`Features.TECHNOLOGY_CATALOG_SYNC_ENABLED`)
+
+The living catalog reads the release cycles of endoflife.date (`https://endoflife.date/api/v1`, or a mirror in `ENDOFLIFE_API_BASE_URL`) for the catalog entries the technologies were adopted from. `TECHNOLOGY_CATALOG_SYNC_ENABLED` is true by default in the cloud and false by default on-premise; set either way, it wins. Off, nothing leaves for endoflife.date: the scheduled task `technology-catalog` still runs at each start and daily (while it is enabled in the scheduled tasks), the cache is not read, and the task brings the catalog shipped with the installed version to the adopted technologies (new versions, dates and CPE identifiers, never over a value typed in the workspace). The frontend shows nothing different.
+
+| File | Line | What | Behavior |
+|------|------|------|----------|
+| `config/features.ts` | 20 | `TECHNOLOGY_CATALOG_SYNC_ENABLED` | Env value when set, otherwise `!SINGLE_TENANT` |
+| `technologies/catalog/technology-catalog-sync.service.ts` | n/a | `technology-catalog` scheduled task (daily 04:40 UTC, and at start), registered in both modes | Reads endoflife.date only when on; syncs the tenants either way |
+| `config/config.controller.ts` | 24 | `technologyCatalogSync` | `Features.TECHNOLOGY_CATALOG_SYNC_ENABLED` in `GET /config/public` |
+| `frontend/src/config/FeaturesContext.tsx` | 43 | `features.technologyCatalogSync` | False until `GET /config/public` says otherwise; no screen depends on it |
+
 #### Vulnerabilities (`Features.VULNERABILITY_FEED_ENABLED`)
 
 The NVD feed needs the way out to the NVD (`https://services.nvd.nist.gov`) or to a mirror (`NVD_API_BASE_URL`). `VULNERABILITY_FEED_ENABLED` is true by default in the cloud and false by default on-premise; set either way, it wins. `NVD_API_KEY` is optional (more requests per 30 seconds). Off, the frontend shows none of it: no IT › Vulnerabilities page or navigation entry, no "Vulnerabilities to review" column in the technologies list, no Technologies group in the notification preferences, and no email to the IT owners. With the feed on and email off (`EMAIL_ENABLED`), the run claims and sends nothing.
 
 | File | Line | What | Behavior |
 |------|------|------|----------|
-| `config/features.ts` | 19 | `VULNERABILITY_FEED_ENABLED` | Env value when set, otherwise `!SINGLE_TENANT` |
+| `config/features.ts` | 25 | `VULNERABILITY_FEED_ENABLED` | Env value when set, otherwise `!SINGLE_TENANT` |
 | `vulnerabilities/vulnerabilities.controller.ts` | 19 | `VulnerabilityFeedGuard` on `/vulnerabilities/*` and `/technologies/:id/vulnerabilities/*` | 403 `FEATURE_DISABLED` when off |
 | `vulnerabilities/nvd-feed.service.ts` | 217 | `vulnerability-feed` scheduled task (default every 6 hours, minute 20), and the notifications of each run | Registered only when on: no request leaves for the NVD and no vulnerability email goes out otherwise |
 | `technologies/technologies.service.ts` | 181 | `vulnerabilities_to_review`, `vulnerabilities_severe` in `GET /technologies` | `null` when off |
-| `config/config.controller.ts` | 24 | `vulnerabilityFeed` | `Features.VULNERABILITY_FEED_ENABLED` in `GET /config/public` |
-| `frontend/src/config/FeaturesContext.tsx` | 41 | `features.vulnerabilityFeed` | False until `GET /config/public` says otherwise |
+| `config/config.controller.ts` | 26 | `vulnerabilityFeed` | `Features.VULNERABILITY_FEED_ENABLED` in `GET /config/public` |
+| `frontend/src/config/FeaturesContext.tsx` | 44 | `features.vulnerabilityFeed` | False until `GET /config/public` says otherwise |
 | `frontend/src/App.tsx` | 272 | Route `/it/vulnerabilities` | Not registered when off |
 | `frontend/src/components/Layout.tsx` | 189 | IT › Operations › Vulnerabilities navigation entry | Hidden when off |
 | `frontend/src/pages/it/VulnerabilitiesPage.tsx` | 472 | The page itself (list grid, change of state in bulk, side panel) | Renders nothing when off |
