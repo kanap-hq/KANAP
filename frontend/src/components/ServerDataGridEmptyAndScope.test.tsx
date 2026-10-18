@@ -30,7 +30,7 @@ type Row = { id: string; name: string; status: string };
 const page = (names: string[]) => ({ data: { items: names.map((name) => ({ id: name, name, status: 'enabled' })), total: names.length, page: 1, limit: 50 } });
 const t = ((key: string) => key) as any;
 
-function Grid(props: { onGridApiReady?: (api: any) => void; withScope?: boolean; emptyState?: React.ReactNode }) {
+function Grid(props: { onGridApiReady?: (api: any) => void; withScope?: boolean; emptyState?: React.ReactNode; defaultFilterModel?: Record<string, unknown> }) {
   return (
     <MemoryRouter>
       <ServerDataGrid<Row>
@@ -45,6 +45,8 @@ function Grid(props: { onGridApiReady?: (api: any) => void; withScope?: boolean;
         statusScopeConfig={props.withScope ? { defaultScope: 'enabled' } : undefined}
         onGridApiReady={props.onGridApiReady}
         emptyState={props.emptyState}
+        initialState={props.defaultFilterModel ? { filter: { filterModel: props.defaultFilterModel } } : undefined}
+        defaultFilterModel={props.defaultFilterModel}
       />
     </MemoryRouter>
   );
@@ -140,6 +142,24 @@ describe('ServerDataGrid', () => {
       expect(await screen.findByText('common:filters.resultCount:2')).toBeInTheDocument();
       expect(gridApi.getFilterModel()).toEqual({});
       expect(screen.getByRole('radio', { name: 'common:labels.enabled' })).toBeChecked();
+      view.unmount();
+    }, 20_000);
+
+    it('goes back to the filters the page opens on, and offers nothing while they apply', async () => {
+      const opening = { name: { filterType: 'text', type: 'contains', filter: 'al' } };
+      get.mockImplementation(async (_url: string, config: Config) => (config.params.filters ? page(['Alpha']) : page(['Alpha', 'Beta'])));
+      let gridApi: any = null;
+      const view = render(<Grid defaultFilterModel={opening} onGridApiReady={(a) => { gridApi = a; }} />);
+      expect(await screen.findByText('common:filters.resultCount:1')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'common:buttons.resetFilters' })).not.toBeInTheDocument();
+
+      await act(async () => { gridApi.setFilterModel(null); });
+      expect(await screen.findByText('common:filters.resultCount:2')).toBeInTheDocument();
+      fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.resetFilters' }));
+
+      expect(await screen.findByText('common:filters.resultCount:1')).toBeInTheDocument();
+      expect(gridApi.getFilterModel()).toEqual(opening);
+      await waitFor(() => expect(screen.queryByRole('button', { name: 'common:buttons.resetFilters' })).not.toBeInTheDocument());
       view.unmount();
     }, 20_000);
   });

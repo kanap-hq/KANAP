@@ -527,6 +527,7 @@ export default function ProjectsPage() {
           extraParams={extraParams}
           columnPreferencesKey="portfolio-projects"
           initialState={initialGridState}
+          defaultFilterModel={defaultFilterModel}
           refreshKey={refreshKey}
           onGridApiReady={(api) => { gridApiRef.current = api; }}
           onQueryStateChange={(state) => {

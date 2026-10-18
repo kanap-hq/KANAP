@@ -994,6 +994,7 @@ export default function ApplicationsPage() {
           showFilteredColumns
           filteredColumnsAfter="name"
           initialState={initialState}
+          defaultFilterModel={defaultFilterModel}
           extraParams={extraParams}
           requiredColumns={['name']}
           onGridApiReady={(api) => {
