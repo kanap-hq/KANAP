@@ -41,7 +41,7 @@ const SORTS: Record<string, string> = {
 type TechnologyInput = Partial<{
   name: unknown; editor: unknown; family: unknown; mode: unknown; lifecycle: unknown; description: unknown; notes: unknown;
   support_notes: unknown; cpe_products: unknown; replaced_by_id: unknown; cyber_criticality: unknown; recovery_wave: unknown;
-  rto_minutes: unknown; rpo_minutes: unknown;
+  rto_minutes: unknown; rpo_minutes: unknown; admin_zone: unknown;
 }>;
 
 type VersionInput = Partial<{
@@ -325,7 +325,7 @@ export class TechnologiesService {
         out.replaced_by_id = replacement.id;
       }
     }
-    const needsSettings = has('family') || has('lifecycle') || has('cyber_criticality') || has('recovery_wave');
+    const needsSettings = has('family') || has('lifecycle') || has('cyber_criticality') || has('recovery_wave') || has('admin_zone');
     if (needsSettings) {
       const settings = await this.itOps.getSettings(tenantId, { manager: mg });
       const codeIn = (list: Array<{ code: string }> | undefined, value: unknown, field: string, nullable: boolean) => {
@@ -338,6 +338,7 @@ export class TechnologiesService {
       if (has('lifecycle')) out.lifecycle = codeIn(settings.lifecycleStates, body.lifecycle, 'lifecycle', false);
       if (has('cyber_criticality')) out.cyber_criticality = codeIn((settings as any).cyberCriticalityLevels, body.cyber_criticality, 'cyber criticality', true);
       if (has('recovery_wave')) out.recovery_wave = codeIn((settings as any).recoveryWaves, body.recovery_wave, 'recovery wave', true);
+      if (has('admin_zone')) out.admin_zone = codeIn(settings.adminZones, body.admin_zone, 'administration zone', true);
     }
     return out;
   }

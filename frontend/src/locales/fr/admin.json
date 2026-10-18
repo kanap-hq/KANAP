@@ -281,6 +281,7 @@
     },
     "exportResources": {
       "accounts": "Comptes",
+      "administrationView": "Vue de l'administration",
       "analyticsCategories": "Dimensions analytiques",
       "applications": "Applications",
       "assets": "Actifs",

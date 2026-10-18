@@ -40,6 +40,7 @@ import { connectionTypeCategoryLabel } from '../../utils/itOpsCatalogDefaults';
 import { useCatalogLocale } from '../../hooks/useLocalizedTaskTypes';
 import api from '../../api';
 import {
+  AdminZoneOption,
   ConnectionTypeOption,
   DomainOption,
   ItOpsEnumOption,
@@ -50,6 +51,7 @@ import {
 } from '../../services/itOpsSettings';
 import { useTranslation } from 'react-i18next';
 import ClassificationCatalogSettings from './components/ClassificationCatalogSettings';
+import DomainTrustsDialog from './components/DomainTrustsDialog';
 
 // ============================================================================
 // Utility Functions
@@ -109,6 +111,9 @@ const listsEqual = (a: ItOpsEnumOption[], b: ItOpsEnumOption[]): boolean => {
     if (((left as any).typicalPorts || undefined) !== ((right as any).typicalPorts || undefined)) return false;
     if (!!(left as any).is_physical !== !!(right as any).is_physical) return false;
     if (JSON.stringify((left as any).translations ?? null) !== JSON.stringify((right as any).translations ?? null)) return false;
+    for (const key of ['admin_group', 'privilege_level', 'secrets_location', 'description']) {
+      if (((left as any)[key] || undefined) !== ((right as any)[key] || undefined)) return false;
+    }
   }
   return true;
 };
@@ -133,6 +138,7 @@ const osListsEqual = (a: OperatingSystemOption[], b: OperatingSystemOption[]): b
 // ============================================================================
 
 type EnumListId =
+  | 'adminZones'
   | 'applicationCategories'
   | 'dataClasses'
   | 'networkSegments'
@@ -150,7 +156,8 @@ type EnumListId =
   | 'interfaceAuthModes'
   | 'ipAddressTypes'
   | 'accessMethods'
-  | 'incidentCategories';
+  | 'incidentCategories'
+  | 'technologyFamilies';
 
 type ListId = EnumListId | 'operatingSystems' | 'connectionTypes' | 'subnets' | 'domains';
 type GroupId = 'locations' | 'serversConnections' | 'appsInterfaces' | 'incidents';
@@ -160,10 +167,10 @@ type GroupId = 'locations' | 'serversConnections' | 'appsInterfaces' | 'incident
 // ============================================================================
 
 const enumListIds: EnumListId[] = [
-  'applicationCategories', 'dataClasses', 'networkSegments', 'entities', 'serverKinds',
+  'adminZones', 'applicationCategories', 'dataClasses', 'networkSegments', 'entities', 'serverKinds',
   'serverProviders', 'serverRoles', 'hostingTypes', 'lifecycleStates', 'interfaceProtocols',
   'interfaceDataCategories', 'interfaceTriggerTypes', 'interfacePatterns', 'interfaceFormats',
-  'interfaceAuthModes', 'ipAddressTypes', 'accessMethods', 'incidentCategories',
+  'interfaceAuthModes', 'ipAddressTypes', 'accessMethods', 'incidentCategories', 'technologyFamilies',
 ];
 
 const listGroupIds: GroupId[] = ['locations', 'serversConnections', 'appsInterfaces', 'incidents'];
@@ -173,10 +180,11 @@ type EnumSectionConfig = {
   id: EnumListId;
   group: GroupId;
   lockedCodes?: string[];
-  kind?: 'enum' | 'hosting' | 'serverKind' | 'serverRole' | 'entity';
+  kind?: 'enum' | 'hosting' | 'serverKind' | 'serverRole' | 'entity' | 'adminZone';
 };
 
 const enumSections: EnumSectionConfig[] = [
+  { id: 'adminZones', group: 'serversConnections', kind: 'adminZone' },
   { id: 'accessMethods', group: 'appsInterfaces' },
   { id: 'applicationCategories', group: 'appsInterfaces' },
   { id: 'networkSegments', group: 'serversConnections' },
@@ -184,6 +192,7 @@ const enumSections: EnumSectionConfig[] = [
   { id: 'ipAddressTypes', group: 'serversConnections' },
   { id: 'serverKinds', group: 'serversConnections', kind: 'serverKind' },
   { id: 'serverRoles', group: 'serversConnections', kind: 'serverRole' },
+  { id: 'technologyFamilies', group: 'serversConnections' },
   { id: 'hostingTypes', group: 'locations', kind: 'hosting' },
   { id: 'serverProviders', group: 'locations' },
   { id: 'lifecycleStates', group: 'appsInterfaces', lockedCodes: ['proposed', 'active', 'deprecated', 'retired'] },
@@ -642,6 +651,8 @@ const DomainsEditor = React.memo(function DomainsEditor({ items, onChange }: Dom
   const { t } = useTranslation(['it', 'common']);
   const removal = useCatalogRemoval('domains');
   const translations = useCatalogTranslations();
+  const [trustsOf, setTrustsOf] = React.useState<(DomainOption & { localId: string }) | null>(null);
+  const countValue = (value: string) => (value.trim() === '' ? undefined : Math.min(MAX_COUNT, Math.max(0, parseInt(value, 10) || 0)));
   const issues = React.useMemo(() => catalogListIssues(localItems, { skipCodes: new Set(localItems.filter((row: any) => row.system).map((row: any) => String(row.code).toLowerCase())) }), [localItems]);
 
   return (
@@ -656,19 +667,23 @@ const DomainsEditor = React.memo(function DomainsEditor({ items, onChange }: Dom
         <Table size="small" stickyHeader={useVirtual}>
           <TableHead>
             <TableRow>
-              <TableCell sx={{ width: '32%' }}>{t('common:enumEditor.name')}</TableCell>
-              <TableCell sx={{ width: '33%' }}>{t('pages.settings.columns.dnsSuffix')}</TableCell>
-              <TableCell sx={{ width: '15%' }}>{t('common:enumEditor.noLongerOffered')}</TableCell>
-              <TableCell align="right" sx={{ width: '20%' }}>{t('common:labels.actions')}</TableCell>
+              <TableCell sx={{ width: '18%' }}>{t('common:enumEditor.name')}</TableCell>
+              <TableCell sx={{ width: '17%' }}>{t('pages.settings.columns.dnsSuffix')}</TableCell>
+              <TableCell sx={{ width: '15%' }}>{t('pages.settings.columns.forest')}</TableCell>
+              <TableCell sx={{ width: '9%' }}>{t('pages.settings.columns.accounts')}</TableCell>
+              <TableCell sx={{ width: '9%' }}>{t('pages.settings.columns.machines')}</TableCell>
+              <TableCell sx={{ width: '10%' }}>{t('pages.settings.columns.trusts')}</TableCell>
+              <TableCell sx={{ width: '8%' }}>{t('common:enumEditor.noLongerOffered')}</TableCell>
+              <TableCell align="right" sx={{ width: '14%' }}>{t('common:labels.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {useVirtual && paddingTop > 0 && (
-              <TableRow><TableCell colSpan={5} sx={{ p: 0, height: paddingTop, border: 0 }} /></TableRow>
+              <TableRow><TableCell colSpan={8} sx={{ p: 0, height: paddingTop, border: 0 }} /></TableRow>
             )}
             {localItems.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5}>
+                <TableCell colSpan={8}>
                   <Typography variant="body2" color="text.secondary">{t('pages.settings.empty.domains')}</Typography>
                 </TableCell>
               </TableRow>
@@ -679,6 +694,10 @@ const DomainsEditor = React.memo(function DomainsEditor({ items, onChange }: Dom
                 <TableRow key={item.localId}>
                   <TableCell sx={{ verticalAlign: 'top' }}><TextField value={item.label || ''} onChange={(e) => handleLabelChange(item.localId, e.target.value, item.dns_suffix || '', item.label || '')} size="small" fullWidth placeholder={t('pages.settings.placeholders.domainName')} disabled={isSystem} InputProps={{ readOnly: isSystem }} inputProps={{ 'aria-label': t('common:enumEditor.name') }} /><IssueText issue={issues.get(localItems.indexOf(item))} /></TableCell>
                   <TableCell><TextField value={item.dns_suffix || ''} onChange={(e) => handleUpdate(item.localId, { dns_suffix: e.target.value.toLowerCase() })} size="small" fullWidth placeholder={t('pages.settings.placeholders.dnsSuffix')} disabled={isSystem} InputProps={{ readOnly: isSystem }} /></TableCell>
+                  <TableCell>{!isSystem && <TextField value={item.forest || ''} onChange={(e) => handleUpdate(item.localId, { forest: e.target.value || undefined })} size="small" fullWidth placeholder={t('pages.settings.placeholders.forest')} inputProps={{ maxLength: 200, 'aria-label': `${t('pages.settings.columns.forest')} ${item.label}` }} />}</TableCell>
+                  <TableCell>{!isSystem && <TextField value={item.account_count ?? ''} onChange={(e) => handleUpdate(item.localId, { account_count: countValue(e.target.value) })} size="small" fullWidth type="number" placeholder={t('pages.settings.placeholders.accountCount')} inputProps={{ min: 0, max: MAX_COUNT, 'aria-label': `${t('pages.settings.columns.accounts')} ${item.label}` }} />}</TableCell>
+                  <TableCell>{!isSystem && <TextField value={item.machine_count ?? ''} onChange={(e) => handleUpdate(item.localId, { machine_count: countValue(e.target.value) })} size="small" fullWidth type="number" placeholder={t('pages.settings.placeholders.machineCount')} inputProps={{ min: 0, max: MAX_COUNT, 'aria-label': `${t('pages.settings.columns.machines')} ${item.label}` }} />}</TableCell>
+                  <TableCell>{!isSystem && item.code && <Button size="small" onClick={() => setTrustsOf(item)} aria-label={`${t('pages.settings.columns.trusts')} ${item.label}`}>{(item.trusts ?? []).length ? t('pages.settings.trusts.count', { count: item.trusts.length }) : t('pages.settings.trusts.none')}</Button>}</TableCell>
                   <TableCell><Checkbox size="small" checked={!!item.deprecated} onChange={(e) => handleUpdate(item.localId, { deprecated: e.target.checked })} disabled={isSystem} inputProps={{ 'aria-label': `${t('common:enumEditor.noLongerOffered')} ${item.label}` }} /></TableCell>
                   <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
                     {isSystem ? (
@@ -692,8 +711,115 @@ const DomainsEditor = React.memo(function DomainsEditor({ items, onChange }: Dom
               );
             })}
             {useVirtual && paddingBottom > 0 && (
-              <TableRow><TableCell colSpan={5} sx={{ p: 0, height: paddingBottom, border: 0 }} /></TableRow>
+              <TableRow><TableCell colSpan={8} sx={{ p: 0, height: paddingBottom, border: 0 }} /></TableRow>
             )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+      {removal.dialog}
+      {translations.dialog}
+      <DomainTrustsDialog domain={trustsOf} domains={localItems} onClose={() => setTrustsOf(null)} onSave={(trusts) => trustsOf && handleUpdate(trustsOf.localId, { trusts })} />
+    </Paper>
+  );
+});
+
+/** The server's limits (`it-ops-settings.service.ts`): a longer value would be refused. */
+const ADMIN_ZONE_LIMITS = { admin_group: 200, privilege_level: 100, secrets_location: 200, description: 2000 } as const;
+const MAX_COUNT = 100_000_000;
+
+interface AdminZonesEditorProps {
+  items: AdminZoneOption[];
+  onChange: (items: AdminZoneOption[]) => void;
+}
+
+/** Administration zones: name, administrator group, privilege level, secrets location and description per zone. */
+export const AdminZonesEditor = React.memo(function AdminZonesEditor({ items, onChange }: AdminZonesEditorProps) {
+  const itemsWithIds = React.useMemo(() => withLocalIds(items, 'adminZones'), [items]);
+  const [localItems, setLocalItems] = React.useState(itemsWithIds);
+  const pendingCommitRef = React.useRef(false);
+
+  // Sync down from parent - skip if we just committed to avoid loops
+  React.useEffect(() => {
+    if (pendingCommitRef.current) {
+      pendingCommitRef.current = false;
+      return;
+    }
+    setLocalItems(itemsWithIds);
+  }, [itemsWithIds]);
+
+  const commitToParent = React.useCallback((next: AdminZoneOption[]) => {
+    pendingCommitRef.current = true;
+    React.startTransition(() => onChange(next));
+  }, [onChange]);
+
+  const handleUpdate = React.useCallback((localId: string, patch: Partial<AdminZoneOption>) => {
+    setLocalItems((prev) => {
+      const next = prev.map((row: any) => (row.localId === localId ? { ...row, ...patch } : row));
+      commitToParent(next);
+      return next;
+    });
+  }, [commitToParent]);
+
+  const handleRemove = React.useCallback((localId: string) => {
+    setLocalItems((prev) => {
+      const next = prev.filter((row: any) => row.localId !== localId);
+      commitToParent(next);
+      return next;
+    });
+  }, [commitToParent]);
+
+  const { t } = useTranslation(['it', 'common']);
+  const removal = useCatalogRemoval('adminZones');
+  const translations = useCatalogTranslations();
+  const issues = React.useMemo(() => catalogListIssues(localItems), [localItems]);
+  const text = (item: any, key: 'admin_group' | 'privilege_level' | 'secrets_location' | 'description', placeholder: string) => (
+    <TextField value={item[key] || ''} onChange={(e) => handleUpdate(item.localId, { [key]: e.target.value || undefined })} size="small" fullWidth placeholder={placeholder} inputProps={{ maxLength: ADMIN_ZONE_LIMITS[key], 'aria-label': `${t(`pages.settings.columns.${key === 'admin_group' ? 'adminGroup' : key === 'privilege_level' ? 'privilegeLevel' : key === 'secrets_location' ? 'secretsLocation' : 'description'}`)} ${item.label}` }} />
+  );
+
+  return (
+    <Paper variant="outlined" sx={{ p: 2 }}>
+      <Stack spacing={0.5} sx={{ mb: 1 }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>{t(listTitleKey('adminZones'))}</Typography>
+        <Typography variant="body2" color="text.secondary">{t(listDescriptionKey('adminZones'))}</Typography>
+      </Stack>
+      <TableContainer>
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell sx={{ width: '18%' }}>{t('common:enumEditor.name')}</TableCell>
+              <TableCell sx={{ width: '17%' }}>{t('pages.settings.columns.adminGroup')}</TableCell>
+              <TableCell sx={{ width: '12%' }}>{t('pages.settings.columns.privilegeLevel')}</TableCell>
+              <TableCell sx={{ width: '17%' }}>{t('pages.settings.columns.secretsLocation')}</TableCell>
+              <TableCell sx={{ width: '18%' }}>{t('pages.settings.columns.description')}</TableCell>
+              <TableCell sx={{ width: '6%' }}>{t('common:enumEditor.noLongerOffered')}</TableCell>
+              <TableCell align="right" sx={{ width: '12%' }}>{t('common:labels.actions')}</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {localItems.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={7}>
+                  <Typography variant="body2" color="text.secondary">{t('pages.settings.empty.adminZones')}</Typography>
+                </TableCell>
+              </TableRow>
+            )}
+            {localItems.map((item: any) => (
+              <TableRow key={item.localId}>
+                <TableCell sx={{ verticalAlign: 'top' }}>
+                  <TextField value={item.label} onChange={(e) => handleUpdate(item.localId, { label: e.target.value })} size="small" fullWidth placeholder={t('pages.settings.placeholders.adminZoneName')} inputProps={{ maxLength: 200, 'aria-label': t('common:enumEditor.name') }} />
+                  <IssueText issue={issues.get(localItems.indexOf(item))} />
+                </TableCell>
+                <TableCell>{text(item, 'admin_group', t('pages.settings.placeholders.adminGroup'))}</TableCell>
+                <TableCell>{text(item, 'privilege_level', t('pages.settings.placeholders.privilegeLevel'))}</TableCell>
+                <TableCell>{text(item, 'secrets_location', t('pages.settings.placeholders.secretsLocation'))}</TableCell>
+                <TableCell>{text(item, 'description', t('pages.settings.placeholders.adminZoneDescription'))}</TableCell>
+                <TableCell><Checkbox size="small" checked={!!item.deprecated} onChange={(e) => handleUpdate(item.localId, { deprecated: e.target.checked })} inputProps={{ 'aria-label': `${t('common:enumEditor.noLongerOffered')} ${item.label}` }} /></TableCell>
+                <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                  {item.code && <TranslateButton label={item.label} onClick={() => translations.openTranslations({ item, onSave: (next) => handleUpdate(item.localId, { translations: next } as any) })} />}
+                  <Button size="small" color="error" onClick={() => void removal.requestRemoval({ name: item.label || item.code, key: item.code ? { code: item.code } : null, onRemove: () => handleRemove(item.localId), onRetire: () => handleUpdate(item.localId, { deprecated: true }) })}>{t('common:enumEditor.remove')}</Button>
+                </TableCell>
+              </TableRow>
+            ))}
           </TableBody>
         </Table>
       </TableContainer>
@@ -718,6 +844,8 @@ type SettingsState = {
   baseline: ItOpsSettings | null;
   dirty: Partial<Record<ListId, boolean>>;
   pending: ListId | null;
+  /** Per list, the rows the server refused (4xx): autosave waits for the next edit instead of resending them. */
+  rejected: Partial<Record<ListId, string>>;
   successMessage: string;
   errorMessage: string | null;
 };
@@ -731,6 +859,7 @@ export const initialState: SettingsState = {
   baseline: null,
   dirty: {},
   pending: null,
+  rejected: {},
   successMessage: '',
   errorMessage: null,
 };
@@ -748,6 +877,7 @@ type Action =
   | { type: 'resetSubnets' }
   | { type: 'resetDomains' }
   | { type: 'setPending'; id: ListId | null }
+  | { type: 'rejected'; id: ListId; sent: any[] }
   | { type: 'saved'; id: ListId; sent: any[]; saved: ItOpsSettings }
   | { type: 'setSuccess'; message: string }
   | { type: 'setError'; message: string | null };
@@ -772,7 +902,7 @@ export function reducer(state: SettingsState, action: Action): SettingsState {
   switch (action.type) {
     case 'hydrate': {
       const next = hydrateFromSettings(action.payload);
-      return { ...state, ...next, dirty: {}, pending: null, errorMessage: null };
+      return { ...state, ...next, dirty: {}, pending: null, rejected: {}, errorMessage: null };
     }
     case 'setEnum': {
       const enums = { ...state.enums, [action.id]: action.items };
@@ -837,10 +967,13 @@ export function reducer(state: SettingsState, action: Action): SettingsState {
         ? currentList.map((row: any, index: number) => ({ ...(matchSaved(row, index) ?? row), localId: row.localId }))
         : currentList.map((row: any, index: number) => (!row.code && action.sent[index] && !action.sent[index].code && savedList[index]?.code ? { ...row, code: savedList[index].code } : row));
       const listState = action.id === 'operatingSystems' ? { operatingSystems: nextList } : action.id === 'connectionTypes' ? { connectionTypes: nextList } : action.id === 'subnets' ? { subnets: nextList } : action.id === 'domains' ? { domains: nextList } : { enums: { ...state.enums, [action.id]: nextList } };
-      return { ...state, ...listState, baseline, dirty: { ...state.dirty, [action.id]: !untouched }, pending: null, errorMessage: null };
+      const { [action.id]: _accepted, ...rejected } = state.rejected;
+      return { ...state, ...listState, baseline, rejected, dirty: { ...state.dirty, [action.id]: !untouched }, pending: null, errorMessage: null };
     }
     case 'setPending':
       return { ...state, pending: action.id || null };
+    case 'rejected':
+      return { ...state, rejected: { ...state.rejected, [action.id]: JSON.stringify(action.sent) } };
     case 'setSuccess':
       return { ...state, successMessage: action.message, errorMessage: null };
     case 'setError':
@@ -848,6 +981,20 @@ export function reducer(state: SettingsState, action: Action): SettingsState {
     default:
       return state;
   }
+}
+
+function listRows(state: SettingsState, id: ListId): any[] {
+  if (id === 'operatingSystems') return state.operatingSystems;
+  if (id === 'connectionTypes') return state.connectionTypes;
+  if (id === 'subnets') return state.subnets;
+  if (id === 'domains') return state.domains;
+  return state.enums[id as EnumListId] || [];
+}
+
+/** The list still holds exactly the rows the server refused: saving them again would be refused again. */
+export function autosaveBlocked(state: SettingsState, id: ListId): boolean {
+  const refused = state.rejected[id];
+  return refused !== undefined && refused === JSON.stringify(stripLocalIds(listRows(state, id)));
 }
 
 // ============================================================================
@@ -877,7 +1024,9 @@ export default function ItOperationsSettingsPage() {
       dispatch({ type: 'saved', id: variables.id, sent: variables.rows, saved: next });
       dispatch({ type: 'setSuccess', message: t('pages.settings.updateSuccess') });
     },
-    onError: (error) => {
+    onError: (error, variables) => {
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      if (status && status >= 400 && status < 500) dispatch({ type: 'rejected', id: variables.id, sent: variables.rows });
       dispatch({ type: 'setError', message: getApiErrorMessage(error, t, t('pages.settings.updateFailed')) });
     },
     onSettled: () => dispatch({ type: 'setPending', id: null }),
@@ -936,7 +1085,7 @@ export default function ItOperationsSettingsPage() {
   React.useEffect(() => {
     if (submitting) return undefined;
     const dirtyIds = (Object.keys(state.dirty) as ListId[]).filter(
-      (id) => state.dirty[id] && listReadyToSave(id),
+      (id) => state.dirty[id] && listReadyToSave(id) && !autosaveBlocked(state, id),
     );
     if (dirtyIds.length === 0) return undefined;
     const timer = setTimeout(() => {
@@ -1060,6 +1209,8 @@ export default function ItOperationsSettingsPage() {
                       <AssetKindEditor items={items as AssetKindItem[]} onChange={(next) => dispatch({ type: 'setEnum', id: enumSection.id, items: withLocalIds(next, enumSection.id) })} hideAddButton {...editorGuards(enumSection.id)} />
                     ) : enumSection.kind === 'serverRole' ? (
                       <ServerRoleEditor items={items as ServerRoleItem[]} onChange={(next) => dispatch({ type: 'setEnum', id: enumSection.id, items: withLocalIds(next, enumSection.id) })} hideAddButton {...editorGuards(enumSection.id)} />
+                    ) : enumSection.kind === 'adminZone' ? (
+                      <AdminZonesEditor items={items as AdminZoneOption[]} onChange={(next) => dispatch({ type: 'setEnum', id: enumSection.id, items: withLocalIds(next, enumSection.id) })} />
                     ) : enumSection.kind === 'entity' ? (
                       <EntityEditor items={items as EntityItem[]} onChange={(next) => dispatch({ type: 'setEnum', id: enumSection.id, items: withLocalIds(next, enumSection.id) })} hideAddButton {...editorGuards(enumSection.id)} />
                     ) : (

@@ -57,6 +57,8 @@ export type TechnologyDetail = {
   name: string;
   editor: string | null;
   family: string | null;
+  /** Code of the "Administration zones" catalog, null when not placed. */
+  admin_zone?: string | null;
   mode: 'installed' | 'subscribed';
   lifecycle: string;
   description: string | null;
@@ -74,7 +76,7 @@ export type TechnologyDetail = {
 };
 
 export type TechnologyPatch = Partial<Pick<TechnologyDetail,
-  'name' | 'editor' | 'family' | 'mode' | 'lifecycle' | 'description' | 'notes' | 'cpe_products' | 'replaced_by_id'
+  'name' | 'editor' | 'family' | 'admin_zone' | 'mode' | 'lifecycle' | 'description' | 'notes' | 'cpe_products' | 'replaced_by_id'
   | 'cyber_criticality' | 'recovery_wave' | 'rto_minutes' | 'rpo_minutes' | 'support_notes'>>;
 
 /** `part:vendor:product`, the product part of a CPE name (`a:microsoft:sql_server`). */
@@ -208,6 +210,11 @@ export function TechnologyProperties({ technology, canManage, onPatch, onOwnersC
   const familyOptions = technology.family && !families.some((option) => option.code === technology.family)
     ? [{ code: technology.family, label: t('common.legacyOption', { label: technology.family }) }, ...families]
     : families;
+  // A retired zone stays offered while the technology is in it; an unknown code shows as is.
+  const zones = (byField.adminZone || []).filter((option) => !option.deprecated || option.code === technology.admin_zone);
+  const zoneOptions = technology.admin_zone && !zones.some((option) => option.code === technology.admin_zone)
+    ? [{ code: technology.admin_zone, label: t('common.legacyOption', { label: technology.admin_zone }) }, ...zones]
+    : zones;
 
   const saveEditor = () => {
     const next = editor.trim() || null;
@@ -251,6 +258,25 @@ export function TechnologyProperties({ technology, canManage, onPatch, onOwnersC
             sx={drawerSelectSx}
           >
             {familyOptions.map((option) => (
+              <MenuItem key={option.code} value={option.code} sx={drawerMenuItemSx}>{option.label}</MenuItem>
+            ))}
+          </Select>
+        </PropertyRow>
+        <PropertyRow label={t('workspace.technology.fields.adminZone')}>
+          <Select
+            value={technology.admin_zone || ''}
+            onChange={(event) => onPatch({ admin_zone: String(event.target.value) || null })}
+            variant="standard"
+            disabled={!canManage}
+            displayEmpty
+            SelectDisplayProps={{ 'aria-label': t('workspace.technology.fields.adminZone') } as React.HTMLAttributes<HTMLDivElement>}
+            sx={drawerSelectSx}
+            renderValue={(value) => (value
+              ? zoneOptions.find((option) => option.code === value)?.label ?? String(value)
+              : <Box component="span" sx={(theme) => ({ color: theme.palette.kanap.text.tertiary })}>{t('workspace.technology.placeholders.noAdminZone')}</Box>)}
+          >
+            <MenuItem value="" sx={drawerMenuItemSx}>{t('workspace.technology.placeholders.noAdminZone')}</MenuItem>
+            {zoneOptions.map((option) => (
               <MenuItem key={option.code} value={option.code} sx={drawerMenuItemSx}>{option.label}</MenuItem>
             ))}
           </Select>

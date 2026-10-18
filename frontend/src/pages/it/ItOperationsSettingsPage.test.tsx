@@ -54,6 +54,14 @@ describe('IT Landscape settings reconciliation', () => {
     expect(state.dirty.applicationCategories).toBe(true);
   });
 
+  it('edits the technology families like the other simple lists', () => {
+    const withFamilies = { ...settings, technologyFamilies: [{ code: 'directory', label: 'Directory and identity', deprecated: false }, { code: 'database', label: 'Database', deprecated: false }] } as ItOpsSettings;
+    let state = reducer(initialState, { type: 'hydrate', payload: withFamilies });
+    expect(state.enums.technologyFamilies.map((row) => row.code)).toEqual(['database', 'directory']);
+    state = reducer(state, { type: 'setEnum', id: 'technologyFamilies', items: state.enums.technologyFamilies.map((row) => (row.code === 'database' ? { ...row, deprecated: true } : row)) });
+    expect(state.dirty.technologyFamilies).toBe(true);
+  });
+
   it('detects a physical flag change as a modification', () => {
     let state = reducer(initialState, { type: 'hydrate', payload: settings });
     const kinds = state.enums.serverKinds.map((row) => ({ ...row, is_physical: true }));
