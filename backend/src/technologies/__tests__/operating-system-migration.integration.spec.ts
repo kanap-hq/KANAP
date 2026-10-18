@@ -145,8 +145,10 @@ async function testDirtyDatabase() {
     const bFree = await asset(runner, b, 'b-free');
     await runner.query(`UPDATE assets SET operating_system = 'Windows Server 2012 R2' WHERE tenant_id = $1 AND id = $2`, [b, bFree]);
 
+    // Windows Server 2008 R2 and Ubuntu 16.04 LTS are versions of the frozen products: the custom
+    // codes land on them and create no version of their own.
     const expectedA = {
-      created: 9, adopted: 4, versions: windowsVersions + ubuntuVersions + centosVersions + oracleLinuxVersions + 6,
+      created: 9, adopted: 4, versions: windowsVersions + ubuntuVersions + centosVersions + oracleLinuxVersions + 4,
       linksCreated: 10, linksReused: 1, orphans: 2, datesDropped: 1,
     };
     const expectedB = { created: 3, adopted: 1, versions: windowsVersions + 3, linksCreated: 3, linksReused: 0, orphans: 2 };

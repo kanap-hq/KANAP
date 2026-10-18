@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { ConfigController } from '../../config/config.controller';
 import { Features } from '../../config/features';
-import { cleanLabel, cpeVersionOf, endoflifeSlug, MAX_RELEASES, mergeProduct, mergeVersions, realDay, releaseProduct, SUPPORT_RULES, validCatalogVersion, versionsOfReleases } from '../catalog/catalog-releases';
+import { cleanLabel, cpeVersionOf, endoflifeSlug, MAX_RELEASES, MAX_VERSIONS, mergeProduct, mergeVersions, realDay, releaseProduct, SUPPORT_RULES, validCatalogVersion, versionsOfReleases } from '../catalog/catalog-releases';
 import { versionMatches } from '../../vulnerabilities/vulnerability-rules';
 import { TechnologyCatalogService, type CatalogVersion } from '../catalog/technology-catalog.service';
 
@@ -164,7 +164,7 @@ function testOperatingSystemSupportDates() {
     const [version] = versionsOfReleases([{ name: '1', label: '1', releaseDate: '2022-04-21', ...release }], '2026-10-18', key);
     return [version.standard_support_end, version.extended_support_end];
   };
-  const ubuntu = { eoasFrom: '2024-09-30', eolFrom: '2027-06-01', eoesFrom: '2032-04-21' };
+  const ubuntu = { eoasFrom: '2024-09-30', eolFrom: '2027-06-01', eoesFrom: '2032-04-21', isLts: true };
   assert.deepEqual(dates('ubuntu', ubuntu), ['2027-06-01', '2032-04-21']);
   assert.deepEqual(dates('rhel', { eoasFrom: '2019-08-06', eolFrom: '2024-06-30', eoesFrom: '2029-05-31' }), ['2024-06-30', '2029-05-31']);
   assert.deepEqual(dates('centos', { eoasFrom: '2020-08-06', eolFrom: '2024-06-30' }), ['2024-06-30', null], 'no paid extension, no extended date');
@@ -179,6 +179,69 @@ function testOperatingSystemSupportDates() {
   assert.deepEqual(osKeys, Object.keys(SUPPORT_RULES).sort());
 }
 
+/**
+ * Operating systems (lot T3, second test round): every version whose support ended in 2010 or
+ * later, however many; Windows Server long-term releases only, without the service pack in the
+ * label; Ubuntu LTS releases only; SLES service packs as `11 SP4`, `12` for `12.0`.
+ */
+function testOperatingSystemReleases() {
+  const today = '2026-10-18';
+  const labels = (key: string, releases: Array<Record<string, unknown>>) => versionsOfReleases(releases, today, key).map((x) => `${x.key}=${x.label}`);
+
+  // The window: a last support ending on 2010-01-01 stays, one the day before goes, whatever the count.
+  const window = [
+    { name: '4', label: '4', releaseDate: '2005-02-15', eolFrom: '2009-12-31' },
+    { name: '5', label: '5', releaseDate: '2007-03-15', eoasFrom: '2008-01-01', eolFrom: '2009-01-01', eoesFrom: '2010-01-01' },
+    ...Array.from({ length: 10 }, (_, i) => ({ name: `${10 + i}`, label: `${10 + i}`, releaseDate: `20${10 + i}-01-01`, eolFrom: '2015-01-01' })),
+  ];
+  const rhel = versionsOfReleases(window, today, 'rhel');
+  assert.equal(rhel.length, 11, `more than ${MAX_VERSIONS} versions for an operating system`);
+  assert.ok(rhel.some((x) => x.key === '5'), 'an extended support ending on 2010-01-01 is kept');
+  assert.ok(!rhel.some((x) => x.key === '4'), 'a support ended before 2010 is left out');
+  assert.equal(versionsOfReleases(window, today, 'postgresql').length, 0, 'other families keep the four-year window');
+
+  // Windows Server: long-term releases, service pack dropped, one 2003.
+  assert.deepEqual(labels('windows-server', [
+    { name: '2025', label: 'Windows Server 2025 (LTSC)', releaseDate: '2024-11-01', eoasFrom: '2029-11-13', eolFrom: '2034-11-14' },
+    { name: '23h2-ac', label: 'Windows Server 23H2 AC', releaseDate: '2023-10-24', eoasFrom: '2026-05-12', eolFrom: '2026-05-12' },
+    { name: '1809-sac', label: 'Windows Server 1809 SAC', releaseDate: '2018-11-13', eoasFrom: '2020-11-10', eolFrom: '2020-11-10' },
+    { name: '2008-r2-sp1', label: 'Windows Server 2008 R2 SP1 (LTSC)', releaseDate: '2011-02-22', eoasFrom: '2015-01-13', eolFrom: '2020-01-14' },
+    { name: '2008-sp2', label: 'Windows Server 2008 SP2 (LTSC)', releaseDate: '2009-04-29', eoasFrom: '2015-01-13', eolFrom: '2020-01-14' },
+    { name: '2003-sp2', label: 'Windows Server 2003 SP2 (LTSC)', releaseDate: '2007-03-13', eoasFrom: '2010-07-13', eolFrom: '2015-07-14' },
+    { name: '2003-sp1', label: 'Windows Server 2003 SP1', releaseDate: '2005-03-30', eoasFrom: '2009-04-14', eolFrom: '2012-04-14' },
+    { name: '2003', label: 'Windows Server 2003 (LTSC)', releaseDate: '2003-04-24', eoasFrom: '2007-04-10', eolFrom: '2011-04-10' },
+    { name: '2000', label: 'Windows Server 2000 (LTSC)', releaseDate: '2000-02-17', eoasFrom: '2005-06-30', eolFrom: '2010-07-13' },
+  ]), ['2025=2025', '2008-r2-sp1=2008 R2', '2008-sp2=2008', '2003-sp2=2003', '2000=2000']);
+
+  // Ubuntu: the LTS releases only.
+  assert.deepEqual(labels('ubuntu', [
+    { name: '24.10', label: "24.10 'Oracular Oriole'", isLts: false, releaseDate: '2024-10-10', eolFrom: '2025-07-10' },
+    { name: '24.04', label: "24.04 'Noble Numbat' (LTS)", isLts: true, releaseDate: '2024-04-25', eolFrom: '2029-05-31', eoesFrom: '2034-04-25' },
+    { name: '6.06', label: "6.06 'Dapper Drake' (LTS)", isLts: true, releaseDate: '2006-06-01', eolFrom: '2011-06-01' },
+    { name: '5.10', label: "5.10 'Breezy Badger'", releaseDate: '2005-10-12', eolFrom: '2011-04-13' },
+  ]), ['24.04=24.04 LTS', '6.06=6.06 LTS']);
+
+  // SLES: service packs, and the first release of a major version without `.0`.
+  assert.deepEqual(labels('sles', [
+    { name: '16.0', label: '16.0', releaseDate: '2025-11-04', eolFrom: '2027-11-30', eoesFrom: '2030-11-30' },
+    { name: '15.0', label: '15.0', releaseDate: '2018-07-16', eolFrom: '2019-12-31', eoesFrom: '2022-12-31' },
+    { name: '11.4', label: '11.4', releaseDate: '2015-07-15', eolFrom: '2019-03-31', eoesFrom: '2022-03-31' },
+    { name: '12.0', label: '12.0', releaseDate: '2014-10-27', eolFrom: '2016-06-30', eoesFrom: '2019-07-01' },
+    { name: '10.4', label: '10.4', releaseDate: '2011-04-12', eolFrom: '2013-07-31', eoesFrom: '2016-07-30' },
+  ]), ['16.0=16', '15.0=15', '11.4=11 SP4', '12.0=12', '10.4=10 SP4']);
+
+  // Debian keeps its code name.
+  assert.deepEqual(labels('debian', [{ name: '7', label: '7 (Wheezy)', releaseDate: '2013-05-04', eoasFrom: '2016-04-25', eolFrom: '2018-05-31' }]), ['7=7 (Wheezy)']);
+
+  // The shipped catalog follows the same rules.
+  const byKey = new Map(shipped.map((p) => [p.key, p]));
+  const shippedLabels = (key: string) => byKey.get(key)!.versions.map((x) => x.label);
+  assert.ok(['2000', '2003', '2008', '2008 R2', '2012 R2', '2025'].every((label) => shippedLabels('windows-server').includes(label)));
+  assert.ok(!shippedLabels('windows-server').some((label) => /\b(AC|SAC|SP\d+)$/.test(label)), 'no channel release, no service pack');
+  assert.ok(shippedLabels('ubuntu').every((label) => label.endsWith(' LTS')));
+  assert.ok(['10 SP4', '11 SP4', '12', '12 SP5', '15', '15 SP7'].every((label) => shippedLabels('sles').includes(label)));
+}
+
 function main() {
   testCpeVersionMatchesTheShippedCatalog();
   testVersionsOfReleases();
@@ -189,6 +252,7 @@ function main() {
   testProductPerRelease();
   testFeatureGate();
   testOperatingSystemSupportDates();
+  testOperatingSystemReleases();
   console.log('catalog-releases.spec: ok');
 }
 
