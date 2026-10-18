@@ -594,6 +594,62 @@ const PAGES = {
       await sleep(1500);
     },
   },
+  // IT contracts article (2026-10-17): SAP Maintenance & Support, Overview tab (deadline sentence, terms timeline, decision panel).
+  'contracts-sap-overview-2026-10-17': {
+    path: '/ops/contracts/7ebe07da-0b08-4945-bcf2-fc214bddf881/overview',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForFunction(() => /Without a decision/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
+      await sleep(1000);
+    },
+  },
+  // IT contracts article (2026-10-17): contracts list, quick filter "To decide within 90 days".
+  'contracts-to-decide-2026-10-17': {
+    path: '/ops/contracts',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 60000 });
+      await sleep(1000);
+      // Year select first (2026 carries the budget on the demo tenant), then the quick filter.
+      await (await page.$('.MuiSelect-select')).click();
+      await page.waitForSelector('li[role="option"]', { timeout: 10000 });
+      await sleep(400);
+      await clickText(page, 'li[role="option"]', '2026');
+      await sleep(800);
+      await page.waitForFunction(() => document.querySelector('main')?.innerText.includes('Committed 2026'), { timeout: 20000 }).catch(() => console.warn('Committed 2026 not shown'));
+      await (await page.$$('xpath/.//button[starts-with(normalize-space(.), "To decide within 90 days")]'))[0].click();
+      await page.waitForFunction(() => document.querySelector('main')?.innerText.includes('4 results'), { timeout: 20000 }).catch(() => console.warn('4 results not shown'));
+      await sleep(1500);
+    },
+  },
+  // IT contracts article (2026-10-17): decision panel after "Terminate" (nothing confirmed: the panel is left open as is).
+  'contracts-cancel-2026-10-17': {
+    path: '/ops/contracts/7ebe07da-0b08-4945-bcf2-fc214bddf881/overview',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForFunction(() => /Without a decision/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
+      await clickText(page, 'button', 'Terminate');
+      await page.waitForFunction(() => /lose this contract/.test(document.querySelector('main')?.innerText || ''), { timeout: 20000 });
+      await sleep(1000);
+    },
+  },
+  // IT contracts article (2026-10-17): budget coverage of the contracts list, 2026, Budget column, no filter.
+  'contracts-budget-coverage-2026-10-17': {
+    path: '/ops/contracts',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 60000 });
+      await sleep(1000);
+      // The year select is the first select of the page (label "Budget" is a bare text node, which pickSelect cannot reach).
+      await (await page.$('.MuiSelect-select')).click();
+      await page.waitForSelector('li[role="option"]', { timeout: 10000 });
+      await sleep(400);
+      await clickText(page, 'li[role="option"]', '2026');
+      await sleep(800);
+      await page.waitForFunction(() => document.querySelector('main')?.innerText.includes('Committed 2026'), { timeout: 20000 }).catch(() => console.warn('Committed 2026 not shown'));
+      await sleep(1500);
+    },
+  },
 };
 PAGES['chargeback-company-2026-10-13'] = PAGES['chargeback-company'];
 
