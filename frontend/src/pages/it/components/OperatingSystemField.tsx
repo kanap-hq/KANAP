@@ -298,11 +298,11 @@ export default function OperatingSystemField({ assetId, disabled, isCluster, lab
         <Typography variant="caption" sx={{ color: supportColor }} data-testid="os-support-dates">
           {supportLine}
         </Typography>
-      ) : (
+      ) : (isCluster || !shown) ? (
         <Typography variant="caption" sx={{ color: 'kanap.text.tertiary' }}>
           {isCluster ? t('workspace.asset.technical.osClusterHint') : t('workspace.asset.technical.osChooseHint')}
         </Typography>
-      )}
+      ) : null}
     </Stack>
   );
 }

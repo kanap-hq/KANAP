@@ -30,9 +30,9 @@ const MARKED: AssetTechnologyRow = {
   via_asset_id: null, via_asset_name: null, is_operating_system: true,
 };
 
-function renderField(props: Partial<React.ComponentProps<typeof OperatingSystemField>> = {}) {
+function renderField(props: Partial<React.ComponentProps<typeof OperatingSystemField>> = {}, marked: AssetTechnologyRow = MARKED) {
   mocked.get.mockImplementation(async (url: string, config?: any) => {
-    if (url === '/assets/asset-1/technologies') return { data: { items: [MARKED] } } as never;
+    if (url === '/assets/asset-1/technologies') return { data: { items: [marked] } } as never;
     if (url === '/technologies' && config?.params?.family === 'operating_system') {
       return { data: { items: [{ id: 'ubuntu', name: 'Ubuntu', reference: 'TEC-2', editor: 'Canonical', family: 'operating_system', lifecycle: 'active' }] } } as never;
     }
@@ -87,6 +87,13 @@ describe('OperatingSystemField', () => {
     expect(dates.textContent).toContain('2027');
     expect(dates.textContent).toContain('workspace.asset.technical.extendedSupportEnds(date=');
     expect(dates.textContent).toContain('2032');
+    expect(screen.queryByText('workspace.asset.technical.osChooseHint')).toBeNull();
+  });
+
+  it('shows no hint once a version without dates is chosen', async () => {
+    renderField({}, { ...MARKED, technology_id: 'deb-id', technology_name: 'Debian', technology_version_id: 'v12', version_label: '12 (Bookworm)' });
+    expect(await screen.findByDisplayValue('12 (Bookworm)')).toBeTruthy();
+    expect(screen.queryByTestId('os-support-dates')).toBeNull();
     expect(screen.queryByText('workspace.asset.technical.osChooseHint')).toBeNull();
   });
 
