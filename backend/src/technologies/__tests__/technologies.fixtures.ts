@@ -1,5 +1,5 @@
 import type { EntityManager, QueryRunner } from 'typeorm';
-import { DEFAULT_TECHNOLOGY_FAMILIES } from '../../it-ops-settings/it-ops-settings.service';
+import { DEFAULT_HOSTING_TYPES, DEFAULT_TECHNOLOGY_FAMILIES } from '../../it-ops-settings/it-ops-settings.service';
 import { IncidentRelationsService } from '../../incidents/services/incident-relations.service';
 import { TechnologyCatalogService } from '../catalog/technology-catalog.service';
 import { TechnologiesRelationsService } from '../technologies-relations.service';
@@ -23,6 +23,7 @@ export function services(audit: AuditEntry[] = []) {
       operatingSystems: [{ code: 'windows_server_2022', label: 'Windows Server 2022' }],
       cyberCriticalityLevels: [{ code: 'high' }],
       recoveryWaves: [{ code: 'wave_1' }],
+      hostingTypes: DEFAULT_HOSTING_TYPES,
     }),
   };
   const storage = { putObject: async () => undefined, deleteObject: async () => undefined };

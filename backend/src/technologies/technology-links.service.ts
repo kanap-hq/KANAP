@@ -604,8 +604,8 @@ export class TechnologyLinksService {
 
   private async presentReaching(mg: EntityManager, tenantId: string, rows: ReachingTechnology[], subject: LinkSide) {
     const techIds = Array.from(new Set(rows.map((r) => r.technology_id)));
-    const techs: Array<{ id: string; name: string; item_number: number; family: string; editor: string | null; mode: string }> = techIds.length
-      ? await mg.query(`SELECT id, name, item_number, family, editor, mode FROM technologies WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, [tenantId, techIds])
+    const techs: Array<{ id: string; name: string; item_number: number; family: string; editor: string | null; hosting_type: string }> = techIds.length
+      ? await mg.query(`SELECT id, name, item_number, family, editor, hosting_type FROM technologies WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, [tenantId, techIds])
       : [];
     const byId = new Map(techs.map((t) => [t.id, t]));
     const assets = await this.assetLabels(mg, tenantId, rows.flatMap((r) => [r.asset_id, r.via_asset_id]));
@@ -624,7 +624,7 @@ export class TechnologyLinksService {
         technology_reference: technologyReference(tech?.item_number),
         family: tech?.family ?? null,
         editor: tech?.editor ?? null,
-        mode: tech?.mode ?? null,
+        hosting_type: tech?.hosting_type ?? null,
         technology_version_id: r.technology_version_id,
         version_label: r.technology_version_id ? versions.get(r.technology_version_id) ?? null : null,
         standard_support_end: r.technology_version_id ? versionDates.get(r.technology_version_id) ?? null : null,

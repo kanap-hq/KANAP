@@ -2,6 +2,7 @@
 import 'dotenv/config';
 import type { QueryRunner } from 'typeorm';
 import { assert, inRolledBackTransaction, runSpecs, seedTenant, setTenant } from '../../spend/__tests__/round-inputs.fixtures';
+import { DEFAULT_HOSTING_TYPES } from '../../it-ops-settings/it-ops-settings.service';
 import { EndOfSupportService, supportState } from '../reports/end-of-support.service';
 import { TechnologyReachService } from '../technology-reach.service';
 import { application, asset, assign, contains, installed, one, technology, version } from './technologies.fixtures';
@@ -73,7 +74,15 @@ async function seed(runner: QueryRunner, tag: string) {
   const free = await technology(runner, tenantId, 5, 'Free', 'other');
   await installed(runner, tenantId, s2, free, null);
   const entra = await technology(runner, tenantId, 4, 'Entra ID', 'directory');
-  await runner.query(`UPDATE technologies SET mode = 'subscribed' WHERE id = $1`, [entra]);
+  await runner.query(`UPDATE technologies SET hosting_type = 'saas' WHERE id = $1`, [entra]);
+  // Hosting types (lot H1): colocation is on premises, so a gap on no server; a public cloud service is not.
+  const colo = await technology(runner, tenantId, 6, 'Colo', 'other');
+  await runner.query(`UPDATE technologies SET hosting_type = 'colocation' WHERE id = $1`, [colo]);
+  const cloud = await technology(runner, tenantId, 7, 'Cloud', 'other');
+  await runner.query(`UPDATE technologies SET hosting_type = 'public_cloud' WHERE id = $1`, [cloud]);
+  // A code out of the catalog: missing data of its own (inferred in the cloud, so not "on no server").
+  const untyped = await technology(runner, tenantId, 8, 'Untyped', 'other');
+  await runner.query(`UPDATE technologies SET hosting_type = 'gone' WHERE id = $1`, [untyped]);
 
   const erp = await application(runner, tenantId, `ERP ${tag}`);
   await assign(runner, tenantId, erp, s1);
@@ -112,7 +121,7 @@ async function seed(runner: QueryRunner, tag: string) {
   return {
     tenantId, today, soon, lastMonth, later, far,
     assets: { s1, s2, s3, s4, s5, dbEmpty, dbDisabled, vmOrphan, vmHosted, retired, vmEol, vmOnOs, vmOnHw },
-    tech: { sql, tomcat, unused, entra, free },
+    tech: { sql, tomcat, unused, entra, free, colo, cloud, untyped },
     versions: { sql2016, sql2019, sql2022, tomcat9 },
     apps: { erp, portal, osVmApp, hwVmApp, crm, saas, dbApp, ssoBare, ssoOk },
   };
@@ -126,6 +135,7 @@ function service() {
         { code: 'new_os', label: 'New OS', standardSupportEnd: '2099-01-01' },
       ],
       serverKinds: [{ code: 'physical_server', is_physical: true }, { code: 'vm', is_physical: false }, { code: 'virtual_machine', is_physical: false }],
+      hostingTypes: DEFAULT_HOSTING_TYPES,
     }),
   };
   return new EndOfSupportService(new TechnologyReachService(), itOps as any);
@@ -225,6 +235,8 @@ async function testGaps() {
       `application_without_server|${g.apps.crm}|-`,
       `vm_without_host|${g.assets.vmOrphan}|-`,
       `technology_not_installed|${g.tech.unused}|-`,
+      `technology_not_installed|${g.tech.colo}|-`,
+      `technology_without_hosting_type|${g.tech.untyped}|-`,
       `database_server_without_dbms|${g.assets.dbEmpty}|-`,
       `sso_application_without_identity|${g.apps.ssoBare}|-`,
       `link_without_version|${g.tech.sql}|${g.assets.s5}`,

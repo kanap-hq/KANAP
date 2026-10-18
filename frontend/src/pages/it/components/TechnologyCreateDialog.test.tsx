@@ -18,8 +18,15 @@ vi.mock('../../../api', () => ({ default: { get, post } }));
 vi.mock('../../../hooks/useItOpsEnumOptions', () => ({
   default: () => ({
     settings: null,
-    byField: { technologyFamily: [{ code: 'database', label: 'Database' }] },
-    labelFor: (_field: string, code: string) => (code === 'database' ? 'Database' : code ?? ''),
+    byField: {
+      technologyFamily: [{ code: 'database', label: 'Database' }],
+      hostingType: [
+        { code: 'on_prem', label: 'On-prem', category: 'on_prem' },
+        { code: 'legacy_dc', label: 'Old datacenter', category: 'on_prem', deprecated: true },
+        { code: 'saas', label: 'SaaS', category: 'cloud' },
+      ],
+    },
+    labelFor: (_field: string, code: string) => ({ database: 'Database', on_prem: 'On-prem', saas: 'SaaS' } as Record<string, string>)[code] ?? code ?? '',
   }),
 }));
 
@@ -41,7 +48,7 @@ describe('TechnologyCreateDialog', () => {
     post.mockReset();
     get.mockImplementation(async (url: string) => {
       if (url === '/technologies/catalog') {
-        return { data: { items: [{ key: 'mssqlserver', name: 'Microsoft SQL Server', editor: 'Microsoft', family: 'database', mode: 'installed', versions: 9, latest_version: '2022', description: 'Microsoft relational database.' }] } };
+        return { data: { items: [{ key: 'mssqlserver', name: 'Microsoft SQL Server', editor: 'Microsoft', family: 'database', hosting_type: 'on_prem', versions: 9, latest_version: '2022', description: 'Microsoft relational database.' }] } };
       }
       if (url === '/technologies/editors') return { data: { items: ['Microsoft'] } };
       return { data: { items: [] } };
@@ -58,12 +65,12 @@ describe('TechnologyCreateDialog', () => {
     // Two levels: the name and its facts on top, the description below across the row.
     const row = description.closest('[role="listitem"]')!;
     const top = row.firstElementChild!;
-    expect(top.textContent).toBe('Microsoft SQL ServerMicrosoft · Database');
+    expect(top.textContent).toBe('Microsoft SQL ServerMicrosoft · Database · On-prem');
     expect(row.lastElementChild).toBe(description);
     fireEvent.click(await screen.findByText('Microsoft SQL Server'));
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith('TEC-4'));
     expect(post).toHaveBeenCalledWith('/technologies/adopt', { catalog_key: 'mssqlserver', language: 'en' });
-    expect(screen.getByText('Microsoft · Database')).toBeTruthy();
+    expect(screen.getByText('Microsoft · Database · On-prem')).toBeTruthy();
   });
 
   it('creates a technology missing from the catalog', async () => {
@@ -71,11 +78,14 @@ describe('TechnologyCreateDialog', () => {
     const onCreated = renderDialog();
     fireEvent.click(screen.getByText('pages.technologies.create.manualLink'));
     fireEvent.change(screen.getByLabelText('workspace.technology.fields.name'), { target: { value: 'In-house broker' } });
-    fireEvent.mouseDown(screen.getByLabelText('workspace.technology.fields.mode'));
-    fireEvent.click(await screen.findByRole('option', { name: 'workspace.technology.modes.subscribed' }));
+    // On premises by default; the retired type is not offered.
+    expect(screen.getByLabelText('workspace.technology.fields.hostingType').textContent).toBe('On-prem');
+    fireEvent.mouseDown(screen.getByLabelText('workspace.technology.fields.hostingType'));
+    expect(screen.queryByRole('option', { name: 'Old datacenter' })).toBeNull();
+    fireEvent.click(await screen.findByRole('option', { name: 'SaaS' }));
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith('TEC-5'));
-    expect(post).toHaveBeenCalledWith('/technologies', { name: 'In-house broker', family: undefined, editor: undefined, mode: 'subscribed' });
+    expect(post).toHaveBeenCalledWith('/technologies', { name: 'In-house broker', family: undefined, editor: undefined, hosting_type: 'saas' });
   });
 
   it('says under the name that the tenant already has it, and goes back to the catalog', async () => {

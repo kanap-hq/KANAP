@@ -13,6 +13,7 @@ import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service
 import { Features } from '../config/features';
 import { TechnologyReachService } from './technology-reach.service';
 import { sortVersions } from './version-order';
+import { DEFAULT_TECHNOLOGY_HOSTING_TYPE, resolveHostingType } from './hosting-type';
 import {
   BUILD_PREFIX_RE,
   CPE_PRODUCT_RE,
@@ -41,9 +42,11 @@ const SORTS: Record<string, string> = {
 
 /** Fields a create or a PATCH may carry; anything else in the body is ignored. */
 type TechnologyInput = Partial<{
-  name: unknown; editor: unknown; family: unknown; mode: unknown; lifecycle: unknown; description: unknown; notes: unknown;
+  name: unknown; editor: unknown; family: unknown; hosting_type: unknown; lifecycle: unknown; description: unknown; notes: unknown;
   support_notes: unknown; cpe_products: unknown; replaced_by_id: unknown; cyber_criticality: unknown; recovery_wave: unknown;
   rto_minutes: unknown; rpo_minutes: unknown; admin_zone: unknown;
+  /** Gone since lot H1: refused, so a client still sending it learns it changed nothing. */
+  mode: unknown;
 }>;
 
 type VersionInput = Partial<{
@@ -69,7 +72,7 @@ export function webLinkUrl(value: unknown): string {
 }
 
 /** Columns the list grid filters with a set filter. */
-const GRID_SET_COLUMNS = ['family', 'editor', 'lifecycle'] as const;
+const GRID_SET_COLUMNS = ['family', 'editor', 'lifecycle', 'hosting_type'] as const;
 
 /** Columns the list grid filters with a text filter, and what they compare. */
 const GRID_TEXT_COLUMNS: Record<string, string> = { name: 't.name', reference: `('TEC-' || t.item_number)` };
@@ -144,7 +147,7 @@ export class TechnologiesService {
   // ==================== LIST AND RECORD ====================
 
   /**
-   * A page of technologies: filters `family`, `editor` (exact, without case), `lifecycle`, `q`
+   * A page of technologies: filters `family`, `editor` (exact, without case), `lifecycle`, `hosting_type`, `q`
    * (name, editor, reference); counters of the page in one statement (`TechnologyReachService`).
    */
   async list(query: Record<string, any>, opts: Opts) {
@@ -177,6 +180,8 @@ export class TechnologiesService {
     if (editors.length) where.push(`lower(t.editor) = ANY(${bind(editors)}::text[])`);
     const lifecycles = list(query.lifecycle);
     if (lifecycles.length) where.push(`t.lifecycle = ANY(${bind(lifecycles)}::text[])`);
+    const hostingTypes = list(query.hosting_type);
+    if (hostingTypes.length) where.push(`t.hosting_type = ANY(${bind(hostingTypes)}::text[])`);
     const q = String(query.q ?? '').trim().slice(0, 100);
     if (q) {
       const needle = bind(`%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
@@ -273,6 +278,10 @@ export class TechnologiesService {
     const { manager: mg, tenantId } = opts;
     const values = await this.validate(body, null, opts);
     if (!values.name) throw new BadRequestException('Name is required.');
+    if (!('hosting_type' in values)) {
+      const settings = await this.itOps.getSettings(tenantId, { manager: mg });
+      values.hosting_type = resolveHostingType(settings.hostingTypes, DEFAULT_TECHNOLOGY_HOSTING_TYPE);
+    }
     await this.assertNameFree(mg, tenantId, values.name as string, null);
     const itemNumber = await allocateItemNumbers('technology', tenantId, 1, mg);
     const columns = ['tenant_id', 'item_number', ...Object.keys(values)];
@@ -314,17 +323,13 @@ export class TechnologiesService {
     const { manager: mg, tenantId } = opts;
     const out: Record<string, unknown> = {};
     const has = (key: keyof TechnologyInput) => body && Object.prototype.hasOwnProperty.call(body, key) && body[key] !== undefined;
+    if (has('mode')) throw new BadRequestException('mode is replaced by hosting_type.');
     if (has('name')) out.name = optionalText(body.name, 'Name', 200);
     if (has('editor')) out.editor = optionalText(body.editor, 'Editor', 200);
     if (has('description')) out.description = optionalText(body.description, 'Description', 20000);
     if (has('notes')) out.notes = optionalText(body.notes, 'Notes', 20000);
     if (has('support_notes')) out.support_notes = optionalText(body.support_notes, 'Support notes', 20000);
     // `catalog_key` is written by the adoption only: a typed technology cannot take a catalog entry's key.
-    if (has('mode')) {
-      const mode = String(body.mode ?? '').trim();
-      if (mode !== 'installed' && mode !== 'subscribed') throw new BadRequestException('Mode must be installed or subscribed.');
-      out.mode = mode;
-    }
     if (has('cpe_products')) out.cpe_products = textList(body.cpe_products, 'CPE product', CPE_PRODUCT_RE);
     for (const key of ['rto_minutes', 'rpo_minutes'] as const) {
       if (!has(key)) continue;
@@ -346,7 +351,8 @@ export class TechnologiesService {
         out.replaced_by_id = replacement.id;
       }
     }
-    const needsSettings = has('family') || has('lifecycle') || has('cyber_criticality') || has('recovery_wave') || has('admin_zone');
+    const needsSettings = has('family') || has('lifecycle') || has('cyber_criticality') || has('recovery_wave') || has('admin_zone')
+      || has('hosting_type');
     if (needsSettings) {
       const settings = await this.itOps.getSettings(tenantId, { manager: mg });
       const codeIn = (list: Array<{ code: string }> | undefined, value: unknown, field: string, nullable: boolean) => {
@@ -360,6 +366,7 @@ export class TechnologiesService {
       if (has('cyber_criticality')) out.cyber_criticality = codeIn((settings as any).cyberCriticalityLevels, body.cyber_criticality, 'cyber criticality', true);
       if (has('recovery_wave')) out.recovery_wave = codeIn((settings as any).recoveryWaves, body.recovery_wave, 'recovery wave', true);
       if (has('admin_zone')) out.admin_zone = codeIn(settings.adminZones, body.admin_zone, 'administration zone', true);
+      if (has('hosting_type')) out.hosting_type = codeIn(settings.hostingTypes, body.hosting_type, 'hosting type', false);
     }
     return out;
   }
@@ -391,7 +398,7 @@ export class TechnologiesService {
   // ==================== EDITORS ====================
 
   /**
-   * The values of the list grid's set filters (`fields`: `editor`, `family`, `lifecycle`, comma
+   * The values of the list grid's set filters (`fields`: `editor`, `family`, `lifecycle`, `hosting_type`, comma
    * list), the tenant's own and all of them: editors deduplicated without case (one spelling per
    * editor, as the filter compares without case), `null` when a technology has none.
    */

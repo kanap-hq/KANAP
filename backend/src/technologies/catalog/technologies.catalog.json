@@ -684,6 +684,7 @@
       "editor": "Amazon Web Services",
       "family": "container",
       "mode": "subscribed",
+      "hosting_type": "public_cloud",
       "cpe_products": [],
       "source_url": "https://endoflife.date/amazon-eks",
       "versions": [
@@ -767,6 +768,7 @@
       "editor": "Microsoft",
       "family": "container",
       "mode": "subscribed",
+      "hosting_type": "public_cloud",
       "cpe_products": [],
       "source_url": "https://endoflife.date/azure-kubernetes-service",
       "versions": [
@@ -1022,6 +1024,7 @@
       "editor": "Google",
       "family": "container",
       "mode": "subscribed",
+      "hosting_type": "public_cloud",
       "cpe_products": [],
       "source_url": "https://endoflife.date/google-kubernetes-engine",
       "versions": [

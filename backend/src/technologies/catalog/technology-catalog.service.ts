@@ -5,6 +5,7 @@ import { AuditService } from '../../audit/audit.service';
 import { languageOf } from '../../common/csv-sheet/request-options';
 import { allocateItemNumbers } from '../../common/item-number.service';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
+import { hostingTypeOfMode, resolveHostingType } from '../hosting-type';
 import { readTechnology, technologyReference } from '../technology-rows';
 // The JSON file has its own name: under ts-node, Node resolves `./x` to `x.json` before `x.ts`.
 import * as shipped from './technologies.catalog.json';
@@ -26,7 +27,10 @@ export type CatalogProduct = {
   name: string;
   editor: string;
   family: string;
+  /** Installed or subscribed: the adoption writes the hosting type it stands for (`hosting-type.ts`). */
   mode: 'installed' | 'subscribed';
+  /** A code of the default hosting types, when the entry names one: it wins over `mode`. */
+  hosting_type?: string;
   cpe_products: string[];
   source_url: string | null;
   versions: CatalogVersion[];
@@ -56,6 +60,11 @@ export class TechnologyCatalogService {
     private readonly itOps: ItOpsSettingsService,
     @Optional() private readonly cpeEvents?: TechnologyCpeEvents,
   ) {}
+
+  /** The hosting type an entry stands for: its own, else the one of its mode. */
+  private hostingTypeOf(product: CatalogProduct): string {
+    return product.hosting_type?.trim().toLowerCase() || hostingTypeOfMode(product.mode);
+  }
 
   /** Every product of the catalog. */
   all(): readonly CatalogProduct[] {
@@ -87,6 +96,7 @@ export class TechnologyCatalogService {
     const names = new Set(rows.map((row) => row.name.trim().toLowerCase()));
     const needle = String(filters.q ?? '').trim().toLowerCase();
     const family = String(filters.family ?? '').trim();
+    const { hostingTypes } = await this.itOps.getSettings(opts.tenantId, { manager: opts.manager });
     const items = this.products
       .filter((product) => !keys.has(product.key) && !names.has(product.name.toLowerCase()))
       .filter((product) => !family || product.family === family)
@@ -97,7 +107,7 @@ export class TechnologyCatalogService {
         name: product.name,
         editor: product.editor,
         family: product.family,
-        mode: product.mode,
+        hosting_type: resolveHostingType(hostingTypes, this.hostingTypeOf(product)),
         cpe_products: product.cpe_products,
         versions: product.versions.length,
         latest_version: product.versions[0]?.label ?? null,
@@ -108,7 +118,8 @@ export class TechnologyCatalogService {
 
   /**
    * Adopt the entry `key`: the technology with its catalog key, editor, family (`other` when the
-   * tenant's catalog no longer has it), mode, CPE identifiers and short description, and its
+   * tenant's catalog no longer has it), hosting type (the entry's, else the one its mode stands for,
+   * resolved against the tenant's hosting types), CPE identifiers and short description, and its
    * versions with their dates. The description is in `opts.language`, failing that the user's
    * stored language, failing that English. Idempotent: an entry already adopted returns its
    * technology and adds nothing (a version the tenant deleted stays deleted); a technology of the
@@ -156,11 +167,12 @@ export class TechnologyCatalogService {
     } else {
       const settings = await this.itOps.getSettings(tenantId, { manager: mg });
       const family = (settings.technologyFamilies ?? []).some((item) => item.code === product.family) ? product.family : 'other';
+      const hostingType = resolveHostingType(settings.hostingTypes, this.hostingTypeOf(product));
       const itemNumber = await allocateItemNumbers('technology', tenantId, 1, mg);
       const [row]: Array<{ id: string }> = await mg.query(
-        `INSERT INTO technologies (tenant_id, item_number, name, editor, family, mode, catalog_key, cpe_products, description)
+        `INSERT INTO technologies (tenant_id, item_number, name, editor, family, hosting_type, catalog_key, cpe_products, description)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
-        [tenantId, itemNumber, product.name, product.editor, family, product.mode, product.key, product.cpe_products, description],
+        [tenantId, itemNumber, product.name, product.editor, family, hostingType, product.key, product.cpe_products, description],
       );
       technologyId = row.id;
       created = true;

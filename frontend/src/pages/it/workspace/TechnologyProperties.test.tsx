@@ -18,6 +18,11 @@ vi.mock('../../../hooks/useItOpsEnumOptions', () => ({
     byField: {
       technologyFamily: [{ code: 'directory', label: 'Directory and identity' }],
       adminZone: [{ code: 'tier_0', label: 'Tier 0' }, { code: 'tier_1', label: 'Tier 1' }, { code: 'old', label: 'Old zone', deprecated: true }],
+      hostingType: [
+        { code: 'on_prem', label: 'On-prem', category: 'on_prem' },
+        { code: 'colo_old', label: 'Old colocation', category: 'on_prem', deprecated: true },
+        { code: 'saas', label: 'SaaS', category: 'cloud' },
+      ],
     },
     labelFor: (_field: string, code: string) => code ?? '',
   }),
@@ -26,7 +31,7 @@ vi.mock('../../../components/fields/TeamMemberMultiSelect', () => ({ default: ()
 
 const TECHNOLOGY: TechnologyDetail = {
   id: 'tech-1', reference: 'TEC-1', name: 'Active Directory', editor: 'Microsoft', family: 'directory', admin_zone: 'tier_0',
-  mode: 'installed', lifecycle: 'active', description: null, notes: null, cpe_products: [], replaced_by_id: null, replaced_by: null, versions: [], owners: [],
+  hosting_type: 'on_prem', lifecycle: 'active', description: null, notes: null, cpe_products: [], replaced_by_id: null, replaced_by: null, versions: [], owners: [],
 };
 
 function renderProperties(technology: TechnologyDetail, canManage = true) {
@@ -70,5 +75,29 @@ describe('TechnologyProperties: administration zone', () => {
     renderProperties({ ...TECHNOLOGY, admin_zone: null }, false);
     expect(zoneField()).toHaveTextContent('workspace.technology.placeholders.noAdminZone');
     expect(zoneField()).toHaveAttribute('aria-disabled', 'true');
+  });
+});
+
+const hostingField = () => screen.getByRole('combobox', { name: 'workspace.technology.fields.hostingType' });
+
+describe('TechnologyProperties: hosting type', () => {
+  it('shows the localized type and saves another one, retired types not offered', () => {
+    const onPatch = renderProperties(TECHNOLOGY);
+    expect(hostingField()).toHaveTextContent('On-prem');
+    fireEvent.mouseDown(hostingField());
+    const options = within(screen.getByRole('listbox')).getAllByRole('option').map((option) => option.textContent);
+    expect(options).toEqual(['On-prem', 'SaaS']);
+    fireEvent.click(screen.getByRole('option', { name: 'SaaS' }));
+    expect(onPatch).toHaveBeenCalledWith({ hosting_type: 'saas' });
+  });
+
+  it('keeps a retired or unknown type the technology has', () => {
+    renderProperties({ ...TECHNOLOGY, hosting_type: 'colo_old' });
+    expect(hostingField()).toHaveTextContent('Old colocation');
+  });
+
+  it('is read only without the right', () => {
+    renderProperties(TECHNOLOGY, false);
+    expect(hostingField()).toHaveAttribute('aria-disabled', 'true');
   });
 });

@@ -9,6 +9,7 @@ import { IncidentRelationsService } from '../incidents/services/incident-relatio
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
 import { releaseOrphanedManagedDocuments } from '../knowledge/integrated-document-orphans';
 import { BUDGET_NATURES, naturesAnd } from '../spend/budget-nature';
+import { isActiveHostingType, resolveHostingType } from './hosting-type';
 import { TechnologiesService } from './technologies.service';
 import { UUID_RE } from './technology-rows';
 
@@ -72,7 +73,8 @@ export type ConversionUnlinked = { managed_documents: number };
 
 export type ConversionPreview = {
   application: { id: string; name: string; reference: string | null };
-  mode: 'installed' | 'subscribed';
+  /** Code of the tenant's hosting types the technology takes (`hostingTypeOf`). */
+  hosting_type: string;
   refusals: ConversionRefusal[];
   moves: ConversionMoves;
   unlinked: ConversionUnlinked;
@@ -88,7 +90,7 @@ export type ConversionFiles = { copies: string[]; originals: string[] };
 type ApplicationRow = {
   id: string; name: string; sequential_id: string | null; editor: string | null; description: string | null; notes: string | null;
   lifecycle: string | null; cyber_criticality: string | null; recovery_wave: string | null; rto_minutes: number | null;
-  rpo_minutes: number | null; predecessor_id: string | null; support_notes: string | null;
+  rpo_minutes: number | null; predecessor_id: string | null; support_notes: string | null; hosting_model: string | null;
 };
 
 type CountRow = Omit<ConversionMoves, 'contracts' | 'budget_lines' | 'projects' | 'incidents'> & ConversionLosses & ConversionUnlinked & {
@@ -185,7 +187,7 @@ export class ApplicationConversionService {
         rto_minutes: app.rto_minutes,
         rpo_minutes: app.rpo_minutes,
         family,
-        mode: preview.mode,
+        hosting_type: preview.hosting_type,
       }, opts);
       const techId = created.id;
       const params = [tenantId, app.id, techId];
@@ -356,7 +358,7 @@ export class ApplicationConversionService {
     if (!UUID_RE.test(id)) throw new NotFoundException('Application not found');
     const rows: ApplicationRow[] = await opts.manager.query(
       `SELECT id, name, sequential_id, editor, description, notes, lifecycle, cyber_criticality, recovery_wave,
-              rto_minutes, rpo_minutes, predecessor_id, support_notes
+              rto_minutes, rpo_minutes, predecessor_id, support_notes, hosting_model
          FROM applications WHERE tenant_id = $1 AND id = $2${lock ? ' FOR UPDATE' : ''}`,
       [opts.tenantId, id],
     );
@@ -368,7 +370,7 @@ export class ApplicationConversionService {
    * The fields the technology would refuse (`TechnologiesService.validate`): lengths, catalog
    * codes that left the catalogs, recovery times out of range.
    */
-  private async invalidFields(app: ApplicationRow, opts: ConversionOpts): Promise<string[]> {
+  private async invalidFields(app: ApplicationRow, opts: ConversionOpts, hostingType: string): Promise<string[]> {
     const out: string[] = [];
     const tooLong = (value: string | null, max: number) => value != null && String(value).trim().length > max;
     if (!String(app.name ?? '').trim() || tooLong(app.name, 200)) out.push('name');
@@ -387,6 +389,8 @@ export class ApplicationConversionService {
     if (!known(settings.lifecycleStates, app.lifecycle)) out.push('lifecycle');
     if (!known(settings.cyberCriticalityLevels, app.cyber_criticality)) out.push('cyber_criticality');
     if (!known(settings.recoveryWaves, app.recovery_wave)) out.push('recovery_wave');
+    // A catalog without any hosting type in use leaves none to give (`resolveHostingType`).
+    if (!isActiveHostingType(settings.hostingTypes, hostingType)) out.push('hosting_type');
     const inRange = (value: number | null, min: number) => value == null || (Number.isInteger(Number(value)) && Number(value) >= min && Number(value) <= 5256000);
     if (!inRange(app.rto_minutes, 1)) out.push('rto_minutes');
     if (!inRange(app.rpo_minutes, 0)) out.push('rpo_minutes');
@@ -401,6 +405,36 @@ export class ApplicationConversionService {
       if (!head) missing.push(row.original_filename);
     }
     return missing;
+  }
+
+  /**
+   * The hosting type the technology takes. With servers (those of its enabled instances, which the
+   * technology will carry): the type of their sites the tenant's catalog has (the one with the most
+   * servers), else on premises. Without: the application's hosting model when the catalog has it
+   * (`on_premise` is `on_prem`; a deprecated field no screen shows, so it never overrides the
+   * servers), else SaaS. Only types in use count; the fallbacks go through `resolveHostingType`.
+   */
+  private async hostingTypeOf(app: ApplicationRow, hasServers: boolean, opts: ConversionOpts): Promise<string> {
+    const { manager: mg, tenantId } = opts;
+    const settings = await this.itOps.getSettings(tenantId, { manager: mg });
+    if (hasServers) {
+      const sites: Array<{ code: string }> = await mg.query(
+        `SELECT l.hosting_type AS code
+           FROM app_instances i
+           JOIN app_asset_assignments aa ON aa.tenant_id = $1 AND aa.app_instance_id = i.id
+           JOIN assets a ON a.tenant_id = $1 AND a.id = aa.asset_id
+           JOIN locations l ON l.tenant_id = $1 AND l.id = a.location_id
+          WHERE i.tenant_id = $1 AND i.application_id = $2 AND ${ACTIVE_INSTANCE}
+          GROUP BY l.hosting_type
+          ORDER BY count(DISTINCT a.id) DESC, l.hosting_type`,
+        [tenantId, app.id],
+      );
+      const site = sites.find((row) => isActiveHostingType(settings.hostingTypes, row.code));
+      return site ? site.code : resolveHostingType(settings.hostingTypes, 'on_prem');
+    }
+    const model = app.hosting_model === 'on_premise' ? 'on_prem' : app.hosting_model;
+    if (isActiveHostingType(settings.hostingTypes, model)) return model!;
+    return resolveHostingType(settings.hostingTypes, 'saas');
   }
 
   /** Every count in one statement, each scoped by the tenant; incidents through the visibility rule. */
@@ -459,14 +493,15 @@ export class ApplicationConversionService {
     const n = (key: keyof CountRow) => Number(row?.[key] ?? 0);
     const refusals: ConversionRefusal[] = COUNTED_REFUSALS.filter((reason) => n(reason as keyof CountRow) > 0)
       .map((reason) => ({ reason, count: n(reason as keyof CountRow) }));
-    const fields = await this.invalidFields(app, opts);
+    const hostingType = await this.hostingTypeOf(app, n('servers') > 0, opts);
+    const fields = await this.invalidFields(app, opts, hostingType);
     if (fields.length) refusals.push({ reason: 'invalid_fields', count: fields.length, fields });
     const missing = await this.missingFiles(app, opts);
     if (missing.length) refusals.push({ reason: 'missing_files', count: missing.length, files: missing });
     const readable = (allowed: boolean, key: keyof CountRow) => (allowed ? n(key) : null);
     return {
       application: { id: app.id, name: app.name, reference: app.sequential_id || null },
-      mode: n('servers') > 0 ? 'installed' : 'subscribed',
+      hosting_type: hostingType,
       refusals,
       moves: {
         owners: n('owners'),

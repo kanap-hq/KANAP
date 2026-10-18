@@ -58,7 +58,7 @@ async function testFoundWithInfrastructureReader() {
     assert.equal(hit.type, 'technologies');
     assert.equal(hit.ref, 'TEC-7');
     assert.equal(hit.label, 'Zorglub Directory Server');
-    assert.deepEqual(hit.metadata, { family: 'directory', editor: 'Zorglub Inc', mode: 'installed' });
+    assert.deepEqual(hit.metadata, { family: 'directory', editor: 'Zorglub Inc', hosting_type: 'on_prem' });
 
     const byRef = await search.searchAll(context(runner, tenantId) as any, { query: 'TEC-7', limit: 20 });
     assert.equal((byRef.items[0] as any)?.id, id, 'the reference TEC-7 ranks the technology first');

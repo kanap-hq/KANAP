@@ -787,7 +787,7 @@
     "shownAs": "Affiché : {{value}}",
     "hostingTypes": {
       "title": "Types d'hébergement",
-      "description": "Modèles d'hébergement proposés à la création d'un site (ex. : sur site, colocation, cloud public, SaaS).",
+      "description": "Où sont hébergés les sites et les technologies (ex. : sur site, colocation, cloud public, SaaS). Chaque type est sur site ou dans le cloud : une technologie sur site est attendue sur des serveurs.",
       "add": "Ajouter un type d'hébergement",
       "empty": "Aucun type d'hébergement défini."
     },

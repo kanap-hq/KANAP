@@ -169,6 +169,7 @@
         "family": "Familie",
         "editor": "Hersteller",
         "lifecycle": "Lebenszyklus",
+        "hostingType": "Hosting-Typ",
         "versionsInUse": "Versionen im Einsatz",
         "servers": "Server",
         "applications": "Anwendungen",
@@ -279,7 +280,8 @@
       "gaps": {
         "application_without_server": "Gehostete Anwendung ohne Server",
         "vm_without_host": "Virtuelle Maschine ohne Host",
-        "technology_not_installed": "Installierte Technologie auf keinem Server",
+        "technology_not_installed": "On-Premises-Technologie auf keinem Server",
+        "technology_without_hosting_type": "Technologie ohne Hosting-Typ der IT-Einstellungen",
         "database_server_without_dbms": "Datenbankserver ohne Datenbanktechnologie",
         "sso_application_without_identity": "Anwendung mit SSO ohne Identitätstechnologie",
         "link_without_version": "Technologieverknüpfung ohne Version",
@@ -643,7 +645,7 @@
         },
         "hostingTypes": {
           "title": "Hosting-Typen",
-          "usage": "Standorte / Erstellen und Bearbeiten"
+          "usage": "Standorte und Technologien / Erstellen und Bearbeiten"
         },
         "serverProviders": {
           "title": "Cloud-Anbieter",
@@ -1487,8 +1489,8 @@
         "loading": "Prüfen, was die Umwandlung ändert…",
         "family": "Familie",
         "familyPlaceholder": "Familie wählen",
-        "modeInstalled": "Sie wird eine auf ihren Servern installierte Technologie.",
-        "modeSubscribed": "Sie hat keine Server: Sie wird eine abonnierte Technologie.",
+        "hostingWithServers": "Sie hat Server: Die Technologie erhält den Hosting-Typ {{type}}. Sie können ihn danach ändern.",
+        "hostingWithoutServers": "Sie hat keine Server: Die Technologie erhält den Hosting-Typ {{type}}. Sie können ihn danach ändern.",
         "movesTitle": "Geht an die Technologie",
         "lossesTitle": "Geht mit der Anwendung verloren",
         "nothing": "Nichts",
@@ -1543,6 +1545,7 @@
           "lifecycle": "Lebenszyklus",
           "cyber_criticality": "Cyber-Kritikalität",
           "recovery_wave": "Wiederherstellungswelle",
+          "hosting_type": "Hosting-Typ (keiner in Verwendung in den IT-Einstellungen)",
           "rto_minutes": "RTO",
           "rpo_minutes": "RPO"
         },
@@ -1843,7 +1846,7 @@
         "editor": "Hersteller",
         "family": "Familie",
         "adminZone": "Administrationszone",
-        "mode": "Modus",
+        "hostingType": "Hosting-Typ",
         "description": "Beschreibung",
         "notes": "Notizen",
         "replacedBy": "Ersetzt durch",
@@ -1856,10 +1859,6 @@
         "notes": "z. B. Lizenz pro Kern, Verlängerung im März",
         "cpe": "z. B. a:microsoft:sql_server",
         "noAdminZone": "Keine Zone"
-      },
-      "modes": {
-        "installed": "Installiert",
-        "subscribed": "Abonniert"
       },
       "cpe": {
         "title": "CPE-Produktkennungen",

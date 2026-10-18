@@ -419,7 +419,7 @@ const SEARCH_INDEX_METADATA_KEYS: Partial<Record<AiSearchEntityType, string[]>> 
   contacts: ['supplier'],
   contracts: ['company', 'supplier'],
   departments: ['company'],
-  technologies: ['family', 'editor', 'mode'],
+  technologies: ['family', 'editor', 'hosting_type'],
   incidents: ['severity', 'category'],
   interfaces: ['source_application', 'target_application', 'business_process'],
   projects: ['business_lead', 'it_lead', 'contributors'],

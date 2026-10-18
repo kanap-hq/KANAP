@@ -540,7 +540,8 @@
       "name": "text",
       "family": "set",
       "editor": "set",
-      "lifecycle": "set"
+      "lifecycle": "set",
+      "hosting_type": "set"
     },
     "fields": [
       "reference",
@@ -548,6 +549,7 @@
       "family",
       "editor",
       "lifecycle",
+      "hosting_type",
       "versions_in_use",
       "servers",
       "applications",

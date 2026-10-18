@@ -16,7 +16,8 @@ export type TechnologyRow = {
   name: string;
   editor: string | null;
   family: string;
-  mode: 'installed' | 'subscribed';
+  /** Code of the tenant's "Hosting types" catalog (lot H1, `hosting-type.ts`). */
+  hosting_type: string;
   lifecycle: string;
   description: string | null;
   notes: string | null;
@@ -46,7 +47,7 @@ export type TechnologyVersionRow = {
   catalog_key: string | null;
 };
 
-export const TECHNOLOGY_COLUMNS = `t.id, t.tenant_id, t.item_number, t.name, t.editor, t.family, t.mode, t.lifecycle, t.description, t.notes,
+export const TECHNOLOGY_COLUMNS = `t.id, t.tenant_id, t.item_number, t.name, t.editor, t.family, t.hosting_type, t.lifecycle, t.description, t.notes,
   t.support_notes, t.catalog_key, t.cpe_products, t.replaced_by_id, t.cyber_criticality, t.recovery_wave, t.rto_minutes, t.rpo_minutes,
   t.admin_zone, t.created_at, t.updated_at`;
 

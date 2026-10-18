@@ -14,7 +14,8 @@ type CatalogEntry = {
   name: string;
   editor: string | null;
   family: string | null;
-  mode: string | null;
+  /** The hosting type the adoption writes, a code of the tenant's hosting types. */
+  hosting_type: string | null;
   versions: number;
   latest_version: string | null;
   /** What the product is and what it is for, in the screen language. */
@@ -78,17 +79,23 @@ export default function TechnologyCreateDialog({ open, onClose, onCreated }: Pro
   const { byField, labelFor } = useItOpsEnumOptions();
   const [manual, setManual] = React.useState(false);
   const [search, setSearch] = React.useState('');
-  const [draft, setDraft] = React.useState({ name: '', family: '', editor: '', mode: 'installed' });
+  const [draft, setDraft] = React.useState({ name: '', family: '', editor: '', hosting_type: '' });
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [nameTaken, setNameTaken] = React.useState(false);
   const debouncedSearch = useDebounced(search.trim(), SEARCH_DEBOUNCE_MS);
+  // Types in use; on premises by default, as the server does (`backend/src/technologies/hosting-type.ts`).
+  const hostingTypes = (byField.hostingType || []).filter((option) => !option.deprecated);
+  const defaultHostingType = (hostingTypes.find((option) => option.code === 'on_prem')
+    ?? hostingTypes.find((option) => option.category === 'on_prem')
+    ?? hostingTypes[0])?.code ?? '';
+  const hostingType = draft.hosting_type || defaultHostingType;
 
   React.useEffect(() => {
     if (!open) return;
     setManual(false);
     setSearch('');
-    setDraft({ name: '', family: '', editor: '', mode: 'installed' });
+    setDraft({ name: '', family: '', editor: '', hosting_type: '' });
     setError(null);
     setNameTaken(false);
   }, [open]);
@@ -126,7 +133,7 @@ export default function TechnologyCreateDialog({ open, onClose, onCreated }: Pro
         name: draft.name.trim(),
         family: draft.family || undefined,
         editor: draft.editor.trim() || undefined,
-        mode: draft.mode,
+        hosting_type: hostingType || undefined,
       });
       await finish(res.data.reference);
     } catch (err) {
@@ -217,8 +224,7 @@ export default function TechnologyCreateDialog({ open, onClose, onCreated }: Pro
                       component="span"
                       sx={(theme) => ({ flex: '0 1 auto', minWidth: 0, textAlign: 'right', fontSize: 12, color: theme.palette.kanap.text.tertiary })}
                     >
-                      {/* The hosting type (lot H1) joins this list, after the family. */}
-                      {[entry.editor, labelFor('technologyFamily', entry.family)].filter(Boolean).join(' · ')}
+                      {[entry.editor, labelFor('technologyFamily', entry.family), labelFor('hostingType', entry.hosting_type)].filter(Boolean).join(' · ')}
                     </Box>
                   </Box>
                   {/* Below: the description across the row, cut at its end, whole on hover. */}
@@ -297,16 +303,18 @@ export default function TechnologyCreateDialog({ open, onClose, onCreated }: Pro
                 placeholder={t('workspace.technology.placeholders.editor')}
               />
             </PropertyRow>
-            <PropertyRow label={t('workspace.technology.fields.mode')}>
+            <PropertyRow label={t('workspace.technology.fields.hostingType')}>
               <Select
                 variant="standard"
-                value={draft.mode}
-                onChange={(event) => setDraft((prev) => ({ ...prev, mode: String(event.target.value) }))}
-                SelectDisplayProps={{ 'aria-label': t('workspace.technology.fields.mode') } as React.HTMLAttributes<HTMLDivElement>}
+                value={hostingType}
+                displayEmpty
+                onChange={(event) => setDraft((prev) => ({ ...prev, hosting_type: String(event.target.value) }))}
+                SelectDisplayProps={{ 'aria-label': t('workspace.technology.fields.hostingType') } as React.HTMLAttributes<HTMLDivElement>}
                 fullWidth
               >
-                <MenuItem value="installed" sx={drawerMenuItemSx}>{t('workspace.technology.modes.installed')}</MenuItem>
-                <MenuItem value="subscribed" sx={drawerMenuItemSx}>{t('workspace.technology.modes.subscribed')}</MenuItem>
+                {hostingTypes.map((option) => (
+                  <MenuItem key={option.code} value={option.code} sx={drawerMenuItemSx}>{option.label}</MenuItem>
+                ))}
               </Select>
             </PropertyRow>
             <Box component="button" type="button" onClick={() => { setManual(false); setError(null); setNameTaken(false); }} sx={linkSx}>

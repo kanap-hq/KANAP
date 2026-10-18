@@ -30,7 +30,7 @@ vi.mock('../../../components/fields/ContactSelect', () => ({
 const mocked = vi.mocked(api);
 
 const TECHNOLOGY = {
-  id: 'tech-1', reference: 'TEC-1', name: 'SQL Server', editor: 'Microsoft', family: 'database', mode: 'installed', lifecycle: 'active',
+  id: 'tech-1', reference: 'TEC-1', name: 'SQL Server', editor: 'Microsoft', family: 'database', hosting_type: 'on_prem', lifecycle: 'active',
   description: null, notes: null, cpe_products: [], replaced_by_id: null, replaced_by: null, versions: [], owners: [],
   support_notes: 'Call the editor first.',
 } as TechnologyDetail;
