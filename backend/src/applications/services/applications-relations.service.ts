@@ -199,8 +199,9 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
 
   /**
    * The declarations are read here, for every state of the application: the technology layer
-   * leaves out an application out of service, but its own tab must still show what it declares
-   * (and the badge counts), so that it can be withdrawn. The hosted rows come from the reach.
+   * leaves out an application out of service, but the Operations tab must still show what it
+   * declares, so that it can be withdrawn. The hosted rows come from the reach. The Relations
+   * badge does not count these rows.
    */
   private async listTechnologies(mg: EntityManager, tenantId: string, appId: string, linkOpts: { manager: EntityManager; tenantId: string; userId: string | null }) {
     const declared: Array<{ technology_id: string; name: string; item_number: number | null; family: string | null; version_label: string | null; standard_support_end: string | null }> = await mg.query(
