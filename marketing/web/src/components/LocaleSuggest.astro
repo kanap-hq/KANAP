@@ -1,0 +1,152 @@
+---
+/**
+ * LocaleSuggest — one-line banner on English pages for visitors whose
+ * browser prefers French, German or Spanish.
+ *
+ * Rendered hidden on every unprefixed page except the home (which redirects
+ * from the <head> script in BaseLayout instead). An inline script reveals it
+ * when all of these hold:
+ *  - no stored choice under localStorage `kanap-locale`
+ *  - the first fr/de/es/en entry of navigator.languages is fr, de or es
+ *  - the page has <link rel="alternate" hreflang="<that locale>">
+ * The banner speaks the visitor's language, so the strings of the three
+ * non-English locales ship as JSON. The link stores the visitor's locale,
+ * the close button stores `en`. The site works with storage unavailable.
+ */
+
+import { useTranslations, type Locale } from '../i18n/ui';
+
+const SUGGESTED: Locale[] = ['fr', 'de', 'es'];
+const strings = Object.fromEntries(
+  SUGGESTED.map((loc) => {
+    const t = useTranslations(loc);
+    return [
+      loc,
+      {
+        text: t('locale.suggest.text'),
+        link: t('locale.suggest.link'),
+        close: t('locale.suggest.close'),
+      },
+    ];
+  }),
+);
+---
+
+<div class="mk-locsug" data-mk-locsug hidden>
+  <div class="mk-container mk-locsug__inner">
+    <p class="mk-locsug__line">
+      <span data-mk-locsug-text></span>
+      <a class="mk-locsug__link" data-mk-locsug-link href="/"></a>
+    </p>
+    <button type="button" class="mk-locsug__close" data-mk-locsug-close>
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
+        <path d="M2.5 2.5l7 7M9.5 2.5l-7 7" />
+      </svg>
+    </button>
+  </div>
+  <script type="application/json" data-mk-locsug-strings set:html={JSON.stringify(strings)} />
+</div>
+
+<script is:inline>
+  (function () {
+    var KEY = 'kanap-locale';
+    var LOCS = ['en', 'fr', 'de', 'es'];
+    var box = document.querySelector('[data-mk-locsug]');
+    if (!box) return;
+    function store(v) {
+      try { localStorage.setItem(KEY, v); } catch (e) {}
+    }
+    try {
+      var stored = null;
+      try { stored = localStorage.getItem(KEY); } catch (e) {}
+      if (LOCS.indexOf(stored) !== -1) return;
+      var langs = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ''];
+      var pref = null;
+      for (var i = 0; i < langs.length; i++) {
+        var p = String(langs[i] || '').toLowerCase().split('-')[0];
+        if (LOCS.indexOf(p) !== -1) { pref = p; break; }
+      }
+      if (!pref || pref === 'en') return;
+      var alt = document.querySelector('link[rel="alternate"][hreflang="' + pref + '"]');
+      if (!alt) return;
+      var s = JSON.parse(box.querySelector('[data-mk-locsug-strings]').textContent)[pref];
+      if (!s) return;
+      var url = new URL(alt.getAttribute('href'), location.href);
+      var link = box.querySelector('[data-mk-locsug-link]');
+      link.href = url.pathname + url.search + url.hash;
+      link.hreflang = pref;
+      link.textContent = s.link;
+      box.querySelector('[data-mk-locsug-text]').textContent = s.text;
+      box.lang = pref;
+      var close = box.querySelector('[data-mk-locsug-close]');
+      close.setAttribute('aria-label', s.close);
+      close.title = s.close;
+      link.addEventListener('click', function () { store(pref); });
+      close.addEventListener('click', function () {
+        store('en');
+        box.hidden = true;
+      });
+      box.hidden = false;
+    } catch (e) {}
+  })();
+</script>
+
+<style>
+  .mk-locsug {
+    background: var(--kanap-nav-chip-bg);
+    border-bottom: 1px solid var(--kanap-border-soft);
+    color: var(--kanap-text-secondary);
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .mk-locsug[hidden] {
+    display: none;
+  }
+
+  .mk-locsug__inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    min-height: 36px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+
+  .mk-locsug__line {
+    margin: 0;
+    min-width: 0;
+  }
+
+  .mk-locsug__link {
+    margin-left: 6px;
+    color: var(--kanap-teal);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .mk-locsug__link:hover {
+    text-decoration: underline;
+  }
+
+  .mk-locsug__close {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: var(--kanap-radius-submit);
+    color: var(--kanap-text-tertiary);
+    cursor: pointer;
+  }
+
+  .mk-locsug__close:hover {
+    color: var(--kanap-text-primary);
+    background: var(--kanap-pill-hover-bg);
+  }
+</style>
