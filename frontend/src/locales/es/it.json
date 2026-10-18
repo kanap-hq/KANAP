@@ -294,6 +294,8 @@
     "vulnerabilities": {
       "title": "Vulnerabilidades",
       "subtitle": "Vulnerabilidades publicadas (NVD) que afectan a las tecnologías en uso, y los servidores y aplicaciones a los que llegan.",
+      "total_one": "Total: {{count, count}} fila ({{cves, count}} CVE)",
+      "total_other": "Total: {{count, count}} filas ({{cves, count}} CVE)",
       "actions": {
         "changeState": "Cambiar el estado",
         "changeStateSelected_one": "Cambiar el estado ({{count}})",

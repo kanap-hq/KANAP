@@ -400,8 +400,8 @@ export class VulnerabilitiesService {
    * paged by row (lot T6c: the unit that carries the state).
    */
   async list(filters: VulnerabilityFilters, opts: VulnOpts, applications: ApplicationsAccess) {
-    const { items, total, limit, offset } = await this.listRows(filters, opts, applications, true);
-    return { items, total, limit, offset };
+    const { items, total, cves, limit, offset } = await this.listRows(filters, opts, applications, true);
+    return { items, total, cves, limit, offset };
   }
 
   private async listRows(filters: VulnerabilityFilters, opts: VulnOpts, applications: ApplicationsAccess, paging: boolean) {
@@ -431,10 +431,19 @@ export class VulnerabilitiesService {
       : `${SEVERITY_ORDER} ${sortField ? direction : 'DESC'}, c.cvss_score ${sortField ? direction : 'DESC'} NULLS LAST, c.published_at DESC NULLS LAST, ${tail}`;
     const params: unknown[] = [tenantId];
     const where = await this.filterSql(mg, tenantId, filters, params);
-    const rows: Array<GridRow & { total: string }> = await mg.query(
+    // The rows and the distinct CVE among them: the grid's total speaks of both.
+    const [counted] = await mg.query(
+      `SELECT count(*)::int AS rows, count(DISTINCT tv.cve_id)::int AS cves ${this.rowsFrom} WHERE tv.tenant_id = $1 ${where}`,
+      params,
+    );
+    const total = Number(counted?.rows ?? 0);
+    const cves = Number(counted?.cves ?? 0);
+    if (!paging && total > EXPORT_LIMIT) {
+      throw new BadRequestException(`More than ${EXPORT_LIMIT} rows match: narrow the filters to export them.`);
+    }
+    const rows: GridRow[] = total === 0 ? [] : await mg.query(
       `SELECT ${this.rowColumns},
-              c.summary, c.cvss_score, c.severity, c.cvss_version, c.published_at, c.last_modified_at, c.nvd_status,
-              count(*) OVER () AS total
+              c.summary, c.cvss_score, c.severity, c.cvss_version, c.published_at, c.last_modified_at, c.nvd_status
          ${this.rowsFrom}
          ${this.usersJoin}
         WHERE tv.tenant_id = $1 ${where}
@@ -442,17 +451,9 @@ export class VulnerabilitiesService {
         LIMIT ${limit} OFFSET ${offset}`,
       params,
     );
-    let total = Number(rows[0]?.total ?? 0);
-    if (rows.length === 0 && offset > 0) {
-      // A page past the end (the grid refreshing a block emptied by a change in bulk): the real
-      // total, never 0, or the grid would empty itself.
-      const [{ n }] = await mg.query(`SELECT count(*)::int AS n ${this.rowsFrom} WHERE tv.tenant_id = $1 ${where}`, params);
-      total = Number(n ?? 0);
-    }
-    if (!paging && total > EXPORT_LIMIT) {
-      throw new BadRequestException(`More than ${EXPORT_LIMIT} rows match: narrow the filters to export them.`);
-    }
-    if (rows.length === 0) return { items: [], total, limit, offset, rows: [] as GridRow[] };
+    // A page past the end (the grid refreshing a block emptied by a change in bulk) keeps the real
+    // total, never 0, or the grid would empty itself.
+    if (rows.length === 0) return { items: [], total, cves, limit, offset, rows: [] as GridRow[] };
     const reach = await this.reachOf(mg, tenantId, rows, applications);
     const items = rows.map((r) => ({
       id: r.id,
@@ -473,7 +474,7 @@ export class VulnerabilitiesService {
       // The servers and applications of this version.
       ...this.counts([r], reach),
     }));
-    return { items, total, limit, offset, rows };
+    return { items, total, cves, limit, offset, rows };
   }
 
   /**

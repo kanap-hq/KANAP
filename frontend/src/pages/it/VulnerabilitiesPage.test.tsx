@@ -150,6 +150,10 @@ describe('VulnerabilitiesPage', () => {
     expect(column('select')).toMatchObject({ suppressColumnsToolPanel: true, filter: false, sortable: false, width: 44 });
     expect(grid.props!.enableRowSelection).toBeFalsy();
     expect(column('summary').flex).toBe(1);
+    // The total in rows and in CVE, as the counters of the technologies list speak in CVE.
+    expect(grid.props!.showRowCount).toBe(true);
+    expect(grid.props!.rowCountText({ total: 31, cves: 12 })).toBe('Total: 31 rows (12 CVE)');
+    expect(grid.props!.rowCountText({ total: 1, cves: 1 })).toBe('Total: 1 row (1 CVE)');
     expect(column('servers').filter).toBe(false);
     expect(await column('technology').filterParams.getValues({})).toEqual([{ value: 'TEC-1', label: 'TEC-1 Tomcat' }]);
     expect(column('technology').valueFormatter({ value: ROW.technology })).toBe('TEC-1 Tomcat');

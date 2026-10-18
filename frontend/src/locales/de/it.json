@@ -294,6 +294,8 @@
     "vulnerabilities": {
       "title": "Schwachstellen",
       "subtitle": "Veröffentlichte Schwachstellen (NVD), die die eingesetzten Technologien betreffen, und die Server und Anwendungen, die sie erreichen.",
+      "total_one": "Gesamt: {{count, count}} Zeile ({{cves, count}} CVE)",
+      "total_other": "Gesamt: {{count, count}} Zeilen ({{cves, count}} CVE)",
       "actions": {
         "changeState": "Status ändern",
         "changeStateSelected_one": "Status ändern ({{count}})",

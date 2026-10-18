@@ -516,6 +516,11 @@ export default function VulnerabilitiesPage() {
     [selection, selectedCount, toggleRow, toggleAll],
   );
 
+  // The grid's total in rows, and in CVE as the counters of the technologies list and record.
+  const rowCountText = useCallback(
+    (answer: { total: number } & Record<string, unknown>) => t('pages.vulnerabilities.total', { count: answer.total, cves: Number(answer.cves ?? 0) }),
+    [t],
+  );
   const severityValues = useCallback(async () => SEVERITIES.map((s) => ({ value: s, label: t(`pages.vulnerabilities.severities.${s}`) })), [t]);
   const stateValues = useCallback(async () => VULNERABILITY_STATES.map((s) => ({ value: s, label: t(`pages.vulnerabilities.states.${s}`) })), [t]);
   const editorValues = useCallback(async () => {
@@ -690,6 +695,7 @@ export default function VulnerabilitiesPage() {
         queryKey="vulnerabilities"
         getRowId={rowId}
         showRowCount
+        rowCountText={rowCountText}
         defaultSort={{ field: 'severity', direction: 'DESC' }}
         initialState={{ filter: { filterModel: initialModel } }}
         requiredColumns={['cve_id']}

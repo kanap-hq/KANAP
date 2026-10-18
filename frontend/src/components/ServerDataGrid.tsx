@@ -141,6 +141,8 @@ export type ServerDataGridProps<T> = {
   paginationPageSize?: number;
   toolbarExtras?: React.ReactNode;
   showRowCount?: boolean;
+  /** With `showRowCount`: the total row's text from the list answer (its `total` and other counts). */
+  rowCountText?: (answer: { total: number } & Record<string, unknown>) => string;
   /**
    * Parameters of the page requests only (not of the filter values or totals), computed from the
    * column state, e.g. the FTE columns shown. A change of their value reloads the rows.
@@ -444,6 +446,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   paginationPageSize,
   toolbarExtras,
   showRowCount,
+  rowCountText,
   pageParams,
   setFilterExcludeMode = false,
   emptyState,
@@ -453,10 +456,11 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   const { tenantSlug } = useTenant();
   const { resolvedMode } = useThemeMode();
 
-  // Determine which column gets the row-count label (first column without a valueFormatter)
+  // Determine which column gets the row-count label (first column with a field and without a
+  // valueFormatter: a column without a field, a box column, would show no value)
   const rowCountField = useMemo(() => {
     if (!showRowCount) return '';
-    const col = columns.find(c => !c.valueFormatter) || columns[0];
+    const col = columns.find(c => c.field && !c.valueFormatter) || columns[0];
     return col?.field || col?.colId || '';
   }, [showRowCount, columns]);
 
@@ -555,6 +559,8 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   const debouncedSearch = useDebouncedValue(search, 400);
   const [loadError, setLoadError] = useState<Error | undefined>();
   const [totalRowCount, setTotalRowCount] = useState<number | null>(null);
+  // The latest list answer without its rows, for `rowCountText`.
+  const [rowCountAnswer, setRowCountAnswer] = useState<Record<string, unknown> | null>(null);
   // Set once the first page of the current query came back empty: 'filtered' when a search, a filter
   // or a Show scope other than the default narrows it. Never while loading or after an error.
   const [emptyResult, setEmptyResult] = useState<null | 'empty' | 'filtered'>(null);
@@ -887,6 +893,8 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   useEffect(() => { refreshKeyRef.current = refreshKey; }, [refreshKey]);
   const pageParamsRef = useRef(pageParams);
   pageParamsRef.current = pageParams;
+  const rowCountTextRef = useRef(rowCountText);
+  rowCountTextRef.current = rowCountText;
   const onTotalChangeRef = useRef(onTotalChange);
   onTotalChangeRef.current = onTotalChange;
   const onListRequestChangeRef = useRef(onListRequestChange);
@@ -996,6 +1004,10 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
         const rows = (res.data?.items ?? []) as any[];
         const total = res.data?.total ?? rows.length;
         setTotalRowCount(total);
+        if (rowCountTextRef.current) {
+          const { items: _items, ...answer } = (res.data ?? {}) as Record<string, unknown>;
+          setRowCountAnswer(answer);
+        }
         if (startRow === 0) {
           const narrowed = !!reqParams.q || !!reqParams.filters || scopeNarrowsRef.current();
           setEmptyResult(total === 0 ? (narrowed ? 'filtered' : 'empty') : null);
@@ -1420,13 +1432,16 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   const mergedPinnedBottomRowData = useMemo(() => {
     const rows: any[] = [];
     if (showRowCount && totalRowCount !== null && rowCountField) {
-      rows.push({ [rowCountField]: t('common:labels.totalWithCount', { count: totalRowCount }) });
+      const label = rowCountText
+        ? rowCountText({ ...(rowCountAnswer ?? {}), total: totalRowCount })
+        : t('common:labels.totalWithCount', { count: totalRowCount });
+      rows.push({ [rowCountField]: label });
     }
     if (pinnedBottomRowData) {
       rows.push(...pinnedBottomRowData);
     }
     return rows.length > 0 ? rows : undefined;
-  }, [showRowCount, totalRowCount, rowCountField, pinnedBottomRowData, t]);
+  }, [showRowCount, totalRowCount, rowCountField, rowCountText, rowCountAnswer, pinnedBottomRowData, t]);
 
   const showAuxHorizontalScrollbar = showTopScroll && !enablePagination;
   // Pages with their own count (a totals row, a footer fed by onTotalChange) do not get a second one.

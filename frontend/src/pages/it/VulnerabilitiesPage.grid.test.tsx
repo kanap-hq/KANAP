@@ -63,6 +63,8 @@ describe('VulnerabilitiesPage on the real grid', () => {
     expect(headers[0]).toBe('select');
     expect(headers).not.toContain('ag-Grid-ControlsColumn');
     expect(container.querySelector('.ag-row [col-id="ag-Grid-ControlsColumn"]')).toBeNull();
+    // The total row, under the CVE column (never in the box column).
+    expect(container.querySelector('.ag-floating-bottom [col-id="cve_id"]')?.textContent).toBe('Total: 3 rows (2 CVE)');
 
     // The elements are read again after each step: AG Grid may draw a row again.
     const box = () => screen.getByRole('checkbox', { name: 'Select CVE-2026-1001, Tomcat 9.0.80' }) as HTMLInputElement;
