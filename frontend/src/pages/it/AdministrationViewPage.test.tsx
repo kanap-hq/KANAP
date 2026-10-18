@@ -27,14 +27,16 @@ const VIEW: AdministrationView = {
   zones: [
     {
       code: 'tier_0', label: 'Tier 0', admin_group: 'Domain admins', privilege_level: 'Tier 0', secrets_location: 'Vault A', description: 'Identity core',
-      deprecated: false, unknown: false, server_count: 1,
+      deprecated: false, unknown: false, server_count: 2,
       technologies: [{ id: 'tech-ad', reference: 'TEC-1', name: 'Active Directory', family: 'directory', directory: true, servers: [{ id: 'asset-dc1', name: 'dc1', reference: null, via_name: null }] }],
+      assets: [{ id: 'asset-fw1', name: 'fw1', reference: 'AST-4', kind: 'firewall' }],
       directory_services: [{ id: 'tech-ad', reference: 'TEC-1', name: 'Active Directory' }],
     },
-    { code: 'tier_1', label: 'Tier 1', admin_group: null, privilege_level: null, secrets_location: null, description: null, deprecated: true, unknown: false, server_count: 0, technologies: [], directory_services: [] },
+    { code: 'tier_1', label: 'Tier 1', admin_group: null, privilege_level: null, secrets_location: null, description: null, deprecated: true, unknown: false, server_count: 0, technologies: [], assets: [], directory_services: [] },
     {
       code: null, label: null, admin_group: null, privilege_level: null, secrets_location: null, description: null, deprecated: false, unknown: false, server_count: 2,
       technologies: [{ id: 'tech-vs', reference: 'TEC-3', name: 'vSphere', family: 'hypervisor', directory: false, servers: [{ id: 'asset-h', name: 'host1', reference: null, via_name: null }, { id: 'asset-vm', name: 'vm1', reference: null, via_name: 'host1' }] }],
+      assets: [],
       directory_services: [],
     },
   ],
@@ -73,6 +75,9 @@ describe('AdministrationViewPage', () => {
     expect(within(table).getByText('TEC-1')).toBeInTheDocument();
     expect(within(table).getByText('Directory and identity')).toBeInTheDocument();
     expect(within(table).getByRole('link', { name: 'dc1' })).toHaveAttribute('href', '/it/assets/asset-dc1');
+    const zoneServers = within(tier0).getByRole('table', { name: 'pages.administrationView.serversInZone' });
+    expect(within(zoneServers).getByText('AST-4')).toBeInTheDocument();
+    expect(within(zoneServers).getByText('fw1')).toBeInTheDocument();
     expect(within(tier0).getByText('pages.administrationView.attributes.directoryServices')).toBeInTheDocument();
     // A retired zone is marked as such.
     expect(within(screen.getByRole('region', { name: 'Tier 1 (common:enumEditor.retiredSuffix)' })).getByText('pages.administrationView.emptyZone')).toBeInTheDocument();

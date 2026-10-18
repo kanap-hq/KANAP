@@ -14,6 +14,7 @@ export interface Asset {
   zone?: string | null;
   hostname?: string | null;
   domain?: string | null;
+  admin_zone?: string | null;
   fqdn?: string | null;
   aliases?: string[] | null;
   ip_addresses?: IpAddressEntry[] | null;
@@ -162,6 +163,7 @@ export interface CreateAssetInput {
   environment?: 'prod' | 'pre_prod' | 'qa' | 'test' | 'dev' | 'sandbox';
   hostname?: string | null;
   domain?: string | null;
+  admin_zone?: string | null;
   aliases?: string[] | null;
   ip_addresses?: IpAddressEntry[] | null;
   is_cluster?: boolean;

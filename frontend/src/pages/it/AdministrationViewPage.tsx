@@ -14,6 +14,7 @@ import type { DomainTrustDirection } from '../../services/itOpsSettings';
 
 type Server = { id: string; name: string; reference: string | null; via_name: string | null };
 type Technology = { id: string; reference: string | null; name: string; family: string; directory: boolean; servers: Server[] };
+type ZoneAsset = { id: string; name: string; reference: string | null; kind: string };
 export type AdministrationZone = {
   code: string | null;
   label: string | null;
@@ -24,6 +25,7 @@ export type AdministrationZone = {
   deprecated: boolean;
   unknown: boolean;
   technologies: Technology[];
+  assets: ZoneAsset[];
   directory_services: Array<{ id: string; reference: string | null; name: string }>;
   server_count: number;
 };
@@ -123,19 +125,38 @@ function ZoneSection({ zone }: { zone: AdministrationZone }) {
     { key: 'family', header: t('pages.administrationView.columns.family'), width: 180, render: (row) => labelFor('technologyFamily', row.family) },
     { key: 'servers', header: t('pages.administrationView.columns.servers'), render: (row) => <Servers servers={row.servers} /> },
   ];
+  const assetColumns: Array<RelationsColumn<ZoneAsset>> = [
+    { key: 'reference', header: t('pages.administrationView.columns.reference'), width: 80, render: (row) => <RelationRef>{row.reference}</RelationRef> },
+    { key: 'name', header: t('common.name'), width: 220, render: (row) => row.name },
+    { key: 'kind', header: t('pages.administrationView.columns.type'), width: 160, render: (row) => labelFor('serverKind', row.kind) },
+  ];
   const title = zone.code === null
     ? t('pages.administrationView.noZone')
     : zone.unknown ? t('pages.administrationView.unknownZone', { code: zone.code })
       : `${nameOf('adminZone', zone.code, zone.label ?? zone.code)}${zone.deprecated ? ` (${t('common:enumEditor.retiredSuffix')})` : ''}`;
+  const empty = !zone.technologies.length && !zone.assets.length;
   return (
     <Box>
-      <RelationsSection title={title} count={zone.technologies.length}>
+      <RelationsSection title={title} count={zone.technologies.length + zone.assets.length}>
         {zone.code === null
           ? <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary', mb: 1 }}>{t('pages.administrationView.noZoneHint')}</Typography>
           : <ZoneAttributes zone={zone} />}
-        {zone.technologies.length
-          ? <RelationsTable columns={columns} rows={zone.technologies} rowKey={(row) => row.id} rowHref={(row) => `/it/technologies/${row.id}`} ariaLabel={title} />
-          : <RelationsEmpty>{t('pages.administrationView.emptyZone')}</RelationsEmpty>}
+        {zone.technologies.length > 0 && (
+          <RelationsTable columns={columns} rows={zone.technologies} rowKey={(row) => row.id} rowHref={(row) => `/it/technologies/${row.id}`} ariaLabel={title} />
+        )}
+        {zone.assets.length > 0 && (
+          <Box sx={{ mt: zone.technologies.length ? 1.5 : 0 }}>
+            <Typography sx={{ m: 0, mb: 0.75, fontSize: 13, fontWeight: 500 }}>{t('pages.administrationView.serversInZone')}</Typography>
+            <RelationsTable
+              columns={assetColumns}
+              rows={zone.assets}
+              rowKey={(row) => row.id}
+              rowHref={(row) => `/it/assets/${row.id}`}
+              ariaLabel={t('pages.administrationView.serversInZone')}
+            />
+          </Box>
+        )}
+        {empty && <RelationsEmpty>{t('pages.administrationView.emptyZone')}</RelationsEmpty>}
       </RelationsSection>
     </Box>
   );
