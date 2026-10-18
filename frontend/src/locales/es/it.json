@@ -1634,6 +1634,8 @@
         "search": "Buscar tecnologías",
         "empty": "Ninguna tecnología en este servidor.",
         "operatingSystem": "Sistema operativo",
+        "edit": "Editar",
+        "editNamed": "Editar {{name}}",
         "changeVersion": "Cambiar la versión de {{name}}",
         "catalog": "Catálogo",
         "remove": "Quitar {{name}}",
