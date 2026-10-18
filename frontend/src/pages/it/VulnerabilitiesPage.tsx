@@ -45,8 +45,8 @@ export type VulnerabilityRow = VulnerabilityGridRow;
 /**
  * The grid's filter model from the address: "to review" unless `state` says otherwise (`all`: every
  * state); `editor`, `technology` (`TEC-n`), `version` (a label, `none`: not recorded) and `severity`
- * as set filters; `q` on the CVE id. These are the entries from the technologies list, the
- * technology record and the emails.
+ * as set filters; `q` on the CVE id; `period` (days) on the publication date. These are the entries
+ * from the technologies list, the technology record and the emails.
  */
 export function filterModelFromSearch(search: string): Record<string, unknown> {
   const params = new URLSearchParams(search);
@@ -64,6 +64,15 @@ export function filterModelFromSearch(search: string): Record<string, unknown> {
   if (severity && (SEVERITIES as readonly string[]).includes(severity)) model.severity = set([severity]);
   const q = params.get('q');
   if (q) model.cve_id = { filterType: 'text', type: 'contains', filter: q };
+  // `period=<days>` (the emails' link): published within the last days, today included.
+  const period = Number(params.get('period'));
+  if (Number.isInteger(period) && period > 0 && period <= 3650) {
+    const day = new Date();
+    day.setDate(day.getDate() - period);
+    const text = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+    // "After" that day: from the next one.
+    model.published_at = { filterType: 'date', type: 'greaterThan', dateFrom: `${text} 00:00:00`, dateTo: null };
+  }
   return model;
 }
 

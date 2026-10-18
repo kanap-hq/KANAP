@@ -188,6 +188,27 @@ describe('VulnerabilitiesPage', () => {
       severity: { filterType: 'set', values: ['high'] },
     });
     expect(filterModelFromSearch('?version=none').version).toEqual({ filterType: 'set', values: [null] });
+    // The technology record's link: the rows of that CVE for that technology, whatever their state.
+    expect(filterModelFromSearch('?technology=TEC-4&state=all&q=CVE-2026-1001')).toEqual({
+      technology: { filterType: 'set', values: ['TEC-4'] },
+      cve_id: { filterType: 'text', type: 'contains', filter: 'CVE-2026-1001' },
+    });
+  });
+
+  it('reads the emails\' period as the CVE published within its last days, to review', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(new Date(2026, 9, 18, 9, 30));
+      expect(filterModelFromSearch('?period=30')).toEqual({
+        state: { filterType: 'set', values: ['to_review'] },
+        // After 18 September: from the 19th, today included (30 days).
+        published_at: { filterType: 'date', type: 'greaterThan', dateFrom: '2026-09-18 00:00:00', dateTo: null },
+      });
+      expect(filterModelFromSearch('?period=abc').published_at).toBeUndefined();
+      expect(filterModelFromSearch('?period=-3').published_at).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('says what to do when nothing is to review', () => {
