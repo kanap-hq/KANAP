@@ -36,7 +36,7 @@ async function applicationsAccess(ctx: TenantRequest): Promise<ApplicationsAcces
   return { scope };
 }
 
-/** The vulnerabilities of the tenant (lot T6a), under the `infrastructure` permission. `export` before `:cveId`. */
+/** The vulnerabilities of the tenant (lot T6a), under the `infrastructure` permission. `export` and `filter-values` before `:cveId`. */
 @UseGuards(JwtAuthGuard, VulnerabilityFeedGuard, PermissionGuard)
 @Controller('vulnerabilities')
 export class VulnerabilitiesController {
@@ -62,7 +62,14 @@ export class VulnerabilitiesController {
     return file.content;
   }
 
-  /** The state (and a common note) of many vulnerabilities at once: chosen ones, or all of the filter. */
+  /** The values of the grid's version filter, under the other filters. */
+  @RequireLevel('infrastructure', 'reader')
+  @Get('filter-values')
+  async filterValues(@Query() query: VulnerabilityFilters & { fields?: string }, @Tenant() ctx: TenantRequest) {
+    return this.svc.filterValues(query ?? {}, opts(ctx));
+  }
+
+  /** The state (and a common note) of many rows at once: chosen ones, or all of the filter. */
   @RequireLevel('infrastructure', 'member')
   @Post('bulk-state')
   async bulkState(@Body() body: Record<string, unknown>, @Tenant() ctx: TenantRequest) {
