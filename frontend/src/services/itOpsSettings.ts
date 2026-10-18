@@ -35,11 +35,6 @@ export type ApplicationClassificationCatalog = {
   recoveryWaves: RecoveryWave[];
 };
 
-export type OperatingSystemOption = ItOpsEnumOption & {
-  standardSupportEnd?: string; // YYYY-MM-DD
-  extendedSupportEnd?: string; // YYYY-MM-DD
-};
-
 export type ConnectionTypeOption = ItOpsEnumOption & {
   typicalPorts?: string;
 };
@@ -112,7 +107,6 @@ export type ItOpsSettings = {
   interfacePatterns: ItOpsEnumOption[];
   interfaceFormats: ItOpsEnumOption[];
   interfaceAuthModes: ItOpsEnumOption[];
-  operatingSystems: OperatingSystemOption[];
   connectionTypes: ConnectionTypeOption[];
   subnets: SubnetOption[];
   domains: DomainOption[];

@@ -6,7 +6,7 @@ const settings = {
   applicationCategories: [{ code: 'analytics', label: 'Analytics', deprecated: false }],
   accessMethods: [{ code: 'web', label: 'Web', deprecated: false }],
   serverKinds: [{ code: 'vm', label: 'Virtual machine', is_physical: false, deprecated: false }],
-  operatingSystems: [], connectionTypes: [], subnets: [], domains: [],
+  connectionTypes: [], subnets: [], domains: [],
   lockedCodes: {}, protectedCodes: { serverKinds: ['vm'] },
 } as unknown as ItOpsSettings;
 

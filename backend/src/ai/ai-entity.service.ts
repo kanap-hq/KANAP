@@ -22,6 +22,7 @@ import {
 } from './ai.types';
 import { incidentRelatedLabelSql, incidentRelatedTitleSql, incidentVisibilitySql, resolveIncidentViewer } from '../incidents/incident-visibility';
 import { budgetLineReference } from '../spend/budget-nature';
+import { operatingSystemLabelSql } from '../technologies/operating-system-codes';
 import { INCIDENT_REVIEW_SLOT } from '../knowledge/integrated-document.constants';
 import { AiPolicyService } from './ai-policy.service';
 import { entityNotFound, resolveAiEntityReference } from './ai-entity-reference.util';
@@ -31,6 +32,8 @@ import {
   resolveAiDocumentIncidentViewer,
   resolveAiParticipationAccessScope,
 } from './query/ai-query-scope.util';
+
+const ASSET_OS_LABEL = operatingSystemLabelSql('a');
 
 type SearchRow = {
   id: string;
@@ -714,7 +717,7 @@ export class AiEntityService {
            OR COALESCE(a.notes, '') ILIKE $2
            OR COALESCE(a.domain, '') ILIKE $2
            OR COALESCE(a.cluster, '') ILIKE $2
-           OR COALESCE(a.operating_system, '') ILIKE $2
+           OR COALESCE(${ASSET_OS_LABEL}, '') ILIKE $2
            OR COALESCE(a.kind, '') ILIKE $2
            OR COALESCE(a.provider, '') ILIKE $2
            OR COALESCE(a.environment, '') ILIKE $2
@@ -1950,7 +1953,7 @@ export class AiEntityService {
   private async listAssets(context: AiExecutionContextWithManager) {
     const rows = await context.manager.query<any[]>(
       `SELECT a.id, a.asset_reference AS item_ref, NULL::int AS item_number, a.name AS label, COALESCE(a.fqdn, a.hostname, a.notes) AS summary, a.status, a.updated_at,
-              a.kind, a.provider, a.environment, a.operating_system
+              a.kind, a.provider, a.environment, ${ASSET_OS_LABEL} AS operating_system
        FROM assets a
        WHERE a.tenant_id = $1
        ORDER BY a.name ASC`,

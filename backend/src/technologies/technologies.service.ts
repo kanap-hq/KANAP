@@ -513,7 +513,8 @@ export class TechnologiesService {
   /**
    * Delete a version: the links that named it become "version unknown". A link whose asset or
    * application already names the technology with an unknown version is removed instead (the pair
-   * would repeat), and counted.
+   * would repeat), and counted. When the removed link was the server's operating system, the mark
+   * moves to the remaining link, so the server keeps its operating system.
    */
   async deleteVersion(idOrRef: string, versionId: string, opts: Opts) {
     const { manager: mg, tenantId } = opts;
@@ -523,18 +524,29 @@ export class TechnologiesService {
     await lockTechnologyMatching(mg, tenantId, tech.id);
     let merged = 0;
     for (const side of ['asset', 'application'] as const) {
-      const [{ n }] = await mg.query(
+      const marked = side === 'asset' ? 'l.is_operating_system' : 'false';
+      const [{ n, os_assets }] = await mg.query(
         `WITH d AS (
            DELETE FROM ${side}_technologies l
             WHERE l.tenant_id = $1 AND l.technology_id = $2 AND l.technology_version_id = $3
               AND EXISTS (SELECT 1 FROM ${side}_technologies o
                            WHERE o.tenant_id = l.tenant_id AND o.${side}_id = l.${side}_id
                              AND o.technology_id = l.technology_id AND o.technology_version_id IS NULL)
-            RETURNING 1)
-         SELECT count(*)::int AS n FROM d`,
+            RETURNING l.${side}_id AS owner_id, ${marked} AS marked)
+         SELECT count(*)::int AS n,
+                COALESCE(array_agg(owner_id) FILTER (WHERE marked), '{}') AS os_assets
+           FROM d`,
         [tenantId, tech.id, before.id],
       );
       merged += Number(n) || 0;
+      if (side === 'asset' && Array.isArray(os_assets) && os_assets.length > 0) {
+        await mg.query(
+          `UPDATE asset_technologies SET is_operating_system = true, updated_at = now()
+            WHERE tenant_id = $1 AND technology_id = $2 AND technology_version_id IS NULL
+              AND asset_id = ANY($3::uuid[])`,
+          [tenantId, tech.id, os_assets],
+        );
+      }
     }
     await mg.query(`DELETE FROM technology_versions WHERE tenant_id = $1 AND technology_id = $2 AND id = $3`, [tenantId, tech.id, before.id]);
     await this.audit.log({ table: 'technology_versions', recordId: tech.id, action: 'delete', before, after: null, userId: opts.userId ?? null }, { manager: mg });

@@ -10,6 +10,7 @@ import { assert, runSpecs, seedTenant, setTenant } from '../../spend/__tests__/r
 import { TechnologyCatalogSyncService, type CatalogRuntime, type TenantSyncResult } from '../catalog/technology-catalog-sync.service';
 import { mergeProduct, versionsOfReleases } from '../catalog/catalog-releases';
 import type { CatalogProduct, CatalogVersion } from '../catalog/technology-catalog.service';
+import * as shippedFile from '../catalog/technologies.catalog.json';
 import { services, type AuditEntry } from './technologies.fixtures';
 
 // The living catalog (lot C4): the sync of a tenant's adopted technologies (new version added, a
@@ -21,6 +22,15 @@ import { services, type AuditEntry } from './technologies.fixtures';
 
 const KEYS = ['postgresql', 'nginx'];
 const HOUR = 60 * 60 * 1000;
+
+/**
+ * Days relative to the day the shipped file was read (`source.retrieved_on`): a cache read counts
+ * only after that day, so the dates of these cases follow the file and survive a rebuild.
+ */
+const RETRIEVED_ON = String((shippedFile as unknown as { source: { retrieved_on: string } }).source.retrieved_on);
+function shippedDay(offset: number): string {
+  return new Date(Date.parse(`${RETRIEVED_ON}T00:00:00.000Z`) + offset * 24 * HOUR).toISOString().slice(0, 10);
+}
 
 function syncService(audit: AuditEntry[] = []) {
   const { catalog } = services(audit);
@@ -259,7 +269,7 @@ async function testReleaseProduct() {
     const { catalog, sync } = syncService();
     const tenantId = await seedTenant(runner, 'cat-sync-sql');
     const { technology } = await catalog.adopt('mssqlserver', { manager: runner.manager, tenantId });
-    const live = versionsOfReleases([{ name: '18.0', label: '2028', releaseDate: '2026-10-01', eolFrom: '2034-01-01' }], '2026-10-17', 'mssqlserver');
+    const live = versionsOfReleases([{ name: '18.0', label: '2028', releaseDate: '2026-10-01', eolFrom: '2034-01-01' }], shippedDay(1), 'mssqlserver');
     const result = await sync.syncTenant(runner.manager, tenantId, new Map([['mssqlserver', mergeProduct(catalog.shippedProduct('mssqlserver')!, live)]]));
     assert.deepEqual([result.versions_added, result.cpe_added], [1, 1]);
     const [tech] = await runner.query(`SELECT cpe_products FROM technologies WHERE id = $1`, [technology.id]);
@@ -329,7 +339,7 @@ type Answer = { status: number; body?: unknown };
 let answer: (slug: string) => Answer = () => ({ status: 404 });
 const requests: string[] = [];
 let baseUrl = '';
-let clock = Date.parse('2026-10-17T04:40:00.000Z');
+let clock = Date.parse(`${shippedDay(1)}T04:40:00.000Z`);
 const sleeps: number[] = [];
 
 async function serve() {
@@ -576,10 +586,10 @@ async function testStaleCache() {
         return [product.versions.some((x) => x.key === '99'), product.versions.find((x) => x.key === '17')!.standard_support_end];
       };
       const own = shipped.versions.find((x) => x.key === '17')!.standard_support_end;
-      assert.deepEqual(await at('2026-10-17T10:00:00Z', '2026-10-18T00:00:00Z'), [true, '2027-01-01'], 'a cache read after the shipped file counts');
-      assert.deepEqual(await at('2026-10-15T10:00:00Z', '2026-10-16T00:00:00Z'), [false, own], 'a shipped file built after the last read wins');
-      assert.deepEqual(await at('2026-10-17T10:00:00Z', '2026-10-30T00:00:00Z'), [false, own], 'a product not read for a week falls back to the shipped file');
-      assert.deepEqual(await at('2026-10-17T10:00:00Z', '2026-10-18T00:00:00Z', false), [false, own], 'gate off: the shipped file only');
+      assert.deepEqual(await at(`${shippedDay(1)}T10:00:00Z`, `${shippedDay(2)}T00:00:00Z`), [true, '2027-01-01'], 'a cache read after the shipped file counts');
+      assert.deepEqual(await at(`${shippedDay(-1)}T10:00:00Z`, `${shippedDay(0)}T00:00:00Z`), [false, own], 'a shipped file built after the last read wins');
+      assert.deepEqual(await at(`${shippedDay(1)}T10:00:00Z`, `${shippedDay(14)}T00:00:00Z`), [false, own], 'a product not read for a week falls back to the shipped file');
+      assert.deepEqual(await at(`${shippedDay(1)}T10:00:00Z`, `${shippedDay(2)}T00:00:00Z`, false), [false, own], 'gate off: the shipped file only');
     });
   } finally {
     (Features as any).TECHNOLOGY_CATALOG_SYNC_ENABLED = enabled;

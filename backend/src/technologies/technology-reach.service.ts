@@ -125,6 +125,8 @@ export type ReachingTechnology = {
   via_asset_id: string | null;
   link_id: string | null;
   source: LinkSource;
+  /** True when this installed link is the server's operating system. */
+  is_operating_system?: boolean;
 };
 
 export type TechnologyCounts = {
@@ -260,7 +262,7 @@ export class TechnologyReachService {
               CASE WHEN u.depth = 0 THEN 'installed' ELSE 'carried' END AS kind,
               at.technology_version_id, NULL::text AS environment, NULL::uuid AS asset_id,
               CASE WHEN u.depth = 0 THEN NULL ELSE u.carrier_id END AS via_asset_id,
-              at.id AS link_id, at.source
+              at.id AS link_id, at.source, at.is_operating_system
          FROM up u
          JOIN asset_technologies at ON at.tenant_id = $1 AND at.asset_id = u.carrier_id
         ORDER BY u.asset_id, at.id, u.depth`,

@@ -55,7 +55,8 @@ export function RelationsTable<T>({ columns, rows, rowKey, rowHref, rowMuted, on
     const href = rowHref?.(row);
     if (href) navigate(href);
   };
-  const trailing = onRemove ? 40 : action ? action.width : 0;
+  const actionWidth = action ? action.width : 0;
+  const removeWidth = onRemove ? 40 : 0;
   return (
     <Box
       component="table"
@@ -92,12 +93,14 @@ export function RelationsTable<T>({ columns, rows, rowKey, rowHref, rowMuted, on
     >
       <colgroup>
         {columns.map((column) => <col key={column.key} style={column.width ? { width: column.width } : undefined} />)}
-        {trailing > 0 && <col style={{ width: trailing }} />}
+        {actionWidth > 0 && <col style={{ width: actionWidth }} />}
+        {removeWidth > 0 && <col style={{ width: removeWidth }} />}
       </colgroup>
       <thead>
         <tr>
           {columns.map((column) => <th key={column.key} className={column.align === 'right' ? 'r' : undefined}>{column.header}</th>)}
-          {trailing > 0 && <th aria-hidden />}
+          {actionWidth > 0 && <th aria-hidden />}
+          {removeWidth > 0 && <th aria-hidden />}
         </tr>
       </thead>
       <tbody>
@@ -122,6 +125,9 @@ export function RelationsTable<T>({ columns, rows, rowKey, rowHref, rowMuted, on
                   {column.render(row)}
                 </Box>
               ))}
+              {action ? (
+                <td className="r" onClick={(event) => event.stopPropagation()}>{action.render(row)}</td>
+              ) : null}
               {onRemove && canRemove && !canRemove(row) ? (
                 <td />
               ) : onRemove ? (
@@ -136,8 +142,6 @@ export function RelationsTable<T>({ columns, rows, rowKey, rowHref, rowMuted, on
                     <CloseIcon sx={{ fontSize: 16 }} />
                   </IconButton>
                 </td>
-              ) : action ? (
-                <td className="r" onClick={(event) => event.stopPropagation()}>{action.render(row)}</td>
               ) : null}
             </tr>
           );
@@ -152,7 +156,8 @@ export function RelationsTable<T>({ columns, rows, rowKey, rowHref, rowMuted, on
                   {index === 0 ? total.label : total.cells[column.key] ?? null}
                 </td>
               ))}
-              {trailing > 0 && <td />}
+              {actionWidth > 0 && <td />}
+              {removeWidth > 0 && <td />}
             </tr>
           ))}
         </tfoot>

@@ -195,20 +195,22 @@ export function suggestOperatingSystem<T extends CatalogOptionLike>(
 
 /**
  * The operating system, with the notice a value KANAP cannot place deserves.
- * A saved match on the platform slug decides first; a match pointing at a code
- * the catalog no longer holds falls through to the name comparison, exactly as
- * if it had never been saved.
+ * A saved match on the platform slug decides first. Its value is a readable label
+ * that the operating-system resolver turns into a technology of any family (VMware
+ * ESXi, Cisco Meraki), so it is kept even when the proposed choices, operating-system
+ * technologies first, do not list it. Without a saved match, the platform name is
+ * compared with the choices.
  */
-function resolveOperatingSystem<T extends CatalogOptionLike>(
+function resolveOperatingSystem(
   object: NetboxObject,
   osMap: Record<string, string>,
-  options: T[],
+  options: CatalogOptionLike[],
   warnings: NetboxNotice[],
-): T | null {
-  const mappedCode = object.platformSlug ? osMap[object.platformSlug] : undefined;
+): CatalogOptionLike | null {
+  const mappedCode = object.platformSlug ? String(osMap[object.platformSlug] ?? '').trim() : '';
   if (mappedCode) {
-    const mapped = options.find((option) => option.code === mappedCode);
-    if (mapped) return mapped;
+    const key = mappedCode.toLowerCase();
+    return options.find((option) => option.code.toLowerCase() === key) ?? { code: mappedCode, label: mappedCode };
   }
   const value = object.platformName ?? object.platformSlug ?? '';
   const { option, ambiguous } = matchCatalogOption(value, options);

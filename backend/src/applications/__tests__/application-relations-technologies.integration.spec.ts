@@ -171,8 +171,9 @@ async function testWriteRefusedWithoutTheRight() {
 }
 
 /**
- * A disabled application leaves the technology layer's views, but its own tab still shows its
- * declarations (only them: its hostings are out of service), can withdraw them, and the badge follows.
+ * A disabled application leaves the technology layer's views, but its own page still shows its
+ * declarations (only them: its hostings are out of service) and can withdraw them. The `technologies`
+ * field follows; the Relations badge does not.
  */
 async function testDisabledApplicationKeepsItsDeclarations() {
   await inRolledBackTransaction(async (runner) => {
@@ -226,15 +227,15 @@ async function testBusinessContributorScope() {
   });
 }
 
-/** The tab badge (`GET /applications/:id/relations-count`) counts declared technologies and processes. */
-async function testBadgeCountsTechnologiesAndProcesses() {
+/** The Relations badge (`GET /applications/:id/relations-count`) counts processes and leaves technologies out. */
+async function testBadgeLeavesOutTechnologies() {
   await inRolledBackTransaction(async (runner) => {
     const seed = await seedTechnologies(runner, 'techcount');
     const crud = new ApplicationsCrudService(undefined as any, undefined as any, undefined as any, undefined as any, undefined as any);
     const counts = await crud.relationCounts(seed.appId, { manager: runner.manager });
-    assert.equal(counts.technologies, 2, 'Tomcat and Java are declared; hosted ones are not counted');
+    assert.equal(counts.technologies, 2, 'the field still names the declared technologies; hosted ones are not in it');
     assert.equal(counts.processes, 1);
-    assert.equal(counts.total, counts.opex + counts.capex + counts.contracts + counts.projects + 2 + 1 + counts.links + counts.attachments);
+    assert.equal(counts.total, counts.opex + counts.capex + counts.contracts + counts.projects + counts.processes + counts.links + counts.attachments);
   });
 }
 
@@ -244,7 +245,7 @@ runSpecs('application-relations-technologies.integration.spec', [
   testLinkAndUnlinkTechnology,
   testLinkAndUnlinkProcess,
   testWriteRefusedWithoutTheRight,
-  testBadgeCountsTechnologiesAndProcesses,
+  testBadgeLeavesOutTechnologies,
   testDisabledApplicationKeepsItsDeclarations,
   testBusinessContributorScope,
 ]).catch((err) => {

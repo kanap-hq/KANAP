@@ -12,6 +12,13 @@ import type { CatalogProduct, CatalogVersion } from './technology-catalog.servic
 export const MAX_VERSIONS = 8;
 /** Versions whose last support ended more than this many years ago are left out. */
 export const ENDED_YEARS_KEPT = 4;
+/**
+ * Operating systems (the entries of `SUPPORT_RULES`) in place of the two rules above: every
+ * version whose last support (standard, extended or end of life) ends on this day or later,
+ * however many. Servers run old systems long after their support ended, and KANAP must name them
+ * to flag them. Twin of `OS_SUPPORT_ENDED_SINCE` in `scripts/technologies/build-catalog.mjs`.
+ */
+export const OS_SUPPORT_ENDED_SINCE = '2010-01-01';
 /** Release cycles read per product at most: an answer with more is cut. */
 export const MAX_RELEASES = 500;
 /** Raw names and labels are cut to this length before they are read. */
@@ -25,6 +32,7 @@ export type EndoflifeRelease = {
   eoasFrom?: unknown;
   eolFrom?: unknown;
   eoesFrom?: unknown;
+  isLts?: unknown;
 };
 
 type CpeVersionRule = {
@@ -48,6 +56,93 @@ const CPE_VERSION_RULES: Record<string, CpeVersionRule> = {
   'oracle-database': { fromLabel: true },
   msexchange: { patterns: [[/^subscription edition\b/i, '15.2']] },
   mssqlserver: { productPerRelease: 'a:microsoft:sql_server_{year}' },
+};
+
+/**
+ * How an operating system reads the support dates of endoflife.date, so that they keep the meaning
+ * of the former operating-system catalog of the IT settings. `eol_then_paid` (Ubuntu, RHEL and
+ * its rebuilds, SLES): standard support ends with the security fixes (`eolFrom`), extended support is
+ * the paid extension when published (`eoesFrom`: ESM, ELS, LTSS). `active_then_eol` (Windows Server,
+ * Debian): standard is the end of mainstream or regular security support, extended the end of
+ * extended support or of Debian LTS (`eolFrom`; the paid ESU and ELTS are left out). The twin of `SUPPORT_RULES` in
+ * `scripts/technologies/build-catalog.mjs`.
+ */
+export const SUPPORT_RULES: Record<string, 'eol_then_paid' | 'active_then_eol'> = {
+  ubuntu: 'eol_then_paid',
+  rhel: 'eol_then_paid',
+  debian: 'active_then_eol',
+  sles: 'eol_then_paid',
+  'rocky-linux': 'eol_then_paid',
+  almalinux: 'eol_then_paid',
+  'oracle-linux': 'eol_then_paid',
+  centos: 'eol_then_paid',
+  'windows-server': 'active_then_eol',
+};
+
+/**
+ * The standard and extended support ends of a release. Other products: standard is the end of
+ * active support when the product has one, else the end of life; extended is the paid extension
+ * when published, else the end of life after an active support. Extended is null when it is not
+ * after standard.
+ */
+export function supportDates(
+  catalogKey: string,
+  eoas: string | null,
+  eol: string | null,
+  eoes: string | null,
+): { standard: string | null; extended: string | null } {
+  const rule = SUPPORT_RULES[catalogKey];
+  let standard: string | null;
+  let extended: string | null;
+  if (rule === 'eol_then_paid') {
+    standard = eol ?? eoas;
+    extended = eoes;
+  } else if (rule === 'active_then_eol') {
+    standard = eoas ?? eol;
+    extended = eoas ? eol : null;
+  } else {
+    standard = eoas ?? eol;
+    extended = eoes ?? (eoas ? eol : null);
+  }
+  if (standard && extended && extended <= standard) extended = null;
+  return { standard, extended };
+}
+
+/** A release cycle as an operating-system rule reads it: its name, and its label cut to 200 characters. */
+type OsRelease = { name: string; label: string | null; isLts: boolean };
+
+/**
+ * The release cycles an operating system keeps (`keep`) and the label it stores (`label`), so that
+ * the labels match the former IT settings catalog and the operating-system codes (`2012 R2`,
+ * `22.04 LTS`, `12 (Bookworm)`, `15 SP5`). Twins of `keepRelease` and `versionLabel` of the
+ * script's PRODUCTS. Windows Server: the long-term releases only (the semi-annual `-sac` and annual
+ * `-ac` channels are left out), the service pack dropped from the label (the newest service pack
+ * comes first and takes it). Ubuntu: the LTS releases only. SLES: endoflife.date names a service
+ * pack `15.5`, stored `15 SP5`, and `15.0` is `15`.
+ */
+const OS_RELEASE_RULES: Record<string, { keep?: (release: OsRelease) => boolean; label?: (release: OsRelease) => string }> = {
+  'windows-server': {
+    keep: (release) => !/-(sac|ac)$/i.test(release.name),
+    label: (release) => {
+      const cleaned = cleanLabel(release.label, release.name);
+      return cleaned.replace(/^Windows Server\s+/i, '').replace(/\s+SP\d+$/i, '') || cleaned;
+    },
+  },
+  ubuntu: {
+    keep: (release) => release.isLts,
+    label: (release) => `${release.name} LTS`,
+  },
+  debian: {
+    // "12 (Bookworm)" stays, parentheses included.
+    label: (release) => (release.label ?? '').replace(/\s+/g, ' ').trim() || release.name,
+  },
+  sles: {
+    label: (release) => {
+      const match = /^(\d+)\.(\d+)$/.exec(release.name);
+      if (match) return match[2] === '0' ? match[1] : `${match[1]} SP${Number(match[2])}`;
+      return cleanLabel(release.label, release.name);
+    },
+  },
 };
 
 /** The CPE product of the release `label` of an entry with one product per release, or null. */
@@ -114,7 +209,8 @@ const day = realDay;
 /**
  * The versions of an entry from its release cycles (`versionsOf` of the script): released by
  * `today`, the newest first, at most `MAX_VERSIONS`, none whose last support ended more than
- * `ENDED_YEARS_KEPT` years ago, one per label and per key.
+ * `ENDED_YEARS_KEPT` years ago, one per label and per key. An operating system keeps every version
+ * whose last support ends on `OS_SUPPORT_ENDED_SINCE` or later, with its `OS_RELEASE_RULES`.
  *
  * What a live answer may hold is checked here, before anything reaches the cache: a cycle whose
  * name is not a text of 1 to 100 characters without surrounding spaces, whose label is empty or
@@ -128,7 +224,10 @@ export function versionsOfReleases(
   catalogKey: string,
   onReject: (reason: string) => void = () => undefined,
 ): CatalogVersion[] {
-  const cutoff = `${Number(today.slice(0, 4)) - ENDED_YEARS_KEPT}${today.slice(4)}`;
+  // SUPPORT_RULES names every operating system of the catalog (the spec checks it).
+  const os = Object.prototype.hasOwnProperty.call(SUPPORT_RULES, catalogKey);
+  const osRules = os ? OS_RELEASE_RULES[catalogKey] : undefined;
+  const cutoff = os ? OS_SUPPORT_ENDED_SINCE : `${Number(today.slice(0, 4)) - ENDED_YEARS_KEPT}${today.slice(4)}`;
   const out: CatalogVersion[] = [];
   const seen = new Set<string>();
   const seenKeys = new Set<string>();
@@ -163,7 +262,9 @@ export function versionsOfReleases(
     const lastEnd = [eoas, eol, eoes].filter((d): d is string => !!d).sort().at(-1) ?? null;
     if (lastEnd && lastEnd < cutoff) continue;
     const rawLabel = typeof release.label === 'string' ? release.label.slice(0, RAW_TEXT_MAX) : null;
-    const label = cleanLabel(rawLabel, rawName);
+    const osRelease: OsRelease = { name: rawName, label: rawLabel, isLts: release.isLts === true };
+    if (osRules?.keep && !osRules.keep(osRelease)) continue;
+    const label = osRules?.label ? osRules.label(osRelease) : cleanLabel(rawLabel, rawName);
     if (!label || label.length > 100) {
       onReject(`${rawName}: label ${JSON.stringify(rawLabel ?? '').slice(0, 60)} is empty or too long once cleaned`);
       continue;
@@ -171,11 +272,7 @@ export function versionsOfReleases(
     if (seen.has(label.toLowerCase()) || seenKeys.has(rawName)) continue;
     seen.add(label.toLowerCase());
     seenKeys.add(rawName);
-    // Standard support: the end of active support when the product has one, else the end of life.
-    // Extended: the paid extension when published, else the end of life after an active support.
-    const standard = eoas ?? eol;
-    let extended = eoes ?? (eoas ? eol : null);
-    if (standard && extended && extended < standard) extended = null;
+    const { standard, extended } = supportDates(catalogKey, eoas, eol, eoes);
     const name = rawName;
     out.push({
       key: name,
@@ -186,7 +283,7 @@ export function versionsOfReleases(
       standard_support_end: standard,
       extended_support_end: extended === standard ? null : extended,
     });
-    if (out.length >= MAX_VERSIONS) break;
+    if (!os && out.length >= MAX_VERSIONS) break;
   }
   return out;
 }

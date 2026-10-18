@@ -2,6 +2,7 @@ import type { CsvLanguage } from '../common/csv-sheet';
 import { Injectable } from '@nestjs/common';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
 import { exportCatalogLabels } from '../it-ops-settings/catalog-resolve';
+import { OperatingSystemService } from '../technologies/operating-system.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager } from 'typeorm';
 import { Asset } from './asset.entity';
@@ -25,6 +26,7 @@ export class AssetsCsvService {
     private readonly exportSvc: CsvExportService,
     private readonly importSvc: CsvImportService,
     private readonly itOpsSettings: ItOpsSettingsService,
+    private readonly operatingSystems: OperatingSystemService,
   ) {}
 
   /**
@@ -67,10 +69,13 @@ export class AssetsCsvService {
     const assets = scope === 'template' ? [] : await queryBuilder.getMany();
     if (assets.length) {
       // Users never see codes: catalog-backed columns are exported as names (import accepts either).
+      // The operating system is already the readable label of the marked link.
       const settings = await this.itOpsSettings.getSettings(tenantId, { manager });
+      const labels = await this.operatingSystems.labelsOf(manager, tenantId, assets.map((asset) => asset.id));
       const ipTypeLabel = (code: string) => settings.ipAddressTypes.find((option) => option.code === code)?.label || code;
       for (const asset of assets) {
-        exportCatalogLabels(asset, { kind: settings.serverKinds, status: settings.lifecycleStates, domain: settings.domains, operating_system: settings.operatingSystems });
+        asset.operating_system = labels.get(asset.id) ?? null;
+        exportCatalogLabels(asset, { kind: settings.serverKinds, status: settings.lifecycleStates, domain: settings.domains });
         if (Array.isArray(asset.ip_addresses)) asset.ip_addresses = asset.ip_addresses.map((ip) => ({ ...ip, type: ipTypeLabel(ip.type) }));
       }
     }

@@ -485,15 +485,6 @@ async function setupSettings() {
       { code: 'cloud_instance', label: 'Cloud Instance' },
       { code: 'cloud_database', label: 'Cloud Database' },
     ]),
-    operatingSystems: mergeByCode(current.operatingSystems, [
-      { code: 'vmware_esxi_8_0', label: 'VMware ESXi 8.0' },
-      { code: 'suse_linux_enterprise_15', label: 'SUSE Linux Enterprise 15' },
-      { code: 'fortios_7_4', label: 'FortiOS 7.4' },
-      { code: 'cisco_meraki', label: 'Cisco Meraki' },
-      { code: 'schneider_ecostruxure', label: 'Schneider EcoStruxure' },
-      { code: 'amazon_linux_2023', label: 'Amazon Linux 2023' },
-      { code: 'amazon_rds', label: 'Amazon RDS' },
-    ]),
     domains: mergeByCode(current.domains, [
       { code: 'fromage-co-local', label: 'fromage-co.local', dns_suffix: 'fromage-co.local' },
       { code: 'kaasmeester-local', label: 'kaasmeester.local', dns_suffix: 'kaasmeester.local' },
@@ -1028,7 +1019,6 @@ async function ensureAssets(locationIdByFixtureCode) {
     return map;
   };
   const kindCodes = codeByLabel(settings.serverKinds);
-  const osCodes = codeByLabel(settings.operatingSystems);
   const locations = await getAll('/locations?limit=500');
   const locationById = new Map(locations.map((item) => [item.id, item]));
   const existing = new Set((await getAll('/assets?limit=1000')).map((item) => item.name));
@@ -1055,8 +1045,7 @@ async function ensureAssets(locationIdByFixtureCode) {
       warn(`Unknown asset kind '${row.kind}' for '${row.name}'`);
       continue;
     }
-    const operating_system = row.operating_system ? osCodes.get(lower(row.operating_system)) ?? null : null;
-    if (row.operating_system && !operating_system) warn(`Unknown OS '${row.operating_system}' for '${row.name}'`);
+    const operating_system = row.operating_system?.trim() ? row.operating_system.trim() : null;
     await apiPost('/assets', {
       name: row.name,
       kind,

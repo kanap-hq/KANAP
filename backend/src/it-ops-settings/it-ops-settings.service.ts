@@ -64,11 +64,6 @@ export const DEFAULT_HOSTING_TYPES: ItOpsEnumOption[] = [
   { code: 'saas', label: 'SaaS', category: 'cloud' },
 ];
 
-export type OperatingSystemOption = ItOpsEnumOption & {
-  standardSupportEnd?: string; // YYYY-MM-DD
-  extendedSupportEnd?: string; // YYYY-MM-DD
-};
-
 export type ConnectionTypeOption = ItOpsEnumOption & {
   typicalPorts?: string;
 };
@@ -142,7 +137,6 @@ export type ItOpsSettings = ClassificationCatalog & {
   interfacePatterns: ItOpsEnumOption[];
   interfaceFormats: ItOpsEnumOption[];
   interfaceAuthModes: ItOpsEnumOption[];
-  operatingSystems: OperatingSystemOption[];
   connectionTypes: ConnectionTypeOption[];
   subnets: SubnetOption[];
   domains: DomainOption[];
@@ -174,7 +168,6 @@ type ItOpsMetadataShape = {
   interface_patterns?: ItOpsEnumOption[];
   interface_formats?: ItOpsEnumOption[];
   interface_auth_modes?: ItOpsEnumOption[];
-  operating_systems?: OperatingSystemOption[];
   connection_types?: ConnectionTypeOption[];
   subnets?: SubnetOption[];
   domains?: DomainOption[];
@@ -349,28 +342,6 @@ export class ItOpsSettingsService {
     { code: 'api_key', label: 'API key' },
     { code: 'certificate', label: 'Certificate' },
     { code: 'none', label: 'None' },
-  ];
-
-  private readonly defaultOperatingSystems: OperatingSystemOption[] = [
-    { code: 'windows_server_2012_r2', label: 'Windows Server 2012 R2', standardSupportEnd: '2018-10-09', extendedSupportEnd: '2023-10-10' },
-    { code: 'windows_server_2016', label: 'Windows Server 2016', standardSupportEnd: '2022-01-11', extendedSupportEnd: '2027-01-12' },
-    { code: 'windows_server_2019', label: 'Windows Server 2019', standardSupportEnd: '2024-01-09', extendedSupportEnd: '2029-01-09' },
-    { code: 'windows_server_2022', label: 'Windows Server 2022', standardSupportEnd: '2026-10-13', extendedSupportEnd: '2031-10-14' },
-    { code: 'windows_server_2025', label: 'Windows Server 2025', standardSupportEnd: '2029-11-13', extendedSupportEnd: '2034-11-14' },
-    { code: 'ubuntu_18_04_lts', label: 'Ubuntu 18.04 LTS', standardSupportEnd: '2023-05-31', extendedSupportEnd: '2028-04-30' },
-    { code: 'ubuntu_20_04_lts', label: 'Ubuntu 20.04 LTS', standardSupportEnd: '2025-05-31', extendedSupportEnd: '2030-05-31' },
-    { code: 'ubuntu_22_04_lts', label: 'Ubuntu 22.04 LTS', standardSupportEnd: '2027-04-30', extendedSupportEnd: '2032-04-30' },
-    { code: 'ubuntu_24_04_lts', label: 'Ubuntu 24.04 LTS', standardSupportEnd: '2029-04-30', extendedSupportEnd: '2034-04-30' },
-    { code: 'rhel_7', label: 'RHEL 7', standardSupportEnd: '2024-06-30', extendedSupportEnd: '2029-05-31' },
-    { code: 'rhel_8', label: 'RHEL 8', standardSupportEnd: '2024-05-31', extendedSupportEnd: '2029-05-31' },
-    { code: 'rhel_9', label: 'RHEL 9', standardSupportEnd: '2027-05-31', extendedSupportEnd: '2032-05-31' },
-    { code: 'debian_10_buster', label: 'Debian 10 (Buster)', standardSupportEnd: '2022-09-10', extendedSupportEnd: '2024-06-30' },
-    { code: 'debian_11_bullseye', label: 'Debian 11 (Bullseye)', standardSupportEnd: '2024-07-01', extendedSupportEnd: '2026-06-30' },
-    { code: 'debian_12_bookworm', label: 'Debian 12 (Bookworm)', standardSupportEnd: '2026-06-10', extendedSupportEnd: '2028-06-30' },
-    { code: 'sles_12_sp5', label: 'SLES 12 SP5', standardSupportEnd: '2024-10-31', extendedSupportEnd: '2027-10-31' },
-    { code: 'sles_15_sp5', label: 'SLES 15 SP5', standardSupportEnd: '2025-12-31', extendedSupportEnd: '2028-12-31' },
-    { code: 'sles_15_sp6', label: 'SLES 15 SP6', standardSupportEnd: '2028-12-31', extendedSupportEnd: '2031-12-31' },
-    { code: 'sles_15_sp7', label: 'SLES 15 SP7', standardSupportEnd: '2031-07-31', extendedSupportEnd: '2034-06-30' },
   ];
 
   private readonly defaultConnectionTypes: ConnectionTypeOption[] = [
@@ -551,20 +522,6 @@ export class ItOpsSettingsService {
       : this.defaultApplicationCategories;
   }
 
-  private parseDate(value: unknown, fieldName: string): string | undefined {
-    if (value === undefined || value === null || String(value).trim() === '') return undefined;
-    const raw = String(value).trim();
-    // Accept YYYY-MM-DD or DD/MM/YYYY
-    const isoMatch = /^\d{4}-\d{2}-\d{2}$/.exec(raw);
-    if (isoMatch) return raw;
-    const euMatch = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(raw);
-    if (euMatch) {
-      const [, dd, mm, yyyy] = euMatch;
-      return `${yyyy}-${mm}-${dd}`;
-    }
-    throw new BadRequestException(`Invalid date format for ${fieldName}; use YYYY-MM-DD`);
-  }
-
   private normalizeList(
     list: unknown,
     defaults: ItOpsEnumOption[],
@@ -652,33 +609,6 @@ export class ItOpsSettingsService {
       if (!byCode.has(def.code)) {
         byCode.set(def.code, { ...def });
       }
-    }
-
-    return Array.from(byCode.values());
-  }
-
-  private normalizeOperatingSystems(
-    list: unknown,
-    defaults: OperatingSystemOption[],
-  ): OperatingSystemOption[] {
-    const byCode = new Map<string, OperatingSystemOption>();
-    const source: any[] | undefined = Array.isArray(list) ? (list as any[]) : defaults;
-
-    for (const raw of source || []) {
-      const code = this.normalizeCode(raw?.code ?? raw?.value);
-      const label = this.normalizeLabel(raw?.label ?? raw?.name, code);
-      const deprecated = !!raw?.deprecated;
-      const standardSupportEnd = this.parseDate(raw?.standardSupportEnd ?? raw?.standard_support_end, 'standardSupportEnd');
-      const extendedSupportEnd = this.parseDate(raw?.extendedSupportEnd ?? raw?.extended_support_end, 'extendedSupportEnd');
-      const translations = normalizeTranslations(raw?.translations);
-      byCode.set(code, {
-        code,
-        label,
-        deprecated,
-        standardSupportEnd,
-        extendedSupportEnd,
-        ...(translations ? { translations } : {}),
-      });
     }
 
     return Array.from(byCode.values());
@@ -1040,10 +970,6 @@ export class ItOpsSettingsService {
       (raw as any).interface_auth_modes,
       this.defaultInterfaceAuthModes,
     );
-    const operatingSystems = this.normalizeOperatingSystems(
-      (raw as any).operating_systems,
-      this.defaultOperatingSystems,
-    );
     const connectionTypes = this.normalizeConnectionTypes(
       (raw as any).connection_types,
       this.defaultConnectionTypes,
@@ -1086,7 +1012,6 @@ export class ItOpsSettingsService {
       interfacePatterns,
       interfaceFormats,
       interfaceAuthModes,
-      operatingSystems,
       connectionTypes,
       subnets,
       domains,
@@ -1276,12 +1201,6 @@ export class ItOpsSettingsService {
         this.defaultInterfaceAuthModes,
       );
     }
-    if (patch.operatingSystems) {
-      next.operatingSystems = this.normalizeOperatingSystems(
-        patch.operatingSystems,
-        this.defaultOperatingSystems,
-      );
-    }
     if (patch.connectionTypes) {
       next.connectionTypes = this.normalizeConnectionTypes(
         patch.connectionTypes,
@@ -1346,7 +1265,6 @@ export class ItOpsSettingsService {
       interface_patterns: next.interfacePatterns,
       interface_formats: next.interfaceFormats,
       interface_auth_modes: next.interfaceAuthModes,
-      operating_systems: next.operatingSystems,
       connection_types: next.connectionTypes,
       subnets: next.subnets,
       domains: next.domains,
@@ -1358,6 +1276,8 @@ export class ItOpsSettingsService {
       admin_zones: next.adminZones,
     };
     for (const key of OBSOLETE_CATALOG_METADATA_KEYS) delete itOps[key];
+    // The spread above keeps a key the migration already removed. A later save must not put it back.
+    delete itOps.operating_systems;
     meta.it_ops = itOps;
     tenant.metadata = meta;
 
@@ -1398,7 +1318,7 @@ export class ItOpsSettingsService {
     hostingTypes: { name: 'Hosting types' }, lifecycleStates: { name: 'Lifecycle statuses' }, interfaceProtocols: { name: 'Interface protocols' },
     interfaceDataCategories: { name: 'Interface data categories' }, interfaceTriggerTypes: { name: 'Interface trigger types' },
     interfacePatterns: { name: 'Integration patterns' }, interfaceFormats: { name: 'Interface data formats' }, interfaceAuthModes: { name: 'Interface authentication modes' },
-    operatingSystems: { name: 'Operating systems' }, connectionTypes: { name: 'Connection types' }, subnets: { name: 'Subnets', subnets: true }, domains: { name: 'Domains' },
+    connectionTypes: { name: 'Connection types' }, subnets: { name: 'Subnets', subnets: true }, domains: { name: 'Domains' },
     ipAddressTypes: { name: 'IP address types' }, accessMethods: { name: 'Access methods', commaSeparatedInCsv: true }, pathHopFunctions: { name: 'Path hop functions' },
     incidentCategories: { name: 'Incident categories' }, businessCriticalityLevels: { name: 'Business criticality' }, cyberCriticalityLevels: { name: 'Cyber criticality' },
     dataClasses: { name: 'Data confidentiality' }, recoveryWaves: { name: 'Recovery waves' }, technologyFamilies: { name: 'Technology families' },

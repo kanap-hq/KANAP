@@ -5,6 +5,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { DataSource, EntityManager } from 'typeorm';
 import { AiAdapterConfig } from '../ai/control-plane/providers/adapter-config.entity';
@@ -55,6 +56,8 @@ import {
 } from './netbox-planner';
 import { NetboxApiError, NetboxLocation, NetboxLocationIndex, NetboxObject, NetboxObjectType } from './netbox.types';
 import { LocationsService, SubItemExternal } from '../locations/locations.service';
+import { operatingSystemLabelSql } from '../technologies/operating-system-codes';
+import { OperatingSystemService } from '../technologies/operating-system.service';
 
 // One engine for the three ways a synchronisation can be asked for: the
 // read-only preview, the manual run and the scheduled run. Fetch, map, match,
@@ -378,6 +381,7 @@ export class NetboxSyncService {
     private readonly itOpsSettings: ItOpsSettingsService,
     private readonly assets: AssetsService,
     private readonly locations: LocationsService,
+    @Optional() private readonly operatingSystems?: OperatingSystemService,
   ) {}
 
   // ==========================================================================
@@ -613,6 +617,7 @@ export class NetboxSyncService {
     ];
 
     const settings = await this.itOpsSettings.getSettings(tenantId, { manager });
+    const operatingSystems = await this.operatingSystemChoices(manager, tenantId);
     const locations: Array<{ id: string; name: string }> = await manager.query(
       `SELECT id, name FROM locations WHERE tenant_id = $1 ORDER BY name ASC`,
       [tenantId],
@@ -642,7 +647,7 @@ export class NetboxSyncService {
     const suggestedOsMap: Record<string, string> = {};
     for (const platform of platforms ?? []) {
       if (saved.os_map[platform.slug]) continue;
-      const match = suggestOperatingSystem(platform.name, settings.operatingSystems);
+      const match = suggestOperatingSystem(platform.name, operatingSystems);
       if (match) suggestedOsMap[platform.slug] = match.code;
     }
 
@@ -654,7 +659,7 @@ export class NetboxSyncService {
       platforms_unavailable: platforms == null,
       asset_kinds: assetKinds,
       locations,
-      operating_systems: settings.operatingSystems.map((option) => ({ code: option.code, label: option.label })),
+      operating_systems: operatingSystems,
       role_map: saved.role_map,
       site_map: saved.site_map,
       os_map: saved.os_map,
@@ -667,6 +672,11 @@ export class NetboxSyncService {
   // ==========================================================================
   // Plan
   // ==========================================================================
+
+  /** Operating-system labels the platform map offers. Empty when the service is not wired (tests). */
+  private operatingSystemChoices(manager: EntityManager, tenantId: string) {
+    return this.operatingSystems?.mappingChoices(manager, tenantId) ?? Promise.resolve([]);
+  }
 
   /** Everything the plan needs from the database, read in a handful of queries. */
   private async loadLocalContext(manager: EntityManager, tenantId: string): Promise<LocalContext> {
@@ -686,7 +696,7 @@ export class NetboxSyncService {
     );
     const assets: ExistingAsset[] = await manager.query(
       `SELECT a.id, a.name, a.asset_reference, a.status, a.kind, a.location_id, a.sub_location_id,
-              a.hostname, a.domain, a.fqdn, a.operating_system, a.ip_addresses,
+              a.hostname, a.domain, a.fqdn, ${operatingSystemLabelSql('a')} AS operating_system, a.ip_addresses,
               h.serial_number, h.manufacturer, h.model, h.rack_location, h.rack_unit
        FROM assets a
        LEFT JOIN asset_hardware_info h ON h.asset_id = a.id AND h.tenant_id = $1
@@ -715,7 +725,7 @@ export class NetboxSyncService {
       catalogs: {
         assetKinds: settings.serverKinds,
         assetProviders: settings.serverProviders,
-        operatingSystems: settings.operatingSystems,
+        operatingSystems: await this.operatingSystemChoices(manager, tenantId),
         lifecycleStates: settings.lifecycleStates,
         ipAddressTypes: settings.ipAddressTypes,
         domains: settings.domains,
@@ -1226,7 +1236,7 @@ export class NetboxSyncService {
   ): Promise<ApplyOutcome> {
     try {
       return await withTenantExecution(this.dataSource, tenantId, async (manager) => {
-        const opts = { manager, tenantId, source: 'system', sourceRef: NETBOX_LINK_SOURCE };
+        const opts = { manager, tenantId, source: 'system', sourceRef: NETBOX_LINK_SOURCE, osSource: 'netbox' as const };
         const warnings = [...row.warnings];
         let assetId = write.assetId;
         let action: 'create' | 'update' | 'unchanged' = row.action === 'create' ? 'create' : 'unchanged';

@@ -40,7 +40,7 @@ export function relationsService(opts: { audit?: AuditEntry[]; taskCalls?: TaskR
     undefined as any, undefined as any, undefined as any, undefined as any,
   );
   // The technology layer is the real service (lot T2a): its reach, idempotence and audit are under test.
-  const technologyLinks = new TechnologyLinksService(audit as any, new TechnologyReachService(), { getSettings: async () => ({ operatingSystems: [] }) } as any);
+  const technologyLinks = new TechnologyLinksService(audit as any, new TechnologyReachService(), { getSettings: async () => ({}) } as any);
   return new ApplicationsRelationsService(
     undefined as any, instances, fxRates as any, interfaces as any, knowledge as any, tasks as any, requests, technologyLinks,
   );

@@ -22,6 +22,7 @@ export interface Asset {
   status: string;
   location_id?: string | null;
   sub_location_id?: string | null;
+  /** Readable label of the marked technology (`Windows Server 2019`). A write resolves it; null clears the mark. */
   operating_system?: string | null;
   notes?: string | null;
   external_links?: AssetExternalLink[] | null;
@@ -97,6 +98,7 @@ export interface ClusterMember {
   provider: string;
   location?: string | null;
   location_id?: string | null;
+  /** Readable label of the member's operating system. */
   operating_system?: string | null;
 }
 
@@ -163,6 +165,7 @@ export interface CreateAssetInput {
   aliases?: string[] | null;
   ip_addresses?: IpAddressEntry[] | null;
   is_cluster?: boolean;
+  /** Readable label. The server resolves it to the marked technology link; null clears the mark. */
   operating_system?: string | null;
   status?: string;
   location_id?: string | null;

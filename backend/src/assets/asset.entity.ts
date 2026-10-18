@@ -52,8 +52,11 @@ export class Asset {
   @Column('boolean', { default: false })
   is_cluster!: boolean;
 
-  @Column('text', { nullable: true })
-  operating_system!: string | null;
+  /**
+   * Readable operating system (`Windows Server 2019`). Not a column: the marked technology
+   * link is the source, and the asset services attach the label after they load the row.
+   */
+  operating_system?: string | null;
 
   @Column('uuid', { nullable: true })
   location_id!: string | null;

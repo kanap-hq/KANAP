@@ -88,7 +88,6 @@ describe('AssetImpactSection', () => {
       `${P}.summary.assets(count=2)`,
       `${P}.summary.clustersDown(count=1)`,
       `${P}.summary.clustersDegraded(count=1)`,
-      `${P}.summary.technologies(count=1)`,
       `${P}.summary.processes(count=1)`,
     ].join(' · '))).toBeInTheDocument();
 
@@ -115,7 +114,8 @@ describe('AssetImpactSection', () => {
     expect(within(clusters).getByText(`${P}.state.down`)).toBeInTheDocument();
     // The server's own name reads through a whole-sentence key in every language.
     expect(within(clusters).getAllByText(`${P}.via.thisServer`)).toHaveLength(2);
-    expect(within(screen.getByRole('table', { name: `${P}.sections.technologies` })).getByText('TEC-1')).toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: `${P}.sections.technologies` })).not.toBeInTheDocument();
+    expect(screen.queryByText('TEC-1')).not.toBeInTheDocument();
     expect(within(screen.getByRole('table', { name: `${P}.sections.processes` })).getByText('Finance')).toBeInTheDocument();
 
     fireEvent.click(within(assetRows[1]).getByText('WEB-01'));
@@ -126,14 +126,19 @@ describe('AssetImpactSection', () => {
     const many = Array.from({ length: 200 }, (_, n) => ({
       id: `vm${n}`, reference: `AST-${n + 10}`, name: `VM-${String(n).padStart(3, '0')}`, kind: 'vm', depth: 1, relation: 'contains' as const, via: [{ id: 'host', name: 'ESX-01' }],
     }));
-    const technology = { id: 'tec', reference: 'TEC-1', name: 'vSphere', versions: [], via: [{ id: 'host', name: 'ESX-01' }], via_total: 25 };
-    renderSection(impact({ assets: [impact().assets[0], ...many], technologies: [technology], totals: { ...impact().totals, assets: 640 } }));
+    const application = { id: 'erp', reference: 'APP-4', name: 'ERP', criticality: null, environments: [], via: [{ id: 'host', name: 'ESX-01' }], via_total: 25 };
+    renderSection(impact({
+      assets: [impact().assets[0], ...many],
+      applications: [application],
+      totals: { ...impact().totals, assets: 640, applications: 1 },
+    }));
     expect(await screen.findByText(new RegExp(`${P}.summary.assets\\(count=640\\)`))).toBeInTheDocument();
     const assets = screen.getByRole('table', { name: `${P}.sections.assets` });
     expect(within(assets).getAllByRole('row')).toHaveLength(IMPACT_ROWS_SHOWN + 1);
     expect(screen.getByText(`${P}.more(count=${640 - IMPACT_ROWS_SHOWN})`)).toBeInTheDocument();
-    const technologies = screen.getByRole('table', { name: `${P}.sections.technologies` });
-    expect(within(technologies).getByText(`${P}.via.onThisServerAnd(name=${P}.more(count=24))`)).toBeInTheDocument();
+    const apps = screen.getByRole('table', { name: `${P}.sections.applications` });
+    expect(within(apps).getByText(`${P}.via.onThisServerAnd(name=${P}.more(count=24))`)).toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: `${P}.sections.technologies` })).not.toBeInTheDocument();
   });
 
   it('keeps the section on screen while it is read again', async () => {
@@ -153,6 +158,20 @@ describe('AssetImpactSection', () => {
       expect(screen.queryByRole('table', { name: `${P}.sections.${section}` })).not.toBeInTheDocument();
     }
     expect(screen.queryByText(`${P}.empty`)).not.toBeInTheDocument();
+  });
+
+  it('leaves technologies out even when they are the only thing that falls', async () => {
+    renderSection(impact({
+      assets: impact().assets.slice(0, 1),
+      clusters: [],
+      applications: [],
+      processes: [],
+      technologies: [{ id: 'tec', reference: 'TEC-1', name: 'vSphere', versions: ['8.0'], via: [{ id: 'host', name: 'ESX-01' }], via_total: 1 }],
+      totals: { assets: 0, applications: 0, clusters: 0, technologies: 1, processes: 0 },
+    }));
+    expect(await screen.findByText(`${P}.empty`)).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(screen.queryByText('TEC-1')).not.toBeInTheDocument();
   });
 
   it('says so in one line when nothing else falls', async () => {

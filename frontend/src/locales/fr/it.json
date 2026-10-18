@@ -692,11 +692,6 @@
           "description": "Catégories utilisées pour classer les entrées du registre des incidents.",
           "usage": "Incidents / Choix de la catégorie"
         },
-        "operatingSystems": {
-          "title": "Systèmes d'exploitation",
-          "description": "Catalogue des systèmes d'exploitation proposés pour les serveurs, avec les dates de fin de support standard et étendu.",
-          "usage": "Serveurs / Onglet technique"
-        },
         "connectionTypes": {
           "title": "Types de connexion",
           "description": "Catalogue à deux niveaux (catégorie et entrée) avec les ports courants.",
@@ -719,8 +714,6 @@
         }
       },
       "columns": {
-        "standardSupport": "Support standard",
-        "extendedSupport": "Support étendu",
         "typicalPorts": "Ports courants",
         "location": "Site",
         "cidr": "CIDR",
@@ -737,7 +730,6 @@
         "secretsLocation": "Emplacement des secrets"
       },
       "placeholders": {
-        "osName": "ex. : Windows Server 2025",
         "connectionName": "ex. : HTTPS",
         "typicalPorts": "ex. : 80, 443",
         "cidr": "ex. : 192.168.1.0/24",
@@ -755,7 +747,6 @@
       },
       "empty": {
         "adminZones": "Aucune zone d'administration définie.",
-        "operatingSystems": "Aucun système d'exploitation configuré pour le moment.",
         "connectionTypes": "Aucun type de connexion défini.",
         "subnets": "Aucun sous-réseau défini.",
         "domains": "Aucun domaine défini."
@@ -964,7 +955,7 @@
         "roles": "Rôles Netbox",
         "sites": "Sites Netbox",
         "operatingSystems": "Systèmes d'exploitation",
-        "operatingSystemsHint": "Choisissez le système d'exploitation KANAP pour chaque plateforme Netbox. Une plateforme laissée sans correspondance ne bloque pas l'import : le système d'exploitation est simplement laissé tel quel.",
+        "operatingSystemsHint": "Choisissez une technologie pour chaque plateforme Netbox. La valeur enregistrée est le nom de la technologie, avec sa version si vous en choisissez une. Une plateforme laissée sans correspondance ne bloque pas l'import : le système d'exploitation est simplement laissé tel quel.",
         "noPlatforms": "Netbox ne liste aucune plateforme, il n'y a donc rien à mettre en correspondance ici.",
         "platformsUnavailable": "Netbox n'a pas renvoyé ses plateformes, les systèmes d'exploitation ne peuvent donc pas être mis en correspondance ici. Vérifiez que le jeton d'API peut lire les plateformes.",
         "noOperatingSystem": "Aucune correspondance",
@@ -981,7 +972,7 @@
           "assetType": "Type d'actif KANAP",
           "netboxPlatform": "Plateforme Netbox",
           "location": "Site KANAP",
-          "operatingSystem": "Système d'exploitation KANAP"
+          "operatingSystem": "Technologie"
         },
         "counts": {
           "devices_one": "{{count}} équipement",
@@ -1614,9 +1605,6 @@
         "fqdn": "FQDN",
         "aliases": "Alias",
         "aliasesPlaceholder": "Saisissez et appuyez sur Entrée",
-        "operatingSystem": "Système d'exploitation",
-        "osClusterHint": "Le système d'exploitation est défini par les actifs membres du cluster.",
-        "osChooseHint": "Choisissez dans la liste des systèmes d'exploitation dans les paramètres.",
         "standardSupportEnds": "Fin du support standard le {{date}}",
         "extendedSupportEnds": "Fin du support étendu le {{date}}",
         "ipAddresses": "Adresses IP",
@@ -1645,6 +1633,11 @@
         "add": "Ajouter",
         "search": "Rechercher des technologies",
         "empty": "Aucune technologie sur ce serveur.",
+        "operatingSystem": "Système d'exploitation",
+        "edit": "Modifier",
+        "editNamed": "Modifier {{name}}",
+        "changeVersion": "Changer la version de {{name}}",
+        "catalog": "Catalogue",
         "remove": "Retirer {{name}}",
         "saveFailed": "Les technologies n'ont pas pu être enregistrées.",
         "columns": {
@@ -1742,8 +1735,6 @@
           "clustersDown_other": "{{count}} clusters tombés",
           "clustersDegraded_one": "{{count}} cluster dégradé",
           "clustersDegraded_other": "{{count}} clusters dégradés",
-          "technologies_one": "{{count}} technologie",
-          "technologies_other": "{{count}} technologies",
           "processes_one": "{{count}} processus métier",
           "processes_other": "{{count}} processus métier"
         },
@@ -1751,7 +1742,6 @@
           "applications": "Applications",
           "assets": "Actifs",
           "clusters": "Clusters",
-          "technologies": "Technologies",
           "processes": "Processus métier"
         },
         "columns": {
@@ -1761,7 +1751,6 @@
           "criticality": "Criticité",
           "type": "Type",
           "state": "État",
-          "versions": "Versions",
           "via": "Via"
         },
         "via": {

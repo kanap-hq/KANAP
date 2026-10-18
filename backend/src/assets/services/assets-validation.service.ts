@@ -50,22 +50,6 @@ export class AssetsValidationService {
     return code;
   }
 
-  async resolveOperatingSystem(
-    value: unknown,
-    tenantId: string,
-    manager?: EntityManager,
-  ): Promise<string | null> {
-    const normalized = this.normalizeNullable(value);
-    if (!normalized) return null;
-    const code = normalized.toLowerCase();
-    const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
-    const allowed = new Set((settings.operatingSystems || []).map((o) => o.code));
-    if (!allowed.has(code)) {
-      throw new BadRequestException(`Invalid operating system "${value}"`);
-    }
-    return code;
-  }
-
   async resolveDomain(
     value: unknown,
     tenantId: string,

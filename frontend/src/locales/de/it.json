@@ -692,11 +692,6 @@
           "description": "Kategorien zur Einordnung der Einträge im Vorfallsregister.",
           "usage": "Vorfälle / Kategorieauswahl"
         },
-        "operatingSystems": {
-          "title": "Betriebssysteme",
-          "description": "Katalog der für Server verfügbaren Betriebssysteme mit Enddaten für Standard- und erweiterten Support.",
-          "usage": "Server / Registerkarte Technik"
-        },
         "connectionTypes": {
           "title": "Verbindungstypen",
           "description": "Zweistufiger Katalog (Kategorie und Eintrag) mit typischen Ports.",
@@ -719,8 +714,6 @@
         }
       },
       "columns": {
-        "standardSupport": "Standard-Support",
-        "extendedSupport": "Erweiterter Support",
         "typicalPorts": "Typische Ports",
         "location": "Standort",
         "cidr": "CIDR",
@@ -737,7 +730,6 @@
         "secretsLocation": "Ablageort der Geheimnisse"
       },
       "placeholders": {
-        "osName": "z. B. Windows Server 2025",
         "connectionName": "z. B. HTTPS",
         "typicalPorts": "z. B. 80, 443",
         "cidr": "z. B. 192.168.1.0/24",
@@ -755,7 +747,6 @@
       },
       "empty": {
         "adminZones": "Keine Administrationszonen definiert.",
-        "operatingSystems": "Noch keine Betriebssysteme konfiguriert.",
         "connectionTypes": "Keine Verbindungstypen definiert.",
         "subnets": "Keine Subnetze definiert.",
         "domains": "Keine Domänen definiert."
@@ -964,7 +955,7 @@
         "roles": "Netbox-Rollen",
         "sites": "Netbox-Standorte",
         "operatingSystems": "Betriebssysteme",
-        "operatingSystemsHint": "Wählen Sie für jede Netbox-Plattform das KANAP-Betriebssystem. Eine Plattform ohne Zuordnung blockiert den Import nicht: Das Betriebssystem bleibt einfach unverändert.",
+        "operatingSystemsHint": "Wählen Sie für jede Netbox-Plattform eine Technologie. Gespeichert wird der Name der Technologie, mit ihrer Version, wenn Sie eine auswählen. Eine Plattform ohne Zuordnung blockiert den Import nicht: Das Betriebssystem bleibt einfach unverändert.",
         "noPlatforms": "Netbox führt keine Plattform, hier gibt es also nichts zuzuordnen.",
         "platformsUnavailable": "Netbox hat seine Plattformen nicht zurückgegeben, daher lassen sich hier keine Betriebssysteme zuordnen. Prüfen Sie, ob das API-Token Plattformen lesen darf.",
         "noOperatingSystem": "Keine Zuordnung",
@@ -981,7 +972,7 @@
           "assetType": "KANAP-Asset-Typ",
           "netboxPlatform": "Netbox-Plattform",
           "location": "KANAP-Standort",
-          "operatingSystem": "KANAP-Betriebssystem"
+          "operatingSystem": "Technologie"
         },
         "counts": {
           "devices_one": "{{count}} Gerät",
@@ -1614,9 +1605,6 @@
         "fqdn": "FQDN",
         "aliases": "Aliase",
         "aliasesPlaceholder": "Eingeben und Enter drücken",
-        "operatingSystem": "Betriebssystem",
-        "osClusterHint": "Das Betriebssystem wird von den Mitglieds-Assets des Clusters definiert.",
-        "osChooseHint": "Wählen Sie aus der Betriebssystemliste in den Einstellungen.",
         "standardSupportEnds": "Standard-Support endet am {{date}}",
         "extendedSupportEnds": "Erweiterter Support endet am {{date}}",
         "ipAddresses": "IP-Adressen",
@@ -1645,6 +1633,11 @@
         "add": "Hinzufügen",
         "search": "Technologien suchen",
         "empty": "Keine Technologie auf diesem Server.",
+        "operatingSystem": "Betriebssystem",
+        "edit": "Bearbeiten",
+        "editNamed": "{{name}} bearbeiten",
+        "changeVersion": "Version von {{name}} ändern",
+        "catalog": "Katalog",
         "remove": "{{name}} entfernen",
         "saveFailed": "Die Technologien konnten nicht gespeichert werden.",
         "columns": {
@@ -1742,8 +1735,6 @@
           "clustersDown_other": "{{count}} Cluster ausgefallen",
           "clustersDegraded_one": "{{count}} Cluster beeinträchtigt",
           "clustersDegraded_other": "{{count}} Cluster beeinträchtigt",
-          "technologies_one": "{{count}} Technologie",
-          "technologies_other": "{{count}} Technologien",
           "processes_one": "{{count}} Geschäftsprozess",
           "processes_other": "{{count}} Geschäftsprozesse"
         },
@@ -1751,7 +1742,6 @@
           "applications": "Anwendungen",
           "assets": "Assets",
           "clusters": "Cluster",
-          "technologies": "Technologien",
           "processes": "Geschäftsprozesse"
         },
         "columns": {
@@ -1761,7 +1751,6 @@
           "criticality": "Kritikalität",
           "type": "Typ",
           "state": "Zustand",
-          "versions": "Versionen",
           "via": "Über"
         },
         "via": {

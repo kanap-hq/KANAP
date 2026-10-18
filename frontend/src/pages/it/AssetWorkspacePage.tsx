@@ -23,7 +23,7 @@ import {
   Switch,
   useTheme,
 } from '@mui/material';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import CloseIcon from '@mui/icons-material/Close';
 import api from '../../api';
@@ -42,6 +42,7 @@ import HardwareInfoPanel, { HardwareInfoPanelHandle } from './editors/HardwareIn
 import SupportInfoPanel, { SupportInfoPanelHandle } from './editors/SupportInfoPanel';
 import AssetRelationsPanel, { AssetRelationsPanelHandle } from './editors/AssetRelationsPanel';
 import AssetTechnologiesSection from './components/AssetTechnologiesSection';
+import { invalidateTechnologyLinks } from './components/technologyLinkQueries';
 import { useAssetNav } from '../../hooks/useAssetNav';
 import EntityKnowledgePanel from '../../components/EntityKnowledgePanel';
 import { useAuth } from '../../auth/AuthContext';
@@ -339,6 +340,7 @@ export default function AssetWorkspacePage() {
     const reference = data.asset_reference?.toUpperCase();
     return !!reference && (routeKey === reference || routeKey.startsWith(`${reference}-`));
   }, [data, isCreate, routeId]);
+  const queryClient = useQueryClient();
   const { byField, labelFor, settings } = useItOpsEnumOptions();
   const topologyLabel = React.useCallback((v?: string) => {
     if (v === 'server_to_server') return t('enums.topology.serverToServer');
@@ -425,7 +427,6 @@ export default function AssetWorkspacePage() {
   const [subLocationId, setSubLocationId] = React.useState<string | null>(null);
   const [subLocationOptions, setSubLocationOptions] = React.useState<Array<{ id: string; name: string; description?: string | null }>>([]);
   const [subLocationLoading, setSubLocationLoading] = React.useState(false);
-  const [operatingSystem, setOperatingSystem] = React.useState<string>('');
   const [notes, setNotes] = React.useState<string>('');
   const [domain, setDomain] = React.useState<string>('');
   const [aliases, setAliases] = React.useState<string[]>([]);
@@ -566,16 +567,6 @@ export default function AssetWorkspacePage() {
     return tab;
   }, [tab, isPhysicalAsset, settings]);
 
-  const operatingSystemOptions = React.useMemo(
-    () => (settings?.operatingSystems || []).map((o) => ({
-      value: o.code,
-      label: o.deprecated ? t('common.deprecatedOption', { label: o.label }) : o.label,
-      standardSupportEnd: o.standardSupportEnd,
-      extendedSupportEnd: o.extendedSupportEnd,
-    })),
-    [settings?.operatingSystems, t],
-  );
-
   const domainOptions = React.useMemo(
     () => (settings?.domains || []).map((d) => ({
       value: d.code,
@@ -680,7 +671,6 @@ export default function AssetWorkspacePage() {
     setEndOfLifeDate(data.end_of_life_date || '');
     setLocationId(data.location_id || null);
     setSubLocationId((data as any).sub_location_id || null);
-    setOperatingSystem(data.operating_system || '');
     setNotes(data.notes || '');
     setDirty(false);
   }, [data]);
@@ -840,7 +830,6 @@ export default function AssetWorkspacePage() {
       aliases: aliases.length > 0 ? aliases : null,
       ip_addresses: ipAddresses.filter((e) => e.ip.trim()).length > 0 ? ipAddresses.filter((e) => e.ip.trim()) : null,
       is_cluster: isCluster,
-      operating_system: isCluster ? null : operatingSystem || null,
       status,
       go_live_date: goLiveDate || null,
       end_of_life_date: endOfLifeDate || null,
@@ -1859,9 +1848,24 @@ export default function AssetWorkspacePage() {
                       onChange={(e) => {
                         const next = e.target.checked;
                         setIsCluster(next);
-                        if (next) setOperatingSystem('');
-                        if (isCreate) setDirty(true);
-                        else void patchAsset({ is_cluster: next, operating_system: next ? null : operatingSystem || null });
+                        if (isCreate) {
+                          setDirty(true);
+                          return;
+                        }
+                        void (async () => {
+                          try {
+                            await patchAsset({ is_cluster: next });
+                          } catch {
+                            return;
+                          }
+                          if (!(next && id && canEditNetboxField('operating_system'))) return;
+                          try {
+                            await api.delete(`/assets/${id}/operating-system`);
+                            await invalidateTechnologyLinks(queryClient);
+                          } catch (e) {
+                            setError(getApiErrorMessage(e, t, t('workspace.asset.technologies.saveFailed')));
+                          }
+                        })();
                       }}
                       disabled={!canManage || saving}
                       color="primary"
@@ -1917,11 +1921,7 @@ export default function AssetWorkspacePage() {
                             </TableCell>
                             <TableCell>{environmentLabel(member.environment)}</TableCell>
                             <TableCell>{labelFor('lifecycleStatus', member.status) || member.status}</TableCell>
-                            <TableCell>
-                              {labelFor('operatingSystem', member.operating_system || '') ||
-                                member.operating_system ||
-                                '-'}
-                            </TableCell>
+                            <TableCell>{member.operating_system || '-'}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -1967,7 +1967,7 @@ export default function AssetWorkspacePage() {
                     {t('pages.netbox.assetSource.managedFields')}
                   </Typography>
                 ) : null}
-                <Stack spacing={1.5} sx={{ maxWidth: 560 }}>
+                <Stack spacing={0} sx={{ maxWidth: 560 }}>
                   <PropertyRow label={t('workspace.asset.technical.hostname')} valueSx={{ maxWidth: 520 }}>
                     <TextField
                       value={hostname}
@@ -2064,39 +2064,9 @@ export default function AssetWorkspacePage() {
                     )}
                     disabled={!canManage}
                   />
-                  <PropertyRow label={t('workspace.asset.technical.operatingSystem')} valueSx={{ maxWidth: 520 }}>
-                    <TextField
-                      select
-                      value={operatingSystem}
-                      onChange={(e) => {
-                        const next = e.target.value;
-                        setOperatingSystem(next);
-                        if (isCreate) setDirty(true);
-                        else void patchAsset({ operating_system: next || null });
-                      }}
-                      disabled={isCluster || !canEditNetboxField('operating_system')}
-                      helperText={(() => {
-                        if (isCluster) return t('workspace.asset.technical.osClusterHint');
-                        const sel = operatingSystemOptions.find((opt) => opt.value === operatingSystem);
-                        if (!sel) return t('workspace.asset.technical.osChooseHint');
-                        const ss = sel.standardSupportEnd ? t('workspace.asset.technical.standardSupportEnds', { date: formatShortDate(sel.standardSupportEnd, locale, { year: 'always' }) }) : '';
-                        const es = sel.extendedSupportEnd ? t('workspace.asset.technical.extendedSupportEnds', { date: formatShortDate(sel.extendedSupportEnd, locale, { year: 'always' }) }) : '';
-                        return [ss, es].filter(Boolean).join(' / ');
-                      })()}
-                      size="small"
-                      variant="standard"
-                      sx={contentFieldSx}
-                    >
-                      <MenuItem value="" sx={drawerMenuItemSx}>{t('common:labels.none')}</MenuItem>
-                      {operatingSystemOptions.map((opt) => (
-                        <MenuItem key={opt.value} value={opt.value} sx={drawerMenuItemSx}>{opt.label}</MenuItem>
-                      ))}
-                    </TextField>
-                  </PropertyRow>
                 </Stack>
               </Box>
 
-              {/* What the server carries, under its operating system (lot T1b). */}
               {!isCreate && id && (
                 <AssetTechnologiesSection assetId={id} canManage={canManage} heading={(title) => <SectionLabel>{title}</SectionLabel>} />
               )}

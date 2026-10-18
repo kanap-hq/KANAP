@@ -142,12 +142,12 @@ const MAPPING_OPTIONS = {
   asset_kinds: [{ code: 'virtual_machine', label: 'Virtual machine' }, { code: 'network_switch', label: 'Network switch' }],
   locations: [{ id: 'loc-1', name: 'Gouda Server Room' }],
   operating_systems: [
-    { code: 'debian_12_bookworm', label: 'Debian 12 (bookworm)' },
-    { code: 'windows_server_2022', label: 'Windows Server 2022' },
+    { code: 'Debian 12 (bookworm)', label: 'Debian 12 (bookworm)' },
+    { code: 'Windows Server 2022', label: 'Windows Server 2022' },
   ],
   role_map: { 'kanap:virtual-machines': 'virtual_machine' },
   site_map: {},
-  os_map: { photon: 'windows_server_2022' },
+  os_map: { photon: 'Windows Server 2022' },
   suggested_role_map: { switch: 'network_switch' },
   suggested_site_map: {},
   suggested_os_map: {},
@@ -156,7 +156,7 @@ const MAPPING_OPTIONS = {
 /** Netbox is less precise than KANAP, so the platform comes with a suggestion. */
 const MAPPING_OPTIONS_WITH_OS_SUGGESTION = {
   ...MAPPING_OPTIONS,
-  suggested_os_map: { 'debian-12': 'debian_12_bookworm' },
+  suggested_os_map: { 'debian-12': 'Debian 12 (bookworm)' },
 };
 
 function renderPage(initialPath = '/it/netbox') {
@@ -377,8 +377,8 @@ describe('NetboxSyncPage', () => {
 
     await waitFor(() => expect((apiClient.put as any).mock.calls).toHaveLength(1));
     expect((apiClient.put as any).mock.calls[0][1].os_map).toEqual({
-      photon: 'windows_server_2022',
-      'debian-12': 'debian_12_bookworm',
+      photon: 'Windows Server 2022',
+      'debian-12': 'Debian 12 (bookworm)',
     });
   });
 

@@ -692,11 +692,6 @@
           "description": "Categories used to classify entries in the incident register.",
           "usage": "Incidents / Category selector"
         },
-        "operatingSystems": {
-          "title": "Operating systems",
-          "description": "Catalog of operating systems available for servers, with standard and extended support end dates.",
-          "usage": "Servers / Technical tab"
-        },
         "connectionTypes": {
           "title": "Connection types",
           "description": "Two-level catalog (category and entry) with typical ports.",
@@ -719,8 +714,6 @@
         }
       },
       "columns": {
-        "standardSupport": "Standard support",
-        "extendedSupport": "Extended support",
         "typicalPorts": "Typical ports",
         "location": "Location",
         "cidr": "CIDR",
@@ -737,7 +730,6 @@
         "secretsLocation": "Secrets location"
       },
       "placeholders": {
-        "osName": "e.g., Windows Server 2025",
         "connectionName": "e.g., HTTPS",
         "typicalPorts": "e.g., 80, 443",
         "cidr": "e.g., 192.168.1.0/24",
@@ -755,7 +747,6 @@
       },
       "empty": {
         "adminZones": "No administration zones defined.",
-        "operatingSystems": "No operating systems configured yet.",
         "connectionTypes": "No connection types defined.",
         "subnets": "No subnets defined.",
         "domains": "No domains defined."
@@ -964,7 +955,7 @@
         "roles": "Netbox roles",
         "sites": "Netbox sites",
         "operatingSystems": "Operating systems",
-        "operatingSystemsHint": "Choose the KANAP operating system for each Netbox platform. A platform left without a match does not block the import: the operating system is simply left as it is.",
+        "operatingSystemsHint": "Choose a technology for each Netbox platform. The value stored is the technology name, with its version when you pick one. A platform left without a match does not block the import: the operating system is simply left as it is.",
         "noPlatforms": "Netbox lists no platform, so there is nothing to match here.",
         "platformsUnavailable": "Netbox did not return its platforms, so operating systems cannot be matched here. Check that the API token can read platforms.",
         "noOperatingSystem": "No match",
@@ -981,7 +972,7 @@
           "assetType": "KANAP asset type",
           "netboxPlatform": "Netbox platform",
           "location": "KANAP location",
-          "operatingSystem": "KANAP operating system"
+          "operatingSystem": "Technology"
         },
         "counts": {
           "devices_one": "{{count}} device",
@@ -1614,9 +1605,6 @@
         "fqdn": "FQDN",
         "aliases": "Aliases",
         "aliasesPlaceholder": "Type and press enter",
-        "operatingSystem": "Operating system",
-        "osClusterHint": "Operating system is defined by cluster member assets.",
-        "osChooseHint": "Choose from the operating systems list in settings.",
         "standardSupportEnds": "Standard support ends {{date}}",
         "extendedSupportEnds": "Extended support ends {{date}}",
         "ipAddresses": "IP addresses",
@@ -1645,6 +1633,11 @@
         "add": "Add",
         "search": "Search technologies",
         "empty": "No technology on this server.",
+        "operatingSystem": "Operating system",
+        "edit": "Edit",
+        "editNamed": "Edit {{name}}",
+        "changeVersion": "Change version of {{name}}",
+        "catalog": "Catalog",
         "remove": "Remove {{name}}",
         "saveFailed": "The technologies could not be saved.",
         "columns": {
@@ -1742,8 +1735,6 @@
           "clustersDown_other": "{{count}} clusters down",
           "clustersDegraded_one": "{{count}} cluster degraded",
           "clustersDegraded_other": "{{count}} clusters degraded",
-          "technologies_one": "{{count}} technology",
-          "technologies_other": "{{count}} technologies",
           "processes_one": "{{count}} business process",
           "processes_other": "{{count}} business processes"
         },
@@ -1751,7 +1742,6 @@
           "applications": "Applications",
           "assets": "Assets",
           "clusters": "Clusters",
-          "technologies": "Technologies",
           "processes": "Business processes"
         },
         "columns": {
@@ -1761,7 +1751,6 @@
           "criticality": "Criticality",
           "type": "Type",
           "state": "State",
-          "versions": "Versions",
           "via": "Via"
         },
         "via": {

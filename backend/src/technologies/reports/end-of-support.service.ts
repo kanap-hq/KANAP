@@ -2,7 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import { applicationParticipantCondition } from '../../auth/business-contributor-scope';
 import { languageOf, writeCsv } from '../../common/csv-sheet';
-import { ItOpsSettingsService, type OperatingSystemOption } from '../../it-ops-settings/it-ops-settings.service';
+import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import type { ApplicationsReach } from '../technology-links.service';
 import { assetInServiceSql, inServiceSql, TechnologyReachService } from '../technology-reach.service';
 import { onPremHostingTypes } from '../hosting-type';
@@ -47,7 +47,7 @@ export type ApplicationRef = { id: string; name: string; reference: string | nul
 export type DeadlineRow = {
   key: string;
   type: DeadlineType;
-  /** The technology, application or asset; null for an operating system (no record of its own yet). */
+  /** The technology, application or asset. An operating system is its technology. */
   item_id: string | null;
   item_name: string;
   item_reference: string | null;
@@ -141,51 +141,6 @@ export function supportState(
   return null;
 }
 
-/**
- * The operating systems of the assets, read from the IT Ops catalog `operatingSystems` (with its
- * support dates) and `assets.operating_system`. Isolated on purpose: lot T3 turns the operating
- * systems into technologies and replaces this source.
- */
-export async function operatingSystemDeadlines(
-  mg: EntityManager,
-  tenantId: string,
-  catalog: OperatingSystemOption[],
-  window: ReportWindow,
-): Promise<Candidate[]> {
-  const ending = new Map<string, { os: OperatingSystemOption; state: DeadlineState; date: string }>();
-  for (const os of catalog) {
-    const support = supportState(os.standardSupportEnd ?? null, os.extendedSupportEnd ?? null, window);
-    if (support) ending.set(os.code, { os, ...support });
-  }
-  if (ending.size === 0) return [];
-  const rows: Array<{ code: string; ids: string[] }> = await mg.query(
-    `SELECT a.operating_system AS code, array_agg(a.id::text ORDER BY a.name) AS ids
-       FROM assets a
-      WHERE a.tenant_id = $1 AND a.operating_system = ANY($2::text[]) AND ${assetInServiceSql('a')}
-      GROUP BY a.operating_system`,
-    [tenantId, Array.from(ending.keys())],
-  );
-  return rows.map((row) => {
-    const { os, state, date } = ending.get(row.code)!;
-    return {
-      key: `operating_system:${row.code}`,
-      type: 'operating_system' as const,
-      item_id: null,
-      item_name: os.label,
-      item_reference: null,
-      version_id: null,
-      version: null,
-      milestone: null,
-      date,
-      standard_support_end: os.standardSupportEnd ?? null,
-      extended_support_end: os.extendedSupportEnd ?? null,
-      state,
-      serverIds: row.ids,
-      applicationIds: [],
-    };
-  });
-}
-
 @Injectable()
 export class EndOfSupportService {
   constructor(
@@ -210,9 +165,12 @@ export class EndOfSupportService {
     const wants = (t: DeadlineType) => !type || type === t;
 
     const candidates: Candidate[] = [];
-    const settings = wants('operating_system') || wants('hardware') ? await this.itOps.getSettings(tenantId, { manager: mg }) : null;
-    if (wants('technology')) candidates.push(...await this.technologyDeadlines(mg, tenantId, window));
-    if (settings && wants('operating_system')) candidates.push(...await operatingSystemDeadlines(mg, tenantId, settings.operatingSystems ?? [], window));
+    // An operating system is a technology version whose family is `operating_system`. One query
+    // covers both types; the filter keeps the view the caller asked for.
+    if (wants('technology') || wants('operating_system')) {
+      candidates.push(...(await this.technologyDeadlines(mg, tenantId, window)).filter((row) => wants(row.type)));
+    }
+    const settings = wants('hardware') ? await this.itOps.getSettings(tenantId, { manager: mg }) : null;
     if (wants('application') && applications) candidates.push(...await this.applicationDeadlines(mg, tenantId, window, applications));
     if (settings && wants('hardware')) {
       const physical = (settings.serverKinds ?? []).filter((kind) => kind.is_physical === true).map((kind) => kind.code);
@@ -428,9 +386,9 @@ export class EndOfSupportService {
 
   /** The versions in use whose support ended or ends within the window, with what they reach. */
   private async technologyDeadlines(mg: EntityManager, tenantId: string, window: ReportWindow): Promise<Candidate[]> {
-    const rows: Array<{ version_id: string; label: string; technology_id: string; name: string; item_number: number; standard: string | null; extended: string | null }> = await mg.query(
+    const rows: Array<{ version_id: string; label: string; technology_id: string; name: string; item_number: number; family: string; standard: string | null; extended: string | null }> = await mg.query(
       `WITH ${USED_VERSIONS}
-       SELECT v.id AS version_id, v.label, t.id AS technology_id, t.name, t.item_number,
+       SELECT v.id AS version_id, v.label, t.id AS technology_id, t.name, t.item_number, t.family,
               ${DAY('v.standard_support_end')} AS standard, ${DAY('v.extended_support_end')} AS extended
          FROM used u
          JOIN technology_versions v ON v.tenant_id = $1 AND v.id = u.version_id
@@ -457,9 +415,11 @@ export class EndOfSupportService {
     };
     const serversByVersion = group(assets.map((a) => [a.technology_version_id, a.asset_id]));
     const appsByVersion = group(apps.map((a) => [a.technology_version_id, a.application_id]));
-    return kept.map(({ row, support }) => ({
-      key: `technology:${row.version_id}`,
-      type: 'technology' as const,
+    return kept.map(({ row, support }) => {
+      const type = row.family === 'operating_system' ? 'operating_system' as const : 'technology' as const;
+      return {
+      key: `${type}:${row.version_id}`,
+      type,
       item_id: row.technology_id,
       item_name: row.name,
       item_reference: technologyReference(row.item_number),
@@ -472,7 +432,8 @@ export class EndOfSupportService {
       state: support.state,
       serverIds: Array.from(serversByVersion.get(row.version_id) ?? []),
       applicationIds: Array.from(appsByVersion.get(row.version_id) ?? []),
-    }));
+      };
+    });
   }
 
   /** Applications in service whose end of support passed or falls within the window. */

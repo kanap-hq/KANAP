@@ -48,6 +48,7 @@ import { PortfolioMetadataItem, PortfolioStatusMetadata } from '../portfolio/wor
 import SendLinkButton from '../../components/workspace/SendLinkButton';
 import DeploymentsEditor from './components/DeploymentsEditor';
 import ApplicationRelationsPanel from './editors/ApplicationRelationsPanel';
+import ApplicationTechnologiesSection from './workspace/ApplicationTechnologiesSection';
 import ApplicationCreateEditor, { type ApplicationCreateEditorHandle } from './editors/ApplicationCreateEditor';
 import CreateVersionDialog from './components/CreateVersionDialog';
 import ApplicationConvertButton from './components/ApplicationConvertButton';
@@ -920,7 +921,7 @@ function InterfacesTab({
   );
 }
 
-function OperationsTab({
+export function OperationsTab({
   app,
   canManage,
   onPatch,
@@ -969,6 +970,7 @@ function OperationsTab({
 
   return (
     <Stack spacing={3.75}>
+      <ApplicationTechnologiesSection id={app.id} />
       <Box>
         <SectionLabel>{t('workspace.application.technical.sectionTitle')}</SectionLabel>
         <Stack spacing={1.5} sx={{ mt: 1.25 }}>

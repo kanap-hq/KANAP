@@ -39,7 +39,6 @@ async function seed(runner: QueryRunner, tag: string) {
   const vmHosted = await a('VM-HOSTED');
   await runner.query(`UPDATE assets SET kind = 'virtual_machine' WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, [tenantId, [vmOrphan, vmHosted]]);
   await contains(runner, tenantId, s1, vmHosted);
-  await runner.query(`UPDATE assets SET operating_system = 'old_os' WHERE tenant_id = $1 AND id = $2`, [tenantId, s3]);
   await runner.query(`UPDATE assets SET kind = 'physical_server', end_of_life_date = $3 WHERE tenant_id = $1 AND id = $2`, [tenantId, s4, soon]);
   // A VM at its end of life is no hardware.
   const vmEol = await a('VM-EOL');
@@ -83,6 +82,15 @@ async function seed(runner: QueryRunner, tag: string) {
   // A code out of the catalog: missing data of its own (inferred in the cloud, so not "on no server").
   const untyped = await technology(runner, tenantId, 8, 'Untyped', 'other');
   await runner.query(`UPDATE technologies SET hosting_type = 'gone' WHERE id = $1`, [untyped]);
+  // An operating system is a technology of that family, marked on the server. Both dates are past.
+  const oldOs = await technology(runner, tenantId, 9, 'Old OS', 'operating_system');
+  const oldOsVersion = await version(runner, tenantId, oldOs, '1', '2015-01-01');
+  await runner.query(`UPDATE technology_versions SET extended_support_end = '2020-01-01' WHERE id = $1`, [oldOsVersion]);
+  await installed(runner, tenantId, s3, oldOs, oldOsVersion);
+  await runner.query(
+    `UPDATE asset_technologies SET is_operating_system = true WHERE tenant_id = $1 AND asset_id = $2 AND technology_id = $3`,
+    [tenantId, s3, oldOs],
+  );
 
   const erp = await application(runner, tenantId, `ERP ${tag}`);
   await assign(runner, tenantId, erp, s1);
@@ -121,8 +129,8 @@ async function seed(runner: QueryRunner, tag: string) {
   return {
     tenantId, today, soon, lastMonth, later, far,
     assets: { s1, s2, s3, s4, s5, dbEmpty, dbDisabled, vmOrphan, vmHosted, retired, vmEol, vmOnOs, vmOnHw },
-    tech: { sql, tomcat, unused, entra, free, colo, cloud, untyped },
-    versions: { sql2016, sql2019, sql2022, tomcat9 },
+    tech: { sql, tomcat, unused, entra, free, colo, cloud, untyped, oldOs },
+    versions: { sql2016, sql2019, sql2022, tomcat9, oldOs: oldOsVersion },
     apps: { erp, portal, osVmApp, hwVmApp, crm, saas, dbApp, ssoBare, ssoOk },
   };
 }
@@ -130,10 +138,6 @@ async function seed(runner: QueryRunner, tag: string) {
 function service() {
   const itOps = {
     getSettings: async () => ({
-      operatingSystems: [
-        { code: 'old_os', label: 'Old OS', standardSupportEnd: '2015-01-01', extendedSupportEnd: '2020-01-01' },
-        { code: 'new_os', label: 'New OS', standardSupportEnd: '2099-01-01' },
-      ],
       serverKinds: [{ code: 'physical_server', is_physical: true }, { code: 'vm', is_physical: false }, { code: 'virtual_machine', is_physical: false }],
       hostingTypes: DEFAULT_HOSTING_TYPES,
     }),
@@ -163,7 +167,7 @@ async function testDeadlines() {
     assert.deepEqual(report.items.map((r) => r.key).sort(), [
       `technology:${g.versions.sql2016}`,
       `technology:${g.versions.sql2019}`,
-      'operating_system:old_os',
+      `operating_system:${g.versions.oldOs}`,
       `application:${g.apps.crm}`,
       `hardware:end_of_life:${g.assets.s4}`,
       `hardware:support_contract:${g.assets.s4}`,
@@ -184,9 +188,12 @@ async function testDeadlines() {
     assert.equal(sql19.state, 'extended_support');
     assert.equal(sql19.date, g.later);
 
-    const os = byKey.get('operating_system:old_os')!;
+    const os = byKey.get(`operating_system:${g.versions.oldOs}`)!;
     assert.equal(os.state, 'out_of_support');
+    assert.equal(os.date, '2020-01-01');
     assert.equal(os.item_name, 'Old OS');
+    assert.equal(os.item_reference, 'TEC-9');
+    assert.equal(os.version, '1');
     assert.deepEqual(os.servers.map((s) => s.id).sort(), [g.assets.s3, g.assets.vmOnOs].sort(), 'the server and the VM it contains');
     assert.deepEqual(os.applications!.map((a) => a.id).sort(), [g.apps.portal, g.apps.osVmApp].sort());
 
@@ -221,6 +228,11 @@ async function testHorizonAndType() {
     assert.ok(!narrow.items.some((r) => r.key === `technology:${g.versions.sql2022}`));
     const hardware = await service().deadlines({ type: 'hardware' }, opts, ALL);
     assert.ok(hardware.items.length === 2 && hardware.items.every((r) => r.type === 'hardware'));
+    const onlyOs = await service().deadlines({ type: 'operating_system' }, opts, ALL);
+    assert.deepEqual(onlyOs.items.map((r) => r.key), [`operating_system:${g.versions.oldOs}`]);
+    const onlyTech = await service().deadlines({ type: 'technology' }, opts, ALL);
+    assert.ok(onlyTech.items.every((r) => r.type === 'technology'));
+    assert.ok(!onlyTech.items.some((r) => r.key.startsWith('operating_system:')));
     await assert.rejects(service().deadlines({ horizon_months: 5 }, opts, ALL), /horizon_months/);
     await assert.rejects(service().deadlines({ type: 'printer' }, opts, ALL), /type must be/);
   });
@@ -291,7 +303,7 @@ async function testBusinessContributorScope() {
     const report = await service().deadlines({}, opts, scope);
     assert.ok(!report.items.some((r) => r.type === 'application'), 'the CRM is outside the scope: no row');
     const byKey = new Map(report.items.map((r) => [r.key, r]));
-    assert.deepEqual(byKey.get('operating_system:old_os')!.applications!.map((a) => a.id), [g.apps.portal], 'only its own application in the columns');
+    assert.deepEqual(byKey.get(`operating_system:${g.versions.oldOs}`)!.applications!.map((a) => a.id), [g.apps.portal], 'only its own application in the columns');
     assert.deepEqual(byKey.get(`technology:${g.versions.sql2016}`)!.applications, []);
     assert.equal(byKey.get(`technology:${g.versions.sql2016}`)!.application_count, 0);
     assert.equal(byKey.get(`technology:${g.versions.sql2016}`)!.server_count, 2, 'servers stay');

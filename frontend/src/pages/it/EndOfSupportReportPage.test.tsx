@@ -72,10 +72,10 @@ const APPLICATION: DeadlineRow = {
 const OS: DeadlineRow = {
   key: 'operating_system:win2012',
   type: 'operating_system',
-  item_id: null,
-  item_name: 'Windows Server 2012',
-  item_reference: null,
-  version: null,
+  item_id: 'tech-os',
+  item_name: 'Windows Server',
+  item_reference: 'TEC-12',
+  version: '2012',
   milestone: null,
   date: '2023-10-10',
   state: 'extended_support',
@@ -165,7 +165,7 @@ describe('EndOfSupportReportPage', () => {
     expect(item.getAttribute('href')).toBe('/it/technologies/tech-1');
     expect(screen.getByRole('link', { name: /Legacy HR/ }).getAttribute('href')).toBe('/it/applications/app-7');
     expect(screen.getByRole('link', { name: 'ESX-09' }).getAttribute('href')).toBe('/it/assets/asset-9');
-    expect(screen.queryByRole('link', { name: 'Windows Server 2012' })).toBeNull();
+    expect(screen.getByRole('link', { name: /Windows Server/ }).getAttribute('href')).toBe('/it/technologies/tech-os');
     expect(screen.queryByText(/^Open the/)).toBeNull();
 
     const row = item.closest('tr')!;

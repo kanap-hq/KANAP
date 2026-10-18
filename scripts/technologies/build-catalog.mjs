@@ -7,7 +7,14 @@
 // published under the MIT license (Copyright 2020 endoflife.date contributors; the notice is in
 // backend/src/technologies/catalog/LICENSE-endoflife-date.txt). The products kept are listed below
 // (PRODUCTS); a few have no endoflife.date page and are written from this list only (`slug` null).
-// Operating systems are not in this catalog: they come with lot T3.
+// Operating systems are in this catalog since lot T3. Their version labels are rewritten
+// (`versionLabel`) so they match the former IT settings catalog (`2012 R2`, `22.04 LTS`,
+// `12 (Bookworm)`, `15 SP5`). endoflife.date names a SUSE service pack `15.5`: the label stored
+// is `15 SP5`, which is what the shipped operating-system codes resolve to. An operating system
+// keeps every release whose support ended in 2010 or later (`OS_SUPPORT_ENDED_SINCE`), however
+// many; `keepRelease` leaves out the cycles an IT department does not run (the Windows Server
+// semi-annual and annual channels, the Ubuntu interim releases). The living catalog
+// (catalog-releases.ts) applies the same rules (`OS_RELEASE_RULES` there).
 //
 // Usage: node scripts/technologies/build-catalog.mjs [--out <file>] [--today YYYY-MM-DD]
 //        node scripts/technologies/build-catalog.mjs --refresh-cpe-versions [--out <file>]
@@ -46,6 +53,13 @@ const API = 'https://endoflife.date/api/v1/products';
 const MAX_VERSIONS = 8;
 /** Versions whose last support ended more than this many years ago are left out. */
 const ENDED_YEARS_KEPT = 4;
+/**
+ * Operating systems (family `operating_system`) in place of the two rules above: every version
+ * whose last support (standard, extended or end of life) ends on this day or later, however many.
+ * Servers run old systems long after their support ended (Windows Server 2003, SLES 11), and
+ * KANAP must name them to flag them. Twin of `OS_SUPPORT_ENDED_SINCE` in catalog-releases.ts.
+ */
+const OS_SUPPORT_ENDED_SINCE = '2010-01-01';
 
 /**
  * SQL Server since 2024: the NVD files each release under a product of its own
@@ -73,8 +87,61 @@ const OPENJDK_CPE = ['a:oracle:jdk', 'a:oracle:openjdk'];
  * `noCpe`: why an entry has no identifier (checked by --check-cpe); it drops any published one. Every identifier kept was
  * checked against the NVD with --check-cpe --nvd (lot C3, 2026-10-17): it exists in the CPE
  * dictionary and CVE name it.
+ * `versionLabel(release)`: the label stored, when cleanLabel would not match the names KANAP
+ * already shows. `keepRelease(release)`: false for a release cycle the catalog leaves out.
+ * Both are twins of `OS_RELEASE_RULES` in catalog-releases.ts.
  */
+const OS_NO_CPE = 'OS vulnerabilities are a separate decision: KANAP does not know the patch level, and Windows Server uses one CPE product per version';
+
+/**
+ * "Windows Server 2019 (LTSC)" → "2019"; "Windows Server 2012 R2 (LTSC)" → "2012 R2"; the service
+ * pack goes: "Windows Server 2008 R2 SP1 (LTSC)" → "2008 R2", "Windows Server 2003 SP2" → "2003"
+ * (the newest service pack comes first and takes the label; the older ones share it and are left out).
+ */
+function windowsServerLabel(release) {
+  const cleaned = cleanLabel(release.label, release.name);
+  return cleaned.replace(/^Windows Server\s+/i, '').replace(/\s+SP\d+$/i, '') || cleaned;
+}
+
+/** The long-term releases only: the semi-annual (`1809-sac`) and annual (`23h2-ac`) channels are left out. */
+function windowsServerRelease(release) {
+  return !/-(sac|ac)$/i.test(String(release.name));
+}
+
+/** The LTS releases only: endoflife.date marks them `isLts`. */
+function ubuntuRelease(release) {
+  return release.isLts === true;
+}
+
+/** "22.04 'Jammy Jellyfish' (LTS)" → "22.04 LTS". */
+function ubuntuLabel(release) {
+  return `${release.name} LTS`;
+}
+
+/** "12 (Bookworm)" stays, parentheses included: cleanLabel would leave "12". */
+function debianLabel(release) {
+  const raw = String(release.label ?? '').replace(/\s+/g, ' ').trim();
+  return raw || String(release.name);
+}
+
+/** endoflife.date names a service pack "15.5": "15 SP5", "11.4" → "11 SP4"; "15.0" → "15", "12.0" → "12". */
+function slesLabel(release) {
+  const match = /^(\d+)\.(\d+)$/.exec(String(release.name));
+  if (match) return match[2] === '0' ? match[1] : `${match[1]} SP${Number(match[2])}`;
+  return cleanLabel(release.label, release.name);
+}
+
 const PRODUCTS = [
+  // Operating systems (lot T3). No CPE: see OS_NO_CPE.
+  { key: 'windows-server', slug: 'windows-server', name: 'Windows Server', editor: 'Microsoft', family: 'operating_system', noCpe: OS_NO_CPE, versionLabel: windowsServerLabel, keepRelease: windowsServerRelease },
+  { key: 'ubuntu', slug: 'ubuntu', name: 'Ubuntu', editor: 'Canonical', family: 'operating_system', noCpe: OS_NO_CPE, versionLabel: ubuntuLabel, keepRelease: ubuntuRelease },
+  { key: 'rhel', slug: 'rhel', name: 'Red Hat Enterprise Linux', editor: 'Red Hat', family: 'operating_system', noCpe: OS_NO_CPE },
+  { key: 'debian', slug: 'debian', name: 'Debian', editor: 'Debian', family: 'operating_system', noCpe: OS_NO_CPE, versionLabel: debianLabel },
+  { key: 'sles', slug: 'sles', name: 'SUSE Linux Enterprise Server', editor: 'SUSE', family: 'operating_system', noCpe: OS_NO_CPE, versionLabel: slesLabel },
+  { key: 'rocky-linux', slug: 'rocky-linux', name: 'Rocky Linux', editor: 'Rocky Enterprise Software Foundation', family: 'operating_system', noCpe: OS_NO_CPE },
+  { key: 'almalinux', slug: 'almalinux', name: 'AlmaLinux', editor: 'AlmaLinux OS Foundation', family: 'operating_system', noCpe: OS_NO_CPE },
+  { key: 'oracle-linux', slug: 'oracle-linux', name: 'Oracle Linux', editor: 'Oracle', family: 'operating_system', noCpe: OS_NO_CPE },
+  { key: 'centos', slug: 'centos', name: 'CentOS', editor: 'The CentOS Project', family: 'operating_system', noCpe: OS_NO_CPE },
   // Databases
   { key: 'mssqlserver', slug: 'mssqlserver', name: 'Microsoft SQL Server', editor: 'Microsoft', family: 'database', cpe: ['a:microsoft:sql_server_2016', 'a:microsoft:sql_server_2017', 'a:microsoft:sql_server_2019', 'a:microsoft:sql_server_2022', 'a:microsoft:sql_server_2025'] },
   { key: 'oracle-database', slug: 'oracle-database', name: 'Oracle Database', editor: 'Oracle', family: 'database', cpe: ['a:oracle:database', 'a:oracle:database_server'], cpeVersion: 'label' },
@@ -252,8 +319,47 @@ function cpeVersionOf(label, entry) {
 
 const day = (value) => (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null);
 
+/**
+ * Operating systems keep the meaning of the former IT settings catalog. eol_then_paid (Ubuntu,
+ * RHEL and its rebuilds, SLES): standard = end of security fixes (eolFrom), extended = paid
+ * extension (eoesFrom: ESM, ELS, LTSS) or nothing. active_then_eol (Windows Server, Debian):
+ * standard = end of mainstream or regular security support, extended = end of extended support or
+ * of Debian LTS (eolFrom). Twin of SUPPORT_RULES in backend/src/technologies/catalog/catalog-releases.ts.
+ */
+const SUPPORT_RULES = {
+  ubuntu: 'eol_then_paid',
+  rhel: 'eol_then_paid',
+  debian: 'active_then_eol',
+  sles: 'eol_then_paid',
+  'rocky-linux': 'eol_then_paid',
+  almalinux: 'eol_then_paid',
+  'oracle-linux': 'eol_then_paid',
+  centos: 'eol_then_paid',
+  'windows-server': 'active_then_eol',
+};
+
+/** Other products: standard = end of active support, else end of life; extended = paid extension, else end of life after an active support. */
+function supportDates(key, eoas, eol, eoes) {
+  const rule = SUPPORT_RULES[key];
+  let standard;
+  let extended;
+  if (rule === 'eol_then_paid') {
+    standard = eol ?? eoas;
+    extended = eoes;
+  } else if (rule === 'active_then_eol') {
+    standard = eoas ?? eol;
+    extended = eoas ? eol : null;
+  } else {
+    standard = eoas ?? eol;
+    extended = eoes ?? (eoas ? eol : null);
+  }
+  if (standard && extended && extended <= standard) extended = null;
+  return { standard, extended };
+}
+
 function versionsOf(releases, today, entry) {
-  const cutoff = `${Number(today.slice(0, 4)) - ENDED_YEARS_KEPT}${today.slice(4)}`;
+  const os = entry.family === 'operating_system';
+  const cutoff = os ? OS_SUPPORT_ENDED_SINCE : `${Number(today.slice(0, 4)) - ENDED_YEARS_KEPT}${today.slice(4)}`;
   const out = [];
   const seen = new Set();
   const sorted = [...releases].sort((a, b) => String(b.releaseDate ?? '').localeCompare(String(a.releaseDate ?? '')));
@@ -264,15 +370,14 @@ function versionsOf(releases, today, entry) {
     const eoes = day(release.eoesFrom);
     const lastEnd = [eoas, eol, eoes].filter(Boolean).sort().at(-1) ?? null;
     if (lastEnd && lastEnd < cutoff) continue;
-    const label = cleanLabel(release.label, release.name);
-    if (seen.has(label.toLowerCase())) continue;
-    seen.add(label.toLowerCase());
-    // Standard support: the end of active support when the product has one, else the end of life.
-    // Extended: the paid extension when published, else the end of life after an active support.
-    const standard = eoas ?? eol;
-    let extended = eoes ?? (eoas ? eol : null);
-    if (standard && extended && extended < standard) extended = null;
+    if (entry.keepRelease && !entry.keepRelease(release)) continue;
     const name = String(release.name);
+    // The eight newest; every one in the window for an operating system.
+    if (!os && out.length >= MAX_VERSIONS) break;
+    const label = entry.versionLabel ? entry.versionLabel(release) : cleanLabel(release.label, release.name);
+    if (!label || seen.has(label.toLowerCase())) continue;
+    seen.add(label.toLowerCase());
+    const { standard, extended } = supportDates(entry.key, eoas, eol, eoes);
     out.push({
       key: name,
       label,
@@ -280,9 +385,8 @@ function versionsOf(releases, today, entry) {
       build_prefixes: name !== label && /^\d+(\.\d+)*$/.test(name) ? [name] : [],
       release_date: day(release.releaseDate),
       standard_support_end: standard,
-      extended_support_end: extended === standard ? null : extended,
+      extended_support_end: extended,
     });
-    if (out.length >= MAX_VERSIONS) break;
   }
   return out;
 }

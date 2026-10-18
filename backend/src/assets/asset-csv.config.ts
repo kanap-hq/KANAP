@@ -6,16 +6,43 @@ import {
   CsvImportContext,
 } from '../common/csv';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
-import { ItOpsSettings } from '../it-ops-settings/it-ops-settings.service';
+import { AuditLog } from '../audit/audit.entity';
+import { AuditService } from '../audit/audit.service';
+import { ItOpsSettings, ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
+import { TechnologyCatalogService } from '../technologies/catalog/technology-catalog.service';
+import { OperatingSystemService } from '../technologies/operating-system.service';
 
 /**
- * Settings-backed fields (kind, status, operating_system, domain) accept a code or a name;
- * ambiguity is refused. IP addresses get their type resolved and their values trimmed.
+ * The operating system is not a column. `beforeCommit` keeps the text here and takes it off the
+ * row before TypeORM saves; `afterCommit` resolves it into the marked link (`source` `import`).
+ * The same object goes from the hook to the save, so a WeakMap holds the text across that.
+ */
+const pendingOperatingSystems = new WeakMap<object, string | null>();
+
+/** The resolver, built on the import's manager. `labelsOf` needs none of the collaborators. */
+function operatingSystemWriter(context: CsvImportContext): OperatingSystemService {
+  const audit = new AuditService(context.manager.getRepository(AuditLog));
+  const itOps = {
+    getSettings: async () => {
+      if (!context.itOpsSettings) throw new Error('IT settings are required to import an operating system.');
+      return context.itOpsSettings;
+    },
+  } as unknown as ItOpsSettingsService;
+  return new OperatingSystemService(audit, itOps, new TechnologyCatalogService(audit, itOps));
+}
+
+function sameOperatingSystem(current: string, wanted: string): boolean {
+  return current.localeCompare(wanted, 'en', { sensitivity: 'accent' }) === 0;
+}
+
+/**
+ * Settings-backed fields (kind, status, domain) accept a code or a name;
+ * ambiguity is refused. The operating system stays a label for the resolver.
+ * IP addresses get their type resolved and their values trimmed.
  */
 function resolveAssetCatalogs(entity: any, settings: ItOpsSettings): void {
   if (entity.kind) entity.kind = resolveCatalogCode(entity.kind, settings.serverKinds);
   if (entity.status) entity.status = resolveCatalogCode(entity.status, settings.lifecycleStates);
-  if (entity.operating_system) entity.operating_system = resolveCatalogCode(entity.operating_system, settings.operatingSystems);
   if (entity.domain) entity.domain = resolveCatalogCode(entity.domain, settings.domains);
   if (!Array.isArray(entity.ip_addresses)) return;
 
@@ -51,7 +78,7 @@ function resolveAssetCatalogs(entity: any, settings: ItOpsSettings): void {
  *
  * Field order matches AssetWorkspacePage.tsx tabs:
  * - Overview: name, location, kind, is_cluster, status, notes
- * - Technical: environment, hostname, domain, aliases, operating_system, cluster, IP addresses
+ * - Technical: environment, hostname, domain, aliases, operating system, cluster, IP addresses
  *
  * Note: fqdn is computed from hostname + domain, so not included in CSV
  */
@@ -354,27 +381,46 @@ export const assetCsvConfig: CsvEntityConfig = {
     },
   ],
 
-  /** The row as the commit stores it: catalog names resolved, provider kept (filled only when blank). */
+  /**
+   * The row as the commit stores it: catalog names resolved, provider kept (filled only when blank).
+   * The operating system is compared to the marked link's label (or, in a fixture that still
+   * carries the text on the row, to that text), without case.
+   */
   sameAsStored: async (rows, context) => {
     const settings = await requireImportCatalogs(context);
+    const ids = rows.flatMap((row) => (row.existingEntity?.id ? [String(row.existingEntity.id)] : []));
+    const labels = ids.length
+      ? await operatingSystemWriter(context).labelsOf(context.manager, context.tenantId, ids)
+      : new Map<string, string>();
     return rows.map((row) => {
       const stored = row.existingEntity;
       if (!stored.provider && (row.parsed.location_id ?? stored.location_id)) return false;
       const next = { ...row.parsed };
+      const hasOs = Object.prototype.hasOwnProperty.call(next, 'operating_system');
+      const osRaw = next.operating_system;
+      delete next.operating_system;
       try {
         resolveAssetCatalogs(next, settings);
       } catch {
         return false;
       }
-      return sameStoredValues(stored, next);
+      if (!sameStoredValues(stored, next)) return false;
+      if (!hasOs) return true;
+      const wanted = osRaw == null || String(osRaw).trim() === '' ? '' : String(osRaw).trim();
+      const id = String(stored.id ?? '');
+      const current = labels.has(id)
+        ? (labels.get(id) ?? '')
+        : (typeof stored.operating_system === 'string' ? stored.operating_system : '');
+      return sameOperatingSystem(current, wanted);
     });
   },
 
   /**
    * Hook to normalize and validate fields before commit.
    * - Derives Provider from Location (required at DB level but auto-populated in frontend)
-   * - Resolves settings-backed fields (kind, status, operating_system, domain, ip_address type)
+   * - Resolves settings-backed fields (kind, status, domain, ip_address type)
    *   accepting both codes and labels
+   * - Holds the operating-system text aside: it is not a column
    */
   beforeCommit: async (entities: any[], context: CsvImportContext) => {
     // 1. Effective IT Ops catalogs (defaults included), preloaded by the assets CSV service.
@@ -403,7 +449,30 @@ export const assetCsvConfig: CsvEntityConfig = {
       }
     }
 
-    // 3. Resolve settings-backed fields and normalize IP addresses
-    for (const entity of entities) resolveAssetCatalogs(entity, settings);
+    // 3. Resolve settings-backed fields and normalize IP addresses.
+    //    The operating system is resolved after the row exists, so the link can point at it.
+    for (const entity of entities) {
+      resolveAssetCatalogs(entity, settings);
+      if (Object.prototype.hasOwnProperty.call(entity, 'operating_system')) {
+        const raw = entity.operating_system;
+        const text = raw == null ? '' : String(raw).trim();
+        pendingOperatingSystems.set(entity, text || null);
+        delete entity.operating_system;
+      }
+    }
+  },
+
+  /** Write the marked link once the asset row has its id. An absent key leaves the link alone. */
+  afterCommit: async (entities: any[], context: CsvImportContext) => {
+    const pending = entities.filter((entity) => pendingOperatingSystems.has(entity));
+    if (pending.length === 0) return;
+    const operatingSystems = operatingSystemWriter(context);
+    for (const entity of pending) {
+      const label = pendingOperatingSystems.get(entity) ?? null;
+      pendingOperatingSystems.delete(entity);
+      if (!entity.id) continue;
+      const resolved = await operatingSystems.resolve(context.manager, context.tenantId, label, { create: true });
+      await operatingSystems.setOperatingSystem(context.manager, context.tenantId, entity.id, resolved, 'import', context.userId);
+    }
   },
 };

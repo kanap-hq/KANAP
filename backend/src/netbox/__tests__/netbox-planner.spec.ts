@@ -43,8 +43,8 @@ const CATALOGS: NetboxCatalogs = {
     { code: 'other', label: 'Other' },
   ],
   operatingSystems: [
-    { code: 'vmware_esxi_8', label: 'VMware ESXi 8' },
-    { code: 'debian_12', label: 'Debian 12' },
+    { code: 'VMware ESXi 8', label: 'VMware ESXi 8' },
+    { code: 'Debian 12', label: 'Debian 12' },
   ],
   lifecycleStates: [
     { code: 'proposed', label: 'Proposed' },
@@ -122,7 +122,7 @@ function asset(overrides: Partial<ExistingAsset> = {}): ExistingAsset {
     hostname: 'par-esx-01',
     domain: 'fromage',
     fqdn: 'par-esx-01.fromage.lan',
-    operating_system: 'vmware_esxi_8',
+    operating_system: 'VMware ESXi 8',
     ip_addresses: [{ type: 'host', ip: '10.10.1.5', subnet_cidr: '10.10.0.0/16' }],
     serial_number: 'SN-0001',
     manufacturer: 'Dell',
@@ -531,6 +531,16 @@ function row(result: ReturnType<typeof plan>, externalId: string): NetboxPlanRow
   assert.deepEqual(diffs.status, { field: 'status', before: 'Active', after: 'Deprecated' });
   assert.deepEqual(diffs.operating_system, { field: 'operating_system', before: 'VMware ESXi 8', after: 'Debian 12' });
   assert.deepEqual(diffs.location, { field: 'location', before: 'Paris DC', after: 'Lyon Warehouse' });
+}
+
+{
+  // The resolver ignores case, so does the preview: a label that differs only by case is not a change.
+  const result = plan({
+    objects: [device({ platform: { name: 'VMware ESXi 8' } })],
+    assets: [asset({ operating_system: 'vmware esxi 8' })],
+  });
+  const updated = row(result, '1');
+  assert.equal(updated.diffs.some((diff) => diff.field === 'operating_system'), false);
 }
 
 {

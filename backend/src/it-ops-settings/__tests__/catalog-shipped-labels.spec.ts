@@ -24,7 +24,6 @@ const settings: any = {
     { code: 'internal', label: 'Internal', rank: 2 },
     { code: 'confidential', label: 'Confidential', rank: 3 },
   ],
-  operatingSystems: [],
   domains: [],
   ipAddressTypes: [{ code: 'management', label: 'Management' }],
 };

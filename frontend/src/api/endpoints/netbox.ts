@@ -120,11 +120,15 @@ export interface NetboxMappingOptions {
   platforms_unavailable?: boolean;
   asset_kinds: Array<{ code: string; label: string }>;
   locations: Array<{ id: string; name: string }>;
+  /**
+   * Technologies a platform can match. `code` and `label` are the same readable text
+   * (the technology name, or the name and its version), which is what `os_map` stores.
+   */
   operating_systems?: Array<{ code: string; label: string }>;
   /** Saved maps: role slug -> asset kind code, site slug -> location id. */
   role_map: Record<string, string>;
   site_map: Record<string, string>;
-  /** Platform slug -> operating system code. Never an import filter. */
+  /** Platform slug -> technology label. Never an import filter. */
   os_map?: Record<string, string>;
   /** Label-match suggestions, for unmapped entries only. Not saved yet. */
   suggested_role_map: Record<string, string>;

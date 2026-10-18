@@ -26,7 +26,6 @@ const LIST_FIELDS: Record<string, Record<string, FieldReader>> = {
   entities: tiered, serverRoles: tiered,
   serverKinds: { ...base, is_physical: (row) => row.is_physical === undefined ? undefined : !!row.is_physical },
   hostingTypes: { ...base, category: (row) => row.category === 'on_prem' || row.category === 'cloud' ? row.category : undefined },
-  operatingSystems: { ...base, standardSupportEnd: text('standardSupportEnd', 'standard_support_end'), extendedSupportEnd: text('extendedSupportEnd', 'extended_support_end') },
   connectionTypes: { ...base, category: text('category'), typicalPorts: text('typicalPorts', 'typical_ports') },
   domains: {
     ...base, dns_suffix: (row) => String(row.dns_suffix ?? '').trim().toLowerCase(), system: (row) => !!row.system,

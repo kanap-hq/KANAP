@@ -19,7 +19,6 @@ type FieldKey =
   | 'interfacePattern'
   | 'interfaceFormat'
   | 'interfaceAuthMode'
-  | 'operatingSystem'
   | 'domain'
   | 'ipAddressType'
   | 'accessMethod'
@@ -48,7 +47,6 @@ export function useItOpsEnumOptions() {
     interfacePattern: settings?.interfacePatterns ?? [],
     interfaceFormat: settings?.interfaceFormats ?? [],
     interfaceAuthMode: settings?.interfaceAuthModes ?? [],
-    operatingSystem: settings?.operatingSystems ?? [],
     domain: settings?.domains ?? [],
     ipAddressType: settings?.ipAddressTypes ?? [],
     accessMethod: settings?.accessMethods ?? [],

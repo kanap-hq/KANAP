@@ -19,10 +19,10 @@ import {
 const BASE_URL = 'https://netbox.example.test';
 
 const OPERATING_SYSTEMS = [
-  { code: 'debian_12_bookworm', label: 'Debian 12 (bookworm)' },
-  { code: 'debian_11_bullseye', label: 'Debian 11 (bullseye)' },
-  { code: 'windows_server_2022', label: 'Windows Server 2022' },
-  { code: 'vmware_esxi_8', label: 'VMware ESXi 8' },
+  { code: 'Debian 12 (bookworm)', label: 'Debian 12 (bookworm)' },
+  { code: 'Debian 11 (bullseye)', label: 'Debian 11 (bullseye)' },
+  { code: 'Windows Server 2022', label: 'Windows Server 2022' },
+  { code: 'VMware ESXi 8', label: 'VMware ESXi 8' },
 ];
 
 const CATALOGS: NetboxCatalogs = {
@@ -60,13 +60,13 @@ function device(platform: Record<string, unknown> | null) {
 const suggest = (name: unknown) => suggestOperatingSystem(name, OPERATING_SYSTEMS)?.code ?? null;
 
 // An exact match on the name, on the code, and whatever the case and spacing.
-assert.equal(suggest('Debian 12 (bookworm)'), 'debian_12_bookworm');
-assert.equal(suggest('vmware_esxi_8'), 'vmware_esxi_8');
-assert.equal(suggest('  windows server 2022  '), 'windows_server_2022');
+assert.equal(suggest('Debian 12 (bookworm)'), 'Debian 12 (bookworm)');
+assert.equal(suggest('VMware ESXi 8'), 'VMware ESXi 8');
+assert.equal(suggest('  windows server 2022  '), 'Windows Server 2022');
 
 // The case this whole mapping exists for: Netbox is less precise than KANAP.
-assert.equal(suggest('Debian 12'), 'debian_12_bookworm');
-assert.equal(suggest('Windows Server'), 'windows_server_2022');
+assert.equal(suggest('Debian 12'), 'Debian 12 (bookworm)');
+assert.equal(suggest('Windows Server'), 'Windows Server 2022');
 
 // The prefix must end on a boundary: "Debian 1" is not the start of a word in
 // "Debian 12 (bookworm)", so it suggests nothing at all.
@@ -86,7 +86,7 @@ assert.equal(suggest('Photon OS'), null);
 // No match saved: the exact comparison still works exactly as before.
 {
   const mapped = mapNetboxObject(device({ slug: 'debian-12', name: 'Debian 12 (bookworm)' }), MAP_OPTIONS);
-  assert.equal(mapped.asset?.operating_system, 'debian_12_bookworm');
+  assert.equal(mapped.asset?.operating_system, 'Debian 12 (bookworm)');
   assert.deepEqual(mapped.warnings, []);
 }
 
@@ -104,9 +104,9 @@ assert.equal(suggest('Photon OS'), null);
 {
   const mapped = mapNetboxObject(device({ slug: 'debian-12', name: 'Debian 12' }), {
     ...MAP_OPTIONS,
-    osMap: { 'debian-12': 'debian_12_bookworm' },
+    osMap: { 'debian-12': 'Debian 12 (bookworm)' },
   });
-  assert.equal(mapped.asset?.operating_system, 'debian_12_bookworm');
+  assert.equal(mapped.asset?.operating_system, 'Debian 12 (bookworm)');
   assert.deepEqual(mapped.warnings, []);
   assert.equal(mapped.display.operating_system, 'Debian 12 (bookworm)');
 }
@@ -115,32 +115,39 @@ assert.equal(suggest('Photon OS'), null);
 {
   const mapped = mapNetboxObject(device({ slug: 'esxi', name: 'VMware ESXi 8' }), {
     ...MAP_OPTIONS,
-    osMap: { esxi: 'debian_12_bookworm' },
+    osMap: { esxi: 'Debian 12 (bookworm)' },
   });
-  assert.equal(mapped.asset?.operating_system, 'debian_12_bookworm');
+  assert.equal(mapped.asset?.operating_system, 'Debian 12 (bookworm)');
 }
 
-// A match pointing at a code the catalog no longer holds falls through to the
-// exact comparison, exactly as if it had never been saved.
+// A saved match is a label for the operating-system resolver, which finds a
+// technology of any family: it is kept even when the proposed choices (operating
+// systems first) do not list it, so a VMware ESXi host keeps its operating system.
 {
   const mapped = mapNetboxObject(device({ slug: 'esxi', name: 'VMware ESXi 8' }), {
     ...MAP_OPTIONS,
-    osMap: { esxi: 'debian_9_stretch' },
+    osMap: { esxi: 'VMware ESXi 8.0' },
   });
-  assert.equal(mapped.asset?.operating_system, 'vmware_esxi_8');
+  assert.equal(mapped.asset?.operating_system, 'VMware ESXi 8.0');
+  assert.deepEqual(mapped.warnings, []);
+  assert.equal(mapped.display.operating_system, 'VMware ESXi 8.0');
+}
+{
+  const mapped = mapNetboxObject(device({ slug: 'meraki', name: 'Meraki' }), {
+    ...MAP_OPTIONS,
+    osMap: { meraki: 'Cisco Meraki' },
+  });
+  assert.equal(mapped.asset?.operating_system, 'Cisco Meraki');
   assert.deepEqual(mapped.warnings, []);
 }
 
-// A stale match with nothing to fall back on leaves the object importable and
-// says why the operating system is empty.
+// A saved match that differs from a choice only by case takes the choice's spelling.
 {
-  const mapped = mapNetboxObject(device({ slug: 'photon', name: 'Photon OS' }), {
+  const mapped = mapNetboxObject(device({ slug: 'debian-12', name: 'Debian 12' }), {
     ...MAP_OPTIONS,
-    osMap: { photon: 'debian_9_stretch' },
+    osMap: { 'debian-12': 'debian 12 (BOOKWORM)' },
   });
-  assert.equal(mapped.asset?.operating_system, null);
-  assert.equal(mapped.warnings[0]?.code, 'os_not_in_catalog');
-  assert.equal(mapped.skipReason, null);
+  assert.equal(mapped.asset?.operating_system, 'Debian 12 (bookworm)');
 }
 
 // No platform at all: nothing is resolved and nothing is warned about.
@@ -236,11 +243,11 @@ async function main() {
     const itOpsSettings: any = {
       getSettings: async () => ({
         serverKinds: [{ code: 'physical_server', label: 'Server' }],
-        operatingSystems: OPERATING_SYSTEMS,
       }),
     };
     const manager: any = { query: async () => [{ id: 'loc-1', name: 'Paris DC' }] };
-    const service = new NetboxSyncService({} as any, config, client, itOpsSettings, {} as any, {} as any);
+    const operatingSystems = { mappingChoices: async () => OPERATING_SYSTEMS };
+    const service = new NetboxSyncService({} as any, config, client, itOpsSettings, {} as any, {} as any, operatingSystems as any);
     return { service, manager };
   }
 
@@ -268,7 +275,7 @@ async function main() {
     const options: any = await service.mappingOptions(manager, 'tenant-1');
     assert.equal(options.platforms_unavailable, false);
     assert.deepEqual(options.platforms.map((entry: any) => entry.slug), ['debian-12']);
-    assert.deepEqual(options.suggested_os_map, { 'debian-12': 'debian_12_bookworm' });
+    assert.deepEqual(options.suggested_os_map, { 'debian-12': 'Debian 12 (bookworm)' });
   }
 
   // A role or site failure is still a failure: those two decide the import.

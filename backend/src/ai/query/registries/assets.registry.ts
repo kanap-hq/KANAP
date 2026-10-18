@@ -1,3 +1,4 @@
+import { operatingSystemLabelSql } from '../../../technologies/operating-system-codes';
 import { AiEntityFilterRegistry } from '../ai-filter.types';
 
 export const assetsRegistry: AiEntityFilterRegistry = {
@@ -204,7 +205,7 @@ export const assetsRegistry: AiEntityFilterRegistry = {
       provider: { expression: 'a.provider' },
       region: { expression: 'a.region' },
       zone: { expression: 'a.zone' },
-      os: { expression: 'a.operating_system' },
+      os: { expression: operatingSystemLabelSql('a') },
       hosting_type: {
         expression: 'l.hosting_type',
         joins: [

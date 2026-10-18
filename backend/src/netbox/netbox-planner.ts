@@ -391,7 +391,7 @@ export function diffNetboxMapping(
       optionLabel(asset.domain, catalogs.domains), optionLabel(mapped.domain, catalogs.domains));
   }
   if (mapped.operating_system) {
-    add('operating_system', asset.operating_system !== mapped.operating_system,
+    add('operating_system', !sameText(asset.operating_system, mapped.operating_system),
       optionLabel(asset.operating_system, catalogs.operatingSystems),
       optionLabel(mapped.operating_system, catalogs.operatingSystems));
   }

@@ -1,10 +1,13 @@
 import React from 'react';
-import { Alert, Box, Stack } from '@mui/material';
+import { Alert, Box, IconButton, Stack, Tooltip, useTheme } from '@mui/material';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../../api';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
+import { useLocale } from '../../../i18n/useLocale';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { formatSupportDate, supportStateColor, supportStateOf } from '../../../utils/supportState';
 import { RelationRef, RelationsEmpty, RelationsSection, RelationsTable, type RelationsColumn } from '../../../components/workspace/RelationsTable';
 import RelationAddPicker, { type RelationOption } from '../../../components/workspace/RelationAddPicker';
 import { invalidateTechnologyLinks } from './technologyLinkQueries';
@@ -23,6 +26,10 @@ export type AssetTechnologyRow = {
   version_label: string | null;
   via_asset_id: string | null;
   via_asset_name: string | null;
+  /** The server's operating system. The list already puts that link first. */
+  is_operating_system?: boolean;
+  standard_support_end?: string | null;
+  extended_support_end?: string | null;
 };
 
 export const assetTechnologiesKey = (assetId: string) => ['asset-technologies', assetId] as const;
@@ -37,16 +44,20 @@ type Props = {
 };
 
 /**
- * What a server carries (lot T1b): technologies installed on it (removable) and carried to it
- * through the server it runs on or its cluster (with that server, not removable). Managers add a
- * technology then its version; each change is saved at once. One line when empty.
+ * What a server carries: technologies installed on it (removable) and carried to it through the
+ * server it runs on or its cluster (with that server, not removable). The marked operating system
+ * leads the list. Managers add a technology then its version, and change a version from the
+ * version or from Edit. Each change is saved at once. One line when empty.
  */
 export default function AssetTechnologiesSection({ assetId, canManage, heading }: Props) {
   const { t } = useTranslation(['it', 'common']);
   const { labelFor } = useItOpsEnumOptions();
+  const theme = useTheme();
+  const locale = useLocale();
   const queryClient = useQueryClient();
   const key = assetTechnologiesKey(assetId);
   const [adding, setAdding] = React.useState<{ anchor: HTMLElement; technology: RelationOption | null } | null>(null);
+  const [versionEdit, setVersionEdit] = React.useState<{ row: AssetTechnologyRow; anchor: HTMLElement } | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
   const { data } = useQuery({
@@ -54,7 +65,7 @@ export default function AssetTechnologiesSection({ assetId, canManage, heading }
     queryFn: async () => (await api.get<{ items: AssetTechnologyRow[] }>(`/assets/${assetId}/technologies`)).data,
     enabled: !!assetId,
   });
-  const pickedId = adding?.technology?.id ?? null;
+  const pickedId = adding?.technology?.id ?? versionEdit?.row.technology_id ?? null;
   const { data: versions } = useQuery({
     queryKey: ['technology-versions', pickedId],
     queryFn: async () => (await api.get<{ items: VersionOption[] }>(`/technologies/${pickedId}/versions`)).data.items,
@@ -75,6 +86,21 @@ export default function AssetTechnologiesSection({ assetId, canManage, heading }
       failed(e);
     }
     await refresh();
+  };
+
+  const changeVersion = async (row: AssetTechnologyRow, choice: VersionChoice) => {
+    if (!row.link_id) return;
+    setError(null);
+    try {
+      await api.patch(`/technologies/${row.technology_id}/assets/${row.link_id}`, choice);
+    } catch (e) {
+      failed(e);
+    }
+    await refresh();
+  };
+
+  const openVersion = (row: AssetTechnologyRow, anchor: HTMLElement) => {
+    setVersionEdit({ row, anchor });
   };
 
   const remove = async (row: AssetTechnologyRow) => {
@@ -103,7 +129,16 @@ export default function AssetTechnologiesSection({ assetId, canManage, heading }
   const dash = '—';
   const columns: Array<RelationsColumn<AssetTechnologyRow>> = [
     { key: 'ref', header: t('workspace.asset.technologies.columns.ref'), width: 64, render: (row) => <RelationRef>{row.technology_reference ?? dash}</RelationRef> },
-    { key: 'name', header: t('workspace.asset.technologies.columns.name'), render: (row) => <span title={row.technology_name ?? undefined}>{row.technology_name ?? dash}</span> },
+    { key: 'name', header: t('workspace.asset.technologies.columns.name'), render: (row) => (
+      <Box component="span" sx={{ display: 'inline-flex', alignItems: 'baseline', gap: 0.75, minWidth: 0 }}>
+        <span title={row.technology_name ?? undefined}>{row.technology_name ?? dash}</span>
+        {row.is_operating_system && (
+          <Box component="span" sx={{ color: 'kanap.text.tertiary', fontSize: 12, flex: 'none' }}>
+            {t('workspace.asset.technologies.operatingSystem')}
+          </Box>
+        )}
+      </Box>
+    ) },
     { key: 'family', header: t('workspace.asset.technologies.columns.family'), width: 180,
       render: (row) => {
         const family = row.family ? labelFor('technologyFamily', row.family) || row.family : dash;
@@ -111,10 +146,47 @@ export default function AssetTechnologiesSection({ assetId, canManage, heading }
       },
     },
     {
-      key: 'version', header: t('workspace.asset.technologies.columns.version'), width: 72,
-      render: (row) => (row.version_label
-        ? <span title={row.version_label}>{row.version_label}</span>
-        : <Box component="span" title={t('workspace.technology.versionPicker.unknown')} sx={{ color: 'kanap.text.tertiary' }}>{dash}</Box>),
+      key: 'version', header: t('workspace.asset.technologies.columns.version'), width: 88,
+      render: (row) => {
+        const standardEnd = row.standard_support_end ?? null;
+        const extendedEnd = row.extended_support_end ?? null;
+        const color = supportStateColor(supportStateOf(standardEnd, extendedEnd), theme);
+        const hint = [
+          standardEnd ? t('workspace.asset.technical.standardSupportEnds', { date: formatSupportDate(standardEnd, locale) }) : '',
+          extendedEnd ? t('workspace.asset.technical.extendedSupportEnds', { date: formatSupportDate(extendedEnd, locale) }) : '',
+        ].filter(Boolean).join(' / ');
+        const title = hint || (row.version_label ? row.version_label : t('workspace.technology.versionPicker.unknown'));
+        const label = row.version_label
+          ? row.version_label
+          : <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>{dash}</Box>;
+        const editable = canManage && row.kind === 'installed' && !!row.link_id;
+        if (!editable) {
+          return <Box component="span" title={title} sx={{ color }}>{label}</Box>;
+        }
+        return (
+          <Box
+            component="button"
+            type="button"
+            title={title}
+            aria-label={t('workspace.asset.technologies.changeVersion', { name: row.technology_name ?? '' })}
+            onClick={(event) => {
+              event.stopPropagation();
+              openVersion(row, event.currentTarget);
+            }}
+            sx={{
+              all: 'unset',
+              display: 'inline',
+              maxWidth: '100%',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              color,
+              cursor: 'pointer',
+            }}
+          >
+            {label}
+          </Box>
+        );
+      },
     },
     {
       key: 'via', header: <span title={t('workspace.asset.technologies.columns.viaHint')}>{t('workspace.asset.technologies.columns.via')}</span>, width: 140,
@@ -155,6 +227,15 @@ export default function AssetTechnologiesSection({ assetId, canManage, heading }
             onClose={() => setAdding(null)}
           />
         )}
+        {versionEdit && (
+          <TechnologyVersionPicker
+            anchorEl={versionEdit.anchor}
+            versions={versions}
+            current={versionEdit.row.technology_version_id}
+            onPick={(choice) => { const row = versionEdit.row; setVersionEdit(null); void changeVersion(row, choice); }}
+            onClose={() => setVersionEdit(null)}
+          />
+        )}
         {data && rows.length === 0 ? (
           <RelationsEmpty>{t('workspace.asset.technologies.empty')}</RelationsEmpty>
         ) : rows.length > 0 ? (
@@ -168,6 +249,21 @@ export default function AssetTechnologiesSection({ assetId, canManage, heading }
             onRemove={canManage ? (row) => { void remove(row); } : undefined}
             canRemove={(row) => row.removable && !!row.link_id}
             removeLabel={(row) => t('workspace.asset.technologies.remove', { name: row.technology_name ?? '' })}
+            action={canManage ? {
+              width: 32,
+              render: (row) => (row.kind === 'installed' && row.link_id ? (
+                <Tooltip title={t('workspace.asset.technologies.edit')} enterTouchDelay={0}>
+                  <IconButton
+                    size="small"
+                    aria-label={t('workspace.asset.technologies.editNamed', { name: row.technology_name ?? '' })}
+                    onClick={(event) => openVersion(row, event.currentTarget)}
+                    sx={{ p: '2px', color: 'kanap.text.tertiary' }}
+                  >
+                    <EditOutlinedIcon sx={{ fontSize: 16 }} />
+                  </IconButton>
+                </Tooltip>
+              ) : null),
+            } : undefined}
           />
         ) : null}
       </RelationsSection>
