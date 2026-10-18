@@ -1,7 +1,9 @@
 ---
 /**
  * BlogStrip — compact "from the blog" list (date + title).
- * Shared by the homepage and the feature pages.
+ * Shared by the homepage and the feature pages. With `title`, the strip
+ * opens on a section heading (feature pages, under "And also"); otherwise on
+ * a small eyebrow (homepage).
  */
 
 import { formatDate, type BlogItem } from '../lib/blog';
@@ -10,17 +12,19 @@ import type { Locale } from '../i18n/ui';
 interface Props {
   posts: BlogItem[];
   locale: Locale;
-  eyebrow: string;
+  eyebrow?: string;
+  /** Section heading, in place of the eyebrow. */
+  title?: string;
   allLabel: string;
   allHref: string;
 }
 
-const { posts, locale, eyebrow, allLabel, allHref } = Astro.props;
+const { posts, locale, eyebrow, title, allLabel, allHref } = Astro.props;
 ---
 
-<div class="mk-blog-strip">
+<div class:list={['mk-blog-strip', { 'mk-blog-strip--titled': title }]}>
   <div class="mk-blog-strip__head">
-    <span class="mk-eyebrow">{eyebrow}</span>
+    {title ? <h2 class="mk-blog-strip__title">{title}</h2> : <span class="mk-eyebrow">{eyebrow}</span>}
     <a href={allHref} class="mk-blog-strip__all">{allLabel} →</a>
   </div>
   <ul class="mk-blog-strip__list">
@@ -36,6 +40,18 @@ const { posts, locale, eyebrow, allLabel, allHref } = Astro.props;
 <style>
   .mk-blog-strip {
     max-width: 900px;
+  }
+
+  .mk-blog-strip--titled {
+    max-width: none;
+  }
+
+  .mk-blog-strip__title {
+    margin: 0;
+  }
+
+  .mk-blog-strip--titled .mk-blog-strip__head {
+    padding-bottom: 16px;
   }
 
   .mk-blog-strip__head {

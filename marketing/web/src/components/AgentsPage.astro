@@ -73,11 +73,11 @@ const agentPosts = await getPostsForFeature('agents', locale);
   </Section>
 
   {agentPosts.length > 0 && (
-    <Section tone="default" compact>
+    <Section tone="default">
       <BlogStrip
         posts={agentPosts}
         locale={locale}
-        eyebrow={tr('blog.home.eyebrow')}
+        title={tr('blog.home.eyebrow')}
         allLabel={tr('blog.home.all')}
         allHref={localePath(locale, '/blog')}
       />
