@@ -23,7 +23,8 @@ type RelevantWebsitesListProps = {
   sx?: SxProps<Theme>;
 };
 
-function normalizeUrl(value: string) {
+/** The address a website link opens: `https://` added to anything without `http://` or `https://`. */
+export function normalizeWebsiteUrl(value: string) {
   const raw = String(value || '').trim();
   if (!raw) return '';
   return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
@@ -99,7 +100,7 @@ export default function RelevantWebsitesList({
         </Typography>
       ) : (
         items.map((item, index) => {
-          const href = normalizeUrl(item.url);
+          const href = normalizeWebsiteUrl(item.url);
           const name = String(item.name || '').trim() || item.url;
           return (
             <Box

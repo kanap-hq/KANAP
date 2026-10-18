@@ -1400,6 +1400,7 @@
         },
         "moved": {
           "owners": "Owners",
+          "support_contacts": "Support contacts",
           "contracts": "Contracts",
           "budget_lines": "Budget lines",
           "projects": "Projects",
@@ -1415,7 +1416,6 @@
           "predecessor": "Predecessor",
           "successors": "Link to its successors",
           "data_residency": "Data residency",
-          "support_contacts": "Support contacts",
           "audience": "Companies and departments using it",
           "links_without_url": "Web links without an address",
           "knowledge_links": "Knowledge links",
@@ -1431,6 +1431,8 @@
           "editor": "editor (200 characters at most)",
           "description": "description (20,000 characters at most)",
           "notes": "notes (20,000 characters at most)",
+          "support_notes": "support notes (20,000 characters at most)",
+          "support_contact_roles": "support contact roles (200 characters at most)",
           "lifecycle": "lifecycle",
           "cyber_criticality": "cyber criticality",
           "recovery_wave": "recovery wave",
@@ -1527,6 +1529,22 @@
         "aliasesExamplePlaceholder": "e.g., server1, srv1",
         "ipAddressPlaceholder": "e.g., 10.12.34.56",
         "removeIpAddress": "Remove IP address"
+      },
+      "technologies": {
+        "title": "Technologies",
+        "add": "Add",
+        "search": "Search technologies",
+        "empty": "No technology on this server.",
+        "remove": "Remove {{name}}",
+        "saveFailed": "The technologies could not be saved.",
+        "columns": {
+          "ref": "Ref",
+          "name": "Name",
+          "family": "Family",
+          "version": "Version",
+          "via": "Via",
+          "viaHint": "Server the technology is installed on, for a deduced row"
+        }
       },
       "assignments": {
         "title": "Assignments",
@@ -1765,6 +1783,95 @@
           "ended": "Out of support",
           "unknown": "Date unknown"
         }
+      },
+      "operations": {
+        "contactsLoadFailed": "The support contacts could not be loaded.",
+        "alreadyListed": "This contact is already listed. Its role stays as it is."
+      },
+      "relations": {
+        "sections": {
+          "documents": "Documents",
+          "links": "Web links"
+        },
+        "empty": {
+          "documents": "No document.",
+          "links": "No web link.",
+          "incidents": "No incident linked."
+        },
+        "search": {
+          "incidents": "Search incidents"
+        },
+        "columns": {
+          "size": "Size",
+          "added": "Added",
+          "url": "Address"
+        },
+        "newLink": "New web link",
+        "editLink": "Edit {{name}}",
+        "editLinkTitle": "Edit web link",
+        "placeholders": {
+          "linkName": "e.g., Release notes",
+          "url": "e.g., https://learn.microsoft.com/sql"
+        }
+      },
+      "servers": {
+        "title": "Servers",
+        "add": "Add",
+        "search": "Search servers",
+        "empty": "No server carries this technology.",
+        "total": "Total",
+        "serverCount_one": "{{count}} server",
+        "serverCount_other": "{{count}} servers",
+        "retired": "Retired server: it counts nowhere",
+        "retiredShort": "retired",
+        "changeVersion": "Change the version on {{name}}",
+        "notesOf": "Notes on {{name}}",
+        "notesPlaceholder": "e.g., cluster node",
+        "remove": "Remove {{name}}",
+        "saveFailed": "The servers could not be saved.",
+        "columns": {
+          "ref": "Ref",
+          "server": "Server",
+          "environment": "Environment",
+          "operatingSystem": "Operating system",
+          "version": "Version",
+          "via": "Via",
+          "viaHint": "Server the technology is installed on, for a deduced row",
+          "notes": "Notes"
+        }
+      },
+      "applications": {
+        "title": "Applications",
+        "add": "Add",
+        "addCount_one": "Add {{count}} application",
+        "addCount_other": "Add {{count}} applications",
+        "search": "Search applications",
+        "empty": "No application uses this technology.",
+        "noAccess": "You cannot see the applications.",
+        "declared": "Declared",
+        "viaHost": "{{server}} (on {{host}})",
+        "yes": "Yes",
+        "changeVersion": "Change the version for {{name}}",
+        "remove": "Remove {{name}}, every declared version",
+        "saveFailed": "The applications could not be saved.",
+        "exportCsv": "Export CSV",
+        "exportFailed": "The export failed.",
+        "columns": {
+          "ref": "Ref",
+          "application": "Application",
+          "environment": "Environment",
+          "criticality": "Criticality",
+          "externalFacing": "External",
+          "server": "Server",
+          "version": "Version",
+          "itOwner": "IT owner"
+        }
+      },
+      "versionPicker": {
+        "search": "Choose a version",
+        "placeholder": "e.g., 2022",
+        "unknown": "Version unknown",
+        "create": "Add version \"{{label}}\""
       },
       "messages": {
         "saveFailed": "The technology could not be saved.",

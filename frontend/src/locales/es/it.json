@@ -1400,6 +1400,7 @@
         },
         "moved": {
           "owners": "Responsables",
+          "support_contacts": "Contactos de soporte",
           "contracts": "Contratos",
           "budget_lines": "Líneas presupuestarias",
           "projects": "Proyectos",
@@ -1415,7 +1416,6 @@
           "predecessor": "Predecesora",
           "successors": "Vínculo con sus sucesoras",
           "data_residency": "Residencia de datos",
-          "support_contacts": "Contactos de soporte",
           "audience": "Empresas y departamentos que la usan",
           "links_without_url": "Enlaces web sin dirección",
           "knowledge_links": "Vínculos de conocimiento",
@@ -1431,6 +1431,8 @@
           "editor": "editor (200 caracteres como máximo)",
           "description": "descripción (20.000 caracteres como máximo)",
           "notes": "notas (20.000 caracteres como máximo)",
+          "support_notes": "notas de soporte (20.000 caracteres como máximo)",
+          "support_contact_roles": "roles de los contactos de soporte (200 caracteres como máximo)",
           "lifecycle": "ciclo de vida",
           "cyber_criticality": "criticidad cibernética",
           "recovery_wave": "ola de recuperación",
@@ -1527,6 +1529,22 @@
         "aliasesExamplePlaceholder": "p. ej., server1, srv1",
         "ipAddressPlaceholder": "p. ej., 10.12.34.56",
         "removeIpAddress": "Eliminar dirección IP"
+      },
+      "technologies": {
+        "title": "Tecnologías",
+        "add": "Añadir",
+        "search": "Buscar tecnologías",
+        "empty": "Ninguna tecnología en este servidor.",
+        "remove": "Quitar {{name}}",
+        "saveFailed": "No se pudieron guardar las tecnologías.",
+        "columns": {
+          "ref": "Ref.",
+          "name": "Nombre",
+          "family": "Familia",
+          "version": "Versión",
+          "via": "Vía",
+          "viaHint": "Servidor en el que está instalada la tecnología, en una fila deducida"
+        }
       },
       "assignments": {
         "title": "Asignaciones",
@@ -1765,6 +1783,95 @@
           "ended": "Sin soporte",
           "unknown": "Fecha desconocida"
         }
+      },
+      "operations": {
+        "contactsLoadFailed": "No se pudieron cargar los contactos de soporte.",
+        "alreadyListed": "Este contacto ya figura en la lista. Su rol no cambia."
+      },
+      "relations": {
+        "sections": {
+          "documents": "Documentos",
+          "links": "Enlaces web"
+        },
+        "empty": {
+          "documents": "Ningún documento.",
+          "links": "Ningún enlace web.",
+          "incidents": "Ningún incidente vinculado."
+        },
+        "search": {
+          "incidents": "Buscar incidentes"
+        },
+        "columns": {
+          "size": "Tamaño",
+          "added": "Añadido",
+          "url": "Dirección"
+        },
+        "newLink": "Nuevo enlace web",
+        "editLink": "Editar {{name}}",
+        "editLinkTitle": "Editar enlace web",
+        "placeholders": {
+          "linkName": "p. ej., Notas de la versión",
+          "url": "p. ej., https://learn.microsoft.com/sql"
+        }
+      },
+      "servers": {
+        "title": "Servidores",
+        "add": "Añadir",
+        "search": "Buscar servidores",
+        "empty": "Ningún servidor lleva esta tecnología.",
+        "total": "Total",
+        "serverCount_one": "{{count}} servidor",
+        "serverCount_other": "{{count}} servidores",
+        "retired": "Servidor retirado: no cuenta en ninguna parte",
+        "retiredShort": "retirado",
+        "changeVersion": "Cambiar la versión en {{name}}",
+        "notesOf": "Notas sobre {{name}}",
+        "notesPlaceholder": "p. ej., nodo del clúster",
+        "remove": "Quitar {{name}}",
+        "saveFailed": "No se pudieron guardar los servidores.",
+        "columns": {
+          "ref": "Ref.",
+          "server": "Servidor",
+          "environment": "Entorno",
+          "operatingSystem": "Sistema operativo",
+          "version": "Versión",
+          "via": "Vía",
+          "viaHint": "Servidor en el que está instalada la tecnología, en una fila deducida",
+          "notes": "Notas"
+        }
+      },
+      "applications": {
+        "title": "Aplicaciones",
+        "add": "Añadir",
+        "addCount_one": "Añadir {{count}} aplicación",
+        "addCount_other": "Añadir {{count}} aplicaciones",
+        "search": "Buscar aplicaciones",
+        "empty": "Ninguna aplicación usa esta tecnología.",
+        "noAccess": "No puede ver las aplicaciones.",
+        "declared": "Declarada",
+        "viaHost": "{{server}} (en {{host}})",
+        "yes": "Sí",
+        "changeVersion": "Cambiar la versión para {{name}}",
+        "remove": "Quitar {{name}}, todas las versiones declaradas",
+        "saveFailed": "No se pudieron guardar las aplicaciones.",
+        "exportCsv": "Exportar CSV",
+        "exportFailed": "La exportación falló.",
+        "columns": {
+          "ref": "Ref.",
+          "application": "Aplicación",
+          "environment": "Entorno",
+          "criticality": "Criticidad",
+          "externalFacing": "Externa",
+          "server": "Servidor",
+          "version": "Versión",
+          "itOwner": "Responsable de TI"
+        }
+      },
+      "versionPicker": {
+        "search": "Elegir una versión",
+        "placeholder": "p. ej., 2022",
+        "unknown": "Versión desconocida",
+        "create": "Añadir la versión «{{label}}»"
       },
       "messages": {
         "saveFailed": "No se pudo guardar la tecnología.",
