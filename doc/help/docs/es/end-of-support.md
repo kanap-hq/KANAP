@@ -13,7 +13,7 @@ Lo que vigila el informe:
 | Tipo | Lo que termina | De dónde viene la fecha |
 |---|---|---|
 | **Tecnología** | Una versión en uso en un servidor en servicio, o declarada por una aplicación en servicio | El fin del soporte estándar y extendido de la versión, en la [tecnología](technologies.md#resumen) |
-| **Sistema operativo** | El sistema operativo de un servidor en servicio | La lista de sistemas operativos en **Panorama IT > Configuración** |
+| **Sistema operativo** | Una versión de un sistema operativo en uso en un servidor en servicio | El fin del soporte estándar y extendido de la versión, en la tecnología de la familia **Sistema operativo** |
 | **Aplicación** | Una aplicación en servicio | Su fecha de fin de soporte |
 | **Hardware** | Un activo físico en servicio | Su fin de vida o el fin de su contrato de soporte, indicado en la columna **Versión** |
 
@@ -35,7 +35,8 @@ Quedan fuera los activos retirados, las aplicaciones desactivadas y las versione
 **Lo que afecta un elemento**: haga clic en una fila para desplegar los servidores y las aplicaciones que hay detrás de sus contadores. Cada nombre abre su ficha.
 
 - Una versión de tecnología afecta a los servidores que la llevan (incluidas las máquinas virtuales de un host que la lleva) y a las aplicaciones alojadas en ellos o que la declaran.
-- Un sistema operativo o un hardware afecta a sus servidores, a lo que contienen y a las aplicaciones desplegadas en todos ellos.
+- Un sistema operativo afecta a los servidores que usan esa versión, a lo que contienen y a las aplicaciones desplegadas en todos ellos. Su fila abre la tecnología.
+- Un hardware afecta a sus servidores, a lo que contienen y a las aplicaciones desplegadas en todos ellos.
 - Una aplicación afecta a los servidores en los que está desplegada.
 
 ## Datos que faltan

@@ -119,6 +119,8 @@ El tipo de cada tecnología: base de datos, hipervisor, directorio e identidad, 
 **Dónde se usa**:
 - Espacio de trabajo de Tecnologías → cabecera y panel de propiedades → **Familia**, y la ventana de nueva tecnología
 
+La familia **Sistema operativo** identifica los sistemas operativos: una tecnología de esa familia añadida a un servidor que no tiene ninguno pasa a ser su sistema operativo. Consulte [Tecnologías](technologies.md#sistemas-operativos).
+
 ### Tipos de conexión
 
 Un catálogo de dos niveles (categoría y entrada) de protocolos de conexión, con los puertos típicos.
@@ -216,19 +218,6 @@ Defina las subredes con notación CIDR y, si procede, su VLAN. Cada subred perte
 - CIDR y números de VLAN son únicos por ubicación (los mismos valores pueden existir en diferentes ubicaciones)
 
 **Auto-rellenado**: Cuando selecciona una subred en un Activo, la Zona de red se rellena automáticamente desde la configuración de la subred.
-
-### Sistemas operativos
-
-Catálogo de sistemas operativos disponibles para los servidores, con las fechas de fin del soporte estándar y extendido.
-
-**Columnas**: Nombre, Soporte estándar, Soporte extendido, Dejar de proponer
-
-**Dónde se usa**:
-- Espacio de trabajo de Activos → pestaña Técnico → selector de **Sistema operativo** (el texto de ayuda muestra las fechas de soporte)
-
-Las fechas se almacenan como `AAAA-MM-DD` pero se muestran y editan como `DD/MM/AAAA`.
-
-Las entradas predeterminadas incluyen versiones de Windows Server, Ubuntu LTS, RHEL, Debian y SLES con fechas de soporte apropiadas.
 
 ### Roles de servidor
 
@@ -426,7 +415,6 @@ Este enfoque le permite evolucionar su taxonomía con el tiempo sin romper los r
 | **Tipos de dirección IP** | Activos (pestaña Técnico → Direcciones IP → Tipo) |
 | **Estados del ciclo de vida** | Aplicaciones, Instancias de app, Interfaces, Enlaces, Activos |
 | **Zonas de red** | Subredes (Zona de red), Activos (auto-rellenado desde subred) |
-| **Sistemas operativos** | Activos (pestaña Técnico) |
 | **Subredes** | Activos (pestaña Técnico → Direcciones IP → Selector de subred) |
 | **Roles de servidor** | Aplicaciones → pestaña Servidores (rol al vincular activo a app), Mapa de conexiones (ubicación por nivel del grafo) |
 | **Tipos de activo** | Activos (Visión general → Tipo) |

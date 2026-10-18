@@ -13,7 +13,7 @@ What the report watches:
 | Type | What ends | Where the date comes from |
 |---|---|---|
 | **Technology** | A version in use on a server in service, or declared by an application in service | The version's end of standard and extended support, on the [technology](technologies.md#overview) |
-| **OS** | The operating system of a server in service | The operating systems list in **IT Landscape > Settings** |
+| **OS** | A version of an operating system in use on a server in service | The version's end of standard and extended support, on the technology of the **Operating system** family |
 | **Application** | An application in service | Its end of support date |
 | **Hardware** | A physical asset in service | Its end of life or the end of its support contract, shown in the **Version** column |
 
@@ -35,7 +35,8 @@ Retired assets, disabled applications and versions nobody uses are left out.
 **What an item touches**: click a row to unfold the servers and the applications behind its counts. Each name opens its record.
 
 - A technology version touches the servers that carry it (including the virtual machines inside a host that carries it) and the applications hosted on them or that declare it.
-- An operating system or a piece of hardware touches its servers, what they contain, and the applications deployed on all of them.
+- An operating system touches the servers that run that version, what they contain, and the applications deployed on all of them. Its row opens the technology.
+- A piece of hardware touches its servers, what they contain, and the applications deployed on all of them.
 - An application touches the servers it is deployed on.
 
 ## Missing data

@@ -200,7 +200,8 @@ Gehen Sie zum Tab **Technik**, um Folgendes hinzuzufügen:
 | Abschnitt | Felder | Details |
 |---------|--------|---------|
 | **Cluster-Verwaltung** | Cluster-Schalter | Schalten Sie ihn ein, wenn dieses Asset ein Cluster ist, und fügen Sie dann seine Mitgliedsserver hinzu |
-| **Identität** | Hostname, Domäne, FQDN, Aliase, Betriebssystem | Der FQDN wird automatisch aus Hostname und Domäne berechnet |
+| **Identität** | Hostname, Domäne, FQDN, Aliase | Der FQDN wird automatisch aus Hostname und Domäne berechnet |
+| **Technologien** | Betriebssystem und weitere Technologien, mit ihren Versionen | Fügen Sie Windows Server, Ubuntu oder eine andere Technologie der Familie **Betriebssystem** hinzu: Sie wird zum Betriebssystem des Servers |
 | **IP-Adressen** | Typ, IP-Adresse, Subnetz | Netzwerkzone und VLAN werden aus dem Subnetz abgeleitet |
 
 !!! info "Mehrere IP-Adressen"

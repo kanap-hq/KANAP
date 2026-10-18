@@ -221,7 +221,14 @@ Jede Zeile zeigt den Schnittstellennamen, die Gegenanwendung und einen Indikator
 
 ### Betrieb
 
-Der Reiter Betrieb erfasst, wie Benutzer auf die Anwendung zugreifen und wer sie unterstützt.
+Der Reiter Betrieb erfasst die Technologien, von denen die Anwendung abhängt, wie Benutzer auf sie zugreifen und wer sie unterstützt.
+
+**Technologien** (oben im Reiter) listet, wovon die Anwendung abhängt, aus zwei Quellen, die die Spalte **Verknüpfung** angibt. Spalten: Referenz (`TEC-4`), Name, Familie, Versionen, Verknüpfung, Server, über die sie kommt (**Über**), Ende des Standardsupports.
+
+- **Deklariert**: Jemand hat die Technologie mit der Anwendung verknüpft, zum Beispiel Entra ID für eine Anwendung, deren Benutzer sich darüber anmelden.
+- **Gehostet**: Ein Server einer ihrer Bereitstellungen trägt die Technologie. **Über** nennt den Server und den Host, wenn die Technologie auf dem Host einer virtuellen Maschine läuft. Deaktivierte Bereitstellungen zählen nicht.
+
+Eine Technologie kann beides sein. Ein Strich in der Versionsspalte bedeutet, dass die Version unbekannt ist. Das Ende des Standardsupports wird orange, sobald es überschritten ist. Der Abschnitt erfordert `infrastructure:reader`. Um eine deklarierte Technologie hinzuzufügen oder zu entfernen, brauchen Sie `applications:member` und `infrastructure:member`. Eine gehostete Technologie hat kein Kreuz: Entfernen Sie sie am Server.
 
 **Technisch**:
 - **Zugriffsmethoden** (Mehrfachauswahl): Wie Benutzer auf diese Anwendung zugreifen. Optionen sind in den [IT-Landschaft-Einstellungen](it-ops-settings.md) konfigurierbar. Standards umfassen Web, Lokal installierte Anwendung, Mobile Anwendung, Proprietäre HMI (industrielle Schnittstelle), Terminal / CLI, VDI / Remote Desktop, Kiosk.
@@ -280,7 +287,7 @@ Zwei dezente Hinweise können erscheinen: Daten auf der höchsten Vertraulichkei
 
 ### Verknüpfungen
 
-Der Reiter Verknüpfungen zeigt, womit diese Anwendung verknüpft ist: ihre Budgetzeilen, Verträge, Projekte, Anfragen, Aufgaben, Vorfälle, Technologien und Geschäftsprozesse, jeweils in einer eigenen Tabelle. Klicken Sie auf eine Zeile, um den Datensatz zu öffnen. Das Reiter-Badge zählt die verknüpften Budgetzeilen, Verträge, Projekte, Vorfälle, Websites und Anhänge.
+Der Reiter Verknüpfungen zeigt, womit diese Anwendung verknüpft ist: ihre Budgetzeilen, Verträge, Projekte, Anfragen, Aufgaben, Vorfälle und Geschäftsprozesse, jeweils in einer eigenen Tabelle. Die Technologien stehen im Reiter [Betrieb](#betrieb). Klicken Sie auf eine Zeile, um den Datensatz zu öffnen. Das Reiter-Badge zählt die verknüpften Budgetzeilen, Verträge, Projekte, Vorfälle, Websites und Anhänge.
 
 **Komponenten** (nur wenn „Kann Unteranwendungen haben" aktiviert ist): eine Tabelle, die die Unteranwendungen dieser Suite mit ihrem Lebenszyklus und ihrer Kritikalität auflistet. Klicken Sie auf eine Zeile, um den Arbeitsbereich der Unteranwendung zu öffnen.
 
@@ -294,15 +301,7 @@ Der Reiter Verknüpfungen zeigt, womit diese Anwendung verknüpft ist: ihre Budg
 | **Anfragen** | Referenz (`REQ-23`), Name, Status, gewünschte Lieferung |
 | **Aufgaben** | Referenz (`T-118`), Titel, Status, zugewiesene Person, Fälligkeit. Es erscheinen nur die Aufgaben, die mit dieser Anwendung selbst verknüpft sind, nicht die Aufgaben ihrer Projekte |
 | **Vorfälle** | Referenz (`INC-14`), Titel, Schweregrad, Status, Erkennungsdatum |
-| **Technologien** | Referenz (`TEC-4`), Name, Familie, Versionen, Verknüpfung, Server, über die sie kommt (**Über**), Ende des Standardsupports |
 | **Geschäftsprozesse** | Name, Fachverantwortlicher |
-
-**Technologien** listet, wovon die Anwendung abhängt, aus zwei Quellen, die die Spalte **Verknüpfung** angibt:
-
-- **Deklariert**: Jemand hat die Technologie mit der Anwendung verknüpft, zum Beispiel Entra ID für eine Anwendung, deren Benutzer sich darüber anmelden.
-- **Gehostet**: Ein Server einer ihrer Bereitstellungen trägt die Technologie. **Über** nennt den Server und den Host, wenn die Technologie auf dem Host einer virtuellen Maschine läuft. Deaktivierte Bereitstellungen zählen nicht.
-
-Eine Technologie kann beides sein. Ein Strich in der Versionsspalte bedeutet, dass die Version unbekannt ist. Das Ende des Standardsupports wird orange, sobald es überschritten ist. Der Abschnitt erfordert `infrastructure:reader`. Um eine deklarierte Technologie hinzuzufügen oder zu entfernen, brauchen Sie zusätzlich `infrastructure:member`. Eine gehostete Technologie hat kein Kreuz: Entfernen Sie sie am Server.
 
 **Geschäftsprozesse** listet die Prozesse, die die Anwendung unterstützt. Der Prozess zeigt dieselbe Verknüpfung in seinem eigenen Abschnitt **Anwendungen**. Ein deaktivierter Prozess bleibt ausgegraut aufgeführt. Das Verknüpfen erfordert zusätzlich `business_processes:member`.
 

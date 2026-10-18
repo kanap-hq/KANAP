@@ -13,7 +13,7 @@ Was der Bericht überwacht:
 | Typ | Was endet | Woher das Datum stammt |
 |---|---|---|
 | **Technologie** | Eine Version im Einsatz auf einem Server in Betrieb oder von einer Anwendung in Betrieb deklariert | Das Ende des Standard- und des erweiterten Supports der Version, auf der [Technologie](technologies.md#ubersicht) |
-| **Betriebssystem** | Das Betriebssystem eines Servers in Betrieb | Die Liste der Betriebssysteme unter **IT-Landschaft > Einstellungen** |
+| **Betriebssystem** | Eine Version eines Betriebssystems, die auf einem Server in Betrieb läuft | Das Ende des Standard- und des erweiterten Supports der Version, an der Technologie der Familie **Betriebssystem** |
 | **Anwendung** | Eine Anwendung in Betrieb | Ihr Supportende-Datum |
 | **Hardware** | Ein physisches Asset in Betrieb | Sein Lebensende oder das Ende seines Supportvertrags, in der Spalte **Version** angezeigt |
 
@@ -35,7 +35,8 @@ Ausgemusterte Assets, deaktivierte Anwendungen und Versionen, die niemand nutzt,
 **Was ein Element betrifft**: Klicken Sie auf eine Zeile, um die Server und Anwendungen hinter ihren Zählern aufzuklappen. Jeder Name öffnet seinen Datensatz.
 
 - Eine Technologieversion betrifft die Server, die sie tragen (einschließlich der virtuellen Maschinen in einem Host, der sie trägt), und die Anwendungen, die darauf gehostet werden oder sie deklarieren.
-- Ein Betriebssystem oder eine Hardware betrifft ihre Server, was diese enthalten, und die Anwendungen, die auf all diesen bereitgestellt sind.
+- Ein Betriebssystem betrifft die Server, die diese Version nutzen, was diese enthalten, und die Anwendungen, die auf all diesen bereitgestellt sind. Seine Zeile öffnet die Technologie.
+- Eine Hardware betrifft ihre Server, was diese enthalten, und die Anwendungen, die auf all diesen bereitgestellt sind.
 - Eine Anwendung betrifft die Server, auf denen sie bereitgestellt ist.
 
 ## Fehlende Daten

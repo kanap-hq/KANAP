@@ -39,7 +39,7 @@ La liste des actifs vous donne une vue filtrable et triable de chaque actif de v
 | **Environnement** | Prod, Pré-prod, QA, Test, Dev, Sandbox, avec un point coloré |
 | **Site** | Où l'actif est hébergé |
 | **Hébergement** | Type d'hébergement (dérivé du site) |
-| **OS** | Système d'exploitation |
+| **OS** | Système d'exploitation : la technologie marquée comme système d'exploitation du serveur, avec sa version |
 | **Zone réseau** | Segment réseau (dérivé du sous-réseau) |
 | **Cycle de vie** | Statut de cycle de vie actuel |
 | **Assignations** | Nombre d'assignations d'applications |
@@ -162,15 +162,29 @@ L'onglet Technique organise le cluster, l'identité réseau, les technologies qu
 - **Domaine** : Le domaine Active Directory ou DNS auquel l'actif appartient. Choisissez parmi les domaines configurés dans **Cartographie SI > Paramètres**. Les options système incluent « Workgroup » (autonome) et « N/A » (non applicable).
 - **FQDN** : Fully Qualified Domain Name, calculé automatiquement à partir du nom d'hôte et du suffixe DNS du domaine. Lecture seule.
 - **Alias** : Noms DNS ou alias supplémentaires pour cet actif. Tapez et appuyez sur Entrée pour ajouter.
-- **Système d'exploitation** : Type et version d'OS (ex. : Windows Server 2022, Ubuntu 24.04 LTS). Désactivé pour les clusters : l'OS est défini par membre. Lorsqu'il est sélectionné, affiche les dates de fin de support standard et étendu en dessous.
+**Technologies** : ce que porte le serveur, par exemple Windows Server, SQL Server, vSphere ou Active Directory. Colonnes : **Réf.**, **Nom**, **Famille**, **Version** et, quand le serveur porte une technologie par un autre, **Via**.
 
-**Technologies** : ce que porte le serveur, par exemple SQL Server, vSphere ou Active Directory. Colonnes : **Réf.**, **Nom**, **Famille**, **Version** et, quand le serveur porte une technologie par un autre, **Via**.
-
+- **Système d'exploitation** : le système d'exploitation du serveur est l'une de ses technologies, de la famille **Système d'exploitation**. Il vient en tête de liste, avec la mention « Système d'exploitation » après son nom. Voir [Système d'exploitation](#systeme-dexploitation) ci-dessous.
+- **Version** : affichée en orange quand le support finit dans les 12 mois ou qu'il ne reste que le support étendu, et en rouge une fois toutes les dates de fin passées. Survolez-la pour voir la fin du support standard et du support étendu.
 - Une technologie installée sur ce serveur se retire avec la croix au bout de sa ligne.
 - Une technologie installée sur le serveur ou le cluster dans lequel celui-ci tourne affiche ce serveur sous **Via**. Elle suit l'installation et se retire là-bas.
 - **Ajouter** (`infrastructure:member`) ouvre une recherche de technologie, puis le choix de la version : choisissez une version, **Version inconnue**, ou tapez un nouveau libellé et choisissez **Ajouter la version « … »** pour la créer. Chaque modification s'enregistre aussitôt.
+- **Changer une version** (`infrastructure:member`) : cliquez sur la version d'une technologie installée, ou sur le crayon au bout de sa ligne. Le même choix de version s'ouvre.
 
-La version et les notes d'une installation se changent depuis l'onglet **Serveurs** de la technologie. Voir [Technologies](technologies.md#lier-une-technologie-a-un-serveur).
+Les notes d'une installation se changent depuis l'onglet **Serveurs** de la technologie. Voir [Technologies](technologies.md#serveurs).
+
+#### Système d'exploitation
+
+Un serveur a un système d'exploitation : une technologie de la famille **Système d'exploitation**, avec sa version.
+
+- **Ajoutez-le** comme n'importe quelle technologie. Quand le serveur n'a pas encore de système d'exploitation, la première technologie de cette famille que vous ajoutez le devient.
+- **Retirez-le** avec sa croix. Si une autre technologie de la famille reste sur le serveur, c'est elle qui devient le système d'exploitation.
+- **Changez la version** en cliquant dessus, comme pour toute technologie.
+- Un **cluster** n'a pas de système d'exploitation propre : chaque membre a le sien.
+
+Pour que VMware ESXi ou FortiOS soit le système d'exploitation d'un hôte, placez cette technologie dans la famille **Système d'exploitation** (son champ **Famille**, sur la technologie).
+
+Le système d'exploitation apparaît dans la colonne **OS** de la liste, dans le tableau des membres d'un cluster et sur la [Carte des connexions](connection-map.md). Ses versions et ses dates de fin de support viennent de la technologie : voir [Technologies](technologies.md).
 
 **Adresses IP** :
 
@@ -223,12 +237,11 @@ Suit les informations de support et de contact fournisseur.
 
 L'onglet Relations connecte cet actif à d'autres enregistrements dans KANAP. Le badge de l'onglet compte tous les éléments liés. La plupart des champs sont enregistrés automatiquement.
 
-**Si ce serveur tombe** : l'onglet s'ouvre sur ce qui s'arrête avec cet actif. Une ligne de synthèse compte les applications, actifs, clusters, technologies et processus métier touchés, puis un tableau par type :
+**Si ce serveur tombe** : l'onglet s'ouvre sur ce qui s'arrête avec cet actif. Une ligne de synthèse compte les applications, actifs, clusters et processus métier touchés, puis un tableau par type :
 
 - **Applications** : celles qui ont un déploiement en service sur un actif tombé, avec leurs environnements, leur criticité et les actifs sur lesquels elles tournent (**Via**).
 - **Actifs** : les actifs qu'il contient, jusqu'à trois niveaux, et les actifs qui dépendent de lui. **Via** montre le chemin.
 - **Clusters** : les clusters dont un membre tombe. **Tombé** quand plus aucun membre ne tient, sinon **Dégradé** avec le nombre de membres tombés. Les applications d'un cluster tombé tombent avec lui.
-- **Technologies** : celles installées sur un actif tombé, avec leurs versions.
 - **Processus métier** : les processus des applications touchées.
 
 Les actifs retirés arrêtent la chaîne : rien ne tombe à travers eux. Chaque tableau montre ses 50 premières lignes et compte le reste. Les applications et les processus demandent le droit de les lire. La section se met à jour une fois les relations de l'actif enregistrées plus bas.
@@ -306,7 +319,7 @@ Depuis la liste des Actifs :
 | `hostname` | Nom d'hôte réseau | Non | |
 | `domain` | Domaine DNS | Non | Accepte un code ou un libellé depuis les Paramètres |
 | `aliases` | Alias DNS | Non | Liste séparée par virgules |
-| `operating_system` | Type d'OS | Non | Accepte un code ou un libellé depuis les Paramètres |
+| `operating_system` | Système d'exploitation | Non | Le nom de la technologie, suivi de sa version (`Windows Server 2019`). Voir ci-dessous |
 | `cluster` | Appartenance à un cluster | Non | Nom du cluster parent |
 | `notes` | Notes en texte libre | Non | |
 
@@ -329,11 +342,12 @@ Pour les champs configurés dans **Cartographie SI > Paramètres**, vous pouvez 
 |-------|-------------------|----------------------|
 | Type d'actif (`kind`) | `vm`, `physical`, `container` | `Virtual Machine`, `Physical Server`, `Container` |
 | Cycle de vie (`status`) | `active`, `inactive`, `decommissioned` | `Active`, `Inactive`, `Decommissioned` |
-| Système d'exploitation | `windows_2022`, `ubuntu_24` | `Windows Server 2022`, `Ubuntu 24.04 LTS` |
 | Domaine | `corp`, `dmz` | `Corporate Domain`, `DMZ` |
 | Type d'adresse IP | `host`, `ipmi`, `mgmt` | `Host IP`, `IPMI`, `Management` |
 
 Le système normalise automatiquement les valeurs lors de l'import, donc `Virtual Machine`, `virtual machine` et `vm` se résolvent tous vers le même type d'actif. Une valeur qui correspond à plusieurs entrées est refusée plutôt que devinée. L'export CSV écrit les noms pour ces colonnes, si bien qu'un fichier exporté peut être réimporté tel quel.
+
+**Système d'exploitation** : la colonne `operating_system` contient le nom de la technologie suivi de sa version, comme l'écrit l'export (`Windows Server 2019`, `Ubuntu 24.04 LTS`). À l'import, KANAP cherche la technologie parmi les vôtres, puis dans le catalogue, et enregistre la version. Une technologie ou une version introuvable est créée : vérifiez donc l'orthographe avant. La valeur devient le système d'exploitation du serveur.
 
 ### Correspondance et mises à jour
 
