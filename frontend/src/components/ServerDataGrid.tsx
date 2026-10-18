@@ -107,6 +107,8 @@ export type ServerDataGridProps<T> = {
   refreshKey?: number | string; // bump to refresh grid after mutations
   initialFilterModel?: any; // deprecated: prefer `initialState`
   initialState?: any; // AG Grid initialState, applied once at grid creation
+  /** The filters the page starts on without a link (open tasks, applications not retired): Reset filters goes back to them. */
+  defaultFilterModel?: Record<string, unknown> | null;
   enableColumnChooser?: boolean; // default: true
   requiredColumns?: string[]; // columns that cannot be hidden
   defaultHiddenColumns?: string[]; // columns hidden by default
@@ -261,6 +263,21 @@ function releaseSupersededBlock(params: IGetRowsParams) {
 /** The sort and filter a block request was asked with, comparable with the grid's current ones. */
 function blockQueryKey(sortModel: SortModelItem[] | undefined, filterModel: unknown): string {
   return JSON.stringify([(sortModel ?? []).map((s) => [s.colId, s.sort]), filterModel ?? {}]);
+}
+
+/** A filter model as comparable text: keys sorted, and the values of a set filter in any order. */
+function filterModelKey(model: unknown): string {
+  const canonical = (value: unknown): unknown => {
+    if (Array.isArray(value)) {
+      const items = value.map(canonical);
+      return items.every((item) => item === null || typeof item !== 'object') ? [...items].sort() : items;
+    }
+    if (value && typeof value === 'object') {
+      return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonical((value as Record<string, unknown>)[key])]));
+    }
+    return value;
+  };
+  return JSON.stringify(canonical(model ?? {}));
 }
 
 /** Date columns: date models from both the filter menu and the box under the header. */
@@ -426,6 +443,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   refreshKey,
   initialFilterModel,
   initialState,
+  defaultFilterModel,
   enableColumnChooser = true,
   requiredColumns = [],
   defaultHiddenColumns = [],
@@ -580,6 +598,10 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   // Set once the first page of the current query came back empty: 'filtered' when a search, a filter
   // or a Show scope other than the default narrows it. Never while loading or after an error.
   const [emptyResult, setEmptyResult] = useState<null | 'empty' | 'filtered'>(null);
+  // The last loaded list had a search, filters other than the page's default or a Show scope other than the default.
+  const [offDefault, setOffDefault] = useState(false);
+  const defaultFilterKeyRef = useRef(filterModelKey(defaultFilterModel));
+  defaultFilterKeyRef.current = filterModelKey(defaultFilterModel);
 
   const gridApiRef = useRef<any>(null);
   const columnApiRef = useRef<any>(null); // deprecated in AG Grid v32+, keep for backward compat (unused)
@@ -1027,6 +1049,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
         if (startRow === 0) {
           const narrowed = !!reqParams.q || !!reqParams.filters || scopeNarrowsRef.current();
           setEmptyResult(total === 0 ? (narrowed ? 'filtered' : 'empty') : null);
+          setOffDefault(!!reqParams.q || scopeNarrowsRef.current() || filterModelKey(fm) !== defaultFilterKeyRef.current);
         }
         onTotalChangeRef.current?.(total);
         if (startRow === 0 && onListRequestChangeRef.current) {
@@ -1234,6 +1257,14 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
     if (statusScopeConfig && statusScopeRef.current !== defaultStatusScope) handleStatusScopeChange(defaultStatusScope);
     gridApiRef.current?.setFilterModel?.(null);
   }, [statusScopeConfig, defaultStatusScope, handleStatusScopeChange]);
+
+  // Reset filters: the list as the page opens it (no search, its default filters, the default Show scope).
+  const resetFilters = useCallback(() => {
+    setSearch('');
+    searchRef.current = '';
+    if (statusScopeConfig && statusScopeRef.current !== defaultStatusScope) handleStatusScopeChange(defaultStatusScope);
+    gridApiRef.current?.setFilterModel?.(defaultFilterModel ?? null);
+  }, [statusScopeConfig, defaultStatusScope, handleStatusScopeChange, defaultFilterModel]);
 
   // Reload when the search, extra params, refreshKey, endpoint or status scope change: AG Grid does
   // not see those. It reloads on a sort or filter change by itself.
@@ -1518,7 +1549,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
           </Alert>
         )}
         {!!loadError && <Alert severity="error">{getApiErrorMessage(loadError, t, t('common:messages.loadFailed'))}</Alert>}
-        {(enableColumnChooser || showResultCount) && (
+        {(enableColumnChooser || showResultCount || offDefault) && (
           <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" alignItems="center">
             {enableColumnChooser && (
               <>
@@ -1529,6 +1560,11 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
                   {t('common:buttons.resetColumns')}
                 </Button>
               </>
+            )}
+            {offDefault && (
+              <Button size="small" onClick={resetFilters}>
+                {t('common:buttons.resetFilters')}
+              </Button>
             )}
             {showResultCount && (
               <Typography sx={{ ml: 'auto', fontSize: 12, color: 'kanap.text.tertiary', fontVariantNumeric: 'tabular-nums' }}>

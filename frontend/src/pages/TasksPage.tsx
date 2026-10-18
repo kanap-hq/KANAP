@@ -670,6 +670,7 @@ export default function TasksPage() {
           enableRowSelection={canAdmin}
           onSelectionChanged={(rows) => setSelectedRows(rows)}
           onGridApiReady={(api) => { gridApiRef.current = api; }}
+          defaultFilterModel={defaultFilterModel}
           initialState={{
             filter: {
               filterModel: initialFilterModel

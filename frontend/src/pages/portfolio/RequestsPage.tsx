@@ -151,6 +151,10 @@ export default function RequestsPage() {
     [defaultHiddenStatuses],
   );
 
+  const defaultFilterModel = useMemo(() => ({
+    status: { filterType: 'set', values: defaultStatusValues },
+  }), [defaultStatusValues]);
+
   // If URL filters are present but do not specify status, still apply default status visibility.
   const initialFilterModel = useMemo(() => {
     const parsed = (urlFilters && typeof urlFilters === 'object' && !Array.isArray(urlFilters))
@@ -158,14 +162,8 @@ export default function RequestsPage() {
       : {};
     const hasExplicitStatusFilter = Object.prototype.hasOwnProperty.call(parsed, 'status');
     if (hasExplicitStatusFilter) return parsed;
-    return {
-      ...parsed,
-      status: {
-        filterType: 'set',
-        values: defaultStatusValues,
-      },
-    };
-  }, [urlFilters, defaultStatusValues]);
+    return { ...parsed, ...defaultFilterModel };
+  }, [urlFilters, defaultFilterModel]);
 
   const lastQueryRef = useRef<{ sort: string; q: string; filters: any } | null>(null);
   const buildWorkspaceSearch = useCallback(() => {
@@ -494,6 +492,7 @@ export default function RequestsPage() {
           extraParams={extraParams}
           columnPreferencesKey="portfolio-requests"
           initialState={initialGridState}
+          defaultFilterModel={defaultFilterModel}
           refreshKey={refreshKey}
           onGridApiReady={(api) => { gridApiRef.current = api; }}
           onQueryStateChange={(state) => {
