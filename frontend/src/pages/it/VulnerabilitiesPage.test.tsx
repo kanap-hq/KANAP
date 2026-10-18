@@ -192,9 +192,10 @@ describe('VulnerabilitiesPage', () => {
       severity: { filterType: 'set', values: ['high'] },
     });
     expect(filterModelFromSearch('?version=none').version).toEqual({ filterType: 'set', values: [null] });
-    // The technology record's link: the rows of that CVE for that technology, whatever their state.
-    expect(filterModelFromSearch('?technology=TEC-4&state=all&q=CVE-2026-1001')).toEqual({
+    // The technology record's link: the row of that CVE for that technology and version, whatever its state.
+    expect(filterModelFromSearch('?technology=TEC-4&version=none&state=all&q=CVE-2026-1001')).toEqual({
       technology: { filterType: 'set', values: ['TEC-4'] },
+      version: { filterType: 'set', values: [null] },
       cve_id: { filterType: 'text', type: 'contains', filter: 'CVE-2026-1001' },
     });
   });
@@ -227,6 +228,9 @@ describe('VulnerabilitiesPage', () => {
 
   it('opens the CVE of any of its rows in the side panel, and refreshes the grid after a change there', async () => {
     renderPage();
+    listed(40);
+    fireEvent.click(box(ROW_BOX));
+    expect(screen.getByTestId('vulnerabilities-selection').textContent).toBe('1 row selected');
     // A click in the selection column opens nothing.
     act(() => grid.props!.onCellClicked({ data: ROW_NONE, column: { getColId: () => 'select' } }));
     expect(screen.queryByTestId('vulnerability-detail')).toBeNull();
@@ -245,6 +249,8 @@ describe('VulnerabilitiesPage', () => {
     await waitFor(() => expect(patchMock).toHaveBeenCalledWith(`/technologies/tech-1/vulnerabilities/${CVE}`, { state: 'handled', technology_version_id: 'v-980' }));
     await waitFor(() => expect(grid.props!.refreshKey).toBe(1));
     expect(screen.getByTestId('vulnerability-detail')).toBeTruthy();
+    // The selection is cleared with the change.
+    expect(screen.queryByTestId('vulnerabilities-selection')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     await waitFor(() => expect(screen.queryByTestId('vulnerability-detail')).toBeNull());
   });

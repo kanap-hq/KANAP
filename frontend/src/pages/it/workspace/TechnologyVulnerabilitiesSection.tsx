@@ -100,7 +100,8 @@ export default function TechnologyVulnerabilitiesSection({ technologyId, canEdit
           columns={columns}
           rows={rows}
           rowKey={(row) => row.id}
-          rowHref={(row) => `/it/vulnerabilities?technology=${encodeURIComponent(technologyRef)}&state=all&q=${encodeURIComponent(row.cve_id)}`}
+          // The grid on this row: the technology, its version (`none`: not recorded) and the CVE.
+          rowHref={(row) => `/it/vulnerabilities?technology=${encodeURIComponent(technologyRef)}&version=${encodeURIComponent(row.version_label ?? 'none')}&state=all&q=${encodeURIComponent(row.cve_id)}`}
           rowMuted={(row) => !row.matching}
           ariaLabel={t('pages.vulnerabilities.section.title')}
         />

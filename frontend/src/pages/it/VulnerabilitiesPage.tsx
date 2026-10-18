@@ -747,7 +747,12 @@ export default function VulnerabilitiesPage() {
               <Typography component="h2" sx={{ fontFamily: MONO_FONT_FAMILY, fontSize: 15, fontWeight: 500 }}>{openCve}</Typography>
               <IconButton size="small" aria-label={t('pages.vulnerabilities.panel.close')} onClick={() => setOpenCve(null)}><CloseIcon fontSize="small" /></IconButton>
             </Stack>
-            <VulnerabilityDetailPanel cveId={openCve} canEdit={canEdit} onChanged={() => setRefreshKey((k) => k + 1)} />
+            <VulnerabilityDetailPanel
+              cveId={openCve}
+              canEdit={canEdit}
+              // The rows change: a selection made on the rows before would not be the one on screen.
+              onChanged={() => { setSelection(NO_SELECTION); setRefreshKey((k) => k + 1); }}
+            />
           </Box>
         )}
       </Drawer>

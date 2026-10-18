@@ -63,7 +63,9 @@ describe('TechnologyVulnerabilitiesSection', () => {
     // Critical in orange (dark mode), medium neutral.
     expect(getComputedStyle(rows[0].querySelector('[data-severity="critical"]') as HTMLElement).color).toBe('rgb(240, 168, 48)');
     fireEvent.click(rows[0]);
-    expect(navigate).toHaveBeenCalledWith('/it/vulnerabilities?technology=TEC-7&state=all&q=CVE-2026-1001');
+    expect(navigate).toHaveBeenCalledWith('/it/vulnerabilities?technology=TEC-7&version=9.0.80&state=all&q=CVE-2026-1001');
+    fireEvent.click(rows[2]);
+    expect(navigate).toHaveBeenLastCalledWith('/it/vulnerabilities?technology=TEC-7&version=none&state=all&q=CVE-2026-1002');
     expect(screen.queryByRole('button', { name: 'Match again' })).toBeNull();
   });
 

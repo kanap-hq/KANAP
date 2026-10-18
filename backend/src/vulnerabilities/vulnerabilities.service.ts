@@ -3,10 +3,12 @@ import { NvdFeedService } from './nvd-feed.service';
 import type { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { applicationParticipantCondition, type ParticipationAccessScope } from '../auth/business-contributor-scope';
+import { assertSetFilterModes } from '../common/ag-grid-filtering';
 import { languageOf, writeCsv } from '../common/csv-sheet';
 import { readTechnology, technologyReference, UUID_RE } from '../technologies/technology-rows';
 import { gridTextClause, gridTextModel } from '../technologies/technologies.service';
 import { TechnologyReachService } from '../technologies/technology-reach.service';
+import { compareVersionLabels, versionOrderSql } from '../technologies/version-order';
 import { VulnerabilityMatchService } from './vulnerability-match.service';
 import { severityOf, VULNERABILITY_STATES, type MatchBasis, type VulnerabilityState } from './vulnerability-rules';
 
@@ -180,8 +182,9 @@ function groupByTechnology(rows: Row[]) {
   }
   const list = Array.from(byTech.values());
   for (const t of list) {
+    // Newest number first (`version-order.ts`), the unknown version last.
     t.versions.sort((a, b) => (a.version_label == null ? 1 : 0) - (b.version_label == null ? 1 : 0)
-      || String(a.version_label ?? '').localeCompare(String(b.version_label ?? ''), 'en', { numeric: true }));
+      || compareVersionLabels(a.version_label, b.version_label));
   }
   return list.sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
 }
@@ -257,7 +260,8 @@ export class VulnerabilitiesService {
    * `editor` (without case), `technology` (id or `TEC-n`; an unknown one matches nothing) and
    * `version` (labels, `null` for the rows without version), text filters on `cve_id` and
    * `summary`, a number filter on `cvss_score`, a date filter on `published_at`. An unreadable
-   * model or another column is ignored.
+   * model or another column is ignored; `technologies` (the name before T6c) reads as `technology`;
+   * a set filter in exclude mode is a 400.
    */
   private gridClauses(raw: unknown, push: (value: unknown) => string): string[] {
     let model: Record<string, any>;
@@ -267,6 +271,10 @@ export class VulnerabilitiesService {
       return [];
     }
     if (!model || typeof model !== 'object') return [];
+    // These set filters read the ticked values: an exclude model is a 400, never read as an include.
+    assertSetFilterModes(model);
+    // The column's name before lot T6c, in filters saved then (a link, a list context).
+    if (model.technology === undefined && model.technologies !== undefined) model = { ...model, technology: model.technologies };
     const out: string[] = [];
     const setValues = (column: string): string[] | null => {
       const m = model[column];
@@ -327,7 +335,7 @@ export class VulnerabilitiesService {
          ${this.rowsFrom}
          ${this.usersJoin}
         WHERE tv.tenant_id = $1 ${extraWhere}
-        ORDER BY t.name, v.label NULLS LAST`,
+        ORDER BY t.name, ${versionOrderSql('v.label')}`,
       params,
     );
   }
@@ -423,7 +431,7 @@ export class VulnerabilitiesService {
     }
     const direction = String(sortDir ?? '').toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
     // Then by CVE, technology, version and row: a stable order, so the pages neither repeat nor skip a row.
-    const tail = 'c.cve_id DESC, lower(t.name), t.id, v.label NULLS LAST, tv.id';
+    const tail = `c.cve_id DESC, lower(t.name), t.id, ${versionOrderSql('v.label')}, tv.id`;
     // Another column: most severe first among equals (a technology's rows most severe first).
     const primary = sortField === 'technology' ? `lower(t.name) ${direction}, t.id` : `${GRID_SORTS[sortField]} ${direction} NULLS LAST`;
     const order = sortField && sortField !== 'severity'
@@ -479,7 +487,7 @@ export class VulnerabilitiesService {
 
   /**
    * The values of the grid's set filters that depend on the rows (`fields`: `version`): the labels
-   * of the versions the other filters reach, `null` last when a row has no version.
+   * of the versions the other filters reach, newest number first, `null` last when a row has no version.
    */
   async filterValues(query: VulnerabilityFilters & { fields?: unknown }, opts: VulnOpts): Promise<Record<string, Array<string | null>>> {
     const { manager: mg, tenantId } = opts;
@@ -502,8 +510,8 @@ export class VulnerabilitiesService {
       `SELECT DISTINCT v.label AS value ${this.rowsFrom} WHERE tv.tenant_id = $1 ${where}`,
       params,
     );
-    out.version = rows.map((r) => r.value).sort((a, b) => (a == null ? 1 : 0) - (b == null ? 1 : 0)
-      || String(a ?? '').localeCompare(String(b ?? ''), 'en', { numeric: true }));
+    // Newest number first (`version-order.ts`), as the grid; null last.
+    out.version = rows.map((r) => r.value).sort((a, b) => (a == null ? 1 : 0) - (b == null ? 1 : 0) || compareVersionLabels(a, b));
     return out;
   }
 
