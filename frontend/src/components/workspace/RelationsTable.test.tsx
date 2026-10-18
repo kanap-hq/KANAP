@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
-import { RelationsTable, fitColumnWidths, type RelationsColumn } from './RelationsTable';
+import { RelationsTable, fitColumnWidths, fitColumns, type RelationsColumn } from './RelationsTable';
 
 type Row = { id: string; name: string; family: string };
 
@@ -12,10 +12,10 @@ type Row = { id: string; name: string; family: string };
 const COLUMNS: Array<RelationsColumn<Row>> = [
   { key: 'ref', header: 'Ref', width: 72, render: (row) => row.id },
   { key: 'name', header: 'Name', render: (row) => row.name },
-  { key: 'family', header: 'Family', width: 110, render: (row) => row.family },
+  { key: 'family', header: 'Family', width: 110, hideOrder: 3, render: (row) => row.family },
   { key: 'version', header: 'Version', width: 72, render: () => '1' },
-  { key: 'link', header: 'Link', width: 120, render: () => 'Uses' },
-  { key: 'via', header: 'Via', width: 140, render: () => 'SRV-1' },
+  { key: 'link', header: 'Link', width: 120, hideOrder: 2, render: () => 'Uses' },
+  { key: 'via', header: 'Via', width: 140, hideOrder: 1, render: () => 'SRV-1' },
   { key: 'supportEnd', header: 'Support end', width: 100, render: () => 'Dec 2027' },
 ];
 const ROWS: Row[] = [{ id: 'TEC-1', name: 'PostgreSQL', family: 'Database' }];
@@ -85,6 +85,29 @@ describe('fitColumnWidths', () => {
   });
 });
 
+describe('fitColumns', () => {
+  const keys = (available: number) => fitColumns(COLUMNS, available).columns.map((column) => column.key);
+
+  it('shows every column while they lose at most a fifth of their width', () => {
+    expect(keys(765)).toEqual(COLUMNS.map((column) => column.key));
+    expect(keys(128 + 614 * 0.8)).toEqual(COLUMNS.map((column) => column.key));
+  });
+
+  it('hides the columns by their order, then fits the others', () => {
+    expect(keys(600)).toEqual(['ref', 'name', 'family', 'version', 'link', 'supportEnd']);
+    // 1,000px with the properties panel open: a 405px frame, 40px of it for the unlink icon.
+    const fitted = fitColumns(COLUMNS, 365);
+    expect(fitted.columns.map((column) => column.key)).toEqual(['ref', 'name', 'version', 'supportEnd']);
+    expect(fitted.minWidth).toBeUndefined();
+    expect(fitted.widths.reduce<number>((sum, width) => sum + (width ?? 0), 0)).toBeLessThanOrEqual(365 - 128);
+  });
+
+  it('never hides a column without an order', () => {
+    expect(keys(100)).toEqual(['ref', 'name', 'version', 'supportEnd']);
+    expect(fitColumns(COLUMNS, 100).minWidth).toBe(3 * 64 + 128);
+  });
+});
+
 describe('RelationsTable at narrow width', () => {
   it('keeps the declared widths until the frame is measured', () => {
     const { container } = renderTable();
@@ -96,11 +119,14 @@ describe('RelationsTable at narrow width', () => {
     const { container } = renderTable({ onRemove: () => {} });
     expect(colWidths(container)).toEqual([...COLUMNS.map((column) => column.width), 40]);
 
-    frameWidth = 560;
+    frameWidth = 405;
     act(() => resize?.());
+    expect(screen.getAllByRole('columnheader').map((th) => th.textContent)).toEqual(['Ref', 'Name', 'Version', 'Support end']);
+    expect(screen.queryByText('SRV-1')).toBeNull();
     const widths = colWidths(container);
+    expect(widths).toHaveLength(5);
     const fixed = widths.slice(0, -1).filter((width): width is number => width != null);
-    expect(fixed.reduce((sum, width) => sum + width, 0)).toBeLessThanOrEqual(560 - 40 - 128);
+    expect(fixed.reduce((sum, width) => sum + width, 0)).toBeLessThanOrEqual(405 - 40 - 128);
     expect(widths[1]).toBeUndefined();
     expect(widths[widths.length - 1]).toBe(40);
     expect(screen.getByRole('table').style.minWidth).toBe('');
@@ -108,7 +134,7 @@ describe('RelationsTable at narrow width', () => {
 
   it('scrolls inside its frame, never the page, when the columns cannot fit', () => {
     frameWidth = 300;
-    renderTable();
+    renderTable({ columns: COLUMNS.map(({ hideOrder: _hideOrder, ...column }) => column) });
     const table = screen.getByRole('table');
     expect(getComputedStyle(table).minWidth).toBe(`${6 * 64 + 128}px`);
     expect(getComputedStyle(table.parentElement!).overflowX).toBe('auto');

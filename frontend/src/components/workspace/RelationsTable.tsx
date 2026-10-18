@@ -14,6 +14,11 @@ export type RelationsColumn<T> = {
    */
   width?: number;
   align?: 'left' | 'right';
+  /**
+   * The column hides in a table too narrow for it (1 first, then 2, ...), once the columns with a
+   * width would otherwise lose more than a fifth of it. Without one, the column always shows.
+   */
+  hideOrder?: number;
   render: (row: T) => React.ReactNode;
 };
 
@@ -52,6 +57,8 @@ const FLEX_MIN_WIDTH = 128;
 const COLUMN_MIN_WIDTH = 64;
 /** The same for a right-aligned column: an amount is never cut. */
 const AMOUNT_MIN_WIDTH = 96;
+/** The share of their width the columns may lose before the next one with a `hideOrder` hides. */
+const MAX_SHRINK = 0.2;
 
 /**
  * Fits the column widths in `available` px (the trailing action columns excluded): the columns
@@ -75,6 +82,25 @@ export function fitColumnWidths(
   return {
     widths: widths.map((width, index) => (width == null ? undefined : Math.floor(width - (width - floors[index]!) * ratio))),
   };
+}
+
+/** Hides the columns a narrow table cannot hold (by `hideOrder`), then fits the others' widths. */
+export function fitColumns<C extends Pick<RelationsColumn<unknown>, 'width' | 'align' | 'hideOrder'>>(
+  columns: C[],
+  available: number,
+): { columns: C[]; widths: Array<number | undefined>; minWidth?: number } {
+  const room = available - (columns.some((column) => column.width == null) ? FLEX_MIN_WIDTH : 0);
+  const hidden = new Set<C>();
+  const fixedTotal = () => columns.reduce((sum, column) => sum + (hidden.has(column) ? 0 : column.width ?? 0), 0);
+  const hideable = columns
+    .filter((column) => column.width != null && column.hideOrder != null)
+    .sort((a, b) => a.hideOrder! - b.hideOrder!);
+  for (const column of hideable) {
+    if (fixedTotal() * (1 - MAX_SHRINK) <= room) break;
+    hidden.add(column);
+  }
+  const shown = columns.filter((column) => !hidden.has(column));
+  return { columns: shown, ...fitColumnWidths(shown, available) };
 }
 
 /** The width of an element, followed as it changes (0 until it is laid out). */
@@ -110,7 +136,7 @@ function titleCutCell(event: React.MouseEvent) {
  * headers, 13px cells, horizontal borders only, row hover, the whole row opens the object, and an
  * unlink icon revealed on hover. Shared by every object that shows its relations.
  */
-export function RelationsTable<T>({ columns, rows, rowKey, rowHref, rowMuted, onRemove, removeLabel, canRemove, action, totals, ariaLabel }: TableProps<T>) {
+export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, rowMuted, onRemove, removeLabel, canRemove, action, totals, ariaLabel }: TableProps<T>) {
   const theme = useTheme();
   const navigate = useNavigate();
   const open = (row: T) => {
@@ -122,8 +148,9 @@ export function RelationsTable<T>({ columns, rows, rowKey, rowHref, rowMuted, on
   const [frame, setFrame] = React.useState<HTMLDivElement | null>(null);
   const frameWidth = useElementWidth(frame);
   const fitted = frameWidth > 0
-    ? fitColumnWidths(columns, frameWidth - actionWidth - removeWidth)
-    : { widths: columns.map((column) => column.width) };
+    ? fitColumns(allColumns, frameWidth - actionWidth - removeWidth)
+    : { columns: allColumns, widths: allColumns.map((column) => column.width) };
+  const { columns } = fitted;
   return (
     <Box ref={setFrame} sx={{ width: '100%', overflowX: 'auto' }}>
       <Box

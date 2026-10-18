@@ -142,7 +142,7 @@ export default function AssetTechnologiesSection({ assetId, canManage, heading }
         )}
       </Box>
     ) },
-    { key: 'family', header: t('workspace.asset.technologies.columns.family'), width: 180,
+    { key: 'family', header: t('workspace.asset.technologies.columns.family'), width: 180, hideOrder: 2,
       render: (row) => {
         const family = row.family ? labelFor('technologyFamily', row.family) || row.family : dash;
         return <span title={family}>{family}</span>;
@@ -192,7 +192,7 @@ export default function AssetTechnologiesSection({ assetId, canManage, heading }
       },
     },
     {
-      key: 'via', header: <span title={t('workspace.asset.technologies.columns.viaHint')}>{t('workspace.asset.technologies.columns.via')}</span>, width: 140,
+      key: 'via', header: <span title={t('workspace.asset.technologies.columns.viaHint')}>{t('workspace.asset.technologies.columns.via')}</span>, width: 140, hideOrder: 1,
       render: (row) => (row.via_asset_name ? <span title={row.via_asset_name}>{row.via_asset_name}</span> : null),
     },
   ];

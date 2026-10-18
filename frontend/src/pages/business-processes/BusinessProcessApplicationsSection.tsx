@@ -88,7 +88,7 @@ export default function BusinessProcessApplicationsSection({ id }: { id: string 
     { key: 'ref', header: t('businessProcesses.applications.columns.ref'), width: 72, render: (row) => <RelationRef>{row.reference ?? dash}</RelationRef> },
     { key: 'name', header: t('businessProcesses.applications.columns.name'), render: (row) => row.name },
     { key: 'criticality', header: t('businessProcesses.applications.columns.criticality'), width: 140, render: (row) => criticalityLabel(row.criticality) },
-    { key: 'itOwner', header: t('businessProcesses.applications.columns.itOwner'), width: 180, render: (row) => (row.it_owner_names.length ? row.it_owner_names.join(', ') : dash) },
+    { key: 'itOwner', header: t('businessProcesses.applications.columns.itOwner'), width: 180, hideOrder: 1, render: (row) => (row.it_owner_names.length ? row.it_owner_names.join(', ') : dash) },
   ];
   const title = t('businessProcesses.applications.title');
   const searchLabel = t('businessProcesses.applications.search');

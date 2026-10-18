@@ -100,7 +100,7 @@ export default function ApplicationTechnologiesSection({ id }: { id: string }) {
   const columns: Array<RelationsColumn<TechnologyRow>> = [
     { key: 'ref', header: t('workspace.application.relations.columns.ref'), width: 72, render: (row) => <RelationRef>{row.reference ?? dash}</RelationRef> },
     { key: 'name', header: t('workspace.application.relations.columns.name'), render: (row) => <span title={row.name ?? undefined}>{row.name ?? dash}</span> },
-    { key: 'family', header: t('workspace.application.relations.columns.family'), width: 110, render: (row) => familyLabel(row.family) },
+    { key: 'family', header: t('workspace.application.relations.columns.family'), width: 110, hideOrder: 3, render: (row) => familyLabel(row.family) },
     {
       key: 'version', header: t('workspace.application.relations.columns.version'), width: 72,
       render: (row) => (row.versions.length > 0
@@ -108,14 +108,14 @@ export default function ApplicationTechnologiesSection({ id }: { id: string }) {
         : <Box component="span" title={t('workspace.application.relations.versionUnknown')} sx={{ color: 'kanap.text.tertiary' }}>{dash}</Box>),
     },
     {
-      key: 'link', header: t('workspace.application.relations.columns.link'), width: 120,
+      key: 'link', header: t('workspace.application.relations.columns.link'), width: 120, hideOrder: 2,
       render: (row) => {
         const label = t(`workspace.application.relations.technologyLink.${technologyLink(row)}`);
         return <span title={label}>{label}</span>;
       },
     },
     {
-      key: 'via', header: t('workspace.application.relations.columns.via'), width: 140,
+      key: 'via', header: t('workspace.application.relations.columns.via'), width: 140, hideOrder: 1,
       render: (row) => {
         const servers = row.via.map(serverLabel).join(', ');
         return <span title={servers || undefined}>{servers}</span>;

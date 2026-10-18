@@ -48,7 +48,7 @@ export default function IncidentRelationsSection({ assetId, applicationId }: Pro
       ),
     },
     { key: 'status', header: t('components.incidentRelations.columns.status'), width: 100, render: (row) => t(`enums.incidentStatus.${row.status}`, { defaultValue: row.status }) },
-    { key: 'detected', header: t('components.incidentRelations.columns.detected'), width: 110, render: (row) => formatShortDate(row.detected_at, i18n.language) },
+    { key: 'detected', header: t('components.incidentRelations.columns.detected'), width: 110, hideOrder: 1, render: (row) => formatShortDate(row.detected_at, i18n.language) },
   ];
 
   return (
