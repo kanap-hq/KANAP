@@ -315,6 +315,7 @@
         "tooMany": "Plus de 5 000 lignes : resserrez les filtres ou sélectionnez moins de lignes.",
         "countFailed": "Les lignes n'ont pas pu être comptées. Réessayez.",
         "failed": "La modification n'a pas pu être enregistrée. Réessayez.",
+        "changed": "La liste a changé depuis le comptage. Vérifiez le nouveau comptage, puis confirmez à nouveau.",
         "save": "Changer l'état",
         "noteKept": "Sans note, chaque ligne garde la sienne."
       },

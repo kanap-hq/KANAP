@@ -267,7 +267,7 @@ describe('VulnerabilitiesPage', () => {
     });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Change state' }));
     await waitFor(() => expect(postMock).toHaveBeenLastCalledWith('/vulnerabilities/bulk-state', {
-      state: 'handled', all: true, filters: { sort: 'severity:DESC', filters: FILTERS }, exclude_ids: ['row-1'], as_of: '2026-10-18T10:00:01.000Z',
+      state: 'handled', all: true, filters: { sort: 'severity:DESC', filters: FILTERS }, exclude_ids: ['row-1'], as_of: '2026-10-18T10:00:01.000Z', expected_rows: 279,
     }));
     await waitFor(() => expect(grid.props!.refreshKey).toBe(1));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
@@ -308,6 +308,30 @@ describe('VulnerabilitiesPage', () => {
     fireEvent.click(box(ROW_NONE_BOX));
     fireEvent.click(screen.getByRole('button', { name: 'Clear selection' }));
     expect(screen.queryByTestId('vulnerabilities-selection')).toBeNull();
+  });
+
+  it('counts again when the list changed between the count and the change (409)', async () => {
+    let counts = 0;
+    postMock.mockImplementation(async (_url: string, body: any) => {
+      if (body.dry_run) {
+        counts += 1;
+        return { data: counts === 1 ? { rows: 40, cves: 12, changes: 40, as_of: '2026-10-18T10:00:00.000Z' } : { rows: 41, cves: 13, changes: 41, as_of: '2026-10-18T10:00:05.000Z' } } as any;
+      }
+      if (body.expected_rows === 40) throw Object.assign(new Error('409'), { response: { status: 409 } });
+      return { data: { ok: true, changed: 41 } } as any;
+    });
+    renderPage();
+    listed(40);
+    fireEvent.click(box(ALL_BOX));
+    fireEvent.click(screen.getByRole('button', { name: 'Change state (40)' }));
+    const dialog = await screen.findByRole('dialog');
+    await waitFor(() => expect(within(dialog).getByRole('status').textContent).toContain('40 rows of 40'));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Change state' }));
+    expect((await within(dialog).findByRole('alert')).textContent).toBe('The list changed since the count. Check the new count, then confirm again.');
+    await waitFor(() => expect(within(dialog).getByRole('status').textContent).toContain('41 rows of 41'));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Change state' }));
+    await waitFor(() => expect(postMock).toHaveBeenLastCalledWith('/vulnerabilities/bulk-state', expect.objectContaining({ as_of: '2026-10-18T10:00:05.000Z', expected_rows: 41 })));
+    await waitFor(() => expect(grid.props!.refreshKey).toBe(1));
   });
 
   it('refuses a change over the cap with a line that says to narrow the filters', async () => {

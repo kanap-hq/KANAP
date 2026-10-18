@@ -315,6 +315,7 @@
         "tooMany": "More than 5,000 rows: narrow the filters, or select fewer rows.",
         "countFailed": "The rows could not be counted. Try again.",
         "failed": "The change could not be saved. Try again.",
+        "changed": "The list changed since the count. Check the new count, then confirm again.",
         "save": "Change state",
         "noteKept": "Without a note, each row keeps its own."
       },

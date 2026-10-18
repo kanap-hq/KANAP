@@ -390,11 +390,17 @@ function BulkStateDialog({ open, onClose, selection, request, onDone }: {
     setSaving(true);
     setError(null);
     try {
-      // Only the rows of the count: a row found after it stays to review.
-      await api.post(`${ENDPOINT}/bulk-state`, { ...body, as_of: count.data?.as_of });
+      // Only the rows of the count: a row found after it stays to review, and more rows than
+      // counted is refused (409).
+      await api.post(`${ENDPOINT}/bulk-state`, { ...body, as_of: count.data?.as_of, expected_rows: count.data?.rows });
       onDone();
-    } catch {
-      setError(t('pages.vulnerabilities.bulk.failed'));
+    } catch (failure: any) {
+      if (failure?.response?.status === 409) {
+        setError(t('pages.vulnerabilities.bulk.changed'));
+        void count.refetch();
+      } else {
+        setError(t('pages.vulnerabilities.bulk.failed'));
+      }
     } finally {
       setSaving(false);
     }

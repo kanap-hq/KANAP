@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { NvdFeedService } from './nvd-feed.service';
 import type { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
@@ -684,8 +684,10 @@ export class VulnerabilitiesService {
    * written in batches of 500, and each changed row is audited on `technology_vulnerabilities`.
    * `dry_run` counts without writing and returns `as_of`, the instant of the count: the write that
    * sends it back changes only the rows detected by then, so a row found after the count (a new CVE
-   * matched while the user confirms) stays to review; `changed` says how many really changed.
-   * More than `BULK_MAX_ROWS` rows is a 400.
+   * matched while the user confirms) stays to review; `changed` says how many really changed. The
+   * write also sends `expected_rows`, the rows of the count (required with `all`): when the locked
+   * rows are more (a matching that began before the count committed after it), nothing is written
+   * and the answer is a 409 `bulk_list_changed`. More than `BULK_MAX_ROWS` rows is a 400.
    */
   async bulkState(body: Record<string, unknown>, opts: VulnOpts) {
     const { manager: mg, tenantId } = opts;
@@ -733,6 +735,14 @@ export class VulnerabilitiesService {
     if (all && body.dry_run !== true && (body.as_of === undefined || body.as_of === null)) {
       throw new BadRequestException('as_of is required with all: send the instant the dry run returned.');
     }
+    // The rows the user confirmed (the dry run's `rows`): required with all, checked under the lock.
+    let expectedRows: number | null = null;
+    if (body.expected_rows !== undefined && body.expected_rows !== null) {
+      expectedRows = Number(body.expected_rows);
+      if (!Number.isSafeInteger(expectedRows) || expectedRows < 0) throw new BadRequestException('expected_rows must be the rows the dry run counted.');
+    } else if (all && body.dry_run !== true) {
+      throw new BadRequestException('expected_rows is required with all: send the rows the dry run counted.');
+    }
     if (body.as_of !== undefined && body.as_of !== null) {
       const asOf = new Date(String(body.as_of));
       if (Number.isNaN(asOf.getTime())) throw new BadRequestException('as_of must be the instant a dry run returned.');
@@ -765,6 +775,11 @@ export class VulnerabilitiesService {
         FOR UPDATE OF tv`,
       scopeParams,
     );
+    // More rows than confirmed: one the count did not see (a matching that began before the count and
+    // committed after it has a detection instant before `as_of`). Nothing is written; the user counts again.
+    if (expectedRows !== null && before.length > expectedRows) {
+      throw new ConflictException({ code: 'bulk_list_changed', message: 'The list changed since the count: count again.' });
+    }
     const toChange = before.filter((row) => row.state !== state || (noteChanges && row.note !== note));
     let changed = 0;
     for (let i = 0; i < toChange.length; i += BULK_BATCH) {
