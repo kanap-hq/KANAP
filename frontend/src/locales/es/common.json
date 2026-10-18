@@ -787,7 +787,7 @@
     "shownAs": "Se muestra: {{value}}",
     "hostingTypes": {
       "title": "Tipos de alojamiento",
-      "description": "Modelos de alojamiento disponibles al crear ubicaciones (p. ej., on-premise, colocation, nube pública, SaaS).",
+      "description": "Dónde se alojan las ubicaciones y las tecnologías (p. ej., on-premise, colocation, nube pública, SaaS). Cada tipo es local o en la nube: una tecnología local se espera en servidores.",
       "add": "Añadir tipo de alojamiento",
       "empty": "No hay tipos de alojamiento definidos."
     },

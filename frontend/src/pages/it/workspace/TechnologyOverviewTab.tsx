@@ -59,7 +59,8 @@ export type TechnologyDetail = {
   family: string | null;
   /** Code of the "Administration zones" catalog, null when not placed. */
   admin_zone?: string | null;
-  mode: 'installed' | 'subscribed';
+  /** Code of the "Hosting types" catalog (on premises, colocation, cloud, SaaS). */
+  hosting_type: string;
   lifecycle: string;
   description: string | null;
   notes: string | null;
@@ -76,7 +77,7 @@ export type TechnologyDetail = {
 };
 
 export type TechnologyPatch = Partial<Pick<TechnologyDetail,
-  'name' | 'editor' | 'family' | 'admin_zone' | 'mode' | 'lifecycle' | 'description' | 'notes' | 'cpe_products' | 'replaced_by_id'
+  'name' | 'editor' | 'family' | 'admin_zone' | 'hosting_type' | 'lifecycle' | 'description' | 'notes' | 'cpe_products' | 'replaced_by_id'
   | 'cyber_criticality' | 'recovery_wave' | 'rto_minutes' | 'rpo_minutes' | 'support_notes'>>;
 
 /** `part:vendor:product`, the product part of a CPE name (`a:microsoft:sql_server`). */
@@ -191,7 +192,7 @@ function ReplacementSelect({ technologyId, value, onChange, disabled }: {
 }
 
 /**
- * Properties drawer of the technology: editor, family, mode, replacement and IT owners. The screen
+ * Properties drawer of the technology: editor, family, hosting type, replacement and IT owners. The screen
  * shows and writes the IT owners only; business owners the API may hold are kept on each save.
  */
 export function TechnologyProperties({ technology, canManage, onPatch, onOwnersChange, onError }: {
@@ -215,6 +216,11 @@ export function TechnologyProperties({ technology, canManage, onPatch, onOwnersC
   const zoneOptions = technology.admin_zone && !zones.some((option) => option.code === technology.admin_zone)
     ? [{ code: technology.admin_zone, label: t('common.legacyOption', { label: technology.admin_zone }) }, ...zones]
     : zones;
+  // Same rule for the hosting type: a retired type stays offered while the technology has it.
+  const hostingTypes = (byField.hostingType || []).filter((option) => !option.deprecated || option.code === technology.hosting_type);
+  const hostingTypeOptions = technology.hosting_type && !hostingTypes.some((option) => option.code === technology.hosting_type)
+    ? [{ code: technology.hosting_type, label: t('common.legacyOption', { label: technology.hosting_type }) }, ...hostingTypes]
+    : hostingTypes;
 
   const saveEditor = () => {
     const next = editor.trim() || null;
@@ -281,17 +287,19 @@ export function TechnologyProperties({ technology, canManage, onPatch, onOwnersC
             ))}
           </Select>
         </PropertyRow>
-        <PropertyRow label={t('workspace.technology.fields.mode')}>
+        <PropertyRow label={t('workspace.technology.fields.hostingType')}>
           <Select
-            value={technology.mode || 'installed'}
-            onChange={(event) => onPatch({ mode: event.target.value as TechnologyDetail['mode'] })}
+            value={technology.hosting_type || ''}
+            onChange={(event) => onPatch({ hosting_type: String(event.target.value) })}
             variant="standard"
             disabled={!canManage}
-            SelectDisplayProps={{ 'aria-label': t('workspace.technology.fields.mode') } as React.HTMLAttributes<HTMLDivElement>}
+            displayEmpty
+            SelectDisplayProps={{ 'aria-label': t('workspace.technology.fields.hostingType') } as React.HTMLAttributes<HTMLDivElement>}
             sx={drawerSelectSx}
           >
-            <MenuItem value="installed" sx={drawerMenuItemSx}>{t('workspace.technology.modes.installed')}</MenuItem>
-            <MenuItem value="subscribed" sx={drawerMenuItemSx}>{t('workspace.technology.modes.subscribed')}</MenuItem>
+            {hostingTypeOptions.map((option) => (
+              <MenuItem key={option.code} value={option.code} sx={drawerMenuItemSx}>{option.label}</MenuItem>
+            ))}
           </Select>
         </PropertyRow>
         <PropertyRow label={t('workspace.technology.fields.replacedBy')}>

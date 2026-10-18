@@ -12,7 +12,8 @@ type Counts = Record<string, number | null>;
 
 export type ConversionPreview = {
   application: { id: string; name: string; reference: string | null };
-  mode: 'installed' | 'subscribed';
+  /** The hosting type the technology takes: its servers' sites (else on premises), or without servers its hosting model (else SaaS). */
+  hosting_type: string;
   refusals: Array<{ reason: string; count: number; fields?: string[]; files?: string[] }>;
   moves: Counts;
   unlinked: Counts;
@@ -47,6 +48,8 @@ export default function ApplicationConvertButton({ applicationId, applicationNam
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const { data: settings } = useLocalizedItOpsSettings();
+  const hostingTypeLabel = (code: string) => (settings as { hostingTypes?: Array<{ code: string; label: string }> } | undefined)
+    ?.hostingTypes?.find((option) => option.code === code)?.label ?? code;
   const families = ((settings as { technologyFamilies?: Array<{ code: string; label: string; deprecated?: boolean }> } | undefined)?.technologyFamilies ?? [])
     .filter((option) => !option.deprecated);
 
@@ -162,7 +165,10 @@ export default function ApplicationConvertButton({ applicationId, applicationNam
               </Select>
             </PropertyRow>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              {t(preview.mode === 'installed' ? 'workspace.application.convert.modeInstalled' : 'workspace.application.convert.modeSubscribed')}
+              {t(
+                (preview.moves.servers ?? 0) > 0 ? 'workspace.application.convert.hostingWithServers' : 'workspace.application.convert.hostingWithoutServers',
+                { type: hostingTypeLabel(preview.hosting_type) },
+              )}
             </Typography>
             {sectionTitle(t('workspace.application.convert.movesTitle'))}
             {countRows(preview.moves, MOVE_KEYS, 'moved')}

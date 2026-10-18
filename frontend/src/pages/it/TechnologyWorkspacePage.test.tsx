@@ -61,7 +61,7 @@ const DETAIL = {
   name: 'Microsoft SQL Server',
   editor: 'Microsoft',
   family: 'database',
-  mode: 'installed',
+  hosting_type: 'on_prem',
   lifecycle: 'active',
   description: 'Main database engine',
   notes: null,

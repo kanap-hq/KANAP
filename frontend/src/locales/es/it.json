@@ -169,6 +169,7 @@
         "family": "Familia",
         "editor": "Editor",
         "lifecycle": "Ciclo de vida",
+        "hostingType": "Tipo de alojamiento",
         "versionsInUse": "Versiones en uso",
         "servers": "Servidores",
         "applications": "Aplicaciones",
@@ -279,7 +280,8 @@
       "gaps": {
         "application_without_server": "Aplicación alojada sin servidor",
         "vm_without_host": "Máquina virtual sin host",
-        "technology_not_installed": "Tecnología instalada en ningún servidor",
+        "technology_not_installed": "Tecnología local en ningún servidor",
+        "technology_without_hosting_type": "Tecnología sin tipo de alojamiento de los ajustes de TI",
         "database_server_without_dbms": "Servidor de base de datos sin tecnología de base de datos",
         "sso_application_without_identity": "Aplicación con SSO sin tecnología de identidad",
         "link_without_version": "Vínculo de tecnología sin versión",
@@ -643,7 +645,7 @@
         },
         "hostingTypes": {
           "title": "Tipos de alojamiento",
-          "usage": "Ubicaciones / Creación y edición"
+          "usage": "Ubicaciones y tecnologías / Creación y edición"
         },
         "serverProviders": {
           "title": "Proveedores cloud",
@@ -1487,8 +1489,8 @@
         "loading": "Comprobando lo que cambia la conversión…",
         "family": "Familia",
         "familyPlaceholder": "Elegir una familia",
-        "modeInstalled": "Se convierte en una tecnología instalada en sus servidores.",
-        "modeSubscribed": "No tiene servidores: se convierte en una tecnología suscrita.",
+        "hostingWithServers": "Tiene servidores: la tecnología toma el tipo de alojamiento {{type}}. Puede cambiarlo después.",
+        "hostingWithoutServers": "No tiene servidores: la tecnología toma el tipo de alojamiento {{type}}. Puede cambiarlo después.",
         "movesTitle": "Pasa a la tecnología",
         "lossesTitle": "Se pierde con la aplicación",
         "nothing": "Nada",
@@ -1543,6 +1545,7 @@
           "lifecycle": "ciclo de vida",
           "cyber_criticality": "criticidad cibernética",
           "recovery_wave": "ola de recuperación",
+          "hosting_type": "tipo de alojamiento (ninguno en uso en los ajustes de TI)",
           "rto_minutes": "RTO",
           "rpo_minutes": "RPO"
         },
@@ -1843,7 +1846,7 @@
         "editor": "Editor",
         "family": "Familia",
         "adminZone": "Zona de administración",
-        "mode": "Modo",
+        "hostingType": "Tipo de alojamiento",
         "description": "Descripción",
         "notes": "Notas",
         "replacedBy": "Reemplazada por",
@@ -1856,10 +1859,6 @@
         "notes": "p. ej., Licencia por núcleo, renovación en marzo",
         "cpe": "p. ej., a:microsoft:sql_server",
         "noAdminZone": "Sin zona"
-      },
-      "modes": {
-        "installed": "Instalada",
-        "subscribed": "Suscrita"
       },
       "cpe": {
         "title": "Identificadores de producto CPE",

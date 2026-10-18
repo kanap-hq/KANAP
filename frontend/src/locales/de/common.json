@@ -787,7 +787,7 @@
     "shownAs": "Angezeigt: {{value}}",
     "hostingTypes": {
       "title": "Hosting-Typen",
-      "description": "Hosting-Modelle, die beim Anlegen von Standorten verfügbar sind (z. B. On-Premises, Colocation, Public Cloud, SaaS).",
+      "description": "Wo Standorte und Technologien gehostet werden (z. B. On-Premises, Colocation, Public Cloud, SaaS). Jeder Typ ist On-Premises oder in der Cloud: Eine On-Premises-Technologie wird auf Servern erwartet.",
       "add": "Hosting-Typ hinzufügen",
       "empty": "Keine Hosting-Typen definiert."
     },

@@ -9,6 +9,7 @@ import { Application } from '../../applications/application.entity';
 import { ApplicationsDeleteService } from '../../applications/applications-delete.service';
 import { REQUIRE_LEVEL_KEY } from '../../auth/require-level.decorator';
 import { IncidentRelationsService } from '../../incidents/services/incident-relations.service';
+import { DEFAULT_HOSTING_TYPES } from '../../it-ops-settings/it-ops-settings.service';
 import { assert, inRolledBackTransaction, runSpecs, seedItem, seedTenant, setTenant, underSavepoint } from '../../spend/__tests__/round-inputs.fixtures';
 import { ApplicationConversionController } from '../application-conversion.controller';
 import { ApplicationConversionService } from '../application-conversion.service';
@@ -52,7 +53,7 @@ function memoryStorage() {
 
 type Storage = ReturnType<typeof memoryStorage>;
 
-function conversion(audit: AuditEntry[], storage: Storage, opts: { failDelete?: boolean; manager?: any } = {}) {
+function conversion(audit: AuditEntry[], storage: Storage, opts: { failDelete?: boolean; manager?: any; hostingTypes?: Array<{ code: string; label: string; category?: string; deprecated?: boolean }> } = {}) {
   const { technologies } = services(audit);
   const auditLog = { log: async (entry: AuditEntry) => void audit.push(entry) };
   // The conversion keeps the managed documents: the delete must not reach them.
@@ -64,6 +65,7 @@ function conversion(audit: AuditEntry[], storage: Storage, opts: { failDelete?: 
       lifecycleStates: [{ code: 'active' }, { code: 'retired' }],
       cyberCriticalityLevels: [{ code: 'high' }],
       recoveryWaves: [{ code: 'wave_1' }],
+      hostingTypes: opts.hostingTypes ?? DEFAULT_HOSTING_TYPES,
     }),
   };
   const incidents = new IncidentRelationsService(undefined as any, auditLog as any);
@@ -192,7 +194,7 @@ async function testPreviewAndConvert() {
 
     const preview = await svc.preview(seeded.app, opts);
     assert.deepEqual(preview.refusals, []);
-    assert.equal(preview.mode, 'installed');
+    assert.equal(preview.hosting_type, 'on_prem');
     assert.deepEqual(preview.application, { id: seeded.app, name: 'vSphere', reference: 'APP-7' });
     assert.deepEqual(preview.moves, { owners: 2, support_contacts: 2, contracts: 1, budget_lines: 2, projects: 1, links: 1, attachments: 1, incidents: 2, servers: 3 });
     assert.deepEqual(preview.unlinked, { managed_documents: 1 });
@@ -207,7 +209,7 @@ async function testPreviewAndConvert() {
     assert.equal(tech.name, 'vSphere');
     assert.equal(tech.editor, 'VMware');
     assert.equal(tech.family, 'hypervisor');
-    assert.equal(tech.mode, 'installed');
+    assert.equal(tech.hosting_type, 'on_prem');
     assert.equal(tech.description, 'Virtualisation platform');
     assert.deepEqual([tech.rto_minutes, tech.rpo_minutes], [240, 60]);
     assert.equal(tech.support_notes, 'Call Broadcom first.');
@@ -285,11 +287,90 @@ async function testSubscribedWithoutServers() {
     const svc = conversion([], memoryStorage());
     const app = await application(runner, tenantId, 'Entra ID');
     const opts = { manager: runner.manager, tenantId };
-    assert.equal((await svc.preview(app, opts)).mode, 'subscribed');
+    assert.equal((await svc.preview(app, opts)).hosting_type, 'saas');
     await assert.rejects(svc.convert(app, {}, opts), /Family is required/);
     const { technology } = await svc.convert(app, { family: 'directory' }, opts);
-    const [row] = await runner.query(`SELECT mode FROM technologies WHERE tenant_id = $1 AND id = $2`, [tenantId, technology.id]);
-    assert.equal(row.mode, 'subscribed');
+    const [row] = await runner.query(`SELECT hosting_type FROM technologies WHERE tenant_id = $1 AND id = $2`, [tenantId, technology.id]);
+    assert.equal(row.hosting_type, 'saas');
+  });
+}
+
+/**
+ * The hosting type (lot H1). With servers: the type of their sites (most servers first), else on
+ * premises; the application's hosting model (deprecated) never overrides them. Without servers:
+ * the hosting model (`on_premise` is `on_prem`), else SaaS. A code the tenant's catalog lacks is skipped.
+ */
+async function testHostingType() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'conv-hosting');
+    const svc = conversion([], memoryStorage());
+    const opts = { manager: runner.manager, tenantId };
+    const typeOf = async (appId: string, service = svc) => (await service.preview(appId, opts)).hosting_type;
+    const withModel = async (name: string, model: string | null) => {
+      const id = await application(runner, tenantId, name);
+      await runner.query(`UPDATE applications SET hosting_model = $3 WHERE tenant_id = $1 AND id = $2`, [tenantId, id, model]);
+      return id;
+    };
+    const site = async (name: string, type: string) => one(runner,
+      `INSERT INTO locations (tenant_id, name, hosting_type, location_reference) VALUES ($1, $2, $3, $2) RETURNING id`, [tenantId, name, type]);
+    const server = async (name: string, location: string) => {
+      const id = await asset(runner, tenantId, name);
+      await runner.query(`UPDATE assets SET location_id = $3 WHERE tenant_id = $1 AND id = $2`, [tenantId, id, location]);
+      return id;
+    };
+    const colo = await site('Colo', 'colocation');
+    const cloud = await site('Cloud', 'public_cloud');
+
+    assert.equal(await typeOf(await withModel('Model on premise', 'on_premise')), 'on_prem');
+    const publicCloud = await withModel('Model public cloud', 'public_cloud');
+    assert.equal(await typeOf(publicCloud), 'public_cloud');
+    assert.equal(await typeOf(await withModel('Model private cloud', 'private_cloud')), 'private_cloud');
+    assert.equal(await typeOf(await withModel('Model SaaS', 'saas')), 'saas');
+
+    // With servers: the sites of its servers, the most servers first.
+    const sited = await withModel('Sited', null);
+    await assign(runner, tenantId, sited, await server('colo-1', colo));
+    await assign(runner, tenantId, sited, await server('colo-2', colo));
+    await assign(runner, tenantId, sited, await server('cloud-1', cloud), 'dev');
+    assert.equal(await typeOf(sited), 'colocation');
+    // A SaaS application (old hosting model) with servers on a site on premises: the servers win.
+    const saasOnSite = await withModel('SaaS on site', 'saas');
+    const premises = await site('Premises', 'on_prem');
+    await assign(runner, tenantId, saasOnSite, await server('prem-1', premises));
+    assert.equal(await typeOf(saasOnSite), 'on_prem');
+    const saasPreview = await svc.preview(saasOnSite, opts);
+    assert.equal(saasPreview.moves.servers, 1, 'the preview says it has servers');
+
+    // Servers without a site are on premises, whatever the model; no server and no model is SaaS.
+    const bare = await withModel('Bare', 'public_cloud');
+    await assign(runner, tenantId, bare, await asset(runner, tenantId, 'no-site'));
+    assert.equal(await typeOf(bare), 'on_prem');
+    assert.equal(await typeOf(await withModel('Nothing', null)), 'saas');
+
+    // A model or a site type the tenant's catalog lacks is skipped; the rule falls back on its own types.
+    const custom = conversion([], memoryStorage(), { hostingTypes: [
+      { code: 'datacenter', label: 'Datacenter', category: 'on_prem' },
+      { code: 'azure', label: 'Azure', category: 'cloud' },
+    ] });
+    assert.equal(await typeOf(await withModel('Unknown model', 'saas'), custom), 'azure');
+    assert.equal(await typeOf(sited, custom), 'datacenter');
+
+    // A retired type is never given: on premises retired, colocation in use.
+    const retiredOnPrem = conversion([], memoryStorage(), { hostingTypes: [
+      { code: 'on_prem', label: 'On-prem', category: 'on_prem', deprecated: true },
+      { code: 'colocation', label: 'Colocation', category: 'on_prem' },
+    ] });
+    assert.equal(await typeOf(bare, retiredOnPrem), 'colocation');
+    // No type in use at all: the preview refuses, and so does the conversion.
+    const empty = conversion([], memoryStorage(), { hostingTypes: [] });
+    const refused = await empty.preview(bare, opts);
+    assert.deepEqual(refused.refusals.find((r) => r.reason === 'invalid_fields')?.fields, ['hosting_type']);
+    await assert.rejects(empty.convert(bare, { family: 'other' }, opts), ConflictException);
+
+    // The technology is created with it.
+    const { technology } = await svc.convert(publicCloud, { family: 'other' }, opts);
+    const [row] = await runner.query(`SELECT hosting_type FROM technologies WHERE tenant_id = $1 AND id = $2`, [tenantId, technology.id]);
+    assert.equal(row.hosting_type, 'public_cloud');
   });
 }
 
@@ -492,7 +573,8 @@ async function testTenantIsolation() {
 void runSpecs('application conversion', [
   ['preview and conversion of a linked application', testPreviewAndConvert],
   ['the preview hides what the caller cannot read', testPreviewReadAccess],
-  ['an application without servers becomes subscribed', testSubscribedWithoutServers],
+  ['an application without servers becomes SaaS', testSubscribedWithoutServers],
+  ['hosting type from the model, the sites, then the servers', testHostingType],
   ['each refusal', testRefusals],
   ['a file missing at the copy', testMissingFileAtCopy],
   ['a failure in the middle loses nothing', testFailureInTheMiddle],

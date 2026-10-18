@@ -21,7 +21,7 @@ const catalog = {
 vi.mock('../../../hooks/useApplicationClassificationCatalog', () => ({ default: () => ({ data: catalog }) }));
 
 const TECHNOLOGY = {
-  id: 'tech-1', reference: 'TEC-1', name: 'Active Directory', editor: 'Microsoft', family: 'directory', mode: 'installed', lifecycle: 'active',
+  id: 'tech-1', reference: 'TEC-1', name: 'Active Directory', editor: 'Microsoft', family: 'directory', hosting_type: 'on_prem', lifecycle: 'active',
   description: null, notes: null, cpe_products: [], replaced_by_id: null, replaced_by: null, versions: [], owners: [],
   cyber_criticality: 'critical', recovery_wave: null, rto_minutes: null, rpo_minutes: 60,
 } as TechnologyDetail;

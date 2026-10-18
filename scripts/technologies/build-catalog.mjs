@@ -11,8 +11,8 @@
 //
 // Usage: node scripts/technologies/build-catalog.mjs [--out <file>] [--today YYYY-MM-DD]
 //        node scripts/technologies/build-catalog.mjs --refresh-cpe-versions [--out <file>]
-//        (recomputes `cpe_version` in the existing file with `cpeVersionOf` and adds the `cpe`
-//        identifiers of PRODUCTS to `cpe_products`, without the network)
+//        (recomputes `cpe_version` in the existing file with `cpeVersionOf`, adds the `cpe`
+//        identifiers of PRODUCTS to `cpe_products` and copies their `hosting_type`, without the network)
 //        node scripts/technologies/build-catalog.mjs --check-cpe [--nvd [--only k1,k2] [--latest]
 //                                                     [--report <file>]]
 //        (checks the CPE identifiers of the file against PRODUCTS: syntax, and an entry without
@@ -64,6 +64,9 @@ const OPENJDK_CPE = ['a:oracle:jdk', 'a:oracle:openjdk'];
  * The products kept, by family (codes of `DEFAULT_TECHNOLOGY_FAMILIES`). `key`: the catalog key
  * stored on an adopted technology (`technologies.catalog_key`). `cpe`: identifiers added to the
  * ones endoflife.date publishes (`part:vendor:product`). `mode`: `subscribed` for a service.
+ * `hosting_type`: a code of the default hosting types (`on_prem`, `colocation`, `public_cloud`,
+ * `private_cloud`, `saas`) when `mode` says too little (a managed cloud service is `public_cloud`,
+ * where `subscribed` alone gives `saas`); the adoption writes it in place of the one of `mode`.
  * `cpeVersion: 'label'`: the label is the NVD version as it stands; `cpeVersions`: `[pattern,
  * version]` for labels without a usable number (see `cpeVersionOf`).
  * `cpeExclude`: identifiers published by endoflife.date that the NVD does not use for this product.
@@ -118,9 +121,9 @@ const PRODUCTS = [
   { key: 'red-hat-openshift', slug: 'red-hat-openshift', name: 'Red Hat OpenShift', editor: 'Red Hat', family: 'container', cpe: ['a:redhat:openshift_container_platform'] },
   { key: 'rancher', slug: 'rancher', name: 'Rancher', editor: 'SUSE', family: 'container', cpe: ['a:rancher:rancher'] },
   { key: 'harbor', slug: 'harbor', name: 'Harbor', editor: 'Cloud Native Computing Foundation', family: 'container' },
-  { key: 'amazon-eks', slug: 'amazon-eks', name: 'Amazon EKS', editor: 'Amazon Web Services', family: 'container', mode: 'subscribed', noCpe: 'The NVD names no CVE under an Amazon EKS product.' },
-  { key: 'azure-kubernetes-service', slug: 'azure-kubernetes-service', name: 'Azure Kubernetes Service', editor: 'Microsoft', family: 'container', mode: 'subscribed', noCpe: 'An online service its provider patches: its CVE call for no action from the customer.' },
-  { key: 'google-kubernetes-engine', slug: 'google-kubernetes-engine', name: 'Google Kubernetes Engine', editor: 'Google', family: 'container', mode: 'subscribed', noCpe: 'An online service its provider patches: its CVE call for no action from the customer.' },
+  { key: 'amazon-eks', slug: 'amazon-eks', name: 'Amazon EKS', editor: 'Amazon Web Services', family: 'container', mode: 'subscribed', hosting_type: 'public_cloud', noCpe: 'The NVD names no CVE under an Amazon EKS product.' },
+  { key: 'azure-kubernetes-service', slug: 'azure-kubernetes-service', name: 'Azure Kubernetes Service', editor: 'Microsoft', family: 'container', mode: 'subscribed', hosting_type: 'public_cloud', noCpe: 'An online service its provider patches: its CVE call for no action from the customer.' },
+  { key: 'google-kubernetes-engine', slug: 'google-kubernetes-engine', name: 'Google Kubernetes Engine', editor: 'Google', family: 'container', mode: 'subscribed', hosting_type: 'public_cloud', noCpe: 'An online service its provider patches: its CVE call for no action from the customer.' },
   // Directory and identity
   { key: 'active-directory', slug: null, name: 'Active Directory', editor: 'Microsoft', family: 'directory', noCpe: 'Its CVE are filed under Windows Server, an operating system (lot T3); a:microsoft:active_directory holds three CVE, the last of 2022.' },
   { key: 'entra-id', slug: null, name: 'Microsoft Entra ID', editor: 'Microsoft', family: 'directory', mode: 'subscribed', noCpe: 'An online service its provider patches: its CVE call for no action from the customer.' },
@@ -287,13 +290,25 @@ async function fetchProduct(slug) {
 /**
  * `--refresh-cpe-versions`: the existing file with `cpe_version` recomputed, the `cpe` of PRODUCTS
  * added to `cpe_products` and its `cpeExclude` removed (the endoflife.date identifiers already in
- * the file are kept otherwise), nothing fetched.
+ * the file are kept otherwise), the `hosting_type` of PRODUCTS copied, nothing fetched.
  */
+/** The product with `hosting_type` set from its PRODUCTS entry (or removed), right after `mode`. */
+function withHostingType(product, entry) {
+  const { hosting_type: _previous, ...rest } = product;
+  const out = {};
+  for (const [name, value] of Object.entries(rest)) {
+    out[name] = value;
+    if (name === 'mode' && entry?.hosting_type) out.hosting_type = entry.hosting_type;
+  }
+  return out;
+}
+
 function refreshCpeVersions(out) {
   const catalog = JSON.parse(readFileSync(out, 'utf8'));
   let changed = 0;
   let added = 0;
   let removed = 0;
+  catalog.products = catalog.products.map((product) => withHostingType(product, PRODUCTS.find((p) => p.key === product.key)));
   for (const product of catalog.products) {
     const entry = PRODUCTS.find((p) => p.key === product.key);
     const cpe = cpeProductsOf(entry, product.cpe_products);
@@ -470,6 +485,7 @@ async function main() {
       editor: entry.editor,
       family: entry.family,
       mode: entry.mode ?? 'installed',
+      ...(entry.hosting_type ? { hosting_type: entry.hosting_type } : {}),
       cpe_products: cpe,
       source_url: entry.slug ? `https://endoflife.date/${entry.slug}` : null,
       versions: remote ? versionsOf(remote.releases ?? [], today, entry) : [],

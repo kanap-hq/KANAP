@@ -5,6 +5,7 @@ import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import dataSource from '../../data-source';
 import { assert, inRolledBackTransaction, runSpecs, seedTenant, setTenant } from '../../spend/__tests__/round-inputs.fixtures';
 import { linkProvenance } from '../../common/link-provenance';
+import { onPremHostingTypes, resolveHostingType } from '../hosting-type';
 import { resolveVersionLabel } from '../technology-rows';
 import type { TechnologyRelationsContext } from '../technologies-relations.service';
 import { asset, one, services, technology, type AuditEntry } from './technologies.fixtures';
@@ -44,6 +45,75 @@ async function testCreateAndValidate() {
     assert.equal(byRef.id, created.id);
     await assert.rejects(technologies.update(created.id, { replaced_by_id: created.id }, opts), /cannot replace itself/);
   });
+}
+
+/**
+ * The hosting type (lot H1): on premises by default, a code of the tenant's hosting types
+ * (trimmed, without case) or a 400, a list filter (plain and grid) and its values, and the
+ * adoption that writes the type a catalog mode stands for.
+ */
+async function testHostingType() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'tec-hosting');
+    const { technologies, catalog } = services();
+    const opts = { manager: runner.manager, tenantId };
+    const plain = await technologies.create({ name: 'Tomcat', family: 'application_server' }, opts);
+    assert.equal(plain.hosting_type, 'on_prem', 'on premises by default');
+    const saas = await technologies.create({ name: 'Okta', family: 'directory', hosting_type: ' SaaS ' }, opts);
+    assert.equal(saas.hosting_type, 'saas');
+    await assert.rejects(technologies.create({ name: 'Nowhere', hosting_type: 'mainframe' }, opts), /Unknown hosting type/);
+    await assert.rejects(technologies.update(plain.id, { hosting_type: null }, opts), /Unknown hosting type/);
+    // The former mode is refused, on a create as on a PATCH.
+    await assert.rejects(technologies.create({ name: 'Old client', mode: 'subscribed' }, opts), /mode is replaced by hosting_type/);
+    await assert.rejects(technologies.update(plain.id, { mode: 'subscribed' }, opts), /mode is replaced by hosting_type/);
+    const moved = await technologies.update(plain.id, { hosting_type: 'public_cloud' }, opts);
+    assert.equal(moved.hosting_type, 'public_cloud');
+
+    const byParam = await technologies.list({ hosting_type: 'saas' }, opts);
+    assert.deepEqual(byParam.items.map((item) => item.name), ['Okta']);
+    const byGrid = await technologies.list({ filters: JSON.stringify({ hosting_type: { filterType: 'set', values: ['public_cloud'] } }) }, opts);
+    assert.deepEqual(byGrid.items.map((item) => item.name), ['Tomcat']);
+    assert.deepEqual((await technologies.filterValues('hosting_type', opts)).hosting_type, ['public_cloud', 'saas']);
+
+    // The catalog keeps its mode: subscribed is SaaS, installed on premises.
+    const offered = await catalog.notAdopted({ q: 'entra' }, opts);
+    assert.equal(offered.items.find((item) => item.key === 'entra-id')?.hosting_type, 'saas');
+    const entra = await catalog.adopt('entra-id', opts);
+    const sql = await catalog.adopt('mssqlserver', opts);
+    const rows: Array<{ id: string; hosting_type: string }> = await runner.query(
+      `SELECT id, hosting_type FROM technologies WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+      [tenantId, [entra.technology.id, sql.technology.id]],
+    );
+    const typeOf = new Map(rows.map((row) => [row.id, row.hosting_type]));
+    assert.deepEqual([typeOf.get(entra.technology.id), typeOf.get(sql.technology.id)], ['saas', 'on_prem']);
+    // An entry that names its type keeps it: a managed Kubernetes is in the public cloud.
+    assert.equal((await catalog.notAdopted({ q: 'eks' }, opts)).items.find((item) => item.key === 'amazon-eks')?.hosting_type, 'public_cloud');
+    const eks = await catalog.adopt('amazon-eks', opts);
+    assert.equal((await technologies.get(eks.technology.id, opts)).hosting_type, 'public_cloud');
+  });
+  // A tenant whose catalog lost a code gets its first type in use of the same category.
+  const custom = [
+    { code: 'datacenter', label: 'Datacenter', category: 'on_prem' },
+    { code: 'old_cloud', label: 'Old cloud', category: 'cloud', deprecated: true },
+    { code: 'azure', label: 'Azure', category: 'cloud' },
+  ];
+  assert.equal(resolveHostingType(custom, 'saas'), 'azure');
+  assert.equal(resolveHostingType(custom, 'on_prem'), 'datacenter');
+  assert.equal(resolveHostingType(custom, 'azure'), 'azure');
+  assert.equal(resolveHostingType([], 'saas'), 'saas', 'no type in use: the default code, listed in the missing data');
+  // A retired type is never given: the first type in use of its category, else the first in use.
+  const retired = [
+    { code: 'on_prem', label: 'On-prem', category: 'on_prem', deprecated: true },
+    { code: 'saas', label: 'SaaS', category: 'cloud' },
+    { code: 'colocation', label: 'Colocation', category: 'on_prem' },
+  ];
+  assert.equal(resolveHostingType(retired, 'on_prem'), 'colocation');
+  assert.equal(resolveHostingType(retired.slice(0, 2), 'on_prem'), 'saas');
+  assert.equal(resolveHostingType([retired[0]], 'on_prem'), 'on_prem', 'every type retired: the default code');
+  // On premises: the catalog's, retired included, and the inferred codes it lacks.
+  assert.deepEqual(onPremHostingTypes(retired).sort(), ['colocation', 'on_prem']);
+  assert.deepEqual(onPremHostingTypes([{ code: 'dc', label: 'DC', category: 'on_prem' }]).sort(), ['colocation', 'dc', 'on_prem']);
+  assert.deepEqual(onPremHostingTypes([]).sort(), ['colocation', 'on_prem']);
 }
 
 async function testVersionLabels() {
@@ -523,6 +593,7 @@ async function testAdoptionDescription() {
 
 runSpecs('technologies-service.integration.spec', [
   ['create and validate', testCreateAndValidate],
+  ['hosting type', testHostingType],
   ['version labels', testVersionLabels],
   ['version order', testVersionOrder],
   ['links and version delete', testLinksAndVersionDelete],

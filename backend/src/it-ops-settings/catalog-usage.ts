@@ -44,7 +44,7 @@ export const CATALOG_USAGE: Record<string, UsageSource[]> = {
   accessMethods: [{ record: 'applications', table: 'applications', predicates: [{ kind: 'array', table: 'applications', column: 'access_methods' }] }],
   serverKinds: [assets('kind')],
   serverProviders: [assets('provider'), { record: 'locations', table: 'locations', predicates: [{ kind: 'scalar', table: 'locations', column: 'provider' }] }],
-  hostingTypes: [{ record: 'locations', table: 'locations', predicates: [{ kind: 'scalar', table: 'locations', column: 'hosting_type' }] }],
+  hostingTypes: [{ record: 'locations', table: 'locations', predicates: [{ kind: 'scalar', table: 'locations', column: 'hosting_type' }] }, technologies('hosting_type')],
   serverRoles: [{ record: 'server_assignments', table: 'app_asset_assignments', predicates: [{ kind: 'scalar', table: 'app_asset_assignments', column: 'role' }] }],
   entities: [{ record: 'connections', table: 'connections', predicates: [{ kind: 'scalar', table: 'connections', column: 'source_entity_code' }, { kind: 'scalar', table: 'connections', column: 'destination_entity_code' }, { kind: 'scalar', table: 'connection_legs', column: 'equipment_entity_code', recordId: 'connection_id' }] }],
   operatingSystems: [assets('operating_system')],

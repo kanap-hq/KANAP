@@ -11,7 +11,7 @@ import ApplicationConvertButton, { type ConversionPreview } from './ApplicationC
 const get = vi.fn();
 const post = vi.fn();
 vi.mock('../../../api', () => ({ default: { get: (...args: any[]) => get(...args), post: (...args: any[]) => post(...args) } }));
-const settings = { data: { technologyFamilies: [{ code: 'hypervisor', label: 'Hypervisor' }, { code: 'database', label: 'Database' }] } };
+const settings = { data: { technologyFamilies: [{ code: 'hypervisor', label: 'Hypervisor' }, { code: 'database', label: 'Database' }], hostingTypes: [{ code: 'on_prem', label: 'On-prem' }] } };
 vi.mock('../../../hooks/useLocalizedItOpsSettings', () => ({ useLocalizedItOpsSettings: () => settings }));
 
 const zeroLosses = {
@@ -22,7 +22,7 @@ const zeroLosses = {
 function preview(extra: Partial<ConversionPreview> = {}): ConversionPreview {
   return {
     application: { id: 'app-1', name: 'vSphere', reference: 'APP-7' },
-    mode: 'installed',
+    hosting_type: 'on_prem',
     refusals: [],
     moves: { owners: 2, support_contacts: 2, contracts: 1, budget_lines: 2, projects: 0, links: 0, attachments: 1, incidents: 0, servers: 3 },
     unlinked: { managed_documents: 0 },
@@ -71,7 +71,7 @@ describe('ApplicationConvertButton', () => {
     expect(within(dialog).queryByText('Projects')).not.toBeInTheDocument();
     expect(within(within(dialog).getByText('Deployments and environments').parentElement!).getByText('2')).toBeInTheDocument();
     expect(within(dialog).getByText(/the reference APP-7/)).toBeInTheDocument();
-    expect(within(dialog).getByText(/installed on its servers/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/It has servers: the technology takes the hosting type On-prem/)).toBeInTheDocument();
 
     const confirm = within(dialog).getByRole('button', { name: 'Convert' });
     expect(confirm).toBeDisabled();

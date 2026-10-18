@@ -169,6 +169,7 @@
         "family": "Family",
         "editor": "Publisher",
         "lifecycle": "Lifecycle",
+        "hostingType": "Hosting type",
         "versionsInUse": "Versions in use",
         "servers": "Servers",
         "applications": "Applications",
@@ -279,7 +280,8 @@
       "gaps": {
         "application_without_server": "Hosted application without a server",
         "vm_without_host": "Virtual machine without a host",
-        "technology_not_installed": "Installed technology on no server",
+        "technology_not_installed": "On-premises technology on no server",
+        "technology_without_hosting_type": "Technology without a hosting type of the IT settings",
         "database_server_without_dbms": "Database server without a database technology",
         "sso_application_without_identity": "Application with SSO without an identity technology",
         "link_without_version": "Technology link without a version",
@@ -643,7 +645,7 @@
         },
         "hostingTypes": {
           "title": "Hosting types",
-          "usage": "Locations / Create & edit"
+          "usage": "Locations and technologies / Create & edit"
         },
         "serverProviders": {
           "title": "Cloud providers",
@@ -1487,8 +1489,8 @@
         "loading": "Checking what the conversion changes…",
         "family": "Family",
         "familyPlaceholder": "Choose a family",
-        "modeInstalled": "It becomes a technology installed on its servers.",
-        "modeSubscribed": "It has no servers: it becomes a subscribed technology.",
+        "hostingWithServers": "It has servers: the technology takes the hosting type {{type}}. You can change it afterwards.",
+        "hostingWithoutServers": "It has no servers: the technology takes the hosting type {{type}}. You can change it afterwards.",
         "movesTitle": "Moves to the technology",
         "lossesTitle": "Lost with the application",
         "nothing": "Nothing",
@@ -1543,6 +1545,7 @@
           "lifecycle": "lifecycle",
           "cyber_criticality": "cyber criticality",
           "recovery_wave": "recovery wave",
+          "hosting_type": "hosting type (none in use in the IT settings)",
           "rto_minutes": "RTO",
           "rpo_minutes": "RPO"
         },
@@ -1843,7 +1846,7 @@
         "editor": "Publisher",
         "family": "Family",
         "adminZone": "Administration zone",
-        "mode": "Mode",
+        "hostingType": "Hosting type",
         "description": "Description",
         "notes": "Notes",
         "replacedBy": "Replaced by",
@@ -1856,10 +1859,6 @@
         "notes": "e.g., Licensed per core, renewal in March",
         "cpe": "e.g., a:microsoft:sql_server",
         "noAdminZone": "No zone"
-      },
-      "modes": {
-        "installed": "Installed",
-        "subscribed": "Subscribed"
       },
       "cpe": {
         "title": "CPE product identifiers",

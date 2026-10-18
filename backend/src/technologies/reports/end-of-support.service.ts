@@ -5,6 +5,7 @@ import { languageOf, writeCsv } from '../../common/csv-sheet';
 import { ItOpsSettingsService, type OperatingSystemOption } from '../../it-ops-settings/it-ops-settings.service';
 import type { ApplicationsReach } from '../technology-links.service';
 import { assetInServiceSql, inServiceSql, TechnologyReachService } from '../technology-reach.service';
+import { onPremHostingTypes } from '../hosting-type';
 import { technologyReference } from '../technology-rows';
 
 /**
@@ -28,6 +29,7 @@ export const GAP_KINDS = [
   'application_without_server',
   'vm_without_host',
   'technology_not_installed',
+  'technology_without_hosting_type',
   'database_server_without_dbms',
   'sso_application_without_identity',
   'link_without_version',
@@ -293,13 +295,24 @@ export class EndOfSupportService {
     );
     items.push(...vms.map((r) => subject('vm_without_host', 'asset', r.id, r.name, null)));
 
+    // A technology hosted on premises (a type of the `on_prem` category) runs on servers of the tenant.
+    const { hostingTypes } = await this.itOps.getSettings(tenantId, { manager: mg });
+    const onPrem = onPremHostingTypes(hostingTypes);
     const lonely: Array<{ id: string; name: string; item_number: number }> = await mg.query(
       `SELECT t.id, t.name, t.item_number FROM technologies t
-        WHERE t.tenant_id = $1 AND t.mode = 'installed' AND t.lifecycle <> 'retired'
+        WHERE t.tenant_id = $1 AND t.hosting_type = ANY($2::text[]) AND t.lifecycle <> 'retired'
           AND NOT EXISTS (SELECT 1 FROM asset_technologies at WHERE at.tenant_id = $1 AND at.technology_id = t.id)`,
-      [tenantId],
+      [tenantId, onPrem],
     );
     items.push(...lonely.map((r) => subject('technology_not_installed', 'technology', r.id, r.name, technologyReference(r.item_number))));
+
+    // A hosting type out of the tenant's catalog (a catalog emptied, a code removed by hand).
+    const untyped: Array<{ id: string; name: string; item_number: number }> = await mg.query(
+      `SELECT t.id, t.name, t.item_number FROM technologies t
+        WHERE t.tenant_id = $1 AND t.lifecycle <> 'retired' AND NOT (t.hosting_type = ANY($2::text[]))`,
+      [tenantId, (hostingTypes ?? []).map((item) => item.code)],
+    );
+    items.push(...untyped.map((r) => subject('technology_without_hosting_type', 'technology', r.id, r.name, technologyReference(r.item_number))));
 
     // Servers with a database role: a technology of the database family installed on them or carried to them.
     const dbServers: Array<{ id: string; name: string }> = await mg.query(
@@ -340,10 +353,10 @@ export class EndOfSupportService {
       }
     }
 
-    // Links without a version, on installed technologies and on those that have versions (a
-    // subscribed service without versions is complete without one).
+    // Links without a version, on technologies hosted on premises and on those that have versions
+    // (a cloud service without versions is complete without one).
     {
-      const params: unknown[] = [tenantId];
+      const params: unknown[] = [tenantId, onPrem];
       const appLinks = applications
         ? `UNION ALL
            SELECT 'application' AS side, t.id, t.name, t.item_number, ap.id AS related_id, ap.name AS related_name
@@ -351,7 +364,7 @@ export class EndOfSupportService {
              JOIN technologies t ON t.tenant_id = $1 AND t.id = d.technology_id
              JOIN applications ap ON ap.tenant_id = $1 AND ap.id = d.application_id AND ${inServiceSql('ap')} ${this.scopeSql('ap', params, applications)}
             WHERE d.tenant_id = $1 AND d.technology_version_id IS NULL
-              AND (t.mode = 'installed' OR EXISTS (SELECT 1 FROM technology_versions v WHERE v.tenant_id = $1 AND v.technology_id = t.id))`
+              AND (t.hosting_type = ANY($2::text[]) OR EXISTS (SELECT 1 FROM technology_versions v WHERE v.tenant_id = $1 AND v.technology_id = t.id))`
         : '';
       const rows: Array<{ side: 'asset' | 'application'; id: string; name: string; item_number: number; related_id: string; related_name: string }> = await mg.query(
         `SELECT 'asset' AS side, t.id, t.name, t.item_number, a.id AS related_id, a.name AS related_name
@@ -359,7 +372,7 @@ export class EndOfSupportService {
            JOIN technologies t ON t.tenant_id = $1 AND t.id = at.technology_id
            JOIN assets a ON a.tenant_id = $1 AND a.id = at.asset_id AND ${assetInServiceSql('a')}
           WHERE at.tenant_id = $1 AND at.technology_version_id IS NULL
-            AND (t.mode = 'installed' OR EXISTS (SELECT 1 FROM technology_versions v WHERE v.tenant_id = $1 AND v.technology_id = t.id))
+            AND (t.hosting_type = ANY($2::text[]) OR EXISTS (SELECT 1 FROM technology_versions v WHERE v.tenant_id = $1 AND v.technology_id = t.id))
          ${appLinks}`,
         params,
       );
@@ -623,7 +636,8 @@ const MILESTONE_LABELS: Record<'end_of_life' | 'support_contract', string> = {
 const GAP_LABELS: Record<GapKind, string> = {
   application_without_server: 'Hosted application without a server',
   vm_without_host: 'Virtual machine without a host',
-  technology_not_installed: 'Installed technology on no server',
+  technology_not_installed: 'On-premises technology on no server',
+  technology_without_hosting_type: 'Technology without a hosting type of the IT settings',
   database_server_without_dbms: 'Database server without a database technology',
   sso_application_without_identity: 'Application with SSO without an identity technology',
   link_without_version: 'Technology link without a version',

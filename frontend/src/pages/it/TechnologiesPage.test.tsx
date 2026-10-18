@@ -33,8 +33,9 @@ vi.mock('../../hooks/useItOpsEnumOptions', () => ({
     byField: {
       technologyFamily: [{ code: 'database', label: 'Database' }, { code: 'directory', label: 'Directory and identity' }],
       lifecycleStatus: [{ code: 'active', label: 'Active' }],
+      hostingType: [{ code: 'on_prem', label: 'On-prem' }, { code: 'saas', label: 'SaaS' }],
     },
-    labelFor: (_field: string, code: string) => (code === 'database' ? 'Database' : code),
+    labelFor: (_field: string, code: string) => ({ database: 'Database', on_prem: 'On-prem', saas: 'SaaS' } as Record<string, string>)[code] ?? code,
   }),
 }));
 vi.mock('../../components/ServerDataGrid', () => ({
@@ -75,16 +76,25 @@ describe('TechnologiesPage', () => {
     renderPage();
     expect(grid.props!.endpoint).toBe('/technologies');
     expect((grid.props!.columns as any[]).map((col) => col.field)).toEqual([
-      'reference', 'name', 'family', 'editor', 'lifecycle', 'versions_in_use', 'servers', 'applications', 'it_owner_names', 'next_support_end',
+      'reference', 'name', 'family', 'editor', 'lifecycle', 'hosting_type', 'versions_in_use', 'servers', 'applications', 'it_owner_names', 'next_support_end',
     ]);
     // The secondary columns start hidden: the default set fits a 1,440 px window.
     expect((grid.props!.columns as any[]).filter((col) => col.defaultHidden).map((col) => col.field)).toEqual([
-      'lifecycle', 'versions_in_use', 'it_owner_names',
+      'lifecycle', 'hosting_type', 'versions_in_use', 'it_owner_names',
     ]);
     const shown = (grid.props!.columns as any[]).filter((col) => !col.defaultHidden);
     expect(shown.reduce((sum, col) => sum + (col.width ?? col.minWidth), 0)).toBeLessThanOrEqual(1100);
     expect(column('family').valueFormatter({ value: 'database' })).toBe('Database');
     expect(column('it_owner_names').valueFormatter({ value: ['Ada Lovelace', 'Alan Turing'] })).toBe('Ada Lovelace +1');
+    expect(column('hosting_type').valueFormatter({ value: 'saas' })).toBe('SaaS');
+  });
+
+  it('filters by hosting type from the catalog, with its localized names', async () => {
+    renderPage();
+    expect(await column('hosting_type').filterParams.getValues({})).toEqual([
+      { value: 'on_prem', label: 'On-prem' },
+      { value: 'saas', label: 'SaaS' },
+    ]);
   });
 
   it('filters by family from the catalog and by editor from the editors endpoint', async () => {

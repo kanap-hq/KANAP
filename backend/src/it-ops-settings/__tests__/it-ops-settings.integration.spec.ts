@@ -28,6 +28,8 @@ async function main() {
     await setup.query(`INSERT INTO tenants(id, slug, name, metadata) VALUES ($1, $2, 'Settings usage test', '{}'::jsonb)`, [tenantId, `settings-usage-${tenantId}`]);
     await setTenant(setup);
     await setup.query(`INSERT INTO locations(id, tenant_id, name, hosting_type, location_reference) VALUES ($1, $2, 'Site A', 'on_prem', 'LOC-A'), ($3, $2, 'Site B', 'on_prem', 'LOC-B')`, [ids.locationA, tenantId, ids.locationB]);
+    // A technology hosted in SaaS (lot H1): the hosting types count the technologies too.
+    await setup.query(`INSERT INTO technologies(tenant_id, item_number, name, hosting_type) VALUES ($1, 1, 'Entra ID', 'saas')`, [tenantId]);
     await setup.query(`INSERT INTO applications(tenant_id, name, category, access_methods) VALUES ($1, 'Cat app', 'analytics', ARRAY['web','vdi']), ($1, 'Other app', 'security', ARRAY['web'])`, [tenantId]);
     // One asset with two IPs of the same type and the same subnet: counted once. A second asset on another site shares the CIDR.
     await setup.query(`INSERT INTO assets(tenant_id, name, kind, environment, location_id, ip_addresses) VALUES
@@ -52,6 +54,7 @@ async function main() {
     assert.equal((await usage('connectionTypes', { code: 'https' })).total, 1, 'protocol rows and leg arrays count the same connection once');
     assert.equal((await usage('pathHopFunctions', { code: 'firewall' })).total, 1);
     assert.equal((await usage('hostingTypes', { code: 'on_prem' })).total, 2);
+    assert.deepEqual((await usage('hostingTypes', { code: 'saas' })).usage.map((item) => [item.record, item.count]), [['technologies', 1]]);
     assert.equal((await usage('serverKinds', { code: 'vm' })).usage[0].listPath, '/it/assets?filters=%7B%22kind%22%3A%7B%22filterType%22%3A%22set%22%2C%22values%22%3A%5B%22vm%22%5D%7D%7D');
     assert.equal((await usage('interfaceProtocols', { code: 'anything' })).total, 0);
     await assert.rejects(() => usage('nope', { code: 'x' }), BadRequestException);
@@ -140,7 +143,7 @@ async function main() {
   } finally {
     for (const runner of [setup, writer]) if (runner.isTransactionActive) await runner.rollbackTransaction().catch(() => undefined);
     await setTenant(cleanup).catch(() => undefined);
-    for (const sql of ['DELETE FROM connection_protocols WHERE tenant_id = $1', 'DELETE FROM connection_legs WHERE tenant_id = $1', 'DELETE FROM connections WHERE tenant_id = $1', 'DELETE FROM assets WHERE tenant_id = $1', 'DELETE FROM applications WHERE tenant_id = $1', 'DELETE FROM locations WHERE tenant_id = $1', 'DELETE FROM audit_log WHERE tenant_id = $1', 'DELETE FROM tenants WHERE id = $1']) {
+    for (const sql of ['DELETE FROM connection_protocols WHERE tenant_id = $1', 'DELETE FROM connection_legs WHERE tenant_id = $1', 'DELETE FROM connections WHERE tenant_id = $1', 'DELETE FROM assets WHERE tenant_id = $1', 'DELETE FROM applications WHERE tenant_id = $1', 'DELETE FROM technologies WHERE tenant_id = $1', 'DELETE FROM locations WHERE tenant_id = $1', 'DELETE FROM audit_log WHERE tenant_id = $1', 'DELETE FROM tenants WHERE id = $1']) {
       await cleanup.query(sql, [tenantId]).catch(() => undefined);
     }
     for (const runner of [setup, publisher, writer, cleanup]) await runner.release().catch(() => undefined);

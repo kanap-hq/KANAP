@@ -787,7 +787,7 @@
     "shownAs": "Shown: {{value}}",
     "hostingTypes": {
       "title": "Hosting types",
-      "description": "Location hosting models available when creating locations (e.g., on-prem, colocation, public cloud, SaaS).",
+      "description": "Where locations and technologies are hosted (e.g., on-prem, colocation, public cloud, SaaS). Each type is on premises or in the cloud: a technology on premises is expected on servers.",
       "add": "Add hosting type",
       "empty": "No hosting types defined."
     },

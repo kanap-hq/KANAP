@@ -31,7 +31,7 @@ export type TechnologyRow = {
   family: string | null;
   editor: string | null;
   lifecycle: string | null;
-  mode: string | null;
+  hosting_type: string | null;
   versions_in_use: number;
   servers: number;
   applications: number;
@@ -167,6 +167,9 @@ export default function TechnologiesPage() {
   const lifecycleValues = useCallback(async () => (byField.lifecycleStatus || [])
     .map((option) => ({ value: option.code, label: option.label })), [byField.lifecycleStatus]);
 
+  const hostingTypeValues = useCallback(async () => (byField.hostingType || [])
+    .map((option) => ({ value: option.code, label: labelFor('hostingType', option.code) })), [byField.hostingType, labelFor]);
+
   const columns: EnhancedColDef<TechnologyRow>[] = useMemo(() => [
     {
       headerName: t('pages.technologies.columns.reference'),
@@ -208,6 +211,18 @@ export default function TechnologiesPage() {
       valueFormatter: (p: any) => labelFor('lifecycleStatus', p.value),
       cellRenderer: LinkCell,
     },
+    {
+      headerName: t('pages.technologies.columns.hostingType'),
+      field: 'hosting_type',
+      width: 140,
+      defaultHidden: true,
+      sortable: false,
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: { getValues: hostingTypeValues, searchable: false },
+      valueFormatter: (p: any) => labelFor('hostingType', p.value),
+      cellRenderer: LinkCell,
+    },
     // Secondary columns start hidden: the default set fits a 1,440 px window without scrolling.
     { headerName: t('pages.technologies.columns.versionsInUse'), field: 'versions_in_use', width: 140, defaultHidden: true, sortable: false, filter: false, cellRenderer: LinkCell },
     // Counters: narrow and right-aligned, so that the default set fits a 1,440 px window.
@@ -230,7 +245,7 @@ export default function TechnologiesPage() {
     ...(vulnerabilityFeed
       ? [{ headerName: t('pages.technologies.columns.vulnerabilities'), field: 'vulnerabilities_to_review' as const, width: 110, headerTooltip: t('pages.technologies.columns.vulnerabilities'), sortable: false, filter: false, cellRenderer: VulnerabilitiesCell }]
       : []),
-  ], [LinkCell, SupportEndCell, editorValues, familyValues, labelFor, lifecycleValues, t, vulnerabilityFeed]);
+  ], [LinkCell, SupportEndCell, editorValues, familyValues, hostingTypeValues, labelFor, lifecycleValues, t, vulnerabilityFeed]);
 
   if (!hasLevel('infrastructure', 'reader')) {
     return <ForbiddenPage />;
