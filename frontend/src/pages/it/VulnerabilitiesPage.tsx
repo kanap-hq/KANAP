@@ -3,7 +3,7 @@ import {
   Box, Button, Checkbox, Drawer, IconButton, Link as MLink, MenuItem, Stack, TextField, Tooltip, Typography,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import { ICellRendererParams } from 'ag-grid-community';
+import type { CellStyle, ICellRendererParams } from 'ag-grid-community';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
@@ -478,6 +478,8 @@ function BulkStateDialog({ open, onClose, selection, request, onDone }: {
 
 /** The column of the row boxes: its header ticks every row of the filter. */
 const SELECTION_COLUMN = 'select';
+/** The box alone, centred: the cell's padding would push it past 44 px and cut it ("…"). */
+const SELECT_CELL_STYLE: CellStyle = { padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', textOverflow: 'clip' };
 /** Stable: a new function would have AG Grid draw its rows again. */
 const rowId = (row: VulnerabilityRow) => row.id;
 
@@ -564,6 +566,8 @@ export default function VulnerabilitiesPage() {
       resizable: false,
       sortable: false,
       filter: false,
+      suppressHeaderMenuButton: true,
+      cellStyle: SELECT_CELL_STYLE,
       headerComponent: SelectAllHeader,
       cellRenderer: SelectRowCell,
       // Space on the focused cell or header ticks, as the box would (AG Grid keeps the focus on the cell).
@@ -595,7 +599,7 @@ export default function VulnerabilitiesPage() {
       cellRenderer: (p: ICellRendererParams<VulnerabilityRow>) => (p.data ? <SeverityCell severity={p.data.severity} score={p.data.cvss_score} /> : null),
     },
     { headerName: t('pages.vulnerabilities.columns.score'), field: 'cvss_score', width: 90, type: 'rightAligned', defaultHidden: true, filter: 'agNumberColumnFilter' },
-    { headerName: t('pages.vulnerabilities.columns.summary'), field: 'summary', minWidth: 140, flex: 1, sortable: false, tooltipField: 'summary' },
+    { headerName: t('pages.vulnerabilities.columns.summary'), field: 'summary', minWidth: 115, flex: 1, sortable: false, tooltipField: 'summary' },
     {
       headerName: t('pages.vulnerabilities.columns.technology'),
       field: 'technology',
@@ -611,7 +615,8 @@ export default function VulnerabilitiesPage() {
     {
       headerName: t('pages.vulnerabilities.columns.version'),
       field: 'version',
-      width: 100,
+      // "Non renseignée" and "Nicht erfasst" whole.
+      width: 125,
       sortable: false,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
@@ -697,6 +702,12 @@ export default function VulnerabilitiesPage() {
       {exportError && (
         <Typography role="alert" sx={{ fontSize: 13, color: 'kanap.text.secondary', mb: 1 }}>{t('pages.vulnerabilities.exportFailed')}</Typography>
       )}
+      {/* The header of the box column: the box alone, centred, without the cell's padding. */}
+      <Box sx={{
+        '& .ag-header-cell[col-id="select"]': { px: 0 },
+        '& .ag-header-cell[col-id="select"] .ag-header-cell-comp-wrapper': { justifyContent: 'center' },
+      }}
+      >
       <ServerDataGrid<VulnerabilityRow>
         columns={columns}
         endpoint={ENDPOINT}
@@ -735,6 +746,7 @@ export default function VulnerabilitiesPage() {
           </Typography>
         )}
       />
+      </Box>
       <Drawer
         anchor="right"
         open={!!openCve}

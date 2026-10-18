@@ -458,6 +458,8 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
 
   // Determine which column gets the row-count label (first column with a field and without a
   // valueFormatter: a column without a field, a box column, would show no value)
+  // The page's own pinned totals (per column): the total label then keeps to its column.
+  const hasPinnedTotals = !!pinnedBottomRowData && pinnedBottomRowData.length > 0;
   const rowCountField = useMemo(() => {
     if (!showRowCount) return '';
     const col = columns.find(c => c.field && !c.valueFormatter) || columns[0];
@@ -511,6 +513,20 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
         delete agGridCol.cellRenderer;
       }
 
+      // The total row's label spans the row from its column (when the page has no totals of its
+      // own there): its text never depends on that column's width.
+      if (showRowCount && field === rowCountField && !hasPinnedTotals) {
+        const origSpan = agGridCol.colSpan;
+        agGridCol.colSpan = (params: any) => {
+          if (params.node?.rowPinned === 'bottom') {
+            const shown = params.api?.getAllDisplayedColumns?.() ?? [];
+            const at = shown.indexOf(params.column);
+            return at >= 0 ? Math.max(shown.length - at, 1) : 1;
+          }
+          return typeof origSpan === 'function' ? origSpan(params) : 1;
+        };
+      }
+
       // When showRowCount is enabled, suppress formatters for pinned
       // bottom rows on every column except the one carrying the label.
       if (showRowCount && field !== rowCountField && agGridCol.valueFormatter) {
@@ -531,7 +547,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
         },
       };
     });
-  }, [columns, showRowCount, rowCountField, scopeColumnField]);
+  }, [columns, showRowCount, rowCountField, scopeColumnField, hasPinnedTotals]);
   const navigate = useNavigate();
   const location = useLocation();
   const urlParams = new URLSearchParams(location.search);

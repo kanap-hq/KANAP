@@ -64,7 +64,13 @@ describe('VulnerabilitiesPage on the real grid', () => {
     expect(headers).not.toContain('ag-Grid-ControlsColumn');
     expect(container.querySelector('.ag-row [col-id="ag-Grid-ControlsColumn"]')).toBeNull();
     // The total row, under the CVE column (never in the box column).
-    expect(container.querySelector('.ag-floating-bottom [col-id="cve_id"]')?.textContent).toBe('Total: 3 rows (2 CVE)');
+    const total = container.querySelector('.ag-floating-bottom [col-id="cve_id"]') as HTMLElement;
+    expect(total.textContent).toBe('Total: 3 rows (2 CVE)');
+    // It spans the row, whatever the width of its column (125 px).
+    expect(parseInt(total.style.width, 10)).toBeGreaterThan(500);
+    // The box column: the box alone, centred, no padding to cut it.
+    const selectCell = container.querySelector('.ag-row:not(.ag-row-pinned) .ag-cell[col-id="select"]') as HTMLElement;
+    expect([selectCell.style.padding, selectCell.style.justifyContent, selectCell.style.textOverflow]).toEqual(['0px', 'center', 'clip']);
 
     // The elements are read again after each step: AG Grid may draw a row again.
     const box = () => screen.getByRole('checkbox', { name: 'Select CVE-2026-1001, Tomcat 9.0.80' }) as HTMLInputElement;
