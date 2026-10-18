@@ -19,7 +19,6 @@ const content: AboutContent = {
     photoAlt: 'Friedrich Eva, fondateur de KANAP',
     paragraphs: [
       "Je suis DSI de transition. Mon métier : reprendre ou reconstruire une DSI, la placer au cœur d'un programme ERP, intégrer le système d'information d'une société rachetée, ou simplement assurer une transition productive et efficace. J'ai passé plus de vingt ans dans l'informatique, dont huit comme DSI de deux ETI internationales, dans la distribution puis dans l'industrie. Je suis certifié CISSP et ISO 27001 Lead Implementer, et je travaille en français, en anglais et en allemand.",
-      "Dans chacun de ces postes, j'ai retrouvé les mêmes irritants : le budget dans plusieurs fichiers Excel, un ou plusieurs débuts de cartographie applicative, rarement maintenus, les projets ailleurs, les contrats éparpillés aux achats, au juridique et à la DSI. Et avant chaque comité, des heures à tout réconcilier à la main.",
     ],
     linkedinLabel: 'Mon profil LinkedIn',
   },
@@ -27,6 +26,7 @@ const content: AboutContent = {
     {
       title: 'Pourquoi KANAP',
       paragraphs: [
+        "Dans chacun de ces postes, j'ai retrouvé les mêmes irritants : le budget dans plusieurs fichiers Excel, un ou plusieurs débuts de cartographie applicative, rarement maintenus, les projets ailleurs, les contrats éparpillés aux achats, au juridique et à la DSI. Et avant chaque comité, des heures à tout réconcilier à la main.",
         "J'ai donc commencé KANAP pour réunir au même endroit les outils vitaux de la gouvernance d'une DSI. D'abord le budget, puis le portefeuille de projets, la cartographie des applications, les contrats, la documentation. Sont ensuite venus les besoins de reporting, et finalement, un agent IA intégré qui facilite la recherche et la synthèse des informations. Aujourd'hui, KANAP est une plateforme modulaire pour PME et ETI : on peut n'en utiliser qu'un module ou plusieurs, selon le contexte et les besoins.",
       ],
     },

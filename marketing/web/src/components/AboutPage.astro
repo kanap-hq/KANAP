@@ -31,8 +31,8 @@ const PHOTO = '/about/friedrich-eva-2026-10.webp';
         class="mk-about__photo"
         src={PHOTO}
         alt={c.founder.photoAlt}
-        width="128"
-        height="128"
+        width="176"
+        height="176"
         loading="eager"
       />
       <div class="mk-about__text">
@@ -76,14 +76,14 @@ const PHOTO = '/about/friedrich-eva-2026-10.webp';
 
   .mk-about__founder {
     display: flex;
-    gap: 32px;
-    align-items: flex-start;
+    gap: 40px;
+    align-items: center;
   }
 
   .mk-about__photo {
     flex: none;
-    width: 128px;
-    height: 128px;
+    width: 176px;
+    height: 176px;
     border-radius: 50%;
     object-fit: cover;
     border: 1px solid var(--kanap-border-default);
@@ -117,9 +117,13 @@ const PHOTO = '/about/friedrich-eva-2026-10.webp';
       gap: 24px;
     }
 
+    .mk-about__founder {
+      align-items: flex-start;
+    }
+
     .mk-about__photo {
-      width: 120px;
-      height: 120px;
+      width: 128px;
+      height: 128px;
     }
   }
 </style>

@@ -19,7 +19,6 @@ const content: AboutContent = {
     photoAlt: 'Friedrich Eva, fundador de KANAP',
     paragraphs: [
       'Soy CIO interino. Mi oficio: retomar o reconstruir un departamento de TI, situarlo en el centro de un programa ERP, integrar los sistemas de información de una empresa adquirida o, simplemente, asegurar una transición productiva y eficaz. Llevo más de veinte años en informática, ocho de ellos como CIO de dos medianas empresas internacionales, primero en la distribución y después en la industria. Tengo las certificaciones CISSP e ISO 27001 Lead Implementer, y trabajo en francés, inglés y alemán.',
-      'En cada uno de esos puestos me encontré con los mismos problemas: el presupuesto repartido en varios archivos de Excel, uno o varios mapas de aplicaciones empezados y rara vez mantenidos, los proyectos en otro sitio, los contratos dispersos entre compras, jurídico y TI. Y antes de cada comité, horas conciliándolo todo a mano.',
     ],
     linkedinLabel: 'Mi perfil de LinkedIn',
   },
@@ -27,6 +26,7 @@ const content: AboutContent = {
     {
       title: 'Por qué KANAP',
       paragraphs: [
+        'En cada uno de esos puestos me encontré con los mismos problemas: el presupuesto repartido en varios archivos de Excel, uno o varios mapas de aplicaciones empezados y rara vez mantenidos, los proyectos en otro sitio, los contratos dispersos entre compras, jurídico y TI. Y antes de cada comité, horas conciliándolo todo a mano.',
         'Por eso empecé KANAP: para reunir en un mismo lugar las herramientas esenciales del gobierno de TI. Primero el presupuesto, después la cartera de proyectos, el mapa de aplicaciones, los contratos, la documentación. Luego llegaron las necesidades de reporting y, por último, un agente de IA integrado que facilita la búsqueda y la síntesis de la información. Hoy, KANAP es una plataforma modular para pymes y medianas empresas: se puede usar un solo módulo o varios, según el contexto y las necesidades.',
       ],
     },

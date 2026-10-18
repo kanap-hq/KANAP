@@ -19,7 +19,6 @@ const content: AboutContent = {
     photoAlt: 'Friedrich Eva, founder of KANAP',
     paragraphs: [
       "I am an interim CIO. My job: taking over or rebuilding an IT department, putting it at the heart of an ERP program, integrating the information systems of an acquired company, or simply making sure a transition is productive and effective. I have spent more than twenty years in IT, eight of them as CIO of two international mid-sized companies, first in distribution, then in manufacturing. I am CISSP and ISO 27001 Lead Implementer certified, and I work in French, English and German.",
-      'In each of these roles, I ran into the same pain points: the budget spread across several Excel files, one or two application maps started and rarely kept up to date, projects somewhere else, contracts scattered between purchasing, legal and IT. And before every committee meeting, hours spent reconciling it all by hand.',
     ],
     linkedinLabel: 'My LinkedIn profile',
   },
@@ -27,6 +26,7 @@ const content: AboutContent = {
     {
       title: 'Why KANAP',
       paragraphs: [
+        'In each of these roles, I ran into the same pain points: the budget spread across several Excel files, one or two application maps started and rarely kept up to date, projects somewhere else, contracts scattered between purchasing, legal and IT. And before every committee meeting, hours spent reconciling it all by hand.',
         'So I started KANAP to bring the essential tools of IT governance together in one place. First the budget, then the project portfolio, the application map, contracts, documentation. Reporting needs came next, and finally a built-in AI agent that makes it easier to find and summarize information. Today, KANAP is a modular platform for small and mid-sized companies: you can use a single module or several, depending on your context and needs.',
       ],
     },
