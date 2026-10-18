@@ -317,7 +317,9 @@
         "failed": "Die Änderung konnte nicht gespeichert werden. Versuchen Sie es erneut.",
         "changed": "Die Liste hat sich seit der Zählung geändert. Prüfen Sie die neue Zählung und bestätigen Sie erneut.",
         "save": "Status ändern",
-        "noteKept": "Ohne Notiz behält jede Zeile ihre eigene."
+        "noteKept": "Ohne Notiz behält jede Zeile ihre eigene.",
+        "noteAll_one": "Die Notiz gilt für die Zeile.",
+        "noteAll_other": "Die Notiz gilt für die {{count}} Zeilen."
       },
       "selection": {
         "all": "Alle Zeilen des Filters auswählen",

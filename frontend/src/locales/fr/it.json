@@ -317,7 +317,9 @@
         "failed": "La modification n'a pas pu être enregistrée. Réessayez.",
         "changed": "La liste a changé depuis le comptage. Vérifiez le nouveau comptage, puis confirmez à nouveau.",
         "save": "Changer l'état",
-        "noteKept": "Sans note, chaque ligne garde la sienne."
+        "noteKept": "Sans note, chaque ligne garde la sienne.",
+        "noteAll_one": "La note s'applique à la ligne.",
+        "noteAll_other": "La note s'applique aux {{count}} lignes."
       },
       "selection": {
         "all": "Sélectionner toutes les lignes du filtre",

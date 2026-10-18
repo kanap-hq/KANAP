@@ -290,10 +290,14 @@ describe('VulnerabilitiesPage', () => {
     expect(screen.getByTestId('vulnerabilities-selection').textContent).toBe('2 rows selected');
     fireEvent.click(screen.getByRole('button', { name: 'Change state (2)' }));
     const dialog = await screen.findByRole('dialog');
-    fireEvent.change(within(dialog).getByRole('textbox', { name: 'Common note' }), { target: { value: 'Patched in March' } });
     expect(dialog.textContent).toContain('The 2 selected rows.');
     await waitFor(() => expect(within(dialog).getByRole('status').textContent).toBe('This changes 2 rows of 2, on 1 vulnerabilities.'));
-    expect(postMock).toHaveBeenLastCalledWith('/vulnerabilities/bulk-state', { state: 'handled', note: 'Patched in March', ids: ['row-1', 'row-2'], dry_run: true });
+    expect(postMock).toHaveBeenLastCalledWith('/vulnerabilities/bulk-state', { state: 'handled', ids: ['row-1', 'row-2'], dry_run: true });
+    // The note counts nothing again.
+    const counts = postMock.mock.calls.length;
+    fireEvent.change(within(dialog).getByRole('textbox', { name: 'Common note' }), { target: { value: 'Patched in March' } });
+    expect(dialog.textContent).toContain('The note goes on the 2 rows.');
+    expect(postMock.mock.calls.length).toBe(counts);
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     listed(12, OTHER_FILTERS);

@@ -317,7 +317,9 @@
         "failed": "No se pudo guardar el cambio. Inténtelo de nuevo.",
         "changed": "La lista ha cambiado desde el recuento. Revise el nuevo recuento y vuelva a confirmar.",
         "save": "Cambiar el estado",
-        "noteKept": "Sin nota, cada fila conserva la suya."
+        "noteKept": "Sin nota, cada fila conserva la suya.",
+        "noteAll_one": "La nota se aplica a la fila.",
+        "noteAll_other": "La nota se aplica a las {{count}} filas."
       },
       "selection": {
         "all": "Seleccionar todas las filas del filtro",

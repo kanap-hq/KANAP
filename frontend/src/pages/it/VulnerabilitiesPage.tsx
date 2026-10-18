@@ -4,7 +4,7 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { ICellRendererParams } from 'ag-grid-community';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 import api from '../../api';
@@ -371,19 +371,22 @@ function BulkStateDialog({ open, onClose, selection, request, onDone }: {
     setError(null);
   }, [open]);
   const ids = useMemo(() => Array.from(selection.ids), [selection.ids]);
-  const body = useMemo(() => ({
+  // The count does not depend on the note: typing it counts nothing again.
+  const scope = useMemo(() => ({
     state,
-    ...(note.trim() ? { note: note.trim() } : {}),
     ...(selection.all
       ? { all: true, filters: scopeParams(request), ...(ids.length > 0 ? { exclude_ids: ids } : {}) }
       : { ids }),
-  }), [ids, note, request, selection.all, state]);
+  }), [ids, request, selection.all, state]);
   const count = useQuery({
-    queryKey: ['vulnerabilities', 'bulk-count', body],
-    queryFn: async () => (await api.post<{ rows: number; cves: number; changes: number; as_of: string }>(`${ENDPOINT}/bulk-state`, { ...body, dry_run: true })).data,
+    queryKey: ['vulnerabilities', 'bulk-count', scope],
+    queryFn: async () => (await api.post<{ rows: number; cves: number; changes: number; as_of: string }>(`${ENDPOINT}/bulk-state`, { ...scope, dry_run: true })).data,
     enabled: open,
     retry: false,
+    // The previous count stays on screen while the next one runs.
+    placeholderData: keepPreviousData,
   });
+  const body = { ...scope, ...(note.trim() ? { note: note.trim() } : {}) };
   // A 400 is the cap; anything else (busy, network) is a failed count.
   const tooMany = count.isError && (count.error as any)?.response?.status === 400;
   const save = async () => {
@@ -412,7 +415,7 @@ function BulkStateDialog({ open, onClose, selection, request, onDone }: {
       onClose={onClose}
       onSave={save}
       saveLabel={t('pages.vulnerabilities.bulk.save')}
-      saveDisabled={!count.data || count.data.changes === 0 || count.isError}
+      saveDisabled={!count.data || count.isPlaceholderData || count.isError || count.data.rows === 0 || (count.data.changes === 0 && note.trim() === '')}
       saveLoading={saving}
     >
       <Stack spacing={1.5}>
@@ -454,9 +457,11 @@ function BulkStateDialog({ open, onClose, selection, request, onDone }: {
               ? t('pages.vulnerabilities.bulk.count', { count: count.data.changes, rows: count.data.rows, cves: count.data.cves })
               : t('pages.vulnerabilities.bulk.counting')}
         </Typography>
-        {note.trim() === '' && (
-          <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>{t('pages.vulnerabilities.bulk.noteKept')}</Typography>
-        )}
+        <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>
+          {note.trim() === ''
+            ? t('pages.vulnerabilities.bulk.noteKept')
+            : t('pages.vulnerabilities.bulk.noteAll', { count: count.data?.rows ?? 0 })}
+        </Typography>
         {error && <Typography role="alert" sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{error}</Typography>}
       </Stack>
     </KanapDialog>
