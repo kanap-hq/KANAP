@@ -12,11 +12,20 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * trigger): each distinct code on an asset, in the settings catalog, or in a Netbox `os_map`
  * (a value with no space; a value that already reads as a label is left alone) becomes a
  * technology. A shipped code (the 19 below, copied here so the migration imports no application
- * code) adopts the frozen product of the shipped catalog. Any other code is matched by name
- * without case, in every family, or created in the family `operating_system` (`other` when the
- * tenant's catalog dropped that family). A last token that starts with a digit is the version
+ * code) adopts the frozen product of the shipped catalog. Any other code goes through the order of
+ * the resolver (`OperatingSystemService.resolve`) on its label: a technology of the tenant whose
+ * name is the whole label (any family); else the longest name that prefixes the label, among the
+ * tenant's technologies and the frozen products (the tenant on a tie), the remainder being the
+ * version (`Windows Server 2008 R2` is the version `2008 R2` of Windows Server, `CentOS 7` adopts
+ * CentOS); else a new technology of family `operating_system` (`other` when the tenant's catalog
+ * dropped that family), a last token that starts with a digit being the version
  * (`VMware ESXi 8.0`). An orphan code, on an asset and in neither the shipped list nor the
- * tenant's catalog, is humanized first (`foo_bar_2` → `foo bar 2`).
+ * tenant's catalog, is humanized first (`foo_bar_2` → `foo bar 2`). A dated settings entry that
+ * ends on a link with no version loses its dates: counted as `dates_dropped`.
+ *
+ * Netbox `os_map` values only point at operating systems: one that no asset and no settings
+ * entry uses is rewritten as a label (the frozen product and version for a shipped code, the
+ * humanized code otherwise) and creates no technology; the resolver handles it at the next sync.
  *
  * Version dates already set are kept. Empty dates take the shipped catalog's, then the dates
  * the settings entry stored. A technology this migration inserts is set to `retired` only when
@@ -25,8 +34,8 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * technology that already existed keeps its lifecycle and its family.
  *
  * The marked link reuses a link of the same technology (a link with no version takes the version),
- * or is created. A marked link of another technology is deleted: a link that only existed to hold
- * the operating system cannot be told from any other link. Provenance is `manual`.
+ * or is created. A link that loses the mark is deleted, the rule of `setOperatingSystem`. A reused
+ * link keeps its provenance; a created link is `manual`.
  *
  * The asset search document stops reading `assets.operating_system` before the column goes.
  * The operating system is not copied back into that document: the technology is indexed itself.
@@ -34,9 +43,12 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  *
  * A second run, once the column is gone, adds nothing. `down()` puts the column and the settings
  * catalog back from the marked links (a shipped code when the table gives one, otherwise the
- * label in snake case), restores the search function, and drops the mark. It does not delete
- * the technologies. Settings entries no asset uses do not come back. Netbox `os_map` stays in
- * labels: they are what the field stores from here on.
+ * label in snake case, made unique and never one of the shipped codes, so that `up()` finds the
+ * same technology again and reuses the link), restores the search function, and drops the mark.
+ * A retired technology comes back as a deprecated entry. A tenant with no marked link gets no
+ * settings key (the defaults apply again). It does not delete the technologies. Settings entries
+ * no asset uses do not come back. Netbox `os_map` stays in labels: they are what the field stores
+ * from here on.
  */
 
 type FrozenVersion = {
@@ -91,7 +103,7 @@ export const SHIPPED_OS_CODES: readonly ShippedOsCode[] = [
 const SHIPPED_BY_CODE = new Map(SHIPPED_OS_CODES.map((entry) => [entry.code, entry]));
 
 /** Frozen operating-system products, copied from the shipped catalog when this migration was written. */
-export const OS_PRODUCTS: readonly FrozenProduct[] = JSON.parse("[{\"key\":\"almalinux\",\"name\":\"AlmaLinux\",\"editor\":\"AlmaLinux OS Foundation\",\"family\":\"operating_system\",\"description\":\"Community Linux distribution rebuilt from Red Hat Enterprise Linux, published by the AlmaLinux OS Foundation.\",\"versions\":[{\"key\":\"10\",\"label\":\"10\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2030-05-31\",\"extended_support_end\":\"2035-05-31\"},{\"key\":\"9\",\"label\":\"9\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2027-05-31\",\"extended_support_end\":\"2032-05-31\"},{\"key\":\"8\",\"label\":\"8\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2024-05-31\",\"extended_support_end\":\"2029-05-31\"}]},{\"key\":\"centos\",\"name\":\"CentOS\",\"editor\":\"The CentOS Project\",\"family\":\"operating_system\",\"description\":\"Community Linux distribution rebuilt from Red Hat Enterprise Linux. CentOS Linux ended with version 7; later builds are CentOS Stream.\",\"versions\":[{\"key\":\"7\",\"label\":\"7\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2020-08-06\",\"extended_support_end\":\"2024-06-30\"}]},{\"key\":\"debian\",\"name\":\"Debian\",\"editor\":\"Debian\",\"family\":\"operating_system\",\"description\":\"Community Linux distribution, published about every two years as a stable release named after a Toy Story character.\",\"versions\":[{\"key\":\"13\",\"label\":\"13 (Trixie)\",\"cpe_version\":\"13\",\"build_prefixes\":[\"13\"],\"standard_support_end\":\"2028-08-09\",\"extended_support_end\":\"2035-06-30\"},{\"key\":\"12\",\"label\":\"12 (Bookworm)\",\"cpe_version\":\"12\",\"build_prefixes\":[\"12\"],\"standard_support_end\":\"2026-07-11\",\"extended_support_end\":\"2033-06-30\"},{\"key\":\"11\",\"label\":\"11 (Bullseye)\",\"cpe_version\":\"11\",\"build_prefixes\":[\"11\"],\"standard_support_end\":\"2024-08-14\",\"extended_support_end\":\"2031-06-30\"},{\"key\":\"10\",\"label\":\"10 (Buster)\",\"cpe_version\":\"10\",\"build_prefixes\":[\"10\"],\"standard_support_end\":\"2022-09-10\",\"extended_support_end\":\"2029-06-30\"},{\"key\":\"9\",\"label\":\"9 (Stretch)\",\"cpe_version\":\"9\",\"build_prefixes\":[\"9\"],\"standard_support_end\":\"2020-07-18\",\"extended_support_end\":\"2027-06-30\"},{\"key\":\"8\",\"label\":\"8 (Jessie)\",\"cpe_version\":\"8\",\"build_prefixes\":[\"8\"],\"standard_support_end\":\"2018-06-17\",\"extended_support_end\":\"2025-06-30\"}]},{\"key\":\"oracle-linux\",\"name\":\"Oracle Linux\",\"editor\":\"Oracle\",\"family\":\"operating_system\",\"description\":\"Linux distribution from Oracle, rebuilt from Red Hat Enterprise Linux, with optional paid support.\",\"versions\":[{\"key\":\"10\",\"label\":\"10\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2035-06-30\",\"extended_support_end\":\"2038-06-30\"},{\"key\":\"9\",\"label\":\"9\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2032-06-30\",\"extended_support_end\":\"2035-06-30\"},{\"key\":\"8\",\"label\":\"8\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2029-07-31\",\"extended_support_end\":\"2032-07-31\"},{\"key\":\"7\",\"label\":\"7\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2024-12-31\",\"extended_support_end\":\"2029-07-31\"},{\"key\":\"6\",\"label\":\"6\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2021-03-31\",\"extended_support_end\":\"2024-12-31\"}]},{\"key\":\"rhel\",\"name\":\"Red Hat Enterprise Linux\",\"editor\":\"Red Hat\",\"family\":\"operating_system\",\"description\":\"Commercial Linux distribution from Red Hat, with ten years of maintenance and an optional extended life cycle.\",\"versions\":[{\"key\":\"10\",\"label\":\"10\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2030-05-31\",\"extended_support_end\":\"2039-05-31\"},{\"key\":\"9\",\"label\":\"9\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2027-05-31\",\"extended_support_end\":\"2036-05-31\"},{\"key\":\"8\",\"label\":\"8\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2024-05-31\",\"extended_support_end\":\"2033-05-31\"},{\"key\":\"7\",\"label\":\"7\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2019-08-06\",\"extended_support_end\":\"2029-05-31\"},{\"key\":\"6\",\"label\":\"6\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2016-05-10\",\"extended_support_end\":\"2024-06-30\"}]},{\"key\":\"rocky-linux\",\"name\":\"Rocky Linux\",\"editor\":\"Rocky Enterprise Software Foundation\",\"family\":\"operating_system\",\"description\":\"Community Linux distribution rebuilt from Red Hat Enterprise Linux, published by the Rocky Enterprise Software Foundation.\",\"versions\":[{\"key\":\"10\",\"label\":\"10\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2030-05-31\",\"extended_support_end\":\"2035-05-31\"},{\"key\":\"9\",\"label\":\"9\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2027-05-31\",\"extended_support_end\":\"2032-05-31\"},{\"key\":\"8\",\"label\":\"8\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2024-05-31\",\"extended_support_end\":\"2029-05-31\"}]},{\"key\":\"sles\",\"name\":\"SUSE Linux Enterprise Server\",\"editor\":\"SUSE\",\"family\":\"operating_system\",\"description\":\"Commercial Linux distribution from SUSE for servers, published as a major version and its service packs.\",\"versions\":[{\"key\":\"16.0\",\"label\":\"16.0\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2027-11-30\",\"extended_support_end\":\"2030-11-30\"},{\"key\":\"15.7\",\"label\":\"15 SP7\",\"cpe_version\":\"15\",\"build_prefixes\":[\"15.7\"],\"standard_support_end\":\"2031-07-31\",\"extended_support_end\":\"2034-07-31\"},{\"key\":\"15.6\",\"label\":\"15 SP6\",\"cpe_version\":\"15\",\"build_prefixes\":[\"15.6\"],\"standard_support_end\":\"2025-12-31\",\"extended_support_end\":\"2028-12-31\"},{\"key\":\"15.5\",\"label\":\"15 SP5\",\"cpe_version\":\"15\",\"build_prefixes\":[\"15.5\"],\"standard_support_end\":\"2024-12-31\",\"extended_support_end\":\"2027-12-31\"},{\"key\":\"15.4\",\"label\":\"15 SP4\",\"cpe_version\":\"15\",\"build_prefixes\":[\"15.4\"],\"standard_support_end\":\"2023-12-31\",\"extended_support_end\":\"2026-12-31\"},{\"key\":\"15.3\",\"label\":\"15 SP3\",\"cpe_version\":\"15\",\"build_prefixes\":[\"15.3\"],\"standard_support_end\":\"2022-12-31\",\"extended_support_end\":\"2025-12-31\"},{\"key\":\"15.2\",\"label\":\"15 SP2\",\"cpe_version\":\"15\",\"build_prefixes\":[\"15.2\"],\"standard_support_end\":\"2021-12-31\",\"extended_support_end\":\"2024-12-31\"},{\"key\":\"12.5\",\"label\":\"12 SP5\",\"cpe_version\":\"12\",\"build_prefixes\":[\"12.5\"],\"standard_support_end\":\"2024-10-31\",\"extended_support_end\":\"2027-10-31\"}]},{\"key\":\"ubuntu\",\"name\":\"Ubuntu\",\"editor\":\"Canonical\",\"family\":\"operating_system\",\"description\":\"Linux distribution from Canonical, published twice a year, with a long-term support release every two years.\",\"versions\":[{\"key\":\"26.04\",\"label\":\"26.04 LTS\",\"cpe_version\":\"26.04\",\"build_prefixes\":[\"26.04\"],\"standard_support_end\":\"2031-05-29\",\"extended_support_end\":\"2036-04-23\"},{\"key\":\"25.10\",\"label\":\"25.10\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2026-07-01\",\"extended_support_end\":null},{\"key\":\"25.04\",\"label\":\"25.04\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2026-01-17\",\"extended_support_end\":null},{\"key\":\"24.10\",\"label\":\"24.10\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2025-07-10\",\"extended_support_end\":null},{\"key\":\"24.04\",\"label\":\"24.04 LTS\",\"cpe_version\":\"24.04\",\"build_prefixes\":[\"24.04\"],\"standard_support_end\":\"2029-05-31\",\"extended_support_end\":\"2034-04-25\"},{\"key\":\"23.10\",\"label\":\"23.10\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2024-07-12\",\"extended_support_end\":null},{\"key\":\"23.04\",\"label\":\"23.04\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2024-01-20\",\"extended_support_end\":null},{\"key\":\"22.10\",\"label\":\"22.10\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2023-07-20\",\"extended_support_end\":null},{\"key\":\"22.04\",\"label\":\"22.04 LTS\",\"cpe_version\":\"22.04\",\"build_prefixes\":[\"22.04\"],\"standard_support_end\":\"2024-09-30\",\"extended_support_end\":\"2032-04-21\"},{\"key\":\"20.04\",\"label\":\"20.04 LTS\",\"cpe_version\":\"20.04\",\"build_prefixes\":[\"20.04\"],\"standard_support_end\":\"2022-10-01\",\"extended_support_end\":\"2030-04-23\"},{\"key\":\"18.04\",\"label\":\"18.04 LTS\",\"cpe_version\":\"18.04\",\"build_prefixes\":[\"18.04\"],\"standard_support_end\":\"2023-05-31\",\"extended_support_end\":\"2028-04-26\"}]},{\"key\":\"windows-server\",\"name\":\"Windows Server\",\"editor\":\"Microsoft\",\"family\":\"operating_system\",\"description\":\"Microsoft operating system for servers, in long-term releases with a standard support period and an extended one.\",\"versions\":[{\"key\":\"2025\",\"label\":\"2025\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2029-11-13\",\"extended_support_end\":\"2034-11-14\"},{\"key\":\"23h2-ac\",\"label\":\"23H2 AC\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2026-05-12\",\"extended_support_end\":null},{\"key\":\"2022\",\"label\":\"2022\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2026-10-13\",\"extended_support_end\":\"2031-10-14\"},{\"key\":\"2019\",\"label\":\"2019\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2024-01-09\",\"extended_support_end\":\"2029-01-09\"},{\"key\":\"2016\",\"label\":\"2016\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2022-01-11\",\"extended_support_end\":\"2030-01-12\"},{\"key\":\"2012-r2\",\"label\":\"2012 R2\",\"cpe_version\":\"2012\",\"build_prefixes\":[],\"standard_support_end\":\"2018-10-09\",\"extended_support_end\":\"2026-10-13\"},{\"key\":\"2012\",\"label\":\"2012\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2018-10-09\",\"extended_support_end\":\"2026-10-13\"},{\"key\":\"2008-r2-sp1\",\"label\":\"2008 R2 SP1\",\"cpe_version\":\"2008\",\"build_prefixes\":[],\"standard_support_end\":\"2015-01-13\",\"extended_support_end\":\"2023-01-10\"}]}]");
+export const OS_PRODUCTS: readonly FrozenProduct[] = JSON.parse("[{\"key\":\"almalinux\",\"name\":\"AlmaLinux\",\"editor\":\"AlmaLinux OS Foundation\",\"family\":\"operating_system\",\"description\":\"Community Linux distribution rebuilt from Red Hat Enterprise Linux, published by the AlmaLinux OS Foundation.\",\"versions\":[{\"key\":\"10\",\"label\":\"10\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2035-05-31\",\"extended_support_end\":null},{\"key\":\"9\",\"label\":\"9\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2032-05-31\",\"extended_support_end\":null},{\"key\":\"8\",\"label\":\"8\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2029-05-31\",\"extended_support_end\":null}]},{\"key\":\"centos\",\"name\":\"CentOS\",\"editor\":\"The CentOS Project\",\"family\":\"operating_system\",\"description\":\"Community Linux distribution rebuilt from Red Hat Enterprise Linux. CentOS Linux ended with version 7; later builds are CentOS Stream.\",\"versions\":[{\"key\":\"7\",\"label\":\"7\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2024-06-30\",\"extended_support_end\":null}]},{\"key\":\"debian\",\"name\":\"Debian\",\"editor\":\"Debian\",\"family\":\"operating_system\",\"description\":\"Community Linux distribution, published about every two years as a stable release named after a Toy Story character.\",\"versions\":[{\"key\":\"13\",\"label\":\"13 (Trixie)\",\"cpe_version\":\"13\",\"build_prefixes\":[\"13\"],\"standard_support_end\":\"2030-06-30\",\"extended_support_end\":\"2035-06-30\"},{\"key\":\"12\",\"label\":\"12 (Bookworm)\",\"cpe_version\":\"12\",\"build_prefixes\":[\"12\"],\"standard_support_end\":\"2028-06-30\",\"extended_support_end\":\"2033-06-30\"},{\"key\":\"11\",\"label\":\"11 (Bullseye)\",\"cpe_version\":\"11\",\"build_prefixes\":[\"11\"],\"standard_support_end\":\"2026-08-31\",\"extended_support_end\":\"2031-06-30\"},{\"key\":\"10\",\"label\":\"10 (Buster)\",\"cpe_version\":\"10\",\"build_prefixes\":[\"10\"],\"standard_support_end\":\"2024-06-30\",\"extended_support_end\":\"2029-06-30\"},{\"key\":\"9\",\"label\":\"9 (Stretch)\",\"cpe_version\":\"9\",\"build_prefixes\":[\"9\"],\"standard_support_end\":\"2022-07-01\",\"extended_support_end\":\"2027-06-30\"},{\"key\":\"8\",\"label\":\"8 (Jessie)\",\"cpe_version\":\"8\",\"build_prefixes\":[\"8\"],\"standard_support_end\":\"2020-06-30\",\"extended_support_end\":\"2025-06-30\"}]},{\"key\":\"oracle-linux\",\"name\":\"Oracle Linux\",\"editor\":\"Oracle\",\"family\":\"operating_system\",\"description\":\"Linux distribution from Oracle, rebuilt from Red Hat Enterprise Linux, with optional paid support.\",\"versions\":[{\"key\":\"10\",\"label\":\"10\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2035-06-30\",\"extended_support_end\":\"2038-06-30\"},{\"key\":\"9\",\"label\":\"9\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2032-06-30\",\"extended_support_end\":\"2035-06-30\"},{\"key\":\"8\",\"label\":\"8\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2029-07-31\",\"extended_support_end\":\"2032-07-31\"},{\"key\":\"7\",\"label\":\"7\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2024-12-31\",\"extended_support_end\":\"2029-07-31\"},{\"key\":\"6\",\"label\":\"6\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2021-03-31\",\"extended_support_end\":\"2024-12-31\"}]},{\"key\":\"rhel\",\"name\":\"Red Hat Enterprise Linux\",\"editor\":\"Red Hat\",\"family\":\"operating_system\",\"description\":\"Commercial Linux distribution from Red Hat, with ten years of maintenance and an optional extended life cycle.\",\"versions\":[{\"key\":\"10\",\"label\":\"10\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2035-05-31\",\"extended_support_end\":\"2039-05-31\"},{\"key\":\"9\",\"label\":\"9\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2032-05-31\",\"extended_support_end\":\"2036-05-31\"},{\"key\":\"8\",\"label\":\"8\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2029-05-31\",\"extended_support_end\":\"2033-05-31\"},{\"key\":\"7\",\"label\":\"7\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2024-06-30\",\"extended_support_end\":\"2029-05-31\"},{\"key\":\"6\",\"label\":\"6\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2020-11-30\",\"extended_support_end\":\"2024-06-30\"}]},{\"key\":\"rocky-linux\",\"name\":\"Rocky Linux\",\"editor\":\"Rocky Enterprise Software Foundation\",\"family\":\"operating_system\",\"description\":\"Community Linux distribution rebuilt from Red Hat Enterprise Linux, published by the Rocky Enterprise Software Foundation.\",\"versions\":[{\"key\":\"10\",\"label\":\"10\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2035-05-31\",\"extended_support_end\":null},{\"key\":\"9\",\"label\":\"9\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2032-05-31\",\"extended_support_end\":null},{\"key\":\"8\",\"label\":\"8\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2029-05-31\",\"extended_support_end\":null}]},{\"key\":\"sles\",\"name\":\"SUSE Linux Enterprise Server\",\"editor\":\"SUSE\",\"family\":\"operating_system\",\"description\":\"Commercial Linux distribution from SUSE for servers, published as a major version and its service packs.\",\"versions\":[{\"key\":\"16.0\",\"label\":\"16.0\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2027-11-30\",\"extended_support_end\":\"2030-11-30\"},{\"key\":\"15.7\",\"label\":\"15 SP7\",\"cpe_version\":\"15\",\"build_prefixes\":[\"15.7\"],\"standard_support_end\":\"2031-07-31\",\"extended_support_end\":\"2034-07-31\"},{\"key\":\"15.6\",\"label\":\"15 SP6\",\"cpe_version\":\"15\",\"build_prefixes\":[\"15.6\"],\"standard_support_end\":\"2025-12-31\",\"extended_support_end\":\"2028-12-31\"},{\"key\":\"15.5\",\"label\":\"15 SP5\",\"cpe_version\":\"15\",\"build_prefixes\":[\"15.5\"],\"standard_support_end\":\"2024-12-31\",\"extended_support_end\":\"2027-12-31\"},{\"key\":\"15.4\",\"label\":\"15 SP4\",\"cpe_version\":\"15\",\"build_prefixes\":[\"15.4\"],\"standard_support_end\":\"2023-12-31\",\"extended_support_end\":\"2026-12-31\"},{\"key\":\"15.3\",\"label\":\"15 SP3\",\"cpe_version\":\"15\",\"build_prefixes\":[\"15.3\"],\"standard_support_end\":\"2022-12-31\",\"extended_support_end\":\"2025-12-31\"},{\"key\":\"15.2\",\"label\":\"15 SP2\",\"cpe_version\":\"15\",\"build_prefixes\":[\"15.2\"],\"standard_support_end\":\"2021-12-31\",\"extended_support_end\":\"2024-12-31\"},{\"key\":\"12.5\",\"label\":\"12 SP5\",\"cpe_version\":\"12\",\"build_prefixes\":[\"12.5\"],\"standard_support_end\":\"2024-10-31\",\"extended_support_end\":\"2027-10-31\"}]},{\"key\":\"ubuntu\",\"name\":\"Ubuntu\",\"editor\":\"Canonical\",\"family\":\"operating_system\",\"description\":\"Linux distribution from Canonical, published twice a year, with a long-term support release every two years.\",\"versions\":[{\"key\":\"26.04\",\"label\":\"26.04 LTS\",\"cpe_version\":\"26.04\",\"build_prefixes\":[\"26.04\"],\"standard_support_end\":\"2031-05-29\",\"extended_support_end\":\"2036-04-23\"},{\"key\":\"25.10\",\"label\":\"25.10\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2026-07-01\",\"extended_support_end\":null},{\"key\":\"25.04\",\"label\":\"25.04\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2026-01-17\",\"extended_support_end\":null},{\"key\":\"24.10\",\"label\":\"24.10\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2025-07-10\",\"extended_support_end\":null},{\"key\":\"24.04\",\"label\":\"24.04 LTS\",\"cpe_version\":\"24.04\",\"build_prefixes\":[\"24.04\"],\"standard_support_end\":\"2029-05-31\",\"extended_support_end\":\"2034-04-25\"},{\"key\":\"23.10\",\"label\":\"23.10\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2024-07-12\",\"extended_support_end\":null},{\"key\":\"23.04\",\"label\":\"23.04\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2024-01-20\",\"extended_support_end\":null},{\"key\":\"22.10\",\"label\":\"22.10\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2023-07-20\",\"extended_support_end\":null},{\"key\":\"22.04\",\"label\":\"22.04 LTS\",\"cpe_version\":\"22.04\",\"build_prefixes\":[\"22.04\"],\"standard_support_end\":\"2027-06-01\",\"extended_support_end\":\"2032-04-21\"},{\"key\":\"20.04\",\"label\":\"20.04 LTS\",\"cpe_version\":\"20.04\",\"build_prefixes\":[\"20.04\"],\"standard_support_end\":\"2025-05-31\",\"extended_support_end\":\"2030-04-23\"},{\"key\":\"18.04\",\"label\":\"18.04 LTS\",\"cpe_version\":\"18.04\",\"build_prefixes\":[\"18.04\"],\"standard_support_end\":\"2023-05-31\",\"extended_support_end\":\"2028-04-26\"}]},{\"key\":\"windows-server\",\"name\":\"Windows Server\",\"editor\":\"Microsoft\",\"family\":\"operating_system\",\"description\":\"Microsoft operating system for servers, in long-term releases with a standard support period and an extended one.\",\"versions\":[{\"key\":\"2025\",\"label\":\"2025\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2029-11-13\",\"extended_support_end\":\"2034-11-14\"},{\"key\":\"23h2-ac\",\"label\":\"23H2 AC\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2026-05-12\",\"extended_support_end\":null},{\"key\":\"2022\",\"label\":\"2022\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2026-10-13\",\"extended_support_end\":\"2031-10-14\"},{\"key\":\"2019\",\"label\":\"2019\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2024-01-09\",\"extended_support_end\":\"2029-01-09\"},{\"key\":\"2016\",\"label\":\"2016\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2022-01-11\",\"extended_support_end\":\"2027-01-12\"},{\"key\":\"2012-r2\",\"label\":\"2012 R2\",\"cpe_version\":\"2012\",\"build_prefixes\":[],\"standard_support_end\":\"2018-10-09\",\"extended_support_end\":\"2023-10-10\"},{\"key\":\"2012\",\"label\":\"2012\",\"cpe_version\":null,\"build_prefixes\":[],\"standard_support_end\":\"2018-10-09\",\"extended_support_end\":\"2023-10-10\"},{\"key\":\"2008-r2-sp1\",\"label\":\"2008 R2 SP1\",\"cpe_version\":\"2008\",\"build_prefixes\":[],\"standard_support_end\":\"2015-01-13\",\"extended_support_end\":\"2020-01-14\"}]}]");
 
 const OS_BY_KEY = new Map(OS_PRODUCTS.map((product) => [product.key, product]));
 
@@ -126,6 +138,7 @@ type Counts = {
   linksCreated: number;
   linksReused: number;
   orphans: number;
+  datesDropped: number;
 };
 
 type Work = {
@@ -209,6 +222,41 @@ function shippedCodeFor(catalogKey: string | null, name: string, version: string
   const product = OS_PRODUCTS.find((item) => item.name.toLowerCase() === name.toLowerCase());
   if (!product) return null;
   return SHIPPED_OS_CODES.find((entry) => entry.product === product.key && entry.version.toLowerCase() === versionLabel)?.code ?? null;
+}
+
+/** The longest frozen product whose name is the label, or prefixes it followed by a space. */
+function productPrefix(label: string): { product: FrozenProduct; remainder: string | null; length: number } | null {
+  const lower = label.toLowerCase();
+  let best: { product: FrozenProduct; remainder: string | null; length: number } | null = null;
+  for (const product of OS_PRODUCTS) {
+    const name = product.name.toLowerCase();
+    let remainder: string | null;
+    if (lower === name) remainder = null;
+    else if (lower.length > name.length && lower.startsWith(name) && lower[name.length] === ' ') {
+      remainder = label.slice(name.length).trim();
+    } else continue;
+    if (!best || name.length > best.length) best = { product, remainder, length: name.length };
+  }
+  return best;
+}
+
+async function tenantPrefix(
+  queryRunner: QueryRunner,
+  tenantId: string,
+  label: string,
+): Promise<{ id: string; name: string; catalogKey: string | null; remainder: string; length: number } | null> {
+  const [row]: Array<{ id: string; name: string; catalog_key: string | null }> = await queryRunner.query(
+    `SELECT id, name, catalog_key FROM technologies
+      WHERE tenant_id = $1
+        AND char_length($2) > char_length(name)
+        AND lower(left($2, char_length(name))) = lower(name)
+        AND substr($2, char_length(name) + 1, 1) = ' '
+      ORDER BY char_length(name) DESC
+      LIMIT 1`,
+    [tenantId, label],
+  );
+  if (!row) return null;
+  return { id: row.id, name: row.name, catalogKey: row.catalog_key, remainder: label.slice(row.name.length).trim(), length: row.name.length };
 }
 
 function assetsSearchFunction(withOperatingSystem: boolean): string {
@@ -440,7 +488,12 @@ async function ensureVersion(
   return { id: inserted.id, label: inserted.label, created: true };
 }
 
-/** Mark the operating system. Returns true when an existing link was reused. */
+/**
+ * Mark the operating system. Returns true when an existing link was reused. The rule of
+ * `setOperatingSystem`: the link of this technology and version, else (with a version) a link of
+ * this technology with no version, else a new `manual` link; a link that loses the mark is
+ * deleted. A reused link keeps its provenance.
+ */
 async function linkOperatingSystem(
   queryRunner: QueryRunner,
   tenantId: string,
@@ -449,57 +502,40 @@ async function linkOperatingSystem(
   versionId: string | null,
 ): Promise<boolean> {
   await queryRunner.query(`SELECT id FROM assets WHERE tenant_id = $1 AND id = $2 FOR UPDATE`, [tenantId, assetId]);
-  const [marked]: Array<{ id: string; technology_id: string; technology_version_id: string | null }> = await queryRunner.query(
-    `SELECT id, technology_id, technology_version_id FROM asset_technologies
-      WHERE tenant_id = $1 AND asset_id = $2 AND is_operating_system`,
+  const [marked]: Array<{ id: string }> = await queryRunner.query(
+    `SELECT id FROM asset_technologies WHERE tenant_id = $1 AND asset_id = $2 AND is_operating_system`,
     [tenantId, assetId],
   );
-  if (marked && marked.technology_id === technologyId && marked.technology_version_id === versionId) return true;
-  if (marked && marked.technology_id !== technologyId) {
-    await queryRunner.query(`DELETE FROM asset_technologies WHERE tenant_id = $1 AND id = $2`, [tenantId, marked.id]);
-  } else if (marked) {
-    await queryRunner.query(
-      `UPDATE asset_technologies SET is_operating_system = false, updated_at = now() WHERE tenant_id = $1 AND id = $2`,
-      [tenantId, marked.id],
-    );
-  }
-  const [same]: Array<{ id: string }> = await queryRunner.query(
+  let [target]: Array<{ id: string }> = await queryRunner.query(
     `SELECT id FROM asset_technologies
       WHERE tenant_id = $1 AND asset_id = $2 AND technology_id = $3 AND technology_version_id IS NOT DISTINCT FROM $4`,
     [tenantId, assetId, technologyId, versionId],
   );
-  if (same) {
-    await queryRunner.query(
-      `UPDATE asset_technologies
-          SET is_operating_system = true, source = 'manual', source_ref = NULL, observed_at = NULL, updated_at = now()
-        WHERE tenant_id = $1 AND id = $2`,
-      [tenantId, same.id],
-    );
-    return true;
-  }
-  if (versionId) {
-    const [blank]: Array<{ id: string }> = await queryRunner.query(
+  if (!target && versionId) {
+    [target] = await queryRunner.query(
       `SELECT id FROM asset_technologies
         WHERE tenant_id = $1 AND asset_id = $2 AND technology_id = $3 AND technology_version_id IS NULL
+        ORDER BY is_operating_system DESC, created_at, id
         LIMIT 1`,
       [tenantId, assetId, technologyId],
     );
-    if (blank) {
-      await queryRunner.query(
-        `UPDATE asset_technologies
-            SET technology_version_id = $3, is_operating_system = true, source = 'manual', source_ref = NULL, observed_at = NULL, updated_at = now()
-          WHERE tenant_id = $1 AND id = $2`,
-        [tenantId, blank.id, versionId],
-      );
-      return true;
-    }
+  }
+  if (marked && marked.id !== target?.id) {
+    await queryRunner.query(`DELETE FROM asset_technologies WHERE tenant_id = $1 AND id = $2`, [tenantId, marked.id]);
+  }
+  if (target) {
+    await queryRunner.query(
+      `UPDATE asset_technologies
+          SET technology_version_id = $3, is_operating_system = true, updated_at = now()
+        WHERE tenant_id = $1 AND id = $2`,
+      [tenantId, target.id, versionId],
+    );
+    return true;
   }
   await queryRunner.query(
     `INSERT INTO asset_technologies (
        tenant_id, asset_id, technology_id, technology_version_id, is_operating_system, source
-     ) VALUES ($1, $2, $3, $4, true, 'manual')
-     ON CONFLICT ON CONSTRAINT asset_technologies_key DO UPDATE
-       SET is_operating_system = true, source = 'manual', source_ref = NULL, observed_at = NULL, updated_at = now()`,
+     ) VALUES ($1, $2, $3, $4, true, 'manual')`,
     [tenantId, assetId, technologyId, versionId],
   );
   return false;
@@ -507,7 +543,7 @@ async function linkOperatingSystem(
 
 async function migrateTenant(queryRunner: QueryRunner, tenantId: string): Promise<Counts> {
   await queryRunner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
-  const counts: Counts = { created: 0, adopted: 0, versions: 0, linksCreated: 0, linksReused: 0, orphans: 0 };
+  const counts: Counts = { created: 0, adopted: 0, versions: 0, linksCreated: 0, linksReused: 0, orphans: 0, datesDropped: 0 };
   const [tenant]: Array<{ metadata: { it_ops?: Record<string, unknown> } | null }> = await queryRunner.query(
     `SELECT metadata FROM tenants WHERE id = $1`,
     [tenantId],
@@ -560,15 +596,6 @@ async function migrateTenant(queryRunner: QueryRunner, tenantId: string): Promis
       WHERE tenant_id = $1 AND provider_kind = 'inventory' AND provider_key = 'netbox'`,
     [tenantId],
   );
-  for (const config of configs) {
-    const map = (config.metadata_json ?? {}).os_map;
-    if (!map || typeof map !== 'object' || Array.isArray(map)) continue;
-    for (const value of Object.values(map as Record<string, unknown>)) {
-      const text = String(value ?? '').trim();
-      if (text && !/\s/.test(text)) add(norm(text), {});
-    }
-  }
-
   const createdIds = new Set<string>();
   const resolved = new Map<string, ResolvedCode>();
   const orphans = new Set<string>();
@@ -580,18 +607,22 @@ async function migrateTenant(queryRunner: QueryRunner, tenantId: string): Promis
     let versionLabel: string | null = null;
     let dates = { ...EMPTY };
     let shippedVersion: { productKey: string; version: FrozenVersion } | null = null;
-    if (shipped) {
-      const product = OS_BY_KEY.get(shipped.product);
-      if (!product) continue;
+    const adopt = async (product: FrozenProduct) => {
       const applied = await adoptProduct(queryRunner, tenantId, product, family, hosting);
-      technologyId = applied.id;
-      technologyName = applied.name;
       if (applied.created) {
         counts.created += 1;
         createdIds.add(applied.id);
       }
       if (applied.adopted) counts.adopted += 1;
       counts.versions += applied.versions;
+      return applied;
+    };
+    if (shipped) {
+      const product = OS_BY_KEY.get(shipped.product);
+      if (!product) continue;
+      const applied = await adopt(product);
+      technologyId = applied.id;
+      technologyName = applied.name;
       const version = product.versions.find((item) => item.label.toLowerCase() === shipped.version.toLowerCase());
       versionLabel = version?.label ?? shipped.version;
       if (version) shippedVersion = { productKey: product.key, version };
@@ -601,18 +632,51 @@ async function migrateTenant(queryRunner: QueryRunner, tenantId: string): Promis
       );
       dates = fillDates(dates, work.dates);
     } else {
-      const label = work.label || humanizeOsCode(work.code);
-      const split = splitOsLabel(label);
-      if (!split.name) continue;
-      const row = await ensureNamed(queryRunner, tenantId, split.name, family, hosting);
-      technologyId = row.id;
-      technologyName = row.name;
-      if (row.created) {
-        counts.created += 1;
-        createdIds.add(row.id);
+      // The resolver's order: exact name, longest prefix (tenant or frozen product), creation.
+      const label = (work.label || humanizeOsCode(work.code)).trim().replace(/\s+/g, ' ');
+      if (!label) continue;
+      let product: FrozenProduct | null = null;
+      const [exact]: Array<{ id: string; name: string }> = await queryRunner.query(
+        `SELECT id, name FROM technologies WHERE tenant_id = $1 AND lower(name) = lower($2) LIMIT 1`,
+        [tenantId, label],
+      );
+      const ownPrefix = exact ? null : await tenantPrefix(queryRunner, tenantId, label);
+      const catalogPrefix = exact ? null : productPrefix(label);
+      if (exact) {
+        technologyId = exact.id;
+        technologyName = exact.name;
+      } else if (ownPrefix && (!catalogPrefix || ownPrefix.length >= catalogPrefix.length)) {
+        technologyId = ownPrefix.id;
+        technologyName = ownPrefix.name;
+        versionLabel = ownPrefix.remainder;
+        product = ownPrefix.catalogKey ? OS_BY_KEY.get(ownPrefix.catalogKey) ?? null : null;
+      } else if (catalogPrefix) {
+        const applied = await adopt(catalogPrefix.product);
+        technologyId = applied.id;
+        technologyName = applied.name;
+        versionLabel = catalogPrefix.remainder;
+        product = catalogPrefix.product;
+      } else {
+        const split = splitOsLabel(label);
+        if (!split.name) continue;
+        const row = await ensureNamed(queryRunner, tenantId, split.name, family, hosting);
+        technologyId = row.id;
+        technologyName = row.name;
+        if (row.created) {
+          counts.created += 1;
+          createdIds.add(row.id);
+        }
+        versionLabel = split.version;
       }
-      versionLabel = split.version;
-      dates = work.dates;
+      const version = product && versionLabel
+        ? product.versions.find((item) => item.label.toLowerCase() === versionLabel!.toLowerCase())
+        : undefined;
+      if (product && version) {
+        shippedVersion = { productKey: product.key, version };
+        dates = fillDates({ standard: version.standard_support_end, extended: version.extended_support_end }, work.dates);
+      } else {
+        dates = work.dates;
+      }
     }
     let versionId: string | null = null;
     let storedVersion: string | null = null;
@@ -621,6 +685,8 @@ async function migrateTenant(queryRunner: QueryRunner, tenantId: string): Promis
       versionId = version.id;
       storedVersion = version.label;
       if (version.created) counts.versions += 1;
+    } else if (work.dates.standard || work.dates.extended) {
+      counts.datesDropped += 1;
     }
     resolved.set(work.code, {
       code: work.code,
@@ -672,10 +738,17 @@ async function migrateTenant(queryRunner: QueryRunner, tenantId: string): Promis
     let changed = false;
     const next: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(map as Record<string, unknown>)) {
-      const code = norm(value);
-      const item = resolved.get(code);
-      if (item && item.label !== value) {
-        next[key] = item.label;
+      const text = String(value ?? '').trim();
+      const code = norm(text);
+      let label = resolved.get(code)?.label ?? null;
+      if (!label && text && !/\s/.test(text)) {
+        const shipped = SHIPPED_BY_CODE.get(code);
+        const product = shipped ? OS_BY_KEY.get(shipped.product) : undefined;
+        const version = product?.versions.find((item) => item.label.toLowerCase() === shipped!.version.toLowerCase());
+        label = product ? osLabel(product.name, version?.label ?? shipped!.version) : humanizeOsCode(text);
+      }
+      if (label && label !== value) {
+        next[key] = label;
         changed = true;
       } else next[key] = value;
     }
@@ -701,11 +774,12 @@ async function restoreTenant(queryRunner: QueryRunner, tenantId: string): Promis
     asset_id: string;
     catalog_key: string | null;
     name: string;
+    retired: boolean;
     version: string | null;
     standard_support_end: string | null;
     extended_support_end: string | null;
   }> = await queryRunner.query(
-    `SELECT a.id AS asset_id, t.catalog_key, t.name, v.label AS version,
+    `SELECT a.id AS asset_id, t.catalog_key, t.name, t.lifecycle = 'retired' AS retired, v.label AS version,
             to_char(v.standard_support_end, 'YYYY-MM-DD') AS standard_support_end,
             to_char(v.extended_support_end, 'YYYY-MM-DD') AS extended_support_end
        FROM asset_technologies at
@@ -717,20 +791,32 @@ async function restoreTenant(queryRunner: QueryRunner, tenantId: string): Promis
   );
   const updates: Array<{ id: string; code: string }> = [];
   const settings: Array<Record<string, unknown>> = [];
-  const seen = new Set<string>();
+  const codeOfLabel = new Map<string, string>();
+  const usedCodes = new Set<string>();
   for (const row of rows) {
     const label = osLabel(row.name, row.version);
-    const code = shippedCodeFor(row.catalog_key, row.name, row.version) ?? snakeOsLabel(label);
+    let code = codeOfLabel.get(label.toLowerCase());
+    if (!code) {
+      const shipped = shippedCodeFor(row.catalog_key, row.name, row.version);
+      if (shipped) code = shipped;
+      else {
+        // Never a shipped code (up() would adopt the product instead of this technology) nor the
+        // code of another label (both would land on one technology).
+        const base = snakeOsLabel(label);
+        code = SHIPPED_BY_CODE.has(base) ? `${base}_custom` : base;
+        for (let n = 2; usedCodes.has(code); n += 1) code = `${base}_${n}`;
+      }
+      codeOfLabel.set(label.toLowerCase(), code);
+      usedCodes.add(code);
+      settings.push({
+        code,
+        label,
+        deprecated: row.retired === true,
+        ...(row.standard_support_end ? { standardSupportEnd: row.standard_support_end } : {}),
+        ...(row.extended_support_end ? { extendedSupportEnd: row.extended_support_end } : {}),
+      });
+    }
     updates.push({ id: row.asset_id, code });
-    if (seen.has(code)) continue;
-    seen.add(code);
-    settings.push({
-      code,
-      label,
-      deprecated: false,
-      ...(row.standard_support_end ? { standardSupportEnd: row.standard_support_end } : {}),
-      ...(row.extended_support_end ? { extendedSupportEnd: row.extended_support_end } : {}),
-    });
   }
   if (updates.length) {
     await queryRunner.query(
@@ -740,9 +826,12 @@ async function restoreTenant(queryRunner: QueryRunner, tenantId: string): Promis
       [tenantId, JSON.stringify(updates)],
     );
   }
+  if (settings.length === 0) return;
   await queryRunner.query(
     `UPDATE tenants
-        SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{it_ops,operating_systems}', $2::jsonb, true)
+        SET metadata = jsonb_set(
+          COALESCE(metadata, '{}'::jsonb), '{it_ops}',
+          COALESCE(metadata->'it_ops', '{}'::jsonb) || jsonb_build_object('operating_systems', $2::jsonb), true)
       WHERE id = $1`,
     [tenantId, JSON.stringify(settings)],
   );
@@ -751,7 +840,7 @@ async function restoreTenant(queryRunner: QueryRunner, tenantId: string): Promis
 function logLine(tenantId: string, counts: Counts): string {
   return `[migration 1854330000000] tenant ${tenantId}: created=${counts.created} adopted=${counts.adopted}`
     + ` versions=${counts.versions} links_created=${counts.linksCreated} links_reused=${counts.linksReused}`
-    + ` orphans=${counts.orphans}`;
+    + ` orphans=${counts.orphans} dates_dropped=${counts.datesDropped}`;
 }
 
 export class OperatingSystemTechnology1854330000000 implements MigrationInterface {
@@ -772,7 +861,8 @@ export class OperatingSystemTechnology1854330000000 implements MigrationInterfac
     const tenants: Array<{ id: string }> = await queryRunner.query(`SELECT id FROM tenants ORDER BY id`);
     for (const tenant of tenants) {
       const counts = await migrateTenant(queryRunner, tenant.id);
-      const any = counts.created || counts.adopted || counts.versions || counts.linksCreated || counts.linksReused || counts.orphans;
+      const any = counts.created || counts.adopted || counts.versions || counts.linksCreated || counts.linksReused
+        || counts.orphans || counts.datesDropped;
       if (any) console.log(logLine(tenant.id, counts));
     }
     await queryRunner.query(`SELECT set_config('app.current_tenant', '', true)`);

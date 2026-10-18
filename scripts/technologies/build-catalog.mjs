@@ -297,6 +297,43 @@ function cpeVersionOf(label, entry) {
 
 const day = (value) => (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null);
 
+/**
+ * Operating systems keep the meaning of the former IT settings catalog. Linux distributions:
+ * standard = end of security fixes (eolFrom), extended = paid extension (eoesFrom: ESM, ELS, LTSS)
+ * or nothing. Windows Server: standard = end of mainstream support, extended = end of extended
+ * support (eolFrom). Twin of SUPPORT_RULES in backend/src/technologies/catalog/catalog-releases.ts.
+ */
+const SUPPORT_RULES = {
+  ubuntu: 'linux',
+  rhel: 'linux',
+  debian: 'linux',
+  sles: 'linux',
+  'rocky-linux': 'linux',
+  almalinux: 'linux',
+  'oracle-linux': 'linux',
+  centos: 'linux',
+  'windows-server': 'windows',
+};
+
+/** Other products: standard = end of active support, else end of life; extended = paid extension, else end of life after an active support. */
+function supportDates(key, eoas, eol, eoes) {
+  const rule = SUPPORT_RULES[key];
+  let standard;
+  let extended;
+  if (rule === 'linux') {
+    standard = eol ?? eoas;
+    extended = eoes;
+  } else if (rule === 'windows') {
+    standard = eoas ?? eol;
+    extended = eoas ? eol : null;
+  } else {
+    standard = eoas ?? eol;
+    extended = eoes ?? (eoas ? eol : null);
+  }
+  if (standard && extended && extended <= standard) extended = null;
+  return { standard, extended };
+}
+
 function versionsOf(releases, today, entry) {
   const cutoff = `${Number(today.slice(0, 4)) - ENDED_YEARS_KEPT}${today.slice(4)}`;
   const out = [];
@@ -316,11 +353,7 @@ function versionsOf(releases, today, entry) {
     const label = entry.versionLabel ? entry.versionLabel(release) : cleanLabel(release.label, release.name);
     if (!label || seen.has(label.toLowerCase())) continue;
     seen.add(label.toLowerCase());
-    // Standard support: the end of active support when the product has one, else the end of life.
-    // Extended: the paid extension when published, else the end of life after an active support.
-    const standard = eoas ?? eol;
-    let extended = eoes ?? (eoas ? eol : null);
-    if (standard && extended && extended < standard) extended = null;
+    const { standard, extended } = supportDates(entry.key, eoas, eol, eoes);
     out.push({
       key: name,
       label,
@@ -328,7 +361,7 @@ function versionsOf(releases, today, entry) {
       build_prefixes: name !== label && /^\d+(\.\d+)*$/.test(name) ? [name] : [],
       release_date: day(release.releaseDate),
       standard_support_end: standard,
-      extended_support_end: extended === standard ? null : extended,
+      extended_support_end: extended,
     });
   }
   return out;

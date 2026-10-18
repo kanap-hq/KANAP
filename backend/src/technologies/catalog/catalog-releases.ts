@@ -50,6 +50,55 @@ const CPE_VERSION_RULES: Record<string, CpeVersionRule> = {
   mssqlserver: { productPerRelease: 'a:microsoft:sql_server_{year}' },
 };
 
+/**
+ * How an operating system reads the support dates of endoflife.date, so that they keep the meaning
+ * of the former operating-system catalog of the IT settings. Linux distributions: standard support
+ * ends with the security fixes (`eolFrom`), extended support is the paid extension when published
+ * (`eoesFrom`: ESM, ELS, LTSS). Windows Server: standard is the end of mainstream support, extended
+ * the end of extended support (`eolFrom`; the paid ESU is left out). The twin of `SUPPORT_RULES` in
+ * `scripts/technologies/build-catalog.mjs`.
+ */
+export const SUPPORT_RULES: Record<string, 'linux' | 'windows'> = {
+  ubuntu: 'linux',
+  rhel: 'linux',
+  debian: 'linux',
+  sles: 'linux',
+  'rocky-linux': 'linux',
+  almalinux: 'linux',
+  'oracle-linux': 'linux',
+  centos: 'linux',
+  'windows-server': 'windows',
+};
+
+/**
+ * The standard and extended support ends of a release. Other products: standard is the end of
+ * active support when the product has one, else the end of life; extended is the paid extension
+ * when published, else the end of life after an active support. Extended is null when it is not
+ * after standard.
+ */
+export function supportDates(
+  catalogKey: string,
+  eoas: string | null,
+  eol: string | null,
+  eoes: string | null,
+): { standard: string | null; extended: string | null } {
+  const rule = SUPPORT_RULES[catalogKey];
+  let standard: string | null;
+  let extended: string | null;
+  if (rule === 'linux') {
+    standard = eol ?? eoas;
+    extended = eoes;
+  } else if (rule === 'windows') {
+    standard = eoas ?? eol;
+    extended = eoas ? eol : null;
+  } else {
+    standard = eoas ?? eol;
+    extended = eoes ?? (eoas ? eol : null);
+  }
+  if (standard && extended && extended <= standard) extended = null;
+  return { standard, extended };
+}
+
 /** The CPE product of the release `label` of an entry with one product per release, or null. */
 export function releaseProduct(catalogKey: string, label: string): string | null {
   const template = CPE_VERSION_RULES[catalogKey]?.productPerRelease;
@@ -171,11 +220,7 @@ export function versionsOfReleases(
     if (seen.has(label.toLowerCase()) || seenKeys.has(rawName)) continue;
     seen.add(label.toLowerCase());
     seenKeys.add(rawName);
-    // Standard support: the end of active support when the product has one, else the end of life.
-    // Extended: the paid extension when published, else the end of life after an active support.
-    const standard = eoas ?? eol;
-    let extended = eoes ?? (eoas ? eol : null);
-    if (standard && extended && extended < standard) extended = null;
+    const { standard, extended } = supportDates(catalogKey, eoas, eol, eoes);
     const name = rawName;
     out.push({
       key: name,

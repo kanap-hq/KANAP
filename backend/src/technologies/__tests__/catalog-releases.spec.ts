@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { ConfigController } from '../../config/config.controller';
 import { Features } from '../../config/features';
-import { cleanLabel, cpeVersionOf, endoflifeSlug, MAX_RELEASES, mergeProduct, mergeVersions, realDay, releaseProduct, validCatalogVersion, versionsOfReleases } from '../catalog/catalog-releases';
+import { cleanLabel, cpeVersionOf, endoflifeSlug, MAX_RELEASES, mergeProduct, mergeVersions, realDay, releaseProduct, SUPPORT_RULES, validCatalogVersion, versionsOfReleases } from '../catalog/catalog-releases';
 import { versionMatches } from '../../vulnerabilities/vulnerability-rules';
 import { TechnologyCatalogService, type CatalogVersion } from '../catalog/technology-catalog.service';
 
@@ -153,6 +153,31 @@ function testFeatureGate() {
   }
 }
 
+/**
+ * Operating systems keep the meaning of the former IT settings catalog, in the living catalog as
+ * in the script (`SUPPORT_RULES`, twins): Linux standard = end of security fixes, extended = paid
+ * extension; Windows Server standard = mainstream, extended = extended support (the paid ESU is
+ * left out). Without the same rule here, the first sync would undo the shipped dates.
+ */
+function testOperatingSystemSupportDates() {
+  const dates = (key: string, release: Record<string, unknown>) => {
+    const [version] = versionsOfReleases([{ name: '1', label: '1', releaseDate: '2022-04-21', ...release }], '2026-10-18', key);
+    return [version.standard_support_end, version.extended_support_end];
+  };
+  const ubuntu = { eoasFrom: '2024-09-30', eolFrom: '2027-06-01', eoesFrom: '2032-04-21' };
+  assert.deepEqual(dates('ubuntu', ubuntu), ['2027-06-01', '2032-04-21']);
+  assert.deepEqual(dates('rhel', { eoasFrom: '2019-08-06', eolFrom: '2024-06-30', eoesFrom: '2029-05-31' }), ['2024-06-30', '2029-05-31']);
+  assert.deepEqual(dates('centos', { eoasFrom: '2020-08-06', eolFrom: '2024-06-30' }), ['2024-06-30', null], 'no paid extension, no extended date');
+  assert.deepEqual(dates('sles', { eolFrom: '2024-10-31', eoesFrom: '2027-10-31' }), ['2024-10-31', '2027-10-31']);
+  assert.deepEqual(dates('windows-server', { eoasFrom: '2022-01-11', eolFrom: '2027-01-12', eoesFrom: '2030-01-12' }), ['2022-01-11', '2027-01-12']);
+  // Every other product keeps the catalog convention: active support, then the paid extension.
+  assert.deepEqual(dates('nginx', ubuntu), ['2024-09-30', '2032-04-21']);
+  assert.deepEqual(dates('postgresql', { eolFrom: '2029-11-08' }), ['2029-11-08', null]);
+  // Every shipped operating system has a rule.
+  const osKeys = shipped.filter((product) => product.family === 'operating_system').map((product) => product.key).sort();
+  assert.deepEqual(osKeys, Object.keys(SUPPORT_RULES).sort());
+}
+
 function main() {
   testCpeVersionMatchesTheShippedCatalog();
   testVersionsOfReleases();
@@ -162,6 +187,7 @@ function main() {
   testSlug();
   testProductPerRelease();
   testFeatureGate();
+  testOperatingSystemSupportDates();
   console.log('catalog-releases.spec: ok');
 }
 

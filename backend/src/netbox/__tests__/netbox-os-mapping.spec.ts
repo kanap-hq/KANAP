@@ -120,27 +120,34 @@ assert.equal(suggest('Photon OS'), null);
   assert.equal(mapped.asset?.operating_system, 'Debian 12 (bookworm)');
 }
 
-// A match pointing at a code the catalog no longer holds falls through to the
-// exact comparison, exactly as if it had never been saved.
+// A saved match is a label for the operating-system resolver, which finds a
+// technology of any family: it is kept even when the proposed choices (operating
+// systems first) do not list it, so a VMware ESXi host keeps its operating system.
 {
   const mapped = mapNetboxObject(device({ slug: 'esxi', name: 'VMware ESXi 8' }), {
     ...MAP_OPTIONS,
-    osMap: { esxi: 'debian_9_stretch' },
+    osMap: { esxi: 'VMware ESXi 8.0' },
   });
-  assert.equal(mapped.asset?.operating_system, 'VMware ESXi 8');
+  assert.equal(mapped.asset?.operating_system, 'VMware ESXi 8.0');
+  assert.deepEqual(mapped.warnings, []);
+  assert.equal(mapped.display.operating_system, 'VMware ESXi 8.0');
+}
+{
+  const mapped = mapNetboxObject(device({ slug: 'meraki', name: 'Meraki' }), {
+    ...MAP_OPTIONS,
+    osMap: { meraki: 'Cisco Meraki' },
+  });
+  assert.equal(mapped.asset?.operating_system, 'Cisco Meraki');
   assert.deepEqual(mapped.warnings, []);
 }
 
-// A stale match with nothing to fall back on leaves the object importable and
-// says why the operating system is empty.
+// A saved match that differs from a choice only by case takes the choice's spelling.
 {
-  const mapped = mapNetboxObject(device({ slug: 'photon', name: 'Photon OS' }), {
+  const mapped = mapNetboxObject(device({ slug: 'debian-12', name: 'Debian 12' }), {
     ...MAP_OPTIONS,
-    osMap: { photon: 'debian_9_stretch' },
+    osMap: { 'debian-12': 'debian 12 (BOOKWORM)' },
   });
-  assert.equal(mapped.asset?.operating_system, null);
-  assert.equal(mapped.warnings[0]?.code, 'os_not_in_catalog');
-  assert.equal(mapped.skipReason, null);
+  assert.equal(mapped.asset?.operating_system, 'Debian 12 (bookworm)');
 }
 
 // No platform at all: nothing is resolved and nothing is warned about.

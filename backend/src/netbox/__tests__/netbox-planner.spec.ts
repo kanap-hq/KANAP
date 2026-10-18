@@ -534,6 +534,16 @@ function row(result: ReturnType<typeof plan>, externalId: string): NetboxPlanRow
 }
 
 {
+  // The resolver ignores case, so does the preview: a label that differs only by case is not a change.
+  const result = plan({
+    objects: [device({ platform: { name: 'VMware ESXi 8' } })],
+    assets: [asset({ operating_system: 'vmware esxi 8' })],
+  });
+  const updated = row(result, '1');
+  assert.equal(updated.diffs.some((diff) => diff.field === 'operating_system'), false);
+}
+
+{
   // Netbox knows nothing about these fields: they must not be blanked.
   const result = plan({
     objects: [device({ serial: null, platform: null, rack: null, position: null, primary_ip4: null, status: null })],

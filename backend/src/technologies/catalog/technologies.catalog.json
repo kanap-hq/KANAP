@@ -5173,8 +5173,8 @@
           "cpe_version": null,
           "build_prefixes": [],
           "release_date": "2025-05-27",
-          "standard_support_end": "2030-05-31",
-          "extended_support_end": "2035-05-31"
+          "standard_support_end": "2035-05-31",
+          "extended_support_end": null
         },
         {
           "key": "9",
@@ -5182,8 +5182,8 @@
           "cpe_version": null,
           "build_prefixes": [],
           "release_date": "2022-05-26",
-          "standard_support_end": "2027-05-31",
-          "extended_support_end": "2032-05-31"
+          "standard_support_end": "2032-05-31",
+          "extended_support_end": null
         },
         {
           "key": "8",
@@ -5191,8 +5191,8 @@
           "cpe_version": null,
           "build_prefixes": [],
           "release_date": "2021-03-30",
-          "standard_support_end": "2024-05-31",
-          "extended_support_end": "2029-05-31"
+          "standard_support_end": "2029-05-31",
+          "extended_support_end": null
         }
       ]
     },
@@ -5211,8 +5211,8 @@
           "cpe_version": null,
           "build_prefixes": [],
           "release_date": "2014-07-07",
-          "standard_support_end": "2020-08-06",
-          "extended_support_end": "2024-06-30"
+          "standard_support_end": "2024-06-30",
+          "extended_support_end": null
         }
       ]
     },
@@ -5233,7 +5233,7 @@
             "13"
           ],
           "release_date": "2025-08-09",
-          "standard_support_end": "2028-08-09",
+          "standard_support_end": "2030-06-30",
           "extended_support_end": "2035-06-30"
         },
         {
@@ -5244,7 +5244,7 @@
             "12"
           ],
           "release_date": "2023-06-10",
-          "standard_support_end": "2026-07-11",
+          "standard_support_end": "2028-06-30",
           "extended_support_end": "2033-06-30"
         },
         {
@@ -5255,7 +5255,7 @@
             "11"
           ],
           "release_date": "2021-08-14",
-          "standard_support_end": "2024-08-14",
+          "standard_support_end": "2026-08-31",
           "extended_support_end": "2031-06-30"
         },
         {
@@ -5266,7 +5266,7 @@
             "10"
           ],
           "release_date": "2019-07-06",
-          "standard_support_end": "2022-09-10",
+          "standard_support_end": "2024-06-30",
           "extended_support_end": "2029-06-30"
         },
         {
@@ -5277,7 +5277,7 @@
             "9"
           ],
           "release_date": "2017-06-17",
-          "standard_support_end": "2020-07-18",
+          "standard_support_end": "2022-07-01",
           "extended_support_end": "2027-06-30"
         },
         {
@@ -5288,7 +5288,7 @@
             "8"
           ],
           "release_date": "2015-04-25",
-          "standard_support_end": "2018-06-17",
+          "standard_support_end": "2020-06-30",
           "extended_support_end": "2025-06-30"
         }
       ]
@@ -5364,7 +5364,7 @@
           "cpe_version": null,
           "build_prefixes": [],
           "release_date": "2025-05-20",
-          "standard_support_end": "2030-05-31",
+          "standard_support_end": "2035-05-31",
           "extended_support_end": "2039-05-31"
         },
         {
@@ -5373,7 +5373,7 @@
           "cpe_version": null,
           "build_prefixes": [],
           "release_date": "2022-05-18",
-          "standard_support_end": "2027-05-31",
+          "standard_support_end": "2032-05-31",
           "extended_support_end": "2036-05-31"
         },
         {
@@ -5382,7 +5382,7 @@
           "cpe_version": null,
           "build_prefixes": [],
           "release_date": "2019-05-07",
-          "standard_support_end": "2024-05-31",
+          "standard_support_end": "2029-05-31",
           "extended_support_end": "2033-05-31"
         },
         {
@@ -5391,7 +5391,7 @@
           "cpe_version": null,
           "build_prefixes": [],
           "release_date": "2014-06-10",
-          "standard_support_end": "2019-08-06",
+          "standard_support_end": "2024-06-30",
           "extended_support_end": "2029-05-31"
         },
         {
@@ -5400,7 +5400,7 @@
           "cpe_version": null,
           "build_prefixes": [],
           "release_date": "2010-11-10",
-          "standard_support_end": "2016-05-10",
+          "standard_support_end": "2020-11-30",
           "extended_support_end": "2024-06-30"
         }
       ]
@@ -5420,8 +5420,8 @@
           "cpe_version": null,
           "build_prefixes": [],
           "release_date": "2025-06-11",
-          "standard_support_end": "2030-05-31",
-          "extended_support_end": "2035-05-31"
+          "standard_support_end": "2035-05-31",
+          "extended_support_end": null
         },
         {
           "key": "9",
@@ -5429,8 +5429,8 @@
           "cpe_version": null,
           "build_prefixes": [],
           "release_date": "2022-07-14",
-          "standard_support_end": "2027-05-31",
-          "extended_support_end": "2032-05-31"
+          "standard_support_end": "2032-05-31",
+          "extended_support_end": null
         },
         {
           "key": "8",
@@ -5438,8 +5438,8 @@
           "cpe_version": null,
           "build_prefixes": [],
           "release_date": "2021-05-01",
-          "standard_support_end": "2024-05-31",
-          "extended_support_end": "2029-05-31"
+          "standard_support_end": "2029-05-31",
+          "extended_support_end": null
         }
       ]
     },
@@ -5633,7 +5633,7 @@
             "22.04"
           ],
           "release_date": "2022-04-21",
-          "standard_support_end": "2024-09-30",
+          "standard_support_end": "2027-06-01",
           "extended_support_end": "2032-04-21"
         },
         {
@@ -5644,7 +5644,7 @@
             "20.04"
           ],
           "release_date": "2020-04-23",
-          "standard_support_end": "2022-10-01",
+          "standard_support_end": "2025-05-31",
           "extended_support_end": "2030-04-23"
         },
         {
@@ -5712,7 +5712,7 @@
           "build_prefixes": [],
           "release_date": "2016-10-15",
           "standard_support_end": "2022-01-11",
-          "extended_support_end": "2030-01-12"
+          "extended_support_end": "2027-01-12"
         },
         {
           "key": "2012-r2",
@@ -5721,7 +5721,7 @@
           "build_prefixes": [],
           "release_date": "2013-11-25",
           "standard_support_end": "2018-10-09",
-          "extended_support_end": "2026-10-13"
+          "extended_support_end": "2023-10-10"
         },
         {
           "key": "2012",
@@ -5730,7 +5730,7 @@
           "build_prefixes": [],
           "release_date": "2012-10-30",
           "standard_support_end": "2018-10-09",
-          "extended_support_end": "2026-10-13"
+          "extended_support_end": "2023-10-10"
         },
         {
           "key": "2008-r2-sp1",
@@ -5739,7 +5739,7 @@
           "build_prefixes": [],
           "release_date": "2011-02-22",
           "standard_support_end": "2015-01-13",
-          "extended_support_end": "2023-01-10"
+          "extended_support_end": "2020-01-14"
         }
       ]
     },

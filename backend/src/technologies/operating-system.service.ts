@@ -136,7 +136,8 @@ export class OperatingSystemService {
    * 3. a technology whose name is the whole label → it, with no version;
    * 4. the longest technology name that prefixes the label, then a space → it, and the
    *    remainder is the version (found without case, created when missing);
-   * 5. the same two steps against the shipped catalog, adopting the product;
+   * 5. the same two steps against the shipped catalog, adopting the product; between 4 and 5
+   *    the longer name wins, the tenant's technology on a tie;
    * 6. with `create`, a new technology of family `operating_system` (or `other` when the
    *    tenant's catalog no longer has that family, the same rule as adoption). A last token
    *    that starts with a digit becomes the version.
@@ -159,13 +160,15 @@ export class OperatingSystemService {
     );
     if (exact[0]) return { technology_id: exact[0].id, technology_version_id: null };
 
+    // The longest name wins between the tenant's technologies and the shipped products, the
+    // tenant on a tie: with a technology "Oracle", "Oracle Linux 9" adopts Oracle Linux.
     const prefixed = await this.prefixTechnology(mg, tenantId, text);
-    if (prefixed) {
+    const fromCatalog = this.prefixProduct(text);
+    if (prefixed && (!fromCatalog || prefixed.length >= fromCatalog.length)) {
       const versionId = await this.ensureVersion(mg, tenantId, prefixed.id, prefixed.remainder, true, EMPTY_DATES);
       return { technology_id: prefixed.id, technology_version_id: versionId };
     }
 
-    const fromCatalog = this.prefixProduct(text);
     if (fromCatalog) {
       const technologyId = await this.adopt(mg, tenantId, fromCatalog.product.key);
       if (!fromCatalog.remainder) return { technology_id: technologyId, technology_version_id: null };
@@ -188,16 +191,15 @@ export class OperatingSystemService {
    * The asset row is locked first (`SELECT … FOR UPDATE`), so two writes on one server run
    * one after the other and the partial unique index never sees two marks.
    *
-   * The previous mark: we cannot tell a link created only to hold the operating system from
-   * a link that also means "this technology is installed". When the new operating system is
-   * another technology, or when the operating system is cleared, the marked link is deleted.
-   * When it is the same technology, the link stays and only loses the mark, and the rule
-   * below picks it up again.
+   * The target link: a link of the same technology whose version is the one asked (null
+   * included). Otherwise, when a version is asked, a link of that technology with no version,
+   * which takes the version. Otherwise a new link. A link that already names another version is
+   * left as it is.
    *
-   * Reuse: a link of the same technology whose version is the one asked (null included) is
-   * marked. Otherwise a link of that technology with no version takes the version asked,
-   * then the mark. Otherwise a new link is created and marked. A link that already names
-   * another version is left as it is.
+   * The previous mark: the link that loses it is deleted, whatever its technology (Windows
+   * Server 2016 then 2019 leaves 2019 only), unless it is the target link itself. Netbox, the
+   * CSV, the assistant and the screen all write through here, so an upgrade never piles up
+   * old versions on the server.
    */
   async setOperatingSystem(
     mg: EntityManager,
@@ -233,16 +235,6 @@ export class OperatingSystemService {
       return { ok: true, link_id: marked.id, changed: false };
     }
 
-    if (marked && marked.technology_id !== resolved.technology_id) {
-      await this.deleteLink(mg, tenantId, marked, userId);
-    } else if (marked) {
-      await mg.query(
-        `UPDATE asset_technologies SET is_operating_system = false, updated_at = now()
-          WHERE tenant_id = $1 AND id = $2`,
-        [tenantId, marked.id],
-      );
-    }
-
     const [same]: Array<LinkRow> = await mg.query(
       `SELECT id, technology_id, technology_version_id, source, source_ref, notes
          FROM asset_technologies
@@ -250,24 +242,26 @@ export class OperatingSystemService {
           AND technology_version_id IS NOT DISTINCT FROM $4`,
       [tenantId, id, resolved.technology_id, versionId],
     );
-    if (same) {
-      await this.markLink(mg, tenantId, same, versionId, provenance, userId);
-      return { ok: true, link_id: same.id, changed: true };
-    }
-
-    if (versionId) {
-      const [blank]: Array<LinkRow> = await mg.query(
+    let blank: LinkRow | undefined;
+    if (!same && versionId) {
+      [blank] = await mg.query(
         `SELECT id, technology_id, technology_version_id, source, source_ref, notes
            FROM asset_technologies
           WHERE tenant_id = $1 AND asset_id = $2 AND technology_id = $3 AND technology_version_id IS NULL
+          ORDER BY is_operating_system DESC, created_at, id
           LIMIT 1`,
         [tenantId, id, resolved.technology_id],
       );
-      if (blank) {
-        await this.markLink(mg, tenantId, blank, versionId, provenance, userId);
+    }
+    const target = same ?? blank;
+    if (marked && marked.id !== target?.id) await this.deleteLink(mg, tenantId, marked, userId);
+
+    if (target) {
+      await this.markLink(mg, tenantId, target, versionId, provenance, userId);
+      if (target.technology_version_id !== versionId) {
         await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId: resolved.technology_id, products: [] });
-        return { ok: true, link_id: blank.id, changed: true };
       }
+      return { ok: true, link_id: target.id, changed: true };
     }
 
     const [inserted]: Array<{ id: string }> = await mg.query(
@@ -369,7 +363,7 @@ export class OperatingSystemService {
     mg: EntityManager,
     tenantId: string,
     label: string,
-  ): Promise<{ id: string; remainder: string } | null> {
+  ): Promise<{ id: string; remainder: string; length: number } | null> {
     const rows: Array<{ id: string; name: string }> = await mg.query(
       `SELECT id, name FROM technologies
         WHERE tenant_id = $1
@@ -381,13 +375,13 @@ export class OperatingSystemService {
       [tenantId, label],
     );
     if (!rows[0]) return null;
-    return { id: rows[0].id, remainder: label.slice(rows[0].name.length).trim() };
+    return { id: rows[0].id, remainder: label.slice(rows[0].name.length).trim(), length: rows[0].name.length };
   }
 
-  private prefixProduct(label: string): { product: CatalogProduct; remainder: string | null } | null {
+  private prefixProduct(label: string): { product: CatalogProduct; remainder: string | null; length: number } | null {
     const products = this.catalog.all();
     const exact = products.find((product) => product.name.toLowerCase() === label.toLowerCase());
-    if (exact) return { product: exact, remainder: null };
+    if (exact) return { product: exact, remainder: null, length: exact.name.length };
     const matches = products.filter((product) => {
       if (label.length <= product.name.length) return false;
       return label.slice(0, product.name.length).toLowerCase() === product.name.toLowerCase()
@@ -395,7 +389,7 @@ export class OperatingSystemService {
     });
     matches.sort((a, b) => b.name.length - a.name.length);
     if (!matches[0]) return null;
-    return { product: matches[0], remainder: label.slice(matches[0].name.length).trim() };
+    return { product: matches[0], remainder: label.slice(matches[0].name.length).trim(), length: matches[0].name.length };
   }
 
   private async createTechnology(mg: EntityManager, tenantId: string, name: string): Promise<string> {
