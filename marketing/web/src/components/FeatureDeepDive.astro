@@ -56,6 +56,18 @@ const featurePosts = featureSlug ? await getPostsForFeature(featureSlug, locale)
     />
   </Section>
 
+  {featurePosts.length > 0 && (
+    <Section tone="default" compact>
+      <BlogStrip
+        posts={featurePosts}
+        locale={locale}
+        eyebrow={t('blog.home.eyebrow')}
+        allLabel={t('blog.home.all')}
+        allHref={localePath(locale, '/blog')}
+      />
+    </Section>
+  )}
+
   <Section tone="sunken" compact>
     <nav class="mk-cross" aria-label={content.crossLinks.label}>
       <p class="mk-eyebrow mk-cross__label">{content.crossLinks.label}</p>
@@ -68,18 +80,6 @@ const featurePosts = featureSlug ? await getPostsForFeature(featureSlug, locale)
       </ul>
     </nav>
   </Section>
-
-  {featurePosts.length > 0 && (
-    <Section tone="default" compact>
-      <BlogStrip
-        posts={featurePosts}
-        locale={locale}
-        eyebrow={t('blog.home.eyebrow')}
-        allLabel={t('blog.home.all')}
-        allHref={localePath(locale, '/blog')}
-      />
-    </Section>
-  )}
 
   <Section tone="default" compact>
     <CTABand

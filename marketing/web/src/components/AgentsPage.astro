@@ -72,6 +72,18 @@ const agentPosts = await getPostsForFeature('agents', locale);
     </div>
   </Section>
 
+  {agentPosts.length > 0 && (
+    <Section tone="default" compact>
+      <BlogStrip
+        posts={agentPosts}
+        locale={locale}
+        eyebrow={tr('blog.home.eyebrow')}
+        allLabel={tr('blog.home.all')}
+        allHref={localePath(locale, '/blog')}
+      />
+    </Section>
+  )}
+
   <Section tone="default" compact>
     <nav class="mk-cross" aria-label={content.crossLinks.label}>
       <p class="mk-eyebrow mk-cross__label">{content.crossLinks.label}</p>
@@ -84,18 +96,6 @@ const agentPosts = await getPostsForFeature('agents', locale);
       </ul>
     </nav>
   </Section>
-
-  {agentPosts.length > 0 && (
-    <Section tone="default" compact>
-      <BlogStrip
-        posts={agentPosts}
-        locale={locale}
-        eyebrow={tr('blog.home.eyebrow')}
-        allLabel={tr('blog.home.all')}
-        allHref={localePath(locale, '/blog')}
-      />
-    </Section>
-  )}
 
   <Section tone="sunken" compact>
     <CTABand
