@@ -137,6 +137,7 @@ The header shows:
 - **Go live** date
 - **Send link**: copy a shareable link to this workspace
 - **Create new version**: launch the version migration wizard (see [Version management](#version-management))
+- **Convert to technology** (`applications:admin` and `infrastructure:member`): see [Converting an application to a technology](#converting-an-application-to-a-technology)
 - **Delete** (`applications:admin`): an application with interfaces gets the refusal and why, with Close only. Otherwise the confirmation names the application and counts the deployments deleted with it, along with its links to other records
 - **Previous / Next**: walk through the filtered list without returning to the grid
 
@@ -279,7 +280,7 @@ Two discreet hints may appear: data at the highest confidentiality level combine
 
 ### Relations
 
-The Relations tab shows what this application is linked to: its budget lines, contracts, projects, requests, tasks and incidents, each in its own table. Click a row to open the record. The tab badge counts the linked budget lines, contracts, projects, incidents, websites and attachments.
+The Relations tab shows what this application is linked to: its budget lines, contracts, projects, requests, tasks, incidents, technologies and business processes, each in its own table. Click a row to open the record. The tab badge counts the linked budget lines, contracts, projects, incidents, websites and attachments.
 
 **Components** (only when "Can have child apps" is enabled): a table listing the child applications of this Suite, with their lifecycle and criticality. Click a row to open the child workspace.
 
@@ -293,6 +294,17 @@ The Relations tab shows what this application is linked to: its budget lines, co
 | **Requests** | Reference (`REQ-23`), name, status, desired delivery |
 | **Tasks** | Reference (`T-118`), title, status, assignee, due date. Only the tasks linked to this application itself appear, not the tasks of its projects |
 | **Incidents** | Reference (`INC-14`), title, severity, status, detection date |
+| **Technologies** | Reference (`TEC-4`), name, family, versions, link, servers it comes through (**Via**), end of standard support |
+| **Business processes** | Name, business owner |
+
+**Technologies** lists what the application depends on, from two sources shown in the **Link** column:
+
+- **Declared**: someone linked the technology to the application, for example Entra ID for an application that signs users in through it.
+- **Hosted**: a server of one of its deployments carries the technology. **Via** names the server, and the host when the technology runs on the host of a virtual machine. Disabled deployments do not count.
+
+A technology can be both. A dash in the version column means the version is not known. The end of standard support turns orange once it has passed. The section needs `infrastructure:reader`. To add or remove a declared technology, you also need `infrastructure:member`. A hosted technology has no cross: remove it from the server instead.
+
+**Business processes** lists the processes the application supports. The process shows the same link in its own **Applications** section. A disabled process stays listed, greyed out. Linking needs `business_processes:member` as well.
 
 Dates in orange need attention: a contract whose renewal decision is due within your contract decision window, or an open task past its due date. A disabled budget line or contract stays listed with its name greyed out. You only see the sections of the modules you can read.
 
@@ -313,6 +325,24 @@ Click **Link** to add the suggestion to its section. The section is absent when 
 **Relevant websites**: add URLs with optional names, useful for vendor portals, monitoring dashboards, or documentation links. **Add URL** opens a dialog; existing entries can be edited or deleted.
 
 **Attachments**: Drag and drop files or click **Select files** to upload. Click an attachment chip to download it. Delete is available to managers.
+
+---
+
+## Converting an application to a technology
+
+Some records were created as applications when they are really technologies: a database engine, a directory, an application server. **Convert to technology** in the header turns such a record into a [technology](technologies.md). Convert when another application can fail or become vulnerable because of it.
+
+You need `applications:admin` and `infrastructure:member`.
+
+The window first checks what the conversion changes. Choose a **Family**, then read the three lists:
+
+- **Moves to the technology**: owners, contracts, budget lines, projects, web links, documents, incidents, and the servers of its active deployments. Each server becomes a server that carries the technology, with an unknown version. Links in modules you cannot read move too.
+- **Kept, without its link to the application**: managed documents stay in their library, among the unfiled documents.
+- **Lost with the application**: deployments and environments, suite membership, predecessor and successors, data residency, support contacts, the companies and departments using it, knowledge links, linked tasks and requests, business processes, the technologies it depends on, and the fields only applications have (users, access methods, SSO, MFA, personal data). Its `APP` reference goes too.
+
+The technology is installed when the application had servers, subscribed otherwise. **Convert** creates the technology, deletes the application and opens the new record. The audit log keeps the old reference.
+
+**When it is refused**: the window lists the reasons and **Convert** stays unavailable. An application cannot convert while it is the source, target or middleware of interfaces, an integration tool of interface bindings, a suite with components, or has interface bindings on its deployments. A technology with the same name, values a technology cannot take, or files missing from storage also block it. Remove these links first, or keep the record as an application.
 
 ---
 

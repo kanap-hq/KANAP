@@ -137,6 +137,7 @@ El encabezado muestra:
 - Fecha de **Puesta en marcha**
 - **Enviar enlace**: copiar un enlace compartible a este espacio de trabajo
 - **Crear nueva versión**: lanzar el asistente de migración de versión (consulte [Gestión de versiones](#gestion-de-versiones))
+- **Convertir en tecnología** (`applications:admin` e `infrastructure:member`): consulte [Convertir una aplicación en tecnología](#convertir-una-aplicacion-en-tecnologia)
 - **Eliminar** (`applications:admin`): una aplicación con interfaces recibe el rechazo y el motivo, solo con Cerrar. Si no, la confirmación nombra la aplicación y cuenta los despliegues eliminados con ella, junto con sus vínculos con otros elementos
 - **Anterior / Siguiente**: recorrer la lista filtrada sin volver a la cuadrícula
 
@@ -279,7 +280,7 @@ Pueden aparecer dos indicaciones discretas: datos en el nivel de confidencialida
 
 ### Relaciones
 
-La pestaña Relaciones muestra con qué está vinculada esta aplicación: sus líneas presupuestarias, contratos, proyectos, solicitudes, tareas e incidentes, cada uno en su propia tabla. Haga clic en una fila para abrir el registro. La insignia de la pestaña cuenta las líneas presupuestarias, contratos, proyectos, incidentes, sitios web y adjuntos vinculados.
+La pestaña Relaciones muestra con qué está vinculada esta aplicación: sus líneas presupuestarias, contratos, proyectos, solicitudes, tareas, incidentes, tecnologías y procesos de negocio, cada uno en su propia tabla. Haga clic en una fila para abrir el registro. La insignia de la pestaña cuenta las líneas presupuestarias, contratos, proyectos, incidentes, sitios web y adjuntos vinculados.
 
 **Componentes** (solo cuando está activado "Puede tener apps hijas"): una tabla que lista las aplicaciones hijas de esta Suite, con su ciclo de vida y criticidad. Haga clic en una fila para abrir el espacio de trabajo del hijo.
 
@@ -293,6 +294,17 @@ La pestaña Relaciones muestra con qué está vinculada esta aplicación: sus l�
 | **Solicitudes** | Referencia (`REQ-23`), nombre, estado, entrega deseada |
 | **Tareas** | Referencia (`T-118`), título, estado, asignado, vencimiento. Solo aparecen las tareas vinculadas a esta aplicación, no las tareas de sus proyectos |
 | **Incidentes** | Referencia (`INC-14`), título, severidad, estado, fecha de detección |
+| **Tecnologías** | Referencia (`TEC-4`), nombre, familia, versiones, vínculo, servidores por los que llega (**Vía**), fin del soporte estándar |
+| **Procesos de negocio** | Nombre, responsable de negocio |
+
+**Tecnologías** lista aquello de lo que depende la aplicación, a partir de dos fuentes que indica la columna **Vínculo**:
+
+- **Declarada**: alguien vinculó la tecnología a la aplicación, por ejemplo Entra ID para una aplicación cuyos usuarios inician sesión con ella.
+- **Alojada**: un servidor de uno de sus despliegues lleva la tecnología. **Vía** nombra el servidor, y el host cuando la tecnología se ejecuta en el host de una máquina virtual. Los despliegues desactivados no cuentan.
+
+Una tecnología puede ser ambas cosas. Un guion en la columna de versiones indica que la versión no se conoce. El fin del soporte estándar pasa a naranja una vez superado. La sección requiere `infrastructure:reader`. Para añadir o quitar una tecnología declarada, necesita además `infrastructure:member`. Una tecnología alojada no tiene cruz: quítela del servidor.
+
+**Procesos de negocio** lista los procesos que la aplicación respalda. El proceso muestra el mismo vínculo en su propia sección **Aplicaciones**. Un proceso desactivado sigue en la lista, atenuado. Vincular requiere también `business_processes:member`.
 
 Las fechas en naranja requieren atención: un contrato cuya decisión de renovación cae dentro de su ventana de decisión de contratos, o una tarea abierta con el vencimiento pasado. Una línea presupuestaria o un contrato desactivado sigue en la lista con el nombre atenuado. Solo ve las secciones de los módulos que puede leer.
 
@@ -313,6 +325,24 @@ Haga clic en **Vincular** para añadir la sugerencia a su sección. La sección 
 **Sitios web relevantes**: añada URLs con nombres opcionales. Es útil para portales de proveedores, paneles de monitoreo o enlaces a documentación. **Añadir URL** abre un diálogo; las entradas existentes pueden editarse o eliminarse.
 
 **Adjuntos**: Arrastre y suelte archivos o haga clic en **Seleccionar archivos** para subirlos. Haga clic en un chip de adjunto para descargarlo. La eliminación está disponible para los gestores.
+
+---
+
+## Convertir una aplicación en tecnología
+
+Algunas fichas se crearon como aplicaciones cuando en realidad son tecnologías: un motor de base de datos, un directorio, un servidor de aplicaciones. **Convertir en tecnología**, en la cabecera, transforma una ficha así en una [tecnología](technologies.md). Convierta cuando otra aplicación pueda caer o volverse vulnerable por su causa.
+
+Necesita `applications:admin` e `infrastructure:member`.
+
+La ventana comprueba primero qué cambia la conversión. Elija una **Familia** y lea las tres listas:
+
+- **Pasa a la tecnología**: responsables, contratos, líneas presupuestarias, proyectos, enlaces web, documentos, incidentes y los servidores de sus despliegues activos. Cada servidor pasa a ser un servidor que lleva la tecnología, con versión desconocida. Los vínculos de los módulos que usted no puede leer también pasan.
+- **Se conserva, sin su vínculo con la aplicación**: los documentos gestionados permanecen en su biblioteca, entre los documentos sin clasificar.
+- **Se pierde con la aplicación**: despliegues y entornos, pertenencia a una suite, predecesor y sucesores, residencia de los datos, contactos de soporte, empresas y departamentos que la usan, vínculos de conocimiento, tareas y solicitudes vinculadas, procesos de negocio, tecnologías de las que depende, y los campos propios de las aplicaciones (usuarios, modos de acceso, SSO, MFA, datos personales). También desaparece su referencia `APP`.
+
+La tecnología queda instalada cuando la aplicación tenía servidores, suscrita en caso contrario. **Convertir** crea la tecnología, elimina la aplicación y abre la nueva ficha. El registro de auditoría conserva la referencia antigua.
+
+**Cuando se rechaza**: la ventana lista los motivos y **Convertir** queda desactivado. Una aplicación no puede convertirse mientras sea origen, destino o middleware de interfaces, herramienta de integración de enlaces de interfaz, una suite con componentes, o tenga enlaces de interfaz en sus despliegues. Una tecnología con el mismo nombre, valores que una tecnología no admite o archivos que faltan en el almacenamiento también la bloquean. Quite primero esos vínculos, o mantenga la ficha como aplicación.
 
 ---
 
