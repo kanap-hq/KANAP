@@ -1,4 +1,5 @@
 import type { Theme } from '@mui/material/styles';
+import { formatShortDate } from '../lib/dateFormat';
 
 /**
  * Support states of a version, an OS or any dated support period, shared by every screen that
@@ -88,4 +89,12 @@ export function supportStateColor(state: SupportState, theme: Theme): string {
 /** True for the states that call for attention (coloured). */
 export function supportStateNeedsAttention(state: SupportState): boolean {
   return SUPPORT_STATE_TOKENS[state] !== 'text.secondary';
+}
+
+/**
+ * An end-of-support date as every screen shows it: always with its year (`12 Nov 2026`), even in
+ * the current year, so that the dates of a column read alike; `empty` when there is none.
+ */
+export function formatSupportDate(value: string | null | undefined, locale: string, empty = ''): string {
+  return formatShortDate(value, locale, { year: 'always', empty });
 }

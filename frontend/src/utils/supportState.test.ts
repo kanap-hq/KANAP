@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createTheme } from '@mui/material/styles';
-import { addMonthsYmd, supportStateColor, supportStateNeedsAttention, supportStateOf } from './supportState';
+import { addMonthsYmd, formatSupportDate, supportStateColor, supportStateNeedsAttention, supportStateOf } from './supportState';
 
 const TODAY = '2026-10-17';
 
@@ -59,5 +59,15 @@ describe('supportStateColor', () => {
     }
     expect(supportStateNeedsAttention('supported')).toBe(false);
     expect(supportStateNeedsAttention('ending_soon')).toBe(true);
+  });
+});
+
+describe('formatSupportDate', () => {
+  it('always shows the year, in the current year too', () => {
+    const thisYear = new Date().getFullYear();
+    expect(formatSupportDate(`${thisYear}-11-12`, 'en')).toBe(`12 Nov ${thisYear}`);
+    expect(formatSupportDate(`${thisYear}-11-12`, 'fr')).toBe(`12 nov. ${thisYear}`);
+    expect(formatSupportDate('2029-11-08', 'en')).toBe('8 Nov 2029');
+    expect(formatSupportDate(null, 'en', '—')).toBe('—');
   });
 });
