@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Box, Button, Checkbox, Drawer, FormControlLabel, IconButton, Link as MLink, MenuItem, Stack, TextField, Typography,
+  Box, Button, Checkbox, Drawer, IconButton, Link as MLink, MenuItem, Stack, TextField, Tooltip, Typography,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { ICellRendererParams } from 'ag-grid-community';
@@ -28,36 +28,38 @@ import ForbiddenPage from '../ForbiddenPage';
 import {
   SEVERITIES,
   SeverityCell,
-  technologiesText,
   VULNERABILITY_STATES,
   VulnerabilityStateCell,
   versionText,
   type VulnerabilityDetail,
-  type VulnerabilityItem,
+  type VulnerabilityGridRow,
   type VulnerabilityState,
   type VulnerabilityVersion,
 } from './vulnerabilities/vulnerabilityTypes';
 
 const ENDPOINT = '/vulnerabilities';
 
-/** A list row: the CVE, with its publishers and its state across its rows (`GET /vulnerabilities`). */
-export type VulnerabilityRow = VulnerabilityItem & { id?: string; editor: string | null; state: VulnerabilityState };
+/** A list row: one technology, version and CVE (`GET /vulnerabilities`). */
+export type VulnerabilityRow = VulnerabilityGridRow;
 
 /**
  * The grid's filter model from the address: "to review" unless `state` says otherwise (`all`: every
- * state); `editor`, `technology` (`TEC-n`) and `severity` as set filters; `q` on the CVE id. These
- * are the entries from the technologies list, the technology record and the emails.
+ * state); `editor`, `technology` (`TEC-n`), `version` (a label, `none`: not recorded) and `severity`
+ * as set filters; `q` on the CVE id. These are the entries from the technologies list, the
+ * technology record and the emails.
  */
 export function filterModelFromSearch(search: string): Record<string, unknown> {
   const params = new URLSearchParams(search);
   const model: Record<string, unknown> = {};
-  const set = (values: string[]) => ({ filterType: 'set', values });
+  const set = (values: Array<string | null>) => ({ filterType: 'set', values });
   const state = params.get('state');
   if (state !== 'all') model.state = set([(VULNERABILITY_STATES as readonly string[]).includes(state ?? '') ? state! : 'to_review']);
   const editor = params.get('editor');
   if (editor) model.editor = set([editor]);
   const technology = params.get('technology');
-  if (technology) model.technologies = set([technology]);
+  if (technology) model.technology = set([technology]);
+  const version = params.get('version');
+  if (version) model.version = set([version === 'none' ? null : version]);
   const severity = params.get('severity');
   if (severity && (SEVERITIES as readonly string[]).includes(severity)) model.severity = set([severity]);
   const q = params.get('q');
@@ -276,22 +278,80 @@ function VulnerabilityDetailPanel({ cveId, canEdit, onChanged }: { cveId: string
   );
 }
 
+/**
+ * The rows chosen for a change in bulk: the ticked rows (`all` false, `ids` the ticked ones), or every
+ * row of the current filter, loaded or not (`all` true, `ids` the rows unticked since).
+ */
+type Selection = { all: boolean; ids: Set<string> };
+const NO_SELECTION: Selection = { all: false, ids: new Set() };
+
+type SelectionApi = { selection: Selection; count: number; toggleRow: (id: string) => void; toggleAll: () => void };
+/** Read by the selection column's cells and header, which the grid renders inside the page. */
+const SelectionContext = createContext<SelectionApi | null>(null);
+
+const isSelected = (selection: Selection, id: string) => (selection.all ? !selection.ids.has(id) : selection.ids.has(id));
+const checkboxSx = { p: 0.25 } as const;
+
+/** A row's box in the selection column. */
+function SelectRowCell({ data }: ICellRendererParams<VulnerabilityRow>) {
+  const { t } = useTranslation('it');
+  const api = useContext(SelectionContext);
+  if (!data || !api) return null;
+  return (
+    <Checkbox
+      size="small"
+      sx={checkboxSx}
+      checked={isSelected(api.selection, data.id)}
+      onChange={() => api.toggleRow(data.id)}
+      inputProps={{ 'aria-label': t('pages.vulnerabilities.selection.row', { cve: data.cve_id, technology: data.technology.name, version: data.version ?? t('pages.vulnerabilities.versionNone') }) }}
+    />
+  );
+}
+
+/** The selection column's header: every row of the current filter, loaded or not; again to clear. */
+function SelectAllHeader() {
+  const { t } = useTranslation('it');
+  const api = useContext(SelectionContext);
+  if (!api) return null;
+  const whole = api.selection.all && api.selection.ids.size === 0;
+  return (
+    <Checkbox
+      size="small"
+      sx={checkboxSx}
+      checked={whole}
+      indeterminate={!whole && api.count > 0}
+      onChange={api.toggleAll}
+      inputProps={{ 'aria-label': t('pages.vulnerabilities.selection.all') }}
+    />
+  );
+}
+
+/** A row's version: its label, or "Not recorded" (potentially concerned) in quiet text. */
+function VersionCell({ data }: ICellRendererParams<VulnerabilityRow>) {
+  const { t } = useTranslation('it');
+  if (!data) return null;
+  if (data.version != null) return <>{data.version}</>;
+  return (
+    <Tooltip title={t('pages.vulnerabilities.versionNoneHint')}>
+      <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>{t('pages.vulnerabilities.versionNone')}</Box>
+    </Tooltip>
+  );
+}
 
 /**
- * The change of state in bulk: a state and a common note for the selected CVE, or for every CVE of
- * the current filter; the count comes from a dry run before the change.
+ * The change of state in bulk: a state and a common note for the selected rows, or for every row of
+ * the current filter but the unticked ones; the count comes from a dry run before the change.
  */
-function BulkStateDialog({ open, onClose, selected, request, onDone }: {
+function BulkStateDialog({ open, onClose, selection, request, onDone }: {
   open: boolean;
   onClose: () => void;
-  selected: string[];
+  selection: Selection;
   request: ListRequest | null;
   onDone: () => void;
 }) {
   const { t } = useTranslation('it');
   const [state, setState] = useState<VulnerabilityState>('handled');
   const [note, setNote] = useState('');
-  const [all, setAll] = useState(selected.length === 0);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   // Each opening starts afresh: a note of the previous change never goes on the next rows.
@@ -299,15 +359,16 @@ function BulkStateDialog({ open, onClose, selected, request, onDone }: {
     if (!open) return;
     setState('handled');
     setNote('');
-    setAll(selected.length === 0);
     setError(null);
-  }, [open, selected.length]);
+  }, [open]);
+  const ids = useMemo(() => Array.from(selection.ids), [selection.ids]);
   const body = useMemo(() => ({
     state,
     ...(note.trim() ? { note: note.trim() } : {}),
-    ...(all ? { all: true } : { cve_ids: selected }),
-    filters: scopeParams(request),
-  }), [all, note, request, selected, state]);
+    ...(selection.all
+      ? { all: true, filters: scopeParams(request), ...(ids.length > 0 ? { exclude_ids: ids } : {}) }
+      : { ids }),
+  }), [ids, note, request, selection.all, state]);
   const count = useQuery({
     queryKey: ['vulnerabilities', 'bulk-count', body],
     queryFn: async () => (await api.post<{ rows: number; cves: number; changes: number; as_of: string }>(`${ENDPOINT}/bulk-state`, { ...body, dry_run: true })).data,
@@ -320,7 +381,7 @@ function BulkStateDialog({ open, onClose, selected, request, onDone }: {
     setSaving(true);
     setError(null);
     try {
-      // Only the rows of the count: a CVE found after it stays to review.
+      // Only the rows of the count: a row found after it stays to review.
       await api.post(`${ENDPOINT}/bulk-state`, { ...body, as_of: count.data?.as_of });
       onDone();
     } catch {
@@ -364,15 +425,11 @@ function BulkStateDialog({ open, onClose, selected, request, onDone }: {
             onChange={(event) => setNote(event.target.value)}
           />
         </PropertyRow>
-        <FormControlLabel
-          control={<Checkbox size="small" checked={all} disabled={selected.length === 0} onChange={(event) => setAll(event.target.checked)} />}
-          label={<Typography sx={{ fontSize: 13 }}>{t('pages.vulnerabilities.bulk.scopeAll')}</Typography>}
-        />
-        {!all && (
-          <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
-            {t('pages.vulnerabilities.bulk.scopeSelected', { count: selected.length })}
-          </Typography>
-        )}
+        <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
+          {selection.all
+            ? ids.length > 0 ? t('pages.vulnerabilities.bulk.scopeAllBut', { count: ids.length }) : t('pages.vulnerabilities.bulk.scopeAll')
+            : t('pages.vulnerabilities.bulk.scopeSelected', { count: ids.length })}
+        </Typography>
         <Typography role="status" sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
           {tooMany
             ? t('pages.vulnerabilities.bulk.tooMany')
@@ -391,12 +448,15 @@ function BulkStateDialog({ open, onClose, selected, request, onDone }: {
   );
 }
 
+/** The column of the row boxes: its header ticks every row of the filter. */
+const SELECTION_COLUMN = 'select';
+
 /**
- * IT › Vulnerabilities (lot T6b): the published CVE (NVD) matched with the technologies of the
- * workspace, on the list grid of the repository (filters per column, columns chosen and kept, sort,
- * total, export), "to review" by default and most severe first. Several CVE, or every one of the
- * filter, change state at once; a row opens the CVE in a side panel. Shown only while the
- * vulnerability feed is on (`features.vulnerabilityFeed`).
+ * IT › Vulnerabilities (lots T6b, T6c): one row per technology, version and published CVE (NVD) of
+ * the workspace, on the list grid of the repository (filters per column, version included, columns
+ * chosen and kept, sort, total, export), "to review" by default and most severe first. Ticked rows,
+ * or every row of the filter (the header box), change state at once; a row opens its CVE in a side
+ * panel. Shown only while the vulnerability feed is on (`features.vulnerabilityFeed`).
  */
 export default function VulnerabilitiesPage() {
   const { t } = useTranslation(['it', 'common']);
@@ -409,13 +469,30 @@ export default function VulnerabilitiesPage() {
   const allowed = hasLevel('infrastructure', 'reader');
   const canEdit = hasLevel('infrastructure', 'member');
   const initialModel = useMemo(() => filterModelFromSearch(location.search), [location.search]);
-  const [selected, setSelected] = useState<VulnerabilityRow[]>([]);
+  const [selection, setSelection] = useState<Selection>(NO_SELECTION);
   const [refreshKey, setRefreshKey] = useState(0);
   const [openCve, setOpenCve] = useState<string | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [exportError, setExportError] = useState(false);
   const requestRef = useRef<ListRequest | null>(null);
   const [request, setRequest] = useState<ListRequest | null>(null);
+  // The filters (and search) of the rows on screen: a change clears the selection.
+  const scopeKeyRef = useRef<string | null>(null);
+
+  const selectedCount = selection.all ? Math.max((request?.total ?? 0) - selection.ids.size, 0) : selection.ids.size;
+  const toggleRow = useCallback((id: string) => setSelection((current) => {
+    const ids = new Set(current.ids);
+    if (ids.has(id)) ids.delete(id);
+    else ids.add(id);
+    return { all: current.all, ids };
+  }), []);
+  const toggleAll = useCallback(() => setSelection((current) => (
+    current.all && current.ids.size === 0 ? NO_SELECTION : { all: true, ids: new Set<string>() }
+  )), []);
+  const selectionApi = useMemo<SelectionApi>(
+    () => ({ selection, count: selectedCount, toggleRow, toggleAll }),
+    [selection, selectedCount, toggleRow, toggleAll],
+  );
 
   const severityValues = useCallback(async () => SEVERITIES.map((s) => ({ value: s, label: t(`pages.vulnerabilities.severities.${s}`) })), [t]);
   const stateValues = useCallback(async () => VULNERABILITY_STATES.map((s) => ({ value: s, label: t(`pages.vulnerabilities.states.${s}`) })), [t]);
@@ -427,29 +504,67 @@ export default function VulnerabilitiesPage() {
     const res = await api.get<{ items: Array<{ reference: string; name: string }> }>('/technologies', { params: { limit: 500, sort: 'name:ASC' } });
     return (res.data?.items || []).map((tech) => ({ value: tech.reference, label: `${tech.reference} ${tech.name}` }));
   }, []);
+  // The labels of the versions the other filters reach, then "Not recorded".
+  const versionValues = useCallback(async ({ context }: { context?: any }) => {
+    const state = context?.getQueryState?.() ?? {};
+    const filters = { ...(state.filters || {}) };
+    delete filters.version;
+    const params: Record<string, unknown> = { fields: 'version' };
+    if (state.q) params.q = state.q;
+    if (Object.keys(filters).length > 0) params.filters = JSON.stringify(filters);
+    const res = await getWithListContext<{ version?: Array<string | null> }>(`${ENDPOINT}/filter-values`, params);
+    return (res.data?.version || []).map((value) => ({ value, label: value ?? t('pages.vulnerabilities.versionNone') }));
+  }, [t]);
 
   const columns: EnhancedColDef<VulnerabilityRow>[] = useMemo(() => [
-    { headerName: t('pages.vulnerabilities.columns.cve'), field: 'cve_id', width: 130, cellStyle: { fontFamily: MONO_FONT_FAMILY, fontSize: '12px' } },
+    ...(canEdit ? [{
+      colId: SELECTION_COLUMN,
+      headerName: '',
+      width: 44,
+      minWidth: 44,
+      maxWidth: 44,
+      lockPosition: 'left' as const,
+      suppressColumnsToolPanel: true,
+      suppressMovable: true,
+      resizable: false,
+      sortable: false,
+      filter: false,
+      headerComponent: SelectAllHeader,
+      cellRenderer: SelectRowCell,
+    }] : []),
+    { headerName: t('pages.vulnerabilities.columns.cve'), field: 'cve_id', width: 125, cellStyle: { fontFamily: MONO_FONT_FAMILY, fontSize: '12px' } },
     {
       headerName: t('pages.vulnerabilities.columns.severity'),
       field: 'severity',
-      width: 110,
+      width: 105,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: { getValues: severityValues, searchable: false },
       cellRenderer: (p: ICellRendererParams<VulnerabilityRow>) => (p.data ? <SeverityCell severity={p.data.severity} score={p.data.cvss_score} /> : null),
     },
     { headerName: t('pages.vulnerabilities.columns.score'), field: 'cvss_score', width: 90, type: 'rightAligned', defaultHidden: true, filter: 'agNumberColumnFilter' },
-    { headerName: t('pages.vulnerabilities.columns.summary'), field: 'summary', minWidth: 160, flex: 1, sortable: false, tooltipField: 'summary' },
+    { headerName: t('pages.vulnerabilities.columns.summary'), field: 'summary', minWidth: 140, flex: 1, sortable: false, tooltipField: 'summary' },
     {
-      headerName: t('pages.vulnerabilities.columns.technologies'),
-      field: 'technologies',
-      width: 180,
-      sortable: false,
+      headerName: t('pages.vulnerabilities.columns.technology'),
+      field: 'technology',
+      width: 150,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: { getValues: technologyValues },
-      valueFormatter: (p: any) => technologiesText((p.value as VulnerabilityRow['technologies']) || [], t),
+      valueFormatter: (p: any) => {
+        const tech = p.value as VulnerabilityRow['technology'] | undefined;
+        return tech ? [tech.reference, tech.name].filter(Boolean).join(' ') : '';
+      },
+    },
+    {
+      headerName: t('pages.vulnerabilities.columns.version'),
+      field: 'version',
+      width: 100,
+      sortable: false,
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: { getValues: versionValues, emptyLabel: t('pages.vulnerabilities.versionNone') },
+      cellRenderer: VersionCell,
     },
     {
       headerName: t('pages.vulnerabilities.columns.editor'),
@@ -468,21 +583,22 @@ export default function VulnerabilitiesPage() {
     {
       headerName: t('pages.vulnerabilities.columns.state'),
       field: 'state',
-      width: 120,
+      width: 115,
       sortable: false,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: { getValues: stateValues, searchable: false },
       cellRenderer: (p: ICellRendererParams<VulnerabilityRow>) => (p.data ? <VulnerabilityStateCell state={p.data.state} /> : null),
     },
+    { headerName: t('pages.vulnerabilities.columns.note'), field: 'note', width: 200, defaultHidden: true, sortable: false, filter: false, tooltipField: 'note' },
     {
       headerName: t('pages.vulnerabilities.columns.published'),
       field: 'published_at',
-      width: 110,
+      width: 105,
       filter: 'agDateColumnFilter',
       valueFormatter: (p: any) => (p.value ? formatShortDate(p.value as string, locale, { year: 'always' }) : ''),
     },
-  ], [editorValues, locale, severityValues, stateValues, t, technologyValues]);
+  ], [canEdit, editorValues, locale, severityValues, stateValues, t, technologyValues, versionValues]);
 
   if (!enabled) return null;
   if (!allowed) return <ForbiddenPage />;
@@ -501,11 +617,21 @@ export default function VulnerabilitiesPage() {
   };
 
   const actions = (
-    <Stack direction="row" spacing={1}>
+    <Stack direction="row" spacing={1} alignItems="center">
+      {canEdit && selectedCount > 0 && (
+        <>
+          <Typography data-testid="vulnerabilities-selection" sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
+            {selection.all
+              ? t('pages.vulnerabilities.selection.whole', { count: selectedCount })
+              : t('pages.vulnerabilities.selection.some', { count: selectedCount })}
+          </Typography>
+          <Button variant="action" onClick={() => setSelection(NO_SELECTION)}>{t('pages.vulnerabilities.selection.clear')}</Button>
+        </>
+      )}
       {canEdit && (
-        <Button variant="action" onClick={() => setBulkOpen(true)} disabled={(request?.total ?? 0) === 0}>
-          {selected.length > 0
-            ? t('pages.vulnerabilities.actions.changeStateSelected', { count: selected.length })
+        <Button variant="action" onClick={() => setBulkOpen(true)} disabled={selectedCount === 0}>
+          {selectedCount > 0
+            ? t('pages.vulnerabilities.actions.changeStateSelected', { count: selectedCount })
             : t('pages.vulnerabilities.actions.changeState')}
         </Button>
       )}
@@ -514,7 +640,7 @@ export default function VulnerabilitiesPage() {
   );
 
   return (
-    <>
+    <SelectionContext.Provider value={selectionApi}>
       <PageHeader title={t('pages.vulnerabilities.title')} actions={actions} />
       {exportError && (
         <Typography role="alert" sx={{ fontSize: 13, color: 'kanap.text.secondary', mb: 1 }}>{t('pages.vulnerabilities.exportFailed')}</Typography>
@@ -523,7 +649,7 @@ export default function VulnerabilitiesPage() {
         columns={columns}
         endpoint={ENDPOINT}
         queryKey="vulnerabilities"
-        getRowId={(row) => row.cve_id}
+        getRowId={(row) => row.id}
         showRowCount
         defaultSort={{ field: 'severity', direction: 'DESC' }}
         initialState={{ filter: { filterModel: initialModel } }}
@@ -532,12 +658,17 @@ export default function VulnerabilitiesPage() {
         columnPreferencesKey="it-vulnerabilities"
         refreshKey={refreshKey}
         enableSearch
-        enableRowSelection={canEdit}
-        onSelectionChanged={setSelected}
         onCellClicked={(event: any) => {
-          if (event?.data?.cve_id && event.column?.getColId?.() !== 'ag-Grid-SelectionColumn') setOpenCve(event.data.cve_id);
+          if (event?.data?.cve_id && event.column?.getColId?.() !== SELECTION_COLUMN) setOpenCve(event.data.cve_id);
         }}
-        onListRequestChange={(next) => { requestRef.current = next; setRequest(next); }}
+        onListRequestChange={(next) => {
+          requestRef.current = next;
+          setRequest(next);
+          const { sort: _sort, ...scope } = scopeParams(next);
+          const key = JSON.stringify(scope);
+          if (scopeKeyRef.current !== null && scopeKeyRef.current !== key) setSelection(NO_SELECTION);
+          scopeKeyRef.current = key;
+        }}
         emptyState={(
           <Typography sx={quietSx} data-testid="vulnerabilities-empty">
             {request?.params?.filters || request?.params?.q ? t('pages.vulnerabilities.empty.filtered') : t('pages.vulnerabilities.empty.none')}
@@ -564,15 +695,16 @@ export default function VulnerabilitiesPage() {
         <BulkStateDialog
           open={bulkOpen}
           onClose={() => setBulkOpen(false)}
-          selected={selected.map((row) => row.cve_id)}
+          selection={selection}
           request={request}
           onDone={() => {
             setBulkOpen(false);
+            setSelection(NO_SELECTION);
             setRefreshKey((k) => k + 1);
             void queryClient.invalidateQueries({ queryKey: ['vulnerabilities'] });
           }}
         />
       )}
-    </>
+    </SelectionContext.Provider>
   );
 }

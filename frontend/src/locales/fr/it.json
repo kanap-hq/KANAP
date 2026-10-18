@@ -304,17 +304,28 @@
         "title": "Changer l'état",
         "state": "État",
         "note": "Note commune",
-        "scopeAll": "Toutes les vulnérabilités du filtre en cours",
-        "scopeSelected_one": "La vulnérabilité sélectionnée.",
-        "scopeSelected_other": "Les {{count}} vulnérabilités sélectionnées.",
+        "scopeAll": "Toutes les lignes du filtre en cours.",
+        "scopeAllBut_one": "Toutes les lignes du filtre en cours, sauf {{count}}.",
+        "scopeAllBut_other": "Toutes les lignes du filtre en cours, sauf {{count}}.",
+        "scopeSelected_one": "La ligne sélectionnée.",
+        "scopeSelected_other": "Les {{count}} lignes sélectionnées.",
         "count_one": "Cela change {{count}} ligne sur {{rows}}, sur {{cves}} vulnérabilités.",
         "count_other": "Cela change {{count}} lignes sur {{rows}}, sur {{cves}} vulnérabilités.",
         "counting": "Comptage des lignes…",
-        "tooMany": "Plus de 5 000 lignes : resserrez les filtres ou sélectionnez moins de vulnérabilités.",
+        "tooMany": "Plus de 5 000 lignes : resserrez les filtres ou sélectionnez moins de lignes.",
         "countFailed": "Les lignes n'ont pas pu être comptées. Réessayez.",
         "failed": "La modification n'a pas pu être enregistrée. Réessayez.",
         "save": "Changer l'état",
         "noteKept": "Sans note, chaque ligne garde la sienne."
+      },
+      "selection": {
+        "all": "Sélectionner toutes les lignes du filtre",
+        "row": "Sélectionner {{cve}}, {{technology}} {{version}}",
+        "whole_one": "{{count}} ligne sélectionnée, tout le filtre",
+        "whole_other": "{{count}} lignes sélectionnées, tout le filtre",
+        "some_one": "{{count}} ligne sélectionnée",
+        "some_other": "{{count}} lignes sélectionnées",
+        "clear": "Tout désélectionner"
       },
       "panel": {
         "close": "Fermer"
@@ -322,6 +333,8 @@
       "exportFailed": "L'export a échoué. Réessayez.",
       "saveFailed": "La modification n'a pas pu être enregistrée. Réessayez.",
       "unknownVersion": "Version non renseignée (potentiellement concernée)",
+      "versionNone": "Non renseignée",
+      "versionNoneHint": "Aucune version renseignée : potentiellement concernée",
       "empty": {
         "none": "Aucune vulnérabilité à traiter. Les vulnérabilités s'affichent pour les technologies qui indiquent leurs identifiants CPE : renseignez-les sur une technologie, ou adoptez-la depuis le catalogue.",
         "filtered": "Aucune vulnérabilité ne correspond à ces filtres."
@@ -330,14 +343,15 @@
         "cve": "CVE",
         "severity": "Sévérité",
         "summary": "Résumé",
-        "technologies": "Technologies",
+        "technology": "Technologie",
         "servers": "Serveurs",
         "applications": "Applications",
         "state": "État",
         "published": "Publication",
         "version": "Version",
         "score": "Score",
-        "editor": "Éditeur"
+        "editor": "Éditeur",
+        "note": "Note"
       },
       "severities": {
         "critical": "Critique",
@@ -363,7 +377,7 @@
         "via": "via {{name}}",
         "stateOf": "État de {{version}}",
         "noteOf": "Note sur {{version}}",
-        "notePlaceholder": "ex. corrigé le 12 mars, changement CHG-123"
+        "notePlaceholder": "ex. corrigé le 12 mars"
       },
       "section": {
         "title": "Vulnérabilités",

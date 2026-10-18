@@ -304,17 +304,28 @@
         "title": "Cambiar el estado",
         "state": "Estado",
         "note": "Nota común",
-        "scopeAll": "Todas las vulnerabilidades del filtro actual",
-        "scopeSelected_one": "La vulnerabilidad seleccionada.",
-        "scopeSelected_other": "Las {{count}} vulnerabilidades seleccionadas.",
+        "scopeAll": "Todas las filas del filtro actual.",
+        "scopeAllBut_one": "Todas las filas del filtro actual, salvo {{count}}.",
+        "scopeAllBut_other": "Todas las filas del filtro actual, salvo {{count}}.",
+        "scopeSelected_one": "La fila seleccionada.",
+        "scopeSelected_other": "Las {{count}} filas seleccionadas.",
         "count_one": "Esto cambia {{count}} fila de {{rows}}, en {{cves}} vulnerabilidades.",
         "count_other": "Esto cambia {{count}} filas de {{rows}}, en {{cves}} vulnerabilidades.",
         "counting": "Contando las filas…",
-        "tooMany": "Más de 5000 filas: acote los filtros o seleccione menos vulnerabilidades.",
+        "tooMany": "Más de 5000 filas: acote los filtros o seleccione menos filas.",
         "countFailed": "No se pudieron contar las filas. Inténtelo de nuevo.",
         "failed": "No se pudo guardar el cambio. Inténtelo de nuevo.",
         "save": "Cambiar el estado",
         "noteKept": "Sin nota, cada fila conserva la suya."
+      },
+      "selection": {
+        "all": "Seleccionar todas las filas del filtro",
+        "row": "Seleccionar {{cve}}, {{technology}} {{version}}",
+        "whole_one": "{{count}} fila seleccionada, todo el filtro",
+        "whole_other": "{{count}} filas seleccionadas, todo el filtro",
+        "some_one": "{{count}} fila seleccionada",
+        "some_other": "{{count}} filas seleccionadas",
+        "clear": "Quitar la selección"
       },
       "panel": {
         "close": "Cerrar"
@@ -322,6 +333,8 @@
       "exportFailed": "La exportación falló. Inténtelo de nuevo.",
       "saveFailed": "No se pudo guardar el cambio. Inténtelo de nuevo.",
       "unknownVersion": "Versión no registrada (potencialmente afectada)",
+      "versionNone": "Sin registrar",
+      "versionNoneHint": "Ninguna versión registrada: potencialmente afectada",
       "empty": {
         "none": "Ninguna vulnerabilidad por revisar. Las vulnerabilidades aparecen para las tecnologías que indican sus identificadores CPE: complételos en una tecnología o adóptela desde el catálogo.",
         "filtered": "Ninguna vulnerabilidad coincide con estos filtros."
@@ -330,14 +343,15 @@
         "cve": "CVE",
         "severity": "Gravedad",
         "summary": "Resumen",
-        "technologies": "Tecnologías",
+        "technology": "Tecnología",
         "servers": "Servidores",
         "applications": "Aplicaciones",
         "state": "Estado",
         "published": "Publicación",
         "version": "Versión",
         "score": "Puntuación",
-        "editor": "Editor"
+        "editor": "Editor",
+        "note": "Nota"
       },
       "severities": {
         "critical": "Crítica",
@@ -363,7 +377,7 @@
         "via": "a través de {{name}}",
         "stateOf": "Estado de {{version}}",
         "noteOf": "Nota sobre {{version}}",
-        "notePlaceholder": "p. ej., parcheado el 12 de marzo, cambio CHG-123"
+        "notePlaceholder": "p. ej., parcheado el 12 de marzo"
       },
       "section": {
         "title": "Vulnerabilidades",

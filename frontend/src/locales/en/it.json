@@ -304,17 +304,28 @@
         "title": "Change the state",
         "state": "State",
         "note": "Common note",
-        "scopeAll": "Every vulnerability of the current filter",
-        "scopeSelected_one": "The selected vulnerability.",
-        "scopeSelected_other": "The {{count}} selected vulnerabilities.",
+        "scopeAll": "Every row of the current filter.",
+        "scopeAllBut_one": "Every row of the current filter but {{count}}.",
+        "scopeAllBut_other": "Every row of the current filter but {{count}}.",
+        "scopeSelected_one": "The selected row.",
+        "scopeSelected_other": "The {{count}} selected rows.",
         "count_one": "This changes {{count}} row of {{rows}}, on {{cves}} vulnerabilities.",
         "count_other": "This changes {{count}} rows of {{rows}}, on {{cves}} vulnerabilities.",
         "counting": "Counting the rows…",
-        "tooMany": "More than 5,000 rows: narrow the filters, or select fewer vulnerabilities.",
+        "tooMany": "More than 5,000 rows: narrow the filters, or select fewer rows.",
         "countFailed": "The rows could not be counted. Try again.",
         "failed": "The change could not be saved. Try again.",
         "save": "Change state",
         "noteKept": "Without a note, each row keeps its own."
+      },
+      "selection": {
+        "all": "Select every row of the filter",
+        "row": "Select {{cve}}, {{technology}} {{version}}",
+        "whole_one": "{{count}} row selected, whole filter",
+        "whole_other": "{{count}} rows selected, whole filter",
+        "some_one": "{{count}} row selected",
+        "some_other": "{{count}} rows selected",
+        "clear": "Clear selection"
       },
       "panel": {
         "close": "Close"
@@ -322,6 +333,8 @@
       "exportFailed": "The export failed. Try again.",
       "saveFailed": "The change could not be saved. Try again.",
       "unknownVersion": "Version not recorded (potentially concerned)",
+      "versionNone": "Not recorded",
+      "versionNoneHint": "No version recorded: potentially concerned",
       "empty": {
         "none": "No vulnerability to review. Vulnerabilities show for the technologies that name their CPE identifiers: fill them in on a technology, or adopt it from the catalog.",
         "filtered": "No vulnerability matches these filters."
@@ -330,14 +343,15 @@
         "cve": "CVE",
         "severity": "Severity",
         "summary": "Summary",
-        "technologies": "Technologies",
+        "technology": "Technology",
         "servers": "Servers",
         "applications": "Applications",
         "state": "State",
         "published": "Published",
         "version": "Version",
         "score": "Score",
-        "editor": "Publisher"
+        "editor": "Publisher",
+        "note": "Note"
       },
       "severities": {
         "critical": "Critical",
@@ -363,7 +377,7 @@
         "via": "through {{name}}",
         "stateOf": "State of {{version}}",
         "noteOf": "Note on {{version}}",
-        "notePlaceholder": "e.g., patched on 12 March, change CHG-123"
+        "notePlaceholder": "e.g., patched on 12 March"
       },
       "section": {
         "title": "Vulnerabilities",

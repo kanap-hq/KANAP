@@ -304,17 +304,28 @@
         "title": "Status ändern",
         "state": "Status",
         "note": "Gemeinsame Notiz",
-        "scopeAll": "Alle Schwachstellen des aktuellen Filters",
-        "scopeSelected_one": "Die ausgewählte Schwachstelle.",
-        "scopeSelected_other": "Die {{count}} ausgewählten Schwachstellen.",
+        "scopeAll": "Alle Zeilen des aktuellen Filters.",
+        "scopeAllBut_one": "Alle Zeilen des aktuellen Filters außer {{count}}.",
+        "scopeAllBut_other": "Alle Zeilen des aktuellen Filters außer {{count}}.",
+        "scopeSelected_one": "Die ausgewählte Zeile.",
+        "scopeSelected_other": "Die {{count}} ausgewählten Zeilen.",
         "count_one": "Dies ändert {{count}} von {{rows}} Zeilen, bei {{cves}} Schwachstellen.",
         "count_other": "Dies ändert {{count}} von {{rows}} Zeilen, bei {{cves}} Schwachstellen.",
         "counting": "Zeilen werden gezählt…",
-        "tooMany": "Mehr als 5.000 Zeilen: Grenzen Sie die Filter ein oder wählen Sie weniger Schwachstellen aus.",
+        "tooMany": "Mehr als 5.000 Zeilen: Grenzen Sie die Filter ein oder wählen Sie weniger Zeilen aus.",
         "countFailed": "Die Zeilen konnten nicht gezählt werden. Versuchen Sie es erneut.",
         "failed": "Die Änderung konnte nicht gespeichert werden. Versuchen Sie es erneut.",
         "save": "Status ändern",
         "noteKept": "Ohne Notiz behält jede Zeile ihre eigene."
+      },
+      "selection": {
+        "all": "Alle Zeilen des Filters auswählen",
+        "row": "{{cve}}, {{technology}} {{version}} auswählen",
+        "whole_one": "{{count}} Zeile ausgewählt, ganzer Filter",
+        "whole_other": "{{count}} Zeilen ausgewählt, ganzer Filter",
+        "some_one": "{{count}} Zeile ausgewählt",
+        "some_other": "{{count}} Zeilen ausgewählt",
+        "clear": "Auswahl aufheben"
       },
       "panel": {
         "close": "Schließen"
@@ -322,6 +333,8 @@
       "exportFailed": "Der Export ist fehlgeschlagen. Versuchen Sie es erneut.",
       "saveFailed": "Die Änderung konnte nicht gespeichert werden. Versuchen Sie es erneut.",
       "unknownVersion": "Version nicht erfasst (möglicherweise betroffen)",
+      "versionNone": "Nicht erfasst",
+      "versionNoneHint": "Keine Version erfasst: möglicherweise betroffen",
       "empty": {
         "none": "Keine Schwachstelle zu prüfen. Schwachstellen erscheinen für Technologien mit CPE-Kennungen: Tragen Sie diese bei einer Technologie ein oder übernehmen Sie die Technologie aus dem Katalog.",
         "filtered": "Keine Schwachstelle entspricht diesen Filtern."
@@ -330,14 +343,15 @@
         "cve": "CVE",
         "severity": "Schweregrad",
         "summary": "Zusammenfassung",
-        "technologies": "Technologien",
+        "technology": "Technologie",
         "servers": "Server",
         "applications": "Anwendungen",
         "state": "Status",
         "published": "Veröffentlicht",
         "version": "Version",
         "score": "Score",
-        "editor": "Hersteller"
+        "editor": "Hersteller",
+        "note": "Notiz"
       },
       "severities": {
         "critical": "Kritisch",
@@ -363,7 +377,7 @@
         "via": "über {{name}}",
         "stateOf": "Status von {{version}}",
         "noteOf": "Notiz zu {{version}}",
-        "notePlaceholder": "z. B. am 12. März gepatcht, Change CHG-123"
+        "notePlaceholder": "z. B. am 12. März gepatcht"
       },
       "section": {
         "title": "Schwachstellen",

@@ -18,11 +18,17 @@ vi.mock('../../auth/AuthContext', () => ({
 const features = vi.hoisted(() => ({ vulnerabilityFeed: true }));
 vi.mock('../../config/FeaturesContext', () => ({ useFeatures: () => ({ config: { features } }) }));
 vi.mock('../ForbiddenPage', () => ({ default: () => <div>Forbidden</div> }));
-const grid = vi.hoisted(() => ({ props: null as null | Record<string, any> }));
+// The grid: its props, and the selection column drawn for the rows of `grid.rows` (header box and
+// row boxes), inside the page as AG Grid draws them.
+const grid = vi.hoisted(() => ({ props: null as null | Record<string, any>, rows: [] as any[] }));
 vi.mock('../../components/ServerDataGrid', () => ({
   default: (props: Record<string, any>) => {
     grid.props = props;
-    return null;
+    const select = (props.columns as any[]).find((col) => col.colId === 'select');
+    if (!select) return null;
+    const Header = select.headerComponent;
+    const Cell = select.cellRenderer;
+    return <div data-testid="grid"><Header />{grid.rows.map((row) => <Cell key={row.id} data={row} />)}</div>;
   },
 }));
 
@@ -36,21 +42,36 @@ const VERSION_980 = {
   matching: true, state: 'to_review' as const, note: null, state_changed_at: null, state_changed_by_name: null,
 };
 const VERSION_UNKNOWN = { ...VERSION_980, id: 'row-2', technology_version_id: null, version_label: null, potential: true, match_basis: 'version_unknown' };
+/** Two grid rows of one CVE: Tomcat 9.0.80, and Tomcat without a recorded version. */
 const ROW: VulnerabilityRow = {
+  id: 'row-1',
   cve_id: CVE,
   summary: 'Remote code execution in the connector',
   cvss_score: 9.8,
   severity: 'critical',
   cvss_version: '3.1',
   published_at: '2026-09-30T00:00:00.000Z',
-  technologies: [{ technology_id: 'tech-1', reference: 'TEC-1', name: 'Tomcat', editor: 'Apache', versions: [VERSION_980, VERSION_UNKNOWN] }],
+  technology: { id: 'tech-1', reference: 'TEC-1', name: 'Tomcat' },
   editor: 'Apache',
+  version: '9.0.80',
+  technology_version_id: 'v-980',
+  potential: false,
   state: 'to_review',
-  servers: 2,
+  note: null,
+  servers: 1,
   applications: null,
 };
+const ROW_NONE: VulnerabilityRow = { ...ROW, id: 'row-2', version: null, technology_version_id: null, potential: true };
 const DETAIL: VulnerabilityDetail = {
-  ...ROW,
+  cve_id: CVE,
+  summary: ROW.summary,
+  cvss_score: 9.8,
+  severity: 'critical',
+  cvss_version: '3.1',
+  published_at: ROW.published_at,
+  technologies: [{ technology_id: 'tech-1', reference: 'TEC-1', name: 'Tomcat', editor: 'Apache', versions: [VERSION_980, VERSION_UNKNOWN] }],
+  servers: 2,
+  applications: null,
   cvss_vector: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H',
   reference_urls: ['https://example.com/advisory'],
   servers_list: [
@@ -71,12 +92,19 @@ function renderPage(path = '/it/vulnerabilities') {
   );
 }
 
-const column = (field: string) => (grid.props!.columns as any[]).find((col) => col.field === field);
+const column = (key: string) => (grid.props!.columns as any[]).find((col) => (col.field ?? col.colId) === key);
 const FILTERS = JSON.stringify({ state: { filterType: 'set', values: ['to_review'] } });
+const OTHER_FILTERS = JSON.stringify({ state: { filterType: 'set', values: ['handled'] } });
+const listed = (total: number, filters = FILTERS, sort = 'severity:DESC') => act(() => grid.props!.onListRequestChange({ params: { page: 1, limit: 50, sort, filters }, total }));
+const box = (name: string) => screen.getByRole('checkbox', { name }) as HTMLInputElement;
+const ROW_BOX = 'Select CVE-2026-1001, Tomcat 9.0.80';
+const ROW_NONE_BOX = 'Select CVE-2026-1001, Tomcat Not recorded';
+const ALL_BOX = 'Select every row of the filter';
 
 describe('VulnerabilitiesPage', () => {
   beforeEach(() => {
     grid.props = null;
+    grid.rows = [ROW, ROW_NONE];
     getMock.mockReset();
     patchMock.mockReset();
     postMock.mockReset();
@@ -85,6 +113,7 @@ describe('VulnerabilitiesPage', () => {
     getMock.mockImplementation(async (url: string) => {
       if (url === `/vulnerabilities/${CVE}`) return { data: DETAIL } as any;
       if (url === '/technologies') return { data: { items: [{ id: 'tech-1', reference: 'TEC-1', name: 'Tomcat' }] } } as any;
+      if (url === '/vulnerabilities/filter-values') return { data: { version: ['9.0.80', '10.1.5', null] } } as any;
       throw new Error(`unexpected ${url}`);
     });
   });
@@ -103,27 +132,27 @@ describe('VulnerabilitiesPage', () => {
     expect(screen.getByText('Forbidden')).toBeTruthy();
   });
 
-  it('lists on the standard grid, to review by default, with filters per column', async () => {
+  it('lists one row per technology, version and CVE, to review by default, with filters per column', async () => {
     renderPage();
     expect(grid.props!.endpoint).toBe('/vulnerabilities');
     expect(grid.props!.columnPreferencesKey).toBe('it-vulnerabilities');
     expect(grid.props!.defaultSort).toEqual({ field: 'severity', direction: 'DESC' });
+    expect(grid.props!.getRowId(ROW_NONE)).toBe('row-2');
     expect(grid.props!.initialState.filter.filterModel).toEqual({ state: { filterType: 'set', values: ['to_review'] } });
-    expect((grid.props!.columns as any[]).map((col) => col.field)).toEqual([
-      'cve_id', 'severity', 'cvss_score', 'summary', 'technologies', 'editor', 'servers', 'applications', 'state', 'published_at',
+    expect((grid.props!.columns as any[]).map((col) => col.field ?? col.colId)).toEqual([
+      'select', 'cve_id', 'severity', 'cvss_score', 'summary', 'technology', 'version', 'editor', 'servers', 'applications', 'state', 'note', 'published_at',
     ]);
     expect(column('published_at').filter).toBe('agDateColumnFilter');
-    // The default set fits a 1,440 px window, the selection column (50 px) included: the summary takes the rest.
+    // The default set fits a 1,440 px window, the selection column included: the summary takes the rest.
     const shown = (grid.props!.columns as any[]).filter((col) => !col.defaultHidden);
-    expect(shown.map((col) => col.field)).toEqual(['cve_id', 'severity', 'summary', 'technologies', 'servers', 'applications', 'state', 'published_at']);
-    const SELECTION = grid.props!.enableRowSelection ? 50 : 0;
-    expect(SELECTION).toBe(50);
-    expect(SELECTION + shown.reduce((sum, col) => sum + (col.width ?? col.minWidth), 0)).toBeLessThanOrEqual(1100);
+    expect(shown.map((col) => col.field ?? col.colId)).toEqual(['select', 'cve_id', 'severity', 'summary', 'technology', 'version', 'servers', 'applications', 'state', 'published_at']);
+    expect(shown.reduce((sum, col) => sum + (col.width ?? col.minWidth), 0)).toBeLessThanOrEqual(1100);
+    expect(column('select')).toMatchObject({ suppressColumnsToolPanel: true, filter: false, sortable: false, width: 44 });
+    expect(grid.props!.enableRowSelection).toBeFalsy();
     expect(column('summary').flex).toBe(1);
     expect(column('servers').filter).toBe(false);
-    expect(await column('technologies').filterParams.getValues({})).toEqual([{ value: 'TEC-1', label: 'TEC-1 Tomcat' }]);
-    expect(column('technologies').valueFormatter({ value: ROW.technologies }))
-      .toBe('TEC-1 Tomcat 9.0.80, Version not recorded (potentially concerned)');
+    expect(await column('technology').filterParams.getValues({})).toEqual([{ value: 'TEC-1', label: 'TEC-1 Tomcat' }]);
+    expect(column('technology').valueFormatter({ value: ROW.technology })).toBe('TEC-1 Tomcat');
     expect((await column('state').filterParams.getValues({})).map((v: any) => v.label)).toEqual(['To review', 'Handled', 'Not affected']);
     // Critical in orange.
     const Severity = column('severity').cellRenderer;
@@ -133,16 +162,32 @@ describe('VulnerabilitiesPage', () => {
     expect(getComputedStyle(severity).color).toBe('rgb(180, 83, 9)');
   });
 
-  it('turns the entries by publisher, technology and CVE into grid filters', () => {
+  it('shows a version not recorded in quiet text, potentially concerned, and filters by version', async () => {
+    renderPage();
+    const Version = column('version').cellRenderer;
+    const { container } = render(<ThemeProvider theme={createAppTheme('light')}><Version data={ROW} /><Version data={ROW_NONE} /></ThemeProvider>);
+    expect(container.textContent).toBe('9.0.80Not recorded');
+    expect(screen.getByLabelText('No version recorded: potentially concerned').textContent).toBe('Not recorded');
+    // The labels the other filters reach, then "Not recorded"; the column's own filter left out.
+    const filters = { state: { filterType: 'set', values: ['to_review'] }, version: { filterType: 'set', values: ['9.0.80'] } };
+    const values = await column('version').filterParams.getValues({ context: { getQueryState: () => ({ q: '', filters }) } });
+    expect(getMock).toHaveBeenCalledWith('/vulnerabilities/filter-values', expect.objectContaining({ params: { fields: 'version', filters: FILTERS } }));
+    expect(values).toEqual([{ value: '9.0.80', label: '9.0.80' }, { value: '10.1.5', label: '10.1.5' }, { value: null, label: 'Not recorded' }]);
+    expect(column('version').filterParams.emptyLabel).toBe('Not recorded');
+  });
+
+  it('turns the entries by publisher, technology, version and CVE into grid filters', () => {
     expect(filterModelFromSearch('?editor=Oracle&technology=TEC-1&state=all&q=CVE-2026-1001')).toEqual({
       editor: { filterType: 'set', values: ['Oracle'] },
-      technologies: { filterType: 'set', values: ['TEC-1'] },
+      technology: { filterType: 'set', values: ['TEC-1'] },
       cve_id: { filterType: 'text', type: 'contains', filter: 'CVE-2026-1001' },
     });
-    expect(filterModelFromSearch('?state=handled&severity=high')).toEqual({
+    expect(filterModelFromSearch('?state=handled&severity=high&version=9.0.80')).toEqual({
       state: { filterType: 'set', values: ['handled'] },
+      version: { filterType: 'set', values: ['9.0.80'] },
       severity: { filterType: 'set', values: ['high'] },
     });
+    expect(filterModelFromSearch('?version=none').version).toEqual({ filterType: 'set', values: [null] });
   });
 
   it('says what to do when nothing is to review', () => {
@@ -151,9 +196,12 @@ describe('VulnerabilitiesPage', () => {
     expect(screen.getByTestId('vulnerabilities-empty').textContent).toContain('CPE identifiers');
   });
 
-  it('opens a CVE in the side panel: servers with the way through, a line for hidden applications', async () => {
+  it('opens the CVE of any of its rows in the side panel, and refreshes the grid after a change there', async () => {
     renderPage();
-    act(() => grid.props!.onCellClicked({ data: ROW, column: { getColId: () => 'cve_id' } }));
+    // A click in the selection column opens nothing.
+    act(() => grid.props!.onCellClicked({ data: ROW_NONE, column: { getColId: () => 'select' } }));
+    expect(screen.queryByTestId('vulnerability-detail')).toBeNull();
+    act(() => grid.props!.onCellClicked({ data: ROW_NONE, column: { getColId: () => 'version' } }));
     const detail = await screen.findByTestId('vulnerability-detail');
     expect(getMock).toHaveBeenCalledWith(`/vulnerabilities/${CVE}`);
     expect(screen.getByRole('region', { name: CVE })).toBeTruthy();
@@ -172,37 +220,81 @@ describe('VulnerabilitiesPage', () => {
     await waitFor(() => expect(screen.queryByTestId('vulnerability-detail')).toBeNull());
   });
 
-  it('changes the state of the selection, or of the whole filter, with the count first', async () => {
+  it('selects every row of the filter from the header box, unticked rows left out, and changes them after the count', async () => {
     postMock.mockImplementation(async (_url: string, body: any) => ({
-      data: body.dry_run ? (body.all ? { rows: 120, cves: 40, changes: 118, as_of: '2026-10-17T10:00:01.000Z' } : { rows: 3, cves: 2, changes: 3, as_of: '2026-10-17T10:00:00.000Z' }) : { ok: true, changed: 3 },
+      data: body.dry_run ? { rows: 279, cves: 90, changes: 279, as_of: '2026-10-18T10:00:01.000Z' } : { ok: true, changed: 279 },
     }) as any);
     renderPage();
-    expect(grid.props!.enableRowSelection).toBe(true);
-    act(() => {
-      grid.props!.onSelectionChanged([ROW, { ...ROW, cve_id: 'CVE-2026-1002' }]);
-      grid.props!.onListRequestChange({ params: { page: 1, limit: 50, sort: 'severity:DESC', filters: FILTERS }, total: 40 });
+    listed(280);
+    expect((screen.getByRole('button', { name: 'Change state' }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(box(ALL_BOX));
+    expect(screen.getByTestId('vulnerabilities-selection').textContent).toBe('280 rows selected, whole filter');
+    expect(box(ALL_BOX).checked).toBe(true);
+    expect(box(ROW_BOX).checked && box(ROW_NONE_BOX).checked).toBe(true);
+    // One row unticked: still the whole filter, but that row.
+    fireEvent.click(box(ROW_BOX));
+    expect(screen.getByTestId('vulnerabilities-selection').textContent).toBe('279 rows selected, whole filter');
+    expect(box(ALL_BOX).checked).toBe(false);
+    expect(box(ALL_BOX).getAttribute('data-indeterminate')).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: 'Change state (279)' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).queryByRole('checkbox')).toBeNull();
+    expect(dialog.textContent).toContain('Every row of the current filter but 1.');
+    await waitFor(() => expect(within(dialog).getByRole('status').textContent).toBe('This changes 279 rows of 279, on 90 vulnerabilities.'));
+    expect(postMock).toHaveBeenLastCalledWith('/vulnerabilities/bulk-state', {
+      state: 'handled', all: true, filters: { sort: 'severity:DESC', filters: FILTERS }, exclude_ids: ['row-1'], dry_run: true,
     });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Change state' }));
+    await waitFor(() => expect(postMock).toHaveBeenLastCalledWith('/vulnerabilities/bulk-state', {
+      state: 'handled', all: true, filters: { sort: 'severity:DESC', filters: FILTERS }, exclude_ids: ['row-1'], as_of: '2026-10-18T10:00:01.000Z',
+    }));
+    await waitFor(() => expect(grid.props!.refreshKey).toBe(1));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(screen.queryByTestId('vulnerabilities-selection')).toBeNull();
+    expect(box(ALL_BOX).checked).toBe(false);
+  });
+
+  it('changes the ticked rows by their ids, and clears the selection when the filter changes', async () => {
+    postMock.mockImplementation(async (_url: string, body: any) => ({
+      data: body.dry_run ? { rows: 2, cves: 1, changes: 2, as_of: '2026-10-18T10:00:00.000Z' } : { ok: true, changed: 2 },
+    }) as any);
+    renderPage();
+    listed(40);
+    fireEvent.click(box(ROW_BOX));
+    fireEvent.click(box(ROW_NONE_BOX));
+    expect(screen.getByTestId('vulnerabilities-selection').textContent).toBe('2 rows selected');
+    expect(box(ALL_BOX).getAttribute('data-indeterminate')).toBe('true');
+    // Another sort keeps the selection; another filter clears it.
+    listed(40, FILTERS, 'cve_id:ASC');
+    expect(screen.getByTestId('vulnerabilities-selection').textContent).toBe('2 rows selected');
     fireEvent.click(screen.getByRole('button', { name: 'Change state (2)' }));
     const dialog = await screen.findByRole('dialog');
     fireEvent.change(within(dialog).getByRole('textbox', { name: 'Common note' }), { target: { value: 'Patched in March' } });
-    await waitFor(() => expect(within(dialog).getByRole('status').textContent).toBe('This changes 3 rows of 3, on 2 vulnerabilities.'));
-    expect(postMock).toHaveBeenLastCalledWith('/vulnerabilities/bulk-state', {
-      state: 'handled', note: 'Patched in March', cve_ids: [CVE, 'CVE-2026-1002'], filters: { sort: 'severity:DESC', filters: FILTERS }, dry_run: true,
-    });
-    fireEvent.click(within(dialog).getByRole('checkbox', { name: 'Every vulnerability of the current filter' }));
-    await waitFor(() => expect(within(dialog).getByRole('status').textContent).toBe('This changes 118 rows of 120, on 40 vulnerabilities.'));
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Change state' }));
-    await waitFor(() => expect(postMock).toHaveBeenLastCalledWith('/vulnerabilities/bulk-state', {
-      state: 'handled', note: 'Patched in March', all: true, filters: { sort: 'severity:DESC', filters: FILTERS }, as_of: '2026-10-17T10:00:01.000Z',
-    }));
-    await waitFor(() => expect(grid.props!.refreshKey).toBe(1));
+    expect(dialog.textContent).toContain('The 2 selected rows.');
+    await waitFor(() => expect(within(dialog).getByRole('status').textContent).toBe('This changes 2 rows of 2, on 1 vulnerabilities.'));
+    expect(postMock).toHaveBeenLastCalledWith('/vulnerabilities/bulk-state', { state: 'handled', note: 'Patched in March', ids: ['row-1', 'row-2'], dry_run: true });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    listed(12, OTHER_FILTERS);
+    expect(screen.queryByTestId('vulnerabilities-selection')).toBeNull();
+    expect(box(ROW_BOX).checked).toBe(false);
+    // A row ticked again, then the whole filter, then the header box again: nothing selected.
+    fireEvent.click(box(ROW_BOX));
+    fireEvent.click(box(ALL_BOX));
+    expect(screen.getByTestId('vulnerabilities-selection').textContent).toBe('12 rows selected, whole filter');
+    fireEvent.click(box(ALL_BOX));
+    expect(screen.queryByTestId('vulnerabilities-selection')).toBeNull();
+    fireEvent.click(box(ROW_NONE_BOX));
+    fireEvent.click(screen.getByRole('button', { name: 'Clear selection' }));
+    expect(screen.queryByTestId('vulnerabilities-selection')).toBeNull();
   });
 
   it('refuses a change over the cap with a line that says to narrow the filters', async () => {
     postMock.mockRejectedValue(Object.assign(new Error('400'), { response: { status: 400 } }));
     renderPage();
-    act(() => grid.props!.onListRequestChange({ params: { page: 1, limit: 50 }, total: 9000 }));
-    fireEvent.click(screen.getByRole('button', { name: 'Change state' }));
+    listed(9000);
+    fireEvent.click(box(ALL_BOX));
+    fireEvent.click(screen.getByRole('button', { name: 'Change state (9000)' }));
     const dialog = await screen.findByRole('dialog');
     await waitFor(() => expect(within(dialog).getByRole('status').textContent).toContain('More than 5,000 rows'));
     expect((within(dialog).getByRole('button', { name: 'Change state' }) as HTMLButtonElement).disabled).toBe(true);
@@ -210,16 +302,17 @@ describe('VulnerabilitiesPage', () => {
 
   it('says a count failed apart from the cap, and starts afresh at each opening', async () => {
     postMock.mockRejectedValueOnce(Object.assign(new Error('503'), { response: { status: 503 } }));
-    postMock.mockResolvedValue({ data: { rows: 3, cves: 2, changes: 3, as_of: '2026-10-17T10:00:00.000Z' } } as any);
+    postMock.mockResolvedValue({ data: { rows: 1, cves: 1, changes: 1, as_of: '2026-10-17T10:00:00.000Z' } } as any);
     renderPage();
-    act(() => grid.props!.onListRequestChange({ params: { page: 1, limit: 50 }, total: 40 }));
-    fireEvent.click(screen.getByRole('button', { name: 'Change state' }));
+    listed(40);
+    fireEvent.click(box(ROW_BOX));
+    fireEvent.click(screen.getByRole('button', { name: 'Change state (1)' }));
     let dialog = await screen.findByRole('dialog');
     await waitFor(() => expect(within(dialog).getByRole('status').textContent).toBe('The rows could not be counted. Try again.'));
     fireEvent.change(within(dialog).getByRole('textbox', { name: 'Common note' }), { target: { value: 'Old note' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    fireEvent.click(screen.getByRole('button', { name: 'Change state' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Change state (1)' }));
     dialog = await screen.findByRole('dialog');
     expect((within(dialog).getByRole('textbox', { name: 'Common note' }) as HTMLInputElement).value).toBe('');
   });
@@ -235,7 +328,8 @@ describe('VulnerabilitiesPage', () => {
   it('gives a reader neither selection nor change of state', () => {
     auth.level = 'reader';
     renderPage();
-    expect(grid.props!.enableRowSelection).toBe(false);
+    expect(column('select')).toBeUndefined();
+    expect(screen.queryByRole('checkbox')).toBeNull();
     expect(screen.queryByRole('button', { name: /Change state/ })).toBeNull();
     expect(screen.getByRole('button', { name: 'Export CSV' })).toBeTruthy();
   });

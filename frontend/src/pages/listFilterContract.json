@@ -563,7 +563,8 @@
       "severity": "set",
       "cvss_score": "number",
       "summary": "text",
-      "technologies": "set",
+      "technology": "set",
+      "version": "set",
       "editor": "set",
       "state": "set",
       "published_at": "date"
@@ -573,11 +574,13 @@
       "severity",
       "cvss_score",
       "summary",
-      "technologies",
+      "technology",
+      "version",
       "editor",
       "servers",
       "applications",
       "state",
+      "note",
       "published_at"
     ]
   },
