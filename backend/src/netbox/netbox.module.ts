@@ -7,6 +7,7 @@ import { AssetsModule } from '../assets/assets.module';
 import { ItOpsSettingsModule } from '../it-ops-settings/it-ops-settings.module';
 import { LocationsModule } from '../locations/locations.module';
 import { PermissionsModule } from '../permissions/permissions.module';
+import { TechnologiesModule } from '../technologies/technologies.module';
 import { UsersModule } from '../users/users.module';
 import { AssetExternalLink } from './asset-external-link.entity';
 import { NetboxClient } from './netbox.client';
@@ -24,6 +25,7 @@ import { NetboxSyncService } from './netbox-sync.service';
     AiProviderSupportModule,
     AssetsModule,
     ItOpsSettingsModule,
+    TechnologiesModule,
     // Sub-locations are written through LocationsService only: uniqueness,
     // display order and the audit trail stay in one place, and the netbox
     // module never runs its own INSERT on location_sub_items.

@@ -2,6 +2,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { EntityManager, Repository } from 'typeorm';
 import { Asset } from '../asset.entity';
 import { AuditSourceOptions } from '../../audit/audit.service';
+import type { LinkSource } from '../../common/link-provenance';
 
 /**
  * Environment values for assets.
@@ -20,6 +21,11 @@ export type EnvironmentValue = (typeof ENVIRONMENTS)[number];
 export interface ServiceOpts extends AuditSourceOptions {
   manager?: EntityManager;
   tenantId?: string;
+  /**
+   * Provenance of the operating-system link (`manual` when omitted). Separate from `source`,
+   * which is the audit entry of the asset row.
+   */
+  osSource?: LinkSource;
 }
 
 /**

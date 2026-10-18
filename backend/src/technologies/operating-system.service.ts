@@ -83,6 +83,53 @@ export class OperatingSystemService {
   }
 
   /**
+   * Choices a Netbox platform can be matched to. `code` and `label` are the same readable text,
+   * which is what the map stores and what the resolver writes. Tenant technologies of family
+   * `operating_system` come first (the name, then each version), then shipped operating-system
+   * products the tenant has not adopted. A technology of another family is not offered here.
+   */
+  async mappingChoices(mg: EntityManager, tenantId: string): Promise<Array<{ code: string; label: string }>> {
+    const choices: Array<{ code: string; label: string }> = [];
+    const seen = new Set<string>();
+    const push = (label: string | null | undefined) => {
+      const text = String(label ?? '').trim();
+      const key = text.toLowerCase();
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      choices.push({ code: text, label: text });
+    };
+
+    const rows: Array<{ name: string; version: string | null }> = await mg.query(
+      `SELECT t.name, v.label AS version
+         FROM technologies t
+         LEFT JOIN technology_versions v ON v.tenant_id = t.tenant_id AND v.technology_id = t.id
+        WHERE t.tenant_id = $1 AND t.family = 'operating_system'
+        ORDER BY lower(t.name), lower(v.label) NULLS FIRST`,
+      [tenantId],
+    );
+    let lastName: string | null = null;
+    for (const row of rows) {
+      if (row.name !== lastName) {
+        push(row.name);
+        lastName = row.name;
+      }
+      if (row.version?.trim()) push(operatingSystemLabel(row.name, row.version));
+    }
+
+    const adopted: Array<{ catalog_key: string }> = await mg.query(
+      `SELECT catalog_key FROM technologies WHERE tenant_id = $1 AND catalog_key IS NOT NULL`,
+      [tenantId],
+    );
+    const adoptedKeys = new Set(adopted.map((row) => row.catalog_key));
+    for (const product of this.catalog.all()) {
+      if (product.family !== 'operating_system' || adoptedKeys.has(product.key)) continue;
+      push(product.name);
+      for (const version of product.versions) push(operatingSystemLabel(product.name, version.label));
+    }
+    return choices;
+  }
+
+  /**
    * A label or an old shipped code, as a technology of the tenant:
    * 1. empty → null;
    * 2. a shipped code (`windows_server_2019`) → that catalog product and its version;

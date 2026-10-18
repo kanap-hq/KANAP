@@ -5,6 +5,9 @@ import { EntityManager, Repository } from 'typeorm';
 import { Asset } from '../asset.entity';
 import { AssetClusterMember } from '../asset-cluster-member.entity';
 import { AuditService } from '../../audit/audit.service';
+import { LinkSource } from '../../common/link-provenance';
+import { operatingSystemLabelSql } from '../../technologies/operating-system-codes';
+import { OperatingSystemService } from '../../technologies/operating-system.service';
 import { AssetsBaseService, ServiceOpts } from './assets-base.service';
 import { AssetsValidationService } from './assets-validation.service';
 import { ShareItemDto } from '../../notifications/dto/share-item.dto';
@@ -22,9 +25,41 @@ export class AssetsCrudService extends AssetsBaseService {
     private readonly audit: AuditService,
     private readonly validation: AssetsValidationService,
     private readonly notifications: NotificationsService,
+    private readonly operatingSystems: OperatingSystemService,
     @Optional() private readonly cpeEvents?: TechnologyCpeEvents,
   ) {
     super(assetRepo);
+  }
+
+  /** The link provenance of an operating-system write. The asset audit keeps `opts.source`. */
+  private osSource(opts?: ServiceOpts): LinkSource {
+    return opts?.osSource ?? 'manual';
+  }
+
+  /**
+   * Turn a label, an old shipped code, or an empty value into the marked link.
+   * `create` is on: a name the tenant does not have yet becomes a technology.
+   */
+  private async applyOperatingSystem(
+    tenantId: string,
+    assetId: string,
+    value: unknown,
+    userId: string | null,
+    opts?: ServiceOpts,
+  ): Promise<void> {
+    const mg = this.getManager(opts);
+    const resolved = await this.operatingSystems.resolve(mg, tenantId, value == null ? null : String(value), { create: true });
+    await this.operatingSystems.setOperatingSystem(mg, tenantId, assetId, resolved, this.osSource(opts), userId);
+  }
+
+  /** The readable label, after the asset audit has already snapshotted the columns. */
+  private async attachOperatingSystem<T extends { id: string }>(
+    asset: T,
+    tenantId: string,
+    opts?: ServiceOpts,
+  ): Promise<T & { operating_system: string | null }> {
+    const label = await this.operatingSystems.labelOf(this.getManager(opts), tenantId, asset.id);
+    return { ...asset, operating_system: label };
   }
 
   private getClusterMemberRepo(manager?: EntityManager) {
@@ -35,11 +70,17 @@ export class AssetsCrudService extends AssetsBaseService {
    * Get a single asset by ID.
    */
   async get(id: string, opts?: ServiceOpts) {
-    return this.withExternalLinks(await this.ensureAsset(id, opts?.manager, opts?.tenantId), opts);
+    return this.withOperatingSystem(await this.withExternalLinks(await this.ensureAsset(id, opts?.manager, opts?.tenantId), opts), opts);
   }
 
   async getByReference(reference: string, opts?: ServiceOpts) {
-    return this.withExternalLinks(await this.ensureAssetByReference(reference, opts?.manager, opts?.tenantId), opts);
+    return this.withOperatingSystem(await this.withExternalLinks(await this.ensureAssetByReference(reference, opts?.manager, opts?.tenantId), opts), opts);
+  }
+
+  private async withOperatingSystem<T extends { id: string; tenant_id?: string | null }>(asset: T, opts?: ServiceOpts) {
+    const tenantId = this.normalizeNullable(opts?.tenantId ?? asset.tenant_id);
+    if (!tenantId) return { ...asset, operating_system: null as string | null };
+    return this.attachOperatingSystem(asset, tenantId, opts);
   }
 
   /**
@@ -154,7 +195,7 @@ export class AssetsCrudService extends AssetsBaseService {
     const status = await this.validation.normalizeLifecycleStatus(body.status, tenant, opts?.manager, 'active');
     const location_id = await this.resolveLocationId((body as any).location_id, tenant, opts?.manager);
     const sub_location_id = await this.resolveSubLocationId((body as any).sub_location_id, location_id, tenant, opts?.manager);
-    const operating_system = await this.validation.resolveOperatingSystem((body as any).operating_system, tenant, opts?.manager);
+    const setsOperatingSystem = Object.prototype.hasOwnProperty.call(body, 'operating_system');
     const is_cluster = body.is_cluster === undefined ? false : this.normalizeBooleanFlag((body as any).is_cluster, 'is_cluster');
     const ip_addresses = await this.validation.validateIpAddresses((body as any).ip_addresses, tenant, this.getManager(opts));
     const notes = this.normalizeNullable((body as any).notes);
@@ -192,7 +233,6 @@ export class AssetsCrudService extends AssetsBaseService {
       aliases,
       ip_addresses,
       cluster: this.normalizeNullable(body.cluster),
-      operating_system,
       is_cluster,
       status,
       go_live_date: this.normalizeNullable((body as any).go_live_date),
@@ -207,7 +247,10 @@ export class AssetsCrudService extends AssetsBaseService {
       { table: 'assets', recordId: saved.id, action: 'create', before: null, after: saved, userId, ...this.auditSource(opts) },
       { manager: opts?.manager },
     );
-    return saved;
+    if (setsOperatingSystem) {
+      await this.applyOperatingSystem(tenant, saved.id, (body as any).operating_system, userId, opts);
+    }
+    return this.attachOperatingSystem(saved, tenant, opts);
   }
 
   /**
@@ -290,13 +333,6 @@ export class AssetsCrudService extends AssetsBaseService {
     if (has('is_cluster')) {
       existing.is_cluster = this.normalizeBooleanFlag((body as any).is_cluster, 'is_cluster');
     }
-    if (has('operating_system')) {
-      existing.operating_system = await this.validation.resolveOperatingSystem(
-        (body as any).operating_system,
-        tenant,
-        opts?.manager,
-      );
-    }
     if (has('status')) {
       existing.status = await this.validation.normalizeLifecycleStatus(
         (body as any).status,
@@ -340,7 +376,10 @@ export class AssetsCrudService extends AssetsBaseService {
     );
     // Retired or back in service: its technologies are matched again with the vulnerabilities.
     if (before.status !== saved.status) await this.cpeEvents?.emitForSubjects(opts?.manager ?? repo.manager, tenant, 'asset', [saved.id]);
-    return saved;
+    if (has('operating_system')) {
+      await this.applyOperatingSystem(tenant, saved.id, (body as any).operating_system, userId, opts);
+    }
+    return this.attachOperatingSystem(saved, tenant, opts);
   }
 
   // =========================================================================
@@ -365,7 +404,7 @@ export class AssetsCrudService extends AssetsBaseService {
       operating_system: string | null;
     }> = await mg.query(
       `SELECT acm.asset_id, a.name, a.environment, a.status, a.location_id,
-              a.kind, a.provider, a.operating_system,
+              a.kind, a.provider, ${operatingSystemLabelSql('a')} AS operating_system,
               l.name AS location_name, l.location_reference AS location_reference
        FROM asset_cluster_members acm
        JOIN assets a ON a.id = acm.asset_id

@@ -77,15 +77,9 @@ type ItOpsSettings = {
   lifecycleStates: ItOpsEnumOption[];
   interfaceProtocols: ItOpsEnumOption[];
   connectionTypes: ConnectionTypeOption[];
-  operatingSystems: OperatingSystemOption[];
   subnets: SubnetOption[];
   domains: DomainOption[];
   ipAddressTypes: ItOpsEnumOption[];  // types of IP addresses for assets
-};
-
-type OperatingSystemOption = ItOpsEnumOption & {
-  standardSupportEnd?: string; // YYYY-MM-DD
-  extendedSupportEnd?: string; // YYYY-MM-DD
 };
 
 type ConnectionTypeOption = ItOpsEnumOption & {
@@ -196,7 +190,7 @@ Tenants can override labels and add new codes. Built‑in codes always exist and
 File: `frontend/src/pages/it/ItOperationsSettingsPage.tsx`
 
 Key implementation details:
-- **Reducer, not 15 states**: All lists live in a single `useReducer` state (`enums`, `operatingSystems`, `connectionTypes`, `dirty`, `pending`, `baseline`). Dirty is O(1) per list and saved separately.
+- **Reducer, not 15 states**: All lists live in a single `useReducer` state (`enums`, `connectionTypes`, `dirty`, `pending`, `baseline`). Dirty is O(1) per list and saved separately. Operating systems left this page: a server's operating system is a technology.
 - **Config-driven sections + grouping**: Lists are defined in `enumSections` (id, title, description, locked codes, kind, group, usage). Groups: Locations; Servers & Connections; Apps/Interfaces. Operating Systems and Connection Types are injected into the Servers & Connections group.
 - **Specialized editors for tiered enums**: `kind: 'entity' | 'serverRole'` routes to `EntityEditor` / `ServerRoleEditor`, each rendering a `Graph tier` dropdown.
 - **Usage hints in headers**: Each `ListSection` renders a caption line with `usage` text (e.g., “Connections / Protocol selector”).
@@ -408,7 +402,7 @@ These settings feed into the IT workspace forms and lists.
     - **Subnet** dropdown uses `settings.subnets` filtered by asset's location.
     - **Network Zone** and **VLAN**: Read-only, derived from the selected subnet.
     - "Add IP Address" button at top of the list adds new entries.
-  - Operating System selector (Technical tab) uses `settings.operatingSystems` and shows support end dates in DD/MM/YYYY.
+  - Operating system (Technical tab) is a technology the server carries, with an optional version. It is not an IT Ops catalog.
   - Deprecated options are hidden for new selections but shown (with a suffix) for existing values.
   - Lifecycle select uses `settings.lifecycleStates`.
 - **Application Instances Editor** (`InstancesEditor.tsx`)

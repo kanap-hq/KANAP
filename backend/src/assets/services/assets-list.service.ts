@@ -4,8 +4,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Asset } from '../asset.entity';
 import { parsePagination } from '../../common/pagination';
+import { operatingSystemLabelSql } from '../../technologies/operating-system-codes';
 import { AssetsBaseService, ServiceOpts } from './assets-base.service';
 import { assertSetFilterModes, bindPositional, compileAgFilterCondition, createParamNameGenerator } from '../../common/ag-grid-filtering';
+
+/** The readable operating system, one scalar subquery on the assets alias `a`. */
+const ASSET_OS_LABEL = operatingSystemLabelSql('a');
 
 /** The asset list columns that sort alphabetically. */
 const ASSET_TEXT_SORTS = new Set(['name', 'asset_reference', 'provider', 'region', 'zone', 'hostname', 'fqdn', 'operating_system', 'location_name', 'sub_location_name', 'cluster']);
@@ -44,7 +48,7 @@ export class AssetsListService extends AssetsBaseService {
       zone: 'a.zone',
       hostname: 'a.hostname',
       fqdn: 'a.fqdn',
-      operating_system: 'a.operating_system',
+      operating_system: ASSET_OS_LABEL,
       is_cluster: 'COALESCE(a.is_cluster, false)::text',
       created_at: 'a.created_at',
       updated_at: 'a.updated_at',
@@ -76,7 +80,7 @@ export class AssetsListService extends AssetsBaseService {
       SELECT DISTINCT ON (a.id)
         a.id, a.tenant_id, a.name, a.asset_reference, a.kind, a.provider, a.environment,
         a.region, a.zone, a.hostname, a.domain, a.fqdn, a.aliases,
-        a.ip_addresses, a.cluster, a.is_cluster, a.operating_system,
+        a.ip_addresses, a.cluster, a.is_cluster, ${ASSET_OS_LABEL} AS operating_system,
         a.location_id, a.sub_location_id, a.status, a.notes, a.created_at, a.updated_at,
         l.name AS location_name,
         l.hosting_type AS hosting_type,
@@ -116,7 +120,7 @@ export class AssetsListService extends AssetsBaseService {
       SELECT
         a.id, a.tenant_id, a.name, a.asset_reference, a.kind, a.provider, a.environment,
         a.region, a.zone, a.hostname, a.domain, a.fqdn, a.aliases,
-        a.ip_addresses, a.cluster, a.is_cluster, a.operating_system,
+        a.ip_addresses, a.cluster, a.is_cluster, ${ASSET_OS_LABEL} AS operating_system,
         a.location_id, a.sub_location_id, a.status, a.notes, a.created_at, a.updated_at,
         a.go_live_date::text AS go_live_date, a.end_of_life_date::text AS end_of_life_date,
         l.name AS location_name,
@@ -163,7 +167,7 @@ export class AssetsListService extends AssetsBaseService {
       zone: 'a.zone',
       hostname: 'a.hostname',
       fqdn: 'a.fqdn',
-      operating_system: 'a.operating_system',
+      operating_system: ASSET_OS_LABEL,
       is_cluster: 'COALESCE(a.is_cluster, false)::text',
       created_at: 'a.created_at',
       updated_at: 'a.updated_at',
@@ -283,7 +287,7 @@ export class AssetsListService extends AssetsBaseService {
       provider: 'a.provider',
       region: 'a.region',
       zone: 'a.zone',
-      operating_system: 'a.operating_system',
+      operating_system: ASSET_OS_LABEL,
       status: 'a.status',
       hostname: 'a.hostname',
       fqdn: 'a.fqdn',
@@ -354,7 +358,7 @@ export class AssetsListService extends AssetsBaseService {
       provider: 'a.provider',
       region: 'a.region',
       zone: 'a.zone',
-      operating_system: 'a.operating_system',
+      operating_system: ASSET_OS_LABEL,
       status: 'a.status',
       hostname: 'a.hostname',
       fqdn: 'a.fqdn',
@@ -513,7 +517,10 @@ export class AssetsListService extends AssetsBaseService {
       name: asset.name,
       kind: asset.kind,
       environment: asset.environment,
-      operating_system: asset.operating_system,
+      operating_system: (await mg.query(
+        `SELECT ${ASSET_OS_LABEL} AS operating_system FROM assets a WHERE a.tenant_id = $1 AND a.id = $2`,
+        [tenantId, asset.id],
+      ))[0]?.operating_system ?? null,
       ip_addresses: asset.ip_addresses,
       location_reference,
       location_name,

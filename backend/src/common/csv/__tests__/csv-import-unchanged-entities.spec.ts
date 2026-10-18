@@ -26,7 +26,6 @@ const itOpsSettings: any = {
   ...DEFAULT_CLASSIFICATION_CATALOG,
   serverKinds: [{ code: 'vm', label: 'Virtual machine' }, { code: 'physical', label: 'Physical server' }],
   lifecycleStates: [{ code: 'active', label: 'Active' }, { code: 'retired', label: 'Retired' }],
-  operatingSystems: [{ code: 'linux', label: 'Linux' }],
   domains: [{ code: 'corp', label: 'Corporate' }],
   ipAddressTypes: [{ code: 'mgmt', label: 'Management' }],
   applicationCategories: [{ code: 'erp', label: 'Enterprise planning' }],

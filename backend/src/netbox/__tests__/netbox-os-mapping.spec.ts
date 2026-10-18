@@ -19,10 +19,10 @@ import {
 const BASE_URL = 'https://netbox.example.test';
 
 const OPERATING_SYSTEMS = [
-  { code: 'debian_12_bookworm', label: 'Debian 12 (bookworm)' },
-  { code: 'debian_11_bullseye', label: 'Debian 11 (bullseye)' },
-  { code: 'windows_server_2022', label: 'Windows Server 2022' },
-  { code: 'vmware_esxi_8', label: 'VMware ESXi 8' },
+  { code: 'Debian 12 (bookworm)', label: 'Debian 12 (bookworm)' },
+  { code: 'Debian 11 (bullseye)', label: 'Debian 11 (bullseye)' },
+  { code: 'Windows Server 2022', label: 'Windows Server 2022' },
+  { code: 'VMware ESXi 8', label: 'VMware ESXi 8' },
 ];
 
 const CATALOGS: NetboxCatalogs = {
@@ -60,13 +60,13 @@ function device(platform: Record<string, unknown> | null) {
 const suggest = (name: unknown) => suggestOperatingSystem(name, OPERATING_SYSTEMS)?.code ?? null;
 
 // An exact match on the name, on the code, and whatever the case and spacing.
-assert.equal(suggest('Debian 12 (bookworm)'), 'debian_12_bookworm');
-assert.equal(suggest('vmware_esxi_8'), 'vmware_esxi_8');
-assert.equal(suggest('  windows server 2022  '), 'windows_server_2022');
+assert.equal(suggest('Debian 12 (bookworm)'), 'Debian 12 (bookworm)');
+assert.equal(suggest('VMware ESXi 8'), 'VMware ESXi 8');
+assert.equal(suggest('  windows server 2022  '), 'Windows Server 2022');
 
 // The case this whole mapping exists for: Netbox is less precise than KANAP.
-assert.equal(suggest('Debian 12'), 'debian_12_bookworm');
-assert.equal(suggest('Windows Server'), 'windows_server_2022');
+assert.equal(suggest('Debian 12'), 'Debian 12 (bookworm)');
+assert.equal(suggest('Windows Server'), 'Windows Server 2022');
 
 // The prefix must end on a boundary: "Debian 1" is not the start of a word in
 // "Debian 12 (bookworm)", so it suggests nothing at all.
@@ -86,7 +86,7 @@ assert.equal(suggest('Photon OS'), null);
 // No match saved: the exact comparison still works exactly as before.
 {
   const mapped = mapNetboxObject(device({ slug: 'debian-12', name: 'Debian 12 (bookworm)' }), MAP_OPTIONS);
-  assert.equal(mapped.asset?.operating_system, 'debian_12_bookworm');
+  assert.equal(mapped.asset?.operating_system, 'Debian 12 (bookworm)');
   assert.deepEqual(mapped.warnings, []);
 }
 
@@ -104,9 +104,9 @@ assert.equal(suggest('Photon OS'), null);
 {
   const mapped = mapNetboxObject(device({ slug: 'debian-12', name: 'Debian 12' }), {
     ...MAP_OPTIONS,
-    osMap: { 'debian-12': 'debian_12_bookworm' },
+    osMap: { 'debian-12': 'Debian 12 (bookworm)' },
   });
-  assert.equal(mapped.asset?.operating_system, 'debian_12_bookworm');
+  assert.equal(mapped.asset?.operating_system, 'Debian 12 (bookworm)');
   assert.deepEqual(mapped.warnings, []);
   assert.equal(mapped.display.operating_system, 'Debian 12 (bookworm)');
 }
@@ -115,9 +115,9 @@ assert.equal(suggest('Photon OS'), null);
 {
   const mapped = mapNetboxObject(device({ slug: 'esxi', name: 'VMware ESXi 8' }), {
     ...MAP_OPTIONS,
-    osMap: { esxi: 'debian_12_bookworm' },
+    osMap: { esxi: 'Debian 12 (bookworm)' },
   });
-  assert.equal(mapped.asset?.operating_system, 'debian_12_bookworm');
+  assert.equal(mapped.asset?.operating_system, 'Debian 12 (bookworm)');
 }
 
 // A match pointing at a code the catalog no longer holds falls through to the
@@ -127,7 +127,7 @@ assert.equal(suggest('Photon OS'), null);
     ...MAP_OPTIONS,
     osMap: { esxi: 'debian_9_stretch' },
   });
-  assert.equal(mapped.asset?.operating_system, 'vmware_esxi_8');
+  assert.equal(mapped.asset?.operating_system, 'VMware ESXi 8');
   assert.deepEqual(mapped.warnings, []);
 }
 
@@ -236,11 +236,11 @@ async function main() {
     const itOpsSettings: any = {
       getSettings: async () => ({
         serverKinds: [{ code: 'physical_server', label: 'Server' }],
-        operatingSystems: OPERATING_SYSTEMS,
       }),
     };
     const manager: any = { query: async () => [{ id: 'loc-1', name: 'Paris DC' }] };
-    const service = new NetboxSyncService({} as any, config, client, itOpsSettings, {} as any, {} as any);
+    const operatingSystems = { mappingChoices: async () => OPERATING_SYSTEMS };
+    const service = new NetboxSyncService({} as any, config, client, itOpsSettings, {} as any, {} as any, operatingSystems as any);
     return { service, manager };
   }
 
@@ -268,7 +268,7 @@ async function main() {
     const options: any = await service.mappingOptions(manager, 'tenant-1');
     assert.equal(options.platforms_unavailable, false);
     assert.deepEqual(options.platforms.map((entry: any) => entry.slug), ['debian-12']);
-    assert.deepEqual(options.suggested_os_map, { 'debian-12': 'debian_12_bookworm' });
+    assert.deepEqual(options.suggested_os_map, { 'debian-12': 'Debian 12 (bookworm)' });
   }
 
   // A role or site failure is still a failure: those two decide the import.

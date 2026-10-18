@@ -78,3 +78,21 @@ export function operatingSystemLabel(name: string, version: string | null | unde
 export function snakeCaseOperatingSystemLabel(label: string): string {
   return label.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'os';
 }
+
+const ASSET_ALIAS = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+/**
+ * The readable operating system of one asset, as a scalar subquery. The partial unique index
+ * guarantees one marked link. `alias` is the assets table in the outer query (`a`).
+ * Same text as `operatingSystemLabel`: the technology name, then the version when it has one.
+ */
+export function operatingSystemLabelSql(assetAlias = 'a'): string {
+  if (!ASSET_ALIAS.test(assetAlias)) throw new Error(`Unsafe asset alias: ${assetAlias}`);
+  const a = assetAlias;
+  return `(SELECT CASE WHEN v.label IS NULL OR btrim(v.label) = '' THEN t.name ELSE t.name || ' ' || v.label END
+     FROM asset_technologies at
+     JOIN technologies t ON t.tenant_id = at.tenant_id AND t.id = at.technology_id
+     LEFT JOIN technology_versions v ON v.tenant_id = at.tenant_id AND v.id = at.technology_version_id
+    WHERE at.tenant_id = ${a}.tenant_id AND at.asset_id = ${a}.id AND at.is_operating_system
+    LIMIT 1)`;
+}

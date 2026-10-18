@@ -43,8 +43,8 @@ const CATALOGS: NetboxCatalogs = {
     { code: 'other', label: 'Other' },
   ],
   operatingSystems: [
-    { code: 'vmware_esxi_8', label: 'VMware ESXi 8' },
-    { code: 'debian_12', label: 'Debian 12' },
+    { code: 'VMware ESXi 8', label: 'VMware ESXi 8' },
+    { code: 'Debian 12', label: 'Debian 12' },
   ],
   lifecycleStates: [
     { code: 'proposed', label: 'Proposed' },
@@ -122,7 +122,7 @@ function asset(overrides: Partial<ExistingAsset> = {}): ExistingAsset {
     hostname: 'par-esx-01',
     domain: 'fromage',
     fqdn: 'par-esx-01.fromage.lan',
-    operating_system: 'vmware_esxi_8',
+    operating_system: 'VMware ESXi 8',
     ip_addresses: [{ type: 'host', ip: '10.10.1.5', subnet_cidr: '10.10.0.0/16' }],
     serial_number: 'SN-0001',
     manufacturer: 'Dell',

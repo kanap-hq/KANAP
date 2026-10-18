@@ -6,6 +6,7 @@ import {
   OPERATING_SYSTEM_CODES,
   humanizeOperatingSystemCode,
   operatingSystemLabel,
+  operatingSystemLabelSql,
   snakeCaseOperatingSystemLabel,
   splitOperatingSystemLabel,
 } from '../operating-system-codes';
@@ -35,6 +36,10 @@ function testLabels() {
   assert.equal(snakeCaseOperatingSystemLabel('VMware ESXi 8.0'), 'vmware_esxi_8_0');
   assert.equal(operatingSystemLabel('Windows Server', '2019'), 'Windows Server 2019');
   assert.equal(operatingSystemLabel('Cisco Meraki', null), 'Cisco Meraki');
+  const sql = operatingSystemLabelSql('a');
+  assert.match(sql, /at\.is_operating_system/);
+  assert.match(sql, /at\.asset_id = a\.id/);
+  assert.throws(() => operatingSystemLabelSql('a;drop'), /Unsafe asset alias/);
 }
 
 function testFrozenProductsMatchTheCatalog() {

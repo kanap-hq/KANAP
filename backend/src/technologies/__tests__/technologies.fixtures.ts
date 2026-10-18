@@ -20,7 +20,6 @@ export function services(audit: AuditEntry[] = []) {
     getSettings: async () => ({
       technologyFamilies: DEFAULT_TECHNOLOGY_FAMILIES,
       lifecycleStates: [{ code: 'active' }, { code: 'retired' }],
-      operatingSystems: [{ code: 'windows_server_2022', label: 'Windows Server 2022' }],
       cyberCriticalityLevels: [{ code: 'high' }],
       recoveryWaves: [{ code: 'wave_1' }],
       hostingTypes: DEFAULT_HOSTING_TYPES,

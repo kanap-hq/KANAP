@@ -10,6 +10,7 @@ import { SHIPPED_CATALOG_LABELS } from '../it-ops-settings/catalog-shipped-label
 import type { CatalogTranslations } from '../it-ops-settings/catalog-codes';
 import { catalogFromMetadata } from '../it-ops-settings/classification-catalog';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
+import { operatingSystemLabelSql } from './operating-system-codes';
 import { assetInServiceSql, TechnologyReachService, type ReachedAsset, type ReachingTechnology } from './technology-reach.service';
 import { readTechnology, technologyReference, UUID_RE, versionOfInput } from './technology-rows';
 
@@ -137,7 +138,6 @@ export class TechnologyLinksService {
     const assets = await this.assetLabels(mg, tenantId, reached.flatMap((r) => [r.asset_id, r.via_asset_id]));
     const versions = await this.versionLabels(mg, tenantId, reached.map((r) => r.technology_version_id));
     const notes = await this.linkNotes(mg, tenantId, 'asset', reached.map((r) => r.link_id));
-    const osLabels = await this.operatingSystemLabels(mg, tenantId);
     const items = reached.map((r) => {
       const asset = assets.get(r.asset_id);
       return {
@@ -151,7 +151,7 @@ export class TechnologyLinksService {
         is_cluster: asset?.is_cluster ?? false,
         environment: asset?.environment ?? null,
         operating_system: asset?.operating_system ?? null,
-        operating_system_label: asset?.operating_system ? osLabels.get(asset.operating_system) ?? asset.operating_system : null,
+        operating_system_label: asset?.operating_system ?? null,
         via_asset_id: r.via_asset_id,
         via_asset_name: r.via_asset_id ? assets.get(r.via_asset_id)?.name ?? null : null,
         technology_version_id: r.technology_version_id,
@@ -684,8 +684,9 @@ export class TechnologyLinksService {
     const wanted = Array.from(new Set(ids.filter((id): id is string => !!id)));
     const rows: Array<{ id: string; name: string; asset_reference: string | null; kind: string; status: string | null; environment: string | null; operating_system: string | null; is_cluster: boolean }> = wanted.length
       ? await mg.query(
-        `SELECT id, name, asset_reference, kind, status, environment, operating_system, COALESCE(is_cluster, false) AS is_cluster
-           FROM assets WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+        `SELECT a.id, a.name, a.asset_reference, a.kind, a.status, a.environment,
+                ${operatingSystemLabelSql('a')} AS operating_system, COALESCE(a.is_cluster, false) AS is_cluster
+           FROM assets a WHERE a.tenant_id = $1 AND a.id = ANY($2::uuid[])`,
         [tenantId, wanted],
       )
       : [];
@@ -735,10 +736,5 @@ export class TechnologyLinksService {
       ? await mg.query(`SELECT id, notes FROM ${side}_technologies WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, [tenantId, wanted])
       : [];
     return new Map(rows.map((row) => [row.id, row.notes]));
-  }
-
-  private async operatingSystemLabels(mg: EntityManager, tenantId: string): Promise<Map<string, string>> {
-    const settings = await this.itOps.getSettings(tenantId, { manager: mg });
-    return new Map((settings.operatingSystems ?? []).map((os) => [os.code, os.label]));
   }
 }
