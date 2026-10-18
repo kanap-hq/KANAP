@@ -15,7 +15,7 @@ KANAP reads the vulnerabilities published by the NVD every 6 hours and compares 
 - **Products**: a technology is compared through its CPE product identifiers (see [Technologies](technologies.md#overview)). A technology without one gets no vulnerability. Retired technologies are left out.
 - **Versions**: only the versions in use count: installed on a server in service, or used by an application in service.
 - **Version numbers**: versions compare on their numbers, part by part. `2016 SP3` counts as 2016 and `19c` as 19. A version with fewer than three numbers stands for its whole branch: `9.0` covers every `9.0.x`. A version KANAP cannot compare, such as a label without a number, counts as concerned.
-- **Unknown version**: a server or an application that names no version is potentially concerned by every vulnerability of the product. Its row reads "Version not recorded (potentially concerned)".
+- **Unknown version**: a server or an application that names no version is potentially concerned by every vulnerability of the product. Its row shows **Not recorded** in the **Version** column.
 
 Some vulnerabilities only apply when two products run together, for example Tomcat on Windows. KANAP shows them for the vulnerable product alone, so one may appear for an installation it does not affect. Mark it **Not affected**.
 
@@ -25,7 +25,7 @@ Changes count at once. When you add a technology or a CPE product identifier, KA
 
 ## The list
 
-The list uses the standard grid: one row per vulnerability, most severe first. It opens on the vulnerabilities **To review**: clear the filter of the **State** column to see the others.
+The list uses the standard grid: one row per technology, version and vulnerability, most severe first. A vulnerability that concerns three versions of SQL Server gives three rows, each with its own state. It opens on the rows **To review**: clear the filter of the **State** column to see the others.
 
 **Columns**:
 
@@ -35,30 +35,37 @@ The list uses the standard grid: one row per vulnerability, most severe first. I
 | **Severity** | **Critical**, **High**, **Medium**, **Low**, **None** or **Not rated** |
 | **Score** | The CVSS score. Hidden by default |
 | **Summary** | The NVD description |
-| **Technologies** | The concerned technologies and versions |
-| **Publisher** | The publishers of these technologies |
-| **Servers** | How many servers carry a concerned version, directly or through the server they run in |
-| **Applications** | How many applications use a concerned version, hosted or declared |
-| **State** | **To review** while one version is still to review, **Not affected** when every version is, **Handled** otherwise |
+| **Technology** | The concerned technology |
+| **Version** | The concerned version. **Not recorded** when a server or an application uses the technology without naming its version: the row is then potentially concerned |
+| **Publisher** | The technology's publisher. Hidden by default |
+| **Servers** | How many servers carry this version, directly or through the server they run in |
+| **Applications** | How many applications use this version, hosted or declared |
+| **State** | **To review**, **Handled** or **Not affected** |
+| **Note** | The note of the row. Hidden by default |
 | **Published** | The publication date |
 
-**Filters**: each column has its own filter under its header. **Severity**, **Technologies**, **Publisher** and **State** offer checkboxes, **Score** a number, **Published** a date, **CVE** and **Summary** a text. The search box above the grid matches the CVE identifier, the summary and the technology name.
+**Filters**: each column has its own filter under its header. **Severity**, **Technology**, **Version**, **Publisher** and **State** offer checkboxes (**Version** offers **Not recorded** too), **Score** a number, **Published** a date, **CVE** and **Summary** a text. The search box above the grid matches the CVE identifier, the summary and the technology name.
 
-**Sort** by **Severity**, **Score**, **Published** or **CVE**. The column chooser shows or hides columns, and the grid remembers your choice.
+**Sort** by **Severity**, **Score**, **Published**, **CVE** or **Technology**. The column chooser shows or hides columns, and the grid remembers your choice.
 
-## Changing the state of several vulnerabilities
+**Links**: the page reads its filters from its address, so you can share a filtered list. `?technology=TEC-4` keeps one technology, `?version=none` the rows without a recorded version, `?state=all` every state, `?period=30` the vulnerabilities published within the last 30 days. The link of the emails uses `period`.
 
-With `infrastructure:member`, tick the vulnerabilities to change, then click **Change state (n)**. Without a selection, **Change state** works on every vulnerability of the current filter. The window asks for:
+## Changing the state of several rows
+
+With `infrastructure:member`, tick the rows to change. The box in the header selects every row of the filter, including the rows not loaded yet; you can then untick some of them. A banner above the grid says how many rows are selected, and **Clear selection** empties it.
+
+**Change state (n)** then asks for:
 
 - The **State** to set.
 - A **Common note**, optional. Without a note, each row keeps its own.
-- With a selection, you can tick **Every vulnerability of the current filter** to widen it.
 
-Before you confirm, the window says how many rows (technology versions) the change touches, on how many vulnerabilities. A vulnerability that arrives after this count is left as it is. Above 5,000 rows, narrow the filters or select fewer vulnerabilities.
+Before you confirm, the window says how many rows the change touches, on how many vulnerabilities. A row found after this count stays as it is. Above 5,000 rows, narrow the filters or select fewer rows.
+
+For example, to mark every unrecorded version of PostgreSQL as not affected: filter **Technology** on PostgreSQL and **Version** on **Not recorded**, tick the header box, click **Change state**, choose **Not affected** and write the reason in the note.
 
 ## Reviewing a vulnerability
 
-Click a row to open the vulnerability in a side panel. You see:
+Click a row to open its vulnerability in a side panel. The panel covers every technology and version the vulnerability concerns. You see:
 
 - The summary, the CVSS vector and the reference links (publisher advisories, patches).
 - **Technologies and versions**: each concerned version, with its **State** and a note.
@@ -79,7 +86,7 @@ KANAP never changes a state you chose. When a version no longer matches (you upg
 
 ## Export
 
-**Export CSV** downloads the vulnerabilities that match the filters, one line per technology version and vulnerability, in the language of your screen. Above 10,000 vulnerabilities, narrow the filters first.
+**Export CSV** downloads the vulnerabilities that match the filters, one line per row of the grid, in its order, in the language of your screen. Above 10,000 vulnerabilities, narrow the filters first.
 
 ## Email notifications
 
@@ -87,7 +94,7 @@ After each check, the IT owners of a technology receive one email about its new 
 
 - **What is announced**: a vulnerability published within the last 30 days on a product the technology was already compared on, or a known vulnerability that has just become critical or high.
 - **What is not**: the first comparison of a technology, or of a CPE identifier you just added, is silent. Its results wait on this page.
-- **How much**: 25 lines at most, one per technology and vulnerability, then a link to the page for the rest.
+- **How much**: 25 lines at most, one per technology and vulnerability, then a link to the page, filtered on the vulnerabilities published within the last 30 days.
 - **How often**: each person hears about a vulnerability on a technology once. A vulnerability not announced at its check is never announced later.
 
 The recipients are the IT owners of the technology whose account is enabled and who can read the infrastructure. Each one can turn these emails off under **Technology notifications** in their notification settings. See [Settings](admin.md#notifications). No email goes out while email is not configured on your installation.

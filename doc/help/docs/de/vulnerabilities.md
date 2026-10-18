@@ -15,7 +15,7 @@ KANAP liest alle 6 Stunden die von der NVD veröffentlichten Schwachstellen und 
 - **Produkte**: Eine Technologie wird über ihre CPE-Produktkennungen verglichen (siehe [Technologien](technologies.md#ubersicht)). Eine Technologie ohne Kennung erhält keine Schwachstelle. Außer Betrieb genommene Technologien bleiben außen vor.
 - **Versionen**: Nur die Versionen im Einsatz zählen: installiert auf einem Server in Betrieb oder genutzt von einer Anwendung in Betrieb.
 - **Versionsnummern**: Versionen werden über ihre Zahlen verglichen, Teil für Teil. `2016 SP3` zählt als 2016 und `19c` als 19. Eine Version mit weniger als drei Zahlen steht für ihren ganzen Zweig: `9.0` umfasst alle `9.0.x`. Eine Version, die KANAP nicht vergleichen kann, etwa eine Bezeichnung ohne Zahl, gilt als betroffen.
-- **Unbekannte Version**: Ein Server oder eine Anwendung ohne Version ist potenziell von jeder Schwachstelle des Produkts betroffen. Die Zeile lautet „Version nicht erfasst (möglicherweise betroffen)“.
+- **Unbekannte Version**: Ein Server oder eine Anwendung ohne Version ist potenziell von jeder Schwachstelle des Produkts betroffen. Die Zeile zeigt in der Spalte **Version** **Nicht erfasst**.
 
 Manche Schwachstellen gelten nur, wenn zwei Produkte zusammen laufen, zum Beispiel Tomcat unter Windows. KANAP zeigt sie für das verwundbare Produkt allein, sodass eine Schwachstelle bei einer Installation erscheinen kann, die sie nicht betrifft. Markieren Sie sie als **Nicht betroffen**.
 
@@ -25,7 +25,7 @@ Eine Schwachstelle, die die NVD noch nicht analysiert hat, erscheint, sobald sie
 
 ## Die Liste
 
-Die Liste nutzt das Standardraster: eine Zeile pro Schwachstelle, die schwerste zuerst. Sie öffnet sich mit den Schwachstellen **Zu prüfen**: Leeren Sie den Filter der Spalte **Status**, um die anderen zu sehen.
+Die Liste nutzt das Standardraster: eine Zeile pro Technologie, Version und Schwachstelle, die schwerste zuerst. Eine Schwachstelle, die drei Versionen von SQL Server betrifft, ergibt drei Zeilen, jede mit ihrem eigenen Status. Sie öffnet sich mit den Zeilen **Zu prüfen**: Leeren Sie den Filter der Spalte **Status**, um die anderen zu sehen.
 
 **Spalten**:
 
@@ -35,30 +35,37 @@ Die Liste nutzt das Standardraster: eine Zeile pro Schwachstelle, die schwerste 
 | **Schweregrad** | **Kritisch**, **Hoch**, **Mittel**, **Niedrig**, **Keine** oder **Nicht bewertet** |
 | **Score** | Der CVSS-Wert. Standardmäßig ausgeblendet |
 | **Zusammenfassung** | Die Beschreibung der NVD |
-| **Technologien** | Die betroffenen Technologien und Versionen |
-| **Hersteller** | Die Hersteller dieser Technologien |
-| **Server** | Wie viele Server eine betroffene Version tragen, direkt oder über den Server, in dem sie laufen |
-| **Anwendungen** | Wie viele Anwendungen eine betroffene Version nutzen, gehostet oder deklariert |
-| **Status** | **Zu prüfen**, solange eine Version noch zu prüfen ist, **Nicht betroffen**, wenn alle es sind, sonst **Behandelt** |
+| **Technologie** | Die betroffene Technologie |
+| **Version** | Die betroffene Version. **Nicht erfasst**, wenn ein Server oder eine Anwendung die Technologie ohne Angabe der Version nutzt: Die Zeile ist dann möglicherweise betroffen |
+| **Hersteller** | Der Hersteller der Technologie. Standardmäßig ausgeblendet |
+| **Server** | Wie viele Server diese Version tragen, direkt oder über den Server, in dem sie laufen |
+| **Anwendungen** | Wie viele Anwendungen diese Version nutzen, gehostet oder deklariert |
+| **Status** | **Zu prüfen**, **Behandelt** oder **Nicht betroffen** |
+| **Notiz** | Die Notiz der Zeile. Standardmäßig ausgeblendet |
 | **Veröffentlicht** | Das Veröffentlichungsdatum |
 
-**Filter**: Jede Spalte hat ihren eigenen Filter unter ihrer Überschrift. **Schweregrad**, **Technologien**, **Hersteller** und **Status** bieten Kontrollkästchen, **Score** eine Zahl, **Veröffentlicht** ein Datum, **CVE** und **Zusammenfassung** einen Text. Das Suchfeld über dem Raster durchsucht die CVE-Kennung, die Zusammenfassung und den Technologienamen.
+**Filter**: Jede Spalte hat ihren eigenen Filter unter ihrer Überschrift. **Schweregrad**, **Technologie**, **Version**, **Hersteller** und **Status** bieten Kontrollkästchen (**Version** bietet auch **Nicht erfasst**), **Score** eine Zahl, **Veröffentlicht** ein Datum, **CVE** und **Zusammenfassung** einen Text. Das Suchfeld über dem Raster durchsucht die CVE-Kennung, die Zusammenfassung und den Technologienamen.
 
-**Sortieren** nach **Schweregrad**, **Score**, **Veröffentlicht** oder **CVE**. Die Spaltenauswahl blendet Spalten ein oder aus, und das Raster merkt sich Ihre Wahl.
+**Sortieren** nach **Schweregrad**, **Score**, **Veröffentlicht**, **CVE** oder **Technologie**. Die Spaltenauswahl blendet Spalten ein oder aus, und das Raster merkt sich Ihre Wahl.
 
-## Den Status mehrerer Schwachstellen ändern
+**Links**: Die Seite liest ihre Filter aus ihrer Adresse, sodass Sie eine gefilterte Liste teilen können. `?technology=TEC-4` behält eine Technologie, `?version=none` die Zeilen ohne erfasste Version, `?state=all` alle Status, `?period=30` die in den letzten 30 Tagen veröffentlichten Schwachstellen. Der Link der E-Mails nutzt `period`.
 
-Mit `infrastructure:member` kreuzen Sie die zu ändernden Schwachstellen an und klicken auf **Status ändern (n)**. Ohne Auswahl wirkt **Status ändern** auf alle Schwachstellen des aktuellen Filters. Das Fenster fragt nach:
+## Den Status mehrerer Zeilen ändern
+
+Mit `infrastructure:member` kreuzen Sie die zu ändernden Zeilen an. Das Kästchen in der Überschrift wählt alle Zeilen des Filters aus, auch die noch nicht geladenen; danach können Sie einzelne abwählen. Ein Hinweis über dem Raster zeigt, wie viele Zeilen ausgewählt sind, und **Auswahl aufheben** leert sie.
+
+**Status ändern (n)** fragt dann nach:
 
 - Dem zu setzenden **Status**.
 - Einer **Gemeinsamen Notiz**, optional. Ohne Notiz behält jede Zeile ihre eigene.
-- Bei einer Auswahl können Sie **Alle Schwachstellen des aktuellen Filters** ankreuzen, um sie zu erweitern.
 
-Bevor Sie bestätigen, sagt das Fenster, wie viele Zeilen (Technologieversionen) die Änderung betrifft, bei wie vielen Schwachstellen. Eine Schwachstelle, die nach dieser Zählung hinzukommt, bleibt unverändert. Über 5.000 Zeilen grenzen Sie die Filter ein oder wählen weniger Schwachstellen aus.
+Bevor Sie bestätigen, sagt das Fenster, wie viele Zeilen die Änderung betrifft, bei wie vielen Schwachstellen. Eine Zeile, die nach dieser Zählung gefunden wird, bleibt unverändert. Über 5.000 Zeilen grenzen Sie die Filter ein oder wählen weniger Zeilen aus.
+
+Zum Beispiel, um alle nicht erfassten Versionen von PostgreSQL als nicht betroffen zu markieren: Filtern Sie **Technologie** auf PostgreSQL und **Version** auf **Nicht erfasst**, kreuzen Sie das Kästchen in der Überschrift an, klicken Sie auf **Status ändern**, wählen Sie **Nicht betroffen** und schreiben Sie den Grund in die Notiz.
 
 ## Eine Schwachstelle prüfen
 
-Ein Klick auf eine Zeile öffnet die Schwachstelle in einem Seitenbereich. Sie sehen:
+Ein Klick auf eine Zeile öffnet ihre Schwachstelle in einem Seitenbereich. Der Bereich umfasst alle Technologien und Versionen, die die Schwachstelle betrifft. Sie sehen:
 
 - Die Zusammenfassung, den CVSS-Vektor und die Referenzlinks (Herstellerhinweise, Patches).
 - **Technologien und Versionen**: jede betroffene Version mit ihrem **Status** und einer Notiz.
@@ -79,7 +86,7 @@ KANAP ändert nie einen Status, den Sie gewählt haben. Wenn eine Version nicht 
 
 ## Export
 
-**CSV exportieren** lädt die Schwachstellen herunter, die den Filtern entsprechen, eine Zeile pro Technologieversion und Schwachstelle, in der Sprache Ihres Bildschirms. Ab 10.000 Schwachstellen grenzen Sie die Filter zuerst ein.
+**CSV exportieren** lädt die Schwachstellen herunter, die den Filtern entsprechen, eine Zeile pro Zeile des Rasters, in seiner Reihenfolge, in der Sprache Ihres Bildschirms. Ab 10.000 Schwachstellen grenzen Sie die Filter zuerst ein.
 
 ## E-Mail-Benachrichtigungen
 
@@ -87,7 +94,7 @@ Nach jeder Prüfung erhalten die IT-Verantwortlichen einer Technologie eine E-Ma
 
 - **Was gemeldet wird**: eine Schwachstelle, die in den letzten 30 Tagen veröffentlicht wurde, zu einem Produkt, mit dem die Technologie bereits verglichen wurde, oder eine bekannte Schwachstelle, die gerade kritisch oder hoch geworden ist.
 - **Was nicht**: Der erste Vergleich einer Technologie, oder einer gerade hinzugefügten CPE-Kennung, bleibt still. Seine Ergebnisse warten auf dieser Seite.
-- **Wie viel**: höchstens 25 Zeilen, eine pro Technologie und Schwachstelle, dann ein Link zur Seite für den Rest.
+- **Wie viel**: höchstens 25 Zeilen, eine pro Technologie und Schwachstelle, dann ein Link zur Seite, gefiltert auf die in den letzten 30 Tagen veröffentlichten Schwachstellen.
 - **Wie oft**: Jede Person erfährt von einer Schwachstelle einer Technologie einmal. Eine Schwachstelle, die bei ihrer Prüfung nicht gemeldet wurde, wird auch später nicht gemeldet.
 
 Empfänger sind die IT-Verantwortlichen der Technologie, deren Konto aktiv ist und die die Infrastruktur lesen dürfen. Jeder kann diese E-Mails unter **Technologie-Benachrichtigungen** in seinen Benachrichtigungseinstellungen abschalten. Siehe [Einstellungen](admin.md#benachrichtigungen). Solange der E-Mail-Versand auf Ihrer Installation nicht eingerichtet ist, geht keine E-Mail hinaus.

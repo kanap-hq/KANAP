@@ -15,7 +15,7 @@ KANAP lit les vulnérabilités publiées par la NVD toutes les 6 heures et les c
 - **Produits** : une technologie est comparée par ses identifiants CPE produit (voir [Technologies](technologies.md#apercu)). Une technologie qui n'en a aucun ne reçoit aucune vulnérabilité. Les technologies retirées sont écartées.
 - **Versions** : seules les versions en service comptent : installées sur un serveur en service, ou utilisées par une application en service.
 - **Numéros de version** : les versions se comparent sur leurs nombres, partie par partie. `2016 SP3` compte comme 2016 et `19c` comme 19. Une version de moins de trois nombres vaut pour toute sa branche : `9.0` couvre tous les `9.0.x`. Une version que KANAP ne peut pas comparer, comme un libellé sans nombre, compte comme concernée.
-- **Version inconnue** : un serveur ou une application qui ne nomme aucune version est potentiellement concerné par toutes les vulnérabilités du produit. Sa ligne indique « Version non renseignée (potentiellement concernée) ».
+- **Version inconnue** : un serveur ou une application qui ne nomme aucune version est potentiellement concerné par toutes les vulnérabilités du produit. Sa ligne affiche **Non renseignée** dans la colonne **Version**.
 
 Certaines vulnérabilités ne s'appliquent que lorsque deux produits tournent ensemble, par exemple Tomcat sur Windows. KANAP les montre pour le seul produit vulnérable : l'une d'elles peut donc apparaître pour une installation qu'elle ne touche pas. Marquez-la **Non concernée**.
 
@@ -25,7 +25,7 @@ Les changements comptent tout de suite. Quand vous ajoutez une technologie ou un
 
 ## La liste
 
-La liste utilise la grille standard : une ligne par vulnérabilité, la plus sévère en premier. Elle s'ouvre sur les vulnérabilités **À traiter** : videz le filtre de la colonne **État** pour voir les autres.
+La liste utilise la grille standard : une ligne par technologie, version et vulnérabilité, la plus sévère en premier. Une vulnérabilité qui concerne trois versions de SQL Server donne trois lignes, chacune avec son propre état. Elle s'ouvre sur les lignes **À traiter** : videz le filtre de la colonne **État** pour voir les autres.
 
 **Colonnes** :
 
@@ -35,30 +35,37 @@ La liste utilise la grille standard : une ligne par vulnérabilité, la plus sé
 | **Sévérité** | **Critique**, **Élevée**, **Moyenne**, **Faible**, **Aucune** ou **Non évaluée** |
 | **Score** | Le score CVSS. Masquée par défaut |
 | **Résumé** | La description de la NVD |
-| **Technologies** | Les technologies et versions concernées |
-| **Éditeur** | Les éditeurs de ces technologies |
-| **Serveurs** | Le nombre de serveurs qui portent une version concernée, directement ou par le serveur dans lequel ils tournent |
-| **Applications** | Le nombre d'applications qui utilisent une version concernée, hébergées ou déclarées |
-| **État** | **À traiter** tant qu'une version reste à traiter, **Non concernée** quand toutes le sont, **Traitée** sinon |
+| **Technologie** | La technologie concernée |
+| **Version** | La version concernée. **Non renseignée** quand un serveur ou une application utilise la technologie sans nommer sa version : la ligne est alors potentiellement concernée |
+| **Éditeur** | L'éditeur de la technologie. Masquée par défaut |
+| **Serveurs** | Le nombre de serveurs qui portent cette version, directement ou par le serveur dans lequel ils tournent |
+| **Applications** | Le nombre d'applications qui utilisent cette version, hébergées ou déclarées |
+| **État** | **À traiter**, **Traitée** ou **Non concernée** |
+| **Note** | La note de la ligne. Masquée par défaut |
 | **Publication** | La date de publication |
 
-**Filtres** : chaque colonne a son propre filtre sous son en-tête. **Sévérité**, **Technologies**, **Éditeur** et **État** proposent des cases à cocher, **Score** un nombre, **Publication** une date, **CVE** et **Résumé** un texte. La zone de recherche au-dessus de la grille porte sur l'identifiant CVE, le résumé et le nom de la technologie.
+**Filtres** : chaque colonne a son propre filtre sous son en-tête. **Sévérité**, **Technologie**, **Version**, **Éditeur** et **État** proposent des cases à cocher (**Version** propose aussi **Non renseignée**), **Score** un nombre, **Publication** une date, **CVE** et **Résumé** un texte. La zone de recherche au-dessus de la grille porte sur l'identifiant CVE, le résumé et le nom de la technologie.
 
-**Tri** par **Sévérité**, **Score**, **Publication** ou **CVE**. Le sélecteur de colonnes affiche ou masque des colonnes, et la grille retient votre choix.
+**Tri** par **Sévérité**, **Score**, **Publication**, **CVE** ou **Technologie**. Le sélecteur de colonnes affiche ou masque des colonnes, et la grille retient votre choix.
 
-## Changer l'état de plusieurs vulnérabilités
+**Liens** : la page lit ses filtres dans son adresse, ce qui permet de partager une liste filtrée. `?technology=TEC-4` garde une technologie, `?version=none` les lignes sans version renseignée, `?state=all` tous les états, `?period=30` les vulnérabilités publiées dans les 30 derniers jours. Le lien des e-mails utilise `period`.
 
-Avec `infrastructure:member`, cochez les vulnérabilités à changer, puis cliquez sur **Changer l'état (n)**. Sans sélection, **Changer l'état** porte sur toutes les vulnérabilités du filtre en cours. La fenêtre demande :
+## Changer l'état de plusieurs lignes
+
+Avec `infrastructure:member`, cochez les lignes à changer. La case de l'en-tête sélectionne toutes les lignes du filtre, y compris celles qui ne sont pas encore chargées ; vous pouvez ensuite en décocher. Un bandeau au-dessus de la grille indique combien de lignes sont sélectionnées, et **Tout désélectionner** vide la sélection.
+
+**Changer l'état (n)** demande alors :
 
 - L'**État** à donner.
 - Une **Note commune**, facultative. Sans note, chaque ligne garde la sienne.
-- Avec une sélection, vous pouvez cocher **Toutes les vulnérabilités du filtre en cours** pour l'élargir.
 
-Avant que vous confirmiez, la fenêtre indique combien de lignes (versions de technologie) le changement touche, sur combien de vulnérabilités. Une vulnérabilité arrivée après ce comptage reste telle quelle. Au-delà de 5 000 lignes, resserrez les filtres ou sélectionnez moins de vulnérabilités.
+Avant que vous confirmiez, la fenêtre indique combien de lignes le changement touche, sur combien de vulnérabilités. Une ligne trouvée après ce comptage reste telle quelle. Au-delà de 5 000 lignes, resserrez les filtres ou sélectionnez moins de lignes.
+
+Par exemple, pour marquer toutes les versions non renseignées de PostgreSQL comme non concernées : filtrez **Technologie** sur PostgreSQL et **Version** sur **Non renseignée**, cochez la case de l'en-tête, cliquez sur **Changer l'état**, choisissez **Non concernée** et écrivez la raison dans la note.
 
 ## Traiter une vulnérabilité
 
-Cliquez sur une ligne pour ouvrir la vulnérabilité dans un panneau latéral. Vous voyez :
+Cliquez sur une ligne pour ouvrir sa vulnérabilité dans un panneau latéral. Le panneau couvre toutes les technologies et versions que la vulnérabilité concerne. Vous voyez :
 
 - Le résumé, le vecteur CVSS et les liens de référence (avis de l'éditeur, correctifs).
 - **Technologies et versions** : chaque version concernée, avec son **État** et une note.
@@ -79,7 +86,7 @@ KANAP ne change jamais un état que vous avez choisi. Quand une version ne corre
 
 ## Export
 
-**Exporter en CSV** télécharge les vulnérabilités qui répondent aux filtres, une ligne par version de technologie et par vulnérabilité, dans la langue de votre écran. Au-delà de 10 000 vulnérabilités, resserrez d'abord les filtres.
+**Exporter en CSV** télécharge les vulnérabilités qui répondent aux filtres, une ligne par ligne de la grille, dans son ordre, dans la langue de votre écran. Au-delà de 10 000 vulnérabilités, resserrez d'abord les filtres.
 
 ## Notifications par e-mail
 
@@ -87,7 +94,7 @@ Après chaque vérification, les responsables IT d'une technologie reçoivent un
 
 - **Ce qui est annoncé** : une vulnérabilité publiée dans les 30 derniers jours sur un produit auquel la technologie était déjà comparée, ou une vulnérabilité connue qui vient de devenir critique ou élevée.
 - **Ce qui ne l'est pas** : la première comparaison d'une technologie, ou d'un identifiant CPE que vous venez d'ajouter, est silencieuse. Ses résultats attendent sur cette page.
-- **Combien** : 25 lignes au plus, une par technologie et par vulnérabilité, puis un lien vers la page pour le reste.
+- **Combien** : 25 lignes au plus, une par technologie et par vulnérabilité, puis un lien vers la page, filtrée sur les vulnérabilités publiées dans les 30 derniers jours.
 - **Combien de fois** : chaque personne entend parler d'une vulnérabilité sur une technologie une seule fois. Une vulnérabilité non annoncée lors de sa vérification ne l'est jamais plus tard.
 
 Les destinataires sont les responsables IT de la technologie dont le compte est actif et qui peuvent lire l'infrastructure. Chacun peut couper ces e-mails sous **Notifications des technologies** dans ses réglages de notification. Voir [Paramètres](admin.md#notifications). Aucun e-mail ne part tant que l'envoi d'e-mails n'est pas configuré sur votre installation.
