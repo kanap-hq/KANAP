@@ -37,6 +37,7 @@ Wenn Sie schnellstmöglich produktiv werden möchten, beginnen Sie mit den Fast-
 
 - [Standorte](locations.md) - Rechenzentren und Cloud-Regionen verfolgen
 - [Assets](assets.md) - Infrastruktur-Inventar verwalten (Server, VMs, Container, Cloud-Instanzen)
+- [Technologien](technologies.md) - Die Produkte verfolgen, auf denen Ihre Anwendungen laufen, mit Versionen und Supportende
 - [Verbindungen](connections.md) - Netzwerk- und Systemverbindungen verfolgen
 - [Verbindungskarte](connection-map.md) - Verbindungstopologie visualisieren
 

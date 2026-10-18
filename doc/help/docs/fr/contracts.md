@@ -210,6 +210,7 @@ Lier ou retirer une application ou un actif dans **Relations** met l'onglet à j
 ### Relations
 
 - **Applications** et **Actifs** : liez les applications et les actifs que couvre ce contrat. Les sélecteurs cherchent parmi les applications et les actifs que vous pouvez voir. Ces liens alimentent l'onglet [Conformité](#conformite). Un actif dont le contrat de support est celui-ci, renseigné sur la fiche de l'actif, n'apparaît pas ici. Il compte quand même pour la conformité
+- **Technologies** : liez les technologies que ce contrat paie, comme un abonnement Microsoft 365 pour Entra ID. Visible seulement si vous pouvez lire l'infrastructure. Les technologies retirées ne sont pas proposées
 - **Contacts** : les personnes liées à ce contrat, chacune avec un rôle (Commercial, Technique, Support ou Autre). **Reprendre les contacts du fournisseur** copie les contacts du fournisseur en un clic
 - **Sites web pertinents** : des liens vers des documents externes, comme le PDF signé ou le portail du fournisseur
 - **Pièces jointes** : une liste de fichiers. Utilisez **Ajouter des fichiers** ou déposez des fichiers sur la section. Cliquez sur un fichier pour le télécharger

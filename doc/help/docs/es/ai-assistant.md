@@ -78,7 +78,7 @@ Escribir `@` abre el **selector de menciones** encima del cuadro de redacción. 
   - `@DOC`: documentos de la base de conocimiento recientes
   - `@APP backup`: aplicaciones que coinciden con "backup"
   - `@BL-12`: la línea presupuestaria con la referencia BL-12. `@BL` solo lista líneas presupuestarias de ambos tipos, y `@OPX` o `@CPX` las limita a las líneas OPEX o CAPEX. Los antiguos números siguen funcionando: `@OPX-12` o `@CPX-3` encuentra su línea
-  - `@PRJ`, `@REQ`, `@INC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@COMP`, `@CONT`, `@DEPT`, `@SUP`, `@BP`
+  - `@PRJ`, `@REQ`, `@INC`, `@TEC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@COMP`, `@CONT`, `@DEPT`, `@SUP`, `@BP`
 - **Texto simple**: cualquier otra cosa (`@payroll`, `@server-2`) ejecuta una búsqueda entre tipos ordenada por relevancia. También encuentra las líneas presupuestarias por el nombre de sus valores analíticos.
 
 Use las teclas de flecha para desplazarse por las sugerencias, **Intro** o **Tab** para confirmar y **Escape** para cerrar el selector. Los resultados se agrupan por tipo de entidad (Conocimiento, Tareas, Proyectos, Aplicaciones, Activos, Contratos, etc.) para que pueda distinguir de un vistazo qué tipo de registro va a insertar.
@@ -147,7 +147,7 @@ La barra de uso de tokens solo aparece una vez que la conversación tiene al men
 
 ## Consejos
 
-- **Use prefijos para mayor precisión**: `@T-`, `@DOC-`, `@PRJ-`, `@REQ-`, `@INC-` corresponden directamente a las referencias nativas de KANAP. Son la forma más rápida de apuntar Plaid a un registro concreto y sobreviven al copiar y pegar porque son idénticos a lo que ve en el resto de la aplicación.
+- **Use prefijos para mayor precisión**: `@T-`, `@DOC-`, `@PRJ-`, `@REQ-`, `@INC-`, `@TEC-` corresponden directamente a las referencias nativas de KANAP. Son la forma más rápida de apuntar Plaid a un registro concreto y sobreviven al copiar y pegar porque son idénticos a lo que ve en el resto de la aplicación.
 - **Inicie una nueva conversación por tema**: mantener las preguntas no relacionadas en conversaciones separadas reduce la ventana de contexto, acelera las respuestas y disminuye el gasto en tokens. La lista de conversaciones está agrupada por fecha para que pueda encontrarlas de nuevo con facilidad.
 - **Apruebe y rechace con criterio**: las vistas previas son lo único que se interpone entre Plaid y sus datos reales. Tómese el segundo extra para leer la comparación antes de hacer clic en **Aprobar**.
 - **Detenga en lugar de esperar**: si Plaid toma un camino equivocado a mitad de la generación, pulse el botón **Detener** en lugar de esperar a que termine. Ahorrará tokens y su siguiente mensaje puede corregir el rumbo.

@@ -215,6 +215,16 @@ Hace seguimiento de información de soporte y contactos del proveedor.
 
 La pestaña Relaciones conecta este activo a otros registros en KANAP. La insignia de la pestaña cuenta todos los elementos vinculados. La mayoría de los campos se guardan automáticamente.
 
+**Si este servidor cae**: la pestaña empieza por lo que se detiene con este activo. Una línea de resumen cuenta las aplicaciones, activos, clústeres, tecnologías y procesos de negocio afectados, y después una tabla por tipo:
+
+- **Aplicaciones**: las que tienen un despliegue en servicio en un activo caído, con sus entornos, su criticidad y los activos en los que se ejecutan (**Vía**).
+- **Activos**: los activos que contiene, hasta tres niveles, y los activos que dependen de él. **Vía** muestra el camino.
+- **Clústeres**: los clústeres con un miembro caído. **Caído** cuando no queda ningún miembro en pie, si no **Degradado** con el número de miembros caídos. Las aplicaciones de un clúster caído caen con él.
+- **Tecnologías**: las instaladas en un activo caído, con sus versiones.
+- **Procesos de negocio**: los procesos de las aplicaciones afectadas.
+
+Los activos retirados cortan la cadena: nada cae a través de ellos. Cada tabla muestra sus 50 primeras filas y cuenta el resto. Las aplicaciones y los procesos requieren el derecho de leerlos. La sección se actualiza al guardar las relaciones del activo, más abajo.
+
 **Relaciones de activos**:
 - **Depende de**: Otros activos de los que depende este (p. ej., un servidor de base de datos)
 - **Contiene**: Activos contenidos dentro de este (p. ej., servidores en un rack)

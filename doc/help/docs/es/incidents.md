@@ -180,6 +180,7 @@ Reabrir un incidente no cambia nada de eso. Las versiones se mantienen, la entra
 
 - **Activos**: los servidores, VM o equipos implicados. Busque y seleccione; enlazar y desenlazar queda anotado en el diario
 - **Aplicaciones**: las aplicaciones y servicios afectados, mismo comportamiento
+- **Tecnologías**: las tecnologías implicadas, como un directorio o un motor de base de datos, mismo comportamiento. Visibles, y contadas en la insignia de la pestaña, solo para los usuarios que pueden leer la infraestructura
 - **Tareas**: el trabajo de seguimiento. Cree una tarea directamente desde el incidente y quedará vinculada a él. La tarea muestra «Incidente · INC-14» en su propia barra lateral, y la columna Tareas del incidente la cuenta
 
 El enlace se hace únicamente desde el lado del incidente. Un activo o una aplicación enlazados muestran el incidente en una sección **Incidentes** de solo lectura en su propia pestaña Relaciones: quien mire un servidor verá su historial de incidencias.

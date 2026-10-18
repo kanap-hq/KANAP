@@ -539,7 +539,7 @@ La pestaña Asignaciones distribuye el gasto de un año entre sus empresas y dep
 
 ### Relaciones
 
-La pestaña Relaciones vincula la línea con objetos relacionados: Proyectos, Aplicaciones, Contratos, Contactos, Sitios web relevantes y Adjuntos. Todo lo de esta pestaña se guarda automáticamente.
+La pestaña Relaciones vincula la línea con objetos relacionados: Proyectos, Aplicaciones, Tecnologías, Contratos, Contactos, Sitios web relevantes y Adjuntos. Todo lo de esta pestaña se guarda automáticamente.
 
 **Proyectos**:
 
@@ -553,6 +553,12 @@ La pestaña Relaciones vincula la línea con objetos relacionados: Proyectos, Ap
 - Use el autocompletado para vincular una o más aplicaciones o servicios de su catálogo IT
 - Esto ayuda a saber qué líneas financian qué aplicaciones o servicios
 - Quite una aplicación haciendo clic en la X de su chip
+
+**Tecnologías**:
+
+- Use el autocompletado para vincular las tecnologías que paga la línea, como licencias de base de datos o una suscripción de hipervisor
+- Solo visible si puede leer la infraestructura
+- Quite una tecnología haciendo clic en la X de su etiqueta
 
 **Contratos**:
 
