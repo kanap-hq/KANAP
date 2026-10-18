@@ -539,7 +539,7 @@ The Allocations tab distributes the spend of a year across your companies and de
 
 ### Relations
 
-The Relations tab links the line to related objects: Projects, Applications, Contracts, Contacts, Relevant websites, and Attachments. Everything on this tab saves automatically.
+The Relations tab links the line to related objects: Projects, Applications, Technologies, Contracts, Contacts, Relevant websites, and Attachments. Everything on this tab saves automatically.
 
 **Projects**:
 
@@ -553,6 +553,12 @@ The Relations tab links the line to related objects: Projects, Applications, Con
 - Use the autocomplete to link one or more applications or services from your IT catalogue
 - This helps track which lines fund which applications or services
 - Remove an application by clicking the X on its chip
+
+**Technologies**:
+
+- Use the autocomplete to link the technologies the line pays for, such as database licences or a hypervisor subscription
+- Shown only if you can read the infrastructure
+- Remove a technology by clicking the X on its chip
 
 **Contracts**:
 

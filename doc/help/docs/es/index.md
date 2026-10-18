@@ -37,6 +37,7 @@ Si desea el camino más corto hacia la productividad, comience con las guías de
 
 - [Ubicaciones](locations.md) - Seguimiento de centros de datos y regiones en la nube
 - [Activos](assets.md) - Gestión del inventario de infraestructura (servidores, VMs, contenedores, instancias en la nube)
+- [Tecnologías](technologies.md) - Seguimiento de los productos sobre los que funcionan sus aplicaciones, sus versiones y su fin de soporte
 - [Conexiones](connections.md) - Seguimiento de conexiones de red y sistemas
 - [Mapa de conexiones](connection-map.md) - Visualización de la topología de conexiones
 

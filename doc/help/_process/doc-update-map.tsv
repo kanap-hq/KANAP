@@ -38,6 +38,8 @@ analytics.md	frontend/src/pages/analytics/**/*.tsx
 analytics.md	frontend/src/components/ChipToggleBar.tsx
 applications.md	frontend/src/pages/it/ApplicationsPage.tsx
 applications.md	frontend/src/pages/it/ApplicationWorkspacePage.tsx
+applications.md	frontend/src/pages/it/workspace/ApplicationRelationsTab.tsx
+applications.md	frontend/src/pages/it/components/ApplicationConvertButton.tsx
 interfaces.md	frontend/src/pages/it/InterfacesPage.tsx
 interfaces.md	frontend/src/pages/it/InterfaceWorkspacePage.tsx
 interface-map.md	frontend/src/pages/it/InterfaceMapPage.tsx
@@ -46,6 +48,17 @@ connections.md	frontend/src/pages/it/ConnectionWorkspacePage.tsx
 connection-map.md	frontend/src/pages/it/ConnectionMapPage.tsx
 assets.md	frontend/src/pages/it/AssetsPage.tsx
 assets.md	frontend/src/pages/it/AssetWorkspacePage.tsx
+assets.md	frontend/src/pages/it/editors/AssetRelationsPanel.tsx
+assets.md	frontend/src/pages/it/editors/AssetImpactSection.tsx
+technologies.md	frontend/src/pages/it/TechnologiesPage.tsx
+technologies.md	frontend/src/pages/it/TechnologyWorkspacePage.tsx
+technologies.md	frontend/src/pages/it/workspace/TechnologyOverviewTab.tsx
+technologies.md	frontend/src/pages/it/components/TechnologyCreateDialog.tsx
+end-of-support.md	frontend/src/pages/it/EndOfSupportReportPage.tsx
+incidents.md	frontend/src/pages/it/IncidentsPage.tsx
+incidents.md	frontend/src/pages/it/IncidentWorkspacePage.tsx
+incidents.md	frontend/src/pages/it/incidents/**/*.tsx
+incidents.md	frontend/src/pages/it/workspace/IncidentRelationsTab.tsx
 locations.md	frontend/src/pages/it/LocationsPage.tsx
 locations.md	frontend/src/pages/it/LocationWorkspacePage.tsx
 it-ops-settings.md	frontend/src/pages/it/ItOperationsSettingsPage.tsx

@@ -84,6 +84,12 @@ La pestaña Visión general está organizada en tres secciones.
 
 - **Notas**: campo de texto libre para información interna como enlaces a mapas de procesos, procedimientos operativos estándar, notas de alcance o planes de mejora.
 
+**Aplicaciones**
+
+Debajo de los detalles, la sección **Aplicaciones** lista las aplicaciones que respaldan el proceso, con su referencia, su criticidad y su responsable de TI. **Añadir** abre una búsqueda; un vínculo se guarda al instante, sin **Guardar**. Pase el ratón por una fila y haga clic en su cruz para quitar el vínculo. La aplicación muestra el mismo vínculo en la sección **Procesos de negocio** de su pestaña Relaciones.
+
+Necesita `business_processes:member` para cambiar los vínculos. La sección solo aparece si puede leer las aplicaciones. Un Business Contributor solo ve y vincula las aplicaciones de su ámbito.
+
 ---
 
 ## Gestión de categorías

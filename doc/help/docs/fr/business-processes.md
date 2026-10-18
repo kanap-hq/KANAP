@@ -84,6 +84,12 @@ L'onglet Vue d'ensemble est organisé en trois sections.
 
 - **Notes** : champ libre pour des informations internes telles que des liens vers des cartographies de processus, des procédures, des notes de périmètre ou des plans d'amélioration.
 
+**Applications**
+
+Sous les détails, la section **Applications** liste les applications qui soutiennent le processus, avec leur référence, leur criticité et leur responsable IT. **Ajouter** ouvre une recherche ; un lien s'enregistre aussitôt, sans **Enregistrer**. Survolez une ligne et cliquez sur sa croix pour retirer le lien. L'application affiche le même lien dans la section **Processus métier** de son onglet Relations.
+
+Il faut `business_processes:member` pour modifier les liens. La section n'apparaît que si vous pouvez lire les applications. Un Business Contributor ne voit et ne lie que les applications de son périmètre.
+
 ---
 
 ## Gérer les catégories

@@ -37,6 +37,7 @@ If you want the shortest path to productivity, start with the Fast Track guides 
 
 - [Locations](locations.md) - Track datacenters and cloud regions
 - [Assets](assets.md) - Manage infrastructure inventory (servers, VMs, containers, cloud instances)
+- [Technologies](technologies.md) - Track the products your applications run on, their versions and their end of support
 - [Connections](connections.md) - Track network and system connections
 - [Connection Map](connection-map.md) - Visualize connection topology
 
