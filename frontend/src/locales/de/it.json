@@ -1440,6 +1440,22 @@
         "ipAddressPlaceholder": "z. B. 10.12.34.56",
         "removeIpAddress": "IP-Adresse entfernen"
       },
+      "technologies": {
+        "title": "Technologien",
+        "add": "Hinzufügen",
+        "search": "Technologien suchen",
+        "empty": "Keine Technologie auf diesem Server.",
+        "remove": "{{name}} entfernen",
+        "saveFailed": "Die Technologien konnten nicht gespeichert werden.",
+        "columns": {
+          "ref": "Ref.",
+          "name": "Name",
+          "family": "Familie",
+          "version": "Version",
+          "via": "Über",
+          "viaHint": "Server, auf dem die Technologie installiert ist, bei einer abgeleiteten Zeile"
+        }
+      },
       "assignments": {
         "title": "Zuordnungen",
         "addAssignment": "Zuordnung hinzufügen",
@@ -1705,6 +1721,65 @@
           "linkName": "z. B. Versionshinweise",
           "url": "z. B. https://learn.microsoft.com/sql"
         }
+      },
+      "servers": {
+        "title": "Server",
+        "add": "Hinzufügen",
+        "search": "Server suchen",
+        "empty": "Kein Server trägt diese Technologie.",
+        "total": "Gesamt",
+        "serverCount_one": "{{count}} Server",
+        "serverCount_other": "{{count}} Server",
+        "retired": "Außer Betrieb genommener Server: er zählt nirgends",
+        "retiredShort": "außer Betrieb",
+        "changeVersion": "Version auf {{name}} ändern",
+        "notesOf": "Notizen zu {{name}}",
+        "notesPlaceholder": "z. B. Clusterknoten",
+        "remove": "{{name}} entfernen",
+        "saveFailed": "Die Server konnten nicht gespeichert werden.",
+        "columns": {
+          "ref": "Ref.",
+          "server": "Server",
+          "environment": "Umgebung",
+          "operatingSystem": "Betriebssystem",
+          "version": "Version",
+          "via": "Über",
+          "viaHint": "Server, auf dem die Technologie installiert ist, bei einer abgeleiteten Zeile",
+          "notes": "Notizen"
+        }
+      },
+      "applications": {
+        "title": "Anwendungen",
+        "add": "Hinzufügen",
+        "addCount_one": "{{count}} Anwendung hinzufügen",
+        "addCount_other": "{{count}} Anwendungen hinzufügen",
+        "search": "Anwendungen suchen",
+        "empty": "Keine Anwendung nutzt diese Technologie.",
+        "noAccess": "Sie können die Anwendungen nicht sehen.",
+        "declared": "Deklariert",
+        "viaHost": "{{server}} (auf {{host}})",
+        "yes": "Ja",
+        "changeVersion": "Version für {{name}} ändern",
+        "remove": "{{name}} entfernen, alle deklarierten Versionen",
+        "saveFailed": "Die Anwendungen konnten nicht gespeichert werden.",
+        "exportCsv": "CSV exportieren",
+        "exportFailed": "Der Export ist fehlgeschlagen.",
+        "columns": {
+          "ref": "Ref.",
+          "application": "Anwendung",
+          "environment": "Umgebung",
+          "criticality": "Kritikalität",
+          "externalFacing": "Extern",
+          "server": "Server",
+          "version": "Version",
+          "itOwner": "IT-Verantwortlicher"
+        }
+      },
+      "versionPicker": {
+        "search": "Version wählen",
+        "placeholder": "z. B. 2022",
+        "unknown": "Version unbekannt",
+        "create": "Version „{{label}}“ hinzufügen"
       },
       "messages": {
         "saveFailed": "Die Technologie konnte nicht gespeichert werden.",

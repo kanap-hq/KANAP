@@ -39,7 +39,7 @@ vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
       <div data-testid="reference">{props.itemReference}</div>
       <h1>{props.title}</h1>
       <div role="tablist">
-        {props.tabs.map((tab: any) => <button key={tab.key} role="tab" disabled={tab.disabled} data-badge={tab.badge ?? undefined}>{tab.label}</button>)}
+        {props.tabs.map((tab: any) => <button key={tab.key} role="tab" disabled={tab.disabled} data-badge={tab.badge ?? ''}>{tab.label}</button>)}
       </div>
       <div>{props.metadata}</div>
       <div>{props.actions}</div>
@@ -121,8 +121,8 @@ describe('TechnologyWorkspacePage', () => {
     const tabs = screen.getAllByRole('tab');
     expect(tabs.map((tab) => [tab.textContent, (tab as HTMLButtonElement).disabled])).toEqual([
       ['workspace.technology.tabs.overview', false],
-      ['workspace.technology.tabs.servers', true],
-      ['workspace.technology.tabs.applications', true],
+      ['workspace.technology.tabs.servers', false],
+      ['workspace.technology.tabs.applications', false],
       ['workspace.technology.tabs.operations', false],
       ['workspace.technology.tabs.compliance', false],
       ['workspace.technology.tabs.relations', false],
@@ -132,6 +132,43 @@ describe('TechnologyWorkspacePage', () => {
     expect(screen.getByTestId('owners-workspace.technology.fields.itOwners').textContent).toBe('Ada Lovelace');
     expect(screen.queryByTestId('owners-workspace.technology.fields.businessOwners')).toBeNull();
     expect(screen.queryByText(/Grace Hopper/)).toBeNull();
+  });
+
+  it('counts the distinct servers in service and the distinct applications in the tab badges', async () => {
+    get.mockImplementation(async (url: string) => {
+      if (url === '/technologies/TEC-3') return { data: DETAIL };
+      if (url === '/technologies/tech-1/assets') {
+        return { data: { items: [
+          { kind: 'installed', link_id: 'l-1', asset_id: 'a1', asset_status: 'active' },
+          { kind: 'installed', link_id: 'l-2', asset_id: 'a1', asset_status: 'active' },
+          { kind: 'installed', link_id: 'l-3', asset_id: 'a2', asset_status: 'retired' },
+          { kind: 'carried', link_id: null, asset_id: 'a3', asset_status: 'active' },
+          { kind: 'carried', link_id: null, asset_id: 'a1', asset_status: 'active' },
+        ] } };
+      }
+      if (url === '/technologies/tech-1/applications') {
+        return { data: { items: [{ kind: 'hosted', application_id: 'erp' }, { kind: 'declared', application_id: 'erp' }, { kind: 'declared', application_id: 'crm' }] } };
+      }
+      return { data: { items: [], has_more: false } };
+    });
+    renderPage();
+    await screen.findByRole('heading', { name: 'Microsoft SQL Server' });
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'workspace.technology.tabs.servers' }).getAttribute('data-badge')).toBe('2'));
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'workspace.technology.tabs.applications' }).getAttribute('data-badge')).toBe('2'));
+    // One read per tab.
+    expect(get.mock.calls.filter(([url]) => url === '/technologies/tech-1/assets')).toHaveLength(1);
+  });
+
+  it('shows no applications badge when the applications cannot be read', async () => {
+    get.mockImplementation(async (url: string) => {
+      if (url === '/technologies/TEC-3') return { data: DETAIL };
+      if (url === '/technologies/tech-1/applications') return { data: { technology: {}, items: null } };
+      return { data: { items: [], has_more: false } };
+    });
+    renderPage();
+    await waitFor(() => expect(get).toHaveBeenCalledWith('/technologies/tech-1/applications'));
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'workspace.technology.tabs.servers' }).getAttribute('data-badge')).toBe('0'));
+    expect(screen.getByRole('tab', { name: 'workspace.technology.tabs.applications' }).getAttribute('data-badge')).toBe('');
   });
 
   it('lists the versions in the order of the API with their shared support state', async () => {
