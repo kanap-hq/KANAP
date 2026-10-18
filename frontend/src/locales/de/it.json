@@ -955,7 +955,7 @@
         "roles": "Netbox-Rollen",
         "sites": "Netbox-Standorte",
         "operatingSystems": "Betriebssysteme",
-        "operatingSystemsHint": "Wählen Sie für jede Netbox-Plattform das KANAP-Betriebssystem. Eine Plattform ohne Zuordnung blockiert den Import nicht: Das Betriebssystem bleibt einfach unverändert.",
+        "operatingSystemsHint": "Wählen Sie für jede Netbox-Plattform eine Technologie. Gespeichert wird der Name der Technologie, mit ihrer Version, wenn Sie eine auswählen. Eine Plattform ohne Zuordnung blockiert den Import nicht: Das Betriebssystem bleibt einfach unverändert.",
         "noPlatforms": "Netbox führt keine Plattform, hier gibt es also nichts zuzuordnen.",
         "platformsUnavailable": "Netbox hat seine Plattformen nicht zurückgegeben, daher lassen sich hier keine Betriebssysteme zuordnen. Prüfen Sie, ob das API-Token Plattformen lesen darf.",
         "noOperatingSystem": "Keine Zuordnung",
@@ -972,7 +972,7 @@
           "assetType": "KANAP-Asset-Typ",
           "netboxPlatform": "Netbox-Plattform",
           "location": "KANAP-Standort",
-          "operatingSystem": "KANAP-Betriebssystem"
+          "operatingSystem": "Technologie"
         },
         "counts": {
           "devices_one": "{{count}} Gerät",
@@ -1607,9 +1607,14 @@
         "aliasesPlaceholder": "Eingeben und Enter drücken",
         "operatingSystem": "Betriebssystem",
         "osClusterHint": "Das Betriebssystem wird von den Mitglieds-Assets des Clusters definiert.",
-        "osChooseHint": "Wählen Sie aus der Betriebssystemliste in den Einstellungen.",
+        "osChooseHint": "Wählen Sie eine Technologie und dann ihre Version.",
         "standardSupportEnds": "Standard-Support endet am {{date}}",
         "extendedSupportEnds": "Erweiterter Support endet am {{date}}",
+        "osTechnology": "Technologie",
+        "osVersion": "Version",
+        "osClear": "Leeren",
+        "osTechnologyPlaceholder": "z. B. Ubuntu",
+        "osVersionPlaceholder": "z. B. 22.04 LTS",
         "ipAddresses": "IP-Adressen",
         "addIpAddress": "IP-Adresse hinzufügen",
         "noIpAddresses": "Keine IP-Adressen konfiguriert.",
@@ -1636,6 +1641,8 @@
         "add": "Hinzufügen",
         "search": "Technologien suchen",
         "empty": "Keine Technologie auf diesem Server.",
+        "operatingSystem": "Betriebssystem",
+        "catalog": "Katalog",
         "remove": "{{name}} entfernen",
         "saveFailed": "Die Technologien konnten nicht gespeichert werden.",
         "columns": {

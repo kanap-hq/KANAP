@@ -955,7 +955,7 @@
         "roles": "Roles de Netbox",
         "sites": "Sitios de Netbox",
         "operatingSystems": "Sistemas operativos",
-        "operatingSystemsHint": "Elija el sistema operativo de KANAP para cada plataforma de Netbox. Una plataforma sin correspondencia no bloquea la importación: el sistema operativo se deja tal como está.",
+        "operatingSystemsHint": "Elija una tecnología para cada plataforma de Netbox. El valor guardado es el nombre de la tecnología, con su versión si elige una. Una plataforma sin correspondencia no bloquea la importación: el sistema operativo se deja tal como está.",
         "noPlatforms": "Netbox no muestra ninguna plataforma, así que aquí no hay nada que poner en correspondencia.",
         "platformsUnavailable": "Netbox no ha devuelto sus plataformas, por lo que aquí no se pueden poner en correspondencia los sistemas operativos. Compruebe que el token de API puede leer las plataformas.",
         "noOperatingSystem": "Sin correspondencia",
@@ -972,7 +972,7 @@
           "assetType": "Tipo de activo KANAP",
           "netboxPlatform": "Plataforma de Netbox",
           "location": "Ubicación KANAP",
-          "operatingSystem": "Sistema operativo KANAP"
+          "operatingSystem": "Tecnología"
         },
         "counts": {
           "devices_one": "{{count}} equipo",
@@ -1607,9 +1607,14 @@
         "aliasesPlaceholder": "Escriba y presione Enter",
         "operatingSystem": "Sistema operativo",
         "osClusterHint": "El sistema operativo está definido por los activos miembros del clúster.",
-        "osChooseHint": "Elija de la lista de sistemas operativos en Configuración.",
+        "osChooseHint": "Elija una tecnología y luego su versión.",
         "standardSupportEnds": "El soporte estándar finaliza el {{date}}",
         "extendedSupportEnds": "El soporte extendido finaliza el {{date}}",
+        "osTechnology": "Tecnología",
+        "osVersion": "Versión",
+        "osClear": "Borrar",
+        "osTechnologyPlaceholder": "p. ej., Ubuntu",
+        "osVersionPlaceholder": "p. ej., 22.04 LTS",
         "ipAddresses": "Direcciones IP",
         "addIpAddress": "Agregar dirección IP",
         "noIpAddresses": "No hay direcciones IP configuradas.",
@@ -1636,6 +1641,8 @@
         "add": "Añadir",
         "search": "Buscar tecnologías",
         "empty": "Ninguna tecnología en este servidor.",
+        "operatingSystem": "Sistema operativo",
+        "catalog": "Catálogo",
         "remove": "Quitar {{name}}",
         "saveFailed": "No se pudieron guardar las tecnologías.",
         "columns": {

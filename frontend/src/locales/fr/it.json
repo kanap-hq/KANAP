@@ -955,7 +955,7 @@
         "roles": "Rôles Netbox",
         "sites": "Sites Netbox",
         "operatingSystems": "Systèmes d'exploitation",
-        "operatingSystemsHint": "Choisissez le système d'exploitation KANAP pour chaque plateforme Netbox. Une plateforme laissée sans correspondance ne bloque pas l'import : le système d'exploitation est simplement laissé tel quel.",
+        "operatingSystemsHint": "Choisissez une technologie pour chaque plateforme Netbox. La valeur enregistrée est le nom de la technologie, avec sa version si vous en choisissez une. Une plateforme laissée sans correspondance ne bloque pas l'import : le système d'exploitation est simplement laissé tel quel.",
         "noPlatforms": "Netbox ne liste aucune plateforme, il n'y a donc rien à mettre en correspondance ici.",
         "platformsUnavailable": "Netbox n'a pas renvoyé ses plateformes, les systèmes d'exploitation ne peuvent donc pas être mis en correspondance ici. Vérifiez que le jeton d'API peut lire les plateformes.",
         "noOperatingSystem": "Aucune correspondance",
@@ -972,7 +972,7 @@
           "assetType": "Type d'actif KANAP",
           "netboxPlatform": "Plateforme Netbox",
           "location": "Site KANAP",
-          "operatingSystem": "Système d'exploitation KANAP"
+          "operatingSystem": "Technologie"
         },
         "counts": {
           "devices_one": "{{count}} équipement",
@@ -1607,9 +1607,14 @@
         "aliasesPlaceholder": "Saisissez et appuyez sur Entrée",
         "operatingSystem": "Système d'exploitation",
         "osClusterHint": "Le système d'exploitation est défini par les actifs membres du cluster.",
-        "osChooseHint": "Choisissez dans la liste des systèmes d'exploitation dans les paramètres.",
+        "osChooseHint": "Choisissez une technologie, puis sa version.",
         "standardSupportEnds": "Fin du support standard le {{date}}",
         "extendedSupportEnds": "Fin du support étendu le {{date}}",
+        "osTechnology": "Technologie",
+        "osVersion": "Version",
+        "osClear": "Effacer",
+        "osTechnologyPlaceholder": "ex. Ubuntu",
+        "osVersionPlaceholder": "ex. 22.04 LTS",
         "ipAddresses": "Adresses IP",
         "addIpAddress": "Ajouter une adresse IP",
         "noIpAddresses": "Aucune adresse IP configurée.",
@@ -1636,6 +1641,8 @@
         "add": "Ajouter",
         "search": "Rechercher des technologies",
         "empty": "Aucune technologie sur ce serveur.",
+        "operatingSystem": "Système d'exploitation",
+        "catalog": "Catalogue",
         "remove": "Retirer {{name}}",
         "saveFailed": "Les technologies n'ont pas pu être enregistrées.",
         "columns": {
